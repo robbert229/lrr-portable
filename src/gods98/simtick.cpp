@@ -5,14 +5,21 @@
 #include "message.hpp"
 #include "simtick.hpp"
 #include "sound.hpp"
+#include "heap.hpp"
+#include "game/level.hpp"
+#include "game/cmd.hpp"
+#include "game/select.hpp"
 
 #define SIMTICK_MUTE_RESET 25.0f
 
 /* ---- mute timer (FUN_0041ba10) ------------------------------------------ */
 // GLOBAL: LEGORR 0x004de1f4
 static uint32_t s_mute_word    = 0;       /* DAT_004de1f4 */
+// GLOBAL: LEGORR 0x004de1fc
 static uint32_t s_mute_last    = 0;       /* DAT_004de1fc */
+// GLOBAL: LEGORR 0x004a2b58
 static float    s_mute_timer   = SIMTICK_MUTE_RESET; /* _DAT_004a2b58, boot fresh */
+// GLOBAL: LEGORR 0x004de200
 static int      s_mute_engaged = 0;       /* DAT_004de200 */
 static int      (*s_mute_hook)(uint32_t id, int vol) = NULL; /* FUN_00464ef0 */
 
@@ -55,6 +62,8 @@ void simtick_mute_timer(EngineContext* c, float dt)
 static SimtickEffect s_effects[16];
 static int           s_effect_count = 0;
 static int           s_effect_fired = 0;
+static void (*s_effect_opacity_hook)(uint32_t, int, float, int) = NULL;
+static void (*s_effect_release_hook)(uint32_t, int) = NULL;
 
 void simtick_effect_table(SimtickEffect* table, int count)
 {
@@ -75,10 +84,47 @@ int simtick_effect_last_fired(void)
     return s_effect_fired;
 }
 
-// STUB: LEGORR 0x0040aa40
-static int effect_helper(SimtickEffect* /*e*/, float /*dt*/)
+void simtick_effect_set_hooks(void (*set_opacity)(uint32_t, int, float, int),
+                              void (*release)(uint32_t, int))
 {
-    return 0; /* TODO(simtick): FUN_0040aa40 per-entry effect helper. */
+    s_effect_opacity_hook = set_opacity;
+    s_effect_release_hook = release;
+}
+
+// FUNCTION: LEGORR 0x0040aa40
+static int effect_helper(SimtickEffect* e, float dt)
+{
+    float elapsed;
+    float opacity;
+    float decrement;
+    uint32_t count;
+    uint32_t index;
+
+    if (e == NULL) {
+        return 0;
+    }
+    memcpy(&elapsed, &e->words[6], sizeof(elapsed));
+    if (elapsed < 15.0f) {
+        memcpy(&decrement, &e->words[5], sizeof(decrement));
+        decrement -= dt;
+        memcpy(&e->words[5], &decrement, sizeof(decrement));
+        opacity = 1.0f - elapsed * 0.06666667f;
+        count = e->words[2];
+        if (s_effect_opacity_hook != NULL) {
+            for (index = 0; index < count; ++index) {
+                s_effect_opacity_hook(e->words[1], (int)index, opacity, 4);
+            }
+        }
+        elapsed += dt;
+        memcpy(&e->words[6], &elapsed, sizeof(elapsed));
+        return 1;
+    }
+
+    e->words[7] &= ~1u;
+    if (s_effect_release_hook != NULL) {
+        s_effect_release_hook(e->words[0], 1);
+    }
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x0040aa10
@@ -122,10 +168,32 @@ void simtick_post_cluster(EngineContext* c)
 /* ---- bobbins list machine (FUN_004091e0) -------------------------------- */
 static SimtickBobbin* s_bobbin_head = NULL;
 static int            s_bobbin_advance = 0;
+static SimtickBobbinMarkHook s_bobbin_mark_hook = NULL;
+static void* s_bobbin_mark_context = NULL;
+static SimtickBobbinSpawnHook s_bobbin_spawn_hook = NULL;
+static SimtickBobbinActionHook s_bobbin_clear_delay_hook = NULL;
+static SimtickBobbinActionHook s_bobbin_die_hook = NULL;
+static void* s_bobbin_action_context = NULL;
 
 void simtick_set_bobbin_head(SimtickBobbin* head)
 {
     s_bobbin_head = head;
+}
+
+void simtick_bobbin_mark_hook_set(SimtickBobbinMarkHook hook, void* context)
+{
+    s_bobbin_mark_hook = hook;
+    s_bobbin_mark_context = context;
+}
+
+void simtick_bobbin_action_hooks_set(SimtickBobbinSpawnHook spawn,
+    SimtickBobbinActionHook clear_delay, SimtickBobbinActionHook die,
+    void* context)
+{
+    s_bobbin_spawn_hook = spawn;
+    s_bobbin_clear_delay_hook = clear_delay;
+    s_bobbin_die_hook = die;
+    s_bobbin_action_context = context;
 }
 
 int simtick_bobbin_advanced(void)
@@ -133,18 +201,104 @@ int simtick_bobbin_advanced(void)
     return s_bobbin_advance;
 }
 
-// STUB: LEGORR 0x00409270
-static int bobbin_spawn(SimtickBobbin* /*n*/)  { return 0; } /* FUN_00409270 */
-// STUB: LEGORR 0x00409a40
-static void bobbin_delayed(SimtickBobbin* /*n*/) {}          /* FUN_00409a40 */
-// STUB: LEGORR 0x00409b30
-static void bobbin_mark(SimtickBobbin* /*n*/) {}             /* FUN_00409b30 */
-// STUB: LEGORR 0x004099f0
-static void bobbin_drop(SimtickBobbin* /*n*/) {}             /* FUN_004099f0 */
-// STUB: LEGORR 0x004027a0
-static void bobbin_clear_delay(SimtickBobbin* /*n*/) {}      /* FUN_004027a0 */
-// STUB: LEGORR 0x00409550
-static void bobbin_die(SimtickBobbin* /*n*/) {}              /* FUN_00409550 */
+// FUNCTION: LEGORR 0x00409270
+static int bobbin_spawn(SimtickBobbin* node)
+{
+    return node != NULL && s_bobbin_spawn_hook != NULL
+        ? s_bobbin_spawn_hook(node, s_bobbin_action_context) : 0;
+} /* FUN_00409270 */
+// FUNCTION: LEGORR 0x00409a40
+static void bobbin_delayed(SimtickBobbin* node)
+{
+    if (node == NULL) return;
+    uint32_t count = node->member_count;
+    if (count > 20u) count = 20u;
+    for (uint32_t i = 0; i < count; ++i) {
+        void* record = node->members[i];
+        if (record == NULL) continue;
+        const float no_timeout = -1.0f;
+        uint32_t flags = 0;
+        __builtin_memcpy((char*)record + 0x340u, &no_timeout,
+                         sizeof(no_timeout));
+        __builtin_memcpy(&flags, (char*)record + 0x3e8u, sizeof(flags));
+        flags |= 0x800000u;
+        __builtin_memcpy((char*)record + 0x3e8u, &flags, sizeof(flags));
+    }
+}
+static void bobbin_mark(SimtickBobbin* node)
+{
+    if (node != NULL && s_bobbin_mark_hook != NULL)
+        s_bobbin_mark_hook(node, s_bobbin_mark_context);
+}
+static void bobbin_record_remove_and_free(SimtickBobbin* node)
+{
+    SimtickBobbin* previous = NULL;
+    SimtickBobbin* current = s_bobbin_head;
+    while (current != NULL && current != node) {
+        previous = current;
+        current = current->next;
+    }
+    if (current == NULL) return;
+    if (previous == NULL) s_bobbin_head = current->next;
+    else previous->next = current->next;
+    engine_heap_free_wrapper(current->owned_buffer);
+    engine_heap_free_wrapper(current);
+}
+
+static SimtickBobbin* bobbin_find_key(const uint32_t key_pair[2])
+{
+    SimtickBobbin* node = s_bobbin_head;
+    if (key_pair == NULL) return NULL;
+    while (node != NULL) {
+        if (node->key_pair[0] == key_pair[0]
+            && node->key_pair[1] == key_pair[1]) return node;
+        node = node->next;
+    }
+    return NULL;
+}
+
+// FUNCTION: LEGORR 0x00409110
+void simtick_selection_group_release(const uint32_t key_pair[2])
+{
+    SimtickBobbin* node = bobbin_find_key(key_pair);
+    if (node == NULL) return;
+    cancel_action_for_matching_coordinates(node->key_pair);
+    bobbin_delayed(node);
+    bobbin_record_remove_and_free(node);
+}
+
+// FUNCTION: LEGORR 0x00409150
+void simtick_selection_group_clear(const uint32_t key_pair[2])
+{
+    SimtickBobbin* node = bobbin_find_key(key_pair);
+    uint32_t i;
+    if (node == NULL) return;
+    for (i = 0; i < node->member_count && i < 20u; ++i) {
+        unsigned char* entity = (unsigned char*)node->members[i];
+        uint32_t flags;
+        if (entity == NULL) continue;
+        memcpy(&flags, entity + 0x3ecu, sizeof(flags));
+        flags &= ~0x100u;
+        memcpy(entity + 0x3ecu, &flags, sizeof(flags));
+        cmd_create_task((EntitySlot*)entity); /* FUN_00402720(entity, 0) */
+    }
+    cancel_action_for_matching_coordinates(node->key_pair);
+    bobbin_delayed(node);
+    bobbin_record_remove_and_free(node);
+}
+// FUNCTION: LEGORR 0x004027a0
+static void bobbin_clear_delay(SimtickBobbin* node)
+{
+    if (node != NULL && s_bobbin_clear_delay_hook != NULL)
+        s_bobbin_clear_delay_hook(node, s_bobbin_action_context);
+} /* FUN_004027a0 */
+// FUNCTION: LEGORR 0x00409550
+static void bobbin_die(SimtickBobbin* node)
+{
+    if (node != NULL && s_bobbin_die_hook != NULL)
+        s_bobbin_die_hook(node, s_bobbin_action_context);
+    if (node != NULL) node->flags &= ~4u;
+} /* FUN_00409550 */
 
 // FUNCTION: LEGORR 0x004091e0
 void simtick_bobbins(EngineContext* c)
@@ -161,7 +315,7 @@ void simtick_bobbins(EngineContext* c)
                     if (bobbin_spawn(node)) {
                         bobbin_delayed(node);
                         bobbin_mark(node);
-                        bobbin_drop(node);
+                        bobbin_record_remove_and_free(node);
                     }
                 } else {
                     bobbin_clear_delay(node);
@@ -495,14 +649,22 @@ void simtick_bitfield_tree(int* base, int code)
 
 /* FUN_004665c0: a single ordered post-step. */
 static int s_post_n = 0;
+static SimtickPostStepHook s_post_step_hook = NULL;
+static void* s_post_step_user = NULL;
 int simtick_post_steps_count(void) { return s_post_n; }
 
-// STUB: LEGORR 0x004665c0
+void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user)
+{
+    s_post_step_hook = hook;
+    s_post_step_user = user;
+}
+
+// FUNCTION: LEGORR 0x004665c0
 void simtick_post_step(EngineContext* c)
 {
-    (void)c;
+    if (s_post_step_hook != NULL)
+        s_post_step_hook(c, s_post_step_user);
     ++s_post_n;
-    /* TODO(simtick): FUN_004377b0 post-step over LAB_004665e0. */
 }
 
 /* FUN_004313b0: minion activity state machine over the +0x88 list.
@@ -836,14 +998,77 @@ void simtick_vu_meter(EngineContext* c, float dt)
 }
 
 /* FUN_0046e390: fx-bank ticker — per-entry sub-fx scan with fade/clamp. */
-static int s_fx_entries[8] = { 0 };
-static int s_fx_count = 0;
-// STUB: LEGORR 0x0046e390
+static SimtickFxEntry* s_fx_entries;
+static uint32_t s_fx_count;
+static SimtickFxResourceUpdateFn s_fx_update;
+static void* s_fx_user;
+
+void simtick_fx_bank_entries_install(SimtickFxEntry* entries, uint32_t count,
+                                     SimtickFxResourceUpdateFn update,
+                                     void* user)
+{
+    s_fx_entries = entries;
+    s_fx_count = count > 256u ? 256u : count;
+    s_fx_update = update;
+    s_fx_user = user;
+}
+
+// FUNCTION: LEGORR 0x0046e390
 void simtick_fx_bank_tick(EngineContext* c, float dt)
 {
-    (void)c; (void)dt; (void)s_fx_entries; (void)s_fx_count;
-    /* corpus: per-entry sub-fx scan, track max, fade update, clamp 240. */
-    ++s_post_n;
+    uint32_t active_count = 0u;
+    float scale = c != NULL && c->time_scale != 0.0f ? c->time_scale : 1.0f;
+    for (uint32_t i = 0; i < s_fx_count; ++i) {
+        SimtickFxEntry* entry = &s_fx_entries[i];
+        float maximum = entry->initial;
+        int any_active = 0;
+        int fade_out = (entry->flags & 2u) == 0u;
+        uint32_t count = entry->count;
+        if (count > 256u) count = 256u;
+        for (uint32_t j = 0; entry->subentries != NULL && j < count; ++j) {
+            SimtickFxSubEntry* sub = &entry->subentries[j];
+            int advance_secondary = sub->enabled == 0.0f
+                || sub->value < entry->current;
+            if (!advance_secondary) {
+                if (maximum < sub->value) maximum = sub->value;
+                fade_out = 0;
+                ++active_count;
+                any_active = 1;
+                if (sub->value == entry->current) advance_secondary = 1;
+            }
+            sub->fade_primary += dt * 1.5f;
+            if (advance_secondary) sub->fade_secondary += dt * 0.5f;
+            if (sub->fade_primary > 240.0f) sub->fade_primary = 240.0f;
+            if (sub->fade_secondary > 240.0f) sub->fade_secondary = 240.0f;
+        }
+        if ((entry->flags & 4u) != 0u) any_active = 0;
+        if (any_active || fade_out) {
+            const float rate = (entry->current - entry->initial) / scale;
+            if (any_active) {
+                entry->flags &= ~2u;
+                entry->current += active_count * dt * 0.3f / (rate + 1.0f);
+                if (entry->current >= maximum) {
+                    entry->current = maximum;
+                    entry->flags |= 4u;
+                }
+            } else {
+                entry->flags &= ~4u;
+                entry->current -= dt * 0.05f;
+                if (entry->current <= maximum) {
+                    entry->current = maximum;
+                    entry->flags |= 2u;
+                }
+            }
+            for (uint32_t j = 0; j < entry->resource_count; ++j) {
+                if (s_fx_update != NULL) {
+                    s_fx_update(entry->resource, j, entry->current, s_fx_user);
+                }
+            }
+        }
+    }
+    if (c != NULL) {
+        terrain_edge_flag_midpoint_update((LevelState*)c->level_block, dt);
+    }
 }
 /* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the
  * same word the mute timer reads (simtick_set_mute_word is the port-side
@@ -906,21 +1131,6 @@ void simtick_scene_transform_current_set(const float xyz[3])
 const float* simtick_scene_transform_config_peek(void)
 {
     return s_xform_config;
-}
-
-/* ReleaseAllGroupRecords (FUN_004099d0) — see simtick.hpp. */
-// FUNCTION: LEGORR 0x004099d0
-void simtick_release_all_group_records(void)
-{
-    SimtickBobbin* node = s_bobbin_head;
-    if (node == NULL) {
-        return;
-    }
-    do {
-        SimtickBobbin* next = node->next; /* corpus saves +0x24 before the drop */
-        bobbin_drop(node);
-        node = next;
-    } while (node != NULL);              /* corpus bottom gate */
 }
 
 /* --- the axis-tolerance window (2026-10-25; see simtick.hpp) ---------------

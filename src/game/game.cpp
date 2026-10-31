@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "game.hpp"
+#include "entity.hpp"
 #include "savegame.hpp"
 
 const char* game_layer_name(void)
@@ -27,4 +28,5 @@ void game_context_init(GameContext* ctx)
      * the corpus inline span so list installs behave (see game.hpp). */
     ctx->stats_activity_cap = AI_ACTIVITY_SLOTS;
     save_init(ctx);
+    entity_pool_callback_context_set(ctx);
 }

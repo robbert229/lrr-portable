@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "crt/crt.hpp"
+#include "heap.hpp"
 #include "string.hpp"
 
 #if defined(_MSC_VER)
@@ -18,10 +19,34 @@ extern "C" int __cdecl _flsbuf(int value, FILE* stream);
 // FUNCTION: LEGORR 0x00477550
 char* string_duplicate(const char* text)
 {
-    /* The reference operation is the CRT strdup idiom on the engine heap.
-     * VC5's _strdup uses that same malloc/free heap; portable builds use the
-     * CRT shim's engine-heap fallback. */
-    return crt_string_duplicate(text);
+    size_t length;
+    char* copy;
+    /* The port tests exercise NULL as an empty result; the reference assumes
+     * non-NULL. Keep that guard while matching its engine-heap ownership. */
+    if (text == NULL) return NULL;
+    length = strlen(text) + 1u;
+    copy = (char*)engine_heap_alloc((long)length);
+    if (copy != NULL) strcpy(copy, text);
+    return copy;
+}
+
+// FUNCTION: LEGORR 0x00485300
+void objective_advisor_text_copy(void* record, int mode,
+                                 const char* format, ...)
+{
+    char local[1024];
+    va_list args;
+    va_start(args, format);
+    formatted_text_buffer_build(local, sizeof(local), format, args);
+    va_end(args);
+    strcpy((char*)record + 0x18, local);
+    if (mode == 0) {
+        *(uint32_t*)((char*)record + 0x828) = 0x41c80000u;
+    }
+    else {
+        *(uint32_t*)((char*)record + 0x828) = 0u;
+    }
+    *(uint32_t*)((char*)record + 0x82c) |= 2u;
 }
 
 /* FormattedTextBufferBuild (FUN_0048e1e0): VC5 builds use output.obj's
@@ -113,6 +138,7 @@ int string_length_bounded(const char* text, int limit)
 // FUNCTION: LEGORR 0x00478f50
 const char* string_path_join(const char* root, ...)
 {
+    // GLOBAL: LEGORR 0x00506098
     static char s_path[STRING_PATH_MAX]; /* the corpus static scratch */
     if (root == NULL) {
         root = "";

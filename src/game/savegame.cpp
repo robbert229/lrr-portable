@@ -1065,29 +1065,35 @@ void* list_get_node(const SavListWindow* win, const void* wide_key)
  * The native routine gets its config from globals and caches both an
  * in-progress marker and the node in the two registry value arrays; this
  * adapter takes the config explicitly and uses the same cache slots. */
-static SavTreeNode* level_node_get_inner(SavListWindow* win, BlockFile* cfg,
-                                         const char* level_name, int depth)
+// FUNCTION: LEGORR 0x00417090
+SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
+                            const char* level_name)
 {
-    if (win == NULL || cfg == NULL || level_name == NULL || depth >= 128) {
+    if (win == NULL || cfg == NULL || level_name == NULL) {
         return NULL;
     }
-    const int index = list_find_name(win, level_name);
-    if (index < 0 || win->values_a == NULL || win->values_b == NULL) {
+    if (win->values_a == NULL || win->values_b == NULL) {
         return NULL;
     }
-    const void* registry_key = win->entries[index];
-    if (list_has_item(win, registry_key) != NULL) {
-        return (SavTreeNode*)list_get_node(win, registry_key);
+    if (list_has_item(win, level_name) != NULL) {
+        return (SavTreeNode*)list_get_node(win, level_name);
     }
 
     SavTreeNode* node = (SavTreeNode*)engine_heap_alloc(sizeof(*node));
+    list_add_name(win, level_name, (void*)1); /* break LevelLinks cycles */
+    list_set_node(win, level_name, node);
     if (node == NULL) {
         return NULL;
     }
     memset(node, 0, sizeof(*node));
-    node->window = (uint32_t)index;
-    list_add_name(win, registry_key, (void*)1); /* break LevelLinks cycles */
-    list_set_node(win, registry_key, node);
+    {
+        const int index = list_find_name(win, level_name);
+        if (index < 0) {
+            engine_heap_free(node);
+            return NULL;
+        }
+        node->window = (uint32_t)index;
+    }
 
     const char* group = strstr(level_name, "::");
     group = group != NULL ? group + 2 : level_name;
@@ -1099,7 +1105,7 @@ static SavTreeNode* level_node_get_inner(SavListWindow* win, BlockFile* cfg,
         snprintf(path, sizeof(path), "%s %s LevelLinks", root, group);
         links = block_get_strptr(cfg, path);
     }
-    if (links == NULL || links[0] == '\0') {
+    if (links == NULL) {
         return node;
     }
 
@@ -1127,14 +1133,15 @@ static SavTreeNode* level_node_get_inner(SavListWindow* win, BlockFile* cfg,
         p = *end == ',' ? end + 1 : end;
     }
     if (count == 0) {
-        return node;
+        engine_heap_free(node);
+        return NULL;
     }
 
     SavTreeNode** children = (SavTreeNode**)engine_heap_alloc(
         (long)(count * sizeof(*children)));
     if (children == NULL) {
-        list_set_node(win, registry_key, NULL);
-        list_add_name(win, registry_key, NULL);
+        list_set_node(win, level_name, NULL);
+        list_add_name(win, level_name, NULL);
         engine_heap_free(node);
         return NULL;
     }
@@ -1142,16 +1149,9 @@ static SavTreeNode* level_node_get_inner(SavListWindow* win, BlockFile* cfg,
     node->children = children;
     node->count = count;
     for (uint32_t i = 0; i < count; ++i) {
-        children[i] = level_node_get_inner(win, cfg, names[i], depth + 1);
+        children[i] = level_node_get(win, cfg, names[i]);
     }
     return node;
-}
-
-// FUNCTION: LEGORR 0x00417090
-SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
-                            const char* level_name)
-{
-    return level_node_get_inner(win, cfg, level_name, 0);
 }
 
 /* SavTreeWalk (FUN_004171c0) — see savegame.hpp. */
@@ -1281,7 +1281,7 @@ void sav_tree_walk2(void* node, SavTree2State* state, int carry,
     if (n == NULL || n->visited != 0u) {
         return;
     }
-    const int extended = 1 < engine_app_mode_get(eng)
+    const int extended = 1 < engine_app_mode_get()
                       || (engine_feature_word_peek() & 0x20000u) != 0u;
     if (extended) {
         state->flag = 0u;

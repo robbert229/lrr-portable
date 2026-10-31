@@ -5,6 +5,13 @@
 #include "audio.hpp"
 
 static AudioPlayer* s_active_audio_player;
+static AudioListenerRolloffHook s_listener_rolloff_hook;
+static void* s_listener_rolloff_context;
+static float s_listener_rolloff;
+static AudioSystemInitHook s_audio_system_init_hook;
+static void* s_audio_system_init_context;
+// GLOBAL: LEGORR 0x00506694
+static int s_audio_buffer_volume;
 
 /* The corpus menu-volume gain is a standalone .rdata dword (verified
  * 0x49e1e0 = 0.11111111f); the compat band's volume_scale member is now
@@ -55,6 +62,41 @@ void audio_close(AudioPlayer* p)
     }
 }
 
+void audio_active_shutdown(void)
+{
+    if (!sound_bank_sound_on()) return;
+    if (s_active_audio_player != NULL) {
+        audio_stop(s_active_audio_player);
+        audio_close(s_active_audio_player);
+    }
+    sound_bank_sound_on_set(0);
+}
+
+void audio_system_init_hook_set(AudioSystemInitHook hook, void* context)
+{
+    s_audio_system_init_hook = hook;
+    s_audio_system_init_context = context;
+}
+
+int audio_system_init(void* window)
+{
+    int initialized = 0;
+    sound_bank_sound_on_set(0);
+    if (s_audio_system_init_hook != NULL)
+        initialized = s_audio_system_init_hook(s_audio_system_init_context,
+                                               window);
+    if (initialized != 0) {
+        sound_bank_sound_on_set(1);
+        s_listener_rolloff = 1.0f;
+        if (s_active_audio_player != NULL)
+            audio_set_volume(s_active_audio_player, 1.0f);
+    }
+    /* The reference's completion result is one after either a successful
+     * device setup or its fallback/skip path; only its retry-dialog code
+     * loops. */
+    return 1;
+}
+
 void audio_set_volume(AudioPlayer* p, float volume)
 {
     if (p == NULL) {
@@ -72,6 +114,7 @@ void audio_set_volume(AudioPlayer* p, float volume)
     }
 }
 
+// GLOBAL: LEGORR 0x004aae30
 static const int s_sfx_attenuation[11] = {
     -10000, -5000, -3500, -2000, -1500, -1000,
       -700,  -400,  -200,   -80,     0
@@ -94,15 +137,22 @@ float audio_sfx_volume_gain(int index)
  * the port's single master stream gain. Invalid corpus attenuation values
  * are ignored by the same range predicate used by sound-bank records. */
 // FUNCTION: LEGORR 0x0047b500
-void audio_sound_volume_set(AudioPlayer* p, int millibels)
+void audio_sound_volume_set(int millibels)
 {
-    if (p == NULL || !sound_bank_sound_on()
-        || !sound_volume_value_valid(millibels)) {
-        return;
+    if (s_bank_sound_on != 0) {
+        if (sound_volume_value_valid(millibels) != 0) {
+            s_audio_buffer_volume = millibels;
+            if (s_active_audio_player == NULL) return;
+            const float gain = millibels <= -10000
+                ? 0.0f : powf(10.0f, (float)millibels / 2000.0f);
+            audio_set_volume(s_active_audio_player, gain);
+        }
     }
-    const float gain = millibels <= -10000
-        ? 0.0f : powf(10.0f, (float)millibels / 2000.0f);
-    audio_set_volume(p, gain);
+}
+
+void audio_active_sound_volume_set(int millibels)
+{
+    audio_sound_volume_set(millibels);
 }
 
 /* SoundVolumeIndexSet (FUN_0047b530): the table lookup is bounded to the
@@ -110,11 +160,9 @@ void audio_sound_volume_set(AudioPlayer* p, int millibels)
 // FUNCTION: LEGORR 0x0047b530
 void audio_sound_volume_index_set(int index)
 {
-    /* The corpus uses `index < 0 || index > 10` for its eleven entries. */
-    if (index < 0 || index > 10) {
-        return;
+    if (index >= 0 && index < 11) {
+        audio_sound_volume_set(s_sfx_attenuation[index]);
     }
-    audio_sound_volume_set(s_active_audio_player, s_sfx_attenuation[index]);
 }
 
 /* GameSpeedSelect (FUN_00414de0): the ledger name is misleading; this is
@@ -156,6 +204,47 @@ void music_mixer_volume_set(float music, float sfx)
 {
     (void)sfx;
     audio_set_volume(s_active_audio_player, music);
+}
+
+void audio_music_mixer_volume_get(float* music, float* sfx)
+{
+    float volume = s_active_audio_player != NULL
+        ? s_active_audio_player->volume : 1.0f;
+    if (music != NULL) *music = volume;
+    if (sfx != NULL) *sfx = volume;
+}
+
+int audio_mixer_control_init(float* music, float* sfx, int apply_volume)
+{
+    if (music == NULL || sfx == NULL) return 0;
+    audio_music_mixer_volume_get(music, sfx);
+    if (apply_volume != 0) music_mixer_volume_set(*music, *sfx);
+    return s_active_audio_player != NULL
+        && s_active_audio_player->dev != NULL;
+}
+
+void audio_listener_rolloff_hook_set(AudioListenerRolloffHook hook,
+                                     void* context)
+{
+    s_listener_rolloff_hook = hook;
+    s_listener_rolloff_context = context;
+}
+
+float audio_listener_rolloff_set(float rolloff)
+{
+    if (rolloff < 0.0f) rolloff = 0.0f;
+    if (rolloff > 10.0f) rolloff = 10.0f;
+    if (sound_bank_sound_on()) {
+        s_listener_rolloff = rolloff;
+        if (s_listener_rolloff_hook != NULL)
+            s_listener_rolloff_hook(s_listener_rolloff_context, rolloff);
+    }
+    return rolloff;
+}
+
+float audio_listener_rolloff_get(void)
+{
+    return s_listener_rolloff;
 }
 
 /* Corpus sounds are all PCM: 8-bit unsigned or 16-bit signed LE, mostly
@@ -275,6 +364,12 @@ int audio_play_sound_3d(AudioPlayer* p, const Sound* s, float pan)
                                         (int)s->format.sample_rate);
     audio_free_pcm(lr);
     return rc == 0 ? frames : -1;
+}
+
+int audio_active_play_sound_3d(const Sound* s, float pan)
+{
+    if (!sound_bank_sound_on() || s_active_audio_player == NULL) return -1;
+    return audio_play_sound_3d(s_active_audio_player, s, pan);
 }
 
 int audio_loop_named(AudioPlayer* p, const char* name, float pan)

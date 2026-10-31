@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "movie.hpp"
+#include "engine.hpp"
 #include "resource.hpp"
 #include "string.hpp"
 
@@ -676,6 +677,7 @@ int movie_next(struct Movie* m, MovieOut* out)
     return movie_decode(m, out);
 }
 
+// FUNCTION: LEGORR 0x0047ec90
 Movie* movie_open_path(const char* os_path)
 {
     if (!ff_bind() || os_path == NULL || os_path[0] == '\0') {
@@ -855,13 +857,195 @@ int movie_info(struct Movie* m, MovieInfo* out)
 
 int movie_available(void) { return 0; }
 void movie_unload(void) { }
-// STUB: LEGORR 0x0047ec90
 Movie* movie_open_path(const char* os_path) { (void)os_path; return NULL; }
 void movie_close(Movie* m) { (void)m; }
 int movie_info(Movie* m, MovieInfo* out) { (void)m; (void)out; return -1; }
 int movie_next(Movie* m, MovieOut* out) { (void)m; (void)out; return 1; }
 
 #endif /* LEGORRR_BACKEND_MINIWIN */
+
+static int s_avi_playback_disabled;
+static AviTimeHook s_avi_time_hook;
+static void* s_avi_time_context;
+static AviFrameUpdateHook s_avi_frame_update_hook;
+static AviFrameLoopHook s_avi_frame_loop_hook;
+static void* s_avi_frame_hook_context;
+static AviSurfaceLockHook s_avi_surface_lock_hook;
+static void* s_avi_surface_lock_context;
+static AviDisplayModeHook s_avi_display_mode_hook;
+static void* s_avi_display_mode_context;
+static AviReleaseHook s_avi_release_hook;
+static AviDisplayReleaseHook s_avi_display_release_hook;
+static void* s_avi_release_context;
+
+void avi_time_hook_set(AviTimeHook hook, void* context)
+{
+    s_avi_time_hook = hook;
+    s_avi_time_context = context;
+}
+
+void avi_frame_hooks_set(AviFrameUpdateHook update,
+                         AviFrameLoopHook loop, void* context)
+{
+    s_avi_frame_update_hook = update;
+    s_avi_frame_loop_hook = loop;
+    s_avi_frame_hook_context = context;
+}
+
+void avi_surface_lock_hook_set(AviSurfaceLockHook hook, void* context)
+{
+    s_avi_surface_lock_hook = hook;
+    s_avi_surface_lock_context = context;
+}
+
+void avi_display_mode_hook_set(AviDisplayModeHook hook, void* context)
+{
+    s_avi_display_mode_hook = hook;
+    s_avi_display_mode_context = context;
+}
+
+void avi_release_hooks_set(AviReleaseHook release_object,
+                           AviDisplayReleaseHook release_display,
+                           void* context)
+{
+    s_avi_release_hook = release_object;
+    s_avi_display_release_hook = release_display;
+    s_avi_release_context = context;
+}
+
+int avi_display_mode_setup(AviPlaybackState* state, uint32_t width,
+                           uint32_t height, uint32_t bits_per_pixel,
+                           int fullscreen, void* display_device)
+{
+    if (state == NULL) return 0;
+    state->display_width = width != 0u ? width : state->display_width;
+    state->display_height = height != 0u ? height : state->display_height;
+    state->display_bits_per_pixel = bits_per_pixel;
+    state->display_fullscreen = fullscreen != 0;
+    state->display_device = display_device;
+    if (s_avi_display_mode_hook == NULL) return 0;
+    return s_avi_display_mode_hook(s_avi_display_mode_context, state,
+        width, height, bits_per_pixel, fullscreen, display_device) != 0;
+}
+
+void avi_playback_state_initialize(AviPlaybackState* state, uint32_t width,
+                                   uint32_t height,
+                                   uint32_t bits_per_pixel, int fullscreen,
+                                   void* display_device)
+{
+    if (state == NULL) return;
+    memset(state, 0, sizeof(*state));
+    state->frame_ready = (uint8_t)avi_display_mode_setup(state, width, height,
+        bits_per_pixel, fullscreen, display_device);
+}
+
+void avi_frame_retriever_destroy(AviPlaybackState* state)
+{
+    if (state == NULL) return;
+    if (!s_avi_playback_disabled && s_avi_release_hook != NULL) {
+        if (state->stream_object != NULL)
+            s_avi_release_hook(s_avi_release_context, state->stream_object);
+        if (state->frame_retriever_object != NULL)
+            s_avi_release_hook(s_avi_release_context,
+                               state->frame_retriever_object);
+    }
+    state->stream_object = NULL;
+    state->frame_retriever_object = NULL;
+}
+
+void avi_player_destroy(AviPlaybackState* state, uint8_t flags)
+{
+    avi_frame_retriever_destroy(state);
+    if ((flags & 1u) != 0u && s_avi_display_release_hook != NULL)
+        s_avi_display_release_hook(s_avi_release_context);
+}
+
+uint32_t avi_surface_lock(AviPlaybackState* state)
+{
+    uint32_t result;
+    if (state == NULL || state->surface_locked != 0
+        || s_avi_surface_lock_hook == NULL) return 0u;
+    result = s_avi_surface_lock_hook(s_avi_surface_lock_context,
+                                     state->surface_object, 1, 0x801u);
+    if (result == 0u) {
+        state->surface_locked = 1u;
+        return 1u;
+    }
+    return result;
+}
+
+uint32_t avi_surface_unlock(AviPlaybackState* state)
+{
+    uint32_t result;
+    if (state == NULL || state->surface_locked == 0
+        || s_avi_surface_lock_hook == NULL) return 0u;
+    result = s_avi_surface_lock_hook(s_avi_surface_lock_context,
+                                     state->surface_object, 0, 0u);
+    if (result == 0u) {
+        state->surface_locked = 0u;
+        return 1u;
+    }
+    return result;
+}
+
+void avi_playback_mode_set(int disabled)
+{
+    s_avi_playback_disabled = disabled != 0;
+}
+
+uint32_t avi_stream_frame_count_get(const AviPlaybackState* state)
+{
+    if (s_avi_playback_disabled || state == NULL) return 0u;
+    return state->stream_frame_count;
+}
+
+uint32_t avi_playback_frame_index_get(const AviPlaybackState* state)
+{
+    if (state == NULL) return 0u;
+    if (s_avi_playback_disabled) return 0u;
+    return state->frame_index;
+}
+
+void avi_frame_seek_and_clock_rebase(AviPlaybackState* state,
+                                     uint32_t frame_index)
+{
+    uint32_t now;
+    if (state == NULL || s_avi_playback_disabled) return;
+    state->frame_index = frame_index;
+    if (s_avi_time_hook == NULL) return;
+    now = s_avi_time_hook(s_avi_time_context);
+    state->frame_clock = (float)now * 0.001f;
+    if (state->frame_rate != 0.0f)
+        state->frame_delta = state->frame_clock
+            - (float)state->frame_index / state->frame_rate;
+}
+
+int avi_frame_update_and_blit(AviPlaybackState* state)
+{
+    int result;
+    if (state == NULL || state->frame_ready == 0
+        || s_avi_playback_disabled || s_avi_frame_update_hook == NULL) {
+        return 0;
+    }
+    result = s_avi_frame_update_hook(s_avi_frame_hook_context, state);
+    if (result != 0 && s_avi_time_hook != NULL) {
+        uint32_t now = s_avi_time_hook(s_avi_time_context);
+        state->frame_rate = state->fps_numerator != 0u
+            ? (float)state->fps_denominator / (float)state->fps_numerator
+            : 0.0f;
+        state->frame_clock = (float)now * 0.001f;
+    }
+    return result != 0;
+}
+
+void avi_playback_frame_loop(AviPlaybackState* state, void* destination)
+{
+    if (state == NULL || state->frame_ready == 0
+        || s_avi_playback_disabled || s_avi_frame_loop_hook == NULL) {
+        return;
+    }
+    s_avi_frame_loop_hook(s_avi_frame_hook_context, state, destination);
+}
 
 /* ------------------------------------------------------------------ *
  *  Platform-neutral helpers: pixels, config surface, filesystem.
@@ -972,11 +1156,12 @@ void movie_scale_rgba_rect(const uint8_t* src, int sw, int sh, int spitch,
 // FUNCTION: LEGORR 0x00414ce0
 int movie_avis_enabled(BlockFile* cfg)
 {
-    if (cfg == NULL) {
-        return 1; /* no config: the corpus default is to play */
+    int dont_play_avis = 0;
+    if (cfg != NULL) {
+        dont_play_avis = block_get_bool(cfg, "Lego* Main DontPlayAvis");
     }
-    /* AvisEnabled @ 0x414ce0 reads the DontPlayAvis kill switch. */
-    return block_get_bool(cfg, "Lego* Main DontPlayAvis") != 1;
+    /* AvisEnabled @ 0x414ce0 also suppresses playback in app modes >= 3. */
+    return dont_play_avis != 1 && engine_app_mode_get() < 3;
 }
 
 /* Partial MoviePlayNamed (FUN_00415910): extracts and normalizes the named

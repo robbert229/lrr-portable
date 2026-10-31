@@ -529,10 +529,10 @@ int main(int argc, char** argv)
         }
     }
 
-    /* ConfigRgbVectorRead (2026-10-25): the comma triplet, scaled 1/255. */
+    /* ConfigRgbVectorRead (2026-10-25): the colon triplet, scaled 1/255. */
     {
-        BlockFile* bf = parse("G {\n  rgb 12,128,255\n  bad 1,2\n  four 1,2,3,4\n  "
-                              "tail 1,2,3,\n}");
+        BlockFile* bf = parse("G {\n  rgb 12:128:255\n  bad 1:2\n  four 1:2:3:4\n  "
+                              "tail 1:2:3:\n}");
         CHECK(bf != NULL, "fixture parses");
         const float sc = 1.0f / 255.0f;
         float r = -1.0f, g = -1.0f, b = -1.0f;
@@ -549,7 +549,7 @@ int main(int argc, char** argv)
               "four tokens fail the count (tracked past three)");
         CHECK(config_rgb_vector_read(bf, "G tail", &r, &g, &b) == 1
                   && b == 3.0f * sc,
-              "the never-tested final comma rides the last token");
+              "the never-tested final colon rides the last token");
         block_close(bf);
     }
 

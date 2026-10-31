@@ -33,6 +33,11 @@ char* string_duplicate(const char* text);
 uint32_t formatted_text_buffer_build(char* out, size_t capacity,
                                      const char* format, va_list args);
 
+/* ObjectiveAdvisorTextCopy (FUN_00485300): format advisor text into the
+ * record's inline buffer and update its mode/dirty fields. */
+void objective_advisor_text_copy(void* record, int mode,
+                                 const char* format, ...);
+
 /* CRT entry shims are implemented in src/crt/crt.cpp and declared here for
  * the engine/game callers that use these string operations.
  * FUN_0048da50: first occurrence of `needle` in `haystack`, or NULL.

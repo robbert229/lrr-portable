@@ -40,6 +40,17 @@
 #include "platform/platform.h"  /* PlatformEvent + canonical key codes */
 
 #define INPUT_KEY_COUNT 256
+#define INPUT_KEY_MAPPING_CAPACITY 128
+
+typedef struct InputKeyMappingTable {
+    uint8_t count[INPUT_KEY_COUNT];
+    uint8_t values[INPUT_KEY_COUNT][INPUT_KEY_MAPPING_CAPACITY];
+} InputKeyMappingTable;
+
+void input_key_mapping_reset(InputKeyMappingTable* table);
+void input_key_mapping_add_bidirectional(InputKeyMappingTable* table,
+                                         uint8_t key_a, uint8_t key_b);
+
 
 typedef struct InputState {
     uint8_t  cur[INPUT_KEY_COUNT];    /* DAT_0076ab80 */
@@ -68,11 +79,49 @@ typedef struct InputState {
     int32_t  text_cap;
 } InputState;
 
+typedef struct InputActionToggleSlot {
+    const void* data;
+    int active;
+} InputActionToggleSlot;
+typedef struct InputActionToggleState {
+    InputActionToggleSlot slots[16];
+} InputActionToggleState;
+typedef int (*InputActionToggleQueryFn)(void* context, int mode);
+typedef int (*InputActionToggleApplyFn)(void* context, int mode,
+                                        unsigned int action,
+                                        const void* data);
+typedef struct InputActionToggleHooks {
+    void* context;
+    InputActionToggleQueryFn query;
+    InputActionToggleApplyFn apply;
+} InputActionToggleHooks;
+int input_action_state_toggle(InputActionToggleState* state,
+                              const InputActionToggleHooks* hooks,
+                              unsigned int action, const void* data);
+typedef struct DirectInputHooks {
+    void* context;
+    int (*interface_create)(void* context);
+    int (*keyboard_create)(void* context);
+    int (*mouse_create)(void* context);
+    int (*devices_configure)(void* context);
+    int (*devices_acquire)(void* context);
+    void (*devices_release)(void* context);
+    /* DirectInput state-read/acquire/unacquire hooks for InputStatePoll.
+     * The two status hooks return zero on success. */
+    int (*keyboard_state_read)(void* context, uint32_t bytes, uint8_t* keys);
+    int (*keyboard_acquire)(void* context);
+    void (*keyboard_unacquire)(void* context);
+} DirectInputHooks;
+void input_direct_hooks_set(const DirectInputHooks* hooks);
+int input_direct_initialize(void); /* FUN_0047ed90 */
+void input_direct_shutdown(void);
+InputState* input_direct_state_get(void);
+void input_state_poll(InputState* state, int poll_active); /* FUN_0047eef0 */
+
 void input_reset(InputState* s);
 
-/* Device pre-tick (the corpus's pre-ticks FUN_0047eef0 / FUN_0047f010):
- * roll the current frame's keys into prev and clear cur for the device to
- * refill. Edges are then cur != 0 && prev == 0. */
+/* Port frame boundary: roll current keys into prev and clear cur for the
+ * next event batch. Edges are then cur != 0 && prev == 0. */
 void input_begin_frame(InputState* s);
 
 /* Device capture — the "writer" half (finding 05's device layer, deferred
@@ -90,6 +139,15 @@ void input_mirror(InputState* s);
 void input_mirror_and_clear(InputState* s);
 
 int  input_key_down(const InputState* s, int key);
+int  input_keyboard_down_key_count(void); /* FUN_0047efb0 */
+typedef int (*InputClientToScreenHook)(int* x, int* y, void* context);
+typedef void (*InputSetCursorPositionHook)(int x, int y, void* context);
+void input_cursor_position_hooks_install(InputClientToScreenHook convert,
+                                        InputSetCursorPositionHook set_cursor,
+                                        void* context);
+void input_cursor_client_position_set(int x, int y); /* FUN_0047f0d0 */
+void input_cursor_client_position_get(int* x, int* y);
+void input_cursor_delta_get(int* x, int* y);
 int  input_key_edge(const InputState* s, int key);
 int  input_key_released(const InputState* s, int key);
 

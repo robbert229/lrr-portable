@@ -36,6 +36,18 @@ typedef struct WavSample {
     uint16_t bits_per_sample;
 } WavSample;
 
+typedef struct SoundWaveDataReader {
+    const uint8_t* data;
+    uint32_t data_size;
+    uint32_t cursor;
+    uint32_t remaining;
+} SoundWaveDataReader;
+void sound_wave_data_reader_init(SoundWaveDataReader* reader,
+                                 const uint8_t* data, uint32_t size);
+uint32_t sound_wave_data_read(SoundWaveDataReader* reader,
+                              uint32_t requested, void* destination,
+                              uint32_t capacity, uint32_t* bytes_read);
+
 /* A loaded sound. `data` is the raw PCM payload of the data chunk. */
 typedef struct Sound {
     char*     name;        /* resource name (or NULL for parsed-from-buffer) */
@@ -55,6 +67,8 @@ void sound_free(Sound* s);
 
 /* Load by resource name (disk or WAD) through the resource layer. */
 Sound* sound_load(const char* name);
+int sound_sample_load_into(Sound* output, const char* name, int mode_flags);
+void sound_sample_clear(Sound* sound);
 
 /* Sound bank (finding 14 §1). `name` is the base name — "<name>.wav" is
  * built internally (corpus "%s.wav" 0x4aae5c). `streamed`/`looping` set the
@@ -108,10 +122,11 @@ int sound_bank_entry_load(const char* name, int streamed, int looping,
                           int volume);
 
 /* SoundBankEntryRelease @ 0x47ab00: clear the busy bit and free the
- * record's sample memory. Deviation: the corpus additionally releases
+ * record's sample memory. Returns 1 when the sound system is enabled and
+ * the slot is valid, otherwise 0. Deviation: the corpus additionally releases
  * three DirectSound buffer interfaces through their vtables — the
  * instance layer is TODO(corpus), so that part of the seam is a no-op. */
-void sound_bank_entry_release(int slot);
+int sound_bank_entry_release(int slot);
 
 /* SoundVolumeValueValid @ 0x47a850: the millibel sanity gate — valid
  * while (-10001 < v < 1). */
@@ -122,6 +137,14 @@ int sound_volume_value_valid(int millibels);
  * corpus's IndexedRecordStride134WordGet. */
 uint32_t sound_bank_entry_flags(int slot);
 int sound_bank_entry_volume(int slot);
+Sound* sound_bank_entry_sample_get(int slot);
+typedef int (*SoundRecordBufferCreateHook)(void* context, int slot,
+                                           int buffer_index,
+                                           const Sound* sample);
+void sound_record_buffer_create_hook_set(SoundRecordBufferCreateHook hook,
+                                         void* context);
+int sound_record_create_buffers(int slot);
+int sound_wave_sample_duplicate_buffer_create(int slot, int buffer_index);
 
 /* SoundBankEntryVolumeSet @ 0x47b050: validate `millibels` (storing 0
  * when invalid) into the record's volume word. Deviations: the corpus
@@ -231,11 +254,9 @@ const char* sound_alias_name(int index);
 /* SoundSubsystemEnableSet @ 0x465260: raise bit
  * 0 on enable (and return — nothing else runs); on disable clear bit 0
  * and, when stop_active is nonzero, run the stop seam. The corpus's stop
- * seam is SoundSubsystemStopAll (unported here) — it walks the live
- * chain (DAT_00506684) and stops both stream states; that instance layer
- * is TODO(corpus), so the port's seam is a no-op today (documented
- * deviation: only the state transition is observable until instances
- * land). Disabling also zeroes the cooldown word _DAT_00502b2c (the last
+ * seam is SoundSubsystemStopAll — it walks the tracked buffer-association
+ * chain and sends both stream indices through their stop hooks. Disabling
+ * also zeroes the cooldown word _DAT_00502b2c (the last
  * alias submitted under the global cooldown — written by the submission
  * queue port #296). */
 void sound_subsystem_enable_set(int enable, int stop_active);
@@ -243,6 +264,59 @@ void sound_subsystem_enable_set(int enable, int stop_active);
 /* SoundSubsystemEnableSetAndStop @ 0x4652a0: enable_set with the stop
  * seam armed. */
 void sound_subsystem_enable_set_and_stop(int enable);
+
+/* SoundBufferStopHandle @ 0x47b130: DirectSound buffers are external to the
+ * portable PCM bank, so the validated bank-slot/buffer index is forwarded to
+ * an installable stop operation. The handle is one of three buffers per bank
+ * slot, matching the reference's three-buffer record layout. */
+typedef void (*SoundBufferStopHook)(void* context, int buffer_handle);
+void sound_buffer_stop_hook_set(SoundBufferStopHook hook, void* context);
+void sound_buffer_stop_handle(int buffer_handle);
+typedef void (*SoundBufferObjectStopHook)(void* context, void* buffer_object);
+typedef void (*SoundStreamStopHook)(void* context, int stream_index);
+typedef int (*SoundStreamStartHook)(void* context, int stream_index,
+                                    const Sound* sample);
+typedef int (*SoundStreamFormatHook)(void* context, int stream_index,
+                                     const WavSample* format,
+                                     uint32_t buffer_bytes);
+typedef int (*SoundStreamDrainHook)(void* context, int stream_index);
+void sound_stream_playback_hooks_set(SoundStreamStartHook start,
+                                     SoundStreamFormatHook format_setup,
+                                     SoundStreamDrainHook drain_check,
+                                     void* context);
+int sound_stream_playback_start(int stream_index, const Sound* sample);
+int sound_stream_format_setup(int stream_index, const WavSample* format,
+                              uint32_t buffer_bytes);
+int sound_stream_drain_check(int stream_index);
+void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
+                                      void* context);
+void sound_stream_stop_hook_set(SoundStreamStopHook hook, void* context);
+void sound_buffer_association_stop_all(void);
+void sound_stream_stop_and_release(int stream_index);
+void sound_subsystem_stop_all(void);
+typedef void (*SoundPositionApplyHook)(void* context, void* buffer_object,
+                                       const float position[3],
+                                       uint32_t flags);
+void sound_position_apply_hook_set(SoundPositionApplyHook hook,
+                                   void* context);
+void sound_position_set_from_vector(void* buffer_object,
+                                    const float position[3]);
+int sound_attached_stop_by_entity(uint32_t entity);
+typedef void* (*SoundInstanceRegisterHook)(void* context, void* instance);
+typedef void (*SoundInstanceStopHook)(void* context, void* instance);
+void sound_instance_hooks_set(SoundInstanceRegisterHook register_hook,
+                              SoundInstanceStopHook stop_hook,
+                              void* context);
+int sound_instance_track_register(void* instance);
+void sound_instance_track_stop_and_remove(void* instance);
+typedef int (*SoundSpatialRefreshHook)(void* context, void* sound_object);
+typedef void (*SoundStreamTickHook)(void* context, int stream_index);
+void sound_spatial_refresh_hooks_set(SoundSpatialRefreshHook refresh,
+                                     SoundStreamTickHook stream_tick,
+                                     void* context);
+void sound_source_spatial_refresh(void* sound_object);
+void sound_source_spatial_refresh_all(void);
+void sound_stream_ring_buffer_tick(int stream_index);
 
 /* SoundSubsystemEnabledGet @ 0x465370: bit 0. */
 int sound_subsystem_enabled(void);
@@ -295,8 +369,7 @@ void sound_request_queue_clear(void);
  *
  *  The idle setter gates deferred plays: nothing arms while a
  *  cooldown is already running. On expiry the corpus stops the
- *  recorded handle through the shared stop path
- *  (SoundHandleStopForward, unported here — instance layer TODO) and
+ *  recorded handle through the shared SoundHandleStopForward path and
  *  resets both words.
  * ------------------------------------------------------------------ */
 
@@ -307,8 +380,7 @@ void sound_request_queue_clear(void);
 int sound_deferred_timer_set_if_idle(float seconds);
 
 /* DeferredSoundPlayExpire @ 0x464e80: when a handle is recorded and
- * the timer still runs, stop it (port stop seam: no-op until the
- * instance layer lands, documented deviation), record -1, and zero
+ * the timer still runs, submit it to the buffer-stop hook, record -1, and zero
  * the timer. Otherwise a no-op. */
 void sound_deferred_play_expire(void);
 
@@ -408,6 +480,11 @@ void sound_alias_play(int alias, int loop);
  * keeps both. Returns 0 as shipped. */
 int sound_positional_sound_submit(int position, int alias, int loop,
                                   int positional, const float* xyz);
+/* SoundSubmissionRouteWrapper @ 0x465050: unwraps the optional position
+ * handle before forwarding the request to PositionalSoundSubmit. */
+void sound_submission_route_wrapper(const void* wrapped_position, int alias,
+                                   int loop, int positional,
+                                   const float* xyz);
 
 /* SoundBatchQueueDrain @ 0x4652d0: with `batch_set` raise batch mode and
  * return (the corpus stops there); otherwise clear batch mode and, when

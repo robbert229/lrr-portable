@@ -156,6 +156,10 @@ TerrainDescriptorNode* terrain_descriptor_find_exact(
     const uint32_t* single_key);
 int terrain_cell_predicate_check(TerrainDescriptorNode* list,
                                  const uint32_t* pair_key);
+/* CellResourceEntryMatches @ 0x0040af40: compare a resource-entry record
+ * with a cell record, unless a live task of the entry's kind matches. */
+int terrain_cell_resource_entry_matches(const uint32_t* cell_record,
+                                        const uint32_t* resource_entry);
 
 /* Objective word bits (finding 22 §2). */
 #define LVL_OBJECTIVE_STILL_PENDING 0x1u
@@ -537,6 +541,14 @@ int level_cell_record_byte3(const LevelState* s, int cx, int cy);
  * update-queue flush tests; OOB cells stay untouched. */
 void level_cell_work_flag_set(LevelState* s, int cx, int cy);
 
+/* TerrainCellWorkFlagClear (FUN_00430320): clear the three transient
+ * work flags for a coordinate when the cell's static/secondary gates permit
+ * it, then mark the cell for the next refresh pass. The corpus's global
+ * descriptor query and four side-effect callbacks remain outside the current
+ * LevelState model. */
+void terrain_cell_work_flag_clear(LevelState* s, const int coord[2],
+                                  uint32_t selector);
+
 /* FUN_004502c0: unsigned membership of a coordinate pair against the
  * grid dimensions (the corpus reads the pair from a struct pointer;
  * LevelState's width/height fields stand in — negative coords wrap as
@@ -683,6 +695,203 @@ int cell_neighbor_direction_code(int x1, int y1, int x2, int y2);
  * activity-side branches stay TODO(corpus) seams (see level.cpp);
  * mode selects the destroy-check versus the mark path. */
 void terrain_neighbor_flag_refresh(LevelState* s, int cx, int cy, int mode);
+typedef int (*TerrainNeighborPresenceHook)(uint32_t x, uint32_t y,
+                                           int mode, void* context);
+typedef void (*TerrainNeighborRenderUpdateHook)(uint32_t x, uint32_t y,
+                                                void* context);
+void terrain_neighbor_flag_hooks_install(
+    TerrainNeighborPresenceHook presence,
+    TerrainNeighborRenderUpdateHook render_update, void* context);
+void terrain_neighbor_flag_set(LevelState* s, int manager,
+                               uint32_t x, uint32_t y); /* FUN_00430470 */
+typedef void (*TerrainNeighborActionHook)(const int cell_xy[2],
+                                          void* context);
+void terrain_neighbor_refresh_hooks_install(
+    TerrainNeighborActionHook build_action,
+    TerrainNeighborActionHook clear_action, void* context);
+void terrain_neighbor_refresh(LevelState* s, const int cell_xy[2]);
+typedef void (*TerrainCellVariantCompleteHook)(void* context);
+void terrain_cell_variant_complete_hook_install(
+    TerrainCellVariantCompleteHook hook, void* context);
+int terrain_cell_variant_flag_propagate(LevelState* s,
+                                        const int cell_xy[2]);
+void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
+                                               const int cell_xy[2]);
+typedef void (*TerrainCellStateProjectionHook)(const int cell_xy[2],
+                                               const float position[3],
+                                               void* context);
+typedef void (*TerrainCellLinkedEntryRemoveHook)(const int cell_xy[2],
+                                                 void* context);
+void terrain_cell_linked_entry_remove_hook_install(
+    TerrainCellLinkedEntryRemoveHook hook, void* context);
+void terrain_cell_state_projection_hook_install(
+    TerrainCellStateProjectionHook hook, void* context);
+int terrain_cell_state_update(LevelState* s, const int cell_xy[2]);
+typedef int (*DockDefinitionCellGetHook)(int cell_xy[2], void* context);
+void dock_definition_cell_get_hook_install(DockDefinitionCellGetHook hook,
+                                          void* context);
+int dock_definition_matches_cell(const int cell_xy[2]); /* FUN_00438f60 */
+typedef struct GridCellEligibilityHooks {
+    void* context;
+    uint32_t (*cell_flags_get)(int x, int y, void* context);
+    int (*surface_entity_eligible)(int x, int y, void* context);
+} GridCellEligibilityHooks;
+void grid_cell_eligibility_hooks_set(const GridCellEligibilityHooks* hooks);
+int grid_cell_entity_eligibility_check(int x, int y); /* FUN_00433e30 */
+typedef struct SpatialObjectQueryRequest {
+    float center[2];
+    float radius;
+    uint32_t mask;
+    uint32_t filters[4];
+    int center_is_cell;
+} SpatialObjectQueryRequest;
+typedef void* (*SpatialObjectQueryHook)(
+    void* context, const SpatialObjectQueryRequest* request);
+void spatial_object_query_hook_install(SpatialObjectQueryHook hook,
+                                      void* context);
+void* spatial_object_query_execute(const SpatialObjectQueryRequest* request);
+typedef void (*TerrainCellRecordCountIncrementHook)(int a, int b, int c,
+                                                    void* context);
+void terrain_cell_record_count_increment_hook_install(
+    TerrainCellRecordCountIncrementHook hook, void* context);
+void terrain_cell_record_count_increment(int a, int b, int c);
+typedef struct TerrainCellRecordCountState {
+    uint32_t counts[4][15][16];
+} TerrainCellRecordCountState;
+typedef struct TerrainCellRecordPruneHooks {
+    void* context;
+    int (*matching_record_exists)(void* context, void* entity, int a, int b,
+                                  int c, uint32_t ordinal);
+    int (*entity_cell_matches)(void* context, void* entity, int a, int b,
+                               int c);
+} TerrainCellRecordPruneHooks;
+void terrain_cell_record_counts_prune(TerrainCellRecordCountState* state,
+                                      void* entity,
+                                      const TerrainCellRecordPruneHooks* hooks);
+typedef struct TaskRecordGridScanHooks {
+    void* context;
+    void* (*record_create)(void* context, void* entity, int a, int b, int c);
+    void (*record_kind_apply)(void* context, void* record, int kind);
+} TaskRecordGridScanHooks;
+void task_record_create_and_scan_grid(
+    TerrainCellRecordCountState* state, void* entity,
+    const TaskRecordGridScanHooks* task_hooks,
+    const TerrainCellRecordPruneHooks* prune_hooks); /* 0x004039a0 */
+typedef struct TerrainCellSurfaceUpdateHooks {
+    void* context;
+    void* (*resource_get)(void* context, unsigned int channel,
+                          unsigned int variant);
+    int (*geometry_get)(void* context, int x, int y, float coordinates[12]);
+    void (*dispatch)(void* context, void* resource,
+                     const float coordinates[12], uint32_t packed_surface,
+                     uint32_t cell_material, void* param_a, void* param_b);
+} TerrainCellSurfaceUpdateHooks;
+int terrain_cell_surface_update_dispatch(const uint8_t* cell, int x, int y,
+                                         void* param_a, void* param_b,
+                                         const TerrainCellSurfaceUpdateHooks* hooks);
+typedef struct TerrainMutationCell {
+    uint32_t flags;
+    uint8_t material;
+} TerrainMutationCell;
+typedef struct TerrainCellMutationGrid {
+    uint32_t width;
+    uint32_t height;
+    float impact_a;
+    float impact_b;
+    const TerrainMutationCell* cells;
+} TerrainCellMutationGrid;
+typedef struct TerrainCellMutationHooks {
+    void* context;
+    int (*corner_heights_get)(void* context, uint32_t x, uint32_t y,
+                              float heights[4]);
+    void (*surface_apply)(void* context, uint32_t x, uint32_t y,
+                          const float heights[4]);
+} TerrainCellMutationHooks;
+int terrain_cell_mutation_progress(const TerrainCellMutationGrid* grid,
+                                   uint32_t x, uint32_t y,
+                                   const TerrainCellMutationHooks* hooks); /* 0x00433380 */
+typedef struct TerrainStampImpactHooks {
+    void* context;
+    uint32_t (*cell_flags_get)(void* context, int x, int y);
+    int (*impact_cell_resolve)(void* context, uint32_t x, uint32_t y,
+                               int mode, int* cell_x, int* cell_y);
+    float (*height_get)(void* context, int x, int y, float offset_x,
+                        float offset_y);
+    void (*impact_event)(void* context, int cell_x, int cell_y,
+                         int mode, int kind, float base_height);
+    int (*effect_create)(void* context, int multiple_neighbors,
+                         uint32_t x, uint32_t y, int cell_x, int cell_y,
+                         float height);
+    void (*cell_flags_or)(void* context, uint32_t x, uint32_t y,
+                          uint32_t flags);
+} TerrainStampImpactHooks;
+int terrain_stamp_impact_handle(uint32_t x, uint32_t y, int direction,
+                                int mode,
+                                const TerrainStampImpactHooks* hooks); /* 0x00431780 */
+typedef struct SurfaceTypeDescriptionEntry {
+    const char* config_key;
+    uint32_t parsed_value;
+    uint32_t flags;
+} SurfaceTypeDescriptionEntry;
+typedef struct SurfaceTypeDescriptionHooks {
+    void* context;
+    const char* (*value_get)(void* context, const char* key);
+    int (*parse)(void* context, const char* value, uint32_t* parsed_value,
+                 uint32_t* flags);
+} SurfaceTypeDescriptionHooks;
+void surface_type_descriptions_load(SurfaceTypeDescriptionEntry entries[18],
+                                    const SurfaceTypeDescriptionHooks* hooks); /* 0x004350a0 */
+typedef struct TileModelEntityRegistration {
+    void* models[2];
+    uint32_t record_words[2][100];
+    float scale_percent;
+    int32_t scale_integer;
+    int32_t parameter;
+} TileModelEntityRegistration;
+typedef struct TileModelEntityRegistrationHooks {
+    void* context;
+    void* (*model_load)(void* context, void* manager, int model_index,
+                        const char* entry, int no_texture);
+    void (*model_scale)(void* context, void* model, float x, float y, float z);
+    void (*model_mode_set)(void* context, void* model, int mode, int enabled);
+    int (*mesh_uv_get)(void* context, void* model, float** uv_records);
+    void (*mesh_uv_set)(void* context, void* model, int first, int count,
+                        float* uv_records);
+    void (*uv_records_release)(void* context, float* uv_records);
+    void (*model_release)(void* context, void* model);
+} TileModelEntityRegistrationHooks;
+TileModelEntityRegistration* tile_model_entity_register(
+    void* manager, const char* first_entry, const char* second_entry,
+    float scale_percent, int parameter,
+    const TileModelEntityRegistrationHooks* hooks); /* 0x0040b5f0 */
+void tile_model_entity_registration_release(
+    TileModelEntityRegistration* registration,
+    const TileModelEntityRegistrationHooks* hooks);
+typedef struct TerrainProjectedCellRefreshState {
+    uint32_t map_width;
+    uint32_t map_height;
+    int center_x;
+    int center_y;
+    int radius;
+    uint32_t deferred_limit;
+    float distance_limit;
+    float facing_limit;
+    uint32_t overlay_enabled;
+} TerrainProjectedCellRefreshState;
+typedef struct TerrainProjectedCellRefreshHooks {
+    void* context;
+    uint32_t (*cell_flags_get)(void* context, int x, int y);
+    void (*cell_flags_set)(void* context, int x, int y, uint32_t flags);
+    int (*candidate_measure)(void* context, int x, int y, float* distance,
+                             float* facing, float* metric);
+    void (*cell_refresh)(void* context, int x, int y);
+    int (*cell_overlay_update)(void* context, int x, int y);
+    void (*cell_sound)(void* context, int x, int y);
+    void (*frame_tick)(void* context);
+} TerrainProjectedCellRefreshHooks;
+uint32_t terrain_projected_cell_state_refresh(
+    const TerrainProjectedCellRefreshState* state,
+    const TerrainProjectedCellRefreshHooks* hooks); /* 0x00433e80 */
 
 /* TerrainCellFlag20ClearAndRefresh (FUN_004310f0): neighbor refresh
  * with mode 0, then clear primary bit 0x20, then the refresh seam. */
@@ -693,6 +902,14 @@ void terrain_cell_flag20_clear_and_refresh(LevelState* s, int cx, int cy);
  * travels as the corpus's first argument), then the refresh seam. */
 void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
                                            int set);
+void* terrain_activity_build_record_get(LevelState* level, int x, int y);
+void terrain_activity_build_record_release(void* record); /* 0x004314c0 */
+void terrain_activity_build_records_release_all(LevelState* level); /* 0x00431530 */
+typedef void (*TerrainEdgeMidpointUpdateFn)(LevelState* level, float delta,
+                                            void* user);
+void terrain_edge_midpoint_update_hook_set(TerrainEdgeMidpointUpdateFn hook,
+                                           void* user);
+void terrain_edge_flag_midpoint_update(LevelState* level, float delta);
 
 /* TerrainCellWorkFlagCircleSet (FUN_00435010): raise the work bit (via
  * the ported in-gate setter) on every cell of the filled circle of the
@@ -795,6 +1012,35 @@ float lava_erosion_delay_from_cell(const LevelState* s, int x, int y);
  * (stack residue pinned to 0, giving the cardinal ring below). */
 int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
                                 int out_xy[2]);
+/* LavaErosionNeighborEligible (FUN_0040f2b0): test one erosion candidate
+ * against the walkable, reservation, material, and edge-wall gates. The
+ * global wrapper uses the installed current-level pointer. */
+void lava_erosion_level_context_set(LevelState* s);
+int lava_erosion_neighbor_eligible(const LevelState* s, int x, int y);
+int lava_erosion_neighbor_eligible_current(const int xy[2]);
+void lava_erosion_pending_cell_add(const int xy[2], int add);
+
+/* The geometric terrain operation behind erosion depends on renderer-owned
+ * surfaces. Keep that edge as a typed callback; the cell/state transition and
+ * neighbor walk remain owned by the level module. */
+typedef int (*LavaErosionEdgeApplyHook)(int x, int y, unsigned int direction,
+                                        int edge, void* context);
+typedef void (*LavaErosionCellActionHook)(int x, int y, int value,
+                                          void* context);
+typedef void (*LavaErosionSoundHook)(int x, int y, void* context);
+typedef void (*LavaErosionEventHook)(int x, int y, void* context);
+void lava_erosion_hooks_set(LavaErosionEdgeApplyHook edge_apply,
+                            LavaErosionCellActionHook work_clear,
+                            LavaErosionCellActionHook cell_change,
+                            LavaErosionSoundHook sound,
+                            LavaErosionEventHook event,
+                            void* context);
+void lava_erosion_mutation_threshold_set(unsigned int threshold);
+int lava_erosion_neighbor_mutate(const int xy[2], unsigned int direction,
+                                 int propagate);
+void lava_erosion_eight_neighbor_propagate(const int xy[2],
+                                           unsigned int direction);
+int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint);
 
 /* CellDirtyQueuePushAndClear (FUN_00450960): the terrain-owned dirty
  * cell queue over the physical block table. push != 0: when the cell's
@@ -880,6 +1126,49 @@ int grid_cell_record_present_check(int x, int y);
 int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
                                uint32_t corner, float out[3]);
 
+/* TerrainCellSurfaceNormalGet (FUN_00463590): fetch the four vertices of an
+ * indexed renderer quad, then combine its two triangle normals. The engine's
+ * layer reader is supplied by the renderer integration. */
+typedef int (*TerrainQuadVertexReadHook)(void* context, void* surface,
+                                        uint32_t cell_index,
+                                        float vertices[4][3]);
+void terrain_quad_vertex_source_set(void* surface, uint32_t width,
+                                    uint32_t height,
+                                    TerrainQuadVertexReadHook hook,
+                                    void* context);
+int terrain_cell_surface_normal_get(uint32_t x, uint32_t y, float out[3]);
+typedef int (*TerrainQuadNormalsEmitHook)(void* context, uint32_t cell_index,
+                                          const float normals[4][3]);
+typedef struct TerrainDirtyQuadNormalPass {
+    uint32_t width;
+    uint32_t height;
+    uint8_t* records; /* 8-byte indexed quad entries; flags at byte 4 */
+    uint32_t* dirty;
+    void* context;
+    TerrainQuadNormalsEmitHook emit_normals;
+} TerrainDirtyQuadNormalPass;
+void terrain_dirty_quad_normal_emit_pass(TerrainDirtyQuadNormalPass* pass);
+typedef struct TerrainCellQuadEmitHooks {
+    void* context;
+    int (*create_quad)(void* context, uint32_t cell_index,
+                       const uint32_t face_order[4]);
+    void (*texture_set)(void* context, int quad, uint32_t texture);
+    void (*visibility_set)(void* context, int quad, int visible);
+    int (*vertices_emit)(void* context, int quad,
+                         const float vertices[4][3], uint8_t flags);
+} TerrainCellQuadEmitHooks;
+typedef struct TerrainCellQuadEmitGrid {
+    uint32_t width;
+    uint32_t height;
+    uint8_t* records; /* indexed entries, 8-byte stride */
+    uint32_t* dirty;
+    uint32_t texture;
+    TerrainCellQuadEmitHooks hooks;
+} TerrainCellQuadEmitGrid;
+int terrain_cell_quad_geometry_emit(TerrainCellQuadEmitGrid* grid,
+                                    uint32_t x, uint32_t y,
+                                    const float vertices[4][3]);
+
 /* TerrainSurfaceTypeNameGet (FUN_00435170): the configured name for a
  * surface type, falling back to the missing-config literal when the
  * entry is null. The name table's owner (the surface-type config loader)
@@ -911,15 +1200,26 @@ uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
  * (15 columns, the grid-record convention) times sixteen slots, indexed
  * (row * 15 + column) * 16 + slot. The corpus's writers (the entity
  * create/teardown/stats-attach paths) are modeled without feeding these
- * tables, so both answer zero in port cases (documented deviation; the
- * exact count meanings are not established — findings 326). The corpus
- * indexes blindly; the port bounds-checks and answers zero outside the
- * tables. `grid_count_table_slot_peek` is a tests/diagnostics view over
+ * tables, so both answer zero in port cases (documented deviation; their
+ * runtime count meanings are not established — findings 326). The
+ * difference getter returns table 1 or table 1 minus table 0, matching the
+ * corpus. The corpus indexes blindly; the port bounds-checks and answers
+ * zero outside the tables. `grid_count_table_slot_peek` is a
+ * tests/diagnostics view over
  * the statics (the message_active_count precedent), returning -1 outside. */
 void grid_record_count_tables_clear(void);
 int grid_record_count_difference_get(int row, int column, int slot,
                                      int subtract_first_table);
+/* RenderConfigSixFieldCopyOut / CopyInOrClear (FUN_004370b0 / 004370d0):
+ * copy the opaque six-dword render snapshot, or clear it when input is NULL. */
+void render_config_six_field_copy_out(uint32_t out[6]);
+void render_config_six_field_copy_in_or_clear(const uint32_t in[6]);
+/* GridRecordCountDifferenceSum (FUN_00437100): sum all 16 slots for rows
+ * 0..14 of `type`, optionally skipping rows whose stats record has bit 8
+ * set at offset +0x144. The stats table is the guarded entity model. */
+int grid_record_count_difference_sum(int type, int skip_flagged_rows);
 uint32_t grid_record_count_get(int row, int column, int slot);
+/* Diagnostics table index: 0 is first, 1 is second. */
 int32_t grid_count_table_slot_peek(int row, int column, int slot, int table);
 
 /* Test hook staging a count-table slot (the corpus's table writers stay
@@ -986,6 +1286,13 @@ struct GameContext;
 void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
                                    int y);
 void coordinate_callback_dispatch(const void* coord_pair, int value);
+typedef int (*CoordinateEntityDispatchHook)(struct EntitySlot* entity,
+                                            const void* coordinate_pair,
+                                            int extra, void* context);
+void coordinate_entity_dispatch_hooks_install(
+    CoordinateEntityDispatchHook direct_callback,
+    CoordinateEntityDispatchHook mode_zero_callback,
+    CoordinateEntityDispatchHook mode_nonzero_callback, void* context);
 void coordinate_callback_dispatch_by_mode(const void* coord_pair,
                                           int mode);
 
@@ -1022,6 +1329,8 @@ uint32_t rng_thunk_draw15(void); /* FUN_004798a0: corpus RNG-thunk forward */
  * storage with set/peek hooks; out-of-range cells answer 0 (guarded
  * deviation: the corpus strides blindly). */
 int terrain_object_type_sfx_at_cell_get(const void* position_record);
+unsigned int level_predug_coordinate_count_get(void);
+int level_predug_coordinate_get(unsigned int index, int cell_xy_out[2]);
                                  /* FUN_0044ad80 */
 void terrain_sfx_grid_cell_set(int cell, int handle);  /* port hook */
 int  terrain_sfx_grid_cell_peek(int cell);             /* port hook */
@@ -1108,8 +1417,11 @@ int cell_variant_entry_match_check(const void* grid, uint32_t x1, uint32_t y1,
  * peek hooks read the modeled counter/last globals (DAT roles). */
 void* path_record_allocate_and_link(const uint32_t* coord_pair);
                                                 /* FUN_00409350 */
+void* tutorial_path_descriptor_create(const uint32_t* coord_pair);
+                                                /* FUN_00409300 */
 uint32_t path_record_count_peek(void);
 void* path_record_last_peek(void);
+void path_record_release_all(void); /* FUN_004099d0 */
 
 /* --- the cell route + neighbour pick band (2026-10-25) ----------------------
  * TerrainCellRouteAndOccupancyCheck (FUN_00431da0): may the entity move

@@ -11,13 +11,10 @@
  *    callback on the port's one-shot timer; the callback re-arms with a
  *    fresh draw, exactly like the shipped re-arm path. Disable drops the
  *    bit, cancels the scheduled callback, and runs one watchdog tick
- *    with argument 0 — which touches nothing, as shipped. Real
- *    CD-track playback does not exist on native hardware under this
- *    architecture: the track-start/stop helpers are documented no-op
- *    seams and the "track died" check is an exposed flag (the port-side
- *    analog of the corpus's CD-media status query), so the state
- *    machine and scheduler are the real, testable observables. The winapi
- *    reference build keeps the real behaviour.
+ *    with argument 0 — which touches nothing, as shipped. Track start,
+ *    stop, status, error text, and watchdog polling use installable device
+ *    hooks, so native builds can supply an MCI-like CD backend without
+ *    coupling this state machine to WinMM.
  *
  *  - SoundMinimumDistanceUpdateMode @ 0x4295f0: the minimum-distance
  *    mode. Mode 0 stores the supplied entity/context and applies the
@@ -30,10 +27,9 @@
  *    is flagged uncertain by finding 418, so this port models exactly
  *    the observable state machine.
  *
- *  The corpus routes both through unported platform/render helpers
- *  (the CD device layer, the renderer clip/listener setters, the
- *  audio min-distance push); those are inert seams here, and only the
- *  state values they would carry are tracked.
+ *  The corpus routes these through platform/render helpers. The CD path
+ *  now exposes command/status hooks; the renderer clip/listener setters
+ *  remain injectable seams, with the values they would carry tracked.
  */
 #ifndef LEGORRR_MEDIA_HPP
 #define LEGORRR_MEDIA_HPP
@@ -174,6 +170,34 @@ void media_min_distance_config_set(float cell_scale, float clip_base,
  * deviation). */
 int  media_cd_audio_playback_available(void); /* FUN_00488b90 */
 void media_cd_audio_open_set(int open);       /* port hook */
+typedef int (*MediaCdAudioInitHook)(void* context);
+void media_cd_audio_init_hook_set(MediaCdAudioInitHook hook, void* context);
+int media_cd_audio_device_state_update(int request);
+typedef int (*MediaCdAudioErrorTextHook)(void* context, int error_code,
+                                         char* output, int capacity);
+typedef int (*MediaCdAudioStatusHook)(void* context, char* mode, int capacity,
+                                      int* current_track, int* error_code);
+void media_cd_audio_error_hook_set(MediaCdAudioErrorTextHook hook,
+                                   void* context);
+void media_cd_audio_error_code_set(int error_code);
+const char* media_cd_audio_error_text_get(void); /* 0x00489260 */
+void media_cd_audio_status_hook_set(MediaCdAudioStatusHook hook,
+                                    void* context);
+int media_cd_audio_track_completion_poll(int track); /* 0x00489280 */
+typedef int (*MediaCdAudioCommandHook)(void* context, const char* command,
+                                       int argument, int* error_code);
+void media_cd_audio_command_hook_set(MediaCdAudioCommandHook hook,
+                                     void* context);
+int media_cd_audio_track_play_from(int track); /* 0x00489210 */
+int media_cd_audio_device_open(int initial_track); /* 0x00489330 */
+int media_cd_audio_stop_and_close(void); /* 0x004893a0 */
+void media_cd_audio_stop_and_close_if_active(void); /* 0x00488bf0 */
+typedef uint32_t (*MediaCdAudioTimeHook)(void* context);
+void media_cd_audio_time_hook_set(MediaCdAudioTimeHook hook, void* context);
+void media_cd_audio_watchdog_tick(int enabled); /* 0x00488c00 */
+typedef void (*MediaCdAudioCompletionHook)(void);
+void media_cd_audio_track_start(int track, int restart_when_done,
+                                MediaCdAudioCompletionHook callback);
 
 /* LoaderProgressCallbackSet (FUN_004802b0): stores the optional loader
  * progress callback pair (DAT_005343ac/DAT_005343b0, finding 118). The

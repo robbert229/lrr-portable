@@ -1,14 +1,51 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <math.h>
+#include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 #include "view.hpp"
 #include "record.hpp"
+#include "texture.hpp"
+#include "heap.hpp"
+#include "crt/crt.hpp"
+
+/* The reference uses the shared VC5 _rand entry. Other builds expose the
+ * same stream through the game RNG's mapped range helper. */
+#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
+#define VIEW_RANDOM_DRAW15() rand()
+#else
+extern int level_rand_u16(void);
+#define VIEW_RANDOM_DRAW15() level_rand_u16()
+#endif
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
+// GLOBAL: LEGORR 0x005560ac
 int   g_view_grid_edge   = 0;       /* DAT_005560ac (tile-count edge clamp) */
 int   g_view_test_blend  = 0;       /* test hook for the mode-3 EMA target */
+static ViewObjectLookupHook s_view_object_lookup_hook = NULL;
+static ViewTargetBlendHook s_view_target_blend_hook = NULL;
+static void* s_view_follow_target_context = NULL;
+
+void view_follow_target_hooks_set(ViewObjectLookupHook lookup,
+    ViewTargetBlendHook blend, void* context)
+{
+    s_view_object_lookup_hook = lookup;
+    s_view_target_blend_hook = blend;
+    s_view_follow_target_context = context;
+}
+
+/* CameraZoomStepAdjust reads the primary view/camera context directly from
+ * the corpus's active-view global. Its owner is the unported config setup. */
+// GLOBAL: LEGORR 0x005560e4
+static void* s_zoom_step_context;
+static TerrainPointPickCellCheckHook s_terrain_point_pick_hook;
+static void* s_terrain_point_pick_user;
+static ViewportPointDispatchHooks s_viewport_point_dispatch_hooks;
+static TexturedSceneDrawHooks s_textured_scene_draw_hooks;
 
 /* The corpus's normalize numerator is the .rdata dword 1.0 at 0x49e008
  * (objdump-verified fdivr operand in FUN_00401750); a named const static
@@ -23,6 +60,2066 @@ static const float s_normalize_unit = 1.0f;   /* DAT_0049e008, verified */
 // GLOBAL: LEGORR 0x0049e050
 static const float s_curve_unit = 1.0f;   /* DAT_0049e050, verified */
 
+static SceneOwnerLinkReleaseFn s_owner_link_interface_release;
+static SceneOwnerLinkReleaseFn s_owner_link_child_release;
+static ViewportDimensionsQueryFn s_viewport_dimensions_query;
+static void* s_viewport_dimensions_context;
+static ModelTransformReadHook s_model_transform_read_hook;
+static SceneTransformWriteHook s_scene_transform_write_hook;
+static void* s_model_transform_context;
+static CameraViewContextReleaseHook s_view_context_release_hook;
+static CameraViewContextFreeHook s_view_context_free_hook;
+static void* s_view_context_close_context;
+static AnimationObjectTransformApplyHook s_animation_orientation_hook;
+static RenderNodePositionApplyHook s_render_node_position_hook;
+static void* s_animation_transform_context;
+static SceneMatrixApplyHook s_scene_matrix_apply_hook;
+static void* s_scene_matrix_apply_context;
+static SceneObjectChainHooks s_scene_object_chain_hooks;
+static SceneObjectDisposeHooks s_scene_object_dispose_hooks;
+static SceneObjectBoundsHooks s_scene_object_bounds_hooks;
+static RenderPackedRgbaHooks s_render_packed_rgba_hooks;
+static RenderHierarchyFloat3Hooks s_render_hierarchy_float3_hooks;
+static SceneActionNameLookupHook s_scene_action_name_lookup_hook;
+static void* s_scene_action_name_lookup_context;
+static SceneActionInterfaceGetHook s_scene_action_interface_get_hook;
+static void* s_scene_action_interface_get_context;
+static VideoAspectRatioQueryHook s_video_aspect_ratio_query_hook;
+static void* s_video_aspect_ratio_query_context;
+static SceneContextHooks s_scene_context_hooks;
+static SceneActFrameScanHooks s_scene_act_frame_scan_hooks;
+static EntityVisualResourceLoadHooks s_entity_visual_resource_load_hooks;
+static DDiSceneAnimationHookRecordHooks s_ddiscene_animation_hook_record_hooks;
+static DDiSceneTimedHookDispatchHook s_ddiscene_timed_hook_dispatch_hook;
+static void* s_ddiscene_timed_hook_dispatch_context;
+static DDiSceneActFrameTimingGetHook s_ddiscene_act_frame_timing_get_hook;
+static void* s_ddiscene_act_frame_timing_context;
+static DDiSceneFrameRecordFindHooks s_ddiscene_frame_record_find_hooks;
+static DDiSceneLightCreateHooks s_ddiscene_light_create_hooks;
+static DDiSceneKindModeSetupHooks s_ddiscene_kind_mode_setup_hooks;
+static DDiSceneDrawBeginHook s_ddiscene_draw_begin_hook;
+static void* s_ddiscene_draw_begin_context;
+static SceneHierarchyRegisterHooks s_scene_hierarchy_register_hooks;
+static DDiSceneObjectDestroyHook s_ddiscene_object_destroy_hook;
+static void* s_ddiscene_object_destroy_context;
+static SceneChildSearchHooks s_scene_child_search_hooks;
+static SceneFormattedStringHooks s_scene_formatted_string_hooks;
+static RenderInterfacePairHooks s_render_interface_pair_hooks;
+static DDiSceneFrameUpdateHook s_ddiscene_frame_update_hook;
+static void* s_ddiscene_frame_update_context;
+static DDiScenePayloadReleaseHooks s_ddiscene_payload_release_hooks;
+static RendererRecordCloneHooks s_renderer_record_clone_hooks;
+static SceneObjectListApplyHook s_scene_object_list_apply_hook;
+static void* s_scene_object_list_apply_context;
+static uint32_t s_quad_mesh_render_records[10][8];
+static void* s_quad_mesh_render_objects[10];
+static void* s_quad_mesh_render_callbacks[10];
+static QuadMeshRenderHooks s_quad_mesh_render_hooks;
+static SinePhaseBlendState s_sine_phase_blend_state;
+static SinePhaseBlendHooks s_sine_phase_blend_hooks;
+static SceneFrameApplyHooks s_scene_frame_apply_hooks;
+static SceneRotationApplyHooks s_scene_rotation_apply_hooks;
+static SceneObjectRecordRetainHook s_scene_object_record_retain_hook;
+static void* s_scene_object_record_retain_context;
+static RenderQualityApplyHook s_render_quality_apply_hook;
+static void* s_render_quality_apply_context;
+
+void scene_object_bounds_hooks_set(const SceneObjectBoundsHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_scene_object_bounds_hooks, 0,
+               sizeof(s_scene_object_bounds_hooks));
+    }
+    else {
+        s_scene_object_bounds_hooks = *hooks;
+    }
+}
+
+/* SceneObjectBoundsUnion (FUN_00474f10): the root's bounds initialize the
+ * output, then each child contributes a componentwise min/max. The original
+ * obtains both the root and child collection through scene-interface calls;
+ * those accessors stay replaceable while the union behavior is local. */
+uint32_t scene_object_bounds_union(void* scene_object,
+                                  float bounds_min_max[6])
+{
+    SceneObjectBoundsHooks* hooks = &s_scene_object_bounds_hooks;
+    void* root;
+    const void* children;
+    uint32_t count = 0;
+    uint32_t i;
+    float child_bounds[6];
+
+    if (scene_object == NULL || bounds_min_max == NULL ||
+        hooks->root_get == NULL || hooks->bounds_query == NULL) {
+        return 0;
+    }
+    root = hooks->root_get(scene_object, hooks->context);
+    if (root == NULL) return 0;
+    hooks->bounds_query(root, bounds_min_max, hooks->context);
+    if (hooks->children_get == NULL || hooks->child_get == NULL) return 0;
+    children = hooks->children_get(root, &count, hooks->context);
+    if (children == NULL) return 0;
+
+    for (i = 0; i < count; i++) {
+        void* child = hooks->child_get(children, i, hooks->context);
+        int axis;
+        if (child == NULL) continue;
+        hooks->bounds_query(child, child_bounds, hooks->context);
+        for (axis = 0; axis < 3; axis++) {
+            if (child_bounds[axis] < bounds_min_max[axis]) {
+                bounds_min_max[axis] = child_bounds[axis];
+            }
+            if (child_bounds[axis + 3] > bounds_min_max[axis + 3]) {
+                bounds_min_max[axis + 3] = child_bounds[axis + 3];
+            }
+        }
+    }
+    return 0;
+}
+
+void render_packed_rgba_hooks_set(const RenderPackedRgbaHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_render_packed_rgba_hooks, 0,
+                              sizeof(s_render_packed_rgba_hooks));
+    else s_render_packed_rgba_hooks = *hooks;
+}
+
+/* RenderObjectSetPackedRgbaFromFloatChannels (FUN_004750b0): the source
+ * channels and render-object setter are engine-owned; the kind gate and
+ * packed channel order remain local. */
+void render_object_set_packed_rgba_from_float_channels(void* scene_object)
+{
+    RenderPackedRgbaHooks* hooks = &s_render_packed_rgba_hooks;
+    void* mesh;
+    void* render_object;
+    float channels[4];
+    uint32_t packed;
+    if (scene_object == NULL ||
+        *(uint32_t*)((char*)scene_object + 0x10) != 5u ||
+        hooks->channels_get == NULL || hooks->packed_set == NULL) return;
+    mesh = *(void**)((char*)scene_object + 0x0c);
+    if (mesh == NULL) return;
+    render_object = *(void**)((char*)mesh + 4);
+    if (render_object == NULL) return;
+    hooks->channels_get(scene_object, channels, hooks->context);
+    packed = ((uint32_t)(int)channels[0] << 24) |
+             ((uint32_t)(int)channels[1] << 16) |
+             ((uint32_t)(int)channels[2] << 8) |
+             (uint32_t)(int)channels[3];
+    hooks->packed_set(render_object, packed, hooks->context);
+}
+
+void render_hierarchy_float3_hooks_set(
+    const RenderHierarchyFloat3Hooks* hooks)
+{
+    if (hooks == NULL) memset(&s_render_hierarchy_float3_hooks, 0,
+                              sizeof(s_render_hierarchy_float3_hooks));
+    else s_render_hierarchy_float3_hooks = *hooks;
+}
+
+/* RenderObjectHierarchyFloat3Set (FUN_00474e90): write the mesh-backed
+ * record directly, or dispatch to the scene interface and each child. */
+uint32_t render_object_hierarchy_float3_set(void* scene_object,
+                                            const float xyz[3])
+{
+    RenderHierarchyFloat3Hooks* hooks = &s_render_hierarchy_float3_hooks;
+    void* mesh;
+    void* mesh_record;
+    void* scene_interface;
+    const void* children;
+    uint32_t count = 0;
+    uint32_t i;
+    if (scene_object == NULL || xyz == NULL) return 0;
+    memcpy(&mesh, (char*)scene_object + 0x0c, sizeof(mesh));
+    if (mesh == NULL) return 0;
+    memcpy(&mesh_record, (char*)mesh + 0x0c, sizeof(mesh_record));
+    if (mesh_record != NULL) {
+        if (hooks->mesh_record_set != NULL) {
+            hooks->mesh_record_set(mesh_record, xyz, hooks->context);
+        }
+        return 0;
+    }
+    memcpy(&scene_interface, (char*)mesh + 8, sizeof(scene_interface));
+    if (scene_interface == NULL) return 0;
+    if (hooks->scene_interface_set != NULL) {
+        hooks->scene_interface_set(scene_interface, xyz, hooks->context);
+    }
+    if (hooks->children_get == NULL || hooks->child_get == NULL ||
+        hooks->child_interface_set == NULL) return 0;
+    children = hooks->children_get(scene_interface, &count, hooks->context);
+    if (children == NULL) return 0;
+    for (i = 0; i < count; ++i) {
+        void* child = hooks->child_get(children, i, hooks->context);
+        if (child != NULL) {
+            hooks->child_interface_set(child, xyz, hooks->context);
+        }
+    }
+    return 0;
+}
+
+void scene_action_name_lookup_hook_set(SceneActionNameLookupHook hook,
+                                       void* context)
+{
+    s_scene_action_name_lookup_hook = hook;
+    s_scene_action_name_lookup_context = context;
+}
+
+/* SceneActionNamePresent (FUN_00473340): only kind-4 scene objects expose
+ * the action-name lookup path. The backend callback models the scene's
+ * action search while preserving that type gate and boolean result. */
+uint32_t scene_action_name_present(void* scene_object, void* action_name)
+{
+    if (scene_object == NULL || *(uint32_t*)((char*)scene_object + 0x10) != 4u ||
+        s_scene_action_name_lookup_hook == NULL) {
+        return 0;
+    }
+    return s_scene_action_name_lookup_hook(
+        scene_object, action_name, s_scene_action_name_lookup_context) != 0;
+}
+
+void scene_act_frame_scan_hooks_set(const SceneActFrameScanHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_scene_act_frame_scan_hooks, 0,
+                              sizeof(s_scene_act_frame_scan_hooks));
+    else s_scene_act_frame_scan_hooks = *hooks;
+}
+
+static int scene_act_frame_name_match(const char* name)
+{
+    static const char prefix[] = "ActFrame_";
+    unsigned int i;
+    if (name == NULL) return 0;
+    for (i = 0; i < 8; ++i) {
+        int a = (unsigned char)name[i];
+        int b = (unsigned char)prefix[i];
+        if (a == 0) return 0;
+        if (a >= 'a' && a <= 'z') a -= ('a' - 'A');
+        if (b >= 'a' && b <= 'z') b -= ('a' - 'A');
+        if (a != b) return 0;
+    }
+    return 1;
+}
+
+/* SceneActionRecordActFrameScan (FUN_00475a70): enumerate both animation
+ * interfaces, retaining action-name order and optionally filling parallel
+ * name/value arrays. The caller's count-only pass uses capacity zero. */
+unsigned int scene_action_record_act_frame_scan(void* scene_object,
+                                                const char** names,
+                                                int* values,
+                                                unsigned int capacity)
+{
+    unsigned int slot, found = 0;
+    SceneActFrameScanHooks* hooks = &s_scene_act_frame_scan_hooks;
+    if (scene_object == NULL || hooks->animation_interface_get == NULL ||
+        hooks->action_count_get == NULL || hooks->action_name_get == NULL)
+        return 0;
+    for (slot = 0; slot < 2; ++slot) {
+        void* animation = hooks->animation_interface_get(scene_object, slot,
+                                                         hooks->context);
+        unsigned int count, index;
+        if (animation == NULL) continue;
+        count = hooks->action_count_get(animation, hooks->context);
+        for (index = 0; index < count; ++index) {
+            const char* name = hooks->action_name_get(animation, index,
+                                                       hooks->context);
+            if (scene_act_frame_name_match(name)) {
+                if (found < capacity) {
+                    int value = 0;
+                    if (hooks->action_value_get != NULL)
+                        hooks->action_value_get(animation, index, &value,
+                                                hooks->context);
+                    if (names != NULL) names[found] = name;
+                    if (values != NULL) values[found] = value;
+                }
+                ++found;
+            }
+        }
+    }
+    return found;
+}
+
+void entity_visual_resource_load_hooks_set(
+    const EntityVisualResourceLoadHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_entity_visual_resource_load_hooks, 0,
+                              sizeof(s_entity_visual_resource_load_hooks));
+    else s_entity_visual_resource_load_hooks = *hooks;
+}
+
+/* EntityVisualResourceLoad (FUN_00473690): resolve the resource key, reuse
+ * an existing cache entry where available, otherwise create one, then run
+ * common preparation and the kind-four act-frame build before attachment. */
+void* entity_visual_resource_load(void* scene_object)
+{
+    EntityVisualResourceLoadHooks* hooks =
+        &s_entity_visual_resource_load_hooks;
+    int kind;
+    const char* name;
+    void* resource = NULL;
+    if (scene_object == NULL || hooks->kind_get == NULL ||
+        hooks->name_get == NULL) return NULL;
+    kind = hooks->kind_get(scene_object, hooks->context);
+    name = hooks->name_get(scene_object, hooks->context);
+    if (name != NULL && hooks->resource_lookup != NULL)
+        resource = hooks->resource_lookup(name, hooks->context);
+    if (resource == NULL && hooks->resource_create != NULL)
+        resource = hooks->resource_create(scene_object, name, hooks->context);
+    if (resource == NULL) return NULL;
+    if (hooks->resource_prepare != NULL)
+        hooks->resource_prepare(resource, scene_object, hooks->context);
+    if (kind == 4 && hooks->animation_build != NULL)
+        hooks->animation_build(resource, scene_object, hooks->context);
+    if (hooks->resource_attach != NULL)
+        hooks->resource_attach(scene_object, resource, hooks->context);
+    return resource;
+}
+
+void scene_action_interface_get_hook_set(SceneActionInterfaceGetHook hook,
+                                         void* context)
+{
+    s_scene_action_interface_get_hook = hook;
+    s_scene_action_interface_get_context = context;
+}
+
+void video_aspect_ratio_query_hook_set(VideoAspectRatioQueryHook hook,
+                                       void* context)
+{
+    s_video_aspect_ratio_query_hook = hook;
+    s_video_aspect_ratio_query_context = context;
+}
+
+float video_object_aspect_ratio_get(void* video_object)
+{
+    if (video_object == NULL || s_video_aspect_ratio_query_hook == NULL) {
+        return 0.0f;
+    }
+    return s_video_aspect_ratio_query_hook(video_object,
+                                           s_video_aspect_ratio_query_context);
+}
+
+void scene_context_hooks_set(const SceneContextHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_scene_context_hooks, 0, sizeof(s_scene_context_hooks));
+    }
+    else {
+        s_scene_context_hooks = *hooks;
+    }
+}
+
+void* ddiscene_context_get(void* scene_object)
+{
+    void* owner_interface = NULL;
+    void* result;
+    SceneContextHooks* const hooks = &s_scene_context_hooks;
+    if (scene_object == NULL || scene_object == hooks->shared_scene ||
+        hooks->owner_interface_get == NULL ||
+        hooks->owner_link_ensure == NULL) {
+        return NULL;
+    }
+    if (!hooks->owner_interface_get(scene_object, &owner_interface,
+                                    hooks->context) ||
+        owner_interface == NULL) {
+        return NULL;
+    }
+    result = scene_object_owner_link_ensure(owner_interface);
+    if (hooks->interface_release != NULL) {
+        hooks->interface_release(owner_interface, hooks->context);
+    }
+    return result;
+}
+
+/* SceneObjectOwnerLinkEnsure (FUN_00475880): return the existing owner-link
+ * record when present, otherwise ask the scene owner to create and attach it. */
+void* scene_object_owner_link_ensure(void* owner_interface)
+{
+    if (owner_interface == NULL ||
+        s_scene_context_hooks.owner_link_ensure == NULL) {
+        return NULL;
+    }
+    return s_scene_context_hooks.owner_link_ensure(
+        owner_interface, s_scene_context_hooks.context);
+}
+
+void ddiscene_animation_hook_record_hooks_set(
+    const DDiSceneAnimationHookRecordHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_ddiscene_animation_hook_record_hooks, 0,
+               sizeof(s_ddiscene_animation_hook_record_hooks));
+    }
+    else {
+        s_ddiscene_animation_hook_record_hooks = *hooks;
+    }
+}
+
+/* DDiSceneAnimationHookCreate (FUN_00475f70): allocate the ten-word record
+ * once, update only nonzero/non-null arguments, and replace its owned name. */
+void ddiscene_animation_hook_create(void* scene_object, int callback,
+                                    const char* name,
+                                    const uint32_t* value_0c, int value_08,
+                                    const uint32_t* value_10,
+                                    const uint32_t* value_14,
+                                    int value_18, int value_24,
+                                    const uint32_t* value_20)
+{
+    DDiSceneAnimationHookRecord* record;
+    DDiSceneAnimationHookRecordHooks* hooks =
+        &s_ddiscene_animation_hook_record_hooks;
+    if (scene_object == NULL || hooks->record_get == NULL ||
+        hooks->record_set == NULL) return;
+    record = hooks->record_get(scene_object, hooks->context);
+    if (record == NULL) {
+        record = (DDiSceneAnimationHookRecord*)engine_heap_alloc(
+            (long)sizeof(DDiSceneAnimationHookRecord));
+        if (record == NULL) return;
+        memset(record, 0, sizeof(*record));
+        record->scene_object = scene_object;
+        if (value_0c != NULL) record->value_0c = *value_0c;
+        record->value_08 = value_08;
+        if (value_10 != NULL) record->value_10 = *value_10;
+        if (value_14 != NULL) record->value_14 = *value_14;
+        record->value_18 = value_18;
+        record->callback = callback;
+        if (value_20 != NULL) record->value_20 = *value_20;
+        record->value_24 = value_24;
+        hooks->record_set(scene_object, record, hooks->context);
+    }
+    else {
+        if (callback != 0) record->callback = callback;
+        if (name != NULL && record->name != NULL) {
+            engine_heap_free(record->name);
+            record->name = NULL;
+        }
+        if (value_0c != NULL) record->value_0c = *value_0c;
+        if (value_08 != 0) record->value_08 = value_08;
+        if (value_10 != NULL) record->value_10 = *value_10;
+        if (value_14 != NULL) record->value_14 = *value_14;
+        if (value_18 != 0) record->value_18 = value_18;
+        if (value_24 != 0) record->value_24 = value_24;
+        if (value_20 != NULL) record->value_20 = *value_20;
+    }
+    if (name != NULL) {
+        const size_t length = strlen(name);
+        record->name = (char*)engine_heap_alloc((long)(length + 1u));
+        if (record->name != NULL) memcpy(record->name, name, length + 1u);
+    }
+}
+
+void ddiscene_timed_hook_dispatch_hook_set(
+    DDiSceneTimedHookDispatchHook hook, void* context)
+{
+    s_ddiscene_timed_hook_dispatch_hook = hook;
+    s_ddiscene_timed_hook_dispatch_context = context;
+}
+
+/* DDiSceneTimedHookDispatch (FUN_004897e0): the timing record's renderer
+ * vtables own the action and child-interface calls. */
+void ddiscene_timed_hook_dispatch(void* hook_record, float time,
+                                  void* output)
+{
+    if (hook_record == NULL || s_ddiscene_timed_hook_dispatch_hook == NULL) {
+        return;
+    }
+    s_ddiscene_timed_hook_dispatch_hook(
+        hook_record, time, output, s_ddiscene_timed_hook_dispatch_context);
+}
+
+void ddiscene_act_frame_timing_get_hook_set(
+    DDiSceneActFrameTimingGetHook hook, void* context)
+{
+    s_ddiscene_act_frame_timing_get_hook = hook;
+    s_ddiscene_act_frame_timing_context = context;
+}
+
+/* DDiSceneApplyActFrameTiming (FUN_00475300): only records with the pending
+ * timing bit dispatch their current action frame's timed hook. */
+void ddiscene_apply_act_frame_timing(void* scene_object)
+{
+    void* hook_record = NULL;
+    float time = 0.0f;
+    if (scene_object == NULL ||
+        (*(uint32_t*)((char*)scene_object + 0x14) & 0x20u) == 0u ||
+        s_ddiscene_act_frame_timing_get_hook == NULL) {
+        return;
+    }
+    if (s_ddiscene_act_frame_timing_get_hook(
+            scene_object, &hook_record, &time,
+            s_ddiscene_act_frame_timing_context) != 0) {
+        ddiscene_timed_hook_dispatch(hook_record, time, NULL);
+    }
+}
+
+void ddiscene_frame_record_find_hooks_set(
+    const DDiSceneFrameRecordFindHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_ddiscene_frame_record_find_hooks, 0,
+               sizeof(s_ddiscene_frame_record_find_hooks));
+    }
+    else {
+        s_ddiscene_frame_record_find_hooks = *hooks;
+    }
+}
+
+static int ddiscene_ascii_case_equal(const char* first, const char* second)
+{
+    if (first == NULL || second == NULL) return 0;
+    while (*first != '\0' && *second != '\0') {
+        if (tolower((unsigned char)*first) !=
+            tolower((unsigned char)*second)) return 0;
+        ++first;
+        ++second;
+    }
+    return *first == '\0' && *second == '\0';
+}
+
+/* DDiSceneFrameRecordFind (FUN_00475e40): search the selected action-frame
+ * collection for the case-insensitive `ActFrame_<name>` record. */
+void* ddiscene_frame_record_find(void* action_interface,
+                                 const char* action_name, int selector)
+{
+    char wanted[1024];
+    static const char prefix[] = "ActFrame_";
+    size_t action_length;
+    size_t prefix_length = sizeof(prefix) - 1u;
+    unsigned int count;
+    unsigned int index;
+    DDiSceneFrameRecordFindHooks* const hooks =
+        &s_ddiscene_frame_record_find_hooks;
+    if (action_interface == NULL || action_name == NULL ||
+        hooks->count_get == NULL || hooks->record_get == NULL ||
+        hooks->record_name_get == NULL) return NULL;
+    action_length = strlen(action_name);
+    if (prefix_length + action_length >= sizeof(wanted)) return NULL;
+    memcpy(wanted, prefix, prefix_length);
+    memcpy(wanted + prefix_length, action_name, action_length + 1u);
+    count = hooks->count_get(action_interface, selector, hooks->context);
+    if (count > 4096u) count = 4096u;
+    for (index = 0; index < count; ++index) {
+        void* record = hooks->record_get(action_interface, selector, index,
+                                         hooks->context);
+        const char* name = record != NULL
+            ? hooks->record_name_get(record, hooks->context) : NULL;
+        if (ddiscene_ascii_case_equal(name, wanted)) {
+            if (hooks->record_retain != NULL)
+                hooks->record_retain(record, hooks->context);
+            return record;
+        }
+    }
+    return NULL;
+}
+
+void ddiscene_light_create_hooks_set(const DDiSceneLightCreateHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_ddiscene_light_create_hooks, 0,
+               sizeof(s_ddiscene_light_create_hooks));
+    }
+    else {
+        s_ddiscene_light_create_hooks = *hooks;
+    }
+}
+
+/* DDiSceneLightCreate (FUN_004734f0): create the scene wrapper as kind 5,
+ * ask the renderer to create/configure the light, and attach its animation
+ * hook only after the renderer accepted the light. */
+void* ddiscene_light_create(void* owner, uint32_t value_a,
+                            uint32_t value_b, uint32_t value_c,
+                            uint32_t value_d)
+{
+    void* record;
+    void* light_interface = NULL;
+    DDiSceneLightCreateHooks* const hooks = &s_ddiscene_light_create_hooks;
+    if (hooks->record_create == NULL || hooks->record_kind_set == NULL ||
+        hooks->light_create == NULL) return NULL;
+    record = hooks->record_create(owner, hooks->context);
+    if (record == NULL) return NULL;
+    hooks->record_kind_set(record, 5u, hooks->context);
+    if (hooks->light_create(record, value_a, value_b, value_c, value_d,
+                            &light_interface, hooks->context) == 0) {
+        if (hooks->light_configure != NULL)
+            hooks->light_configure(record, value_b, hooks->context);
+        if (hooks->animation_hook_set != NULL)
+            hooks->animation_hook_set(record, light_interface,
+                                      hooks->context);
+    }
+    return record;
+}
+
+void ddiscene_kind_mode_setup_hooks_set(
+    const DDiSceneKindModeSetupHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_ddiscene_kind_mode_setup_hooks, 0,
+               sizeof(s_ddiscene_kind_mode_setup_hooks));
+    }
+    else {
+        s_ddiscene_kind_mode_setup_hooks = *hooks;
+    }
+}
+
+/* DDiSceneObjectKindModeSetup (FUN_00473560): create kind-one scene state;
+ * modes 2/3/4 map to renderer resources 0x2000/0x3000/0x2800, while other
+ * modes enter the legacy interface path. */
+void* ddiscene_object_kind_mode_setup(void* owner, int mode)
+{
+    unsigned int resource_kind;
+    void* record;
+    void* resource;
+    DDiSceneKindModeSetupHooks* const hooks =
+        &s_ddiscene_kind_mode_setup_hooks;
+    if (hooks->record_create == NULL || hooks->record_kind_set == NULL)
+        return NULL;
+    record = hooks->record_create(owner, hooks->context);
+    if (record == NULL) return NULL;
+    hooks->record_kind_set(record, 1u, hooks->context);
+    if (mode == 2) resource_kind = 0x2000u;
+    else if (mode == 3) resource_kind = 0x3000u;
+    else if (mode == 4) resource_kind = 0x2800u;
+    else {
+        if (hooks->legacy_mode_setup != NULL)
+            hooks->legacy_mode_setup(record, mode, hooks->context);
+        return record;
+    }
+    if (hooks->mode_resource_create != NULL &&
+        hooks->animation_resource_set != NULL) {
+        resource = hooks->mode_resource_create(record, resource_kind,
+                                               hooks->context);
+        hooks->animation_resource_set(record, resource, hooks->context);
+    }
+    return record;
+}
+
+void ddiscene_draw_begin_hook_set(DDiSceneDrawBeginHook hook, void* context)
+{
+    s_ddiscene_draw_begin_hook = hook;
+    s_ddiscene_draw_begin_context = context;
+}
+
+/* DDiSceneDrawBegin (FUN_00477010): the device's draw-state/query sequence
+ * is owned by the installed renderer interface. */
+void ddiscene_draw_begin(void* render_object, int begin)
+{
+    if (render_object == NULL || s_ddiscene_draw_begin_hook == NULL) return;
+    s_ddiscene_draw_begin_hook(render_object, begin,
+                               s_ddiscene_draw_begin_context);
+}
+
+void scene_hierarchy_register_hooks_set(
+    const SceneHierarchyRegisterHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_scene_hierarchy_register_hooks, 0,
+               sizeof(s_scene_hierarchy_register_hooks));
+    }
+    else {
+        s_scene_hierarchy_register_hooks = *hooks;
+    }
+}
+
+static void scene_hierarchy_register_node(unsigned short* next_index,
+                                          void* root, void* node,
+                                          unsigned int depth)
+{
+    SceneHierarchyNodeInfo info;
+    SceneHierarchyRegisterHooks* const hooks =
+        &s_scene_hierarchy_register_hooks;
+    char name[1028];
+    char digits[10];
+    size_t i;
+    size_t name_length;
+    unsigned int digit_count;
+    unsigned int node_number;
+    void* child;
+    if (next_index == NULL || node == NULL || depth > 128u ||
+        hooks->node_inspect == NULL) return;
+    memset(&info, 0, sizeof(info));
+    if (!hooks->node_inspect(node, &info, hooks->context)) return;
+    if (info.scene_interface != NULL) {
+        if ((info.flags & 4u) != 0u &&
+            hooks->identity_transform_set != NULL) {
+            hooks->identity_transform_set(info.scene_interface,
+                                           hooks->context);
+        }
+        if (hooks->interface_store != NULL) {
+            hooks->interface_store(root, *next_index, info.scene_interface,
+                                   hooks->context);
+        }
+        if (hooks->node_index_set != NULL) {
+            hooks->node_index_set(node, *next_index, hooks->context);
+        }
+        if (*next_index != 0xffffu) ++*next_index;
+        if (info.display_name != NULL && hooks->interface_name_set != NULL) {
+            name_length = strlen(info.display_name);
+            if (name_length > sizeof(name) - 8u)
+                name_length = sizeof(name) - 8u;
+            memcpy(name, info.display_name, name_length);
+            name[name_length++] = '_';
+            node_number = (unsigned int)info.node_id;
+            digit_count = 0u;
+            do {
+                digits[digit_count++] = (char)('0' + node_number % 10u);
+                node_number /= 10u;
+            } while (node_number != 0u && digit_count < sizeof(digits));
+            if (digit_count == 1u) digits[digit_count++] = '0';
+            while (digit_count != 0u && name_length < sizeof(name) - 1u)
+                name[name_length++] = digits[--digit_count];
+            name[name_length] = '\0';
+            for (i = 0; name[i] != '\0'; ++i) {
+                if (!isalnum((unsigned char)name[i]) && name[i] != '_')
+                    name[i] = '_';
+            }
+            hooks->interface_name_set(info.scene_interface, name,
+                                      hooks->context);
+        }
+    }
+    child = info.first_child;
+    while (child != NULL) {
+        scene_hierarchy_register_node(next_index, root, child, depth + 1u);
+        if (hooks->next_sibling == NULL) break;
+        child = hooks->next_sibling(child, hooks->context);
+    }
+}
+
+/* SceneHierarchyInterfaceRegisterRecursive (FUN_004887c0): register each
+ * node interface in depth-first order, apply identity transforms to flagged
+ * nodes, assign sequential ids, and publish sanitized interface names. */
+void scene_hierarchy_interface_register_recursive(unsigned short* next_index,
+                                                  void* root, void* node)
+{
+    scene_hierarchy_register_node(next_index, root, node, 0u);
+}
+
+void ddiscene_object_destroy_hook_set(DDiSceneObjectDestroyHook hook,
+                                      void* context)
+{
+    s_ddiscene_object_destroy_hook = hook;
+    s_ddiscene_object_destroy_context = context;
+}
+
+/* DDiSceneObjectDestroy (FUN_00472a40) delegates to the mode-bearing
+ * destructor with mode zero. */
+void ddiscene_object_destroy(void* scene_object)
+{
+    ddiscene_object_destroy_with_mode(scene_object, 0);
+}
+
+/* DDiSceneObjectDestroy (FUN_00472a50): renderer-specific vtable resources
+ * are released by the installed destructor callback. */
+void ddiscene_object_destroy_with_mode(void* scene_object, int mode)
+{
+    if (scene_object == NULL || s_ddiscene_object_destroy_hook == NULL) return;
+    s_ddiscene_object_destroy_hook(scene_object, mode,
+                                   s_ddiscene_object_destroy_context);
+}
+
+static void* ddiscene_object_timing_interface_get(void* scene_object)
+{
+    uint32_t kind;
+    if (scene_object == NULL) return NULL;
+    kind = *(uint32_t*)((char*)scene_object + 0x10);
+    if (kind == 3u) return *(void**)((char*)scene_object + 4);
+    if (kind == 4u && s_scene_action_interface_get_hook != NULL) {
+        void* action_slot = *(void**)((char*)scene_object + 0x0c);
+        void* action_name = action_slot != NULL ? *(void**)action_slot : NULL;
+        return s_scene_action_interface_get_hook(
+            scene_object, action_name, 0,
+            s_scene_action_interface_get_context);
+    }
+    return NULL;
+}
+
+/* DDiSceneObjectLengthGet (FUN_00475390): type 4 resolves its selected
+ * action by the object's name slot; type 3 already carries a frame pointer. */
+float ddiscene_object_length_get(void* scene_object)
+{
+    void* interface_object =
+        ddiscene_object_timing_interface_get(scene_object);
+    return interface_object != NULL ?
+        ddiscene_animation_duration_get(interface_object) : 0.0f;
+}
+
+/* DDiSceneObjectFramePositionGet (FUN_004753f0): follow the same type
+ * dispatch, then read the current action record's +0x0c field. */
+uint32_t ddiscene_object_frame_position_get(void* scene_object)
+{
+    void* interface_object =
+        ddiscene_object_timing_interface_get(scene_object);
+    return interface_object != NULL ?
+        ddiscene_action_record_field_0c_get(interface_object) : 0u;
+}
+
+/* DDiSceneAnimationCallbacksSet (FUN_00475c00): allocate the four-callback
+ * record once, then replace only non-null callback arguments. Native pointer
+ * width keeps the record usable in the 64-bit reconstruction. */
+void ddiscene_animation_callbacks_set(void* scene_object,
+                                      void* callback_a, void* callback_b,
+                                      void* callback_c, void* callback_d)
+{
+    void** callbacks = NULL;
+    void* values[4];
+    unsigned int i;
+    if (scene_object == NULL) return;
+    memcpy(&callbacks, (char*)scene_object + 0x0c, sizeof(callbacks));
+    if (callbacks == NULL) {
+        callbacks = (void**)engine_heap_alloc((long)(4 * sizeof(void*)));
+        if (callbacks == NULL) return;
+        memset(callbacks, 0, 4 * sizeof(void*));
+        memcpy((char*)scene_object + 0x0c, &callbacks, sizeof(callbacks));
+    }
+    values[0] = callback_a;
+    values[1] = callback_b;
+    values[2] = callback_c;
+    values[3] = callback_d;
+    for (i = 0; i < 4; ++i) {
+        if (values[i] != NULL) callbacks[i] = values[i];
+    }
+}
+
+void ddiscene_payload_release_hooks_set(
+    const DDiScenePayloadReleaseHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_ddiscene_payload_release_hooks, 0,
+                              sizeof(s_ddiscene_payload_release_hooks));
+    else s_ddiscene_payload_release_hooks = *hooks;
+}
+
+/* DDiScenePayloadRelease (FUN_00475c80): release kind-specific resources,
+ * free the payload, and clear the scene's +0x0c slot. */
+void ddiscene_payload_release(void* scene_object)
+{
+    void* payload;
+    void* owner;
+    uint32_t kind;
+    void** fields;
+    if (scene_object == NULL) return;
+    memcpy(&payload, (char*)scene_object + 0x0c, sizeof(payload));
+    if (payload == NULL) return;
+    memcpy(&kind, (char*)scene_object + 0x10, sizeof(kind));
+    memcpy(&owner, (char*)scene_object + 4, sizeof(owner));
+    fields = (void**)payload;
+    if (kind == 4u) {
+        if (fields[0] != NULL) engine_heap_free(fields[0]);
+    }
+    else if (kind == 5u) {
+        if (fields[1] != NULL &&
+            s_ddiscene_payload_release_hooks.interface_release != NULL) {
+            s_ddiscene_payload_release_hooks.interface_release(
+                fields[1], s_ddiscene_payload_release_hooks.context);
+        }
+    }
+    else if (kind == 1u && fields[2] != NULL) {
+        if (s_ddiscene_payload_release_hooks.kind1_detach != NULL) {
+            s_ddiscene_payload_release_hooks.kind1_detach(
+                owner, fields[2], s_ddiscene_payload_release_hooks.context);
+        }
+        if (s_ddiscene_payload_release_hooks.interface_release != NULL) {
+            s_ddiscene_payload_release_hooks.interface_release(
+                fields[2], s_ddiscene_payload_release_hooks.context);
+        }
+    }
+    else if (kind == 8u && fields[3] != NULL &&
+             s_ddiscene_payload_release_hooks.kind8_detach != NULL) {
+        s_ddiscene_payload_release_hooks.kind8_detach(
+            fields[3], owner, s_ddiscene_payload_release_hooks.context);
+    }
+    engine_heap_free(payload);
+    payload = NULL;
+    memcpy((char*)scene_object + 0x0c, &payload, sizeof(payload));
+}
+
+/* DDiSceneResourceNameResolve (FUN_00476770): find the DDiScene_ marker,
+ * skip non-alpha bytes in the suffix, and return an owned copy. The corpus
+ * uses integer 1 when the marker is absent; retain that sentinel. */
+char* ddiscene_resource_name_resolve(const char* name)
+{
+    static const char prefix[] = "DDiScene_";
+    const char* suffix;
+    size_t length;
+    char* resolved;
+    if (name == NULL) return (char*)1;
+    suffix = strstr(name, prefix);
+    if (suffix == NULL) return (char*)1;
+    suffix += sizeof(prefix) - 1;
+    while (*suffix != '\0' && !isalpha((unsigned char)*suffix)) ++suffix;
+    if (*suffix == '\0') return (char*)1;
+    length = strlen(suffix);
+    resolved = (char*)engine_heap_alloc((long)(length + 1));
+    if (resolved == NULL) return (char*)1;
+    memcpy(resolved, suffix, length + 1);
+    return resolved;
+}
+
+void ddiscene_frame_update_hook_set(DDiSceneFrameUpdateHook hook,
+                                    void* context)
+{
+    s_ddiscene_frame_update_hook = hook;
+    s_ddiscene_frame_update_context = context;
+}
+
+/* DDiSceneFrameUpdateAndCallbacks (FUN_00475140): enter the registered
+ * frame/action update after the scene wrapper has resolved its active time. */
+int ddiscene_frame_update_and_callbacks(void* scene_object, float time)
+{
+    if (scene_object == NULL || s_ddiscene_frame_update_hook == NULL) {
+        return 0;
+    }
+    s_ddiscene_frame_update_hook(scene_object, time,
+                                 s_ddiscene_frame_update_context);
+    return 1;
+}
+
+/* DDiSceneAdvanceByTime (FUN_00475120): advance from the scene's current
+ * object length by the supplied delta, then enter the frame-update path. */
+void ddiscene_advance_by_time(void* scene_object, float delta)
+{
+    float current;
+    if (scene_object == NULL || s_ddiscene_frame_update_hook == NULL) return;
+    current = ddiscene_object_length_get(scene_object);
+    ddiscene_frame_update_and_callbacks(scene_object, current + delta);
+}
+
+/* TypedChildResourceScalarGet (FUN_004757f0): only type-4 scene objects with
+ * a non-null resource name can resolve a child property. */
+float typed_child_resource_scalar_get(void* scene_object)
+{
+    void* action_slot;
+    void* action_name;
+    void* interface_object;
+    if (scene_object == NULL ||
+        *(uint32_t*)((char*)scene_object + 0x10) != 4u) {
+        return 0.0f;
+    }
+    action_slot = *(void**)((char*)scene_object + 0x0c);
+    if (action_slot == NULL) return 0.0f;
+    action_name = *(void**)action_slot;
+    if (action_name == NULL) return 0.0f;
+    interface_object = ddiscene_object_timing_interface_get(scene_object);
+    return interface_object != NULL ?
+        scene_property_float_at14_get(interface_object) : 0.0f;
+}
+
+void scene_child_search_hooks_set(const SceneChildSearchHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_scene_child_search_hooks, 0,
+               sizeof(s_scene_child_search_hooks));
+    }
+    else {
+        s_scene_child_search_hooks = *hooks;
+    }
+}
+
+/* SceneObjectFirstNonKind6ChildGet (FUN_00475830): walk the child-interface
+ * chain until its owner property has a kind other than six. */
+void* scene_object_first_non_kind6_child_get(void* child_interface)
+{
+    SceneChildSearchHooks* hooks = &s_scene_child_search_hooks;
+    void* current = child_interface;
+    uint32_t guard = 0;
+    while (current != NULL && guard < 4096u) {
+        void* property;
+        void* next;
+        if (hooks->property_get == NULL || hooks->next_get == NULL) return NULL;
+        property = hooks->property_get(current, hooks->context);
+        if (property != NULL && *(uint32_t*)((char*)property + 0x10) != 6u) {
+            return property;
+        }
+        next = hooks->next_get(current, hooks->context);
+        if (next != NULL && hooks->retain != NULL) {
+            hooks->retain(next, hooks->context);
+        }
+        current = next;
+        ++guard;
+    }
+    return NULL;
+}
+
+void scene_formatted_string_hooks_set(const SceneFormattedStringHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_scene_formatted_string_hooks, 0,
+               sizeof(s_scene_formatted_string_hooks));
+    }
+    else {
+        s_scene_formatted_string_hooks = *hooks;
+    }
+}
+
+/* SceneObjectSetFormattedString (FUN_00476270): format into a bounded stack
+ * scratch buffer, copy into engine-owned storage, set the interface string,
+ * then publish the animation hook in the recovered order. */
+void scene_object_set_formatted_string(void* scene_object,
+                                       const char* format, ...)
+{
+    char local[1024];
+    char* owned;
+    size_t length;
+    va_list arguments;
+    if (scene_object == NULL || format == NULL) return;
+    va_start(arguments, format);
+#if defined(_MSC_VER)
+    _vsnprintf(local, sizeof(local) - 1, format, arguments);
+#else
+    vsnprintf(local, sizeof(local) - 1, format, arguments);
+#endif
+    va_end(arguments);
+    local[sizeof(local) - 1] = '\0';
+    length = strlen(local);
+    owned = (char*)engine_heap_alloc((long)(length + 1));
+    if (owned == NULL) return;
+    memcpy(owned, local, length + 1);
+    if (s_scene_formatted_string_hooks.string_set != NULL) {
+        s_scene_formatted_string_hooks.string_set(
+            scene_object, owned, s_scene_formatted_string_hooks.context);
+    }
+    if (s_scene_formatted_string_hooks.animation_string_bind != NULL) {
+        s_scene_formatted_string_hooks.animation_string_bind(
+            scene_object, owned, s_scene_formatted_string_hooks.context);
+    }
+    if (s_scene_formatted_string_hooks.string_set == NULL &&
+        s_scene_formatted_string_hooks.animation_string_bind == NULL) {
+        engine_heap_free(owned);
+    }
+}
+
+void render_interface_pair_hooks_set(const RenderInterfacePairHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_render_interface_pair_hooks, 0,
+                              sizeof(s_render_interface_pair_hooks));
+    else s_render_interface_pair_hooks = *hooks;
+}
+
+/* RenderInterfacePairUpdate (FUN_00476220): preserve the two-interface
+ * operation as one backend callback so it can issue the recovered query,
+ * parent update, and pair-set sequence. */
+void render_interface_pair_update(void* first, void* second)
+{
+    if (s_render_interface_pair_hooks.pair_update != NULL) {
+        s_render_interface_pair_hooks.pair_update(
+            first, second, s_render_interface_pair_hooks.context);
+    }
+}
+
+/* DDiSceneObjectAttachOrUnlink (FUN_00475710): pairs both stored interfaces
+ * against a source pair, or asks the backend to unlink each current one. */
+void ddiscene_scene_object_attach_or_unlink(void* pair_record,
+                                            void* source_pair_record)
+{
+    void* first;
+    void* second;
+    if (pair_record == NULL) return;
+    memcpy(&first, pair_record, sizeof(first));
+    memcpy(&second, (char*)pair_record + 2 * sizeof(void*), sizeof(second));
+    if (source_pair_record == NULL) {
+        if (first != NULL &&
+            s_render_interface_pair_hooks.interface_unlink != NULL) {
+            s_render_interface_pair_hooks.interface_unlink(
+                first, s_render_interface_pair_hooks.context);
+        }
+        if (second != NULL &&
+            s_render_interface_pair_hooks.interface_unlink != NULL) {
+            s_render_interface_pair_hooks.interface_unlink(
+                second, s_render_interface_pair_hooks.context);
+        }
+        return;
+    }
+    {
+        void* source_first;
+        void* source_second;
+        memcpy(&source_first, source_pair_record, sizeof(source_first));
+        memcpy(&source_second,
+               (char*)source_pair_record + 2 * sizeof(void*),
+               sizeof(source_second));
+        render_interface_pair_update(source_first, first);
+        render_interface_pair_update(source_second, second);
+    }
+}
+
+static int render_quality_string_equals(const char* left, const char* right)
+{
+    unsigned char a, b;
+    if (left == NULL || right == NULL) return 0;
+    do {
+        a = (unsigned char)*left++;
+        b = (unsigned char)*right++;
+        if (a >= 'A' && a <= 'Z') a = (unsigned char)(a + ('a' - 'A'));
+        if (b >= 'A' && b <= 'Z') b = (unsigned char)(b + ('a' - 'A'));
+        if (a != b) return 0;
+    } while (a != 0);
+    return 1;
+}
+
+void render_quality_apply_hook_set(RenderQualityApplyHook hook,
+                                   void* context)
+{
+    s_render_quality_apply_hook = hook;
+    s_render_quality_apply_context = context;
+}
+
+int render_quality_config_apply(const RenderQualitySettings* settings)
+{
+    int quality;
+    if (settings == NULL || settings->fp_clip_blocks == 0.0f) return 0;
+    if (render_quality_string_equals(settings->quality, "Gouraud")) quality = 3;
+    else if (render_quality_string_equals(settings->quality, "Flat")) quality = 2;
+    else if (render_quality_string_equals(settings->quality, "Wireframe"))
+        quality = 0;
+    else return 0;
+    if (s_render_quality_apply_hook != NULL) {
+        s_render_quality_apply_hook(s_render_quality_apply_context, quality,
+                                    settings->dither == 1,
+                                    settings->filter == 1,
+                                    settings->mipmap == 1,
+                                    settings->linear_mipmap == 1,
+                                    settings->blend == 1,
+                                    settings->alpha == 1);
+    }
+    return 1;
+}
+
+void selection_rectangle_render(const SelectionRectangleRenderState* state,
+                                const SelectionRectangleRenderHooks* hooks)
+{
+    float anchor[2];
+    float points[10];
+    if (state == NULL || hooks == NULL || (state->flags & 0x100u) == 0u ||
+        hooks->anchor_get == NULL || hooks->polyline_draw == NULL ||
+        !hooks->anchor_get(hooks->context, anchor)) return;
+    points[0] = anchor[0]; points[1] = anchor[1];
+    points[2] = state->mouse_x; points[3] = anchor[1];
+    points[4] = state->mouse_x; points[5] = state->mouse_y;
+    points[6] = anchor[0]; points[7] = state->mouse_y;
+    points[8] = anchor[0]; points[9] = anchor[1];
+    hooks->polyline_draw(hooks->context, points, 4, state->color, 2);
+}
+
+int camera_pointer_ray_route(const CameraPointerRayHooks* hooks,
+                             float x, float y, float* out_x, float* out_y)
+{
+    float near_point[3], far_point[3], direction[3];
+    float plane_point[3] = { 0.0f, 0.0f, 0.0f };
+    float plane_normal[3] = { 0.0f, 0.0f, -1.0f };
+    float intersection[3];
+    int i;
+    if (hooks == NULL || hooks->screen_point_to_ray == NULL ||
+        hooks->plane_intersect == NULL || out_x == NULL || out_y == NULL)
+        return 0;
+    if (!hooks->screen_point_to_ray(hooks->context, x, y, 0.0f, near_point) ||
+        !hooks->screen_point_to_ray(hooks->context, x, y, 1.0f, far_point))
+        return 0;
+    for (i = 0; i < 3; ++i) direction[i] = far_point[i] - near_point[i];
+    if (!hooks->plane_intersect(hooks->context, near_point, direction,
+                                plane_point, plane_normal, intersection))
+        return 0;
+    *out_x = intersection[0];
+    *out_y = intersection[1];
+    return 1;
+}
+
+void render_viewport_state_update(RenderViewportState* state,
+                                  const RenderViewportHooks* hooks)
+{
+    float position[2];
+    if (state == NULL || hooks == NULL) return;
+    if (state->view_object == NULL) state->flags |= 0x4000u;
+    if ((state->flags & 0x4000u) != 0u) {
+        position[0] = state->fallback_position[0];
+        position[1] = state->fallback_position[1];
+    }
+    else {
+        position[0] = 0.0f;
+        position[1] = 0.0f;
+        if (hooks->view_position_get != NULL)
+            hooks->view_position_get(hooks->context, state->view_object,
+                                     position);
+    }
+    if (hooks->display_state_set != NULL)
+        hooks->display_state_set(hooks->context, state->device,
+                                 state->display_value);
+    if (hooks->position_set != NULL)
+        hooks->position_set(hooks->context, state->device, position);
+}
+
+void global_render_record_set_from_input(
+    void* record, void* view, const GlobalRenderRecordHooks* hooks)
+{
+    float value;
+    if (record == NULL || view == NULL || hooks == NULL ||
+        hooks->value_get == NULL || hooks->record_set == NULL) return;
+    value = hooks->value_get(hooks->context, record, 0.7f, 0.01f);
+    hooks->record_set(hooks->context, view, record, 2, value);
+}
+
+EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
+    void* manager, void* owner, void* callback, int mode,
+    const EngineTaskCallbackHooks* hooks)
+{
+    EngineTaskCallbackRecord* record;
+    void* resource_interface = NULL;
+    if (hooks != NULL && hooks->record_allocate != NULL)
+        record = hooks->record_allocate(hooks->context);
+    else
+        record = (EngineTaskCallbackRecord*)calloc(1, sizeof(*record));
+    if (record == NULL) return NULL;
+    memset(record, 0, sizeof(*record));
+    if (hooks != NULL && hooks->global_initialize != NULL)
+        hooks->global_initialize(hooks->context);
+    if (hooks != NULL && hooks->manager_event != NULL)
+        hooks->manager_event(hooks->context, manager);
+    if (hooks != NULL && hooks->resource_interface_get != NULL)
+        resource_interface = hooks->resource_interface_get(hooks->context,
+                                                            record);
+    if (hooks != NULL && hooks->owner_bind != NULL)
+        hooks->owner_bind(hooks->context, owner, resource_interface);
+    if (hooks != NULL && hooks->callback_attach != NULL)
+        hooks->callback_attach(hooks->context, resource_interface, record);
+    record->resource_interface = resource_interface;
+    record->callback = callback;
+    record->handler = callback;
+    record->self = record;
+    record->owner = owner;
+    record->value = 1u;
+    if (mode == 1) record->flags |= 2u;
+    else if (mode == 2) record->flags |= 4u;
+    return record;
+}
+
+void scene_object_record_retain_hook_set(SceneObjectRecordRetainHook hook,
+                                         void* context)
+{
+    s_scene_object_record_retain_hook = hook;
+    s_scene_object_record_retain_context = context;
+}
+
+void scene_object_record_clone_retain_handles(
+    const SceneObjectRecord* source, SceneObjectRecord* destination)
+{
+    unsigned int i;
+    if (source == NULL || destination == NULL) return;
+    for (i = 0; i < 0x53u; ++i) destination->words[i] = source->words[i];
+    destination->words[0x52] = (void*)((uintptr_t)destination->words[0x52]
+                                      & ~(uintptr_t)1u);
+    if (s_scene_object_record_retain_hook != NULL) {
+        if (source->words[1] != NULL)
+            destination->words[1] = s_scene_object_record_retain_hook(
+                s_scene_object_record_retain_context, source->words[1]);
+        if (source->words[0x1f] != NULL)
+            destination->words[0x1f] = s_scene_object_record_retain_hook(
+                s_scene_object_record_retain_context, source->words[0x1f]);
+    }
+}
+
+void scene_frame_apply_hooks_set(const SceneFrameApplyHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_scene_frame_apply_hooks, 0,
+                              sizeof(s_scene_frame_apply_hooks));
+    else s_scene_frame_apply_hooks = *hooks;
+}
+
+static float scene_frame_vector_length(const float vector[3])
+{
+    return (float)sqrt((double)(vector[0] * vector[0] +
+                                 vector[1] * vector[1] +
+                                 vector[2] * vector[2]));
+}
+
+int scene_frame_from_triplet_apply(void* object, const float first[3],
+                                   const float second[3],
+                                   const float third[3])
+{
+    float forward[3];
+    float normal[3];
+    float forward_length, normal_length;
+    int i;
+    if (object == NULL || first == NULL || second == NULL || third == NULL)
+        return 0;
+    for (i = 0; i < 3; ++i) forward[i] = second[i] - first[i];
+    normal[0] = (third[2] - second[2]) * forward[1] -
+                (third[1] - second[1]) * forward[2];
+    normal[1] = (third[0] - second[0]) * forward[2] -
+                (third[2] - second[2]) * forward[0];
+    normal[2] = (third[1] - second[1]) * forward[0] -
+                (third[0] - second[0]) * forward[1];
+    forward_length = scene_frame_vector_length(forward);
+    normal_length = scene_frame_vector_length(normal);
+    if (forward_length == 0.0f || normal_length == 0.0f) return 0;
+    for (i = 0; i < 3; ++i) {
+        forward[i] /= forward_length;
+        normal[i] = -normal[i] / normal_length;
+    }
+    if (s_scene_frame_apply_hooks.orientation_set != NULL)
+        s_scene_frame_apply_hooks.orientation_set(
+            s_scene_frame_apply_hooks.context, object, 0, normal, forward);
+    if (s_scene_frame_apply_hooks.position_set != NULL)
+        s_scene_frame_apply_hooks.position_set(
+            s_scene_frame_apply_hooks.context, object, 0, first);
+    if (s_scene_frame_apply_hooks.frame_refresh != NULL)
+        s_scene_frame_apply_hooks.frame_refresh(
+            s_scene_frame_apply_hooks.context, object, second);
+    return 1;
+}
+
+int viewport_target_position_clamp(ViewportTargetClampState* state,
+                                   const int position[2])
+{
+    int clamped_x, clamped_y;
+    int maximum_x, maximum_y;
+    int changed;
+    if (state == NULL || position == NULL || state->edge_extent < 0 ||
+        state->map_width <= 0 || state->map_height <= 0) return 0;
+    clamped_x = position[0];
+    clamped_y = position[1];
+    maximum_x = state->map_width - state->edge_extent - 1;
+    maximum_y = state->map_height - state->edge_extent - 1;
+    if (clamped_x < state->edge_extent) clamped_x = state->edge_extent;
+    if (clamped_x > maximum_x) clamped_x = maximum_x;
+    if (clamped_y < state->edge_extent) clamped_y = state->edge_extent;
+    if (clamped_y > maximum_y) clamped_y = maximum_y;
+    changed = clamped_x != position[0] || clamped_y != position[1];
+    state->target[0] = clamped_x;
+    state->target[1] = clamped_y;
+    state->global_flags |= 0x200000u;
+    return changed;
+}
+
+void scene_rotation_apply_hooks_set(const SceneRotationApplyHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_scene_rotation_apply_hooks, 0,
+                              sizeof(s_scene_rotation_apply_hooks));
+    else s_scene_rotation_apply_hooks = *hooks;
+}
+
+void scene_rotation_flags_apply(void* object, const float first[3],
+                                const float second[3], const float third[3],
+                                float scale, float uniform_scale,
+                                float child_value, uint8_t flags)
+{
+    unsigned int i, count;
+    SceneRotationApplyHooks* hooks = &s_scene_rotation_apply_hooks;
+    if (object == NULL || first == NULL || second == NULL || third == NULL)
+        return;
+    scene_frame_from_triplet_apply(object, first, second, third);
+    if (hooks->apply != NULL)
+        hooks->apply(hooks->context, object, 0x473b40u, 0, 0, 0, 0, 0);
+    count = hooks->child_count != NULL
+        ? hooks->child_count(hooks->context, object) : 0;
+    for (i = 0; i < count; ++i) {
+        if (hooks->apply != NULL)
+            hooks->apply(hooks->context, object, 0x474da0u, i,
+                         child_value, 0, 0, 0);
+    }
+    if (hooks->apply == NULL) return;
+    hooks->apply(hooks->context, object, 0x4755e0u, 1,
+                 -0.02f, -0.02f, 0, 0);
+    hooks->apply(hooks->context, object, 0x4755b0u, 1,
+                 1.015f, 1.015f, scale, 0);
+    hooks->apply(hooks->context, object, 0x4750b0u, 0,
+                 uniform_scale, uniform_scale, uniform_scale, 1.0f);
+    if (flags & 1u) hooks->apply(hooks->context, object, 0x475580u, 1,
+                                 1, 0, 0, 1.57079637f);
+    if (flags & 2u) hooks->apply(hooks->context, object, 0x475580u, 1,
+                                 1, 0, 0, -1.57079637f);
+    if (flags & 4u) hooks->apply(hooks->context, object, 0x475580u, 1,
+                                 0, 1, 0, 1.57079637f);
+    if (flags & 8u) hooks->apply(hooks->context, object, 0x475580u, 1,
+                                 0, 1, 0, -1.57079637f);
+    if (flags & 0x10u) hooks->apply(hooks->context, object, 0x475580u, 1,
+                                   0, 0, 1, 1.57079637f);
+    if (flags & 0x20u) hooks->apply(hooks->context, object, 0x475580u, 1,
+                                   0, 0, 1, -1.57079637f);
+    if (flags & 0x80u) hooks->apply(hooks->context, object, 0x4755e0u, 2,
+                                   0, -10, 0, 0);
+    if (flags & 0x40u) hooks->apply(hooks->context, object, 0x4755e0u, 2,
+                                   0, 10, 0, 0);
+}
+static RenderResourceBindingHooks s_render_resource_binding_hooks;
+static float s_viewport_left;
+static float s_viewport_top;
+static float s_viewport_right;
+static float s_viewport_bottom;
+
+void viewport_rectangle_set(float left, float top, float right, float bottom)
+{
+    s_viewport_left = left;
+    s_viewport_top = top;
+    s_viewport_right = right;
+    s_viewport_bottom = bottom;
+}
+
+void viewport_dimensions_query_hook_set(ViewportDimensionsQueryFn query,
+                                        void* context)
+{
+    s_viewport_dimensions_query = query;
+    s_viewport_dimensions_context = context;
+}
+
+void model_transform_copy_hooks_set(ModelTransformReadHook read_transform,
+                                    SceneTransformWriteHook write_transform,
+                                    void* context)
+{
+    s_model_transform_read_hook = read_transform;
+    s_scene_transform_write_hook = write_transform;
+    s_model_transform_context = context;
+}
+
+// ModelTransformCopyToSceneNode (FUN_00435e35) copies transform state only
+// for mode-3 views. The callbacks bridge the native model and scene backends.
+// FUNCTION: LEGORR 0x00435e35
+void model_transform_copy_to_scene_node(void* view_ptr, void* model_record)
+{
+    ViewContext* view = (ViewContext*)view_ptr;
+    void* model;
+    float position[3];
+    float orientation[4];
+    if (view == NULL || model_record == NULL || view->mode != 3 ||
+        s_model_transform_read_hook == NULL ||
+        s_scene_transform_write_hook == NULL) return;
+    model = *(void**)((char*)model_record + 0x24);
+    if (model == NULL) return;
+    if (!s_model_transform_read_hook(s_model_transform_context, model,
+                                     position, orientation)) return;
+    s_scene_transform_write_hook(s_model_transform_context, &view->cam_world,
+                                 position, orientation);
+}
+
+void camera_view_context_close_hooks_set(CameraViewContextReleaseHook release,
+                                         CameraViewContextFreeHook free_view,
+                                         void* context)
+{
+    s_view_context_release_hook = release;
+    s_view_context_free_hook = free_view;
+    s_view_context_close_context = context;
+}
+
+// CameraViewContextClose (FUN_00435dc8) releases the world camera first,
+// conditionally releases follow and third handles, then frees the context.
+// FUNCTION: LEGORR 0x00435dc8
+void camera_view_context_close(void* view)
+{
+    int mode;
+    if (view == NULL) return;
+    mode = *(int*)view;
+    if (s_view_context_release_hook != NULL) {
+        s_view_context_release_hook(s_view_context_close_context, view, 9);
+        if (mode != 3) {
+            s_view_context_release_hook(s_view_context_close_context,
+                                        view, 10);
+            s_view_context_release_hook(s_view_context_close_context,
+                                        view, 12);
+        }
+    }
+    if (s_view_context_free_hook != NULL) {
+        s_view_context_free_hook(s_view_context_close_context, view);
+    }
+}
+
+void animation_transform_hooks_set(AnimationObjectTransformApplyHook orient,
+                                   RenderNodePositionApplyHook position,
+                                   void* context)
+{
+    s_animation_orientation_hook = orient;
+    s_render_node_position_hook = position;
+    s_animation_transform_context = context;
+}
+
+// AnimationObjectTransformSet (FUN_00406dc0).
+// FUNCTION: LEGORR 0x00406dc0
+void animation_object_transform_set(void* record, float first, float second)
+{
+    static const float orientation[4] = { 0.0f, 0.0f, 0.0f, -1.0f };
+    void* render_object;
+    if (record == NULL || s_animation_orientation_hook == NULL) return;
+    render_object = *(void**)((char*)record + 4);
+    if (render_object == NULL) return;
+    s_animation_orientation_hook(s_animation_transform_context,
+                                 render_object, first, second, orientation);
+}
+
+// RenderNodeSetPositionFromCallback (FUN_00406df0).
+// FUNCTION: LEGORR 0x00406df0
+void render_node_position_from_callback(void* record, float x, float y,
+                                        RenderNodePositionValueFn value_fn,
+                                        void* context)
+{
+    void* render_object;
+    float z;
+    if (record == NULL || value_fn == NULL ||
+        s_render_node_position_hook == NULL) return;
+    render_object = *(void**)((char*)record + 4);
+    if (render_object == NULL) return;
+    z = value_fn(x, y, context);
+    s_render_node_position_hook(s_animation_transform_context,
+                                render_object, x, y, z);
+}
+
+void scene_matrix_apply_hook_set(SceneMatrixApplyHook hook, void* context)
+{
+    s_scene_matrix_apply_hook = hook;
+    s_scene_matrix_apply_context = context;
+}
+
+// MatrixApplyRotationAboutZWithOffset (FUN_0044b7a0).
+// FUNCTION: LEGORR 0x0044b7a0
+void matrix_apply_rotation_about_z_with_offset(void* target,
+                                               float matrix[16],
+                                               float offset)
+{
+    float original[16];
+    float rotated[16];
+    float old_x;
+    float old_y;
+    float old_z;
+    int column;
+    if (matrix == NULL) return;
+    memcpy(original, matrix, sizeof(original));
+    old_x = original[12];
+    old_y = original[13];
+    old_z = original[14];
+    for (column = 0; column < 4; ++column) {
+        int base = column * 4;
+        rotated[base + 0] = -original[base + 1];
+        rotated[base + 1] = original[base + 0];
+        rotated[base + 2] = original[base + 2];
+        rotated[base + 3] = original[base + 3];
+    }
+    rotated[12] = old_x;
+    rotated[13] = old_z;
+    rotated[14] = -old_y - offset;
+    memcpy(matrix, rotated, sizeof(rotated));
+    if (s_scene_matrix_apply_hook != NULL) {
+        s_scene_matrix_apply_hook(s_scene_matrix_apply_context,
+                                  target, matrix);
+    }
+}
+
+void renderer_record_clone_hooks_set(const RendererRecordCloneHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_renderer_record_clone_hooks, 0,
+               sizeof(s_renderer_record_clone_hooks));
+    }
+    else {
+        s_renderer_record_clone_hooks = *hooks;
+    }
+}
+
+// RendererRecordClone (FUN_00406cb0).
+// FUNCTION: LEGORR 0x00406cb0
+void renderer_record_clone(const RendererRecord* source,
+                           RendererRecord* destination)
+{
+    unsigned int i;
+    if (source == NULL || destination == NULL) return;
+    destination->first_word = source->first_word;
+    destination->visual_resource = source->visual_resource;
+    for (i = 0; i < 23; ++i) destination->prefix[i] = source->prefix[i];
+    for (i = 0; i < 3; ++i) {
+        destination->resource_lists[i] = source->resource_lists[i];
+    }
+    destination->flags = source->flags & ~1u;
+    if (s_renderer_record_clone_hooks.linked_records_clone != NULL) {
+        for (i = 0; i < 3; ++i) {
+            destination->resource_lists[i] =
+                s_renderer_record_clone_hooks.linked_records_clone(
+                    s_renderer_record_clone_hooks.context,
+                    source->resource_lists[i]);
+        }
+    }
+    if (s_renderer_record_clone_hooks.visual_resource_load != NULL) {
+        destination->visual_resource =
+            s_renderer_record_clone_hooks.visual_resource_load(
+                s_renderer_record_clone_hooks.context,
+                source->visual_resource);
+    }
+}
+
+void scene_object_list_apply_hook_set(SceneObjectListApplyHook hook,
+                                      void* context)
+{
+    s_scene_object_list_apply_hook = hook;
+    s_scene_object_list_apply_context = context;
+}
+
+static void scene_object_list_apply(void* list, uint32_t operation,
+                                    void* payload)
+{
+    void* object;
+    unsigned int count;
+    if (list == NULL || s_scene_object_list_apply_hook == NULL) return;
+    object = *(void**)((char*)list + 4);
+    count = 0;
+    while (object != NULL && count < 65536u) {
+        void* next = *(void**)((char*)object + 0x9c);
+        s_scene_object_list_apply_hook(s_scene_object_list_apply_context,
+                                       list, object, operation, payload);
+        object = next;
+        ++count;
+    }
+}
+
+// FUNCTION: LEGORR 0x0040fe00
+void scene_object_list_update_transforms(void* list, void* payload)
+{
+    void* first;
+    if (list == NULL) return;
+    first = *(void**)list;
+    if (s_scene_object_list_apply_hook != NULL) {
+        s_scene_object_list_apply_hook(s_scene_object_list_apply_context,
+                                       list, first, 0x0040fde0u, payload);
+    }
+    scene_object_list_apply(list, 0x0040fb90u, payload);
+    scene_object_list_apply(list, 0x0040fd00u, payload);
+}
+
+// FUNCTION: LEGORR 0x0040ff50
+void scene_object_list_apply_float_callback(void* list, float value)
+{
+    scene_object_list_apply(list, 0x0040fed0u, &value);
+}
+
+// FUNCTION: LEGORR 0x00410070
+void scene_object_list_apply_position_callback(void* list,
+                                              const float position[3])
+{
+    scene_object_list_apply(list, 0x00410050u, (void*)position);
+}
+
+// FUNCTION: LEGORR 0x004100b0
+void scene_object_list_apply_second_position_callback(
+    void* list, const float position[3])
+{
+    scene_object_list_apply(list, 0x00410090u, (void*)position);
+}
+
+// FUNCTION: LEGORR 0x0040a5c0
+void* quad_mesh_render_record_pool_slot_allocate(void)
+{
+    unsigned int i;
+    for (i = 0; i < 10; ++i) {
+        if ((s_quad_mesh_render_records[i][7] & 1u) == 0u) {
+            s_quad_mesh_render_records[i][7] |= 1u;
+            return s_quad_mesh_render_records[i];
+        }
+    }
+    return NULL;
+}
+
+void quad_mesh_render_hooks_set(const QuadMeshRenderHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_quad_mesh_render_hooks, 0, sizeof(s_quad_mesh_render_hooks));
+    }
+    else {
+        s_quad_mesh_render_hooks = *hooks;
+    }
+}
+
+// FUNCTION: LEGORR 0x0040a4b0
+void quad_mesh_render_record_create(void* entity, uint32_t count)
+{
+    static const int offsets[6] = { 0, 2, 1, 0, 3, 2 };
+    void* slot;
+    void* parent;
+    void* render_object;
+    void* callback_record;
+    unsigned int index;
+    int i;
+    if (entity == NULL || count == 0u || count >= 999u ||
+        s_quad_mesh_render_hooks.entity_eligible == NULL ||
+        !s_quad_mesh_render_hooks.entity_eligible(
+            s_quad_mesh_render_hooks.context, entity)) return;
+    slot = quad_mesh_render_record_pool_slot_allocate();
+    if (slot == NULL) return;
+    for (index = 0; index < 10; ++index) {
+        if (slot == s_quad_mesh_render_records[index]) break;
+    }
+    if (index >= 10) return;
+    s_quad_mesh_render_records[index][3] = 0;
+    s_quad_mesh_render_records[index][4] = 0;
+    s_quad_mesh_render_records[index][5] = 0;
+    s_quad_mesh_render_records[index][6] = 0;
+    if (s_quad_mesh_render_hooks.entity_lift_get != NULL) {
+        float lift = s_quad_mesh_render_hooks.entity_lift_get(
+            s_quad_mesh_render_hooks.context, entity);
+        float negative_lift = -lift;
+        memcpy(&s_quad_mesh_render_records[index][5], &negative_lift,
+               sizeof(negative_lift));
+    }
+    parent = s_quad_mesh_render_hooks.entity_scene_get != NULL
+        ? s_quad_mesh_render_hooks.entity_scene_get(
+              s_quad_mesh_render_hooks.context, entity) : NULL;
+    render_object = s_quad_mesh_render_objects[index];
+    if (render_object == NULL) {
+        if (s_quad_mesh_render_hooks.render_object_create == NULL) return;
+        render_object = s_quad_mesh_render_hooks.render_object_create(
+            s_quad_mesh_render_hooks.context, parent);
+        if (render_object == NULL) return;
+        s_quad_mesh_render_objects[index] = render_object;
+        callback_record = s_quad_mesh_render_hooks.callback_record_create != NULL
+            ? s_quad_mesh_render_hooks.callback_record_create(
+                  s_quad_mesh_render_hooks.context, render_object, slot,
+                  0x3000u) : NULL;
+        s_quad_mesh_render_callbacks[index] = callback_record;
+        if (callback_record != NULL &&
+            s_quad_mesh_render_hooks.digit_quad_prepare != NULL) {
+            for (i = 0; i < 4; ++i) {
+                s_quad_mesh_render_hooks.digit_quad_prepare(
+                    s_quad_mesh_render_hooks.context, callback_record,
+                    4, 2, 3, offsets);
+            }
+        }
+    }
+    else {
+        if (s_quad_mesh_render_hooks.render_object_attach != NULL) {
+            s_quad_mesh_render_hooks.render_object_attach(
+                s_quad_mesh_render_hooks.context, render_object, parent);
+        }
+        if (s_quad_mesh_render_hooks.render_object_disable != NULL) {
+            s_quad_mesh_render_hooks.render_object_disable(
+                s_quad_mesh_render_hooks.context, render_object, 0);
+        }
+    }
+    if (s_quad_mesh_render_hooks.digit_count_apply != NULL) {
+        s_quad_mesh_render_hooks.digit_count_apply(
+            s_quad_mesh_render_hooks.context, slot, count);
+    }
+}
+
+void sine_phase_blend_state_set(const SinePhaseBlendState* state)
+{
+    if (state == NULL) memset(&s_sine_phase_blend_state, 0,
+                              sizeof(s_sine_phase_blend_state));
+    else s_sine_phase_blend_state = *state;
+}
+
+void sine_phase_blend_hooks_set(const SinePhaseBlendHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_sine_phase_blend_hooks, 0,
+                              sizeof(s_sine_phase_blend_hooks));
+    else s_sine_phase_blend_hooks = *hooks;
+}
+
+// FUNCTION: LEGORR 0x00424730
+void sine_phase_midpoint_blend_dispatch(void* object, float delta)
+{
+    SinePhaseBlendState* state = &s_sine_phase_blend_state;
+    SinePhaseBlendHooks* hooks = &s_sine_phase_blend_hooks;
+    float color[3];
+    float half_difference;
+    float oscillation;
+    unsigned int i;
+    if ((state->flags & 0x8000u) == 0u) return;
+    if (hooks->object_prepare != NULL) {
+        hooks->object_prepare(hooks->context, object);
+    }
+    if (object == NULL || (state->flags & 0x10000u) == 0u ||
+        hooks->color_apply == NULL || state->period == 0.0f) return;
+    state->phase += (6.2831855f / state->period) * delta;
+    oscillation = (float)sin((double)state->phase);
+    for (i = 0; i < 3; ++i) {
+        half_difference = (state->to[i] - state->from[i]) * 0.5f;
+        color[i] = state->from[i] + half_difference +
+                   half_difference * oscillation;
+    }
+    hooks->color_apply(hooks->context, color[0], color[1], color[2]);
+}
+
+void render_resource_binding_hooks_set(
+    const RenderResourceBindingHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_render_resource_binding_hooks, 0,
+               sizeof(s_render_resource_binding_hooks));
+    }
+    else {
+        s_render_resource_binding_hooks = *hooks;
+    }
+}
+
+// FUNCTION: LEGORR 0x0046c030
+void render_resource_binding_initialize(RenderResourceBinding* binding,
+                                        void* key, void* config_a,
+                                        void* config_b)
+{
+    unsigned int selector;
+    if (binding == NULL) return;
+    binding->key = NULL;
+    binding->resource = NULL;
+    binding->state = 0;
+    binding->flags = 0;
+    if (s_render_resource_binding_hooks.resource_find != NULL) {
+        for (selector = 0; selector < 3; ++selector) {
+            binding->resource =
+                s_render_resource_binding_hooks.resource_find(
+                    s_render_resource_binding_hooks.context,
+                    config_a, config_b, selector);
+            if (binding->resource != NULL) break;
+        }
+    }
+    binding->key = key;
+}
+
+// FUNCTION: LEGORR 0x0046c0b0
+void render_resource_binding_copy_and_convert(
+    const RenderResourceBinding* source,
+    RenderResourceBinding* destination)
+{
+    if (source == NULL || destination == NULL) return;
+    *destination = *source;
+    if (s_render_resource_binding_hooks.resource_load != NULL) {
+        destination->resource =
+            s_render_resource_binding_hooks.resource_load(
+                s_render_resource_binding_hooks.context, source->resource);
+    }
+}
+
+// FUNCTION: LEGORR 0x0046c0f0
+void render_resource_binding_release(RenderResourceBinding* binding)
+{
+    if (binding == NULL) return;
+    if (s_render_resource_binding_hooks.resource_release != NULL) {
+        s_render_resource_binding_hooks.resource_release(
+            s_render_resource_binding_hooks.context, binding->resource);
+    }
+}
+
+// FUNCTION: LEGORR 0x0046c110
+float animation_resource_advance_time(RenderResourceBinding* binding,
+                                     void* argument)
+{
+    if (binding != NULL &&
+        s_render_resource_binding_hooks.animation_time_get != NULL) {
+        (void)s_render_resource_binding_hooks.animation_time_get(
+            s_render_resource_binding_hooks.context, binding->resource,
+            argument);
+    }
+    return 0.0f;
+}
+
+// FUNCTION: LEGORR 0x0046c130
+void scene_object_set_animation_with_fallback(
+    RenderResourceBinding* binding, void* name)
+{
+    int result = 0;
+    if (binding == NULL ||
+        s_render_resource_binding_hooks.animation_set == NULL) return;
+    result = s_render_resource_binding_hooks.animation_set(
+        s_render_resource_binding_hooks.context, binding->resource, name);
+    if (result == 0) {
+        (void)s_render_resource_binding_hooks.animation_set(
+            s_render_resource_binding_hooks.context, binding->resource,
+            s_render_resource_binding_hooks.fallback_animation);
+    }
+}
+
+void scene_object_chain_hooks_set(const SceneObjectChainHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_scene_object_chain_hooks, 0,
+               sizeof(s_scene_object_chain_hooks));
+    }
+    else {
+        s_scene_object_chain_hooks = *hooks;
+    }
+}
+
+static void scene_object_chain_nodes_release(SceneObjectChainRecord* record)
+{
+    int i;
+    if (record == NULL || s_scene_object_chain_hooks.node_release == NULL)
+        return;
+    for (i = 2; i >= 0; --i) {
+        if (record->node[i] != NULL) {
+            s_scene_object_chain_hooks.node_release(
+                s_scene_object_chain_hooks.context, record->node[i]);
+            record->node[i] = NULL;
+        }
+    }
+}
+
+// SceneObjectChainRecordCreate (FUN_00435b20).
+// FUNCTION: LEGORR 0x00435b20
+SceneObjectChainRecord* scene_object_chain_record_create(void* parent,
+                                                         int type)
+{
+    static const float direction[3] = { 0.0f, 0.0f, 1.0f };
+    static const float up[3] = { 0.0f, 1.0f, 0.0f };
+    SceneObjectChainRecord* record;
+    SceneObjectChainHooks* hooks = &s_scene_object_chain_hooks;
+    if (hooks->node_create == NULL) return NULL;
+    record = (SceneObjectChainRecord*)engine_heap_alloc(
+        (long)sizeof(SceneObjectChainRecord));
+    if (record == NULL) return NULL;
+    memset(record, 0, sizeof(*record));
+    record->type = type;
+    record->layer_depth = 200.0f;
+    record->node[0] = hooks->node_create(hooks->context, NULL);
+    if (record->node[0] == NULL) goto fail;
+    if (hooks->node_position_set != NULL) {
+        hooks->node_position_set(hooks->context, record->node[0],
+                                 0.0f, 0.0f, -record->layer_depth);
+    }
+    if (hooks->node_orientation_set != NULL) {
+        hooks->node_orientation_set(hooks->context, record->node[0],
+                                    direction, up);
+    }
+    if (type == 3) {
+        if (hooks->node_attach != NULL)
+            hooks->node_attach(hooks->context, record->node[0], parent);
+        return record;
+    }
+    record->node[1] = hooks->node_create(hooks->context, parent);
+    if (record->node[1] == NULL) goto fail;
+    record->node[2] = hooks->node_create(hooks->context, parent);
+    if (record->node[2] == NULL) goto fail;
+    record->node[3] = hooks->node_create(hooks->context, record->node[1]);
+    if (record->node[3] == NULL) goto fail;
+    if (type == 1) {
+        record->node[4] = hooks->node_create(hooks->context, record->node[3]);
+        if (record->node[4] != NULL && hooks->node_position_set != NULL) {
+            hooks->node_position_set(hooks->context, record->node[4],
+                                     0.0f, 0.0f, -80.0f);
+        }
+    }
+    if (hooks->node_attach != NULL) {
+        hooks->node_attach(hooks->context, record->node[0], record->node[3]);
+    }
+    return record;
+fail:
+    scene_object_chain_nodes_release(record);
+    engine_heap_free(record);
+    return NULL;
+}
+
+void scene_object_chain_record_release(SceneObjectChainRecord* record)
+{
+    int i;
+    if (record == NULL) return;
+    if (s_scene_object_chain_hooks.node_release != NULL) {
+        for (i = 4; i >= 0; --i) {
+            if (record->node[i] != NULL) {
+                s_scene_object_chain_hooks.node_release(
+                    s_scene_object_chain_hooks.context, record->node[i]);
+            }
+        }
+    }
+    engine_heap_free(record);
+}
+
+void scene_object_dispose_hooks_set(const SceneObjectDisposeHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_scene_object_dispose_hooks, 0,
+               sizeof(s_scene_object_dispose_hooks));
+    }
+    else {
+        s_scene_object_dispose_hooks = *hooks;
+    }
+}
+
+// FUNCTION: LEGORR 0x0044bae0
+void scene_object_resource_and_callback_state_dispose(void** owner)
+{
+    void* scene_object;
+    void** resource_slot;
+    void* resource;
+    SceneObjectDisposeHooks* hooks = &s_scene_object_dispose_hooks;
+    if (owner == NULL || *owner == NULL) return;
+    if (hooks->callback_state_remove != NULL) {
+        hooks->callback_state_remove(hooks->context, owner,
+                                     0x0044bab0u, 0);
+    }
+    scene_object = *owner;
+    resource_slot = (void**)((char*)scene_object + 0x98);
+    resource = *resource_slot;
+    if (resource != NULL) {
+        if (hooks->scene_node_detach != NULL) {
+            hooks->scene_node_detach(hooks->context, resource);
+        }
+        if (hooks->scene_node_release != NULL) {
+            hooks->scene_node_release(hooks->context, resource);
+        }
+        *resource_slot = NULL;
+    }
+    if (hooks->owner_record_release != NULL) {
+        hooks->owner_record_release(hooks->context, owner);
+    }
+}
+
+/* FUNCTION: LEGORR 0x00485ea0 */
+void viewport_subrectangle_set(const float rectangle[4])
+{
+    float width = 0.0f;
+    float height = 0.0f;
+    float left = 0.0f;
+    float top = 0.0f;
+    float right;
+    float bottom;
+    if (rectangle != NULL) {
+        if (rectangle[0] > 0.0f) left = rectangle[0];
+        if (rectangle[1] > 0.0f) top = rectangle[1];
+    }
+    if (s_viewport_dimensions_query == NULL ||
+        s_viewport_dimensions_query(s_viewport_dimensions_context,
+                                    &width, &height) != 0) {
+        return;
+    }
+    right = width;
+    bottom = height;
+    if (rectangle != NULL) {
+        if (rectangle[2] + left < right) right = rectangle[2] + left;
+        if (rectangle[3] + top < bottom) bottom = rectangle[3] + top;
+    }
+    viewport_rectangle_set(left, top, right, bottom);
+}
+
+/* FUNCTION: LEGORR 0x00485fb0 */
+void viewport_rectangle_get(float rectangle[4])
+{
+    if (rectangle == NULL) return;
+    rectangle[0] = s_viewport_left;
+    rectangle[1] = s_viewport_top;
+    rectangle[2] = s_viewport_right - s_viewport_left;
+    rectangle[3] = s_viewport_bottom - s_viewport_top;
+}
+
+void scene_object_owner_link_release_hooks_set(
+    SceneOwnerLinkReleaseFn interface_release,
+    SceneOwnerLinkReleaseFn child_chain_release)
+{
+    s_owner_link_interface_release = interface_release;
+    s_owner_link_child_release = child_chain_release;
+}
+
+// FUNCTION: LEGORR 0x00489750
+void scene_object_owner_link_release(SceneObjectOwnerLinkRecord* record)
+{
+    uint32_t i;
+    if (record == NULL) return;
+    if (record->kind == 0) {
+        if (record->shared_mode == 0) {
+            if (s_owner_link_interface_release != NULL) {
+                s_owner_link_interface_release(record->first_handle);
+                s_owner_link_interface_release(record->second_handle);
+            }
+        }
+        else if (s_owner_link_child_release != NULL) {
+            s_owner_link_child_release(record->child_chain);
+        }
+    }
+    if (record->shared_mode == 0) {
+        for (i = 0; i < record->handle_count; ++i) {
+            if (record->handles != NULL &&
+                s_owner_link_interface_release != NULL)
+                s_owner_link_interface_release(record->handles[i]);
+        }
+        engine_heap_free(record->handles);
+    }
+    engine_heap_free(record);
+}
+
 /* ---- pure vector helpers ------------------------------------------------
  * Corpus mapping (finding 280; the portable C fallbacks preserve the
  * byte-equivalent single-precision results, while selected MSVC/i386 paths
@@ -34,12 +2131,32 @@ static const float s_curve_unit = 1.0f;   /* DAT_0049e050, verified */
  *   FUN_0047c0c0 vec_exact_equal. */
 
 // FUNCTION: LEGORR 0x00401720
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void vec_scale(float* dst, const float* src, float s)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 8]
+        mov eax, dword ptr [esp + 4]
+        fld dword ptr [esp + 0x0c]
+        fmul dword ptr [ecx]
+        fstp dword ptr [eax]
+        fld dword ptr [ecx + 4]
+        fmul dword ptr [esp + 0x0c]
+        fstp dword ptr [eax + 4]
+        fld dword ptr [ecx + 8]
+        fmul dword ptr [esp + 0x0c]
+        fstp dword ptr [eax + 8]
+        ret
+    }
+}
+#else
 void vec_scale(float* dst, const float* src, float s) /* FUN_00401720 */
 {
     dst[0] = s * src[0];
     dst[1] = s * src[1];
     dst[2] = s * src[2];
 }
+#endif
 
 // FUNCTION: LEGORR 0x00401500
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -71,20 +2188,75 @@ void vec_add(float* dst, const float* a, const float* b) /* FUN_00401500 */
 #endif
 
 // FUNCTION: LEGORR 0x004016c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void vec_sub(float* dst, const float* a, const float* b)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 0x0c]
+        mov eax, dword ptr [esp + 4]
+        fld dword ptr [ecx]
+        fsub dword ptr [edx]
+        fstp dword ptr [eax]
+        fld dword ptr [ecx + 4]
+        fsub dword ptr [edx + 4]
+        fstp dword ptr [eax + 4]
+        fld dword ptr [ecx + 8]
+        fsub dword ptr [edx + 8]
+        fstp dword ptr [eax + 8]
+        ret
+    }
+}
+#else
 void vec_sub(float* dst, const float* a, const float* b) /* FUN_004016c0 */
 {
     dst[0] = a[0] - b[0];
     dst[1] = a[1] - b[1];
     dst[2] = a[2] - b[2];
 }
+#endif
 
 // FUNCTION: LEGORR 0x00401470
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void vec_cross(float* dst, const float* b,
+                                 const float* c)
+{
+    __asm {
+        mov edx, dword ptr [esp + 8]
+        mov ecx, dword ptr [esp + 0x0c]
+        mov eax, dword ptr [esp + 4]
+        fld dword ptr [edx + 8]
+        fld dword ptr [ecx + 8]
+        fmul dword ptr [edx + 4]
+        fxch st(1)
+        fmul dword ptr [ecx + 4]
+        fsubp st(1), st
+        fstp dword ptr [eax]
+        fld dword ptr [ecx + 8]
+        fld dword ptr [edx + 8]
+        fmul dword ptr [ecx]
+        fxch st(1)
+        fmul dword ptr [edx]
+        fsubp st(1), st
+        fstp dword ptr [eax + 4]
+        fld dword ptr [edx + 4]
+        fld dword ptr [ecx + 4]
+        fmul dword ptr [edx]
+        fxch st(1)
+        fmul dword ptr [ecx]
+        fsubp st(1), st
+        fstp dword ptr [eax + 8]
+        ret
+    }
+}
+#else
 void vec_cross(float* dst, const float* b, const float* c) /* FUN_00401470 */
 {
     dst[0] = b[1] * c[2] - b[2] * c[1];
     dst[1] = b[2] * c[0] - b[0] * c[2];
     dst[2] = b[0] * c[1] - b[1] * c[0];
 }
+#endif
 
 // FUNCTION: LEGORR 0x00401750
 /* FUN_00401750 keeps its x87 load/accumulate/store schedule; the zero-length
@@ -236,10 +2408,201 @@ float vec2_dist_alt(const float* a, const float* b) /* FUN_00406730 */
     return sqrtf(dx * dx + dy * dy);
 }
 
+// FUNCTION: LEGORR 0x004089d0
+float segment_2d_point_distance(const float* point, const float* start,
+                                const float* end)
+{
+    const float dx = end[0] - start[0];
+    const float dy = end[1] - start[1];
+    const float length_sq = dx * dx + dy * dy;
+    float t;
+    float nearest[2];
+
+    if (length_sq <= 0.0f) {
+        return vec2_dist(point, start);
+    }
+
+    t = ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) /
+        length_sq;
+    if (t < 0.0f) {
+        nearest[0] = start[0];
+        nearest[1] = start[1];
+    }
+    else if (t > 1.0f) {
+        nearest[0] = end[0];
+        nearest[1] = end[1];
+    }
+    else {
+        nearest[0] = start[0] + t * dx;
+        nearest[1] = start[1] + t * dy;
+    }
+    return vec2_dist(point, nearest);
+}
+
+// FUNCTION: LEGORR 0x00408b00
+float point_to_polyline_minimum_segment_distance(const float* point,
+                                                 const float* points,
+                                                 unsigned int segment_count)
+{
+    unsigned int i;
+    float minimum = segment_2d_point_distance(point, points, points + 2);
+    for (i = 1; i < segment_count; ++i) {
+        const float* segment_start = points + i * 2;
+        const float distance = segment_2d_point_distance(point, segment_start,
+                                                          segment_start + 2);
+        if (distance < minimum) {
+            minimum = distance;
+        }
+    }
+    return minimum;
+}
+
 // FUNCTION: LEGORR 0x0047c0c0
 int vec_exact_equal(const float* a, const float* b) /* FUN_0047c0c0 */
 {
     return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
+}
+
+// FUNCTION: LEGORR 0x00477290
+void camera_screen_coordinate_project(const ViewProjectionAdapter* adapter,
+                                      float* output, const float* input)
+{
+    if (adapter == NULL || adapter->screen_project == NULL || output == NULL ||
+        input == NULL) return;
+    adapter->screen_project(adapter->context, output, input);
+}
+
+// FUNCTION: LEGORR 0x004772d0
+void camera_project_point_to_screen(const ViewProjectionAdapter* adapter,
+                                   float* output_xy, const float* input_xyz)
+{
+    float projected[4];
+    if (adapter == NULL || adapter->transform_point == NULL ||
+        output_xy == NULL || input_xyz == NULL) return;
+    adapter->transform_point(adapter->context, projected, input_xyz);
+    output_xy[0] = projected[0] / projected[3];
+    output_xy[1] = projected[1] / projected[3];
+}
+
+static float projected_triangle_area_2d(const float* a, const float* b,
+                                        const float* c)
+{
+    float area = (b[0] - a[0]) * (c[1] - a[1]) -
+                 (b[1] - a[1]) * (c[0] - a[0]);
+    return (area < 0.0f ? -area : area) * 0.5f;
+}
+
+// FUNCTION: LEGORR 0x0040b470
+float projected_quad_screen_area_calculate(
+    const ViewProjectionAdapter* adapter, const float* quad_xyz,
+    const float bounds_xy[2], int apply_visibility_clip)
+{
+    float clip[4][4];
+    float screen[4][3];
+    float visibility = 1.0f;
+    int i;
+    if (adapter == NULL || adapter->transform_point == NULL ||
+        quad_xyz == NULL || bounds_xy == NULL) return 0.0f;
+    for (i = 0; i < 4; ++i) {
+        adapter->transform_point(adapter->context, clip[i], quad_xyz + i * 3);
+        screen[i][0] = clip[i][0] / clip[i][3];
+        screen[i][1] = clip[i][1] / clip[i][3];
+        screen[i][2] = clip[i][2] / clip[i][3];
+        if (apply_visibility_clip &&
+            (screen[i][0] < 0.0f || screen[i][1] < 0.0f ||
+             screen[i][0] > bounds_xy[0] || screen[i][1] > bounds_xy[1] ||
+             screen[i][2] < 0.0f)) {
+            visibility -= 0.25f;
+        }
+    }
+    if (visibility <= 0.0f) return 0.0f;
+    return (projected_triangle_area_2d(screen[0], screen[1], screen[2]) +
+            projected_triangle_area_2d(screen[2], screen[3], screen[0])) *
+           visibility;
+}
+
+// FUNCTION: LEGORR 0x0040fb00
+void matrix_rotation_compose_xyz(float* record)
+{
+    float scratch[64];
+    float* rotation_x = scratch + 32;
+    float* rotation_y = scratch;
+    float* rotation_z = scratch + 16;
+    float* intermediate = scratch + 48;
+
+    matrix4_set_rotation_x(rotation_x, record[0x28 / 4]);
+    matrix4_set_rotation_y(rotation_y, record[0x24 / 4]);
+    matrix4_set_rotation_z(rotation_z, record[0x2c / 4]);
+    matrix4_multiply(intermediate, rotation_x, rotation_y);
+    matrix4_multiply(record + 0x58 / 4, rotation_z, intermediate);
+}
+
+// FUNCTION: LEGORR 0x00479500
+void d3drm_vector_random(float* out)
+{
+    /* D3DRM supplies a random direction. The native approximation samples
+     * three signed components and normalizes; distribution differs. */
+    float x = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+    float y = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+    float z = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+    float length = sqrtf(x * x + y * y + z * z);
+    if (length == 0.0f) {
+        x = 1.0f;
+        y = 0.0f;
+        z = 0.0f;
+        length = 1.0f;
+    }
+    out[0] = x / length;
+    out[1] = y / length;
+    out[2] = z / length;
+}
+
+// FUNCTION: LEGORR 0x00479510
+void d3drm_vector_rotate(float* out, const float* vector, const float* axis,
+                         float angle)
+{
+    /* Rough Rodrigues rotation for the D3DRM import. The reference DLL's
+     * axis normalization and exceptional-value behavior are unavailable. */
+    float axis_length = sqrtf(axis[0] * axis[0] + axis[1] * axis[1] +
+                              axis[2] * axis[2]);
+    float x;
+    float y;
+    float z;
+    float dot;
+    float c;
+    float s;
+    float one_minus_c;
+    float n[3];
+    if (axis_length == 0.0f) {
+        out[0] = vector[0];
+        out[1] = vector[1];
+        out[2] = vector[2];
+        return;
+    }
+    n[0] = axis[0] / axis_length;
+    n[1] = axis[1] / axis_length;
+    n[2] = axis[2] / axis_length;
+    x = vector[0]; y = vector[1]; z = vector[2];
+    dot = n[0] * x + n[1] * y + n[2] * z;
+    c = cosf(angle);
+    s = sinf(angle);
+    one_minus_c = 1.0f - c;
+    out[0] = x * c + (n[1] * z - n[2] * y) * s + n[0] * dot * one_minus_c;
+    out[1] = y * c + (n[2] * x - n[0] * z) * s + n[1] * dot * one_minus_c;
+    out[2] = z * c + (n[0] * y - n[1] * x) * s + n[2] * dot * one_minus_c;
+}
+
+// FUNCTION: LEGORR 0x0040fcc0
+void vector_scale_components_in_place(float* vector, float sx, float sy,
+                                      float sz)
+{
+    if (vector == NULL) {
+        return;
+    }
+    d3drm_vector_random(vector);
+    vector[0] *= sx;
+    vector[1] *= sy;
+    vector[2] *= sz;
 }
 
 /* ---- geometry helpers (finding 363/323) --------------------------------
@@ -249,26 +2612,122 @@ int vec_exact_equal(const float* a, const float* b) /* FUN_0047c0c0 */
 /* PointDistanceWithinRadius (FUN_0045b8a0): true when the point
  * (x1,y1)-(x2,y2) distance is under `radius`. */
 // FUNCTION: LEGORR 0x0045b8a0
-int point_distance_within_radius(float x1, float y1, float x2, float y2,
-                                 float radius)
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int point_distance_within_radius(int x1, int y1, int x2,
+                                                   int y2, int radius)
 {
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    return sqrtf(dx * dx + dy * dy) < radius;
+    __asm {
+        sub esp, 8
+        mov eax, dword ptr [esp + 0x14]
+        mov edx, dword ptr [esp + 0x0c]
+        mov ecx, dword ptr [esp + 0x18]
+        sub eax, edx
+        mov edx, dword ptr [esp + 0x10]
+        mov dword ptr [esp + 0x14], eax
+        fild dword ptr [esp + 0x14]
+        fild dword ptr [esp + 0x1c]
+        sub ecx, edx
+        mov dword ptr [esp + 0x18], ecx
+        fild dword ptr [esp + 0x18]
+        fld st(2)
+        fmul st, st(3)
+        fxch st(1)
+        fst dword ptr [esp + 4]
+        fmul dword ptr [esp + 4]
+        faddp st(1), st
+        fsqrt
+        fst dword ptr [esp + 0x14]
+        fxch st(1)
+        fcompp
+        fnstsw ax
+        test ah, 0x41
+        fstp st(0)
+        jne point_distance_outside_radius
+        mov eax, 1
+        add esp, 8
+        ret
+
+    point_distance_outside_radius:
+        xor eax, eax
+        add esp, 8
+        ret
+    }
 }
+#else
+int point_distance_within_radius(int x1, int y1, int x2, int y2, int radius)
+{
+    const float dx = (float)(x2 - x1);
+    const float dy = (float)(y2 - y1);
+    return sqrtf(dx * dx + dy * dy) < (float)radius;
+}
+#endif
 
 /* RectContainsPointHalfOpen (FUN_0045e660): rect is the corpus record's
  * float quad {x, y, w, h} at +0x4…+0x10 — half-open in both axes. */
 // FUNCTION: LEGORR 0x0045e660
-int rect_contains_point_half_open(const float rect_xywh[4], int x, int y)
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int rect_contains_point_half_open(const float* rect_record,
+                                                    int x, int y)
 {
-    if (((rect_xywh[0] <= (float)x) && ((float)x < rect_xywh[2] + rect_xywh[0]))
-        && ((rect_xywh[1] <= (float)y)
-            && ((float)y < rect_xywh[3] + rect_xywh[1]))) {
+    __asm {
+        sub esp, 8
+        mov eax, dword ptr [esp + 0x10]
+        mov ecx, dword ptr [esp + 0x0c]
+        xor edx, edx
+        mov dword ptr [esp], eax
+        mov dword ptr [esp + 4], edx
+        fild qword ptr [esp]
+        fcom dword ptr [ecx + 4]
+        fnstsw ax
+        test ah, 1
+        jne rect_contains_false_with_stack
+        fld dword ptr [ecx + 0x0c]
+        fadd dword ptr [ecx + 4]
+        fxch st(1)
+        fcompp
+        fnstsw ax
+        test ah, 1
+        je rect_contains_false
+
+        mov eax, dword ptr [esp + 0x14]
+        mov dword ptr [esp + 4], edx
+        mov dword ptr [esp], eax
+        fild qword ptr [esp]
+        fcom dword ptr [ecx + 8]
+        fnstsw ax
+        test ah, 1
+        jne rect_contains_false_with_stack
+        fld dword ptr [ecx + 0x10]
+        fadd dword ptr [ecx + 8]
+        fxch st(1)
+        fcompp
+        fnstsw ax
+        test ah, 1
+        je rect_contains_false
+        mov eax, 1
+        add esp, 8
+        ret
+
+    rect_contains_false_with_stack:
+        fstp st(0)
+    rect_contains_false:
+        xor eax, eax
+        add esp, 8
+        ret
+    }
+}
+#else
+int rect_contains_point_half_open(const float* rect_record, int x, int y)
+{
+    if (((rect_record[1] <= (float)x)
+         && ((float)x < rect_record[3] + rect_record[1]))
+        && ((rect_record[2] <= (float)y)
+            && ((float)y < rect_record[4] + rect_record[2]))) {
         return 1;
     }
     return 0;
 }
+#endif
 
 /* ---- offset-point rect family (findings 241/363/446) --------------------- */
 
@@ -291,7 +2750,15 @@ static int rect_contains_converted(const float rect[4], float off_x,
 int rect_contains_offset_point(const float rect_bounds[4], float off_x,
                                float off_y, int x, int y)
 {
-    return rect_contains_converted(rect_bounds, off_x, off_y, x, y);
+    const int offset_x = (int)off_x;
+    const int offset_y = (int)off_y;
+    const float point_x = (float)(x - offset_x);
+    const float point_y = (float)(y - offset_y);
+    if (rect_bounds[0] <= point_x && point_y < rect_bounds[3] &&
+        rect_bounds[1] <= point_y && point_x < rect_bounds[2]) {
+        return 1;
+    }
+    return 0;
 }
 
 /* RectContainsPointByConvertedCoords (FUN_00463c00): the region-route
@@ -301,7 +2768,15 @@ int rect_contains_point_by_converted_coords(const float rect_bounds[4],
                                             float off_x, float off_y,
                                             int x, int y)
 {
-    return rect_contains_converted(rect_bounds, off_x, off_y, x, y);
+    const int offset_x = (int)off_x;
+    const int offset_y = (int)off_y;
+    const float point_x = (float)(x - offset_x);
+    const float point_y = (float)(y - offset_y);
+    if (rect_bounds[0] <= point_x && point_y < rect_bounds[3] &&
+        rect_bounds[1] <= point_y && point_x < rect_bounds[2]) {
+        return 1;
+    }
+    return 0;
 }
 
 /* RectContainsPointFromObjectBounds (FUN_00463c90): same test, bounds via
@@ -333,6 +2808,65 @@ static const float s_matrix_zero = 0.0f;  /* DAT_0049e924 */
  * equality, test ah, 0x40), 0 otherwise. Both dot products accumulate z,
  * y, x, matching the corpus's fadd order. */
 // FUNCTION: LEGORR 0x00479a30
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int ray_plane_intersection_parameter(
+    float* t_out, const float* p, const float* d, const float* q,
+    const float* n)
+{
+    __asm {
+        mov eax, dword ptr [esp + 0x0c]
+        mov ecx, dword ptr [esp + 0x14]
+        fld dword ptr [eax + 8]
+        fld dword ptr [eax + 4]
+        fmul dword ptr [ecx + 4]
+        fld dword ptr [ecx]
+        fxch st(2)
+        fmul dword ptr [ecx + 8]
+        fxch st(2)
+        fmul dword ptr [eax]
+        fxch st(2)
+        faddp st(1), st
+        fxch st(1)
+        faddp st(1), st
+        fld st(0)
+        fcomp dword ptr [s_matrix_zero]
+        fnstsw ax
+        test ah, 0x40
+        jne ray_plane_zero
+
+        mov eax, dword ptr [esp + 0x10]
+        mov edx, dword ptr [esp + 8]
+        fld dword ptr [eax + 4]
+        fld dword ptr [eax + 8]
+        fsub dword ptr [edx + 8]
+        fxch st(1)
+        fsub dword ptr [edx + 4]
+        fld dword ptr [eax]
+        fsub dword ptr [edx]
+        fxch st(2)
+        fmul dword ptr [ecx + 8]
+        fxch st(1)
+        fmul dword ptr [ecx + 4]
+        fxch st(2)
+        fmul dword ptr [ecx]
+        fxch st(2)
+        faddp st(1), st
+        fxch st(1)
+        faddp st(1), st
+        mov ecx, dword ptr [esp + 4]
+        mov eax, 1
+        fdiv st, st(1)
+        fstp dword ptr [ecx]
+        fstp st(0)
+        ret
+
+    ray_plane_zero:
+        fstp st(0)
+        xor eax, eax
+        ret
+    }
+}
+#else
 int ray_plane_intersection_parameter(float* t_out, const float* p,
                                      const float* d, const float* q,
                                      const float* n)
@@ -345,11 +2879,84 @@ int ray_plane_intersection_parameter(float* t_out, const float* p,
     }
     return 0;
 }
+#endif
 
 /* LineIntersection2DCompute (FUN_00479af0): intersects line1
  * (point p1, direction d1) with line2 (point p2, direction d2); writes the
  * hit point into `out` and returns it, or NULL when parallel. */
 // FUNCTION: LEGORR 0x00479af0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) float* line_intersection_2d_compute(
+    float* out, const float* p1, const float* d1, const float* p2,
+    const float* d2)
+{
+    __asm {
+        mov eax, dword ptr [esp + 0x14]
+        mov edx, dword ptr [esp + 0x0c]
+        fld dword ptr [eax]
+        fld dword ptr [eax + 4]
+        fld dword ptr [edx]
+        fld dword ptr [edx + 4]
+        fchs
+        fxch st(1)
+        fchs
+        fxch st(1)
+        fmul st, st(3)
+        fxch st(1)
+        fmul st, st(2)
+        fld dword ptr [s_matrix_zero]
+        fxch st(1)
+        fsubp st(2), st
+        fcomp st(1)
+        fnstsw ax
+        test ah, 0x40
+        jne line_intersection_parallel
+
+        fxch st(1)
+        fdiv st, st(1)
+        fxch st(2)
+        mov ecx, dword ptr [esp + 8]
+        push esi
+        mov esi, dword ptr [esp + 0x14]
+        mov eax, dword ptr [esp + 8]
+        fdiv st, st(1)
+        fld dword ptr [ecx]
+        fld dword ptr [ecx + 4]
+        fsub dword ptr [esi + 4]
+        fxch st(1)
+        fsub dword ptr [esi]
+        fxch st(4)
+        fchs
+        fxch st(2)
+        fmulp st(1), st
+        fxch st(3)
+        fmulp st(1), st
+        pop esi
+        faddp st(2), st
+        fstp st(0)
+        fld st(0)
+        fmul dword ptr [edx]
+        fstp dword ptr [eax]
+        fmul dword ptr [edx + 4]
+        fstp dword ptr [eax + 4]
+        fld dword ptr [ecx]
+        fadd dword ptr [eax]
+        fld dword ptr [eax + 4]
+        fxch st(1)
+        fstp dword ptr [eax]
+        fadd dword ptr [ecx + 4]
+        fstp dword ptr [eax + 4]
+        ret
+
+    line_intersection_parallel:
+        fstp st(0)
+        fstp st(0)
+        fstp st(0)
+        xor eax, eax
+        ret
+    }
+}
+#else
 float* line_intersection_2d_compute(float* out, const float* p1,
                                     const float* d1, const float* p2,
                                     const float* d2)
@@ -366,6 +2973,7 @@ float* line_intersection_2d_compute(float* out, const float* p1,
     }
     return NULL;
 }
+#endif
 
 /* The corpus's quadrupling factor is the .rdata dword 4.0 at 0x49e938
  * (objdump-verified operand of the corpus discriminant term); a named
@@ -379,6 +2987,91 @@ static const float s_sphere_quadruple = 4.0f;   /* DAT_0049e938 */
  * gate is the corpus's fcomp against the 0.0 dword (0x49e924) with
  * test ah, 0x41 — strictly positive. */
 // FUNCTION: LEGORR 0x00479c10
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int sphere_ray_intersection_discriminant_positive(
+    const float* center, float radius2, const float* origin,
+    const float* dir)
+{
+    __asm {
+        sub esp, 0x0c
+        mov eax, dword ptr [esp + 0x18]
+        mov ecx, dword ptr [esp + 0x1c]
+        push esi
+        fld dword ptr [eax + 4]
+        fld dword ptr [eax + 8]
+        fld dword ptr [eax]
+        fxch st(2)
+        mov eax, dword ptr [esp + 0x14]
+        mov edx, dword ptr [ecx]
+        mov dword ptr [esp + 4], edx
+        fsub dword ptr [eax + 4]
+        fxch st(1)
+        fsub dword ptr [eax + 8]
+        mov esi, dword ptr [ecx + 4]
+        fld dword ptr [esp + 4]
+        mov dword ptr [esp + 8], esi
+        mov ecx, dword ptr [ecx + 8]
+        fld dword ptr [esp + 8]
+        fxch st(4)
+        fsub dword ptr [eax]
+        fxch st(1)
+        fadd st, st
+        fxch st(4)
+        fadd st, st
+        mov dword ptr [esp + 0x0c], ecx
+        fld dword ptr [esp + 0x0c]
+        fadd st, st
+        fxch st(4)
+        fst dword ptr [esp + 8]
+        fmul dword ptr [esp + 8]
+        fxch st(3)
+        fst dword ptr [esp + 0x0c]
+        fmul dword ptr [esp + 0x0c]
+        fld st(2)
+        fxch st(6)
+        fmul st, st(3)
+        fxch st(2)
+        fmul dword ptr [esp + 8]
+        fxch st(5)
+        fmul dword ptr [esp + 0x0c]
+        fxch st(6)
+        fmul st, st(3)
+        fxch st(5)
+        faddp st(2), st
+        faddp st(3), st
+        fld dword ptr [esp + 0x18]
+        fmul dword ptr [esp + 0x18]
+        fxch st(5)
+        faddp st(1), st
+        fxch st(3)
+        faddp st(2), st
+        fxch st(2)
+        fstp dword ptr [esp + 0x18]
+        fmul dword ptr [s_sphere_quadruple]
+        fld dword ptr [esp + 0x18]
+        fmul dword ptr [esp + 0x18]
+        fxch st(3)
+        fsubp st(1), st
+        fsubp st(2), st
+        fxch st(1)
+        fstp st(1)
+        fcomp dword ptr [s_matrix_zero]
+        fnstsw ax
+        test ah, 0x41
+        jne sphere_ray_discriminant_nonpositive
+        mov eax, 1
+        pop esi
+        add esp, 0x0c
+        ret
+
+    sphere_ray_discriminant_nonpositive:
+        xor eax, eax
+        pop esi
+        add esp, 0x0c
+        ret
+    }
+}
+#else
 int sphere_ray_intersection_discriminant_positive(const float* center,
                                                   float radius2,
                                                   const float* origin,
@@ -395,6 +3088,7 @@ int sphere_ray_intersection_discriminant_positive(const float* center,
     }
     return 0;
 }
+#endif
 
 /* ---- 4x4 matrices + polygon parity (finding 309/388) --------------------- */
 
@@ -458,6 +3152,37 @@ int point_in_polygon_2d(const float point[2], const float* verts,
  * dir[1]/dir[2] into registers before the stores; the x term is t*dir +
  * origin while y/z add to the origin first — component order mirrored. */
 // FUNCTION: LEGORR 0x00479ab0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void point_along_ray(float* out, const float* origin,
+                                      const float* dir, float t)
+{
+    __asm {
+        mov eax, dword ptr [esp + 0x0c]
+        mov ecx, dword ptr [esp + 8]
+        fld dword ptr [esp + 0x10]
+        fmul dword ptr [eax]
+        fld dword ptr [eax + 4]
+        fmul dword ptr [esp + 0x10]
+        fxch st(1)
+        fadd dword ptr [ecx]
+        fld dword ptr [eax + 8]
+        fmul dword ptr [esp + 0x10]
+        fxch st(1)
+        mov eax, dword ptr [esp + 4]
+        fstp dword ptr [eax]
+        fld dword ptr [ecx + 4]
+        fadd st, st(2)
+        fxch st(1)
+        fstp st(2)
+        fstp dword ptr [eax + 4]
+        fld dword ptr [ecx + 8]
+        fadd st, st(1)
+        fstp dword ptr [eax + 8]
+        fstp st(0)
+        ret
+    }
+}
+#else
 void point_along_ray(float* out, const float* origin, const float* dir,
                      float t)
 {
@@ -467,6 +3192,17 @@ void point_along_ray(float* out, const float* origin, const float* dir,
     out[1] = origin[1] + dy * t;
     out[2] = origin[2] + dz * t;
 }
+#endif
+
+/* RandomFloatRange (FUN_004798b0): consume the shared 15-bit random stream
+ * and scale it into the requested half-open interval. */
+// FUNCTION: LEGORR 0x004798b0
+float random_float_range(float minimum, float maximum)
+{
+    const float random_value = (float)VIEW_RANDOM_DRAW15();
+    return random_value * 3.051851e-05f * (maximum - minimum) + minimum;
+}
+#undef VIEW_RANDOM_DRAW15
 
 /* ViewRayIntersectionTest (FUN_004798e0): normalizes both direction
  * vectors (the corpus sums each normalization as z²+y²+x², its SQRT
@@ -518,8 +3254,11 @@ void matrix4_identity_translation_set(float* out, const float* translation)
 // FUNCTION: LEGORR 0x00479eb0
 void matrix4_copy(float* out, const float* src)
 {
-    for (int i = 0; i < 16; ++i) {
-        out[i] = src[i];
+    for (int row = 0; row < 4; ++row) {
+        for (int column = 0; column < 4; ++column) {
+            const int index = row * 4 + column;
+            out[index] = src[index];
+        }
     }
 }
 
@@ -573,9 +3312,17 @@ void matrix4_set_rotation_z(float* out, float angle)
 void perspective_projection_matrix_set(float* out, float p1, float p2,
                                        float p3, float p4, float p5)
 {
-    for (int i = 0; i < 16; ++i) {
-        out[i] = 0.0f;
-    }
+    out[3] = 0.0f;
+    out[2] = 0.0f;
+    out[7] = 0.0f;
+    out[6] = 0.0f;
+    out[4] = 0.0f;
+    out[11] = 0.0f;
+    out[9] = 0.0f;
+    out[8] = 0.0f;
+    out[14] = 0.0f;
+    out[13] = 0.0f;
+    out[12] = 0.0f;
     out[15] = 1.0f;
     out[10] = 1.0f;
     out[0] = p4 / p1;
@@ -713,15 +3460,19 @@ static void cam_surface_height_stub()
 {
     /* TODO(view): FUN_00431570 terrain handle -> FUN_0044fe70 surface height. */
 }
-// STUB: LEGORR 0x0044a200
-static int object_lookup(int /*id*/)
+// FUNCTION: LEGORR 0x0044a200
+static int object_lookup(int id)
 {
-    return 0; /* TODO(view): FUN_0044a200 object layer. */
+    return s_view_object_lookup_hook != NULL
+        ? s_view_object_lookup_hook(id, s_view_follow_target_context) : 0;
 }
-// STUB: LEGORR 0x0044a070
-static int target_blend(int /*id*/, int /*mode*/, float* blend,
+// FUNCTION: LEGORR 0x0044a070
+static int target_blend(int id, int mode, float* blend,
                         float* facing)
 {
+    if (s_view_target_blend_hook != NULL)
+        return s_view_target_blend_hook(id, mode, blend, facing,
+                                        s_view_follow_target_context);
     if (blend != NULL) {
         blend[0] = blend[1] = blend[2] = 0.0f;
     }
@@ -914,17 +3665,32 @@ int menu_overlay_list_count(const void* menu)
 
 /* TerrainGridBorderInsetGet (FUN_00435f28): DAT_005560ac's getter. */
 // FUNCTION: LEGORR 0x00435f28
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int view_grid_edge_get(void)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [g_view_grid_edge]
+        pop ebp
+        ret
+    }
+}
+#else
 int view_grid_edge_get(void)
 {
     return g_view_grid_edge;
 }
+#endif
 
 /* --- camera-selection cluster (see view.hpp) -------------------------------
  * DAT_005560a0 / DAT_005560a8: zero-initialized until camera_view_context_set
  * configures them (the corpus loads them from the camera config records at
  * startup — that loader seam is unported, so the pan stays inert out of the
  * box, like g_view_grid_edge). */
+// GLOBAL: LEGORR 0x005560a0
 float g_view_pan_cap   = 0.0f;  /* DAT_005560a0 (CameraAcceleration) */
+// GLOBAL: LEGORR 0x005560a8
 float g_view_pan_scale = 0.0f;  /* DAT_005560a8 (CameraSpeed) */
 
 // FUNCTION: LEGORR 0x00435e0e
@@ -982,6 +3748,309 @@ void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount)
  * seam). Only the record-field shape these five leaves need is written. */
 #define CAM_FLAGS_OFF 0xb8  /* gate-bit byte */
 
+static CameraPoseDispatchHook s_camera_pose_dispatch_hook;
+static void* s_camera_pose_dispatch_context;
+static SceneTimingValueGetHook s_scene_timing_value_get_hook;
+static SceneTimingCountGetHook s_scene_timing_count_get_hook;
+static void* s_scene_timing_hooks_context;
+static AnimationObjectTimeUpdateHook s_animation_object_time_update_hook;
+static AnimationObjectActionHook s_animation_object_time_get_hook;
+static AnimationObjectActionHook s_animation_object_value_get_hook;
+static void* s_animation_object_hooks_context;
+static RendererSubobjectFindHook s_renderer_subobject_find_hook;
+static RendererSubobjectApplyHook s_renderer_subobject_apply_hook;
+static void* s_renderer_subobject_hooks_context;
+static RendererHandleScalarGetHook s_renderer_handle_scalar_get_hook;
+static void* s_renderer_handle_scalar_get_context;
+
+void camera_pose_dispatch_hook_install(CameraPoseDispatchHook hook,
+                                       void* context)
+{
+    s_camera_pose_dispatch_hook = hook;
+    s_camera_pose_dispatch_context = context;
+}
+
+void scene_timing_value_hooks_install(SceneTimingValueGetHook value_get,
+                                      SceneTimingCountGetHook count_get,
+                                      void* context)
+{
+    s_scene_timing_value_get_hook = value_get;
+    s_scene_timing_count_get_hook = count_get;
+    s_scene_timing_hooks_context = context;
+}
+
+/* RendererObjectTimingValueAdjustByCount (FUN_00406d30): read the base
+ * timing value from the frame interface and subtract one frame duration for
+ * each additional instance when the value is nonzero. */
+// FUNCTION: LEGORR 0x00406D30
+float renderer_object_timing_value_adjust_by_count(void* record,
+                                                   void* argument,
+                                                   uint32_t count)
+{
+    void* frame;
+    float value;
+    int frame_duration;
+    if (record == NULL || s_scene_timing_value_get_hook == NULL) {
+        return 0.0f;
+    }
+    frame = *(void**)((char*)record + 4);
+    if (frame == NULL) {
+        return 0.0f;
+    }
+    value = s_scene_timing_value_get_hook(frame, argument,
+                                         s_scene_timing_hooks_context);
+    if (count > 1u && value != 0.0f &&
+        s_scene_timing_count_get_hook != NULL) {
+        frame_duration = s_scene_timing_count_get_hook(
+            frame, s_scene_timing_hooks_context);
+        value -= (float)frame_duration * (float)(count - 1u);
+    }
+    return value;
+}
+
+void animation_object_hooks_install(AnimationObjectTimeUpdateHook update,
+                                    AnimationObjectActionHook time_get,
+                                    AnimationObjectActionHook value_get,
+                                    void* context)
+{
+    s_animation_object_time_update_hook = update;
+    s_animation_object_time_get_hook = time_get;
+    s_animation_object_value_get_hook = value_get;
+    s_animation_object_hooks_context = context;
+}
+
+/* AnimationObjectTimeUpdate (FUN_00406d10): forward the supplied time to
+ * the scene frame stored in the animation object's +4 slot. */
+// FUNCTION: LEGORR 0x00406D10
+void animation_object_time_update(void* record, float time)
+{
+    void* frame;
+    if (record == NULL || s_animation_object_time_update_hook == NULL) return;
+    frame = *(void**)((char*)record + 4);
+    if (frame != NULL) {
+        s_animation_object_time_update_hook(
+            frame, time, s_animation_object_hooks_context);
+    }
+}
+
+/* AnimationObjectTimeGet (FUN_00406da0): query the object's current scene
+ * frame through the installed backend callback. */
+// FUNCTION: LEGORR 0x00406DA0
+void animation_object_time_get(void* record)
+{
+    void* frame;
+    if (record == NULL || s_animation_object_time_get_hook == NULL) return;
+    frame = *(void**)((char*)record + 4);
+    if (frame != NULL) {
+        s_animation_object_time_get_hook(frame,
+                                         s_animation_object_hooks_context);
+    }
+}
+
+/* AnimationObjectValueGet (FUN_00407090): run the value-query method on
+ * the scene frame stored at +4. */
+// FUNCTION: LEGORR 0x00407090
+void animation_object_value_get(void* record)
+{
+    void* frame;
+    if (record == NULL || s_animation_object_value_get_hook == NULL) return;
+    frame = *(void**)((char*)record + 4);
+    if (frame != NULL) {
+        s_animation_object_value_get_hook(
+            frame, s_animation_object_hooks_context);
+    }
+}
+
+void renderer_subobject_hooks_install(RendererSubobjectFindHook find,
+                                      RendererSubobjectApplyHook apply,
+                                      void* context)
+{
+    s_renderer_subobject_find_hook = find;
+    s_renderer_subobject_apply_hook = apply;
+    s_renderer_subobject_hooks_context = context;
+}
+
+/* RendererObjectSubobjectDispatch (FUN_00406f50): resolve the requested
+ * child from the frame interface, then apply it in the default mode. */
+void* renderer_object_subobject_find_apply(void* record, void* key)
+{
+    void* frame;
+    void* details = NULL;
+    void* subobject;
+    if (record == NULL || s_renderer_subobject_find_hook == NULL ||
+        s_renderer_subobject_apply_hook == NULL) {
+        return NULL;
+    }
+    frame = *(void**)((char*)record + 4);
+    if (frame == NULL) {
+        return NULL;
+    }
+    subobject = s_renderer_subobject_find_hook(
+        frame, key, &details, s_renderer_subobject_hooks_context);
+    s_renderer_subobject_apply_hook(frame, subobject, 0, 0,
+                                    s_renderer_subobject_hooks_context);
+    return subobject;
+}
+
+// FUNCTION: LEGORR 0x00406F50
+void renderer_object_subobject_dispatch(void* record, void* key)
+{
+    (void)renderer_object_subobject_find_apply(record, key);
+}
+
+/* RendererCachedHandle48GetOrCreate (FUN_00406fe0): lazily resolve the
+ * resource at +0x34 and cache its scene subobject at +0x48. */
+// FUNCTION: LEGORR 0x00406FE0
+void* renderer_cached_handle_48_get_or_create(void* record)
+{
+    void** source;
+    void** cached;
+    if (record == NULL) return NULL;
+    source = (void**)((char*)record + 0x34);
+    cached = (void**)((char*)record + 0x48);
+    if (*source == NULL) return NULL;
+    if (*cached == NULL) {
+        *cached = renderer_object_subobject_find_apply(record, *source);
+    }
+    return *cached;
+}
+
+/* RendererCachedHandle50GetOrCreate (FUN_00407010): sibling cache with
+ * source at +0x3c and cached handle at +0x50. */
+// FUNCTION: LEGORR 0x00407010
+void* renderer_cached_handle_50_get_or_create(void* record)
+{
+    void** source;
+    void** cached;
+    if (record == NULL) return NULL;
+    source = (void**)((char*)record + 0x3c);
+    cached = (void**)((char*)record + 0x50);
+    if (*source == NULL) return NULL;
+    if (*cached == NULL) {
+        *cached = renderer_object_subobject_find_apply(record, *source);
+    }
+    return *cached;
+}
+
+void renderer_handle_scalar_hook_install(RendererHandleScalarGetHook hook,
+                                         void* context)
+{
+    s_renderer_handle_scalar_get_hook = hook;
+    s_renderer_handle_scalar_get_context = context;
+}
+
+/* RendererCachedHandle4cIsNotOne (FUN_00407040): lazily resolve +0x38 into
+ * +0x4c, then answer whether the handle's scalar property differs from 1. */
+// FUNCTION: LEGORR 0x00407040
+int renderer_cached_handle_4c_is_not_one(void* record)
+{
+    void** source;
+    void** cached;
+    float value;
+    if (record == NULL) return 0;
+    source = (void**)((char*)record + 0x38);
+    cached = (void**)((char*)record + 0x4c);
+    if (*cached == NULL && *source != NULL) {
+        *cached = renderer_object_subobject_find_apply(record, *source);
+    }
+    if (*cached == NULL || s_renderer_handle_scalar_get_hook == NULL) {
+        return 0;
+    }
+    value = s_renderer_handle_scalar_get_hook(
+        *cached, s_renderer_handle_scalar_get_context);
+    return value != 1.0f;
+}
+
+// FUNCTION: LEGORR 0x00408770
+void* scene_object_indexed_handle_get_or_create(void* record, int index)
+{
+    void** source;
+    void** cached;
+    if (record == NULL) return NULL;
+    source = (void**)((char*)record + 8);
+    if (*source == NULL) return NULL;
+    cached = (void**)((char*)record + 0x28) + index;
+    if (*cached == NULL) {
+        *cached = renderer_object_subobject_find_apply(record, *source);
+    }
+    return *cached;
+}
+
+// FUNCTION: LEGORR 0x004087b0
+void* scene_object_primary_handle_get_or_create(void* record)
+{
+    void** source;
+    void** cached;
+    if (record == NULL) return NULL;
+    source = (void**)((char*)record + 0x10);
+    cached = (void**)((char*)record + 0x68);
+    if (*source == NULL) return NULL;
+    if (*cached == NULL) {
+        *cached = renderer_object_subobject_find_apply(record, *source);
+    }
+    return *cached;
+}
+
+// FUNCTION: LEGORR 0x004087e0
+void* scene_object_secondary_handle_get_or_create(void* record)
+{
+    void** source;
+    void** cached;
+    if (record == NULL) return NULL;
+    source = (void**)((char*)record + 0x14);
+    cached = (void**)((char*)record + 0x6c);
+    if (*source == NULL) return NULL;
+    if (*cached == NULL) {
+        *cached = renderer_object_subobject_find_apply(record, *source);
+    }
+    return *cached;
+}
+
+// FUNCTION: LEGORR 0x00408810
+void* scene_object_indexed_secondary_handle_get_or_create(void* record,
+                                                           int index)
+{
+    void** source;
+    void** cached;
+    if (record == NULL) return NULL;
+    source = (void**)((char*)record + 0x18);
+    if (*source == NULL) return NULL;
+    cached = (void**)((char*)record + 0x50) + index;
+    if (*cached == NULL) {
+        *cached = renderer_object_subobject_find_apply(record, *source);
+    }
+    return *cached;
+}
+
+// AnimationLoopTimeAdjust (FUN_00408860) shares the counted scene-time
+// adjustment, then refreshes and clears the optional loop-time latch.
+// FUNCTION: LEGORR 0x00408860
+float animation_loop_time_adjust(void* record, void* argument,
+                                 uint32_t count)
+{
+    uint32_t* flags;
+    void* loop_frame;
+    float value;
+    if (record == NULL) return 0.0f;
+    value = renderer_object_timing_value_adjust_by_count(record, argument,
+                                                          count);
+    flags = (uint32_t*)((char*)record + 0x148);
+    if ((*flags & 2u) != 0u) {
+        loop_frame = *(void**)((char*)record + 0x7c);
+        if (loop_frame != NULL && s_scene_timing_count_get_hook != NULL &&
+            s_animation_object_time_update_hook != NULL) {
+            float scale = *(float*)((char*)record + 0x80);
+            int duration = s_scene_timing_count_get_hook(
+                loop_frame, s_scene_timing_hooks_context);
+            s_animation_object_time_update_hook(
+                loop_frame, (float)duration * scale,
+                s_animation_object_hooks_context);
+        }
+        *flags &= ~2u;
+    }
+    return value;
+}
+
 static uint8_t cam_flags(const void* rec, size_t off)
 {
     return *(const uint8_t*)((const char*)rec + off);
@@ -1000,9 +4069,63 @@ void camera_tilt_bounds_set(void* camera, float lo, float hi)
     if (camera == NULL) {
         return; /* deviation: the corpus writes blindly */
     }
-    cam_or_flags(camera, 1u);
+    uint8_t* flags = (uint8_t*)((char*)camera + CAM_FLAGS_OFF);
+    *flags = (uint8_t)(*flags | 1u);
     __builtin_memcpy((char*)camera + 0x7c, &lo, sizeof(lo));
     __builtin_memcpy((char*)camera + 0x80, &hi, sizeof(hi));
+}
+
+/* CameraSetTilt (FUN_00436860): honor the optional bound unless override bit
+ * 8 is set, store +0x78, reset the scene object's pose, then apply the
+ * negative X-axis rotation. The DDiSceneObjectPoseMethodDispatch leaf is an
+ * injectable renderer seam because its owning scene interface varies by
+ * backend. */
+// FUNCTION: LEGORR 0x00436860
+void camera_tilt_set(void* camera, float value)
+{
+    uint8_t flags;
+    float lo, hi;
+    void* scene_object;
+    void* pose_context;
+    if (camera == NULL) {
+        return;
+    }
+    flags = *(uint8_t*)((char*)camera + CAM_FLAGS_OFF);
+    __builtin_memcpy(&lo, (char*)camera + 0x7c, sizeof(lo));
+    __builtin_memcpy(&hi, (char*)camera + 0x80, sizeof(hi));
+    if ((flags & 1u) != 0u && (flags & 8u) == 0u &&
+        (value < lo || value > hi)) {
+        return;
+    }
+    __builtin_memcpy((char*)camera + 0x78, &value, sizeof(value));
+    scene_object = *(void**)((char*)camera + 0x30);
+    pose_context = *(void**)((char*)camera + 0x28);
+    if (scene_object == NULL) {
+        return;
+    }
+    if (s_camera_pose_dispatch_hook != NULL) {
+        s_camera_pose_dispatch_hook(scene_object, pose_context,
+                                    0.0f, 0.0f, 1.0f,
+                                    0.0f, 1.0f, 0.0f,
+                                    s_camera_pose_dispatch_context);
+    }
+    render_object_rotate_axis(scene_object, 1u, 1.0f, 0.0f, 0.0f, -value);
+}
+
+/* ScreenEffectRecordSet (FUN_00435ebb): copy the four effect parameters
+ * around the camera tilt operation in the original record. */
+// FUNCTION: LEGORR 0x00435ebb
+void screen_effect_record_set(void* camera_record,
+                              uint32_t field4, uint32_t field8,
+                              uint32_t fieldc, float tilt,
+                              uint32_t field10)
+{
+    if (camera_record == NULL) return;
+    memcpy((char*)camera_record + 4, &field4, sizeof(field4));
+    memcpy((char*)camera_record + 8, &field8, sizeof(field8));
+    memcpy((char*)camera_record + 0x0c, &fieldc, sizeof(fieldc));
+    camera_tilt_set(camera_record, tilt);
+    memcpy((char*)camera_record + 0x10, &field10, sizeof(field10));
 }
 
 // FUNCTION: LEGORR 0x00436921
@@ -1011,9 +4134,43 @@ void camera_scalar_bounds_set(void* camera, float lo, float hi)
     if (camera == NULL) {
         return; /* deviation: the corpus writes blindly */
     }
-    cam_or_flags(camera, 2u);
+    uint8_t* flags = (uint8_t*)((char*)camera + CAM_FLAGS_OFF);
+    *flags = (uint8_t)(*flags | 2u);
     __builtin_memcpy((char*)camera + 0x88, &lo, sizeof(lo));
     __builtin_memcpy((char*)camera + 0x8c, &hi, sizeof(hi));
+}
+
+/* CameraSetBoundedRotationValue (FUN_00436953): same optional-range and
+ * override gates as the tilt setter, with a reset pose followed by a
+ * negative Z-axis rotation. */
+// FUNCTION: LEGORR 0x00436953
+void camera_rotation_set(void* camera, float value)
+{
+    uint8_t flags;
+    float lo, hi;
+    void* scene_object;
+    if (camera == NULL) {
+        return;
+    }
+    flags = *(uint8_t*)((char*)camera + CAM_FLAGS_OFF);
+    __builtin_memcpy(&lo, (char*)camera + 0x88, sizeof(lo));
+    __builtin_memcpy(&hi, (char*)camera + 0x8c, sizeof(hi));
+    if ((flags & 2u) != 0u && (flags & 8u) == 0u &&
+        (value < lo || value > hi)) {
+        return;
+    }
+    __builtin_memcpy((char*)camera + 0x84, &value, sizeof(value));
+    scene_object = *(void**)((char*)camera + 0x28);
+    if (scene_object == NULL) {
+        return;
+    }
+    if (s_camera_pose_dispatch_hook != NULL) {
+        s_camera_pose_dispatch_hook(scene_object, NULL,
+                                    0.0f, 0.0f, 1.0f,
+                                    0.0f, 1.0f, 0.0f,
+                                    s_camera_pose_dispatch_context);
+    }
+    render_object_rotate_axis(scene_object, 1u, 0.0f, 0.0f, 1.0f, -value);
 }
 
 // FUNCTION: LEGORR 0x00436a18
@@ -1022,7 +4179,8 @@ void camera_distance_bounds_set(void* camera, float lo, float hi)
     if (camera == NULL) {
         return; /* deviation: the corpus writes blindly */
     }
-    cam_or_flags(camera, 4u);
+    uint8_t* flags = (uint8_t*)((char*)camera + CAM_FLAGS_OFF);
+    *flags = (uint8_t)(*flags | 4u);
     __builtin_memcpy((char*)camera + 0x94, &lo, sizeof(lo));
     __builtin_memcpy((char*)camera + 0x98, &hi, sizeof(hi));
 }
@@ -1033,7 +4191,7 @@ void camera_distance_set(void* camera, float value)
     if (camera == NULL) {
         return; /* deviation: the corpus writes blindly */
     }
-    const uint8_t f = cam_flags(camera, CAM_FLAGS_OFF);
+    const uint8_t f = *(const uint8_t*)((const char*)camera + CAM_FLAGS_OFF);
     float lo = 0.0f, hi = 0.0f;
     __builtin_memcpy(&lo, (const char*)camera + 0x94, sizeof(lo));
     __builtin_memcpy(&hi, (const char*)camera + 0x98, sizeof(hi));
@@ -1055,6 +4213,19 @@ void camera_zoom_update(void* camera, float delta)
 
 /* CursorScreenRayContextReset (FUN_00435f16) — see view.hpp. */
 // FUNCTION: LEGORR 0x00435f16
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void cursor_screen_ray_context_reset(ViewContext* v)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        test eax, eax
+        je cursor_screen_ray_reset_null
+        mov dword ptr [eax + 0x9c], 0
+    cursor_screen_ray_reset_null:
+        ret
+    }
+}
+#else
 void cursor_screen_ray_context_reset(ViewContext* v)
 {
     if (v == NULL) {
@@ -1062,6 +4233,7 @@ void cursor_screen_ray_context_reset(ViewContext* v)
     }
     v->pan_accum = 0.0f; /* the corpus's view-record +0x9c slot */
 }
+#endif
 
 /* CurrentLevelTerrainGridPick (FUN_00433be0) — see view.hpp. */
 // FUNCTION: LEGORR 0x00433be0
@@ -1073,6 +4245,132 @@ void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
     int* px = gx != NULL ? gx : &tx;
     int* py = gy != NULL ? gy : &ty;
     (void)engine_context_grid_pick(ctx, pos, px, py);
+}
+
+void terrain_point_pick_cell_check_hook_set(
+    TerrainPointPickCellCheckHook hook, void* user)
+{
+    s_terrain_point_pick_hook = hook;
+    s_terrain_point_pick_user = user;
+}
+
+// FUNCTION: LEGORR 0x0045e6d0
+int terrain_point_pick_resolve(const TerrainPointPickRegion* region,
+                               uint32_t screen_x, uint32_t screen_y,
+                               float out_world_xy[2],
+                               uint32_t argument_a,
+                               uint32_t argument_b)
+{
+    float world_x;
+    float world_y;
+    float x = (float)screen_x;
+    float y = (float)screen_y;
+    if (region == NULL || s_terrain_point_pick_hook == NULL ||
+        region->tile_size == 0.0f ||
+        x < region->screen_left ||
+        x >= region->screen_left + region->screen_width ||
+        y < region->screen_top ||
+        y >= region->screen_top + region->screen_height) {
+        return 0;
+    }
+    world_y = region->scale *
+        ((region->screen_top + region->screen_width * 0.5f) - y) /
+        region->tile_size + region->world_origin_y;
+    world_x = region->world_origin_x - region->scale *
+        ((region->screen_left + region->screen_width * 0.5f) - x) /
+        region->tile_size;
+    if (!s_terrain_point_pick_hook(region->grid_token, world_x, world_y,
+                                   argument_a, argument_b,
+                                   s_terrain_point_pick_user)) {
+        return 0;
+    }
+    if (out_world_xy != NULL) {
+        out_world_xy[0] = world_x;
+        out_world_xy[1] = world_y;
+    }
+    return 1;
+}
+
+void viewport_point_dispatch_hooks_set(const ViewportPointDispatchHooks* hooks)
+{
+    if (hooks == NULL)
+        memset(&s_viewport_point_dispatch_hooks, 0,
+               sizeof(s_viewport_point_dispatch_hooks));
+    else
+        s_viewport_point_dispatch_hooks = *hooks;
+}
+
+// FUNCTION: LEGORR 0x0045e820
+int viewport_point_callback_dispatch(const TerrainPointPickRegion* region,
+                                     uint32_t screen_x, uint32_t screen_y,
+                                     uint32_t* object_handle,
+                                     float out_position_xy[2])
+{
+    float world_xy[2];
+    float position[3];
+    uint32_t handle = 0u;
+    if (object_handle != NULL) *object_handle = 0u;
+    if (region == NULL || object_handle == NULL ||
+        s_viewport_point_dispatch_hooks.resolve == NULL ||
+        !terrain_point_pick_resolve(region, screen_x, screen_y, world_xy,
+                                    0u, 0u)) {
+        return 0;
+    }
+    if (!s_viewport_point_dispatch_hooks.resolve(region->grid_token,
+            world_xy[0], world_xy[1], region->scale, &handle,
+            s_viewport_point_dispatch_hooks.user) || handle == 0u) {
+        return 0;
+    }
+    *object_handle = handle;
+    if (out_position_xy != NULL &&
+        s_viewport_point_dispatch_hooks.position_get != NULL &&
+        s_viewport_point_dispatch_hooks.position_get(handle, position,
+            s_viewport_point_dispatch_hooks.user)) {
+        out_position_xy[0] = position[0];
+        out_position_xy[1] = position[1];
+    }
+    return 1;
+}
+
+void textured_scene_draw_hooks_set(const TexturedSceneDrawHooks* hooks)
+{
+    if (hooks == NULL)
+        memset(&s_textured_scene_draw_hooks, 0,
+               sizeof(s_textured_scene_draw_hooks));
+    else
+        s_textured_scene_draw_hooks = *hooks;
+}
+
+// FUNCTION: LEGORR 0x0045db00
+void textured_scene_object_draw_at_position(const void* view,
+                                            const float position_xy[2],
+                                            float z, float size)
+{
+    float saved_matrix[16];
+    float position[4];
+    float scale;
+    int width;
+    int saved = 0;
+    if (view == NULL || position_xy == NULL ||
+        s_textured_scene_draw_hooks.draw == NULL) return;
+    if (s_textured_scene_draw_hooks.state_save != NULL)
+        saved = s_textured_scene_draw_hooks.state_save(
+            s_textured_scene_draw_hooks.user, saved_matrix);
+    if (s_textured_scene_draw_hooks.view_transform_set != NULL)
+        s_textured_scene_draw_hooks.view_transform_set(
+            s_textured_scene_draw_hooks.user, (const char*)view + 4);
+    position[0] = position_xy[0];
+    position[1] = position_xy[1];
+    position[2] = z;
+    position[3] = 0.0f;
+    view_point_to_screen_geometry_transform(view, position);
+    scale = size * 0.7f + 0.3f;
+    width = (int)scale;
+    s_textured_scene_draw_hooks.draw(s_textured_scene_draw_hooks.user,
+        position, width, width * 2, scale * 0.7f, scale * 0.9f, scale);
+    if (saved && s_textured_scene_draw_hooks.state_restore != NULL)
+        s_textured_scene_draw_hooks.state_restore(
+            s_textured_scene_draw_hooks.user, saved_matrix);
 }
 
 /* GridOperationArgumentAdapter (FUN_00442540) — see view.hpp. */
@@ -1089,11 +4387,36 @@ void grid_operation_argument_adapter(float x, float y, EngineContext* ctx)
 // FUNCTION: LEGORR 0x0040fec0
 void set_global_scalar_to_one(void)
 {
-    /* the corpus's ramp draw is discarded; faithful no-op */
+    (void)random_float_range(0.0f, 1.0f);
 }
 
 /* FloatNegateAbsoluteValue (FUN_0044d250) — see view.hpp. */
 // FUNCTION: LEGORR 0x0044d250
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void float_negate_absolute_value(float* value)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        test ecx, ecx
+        je float_negate_null
+        fld dword ptr [ecx]
+        fcomp dword ptr ds:[0049e4b0h]
+        fld dword ptr [ecx]
+        fnstsw ax
+        test ah, 1
+        je float_negate_nonnegative
+        fmul dword ptr ds:[0049e4c8h]
+        fstp dword ptr [ecx]
+        ret
+
+    float_negate_nonnegative:
+        fchs
+        fstp dword ptr [ecx]
+    float_negate_null:
+        ret
+    }
+}
+#else
 void float_negate_absolute_value(float* value)
 {
     if (value == NULL) {
@@ -1101,6 +4424,7 @@ void float_negate_absolute_value(float* value)
     }
     *value = -*value; /* both corpus branches negate */
 }
+#endif
 
 /* Vector2SetLength (FUN_00406760) — see view.hpp. */
 // FUNCTION: LEGORR 0x00406760
@@ -1169,15 +4493,20 @@ void vector2_set_length(float v[2], float length)
 #endif
 
 /* CameraZoomStepAdjust (FUN_0045bf20) — see view.hpp. */
+void camera_zoom_step_context_set(void* context)
+{
+    s_zoom_step_context = context;
+}
+
 // FUNCTION: LEGORR 0x0045bf20
-void camera_zoom_step_adjust(void* camera, int direction, float step)
+void camera_zoom_step_adjust(int direction, float step)
 {
     if (direction == 0) {
-        camera_zoom_update(camera, step * -3.0f);
+        camera_zoom_update(s_zoom_step_context, step * -3.0f);
         return; /* layout: the corpus's arm0 ends at its own ret (0x45bf44) */
     }
     if (direction == 1) {
-        camera_zoom_update(camera, step * 3.0f);
+        camera_zoom_update(s_zoom_step_context, step * 3.0f);
     }
     /* other directions: the corpus's early exit — inert */
 }
@@ -1209,7 +4538,7 @@ float selected_global_point_transform_and_return_x(EngineContext* ctx)
 // FUNCTION: LEGORR 0x00436ac9
 void renderer_node_relative_position_set(const void* node, float x, float y)
 {
-    void* handle = NULL;
+    uint32_t handle = 0u;
     if (node != NULL) {
         __builtin_memcpy(&handle, (const char*)node + 0x28, sizeof handle);
     }
@@ -1222,6 +4551,160 @@ void renderer_node_relative_position_set(const void* node, float x, float y)
  * renderer-side initializer, so the port carries it as a hooked static. */
 // GLOBAL: LEGORR 0x0076add4
 static void* s_scene_root;
+// GLOBAL: LEGORR 0x0076cd8c
+static uint32_t s_scene_fog_color;
+// GLOBAL: LEGORR 0x00505920
+static uint32_t s_scene_fog_mode;
+
+/* Reconstruction owner for the corpus DDiScene render-surface record pool. */
+static void* s_render_surface_pool_blocks[32];
+static unsigned int s_render_surface_pool_level_count;
+static void* s_render_surface_pool_free_head;
+
+static size_t render_surface_pool_stride(void)
+{
+    return (size_t)0x20u + (sizeof(void*) - sizeof(uint32_t));
+}
+
+static void* render_surface_pool_link_get(void* record)
+{
+    void* next;
+    memcpy(&next, (unsigned char*)record + 0x1c, sizeof(next));
+    return next;
+}
+
+static void render_surface_pool_link_set(void* record, void* next)
+{
+    memcpy((unsigned char*)record + 0x1c, &next, sizeof(next));
+}
+
+// FUNCTION: LEGORR 0x00477370
+void ddiscene_render_surface_pool_grow(void)
+{
+    unsigned int count;
+    unsigned int i;
+    size_t stride;
+    unsigned char* block;
+    if (s_render_surface_pool_level_count >= 32u) {
+        return;
+    }
+    count = 1u << s_render_surface_pool_level_count;
+    stride = render_surface_pool_stride();
+    if ((size_t)count > (size_t)0x7fffffff / stride) {
+        return;
+    }
+    block = (unsigned char*)engine_heap_alloc((long)((size_t)count * stride));
+    if (block == NULL) {
+        return;
+    }
+    s_render_surface_pool_blocks[s_render_surface_pool_level_count] = block;
+    ++s_render_surface_pool_level_count;
+    for (i = 0; i + 1u < count; ++i) {
+        render_surface_pool_link_set(block + (size_t)i * stride,
+                                     block + (size_t)(i + 1u) * stride);
+    }
+    render_surface_pool_link_set(block + (size_t)(count - 1u) * stride,
+                                 s_render_surface_pool_free_head);
+    s_render_surface_pool_free_head = block;
+}
+
+void* ddiscene_render_surface_pool_acquire(void)
+{
+    void* record;
+    if (s_render_surface_pool_free_head == NULL) {
+        ddiscene_render_surface_pool_grow();
+    }
+    record = s_render_surface_pool_free_head;
+    if (record != NULL) {
+        s_render_surface_pool_free_head = render_surface_pool_link_get(record);
+        render_surface_pool_link_set(record, NULL);
+    }
+    return record;
+}
+
+void ddiscene_render_surface_pool_release(void* record)
+{
+    if (record != NULL) {
+        render_surface_pool_link_set(record, s_render_surface_pool_free_head);
+        s_render_surface_pool_free_head = record;
+    }
+}
+
+static void* s_scene_registry_blocks[32];
+static unsigned int s_scene_registry_block_count;
+static void* s_scene_registry_free_head;
+static SceneRegistrySurfaceReleaseFn s_scene_registry_surface_release;
+
+static size_t scene_registry_record_stride(void)
+{
+    return (size_t)0x1cu + sizeof(void*);
+}
+
+static void* scene_registry_record_next_get(void* record)
+{
+    void* next;
+    memcpy(&next, (unsigned char*)record + 0x1c, sizeof(next));
+    return next;
+}
+
+static void scene_registry_record_next_set(void* record, void* next)
+{
+    memcpy((unsigned char*)record + 0x1c, &next, sizeof(next));
+}
+
+void scene_object_registry_surface_release_set(
+    SceneRegistrySurfaceReleaseFn release)
+{
+    s_scene_registry_surface_release = release;
+}
+
+void scene_object_registry_pool_block_register(void* block)
+{
+    if (block != NULL && s_scene_registry_block_count < 32u) {
+        s_scene_registry_blocks[s_scene_registry_block_count++] = block;
+    }
+}
+
+// FUNCTION: LEGORR 0x0047e130
+void scene_object_registry_release_all(void)
+{
+    unsigned int level;
+    size_t stride = scene_registry_record_stride();
+    for (level = 0u; level < s_scene_registry_block_count; ++level) {
+        unsigned int count = 1u << level;
+        unsigned int i;
+        unsigned char* block =
+            (unsigned char*)s_scene_registry_blocks[level];
+        for (i = 0u; i < count; ++i) {
+            void* record = block + (size_t)i * stride;
+            if (scene_registry_record_next_get(record) == record) {
+                void* surface;
+                memcpy(&surface, record, sizeof(surface));
+                if (s_scene_registry_surface_release != NULL) {
+                    s_scene_registry_surface_release(surface);
+                } else {
+                    texture_release((TextureSurface*)surface);
+                }
+                scene_registry_record_next_set(record,
+                                                s_scene_registry_free_head);
+                s_scene_registry_free_head = record;
+            }
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x0047d430
+void scene_object_registry_teardown(void)
+{
+    unsigned int i;
+    scene_object_registry_release_all();
+    fixed_size_small_record_pool_teardown();
+    for (i = 0u; i < s_scene_registry_block_count; ++i) {
+        s_scene_registry_blocks[i] = NULL;
+    }
+    s_scene_registry_block_count = 0u;
+    s_scene_registry_free_head = NULL;
+}
 
 void scene_root_install(void* root) { s_scene_root = root; }
 void* scene_root_peek(void) { return s_scene_root; }
@@ -1231,6 +4714,451 @@ void* scene_root_peek(void) { return s_scene_root; }
 void* scene_root_object_get(void)
 {
     return s_scene_root;
+}
+
+/* The scene object wrapper stores its interface in its first word. These
+ * renderer leaves dispatch through fixed vtable slots on that interface. */
+class SceneRootInterface
+{
+public:
+#define SCENE_INTERFACE_SLOT(n) virtual void slot_##n(void) = 0
+    SCENE_INTERFACE_SLOT(0); SCENE_INTERFACE_SLOT(1);
+    SCENE_INTERFACE_SLOT(2); SCENE_INTERFACE_SLOT(3);
+    SCENE_INTERFACE_SLOT(4); SCENE_INTERFACE_SLOT(5);
+    SCENE_INTERFACE_SLOT(6); SCENE_INTERFACE_SLOT(7);
+    SCENE_INTERFACE_SLOT(8); SCENE_INTERFACE_SLOT(9);
+    SCENE_INTERFACE_SLOT(10); SCENE_INTERFACE_SLOT(11);
+    SCENE_INTERFACE_SLOT(12); SCENE_INTERFACE_SLOT(13);
+    SCENE_INTERFACE_SLOT(14);
+    virtual void clip_distance_set(float distance) = 0;
+    SCENE_INTERFACE_SLOT(16); SCENE_INTERFACE_SLOT(17);
+    SCENE_INTERFACE_SLOT(18); SCENE_INTERFACE_SLOT(19);
+    virtual void transform_point(void* output, const void* input) = 0;
+    SCENE_INTERFACE_SLOT(21);
+    SCENE_INTERFACE_SLOT(22); SCENE_INTERFACE_SLOT(23);
+    SCENE_INTERFACE_SLOT(24); SCENE_INTERFACE_SLOT(25);
+    SCENE_INTERFACE_SLOT(26); SCENE_INTERFACE_SLOT(27);
+    SCENE_INTERFACE_SLOT(28); SCENE_INTERFACE_SLOT(29);
+    SCENE_INTERFACE_SLOT(30); SCENE_INTERFACE_SLOT(31);
+    virtual unsigned int render_surface_value_pair_80_get(void) = 0;
+    virtual unsigned int render_surface_value_pair_84_get(void) = 0;
+    SCENE_INTERFACE_SLOT(34); SCENE_INTERFACE_SLOT(35);
+    SCENE_INTERFACE_SLOT(36); SCENE_INTERFACE_SLOT(37);
+    SCENE_INTERFACE_SLOT(38); SCENE_INTERFACE_SLOT(39);
+    SCENE_INTERFACE_SLOT(40); SCENE_INTERFACE_SLOT(41);
+    SCENE_INTERFACE_SLOT(42); SCENE_INTERFACE_SLOT(43);
+    SCENE_INTERFACE_SLOT(44); SCENE_INTERFACE_SLOT(45);
+    SCENE_INTERFACE_SLOT(46);
+    virtual void fog_color_enable(unsigned int color) = 0;
+    SCENE_INTERFACE_SLOT(48); SCENE_INTERFACE_SLOT(49);
+    SCENE_INTERFACE_SLOT(50);
+    virtual void fog_enable(int enabled) = 0;
+    virtual void fog_color_set(unsigned int color) = 0;
+    virtual void fog_mode_set(unsigned int mode) = 0;
+    virtual void fog_parameters_set(unsigned int start, unsigned int end,
+                                    unsigned int density) = 0;
+    SCENE_INTERFACE_SLOT(55); SCENE_INTERFACE_SLOT(56);
+    SCENE_INTERFACE_SLOT(57); SCENE_INTERFACE_SLOT(58);
+    SCENE_INTERFACE_SLOT(59); SCENE_INTERFACE_SLOT(60);
+    SCENE_INTERFACE_SLOT(61); SCENE_INTERFACE_SLOT(62);
+    SCENE_INTERFACE_SLOT(63); SCENE_INTERFACE_SLOT(64);
+    SCENE_INTERFACE_SLOT(65); SCENE_INTERFACE_SLOT(66);
+    SCENE_INTERFACE_SLOT(67); SCENE_INTERFACE_SLOT(68);
+    SCENE_INTERFACE_SLOT(69); SCENE_INTERFACE_SLOT(70);
+    SCENE_INTERFACE_SLOT(71); SCENE_INTERFACE_SLOT(72);
+    SCENE_INTERFACE_SLOT(73); SCENE_INTERFACE_SLOT(74);
+    SCENE_INTERFACE_SLOT(75); SCENE_INTERFACE_SLOT(76);
+    SCENE_INTERFACE_SLOT(77); SCENE_INTERFACE_SLOT(78);
+    SCENE_INTERFACE_SLOT(79); SCENE_INTERFACE_SLOT(80);
+    SCENE_INTERFACE_SLOT(81); SCENE_INTERFACE_SLOT(82);
+    SCENE_INTERFACE_SLOT(83); SCENE_INTERFACE_SLOT(84);
+    virtual void fog_render_mode_set(unsigned int mode) = 0;
+#undef SCENE_INTERFACE_SLOT
+};
+
+static void* scene_root_interface(void)
+{
+    return *(void**)s_scene_root;
+}
+
+/* DDiScene object interfaces expose the current action/property record at
+ * vtable byte offset 0x1c. Keep the unrelated renderer-root vtable above
+ * separate: this is the small interface used by the animation getters. */
+class DDiScenePropertyInterface
+{
+public:
+    virtual void slot_00(void) = 0;
+    virtual void slot_04(void) = 0;
+    virtual void slot_08(void) = 0;
+    virtual void slot_0c(void) = 0;
+    virtual void slot_10(void) = 0;
+    virtual void slot_14(void) = 0;
+    virtual void slot_18(void) = 0;
+    virtual void* current_property_get(void) = 0;
+};
+
+class SceneObjectTransformInterface
+{
+public:
+    virtual void slot_00(void) = 0; virtual void slot_04(void) = 0;
+    virtual void slot_08(void) = 0; virtual void slot_0c(void) = 0;
+    virtual void slot_10(void) = 0; virtual void slot_14(void) = 0;
+    virtual void slot_18(void) = 0; virtual void slot_1c(void) = 0;
+    virtual void slot_20(void) = 0; virtual void slot_24(void) = 0;
+    virtual void slot_28(void) = 0; virtual void slot_2c(void) = 0;
+    virtual void slot_30(void) = 0; virtual void slot_34(void) = 0;
+    virtual void transform_matrix_set(uint32_t mode,
+                                      const float* matrix) = 0;
+    virtual void slot_3c(uint32_t mode, float x, float y, float z) = 0;
+    virtual void frame_scale_set(uint32_t mode, float x, float y,
+                                 float z) = 0;
+    virtual void rotate_axis(uint32_t mode, float x, float y, float z,
+                             float angle) = 0;
+};
+
+#define DDI_COORD_SLOT(n) virtual void slot_##n(void) = 0
+class SceneObjectCoordinateInterface
+{
+public:
+    DDI_COORD_SLOT(00); DDI_COORD_SLOT(01); DDI_COORD_SLOT(02);
+    DDI_COORD_SLOT(03); DDI_COORD_SLOT(04); DDI_COORD_SLOT(05);
+    DDI_COORD_SLOT(06); DDI_COORD_SLOT(07); DDI_COORD_SLOT(08);
+    DDI_COORD_SLOT(09); DDI_COORD_SLOT(10); DDI_COORD_SLOT(11);
+    DDI_COORD_SLOT(12); DDI_COORD_SLOT(13); DDI_COORD_SLOT(14);
+    DDI_COORD_SLOT(15); DDI_COORD_SLOT(16); DDI_COORD_SLOT(17);
+    DDI_COORD_SLOT(18); DDI_COORD_SLOT(19); DDI_COORD_SLOT(20);
+    DDI_COORD_SLOT(21); DDI_COORD_SLOT(22); DDI_COORD_SLOT(23);
+    DDI_COORD_SLOT(24); DDI_COORD_SLOT(25); DDI_COORD_SLOT(26);
+    DDI_COORD_SLOT(27); DDI_COORD_SLOT(28); DDI_COORD_SLOT(29);
+    DDI_COORD_SLOT(30); DDI_COORD_SLOT(31); DDI_COORD_SLOT(32);
+    virtual void coordinate_transform_to_output(void* input,
+                                               void* output) = 0;
+    DDI_COORD_SLOT(34); DDI_COORD_SLOT(35); DDI_COORD_SLOT(36);
+    DDI_COORD_SLOT(37); DDI_COORD_SLOT(38); DDI_COORD_SLOT(39);
+    DDI_COORD_SLOT(40); DDI_COORD_SLOT(41); DDI_COORD_SLOT(42);
+    DDI_COORD_SLOT(43); DDI_COORD_SLOT(44); DDI_COORD_SLOT(45);
+    DDI_COORD_SLOT(46); DDI_COORD_SLOT(47); DDI_COORD_SLOT(48);
+    DDI_COORD_SLOT(49); DDI_COORD_SLOT(50); DDI_COORD_SLOT(51);
+    DDI_COORD_SLOT(52); DDI_COORD_SLOT(53); DDI_COORD_SLOT(54);
+    DDI_COORD_SLOT(55); DDI_COORD_SLOT(56); DDI_COORD_SLOT(57);
+    DDI_COORD_SLOT(58); DDI_COORD_SLOT(59); DDI_COORD_SLOT(60);
+    DDI_COORD_SLOT(61); DDI_COORD_SLOT(62); DDI_COORD_SLOT(63);
+    DDI_COORD_SLOT(64); DDI_COORD_SLOT(65);
+    virtual void coordinate_transform_in_place(void* coordinates,
+                                              void* transform) = 0;
+};
+#undef DDI_COORD_SLOT
+
+class SceneLightInterface
+{
+public:
+    virtual void slot_00(void) = 0; virtual void slot_04(void) = 0;
+    virtual void slot_08(void) = 0; virtual void slot_0c(void) = 0;
+    virtual void slot_10(void) = 0; virtual void slot_14(void) = 0;
+    virtual void slot_18(void) = 0; virtual void slot_1c(void) = 0;
+    virtual void slot_20(void) = 0; virtual void slot_24(void) = 0;
+    virtual void slot_28(void) = 0; virtual void slot_2c(void) = 0;
+    virtual void slot_30(void) = 0; virtual void slot_34(void) = 0;
+    virtual int slot_38(uint32_t value) = 0;
+    virtual int slot_3c(uint32_t value) = 0;
+    virtual int slot_40(uint32_t value) = 0;
+};
+
+static SceneLightInterface* scene_light_interface(void* record)
+{
+    void* const light = *(void**)((char*)record + 0x0c);
+    return (SceneLightInterface*)*(void**)((char*)light + 4);
+}
+
+/* DDiSceneAnimationDurationGet (FUN_004761a0). */
+// FUNCTION: LEGORR 0x004761a0
+float ddiscene_animation_duration_get(void* scene_interface)
+{
+    void* record = ((DDiScenePropertyInterface*)scene_interface)
+        ->current_property_get();
+    return record != NULL ? *(float*)((char*)record + 0x10) : 0.0f;
+}
+
+/* DDiSceneAnimationStateGet (FUN_004761e0). */
+// FUNCTION: LEGORR 0x004761e0
+uint32_t ddiscene_animation_state_get(void* scene_interface)
+{
+    void* record = ((DDiScenePropertyInterface*)scene_interface)
+        ->current_property_get();
+    return record != NULL ? *(uint32_t*)((char*)record + 0x18) : 0u;
+}
+
+/* DDiSceneAnimationLastFrameGet (FUN_00476200). */
+// FUNCTION: LEGORR 0x00476200
+uint32_t ddiscene_animation_last_frame_get(void* scene_interface)
+{
+    void* record = ((DDiScenePropertyInterface*)scene_interface)
+        ->current_property_get();
+    return record != NULL ? *(uint32_t*)((char*)record + 0x20) : 0u;
+}
+
+/* DDiSceneActionRecordField1CGet (FUN_00476160). */
+// FUNCTION: LEGORR 0x00476160
+uint32_t ddiscene_action_record_field_1c_get(void* scene_interface)
+{
+    void* record = ((DDiScenePropertyInterface*)scene_interface)
+        ->current_property_get();
+    return record != NULL ? *(uint32_t*)((char*)record + 0x1c) : 0u;
+}
+
+/* DDiSceneActionRecordField0CGet (FUN_00476180). */
+// FUNCTION: LEGORR 0x00476180
+uint32_t ddiscene_action_record_field_0c_get(void* scene_interface)
+{
+    void* record = ((DDiScenePropertyInterface*)scene_interface)
+        ->current_property_get();
+    return record != NULL ? *(uint32_t*)((char*)record + 0x0c) : 0u;
+}
+
+/* ScenePropertyValueAt08Get (FUN_00476310). */
+// FUNCTION: LEGORR 0x00476310
+uint32_t scene_property_value_at08_get(void* scene_interface)
+{
+    void* record = ((DDiScenePropertyInterface*)scene_interface)
+        ->current_property_get();
+    return record != NULL ? *(uint32_t*)((char*)record + 0x08) : 0u;
+}
+
+/* SceneObjectTransformMatrixSet (FUN_004756b0). The wrapper stores the
+ * renderer interface pointer in its first word; the corpus dispatches slot
+ * 0x38 with the caller's mode and matrix. */
+// FUNCTION: LEGORR 0x004756b0
+void scene_object_transform_matrix_set(void* object, uint32_t mode,
+                                       const float* matrix)
+{
+    SceneObjectTransformInterface* const scene =
+        (SceneObjectTransformInterface*)*(void**)object;
+    scene->transform_matrix_set(mode, matrix);
+}
+
+/* RenderObjectSetIdentityTransform (FUN_00475610). */
+// FUNCTION: LEGORR 0x00475610
+void render_object_set_identity_transform(void* object)
+{
+    float matrix[16];
+    matrix4_set_identity(matrix);
+    scene_object_transform_matrix_set(object, 0u, matrix);
+}
+
+/* RenderObjectRotateAxis (FUN_00475580), vtable slot +0x44. */
+// FUNCTION: LEGORR 0x00475580
+void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,
+                               float z, float angle)
+{
+    SceneObjectTransformInterface* const scene =
+        (SceneObjectTransformInterface*)*(void**)object;
+    scene->rotate_axis(mode, x, y, z, angle);
+}
+
+/* SceneFrameScaleSet (FUN_004755b0), vtable slot +0x40. */
+// FUNCTION: LEGORR 0x004755b0
+void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
+                           float z)
+{
+    SceneObjectTransformInterface* const scene =
+        (SceneObjectTransformInterface*)*(void**)object;
+    scene->frame_scale_set(mode, x, y, z);
+}
+
+/* SceneObjectCoordinateTransformToOutput (FUN_00475090), interface slot
+ * +0x84 as recovered in Finding 337. */
+// FUNCTION: LEGORR 0x00475090
+void scene_object_coordinate_transform_to_output(void* object,
+                                                  void* input, void* output)
+{
+    SceneObjectCoordinateInterface* const scene =
+        (SceneObjectCoordinateInterface*)*(void**)object;
+    scene->coordinate_transform_to_output(input, output);
+}
+
+/* SceneObjectCoordinateTransformInPlace (FUN_00475070), interface slot
+ * +0x108 as recovered in Finding 337. */
+// FUNCTION: LEGORR 0x00475070
+void scene_object_coordinate_transform_in_place(void* object,
+                                                void* coordinates,
+                                                void* transform)
+{
+    SceneObjectCoordinateInterface* const scene =
+        (SceneObjectCoordinateInterface*)*(void**)object;
+    scene->coordinate_transform_in_place(coordinates, transform);
+}
+
+/* Light interface forwarding leaves (Finding 430). The reference treats
+ * zero from each vtable call as success. */
+// FUNCTION: LEGORR 0x004734a0
+int light_interface_call_slot_38(void* record, uint32_t value)
+{
+    return scene_light_interface(record)->slot_38(value) == 0;
+}
+
+// FUNCTION: LEGORR 0x00473480
+int light_interface_call_slot_3c(void* record, uint32_t value)
+{
+    return scene_light_interface(record)->slot_3c(value) == 0;
+}
+
+// FUNCTION: LEGORR 0x00473460
+int light_interface_call_slot_40(void* record, uint32_t value)
+{
+    return scene_light_interface(record)->slot_40(value) == 0;
+}
+
+static const void* s_advisor_companion_transform;
+static AdvisorCompanionApplyFn s_advisor_object_apply;
+static AdvisorCompanionApplyFn s_advisor_scene_apply;
+
+void advisor_companion_apply_hooks_set(const void* transform,
+                                       AdvisorCompanionApplyFn object_apply,
+                                       AdvisorCompanionApplyFn scene_apply)
+{
+    s_advisor_companion_transform = transform;
+    s_advisor_object_apply = object_apply;
+    s_advisor_scene_apply = scene_apply;
+}
+
+// FUNCTION: LEGORR 0x004734c0
+void advisor_companion_transform_apply(void* unused, void** object_reference)
+{
+    void* object;
+    (void)unused;
+    if (object_reference == NULL) {
+        return;
+    }
+    object = *object_reference;
+    if (s_advisor_object_apply != NULL) {
+        s_advisor_object_apply(object, s_advisor_companion_transform,
+                               &object_reference);
+    }
+    if (s_advisor_scene_apply != NULL) {
+        s_advisor_scene_apply(object, s_advisor_companion_transform,
+                              &object_reference);
+    }
+}
+
+static void* s_scene_value_query_context;
+static SceneObjectReadyQueryFn s_scene_ready_query;
+static SceneObjectCurrentValueFn s_scene_current_value_query;
+static SceneObjectValueReleaseFn s_scene_value_release;
+
+void scene_object_value_query_hooks_set(
+    void* context, SceneObjectReadyQueryFn ready_query,
+    SceneObjectCurrentValueFn value_query, SceneObjectValueReleaseFn release)
+{
+    s_scene_value_query_context = context;
+    s_scene_ready_query = ready_query;
+    s_scene_current_value_query = value_query;
+    s_scene_value_release = release;
+}
+
+// FUNCTION: LEGORR 0x00476f70
+uint32_t scene_object_query_value_if_ready(void* object)
+{
+    void* ready_interface;
+    void* owner;
+    void* object_local;
+    uint32_t value = 0u;
+    const uint32_t* current;
+    if (object == NULL) {
+        return 0u;
+    }
+    ready_interface = *(void**)((char*)object + 0x10);
+    if (s_scene_ready_query == NULL ||
+        s_scene_ready_query(ready_interface) != 0) {
+        return 0u;
+    }
+    if (s_scene_current_value_query != NULL) {
+        current = s_scene_current_value_query(s_scene_value_query_context);
+        if (current != NULL) {
+            value = *current;
+        }
+    }
+    owner = *(void**)((char*)object + 8);
+    object_local = object;
+    if (s_scene_value_release != NULL) {
+        s_scene_value_release(owner, &object_local);
+    }
+    return value;
+}
+
+// FUNCTION: LEGORR 0x00473dc0
+void renderer_fog_enable_and_color_apply(int enabled)
+{
+    SceneRootInterface* const scene =
+        (SceneRootInterface*)*(void**)s_scene_root;
+    scene->fog_enable(enabled);
+    scene->fog_color_enable(enabled != 0 ? s_scene_fog_color : 0u);
+}
+
+// FUNCTION: LEGORR 0x00473e70
+void renderer_fog_mode_set(unsigned int mode)
+{
+    SceneRootInterface* const scene =
+        (SceneRootInterface*)*(void**)s_scene_root;
+    scene->fog_mode_set(mode);
+    scene->fog_render_mode_set(s_scene_fog_mode);
+}
+
+// FUNCTION: LEGORR 0x00473e10
+void renderer_fog_color_set(float red, float green, float blue)
+{
+    (void)green; /* reference code converts the first argument twice */
+    const unsigned int first = (unsigned int)float_to_long(red * 255.0f);
+    const unsigned int second = (unsigned int)float_to_long(red * 255.0f);
+    const unsigned int third = (unsigned int)float_to_long(blue * 255.0f);
+    const unsigned int packed =
+        ((first | ((second | 0xffffff00u) << 8)) << 8) | third;
+    SceneRootInterface* const scene =
+        (SceneRootInterface*)*(void**)s_scene_root;
+    s_scene_fog_color = packed;
+    scene->fog_color_set(packed);
+}
+
+// FUNCTION: LEGORR 0x00473ea0
+void renderer_fog_parameters_set(unsigned int start, unsigned int end,
+                                 unsigned int density)
+{
+    SceneRootInterface* const scene =
+        (SceneRootInterface*)*(void**)s_scene_root;
+    scene->fog_parameters_set(start, end, density);
+}
+
+// FUNCTION: LEGORR 0x00476fb0
+void renderer_object_set_clip_distance(void* object, float distance)
+{
+    SceneRootInterface* const scene =
+        (SceneRootInterface*)*(void**)((char*)object + 0x10);
+    scene->clip_distance_set(distance);
+}
+
+// FUNCTION: LEGORR 0x004772b0
+void render_interface_transform_point(void* object, void* output,
+                                      const void* input)
+{
+    SceneRootInterface* const scene =
+        (SceneRootInterface*)*(void**)((char*)object + 0x10);
+    scene->transform_point(output, input);
+}
+
+// FUNCTION: LEGORR 0x00476f10
+void render_surface_get_value_pair_80_and_84(void* surface,
+                                             uint32_t* out_80,
+                                             uint32_t* out_84)
+{
+    if (out_80 != NULL) {
+        void* const scene = *(void**)((char*)surface + 0x10);
+        *out_80 = ((SceneRootInterface*)scene)
+            ->render_surface_value_pair_80_get();
+    }
+    if (out_84 != NULL) {
+        void* const scene = *(void**)((char*)surface + 0x10);
+        *out_84 = ((SceneRootInterface*)scene)
+            ->render_surface_value_pair_84_get();
+    }
 }
 
 /* SceneNodePositionSet (FUN_00410020) — see view.hpp. The inner object
@@ -1423,6 +5351,29 @@ void surface_triangle_normal_calculate(float* out, const float* p2,
 }
 #endif
 
+/* FUNCTION: LEGORR 0x00479630
+ * Deterministic port-side area: the corpus applies a random angular
+ * perturbation to the longest edge. This keeps the triangle geometry and
+ * downward-facing gate while omitting that unknown random-angle schedule. */
+float surface_triangle_area_calculate(const float* p1, const float* p2,
+                                      const float* p3,
+                                      int only_downward)
+{
+    float e1[3], e2[3], normal[3];
+    float cx, cy, cz;
+    if (p1 == NULL || p2 == NULL || p3 == NULL) return 0.0f;
+    e1[0] = p2[0] - p1[0]; e1[1] = p2[1] - p1[1]; e1[2] = p2[2] - p1[2];
+    e2[0] = p3[0] - p1[0]; e2[1] = p3[1] - p1[1]; e2[2] = p3[2] - p1[2];
+    cx = e1[1] * e2[2] - e1[2] * e2[1];
+    cy = e1[2] * e2[0] - e1[0] * e2[2];
+    cz = e1[0] * e2[1] - e1[1] * e2[0];
+    if (only_downward) {
+        surface_triangle_normal_calculate(normal, p1, p2, p3);
+        if (normal[2] >= 0.0f) return 0.0f;
+    }
+    return 0.5f * (float)sqrt(cx * cx + cy * cy + cz * cz);
+}
+
 /* SceneMeshColorAndAlphaSet (FUN_00475020) — see view.hpp. */
 // FUNCTION: LEGORR 0x00475020
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -1550,6 +5501,7 @@ void scene_mesh_color_set(void* object, int block, float red, float green,
 /* --- the rotated-pairs scratch (see view.hpp) ----------------------------- */
 
 #define ROT_PAIR_SLOTS 256 /* deviation: bounded scratch (blind DAT stride) */
+// GLOBAL: LEGORR 0x005013c8
 static int s_rot_pairs[ROT_PAIR_SLOTS * 2];
 
 void* rotated_pairs_scratch_peek(void) { return s_rot_pairs; }
@@ -1848,9 +5800,8 @@ uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
 /* ViewPointToScreenGeometryTransform (FUN_0045e940) — see view.hpp. The
  * record window is the projection block: center +4/+8, half-size +c/+10,
  * scale pair +14/+18, screen offsets +1c/+20. Deviations: NULL guards on
- * both inputs (the corpus dereferences blindly) and the scale ratio is
- * computed once where the corpus recomputes it five times (bit-identical
- * for the same pair). */
+ * both inputs (the corpus dereferences blindly). The scale ratio is
+ * recomputed at each output as in the corpus. */
 // FUNCTION: LEGORR 0x0045e940
 void view_point_to_screen_geometry_transform(const void* view, float p[4])
 {
@@ -1869,15 +5820,14 @@ void view_point_to_screen_geometry_transform(const void* view, float p[4])
     __builtin_memcpy(&off_x, w + 0x1c, sizeof off_x);
     __builtin_memcpy(&off_y, w + 0x20, sizeof off_y);
 
-    const float ratio = scale_a / scale_b;
     p[0] = p[0] - off_x;
     p[1] = p[1] - off_y;
-    p[0] = ratio * p[0];
-    p[1] = ratio * p[1];
-    p[2] = ratio * p[2];
+    p[0] = (scale_a / scale_b) * p[0];
+    p[1] = (scale_a / scale_b) * p[1];
+    p[2] = (scale_a / scale_b) * p[2];
     p[0] = p[0] + half_x * 0.5f + cx;
     p[1] = (half_y * 0.5f + cy) - p[1];
-    p[3] = ratio * p[3];
+    p[3] = (scale_a / scale_b) * p[3];
 }
 
 /* PolylineSegmentLengthsAndTotalCalculate (FUN_004067b0) — see view.hpp. */
@@ -1910,4 +5860,521 @@ float polyline_segment_lengths_total(uint32_t* curve)
         }
     }
     return (float)total;
+}
+
+// FUNCTION: LEGORR 0x00408b60
+void point_project_onto_line2d(const float* line_start, const float* line_end,
+                               const float* point, float* out)
+{
+    float dx = line_end[0] - line_start[0];
+    float dy = line_end[1] - line_start[1];
+    float inverse_length = 1.0f / sqrt(dy * dy + dx * dx);
+    float unit_x = inverse_length * dx;
+    float unit_y = inverse_length * dy;
+    float projection = (point[1] - line_start[1]) * unit_y +
+                       (point[0] - line_start[0]) * unit_x;
+    out[0] = projection * unit_x + line_start[0];
+    out[1] = projection * unit_y + line_start[1];
+}
+
+// FUNCTION: LEGORR 0x00408bf0
+void point2d_project_onto_direction(const float* origin, const float* direction,
+                                    const float* point, float* out)
+{
+    float direction_x = direction[0];
+    float direction_y = direction[1];
+    float inverse_length = 1.0f / sqrt(direction_y * direction_y +
+                                       direction_x * direction_x);
+    float unit_x = inverse_length * direction_x;
+    float unit_y = inverse_length * direction_y;
+    float projection = (point[1] - origin[1]) * unit_y +
+                       (point[0] - origin[0]) * unit_x;
+    out[0] = projection * unit_x + origin[0];
+    out[1] = projection * unit_y + origin[1];
+}
+
+/* The callback is vtable slot 7 (byte offset 0x1c on x86). Express it as a
+ * virtual method so older MSVC compilers use their implicit thiscall ABI. */
+class ScenePropertyValueInterface
+{
+public:
+    virtual void* slot_0(void) = 0;
+    virtual void* slot_1(void) = 0;
+    virtual void* slot_2(void) = 0;
+    virtual void* slot_3(void) = 0;
+    virtual void* slot_4(void) = 0;
+    virtual void* slot_5(void) = 0;
+    virtual void* value_record_set(void* value) = 0;
+    virtual void* value_record_get(void) = 0;
+};
+
+static void* scene_property_value_record_get(void* property)
+{
+    void** vtable = NULL;
+    if (property == NULL) {
+        return NULL;
+    }
+    __builtin_memcpy(&vtable, property, sizeof vtable);
+    if (vtable == NULL) {
+        return NULL;
+    }
+    if (vtable[7] == NULL) {
+        return NULL;
+    }
+    return ((ScenePropertyValueInterface*)property)->value_record_get();
+}
+
+/* AttachedObjectDataReleaseAndClear (FUN_004760e0): release the optional
+ * record-owned buffer and record, then clear the interface's value slot. */
+void attached_object_data_release_and_clear(void* property)
+{
+    void* record = scene_property_value_record_get(property);
+    void* buffer = NULL;
+    if (record != NULL) {
+        memcpy(&buffer, (char*)record + 4, sizeof(buffer));
+        if (buffer != NULL) engine_heap_free(buffer);
+        engine_heap_free(record);
+    }
+    if (property != NULL) {
+        ((ScenePropertyValueInterface*)property)->value_record_set(NULL);
+    }
+}
+
+/* CallbackRecordSetFlag10AndRefresh (FUN_00475e10): set the record's flag
+ * before invalidating its cached property payload. */
+void callback_record_set_flag10_and_refresh(void* property)
+{
+    void* record = scene_property_value_record_get(property);
+    if (record == NULL) return;
+    *(uint32_t*)((char*)record + 0x14) |= 0x10u;
+    attached_object_data_release_and_clear(property);
+}
+
+/* ScenePropertyFloatAt14Get (FUN_004761c0): read the float at +0x14 in the
+ * property record returned by the interface's slot +0x1c. */
+float scene_property_float_at14_get(void* property)
+{
+    void* record = scene_property_value_record_get(property);
+    return record != NULL ? *(float*)((char*)record + 0x14) : 0.0f;
+}
+
+/* ScenePropertyPrimaryValueGet (FUN_00476120): first dword in the value
+ * record returned by the object's virtual callback. */
+// FUNCTION: LEGORR 0x00476120
+uint32_t scene_property_primary_value_get(void* property)
+{
+    void* record = scene_property_value_record_get(property);
+    if (record != NULL) {
+        return *(uint32_t*)record;
+    }
+    return 0;
+}
+
+/* ScenePropertySecondaryValueGet (FUN_00476140): second dword in the same
+ * callback result. */
+// FUNCTION: LEGORR 0x00476140
+uint32_t scene_property_secondary_value_get(void* property)
+{
+    void* record = scene_property_value_record_get(property);
+    if (record != NULL) {
+        return *(uint32_t*)((char*)record + 4);
+    }
+    return 0;
+}
+
+/* Row-span staging records from FUN_0046eb30. The corpus has a 0x320-byte
+ * count slot and an adjacent x/y float-pair window; dimensions inferred
+ * from that window bound the port's rough model to 96 points per row and
+ * 64 staged rows. */
+#define MAP_ROW_SPAN_RECORDS_MAX 64
+#define MAP_ROW_SPAN_POINTS_MAX 96
+#define MAP_ROW_SPAN_COUNT_OFFSET 0x320
+#define MAP_ROW_SPAN_RECORD_SIZE 0x324
+static unsigned char s_map_row_span_records[MAP_ROW_SPAN_RECORDS_MAX]
+                                           [MAP_ROW_SPAN_RECORD_SIZE];
+static uint32_t s_map_row_span_records_count;
+
+/* AppendMapRowSpanToBuffer (FUN_0046ead0): append each x in the half-open
+ * interval [x_begin, x_end), pairing it with y. */
+// FUNCTION: LEGORR 0x0046ead0
+void map_row_span_append(void* buffer, uint32_t y, uint32_t x_begin,
+                         uint32_t x_end)
+{
+    if (buffer == NULL) {
+        return;
+    }
+    uint32_t count = 0u;
+    __builtin_memcpy(&count, (char*)buffer + MAP_ROW_SPAN_COUNT_OFFSET,
+                     sizeof(count));
+    while (x_begin < x_end && count < MAP_ROW_SPAN_POINTS_MAX) {
+        const float x = (float)x_begin;
+        const float fy = (float)y;
+        __builtin_memcpy((char*)buffer + (size_t)count * 8u, &x, sizeof(x));
+        __builtin_memcpy((char*)buffer + (size_t)count * 8u + 4u,
+                         &fy, sizeof(fy));
+        ++x_begin;
+        ++count;
+    }
+    __builtin_memcpy((char*)buffer + MAP_ROW_SPAN_COUNT_OFFSET, &count,
+                     sizeof(count));
+}
+
+/* StartMapRowSpanBufferRecord (FUN_0046eb30): clear a new row record,
+ * append the supplied span, then advance the port-owned staging count. */
+// FUNCTION: LEGORR 0x0046eb30
+void map_row_span_record_start(uint32_t y, uint32_t x_begin,
+                               uint32_t x_end)
+{
+    if (s_map_row_span_records_count >= MAP_ROW_SPAN_RECORDS_MAX) {
+        return;
+    }
+    unsigned char* record =
+        s_map_row_span_records[s_map_row_span_records_count];
+    memset(record, 0, MAP_ROW_SPAN_RECORD_SIZE);
+    map_row_span_append(record, y, x_begin, x_end);
+    ++s_map_row_span_records_count;
+}
+
+uint32_t map_row_span_record_count(void)
+{
+    return s_map_row_span_records_count;
+}
+
+const void* map_row_span_record_get(uint32_t index)
+{
+    if (index >= s_map_row_span_records_count) {
+        return NULL;
+    }
+    return s_map_row_span_records[index];
+}
+
+/* FloatRoundToNearestInt (FUN_00463e40): the caller uses the returned
+ * integer as a row index. The corpus compares the fractional part against
+ * 0.5, choosing floor below it and ceil at/above it (ties toward +infinity). */
+// FUNCTION: LEGORR 0x00463e40
+int float_round_to_nearest_int(float value)
+{
+    const double lower = floor((double)value);
+    const double rounded = ((double)value - lower < 0.5)
+        ? lower : ceil((double)value);
+    return crt_float_to_long((float)rounded);
+}
+
+static RendererSubobjectResolveFn s_renderer_subobject_resolver;
+
+void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver)
+{
+    s_renderer_subobject_resolver = resolver;
+}
+
+static void* scene_object_cached_subobject_get(void* owner,
+                                               size_t source_offset,
+                                               size_t cache_offset,
+                                               int index)
+{
+    if (owner == NULL || index < 0 || index >= 16) {
+        return NULL;
+    }
+    void* source = NULL;
+    __builtin_memcpy(&source, (char*)owner + source_offset, sizeof(source));
+    void* cached = NULL;
+    const size_t slot_offset = cache_offset + (size_t)index * sizeof(void*);
+    __builtin_memcpy(&cached, (char*)owner + slot_offset, sizeof(cached));
+    if (cached == NULL && source != NULL
+        && s_renderer_subobject_resolver != NULL) {
+        cached = s_renderer_subobject_resolver(owner, source, index);
+        __builtin_memcpy((char*)owner + slot_offset, &cached, sizeof(cached));
+    }
+    return cached;
+}
+
+/* ActivityRunnerStateRead (FUN_00406f80): lazily resolve and cache the
+ * selected subobject from the runner's +0x20 source into its +0x54 table. */
+// FUNCTION: LEGORR 0x00406f80
+void* activity_runner_state_read(void* runner, int index)
+{
+    return scene_object_cached_subobject_get(runner, 0x20u, 0x54u, index);
+}
+
+/* SceneActivityChangeSecondary (FUN_004085f0): the secondary scene object
+ * cache uses source +0x0c and slot table +0x40. */
+// FUNCTION: LEGORR 0x004085f0
+void* scene_activity_change_secondary(void* activity, int index)
+{
+    return scene_object_cached_subobject_get(activity, 0x0cu, 0x40u,
+                                              index);
+}
+
+/* FUNCTION: LEGORR 0x00406fb0 */
+void* renderer_cached_handle_40_get_or_create(void* renderer)
+{
+    return scene_object_cached_subobject_get(renderer, 0x2cu, 0x40u, 0);
+}
+
+static SceneActivityChangeFn s_scene_activity_change;
+
+void scene_activity_change_callback_set(SceneActivityChangeFn callback)
+{
+    s_scene_activity_change = callback;
+}
+
+/* FUNCTION: LEGORR 0x00408570
+ * Clear the two counted handle arrays before notifying scene systems and
+ * rebuilding the indexed table. Array counts are capped to their fixed
+ * 16-slot layout in this portable model. */
+int scene_activity_change(void* activity, void* state, void* value)
+{
+    if (activity == NULL) return 0;
+    unsigned int count = 0;
+    unsigned int i;
+    __builtin_memcpy(&count, (char*)activity + 0x70u, sizeof(count));
+    if (count > 16u) count = 16u;
+    for (i = 0; i < count; ++i) {
+        unsigned int zero = 0;
+        __builtin_memcpy((char*)activity + 0x28u + i * 4u,
+                         &zero, sizeof(zero));
+    }
+    __builtin_memcpy(&count, (char*)activity + 0x74u, sizeof(count));
+    if (count > 16u) count = 16u;
+    for (i = 0; i < count; ++i) {
+        unsigned int zero = 0;
+        __builtin_memcpy((char*)activity + 0x40u + i * 4u,
+                         &zero, sizeof(zero));
+    }
+    unsigned int zero_count = 0;
+    __builtin_memcpy((char*)activity + 0x68u, &zero_count, sizeof(zero_count));
+    __builtin_memcpy((char*)activity + 0x6cu, &zero_count, sizeof(zero_count));
+    int result = s_scene_activity_change != NULL
+        ? s_scene_activity_change(activity, state, value) : 0;
+    return result;
+}
+
+static uint32_t s_global_vector_values[4];
+static GlobalVectorNotifyFn s_global_vector_notify;
+
+void global_vector_notify_callback_set(GlobalVectorNotifyFn callback)
+{
+    s_global_vector_notify = callback;
+}
+
+void global_vector_get(uint32_t values[4])
+{
+    if (values != NULL) {
+        __builtin_memcpy(values, s_global_vector_values,
+                         sizeof(s_global_vector_values));
+    }
+}
+
+/* FUNCTION: LEGORR 0x0040ffe0. The corpus stores four global dwords and
+ * broadcasts the new tuple to a callback walk rooted at context. */
+void global_vector_set_and_notify(void* context, const uint32_t values[4])
+{
+    if (values == NULL) return;
+    __builtin_memcpy(s_global_vector_values, values,
+                     sizeof(s_global_vector_values));
+    if (s_global_vector_notify != NULL) {
+        s_global_vector_notify(context, s_global_vector_values);
+    }
+}
+
+static UIRenderTreeHook s_ui_render_tree_hook;
+static void* s_ui_render_tree_hook_user;
+
+void ui_render_tree_hook_set(UIRenderTreeHook hook, void* user)
+{
+    s_ui_render_tree_hook = hook;
+    s_ui_render_tree_hook_user = user;
+}
+
+/* FUNCTION: LEGORR 0x004889a0 */
+void ui_render_entry_subrecord_apply(void* tree, void* entry,
+                                     uint32_t subrecord_index)
+{
+    if (tree == NULL || entry == NULL) return;
+    void* entries = NULL;
+    __builtin_memcpy(&entries, (char*)tree + 0x14u, sizeof(entries));
+    unsigned short entry_index = 0;
+    __builtin_memcpy(&entry_index, (char*)entry + 6u,
+                     sizeof(entry_index));
+    if (entries == NULL || entry_index >= 256u) return;
+    void* object = NULL;
+    __builtin_memcpy(&object, (char*)entries
+                     + (size_t)entry_index * sizeof(void*), sizeof(object));
+    void* subrecord = NULL;
+    __builtin_memcpy(&subrecord, (char*)entry + 0x18u
+                     + (size_t)(subrecord_index & 0xffffu) * 0x28u,
+                     sizeof(subrecord));
+    if (s_ui_render_tree_hook != NULL) {
+        s_ui_render_tree_hook(3, tree, entry, subrecord,
+                              s_ui_render_tree_hook_user);
+    }
+    (void)object;
+}
+
+/* FUNCTION: LEGORR 0x00488900 */
+void ui_render_tree_entry_process(void* tree, void* entry)
+{
+    unsigned int depth = 0;
+    while (tree != NULL && entry != NULL && depth++ < 256u) {
+        unsigned short entry_index = 0;
+        __builtin_memcpy(&entry_index, (char*)entry + 6u,
+                         sizeof(entry_index));
+        unsigned short kind = 0;
+        __builtin_memcpy(&kind, (char*)entry + 0x12u, sizeof(kind));
+        if (kind == 1u) ui_render_entry_subrecord_apply(tree, entry, 0u);
+        unsigned char flags = *((unsigned char*)entry + 0x28u);
+        if ((flags & 1u) == 0 && s_ui_render_tree_hook != NULL) {
+            void* node = s_ui_render_tree_hook(2, tree, entry, NULL,
+                                                s_ui_render_tree_hook_user);
+            if (node != NULL && (flags & 4u) != 0) {
+                uint32_t node_flags = 0;
+                __builtin_memcpy(&node_flags, (char*)node + 0x2cu,
+                                 sizeof(node_flags));
+                node_flags |= 0x01000000u;
+                __builtin_memcpy((char*)node + 0x2cu, &node_flags,
+                                 sizeof(node_flags));
+            }
+        }
+        void* child = NULL;
+        __builtin_memcpy(&child, (char*)entry + 0x1cu, sizeof(child));
+        unsigned short child_gate = 1;
+        __builtin_memcpy(&child_gate, (char*)entry + 0x26u,
+                         sizeof(child_gate));
+        if (child != NULL && child_gate == 0) {
+            ui_render_element_children_enumerate(tree, entry);
+            child = NULL;
+            __builtin_memcpy((char*)entry + 0x1cu, &child, sizeof(child));
+        }
+        (void)entry_index;
+        __builtin_memcpy(&entry, (char*)entry + 0x2cu, sizeof(entry));
+    }
+}
+
+/* FUNCTION: LEGORR 0x004880d0 */
+void ui_render_element_children_enumerate(void* tree, void* entry)
+{
+    if (s_ui_render_tree_hook != NULL && tree != NULL && entry != NULL) {
+        s_ui_render_tree_hook(1, tree, entry, NULL,
+                              s_ui_render_tree_hook_user);
+    }
+}
+
+/* FUNCTION: LEGORR 0x00487990 */
+void ui_render_tree_layout_and_release(void* tree, void* layout_context)
+{
+    if (tree == NULL) return;
+    if (s_ui_render_tree_hook != NULL) {
+        s_ui_render_tree_hook(0, tree, layout_context, NULL,
+                              s_ui_render_tree_hook_user);
+    }
+    void* entry = NULL;
+    __builtin_memcpy(&entry, (char*)tree + 0x1cu, sizeof(entry));
+    unsigned int count = 0;
+    while (entry != NULL && count++ < 4096u) {
+        void* next = NULL;
+        __builtin_memcpy(&next, (char*)entry + 0x30u, sizeof(next));
+        ui_render_tree_entry_process(tree, entry);
+        entry = next;
+    }
+    if (s_ui_render_tree_hook != NULL) {
+        s_ui_render_tree_hook(4, tree, NULL, NULL,
+                              s_ui_render_tree_hook_user);
+    }
+}
+
+static void** s_global_entity_render_params;
+static uint32_t s_global_entity_render_param_count;
+static GlobalEntityRenderParamFn s_global_entity_render_param_update;
+static void* s_global_entity_render_param_user;
+
+void global_entity_render_parameters_install(void** entities, uint32_t count,
+                                             GlobalEntityRenderParamFn update,
+                                             void* user)
+{
+    s_global_entity_render_params = entities;
+    s_global_entity_render_param_count = count > 65536u ? 65536u : count;
+    s_global_entity_render_param_update = update;
+    s_global_entity_render_param_user = user;
+}
+
+/* FUNCTION: LEGORR 0x0046e1c0 */
+void global_entity_render_parameter_mode_set(int mode)
+{
+    if (s_global_entity_render_params == NULL
+        || s_global_entity_render_param_update == NULL) return;
+    const float first = mode == 0 ? 0.0f : 0.12f;
+    const float second = mode == 0 ? 0.0f : 0.32f;
+    for (uint32_t i = 0; i < s_global_entity_render_param_count; ++i) {
+        if (s_global_entity_render_params[i] != NULL) {
+            s_global_entity_render_param_update(
+                s_global_entity_render_params[i], first, second,
+                s_global_entity_render_param_user);
+        }
+    }
+}
+
+static GridSurfaceLookupFn s_grid_surface_lookup;
+static GridSurfaceHandleReleaseFn s_grid_surface_release;
+static void* s_grid_surface_user;
+
+void grid_surface_hooks_set(GridSurfaceLookupFn lookup,
+                            GridSurfaceHandleReleaseFn release, void* user)
+{
+    s_grid_surface_lookup = lookup;
+    s_grid_surface_release = release;
+    s_grid_surface_user = user;
+}
+
+/* FUNCTION: LEGORR 0x0046e330 */
+void grid_surface_entry_reset(void* surface, int key)
+{
+    if (surface == NULL || s_grid_surface_lookup == NULL) return;
+    int index = key;
+    void* entry = s_grid_surface_lookup(surface, key, &index,
+                                        s_grid_surface_user);
+    if (entry == NULL || index < 0 || index > 4096) return;
+    uint32_t flags = 0;
+    uint32_t handle = 0u;
+    __builtin_memcpy(&flags, (char*)entry + 0x424u, sizeof(flags));
+    flags = (flags & ~2u) | 1u;
+    __builtin_memcpy((char*)entry + 0x424u, &flags, sizeof(flags));
+    __builtin_memcpy(&handle, (char*)entry + 0x420u, sizeof(handle));
+    if (s_grid_surface_release != NULL) {
+        s_grid_surface_release(handle, s_grid_surface_user);
+    }
+    uint32_t zero = 0;
+    __builtin_memcpy((char*)entry + 0x338u + (size_t)index * 0x18u,
+                     &zero, sizeof(zero));
+}
+
+static WorldSpatialRecordModel* s_world_spatial_records;
+static uint32_t s_world_spatial_record_count;
+
+void world_spatial_records_install(WorldSpatialRecordModel* records,
+                                   uint32_t count)
+{
+    s_world_spatial_records = records;
+    s_world_spatial_record_count = count > 65536u ? 65536u : count;
+}
+
+/* FUNCTION: LEGORR 0x0046e8a0 */
+WorldSpatialRecordModel* world_spatial_record_find_at_grid_coordinate(
+    int x, int y, uint32_t* point_index)
+{
+    if (s_world_spatial_records == NULL) return NULL;
+    for (uint32_t record = 0; record < s_world_spatial_record_count; ++record) {
+        WorldSpatialRecordModel* candidate = &s_world_spatial_records[record];
+        if (candidate->point_pairs == NULL) continue;
+        uint32_t count = candidate->point_count > 65536u
+            ? 65536u : candidate->point_count;
+        for (uint32_t point = 0; point < count; ++point) {
+            const int px = (int)candidate->point_pairs[point * 2u];
+            const int py = (int)candidate->point_pairs[point * 2u + 1u];
+            if (px == x && py == y) {
+                if (point_index != NULL) *point_index = point;
+                return candidate;
+            }
+        }
+    }
+    return NULL;
 }

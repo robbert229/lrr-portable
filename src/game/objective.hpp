@@ -33,6 +33,37 @@
 #ifdef __cplusplus
 extern "C" {
 #endif/* Objective-slot offsets inside the level block (finding 22). */
+typedef struct RewardTaskResourceRecord {
+    uint32_t flags;
+    void* image_surface;
+    void* font_record;
+} RewardTaskResourceRecord;
+void reward_task_resource_slot_set(unsigned int slot, uint32_t flags,
+                                   void* image_surface, void* font_record);
+void reward_task_flush_images(RewardTaskResourceRecord* task);
+void reward_task_flush_font(RewardTaskResourceRecord* task);
+void reward_task_block_finish(void);
+typedef void (*ObjectiveDeferredCallback)(void);
+void objective_deferred_callback_set(ObjectiveDeferredCallback callback);
+void objective_deferred_callback_invoke_if_set(void);
+typedef struct AdvisorTimerState {
+    float timers[4];
+    float countdown;
+    int stored_toggle;
+    int hold_countdown;
+    int update_pending;
+    int finalize_pending;
+    int advisor_active;
+    int advisor_scroll;
+    float final_timer;
+} AdvisorTimerState;
+typedef void (*AdvisorTimerActionFn)(int value, int mode, void* user);
+typedef void (*AdvisorTimerFinalizeFn)(void* user);
+void advisor_timer_hooks_set(AdvisorTimerActionFn action,
+                             AdvisorTimerFinalizeFn finalize, void* user);
+void advisor_timer_array_advance_and_advisor_clear(AdvisorTimerState* state,
+                                                   float delta);
+
 #define OBJ_SLOT_HANDLE       0xBC  /* 0x54 B of image handles/dims + AVI */
 #define OBJ_OFF_ACH_IMG       0xC8  /* "achieved" image handle (+0xc8)      */
 #define OBJ_OFF_ACH_DIM       0xCC  /* "achieved" image dims (2 floats)    */
@@ -105,19 +136,100 @@ int objective_voice_alias_raise_gate_bit27(LevelState* s);
 
 /* --- the advisor action window band (2026-10-25) ---------------------------
  * The corpus keeps the advisor's per-action records in an unowned word
- * region (base word + row * 0x24): {mode +0x00, pair dwords +0x04/+0x08,
- * read-out pair +0x0c/+0x10, flag word +0x14}. The port models the
- * region as a bounded module table (the widened-window convention); the
- * corpus's writers outside these two rows leave it zero.
- * AdvisorActionPositionAndModeSet (FUN_00401840): stores the mode and
- * the pair dwords, raising flag word bit 0x10000 when mode is 0xc and
- * clearing it otherwise. Bounds-guarded (deviation: blind stride). */
+ * region (base word + row * 0x24). The port models the region as a bounded
+ * module table (the widened-window convention).
+ * The scene request model exposes render/audio effects through an action
+ * callback and scene readiness through a small owner-side state bit. */
+enum {
+    ADVISOR_SCENE_ACTION_RESET = 0,
+    ADVISOR_SCENE_ACTION_HIDE = 1,
+    ADVISOR_SCENE_ACTION_SOUND = 2,
+    ADVISOR_SCENE_ACTION_VISUAL_INIT = 3,
+    ADVISOR_SCENE_ACTION_CONTROLLER_INIT = 4,
+    ADVISOR_SCENE_ACTION_NOTIFY = 5,
+    ADVISOR_SCENE_ACTION_ATTACH = 6
+};
+typedef void (*AdvisorSceneActionHook)(int action, int row,
+                                       uint32_t animation, void* user);
+/* Creates the type-3 companion DDiScene, applies its recovered transform to
+ * the base scene, enables it, and returns its handle. */
+typedef uint32_t (*AdvisorCompanionSceneCreateHook)(uint32_t base_scene,
+                                                    void* user);
+typedef struct AdvisorAnimationHooks {
+    void* user;
+    float (*update)(uint32_t handle, float delta, void* user);
+    float (*time_get)(uint32_t handle, void* user);
+    void (*seek)(uint32_t handle, float time, void* user);
+} AdvisorAnimationHooks;
+typedef void (*AdvisorTransformApplyHook)(int row, uint32_t animation,
+                                          float x, float y, float scale,
+                                          void* user);
+void advisor_sound_alias_set(int alias);
+void advisor_sound_alias_play_global(void); /* FUN_00456810 */
+typedef int (*CoordinateListVisitCallback)(void* record, int x, int y,
+                                           void* user);
+typedef void* (*CoordinateListHeadGetHook)(void* list_key, void* context);
+void coordinate_list_visit_hooks_set(CoordinateListHeadGetHook head_get,
+                                     void* context);
+void coordinate_list_callback_visit(void* list_key,
+                                   CoordinateListVisitCallback callback,
+                                   void* user); /* FUN_00456cb0 */
+typedef struct AdvisorPositionConfigEntry {
+    const char* position_name;
+    const char* animation_name;
+    int position_type;
+    uint32_t position_mode;
+    int action_mode;
+    float x;
+    float y;
+} AdvisorPositionConfigEntry;
+typedef int (*AdvisorAnimationConfigLookupHook)(const char* name,
+                                                uint32_t* handle,
+                                                float* start_time,
+                                                float* end_time,
+                                                void* user);
+void advisor_scene_ready_set(int ready);
+void advisor_scene_action_hook_set(AdvisorSceneActionHook hook, void* user);
+void advisor_companion_scene_create_hook_set(
+    AdvisorCompanionSceneCreateHook hook, void* user);
+void advisor_scene_controller_initialize(void* config_context,
+                                         const uint32_t* scene_context_words,
+                                         uint32_t transform_context_handle);
+void advisor_transition_worker(float delta); /* FUN_00401990 */
+void advisor_scene_visual_state_initialize(void); /* FUN_00401210 */
+float advisor_scene_scale_get(void);
+void advisor_transform_apply_hook_set(AdvisorTransformApplyHook hook,
+                                      void* user);
+void advisor_apply_slot_transform(int row); /* FUN_00401b30 */
+int advisor_position_config_load(const AdvisorPositionConfigEntry* entries,
+                                 uint32_t count); /* FUN_00401530 */
+int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
+                              void* user); /* FUN_00401270 */
+int advisor_request_admit(int row, int immediate); /* FUN_004018c0 */
+void advisor_request_reset_and_submit_sound(int row); /* FUN_00401930 */
+void advisor_animation_end_cleanup(void); /* FUN_004011c0 */
+void advisor_animation_hooks_set(const AdvisorAnimationHooks* hooks);
+void advisor_animation_slot_install(int slot, uint32_t handle,
+                                    float start_time, float end_time);
+int advisor_scene_advance_completion_check(int animation_slot,
+                                           float delta); /* FUN_00401a70 */
+
+/* AdvisorPositionRecordInitialize (FUN_004017b0) initializes the action
+ * record and flags. */
+void advisor_position_record_initialize(int row, uint32_t animation_index,
+                                        int position_index,
+                                        uint32_t position_mode,
+                                        int action_mode, uint32_t x,
+                                        uint32_t y);
+/* AdvisorActionPositionAndModeSet (FUN_00401840): stores the mode and
+ * position pair, raising flag word bit 0x10000 when mode is 0xc and
+ * clearing it otherwise. */
 void advisor_action_position_and_mode_set(int row, int mode,
                                           uint32_t dword_a,
                                           uint32_t dword_b); /* FUN_00401840 */
 
-/* AdvisorActionPositionGet (FUN_00401890): reads the record's +0x0c and
- * +0x10 dwords (the corpus's separate read-out window — this band's set
+/* AdvisorActionPositionGet (FUN_00401890): reads the record's +0x1c and
+ * +0x20 dwords (the corpus's separate read-out window — this band's set
  * never writes them, a faithful quirk). NULL outputs skipped. */
 void advisor_action_position_get(int row, uint32_t* dword_c,
                                  uint32_t* dword_d);          /* FUN_00401890 */
@@ -134,5 +246,9 @@ int objective_advisor_token_lookup(uint32_t index);
 
 /* Test hook installing the token table (corpus writer unported). */
 void objective_advisor_tokens_install(const uint32_t* table, uint32_t count);
+
+/* Advisor name tables (FUN_004013e0/FUN_004014c0). */
+int advisor_position_name_to_index(const char* name, int* index);
+int advisor_animation_name_to_index(const char* name, int* index);
 
 #endif /* LEGORRR_GAME_OBJECTIVE_HPP */

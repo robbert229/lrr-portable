@@ -69,6 +69,7 @@ typedef struct PlatformEvent {
 
 PlatformWindow* platform_create_window(const char* title, int width, int height);
 void            platform_destroy_window(PlatformWindow* win);
+void            platform_set_window_title(const char* title);
 
 /* The DX-era HWND to hand to SetCooperativeLevel (miniwin reinterprets it
  * as an SDL_Window*). */
@@ -128,6 +129,16 @@ void platform_audio_stop(PlatformAudio* a);
 void platform_present_pixels(PlatformWindow* win,
                              const void* pixels, int pitch,
                              int width, int height);
+typedef struct PlatformRenderSurfaceOps {
+    void* context;
+    int (*fullscreen_get)(void* context);
+    void (*surface_flip)(void* context, PlatformWindow* win,
+                         int first_flag, int second_flag);
+    void (*windowed_blit)(void* context, PlatformWindow* win,
+                          const void* pixels, int pitch,
+                          int width, int height);
+} PlatformRenderSurfaceOps;
+void platform_render_surface_ops_set(const PlatformRenderSurfaceOps* ops);
 
 /* Optional: dump the last presented framebuffer to a PPM for headless/CI
  * verification; no-op unless LEGORRR_SCREENSHOT is set. */

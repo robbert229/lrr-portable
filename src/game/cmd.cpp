@@ -15,6 +15,8 @@
 #include "gods98/heap.hpp"
 #include "gods98/media.hpp"
 #include "gods98/message.hpp"
+
+static CommandKindRecordHooks s_command_kind_record_hooks;
 #include "gods98/string.hpp"
 
 /* ------------------------------------------------------------------ *
@@ -100,8 +102,18 @@ void cmd_rec_set_next(void* rec, void* next) { as_rec(rec)->next = next; }
 #define CMD_POOL_LINK_GET(rec) ((rec)->next)
 #define CMD_POOL_LINK_SET(rec, value) ((rec)->next = (value))
 #endif
+#if defined(LEGORRR_BACKEND_WINAPI)
+/* Layout control (the frontend.cpp/audio.cpp data_seg precedent): the
+ * release loop's bound s_blocks + CMD_POOL_MAX_BLOCKS materializes as an
+ * absolute operand Reccmp must resolve through s_free's annotation at
+ * 0x4b31f8, so s_free has to own the dword right after the twelve table
+ * entries. The default .bss/.data split let s_upgrade_names land there
+ * instead, so the trio rides one zero-initialized named segment in
+ * declaration order. */
+#pragma data_seg(".data$cmdpool")
+#endif
 // GLOBAL: LEGORR 0x004b31c8
-static CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS];
+static CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS] = { 0 };
 /* The corpus table ends at the free-list head: HandleArrayReleaseAndReset
  * advances four bytes at a time and compares esi with 0x4b31f8. Keep this
  * declaration immediately after the 12 table entries. */
@@ -109,12 +121,20 @@ static CmdRec* s_blocks[CMD_POOL_MAX_BLOCKS];
 static void*   s_free       = NULL;
 // GLOBAL: LEGORR 0x004b31fc
 static int     s_pool_level = 0;
+#if defined(LEGORRR_BACKEND_WINAPI)
+#pragma data_seg()
+#endif
 
 // GLOBAL: LEGORR 0x004b3354
 static CmdRec* s_global_head = NULL; /* DAT_004b3354 */
 static CmdRec* s_global_tail = NULL; /* DAT_004b3358 */
 // GLOBAL: LEGORR 0x004b8060
 static int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
+static CmdPurgeCellPredicate s_cmd_purge_cell_usable;
+static CmdPurgeCellPredicate s_cmd_purge_neighbor_eligible;
+static CmdPurgeCompare s_cmd_purge_compare;
+static void* s_cmd_purge_context;
+static PendingCommandScanHooks s_pending_command_scan_hooks;
 
 // FUNCTION: LEGORR 0x004064c0
 static void cmd_pool_grow(void)
@@ -164,7 +184,9 @@ void cmd_free(void* rec, int cancel)
     if (cancel == 0) {
         cmd_cancel_ref(rec); /* corpus: unless the argument suppresses it */
     }
-    CmdRec* r = as_rec(rec);
+    /* Keep the corpus's direct record dereference here; routing through
+     * as_rec adds a call in this hot pool leaf. */
+    CmdRec* r = (CmdRec*)rec;
     if (r->buffer != NULL && (r->state & CMD_STATE_BUFOUT) == 0) {
         engine_heap_free(r->buffer); /* corpus: push eax / call 0x48db80 */
         /* corpus: the pointer is never cleared — cmd_alloc zeroes the
@@ -200,7 +222,8 @@ static const char* const PRIO_NAMES[27] = {
     "Barrier", "FindLoad", "Recharge", "UpgradeBuilding", "Gather", "Steal",
     "Punch", "Depart", "AttackPath", "AttackObject", "Congregate",
 };
-static int8_t s_behaviour[27]; /* DAT_004b32e8 by kind */
+// GLOBAL: LEGORR 0x004b32e8
+static int32_t s_behaviour[27]; /* DAT_004b32e8 by kind, DWORD stride */
 
 // FUNCTION: LEGORR 0x00401cf0
 void cmd_init(void)
@@ -319,12 +342,12 @@ void* cmd_chain_walk(const EntitySlot* e)
     if (e == NULL || e->cmd_head == NULL) {
         return NULL;
     }
-    CmdRec* cur = as_rec(e->cmd_head);
+    CmdRec* cur = (CmdRec*)e->cmd_head;
     for (;;) {
         if (cur->next == NULL) {
             return cur;
         }
-        cur = as_rec(cur->next);
+        cur = (CmdRec*)cur->next;
     }
 }
 
@@ -367,6 +390,49 @@ int cmd_chain_drop(EntitySlot* e, int type)
 void* cmd_global_head(void)
 {
     return s_global_head;
+}
+
+void* cmd_global_pending_head(void)
+{
+    return s_global_tail;
+}
+
+void pending_command_scan_hooks_set(const PendingCommandScanHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_pending_command_scan_hooks, 0,
+                              sizeof(s_pending_command_scan_hooks));
+    else s_pending_command_scan_hooks = *hooks;
+}
+
+/* Both corpus scans walk the global pending-command list. The timer phase
+ * fires expired entries; assignment then associates surviving records with
+ * eligible entities. Each hook returns nonzero when it consumed/unlinked the
+ * record, so iteration saves the next link before entering engine code. */
+void pending_command_timer_fire_scan(void)
+{
+    CmdRec* rec = s_global_tail;
+    while (rec != NULL) {
+        CmdRec* next = as_rec(rec->global_next);
+        if (s_pending_command_scan_hooks.timer_fire != NULL &&
+            (*(float*)&rec->param2) <= 0.0f)
+            s_pending_command_scan_hooks.timer_fire(
+                rec, s_pending_command_scan_hooks.context);
+        rec = next;
+    }
+}
+
+void pending_command_entity_assignment_tick(void)
+{
+    CmdRec* rec = s_global_head;
+    while (rec != NULL) {
+        CmdRec* next = as_rec(rec->global_next);
+        if (s_pending_command_scan_hooks.entity_assign != NULL &&
+            (*(float*)&rec->param2) <= 0.0f &&
+            (rec->state & 0x80400u) == 0u)
+            s_pending_command_scan_hooks.entity_assign(
+                rec, s_pending_command_scan_hooks.context);
+        rec = next;
+    }
 }
 
 void* cmd_global_next(const void* rec)
@@ -607,23 +673,199 @@ void cmd_create_task(EntitySlot* e)
     cmd_minion_companion(e);
 }
 
+/* ObjectCommandTaskCreate (FUN_00403320): append a type-0x15 task record
+ * carrying the spatial-query result and the caller's parameter. */
+void* cmd_entity_task_record_create_and_append(EntitySlot* e, void* payload,
+                                               int parameter)
+{
+    CmdRec* rec;
+    if (e == NULL || payload == NULL) return NULL;
+    rec = (CmdRec*)cmd_alloc(0x15);
+    if (rec == NULL) return NULL;
+    rec->payload = payload;
+    rec->cell_count = parameter;
+    cmd_chain_append(e, rec, 0);
+    return rec;
+}
+
+// CommandKindRecordIssueAndLink (FUN_00403750).
+// FUNCTION: LEGORR 0x00403750
+void cmd_command_kind_record_issue(uint32_t a, uint32_t b, uint32_t c,
+                                   const int cell_xy[2], uint32_t zone,
+                                   const float* random_pair, int set_flag)
+{
+    CmdRec* rec;
+    float first;
+    float second;
+    if (cell_xy == NULL) return;
+    rec = (CmdRec*)cmd_alloc(7);
+    if (rec == NULL) return;
+    rec->cell_act = (int32_t)a;
+    rec->cell_target = (int32_t)b;
+    rec->cell_count = (int32_t)c;
+    memcpy(&rec->x, &cell_xy[0], sizeof(cell_xy[0]));
+    memcpy(&rec->y, &cell_xy[1], sizeof(cell_xy[1]));
+    rec->zone = (int32_t)zone;
+    if (random_pair != NULL) {
+        first = random_pair[0];
+        second = random_pair[1];
+    }
+    else if (s_command_kind_record_hooks.random_range != NULL) {
+        first = s_command_kind_record_hooks.random_range(
+            0.4f, 0.6f, s_command_kind_record_hooks.context);
+        second = s_command_kind_record_hooks.random_range(
+            0.4f, 0.6f, s_command_kind_record_hooks.context);
+    }
+    else {
+        first = 0.5f;
+        second = 0.5f;
+    }
+    memcpy(&rec->pad_30[0], &first, sizeof(first));
+    memcpy(&rec->pad_30[4], &second, sizeof(second));
+    rec->param2 = 0;
+    if (set_flag != 0) rec->state |= 0x800u;
+    cmd_link_head(rec, 5);
+    rec->state |= 0x400u;
+    if (s_command_kind_record_hooks.terrain_cell_update != NULL) {
+        s_command_kind_record_hooks.terrain_cell_update(
+            cell_xy, (int)a, (int)b, (int)c,
+            s_command_kind_record_hooks.context);
+    }
+}
+
 /* ------------------------------------------------------------------ *
  *  Global tick + purge (scoped; AI execution receivers are stubs).
  * ------------------------------------------------------------------ */
 
-// STUB: LEGORR 0x00402310
+void cmd_chain_purge_hooks_install(CmdPurgeCellPredicate cell_usable,
+                                   CmdPurgeCellPredicate neighbor_eligible,
+                                   CmdPurgeCompare compare, void* context)
+{
+    s_cmd_purge_cell_usable = cell_usable;
+    s_cmd_purge_neighbor_eligible = neighbor_eligible;
+    s_cmd_purge_compare = compare;
+    s_cmd_purge_context = context;
+}
+
+static int cmd_purge_compare_adapter(const void* left, const void* right)
+{
+    if (s_cmd_purge_compare == NULL) {
+        return 0;
+    }
+    return s_cmd_purge_compare(left, right, s_cmd_purge_context);
+}
+
+// FUNCTION: LEGORR 0x00402310
 void cmd_chain_purge(EntitySlot* e)
 {
+    CmdRec* records[300];
+    CmdRec* cur;
+    CmdRec* overflow;
+    int count;
+    int i;
     if (e == NULL) {
         return;
     }
-    CmdRec* cur = as_rec(e->cmd_head);
-    e->cmd_head = NULL;
-    while (cur != NULL) {
+    cur = as_rec(e->cmd_head);
+    overflow = NULL;
+    while (cur != NULL && (cur->state & CMD_STATE_DONE) != 0u) {
         CmdRec* next = as_rec(cur->next);
+        if (e->cmd_head == cur) {
+            e->cmd_head = next;
+        }
         cmd_global_unlink(cur);
-        cmd_free(cur, 1);
+        cmd_free(cur, 0);
         cur = next;
+    }
+    if (e->cmd_head == NULL) {
+        return;
+    }
+    /* Completed records may also occur after a live command. Keep their
+     * neighbours linked exactly as the corpus's first walk does. */
+    {
+        CmdRec* previous = as_rec(e->cmd_head);
+        cur = as_rec(previous->next);
+        while (cur != NULL) {
+            CmdRec* next = as_rec(cur->next);
+            if ((cur->state & CMD_STATE_DONE) != 0u) {
+                previous->next = next;
+                cmd_global_unlink(cur);
+                cmd_free(cur, 0);
+            } else {
+                previous = cur;
+            }
+            cur = next;
+        }
+    }
+    count = 0;
+    cur = as_rec(e->cmd_head);
+    while (cur != NULL) {
+        if (count == 300) {
+            overflow = cur;
+            break;
+        }
+        records[count++] = cur;
+        cur = as_rec(cur->next);
+    }
+    for (i = 0; i < count; ++i) {
+        CmdRec* rec = records[i];
+        int behavior = (rec->kind >= 0 && rec->kind < 27)
+            ? s_behaviour[rec->kind] : 0;
+        if (behavior == 0 || (rec->state & CMD_STATE_CANCEL) != 0u) {
+            rec->state &= ~0x80000u;
+            rec->behaviour = ((rec->state & 0x30000u) != 0u)
+                ? 99 : behavior;
+        } else {
+            rec->state |= 0x80000u;
+        }
+        if (rec->type == 8) {
+            if ((rec->state & 8u) == 0u) {
+                int cell_x, cell_y;
+                memcpy(&cell_x, &rec->x, sizeof(cell_x));
+                memcpy(&cell_y, &rec->y, sizeof(cell_y));
+                if (s_cmd_purge_cell_usable != NULL &&
+                    s_cmd_purge_cell_usable(cell_x, cell_y,
+                                            s_cmd_purge_context) != 0) {
+                    rec->behaviour = 0;
+                }
+            } else {
+                static const int offsets[4][2] = {
+                    {0, 0}, {0, -1}, {-1, -1}, {-1, 0}
+                };
+                int cell_x, cell_y;
+                int found = 0;
+                int n;
+                memcpy(&cell_x, &rec->x, sizeof(cell_x));
+                memcpy(&cell_y, &rec->y, sizeof(cell_y));
+                for (n = 0; n < 4; ++n) {
+                    int x = cell_x + offsets[n][0];
+                    int y = cell_y + offsets[n][1];
+                    if (s_cmd_purge_neighbor_eligible != NULL &&
+                        s_cmd_purge_neighbor_eligible(x, y,
+                            s_cmd_purge_context) != 0) {
+                        found = 1;
+                    }
+                }
+                if (found) {
+                    if (rec->behaviour == 0) {
+                        rec->behaviour = 100;
+                    }
+                } else {
+                    rec->behaviour = 0;
+                }
+            }
+        }
+    }
+    if (count > 1 && s_cmd_purge_compare != NULL) {
+        qsort(records, (size_t)count, sizeof(records[0]),
+              cmd_purge_compare_adapter);
+    }
+    if (count != 0) {
+        for (i = 0; i + 1 < count; ++i) {
+            records[i]->next = records[i + 1];
+        }
+        records[count - 1]->next = overflow;
+        e->cmd_head = records[0];
     }
 }
 
@@ -650,7 +892,12 @@ void cmd_tick_global(void)
  * ------------------------------------------------------------------ */
 
 #define IDLE_TABLE_MAX 20
-static EntitySlot* s_idle[IDLE_TABLE_MAX];
+typedef struct IdleQueueRecord {
+    EntitySlot* entity;
+    float timer;
+} IdleQueueRecord;
+// GLOBAL: LEGORR 0x00557a84
+static IdleQueueRecord s_idle[IDLE_TABLE_MAX];
 
 // FUNCTION: LEGORR 0x00407450
 static void idle_register(EntitySlot* e)
@@ -659,18 +906,20 @@ static void idle_register(EntitySlot* e)
         return;
     }
     int i = 0;
-    while (i < IDLE_TABLE_MAX && s_idle[i] != e) {
+    while (i < IDLE_TABLE_MAX && s_idle[i].entity != e) {
         ++i;
     }
     if (i == IDLE_TABLE_MAX) {
         for (i = 0; i < IDLE_TABLE_MAX; ++i) {
-            if (s_idle[i] == NULL) {
-                s_idle[i] = e;
+            if (s_idle[i].entity == NULL) {
+                s_idle[i].entity = e;
                 break;
             }
         }
     }
-    /* timestamps handled by the (future) idle poller */
+    if (i < IDLE_TABLE_MAX) {
+        s_idle[i].timer = 12.5f; /* corpus stores 0x41480000 at +4 */
+    }
 }
 
 /* port hook: EntityPointerRegistriesRemove clears idle-queue records from
@@ -678,8 +927,8 @@ static void idle_register(EntitySlot* e)
 void idle_queue_clear(EntitySlot* e)
 {
     for (int i = 0; i < IDLE_TABLE_MAX; ++i) {
-        if (s_idle[i] == e) {
-            s_idle[i] = NULL;
+        if (s_idle[i].entity == e) {
+            s_idle[i].entity = NULL;
         }
     }
 }
@@ -1041,6 +1290,59 @@ int selection_entity_remove(void* entity)
     return 1;
 }
 
+/* SelectionObjectDetach (FUN_004524b0): cancel queued commands for the
+ * object, remove it from the selected set, and clear the current selection
+ * context when it refers to that object. The corpus's final context-pair
+ * coordinate refresh has no owner in this module; for removal of the first
+ * selected object, route the ported HUD reset through the existing post. */
+// FUNCTION: LEGORR 0x004524b0
+void selection_object_detach(void* entity)
+{
+    if (entity == NULL) {
+        return;
+    }
+    const int was_first = (selection_first(s_ctx) == (EntitySlot*)entity);
+    cmd_queue_cancel_match((int)(uintptr_t)entity);
+    (void)selection_entity_remove(entity);
+    if (current_selection_context_get() == entity) {
+        current_selection_context_set(NULL);
+    }
+    if (was_first) {
+        command_context_post_to_hud(0, NULL);
+    }
+}
+
+static SelectedEntityDetachPoseHook s_selected_entity_detach_pose_hook;
+
+void selected_entity_detach_pose_hook_set(SelectedEntityDetachPoseHook hook)
+{
+    s_selected_entity_detach_pose_hook = hook;
+}
+
+/* SelectedEntityDetachCallback (FUN_0041f6c0): capability bit 0 chooses
+ * between the attachment detach path and the carried-object pose/activity
+ * path. The latter is a seam owned by the pose/activity module. */
+// FUNCTION: LEGORR 0x0041f6c0
+int selected_entity_detach_callback(EntitySlot* entity)
+{
+    EntitySlot* attached;
+    uint32_t capabilities;
+    if (entity == NULL) return 0;
+    capabilities = entity_capability_flags_get(entity);
+    attached = (EntitySlot*)entity->carry_link_308;
+    if ((capabilities & 1u) != 0u) {
+        if ((entity->flags_3e0 & 0x400u) != 0u && attached != NULL
+            && s_selected_entity_detach_pose_hook != NULL) {
+            s_selected_entity_detach_pose_hook(attached);
+        }
+    }
+    else if ((entity->flags_3e0 & 0x400u) == 0u || attached == NULL
+             || attached->type != 9) {
+        unported_ledger_stubs::entity_attached_object_list_detach(entity, 0);
+    }
+    return 0;
+}
+
 /* --- selection filter / state monitor (see cmd.hpp) --------------------------
  * The corpus's selection-array append + flag-word set land on the port's
  * modeled selection storage; everything it would hand to the entity /
@@ -1138,7 +1440,7 @@ int selected_entity_state_monitor(void)
  * takes an EngineContext — a callee-signature barrier (b26) — so this
  * file-local no-op carrier reproduces the corpus's blind no-arg call at
  * the entry of 0x402670. NOTE (b46): the carrier must NOT carry the
- * `// STUB: LEGORR 0x00431560` annotation — duplicating a ledger-stub
+ * annotation — duplicating a ledger-stub
  * address scores fine, but duplicating a *scored* // FUNCTION: claim
  * steals the ledger match away from camera_state_root. */
 static void current_level_get(void)
@@ -1184,6 +1486,7 @@ void entity_deferred_work_schedule(EntitySlot* e)
  * DAT_004b7ff4: the per-priority state table, zeroed by the (unported)
  * registry initializer loop — zero-init static, 27 entries. */
 #define PRIORITY_ENTRY_COUNT 27
+// GLOBAL: LEGORR 0x004b7ff4
 static int s_priority_state[PRIORITY_ENTRY_COUNT];
 // FUNCTION: LEGORR 0x00402000
 void cmd_mark_matching(int type, int payload, const int coords[2])
@@ -1215,33 +1518,32 @@ void cmd_set_kind(void* rec, int kind)
     }
     CmdRec* r = as_rec(rec);
     if ((r->state & 0x30000u) == 0u) {
-        r->behaviour = cmd_kind_behaviour(kind);
+        const int behaviour = (kind >= 0 && kind < 27)
+                                  ? s_behaviour[kind] : 0x31;
+        r->kind = kind;
+        r->behaviour = behaviour;
     } else {
         r->behaviour = 99;
+        r->kind = kind;
     }
-    r->kind = kind;
 }
 // FUNCTION: LEGORR 0x00402090
 void priority_entry_order_value_set(int kind, int value)
 {
-    if (kind >= 0 && kind < 27) {
-        s_behaviour[kind] = (int8_t)value;
-    }
-    /* deviation: the corpus writes blindly into the order table. */
+    /* Config callers pass the registered 0..26 kind index. The reference
+     * writes directly to DAT_004b32e8[kind] without a range check. */
+    s_behaviour[kind] = value;
 }
 // FUNCTION: LEGORR 0x004020a0
 void priority_entry_state_set(int kind, int value)
 {
-    if (kind >= 0 && kind < PRIORITY_ENTRY_COUNT) {
-        s_priority_state[kind] = value;
-    }
+    /* Match the corpus's direct indexed write to DAT_004b7ff4[kind]. */
+    s_priority_state[kind] = value;
 }
 // FUNCTION: LEGORR 0x004020b0
 int priority_entry_state_get(int kind)
 {
-    if (kind < 0 || kind >= PRIORITY_ENTRY_COUNT) {
-        return 0; /* deviation: the corpus reads blindly */
-    }
+    /* Match the corpus's direct indexed read from DAT_004b7ff4[kind]. */
     return s_priority_state[kind];
 }
 
@@ -1309,12 +1611,12 @@ void handle_array_release_and_reset(void)
 {
     CmdRec** walk = s_blocks;
     CmdRec** const end = s_blocks + CMD_POOL_MAX_BLOCKS;
-    while (walk < end) {
+    do {
         if (*walk != NULL) {
             engine_heap_free(*walk);
         }
         ++walk;
-    }
+    } while (walk < end);
     s_free = NULL;
     s_global_enabled = 0;
 }
@@ -1541,19 +1843,149 @@ void entity_kind_command_issue(EntitySlot* e)
     cmd_link_head(rec, 0xc);
 }
 
-// STUB: LEGORR 0x00402a40
-void coordinate_pair_callback_dispatch(const void* coord_pair)
+static CoordinatePairEntityCallback s_coordinate_pair_entity_callback;
+static ArgumentEntityCallback s_argument_entity_callback;
+static void* s_callback_dispatch_context;
+static TaskCallbackEntityFn s_task_callback_entity_fn;
+static void* s_task_callback_entity_context;
+static TaskCallbackEntityFn s_pending_record_callback_fn;
+static void* s_pending_record_callback_context;
+static EntityTaskQueueFlushHooks s_entity_task_queue_flush_hooks;
+void cmd_callback_dispatch_hooks_install(
+    CoordinatePairEntityCallback coordinate_callback,
+    ArgumentEntityCallback argument_callback, void* context)
 {
-    /* Seam: pairs the coordinate word with zero and traverses the entity
-     * pool with the fixed callback — the pool-registry machinery above. */
-    (void)coord_pair;
+    s_coordinate_pair_entity_callback = coordinate_callback;
+    s_argument_entity_callback = argument_callback;
+    s_callback_dispatch_context = context;
 }
 
-// STUB: LEGORR 0x00402aa0
+void task_callback_dispatch_hook_install(TaskCallbackEntityFn callback,
+                                         void* context)
+{
+    s_task_callback_entity_fn = callback;
+    s_task_callback_entity_context = context;
+}
+
+void pending_record_callback_dispatch_hook_install(
+    TaskCallbackEntityFn callback, void* context)
+{
+    s_pending_record_callback_fn = callback;
+    s_pending_record_callback_context = context;
+}
+
+void entity_task_queue_flush_hooks_set(
+    const EntityTaskQueueFlushHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_entity_task_queue_flush_hooks, 0,
+               sizeof(s_entity_task_queue_flush_hooks));
+    }
+    else {
+        s_entity_task_queue_flush_hooks = *hooks;
+    }
+}
+
+void cmd_kind_record_hooks_set(const CommandKindRecordHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_command_kind_record_hooks, 0,
+               sizeof(s_command_kind_record_hooks));
+    }
+    else {
+        s_command_kind_record_hooks = *hooks;
+    }
+}
+
+struct CoordinatePairCallbackPayload {
+    const void* coordinate_pair;
+    int extra;
+};
+
+static int coordinate_pair_callback_adapter(EntitySlot* entity, void* payload)
+{
+    CoordinatePairCallbackPayload* const data =
+        (CoordinatePairCallbackPayload*)payload;
+    if (data == NULL || s_coordinate_pair_entity_callback == NULL) {
+        return 0;
+    }
+    return s_coordinate_pair_entity_callback(entity, data->coordinate_pair,
+                                              data->extra,
+                                              s_callback_dispatch_context);
+}
+
+static int argument_callback_adapter(EntitySlot* entity, void* argument)
+{
+    if (s_argument_entity_callback == NULL) {
+        return 0;
+    }
+    return s_argument_entity_callback(entity, argument,
+                                      s_callback_dispatch_context);
+}
+
+static int task_callback_entity_adapter(EntitySlot* entity, void* payload)
+{
+    if (s_task_callback_entity_fn == NULL) return 0;
+    return s_task_callback_entity_fn(entity, payload,
+                                     s_task_callback_entity_context);
+}
+
+static int pending_record_callback_adapter(EntitySlot* entity, void* payload)
+{
+    if (s_pending_record_callback_fn == NULL) return 0;
+    return s_pending_record_callback_fn(entity, payload,
+                                       s_pending_record_callback_context);
+}
+
+// FUNCTION: LEGORR 0x00402a40
+void coordinate_pair_callback_dispatch(const void* coord_pair)
+{
+    CoordinatePairCallbackPayload payload;
+    payload.coordinate_pair = coord_pair;
+    payload.extra = 0;
+    entity_pool_callback_search(coordinate_pair_callback_adapter, &payload);
+}
+
+// FUNCTION: LEGORR 0x00402aa0
 void argument_callback_dispatch(void* arg)
 {
-    /* Seam: dispatches the argument through the fixed pool callback. */
-    (void)arg;
+    entity_pool_callback_search(argument_callback_adapter, arg);
+}
+
+// FUNCTION: LEGORR 0x00403a10
+void task_callback_dispatch(void* payload)
+{
+    entity_pool_callback_search(task_callback_entity_adapter, payload);
+}
+
+// FUNCTION: LEGORR 0x00403ef0
+void pending_record_callback_dispatch(void* payload)
+{
+    entity_pool_callback_search(pending_record_callback_adapter, payload);
+}
+
+// EntityTaskQueueFlush (FUN_004040a0).
+// FUNCTION: LEGORR 0x004040a0
+void entity_task_queue_flush(EntitySlot* entity)
+{
+    EntityTaskQueueFlushHooks* hooks = &s_entity_task_queue_flush_hooks;
+    void* head;
+    if (entity == NULL || (hooks->scheduler_blocked != NULL &&
+        hooks->scheduler_blocked(hooks->context))) return;
+    if (hooks->remove_activity != NULL) {
+        hooks->remove_activity(entity, 0, NULL, hooks->context);
+    }
+    head = entity->cmd_head;
+    if ((entity->flags_3e0 & 0x400u) != 0u && head != NULL &&
+        cmd_rec_type(head) == 8u && hooks->remove_activity != NULL) {
+        hooks->remove_activity(entity, 9, head, hooks->context);
+    }
+    if (hooks->queue_relink != NULL) {
+        hooks->queue_relink(entity, hooks->context);
+    }
+    if (hooks->state_recompute != NULL) {
+        hooks->state_recompute(entity, hooks->context);
+    }
 }
 
 unsigned cmd_rec_count_get(const void* rec)
@@ -2604,6 +3036,7 @@ void upgrade_resource_debit(int selector, int amount)
  * compare. A cold table answers NULL like the corpus's zero-count return. */
 #define UPGRADE_NAME_TABLE_MAX 36 /* span-derived window guard */
 static const char* s_upgrade_names[UPGRADE_NAME_TABLE_MAX];
+// GLOBAL: LEGORR 0x005561e4
 static void* s_upgrade_records;
 static unsigned s_upgrade_count;
 
@@ -2661,7 +3094,8 @@ const void* upgrade_name_entry_find(const char* name)
  * handle blindly and would take a draw modulo zero — the port skips the
  * cell loop without the level (the re-arm draw still runs, the corpus's
  * re-arm is level-independent) and reads the dims through the word model. */
-static float s_sweep_timer; /* DAT_004d78c4 */
+// GLOBAL: LEGORR 0x004d78c4
+static float s_sweep_timer;
 
 void kind_six_sweep_timer_install(float value) { s_sweep_timer = value; }
 float kind_six_sweep_timer_peek(void) { return s_sweep_timer; }

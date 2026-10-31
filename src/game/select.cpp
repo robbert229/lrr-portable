@@ -72,6 +72,27 @@ int selection_has_any(const GameContext* ctx)
     return ctx != NULL && ctx->selection_count != 0;
 }
 
+/* SelectedObjectOutlinesDraw (FUN_00424830): draw the first selected entry
+ * green, then the rest yellow. The scene-marker builder is renderer-owned. */
+// FUNCTION: LEGORR 0x00424830
+void selected_object_outlines_draw(
+    const GameContext* ctx, SelectedObjectOutlineDrawFn draw,
+    void* context)
+{
+    const int count = selection_count(ctx);
+    EntitySlot* const* entries = selection_record_array(ctx);
+    int i;
+    if (draw == NULL || entries == NULL) return;
+    for (i = 0; i < count; ++i) {
+        if (i == 0) {
+            draw(context, entries[i], 0.0f, 1.0f, 0.0f);
+        }
+        else {
+            draw(context, entries[i], 1.0f, 1.0f, 0.0f);
+        }
+    }
+}
+
 // FUNCTION: LEGORR 0x004525e0
 EntitySlot* const* selection_record_array(const GameContext* ctx)
 {

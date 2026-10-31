@@ -78,6 +78,7 @@ float media_timer_remaining(void)
  *  CDAudioWatchdogModeUpdate @ 0x4297b0 (issue #301).
  * ------------------------------------------------------------------ */
 
+// GLOBAL: LEGORR 0x00556ecc
 static uint32_t s_cd_flags;        /* DAT_00556ecc role, module-local */
 static int      s_cd_base  = 2;    /* DAT_00556f0c: CDStartTrack (2 default) */
 static int      s_cd_window = 1;   /* DAT_00556f10: CDTracks (1 default) */
@@ -194,20 +195,13 @@ void media_cd_watchdog_tick(int arg)
 // FUNCTION: LEGORR 0x00429810
 void media_audio_playback_toggle(int enable)
 {
-    /* One flags read before the test, stored before each arm's call
-     * (the corpus duplicates the call site); the callee takes the raw
-     * enable, not a literal. */
-    uint32_t flags = s_cd_flags;
     if (enable != 0) {
-        flags |= MEDIA_FLAG_SOUND_ON;
-        s_cd_flags = flags;
+        s_cd_flags |= MEDIA_FLAG_SOUND_ON;
         sound_subsystem_enable_set_and_stop(enable);
+        return;
     }
-    else {
-        flags &= ~MEDIA_FLAG_SOUND_ON;
-        s_cd_flags = flags;
-        sound_subsystem_enable_set_and_stop(enable);
-    }
+    s_cd_flags &= ~MEDIA_FLAG_SOUND_ON;
+    sound_subsystem_enable_set_and_stop(0);
 }
 
 /* ------------------------------------------------------------------ *
@@ -261,21 +255,37 @@ void media_action_feedback_sound_dispatch(int event)
 {
     int saved = sound_batch_mode_get();
     sound_batch_queue_drain(0, 0);      /* force batch mode off, no replay */
-    int slot = 0;
     int cue = 0;
     switch (event) {
-    case 0:  slot = 0x14; cue = 0x13; break;
-    case 1:  slot = 0x15; cue = 0x14; break;
-    case 2:  slot = 0x15; cue = 0x1f; break;
-    case 3:  slot = 0x14; cue = 0x1e; break;
-    case 4:  slot = 0x14; cue = 0x20; break;
-    case 5:  slot = 0x14; cue = 0x21; break;
+    case 0:
+        media_pointer_cursor_override_set(0x14, 12.5f);
+        cue = 0x13;
+        break;
+    case 1:
+        media_pointer_cursor_override_set(0x15, 12.5f);
+        cue = 0x14;
+        break;
+    case 2:
+        media_pointer_cursor_override_set(0x15, 12.5f);
+        cue = 0x1f;
+        break;
+    case 3:
+        media_pointer_cursor_override_set(0x14, 12.5f);
+        cue = 0x1e;
+        break;
+    case 4:
+        media_pointer_cursor_override_set(0x14, 12.5f);
+        cue = 0x20;
+        break;
+    case 5:
+        media_pointer_cursor_override_set(0x14, 12.5f);
+        cue = 0x21;
+        break;
     default:
         /* Unknown event: submit nothing, but still restore the mode. */
         sound_batch_queue_drain(saved, 0);
         return;
     }
-    media_pointer_cursor_override_set(slot, 12.5f);  /* 0x41480000 */
     sound_alias_play(cue, 0);
     sound_batch_queue_drain(saved, 0);  /* restore the saved mode */
 }
@@ -401,6 +411,23 @@ float media_min_distance_ref_distance(void)
 /* --- the CD-audio availability seam (see media.hpp) -------------------------- */
 // GLOBAL: LEGORR 0x0054486c
 static int s_cd_audio_open; /* DAT_0054486c role: unowned, zero-init */
+static int s_cd_audio_current_track = -1; /* DAT_00544a04 */
+static MediaCdAudioInitHook s_cd_audio_init_hook;
+static void* s_cd_audio_init_context;
+static MediaCdAudioErrorTextHook s_cd_audio_error_hook;
+static void* s_cd_audio_error_context;
+static MediaCdAudioStatusHook s_cd_audio_status_hook;
+static void* s_cd_audio_status_context;
+static MediaCdAudioCommandHook s_cd_audio_command_hook;
+static void* s_cd_audio_command_context;
+static MediaCdAudioTimeHook s_cd_audio_time_hook;
+static void* s_cd_audio_time_context;
+static uint32_t s_cd_audio_watchdog_time;
+static int s_cd_audio_target_track;
+static int s_cd_audio_restart_when_done;
+static MediaCdAudioCompletionHook s_cd_audio_completion_hook;
+static int s_cd_audio_last_error;
+static char s_cd_audio_error_text[200];
 
 // FUNCTION: LEGORR 0x00488b90
 int media_cd_audio_playback_available(void)
@@ -408,9 +435,199 @@ int media_cd_audio_playback_available(void)
     return (s_cd_audio_open != 0 && s_bank_sound_on != 0) ? 1 : 0;
 }
 
+void media_cd_audio_init_hook_set(MediaCdAudioInitHook hook, void* context)
+{
+    s_cd_audio_init_hook = hook;
+    s_cd_audio_init_context = context;
+}
+
+/* CDAudioDeviceStateUpdate (FUN_00488b50): a nonzero request clears the
+ * open flag and succeeds. A zero request marks it open and delegates the
+ * remaining audio-system initialization through the installed seam. */
+// FUNCTION: LEGORR 0x00488B50
+int media_cd_audio_device_state_update(int request)
+{
+    s_cd_audio_open = request == 0;
+    s_cd_audio_current_track = -1;
+    if (request != 0) return 1;
+    if (s_cd_audio_init_hook == NULL) return 0;
+    return s_cd_audio_init_hook(s_cd_audio_init_context) != 0;
+}
+
 void media_cd_audio_open_set(int open)
 {
     s_cd_audio_open = open;
+}
+
+void media_cd_audio_error_hook_set(MediaCdAudioErrorTextHook hook,
+                                   void* context)
+{
+    s_cd_audio_error_hook = hook;
+    s_cd_audio_error_context = context;
+}
+
+void media_cd_audio_error_code_set(int error_code)
+{
+    s_cd_audio_last_error = error_code;
+}
+
+const char* media_cd_audio_error_text_get(void)
+{
+    s_cd_audio_error_text[0] = '\0';
+    if (s_cd_audio_error_hook != NULL) {
+        s_cd_audio_error_hook(s_cd_audio_error_context, s_cd_audio_last_error,
+                              s_cd_audio_error_text,
+                              (int)sizeof(s_cd_audio_error_text));
+        s_cd_audio_error_text[sizeof(s_cd_audio_error_text) - 1] = '\0';
+    }
+    return s_cd_audio_error_text;
+}
+
+void media_cd_audio_status_hook_set(MediaCdAudioStatusHook hook,
+                                    void* context)
+{
+    s_cd_audio_status_hook = hook;
+    s_cd_audio_status_context = context;
+}
+
+static int media_cd_audio_text_equal(const char* left, const char* right)
+{
+    unsigned char a;
+    unsigned char b;
+    if (left == NULL || right == NULL) return 0;
+    while (*left != '\0' && *right != '\0') {
+        a = (unsigned char)*left++;
+        b = (unsigned char)*right++;
+        if (a >= 'A' && a <= 'Z') a = (unsigned char)(a + ('a' - 'A'));
+        if (b >= 'A' && b <= 'Z') b = (unsigned char)(b + ('a' - 'A'));
+        if (a != b) return 0;
+    }
+    return *left == *right;
+}
+
+int media_cd_audio_track_completion_poll(int track)
+{
+    char mode[32];
+    int current_track = 0;
+    int error_code = 0;
+    mode[0] = '\0';
+    if (s_cd_audio_open == 0 || s_cd_audio_status_hook == NULL)
+        return 0;
+    if (!s_cd_audio_status_hook(s_cd_audio_status_context, mode,
+                                (int)sizeof(mode), &current_track,
+                                &error_code)) {
+        s_cd_audio_last_error = error_code;
+        (void)media_cd_audio_error_text_get();
+        return 0;
+    }
+    mode[sizeof(mode) - 1] = '\0';
+    s_cd_audio_current_track = current_track;
+    if (!media_cd_audio_text_equal(mode, "stopped")
+        && current_track <= track + 1) {
+        return 1;
+    }
+    s_cd_audio_last_error = error_code;
+    (void)media_cd_audio_error_text_get();
+    return 0;
+}
+
+void media_cd_audio_command_hook_set(MediaCdAudioCommandHook hook,
+                                     void* context)
+{
+    s_cd_audio_command_hook = hook;
+    s_cd_audio_command_context = context;
+}
+
+int media_cd_audio_track_play_from(int track)
+{
+    int error_code = 0;
+    if (s_cd_audio_command_hook == NULL) return 0;
+    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "play",
+                                 track + 1, &error_code)) {
+        s_cd_audio_last_error = error_code;
+        (void)media_cd_audio_error_text_get();
+        return 0;
+    }
+    s_cd_audio_current_track = track;
+    return 1;
+}
+
+int media_cd_audio_device_open(int initial_track)
+{
+    int error_code = 0;
+    if (s_cd_audio_command_hook == NULL) return 0;
+    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "open",
+                                 0, &error_code)) {
+        s_cd_audio_last_error = error_code;
+        (void)media_cd_audio_error_text_get();
+        return 0;
+    }
+    s_cd_audio_open = 1;
+    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "set-tmsf",
+                                 0, &error_code)) {
+        s_cd_audio_last_error = error_code;
+        (void)media_cd_audio_error_text_get();
+        return 0;
+    }
+    return media_cd_audio_track_play_from(initial_track);
+}
+
+void media_cd_audio_track_start(int track, int restart_when_done,
+                                MediaCdAudioCompletionHook callback)
+{
+    if (s_cd_audio_open == 0) return;
+    if (restart_when_done == 1) s_cd_audio_restart_when_done = 1;
+    s_cd_audio_target_track = track;
+    s_cd_audio_completion_hook = callback;
+    (void)media_cd_audio_device_open(track);
+}
+
+int media_cd_audio_stop_and_close(void)
+{
+    int error_code = 0;
+    if (s_cd_audio_command_hook == NULL) return 0;
+    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "stop",
+                                 0, &error_code)) {
+        s_cd_audio_last_error = error_code;
+        (void)media_cd_audio_error_text_get();
+        return 0;
+    }
+    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "close",
+                                 0, &error_code)) {
+        s_cd_audio_last_error = error_code;
+        (void)media_cd_audio_error_text_get();
+        return 0;
+    }
+    s_cd_audio_open = 0;
+    s_cd_audio_current_track = -1;
+    return 1;
+}
+
+void media_cd_audio_stop_and_close_if_active(void)
+{
+    if (s_cd_audio_open != 0) (void)media_cd_audio_stop_and_close();
+}
+
+void media_cd_audio_time_hook_set(MediaCdAudioTimeHook hook, void* context)
+{
+    s_cd_audio_time_hook = hook;
+    s_cd_audio_time_context = context;
+}
+
+void media_cd_audio_watchdog_tick(int enabled)
+{
+    uint32_t now;
+    if (enabled == 0 || s_cd_audio_open == 0 || s_cd_audio_time_hook == NULL)
+        return;
+    now = s_cd_audio_time_hook(s_cd_audio_time_context);
+    if (now <= s_cd_audio_watchdog_time + 4000u) return;
+    if (media_cd_audio_track_completion_poll(s_cd_audio_target_track) == 0) {
+        if (s_cd_audio_restart_when_done != 0)
+            (void)media_cd_audio_track_play_from(s_cd_audio_target_track);
+        if (s_cd_audio_completion_hook != NULL)
+            s_cd_audio_completion_hook();
+    }
+    s_cd_audio_watchdog_time = now;
 }
 
 /* LoaderProgressCallbackSet (FUN_004802b0) — see media.hpp. */

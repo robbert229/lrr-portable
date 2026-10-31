@@ -178,9 +178,14 @@ typedef struct RewardScreen {
  * signed tile-type byte; the port guards out-of-range reads). */
 #define AI_STATS_TERRAIN_TYPES 16
 typedef struct AiWaypoint {
-    float   x, y;
-    uint8_t pending; /* 1 = unarrived; arrival clears it (0x43cd90) */
+    float   x, y;            /* route point, record offsets 0x00/0x04 */
+    float   weight_y;         /* interpolation weight, record offset 0x08 */
+    float   weight_x;         /* interpolation weight, record offset 0x0c */
+    uint8_t pending;          /* record flags at +0x10; arrival clears bit 0 */
+    uint8_t step_kind;        /* record kind at +0x11 */
+    uint8_t reserved[2];      /* complete the corpus's 0x14-byte stride */
 } AiWaypoint;
+typedef char AiWaypointSizeCheck[(sizeof(AiWaypoint) == 0x14) ? 1 : -1];
 
 typedef struct EntitySlot {
     int32_t type;       /* corpus entity-type code (1..9)         */
@@ -188,6 +193,16 @@ typedef struct EntitySlot {
     char    name[32];
     float   x, y, z;
     float   rot;
+    float   movement_tick_scale; /* corpus entity +0xae, reset to 0.01 */
+    float   velocity_x;
+    float   velocity_y;
+    float   velocity_z;
+    float   facing_target_x;
+    float   facing_target_y;
+    float   facing_target_z;
+    float   type5_finalize_timeout;
+    uint32_t last_action_event;
+    uint32_t last_action_event_flags;
     int32_t flags;      /* reconstruction-side flag word          */
     /* --- .ol grammar (decompile-verified, FUN_0042e020/e8b0) ----- */
     char    type_name[24]; /* .ol `type` name (e.g. "SmallDigger") */
@@ -198,11 +213,13 @@ typedef struct EntitySlot {
     const void* model;      /* parsed LWO Model* (entity_model cache) */
     /* --- command layer (finding 10) --- */
     void*   cmd_head;   /* chain-head command record (entity +0x2f0) */
+    void*   route_partner_300; /* reciprocal partner link for step commands */
     uint32_t flags_3e0; /* mirror of entity +0x3e0 (bit 0x400 gates gated cmds) */
     uint32_t flags_3e8; /* mirror of entity +0x3e8 (type-6 high bit → kind) */
     /* --- entity-tick state (callback 0x43c810, finding 10) --------- */
     uint32_t flags_3e4; /* +0x3e4 (bit 0x8000000 = wake-timer running)  */
     uint32_t flags_3ec; /* +0x3ec (activity/behaviour flags)            */
+    int32_t command_mode_404; /* per-entity mode written by route commands */
     /* +0x3f0: level-state mask word. The corpus's two readers are this
      * module's selection gate (CurrentLevelStateFlagsContainMask) and the
      * unported sim-interaction update; no ported writer feeds it — a
@@ -278,6 +295,26 @@ typedef struct EntitySlot {
     int32_t  act_list[AI_ACTIVITY_SLOTS]; /* +0x370: valid entries first   */
     int      act_count;                   /* +0x384: valid entries, 0 = no
                                            * permission (probe false)       */
+    struct GameContext* owner_ctx; /* port back-reference for queued spawns */
+    uint32_t effect_counter_a; /* additive effects from record +4 */
+    uint32_t effect_counter_b; /* additive effects from record +8 */
+    float auxiliary_state_388; /* +0x388: cursor-target timeout */
+    uint32_t auxiliary_slot_38c;
+    uint32_t indexed_record_flags;
+    uint32_t indexed_record_flag_index;
+    uint32_t action_consume_counters[6];
+    uint32_t action_consume_counters_initialized;
+    int32_t payload_state_8c;
+    void* payload_handle_04;
+    void* payload_aux_handle_7c;
+    void* payload_resource_chains[3];
+    void* visual_resource_handles[4]; /* per-type cached scene visual */
+    void* payload_owned_blocks[5];
+    uint32_t payload_flags_70;
+    void* scene_slot_cache[12];
+    uint32_t scene_slot_generation;
+    int32_t task_pair_3b4[2];
+    int32_t task_scalar_3bc;
 } EntitySlot;
 
 /* Completed-objective `.osf` table (finding 08): 20-byte entries — id, ref,

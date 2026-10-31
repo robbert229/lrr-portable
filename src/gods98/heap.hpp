@@ -151,6 +151,20 @@ void text_buffer_append_format(void* record, const char* format, ...);
 void formatted_text_append_to_ring_buffer(void* record, int skip_bells,
                                           const char* format, ...);
 
+typedef struct TextBufferDrawOps {
+    void* context;
+    int (*font_line_height)(void* context, void* font);
+    int (*glyph_advance)(void* context, void* font, unsigned char glyph);
+    int (*glyph_draw)(void* context, void* font, int x, int y,
+                      unsigned char glyph, int draw_mode);
+    int (*is_word_break)(void* context, unsigned char glyph);
+} TextBufferDrawOps;
+void text_buffer_draw_ops_set(const TextBufferDrawOps* ops);
+int text_buffer_draw_wrapped(void* record, uint32_t start_line,
+                             float line_scale, int* height_out);
+int text_wrap_measure_and_draw_lines(void* record, float elapsed,
+                                     int* height_out);
+
 /* UITextOutputObjectRelease (FUN_0045a620): resets the text-output record
  * held in the caller's pointer slot. The corpus dereferences blindly;
  * the port guards the holder (deviation). */

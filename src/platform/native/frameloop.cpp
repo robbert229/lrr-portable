@@ -23,6 +23,16 @@ struct PlatformWindow {
     int          h;
 };
 
+static PlatformWindow* s_active_window;
+static PlatformRenderSurfaceOps s_platform_render_surface_ops;
+
+void platform_render_surface_ops_set(const PlatformRenderSurfaceOps* ops)
+{
+    if (ops != NULL) s_platform_render_surface_ops = *ops;
+    else memset(&s_platform_render_surface_ops, 0,
+                sizeof(s_platform_render_surface_ops));
+}
+
 PlatformWindow* platform_create_window(const char* title, int width, int height)
 {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -51,6 +61,7 @@ PlatformWindow* platform_create_window(const char* title, int width, int height)
     pw->w = width;
     pw->h = height;
     pw->window_surface = SDL_GetWindowSurface(win);
+    s_active_window = pw;
     /* The game draws its own bitmap pointer into the framebuffer. */
     SDL_HideCursor();
     return pw;
@@ -65,8 +76,19 @@ void platform_destroy_window(PlatformWindow* pw)
         SDL_DestroyWindow(pw->sdl);
     }
     SDL_ShowCursor();
+    if (s_active_window == pw) {
+        s_active_window = NULL;
+    }
     pw->sdl = NULL;
     free(pw);
+}
+
+void platform_set_window_title(const char* title)
+{
+    if (s_active_window != NULL && s_active_window->sdl != NULL
+        && title != NULL) {
+        SDL_SetWindowTitle(s_active_window->sdl, title);
+    }
 }
 
 void* platform_window_hwnd(PlatformWindow* pw)
@@ -180,6 +202,21 @@ void platform_present_pixels(PlatformWindow* pw,
                              const void* pixels, int pitch,
                              int width, int height)
 {
+    if (s_platform_render_surface_ops.fullscreen_get != NULL &&
+        s_platform_render_surface_ops.fullscreen_get(
+            s_platform_render_surface_ops.context)) {
+        if (s_platform_render_surface_ops.surface_flip != NULL) {
+            s_platform_render_surface_ops.surface_flip(
+                s_platform_render_surface_ops.context, pw, 0, 1);
+        }
+        return;
+    }
+    if (s_platform_render_surface_ops.windowed_blit != NULL) {
+        s_platform_render_surface_ops.windowed_blit(
+            s_platform_render_surface_ops.context, pw, pixels, pitch,
+            width, height);
+        return;
+    }
     if (pw == NULL || pw->sdl == NULL || pw->window_surface == NULL) {
         return;
     }

@@ -1,10 +1,117 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <string.h>
-#include <ctype.h>
 
 #include "engine.hpp"
 #include "input.hpp"
 #include "message.hpp"
+
+static DirectInputHooks s_direct_input_hooks;
+static InputState s_direct_input_state;
+static int s_direct_input_initialized;
+static int s_direct_input_keyboard_acquired;
+
+void input_direct_hooks_set(const DirectInputHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_direct_input_hooks, 0,
+                              sizeof(s_direct_input_hooks));
+    else s_direct_input_hooks = *hooks;
+}
+
+int input_direct_initialize(void)
+{
+    input_reset(&s_direct_input_state);
+    s_direct_input_initialized = 0;
+    s_direct_input_keyboard_acquired = 0;
+    if (s_direct_input_hooks.interface_create != NULL &&
+        !s_direct_input_hooks.interface_create(s_direct_input_hooks.context))
+        return 0;
+    if (s_direct_input_hooks.keyboard_create != NULL &&
+        !s_direct_input_hooks.keyboard_create(s_direct_input_hooks.context))
+        goto failed;
+    if (s_direct_input_hooks.mouse_create != NULL &&
+        !s_direct_input_hooks.mouse_create(s_direct_input_hooks.context))
+        goto failed;
+    if (s_direct_input_hooks.devices_configure != NULL &&
+        !s_direct_input_hooks.devices_configure(s_direct_input_hooks.context))
+        goto failed;
+    if (s_direct_input_hooks.devices_acquire != NULL &&
+        !s_direct_input_hooks.devices_acquire(s_direct_input_hooks.context))
+        goto failed;
+    s_direct_input_initialized = 1;
+    s_direct_input_keyboard_acquired = 1;
+    return 1;
+failed:
+    if (s_direct_input_hooks.devices_release != NULL)
+        s_direct_input_hooks.devices_release(s_direct_input_hooks.context);
+    input_reset(&s_direct_input_state);
+    s_direct_input_keyboard_acquired = 0;
+    return 0;
+}
+
+void input_direct_shutdown(void)
+{
+    if (s_direct_input_initialized &&
+        s_direct_input_hooks.devices_release != NULL)
+        s_direct_input_hooks.devices_release(s_direct_input_hooks.context);
+    s_direct_input_initialized = 0;
+    s_direct_input_keyboard_acquired = 0;
+    input_reset(&s_direct_input_state);
+}
+
+InputState* input_direct_state_get(void)
+{
+    return &s_direct_input_state;
+}
+#include <ctype.h>
+
+static uint8_t s_global_current_keys[INPUT_KEY_COUNT];
+static int s_cursor_client_x;
+static int s_cursor_client_y;
+static int s_cursor_delta_x;
+static int s_cursor_delta_y;
+static InputClientToScreenHook s_input_client_to_screen_hook;
+static InputSetCursorPositionHook s_input_set_cursor_position_hook;
+static void* s_input_cursor_hook_context;
+
+static void input_global_current_keys_copy(const InputState* state)
+{
+    if (state != NULL) {
+        memcpy(s_global_current_keys, state->cur, sizeof(s_global_current_keys));
+    }
+}
+
+void input_key_mapping_reset(InputKeyMappingTable* table)
+{
+    if (table != NULL) memset(table, 0, sizeof(*table));
+}
+
+// FUNCTION: LEGORR 0x0044f1a0
+void input_key_mapping_add_bidirectional(InputKeyMappingTable* table,
+                                         uint8_t key_a, uint8_t key_b)
+{
+    uint32_t i;
+    int found = 0;
+    if (table == NULL) return;
+    for (i = 0; i < table->count[key_a]; ++i) {
+        if (table->values[key_a][i] == key_b) {
+            found = 1;
+            break;
+        }
+    }
+    if (!found && table->count[key_a] < INPUT_KEY_MAPPING_CAPACITY) {
+        table->values[key_a][table->count[key_a]++] = key_b;
+    }
+    found = 0;
+    for (i = 0; i < table->count[key_b]; ++i) {
+        if (table->values[key_b][i] == key_a) {
+            found = 1;
+            break;
+        }
+    }
+    if (!found && table->count[key_b] < INPUT_KEY_MAPPING_CAPACITY) {
+        table->values[key_b][table->count[key_b]++] = key_a;
+    }
+}
 
 void input_reset(InputState* s)
 {
@@ -23,12 +130,79 @@ void input_reset(InputState* s)
     s->text_target = NULL;
     s->text_len = 0;
     s->text_cap = 0;
+    memset(s_global_current_keys, 0, sizeof(s_global_current_keys));
 }
 
-/* InputStatePoll's successful-device state rollover (the previous/current
- * 256-byte tables) is represented here; the DirectInput acquisition and
- * retry path remain platform-owned. */
+/* FUN_00483810: toggle the state associated with one input action. The
+ * DirectInput call boundary is supplied as a typed hook; the local slot table
+ * preserves the original one-active-registration-per-action behavior. */
+int input_action_state_toggle(InputActionToggleState* state,
+                              const InputActionToggleHooks* hooks,
+                              unsigned int action, const void* data)
+{
+    InputActionToggleSlot* slot;
+    int mode = 0;
+    int result;
+    if (state == NULL || action >= 16u) return 0;
+    if (hooks != NULL && hooks->query != NULL &&
+        hooks->query(hooks->context, 0) != 0)
+        mode = -1;
+    if (hooks != NULL && hooks->apply != NULL) {
+        result = hooks->apply(hooks->context, mode, action, data);
+        if (result != 0) return 0;
+    }
+    slot = &state->slots[action];
+    if (!slot->active) {
+        slot->active = 1;
+        slot->data = data;
+    }
+    else if (slot->data == data) {
+        slot->active = 0;
+        return 1;
+    }
+    return 1;
+}
+
+/* InputStatePoll (FUN_0047eef0). `poll_active` supplies the original mode
+ * gate; DirectInput operations remain platform hooks. */
 // FUNCTION: LEGORR 0x0047eef0
+void input_state_poll(InputState* s, int poll_active)
+{
+    int i;
+    int result = -1;
+    if (s == NULL) return;
+    if (!poll_active) {
+        memset(s->cur, 0, sizeof(s->cur));
+        memset(s->prev, 0, sizeof(s->prev));
+        if (s_direct_input_initialized &&
+            s_direct_input_hooks.keyboard_unacquire != NULL)
+            s_direct_input_hooks.keyboard_unacquire(
+                s_direct_input_hooks.context);
+        s_direct_input_keyboard_acquired = 0;
+        input_global_current_keys_copy(s);
+        return;
+    }
+    if (!s_direct_input_initialized) return;
+    if (s_direct_input_keyboard_acquired &&
+        s_direct_input_hooks.keyboard_state_read != NULL) {
+        for (i = 0; i < INPUT_KEY_COUNT; ++i) {
+            s->prev[i] = s->cur[i];
+            s->cur[i] = 0;
+        }
+        result = s_direct_input_hooks.keyboard_state_read(
+            s_direct_input_hooks.context, INPUT_KEY_COUNT, s->cur);
+    }
+    if (result != 0) {
+        s_direct_input_keyboard_acquired = 0;
+        if (s_direct_input_hooks.keyboard_acquire != NULL &&
+            s_direct_input_hooks.keyboard_acquire(
+                s_direct_input_hooks.context) == 0)
+            s_direct_input_keyboard_acquired = 1;
+    }
+    input_global_current_keys_copy(s);
+}
+
+/* Port frame boundary; InputStatePoll is a separate device operation. */
 void input_begin_frame(InputState* s)
 {
     if (s == NULL) {
@@ -39,6 +213,7 @@ void input_begin_frame(InputState* s)
         s->cur[i] = 0;
     }
     s->mouse_press = 0;
+    input_global_current_keys_copy(s);
 }
 
 void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
@@ -71,6 +246,7 @@ void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
             break;
         }
     }
+    input_global_current_keys_copy(s);
 }
 
 void input_mirror(InputState* s)
@@ -92,11 +268,74 @@ void input_mirror_and_clear(InputState* s)
         s->mirror[i] = s->cur[i];
         s->cur[i] = 0;
     }
+    input_global_current_keys_copy(s);
 }
 
 int input_key_down(const InputState* s, int key)
 {
     return (key >= 0 && key < INPUT_KEY_COUNT) ? s->cur[key] != 0 : 0;
+}
+
+/* KeyboardDownKeyCount (FUN_0047efb0): count nonzero entries in the
+ * module's current 256-byte key snapshot. The engine has one active input
+ * table; capture/frame/reset keep this portable snapshot in sync with it. */
+// FUNCTION: LEGORR 0x0047EFB0
+int input_keyboard_down_key_count(void)
+{
+    int count = 0;
+    int i;
+    for (i = 0; i < INPUT_KEY_COUNT; ++i) {
+        if (s_global_current_keys[i] != 0u) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+void input_cursor_position_hooks_install(InputClientToScreenHook convert,
+                                        InputSetCursorPositionHook set_cursor,
+                                        void* context)
+{
+    s_input_client_to_screen_hook = convert;
+    s_input_set_cursor_position_hook = set_cursor;
+    s_input_cursor_hook_context = context;
+}
+
+/* CursorSetClientPosition (FUN_0047f0d0): update the client-relative mouse
+ * globals, clear the accumulated movement pair, convert against the active
+ * window when the platform hook exists, and move the host cursor. */
+// FUNCTION: LEGORR 0x0047F0D0
+void input_cursor_client_position_set(int x, int y)
+{
+    int screen_x = x;
+    int screen_y = y;
+    s_cursor_client_x = x;
+    s_cursor_client_y = y;
+    s_cursor_delta_x = 0;
+    s_cursor_delta_y = 0;
+    if (s_input_client_to_screen_hook != NULL) {
+        if (s_input_client_to_screen_hook(&screen_x, &screen_y,
+                                          s_input_cursor_hook_context) == 0) {
+            screen_x = x;
+            screen_y = y;
+        }
+    }
+    if (s_input_set_cursor_position_hook != NULL) {
+        s_input_set_cursor_position_hook(screen_x, screen_y,
+                                         s_input_cursor_hook_context);
+    }
+}
+
+void input_cursor_client_position_get(int* x, int* y)
+{
+    if (x != NULL) *x = s_cursor_client_x;
+    if (y != NULL) *y = s_cursor_client_y;
+}
+
+void input_cursor_delta_get(int* x, int* y)
+{
+    if (x != NULL) *x = s_cursor_delta_x;
+    if (y != NULL) *y = s_cursor_delta_y;
 }
 
 int input_key_edge(const InputState* s, int key)

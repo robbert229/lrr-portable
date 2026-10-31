@@ -33,16 +33,19 @@ int entity_kind_lookup(const char* kind, int* notexture)
         return ENTITY_KIND_UNKNOWN;
     }
 
-    /* Tokenize the kind on ':' — the second component is the optional
-     * NOTEXTURE flag (s_NOTEXTURE at 0x4aab78), compared case-insensitively
-     * once the caller splits with DAT_004a1cd4 ("::" surrogate in corpus;
-     * here a single ':' delimiter). */
+    /* Tokenize on the corpus ':' delimiter. The kind comes from the first
+     * token and NOTEXTURE, when present, is checked against the second. */
     char buf[64];
     snprintf(buf, sizeof buf, "%s", kind);
     char* colon = strchr(buf, ':');
     if (colon != NULL) {
         *colon = '\0';
-        if (strcasecmp_lite(colon + 1, "NOTEXTURE") == 0 && notexture != NULL) {
+        char* option = colon + 1;
+        char* next = strchr(option, ':');
+        if (next != NULL) {
+            *next = '\0';
+        }
+        if (strcasecmp_lite(option, "NOTEXTURE") == 0 && notexture != NULL) {
             *notexture = 1;
         }
     }

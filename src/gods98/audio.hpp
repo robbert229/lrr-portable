@@ -28,6 +28,10 @@ typedef struct AudioPlayer {
 
 int  audio_open(AudioPlayer* p);     /* 0 on success, non-zero otherwise */
 void audio_close(AudioPlayer* p);
+void audio_active_shutdown(void); /* 0x0047a800 */
+typedef int (*AudioSystemInitHook)(void* context, void* window);
+void audio_system_init_hook_set(AudioSystemInitHook hook, void* context);
+int audio_system_init(void* window); /* 0x0047a640 */
 
 /* Master volume 0..1 (FUN_00464ef0 analog); applied to the audio stream. */
 void audio_set_volume(AudioPlayer* p, float volume);
@@ -36,7 +40,9 @@ void audio_set_volume(AudioPlayer* p, float volume);
 float audio_sfx_volume_gain(int index);
 /* SoundBufferVolumeSet (FUN_0047b500): apply DirectSound hundredth-dB
  * attenuation as the port's single output gain. */
-void audio_sound_volume_set(AudioPlayer* p, int millibels);
+void audio_sound_volume_set(int millibels);
+/* Apply attenuation to the currently installed AudioPlayer. */
+void audio_active_sound_volume_set(int millibels);
 /* SoundVolumeIndexSet (FUN_0047b530): map the options index 0..10 through
  * the corpus attenuation table and apply it. */
 void audio_sound_volume_index_set(int index);
@@ -48,6 +54,13 @@ void audio_menu_sfx_volume_set(int index);
  * corpus's paired music-mixer channels. */
 void audio_menu_volume_set(int value);
 void music_mixer_volume_set(float music, float sfx);
+int audio_mixer_control_init(float* music, float* sfx, int apply_volume);
+void audio_music_mixer_volume_get(float* music, float* sfx);
+typedef void (*AudioListenerRolloffHook)(void* context, float rolloff);
+void audio_listener_rolloff_hook_set(AudioListenerRolloffHook hook,
+                                     void* context);
+float audio_listener_rolloff_set(float rolloff); /* 0x0047c100 */
+float audio_listener_rolloff_get(void);
 
 /* Submit one bank sound as a one-shot. Returns the number of frames queued,
  * or -1 on failure. */
@@ -59,6 +72,7 @@ int  audio_play_named(AudioPlayer* p, const char* name);
 /* 3D-ish one-shot: mono sound spatialized with a -1..1 pan (constant-power
  * balance; distance falloff via audio_set_volume at the call site). */
 int  audio_play_sound_3d(AudioPlayer* p, const Sound* s, float pan);
+int  audio_active_play_sound_3d(const Sound* s, float pan);
 
 /* Start/replace the continuous looping track (finding 14 §1 flag bit 2) for
  * a sound at pan -1..1. Loads through the bank when given a resource name

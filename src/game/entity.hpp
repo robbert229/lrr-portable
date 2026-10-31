@@ -52,6 +52,256 @@ typedef struct ObjectPlacement {
     char  model[128];    /* optional `Model` key (port extension)    */
 } ObjectPlacement;
 
+/* Six zeroed lookup maps allocated by FUN_0041aa00. The original keeps two
+ * independent table capacities; this owner makes those capacities explicit.
+ * Zero-initialize the owner before its first allocation; later allocations
+ * release and replace its previous arrays. */
+typedef struct EntityTableMaps {
+    uint32_t* primary_a;
+    uint8_t* flags_a;
+    uint32_t* secondary_a;
+    uint32_t* primary_b;
+    uint8_t* flags_b;
+    uint32_t* secondary_b;
+    unsigned int count_a;
+    unsigned int count_b;
+} EntityTableMaps;
+void entity_table_maps_allocate(EntityTableMaps* maps, unsigned int count_a,
+                                unsigned int count_b); /* FUN_0041aa00 */
+void entity_table_maps_release(EntityTableMaps* maps);
+typedef int (*EntitySurfaceVectorGetHook)(void* surface, float out_xy[2]);
+void entity_surface_vector_hook_set(EntitySurfaceVectorGetHook hook);
+void entity_surface_vector_normalize(void* surface, float out_xy[2]); /* FUN_004422a0 */
+float entity_vector_direction_angle_radians_get(void* surface); /* FUN_00442480 */
+void entity_action_sequence_reset(EntitySlot* entity, int preserve_mode); /* FUN_00441940 */
+void entity_state_reset(EntitySlot* entity, int clear_mode, int reset_mode); /* FUN_00441b30 */
+typedef void (*EntityQueuedRecordProcessHook)(EntitySlot* source,
+                                               EntitySlot* target,
+                                               void* record);
+typedef void (*EntityQueuedRecordReleaseHook)(void* record);
+typedef int (*EntitySimulationImmediateModeHook)(EntitySlot* source);
+void entity_simulation_queue_hooks_set(EntityQueuedRecordProcessHook process,
+                                       EntityQueuedRecordReleaseHook release);
+void entity_simulation_queue_mode_hook_set(
+    EntitySimulationImmediateModeHook immediate_mode);
+int entity_simulation_queue_attach(EntitySlot* source, EntitySlot* target,
+                                   void* record, int record_kind);
+void entity_simulation_queue_flush(EntitySlot* source); /* FUN_0043eea0 */
+typedef void (*EntityFlagDispatchHook)(EntitySlot* entity, uint32_t argument_a,
+                                       uint32_t argument_b, uint32_t argument_c,
+                                       int* result);
+void entity_flag_dispatch_hooks_set(EntityFlagDispatchHook first,
+                                    EntityFlagDispatchHook second);
+int entity_flag_gated_callback_dispatch(EntitySlot* entity,
+                                        uint32_t argument_a,
+                                        uint32_t argument_b,
+                                        uint32_t argument_c); /* FUN_00445d70 */
+int entity_directed_line_side_check(const EntitySlot* entity,
+                                    const float point_xy[2],
+                                    const float direction_xy[2]); /* FUN_00470630 */
+typedef float (*EntitySegmentRadiusGetHook)(const EntitySlot* entity);
+void entity_segment_radius_hook_set(EntitySegmentRadiusGetHook hook);
+int entity_segment_center_proximity_check(const EntitySlot* entity,
+                                          const float start_xy[2],
+                                          const float end_xy[2],
+                                          int check_side); /* FUN_00470540 */
+typedef struct EntityRayHitSweepState {
+    void* hit_object;
+    float max_distance;
+    const float* start;
+    const float* direction;
+    int hit;
+} EntityRayHitSweepState;
+typedef struct EntityRayHitSweepOps {
+    void* context;
+    int (*object_position_get)(void* context, void* object,
+                               float position_out[3]);
+    int (*see_through_walls_enabled)(void* context);
+    void (*scene_trace_prepare)(void* context,
+                                EntityRayHitSweepState* state);
+    int (*grid_dimensions_get)(void* context, uint32_t* width_out,
+                               uint32_t* height_out);
+    int (*world_to_cell)(void* context, const float point[3],
+                         uint32_t* x_out, uint32_t* y_out);
+    int (*cell_intersection)(void* context, uint32_t x, uint32_t y,
+                             const float start[3], const float direction[3],
+                             float hit_point_out[3]);
+} EntityRayHitSweepOps;
+void ray_hit_cell_sweep_ops_set(const EntityRayHitSweepOps* ops);
+void ray_hit_cell_distance_minimize_sweep(
+    EntityRayHitSweepState* state); /* FUN_00471630 */
+int scene_segment_trace_nearest_hit(const float start[3],
+                                   const float direction[3],
+                                   void** hit_object_out,
+                                   float* max_distance_io); /* FUN_00471860 */
+int object_pair_ray_hit_check(void* first, void* second); /* FUN_004718d0 */
+int see_through_walls_ray_check(void* first, void* second); /* FUN_00471960 */
+typedef struct EntityVelocitySteerState {
+    void* primary;
+    void* secondary;
+    float target[3];
+    float velocity[3];
+    float heading;
+    float max_vertical_velocity;
+} EntityVelocitySteerState;
+typedef void (*EntitySteerVelocityApplyFn)(
+    void* context, void* entity, const float velocity[3],
+    float heading, int secondary_pass);
+void entity_steer_velocity_apply_hook_set(EntitySteerVelocityApplyFn hook,
+                                          void* context);
+void entity_velocity_steer_blend_update(EntityVelocitySteerState* state,
+                                        const float target[3], float elapsed,
+                                        int update_target); /* FUN_00471a60 */
+int pose_offset_velocity_slot_blend_update(
+    EntityVelocitySteerState* state, const float offset[3],
+    const float translation[3], float elapsed); /* FUN_00471f00 */
+typedef struct EntityVelocitySlotDispatchOps {
+    void* context;
+    int (*state_get)(void* context, void* entity, uint32_t* flags_out,
+                     uint32_t* slot_count_out);
+    int (*pose_slot_get)(void* context, void* entity, void* argument,
+                         uint32_t slot, EntityVelocitySteerState** state_out,
+                         float offset_out[3], float translation_out[3],
+                         float* elapsed_out);
+    void (*steer_sound_dispatch)(void* context, void* entity,
+                                void* argument, uint32_t slot);
+} EntityVelocitySlotDispatchOps;
+void entity_velocity_slot_dispatch_ops_set(
+    const EntityVelocitySlotDispatchOps* ops);
+int entity_velocity_slot_dispatch(void* entity, void* argument); /* FUN_00471fc0 */
+typedef struct EntityVelocitySteerDispatchOps {
+    void* context;
+    int (*steer_input_get)(void* context, void* entity, void* argument,
+                           float delta, EntityVelocitySteerState** state_out,
+                           float target_out[3], float* current_velocity_out);
+    int (*effect_state_get)(void* context, uint32_t* global_flags_out);
+    int (*active_entity_get)(void* context, void** entity_out);
+    int (*candidate_ready)(void* context, void* entity, void* argument,
+                           uint32_t candidate);
+    float (*candidate_speed_scale)(void* context, void* entity,
+                                   uint32_t candidate);
+    int (*candidate_update)(void* context, void* entity, void* argument,
+                           uint32_t candidate, float speed_scale);
+    void (*first_candidate_initialize)(void* context, void* entity,
+                                      void* argument);
+} EntityVelocitySteerDispatchOps;
+void entity_velocity_steer_dispatch_ops_set(
+    const EntityVelocitySteerDispatchOps* ops);
+int entity_velocity_steer_dispatch_and_sound(void* entity, void* argument,
+                                             float delta); /* FUN_00471d20 */
+typedef void (*EntityVelocityApplyHook)(EntitySlot* entity, float x, float y,
+                                        float z);
+void entity_velocity_apply_hooks_set(EntityVelocityApplyHook vehicle,
+                                     EntityVelocityApplyHook minifig,
+                                     EntityVelocityApplyHook object,
+                                     EntityVelocityApplyHook building,
+                                     EntityVelocityApplyHook special);
+void entity_velocity_vector_dispatch(EntitySlot* entity, float angle,
+                                     const float vector_or_null[3]); /* FUN_00442300 */
+typedef int (*EntityRouteSegmentAcceptHook)(EntitySlot* entity,
+                                            float x0, float y0,
+                                            float x1, float y1);
+void entity_route_segment_accept_hook_set(EntityRouteSegmentAcceptHook hook);
+int entity_route_setup_and_marker_associate(EntitySlot* entity,
+                                            unsigned int count,
+                                            const float* x_values,
+                                            const float* y_values,
+                                            int final_marker); /* FUN_00441700 */
+typedef float (*EntitySurfaceScaleReadHook)(void* context);
+void entity_surface_scale_read_hook_set(EntitySurfaceScaleReadHook hook,
+                                        void* context);
+float entity_surface_scale_get(void);
+typedef struct CellEntityKindRegistry {
+    uint32_t width;
+    uint32_t height;
+    void** records;
+    void* context;
+    int (*grid_to_world)(void* context, uint32_t x, uint32_t y,
+                         float* world_x, float* world_y);
+    void* (*create_kind14)(void* context, float world_x, float world_y);
+    void (*release_entity)(void* context, void* entity);
+} CellEntityKindRegistry;
+void cell_entity_kind_create_or_remove(CellEntityKindRegistry* registry,
+                                       uint32_t x, uint32_t y,
+                                       int create); /* FUN_0040e350 */
+typedef struct WorldObjectSpawnRequest {
+    uint32_t object_kind;
+    uint32_t orientation_quadrant;
+    uint32_t reserved;
+    int32_t origin_x;
+    int32_t origin_y;
+    const int32_t* coordinate_pairs;
+    uint32_t coordinate_pair_count;
+#if defined(_WIN64) || defined(__LP64__) || defined(_LP64)
+    uint32_t reserved_tail[44];
+#else
+    uint32_t reserved_tail[46];
+#endif
+} WorldObjectSpawnRequest;
+typedef struct WorldObjectCreateHooks {
+    void* context;
+    void (*terrain_pairs_prepare)(void* context,
+                                  const int32_t* coordinate_pairs,
+                                  uint32_t coordinate_pair_count,
+                                  float extent);
+    void (*neighbor_cells_refresh)(void* context,
+                                   const int32_t position[2]);
+    /* Converts the request coordinates and creates a type-4 entity via
+     * FUN_00438610. */
+    EntitySlot* (*entity_create_type4)(
+        void* context, const WorldObjectSpawnRequest* request,
+        float orientation_radians);
+    void (*event8_dispatch)(void* context, EntitySlot* entity);
+    void (*matching_pair_prepare)(void* context, int32_t x, int32_t y);
+    void (*matching_pair_attach)(void* context, EntitySlot* entity,
+                                 const int32_t pair[2]);
+    void (*boundary_pair_special)(void* context, const int32_t pair[2]);
+    void (*boundary_pair_unlink)(void* context, const int32_t pair[2]);
+    void (*boundary_pair_apply)(void* context, int32_t x, int32_t y);
+    void (*boundary_pair_secondary)(void* context, const int32_t pair[2]);
+    void (*cardinal_neighbors_apply)(void* context, int32_t x, int32_t y);
+    void (*pair_refresh)(void* context, int32_t x, int32_t y);
+} WorldObjectCreateHooks;
+EntitySlot* world_object_spawn_request_create(
+    const WorldObjectCreateHooks* hooks,
+    const WorldObjectSpawnRequest* request,
+    int notify); /* FUN_00409b30 */
+void world_object_create_with_transform(const WorldObjectCreateHooks* hooks,
+                                        uint32_t object_kind,
+                                        const int32_t position[2],
+                                        uint32_t subtype,
+                                        const int32_t* coordinate_pairs,
+                                        uint32_t coordinate_pair_count,
+                                        int notify); /* FUN_00409a90 */
+typedef struct EntityScenePose {
+    float position[3];
+    float orientation[7];
+} EntityScenePose;
+typedef struct EntityScenePoseHooks {
+    void* context;
+    int (*poses_get)(void* context, EntitySlot* entity,
+                     EntityScenePose** source, EntityScenePose** target);
+} EntityScenePoseHooks;
+void entity_scene_pose_hooks_set(const EntityScenePoseHooks* hooks);
+void scene_object_pose_position_sync(EntitySlot* entity); /* FUN_00443510 */
+typedef struct EntityPairPoseHooks {
+    void* context;
+    int (*pose_read)(void* context, EntitySlot* entity,
+                     EntityScenePose* pose);
+    int (*scene_present)(void* context, EntitySlot* entity);
+    void (*pose_apply)(void* context, EntitySlot* entity,
+                       const EntityScenePose* pose);
+    void (*activity_raise)(void* context, EntitySlot* entity, int activity);
+} EntityPairPoseHooks;
+void entity_pair_pose_hooks_set(const EntityPairPoseHooks* hooks);
+int entity_record_pair_pose_copy_and_activity_raise(EntitySlot* entity);
+void set_vector_and_notify_listeners(float* state,
+                                     const float* delta); /* FUN_0040fde0 */
+int entity_face_target_action_start(EntitySlot* entity, EntitySlot* target,
+                                    int mode); /* FUN_00441ed0 */
+void entity_finish_state_1a(EntitySlot* entity); /* FUN_0043c4c0 */
+void entity_mark_and_finish_state_1a(EntitySlot* entity); /* FUN_0043c530 */
+
 /* Allocate a slot of `type`; returns the slot index or -1 when the table is
  * full or type is out of 1..4. */
 int entity_create(GameContext* ctx, int type, const char* name,
@@ -72,6 +322,313 @@ int entity_pool_find_by_callback(GameContext* ctx,
 int entity_pool_find_by_callback_filtered(GameContext* ctx,
                                           int (*callback)(EntitySlot*, void*),
                                           void* payload);
+void entity_pool_callback_context_set(GameContext* ctx);
+GameContext* entity_pool_callback_context_get(void);
+int entity_pool_callback_search(int (*callback)(EntitySlot*, void*),
+                                void* payload); /* FUN_00406540 */
+typedef void (*EntityCallbackDispatchHook)(EntitySlot* entity, void* context);
+void entity_callback_dispatch_hook_set(EntityCallbackDispatchHook hook,
+                                       void* context);
+void entity_callback_dispatch_unless_type_five(EntitySlot* entity); /* 0x4374f0 */
+/* EntityTeardown (FUN_00437540): execute the engine-owned cleanup stages in
+ * the observed order while this module owns flag clearing and pool relinking. */
+typedef struct EntityTeardownHooks {
+    void* context;
+    void (*operation)(EntitySlot* entity, unsigned int operation,
+                      void* context);
+    void* (*resource_get)(EntitySlot* entity, unsigned int record_word,
+                          void* context);
+    void (*resource_release)(void* resource, void* context);
+    void (*type_resource_release)(EntitySlot* entity, int type,
+                                  void* context);
+    void (*counter_increment)(unsigned int slot, void* context);
+    uint32_t (*state_flags_get)(EntitySlot* entity, void* context);
+    void (*free_list_link)(EntitySlot* entity, void* previous_head,
+                           void* context);
+} EntityTeardownHooks;
+enum EntityTeardownOperation {
+    ENTITY_TEARDOWN_CALLBACK = 0,
+    ENTITY_TEARDOWN_TYPE_THREE_PREPARE = 1,
+    ENTITY_TEARDOWN_DETACH_PARENT = 2,
+    ENTITY_TEARDOWN_RELEASE_SCENE = 3,
+    ENTITY_TEARDOWN_RELEASE_LINK = 4,
+    ENTITY_TEARDOWN_RESET_REFERENCE = 5,
+    ENTITY_TEARDOWN_RESET_ACTION = 6,
+    ENTITY_TEARDOWN_RELEASE_ACTIVITY = 7,
+    ENTITY_TEARDOWN_RELEASE_AI = 8,
+    ENTITY_TEARDOWN_RELEASE_TYPE_DATA = 9,
+    ENTITY_TEARDOWN_FINALIZE = 10
+};
+void entity_teardown_hooks_set(const EntityTeardownHooks* hooks);
+int entity_teardown(EntitySlot* entity); /* 0x437540 */
+typedef struct EntityCommandStatusFeedbackHooks {
+    void* context;
+    const char* (*command_text_get)(EntitySlot* entity, void* context);
+    const char* (*status_text_get)(EntitySlot* entity, int status,
+                                   void* context);
+    void (*feedback_dispatch)(EntitySlot* entity, const char* text,
+                              void* context);
+    void (*empty_command_clear)(EntitySlot* entity, void* context);
+    int (*status_get)(EntitySlot* entity, void* context);
+} EntityCommandStatusFeedbackHooks;
+void entity_command_status_feedback_hooks_set(
+    const EntityCommandStatusFeedbackHooks* hooks);
+void entity_command_status_feedback_dispatch(EntitySlot* entity); /* 0x428020 */
+typedef struct EntityActionPrerequisiteHooks {
+    void* context;
+    int (*action_ready)(EntitySlot* entity, int action, void* context);
+    int (*action_values_get)(EntitySlot* entity, int action,
+                             uint32_t values[3], void* context);
+    uint32_t (*resource_get)(unsigned int resource, void* context);
+} EntityActionPrerequisiteHooks;
+void entity_action_prerequisite_hooks_set(
+    const EntityActionPrerequisiteHooks* hooks);
+int entity_action_kind_prerequisite_check(EntitySlot* entity,
+                                          int action); /* 0x4388b0 */
+typedef int (*EntityRouteMarkerCandidateHook)(EntitySlot* candidate,
+                                               const float position[2],
+                                               uint32_t flags,
+                                               void* context);
+void entity_route_marker_candidate_hook_set(
+    EntityRouteMarkerCandidateHook hook, void* context);
+EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
+                                               int include_secondary); /* 0x4389e0 */
+typedef struct EntityKindRecordUpdateHooks {
+    void* context;
+    void (*type_four_update)(EntitySlot* entity, void* context);
+    void (*action_dispatch)(EntitySlot* entity, int action, void* context);
+    void (*type_four_global_action)(void* context);
+    void (*type_one_record_update)(EntitySlot* entity, void* context);
+    void (*type_one_or_two_update)(EntitySlot* entity, void* context);
+    void (*global_refresh)(void* context);
+    void (*event_emit)(EntitySlot* entity, int type, uint32_t flags,
+                       void* context);
+    void (*type_four_counter_increment)(void* context);
+} EntityKindRecordUpdateHooks;
+void entity_kind_record_update_hooks_set(
+    const EntityKindRecordUpdateHooks* hooks);
+void entity_kind_record_update_dispatch(EntitySlot* entity); /* 0x438460 */
+typedef struct GridObjectRecord {
+    void* first;
+    void* second;
+    uint32_t reserved[9];
+} GridObjectRecord;
+typedef void (*GridObjectRecordsReleaseHook)(void* context);
+void grid_object_record_state_install(const GridObjectRecord* records,
+                                      unsigned int count,
+                                      GridObjectRecordsReleaseHook tail,
+                                      void* context);
+void grid_object_records_release(void); /* 0x4378e0 */
+typedef struct QueuedGridAnimationHooks {
+    void* context;
+    float (*mode_scale_get)(int mode, void* context);
+    int (*anchor_position_get)(void* anchor, float position[2],
+                               void* context);
+    EntitySlot* (*entity_find)(const float position[2], int type,
+                               int filter_a, int filter_b, void* context);
+    EntitySlot* (*animation_entity_get)(EntitySlot* entity, int type,
+                                       int filter_a, int filter_b,
+                                       void* context);
+    void (*work_queue_update)(EntitySlot* entity, int mode, void* context);
+} QueuedGridAnimationHooks;
+void queued_grid_animation_hooks_set(const QueuedGridAnimationHooks* hooks);
+void process_queued_grid_animations(void* anchor, int mode,
+                                    float delta); /* 0x437300 */
+typedef struct RoverWorkQueueHooks {
+    void* context;
+    void* (*model_get)(EntitySlot* entity, void* context);
+    unsigned int (*animation_count_get)(void* model, void* context);
+    void (*position_get)(int mode, float position[3], void* context);
+    void (*animation_position_set)(void* model, unsigned int index,
+                                   const float position[3], float scale,
+                                   void* context);
+    void (*animation_update)(void* model, unsigned int index,
+                             const float position[3], void* context);
+} RoverWorkQueueHooks;
+void rover_work_queue_hooks_set(const RoverWorkQueueHooks* hooks);
+void rover_work_queue_update(EntitySlot* entity, int mode); /* 0x4383b0 */
+typedef void (*EntitySpawnSpecialFinalizeHook)(EntitySlot* entity,
+                                               int value, void* context);
+void entity_spawn_special_finalize_hook_set(
+    EntitySpawnSpecialFinalizeHook hook, void* context);
+EntitySlot* entity_create_with_position(GameContext* context, int type,
+                                        const char* name, int value,
+                                        float x, float y,
+                                        float z); /* 0x438610 */
+typedef struct BuildingUpgradeAdmissionHooks {
+    void* context;
+    uint32_t (*maximum_level_get)(EntitySlot* building, void* context);
+    uint32_t (*current_level_get)(EntitySlot* building, void* context);
+    uint32_t (*cost_get)(unsigned int resource, void* context);
+    uint32_t (*resource_get)(unsigned int resource, void* context);
+} BuildingUpgradeAdmissionHooks;
+void building_upgrade_admission_hooks_set(
+    const BuildingUpgradeAdmissionHooks* hooks);
+int building_upgrade_resource_admission_check(EntitySlot* building,
+                                               uint32_t* out_secondary_cost); /* 0x438770 */
+typedef struct BuildingUpgradeCommitHooks {
+    void* context;
+    void (*resource_spend)(EntitySlot* building, unsigned int resource,
+                           uint32_t amount, void* context);
+    void (*upgrade_request_clear)(EntitySlot* building, void* context);
+    void (*payload_level_set)(EntitySlot* building, unsigned int level,
+                              void* context);
+    void (*stats_level_set)(EntitySlot* building, unsigned int level,
+                            void* context);
+    void (*upgrade_effect_dispatch)(EntitySlot* building, unsigned int level,
+                                    void* context);
+} BuildingUpgradeCommitHooks;
+void building_upgrade_commit_hooks_set(
+    const BuildingUpgradeCommitHooks* hooks);
+void building_upgrade_commit(EntitySlot* building); /* 0x4387f0 */
+typedef struct DeferredOListEntityRecord {
+    int cell_x;
+    int cell_y;
+    float x;
+    float y;
+    float z;
+    int source_kind;
+    int entity_type;
+    int variant;
+    int record_flags;
+    char* name;
+    char* link_name;
+} DeferredOListEntityRecord;
+typedef struct DeferredOListEntityHooks {
+    void* context;
+    EntitySlot* (*entity_create)(const DeferredOListEntityRecord* record,
+                                 void* context);
+    EntitySlot* (*special_building_create)(
+        const DeferredOListEntityRecord* record, unsigned int level,
+        void* context);
+    void (*control_initialize)(EntitySlot* entity, void* context);
+    void (*type_two_event)(EntitySlot* entity, void* context);
+    void (*type_eleven_finalize)(EntitySlot* entity, void* context);
+    void (*link_finalize)(EntitySlot* entity, EntitySlot* target,
+                          unsigned int mode, void* context);
+    void (*record_release)(DeferredOListEntityRecord* record,
+                           void* context);
+} DeferredOListEntityHooks;
+void deferred_olist_entity_hooks_set(const DeferredOListEntityHooks* hooks);
+void deferred_olist_entity_queue_install(
+    const DeferredOListEntityRecord* records, unsigned int count);
+void deferred_olist_entity_create_and_link(const int cell_xy[2]); /* 0x437940 */
+typedef int (*EntitySpatialQueryHook)(void* context, EntitySlot* subject,
+                                      EntitySlot* candidate,
+                                      const float position[2],
+                                      const float values[3]);
+void entity_spatial_query_hook_set(EntitySpatialQueryHook hook, void* context);
+int entity_spatial_query_dispatch(EntitySlot* subject,
+                                  const float position[2],
+                                  const float values[3]);
+void entity_indexed_value_table_clear(void);
+void entity_indexed_value_append(int group, uint32_t value); /* FUN_00469a90 */
+int entity_grouped_code_table_find_value_index(uint32_t value,
+                                               int* out_group); /* FUN_0046a120 */
+void entity_indexed_record_table_set(int group, const void* const* records,
+                                     uint32_t count);
+uint32_t entity_indexed_record_word_at_b0_get(int group, int index,
+                                              int slot); /* FUN_00469ac0 */
+uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
+                                                     int slot); /* FUN_0046a0c0 */
+typedef int (*PeriodicEntityCallback)(EntitySlot* entity, void* payload,
+                                      void* context);
+void periodic_entity_callback_install(PeriodicEntityCallback callback,
+                                      void* context);
+void periodic_entity_callback_dispatch(void* payload); /* FUN_00425b40 */
+typedef void (*EntityDefaultTransformApplyHook)(EntitySlot* entity,
+                                                void* argument,
+                                                float scale, int mode_a,
+                                                int mode_b, void* context);
+void entity_default_transform_apply_hook_set(
+    EntityDefaultTransformApplyHook hook, void* context);
+int entity_default_transform_apply_if_flagged(EntitySlot* entity,
+                                              void* argument);
+void entity_default_transform_apply_all(void* argument);
+EntitySlot* entity_at_grid_position_find(const int cell_xy[2]); /* 0x00438670 */
+typedef void (*EntityActivityRecordRemoveFn)(void* record, void* action,
+                                             void* user);
+void entity_activity_record_remove_hook_set(EntityActivityRecordRemoveFn hook,
+                                            void* user);
+void entity_activity_record_remove_by_type(void* entity, uint32_t type,
+                                           void* action_context);
+void entity_activity_records_refresh(void* entity);
+void entity_activity_record_removal_suppression_set(uint32_t flags);
+typedef void (*ActivityRecordClearFn)(void* head, void* user);
+typedef int (*ActivityRunnerChangeFn)(void* scene_owner, void* state,
+                                      void* value, void* user);
+void activity_runner_hooks_set(ActivityRecordClearFn clear_records,
+                               ActivityRunnerChangeFn change, void* user);
+int activity_runner_update(void* runner, void* state, void* value);
+typedef void* (*EntityTrackedCleanupFn)(int operation, void* entity,
+                                        uint32_t flags, float position[3],
+                                        void* user);
+void entity_tracked_cleanup_context_set(void** tracked_entities,
+                                       EntityTrackedCleanupFn callback,
+                                       void* user);
+void entity_destroy_tracked_pointer_cleanup(void* entity); /* 0x00409ff0 */
+typedef void (*EntityPairCountUpdateFn)(uint32_t count, void* user);
+typedef struct EntityPairRecord { void* first; void* second; } EntityPairRecord;
+void entity_pair_count_records_install(EntityPairRecord* records,
+                                       uint32_t count,
+                                       EntityPairCountUpdateFn update,
+                                       void* user);
+void entity_pair_count_refresh(void* first, void* second); /* 0x0041ec30 */
+typedef int (*EntityActionTargetCellValidateFn)(EntitySlot* entity,
+                                                void* user);
+void entity_action_target_cell_validator_set(
+    EntityActionTargetCellValidateFn validator, void* user);
+int entity_action_target_cell_is_valid(EntitySlot* entity); /* 0x0043fdc0 */
+typedef int (*EntityExplicitRouteFn)(EntitySlot* actor, EntitySlot* target,
+                                     float* x_values, float* y_values,
+                                     unsigned int* count, void* user);
+void entity_explicit_route_hook_set(EntityExplicitRouteFn hook, void* user);
+int entity_route_to_explicit_target(EntitySlot* actor,
+                                    EntitySlot* target); /* 0x0043fe70 */
+int entity_route_marker_setup(EntitySlot* actor); /* 0x0043fff0 */
+typedef int (*EntityHurtSoundAvailableFn)(void* user);
+typedef void (*EntityHurtSoundSubmitFn)(EntitySlot* entity, void* user);
+typedef float (*EntityHurtSoundDurationFn)(void* user);
+void entity_hurt_sound_hooks_set(EntityHurtSoundAvailableFn available,
+                                 EntityHurtSoundSubmitFn submit,
+                                 EntityHurtSoundDurationFn duration,
+                                 void* user);
+int entity_damage_hurt_sound_submit(EntitySlot* entity, float time,
+                                    float damage); /* 0x0043fb40 */
+typedef void (*EntityLinkedEventSubmitFn)(uint32_t event, EntitySlot* entity,
+                                          void* user);
+void entity_linked_event_submit_hook_set(EntityLinkedEventSubmitFn hook,
+                                         void* user);
+void entity_linked_activity_event_dispatch(EntitySlot* entity,
+                                           uint32_t events); /* 0x0043f5b0 */
+void direction_driven_heading_angle_step(void* state, const float* direction);
+void kind_two_steering_torque_apply(void* state, float direction[3]);
+void steering_physics_step(void* unused, float* state, const float* delta);
+typedef int (*EntityFlagMaskPredicate)(EntitySlot*, uint32_t, void*);
+int entity_flag_mask_callbacks_all_pass(GameContext* ctx, uint32_t mask,
+                                        EntityFlagMaskPredicate predicate,
+                                        void* user); /* FUN_0046a4c0 */
+void entity_iteration_callback_guard(GameContext* ctx,
+                                     int (*callback)(EntitySlot*, void*),
+                                     void* payload); /* FUN_0043b320 */
+uint32_t entity_iteration_guard_flags_peek(void); /* port hook */
+typedef int (*SceneObjectStateCallback)(EntitySlot*, uint32_t, uint32_t,
+                                        uint32_t, void*);
+void scene_object_state_dispatch_words_install(uint32_t point_low,
+                                               uint32_t point_high,
+                                               uint32_t word_c,
+                                               uint32_t word14);
+void scene_object_state_dispatch(GameContext* ctx, uint32_t selector,
+                                 uint32_t mode, uint32_t flags,
+                                 SceneObjectStateCallback callback,
+                                 void* user); /* FUN_0046a510 */
+
+/* EntitySpawnRequestQueueAdd/Process (FUN_0043f150/0x0043f190): bounded
+ * nine-entry deferred spawn request queue. The port processes the first
+ * valid entity-type request when an eligible requester is ticked. */
+int entity_spawn_request_queue_add(GameContext* ctx, int type,
+                                  int request_kind);
+void entity_spawn_request_queue_process(EntitySlot* requester);
 
 /* EntityQueryFlagCount (FUN_0041b3c0): catalog-kind query over the stats
  * flag words and the own-storage catalog count/pair windows (install hooks
@@ -150,6 +707,24 @@ float entity_stats_float_atdc(const EntitySlot* e);   /* FUN_00469e20 */
 uint32_t entity_stats_word_atac(const EntitySlot* e); /* FUN_00469e40 */
 uint32_t entity_stats_word_get(const EntitySlot* e);  /* FUN_00469e60 (+144) */
 uint32_t entity_state_flags_get(const EntitySlot* e); /* FUN_00469e80 (+148) */
+typedef struct EntityStateOverrideEntry {
+    uint32_t flags_3f0;
+    uint32_t stats_index;
+    uint32_t task_state_words[3];
+} EntityStateOverrideEntry;
+typedef void (*EntityStateOverrideStatsSetHook)(EntitySlot* entity,
+                                                 uint32_t stats_index,
+                                                 void* context);
+typedef void (*EntityStateOverrideTaskRestoreHook)(
+    EntitySlot* entity, const uint32_t task_state_words[3], void* context);
+void entity_state_override_hooks_set(
+    EntityStateOverrideStatsSetHook stats_set,
+    EntityStateOverrideTaskRestoreHook task_restore, void* context);
+int entity_state_override_stack_set(const EntityStateOverrideEntry* entries,
+                                    uint32_t count);
+int entity_state_override_stack_push(const EntityStateOverrideEntry* entry);
+int entity_state_override_pop(EntitySlot* entity); /* FUN_00459240 */
+void entity_record_flag400_toggle_and_refresh(EntitySlot* e); /* FUN_0046a330 */
 uint32_t entity_capability_flags_get(const EntitySlot* e); /* FUN_00469ea0 (+14c) */
 float entity_stats_float_at88(const EntitySlot* e);   /* FUN_00469f20
                                          * (the "screen shake" reader) */
@@ -198,10 +773,386 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed);
 /* FUN_004436f0 — kind-3 predicate: type == 3 and +0x3e8 bit 0x04000000. */
 int entity_type3_flag04000000_test(const EntitySlot* e);
 
+/* VehicleUnloadAdjacentCellFind and its two stat-flag gates (0x439d50,
+ * 0x439e10, 0x439e40). These callbacks model the level/global helpers used
+ * to resolve a terrain coordinate and test candidate-cell occupancy. */
+typedef int (*EntityUnloadCellOriginHook)(const EntitySlot* entity, int* x,
+                                          int* y, void* context);
+typedef int (*EntityUnloadCellCandidateHook)(int x, int y, void* context);
+typedef int (*EntityUnloadRouteCheckHook)(int x, int y, void* context);
+typedef uint32_t (*EntityUnloadStatFlagsHook)(const EntitySlot* entity,
+                                              void* context);
+void entity_unload_cell_hooks_set(EntityUnloadCellOriginHook origin,
+                                  EntityUnloadCellCandidateHook candidate,
+                                  EntityUnloadRouteCheckHook route_check,
+                                  EntityUnloadStatFlagsHook stat_flags,
+                                  void* context);
+int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
+                                             int out_xy[2]);
+int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
+                                                int out_xy[2]);
+int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2]);
+int entity_accepts_target_for_task_check(const EntitySlot* entity,
+                                         const EntitySlot* target,
+                                         int apply_extra_gate); /* 0x00439bd0 */
+int entity_gated_step_command_issue(EntitySlot* entity,
+                                    EntitySlot* target); /* 0x00439a20 */
+typedef int (*EntityTaskTargetCellHook)(const EntitySlot* entity,
+                                        const uint32_t* task_record,
+                                        void* context);
+void entity_task_target_cell_hook_set(EntityTaskTargetCellHook hook,
+                                      void* context);
+int entity_task_target_cell_eligibility_check(
+    const EntitySlot* entity, const uint32_t* task_record); /* 0x00439b80 */
+void entity_pair_interaction_activity_sentinel_set(int activity);
+void entity_pair_interaction_gate(EntitySlot* entity,
+                                  const EntitySlot* partner); /* 0x0043a9f0 */
+typedef int (*EntityVisualResourcePresentHook)(const EntitySlot* entity,
+                                               void* resource,
+                                               void* context);
+typedef void (*EntityVisualResourceCreateHook)(EntitySlot* entity,
+                                               void* context);
+void entity_visual_resource_hooks_set(EntityVisualResourcePresentHook present,
+                                      EntityVisualResourceCreateHook create,
+                                      void* context);
+void entity_visual_resource_get_or_create(EntitySlot* entity); /* 0x0043a5f0 */
+typedef struct EntityProximityActivityHooks {
+    void* context;
+    float (*measure_get)(void* context, const EntitySlot* entity);
+    int (*cell_resolve)(void* context, const EntitySlot* entity,
+                       int* x, int* y);
+    int (*cell_state)(void* context, int x, int y, int mode);
+    int (*cell_world_position)(void* context, int x, int y, float out_xy[2]);
+    float (*radius_get)(void* context);
+} EntityProximityActivityHooks;
+void entity_proximity_activity_hooks_set(
+    const EntityProximityActivityHooks* hooks);
+void entity_proximity_activity_raise(EntitySlot* entity); /* 0x0043aab0 */
+typedef void (*EntityBuildingDepositHook)(EntitySlot* entity, void* context);
+void entity_building_deposit_hook_set(EntityBuildingDepositHook hook,
+                                      void* context);
+void entity_building_deposit_state_monitor(EntitySlot* entity); /* 0x0043bb20 */
+typedef struct EntityDepositActivityHooks {
+    void* context;
+    uint32_t (*activity_flags)(void* context, const EntitySlot* entity);
+    int (*target_busy)(void* context, const EntitySlot* target, int mode);
+    int (*route_to_target)(void* context, EntitySlot* entity,
+                           EntitySlot* target, int* direction);
+    void (*deposit_cancel)(void* context, EntitySlot* entity);
+    void (*deposit_start)(void* context, EntitySlot* entity,
+                          EntitySlot* target, int direction);
+} EntityDepositActivityHooks;
+void entity_deposit_activity_hooks_set(const EntityDepositActivityHooks* hooks);
+int entity_deposit_activity_gate(EntitySlot* entity,
+                                 EntitySlot* target); /* FUN_0043a300 */
+typedef struct EntityKindFourPostCreateHooks {
+    void* context;
+    uint32_t (*kind_resolve)(void* context, EntitySlot* entity);
+    uint32_t (*state_flags)(void* context, EntitySlot* entity);
+    int (*position_conflicts)(void* context, const float position[2],
+                              uint32_t kind);
+    int (*post_create_allowed)(void* context);
+    int (*is_interactive_scene)(void* context, EntitySlot* entity);
+    void (*refresh_entity)(void* context, EntitySlot* entity);
+    void (*position_activate)(void* context, const float position[2]);
+} EntityKindFourPostCreateHooks;
+void entity_kind_four_post_create_hooks_set(
+    const EntityKindFourPostCreateHooks* hooks);
+void entity_kind_four_post_create_resolve(EntitySlot* entity); /* FUN_0043c570 */
+typedef void (*EntityTypeTwoEventHook)(const EntitySlot* entity,
+                                       uint32_t argument_a,
+                                       uint32_t argument_b, void* context);
+void entity_type_two_event_hook_set(EntityTypeTwoEventHook hook,
+                                    void* context);
+void entity_type_two_event_dispatch(const EntitySlot* entity,
+                                    uint32_t argument_a,
+                                    uint32_t argument_b); /* 0x0043b820 */
+typedef struct EntityTypeTwoPositionedHooks {
+    void* context;
+    int (*position_get)(void* context, void* scene_object, float out_xyz[3]);
+    void (*dispatch)(void* context, const EntitySlot* entity,
+                     uint32_t argument_a, uint32_t argument_b, int mode,
+                     const float position[3]);
+} EntityTypeTwoPositionedHooks;
+void entity_type_two_positioned_hooks_set(
+    const EntityTypeTwoPositionedHooks* hooks);
+void entity_type_two_positioned_callback_dispatch(
+    const EntitySlot* entity, void* scene_object, uint32_t argument_a,
+    uint32_t argument_b, int mode); /* 0x0043b850 */
+typedef int (*EntityTaskCoordinateMatchHook)(void* context,
+                                              const EntitySlot* entity,
+                                              uint32_t x, uint32_t y);
+void entity_task_count_context_set(GameContext* context,
+                                   EntityTaskCoordinateMatchHook match,
+                                   void* user);
+void entity_task_count_at_grid_coordinate_query(uint32_t x, uint32_t y,
+                                                uint32_t* out_count);
+typedef void (*EntityIndexedFlagPublishHook)(EntitySlot* entity,
+                                             uint32_t flags,
+                                             uint32_t event_id,
+                                             void* context);
+void entity_indexed_flag_publish_hook_set(EntityIndexedFlagPublishHook hook,
+                                          void* context);
+void entity_indexed_flag_set_and_refresh(EntitySlot* entity); /* 0x00439c80 */
+typedef void* (*EntityToolNameLoadHook)(void* string_loader, void* config,
+                                        const char* category, int slot,
+                                        void* context);
+void entity_tool_name_load_hook_set(EntityToolNameLoadHook hook,
+                                    void* context);
+void entity_tool_name_strings_load(void* string_loader,
+                                   void* config); /* 0x00439950 */
+void* entity_tool_name_string_get(int slot);
+typedef struct EntityBuildPlacementHooks {
+    void* context;
+    int (*position_choose)(void* context, const int cell_xy[2],
+                          float out_world_xy[2]);
+    EntitySlot* (*entity_create)(void* context, int kind, int selector,
+                                 int entity_id, float x, float y);
+    void (*queue_entity)(void* context, int opcode, EntitySlot* entity);
+    void (*event_raise)(void* context, int event_id, const int cell_xy[2]);
+    void (*cell_counter_increment)(void* context, const int cell_xy[2],
+                                   int field_offset);
+    int (*batch_counts_read)(void* context, const int cell_xy[2],
+                             uint32_t counts[4]);
+} EntityBuildPlacementHooks;
+void entity_build_placement_hooks_set(const EntityBuildPlacementHooks* hooks);
+int entity_build_placement_command_setup(const int cell_xy[2], int entity_id,
+                                         const float world_xy[2],
+                                         int update_state, int alternate);
+void entity_build_placement_command_pair_create(const int cell_xy[2],
+                                                int entity_id);
+void entity_build_placement_command_batch_expand(const int cell_xy[2]);
+typedef struct EntityActionIssueHooks {
+    void* context;
+    EntitySlot* (*create)(void* context, EntitySlot* source, int kind,
+                          int selector, int argument);
+    void (*kind_event)(void* context, int kind, int selector);
+    void (*queue)(void* context, int opcode, EntitySlot* created);
+    void (*label_set)(void* context, EntitySlot* created, const char* label);
+} EntityActionIssueHooks;
+void entity_action_issue_hooks_set(const EntityActionIssueHooks* hooks);
+EntitySlot* entity_action_kind_entity_create_and_command_issue(
+    EntitySlot* source, int kind, int selector, int argument); /* 0x0043a650 */
+typedef struct EntityActionConsumeRecord {
+    int type;
+    int reference;
+    uint32_t counter_index;
+    uint32_t flags;
+    int active;
+} EntityActionConsumeRecord;
+typedef struct EntityActionConsumeHooks {
+    void* context;
+    void (*event_dispatch)(void* context, int type, int reference);
+    void (*record_release)(void* context, EntityActionConsumeRecord* record);
+    void (*entity_records_cleanup)(void* context, EntitySlot* entity);
+} EntityActionConsumeHooks;
+void entity_action_consume_hooks_set(const EntityActionConsumeHooks* hooks);
+void entity_action_record_consume_and_cleanup(
+    EntitySlot* entity, EntityActionConsumeRecord* record); /* 0x0043a850 */
+typedef int (*EntityPairRayHitCheckHook)(const EntitySlot* first,
+                                         const EntitySlot* second,
+                                         void* context);
+void entity_pair_ray_hit_check_hook_set(EntityPairRayHitCheckHook hook,
+                                        void* context);
+int entity_pair_ray_hit_check(const EntitySlot* first,
+                              const EntitySlot* second);
+int entity_type26_command_completion_gate(const EntitySlot* entity); /* 0x0043c3e0 */
+typedef struct EntityClippedRectangleHooks {
+    void* context;
+    void (*visit_entities)(void* context, void* payload,
+                           const float bounds[4]);
+    void (*queue_command)(void* context, int opcode);
+} EntityClippedRectangleHooks;
+void entity_clipped_rectangle_hooks_set(
+    const EntityClippedRectangleHooks* hooks);
+void entity_clipped_rectangle_callback_dispatch(
+    void* payload, const float rect_a[2],
+    const float rect_b[2]); /* 0x0043b6c0 */
+
+/* Route candidate helpers from the terrain/movement predicate band. */
+int entity_cell_type_speed_multiplier_resolve(const EntitySlot* entity,
+                                              const struct LevelState* level,
+                                              int x, int y, float scale,
+                                              float* out_scale); /* FUN_00433180 */
+int entity_route_cell_candidate_accept(const EntitySlot* entity,
+                                       const struct LevelState* level,
+                                       int x, int y, int mode); /* FUN_00443840 */
+void entity_transform_position_get(const EntitySlot* entity,
+                                   float out_xy[2]); /* FUN_00442260 */
+int entity_world_center_position_read(const EntitySlot* entity,
+                                      float out_xyz[3]); /* FUN_00471ca0 */
+int entity_centers_within_configured_radius(const EntitySlot* first,
+                                            const EntitySlot* second); /* FUN_00472080 */
+int entity_centers_within_object_radius(const EntitySlot* first,
+                                        const EntitySlot* second); /* FUN_00472130 */
+void entity_world_position_set(EntitySlot* entity, float x, float y,
+                               float heading, int update_heading); /* FUN_004428a0 */
+typedef void (*EntityFinalizeHook)(EntitySlot* entity);
+void entity_type5_finalize_environment_set(uint32_t mode_flags,
+                                          EntityFinalizeHook timeout_hook,
+                                          EntityFinalizeHook finalize_hook);
+void entity_type5_finalize_if_allowed(EntitySlot* entity); /* FUN_00441ea0 */
+typedef int (*EntityRouteStateHook)(EntitySlot* entity);
+void entity_route_state_hook_set(EntityRouteStateHook hook);
+void entity_action_route_state_initialize(EntitySlot* entity); /* FUN_00442210 */
+void entity_enter_event21_state_once(EntitySlot* entity); /* FUN_00444620 */
+
 /* FUN_00447730 — routing-progress advance (findings 377/448): add 25 to
  * the +0x344 progress float, clear the +0x2fc link field, clamp to the
  * entity's +0x340 bound, and answer 1 when that bound is reached. */
 int entity_progress_advance_by_25(EntitySlot* e);
+
+/* LinkedEntityRouteFlagClear (FUN_0043f100): clear route bit 0x40 from
+ * the entity and its optional +0x2fc linked entity. */
+void entity_linked_route_flag_clear(GameContext* ctx, EntitySlot* e);
+
+/* EntityClearNestedState8Fields (FUN_004487c0): when gated, clear the two
+ * coordinate words on a linked type-8 entity. */
+void entity_clear_nested_state_8_fields(EntitySlot* e);
+
+/* TypeFourEntityCallbackDispatch (FUN_00447900): filtered pool walk whose
+ * recovered outer gate selects type-4 entities; payload is forwarded to
+ * the predicate extension point. */
+int entity_type_four_callback_dispatch(GameContext* ctx,
+                                      int (*callback)(EntitySlot*, void*),
+                                      void* payload);
+
+/* EntityEffectCountersApplyFromRecord (FUN_0042b2f0): when state flag 8
+ * is set, fold record dwords +4 and +8 into the entity's effect counters. */
+void entity_effect_counters_apply_from_record(EntitySlot* e,
+                                              const void* record);
+
+/* EntityDamageApply (FUN_0043f6a0): apply damage to the entity health
+ * mirror after the shared eligibility/attached-object gate. */
+void entity_damage_apply(EntitySlot* e, float damage, int emit_effects);
+
+/* EntityPoolFindWithLocalPredicate (FUN_0043f560): rough linked-reference
+ * cleanup pass used during entity teardown/state changes. */
+int entity_pool_find_with_local_predicate(GameContext* ctx,
+                                          EntitySlot* target);
+
+/* PendingTypeValueSlotSelect/ResetObjectAuxiliaryState (FUN_00407a10 /
+ * 0x00407370): select a pending value slot by entity flags and command
+ * type, then clear auxiliary state when the refresh gate is raised. */
+void pending_type_value_set(uint32_t original_address, uint32_t value);
+uint32_t pending_type_value_get(uint32_t original_address);
+void pending_type_value_slot_select(const EntitySlot* e, uint32_t* out);
+void entity_reset_auxiliary_state(EntitySlot* e);
+
+typedef struct EntityCursorTargetHooks {
+    void* context;
+    const void* projection_adapter;
+    int (*scene_position_get)(void* context, const EntitySlot* entity,
+                              float out_xyz[3]);
+    int (*point_project)(void* context, const float point_xyz[3],
+                         float out_xy[2]);
+} EntityCursorTargetHooks;
+void entity_cursor_target_hooks_set(const EntityCursorTargetHooks* hooks);
+int entity_cursor_target_screen_position_get(const EntitySlot* entity,
+                                             float out_xy[2]);
+
+/* Entity payload ownership hooks and rough state model
+ * (FUN_00406ec0/0x004083a0/0x00408940/0x004089a0). */
+typedef void (*EntityPayloadReleaseFn)(void* resource);
+void entity_payload_release_hooks_set(EntityPayloadReleaseFn scene_release,
+                                      EntityPayloadReleaseFn chain_release);
+void entity_scene_slot_table_rebuild(EntitySlot* e, int mode);
+void entity_payload_state_set(EntitySlot* e, int state);
+void entity_payload_release_subslots(EntitySlot* e);
+void entity_payload_teardown(EntitySlot* e);
+typedef struct EntityHeadingStepState {
+    float position[2];
+    float direction[2];
+    float remaining;
+    uint32_t flags;
+} EntityHeadingStepState;
+typedef struct EntityHeadingStepHooks {
+    void* context;
+    int (*position_to_cell)(void* context, float x, float y,
+                            int* cell_x, int* cell_y);
+    int (*cell_step_allowed)(void* context, void* entity, int cell_x,
+                             int cell_y);
+    int (*position_transition)(void* context, void* entity,
+                               const float position[2]);
+    void (*position_set)(void* context, void* entity,
+                         const float position[2]);
+} EntityHeadingStepHooks;
+void entity_heading_step_move(EntityHeadingStepState* state, void* entity,
+                              float delta,
+                              const EntityHeadingStepHooks* hooks); /* 0x0044c1b0 */
+typedef struct EntityAuxiliaryReleaseRecord {
+    void* scene_object;
+    uint32_t flags;
+    float value;
+    float point[3];
+    struct EntityAuxiliaryReleaseRecord* next;
+} EntityAuxiliaryReleaseRecord;
+typedef struct EntityAuxiliaryReleaseHooks {
+    void* context;
+    EntityAuxiliaryReleaseRecord* (*record_allocate)(void* context);
+    void (*record_release)(void* context, EntityAuxiliaryReleaseRecord* record);
+    void* (*scene_object_get)(void* context, EntitySlot* entity);
+    float (*value_get)(void* context, EntitySlot* entity);
+    int (*scene_point_get)(void* context, void* scene_object, float point[3]);
+    int (*scene_callback_ready)(void* context, void* scene_object);
+    void (*scene_callback_apply)(void* context, void* scene_object,
+                                 uint32_t callback_id, const float point[3]);
+    void (*scene_object_dispose)(void* context, void* scene_object);
+} EntityAuxiliaryReleaseHooks;
+void entity_auxiliary_payload_release(EntitySlot* entity,
+                                      const EntityAuxiliaryReleaseHooks* hooks); /* 0x0044be30 */
+void entity_auxiliary_release_records_flush(
+    const EntityAuxiliaryReleaseHooks* hooks);
+typedef struct EntityMotionSceneSyncHooks {
+    void* context;
+    void* (*scene_record_get)(void* context, EntitySlot* entity);
+    void (*wake_transition)(void* context, EntitySlot* entity);
+    int (*record_timer_active)(void* context, void* record);
+    void (*record_timer_advance)(void* context, void* record, float delta);
+    float (*entity_timer_get)(void* context, EntitySlot* entity);
+    void (*entity_action)(void* context, EntitySlot* entity,
+                          int a, int b, int c);
+    int (*scene_position_get)(void* context, EntitySlot* entity,
+                              float position[3]);
+    void* (*scene_object_get)(void* context, EntitySlot* entity);
+    int (*scene_object_registered)(void* context, void* record);
+    int (*scene_should_wake)(void* context, void* scene_object);
+    void (*record_timer_clear)(void* context, void* record);
+    void (*scene_callback_apply)(void* context, void* scene_object,
+                                 uint32_t callback_id, const float values[4]);
+    void (*record_transform_apply)(void* context, void* record,
+                                   uint32_t operation, const float values[3]);
+    void (*periodic_callback)(void* context, EntitySlot* entity,
+                              float delta, float speed,
+                              uint32_t mode_a, uint32_t mode_b,
+                              uint32_t mode_c);
+} EntityMotionSceneSyncHooks;
+void entity_motion_to_scene_node_sync(EntitySlot* entity, float delta,
+                                      const EntityMotionSceneSyncHooks* hooks); /* 0x0044bc30 */
+typedef struct EntityStatsConfigRecord {
+    char name[64];
+    int type;
+    int row;
+    uint32_t level_count;
+    float fields[65];
+    float levels[16];
+} EntityStatsConfigRecord;
+typedef struct EntityStatsConfigHooks {
+    void* context;
+    unsigned int (*entry_count)(void* context, void* config, void* section);
+    const char* (*entry_name)(void* context, void* config, void* section,
+                              unsigned int index);
+    int (*type_row_resolve)(void* context, const char* name, int* type,
+                            int* row);
+    unsigned int (*type_capacity)(void* context, int type);
+    int (*float_value_get)(void* context, const char* name,
+                           const char* field, unsigned int level,
+                           float* value);
+    void (*record_commit)(void* context,
+                          const EntityStatsConfigRecord* record);
+} EntityStatsConfigHooks;
+unsigned int entity_stats_config_load(void* config, void* section,
+                                     const EntityStatsConfigHooks* hooks); /* 0x004667e0 */
 
 /* --- object pointer registry (2026-10-24) ---------------------------------
  * ObjectPointerRegistryClearMatch / ObjectPointerRegistryGetSlot
@@ -256,6 +1207,10 @@ int entity_flag40000_threshold_compare(const EntitySlot* e);
  * TaskType23CreateForCategoryMask (cmd.*). */
 int entity_flags_contain_requested_single_bit(const EntitySlot* e,
                                               int selector);
+
+/* TaskCounterIncrementByBranch (Finding 464): count its zero/nonzero paths;
+ * the corpus has not established a gameplay interpretation for the totals. */
+void entity_task_counter_increment_by_branch(int nonzero);
 
 #ifdef __cplusplus
 }
@@ -353,6 +1308,9 @@ uint32_t pooled_record_chunk_count_peek(void);
  * corpus grows a chunk first; the port answers NULL only if that grow
  * finds the allocator empty (deviation: the corpus strides the word). */
 void* pooled_record_allocate_and_reset(void);
+/* EntityPoolResourcesRelease (FUN_00437050): release all tracked pool blocks
+ * and clear the allocator head/count so a later initialization can regrow. */
+void pooled_record_pool_resources_release(void);
 
 /* ResolvedEntityOperationDispatch (FUN_00460910): resolves the name through
  * the corpus resolver's (type, row) pair and feeds the count-difference
@@ -404,5 +1362,99 @@ uint32_t stats_instance_word_at_bc(const void* config_block); /* FUN_00469b50 */
 uint32_t stats_instance_word_at_e0(const void* config_block); /* FUN_00469b80 */
 uint32_t stats_instance_word_at_ec(const void* config_block); /* FUN_00469bb0 */
 uint32_t stats_instance_word_at_f0(const void* config_block); /* FUN_00469be0 */
+
+/* CreateRepeatedResourceInstances (FUN_00408e50): minimal owner for the
+ * per-entity sequence counter at +0x1c and optional kind-7/variant-1 flag. */
+typedef struct EntityRepeatedResourceState {
+    void* resource;
+    uint32_t sequence_count;
+    uint32_t flags;
+} EntityRepeatedResourceState;
+typedef void (*EntityRepeatedResourceCreateHook)(int kind, int variant,
+                                                 void* value, void* entity,
+                                                 uint32_t sequence,
+                                                 void* context);
+void entity_repeated_resource_create_hook_install(
+    EntityRepeatedResourceCreateHook hook, void* context);
+void entity_repeated_resource_instances_create(
+    EntityRepeatedResourceState* state, int kind, int variant,
+    void* value, void* entity, int count); /* FUN_00408e50 */
+void entity_kind_name_tables_install(int kind, const char* const* names,
+                                     uint32_t count);
+const char* item_name_by_kind_lookup(uint32_t kind, int index); /* FUN_004396c0 */
+void entity_localized_name_tables_install(int kind,
+                                          const char* const* names,
+                                          const char* const* the_names,
+                                          uint32_t count);
+const char* entity_display_name_lookup(uint32_t kind, int index); /* FUN_004395e0 */
+const char* localized_object_name_get(uint32_t kind, int index); /* FUN_00439860 */
+const char* localized_object_the_name_get(uint32_t kind,
+                                          int index); /* FUN_00439790 */
+typedef struct EntityHealthThresholdState {
+    uint32_t upper_limit;
+    uint32_t secondary_limit;
+    uint32_t required_value;
+    float health_percent;
+} EntityHealthThresholdState;
+typedef int (*EntityHealthThresholdReadHook)(const EntitySlot* entity,
+                                             EntityHealthThresholdState* state,
+                                             void* context);
+void entity_health_threshold_read_hook_install(
+    EntityHealthThresholdReadHook hook, void* context);
+int entity_flag400_and_health_threshold_check(
+    const EntitySlot* entity); /* FUN_004399c0 */
+typedef int (*EntityAnimationStateApplyHook)(EntitySlot* entity,
+                                             uint32_t state, void* context);
+void entity_animation_state_apply_hook_install(
+    EntityAnimationStateApplyHook hook, void* context);
+int entity_animation_state_set(EntitySlot* entity,
+                               uint32_t state); /* FUN_00439cd0 */
+int entity_record_flag20_query(EntitySlot* entity,
+                               uint32_t state); /* FUN_00439e40 */
+typedef void (*EntityPeriodicTickHook)(EntitySlot* entity, float delta,
+                                        void* context);
+void entity_periodic_tick_hook_install(EntityPeriodicTickHook hook,
+                                       void* context);
+void periodic_timer25_advance(GameContext* ctx, float delta); /* FUN_0043c2b0 */
+float periodic_timer25_peek(void);
+
+namespace unported_ledger_stubs {
+typedef int (*CellStepPathResolveHook)(int start_x, int start_y,
+                                       int target_x, int target_y,
+                                       int out_xy[2], void* user);
+typedef float (*CellStepRandomRangeHook)(float minimum, float maximum,
+                                         void* user);
+typedef struct EmergenceSpawnHooks {
+    void* user;
+    uint16_t (*random_u16)(void* user);
+    EntitySlot* (*spawn_try)(int entity_index, int owner_index,
+                             int cell_x, int cell_y, void* user);
+    int (*cell_eligible)(int cell_x, int cell_y, void* user);
+    int (*cell_world_position)(int cell_x, int cell_y, float out_xy[2],
+                               void* user);
+    EntitySlot* (*create)(void* base_entity, int type, int owner_index,
+                          float x, float y, float heading, void* user);
+    void (*post_create)(EntitySlot* entity, int cell_x, int cell_y,
+                        void* user);
+} EmergenceSpawnHooks;
+void emergence_spawn_hooks_set(const EmergenceSpawnHooks* hooks);
+EntitySlot* emergence_random_spawn_attempt(int entity_index, int owner_index,
+                                           int grid_width, int grid_height);
+EntitySlot* creature_spawn_from_emergence(void* base_entity, int mode_token,
+                                          int owner_index, int cell_x,
+                                          int cell_y); /* FUN_0043af30 */
+void entity_cell_step_hooks_set(CellStepPathResolveHook path_hook,
+                                CellStepRandomRangeHook random_hook,
+                                void* user);
+int entity_cell_step_action_peek(const EntitySlot* entity, int* type_out,
+                                 float out_xy[2], uint32_t* flags_out);
+int entity_cell_step_command_issue_with_jitter(
+    EntitySlot* entity, const int target_xy[2], const float input_xy[2],
+    int action_mode, int mark_pending); /* FUN_0043a120 */
+void entity_attached_object_list_detach(EntitySlot* entity,
+                                        int reset_mode); /* FUN_00439e70 */
+int entity_capacity_or_state_predicate(
+    const EntitySlot* entity); /* FUN_0043c650 */
+}
 
 #endif /* LEGORRR_GAME_ENTITY_HPP */

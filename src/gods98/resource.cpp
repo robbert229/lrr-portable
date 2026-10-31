@@ -6,7 +6,2438 @@
 
 #include "resource.hpp"
 #include "heap.hpp"
+#include "record.hpp"
 #include "string.hpp"
+
+/* Shared file-layer diagnostics used by the reference dispatchers. */
+// GLOBAL: LEGORR 0x004ab028
+static const char s_game_file_unknown_type_format[] =
+    "%s(%i) : Unknown file system in call to %s";
+// GLOBAL: LEGORR 0x004aafd4
+static const char s_game_file_source_path[] =
+    "C:\\Dev\\SourceSafe\\gods98_dx6\\gods98\\src\\Files.c";
+// GLOBAL: LEGORR 0x004ab054
+static const char s_game_file_seek_name[] = "File_Seek";
+// GLOBAL: LEGORR 0x004ab010
+static const char s_game_file_seek_mode_format[] = "Uknown seek mode (%i)";
+// GLOBAL: LEGORR 0x004ab0a0
+static const char s_game_file_tell_name[] = "File_Tell";
+// GLOBAL: LEGORR 0x004ab0b8
+static const char s_game_file_gets_name[] = "File_GetS";
+// GLOBAL: LEGORR 0x004ab0ac
+static const char s_game_file_getc_name[] = "File_GetC";
+// GLOBAL: LEGORR 0x004ab0c4
+static const char s_game_file_printf_wad_error[] =
+    "\"fprintf\" is unsupprted for wad files";
+// GLOBAL: LEGORR 0x004ab0ec
+static const char s_game_file_printf_name[] = "File_PrintF";
+
+/* Explicit vtable layouts used by the three small resource wrappers below.
+ * The corpus uses 32-bit COM-style interfaces; these declarations preserve
+ * their method slots without importing a platform SDK. */
+class ResourcePropertyInterface
+{
+public:
+    virtual void slot_00(void) = 0;
+    virtual void slot_04(void) = 0;
+    virtual void slot_08(void) = 0;
+    virtual void slot_0c(void) = 0;
+    virtual void slot_10(void) = 0;
+    virtual void slot_14(void) = 0;
+    virtual void slot_18(void) = 0;
+    virtual void* property_get(void) = 0;
+};
+
+class ResourceSlot40Interface
+{
+public:
+    virtual void slot_00(void) = 0;
+    virtual void slot_04(void) = 0;
+    virtual void slot_08(void) = 0;
+    virtual void slot_0c(void) = 0;
+    virtual void slot_10(void) = 0;
+    virtual void slot_14(void) = 0;
+    virtual void slot_18(void) = 0;
+    virtual void slot_1c(void) = 0;
+    virtual void slot_20(void) = 0;
+    virtual void slot_24(void) = 0;
+    virtual void slot_28(void) = 0;
+    virtual void slot_2c(void) = 0;
+    virtual void slot_30(void) = 0;
+    virtual void slot_34(void) = 0;
+    virtual void slot_38(void) = 0;
+    virtual void slot_3c(void) = 0;
+    virtual void slot_40(uint32_t value) = 0;
+};
+
+class ResourceSlot88Interface
+{
+public:
+    virtual void slot_00(void) = 0;
+    virtual void slot_04(void) = 0;
+    virtual void slot_08(void) = 0;
+    virtual void slot_0c(void) = 0;
+    virtual void slot_10(void) = 0;
+    virtual void slot_14(void) = 0;
+    virtual void slot_18(void) = 0;
+    virtual void slot_1c(void) = 0;
+    virtual void slot_20(void) = 0;
+    virtual void slot_24(void) = 0;
+    virtual void slot_28(void) = 0;
+    virtual void slot_2c(void) = 0;
+    virtual void slot_30(void) = 0;
+    virtual void slot_34(void) = 0;
+    virtual void slot_38(void) = 0;
+    virtual void slot_3c(void) = 0;
+    virtual void slot_40(void) = 0;
+    virtual void slot_44(void) = 0;
+    virtual void slot_48(void) = 0;
+    virtual void slot_4c(void) = 0;
+    virtual void slot_50(void) = 0;
+    virtual void slot_54(void) = 0;
+    virtual void slot_58(void) = 0;
+    virtual void slot_5c(void) = 0;
+    virtual void slot_60(void) = 0;
+    virtual void slot_64(void) = 0;
+    virtual void slot_68(void) = 0;
+    virtual void slot_6c(void) = 0;
+    virtual void slot_70(void) = 0;
+    virtual void slot_74(void) = 0;
+    virtual void slot_78(void) = 0;
+    virtual void slot_7c(void) = 0;
+    virtual void slot_80(void) = 0;
+    virtual void slot_84(void) = 0;
+    virtual void slot_88(void) = 0;
+};
+
+class ResourceRetainInterface
+{
+public:
+    virtual void slot_00(void) = 0;
+    virtual void retain(void) = 0;
+};
+
+/* RenderResourceTrackAndRetain maintains a process-wide singly linked list.
+ * Its original head is DAT_0076ad60. */
+// GLOBAL: LEGORR 0x0076ad60
+static void* render_resource_tracked_head;
+
+#define ROCK_FALL_STYLE_NAME_CAPACITY 64
+#define ROCK_FALL_STYLE_NAME_LENGTH 128
+static char s_rock_fall_style_names[ROCK_FALL_STYLE_NAME_CAPACITY]
+                                    [ROCK_FALL_STYLE_NAME_LENGTH];
+static uint32_t s_rock_fall_style_name_count;
+static SceneTimeoutEntrySet s_terrain_marker_sets[10];
+static SceneResourceSlotModel s_scene_resource_slots[10];
+static void* s_scene_light_primary[4];
+static void* s_scene_light_secondary[4];
+static void* s_scene_marker_templates[3];
+static int s_scene_marker_scene_variant;
+static SceneObjectPositionHook s_scene_object_position_hook;
+static void* s_scene_object_position_context;
+static void* s_terrain_point_template;
+static TerrainHeightAtPointHook s_terrain_height_hook;
+static void* s_terrain_height_context;
+static SceneResourceAdvanceHook s_scene_advance_hook;
+static SceneResourceReleaseHook s_scene_release_hook;
+static SceneTimeoutEffectHook s_bird_scarer_effect_hook;
+static SceneTimeoutSetCallback s_scene_timeout_set_callback;
+static void* s_global_resource_handle;
+static GlobalResourceReleaseFn s_global_resource_release;
+static void* s_global_resource_user;
+static GlobalResourceCleanupFn s_global_resource_cleanup;
+static void* s_global_resource_cleanup_user;
+static void* s_scroll_rect_payload_records[10];
+static PanelResourceLoadFn s_panel_resource_loader;
+static void* s_panel_resource_loader_user;
+static ObjectListCountFn s_object_list_count;
+static ObjectListSetFn s_object_list_set;
+static void* s_object_list_user;
+static ResourceListCreateFn s_resource_list_create;
+static ResourceListUpdateFn s_resource_list_update;
+static void* s_resource_list_user;
+static OwnedObjectReleaseFn s_owned_object_release;
+static OwnedObjectReleaseFn s_owned_scene_destroy;
+static OwnedObjectReleaseFn s_owned_node_free;
+static void* s_owned_release_user;
+static char* s_string_table_names[50];
+static int s_string_table_current = -1;
+static int s_string_table_enabled;
+static const char* s_message_strings[65];
+static int s_loading_progress_enabled;
+static int s_loading_progress_total;
+static int s_loading_progress_units;
+static int s_loading_progress_mode;
+static float s_loading_progress_last = -1.0f;
+static float s_loading_progress_rect[4];
+static FileLoadingProgressDrawFn s_loading_progress_draw;
+static void* s_loading_progress_user;
+static void* s_indexed_surface;
+static void* s_indexed_surface_texture;
+static uint32_t* s_indexed_surface_entries;
+static int s_indexed_surface_width;
+static int s_indexed_surface_height;
+static IndexedSurfaceCreateFn s_indexed_surface_create;
+static IndexedTextureLoadFn s_indexed_texture_load;
+static IndexedSurfaceReleaseFn s_indexed_surface_release;
+static IndexedSurfaceTextureSetFn s_indexed_surface_texture_set;
+static void* s_indexed_surface_user;
+static VisualModelResolveFn s_visual_model_resolver;
+static void* s_visual_model_resolver_user;
+static void* s_scene_lifecycle_context;
+static float s_bird_scarer_period;
+static void* s_terrain_point_objects[4];
+static uint32_t s_terrain_point_object_count;
+static void* s_scene_resource_slot_instances[10][10];
+static SceneEffectPoseHook s_scene_effect_pose_hook;
+static void* s_scene_effect_pose_context;
+static void* s_numbered_bitmap_slots[11];
+static NumberedBitmapLoadHook s_numbered_bitmap_load_hook;
+static void* s_numbered_bitmap_context;
+static SceneAnimationDurationHook s_animation_duration_hook;
+static SceneAnimationLastFrameHook s_animation_last_frame_hook;
+static void* s_animation_duration_context;
+static SceneResourceNamedResolveHook s_scene_resource_named_resolve_hook;
+static SceneObjectResourceReleaseHook s_scene_object_resource_release_hook;
+static void* s_scene_resource_record_context;
+static SceneAnimationTrackApplyHook s_animation_track_apply_hook;
+static void* s_animation_track_context;
+static SceneResourceOwnerApplyHook s_scene_resource_owner_apply_hook;
+static SceneAttachedResourceReleaseHook s_scene_attached_resource_release_hook;
+static void* s_scene_resource_owner_context;
+static SceneOwnedMemoryReleaseHook s_scene_owned_memory_release_hook;
+static void* s_scene_owned_memory_context;
+static SceneAnimationChannelUpdateHook s_animation_channel_update_hook;
+static SceneAnimationChannelQueryHook s_animation_channel_query_hook;
+static SceneAnimationVisibilityHook s_animation_visibility_hook;
+static void* s_animation_channel_context;
+static SceneIndexedRecordNodeReleaseHook s_scene_indexed_record_release_hook;
+static void* s_scene_indexed_record_context;
+static SceneChannelEntryProcessHook s_scene_channel_entry_process_hook;
+static void* s_scene_channel_entry_context;
+typedef struct SceneAvailabilitySlot {
+    void* handle;
+    int configured;
+    int enabled;
+    int pending;
+} SceneAvailabilitySlot;
+#define SCENE_AVAILABILITY_STYLE_CAPACITY 64
+static SceneAvailabilitySlot
+    s_scene_availability_styles[SCENE_AVAILABILITY_STYLE_CAPACITY][3][4];
+static uint32_t s_scene_cell_table_pairs[SCENE_AVAILABILITY_STYLE_CAPACITY]
+                                         [3][4][2];
+typedef struct SceneResourceNameSlot {
+    uint32_t handle_key;
+    uint32_t secondary_key;
+    void* handle;
+    uint32_t name_base;
+    uint32_t name_count;
+    uint32_t registered;
+} SceneResourceNameSlot;
+static SceneResourceNameSlot
+    s_scene_resource_name_slots[SCENE_AVAILABILITY_STYLE_CAPACITY][3][4];
+static SceneResourceNameFormatHook s_resource_name_format_hook;
+static SceneResourceNameApplyHook s_resource_name_apply_hook;
+static void* s_resource_name_context;
+static SceneResourceParentLoadHook s_resource_parent_load_hook;
+static SceneResourceChildCreateHook s_resource_child_create_hook;
+static SceneResourceLockHook s_resource_lock_hook;
+static void* s_resource_instance_context;
+static void* s_scene_availability_parents[2];
+static void* s_scene_act_parents[SCENE_AVAILABILITY_STYLE_CAPACITY][3];
+static SceneAvailabilitySlot s_scene_availability_transients[2][30];
+static SceneActLoadHook s_scene_act_load_hook;
+static SceneActNameRegisterHook s_scene_act_name_register_hook;
+static void* s_scene_act_context;
+static int s_scene_pose_slot_claimed[SCENE_AVAILABILITY_STYLE_CAPACITY][3][4];
+static SceneSlotPoseHook s_scene_slot_pose_hook;
+static void* s_scene_slot_pose_context;
+static TransientEffectConfigureHook s_transient_effect_configure_hook;
+static void* s_transient_effect_configure_context;
+static uint32_t s_scene_availability_groups[12];
+static uint32_t s_scene_availability_slots[12];
+static SceneAvailabilityAdvanceHook s_availability_advance_hook;
+static SceneAvailabilityEnableHook s_availability_enable_hook;
+static void* s_availability_context;
+static int s_scene_availability_selected_style;
+
+void rock_fall_style_names_install(const char* const* names, uint32_t count)
+{
+    uint32_t i;
+    if (count > ROCK_FALL_STYLE_NAME_CAPACITY) {
+        count = ROCK_FALL_STYLE_NAME_CAPACITY;
+    }
+    memset(s_rock_fall_style_names, 0, sizeof(s_rock_fall_style_names));
+    s_rock_fall_style_name_count = 0u;
+    if (names == NULL) {
+        return;
+    }
+    for (i = 0u; i < count; ++i) {
+        if (names[i] != NULL) {
+            strncpy(s_rock_fall_style_names[i], names[i],
+                    ROCK_FALL_STYLE_NAME_LENGTH - 1);
+        }
+    }
+    s_rock_fall_style_name_count = count;
+}
+
+/* RockFallStyleNameLookup (FUN_0040bf70): case-insensitive name scan over
+ * the installed RockFallStyles names. The port caps the owner table and
+ * guards null input/output instead of following the DAT table blindly. */
+// FUNCTION: LEGORR 0x0040BF70
+int rock_fall_style_name_lookup(const char* name, uint32_t* index)
+{
+    uint32_t i;
+    if (name == NULL || index == NULL) {
+        return 0;
+    }
+    for (i = 0u; i < s_rock_fall_style_name_count; ++i) {
+        if (s_rock_fall_style_names[i][0] != '\0'
+            && strcasecmp_lite(s_rock_fall_style_names[i], name) == 0) {
+            *index = i;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* RockFallStylesConfigLoad (FUN_0040bfd0): owns a bounded native copy of
+ * each configured name and registers comma-delimited scene resource tokens.
+ * The callback stands in for SceneActSlotLoadAndRegister, whose original
+ * DirectDraw scene implementation has not been ported. */
+// FUNCTION: LEGORR 0x0040BFD0
+void rock_fall_styles_config_load(const RockFallStyleConfigEntry* entries,
+                                 uint32_t count,
+                                 RockFallStyleRegisterHook register_hook,
+                                 void* context)
+{
+    const char* names[ROCK_FALL_STYLE_NAME_CAPACITY];
+    uint32_t i;
+    if (entries == NULL) {
+        rock_fall_style_names_install(NULL, 0u);
+        return;
+    }
+    if (count > ROCK_FALL_STYLE_NAME_CAPACITY) {
+        count = ROCK_FALL_STYLE_NAME_CAPACITY;
+    }
+    memset(s_rock_fall_style_names, 0, sizeof(s_rock_fall_style_names));
+    for (i = 0u; i < count; ++i) {
+        char* token;
+        char* cursor;
+        char* parsed[32];
+        uint32_t parsed_count = 0u;
+        strncpy(s_rock_fall_style_names[i],
+                entries[i].name != NULL ? entries[i].name : "",
+                ROCK_FALL_STYLE_NAME_LENGTH - 1);
+        names[i] = s_rock_fall_style_names[i];
+        if (entries[i].resources == NULL || register_hook == NULL) {
+            continue;
+        }
+        token = (char*)malloc(strlen(entries[i].resources) + 1u);
+        if (token == NULL) {
+            continue;
+        }
+        strcpy(token, entries[i].resources);
+        cursor = token;
+        while (*cursor != '\0') {
+            char* start = cursor;
+            while (*cursor != '\0' && *cursor != ',') {
+                ++cursor;
+            }
+            if (*cursor == ',') {
+                *cursor++ = '\0';
+            }
+            if (*start != '\0' && parsed_count < 32u) {
+                parsed[parsed_count++] = start;
+            }
+        }
+        if (*cursor == '\0' && parsed_count == 0u && token[0] != '\0') {
+            parsed[parsed_count++] = token;
+        }
+        if (parsed_count > 1u) {
+            uint32_t resource_index;
+            for (resource_index = 1u; resource_index < parsed_count;
+                 ++resource_index) {
+                register_hook(parsed[resource_index], i, resource_index - 1u,
+                              parsed[0], context);
+            }
+        }
+        free(token);
+    }
+    s_rock_fall_style_name_count = count;
+}
+
+void scene_resource_lifecycle_hooks_install(
+    SceneResourceAdvanceHook advance, SceneResourceReleaseHook release,
+    SceneTimeoutEffectHook bird_scarer_effect, void* context)
+{
+    s_scene_advance_hook = advance;
+    s_scene_release_hook = release;
+    s_bird_scarer_effect_hook = bird_scarer_effect;
+    s_scene_lifecycle_context = context;
+}
+
+void scene_light_pool_slot_install(int secondary, int index, void* handle)
+{
+    if (index < 0 || index >= 4) {
+        return;
+    }
+    if (secondary != 0) {
+        s_scene_light_secondary[index] = handle;
+    } else {
+        s_scene_light_primary[index] = handle;
+    }
+}
+
+void scene_timeout_entry_install(int set_index, int entry_index, void* handle)
+{
+    if (set_index < 0 || set_index >= 10 || entry_index < 0
+        || entry_index >= 10) {
+        return;
+    }
+    s_terrain_marker_sets[set_index].entries[entry_index] = handle;
+    if ((uint32_t)(entry_index + 1) > s_terrain_marker_sets[set_index].count) {
+        s_terrain_marker_sets[set_index].count = (uint32_t)(entry_index + 1);
+    }
+}
+
+void scene_timeout_set_count_install(int set_index, uint32_t count)
+{
+    if (set_index < 0 || set_index >= 10) {
+        return;
+    }
+    if (count > 10u) {
+        count = 10u;
+    }
+    s_terrain_marker_sets[set_index].count = count;
+}
+
+void scene_timeout_set_callback_set(SceneTimeoutSetCallback callback)
+{
+    s_scene_timeout_set_callback = callback;
+}
+
+/* FUNCTION: LEGORR 0x0040bdc0 */
+void scene_timeout_set_10000(void)
+{
+    unsigned char output_a[4] = { 0, 0, 0, 0 };
+    unsigned char output_b[4] = { 0, 0, 0, 0 };
+    if (s_scene_timeout_set_callback != NULL) {
+        s_scene_timeout_set_callback(10000.0f, output_a, output_b);
+    }
+}
+
+void global_resource_handle_set(void* handle)
+{
+    s_global_resource_handle = handle;
+}
+
+void global_resource_release_callback_set(GlobalResourceReleaseFn callback,
+                                          void* user)
+{
+    s_global_resource_release = callback;
+    s_global_resource_user = user;
+}
+
+void global_resource_cleanup_callback_set(GlobalResourceCleanupFn callback,
+                                          void* user)
+{
+    s_global_resource_cleanup = callback;
+    s_global_resource_cleanup_user = user;
+}
+
+/* FUNCTION: LEGORR 0x0044e0a0 */
+void global_resource_handle_release(void)
+{
+    if (s_global_resource_handle != NULL) {
+        if (s_global_resource_release != NULL) {
+            s_global_resource_release(s_global_resource_handle,
+                                      s_global_resource_user);
+        }
+        if (s_global_resource_cleanup != NULL) {
+            s_global_resource_cleanup(s_global_resource_cleanup_user);
+        }
+        s_global_resource_handle = NULL;
+    }
+}
+
+/* FUNCTION: LEGORR 0x004629d0 */
+void* panel_event_entry_append(void* panel, const char* name,
+                               uint32_t payload, uint32_t value_a,
+                               uint32_t value_b, uint32_t flags)
+{
+    if (panel == NULL || name == NULL || payload == 0u) return NULL;
+    uint32_t count = 0;
+    void* entries = NULL;
+    __builtin_memcpy(&count, (char*)panel + 0x1cu, sizeof(count));
+    __builtin_memcpy(&entries, (char*)panel + 0x20u, sizeof(entries));
+    if (count >= 4096u) return NULL;
+    void* resized = realloc(entries, (size_t)(count + 1u) * sizeof(void*));
+    if (resized == NULL) return NULL;
+    entries = resized;
+    __builtin_memcpy((char*)panel + 0x20u, &entries, sizeof(entries));
+    void* record = calloc(1u, 40u);
+    if (record == NULL) return NULL;
+    size_t length = strlen(name) + 1u;
+    char* name_copy = (char*)malloc(length);
+    if (name_copy == NULL) {
+        free(record);
+        return NULL;
+    }
+    memcpy(name_copy, name, length);
+    uint32_t type = 3u;
+    __builtin_memcpy((char*)record + 0u, &type, sizeof(type));
+    __builtin_memcpy((char*)record + 4u, &value_a, sizeof(value_a));
+    __builtin_memcpy((char*)record + 8u, &value_b, sizeof(value_b));
+    __builtin_memcpy((char*)record + 0x14u, &name_copy, sizeof(name_copy));
+    __builtin_memcpy((char*)record + 0x18u, &payload, sizeof(payload));
+    __builtin_memcpy((char*)record + 0x1cu, &flags, sizeof(flags));
+    ((void**)entries)[count] = record;
+    ++count;
+    __builtin_memcpy((char*)panel + 0x20u, &entries, sizeof(entries));
+    __builtin_memcpy((char*)panel + 0x1cu, &count, sizeof(count));
+    return record;
+}
+
+void panel_resource_loader_set(PanelResourceLoadFn callback, void* user)
+{
+    s_panel_resource_loader = callback;
+    s_panel_resource_loader_user = user;
+}
+
+/* FUNCTION: LEGORR 0x00463810 */
+void scroll_rect_payload_record_create(int slot, const float rect[4],
+                                       int count, uint32_t value,
+                                       const char* resource_name)
+{
+    if (slot < 0 || slot >= 10 || rect == NULL) return;
+    struct ScrollRectRecord {
+        float left, top, right, bottom;
+        uint32_t field10, field14;
+        void* resource;
+        int field1c;
+        uint32_t field20;
+        uint32_t field24;
+    };
+    ScrollRectRecord* record = (ScrollRectRecord*)calloc(1u,
+                                               sizeof(ScrollRectRecord));
+    if (record == NULL) return;
+    record->left = rect[0];
+    record->top = rect[1];
+    record->right = rect[2] + rect[0];
+    record->bottom = rect[3] + rect[1];
+    record->field1c = count - 1;
+    record->field20 = value;
+    if (s_panel_resource_loader != NULL && resource_name != NULL) {
+        record->resource = s_panel_resource_loader(resource_name,
+                                                   s_panel_resource_loader_user);
+    }
+    s_scroll_rect_payload_records[slot] = record;
+}
+
+void* scroll_rect_payload_record_get(int slot)
+{
+    return slot >= 0 && slot < 10 ? s_scroll_rect_payload_records[slot] : NULL;
+}
+
+void object_list_field_callbacks_set(ObjectListCountFn count,
+                                     ObjectListSetFn set, void* user)
+{
+    s_object_list_count = count;
+    s_object_list_set = set;
+    s_object_list_user = user;
+}
+
+/* FUNCTION: LEGORR 0x00440bf0 */
+void object_list_field_assign_all(void* record, void* value)
+{
+    if (record == NULL || s_object_list_count == NULL
+        || s_object_list_set == NULL) return;
+    uint32_t type = 0;
+    void* list = NULL;
+    __builtin_memcpy(&type, record, sizeof(type));
+    if (type != 5u) return;
+    __builtin_memcpy(&list, (char*)record + 0x1cu, sizeof(list));
+    uint32_t count = s_object_list_count(list, s_object_list_user);
+    if (count > 65536u) count = 65536u;
+    for (uint32_t i = 0; i < count; ++i) {
+        s_object_list_set(list, i, value, s_object_list_user);
+    }
+}
+
+void resource_list_update_hooks_set(ResourceListCreateFn create,
+                                    ResourceListUpdateFn update, void* user)
+{
+    s_resource_list_create = create;
+    s_resource_list_update = update;
+    s_resource_list_user = user;
+}
+
+/* FUNCTION: LEGORR 0x00451bc0 */
+void resource_list_update_matching_key(void* list, void* library,
+                                      void* update_value, uint32_t key)
+{
+    struct ResourceListNodeModel {
+        void* object;
+        void* handle;
+        void* resource_key;
+        uint32_t key;
+        uint32_t padding;
+        ResourceListNodeModel* next;
+    };
+    unsigned int count = 0;
+    while (list != NULL && count++ < 4096u) {
+        ResourceListNodeModel* node = (ResourceListNodeModel*)list;
+        if (node->key == key) {
+            if (node->handle == NULL && s_resource_list_create != NULL) {
+                node->handle = s_resource_list_create(library,
+                                                node->resource_key,
+                                                s_resource_list_user);
+            }
+            if (node->handle != NULL && s_resource_list_update != NULL) {
+                s_resource_list_update(node->handle, node->object, update_value,
+                                       s_resource_list_user);
+            }
+        }
+        list = node->next;
+    }
+}
+
+void owned_object_release_hooks_set(OwnedObjectReleaseFn object_release,
+                                    OwnedObjectReleaseFn scene_destroy,
+                                    OwnedObjectReleaseFn node_free,
+                                    void* user)
+{
+    s_owned_object_release = object_release;
+    s_owned_scene_destroy = scene_destroy;
+    s_owned_node_free = node_free;
+    s_owned_release_user = user;
+}
+
+/* FUNCTION: LEGORR 0x00451c50. The reference chain is represented with
+ * host-sized links; ownership bits keep the original two release gates. */
+void owned_object_reference_chain_release(void* head)
+{
+    struct OwnedObjectNodeModel {
+        void* primary;
+        void* field1;
+        void* secondary;
+        void* field3;
+        uint32_t flags;
+        uint32_t padding;
+        OwnedObjectNodeModel* next;
+    };
+    OwnedObjectNodeModel* node = (OwnedObjectNodeModel*)head;
+    unsigned int count = 0;
+    while (node != NULL && count++ < 4096u) {
+        OwnedObjectNodeModel* next = node->next;
+        if ((node->flags & 1u) == 0u) {
+            if (node->secondary != NULL && s_owned_object_release != NULL) {
+                s_owned_object_release(node->secondary, s_owned_release_user);
+            }
+            if (node->primary != NULL && s_owned_scene_destroy != NULL) {
+                s_owned_scene_destroy(node->primary, s_owned_release_user);
+            }
+        }
+        if ((node->flags & 2u) == 0u) {
+            if (s_owned_node_free != NULL) {
+                s_owned_node_free(node, s_owned_release_user);
+            } else {
+                engine_heap_free(node);
+            }
+        }
+        node = next;
+    }
+}
+
+int string_table_entry_install(const char* name)
+{
+    if (name == NULL) return -1;
+    for (int i = 0; i < 50; ++i) {
+        if (s_string_table_names[i] == NULL) {
+            size_t length = strlen(name) + 1u;
+            char* copy = (char*)malloc(length);
+            if (copy == NULL) return -1;
+            memcpy(copy, name, length);
+            s_string_table_names[i] = copy;
+            return i;
+        }
+    }
+    return -1;
+}
+
+/* FUNCTION: LEGORR 0x0044dde0 */
+void string_table_entry_set_current(const char* name)
+{
+    if (name == NULL) {
+        s_string_table_enabled = 0;
+        s_string_table_current = -1;
+        return;
+    }
+    int found = -1;
+    for (int i = 0; i < 50 && s_string_table_names[i] != NULL; ++i) {
+        const unsigned char* a = (const unsigned char*)s_string_table_names[i];
+        const unsigned char* b = (const unsigned char*)name;
+        while (*a != 0 && *b != 0) {
+            unsigned char ca = *a++;
+            unsigned char cb = *b++;
+            if (ca >= 'A' && ca <= 'Z') ca = (unsigned char)(ca + ('a' - 'A'));
+            if (cb >= 'A' && cb <= 'Z') cb = (unsigned char)(cb + ('a' - 'A'));
+            if (ca != cb) break;
+        }
+        if (*a == 0 && *b == 0) { found = i; break; }
+    }
+    if (found < 0) found = string_table_entry_install(name);
+    s_string_table_current = found;
+    s_string_table_enabled = 1;
+}
+
+const char* string_table_entry_current(void)
+{
+    return s_string_table_current >= 0 && s_string_table_current < 50
+        ? s_string_table_names[s_string_table_current] : NULL;
+}
+
+/* FUNCTION: LEGORR 0x00451cd0 */
+void message_string_table_initialize(void)
+{
+    static const char* names[65] = {
+        "Message_Null", "Message_Select", "Message_Selected",
+        "Message_ClearSelection", "Message_Deselect", "Message_Goto",
+        "Message_RockMonsterGoto", "Message_RockMonsterGotoComplete",
+        "Message_UserGoto", "Message_FirstPerson", "Message_TrackObject",
+        "Message_TopView", "Message_PlaySample", "Message_Dig",
+        "Message_DigComplete", "Message_Repair", "Message_RepairComplete",
+        "Message_Reinforce", "Message_ReinforceComplete", "Message_RockFall",
+        "Message_RockFallComplete", "Message_GenerateCrystal",
+        "Message_GenerateCrystalComplete", "Message_CollectCrystal",
+        "Message_CollectCrystalComplete", "Message_CrystalToRefinery",
+        "Message_CrystalToRefineryComplete", "Message_GenerateOre",
+        "Message_GenerateOreComplete", "Message_CollectOre",
+        "Message_CollectOreComplete", "Message_GenerateRockMonster",
+        "Message_GenerateRockMonsterComplete", "Message_GatherRock",
+        "Message_GatherRockComplete", "Message_PickRandomFloor",
+        "Message_PickRandomFloorComplete", "Message_AttackBuilding",
+        "Message_AttackBuildingComplete", "Message_Clear",
+        "Message_ClearComplete", "Message_GetIn",
+        "Message_ManSelectedAndMonsterClicked", "Message_FollowAttack",
+        "Message_CollectTool", "Message_ReduceSelection", "Message_ClearFallIn",
+        "Message_ClearFallInComplete", "Message_BuildPath",
+        "Message_BuildPathComplete", "Message_Train", "Message_TrainComplete",
+        "Message_GenerateCrystalAndOre", "Message_GenerateCrystalAndOreComplete",
+        "Message_GenerateFromCryOre", "Message_GenerateFromCryOreComplete",
+        "Message_Upgrade", "Message_UpgradeComplete", "Message_ClearBuilding",
+        "Message_ClearBuildingComplete", "Message_ClearInitial",
+        "Message_ClearInitialComplete", "Message_ClearRemovePath",
+        "Message_ClearRemovePathComplete", "Message_Debug_DestroyAll"
+    };
+    memcpy(s_message_strings, names, sizeof(s_message_strings));
+}
+
+const char* message_string_table_get(uint32_t index)
+{
+    return index < 65u ? s_message_strings[index] : NULL;
+}
+
+void file_loading_progress_state_install(int enabled, int total, int mode,
+                                         const float rect[4],
+                                         FileLoadingProgressDrawFn draw,
+                                         void* user)
+{
+    s_loading_progress_enabled = enabled != 0;
+    s_loading_progress_total = total;
+    s_loading_progress_units = 0;
+    s_loading_progress_mode = mode;
+    s_loading_progress_last = -1.0f;
+    s_loading_progress_draw = draw;
+    s_loading_progress_user = user;
+    if (rect != NULL) memcpy(s_loading_progress_rect, rect,
+                             sizeof(s_loading_progress_rect));
+}
+
+/* FUNCTION: LEGORR 0x0044dec0 */
+void file_loading_progress_update(uint32_t unused, float amount)
+{
+    (void)unused;
+    if (!s_loading_progress_enabled) return;
+    s_loading_progress_units += (int)amount;
+    float progress = s_loading_progress_total > 0
+        ? (float)s_loading_progress_units / (float)s_loading_progress_total
+        : 0.0f;
+    if (s_loading_progress_last + 0.002f >= progress) return;
+    if (progress > 1.0f) progress = 1.0f;
+    float rect[4];
+    memcpy(rect, s_loading_progress_rect, sizeof(rect));
+    switch (s_loading_progress_mode) {
+    case 0:
+        rect[3] = rect[3] + rect[2] - rect[2] * progress;
+        break;
+    case 1:
+        rect[0] *= progress;
+        break;
+    case 2:
+        rect[2] *= progress;
+        break;
+    case 3:
+        rect[1] = rect[1] + rect[0] - rect[0] * progress;
+        break;
+    default:
+        break;
+    }
+    if (s_loading_progress_draw != NULL) {
+        s_loading_progress_draw(progress, rect, 1,
+                                s_loading_progress_user);
+        s_loading_progress_draw(progress, rect, 0,
+                                s_loading_progress_user);
+    }
+    s_loading_progress_last = progress;
+}
+
+void indexed_surface_resource_hooks_set(IndexedSurfaceCreateFn create,
+                                        IndexedTextureLoadFn load_texture,
+                                        IndexedSurfaceReleaseFn release,
+                                        IndexedSurfaceTextureSetFn set_texture,
+                                        void* user)
+{
+    s_indexed_surface_create = create;
+    s_indexed_texture_load = load_texture;
+    s_indexed_surface_release = release;
+    s_indexed_surface_texture_set = set_texture;
+    s_indexed_surface_user = user;
+}
+
+/* FUNCTION: LEGORR 0x00462da0 */
+int indexed_surface_resource_allocate(void* owner, int width, int height)
+{
+    if (s_indexed_surface_create == NULL || width <= 0 || height <= 0
+        || width > 4096 || height > 4096) return 0;
+    void* surface = s_indexed_surface_create(owner, 2, s_indexed_surface_user);
+    if (surface == NULL) return 0;
+    size_t count = (size_t)width * (size_t)height;
+    if (count > 16777216u) {
+        if (s_indexed_surface_release != NULL) {
+            s_indexed_surface_release(surface, s_indexed_surface_user);
+        }
+        return 0;
+    }
+    uint32_t* entries = (uint32_t*)calloc(count * 2u, sizeof(uint32_t));
+    if (entries == NULL) {
+        if (s_indexed_surface_release != NULL) {
+            s_indexed_surface_release(surface, s_indexed_surface_user);
+        }
+        return 0;
+    }
+    for (size_t i = 0; i < count; ++i) entries[i * 2u + 1u] = 1u;
+    free(s_indexed_surface_entries);
+    if (s_indexed_surface != NULL && s_indexed_surface_release != NULL) {
+        s_indexed_surface_release(s_indexed_surface, s_indexed_surface_user);
+    }
+    s_indexed_surface = surface;
+    s_indexed_surface_entries = entries;
+    s_indexed_surface_width = width;
+    s_indexed_surface_height = height;
+    if (s_indexed_surface_texture != NULL && s_indexed_surface_release != NULL) {
+        s_indexed_surface_release(s_indexed_surface_texture,
+                                  s_indexed_surface_user);
+    }
+    s_indexed_surface_texture = NULL;
+    return 1;
+}
+
+/* FUNCTION: LEGORR 0x00462e60 */
+int animated_texture_replace(const char* name)
+{
+    if (s_indexed_surface_texture != NULL && s_indexed_surface_release != NULL) {
+        s_indexed_surface_release(s_indexed_surface_texture,
+                                  s_indexed_surface_user);
+    }
+    s_indexed_surface_texture = NULL;
+    if (s_indexed_texture_load == NULL || name == NULL) return 0;
+    void* texture = s_indexed_texture_load(name, s_indexed_surface_user);
+    if (texture == NULL) return 0;
+    s_indexed_surface_texture = texture;
+    size_t count = (size_t)s_indexed_surface_width
+        * (size_t)s_indexed_surface_height;
+    if (s_indexed_surface_texture_set != NULL && s_indexed_surface != NULL) {
+        for (size_t i = 0; i < count; ++i) {
+            s_indexed_surface_texture_set(s_indexed_surface, (uint32_t)i,
+                                          texture, s_indexed_surface_user);
+        }
+    }
+    return 1;
+}
+
+/* FUNCTION: LEGORR 0x00462ed0 */
+void graphics_overlay_resources_release(void)
+{
+    free(s_indexed_surface_entries);
+    s_indexed_surface_entries = NULL;
+    if (s_indexed_surface != NULL && s_indexed_surface_release != NULL) {
+        s_indexed_surface_release(s_indexed_surface, s_indexed_surface_user);
+    }
+    s_indexed_surface = NULL;
+    if (s_indexed_surface_texture != NULL && s_indexed_surface_release != NULL) {
+        s_indexed_surface_release(s_indexed_surface_texture,
+                                  s_indexed_surface_user);
+    }
+    s_indexed_surface_texture = NULL;
+    s_indexed_surface_width = 0;
+    s_indexed_surface_height = 0;
+}
+
+void visual_model_resolver_set(VisualModelResolveFn resolver, void* user)
+{
+    s_visual_model_resolver = resolver;
+    s_visual_model_resolver_user = user;
+}
+
+/* FUNCTION: LEGORR 0x004519b0 */
+void* visual_model_record_create(void* parent, const char* name,
+                                 const char* path_a, const char* path_b,
+                                 int flags)
+{
+    if (name == NULL || path_a == NULL || path_b == NULL
+        || s_visual_model_resolver == NULL) return NULL;
+    char path[512];
+    size_t a = strlen(path_a);
+    size_t b = strlen(path_b);
+    if (a + b + 2u > sizeof(path)) return NULL;
+    memcpy(path, path_a, a);
+    path[a] = '\\';
+    memcpy(path + a + 1u, path_b, b + 1u);
+    void* resource = s_visual_model_resolver(path, 1,
+                                             s_visual_model_resolver_user);
+    if (resource == NULL) {
+        resource = s_visual_model_resolver(path, 2,
+                                           s_visual_model_resolver_user);
+    }
+    if (resource == NULL) return NULL;
+    struct VisualModelRecordModel {
+        void* resource;
+        uint32_t flags;
+        char* name;
+        int extra;
+        uint32_t kind;
+        void* next;
+    };
+    VisualModelRecordModel* record = (VisualModelRecordModel*)calloc(
+        1u, sizeof(VisualModelRecordModel));
+    if (record == NULL) return NULL;
+    size_t name_length = strlen(name) + 1u;
+    record->name = (char*)malloc(name_length);
+    if (record->name == NULL) { free(record); return NULL; }
+    memcpy(record->name, name, name_length);
+    record->resource = resource;
+    record->flags = 0u;
+    record->extra = flags;
+    record->kind = 2u;
+    if (parent != NULL) {
+        __builtin_memcpy((char*)parent + 0x14u, &record, sizeof(record));
+    }
+    return record;
+}
+
+/* SceneTimeoutEntrySweep (FUN_0040cb70): advance each handle and remove
+ * completed entries by swapping in the last live handle. The bird-scarer
+ * slot periodically invokes the original camera/effect path through a hook. */
+// FUNCTION: LEGORR 0x0040CB70
+void scene_timeout_entry_sweep(SceneTimeoutEntrySet* set, float delta)
+{
+    uint32_t index = 0u;
+    if (set == NULL) {
+        return;
+    }
+    if (set->count > 10u) {
+        set->count = 10u;
+    }
+    while (index < set->count) {
+        void* handle = set->entries[index];
+        int expired = 0;
+        if (handle == NULL) {
+            set->entries[index] = set->entries[set->count - 1u];
+            set->entries[set->count - 1u] = NULL;
+            --set->count;
+            continue;
+        }
+        if (set == &s_terrain_marker_sets[8]) {
+            s_bird_scarer_period += delta;
+            if (s_bird_scarer_period > 12.5f) {
+                if (s_bird_scarer_effect_hook != NULL) {
+                    s_bird_scarer_effect_hook(handle,
+                                              s_scene_lifecycle_context);
+                }
+                s_bird_scarer_period = 0.0f;
+            }
+        }
+        if (s_scene_advance_hook != NULL) {
+            expired = s_scene_advance_hook(handle, delta,
+                                           s_scene_lifecycle_context);
+        }
+        if (expired != 0) {
+            if (s_scene_release_hook != NULL) {
+                s_scene_release_hook(handle, s_scene_lifecycle_context);
+            }
+            --set->count;
+            set->entries[index] = set->entries[set->count];
+            set->entries[set->count] = NULL;
+            continue;
+        }
+        ++index;
+    }
+}
+
+static void scene_light_pool_expire(void** pool, float delta)
+{
+    for (int i = 0; i < 4; ++i) {
+        void* handle = pool[i];
+        if (handle != NULL && s_scene_advance_hook != NULL
+            && s_scene_advance_hook(handle, delta,
+                                    s_scene_lifecycle_context) != 0) {
+            if (s_scene_release_hook != NULL) {
+                s_scene_release_hook(handle, s_scene_lifecycle_context);
+            }
+            pool[i] = NULL;
+        }
+    }
+}
+
+/* SceneLightPoolExpireSweep (FUN_0040c4d0). */
+// FUNCTION: LEGORR 0x0040C4D0
+void scene_light_pool_primary_expire(float delta)
+{
+    scene_light_pool_expire(s_scene_light_primary, delta);
+}
+
+/* SceneLightSecondaryPoolExpireSweep (FUN_0040c520). */
+// FUNCTION: LEGORR 0x0040C520
+void scene_light_pool_secondary_expire(float delta)
+{
+    scene_light_pool_expire(s_scene_light_secondary, delta);
+}
+
+/* SceneResourceSingletonPoolRelease (FUN_0040c690): release and clear the
+ * four primary singleton handles. */
+// FUNCTION: LEGORR 0x0040C690
+void scene_resource_singleton_pool_release(void)
+{
+    for (int i = 0; i < 4; ++i) {
+        if (s_scene_light_primary[i] != NULL) {
+            if (s_scene_release_hook != NULL) {
+                s_scene_release_hook(s_scene_light_primary[i],
+                                    s_scene_lifecycle_context);
+            }
+            s_scene_light_primary[i] = NULL;
+        }
+    }
+}
+
+/* TerrainMarkerSetsClear (FUN_0040cc40): sweep all ten marker sets in table
+ * order using the same timeout contract. */
+// FUNCTION: LEGORR 0x0040CC40
+void terrain_marker_sets_clear(float delta)
+{
+    for (int i = 0; i < 10; ++i) {
+        scene_timeout_entry_sweep(&s_terrain_marker_sets[i], delta);
+    }
+}
+
+/* GetResourceSlotAddressByIndex (FUN_0040c8a0): return the selected slot
+ * record from the ten-entry global band; invalid indices answer NULL. */
+// FUNCTION: LEGORR 0x0040C8A0
+SceneResourceSlotModel* resource_slot_address_by_index(int index)
+{
+    if (index < 0 || index >= 10) {
+        return NULL;
+    }
+    return &s_scene_resource_slots[index];
+}
+
+void resource_slot_model_install(int index, void* handle, uint32_t count)
+{
+    SceneResourceSlotModel* slot = resource_slot_address_by_index(index);
+    if (slot == NULL) {
+        return;
+    }
+    slot->handle = handle;
+    slot->count = count;
+}
+
+static Resource* resource_load_complete(const char* path)
+{
+    Resource* resource;
+    if (path == NULL || path[0] == '\0') {
+        return NULL;
+    }
+    resource = resource_open(path, RESOURCE_AUTO);
+    if (resource == NULL) {
+        return NULL;
+    }
+    if (resource_read(resource) < 0) {
+        resource_free(resource);
+        return NULL;
+    }
+    return resource;
+}
+
+/* ResourceHandleLoadWithFallback (FUN_0040c920): load the primary resource,
+ * retry the fallback when absent, and mark the selected port slot enabled. */
+// FUNCTION: LEGORR 0x0040C920
+int resource_handle_load_with_fallback(int index, const char* primary,
+                                       const char* fallback)
+{
+    SceneResourceSlotModel* slot = resource_slot_address_by_index(index);
+    Resource* resource;
+    if (slot == NULL || (primary == NULL && fallback == NULL)) {
+        return 0;
+    }
+    resource = resource_load_complete(primary);
+    if (resource == NULL) {
+        resource = resource_load_complete(fallback);
+    }
+    if (resource == NULL) {
+        return 0;
+    }
+    if (slot->handle != NULL) {
+        resource_free((Resource*)slot->handle);
+    }
+    slot->handle = resource;
+    slot->selected = 1u;
+    return 1;
+}
+
+/* MiscObjectsEffectSlotBind (FUN_0040c990): bind the fixed ten misc-effect
+ * resource slots using primary/fallback resource descriptors. */
+// FUNCTION: LEGORR 0x0040C990
+int misc_objects_effect_slots_bind(const MiscEffectResourceEntry* entries,
+                                   uint32_t count)
+{
+    uint32_t index;
+    int loaded = 0;
+    if (entries == NULL) {
+        return 0;
+    }
+    if (count > 10u) {
+        count = 10u;
+    }
+    for (index = 0u; index < count; ++index) {
+        if (resource_handle_load_with_fallback((int)index,
+                entries[index].primary, entries[index].fallback) != 0) {
+            ++loaded;
+        }
+    }
+    return loaded;
+}
+
+void numbered_bitmap_load_hook_install(NumberedBitmapLoadHook hook,
+                                        void* context)
+{
+    s_numbered_bitmap_load_hook = hook;
+    s_numbered_bitmap_context = context;
+}
+
+/* PreloadNumberedBitmaps (FUN_0040a400): format and load indexes 0..10,
+ * retaining the first ten in the indexed table and the final one separately. */
+// FUNCTION: LEGORR 0x0040A400
+void preload_numbered_bitmaps(const char* directory, const char* prefix)
+{
+    unsigned int index;
+    char path[512];
+    if (directory == NULL || s_numbered_bitmap_load_hook == NULL) {
+        return;
+    }
+    for (index = 0u; index < 11u; ++index) {
+        char suffix[24];
+        size_t length;
+        strncpy(path, directory, 400u);
+        path[400] = '\0';
+        length = strlen(path);
+        if (length < sizeof(path) - 1u) {
+            path[length++] = '\\';
+            path[length] = '\0';
+        }
+        if (prefix != NULL && prefix[0] != '\0' && length < 480u) {
+            size_t available = 480u - length;
+            strncat(path, prefix, available);
+            length = strlen(path);
+            if (length < sizeof(path) - 1u) {
+                path[length++] = '_';
+                path[length] = '\0';
+            }
+        }
+        sprintf(suffix, "%u.bmp", index);
+        strncat(path, suffix, sizeof(path) - strlen(path) - 1u);
+        s_numbered_bitmap_slots[index] = s_numbered_bitmap_load_hook(
+            path, s_numbered_bitmap_context);
+    }
+}
+
+void* numbered_bitmap_slot_peek(int index)
+{
+    return (index >= 0 && index < 11) ? s_numbered_bitmap_slots[index] : NULL;
+}
+
+void scene_animation_duration_hooks_install(
+    SceneAnimationDurationHook duration,
+    SceneAnimationLastFrameHook last_frame, void* context)
+{
+    s_animation_duration_hook = duration;
+    s_animation_last_frame_hook = last_frame;
+    s_animation_duration_context = context;
+}
+
+/* AnimationDurationForLoopCount (FUN_0046d1c0): select the primary duration
+ * unless flag 4 suppresses it, let a secondary animation override it, then
+ * subtract repeated primary loop frames for multi-loop requests. */
+// FUNCTION: LEGORR 0x0046D1C0
+float animation_duration_for_loop_count(
+    const SceneAnimationDurationState* state, uint32_t primary_mode,
+    uint32_t secondary_mode, uint32_t loop_count)
+{
+    float duration = 0.0f;
+    if (state == NULL) {
+        return 0.0f;
+    }
+    if ((state->flags & 4u) == 0u && state->primary != NULL
+        && s_animation_duration_hook != NULL) {
+        duration = s_animation_duration_hook(state->primary, primary_mode,
+                                             s_animation_duration_context);
+    }
+    if (state->secondary != NULL && s_animation_duration_hook != NULL) {
+        duration = s_animation_duration_hook(state->secondary, secondary_mode,
+                                             s_animation_duration_context);
+    }
+    if (loop_count > 1u && duration != 0.0f
+        && state->primary != NULL && s_animation_last_frame_hook != NULL) {
+        duration -= (float)(s_animation_last_frame_hook(state->primary,
+            s_animation_duration_context) * (loop_count - 1u));
+    }
+    return duration;
+}
+
+void scene_resource_record_hooks_install(
+    SceneResourceNamedResolveHook resolve,
+    SceneObjectResourceReleaseHook release, void* context)
+{
+    s_scene_resource_named_resolve_hook = resolve;
+    s_scene_object_resource_release_hook = release;
+    s_scene_resource_record_context = context;
+}
+
+/* SceneResourceNamedEntryResolveWithFallback (FUN_0046d9f0): query the
+ * secondary resource first, then the primary resource if it has no match. */
+// FUNCTION: LEGORR 0x0046D9F0
+void* scene_resource_named_entry_resolve_with_fallback(
+    SceneResourceAnimationRecord* record, const char* name, uint32_t index)
+{
+    void* result = NULL;
+    if (record == NULL || s_scene_resource_named_resolve_hook == NULL) {
+        return NULL;
+    }
+    if (record->secondary_resource != NULL) {
+        result = s_scene_resource_named_resolve_hook(
+            record->secondary_resource, name, index,
+            s_scene_resource_record_context);
+    }
+    if (result == NULL && record->primary_resource != NULL) {
+        result = s_scene_resource_named_resolve_hook(record->primary_resource,
+            name, index, s_scene_resource_record_context);
+    }
+    return result;
+}
+
+// FUNCTION: LEGORR 0x0046DA50
+int scene_activity_change_dispatch(SceneResourceAnimationRecord* record,
+                                   int index)
+{
+    void* result;
+    if (record == NULL || record->activity_resource == NULL
+        || index < 0 || index >= 16) {
+        return 0;
+    }
+    result = record->activity_cache[index];
+    if (result == NULL) {
+        result = s_scene_resource_named_resolve_hook != NULL
+            ? s_scene_resource_named_resolve_hook(record->activity_resource,
+                NULL, (uint32_t)index, s_scene_resource_record_context) : NULL;
+        record->activity_cache[index] = result;
+    }
+    return (int)(size_t)result;
+}
+
+// FUNCTION: LEGORR 0x0046DA90
+void* scene_resource_cached_slot_b4_get(SceneResourceAnimationRecord* record)
+{
+    if (record == NULL || record->slot_b4_name == NULL) return NULL;
+    if (record->cached_b4 == NULL) {
+        record->cached_b4 = scene_resource_named_entry_resolve_with_fallback(
+            record, record->slot_b4_name, 0u);
+    }
+    return record->cached_b4;
+}
+
+// FUNCTION: LEGORR 0x0046DAC0
+void* scene_resource_cached_slot_b8_get(SceneResourceAnimationRecord* record)
+{
+    if (record == NULL || record->slot_b8_name == NULL) return NULL;
+    if (record->cached_b8 == NULL) {
+        record->cached_b8 = scene_resource_named_entry_resolve_with_fallback(
+            record, record->slot_b8_name, 0u);
+    }
+    return record->cached_b8;
+}
+
+// FUNCTION: LEGORR 0x0046DAF0
+void* scene_resource_cached_slot_c0_get(SceneResourceAnimationRecord* record)
+{
+    if (record == NULL || record->slot_c0_name == NULL) return NULL;
+    if (record->cached_c0 == NULL) {
+        record->cached_c0 = scene_resource_named_entry_resolve_with_fallback(
+            record, record->slot_c0_name, 0u);
+    }
+    return record->cached_c0;
+}
+
+// FUNCTION: LEGORR 0x0046DB20
+void* attached_entity_slot_object_get(SceneResourceAnimationRecord* record,
+                                      int index)
+{
+    void* result;
+    if (record == NULL || record->attached_resource == NULL
+        || index < 0 || index >= 16) return NULL;
+    result = record->attached_cache[index];
+    if (result == NULL && s_scene_resource_named_resolve_hook != NULL) {
+        result = s_scene_resource_named_resolve_hook(record->attached_resource,
+            NULL, (uint32_t)index, s_scene_resource_record_context);
+        record->attached_cache[index] = result;
+    }
+    return result;
+}
+
+/* SceneObjectResourceRelease (FUN_0046db70): release the primary owned
+ * scene resource through the installed owner callback. */
+// FUNCTION: LEGORR 0x0046DB70
+void scene_object_resource_release(SceneResourceAnimationRecord* record)
+{
+    if (record != NULL && record->primary_resource != NULL
+        && s_scene_object_resource_release_hook != NULL) {
+        s_scene_object_resource_release_hook(record->primary_resource,
+                                             s_scene_resource_record_context);
+        record->primary_resource = NULL;
+    }
+}
+
+void scene_animation_track_hook_install(SceneAnimationTrackApplyHook hook,
+                                        void* context)
+{
+    s_animation_track_apply_hook = hook;
+    s_animation_track_context = context;
+}
+
+void scene_resource_owner_hook_install(SceneResourceOwnerApplyHook apply,
+                                       SceneAttachedResourceReleaseHook release,
+                                       void* context)
+{
+    s_scene_resource_owner_apply_hook = apply;
+    s_scene_attached_resource_release_hook = release;
+    s_scene_resource_owner_context = context;
+}
+
+// FUNCTION: LEGORR 0x0046CED0
+void paired_resource_state_set(ScenePairedAnimationState* state, int enabled)
+{
+    if (state == NULL || s_animation_track_apply_hook == NULL) {
+        return;
+    }
+    s_animation_track_apply_hook(state->primary_track,
+        state->primary_resource, enabled == 0, s_animation_track_context);
+    if (state->secondary_resource != NULL && state->secondary_track != NULL) {
+        s_animation_track_apply_hook(state->secondary_track,
+            state->secondary_resource, enabled == 0,
+            s_animation_track_context);
+    }
+}
+
+// FUNCTION: LEGORR 0x0046CF20
+void scene_entity_animation_tracks_set_enabled(
+    ScenePairedAnimationState* state, int enabled)
+{
+    paired_resource_state_set(state, enabled);
+}
+
+// FUNCTION: LEGORR 0x0046D140
+void scene_assign_owner_from_model(ScenePairedAnimationState* state,
+                                   void* owner)
+{
+    uint32_t i;
+    if (state == NULL || s_scene_resource_owner_apply_hook == NULL) {
+        return;
+    }
+    s_scene_resource_owner_apply_hook(state->primary_resource, owner,
+                                      s_scene_resource_owner_context);
+    if (state->secondary_resource != NULL) {
+        s_scene_resource_owner_apply_hook(state->secondary_resource, owner,
+                                          s_scene_resource_owner_context);
+    }
+    if (state->attached_count > 16u) {
+        state->attached_count = 16u;
+    }
+    for (i = 0u; i < state->attached_count; ++i) {
+        if (state->attached_models[i] != NULL) {
+            s_scene_resource_owner_apply_hook(state->attached_models[i],
+                owner, s_scene_resource_owner_context);
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x0046D1A0
+void scene_object_attached_resource_release(ScenePairedAnimationState* state)
+{
+    if (state != NULL && state->primary_resource != NULL
+        && s_scene_attached_resource_release_hook != NULL) {
+        s_scene_attached_resource_release_hook(state->primary_resource,
+                                               s_scene_resource_owner_context);
+        state->primary_resource = NULL;
+    }
+}
+
+void scene_payload_memory_release_hook_install(
+    SceneOwnedMemoryReleaseHook release, void* context)
+{
+    s_scene_owned_memory_release_hook = release;
+    s_scene_owned_memory_context = context;
+}
+
+/* EntityPayloadType1Release (FUN_0046ce10): clear indexed registrations,
+ * free optional owned descriptor buffers, release six paired scene slots,
+ * then release the primary/secondary scene resources. */
+// FUNCTION: LEGORR 0x0046CE10
+void entity_payload_type1_release(ScenePairedAnimationState* state)
+{
+    uint32_t i;
+    if (state == NULL) {
+        return;
+    }
+    for (i = 0u; i < state->activity_cache_count && i < 16u; ++i) {
+        state->activity_cache[i] = NULL;
+    }
+    for (i = 0u; i < state->attached_count && i < 16u; ++i) {
+        state->attached_cache[i] = NULL;
+    }
+    if ((state->flags & 1u) != 0u && s_scene_owned_memory_release_hook != NULL) {
+        for (i = 0u; i < 4u; ++i) {
+            if (state->owned_memory[i] != NULL) {
+                s_scene_owned_memory_release_hook(state->owned_memory[i],
+                                                  s_scene_owned_memory_context);
+                state->owned_memory[i] = NULL;
+            }
+        }
+    }
+    for (i = 0u; i < 6u; ++i) {
+        if (state->scene_slots[i] != NULL && s_scene_release_hook != NULL) {
+            s_scene_release_hook(state->scene_slots[i], s_scene_lifecycle_context);
+        }
+        state->scene_slots[i] = NULL;
+    }
+    state->scene_slot_count = 0u;
+    if (state->primary_resource != NULL && s_scene_release_hook != NULL) {
+        s_scene_release_hook(state->primary_resource, s_scene_lifecycle_context);
+    }
+    if (state->secondary_resource != NULL && s_scene_release_hook != NULL) {
+        s_scene_release_hook(state->secondary_resource, s_scene_lifecycle_context);
+    }
+    state->primary_resource = NULL;
+    state->secondary_resource = NULL;
+}
+
+/* SceneRecordTemplateInstantiate (FUN_0046cff0): copy template state,
+ * clone the primary/secondary resources and attached scene handles, clear
+ * per-instance caches, then enable the new resource graph. */
+// FUNCTION: LEGORR 0x0046CFF0
+int scene_record_template_instantiate(
+    const ScenePairedAnimationState* source,
+    ScenePairedAnimationState* destination)
+{
+    uint32_t i;
+    if (source == NULL || destination == NULL
+        || s_resource_child_create_hook == NULL
+        || source->primary_resource == NULL) {
+        return 0;
+    }
+    *destination = *source;
+    memset(destination->activity_cache, 0, sizeof(destination->activity_cache));
+    memset(destination->attached_cache, 0, sizeof(destination->attached_cache));
+    memset(destination->scene_slots, 0, sizeof(destination->scene_slots));
+    destination->primary_resource = s_resource_child_create_hook(
+        source->primary_resource, s_resource_instance_context);
+    if (destination->primary_resource == NULL) {
+        return 0;
+    }
+    if (source->secondary_resource != NULL) {
+        destination->secondary_resource = s_resource_child_create_hook(
+            source->secondary_resource, s_resource_instance_context);
+        if (destination->secondary_resource != NULL && s_resource_lock_hook != NULL) {
+            s_resource_lock_hook(destination->secondary_resource, 1,
+                                 s_resource_instance_context);
+        }
+    }
+    if (s_resource_lock_hook != NULL) {
+        s_resource_lock_hook(destination->primary_resource, 1,
+                             s_resource_instance_context);
+    }
+    if (s_scene_resource_owner_apply_hook != NULL
+        && destination->secondary_resource != NULL) {
+        s_scene_resource_owner_apply_hook(destination->secondary_resource,
+            destination->primary_resource, s_scene_resource_owner_context);
+    }
+    if (destination->attached_count > 16u) {
+        destination->attached_count = 16u;
+    }
+    for (i = 0u; i < destination->attached_count; ++i) {
+        if (source->attached_models[i] != NULL) {
+            destination->attached_models[i] = s_resource_child_create_hook(
+                source->attached_models[i], s_resource_instance_context);
+        }
+    }
+    destination->cached_b4 = NULL;
+    destination->cached_b8 = NULL;
+    destination->cached_c0 = NULL;
+    scene_resource_slots_rebuild(destination, destination->slot_base_name);
+    return 1;
+}
+
+/* SceneResourceDrawAtOrigin (FUN_0046d350): forward the record's primary
+ * scene handle and caller coordinates through the origin-pose seam. */
+// FUNCTION: LEGORR 0x0046D350
+void scene_resource_draw_at_origin(SceneResourceAnimationRecord* record,
+                                   float x, float y, float z)
+{
+    if (record != NULL && record->primary_resource != NULL
+        && s_scene_effect_pose_hook != NULL) {
+        s_scene_effect_pose_hook(record->primary_resource, x, y, z,
+            0.0f, 0.0f, -1.0f, s_scene_effect_pose_context);
+    }
+}
+
+void scene_animation_channel_hooks_install(
+    SceneAnimationChannelUpdateHook update,
+    SceneAnimationChannelQueryHook query,
+    SceneAnimationVisibilityHook visibility, void* context)
+{
+    s_animation_channel_update_hook = update;
+    s_animation_channel_query_hook = query;
+    s_animation_visibility_hook = visibility;
+    s_animation_channel_context = context;
+}
+
+// FUNCTION: LEGORR 0x0046D260
+void scene_resource_slots_rebuild(ScenePairedAnimationState* state,
+                                  const char* slot_base_name)
+{
+    uint32_t index;
+    uint32_t count = 0u;
+    if (state == NULL) {
+        return;
+    }
+    for (index = 0u; index < 6u; ++index) {
+        void* handle = NULL;
+        if (state->primary_resource != NULL && slot_base_name != NULL
+            && s_scene_resource_named_resolve_hook != NULL) {
+            handle = s_scene_resource_named_resolve_hook(
+                state->primary_resource, slot_base_name, index,
+                s_scene_resource_record_context);
+        }
+        state->scene_slots[index] = handle;
+        if (handle != NULL) {
+            ++count;
+        }
+    }
+    state->scene_slot_count = count;
+}
+
+// FUNCTION: LEGORR 0x0046C3F0
+uint32_t scene_activity_paired_channel_update(
+    ScenePairedAnimationState* state, uint32_t channel, int visible)
+{
+    uint32_t changed = 0u;
+    uint32_t i;
+    uint32_t previous_flags;
+    if (state == NULL) {
+        return 0u;
+    }
+    state->cached_b4 = NULL;
+    state->cached_b8 = NULL;
+    state->cached_c0 = NULL;
+    for (i = 0u; i < state->activity_cache_count && i < 16u; ++i) {
+        state->activity_cache[i] = NULL;
+    }
+    for (i = 0u; i < state->attached_count && i < 16u; ++i) {
+        state->attached_cache[i] = NULL;
+    }
+    previous_flags = state->flags;
+    if (s_animation_channel_update_hook != NULL) {
+        changed = s_animation_channel_update_hook(state->primary_resource,
+            channel, s_animation_channel_context);
+    }
+    state->flags &= ~4u;
+    if (changed == 0u && (previous_flags & 8u) != 0u
+        && s_animation_channel_query_hook != NULL
+        && s_animation_channel_query_hook(state->primary_resource, channel,
+                s_animation_channel_context) == 0) {
+        state->flags |= 4u;
+    }
+    if (state->secondary_resource != NULL
+        && s_animation_channel_update_hook != NULL) {
+        changed |= s_animation_channel_update_hook(state->secondary_resource,
+            channel, s_animation_channel_context);
+    }
+    if (s_animation_visibility_hook != NULL) {
+        if ((state->flags & 4u) == 0u) {
+            s_animation_visibility_hook(state->primary_resource, visible,
+                                        s_animation_channel_context);
+        }
+        if (state->secondary_resource != NULL) {
+            s_animation_visibility_hook(state->secondary_resource, visible,
+                                        s_animation_channel_context);
+        }
+    }
+    scene_resource_slots_rebuild(state, state->slot_base_name);
+    return changed;
+}
+
+void scene_indexed_record_release_hook_install(
+    SceneIndexedRecordNodeReleaseHook release, void* context)
+{
+    s_scene_indexed_record_release_hook = release;
+    s_scene_indexed_record_context = context;
+}
+
+/* IndexedRecordListRebuildForValue (FUN_0046c340): dispose the prior index
+ * chain, then construct a linked node for each source record matching value. */
+// FUNCTION: LEGORR 0x0046C340
+void scene_indexed_record_list_rebuild_for_value(SceneIndexedRecordList* list,
+                                                 int value)
+{
+    SceneIndexedRecordNode* node;
+    SceneIndexedRecordNode* tail = NULL;
+    uint32_t index;
+    if (list == NULL) {
+        return;
+    }
+    node = list->head;
+    while (node != NULL) {
+        SceneIndexedRecordNode* next = node->next;
+        if (s_scene_indexed_record_release_hook != NULL) {
+            s_scene_indexed_record_release_hook(node,
+                                               s_scene_indexed_record_context);
+        } else {
+            free(node);
+        }
+        node = next;
+    }
+    list->selected_value = value;
+    list->head = NULL;
+    if (list->records == NULL) {
+        return;
+    }
+    for (index = 0u; index < list->count; ++index) {
+        if (list->records[index].value == value) {
+            SceneIndexedRecordNode* fresh =
+                (SceneIndexedRecordNode*)calloc(1u, sizeof(*fresh));
+            if (fresh == NULL) {
+                return;
+            }
+            fresh->record = &list->records[index];
+            fresh->source_index = index;
+            if (list->head == NULL) {
+                list->head = fresh;
+            } else {
+                tail->next = fresh;
+            }
+            tail = fresh;
+        }
+    }
+}
+
+void scene_channel_entry_process_hook_install(
+    SceneChannelEntryProcessHook hook, void* context)
+{
+    s_scene_channel_entry_process_hook = hook;
+    s_scene_channel_entry_context = context;
+}
+
+/* SceneChannelSlotsRebuild (FUN_0046c510): clear the fixed three-by-five
+ * registration window and rebuild it by walking the scene's channel list. */
+// FUNCTION: LEGORR 0x0046C510
+void scene_channel_slots_rebuild(SceneChannelSlotsState* state, int mode)
+{
+    SceneChannelEntry* entry;
+    uint32_t count = 0u;
+    if (state == NULL) {
+        return;
+    }
+    memset(state->slots, 0, sizeof(state->slots));
+    state->registered_count = 0u;
+    state->mode = mode == 0 ? 0u : 1u;
+    for (entry = state->entries; entry != NULL; entry = entry->next) {
+        uint32_t processed;
+        uint32_t group;
+        if (entry->record == NULL || s_scene_channel_entry_process_hook == NULL) {
+            continue;
+        }
+        processed = s_scene_channel_entry_process_hook(entry->record,
+            state->mode, &state->slots[0][0], 15u,
+            s_scene_channel_entry_context);
+        for (group = 0u; group < 3u; ++group) {
+            uint32_t slot;
+            for (slot = 0u; slot < 5u; ++slot) {
+                if (state->slots[group][slot] != NULL) {
+                    ++count;
+                }
+            }
+        }
+        if (processed == 0u) {
+            continue;
+        }
+    }
+    state->registered_count = count;
+}
+
+/* RecordIndexedEntriesRebuildAndRefresh (FUN_0046cf90): rebuild the selected
+ * value's linked entries, then reset and refresh the associated channels. */
+// FUNCTION: LEGORR 0x0046CF90
+void scene_record_indexed_entries_rebuild_and_refresh(
+    SceneIndexedRecordList* list, SceneChannelSlotsState* channels, int value)
+{
+    scene_indexed_record_list_rebuild_for_value(list, value);
+    scene_channel_slots_rebuild(channels, 0);
+}
+
+void scene_effect_pose_hook_install(SceneEffectPoseHook hook, void* context)
+{
+    s_scene_effect_pose_hook = hook;
+    s_scene_effect_pose_context = context;
+}
+
+/* LavaEffectSelectAndPlace (FUN_0040cce0): clone a configured effect resource
+ * into its per-slot ten-instance pool and place it at the requested pose. */
+// FUNCTION: LEGORR 0x0040CCE0
+int lava_effect_select_and_place(int index, const float* position,
+                                 const float* rotation)
+{
+    SceneResourceSlotModel* slot = resource_slot_address_by_index(index);
+    void* instance;
+    float rx = 0.0f;
+    float ry = 1.0f;
+    float rz = 0.0f;
+    if (slot == NULL || position == NULL || slot->handle == NULL
+        || slot->count >= 10u || s_resource_child_create_hook == NULL
+        || s_scene_effect_pose_hook == NULL) {
+        return 0;
+    }
+    if (rotation != NULL) {
+        rx = rotation[0];
+        ry = rotation[1];
+        rz = rotation[2];
+    }
+    instance = s_resource_child_create_hook(slot->handle,
+                                             s_resource_instance_context);
+    if (instance == NULL) {
+        return 0;
+    }
+    if (s_scene_effect_pose_hook(instance, position[0], position[1],
+            position[2], rx, ry, rz, s_scene_effect_pose_context) == 0) {
+        if (s_scene_release_hook != NULL) {
+            s_scene_release_hook(instance, s_scene_lifecycle_context);
+        }
+        return 0;
+    }
+    s_scene_resource_slot_instances[index][slot->count] = instance;
+    ++slot->count;
+    return 1;
+}
+
+void scene_marker_templates_install(void* light_default, void* light_variant,
+                                    void* marker, int scene_variant)
+{
+    s_scene_marker_templates[0] = light_default;
+    s_scene_marker_templates[1] = light_variant;
+    s_scene_marker_templates[2] = marker;
+    s_scene_marker_scene_variant = scene_variant;
+}
+
+void scene_object_position_hook_install(SceneObjectPositionHook hook,
+                                        void* context)
+{
+    s_scene_object_position_hook = hook;
+    s_scene_object_position_context = context;
+}
+
+void terrain_point_template_install(void* handle)
+{
+    s_terrain_point_template = handle;
+}
+
+void terrain_height_hook_install(TerrainHeightAtPointHook hook,
+                                void* context)
+{
+    s_terrain_height_hook = hook;
+    s_terrain_height_context = context;
+}
+
+/* TerrainPointObjectCreate (FUN_0040c750): resolve the point, place it one
+ * scene unit below the terrain surface, and retain it in the four-object
+ * expiry pool. */
+// FUNCTION: LEGORR 0x0040C750
+void terrain_point_object_create(void* object, const float* xy)
+{
+    float position[3];
+    float height;
+    uint32_t index;
+    void* instance;
+    if (object == NULL) {
+        if (xy == NULL) {
+            return;
+        }
+        position[0] = xy[0];
+        position[1] = xy[1];
+    } else if (s_scene_object_position_hook == NULL
+               || s_scene_object_position_hook(object, position,
+                        s_scene_object_position_context) == 0) {
+        return;
+    }
+    if (s_terrain_height_hook == NULL || s_terrain_point_template == NULL
+        || s_resource_child_create_hook == NULL
+        || s_scene_effect_pose_hook == NULL
+        || s_terrain_height_hook(position[0], position[1], &height,
+                                 s_terrain_height_context) == 0
+        || s_terrain_point_object_count >= 4u) {
+        return;
+    }
+    position[2] = height - 1.0f;
+    instance = s_resource_child_create_hook(s_terrain_point_template,
+                                             s_resource_instance_context);
+    if (instance == NULL || s_scene_effect_pose_hook(instance,
+            position[0], position[1], position[2], 0.0f, 1.0f, 0.0f,
+            s_scene_effect_pose_context) == 0) {
+        if (instance != NULL && s_scene_release_hook != NULL) {
+            s_scene_release_hook(instance, s_scene_lifecycle_context);
+        }
+        return;
+    }
+    index = s_terrain_point_object_count++;
+    s_terrain_point_objects[index] = instance;
+}
+
+/* SceneLightCreateAtPosition (FUN_0040be10): clone the scene-selected light
+ * template into the first free four-entry pool slot and place it. */
+// FUNCTION: LEGORR 0x0040BE10
+void scene_light_create_at_position(const float position[3])
+{
+    int slot;
+    int template_index = s_scene_marker_scene_variant == 2 ? 1 : 0;
+    void* template_handle = s_scene_marker_templates[template_index];
+    if (position == NULL || template_handle == NULL
+        || s_resource_child_create_hook == NULL
+        || s_scene_effect_pose_hook == NULL) {
+        return;
+    }
+    for (slot = 0; slot < 4; ++slot) {
+        if (s_scene_light_primary[slot] == NULL) {
+            void* instance = s_resource_child_create_hook(
+                template_handle, s_resource_instance_context);
+            if (instance != NULL && s_scene_effect_pose_hook(instance,
+                    position[0], position[1], position[2], 0.0f, 1.0f, 0.0f,
+                    s_scene_effect_pose_context) != 0) {
+                s_scene_light_primary[slot] = instance;
+            } else if (instance != NULL && s_scene_release_hook != NULL) {
+                s_scene_release_hook(instance, s_scene_lifecycle_context);
+            }
+            return;
+        }
+    }
+}
+
+/* SceneMarkerCreateAtPositionOrObject (FUN_0040beb0): use explicit
+ * coordinates for a null object, otherwise ask the object-position seam. */
+// FUNCTION: LEGORR 0x0040BEB0
+void scene_marker_create_at_position_or_object(void* object,
+                                               const float position[3])
+{
+    int slot;
+    float resolved[3];
+    if (object == NULL) {
+        if (position == NULL) {
+            return;
+        }
+        resolved[0] = position[0];
+        resolved[1] = position[1];
+        resolved[2] = position[2];
+    } else if (s_scene_object_position_hook == NULL
+               || s_scene_object_position_hook(object, resolved,
+                        s_scene_object_position_context) == 0) {
+        return;
+    }
+    if (s_scene_marker_templates[2] == NULL
+        || s_resource_child_create_hook == NULL
+        || s_scene_effect_pose_hook == NULL) {
+        return;
+    }
+    for (slot = 0; slot < 4; ++slot) {
+        if (s_scene_light_secondary[slot] == NULL) {
+            void* instance = s_resource_child_create_hook(
+                s_scene_marker_templates[2], s_resource_instance_context);
+            if (instance != NULL && s_scene_effect_pose_hook(instance,
+                    resolved[0], resolved[1], resolved[2], 0.0f, 1.0f, 0.0f,
+                    s_scene_effect_pose_context) != 0) {
+                s_scene_light_secondary[slot] = instance;
+            } else if (instance != NULL && s_scene_release_hook != NULL) {
+                s_scene_release_hook(instance, s_scene_lifecycle_context);
+            }
+            return;
+        }
+    }
+}
+
+/* SceneMarkerCreateAtObjectPosition (FUN_0040bde0). */
+// FUNCTION: LEGORR 0x0040BDE0
+void scene_marker_create_at_object_position(void* object)
+{
+    scene_marker_create_at_position_or_object(object, NULL);
+}
+
+/* GlobalResourceHandleLoadAndEnable (FUN_0040c720): load and retain the
+ * resource, with enable represented by the stored non-null global handle. */
+// FUNCTION: LEGORR 0x0040C720
+int global_resource_handle_load_and_enable(const char* path)
+{
+    Resource* resource = resource_load_complete(path);
+    if (resource == NULL) {
+        return 0;
+    }
+    if (s_global_resource_handle != NULL) {
+        global_resource_handle_release();
+    }
+    s_global_resource_handle = resource;
+    return 1;
+}
+
+Resource* global_resource_handle_peek(void)
+{
+    return (Resource*)s_global_resource_handle;
+}
+
+void scene_availability_hooks_install(SceneAvailabilityAdvanceHook advance,
+                                      SceneAvailabilityEnableHook enable,
+                                      void* context)
+{
+    s_availability_advance_hook = advance;
+    s_availability_enable_hook = enable;
+    s_availability_context = context;
+}
+
+void scene_availability_style_select(int style)
+{
+    if (style >= 0 && style < SCENE_AVAILABILITY_STYLE_CAPACITY) {
+        s_scene_availability_selected_style = style;
+    }
+}
+
+void scene_availability_style_slot_install(int style, int group, int slot,
+                                           void* handle, int configured)
+{
+    if (style < 0 || style >= SCENE_AVAILABILITY_STYLE_CAPACITY
+        || group < 0 || group >= 3
+        || slot < 0 || slot >= 4) {
+        return;
+    }
+    s_scene_availability_styles[style][group][slot].handle = handle;
+    s_scene_availability_styles[style][group][slot].configured = configured;
+    s_scene_availability_styles[style][group][slot].enabled = 0;
+}
+
+void scene_availability_transient_slot_install(int group, int slot,
+                                               void* handle, int configured)
+{
+    if (group < 0 || group >= 2 || slot < 0 || slot >= 30) {
+        return;
+    }
+    s_scene_availability_transients[group][slot].handle = handle;
+    s_scene_availability_transients[group][slot].configured = configured;
+    s_scene_availability_transients[group][slot].enabled = 0;
+    s_scene_availability_transients[group][slot].pending = 0;
+}
+
+void scene_cell_table_pair_install(int style, int group, int slot,
+                                   uint32_t first, uint32_t second)
+{
+    if (style < 0 || style >= SCENE_AVAILABILITY_STYLE_CAPACITY
+        || group < 0 || group >= 3 || slot < 0 || slot >= 4) {
+        return;
+    }
+    s_scene_cell_table_pairs[style][group][slot][0] = first;
+    s_scene_cell_table_pairs[style][group][slot][1] = second;
+}
+
+/* ReadCellTablePair (FUN_0040c570): reads the two words in the selected
+ * style's group slot. Invalid native indices return zero values. */
+// FUNCTION: LEGORR 0x0040C570
+void scene_cell_table_pair_read(int group, int slot, uint32_t* first,
+                                uint32_t* second)
+{
+    uint32_t a = 0u;
+    uint32_t b = 0u;
+    if (group >= 0 && group < 3 && slot >= 0 && slot < 4) {
+        a = s_scene_cell_table_pairs[s_scene_availability_selected_style]
+                                    [group][slot][0];
+        b = s_scene_cell_table_pairs[s_scene_availability_selected_style]
+                                    [group][slot][1];
+    }
+    if (first != NULL) {
+        *first = a;
+    }
+    if (second != NULL) {
+        *second = b;
+    }
+}
+
+void scene_resource_name_hooks_install(SceneResourceNameFormatHook format,
+                                       SceneResourceNameApplyHook apply,
+                                       void* context)
+{
+    s_resource_name_format_hook = format;
+    s_resource_name_apply_hook = apply;
+    s_resource_name_context = context;
+}
+
+void scene_resource_name_slot_install(int style, int group, int slot,
+                                      uint32_t handle_key,
+                                      uint32_t secondary_key, void* handle,
+                                      uint32_t name_base, uint32_t name_count)
+{
+    SceneResourceNameSlot* entry;
+    if (style < 0 || style >= SCENE_AVAILABILITY_STYLE_CAPACITY
+        || group < 0 || group >= 3 || slot < 0 || slot >= 4) {
+        return;
+    }
+    entry = &s_scene_resource_name_slots[style][group][slot];
+    entry->handle_key = handle_key;
+    entry->secondary_key = secondary_key;
+    entry->handle = handle;
+    entry->name_base = name_base;
+    entry->name_count = name_count;
+}
+
+/* ResourceSlotRegisterName (FUN_0040c5b0): find the matching handle pair,
+ * claim its next available registration bit, and delegate name formatting
+ * and application through the engine-facing hooks. */
+// FUNCTION: LEGORR 0x0040C5B0
+int scene_resource_slot_register_name(uint32_t handle_key,
+                                      uint32_t secondary_key)
+{
+    int group;
+    for (group = 0; group < 3; ++group) {
+        int slot;
+        for (slot = 0; slot < 4; ++slot) {
+            SceneResourceNameSlot* entry =
+                &s_scene_resource_name_slots[s_scene_availability_selected_style]
+                                            [group][slot];
+            uint32_t index;
+            if (entry->handle == NULL || entry->handle_key != handle_key
+                || entry->secondary_key != secondary_key) {
+                continue;
+            }
+            for (index = 0u; index < entry->name_count && index < 32u; ++index) {
+                uint32_t bit = 1u << index;
+                void* formatted;
+                if ((entry->registered & bit) != 0u) {
+                    continue;
+                }
+                entry->registered |= bit;
+                if (s_resource_name_format_hook == NULL
+                    || s_resource_name_apply_hook == NULL) {
+                    return 0;
+                }
+                formatted = s_resource_name_format_hook(entry->handle,
+                    entry->name_base, index, s_resource_name_context);
+                if (formatted == NULL) {
+                    return 0;
+                }
+                s_resource_name_apply_hook(entry->handle, formatted,
+                                           s_resource_name_context);
+                return 1;
+            }
+            return 0;
+        }
+    }
+    return 0;
+}
+
+void scene_resource_instance_hooks_install(SceneResourceParentLoadHook load,
+                                           SceneResourceChildCreateHook clone,
+                                           SceneResourceLockHook lock,
+                                           void* context)
+{
+    s_resource_parent_load_hook = load;
+    s_resource_child_create_hook = clone;
+    s_resource_lock_hook = lock;
+    s_resource_instance_context = context;
+}
+
+/* IndexedResourceHandleSetCreate (FUN_0040c1b0): create and lock a parent
+ * resource, then populate its fixed 30-child transient group. */
+// FUNCTION: LEGORR 0x0040C1B0
+int indexed_resource_handle_set_create(void* scene, const char* path,
+                                       int group)
+{
+    int index;
+    void* parent;
+    if (group < 0 || group >= 2 || s_resource_parent_load_hook == NULL
+        || s_resource_child_create_hook == NULL) {
+        return 0;
+    }
+    parent = s_resource_parent_load_hook(scene, path,
+                                         s_resource_instance_context);
+    if (parent == NULL) {
+        return 0;
+    }
+    s_scene_availability_parents[group] = parent;
+    if (s_resource_lock_hook != NULL) {
+        s_resource_lock_hook(parent, 1, s_resource_instance_context);
+    }
+    for (index = 0; index < 30; ++index) {
+        SceneAvailabilitySlot* entry =
+            &s_scene_availability_transients[group][index];
+        entry->handle = s_resource_child_create_hook(
+            parent, s_resource_instance_context);
+        entry->configured = entry->handle != NULL;
+        entry->enabled = 0;
+        entry->pending = 0;
+        if (entry->handle != NULL && s_resource_lock_hook != NULL) {
+            s_resource_lock_hook(entry->handle, 1,
+                                 s_resource_instance_context);
+        }
+    }
+    return 1;
+}
+
+void scene_act_hooks_install(SceneActLoadHook load,
+                             SceneActNameRegisterHook register_name,
+                             void* context)
+{
+    s_scene_act_load_hook = load;
+    s_scene_act_name_register_hook = register_name;
+    s_scene_act_context = context;
+}
+
+/* SceneActSlotLoadAndRegister (FUN_0040c0d0): load an LWS typed resource,
+ * retry the corpus's ANIM type fallback, then lock its parent and four
+ * children into the configured style/group record. */
+// FUNCTION: LEGORR 0x0040C0D0
+int scene_act_slot_load_and_register(void* scene, const char* path,
+                                     int style, int group,
+                                     const char* name)
+{
+    void* parent;
+    int slot;
+    if (style < 0 || style >= SCENE_AVAILABILITY_STYLE_CAPACITY
+        || group < 0 || group >= 3 || path == NULL
+        || s_scene_act_load_hook == NULL
+        || s_resource_child_create_hook == NULL) {
+        return 0;
+    }
+    parent = s_scene_act_load_hook(scene, path, "LWS", s_scene_act_context);
+    if (parent == NULL) {
+        parent = s_scene_act_load_hook(scene, path, "ANIM", s_scene_act_context);
+    }
+    if (parent == NULL) {
+        return 0;
+    }
+    s_scene_act_parents[style][group] = parent;
+    if (s_resource_lock_hook != NULL) {
+        s_resource_lock_hook(parent, 1, s_resource_instance_context);
+    }
+    for (slot = 0; slot < 4; ++slot) {
+        SceneAvailabilitySlot* child =
+            &s_scene_availability_styles[style][group][slot];
+        child->handle = s_resource_child_create_hook(
+            parent, s_resource_instance_context);
+        child->configured = child->handle != NULL ? 1 : 0;
+        child->enabled = 0;
+        child->pending = 0;
+        s_scene_pose_slot_claimed[style][group][slot] = 0;
+        if (child->handle != NULL && s_resource_lock_hook != NULL) {
+            s_resource_lock_hook(child->handle, 1, s_resource_instance_context);
+        }
+    }
+    if (s_scene_act_name_register_hook != NULL) {
+        s_scene_act_name_register_hook(parent, name, (uint32_t)style,
+                                       (uint32_t)group, s_scene_act_context);
+    }
+    return 1;
+}
+
+void scene_slot_pose_hook_install(SceneSlotPoseHook hook, void* context)
+{
+    s_scene_slot_pose_hook = hook;
+    s_scene_slot_pose_context = context;
+}
+
+/* SceneSlotPoseScaleRegister (FUN_0040c230): claim the first vacant pose
+ * slot in a style group, initialize its scene transform through the hook,
+ * and retain the paired values used by ReadCellTablePair. */
+// FUNCTION: LEGORR 0x0040C230
+int scene_slot_pose_scale_register(int group, uint32_t first,
+                                   uint32_t second, float x, float y,
+                                   float z, float heading, float pitch)
+{
+    int slot;
+    SceneAvailabilitySlot* model;
+    if (group < 0 || group >= 3 || s_scene_slot_pose_hook == NULL) {
+        return 0;
+    }
+    for (slot = 0; slot < 4; ++slot) {
+        if (s_scene_pose_slot_claimed[s_scene_availability_selected_style]
+                                     [group][slot] != 0) {
+            continue;
+        }
+        model = &s_scene_availability_styles[s_scene_availability_selected_style]
+                                            [group][slot];
+        if (model->handle == NULL
+            || s_scene_slot_pose_hook(model->handle, group, slot, x, y, z,
+                                      heading, pitch,
+                                      s_scene_slot_pose_context) == 0) {
+            return 0;
+        }
+        s_scene_pose_slot_claimed[s_scene_availability_selected_style]
+                                 [group][slot] = 1;
+        s_scene_cell_table_pairs[s_scene_availability_selected_style]
+                                [group][slot][0] = first;
+        s_scene_cell_table_pairs[s_scene_availability_selected_style]
+                                [group][slot][1] = second;
+        return 1;
+    }
+    return 0;
+}
+
+/* RockFallStyleSceneResourcesRelease (FUN_0040c6c0): release the four
+ * resource handles in each of three groups for the selected style. */
+// FUNCTION: LEGORR 0x0040C6C0
+void rock_fall_style_scene_resources_release(void)
+{
+    int group;
+    for (group = 0; group < 3; ++group) {
+        int slot;
+        for (slot = 0; slot < 4; ++slot) {
+            SceneAvailabilitySlot* entry =
+                &s_scene_availability_styles[s_scene_availability_selected_style]
+                                             [group][slot];
+            if (entry->handle != NULL && s_scene_release_hook != NULL) {
+                s_scene_release_hook(entry->handle, s_scene_lifecycle_context);
+            }
+            entry->handle = NULL;
+            entry->configured = 0;
+            entry->enabled = 0;
+            entry->pending = 0;
+            s_scene_pose_slot_claimed[s_scene_availability_selected_style]
+                                     [group][slot] = 0;
+        }
+    }
+}
+
+void terrain_point_object_install(int slot, void* handle)
+{
+    if (slot < 0 || slot >= 4) {
+        return;
+    }
+    if (slot >= (int)s_terrain_point_object_count) {
+        s_terrain_point_object_count = (uint32_t)(slot + 1);
+    }
+    s_terrain_point_objects[slot] = handle;
+}
+
+/* TerrainPointObjectsRemoveMatching (FUN_0040c830): advance each live
+ * point object and remove completed objects with swap-with-last compaction. */
+// FUNCTION: LEGORR 0x0040C830
+void terrain_point_objects_remove_matching(float delta)
+{
+    uint32_t index = 0u;
+    if (s_terrain_point_object_count > 4u) {
+        s_terrain_point_object_count = 4u;
+    }
+    while (index < s_terrain_point_object_count) {
+        void* handle = s_terrain_point_objects[index];
+        if (handle != NULL && s_scene_advance_hook != NULL
+            && s_scene_advance_hook(handle, delta,
+                                    s_scene_lifecycle_context) != 0) {
+            if (s_scene_release_hook != NULL) {
+                s_scene_release_hook(handle, s_scene_lifecycle_context);
+            }
+            --s_terrain_point_object_count;
+            s_terrain_point_objects[index] =
+                s_terrain_point_objects[s_terrain_point_object_count];
+            s_terrain_point_objects[s_terrain_point_object_count] = NULL;
+        } else {
+            ++index;
+        }
+    }
+}
+
+void transient_effect_configure_hook_install(
+    TransientEffectConfigureHook hook, void* context)
+{
+    s_transient_effect_configure_hook = hook;
+    s_transient_effect_configure_context = context;
+}
+
+/* TransientEffectRenderSlotConfigure (FUN_0040c2f0): configure the first
+ * available child in one of the two 30-slot transient groups. */
+// FUNCTION: LEGORR 0x0040C2F0
+int transient_effect_render_slot_configure(int group, float x, float y,
+                                           float size, float heading,
+                                           float dx, float dy)
+{
+    int slot;
+    if (group < 0 || group >= 2 || s_transient_effect_configure_hook == NULL) {
+        return 0;
+    }
+    for (slot = 0; slot < 30; ++slot) {
+        SceneAvailabilitySlot* entry =
+            &s_scene_availability_transients[group][slot];
+        if (entry->configured != 0 || entry->pending != 0
+            || entry->handle == NULL) {
+            continue;
+        }
+        if (s_transient_effect_configure_hook(entry->handle, group, x, y,
+                size, heading, dx, dy,
+                s_transient_effect_configure_context) == 0) {
+            return 0;
+        }
+        entry->pending = 1;
+        entry->enabled = 0;
+        return 1;
+    }
+    return 0;
+}
+
+static int scene_availability_advance(SceneAvailabilitySlot* slot, float delta)
+{
+    if ((slot->configured != 0 && slot->pending == 0)
+        || slot->enabled != 0 || slot->handle == NULL
+        || s_availability_advance_hook == NULL
+        || s_availability_advance_hook(slot->handle, delta,
+                                       s_availability_context) <= 0) {
+        return 0;
+    }
+    if (s_availability_enable_hook != NULL) {
+        s_availability_enable_hook(slot->handle, s_availability_context);
+    }
+    slot->configured = 1;
+    slot->pending = 0;
+    slot->enabled = 1;
+    return 1;
+}
+
+/* FUNCTION: LEGORR 0x0040C3A0 */
+int scene_resource_availability_sweep(float delta, uint32_t** groups_out,
+                                      uint32_t** slots_out)
+{
+    int count = 0;
+    int group;
+    int slot;
+    terrain_point_objects_remove_matching(delta);
+    scene_light_pool_primary_expire(delta);
+    scene_light_pool_secondary_expire(delta);
+    terrain_marker_sets_clear(delta);
+    for (group = 0; group < 3; ++group) {
+        for (slot = 0; slot < 4; ++slot) {
+            SceneAvailabilitySlot* entry =
+                &s_scene_availability_styles[s_scene_availability_selected_style]
+                                             [group][slot];
+            if (scene_availability_advance(entry, delta) != 0 && count < 12) {
+                s_scene_availability_groups[count] = (uint32_t)group;
+                s_scene_availability_slots[count] = (uint32_t)slot;
+                ++count;
+            }
+        }
+    }
+    for (group = 0; group < 2; ++group) {
+        for (slot = 0; slot < 30; ++slot) {
+            scene_availability_advance(&s_scene_availability_transients[group][slot],
+                                       delta);
+        }
+    }
+    if (groups_out != NULL) {
+        *groups_out = s_scene_availability_groups;
+    }
+    if (slots_out != NULL) {
+        *slots_out = s_scene_availability_slots;
+    }
+    return count;
+}
+
+// FUNCTION: LEGORR 0x00477220
+void render_resource_track_and_retain(void* resource)
+{
+    void** next;
+    ResourceRetainInterface* interface_object;
+    if (resource == NULL) {
+        return;
+    }
+    next = (void**)((unsigned char*)resource + 0x1c);
+    *next = render_resource_tracked_head;
+    render_resource_tracked_head = resource;
+    interface_object = *(ResourceRetainInterface**)((unsigned char*)resource + 0x10);
+    interface_object->retain();
+}
+
+// FUNCTION: LEGORR 0x00477270
+void resource_interface_call_slot88(void* wrapper)
+{
+    ResourceSlot88Interface* interface_object =
+        *(ResourceSlot88Interface**)((unsigned char*)wrapper + 0x10);
+    interface_object->slot_88();
+}
+
+// FUNCTION: LEGORR 0x00476d10
+void render_resource_pair_release_and_clear(void** pair)
+{
+    void* property;
+    if (pair == NULL) {
+        return;
+    }
+    property = pair[1] != NULL
+        ? ((ResourcePropertyInterface*)pair[1])->property_get() : NULL;
+    engine_heap_free(property);
+    engine_heap_free(pair[0]);
+    pair[0] = NULL;
+    pair[1] = NULL;
+}
+
+// FUNCTION: LEGORR 0x004762f0
+void scene_property_owned_buffer_release(void* property)
+{
+    void* record;
+    void* owned_buffer;
+    if (property == NULL) {
+        return;
+    }
+    record = ((ResourcePropertyInterface*)property)->property_get();
+    owned_buffer = record != NULL ? *(void**)((char*)record + 0x08) : NULL;
+    engine_heap_free(owned_buffer);
+}
+
+// FUNCTION: LEGORR 0x00477250
+void resource_interface_call_slot40_and_clear_field14(
+    ResourceInterfaceWrapper* wrapper, uint32_t value)
+{
+    if (wrapper == NULL) {
+        return;
+    }
+    if (wrapper->interface_object != NULL) {
+        ((ResourceSlot40Interface*)wrapper->interface_object)->slot_40(value);
+    }
+    wrapper->field14 = 0;
+}
 
 #define RESOURCE_MAX_WADS 10
 #define RESOURCE_PATH_MAX 4096
@@ -193,8 +2624,12 @@ typedef struct ResourceWad {
 static ResourceWad s_wads[RESOURCE_MAX_WADS];
 static int       s_wad_count = 0;
 static char      s_wad_prefix[RESOURCE_PATH_MAX] = "LegoRR";
+// GLOBAL: LEGORR 0x005339a0
 static char      s_wad_mount_path_cache[0x400];
+// GLOBAL: LEGORR 0x005343b8
 static int       s_wad_mount_path_cache_valid;
+// GLOBAL: LEGORR 0x00533da0
+static char      s_wad_mount_path_rewrite[0x400];
 
 /* CD/STD fallback state (finding 01). */
 #ifdef LEGORRR_BACKEND_WINAPI
@@ -205,6 +2640,9 @@ static int       s_wad_mount_path_cache_valid;
 static char  s_cd_drive    = 'A'; /* DAT_005343b4 analog; default mirrors .rdata */
 static char  s_cd_data_dir[RESOURCE_PATH_MAX] = "Data";
 static char  s_cd_root[RESOURCE_PATH_MAX] = ""; /* "" = "%c:\" default */
+static ResourceDriveTypeQueryFn s_cd_drive_type_query;
+static ResourcePathExistsFn s_cd_path_exists;
+static void* s_cd_probe_context;
 
 static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
 {
@@ -230,6 +2668,37 @@ static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
     }
 #endif
     return out;
+}
+
+/* PathResolveAgainstBase (FUN_00480220): form a path under the configured
+ * data root and reject parent-directory components that escape that root. */
+// FUNCTION: LEGORR 0x00480220
+const char* resource_path_resolve_against_base(const char* path)
+{
+    static char resolved[RESOURCE_PATH_MAX];
+    char base[RESOURCE_PATH_MAX];
+    const char* part;
+    size_t length;
+    if (path == NULL) return NULL;
+    if (*path == '\\') ++path;
+    length = strlen(path);
+    if (length >= sizeof(resolved)) return NULL;
+    if (*path == '/' || strchr(path, ':') != NULL) return NULL;
+    part = path;
+    while (*part != '\0') {
+        const char* end = part;
+        size_t segment_length;
+        while (*end != '\0' && *end != '/' && *end != '\\') ++end;
+        segment_length = (size_t)(end - part);
+        if (segment_length == 2 && part[0] == '.' && part[1] == '.') {
+            return NULL;
+        }
+        part = (*end == '\0') ? end : end + 1;
+    }
+    ares_cd_path("", base, sizeof(base));
+    if (strlen(base) + length >= sizeof(resolved)) return NULL;
+    snprintf(resolved, sizeof(resolved), "%s%s", base, path);
+    return resolved;
 }
 
 /* SoundPathFallbackFormat (FUN_0047f660): only format the fallback when a
@@ -274,6 +2743,54 @@ static const char* ares_cd_root_path(const char* name, char* out, size_t out_sz)
         snprintf(out, out_sz, "%c:%c%s", s_cd_drive, RES_PATH_SEP, name);
     }
     return out;
+}
+
+void resource_cd_probe_hooks_set(ResourceDriveTypeQueryFn drive_type,
+                                 ResourcePathExistsFn path_exists,
+                                 void* context)
+{
+    s_cd_drive_type_query = drive_type;
+    s_cd_path_exists = path_exists;
+    s_cd_probe_context = context;
+}
+
+static int resource_cd_key_path_exists(const char* path)
+{
+    FILE* fp;
+    if (s_cd_path_exists != NULL) {
+        return s_cd_path_exists(path, s_cd_probe_context);
+    }
+    fp = fopen(path, "rb");
+    if (fp == NULL) return 0;
+    fclose(fp);
+    return 1;
+}
+
+/* FindCdKeyDrive (FUN_0047f4f0): scan optical drive letters C through Z,
+ * retaining the first drive with a readable cd.key marker. Platform hooks
+ * supply drive type and file probes; a mounted root uses its file probe. */
+// FUNCTION: LEGORR 0x0047f4f0
+int resource_find_cd_key_drive(void)
+{
+    char path[RESOURCE_PATH_MAX];
+    char drive;
+    if (s_cd_root[0] != '\0') {
+        ares_cd_root_path("cd.key", path, sizeof(path));
+        return resource_cd_key_path_exists(path);
+    }
+    for (drive = 'C'; drive <= 'Z'; ++drive) {
+        if (s_cd_drive_type_query != NULL &&
+            s_cd_drive_type_query(drive, s_cd_probe_context) != 5) {
+            continue;
+        }
+        snprintf(path, sizeof(path), "%c:%c%s%ccd.key", drive,
+                 RES_PATH_SEP, s_cd_data_dir, RES_PATH_SEP);
+        if (resource_cd_key_path_exists(path)) {
+            s_cd_drive = drive;
+            return 1;
+        }
+    }
+    return 0;
 }
 
 int resource_cd_present(void)
@@ -657,6 +3174,39 @@ int wad_entry_find_across_mounted_archives(const char* name, int wad_idx)
     return -1;
 }
 
+// FUNCTION: LEGORR 0x0047ffc0
+char* game_file_mounted_path_prefix_rewrite(const char* path)
+{
+    size_t path_length;
+    size_t prefix_length;
+    char prefix[0x400];
+    if (!s_wad_mount_path_cache_valid || path == NULL) return (char*)path;
+    path_length = strlen(path);
+    prefix_length = strlen(s_wad_mount_path_cache);
+    if (path_length <= prefix_length || prefix_length == 0u
+        || prefix_length >= sizeof(prefix)) return (char*)path;
+    memcpy(prefix, path, prefix_length);
+    prefix[prefix_length] = '\0';
+    if (strcasecmp_lite(prefix, s_wad_mount_path_cache) != 0)
+        return (char*)path;
+    snprintf(s_wad_mount_path_rewrite, sizeof(s_wad_mount_path_rewrite),
+             "%s", path + prefix_length);
+    return s_wad_mount_path_rewrite;
+}
+
+/* FileOpenRouteSelect (FUN_0047fe30): choose loose-file handling for
+ * non-write modes only when the rewritten path is not present in a mounted
+ * archive. */
+// FUNCTION: LEGORR 0x0047fe30
+int game_file_open_route_select(const char* path, const char* mode)
+{
+    char* rewritten;
+    if (path == NULL || mode == NULL) return 2;
+    if (mode[0] == 'w' || mode[0] == 'W') return 1;
+    rewritten = game_file_mounted_path_prefix_rewrite(path);
+    return wad_entry_find_across_mounted_archives(rewritten, -1) == -1;
+}
+
 /* Open an entry inside mounted wad `wad_idx` (no payload yet). */
 static Resource* ares_open_wad(int wad_idx, int entry_idx, const char* name)
 {
@@ -765,6 +3315,196 @@ Resource* resource_open(const char* name, int mode)
     return NULL;
 }
 
+/* MapOpen2 (FUN_00480170): open a map resource, expose its progress and
+ * payload to the map-index callbacks, dispatch the resolved record, and
+ * optionally transfer an engine-heap copy of the payload to the caller. */
+// FUNCTION: LEGORR 0x00480170
+int map_open2(const char* path, const MapOpenOps* ops,
+              void** map_data_out, int32_t* size_out)
+{
+    Resource* resource;
+    Resource callback_resource;
+    void* map_data = NULL;
+    void* map_record;
+    int32_t size;
+    int map_index;
+    int result = -1;
+    if (map_data_out != NULL) *map_data_out = NULL;
+    if (size_out != NULL) *size_out = 0;
+    if (path == NULL || ops == NULL || ops->map_index_find == NULL ||
+        ops->map_record_get == NULL || ops->map_record_open == NULL) return -1;
+    resource = resource_open(path, RESOURCE_AUTO);
+    if (resource == NULL) return -1;
+    size = resource_read(resource);
+    if (size < 0 || resource->data == NULL) {
+        resource_free(resource);
+        return -1;
+    }
+    if (ops->progress != NULL) {
+        ops->progress(ops->context, path, (uint32_t)size);
+    }
+    map_index = ops->map_index_find(ops->context, resource);
+    if (map_index < 0) {
+        resource_free(resource);
+        return -1;
+    }
+    map_record = ops->map_record_get(ops->context, map_index);
+    if (map_record == NULL) {
+        resource_free(resource);
+        return -1;
+    }
+    map_data = engine_heap_alloc(size > 0 ? (long)size : 1L);
+    if (map_data == NULL) {
+        resource_free(resource);
+        return -1;
+    }
+    if (size > 0) memcpy(map_data, resource->data, (size_t)size);
+    callback_resource = *resource;
+    callback_resource.data = (uint8_t*)map_data;
+    if (ops->map_record_open(ops->context, map_record,
+                             &callback_resource) != 0) {
+        if (map_data != NULL) engine_heap_free(map_data);
+        resource_free(resource);
+        return -1;
+    }
+    if (map_data_out != NULL) {
+        *map_data_out = map_data;
+        if (size_out != NULL) *size_out = size;
+    }
+    else {
+        engine_heap_free(map_data);
+    }
+    result = map_index;
+    resource_free(resource);
+    return result;
+}
+
+/* FileTokenListLoadAndTreeScan (FUN_004802d0): tokenize the configured file
+ * into fixed 256-byte entries, then hand the list and root to the directory
+ * walker. Whitespace-delimited parsing matches the token-reader boundary. */
+// FUNCTION: LEGORR 0x004802d0
+int resource_file_token_list_load_and_tree_scan(
+    const char* token_file, const char* root, ResourceFileTokenList* list,
+    const ResourceFileTokenListOps* ops)
+{
+    Resource* resource;
+    int32_t size;
+    int32_t position = 0;
+    if (list == NULL || token_file == NULL) return -1;
+    list->count = 0u;
+    resource = resource_open(token_file, RESOURCE_AUTO);
+    if (resource == NULL) return -1;
+    size = resource_read(resource);
+    if (size < 0 || resource->data == NULL) {
+        resource_free(resource);
+        return -1;
+    }
+    while (position < size && list->count < 512u) {
+        uint32_t length = 0u;
+        char* token;
+        while (position < size &&
+               (resource->data[position] == ' ' ||
+                resource->data[position] == '\t' ||
+                resource->data[position] == '\r' ||
+                resource->data[position] == '\n')) ++position;
+        if (position >= size) break;
+        token = list->tokens[list->count];
+        while (position < size && resource->data[position] != ' ' &&
+               resource->data[position] != '\t' &&
+               resource->data[position] != '\r' &&
+               resource->data[position] != '\n') {
+            if (length < 255u) token[length++] = (char)resource->data[position];
+            ++position;
+        }
+        token[length] = '\0';
+        if (length != 0u) list->count++;
+    }
+    resource_free(resource);
+    if (ops != NULL && ops->directory_tree_scan != NULL) {
+        ops->directory_tree_scan(ops->context, root, list);
+    }
+    return (int)list->count;
+}
+
+/* DirectoryTokenListCompare (FUN_00480570): find a token with the same
+ * ASCII case-folded spelling. The original discards the comparison result;
+ * this API exposes it to the reconstructed directory walker. */
+// FUNCTION: LEGORR 0x00480570
+int resource_directory_token_list_contains(
+    const ResourceFileTokenList* list, const char* token)
+{
+    uint32_t index;
+    if (list == NULL || token == NULL) return 0;
+    for (index = 0u; index < list->count && index < 512u; ++index) {
+        if (strcasecmp_lite(token, list->tokens[index]) == 0) return 1;
+    }
+    return 0;
+}
+
+static void resource_directory_tree_scan_walk(
+    const char* root, const ResourceFileTokenList* tokens,
+    const ResourceDirectoryScanOps* ops)
+{
+    void* scan = NULL;
+    char name[260];
+    char pattern[1024];
+    unsigned int root_length;
+    unsigned int offset;
+    if (root == NULL || ops == NULL || ops->scan_open == NULL ||
+        ops->scan_next == NULL) return;
+    root_length = (unsigned int)strlen(root);
+    if (root_length + 5u >= sizeof(pattern)) return;
+    memcpy(pattern, root, root_length);
+    offset = root_length;
+    if (offset != 0u && pattern[offset - 1u] != '/' &&
+        pattern[offset - 1u] != '\\') {
+        pattern[offset++] = '\\';
+    }
+    memcpy(pattern + offset, "*.*", 4u);
+    if (!ops->scan_open(ops->context, pattern, &scan) || scan == NULL) return;
+    for (;;) {
+        int is_directory = 0;
+        unsigned int name_length;
+        char child_path[1024];
+        int next;
+        name[0] = '\0';
+        next = ops->scan_next(ops->context, scan, name, &is_directory);
+        if (next <= 0) break;
+        name[259] = '\0';
+        if (name[0] == '\0' || strcmp(name, ".") == 0 ||
+            strcmp(name, "..") == 0) continue;
+        root_length = (unsigned int)strlen(root);
+        name_length = (unsigned int)strlen(name);
+        if (root_length + name_length + 2u >= sizeof(child_path)) continue;
+        memcpy(child_path, root, root_length);
+        offset = root_length;
+        if (offset != 0u && child_path[offset - 1u] != '/' &&
+            child_path[offset - 1u] != '\\') {
+            child_path[offset++] = '\\';
+        }
+        memcpy(child_path + offset, name, name_length + 1u);
+        if (is_directory != 0) {
+            resource_directory_tree_scan_walk(child_path, tokens, ops);
+        }
+        else {
+            /* The reference performs this comparison for side effects only;
+             * its helper does not return a membership result. */
+            resource_directory_token_list_contains(tokens, child_path);
+        }
+    }
+    if (ops->scan_close != NULL) ops->scan_close(ops->context, scan);
+}
+
+/* DirectoryTreeScan (FUN_00480390): search root\\*.*, skip the dot entries,
+ * recurse into directories, and compare each file path against the token list. */
+// FUNCTION: LEGORR 0x00480390
+void resource_directory_tree_scan(const char* root,
+                                  const ResourceFileTokenList* tokens,
+                                  const ResourceDirectoryScanOps* ops)
+{
+    resource_directory_tree_scan_walk(root, tokens, ops);
+}
+
 int32_t resource_read(Resource* r)
 {
     if (r == NULL || r->data != NULL) {
@@ -854,6 +3594,90 @@ void resource_free(Resource* r)
     free(r);
 }
 
+static WholeFileProgressHook s_whole_file_progress_hook;
+static void* s_whole_file_progress_user;
+
+/* FUNCTION: LEGORR 0x004800C0 */
+void* read_whole_file_with_progress(const char* path, int32_t* size_out,
+                                    int binary_mode)
+{
+    Resource* resource;
+    int32_t length;
+    void* buffer;
+    (void)binary_mode; /* resource payloads are byte streams in this port */
+    if (size_out != NULL) {
+        *size_out = 0;
+    }
+    if (path == NULL) {
+        return NULL;
+    }
+    resource = resource_open(path, RESOURCE_AUTO);
+    if (resource == NULL) {
+        return NULL;
+    }
+    length = resource_read(resource);
+    if (length < 0) {
+        resource_free(resource);
+        return NULL;
+    }
+    if (s_whole_file_progress_hook != NULL) {
+        s_whole_file_progress_hook(path, (uint32_t)length,
+                                   s_whole_file_progress_user);
+    }
+    buffer = engine_heap_alloc(length > 0 ? (long)length : 1L);
+    if (buffer == NULL) {
+        resource_free(resource);
+        return NULL;
+    }
+    if (length > 0 && resource->data != NULL) {
+        memcpy(buffer, resource->data, (size_t)length);
+    }
+    if (size_out != NULL) {
+        *size_out = length;
+    }
+    resource_free(resource);
+    return buffer;
+}
+
+/* FUNCTION: LEGORR 0x004800A0 */
+void* read_whole_file(const char* path, int32_t* size_out)
+{
+    return read_whole_file_with_progress(path, size_out, 1);
+}
+
+void whole_file_progress_hook_set(WholeFileProgressHook hook, void* user)
+{
+    s_whole_file_progress_hook = hook;
+    s_whole_file_progress_user = user;
+}
+
+/* FixedRecordSlotAllocate (FUN_0048be00): the file-resource record band is
+ * separate from the 16-entry WAD stream-slot table below. The reference
+ * scans ten 0x24-byte records by their +4 occupancy dword, zeros all nine
+ * dwords in the first free record, and returns its index. The port stores
+ * those exact 32-bit words; pointer-bearing users are represented by the
+ * surrounding resource-layer APIs rather than widening this corpus record. */
+#define FILE_RESOURCE_RECORD_SLOTS 10
+typedef struct FileResourceRecordSlot {
+    uint32_t words[9];
+} FileResourceRecordSlot;
+static FileResourceRecordSlot s_file_resource_record_slots[
+    FILE_RESOURCE_RECORD_SLOTS];
+
+/* FUNCTION: LEGORR 0x0048BE00 */
+int file_resource_record_slot_allocate(void)
+{
+    int i;
+    for (i = 0; i < FILE_RESOURCE_RECORD_SLOTS; ++i) {
+        if (s_file_resource_record_slots[i].words[1] == 0u) {
+            memset(&s_file_resource_record_slots[i], 0,
+                   sizeof(s_file_resource_record_slots[i]));
+            return i;
+        }
+    }
+    return -1;
+}
+
 /* --- the fixed-record slot resources (see resource.hpp) -------------------- */
 #define FIXED_RECORD_SLOTS 16
 
@@ -932,26 +3756,38 @@ int wad_file_seek(GameFileHandle* handle, int offset, int origin)
 {
     WadFileStreamState* state;
     int length;
-    if (handle == NULL || handle->flag != 1 || handle->stream == NULL) {
+    uint32_t type;
+    if (handle == NULL) return 0;
+    type = game_file_system_type_get(handle);
+    if (type == 1u) {
+        if (handle->stream == NULL) return 0;
+        return fseek((FILE*)handle->stream, offset, origin);
+    }
+    if (type != 0u) {
+        resource_debug_output_format(s_game_file_unknown_type_format,
+            s_game_file_source_path, 0x170, s_game_file_seek_name);
         return 0;
     }
+    if (handle->stream == NULL) return 0;
     state = (WadFileStreamState*)handle->stream;
-    length = wad_stream_length_get(state->slot);
     if (origin == 0) {
         state->cursor = offset;
+        length = wad_stream_length_get(state->slot);
+        if (length < state->cursor) state->cursor = length;
+        if (state->cursor < 0) state->cursor = 0;
     }
     else if (origin == 1) {
         state->cursor += offset;
+        length = wad_stream_length_get(state->slot);
+        if (length < state->cursor) state->cursor = length;
+        if (state->cursor < 0) state->cursor = 0;
     }
     else if (origin == 2) {
-        state->cursor = length + offset;
-        return 0;
+        state->cursor = wad_stream_length_get(state->slot) + offset;
     }
     else {
-        return 0;
+        resource_debug_output_format(s_game_file_seek_mode_format, origin);
     }
-    if (state->cursor > length) state->cursor = length;
-    if (state->cursor < 0) state->cursor = 0;
     return 0;
 }
 
@@ -965,10 +3801,24 @@ int wad_file_read(void* destination, int element_size, int element_count,
     Resource* resource;
     int length;
     unsigned int bytes;
-    if (destination == NULL || handle == NULL || handle->flag != 1
-        || handle->stream == NULL || element_size <= 0 || element_count <= 0) {
+    uint32_t type;
+    if (handle == NULL) {
         return 0;
     }
+    type = game_file_system_type_get(handle);
+    if (type == 1u) {
+        if (destination == NULL || handle->stream == NULL || element_size <= 0
+            || element_count <= 0) return 0;
+        return (int)fread(destination, (size_t)element_size,
+                          (size_t)element_count, (FILE*)handle->stream);
+    }
+    if (type != 0u) {
+        resource_debug_output_format(s_game_file_unknown_type_format,
+            s_game_file_source_path, 0x18b, "WadFileRead");
+        return 0;
+    }
+    if (destination == NULL || handle->stream == NULL || element_size <= 0
+        || element_count <= 0) return 0;
     state = (WadFileStreamState*)handle->stream;
     resource = (Resource*)fixed_record_slot_resource_get(state->slot);
     if (resource == NULL) return 0;
@@ -988,11 +3838,108 @@ int wad_file_read(void* destination, int element_size, int element_count,
 int wad_file_cursor_get(GameFileHandle* handle)
 {
     WadFileStreamState* state;
-    if (handle == NULL || handle->flag != 1 || handle->stream == NULL) {
+    uint32_t type;
+    if (handle == NULL) return 0;
+    type = game_file_system_type_get(handle);
+    if (type == 0u) {
+        if (handle->stream == NULL) return 0;
+        state = (WadFileStreamState*)handle->stream;
+        return state->cursor;
+    }
+    if (type == 1u) {
+        if (handle->stream == NULL) return 0;
+        return (int)ftell((FILE*)handle->stream);
+    }
+    resource_debug_output_format(s_game_file_unknown_type_format,
+        s_game_file_source_path, 0x1d5, s_game_file_tell_name);
+    return 0;
+}
+
+/* GameFileReadByte (FUN_0047fc20) and its line readers (FUN_0047fce0,
+ * FUN_0047fd40): type 0 dispatches to the WAD cursor buffer and type 1 to
+ * the FILE-backed CRT stream. */
+// FUNCTION: LEGORR 0x0047fc20
+int game_file_read_byte(GameFileHandle* handle)
+{
+    WadFileStreamState* state;
+    Resource* resource;
+    int length;
+    int value;
+    uint32_t type;
+    if (handle == NULL) return -1;
+    type = game_file_system_type_get(handle);
+    if (type == 1u) {
+        return handle->stream != NULL ? fgetc((FILE*)handle->stream) : -1;
+    }
+    if (type != 0u) {
+        resource_debug_output_format(s_game_file_unknown_type_format,
+            s_game_file_source_path, 0x221, s_game_file_getc_name);
         return 0;
     }
+    if (handle->stream == NULL) return -1;
     state = (WadFileStreamState*)handle->stream;
-    return state->cursor;
+    resource = (Resource*)fixed_record_slot_resource_get(state->slot);
+    if (resource == NULL) return -1;
+    length = resource_read(resource);
+    if (length <= 0 || state->cursor < 0 || state->cursor >= length) return -1;
+    value = resource->data[state->cursor++];
+    return value;
+}
+
+// FUNCTION: LEGORR 0x0047fce0
+char* game_file_read_line(char* buffer, int capacity,
+                          GameFileHandle* handle)
+{
+    int count = 0;
+    int c;
+    if (buffer == NULL || capacity <= 1) return NULL;
+    while (count < capacity - 1) {
+        c = game_file_read_byte(handle);
+        if (c < 0) break;
+        buffer[count++] = (char)c;
+        if (c == '\0' || c == '\n') break;
+    }
+    if (count == 0) return NULL;
+    buffer[count] = '\0';
+    return buffer;
+}
+
+// FUNCTION: LEGORR 0x0047fd40
+char* game_file_read_line_dispatch(char* buffer, int capacity,
+                                   GameFileHandle* handle)
+{
+    uint32_t type;
+    if (handle == NULL) return NULL;
+    type = game_file_system_type_get(handle);
+    if (type == 0u) {
+        return game_file_read_line(buffer, capacity, handle);
+    }
+    if (type == 1u) {
+        if (buffer == NULL || capacity <= 0 || handle->stream == NULL) {
+            return NULL;
+        }
+        return fgets(buffer, capacity, (FILE*)handle->stream);
+    }
+    resource_debug_output_format(s_game_file_unknown_type_format,
+        s_game_file_source_path, 0x24b, s_game_file_gets_name);
+    return NULL;
+}
+
+// FUNCTION: LEGORR 0x00480050
+char* game_file_read_crlf_line(char* buffer, int capacity,
+                               GameFileHandle* handle)
+{
+    char* result = game_file_read_line_dispatch(buffer, capacity, handle);
+    size_t length;
+    if (result == NULL) return NULL;
+    length = strlen(buffer);
+    if (length != 0u && buffer[length - 1u] == '\n') {
+        buffer[--length] = '\0';
+    }
+    if (length != 0u && buffer[length - 1u] == '\r') {
+        buffer[length - 1u] = '\0';
+    }
+    return result;
 }
 
 void fixed_record_slot_install(int slot, void* resource)
@@ -1006,6 +3953,103 @@ void fixed_record_slot_install(int slot, void* resource)
 int fixed_record_slot_flag_peek(int slot)
 {
     return (slot >= 0 && slot < FIXED_RECORD_SLOTS) ? (int)s_fixed_slots[slot].in_use : 0;
+}
+
+static void fixed_record_slot_release(int slot)
+{
+    if (slot < 0 || slot >= FIXED_RECORD_SLOTS) return;
+    if (s_fixed_slots[slot].resource != NULL) {
+        resource_free((Resource*)s_fixed_slots[slot].resource);
+    }
+    s_fixed_slots[slot].resource = NULL;
+    s_fixed_slots[slot].in_use = 0;
+}
+
+// FUNCTION: LEGORR 0x0047ff50
+void game_file_handle_release(GameFileHandle* handle)
+{
+    if (handle == NULL) return;
+    if (handle->flag == 1) {
+        if (handle->stream != NULL) fclose((FILE*)handle->stream);
+        engine_heap_free_wrapper(handle);
+        return;
+    }
+    else if (handle->flag == 0) {
+        WadFileStreamState* state = (WadFileStreamState*)handle->stream;
+        if (state != NULL) {
+            fixed_record_slot_release(state->slot);
+            engine_heap_free_wrapper(state);
+        }
+    }
+    else {
+        return;
+    }
+    engine_heap_free_wrapper(handle);
+}
+
+// FUNCTION: LEGORR 0x0047fac0
+int game_file_close(GameFileHandle* handle)
+{
+    if (handle != NULL && (handle->flag == 0 || handle->flag == 1)) {
+        game_file_handle_release(handle);
+    }
+    return 0;
+}
+
+/* GameFileWrite (FUN_0047fa50): writes are supported by loose-file streams;
+ * WAD entries are immutable and report a zero item count. */
+// FUNCTION: LEGORR 0x0047fa50
+uint32_t game_file_write(const void* data, uint32_t size,
+                         uint32_t count, GameFileHandle* handle)
+{
+    if (handle == NULL || handle->flag != 1 || handle->stream == NULL ||
+        data == NULL || size == 0u || count == 0u) {
+        return 0u;
+    }
+    return (uint32_t)fwrite(data, (size_t)size, (size_t)count,
+                            (FILE*)handle->stream);
+}
+
+/* GameFilePrintFormat (FUN_0047fdb0): forward formatted text to a loose
+ * stream, returning the corpus's fixed zero status. */
+// FUNCTION: LEGORR 0x0047fdb0
+int game_file_print_format(GameFileHandle* handle, const char* format, ...)
+{
+    uint32_t type;
+    va_list args;
+    if (handle == NULL) return 0;
+    type = game_file_system_type_get(handle);
+    if (type == 0u) {
+        resource_debug_output_format(s_game_file_printf_wad_error);
+        return 0;
+    }
+    if (type != 1u) {
+        resource_debug_output_format(s_game_file_unknown_type_format,
+            s_game_file_source_path, 0x264, s_game_file_printf_name);
+        return 0;
+    }
+    if (handle->stream == NULL || format == NULL) return 0;
+    va_start(args, format);
+    (void)vfprintf((FILE*)handle->stream, format, args);
+    va_end(args);
+    return 0;
+}
+
+/* DebugOutputFormat (FUN_0047f600) formats one variadic message into the
+ * same 1024-byte scratch size as the reference and emits it to the process
+ * debug stream. The portable backend uses stderr for that stream. */
+// FUNCTION: LEGORR 0x0047f600
+void resource_debug_output_format(const char* format, ...)
+{
+    char buffer[1024];
+    va_list args;
+    if (format == NULL) {
+        return;
+    }
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    va_end(args);
+    fputs(buffer, stderr);
 }
 
 /* WadMemoryStreamBufferGet (FUN_0048c030): the corpus wrapper routes the
@@ -1348,6 +4392,7 @@ int wad_entry_read_into_stream_slot(WadStreamSlots* slots, const char* name)
  * globals, freed in corpus order. Deviations: the band lands as
  * own storage (install/peek hooks for the named globals), the
  * corpus frees without clearing, and the port nulls each freed slot. */
+// GLOBAL: LEGORR 0x004ddc04
 static struct {
     void* handle;      /* corpus band dword (stride 8; the word behind rides) */
     uint32_t word2;

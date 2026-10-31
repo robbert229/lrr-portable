@@ -11,6 +11,8 @@
 #include "mission.hpp"
 #include "objective.hpp"
 #include "savegame.hpp"
+#include "ui_list.hpp"
+#include "../gods98/sound.hpp"
 #include "util.hpp"
 
 /* The ten named task slots (TaskBlockInit local list). */
@@ -20,6 +22,12 @@ static const char* TASK_NAMES[GAME_TASK_COUNT] = {
 };
 
 #define MISS_CRYSTAL_QUOTA 26 /* crystal display budget (CrystalQuotaSetup) */
+
+/* The reference entry points carry no context pointers. The game/runtime
+ * owner must bind its active reward state and engine callbacks before calling
+ * those ABI adapters. */
+static RewardScreenState* s_reward_screen_state;
+static const RewardScreenOps* s_reward_screen_ops;
 
 /* Path helper: level-scoped `Reward [<sub>] [<name>]` key, resolved via
  * util_level_cfg_path (Levels container first, flat fallback). */
@@ -116,20 +124,19 @@ static int task_fields(const char* token, char out[UTIL_QUERY_MAX_FIELDS][256])
     return util_query_fields(token, out, sizeof(out[0]));
 }
 
-/* StrReplace (FUN_00413f00): replace one byte through the bounded reward
- * text field. The original scans to NUL; the 0x20 cap preserves this port's
- * modeled field boundary. */
+/* StrReplace (FUN_00413f00): replace one byte throughout a NUL-terminated
+ * string and return the original pointer. */
 // FUNCTION: LEGORR 0x00413f00
-static void mission_replace_char(char* text, char from, char to, int limit)
+static char* mission_replace_char(char* text, char from, char to)
 {
-    if (limit <= 0 || from == '\0') return;
-    char* cursor = text;
-    char* match;
-    while ((match = crt_strchr(cursor, from)) != NULL
-           && match - text < limit) {
-        *match = to;
-        cursor = match + 1;
+    char* const original = text;
+    while (*text != '\0') {
+        if (*text == from) {
+            *text = to;
+        }
+        ++text;
     }
+    return original;
 }
 
 /* ------------------------------------------------------------------ *
@@ -171,7 +178,7 @@ static void task_loader_text(BlockFile* cfg, const char* root,
         return;
     }
     task_put_str(t, TASK_OFF_TEXT, f[0], 0x100);
-    mission_replace_char((char*)t->data + TASK_OFF_TEXT, '_', ' ', 0x20);
+    mission_replace_char((char*)t->data + TASK_OFF_TEXT, '_', ' ');
     task_put_int(t, TASK_OFF_TEXT_XY, (int32_t)atoi(f[1]));
     task_put_int(t, TASK_OFF_TEXT_XY + 4, (int32_t)atoi(f[2]));
     task_add_flag(t, TASK_FLAG_MASK);
@@ -191,9 +198,10 @@ static void task_loader_flics(BlockFile* cfg, const char* root,
         return;
     }
     task_put_str(t, TASK_OFF_FLICPATH2, f[0], 128);
-    for (int i = 0; i < 4; ++i) {
-        task_put_int(t, TASK_OFF_FLIC_RECT + i * 4, (int32_t)atoi(f[1 + i]));
-    }
+    task_put_int(t, TASK_OFF_FLIC_RECT + 8, (int32_t)atoi(f[1]));
+    task_put_int(t, TASK_OFF_FLIC_RECT + 12, (int32_t)atoi(f[2]));
+    task_put_int(t, TASK_OFF_FLIC_RECT, (int32_t)atoi(f[3]));
+    task_put_int(t, TASK_OFF_FLIC_RECT + 4, (int32_t)atoi(f[4]));
     task_add_flag(t, TASK_FLAG_FLIC);
 }
 
@@ -564,4 +572,376 @@ const char* mission_reward_advance(GameContext* ctx)
         object_list_load(ctx, ctx->cfg, name);
     }
     return ctx->level != NULL ? (const char*)ctx->level->ptr_name : NULL;
+}
+
+static GameTask* reward_task_get(RewardScreenState* state, int index)
+{
+    if (state == NULL || state->game == NULL || index < 0 ||
+        index >= GAME_TASK_COUNT) return NULL;
+    return &state->game->tasks[index];
+}
+
+static void reward_task_flic_reload(RewardScreenState* state, int index)
+{
+    GameTask* task = reward_task_get(state, index);
+    Flic* flic;
+    const char* path;
+    if (task == NULL || (task_flags(task) & TASK_FLAG_FLIC) == 0u) return;
+    if (state->task_flics[index] != NULL) {
+        flic_close(state->task_flics[index]);
+        state->task_flics[index] = NULL;
+    }
+    path = (const char*)task->data + TASK_OFF_FLICPATH2;
+    if (path[0] == '\0') return;
+    flic = flic_open(path);
+    state->task_flics[index] = flic;
+}
+
+static void reward_task_flics_reload_all(RewardScreenState* state)
+{
+    int i;
+    if (state == NULL) return;
+    for (i = 0; i < GAME_TASK_COUNT; ++i)
+        reward_task_flic_reload(state, i);
+}
+
+static void reward_task_flics_close_all(RewardScreenState* state)
+{
+    int i;
+    if (state == NULL) return;
+    for (i = 0; i < GAME_TASK_COUNT; ++i) {
+        if (state->task_flics[i] != NULL) {
+            flic_close(state->task_flics[i]);
+            state->task_flics[i] = NULL;
+        }
+    }
+}
+
+void reward_screen_state_init(RewardScreenState* state, GameContext* game,
+                              PointerCursorState* pointer_cursor,
+                              const PointerCursorHooks* pointer_hooks)
+{
+    if (state == NULL) return;
+    memset(state, 0, sizeof(*state));
+    state->game = game;
+    state->pointer_cursor = pointer_cursor;
+    state->pointer_cursor_hooks = pointer_hooks;
+    state->task_duration = game != NULL ? game->reward.timer : 0.0f;
+    state->elapsed = state->task_duration;
+}
+
+void reward_screen_runtime_bind(RewardScreenState* state,
+                                const RewardScreenOps* ops)
+{
+    s_reward_screen_state = state;
+    s_reward_screen_ops = ops;
+}
+
+int reward_screen_tick_bound(void)
+{
+    return reward_screen_tick(s_reward_screen_state, s_reward_screen_ops);
+}
+
+/* RewardFlhContextTick (FUN_004624a0): advance one task when the display
+ * interval expires, or skip the first interval on the slow/normal path. */
+static void reward_screen_task_timer_tick(RewardScreenState* state,
+                                          const RewardScreenOps* ops)
+{
+    int advance = 0;
+    int stage_is_initial;
+    int display_mode = ops != NULL && ops->display_mode_get != NULL
+        ? ops->display_mode_get(ops->context, state->game) : 0;
+    stage_is_initial = state->transition_stage == 0;
+    if (state->task_duration <= state->elapsed) {
+        if (stage_is_initial) advance = 1;
+    }
+    else if (!stage_is_initial &&
+             state->task_duration * 2.0f <= state->elapsed &&
+             display_mode == 1 &&
+             state->displayed_task_count < GAME_TASK_COUNT) {
+        advance = 1;
+    }
+    if (!advance) return;
+
+    state->elapsed -= state->task_duration;
+    if (state->displayed_task_count < GAME_TASK_COUNT)
+        ++state->displayed_task_count;
+    if (state->displayed_task_count > 0) {
+        GameTask* task = reward_task_get(state,
+                                          state->displayed_task_count - 1);
+        if (task != NULL) {
+            const char* sound_name = (const char*)task->data + TASK_OFF_SOUND;
+            int sound_alias;
+            if (sound_name[0] != '\0' &&
+                sound_alias_lookup(sound_name, &sound_alias))
+                sound_request_queue_submit(sound_alias, 0);
+        }
+    }
+    if (state->displayed_task_count > 9) {
+        if (state->transition_stage == 0) {
+            state->displayed_task_count = 9;
+            ++state->transition_stage;
+            return;
+        }
+        if (state->transition_stage > 1) {
+            if (state->displayed_task_count > 10) {
+                state->displayed_task_count = 10;
+                ++state->transition_stage;
+                return;
+            }
+            reward_task_flics_reload_all(state);
+        }
+    }
+}
+
+void reward_screen_transition_tick(RewardScreenState* state,
+                                   const RewardScreenOps* ops)
+{
+    int return_to_game = 0;
+    int reset_reward = 0;
+    if (state == NULL || state->game == NULL || ops == NULL ||
+        (state->game->cheat & 0x10u) == 0u ||
+        ops->transition_events == NULL ||
+        !ops->transition_events(ops->context, &return_to_game,
+                                &reset_reward)) return;
+    if (return_to_game && ops->return_to_game != NULL)
+        ops->return_to_game(ops->context);
+    if (!reset_reward) return;
+    state->displayed_task_count = 0;
+    state->transition_stage = 0;
+    state->transition_state = 0;
+    state->score_text_gate = 0;
+    state->elapsed = state->task_duration;
+    sound_buffer_stop_handle(0x29);
+    sound_request_queue_submit(0x29, 1);
+    reward_task_flics_reload_all(state);
+}
+
+// FUNCTION: LEGORR 0x00462390
+void reward_screen_transition_tick_abi(int* displayed_task_count,
+                                       int* transition_stage,
+                                       int* score_text_gate, float* elapsed)
+{
+    RewardScreenState* state = s_reward_screen_state;
+    if (state == NULL || displayed_task_count == NULL ||
+        transition_stage == NULL || score_text_gate == NULL ||
+        elapsed == NULL) return;
+    state->displayed_task_count = *displayed_task_count;
+    state->transition_stage = *transition_stage;
+    state->score_text_gate = *score_text_gate;
+    state->elapsed = *elapsed;
+    reward_screen_transition_tick(state, s_reward_screen_ops);
+    *displayed_task_count = state->displayed_task_count;
+    *transition_stage = state->transition_stage;
+    *score_text_gate = state->score_text_gate;
+    *elapsed = state->elapsed;
+}
+
+// FUNCTION: LEGORR 0x00462700
+void reward_pointer_override_expiry_tick(RewardScreenState* state,
+                                         float delta,
+                                         const RewardScreenOps* ops)
+{
+    if (state == NULL) return;
+    ui_pointer_cursor_override_tick(1.0f);
+    if (state->pointer_cursor != NULL) {
+        state->pointer_cursor->selected = 0;
+        if (ops != NULL && ops->cursor_position_get != NULL) {
+            ops->cursor_position_get(ops->context, &state->pointer_x,
+                                     &state->pointer_y);
+        }
+        pointer_cursor_draw(state->pointer_cursor,
+                            state->pointer_cursor_hooks,
+                            state->pointer_x, state->pointer_y);
+    }
+    if (ops != NULL && ops->cursor_input_update != NULL)
+        ops->cursor_input_update(ops->context);
+    state->pointer_override_active = 0;
+    if (ops != NULL && ops->pointer_override_clear != NULL)
+        ops->pointer_override_clear(ops->context);
+    if (ops != NULL && ops->screen_effect_update != NULL)
+        ops->screen_effect_update(ops->context, delta);
+    if (ops != NULL && ops->pointer_effect_update != NULL)
+        ops->pointer_effect_update(ops->context, state->pointer_x,
+                                   state->pointer_y, delta * 40.0f);
+    if (ops != NULL && ops->frame_pump != NULL)
+        ops->frame_pump(ops->context, 1);
+}
+
+void reward_pointer_override_expiry_tick_bound(float delta)
+{
+    reward_pointer_override_expiry_tick(s_reward_screen_state, delta,
+                                        s_reward_screen_ops);
+}
+
+static void reward_screen_task_visual_draw(RewardScreenState* state,
+                                          const RewardScreenOps* ops,
+                                          int index, uint32_t mask)
+{
+    GameTask* task = reward_task_get(state, index);
+    Flic* flic;
+    if (task == NULL || ops == NULL) return;
+    if ((mask == 2u &&
+         (state->game->reward.display_images == 0 ||
+          (task_flags(task) & TASK_FLAG_IMG) == 0u)) ||
+        (mask == 0x40u &&
+         (state->game->reward.display_images == 0 ||
+          (task_flags(task) & TASK_FLAG_BOXIMG) == 0u)) ||
+        (mask == 4u &&
+         (state->game->reward.display_flics == 0 ||
+          (task_flags(task) & TASK_FLAG_FLIC) == 0u))) return;
+    flic = state->task_flics[index];
+    if (mask == 4u) {
+        if (flic == NULL) {
+            reward_task_flic_reload(state, index);
+            flic = state->task_flics[index];
+        }
+        if (flic != NULL) flic_tick_loop(flic, 1);
+    }
+    if (ops->task_visual_draw == NULL) return;
+    ops->task_visual_draw(ops->context, task, index, mask,
+                          state->displayed_task_count, state->elapsed, flic);
+}
+
+// FUNCTION: LEGORR 0x00462ad0
+extern "C" int reward_scroll_ticker_advance_and_draw(
+    RewardScrollTickerState* state)
+{
+    uint32_t i;
+    if (state == NULL || state->entry_get == NULL || state->entry_draw == NULL)
+        return 0;
+    for (i = 0; i < state->entry_count; ++i) {
+        RewardScrollTickerEntry entry;
+        int y;
+        int upper;
+        int clipped;
+        if (!state->entry_get(state->context, i, &entry)) continue;
+        y = entry.y;
+        if ((state->flags & 1u) != 0u && entry.line_height != 0) {
+            while ((float)y < state->minimum_y)
+                y += entry.line_height;
+            upper = (int)(state->scroll_height + state->minimum_y +
+                          state->lower_clip);
+            while ((float)y > (float)upper) y -= entry.line_height;
+        }
+        clipped = (entry.flags & 2u) == 0u &&
+            ((float)y > state->minimum_y + state->lower_clip ||
+             (float)y < state->minimum_y);
+        if (!clipped || (entry.flags & 2u) != 0u)
+            state->entry_draw(state->context, &entry, entry.x, y, clipped);
+    }
+    state->current_y -= state->scroll_speed;
+    if ((state->flags & 0x10u) != 0u && state->debug_key_get != NULL) {
+        if (state->debug_key_get(state->context, 0u)) state->scroll_speed = 0.0f;
+        if (state->debug_key_get(state->context, 1u))
+            state->current_y = state->minimum_y;
+        if (state->debug_key_get(state->context, 2u))
+            state->scroll_speed += 0.01f;
+        if (state->debug_key_get(state->context, 3u))
+            state->scroll_speed -= 0.01f;
+        for (i = 0; i < 10u; ++i) {
+            if (state->debug_key_get(state->context, i + 4u)) {
+                float magnitude = (float)i * 0.1f;
+                state->scroll_speed = state->scroll_speed < 0.0f
+                    ? -magnitude : magnitude;
+            }
+        }
+    }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00461410
+int reward_screen_tick(RewardScreenState* state, const RewardScreenOps* ops)
+{
+    GameContext* game;
+    uint32_t now;
+    int display_mode;
+    int i;
+    if (state == NULL || ops == NULL || state->game == NULL) return 0;
+    game = state->game;
+    if (game->level == NULL || game->checkpoint_blob == NULL ||
+        ops->save_button_check == NULL || ops->time_get_ms == NULL ||
+        ops->fast_forward_pressed == NULL || ops->frame_pump == NULL ||
+        !ops->save_button_check(ops->context, game)) return 0;
+    now = ops->time_get_ms != NULL ? ops->time_get_ms(ops->context) : 0u;
+    state->last_clock_ms = now;
+    if (ops->display_mode_get != NULL)
+        display_mode = ops->display_mode_get(ops->context, game);
+    else display_mode = 0;
+
+    while (state->transition_stage < 4 ||
+           state->pointer_override_active ||
+           (ops->loop_should_continue != NULL &&
+            ops->loop_should_continue(ops->context, state))) {
+        uint32_t current_ms = ops->time_get_ms != NULL
+            ? ops->time_get_ms(ops->context) : state->last_clock_ms;
+        float delta = (float)(uint32_t)(current_ms - state->last_clock_ms)
+            * 0.001f;
+        int task_limit;
+        int fast_forward;
+        int score_text_drawn = 0;
+        state->last_clock_ms = current_ms;
+        state->elapsed += delta;
+        reward_screen_task_timer_tick(state, ops);
+        fast_forward = ops->fast_forward_pressed != NULL &&
+            ops->fast_forward_pressed(ops->context);
+        if (fast_forward && state->transition_stage < 3) {
+            ++state->transition_stage;
+            if (state->transition_stage == 3)
+                state->transition_stage = 2;
+            if (state->transition_stage < 2 || display_mode != 1)
+                state->displayed_task_count = 9;
+            else state->displayed_task_count = 10;
+        }
+        if (state->scroll_ticker != NULL)
+            reward_scroll_ticker_advance_and_draw(state->scroll_ticker);
+        for (i = 0; i < state->displayed_task_count; ++i)
+            reward_screen_task_visual_draw(state, ops, i, 2u);
+        task_limit = state->displayed_task_count < 9
+            ? state->displayed_task_count : 9;
+        for (i = 0; i < task_limit; ++i)
+            reward_screen_task_visual_draw(state, ops, i, 0x40u);
+        for (i = 0; i < state->displayed_task_count; ++i)
+            reward_screen_task_visual_draw(state, ops, i, 4u);
+
+        if ((state->displayed_task_count == 10 ||
+             (display_mode != 1 && state->displayed_task_count == 9)) &&
+            ops->score_text_gate_ready != NULL &&
+            ops->score_text_gate_ready(ops->context, game))
+            state->score_text_gate = 1;
+        for (i = 0; game->reward.display_text != 0 && i < task_limit; ++i) {
+            GameTask* task = reward_task_get(state, i);
+            if (task != NULL && ops->task_text_draw != NULL)
+                ops->task_text_draw(ops->context, task, i,
+                                    state->displayed_task_count,
+                                    state->elapsed);
+        }
+        if (state->score_text_gate && game->reward.display_text != 0 &&
+            ops->score_text_draw != NULL) {
+            score_text_drawn = ops->score_text_draw(
+                ops->context, game, state->displayed_task_count,
+                state->elapsed);
+            if (score_text_drawn && state->transition_stage < 3 &&
+                ops->reward_zone_check != NULL)
+                ops->reward_zone_check(ops->context, state);
+        }
+        if (ops->reward_stats_draw != NULL)
+            ops->reward_stats_draw(ops->context, game);
+        if (state->transition_stage == 3) state->transition_stage = 4;
+        reward_screen_transition_tick(state, ops);
+        reward_pointer_override_expiry_tick(state, delta, ops);
+    }
+
+    if (ops->reward_scroll_cleanup != NULL)
+        ops->reward_scroll_cleanup(ops->context);
+    if (ops->render_finish != NULL) ops->render_finish(ops->context);
+    reward_task_flics_close_all(state);
+    if (ops->input_restore != NULL) ops->input_restore(ops->context, 1);
+    if (display_mode == 1) {
+        if (ops->completion_audio != NULL)
+            ops->completion_audio(ops->context, game);
+        sound_request_queue_submit(0x2c, 1);
+        if (ops->frame_pump != NULL) ops->frame_pump(ops->context, 1);
+    }
+    return 1;
 }

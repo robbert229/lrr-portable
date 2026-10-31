@@ -76,6 +76,71 @@ typedef struct MovieInfo {
     int audio_channels;  /* always 2: the track is normalized    */
 } MovieInfo;
 
+/* Logical view of the AVI playback object fields read by the frame-count
+ * and playback-index helpers (reference offsets +0x2c and +0xb8). */
+typedef struct AviPlaybackState {
+    unsigned char reserved_00[8];
+    uint8_t surface_locked;
+    unsigned char reserved_09[0x17];
+    uint32_t fps_numerator;
+    uint32_t fps_denominator;
+    uint32_t reserved_28;
+    uint32_t stream_frame_count;
+    unsigned char reserved_30[0x69];
+    uint8_t frame_ready;
+    unsigned char reserved_9a[0x12];
+    float frame_delta;
+    float frame_clock;
+    float frame_rate;
+    uint32_t frame_index;
+    void* surface_object; /* host-width sidecar for the +0x18 interface */
+    uint32_t display_width;
+    uint32_t display_height;
+    uint32_t display_bits_per_pixel;
+    int display_fullscreen;
+    void* display_device;
+    void* stream_object;
+    void* frame_retriever_object;
+} AviPlaybackState;
+typedef uint32_t (*AviTimeHook)(void* context);
+typedef int (*AviFrameUpdateHook)(void* context, AviPlaybackState* state);
+typedef void (*AviFrameLoopHook)(void* context, AviPlaybackState* state,
+                                 void* destination);
+typedef uint32_t (*AviSurfaceLockHook)(void* context, void* surface,
+                                       int lock, uint32_t flags);
+typedef int (*AviDisplayModeHook)(void* context, AviPlaybackState* state,
+                                  uint32_t width, uint32_t height,
+                                  uint32_t bits_per_pixel,
+                                  int fullscreen, void* display_device);
+typedef void (*AviReleaseHook)(void* context, void* object);
+typedef void (*AviDisplayReleaseHook)(void* context);
+void avi_time_hook_set(AviTimeHook hook, void* context);
+void avi_frame_hooks_set(AviFrameUpdateHook update,
+                         AviFrameLoopHook loop, void* context);
+void avi_surface_lock_hook_set(AviSurfaceLockHook hook, void* context);
+void avi_display_mode_hook_set(AviDisplayModeHook hook, void* context);
+void avi_release_hooks_set(AviReleaseHook release_object,
+                           AviDisplayReleaseHook release_display,
+                           void* context);
+int avi_display_mode_setup(AviPlaybackState* state, uint32_t width,
+                           uint32_t height, uint32_t bits_per_pixel,
+                           int fullscreen, void* display_device);
+void avi_playback_state_initialize(AviPlaybackState* state, uint32_t width,
+                                   uint32_t height,
+                                   uint32_t bits_per_pixel, int fullscreen,
+                                   void* display_device);
+void avi_frame_retriever_destroy(AviPlaybackState* state);
+void avi_player_destroy(AviPlaybackState* state, uint8_t flags);
+uint32_t avi_surface_lock(AviPlaybackState* state); /* 0x0047e760 */
+uint32_t avi_surface_unlock(AviPlaybackState* state); /* 0x0047e7b0 */
+void avi_playback_mode_set(int disabled);
+uint32_t avi_stream_frame_count_get(const AviPlaybackState* state);
+uint32_t avi_playback_frame_index_get(const AviPlaybackState* state);
+void avi_frame_seek_and_clock_rebase(AviPlaybackState* state,
+                                     uint32_t frame_index);
+int avi_frame_update_and_blit(AviPlaybackState* state);
+void avi_playback_frame_loop(AviPlaybackState* state, void* destination);
+
 /* Fills info (pulling the first frame if needed). 0 on success. */
 int movie_info(Movie* m, MovieInfo* out);
 
@@ -170,7 +235,8 @@ void movie_scale_rgba_rect(const uint8_t* src, int sw, int sh, int spitch,
 /* --- config surface (finding 23 callbacks) ------------------------------ */
 
 /* AvisEnabled @ 0x414ce0: play movies when `Lego* Main DontPlayAvis` is not
- * TRUE (missing/FALSE -> enabled). */
+ * TRUE and engine app mode is below 3. Missing/FALSE defaults to enabled in
+ * normal app mode. */
 int  movie_avis_enabled(BlockFile* cfg);
 
 /* MoviePlayNamed: read a `Lego* Main <key>` movie path and normalize its

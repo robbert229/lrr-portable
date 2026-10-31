@@ -30,6 +30,323 @@
 #include "tickers.hpp"
 #include "view.hpp"
 #include "camera.hpp"
+
+static MainLoopFramePumpHooks s_main_loop_frame_pump_hooks;
+static int s_main_loop_renderer_frame_started;
+static WindowRuntimeOps s_window_runtime_ops;
+static WindowRuntimeState s_window_runtime_state;
+static WindowDefaultProc s_window_default_proc;
+static void* s_window_default_proc_context;
+
+void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_main_loop_frame_pump_hooks, 0,
+               sizeof(s_main_loop_frame_pump_hooks));
+    }
+    else {
+        s_main_loop_frame_pump_hooks = *hooks;
+    }
+}
+
+/* MainLoopFramePump (FUN_00477f30): preserve the reference dispatch order,
+ * begin rendering once per frame, and clear the begin guard after frame end. */
+void main_loop_frame_pump(int mode_transition)
+{
+    MainLoopFramePumpHooks* const hooks = &s_main_loop_frame_pump_hooks;
+    if (hooks->window_messages != NULL)
+        hooks->window_messages(hooks->context);
+    if (hooks->timer_and_task_updates != NULL)
+        hooks->timer_and_task_updates(hooks->context);
+    if (hooks->deferred_work != NULL)
+        hooks->deferred_work(hooks->context);
+    if (!s_main_loop_renderer_frame_started) {
+        if (hooks->renderer_begin != NULL)
+            hooks->renderer_begin(hooks->context);
+        s_main_loop_renderer_frame_started = 1;
+    }
+    if (hooks->frame_end != NULL) hooks->frame_end(hooks->context);
+    if (mode_transition != 0 && hooks->mode_transition != NULL)
+        hooks->mode_transition(hooks->context, 0, 0);
+    s_main_loop_renderer_frame_started = 0;
+}
+
+void window_runtime_ops_set(const WindowRuntimeOps* ops)
+{
+    if (ops == NULL) memset(&s_window_runtime_ops, 0,
+                            sizeof(s_window_runtime_ops));
+    else s_window_runtime_ops = *ops;
+}
+
+void window_runtime_ops_install_defaults(const WindowRuntimeOps* ops)
+{
+    if (ops == NULL) return;
+    if (s_window_runtime_ops.device_caps_query == NULL)
+        s_window_runtime_ops.device_caps_query = ops->device_caps_query;
+    if (s_window_runtime_ops.adjust_window_rect == NULL)
+        s_window_runtime_ops.adjust_window_rect = ops->adjust_window_rect;
+    if (s_window_runtime_ops.mouse_capture == NULL)
+        s_window_runtime_ops.mouse_capture = ops->mouse_capture;
+    if (s_window_runtime_ops.mouse_release == NULL)
+        s_window_runtime_ops.mouse_release = ops->mouse_release;
+}
+
+void window_runtime_default_proc_set(WindowDefaultProc proc, void* context)
+{
+    s_window_default_proc = proc;
+    s_window_default_proc_context = context;
+}
+
+void window_runtime_window_handle_set(void* window)
+{
+    s_window_runtime_state.window = window;
+}
+
+void window_runtime_mode_set(int fullscreen, int32_t style)
+{
+    if (fullscreen != 0) s_window_runtime_state.flags |= 2u;
+    else s_window_runtime_state.flags &= ~2u;
+    s_window_runtime_state.window_style = style;
+}
+
+void window_runtime_flags_set(uint32_t flags)
+{
+    s_window_runtime_state.flags = flags;
+}
+
+uint32_t window_runtime_flags_get(void)
+{
+    return s_window_runtime_state.flags;
+}
+
+const WindowRuntimeState* window_runtime_state_get(void)
+{
+    return &s_window_runtime_state;
+}
+
+void window_runtime_state_initialize(void* owner)
+{
+    memset(&s_window_runtime_state, 0, sizeof(s_window_runtime_state));
+    s_window_runtime_state.owner = owner;
+}
+
+void window_runtime_display_caps_query_discard(void)
+{
+    if (s_window_runtime_ops.device_caps_query != NULL) {
+        (void)s_window_runtime_ops.device_caps_query(
+            s_window_runtime_ops.context, s_window_runtime_state.window, 12);
+    }
+}
+
+int window_runtime_callback_triplet_set(const size_t* triplet)
+{
+    if (triplet == NULL) return 0;
+    s_window_runtime_state.callback_triplet[0] = triplet[0];
+    s_window_runtime_state.callback_triplet[1] = triplet[1];
+    s_window_runtime_state.callback_triplet[2] = triplet[2];
+    s_window_runtime_state.callback_triplet_valid = 1;
+    return 1;
+}
+
+int window_runtime_callback_triplet_get(size_t triplet[3])
+{
+    if (triplet == NULL ||
+        s_window_runtime_state.callback_triplet_valid == 0u) return 0;
+    triplet[0] = s_window_runtime_state.callback_triplet[0];
+    triplet[1] = s_window_runtime_state.callback_triplet[1];
+    triplet[2] = s_window_runtime_state.callback_triplet[2];
+    return 1;
+}
+
+int window_runtime_message_filter(uint32_t message)
+{
+    if ((s_window_runtime_state.flags & 2u) != 0u &&
+        (message == 0x1cu || message == 0x104u || message == 0x105u)) {
+        return 0;
+    }
+    return 1;
+}
+
+int window_runtime_adjust_rect(WindowPortRect* rect)
+{
+    if (rect == NULL) return 0;
+    if ((s_window_runtime_state.flags & 2u) == 0u &&
+        s_window_runtime_ops.adjust_window_rect != NULL) {
+        return s_window_runtime_ops.adjust_window_rect(
+            s_window_runtime_ops.context, rect,
+            s_window_runtime_state.window_style, 0);
+    }
+    return 1;
+}
+
+static ptrdiff_t window_runtime_default(void* window, uint32_t message,
+                                        size_t wparam, ptrdiff_t lparam)
+{
+    if (s_window_default_proc != NULL) {
+        return s_window_default_proc(s_window_default_proc_context, window,
+                                     message, wparam, lparam);
+    }
+    return 0;
+}
+
+static void window_runtime_capture(void* window)
+{
+    if (s_window_runtime_ops.mouse_capture != NULL) {
+        s_window_runtime_ops.mouse_capture(s_window_runtime_ops.context,
+                                           window);
+    }
+    s_window_runtime_state.mouse_capture = 1;
+}
+
+static void window_runtime_release_capture(void)
+{
+    if (s_window_runtime_ops.mouse_release != NULL) {
+        s_window_runtime_ops.mouse_release(s_window_runtime_ops.context);
+    }
+    s_window_runtime_state.mouse_capture = 0;
+}
+
+ptrdiff_t window_runtime_game_window_proc(void* window, uint32_t message,
+                                          size_t wparam, ptrdiff_t lparam)
+{
+    WindowRuntimeState* state = &s_window_runtime_state;
+    if (message == 2u || message == 0x10u || message == 0x12u) {
+        state->close_requested = 1;
+    }
+    if (message == 0x1cu) {
+        state->app_active = (uint32_t)wparam;
+        return 0;
+    }
+    if (message == 0x46u) {
+        if (lparam != 0) {
+            uint32_t* flags = (uint32_t*)((char*)lparam + 24);
+            *flags &= ~0x200u;
+        }
+        return 0;
+    }
+    if (message == 0x86u || message == 0x100u || message == 0x101u ||
+        message == 0x104u || message == 0x200u || message == 0x211u ||
+        message == 0x212u) {
+        return 0;
+    }
+    if (message == 0x201u || message == 0x202u || message == 0x204u ||
+        message == 0x205u) {
+        int down = message == 0x201u || message == 0x204u;
+        int right = message == 0x204u || message == 0x205u;
+        if ((state->flags & 0x4000u) == 0u) {
+            if (down) {
+                if (state->mouse_capture == 0u) {
+                    state->left_button_down = 1;
+                    state->right_button_down = 1;
+                }
+                if (right) state->right_button_down = 1;
+                else state->left_button_down = 1;
+                state->mouse_activity = 1;
+                state->mouse_capture = 1;
+                return 0;
+            }
+            state->left_button_down = 0;
+            state->right_button_down = 0;
+            state->mouse_activity = 0;
+            state->mouse_capture = 0;
+        }
+        else {
+            if (right) state->right_button_down = down != 0;
+            else state->left_button_down = down != 0;
+            state->mouse_activity = 1;
+            return 0;
+        }
+    }
+    if (message == 0x203u) {
+        state->left_double_click = 1;
+        return 0;
+    }
+    if (message == 0x206u) {
+        state->right_double_click = 1;
+        return 0;
+    }
+    return window_runtime_default(window, message, wparam, lparam);
+}
+
+ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
+                                               size_t wparam,
+                                               ptrdiff_t lparam)
+{
+    WindowRuntimeState* state = &s_window_runtime_state;
+    int button;
+    if (message == 6u) return 0;
+    if (message == 0x1cu) {
+        state->app_active = (uint32_t)wparam;
+        return 0;
+    }
+    if (message == 0x10u || message == 2u) {
+        state->close_requested = 1;
+        return 0;
+    }
+    if (message == 0x203u) {
+        state->mouse_activity = 1;
+        state->left_double_click = 1;
+        return 0;
+    }
+    if (message == 0x206u) {
+        state->mouse_activity = 1;
+        state->right_double_click = 1;
+        return 0;
+    }
+    if (message >= 0x201u && message <= 0x205u) {
+        button = (int)(message - 0x201u);
+        if (button == 0 || button == 1 || button == 3 || button == 4) {
+            int down = button == 0 || button == 3;
+            int right = button == 3 || button == 4;
+            if ((state->flags & 0x4000u) == 0u) {
+                if (down) {
+                    int was_captured = state->mouse_capture != 0u;
+                    window_runtime_capture(window);
+                    if (!was_captured) {
+                        state->left_button_down = 1;
+                        state->right_button_down = 1;
+                    }
+                    state->left_button_down = 1;
+                    state->right_button_down = 1;
+                    state->mouse_activity = 1;
+                    return 0;
+                }
+                window_runtime_release_capture();
+                state->left_button_down = 0;
+                state->right_button_down = 0;
+                state->mouse_activity = 0;
+            }
+            else {
+                if (button == 0) {
+                    window_runtime_capture(window);
+                    state->left_button_down = 1;
+                    state->mouse_activity = 1;
+                    return 0;
+                }
+                if (button == 1) {
+                    window_runtime_release_capture();
+                    state->mouse_activity = 1;
+                    state->left_button_down = 0;
+                    return 0;
+                }
+                if (right) state->right_button_down = down != 0;
+                state->mouse_activity = 1;
+                return 0;
+            }
+        }
+    }
+    if (message == 0x10u || message == 2u) state->close_requested = 1;
+    return window_runtime_default(window, message, wparam, lparam);
+}
+
+/* WindowTitleSet (FUN_004783d0): forwards the title to the active platform
+ * window. The native backend owns the SDL window; winapi's window seam is
+ * still a stub, so its adapter currently ignores this request. */
+// FUNCTION: LEGORR 0x004783d0
+void window_title_set(const char* title)
+{
+    platform_set_window_title(title);
+}
 #include "message.hpp"
 #include "game/util.hpp"
 

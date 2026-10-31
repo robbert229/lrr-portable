@@ -13,6 +13,7 @@
 #include "level.hpp"
 #include "mission.hpp"
 #include "select.hpp"
+#include "gods98/block.hpp"
 
 /* The command record's mutable `now` doubles as the task countdown for
  * task commands (the link primitives seed it with the 1500.0 "now"
@@ -36,7 +37,7 @@
 static const void* rec_payload(const void* rec) { return cmd_rec_payload(rec); }
 
 /* DAT_004decc4 activity-name table, per the initializer at 0x436c2f. */
-static const char* const s_activity[AI_ACTIVITY_COUNT] = {
+static const char* const s_activity_initial[AI_ACTIVITY_COUNT] = {
     "Activity_Stand", "Activity_Route", "Activity_RouteRubble",
     "Activity_RunPanic", "Activity_Drill", "Activity_Teleport",
     "Activity_Walk", "Activity_Reinforce", "Activity_Reverse",
@@ -65,8 +66,28 @@ static const char* const s_activity[AI_ACTIVITY_COUNT] = {
     "Activity_Waiting19", "Activity_Waiting20", "Activity_Waiting21"
 };
 
+static const char* s_activity[AI_ACTIVITY_COUNT];
+static int s_activity_initialized;
+
+/* ActivityNameTableInit (FUN_00436c20): the corpus first clears the large
+ * name-map backing store and then installs the 77 activity labels. The port
+ * owns only the activity-name slice, so this initializes that same slice and
+ * leaves unrelated tables to their own owners. */
+// FUNCTION: LEGORR 0x00436C20
+void ai_activity_name_table_initialize(void)
+{
+    int i;
+    for (i = 0; i < AI_ACTIVITY_COUNT; ++i) {
+        s_activity[i] = s_activity_initial[i];
+    }
+    s_activity_initialized = 1;
+}
+
 const char* ai_activity_name(int id)
 {
+    if (!s_activity_initialized) {
+        ai_activity_name_table_initialize();
+    }
     return (id >= 0 && id < AI_ACTIVITY_COUNT) ? s_activity[id] : NULL;
 }
 
@@ -109,6 +130,156 @@ void entity_activity_toggle(EntitySlot* e, int on)
         ai_set_activity(e, 0x35, 0); /* FUN_004409e0 */
     }
     activity_register_bookkeeping(e); /* FUN_00447c40, corpus tail call */
+}
+
+/* EntityKind6TickDownMarkerSpawn (FUN_004489a0): the original uses the
+ * type-13 object factory, applies the entity pose and attaches the
+ * `TickDown` scene action, then raises the marker flag. The reconstruction
+ * has no scene-action resource owner yet, so the type-13 entity and flag
+ * are modeled while the visual action remains absent. */
+// FUNCTION: LEGORR 0x004489a0
+int entity_kind6_tick_down_marker_spawn(GameContext* ctx, EntitySlot* e)
+{
+    if (ctx == NULL || e == NULL || ai_activity_scan(e, 6) == 0) {
+        return 0;
+    }
+    int index = entity_create(ctx, 13, "TickDown", e->x, e->y, e->z,
+                              e->rot);
+    if (index < 0) {
+        return 0;
+    }
+    EntitySlot* marker = (EntitySlot*)entity_at(ctx, 13, index);
+    if (marker == NULL) {
+        return 0;
+    }
+    marker->flags_3e8 |= 0x10000u;
+    return 1;
+}
+
+/* RemoveObjectIfClass6 (FUN_0041f840) performs the activity-6 scan and
+ * raises the tick-down marker when available; the corpus returns zero
+ * regardless of whether the marker was created. */
+// FUNCTION: LEGORR 0x0041f840
+int entity_remove_object_if_class6(GameContext* ctx, EntitySlot* e)
+{
+    if (e != NULL && ai_activity_scan(e, 6) != 0) {
+        entity_kind6_tick_down_marker_spawn(ctx, e);
+    }
+    return 0;
+}
+
+#define BUBBLE_ACTION_NAME_COUNT 39
+#define BUBBLE_ACTION_NAME_CAPACITY 64
+static char s_bubble_action_names[BUBBLE_ACTION_NAME_COUNT]
+                                  [BUBBLE_ACTION_NAME_CAPACITY];
+// GLOBAL: LEGORR 0x00557864
+static uint32_t s_bubble_texture_handles[BUBBLE_ACTION_NAME_COUNT];
+static BubbleTextureResourceLoadFn s_bubble_texture_load;
+static BubbleTextureInitializeFn s_bubble_texture_initialize;
+static void* s_bubble_texture_context;
+static uint32_t s_bubble_config_global_flags;
+
+int bubble_action_name_register(int index, const char* name)
+{
+    if (index < 0 || index >= BUBBLE_ACTION_NAME_COUNT || name == NULL) {
+        return 0;
+    }
+    size_t n = strlen(name);
+    if (n >= BUBBLE_ACTION_NAME_CAPACITY) {
+        n = BUBBLE_ACTION_NAME_CAPACITY - 1u;
+    }
+    memcpy(s_bubble_action_names[index], name, n);
+    s_bubble_action_names[index][n] = '\0';
+    return 1;
+}
+
+/* BubbleActionNameToIndex (FUN_00407300): the source scans 39 configured
+ * strings with case-insensitive comparison. The config loader is still a
+ * separate stub, so unregistered rows are skipped instead of dereferenced. */
+// FUNCTION: LEGORR 0x00407300
+int bubble_action_name_to_index(const char* name)
+{
+    if (name == NULL) {
+        return -1;
+    }
+    for (int i = 0; i < BUBBLE_ACTION_NAME_COUNT; ++i) {
+        const char* candidate = s_bubble_action_names[i];
+        if (candidate[0] == '\0') {
+            continue;
+        }
+        const unsigned char* a = (const unsigned char*)candidate;
+        const unsigned char* b = (const unsigned char*)name;
+        while (*a != 0u && *b != 0u) {
+            int ca = *a;
+            int cb = *b;
+            if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
+            if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
+            if (ca != cb) break;
+            ++a;
+            ++b;
+        }
+        if (*a == *b) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void bubble_texture_load_hooks_set(BubbleTextureResourceLoadFn load,
+                                   BubbleTextureInitializeFn initialize,
+                                   void* context)
+{
+    s_bubble_texture_load = load;
+    s_bubble_texture_initialize = initialize;
+    s_bubble_texture_context = context;
+}
+
+void bubble_config_global_flags_set(uint32_t flags)
+{
+    s_bubble_config_global_flags = flags;
+}
+
+/* BubbleConfigTextureLoad (FUN_00407240): walk Bubbles entries, filter
+ * names with the global 0x02000000 gate, map the action to its fixed slot,
+ * and retain the loaded resource handle before initializing it. */
+// FUNCTION: LEGORR 0x00407240
+void bubble_config_texture_load(BlockFile* cfg)
+{
+    BlockRec* group = block_subgroup(cfg, "Bubbles");
+    BlockRec* entry = block_first_child(group);
+    while (entry != NULL) {
+        const char* name = block_name(entry);
+        const char* resource_name = block_value(entry);
+        int enabled = 1;
+        if (name != NULL && name[0] == '!') {
+            if ((s_bubble_config_global_flags & 0x02000000u) != 0u) {
+                enabled = 0;
+            }
+            else {
+                ++name;
+            }
+        }
+        if (enabled && name != NULL && resource_name != NULL
+            && s_bubble_texture_load != NULL) {
+            const int index = bubble_action_name_to_index(name);
+            if (index >= 0 && index < BUBBLE_ACTION_NAME_COUNT) {
+                const uint32_t handle = s_bubble_texture_load(
+                    s_bubble_texture_context, resource_name, 0, 0);
+                s_bubble_texture_handles[index] = handle;
+                if (handle != 0u && s_bubble_texture_initialize != NULL) {
+                    s_bubble_texture_initialize(s_bubble_texture_context,
+                                                handle);
+                }
+            }
+        }
+        entry = block_next_sibling(entry);
+    }
+}
+
+uint32_t bubble_texture_handle_peek(int index)
+{
+    return (index >= 0 && index < BUBBLE_ACTION_NAME_COUNT)
+        ? s_bubble_texture_handles[index] : 0u;
 }
 
 /* FUN_00403f30: if the chain head is not a live idle record (type 0xe),
@@ -991,13 +1162,12 @@ static void task_deposit(GameContext* ctx, int kind)
     }
 }
 
-/* AttachedEntityWake (FUN_0044c110): apply the wake timer and wake-request
- * flag to the already-resolved attached target. The original resolves this
- * target through the parent's +0x364 pointer; the port stores that pointer
- * directly as `wake_target`. */
+/* AttachedEntityWake (FUN_0044c110): resolve the parent's +0x364 attached
+ * target, then apply its wake timer and wake-request flag. */
 // FUNCTION: LEGORR 0x0044c110
-static void ai_attached_entity_wake(EntitySlot* target)
+static void ai_attached_entity_wake(EntitySlot* parent)
 {
+    EntitySlot* target = (EntitySlot*)parent->wake_target;
     if ((target->flags_3e0 & 0x00200000u) == 0) {
         target->field_340 = 100.0f;
         target->flags_3e8 |= 0x00800000u;
@@ -1033,8 +1203,7 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
      * so the port mirrors the field as-is. */
     if ((e->flags_3e4 & ENT_FLAG3E4_WAKE_TIMER) != 0) {
         if (!(e->wake_timer > 0.0f) && e->wake_target != NULL) {
-            EntitySlot* t = (EntitySlot*)e->wake_target;
-            ai_attached_entity_wake(t);
+            ai_attached_entity_wake(e);
         }
         e->wake_timer -= dt;
         return 1;
@@ -1210,12 +1379,17 @@ void entity_dispatch_event5_and_set_flag(EntitySlot* e)
     e->flags_3e0 |= 0x200000u;
 }
 
-/* ActivityRegister — the corpus's site-level re-registration is folded into
- * ai_set_activity (see finding 10); the call remains for code shape. */
-// STUB: LEGORR 0x00447c40
-static void activity_register_bookkeeping(EntitySlot* /*e*/)
+/* SceneActivityUpdateDispatch (FUN_00447c40): ai_set_activity already
+ * stores the current activity in both mirrored fields at the existing
+ * callsites, so the common call returns early. Preserve the change path for
+ * callers that update the current id directly. */
+// FUNCTION: LEGORR 0x00447c40
+static void activity_register_bookkeeping(EntitySlot* e)
 {
-    /* FUN_00447c40: no-op here — the fold at ai_set_activity covers it. */
+    if (e == NULL || e->activity == e->activity_last) return;
+    attach_idle_record(e);
+    e->activity_last = e->activity;
+    e->activity_timer = 0.0f;
 }
 
 /* EntitySetActivityPlace (FUN_00448c50) — see ai.hpp. */

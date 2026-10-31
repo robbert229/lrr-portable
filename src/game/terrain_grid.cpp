@@ -1,0 +1,2099 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#include <string.h>
+#include <stdio.h>
+#include <math.h>
+
+#include "terrain_grid.hpp"
+#include "level.hpp"
+#include "../crt/crt.hpp"
+#include "../gods98/resource.hpp"
+#include "../gods98/view.hpp"
+
+#include <stdlib.h>
+
+static void* s_map_cell_record_grid;
+static void* s_map_cell_record_level;
+static TerrainCellInBoundsHook s_terrain_cell_in_bounds_hook;
+static TerrainCellStateUpdateHook s_terrain_cell_state_update_hook;
+static void* s_terrain_cell_neighbor_context;
+typedef struct GridCellObjectNode {
+    void* object;
+    int x;
+    int y;
+    struct GridCellObjectNode* next_cell;
+    struct GridCellObjectNode* next_free;
+} GridCellObjectNode;
+typedef struct GridCellObjectChunk {
+    struct GridCellObjectChunk* next;
+    GridCellObjectNode nodes[32];
+} GridCellObjectChunk;
+static void** s_grid_cell_object_heads;
+static GridCellObjectChunk* s_grid_cell_object_chunks;
+static GridCellObjectNode* s_grid_cell_object_free;
+static GridCellObjectCoordinatesHook s_grid_object_coordinates_hook;
+static GridCellObjectFlagHook s_grid_object_flag_hook;
+static void* s_grid_cell_object_context;
+static TerrainCellObjectAvailableHook s_cell_object_available_hook;
+static TerrainCellObjectCreateHook s_cell_object_create_hook;
+static TerrainCellObjectDeleteHook s_cell_object_delete_hook;
+static void* s_cell_object_context;
+static TerrainActivationPrepareHook s_terrain_activation_prepare_hook;
+static TerrainActivationResolveHook s_terrain_activation_resolve_hook;
+static TerrainActivationSpecialCellHook s_terrain_activation_special_hook;
+static TerrainActivationFloodHook s_terrain_activation_flood_hook;
+static void* s_terrain_activation_context;
+static TerrainFloodStateHook s_terrain_flood_state_hook;
+static TerrainFloodEffectHook s_terrain_flood_effect_hook;
+static TerrainFloodRollHook s_terrain_flood_roll_hook;
+static void* s_terrain_flood_context;
+static TerrainCellWorldPositionHook s_cell_world_position_hook;
+static void* s_cell_world_position_context;
+static FenceSparkCellCenterHook s_fence_spark_center_hook;
+static FenceSparkHeightHook s_fence_spark_height_hook;
+static FenceSparkEntityRadiusHook s_fence_spark_radius_hook;
+static FenceSparkFinalizeHook s_fence_spark_finalize_hook;
+static void* s_fence_spark_context;
+static TerrainVariantCellResolveHook s_terrain_variant_resolve_hook;
+static TerrainVariantRandomHook s_terrain_variant_random_hook;
+static TerrainVariantCellStateHook s_terrain_variant_cell_state_hook;
+static TerrainVariantOperationHook s_terrain_variant_operation_hook;
+static void* s_terrain_variant_context;
+static TerrainPathGridSizeHook s_terrain_path_grid_size_hook;
+static TerrainPathRouteHook s_terrain_path_route_hook;
+static TerrainPathHalfCostHook s_terrain_path_half_cost_hook;
+static void* s_terrain_path_context;
+static TerrainFenceSparkEntityPositionHook s_fence_spark_entity_position_hook;
+static TerrainFenceSparkCellLifetimeHook s_fence_spark_lifetime_hook;
+static TerrainFenceSparkEligibilityHook s_fence_spark_eligibility_hook;
+static TerrainFenceSparkDurationHook s_fence_spark_duration_hook;
+static void* s_fence_spark_interaction_context;
+
+/* MapCellRecordGridInitialize (FUN_0040cdc0): allocate the fixed five-word
+ * cell record array using the level dimensions at +0x14/+0x18. */
+// FUNCTION: LEGORR 0x0040CDC0
+void map_cell_record_grid_initialize(void* level)
+{
+    GridCellObjectChunk* chunk;
+    uint32_t width;
+    uint32_t height;
+    uint32_t count;
+    size_t bytes;
+    if (s_map_cell_record_grid != NULL) {
+        free(s_map_cell_record_grid);
+        s_map_cell_record_grid = NULL;
+    }
+    if (s_grid_cell_object_heads != NULL) {
+        free(s_grid_cell_object_heads);
+        s_grid_cell_object_heads = NULL;
+    }
+    s_grid_cell_object_free = NULL;
+    for (chunk = s_grid_cell_object_chunks; chunk != NULL; chunk = chunk->next) {
+        int node_index;
+        for (node_index = 0; node_index < 32; ++node_index) {
+            memset(&chunk->nodes[node_index], 0,
+                   sizeof(chunk->nodes[node_index]));
+            chunk->nodes[node_index].next_free = s_grid_cell_object_free;
+            s_grid_cell_object_free = &chunk->nodes[node_index];
+        }
+    }
+    s_map_cell_record_level = level;
+    if (level == NULL) {
+        return;
+    }
+    width = *(const uint32_t*)((const unsigned char*)level + 0x14);
+    height = *(const uint32_t*)((const unsigned char*)level + 0x18);
+    if (height != 0u && width > 0x7fffffffu / height) {
+        return;
+    }
+    count = width * height;
+    if (count > 0x7fffffffu / 0x14u) {
+        return;
+    }
+    bytes = (size_t)count * 0x14u;
+    s_map_cell_record_grid = malloc(bytes);
+    if (s_map_cell_record_grid != NULL) {
+        memset(s_map_cell_record_grid, 0, bytes);
+        s_grid_cell_object_heads = (void**)calloc(count, sizeof(void*));
+    }
+}
+
+/* MapCellStateBufferRebuild (FUN_0040ce80): release prior marker resources,
+ * then rebuild the level's per-cell state records. */
+// FUNCTION: LEGORR 0x0040CE80
+void map_cell_state_buffer_rebuild(void* level)
+{
+    selection_marker_resources_release();
+    map_cell_record_grid_initialize(level);
+}
+
+void* map_cell_record_grid_get(void)
+{
+    return s_map_cell_record_grid;
+}
+
+void* map_cell_record_grid_level_get(void)
+{
+    return s_map_cell_record_level;
+}
+
+void terrain_cell_neighbor_update_hooks_install(
+    TerrainCellInBoundsHook in_bounds, TerrainCellStateUpdateHook update,
+    void* context)
+{
+    s_terrain_cell_in_bounds_hook = in_bounds;
+    s_terrain_cell_state_update_hook = update;
+    s_terrain_cell_neighbor_context = context;
+}
+
+/* TerrainCellAndNeighborsUpdate (FUN_0040cea0): update a cell, then each
+ * cardinal neighbor that passes the installed terrain bounds predicate. */
+// FUNCTION: LEGORR 0x0040CEA0
+void terrain_cell_and_neighbors_update(int x, int y)
+{
+    static const int offsets[4][2] = { { 0, 1 }, { 1, 0 }, { 0, -1 },
+                                      { -1, 0 } };
+    int index;
+    if (s_terrain_cell_state_update_hook == NULL) {
+        return;
+    }
+    s_terrain_cell_state_update_hook(s_map_cell_record_level, x, y,
+                                     s_terrain_cell_neighbor_context);
+    for (index = 0; index < 4; ++index) {
+        int nx = x + offsets[index][0];
+        int ny = y + offsets[index][1];
+        if (s_terrain_cell_in_bounds_hook != NULL
+            && s_terrain_cell_in_bounds_hook(s_map_cell_record_level, nx, ny,
+                    s_terrain_cell_neighbor_context) != 0) {
+            s_terrain_cell_state_update_hook(s_map_cell_record_level, nx, ny,
+                                             s_terrain_cell_neighbor_context);
+        }
+    }
+}
+
+void grid_cell_object_hooks_install(GridCellObjectCoordinatesHook coordinates,
+                                    GridCellObjectFlagHook set_registered,
+                                    void* context)
+{
+    s_grid_object_coordinates_hook = coordinates;
+    s_grid_object_flag_hook = set_registered;
+    s_grid_cell_object_context = context;
+}
+
+// FUNCTION: LEGORR 0x0040D030
+void terrain_record_pool_chunk_allocate(void)
+{
+    GridCellObjectChunk* chunk;
+    int index;
+    chunk = (GridCellObjectChunk*)malloc(sizeof(GridCellObjectChunk));
+    if (chunk == NULL) {
+        return;
+    }
+    chunk->next = s_grid_cell_object_chunks;
+    s_grid_cell_object_chunks = chunk;
+    for (index = 0; index < 32; ++index) {
+        chunk->nodes[index].next_free = s_grid_cell_object_free;
+        s_grid_cell_object_free = &chunk->nodes[index];
+    }
+}
+
+void terrain_variant_update_hooks_set(TerrainVariantCellResolveHook resolve,
+                                      TerrainVariantRandomHook random_value,
+                                      TerrainVariantCellStateHook cell_state,
+                                      TerrainVariantOperationHook operation,
+                                      void* context)
+{
+    s_terrain_variant_resolve_hook = resolve;
+    s_terrain_variant_random_hook = random_value;
+    s_terrain_variant_cell_state_hook = cell_state;
+    s_terrain_variant_operation_hook = operation;
+    s_terrain_variant_context = context;
+}
+
+/* TerrainCellVariantUpdateQueue (FUN_0043abf0). Operation ids: 1 is the
+ * 1-in-5 cell variant adjustment, 2 creates the cell marker, 3 applies
+ * surface type 0x3f, 4 submits the terrain update, and 5 dispatches the
+ * trailing deferred callback. */
+void terrain_cell_variant_update_queue(void* entity)
+{
+    int x = 0, y = 0;
+    int have_cell;
+    if (entity == NULL || s_terrain_variant_operation_hook == NULL) return;
+    have_cell = s_terrain_variant_resolve_hook != NULL
+        && s_terrain_variant_resolve_hook(entity, &x, &y,
+                                          s_terrain_variant_context);
+    if (have_cell && s_terrain_variant_random_hook != NULL
+        && s_terrain_variant_random_hook(s_terrain_variant_context) % 5 == 0) {
+        s_terrain_variant_operation_hook(1, entity, x, y, 3, 1,
+                                         s_terrain_variant_context);
+    }
+    if (have_cell && s_terrain_variant_cell_state_hook != NULL
+        && s_terrain_variant_cell_state_hook(x, y,
+                                             s_terrain_variant_context)) {
+        s_terrain_variant_operation_hook(2, entity, x, y, 0, 0,
+                                         s_terrain_variant_context);
+        s_terrain_variant_operation_hook(3, entity, x, y, 0x3f, 0,
+                                         s_terrain_variant_context);
+        s_terrain_variant_operation_hook(4, entity, x, y, 0, 0,
+                                         s_terrain_variant_context);
+    }
+    s_terrain_variant_operation_hook(5, entity, x, y, 0, 0,
+                                     s_terrain_variant_context);
+}
+
+void terrain_grid_path_hooks_set(TerrainPathGridSizeHook grid_size,
+                                 TerrainPathRouteHook route,
+                                 void* context)
+{
+    s_terrain_path_grid_size_hook = grid_size;
+    s_terrain_path_route_hook = route;
+    s_terrain_path_context = context;
+}
+
+void terrain_neighbor_path_half_cost_hook_set(TerrainPathHalfCostHook hook)
+{
+    s_terrain_path_half_cost_hook = hook;
+}
+
+/* FUNCTION: LEGORR 0x00440c70 */
+int terrain_grid_path_search(void* level, uint32_t start_x,
+                             uint32_t start_y, uint32_t goal_x,
+                             uint32_t goal_y, int** out_x, int** out_y,
+                             uint32_t* out_count, TerrainPathStopHook stop,
+                             void* user)
+{
+    static const int dx[4] = { -1, 0, 1, 0 };
+    static const int dy[4] = { 0, 1, 0, -1 };
+    uint32_t width, height, cell_count, start, goal;
+    uint32_t* depth;
+    uint32_t* queue;
+    uint32_t read_index, write_index;
+    uint32_t found = 0;
+    int* route_x;
+    int* route_y;
+    uint32_t length, cell, step;
+    if (out_x == NULL || out_y == NULL || out_count == NULL
+        || s_terrain_path_grid_size_hook == NULL
+        || s_terrain_path_route_hook == NULL
+        || !s_terrain_path_grid_size_hook(level, &width, &height,
+                                          s_terrain_path_context)
+        || width == 0 || height == 0 || width > 65535u || height > 65535u
+        || width > 16777216u / height
+        || start_x >= width || start_y >= height) return 0;
+    cell_count = width * height;
+    if (stop == NULL) {
+        if (goal_x >= width || goal_y >= height
+            || !s_terrain_path_route_hook(level, goal_x, goal_y, 0,
+                                          s_terrain_path_context)) return 0;
+    }
+    depth = (uint32_t*)calloc((size_t)cell_count, sizeof(uint32_t));
+    queue = (uint32_t*)malloc((size_t)cell_count * sizeof(uint32_t));
+    if (depth == NULL || queue == NULL) {
+        free(depth);
+        free(queue);
+        return 0;
+    }
+    start = start_y * width + start_x;
+    goal = 0;
+    depth[start] = 1;
+    queue[0] = start;
+    read_index = 0;
+    write_index = 1;
+    while (read_index < write_index && found == 0) {
+        uint32_t current = queue[read_index++];
+        uint32_t x = current % width;
+        uint32_t y = current / width;
+        int direction;
+        for (direction = 0; direction < 4; ++direction) {
+            int nx = (int)x + dx[direction];
+            int ny = (int)y + dy[direction];
+            uint32_t next;
+            uint32_t candidate[2];
+            if (nx < 0 || ny < 0 || (uint32_t)nx >= width
+                || (uint32_t)ny >= height) continue;
+            next = (uint32_t)ny * width + (uint32_t)nx;
+            if (depth[next] != 0
+                || !s_terrain_path_route_hook(level, (uint32_t)nx,
+                                             (uint32_t)ny, direction,
+                                             s_terrain_path_context)) continue;
+            depth[next] = depth[current] + 1;
+            queue[write_index++] = next;
+            candidate[0] = (uint32_t)nx;
+            candidate[1] = (uint32_t)ny;
+            if (stop != NULL) {
+                if (stop(level, candidate, user)) {
+                    goal = next;
+                    found = 1;
+                    break;
+                }
+            }
+            else if ((uint32_t)nx == goal_x && (uint32_t)ny == goal_y) {
+                goal = next;
+                found = 1;
+                break;
+            }
+        }
+    }
+    if (found == 0) {
+        free(depth);
+        free(queue);
+        return 0;
+    }
+    length = depth[goal];
+    route_x = (int*)malloc((size_t)length * sizeof(int));
+    route_y = (int*)malloc((size_t)length * sizeof(int));
+    if (route_x == NULL || route_y == NULL) {
+        free(route_x);
+        free(route_y);
+        free(depth);
+        free(queue);
+        return 0;
+    }
+    cell = goal;
+    for (step = length; step > 0; --step) {
+        uint32_t x = cell % width;
+        uint32_t y = cell / width;
+        int direction;
+        route_x[step - 1] = (int)x;
+        route_y[step - 1] = (int)y;
+        if (step == 1) break;
+        for (direction = 0; direction < 4; ++direction) {
+            int px = (int)x + dx[direction];
+            int py = (int)y + dy[direction];
+            if (px >= 0 && py >= 0 && (uint32_t)px < width
+                && (uint32_t)py < height
+                && depth[(uint32_t)py * width + (uint32_t)px]
+                    == depth[cell] - 1) {
+                cell = (uint32_t)py * width + (uint32_t)px;
+                break;
+            }
+        }
+    }
+    *out_x = route_x;
+    *out_y = route_y;
+    *out_count = length;
+    free(depth);
+    free(queue);
+    return 1;
+}
+
+/* TerrainNeighborPathCheck (FUN_004410f0): relax cardinal routes in FIFO
+ * order. A qualifying cell one step beyond a neighbor makes that edge cost
+ * 0.5; otherwise it costs 1.0. */
+int terrain_neighbor_path_check(void* level, uint32_t start_x,
+                                uint32_t start_y, uint32_t goal_x,
+                                uint32_t goal_y, int** out_x, int** out_y,
+                                uint32_t* out_count, TerrainPathStopHook stop,
+                                void* user)
+{
+    static const int dx[4] = { 0, 1, 0, -1 };
+    static const int dy[4] = { -1, 0, 1, 0 };
+    uint32_t width, height, cell_count, start, goal;
+    float* cost;
+    uint32_t* queue;
+    uint8_t* queued;
+    uint32_t read_index = 0, write_index = 0;
+    uint32_t queue_count = 0;
+    uint32_t i;
+    int found = 0;
+    int target_reached = 0;
+    int* reverse_x;
+    int* reverse_y;
+    int* route_x;
+    int* route_y;
+    uint32_t length = 0;
+    uint32_t cell;
+    if (out_x == NULL || out_y == NULL || out_count == NULL ||
+        s_terrain_path_grid_size_hook == NULL ||
+        s_terrain_path_route_hook == NULL ||
+        !s_terrain_path_grid_size_hook(level, &width, &height,
+                                       s_terrain_path_context) ||
+        width == 0 || height == 0 || width > 65535u || height > 65535u ||
+        width > 16777216u / height || start_x >= width || start_y >= height)
+        return 0;
+    if (stop == NULL && (goal_x >= width || goal_y >= height ||
+        !s_terrain_path_route_hook(level, goal_x, goal_y, 0,
+                                   s_terrain_path_context))) return 0;
+    cell_count = width * height;
+    cost = (float*)malloc((size_t)cell_count * sizeof(float));
+    queue = (uint32_t*)malloc((size_t)cell_count * sizeof(uint32_t));
+    queued = (uint8_t*)calloc((size_t)cell_count, sizeof(uint8_t));
+    if (cost == NULL || queue == NULL || queued == NULL) {
+        free(cost);
+        free(queue);
+        free(queued);
+        return 0;
+    }
+    for (i = 0; i < cell_count; ++i) cost[i] = 3.402823466e+38F;
+    start = start_y * width + start_x;
+    goal = 0;
+    cost[start] = 0.0f;
+    queue[write_index] = start;
+    write_index = (write_index + 1u) % cell_count;
+    queue_count = 1;
+    queued[start] = 1;
+    while (queue_count != 0u && !found) {
+        uint32_t current;
+        uint32_t x, y;
+        int direction;
+        current = queue[read_index];
+        read_index = (read_index + 1u) % cell_count;
+        --queue_count;
+        queued[current] = 0;
+        x = current % width;
+        y = current / width;
+        for (direction = 0; direction < 4; ++direction) {
+            int nx = (int)x + dx[direction];
+            int ny = (int)y + dy[direction];
+            uint32_t next;
+            uint32_t candidate[2];
+            float edge_cost = 1.0f;
+            if (nx < 0 || ny < 0 || (uint32_t)nx >= width ||
+                (uint32_t)ny >= height ||
+                !s_terrain_path_route_hook(level, (uint32_t)nx,
+                                           (uint32_t)ny, direction,
+                                           s_terrain_path_context)) continue;
+            if (s_terrain_path_half_cost_hook != NULL &&
+                s_terrain_path_half_cost_hook(level, (uint32_t)nx,
+                                              (uint32_t)ny, direction,
+                                              s_terrain_path_context))
+                edge_cost = 0.5f;
+            next = (uint32_t)ny * width + (uint32_t)nx;
+            if (cost[next] != 0.0f &&
+                cost[current] + edge_cost < cost[next]) {
+                cost[next] = cost[current] + edge_cost;
+                candidate[0] = (uint32_t)nx;
+                candidate[1] = (uint32_t)ny;
+                if (stop != NULL && stop(level, candidate, user)) {
+                    goal = next;
+                    found = 1;
+                }
+                else if (stop == NULL && (uint32_t)nx == goal_x &&
+                         (uint32_t)ny == goal_y) {
+                    goal = next;
+                    target_reached = 1;
+                }
+                if (!queued[next]) {
+                    queue[write_index] = next;
+                    write_index = (write_index + 1u) % cell_count;
+                    ++queue_count;
+                    queued[next] = 1;
+                }
+            }
+        }
+    }
+    if (stop == NULL) found = target_reached;
+    if (!found) {
+        free(cost);
+        free(queue);
+        free(queued);
+        return 0;
+    }
+    reverse_x = (int*)malloc((size_t)cell_count * sizeof(int));
+    reverse_y = (int*)malloc((size_t)cell_count * sizeof(int));
+    if (reverse_x == NULL || reverse_y == NULL) {
+        free(reverse_x);
+        free(reverse_y);
+        free(cost);
+        free(queue);
+        free(queued);
+        return 0;
+    }
+    cell = goal;
+    for (;;) {
+        uint32_t x = cell % width;
+        uint32_t y = cell / width;
+        int predecessor = 0;
+        float best_difference = 2.0f;
+        uint32_t best_cell = cell;
+        if (length >= cell_count) break;
+        reverse_x[length] = (int)x;
+        reverse_y[length] = (int)y;
+        ++length;
+        if (cell == start) break;
+        for (i = 0; i < 4u; ++i) {
+            int px = (int)x + dx[i];
+            int py = (int)y + dy[i];
+            uint32_t previous;
+            float difference;
+            if (px < 0 || py < 0 || (uint32_t)px >= width ||
+                (uint32_t)py >= height) continue;
+            previous = (uint32_t)py * width + (uint32_t)px;
+            difference = cost[cell] - cost[previous];
+            if (difference > 0.0f && difference <= 1.0f &&
+                difference < best_difference) {
+                best_difference = difference;
+                best_cell = previous;
+                predecessor = 1;
+            }
+        }
+        if (!predecessor) break;
+        cell = best_cell;
+    }
+    if (length == 0u || (uint32_t)reverse_y[length - 1] * width +
+                        (uint32_t)reverse_x[length - 1] != start) {
+        free(reverse_x);
+        free(reverse_y);
+        free(cost);
+        free(queue);
+        free(queued);
+        return 0;
+    }
+    route_x = (int*)malloc((size_t)length * sizeof(int));
+    route_y = (int*)malloc((size_t)length * sizeof(int));
+    if (route_x == NULL || route_y == NULL) {
+        free(route_x);
+        free(route_y);
+        free(reverse_x);
+        free(reverse_y);
+        free(cost);
+        free(queue);
+        free(queued);
+        return 0;
+    }
+    for (i = 0; i < length; ++i) {
+        route_x[i] = reverse_x[length - i - 1u];
+        route_y[i] = reverse_y[length - i - 1u];
+    }
+    *out_x = route_x;
+    *out_y = route_y;
+    *out_count = length;
+    free(reverse_x);
+    free(reverse_y);
+    free(cost);
+    free(queue);
+    free(queued);
+    return 1;
+}
+
+/* LoadTileMeshes (FUN_0042b330): the level owns a row-major pointer table.
+ * The editor path leaves it zeroed; normal play registers one paired bitmap
+ * resource for every cell. */
+int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid, int editor_mode)
+{
+    size_t count;
+    uint32_t x, y;
+    if (grid == NULL || grid->width == 0 || grid->height == 0
+        || grid->width > 65535u || grid->height > 65535u
+        || (size_t)grid->width > ((size_t)-1) / (size_t)grid->height
+        || (size_t)grid->width * (size_t)grid->height
+            > ((size_t)-1) / sizeof(void*)) return 0;
+    terrain_tile_mesh_grid_release(grid);
+    count = (size_t)grid->width * (size_t)grid->height;
+    grid->meshes = (void**)calloc(count, sizeof(void*));
+    if (grid->meshes == NULL) return 0;
+    if (editor_mode) return 1;
+    if (grid->bitmap_prefix == NULL || grid->register_mesh == NULL) {
+        terrain_tile_mesh_grid_release(grid);
+        return 0;
+    }
+    for (y = 0; y < grid->height; ++y) {
+        for (x = 0; x < grid->width; ++x) {
+            char bitmap_a[256];
+            char bitmap_b[256];
+            size_t prefix_len = strlen(grid->bitmap_prefix);
+            size_t index = (size_t)y * (size_t)grid->width + (size_t)x;
+            if (prefix_len + 16u >= sizeof(bitmap_a)) {
+                terrain_tile_mesh_grid_release(grid);
+                return 0;
+            }
+            strcpy(bitmap_a, grid->bitmap_prefix);
+            strcpy(bitmap_b, grid->bitmap_prefix);
+            sprintf(bitmap_a + prefix_len, "%x%xa", (unsigned int)x,
+                    (unsigned int)y);
+            sprintf(bitmap_b + prefix_len, "%x%xb", (unsigned int)x,
+                    (unsigned int)y);
+            grid->meshes[index] = grid->register_mesh(
+                grid->scene, bitmap_a, bitmap_b, grid->material,
+                grid->options, grid->context);
+        }
+    }
+    return 1;
+}
+
+void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid)
+{
+    size_t i, count;
+    if (grid == NULL || grid->meshes == NULL) return;
+    count = (size_t)grid->width * (size_t)grid->height;
+    if (grid->release_mesh != NULL) {
+        for (i = 0; i < count; ++i) {
+            if (grid->meshes[i] != NULL) {
+                grid->release_mesh(grid->meshes[i], grid->context);
+            }
+        }
+    }
+    free(grid->meshes);
+    grid->meshes = NULL;
+}
+
+/* TerrainGridEntryResourcesReleaseAll (FUN_00434530): the current model
+ * represents each cell's visual resources as one owned mesh handle. */
+// FUNCTION: LEGORR 0x00434530
+void terrain_grid_entry_resources_release_all(TerrainTileMeshGrid* grid)
+{
+    terrain_tile_mesh_grid_release(grid);
+}
+
+/* TerrainCellResourceGridDispose (FUN_0040b410): release each cell's
+ * resource handle, then release the handle table and grid owner. */
+// FUNCTION: LEGORR 0x0040B410
+void terrain_cell_resource_grid_dispose(TerrainCellResourceGrid* grid)
+{
+    size_t i, count;
+    if (grid == NULL) return;
+    if (grid->height != 0u
+        && (size_t)grid->width > ((size_t)-1) / (size_t)grid->height) {
+        free(grid->handles);
+        free(grid);
+        return;
+    }
+    count = (size_t)grid->width * (size_t)grid->height;
+    if (grid->handles != NULL && grid->release_handle != NULL) {
+        for (i = 0; i < count; ++i) {
+            if (grid->handles[i] != NULL) {
+                grid->release_handle(grid->handles[i], grid->context);
+            }
+        }
+    }
+    free(grid->handles);
+    free(grid);
+}
+
+static GridCellObjectNode* grid_cell_object_node_acquire(void)
+{
+    if (s_grid_cell_object_free == NULL) {
+        terrain_record_pool_chunk_allocate();
+        if (s_grid_cell_object_free == NULL) {
+            return NULL;
+        }
+    }
+    {
+        GridCellObjectNode* node = s_grid_cell_object_free;
+        s_grid_cell_object_free = node->next_free;
+        memset(node, 0, sizeof(*node));
+        return node;
+    }
+}
+
+/* GridCellObjectLinkInsert (FUN_0040cf80): acquire a five-word node and
+ * prepend it to the per-cell object chain. */
+// FUNCTION: LEGORR 0x0040CF80
+void* grid_cell_object_link_insert(void* object, int x, int y)
+{
+    uint32_t width;
+    uint32_t height;
+    uint32_t index;
+    GridCellObjectNode* node;
+    if (object == NULL || s_map_cell_record_level == NULL
+        || s_grid_cell_object_heads == NULL) {
+        return NULL;
+    }
+    width = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                               + 0x14);
+    height = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                                + 0x18);
+    if (x < 0 || y < 0 || (uint32_t)x >= width || (uint32_t)y >= height) {
+        return NULL;
+    }
+    index = (uint32_t)y * width + (uint32_t)x;
+    node = grid_cell_object_node_acquire();
+    if (node == NULL) {
+        return NULL;
+    }
+    node->object = object;
+    node->x = x;
+    node->y = y;
+    node->next_cell = (GridCellObjectNode*)s_grid_cell_object_heads[index];
+    s_grid_cell_object_heads[index] = node;
+    if (s_grid_object_flag_hook != NULL) {
+        s_grid_object_flag_hook(object, s_grid_cell_object_context);
+    }
+    terrain_cell_and_neighbors_update(x, y);
+    return node;
+}
+
+/* RegisterObjectAtGridPosition (FUN_0040cf50): query an object's grid cell,
+ * then insert it in that cell's linked record chain. */
+// FUNCTION: LEGORR 0x0040CF50
+void register_object_at_grid_position(void* object)
+{
+    int x;
+    int y;
+    if (object == NULL || s_grid_object_coordinates_hook == NULL
+        || s_grid_object_coordinates_hook(object, &x, &y,
+                                         s_grid_cell_object_context) == 0) {
+        return;
+    }
+    grid_cell_object_link_insert(object, x, y);
+}
+
+/* TerrainCellEntityRecordUnlink (FUN_0040d100): return the cell's linked
+ * records to the pool, clear its head, and refresh the changed cell ring. */
+// FUNCTION: LEGORR 0x0040D100
+void terrain_cell_entity_record_unlink(void* record, int x, int y)
+{
+    uint32_t width;
+    uint32_t height;
+    uint32_t index;
+    GridCellObjectNode* node;
+    (void)record;
+    if (s_map_cell_record_level == NULL || s_grid_cell_object_heads == NULL) {
+        return;
+    }
+    width = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                               + 0x14);
+    height = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                                + 0x18);
+    if (x < 0 || y < 0 || (uint32_t)x >= width || (uint32_t)y >= height) {
+        return;
+    }
+    index = (uint32_t)y * width + (uint32_t)x;
+    node = (GridCellObjectNode*)s_grid_cell_object_heads[index];
+    s_grid_cell_object_heads[index] = NULL;
+    while (node != NULL) {
+        GridCellObjectNode* next = node->next_cell;
+        node->next_free = s_grid_cell_object_free;
+        s_grid_cell_object_free = node;
+        node = next;
+    }
+    terrain_cell_and_neighbors_update(x, y);
+}
+
+/* TerrainEntityCellRecordRemove (FUN_0040d0a0): locate the object's cell and
+ * clear its cell record chain when the object is registered there. */
+// FUNCTION: LEGORR 0x0040D0A0
+void terrain_entity_cell_record_remove(void* object)
+{
+    int x;
+    int y;
+    uint32_t width;
+    uint32_t height;
+    uint32_t index;
+    GridCellObjectNode* node;
+    if (object == NULL || s_grid_object_coordinates_hook == NULL
+        || s_grid_object_coordinates_hook(object, &x, &y,
+                                          s_grid_cell_object_context) == 0
+        || s_map_cell_record_level == NULL || s_grid_cell_object_heads == NULL) {
+        return;
+    }
+    width = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                               + 0x14);
+    height = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                                + 0x18);
+    if (x < 0 || y < 0 || (uint32_t)x >= width || (uint32_t)y >= height) {
+        return;
+    }
+    index = (uint32_t)y * width + (uint32_t)x;
+    node = (GridCellObjectNode*)s_grid_cell_object_heads[index];
+    if (node != NULL) {
+        terrain_cell_entity_record_unlink(node, x, y);
+    }
+}
+
+void terrain_cell_object_hooks_install(TerrainCellObjectAvailableHook available,
+                                      TerrainCellObjectCreateHook create,
+                                      TerrainCellObjectDeleteHook destroy,
+                                      void* context)
+{
+    s_cell_object_available_hook = available;
+    s_cell_object_create_hook = create;
+    s_cell_object_delete_hook = destroy;
+    s_cell_object_context = context;
+}
+
+/* CreateCellObjectIfAvailable (FUN_0040d170): defer eligibility and game
+ * object construction to explicit seams, then register the created object. */
+// FUNCTION: LEGORR 0x0040D170
+int create_cell_object_if_available(int x, int y)
+{
+    void* object;
+    if (s_cell_object_available_hook == NULL
+        || s_cell_object_create_hook == NULL
+        || s_cell_object_available_hook(x, y, s_cell_object_context) == 0) {
+        return 0;
+    }
+    object = s_cell_object_create_hook(x, y, s_cell_object_context);
+    if (object == NULL
+        || grid_cell_object_link_insert(object, x, y) == NULL) {
+        return 0;
+    }
+    return 1;
+}
+
+/* DeleteCellObject (FUN_0040d1f0): remove and destroy the cell's head object
+ * when present. */
+// FUNCTION: LEGORR 0x0040D1F0
+int delete_cell_object(int x, int y)
+{
+    uint32_t width;
+    uint32_t height;
+    uint32_t index;
+    GridCellObjectNode* node;
+    if (s_map_cell_record_level == NULL || s_grid_cell_object_heads == NULL) {
+        return 0;
+    }
+    width = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                               + 0x14);
+    height = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                                + 0x18);
+    if (x < 0 || y < 0 || (uint32_t)x >= width || (uint32_t)y >= height) {
+        return 0;
+    }
+    index = (uint32_t)y * width + (uint32_t)x;
+    node = (GridCellObjectNode*)s_grid_cell_object_heads[index];
+    if (node == NULL) {
+        return 0;
+    }
+    terrain_entity_cell_record_remove(node->object);
+    if (s_cell_object_delete_hook != NULL) {
+        s_cell_object_delete_hook(node->object, s_cell_object_context);
+    }
+    return 1;
+}
+
+void terrain_activation_hooks_install(TerrainActivationPrepareHook prepare,
+                                     TerrainActivationResolveHook resolve,
+                                     TerrainActivationSpecialCellHook special,
+                                     TerrainActivationFloodHook flood,
+                                     void* context)
+{
+    s_terrain_activation_prepare_hook = prepare;
+    s_terrain_activation_resolve_hook = resolve;
+    s_terrain_activation_special_hook = special;
+    s_terrain_activation_flood_hook = flood;
+    s_terrain_activation_context = context;
+}
+
+static int terrain_cell_has_object_record(int x, int y)
+{
+    uint32_t width;
+    uint32_t height;
+    if (s_map_cell_record_level == NULL || s_grid_cell_object_heads == NULL
+        || x < 0 || y < 0) {
+        return 0;
+    }
+    width = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                               + 0x14);
+    height = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                                + 0x18);
+    if ((uint32_t)x >= width || (uint32_t)y >= height) {
+        return 0;
+    }
+    return s_grid_cell_object_heads[(uint32_t)y * width + (uint32_t)x] != NULL;
+}
+
+/* TerrainCellActivationTry (FUN_0040d4f0): prepare activation state, validate
+ * the target cell or entity flags, then dispatch a one-step flood walk. */
+// FUNCTION: LEGORR 0x0040D4F0
+int terrain_cell_activation_try(void* object, int x, int y)
+{
+    if (s_terrain_activation_prepare_hook != NULL) {
+        s_terrain_activation_prepare_hook(s_terrain_activation_context);
+    }
+    if (object == NULL) {
+        if (!terrain_cell_has_object_record(x, y)
+            && (s_terrain_activation_special_hook == NULL
+                || s_terrain_activation_special_hook(x, y,
+                    s_terrain_activation_context) == 0)) {
+            return 0;
+        }
+    } else {
+        uint32_t entity_flags = 0u;
+        uint32_t state_flags = 0u;
+        if (s_terrain_activation_resolve_hook == NULL
+            || s_terrain_activation_resolve_hook(object, &x, &y,
+                    &entity_flags, &state_flags,
+                    s_terrain_activation_context) == 0
+            || ((entity_flags & 0x400u) == 0u
+                && (state_flags & 0x20000000u) == 0u)) {
+            return 0;
+        }
+    }
+    if (s_terrain_activation_flood_hook != NULL) {
+        s_terrain_activation_flood_hook(x, y, 1, 0.0f,
+                                        s_terrain_activation_context);
+    }
+    return 1;
+}
+
+void terrain_neighbor_flood_hooks_install(TerrainFloodStateHook state,
+                                          TerrainFloodEffectHook effect,
+                                          TerrainFloodRollHook roll,
+                                          void* context)
+{
+    s_terrain_flood_state_hook = state;
+    s_terrain_flood_effect_hook = effect;
+    s_terrain_flood_roll_hook = roll;
+    s_terrain_flood_context = context;
+}
+
+static uint32_t* terrain_cell_state_flags_at(int x, int y)
+{
+    uint32_t width;
+    uint32_t height;
+    uint32_t index;
+    if (s_map_cell_record_level == NULL || s_map_cell_record_grid == NULL
+        || x < 0 || y < 0) {
+        return NULL;
+    }
+    width = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                               + 0x14);
+    height = *(const uint32_t*)((const unsigned char*)s_map_cell_record_level
+                                + 0x18);
+    if ((uint32_t)x >= width || (uint32_t)y >= height) {
+        return NULL;
+    }
+    index = (uint32_t)y * width + (uint32_t)x;
+    return (uint32_t*)((unsigned char*)s_map_cell_record_grid
+                       + (size_t)index * 0x14u + 8u);
+}
+
+static void terrain_cell_neighbor_flood_walk_inner(int x, int y, int force,
+                                                   float strength,
+                                                   unsigned int depth)
+{
+    static const int offsets[8][2] = {
+        { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 },
+        { 0, 2 }, { 2, 0 }, { 0, -2 }, { -2, 0 }
+    };
+    uint32_t* flags = terrain_cell_state_flags_at(x, y);
+    int index;
+    if (flags == NULL || depth > 256u || (*flags & 0x100u) != 0u) {
+        return;
+    }
+    *flags |= 0x100u;
+    for (index = 0; index < 8; ++index) {
+        int nx = x + offsets[index][0];
+        int ny = y + offsets[index][1];
+        uint32_t* next_flags = terrain_cell_state_flags_at(nx, ny);
+        int occupied;
+        int current_state;
+        int emit_effect;
+        if (next_flags == NULL || (*next_flags & 0x100u) != 0u) {
+            continue;
+        }
+        occupied = s_terrain_flood_state_hook != NULL
+            ? s_terrain_flood_state_hook(nx, ny, 1, s_terrain_flood_context)
+            : 0;
+        current_state = s_terrain_flood_state_hook != NULL
+            ? s_terrain_flood_state_hook(x, y, 0, s_terrain_flood_context)
+            : 0;
+        if (occupied == 0 && current_state != 0) {
+            continue;
+        }
+        emit_effect = force != 0;
+        if (emit_effect == 0 && strength > 0.0f
+            && s_terrain_flood_roll_hook != NULL) {
+            float capped = strength > 200.0f ? 200.0f : strength;
+            emit_effect = s_terrain_flood_roll_hook((int)capped,
+                                                    s_terrain_flood_context);
+        }
+        if (emit_effect != 0 && s_terrain_flood_effect_hook != NULL) {
+            s_terrain_flood_effect_hook(x, y, nx, ny,
+                                        s_terrain_flood_context);
+        }
+        if (occupied == 0) {
+            terrain_cell_neighbor_flood_walk_inner(nx, ny, force, strength,
+                                                   depth + 1u);
+        }
+    }
+}
+
+/* TerrainCellNeighborFloodWalk (FUN_0040d850): mark visited cells, inspect
+ * the corpus's cardinal/extended candidate offsets, emit edge effects, and
+ * recurse into unoccupied cells. State queries, edge creation, and random
+ * gating are explicit seams because the owning terrain renderer is unported. */
+// FUNCTION: LEGORR 0x0040D850
+void terrain_cell_neighbor_flood_walk(int x, int y, int force, float strength)
+{
+    terrain_cell_neighbor_flood_walk_inner(x, y, force, strength, 0u);
+}
+
+void terrain_cell_world_position_hook_install(
+    TerrainCellWorldPositionHook hook, void* context)
+{
+    s_cell_world_position_hook = hook;
+    s_cell_world_position_context = context;
+}
+
+int terrain_cell_world_position_get(int x, int y, float position[3])
+{
+    if (position == NULL || s_cell_world_position_hook == NULL) return 0;
+    return s_cell_world_position_hook(s_map_cell_record_level, x, y,
+        position, s_cell_world_position_context) != 0;
+}
+
+/* ComputeWorldPositionDelta (FUN_0040dd90): query the two cell centers and
+ * subtract the first world position from the second. */
+// FUNCTION: LEGORR 0x0040DD90
+void compute_world_position_delta(int x1, int y1, int x2, int y2,
+                                  float delta[3])
+{
+    float first[3];
+    float second[3];
+    int index;
+    if (delta == NULL) {
+        return;
+    }
+    if (s_cell_world_position_hook == NULL
+        || s_cell_world_position_hook(s_map_cell_record_level, x1, y1, first,
+                                      s_cell_world_position_context) == 0
+        || s_cell_world_position_hook(s_map_cell_record_level, x2, y2, second,
+                                      s_cell_world_position_context) == 0) {
+        delta[0] = 0.0f;
+        delta[1] = 0.0f;
+        delta[2] = 0.0f;
+        return;
+    }
+    for (index = 0; index < 3; ++index) {
+        delta[index] = second[index] - first[index];
+    }
+}
+
+/* CellPairEdgeEffectApply (FUN_0040dc20): accept the four corpus-adjacent
+ * offset pairs, compute their world direction, and configure the matching
+ * transient effect group. */
+// FUNCTION: LEGORR 0x0040DC20
+int cell_pair_edge_effect_apply(int x1, int y1, int x2, int y2)
+{
+    static const int offsets[8][2] = {
+        { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 },
+        { 0, 2 }, { 2, 0 }, { 0, -2 }, { -2, 0 }
+    };
+    int side = -1;
+    int index;
+    float position[3];
+    float delta[3];
+    if (s_cell_world_position_hook == NULL) {
+        return 0;
+    }
+    for (index = 0; index < 4; ++index) {
+        if (x2 == x1 + offsets[index][0]
+            && y2 == y1 + offsets[index][1]) {
+            side = 0;
+            break;
+        }
+        if (x2 == x1 + offsets[index + 4][0]
+            && y2 == y1 + offsets[index + 4][1]) {
+            side = 1;
+            break;
+        }
+    }
+    if (side < 0
+        || s_cell_world_position_hook(s_map_cell_record_level, x1, y1,
+                position, s_cell_world_position_context) == 0) {
+        return 0;
+    }
+    compute_world_position_delta(x1, y1, x2, y2, delta);
+    return transient_effect_render_slot_configure(side, position[0],
+        position[1], position[2], delta[0], delta[1], delta[2]);
+}
+
+void fence_spark_terrain_hooks_install(FenceSparkCellCenterHook center,
+                                      FenceSparkHeightHook height,
+                                      FenceSparkEntityRadiusHook radius,
+                                      FenceSparkFinalizeHook finalize,
+                                      void* context)
+{
+    s_fence_spark_center_hook = center;
+    s_fence_spark_height_hook = height;
+    s_fence_spark_radius_hook = radius;
+    s_fence_spark_finalize_hook = finalize;
+    s_fence_spark_context = context;
+}
+
+/* FenceSparkLaunchRegister (FUN_0040e0c0): place the transient spark at the
+ * target cell center, derive its vertical separation from the source height
+ * and entity radius, then attach/register the spark through the caller hook. */
+// FUNCTION: LEGORR 0x0040E0C0
+void fence_spark_launch_register(void* entity, const float position_xy[2],
+                                 int cell_x, int cell_y)
+{
+    float center[3];
+    float source_height;
+    float dx;
+    float dy;
+    float radius;
+    if (entity == NULL || position_xy == NULL
+        || s_fence_spark_center_hook == NULL
+        || s_fence_spark_height_hook == NULL
+        || s_fence_spark_center_hook(cell_x, cell_y, center,
+                                     s_fence_spark_context) == 0
+        || s_fence_spark_height_hook(position_xy[0], position_xy[1],
+                &source_height, s_fence_spark_context) == 0) {
+        return;
+    }
+    dx = position_xy[0] - center[0];
+    dy = position_xy[1] - center[1];
+    radius = s_fence_spark_radius_hook != NULL
+        ? s_fence_spark_radius_hook(entity, s_fence_spark_context) : 0.0f;
+    transient_effect_render_slot_configure(0, center[0], center[1], center[2],
+        dx, dy, source_height - radius * 0.5f - center[2]);
+    if (s_fence_spark_finalize_hook != NULL) {
+        s_fence_spark_finalize_hook(entity, dx, dy, s_fence_spark_context);
+    }
+}
+
+void terrain_fence_spark_hooks_install(
+    TerrainFenceSparkEntityPositionHook entity_position,
+    TerrainFenceSparkCellLifetimeHook lifetime,
+    TerrainFenceSparkEligibilityHook eligible,
+    TerrainFenceSparkDurationHook duration, void* context)
+{
+    s_fence_spark_entity_position_hook = entity_position;
+    s_fence_spark_lifetime_hook = lifetime;
+    s_fence_spark_eligibility_hook = eligible;
+    s_fence_spark_duration_hook = duration;
+    s_fence_spark_interaction_context = context;
+}
+
+/* EntityFenceSparkTerrainInteraction (FUN_0040de40): check the source cell,
+ * choose the closest adjacent cell whose spark timer has expired, register
+ * the launch/activation, and refresh that cell's timer. */
+// FUNCTION: LEGORR 0x0040DE40
+int entity_fence_spark_terrain_interaction(void* entity)
+{
+    static const int offsets[4][2] = {
+        { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 }
+    };
+    int cell_x;
+    int cell_y;
+    int target_x;
+    int target_y;
+    int have_target = 0;
+    float entity_xy[2];
+    float target_distance = 0.0f;
+    float remaining;
+    int index;
+    if (entity == NULL || s_grid_object_coordinates_hook == NULL
+        || s_fence_spark_entity_position_hook == NULL
+        || s_fence_spark_lifetime_hook == NULL
+        || s_fence_spark_eligibility_hook == NULL
+        || s_cell_world_position_hook == NULL
+        || s_grid_object_coordinates_hook(entity, &cell_x, &cell_y,
+                s_grid_cell_object_context) == 0
+        || s_fence_spark_entity_position_hook(entity, entity_xy,
+                s_fence_spark_interaction_context) == 0
+        || s_fence_spark_eligibility_hook(cell_x, cell_y,
+                s_fence_spark_interaction_context) == 0) {
+        return 0;
+    }
+    if (s_fence_spark_lifetime_hook(cell_x, cell_y, &remaining,
+            s_fence_spark_interaction_context) != 0 && remaining <= 0.0f) {
+        target_x = cell_x;
+        target_y = cell_y;
+        have_target = 1;
+    } else {
+        for (index = 0; index < 4; ++index) {
+            int nx = cell_x + offsets[index][0];
+            int ny = cell_y + offsets[index][1];
+            float candidate_remaining;
+            float position[3];
+            float dx;
+            float dy;
+            float distance;
+            if (s_fence_spark_lifetime_hook(nx, ny, &candidate_remaining,
+                    s_fence_spark_interaction_context) == 0
+                || candidate_remaining > 0.0f
+                || s_cell_world_position_hook(s_map_cell_record_level, nx, ny,
+                    position, s_cell_world_position_context) == 0) {
+                continue;
+            }
+            dx = entity_xy[0] - position[0];
+            dy = entity_xy[1] - position[1];
+            distance = dx * dx + dy * dy;
+            if (!have_target || distance < target_distance) {
+                target_distance = distance;
+                target_x = nx;
+                target_y = ny;
+                have_target = 1;
+            }
+        }
+    }
+    if (!have_target) {
+        return 0;
+    }
+    fence_spark_launch_register(entity, entity_xy, cell_x, cell_y);
+    terrain_cell_activation_try(NULL, target_x, target_y);
+    if (s_fence_spark_duration_hook != NULL
+        && s_fence_spark_lifetime_hook != NULL) {
+        remaining = s_fence_spark_duration_hook(entity,
+                                                s_fence_spark_interaction_context);
+        s_fence_spark_lifetime_hook(target_x, target_y, &remaining,
+                                    s_fence_spark_interaction_context);
+    }
+    return 1;
+}
+
+static int terrain_grid_cell_valid(const TerrainSurfaceGrid* grid,
+                                   uint32_t x, uint32_t y);
+static uint32_t terrain_grid_cell_index(const TerrainSurfaceGrid* grid,
+                                        uint32_t x, uint32_t y);
+static NestedPointerReleaseHook s_nested_handle_release_hook;
+static NestedPointerReleaseHook s_nested_memory_release_hook;
+
+void nested_pointer_record_release_hooks_set(NestedPointerReleaseHook handle_hook,
+                                             NestedPointerReleaseHook memory_hook)
+{
+    s_nested_handle_release_hook = handle_hook;
+    s_nested_memory_release_hook = memory_hook;
+}
+
+// FUNCTION: LEGORR 0x0044e670
+void nested_pointer_record_destroy(NestedPointerRecord* record)
+{
+    if (record == NULL) return;
+    if (s_nested_handle_release_hook != NULL) {
+        s_nested_handle_release_hook(record->first_handle);
+        s_nested_handle_release_hook(record->second_handle);
+    }
+    if (s_nested_memory_release_hook != NULL) {
+        s_nested_memory_release_hook(record->child_buffer);
+        s_nested_memory_release_hook(record);
+    }
+}
+
+void terrain_surface_grid_initialize(TerrainSurfaceGrid* grid,
+                                     uint32_t width, uint32_t height,
+                                     uint8_t* surface_values,
+                                     float* surface_vectors,
+                                     uint8_t* triangulation_flags)
+{
+    if (grid == NULL) return;
+    grid->width = width;
+    grid->height = height;
+    grid->surface_values = surface_values;
+    grid->surface_vectors = surface_vectors;
+    grid->triangulation_flags = triangulation_flags;
+    grid->selected_payload_index = 0;
+    grid->cell_records = NULL;
+    grid->texture_corner_values = NULL;
+    grid->material_context = NULL;
+    grid->material_handle_resolve = NULL;
+    grid->surface_palette_apply = NULL;
+    grid->changed_count = 0;
+    grid->initialize_context = NULL;
+    grid->initialize_cell = NULL;
+    memset(grid->changed_xy, 0, sizeof(grid->changed_xy));
+}
+
+void terrain_grid_cell_initializer_set(TerrainSurfaceGrid* grid, void* context,
+                                       void (*initialize_cell)(void*, uint32_t,
+                                                               uint32_t))
+{
+    if (grid == NULL) return;
+    grid->initialize_context = context;
+    grid->initialize_cell = initialize_cell;
+}
+
+// FUNCTION: LEGORR 0x0044e880
+void terrain_grid_cells_initialize(TerrainSurfaceGrid* grid)
+{
+    uint32_t x;
+    uint32_t y;
+    if (grid == NULL || grid->initialize_cell == NULL) return;
+    for (y = 0; y < grid->height; ++y) {
+        for (x = 0; x < grid->width; ++x)
+            grid->initialize_cell(grid->initialize_context, x, y);
+    }
+}
+
+// FUNCTION: LEGORR 0x0044f490
+void terrain_grid_operation_apply_all(TerrainSurfaceGrid* grid,
+                                     uint32_t operation, void* context,
+                                     TerrainGridOperationHook hook)
+{
+    uint32_t x;
+    uint32_t y;
+    if (grid == NULL || hook == NULL) return;
+    for (y = 0; y < grid->height; ++y) {
+        for (x = 0; x < grid->width; ++x)
+            hook(context, y * grid->width + x, operation);
+    }
+}
+
+// FUNCTION: LEGORR 0x00429160
+void terrain_cell_palette_resource_at_grid_position(
+    const TerrainPaletteGrid* grid, uint32_t x, uint32_t y)
+{
+    uint32_t cell_index;
+    uint32_t packed;
+    if (grid == NULL || grid->cell_records == NULL ||
+        grid->palette_resource_select == NULL || x >= grid->width ||
+        y >= grid->height) return;
+    cell_index = y * grid->width + x;
+    packed = (cell_index * 9u) & 0xffffff00u;
+    packed |= grid->cell_records[cell_index * 0x48u + 1u];
+    grid->palette_resource_select(grid->context, packed);
+}
+
+// FUNCTION: LEGORR 0x0044e4d0
+void terrain_grid_vertex_build(TerrainVertexBuildGrid* grid)
+{
+    static const float corners[4][2] = {
+        { 0.0f, 0.0f }, { 1.0f, 0.0f },
+        { 0.0f, 1.0f }, { 1.0f, 1.0f }
+    };
+    uint32_t x, y;
+    if (grid == NULL || grid->cell_records == NULL ||
+        grid->vertices_write == NULL || grid->map_width == 0) return;
+    for (y = 0; y < grid->height; ++y) {
+        for (x = 0; x < grid->width; ++x) {
+            float vertices[12];
+            unsigned int corner;
+            for (corner = 0; corner < 4; ++corner) {
+                int sample_x = (int)x + (int)(corners[corner][0] * grid->spacing + 0.5f);
+                int sample_y = (int)y + (int)(corners[corner][1] * grid->spacing + 0.5f);
+                unsigned long sample_index;
+                float height;
+                if (sample_x < 0) sample_x = 0;
+                if (sample_y < 0) sample_y = 0;
+                if (grid->map_width != 0 && (uint32_t)sample_x >= grid->map_width)
+                    sample_x = (int)grid->map_width - 1;
+                if (grid->map_height != 0 && (uint32_t)sample_y >= grid->map_height)
+                    sample_y = (int)grid->map_height - 1;
+                sample_index = ((unsigned long)sample_y * grid->map_width +
+                                (unsigned long)sample_x) * 0x28ul;
+                height = -(float)grid->cell_records[sample_index + 0x1aul] *
+                         grid->vertical_scale;
+                vertices[corner * 3] = ((float)x + corners[corner][0]) *
+                                       grid->spacing + grid->x_origin;
+                vertices[corner * 3 + 1] = height;
+                vertices[corner * 3 + 2] = grid->z_origin -
+                    ((float)y + corners[corner][1]) * grid->spacing;
+                if (height < grid->minimum_y) grid->minimum_y = height;
+            }
+            grid->vertices_write(grid->context, y * grid->width + x, vertices);
+        }
+    }
+}
+
+/* TerrainTileStyleResolve (FUN_0045e9e0): the retail routine selects an RGB
+ * triplet from the cell's state and a global palette. Those global reads are
+ * represented by the resolver; preserve the output record's leading fields. */
+int terrain_tile_style_resolve(void* output, uint32_t x, uint32_t y,
+                               uint32_t style, void* context,
+                               TerrainTileStyleHook resolver)
+{
+    float rgb[3];
+    if (output == NULL || resolver == NULL) return 0;
+    if (!resolver(context, x, y, style, rgb)) return 0;
+    memcpy((unsigned char*)output + 0x10, rgb, sizeof(rgb));
+    return 1;
+}
+
+/* TerrainViewTileGeometryBuild (FUN_0045dbc0): walk row-major cells, resolve
+ * their material style, and emit each visible tile at the scaled world
+ * coordinate. The renderer and game's palette remain explicit callouts. */
+void terrain_view_tile_geometry_build(TerrainViewTileGrid* grid)
+{
+    uint32_t x, y;
+    if (grid == NULL || grid->style_resolve == NULL || grid->emit == NULL)
+        return;
+    for (y = 0; y < grid->height; ++y) {
+        for (x = 0; x < grid->width; ++x) {
+            float rgb[3];
+            float position[3];
+            if (!grid->style_resolve(grid->context, x, y, grid->style, rgb))
+                continue;
+            position[0] = grid->origin[0] + (float)x * grid->tile_size[0];
+            position[1] = grid->origin[1];
+            position[2] = grid->origin[2] - (float)y * grid->tile_size[1];
+            grid->emit(grid->context, x, y, position, grid->tile_size, rgb);
+        }
+    }
+}
+
+void terrain_surface_grid_material_hooks_set(
+    TerrainSurfaceGrid* grid, uint8_t* cell_records,
+    uint8_t* texture_corner_values, void* context,
+    uint32_t (*resolve)(void*, uint8_t),
+    void (*apply)(void*, uint32_t, uint32_t))
+{
+    if (grid == NULL) return;
+    grid->cell_records = cell_records;
+    grid->texture_corner_values = texture_corner_values;
+    grid->material_context = context;
+    grid->material_handle_resolve = resolve;
+    grid->surface_palette_apply = apply;
+}
+
+// FUNCTION: LEGORR 0x0044f230
+void terrain_cell_material_set(TerrainSurfaceGrid* grid, uint32_t x,
+                               uint32_t y, uint8_t material,
+                               uint8_t rotation)
+{
+    uint32_t index;
+    uint32_t handle = material;
+    uint8_t flags;
+    uint32_t i;
+    static const uint8_t corner_order[4] = { 1, 3, 2, 0 };
+    if (!terrain_grid_cell_valid(grid, x, y) || grid->cell_records == NULL)
+        return;
+    index = terrain_grid_cell_index(grid, x, y);
+    flags = grid->cell_records[index * 0x28u + 0x19u];
+    if (grid->material_handle_resolve != NULL)
+        handle = grid->material_handle_resolve(grid->material_context, material);
+    grid->cell_records[index * 0x28u + 0x18u] = material;
+    if ((flags & 1u) != 0) rotation = (uint8_t)(rotation + 1u);
+    if (grid->surface_palette_apply != NULL)
+        grid->surface_palette_apply(grid->material_context, index, handle);
+    if ((flags & 0x10u) == 0 && grid->texture_corner_values != NULL) {
+        uint8_t input[4];
+        uint8_t* output = grid->texture_corner_values + index * 4u;
+        for (i = 0; i < 4; ++i) input[i] = output[corner_order[i]];
+        for (i = 0; i < 4; ++i)
+            output[i] = input[(uint8_t)(i - rotation) & 3u];
+    }
+}
+
+static int terrain_grid_cell_valid(const TerrainSurfaceGrid* grid,
+                                   uint32_t x, uint32_t y)
+{
+    return grid != NULL && x < grid->width && y < grid->height;
+}
+
+static uint32_t terrain_grid_cell_index(const TerrainSurfaceGrid* grid,
+                                        uint32_t x, uint32_t y)
+{
+    return y * grid->width + x;
+}
+
+// FUNCTION: LEGORR 0x0044e860
+void grid_cell_set_payload_index(TerrainSurfaceGrid* grid, uint32_t x,
+                                 uint32_t y)
+{
+    if (terrain_grid_cell_valid(grid, x, y))
+        grid->selected_payload_index = terrain_grid_cell_index(grid, x, y);
+}
+
+// FUNCTION: LEGORR 0x004500d0
+int terrain_cell_surface_vertices_get(TerrainSurfaceGrid* grid, uint32_t x,
+                                      uint32_t y, float out[12])
+{
+    uint32_t index;
+    int flip;
+    static const uint8_t flipped_order[4] = { 1, 2, 3, 0 };
+    uint32_t i;
+    if (!terrain_grid_cell_valid(grid, x, y) || grid->surface_vectors == NULL ||
+        out == NULL) return 0;
+    index = terrain_grid_cell_index(grid, x, y);
+    flip = grid->triangulation_flags != NULL &&
+           (grid->triangulation_flags[index] & 1u) != 0;
+    for (i = 0; i < 4; ++i) {
+        uint32_t src_corner = flip ? flipped_order[i] : i;
+        memcpy(out + i * 3, grid->surface_vectors + (index * 4 + src_corner) * 3,
+               sizeof(float) * 3);
+    }
+    return flip;
+}
+
+static int terrain_ray_triangle_hit(const float origin[3],
+                                    const float direction[3],
+                                    const float a[3], const float b[3],
+                                    const float c[3], float hit[3])
+{
+    float normal[3];
+    float point[3];
+    float v0[3], v1[3], v2[3];
+    float d00, d01, d11, d20, d21, denominator, u, v;
+    int i;
+    surface_triangle_normal_calculate(normal, a, b, c);
+    if (!view_ray_intersection_test(point, origin, direction, a, normal))
+        return 0;
+    for (i = 0; i < 3; ++i) {
+        v0[i] = c[i] - a[i];
+        v1[i] = b[i] - a[i];
+        v2[i] = point[i] - a[i];
+    }
+    d00 = v0[0]*v0[0] + v0[1]*v0[1] + v0[2]*v0[2];
+    d01 = v0[0]*v1[0] + v0[1]*v1[1] + v0[2]*v1[2];
+    d11 = v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2];
+    d20 = v2[0]*v0[0] + v2[1]*v0[1] + v2[2]*v0[2];
+    d21 = v2[0]*v1[0] + v2[1]*v1[1] + v2[2]*v1[2];
+    denominator = d00 * d11 - d01 * d01;
+    if (denominator == 0.0f) return 0;
+    u = (d11 * d20 - d01 * d21) / denominator;
+    v = (d00 * d21 - d01 * d20) / denominator;
+    if (u < 0.0f || v < 0.0f || u + v > 1.0f) return 0;
+    for (i = 0; i < 3; ++i) hit[i] = point[i];
+    return 1;
+}
+
+int terrain_cell_ray_hit_test(TerrainSurfaceGrid* grid, uint32_t x,
+                              uint32_t y, const float origin[3],
+                              const float direction[3], float hit[3])
+{
+    float vertices[12];
+    float first_hit[3], second_hit[3];
+    int first, second;
+    int i;
+    if (origin == NULL || direction == NULL || hit == NULL || grid == NULL ||
+        grid->surface_vectors == NULL || !terrain_grid_cell_valid(grid, x, y))
+        return 0;
+    terrain_cell_surface_vertices_get(grid, x, y, vertices);
+    first = terrain_ray_triangle_hit(origin, direction, vertices,
+                                     vertices + 3, vertices + 6, first_hit);
+    second = terrain_ray_triangle_hit(origin, direction, vertices + 6,
+                                      vertices + 9, vertices, second_hit);
+    if (!first && !second) return 0;
+    if (first && second) {
+        float dx0 = first_hit[0] - origin[0];
+        float dy0 = first_hit[1] - origin[1];
+        float dz0 = first_hit[2] - origin[2];
+        float dx1 = second_hit[0] - origin[0];
+        float dy1 = second_hit[1] - origin[1];
+        float dz1 = second_hit[2] - origin[2];
+        if (dx1*dx1 + dy1*dy1 + dz1*dz1 <
+            dx0*dx0 + dy0*dy0 + dz0*dz0) {
+            for (i = 0; i < 3; ++i) hit[i] = second_hit[i];
+            return 1;
+        }
+    }
+    for (i = 0; i < 3; ++i) hit[i] = first ? first_hit[i] : second_hit[i];
+    return 1;
+}
+
+void* staged_cell_candidate_collect(uint32_t row, uint32_t first_cell,
+                                    uint32_t end_cell,
+                                    const StagedCellCandidateRecord* records,
+                                    uint32_t record_count,
+                                    StagedCellCandidateLinks* links)
+{
+    uint32_t cell;
+    uint32_t record_index;
+    void* last_record = NULL;
+    if (row == 0u || records == NULL || links == NULL ||
+        links->previous_records == NULL || links->current_records == NULL)
+        return NULL;
+    for (cell = first_cell; cell < end_cell; ++cell) {
+        for (record_index = 0; record_index < record_count; ++record_index) {
+            const StagedCellCandidateRecord* record = &records[record_index];
+            uint32_t pair;
+            if (record->record == NULL || record->predecessor == NULL ||
+                record->record == record->predecessor ||
+                record->cell_pairs == NULL) continue;
+            for (pair = 0; pair < record->pair_count; ++pair) {
+                const float* xy = record->cell_pairs + pair * 2u;
+                if (xy[0] == (float)cell && xy[1] == (float)(row - 1u)) {
+                    if (links->count >= links->capacity) return last_record;
+                    links->previous_records[links->count] = record->predecessor;
+                    links->current_records[links->count] = record->record;
+                    ++links->count;
+                    last_record = record->record;
+                }
+            }
+        }
+    }
+    return last_record;
+}
+
+void staged_cell_candidate_select(
+    LevelState* level, StagedCellCandidateSelectionRecord* records,
+    uint32_t record_count)
+{
+    uint32_t record_index;
+    int width = level_width(level);
+    int height = level_height(level);
+    for (record_index = 0; records != NULL && record_index < record_count;
+         ++record_index) {
+        StagedCellCandidateSelectionRecord* record = &records[record_index];
+        uint32_t item;
+        record->selected_count = 0u;
+        if (record->candidate_xy == NULL || record->selected_items == NULL ||
+            record->selected_alternatives == NULL || width <= 0 || height <= 0)
+            continue;
+        for (item = 0; item < record->item_count; ++item) {
+            uint32_t alternative;
+            const float* candidates = record->candidate_xy + item * 8u;
+            for (alternative = 0; alternative < 4u; ++alternative) {
+                int x = float_round_to_nearest_int(candidates[alternative * 2u]);
+                int y = float_round_to_nearest_int(candidates[alternative * 2u + 1u]);
+                uint32_t cell_type;
+                if (x < 0 || y < 0 || x >= width || y >= height ||
+                    !level_cell_type_get_at(level, (uint32_t)x, (uint32_t)y,
+                                            &cell_type) ||
+                    cell_type == 7u || cell_type == 1u) continue;
+                if (record->selected_count >= record->selected_capacity) break;
+                record->selected_items[record->selected_count] = item;
+                record->selected_alternatives[record->selected_count] =
+                    alternative;
+                ++record->selected_count;
+                break;
+            }
+        }
+    }
+}
+
+void terrain_cell_quad_run_stage(
+    LevelState* level, void* context, TerrainCellTypeReadHook read_cell_type,
+    TerrainCellQuadRunFlushHook flush_run,
+    TerrainCellQuadRunFinishHook finish)
+{
+    int width;
+    int height;
+    uint32_t y;
+    if (level == NULL || flush_run == NULL) return;
+    width = level_width(level);
+    height = level_height(level);
+    if (width <= 0 || height <= 0) return;
+    for (y = 0; y < (uint32_t)height; ++y) {
+        uint32_t x;
+        uint32_t run_start = 0u;
+        int run_active = 0;
+        for (x = 0; x < (uint32_t)width; ++x) {
+            uint32_t cell_type = 0xffffffffu;
+            int readable = read_cell_type != NULL
+                ? read_cell_type(context, level, x, y, &cell_type)
+                : level_cell_type_get_at(level, x, y, &cell_type);
+            if (readable && cell_type == 7u) {
+                if (!run_active) {
+                    run_start = x;
+                    run_active = 1;
+                }
+            }
+            else if (run_active) {
+                flush_run(context, y, run_start, x);
+                run_active = 0;
+            }
+        }
+        /* The reference has no trailing-run flush at the row boundary. */
+    }
+    if (finish != NULL) finish(context);
+}
+
+void terrain_cell_quad_run_emit(
+    LevelState* level, TerrainCellQuadRunRecord* records,
+    uint32_t record_count, const TerrainCellQuadRunEmitHooks* hooks)
+{
+    uint32_t record_index;
+    if (records == NULL || hooks == NULL || hooks->cell_vertices_get == NULL ||
+        hooks->mesh_create == NULL || hooks->quad_vertices_emit == NULL)
+        return;
+    for (record_index = 0; record_index < record_count; ++record_index) {
+        TerrainCellQuadRunRecord* record = &records[record_index];
+        uint32_t item;
+        record->height = -10000.0f;
+        record->flags = 0u;
+        record->mesh = -1;
+        if (record->item_count != 0u && record->cell_xy == NULL) continue;
+        for (item = 0; item < record->item_count; ++item) {
+            const float* xy;
+            float vertices[4][3];
+            uint32_t corner;
+            xy = record->cell_xy + item * 2u;
+            if (!hooks->cell_vertices_get(hooks->context, xy[0], xy[1],
+                                          vertices)) continue;
+            for (corner = 0; corner < 4u; ++corner) {
+                uint32_t cell_type = 0xffffffffu;
+                int cell_x = float_round_to_nearest_int(vertices[corner][0]);
+                int cell_y = float_round_to_nearest_int(vertices[corner][1]);
+                int readable = hooks->cell_type_get != NULL
+                    ? hooks->cell_type_get(hooks->context, level, cell_x,
+                                           cell_y, &cell_type)
+                    : level != NULL && cell_x >= 0 && cell_y >= 0 &&
+                      level_cell_type_get_at(level, (uint32_t)cell_x,
+                                             (uint32_t)cell_y, &cell_type);
+                if (readable && cell_type == 0u) {
+                    if (record->height < vertices[corner][2])
+                        record->height = vertices[corner][2];
+                }
+                else {
+                    record->flags |= 1u;
+                }
+            }
+        }
+        record->mesh = hooks->mesh_create(hooks->context, 3);
+        if (record->mesh == -1) continue;
+        if (hooks->mesh_visibility_set != NULL)
+            hooks->mesh_visibility_set(hooks->context, record->mesh,
+                                       (record->flags & 1u) == 0u);
+        if (hooks->mesh_texture_scale_set != NULL)
+            hooks->mesh_texture_scale_set(hooks->context, record->mesh,
+                                         0.3f, 0.8f, 0.6f);
+        for (item = 0; item < record->item_count; ++item) {
+            const float* xy = record->cell_xy + item * 2u;
+            float vertices[4][3];
+            uint32_t corner;
+            if (!hooks->cell_vertices_get(hooks->context, xy[0], xy[1],
+                                          vertices)) continue;
+            for (corner = 0; corner < 4u; ++corner)
+                vertices[corner][2] = record->height;
+            hooks->quad_vertices_emit(hooks->context, record->mesh, item,
+                                      vertices);
+        }
+    }
+}
+
+int terrain_cell_surface_quad_height_fill(
+    TerrainSurfaceGrid* surface, TerrainCellQuadRunRecord* records,
+    uint32_t record_count, uint32_t x, uint32_t y,
+    const TerrainCellQuadSlotMutationHooks* hooks)
+{
+    uint32_t record_index;
+    for (record_index = 0; records != NULL && record_index < record_count;
+         ++record_index) {
+        TerrainCellQuadRunRecord* record = &records[record_index];
+        uint32_t item;
+        if (record->cell_xy == NULL || record->slot_active == NULL ||
+            record->slot_offsets == NULL || record->slot_heights == NULL)
+            continue;
+        for (item = 0; item < record->item_count; ++item) {
+            const float* xy = record->cell_xy + item * 2u;
+            uint32_t corners[2] = { 0u, 2u };
+            float vertices[12];
+            float height_a, height_b;
+            if (float_round_to_nearest_int(xy[0]) != (int)x ||
+                float_round_to_nearest_int(xy[1]) != (int)y) continue;
+            if (hooks != NULL && hooks->height_corner_pair_get != NULL &&
+                !hooks->height_corner_pair_get(hooks->context, x, y, corners))
+                return 0;
+            if (item >= record->slot_capacity || corners[0] >= 4u ||
+                corners[1] >= 4u || surface == NULL ||
+                surface->surface_vectors == NULL || x >= surface->width ||
+                y >= surface->height) return 0;
+            terrain_cell_surface_vertices_get(surface, x, y, vertices);
+            height_a = vertices[corners[0] * 3u + 2u];
+            height_b = vertices[corners[1] * 3u + 2u];
+            record->flags = (record->flags & ~4u) | 2u;
+            if (hooks != NULL && hooks->mesh_visibility_set != NULL)
+                hooks->mesh_visibility_set(hooks->context, record->mesh, 0);
+            record->slot_active[item] = 1u;
+            record->slot_offsets[item * 2u] = 0.0f;
+            record->slot_offsets[item * 2u + 1u] = 0.0f;
+            record->slot_heights[item] = height_a < height_b
+                ? height_a : height_b;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int building_footprint_render_and_validate(
+    TerrainSurfaceGrid* surface, const int offset[2], const int* source_xy,
+    uint32_t count, int rotation, float maximum_height_span,
+    float maximum_edge_delta, uint32_t minimum_routes,
+    const BuildingFootprintPreviewHooks* hooks)
+{
+    static const int adjacent[4][2] = {
+        { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 }
+    };
+    const int* cells;
+    uint32_t index;
+    int surface_valid;
+    int all_valid;
+    if (offset == NULL || (count != 0u && source_xy == NULL) || hooks == NULL ||
+        count > 256u)
+        return 0;
+    cells = (const int*)rotated_pairs_scratch_fill(offset, source_xy,
+                                                   (int)count, rotation);
+    surface_valid = terrain_surface_vertex_span_validate(
+        surface, cells, count, maximum_height_span, maximum_edge_delta);
+    all_valid = surface_valid;
+    for (index = 0; index < count; ++index) {
+        int x = cells[index * 2u];
+        int y = cells[index * 2u + 1u];
+        int in_bounds = surface != NULL && x >= 0 && y >= 0 &&
+            (uint32_t)x < surface->width && (uint32_t)y < surface->height;
+        int neighbor_valid = 0;
+        int direction;
+        int closing_edge = index + 1u == count && count > minimum_routes;
+        if (hooks->neighbor_cell_accept != NULL) {
+            for (direction = 0; direction < 4; ++direction) {
+                if (hooks->neighbor_cell_accept(hooks->context,
+                    x + adjacent[direction][0], y + adjacent[direction][1],
+                    (uint32_t)direction, closing_edge)) {
+                    neighbor_valid = 1;
+                    break;
+                }
+            }
+        }
+        if (!in_bounds || !neighbor_valid || !surface_valid) all_valid = 0;
+        if (hooks->cell_preview_emit != NULL)
+            hooks->cell_preview_emit(hooks->context, index, x, y, in_bounds,
+                                     surface_valid, neighbor_valid);
+    }
+    return all_valid;
+}
+
+/* SurfaceVertexSpanValidate (FUN_0044e8c0): check every distinct cell in a
+ * sampled terrain span. Adjacent corner heights must stay within the edge
+ * limit; cells carrying the terrain height-check bit must also stay within
+ * the requested total height range. */
+int terrain_surface_vertex_span_validate(TerrainSurfaceGrid* grid,
+                                         const int* cell_xy,
+                                         uint32_t cell_count,
+                                         float maximum_height_span,
+                                         float maximum_edge_delta)
+{
+    static const uint8_t edge_corners[6][2] = {
+        { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 }, { 0, 2 }, { 1, 3 }
+    };
+    uint32_t i;
+    int have_flagged_height = 0;
+    float minimum_height = 10000.0f;
+    float maximum_height = -10000.0f;
+    if (grid == NULL || (cell_count != 0 && cell_xy == NULL)) return 0;
+    for (i = 0; i < cell_count; ++i) {
+        float vertices[12];
+        float cell_minimum;
+        float cell_maximum;
+        uint32_t corner;
+        uint32_t edge;
+        int x = cell_xy[i * 2];
+        int y = cell_xy[i * 2 + 1];
+        uint32_t index;
+        if (grid->surface_vectors == NULL || x < 0 || y < 0 ||
+            (uint32_t)x >= grid->width || (uint32_t)y >= grid->height)
+            return 0;
+        terrain_cell_surface_vertices_get(grid, (uint32_t)x, (uint32_t)y,
+                                           vertices);
+        cell_minimum = vertices[0];
+        cell_maximum = vertices[0];
+        for (corner = 0; corner < 4; ++corner) {
+            float height = vertices[corner * 3];
+            if (height < cell_minimum) cell_minimum = height;
+            if (height > cell_maximum) cell_maximum = height;
+        }
+        for (edge = 0; edge < 6; ++edge) {
+            float first = vertices[edge_corners[edge][0] * 3];
+            float second = vertices[edge_corners[edge][1] * 3];
+            float delta = first - second;
+            if (delta < 0.0f) delta = -delta;
+            if (delta > maximum_edge_delta) return 0;
+        }
+        index = terrain_grid_cell_index(grid, (uint32_t)x, (uint32_t)y);
+        if (grid->cell_records != NULL &&
+            (grid->cell_records[index * 0x28u + 0x19u] & 8u) != 0) {
+            if (cell_minimum < minimum_height) minimum_height = cell_minimum;
+            if (cell_maximum > maximum_height) maximum_height = cell_maximum;
+            have_flagged_height = 1;
+        }
+    }
+    if (have_flagged_height &&
+        maximum_height - minimum_height > maximum_height_span) return 0;
+    return 1;
+}
+
+/* TerrainCellListSurfaceHeightClampMutate (FUN_0044ead0): bound the four
+ * surface heights of each requested cell around that cell's mean height and
+ * mark it for the follow-up terrain refresh. */
+void terrain_cell_surface_height_clamp(TerrainSurfaceGrid* grid,
+                                       const int* cell_xy,
+                                       uint32_t cell_count,
+                                       float maximum_offset)
+{
+    uint32_t i;
+    if (grid == NULL || grid->surface_vectors == NULL || cell_xy == NULL ||
+        maximum_offset < 0.0f) return;
+    for (i = 0; i < cell_count; ++i) {
+        int x = cell_xy[i * 2];
+        int y = cell_xy[i * 2 + 1];
+        uint32_t index;
+        uint32_t corner;
+        float average = 0.0f;
+        float minimum;
+        float maximum;
+        if (x < 0 || y < 0 || (uint32_t)x >= grid->width ||
+            (uint32_t)y >= grid->height) continue;
+        index = terrain_grid_cell_index(grid, (uint32_t)x, (uint32_t)y);
+        for (corner = 0; corner < 4; ++corner)
+            average += grid->surface_vectors[(index * 4u + corner) * 3u];
+        average *= 0.25f;
+        minimum = average - maximum_offset;
+        maximum = average + maximum_offset;
+        for (corner = 0; corner < 4; ++corner) {
+            float* height = &grid->surface_vectors[(index * 4u + corner) * 3u];
+            if (*height < minimum) *height = minimum;
+            else if (*height > maximum) *height = maximum;
+        }
+        if (grid->cell_records != NULL)
+            grid->cell_records[index * 0x28u + 0x19u] |= 8u;
+    }
+}
+
+/* TerrainSurfacePointProjectOffset (FUN_0044fb90): select the triangle
+ * containing a point and shift along its stored horizontal normal. */
+int terrain_surface_point_project_offset(TerrainSurfaceGrid* grid,
+                                         float x, float z,
+                                         int orientation, float offset,
+                                         float* out_x, float* out_z)
+{
+    unsigned int cell_x;
+    unsigned int cell_z;
+    unsigned int index;
+    unsigned int triangle_offset;
+    float fraction_x;
+    float fraction_z;
+    float normal_x;
+    float normal_z;
+    float length;
+    int flipped;
+    const float* normal;
+    if (grid == NULL || grid->cell_records == NULL ||
+        grid->triangulation_flags == NULL || out_x == NULL || out_z == NULL ||
+        x < 0.0f || z < 0.0f) return 0;
+    cell_x = (unsigned int)x;
+    cell_z = (unsigned int)z;
+    if (cell_x >= grid->width || cell_z >= grid->height) return 0;
+    index = cell_z * grid->width + cell_x;
+    fraction_x = x - (float)cell_x;
+    fraction_z = z - (float)cell_z;
+    flipped = (grid->triangulation_flags[index] & 1u) != 0;
+    if (!flipped)
+        triangle_offset = fraction_x + fraction_z < 1.0f ? 0u : 0x0cu;
+    else
+        triangle_offset = fraction_z <= fraction_x ? 0x0cu : 0u;
+    normal = (const float*)(grid->cell_records + index * 0x28u +
+                            triangle_offset);
+    normal_x = normal[0];
+    normal_z = normal[1];
+    if (orientation != 0) {
+        normal_x = -normal_x;
+        normal_z = -normal_z;
+    }
+    length = (float)sqrt((double)(normal_x * normal_x + normal_z * normal_z));
+    if (length == 0.0f) return 0;
+    *out_x = x - (normal_x / length) * offset;
+    *out_z = z - (normal_z / length) * offset;
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00450220
+void grid_cell_read_surface_values(TerrainSurfaceGrid* grid, uint32_t x,
+                                   uint32_t y, float out[12])
+{
+    uint32_t index;
+    const float* values;
+    if (!terrain_grid_cell_valid(grid, x, y) || grid->surface_vectors == NULL ||
+        out == NULL) return;
+    index = terrain_grid_cell_index(grid, x, y);
+    values = grid->surface_vectors + index * 12;
+    out[0] = values[0];
+    out[1] = values[1];
+    out[2] = values[2];
+    out[3] = values[3];
+    out[4] = values[4];
+    out[5] = values[5];
+    out[6] = values[6];
+    out[7] = values[7];
+    out[8] = values[8];
+    out[9] = values[9];
+    out[10] = values[10];
+    out[11] = values[11];
+}
+
+// FUNCTION: LEGORR 0x00450060
+int grid_cell_read_surface_vector(TerrainSurfaceGrid* grid, uint32_t x,
+                                  uint32_t y, float out[3])
+{
+    uint32_t index;
+    uint32_t corner;
+    if (!terrain_grid_cell_valid(grid, x, y) || grid->surface_vectors == NULL ||
+        out == NULL) return 0;
+    index = terrain_grid_cell_index(grid, x, y);
+    corner = grid->triangulation_flags != NULL &&
+             (grid->triangulation_flags[index] & 1u) != 0 ? 1u : 0u;
+    memcpy(out, grid->surface_vectors + (index * 4 + corner) * 3,
+           sizeof(float) * 3);
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00451230
+void terrain_cell_surface_vector_write(TerrainSurfaceGrid* grid,
+                                       uint32_t x, uint32_t y,
+                                       uint32_t corner,
+                                       const float vector[3])
+{
+    uint32_t index;
+    if (!terrain_grid_cell_valid(grid, x, y) || grid->surface_vectors == NULL ||
+        vector == NULL || corner > 3) return;
+    index = terrain_grid_cell_index(grid, x, y);
+    if (grid->triangulation_flags != NULL &&
+        (grid->triangulation_flags[index] & 1u) != 0) corner = (corner + 1u) & 3u;
+    memcpy(grid->surface_vectors + (index * 4 + corner) * 3, vector,
+           sizeof(float) * 3);
+}
+
+// FUNCTION: LEGORR 0x00451450
+void terrain_cell_surface_vector_offset_add(TerrainSurfaceGrid* grid,
+                                            uint32_t x, uint32_t y,
+                                            uint32_t corner,
+                                            const float offset[3])
+{
+    uint32_t index;
+    float* vector;
+    if (!terrain_grid_cell_valid(grid, x, y) || grid->surface_vectors == NULL ||
+        offset == NULL || corner > 3) return;
+    index = terrain_grid_cell_index(grid, x, y);
+    if (grid->triangulation_flags != NULL &&
+        (grid->triangulation_flags[index] & 1u) != 0) corner = (corner + 1u) & 3u;
+    vector = grid->surface_vectors + (index * 4 + corner) * 3;
+    vector[0] += offset[0];
+    vector[1] += offset[1];
+    vector[2] += offset[2];
+}
+
+// FUNCTION: LEGORR 0x004507d0
+int terrain_cell_edge_vector_query(TerrainSurfaceGrid* grid, uint32_t x,
+                                   uint32_t y, float out[3])
+{
+    uint32_t cell_x = x;
+    uint32_t cell_y = y;
+    uint32_t corner = 0;
+    uint32_t index;
+    if (grid == NULL || out == NULL || grid->width == 0 || grid->height == 0 ||
+        x > grid->width || y > grid->height) return 0;
+    if (x == grid->width) {
+        --cell_x;
+        corner = 1;
+    }
+    if (y == grid->height) {
+        --cell_y;
+        corner = (x == grid->width) ? 2u : 3u;
+    }
+    if (!terrain_grid_cell_valid(grid, cell_x, cell_y) ||
+        grid->surface_vectors == NULL) return 0;
+    index = terrain_grid_cell_index(grid, cell_x, cell_y);
+    if (grid->triangulation_flags != NULL &&
+        (grid->triangulation_flags[index] & 1u) != 0) {
+        corner = (corner + 1u) & 3u;
+    }
+    memcpy(out, grid->surface_vectors + (index * 4 + corner) * 3,
+           sizeof(float) * 3);
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00450700
+void grid_surface_write_at_xy(TerrainSurfaceGrid* grid, int x, int y,
+                              uint8_t value)
+{
+    unsigned int index;
+    if (grid == NULL || grid->surface_values == NULL || x < 0 || y < 0 ||
+        (uint32_t)x >= grid->width || (uint32_t)y >= grid->height) return;
+    index = (uint32_t)y * grid->width + (uint32_t)x;
+    grid->surface_values[index] = value;
+}
+
+// FUNCTION: LEGORR 0x00450730
+void terrain_cell_change_queue_append(TerrainSurfaceGrid* grid, int x, int y)
+{
+    if (grid == NULL || grid->changed_count >= TERRAIN_GRID_CHANGE_CAPACITY)
+        return;
+    grid_surface_write_at_xy(grid, x, y, 0);
+    grid->changed_xy[grid->changed_count][0] = (int16_t)x;
+    grid->changed_xy[grid->changed_count][1] = (int16_t)y;
+    ++grid->changed_count;
+}
+
+// FUNCTION: LEGORR 0x00450780
+void terrain_cell_change_queue_flush(TerrainSurfaceGrid* grid)
+{
+    uint32_t i;
+    if (grid == NULL) return;
+    for (i = 0; i < grid->changed_count; ++i) {
+        grid_surface_write_at_xy(grid, grid->changed_xy[i][0],
+                                 grid->changed_xy[i][1], 1);
+    }
+    grid->changed_count = 0;
+}
