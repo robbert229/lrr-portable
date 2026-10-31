@@ -641,90 +641,6 @@ static int movie_play_avi_rect(const char* os_path, const char* label,
     return 1;
 }
 
-static int credits_load_lines(const char* name, char*** out_lines,
-                              int* out_count)
-{
-    *out_lines = NULL;
-    *out_count = 0;
-    Resource* r = resource_open(name, RESOURCE_AUTO);
-    if (r == NULL) {
-        return 0;
-    }
-    int32_t size = resource_read(r);
-    if (size <= 0) {
-        resource_free(r);
-        return 0;
-    }
-    char* text = (char*)malloc((size_t)size + 1);
-    if (text == NULL) {
-        resource_free(r);
-        return 0;
-    }
-    memcpy(text, r->data, (size_t)size);
-    text[size] = '\0';
-    resource_free(r);
-
-    int count = 1;
-    for (int32_t i = 0; i < size; ++i) {
-        if (text[i] == '\n') {
-            ++count;
-        }
-    }
-    char** lines = (char**)calloc((size_t)count, sizeof(*lines));
-    if (lines == NULL) {
-        free(text);
-        return 0;
-    }
-    int n = 0;
-    char* start = text;
-    for (;;) {
-        char* p = strchr(start, '\n');
-        if (p == NULL) {
-            p = start + strlen(start);
-        }
-        char saved = *p;
-        *p = '\0';
-        size_t len = strlen(start);
-        if (len > 0 && start[len - 1] == '\r') {
-            start[--len] = '\0';
-        }
-#if defined(_MSC_VER)
-        lines[n] = _strdup(start);
-#else
-        lines[n] = (char*)malloc(len + 1);
-#endif
-        if (lines[n] == NULL) {
-            for (int i = 0; i < n; ++i) {
-                free(lines[i]);
-            }
-            free(lines);
-            free(text);
-            return 0;
-        }
-#if !defined(_MSC_VER)
-        memcpy(lines[n++], start, len + 1);
-#else
-        ++n;
-#endif
-        if (saved == '\0') {
-            break;
-        }
-        start = p + 1;
-    }
-    free(text);
-    *out_lines = lines;
-    *out_count = n;
-    return 1;
-}
-
-static void credits_free_lines(char** lines, int count)
-{
-    for (int i = 0; i < count; ++i) {
-        free(lines[i]);
-    }
-    free(lines);
-}
-
 /* CreditsTextFile + CreditsBackAVI: scroll centered text over the configured
  * AVI until the player presses a key or clicks. */
 static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
@@ -732,12 +648,13 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
                               AudioPlayer* ap, int audio_status, int* quit,
                               FILE* log, long* frame_number)
 {
+    uint32_t scroll_clock = (uint32_t)now_ms();
     const char* text_name = block_get_strptr(cfg,
                                              "Lego* Main CreditsTextFile");
     char** lines = NULL;
     int line_count = 0;
     if (text_name == NULL
-        || !credits_load_lines(text_name, &lines, &line_count)) {
+        || !frontend_credits_lines_load(text_name, &lines, &line_count)) {
         fprintf(log, "credits: cannot load %s\n",
                 text_name != NULL ? text_name : "Lego* Main CreditsTextFile");
         return;
@@ -752,9 +669,8 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
     memset(&out, 0, sizeof(out));
     int video_frame_ms = FRAME_MS;
     char movie_rel[256], movie_os[512];
-    if (movie_avis_enabled(cfg)
-        && movie_key_path(cfg, "CreditsBackAVI", movie_rel,
-                          sizeof(movie_rel))
+    if (movie_key_path(cfg, "CreditsBackAVI", movie_rel,
+                       sizeof(movie_rel))
         && movie_path_resolve(wad_dir, movie_rel, movie_os,
                               sizeof(movie_os))) {
         movie = movie_open_path(movie_os);
@@ -772,10 +688,11 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
     }
     InputState input;
     input_reset(&input);
-    long scroll_px = 0;
+    int scroll_px = 0;
     int64_t next_video_ms = now_ms();
     int have_video_frame = 0;
     int leave = 0;
+    int mouse_was_down = 0;
     while (!*quit && !leave) {
         PlatformEvent evbuf[32];
         int nev = platform_pump_events(win, evbuf, 32);
@@ -785,10 +702,14 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
                 *quit = 1;
                 break;
             }
-            if (evbuf[i].kind == PLATFORM_EVENT_KEYDOWN
-                || (evbuf[i].kind == PLATFORM_EVENT_MOUSE
-                    && evbuf[i].button == 1)) {
+            if (evbuf[i].kind == PLATFORM_EVENT_KEYDOWN) {
                 leave = 1;
+            }
+            if (evbuf[i].kind == PLATFORM_EVENT_MOUSE) {
+                if (!evbuf[i].held && mouse_was_down) {
+                    leave = 1;
+                }
+                mouse_was_down = evbuf[i].held;
             }
         }
         if (*quit || leave) {
@@ -821,6 +742,9 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
             }
         }
 
+        frontend_credits_scroll_step((uint32_t)now_ms(), &scroll_clock,
+                                     &scroll_px);
+
         void* pixels = NULL;
         int pitch = 0;
         if (surface_lock(surf, &pixels, &pitch) == 0) {
@@ -842,15 +766,16 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
         if (audio_status == 0) {
             audio_update(ap);
         }
-        Sleep(FRAME_MS);
-        ++scroll_px;
+        if (movie == NULL) {
+            Sleep(10);
+        }
         ++*frame_number;
         input_begin_frame(&input);
     }
 
     movie_close(movie);
     texture_release(font);
-    credits_free_lines(lines, line_count);
+    frontend_credits_lines_free(lines, line_count);
 }
 
 /* Level load + mission seeding + level intro movie + engine binding. Both
@@ -1299,6 +1224,8 @@ int LegorrrRun(void)
     cmd_context_set(&game);
     game.cfg = block_open("Lego.cfg");
     if (game.cfg != NULL) {
+        entity_names_config_load(game.cfg);
+        tooltip_icons_config_load(game.cfg);
         /* InfoMessages section -> per-id bus sounds (finding 22 §1). */
         message_load_infomessages(game.cfg);
     }
@@ -1376,13 +1303,11 @@ int LegorrrRun(void)
 
     /* Audio: open the DirectSound-analog surface + play a real corpus wav. */
     AudioPlayer ap = { 0 };
-    int audio_status = audio_open(&ap);
+    audio_system_player_set(&ap);
+    audio_system_init(platform_window_hwnd(win));
+    int audio_status = sound_bank_sound_on() ? 0 : -1;
     int sfx_frames = 0;
     if (audio_status == 0) {
-        /* Sound-system init succeeded: raise the bank gate, mirroring the
-         * corpus's DAT_00533878 = 1 on the DirectSound-init success path
-         * (0x47a766); the static stays 0 when audio is unavailable. */
-        sound_bank_sound_on_set(1);
         /* Master gain from the store, not a fixed 0.6: the active save
          * context's restored SFX_Volume (or the default) applies immediately
          * (issue #85) — saved settings take effect without a menu nudge. */
@@ -2281,7 +2206,9 @@ int LegorrrRun(void)
             "exit=%s\n", frames, ctx.state, ctx.tickers_ran, stop);
 
     EngineShutdown(&ctx);
-    audio_close(&ap);
+    sound_subsystem_stop_all();
+    audio_active_shutdown();
+    audio_system_player_set(NULL);
     texture_cache_clear();
     surface_destroy(&surf);
     platform_destroy_window(win);

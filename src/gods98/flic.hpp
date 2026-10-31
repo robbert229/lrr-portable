@@ -30,6 +30,29 @@ extern "C" {
 
 typedef struct Flic Flic;
 
+/* Container walking primitives corresponding to the original loader's
+ * header validator and chunk/frame walkers. The byte-buffer entry point is
+ * useful to callers that already own the complete file image. */
+typedef struct FlicHeaderInfo {
+    uint16_t magic;
+    uint16_t frames;
+    uint16_t width;
+    uint16_t height;
+    uint16_t depth;
+} FlicHeaderInfo;
+int flic_file_header_validate(const void* bytes, size_t length,
+                              FlicHeaderInfo* header);
+/* flic_chunk_walk advances the in-memory file cursor through ancillary
+ * chunks and one frame chunk, matching the target's zero return. The LK and
+ * type-0B handlers are RAM-mode no-ops, as in the target. Their stream-mode
+ * behavior requires a seekable file handle and resizable scratch buffer;
+ * Flic currently owns a preloaded byte image and exposes no stream-state
+ * interface, so that path cannot be represented here. */
+int flic_chunk_walk(Flic* flic);
+int flic_frame_record_walk(Flic* flic);
+int flic_chunk_buffer_and_continue_lk(Flic* flic);
+int flic_chunk_buffer_and_continue_type0b(Flic* flic);
+
 /* Open a `.flh` by resource name (wad entry like `Interface\Pointers\
  * HAMMER.FLH`, or a loose `Data/AVI/...` path like `avi\PB1.flh`, resolved
  * case-insensitively through the movie path helper). Returns NULL on open/

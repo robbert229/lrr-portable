@@ -5,8 +5,10 @@
 #include "platform/platform.h"
 #include "gods98/frameloop.hpp"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <mmsystem.h>
 
 struct PlatformWindow {
     HWND hwnd;
@@ -276,61 +278,323 @@ void platform_screenshot(PlatformWindow* win, const void* pixels, int pitch,
     (void)frame;
 }
 
+typedef struct PlatformAudioSubmission {
+    HWAVEOUT output;
+    WAVEHDR header;
+    DWORD bytes;
+    DWORD sample_rate;
+    WORD channels;
+    int is_loop;
+    struct PlatformAudioSubmission* next;
+} PlatformAudioSubmission;
+
+struct PlatformAudio {
+    PlatformAudioSubmission* submissions;
+    PlatformAudioSubmission* loop;
+    float gain;
+};
+
+static DWORD platform_audio_volume(float gain)
+{
+    DWORD channel = (DWORD)(gain * 65535.0f);
+    return channel | (channel << 16);
+}
+
+static void platform_audio_submission_destroy(PlatformAudioSubmission* item,
+                                              int reset)
+{
+    if (item == NULL) return;
+    if (item->output != NULL) {
+        if (reset) waveOutReset(item->output);
+        waveOutUnprepareHeader(item->output, &item->header,
+                               sizeof(item->header));
+        waveOutClose(item->output);
+    }
+    free(item->header.lpData);
+    free(item);
+}
+
+static void platform_audio_reap(PlatformAudio* a)
+{
+    PlatformAudioSubmission** link;
+    if (a == NULL) return;
+    link = &a->submissions;
+    while (*link != NULL) {
+        PlatformAudioSubmission* item = *link;
+        if (!item->is_loop && (item->header.dwFlags & WHDR_DONE) != 0) {
+            *link = item->next;
+            platform_audio_submission_destroy(item, 0);
+        }
+        else {
+            link = &item->next;
+        }
+    }
+}
+
+static int platform_audio_submit(PlatformAudio* a, const int16_t* pcm,
+                                 int frames, int sample_rate, int channels,
+                                 int loop)
+{
+    PlatformAudioSubmission* item;
+    WAVEFORMATEX format;
+    DWORD bytes;
+    MMRESULT result;
+
+    platform_audio_reap(a);
+    if (a == NULL || pcm == NULL || frames <= 0 || sample_rate <= 0 ||
+        (channels != 1 && channels != 2) ||
+        sample_rate > 0x3fffffff / (channels * 2) ||
+        frames > 0x3fffffff / (channels * 2)) return -1;
+    bytes = (DWORD)(frames * channels * 2);
+    item = (PlatformAudioSubmission*)calloc(1, sizeof(*item));
+    if (item == NULL) return -1;
+    item->header.lpData = (LPSTR)malloc(bytes);
+    if (item->header.lpData == NULL) {
+        free(item);
+        return -1;
+    }
+    memcpy(item->header.lpData, pcm, bytes);
+    item->bytes = bytes;
+    item->sample_rate = (DWORD)sample_rate;
+    item->channels = (WORD)channels;
+    item->is_loop = loop;
+
+    memset(&format, 0, sizeof(format));
+    format.wFormatTag = WAVE_FORMAT_PCM;
+    format.nChannels = (WORD)channels;
+    format.nSamplesPerSec = (DWORD)sample_rate;
+    format.wBitsPerSample = 16;
+    format.nBlockAlign = (WORD)(channels * 2);
+    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+    result = waveOutOpen(&item->output, WAVE_MAPPER, &format, 0, 0,
+                         CALLBACK_NULL);
+    if (result != MMSYSERR_NOERROR) {
+        platform_audio_submission_destroy(item, 0);
+        return -1;
+    }
+    waveOutSetVolume(item->output, platform_audio_volume(a->gain));
+    item->header.dwBufferLength = bytes;
+    if (loop) {
+        item->header.dwFlags = WHDR_BEGINLOOP | WHDR_ENDLOOP;
+        item->header.dwLoops = 0xffffffffUL;
+    }
+    result = waveOutPrepareHeader(item->output, &item->header,
+                                  sizeof(item->header));
+    if (result != MMSYSERR_NOERROR) {
+        platform_audio_submission_destroy(item, 0);
+        return -1;
+    }
+    result = waveOutWrite(item->output, &item->header, sizeof(item->header));
+    if (result != MMSYSERR_NOERROR) {
+        platform_audio_submission_destroy(item, 1);
+        return -1;
+    }
+    item->next = a->submissions;
+    a->submissions = item;
+    if (loop) a->loop = item;
+    return 0;
+}
+
 PlatformAudio* platform_audio_open(void)
 {
-    return NULL;
+    PlatformAudio* a;
+    if (waveOutGetNumDevs() == 0) return NULL;
+    a = (PlatformAudio*)calloc(1, sizeof(*a));
+    if (a != NULL) a->gain = 1.0f;
+    return a;
 }
 
 void platform_audio_close(PlatformAudio* a)
 {
-    (void)a;
+    if (a == NULL) return;
+    platform_audio_stop(a);
+    free(a);
 }
 
 int platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
                         int sample_rate)
 {
-    (void)a; (void)pcm; (void)frames; (void)sample_rate;
-    return -1;
+    return platform_audio_submit(a, pcm, frames, sample_rate, 1, 0);
 }
 
 int platform_audio_play_stereo(PlatformAudio* a, const int16_t* lr,
                                int frames, int sample_rate)
 {
-    (void)a; (void)lr; (void)frames; (void)sample_rate;
-    return -1;
+    return platform_audio_submit(a, lr, frames, sample_rate, 2, 0);
 }
 
 int platform_audio_loop(PlatformAudio* a, const int16_t* lr,
                         int frames, int sample_rate)
 {
-    (void)a; (void)lr; (void)frames; (void)sample_rate;
-    return -1;
+    if (a == NULL) return -1;
+    if (a->loop != NULL) {
+        PlatformAudioSubmission** link = &a->submissions;
+        while (*link != NULL && *link != a->loop) link = &(*link)->next;
+        if (*link != NULL) {
+            PlatformAudioSubmission* old = *link;
+            *link = old->next;
+            a->loop = NULL;
+            platform_audio_submission_destroy(old, 1);
+        }
+    }
+    if (lr == NULL || frames <= 0 || sample_rate <= 0) return 0;
+    return platform_audio_submit(a, lr, frames, sample_rate, 2, 1);
 }
 
 void platform_audio_refill(PlatformAudio* a)
 {
-    (void)a;
+    platform_audio_reap(a);
 }
 
 int platform_audio_set_gain(PlatformAudio* a, float gain)
 {
-    (void)a; (void)gain;
-    return -1;
+    PlatformAudioSubmission* item;
+    int result = 0;
+    if (a == NULL) return -1;
+    if (gain < 0.0f) gain = 0.0f;
+    if (gain > 1.0f) gain = 1.0f;
+    a->gain = gain;
+    for (item = a->submissions; item != NULL; item = item->next) {
+        if (waveOutSetVolume(item->output, platform_audio_volume(gain)) !=
+            MMSYSERR_NOERROR) result = -1;
+    }
+    return result;
 }
 
 float platform_audio_get_gain(PlatformAudio* a)
 {
-    (void)a;
-    return 0.0f;
+    return a != NULL ? a->gain : 0.0f;
 }
 
 int platform_audio_queued(PlatformAudio* a)
 {
-    (void)a;
-    return 0;
+    PlatformAudioSubmission* item;
+    unsigned long total = 0;
+    if (a == NULL) return 0;
+    platform_audio_reap(a);
+    for (item = a->submissions; item != NULL; item = item->next) {
+        DWORD played = 0;
+        DWORD queued;
+        MMTIME position;
+        if (item->is_loop) {
+            queued = item->bytes;
+        }
+        else {
+            memset(&position, 0, sizeof(position));
+            position.wType = TIME_BYTES;
+            if (waveOutGetPosition(item->output, &position,
+                                   sizeof(position)) == MMSYSERR_NOERROR) {
+                if (position.wType == TIME_BYTES) played = position.u.cb;
+                else if (position.wType == TIME_MS) {
+                    played = (DWORD)((double)position.u.ms *
+                        (double)item->sample_rate * item->channels * 2.0 /
+                        1000.0);
+                }
+            }
+            if (played > item->bytes) played = item->bytes;
+            queued = item->bytes - played;
+        }
+        total += queued;
+        if (total > 0x7fffffffUL) return 0x7fffffff;
+    }
+    return (int)total;
 }
 
 void platform_audio_stop(PlatformAudio* a)
 {
-    (void)a;
+    PlatformAudioSubmission* item;
+    if (a == NULL) return;
+    item = a->submissions;
+    a->submissions = NULL;
+    a->loop = NULL;
+    while (item != NULL) {
+        PlatformAudioSubmission* next = item->next;
+        platform_audio_submission_destroy(item, 1);
+        item = next;
+    }
+}
+
+static int s_platform_cd_audio_open;
+
+static int platform_cd_audio_command(const char* command, int* error_code)
+{
+    MCIERROR result = mciSendStringA(command, NULL, 0, NULL);
+    if (error_code != NULL) *error_code = (int)result;
+    return result == 0 ? 1 : 0;
+}
+
+int platform_cd_audio_open(int* error_code)
+{
+    int opened;
+    if (s_platform_cd_audio_open != 0) {
+        if (error_code != NULL) *error_code = 0;
+        return 1;
+    }
+    opened = platform_cd_audio_command("open cdaudio", error_code);
+    if (opened) s_platform_cd_audio_open = 1;
+    return opened;
+}
+
+int platform_cd_audio_set_tmsf(int* error_code)
+{
+    return platform_cd_audio_command("set cdaudio time format tmsf",
+                                     error_code);
+}
+
+int platform_cd_audio_play(int one_based_track, int* error_code)
+{
+    char command[64];
+    if (one_based_track < 1) {
+        if (error_code != NULL) *error_code = MCIERR_OUTOFRANGE;
+        return 0;
+    }
+    sprintf(command, "play cdaudio from %d", one_based_track);
+    return platform_cd_audio_command(command, error_code);
+}
+
+int platform_cd_audio_stop(int* error_code)
+{
+    return platform_cd_audio_command("stop cdaudio", error_code);
+}
+
+int platform_cd_audio_close(int* error_code)
+{
+    int closed = platform_cd_audio_command("close cdaudio", error_code);
+    if (closed) s_platform_cd_audio_open = 0;
+    return closed;
+}
+
+int platform_cd_audio_status(char* mode, int mode_capacity,
+                             int* current_track, int* error_code)
+{
+    char track_text[32];
+    MCIERROR result;
+    if (mode == NULL || mode_capacity <= 0 || current_track == NULL) {
+        if (error_code != NULL) *error_code = MCIERR_PARAM_OVERFLOW;
+        return 0;
+    }
+    mode[0] = '\0';
+    result = mciSendStringA("status cdaudio mode", mode,
+                            (UINT)mode_capacity, NULL);
+    if (result == 0) {
+        track_text[0] = '\0';
+        result = mciSendStringA("status cdaudio current track", track_text,
+                                sizeof(track_text), NULL);
+    }
+    if (result == 0) *current_track = atoi(track_text);
+    if (error_code != NULL) *error_code = (int)result;
+    return result == 0 ? 1 : 0;
+}
+
+int platform_cd_audio_error_text(int error_code, char* output,
+                                 int output_capacity)
+{
+    if (output == NULL || output_capacity <= 0) return 0;
+    return mciGetErrorStringA((MCIERROR)error_code, output,
+                              (UINT)output_capacity) ? 1 : 0;
+}
+
+uint32_t platform_time_milliseconds(void)
+{
+    return (uint32_t)timeGetTime();
 }

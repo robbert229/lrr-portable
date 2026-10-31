@@ -19,6 +19,10 @@
 #include <cstddef>
 
 #include "texture.hpp"
+#include "scene_resources.hpp"
+#if defined(LEGORRR_BACKEND_MINIWIN)
+#include <miniwin/d3drm.h>
+#endif
 
 typedef struct DisplaySurface {
     void*  dd;    /* LPDIRECTDRAW  (opaque out of the seam) */
@@ -27,6 +31,17 @@ typedef struct DisplaySurface {
     int    w;
     int    h;
 } DisplaySurface;
+
+/* The original render-surface allocator normalizes a rectangle against the
+ * display, pops a pooled record, and attaches the created surface to it
+ * (FUN_00476e50). The backend owns display queries, pool growth, and the
+ * device-specific surface call through these operations. */
+typedef struct ScreenBoundedSurfaceRecord {
+    unsigned char bytes[0x20u + sizeof(void*) - sizeof(uint32_t)];
+} ScreenBoundedSurfaceRecord;
+void screen_bounded_surface_device_set(void* renderer, void* device);
+ScreenBoundedSurfaceRecord* screen_bounded_surface_allocate(
+    uint32_t width, uint32_t height, void* camera, int x, int y);
 
 /* FUN_00482220: one 0x70-byte mesh render record. The corpus stores the
  * index count/pointer at offsets 0/8 and vertex count/pointer at 4/0xc. */
@@ -160,6 +175,8 @@ void render_surface_restore_from_primary(DisplaySurface* destination,
                                          int restore_enabled); /* FUN_0047cc20 */
 void windowed_render_surface_blit(DisplaySurface* primary,
                                   DisplaySurface* back_surface); /* FUN_0047cc50 */
+void surface_blit_wait(void* destination_surface,
+                       DisplaySurface* source); /* FUN_0047ed00 */
 int surface_directdraw_description_get(DisplaySurface* surface,
                                        SurfaceDescriptionInfo* out); /* FUN_0047de60 */
 int surface_directdraw_pixel_format_get(DisplaySurface* surface,

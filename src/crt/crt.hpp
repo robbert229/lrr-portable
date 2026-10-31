@@ -125,8 +125,9 @@ void* crt_calloc_aligned(int count, int size);  /* FUN_004997c0 */
 int crt_float_to_long(float value);
 #endif
 
-/* FUN_00417430: forwards a float to 32-bit integer conversion through
- * the CRT's __ftol routine. */
+/* FUN_00417430: convert the indexed float in the record's +0x34 table.
+ * Its x86 body tail-jumps to the CRT __ftol helper with the value in ST(0). */
+int float_to_long_x87(unsigned int index, const void* record);
 int float_to_long(float value);
 
 /* FUN_0041f8e0: the callable no-op installed by several engine paths. */

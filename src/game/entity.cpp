@@ -8,19 +8,24 @@
 
 #include "ai.hpp"
 #include "entity.hpp"
+#include "weapon.hpp"
 #include "effects.hpp"
 #include "level.hpp"
+#include "terrain_grid.hpp"
 #include "cmd.hpp"
 #include "gods98/model.hpp"
 #include "gods98/view.hpp"
+#include "gods98/record.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/string.hpp"
 #include "gods98/message.hpp"
+#include "frontend.hpp"
 
 static EntityRepeatedResourceCreateHook s_repeated_resource_create_hook;
+static uint32_t s_next_ddiscene_owner_token = 1u;
 static void* s_repeated_resource_create_context;
-static char s_entity_kind_names[5][32][128];
-static uint32_t s_entity_kind_name_counts[5];
+static char s_entity_kind_names[16][32][128];
+static uint32_t s_entity_kind_name_counts[16];
 static char s_entity_localized_names[16][32][128];
 static char s_entity_localized_the_names[16][32][128];
 static uint32_t s_entity_localized_name_counts[16];
@@ -51,13 +56,6 @@ static const char* s_object_name_special[9];
 // GLOBAL: LEGORR 0x005561b0
 static const char* s_object_the_name_special[9];
 static EntityHealthThresholdReadHook s_entity_health_threshold_read_hook;
-static EntityUnloadCellOriginHook s_entity_unload_cell_origin_hook;
-static EntityUnloadCellCandidateHook s_entity_unload_cell_candidate_hook;
-static EntityUnloadRouteCheckHook s_entity_unload_route_check_hook;
-static EntityUnloadStatFlagsHook s_entity_unload_stat_flags_hook;
-static void* s_entity_unload_cell_context;
-static EntityTaskTargetCellHook s_entity_task_target_cell_hook;
-static void* s_entity_task_target_cell_context;
 static int s_entity_pair_activity_sentinel;
 static EntityVisualResourcePresentHook s_entity_visual_resource_present_hook;
 static EntityVisualResourceCreateHook s_entity_visual_resource_create_hook;
@@ -74,7 +72,6 @@ static void* s_entity_indexed_flag_context;
 static EntityToolNameLoadHook s_entity_tool_name_load_hook;
 static void* s_entity_tool_name_context;
 static void* s_entity_tool_name_handles[11];
-static EntityProximityActivityHooks s_entity_proximity_activity_hooks;
 static EntityTypeTwoEventHook s_entity_type_two_event_hook;
 static void* s_entity_type_two_event_context;
 static EntityTypeTwoPositionedHooks s_entity_type_two_positioned_hooks;
@@ -84,8 +81,8 @@ static void* s_entity_task_coordinate_match_user;
 static EntityBuildingDepositHook s_entity_building_deposit_hook;
 static void* s_entity_building_deposit_context;
 static EntityDepositActivityHooks s_entity_deposit_activity_hooks;
-static EntityKindFourPostCreateHooks s_entity_kind_four_post_create_hooks;
 static EntityBuildPlacementHooks s_entity_build_placement_hooks;
+static GameContext* s_entity_build_placement_context;
 static EntityActionIssueHooks s_entity_action_issue_hooks;
 static EntityActionConsumeHooks s_entity_action_consume_hooks;
 static EntityClippedRectangleHooks s_entity_clipped_rectangle_hooks;
@@ -94,8 +91,9 @@ static void* s_entity_pair_ray_hit_check_context;
 static void* s_entity_health_threshold_context;
 static EntityStateOverrideEntry s_entity_state_override_entries[64];
 static uint32_t s_entity_state_override_count;
-static EntityStateOverrideStatsSetHook s_entity_state_override_stats_set;
-static EntityStateOverrideTaskRestoreHook s_entity_state_override_task_restore;
+static EntityStateOverrideValue330ApplyHook
+    s_entity_state_override_value_330_apply;
+static EntityStateOverrideRenameHook s_entity_state_override_rename;
 static void* s_entity_state_override_context;
 
 typedef struct EntitySimulationQueueItem {
@@ -238,7 +236,7 @@ void entity_kind_name_tables_install(int kind, const char* const* names,
                                      uint32_t count)
 {
     uint32_t i;
-    if (kind < 1 || kind > 4) {
+    if (kind < 1 || (kind > 4 && kind != 10)) {
         return;
     }
     if (count > 32u) {
@@ -430,12 +428,38 @@ static const char* entity_localized_name_pick(uint32_t kind, int index,
     return item_name_by_kind_lookup(kind, index);
 }
 
-/* EntityDisplayNameLookup (FUN_004395e0): select a display label by entity
- * kind and its configured name-table index. */
-// FUNCTION: LEGORR 0x004395E0
-const char* entity_display_name_lookup(uint32_t kind, int index)
+static int entity_display_name_config_index(const EntitySlot* entity)
 {
-    return entity_localized_name_pick(kind, index, 0);
+    uint32_t i;
+    int kind;
+    if (entity == NULL || entity->type < 1 ||
+        (entity->type > 4 && entity->type != 10)) return -1;
+    kind = entity->type;
+    for (i = 0u; i < s_entity_kind_name_counts[kind]; ++i) {
+        if (strcmp(entity->type_name, s_entity_kind_names[kind][i]) == 0)
+            return (int)i;
+    }
+    return -1;
+}
+
+/* EntityDisplayNameLookup (FUN_004395e0) receives an EntitySlot*. Its
+ * category-specific index is represented by the config type name in the
+ * portable entity record; kind 7's second-word selector is retained as
+ * etype, matching the original +4 read. */
+// FUNCTION: LEGORR 0x004395E0
+const char* entity_display_name_lookup(const EntitySlot* entity)
+{
+    int index;
+    if (entity == NULL || entity->type < 0) return NULL;
+    if ((entity->type >= 1 && entity->type <= 4) || entity->type == 10) {
+        index = entity_display_name_config_index(entity);
+        return index >= 0
+            ? entity_localized_name_pick((uint32_t)entity->type, index, 0)
+            : NULL;
+    }
+    if (entity->type == 7)
+        return entity_localized_name_pick(7u, entity->etype, 0);
+    return entity_localized_name_pick((uint32_t)entity->type, 0, 0);
 }
 
 // FUNCTION: LEGORR 0x00439860
@@ -533,9 +557,8 @@ int entity_animation_state_set(EntitySlot* entity, uint32_t state)
                                                s_entity_animation_state_context);
 }
 
-/* EntityRecordFlag20Query (FUN_00439e40): only apply the requested state
- * when the entity capability word contains bit 0x20. */
-// FUNCTION: LEGORR 0x00439E40
+/* Apply the requested animation state only when the entity capability word
+ * contains bit 0x20. */
 int entity_record_flag20_query(EntitySlot* entity, uint32_t state)
 {
     if (entity == NULL
@@ -1134,13 +1157,79 @@ int entity_route_setup_and_marker_associate(EntitySlot* entity,
             return 0;
     }
     entity_action_sequence_reset(entity, 0);
-    for (i = 0; i < count; ++i) entity->wp[i] = route[i];
+    for (i = 0; i < count; ++i) ENTITY_WAYPOINTS(entity)[i] = route[i];
     entity->wp_count = (int)count;
     entity->wp_index = 0;
     entity->flags_3ec &= ~0x400u;
     entity->flags_3e0 |= 1u;
     entity->pos_pair_2f4 = 0.0f;
     entity->pos_pair_2f8 = 0.0f;
+    return 1;
+}
+
+int entity_waypoint_storage_reserve(EntitySlot* entity, unsigned int count)
+{
+    AiWaypoint* grown;
+    unsigned int current_capacity;
+    unsigned int copy_count;
+    if (entity == NULL) return 0;
+    current_capacity = entity->wp_dynamic != NULL
+        ? entity->wp_capacity : AI_WAYPOINTS_MAX;
+    if (count <= current_capacity) return 1;
+    if ((size_t)count > ((size_t)-1) / sizeof(AiWaypoint)) return 0;
+    grown = (AiWaypoint*)realloc(entity->wp_dynamic,
+                                (size_t)count * sizeof(AiWaypoint));
+    if (grown == NULL) return 0;
+    if (entity->wp_dynamic == NULL) {
+        copy_count = (unsigned int)entity->wp_count;
+        if (copy_count > AI_WAYPOINTS_MAX) copy_count = AI_WAYPOINTS_MAX;
+        if (copy_count != 0u) {
+            memcpy(grown, entity->wp, copy_count * sizeof(AiWaypoint));
+        }
+    }
+    entity->wp_dynamic = grown;
+    entity->wp_capacity = count;
+    return 1;
+}
+
+/* AdjacentRouteStepAppend (FUN_004468c0): append a half-cell waypoint only
+ * while route-building is active and the requested cell touches the current
+ * tail cardinally. Grow the port's inline waypoint span with realloc when the
+ * route reaches it, matching the corpus's count-based buffer growth. */
+// FUNCTION: LEGORR 0x004468c0
+int entity_route_adjacent_step_append(EntitySlot* entity, int cell_x,
+                                      int cell_y)
+{
+    AiWaypoint* waypoint;
+    int last_x;
+    int last_y;
+    if (entity == NULL || (entity->flags_3e0 & 1u) == 0u
+        || entity->wp_count <= 0
+        || entity->wp_count == 0x7fffffff) {
+        return 0;
+    }
+    waypoint = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
+    last_x = (int)waypoint->x;
+    last_y = (int)waypoint->y;
+    if (!((cell_x == last_x &&
+           (cell_y == last_y - 1 || cell_y == last_y + 1)) ||
+          (cell_y == last_y &&
+           (cell_x == last_x - 1 || cell_x == last_x + 1)))) {
+        return 0;
+    }
+    if (!entity_waypoint_storage_reserve(
+            entity, (unsigned int)entity->wp_count + 1u)) return 0;
+    waypoint = &ENTITY_WAYPOINTS(entity)[entity->wp_count];
+    waypoint->x = (float)cell_x;
+    waypoint->y = (float)cell_y;
+    waypoint->weight_x = 0.5f;
+    waypoint->weight_y = 0.5f;
+    waypoint->pending = 0;
+    waypoint->step_kind = 1;
+    waypoint->reserved[0] = 0;
+    waypoint->reserved[1] = 0;
+    ++entity->wp_count;
+    entity->flags_3e8 &= ~0x400u;
     return 1;
 }
 
@@ -1627,6 +1716,7 @@ void entity_teardown_hooks_set(const EntityTeardownHooks* hooks)
 /* EntityTeardown (FUN_00437540). The legacy routine's engine calls are
  * represented by typed stage callbacks; record flags, command-chain cleanup,
  * special back-reference clearing, and free-list ownership stay local. */
+// FUNCTION: LEGORR 0x00437540
 int entity_teardown(EntitySlot* entity)
 {
     uint32_t flags;
@@ -1676,6 +1766,10 @@ int entity_teardown(EntitySlot* entity)
         entity->flags_3ec = (int32_t)(flags & ~0x80U);
         flags &= ~0x80U;
     }
+    /* Remove the token from the scene before the release callback can return
+     * that renderer record to its pool. Keep the entity token valid through
+     * the release callback itself. */
+    entity_ddiscene_scene_owner_bind(entity, NULL);
     if (s_entity_teardown_hooks.operation != NULL) {
         s_entity_teardown_hooks.operation(entity, ENTITY_TEARDOWN_DETACH_PARENT,
             s_entity_teardown_hooks.context);
@@ -1710,6 +1804,12 @@ int entity_teardown(EntitySlot* entity)
         s_entity_teardown_hooks.free_list_link(entity,
             s_entity_teardown_free_head,
             s_entity_teardown_hooks.context);
+    free(entity->wp_dynamic);
+    entity->wp_dynamic = NULL;
+    entity->wp_capacity = 0;
+    entity->wp_count = 0;
+    entity->wp_index = 0;
+    entity->ddiscene_owner_token = 0u;
     s_entity_teardown_free_head = entity;
     return 0;
 }
@@ -1786,6 +1886,7 @@ void entity_action_prerequisite_hooks_set(
 /* EntityActionKindPrerequisiteCheck (FUN_004388b0): require a type-one
  * entity and a valid action, then gate the two resource balances against
  * the corpus's packed primary/secondary action costs. */
+// FUNCTION: LEGORR 0x004388B0
 int entity_action_kind_prerequisite_check(EntitySlot* entity, int action)
 {
     uint32_t values[3] = { 0u, 0u, 0u };
@@ -1849,6 +1950,7 @@ void entity_route_marker_candidate_hook_set(
 /* EntityRouteMarkerCandidateFind (FUN_004389e0): find the first pooled
  * entity within the corpus's 10,000-unit radius that passes the optional
  * route-marker predicate. */
+// FUNCTION: LEGORR 0x004389E0
 EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
                                                int include_secondary)
 {
@@ -1881,6 +1983,7 @@ void entity_kind_record_update_hooks_set(
 /* EntityKindRecordUpdateDispatch (FUN_00438460): preserve type-specific
  * update order, action transitions, event flags, and the two shared flag
  * updates while leaving engine-owned side effects behind typed callbacks. */
+// FUNCTION: LEGORR 0x00438460
 void entity_kind_record_update_dispatch(EntitySlot* entity)
 {
     EntityKindRecordUpdateHooks* const hooks =
@@ -1914,13 +2017,15 @@ void entity_kind_record_update_dispatch(EntitySlot* entity)
     else if (type == 1 && hooks->type_one_record_update != NULL) {
         hooks->type_one_record_update(entity, hooks->context);
     }
-    if ((type == 1 || type == 2) &&
-        hooks->type_one_or_two_update != NULL) {
-        hooks->type_one_or_two_update(entity, hooks->context);
+    if (type == 1 || type == 2) {
+        (void)entity_pool_find_with_local_predicate(entity->owner_ctx, entity);
     }
     if (hooks->event_emit != NULL) {
         hooks->event_emit(entity, type, entity->flags_3ec & 0x200u,
                           hooks->context);
+    }
+    if (type == 1 || type == 2) {
+        scalar_task_record_queue(entity);
     }
     if (type == 4 && hooks->type_four_counter_increment != NULL) {
         hooks->type_four_counter_increment(hooks->context);
@@ -1949,6 +2054,7 @@ void grid_object_record_state_install(const GridObjectRecord* records,
 /* GridObjectRecordsRelease (FUN_004378e0): release both owned handles for
  * each active record, clear the fixed 200-word table, then release its side
  * structure through the installed owner callback. */
+// FUNCTION: LEGORR 0x004378e0
 void grid_object_records_release(void)
 {
     unsigned int i;
@@ -1978,6 +2084,11 @@ void queued_grid_animation_hooks_set(const QueuedGridAnimationHooks* hooks)
     else {
         s_queued_grid_animation_hooks = *hooks;
     }
+}
+
+void queued_grid_animation_accumulator_clear(void)
+{
+    s_queued_grid_animation_fraction = 0.0f;
 }
 
 /* ProcessQueuedGridAnimations (FUN_00437300): accumulate scaled fractional
@@ -2032,6 +2143,7 @@ void rover_work_queue_hooks_set(const RoverWorkQueueHooks* hooks)
 
 /* RoverWorkQueueUpdate (FUN_004383b0): apply the selected global work
  * position to every animation component in the rover's scene model. */
+// FUNCTION: LEGORR 0x004383B0
 void rover_work_queue_update(EntitySlot* entity, int mode)
 {
     RoverWorkQueueHooks* const hooks = &s_rover_work_queue_hooks;
@@ -2137,6 +2249,20 @@ static uint32_t entity_indexed_record_word_get(int group, int index,
 uint32_t entity_indexed_record_word_at_b0_get(int group, int index, int slot)
 {
     return entity_indexed_record_word_get(group, index, slot, 0xb0u);
+}
+
+/* IndexedRecordWordAtOffsetB4Get (FUN_00469af0) is the adjacent dword
+ * reader used by EntityKindOneRandomSpawnTrigger. */
+uint32_t entity_indexed_record_word_at_b4_get(int group, int index, int slot)
+{
+    return entity_indexed_record_word_get(group, index, slot, 0xb4u);
+}
+
+/* EntityIndexedRecordWordAtOffsetF0Get (FUN_00469be0): the per-entity
+ * record selector used to choose an attached scene-resource slot. */
+uint32_t entity_indexed_record_word_at_f0_get(int group, int index, int slot)
+{
+    return entity_indexed_record_word_get(group, index, slot, 0xf0u);
 }
 
 /* MappedIndexedRecordWordAtFCGet (FUN_0046a0c0) is the corresponding
@@ -2498,7 +2624,7 @@ int entity_route_to_explicit_target(EntitySlot* actor, EntitySlot* target)
         return 0;
     }
     actor->link_target = target;
-    actor->wp[count - 1u].pending = 0x15u;
+    ENTITY_WAYPOINTS(actor)[count - 1u].pending = 0x15u;
     actor->flags_3ec |= 0x8000u;
     entity_activity_toggle(target, 1);
     return 1;
@@ -2525,7 +2651,7 @@ int entity_route_marker_setup(EntitySlot* actor)
         return 0;
     }
     actor->link_2fc = (uintptr_t)target;
-    actor->wp[count - 1u].pending = 0x13u;
+    ENTITY_WAYPOINTS(actor)[count - 1u].pending = 0x13u;
     return 1;
 }
 
@@ -2969,6 +3095,10 @@ int entity_create(GameContext* ctx, int type, const char* name,
     slot->activity = -1;       /* corpus +0x2e8 NULL pointer = no activity */
     slot->activity_last = -1;
     slot->owner_ctx = ctx;
+    slot->ddiscene_owner_token = s_next_ddiscene_owner_token++;
+    if (slot->ddiscene_owner_token == 0u) {
+        slot->ddiscene_owner_token = s_next_ddiscene_owner_token++;
+    }
     slot->x = x;
     slot->y = y;
     slot->z = z;
@@ -2999,6 +3129,27 @@ int entity_create(GameContext* ctx, int type, const char* name,
         slot->name[copy_length] = '\0';
     }
     return (*cnt)++;
+}
+
+uint32_t entity_ddiscene_owner_token_get(const EntitySlot* entity)
+{
+    return entity != NULL ? entity->ddiscene_owner_token : 0u;
+}
+
+/* EntityVisualLoadACT/general model creation ultimately supplies the scene
+ * object to this seam. Keep the scene pointer as a port sidecar and store the
+ * stable token in the renderer's legacy +0x20 owner word. */
+void entity_ddiscene_scene_owner_bind(EntitySlot* entity, void* scene_object)
+{
+    if (entity == NULL) return;
+    if (entity->attached_scene_object != NULL &&
+        entity->attached_scene_object != scene_object) {
+        scene_object_owner_set(entity->attached_scene_object, 0u);
+    }
+    entity->attached_scene_object = scene_object;
+    if (scene_object != NULL) {
+        scene_object_owner_set(scene_object, entity->ddiscene_owner_token);
+    }
 }
 
 void entity_spawn_special_finalize_hook_set(
@@ -3043,6 +3194,7 @@ void building_upgrade_admission_hooks_set(
 /* BuildingUpgradeResourceAdmissionCheck (FUN_00438770): reject the terminal
  * upgrade level, then apply the two-resource threshold and return the
  * secondary debit amount when that path is selected. */
+// FUNCTION: LEGORR 0x00438770
 int building_upgrade_resource_admission_check(EntitySlot* building,
                                                uint32_t* out_secondary_cost)
 {
@@ -3083,6 +3235,7 @@ void building_upgrade_commit_hooks_set(
 /* BuildingUpgradeCommit (FUN_004387f0): spend the selected resource, clear
  * the pending request, advance the level in payload/stats, and dispatch the
  * upgrade's world effect. */
+// FUNCTION: LEGORR 0x004387f0
 void building_upgrade_commit(EntitySlot* building)
 {
     BuildingUpgradeCommitHooks* const hooks =
@@ -3107,6 +3260,7 @@ void building_upgrade_commit(EntitySlot* building)
         building, s_building_upgrade_admission_hooks.context) + 1u;
     if (hooks->resource_spend != NULL)
         hooks->resource_spend(building, resource, amount, hooks->context);
+    building->activity_counter_3d8 = 0.0f;
     if (hooks->upgrade_request_clear != NULL)
         hooks->upgrade_request_clear(building, hooks->context);
     if (hooks->payload_level_set != NULL)
@@ -3154,6 +3308,7 @@ static int deferred_olist_string_equal(const char* first, const char* second)
 /* DeferredOListEntityCreateAndLink (FUN_00437940): realize all queued object
  * records at a cell, initialize each created entity, resolve named links
  * after creation, then release the consumed queue records. */
+// FUNCTION: LEGORR 0x00437940
 void deferred_olist_entity_create_and_link(const int cell_xy[2])
 {
     EntitySlot* created[200];
@@ -3371,9 +3526,19 @@ float entity_stats_float_ate8(const EntitySlot* e) { return stats_rec_float(e, 0
 // FUNCTION: LEGORR 0x00469d90
 float entity_stats_float_at70(const EntitySlot* e) { return stats_rec_float(e, 0x70); }
 // FUNCTION: LEGORR 0x00469da0
-void* entity_stats_field_at_a0(const EntitySlot* e)
+static void* entity_stats_field_at_a0_corpus(const EntitySlot* e)
 {
     /* the corpus returns the ADDRESS record+0xa0, not its contents */
+    return (void*)((const uint8_t*)e->stats_record + 0xa0);
+}
+
+void* entity_stats_field_at_a0(const EntitySlot* e)
+{
+    /* Portable callers may leave the stats record unset; keep their tested
+     * zero-template address while the mapped leaf models a real record. */
+    if (e->stats_record != NULL) {
+        return entity_stats_field_at_a0_corpus(e);
+    }
     return (void*)(stats_rec(e) + 0xa0);
 }
 // FUNCTION: LEGORR 0x00469db0
@@ -3393,11 +3558,11 @@ uint32_t entity_stats_word_get(const EntitySlot* e) { return stats_rec_word(e, 0
 uint32_t entity_state_flags_get(const EntitySlot* e) { return stats_rec_word(e, 0x148); }
 
 void entity_state_override_hooks_set(
-    EntityStateOverrideStatsSetHook stats_set,
-    EntityStateOverrideTaskRestoreHook task_restore, void* context)
+    EntityStateOverrideValue330ApplyHook value_330_apply,
+    EntityStateOverrideRenameHook rename, void* context)
 {
-    s_entity_state_override_stats_set = stats_set;
-    s_entity_state_override_task_restore = task_restore;
+    s_entity_state_override_value_330_apply = value_330_apply;
+    s_entity_state_override_rename = rename;
     s_entity_state_override_context = context;
 }
 
@@ -3429,7 +3594,8 @@ int entity_state_override_stack_push(const EntityStateOverrideEntry* entry)
 }
 
 /* PopEntityStateOverride (FUN_00459240): only type-2 entities consume the
- * global LIFO; restore the +0x3f0 word before stats and task-state callbacks. */
+ * global LIFO; restore +0x3f0 and the saved name, then apply +0x330. */
+// FUNCTION: LEGORR 0x00459240
 int entity_state_override_pop(EntitySlot* entity)
 {
     EntityStateOverrideEntry entry;
@@ -3439,13 +3605,24 @@ int entity_state_override_pop(EntitySlot* entity)
     }
     entry = s_entity_state_override_entries[--s_entity_state_override_count];
     entity->flags_3f0 = entry.flags_3f0;
-    if (s_entity_state_override_stats_set != NULL) {
-        s_entity_state_override_stats_set(entity, entry.stats_index,
-                                          s_entity_state_override_context);
+    if (s_entity_state_override_rename != NULL) {
+        s_entity_state_override_rename(entity, entry.name,
+                                       s_entity_state_override_context);
     }
-    if (s_entity_state_override_task_restore != NULL) {
-        s_entity_state_override_task_restore(entity, entry.task_state_words,
-                                             s_entity_state_override_context);
+    else {
+        size_t length = 0;
+        while (length < sizeof(entry.name) && entry.name[length] != '\0') {
+            entity->name[length] = entry.name[length];
+            ++length;
+        }
+        entity->name[length] = '\0';
+    }
+    if (s_entity_state_override_value_330_apply != NULL) {
+        s_entity_state_override_value_330_apply(
+            entity, entry.value_330, s_entity_state_override_context);
+    }
+    else {
+        entity->indexed_record_slot_330 = (int32_t)entry.value_330;
     }
     return 1;
 }
@@ -3884,6 +4061,7 @@ int entity_type3_flag04000000_test(const EntitySlot* e)
 }
 
 /* EntityAcceptsTargetForTaskCheck (FUN_00439bd0, finding 471). */
+// FUNCTION: LEGORR 0x00439bd0
 int entity_accepts_target_for_task_check(const EntitySlot* entity,
                                          const EntitySlot* target,
                                          int apply_extra_gate)
@@ -3913,6 +4091,7 @@ int entity_accepts_target_for_task_check(const EntitySlot* entity,
  * gate and target gate pass, install a move command toward the target and
  * retain the target link. The original's bespoke action-record/path writer
  * is represented by the port's shared move-command path builder. */
+// FUNCTION: LEGORR 0x00439A20
 int entity_gated_step_command_issue(EntitySlot* entity, EntitySlot* target)
 {
     if (entity == NULL || target == NULL
@@ -3925,25 +4104,30 @@ int entity_gated_step_command_issue(EntitySlot* entity, EntitySlot* target)
     return 1;
 }
 
-void entity_task_target_cell_hook_set(EntityTaskTargetCellHook hook,
-                                      void* context)
-{
-    s_entity_task_target_cell_hook = hook;
-    s_entity_task_target_cell_context = context;
-}
-
-/* FUNCTION: LEGORR 0x00439b80 */
+// FUNCTION: LEGORR 0x00439b80
 int entity_task_target_cell_eligibility_check(
     const EntitySlot* entity, const uint32_t* task_record)
 {
+    SpatialObjectQueryRequest request;
+    float position[2];
+    void* candidate;
     if (entity == NULL) return 0;
     if (entity->type != 1) return 1;
     if (task_record == NULL || task_record[1] != 0u) return 0;
     if ((entity_capability_flags_get(entity) & 0x200u) != 0u) return 1;
-    if (s_entity_task_target_cell_hook == NULL) return 0;
-    return s_entity_task_target_cell_hook(entity, task_record,
-                                          s_entity_task_target_cell_context)
-        != 0;
+
+    /* The reference's 0x438ae0 call is the live mask-2 spatial query. Its
+     * arguments are the actor, task_record[0], and task_record[0xcc]. */
+    memset(&request, 0, sizeof(request));
+    entity_transform_position_get(entity, position);
+    request.center[0] = position[0];
+    request.center[1] = position[1];
+    request.radius = 10000.0f;
+    request.mask = 2u;
+    request.filters[0] = task_record[0];
+    request.filters[1] = task_record[0xcc];
+    candidate = spatial_object_query_execute(&request);
+    return candidate != NULL;
 }
 
 void entity_pair_interaction_activity_sentinel_set(int activity)
@@ -3954,6 +4138,7 @@ void entity_pair_interaction_activity_sentinel_set(int activity)
 /* EntityPairInteractionGate (FUN_0043a9f0): a qualifying carrier pair
  * requests activity 0x24 once per current sentinel and raises the partner
  * interaction bit in the entity's +0x3e4 flags. */
+// FUNCTION: LEGORR 0x0043A9F0
 void entity_pair_interaction_gate(EntitySlot* entity,
                                   const EntitySlot* partner)
 {
@@ -3983,6 +4168,7 @@ void entity_visual_resource_hooks_set(EntityVisualResourcePresentHook present,
 
 /* EntityVisualResourceGetOrCreate (FUN_0043a5f0): choose one of the four
  * type-specific cached visual handles and create the model when absent. */
+// FUNCTION: LEGORR 0x0043a5f0
 void entity_visual_resource_get_or_create(EntitySlot* entity)
 {
     int slot;
@@ -4010,6 +4196,7 @@ void entity_indexed_flag_publish_hook_set(EntityIndexedFlagPublishHook hook,
 
 /* EntityIndexedFlagSetAndRefresh (FUN_00439c80): type-1 records publish
  * their indexed bit, refresh the owning entity's flags, and raise event 0x19. */
+// FUNCTION: LEGORR 0x00439C80
 void entity_indexed_flag_set_and_refresh(EntitySlot* entity)
 {
     uint32_t bit;
@@ -4033,6 +4220,7 @@ void entity_tool_name_load_hook_set(EntityToolNameLoadHook hook,
 
 /* ToolNameStringResourcesLoad (FUN_00439950): load the eleven configured
  * entries from the ToolNames category into the global indexed handle table. */
+// FUNCTION: LEGORR 0x00439950
 void entity_tool_name_strings_load(void* string_loader, void* config)
 {
     int slot;
@@ -4050,46 +4238,35 @@ void* entity_tool_name_string_get(int slot)
     return slot >= 0 && slot < 11 ? s_entity_tool_name_handles[slot] : NULL;
 }
 
-void entity_proximity_activity_hooks_set(
-    const EntityProximityActivityHooks* hooks)
-{
-    if (hooks == NULL) {
-        memset(&s_entity_proximity_activity_hooks, 0,
-               sizeof(s_entity_proximity_activity_hooks));
-    }
-    else {
-        s_entity_proximity_activity_hooks = *hooks;
-    }
-}
-
 /* ProximityActivityRaise (FUN_0043aab0, finding 471): activate activity
  * 0x24 when a type-3 entity is near a qualifying terrain cell. */
+// FUNCTION: LEGORR 0x0043AAB0
 void entity_proximity_activity_raise(EntitySlot* entity)
 {
-    EntityProximityActivityHooks* hooks = &s_entity_proximity_activity_hooks;
+    const GameContext* context;
+    const LevelState* level;
     float cell_xy[2];
-    float radius;
-    float measure;
+    float block_size;
     float dx, dy;
-    int x, y;
+    int x = 0, y = 0;
     if (entity == NULL || entity->type != 3
         || (entity_capability_flags_get(entity) & 0x4000u) == 0u
-        || hooks->measure_get == NULL
-        || hooks->cell_resolve == NULL || hooks->cell_state == NULL
-        || hooks->cell_world_position == NULL || hooks->radius_get == NULL
         || s_entity_pair_activity_sentinel == entity->activity
         || (entity->flags_3e0 & 0x400u) != 0u
-        ) return;
-    measure = hooks->measure_get(hooks->context, entity);
-    if (!(measure < entity->field_340)
-        || !hooks->cell_resolve(hooks->context, entity, &x, &y)
-        || !hooks->cell_state(hooks->context, x, y, 1)
-        || hooks->cell_state(hooks->context, x, y, 0)
-        || !hooks->cell_world_position(hooks->context, x, y, cell_xy)) return;
-    radius = hooks->radius_get(hooks->context) * 0.33333334f;
+        || !(entity_stats_float_ate8(entity) < entity->field_340)) return;
+    context = entity->owner_ctx;
+    level = context != NULL ? context->level : NULL;
+    if (level == NULL || level->ptr_terrain == NULL) return;
+    entity_position_to_terrain_cell(entity, level, &x, &y);
+    if (!level_coord_pair_within_bounds(level, x, y)
+        || !level_cell_occupied_at(level, x, y)
+        || level_cell_flag_8000(level, x, y) != 0u
+        || !terrain_cell_world_center_xy_get(level->ptr_terrain, x, y,
+                                             cell_xy)) return;
+    block_size = terrain_blocksize_get(level->ptr_terrain);
     dx = entity->x - cell_xy[0];
     dy = entity->y - cell_xy[1];
-    if (sqrtf(dx * dx + dy * dy) < radius) {
+    if (sqrtf(dx * dx + dy * dy) < block_size * 0.33333334f) {
         ai_set_activity(entity, 0x24, 0);
         entity->flags_3e4 |= 0x00200000u;
     }
@@ -4104,6 +4281,7 @@ void entity_type_two_event_hook_set(EntityTypeTwoEventHook hook,
 
 /* TypeTwoEntityEventDispatch (FUN_0043b820): resolve the supplied entity or
  * its attached owner to a type-2 record, then dispatch through its event hook. */
+// FUNCTION: LEGORR 0x0043B820
 void entity_type_two_event_dispatch(const EntitySlot* entity,
                                     uint32_t argument_a,
                                     uint32_t argument_b)
@@ -4135,6 +4313,7 @@ void entity_type_two_positioned_hooks_set(
 /* TypeTwoEntityPositionedCallbackDispatch (FUN_0043b850): resolve the type-2
  * record, optionally capture a scene-object position, and delegate the
  * record-set walk to the registered callback. */
+// FUNCTION: LEGORR 0x0043B850
 void entity_type_two_positioned_callback_dispatch(
     const EntitySlot* entity, void* scene_object, uint32_t argument_a,
     uint32_t argument_b, int mode)
@@ -4164,6 +4343,7 @@ void entity_task_count_context_set(GameContext* context,
 
 /* TaskCountAtGridCoordinateQuery (FUN_0043b360): clear the result and scan
  * the live entity tables for task records associated with the requested cell. */
+// FUNCTION: LEGORR 0x0043B360
 void entity_task_count_at_grid_coordinate_query(uint32_t x, uint32_t y,
                                                 uint32_t* out_count)
 {
@@ -4204,6 +4384,7 @@ void entity_building_deposit_hook_set(EntityBuildingDepositHook hook,
 /* BuildingDepositStateMonitor (FUN_0043bb20): clear stale deposit state
  * when the carried count, capability threshold, or state flags no longer
  * permit it; otherwise request the configured deposit action when supported. */
+// FUNCTION: LEGORR 0x0043BB20
 void entity_building_deposit_state_monitor(EntitySlot* entity)
 {
     uint32_t capabilities;
@@ -4244,29 +4425,33 @@ void entity_deposit_activity_hooks_set(const EntityDepositActivityHooks* hooks)
     else s_entity_deposit_activity_hooks = *hooks;
 }
 
-/* EntityDepositActivityGate (FUN_0043a300): activated deposits either force
- * the interrupt action or route the actor to the target before attaching the
- * deposit command state. The renderer's quadrant resolver is represented by
- * the route hook's direction result. */
+/* EntityDepositActivityGate (FUN_0043a300): activated deposits enter activity
+ * 0x1d through the live activity setter; otherwise the accepted target and
+ * route hooks control the approach/attachment branch. */
+// FUNCTION: LEGORR 0x0043A300
 int entity_deposit_activity_gate(EntitySlot* entity, EntitySlot* target)
 {
     uint32_t flags;
     int direction = 0;
-    if (entity == NULL || target == NULL
-        || (entity->flags_3e0 & 0x400u) == 0u) return 0;
+    if (entity == NULL || (entity->flags_3e0 & 0x400u) == 0u) return 0;
     if (s_entity_deposit_activity_hooks.activity_flags != NULL)
         flags = s_entity_deposit_activity_hooks.activity_flags(
             s_entity_deposit_activity_hooks.context, entity);
-    else flags = entity_capability_flags_get(entity);
+    else flags = entity_stats_word_get(entity);
     if ((flags & (4u | 2u)) != 0u) {
         entity->flags_3e0 |= 0x2000u;
-        cmd_create_task(entity);
-        entity->movement_tick_scale = 1.0f;
+        ai_set_activity(entity, 0x1d, 1);
+        entity->activity_timer = 1.0f;
         if (s_entity_deposit_activity_hooks.deposit_cancel != NULL)
             s_entity_deposit_activity_hooks.deposit_cancel(
                 s_entity_deposit_activity_hooks.context, entity);
         return 1;
     }
+    if (target == NULL) return 0;
+    if (!entity_accepts_target_for_task_check(
+            target, (const EntitySlot*)entity->carry_link_308, 0)
+        && (entity_stats_word_get(target) & 8u) == 0u) return 0;
+    flags = entity_stats_word_get(target);
     if (s_entity_deposit_activity_hooks.target_busy != NULL
         && s_entity_deposit_activity_hooks.target_busy(
             s_entity_deposit_activity_hooks.context, target, 0)) flags |= 8u;
@@ -4280,46 +4465,106 @@ int entity_deposit_activity_gate(EntitySlot* entity, EntitySlot* target)
     return 1;
 }
 
-void entity_kind_four_post_create_hooks_set(
-    const EntityKindFourPostCreateHooks* hooks)
+static int entity_kind_four_candidate_search(LevelState* level, int x, int y,
+                                              int amount)
 {
-    if (hooks == NULL) memset(&s_entity_kind_four_post_create_hooks, 0,
-                              sizeof(s_entity_kind_four_post_create_hooks));
-    else s_entity_kind_four_post_create_hooks = *hooks;
+    static const int offsets[4][2] = {
+        { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 }
+    };
+    int direction;
+    for (direction = 0; direction < 4; ++direction) {
+        int cell_xy[2];
+        int nx = x + offsets[direction][0];
+        int ny = y + offsets[direction][1];
+        if (level_cell_secondary_bit0(level, nx, ny) != 0u) {
+            EntitySlot* found;
+            cell_xy[0] = nx;
+            cell_xy[1] = ny;
+            found = entity_at_grid_position_find(cell_xy);
+            if (found != NULL && entity_available_resource_spend(
+                    level, amount, found)) return 1;
+        }
+        if (!level_cell_occupied_at(level, nx, ny) &&
+            !level_cell_occupied_or_flag(level, nx, ny, 1)) continue;
+        if (level_cell_visited_flag(level, nx, ny) != 0u) continue;
+        terrain_cell_visited_flag_set_and_track(level, nx, ny);
+        if (entity_kind_four_candidate_search(level, nx, ny, amount))
+            return 1;
+    }
+    return 0;
 }
 
-/* KindFourPostCreateResolve (FUN_0043c570): resolve the created building's
- * kind and location, clear the pending marker when its placement is free,
- * otherwise retain the marker and optionally activate it in the live scene. */
+static int entity_kind_four_candidate_find(LevelState* level,
+                                            const int start_xy[2],
+                                            int amount)
+{
+    int found;
+    if (level == NULL || start_xy == NULL) return 0;
+    found = entity_kind_four_candidate_search(level, start_xy[0], start_xy[1],
+                                               amount);
+    terrain_cell_visited_flags_clear_all(level);
+    return found;
+}
+
+static void entity_kind_four_adjacent_expand(LevelState* level, int x, int y)
+{
+    static const int offsets[4][2] = {
+        { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 }
+    };
+    int direction;
+    for (direction = 0; direction < 4; ++direction) {
+        int nx = x + offsets[direction][0];
+        int ny = y + offsets[direction][1];
+        if (!level_cell_occupied_at(level, nx, ny) &&
+            !level_cell_occupied_or_flag(level, nx, ny, 1)) continue;
+        if (level_cell_secondary_flag_100(level, nx, ny) != 0u) continue;
+        terrain_cell_flag100_set_and_track(level, nx, ny);
+        entity_kind_four_adjacent_expand(level, nx, ny);
+    }
+}
+
+/* KindFourPostCreateResolve (FUN_0043c570): clear the pending marker and
+ * register the kind-four object when its nearby resource search fails;
+ * otherwise keep the marker and expand the adjacent-cell state when the
+ * observed stats and entity-eligibility gates pass. */
+// FUNCTION: LEGORR 0x0043c570
 void entity_kind_four_post_create_resolve(EntitySlot* entity)
 {
-    uint32_t state;
-    uint32_t kind;
-    float position[2];
-    EntityKindFourPostCreateHooks* hooks =
-        &s_entity_kind_four_post_create_hooks;
-    if (entity == NULL || entity->type != 4
-        || (entity->flags_3e8 & 0x80000000u) != 0u) return;
-    kind = hooks->kind_resolve != NULL
-        ? hooks->kind_resolve(hooks->context, entity) : 0u;
-    entity_transform_position_get(entity, position);
-    state = hooks->state_flags != NULL
-        ? hooks->state_flags(hooks->context, entity) : 0u;
-    if ((state & (0x200u | 0x400u)) == 0u
-        && hooks->position_conflicts != NULL
-        && !hooks->position_conflicts(hooks->context, position, kind)) {
+    LevelState* level;
+    uint32_t flags;
+    int cell_xy[2];
+    int have_cell;
+    if (entity == NULL || entity->type != 4 ||
+        (entity->flags_3e8 & 0x80000000u) != 0u) return;
+    level = entity->owner_ctx != NULL ? entity->owner_ctx->level : NULL;
+    if (level == NULL) {
+        GameContext* context = entity_pool_callback_context_get();
+        level = context != NULL ? context->level : NULL;
+    }
+    have_cell = 0;
+    cell_xy[0] = -1;
+    cell_xy[1] = -1;
+    if (level != NULL) {
+        entity_position_to_terrain_cell(entity, level, &cell_xy[0],
+                                        &cell_xy[1]);
+        have_cell = level_coord_pair_within_bounds(
+            level, cell_xy[0], cell_xy[1]);
+    }
+    flags = entity_state_flags_get(entity);
+    if ((flags & (0x200u | 0x400u)) == 0u && have_cell &&
+        !entity_kind_four_candidate_find(level, cell_xy,
+            (int)stats_instance_word_at_bc(entity))) {
         entity->flags_3e8 &= ~0x20000000u;
-        if (hooks->refresh_entity != NULL)
-            hooks->refresh_entity(hooks->context, entity);
+        type4_object_registry_insert(entity);
         return;
     }
     entity->flags_3e8 |= 0x20000000u;
-    if ((state & 0x200u) != 0u && hooks->post_create_allowed != NULL
-        && hooks->post_create_allowed(hooks->context)
-        && hooks->is_interactive_scene != NULL
-        && hooks->is_interactive_scene(hooks->context, entity)
-        && hooks->position_activate != NULL)
-        hooks->position_activate(hooks->context, position);
+    if ((flags & 0x200u) != 0u && have_cell &&
+        entity_shared_eligibility_check(entity, 0)) {
+        /* FUN_0041f8e0 is empty, so its return-register residue preserves
+         * the preceding nonzero eligibility result in the original call. */
+        entity_kind_four_adjacent_expand(level, cell_xy[0], cell_xy[1]);
+    }
 }
 
 void entity_build_placement_hooks_set(const EntityBuildPlacementHooks* hooks)
@@ -4333,6 +4578,11 @@ void entity_build_placement_hooks_set(const EntityBuildPlacementHooks* hooks)
     }
 }
 
+void entity_build_placement_context_bind(GameContext* context)
+{
+    s_entity_build_placement_context = context;
+}
+
 /* EntityBuildPlacementCommandSetup and its alternate (FUN_00439370 / 4b0).
  * World-cell sampling, model creation, command enqueueing, and mission
  * counters cross the installed game/scene boundary hooks. */
@@ -4342,43 +4592,68 @@ int entity_build_placement_command_setup(const int cell_xy[2], int entity_id,
 {
     EntityBuildPlacementHooks* hooks = &s_entity_build_placement_hooks;
     float position[2];
+    float cell_position[3];
     EntitySlot* created;
+    GameContext* context = entity_pool_callback_context_get();
+    uint8_t* cell_record;
     int kind = alternate ? 7 : 6;
     int opcode = alternate ? 0x1c : 0x16;
-    if (cell_xy == NULL || hooks->entity_create == NULL
-        || hooks->queue_entity == NULL) return 0;
+    if (cell_xy == NULL) return 0;
     if (world_xy != NULL) {
         position[0] = world_xy[0];
         position[1] = world_xy[1];
+    } else if (hooks->position_choose != NULL) {
+        if (!hooks->position_choose(hooks->context, cell_xy, position))
+            return 0;
+    } else {
+        if (!terrain_cell_world_position_get(cell_xy[0], cell_xy[1],
+                                             cell_position)) return 0;
+        position[0] = cell_position[0];
+        position[1] = cell_position[1];
     }
-    else if (hooks->position_choose == NULL
-             || !hooks->position_choose(hooks->context, cell_xy, position)) {
-        return 0;
+    if (hooks->entity_create != NULL) {
+        created = hooks->entity_create(hooks->context, kind, 0, entity_id,
+                                       position[0], position[1]);
+    } else {
+        created = entity_create_with_position(context, kind, NULL, entity_id,
+                                              position[0], position[1], 0.0f);
     }
-    created = hooks->entity_create(hooks->context, kind, 0, entity_id,
-                                   position[0], position[1]);
     if (created == NULL) return 0;
-    hooks->queue_entity(hooks->context, opcode, created);
+    if (hooks->queue_entity != NULL)
+        hooks->queue_entity(hooks->context, opcode, created);
+    else
+        cmd_enqueue(opcode, created, 0, 0, 0);
+    cell_record = context != NULL && context->level != NULL
+        ? level_voxel(context->level, cell_xy[0], cell_xy[1]) : NULL;
     if (alternate) {
         if (hooks->event_raise != NULL) {
             hooks->event_raise(hooks->context, 0x13, cell_xy);
+        } else {
+            advisor_text_animation_update(0x13, 1, 0);
         }
         if (update_state && hooks->cell_counter_increment != NULL) {
             hooks->cell_counter_increment(hooks->context, cell_xy, 0x30);
+        } else if (update_state && cell_record != NULL) {
+            ++*(uint32_t*)(cell_record + 0x30);
         }
     }
     else if (update_state) {
         if (hooks->event_raise != NULL) {
-            hooks->event_raise(hooks->context, 0, cell_xy);
+            hooks->event_raise(hooks->context, 0x11, cell_xy);
+        } else {
+            message_dispatch(0, 0, 0, cell_xy);
+            advisor_text_animation_update(0x11, 1, 0);
         }
         if (hooks->cell_counter_increment != NULL) {
             hooks->cell_counter_increment(hooks->context, cell_xy, 0x2c);
+        } else if (cell_record != NULL) {
+            ++*(uint32_t*)(cell_record + 0x2c);
         }
     }
     return 1;
 }
 
-/* FUNCTION: LEGORR 0x00439340 */
+// FUNCTION: LEGORR 0x00439340
 void entity_build_placement_command_pair_create(const int cell_xy[2],
                                                 int entity_id)
 {
@@ -4387,28 +4662,53 @@ void entity_build_placement_command_pair_create(const int cell_xy[2],
 }
 
 /* EntityBuildPlacementCommandBatchExpand (FUN_00439280): parse four counts,
- * then expand selectors 0/1 into the two command-setup families. The port
- * caps each expansion at 1024 commands to guard malformed config data. */
+ * then expand selectors 0/1 into the two command-setup families. The four
+ * values are the outputs of the level's byte-state classifier at 0x42c5b0,
+ * so this path uses the live level record instead of requiring a separately
+ * installed count callback. */
+// FUNCTION: LEGORR 0x00439280
 void entity_build_placement_command_batch_expand(const int cell_xy[2])
 {
     uint32_t counts[4];
     uint32_t i;
-    if (cell_xy == NULL || s_entity_build_placement_hooks.batch_counts_read
-            == NULL
-        || !s_entity_build_placement_hooks.batch_counts_read(
-            s_entity_build_placement_hooks.context, cell_xy, counts)) return;
-    for (i = 0; i < counts[0] && i < 1024u; ++i) {
+    GameContext* context = entity_pool_callback_context_get();
+    if (cell_xy == NULL || context == NULL || context->level == NULL ||
+        !level_cell_byte_state_classify(context->level, cell_xy[0],
+            cell_xy[1], &counts[0], &counts[1], &counts[2], &counts[3])) {
+        return;
+    }
+    for (i = 0; i < counts[0]; ++i) {
         (void)entity_build_placement_command_setup(cell_xy, 0, NULL, 1, 0);
     }
-    for (i = 0; i < counts[1] && i < 1024u; ++i) {
+    for (i = 0; i < counts[1]; ++i) {
         (void)entity_build_placement_command_setup(cell_xy, 1, NULL, 1, 0);
     }
-    for (i = 0; i < counts[2] && i < 1024u; ++i) {
+    for (i = 0; i < counts[2]; ++i) {
         (void)entity_build_placement_command_setup(cell_xy, 0, NULL, 1, 1);
     }
-    for (i = 0; i < counts[3] && i < 1024u; ++i) {
+    for (i = 0; i < counts[3]; ++i) {
         (void)entity_build_placement_command_setup(cell_xy, 1, NULL, 1, 1);
     }
+}
+
+/* EntityActionKindSupported (FUN_0043a7c0): the no-op callback used by the
+ * kind-6 branch has no defined nonzero return in the port, while kind 7
+ * checks the selected live level resource. */
+static int entity_action_kind_supported(const EntitySlot* source, int kind,
+                                        int selector)
+{
+    uint32_t flags;
+    const LevelState* level;
+    if (source == NULL) return 0;
+    flags = entity_stats_word_get(source);
+    if ((flags & 8u) == 0u) return 0;
+    if (kind == 6) return 0;
+    if (kind == 7) {
+        level = source->owner_ctx != NULL ? source->owner_ctx->level : NULL;
+        if (level == NULL) return 0;
+        return level_int(level, selector != 0 ? 0xac : 0xa0) != 0;
+    }
+    return kind == 8 || kind == 9 || kind == 0xb || kind == 0xd;
 }
 
 void entity_action_issue_hooks_set(const EntityActionIssueHooks* hooks)
@@ -4425,6 +4725,7 @@ void entity_action_issue_hooks_set(const EntityActionIssueHooks* hooks)
 /* ActionKindEntityCreateAndCommandIssue (FUN_0043a650). The installed
  * constructor owns resource/template selection; this routine keeps the
  * verified action gate, event order, queue opcode, and kind labels. */
+// FUNCTION: LEGORR 0x0043A650
 EntitySlot* entity_action_kind_entity_create_and_command_issue(
     EntitySlot* source, int kind, int selector, int argument)
 {
@@ -4476,6 +4777,7 @@ void entity_action_consume_hooks_set(const EntityActionConsumeHooks* hooks)
 /* EntityActionRecordConsumeAndCleanup (FUN_0043a850): preserve the type-6
  * count accumulation, type-7 external notification, record release, and
  * non-creature activity-list cleanup. */
+// FUNCTION: LEGORR 0x0043A850
 void entity_action_record_consume_and_cleanup(
     EntitySlot* entity, EntityActionConsumeRecord* record)
 {
@@ -4494,10 +4796,17 @@ void entity_action_record_consume_and_cleanup(
         else if (hooks->event_dispatch != NULL) {
             hooks->event_dispatch(hooks->context, 6, record->reference);
         }
+        else if (entity->owner_ctx != NULL) {
+            global_object_field8c_increment(entity->owner_ctx->level);
+        }
     }
     else if (record->type == 7 && entity->type != 3
              && hooks->event_dispatch != NULL) {
         hooks->event_dispatch(hooks->context, 7, record->reference);
+    }
+    else if (record->type == 7 && entity->type != 3
+             && entity->owner_ctx != NULL) {
+        level_resource_balance_add_and_sound(record->reference);
     }
     record->active = 0;
     if (hooks->record_release != NULL) {
@@ -4523,6 +4832,7 @@ void entity_clipped_rectangle_hooks_set(
 /* ClippedRectangleCallbackDispatch (FUN_0043b6c0): form the componentwise
  * rectangle union, visit entities, then enqueue opcode 0x2d unless renderer
  * state bit 8 suppresses the path. */
+// FUNCTION: LEGORR 0x0043b6c0
 void entity_clipped_rectangle_callback_dispatch(
     void* payload, const float rect_a[2], const float rect_b[2])
 {
@@ -4559,13 +4869,129 @@ int entity_pair_ray_hit_check(const EntitySlot* first,
         != 0;
 }
 
+/* EntityActivityCountersAdvance (FUN_0043c6b0): accumulate the frame delta
+ * into the three per-entity counters. Type 2 emits the two configured
+ * threshold messages once on each upward crossing; kinds 6, 7, 9, and 0xb
+ * schedule deferred work each time the first counter reaches 750. */
+// FUNCTION: LEGORR 0x0043c6b0
+void entity_activity_counters_advance(EntitySlot* entity, float elapsed)
+{
+    float old_3d8;
+    float old_3d4;
+    float threshold;
+    const LevelState* level;
+    if (entity == NULL) return;
+    old_3d8 = entity->activity_counter_3d8;
+    old_3d4 = entity->activity_counter_3d4;
+    entity->activity_counter_3d8 += elapsed;
+    entity->activity_counter_3d4 += elapsed;
+    entity->activity_counter_3dc += elapsed;
+    level = entity->owner_ctx != NULL ? entity->owner_ctx->level : NULL;
+    if (entity->type == 2) {
+        threshold = engine_float_field210_get_by_index(level, 2);
+        if (threshold != 0.0f
+            && threshold <= entity->activity_counter_3d8
+            && old_3d8 < threshold) {
+            message_dispatch(0x22, 0,
+                (uint32_t)(uintptr_t)entity, NULL);
+        }
+        threshold = engine_float_field260_get(level);
+        if (threshold != 0.0f
+            && threshold <= entity->activity_counter_3d4
+            && old_3d4 < threshold) {
+            message_dispatch(0x23, 0,
+                (uint32_t)(uintptr_t)entity, NULL);
+            return;
+        }
+    }
+    else if ((entity->type == 6 || entity->type == 7 || entity->type == 9
+              || (entity->type == 0xb
+                  && (entity->flags_3e4 & 0x02000000u) == 0u))
+             && 750.0f <= old_3d8 + elapsed && old_3d8 < 750.0f) {
+        entity->activity_counter_3d8 = 0.0f;
+        entity_deferred_work_schedule(entity);
+    }
+}
+
+static EntityOneShotAttachedEffectHooks s_one_shot_attached_effect_hooks;
+
+void entity_one_shot_attached_effect_hooks_set(
+    const EntityOneShotAttachedEffectHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_one_shot_attached_effect_hooks, 0,
+               sizeof(s_one_shot_attached_effect_hooks));
+    }
+    else {
+        s_one_shot_attached_effect_hooks = *hooks;
+    }
+}
+
+/* OneShotAttachedEffectStart (FUN_0044c030): a type-3 owner accepts this
+ * only once. The scene adapter supplies the pose and child/action operations;
+ * the owner timer, child kind, flags, and reciprocal +0x364 link stay here. */
+// FUNCTION: LEGORR 0x0044c030
+int entity_one_shot_attached_effect_start(EntitySlot* entity,
+                                          float duration)
+{
+    EntityOneShotAttachedEffectHooks* const hooks =
+        &s_one_shot_attached_effect_hooks;
+    EntitySlot* child;
+    float position[2];
+    float angle;
+    if (entity == NULL || entity->type != 3
+        || (entity->flags_3e4 & 0x08000000u) != 0u) {
+        return 0;
+    }
+    entity->flags_3e4 |= 0x08000000u;
+    entity->wake_timer = duration * 25.0f;
+    if (hooks->scene_pose_get == NULL || hooks->child_create == NULL) {
+        return 0;
+    }
+    if (!hooks->scene_pose_get(hooks->context, entity, position, &angle)) {
+        return 0;
+    }
+    child = hooks->child_create(hooks->context, entity, 0x12,
+                                position, angle);
+    if (child == NULL) return 0;
+    if (hooks->child_action_start != NULL) {
+        hooks->child_action_start(hooks->context, child, "Start");
+    }
+    child->flags_3e0 |= 0x100u;
+    entity->wake_target = child;
+    child->wake_target = entity;
+    return 1;
+}
+
+/* EntityPairScalarFieldsSet (FUN_0044c150): accept kinds one through three,
+ * reset their action state, then install the pair/scalar and raise the
+ * corresponding +0x3e4 state bit. */
+// FUNCTION: LEGORR 0x0044c150
+int entity_pair_scalar_fields_set(EntitySlot* entity, const int32_t pair[2],
+                                  int32_t scalar)
+{
+    if (entity == NULL || pair == NULL
+        || (entity->type != 1 && entity->type != 2 && entity->type != 3)) {
+        return 0;
+    }
+    entity_state_reset(entity, 0, 1);
+    entity->task_pair_3b4[0] = pair[0];
+    entity->task_pair_3b4[1] = pair[1];
+    entity->task_scalar_3bc = scalar;
+    entity->flags_3e4 |= 0x00004000u;
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x0043c3e0
 /* EntityType26CommandCompletionGate (FUN_0043c3e0): only type-2 entities
  * carrying a kind-0x1a command are considered; distance acceptance followed
- * by a clear ray check completes the gate. */
+ * by a clear ray check completes the gate. The renderer-owned ray provider
+ * must be installed before this gate can report completion. */
 int entity_type26_command_completion_gate(const EntitySlot* entity)
 {
     const void* command;
     const EntitySlot* target;
+    int ray_hit;
     if (entity == NULL || entity->type != 2) return 0;
     command = entity->cmd_head;
     if (command == NULL || cmd_rec_type(command) != 0x1a) return 0;
@@ -4574,47 +5000,40 @@ int entity_type26_command_completion_gate(const EntitySlot* entity)
                                                                   target)) {
         return 0;
     }
-    if (s_entity_pair_ray_hit_check_hook == NULL) return 0;
-    return s_entity_pair_ray_hit_check_hook(entity, target,
-                                            s_entity_pair_ray_hit_check_context)
-        == 0;
+    if (s_entity_pair_ray_hit_check_hook != NULL) {
+        ray_hit = s_entity_pair_ray_hit_check_hook(
+            entity, target, s_entity_pair_ray_hit_check_context);
+    }
+    else {
+        /* object_pair_ray_hit_check needs renderer object positions and the
+         * scene trace owner. Do not treat its no-provider result as a clear
+         * ray; no production installer for these ops exists in this tree. */
+        if (s_entity_ray_hit_sweep_ops.object_position_get == NULL ||
+            s_entity_ray_hit_sweep_ops.scene_trace_prepare == NULL) {
+            return 0;
+        }
+        ray_hit = object_pair_ray_hit_check((void*)entity, (void*)target);
+    }
+    return ray_hit == 0;
 }
 
-void entity_unload_cell_hooks_set(EntityUnloadCellOriginHook origin,
-                                  EntityUnloadCellCandidateHook candidate,
-                                  EntityUnloadRouteCheckHook route_check,
-                                  EntityUnloadStatFlagsHook stat_flags,
-                                  void* context)
-{
-    s_entity_unload_cell_origin_hook = origin;
-    s_entity_unload_cell_candidate_hook = candidate;
-    s_entity_unload_route_check_hook = route_check;
-    s_entity_unload_stat_flags_hook = stat_flags;
-    s_entity_unload_cell_context = context;
-}
-
-/* FUNCTION: LEGORR 0x00439d50 */
-int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
-                                             int out_xy[2])
+static int entity_unload_adjacent_cell_find_on_level(
+    const EntitySlot* entity, const LevelState* level, int out_xy[2])
 {
     static const int offsets[4][2] = {
         { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 }
     };
-    int x, y, i;
-    if (entity == NULL || s_entity_unload_cell_origin_hook == NULL
-        || s_entity_unload_cell_candidate_hook == NULL
-        || s_entity_unload_route_check_hook == NULL
-        || !s_entity_unload_cell_origin_hook(entity, &x, &y,
-                                             s_entity_unload_cell_context)) {
-        return 0;
-    }
+    int x = 0, y = 0, i;
+    if (entity == NULL || level == NULL) return 0;
+    entity_position_to_terrain_cell(entity, level, &x, &y);
+    if (level_coord_pair_within_bounds(level, x, y) == 0) return 0;
     for (i = 0; i < 4; ++i) {
         int candidate_x = x + offsets[i][0];
         int candidate_y = y + offsets[i][1];
-        if (s_entity_unload_cell_candidate_hook(
-                candidate_x, candidate_y, s_entity_unload_cell_context)
-            && s_entity_unload_route_check_hook(
-                candidate_x, candidate_y, s_entity_unload_cell_context)) {
+        if (level_cell_flag_8_bounded(level, candidate_x, candidate_y) != 0u
+            && terrain_cell_route_and_occupancy_check(
+                NULL, level, candidate_x, candidate_y,
+                candidate_x, candidate_y, 0) != 0) {
             if (out_xy != NULL) {
                 out_xy[0] = candidate_x;
                 out_xy[1] = candidate_y;
@@ -4625,24 +5044,33 @@ int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
     return 0;
 }
 
-/* FUNCTION: LEGORR 0x00439e10 */
+// FUNCTION: LEGORR 0x00439d50
+int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
+                                             int out_xy[2])
+{
+    const GameContext* context;
+    if (entity == NULL) return 0;
+    context = entity->owner_ctx;
+    return entity_unload_adjacent_cell_find_on_level(
+        entity, context != NULL ? context->level : NULL, out_xy);
+}
+
+// FUNCTION: LEGORR 0x00439e10
 int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
                                                 int out_xy[2])
 {
-    if (entity == NULL || s_entity_unload_stat_flags_hook == NULL
-        || (s_entity_unload_stat_flags_hook(
-                entity, s_entity_unload_cell_context) & 0x10u) == 0) {
+    if (entity == NULL
+        || (entity_capability_flags_get(entity) & 0x10u) == 0u) {
         return 0;
     }
     return entity_vehicle_unload_adjacent_cell_find(entity, out_xy);
 }
 
-/* FUNCTION: LEGORR 0x00439e40 */
+// FUNCTION: LEGORR 0x00439e40
 int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2])
 {
-    if (entity == NULL || s_entity_unload_stat_flags_hook == NULL
-        || (s_entity_unload_stat_flags_hook(
-                entity, s_entity_unload_cell_context) & 0x20u) == 0) {
+    if (entity == NULL
+        || (entity_capability_flags_get(entity) & 0x20u) == 0u) {
         return 0;
     }
     return entity_vehicle_unload_adjacent_cell_find(entity, out_xy);
@@ -4699,9 +5127,19 @@ int entity_route_cell_candidate_accept(const EntitySlot* entity,
 // FUNCTION: LEGORR 0x00442260
 void entity_transform_position_get(const EntitySlot* entity, float out_xy[2])
 {
+    float position[3];
     if (entity == NULL || out_xy == NULL) return;
-    /* The reference reads scene-object x/y. EntitySlot keeps those world
-     * coordinates as the simulation-side mirror. */
+    /* The reference resolves the kind-specific transform, then reads its
+     * slot-zero position.  The attached scene object is the port's live
+     * transform for objects whose type component has reached the renderer;
+     * the slot coordinates remain the simulation fallback. */
+    if (entity->attached_scene_object != NULL &&
+        ddiscene_object_position_get(entity->attached_scene_object, NULL,
+                                     position)) {
+        out_xy[0] = position[0];
+        out_xy[1] = position[1];
+        return;
+    }
     out_xy[0] = entity->x;
     out_xy[1] = entity->y;
 }
@@ -4737,9 +5175,12 @@ static int entity_centers_within_radius(const EntitySlot* first,
 int entity_centers_within_configured_radius(const EntitySlot* first,
                                             const EntitySlot* second)
 {
+    int activity_class;
     if (first == NULL || second == NULL) return 0;
+    activity_class = ai_activity_probe(first);
+    if (activity_class == 0) return 0;
     return entity_centers_within_radius(first, second,
-                                        entity_collision_radius_get(first));
+        lego::weapon_type_range_get(activity_class));
 }
 
 // FUNCTION: LEGORR 0x00472130
@@ -4756,6 +5197,12 @@ void entity_world_position_set(EntitySlot* entity, float x, float y,
                                float heading, int update_heading)
 {
     if (entity == NULL) return;
+    /* Keep an already-created scene transform in step with the simulation
+     * coordinates.  Kind-specific pose components are not represented in
+     * EntitySlot yet, so the renderer handle is the available live endpoint. */
+    if (entity->attached_scene_object != NULL)
+        (void)ddiscene_object_position_set(entity->attached_scene_object, NULL,
+                                           x, y, entity->z);
     entity->x = x;
     entity->y = y;
     if (update_heading) entity->rot = heading;
@@ -4808,12 +5255,10 @@ void entity_enter_event21_state_once(EntitySlot* entity)
 {
     if (entity == NULL || (entity->flags_3e0 & 0x04000000u) != 0u ||
         entity->owner_36c != NULL) return;
-    entity->activity_timer = 0.0f;
+    entity_state_reset(entity, 0, 1);
     entity->flags_3e0 |= 0x04000000u;
-    entity->last_action_event = 0x21u;
-    entity->last_action_event_flags = 0u;
-    if (s_entity_route_state_hook != NULL)
-        (void)s_entity_route_state_hook(entity);
+    ai_set_activity(entity, 0x21, 0);
+    ai_idle_chain_record_attach(entity);
 }
 
 /* EntityProgressAdvanceBy25 (FUN_00447730, findings 377/448): the corpus
@@ -5289,6 +5734,7 @@ void entity_heading_step_move(EntityHeadingStepState* state, void* entity,
     state->remaining -= (float)sqrt((double)(step_x * step_x + step_y * step_y));
 }
 
+// GLOBAL: LEGORR 0x004eadd0
 static EntityAuxiliaryReleaseRecord* s_entity_auxiliary_release_records;
 
 void entity_auxiliary_payload_release(
@@ -5297,6 +5743,7 @@ void entity_auxiliary_payload_release(
     EntityAuxiliaryReleaseRecord* record;
     void* scene_object;
     uint32_t flags;
+    float point[3] = { 0.0f, 0.0f, 0.0f };
     if (entity == NULL || hooks == NULL || hooks->scene_object_get == NULL)
         return;
     scene_object = hooks->scene_object_get(hooks->context, entity);
@@ -5310,7 +5757,8 @@ void entity_auxiliary_payload_release(
     if (hooks->record_allocate != NULL)
         record = hooks->record_allocate(hooks->context);
     else
-        record = (EntityAuxiliaryReleaseRecord*)calloc(1, sizeof(*record));
+        record = (EntityAuxiliaryReleaseRecord*)engine_heap_alloc(
+            (long)sizeof(*record));
     if (record == NULL) {
         if (hooks->scene_object_dispose != NULL)
             hooks->scene_object_dispose(hooks->context, scene_object);
@@ -5318,18 +5766,18 @@ void entity_auxiliary_payload_release(
     }
     memset(record, 0, sizeof(*record));
     record->scene_object = scene_object;
+    record->next = s_entity_auxiliary_release_records;
     record->flags = flags;
     record->value = hooks->value_get != NULL
         ? hooks->value_get(hooks->context, entity) : 0.0f;
     if (hooks->scene_point_get != NULL)
-        hooks->scene_point_get(hooks->context, scene_object, record->point);
-    record->next = s_entity_auxiliary_release_records;
+        hooks->scene_point_get(hooks->context, scene_object, point);
     s_entity_auxiliary_release_records = record;
     if (hooks->scene_callback_apply != NULL) {
         hooks->scene_callback_apply(hooks->context, scene_object,
-                                    0x00410020u, record->point);
+                                    0x00410020u, point);
         hooks->scene_callback_apply(hooks->context, scene_object,
-                                    0x004100b0u, record->point);
+                                    0x004100b0u, point);
     }
 }
 
@@ -5351,7 +5799,7 @@ void entity_auxiliary_release_records_flush(
         if (hooks != NULL && hooks->record_release != NULL)
             hooks->record_release(hooks->context, record);
         else
-            free(record);
+            engine_heap_free(record);
     }
 }
 
@@ -5370,7 +5818,8 @@ void entity_motion_to_scene_node_sync(
     record = hooks->scene_record_get != NULL
         ? hooks->scene_record_get(hooks->context, entity) : NULL;
     scene_object = hooks->scene_object_get != NULL
-        ? hooks->scene_object_get(hooks->context, entity) : NULL;
+        ? hooks->scene_object_get(hooks->context, entity)
+        : entity->attached_scene_object;
     if ((flags & 0x400000u) == 0u &&
         (hooks->scene_should_wake == NULL ||
          !hooks->scene_should_wake(hooks->context, scene_object)) &&
@@ -5388,8 +5837,22 @@ void entity_motion_to_scene_node_sync(
         if (hooks->record_timer_clear != NULL)
             hooks->record_timer_clear(hooks->context, record);
     }
-    if (hooks->scene_position_get != NULL)
+    if (hooks->scene_position_get != NULL) {
         hooks->scene_position_get(hooks->context, entity, position);
+    }
+    else if (scene_object != NULL &&
+             ddiscene_object_position_get(scene_object, NULL, position)) {
+        /* The renderer owns this transform. Keep the simulation mirror in
+         * sync when no type-specific pose adapter was installed. */
+        entity->x = position[0];
+        entity->y = position[1];
+        entity->z = position[2];
+    }
+    else {
+        position[0] = entity->x;
+        position[1] = entity->y;
+        position[2] = entity->z;
+    }
     callback_values[0] = position[0];
     callback_values[1] = position[1];
     callback_values[2] = -position[2];
@@ -5466,7 +5929,7 @@ unsigned int entity_stats_config_load(
             ? hooks->type_capacity(hooks->context, record.type) : 16u;
         if (capacity > 16u) capacity = 16u;
         record.level_count = capacity;
-        for (field = 0; field < 64u; ++field)
+        for (field = 0; field < 65u; ++field)
             hooks->float_value_get(hooks->context, record.name, fields[field],
                                    0, &record.fields[field]);
         for (level = 0; level < capacity; ++level)

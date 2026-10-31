@@ -3,6 +3,7 @@
 // Entries marked STUB are inert placeholders; FUNCTION entries are callable.
 
 #include <stddef.h>
+#include <math.h>
 
 #include "terrain_grid.hpp"
 #include "level.hpp"
@@ -39,10 +40,12 @@
 #include "../gods98/message.hpp"
 #include "../gods98/surface.hpp"
 #include "../gods98/resource.hpp"
+#include "../gods98/texture.hpp"
 #include "../gods98/scene_resources.hpp"
 #include "../gods98/scene_pool.hpp"
 #include "../gods98/heap.hpp"
 #include "../gods98/record.hpp"
+#include "../gods98/camera.hpp"
 #include "../gods98/sound.hpp"
 #include "../gods98/audio.hpp"
 #include "../gods98/media.hpp"
@@ -50,8 +53,10 @@
 #include "../gods98/model.hpp"
 #include "../gods98/block.hpp"
 #include "../gods98/flic.hpp"
+#include "../gods98/resource.hpp"
 #include "../gods98/input.hpp"
 #include "frontend.hpp"
+#include "select.hpp"
 #include "../gods98/view.hpp"
 #include "../gods98/engine.hpp"
 #include "../gods98/frameloop.hpp"
@@ -65,6 +70,7 @@
 #include <string.h>
 
 static char s_directx_error_message[1024];
+extern float random_float_range(float minimum, float maximum);
 // GLOBAL: LEGORR 0x005343c8
 static InputActionToggleState s_input_action_toggle_state;
 static uint32_t* s_ui_transition_feature_word;
@@ -168,14 +174,28 @@ static int s_type11_cell_coordinates[10][2];
 // GLOBAL: LEGORR 0x004e8540
 static unsigned int s_type11_cell_coordinate_count;
 
-typedef struct CellStepActionRecord {
-    EntitySlot* entity;
-    int type;
-    float x;
-    float y;
-    uint32_t flags;
-} CellStepActionRecord;
-static CellStepActionRecord s_cell_step_actions[128];
+// FUNCTION: LEGORR 0x004372a0
+void spawn_coordinate_pool_clear_impl(void)
+{
+    unsigned int i;
+    GameContext* context = entity_pool_callback_context_get();
+    /* LAB_0043b350 is not recovered; preserve the guard's enter/leave path. */
+    entity_iteration_callback_guard(context, NULL, NULL);
+    grid_record_count_tables_clear();
+    grid_object_records_release();
+    level_predug_coordinate_pool_clear();
+    camera_predug_spawn_state_clear();
+    camera_spawn_coordinate_hook_set(NULL, NULL);
+    for (i = 0; i < 10u; ++i) {
+        s_type11_cell_coordinates[i][0] = 0;
+        s_type11_cell_coordinates[i][1] = 0;
+    }
+    s_type11_cell_coordinate_count = 0u;
+    queued_grid_animation_accumulator_clear();
+    ai_idle_table_reset();
+    entity_global_animation_state_set(0u);
+}
+
 static CellStepPathResolveHook s_cell_step_path_hook;
 static CellStepRandomRangeHook s_cell_step_random_hook;
 static void* s_cell_step_hook_user;
@@ -217,6 +237,7 @@ void input_device_release_hooks_set(const InputDeviceReleaseHooks* hooks)
     else s_input_device_release_hooks = *hooks;
 }
 
+// FUNCTION: LEGORR 0x004588e0
 void input_device_release(void)
 {
     InputDeviceReleaseHooks* hooks = &s_input_device_release_hooks;
@@ -753,16 +774,18 @@ EntitySlot* emergence_random_spawn_attempt(int entity_index, int owner_index,
     unsigned int attempt;
     if (grid_width <= 0 || grid_height <= 0 || grid_width > 65535 ||
         grid_height > 65535 ||
-        s_emergence_spawn_hooks.random_u16 == NULL ||
         s_emergence_spawn_hooks.spawn_try == NULL) return NULL;
     for (attempt = 0; attempt < 1000u; ++attempt) {
-        uint16_t rx = s_emergence_spawn_hooks.random_u16(
-            s_emergence_spawn_hooks.user);
-        uint16_t ry = s_emergence_spawn_hooks.random_u16(
-            s_emergence_spawn_hooks.user);
+        int16_t rx = s_emergence_spawn_hooks.random_u16 != NULL
+            ? (int16_t)s_emergence_spawn_hooks.random_u16(
+                s_emergence_spawn_hooks.user)
+            : (int16_t)rng_thunk_draw15();
+        int16_t ry = s_emergence_spawn_hooks.random_u16 != NULL
+            ? (int16_t)s_emergence_spawn_hooks.random_u16(
+                s_emergence_spawn_hooks.user)
+            : (int16_t)rng_thunk_draw15();
         EntitySlot* entity = s_emergence_spawn_hooks.spawn_try(entity_index,
-            owner_index, (int)(rx % (uint16_t)grid_width),
-            (int)(ry % (uint16_t)grid_height),
+            owner_index, (int)rx % grid_width, (int)ry % grid_height,
             s_emergence_spawn_hooks.user);
         if (entity != NULL) return entity;
     }
@@ -783,18 +806,45 @@ EntitySlot* creature_spawn_from_emergence(void* base_entity, int mode_token,
     float origin[2];
     float neighbor[2];
     EntitySlot* created;
-    if (mode_token != 3 || s_emergence_spawn_hooks.cell_eligible == NULL ||
+    if (mode_token != 3 ||
+        (s_emergence_spawn_hooks.level == NULL &&
+         s_emergence_spawn_hooks.cell_eligible == NULL) ||
         s_emergence_spawn_hooks.cell_world_position == NULL ||
-        s_emergence_spawn_hooks.create == NULL ||
-        !s_emergence_spawn_hooks.cell_eligible(cell_x, cell_y,
-                                               s_emergence_spawn_hooks.user)) {
+        s_emergence_spawn_hooks.create == NULL) {
+        return NULL;
+    }
+    if (s_emergence_spawn_hooks.level != NULL) {
+        LevelState* level = s_emergence_spawn_hooks.level;
+        if (!level_cell_walkable_flag(level, cell_x, cell_y) ||
+            level_cell_flag_20_bounded(level, cell_x, cell_y) != 0u ||
+            level_cell_mask_c0(level, cell_x, cell_y) != 0u ||
+            level_cell_state_is_1(level, cell_x, cell_y) ||
+            level_cell_flag_reserved(level, cell_x, cell_y) != 0u) {
+            return NULL;
+        }
+    }
+    else if (!s_emergence_spawn_hooks.cell_eligible(
+                 cell_x, cell_y, s_emergence_spawn_hooks.user)) {
         return NULL;
     }
     for (direction = 0; direction < 4; ++direction) {
         neighbor_x = cell_x + offsets[direction][0];
         neighbor_y = cell_y + offsets[direction][1];
-        if (s_emergence_spawn_hooks.cell_eligible(neighbor_x, neighbor_y,
-                s_emergence_spawn_hooks.user)) break;
+        if (s_emergence_spawn_hooks.level != NULL) {
+            LevelState* level = s_emergence_spawn_hooks.level;
+            if (level_cell_flag_8_bounded(level, neighbor_x, neighbor_y) == 0u ||
+                level_cell_mask_180000(level, neighbor_x, neighbor_y) != 0 ||
+                !terrain_cell_route_and_occupancy_check(NULL, level,
+                    neighbor_x, neighbor_y, neighbor_x, neighbor_y, 0)) {
+                continue;
+            }
+        }
+        else if (!s_emergence_spawn_hooks.cell_eligible(
+                     neighbor_x, neighbor_y,
+                     s_emergence_spawn_hooks.user)) {
+            continue;
+        }
+        break;
     }
     if (direction >= 4) return NULL;
     if (!s_emergence_spawn_hooks.cell_world_position(cell_x, cell_y, origin,
@@ -808,8 +858,35 @@ EntitySlot* creature_spawn_from_emergence(void* base_entity, int mode_token,
         s_emergence_spawn_hooks.user);
     if (created == NULL) return NULL;
     created->flags_3e0 |= 0x100u;
+    entity_dispatch_event31_for_pending_flag(created);
+    ai_set_activity(created, 0x0c, 0);
+    ai_idle_chain_record_attach(created);
+    message_dispatch(0x1f, 0u, (uint32_t)(uintptr_t)created, NULL);
+    if (s_emergence_spawn_hooks.scene_action_attach != NULL) {
+        s_emergence_spawn_hooks.scene_action_attach(created, 10, 0, 1, 0,
+            s_emergence_spawn_hooks.user);
+    }
+    if (s_emergence_spawn_hooks.level != NULL)
+        level_tile_mark(s_emergence_spawn_hooks.level, cell_x, cell_y, 1);
     created->pos_pair_2f4 = (float)cell_x;
     created->pos_pair_2f8 = (float)cell_y;
+    {
+        static const char* type_names[3] = {
+            "RockMonster", "Lavamonster", "Icemonster"
+        };
+        unsigned int i;
+        int type, row;
+        for (i = 0u; i < 3u; ++i) {
+            if (entity_type_row_for_name(type_names[i], &type, &row) &&
+                created->type == type && created->etype == row) {
+                message_dispatch((int)i + 2, 0u,
+                                (uint32_t)(uintptr_t)created, NULL);
+                break;
+            }
+        }
+    }
+    message_dispatch(0x27, 0u, (uint32_t)(uintptr_t)created, NULL);
+    global_counter_at_00555324_increment();
     if (s_emergence_spawn_hooks.post_create != NULL)
         s_emergence_spawn_hooks.post_create(created, cell_x, cell_y,
                                             s_emergence_spawn_hooks.user);
@@ -828,22 +905,22 @@ void entity_cell_step_hooks_set(CellStepPathResolveHook path_hook,
 int entity_cell_step_action_peek(const EntitySlot* entity, int* type_out,
                                  float out_xy[2], uint32_t* flags_out)
 {
-    unsigned int i;
     if (type_out != NULL) *type_out = 0;
     if (out_xy != NULL) out_xy[0] = out_xy[1] = 0.0f;
     if (flags_out != NULL) *flags_out = 0u;
-    for (i = 0; i < 128u; ++i) {
-        if (s_cell_step_actions[i].entity == entity && entity != NULL) {
-            if (type_out != NULL) *type_out = s_cell_step_actions[i].type;
-            if (out_xy != NULL) {
-                out_xy[0] = s_cell_step_actions[i].x;
-                out_xy[1] = s_cell_step_actions[i].y;
-            }
-            if (flags_out != NULL) *flags_out = s_cell_step_actions[i].flags;
-            return 1;
-        }
+    if (entity == NULL || entity->wp_count <= 0 ||
+        (entity->wp_dynamic == NULL
+            ? entity->wp_count > AI_WAYPOINTS_MAX
+            : (unsigned int)entity->wp_count > entity->wp_capacity)) return 0;
+    const AiWaypoint* step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
+    if (step->step_kind != 8 && step->step_kind != 9) return 0;
+    if (type_out != NULL) *type_out = step->step_kind;
+    if (out_xy != NULL) {
+        out_xy[0] = step->weight_y;
+        out_xy[1] = step->weight_x;
     }
-    return 0;
+    if (flags_out != NULL) *flags_out = step->pending;
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x0043a120
@@ -851,32 +928,86 @@ int entity_cell_step_command_issue_with_jitter(EntitySlot* entity,
     const int target_xy[2], const float input_xy[2], int action_mode,
     int mark_pending)
 {
-    int start_x;
-    int start_y;
-    int move_xy[2];
+    int start_x, start_y;
+    int* path_x = NULL;
+    int* path_y = NULL;
+    uint32_t path_count = 0u;
+    float route_x[AI_WAYPOINTS_MAX];
+    float route_y[AI_WAYPOINTS_MAX];
     float jitter_x = 0.5f;
     float jitter_y = 0.5f;
-    unsigned int i;
-    CellStepActionRecord* record = NULL;
+    int mark_step = mark_pending;
+    int route_result;
+    uint32_t i;
     if (entity == NULL || target_xy == NULL ||
-        (entity->flags_3e8 & 0x400u) == 0u) return 0;
-    start_x = (int)entity->x;
-    start_y = (int)entity->y;
-    move_xy[0] = target_xy[0];
-    move_xy[1] = target_xy[1];
-    if (start_x != target_xy[0] || start_y != target_xy[1]) {
-        if (s_cell_step_path_hook == NULL ||
-            !s_cell_step_path_hook(start_x, start_y, target_xy[0],
-                                   target_xy[1], move_xy,
-                                   s_cell_step_hook_user)) return 0;
+        (entity->flags_3e0 & 0x400u) == 0u) return 0;
+    start_x = level_cell_of(entity->x);
+    start_y = level_cell_of(entity->y);
+    if (start_x == target_xy[0] && start_y == target_xy[1]) {
+        path_x = (int*)malloc(sizeof(int));
+        path_y = (int*)malloc(sizeof(int));
+        if (path_x == NULL || path_y == NULL) {
+            free(path_x);
+            free(path_y);
+            return 0;
+        }
+        path_x[0] = target_xy[0];
+        path_y[0] = target_xy[1];
+        path_count = 1u;
     }
+    else if (entity->owner_ctx != NULL && entity->owner_ctx->level != NULL) {
+        if (!terrain_neighbor_path_check(entity->owner_ctx->level,
+                (uint32_t)start_x, (uint32_t)start_y,
+                (uint32_t)target_xy[0], (uint32_t)target_xy[1],
+                &path_x, &path_y, &path_count, NULL, NULL)) return 0;
+    }
+    else if (s_cell_step_path_hook != NULL) {
+        int fallback_xy[2] = { target_xy[0], target_xy[1] };
+        if (!s_cell_step_path_hook(start_x, start_y, target_xy[0],
+                                   target_xy[1], fallback_xy,
+                                   s_cell_step_hook_user)) return 0;
+        path_x = (int*)malloc(sizeof(int));
+        path_y = (int*)malloc(sizeof(int));
+        if (path_x == NULL || path_y == NULL) {
+            free(path_x);
+            free(path_y);
+            return 0;
+        }
+        path_x[0] = fallback_xy[0];
+        path_y[0] = fallback_xy[1];
+        path_count = 1u;
+    }
+    else return 0;
+    if (path_count == 0u || path_count > AI_WAYPOINTS_MAX) {
+        free(path_x);
+        free(path_y);
+        return 0;
+    }
+    for (i = 0u; i < path_count; ++i) {
+        route_x[i] = (float)path_x[i];
+        route_y[i] = (float)path_y[i];
+    }
+    route_result = entity_route_setup_and_marker_associate(
+        entity, path_count, route_x, route_y, 0);
+    free(path_x);
+    free(path_y);
+    if (!route_result || entity->wp_count <= 0) return 0;
+
     if (entity->type == 1) {
         float value = s_cell_step_random_hook != NULL
             ? s_cell_step_random_hook(0.55f, 0.75f, s_cell_step_hook_user)
-            : 0.65f;
-        int direction = s_cell_step_random_hook != NULL
-            ? (int)s_cell_step_random_hook(0.0f, 3.999f,
-                                          s_cell_step_hook_user) : 0;
+            : (float)(int16_t)rng_thunk_draw15() * 3.051851e-05f * 0.20f
+                + 0.55f;
+        int direction;
+        if (s_cell_step_random_hook != NULL) {
+            direction = (int)s_cell_step_random_hook(
+                0.0f, 3.999f, s_cell_step_hook_user);
+        }
+        else {
+            int16_t draw = (int16_t)rng_thunk_draw15();
+            direction = draw < 0 ? -(int)draw : (int)draw;
+        }
+        mark_step = 1;
         switch (direction & 3) {
         case 0: jitter_x = 0.5f; jitter_y = value; break;
         case 1: jitter_x = value; jitter_y = 0.5f; break;
@@ -887,23 +1018,13 @@ int entity_cell_step_command_issue_with_jitter(EntitySlot* entity,
         jitter_x = input_xy[0];
         jitter_y = input_xy[1];
     }
-    cmd_create_move(entity, (float)move_xy[0] + jitter_x,
-                    (float)move_xy[1] + jitter_y, 0);
-    for (i = 0; i < 128u; ++i) {
-        if (s_cell_step_actions[i].entity == entity) {
-            record = &s_cell_step_actions[i];
-            break;
-        }
-        if (record == NULL && s_cell_step_actions[i].entity == NULL)
-            record = &s_cell_step_actions[i];
+    AiWaypoint* step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
+    step->step_kind = (uint8_t)(action_mode == 0 ? 8 : 9);
+    if (input_xy != NULL) {
+        step->weight_y = jitter_x;
+        step->weight_x = jitter_y;
     }
-    if (record != NULL) {
-        record->entity = entity;
-        record->type = action_mode == 0 ? 8 : 9;
-        record->x = jitter_x;
-        record->y = jitter_y;
-        if (mark_pending != 0) record->flags |= 8u;
-    }
+    if (mark_step != 0) step->pending |= 8u;
     return 1;
 }
 
@@ -922,7 +1043,11 @@ void ledger_stub_00403320_ObjectCommandTaskCreate(EntitySlot* entity,
         target = ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(entity);
     }
     if (target != NULL) {
-        cmd_chain_purge(entity);
+        /* The original sweeps flagged records out of the entity chain, then
+         * appends this task after the surviving tail.  Purging completed
+         * commands uses a different policy and can drop records the corpus
+         * keeps. */
+        command_queue_sweep_relink(entity);
         cmd_entity_task_record_create_and_append(entity, target, parameter);
     }
 }
@@ -964,23 +1089,6 @@ void ledger_stub_00403810_TerrainCellRecordCountUpdate(
         }
     }
     ++cmd_pending_command_counts[b * 0x10 + a * 0xf0 + c];
-}
-
-// FUNCTION: LEGORR 0x00403910
-void ledger_stub_00403910_CellRecordCountsPruneForEntity(
-    TerrainCellRecordCountState* state, void* entity,
-    const TerrainCellRecordPruneHooks* hooks)
-{
-    terrain_cell_record_counts_prune(state, entity, hooks);
-}
-
-// FUNCTION: LEGORR 0x004039a0
-void ledger_stub_004039a0_TaskRecordCreateAndScanGrid(
-    TerrainCellRecordCountState* state, void* entity,
-    const TaskRecordGridScanHooks* task_hooks,
-    const TerrainCellRecordPruneHooks* prune_hooks)
-{
-    task_record_create_and_scan_grid(state, entity, task_hooks, prune_hooks);
 }
 
 /* Object placement operations depend on game-specific policy, so keep that
@@ -1325,14 +1433,12 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
 }
 
 // PendingCommandTimerFireScan
-// FUNCTION: LEGORR 0x00405950
 void ledger_stub_00405950_PendingCommandTimerFireScan()
 {
     pending_command_timer_fire_scan();
 }
 
 // PendingCommandEntityAssignmentTick
-// FUNCTION: LEGORR 0x00405c10
 void ledger_stub_00405c10_PendingCommandEntityAssignmentTick()
 {
     pending_command_entity_assignment_tick();
@@ -1447,43 +1553,122 @@ int ledger_stub_00408d70_TerrainDescriptorCoordinateCountLimitCheck(
 
 // FUNCTION: LEGORR 0x00408ec0
 uint32_t ledger_stub_00408ec0_KindNineNeighborEmitForFootprintCells(
-    int x, int y, void (*emit)(int, int, void*), void* context)
+    const int cell_xy[2], const int* footprint_xy, uint32_t footprint_count)
 {
-    int dx, dy;
-    uint32_t count = 0;
-    if (emit == NULL) return 0;
-    for (dy = -1; dy <= 1; ++dy) {
-        for (dx = -1; dx <= 1; ++dx) {
-            emit(x + dx, y + dy, context);
-            ++count;
+    static const int neighbor_xy[4][2] = {
+        { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 }
+    };
+    GameContext* context = entity_pool_callback_context_get();
+    uint8_t* descriptor = (uint8_t*)path_record_last_peek();
+    uint32_t emitted = 0u;
+    float scale;
+    float edge;
+    float command_offsets[4][2];
+    uint32_t segment;
+
+    if (cell_xy == NULL || footprint_xy == NULL || footprint_count == 0u ||
+        context == NULL || context->level == NULL ||
+        context->level->ptr_terrain == NULL) return 0u;
+
+    /* TerrainDescriptorFindExact(cell_xy, 0): records are head-linked at
+     * +0x24 and key the requested cell at +0x0c/+0x10. */
+    while (descriptor != NULL) {
+        int descriptor_x, descriptor_y;
+        memcpy(&descriptor_x, descriptor + 0x0c, sizeof(descriptor_x));
+        memcpy(&descriptor_y, descriptor + 0x10, sizeof(descriptor_y));
+        if (descriptor_x == cell_xy[0] && descriptor_y == cell_xy[1]) break;
+        descriptor = (uint8_t*)*(void**)(descriptor + 0x24);
+    }
+    if (descriptor == NULL) return 0u;
+
+    /* The original obtains the terrain handle from the current level and
+     * uses its +0x10 block size to place the four edge command anchors. */
+    scale = terrain_blocksize_get(context->level->ptr_terrain);
+    if (scale == 0.0f) return 0u;
+    edge = 8.8f / scale;
+    command_offsets[0][0] = 0.5f;
+    command_offsets[0][1] = 1.0f - edge;
+    command_offsets[1][0] = 1.0f - edge;
+    command_offsets[1][1] = 0.5f;
+    command_offsets[2][0] = 0.5f;
+    command_offsets[2][1] = edge;
+    command_offsets[3][0] = edge;
+    command_offsets[3][1] = 0.5f;
+
+    for (segment = 0u; segment < footprint_count; ++segment) {
+        const int* point = footprint_xy + segment * 2u;
+        int is_duplicate = segment + 1u < footprint_count &&
+            point[0] == point[2] && point[1] == point[3];
+        int direction;
+        if (is_duplicate) {
+            /* Duplicate consecutive coordinates delimit the same interior
+             * pair in the corpus loop; it advances over both entries. */
+            ++segment;
+            continue;
+        }
+
+        for (direction = 0; direction < 4; ++direction) {
+            int neighbor_x = point[0] + neighbor_xy[direction][0];
+            int neighbor_y = point[1] + neighbor_xy[direction][1];
+            uint32_t candidate;
+            int inside = 0;
+            for (candidate = 0u; candidate < footprint_count;) {
+                const int* candidate_xy = footprint_xy + candidate * 2u;
+                if (candidate + 1u < footprint_count &&
+                    candidate_xy[0] == candidate_xy[2] &&
+                    candidate_xy[1] == candidate_xy[3]) {
+                    /* The corpus's paired-coordinate walk advances past a
+                     * duplicate pair without considering either entry. */
+                    candidate += 2u;
+                    continue;
+                }
+                if (candidate_xy[0] == neighbor_x &&
+                    candidate_xy[1] == neighbor_y) {
+                    inside = 1;
+                    break;
+                }
+                ++candidate;
+            }
+            if (!inside) {
+                uint32_t descriptor_key;
+                memcpy(&descriptor_key, descriptor + 0x08,
+                       sizeof(descriptor_key));
+                cmd_command_kind_record_issue(
+                    9u, 0u, 0u, point, descriptor_key,
+                    command_offsets[direction], 1);
+                ++(*(uint32_t*)(descriptor + 0x1c));
+                ++emitted;
+            }
         }
     }
-    return count;
+    return emitted;
 }
 
-// PassableAdjacentCellSearchExpand
-static void placement_cell_search_expand(LevelState* level, int x, int y)
+// FUNCTION: LEGORR 0x004093b0
+static void placement_cell_search_expand(const int cell_xy[2])
 {
     static const int offset[4][2] = {{0,-1},{1,0},{0,1},{-1,0}};
+    GameContext* context = entity_pool_callback_context_get();
+    LevelState* level = context != NULL ? context->level : NULL;
     int direction;
-    if (level == NULL) return;
+    if (level == NULL || cell_xy == NULL) return;
     for (direction = 0; direction < 4; ++direction) {
-        int nx = x + offset[direction][0];
-        int ny = y + offset[direction][1];
+        int next_xy[2];
+        int nx = cell_xy[0] + offset[direction][0];
+        int ny = cell_xy[1] + offset[direction][1];
         if (!level_cell_occupied_at(level, nx, ny) &&
             !level_cell_occupied_or_flag(level, nx, ny, 1)) continue;
-        if (level_cell_visited_flag(level, nx, ny) != 0u) continue;
-        terrain_cell_visited_flag_set_and_track(level, nx, ny);
-        placement_cell_search_expand(level, nx, ny);
+        if (level_cell_secondary_flag_100(level, nx, ny) != 0u) continue;
+        terrain_cell_flag100_set_and_track(level, nx, ny);
+        next_xy[0] = nx;
+        next_xy[1] = ny;
+        placement_cell_search_expand(next_xy);
     }
 }
-// FUNCTION: LEGORR 0x004093b0
 void ledger_stub_004093b0_PassableAdjacentCellSearchExpand(
     const int cell_xy[2])
 {
-    GameContext* context = entity_pool_callback_context_get();
-    if (context == NULL || context->level == NULL || cell_xy == NULL) return;
-    placement_cell_search_expand(context->level, cell_xy[0], cell_xy[1]);
+    placement_cell_search_expand(cell_xy);
 }
 
 // FindNearbyPlacementCandidate
@@ -1538,23 +1723,147 @@ int ledger_stub_00409470_NeighborCellEntitySearchRecurse(
 
 // FUNCTION: LEGORR 0x00409600
 void ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
-    TerrainTileMeshGrid* grid)
+    const int cell_xy[2])
 {
-    terrain_grid_entry_resources_release_all(grid);
+    GameContext* context = entity_pool_callback_context_get();
+    uint8_t* descriptor = (uint8_t*)path_record_last_peek();
+    int* coordinates;
+    uint32_t count;
+    uint32_t entity_count;
+    uint32_t entity_index;
+    uint32_t progress;
+    uint32_t descriptor_key;
+    if (cell_xy == NULL || context == NULL || context->level == NULL)
+        return;
+
+    /* TerrainDescriptorFindExact(cell_xy, 0). */
+    while (descriptor != NULL) {
+        int x, y;
+        memcpy(&x, descriptor + 0x0c, sizeof(x));
+        memcpy(&y, descriptor + 0x10, sizeof(y));
+        if (x == cell_xy[0] && y == cell_xy[1]) break;
+        descriptor = (uint8_t*)*(void**)(descriptor + 0x24);
+    }
+    if (descriptor == NULL) return;
+    memcpy(&progress, descriptor + 0x1c, sizeof(progress));
+    if (progress == *(uint32_t*)(descriptor + 0x20)) return;
+    coordinates = (int*)path_record_payload_get(descriptor);
+    count = path_record_payload_count_get(descriptor);
+    memcpy(&descriptor_key, descriptor + 0x08, sizeof(descriptor_key));
+    if (count != 0u && coordinates == NULL) return;
+
+    progress = 0u;
+    while (progress < count) {
+        int x = coordinates[progress * 2u];
+        int y = coordinates[progress * 2u + 1u];
+        int duplicate = progress + 1u < count &&
+            x == coordinates[(progress + 1u) * 2u] &&
+            y == coordinates[(progress + 1u) * 2u + 1u];
+        uint8_t* cell = level_voxel(context->level, x, y);
+        if (cell != NULL) {
+            uint32_t* cell_flags = (uint32_t*)(cell + 0x08);
+            if (duplicate) *cell_flags &= ~0x8000u;
+            *cell_flags &= ~0x100000u;
+            (void)level_cell_path_record_set(context->level, x, y, NULL);
+            terrain_cell_refresh_dispatch(context, x, y);
+            cancel_action_for_matching_coordinates(
+                (const uint32_t*)coordinates + progress * 2u);
+        }
+        if (duplicate) ++progress;
+        ++progress;
+    }
+
+    entity_count = path_record_entity_count_get(descriptor);
+    for (entity_index = 0u; entity_index < entity_count; ++entity_index) {
+        EntitySlot* entity = path_record_entity_get(descriptor, entity_index);
+        if (entity == NULL) continue;
+        if (entity->type == 9) {
+            entity->flags_3e8 |= 0x800000u;
+            entity->field_340 = -1.0f;
+        }
+        else {
+            entity->flags_3ec &= ~0x100u;
+            cmd_create_task(entity);
+        }
+    }
+
+    cmd_cancel_by_coords((int)descriptor_key, 0, 0, 0);
+    path_record_release(descriptor);
 }
 
 // CellPathRecordRegisterApply
-typedef struct CellPathRecordRegisterState {
-    void* context;
-    int (*register_cell)(void* context, int x, int y, uint32_t flags);
-} CellPathRecordRegisterState;
 // FUNCTION: LEGORR 0x00409790
-int ledger_stub_00409790_CellPathRecordRegisterApply(
-    CellPathRecordRegisterState* state, const int cell_xy[2], uint32_t flags)
+uint32_t ledger_stub_00409790_CellPathRecordRegisterApply(
+    uint32_t record_key, const int cell_xy[2], uint32_t direction,
+    const int* footprint_xy, uint32_t footprint_count)
 {
-    if (state == NULL || state->register_cell == NULL || cell_xy == NULL)
-        return 0;
-    return state->register_cell(state->context, cell_xy[0], cell_xy[1], flags);
+    GameContext* context = entity_pool_callback_context_get();
+    void* record;
+    int* coordinate_copy = NULL;
+    uint32_t index = 0u;
+    if (cell_xy == NULL ||
+        (footprint_count != 0u && footprint_xy == NULL) ||
+        (size_t)footprint_count > ((size_t)-1) / (2u * sizeof(int)))
+        return 0u;
+
+    record = path_record_allocate_and_link((const uint32_t*)cell_xy);
+    if (record == NULL) return 0u;
+    memcpy((char*)record + 0x00, &record_key, sizeof(record_key));
+    memcpy((char*)record + 0x04, &direction, sizeof(direction));
+    if (footprint_count != 0u) {
+        coordinate_copy = (int*)engine_heap_alloc((long)(
+            (size_t)footprint_count * 2u * sizeof(int)));
+        if (coordinate_copy == NULL) {
+            path_record_release(record);
+            return 0u;
+        }
+        memcpy(coordinate_copy, footprint_xy,
+               (size_t)footprint_count * 2u * sizeof(int));
+    }
+    if (!path_record_payload_set(record, coordinate_copy, footprint_count)) {
+        engine_heap_free(coordinate_copy);
+        path_record_release(record);
+        return 0u;
+    }
+    if (footprint_count != 0u && path_record_surface_grid_get() != NULL) {
+        /* The corpus passes 4.0f to TerrainCellListSurfaceHeightClampMutate;
+         * that helper works with half the value on either side of its mean. */
+        terrain_cell_surface_height_clamp(path_record_surface_grid_get(),
+                                          coordinate_copy,
+                                          footprint_count, 2.0f);
+    }
+
+    while (index < footprint_count) {
+        int x = coordinate_copy[index * 2u];
+        int y = coordinate_copy[index * 2u + 1u];
+        uint8_t* cell = context != NULL && context->level != NULL
+            ? level_voxel(context->level, x, y) : NULL;
+        int duplicate = index + 1u < footprint_count &&
+            x == coordinate_copy[(index + 1u) * 2u] &&
+            y == coordinate_copy[(index + 1u) * 2u + 1u];
+        if (cell != NULL) {
+            uint32_t* cell_flags = (uint32_t*)(cell + 0x08);
+            static const int neighbor_xy[8][2] = {
+                { 0, -1 }, { 1, -1 }, { 1, 0 }, { 1, 1 },
+                { 0, 1 }, { -1, 1 }, { -1, 0 }, { -1, -1 }
+            };
+            int neighbor;
+            if (duplicate) *cell_flags |= 0x8000u;
+            *cell_flags |= 0x100000u;
+            (void)level_cell_path_record_set(context->level, x, y, record);
+            terrain_cell_refresh_dispatch(context, x, y);
+            for (neighbor = 0; neighbor < 8; ++neighbor) {
+                terrain_cell_refresh_dispatch(
+                    context, x + neighbor_xy[neighbor][0],
+                    y + neighbor_xy[neighbor][1]);
+            }
+            cancel_action_for_matching_coordinates(
+                (const uint32_t*)coordinate_copy + index * 2u);
+            if (duplicate) ++index;
+        }
+        ++index;
+    }
+    return *(uint32_t*)((char*)record + 0x08);
 }
 
 // RefreshEightNeighborCells
@@ -1734,14 +2043,19 @@ void ledger_stub_0040b1b0_DependencyGridOccupancyPass(void)
     (void)dependency_grid_occupancy_pass();
 }
 
-// FUNCTION: LEGORR 0x0040b310
+/* Retain the earlier port-facing mesh-grid adapter for internal callers. */
 int ledger_stub_0040b310_LoadTileVariants(TerrainTileMeshGrid* grid,
                                           int editor_mode)
 {
     return terrain_tile_mesh_grid_load(grid, editor_mode);
 }
 
-// FUNCTION: LEGORR 0x0040b5f0
+TerrainCellResourceGrid* ledger_stub_0040b310_LoadTileVariants(
+    const char* bitmap_prefix, uint32_t width, uint32_t height)
+{
+    return terrain_cell_resource_grid_load(bitmap_prefix, width, height);
+}
+
 TileModelEntityRegistration* ledger_stub_0040b5f0_TileModelEntityRegister(
     void* manager, const char* first_entry, const char* second_entry,
     float scale_percent, int parameter,
@@ -1752,61 +2066,80 @@ TileModelEntityRegistration* ledger_stub_0040b5f0_TileModelEntityRegister(
 }
 
 // FUNCTION: LEGORR 0x0040b880
-int ledger_stub_0040b880_CellVisualChannelRelay(
-    unported_ledger_stubs::CellVisualChannelTable* table,
-    uint32_t channel, uint32_t index, void* resource)
+void ledger_stub_0040b880_CellVisualChannelRelay(
+    SceneCellVisualRelayRecord* record, const float corner_points[12],
+    uint32_t lookup_selector, uint32_t corner_index, float scale,
+    float uniform_scale)
 {
-    return unported_ledger_stubs::cell_visual_channel_table_resource_set(
-        table, channel, index, resource);
+    scene_cell_visual_channels_apply(record, corner_points, lookup_selector,
+                                     corner_index, scale, uniform_scale);
 }
 
-// FUNCTION: LEGORR 0x0040ba00
 void ledger_stub_0040ba00_SceneRotationFlagsApply(
-    void* object, const float first[3], const float second[3],
+    void* object, float projection_scale, const float first[3],
+    const float second[3],
     const float third[3], float scale, float uniform_scale,
     float child_value, uint8_t flags)
 {
-    scene_rotation_flags_apply(object, first, second, third, scale,
-                               uniform_scale, child_value, flags);
+    scene_rotation_flags_apply(object, projection_scale, first, second,
+                               third, scale, uniform_scale, child_value,
+                               flags);
 }
 
 // FUNCTION: LEGORR 0x0040bb90
-int ledger_stub_0040bb90_SceneFrameFromTripletApply(
-    void* object, const float first[3], const float second[3],
-    const float third[3])
+void ledger_stub_0040bb90_SceneFrameFromTripletApply(
+    void* object, float projection_scale, const float first[3],
+    const float second[3], const float third[3])
 {
-    return scene_frame_from_triplet_apply(object, first, second, third);
+    scene_frame_from_triplet_apply(object, projection_scale, first, second,
+                                   third);
 }
 
 // SetTimeoutTo10000
+// FUNCTION: LEGORR 0x0040bdc0
+void ledger_stub_0040bdc0_SetTimeoutTo10000(void)
+{
+    uint32_t* ignored_output = NULL;
+    (void)scene_resource_availability_sweep(10000.0f, &ignored_output,
+                                             &ignored_output);
+}
 
-
-
-// CellCornerOccupancyScan
-typedef int (*CellCornerOccupancyHook)(void* context, int x, int y);
+// CellCornerOccupancyScan examines the center and ordered cardinal neighbors
+// in the map-record sidecar and the level's special-state predicate.
 // FUNCTION: LEGORR 0x0040e1e0
 uint32_t ledger_stub_0040e1e0_CellCornerOccupancyScan(
-    int cell_x, int cell_y, CellCornerOccupancyHook occupied, void* context,
-    int output_xy[8])
+    LevelState* level, int cell_x, int cell_y)
 {
-    static const int offsets[4][2] = {{0,0},{1,0},{1,1},{0,1}};
-    uint32_t i, count = 0u;
-    if (occupied == NULL) return 0u;
+    static const int dx[4] = { 0, 1, 0, -1 };
+    static const int dy[4] = { 1, 0, -1, 0 };
+    uint32_t i;
+    if (level == NULL ||
+        terrain_cell_object_record_present(cell_x, cell_y) ||
+        terrain_cell_special_state_predicate(level, cell_x, cell_y, 0))
+        return 0u;
     for (i = 0u; i < 4u; ++i) {
-        int x = cell_x + offsets[i][0];
-        int y = cell_y + offsets[i][1];
-        if (!occupied(context, x, y)) continue;
-        if (output_xy != NULL) {
-            output_xy[count * 2u] = x;
-            output_xy[count * 2u + 1u] = y;
+        int nx = cell_x + dx[i];
+        int ny = cell_y + dy[i];
+        int opposite = (int)((i - 2u) & 3u);
+        int ox = cell_x + dx[opposite];
+        int oy = cell_y + dy[opposite];
+        int neighbor_record = terrain_cell_object_record_present(nx, ny);
+        int neighbor_special = 0;
+        if (!neighbor_record) {
+            neighbor_special = terrain_cell_special_state_predicate(
+                level, nx, ny, 0);
+            if (!neighbor_special) continue;
         }
-        ++count;
+        if (terrain_cell_object_record_present(ox, oy)) return 1u;
+        if (terrain_cell_special_state_predicate(level, ox, oy, 0) &&
+            !neighbor_special &&
+            (!neighbor_record || !terrain_cell_special_state_predicate(
+                level, nx, ny, 0))) return 1u;
     }
-    return count;
+    return 0u;
 }
 
 // LavaErosionNeighborMutate
-// FUNCTION: LEGORR 0x0040f330
 void ledger_stub_0040f330_LavaErosionNeighborMutate(
     const int xy[2], unsigned int direction, int propagate)
 {
@@ -1814,7 +2147,6 @@ void ledger_stub_0040f330_LavaErosionNeighborMutate(
 }
 
 // ErosionEightNeighborPropagate
-// FUNCTION: LEGORR 0x0040f5f0
 void ledger_stub_0040f5f0_ErosionEightNeighborPropagate(
     const int xy[2], unsigned int direction)
 {
@@ -1822,7 +2154,6 @@ void ledger_stub_0040f5f0_ErosionEightNeighborPropagate(
 }
 
 // LavaErosionCellEligibleAndMutate
-// FUNCTION: LEGORR 0x0040f190
 int ledger_stub_0040f190_LavaErosionCellEligibleAndMutate(
     const int xy[2], int hint)
 {
@@ -1881,7 +2212,6 @@ uint32_t ledger_stub_00418920_CategoryCellCandidateListBuild(
 }
 
 // OverlayTextBufferRefresh
-// FUNCTION: LEGORR 0x00418a00
 int ledger_stub_00418a00_OverlayTextBufferRefresh(void)
 {
     return overlay_text_buffer_refresh();
@@ -1919,8 +2249,10 @@ int ledger_stub_0041a1a0_UIEntryHitTestAndDispatch(
                 for (move = index; move != 0u; --move)
                     state->entries[move] = state->entries[move - 1u];
                 state->entries[0] = selected;
-                state->flags |= 3u;
             }
+            /* RecordListEntryMoveToFront sets both state bits even when the
+             * clicked row is already at index zero. */
+            state->flags |= 3u;
         }
         return 1;
     }
@@ -1943,15 +2275,16 @@ int ledger_stub_0041c4f0_AdvisorAnimationPositionAndRequestUpdate(
     return advisor_request_admit(row, immediate);
 }
 
-// FUNCTION: LEGORR 0x0041c7b0
 int ledger_stub_0041c7b0_InputActionStateUpdate(const EngineContext* context,
                                                 int action, int alternate)
 {
-    return input_action_pressed_get(context, action, alternate);
+    (void)context;
+    (void)alternate;
+    input_action_state_update(action);
+    return 0;
 }
 
 // CatalogSlotFlagUpdate
-// FUNCTION: LEGORR 0x0041c800
 void ledger_stub_0041c800_CatalogSlotFlagUpdate(int category, int slot)
 {
     catalog_slot_flag_update(category, slot);
@@ -2010,6 +2343,7 @@ static void ui_action_dispatch_global_low_byte_clear(
     state->action_flags &= ~0xffu;
 }
 
+// FUNCTION: LEGORR 0x0041dca0
 int ui_action_dispatch(int action)
 {
     UiActionDispatchState* state = s_ui_action_dispatch_state;
@@ -2424,7 +2758,6 @@ action_flag_toggle:
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0041dca0
 int ledger_stub_0041dca0_UiActionDispatch(int action)
 {
     return ui_action_dispatch(action);
@@ -2688,46 +3021,92 @@ int ledger_stub_0042bb60_TextureSetConfigLoad(TerrainTileMeshGrid* grid,
 }
 
 // FUNCTION: LEGORR 0x0042c330
-EntitySlot* ledger_stub_0042c330_EmergeMapTriggerSpawn(
-    int entity_index, int owner_index, int grid_width, int grid_height)
+int ledger_stub_0042c330_EmergeMapTriggerSpawn(
+    LevelState* level, const int cell_xy[2], int output_xy[2])
 {
-    return emergence_random_spawn_attempt(entity_index, owner_index,
-                                          grid_width, grid_height);
+    unsigned char* records;
+    uint32_t record_count;
+    uint32_t owner_index;
+    GameContext* context;
+    const EntitySlot* base_entity;
+    uint32_t record_index;
+    if (level == NULL || cell_xy == NULL || level->ptr_layerl == NULL)
+        return 0;
+    records = (unsigned char*)level->ptr_layerl;
+    record_count = level->word[LEVEL_OFF_LAYERL_COUNT / 4];
+    owner_index = level->word[0xb0 / 4];
+    context = entity_pool_callback_context_get();
+    if (context == NULL || context->level != level) return 0;
+    base_entity = entity_at(context, 3, (int)owner_index);
+    if (base_entity == NULL) return 0;
+    for (record_index = 0u; record_index < record_count; ++record_index) {
+        unsigned char* record = records + record_index * 0x4cu;
+        uint32_t slot_index;
+        int record_x, record_y;
+        float timer;
+        memcpy(&record_x, record + 4, sizeof(record_x));
+        memcpy(&record_y, record + 8, sizeof(record_y));
+        memcpy(&timer, record + 0x0c, sizeof(timer));
+        if (record_x != cell_xy[0] || record_y != cell_xy[1] ||
+            timer > 0.0f) continue;
+        for (slot_index = 0u; slot_index < 5u; ++slot_index) {
+            unsigned char* entry = record + 0x18u + slot_index * 0x0cu;
+            int spawn_x, spawn_y;
+            uint32_t populated;
+            EntitySlot* spawned;
+            memcpy(&populated, entry, sizeof(populated));
+            if (populated == 0u) continue;
+            memcpy(&spawn_x, entry - 8, sizeof(spawn_x));
+            memcpy(&spawn_y, entry - 4, sizeof(spawn_y));
+            spawned = creature_spawn_from_emergence(
+                (void*)base_entity, 3, (int)owner_index, spawn_x, spawn_y);
+            if (spawned == NULL) continue;
+            memcpy(record + 0x0c, &level->word[0x264 / 4], sizeof(float));
+            if (output_xy != NULL) {
+                output_xy[0] = spawn_x;
+                output_xy[1] = spawn_y;
+            }
+            return 1;
+        }
+    }
+    return 0;
 }
 
-// MiniFigureTypeTableLoad
-// FUNCTION: LEGORR 0x0042cf50
+// Port-facing adapter retained for callers that provide a table and hooks.
 int ledger_stub_0042cf50_MiniFigureTypeTableLoad(
     TypeConfigTable* table, void* section, const TypeConfigHooks* hooks)
 {
-    return type_config_table_load(table, section, 1u, hooks);
+    /* FUN_0042cf50 uses 0x74-byte rows and its shared type-row parser. */
+    return type_config_record_table_load(table, section, 1u, 0x74u, hooks);
 }
 
-// BuildingTypesLoad
-// FUNCTION: LEGORR 0x0042d2b0
+// Port-facing adapter retained for callers that provide a table and hooks.
 int ledger_stub_0042d2b0_BuildingTypesLoad(
     TypeConfigTable* table, void* section, const TypeConfigHooks* hooks)
 {
-    return type_config_table_load(table, section, 2u, hooks);
+    /* FUN_0042d2b0 uses 0x14c-byte building records. */
+    return type_config_record_table_load(table, section, 2u, 0x14cu, hooks);
 }
 
-// ObjectNamesLoad
-// FUNCTION: LEGORR 0x0042d600
+// Port-facing adapter retained for callers that provide table and hooks.
 void ledger_stub_0042d600_ObjectNamesLoad(
     ObjectNameTableSet* tables, void* section,
     const ObjectNameLoadHooks* hooks)
 {
+    /* The five input name tables and counts are the vehicle, mini-figure,
+     * monster, building, and upgrade tables consumed by the decompile. */
     object_names_load(tables, section, hooks);
 }
 
-// ObjectTheNamesLoad
-// FUNCTION: LEGORR 0x0042da20
+// Port-facing adapter retained for callers that provide table and hooks.
 void ledger_stub_0042da20_ObjectTheNamesLoad(
     ObjectNameTableSet* tables, BlockFile* config,
     const ObjectNameLoadHooks* hooks)
 {
     BlockRec* section;
     if (tables == NULL || config == NULL || hooks == NULL) return;
+    /* Unlike ObjectNamesLoad, this loader first opens the named config
+     * subgroup and uses its own parallel table and handle globals. */
     section = block_subgroup(config, "ObjectTheNames");
     if (section == NULL) return;
     object_names_load(tables, section, hooks);
@@ -2741,7 +3120,9 @@ int ledger_stub_0042de40_ViewportTargetPositionClamp(
 }
 
 
-// FUNCTION: LEGORR 0x00431780
+/* Port adapter for TerrainStampImpactHandler (FUN_00431780). Its hook-bundle
+ * argument is a reconstruction seam, not part of the corpus ABI; production
+ * terrain/effect bindings are not installed yet. */
 int ledger_stub_00431780_TerrainStampImpactHandler(
     uint32_t x, uint32_t y, int direction, int mode,
     const TerrainStampImpactHooks* hooks)
@@ -2772,7 +3153,9 @@ uint32_t ledger_stub_00431b20_PlacementBlockedAdjacentCellScan(
     return count;
 }
 
-// FUNCTION: LEGORR 0x00433380
+/* Port adapter for TerrainCellMutationProgress (FUN_00433380). The copied
+ * grid and hook bundle model the observed cell/height updates, but do not
+ * match the corpus's global-state ABI and have no production installer. */
 int ledger_stub_00433380_TerrainCellMutationProgress(
     const TerrainCellMutationGrid* grid, uint32_t x, uint32_t y,
     const TerrainCellMutationHooks* hooks)
@@ -2958,11 +3341,10 @@ void ledger_stub_00434af0_TextMessagesConfigLoad(BlockFile* config)
     }
 }
 
-// FUNCTION: LEGORR 0x00434da0
 void ledger_stub_00434da0_AdvisorTooltipAndTooltipSoundConfigLoad(
     BlockFile* config)
 {
-    tooltip_info_strings_load(config);
+    advisor_tooltip_and_sound_config_load(config);
 }
 
 // FUNCTION: LEGORR 0x004350a0
@@ -2982,7 +3364,6 @@ int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void)
 }
 
 // ToolTipIconsConfigLoad
-// FUNCTION: LEGORR 0x00437150
 void ledger_stub_00437150_ToolTipIconsConfigLoad(void* config)
 {
     tooltip_icons_config_load(config);
@@ -3006,21 +3387,18 @@ void ledger_stub_004374f0_EntityCallbackDispatchUnlessTypeFive(
 }
 
 // EntityTeardown
-// FUNCTION: LEGORR 0x00437540
 int ledger_stub_00437540_EntityTeardown(EntitySlot* entity)
 {
     return entity_teardown(entity);
 }
 
 // GridObjectRecordsRelease
-// FUNCTION: LEGORR 0x004378e0
 void ledger_stub_004378e0_GridObjectRecordsRelease()
 {
     grid_object_records_release();
 }
 
 // DeferredOListEntityCreateAndLink
-// FUNCTION: LEGORR 0x00437940
 void ledger_stub_00437940_DeferredOListEntityCreateAndLink(
     const int cell_xy[2])
 {
@@ -3028,14 +3406,12 @@ void ledger_stub_00437940_DeferredOListEntityCreateAndLink(
 }
 
 // RoverWorkQueueUpdate
-// FUNCTION: LEGORR 0x004383b0
 void ledger_stub_004383b0_RoverWorkQueueUpdate(EntitySlot* entity, int mode)
 {
     rover_work_queue_update(entity, mode);
 }
 
 // EntityKindRecordUpdateDispatch
-// FUNCTION: LEGORR 0x00438460
 void ledger_stub_00438460_EntityKindRecordUpdateDispatch(EntitySlot* entity)
 {
     entity_kind_record_update_dispatch(entity);
@@ -3051,7 +3427,6 @@ EntitySlot* ledger_stub_00438610_EntityCreateWithPosition(
 }
 
 // BuildingUpgradeResourceAdmissionCheck
-// FUNCTION: LEGORR 0x00438770
 int ledger_stub_00438770_BuildingUpgradeResourceAdmissionCheck(
     EntitySlot* building, uint32_t* out_secondary_cost)
 {
@@ -3060,14 +3435,12 @@ int ledger_stub_00438770_BuildingUpgradeResourceAdmissionCheck(
 }
 
 // BuildingUpgradeCommit
-// FUNCTION: LEGORR 0x004387f0
 void ledger_stub_004387f0_BuildingUpgradeCommit(EntitySlot* building)
 {
     building_upgrade_commit(building);
 }
 
 // EntityActionKindPrerequisiteCheck
-// FUNCTION: LEGORR 0x004388b0
 int ledger_stub_004388b0_EntityActionKindPrerequisiteCheck(
     EntitySlot* entity, int action)
 {
@@ -3075,7 +3448,6 @@ int ledger_stub_004388b0_EntityActionKindPrerequisiteCheck(
 }
 
 // EntityRouteMarkerCandidateFind
-// FUNCTION: LEGORR 0x004389e0
 EntitySlot* ledger_stub_004389e0_EntityRouteMarkerCandidateFind(
     EntitySlot* source, int include_secondary)
 {
@@ -3099,6 +3471,22 @@ static void spatial_query_center_from_entity(
     }
 }
 
+static void spatial_query_center_from_cell(
+    SpatialObjectQueryRequest* request, const int cell_xy[2])
+{
+    float world_position[3];
+    if (request == NULL || cell_xy == NULL) return;
+    /* The reference converts the cell to its world-space center. A failed
+     * conversion leaves the initialized center at (0, 0), but still runs the
+     * entity-pool query. */
+    if (terrain_cell_world_position_get(cell_xy[0], cell_xy[1],
+                                        world_position)) {
+        request->center[0] = world_position[0];
+        request->center[1] = world_position[1];
+    }
+    request->center_is_cell = 0;
+}
+
 // FUNCTION: LEGORR 0x00438a60
 void* ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
     const int cell_xy[2], uint32_t filter_a, uint32_t filter_b,
@@ -3107,9 +3495,7 @@ void* ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
     SpatialObjectQueryRequest request;
     if (cell_xy == NULL) return NULL;
     spatial_query_request_init(&request, 1u);
-    request.center[0] = (float)cell_xy[0];
-    request.center[1] = (float)cell_xy[1];
-    request.center_is_cell = 1;
+    spatial_query_center_from_cell(&request, cell_xy);
     request.filters[0] = filter_a;
     request.filters[1] = filter_b;
     request.filters[2] = filter_c;
@@ -3124,11 +3510,7 @@ void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
     SpatialObjectQueryRequest request;
     spatial_query_request_init(&request, 2u);
     if (entity != NULL) spatial_query_center_from_entity(&request, entity);
-    else if (cell_xy != NULL) {
-        request.center[0] = (float)cell_xy[0];
-        request.center[1] = (float)cell_xy[1];
-        request.center_is_cell = 1;
-    }
+    else spatial_query_center_from_cell(&request, cell_xy);
     request.filters[0] = filter_a;
     request.filters[1] = filter_b;
     return spatial_object_query_execute(&request);
@@ -3227,7 +3609,6 @@ void* ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
 }
 
 // EntityBuildPlacementCommandBatchExpand
-// FUNCTION: LEGORR 0x00439280
 void ledger_stub_00439280_EntityBuildPlacementCommandBatchExpand(
     const int cell_xy[2])
 {
@@ -3235,7 +3616,6 @@ void ledger_stub_00439280_EntityBuildPlacementCommandBatchExpand(
 }
 
 // EntityBuildPlacementCommandPairCreate
-// FUNCTION: LEGORR 0x00439340
 void ledger_stub_00439340_EntityBuildPlacementCommandPairCreate(
     const int cell_xy[2], int entity_id)
 {
@@ -3263,7 +3643,6 @@ void ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
 }
 
 // ToolNameStringResourcesLoad
-// FUNCTION: LEGORR 0x00439950
 void ledger_stub_00439950_ToolNameStringResourcesLoad(void* string_loader,
                                                      void* config)
 {
@@ -3271,7 +3650,6 @@ void ledger_stub_00439950_ToolNameStringResourcesLoad(void* string_loader,
 }
 
 // GatedStepCommandIssueWithTargetRecord
-// FUNCTION: LEGORR 0x00439a20
 int ledger_stub_00439a20_GatedStepCommandIssueWithTargetRecord(
     EntitySlot* entity, EntitySlot* target)
 {
@@ -3279,7 +3657,6 @@ int ledger_stub_00439a20_GatedStepCommandIssueWithTargetRecord(
 }
 
 // TaskTargetCellEligibilityCheck
-// FUNCTION: LEGORR 0x00439b80
 int ledger_stub_00439b80_TaskTargetCellEligibilityCheck(
     const EntitySlot* entity, const uint32_t* task_record)
 {
@@ -3287,7 +3664,6 @@ int ledger_stub_00439b80_TaskTargetCellEligibilityCheck(
 }
 
 // EntityAcceptsTargetForTaskCheck
-// FUNCTION: LEGORR 0x00439bd0
 int ledger_stub_00439bd0_EntityAcceptsTargetForTaskCheck(
     const EntitySlot* entity, const EntitySlot* target, int apply_extra_gate)
 {
@@ -3296,14 +3672,12 @@ int ledger_stub_00439bd0_EntityAcceptsTargetForTaskCheck(
 }
 
 // EntityIndexedFlagSetAndRefresh
-// FUNCTION: LEGORR 0x00439c80
 void ledger_stub_00439c80_EntityIndexedFlagSetAndRefresh(EntitySlot* entity)
 {
     entity_indexed_flag_set_and_refresh(entity);
 }
 
 // VehicleUnloadAdjacentCellFind
-// FUNCTION: LEGORR 0x00439d50
 int ledger_stub_00439d50_VehicleUnloadAdjacentCellFind(
     const EntitySlot* entity, int out_xy[2])
 {
@@ -3311,7 +3685,6 @@ int ledger_stub_00439d50_VehicleUnloadAdjacentCellFind(
 }
 
 // VehicleUnloadCellFindIfEligible
-// FUNCTION: LEGORR 0x00439e10
 int ledger_stub_00439e10_VehicleUnloadCellFindIfEligible(
     const EntitySlot* entity, int out_xy[2])
 {
@@ -3366,7 +3739,6 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
 }
 
 // EntityDepositActivityGate
-// FUNCTION: LEGORR 0x0043a300
 int ledger_stub_0043a300_EntityDepositActivityGate(EntitySlot* entity,
                                                    EntitySlot* target)
 {
@@ -3374,14 +3746,12 @@ int ledger_stub_0043a300_EntityDepositActivityGate(EntitySlot* entity,
 }
 
 // EntityVisualResourceGetOrCreate
-// FUNCTION: LEGORR 0x0043a5f0
 void ledger_stub_0043a5f0_EntityVisualResourceGetOrCreate(EntitySlot* entity)
 {
     entity_visual_resource_get_or_create(entity);
 }
 
 // ActionKindEntityCreateAndCommandIssue
-// FUNCTION: LEGORR 0x0043a650
 EntitySlot* ledger_stub_0043a650_ActionKindEntityCreateAndCommandIssue(
     EntitySlot* source, int kind, int selector, int argument)
 {
@@ -3390,7 +3760,6 @@ EntitySlot* ledger_stub_0043a650_ActionKindEntityCreateAndCommandIssue(
 }
 
 // EntityActionRecordConsumeAndCleanup
-// FUNCTION: LEGORR 0x0043a850
 void ledger_stub_0043a850_EntityActionRecordConsumeAndCleanup(
     EntitySlot* entity, EntityActionConsumeRecord* record)
 {
@@ -3398,7 +3767,6 @@ void ledger_stub_0043a850_EntityActionRecordConsumeAndCleanup(
 }
 
 // EntityPairInteractionGate
-// FUNCTION: LEGORR 0x0043a9f0
 void ledger_stub_0043a9f0_EntityPairInteractionGate(
     EntitySlot* entity, const EntitySlot* partner)
 {
@@ -3406,21 +3774,18 @@ void ledger_stub_0043a9f0_EntityPairInteractionGate(
 }
 
 // ProximityActivityRaise
-// FUNCTION: LEGORR 0x0043aab0
 void ledger_stub_0043aab0_ProximityActivityRaise(EntitySlot* entity)
 {
     entity_proximity_activity_raise(entity);
 }
 
 // TerrainCellVariantUpdateQueue
-// FUNCTION: LEGORR 0x0043abf0
 void ledger_stub_0043abf0_TerrainCellVariantUpdateQueue(void* entity)
 {
     terrain_cell_variant_update_queue(entity);
 }
 
 // TaskCountAtGridCoordinateQuery
-// FUNCTION: LEGORR 0x0043b360
 void ledger_stub_0043b360_TaskCountAtGridCoordinateQuery(
     uint32_t x, uint32_t y, uint32_t* out_count)
 {
@@ -3428,7 +3793,6 @@ void ledger_stub_0043b360_TaskCountAtGridCoordinateQuery(
 }
 
 // ClippedRectangleCallbackDispatch
-// FUNCTION: LEGORR 0x0043b6c0
 void ledger_stub_0043b6c0_ClippedRectangleCallbackDispatch(
     void* payload, const float rect_a[2], const float rect_b[2])
 {
@@ -3436,7 +3800,6 @@ void ledger_stub_0043b6c0_ClippedRectangleCallbackDispatch(
 }
 
 // TypeTwoEntityEventDispatch
-// FUNCTION: LEGORR 0x0043b820
 void ledger_stub_0043b820_TypeTwoEntityEventDispatch(
     const EntitySlot* entity, uint32_t argument_a, uint32_t argument_b)
 {
@@ -3444,7 +3807,6 @@ void ledger_stub_0043b820_TypeTwoEntityEventDispatch(
 }
 
 // TypeTwoEntityPositionedCallbackDispatch
-// FUNCTION: LEGORR 0x0043b850
 void ledger_stub_0043b850_TypeTwoEntityPositionedCallbackDispatch(
     const EntitySlot* entity, void* scene_object, uint32_t argument_a,
     uint32_t argument_b, int mode)
@@ -3454,14 +3816,12 @@ void ledger_stub_0043b850_TypeTwoEntityPositionedCallbackDispatch(
 }
 
 // BuildingDepositStateMonitor
-// FUNCTION: LEGORR 0x0043bb20
 void ledger_stub_0043bb20_BuildingDepositStateMonitor(EntitySlot* entity)
 {
     entity_building_deposit_state_monitor(entity);
 }
 
 // ObjectiveSidecarAppendGate
-// FUNCTION: LEGORR 0x0043bc40
 int ledger_stub_0043bc40_ObjectiveSidecarAppendGate(
     ObjectiveSidecarSnapshot* state, void* context,
     ObjectiveSidecarActionHook action)
@@ -3470,7 +3830,6 @@ int ledger_stub_0043bc40_ObjectiveSidecarAppendGate(
 }
 
 // EntityType26CommandCompletionGate
-// FUNCTION: LEGORR 0x0043c3e0
 int ledger_stub_0043c3e0_EntityType26CommandCompletionGate(
     const EntitySlot* entity)
 {
@@ -3478,31 +3837,28 @@ int ledger_stub_0043c3e0_EntityType26CommandCompletionGate(
 }
 
 // KindFourPostCreateResolve
-// FUNCTION: LEGORR 0x0043c570
 void ledger_stub_0043c570_KindFourPostCreateResolve(EntitySlot* entity)
 {
     entity_kind_four_post_create_resolve(entity);
 }
 
 /* EntityCapacityOrStatePredicate (FUN_0043c650): gate on stats bit 0x80000,
- * compare the configured +0xe0 threshold against the referenced counter,
+ * compare the indexed stats-table +0xe0 value against the referenced count,
  * then reject an entity carrying the +0x3e8 high-bit state. */
 // FUNCTION: LEGORR 0x0043c650
 int entity_capacity_or_state_predicate(const EntitySlot* entity)
 {
     uint32_t stats_flags;
-    uint32_t threshold = 0u;
+    uint32_t limit;
     uint32_t current = 0u;
     if (entity == NULL) return 0;
     stats_flags = entity_stats_word_get(entity);
     if ((stats_flags & 0x80000u) == 0u) return 0;
-    if (entity->stats_record != NULL)
-        memcpy(&threshold, (const uint8_t*)entity->stats_record + 0xe0u,
-               sizeof(threshold));
+    limit = stats_instance_word_at_e0(entity);
     if (entity->carry_ref_348 != NULL)
         memcpy(&current, entity->carry_ref_348, sizeof(current));
-    if (threshold != 0u && entity->carry_ref_348 != NULL &&
-        threshold <= current) return 0;
+    if (limit != 0u && entity->carry_ref_348 != NULL && limit <= current)
+        return 0;
     return (entity->flags_3e8 & 0x80000000u) == 0u ? 1 : 0;
 }
 
@@ -3512,7 +3868,11 @@ void ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick(
     EntitySlot* entity, float delta)
 {
     float damage = 0.0f;
+    float terrain_damage = 0.0f;
+    LevelState* level;
+    int cell_x, cell_y;
     if (entity == NULL || entity->type == 10 || entity->type == 5) return;
+    level = (entity->owner_ctx != NULL) ? entity->owner_ctx->level : NULL;
     if (entity->field_340 <= 0.0f) {
         entity->field_340 = 0.0f;
     }
@@ -3528,9 +3888,31 @@ void ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick(
         entity->progress_344 -= decay;
         if (entity->progress_344 < 0.0f) entity->progress_344 = 0.0f;
     }
+
+    if (level != NULL) {
+        uint8_t* cell;
+        entity_position_to_terrain_cell(entity, level, &cell_x, &cell_y);
+        cell = level_voxel(level, cell_x, cell_y);
+        if (entity->attach_304 == NULL && cell != NULL && cell[2] == 6 &&
+            (entity->type == 6 || entity->type == 7)) {
+            level_state_field9c_add(level, 1);
+            entity->field_340 = -4.0f;
+            entity->flags_3e8 |= 0x00800000u;
+        }
+        if (entity_cell_type_speed_multiplier_resolve(
+                entity, level, cell_x, cell_y, delta, &terrain_damage)) {
+            entity_damage_apply(entity, terrain_damage, 1);
+        }
+    }
+
+    if ((entity_state_flags_get(entity) & 0x00010000u) != 0u &&
+        (entity->flags_3e0 & 0x00100100u) == 0u &&
+        (entity->flags_3e4 & 0x08000000u) == 0u) {
+        (void)entity_fence_spark_terrain_interaction(entity);
+    }
     if (entity->field_340 < entity->progress_344)
         entity->progress_344 = entity->field_340;
-    (void)entity_damage_hurt_sound_submit(entity, delta, damage);
+    (void)entity_damage_hurt_sound_submit(entity, delta, terrain_damage);
     if (entity->activity_param != 0 && entity->activity_timer >= 0.0f)
         entity->activity_timer += delta;
 }
@@ -3601,16 +3983,38 @@ int ledger_stub_004401b0_TerrainCellToWorldPosition(EntitySlot* entity,
     LevelState* level;
     int cell_x, cell_y;
     int should_transfer = 0;
-    int target_position_set = 0;
-    EntityScenePose pose;
-    float unload_position[3];
+    int target_pose_valid = 0;
+    int linked_pose_valid = 0;
+    float target_position[3];
+    EntityScenePose target_pose;
+    EntityScenePose linked_pose;
+    EntityScenePose entity_pose;
     if (entity == NULL || entity->owner_ctx == NULL ||
         (entity_state_flags_get(entity) & 0x20000u) == 0u) return 0;
     owner = (EntitySlot*)entity->owner_36c;
     if (owner == NULL || (owner->flags_3e0 & 1u) != 0u) return 0;
     level = entity->owner_ctx->level;
     if (level == NULL) return 0;
-    entity_position_to_terrain_cell(entity, level, &cell_x, &cell_y);
+
+    /* FUN_004401b0 asks the scene object for its current position before
+     * resolving the terrain cell. EntitySlot coordinates are only the
+     * fallback when the renderer has no pose provider. */
+    if (s_entity_pair_pose_hooks.pose_read != NULL &&
+        s_entity_pair_pose_hooks.pose_read(s_entity_pair_pose_hooks.context,
+                                           entity, &entity_pose)) {
+        target_position[0] = entity_pose.position[0];
+        target_position[1] = entity_pose.position[1];
+        target_position[2] = entity_pose.position[2];
+        cell_x = level_cell_of(target_position[0]);
+        cell_y = level_cell_of(target_position[1]);
+    }
+    else {
+        target_position[0] = entity->x;
+        target_position[1] = entity->y;
+        target_position[2] = entity->z;
+        cell_x = level_cell_of(target_position[0]);
+        cell_y = level_cell_of(target_position[1]);
+    }
     if ((entity_state_flags_get(entity) & 0x02000000u) != 0u &&
         entity_route_cell_candidate_accept(owner, level, cell_x, cell_y, 1))
         should_transfer = 1;
@@ -3619,12 +4023,10 @@ int ledger_stub_004401b0_TerrainCellToWorldPosition(EntitySlot* entity,
         if (force == 0 &&
             entity_vehicle_unload_cell_find_if_eligible(entity, unload_cell)) {
             if (!terrain_cell_world_position_get(unload_cell[0], unload_cell[1],
-                                                 unload_position)) return 0;
-            entity_world_position_set(owner, unload_position[0],
-                                      unload_position[1], owner->rot, 1);
-            owner->z = unload_position[2];
+                                                 target_position)) return 0;
+            cell_x = unload_cell[0];
+            cell_y = unload_cell[1];
             should_transfer = 1;
-            target_position_set = 1;
         }
         else if ((entity_state_flags_get(entity) & 0x02000000u) == 0u) {
             object_attached_record_allocate(entity);
@@ -3632,35 +4034,68 @@ int ledger_stub_004401b0_TerrainCellToWorldPosition(EntitySlot* entity,
     }
     else if (!should_transfer && (entity->flags_3ec & 0x40u) != 0u) {
         linked = (EntitySlot*)entity->link_2fc;
-        if (linked != NULL && linked->type == 4 &&
-            entity_world_center_position_read(linked, unload_position)) {
-            entity_world_position_set(owner, unload_position[0],
-                                      unload_position[1], owner->rot, 1);
-            owner->z = unload_position[2];
-            should_transfer = 1;
-            target_position_set = 1;
+        if (linked != NULL && linked->type == 4) {
+            if (s_entity_pair_pose_hooks.scene_present != NULL &&
+                !s_entity_pair_pose_hooks.scene_present(
+                    s_entity_pair_pose_hooks.context, linked)) {
+                linked = NULL;
+            }
+            if (linked != NULL &&
+                s_entity_pair_pose_hooks.pose_read != NULL &&
+                s_entity_pair_pose_hooks.pose_read(
+                    s_entity_pair_pose_hooks.context, linked, &linked_pose)) {
+                target_position[0] = linked_pose.position[0];
+                target_position[1] = linked_pose.position[1];
+                target_position[2] = linked_pose.position[2];
+                cell_x = level_cell_of(target_position[0]);
+                cell_y = level_cell_of(target_position[1]);
+                linked_pose_valid = 1;
+                should_transfer = 1;
+            }
+            else if (linked != NULL &&
+                     entity_world_center_position_read(linked,
+                                                       target_position)) {
+                cell_x = level_cell_of(target_position[0]);
+                cell_y = level_cell_of(target_position[1]);
+                should_transfer = 1;
+            }
         }
     }
     if (!should_transfer) return 0;
 
-    if (!target_position_set && s_entity_pair_pose_hooks.pose_read != NULL &&
-        s_entity_pair_pose_hooks.pose_apply != NULL &&
-        s_entity_pair_pose_hooks.pose_read(s_entity_pair_pose_hooks.context,
-                                           entity, &pose)) {
-        s_entity_pair_pose_hooks.pose_apply(s_entity_pair_pose_hooks.context,
-                                            owner, &pose);
+    target_position[2] = (float)terrain_surface_height_get(level->ptr_terrain,
+                                                            cell_x, cell_y);
+    entity_world_position_set(owner, target_position[0], target_position[1],
+                              owner->rot, 0);
+    owner->z = target_position[2];
+
+    /* The linked-object branch explicitly copies its orientation. Other
+     * branches only set the owner's position, preserving its current scene
+     * orientation when the renderer can provide it. */
+    if (s_entity_pair_pose_hooks.pose_apply != NULL) {
+        if (linked_pose_valid) {
+            target_pose = linked_pose;
+            target_pose_valid = 1;
+        }
+        else if (s_entity_pair_pose_hooks.pose_read != NULL &&
+                 s_entity_pair_pose_hooks.pose_read(
+                     s_entity_pair_pose_hooks.context, owner, &target_pose)) {
+            target_pose_valid = 1;
+        }
+        if (target_pose_valid) {
+            target_pose.position[0] = target_position[0];
+            target_pose.position[1] = target_position[1];
+            target_pose.position[2] = target_position[2];
+            s_entity_pair_pose_hooks.pose_apply(
+                s_entity_pair_pose_hooks.context, owner, &target_pose);
+        }
     }
-    else if (!target_position_set) {
-        entity_world_position_set(owner, entity->x, entity->y, entity->rot, 1);
-    }
+
     entity->owner_36c = NULL;
     owner->owner_36c = NULL;
     owner->flags_3e4 &= ~8u;
-    owner->link_2fc = 0;
-    entity->link_2fc = 0;
-    entity_activity_records_refresh(owner);
-    entity_action_sequence_reset(owner, 0);
-    entity_action_sequence_reset(entity, 0);
+    ai_set_activity(owner, 0, 0);
+    (void)selection_entity_remove(entity);
     return 1;
 }
 
@@ -3697,7 +4132,7 @@ int ledger_stub_004403d0_LevelDebugCellRetargetDispatch(
                 entity, (unsigned int)target_cell[0],
                 (unsigned int)target_cell[1], 0, &candidate, 1) &&
             entity->wp_count > 0) {
-            step = &entity->wp[entity->wp_count - 1];
+            step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
             step->weight_x = 0.5f;
             step->weight_y = 0.5f;
             switch (candidate & 3u) {
@@ -3797,24 +4232,90 @@ int ledger_stub_004408c0_SpatialEntityCallbackQueryAtOptionalCoordinate(
 void ledger_stub_00440a10_AttachedEntityDirectionVectorUpdate(
     EntitySlot* entity)
 {
-    EntitySlot* attached;
-    float origin[3];
-    float target[3];
-    float dx, dy, dz, length;
-    if (entity == NULL) return;
-    attached = (EntitySlot*)entity->carry_link_308;
-    if (attached == NULL || (attached->flags_3e8 & 0x2000u) != 0u ||
-        !entity_world_center_position_read(entity, origin) ||
-        !entity_world_center_position_read(attached, target)) return;
-    dx = target[0] - origin[0];
-    dy = target[1] - origin[1];
-    dz = target[2] - origin[2];
-    length = (float)sqrt((double)(dx * dx + dy * dy + dz * dz));
-    if (length == 0.0f) return;
-    attached->facing_target_x = dx / length;
-    attached->facing_target_y = dy / length;
-    attached->facing_target_z = dz / length;
-    attached->movement_tick_scale = length;
+    uint32_t i;
+    if (entity == NULL || entity->attached_children == NULL) return;
+    for (i = 0u; i < entity->attached_child_count; ++i) {
+        EntitySlot* child = entity->attached_children[i];
+        void* child_scene;
+        void* record = NULL;
+        void* parent_scene = NULL;
+        int resolver_index = 0;
+        int resolver_kind = 0;
+        float old_position[3];
+        float new_position[3];
+        float dx, dy, dz, length, inverse_length;
+        if (child == NULL || (child->flags_3e8 & 0x2000u) != 0u) continue;
+        child_scene = child->attached_scene_object;
+        if (child_scene == NULL ||
+            !ddiscene_object_position_get(child_scene, NULL, old_position))
+            continue;
+        switch (entity->type) {
+        case 1:
+            record = entity->attached_direction_record_type1;
+            resolver_kind = 2;
+            resolver_index = (int)entity_indexed_record_word_at_f0_get(
+                1, entity->etype, entity->indexed_record_slot_330) +
+                child->attached_scene_slot_index;
+            break;
+        case 2:
+            if (entity->owner_36c != NULL &&
+                ((EntitySlot*)entity->owner_36c)->type == 1) {
+                EntitySlot* linked = (EntitySlot*)entity->owner_36c;
+                record = linked->attached_direction_record_type1;
+                resolver_kind = 2;
+                resolver_index = (int)entity_indexed_record_word_at_f0_get(
+                    1, linked->etype, linked->indexed_record_slot_330) +
+                    child->attached_scene_slot_index;
+            }
+            else {
+                record = entity->attached_direction_record_type2;
+                resolver_kind = 0;
+            }
+            break;
+        case 3:
+            record = entity->attached_direction_record_type3;
+            resolver_kind = 0;
+            break;
+        case 4:
+            record = entity->attached_direction_record_type4;
+            resolver_kind = 1;
+            resolver_index = child->attached_scene_slot_index;
+            break;
+        default:
+            continue;
+        }
+        if (record == NULL) continue;
+        switch (resolver_kind) {
+        case 1:
+            parent_scene = scene_object_indexed_handle_get_or_create(
+                record, resolver_index);
+            break;
+        case 2:
+            parent_scene = attached_entity_slot_object_get(
+                (SceneResourceAnimationRecord*)record, resolver_index);
+            break;
+        default:
+            parent_scene = renderer_cached_handle_48_get_or_create(record);
+            break;
+        }
+        if (parent_scene == NULL) continue;
+        (void)ddiscene_object_position_set(child_scene, parent_scene,
+                                           0.0f, 0.0f, 0.0f);
+        (void)ddiscene_object_pose_method_dispatch(
+            child_scene, parent_scene, 0.0f, 0.0f, 1.0f,
+            0.0f, 1.0f, 0.0f);
+        if (!ddiscene_object_position_get(child_scene, NULL, new_position))
+            continue;
+        dx = new_position[0] - old_position[0];
+        dy = new_position[1] - old_position[1];
+        dz = new_position[2] - old_position[2];
+        length = (float)sqrt((double)(dx * dx + dy * dy + dz * dz));
+        inverse_length = 1.0f / length;
+        child->attached_direction_length = length;
+        child->attached_direction[0] = inverse_length * dx;
+        child->attached_direction[1] = inverse_length * dy;
+        child->attached_direction[2] = inverse_length * dz;
+    }
 }
 
 // GridRouteSearchAdapter
@@ -3832,7 +4333,6 @@ int ledger_stub_00440c30_GridRouteSearchAdapter(
 }
 
 // TerrainGridPathSearch
-// FUNCTION: LEGORR 0x00440c70
 int ledger_stub_00440c70_TerrainGridPathSearch(
     void* level, uint32_t start_x, uint32_t start_y,
     uint32_t goal_x, uint32_t goal_y, int** out_x, int** out_y,
@@ -3843,7 +4343,6 @@ int ledger_stub_00440c70_TerrainGridPathSearch(
 }
 
 // TerrainNeighborPathCheck
-// FUNCTION: LEGORR 0x004410f0
 int ledger_stub_004410f0_TerrainNeighborPathCheck(
     void* level, uint32_t start_x, uint32_t start_y,
     uint32_t goal_x, uint32_t goal_y, int** out_x, int** out_y,
@@ -4108,7 +4607,7 @@ int ledger_stub_00446e40_EntityNearestCellRouteCommit(
     if (mode != 0) entity->flags_3e8 |= 0x02000000u;
     else entity->flags_3e8 &= ~0x02000000u;
     if (entity->wp_count > 0) {
-        entity->wp[entity->wp_count - 1].pending = (candidate & 1u) ? 2u : 1u;
+        ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].pending = (candidate & 1u) ? 2u : 1u;
     }
     return 1;
 }
@@ -4127,12 +4626,14 @@ int ledger_stub_0044702d_RegisterRelativeStateUpdateFragment(
 }
 
 // EntityConditionalTypeFiveSpawn
+int ledger_stub_0044a5d0_NearestOpenCellCoordSearch(
+    EntitySlot* entity, int* output_x, int* output_y,
+    int require_minimum_distance, int allow_maskc0, int allow_flag20);
 // FUNCTION: LEGORR 0x004470d0
 int ledger_stub_004470d0_EntityConditionalTypeFiveSpawn(EntitySlot* entity)
 {
     GameContext* ctx;
     LevelState* level;
-    int current[2];
     int destination[2];
     int slot;
     EntitySlot* spawned;
@@ -4145,8 +4646,8 @@ int ledger_stub_004470d0_EntityConditionalTypeFiveSpawn(EntitySlot* entity)
     ctx = entity->owner_ctx;
     level = ctx->level;
     if (level == NULL) return 0;
-    entity_position_to_terrain_cell(entity, level, &current[0], &current[1]);
-    if (!first_free_neighbor_cell_pick(entity, level, current, destination, 0))
+    if (!ledger_stub_0044a5d0_NearestOpenCellCoordSearch(
+            entity, &destination[0], &destination[1], 1, 0, 0))
         return 0;
 
     slot = entity_create(ctx, 5, "Type5", (float)destination[0],
@@ -4197,7 +4698,7 @@ int ledger_stub_004471b0_TryCreateLinkedEntityAtPosition(
                                                   &route_y, 0)) {
         return 0;
     }
-    entity->wp[0].pending = 3u;
+    ENTITY_WAYPOINTS(entity)[0].pending = 3u;
     entity->link_2fc = (uintptr_t)linked;
     linked->attach_304 = entity;
     return 1;
@@ -4360,7 +4861,9 @@ void ledger_stub_004477d0_PathStepLookaheadEntryWrite(EntitySlot* entity)
     float length;
 
     if (entity == NULL || entity->wp_count <= 0
-        || entity->wp_count > AI_WAYPOINTS_MAX) {
+        || (entity->wp_dynamic == NULL
+            ? entity->wp_count > AI_WAYPOINTS_MAX
+            : (unsigned int)entity->wp_count > entity->wp_capacity)) {
         return;
     }
     linked = (EntitySlot*)entity->carry_link_308;
@@ -4372,7 +4875,7 @@ void ledger_stub_004477d0_PathStepLookaheadEntryWrite(EntitySlot* entity)
         return;
     }
 
-    waypoint = &entity->wp[entity->wp_count - 1];
+    waypoint = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     dx = target->x - waypoint->x;
     dy = target->y - waypoint->y;
     length = (float)sqrt((double)(dx * dx + dy * dy));
@@ -4574,9 +5077,9 @@ int ledger_stub_00448800_EntityMoveToCellCoordinates(
 
     /* The source queues the route through its command record. The portable
      * model keeps the same destination in its inline waypoint list. */
-    entity->wp[0].x = (float)x;
-    entity->wp[0].y = (float)y;
-    entity->wp[0].pending = 9u;
+    ENTITY_WAYPOINTS(entity)[0].x = (float)x;
+    ENTITY_WAYPOINTS(entity)[0].y = (float)y;
+    ENTITY_WAYPOINTS(entity)[0].pending = 9u;
     entity->wp_count = 1;
     entity->wp_index = 0;
     entity->pos_pair_2f4 = (float)x;
@@ -4617,7 +5120,7 @@ int ledger_stub_00448880_RecordGatedStepCommandIssue(
                                                   &route_y, 0)) {
         return 0;
     }
-    entity->wp[0].pending = 9u;
+    ENTITY_WAYPOINTS(entity)[0].pending = 9u;
     entity->pos_pair_2f4 = route_x;
     entity->pos_pair_2f8 = route_y;
     return 1;
@@ -4648,7 +5151,7 @@ int ledger_stub_00448a60_EntityNeighborCellMoveCommandHandle(
                                     &source_cell[1]);
     if (!entity_route_to_cell_commit(entity, target_cell[0], target_cell[1],
                                      9u) || entity->wp_count <= 0) return 0;
-    step = &entity->wp[entity->wp_count - 1];
+    step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     step->step_kind = 9u;
     if (entity->type == 1) {
         direction = entity_route_cardinal_direction(source_cell[0],
@@ -4709,7 +5212,7 @@ int ledger_stub_00448c90_CardinalStepCommandIssueAndLink(
                                     &source_cell[1]);
     if (!entity_route_to_cell_commit(entity, target_cell[0], target_cell[1],
                                      15u)) return 0;
-    step = &entity->wp[entity->wp_count - 1];
+    step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     direction = entity_route_cardinal_direction(source_cell[0], source_cell[1],
                                                  target_cell[0], target_cell[1]);
     weight = entity_route_weight_random(0.55f, 0.75f);
@@ -4753,7 +5256,7 @@ int ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
     direction = (candidate - 2u) & 3u;
     edge_weight = entity_route_weight_random(0.1f, 0.9f);
     step_fraction = 4.0f / entity_surface_scale_get();
-    step = &entity->wp[entity->wp_count - 1];
+    step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     switch (direction) {
     case 0u: step->weight_y = edge_weight;
             step->weight_x = 1.0f - step_fraction; break;
@@ -4794,7 +5297,7 @@ int ledger_stub_00449010_EntityKind6RecordApproachRouteIssue(EntitySlot* entity)
     if (!ledger_stub_00449880_BlockedCellApproachWeightWrite(
             entity, (unsigned int)cell[0], (unsigned int)cell[1], 3.0f))
         return 0;
-    step = &entity->wp[entity->wp_count - 1];
+    step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     step->step_kind = 18u;
     entity->pos_pair_2f4 = (float)cell[0];
     entity->pos_pair_2f8 = (float)cell[1];
@@ -4831,7 +5334,7 @@ int ledger_stub_004490a0_ProximityStepCommandIssueWithLink(
     else
         edge_weight = entity_route_weight_random(0.2f, 0.8f);
     step_fraction = 4.0f / entity_surface_scale_get();
-    step = &entity->wp[entity->wp_count - 1];
+    step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     switch (direction) {
     case 0u: step->weight_y = edge_weight;
             step->weight_x = 1.0f - step_fraction; break;
@@ -5002,46 +5505,42 @@ int ledger_stub_00449610_EntityCoordinateRouteAndMark(
     return entity_route_to_cell_commit(entity, target_x, target_y, marker);
 }
 
+int ledger_stub_0044a5d0_NearestOpenCellCoordSearch(
+    EntitySlot* entity, int* output_x, int* output_y,
+    int require_minimum_distance, int allow_maskc0, int allow_flag20);
+int ledger_stub_0044a4f0_NearestCellCoordinateWorldResolve(
+    const EntitySlot* target, int cell_xy_out[2]);
+int ledger_stub_00449880_BlockedCellApproachWeightWrite(
+    EntitySlot* entity, unsigned int cell_x, unsigned int cell_y,
+    float amount);
+
 // RouteStepCommandIssue
 // FUNCTION: LEGORR 0x00449700
 int ledger_stub_00449700_RouteStepCommandIssue(EntitySlot* entity)
 {
     LevelState* level;
-    int current[2];
     int destination[2];
-    unsigned int i;
-    unsigned int count;
-    int found = 0;
-    int best_distance = 0x7fffffff;
+    int found;
     if (entity == NULL || entity->owner_ctx == NULL) return 0;
     level = entity->owner_ctx->level;
     if (level == NULL) return 0;
-    entity_position_to_terrain_cell(entity, level, &current[0], &current[1]);
     if ((entity->flags_3e8 & 0x00100000u) != 0u) {
-        count = level_predug_coordinate_count_get();
-        for (i = 0; i < count; ++i) {
-            int cell[2];
-            int distance;
-            if (!level_predug_coordinate_get(i, cell) ||
-                !entity_route_cell_candidate_accept(entity, level,
-                                                    cell[0], cell[1], 1))
-                continue;
-            distance = abs(cell[0] - current[0]) + abs(cell[1] - current[1]);
-            if (distance < best_distance) {
-                destination[0] = cell[0];
-                destination[1] = cell[1];
-                best_distance = distance;
-                found = 1;
-            }
-        }
+        found = ledger_stub_0044a4f0_NearestCellCoordinateWorldResolve(
+            entity, destination);
+        if (!found || !entity_route_to_cell_commit(entity, destination[0],
+                                                    destination[1], 10u))
+            return 0;
     }
     else {
-        found = first_free_neighbor_cell_pick(entity, level, current,
-                                               destination, 1);
+        found = ledger_stub_0044a5d0_NearestOpenCellCoordSearch(
+            entity, &destination[0], &destination[1], 1, 0, 1);
+        if (!found || !ledger_stub_00449880_BlockedCellApproachWeightWrite(
+                entity, (unsigned int)destination[0],
+                (unsigned int)destination[1], 3.0f)) return 0;
+        ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].step_kind = 10u;
     }
-    if (!found || !entity_route_to_cell_commit(entity, destination[0],
-                                                destination[1], 10u))
-        return 0;
+    entity->pos_pair_2f4 = (float)destination[0];
+    entity->pos_pair_2f8 = (float)destination[1];
     return 1;
 }
 
@@ -5062,7 +5561,7 @@ int ledger_stub_00449880_BlockedCellApproachWeightWrite(
             entity, cell_x, cell_y, 0, &direction, 1)) return 0;
     if (entity->wp_count <= 0) return 0;
     scaled = amount / entity_surface_scale_get();
-    step = &entity->wp[entity->wp_count - 1];
+    step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     step->weight_x = 0.5f;
     step->weight_y = 0.5f;
     switch (direction & 3u) {
@@ -5100,7 +5599,7 @@ int ledger_stub_00449ac0_ProximityStepCommandIssueClearingGate(
     entity->activity_timer = 0.0f;
     entity->link_2fc = (uintptr_t)target;
     if (entity->wp_count > 0)
-        entity->wp[0].pending = (uint8_t)(entity->wp[0].pending | 4u |
+        ENTITY_WAYPOINTS(entity)[0].pending = (uint8_t)(ENTITY_WAYPOINTS(entity)[0].pending | 4u |
                                                    (direction & 3u));
     return 1;
 }
@@ -5240,9 +5739,9 @@ int ledger_stub_0044a3d0_PlaceCellNearestResolve(const EntitySlot* target,
         int x = s_type11_cell_coordinates[i][0];
         int y = s_type11_cell_coordinates[i][1];
         if (!terrain_cell_world_position_get(x, y, world)) continue;
-        dx = target_xy[0] - world[0];
         dy = target_xy[1] - world[1];
-        distance = sqrtf(dx * dx + dy * dy);
+        dx = target_xy[0] - world[0];
+        distance = sqrtf(dy * dy + dx * dx);
         if (distance < best_distance) {
             best_distance = distance;
             best_index = i;
@@ -5277,9 +5776,9 @@ int ledger_stub_0044a4f0_NearestCellCoordinateWorldResolve(
         float distance;
         if (!level_predug_coordinate_get(i, cell) ||
             !terrain_cell_world_position_get(cell[0], cell[1], world)) continue;
-        dx = target_xy[0] - world[0];
         dy = target_xy[1] - world[1];
-        distance = sqrtf(dx * dx + dy * dy);
+        dx = target_xy[0] - world[0];
+        distance = sqrtf(dy * dy + dx * dx);
         if (distance < best_distance) {
             best_distance = distance;
             best_cell[0] = cell[0];
@@ -5295,37 +5794,79 @@ int ledger_stub_0044a4f0_NearestCellCoordinateWorldResolve(
     return 1;
 }
 
+typedef struct NearestOpenCellCandidate {
+    int x;
+    int y;
+    float distance;
+} NearestOpenCellCandidate;
+
+static int nearest_open_cell_candidate_compare(const void* first,
+                                               const void* second)
+{
+    const NearestOpenCellCandidate* a =
+        (const NearestOpenCellCandidate*)first;
+    const NearestOpenCellCandidate* b =
+        (const NearestOpenCellCandidate*)second;
+    if (a->distance < b->distance) return -1;
+    if (a->distance > b->distance) return 1;
+    return 0;
+}
+
 // NearestOpenCellCoordSearch
 // FUNCTION: LEGORR 0x0044a5d0
 int ledger_stub_0044a5d0_NearestOpenCellCoordSearch(
-    LevelState* level, const int origin_xy[2], int output_xy[2],
-    PlacementCellBlockedHook blocked, void* context)
+    EntitySlot* entity, int* output_x, int* output_y,
+    int require_minimum_distance, int allow_maskc0, int allow_flag20)
 {
-    int width, height, radius, x, y;
-    if (level == NULL || origin_xy == NULL || output_xy == NULL) return 0;
-    width = level_width(level);
-    height = level_height(level);
-    if (width <= 0 || height <= 0) return 0;
-    for (radius = 0; radius < width + height; ++radius) {
-        for (y = origin_xy[1] - radius; y <= origin_xy[1] + radius; ++y) {
-            int dx = radius - abs(y - origin_xy[1]);
-            x = origin_xy[0] - dx;
-            if (x >= 0 && y >= 0 && x < width && y < height &&
-                level_cell_walkable_flag(level, x, y) &&
-                (blocked == NULL || !blocked(context, x, y))) {
-                output_xy[0] = x; output_xy[1] = y; return 1;
+    NearestOpenCellCandidate candidates[100];
+    LevelState* level;
+    float entity_position[2];
+    int center_x = 0, center_y = 0;
+    int x, y;
+    unsigned int count = 0u;
+    float minimum_distance;
+    if (entity == NULL || entity->owner_ctx == NULL ||
+        output_x == NULL || output_y == NULL) return 0;
+    level = entity->owner_ctx->level;
+    if (level == NULL || level->ptr_terrain == NULL) return 0;
+    entity_transform_position_get(entity, entity_position);
+    (void)terrain_world_xy_to_cell(level->ptr_terrain, entity_position[0],
+                                   entity_position[1], &center_x, &center_y);
+    minimum_distance = terrain_blocksize_get(level->ptr_terrain);
+    for (y = center_y - 10; y < center_y + 10; ++y) {
+        for (x = center_x - 10; x < center_x + 10; ++x) {
+            float cell_position[2];
+            float dx, dy, distance;
+            if (!level_cell_walkable_flag(level, x, y) ||
+                (allow_flag20 == 0 &&
+                 level_cell_flag_20_bounded(level, x, y) != 0u) ||
+                (allow_maskc0 == 0 && level_cell_mask_c0(level, x, y) != 0u)) {
+                continue;
             }
-            if (dx != 0) {
-                x = origin_xy[0] + dx;
-                if (x >= 0 && y >= 0 && x < width && y < height &&
-                    level_cell_walkable_flag(level, x, y) &&
-                    (blocked == NULL || !blocked(context, x, y))) {
-                    output_xy[0] = x; output_xy[1] = y; return 1;
-                }
+            if (!terrain_cell_world_center_xy_get(level->ptr_terrain,
+                                                  x, y, cell_position)) {
+                continue;
+            }
+            dx = cell_position[0] - entity_position[0];
+            dy = cell_position[1] - entity_position[1];
+            distance = sqrtf(dx * dx + dy * dy);
+            if (require_minimum_distance != 0 &&
+                minimum_distance > distance) continue;
+            if (count < 100u) {
+                candidates[count].x = x;
+                candidates[count].y = y;
+                candidates[count].distance = distance;
+                ++count;
             }
         }
     }
-    return 0;
+    if (count == 0u) return 0;
+    crt_array_sort_with_comparator(candidates, (size_t)count,
+                                  sizeof(candidates[0]),
+                                  nearest_open_cell_candidate_compare);
+    *output_x = candidates[0].x;
+    *output_y = candidates[0].y;
+    return 1;
 }
 
 // PolyVariantSectionModelBuild
@@ -5344,113 +5885,190 @@ int ledger_stub_0044a7d0_PolyVariantSectionModelBuild(
 }
 
 // BuildingPlacementPreviewUpdate
-typedef struct BuildingPlacementPreviewHooks {
-    void* context;
-    int (*position_get)(void* context, float position[3]);
-    int (*placement_check)(void* context, const float position[3]);
-    void (*preview_set)(void* context, const float position[3], int valid);
-} BuildingPlacementPreviewHooks;
+static BuildingPlacementPreviewHooks s_building_placement_preview_hooks;
+static int s_building_placement_preview_owner_bound;
 // FUNCTION: LEGORR 0x0044a910
 int ledger_stub_0044a910_BuildingPlacementPreviewUpdate(
     const BuildingPlacementPreviewHooks* hooks)
 {
     float position[3];
+    uint32_t record_key = 0u;
+    uint32_t direction = 0u;
+    uint32_t footprint_count = 0u;
+    const int* footprint_xy = NULL;
+    TerrainSurfaceGrid* surface_grid = NULL;
+    int cell_xy[2] = { 0, 0 };
+    int emit_boundary_commands = 0;
     int valid;
     if (hooks == NULL || hooks->position_get == NULL ||
         hooks->placement_check == NULL || hooks->preview_set == NULL ||
         !hooks->position_get(hooks->context, position)) return 0;
     valid = hooks->placement_check(hooks->context, position);
+    if (valid && hooks->path_selection_get != NULL &&
+        hooks->path_selection_get(hooks->context, position, &record_key,
+                                  cell_xy, &direction, &footprint_xy,
+                                  &footprint_count, &surface_grid,
+                                  &emit_boundary_commands) &&
+        (footprint_count == 0u || footprint_xy != NULL)) {
+        path_record_surface_grid_bind(surface_grid);
+        (void)ledger_stub_00409790_CellPathRecordRegisterApply(
+            record_key, cell_xy, direction, footprint_xy, footprint_count);
+        if (emit_boundary_commands) {
+            (void)ledger_stub_00408ec0_KindNineNeighborEmitForFootprintCells(
+                cell_xy, footprint_xy, footprint_count);
+        }
+    }
     hooks->preview_set(hooks->context, position, valid);
     return valid;
+}
+
+void building_placement_preview_owner_bind(
+    const BuildingPlacementPreviewHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_building_placement_preview_hooks, 0,
+               sizeof(s_building_placement_preview_hooks));
+        s_building_placement_preview_owner_bound = 0;
+        return;
+    }
+    s_building_placement_preview_hooks = *hooks;
+    s_building_placement_preview_owner_bound = 1;
+}
+
+int building_placement_preview_owner_update(void)
+{
+    if (!s_building_placement_preview_owner_bound) return 0;
+    return ledger_stub_0044a910_BuildingPlacementPreviewUpdate(
+        &s_building_placement_preview_hooks);
 }
 
 // ScatterSpawnGateSet is implemented in spawn.cpp.
 
 // EntityAttachedSpawnRecordProcess
-typedef int (*EntityAttachedSpawnHook)(void* context, EntitySlot* owner,
-                                      const void* record);
 // FUNCTION: LEGORR 0x0044af90
-uint32_t ledger_stub_0044af90_EntityAttachedSpawnRecordProcess(
-    EntitySlot* owner, const void* const* records, uint32_t record_count,
-    EntityAttachedSpawnHook spawn, void* context)
+void ledger_stub_0044af90_EntityAttachedSpawnRecordProcess(EntitySlot* owner)
 {
-    uint32_t i, spawned = 0u;
-    if (owner == NULL || records == NULL || spawn == NULL) return 0u;
-    for (i = 0u; i < record_count; ++i)
-        if (records[i] != NULL && spawn(context, owner, records[i])) ++spawned;
-    return spawned;
+    if (owner != NULL && owner->carry_ref_348 != NULL) {
+        const uint32_t count = *(const uint32_t*)owner->carry_ref_348;
+        lego::random_kind_six_scatter_spawn(owner, (int)count, 0);
+    }
 }
 
 // ConfiguredTinyMonsterSpawnAndTeardown
-typedef struct ConfiguredMonsterHooks {
-    void* context;
-    EntitySlot* (*spawn)(void* context, int x, int y, uint32_t type);
-    void (*teardown)(void* context, EntitySlot* monster);
-} ConfiguredMonsterHooks;
 // FUNCTION: LEGORR 0x0044afb0
-EntitySlot* ledger_stub_0044afb0_ConfiguredTinyMonsterSpawnAndTeardown(
-    int x, int y, uint32_t type, const ConfiguredMonsterHooks* hooks,
-    int teardown_immediately)
+void ledger_stub_0044afb0_ConfiguredTinyMonsterSpawnAndTeardown(
+    EntitySlot* source)
 {
-    EntitySlot* monster;
-    if (hooks == NULL || hooks->spawn == NULL) return NULL;
-    monster = hooks->spawn(hooks->context, x, y, type);
-    if (monster != NULL && teardown_immediately && hooks->teardown != NULL)
-        hooks->teardown(hooks->context, monster);
-    return monster;
+    static const char* const configured_names[3] = {
+        "RockMonster", "Lavamonster", "Icemonster"
+    };
+    int resolved_type, resolved_row, source_type, source_row;
+    int selected = -1, i;
+    const char* replacement;
+    float position[2];
+    EntitySlot* monster = NULL;
+    unsigned int successes = 0u;
+    if (source == NULL || source->owner_ctx == NULL) return;
+    if (source->type_name[0] == '\0' ||
+        !entity_type_row_for_name(source->type_name, &source_type,
+                                  &source_row)) return;
+    for (i = 0; i < 3; ++i) {
+        if (entity_type_row_for_name(configured_names[i], &resolved_type,
+                                     &resolved_row) &&
+            source_type == resolved_type && source_row == resolved_row) {
+            selected = i;
+            break;
+        }
+    }
+    if (selected < 0) return;
+    replacement = selected == 2 ? "TinyIM" : "TinyRM";
+    if (!entity_type_row_for_name(replacement, &resolved_type, &resolved_row))
+        return;
+    entity_transform_position_get(source, position);
+    while (successes < 3u) {
+        monster = entity_create_with_position(
+            source->owner_ctx, resolved_type, replacement, 0,
+            position[0], position[1], (float)(level_rand_u16() % 7));
+        if (monster == NULL) return;
+        monster->field_340 = -1.0f;
+        if (!ledger_stub_00449700_RouteStepCommandIssue(monster)) break;
+        ++successes;
+        source->flags_3e4 |= 0x20u;
+    }
+    if (successes == 3u) return;
+    if (monster != NULL) (void)entity_teardown(monster);
 }
 
 // SmallSpiderCellSwarmSpawn
-typedef EntitySlot* (*SmallSpiderSpawnHook)(void* context, int x, int y,
-                                            uint32_t index);
 // FUNCTION: LEGORR 0x0044b140
-uint32_t ledger_stub_0044b140_SmallSpiderCellSwarmSpawn(
-    const int center_xy[2], uint32_t count, SmallSpiderSpawnHook spawn,
-    void* context)
+void ledger_stub_0044b140_SmallSpiderCellSwarmSpawn(
+    int cell_x, int cell_y, uint32_t variation)
 {
-    uint32_t i, spawned = 0u;
-    if (center_xy == NULL || spawn == NULL) return 0u;
-    for (i = 0u; i < count; ++i) {
-        int x = center_xy[0] + (int)(i % 3u) - 1;
-        int y = center_xy[1] + (int)(i / 3u) - 1;
-        if (spawn(context, x, y, i) != NULL) ++spawned;
+    int type, row, i, count = (int)(variation & 3u) + 2;
+    float vertices[12];
+    float min_x, max_x, min_y, max_y;
+    GameContext* context = entity_pool_callback_context_get();
+    TerrainSurfaceGrid* grid = path_record_surface_grid_get();
+    if (context == NULL || context->level == NULL || grid == NULL ||
+        !entity_type_row_for_name("SmallSpider", &type, &row) ||
+        !terrain_cell_surface_vertices_get(grid, (uint32_t)cell_x,
+                                           (uint32_t)cell_y, vertices)) return;
+    min_x = max_x = vertices[0];
+    min_y = max_y = vertices[1];
+    for (i = 1; i < 4; ++i) {
+        if (vertices[i * 3] < min_x) min_x = vertices[i * 3];
+        if (vertices[i * 3] > max_x) max_x = vertices[i * 3];
+        if (vertices[i * 3 + 1] < min_y) min_y = vertices[i * 3 + 1];
+        if (vertices[i * 3 + 1] > max_y) max_y = vertices[i * 3 + 1];
     }
-    return spawned;
+    (void)row;
+    for (i = 0; i < count; ++i) {
+        int rotation = level_rand_u16() % 7;
+        float x = random_float_range(min_x + 1.0f, max_x - 1.0f);
+        float y = random_float_range(min_y + 1.0f, max_y - 1.0f);
+        EntitySlot* spider = entity_create_with_position(
+            context, type, "SmallSpider", 0, x, y, (float)rotation);
+        if (spider != NULL) spider->flags_3e0 |= 0x10000u;
+    }
 }
 
 // PairingActivityRaiseAndMutualLink
 // FUNCTION: LEGORR 0x0044b250
 int ledger_stub_0044b250_PairingActivityRaiseAndMutualLink(
-    EntitySlot* first, EntitySlot* second, int activity, int activity_param)
+    EntitySlot* first, EntitySlot* second)
 {
-    if (first == NULL || second == NULL || first == second) return 0;
-    first->activity = activity;
-    first->activity_param = activity_param;
-    first->activity_timer = 0.0f;
-    first->link_2fc = (uintptr_t)second;
-    second->activity = activity;
-    second->activity_param = activity_param;
-    second->activity_timer = 0.0f;
-    second->link_2fc = (uintptr_t)first;
+    if (first == NULL || second == NULL ||
+        !entity_shared_eligibility_check(second, 1) ||
+        (second->flags_3e4 & 0x100u) != 0u ||
+        (second->flags_3e4 & 2u) != 0u ||
+        (first->flags_3e4 & 1u) != 0u ||
+        entity_flags_mask107c33de_or_1c00203_any_test(first) ||
+        !(entity_stats_float_ate8(first) < first->field_340)) return 0;
+    lego::pairing_activity_prepare(second);
+    entity_state_reset(second, 0, 1);
+    entity_state_reset(first, 0, 1);
+    ai_set_activity(first, 0x25, 1);
+    ai_idle_chain_record_attach(first);
+    ai_set_activity(second, 0x26, 1);
+    ai_idle_chain_record_attach(second);
+    first->flags_3e4 |= 1u;
+    second->flags_3e4 |= 2u;
+    first->pair_link_3c0 = (uintptr_t)second;
+    second->pair_link_3c0 = (uintptr_t)first;
     return 1;
 }
 
 // TypeTwoEntityTargetResolveAndApply
-typedef EntitySlot* (*EntityTargetResolveHook)(void* context,
-                                              EntitySlot* entity);
 // FUNCTION: LEGORR 0x0044b4c0
-EntitySlot* ledger_stub_0044b4c0_TypeTwoEntityTargetResolveAndApply(
-    EntitySlot* entity, EntityTargetResolveHook resolve, void* context,
-    int activity)
+int ledger_stub_0044b4c0_TypeTwoEntityTargetResolveAndApply(
+    EntitySlot* entity, uint32_t code)
 {
-    EntitySlot* target;
-    if (entity == NULL || entity->type != 2 || resolve == NULL) return NULL;
-    target = resolve(context, entity);
-    if (target == NULL) return NULL;
-    entity->link_2fc = (uintptr_t)target;
-    entity->activity = activity;
-    entity->activity_timer = 0.0f;
-    return target;
+    int group;
+    /* The reference treats an unmapped code, and every non-minifigure,
+     * permissively. A mapped code is a permitted-activity group id. */
+    if (entity == NULL || entity->type != 2) return 1;
+    if (!entity_grouped_code_table_find_value_index(code, &group)) return 1;
+    return ai_activity_scan(entity, group);
 }
 
 // ObjectPositionStepCommandIssueAndLink
@@ -5496,20 +6114,6 @@ void ledger_stub_0044be30_EntityAuxiliaryPayloadRelease(
     entity_auxiliary_payload_release(entity, hooks);
 }
 
-// FUNCTION: LEGORR 0x0044c150
-int ledger_stub_0044c150_EntityPairScalarFieldsSet(EntitySlot* entity,
-                                                  const int32_t pair[2],
-                                                  int32_t scalar)
-{
-    if (entity->type != 1 && entity->type != 2 && entity->type != 3) return 0;
-    entity_state_reset(entity, 0, 1);
-    entity->task_pair_3b4[0] = pair[0];
-    entity->task_pair_3b4[1] = pair[1];
-    entity->task_scalar_3bc = scalar;
-    entity->flags_3e4 |= 0x00004000u;
-    return 1;
-}
-
 // FUNCTION: LEGORR 0x0044c1b0
 void ledger_stub_0044c1b0_EntityHeadingStepMove(
     EntityHeadingStepState* state, void* entity, float delta,
@@ -5519,7 +6123,6 @@ void ledger_stub_0044c1b0_EntityHeadingStepMove(
 }
 
 // DriftOffsetStepApply
-// FUNCTION: LEGORR 0x0044d0d0
 void ledger_stub_0044d0d0_DriftOffsetStepApply(float delta)
 {
     motion_drift_offset_step(delta);
@@ -5532,8 +6135,9 @@ void ledger_stub_0044d280_RandomWaypointTimerStepApply(
     PortLoopRandomRangeHook random_range, void* context)
 {
     int i;
-    if (state == NULL || random_range == NULL ||
-        (state->flags & 4u) == 0u) return;
+    float first_step;
+    if (state == NULL || random_range == NULL || (state->flags & 4u) == 0u)
+        return;
     if ((state->flags & 8u) == 0u) {
         state->delay -= delta;
         if (state->delay > 0.0f) return;
@@ -5541,22 +6145,21 @@ void ledger_stub_0044d280_RandomWaypointTimerStepApply(
                                     state->delay_max);
         state->duration = random_range(context, state->duration_min,
                                        state->duration_max);
-        for (i = 0; i < 3; ++i) {
-            float low = state->bounds_min[i];
-            float high = state->bounds_max[i];
-            if (high < low) {
-                float swap = low;
-                low = high;
-                high = swap;
+        {
+            const float fraction = random_range(context, 0.0f, 1.0f);
+            for (i = 0; i < 3; ++i) {
+                state->target[i] =
+                    (float)fabs((double)(state->bounds_max[i] -
+                                          state->bounds_min[i])) * fraction +
+                    state->bounds_min[i];
+                state->progress[i] = 0.0f;
             }
-            state->target[i] = random_range(context, low, high);
-            state->progress[i] = 0.0f;
-            {
-                float scale = random_range(context, state->scale_min,
-                                           state->scale_max);
-                if (scale == 0.0f) scale = 1.0f;
+        }
+        {
+            const float scale = random_range(context, state->scale_min,
+                                              state->scale_max);
+            for (i = 0; i < 3; ++i)
                 state->velocity[i] = state->target[i] / scale;
-            }
         }
         state->flags |= 0x18u;
         return;
@@ -5565,35 +6168,41 @@ void ledger_stub_0044d280_RandomWaypointTimerStepApply(
         if ((state->flags & 0x20u) == 0u) {
             state->duration -= delta;
             if (state->duration > 0.0f) return;
-            for (i = 0; i < 3; ++i) {
-                float scale = random_range(context, state->scale_min,
-                                           state->scale_max);
-                if (scale == 0.0f) scale = 1.0f;
-                state->velocity[i] = state->target[i] / scale;
+            for (i = 0; i < 3; ++i)
                 state->progress[i] = state->target[i];
+            {
+                const float scale = random_range(context, state->scale_min,
+                                                  state->scale_max);
+                for (i = 0; i < 3; ++i)
+                    state->velocity[i] = state->target[i] / scale;
             }
             state->flags |= 0x20u;
             return;
         }
+        first_step = delta * state->velocity[0];
         for (i = 0; i < 3; ++i) {
-            const float step = state->velocity[i] * delta;
+            const float step = delta * state->velocity[i];
             state->position[i] -= step;
             state->progress[i] -= step;
         }
-        if (state->progress[0] <= 0.0f || state->progress[0] == 0.0f) {
+        if ((first_step < 0.0f && state->progress[0] >= 0.0f) ||
+            (first_step >= 0.0f && state->progress[0] <= 0.0f)) {
+            for (i = 0; i < 3; ++i)
+                state->position[i] -= state->progress[i];
             state->flags &= ~0x38u;
         }
         return;
     }
+    first_step = delta * state->velocity[0];
     for (i = 0; i < 3; ++i) {
         const float step = state->velocity[i] * delta;
         state->position[i] += step;
         state->progress[i] += step;
     }
-    if (state->progress[0] >= state->target[0]) {
-        state->position[0] += state->target[0] - state->progress[0];
-        state->position[1] += state->target[1] - state->progress[1];
-        state->position[2] += state->target[2] - state->progress[2];
+    if ((first_step < 0.0f && state->progress[0] <= state->target[0]) ||
+        (first_step >= 0.0f && state->progress[0] >= state->target[0])) {
+        for (i = 0; i < 3; ++i)
+            state->position[i] += state->target[i] - state->progress[i];
         state->flags &= ~0x10u;
     }
 }
@@ -5645,7 +6254,9 @@ void ledger_stub_0044d760_JitterStepApply(
     for (i = 0; i < 3; ++i) state->position[i] = candidate[i];
     if (hooks->position_apply != NULL)
         hooks->position_apply(hooks->context, state->position);
-    state->remaining -= delta;
+    /* The source decrements the sampled magnitude by its sampled lifetime
+     * after each accepted position update; delta is only used by the delay. */
+    state->remaining -= state->lifetime;
     if (state->remaining <= 0.0f) state->flags &= ~0x80u;
 }
 
@@ -5745,7 +6356,6 @@ void ledger_stub_0044e6d0_TerrainCellMaterialTransitionBegin(
 }
 
 // SurfaceVertexSpanValidate
-// FUNCTION: LEGORR 0x0044e8c0
 int ledger_stub_0044e8c0_SurfaceVertexSpanValidate(
     TerrainSurfaceGrid* grid, const int* cell_xy, unsigned int cell_count,
     float maximum_height_span, float maximum_edge_delta)
@@ -5756,7 +6366,6 @@ int ledger_stub_0044e8c0_SurfaceVertexSpanValidate(
 }
 
 // TerrainCellListSurfaceHeightClampMutate
-// FUNCTION: LEGORR 0x0044ead0
 void ledger_stub_0044ead0_TerrainCellListSurfaceHeightClampMutate(
     TerrainSurfaceGrid* grid, const int* cell_xy, unsigned int cell_count,
     float maximum_offset)
@@ -5835,14 +6444,12 @@ int ledger_stub_004515e0_TerrainCellRayHitTest(
 
 
 // TutorialNerpScriptFileLoad
-// FUNCTION: LEGORR 0x00452df0
 int ledger_stub_00452df0_TutorialNerpScriptFileLoad(const char* path)
 {
     return tutorial_script_file_load(path);
 }
 
 // ObjectiveAdvisorTokenLoad
-// FUNCTION: LEGORR 0x00452e70
 int ledger_stub_00452e70_ObjectiveAdvisorTokenLoad(
     uint32_t source_limit, char** output_tokens)
 {
@@ -5850,21 +6457,18 @@ int ledger_stub_00452e70_ObjectiveAdvisorTokenLoad(
 }
 
 // AdvisorDisplayStateResourcesRelease
-// FUNCTION: LEGORR 0x00453220
 int ledger_stub_00453220_AdvisorDisplayStateResourcesRelease()
 {
     return tutorial_display_resources_release();
 }
 
 // IndirectHandleResolveInPlace
-// FUNCTION: LEGORR 0x004532e0
 void ledger_stub_004532e0_IndirectHandleResolveInPlace(uint32_t* value)
 {
     tutorial_indirect_handle_resolve(value);
 }
 
 // TutorialScriptCommandDispatch
-// FUNCTION: LEGORR 0x00453320
 void ledger_stub_00453320_TutorialScriptCommandDispatch(float delta)
 {
     tutorial_script_command_dispatch(delta);
@@ -5872,7 +6476,6 @@ void ledger_stub_00453320_TutorialScriptCommandDispatch(float delta)
 
 
 // AdvisorScrollStepAdvance
-// FUNCTION: LEGORR 0x00453920
 void ledger_stub_00453920_AdvisorScrollStepAdvance()
 {
     tutorial_advisor_scroll_step_advance();
@@ -5880,21 +6483,13 @@ void ledger_stub_00453920_AdvisorScrollStepAdvance()
 
 
 // CameraFocusTweenUpdate
-// FUNCTION: LEGORR 0x00453da0
 void ledger_stub_00453da0_CameraFocusTweenUpdate(float delta)
 {
     tutorial_camera_focus_tween_update(delta);
 }
 
 // SoundAliasPlayGlobal
-// FUNCTION: LEGORR 0x00456810
-void ledger_stub_00456810_SoundAliasPlayGlobal()
-{
-    advisor_sound_alias_play_global();
-}
-
 // AdvisorInlineTokenRender
-// FUNCTION: LEGORR 0x00456830
 void ledger_stub_00456830_AdvisorInlineTokenRender(
     char* source, char* output, int draw)
 {
@@ -5910,14 +6505,12 @@ void ledger_stub_00456cb0_CoordinateListCallbackVisit(
 }
 
 // InputDeviceRelease
-// FUNCTION: LEGORR 0x004588e0
 void ledger_stub_004588e0_InputDeviceRelease()
 {
     input_device_release();
 }
 
 // PopEntityStateOverride
-// FUNCTION: LEGORR 0x00459240
 int ledger_stub_00459240_PopEntityStateOverride(EntitySlot* entity)
 {
     return entity_state_override_pop(entity);
@@ -5934,7 +6527,6 @@ void ledger_stub_00459530_RenderThreePassUpdate(BlockFile* values,
 }
 
 // HealthBarConfigLoadAndShadeDerive
-// FUNCTION: LEGORR 0x00459560
 int ledger_stub_00459560_HealthBarConfigLoadAndShadeDerive(
     BlockFile* values, BlockFile* names)
 {
@@ -5942,7 +6534,6 @@ int ledger_stub_00459560_HealthBarConfigLoadAndShadeDerive(
 }
 
 // HungerImagesPositionConfigLoad
-// FUNCTION: LEGORR 0x00459900
 int ledger_stub_00459900_HungerImagesPositionConfigLoad(
     BlockFile* values, BlockFile* names)
 {
@@ -5950,7 +6541,6 @@ int ledger_stub_00459900_HungerImagesPositionConfigLoad(
 }
 
 // LoadObjectHungerMeterImages
-// FUNCTION: LEGORR 0x004599c0
 void ledger_stub_004599c0_LoadObjectHungerMeterImages(BlockFile* values,
                                                        BlockFile* names)
 {
@@ -5966,35 +6556,30 @@ int ledger_stub_00459a50_BubbleImagesPositionConfigLoad(
 }
 
 // RenderEntityScreenRing
-// FUNCTION: LEGORR 0x00459b00
 void ledger_stub_00459b00_RenderEntityScreenRing(void* entity, int x, int y)
 {
     legacy_entity_screen_ring_render(entity, x, y);
 }
 
 // UiPanelNameTablesInit
-// FUNCTION: LEGORR 0x0045a030
 void ledger_stub_0045a030_UiPanelNameTablesInit()
 {
     ui_panel_name_tables_init();
 }
 
 // ScrollPanelControlsInitialize
-// FUNCTION: LEGORR 0x0045a240
 void ledger_stub_0045a240_ScrollPanelControlsInitialize()
 {
     legacy_scroll_panel_controls_initialize();
 }
 
 // PanelCategoryInteractionStateReset
-// FUNCTION: LEGORR 0x0045a270
 void ledger_stub_0045a270_PanelCategoryInteractionStateReset()
 {
     legacy_panel_category_interaction_state_reset();
 }
 
 // OverlayImageRecordLoad
-// FUNCTION: LEGORR 0x0045a2e0
 void ledger_stub_0045a2e0_OverlayImageRecordLoad(BlockFile* cfg, int panel,
                                                   const char* path)
 {
@@ -6010,14 +6595,12 @@ int ledger_stub_0045a370_CaseInsensitiveStringTableLookup(
 }
 
 // PanelSlotCoordinateHitTest
-// FUNCTION: LEGORR 0x0045a3b0
 int ledger_stub_0045a3b0_PanelSlotCoordinateHitTest(int panel, int x, int y)
 {
     return legacy_panel_slot_coordinate_hit_test(panel, x, y);
 }
 
 // CaseInsensitiveIndexedStringLookup
-// FUNCTION: LEGORR 0x0045a410
 int ledger_stub_0045a410_CaseInsensitiveIndexedStringLookup(
     unsigned int table_index, const char* name, unsigned int* out_index)
 {
@@ -6025,7 +6608,6 @@ int ledger_stub_0045a410_CaseInsensitiveIndexedStringLookup(
 }
 
 // PanelImageSlotEntryAllocate
-// FUNCTION: LEGORR 0x0045a500
 void* ledger_stub_0045a500_PanelImageSlotEntryAllocate(
     int panel, const char* path, const int rect[4], uint32_t flags)
 {
@@ -6043,9 +6625,25 @@ void ledger_stub_0045a590_ScrollingAdvisorTextAppend(void* record,
 // UITextOutputPositionAndDraw
 // FUNCTION: LEGORR 0x0045a5b0
 void ledger_stub_0045a5b0_UITextOutputPositionAndDraw(
-    void* record, const char* text, const char* fallback)
+    void* record, uint32_t start_line, float line_scale)
 {
-    legacy_ui_text_output_position_and_draw(record, text, fallback);
+    void* output;
+    void* offsets;
+    int base_x, base_y;
+    float offset_x, offset_y;
+    int x, y;
+    if (record == NULL) return;
+    memcpy(&output, (char*)record, sizeof(output));
+    memcpy(&base_y, (char*)record + 4, sizeof(base_y));
+    memcpy(&base_x, (char*)record + 8, sizeof(base_x));
+    memcpy(&offsets, (char*)record + 12, sizeof(offsets));
+    if (output == NULL || offsets == NULL) return;
+    memcpy(&offset_y, (char*)offsets + 0x18, sizeof(offset_y));
+    memcpy(&offset_x, (char*)offsets + 0x1c, sizeof(offset_x));
+    x = (int)floor((double)((float)base_x + offset_x));
+    y = (int)floor((double)((float)base_y + offset_y));
+    float_pair_at_offset4_set_from_ints(output, x, y);
+    (void)text_buffer_draw_wrapped(output, start_line, line_scale, NULL);
 }
 
 // SimCursorInteractionTick
@@ -6236,44 +6834,19 @@ int ledger_stub_00460310_EntityType4IndexListAppend(
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00460360
-int ledger_stub_00460360_CheckpointBlobTaskProgressRefresh(GameContext* ctx)
+int ledger_stub_00460360_CheckpointBlobTaskProgressRefresh()
 {
-    return checkpoint_blob_task_progress_recalculate(ctx);
+    return mission_checkpoint_task_progress_refresh_bound();
 }
 
-// FUNCTION: LEGORR 0x00460f00
-void ledger_stub_00460f00_RewardStatsPanelDraw(
-    const TextureSurface* font, void* pixels, int pitch, int width, int height,
-    int x, int y, const char* text)
+int ledger_stub_00460f00_RewardStatsPanelDraw(void)
 {
-    if (text != NULL)
-        reward_text_draw(font, pixels, pitch, width, height, x, y, "%s", text);
+    return reward_stats_panel_draw_bound();
 }
 
-// FUNCTION: LEGORR 0x00461070
-int ledger_stub_00461070_RewardStatsTextFormat(const GameContext* ctx,
-                                               char* elapsed,
-                                               size_t elapsed_capacity)
+int ledger_stub_00461070_RewardStatsTextFormat(void)
 {
-    uint32_t seconds;
-    uint32_t hours, minutes, remainder;
-    float elapsed_value;
-    char* blob;
-    if (ctx == NULL || ctx->checkpoint_blob == NULL || elapsed == NULL
-        || elapsed_capacity < 9u) return 0;
-    blob = (char*)ctx->checkpoint_blob;
-    memcpy(&elapsed_value, blob + 0x2dbc, sizeof(elapsed_value));
-    seconds = elapsed_value > 0.0f ? (uint32_t)elapsed_value : 0u;
-    seconds %= 359999u;
-    hours = seconds / 3600u;
-    remainder = seconds % 3600u;
-    minutes = remainder / 60u;
-    remainder %= 60u;
-    sprintf(elapsed, "%02lu:%02lu:%02lu", (unsigned long)hours,
-            (unsigned long)minutes, (unsigned long)remainder);
-    memcpy(blob + 0x2dbc, &seconds, sizeof(seconds));
-    return 1;
+    return reward_stats_text_format_bound();
 }
 
 int ledger_stub_00461410_RewardScreenTick(void)
@@ -6281,10 +6854,12 @@ int ledger_stub_00461410_RewardScreenTick(void)
     return reward_screen_tick_bound();
 }
 
-// FUNCTION: LEGORR 0x00461790
-int ledger_stub_00461790_RewardDisplayTick(const GameContext* ctx)
+void ledger_stub_00461790_RewardDisplayTick(GameTask* task,
+                                            uint32_t draw_mask,
+                                            uint32_t task_number,
+                                            float elapsed)
 {
-    return mission_reward_active(ctx);
+    reward_display_task_abi(task, draw_mask, task_number, elapsed);
 }
 
 // FUNCTION: LEGORR 0x00461c90
@@ -6317,10 +6892,12 @@ int ledger_stub_00462460_RewardFlhContextReload(Flic** player,
     return opened != NULL;
 }
 
-// FUNCTION: LEGORR 0x004624a0
-int ledger_stub_004624a0_RewardFlhContextTick(Flic* player)
+void ledger_stub_004624a0_RewardFlhContextTick(int* displayed_task_count,
+                                                int* transition_stage,
+                                                float* elapsed)
 {
-    return flic_tick_loop(player, 1);
+    reward_flic_context_tick_abi(displayed_task_count, transition_stage,
+                                 elapsed);
 }
 
 // FUNCTION: LEGORR 0x00462600
@@ -6359,11 +6936,11 @@ int ledger_stub_00462ad0_RewardScrollTickerAdvanceAndDraw(
 
 // TerrainCellQuadGeometryEmit
 // FUNCTION: LEGORR 0x00462f20
-int ledger_stub_00462f20_TerrainCellQuadGeometryEmit(
+void ledger_stub_00462f20_TerrainCellQuadGeometryEmit(
     TerrainCellQuadEmitGrid* grid, unsigned int x, unsigned int y,
     const float vertices[4][3])
 {
-    return terrain_cell_quad_geometry_emit(grid, x, y, vertices);
+    terrain_cell_quad_geometry_emit(grid, x, y, vertices);
 }
 
 // TerrainDirtyCellQuadNormalEmitPass
@@ -6413,9 +6990,11 @@ SceneQuadGridRecord* scene_quad_grid_emit(
     SceneQuadGridRecord* record;
     uint32_t face;
     if (hooks == NULL || hooks->mesh_create == NULL ||
-        hooks->face_index_buffer_create == NULL ||
+        hooks->mesh_record_allocate_or_append == NULL ||
         hooks->face_vertices_get == NULL ||
-        hooks->face_vertices_emit == NULL || hooks->face_finalize == NULL)
+        hooks->face_vertices_emit == NULL ||
+        hooks->face_texture_bind_by_mode == NULL ||
+        hooks->scene_render_lock_toggle == NULL)
         return NULL;
     record = (SceneQuadGridRecord*)malloc(sizeof(*record));
     if (record == NULL) return NULL;
@@ -6431,10 +7010,12 @@ SceneQuadGridRecord* scene_quad_grid_emit(
         for (i = 0; i < 6u; ++i)
             indices[face * 6u + i] = base_indices[i] + face * 4u;
     }
+    /* FUN_00463f00 creates one shared 20-vertex, 10-row mesh record before
+     * populating the ten face groups. */
+    hooks->mesh_record_allocate_or_append(hooks->context, record->mesh,
+                                           20u, 10u, 3u, indices);
     for (face = 0; face < 10u; ++face) {
         uint32_t quad;
-        if (!hooks->face_index_buffer_create(hooks->context, record->mesh,
-                face, 20u, 10u, indices)) goto fail;
         for (quad = 0; quad < 5u; ++quad) {
             float vertices[4][9];
             if (!hooks->face_vertices_get(hooks->context, face, quad,
@@ -6442,10 +7023,10 @@ SceneQuadGridRecord* scene_quad_grid_emit(
                 !hooks->face_vertices_emit(hooks->context, record->mesh,
                                            face, quad, vertices)) goto fail;
         }
-        hooks->face_finalize(hooks->context, record->mesh, face, 3u);
+        hooks->face_texture_bind_by_mode(hooks->context, record->mesh,
+                                         face, 3u);
     }
-    if (hooks->visibility_set != NULL)
-        hooks->visibility_set(hooks->context, record->mesh, 1);
+    hooks->scene_render_lock_toggle(hooks->context, record->mesh, 1);
     return record;
 fail:
     if (hooks->mesh_release != NULL)
@@ -6462,7 +7043,7 @@ SceneQuadGridRecord* ledger_stub_00463f00_SceneQuadGridEmit(
 
 // BuildingPlacementFootprintRenderAndValidate
 // FUNCTION: LEGORR 0x004641c0
-int ledger_stub_004641c0_BuildingPlacementFootprintRenderAndValidate(
+const int* ledger_stub_004641c0_BuildingPlacementFootprintRenderAndValidate(
     TerrainSurfaceGrid* surface, const int offset[2], const int* source_xy,
     unsigned int count, int rotation, float maximum_height_span,
     float maximum_edge_delta, unsigned int minimum_routes,
@@ -6479,66 +7060,45 @@ void ledger_stub_00465190_SoundHandleStopForward(int buffer_handle)
     sound_buffer_stop_handle(buffer_handle);
 }
 
-// FUNCTION: LEGORR 0x004653a0
-int ledger_stub_004653a0_TransientEffectTexturesPreload(void)
+void ledger_stub_004653a0_TransientEffectTexturesPreload(
+    const char* filename_prefix, const char* filename_format,
+    uint32_t texture_count)
 {
-    return transient_effect_textures_preload();
+    transient_effect_textures_preload(filename_prefix, filename_format,
+                                      texture_count);
 }
 
 // FUNCTION: LEGORR 0x00465430
 void* ledger_stub_00465430_TransientEffectEmitterCreate(
-    int kind, const float position[3])
+    int scene_context, uint32_t position_x, uint32_t position_y,
+    int* direction, float red, float green, float blue, float rate,
+    int sound_id, int mode, uint32_t seed, int auxiliary)
 {
-    return transient_effect_emitter_create(kind, position);
+    return transient_effect_emitter_create(scene_context, position_x,
+        position_y, direction, red, green, blue, rate, sound_id, mode,
+        seed, auxiliary);
 }
 
-// FUNCTION: LEGORR 0x00465970
 void ledger_stub_00465970_TransientEffectRegistryReleaseAll(void)
 {
     transient_effect_registry_release_all();
 }
 
-// FUNCTION: LEGORR 0x004659b0
-void ledger_stub_004659b0_TransientEffectInstanceRelease(void* instance)
+void ledger_stub_004659b0_TransientEffectInstanceRelease(void* instance,
+                                                        void* alternate)
 {
-    transient_effect_instance_release(instance);
+    transient_effect_instance_release(instance, alternate);
 }
 
-// FUNCTION: LEGORR 0x00465a90
 void ledger_stub_00465a90_TransientEffectRegistryEnableSet(int enabled)
 {
     transient_effect_registry_enable_set(enabled);
 }
 
-// FUNCTION: LEGORR 0x00465ac0
 void ledger_stub_00465ac0_TransientEffectEnableSet(void* instance,
                                                   int enabled)
 {
-    unsigned char* bytes = (unsigned char*)instance;
-    uint32_t* flags;
-    record_flag2c_bit0_set(*(void**)(bytes + 0x290), enabled);
-    flags = (uint32_t*)(bytes + 0x294);
-    if (enabled != 0) {
-        *flags |= 1u;
-    }
-    else {
-        *flags &= ~1u;
-    }
-}
-
-// FUNCTION: LEGORR 0x00465c50
-int ledger_stub_00465c50_ParticleSlotInitializeForEmitter(
-    void* owner, const float position[3], const float direction[3],
-    uint32_t auxiliary, uint32_t mode)
-{
-    return entity_spawn_record_slot_init(owner, position, direction,
-                                         auxiliary, mode);
-}
-
-// FUNCTION: LEGORR 0x00465e00
-void ledger_stub_00465e00_AdvanceTimedVisualSegmentAndFade(float delta)
-{
-    screen_effects_tick(delta);
+    transient_effect_enable_set(instance, enabled);
 }
 
 // FUNCTION: LEGORR 0x00465f40
@@ -6550,7 +7110,11 @@ void ledger_stub_00465f40_InstanceQuadVerticesBuild(
                                     blue, alpha);
 }
 
-// FUNCTION: LEGORR 0x00466250
+/* ExpandCellEntitySpawn (FUN_00466250) is intentionally not mapped to
+ * CreateCellObjectIfAvailable: its decompile creates a type-12 entity,
+ * records it on the voxel, sets +0x3e0 bit 0x100, and starts "Expand".
+ * The port has no production cell-eligibility/world-position/create/action
+ * binding for that sequence yet. */
 int ledger_stub_00466250_ExpandCellEntitySpawn(int x, int y)
 {
     return create_cell_object_if_available(x, y);
@@ -6569,42 +7133,38 @@ int ledger_stub_00466490_CellSightRayCheckAndFlag(
     return visible;
 }
 
-// FUNCTION: LEGORR 0x004667e0
 unsigned int ledger_stub_004667e0_EntityStatsConfigLoad(
     void* config, void* section, const EntityStatsConfigHooks* hooks)
 {
     return entity_stats_config_load(config, section, hooks);
 }
 
-// AdvisorTextDisplayWorker
-// FUNCTION: LEGORR 0x0046ad00
-int ledger_stub_0046ad00_AdvisorTextDisplayWorker(float delta)
-{
-    return advisor_text_display_worker(delta);
-}
-
-// FUNCTION: LEGORR 0x0046b7c0
 void ledger_stub_0046b7c0_TimedEffectAndCueUpdate(
-    TimedEffectCueState* state, float x, float y, float delta,
-    const TimedEffectCueHooks* hooks)
+    uint32_t render_x, uint32_t render_y, float delta)
 {
-    timed_effect_cue_update(state, x, y, delta, hooks);
+    timed_effect_runtime_update(render_x, render_y, delta);
 }
 
-// FUNCTION: LEGORR 0x0046b8b0
-void ledger_stub_0046b8b0_RectangularGridOverlayGeometryDraw(
-    const RectangularGridOverlayState* state,
-    const RectangularGridOverlayHooks* hooks)
+void ledger_stub_0046b700_TimedEffectCueRequestSet(unsigned int slot,
+                                                  uint32_t cue)
 {
-    rectangular_grid_overlay_geometry_draw(state, hooks);
+    timed_effect_cue_request_set(slot, cue);
 }
 
-// FUNCTION: LEGORR 0x0046bc30
-void ledger_stub_0046bc30_TimedEffectSlotRender(
-    const TimedEffectSlotRenderState* state,
-    const TimedEffectSlotRenderHooks* hooks)
+void ledger_stub_0046b730_TimedEffectPersistenceSet(unsigned int slot,
+                                                    int enabled)
 {
-    timed_effect_slot_render(state, hooks);
+    timed_effect_persistence_set(slot, enabled);
+}
+
+void ledger_stub_0046b770_TimedEffectUpdateRequestSet(unsigned int slot)
+{
+    timed_effect_update_request_set(slot);
+}
+
+void ledger_stub_0046b7a0_TimedEffectTimestampReset(unsigned int slot)
+{
+    timed_effect_timestamp_reset(slot);
 }
 
 // UpgradeLevelTableParse
@@ -6618,7 +7178,6 @@ void ledger_stub_0046c160_UpgradeLevelTableParse(
 
 
 // VehicleTypeDefinitionParse
-// FUNCTION: LEGORR 0x0046c6f0
 int ledger_stub_0046c6f0_VehicleTypeDefinitionParse(
     VehicleTypeDefinition* definition, void* context,
     VehicleTypeFieldReadHook read_field)
@@ -6647,12 +7206,10 @@ void ledger_stub_0046db90_CellQuadRunStage(
 }
 
 // StagedCellCandidateSelect
-// FUNCTION: LEGORR 0x0046dd10
 void ledger_stub_0046dd10_StagedCellCandidateSelect(
-    LevelState* level, StagedCellCandidateSelectionRecord* records,
-    unsigned int record_count)
+    void* unused, LevelState* level)
 {
-    staged_cell_candidate_select(level, records, record_count);
+    staged_cell_candidate_select(unused, level);
 }
 
 // CellQuadRunEmit
@@ -6676,14 +7233,10 @@ int ledger_stub_0046e220_CellSurfaceQuadHeightFill(
 }
 
 // StagedCellCandidateCollect
-// FUNCTION: LEGORR 0x0046e9d0
 void* ledger_stub_0046e9d0_StagedCellCandidateCollect(
-    unsigned int row, unsigned int first_cell, unsigned int end_cell,
-    const StagedCellCandidateRecord* records, unsigned int record_count,
-    StagedCellCandidateLinks* links)
+    unsigned int row, unsigned int first_cell, unsigned int end_cell)
 {
-    return staged_cell_candidate_collect(row, first_cell, end_cell, records,
-                                         record_count, links);
+    return staged_cell_candidate_collect(row, first_cell, end_cell);
 }
 
 // EntityIndexedFloatLookupWithMinusOneFallback
@@ -6832,7 +7385,6 @@ void* ledger_stub_00473560_DDiSceneObjectKindModeSetup(void* owner, int mode)
 }
 
 // EntityVisualResourceLoad
-// FUNCTION: LEGORR 0x00473690
 void* ledger_stub_00473690_EntityVisualResourceLoad(void* scene_object)
 {
     return entity_visual_resource_load(scene_object);
@@ -6935,25 +7487,14 @@ int ledger_stub_00473c60_XfTextureNameFormat(
 typedef void* (*TextureSurfaceCreateHook)(void* context, uint32_t width,
                                           uint32_t height, uint32_t format,
                                           uint32_t flags);
-typedef void (*InterfaceForwardSyncHook)(void* context, void* source,
-                                         void* destination);
 static TextureSurfaceCreateHook s_texture_surface_create_hook;
 static void* s_texture_surface_create_context;
-static InterfaceForwardSyncHook s_interface_forward_sync_hook;
-static void* s_interface_forward_sync_context;
 
 void texture_surface_create_hook_set(TextureSurfaceCreateHook hook,
                                      void* context)
 {
     s_texture_surface_create_hook = hook;
     s_texture_surface_create_context = context;
-}
-
-void interface_forward_sync_hook_set(InterfaceForwardSyncHook hook,
-                                     void* context)
-{
-    s_interface_forward_sync_hook = hook;
-    s_interface_forward_sync_context = context;
 }
 
 // FUNCTION: LEGORR 0x004744f0
@@ -6966,19 +7507,142 @@ void* ledger_stub_004744f0_TextureSurfaceCreate(
                                          width, height, format, flags);
 }
 
-// FUNCTION: LEGORR 0x00474760
-uint32_t ledger_stub_00474760_InterfaceArrayForwardSync(
-    void* const* source, void* const* destination, uint32_t count)
+static void* s_interface_forward_sync_items[4];
+
+static void interface_array_forward_sync_slot80(void* object,
+                                                 uint32_t* count,
+                                                 void** items)
 {
+    void** vtable;
+    typedef void (*Method)(void*, void*, void*);
+    if (object == NULL || count == NULL) return;
+    memcpy(&vtable, object, sizeof(vtable));
+    if (vtable == NULL || vtable[0x80 / 4] == NULL) return;
+    ((Method)vtable[0x80 / 4])(object, count, items);
+}
+
+static void interface_array_forward_sync_slot(void* object,
+                                               unsigned int byte_offset,
+                                               void* value)
+{
+    void** vtable;
+    typedef void (*Method)(void*, void*);
+    if (object == NULL) return;
+    memcpy(&vtable, object, sizeof(vtable));
+    if (vtable == NULL || vtable[byte_offset / 4] == NULL) return;
+    ((Method)vtable[byte_offset / 4])(object, value);
+}
+
+// ResourceListUpdateMatchingKey supplies the cached object, scene record, and
+// request word.  The record's kind chooses the active
+// interface; slot +0x80 enumerates values into the shared four-entry scratch
+// array, and slots +0xa0/+0x48 forward them to the paired interfaces.
+// FUNCTION: LEGORR 0x00474760
+void ledger_stub_00474760_InterfaceArrayForwardSync(
+    void* source_value, void* scene_record, uint32_t request)
+{
+    unsigned char* record = (unsigned char*)scene_record;
+    uint32_t kind;
+    uint32_t count;
     uint32_t i;
-    if (source == NULL || destination == NULL ||
-        s_interface_forward_sync_hook == NULL) return 0u;
-    for (i = 0u; i < count; ++i) {
-        if (source[i] != NULL && destination[i] != NULL)
-            s_interface_forward_sync_hook(s_interface_forward_sync_context,
-                                          source[i], destination[i]);
+    void* primary;
+    void* secondary;
+    void* secondary_child;
+
+    if (record == NULL) return;
+    memcpy(&kind, record + 0x10, sizeof(kind));
+    memcpy(&primary, record + (kind == 6u ? 0x00 : 0x04), sizeof(primary));
+    if (primary == NULL) return;
+
+    if (request != 0u) {
+        count = request;
+        interface_array_forward_sync_slot80(primary, &count, NULL);
+        if (count > 4u) count = 4u;
+        if (count != 0u) {
+            interface_array_forward_sync_slot80(primary, &count,
+                                                 s_interface_forward_sync_items);
+            if (count > 4u) count = 4u;
+            for (i = 0u; i < count; ++i) {
+                interface_array_forward_sync_slot(primary, 0xa0,
+                    s_interface_forward_sync_items[i]);
+            }
+        }
+
+        memcpy(&secondary, record + 0x08, sizeof(secondary));
+        if (secondary != NULL) {
+            uint32_t secondary_count = 0u;
+            interface_array_forward_sync_slot80(secondary,
+                                                 &secondary_count, NULL);
+            if (secondary_count > 4u) secondary_count = 4u;
+            if (secondary_count != 0u) {
+                interface_array_forward_sync_slot80(secondary,
+                    &secondary_count, s_interface_forward_sync_items);
+                if (secondary_count > 4u) secondary_count = 4u;
+                memcpy(&secondary_child, (unsigned char*)secondary + 0x08,
+                       sizeof(secondary_child));
+                for (i = 0u; i < secondary_count; ++i) {
+                    void* item = s_interface_forward_sync_items[i];
+                    interface_array_forward_sync_slot(primary, 0x48, item);
+                    interface_array_forward_sync_slot(secondary_child, 0xa0,
+                                                       item);
+                }
+            }
+        }
+        *(uint32_t*)(record + 0x14) &= ~4u;
+        if (source_value != NULL) {
+            void* selector_owner = NULL;
+            uint32_t selector_owner_flags = 0u;
+            void* selector_data = NULL;
+            void* selector = NULL;
+            memcpy(&selector_owner, (unsigned char*)source_value + 0x0c,
+                   sizeof(selector_owner));
+            if (selector_owner != NULL) {
+                memcpy(&selector_owner_flags,
+                       (unsigned char*)selector_owner + 0x08,
+                       sizeof(selector_owner_flags));
+                if (selector_owner_flags != 0u) {
+                    interface_array_forward_sync_slot(primary, 0x48, primary);
+                    *(uint32_t*)(record + 0x14) |= 4u;
+                }
+                else {
+                    memcpy(&selector_data,
+                           (unsigned char*)selector_owner + 0x0c,
+                           sizeof(selector_data));
+                    selector = NULL;
+                    if (selector_data != NULL)
+                        memcpy(&selector,
+                               (unsigned char*)selector_data + 0x0c,
+                               sizeof(selector));
+                    interface_array_forward_sync_slot(primary, 0x48,
+                                                       selector);
+                    *(uint32_t*)(record + 0x14) |= 4u;
+                }
+            }
+        }
     }
-    return count;
+    else {
+        count = 0u;
+        interface_array_forward_sync_slot80(primary, &count,
+                                             NULL);
+        if (count > 4u) count = 4u;
+        if (count != 0u) {
+            interface_array_forward_sync_slot80(primary, &count,
+                                                 s_interface_forward_sync_items);
+            if (count > 4u) count = 4u;
+            memcpy(&secondary, record + 0x08, sizeof(secondary));
+            secondary_child = NULL;
+            if (secondary != NULL)
+                memcpy(&secondary_child, (unsigned char*)secondary + 0x08,
+                       sizeof(secondary_child));
+            for (i = 0u; i < count; ++i) {
+                void* item = s_interface_forward_sync_items[i];
+                interface_array_forward_sync_slot(primary, 0x48, item);
+                interface_array_forward_sync_slot(secondary_child, 0xa0,
+                                                   item);
+            }
+        }
+        *(uint32_t*)(record + 0x14) &= ~4u;
+    }
 }
 
 // MeshRecordAllocateOrAppend
@@ -7062,13 +7726,13 @@ uint32_t ledger_stub_00474f10_SceneObjectBoundsUnion(
 // RenderObjectSetPackedRgbaFromFloatChannels
 // FUNCTION: LEGORR 0x004750b0
 void ledger_stub_004750b0_RenderObjectSetPackedRgbaFromFloatChannels(
-    void* scene_object)
+    void* scene_object, float red, float green, float blue, float alpha)
 {
-    render_object_set_packed_rgba_from_float_channels(scene_object);
+    render_object_set_packed_rgba_from_float_channels(
+        scene_object, red, green, blue, alpha);
 }
 
 // DDiSceneAdvanceByTime
-// FUNCTION: LEGORR 0x00475120
 void ledger_stub_00475120_DDiSceneAdvanceByTime(
     void* scene_object, float delta)
 {
@@ -7076,15 +7740,53 @@ void ledger_stub_00475120_DDiSceneAdvanceByTime(
 }
 
 // DDiSceneFrameUpdateAndCallbacks
-// FUNCTION: LEGORR 0x00475140
-int ledger_stub_00475140_DDiSceneFrameUpdateAndCallbacks(
+float ledger_stub_00475140_DDiSceneFrameUpdateAndCallbacks(
     void* scene_object, float time)
 {
     return ddiscene_frame_update_and_callbacks(scene_object, time);
 }
 
+/* The original boot path registers an SFX sample hook and an entity scene-end
+ * hook. These adapters use the port's alias registry and EntitySlot flags;
+ * owner-token resolution remains a renderer integration boundary. */
+static EntityDDiSceneOwnerResolveHook s_ddiscene_owner_resolve;
+static void* s_ddiscene_owner_resolve_context;
+
+static void entity_ddiscene_sample_callback(const char* sample_name,
+                                            void* scene_object,
+                                            void* context)
+{
+    int alias;
+    (void)context;
+    if (sample_name != NULL && scene_object != NULL &&
+        sound_alias_lookup(sample_name, &alias)) {
+        sound_submission_route_wrapper(scene_object, alias, 0, 1, NULL);
+    }
+}
+
+static void entity_ddiscene_end_callback(void* scene_object, void* context)
+{
+    EntitySlot* entity;
+    uint32_t owner_token;
+    (void)context;
+    if (scene_object == NULL || s_ddiscene_owner_resolve == NULL) return;
+    owner_token = scene_object_owner_get(scene_object);
+    if (owner_token == 0u) return;
+    entity = s_ddiscene_owner_resolve(owner_token,
+                                     s_ddiscene_owner_resolve_context);
+    if (entity != NULL) entity->flags_3e4 |= 0x00010000u;
+}
+
+void entity_ddiscene_callbacks_install(
+    EntityDDiSceneOwnerResolveHook owner_resolve, void* context)
+{
+    s_ddiscene_owner_resolve = owner_resolve;
+    s_ddiscene_owner_resolve_context = context;
+    ddiscene_frame_callbacks_set(entity_ddiscene_sample_callback, NULL, 1,
+                                 entity_ddiscene_end_callback, NULL);
+}
+
 // DDiSceneApplyActFrameTiming
-// FUNCTION: LEGORR 0x00475300
 void ledger_stub_00475300_DDiSceneApplyActFrameTiming(void* scene_object)
 {
     ddiscene_apply_act_frame_timing(scene_object);
@@ -7198,7 +7900,6 @@ void* ledger_stub_00475e40_DDiSceneFrameRecordFind(
 }
 
 // DDiSceneAnimationHookCreate
-// FUNCTION: LEGORR 0x00475f70
 void ledger_stub_00475f70_DDiSceneAnimationHookCreate(
     void* scene_object, int callback, const char* name,
     const uint32_t* value_0c, int value_08, const uint32_t* value_10,
@@ -7355,22 +8056,12 @@ int ledger_stub_00476dc0_RenderTargetViewportScaleSet(
     return 1;
 }
 
-// ScreenBoundedSurfaceResourceAllocate
-typedef void* (*ScreenBoundedSurfaceAllocateHook)(void* context,
-    uint32_t width, uint32_t height, uint32_t format);
 // FUNCTION: LEGORR 0x00476e50
-void* ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate(
-    uint32_t screen_width, uint32_t screen_height,
-    uint32_t requested_width, uint32_t requested_height, uint32_t format,
-    ScreenBoundedSurfaceAllocateHook allocate, void* context)
+ScreenBoundedSurfaceRecord*
+ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate(
+    uint32_t width, uint32_t height, void* camera, int x, int y)
 {
-    uint32_t width = requested_width;
-    uint32_t height = requested_height;
-    if (allocate == NULL || screen_width == 0u || screen_height == 0u ||
-        width == 0u || height == 0u) return NULL;
-    if (width > screen_width) width = screen_width;
-    if (height > screen_height) height = screen_height;
-    return allocate(context, width, height, format);
+    return screen_bounded_surface_allocate(width, height, camera, x, y);
 }
 
 
@@ -7386,10 +8077,9 @@ void ledger_stub_00477010_DDiSceneDrawBegin(void* render_object, int begin)
 
 // ComPropertyResultGet
 // FUNCTION: LEGORR 0x00477310
-uint32_t ledger_stub_00477310_ComPropertyResultGet(const uint32_t* result,
-                                                   uint32_t value_index)
+void* ledger_stub_00477310_ComPropertyResultGet(void* resource_owner)
 {
-    return result != NULL && value_index < 8u ? result[value_index] : 0u;
+    return com_resource_enumeration_result_get(resource_owner);
 }
 
 // RenderResourceTrackedReferencesRelease
@@ -7455,90 +8145,6 @@ void ledger_stub_004789a0_MusicMixerVolumeGet(float* music, float* sfx)
     (void)audio_mixer_control_init(music, sfx, 0);
 }
 
-// FUNCTION: LEGORR 0x004789c0
-int ledger_stub_004789c0_WindowsMixerControlInit(float* music, float* sfx,
-                                                  int apply_volume)
-{
-    return audio_mixer_control_init(music, sfx, apply_volume);
-}
-
-
-// FUNCTION: LEGORR 0x0047a640
-int ledger_stub_0047a640_DirectSoundSystemInit(void* window)
-{
-    return audio_system_init(window);
-}
-
-// FUNCTION: LEGORR 0x0047a800
-void ledger_stub_0047a800_DirectSoundObjectsShutdown()
-{
-    sound_subsystem_stop_all();
-    audio_active_shutdown();
-}
-
-// FUNCTION: LEGORR 0x0047ad10
-void ledger_stub_0047ad10_SoundPositionSetFromVector(
-    void* buffer_object, const float position[3])
-{
-    sound_position_set_from_vector(buffer_object, position);
-}
-
-// FUNCTION: LEGORR 0x0047ad30
-int ledger_stub_0047ad30_AttachedSoundStopByEntity(void* context,
-                                                    uint32_t entity)
-{
-    (void)context;
-    return sound_attached_stop_by_entity(entity);
-}
-
-// FUNCTION: LEGORR 0x0047ad70
-int ledger_stub_0047ad70_SoundBufferPlayWithPosition(
-    const Sound* sample, const float position[3])
-{
-    float pan = 0.0f;
-    if (position != NULL) {
-        float distance = (float)sqrt(position[0] * position[0]
-                                     + position[1] * position[1]
-                                     + position[2] * position[2]);
-        if (distance > 0.0f) pan = position[0] / distance;
-    }
-    return audio_active_play_sound_3d(sample, pan);
-}
-
-// FUNCTION: LEGORR 0x0047b0f0
-Sound* ledger_stub_0047b0f0_SoundHandleToBuffer(int handle)
-{
-    return sound_bank_entry_sample_get(handle);
-}
-
-// FUNCTION: LEGORR 0x0047b130
-void ledger_stub_0047b130_SoundBufferStopHandle(int buffer_handle)
-{
-    sound_buffer_stop_handle(buffer_handle);
-}
-
-// FUNCTION: LEGORR 0x0047b160
-void ledger_stub_0047b160_SoundSubsystemStopAll()
-{
-    sound_buffer_association_stop_all();
-    sound_stream_stop_and_release(0);
-    sound_stream_stop_and_release(1);
-}
-
-// FUNCTION: LEGORR 0x0047b1a0
-int ledger_stub_0047b1a0_SoundInstanceTrackRegister(void* instance)
-{
-    return sound_instance_track_register(instance);
-}
-
-// FUNCTION: LEGORR 0x0047b220
-void ledger_stub_0047b220_SoundInstanceTrackStopAndRemove(void* context,
-                                                           void* instance)
-{
-    (void)context;
-    sound_instance_track_stop_and_remove(instance);
-}
-
 // NestedRecordListRemoveMatchingKey
 typedef struct NestedResourceRecord {
     int key;
@@ -7569,81 +8175,6 @@ int ledger_stub_0047b330_NestedRecordListRemoveMatchingKey(
         engine_heap_free(child);
     }
     return record->key == key;
-}
-
-// FUNCTION: LEGORR 0x0047b390
-void ledger_stub_0047b390_SoundSourceSpatialRefreshAll()
-{
-    sound_source_spatial_refresh_all();
-}
-
-// FUNCTION: LEGORR 0x0047b410
-void ledger_stub_0047b410_SoundSourceSpatialRefresh(void* sound_object)
-{
-    sound_source_spatial_refresh(sound_object);
-}
-
-
-
-// FUNCTION: LEGORR 0x0047b550
-void ledger_stub_0047b550_SoundBufferVolumeSetMinus300()
-{
-    if (sound_bank_sound_on()) {
-        audio_active_sound_volume_set(-300);
-    }
-}
-
-// FUNCTION: LEGORR 0x0047b580
-int ledger_stub_0047b580_InMemoryWaveSampleLoad(Sound* output,
-                                                 const char* path,
-                                                 int mode_flags)
-{
-    return sound_sample_load_into(output, path, mode_flags);
-}
-
-// FUNCTION: LEGORR 0x0047b6c0
-int ledger_stub_0047b6c0_SoundRecordCreateBuffers(int slot)
-{
-    return sound_record_create_buffers(slot);
-}
-
-// FUNCTION: LEGORR 0x0047b790
-int ledger_stub_0047b790_WaveSampleDuplicateBufferCreate(
-    int slot, int buffer_index)
-{
-    return sound_wave_sample_duplicate_buffer_create(slot, buffer_index);
-}
-
-// FUNCTION: LEGORR 0x0047b970
-int ledger_stub_0047b970_StreamedWavePlaybackStart(int stream_index,
-                                                    const Sound* sample)
-{
-    return sound_stream_playback_start(stream_index, sample);
-}
-
-// FUNCTION: LEGORR 0x0047ba20
-void ledger_stub_0047ba20_StreamPlaybackStopAndRelease(int stream_index)
-{
-    sound_stream_stop_and_release(stream_index);
-}
-
-// FUNCTION: LEGORR 0x0047baa0
-int ledger_stub_0047baa0_StreamedWaveFormatAndBufferSetup(
-    int stream_index, const WavSample* format, uint32_t buffer_bytes)
-{
-    return sound_stream_format_setup(stream_index, format, buffer_bytes);
-}
-
-// FUNCTION: LEGORR 0x0047bc30
-int ledger_stub_0047bc30_StreamedWavePlaybackDrainCheck(int stream_index)
-{
-    return sound_stream_drain_check(stream_index);
-}
-
-// FUNCTION: LEGORR 0x0047bdb0
-void ledger_stub_0047bdb0_StreamedWaveRingBufferTick(int stream_index)
-{
-    sound_stream_ring_buffer_tick(stream_index);
 }
 
 // FUNCTION: LEGORR 0x0047c100
@@ -7747,7 +8278,6 @@ void ledger_stub_0047e4c0_AviPlaybackStateInitialize(
                                   fullscreen, display_device);
 }
 
-// FUNCTION: LEGORR 0x0047e510
 int ledger_stub_0047e510_DirectDrawDisplayModeSetup(
     AviPlaybackState* state, uint32_t width, uint32_t height,
     uint32_t bits_per_pixel, int fullscreen, void* display_device)
@@ -7756,36 +8286,24 @@ int ledger_stub_0047e510_DirectDrawDisplayModeSetup(
                                   fullscreen, display_device);
 }
 
-// FUNCTION: LEGORR 0x0047e760
 uint32_t ledger_stub_0047e760_AviSurfaceLock(AviPlaybackState* state)
 {
     return avi_surface_lock(state);
 }
 
-// FUNCTION: LEGORR 0x0047e7b0
 uint32_t ledger_stub_0047e7b0_AviFrameSurfaceUnlock(AviPlaybackState* state)
 {
     return avi_surface_unlock(state);
 }
 
-// FUNCTION: LEGORR 0x0047e980
 void ledger_stub_0047e980_AviPlayerDestroy(AviPlaybackState* state,
                                             uint8_t flags)
 {
-    if (state != NULL && state->stream_object != NULL) {
-        movie_close((Movie*)state->stream_object);
-        state->stream_object = NULL;
-    }
     avi_player_destroy(state, flags);
 }
 
-// FUNCTION: LEGORR 0x0047e9a0
 void ledger_stub_0047e9a0_AviFrameRetrieverDestroy(AviPlaybackState* state)
 {
-    if (state != NULL && state->stream_object != NULL) {
-        movie_close((Movie*)state->stream_object);
-        state->stream_object = NULL;
-    }
     avi_frame_retriever_destroy(state);
 }
 
@@ -7807,13 +8325,11 @@ int ledger_stub_0047e9e0_AviFrameDecodeAndCopy(Movie* movie,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x0047eb20
 int ledger_stub_0047eb20_AviFrameUpdateAndBlit(AviPlaybackState* state)
 {
     return avi_frame_update_and_blit(state);
 }
 
-// FUNCTION: LEGORR 0x0047ebe0
 uint32_t ledger_stub_0047ebe0_AviStreamFrameCountGet(
     const AviPlaybackState* state)
 {
@@ -7824,13 +8340,11 @@ struct AviFrameSeekRebaseMethod {
     void seek(uint32_t frame_index);
 };
 
-// FUNCTION: LEGORR 0x0047ebf0
 void AviFrameSeekRebaseMethod::seek(uint32_t frame_index)
 {
     avi_frame_seek_and_clock_rebase((AviPlaybackState*)this, frame_index);
 }
 
-// FUNCTION: LEGORR 0x0047ec60
 uint32_t ledger_stub_0047ec60_AviPlaybackFrameIndexGet(
     const AviPlaybackState* state)
 {
@@ -7838,34 +8352,23 @@ uint32_t ledger_stub_0047ec60_AviPlaybackFrameIndexGet(
 }
 
 // FUNCTION: LEGORR 0x0047ec80
-int ledger_stub_0047ec80_AviFileInitialize(AviPlaybackState* state,
-                                            const char* path)
+void ledger_stub_0047ec80_AviFileInitialize(void* context)
 {
-    Movie* movie;
-    MovieInfo info;
-    if (state == NULL || path == NULL) return 0;
-    movie = movie_open_path(path);
-    if (movie == NULL) return 0;
-    if (movie_info(movie, &info) != 0) {
-        movie_close(movie);
-        return 0;
-    }
-    state->stream_object = movie;
-    state->fps_numerator = (uint32_t)info.fps_num;
-    state->fps_denominator = (uint32_t)info.fps_den;
-    state->stream_frame_count = 0;
-    state->frame_index = 0;
-    state->frame_ready = 0;
-    return 1;
+    avi_file_initialize(context);
+}
+
+void ledger_stub_0047e800_AviFrameRetrieverOpen(AviPlaybackState* state,
+                                                 const char* path)
+{
+    avi_frame_retriever_open(state, path);
 }
 
 // FUNCTION: LEGORR 0x0047ecf0
-int ledger_stub_0047ecf0_AviFrameUpdate(AviPlaybackState* state)
+uint8_t ledger_stub_0047ecf0_AviFrameUpdate(AviPlaybackState* state)
 {
-    return avi_frame_update_and_blit(state);
+    return (uint8_t)state->frame_update_and_blit();
 }
 
-// FUNCTION: LEGORR 0x0047ed00
 void ledger_stub_0047ed00_AviPlaybackFrameLoop(AviPlaybackState* state,
                                                 void* destination)
 {
@@ -7883,44 +8386,23 @@ void ledger_stub_0047ed40_AviFrameIndexAndClockReset(
 uint32_t ledger_stub_0047ed50_AviCurrentFrameIndexGet(
     const AviPlaybackState* state)
 {
-    return avi_playback_frame_index_get(state);
+    return state->playback_frame_index_get();
 }
 
 // FUNCTION: LEGORR 0x0047ed60
 uint32_t ledger_stub_0047ed60_AviStreamFrameCountGet(
     const AviPlaybackState* state)
 {
-    return avi_stream_frame_count_get(state);
-}
-
-// FUNCTION: LEGORR 0x0047ed90
-int ledger_stub_0047ed90_DirectInputInitialize()
-{
-    return input_direct_initialize();
-}
-
-// FUNCTION: LEGORR 0x0047efd0
-void ledger_stub_0047efd0_DirectInputShutdown(InputState* state)
-{
-    if (state == input_direct_state_get()) input_direct_shutdown();
-    else input_reset(state);
-}
-
-// FUNCTION: LEGORR 0x0047fb60
-Sound* ledger_stub_0047fb60_SoundSampleFileOpenByName(const char* name)
-{
-    return sound_load(name);
+    return state->stream_frame_count_get();
 }
 
 // SharedTextureRootRegister
-// FUNCTION: LEGORR 0x004805b0
 int ledger_stub_004805b0_SharedTextureRootRegister(const char* root)
 {
     return lego::shared_texture_root_register(root);
 }
 
 // SharedTextureRootInitialize
-// FUNCTION: LEGORR 0x00480650
 int ledger_stub_00480650_SharedTextureRootInitialize()
 {
     return lego::shared_texture_root_initialize();
@@ -8024,7 +8506,8 @@ int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
         memcpy(&frames, track, sizeof(frames));
         if (frame_count <= 0 || frames == NULL) continue;
         frame_index = (frame_base + frame_offset) % frame_count;
-        if (frame_index < 0) frame_index += frame_count;
+        /* The reference clamps a negative remainder to frame zero. */
+        if (frame_index < 0) frame_index = 0;
         memcpy(&frame, (unsigned char*)frames +
                (size_t)frame_index * sizeof(frame), sizeof(frame));
         ledger_stub_004830c0_AnimatedTextureFrameSurfaceSet(
@@ -8046,7 +8529,6 @@ int ledger_stub_00482220_MeshRecordAllocateAndFill(
 
 
 // ModelRenderPassDispatch
-// FUNCTION: LEGORR 0x00482d60
 void ledger_stub_00482d60_ModelRenderPassDispatch(void* device)
 {
     model_render_pass_dispatch(device);
@@ -8102,32 +8584,38 @@ int ledger_stub_00483f00_FlicPlayerClose(Flic* player)
 
 // FUNCTION: LEGORR 0x00483f60
 int ledger_stub_00483f60_FlicFileHeaderValidate(const char* path,
-                                                 Flic** player_out)
+                                                int* context)
 {
-    Flic* player = flic_open(path);
-    if (player_out != NULL) *player_out = player;
-    return player != NULL;
-}
-
-// FUNCTION: LEGORR 0x00484320
-int ledger_stub_00484320_FlicChunkWalk(Flic* player, int loop)
-{
-    if (player == NULL) return 0;
-    return flic_tick_loop(player, loop);
-}
-
-// FUNCTION: LEGORR 0x004844b0
-int ledger_stub_004844b0_FlicFrameRecordWalk(Flic* player, int loop)
-{
-    if (player == NULL) return 0;
-    return flic_tick_loop(player, loop);
+    Resource* resource;
+    unsigned char* header;
+    uint32_t declared_size;
+    uint16_t magic;
+    int32_t file_size;
+    int result = 0;
+    if (path == NULL || context == NULL) return 0;
+    resource = resource_open(path, RESOURCE_AUTO);
+    if (resource == NULL) return 0;
+    file_size = resource_read(resource);
+    header = (unsigned char*)context + 0x640;
+    if (file_size >= 0x88) {
+        memcpy(header, resource->data, 0x88);
+        memcpy(&declared_size, header, sizeof(declared_size));
+        memcpy(&magic, header + 4, sizeof(magic));
+        if (declared_size == (uint32_t)file_size &&
+            (magic == 0x9119u || magic == 0x1234u ||
+             magic == 0xaf11u || magic == 0xaf12u || magic == 0xaf43u)) {
+            result = 1;
+        }
+    }
+    resource_free(resource);
+    return result;
 }
 
 // FUNCTION: LEGORR 0x00484610
 int ledger_stub_00484610_FlicSubrecordOpcodeDispatch(void* record)
 {
     uint8_t* rec = (uint8_t*)record;
-    uint32_t opcode;
+    int16_t opcode;
     if (rec == NULL) return 0;
     memcpy(&opcode, rec + 0x6d4, sizeof(opcode));
     if (opcode == 4u) return flic_decode16_bit_row_records(rec);
@@ -8136,37 +8624,10 @@ int ledger_stub_00484610_FlicSubrecordOpcodeDispatch(void* record)
     if (opcode == 0x0fu || opcode == 0x19u)
         return flic_opcode25_decode_dispatch(rec);
     if (opcode == 0x10u) return flic_opcode16_mode_dispatch(rec + 0x6d0);
-    if (opcode == 0x1bu) return flic_decode8_bit_alternate_delta(rec);
+    /* FUN_00484610 routes both 0x07 and 0x1b through FUN_00485030. */
+    if (opcode == 0x07u || opcode == 0x1bu)
+        return flic_opcode27_decode_dispatch(rec);
     return 0;
-}
-
-// FUNCTION: LEGORR 0x00484720
-int ledger_stub_00484720_FlicChunkBufferAndContinueLK(Flic* player, int loop)
-{
-    return flic_tick_loop(player, loop);
-}
-
-// FUNCTION: LEGORR 0x004847d0
-int ledger_stub_004847d0_FlicChunkBufferAndContinueType0B(Flic* player,
-                                                           int loop)
-{
-    return flic_tick_loop(player, loop);
-}
-
-// TextBufferDrawWrapped
-// FUNCTION: LEGORR 0x00485390
-int ledger_stub_00485390_TextBufferDrawWrapped(void* record,
-    uint32_t start_line, float line_scale, int* height_out)
-{
-    return text_buffer_draw_wrapped(record, start_line, line_scale, height_out);
-}
-
-// TextWrapMeasureAndDrawLines
-// FUNCTION: LEGORR 0x00485710
-int ledger_stub_00485710_TextWrapMeasureAndDrawLines(void* record,
-    float elapsed, int* height_out)
-{
-    return text_wrap_measure_and_draw_lines(record, elapsed, height_out);
 }
 
 // LoadLWSCScene
@@ -8261,9 +8722,11 @@ typedef struct SharedObjectAnimationHooks {
 } SharedObjectAnimationHooks;
 // FUNCTION: LEGORR 0x00487ba0
 void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
-    void* shared_object, float time, const SharedObjectAnimationHooks* hooks)
+    void* shared_object, float time, const void* hook_context)
 {
     unsigned char* owner = (unsigned char*)shared_object;
+    const SharedObjectAnimationHooks* hooks =
+        (const SharedObjectAnimationHooks*)hook_context;
     uint16_t duration;
     uint16_t track_count;
     uint32_t flags;
@@ -8308,11 +8771,11 @@ void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
 }
 
 // AnimationTrackFindKeyframeAndFraction
-// FUNCTION: LEGORR 0x00487cb0
 float ledger_stub_00487cb0_AnimationTrackFindKeyframeAndFraction(
     const void* track, float time, uint16_t* segment_out)
 {
-    return lego::keyframe_time_segment_fraction(track, time, segment_out);
+    return ::animation_track_find_keyframe_and_fraction(track, time,
+                                                         segment_out);
 }
 
 // ComInterfaceQueryAndContextDispatch
@@ -8365,22 +8828,19 @@ void ledger_stub_00488070_SharedObjectFloatTrackInterpolateApply(
 }
 
 // AnimationTrackKeysInterpolate
-// FUNCTION: LEGORR 0x00488170
 void ledger_stub_00488170_AnimationTrackKeysInterpolate(
     void* owner, const void* track, uint32_t segment, float fraction)
 {
-    lego::animation_track_keys_interpolate_apply(owner, track, segment,
-                                                  fraction);
+    ::animation_track_keys_interpolate(owner, track, segment, fraction);
 }
 
 // SceneNodeTransformMatrixApply
-// FUNCTION: LEGORR 0x004882e0
 void ledger_stub_004882e0_SceneNodeTransformMatrixApply(void* owner,
     const void* track, const float position[3], const float rotation[3],
     const float scale[3])
 {
-    lego::scene_node_transform_matrix_apply(owner, track, position, rotation,
-                                             scale);
+    ::scene_node_transform_matrix_apply(owner, track, position, rotation,
+                                        scale);
 }
 
 // ModelResourceResolveOrLoad
@@ -8450,102 +8910,6 @@ void ledger_stub_00488bb0_CdAudioTrackStart(int track, int restart_when_done,
     MediaCdAudioCompletionHook callback)
 {
     media_cd_audio_track_start(track, restart_when_done, callback);
-}
-
-// FUNCTION: LEGORR 0x00488bf0
-void ledger_stub_00488bf0_CdAudioStopAndCloseIfActive()
-{
-    media_cd_audio_stop_and_close_if_active();
-}
-
-// FUNCTION: LEGORR 0x00488c00
-void ledger_stub_00488c00_CDAudioWatchdogTick(int enabled)
-{
-    media_cd_audio_watchdog_tick(enabled);
-}
-
-// FUNCTION: LEGORR 0x00488c70
-int ledger_stub_00488c70_WaveFormatOpenAndRead(const char* name,
-                                                WavSample* format_out)
-{
-    Sound* sample;
-    if (format_out == NULL) return 0;
-    sample = sound_load(name);
-    if (sample == NULL) return 0;
-    *format_out = sample->format;
-    sound_free(sample);
-    return 1;
-}
-
-// FUNCTION: LEGORR 0x00488e70
-uint32_t ledger_stub_00488e70_WaveFileAverageBytesPerSecondRead(
-    const char* path)
-{
-    Sound* sound = sound_load(path);
-    uint32_t byte_rate;
-    if (sound == NULL) return 0u;
-    byte_rate = sound->format.byte_rate;
-    sound_free(sound);
-    return byte_rate;
-}
-
-// FUNCTION: LEGORR 0x00488f10
-Sound* ledger_stub_00488f10_WaveFileOpenReadChunks(const char* name)
-{
-    return sound_load(name);
-}
-
-// FUNCTION: LEGORR 0x004890c0
-const uint8_t* ledger_stub_004890c0_WaveDataChunkOpen(const Sound* sample,
-                                                       uint32_t* size_out)
-{
-    if (size_out != NULL) *size_out = sample != NULL ? sample->data_len : 0;
-    return sample != NULL ? sample->data : NULL;
-}
-
-// FUNCTION: LEGORR 0x00489100
-uint32_t ledger_stub_00489100_WaveDataRead(
-    SoundWaveDataReader* reader, uint32_t requested, void* destination,
-    uint32_t capacity, uint32_t* bytes_read)
-{
-    return sound_wave_data_read(reader, requested, destination, capacity,
-                                bytes_read);
-}
-
-// FUNCTION: LEGORR 0x004891d0
-void ledger_stub_004891d0_MmioHandleAndGlobalBufferRelease(Sound* sample)
-{
-    sound_free(sample);
-}
-
-// FUNCTION: LEGORR 0x00489210
-int ledger_stub_00489210_CDAudioTrackPlayFrom(int track)
-{
-    return media_cd_audio_track_play_from(track);
-}
-
-// FUNCTION: LEGORR 0x00489260
-void ledger_stub_00489260_CDAudioErrorTextGet()
-{
-    (void)media_cd_audio_error_text_get();
-}
-
-// FUNCTION: LEGORR 0x00489280
-int ledger_stub_00489280_CDAudioTrackCompletionPoll(int track)
-{
-    return media_cd_audio_track_completion_poll(track);
-}
-
-// FUNCTION: LEGORR 0x00489330
-int ledger_stub_00489330_CDAudioDeviceOpen(int initial_track)
-{
-    return media_cd_audio_device_open(initial_track);
-}
-
-// FUNCTION: LEGORR 0x004893a0
-int ledger_stub_004893a0_CdAudioStopAndClose()
-{
-    return media_cd_audio_stop_and_close();
 }
 
 // ComInterfaceQueryOrFallback
@@ -8665,19 +9029,7 @@ ledger_stub_004895c0_ResourceTreeCallbackContextCreateForResource(
     return portable_resource_context_create(resource, NULL, root, 1u);
 }
 
-// SceneActFrameRecordCloneOrCreate
-typedef void* (*SceneActFrameCloneHook)(void* context, const void* source);
-// FUNCTION: LEGORR 0x00489660
-void* ledger_stub_00489660_SceneActFrameRecordCloneOrCreate(
-    const void* source, SceneActFrameCloneHook clone, void* context)
-{
-    if (clone == NULL) return NULL;
-    return clone(context, source);
-}
-
-
 // DDiSceneTimedHookDispatch
-// FUNCTION: LEGORR 0x004897e0
 void ledger_stub_004897e0_DDiSceneTimedHookDispatch(
     void* hook_record, float time, void* output)
 {
@@ -8905,7 +9257,23 @@ uint32_t ledger_stub_0048c360_LwoCurves(GameFileHandle* stream,
 // LIBRARY: LEGORR 0x0048dc80 SYMBOL
 // _realloc
 #if !defined(_MSC_VER)
-void ledger_stub_0048dc80_GrowHeapArray() {}
+void* ledger_stub_0048dc80_GrowHeapArray(void* allocation,
+                                         uint32_t requested_size)
+{
+    uint32_t size = requested_size;
+    if (allocation == NULL) {
+        if (size == 0u) size = 1u;
+        return engine_heap_alloc((long)size);
+    }
+    if (size == 0u) {
+        engine_heap_free(allocation);
+        return NULL;
+    }
+    /* The CRT rounds ordinary allocations to its 16-byte small-block unit. */
+    if (size >= 0xffffffe1u) return NULL;
+    size = (size + 15u) & ~15u;
+    return realloc(allocation, (size_t)size);
+}
 #endif
 
 /* SehScopeTableLookup (FUN_0048ee90): walk the nested active scope ranges
@@ -8964,7 +9332,43 @@ void* seh_scope_table_lookup(const void* registration_frame,
 // LIBRARY: LEGORR 0x00491cc0 SYMBOL
 // ___sbh_resize_block
 #if !defined(_MSC_VER)
-void ledger_stub_00491cc0_SmallHeapBlockResizeInPlace() {}
+int ledger_stub_00491cc0_SmallHeapBlockResizeInPlace(
+    void* heap, uint32_t* group, uint8_t* block, uint32_t requested_units)
+{
+    uintptr_t group_offset;
+    uint32_t* bucket;
+    uint32_t old_units;
+    if (heap == NULL || group == NULL || block == NULL ||
+        requested_units > 0xffu) return 0;
+    group_offset = (uintptr_t)group -
+                   (uintptr_t)(*(uint8_t**) ((uint8_t*)heap + 0x10));
+    bucket = (uint32_t*)((uint8_t*)heap + 0x18u +
+                         (group_offset >> 12) * 8u);
+    old_units = block[0];
+    if (old_units <= requested_units) {
+        uint8_t* new_end;
+        uint8_t* scan;
+        if (old_units == requested_units) return 0;
+        new_end = block + requested_units;
+        if (new_end > (uint8_t*)(group + 0x3e)) return 0;
+        for (scan = block + old_units; scan < new_end; ++scan)
+            if (*scan != 0u) return 0;
+        block[0] = (uint8_t)requested_units;
+        if ((uint8_t*)group[0] >= block && (uint8_t*)group[0] < new_end) {
+            uint8_t* first_free = new_end;
+            while (first_free < (uint8_t*)(group + 0x3e) &&
+                   *first_free == 0u) ++first_free;
+            group[0] = (uint32_t)first_free;
+            group[1] = (uint32_t)(first_free - new_end);
+        }
+        bucket[0] += old_units - requested_units;
+        return 1;
+    }
+    block[0] = (uint8_t)requested_units;
+    bucket[1] = 0xf1u;
+    bucket[0] += old_units - requested_units;
+    return 1;
+}
 #endif
 
 // LocaleCharacterMapString
@@ -8982,6 +9386,11 @@ void ledger_stub_00491cc0_SmallHeapBlockResizeInPlace() {}
 // CrtCharacterClassFlag8Check
 
 } // namespace unported_ledger_stubs
+
+void spawn_coordinate_pool_clear(void)
+{
+    unported_ledger_stubs::spawn_coordinate_pool_clear_impl();
+}
 
 /* The old NERP/advisor owner lives in DAT windows in the corpus.  Keep the
  * parser and interpreter state explicit here so callers can install the
@@ -9082,6 +9491,7 @@ void tutorial_script_program_install(const uint32_t* words, uint32_t count)
     s_tutorial_program_count = count;
 }
 
+// FUNCTION: LEGORR 0x00452df0
 int tutorial_script_file_load(const char* path)
 {
     uint32_t size = 0;
@@ -9118,6 +9528,7 @@ int tutorial_script_file_load(const char* path)
     return data != NULL;
 }
 
+// FUNCTION: LEGORR 0x00452e70
 int tutorial_objective_token_load(uint32_t source_limit, char** output_tokens)
 {
     char* mutable_source;
@@ -9161,6 +9572,7 @@ int tutorial_objective_token_load(uint32_t source_limit, char** output_tokens)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x00453220
 int tutorial_display_resources_release(void)
 {
     if (s_tutorial_script_data != NULL) {
@@ -9184,6 +9596,7 @@ int tutorial_display_resources_release(void)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x004532e0
 void tutorial_indirect_handle_resolve(uint32_t* value)
 {
     uint32_t index;
@@ -9208,6 +9621,7 @@ static uint32_t tutorial_compare_values(uint32_t op, uint32_t left,
     }
 }
 
+// FUNCTION: LEGORR 0x00453320
 void tutorial_script_command_dispatch(float delta)
 {
     uint32_t pc = 0;
@@ -9292,6 +9706,7 @@ void tutorial_advisor_scroll_state_set(uint32_t pending, uint32_t maximum,
     s_tutorial_scroll_flags = state_flags;
 }
 
+// FUNCTION: LEGORR 0x00453920
 void tutorial_advisor_scroll_step_advance(void)
 {
     if (s_tutorial_scroll_pending != 0) {
@@ -9331,6 +9746,7 @@ void tutorial_camera_focus_state_set(uint32_t focus_id, uint32_t valid,
     s_tutorial_focus_angle_velocity = 0.0f;
 }
 
+// FUNCTION: LEGORR 0x00453da0
 void tutorial_camera_focus_tween_update(float delta)
 {
     float scale = 1.0f;
@@ -9389,6 +9805,7 @@ static void tutorial_inline_append(char* out, uint32_t* used, const char* text)
     out[*used] = '\0';
 }
 
+// FUNCTION: LEGORR 0x00456830
 void tutorial_inline_token_render(char* source, char* output, int draw)
 {
     uint32_t used = 0;
@@ -9545,6 +9962,7 @@ static void legacy_color_pair(float source[3], float high[3], float low[3])
     }
 }
 
+// FUNCTION: LEGORR 0x00459560
 int legacy_health_bar_config_load(BlockFile* values, BlockFile* names)
 {
     int x, y;
@@ -9594,6 +10012,7 @@ static void legacy_hud_resource_name(BlockFile* cfg, const char* path,
     }
 }
 
+// FUNCTION: LEGORR 0x004599c0
 void legacy_hunger_images_load(BlockFile* values, BlockFile* names)
 {
     int i;
@@ -9622,6 +10041,7 @@ void legacy_hunger_images_load(BlockFile* values, BlockFile* names)
     }
 }
 
+// FUNCTION: LEGORR 0x00459900
 int legacy_hunger_images_position_config_load(BlockFile* values,
                                                BlockFile* names)
 {
@@ -9662,63 +10082,94 @@ static uint32_t legacy_rgb_pack(const float rgb[3])
     return (r << 16) | (g << 8) | b;
 }
 
+// FUNCTION: LEGORR 0x00459b00
 void legacy_entity_screen_ring_render(void* entity, int x, int y)
 {
     EntitySlot* slot = (EntitySlot*)entity;
-    float points[42];
+    float rect[4];
     float health;
-    float radius;
-    float two_pi = 6.28318530718f;
-    uint32_t i;
-    uint32_t segments;
+    float width;
+    float height;
+    float border;
+    float health_size;
+    int i;
     if (slot == NULL || (s_legacy_health_bar.flags & 2u) == 0) return;
     if (s_legacy_hud_ops.entity_renderable == NULL ||
         !s_legacy_hud_ops.entity_renderable(slot,
                                              s_legacy_hud_ops.context)) return;
-    health = legacy_clamp_01(slot->field_340 * 0.01f);
-    radius = (s_legacy_health_bar.width + s_legacy_health_bar.height) * 0.5f;
-    if (radius <= 0.0f) radius = s_legacy_health_bar.border + 1.0f;
-    segments = (uint32_t)(health * 20.0f);
-    if (segments < 2) return;
-    if (segments > 20) segments = 20;
-    for (i = 0; i <= segments; ++i) {
-        float angle = -1.57079632679f + two_pi * (float)i / 20.0f;
-        points[i * 2] = (float)x + s_legacy_health_bar.x +
-                        radius * (float)cos((double)angle);
-        points[i * 2 + 1] = (float)y + s_legacy_health_bar.y +
-                            radius * (float)sin((double)angle);
+    health = slot->field_340;
+    if (health < 0.0f) health = 0.0f;
+    if (health > 100.0f) health = 100.0f;
+    border = s_legacy_health_bar.border;
+    width = s_legacy_health_bar.width + border * 2.0f;
+    height = s_legacy_health_bar.height + border * 2.0f;
+    rect[0] = (float)x + s_legacy_health_bar.x;
+    rect[1] = (float)y + s_legacy_health_bar.y;
+    if (s_legacy_hud_ops.rect_draw != NULL) {
+        if (s_legacy_health_bar.vertical == 0u) {
+            health_size = health * width * 0.01f;
+            rect[2] = health_size;
+            rect[3] = height;
+            s_legacy_hud_ops.rect_draw(rect,
+                legacy_rgb_pack(s_legacy_health_bar.health_rgb),
+                s_legacy_hud_ops.context);
+            rect[0] += health_size;
+            rect[2] = width - health_size;
+            s_legacy_hud_ops.rect_draw(rect,
+                legacy_rgb_pack(s_legacy_health_bar.background_rgb),
+                s_legacy_hud_ops.context);
+        }
+        else {
+            health_size = (100.0f - health) * height * 0.01f;
+            rect[2] = width;
+            rect[3] = health_size;
+            s_legacy_hud_ops.rect_draw(rect,
+                legacy_rgb_pack(s_legacy_health_bar.background_rgb),
+                s_legacy_hud_ops.context);
+            rect[1] += health_size;
+            rect[3] = height - health_size;
+            s_legacy_hud_ops.rect_draw(rect,
+                legacy_rgb_pack(s_legacy_health_bar.health_rgb),
+                s_legacy_hud_ops.context);
+        }
     }
-    if (s_legacy_hud_ops.polyline_draw != NULL)
-        s_legacy_hud_ops.polyline_draw(points, segments + 1,
-            legacy_rgb_pack(s_legacy_health_bar.health_rgb),
-            s_legacy_hud_ops.context);
+    if (s_legacy_hud_ops.rect_draw == NULL || border <= 0.0f) return;
+    for (i = 0; i < (int)border; ++i) {
+        float inset = (float)i;
+        float band = 1.0f;
+        uint32_t high = legacy_rgb_pack(s_legacy_health_bar.border_high);
+        uint32_t low = legacy_rgb_pack(s_legacy_health_bar.border_low);
+        rect[0] = (float)x + s_legacy_health_bar.x + inset;
+        rect[1] = (float)y + s_legacy_health_bar.y + inset;
+        rect[2] = width - inset * 2.0f;
+        rect[3] = band;
+        s_legacy_hud_ops.rect_draw(rect, high, s_legacy_hud_ops.context);
+        rect[1] = (float)y + s_legacy_health_bar.y + height - inset - band;
+        s_legacy_hud_ops.rect_draw(rect, low, s_legacy_hud_ops.context);
+        rect[0] = (float)x + s_legacy_health_bar.x + inset;
+        rect[1] = (float)y + s_legacy_health_bar.y + inset;
+        rect[2] = band;
+        rect[3] = height - inset * 2.0f;
+        s_legacy_hud_ops.rect_draw(rect, high, s_legacy_hud_ops.context);
+        rect[0] = (float)x + s_legacy_health_bar.x + width - inset - band;
+        s_legacy_hud_ops.rect_draw(rect, low, s_legacy_hud_ops.context);
+    }
 }
 
+// FUNCTION: LEGORR 0x0045a240
 void legacy_scroll_panel_controls_initialize(void)
 {
-    int i;
-    ui_panel_name_tables_init();
-    if (s_legacy_hud_ops.scroll_table_initialize != NULL) {
-        s_legacy_hud_ops.scroll_table_initialize(s_legacy_hud_ops.context, 0);
-        s_legacy_hud_ops.scroll_table_initialize(s_legacy_hud_ops.context, 1);
-    }
+    ui_scroll_info_panel_initialize(s_legacy_hud_ops.overlay_init_sink);
+    ui_overlay_create_configured_element(s_legacy_hud_ops.overlay_init_sink);
     if (s_legacy_hud_ops.scroll_control_initialize != NULL) {
         s_legacy_hud_ops.scroll_control_initialize(
             s_legacy_hud_ops.context, 6, 1, 1);
         s_legacy_hud_ops.scroll_control_initialize(
             s_legacy_hud_ops.context, 6, 2, 1);
     }
-    for (i = 0; i < 18; ++i) {
-        float x1, y1, x2, y2;
-        panel_category_bounds_peek(i, &x1, &y1, &x2, &y2);
-        s_legacy_panels[i].initial[0] = x1;
-        s_legacy_panels[i].initial[1] = y1;
-        s_legacy_panels[i].initial[2] = x2;
-        s_legacy_panels[i].initial[3] = y2;
-        s_legacy_panels[i].flags = 4u;
-    }
 }
 
+// FUNCTION: LEGORR 0x0045a270
 void legacy_panel_category_interaction_state_reset(void)
 {
     int i;
@@ -9731,8 +10182,10 @@ void legacy_panel_category_interaction_state_reset(void)
             s_legacy_panels[i].selection_flags[j] &= ~0x48u;
     }
     s_legacy_hud_state_flags = 0;
+    overlay_anim_float_install(0.0f);
 }
 
+// FUNCTION: LEGORR 0x0045a2e0
 void legacy_overlay_image_record_load(BlockFile* cfg, int panel,
                                      const char* path)
 {
@@ -9766,6 +10219,7 @@ void legacy_overlay_image_record_load(BlockFile* cfg, int panel,
     }
 }
 
+// FUNCTION: LEGORR 0x0045a3b0
 int legacy_panel_slot_coordinate_hit_test(int panel, int x, int y)
 {
     LegacyPanelPortRecord* record;
@@ -9780,6 +10234,7 @@ int legacy_panel_slot_coordinate_hit_test(int panel, int x, int y)
     return hit ? panel == 0 : 1;
 }
 
+// FUNCTION: LEGORR 0x0045a500
 void* legacy_panel_image_slot_entry_allocate(int panel, const char* path,
                                              const int rect[4],
                                              uint32_t flags)
@@ -9875,20 +10330,23 @@ void legacy_panel_image_slot_entry_release(void* opaque)
 /* ObjectiveSidecarAppendGate (FUN_0043bc40): the corpus has many engine
  * callbacks in this gate. This stateful port preserves its early gates and
  * action order while exposing those engine transitions as a narrow hook. */
+// FUNCTION: LEGORR 0x0043bc40
 int objective_sidecar_append_gate(ObjectiveSidecarSnapshot* state,
                                   void* context,
                                   ObjectiveSidecarActionHook action)
 {
-    if (state == NULL || action == NULL) return 0;
+    if (state == NULL) return 0;
     if (state->type != 4
         && ((state->status & 0x08000000u) != 0u
             || (state->state & 0x00200000u) != 0u)) return 0;
     if (state->activity_timer > 0.0f) return 0;
     if ((state->status & 0x80000070u) != 0u && state->linked) {
+        if (action == NULL) return 0;
         action(context, 1, state); /* cancel linked special activity */
         state->linked = 0;
     }
     if ((state->mode_flags & 0x00800000u) != 0u) {
+        if (action == NULL) return 0;
         action(context, 2, state); /* release sidecar and stop motion */
         if (state->type == 4 || state->type == 5)
             action(context, state->type == 4 ? 3 : 4, state);
@@ -9898,17 +10356,24 @@ int objective_sidecar_append_gate(ObjectiveSidecarSnapshot* state,
     if (state->type == 3) {
         if ((state->status & 0x8000u) == 0u) {
             if ((state->state & 0x00100000u) == 0u) return 0;
+            if (action == NULL) return 0;
             state->state |= 0x00020000u;
             action(context, 6, state);
             return 1;
         }
         if ((state->state & 0x00100000u) != 0u) return 0;
+        if (action == NULL) return 0;
         action(context, 7, state);
+        return 1;
+    }
+    if (state->type == 6) {
+        state->mode_flags |= 0x00800000u;
         return 1;
     }
     if ((state->type == 4 || state->type == 6)
         && (state->entity_flags & 0x40000u) == 0u) return 0;
     if ((state->state & 0x00400000u) != 0u) return 0;
+    if (action == NULL) return 0;
     action(context, 8, state); /* capture state and detach stale owner */
     if (state->type == 0xb) action(context, 9, state);
     action(context, 10, state); /* append/update objective sidecar */

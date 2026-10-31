@@ -282,16 +282,16 @@ uint32_t bubble_texture_handle_peek(int index)
         ? s_bubble_texture_handles[index] : 0u;
 }
 
-/* FUN_00403f30: if the chain head is not a live idle record (type 0xe),
- * prepend one so the idle poller sees this entity. */
-// FUNCTION: LEGORR 0x00403f30
-static void attach_idle_record(EntitySlot* e)
+/* FUN_00403f30: when the chain head is absent or is not kind 0xe, allocate
+ * an idle record, link the former head through +0x60, and install it. */
+// FUNCTION: LEGORR 0x00403F30
+void ai_idle_chain_record_attach(EntitySlot* entity)
 {
-    if (e->cmd_head == NULL || cmd_rec_type(e->cmd_head) != 0xe) {
+    if (entity->cmd_head == NULL || cmd_rec_type(entity->cmd_head) != 0xe) {
         void* rec = cmd_alloc(0xe);
         if (rec != NULL) {
-            cmd_rec_set_next(rec, e->cmd_head);
-            e->cmd_head = rec;
+            cmd_rec_set_next(rec, entity->cmd_head);
+            entity->cmd_head = rec;
         }
     }
 }
@@ -713,9 +713,9 @@ int ai_path_append(EntitySlot* e, float x, float y)
     if (e->wp_count >= AI_WAYPOINTS_MAX) {
         return -1;
     }
-    e->wp[e->wp_count].x = x;
-    e->wp[e->wp_count].y = y;
-    e->wp[e->wp_count].pending = 1;
+    ENTITY_WAYPOINTS(e)[e->wp_count].x = x;
+    ENTITY_WAYPOINTS(e)[e->wp_count].y = y;
+    ENTITY_WAYPOINTS(e)[e->wp_count].pending = 1;
     return e->wp_count++;
 }
 
@@ -1097,18 +1097,18 @@ static int step_path(GameContext* ctx, EntitySlot* e, float fallback_x,
         float rem = dt;
         for (;;) {
             while (e->wp_index < e->wp_count &&
-                   e->wp[e->wp_index].pending == 0) {
+                   ENTITY_WAYPOINTS(e)[e->wp_index].pending == 0) {
                 ++e->wp_index; /* skip popped entries */
             }
             if (e->wp_index >= e->wp_count) {
                 done = 1; /* path exhausted: arrived */
                 break;
             }
-            float wx = e->wp[e->wp_index].x, wy = e->wp[e->wp_index].y;
+            float wx = ENTITY_WAYPOINTS(e)[e->wp_index].x, wy = ENTITY_WAYPOINTS(e)[e->wp_index].y;
             float dx = wx - e->x, dy = wy - e->y;
             float len = (float)__builtin_sqrtf(dx * dx + dy * dy);
             if (len <= 0.001f) {
-                e->wp[e->wp_index].pending = 0; /* already there: pop */
+                ENTITY_WAYPOINTS(e)[e->wp_index].pending = 0; /* already there: pop */
                 ++e->wp_index;
                 continue;
             }
@@ -1118,7 +1118,7 @@ static int step_path(GameContext* ctx, EntitySlot* e, float fallback_x,
                 e->x = wx;
                 e->y = wy;
                 rem -= len / cps; /* time actually consumed */
-                e->wp[e->wp_index].pending = 0; /* pop = flag clear (0x43cd90) */
+                ENTITY_WAYPOINTS(e)[e->wp_index].pending = 0; /* pop = flag clear (0x43cd90) */
                 ++e->wp_index;
                 if (e->wp_index >= e->wp_count) {
                     done = 1;
@@ -1185,7 +1185,7 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
         if (current != e->activity_last) {
             /* FUN_00403f30: the zeroed name is outside the eight-name
              * exception set, so the idle record attach always runs here. */
-            attach_idle_record(e);
+            ai_idle_chain_record_attach(e);
             /* per-type runner progress: object layer, TODO(corpus) */
             e->activity_last = AI_ACTIVITY_NONE; /* +0xbb = +0x2e8 (0) */
             e->activity_timer = 0.0f;            /* +0xb5 / +0x2d4 */
@@ -1387,7 +1387,7 @@ void entity_dispatch_event5_and_set_flag(EntitySlot* e)
 static void activity_register_bookkeeping(EntitySlot* e)
 {
     if (e == NULL || e->activity == e->activity_last) return;
-    attach_idle_record(e);
+    ai_idle_chain_record_attach(e);
     e->activity_last = e->activity;
     e->activity_timer = 0.0f;
 }
@@ -1478,7 +1478,7 @@ void entity_activity23_state_transition(EntitySlot* e)
     if ((e->flags_3e0 & 0x400u) == 0u) {
         e->flags_3e0 |= 0x40000000u;
         ai_set_activity(e, 0x23, 0); /* FUN_004409e0; 0x447c40 folds here */
-        attach_idle_record(e);       /* FUN_00403f30 */
+        ai_idle_chain_record_attach(e); /* FUN_00403f30 */
     }
 }
 
@@ -1600,7 +1600,7 @@ void linked_entity_flag_and_command_update(EntitySlot* e)
 /* port hook: clear the idle-registration table (unowned). */
 void ai_idle_table_reset(void)
 {
-    for (int i = 0; i < s_idle100_n; ++i) {
+    for (int i = 0; i < AI_IDLE_TABLE_MAX; ++i) {
         s_idle100[i] = NULL;
     }
     s_idle100_n = 0;

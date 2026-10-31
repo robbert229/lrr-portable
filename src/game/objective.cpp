@@ -20,23 +20,28 @@ static ObjectiveDeferredCallback s_objective_deferred_callback;
 static AdvisorTimerActionFn s_advisor_timer_action;
 static AdvisorTimerFinalizeFn s_advisor_timer_finalize;
 static void* s_advisor_timer_user;
-static int s_advisor_sound_alias = -1;
+// GLOBAL: LEGORR 0x004a6768
+static int s_advisor_sound_slot = -1;
 static CoordinateListHeadGetHook s_coordinate_list_head_get;
 static void* s_coordinate_list_head_context;
 static RewardTaskResourceRecord s_reward_task_resources[10];
 
-void advisor_sound_alias_set(int alias)
+void advisor_sound_alias_set(int slot)
 {
-    s_advisor_sound_alias = alias;
+    /* DAT_004a6768 receives the value from the configured advisor sound
+     * table, whose entries are sound-bank slots (the 0x47b8e0 and 0x47ad70
+     * callers consume it as a slot), not SoundAliasPlay IDs. */
+    s_advisor_sound_slot = slot;
 }
 
-/* SoundAliasPlayGlobal (FUN_00456810): the script-owned alias is optional;
- * when configured, play it once on the global channel (sound mode 2). */
+/* SoundAliasPlayGlobal (FUN_00456810) forwards the configured bank slot
+ * directly to SoundBufferPlayWithPosition in global mode 2, with loop 0.
+ * It does not run alias lookup or variant selection. */
+// FUNCTION: LEGORR 0x00456810
 void advisor_sound_alias_play_global(void)
 {
-    if (s_advisor_sound_alias != -1) {
-        sound_alias_play(s_advisor_sound_alias, 0);
-    }
+    if (s_advisor_sound_slot != -1 && sound_bank_sound_on())
+        (void)sound_bank_entry_play_mode(s_advisor_sound_slot, 0, 2);
 }
 
 void coordinate_list_visit_hooks_set(CoordinateListHeadGetHook head_get,

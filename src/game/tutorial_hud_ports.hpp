@@ -76,6 +76,7 @@ typedef void (*LegacyHudPolylineDrawFn)(const float* xy, uint32_t count,
 typedef int (*LegacyHudTextMeasureFn)(const char* text, void* context);
 typedef void (*LegacyHudTextDrawFn)(const char* text, int x, int y,
                                     void* context);
+struct UiOverlayInitSink;
 typedef struct LegacyHudOps {
     void* context;
     int (*entity_renderable)(void* entity, void* context);
@@ -99,6 +100,7 @@ typedef struct LegacyHudOps {
     void (*scroll_table_initialize)(void* context, int table);
     void (*scroll_control_initialize)(void* context, int category,
                                       int slot, int enabled);
+    const struct UiOverlayInitSink* overlay_init_sink;
 } LegacyHudOps;
 
 typedef struct LegacyHealthBarState {

@@ -124,6 +124,20 @@ int  platform_audio_queued(PlatformAudio* a);
 /* Stop / clear pending output + the loop track. */
 void platform_audio_stop(PlatformAudio* a);
 
+/* CD-DA is a separate Windows media device in the reference build. The
+ * native backend reports it unavailable; it does not pretend an audio
+ * stream or an uninstalled callback is a CD device. */
+int  platform_cd_audio_open(int* error_code);
+int  platform_cd_audio_set_tmsf(int* error_code);
+int  platform_cd_audio_play(int one_based_track, int* error_code);
+int  platform_cd_audio_stop(int* error_code);
+int  platform_cd_audio_close(int* error_code);
+int  platform_cd_audio_status(char* mode, int mode_capacity,
+                              int* current_track, int* error_code);
+int  platform_cd_audio_error_text(int error_code, char* output,
+                                  int output_capacity);
+uint32_t platform_time_milliseconds(void);
+
 /* Commit a framebuffer (RGBA32 byte order R,G,B,A on little-endian) to the
  * window. `pixels`/`pitch` are what the DDraw surface Lock handed back. */
 void platform_present_pixels(PlatformWindow* win,

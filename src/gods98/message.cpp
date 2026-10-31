@@ -4,7 +4,9 @@
 #include <stdio.h>
 
 #include "game/savegame.hpp"
+#include "engine.hpp"
 #include "heap.hpp"
+#include "input.hpp"
 #include "message.hpp"
 #include "sound.hpp"
 #include "string.hpp"
@@ -177,13 +179,11 @@ static void* s_idx_aux[IDX_LIST_SLOTS];
 static MessagePanelRefreshHook s_panel_refresh_hook;
 static void* s_panel_refresh_context;
 #define CATALOG_SLOT_CAPACITY 256
-static uint32_t s_catalog_slot_flags[2][CATALOG_SLOT_CAPACITY];
 static CatalogSlotPredicateHook s_catalog_slot_eligible;
 static CatalogSlotPredicateHook s_catalog_slot_available;
 static CatalogSlotRankHook s_catalog_slot_rank;
 static CatalogSlotLimitHook s_catalog_slot_limit;
 static void* s_catalog_slot_context;
-static uint32_t s_catalog_slot_global_flags;
 
 void catalog_slot_flag_hooks_set(CatalogSlotPredicateHook eligible,
                                  CatalogSlotPredicateHook available,
@@ -206,32 +206,33 @@ static int catalog_slot_table_index(int category)
 
 void catalog_slot_flag_word_set(int category, int slot, uint32_t flags)
 {
-    int table = catalog_slot_table_index(category);
-    if (table < 0 || slot < 0 || slot >= CATALOG_SLOT_CAPACITY) return;
-    s_catalog_slot_flags[table][slot] = flags;
+    if (catalog_slot_table_index(category) < 0 || slot < 0 ||
+        slot >= CATALOG_SLOT_CAPACITY) return;
+    input_binding_state_word_set(category, slot, flags);
 }
 
 uint32_t catalog_slot_flag_word_get(int category, int slot)
 {
-    int table = catalog_slot_table_index(category);
-    if (table < 0 || slot < 0 || slot >= CATALOG_SLOT_CAPACITY) return 0;
-    return s_catalog_slot_flags[table][slot];
+    if (catalog_slot_table_index(category) < 0 || slot < 0 ||
+        slot >= CATALOG_SLOT_CAPACITY) return 0;
+    return input_binding_state_word_get(category, slot);
 }
 
 void catalog_slot_flag_global_state_set(uint32_t flags)
 {
-    s_catalog_slot_global_flags = flags;
+    global_state_low_word_set(flags);
 }
 
-/* FUNCTION: LEGORR 0x0041c800 */
+// FUNCTION: LEGORR 0x0041c800
 void catalog_slot_flag_update(int category, int slot)
 {
-    int table = catalog_slot_table_index(category);
     uint32_t flags;
     int should_clear = 0;
-    if (table < 0 || slot < 0 || slot >= CATALOG_SLOT_CAPACITY) return;
-    flags = s_catalog_slot_flags[table][slot];
-    if ((flags & 2u) == 0 && (s_catalog_slot_global_flags & 0x80u) != 0) {
+    if (catalog_slot_table_index(category) < 0 || slot < 0 ||
+        slot >= CATALOG_SLOT_CAPACITY) return;
+    flags = input_binding_state_word_get(category, slot);
+    if ((flags & 2u) == 0 &&
+        (global_state_low_word_get() & 0x80u) != 0u) {
         if (s_catalog_slot_eligible != NULL
             && s_catalog_slot_available != NULL
             && s_catalog_slot_eligible(category, slot,
@@ -241,13 +242,18 @@ void catalog_slot_flag_update(int category, int slot)
             if (category == 4) {
                 should_clear = 1;
             }
-            else if (s_catalog_slot_rank != NULL
-                     && s_catalog_slot_limit != NULL
-                     && s_catalog_slot_rank(category, slot,
-                                            s_catalog_slot_context)
-                        <= s_catalog_slot_limit(category,
-                                                s_catalog_slot_context)) {
-                should_clear = 1;
+            else {
+                /* FUN_0041f8e0 is an empty callback. In the original call
+                 * sequence EAX therefore retains the preceding rank result,
+                 * making the observed rank <= limit comparison rank <= rank. */
+                if (s_catalog_slot_rank == NULL ||
+                    s_catalog_slot_limit == NULL ||
+                    s_catalog_slot_rank(category, slot,
+                                        s_catalog_slot_context)
+                      <= s_catalog_slot_limit(category,
+                                              s_catalog_slot_context)) {
+                    should_clear = 1;
+                }
             }
         }
         if (should_clear) flags &= ~1u;
@@ -256,7 +262,7 @@ void catalog_slot_flag_update(int category, int slot)
     else {
         flags |= 1u;
     }
-    s_catalog_slot_flags[table][slot] = flags;
+    input_binding_state_word_set(category, slot, flags);
 }
 
 /* The InfoMessages catalog — finding 22's 40 names, in table order. The

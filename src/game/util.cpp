@@ -215,6 +215,7 @@ void motion_drift_state_install(MotionDriftState* state,
 /* DriftOffsetStepApply (FUN_0044d0d0): periodically choose a three-axis
  * offset, reflect it at the horizontal bound, and accumulate it into the
  * module-owned drift position. */
+// FUNCTION: LEGORR 0x0044D0D0
 void motion_drift_offset_step(float delta)
 {
     MotionDriftState* state = s_motion_drift_state;
@@ -237,7 +238,8 @@ void motion_drift_offset_step(float delta)
         step[i] = ((random_value * 2.0f) - 1.0f) * state->amplitude[i];
     shifted_x = step[0] + state->center_x;
     if (state->max_abs_x <= (shifted_x < 0.0f ? -shifted_x : shifted_x)) {
-        for (i = 0; i != 3; ++i) step[i] = -step[i];
+        for (i = 0; i != 3; ++i)
+            step[i] = step[i] < 0.0f ? step[i] : -step[i];
         shifted_x = step[0] + state->center_x;
         if (state->max_abs_x <=
             (shifted_x < 0.0f ? -shifted_x : shifted_x)) return;

@@ -11,6 +11,24 @@ extern "C" {
 struct EntitySlot;
 struct EngineContext;
 struct LevelState;
+struct TerrainSurfaceGrid;
+
+typedef struct BuildingPlacementPreviewHooks {
+    void* context;
+    int (*position_get)(void* context, float position[3]);
+    int (*placement_check)(void* context, const float position[3]);
+    void (*preview_set)(void* context, const float position[3], int valid);
+    int (*path_selection_get)(void* context, const float position[3],
+                              uint32_t* record_key, int cell_xy[2],
+                              uint32_t* direction,
+                              const int** footprint_xy,
+                              uint32_t* footprint_count,
+                              struct TerrainSurfaceGrid** surface_grid,
+                              int* emit_boundary_commands);
+} BuildingPlacementPreviewHooks;
+void building_placement_preview_owner_bind(
+    const BuildingPlacementPreviewHooks* hooks);
+int building_placement_preview_owner_update(void);
 
 typedef struct ObjectiveSidecarSnapshot {
     int type;
@@ -254,17 +272,18 @@ typedef struct SceneQuadGridRecord {
 typedef struct SceneQuadGridEmitHooks {
     void* context;
     void* (*mesh_create)(void* context, void* scene, int kind);
-    int (*face_index_buffer_create)(void* context, void* mesh,
-                                    uint32_t face, uint32_t vertex_count,
-                                    uint32_t primitive_count,
-                                    const uint32_t* indices);
+    int (*mesh_record_allocate_or_append)(void* context, void* mesh,
+                                          uint32_t vertex_count,
+                                          uint32_t index_rows,
+                                          uint32_t index_columns,
+                                          const uint32_t* indices);
     int (*face_vertices_get)(void* context, uint32_t face, uint32_t quad,
                              float vertices[4][9]);
     int (*face_vertices_emit)(void* context, void* mesh, uint32_t face,
                               uint32_t quad, const float vertices[4][9]);
-    void (*face_finalize)(void* context, void* mesh, uint32_t face,
-                          uint32_t mode);
-    void (*visibility_set)(void* context, void* mesh, int visible);
+    void (*face_texture_bind_by_mode)(void* context, void* mesh,
+                                      uint32_t face, uint32_t mode);
+    void (*scene_render_lock_toggle)(void* context, void* mesh, int enabled);
     void (*mesh_release)(void* context, void* mesh);
 } SceneQuadGridEmitHooks;
 SceneQuadGridRecord* scene_quad_grid_emit(

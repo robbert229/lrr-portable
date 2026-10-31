@@ -3,7 +3,9 @@
 
 #include "engine.hpp"
 #include "message.hpp"
+#include "record.hpp"
 #include "simtick.hpp"
+#include "surface.hpp"
 #include "tickers.hpp"
 
 /* ------------------------------------------------------------------ *
@@ -218,15 +220,51 @@ void EngineManagerDispatch(EngineContext* ctx, float dt)
     }
 }
 
-/* Render begin/end pairs + world draw vs editor pass — corpus lines 130-215:
- * surface lock/unlock (FUN_00473b40), sprite/animation draw, FUN_00477150
- * (render target, dt), the in-game world drawers FUN_00435300 / FUN_00454600,
- * and the &2/&0x2000-gated second render pass (FUN_004291a0(scale,1) etc.).
- */
+/* Render orchestration — corpus EngineTick lines 130-215. The port has the
+ * second render-pass and render-step operations, indexed-surface restore,
+ * and renderer begin-frame operation. The reference surface handles
+ * (DAT_00556100/04, DAT_005560f0/f4/f8/fc and DAT_0055610c) and scene/render
+ * objects (DAT_005560d8/dc/e0) are not present in EngineContext; do not cast
+ * view/camera records or invent a renderer ABI to stand in for them. Thus the
+ * corresponding lock/unlock, sprite, scene draw, world draw, and editor
+ * camera/graph operations remain unavailable at these call sites. */
 void EngineRenderFrame(EngineContext* ctx, float dt, float scale, uint32_t* sim_out1)
 {
-    (void)ctx; (void)dt; (void)scale; (void)sim_out1;
-    /* TODO(engine): begin/end pairs once surfaces exist (miniwin DDraw). */
+    (void)dt;
+    (void)sim_out1;
+    if (ctx == NULL) {
+        return;
+    }
+
+    if (ctx->context_mode == 0) {
+        /* The original editor path restores indexed surface visibility after
+         * its camera/scene pass. Those preceding operations require the
+         * absent editor scene and render-surface handles. */
+        indexed_surface_entries_restore();
+    }
+
+    /* The corpus draws the extra camera pass only when both bits are set and
+     * the 0x20000 suppression bit is clear. FUN_004291a0 takes scaled time
+     * and pass selector 1 here; its existing port seam models that selector
+     * as the nonzero scale argument. */
+    if ((ctx->state & 0x0002u) != 0 &&
+        (ctx->state & 0x2000u) != 0 &&
+        (ctx->state & 0x20000u) == 0) {
+        simtick_render_pass(ctx, scale, 1.0f, 0);
+        simtick_render_step(ctx);
+
+        /* The intervening target lock, scene begin/draw/end, and target
+         * unlock need DAT_005560e0, DAT_005560d8 and DAT_005560f4, none of
+         * which has a corresponding EngineContext/API handle. */
+    }
+
+    /* FUN_00477fa0 is available as a renderer-owned once-per-frame hook and
+     * is unconditional at this point in the reference sequence. */
+    (void)renderer_begin_frame_once();
+
+    /* World renderers (FUN_00435300/FUN_00454600), viewport update, primary
+     * surface change-queue flush, and the preceding regular/editor surface
+     * passes need renderer-owned roots/targets absent from the engine API. */
 }
 
 /* Air-supply beat mechanic — corpus EngineTick tail. When the air supply

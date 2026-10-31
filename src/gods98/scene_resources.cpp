@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "record.hpp"
+#include "heap.hpp"
+#include "view.hpp"
 namespace lego {
 namespace {
 void* s_resource_slots[SCENE_RESOURCE_SLOT_COUNT];
@@ -15,9 +17,6 @@ void** s_string_table_a = 0;
 void** s_string_table_b = 0;
 unsigned int s_string_count_a = 0;
 unsigned int s_string_count_b = 0;
-void* s_reference_pool_records[32];
-unsigned int s_reference_pool_counts[32];
-unsigned int s_reference_pool_count = 0;
 SceneFloatTrackApplyHook s_float_track_apply_hook = 0;
 void* s_float_track_apply_context = 0;
 SceneAnimationTrackApplyHook s_animation_track_apply_hook = 0;
@@ -37,13 +36,20 @@ void scene_resource_release_hook_set(SceneResourceReleaseHook hook, void* contex
 { s_release_hook = hook; s_release_context = context; }
 // FUNCTION: LEGORR 0x00476d50
 void scene_resource_slots_initialize()
-{ memset(s_resource_slots, 0, sizeof(s_resource_slots)); s_slot_count = 0; s_slots_live = 1; }
+{
+    memset(s_resource_slots, 0, sizeof(s_resource_slots));
+    s_slot_count = 0;
+    s_slots_live = 1;
+    ddiscene_render_surface_pool_initialize();
+}
 // FUNCTION: LEGORR 0x00476d80
 void scene_resource_slots_release_all()
 {
     int i;
+    scene_resource_tracked_references_release_all();
     if (s_release_hook != 0) for (i = 0; i < s_slot_count; ++i)
         if (s_resource_slots[i] != 0) s_release_hook(s_resource_slots[i], s_release_context);
+    ddiscene_render_surface_pool_release_all();
     memset(s_resource_slots, 0, sizeof(s_resource_slots)); s_slot_count = 0; s_slots_live = 0;
 }
 void* scene_resource_slot_get(unsigned int index)
@@ -188,22 +194,29 @@ void shared_texture_root_load_hook_set(SharedTextureRootLoadHook hook,
     s_shared_texture_load_hook = hook;
     s_shared_texture_load_context = context;
 }
+// FUNCTION: LEGORR 0x004805b0
 int shared_texture_root_register(const char* root)
 {
-    size_t length = root != 0 ? strlen(root) : 0u;
-    if (length >= sizeof(s_shared_texture_root))
-        length = sizeof(s_shared_texture_root) - 2u;
-    if (length != 0u) memcpy(s_shared_texture_root, root, length);
-    if (length != 0u && s_shared_texture_root[length - 1u] != '/' &&
-        s_shared_texture_root[length - 1u] != '\\') {
-        s_shared_texture_root[length++] = '\\';
+    if (root != 0) {
+        size_t length = strlen(root);
+        if (length >= sizeof(s_shared_texture_root))
+            length = sizeof(s_shared_texture_root) - 2u;
+        if (length != 0u) memcpy(s_shared_texture_root, root, length);
+        /* SharedTextureRootRegister checks for the reference's backslash
+         * separator specifically; a forward slash is retained and followed
+         * by the backslash it appends. */
+        if (length != 0u && s_shared_texture_root[length - 1u] != '\\') {
+            s_shared_texture_root[length++] = '\\';
+        }
+        s_shared_texture_root[length] = '\0';
     }
-    s_shared_texture_root[length] = '\0';
     memset(s_shared_texture_resources, 0, sizeof(s_shared_texture_resources));
     s_shared_texture_resource_count = 20u;
     s_shared_texture_initialized = 0;
-    return shared_texture_root_initialize();
+    (void)shared_texture_root_initialize();
+    return 1;
 }
+// FUNCTION: LEGORR 0x00480650
 int shared_texture_root_initialize()
 {
     unsigned int i;
@@ -229,26 +242,19 @@ void* shared_texture_root_resource_get(unsigned int index)
         return 0;
     return s_shared_texture_resources[index];
 }
-int scene_resource_reference_pool_install(unsigned int pool, void* records,
-                                          unsigned int record_count)
-{
-    if (pool >= 32u) return 0;
-    s_reference_pool_records[pool] = records;
-    s_reference_pool_counts[pool] = record_count;
-    if (pool >= s_reference_pool_count) s_reference_pool_count = pool + 1u;
-    return 1;
-}
 void scene_resource_tracked_references_release_all()
 {
     unsigned int pool;
     typedef uint32_t (*ReleaseMethod)(void*);
-    for (pool = 0; pool < s_reference_pool_count; ++pool) {
-        unsigned char* records =
-            static_cast<unsigned char*>(s_reference_pool_records[pool]);
+    for (pool = 0; pool < ddiscene_render_surface_pool_block_count(); ++pool) {
+        unsigned char* records = static_cast<unsigned char*>(
+            ddiscene_render_surface_pool_block_get(pool));
         unsigned int index;
+        unsigned int record_count = 1u << pool;
         if (records == 0) continue;
-        for (index = 0; index < s_reference_pool_counts[pool]; ++index) {
-            unsigned char* record = records + (size_t)index * 0x20u;
+        for (index = 0; index < record_count; ++index) {
+            size_t stride = (size_t)0x20u + sizeof(void*) - sizeof(uint32_t);
+            unsigned char* record = records + (size_t)index * stride;
             void* self_link;
             void* interface_object;
             void** vtable;

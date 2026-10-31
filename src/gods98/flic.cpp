@@ -33,6 +33,7 @@ struct FlicChunk {
     const uint8_t* data; /* chunk start (16-byte header included) */
     uint32_t       size; /* chunk size, incl. header */
     uint16_t       count; /* subrecord count; 0 = hold chunk */
+    uint16_t       type;
 };
 
 struct Flic {
@@ -42,10 +43,17 @@ struct Flic {
     int eof;
     FlicChunk* chunks; /* chunks[0] = keyframe, [1..] = deltas/holds */
     int chunk_n;
+    int chunk_cap;
+    int frame_n;
+    int last_walk_frame_valid;
+    int first_frame_chunk;
+    int next_chunk;
+    size_t cursor;   /* byte offset of the next chunk in the RAM image */
     uint8_t* raw;     /* owned copy of the whole file */
     size_t   raw_len;
     uint16_t* pix;    /* RGB555 frame buffer */
     uint8_t* rgba;    /* lazy RGBA32 conversion */
+    int current_chunk;
 };
 
 static uint16_t le16(const uint8_t* p)
@@ -57,6 +65,32 @@ static uint32_t le32(const uint8_t* p)
 {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16)
            | ((uint32_t)p[3] << 24);
+}
+
+/* FlicFileHeaderValidate (FUN_00483f60): the original reads 0x88 bytes,
+ * compares the declared file length with the stream length, and accepts the
+ * five FLIC-family markers. Format-specific surface constraints are checked
+ * by flic_open after this shared container validation. */
+int flic_file_header_validate(const void* bytes, size_t length,
+                              FlicHeaderInfo* header)
+{
+    const uint8_t* data = (const uint8_t*)bytes;
+    uint16_t magic;
+    if (data == NULL || header == NULL || length < FLIC_HEADER
+        || length > 0xffffffffu || le32(data) != (uint32_t)length) {
+        return 0;
+    }
+    magic = le16(data + 4);
+    if (magic != 0x1234u && magic != 0x9119u
+        && magic != 0xaf11u && magic != 0xaf12u && magic != 0xaf43u) {
+        return 0;
+    }
+    header->magic = magic;
+    header->frames = le16(data + 6);
+    header->width = le16(data + 8);
+    header->height = le16(data + 10);
+    header->depth = le16(data + 12);
+    return 1;
 }
 
 int flic_width(const Flic* f)  { return f != NULL ? f->width : 0; }
@@ -189,24 +223,25 @@ static void fli_delta(uint16_t* pix, int w, int h, const uint8_t* body,
 
 /* Decode every subrecord of one chunk into the frame buffer (a keyframe in
  * chunk 0, deltas otherwise; holds have none). */
-static void fli_decode_chunk(Flic* f, const FlicChunk* ch)
+static int fli_decode_chunk(Flic* f, const FlicChunk* ch)
 {
     if (ch->count == 0) {
-        return; /* hold: pixels unchanged */
+        return 1; /* hold: pixels unchanged */
     }
     size_t pos = FLIC_CHUNK_HDR; /* subrecords start at chunk + 0x10 */
     for (uint16_t r = 0; r < ch->count; ++r) {
-        if (pos + 10 > ch->size) {
-            break; /* truncated record header */
+        if (pos + 6 > ch->size) {
+            return 0; /* truncated size/opcode header */
         }
         const uint8_t* rec = ch->data + pos;
         uint32_t rec_size = le32(rec);
         uint16_t opcode = le16(rec + 4);
-        if (rec_size < 8 || pos + rec_size > ch->size) {
-            break; /* record overruns its chunk — bounded */
+        uint32_t header_size = opcode == 25 ? 7u : 8u;
+        if (rec_size < header_size || rec_size > ch->size - pos) {
+            return 0; /* record overruns its chunk — bounded */
         }
-        const uint8_t* body = rec + ((opcode == 25) ? 7 : 8);
-        size_t blen = rec_size - ((opcode == 25) ? 7u : 8u);
+        const uint8_t* body = rec + header_size;
+        size_t blen = rec_size - header_size;
         if (opcode == 25) {
             fli_keyframe(f->pix, f->width, f->height, body, blen);
         } else if (opcode == 27) {
@@ -217,6 +252,90 @@ static void fli_decode_chunk(Flic* f, const FlicChunk* ch)
     if (f->rgba != NULL) {
         f->rgba = NULL; /* invalidate the conversion */
     }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x004844b0
+/* FlicFrameRecordWalk: walk the declared subrecords from the
+ * 16-byte chunk header, advancing the byte cursor by each record's size. RAM
+ * mode has already buffered the chunk; stream-mode refill/capacity work is
+ * not representable by this resource-independent in-memory player. */
+int flic_frame_record_walk(Flic* f)
+{
+    const FlicChunk* ch;
+    if (f == NULL || f->chunks == NULL || f->current_chunk < 0
+        || f->current_chunk >= f->chunk_n) {
+        return 0;
+    }
+    ch = &f->chunks[f->current_chunk];
+    if (ch->type != 0xf1fau) {
+        return 0;
+    }
+    f->cursor = (size_t)(ch->data - f->raw) + FLIC_CHUNK_HDR;
+    if (!fli_decode_chunk(f, ch)) {
+        return 0;
+    }
+    {
+        size_t pos = FLIC_CHUNK_HDR;
+        uint16_t r;
+        for (r = 0; r < ch->count; ++r) {
+            uint32_t rec_size = le32(ch->data + pos);
+            pos += rec_size;
+        }
+        f->cursor = (size_t)(ch->data - f->raw) + pos;
+    }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00484720
+/* Both target handlers are no-ops in RAM mode. Their stream-mode paths need
+ * the original file handle, seek position, and reallocatable scratch buffer;
+ * those resources are not part of the in-memory Flic interface. */
+int flic_chunk_buffer_and_continue_lk(Flic* f)
+{
+    (void)f;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004847d0
+int flic_chunk_buffer_and_continue_type0b(Flic* f)
+{
+    (void)f;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00484320
+/* FlicChunkWalk: advance through non-frame chunks until the next F1FA frame
+ * is found. RAM mode has the complete chunk image already buffered, so LK
+ * and type-0B use their observed no-op branches. */
+int flic_chunk_walk(Flic* f)
+{
+    if (f == NULL) {
+        return 0;
+    }
+    f->last_walk_frame_valid = 0;
+    if (f->chunks == NULL || f->chunk_n == 0) {
+        return 0;
+    }
+    while (f->next_chunk < f->chunk_n) {
+        int chunk_index = f->next_chunk++;
+        const FlicChunk* ch = &f->chunks[chunk_index];
+        f->current_chunk = chunk_index;
+        f->cursor = (size_t)(ch->data - f->raw);
+        if (ch->type == 0x000bu) {
+            flic_chunk_buffer_and_continue_type0b(f);
+        } else if (ch->type == 0x4b4cu) {
+            flic_chunk_buffer_and_continue_lk(f);
+        } else if (ch->type == 0xf1fau) {
+            f->last_walk_frame_valid = flic_frame_record_walk(f);
+            f->cursor = (size_t)(ch->data - f->raw) + ch->size;
+            return 0;
+        }
+        f->cursor = (size_t)(ch->data - f->raw) + ch->size;
+        /* All other chunks are skipped using the checked size recorded by
+         * the open-time chunk scan. */
+    }
+    return 0;
 }
 
 /* --- open / close --------------------------------------------------------- */
@@ -255,23 +374,15 @@ Flic* flic_open(const char* name)
     const uint8_t* d = r->data;
     int n = r->size;
 
-    /* Header (finding 21 §2). */
-    uint32_t filesize = le32(d + 0x00);
-    uint16_t magic = le16(d + 0x04);
-    uint16_t nframes = le16(d + 0x06);
-    uint16_t width = le16(d + 0x08);
-    uint16_t height = le16(d + 0x0a);
-    uint16_t depth = le16(d + 0x0c);
-    if ((uint32_t)n != filesize || depth != 16 || width == 0 || height == 0
-        || width > 4096 || height > 4096) {
+    /* Header validator mirrors FUN_00483f60; retain the port's explicit
+     * 16-bit surface and allocation bounds after container validation. */
+    FlicHeaderInfo header;
+    header.depth = 0;
+    if (!flic_file_header_validate(d, (size_t)n, &header)
+        || header.depth != 16 || header.width == 0 || header.height == 0
+        || header.width > 4096 || header.height > 4096) {
         fprintf(stderr, "flic: %s: bad header (size %d vs %d, depth %d)\n",
-                name, (int)filesize, n, depth);
-        resource_free(r);
-        return NULL;
-    }
-    if (magic != FLIC_MAGIC_AF43 && magic != 0x1234 && magic != 0x9119
-        && magic != 0x911a && magic != 0xaf11 && magic != 0xaf12) {
-        fprintf(stderr, "flic: %s: unrecognized magic 0x%04x\n", name, magic);
+                name, (int)le32(d), n, header.depth);
         resource_free(r);
         return NULL;
     }
@@ -281,12 +392,15 @@ Flic* flic_open(const char* name)
         resource_free(r);
         return NULL;
     }
-    f->width = width;
-    f->height = height;
-    f->frames = nframes + 1; /* chunk count = nFrames + 1, finding 21 §2 */
+    f->width = header.width;
+    f->height = header.height;
+    f->frames = (int)header.frames + 1;
+    f->first_frame_chunk = -1;
+    f->current_chunk = -1;
     f->raw = (uint8_t*)malloc((size_t)n);
-    f->pix = (uint16_t*)malloc((size_t)width * height * 2);
-    f->chunks = (FlicChunk*)calloc((size_t)f->frames, sizeof(FlicChunk));
+    f->pix = (uint16_t*)malloc((size_t)header.width * header.height * 2);
+    f->chunk_cap = (int)(((size_t)n - FLIC_CHUNK_START) / FLIC_CHUNK_HDR) + 1;
+    f->chunks = (FlicChunk*)calloc((size_t)f->chunk_cap, sizeof(FlicChunk));
     if (f->raw == NULL || f->pix == NULL || f->chunks == NULL) {
         flic_close(f);
         resource_free(r);
@@ -296,10 +410,11 @@ Flic* flic_open(const char* name)
     f->raw_len = (size_t)n;
     resource_free(r);
 
-    /* Chunk walk from 0x80 (finding 21 §3). */
+    /* Bounded chunk inventory from 0x80. Keep all chunks because the
+     * original walker skips ancillary and unknown types between frames. */
     size_t pos = FLIC_CHUNK_START;
     int cn = 0;
-    while (pos + FLIC_CHUNK_HDR <= f->raw_len && cn < f->frames) {
+    while (pos + FLIC_CHUNK_HDR <= f->raw_len && cn < f->chunk_cap) {
         const uint8_t* ch = f->raw + pos;
         uint32_t csize = le32(ch);
         if (csize < FLIC_CHUNK_HDR || pos + csize > f->raw_len) {
@@ -308,13 +423,32 @@ Flic* flic_open(const char* name)
         f->chunks[cn].data = ch;
         f->chunks[cn].size = csize;
         f->chunks[cn].count = le16(ch + 6);
+        f->chunks[cn].type = le16(ch + 4);
+        if (f->chunks[cn].type == 0xf1fau) {
+            if (f->first_frame_chunk < 0) {
+                f->first_frame_chunk = cn;
+            }
+            ++f->frame_n;
+        }
         ++cn;
         pos += csize;
     }
     f->chunk_n = cn;
 
-    /* Frame 0 = keyframe, decoded at open. */
-    fli_decode_chunk(f, &f->chunks[0]);
+    /* Frame 0 is the first F1FA chunk; prefix metadata chunks are skipped. */
+    if (f->first_frame_chunk < 0) {
+        flic_close(f);
+        return NULL;
+    }
+    f->current_chunk = f->first_frame_chunk;
+    f->cursor = (size_t)(f->chunks[f->first_frame_chunk].data - f->raw);
+    if (!flic_frame_record_walk(f)) {
+        flic_close(f);
+        return NULL;
+    }
+    f->cursor = (size_t)(f->chunks[f->first_frame_chunk].data - f->raw)
+                + f->chunks[f->first_frame_chunk].size;
+    f->next_chunk = f->first_frame_chunk + 1;
     f->idx = 0;
     return f;
 }
@@ -337,17 +471,22 @@ int flic_tick_loop(Flic* f, int loop)
     if (f == NULL) {
         return 0;
     }
-    int next = f->idx + 1;
-    if (next >= f->chunk_n) {
+    if (f->idx + 1 >= f->frames) {
         if (!loop) {
             f->eof = 1;
             return f->idx; /* stay on the last frame */
         }
-        next = 1; /* corpus RAM loop: keyframe already decoded */
+        /* RAM mode keeps the decoded keyframe and restarts at frame 1. */
+        f->idx = 0;
+        f->next_chunk = f->first_frame_chunk + 1;
     }
-    f->idx = next;
+    flic_chunk_walk(f);
+    if (!f->last_walk_frame_valid) {
+        f->eof = 1;
+        return f->idx;
+    }
+    ++f->idx;
     f->eof = 0;
-    fli_decode_chunk(f, &f->chunks[next]);
     return f->idx;
 }
 

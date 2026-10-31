@@ -33,6 +33,8 @@
 
 #include <cstdint>
 #include <cstddef>
+
+struct EventTimerState;
 #include <stdarg.h>
 
 #include "gods98/block.hpp"
@@ -389,6 +391,9 @@ void tooltip_icon_config_hooks_set(const ToolTipIconConfigHooks* hooks,
                                    const char* const secondary_names[6]);
 void tooltip_icons_config_load(void* config); /* 0x437150 */
 void* tooltip_icon_handle_get(unsigned int bank, unsigned int index);
+void advisor_tooltip_and_sound_config_load(BlockFile* config); /* 0x434da0 */
+const char* advisor_tooltip_text_get(int index);
+int advisor_tooltip_sound_get(int index);
 void* menu_button_record_make(const char* text,
                               const TextureSurface* normal_font,
                               const TextureSurface* selected_font,
@@ -569,11 +574,25 @@ void interface_message_tab_info_text_load(const char* path); /* FUN_00419430 */
 TextureSurface* interface_message_tab_info_text(void); /* port accessor */
 
 /* Draw one frame of the scrolling credits lane over the caller's backdrop.
- * scroll_px advances one pixel per frame; the text cycles from below the
- * screen back to the bottom after the final line leaves the top. */
+ * scroll_px is the accumulated one-pixel offset from the 33 ms clock step;
+ * the text cycles from below the screen after the final line leaves the top. */
 void frontend_render_credits(const TextureSurface* font,
                              const char* const* lines, int line_count,
                              int scroll_px, int w, int h, void* px, int pitch);
+
+/* ScrollingTextDisplay's CreditsTextFile loader: try `<path>.cconv` first,
+ * then the configured path, and split on CRLF while retaining the terminal
+ * empty row. The returned rows are released with
+ * frontend_credits_lines_free(). */
+int frontend_credits_lines_load(const char* path, char*** lines_out,
+                                int* count_out);
+void frontend_credits_lines_free(char** lines, int count);
+
+/* Advance the credits lane by at most one pixel for a >33 ms elapsed step.
+ * `clock_ms` is the prior timeGetTime-style stamp and `scroll_px` is the
+ * accumulated lane offset. */
+void frontend_credits_scroll_step(uint32_t now_ms, uint32_t* clock_ms,
+                                  int* scroll_px);
 
 /* The in-game Help Window (issue #85): the panel the Help_Window option
  * toggles. The option is checked here — the display gate — so every caller
@@ -632,10 +651,11 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value);
 
 /* --- band-mode / timed-effect / positions (2026-10-24) ----------------------
  * TimedEffectUpdateRequestSet (FUN_0046b770, findings 228/05): raises the
- * update flag (bit 2) of a timed-effect entry. The band storage lives
- * with the unported timed-effect update family — the port models each
- * entry's flag word inside a guarded 16-entry window (documented bounds
- * deviation), with a peek view for tests.
+ * update flag (bit 2) of one of the shared 40-entry timed-effect records at
+ * DAT_0054c000. Each entry's cue, flags, timestamp, and payload now use the
+ * decompiled 0x27c-byte record stride. Setters retain a bounds guard for the
+ * portable API, while the target-address leaves are annotated on the direct
+ * implementations.
  * UiModeTransitionRequest (FUN_00418fc0, finding 250): the band mode word
  * (DAT_004dc64c, modeled with the selection-state band) transition —
  * the zero-second argument arms mode 4, mode 4 hands over to the requested
@@ -654,8 +674,7 @@ void timed_effect_update_request_set(int index);
 uint32_t timed_effect_flags_peek(int index);           /* diagnostics */
 
 /* TimedEffectCueRequestSet (FUN_0046b700): stores the cue request word in
- * the entry's band slot (+0 in the corpus's 0x27c stride, modeled as the
- * port's guarded cue window) and raises the entry's flag bits 0 and 1.
+ * the entry's +0x274 word and raises flag bits 0 and 1 at +0x278.
  * Deviation: the corpus strides any index and the stride band blindly. */
 void timed_effect_cue_request_set(int index, uint32_t value);
 uint32_t timed_effect_cue_peek(int index);             /* port hook */
@@ -741,6 +760,10 @@ typedef struct AdvisorTextDisplayState {
     float message_timer;
     float x;
     float y;
+    /* Optional engine text-output records. The slot path uses the primary or
+     * alternate record when slot_text_draw is not supplied. */
+    void* primary_text_output;
+    void* alternate_text_output;
 } AdvisorTextDisplayState;
 typedef struct AdvisorTextDisplayOps {
     void* context;
@@ -759,7 +782,7 @@ typedef struct AdvisorTextDisplayOps {
                              float delta);
 } AdvisorTextDisplayOps;
 void advisor_text_display_ops_set(const AdvisorTextDisplayOps* ops);
-int advisor_text_display_worker(float delta); /* FUN_0046ad00 */
+void advisor_text_display_worker(float delta); /* FUN_0046ad00 */
 typedef struct SelectedGroundMarkerOps {
     void* context;
     int (*entity_renderable)(void* context, void* entity);
@@ -1005,6 +1028,9 @@ float    selection_coordinates_peek(int which); /* 0..3 */
 void     selection_region_parameters_peek(float out[5]);
 extern uint32_t s_obj_sel_word; /* DAT_004ddccc: objective selection mode */
 uint32_t objective_selection_word_peek(void);   /* port hook */
+void frontend_event_timer_state_get(EventTimerState* state);
+void frontend_event_timer_state_set(const EventTimerState* state);
+void timed_status_and_event_tick(float delta); /* FUN_0041b930 */
 float    interaction_timer_peek(void);          /* port hook */
 uint32_t interaction_flags_peek(void);          /* port hook */
 /* PointerActionStateDispatch (FUN_0041c6e0): drive the pointer action
@@ -1145,15 +1171,15 @@ void menu_clock_millis_set(uint32_t millis); /* port tick hook */
 void panel_texture_slots_blit(int panel); /* FUN_0045a9c0 */
 
 /* TimedEffectTimestampReset (FUN_0046b7a0): stamps the corpus's global tick
- * word into the band entry's time field (stride-0x27c table — the port keeps
- * the fields the setters touch side by side). The corpus tick word
- * (DAT_0054bf3c) belongs to the unported update family, so it lands as a
- * zero-init module static with a set hook. Out-of-range indices are guarded
- * (documented deviation: the corpus strides blindly). */
+ * word into the shared record timestamp. The corpus tick word
+ * (DAT_0054bf3c) is mapped as a zero-init module static with a set hook; its
+ * production producer remains outside this module. Out-of-range indices are
+ * guarded (documented deviation: the corpus strides blindly). */
 void    timed_effect_timestamp_reset(int index);  /* FUN_0046b7a0 */
 void    timed_effect_tick_word_set(uint32_t tick); /* port hook */
 uint32_t timed_effect_tick_word_peek(void);
 uint32_t timed_effect_time_peek(int index);        /* diagnostics */
+void* timed_effect_record_storage_get(unsigned int index); /* 0x27c stride */
 /* ScreenRightEdgeCacheRefresh (FUN_0041a290): re-reads the index-0 text
  * metrics pair through the ported getter and caches x - y into the right-edge
  * word. The corpus's reader is the unported layout band, so the cache lands
@@ -1165,6 +1191,7 @@ uint32_t screen_right_edge_cache_peek(void);    /* port hook */
  * the advance returned by FUN_0047a470; this port derives the same value from
  * the bitmap ink bounds used by its renderer. */
 int bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
+TextureSurface* bitmap_font_resource_load(const char* name); /* FUN_00479ee0 */
                                                 /* FUN_0047a520 */
 
 /* --- panel resource + scroll leaf band (2026-10-24; findings 386/439/436/

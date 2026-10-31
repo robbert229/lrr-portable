@@ -27,6 +27,7 @@ typedef struct TerrainSurfaceGrid {
     uint32_t changed_count;
     void* initialize_context;
     void (*initialize_cell)(void* context, uint32_t x, uint32_t y);
+    const void* terrain_window; /* original cell-variant/normal sampling view */
 } TerrainSurfaceGrid;
 
 /* Tile mesh grid owned by a level record (LoadTileMeshes, FUN_0042b330).
@@ -53,15 +54,14 @@ typedef struct TerrainTileMeshGrid {
 } TerrainTileMeshGrid;
 int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid, int editor_mode);
 void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid);
-void terrain_grid_entry_resources_release_all(TerrainTileMeshGrid* grid);
-typedef void (*TerrainCellResourceReleaseHook)(void* handle, void* context);
 typedef struct TerrainCellResourceGrid {
     uint32_t width;
     uint32_t height;
     void** handles;
-    void* context;
-    TerrainCellResourceReleaseHook release_handle;
 } TerrainCellResourceGrid;
+void terrain_grid_entry_resources_release_all(TerrainCellResourceGrid* grid);
+TerrainCellResourceGrid* terrain_cell_resource_grid_load(
+    const char* bitmap_prefix, uint32_t width, uint32_t height); /* 0x0040b310 */
 void terrain_cell_resource_grid_dispose(TerrainCellResourceGrid* grid);
 
 void terrain_surface_grid_initialize(TerrainSurfaceGrid* grid,
@@ -74,6 +74,8 @@ void terrain_surface_grid_material_hooks_set(
     uint8_t* texture_corner_values, void* context,
     uint32_t (*resolve)(void*, uint8_t),
     void (*apply)(void*, uint32_t, uint32_t));
+void terrain_surface_grid_terrain_window_set(TerrainSurfaceGrid* grid,
+                                             const void* terrain_window);
 void terrain_cell_material_set(TerrainSurfaceGrid* grid, uint32_t x,
                                uint32_t y, uint8_t material,
                                uint8_t rotation); /* FUN_0044f230 */
@@ -166,11 +168,11 @@ typedef struct StagedCellCandidateLinks {
     uint32_t count;
     uint32_t capacity;
 } StagedCellCandidateLinks;
+void staged_cell_candidate_collect_state_install(
+    const StagedCellCandidateRecord* records, uint32_t record_count,
+    StagedCellCandidateLinks* links);
 void* staged_cell_candidate_collect(uint32_t row, uint32_t first_cell,
-                                    uint32_t end_cell,
-                                    const StagedCellCandidateRecord* records,
-                                    uint32_t record_count,
-                                    StagedCellCandidateLinks* links);
+                                    uint32_t end_cell);
 typedef struct StagedCellCandidateSelectionRecord {
     uint32_t item_count;
     const float* candidate_xy; /* item_count * four (x,y) alternatives */
@@ -179,9 +181,9 @@ typedef struct StagedCellCandidateSelectionRecord {
     uint32_t* selected_items;
     uint32_t* selected_alternatives;
 } StagedCellCandidateSelectionRecord;
-void staged_cell_candidate_select(
-    struct LevelState* level,
+void staged_cell_candidate_selection_state_install(
     StagedCellCandidateSelectionRecord* records, uint32_t record_count);
+void staged_cell_candidate_select(void* unused, struct LevelState* level);
 typedef void (*TerrainCellQuadRunFlushHook)(void* context, uint32_t row,
                                            uint32_t first_cell,
                                            uint32_t end_cell);
@@ -204,6 +206,7 @@ typedef struct TerrainCellQuadRunRecord {
     uint8_t* slot_active;
     float* slot_offsets; /* slot_capacity consecutive (x,y) pairs */
     float* slot_heights;
+    const uint32_t* slot_orientations; /* selects one of four corner pairs */
 } TerrainCellQuadRunRecord;
 typedef struct TerrainCellQuadRunEmitHooks {
     void* context;
@@ -217,7 +220,7 @@ typedef struct TerrainCellQuadRunEmitHooks {
                                    float scale_x, float scale_y,
                                    float scale_z);
     int (*quad_vertices_emit)(void* context, int mesh, uint32_t item,
-                              const float vertices[4][3]);
+                              const float vertices[4][9]);
 } TerrainCellQuadRunEmitHooks;
 void terrain_cell_quad_run_emit(
     struct LevelState* level, TerrainCellQuadRunRecord* records,
@@ -236,13 +239,24 @@ int terrain_cell_surface_quad_height_fill(
     const TerrainCellQuadSlotMutationHooks* hooks);
 typedef struct BuildingFootprintPreviewHooks {
     void* context;
+    /* FUN_00433090 && !FUN_00433030 for one cardinal neighbor. */
+    int (*adjacent_occupied_unflagged)(void* context, int x, int y);
+    /* FUN_00431b20 is called once for the footprint cell. The final two
+     * arguments are its param_3/param_4 mode flags. */
     int (*neighbor_cell_accept)(void* context, int x, int y,
-                                uint32_t direction, int closing_edge);
+                                uint32_t repeated_cell, int route_limit_hit);
+    /* FUN_00428780; nonzero selects the blocked preview style. */
+    int (*terrain_command_predicate)(void* context, const int offset[2]);
+    void (*preview_color_set)(void* context, uint32_t preview_index,
+                              float red, float green, float blue,
+                              float alpha);
+    void (*preview_overlay_color_set)(void* context, uint32_t preview_index,
+                                      float red, float green, float blue);
     void (*cell_preview_emit)(void* context, uint32_t preview_index,
                               int x, int y, int in_bounds,
                               int surface_valid, int neighbor_valid);
 } BuildingFootprintPreviewHooks;
-int building_footprint_render_and_validate(
+const int* building_footprint_render_and_validate(
     TerrainSurfaceGrid* surface, const int offset[2], const int* source_xy,
     uint32_t count, int rotation, float maximum_height_span,
     float maximum_edge_delta, uint32_t minimum_routes,
@@ -263,6 +277,8 @@ void terrain_cell_surface_vector_write(TerrainSurfaceGrid* grid,
                                        uint32_t x, uint32_t y,
                                        uint32_t corner,
                                        const float vector[3]); /* 0x00451230 */
+void terrain_cell_surface_vectors_initialize(TerrainSurfaceGrid* grid,
+                                             uint32_t x, uint32_t y); /* 0x00450f30 */
 void terrain_cell_surface_vector_offset_add(TerrainSurfaceGrid* grid,
                                             uint32_t x, uint32_t y,
                                             uint32_t corner,
@@ -281,6 +297,7 @@ void map_cell_record_grid_initialize(void* level);
 void map_cell_state_buffer_rebuild(void* level);
 void* map_cell_record_grid_get(void);
 void* map_cell_record_grid_level_get(void);
+int terrain_cell_object_record_present(int x, int y);
 typedef int (*TerrainCellInBoundsHook)(void* level, int x, int y,
                                        void* context);
 typedef void (*TerrainCellStateUpdateHook)(void* level, int x, int y,
@@ -322,6 +339,11 @@ void terrain_activation_hooks_install(TerrainActivationPrepareHook prepare,
                                      TerrainActivationFloodHook flood,
                                      void* context);
 int terrain_cell_activation_try(void* object, int x, int y); /* FUN_0040d4f0 */
+/* Flood-state queries mirror the original predicates: mode 0 is the base
+ * occupied/secondary-bit test, mode 1 additionally requires secondary bit
+ * 0x100, and mode 2 reports that the renderer-owned cell-record value at
+ * +0x0c is non-positive. The first two have level-record implementations; mode 2 needs the
+ * renderer record hook when that state is available. */
 typedef int (*TerrainFloodStateHook)(int x, int y, int mode, void* context);
 typedef void (*TerrainFloodEffectHook)(int from_x, int from_y, int to_x,
                                        int to_y, void* context);

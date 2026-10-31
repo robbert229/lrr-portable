@@ -135,6 +135,20 @@ uint32_t simtick_scene_word(void);
 void simtick_set_scene_word(uint32_t w);
 void simtick_set_scene_broadcast(void (*h)(int));
 int  simtick_scene_broadcasts(void);
+/* Terrain-cell snapshot/flush performed by FUN_00432200 / FUN_004321a0
+ * around the scene entity walk. Coordinates use the active EngineState grid. */
+void simtick_scene_cell_track(int x, int y);
+void simtick_scene_cell_init_hook(void (*hook)(EngineState* state, int x,
+                                                int y));
+int  simtick_scene_cells_pending(void);
+typedef void (*SimtickSceneEntityHook)(void* entity, float dt, void* user);
+void simtick_scene_entity_hook_set(SimtickSceneEntityHook hook, void* user);
+typedef void (*SimtickPostClusterRecordHook)(void* record, int argument,
+                                             void* user);
+void simtick_post_cluster_records_set(void** tables, uint32_t table_count,
+    SimtickPostClusterRecordHook active_record_hook,
+    SimtickPostClusterRecordHook entity_first_hook,
+    SimtickPostClusterRecordHook entity_second_hook, void* user);
 void simtick_sfx_seed(int n, const void** entries);     /* stride 0xac */
 int  simtick_sfx_releases(void);
 
@@ -146,6 +160,14 @@ void simtick_sound_bank_tick(EngineContext* c, float dt);  /* FUN_00465b00 */
 void simtick_render_pass(EngineContext* c, float dt, float scale,
                          uint32_t o1);                     /* FUN_004291a0 */
 void simtick_render_step(EngineContext* c);                /* FUN_00449c00 */
+typedef void (*SimtickRenderPassHook)(EngineContext* context, float dt,
+                                      float scale, void* user);
+void simtick_render_pass_hook_set(SimtickRenderPassHook hook, void* user);
+typedef void (*SimtickRenderEntityHook)(void* entity, void* user);
+void simtick_render_entity_hook_set(SimtickRenderEntityHook hook, void* user);
+/* Exact implemented prefix of MainSimInteractionAndCellUpdate: clears
+ * EngineContext.debug bit 0x400. The pointer-ray, cursor-mode, and UI-state
+ * inputs required by its remaining dispatch are not yet modeled. */
 void simtick_vu_meter(EngineContext* c, float dt);         /* FUN_00426520 */
 void simtick_fx_bank_tick(EngineContext* c, float dt);     /* FUN_0046e390 */
 typedef struct SimtickFxSubEntry {
@@ -225,6 +247,7 @@ void simtick_directsound_listener_view_set(int view); /* FUN_0047ab80 */
 void simtick_route_position_blocked_state_set(int blocked);
                                         /* FUN_0044da20 */
 void simtick_global_ui_flags_clear_bits12(void); /* FUN_0045b610 */
+void simtick_global_ui_flags_set_bit2(void);
 uint32_t simtick_route_position_state_peek(void);
 uint32_t simtick_global_ui_flags_word(void);
 

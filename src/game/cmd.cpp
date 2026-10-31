@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "cmd.hpp"
 #include "ai.hpp"
@@ -15,6 +16,14 @@
 #include "gods98/heap.hpp"
 #include "gods98/media.hpp"
 #include "gods98/message.hpp"
+#include "gods98/sound.hpp"
+
+namespace unported_ledger_stubs {
+int entity_capacity_or_state_predicate(const EntitySlot* entity);
+int ledger_stub_004470d0_EntityConditionalTypeFiveSpawn(EntitySlot* entity);
+int ledger_stub_00447210_EntityAdjacentPlacementCellSearch(
+    EntitySlot* entity, EntitySlot* target);
+}
 
 static CommandKindRecordHooks s_command_kind_record_hooks;
 #include "gods98/string.hpp"
@@ -127,14 +136,72 @@ static int     s_pool_level = 0;
 
 // GLOBAL: LEGORR 0x004b3354
 static CmdRec* s_global_head = NULL; /* DAT_004b3354 */
-static CmdRec* s_global_tail = NULL; /* DAT_004b3358: pending-list head */
+static CmdRec* s_global_tail = NULL; /* DAT_004b3358: independent pending-list head */
+static GameContext* s_ctx = NULL;
+
+/* The original keeps two independent 50-entry candidate arrays: the
+ * assignment pass at +0x335c and the timer pass at +0x3428. Their callback
+ * bodies are anonymous, but the decompile shows the assignment walker is
+ * unfiltered and the timer walker excludes +0x3e8 bit 0x80000. Rebuild each
+ * view from the live typed pools and keep them separate because each pass
+ * consumes entries with its own swap-with-last rule. */
+#define PENDING_CANDIDATE_CAPACITY 50
+static EntitySlot* s_pending_assignment_candidates[PENDING_CANDIDATE_CAPACITY];
+static EntitySlot* s_pending_timer_candidates[PENDING_CANDIDATE_CAPACITY];
+static unsigned s_pending_assignment_count;
+static unsigned s_pending_timer_count;
+
+static GameContext* pending_scan_context_get(void)
+{
+    return s_ctx != NULL ? s_ctx : entity_pool_callback_context_get();
+}
+
+static unsigned pending_candidate_pool_build(GameContext* context,
+                                              EntitySlot** output,
+                                              int filter_flagged)
+{
+    unsigned count = 0;
+    int type;
+    int index;
+    if (context == NULL || output == NULL) return 0;
+    /* Entity types 5..19 share one special-object table in GameContext. */
+    for (type = 1; type <= 5 && count < PENDING_CANDIDATE_CAPACITY; ++type) {
+        const int entity_count_for_type = entity_count(context, type);
+        for (index = 0; index < entity_count_for_type &&
+                            count < PENDING_CANDIDATE_CAPACITY; ++index) {
+            EntitySlot* entity = (EntitySlot*)entity_at(context, type, index);
+            if (entity != NULL && entity->type != 0 &&
+                (filter_flagged == 0 ||
+                 (entity->flags_3e8 & 0x80000u) == 0u))
+                output[count++] = entity;
+        }
+    }
+    {
+        const unsigned live_count = count;
+        while (count < PENDING_CANDIDATE_CAPACITY) output[count++] = NULL;
+        count = live_count;
+    }
+    return count;
+}
+
+static int pending_record_matches_entity(const CmdRec* record,
+                                         const EntitySlot* entity)
+{
+    if (record == NULL || entity == NULL) return 0;
+    if ((record->state & 0x100u) != 0u) {
+        return cmd_array_find_value_index((const int*)record->buffer,
+                                          record->count,
+                                          (int)(uintptr_t)entity, NULL);
+    }
+    /* FUN_00452610(entity, 0): stats-state mask 0x200000. */
+    return (entity_state_flags_get(entity) & 0x200000u) != 0u;
+}
 // GLOBAL: LEGORR 0x004b8060
 static int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
 static CmdPurgeCellPredicate s_cmd_purge_cell_usable;
 static CmdPurgeCellPredicate s_cmd_purge_neighbor_eligible;
 static CmdPurgeCompare s_cmd_purge_compare;
 static void* s_cmd_purge_context;
-static PendingCommandScanHooks s_pending_command_scan_hooks;
 
 // FUNCTION: LEGORR 0x004064c0
 static void cmd_pool_grow(void)
@@ -236,6 +303,8 @@ void cmd_init(void)
     s_free = NULL;
     s_global_head = NULL;
     s_global_tail = NULL;
+    s_pending_assignment_count = 0;
+    s_pending_timer_count = 0;
     s_global_enabled = 1;
 
     for (i = 0; i < 27; ++i) {
@@ -312,9 +381,6 @@ static void cmd_bind_kind(CmdRec* rec, int kind)
 // FUNCTION: LEGORR 0x00404030
 static void cmd_link_head(CmdRec* rec, int kind)
 {
-    if (s_global_head == NULL) {
-        s_global_tail = rec; /* first task establishes the global tail */
-    }
     rec->global_next = s_global_head;
     s_global_head = rec;
     rec->now = 1500.0f;
@@ -325,15 +391,10 @@ static void cmd_link_head(CmdRec* rec, int kind)
 // FUNCTION: LEGORR 0x00404070
 static void cmd_link_tail(CmdRec* rec)
 {
-    rec->global_next = NULL;
-    if (s_global_tail != NULL) {
-        s_global_tail->global_next = rec;
-    } else {
-        s_global_head = rec;
-    }
+    rec->global_next = s_global_tail;
     s_global_tail = rec;
     rec->now = 1500.0f;
-    rec->state &= ~CMD_STATE_PENDING;
+    rec->state &= ~(CMD_STATE_PENDING | 0x10u);
 }
 
 // FUNCTION: LEGORR 0x00404190
@@ -397,41 +458,209 @@ void* cmd_global_pending_head(void)
     return s_global_tail;
 }
 
-void pending_command_scan_hooks_set(const PendingCommandScanHooks* hooks)
-{
-    if (hooks == NULL) memset(&s_pending_command_scan_hooks, 0,
-                              sizeof(s_pending_command_scan_hooks));
-    else s_pending_command_scan_hooks = *hooks;
-}
-
-/* Both corpus scans walk the global pending-command list. The timer phase
- * fires expired entries; assignment then associates surviving records with
- * eligible entities. Each hook returns nonzero when it consumed/unlinked the
- * record, so iteration saves the next link before entering engine code. */
+// FUNCTION: LEGORR 0x00405950
+/* PendingCommandTimerFireScan (FUN_00405950).  The decompile walks the
+ * tail-linked list and the separate DAT_004b3428 candidate pool.  The pool
+ * is reconstructed from the live typed entity tables because its original
+ * anonymous callback has no port owner yet.  Preserve the observed timer,
+ * per-kind flag, record unlink, entity-head install/copy, and swap-removal
+ * effects for branches whose predicates are represented by existing APIs. */
 void pending_command_timer_fire_scan(void)
 {
-    CmdRec* rec = s_global_tail;
-    while (rec != NULL) {
-        CmdRec* next = as_rec(rec->global_next);
-        if (s_pending_command_scan_hooks.timer_fire != NULL &&
-            (*(float*)&rec->param2) <= 0.0f)
-            s_pending_command_scan_hooks.timer_fire(
-                rec, s_pending_command_scan_hooks.context);
-        rec = next;
+    GameContext* context = pending_scan_context_get();
+    CmdRec* previous = NULL;
+    CmdRec* record = s_global_tail;
+    unsigned count = pending_candidate_pool_build(context,
+                                                   s_pending_timer_candidates,
+                                                   1);
+    s_pending_timer_count = count;
+    while (record != NULL) {
+        CmdRec* next = as_rec(record->global_next);
+        int removed = 0;
+        if ((*(float*)&record->param2) <= 0.0f) {
+            unsigned i = 0;
+            for (i = 0; i < s_pending_timer_count; ++i) {
+                EntitySlot* entity = s_pending_timer_candidates[i];
+                int fire = 0;
+                if (entity == NULL) continue;
+                /* Kind 0x18 is tested after the shared stats-threshold
+                 * block in FUN_00405950. Keep it eligible even when the
+                 * +0xe8 value has reached the entity's +0x340 limit. */
+                if (record->type == 0x18) {
+                    fire = entity_type3_flag04000000_test(entity) ||
+                           (entity_state_flags_get(entity) & 0x100000u) != 0u;
+                }
+                else if (!(entity_stats_float_ate8(entity) <
+                           entity->field_340)) {
+                    continue;
+                }
+                switch (record->type) {
+                case 10:
+                    if ((entity_state_flags_get(entity) & 0x80000u) == 0u ||
+                        (record->payload != NULL &&
+                         entity_shared_eligibility_check(
+                             (EntitySlot*)record->payload, 0) != 0 &&
+                         (entity_state_flags_get((EntitySlot*)record->payload)
+                          & 0x400u) == 0u)) {
+                        float entity_position[3];
+                        float target_position[3];
+                        if (record->payload != NULL) {
+                            entity_transform_position_get(entity,
+                                                          entity_position);
+                            entity_transform_position_get(
+                                (EntitySlot*)record->payload, target_position);
+                            const float dx = entity_position[0] -
+                                             target_position[0];
+                            const float dy = entity_position[1] -
+                                             target_position[1];
+                            const float radius = entity_stats_float_at98(entity);
+                            if (sqrt((double)(dx * dx + dy * dy)) < radius) {
+                                fire = 1;
+                                if ((entity_state_flags_get(entity) &
+                                     0x80000u) == 0u)
+                                    record->param2 = (int32_t)0x443b8000u;
+                            }
+                        }
+                    }
+                    break;
+                case 0x19:
+                    fire = (entity_state_flags_get(entity) & 0x4000u) != 0u;
+                    break;
+                case 4:
+                    fire = entity_type3_flag04000000_test(entity) &&
+                           grid_record_count_difference_sum(4, 0) != 0;
+                    break;
+                case 3:
+                    fire = unported_ledger_stubs::
+                        entity_capacity_or_state_predicate(entity);
+                    if (fire) record->param2 = (int32_t)0x437a0000u;
+                    break;
+                case 0:
+                    if (entity_type3_flag04000000_test(entity) &&
+                        context != NULL && context->level != NULL) {
+                        float position[2];
+                        int cell_x, cell_y;
+                        entity_transform_position_get(entity, position);
+                        if (terrain_world_xy_to_cell(
+                                context->level->ptr_terrain, position[0],
+                                position[1], &cell_x, &cell_y) &&
+                            ((int)record->x != cell_x ||
+                             (int)record->y != cell_y))
+                            fire = 1;
+                    }
+                    break;
+                case 0x1d:
+                    fire = entity_type3_flag04000000_test(entity);
+                    if (fire) record->param2 = (int32_t)0x437a0000u;
+                    break;
+                default:
+                    /* Other record kinds have no fire branch in this scan. */
+                    break;
+                }
+                if (fire) {
+                    --s_pending_timer_count;
+                    s_pending_timer_candidates[i] =
+                        s_pending_timer_candidates[s_pending_timer_count];
+                    if ((record->state & 0x40u) == 0u) {
+                        if (previous == NULL) s_global_tail = next;
+                        else previous->global_next = next;
+                        record->global_next = NULL;
+                        entity->cmd_head = record;
+                        removed = 1;
+                    }
+                    else {
+                        entity->cmd_head = cmd_pending_record_copy(record);
+                    }
+                    break;
+                }
+            }
+        }
+        if (!removed) previous = record;
+        record = next;
     }
 }
 
+// FUNCTION: LEGORR 0x00405c10
+/* PendingCommandEntityAssignmentTick (FUN_00405c10). Candidate membership
+ * uses the recovered 0x452610 stats mask or the record's explicit pointer
+ * array (0x452650). The direct-coordinate kind-0 path is represented below,
+ * including its shared entity gates, terrain conversion checks,
+ * nearest-candidate choice, and attach/copy transition.
+ *
+ * The direct-coordinate kind-0 branch can evaluate the common eligibility
+ * gates represented by EntitySlot and GameContext. Its feature-bit gate
+ * calls FUN_0044c530, for which this path has no represented operation; in
+ * that mode it leaves the record pending. Target-relative and task branches
+ * still require PlaceCommandEligibilityCheck (0x404fc0), whose runtime
+ * ObjectTaskEligibilityOps binding and branch-specific target/config values
+ * are not available here. */
 void pending_command_entity_assignment_tick(void)
 {
-    CmdRec* rec = s_global_head;
-    while (rec != NULL) {
-        CmdRec* next = as_rec(rec->global_next);
-        if (s_pending_command_scan_hooks.entity_assign != NULL &&
-            (*(float*)&rec->param2) <= 0.0f &&
-            (rec->state & 0x80400u) == 0u)
-            s_pending_command_scan_hooks.entity_assign(
-                rec, s_pending_command_scan_hooks.context);
-        rec = next;
+    GameContext* context = pending_scan_context_get();
+    CmdRec* previous = NULL;
+    CmdRec* record = s_global_head;
+    unsigned count = pending_candidate_pool_build(
+        context, s_pending_assignment_candidates, 0);
+    s_pending_assignment_count = count;
+    while (record != NULL) {
+        CmdRec* next = as_rec(record->global_next);
+        if ((*(float*)&record->param2 <= 0.0f) &&
+            (record->state & 0x80400u) == 0u) {
+            unsigned i;
+            float nearest = 99999.0f;
+            unsigned selected_index = s_pending_assignment_count;
+            EntitySlot* selected = NULL;
+            int target_cell_x, target_cell_y;
+            const int has_direct_placement =
+                record->type == 0 && context != NULL &&
+                context->level != NULL &&
+                terrain_world_xy_to_cell(context->level->ptr_terrain,
+                                         record->x, record->y,
+                                         &target_cell_x, &target_cell_y);
+            for (i = 0; has_direct_placement &&
+                        i < s_pending_assignment_count; ++i) {
+                EntitySlot* entity = s_pending_assignment_candidates[i];
+                float position[2];
+                int cell_x, cell_y;
+                float dx, dy, distance;
+                if (!pending_record_matches_entity(record, entity) ||
+                    ((entity_state_flags_get(entity) & 0x20000u) != 0u &&
+                     entity->owner_36c == NULL) ||
+                    (entity->flags_3e0 & 0x800000u) != 0u ||
+                    (entity->flags_3ec & 0x400u) != 0u ||
+                    (context->cheat & 1u) != 0u)
+                    continue;
+                entity_transform_position_get(entity, position);
+                if (!terrain_world_xy_to_cell(context->level->ptr_terrain,
+                                              position[0], position[1],
+                                              &cell_x, &cell_y))
+                    continue;
+                (void)target_cell_x;
+                (void)target_cell_y;
+                dx = position[0] - record->x;
+                dy = position[1] - record->y;
+                distance = dx * dx + dy * dy;
+                if (selected == NULL || distance < nearest) {
+                    selected = entity;
+                    selected_index = i;
+                    nearest = distance;
+                }
+            }
+            if (selected != NULL) {
+                const int copied = (record->state & 0x40u) != 0u;
+                entity_record_attach_and_relink(record, previous, selected);
+                --s_pending_assignment_count;
+                s_pending_assignment_candidates[selected_index] =
+                    s_pending_assignment_candidates[s_pending_assignment_count];
+                /* The assignment pass consumes this record from its global
+                 * list and the entity-local head now owns it. */
+                if (copied) previous = record;
+                record = next;
+                continue;
+            }
+        }
+        previous = record;
+        record = next;
     }
 }
 
@@ -442,25 +671,26 @@ void* cmd_global_next(const void* rec)
 
 void cmd_global_unlink(const void* rec)
 {
-    if (rec == NULL || s_global_head == NULL) {
-        return;
-    }
-    CmdRec* prev = NULL;
-    for (CmdRec* cur = s_global_head; cur != NULL;
-         cur = as_rec(cur->global_next)) {
-        if ((const void*)cur == rec) {
-            if (prev != NULL) {
-                prev->global_next = cur->global_next;
-            } else {
-                s_global_head = as_rec(cur->global_next);
+    CmdRec** roots[2];
+    int root_index;
+    if (rec == NULL) return;
+    roots[0] = &s_global_head;
+    roots[1] = &s_global_tail;
+    for (root_index = 0; root_index < 2; ++root_index) {
+        CmdRec* previous = NULL;
+        CmdRec* current = *roots[root_index];
+        while (current != NULL) {
+            if ((const void*)current == rec) {
+                if (previous != NULL)
+                    previous->global_next = current->global_next;
+                else
+                    *roots[root_index] = as_rec(current->global_next);
+                current->global_next = NULL;
+                return;
             }
-            if (s_global_tail == cur) {
-                s_global_tail = prev;
-            }
-            cur->global_next = NULL;
-            return;
+            previous = current;
+            current = as_rec(current->global_next);
         }
-        prev = cur;
     }
 }
 
@@ -560,8 +790,6 @@ static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
 /* ------------------------------------------------------------------ *
  *  Creators (CmdCreateMove/Target/Gated/Task + MinionCompanionCmd).
  * ------------------------------------------------------------------ */
-
-static GameContext* s_ctx = NULL;
 
 // FUNCTION: LEGORR 0x004035c0
 void cmd_create_move(EntitySlot* e, float x, float y, int flag)
@@ -884,6 +1112,11 @@ void cmd_tick_global(void)
         cur = next;
     }
     s_global_head = NULL;
+    for (CmdRec* tail_cur = s_global_tail; tail_cur != NULL; ) {
+        CmdRec* next = as_rec(tail_cur->global_next);
+        tail_cur->global_next = NULL;
+        tail_cur = next;
+    }
     s_global_tail = NULL;
 }
 
@@ -1023,16 +1256,26 @@ void cmd_keybind_tick(int (*keyheld)(int key))
     }
 }
 
-/* Manager-dispatch stubs (the corpus's 0x4526c0/0x452be0/… handlers). */
-static void mgr_stub(const char* what, int a)
-{
-    (void)what;
-    (void)a;
-}
-
 // FUNCTION: LEGORR 0x004520d0
 void cmd_queue_tick(void)
 {
+    /* CmdTickGlobal's two pending-list scans are part of the live command
+     * frame path.  Its full callback dispatch has no port equivalent, so the
+     * scans rebuild their candidate views from the active GameContext. */
+    if (((uint32_t)s_global_enabled & 0x80000000u) == 0u) {
+        CmdRec* pending;
+        for (pending = s_global_head; pending != NULL;
+             pending = as_rec(pending->global_next)) {
+            if (pending->type == 10 &&
+                (pending->state & 0x200000u) == 0u &&
+                pending->payload != NULL &&
+                (((EntitySlot*)pending->payload)->field_340 <= 0.0f ||
+                 ((EntitySlot*)pending->payload)->field_340 >= 100.0f))
+                pending->state |= 0x20u;
+        }
+        pending_command_entity_assignment_tick();
+        pending_command_timer_fire_scan();
+    }
     /* 1. Producer block: the held-key pre-pass (SelectionRoot step 1 —
      *    cheat-keybinds; the demo binds keys via cmd_bind_key). */
     if (s_ctx != NULL && s_ctx->input_keyheld != NULL) {
@@ -1068,24 +1311,83 @@ void cmd_queue_tick(void)
         case 0x2b:
             cmd_create_target(ent, (void*)(uintptr_t)q->a2);
             break;
-        case 1:  mgr_stub("op1",  q->a2); break;
-        case 3:  mgr_stub("op3",  0);        break;
-        case 4:  mgr_stub("op4",  q->a2); break;
-        case 9:  mgr_stub("op9",  q->a2); break;
-        case 0xb: mgr_stub("opb",  0);       break;
-        case 0xc: mgr_stub("opc",  q->a2); break;
-        case 0x13: mgr_stub("op13", q->a2); break;
-        case 0x15: mgr_stub("op15", q->a2); break;
-        case 0x1b: mgr_stub("op1b", q->a2); break;
-        case 0x1f: mgr_stub("op1f", 0);       break;
-        case 0x21: mgr_stub("op21", q->a2); break;
-        case 0x23: mgr_stub("op23", q->a2); break;
-        case 0x25: mgr_stub("op25", q->a2); break;
+        case 1:
+            selection_candidate_filter_default(ent, q->a2);
+            break;
+        case 3:
+            selection_clear(s_ctx);
+            break;
+        case 4:
+            selection_entity_remove(ent);
+            break;
+        case 9:
+            selection_command_dispatch(q->a2);
+            break;
+        case 0xb:
+            media_min_distance_update_mode(1, NULL, 0);
+            break;
+        case 0xc:
+            sound_alias_play(q->a2, 0);
+            break;
+        case 10:
+            /* GlobalRenderRecordSetFromInput also needs its active view and
+             * renderer hooks; the queue entry supplies neither. */
+            break;
+        case 0x13:
+            /* The entry splits a2 into low/high 16-bit direction/mode and
+             * passes a3/a4 as coordinates. TerrainStampImpactHandler needs
+             * the runtime terrain/effect hook bundle, which is not bound
+             * here. */
+            break;
+        case 0x15:
+        case 0x1b:
+        {
+            int cell_xy[2];
+            cell_xy[0] = q->a3;
+            cell_xy[1] = q->a4;
+            (void)entity_build_placement_command_setup(
+                cell_xy, 0, NULL, 1, q->opcode == 0x1b);
+            break;
+        }
+        case 0x1f:
+            /* EmergenceRandomSpawnAttempt's port API requires entity/owner
+             * indices and level dimensions absent from this queue entry. */
+            break;
+        case 0x21:
+            (void)unported_ledger_stubs::
+                ledger_stub_004470d0_EntityConditionalTypeFiveSpawn(ent);
+            break;
+        case 0x23:
+            entity_random_valid_cell_command_create(ent);
+            break;
+        case 0x25:
+            (void)unported_ledger_stubs::
+                ledger_stub_00447210_EntityAdjacentPlacementCellSearch(
+                    ent, (EntitySlot*)(uintptr_t)q->a2);
+            break;
         case 0x2d: selection_state_tick(s_ctx); break;
-        case 0x34: mgr_stub("op34", q->a2); break;
-        case 0x36: mgr_stub("op36", q->a2); break;
-        case 0x40: mgr_stub("op40", 0);       break;
-        default:   mgr_stub("unknown", q->opcode); break;
+        case 0x34:
+        {
+            int cell_xy[2];
+            cell_xy[0] = q->a3;
+            cell_xy[1] = q->a4;
+            entity_build_placement_command_pair_create(cell_xy, 0);
+            break;
+        }
+        case 0x36:
+        {
+            int cell_xy[2];
+            cell_xy[0] = q->a3;
+            cell_xy[1] = q->a4;
+            entity_build_placement_command_batch_expand(cell_xy);
+            break;
+        }
+        case 0x40:
+            (void)selected_entity_state_monitor();
+            break;
+        default:
+            /* SelectionRoot has no default dispatch branch. */
+            break;
         }
     }
 }
@@ -2269,9 +2571,7 @@ int task_kind_filtered_search(int selector)
 }
 
 /* --- the task-record queue producers (see cmd.hpp) ---------------------------
- * The pair staging uses the corpus's int view of the coordinate slots; the
- * global tail list DAT_004b3358 is the port's single global chain (the two
- * corpus lists overlay one link word, so the port models one chain). */
+ * The pair staging uses the corpus's int view of the coordinate slots. */
 static void cmd_pair_stage(CmdRec* rec, const int pair[2])
 {
     if (pair != NULL) {
@@ -2362,7 +2662,7 @@ void task_registry_remove_type0_entry_by_pair(const int pair[2])
         return; /* deviation: the corpus reads the pair blindly */
     }
     CmdRec* prev = NULL;
-    for (CmdRec* cur = s_global_head; cur != NULL;) {
+    for (CmdRec* cur = s_global_tail; cur != NULL;) {
         CmdRec* next = as_rec(cur->global_next);
         int cx = 0, cy = 0;
         cmd_rec_cell_xy_get(cur, &cx, &cy);
@@ -2370,10 +2670,7 @@ void task_registry_remove_type0_entry_by_pair(const int pair[2])
             if (prev != NULL) {
                 prev->global_next = next;
             } else {
-                s_global_head = next;
-            }
-            if (cur == s_global_tail) {
-                s_global_tail = prev;
+                s_global_tail = next;
             }
             cmd_free(cur, 0);
             return; /* corpus: the first match only */
@@ -2386,16 +2683,13 @@ void task_registry_remove_type0_entry_by_pair(const int pair[2])
 void task_registry_remove_type10_entries_for_entity(const EntitySlot* e)
 {
     CmdRec* prev = NULL;
-    for (CmdRec* cur = s_global_head; cur != NULL;) {
+    for (CmdRec* cur = s_global_tail; cur != NULL;) {
         CmdRec* next = as_rec(cur->global_next);
         if (cur->type == 10 && cur->payload == (void*)e) {
             if (prev != NULL) {
                 prev->global_next = next;
             } else {
-                s_global_head = next;
-            }
-            if (cur == s_global_tail) {
-                s_global_tail = prev;
+                s_global_tail = next;
             }
             cmd_free(cur, 0);
             cur = next;
@@ -2448,17 +2742,18 @@ int cmd_rec_cell_count_get(const void* rec)
 }
 
 /* --- entity command-chain housekeeping (see cmd.hpp) --------------------------
- * The corpus's DAT_004b3354/DAT_004b3358 lists overlay one link word, so the
- * two raw moves below land on the port's single global chain; the records'
- * entity-chain link clears as the corpus's +0x60 overwrite does. */
+ * DAT_004b3354 and DAT_004b3358 are separate roots that each use +0x60. */
 static void cmd_raw_head_insert(CmdRec* rec)
 {
     rec->global_next = s_global_head;
     rec->next = NULL;
-    if (s_global_head == NULL) {
-        s_global_tail = rec;
-    }
     s_global_head = rec;
+}
+static void cmd_raw_tail_insert(CmdRec* rec)
+{
+    rec->global_next = s_global_tail;
+    rec->next = NULL;
+    s_global_tail = rec;
 }
 // FUNCTION: LEGORR 0x004041e0
 void* entity_command_chain_head_remove(EntitySlot* e)
@@ -2483,7 +2778,7 @@ void* entity_command_chain_head_remove(EntitySlot* e)
         cmd_raw_head_insert(head); /* the pending-and-undone head moves on */
     } else if ((head->state & 0x2000u) != 0u /* corpus 0x40421b: test ch,0x20 -> state bit 13 */
                && (head->state & 0x20u) == 0u) {
-        cmd_raw_head_insert(head); /* the tail list is the port's one chain */
+        cmd_raw_tail_insert(head); /* raw onto DAT_004b3358 */
     } else {
         cmd_free(head, 0);
     }
@@ -2569,7 +2864,7 @@ void command_queue_sweep_relink(EntitySlot* e)
         } else if ((cur->state & 0x2000u) != 0u /* corpus 0x40413b: test ch,0x20 -> state bit 13 */
                    && (cur->state & 0x20u) == 0u
                    && (cur->state & 0x10u) == 0u) {
-            cmd_raw_head_insert(cur); /* raw onto the tail list */
+            cmd_raw_tail_insert(cur); /* raw onto DAT_004b3358 */
         } else {
             /* The corpus relinks every keeper through the HEAD keeper's
              * link slot only (iVar3 is assigned once), so an intermediate
@@ -2616,6 +2911,44 @@ void cmd_rec_zone_set(void* rec, int zone)
 void cmd_link_global_head(void* rec, int kind)
 {
     cmd_link_head(as_rec(rec), kind);
+}
+
+/* ValidatedRecordCloneQueue (FUN_004030e0): retain a command record only
+ * when its leading code is present in the grouped code table.  The original
+ * stores the clone at source +0x58 and keeps both source links on the new
+ * record; its optional payload is a count of dwords. */
+// FUNCTION: LEGORR 0x004030e0
+void cmd_validated_record_queue(void* record)
+{
+    CmdRec* const source = as_rec(record);
+    CmdRec* copy;
+    int group;
+    uint32_t i;
+    if (source == NULL
+        || entity_grouped_code_table_find_value_index(
+               (uint32_t)source->type, &group) == 0) {
+        return;
+    }
+    source->state |= 0x1000u;
+    copy = (CmdRec*)cmd_alloc(0x13);
+    if (copy == NULL) return;
+    if ((source->state & 0x100u) != 0u) {
+        copy->buffer = malloc((size_t)source->count * sizeof(uint32_t));
+        if (copy->buffer == NULL && source->count != 0u) {
+            cmd_free(copy, 0);
+            return;
+        }
+        copy->count = source->count;
+        for (i = 0; i < source->count; ++i) {
+            ((uint32_t*)copy->buffer)[i] = ((const uint32_t*)source->buffer)[i];
+        }
+        copy->state |= 0x100u;
+    }
+    copy->state |= 0x10u;
+    copy->arg38 = (void*)(unsigned long)(unsigned int)group;
+    copy->ref = record;
+    source->ref = copy;
+    cmd_link_head(copy, source->kind);
 }
 
 /* CmdCancelByCoords (FUN_00403700) — see cmd.hpp. The corpus strides the

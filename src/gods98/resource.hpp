@@ -483,7 +483,7 @@ void* scene_resource_cached_slot_c0_get(
     SceneResourceAnimationRecord* record); /* FUN_0046daf0 */
 void* attached_entity_slot_object_get(SceneResourceAnimationRecord* record,
                                       int index); /* FUN_0046db20 */
-void scene_object_resource_release(SceneResourceAnimationRecord* record);
+void scene_object_resource_release(void* record);
                                                 /* FUN_0046db70 */
 typedef struct ScenePairedAnimationState {
     void* primary_resource;

@@ -1,7 +1,20 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "effects.hpp"
 #include "entity.hpp"
+#include "frontend.hpp"
+#include "crt/crt.hpp"
+#include "engine.hpp"
+#include "simtick.hpp"
+#include "sound.hpp"
+#include "gods98/heap.hpp"
+#include "gods98/record.hpp"
+#include "gods98/texture.hpp"
+#include "gods98/view.hpp"
+#include "level.hpp"
 #include <math.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static uint32_t s_active_effect_occupied[10];
@@ -25,22 +38,113 @@ static ScreenEffectTickHooks s_screen_effect_tick_hooks;
 static float s_screen_effect_pulse_timer;
 static void* s_screen_space_effect_dispatch_context;
 static TransientEffectHooks s_transient_effect_hooks;
-static void* s_transient_effect_instances[128];
-static int s_transient_effect_count;
+static TextureSurface* s_transient_effect_textures[12];
+static uint32_t s_transient_effect_texture_count;
+static void* s_transient_effect_head;
+static void* s_transient_effect_tail;
+typedef struct TransientEffectInstanceLinks {
+    void* instance;
+    void* scene_object;
+    void* render_record;
+    struct TransientEffectInstanceLinks* next;
+    struct TransientEffectInstanceLinks* previous;
+    struct TransientEffectInstanceLinks* all_next;
+} TransientEffectInstanceLinks;
+static TransientEffectInstanceLinks* s_transient_effect_links;
 static int s_transient_effect_enabled = 1;
+static TimedEffectRuntimeHooks s_timed_effect_runtime_hooks;
+// GLOBAL: LEGORR 0x004aa64c
+static uint32_t s_timed_effect_cue_gate = 1u;
 static SceneTransformState s_scene_transform_state;
 static SceneTransformApplyHook s_scene_transform_apply_hook;
 static void* s_scene_transform_apply_context;
 static LightEffectParameterState s_light_effect_parameters;
 static EntityNodeScaleApplyHook s_entity_node_scale_apply_hook;
 static void* s_entity_node_scale_apply_context;
-static EventTimerState* s_event_timer_state;
 static EventTimerActionHook s_event_timer_action_hook;
 static void* s_event_timer_action_context;
+static EventTimerInteractionFlagsHook s_event_timer_interaction_flags_hook;
+static void* s_event_timer_interaction_flags_context;
 
-void event_timer_state_set(EventTimerState* state)
+static TransientEffectInstanceLinks* transient_effect_links_find(
+    const void* instance)
 {
-    s_event_timer_state = state;
+    TransientEffectInstanceLinks* links;
+    for (links = s_transient_effect_links; links != NULL;
+         links = links->all_next) {
+        if (links->instance == instance) return links;
+    }
+    return NULL;
+}
+
+static TransientEffectInstanceLinks* transient_effect_links_add(void* instance)
+{
+    TransientEffectInstanceLinks* links;
+    if (instance == NULL) return NULL;
+    links = transient_effect_links_find(instance);
+    if (links != NULL) return links;
+    links = (TransientEffectInstanceLinks*)malloc(sizeof(*links));
+    if (links == NULL) return NULL;
+    memset(links, 0, sizeof(*links));
+    links->instance = instance;
+    if (sizeof(void*) == 4u) {
+        unsigned char* bytes = (unsigned char*)instance;
+        links->scene_object = *(void**)(bytes + 0x28c);
+        links->render_record = *(void**)(bytes + 0x290);
+    }
+    links->all_next = s_transient_effect_links;
+    s_transient_effect_links = links;
+    return links;
+}
+
+static void* transient_effect_scene_object_get(void* instance)
+{
+    TransientEffectInstanceLinks* links =
+        transient_effect_links_find(instance);
+    if (links != NULL && links->scene_object != NULL)
+        return links->scene_object;
+    if (instance != NULL && sizeof(void*) == 4u)
+        return *(void**)((unsigned char*)instance + 0x28c);
+    return NULL;
+}
+
+static void* transient_effect_render_record_get(void* instance)
+{
+    TransientEffectInstanceLinks* links =
+        transient_effect_links_find(instance);
+    if (links != NULL && links->render_record != NULL)
+        return links->render_record;
+    if (instance != NULL && sizeof(void*) == 4u)
+        return *(void**)((unsigned char*)instance + 0x290);
+    return NULL;
+}
+
+static void* transient_effect_next_get(void* instance)
+{
+    TransientEffectInstanceLinks* links =
+        transient_effect_links_find(instance);
+    if (links != NULL) return links->next != NULL ? links->next->instance : NULL;
+    if (instance != NULL && sizeof(void*) == 4u)
+        return *(void**)((unsigned char*)instance + 0x298);
+    return NULL;
+}
+
+static void* transient_effect_previous_get(void* instance)
+{
+    TransientEffectInstanceLinks* links =
+        transient_effect_links_find(instance);
+    if (links != NULL)
+        return links->previous != NULL ? links->previous->instance : NULL;
+    if (instance != NULL && sizeof(void*) == 4u)
+        return *(void**)((unsigned char*)instance + 0x29c);
+    return NULL;
+}
+
+static void transient_effect_link_pointer_set(void* instance, size_t offset,
+                                               void* value)
+{
+    if (sizeof(void*) == 4u && instance != NULL)
+        *(void**)((unsigned char*)instance + offset) = value;
 }
 
 void event_timer_action_hook_set(EventTimerActionHook hook, void* context)
@@ -49,53 +153,73 @@ void event_timer_action_hook_set(EventTimerActionHook hook, void* context)
     s_event_timer_action_context = context;
 }
 
+void event_timer_interaction_flags_hook_set(
+    EventTimerInteractionFlagsHook hook, void* context)
+{
+    s_event_timer_interaction_flags_hook = hook;
+    s_event_timer_interaction_flags_context = context;
+}
+
+uint32_t event_timer_interaction_flags_get(void)
+{
+    return s_event_timer_interaction_flags_hook != NULL
+        ? s_event_timer_interaction_flags_hook(
+              s_event_timer_interaction_flags_context) : 0u;
+}
+
 void event_timer_countdown_advance(float delta)
 {
-    EventTimerState* state = s_event_timer_state;
-    if (state == NULL || (state->flags & 0x80u) != 0u) return;
-    if ((state->flags & 0x100u) == 0u) {
-        if ((state->flags & 4u) != 0u) {
-            state->timer -= delta * state->rate;
-            if (state->timer <= state->lower) {
-                state->flags |= 0x80u;
-                state->timer = state->lower;
+    EventTimerState state;
+    frontend_event_timer_state_get(&state);
+    if ((state.flags & 0x80u) != 0u) return;
+    if ((state.flags & 0x100u) == 0u) {
+        if ((state.flags & 4u) != 0u) {
+            state.timer -= delta * state.rate;
+            if (state.timer <= state.lower) {
+                state.flags |= 0x80u;
+                state.timer = state.lower;
             }
         }
+        frontend_event_timer_state_set(&state);
         return;
     }
-    state->timer += delta * state->rate;
-    if (state->current_event == 0x16 &&
-        (state->external_flags & 2u) != 0u) {
+    state.timer += delta * state.rate;
+    if (state.current_event == 0x16 &&
+        (state.external_flags & 2u) != 0u) {
         if (s_event_timer_action_hook != NULL) {
             s_event_timer_action_hook(s_event_timer_action_context, 8, 0);
             s_event_timer_action_hook(s_event_timer_action_context, 6, 1);
         }
-        state->timer = state->upper;
+        state.timer = state.upper;
     }
-    if (state->timer < state->upper) return;
-    state->flags &= ~0x100u;
-    state->timer = state->upper;
-    if (s_event_timer_action_hook != NULL)
-        s_event_timer_action_hook(s_event_timer_action_context, 0x15, 0);
-    if (state->next_event == 0x16) {
-        state->flags = (state->flags & ~4u) | 0x80u;
+    if (state.timer < state.upper) {
+        frontend_event_timer_state_set(&state);
+        return;
+    }
+    state.flags &= ~0x100u;
+    state.timer = state.upper;
+    sound_alias_play(0x15, 0);
+    if (state.next_event == 0x16) {
+        state.flags = (state.flags & ~4u) | 0x80u;
         if (s_event_timer_action_hook != NULL)
             s_event_timer_action_hook(s_event_timer_action_context, 8, 0);
+        simtick_global_ui_flags_clear_bits12();
+        simtick_global_ui_flags_set_bit2();
     }
-    else if (state->next_event == 0x17) {
-        state->flags = (state->flags & ~4u) | 0x80u;
+    else if (state.next_event == 0x17) {
+        state.flags = (state.flags & ~4u) | 0x80u;
         if (s_event_timer_action_hook != NULL)
             s_event_timer_action_hook(s_event_timer_action_context, 0x0b, 0);
-        state->external_flags |= 1u;
-        if (s_event_timer_action_hook != NULL)
-            s_event_timer_action_hook(s_event_timer_action_context, 0x0e7e, 0);
+        global_state_low_word_set(global_state_low_word_get() | 1u);
+        global_flag_bit0_clear();
     }
     else {
-        state->flags |= 4u;
+        state.flags |= 4u;
     }
-    state->current_event = state->next_event;
-    state->lower = state->next_lower;
-    state->upper = state->next_upper;
+    state.current_event = state.next_event;
+    state.current_x = state.next_x;
+    state.current_y = state.next_y;
+    frontend_event_timer_state_set(&state);
 }
 
 void timed_effect_cue_update(TimedEffectCueState* state, float x, float y,
@@ -135,6 +259,7 @@ void timed_effect_cue_update(TimedEffectCueState* state, float x, float y,
     }
 }
 
+// FUNCTION: LEGORR 0x0046b8b0
 void rectangular_grid_overlay_geometry_draw(
     const RectangularGridOverlayState* state,
     const RectangularGridOverlayHooks* hooks)
@@ -885,6 +1010,8 @@ void effect_apply_by_kind_branch(void* entity, const float direction_xy[2],
             if (s_effect_apply_hooks.impulse_apply != NULL)
                 s_effect_apply_hooks.impulse_apply(s_effect_apply_hooks.context,
                                                    entity, amount, 0);
+            (void)entity_one_shot_attached_effect_start(
+                (EntitySlot*)entity, duration);
             if (s_effect_apply_hooks.effect_apply != NULL)
                 s_effect_apply_hooks.effect_apply(s_effect_apply_hooks.context,
                                                   entity, mode, direction,
@@ -989,71 +1116,451 @@ void transient_effect_hooks_set(const TransientEffectHooks* hooks)
     }
 }
 
-int transient_effect_textures_preload(void)
+void transient_effect_instance_handles_set(void* instance,
+                                           void* scene_object,
+                                           void* render_record)
 {
-    if (!s_transient_effect_enabled
-        || s_transient_effect_hooks.textures_preload == NULL) return 0;
-    return s_transient_effect_hooks.textures_preload(
-        s_transient_effect_hooks.context) != 0;
+    TransientEffectInstanceLinks* links = transient_effect_links_add(instance);
+    if (links == NULL) return;
+    links->scene_object = scene_object;
+    links->render_record = render_record;
+    transient_effect_link_pointer_set(instance, 0x28cu, scene_object);
+    transient_effect_link_pointer_set(instance, 0x290u, render_record);
 }
 
-void* transient_effect_emitter_create(int kind, const float position[3])
+// FUNCTION: LEGORR 0x004653a0
+void transient_effect_textures_preload(const char* filename_prefix,
+                                      const char* filename_format,
+                                      uint32_t texture_count)
+{
+    uint32_t i;
+    if (s_transient_effect_hooks.textures_preload != NULL) {
+        s_transient_effect_hooks.textures_preload(
+            s_transient_effect_hooks.context, filename_prefix,
+            filename_format, texture_count);
+        return;
+    }
+
+    /* FUN_004653a0 keeps one cache reference per numbered bitmap.  The
+     * executable's table is a DAT global; this port owns the same references
+     * here until the next preload replaces the table. */
+    for (i = 0; i < s_transient_effect_texture_count; ++i) {
+        if (s_transient_effect_textures[i] != NULL)
+            texture_release(s_transient_effect_textures[i]);
+        s_transient_effect_textures[i] = NULL;
+    }
+    s_transient_effect_texture_count = texture_count > 12u
+        ? 12u : texture_count;
+    for (i = 0; i < s_transient_effect_texture_count; ++i) {
+        char filename[260];
+        if (filename_prefix == NULL || filename_format == NULL) break;
+        sprintf(filename, filename_format, filename_prefix, (int)i);
+        s_transient_effect_textures[i] = texture_get_or_load(NULL, filename);
+    }
+    if (i < s_transient_effect_texture_count)
+        s_transient_effect_texture_count = i;
+}
+
+void* transient_effect_emitter_create(int scene_context,
+                                      uint32_t position_x,
+                                      uint32_t position_y, int* direction,
+                                      float red, float green, float blue,
+                                      float rate, int sound_id, int mode,
+                                      uint32_t seed, int auxiliary)
 {
     void* instance;
-    if (!s_transient_effect_enabled || position == NULL
-        || s_transient_effect_hooks.emitter_create == NULL) return NULL;
+    if (s_transient_effect_hooks.emitter_create == NULL) return NULL;
     instance = s_transient_effect_hooks.emitter_create(
-        s_transient_effect_hooks.context, kind, position);
+        s_transient_effect_hooks.context, scene_context, position_x,
+        position_y, direction, red, green, blue, rate, sound_id, mode,
+        seed, auxiliary);
     if (instance == NULL) return NULL;
-    if (s_transient_effect_count >= 128) {
-        if (s_transient_effect_hooks.instance_release != NULL)
-            s_transient_effect_hooks.instance_release(
-                s_transient_effect_hooks.context, instance);
-        return NULL;
+    {
+        TransientEffectInstanceLinks* links =
+            transient_effect_links_add(instance);
+        TransientEffectInstanceLinks* tail =
+            transient_effect_links_find(s_transient_effect_tail);
+        if (links == NULL) {
+            if (s_transient_effect_hooks.instance_release != NULL)
+                s_transient_effect_hooks.instance_release(
+                    s_transient_effect_hooks.context, instance, NULL);
+            else
+                engine_heap_free(instance);
+            return NULL;
+        }
+        links->next = NULL;
+        links->previous = tail;
+        transient_effect_link_pointer_set(instance, 0x298u, NULL);
+        transient_effect_link_pointer_set(instance, 0x29cu,
+                                          s_transient_effect_tail);
+        if (tail != NULL) {
+            tail->next = links;
+            transient_effect_link_pointer_set(tail->instance, 0x298u,
+                                              instance);
+        }
+        else
+            s_transient_effect_head = instance;
     }
-    s_transient_effect_instances[s_transient_effect_count++] = instance;
+    if (s_transient_effect_tail == NULL)
+        s_transient_effect_head = instance;
+    s_transient_effect_tail = instance;
     return instance;
 }
 
-void transient_effect_instance_release(void* instance)
+// FUNCTION: LEGORR 0x00465c50
+int transient_effect_particle_slot_initialize(void* emitter,
+                                              uint32_t slot)
 {
-    int i;
-    if (instance == NULL) return;
-    for (i = 0; i < s_transient_effect_count; ++i) {
-        if (s_transient_effect_instances[i] == instance) {
-            s_transient_effect_instances[i] =
-                s_transient_effect_instances[--s_transient_effect_count];
-            s_transient_effect_instances[s_transient_effect_count] = NULL;
-            break;
-        }
+    unsigned char* bytes = (unsigned char*)emitter;
+    uint32_t* slot_words;
+    uint32_t random_value;
+    float random_vector[3];
+    float position[3] = { 0.0f, 0.0f, 0.0f };
+    float z;
+    float scale;
+    float speed;
+    int result;
+    if (emitter == NULL) return 0;
+    slot_words = (uint32_t*)(bytes + (size_t)slot * 0x3cu);
+    if ((*(uint32_t*)(bytes + 0x294) & 8u) != 0u) {
+        uint32_t count = *(uint32_t*)(bytes + 0x284);
+        if (count == 3u) *(uint32_t*)(bytes + 0x294) |= 0x10u;
+        *(uint32_t*)(bytes + 0x284) = count + 1u;
     }
-    if (s_transient_effect_hooks.instance_release != NULL)
-        s_transient_effect_hooks.instance_release(
-            s_transient_effect_hooks.context, instance);
+    slot_words[0] = 1u;
+    indexed_record_flag6c_bit0_set(transient_effect_render_record_get(emitter),
+                                   (int)slot, 0);
+    d3drm_vector_random(random_vector);
+    z = -fabsf(random_vector[2]) * 0.17f - 0.83f;
+    ((float*)slot_words)[1] = random_vector[0] * 0.17f;
+    ((float*)slot_words)[2] = random_vector[1] * 0.17f;
+    ((float*)slot_words)[3] = z;
+    z += *(float*)(bytes + 0x270);
+    speed = *(float*)(bytes + 0x288);
+    scale = -speed / z;
+    z *= scale;
+    ((float*)slot_words)[4] = scale *
+        (*(float*)(bytes + 0x268) + random_vector[0] * 0.17f);
+    ((float*)slot_words)[5] = scale *
+        (*(float*)(bytes + 0x26c) + random_vector[1] * 0.17f);
+    ((float*)slot_words)[6] = z;
+    *(uint32_t*)(bytes + 0x294) = 4u;
+    (void)ddiscene_object_position_get(
+        transient_effect_scene_object_get(emitter), NULL, position);
+    ((float*)slot_words)[7] = position[0];
+    ((float*)slot_words)[8] = position[1];
+    ((float*)slot_words)[9] = position[2];
+    slot_words[12] = 0u;
+    slot_words[14] = 0u;
+    random_value = (uint32_t)level_rand_u16();
+    slot_words[13] = random_value % 0x1eu + 0x28u;
+    *(float*)(bytes + 600) = (0.5f / speed) *
+                              ((float*)slot_words)[11];
+    result = (int)(random_value / 0x1eu);
+    return result;
 }
 
+// FUNCTION: LEGORR 0x00465e00
+void transient_effect_segment_advance(void* emitter, uint32_t slot,
+                                      float delta)
+{
+    unsigned char* bytes = (unsigned char*)emitter;
+    float* particle;
+    float distance;
+    void* resource;
+    if (emitter == NULL) return;
+    particle = (float*)(bytes + (size_t)slot * 0x3cu);
+    resource = transient_effect_render_record_get(emitter);
+    particle[7] += particle[4] * delta;
+    particle[8] += particle[5] * delta;
+    particle[9] += particle[6] * delta;
+    distance = fabsf(particle[6] * delta) + particle[14];
+    particle[14] = distance;
+    if ((float)(int)particle[13] <= distance) {
+        *(uint32_t*)particle = 0u;
+        indexed_record_flag6c_bit0_set(resource, (int)slot, 1);
+        return;
+    }
+    particle[12] += delta;
+    (void)screen_effect_item_opacity_set(resource, (int)slot,
+        0.7f - (distance / (float)(int)particle[13]) * 0.7f, 4);
+}
+
+// FUNCTION: LEGORR 0x00465b00
+void transient_effect_instances_tick(float delta)
+{
+    void* instance = s_transient_effect_head;
+    while (instance != NULL) {
+        unsigned char* bytes = (unsigned char*)instance;
+        void* next = transient_effect_next_get(instance);
+        uint32_t flags;
+        int all_inactive = 1;
+        uint32_t slot_count;
+        uint32_t slot;
+        if ((*(uint32_t*)(bytes + 0x294) & 0x20u) == 0u &&
+            *(uint32_t*)(bytes + 0x2a4) == 0u) {
+            if (*(uint32_t*)(bytes + 0x2a0) != 0u) {
+                int sound = sound_positional_sound_submit(0,
+                    (int)*(uint32_t*)(bytes + 0x2a0), 1, 0,
+                    (const float*)(bytes + 0x25c));
+                *(uint32_t*)(bytes + 0x2a4) = (uint32_t)sound;
+            }
+            if (*(uint32_t*)(bytes + 0x2a4) == 0u)
+                *(uint32_t*)(bytes + 0x294) |= 0x20u;
+        }
+        flags = *(uint32_t*)(bytes + 0x294);
+        if ((flags & 1u) == 0u) {
+            if ((flags & 8u) == 0u || (flags & 0x10u) == 0u) {
+                if (*(float*)(bytes + 0x258) <= 0.0f) {
+                    slot_count = *(uint32_t*)(bytes + 0x280);
+                    for (slot = 0u; slot < slot_count; ++slot) {
+                        if (*(uint32_t*)(bytes + (size_t)slot * 0x3cu) == 0u) {
+                            transient_effect_particle_slot_initialize(
+                                instance, slot);
+                            break;
+                        }
+                    }
+                }
+                *(float*)(bytes + 0x258) -= delta;
+            }
+            slot_count = *(uint32_t*)(bytes + 0x280);
+            for (slot = 0u; slot < slot_count; ++slot) {
+                if (*(uint32_t*)(bytes + (size_t)slot * 0x3cu) != 0u) {
+                    transient_effect_segment_advance(instance, slot, delta);
+                    all_inactive = 0;
+                }
+            }
+            flags = *(uint32_t*)(bytes + 0x294);
+            if ((flags & 0x18u) == 0x18u && all_inactive)
+                transient_effect_instance_release(instance,
+                    transient_effect_scene_object_get(instance));
+        }
+        instance = next;
+    }
+}
+
+// FUNCTION: LEGORR 0x004659b0
+void transient_effect_instance_release(void* instance, void* resource)
+{
+    unsigned char* bytes;
+    void* previous;
+    void* next;
+    TransientEffectInstanceLinks* links;
+    TransientEffectInstanceLinks* all_previous;
+    if (instance == NULL) return;
+    bytes = (unsigned char*)instance;
+    /* The reference selects the retained resource only for instances whose
+     * ownership bit is set; otherwise its second argument is the resource
+     * whose render instance must be detached. */
+    if ((bytes[0x294] & 2u) != 0u)
+        resource = transient_effect_scene_object_get(instance);
+    links = transient_effect_links_find(instance);
+    next = transient_effect_next_get(instance);
+    previous = transient_effect_previous_get(instance);
+    if (next != NULL) {
+        TransientEffectInstanceLinks* next_links =
+            transient_effect_links_find(next);
+        if (next_links != NULL) next_links->previous = links != NULL
+            ? links->previous : NULL;
+        transient_effect_link_pointer_set(next, 0x29cu, previous);
+    }
+    else s_transient_effect_tail = previous;
+    if (previous != NULL) {
+        TransientEffectInstanceLinks* previous_links =
+            transient_effect_links_find(previous);
+        if (previous_links != NULL) previous_links->next = links != NULL
+            ? links->next : NULL;
+        transient_effect_link_pointer_set(previous, 0x298u, next);
+    }
+    else s_transient_effect_head = next;
+    if (links != NULL) {
+        all_previous = NULL;
+        if (s_transient_effect_links == links)
+            s_transient_effect_links = links->all_next;
+        else {
+            all_previous = s_transient_effect_links;
+            while (all_previous != NULL && all_previous->all_next != links)
+                all_previous = all_previous->all_next;
+            if (all_previous != NULL) all_previous->all_next = links->all_next;
+        }
+    }
+    if (s_transient_effect_hooks.instance_release != NULL) {
+        s_transient_effect_hooks.instance_release(
+            s_transient_effect_hooks.context, instance, resource);
+    }
+    else {
+        if ((bytes[0x294] & 2u) != 0u)
+            ddiscene_object_destroy(resource);
+        engine_heap_free(instance);
+    }
+    if (links != NULL) free(links);
+}
+
+// FUNCTION: LEGORR 0x00465970
 void transient_effect_registry_release_all(void)
 {
-    while (s_transient_effect_count > 0) {
-        void* instance = s_transient_effect_instances[--s_transient_effect_count];
-        s_transient_effect_instances[s_transient_effect_count] = NULL;
-        if (s_transient_effect_hooks.instance_release != NULL
-            && instance != NULL) {
-            s_transient_effect_hooks.instance_release(
-                s_transient_effect_hooks.context, instance);
-        }
+    while (s_transient_effect_head != NULL) {
+        void* instance = s_transient_effect_head;
+        void* resource = NULL;
+        transient_effect_instance_release(instance, resource);
+    }
+    s_transient_effect_head = NULL;
+    s_transient_effect_tail = NULL;
+}
+
+// FUNCTION: LEGORR 0x00465a90
+void transient_effect_registry_enable_set(int enabled)
+{
+    void* instance;
+    s_transient_effect_enabled = enabled != 0;
+    for (instance = s_transient_effect_head; instance != NULL;
+         instance = transient_effect_next_get(instance)) {
+        transient_effect_enable_set(instance, s_transient_effect_enabled);
     }
 }
 
-void transient_effect_registry_enable_set(int enabled)
+// FUNCTION: LEGORR 0x00465ac0
+void transient_effect_enable_set(void* instance, int enabled)
 {
-    s_transient_effect_enabled = enabled != 0;
-    if (!s_transient_effect_enabled) transient_effect_registry_release_all();
+    unsigned char* bytes;
+    uint32_t* flags;
+    if (instance == NULL) return;
+    bytes = (unsigned char*)instance;
+    flags = (uint32_t*)(bytes + 0x294);
+    record_flag2c_bit0_set(transient_effect_render_record_get(instance),
+                            enabled);
+    if (enabled != 0) *flags |= 1u;
+    else *flags &= ~1u;
 }
 
 int transient_effect_registry_enabled_get(void)
 {
     return s_transient_effect_enabled;
+}
+
+void timed_effect_runtime_hooks_set(const TimedEffectRuntimeHooks* hooks)
+{
+    if (hooks == NULL)
+        memset(&s_timed_effect_runtime_hooks, 0,
+               sizeof(s_timed_effect_runtime_hooks));
+    else
+        s_timed_effect_runtime_hooks = *hooks;
+}
+
+TimedEffectRecord* timed_effect_record_get(unsigned int slot)
+{
+    return (TimedEffectRecord*)timed_effect_record_storage_get(slot);
+}
+
+void timed_effect_cue_request_set(unsigned int slot, uint32_t cue)
+{
+    TimedEffectRecord* record = timed_effect_record_get(slot);
+    if (record == NULL) return;
+    record->cue = cue;
+    record->flags |= 3u;
+}
+
+void timed_effect_persistence_set(unsigned int slot, int enabled)
+{
+    TimedEffectRecord* record = timed_effect_record_get(slot);
+    if (record == NULL) return;
+    if (enabled != 0) record->flags |= 0x10u;
+    else record->flags &= ~0x10u;
+}
+
+void timed_effect_update_request_set(unsigned int slot)
+{
+    TimedEffectRecord* record = timed_effect_record_get(slot);
+    if (record != NULL) record->flags |= 4u;
+}
+
+void timed_effect_timestamp_reset(unsigned int slot)
+{
+    TimedEffectRecord* record = timed_effect_record_get(slot);
+    if (record != NULL) {
+        uint32_t tick = timed_effect_tick_word_peek();
+        memcpy(&record->timestamp, &tick, sizeof(record->timestamp));
+        if (s_timed_effect_runtime_hooks.time_get != NULL)
+            record->timestamp = s_timed_effect_runtime_hooks.time_get(
+                s_timed_effect_runtime_hooks.context);
+    }
+}
+
+// FUNCTION: LEGORR 0x0046bc30
+void timed_effect_slot_render_record(const TimedEffectRecord* record,
+                                     uint32_t render_x, uint32_t render_y)
+{
+    if (record != NULL && s_timed_effect_runtime_hooks.slot_render != NULL)
+        s_timed_effect_runtime_hooks.slot_render(
+            s_timed_effect_runtime_hooks.context, record,
+            render_x, render_y);
+}
+
+// FUNCTION: LEGORR 0x0046b7c0
+void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
+                                 float delta)
+{
+    float now;
+    uint32_t tick_bits;
+    uint32_t cue_gate;
+    uint32_t global_flags;
+    int rendered = 0;
+    int advanced = 0;
+    unsigned int slot;
+    tick_bits = timed_effect_tick_word_peek();
+    memcpy(&now, &tick_bits, sizeof(now));
+    if (s_timed_effect_runtime_hooks.time_get != NULL)
+        now = s_timed_effect_runtime_hooks.time_get(
+            s_timed_effect_runtime_hooks.context);
+    cue_gate = s_timed_effect_runtime_hooks.cue_gate_get != NULL
+        ? s_timed_effect_runtime_hooks.cue_gate_get(
+              s_timed_effect_runtime_hooks.context)
+        : s_timed_effect_cue_gate;
+    global_flags = s_timed_effect_runtime_hooks.global_flags_get != NULL
+        ? s_timed_effect_runtime_hooks.global_flags_get(
+              s_timed_effect_runtime_hooks.context)
+        : global_state_low_word_get();
+    for (slot = 1u; slot < 39u; ++slot) {
+        TimedEffectRecord* record = timed_effect_record_get(slot);
+        if (record == NULL) continue;
+        if ((record->flags & 3u) == 0u) continue;
+        if ((record->flags & 4u) == 0u || advanced != 0) {
+            record->timestamp = 0.0f;
+        }
+        else if (record->timestamp < now || rendered != 0) {
+            cue_gate = 1u;
+            s_timed_effect_cue_gate = cue_gate;
+            if (s_timed_effect_runtime_hooks.cue_gate_set != NULL)
+                s_timed_effect_runtime_hooks.cue_gate_set(
+                    s_timed_effect_runtime_hooks.context, cue_gate);
+            advanced = 1;
+            record->timestamp += delta;
+        }
+        else {
+            if (record->cue != 0u && cue_gate != 0u &&
+                (global_flags & 0x100000u) == 0u &&
+                s_timed_effect_runtime_hooks.attached_effect_update != NULL) {
+                cue_gate = s_timed_effect_runtime_hooks.attached_effect_update(
+                    s_timed_effect_runtime_hooks.context, record->cue, 0) == 0
+                    ? 1u : 0u;
+                s_timed_effect_cue_gate = cue_gate;
+                if (s_timed_effect_runtime_hooks.cue_gate_set != NULL)
+                    s_timed_effect_runtime_hooks.cue_gate_set(
+                        s_timed_effect_runtime_hooks.context, cue_gate);
+            }
+            else if (record->cue != 0u && cue_gate != 0u &&
+                     (global_flags & 0x100000u) == 0u) {
+                cue_gate = sound_submit_with_global_cooldown(
+                    (int)record->cue, NULL) == 0 ? 1u : 0u;
+                s_timed_effect_cue_gate = cue_gate;
+            }
+            timed_effect_slot_render_record(record, render_x, render_y);
+            rendered = 1;
+            advanced = 1;
+            record->timestamp += delta;
+        }
+        record->flags &= ~4u;
+    }
 }
 
 /* FUNCTION: LEGORR 0x0040e8d0

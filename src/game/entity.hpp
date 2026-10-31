@@ -28,6 +28,8 @@
 extern "C" {
 #endif
 
+typedef struct TypeConfigTable TypeConfigTable;
+
 /* Entity type constants (ObjectTypeByName FUN_0042e8b0 — decompile-verified).
  * 1..4 are the four typed tables (the `.ol`-placeable kinds); 5..19 are the
  * special-object kinds the corpus stores in per-kind singletons, which the
@@ -207,6 +209,10 @@ int entity_route_setup_and_marker_associate(EntitySlot* entity,
                                             const float* x_values,
                                             const float* y_values,
                                             int final_marker); /* FUN_00441700 */
+int entity_waypoint_storage_reserve(EntitySlot* entity,
+                                    unsigned int count);
+int entity_route_adjacent_step_append(EntitySlot* entity, int cell_x,
+                                      int cell_y); /* FUN_004468c0 */
 typedef float (*EntitySurfaceScaleReadHook)(void* context);
 void entity_surface_scale_read_hook_set(EntitySurfaceScaleReadHook hook,
                                         void* context);
@@ -399,7 +405,6 @@ typedef struct EntityKindRecordUpdateHooks {
     void (*action_dispatch)(EntitySlot* entity, int action, void* context);
     void (*type_four_global_action)(void* context);
     void (*type_one_record_update)(EntitySlot* entity, void* context);
-    void (*type_one_or_two_update)(EntitySlot* entity, void* context);
     void (*global_refresh)(void* context);
     void (*event_emit)(EntitySlot* entity, int type, uint32_t flags,
                        void* context);
@@ -432,6 +437,7 @@ typedef struct QueuedGridAnimationHooks {
     void (*work_queue_update)(EntitySlot* entity, int mode, void* context);
 } QueuedGridAnimationHooks;
 void queued_grid_animation_hooks_set(const QueuedGridAnimationHooks* hooks);
+void queued_grid_animation_accumulator_clear(void);
 void process_queued_grid_animations(void* anchor, int mode,
                                     float delta); /* 0x437300 */
 typedef struct RoverWorkQueueHooks {
@@ -529,6 +535,10 @@ void entity_indexed_record_table_set(int group, const void* const* records,
                                      uint32_t count);
 uint32_t entity_indexed_record_word_at_b0_get(int group, int index,
                                               int slot); /* FUN_00469ac0 */
+uint32_t entity_indexed_record_word_at_b4_get(int group, int index,
+                                              int slot); /* FUN_00469af0 */
+uint32_t entity_indexed_record_word_at_f0_get(int group, int index,
+                                              int slot); /* FUN_00469be0 */
 uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
                                                      int slot); /* FUN_0046a0c0 */
 typedef int (*PeriodicEntityCallback)(EntitySlot* entity, void* payload,
@@ -659,6 +669,9 @@ int entity_type_row_for_name(const char* name, int* type_out, int* row_out);
  * entity table. Returns the number of objects placed, or -1 when the
  * resource is missing/unparsable. */
 int object_list_load(GameContext* ctx, BlockFile* cfg, const char* level_name);
+/* Load the config-backed entity display-name tables after Lego.cfg opens. */
+void entity_names_config_load(BlockFile* cfg);
+const TypeConfigTable* entity_type_config_table_get(uint32_t row_kind);
 
 /* Load a `.ol` object list by resource path directly (the grammar half of
  * object_list_load, for probes/fixtures that already know the path; the
@@ -709,17 +722,18 @@ uint32_t entity_stats_word_get(const EntitySlot* e);  /* FUN_00469e60 (+144) */
 uint32_t entity_state_flags_get(const EntitySlot* e); /* FUN_00469e80 (+148) */
 typedef struct EntityStateOverrideEntry {
     uint32_t flags_3f0;
-    uint32_t stats_index;
-    uint32_t task_state_words[3];
+    uint32_t value_330;
+    char name[12];
 } EntityStateOverrideEntry;
-typedef void (*EntityStateOverrideStatsSetHook)(EntitySlot* entity,
-                                                 uint32_t stats_index,
-                                                 void* context);
-typedef void (*EntityStateOverrideTaskRestoreHook)(
-    EntitySlot* entity, const uint32_t task_state_words[3], void* context);
+typedef void (*EntityStateOverrideValue330ApplyHook)(EntitySlot* entity,
+                                                     uint32_t value,
+                                                     void* context);
+typedef void (*EntityStateOverrideRenameHook)(EntitySlot* entity,
+                                              const char* name,
+                                              void* context);
 void entity_state_override_hooks_set(
-    EntityStateOverrideStatsSetHook stats_set,
-    EntityStateOverrideTaskRestoreHook task_restore, void* context);
+    EntityStateOverrideValue330ApplyHook value_330_apply,
+    EntityStateOverrideRenameHook rename, void* context);
 int entity_state_override_stack_set(const EntityStateOverrideEntry* entries,
                                     uint32_t count);
 int entity_state_override_stack_push(const EntityStateOverrideEntry* entry);
@@ -774,19 +788,7 @@ int entity_shared_eligibility_check(const EntitySlot* e, int relaxed);
 int entity_type3_flag04000000_test(const EntitySlot* e);
 
 /* VehicleUnloadAdjacentCellFind and its two stat-flag gates (0x439d50,
- * 0x439e10, 0x439e40). These callbacks model the level/global helpers used
- * to resolve a terrain coordinate and test candidate-cell occupancy. */
-typedef int (*EntityUnloadCellOriginHook)(const EntitySlot* entity, int* x,
-                                          int* y, void* context);
-typedef int (*EntityUnloadCellCandidateHook)(int x, int y, void* context);
-typedef int (*EntityUnloadRouteCheckHook)(int x, int y, void* context);
-typedef uint32_t (*EntityUnloadStatFlagsHook)(const EntitySlot* entity,
-                                              void* context);
-void entity_unload_cell_hooks_set(EntityUnloadCellOriginHook origin,
-                                  EntityUnloadCellCandidateHook candidate,
-                                  EntityUnloadRouteCheckHook route_check,
-                                  EntityUnloadStatFlagsHook stat_flags,
-                                  void* context);
+ * 0x439e10, 0x439e40): direct level-backed neighbor selection. */
 int entity_vehicle_unload_adjacent_cell_find(const EntitySlot* entity,
                                              int out_xy[2]);
 int entity_vehicle_unload_cell_find_if_eligible(const EntitySlot* entity,
@@ -797,11 +799,6 @@ int entity_accepts_target_for_task_check(const EntitySlot* entity,
                                          int apply_extra_gate); /* 0x00439bd0 */
 int entity_gated_step_command_issue(EntitySlot* entity,
                                     EntitySlot* target); /* 0x00439a20 */
-typedef int (*EntityTaskTargetCellHook)(const EntitySlot* entity,
-                                        const uint32_t* task_record,
-                                        void* context);
-void entity_task_target_cell_hook_set(EntityTaskTargetCellHook hook,
-                                      void* context);
 int entity_task_target_cell_eligibility_check(
     const EntitySlot* entity, const uint32_t* task_record); /* 0x00439b80 */
 void entity_pair_interaction_activity_sentinel_set(int activity);
@@ -816,17 +813,6 @@ void entity_visual_resource_hooks_set(EntityVisualResourcePresentHook present,
                                       EntityVisualResourceCreateHook create,
                                       void* context);
 void entity_visual_resource_get_or_create(EntitySlot* entity); /* 0x0043a5f0 */
-typedef struct EntityProximityActivityHooks {
-    void* context;
-    float (*measure_get)(void* context, const EntitySlot* entity);
-    int (*cell_resolve)(void* context, const EntitySlot* entity,
-                       int* x, int* y);
-    int (*cell_state)(void* context, int x, int y, int mode);
-    int (*cell_world_position)(void* context, int x, int y, float out_xy[2]);
-    float (*radius_get)(void* context);
-} EntityProximityActivityHooks;
-void entity_proximity_activity_hooks_set(
-    const EntityProximityActivityHooks* hooks);
 void entity_proximity_activity_raise(EntitySlot* entity); /* 0x0043aab0 */
 typedef void (*EntityBuildingDepositHook)(EntitySlot* entity, void* context);
 void entity_building_deposit_hook_set(EntityBuildingDepositHook hook,
@@ -845,19 +831,6 @@ typedef struct EntityDepositActivityHooks {
 void entity_deposit_activity_hooks_set(const EntityDepositActivityHooks* hooks);
 int entity_deposit_activity_gate(EntitySlot* entity,
                                  EntitySlot* target); /* FUN_0043a300 */
-typedef struct EntityKindFourPostCreateHooks {
-    void* context;
-    uint32_t (*kind_resolve)(void* context, EntitySlot* entity);
-    uint32_t (*state_flags)(void* context, EntitySlot* entity);
-    int (*position_conflicts)(void* context, const float position[2],
-                              uint32_t kind);
-    int (*post_create_allowed)(void* context);
-    int (*is_interactive_scene)(void* context, EntitySlot* entity);
-    void (*refresh_entity)(void* context, EntitySlot* entity);
-    void (*position_activate)(void* context, const float position[2]);
-} EntityKindFourPostCreateHooks;
-void entity_kind_four_post_create_hooks_set(
-    const EntityKindFourPostCreateHooks* hooks);
 void entity_kind_four_post_create_resolve(EntitySlot* entity); /* FUN_0043c570 */
 typedef void (*EntityTypeTwoEventHook)(const EntitySlot* entity,
                                        uint32_t argument_a,
@@ -916,6 +889,7 @@ typedef struct EntityBuildPlacementHooks {
                              uint32_t counts[4]);
 } EntityBuildPlacementHooks;
 void entity_build_placement_hooks_set(const EntityBuildPlacementHooks* hooks);
+void entity_build_placement_context_bind(GameContext* context);
 int entity_build_placement_command_setup(const int cell_xy[2], int entity_id,
                                          const float world_xy[2],
                                          int update_state, int alternate);
@@ -1082,10 +1056,9 @@ void entity_heading_step_move(EntityHeadingStepState* state, void* entity,
                               const EntityHeadingStepHooks* hooks); /* 0x0044c1b0 */
 typedef struct EntityAuxiliaryReleaseRecord {
     void* scene_object;
+    struct EntityAuxiliaryReleaseRecord* next;
     uint32_t flags;
     float value;
-    float point[3];
-    struct EntityAuxiliaryReleaseRecord* next;
 } EntityAuxiliaryReleaseRecord;
 typedef struct EntityAuxiliaryReleaseHooks {
     void* context;
@@ -1386,7 +1359,7 @@ void entity_localized_name_tables_install(int kind,
                                           const char* const* names,
                                           const char* const* the_names,
                                           uint32_t count);
-const char* entity_display_name_lookup(uint32_t kind, int index); /* FUN_004395e0 */
+const char* entity_display_name_lookup(const EntitySlot* entity); /* FUN_004395e0 */
 const char* localized_object_name_get(uint32_t kind, int index); /* FUN_00439860 */
 const char* localized_object_the_name_get(uint32_t kind,
                                           int index); /* FUN_00439790 */
@@ -1409,6 +1382,16 @@ void entity_animation_state_apply_hook_install(
     EntityAnimationStateApplyHook hook, void* context);
 int entity_animation_state_set(EntitySlot* entity,
                                uint32_t state); /* FUN_00439cd0 */
+typedef EntitySlot* (*EntityDDiSceneOwnerResolveHook)(uint32_t owner_token,
+                                                       void* context);
+/* Bind the in-project SFX sample and entity completion callbacks. The host
+ * supplies owner-token resolution because renderer owner links are opaque. */
+namespace unported_ledger_stubs {
+void entity_ddiscene_callbacks_install(
+    EntityDDiSceneOwnerResolveHook owner_resolve, void* context);
+}
+uint32_t entity_ddiscene_owner_token_get(const EntitySlot* entity);
+void entity_ddiscene_scene_owner_bind(EntitySlot* entity, void* scene_object);
 int entity_record_flag20_query(EntitySlot* entity,
                                uint32_t state); /* FUN_00439e40 */
 typedef void (*EntityPeriodicTickHook)(EntitySlot* entity, float delta,
@@ -1417,6 +1400,23 @@ void entity_periodic_tick_hook_install(EntityPeriodicTickHook hook,
                                        void* context);
 void periodic_timer25_advance(GameContext* ctx, float delta); /* FUN_0043c2b0 */
 float periodic_timer25_peek(void);
+void entity_activity_counters_advance(EntitySlot* entity,
+                                      float elapsed); /* FUN_0043c6b0 */
+typedef struct EntityOneShotAttachedEffectHooks {
+    void* context;
+    int (*scene_pose_get)(void* context, EntitySlot* owner,
+                          float position_out[2], float* angle_out);
+    EntitySlot* (*child_create)(void* context, EntitySlot* owner, int kind,
+                                const float position[2], float angle);
+    void (*child_action_start)(void* context, EntitySlot* child,
+                               const char* action);
+} EntityOneShotAttachedEffectHooks;
+void entity_one_shot_attached_effect_hooks_set(
+    const EntityOneShotAttachedEffectHooks* hooks);
+int entity_one_shot_attached_effect_start(EntitySlot* entity,
+                                          float duration); /* 0x0044c030 */
+int entity_pair_scalar_fields_set(EntitySlot* entity, const int32_t pair[2],
+                                  int32_t scalar); /* 0x0044c150 */
 
 namespace unported_ledger_stubs {
 typedef int (*CellStepPathResolveHook)(int start_x, int start_y,
@@ -1426,6 +1426,7 @@ typedef float (*CellStepRandomRangeHook)(float minimum, float maximum,
                                          void* user);
 typedef struct EmergenceSpawnHooks {
     void* user;
+    struct LevelState* level;
     uint16_t (*random_u16)(void* user);
     EntitySlot* (*spawn_try)(int entity_index, int owner_index,
                              int cell_x, int cell_y, void* user);
@@ -1434,6 +1435,9 @@ typedef struct EmergenceSpawnHooks {
                                void* user);
     EntitySlot* (*create)(void* base_entity, int type, int owner_index,
                           float x, float y, float heading, void* user);
+    void (*scene_action_attach)(EntitySlot* entity, int action,
+                                int argument_a, int argument_b,
+                                int argument_c, void* user);
     void (*post_create)(EntitySlot* entity, int cell_x, int cell_y,
                         void* user);
 } EmergenceSpawnHooks;

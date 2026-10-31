@@ -118,6 +118,7 @@ target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 add_library(game STATIC
   ${GAME_DIR}/game.cpp ${GAME_DIR}/level.cpp ${GAME_DIR}/objective.cpp
   ${GAME_DIR}/savegame.cpp ${GAME_DIR}/mission.cpp ${GAME_DIR}/entity.cpp
+  ${GAME_DIR}/entity_config.cpp
   ${GAME_DIR}/cmd.cpp ${GAME_DIR}/select.cpp ${GAME_DIR}/ai.cpp
   ${GAME_DIR}/render.cpp ${GAME_DIR}/scene_render.cpp
   ${GAME_DIR}/frontend.cpp ${GAME_DIR}/options.cpp

@@ -28,9 +28,11 @@
 #include <time.h>
 
 #include "frontend.hpp"
+#include "effects.hpp"
 #include "savegame.hpp"
 #include "gods98/audio.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/simtick.hpp"
 #include "gods98/message.hpp"
 #include "gods98/flic.hpp"
 #include "crt/crt.hpp"
@@ -39,6 +41,7 @@
 #include "gods98/texture.hpp"
 #include "gods98/surface.hpp"
 #include "gods98/sound.hpp"
+#include "gods98/block.hpp"
 #include "gods98/input.hpp"
 #include "crt/crt.hpp"
 #include "util.hpp"
@@ -3189,7 +3192,6 @@ static int fe_font_key_hit(uint32_t p, const uint32_t keys[2])
  * exactly this box (FUN_00479ee0's right-edge scan / per-glyph rect), which
  * keeps each face's background AND frame strips out while retaining the
  * glyph's dark outline when it is inside the box. */
-// FUNCTION: LEGORR 0x00479ee0
 static int fe_font_ink_box(const TextureSurface* f, int cw, int ch, int g,
                            const uint32_t keys[2], int* minx, int* miny,
                            int* maxx, int* maxy)
@@ -3211,6 +3213,26 @@ static int fe_font_ink_box(const TextureSurface* f, int cw, int ch, int g,
         }
     }
     return *maxx >= 0;
+}
+
+/* FontResourceLoad (FUN_00479ee0): load a font bitmap through the image
+ * resource path. The native font object stores a DirectDraw surface and
+ * precomputed glyph widths; the port retains the decoded surface and derives
+ * widths from its 10-by-19 grid in bitmap_font_glyph_measure_width(). */
+// FUNCTION: LEGORR 0x00479ee0
+TextureSurface* bitmap_font_resource_load(const char* name)
+{
+    TextureSurface* surface;
+    int cell_width;
+    int cell_height;
+    if (name == NULL || name[0] == '\0') return NULL;
+    surface = image_surface_load(name, 0u, 0u);
+    if (surface == NULL) return NULL;
+    if (!fe_font_cell(surface, &cell_width, &cell_height)) {
+        texture_free(surface);
+        return NULL;
+    }
+    return surface;
 }
 
 /* Advance width of glyph g = its ink width from the cell's left edge
@@ -3924,6 +3946,7 @@ int ui_panel_name_table_lookup(const char* name, int* out_index)
 
 /* UiPanelIndexedNameLookup (FUN_0045a410): each category owns 24 optional
  * names; the first matching slot is written to the caller. */
+// FUNCTION: LEGORR 0x0045a410
 int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
                                  unsigned int* out_index)
 {
@@ -3942,6 +3965,7 @@ int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
 
 /* UiPanelNameTablesInit (FUN_0045a030): the corpus publishes twelve panel
  * names and the named controls at their 24-slot category positions. */
+// FUNCTION: LEGORR 0x0045a030
 void ui_panel_name_tables_init(void)
 {
     static const char* const names[12] = {
@@ -3992,8 +4016,18 @@ void ui_panel_name_tables_init(void)
 }
 
 static ToolTipIconConfigHooks s_tooltip_icon_config_hooks;
-static const char* s_tooltip_primary_names[11];
-static const char* s_tooltip_secondary_names[6];
+static const char* s_tooltip_primary_names[11] = {
+    "LegoObject_ToolType_Drill", "LegoObject_ToolType_Spade",
+    "LegoObject_ToolType_Hammer", "LegoObject_ToolType_Spanner",
+    "LegoObject_ToolType_Laser", "LegoObject_ToolType_PusherGun",
+    "LegoObject_ToolType_BirdScarer", "LegoObject_ToolType_FreezerGun",
+    NULL, NULL, NULL
+};
+static const char* s_tooltip_secondary_names[6] = {
+    "LegoObject_AbilityType_Pilot", "LegoObject_AbilityType_Sailor",
+    "LegoObject_AbilityType_Driver", "LegoObject_AbilityType_Dynamite",
+    "LegoObject_AbilityType_Repair", "LegoObject_AbilityType_Scanner"
+};
 static void* s_tooltip_primary_handles[11];
 static void* s_tooltip_secondary_handles[6];
 static void* s_tooltip_blank_handle;
@@ -4028,36 +4062,80 @@ void* tooltip_icon_handle_get(unsigned int bank, unsigned int index)
     return NULL;
 }
 
+static char s_advisor_tooltip_texts[38][256];
+static int s_advisor_tooltip_sounds[38];
+
+const char* advisor_tooltip_text_get(int index)
+{
+    return index >= 0 && index < 38 && s_advisor_tooltip_texts[index][0] != '\0'
+        ? s_advisor_tooltip_texts[index] : NULL;
+}
+
+int advisor_tooltip_sound_get(int index)
+{
+    return index >= 0 && index < 38 ? s_advisor_tooltip_sounds[index] : 0;
+}
+
+/* AdvisorTooltipAndTooltipSoundConfigLoad (FUN_00434da0): the two config
+ * groups are keyed by the 38 named tooltip slots. Keep their text and sound
+ * alias in the same slot used by case_insensitive_name_table_lookup. */
+// FUNCTION: LEGORR 0x00434DA0
+void advisor_tooltip_and_sound_config_load(BlockFile* config)
+{
+    BlockRec* entry;
+    BlockRec* section = block_subgroup(config, "ToolTips");
+    for (entry = block_first_child(section); entry != NULL;
+         entry = block_next_sibling(entry)) {
+        int index;
+        const char* value = block_value(entry);
+        if (value != NULL && case_insensitive_name_table_lookup(
+                block_name(entry), &index)) {
+            size_t length = strlen(value);
+            if (length >= sizeof(s_advisor_tooltip_texts[index - 1]))
+                length = sizeof(s_advisor_tooltip_texts[index - 1]) - 1u;
+            memcpy(s_advisor_tooltip_texts[index - 1], value, length);
+            s_advisor_tooltip_texts[index - 1][length] = '\0';
+        }
+    }
+    section = block_subgroup(config, "ToolTipsSFXs");
+    for (entry = block_first_child(section); entry != NULL;
+         entry = block_next_sibling(entry)) {
+        int index;
+        int alias;
+        const char* value = block_value(entry);
+        if (value != NULL && case_insensitive_name_table_lookup(
+                block_name(entry), &index) &&
+            sound_alias_lookup(value, &alias)) {
+            s_advisor_tooltip_sounds[index - 1] = alias;
+        }
+    }
+}
+
 /* ToolTipIconsConfigLoad (FUN_00437150): load matching images from the
  * ToolTipIcons config section into the two named icon banks and special
  * Blank/Cursor slots. */
+// FUNCTION: LEGORR 0x00437150
 void tooltip_icons_config_load(void* config)
 {
-    ToolTipIconConfigHooks* const hooks = &s_tooltip_icon_config_hooks;
-    void* section;
-    void* entry;
-    if (hooks->section_open == NULL || hooks->entry_first == NULL ||
-        hooks->entry_next == NULL || hooks->entry_name_get == NULL ||
-        hooks->entry_value_get == NULL || hooks->image_load == NULL) return;
-    section = hooks->section_open(config, "ToolTipIcons", hooks->context);
+    BlockRec* section = block_subgroup((BlockFile*)config, "ToolTipIcons");
+    BlockRec* entry;
     if (section == NULL) {
-        if (s_tooltip_cursor_handle != NULL && hooks->image_release != NULL) {
-            hooks->image_release(s_tooltip_cursor_handle, hooks->context);
+        if (s_tooltip_cursor_handle != NULL) {
+            texture_release((TextureSurface*)s_tooltip_cursor_handle);
         }
         s_tooltip_cursor_handle = NULL;
         return;
     }
-    entry = hooks->entry_first(section, hooks->context);
+    entry = block_first_child(section);
     while (entry != NULL) {
-        const char* name = hooks->entry_name_get(entry, hooks->context);
-        const char* value = hooks->entry_value_get(entry, hooks->context);
+        const char* name = block_name(entry);
+        const char* value = block_value(entry);
         unsigned int i;
         int matched = 0;
         for (i = 0; i < 11u; ++i) {
             if (ui_panel_string_equal_case_insensitive(
                     name, s_tooltip_primary_names[i])) {
-                s_tooltip_primary_handles[i] = hooks->image_load(
-                    value, hooks->context);
+                s_tooltip_primary_handles[i] = image_surface_load(value, 0u, 0u);
                 matched = 1;
                 break;
             }
@@ -4066,19 +4144,19 @@ void tooltip_icons_config_load(void* config)
             for (i = 0; i < 6u; ++i) {
                 if (ui_panel_string_equal_case_insensitive(
                         name, s_tooltip_secondary_names[i])) {
-                    s_tooltip_secondary_handles[i] = hooks->image_load(
-                        value, hooks->context);
+                    s_tooltip_secondary_handles[i] = image_surface_load(
+                        value, 0u, 0u);
                     matched = 1;
                     break;
                 }
             }
         }
         if (!matched && ui_panel_string_equal_case_insensitive(name, "Blank"))
-            s_tooltip_blank_handle = hooks->image_load(value, hooks->context);
+            s_tooltip_blank_handle = image_surface_load(value, 0u, 0u);
         else if (!matched && ui_panel_string_equal_case_insensitive(
                                  name, "Cursor"))
-            s_tooltip_cursor_handle = hooks->image_load(value, hooks->context);
-        entry = hooks->entry_next(entry, hooks->context);
+            s_tooltip_cursor_handle = image_surface_load(value, 0u, 0u);
+        entry = block_next_sibling(entry);
     }
 }
 
@@ -4827,6 +4905,101 @@ void frontend_render_credits(const TextureSurface* font,
     }
 }
 
+/* FUNCTION: LEGORR 0x0040a0c0 (text-source portion)
+ * The corpus formats `<CreditsTextFile>.cconv`, falls back to the configured
+ * file only when that open fails, counts CRLF pairs, and uses the shared
+ * delimiter splitter. Keeping the source buffer alive also keeps each row a
+ * zero-copy pointer into the single allocation, as in the original. */
+int frontend_credits_lines_load(const char* path, char*** lines_out,
+                                int* count_out)
+{
+    if (lines_out == NULL || count_out == NULL) {
+        return 0;
+    }
+    *lines_out = NULL;
+    *count_out = 0;
+    if (path == NULL || path[0] == '\0') {
+        return 0;
+    }
+
+    char sidecar[1024];
+    Resource* resource = NULL;
+    const int sidecar_length = snprintf(sidecar, sizeof(sidecar), "%s.cconv",
+                                        path);
+    if (sidecar_length > 0 && (size_t)sidecar_length < sizeof(sidecar)) {
+        resource = resource_open(sidecar, RESOURCE_AUTO);
+    }
+    if (resource == NULL) {
+        resource = resource_open(path, RESOURCE_AUTO);
+    }
+    if (resource == NULL) {
+        return 0;
+    }
+
+    int32_t size = resource_read(resource);
+    if (size <= 0) {
+        resource_free(resource);
+        return 0;
+    }
+    char* text = (char*)malloc((size_t)size + 1);
+    if (text == NULL) {
+        resource_free(resource);
+        return 0;
+    }
+    memcpy(text, resource->data, (size_t)size);
+    text[size] = '\0';
+    resource_free(resource);
+
+    int count = 1;
+    int32_t i;
+    for (i = 0; i + 1 < size; ++i) {
+        if (text[i] == '\r' && text[i + 1] == '\n') {
+            ++count;
+        }
+    }
+    char** lines = (char**)malloc((size_t)count * sizeof(*lines));
+    if (lines == NULL) {
+        free(text);
+        return 0;
+    }
+    int line = 0;
+    lines[line++] = text;
+    for (i = 0; i + 1 < size; ++i) {
+        if (text[i] == '\r' && text[i + 1] == '\n') {
+            text[i] = '\0';
+            text[i + 1] = '\0';
+            lines[line++] = text + i + 2;
+            ++i;
+        }
+    }
+    *lines_out = lines;
+    *count_out = line;
+    return 1;
+}
+
+void frontend_credits_lines_free(char** lines, int count)
+{
+    (void)count;
+    if (lines != NULL) {
+        free(lines[0]);
+        free(lines);
+    }
+}
+
+/* FUNCTION: LEGORR 0x0040a0c0 (scroll-clock portion) */
+void frontend_credits_scroll_step(uint32_t now, uint32_t* clock,
+                                  int* scroll_px)
+{
+    if (clock == NULL || scroll_px == NULL || now - *clock <= 0x21u) {
+        return;
+    }
+    ++*scroll_px;
+    *clock += 0x21u;
+    if (*clock < now) {
+        *clock = now;
+    }
+}
+
 /* --- current selection context (see frontend.hpp) -------------------------- */
 // GLOBAL: LEGORR 0x00557500
 static void* s_current_selection_context;
@@ -4926,24 +5099,21 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value)
 /* --- band-mode / timed-effect / positions (see frontend.hpp) -----------------
  * The band mode word joins the selection-state statics (the corpus's
  * DAT_004dc64c, read by the transition leaf and raised in passing by the
- * state-bit gates). The timed-effect flag words land as a guarded window:
- * the corpus's 0x27c-stride band entries live with the unported
- * update dispatch; the flag and time fields land as guarded windows. */
-#define TIMED_EFFECT_ENTRIES 16
+ * state-bit gates). The timed-effect state uses the full 0x27c-stride
+ * records: the timestamp, cue, flags, attached object, and image list share
+ * the corpus table at DAT_0054c000. */
+#define TIMED_EFFECT_ENTRIES 40
 #define TIMED_EFFECT_RECORD_COUNT 40
-#define TIMED_EFFECT_RECORD_STRIDE_DWORDS 0x9f
 #define LAYOUT_POSITION_ENTRIES 2   /* corpus: two help-window buttons */
 #define LAYOUT_POSITION_STRIDE 7    /* corpus advances 0x1c bytes per entry */
 
 // GLOBAL: LEGORR 0x004dc64c
 static int      s_band_mode;
-static uint32_t s_timed_effect_flags[TIMED_EFFECT_ENTRIES];
 /* Corpus records span DAT_0054c000..DAT_0055235f at 0x27c-byte strides;
  * the update walk's exclusive flag bound is DAT_0055235c (record 39's
  * +0x278 field), so the timestamp band has 40 records. */
 // GLOBAL: LEGORR 0x0054c000
-static uint32_t s_timed_effect_time[TIMED_EFFECT_RECORD_COUNT
-                                    * TIMED_EFFECT_RECORD_STRIDE_DWORDS];
+static TimedEffectRecord s_timed_effect_records[TIMED_EFFECT_RECORD_COUNT];
 // GLOBAL: LEGORR 0x0054bf3c
 static uint32_t s_timed_effect_tick;
 // GLOBAL: LEGORR 0x004db904
@@ -4995,32 +5165,34 @@ static void (*s_help_window_sound_clear)(int);
 static void (*s_help_render_transition_clear)(int, int);
 
 // FUNCTION: LEGORR 0x0046b770
-void timed_effect_update_request_set(int index)
+static void timed_effect_update_request_set_corpus(int index)
 {
-    if (index >= 0 && index < TIMED_EFFECT_ENTRIES) {
-        s_timed_effect_flags[index] |= 4u;
-    }
-    /* deviation: the corpus raises blindly at any index. */
+    s_timed_effect_records[index].flags |= 4u;
 }
 
-/* TimedEffectCueRequestSet (FUN_0046b700) — see frontend.hpp. The band's
- * cue word lands as own storage next to the flag/time windows. */
-static uint32_t s_timed_effect_cue[TIMED_EFFECT_ENTRIES];
+void timed_effect_update_request_set(int index)
+{
+    if (index >= 0 && index < TIMED_EFFECT_ENTRIES)
+        timed_effect_update_request_set_corpus(index);
+}
 
 // FUNCTION: LEGORR 0x0046b700
+static void timed_effect_cue_request_set_corpus(int index, uint32_t value)
+{
+    s_timed_effect_records[index].cue = value;
+    s_timed_effect_records[index].flags |= 3u;
+}
+
 void timed_effect_cue_request_set(int index, uint32_t value)
 {
-    if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
-        return; /* deviation: the corpus strides any index blindly */
-    }
-    s_timed_effect_cue[index] = value;
-    s_timed_effect_flags[index] |= 3u;
+    if (index >= 0 && index < TIMED_EFFECT_ENTRIES)
+        timed_effect_cue_request_set_corpus(index, value);
 }
 
 uint32_t timed_effect_cue_peek(int index)
 {
     return (index >= 0 && index < TIMED_EFFECT_ENTRIES)
-               ? s_timed_effect_cue[index] : 0u;
+        ? s_timed_effect_records[index].cue : 0u;
 }
 
 uint32_t timed_effect_flags_peek(int index)
@@ -5028,7 +5200,7 @@ uint32_t timed_effect_flags_peek(int index)
     if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
         return 0u;
     }
-    return s_timed_effect_flags[index];
+    return s_timed_effect_records[index].flags;
 }
 
 // FUNCTION: LEGORR 0x00418fc0
@@ -5645,18 +5817,32 @@ void advisor_text_display_ops_set(const AdvisorTextDisplayOps* ops)
                 sizeof(s_advisor_text_display_ops));
 }
 
+/* The engine text-output record already owns its font, position, wrapping,
+ * and scroll state. Use the shared record writer and wrapped renderer when a
+ * display-state provider supplies that record but no backend-specific draw
+ * callback. */
+static int advisor_text_output_draw(void* output, const char* text,
+                                    int mode, float delta)
+{
+    if (output == NULL || text == NULL) return 0;
+    objective_advisor_text_copy(output, mode, "%s", text);
+    (void)text_buffer_draw_wrapped(output, 0u, delta, NULL);
+    return 1;
+}
+
 /* AdvisorTextDisplayWorker (FUN_0046ad00): update the active advisor slot
  * or message timer, render the selected text path, then close or finish the
  * interface overlay according to the global display state. */
-int advisor_text_display_worker(float delta)
+// FUNCTION: LEGORR 0x0046ad00
+void advisor_text_display_worker(float delta)
 {
     AdvisorTextDisplayOps* ops = &s_advisor_text_display_ops;
     AdvisorTextDisplayState state;
     int old_slot;
     int alternate;
-    if (ops->state_get == NULL) return 0;
+    if (ops->state_get == NULL) return;
     memset(&state, 0, sizeof(state));
-    if (!ops->state_get(ops->context, &state)) return 0;
+    if (!ops->state_get(ops->context, &state)) return;
     old_slot = state.current_slot;
     if (state.message_flags == 0u) {
         int available = ops->slot_is_available != NULL ?
@@ -5666,6 +5852,13 @@ int advisor_text_display_worker(float delta)
             if (ops->slot_text_draw != NULL) {
                 ops->slot_text_draw(ops->context, state.current_slot,
                                     alternate, state.x, state.y);
+            }
+            else {
+                const char* text = ui_message_text_slot_get(
+                    (unsigned int)state.current_slot);
+                void* output = alternate != 0 ? state.alternate_text_output :
+                                                state.primary_text_output;
+                (void)advisor_text_output_draw(output, text, 1, delta);
             }
             if (state.message_timer <= 0.0f) {
                 state.current_slot = 0x1a;
@@ -5696,11 +5889,10 @@ int advisor_text_display_worker(float delta)
     if (ops->overlay_active != NULL &&
         ops->overlay_active(ops->context) && old_slot != 0x16) {
         if (ops->overlay_close != NULL) ops->overlay_close(ops->context);
-        return 1;
+        return;
     }
     if (ops->interface_finish != NULL)
         ops->interface_finish(ops->context, &state, delta);
-    return 1;
 }
 
 void selected_ground_marker_ops_set(const SelectedGroundMarkerOps* ops)
@@ -5793,9 +5985,12 @@ void overlay_text_buffer_ops_set(const OverlayTextBufferOps* ops)
                 sizeof(s_overlay_text_buffer_ops));
 }
 
+static void help_transition_control_noop(int a, int b);
+
 /* OverlayTextBufferRefresh (FUN_00418a00): refresh the help overlay,
  * validate interface/input gates, render its header and scrolled entries,
  * then finish the overlay frame. */
+// FUNCTION: LEGORR 0x00418a00
 int overlay_text_buffer_refresh(void)
 {
     OverlayTextBufferOps* ops = &s_overlay_text_buffer_ops;
@@ -5808,21 +6003,41 @@ int overlay_text_buffer_refresh(void)
     float y;
     float clip_y;
     int primary_drawn;
-    if (ops->ensure_initialized == NULL) return 0;
-    if (!ops->ensure_initialized(ops->context)) return 0;
+    /* The reference re-arms the transition cleanup when its bit-0x40 mode
+     * handler is absent, then checks that mode again. That state is owned by
+     * this module, so it does not need a host callback. */
+    if (ops->ensure_initialized != NULL) {
+        if (!ops->ensure_initialized(ops->context)) return 0;
+    } else {
+        if (ui_mode_resource_bit40_get() == 0u) {
+            help_render_transition_cleanup_if_active();
+        }
+        if (ui_mode_resource_bit40_get() == 0u) return 0;
+    }
     flags = ops->interface_flags_get != NULL ?
-        ops->interface_flags_get(ops->context) : 0u;
+        ops->interface_flags_get(ops->context) : s_sel_state;
     if ((flags & 2u) == 0u || (flags & 1u) == 0u) return 0;
     input_flags = ops->input_flags_get != NULL ?
-        ops->input_flags_get(ops->context) : 0u;
+        ops->input_flags_get(ops->context) : system_state_flags_get();
     if ((input_flags & 0x800u) != 0u) return 0;
     if (ops->transition_begin != NULL)
         ops->transition_begin(ops->context);
+    else
+        help_transition_control_noop(0, 1);
     count = ops->entry_count_get != NULL ?
         ops->entry_count_get(ops->context) : 0;
     if (count <= 0) {
         if (ops->reset != NULL) ops->reset(ops->context);
+        else help_render_transition_cleanup_if_active();
         return 1;
+    }
+    /* SurfaceBlitRect has a repository binding through the resource-record
+     * renderer. The per-frame message/list source that decides whether this
+     * background is needed is still supplied by the caller's row provider. */
+    if (s_help_background_handle != 0u) {
+        crt_surface_blit_record(s_help_background_handle,
+                                s_help_background_offset_x,
+                                s_help_background_offset_y);
     }
     primary_drawn = ops->primary_text_draw != NULL ?
         ops->primary_text_draw(ops->context, &bottom) : 0;
@@ -5863,6 +6078,7 @@ int overlay_text_buffer_refresh(void)
         y += line.height + 10.0f;
     }
     if (ops->finish != NULL) ops->finish(ops->context);
+    else ui_mode_resource_positions_apply();
     return 1;
 }
 
@@ -6422,11 +6638,15 @@ static float s_reg_f0;            /* DAT_004ddcf0 */
 // GLOBAL: LEGORR 0x004ddccc
 uint32_t s_obj_sel_word;          /* DAT_004ddccc */
 // GLOBAL: LEGORR 0x004ddcd0
-static uint32_t s_obj_track_word; /* DAT_004ddcd0 */
+static float s_obj_track_word;     /* _DAT_004ddcd0 */
 // GLOBAL: LEGORR 0x004de1ec
 static float    s_inter_timer = 0.0f; /* DAT_004de1ec */
 // GLOBAL: LEGORR 0x004de1f8
 static uint32_t s_inter_flags;    /* DAT_004de1f8 */
+// GLOBAL: LEGORR 0x004ddd1c
+static uint32_t s_status_banner_word;
+// GLOBAL: LEGORR 0x004ddd20
+static float s_status_blink_timer;
 // GLOBAL: LEGORR 0x004ddd00
 static uint32_t s_pointer_action_type; /* DAT_004ddd00 */
 // GLOBAL: LEGORR 0x004ddd04
@@ -6526,7 +6746,7 @@ void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
 void objective_selection_state_reset(void)
 {
     s_obj_sel_word = 0u;
-    __builtin_memcpy(&s_obj_track_word, &s_reg_e8, sizeof(s_obj_track_word));
+    s_obj_track_word = s_reg_e8;
     s_inter_flags |= 0x84u;
 }
 
@@ -6609,6 +6829,50 @@ static uint32_t s_map_store_last_x;   /* DAT_004ddcf4 */
 static uint32_t s_map_store_last_y;   /* DAT_004ddcf8 */
 // GLOBAL: LEGORR 0x004ddcfc
 static uint32_t s_map_store_kind;     /* DAT_004ddcfc */
+
+void frontend_event_timer_state_get(EventTimerState* state)
+{
+    if (state == NULL) return;
+    state->flags = s_inter_flags;
+    /* DAT_005002bc is supplied only by its unported input producer. */
+    state->external_flags = event_timer_interaction_flags_get();
+    state->current_event = (int)s_obj_sel_word;
+    state->next_event = (int)s_map_store_kind;
+    state->timer = s_obj_track_word;
+    state->rate = s_reg_f0;
+    state->lower = s_reg_e8;
+    state->upper = s_reg_e0;
+    state->current_x = s_map_store_pair_x;
+    state->current_y = s_map_store_pair_y;
+    state->next_x = s_map_store_last_x;
+    state->next_y = s_map_store_last_y;
+}
+
+void frontend_event_timer_state_set(const EventTimerState* state)
+{
+    if (state == NULL) return;
+    s_inter_flags = state->flags;
+    s_obj_sel_word = (uint32_t)state->current_event;
+    s_obj_track_word = state->timer;
+    s_map_store_pair_x = state->current_x;
+    s_map_store_pair_y = state->current_y;
+}
+
+// FUNCTION: LEGORR 0x0041B930
+void timed_status_and_event_tick(float delta)
+{
+    s_status_blink_timer -= delta;
+    if (s_status_blink_timer < 0.0f) {
+        s_status_banner_word = (uint32_t)(s_status_banner_word == 0u);
+        s_status_blink_timer = 15.0f;
+    }
+    event_timer_countdown_advance(delta);
+    if (s_inter_timer > 0.0f) {
+        s_inter_timer -= delta;
+        return;
+    }
+    s_inter_flags |= 0x800u;
+}
 
 // FUNCTION: LEGORR 0x0041ea50
 void store_selected_map_coordinate(int kind, const uint32_t coord[2])
@@ -6762,8 +7026,6 @@ uint32_t cell_action_permission_table_peek(int index)
 }
 
 /* --- the menu-tick gate + status banner word (see frontend.hpp) ------------- */
-// GLOBAL: LEGORR 0x004ddd1c
-static uint32_t s_status_banner_word;   /* DAT_004ddd1c */
 
 // FUNCTION: LEGORR 0x00412190
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -6944,12 +7206,11 @@ void panel_texture_slots_blit(int panel)
 
 /* Keep the address-mapped leaf blind like the corpus; the public wrapper
  * retains the bounds check exercised by the portable API tests. */
-// FUNCTION: LEGORR 0x46b7a0
+// FUNCTION: LEGORR 0x0046b7a0
 static void timed_effect_timestamp_reset_corpus(int index)
 {
-    *(float*)(s_timed_effect_time
-              + index * TIMED_EFFECT_RECORD_STRIDE_DWORDS) =
-        *(const float*)&s_timed_effect_tick;
+    memcpy(&s_timed_effect_records[index].timestamp,
+           &s_timed_effect_tick, sizeof(s_timed_effect_records[index].timestamp));
 }
 
 void timed_effect_timestamp_reset(int index)
@@ -6960,6 +7221,12 @@ void timed_effect_timestamp_reset(int index)
     /* deviation: the corpus strides the table blindly at any index. */
 }
 
+void* timed_effect_record_storage_get(unsigned int index)
+{
+    if (index >= TIMED_EFFECT_RECORD_COUNT) return NULL;
+    return &s_timed_effect_records[index];
+}
+
 void timed_effect_tick_word_set(uint32_t tick) { s_timed_effect_tick = tick; }
 uint32_t timed_effect_tick_word_peek(void) { return s_timed_effect_tick; }
 
@@ -6968,7 +7235,9 @@ uint32_t timed_effect_time_peek(int index)
     if (index < 0 || index >= TIMED_EFFECT_RECORD_COUNT) {
         return 0u;
     }
-    return s_timed_effect_time[index * TIMED_EFFECT_RECORD_STRIDE_DWORDS];
+    uint32_t bits;
+    memcpy(&bits, &s_timed_effect_records[index].timestamp, sizeof(bits));
+    return bits;
 }
 
 /* ScreenRightEdgeCacheRefresh (FUN_0041a290) — see frontend.hpp. */
@@ -7716,16 +7985,17 @@ void ui_overlay_animation_advance(int mode, int steps)
     }
 }
 
-/* TimedEffectPersistenceSet (FUN_0046b730) — see frontend.hpp. */
 // FUNCTION: LEGORR 0x0046b730
+static void timed_effect_persistence_set_corpus(int index, int set)
+{
+    uint32_t* flags = &s_timed_effect_records[index].flags;
+    *flags = (set != 0) ? (*flags | 0x10u) : (*flags & ~0x10u);
+}
+
 void timed_effect_persistence_set(int index, int set)
 {
-    if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
-        return; /* deviation: the corpus strides the band blindly */
-    }
-    s_timed_effect_flags[index] =
-        (set != 0) ? (s_timed_effect_flags[index] | 0x10u)
-                   : (s_timed_effect_flags[index] & ~0x10u);
+    if (index >= 0 && index < TIMED_EFFECT_ENTRIES)
+        timed_effect_persistence_set_corpus(index, set);
 }
 
 /* CursorTileSelectionUpdateByType (FUN_0041cc80) — see frontend.hpp. */

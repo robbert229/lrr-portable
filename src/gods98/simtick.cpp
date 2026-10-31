@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "message.hpp"
 #include "simtick.hpp"
 #include "sound.hpp"
 #include "heap.hpp"
+#include "crt/crt.hpp"
 #include "game/level.hpp"
 #include "game/cmd.hpp"
 #include "game/select.hpp"
+#include "game/entity.hpp"
+#include "game/effects.hpp"
+#include "game/render.hpp"
 
 #define SIMTICK_MUTE_RESET 25.0f
 
@@ -142,6 +147,14 @@ void simtick_table_dispatch(EngineContext* c, float dt, float scale)
 
 /* ---- post-step cluster (FUN_0040d450) ----------------------------------- */
 static int s_post_steps = 0;
+static void** s_post_record_tables = NULL;
+static uint32_t s_post_record_table_count = 0;
+static SimtickPostClusterRecordHook s_post_active_hook = NULL;
+static SimtickPostClusterRecordHook s_post_entity_first_hook = NULL;
+static SimtickPostClusterRecordHook s_post_entity_second_hook = NULL;
+static void* s_post_cluster_user = NULL;
+static SimtickSceneEntityHook s_scene_entity_hook = NULL;
+static void* s_scene_entity_user = NULL;
 
 int simtick_post_steps_run(void);
 
@@ -150,19 +163,82 @@ int simtick_post_steps_run(void)
     return s_post_steps;
 }
 
-static void post_step(int /*id*/)
+void simtick_post_cluster_records_set(void** tables, uint32_t table_count,
+    SimtickPostClusterRecordHook active_record_hook,
+    SimtickPostClusterRecordHook entity_first_hook,
+    SimtickPostClusterRecordHook entity_second_hook, void* user)
 {
-    /* TODO(simtick): FUN_0040d490 / FUN_004377b0 post-step bodies. */
-    ++s_post_steps;
+    s_post_record_tables = tables;
+    s_post_record_table_count = table_count;
+    s_post_active_hook = active_record_hook;
+    s_post_entity_first_hook = entity_first_hook;
+    s_post_entity_second_hook = entity_second_hook;
+    s_post_cluster_user = user;
+}
+
+static void post_cluster_active_records(void)
+{
+    uint32_t table_index;
+    const size_t record_stride = 0x10u + sizeof(void*);
+    for (table_index = 0; table_index < s_post_record_table_count;
+         ++table_index) {
+        void* table = s_post_record_tables != NULL
+            ? s_post_record_tables[table_index] : NULL;
+        uint32_t count;
+        uint32_t i;
+        if (table == NULL) continue;
+        count = (uint32_t)1u << (table_index & 31u);
+        for (i = 0; i < count; ++i) {
+            uint8_t* record = (uint8_t*)table + i * record_stride;
+            void* self;
+            memcpy(&self, record + 0x10, sizeof(self));
+            if (self == (void*)record && s_post_active_hook != NULL)
+                s_post_active_hook(record, 1, s_post_cluster_user);
+        }
+    }
+}
+
+static int post_cluster_entity_first(EntitySlot* entity, void* payload)
+{
+    (void)payload;
+    if (s_post_entity_first_hook != NULL)
+        s_post_entity_first_hook(entity, 0, s_post_cluster_user);
+    return 0;
+}
+
+static int post_cluster_entity_second(EntitySlot* entity, void* payload)
+{
+    (void)payload;
+    if (s_post_entity_second_hook != NULL)
+        s_post_entity_second_hook(entity, 1, s_post_cluster_user);
+    return 0;
+}
+
+static int scene_entity_callback(EntitySlot* entity, void* payload)
+{
+    float dt = *(float*)payload;
+    if (s_scene_entity_hook != NULL)
+        s_scene_entity_hook(entity, dt, s_scene_entity_user);
+    return 0;
+}
+
+void simtick_scene_entity_hook_set(SimtickSceneEntityHook hook, void* user)
+{
+    s_scene_entity_hook = hook;
+    s_scene_entity_user = user;
 }
 
 // FUNCTION: LEGORR 0x0040d450
 void simtick_post_cluster(EngineContext* c)
 {
+    GameContext* game = entity_pool_callback_context_get();
     (void)c;
-    post_step(1);
-    post_step(2);
-    post_step(3);
+    post_cluster_active_records();
+    entity_pool_find_by_callback_filtered(game,
+        post_cluster_entity_first, NULL);
+    entity_pool_find_by_callback_filtered(game,
+        post_cluster_entity_second, NULL);
+    s_post_steps += 3;
 }
 
 /* ---- bobbins list machine (FUN_004091e0) -------------------------------- */
@@ -776,29 +852,119 @@ void simtick_grid_cell_pass(EngineContext* c)
     }
 }
 
-/* FUN_0043b270: scene pass with a flag word + a 125 s broadcast timer. */
+/* FUN_0043b270: scene pass with a flag word + terrain-cell staging. */
 static uint32_t s_scene_word = 0;
 static void (*s_scene_broadcast)(int) = NULL;
 static int s_scene_bcasts = 0;
 static float s_scene_timer = 0.0f;
+typedef struct SimtickCellCoord { int x, y; } SimtickCellCoord;
+static SimtickCellCoord* s_scene_tracked = NULL;
+static uint32_t s_scene_tracked_count = 0;
+static uint32_t s_scene_tracked_capacity = 0;
+static SimtickCellCoord* s_scene_pending = NULL;
+static uint32_t s_scene_pending_count = 0;
+static uint32_t s_scene_pending_capacity = 0;
+static void (*s_scene_cell_init)(EngineState*, int, int) = NULL;
 
 uint32_t simtick_scene_word(void)      { return s_scene_word; }
 void simtick_set_scene_word(uint32_t w) { s_scene_word = w; }
 void simtick_set_scene_broadcast(void (*h)(int)) { s_scene_broadcast = h; }
 int  simtick_scene_broadcasts(void)    { return s_scene_bcasts; }
 
+static int scene_cell_list_append(SimtickCellCoord** list, uint32_t* count,
+                                 uint32_t* capacity, int x, int y)
+{
+    if (*count == *capacity) {
+        uint32_t next_capacity = *capacity == 0 ? 16u : *capacity * 2u;
+        SimtickCellCoord* next = (SimtickCellCoord*)realloc(
+            *list, (size_t)next_capacity * sizeof(SimtickCellCoord));
+        if (next == NULL) return 0;
+        *list = next;
+        *capacity = next_capacity;
+    }
+    (*list)[*count].x = x;
+    (*list)[*count].y = y;
+    ++*count;
+    return 1;
+}
+
+void simtick_scene_cell_track(int x, int y)
+{
+    scene_cell_list_append(&s_scene_tracked, &s_scene_tracked_count,
+                           &s_scene_tracked_capacity, x, y);
+}
+
+void simtick_scene_cell_init_hook(void (*hook)(EngineState*, int, int))
+{
+    s_scene_cell_init = hook;
+}
+
+int simtick_scene_cells_pending(void)
+{
+    return (int)s_scene_pending_count;
+}
+
+/* FUN_00432200 snapshots the tracked coordinates before the entity walk,
+ * mirrors each coordinate into its previous-state slots, and clears cell
+ * flag 0x100. The host grid is the same +0xb8 / 0x48-byte cell array used by
+ * EngineState. */
+static void scene_cell_previous_state_track(EngineState* st)
+{
+    uint32_t i;
+    if (s_scene_tracked_count == 0) return;
+    for (i = 0; i < s_scene_tracked_count; ++i) {
+        SimtickCellCoord coord = s_scene_tracked[i];
+        if (st != NULL && st->grid_cells != NULL && coord.x >= 0 && coord.y >= 0
+            && (uint32_t)coord.x < st->grid_w
+            && (uint32_t)coord.y < st->grid_h) {
+            uint8_t* cell = (uint8_t*)st->grid_cells
+                + ((uint32_t)coord.y * st->grid_w + (uint32_t)coord.x) * 0x48u;
+            uint32_t flags;
+            memcpy(&flags, cell + 0x0c, sizeof(flags));
+            flags &= ~0x100u;
+            memcpy(cell + 0x0c, &flags, sizeof(flags));
+        }
+        scene_cell_list_append(&s_scene_pending, &s_scene_pending_count,
+                              &s_scene_pending_capacity, coord.x, coord.y);
+    }
+    s_scene_tracked_count = 0;
+}
+
+/* FUN_004321a0 drains the snapshot after the entity callback walk. A cell
+ * whose +0x0d byte bit 0 is clear is sent to CellInitPass (FUN_0042f6f0). */
+static void scene_cell_update_queue_flush(EngineState* st)
+{
+    uint32_t i;
+    for (i = 0; i < s_scene_pending_count; ++i) {
+        SimtickCellCoord coord = s_scene_pending[i];
+        if (st == NULL || st->grid_cells == NULL || coord.x < 0 || coord.y < 0
+            || (uint32_t)coord.x >= st->grid_w
+            || (uint32_t)coord.y >= st->grid_h) continue;
+        uint8_t* cell = (uint8_t*)st->grid_cells
+            + ((uint32_t)coord.y * st->grid_w + (uint32_t)coord.x) * 0x48u;
+        if ((cell[0x0d] & 1u) == 0 && s_scene_cell_init != NULL)
+            s_scene_cell_init(st, coord.x, coord.y);
+    }
+    s_scene_pending_count = 0;
+}
+
 // FUNCTION: LEGORR 0x0043b270
 void simtick_scene_pass(EngineContext* c, float dt)
 {
-    (void)c;
+    EngineState* st = c != NULL ? c->state_block : NULL;
     if ((s_scene_word & 4u) != 0) {
-        /* TODO(simtick): FUN_00432200 entry pass. */
+        scene_cell_previous_state_track(st);
     }
     s_scene_word |= 0x10u;
-    ++s_post_n; /* FUN_004377d0 scene hook step */
+    /* FUN_004377d0(callback, &dt, 0): visit every live, unflagged entity.
+     * The callback body updates renderer-owned scene state; it is kept at
+     * that ownership seam until the renderer record is present in context. */
+    entity_pool_find_by_callback(entity_pool_callback_context_get(),
+                                 scene_entity_callback, (void*)&dt, 0);
+    ++s_post_n;
     s_scene_word &= ~0x10u;
     if ((s_scene_word & 4u) != 0) {
-        /* TODO(simtick): FUN_004321a0 exit pass. */
+        scene_cell_update_queue_flush(st);
     }
     if ((s_scene_word & 8u) == 0) {
         s_scene_word &= ~4u;
@@ -866,7 +1032,10 @@ void simtick_sfx_bank(EngineContext* c, float dt)
 
 /* shared tranche-10 module state */
 static int   s_mouse_anchor_x = 0, s_mouse_anchor_y = 0;
-static float s_vu_accum = 0.0f;
+static SimtickRenderPassHook s_render_pass_hook = NULL;
+static void* s_render_pass_user = NULL;
+static SimtickRenderEntityHook s_render_entity_hook = NULL;
+static void* s_render_entity_user = NULL;
 
 /* FUN_00425d90: world picker via mouse motion. */
 static int (*s_pick)(int, int) = NULL;
@@ -951,49 +1120,112 @@ void simtick_ambient_spawn(EngineContext* c, float dt)
 /* FUN_004520d0 is the per-player command-queue executor — owned by the
  * game layer (src/game/cmd.cpp); kept out of the simtick module. */
 
-/* FUN_00465b00: sound-bank ticker — linked entries with init/lifetime. */
-// FUNCTION: LEGORR 0x00465b00
+/* Legacy tick-list slot advances the transient-effect instance registry. */
 void simtick_sound_bank_tick(EngineContext* c, float dt)
 {
-    (void)c; (void)dt;
-    /* corpus: walk DAT_00552128 linked entries; init missing voices, tick
-     * lifetime, update slots. Structural pass: one ordered step per node. */
-    ++s_post_n;
+    (void)c;
+    transient_effect_instances_tick(dt);
 }
 
 /* FUN_004291a0: render-pass entry (in-game camera probe / world collect). */
 // FUNCTION: LEGORR 0x004291a0
 void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
 {
-    (void)dt; (void)o1;
+    (void)o1;
     if (c == NULL) return;
-    if (scale != 0.0f) return; /* corpus: param_2 == 0 gates the in-game pass */
-    if (c->context_mode != 1) return;
-    /* corpus: camera pos (FUN_004754c0 on the view cam), grid pick, height,
-     * scale by FUN_00450890 x3, world-collect via FUN_00450600 hook. */
-    ++s_post_n;
+    if (scale == 0.0f) {
+        if (c->context_mode == 1 || c->context_mode == 0) {
+            if (s_render_pass_hook != NULL)
+                s_render_pass_hook(c, dt, scale, s_render_pass_user);
+            ++s_post_n;
+        }
+    } else if ((c->state & 2u) != 0 && (c->state & 0x2000u) != 0) {
+        if (s_render_pass_hook != NULL)
+            s_render_pass_hook(c, dt, scale, s_render_pass_user);
+        ++s_post_n;
+    }
 }
 
 int simtick_render_steps(void) { return s_post_n; }
+
+void simtick_render_pass_hook_set(SimtickRenderPassHook hook, void* user)
+{
+    s_render_pass_hook = hook;
+    s_render_pass_user = user;
+}
+
+void simtick_render_entity_hook_set(SimtickRenderEntityHook hook, void* user)
+{
+    s_render_entity_hook = hook;
+    s_render_entity_user = user;
+}
+
+static int render_entity_callback(EntitySlot* entity, void* payload)
+{
+    (void)payload;
+    if (s_render_entity_hook != NULL)
+        s_render_entity_hook(entity, s_render_entity_user);
+    return 0;
+}
+
 /* FUN_00449c00: a single ordered render step. */
 // FUNCTION: LEGORR 0x00449c00
 void simtick_render_step(EngineContext* c)
 {
     (void)c;
+    entity_pool_find_by_callback(entity_pool_callback_context_get(),
+        render_entity_callback, NULL, 0);
     ++s_post_n;
 }
 
-/* FUN_00426520: vu/timer accumulators gated on input buttons. */
+/* MainSimInteractionAndCellUpdate (FUN_00426520; Findings 474/455) clears
+ * the debug bit, resolves the live pointer against the loaded level, then
+ * routes a click to entity selection or a move command. The original has
+ * several additional cursor modes and HUD/terrain feedback branches; those
+ * rely on UI mode globals which have no EngineContext owner yet. The
+ * reachable selection path uses the same perspective camera and viewport
+ * dimensions as the software scene renderer, rather than guessing a cell
+ * from raw screen coordinates. */
 // FUNCTION: LEGORR 0x00426520
 void simtick_vu_meter(EngineContext* c, float dt)
 {
+    GameContext* game;
+    LevelState* level;
+    float cell_x, cell_y;
+    EntitySlot* picked;
+    int width, height;
+    (void)dt;
     if (c == NULL) return;
-    c->debug &= ~0x400u; /* corpus: DAT_00556ed0 &= ~0x400 each frame */
-    if (c->input != NULL && (c->input->cur[0x2d] != 0
-                             || c->input->cur[0x2e] != 0)) {
-        s_vu_accum = 0.0f; /* buttons held -> zero the accumulator */
-    } else {
-        s_vu_accum += dt;
+    c->debug &= ~0x400u; /* corpus's first statement after loading state */
+
+    if ((c->state & 2u) == 0u || (c->state & 0x100u) != 0u ||
+        c->context_mode != 1 || c->input == NULL ||
+        c->input->mouse_press == 0) return;
+
+    game = entity_pool_callback_context_get();
+    level = (LevelState*)c->level_block;
+    if (game == NULL || level == NULL || game->level != level) return;
+    width = display_width_get();
+    height = display_height_get();
+    if (width <= 0 || height <= 0 ||
+        !level_scene_mouse_cell(game, level, width, height,
+                               c->input->mouse_x, c->input->mouse_y,
+                               &cell_x, &cell_y)) return;
+
+    picked = level_scene_pick_entity(game, level, width, height,
+                                     c->input->mouse_x, c->input->mouse_y,
+                                     18.0f);
+    if (picked == NULL) {
+        /* The renderer's precise screen picker currently covers minifigures.
+         * Keep other selectable entity kinds reachable through the shared
+         * cell-space selection owner. */
+        picked = selection_pick(game, cell_x, cell_y, 0.75f);
+    }
+    if (picked != NULL) {
+        (void)selection_add(game, picked);
+    }
+    else if (selection_count(game) != 0) {
+        (void)selection_cmd_move(game, cell_x, cell_y);
     }
 }
 
@@ -1106,6 +1338,11 @@ uint32_t simtick_route_position_state_peek(void) { return s_edit_word; }
 void simtick_global_ui_flags_clear_bits12(void)
 {
     s_timer_word &= 0xfffffff9u;
+}
+
+void simtick_global_ui_flags_set_bit2(void)
+{
+    s_timer_word |= 2u;
 }
 
 uint32_t simtick_global_ui_flags_word(void) { return s_timer_word; }

@@ -12,6 +12,7 @@
 #include "objective.hpp"
 #include "savegame.hpp"
 #include "ui_list.hpp"
+#include "effects.hpp"
 #include "../gods98/sound.hpp"
 #include "util.hpp"
 
@@ -28,6 +29,8 @@ static const char* TASK_NAMES[GAME_TASK_COUNT] = {
  * those ABI adapters. */
 static RewardScreenState* s_reward_screen_state;
 static const RewardScreenOps* s_reward_screen_ops;
+static RewardScreenState s_reward_screen_default_state;
+static void reward_task_flics_close_all(RewardScreenState* state);
 
 /* Path helper: level-scoped `Reward [<sub>] [<name>]` key, resolved via
  * util_level_cfg_path (Levels container first, flat fallback). */
@@ -362,7 +365,10 @@ void mission_set_ore(GameContext* ctx, int32_t v)
 }
 void mission_add_score(GameContext* ctx, int32_t v)
 {
-    if (ctx != NULL) ctx->mission.score += v;
+    if (ctx != NULL) {
+        ctx->mission.score += v;
+        reward_score_add((float)v);
+    }
 }
 
 void mission_incident(GameContext* ctx, int id)
@@ -400,7 +406,209 @@ int mission_update(GameContext* ctx)
             completed |= (1 << i);
         }
     }
+    if (ctx->checkpoint_blob != NULL)
+        (void)mission_checkpoint_task_progress_refresh(ctx);
     return completed;
+}
+
+static float mission_blob_float_get(const uint8_t* blob, size_t offset)
+{
+    float value;
+    __builtin_memcpy(&value, blob + offset, sizeof(value));
+    return value;
+}
+
+static void mission_blob_float_set(uint8_t* blob, size_t offset, float value)
+{
+    __builtin_memcpy(blob + offset, &value, sizeof(value));
+}
+
+static void mission_blob_word_set(uint8_t* blob, size_t offset,
+                                  uint32_t value)
+{
+    __builtin_memcpy(blob + offset, &value, sizeof(value));
+}
+
+/* CheckpointBlobTaskProgressRefresh (FUN_00460360) prepares the per-level
+ * task snapshot consumed by RewardStatsPanelDraw. Keep the map-derived
+ * counters local to this GameContext and route the percentage fold through
+ * the separate 0x460950 implementation. The reference also snapshots
+ * the shared CRT-backed score/stat globals through their live accessors.
+ * The DAT_005529a0 scratch copy and DAT_00555118 still have no ported writer. */
+int mission_checkpoint_task_progress_refresh(GameContext* ctx)
+{
+    LevelState* level;
+    uint8_t* blob;
+    int width;
+    int height;
+    uint32_t cell_count = 0u;
+    float classified_a = 0.0f;
+    float classified_b = 0.0f;
+    float eligible_cells = 0.0f;
+    float eligible_non_solid = 0.0f;
+    float marked_cells = 0.0f;
+    int y;
+
+    if (ctx == NULL || ctx->level == NULL || ctx->checkpoint_blob == NULL)
+        return 0;
+    level = ctx->level;
+    blob = (uint8_t*)ctx->checkpoint_blob;
+    level_set_int(level, OBJ_OFF_CRYSTAL_LIVE, ctx->mission.crystals);
+    level_set_int(level, OBJ_OFF_ORE_LIVE, ctx->mission.ore);
+    width = level_int(level, LEVEL_OFF_WIDTH);
+    height = level_int(level, LEVEL_OFF_HEIGHT);
+    if (width <= 0 || height <= 0 || level_voxel(level, 0, 0) == NULL) return 0;
+
+    mission_blob_float_set(blob, 0x1d1c, 0.0f);
+    mission_blob_float_set(blob, 0x1f2c, 0.0f);
+    mission_blob_word_set(blob, 0x1c8, 0u);
+    mission_blob_word_set(blob, 0x1cc, 0u);
+    mission_blob_word_set(blob, 0x1d0, 0u);
+    mission_blob_float_set(blob, 0x1d14, 0.0f);
+    mission_blob_float_set(blob, 0x2140, crt_float_00554adc_peek());
+    mission_blob_float_set(blob, 0x2560, crt_float_00554efc_peek());
+    mission_blob_float_set(blob, 0x213c, 0.0f);
+    mission_blob_float_set(blob, 0x1b04, 0.0f);
+    mission_blob_float_set(blob, 0x1b08, 0.0f);
+    {
+        const uint32_t pilot_count = (uint32_t)
+            resolved_entity_operation_dispatch("Pilot", 0, 0);
+        mission_blob_word_set(blob, 0x2778, pilot_count);
+        mission_blob_float_set(blob, 0x276c, (float)pilot_count);
+        mission_blob_float_set(blob, 0x2770, (float)pilot_count);
+    }
+    mission_blob_word_set(blob, 0x277c, 0u); /* DAT_00555118 has no ported writer */
+    mission_blob_float_set(blob, 0x2784, crt_float_00555120_peek());
+
+    {
+        const uint32_t count_a = crt_counter_00555324_peek();
+        const uint32_t count_b = crt_counter_00555328_peek();
+        const uint32_t count_c = crt_counter_0055532c_peek();
+        float score_percent = (float)count_a * 100.0f;
+        const float score_limit = crt_float_00555330_peek();
+        if (score_percent > score_limit) score_percent = score_limit;
+        mission_blob_word_set(blob, 0x2988, count_a);
+        mission_blob_word_set(blob, 0x298c, count_b);
+        mission_blob_word_set(blob, 0x2990, count_c);
+        mission_blob_float_set(blob, 0x2994, score_percent);
+        mission_blob_float_set(blob, 0x297c, (float)count_a * 100.0f);
+        mission_blob_float_set(blob, 0x2980, score_percent);
+    }
+    {
+        const uint32_t score_count = reward_score_count_peek();
+        const float score_total = reward_score_total_peek();
+        const float denominator = (float)score_count;
+        mission_blob_float_set(blob, 0x2da0, denominator);
+        mission_blob_float_set(blob, 0x2d9c, score_total / denominator);
+    }
+    /* The port has no owner for the session-global scratch block at
+     * DAT_005529a4 or the 0x66-dword task seed image at DAT_005529c4. Keep
+     * their copied regions at the same zero-init values a new context gets. */
+    memset(blob + 8, 0, 8u * sizeof(uint32_t));
+    memset(blob + 0x28, 0, 0x198u);
+    mission_blob_float_set(blob, 0x2344, 0.0f);
+    mission_blob_float_set(blob, 0x2354, 0.0f);
+    mission_blob_float_set(blob, 0x2554, 0.0f);
+    mission_blob_float_set(blob, 0x2564, 0.0f);
+    mission_blob_float_set(blob, 0x2d94, 0.0f);
+    mission_blob_float_set(blob, 0x2da4, 0.0f);
+
+    /* Keep the named task values tied to live mission counters before the
+     * aggregate percentage routine consumes its input/target pairs. */
+    task_set_value(&ctx->tasks[0], ctx->mission.crystals);
+    task_set_value(&ctx->tasks[1], ctx->mission.ore);
+    task_set_value(&ctx->tasks[3], ctx->mission.constructions);
+    task_set_value(&ctx->tasks[5], ctx->mission.score);
+    __builtin_memcpy(blob + 0x1cec, ctx->tasks,
+                     GAME_TASK_COUNT * GAME_TASK_STRIDE);
+
+    /* The reference's 0x2c5b0 classifier reads voxel +5 and routes its
+     * {1,3,5,10,25} weight to one of four accumulators. Its caller consumes
+     * the first and fourth outputs as the two map totals. */
+    for (y = 0; y < height; ++y) {
+        int x;
+        for (x = 0; x < width; ++x) {
+            const uint8_t* voxel = level_voxel(level, x, y);
+            uint32_t a = 0u, b = 0u, c = 0u, d = 0u;
+            uint32_t flags;
+            uint8_t terrain_type;
+            if (voxel == NULL) continue;
+            ++cell_count;
+            level_cell_byte_state_classify(level, x, y, &a, &b, &c, &d);
+            classified_a += (float)a;
+            classified_b += (float)d;
+            terrain_type = voxel[2];
+            __builtin_memcpy(&flags, voxel + 8, sizeof(flags));
+            if ((flags & 8u) == 0u) {
+                if (terrain_type != 1u) {
+                    eligible_cells += 1.0f;
+                    eligible_non_solid += 1.0f;
+                }
+                if (terrain_type == 10u) classified_a += 4.0f;
+            }
+            else if (terrain_type != 7u && terrain_type != 6u) {
+                eligible_non_solid += 1.0f;
+            }
+            if ((flags & 0x61100000u) != 0u) {
+                marked_cells += 1.0f;
+                eligible_cells += 1.0f;
+            }
+        }
+    }
+
+    mission_blob_word_set(blob, 0x1c8, cell_count);
+    mission_blob_float_set(blob, 0x1d1c, classified_a);
+    mission_blob_float_set(blob, 0x1f2c,
+                           classified_b + eligible_cells * 4.0f);
+    mission_blob_float_set(blob, 0x213c, eligible_cells);
+    mission_blob_float_set(blob, 0x1b04, eligible_non_solid);
+    mission_blob_float_set(blob, 0x1b08, marked_cells);
+    mission_blob_float_set(blob, 0x1d20,
+        (float)level_int(level, OBJ_OFF_CRYSTAL_LIVE));
+    mission_blob_float_set(blob, 0x1f30,
+        (float)level_int(level, OBJ_OFF_ORE_LIVE));
+    mission_blob_float_set(blob, 0x2b8c, 100.0f);
+    mission_blob_float_set(blob, 0x2b90,
+        (float)level_int(level, LEVEL_OFF_AIR_SUPPLY));
+    mission_blob_float_set(blob, 0x234c,
+                           mission_blob_float_get(blob, 0x1cc));
+    mission_blob_float_set(blob, 0x2350,
+        (mission_blob_float_get(blob, 0x1cc) -
+         mission_blob_float_get(blob, 0x1d0)) + 1.0f);
+    if (mission_blob_float_get(blob, 0x2344) != 0.0f) {
+        mission_blob_float_set(blob, 0x2354,
+            (100.0f / mission_blob_float_get(blob, 0x2344)) *
+             mission_blob_float_get(blob, 0x2350));
+    }
+    if (mission_blob_float_get(blob, 0x2554) != 0.0f) {
+        mission_blob_float_set(blob, 0x2564,
+            (100.0f / mission_blob_float_get(blob, 0x2554)) *
+             mission_blob_float_get(blob, 0x2560));
+    }
+
+    /* Clamp every task's render percentage, except the Timer record whose
+     * +0x38 field is owned by the timer task path in the original. */
+    {
+        uint32_t offset;
+        for (offset = 0u; offset < 0x14a0u; offset += GAME_TASK_STRIDE) {
+            float progress;
+            if (offset == 0x1080u) continue;
+            progress = mission_blob_float_get(blob, 0x1cec + offset + 0x38u);
+            if (progress < 0.0f) progress = 0.0f;
+            if (progress > 100.0f) progress = 100.0f;
+            mission_blob_float_set(blob, 0x1cec + offset + 0x38u, progress);
+        }
+    }
+    if (!checkpoint_blob_task_progress_recalculate(ctx)) return 0;
+    (void)reward_stats_panel_draw_bound();
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00460360
+int mission_checkpoint_task_progress_refresh_bound(void)
+{
+    if (s_reward_screen_state == NULL) return 0;
+    return mission_checkpoint_task_progress_refresh(s_reward_screen_state->game);
 }
 
 /* Partial RewardInit port: reproduces the display/config settings while
@@ -417,6 +625,19 @@ void mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_nam
     rs->save_h = 20.0f;
     rs->advance_w = 72.0f;
     rs->advance_h = 20.0f;
+    /* The reference reward ABI reads process-global state. Keep an owned
+     * default state bound to the active GameContext so the checkpoint and
+     * pointer-expiry entry points operate on the same live reward data even
+     * when a renderer has not installed its drawing callbacks. */
+    if (s_reward_screen_state == NULL ||
+        s_reward_screen_state == &s_reward_screen_default_state) {
+        if (s_reward_screen_state == &s_reward_screen_default_state)
+            reward_task_flics_close_all(&s_reward_screen_default_state);
+        reward_screen_state_init(&s_reward_screen_default_state, ctx,
+                                 NULL, NULL);
+        reward_screen_runtime_bind(&s_reward_screen_default_state,
+                                   s_reward_screen_ops);
+    }
     if (cfg == NULL || level_name == NULL) {
         return;
     }
@@ -531,6 +752,8 @@ int mission_reward_click(GameContext* ctx, int hit_save)
         return 0;
     }
     (void)hit_save;
+    if (ctx->checkpoint_blob == NULL) checkpoint_blob_build(ctx);
+    (void)mission_checkpoint_task_progress_refresh(ctx);
     /* The corpus's reward-button handler (FUN_00462780) commits the
      * checkpoint through CheckpointStep; the level name maps to the active
      * record. */
@@ -557,6 +780,8 @@ const char* mission_reward_advance(GameContext* ctx)
     char name[128];
     snprintf(name, sizeof(name), "%s", next);
 
+    if (ctx->checkpoint_blob == NULL) checkpoint_blob_build(ctx);
+    (void)mission_checkpoint_task_progress_refresh(ctx);
     checkpoint_step(ctx); /* save before moving on */
     level_destroy(ctx->level);
     ctx->level = NULL;
@@ -640,6 +865,81 @@ void reward_screen_runtime_bind(RewardScreenState* state,
 int reward_screen_tick_bound(void)
 {
     return reward_screen_tick(s_reward_screen_state, s_reward_screen_ops);
+}
+
+/* RewardStatsTextFormat (FUN_00461070). The checkpoint snapshot stores the
+ * numeric values and their rendered forms in the same fixed task records.
+ * Keep the offsets literal: several values are outside the contiguous task
+ * array, exactly as the reference writes them. */
+// FUNCTION: LEGORR 0x00461070
+int reward_stats_text_format_bound(void)
+{
+    static const int value_offsets[] = {
+        0x1d3c, 0x1f4c, 0x215c, 0x1b24, 0x1cc,
+        0x257c, 0x278c, 0x299c, 0x2bac, 0x2fcc
+    };
+    static const int text_offsets[] = {
+        0x1dc0, 0x1fd0, 0x21e0, 0x1ba8, 0x23f0,
+        0x2600, 0x2810, 0x2a20, 0x2c30, 0x3050
+    };
+    RewardScreenState* state = s_reward_screen_state;
+    uint8_t* blob;
+    int i;
+    uint32_t seconds;
+    uint32_t hours;
+    uint32_t minutes;
+    uint32_t remainder;
+    float value;
+    int32_t integer;
+
+    if (state == NULL || state->game == NULL ||
+        state->game->level == NULL || state->game->checkpoint_blob == NULL)
+        return 0;
+    blob = state->game->checkpoint_blob;
+    for (i = 0; i < 10; ++i) {
+        if (i == 4) {
+            __builtin_memcpy(&integer, blob + value_offsets[i], 4);
+        }
+        else {
+            __builtin_memcpy(&value, blob + value_offsets[i], 4);
+            integer = (int32_t)value;
+        }
+        __builtin_memcpy(blob + value_offsets[i], &integer, 4);
+        sprintf((char*)blob + text_offsets[i], "%d", (int)integer);
+    }
+
+    /* The elapsed-time source is a float at +0x2dbc. The reference reduces
+     * it modulo 359999 seconds, then emits hours, minutes, and seconds. */
+    __builtin_memcpy(&value, blob + 0x2dbc, 4);
+    seconds = value > 0.0f ? (uint32_t)value : 0u;
+    seconds %= 359999u;
+    __builtin_memcpy(blob + 0x2dbc, &seconds, 4);
+    hours = seconds / 3600u;
+    remainder = seconds % 3600u;
+    minutes = remainder / 60u;
+    remainder %= 60u;
+    sprintf((char*)blob + 0x2e40, "%02lu:%02lu:%02lu",
+            (unsigned long)hours, (unsigned long)minutes,
+            (unsigned long)remainder);
+    return 1;
+}
+
+/* RewardStatsPanelDraw (FUN_00460f00) owns layout and text selection in the
+ * original. The renderer-specific layout/draw calls are supplied by the
+ * bound runtime; keep the level/blob admission gate and formatting here. */
+// FUNCTION: LEGORR 0x00460f00
+int reward_stats_panel_draw_bound(void)
+{
+    RewardScreenState* state = s_reward_screen_state;
+    if (state == NULL || state->game == NULL || state->game->level == NULL ||
+        state->game->checkpoint_blob == NULL ||
+        !reward_stats_text_format_bound()) return 0;
+    if (s_reward_screen_ops != NULL &&
+        s_reward_screen_ops->reward_stats_draw != NULL) {
+        s_reward_screen_ops->reward_stats_draw(
+            s_reward_screen_ops->context, state->game);
+    }
+    return 1;
 }
 
 /* RewardFlhContextTick (FUN_004624a0): advance one task when the display
@@ -764,6 +1064,8 @@ void reward_pointer_override_expiry_tick(RewardScreenState* state,
     if (ops != NULL && ops->pointer_effect_update != NULL)
         ops->pointer_effect_update(ops->context, state->pointer_x,
                                    state->pointer_y, delta * 40.0f);
+    timed_effect_runtime_update(renderer_word_a_get(), renderer_word_b_get(),
+                                delta * 40.0f);
     if (ops != NULL && ops->frame_pump != NULL)
         ops->frame_pump(ops->context, 1);
 }
@@ -801,6 +1103,90 @@ static void reward_screen_task_visual_draw(RewardScreenState* state,
     if (ops->task_visual_draw == NULL) return;
     ops->task_visual_draw(ops->context, task, index, mask,
                           state->displayed_task_count, state->elapsed, flic);
+}
+
+/* RewardDisplayTick (FUN_00461790). `task_number` is one-based in the
+ * reward loop (zero is also accepted for its first slot); the input record is
+ * the checkpoint copy, which is what the original renderer reads. */
+// FUNCTION: LEGORR 0x00461790
+void reward_display_task_abi(GameTask* task, uint32_t draw_mask,
+                             uint32_t task_number, float elapsed)
+{
+    RewardScreenState* state = s_reward_screen_state;
+    const RewardScreenOps* ops = s_reward_screen_ops;
+    int index;
+    uint32_t flags;
+    Flic* flic;
+    const char* path;
+
+    if (state == NULL || state->game == NULL || task == NULL || ops == NULL)
+        return;
+    index = task_number == 0u ? 0 : (int)task_number - 1;
+    if (index < 0 || index >= GAME_TASK_COUNT) return;
+    flags = task_flags(task);
+    if (draw_mask == 2u &&
+        (state->game->reward.display_images == 0 ||
+         (flags & TASK_FLAG_IMG) == 0u)) return;
+    if (draw_mask == 0x40u &&
+        (state->game->reward.display_images == 0 ||
+         (flags & TASK_FLAG_BOXIMG) == 0u)) return;
+    if (draw_mask == 4u &&
+        (state->game->reward.display_flics == 0 ||
+         (flags & TASK_FLAG_FLIC) == 0u)) return;
+    if ((draw_mask == 1u || draw_mask == 0x10u || draw_mask == 0x20u) &&
+        state->game->reward.display_text == 0) return;
+    if (draw_mask == 1u && (flags & TASK_FLAG_COMPLETED) == 0u) return;
+    if (draw_mask == 0x10u && (flags & TASK_FLAG_TEXT) == 0u) return;
+    if (draw_mask == 0x20u && (flags & TASK_FLAG_BOXTEXT) == 0u) return;
+    if (draw_mask != 1u && draw_mask != 2u && draw_mask != 4u &&
+        draw_mask != 0x10u && draw_mask != 0x20u && draw_mask != 0x40u)
+        return;
+
+    if (draw_mask == 1u) {
+        if (ops->task_text_draw != NULL)
+            ops->task_text_draw(ops->context, task, index,
+                                state->displayed_task_count, elapsed);
+        return;
+    }
+
+    flic = state->task_flics[index];
+    if (draw_mask == 4u) {
+        if (flic == NULL) {
+            path = (const char*)task->data + TASK_OFF_FLICPATH2;
+            if (path[0] != '\0') {
+                flic = flic_open(path);
+                state->task_flics[index] = flic;
+            }
+        }
+        if (flic != NULL) flic_tick_loop(flic, 1);
+    }
+    if (ops->task_visual_draw != NULL) {
+        ops->task_visual_draw(ops->context, task, index, draw_mask,
+                              state->displayed_task_count, elapsed, flic);
+    }
+    if ((draw_mask == 0x10u || draw_mask == 0x20u) &&
+        ops->task_text_draw != NULL) {
+        ops->task_text_draw(ops->context, task, index,
+                            state->displayed_task_count, elapsed);
+    }
+}
+
+/* RewardFlhContextTick (FUN_004624a0) updates the timer/index tuple supplied
+ * by the reward loop, and performs task audio and transition cleanup. */
+// FUNCTION: LEGORR 0x004624a0
+void reward_flic_context_tick_abi(int* displayed_task_count,
+                                  int* transition_stage, float* elapsed)
+{
+    RewardScreenState* state = s_reward_screen_state;
+    if (state == NULL || state->game == NULL || displayed_task_count == NULL ||
+        transition_stage == NULL || elapsed == NULL) return;
+    state->displayed_task_count = *displayed_task_count;
+    state->transition_stage = *transition_stage;
+    state->elapsed = *elapsed;
+    reward_screen_task_timer_tick(state, s_reward_screen_ops);
+    *displayed_task_count = state->displayed_task_count;
+    *transition_stage = state->transition_stage;
+    *elapsed = state->elapsed;
 }
 
 // FUNCTION: LEGORR 0x00462ad0

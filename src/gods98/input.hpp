@@ -194,6 +194,16 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
  * and skipping writes — deviation). */
 void input_entry_flag8_set_clear(int entry, int set);
 uint32_t input_entry_flag8_get(int entry);
+/* Full action/binding words used by InputActionStateUpdate and the catalog
+ * slot helpers. Categories 1 and 4 share these same live input tables. */
+uint32_t input_action_state_word_get(int action);
+void input_action_state_word_set(int action, uint32_t flags);
+uint32_t input_binding_state_word_get(int kind, int entry);
+void input_binding_state_word_set(int kind, int entry, uint32_t flags);
+typedef int (*InputActionStateQueryFn)(void* context, int action);
+void input_action_state_query_set(InputActionStateQueryFn query,
+                                  void* context);
+void input_action_state_update(int action); /* FUN_0041c7b0 */
 void player_input_flag8_set_clear(int kind, int action, int set);
 uint32_t player_input_flag8_get(int kind, int action);
 

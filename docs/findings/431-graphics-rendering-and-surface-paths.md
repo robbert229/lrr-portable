@@ -20,6 +20,17 @@ Matrix utilities provide the shared transform foundation: multiplication, identi
 
 ## Surface formats and pixel paths
 
+The current port has concrete LWO/UV parsing and path-keyed model reuse, but its
+`Model` value is still the parser's compact `PNTS`/`POLS`/`SURF` representation.
+It is not the reference's 32-bit layer object consumed by `MaterialPass`, nor
+does it own the generated `0x70` render records, Direct3DRM materials/textures,
+or the interface methods used to submit and release them. `material_pass_execute`
+therefore remains an operation seam: the missing piece is the scene/render
+owner that converts parsed layers and their TIMG bindings into renderer objects
+and supplies per-record apply/submit methods. The parsed model cache and mesh
+record allocator can be exercised independently, but those components alone
+cannot draw a loaded model.
+
 DirectDraw surface descriptors expose width, height, pitch, bit depth, and channel masks through interface queries. `DirectDrawSurfacePixelRead` bounds-checks coordinates, locks the surface, reads a value using pitch and pixel depth, and unlocks it. The software drawing routines use a shared lock/configure path, cache the channel masks and shifts, select a writer for 8-, 16-, 24-, or 32-bit formats, and reset that state on unlock. Polyline drawing uses a clipped Bresenham walk; span records fill horizontal intervals; circle drawing samples points and clips them to surface bounds. Findings [234](234-game-file-streams-and-surface-pixels.md), [309](309-geometry-and-directdraw-surface-helpers.md), [358](358-matrix-window-surface-and-heap-helpers.md), and [385](385-stream-surface-avi-and-route-state-helpers.md) provide the operation-level behavior and evidence.
 
 Bitmap handling branches on the source/destination format. The assigned helpers decode palettized data, expand 8-bit palette indices to 16-bit pixels, convert 24-bit bitmap data, encode a requested RGB color using either a palette lookup or channel masks, pack/unpack RGB values, and save/load bitmap surfaces. Population-count and first-set-bit helpers support channel-mask normalization. Row-flip helpers derive row bytes from width and bit depth, then swap opposing rows through a temporary row buffer. Findings [23](23-front-end-and-menu.md), [229](229-wwad-archive-and-render-resource-helpers.md), [230](230-engine-input-selection-and-resource-helpers.md), [234](234-game-file-streams-and-surface-pixels.md), [245](245-region-route-light-config-and-surface-helpers.md), [246](246-entity-move-route-command-and-object-clone-helpers.md), [250](250-config-band-loaders-cell-corner-scan-action-command-record-instantiation-and-render-state-helpers.md), [309](309-geometry-and-directdraw-surface-helpers.md), [358](358-matrix-window-surface-and-heap-helpers.md), and [393](393-string-list-and-small-record-utilities.md) cover these transformations. The available static paths do not establish behavior for every malformed bitmap header or every unusual channel-mask layout.

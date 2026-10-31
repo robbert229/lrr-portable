@@ -5,7 +5,16 @@ struct EntitySlot;
 namespace lego {
 typedef void (*SpawnRandomTriggerHook)(void* entity, void* context);
 typedef void (*SpawnScatterHook)(void* entity, int count, int mode, void* context);
+typedef int (*SpawnScenePositionGetHook)(::EntitySlot* entity,
+                                         float position_xy[2], void* context);
+typedef void (*PairingActivityPrepareHook)(::EntitySlot* target,
+                                            void* context);
 void spawn_hooks_set(SpawnRandomTriggerHook trigger, SpawnScatterHook scatter, void* context);
+void spawn_scene_position_get_hook_set(SpawnScenePositionGetHook hook,
+                                       void* context);
+void pairing_activity_prepare_hook_set(PairingActivityPrepareHook hook,
+                                      void* context);
+void pairing_activity_prepare(::EntitySlot* target);
 void scatter_spawn_gate_set(int enabled); /* 0x0044adc0 */
 int scatter_spawn_gate_get();
 void entity_kind_one_random_spawn_trigger(void* entity); /* 0x0044ade0 */

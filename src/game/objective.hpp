@@ -164,7 +164,8 @@ typedef struct AdvisorAnimationHooks {
 typedef void (*AdvisorTransformApplyHook)(int row, uint32_t animation,
                                           float x, float y, float scale,
                                           void* user);
-void advisor_sound_alias_set(int alias);
+/* Stores DAT_004a6768, a configured sound-bank slot (not an alias index). */
+void advisor_sound_alias_set(int slot);
 void advisor_sound_alias_play_global(void); /* FUN_00456810 */
 typedef int (*CoordinateListVisitCallback)(void* record, int x, int y,
                                            void* user);

@@ -9,7 +9,16 @@
 #include "record.hpp"
 #include "crt/crt.hpp"
 #include "sound.hpp"
+#include "audio.hpp"
+#include "media.hpp"
+#include "resource.hpp"
+#include "scene_resources.hpp"
+#include "view.hpp"
+#include "game/frontend.hpp"
+#include "game/entity.hpp"
+#include "game/objective.hpp"
 #include "heap.hpp"
+#include <stdlib.h>
 
 /* PanelSelectionHighlightToggle/EngineTick DAT globals (see the function
  * comments at their use sites): bit-0 flag word and the 250-ms cooldown in
@@ -183,6 +192,7 @@ int EngineTick(EngineContext* ctx, float dt)
      *    0xb,5,7,10 interleaved with the named manager tickers. Stub table. */
     if ((ctx->state & ENGINE_STATE_INDEXED_SUBSYS) != 0) {
         EngineManagerDispatch(ctx, dt);
+        timed_status_and_event_tick(dt);
     }
 
     /* 8. Render begin/end pairs, world-draw vs editor pass, and the
@@ -258,20 +268,53 @@ float EngineTimeScale(EngineContext* ctx)
     return ctx->time_scale;
 }
 
-/* Port-side shutdown dispatcher used by the current frame loop. The corpus
- * selects LAB_00424cf0 (normal play) or LAB_00424d00 (loader mode) when it
- * initializes its callback registry at 0x0041fa20; those branch bodies are
- * not represented by this context-taking adapter. Keep the established
- * no-op scaffold behavior until their cleanup dependencies are ported.
- */
+/* ResetLevelAndExit @ 0x4250a0. The original normal-play callback does not
+ * run the loader teardown: it disables the CD watchdog and exits through the
+ * CRT. Keep that path distinct from EngineShutdown's loader-mode cleanup. */
+static void engine_reset_level_and_exit(void)
+{
+    media_cd_watchdog_update(0);
+    exit(0);
+}
+
+/* EngineShutdown @ 0x424d00. Several corpus owners (renderer globals and
+ * five global entity arrays) have no corresponding EngineContext binding in
+ * this port. Run the teardown operations whose owners/APIs are represented;
+ * do not pass unrelated context fields to renderer cleanup routines. */
 void EngineShutdown(EngineContext* ctx)
 {
-    if (ctx->app_mode == ENGINE_APP_LOADER) {
-        /* corpus EngineShutdown @ 0x424d00 — subsystem closes, entity-array
-         * destructors, LoaderProfile load. TODO(engine). */
+    if (ctx == NULL) {
         return;
     }
-    /* corpus LAB_00424cf0 — stub forwarding to FUN_004250a0. TODO(engine). */
+
+    if (ctx->app_mode != ENGINE_APP_LOADER) {
+        engine_reset_level_and_exit();
+        return;
+    }
+
+    /* Ordered leading subsystem teardown from the checked-in shutdown
+     * decompile. FUN_0042f0c0's global pending-level owner is not bound here. */
+    global_resource_handle_release();
+    reward_task_block_finish();
+    media_cd_watchdog_update(0);
+    media_audio_playback_toggle(0);
+    resource_handle_set_release();
+
+    /* The three view globals are represented by the context's view slots. */
+    camera_view_context_close(ctx->views[0]);
+    camera_view_context_close(ctx->views[1]);
+    camera_view_context_close(ctx->views[2]);
+    ctx->views[0] = NULL;
+    ctx->views[1] = NULL;
+    ctx->views[2] = NULL;
+
+    /* Existing resource and entity-pool owners corresponding to later
+     * teardown calls. Renderer-only release calls and the five unbound
+     * entity-array destructor loops remain unavailable. */
+    rock_fall_style_scene_resources_release();
+    pooled_record_pool_resources_release();
+    lego::scene_resource_slots_release_all();
+    lego::scene_resource_string_tables_free();
 }
 /* RuntimeFlag40000000Get (FUN_0041f970): the faithful masked read of the
  * port's engine-state word. */

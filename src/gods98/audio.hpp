@@ -16,6 +16,8 @@
 #include "platform/platform.h"
 #include "sound.hpp"
 
+typedef struct AudioBuffer AudioBuffer;
+
 typedef struct AudioPlayer {
     PlatformAudio* dev;   /* owned platform audio device */
     float          volume; /* master gain 0..1 */
@@ -24,11 +26,23 @@ typedef struct AudioPlayer {
     Sound*   loop_sound;
     float    loop_pan;
     int      loop_render_dirty;
+    AudioBuffer* loop_buffer;
+    /* The platform backend has one shared queued output. Keep logical stream
+     * state here so streamed WAV submissions can be tracked independently. */
+    const Sound* stream_sample[2];
+    WavSample stream_format[2];
+    uint32_t stream_buffer_bytes[2];
+    uint32_t stream_cursor_bytes[2];
+    uint32_t stream_queued_frames[2];
+    int      stream_active[2];
 } AudioPlayer;
 
 int  audio_open(AudioPlayer* p);     /* 0 on success, non-zero otherwise */
 void audio_close(AudioPlayer* p);
+void audio_system_player_set(AudioPlayer* p);
+AudioPlayer* audio_system_player_get(void);
 void audio_active_shutdown(void); /* 0x0047a800 */
+void audio_system_shutdown(void); /* 0x0047a800 */
 typedef int (*AudioSystemInitHook)(void* context, void* window);
 void audio_system_init_hook_set(AudioSystemInitHook hook, void* context);
 int audio_system_init(void* window); /* 0x0047a640 */
@@ -43,6 +57,7 @@ float audio_sfx_volume_gain(int index);
 void audio_sound_volume_set(int millibels);
 /* Apply attenuation to the currently installed AudioPlayer. */
 void audio_active_sound_volume_set(int millibels);
+void audio_sound_volume_minus_300(void); /* 0x0047b550 */
 /* SoundVolumeIndexSet (FUN_0047b530): map the options index 0..10 through
  * the corpus attenuation table and apply it. */
 void audio_sound_volume_index_set(int index);
@@ -78,12 +93,32 @@ int  audio_active_play_sound_3d(const Sound* s, float pan);
  * a sound at pan -1..1. Loads through the bank when given a resource name
  * (name may be NULL to change only the pan of the current loop). */
 int  audio_loop_named(AudioPlayer* p, const char* name, float pan);
+int  audio_loop_sample(AudioPlayer* p, const Sound* sample, float pan);
 void audio_set_loop_pan(AudioPlayer* p, float pan);
 
 /* Per-frame: refill the looping stream + re-seed when the pan changed. */
 void audio_update(AudioPlayer* p);
 
 void audio_stop(AudioPlayer* p);
+
+/* Portable counterparts for bank-owned duplicate buffers and the two
+ * reference streamed-wave slots. Buffers retain converted PCM and volume;
+ * playback uses the installed player's shared output queue. */
+AudioBuffer* audio_buffer_create(const Sound* sample);
+void audio_buffer_destroy(AudioBuffer* buffer);
+void audio_buffer_volume_set(AudioBuffer* buffer, int millibels);
+void audio_buffer_stop(AudioBuffer* buffer);
+int audio_buffer_play(AudioBuffer* buffer);
+int audio_buffer_play_attenuated(AudioBuffer* buffer, int extra_millibels);
+int audio_buffer_loop(AudioBuffer* buffer, const Sound* sample);
+int audio_buffer_loop_attenuated(AudioBuffer* buffer, const Sound* sample,
+                                 int extra_millibels);
+int audio_stream_setup(AudioPlayer* p, int stream_index,
+                       const WavSample* format, uint32_t buffer_bytes);
+int audio_stream_start(AudioPlayer* p, int stream_index, const Sound* sample);
+void audio_stream_stop(AudioPlayer* p, int stream_index);
+int audio_stream_drain_check(AudioPlayer* p, int stream_index);
+void audio_stream_tick(AudioPlayer* p, int stream_index);
 
 /* Convert a bank Sound to mono 16-bit signed PCM (the seam's transport).
  * Returns frame count; *out is allocated (free with audio_free_pcm). */

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "gods98/texture.hpp"
 #if defined(_MSC_VER)
 #pragma function(fabs)
 #include <io.h>
@@ -603,10 +604,41 @@ int crt_float_to_long(float value)
 }
 #endif
 
-/* FUN_00417430: app helper that forwards to the CRT __ftol routine under
- * the truncate-toward-zero control word (findings 381/393). Overflow
- * values are outside the corpus's caller set (deviation in crt.hpp). */
+/* The raw x86 body indexes the float table at record+0x34 with a 0x3190
+ * stride, loads the float at +0x2fb8, and tail-jumps to __ftol. Ghidra
+ * treated the x87 input as the whole function and lost both parameters. */
 // FUNCTION: LEGORR 0x00417430
+#if defined(_MSC_VER) && defined(_M_IX86)
+extern "C" int __cdecl _ftol(void);
+__declspec(naked) int float_to_long_x87(unsigned int index, const void* record)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov edx, dword ptr [esp + 8]
+        mov eax, ecx
+        shl eax, 5
+        add eax, ecx
+        lea eax, [eax + eax * 2]
+        lea ecx, [ecx + eax * 8]
+        shl ecx, 4
+        mov eax, dword ptr [edx + 0x34]
+        fld dword ptr [ecx + eax + 0x2fb8]
+        jmp _ftol
+    }
+}
+#else
+int float_to_long_x87(unsigned int index, const void* record)
+{
+    uintptr_t values = 0;
+    uint32_t offset = index * 0x3190u;
+    float value;
+    memcpy(&values, (const char*)record + 0x34, sizeof(uintptr_t));
+    memcpy(&value, (const char*)values + offset + 0x2fb8, sizeof(value));
+    return crt_float_to_long(value);
+}
+#endif
+
+/* Portable typed adapter for ordinary C++ callers. */
 int float_to_long(float value)
 {
     return (int)value;
@@ -1346,10 +1378,23 @@ int32_t constant_negative_10000_get(void)
 }
 
 // FUNCTION: LEGORR 0x00490230
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t processor_feature_fallback_false(void)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        xor eax, eax
+        pop ebp
+        ret
+    }
+}
+#else
 uint32_t processor_feature_fallback_false(void)
 {
     return 0u;
 }
+#endif
 
 /* VC5 LIBC.LIB's testfdiv.obj supplies this optional Kernel32 resolver. */
 // LIBRARY: LEGORR 0x00490280 SYMBOL
@@ -3056,15 +3101,40 @@ static void* s_entry_cache_slot_get(const char* key, long slot,
 }
 
 // FUNCTION: LEGORR 0x00410520
+static void* string_cache_lookup_or_load_corpus(const char* key)
+{
+    if (key != NULL && *key != '\0') {
+        void* entry = string_registry_intern(key);
+        void** value_slot = (void**)((char*)entry + sizeof(void*));
+        if (*value_slot == NULL) {
+            *value_slot = image_surface_load(key, 0u, 0u);
+        }
+        return *value_slot;
+    }
+    return NULL;
+}
+
 void* string_cache_lookup_or_load(const char* key)
 {
-    return s_entry_cache_slot_get(key, 1, s_bitmap_surface_loader);
+    if (s_bitmap_surface_loader != NULL) {
+        return s_entry_cache_slot_get(key, 1, s_bitmap_surface_loader);
+    }
+    return string_cache_lookup_or_load_corpus(key);
 }
 
 // FUNCTION: LEGORR 0x00410560
 void* resource_name_cache_get_or_load(const char* key)
 {
-    return s_entry_cache_slot_get(key, 2, s_font_resource_loader);
+    if (key != NULL && *key != '\0') {
+        void* entry = string_registry_intern(key);
+        void** value_slot = (void**)((char*)entry + 2 * sizeof(void*));
+        if (*value_slot == NULL) {
+            *value_slot = (s_font_resource_loader != NULL)
+                ? s_font_resource_loader(key) : NULL;
+        }
+        return *value_slot;
+    }
+    return NULL;
 }
 
 /* --- the selection marker table (see crt.hpp) ------------------------------

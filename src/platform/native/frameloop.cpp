@@ -443,3 +443,61 @@ void platform_audio_stop(PlatformAudio* a)
     platform_audio_loop(a, NULL, 0, 0);
     SDL_ClearAudioStream(a->stream);
 }
+
+static int platform_cd_audio_unavailable(int* error_code)
+{
+    if (error_code != NULL) *error_code = 1;
+    return 0;
+}
+
+int platform_cd_audio_open(int* error_code)
+{
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_set_tmsf(int* error_code)
+{
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_play(int one_based_track, int* error_code)
+{
+    (void)one_based_track;
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_stop(int* error_code)
+{
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_close(int* error_code)
+{
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_status(char* mode, int mode_capacity,
+                             int* current_track, int* error_code)
+{
+    if (mode != NULL && mode_capacity > 0) mode[0] = '\0';
+    if (current_track != NULL) *current_track = 0;
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_error_text(int error_code, char* output,
+                                 int output_capacity)
+{
+    static const char message[] = "CD audio is unavailable on this backend";
+    int i;
+    (void)error_code;
+    if (output == NULL || output_capacity <= 0) return 0;
+    for (i = 0; i + 1 < output_capacity && message[i] != '\0'; ++i)
+        output[i] = message[i];
+    output[i] = '\0';
+    return 1;
+}
+
+uint32_t platform_time_milliseconds(void)
+{
+    return (uint32_t)SDL_GetTicks();
+}

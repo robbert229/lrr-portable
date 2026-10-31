@@ -86,6 +86,15 @@ void mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_nam
  * Returns a bitmask of tasks that completed this frame. */
 int mission_update(GameContext* ctx);
 
+/* Per-level checkpoint/reward snapshot refresh (corpus 0x460360): derive
+ * map-backed task totals, clamp task progress, recalculate aggregate
+ * percentages, and refresh the reward statistics display. The caller must
+ * have built the temporary checkpoint blob first. */
+int mission_checkpoint_task_progress_refresh(GameContext* ctx);
+/* No-argument adapter for the original global-context call site at
+ * 0x435940; it resolves the currently bound mission GameContext. */
+int mission_checkpoint_task_progress_refresh_bound(void);
+
 /* The ten task names in slot order (s_Crystals … s_Score). */
 const char* mission_task_name_at(GameContext* ctx, int slot);
 
@@ -163,6 +172,14 @@ void reward_screen_runtime_bind(RewardScreenState* state,
                                const RewardScreenOps* ops);
 int reward_screen_tick(RewardScreenState* state, const RewardScreenOps* ops);
 int reward_screen_tick_bound(void);
+/* Reward display cluster ABI adapters. These use the bound screen state and
+ * renderer callbacks installed by reward_screen_runtime_bind. */
+int reward_stats_panel_draw_bound(void);
+int reward_stats_text_format_bound(void);
+void reward_display_task_abi(GameTask* task, uint32_t draw_mask,
+                             uint32_t task_number, float elapsed);
+void reward_flic_context_tick_abi(int* displayed_task_count,
+                                  int* transition_stage, float* elapsed);
 void reward_screen_transition_tick(RewardScreenState* state,
                                    const RewardScreenOps* ops);
 void reward_screen_transition_tick_abi(int* displayed_task_count,

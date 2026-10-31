@@ -20,8 +20,12 @@
 #include <strings.h>
 #endif
 
-static char s_model_resource_cache_names[128][260];
-static Model* s_model_resource_cache[128];
+/* The reference reserves two adjacent 8-byte path/handle tables, each
+ * 0x1f40 bytes apart: 1000 entries at an 8-byte stride.  The parser cache
+ * keeps owned model pointers beside the same number of canonical paths. */
+#define MODEL_RESOURCE_CACHE_CAPACITY 1000u
+static char s_model_resource_cache_names[MODEL_RESOURCE_CACHE_CAPACITY][260];
+static Model* s_model_resource_cache[MODEL_RESOURCE_CACHE_CAPACITY];
 
 /* FUNCTION: LEGORR 0x00481fa0 */
 void mesh_vertex_coordinate_remap(int vertex_count, const float* positions_xyz,
@@ -946,6 +950,8 @@ done:
 // FUNCTION: LEGORR 0x0048d7c0
 Model* model_open(const char* path)
 {
+    if (path == NULL || path[0] == '\0')
+        return NULL;
     Resource* r = resource_open(path, RESOURCE_AUTO);
     if (!r)
         return NULL;
@@ -992,29 +998,49 @@ void model_free(Model* m)
     free(m);
 }
 
+/* The reference's model resolver builds into a 260-byte stack path before
+ * doing its case-insensitive cache lookup. Keep the same bounded path
+ * contract without snprintf, which is not part of the VC5 CRT. */
+static int model_resource_path_build(char* output, size_t output_size,
+                                     const char* prefix, const char* path)
+{
+    size_t prefix_length;
+    size_t path_length;
+    size_t separator_length = 0;
+    if (output == NULL || output_size == 0 || path == NULL || path[0] == '\0')
+        return 0;
+    prefix_length = (prefix != NULL) ? strlen(prefix) : 0;
+    path_length = strlen(path);
+    if (prefix_length != 0) {
+        char last = prefix[prefix_length - 1];
+        if (last != '/' && last != '\\')
+            separator_length = 1;
+    }
+    if (prefix_length >= output_size ||
+        separator_length > output_size - prefix_length - 1 ||
+        path_length > output_size - prefix_length - separator_length - 1)
+        return 0;
+    if (prefix_length != 0) {
+        memcpy(output, prefix, prefix_length);
+        if (separator_length != 0)
+            output[prefix_length++] = '\\';
+    }
+    memcpy(output + prefix_length, path, path_length);
+    output[prefix_length + path_length] = '\0';
+    return 1;
+}
+
 Model* model_resource_resolve_or_load(const char* prefix, const char* path)
 {
     char resolved[260];
     unsigned int i;
-    unsigned int free_slot = 128u;
+    unsigned int free_slot = MODEL_RESOURCE_CACHE_CAPACITY;
     Model* loaded;
-    size_t prefix_length;
-    if (path == NULL || path[0] == '\0') return NULL;
-    prefix_length = prefix != NULL ? strlen(prefix) : 0u;
-    if (prefix_length == 0u) {
-        snprintf(resolved, sizeof(resolved), "%s", path);
-    }
-    else if (prefix[prefix_length - 1u] == '/' ||
-             prefix[prefix_length - 1u] == '\\') {
-        snprintf(resolved, sizeof(resolved), "%s%s", prefix, path);
-    }
-    else {
-        snprintf(resolved, sizeof(resolved), "%s/%s", prefix, path);
-    }
-    resolved[sizeof(resolved) - 1u] = '\0';
-    for (i = 0; i < 128u; ++i) {
+    if (!model_resource_path_build(resolved, sizeof(resolved), prefix, path))
+        return NULL;
+    for (i = 0; i < MODEL_RESOURCE_CACHE_CAPACITY; ++i) {
         if (s_model_resource_cache[i] == NULL) {
-            if (free_slot == 128u) free_slot = i;
+            if (free_slot == MODEL_RESOURCE_CACHE_CAPACITY) free_slot = i;
             continue;
         }
         if (strcasecmp(s_model_resource_cache_names[i], resolved) == 0)
@@ -1022,7 +1048,7 @@ Model* model_resource_resolve_or_load(const char* prefix, const char* path)
     }
     loaded = model_open(resolved);
     if (loaded == NULL) return NULL;
-    if (free_slot < 128u) {
+    if (free_slot < MODEL_RESOURCE_CACHE_CAPACITY) {
         strncpy(s_model_resource_cache_names[free_slot], resolved,
                 sizeof(s_model_resource_cache_names[free_slot]) - 1u);
         s_model_resource_cache_names[free_slot]
@@ -1035,7 +1061,7 @@ Model* model_resource_resolve_or_load(const char* prefix, const char* path)
 void model_resource_cache_clear(void)
 {
     unsigned int i;
-    for (i = 0; i < 128u; ++i) {
+    for (i = 0; i < MODEL_RESOURCE_CACHE_CAPACITY; ++i) {
         if (s_model_resource_cache[i] != NULL)
             model_free(s_model_resource_cache[i]);
         s_model_resource_cache[i] = NULL;

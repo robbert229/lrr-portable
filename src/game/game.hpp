@@ -166,7 +166,7 @@ typedef struct RewardScreen {
  * x/y are entry[0]/entry[1] read at callback 0x43cba5. The corpus "pending"
  * byte flag sits at entry+8 (callback 0x43cd83 reads list+idx*20-12 relative
  * to +0x28); arrival clears that byte — the pop is flag-clear, not removal. */
-#define AI_WAYPOINTS_MAX 16 /* port bound; the corpus list is heap-allocated */
+#define AI_WAYPOINTS_MAX 16 /* inline waypoint span; longer lists realloc-grow */
 /* Permitted-activity list bound (corpus entity +0x370 id slots / +0x384 count):
  * the inline span +0x370..+0x384 is five dwords, so an entity holds at most
  * five permitted activity ids before the setter (FUN_0044b370) recycles
@@ -285,6 +285,8 @@ typedef struct EntitySlot {
     float    pos_pair_2f8; /* +0x2f8: pair y                                */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
     AiWaypoint wp[AI_WAYPOINTS_MAX];
+    AiWaypoint* wp_dynamic; /* realloc-grown continuation of the inline list */
+    unsigned int wp_capacity;
     int      wp_count;       /* +0x28: valid entries                      */
     int      wp_index;       /* +0x2c: entry being walked                 */
     /* --- permitted-activity list (corpus +0x370 ids / +0x384 count) ----- *
@@ -298,10 +300,32 @@ typedef struct EntitySlot {
     struct GameContext* owner_ctx; /* port back-reference for queued spawns */
     uint32_t effect_counter_a; /* additive effects from record +4 */
     uint32_t effect_counter_b; /* additive effects from record +8 */
+    /* Activity counters mirrored from corpus offsets +0x3d4/+0x3d8/+0x3dc.
+     * These are advances driven by the entity frame delta. */
+    float activity_counter_3d4;
+    float activity_counter_3d8;
+    float activity_counter_3dc;
     float auxiliary_state_388; /* +0x388: cursor-target timeout */
     uint32_t auxiliary_slot_38c;
     uint32_t indexed_record_flags;
     uint32_t indexed_record_flag_index;
+    /* Scene-owner sidecar for the corpus's variable attachment array at
+     * +0x308/+0x324. The pointer is borrowed from the scene owner; entity
+     * creation zero-initializes it and the scene owner clears it on release. */
+    struct EntitySlot** attached_children;
+    uint32_t attached_child_count;
+    void* attached_scene_object;
+    uint32_t ddiscene_owner_token; /* stable 32-bit owner link for scene callbacks */
+    int32_t attached_scene_slot_index; /* corpus child +0x320 */
+    int32_t indexed_record_slot_330;   /* corpus selector at +0x330 */
+    void* attached_direction_record_type1;
+    void* attached_direction_record_type2;
+    void* attached_direction_record_type3;
+    void* attached_direction_record_type4;
+    /* Direction state written by AttachedEntityDirectionVectorUpdate
+     * (+0x2ac..+0x2b8 in the corpus image). */
+    float attached_direction[3];
+    float attached_direction_length;
     uint32_t action_consume_counters[6];
     uint32_t action_consume_counters_initialized;
     int32_t payload_state_8c;
@@ -315,7 +339,13 @@ typedef struct EntitySlot {
     uint32_t scene_slot_generation;
     int32_t task_pair_3b4[2];
     int32_t task_scalar_3bc;
+    uintptr_t pair_link_3c0; /* reciprocal entity link at corpus +0x3c0 */
 } EntitySlot;
+
+/* Waypoint consumers use this accessor so routes grown past the inline
+ * bootstrap span remain contiguous to every reader. */
+#define ENTITY_WAYPOINTS(entity) \
+    (((entity)->wp_dynamic != NULL) ? (entity)->wp_dynamic : (entity)->wp)
 
 /* Completed-objective `.osf` table (finding 08): 20-byte entries — id, ref,
  * then a 12-byte name slot (OsfAdd zeroes it, then strncpy's up to 0xb

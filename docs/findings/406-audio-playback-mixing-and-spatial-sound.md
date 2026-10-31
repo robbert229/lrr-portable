@@ -89,6 +89,8 @@ Music is CD-DA, not an archived music-file stream. The watchdog uses `timeGetTim
 
 ## Limits and related findings
 
+- The winapi backend issues CD-DA operations through MCI and reads its device status/error text from MCI. Native SDL has no CD-DA device path, so these calls report unavailable instead of treating the game's PCM output stream as a disc player. `WindowsMixerControlInit` is represented by the active software-output gain; the CD-audio mixer source itself is not available through the native backend.
+- The native audio surface has one shared SDL queue and no DirectSound buffer interface. Stream chunks use per-slot cursors and frame-clock refill estimates, but stopping a stream cannot retract only its already queued samples. Direct3DRM-attached source refresh also needs a frame/provider adapter; native SDL has no matching COM position setter, so that path remains inactive until one is supplied.
 - Static decompilation establishes control flow and state writes, not audibility or actual DirectSound/MCI success. Specific ignored HRESULTs, cache-on-failure behavior, and queue overflow paths are isolated in Findings 153, 168, 198, 203–204, and 217–218.
 - The streamed metadata probe and file-layer size/read paths can diverge: Findings 217–218 describe the unchecked probe and standard-path MMIO open; Finding 11 documents the game file/WAD layer.
 - Existing detail: Findings 14 (audio formats and subsystem map), 62 (distance controls), 107–108 (aliases/streamed WAV), 119–164 (DirectSound, source buffers, mixer volumes, stream ring), 168–171 and 176–180 (sound request/track behavior), 195–218 (failure paths and spatial/CD details), and 345 (sound-object duration).

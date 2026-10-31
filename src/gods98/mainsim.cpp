@@ -11,14 +11,6 @@
  *  gesture model; MainSimStep is driven by the named quit key here.
  */
 
-void main_view_key_step(EngineContext* ctx, int view_idx, uint32_t mode,
-                        float amount)
-{
-    (void)ctx; (void)view_idx; (void)mode; (void)amount;
-    /* TODO(mainsim): corpus FUN_00436900/004369f4/00436aa5 per-view camera
-     * keys, routed through view.cam_* once the view input is exercised. */
-}
-
 void main_hud_text(EngineContext* ctx, const char* s)
 {
     (void)ctx;
@@ -98,16 +90,12 @@ int main_sim_step(EngineContext* ctx, float scale, float dt,
         ctx->state_block->air_beat = (uint32_t)v;
     }
 
-    /* Camera keys (corpus FUN_00436900..) — routed per-view. */
-    if (m_edge(ctx, 'z')) {
-        main_view_key_step(ctx, 0, 1, 0.25f); /* pan */
-    }
-    if (m_edge(ctx, 'x')) {
-        main_view_key_step(ctx, 0, 2, 0.25f); /* rotate */
-    }
-    if (m_edge(ctx, 'c')) {
-        main_view_key_step(ctx, 0, 3, 0.25f); /* zoom */
-    }
+    /* The source camera keys and deltas are identified (see mainsim.hpp and
+     * Finding 101), but the called helpers expect the original camera-control
+     * record. ViewContext's reconstructed fields do not match that record's
+     * +0x78/+0x84/+0x90 values or scene-node offsets, so applying the deltas
+     * here would mutate unrelated state. Keep this path deferred until that
+     * record has a faithful adapter. */
 
     /* The three edge outputs EngineTick's later tickers consume. */
     if (m_edge(ctx, '1')) {

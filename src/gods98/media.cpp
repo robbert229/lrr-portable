@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include "platform/platform.h"
+#include "audio.hpp"
 #include "sound.hpp"
 
 /* ------------------------------------------------------------------ *
@@ -425,7 +427,9 @@ static uint32_t s_cd_audio_watchdog_time;
 static int s_cd_audio_target_track;
 static int s_cd_audio_restart_when_done;
 static MediaCdAudioCompletionHook s_cd_audio_completion_hook;
+// GLOBAL: LEGORR 0x00544a1c
 static int s_cd_audio_last_error;
+// GLOBAL: LEGORR 0x00576500
 static char s_cd_audio_error_text[200];
 
 // FUNCTION: LEGORR 0x00488b90
@@ -449,8 +453,9 @@ int media_cd_audio_device_state_update(int request)
     s_cd_audio_open = request == 0;
     s_cd_audio_current_track = -1;
     if (request != 0) return 1;
-    if (s_cd_audio_init_hook == NULL) return 0;
-    return s_cd_audio_init_hook(s_cd_audio_init_context) != 0;
+    if (s_cd_audio_init_hook != NULL)
+        return s_cd_audio_init_hook(s_cd_audio_init_context) != 0;
+    return audio_system_init(NULL) != 0;
 }
 
 void media_cd_audio_open_set(int open)
@@ -479,7 +484,19 @@ const char* media_cd_audio_error_text_get(void)
                               (int)sizeof(s_cd_audio_error_text));
         s_cd_audio_error_text[sizeof(s_cd_audio_error_text) - 1] = '\0';
     }
+    else {
+        (void)platform_cd_audio_error_text(s_cd_audio_last_error,
+                                           s_cd_audio_error_text,
+                                           (int)sizeof(s_cd_audio_error_text));
+        s_cd_audio_error_text[sizeof(s_cd_audio_error_text) - 1] = '\0';
+    }
     return s_cd_audio_error_text;
+}
+
+// FUNCTION: LEGORR 0x00489260
+void media_cd_audio_error_text_refresh(void)
+{
+    (void)media_cd_audio_error_text_get();
 }
 
 void media_cd_audio_status_hook_set(MediaCdAudioStatusHook hook,
@@ -504,17 +521,25 @@ static int media_cd_audio_text_equal(const char* left, const char* right)
     return *left == *right;
 }
 
+// FUNCTION: LEGORR 0x00489280
 int media_cd_audio_track_completion_poll(int track)
 {
     char mode[32];
     int current_track = 0;
     int error_code = 0;
     mode[0] = '\0';
-    if (s_cd_audio_open == 0 || s_cd_audio_status_hook == NULL)
-        return 0;
-    if (!s_cd_audio_status_hook(s_cd_audio_status_context, mode,
-                                (int)sizeof(mode), &current_track,
-                                &error_code)) {
+    if (s_cd_audio_open == 0) return 0;
+    if (s_cd_audio_status_hook != NULL) {
+        if (!s_cd_audio_status_hook(s_cd_audio_status_context, mode,
+                                    (int)sizeof(mode), &current_track,
+                                    &error_code)) {
+            s_cd_audio_last_error = error_code;
+            (void)media_cd_audio_error_text_get();
+            return 0;
+        }
+    }
+    else if (!platform_cd_audio_status(mode, (int)sizeof(mode),
+                                       &current_track, &error_code)) {
         s_cd_audio_last_error = error_code;
         (void)media_cd_audio_error_text_get();
         return 0;
@@ -537,12 +562,19 @@ void media_cd_audio_command_hook_set(MediaCdAudioCommandHook hook,
     s_cd_audio_command_context = context;
 }
 
+// FUNCTION: LEGORR 0x00489210
 int media_cd_audio_track_play_from(int track)
 {
     int error_code = 0;
-    if (s_cd_audio_command_hook == NULL) return 0;
-    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "play",
-                                 track + 1, &error_code)) {
+    int played;
+    if (s_cd_audio_command_hook != NULL) {
+        played = s_cd_audio_command_hook(s_cd_audio_command_context, "play",
+                                         track + 1, &error_code);
+    }
+    else {
+        played = platform_cd_audio_play(track + 1, &error_code);
+    }
+    if (!played) {
         s_cd_audio_last_error = error_code;
         (void)media_cd_audio_error_text_get();
         return 0;
@@ -551,21 +583,44 @@ int media_cd_audio_track_play_from(int track)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x00489330
 int media_cd_audio_device_open(int initial_track)
 {
     int error_code = 0;
-    if (s_cd_audio_command_hook == NULL) return 0;
-    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "open",
-                                 0, &error_code)) {
+    int opened;
+    if (s_cd_audio_command_hook != NULL) {
+        opened = s_cd_audio_command_hook(s_cd_audio_command_context, "open",
+                                         0, &error_code);
+    }
+    else {
+        opened = platform_cd_audio_open(&error_code);
+    }
+    if (!opened) {
+        s_cd_audio_open = 0;
         s_cd_audio_last_error = error_code;
         (void)media_cd_audio_error_text_get();
         return 0;
     }
     s_cd_audio_open = 1;
-    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "set-tmsf",
-                                 0, &error_code)) {
+    if (s_cd_audio_command_hook != NULL) {
+        opened = s_cd_audio_command_hook(s_cd_audio_command_context,
+                                         "set-tmsf", 0, &error_code);
+    }
+    else {
+        opened = platform_cd_audio_set_tmsf(&error_code);
+    }
+    if (!opened) {
+        s_cd_audio_open = 0;
         s_cd_audio_last_error = error_code;
         (void)media_cd_audio_error_text_get();
+        if (s_cd_audio_command_hook != NULL) {
+            int ignored_error = 0;
+            (void)s_cd_audio_command_hook(s_cd_audio_command_context,
+                                          "close", 0, &ignored_error);
+        }
+        else {
+            (void)platform_cd_audio_close(NULL);
+        }
         return 0;
     }
     return media_cd_audio_track_play_from(initial_track);
@@ -581,18 +636,31 @@ void media_cd_audio_track_start(int track, int restart_when_done,
     (void)media_cd_audio_device_open(track);
 }
 
+// FUNCTION: LEGORR 0x004893a0
 int media_cd_audio_stop_and_close(void)
 {
     int error_code = 0;
-    if (s_cd_audio_command_hook == NULL) return 0;
-    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "stop",
-                                 0, &error_code)) {
+    int stopped;
+    if (s_cd_audio_command_hook != NULL) {
+        stopped = s_cd_audio_command_hook(s_cd_audio_command_context,
+                                          "stop", 0, &error_code);
+    }
+    else {
+        stopped = platform_cd_audio_stop(&error_code);
+    }
+    if (!stopped) {
         s_cd_audio_last_error = error_code;
         (void)media_cd_audio_error_text_get();
         return 0;
     }
-    if (!s_cd_audio_command_hook(s_cd_audio_command_context, "close",
-                                 0, &error_code)) {
+    if (s_cd_audio_command_hook != NULL) {
+        stopped = s_cd_audio_command_hook(s_cd_audio_command_context,
+                                          "close", 0, &error_code);
+    }
+    else {
+        stopped = platform_cd_audio_close(&error_code);
+    }
+    if (!stopped) {
         s_cd_audio_last_error = error_code;
         (void)media_cd_audio_error_text_get();
         return 0;
@@ -602,6 +670,7 @@ int media_cd_audio_stop_and_close(void)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x00488bf0
 void media_cd_audio_stop_and_close_if_active(void)
 {
     if (s_cd_audio_open != 0) (void)media_cd_audio_stop_and_close();
@@ -613,12 +682,15 @@ void media_cd_audio_time_hook_set(MediaCdAudioTimeHook hook, void* context)
     s_cd_audio_time_context = context;
 }
 
+// FUNCTION: LEGORR 0x00488c00
 void media_cd_audio_watchdog_tick(int enabled)
 {
     uint32_t now;
-    if (enabled == 0 || s_cd_audio_open == 0 || s_cd_audio_time_hook == NULL)
+    if (enabled == 0 || s_cd_audio_open == 0)
         return;
-    now = s_cd_audio_time_hook(s_cd_audio_time_context);
+    now = s_cd_audio_time_hook != NULL
+        ? s_cd_audio_time_hook(s_cd_audio_time_context)
+        : platform_time_milliseconds();
     if (now <= s_cd_audio_watchdog_time + 4000u) return;
     if (media_cd_audio_track_completion_poll(s_cd_audio_target_track) == 0) {
         if (s_cd_audio_restart_when_done != 0)

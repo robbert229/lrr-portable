@@ -87,6 +87,7 @@ void cmd_kind_record_hooks_set(const CommandKindRecordHooks* hooks);
 void cmd_command_kind_record_issue(uint32_t a, uint32_t b, uint32_t c,
                                    const int cell_xy[2], uint32_t zone,
                                    const float* random_pair, int set_flag);
+void cmd_validated_record_queue(void* record); /* FUN_004030e0 */
 
 /* --- chain ops ---------------------------------------------------------- */
 /* CmdChainWalk: return the tail record of the entity's chain (or NULL). */
@@ -135,12 +136,6 @@ void* cmd_global_next(const void* rec);
 /* Unlink `rec` from the global command list (a record is also chained on
  * its entity; completion unlinks here before cmd_free). */
 void cmd_global_unlink(const void* rec);
-typedef struct PendingCommandScanHooks {
-    void* context;
-    int (*timer_fire)(void* record, void* context);
-    int (*entity_assign)(void* record, void* context);
-} PendingCommandScanHooks;
-void pending_command_scan_hooks_set(const PendingCommandScanHooks* hooks);
 void pending_command_timer_fire_scan(void); /* 0x405950 */
 void pending_command_entity_assignment_tick(void); /* 0x405c10 */
 
@@ -350,8 +345,8 @@ int cmd_rec_param2_get(const void* rec);
  * 1 of the registry word (the port's s_global_enabled view); zero runs the
  * entity callback sweep (the unported LAB seam — inert), sets the bit,
  * drops both list heads, and zeroes the 27-entry priority-state table.
- * (The corpus's 0x12c0-entry cell-record counter block is registry data
- * the port does not model — documented seam.)
+ * The 0x12c0-entry cell-record counter block is the live
+ * cmd_pending_command_counts table, shared with the terrain-cell task sweep.
  * EngineMemoryAllocate / EngineMemoryFree (FUN_004021e0 / FUN_00402210):
  * the engine-heap wrapper pair — allocate-and-lose (the corpus discards
  * the return) and free.
@@ -481,9 +476,8 @@ int cmd_rec_extra_get(const void* rec);
  * int view, deviation noted), followed by the action word, the -1 target
  * marker and the zero entry count. Each links at a cell-command kind and
  * runs the record-array half. The counter update that follows the link
- * belongs to the unported spatial-query/action-issue family and the
- * cell-record counter block, so the port documents it as a seam (see
- * docs/coverage/blocked.md) and changes no entity state there.
+ * belongs to the spatial-query/action-issue path; where that path has no
+ * eligible entity it increments cmd_pending_command_counts.
  * TerrainCellCommandCreate (FUN_00402510): all three state guards must come
  * out clear — the state-equals-1 and state-equals-6 tests and the in-bounds
  * flag-bit-4 test. Then the type-8 record, the flag word's bit 3 with the
@@ -542,9 +536,9 @@ int task_kind_filtered_search(int selector);
  * The kind-tagged queue family: each allocates its record kind, stages the
  * corpus's words, assigns the command kind and lands the record. Coordinate
  * pairs ride the coordinate slots as integers (the port reads them back
- * through cmd_rec_cell_xy_get). The DAT_004b3358 tail list is the port's
- * single global chain, so the removal walkers sweep that chain with the
- * same semantics. The timed pair (kind 5/0x11) stores its arguments in the
+ * through cmd_rec_cell_xy_get). DAT_004b3354 and DAT_004b3358 are independent
+ * global-list roots sharing each record's +0x60 link. The timed pair
+ * (kind 5/0x11) stores its arguments in the
  * cell-command slots and zeroes the timestamp slot before linking.
  *  CoordinatePairEventQueue (FUN_004030b0): kind 0xc, pair plus the +0x54
  *      event payload, head-linked as command 8.
@@ -606,9 +600,7 @@ int cmd_rec_cell_count_get(const void* rec); /* +0x28 word (timed arg 3) */
  * records free, pending-undone ones go raw onto the head list, bit-16
  * undone ones raw onto the tail list, everything else stays. The corpus
  * relinks every keeper through the HEAD keeper's link slot only, so an
- * intermediate keeper is orphaned (the corpus quirk, pinned). The corpus's
- * two global lists overlay the same link word, so both raw inserts land
- * on the port's single global chain (documented).
+ * intermediate keeper is orphaned (the corpus quirk, pinned).
  * EntityTaskChainContainsKind (FUN_004041b0): any chain record of the type. */
 void* entity_command_chain_head_remove(EntitySlot* e);
 void entity_drain_command_chain(EntitySlot* e);

@@ -23,6 +23,66 @@ static void mesh_record_default_release(void*, void* memory)
 static MeshRecordAppendOps s_mesh_record_append_ops;
 static ModelTextureBindOps s_model_texture_bind_ops;
 static MaterialPassOps s_material_pass_ops;
+static void* s_screen_bounded_surface_renderer;
+static void* s_screen_bounded_surface_device;
+
+void screen_bounded_surface_device_set(void* renderer, void* device)
+{
+    s_screen_bounded_surface_renderer = renderer;
+    s_screen_bounded_surface_device = device;
+}
+
+/* ScreenBoundedSurfaceResourceAllocate (FUN_00476e50): negative positions
+ * are measured from the far edge; reject rectangles that do not fit, then
+ * pop a pooled record and attach the created surface to it. */
+ScreenBoundedSurfaceRecord* screen_bounded_surface_allocate(
+    uint32_t width, uint32_t height, void* camera, int x, int y)
+{
+    uint32_t screen_width, screen_height;
+    uint32_t normalized_x, normalized_y;
+    ScreenBoundedSurfaceRecord* record;
+    if (s_screen_bounded_surface_renderer == NULL ||
+        s_screen_bounded_surface_device == NULL || camera == NULL)
+        return NULL;
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    screen_width = ((IDirect3DRMDevice2*)s_screen_bounded_surface_device)->GetWidth();
+    screen_height = ((IDirect3DRMDevice2*)s_screen_bounded_surface_device)->GetHeight();
+#else
+    return NULL;
+#endif
+    if (screen_width > 0x7fffffffu || screen_height > 0x7fffffffu)
+        return NULL;
+    if (x < 0) x += (int)screen_width;
+    if (y < 0) y += (int)screen_height;
+    if (x < 0 || y < 0) return NULL;
+    normalized_x = (uint32_t)x;
+    normalized_y = (uint32_t)y;
+    if ((uint64_t)normalized_x + width > screen_width ||
+        (uint64_t)normalized_y + height > screen_height) return NULL;
+
+    record = (ScreenBoundedSurfaceRecord*)ddiscene_render_surface_pool_acquire();
+    if (record == NULL) return NULL;
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    {
+        IDirect3DRMViewport** viewport_out =
+            (IDirect3DRMViewport**)(record->bytes + 0x10);
+        IDirect3DRMViewport* viewport = NULL;
+        HRESULT result = ((IDirect3DRM*)s_screen_bounded_surface_renderer)->
+            CreateViewport((IDirect3DRMDevice2*)s_screen_bounded_surface_device,
+                           (IDirect3DRMFrame*)camera, (int)normalized_x,
+                           (int)normalized_y, (int)width, (int)height,
+                           viewport_out);
+        if (result != 0) return NULL;
+        viewport = *viewport_out;
+        if (viewport == NULL) return NULL;
+        (void)viewport->SetAppData((LPD3DRM_APPDATA)record);
+        memset(record->bytes + 0x14, 0, sizeof(uint32_t));
+    }
+#else
+    return NULL;
+#endif
+    return record;
+}
 
 int mesh_record_allocate_or_append_ops_set(const MeshRecordAppendOps* ops)
 {
@@ -948,6 +1008,7 @@ void model_render_pass_dispatch_ops_set(
                 sizeof(s_model_render_pass_dispatch_ops));
 }
 
+// FUNCTION: LEGORR 0x00482d60
 /* ModelRenderPassDispatch (FUN_00482d60): configure the frame, walk queued
  * models, render each base pass, then render eligible child records in the
  * corpus's two material ordering groups and flush shared state. */
@@ -1313,6 +1374,7 @@ int direct3drm_device_initialize(void* adapter, uint32_t adapter_flags,
         s_direct3drm_device_init_ops.device_display_mode_set != NULL &&
         !s_direct3drm_device_init_ops.device_display_mode_set(
             s_direct3drm_device_init_ops.context, device, 2)) goto cleanup;
+    screen_bounded_surface_device_set(renderer, device);
     if (s_direct3drm_device_init_ops.state_commit != NULL) {
         s_direct3drm_device_init_ops.state_commit(
             s_direct3drm_device_init_ops.context, device, renderer,
@@ -1894,6 +1956,22 @@ void surface_writer_unlock_hook_set(SurfaceWriterUnlockHook hook)
     s_surface_writer_unlock_hook = hook;
 }
 
+static void surface_directdraw_unlock_call(void* surface)
+{
+    if (surface == NULL) return;
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    (void)((LPDIRECTDRAWSURFACE)surface)->Unlock(NULL);
+#elif defined(_WIN32)
+    typedef long (__stdcall *SurfaceUnlockProc)(void*, void*);
+    void** vtable = *(void***)surface;
+    if (vtable == NULL || vtable[32] == NULL) return;
+    SurfaceUnlockProc unlock = (SurfaceUnlockProc)vtable[32];
+    (void)unlock(surface, NULL);
+#else
+    (void)surface;
+#endif
+}
+
 /* DirectDrawSurfaceUnlock (FUN_0047ded0): forward a full-surface unlock to
  * the installed platform interface callback. */
 // FUNCTION: LEGORR 0x0047ded0
@@ -1901,19 +1979,21 @@ void surface_directdraw_unlock(void* surface)
 {
     if (s_surface_writer_unlock_hook != NULL) {
         s_surface_writer_unlock_hook(surface, 0);
+    } else {
+        surface_directdraw_unlock_call(surface);
     }
 }
 
-/* SurfaceUnlockResetPixelWriter (FUN_00486650): release the locked target
- * through its owner hook, then clear the depth and active pixel-writer
- * globals. The channel-shift counts remain as in the reference. */
+/* SurfaceUnlockResetPixelWriter (FUN_00486650): unlock the DirectDraw target,
+ * then clear the format and active pixel-writer globals. */
 // FUNCTION: LEGORR 0x00486650
 void surface_unlock_reset_pixel_writer(void* surface)
 {
-    if (s_surface_writer_unlock_hook != NULL) {
-        s_surface_writer_unlock_hook(surface, 0);
-    }
+    surface_directdraw_unlock(surface);
     s_surface_pixel_bits = 0u;
+    s_surface_red_mask_bits = 0u;
+    s_surface_green_mask_bits = 0u;
+    s_surface_blue_mask_bits = 0u;
     s_surface_pixel_writer = NULL;
 }
 
@@ -2399,6 +2479,73 @@ void surface_pixel_rows_flip_in_place(void* surface)
 
 static LPDIRECTDRAW s_dd(void* p)      { return (LPDIRECTDRAW)p; }
 static LPDIRECTDRAWSURFACE s_surf(void* p) { return (LPDIRECTDRAWSURFACE)p; }
+static IDirect3DRM* s_screen_renderer_rm;
+static IDirect3DRMDevice2* s_screen_renderer_device;
+static void* s_screen_renderer_surface;
+
+struct MiniwinRendererGuidList {
+    GUID values[16];
+    unsigned int count;
+};
+
+static HRESULT miniwin_renderer_guid_collect(LPGUID guid, LPSTR, LPSTR,
+    LPD3DDEVICEDESC, LPD3DDEVICEDESC, LPVOID context)
+{
+    MiniwinRendererGuidList* list = (MiniwinRendererGuidList*)context;
+    if (guid != NULL && list != NULL && list->count < 16u)
+        list->values[list->count++] = *guid;
+    return DD_OK;
+}
+
+static void miniwin_screen_renderer_release(void)
+{
+    if (s_screen_renderer_device != NULL) {
+        s_screen_renderer_device->Release();
+        s_screen_renderer_device = NULL;
+    }
+    if (s_screen_renderer_rm != NULL) {
+        s_screen_renderer_rm->Release();
+        s_screen_renderer_rm = NULL;
+    }
+    s_screen_renderer_surface = NULL;
+    screen_bounded_surface_device_set(NULL, NULL);
+}
+
+static void miniwin_screen_renderer_initialize(DisplaySurface* surface)
+{
+    IDirect3D2* d3d = NULL;
+    MiniwinRendererGuidList list;
+    unsigned int i;
+    memset(&list, 0, sizeof(list));
+    miniwin_screen_renderer_release();
+    if (surface == NULL || surface->dd == NULL || surface->surf == NULL)
+        return;
+    if (s_dd(surface->dd)->QueryInterface(IID_IDirect3D2,
+            (void**)&d3d) != DD_OK || d3d == NULL) return;
+    if (d3d->EnumDevices(miniwin_renderer_guid_collect, &list) != DD_OK) {
+        d3d->Release();
+        return;
+    }
+    d3d->Release();
+    if (list.count == 0u || Direct3DRMCreate(&s_screen_renderer_rm) != DD_OK ||
+        s_screen_renderer_rm == NULL) return;
+    for (i = 0; i < list.count; ++i) {
+        if (s_screen_renderer_rm->CreateDeviceFromSurface(
+                &list.values[i], s_dd(surface->dd), s_surf(surface->surf),
+                &s_screen_renderer_device) == DD_OK &&
+            s_screen_renderer_device != NULL) {
+            s_screen_renderer_surface = surface->surf;
+            screen_bounded_surface_device_set(s_screen_renderer_rm,
+                                               s_screen_renderer_device);
+            return;
+        }
+        if (s_screen_renderer_device != NULL) {
+            s_screen_renderer_device->Release();
+            s_screen_renderer_device = NULL;
+        }
+    }
+    miniwin_screen_renderer_release();
+}
 
 int surface_create(DisplaySurface* out, void* hwnd, int w, int h)
 {
@@ -2407,9 +2554,11 @@ int surface_create(DisplaySurface* out, void* hwnd, int w, int h)
         return -1;
     }
     if (DirectDrawCreate(NULL, &dd, NULL) != DD_OK || dd == NULL) {
+        if (dd != NULL) dd->Release();
         return -2;
     }
     if (dd->SetCooperativeLevel((HWND)hwnd, DDSCL_NORMAL) != DD_OK) {
+        dd->Release();
         return -3;
     }
     DDSURFACEDESC d;
@@ -2421,6 +2570,8 @@ int surface_create(DisplaySurface* out, void* hwnd, int w, int h)
     d.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
     LPDIRECTDRAWSURFACE surf = NULL;
     if (dd->CreateSurface(&d, &surf, NULL) != DD_OK || surf == NULL) {
+        if (surf != NULL) surf->Release();
+        dd->Release();
         return -4;
     }
     out->dd = dd;
@@ -2428,6 +2579,7 @@ int surface_create(DisplaySurface* out, void* hwnd, int w, int h)
     out->hwnd = hwnd;
     out->w = w;
     out->h = h;
+    miniwin_screen_renderer_initialize(out);
     return 0;
 }
 
@@ -2436,6 +2588,8 @@ void surface_destroy(DisplaySurface* s)
     if (s == NULL) {
         return;
     }
+    if (s->surf != NULL && s->surf == s_screen_renderer_surface)
+        miniwin_screen_renderer_release();
     if (s->surf != NULL) {
         s_surf(s->surf)->Release();
     }
@@ -2509,6 +2663,14 @@ static void windowed_surface_blit_impl(DisplaySurface* primary,
                                &source_rect, DDBLT_WAIT, NULL);
 }
 
+static void surface_blit_wait_impl(void* destination,
+                                   DisplaySurface* source)
+{
+    if (destination == NULL || source == NULL || source->surf == NULL) return;
+    s_surf(destination)->Blt(NULL, s_surf(source->surf), NULL, DDBLT_WAIT,
+                            NULL);
+}
+
 static int surface_directdraw_pixel_format_query(DisplaySurface* s,
                                                  SurfacePixelFormat* out)
 {
@@ -2541,19 +2703,37 @@ static int surface_directdraw_description_query(DisplaySurface* s,
     return 1;
 }
 
-#else  /* !LEGORRR_BACKEND_MINIWIN — winapi stub (TODO reference build) */ 
+#else  /* !LEGORRR_BACKEND_MINIWIN — DirectDraw headers are unavailable. */
 
 int surface_create(DisplaySurface* out, void* hwnd, int w, int h)
 {
-    (void)out; (void)hwnd; (void)w; (void)h;
+    (void)hwnd;
+    if (out == NULL) return -1;
+    out->dd = NULL;
+    out->surf = NULL;
+    out->hwnd = NULL;
+    out->w = 0;
+    out->h = 0;
+    if (w <= 0 || h <= 0) return -1;
     return -5;
 }
-void surface_destroy(DisplaySurface* s) { (void)s; }
-int surface_width(DisplaySurface* s)  { (void)s; return 0; }
-int surface_height(DisplaySurface* s) { (void)s; return 0; }
+void surface_destroy(DisplaySurface* s)
+{
+    if (s == NULL) return;
+    s->dd = NULL;
+    s->surf = NULL;
+    s->hwnd = NULL;
+    s->w = 0;
+    s->h = 0;
+}
+int surface_width(DisplaySurface* s)  { return s != NULL ? s->w : 0; }
+int surface_height(DisplaySurface* s) { return s != NULL ? s->h : 0; }
 int surface_lock(DisplaySurface* s, void** pixels, int* pitch)
 {
-    (void)s; (void)pixels; (void)pitch;
+    (void)s;
+    if (pixels != NULL) *pixels = NULL;
+    if (pitch != NULL) *pitch = 0;
+    if (pixels == NULL || pitch == NULL) return -1;
     return -5;
 }
 void surface_unlock(DisplaySurface* s, void* pixels)
@@ -2571,16 +2751,35 @@ static void windowed_surface_blit_impl(DisplaySurface* primary,
 {
     (void)primary; (void)back_surface;
 }
+static void surface_blit_wait_impl(void* destination,
+                                   DisplaySurface* source)
+{
+    (void)destination; (void)source;
+}
 static int surface_directdraw_description_query(DisplaySurface* surface,
                                                 SurfaceDescriptionInfo* out)
 {
-    (void)surface; (void)out;
+    (void)surface;
+    if (out != NULL) {
+        out->width = 0;
+        out->height = 0;
+        out->pitch = 0;
+        out->pixels = NULL;
+        out->bits_per_pixel = 0;
+    }
     return 0;
 }
 static int surface_directdraw_pixel_format_query(DisplaySurface* surface,
                                                  SurfacePixelFormat* out)
 {
-    (void)surface; (void)out;
+    (void)surface;
+    if (out != NULL) {
+        out->bits_per_pixel = 0;
+        out->red_mask = 0;
+        out->green_mask = 0;
+        out->blue_mask = 0;
+        out->palette_rgb = NULL;
+    }
     return 0;
 }
 
@@ -2605,6 +2804,13 @@ void windowed_render_surface_blit(DisplaySurface* primary,
                                   DisplaySurface* back_surface)
 {
     windowed_surface_blit_impl(primary, back_surface);
+}
+
+/* AviPlaybackFrameLoop (FUN_0047ed00): copy the movie surface into the
+ * shared render target with a full-surface, wait-for-completion blit. */
+void surface_blit_wait(void* destination, DisplaySurface* source)
+{
+    surface_blit_wait_impl(destination, source);
 }
 
 /* DirectDrawSurfaceDescriptionGet (FUN_0047de60): retrieve the active

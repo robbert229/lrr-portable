@@ -161,8 +161,8 @@ static inline void pointer_cursor_draw(PointerCursorState* state,
     slot = &state->slots[selected];
     if (!slot->animated) {
         void* bitmap = slot->resource != NULL ? slot->resource
-                                               : state->default_surface;
-        if (bitmap == NULL) bitmap = state->slots[0].resource;
+                                               : state->slots[0].resource;
+        if (bitmap == NULL) bitmap = state->default_surface;
         if (bitmap != NULL && hooks->bitmap_draw != NULL)
             hooks->bitmap_draw(hooks->context, bitmap, (float)x, (float)y);
         return;
@@ -170,6 +170,11 @@ static inline void pointer_cursor_draw(PointerCursorState* state,
     if (slot->resource != NULL && hooks->animation_draw != NULL) {
         const uint32_t flags = hooks->render_flags_get == NULL ? 0u
             : hooks->render_flags_get(hooks->context);
+        /* The original draws the blank cursor surface before the animated
+         * cursor so the animation has a clean background at the pointer. */
+        if (state->slots[1].resource != NULL && hooks->bitmap_draw != NULL)
+            hooks->bitmap_draw(hooks->context, state->slots[1].resource,
+                               (float)x, (float)y);
         hooks->animation_draw(hooks->context, slot->resource,
             (float)((int)x + slot->hot_x), (float)((int)y + slot->hot_y),
             (int)((~flags >> 20) & 1u), 1);

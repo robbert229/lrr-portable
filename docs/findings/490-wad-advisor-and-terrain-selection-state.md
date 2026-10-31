@@ -4,7 +4,7 @@
 
 `0x005756A0` begins 100 fixed-stride WAD resource slots of `0x10` bytes each. Each slot stores a resource handle, an active flag at `+4`, a WAD/archive handle at `+8`, and an entry index at `+0xC`. Allocation scans the flags; release and lookup use the indexed handle.
 
-`0x004A6768` is the selected advisor sound-alias ID. Advisor inline-token processing assigns the alias ID from the configured sound-alias table and plays it; the global sound helper checks for the `-1` sentinel before playback.
+`0x004A6768` stores the selected advisor sound-bank slot. Advisor inline-token processing reads the slot from its configured table, passes it to `StreamedWaveBufferStepRate` and `SoundBufferPlayWithPosition`, and saves it for the global sound helper. The latter plays the slot directly when it is not `-1`; it does not pass the value through alias lookup or variant selection.
 
 `0x004A9090` and `0x004A9094` store the selected terrain-view tile coordinates. `ScreenCoordNormalizeInit` resets them to `-1`; `TerrainViewTileGeometryBuild` highlights the geometry whose X/Y indices match the pair.
 

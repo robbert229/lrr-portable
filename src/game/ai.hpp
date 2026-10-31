@@ -95,6 +95,7 @@ enum AiActivity {
 /* DAT_004decc4 lookup: activity name for `id` (NULL when out of range). */
 const char* ai_activity_name(int id);
 void ai_activity_name_table_initialize(void); /* FUN_00436c20 */
+void ai_idle_chain_record_attach(EntitySlot* entity); /* FUN_00403f30 */
 
 /* FUN_004409e0 semantics: set the entity's activity (name-table index),
  * store the param, reset the activity timer. Out-of-range ids ignored. */

@@ -467,6 +467,7 @@ static int text_buffer_layout_inline(void* record, void* font,
     return (int)line_count;
 }
 
+// FUNCTION: LEGORR 0x00485710
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,
                                      int* height_out)
 {
@@ -529,6 +530,7 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
     return result;
 }
 
+// FUNCTION: LEGORR 0x00485390
 int text_buffer_draw_wrapped(void* record, uint32_t start_line,
                              float line_scale, int* height_out)
 {

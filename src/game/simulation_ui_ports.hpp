@@ -85,14 +85,21 @@ static inline int panel_rotation_control_config_load(
     PanelRotationControlState* state, const PanelRotationControlHooks* hooks)
 {
     static const char* image_names[4] = {
-        "RotateLeft", "RotateRight", "RotateUp", "RotateDown"
+        "LeftImage", "RightImage", "UpImage", "DownImage"
     };
     int ok = 1;
     int i;
     if (state == 0 || hooks == 0) return 0;
+    /* The reference defaults each missing PanelRotationControl numeric
+     * setting to one before attempting its config lookup. */
+    state->center_x = 1;
+    state->center_y = 1;
+    state->radius = 1;
     if (hooks->config_get != 0) {
-        ok &= hooks->config_get(hooks->context, "CenterX", &state->center_x);
-        ok &= hooks->config_get(hooks->context, "CenterY", &state->center_y);
+        ok &= hooks->config_get(hooks->context, "CenterPositionX",
+                                &state->center_x);
+        ok &= hooks->config_get(hooks->context, "CenterPositionY",
+                                &state->center_y);
         ok &= hooks->config_get(hooks->context, "Radius", &state->radius);
     }
     for (i = 0; i < 4; ++i)

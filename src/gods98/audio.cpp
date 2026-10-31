@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 #include "audio.hpp"
 
@@ -10,8 +11,20 @@ static void* s_listener_rolloff_context;
 static float s_listener_rolloff;
 static AudioSystemInitHook s_audio_system_init_hook;
 static void* s_audio_system_init_context;
+static float s_audio_system_initial_volume = 1.0f;
 // GLOBAL: LEGORR 0x00506694
 static int s_audio_buffer_volume;
+
+struct AudioBuffer {
+    const Sound* sample;
+    int16_t* pcm;
+    int frames;
+    int sample_rate;
+    float gain;
+    int millibels;
+    int playing;
+    int playing_loop;
+};
 
 /* The corpus menu-volume gain is a standalone .rdata dword (verified
  * 0x49e1e0 = 0.11111111f); the compat band's volume_scale member is now
@@ -45,6 +58,21 @@ int audio_open(AudioPlayer* p)
     }
     s_active_audio_player = p;
     p->volume = 1.0f;
+    p->loop_sound = NULL;
+    p->loop_pan = 0.0f;
+    p->loop_render_dirty = 0;
+    p->loop_buffer = NULL;
+    p->stream_sample[0] = NULL;
+    p->stream_sample[1] = NULL;
+    memset(p->stream_format, 0, sizeof(p->stream_format));
+    p->stream_buffer_bytes[0] = 0;
+    p->stream_buffer_bytes[1] = 0;
+    p->stream_cursor_bytes[0] = 0;
+    p->stream_cursor_bytes[1] = 0;
+    p->stream_queued_frames[0] = 0;
+    p->stream_queued_frames[1] = 0;
+    p->stream_active[0] = 0;
+    p->stream_active[1] = 0;
     platform_audio_set_gain(p->dev, p->volume);
     return 0;
 }
@@ -54,12 +82,40 @@ void audio_close(AudioPlayer* p)
     if (p == NULL) {
         return;
     }
+    if (p->loop_buffer != NULL) {
+        p->loop_buffer->playing = 0;
+        p->loop_buffer->playing_loop = 0;
+    }
     platform_audio_close(p->dev);
     p->dev = NULL;
     p->loop_sound = NULL;
+    p->loop_pan = 0.0f;
+    p->loop_render_dirty = 0;
+    p->loop_buffer = NULL;
+    p->stream_sample[0] = NULL;
+    p->stream_sample[1] = NULL;
+    memset(p->stream_format, 0, sizeof(p->stream_format));
+    p->stream_buffer_bytes[0] = 0;
+    p->stream_buffer_bytes[1] = 0;
+    p->stream_cursor_bytes[0] = 0;
+    p->stream_cursor_bytes[1] = 0;
+    p->stream_queued_frames[0] = 0;
+    p->stream_queued_frames[1] = 0;
+    p->stream_active[0] = 0;
+    p->stream_active[1] = 0;
     if (s_active_audio_player == p) {
         s_active_audio_player = NULL;
     }
+}
+
+void audio_system_player_set(AudioPlayer* p)
+{
+    s_active_audio_player = p;
+}
+
+AudioPlayer* audio_system_player_get(void)
+{
+    return s_active_audio_player;
 }
 
 void audio_active_shutdown(void)
@@ -67,9 +123,18 @@ void audio_active_shutdown(void)
     if (!sound_bank_sound_on()) return;
     if (s_active_audio_player != NULL) {
         audio_stop(s_active_audio_player);
+        audio_set_volume(s_active_audio_player,
+                         s_audio_system_initial_volume);
         audio_close(s_active_audio_player);
     }
     sound_bank_sound_on_set(0);
+}
+
+// FUNCTION: LEGORR 0x0047a800
+void audio_system_shutdown(void)
+{
+    sound_subsystem_stop_all();
+    audio_active_shutdown();
 }
 
 void audio_system_init_hook_set(AudioSystemInitHook hook, void* context)
@@ -78,6 +143,7 @@ void audio_system_init_hook_set(AudioSystemInitHook hook, void* context)
     s_audio_system_init_context = context;
 }
 
+// FUNCTION: LEGORR 0x0047a640
 int audio_system_init(void* window)
 {
     int initialized = 0;
@@ -85,11 +151,15 @@ int audio_system_init(void* window)
     if (s_audio_system_init_hook != NULL)
         initialized = s_audio_system_init_hook(s_audio_system_init_context,
                                                window);
+    else if (s_active_audio_player != NULL)
+        initialized = audio_open(s_active_audio_player) == 0;
     if (initialized != 0) {
         sound_bank_sound_on_set(1);
         s_listener_rolloff = 1.0f;
-        if (s_active_audio_player != NULL)
+        if (s_active_audio_player != NULL) {
+            s_audio_system_initial_volume = s_active_audio_player->volume;
             audio_set_volume(s_active_audio_player, 1.0f);
+        }
     }
     /* The reference's completion result is one after either a successful
      * device setup or its fallback/skip path; only its retry-dialog code
@@ -155,6 +225,13 @@ void audio_active_sound_volume_set(int millibels)
     audio_sound_volume_set(millibels);
 }
 
+// FUNCTION: LEGORR 0x0047b550
+void audio_sound_volume_minus_300(void)
+{
+    if (s_bank_sound_on != 0)
+        audio_sound_volume_set(-300);
+}
+
 /* SoundVolumeIndexSet (FUN_0047b530): the table lookup is bounded to the
  * eleven menu slider entries, then the selected attenuation is applied. */
 // FUNCTION: LEGORR 0x0047b530
@@ -214,6 +291,7 @@ void audio_music_mixer_volume_get(float* music, float* sfx)
     if (sfx != NULL) *sfx = volume;
 }
 
+// FUNCTION: LEGORR 0x004789c0
 int audio_mixer_control_init(float* music, float* sfx, int apply_volume)
 {
     if (music == NULL || sfx == NULL) return 0;
@@ -387,9 +465,30 @@ int audio_loop_named(AudioPlayer* p, const char* name, float pan)
             return -1;
         }
     }
-    p->loop_sound = s;
+    return audio_loop_sample(p, s, pan);
+}
+
+int audio_loop_sample(AudioPlayer* p, const Sound* s, float pan)
+{
+    int16_t* lr = NULL;
+    int frames;
+    if (p == NULL || s == NULL || p->dev == NULL) return -1;
+    if (pan < -1.0f) pan = -1.0f;
+    if (pan > 1.0f) pan = 1.0f;
+    frames = audio_to_stereo_pan(s, pan, &lr);
+    if (frames <= 0) return -1;
+    if (platform_audio_loop(p->dev, lr, frames,
+                            (int)s->format.sample_rate) != 0) {
+        audio_free_pcm(lr);
+        return -1;
+    }
+    audio_free_pcm(lr);
+    if (p->loop_buffer != NULL)
+        p->loop_buffer->playing_loop = 0;
+    p->loop_buffer = NULL;
+    p->loop_sound = (Sound*)s;
     p->loop_pan = pan;
-    p->loop_render_dirty = 1;
+    p->loop_render_dirty = 0;
     return 0;
 }
 
@@ -452,6 +551,304 @@ void audio_stop(AudioPlayer* p)
         return;
     }
     platform_audio_stop(p->dev);
+    if (p->loop_buffer != NULL) {
+        p->loop_buffer->playing = 0;
+        p->loop_buffer->playing_loop = 0;
+    }
     p->loop_sound = NULL;
+    p->loop_buffer = NULL;
     p->loop_render_dirty = 0;
+    p->stream_sample[0] = NULL;
+    p->stream_sample[1] = NULL;
+    memset(p->stream_format, 0, sizeof(p->stream_format));
+    p->stream_buffer_bytes[0] = 0;
+    p->stream_buffer_bytes[1] = 0;
+    p->stream_cursor_bytes[0] = 0;
+    p->stream_cursor_bytes[1] = 0;
+    p->stream_queued_frames[0] = 0;
+    p->stream_queued_frames[1] = 0;
+    p->stream_active[0] = 0;
+    p->stream_active[1] = 0;
+}
+
+AudioBuffer* audio_buffer_create(const Sound* sample)
+{
+    AudioBuffer* buffer;
+    int16_t* pcm = NULL;
+    int frames;
+    if (sample == NULL) return NULL;
+    frames = audio_to_16mono(sample, &pcm);
+    if (frames <= 0) return NULL;
+    buffer = (AudioBuffer*)calloc(1, sizeof(AudioBuffer));
+    if (buffer == NULL) {
+        audio_free_pcm(pcm);
+        return NULL;
+    }
+    buffer->pcm = pcm;
+    buffer->sample = sample;
+    buffer->frames = frames;
+    buffer->sample_rate = (int)sample->format.sample_rate;
+    buffer->gain = 1.0f;
+    buffer->millibels = 0;
+    return buffer;
+}
+
+void audio_buffer_destroy(AudioBuffer* buffer)
+{
+    if (buffer == NULL) return;
+    audio_buffer_stop(buffer);
+    free(buffer->pcm);
+    free(buffer);
+}
+
+void audio_buffer_volume_set(AudioBuffer* buffer, int millibels)
+{
+    if (buffer == NULL) return;
+    if (sound_volume_value_valid(millibels) == 0) millibels = 0;
+    buffer->millibels = millibels;
+    buffer->gain = millibels <= -10000 ? 0.0f
+        : powf(10.0f, (float)millibels / 2000.0f);
+}
+
+int audio_buffer_play(AudioBuffer* buffer)
+{
+    return audio_buffer_play_attenuated(buffer, 0);
+}
+
+int audio_buffer_play_attenuated(AudioBuffer* buffer, int extra_millibels)
+{
+    int rc;
+    int i;
+    int16_t* scaled;
+    float gain;
+    AudioPlayer* player = s_active_audio_player;
+    if (buffer == NULL || player == NULL || player->dev == NULL
+        || buffer->pcm == NULL || buffer->frames <= 0) return -1;
+    gain = buffer->gain;
+    /* DirectSound rejects SetVolume requests below -10000. The reference
+     * ignores that HRESULT, so retain the configured gain in that edge. */
+    if (extra_millibels != 0 && buffer->millibels + extra_millibels >= -10000)
+        gain = powf(10.0f,
+                    (float)(buffer->millibels + extra_millibels) / 2000.0f);
+    if (gain == 1.0f) {
+        rc = platform_audio_play(player->dev, buffer->pcm, buffer->frames,
+                                 buffer->sample_rate);
+    } else {
+        scaled = (int16_t*)calloc((size_t)buffer->frames, sizeof(int16_t));
+        if (scaled == NULL) return -1;
+        for (i = 0; i < buffer->frames; ++i)
+            scaled[i] = (int16_t)(buffer->pcm[i] * gain);
+        rc = platform_audio_play(player->dev, scaled, buffer->frames,
+                                 buffer->sample_rate);
+        free(scaled);
+    }
+    buffer->playing = rc == 0;
+    buffer->playing_loop = 0;
+    return rc == 0 ? buffer->frames : -1;
+}
+
+void audio_buffer_stop(AudioBuffer* buffer)
+{
+    AudioPlayer* player = s_active_audio_player;
+    if (buffer == NULL) return;
+    if (buffer->playing_loop && player != NULL && player->dev != NULL
+        && player->loop_buffer == buffer) {
+        (void)platform_audio_loop(player->dev, NULL, 0, 0);
+        player->loop_sound = NULL;
+        player->loop_buffer = NULL;
+        player->loop_render_dirty = 0;
+    }
+    /* The SDL queue has no voice identifiers for one-shot samples. */
+    buffer->playing = 0;
+    buffer->playing_loop = 0;
+}
+
+int audio_buffer_loop(AudioBuffer* buffer, const Sound* sample)
+{
+    return audio_buffer_loop_attenuated(buffer, sample, 0);
+}
+
+int audio_buffer_loop_attenuated(AudioBuffer* buffer, const Sound* sample,
+                                 int extra_millibels)
+{
+    int i;
+    int16_t* lr;
+    float gain;
+    AudioPlayer* player = s_active_audio_player;
+    if (buffer == NULL || sample == NULL || player == NULL
+        || player->dev == NULL || buffer->pcm == NULL || buffer->frames <= 0)
+        return -1;
+    lr = (int16_t*)calloc((size_t)buffer->frames * 2u, sizeof(int16_t));
+    if (lr == NULL) return -1;
+    gain = buffer->gain;
+    if (extra_millibels != 0 && buffer->millibels + extra_millibels >= -10000)
+        gain = powf(10.0f,
+                    (float)(buffer->millibels + extra_millibels) / 2000.0f);
+    for (i = 0; i < buffer->frames; ++i) {
+        int16_t value = (int16_t)(buffer->pcm[i] * gain);
+        lr[i * 2] = value;
+        lr[i * 2 + 1] = value;
+    }
+    i = platform_audio_loop(player->dev, lr, buffer->frames,
+                            buffer->sample_rate);
+    free(lr);
+    if (i != 0) return -1;
+    if (player->loop_buffer != NULL)
+        player->loop_buffer->playing_loop = 0;
+    player->loop_buffer = buffer;
+    player->loop_sound = (Sound*)sample;
+    player->loop_pan = 0.0f;
+    player->loop_render_dirty = 0;
+    buffer->playing = 1;
+    buffer->playing_loop = 1;
+    return 0;
+}
+
+int audio_stream_setup(AudioPlayer* p, int stream_index,
+                       const WavSample* format, uint32_t buffer_bytes)
+{
+    uint32_t frame_bytes;
+    if (p == NULL || p->dev == NULL || stream_index < 0 || stream_index > 1
+        || format == NULL || format->format_tag != 1
+        || (format->channels != 1 && format->channels != 2)
+        || (format->bits_per_sample != 8 && format->bits_per_sample != 16))
+        return 0;
+    frame_bytes = (uint32_t)format->channels
+                * ((uint32_t)format->bits_per_sample / 8u);
+    if (frame_bytes == 0u || format->sample_rate == 0u
+        || format->block_align != frame_bytes || buffer_bytes < frame_bytes)
+        return 0;
+    p->stream_buffer_bytes[stream_index] =
+        buffer_bytes - buffer_bytes % frame_bytes;
+    p->stream_format[stream_index] = *format;
+    p->stream_sample[stream_index] = NULL;
+    p->stream_cursor_bytes[stream_index] = 0;
+    p->stream_queued_frames[stream_index] = 0;
+    p->stream_active[stream_index] = 0;
+    return 1;
+}
+
+/* Feed one aligned slice from a loaded WAVE sample into the shared output.
+ * The software backend cannot expose a DirectSound ring buffer, so the
+ * player keeps a byte cursor and submits at most one reference-sized buffer
+ * per refill. */
+static int audio_stream_submit_chunk(AudioPlayer* p, int stream_index)
+{
+    const Sound* sample;
+    Sound slice;
+    int16_t* pcm;
+    int frames;
+    uint32_t frame_bytes;
+    uint32_t amount;
+    if (p == NULL || stream_index < 0 || stream_index > 1
+        || p->dev == NULL) return 0;
+    sample = p->stream_sample[stream_index];
+    if (sample == NULL || sample->data == NULL
+        || p->stream_cursor_bytes[stream_index] >= sample->data_len)
+        return 0;
+    frame_bytes = (uint32_t)sample->format.channels
+                * ((uint32_t)sample->format.bits_per_sample / 8u);
+    if (frame_bytes == 0u) return 0;
+    amount = p->stream_buffer_bytes[stream_index];
+    if (amount == 0u) amount = frame_bytes * 4096u;
+    amount -= amount % frame_bytes;
+    if (amount == 0u) return 0;
+    amount = sample->data_len - p->stream_cursor_bytes[stream_index] < amount
+        ? sample->data_len - p->stream_cursor_bytes[stream_index] : amount;
+    amount -= amount % frame_bytes;
+    if (amount == 0u || amount > 0x7fffffffu) return 0;
+    memset(&slice, 0, sizeof(slice));
+    slice.format = sample->format;
+    slice.data = sample->data + p->stream_cursor_bytes[stream_index];
+    slice.data_len = amount;
+    frames = audio_to_16mono(&slice, &pcm);
+    if (frames <= 0) return 0;
+    if (platform_audio_play(p->dev, pcm, frames,
+                            (int)sample->format.sample_rate) != 0) {
+        audio_free_pcm(pcm);
+        return 0;
+    }
+    audio_free_pcm(pcm);
+    p->stream_cursor_bytes[stream_index] += amount;
+    p->stream_queued_frames[stream_index] += (uint32_t)frames;
+    return frames;
+}
+
+int audio_stream_start(AudioPlayer* p, int stream_index, const Sound* sample)
+{
+    uint32_t frame_bytes;
+    if (p == NULL || stream_index < 0 || stream_index > 1 || sample == NULL
+        || p->dev == NULL || sample->data == NULL || sample->data_len == 0u)
+        return 0;
+    if (sample->format.format_tag != 1
+        || (sample->format.channels != 1 && sample->format.channels != 2)
+        || (sample->format.bits_per_sample != 8 &&
+            sample->format.bits_per_sample != 16)) return 0;
+    frame_bytes = (uint32_t)sample->format.channels
+                * ((uint32_t)sample->format.bits_per_sample / 8u);
+    if (frame_bytes == 0u || sample->format.sample_rate == 0u
+        || sample->format.block_align != frame_bytes) return 0;
+    if (p->stream_buffer_bytes[stream_index] == 0u)
+        p->stream_buffer_bytes[stream_index] = frame_bytes * 4096u;
+    p->stream_format[stream_index] = sample->format;
+    p->stream_sample[stream_index] = sample;
+    p->stream_cursor_bytes[stream_index] = 0;
+    p->stream_queued_frames[stream_index] = 0;
+    p->stream_active[stream_index] = 1;
+    if (audio_stream_submit_chunk(p, stream_index) <= 0) {
+        audio_stream_stop(p, stream_index);
+        return 0;
+    }
+    return 1;
+}
+
+void audio_stream_stop(AudioPlayer* p, int stream_index)
+{
+    if (p == NULL || stream_index < 0 || stream_index > 1) return;
+    p->stream_active[stream_index] = 0;
+    p->stream_sample[stream_index] = NULL;
+    p->stream_buffer_bytes[stream_index] = 0;
+    p->stream_cursor_bytes[stream_index] = 0;
+    p->stream_queued_frames[stream_index] = 0;
+    memset(&p->stream_format[stream_index], 0, sizeof(WavSample));
+}
+
+int audio_stream_drain_check(AudioPlayer* p, int stream_index)
+{
+    if (p == NULL || stream_index < 0 || stream_index > 1
+        || !p->stream_active[stream_index] || p->dev == NULL) return 0;
+    if (p->stream_sample[stream_index] == NULL
+        || (p->stream_cursor_bytes[stream_index]
+                >= p->stream_sample[stream_index]->data_len
+            && p->stream_queued_frames[stream_index] == 0u)) {
+        p->stream_active[stream_index] = 0;
+        p->stream_sample[stream_index] = NULL;
+        p->stream_buffer_bytes[stream_index] = 0;
+        p->stream_cursor_bytes[stream_index] = 0;
+        p->stream_queued_frames[stream_index] = 0;
+        memset(&p->stream_format[stream_index], 0, sizeof(WavSample));
+        return 0;
+    }
+    return 1;
+}
+
+void audio_stream_tick(AudioPlayer* p, int stream_index)
+{
+    uint32_t frames_per_tick;
+    if (p == NULL || stream_index < 0 || stream_index > 1
+        || !p->stream_active[stream_index]
+        || p->stream_sample[stream_index] == NULL) return;
+    frames_per_tick = p->stream_format[stream_index].sample_rate / 60u;
+    if (frames_per_tick == 0u) frames_per_tick = 1u;
+    if (p->stream_queued_frames[stream_index] > frames_per_tick)
+        p->stream_queued_frames[stream_index] -= frames_per_tick;
+    else
+        p->stream_queued_frames[stream_index] = 0;
+    if (p->stream_queued_frames[stream_index]
+            <= p->stream_format[stream_index].sample_rate / 30u
+        && p->stream_cursor_bytes[stream_index]
+            < p->stream_sample[stream_index]->data_len) {
+        (void)audio_stream_submit_chunk(p, stream_index);
+    }
+    (void)audio_stream_drain_check(p, stream_index);
 }

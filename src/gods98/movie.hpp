@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* gods98 engine — AVI movie module (finding 14 §4, finding 23 callbacks).
  *
- * Software AVI playback for the native port. The corpus's path is
- * AVIFIL32 — AviStreamModule @ 0x47e800 / MovieOpen @ 0x47ec90, whose
- * AVIStreamGetFrame returns DIB bytes blitted straight to the surface.
- * The modern analog used here: FFmpeg's in-process decoder (dlopen'd at
- * runtime) turns each frame into RGBA32 pixels and hands the audio track to
- * the platform PCM seam.
+ * AVI playback follows the corpus's AVIFIL32 path on Windows —
+ * AviStreamModule @ 0x47e800 / MovieOpen @ 0x47ec90, whose
+ * AVIStreamGetFrame returns DIB bytes blitted straight to the surface. The
+ * native backend uses FFmpeg, loaded dynamically, to produce RGBA32 pixels
+ * and pass decoded audio to the platform PCM seam.
  *
  * Corpus surface reconstructed (finding 23):
  *
@@ -20,7 +19,7 @@
  * `DontPlayAvis` master kill switch. The movies themselves are *loose* files
  * under `Data/AVI/` (never inside the wads).
  *
- * Dependency discipline (ADR 0003/0004): the build declares **no** ffmpeg
+ * Dependency discipline (ADR 0003/0004): the native build declares **no** ffmpeg
  * link dependency and includes **no** ffmpeg headers. `movie_available()`
  * dlopens the versioned runtime shared libraries (libavformat/libavcodec/
  * libavutil/libswscale) on first use and dlsym's the ~26-symbol subset the
@@ -32,8 +31,8 @@
  * ffmpeg at runtime (dlopen, no linking) also keeps this LGPL build
  * GPL-clean.
  *
- * The winapi reference build is real AVIFIL32 on Windows; this module is the
- * native backend's decode path and compiles to stubs there (like surface.*).
+ * The Windows backend dynamically resolves documented AVIFIL32 entry points
+ * from avifil32.dll; it needs no VfW import library.
  */
 #ifndef LEGORRR_MOVIE_HPP
 #define LEGORRR_MOVIE_HPP
@@ -49,9 +48,8 @@ extern "C" {
 
 /* --- capability probe ---------------------------------------------------- */
 
-/* 1 when the FFmpeg runtime libs resolved and their API version is
- * supported (libavcodec >= 61, i.e. FFmpeg 7+ — the sample-rate layout the
- * decode reads). Idempotent; logs the failure reason to stderr. */
+/* 1 when the configured playback API is available: supported FFmpeg runtime
+ * libraries on native, or the required AVIFIL32 entry points on Windows. */
 int movie_available(void);
 
 /* Release the cached dlopen handles (used between test runs to prove the
@@ -62,9 +60,9 @@ void movie_unload(void);
 
 typedef struct Movie Movie;
 
-/* Open an AVI by filesystem path. Decodes nothing yet; the first frame is
- * pulled (and cached) by the first movie_info/movie_next call so information
- * is complete before presentation. Returns NULL on open/codec failure. */
+/* Open an AVI by filesystem path. Native playback decodes the first frame on
+ * the first movie_info/movie_next call; Windows reads stream metadata at open
+ * and pulls frames on movie_next. Returns NULL on open/decoder failure. */
 Movie* movie_open_path(const char* os_path);
 
 void movie_close(Movie* m);
@@ -93,14 +91,30 @@ typedef struct AviPlaybackState {
     float frame_clock;
     float frame_rate;
     uint32_t frame_index;
-    void* surface_object; /* host-width sidecar for the +0x18 interface */
+    void* surface_object; /* host-width sidecar for movie display surface */
     uint32_t display_width;
     uint32_t display_height;
     uint32_t display_bits_per_pixel;
     int display_fullscreen;
     void* display_device;
+    void* surface_pixels; /* host-width lock result sidecar */
+    int surface_pitch;    /* host-width row pitch paired with surface_pixels */
+    uint8_t surface_owned;
     void* stream_object;
     void* frame_retriever_object;
+    /* Target thiscall entry points use the player object in ECX on x86. */
+    void frame_retriever_open(const char* path);
+    int display_mode_setup(uint32_t width, uint32_t height,
+                           uint32_t bits_per_pixel, int fullscreen);
+    uint32_t surface_lock();
+    uint32_t surface_unlock();
+    uint32_t stream_frame_count_get() const;
+    uint32_t playback_frame_index_get() const;
+    void frame_seek_and_clock_rebase(uint32_t frame_index);
+    int frame_update_and_blit();
+    uint8_t frame_update();
+    void frame_retriever_destroy();
+    void player_destroy(uint8_t flags);
 } AviPlaybackState;
 typedef uint32_t (*AviTimeHook)(void* context);
 typedef int (*AviFrameUpdateHook)(void* context, AviPlaybackState* state);
@@ -122,6 +136,8 @@ void avi_display_mode_hook_set(AviDisplayModeHook hook, void* context);
 void avi_release_hooks_set(AviReleaseHook release_object,
                            AviDisplayReleaseHook release_display,
                            void* context);
+void avi_file_initialize(void* context); /* 0x0047ec80 */
+void avi_frame_retriever_open(AviPlaybackState* state, const char* path);
 int avi_display_mode_setup(AviPlaybackState* state, uint32_t width,
                            uint32_t height, uint32_t bits_per_pixel,
                            int fullscreen, void* display_device);
@@ -136,6 +152,8 @@ uint32_t avi_surface_unlock(AviPlaybackState* state); /* 0x0047e7b0 */
 void avi_playback_mode_set(int disabled);
 uint32_t avi_stream_frame_count_get(const AviPlaybackState* state);
 uint32_t avi_playback_frame_index_get(const AviPlaybackState* state);
+uint32_t movie_frame_count(Movie* movie);
+int movie_seek_frame(Movie* movie, uint32_t frame_index);
 void avi_frame_seek_and_clock_rebase(AviPlaybackState* state,
                                      uint32_t frame_index);
 int avi_frame_update_and_blit(AviPlaybackState* state);

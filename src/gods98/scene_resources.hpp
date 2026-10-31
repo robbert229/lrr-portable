@@ -34,8 +34,6 @@ int shared_texture_root_register(const char* root); /* 0x004805b0 */
 int shared_texture_root_initialize(); /* 0x00480650 */
 const char* shared_texture_root_get();
 void* shared_texture_root_resource_get(unsigned int index);
-int scene_resource_reference_pool_install(unsigned int pool, void* records,
-                                          unsigned int record_count);
 void scene_resource_tracked_references_release_all(); /* 0x004773e0 */
 typedef void (*SceneFloatTrackApplyHook)(void* owner, const void* track,
                                          float value, void* context);

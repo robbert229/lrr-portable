@@ -8,6 +8,7 @@
 #include "heap.hpp"
 #include "record.hpp"
 #include "string.hpp"
+#include "view.hpp"
 
 /* Shared file-layer diagnostics used by the reference dispatchers. */
 // GLOBAL: LEGORR 0x004ab028
@@ -116,11 +117,6 @@ public:
     virtual void slot_00(void) = 0;
     virtual void retain(void) = 0;
 };
-
-/* RenderResourceTrackAndRetain maintains a process-wide singly linked list.
- * Its original head is DAT_0076ad60. */
-// GLOBAL: LEGORR 0x0076ad60
-static void* render_resource_tracked_head;
 
 #define ROCK_FALL_STYLE_NAME_CAPACITY 64
 #define ROCK_FALL_STYLE_NAME_LENGTH 128
@@ -1313,17 +1309,12 @@ void* attached_entity_slot_object_get(SceneResourceAnimationRecord* record,
     return result;
 }
 
-/* SceneObjectResourceRelease (FUN_0046db70): release the primary owned
- * scene resource through the installed owner callback. */
+/* FUN_0046db70 passes the pointer stored at +8 to the typed-child scalar
+ * accessor and discards its result. */
 // FUNCTION: LEGORR 0x0046DB70
-void scene_object_resource_release(SceneResourceAnimationRecord* record)
+void scene_object_resource_release(void* record)
 {
-    if (record != NULL && record->primary_resource != NULL
-        && s_scene_object_resource_release_hook != NULL) {
-        s_scene_object_resource_release_hook(record->primary_resource,
-                                             s_scene_resource_record_context);
-        record->primary_resource = NULL;
-    }
+    (void)typed_child_resource_scalar_get(*(void**)((char*)record + 8));
 }
 
 void scene_animation_track_hook_install(SceneAnimationTrackApplyHook hook,
@@ -2384,8 +2375,8 @@ void render_resource_track_and_retain(void* resource)
         return;
     }
     next = (void**)((unsigned char*)resource + 0x1c);
-    *next = render_resource_tracked_head;
-    render_resource_tracked_head = resource;
+    *next = s_render_surface_pool_free_head;
+    s_render_surface_pool_free_head = resource;
     interface_object = *(ResourceRetainInterface**)((unsigned char*)resource + 0x10);
     interface_object->retain();
 }

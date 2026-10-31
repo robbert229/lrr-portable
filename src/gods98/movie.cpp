@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* gods98 engine — AVI movie module (see movie.hpp for the design).
  *
- * The FFmpeg binding: no headers, no link dependency. The four versioned
- * shared libraries are dlopen'd on first use and the ~26-symbol subset is
- * dlsym'ed once into a table. All library structs are opaque handles except
+ * The native FFmpeg binding uses no headers or link dependency. The Windows
+ * backend separately binds the documented AVIFIL32 API at runtime. The four
+ * versioned shared libraries are dlopen'd on first use and the ~26-symbol
+ * subset is dlsym'ed once into a table. All library structs are opaque handles except
  * two deliberately tiny reads:
  *
  *   - the AVFrame *prefix* (data[8]/linesize[8]/width/height/nb_samples/
@@ -26,6 +27,11 @@
 #include "engine.hpp"
 #include "resource.hpp"
 #include "string.hpp"
+#include "surface.hpp"
+
+#if defined(LEGORRR_BACKEND_WINAPI)
+#include <windows.h>
+#endif
 
 /* FFmpeg runtime sonames to dlopen, ';'-joined. The meson toolchain owns
  * these — the same literals drive the configure-time probe and are passed as
@@ -384,6 +390,10 @@ struct Movie {
     int        width, height;    /* from the first decoded frame           */
     int        fps_num, fps_den; /* from av_guess_frame_rate               */
     int        audio_rate;       /* from the audio stream codecpar         */
+    uint32_t   frame_count;
+    int        frame_count_known;
+    uint32_t   next_frame_index;
+    char*      path;
 
     FFFormatCtx* fmt;
     void*      vs;               /* AVStream* video (prefix-cast to read)  */
@@ -672,9 +682,71 @@ int movie_next(struct Movie* m, MovieOut* out)
         out->audio_frames = m->audio_pos;
         out->audio_rate = m->audio_rate;
         movie_audio_reset(m);
+        ++m->next_frame_index;
         return m->eof ? 1 : 0;
     }
-    return movie_decode(m, out);
+    {
+        int result = movie_decode(m, out);
+        if (result == 0) ++m->next_frame_index;
+        return result;
+    }
+}
+
+uint32_t movie_frame_count(Movie* m)
+{
+    Movie* scan;
+    MovieOut frame;
+    uint32_t count = 0;
+    if (m == NULL || !m->ok) return 0u;
+    if (m->frame_count_known) return m->frame_count;
+    scan = movie_open_path(m->path);
+    if (scan == NULL) return 0u;
+    while (movie_next(scan, &frame) == 0) {
+        if (count != 0xffffffffu) ++count;
+    }
+    movie_close(scan);
+    m->frame_count = count;
+    m->frame_count_known = 1;
+    return count;
+}
+
+int movie_seek_frame(Movie* m, uint32_t frame_index)
+{
+    Movie* replacement;
+    Movie old;
+    MovieInfo info;
+    MovieOut frame;
+    uint32_t i;
+    if (m == NULL || !m->ok || m->path == NULL) return 0;
+    if (frame_index == m->next_frame_index) return 1;
+    if (frame_index > m->next_frame_index &&
+        (!m->frame_count_known || frame_index < m->frame_count)) {
+        while (m->next_frame_index < frame_index) {
+            if (movie_next(m, &frame) != 0) return 0;
+        }
+        return 1;
+    }
+    if (m->frame_count_known && frame_index >= m->frame_count) return 0;
+    replacement = movie_open_path(m->path);
+    if (replacement == NULL) return 0;
+    if (movie_info(replacement, &info) != 0) {
+        movie_close(replacement);
+        return 0;
+    }
+    for (i = 0; i < frame_index; ++i) {
+        if (movie_next(replacement, &frame) != 0) break;
+    }
+    if (i != frame_index) {
+        movie_close(replacement);
+        return 0;
+    }
+    replacement->frame_count = m->frame_count;
+    replacement->frame_count_known = m->frame_count_known;
+    old = *m;
+    *m = *replacement;
+    *replacement = old;
+    movie_close(replacement);
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x0047ec90
@@ -701,6 +773,12 @@ Movie* movie_open_path(const char* os_path)
     }
     m->fmt = fmt;
     m->astream = -1;
+    m->path = (char*)malloc(strlen(os_path) + 1);
+    if (m->path == NULL) {
+        movie_close(m);
+        return NULL;
+    }
+    strcpy(m->path, os_path);
 
     /* Stream selection: walk ic->streams directly (this build's
      * av_find_best_stream returns an index — not a pointer — and skips
@@ -817,6 +895,7 @@ void movie_close(struct Movie* m)
     }
     free(m->rgba);
     free(m->audio);
+    free(m->path);
     free(m);
 }
 
@@ -850,10 +929,362 @@ int movie_info(struct Movie* m, MovieInfo* out)
     return m->ok ? 0 : -1;
 }
 
-#else /* !LEGORRR_BACKEND_MINIWIN || LEGORRR_MOVIES_CFG_DISABLED — the
-         winapi reference build plays movies through the real AVIFIL32 on
-         Windows, and `-Dmovies=disabled` compiles the module out by design;
-         both are stubs here. */
+#elif defined(LEGORRR_BACKEND_WINAPI) && !defined(LEGORRR_MOVIES_CFG_DISABLED)
+
+/* The Windows backend uses the same documented AVIFIL32 entry points as the
+ * reference executable. The developer distrobox has the AVIFIL32 import
+ * library, but not vfw.h; resolve the documented exports at runtime and keep
+ * AVIStream opaque. BITMAPINFOHEADER itself comes from windows.h. */
+typedef HRESULT (WINAPI *movie_avi_open_fn)(void**, LPCSTR, DWORD, LONG,
+                                             UINT, CLSID*);
+typedef void (WINAPI *movie_avi_file_fn)(void);
+typedef void* (WINAPI *movie_avi_getframe_open_fn)(void*, LPBITMAPINFOHEADER);
+typedef LPVOID (WINAPI *movie_avi_getframe_fn)(void*, LONG);
+typedef HRESULT (WINAPI *movie_avi_getframe_close_fn)(void*);
+typedef ULONG (WINAPI *movie_avi_release_fn)(void*);
+typedef LONG (WINAPI *movie_avi_length_fn)(void*);
+typedef LONG (WINAPI *movie_avi_start_fn)(void*);
+typedef LONG (WINAPI *movie_avi_sample_time_fn)(void*, LONG);
+typedef HRESULT (WINAPI *movie_avi_read_format_fn)(void*, LONG, LPVOID,
+                                                    LONG*);
+
+typedef struct movie_winapi_binding {
+    HMODULE module;
+    int initialized;
+    movie_avi_file_fn file_init;
+    movie_avi_file_fn file_exit;
+    movie_avi_open_fn stream_open;
+    movie_avi_getframe_open_fn frame_open;
+    movie_avi_getframe_fn get_frame;
+    movie_avi_getframe_close_fn frame_close;
+    movie_avi_release_fn stream_release;
+    movie_avi_length_fn stream_length;
+    movie_avi_start_fn stream_start;
+    movie_avi_sample_time_fn sample_to_time;
+    movie_avi_read_format_fn read_format;
+} movie_winapi_binding;
+
+static movie_winapi_binding movie_vfw;
+
+#define MOVIE_VFW_LOAD(field, symbol, type)                                  \
+    do {                                                                      \
+        movie_vfw.field = (type)GetProcAddress(movie_vfw.module, symbol);     \
+        if (movie_vfw.field == NULL) {                                        \
+            FreeLibrary(movie_vfw.module);                                    \
+            memset(&movie_vfw, 0, sizeof(movie_vfw));                         \
+            return 0;                                                         \
+        }                                                                     \
+    } while (0)
+
+typedef struct Movie {
+    int ok;
+    int width;
+    int height;
+    int fps_num;
+    int fps_den;
+    int has_pending;
+    uint32_t frame_count;
+    uint32_t next_frame_index;
+    LONG stream_start;
+    void* stream;
+    void* retriever;
+    char* path;
+    uint8_t* rgba;
+    int rgba_pitch;
+} Movie;
+
+static int movie_vfw_bind(void)
+{
+    if (movie_vfw.module != NULL) {
+        return 1;
+    }
+    movie_vfw.module = LoadLibraryA("avifil32.dll");
+    if (movie_vfw.module == NULL) {
+        return 0;
+    }
+    MOVIE_VFW_LOAD(file_init, "AVIFileInit", movie_avi_file_fn);
+    MOVIE_VFW_LOAD(file_exit, "AVIFileExit", movie_avi_file_fn);
+    MOVIE_VFW_LOAD(stream_open, "AVIStreamOpenFromFileA",
+                   movie_avi_open_fn);
+    MOVIE_VFW_LOAD(frame_open, "AVIStreamGetFrameOpen",
+                   movie_avi_getframe_open_fn);
+    MOVIE_VFW_LOAD(get_frame, "AVIStreamGetFrame", movie_avi_getframe_fn);
+    MOVIE_VFW_LOAD(frame_close, "AVIStreamGetFrameClose",
+                   movie_avi_getframe_close_fn);
+    MOVIE_VFW_LOAD(stream_release, "AVIStreamRelease",
+                   movie_avi_release_fn);
+    MOVIE_VFW_LOAD(stream_length, "AVIStreamLength", movie_avi_length_fn);
+    MOVIE_VFW_LOAD(stream_start, "AVIStreamStart", movie_avi_start_fn);
+    MOVIE_VFW_LOAD(sample_to_time, "AVIStreamSampleToTime",
+                   movie_avi_sample_time_fn);
+    MOVIE_VFW_LOAD(read_format, "AVIStreamReadFormat",
+                   movie_avi_read_format_fn);
+    movie_vfw.file_init();
+    movie_vfw.initialized = 1;
+    return 1;
+}
+
+int movie_available(void)
+{
+    return movie_vfw_bind();
+}
+
+void movie_unload(void)
+{
+    if (movie_vfw.module != NULL && movie_vfw.initialized) {
+        movie_vfw.file_exit();
+    }
+    if (movie_vfw.module != NULL) {
+        FreeLibrary(movie_vfw.module);
+    }
+    memset(&movie_vfw, 0, sizeof(movie_vfw));
+}
+
+static int movie_winapi_read_info(Movie* m)
+{
+    LONG format_size = 0;
+    BYTE* format;
+    BITMAPINFOHEADER* header;
+    HRESULT result;
+    LONG first_time, second_time, intervals;
+    movie_vfw.read_format(m->stream, m->stream_start, NULL, &format_size);
+    if (format_size < (LONG)sizeof(BITMAPINFOHEADER)
+        || format_size > 1024L * 1024L) {
+        return 0;
+    }
+    format = (BYTE*)malloc((size_t)format_size);
+    if (format == NULL) {
+        return 0;
+    }
+    result = movie_vfw.read_format(m->stream, m->stream_start, format,
+                                   &format_size);
+    if (result != 0 || format_size < (LONG)sizeof(BITMAPINFOHEADER)) {
+        free(format);
+        return 0;
+    }
+    header = (BITMAPINFOHEADER*)format;
+    if (header->biSize < sizeof(BITMAPINFOHEADER)
+        || header->biSize > (DWORD)format_size
+        || header->biWidth <= 0 || header->biWidth > 8192
+        || header->biHeight == 0 || header->biHeight > 8192
+        || header->biHeight == (LONG)0x80000000) {
+        free(format);
+        return 0;
+    }
+    m->width = (int)header->biWidth;
+    m->height = (int)(header->biHeight < 0
+                    ? -header->biHeight : header->biHeight);
+    free(format);
+    intervals = m->frame_count > 10u ? 10 : (LONG)m->frame_count - 1;
+    if (intervals < 1) {
+        intervals = 1;
+    }
+    first_time = movie_vfw.sample_to_time(m->stream, m->stream_start);
+    second_time = movie_vfw.sample_to_time(m->stream,
+                                           m->stream_start + intervals);
+    if (first_time >= 0 && second_time > first_time) {
+        m->fps_num = (int)(1000L * intervals);
+        m->fps_den = (int)(second_time - first_time);
+    } else {
+        m->fps_num = 15;
+        m->fps_den = 1;
+    }
+    return 1;
+}
+
+Movie* movie_open_path(const char* os_path)
+{
+    Movie* m;
+    LONG length;
+    if (os_path == NULL || os_path[0] == '\0' || !movie_vfw_bind()) {
+        return NULL;
+    }
+    m = (Movie*)calloc(1, sizeof(*m));
+    if (m == NULL) {
+        return NULL;
+    }
+    if (movie_vfw.stream_open(&m->stream, os_path, 0x73646976UL, 0, 0, NULL)
+        != 0 || m->stream == NULL) {
+        movie_close(m);
+        return NULL;
+    }
+    m->stream_start = movie_vfw.stream_start(m->stream);
+    length = movie_vfw.stream_length(m->stream);
+    if (length <= 0) {
+        movie_close(m);
+        return NULL;
+    }
+    m->frame_count = (uint32_t)length;
+    /* AVIGETFRAMEF_BESTDISPLAYFMT is documented as value 1; the original
+     * constructor passes this same value to AVIStreamGetFrameOpen. */
+    m->retriever = movie_vfw.frame_open(m->stream,
+                                        (LPBITMAPINFOHEADER)1);
+    if (m->retriever == NULL || !movie_winapi_read_info(m)) {
+        movie_close(m);
+        return NULL;
+    }
+    m->path = (char*)malloc(strlen(os_path) + 1);
+    if (m->path == NULL) {
+        movie_close(m);
+        return NULL;
+    }
+    strcpy(m->path, os_path);
+    m->ok = 1;
+    return m;
+}
+
+void movie_close(Movie* m)
+{
+    if (m == NULL) {
+        return;
+    }
+    if (m->retriever != NULL && movie_vfw.frame_close != NULL) {
+        movie_vfw.frame_close(m->retriever);
+    }
+    if (m->stream != NULL && movie_vfw.stream_release != NULL) {
+        movie_vfw.stream_release(m->stream);
+    }
+    free(m->rgba);
+    free(m->path);
+    free(m);
+}
+
+int movie_info(Movie* m, MovieInfo* out)
+{
+    if (out == NULL) {
+        return -1;
+    }
+    memset(out, 0, sizeof(*out));
+    if (m == NULL || !m->ok) {
+        return -1;
+    }
+    out->width = m->width;
+    out->height = m->height;
+    out->fps_num = m->fps_num;
+    out->fps_den = m->fps_den;
+    /* The reference AVIFIL32 movie object opens only the `vids` stream. */
+    out->audio_rate = 0;
+    out->audio_channels = 0;
+    return 0;
+}
+
+static uint8_t movie_winapi_scale_component(unsigned value, unsigned max)
+{
+    return (uint8_t)((value * 255u + max / 2u) / max);
+}
+
+int movie_next(Movie* m, MovieOut* out)
+{
+    LPVOID dib;
+    BITMAPINFOHEADER* header;
+    const BYTE* pixels;
+    const RGBQUAD* palette = NULL;
+    int bits, top_down, x, y;
+    size_t row_bytes;
+    if (out == NULL) {
+        return -1;
+    }
+    memset(out, 0, sizeof(*out));
+    if (m == NULL || !m->ok) {
+        return 1;
+    }
+    if (m->next_frame_index >= m->frame_count) {
+        return 1;
+    }
+    dib = movie_vfw.get_frame(m->retriever,
+                              m->stream_start + (LONG)m->next_frame_index);
+    if (dib == NULL) {
+        return -1;
+    }
+    header = (BITMAPINFOHEADER*)dib;
+    if (header->biSize < sizeof(BITMAPINFOHEADER)
+        || header->biWidth != m->width || header->biHeight == 0
+        || header->biHeight == (LONG)0x80000000
+        || header->biHeight > 8192 || header->biHeight < -8192
+        || (header->biHeight < 0 ? -header->biHeight
+                                 : header->biHeight) != m->height) {
+        return -1;
+    }
+    bits = (int)header->biBitCount;
+    if (header->biCompression != BI_RGB
+        || (bits != 8 && bits != 16 && bits != 24 && bits != 32)) {
+        return -1;
+    }
+    if (m->rgba == NULL) {
+        m->rgba = (uint8_t*)malloc((size_t)m->width * m->height * 4);
+        if (m->rgba == NULL) {
+            return -1;
+        }
+    }
+    m->rgba_pitch = m->width * 4;
+    row_bytes = (((size_t)m->width * (size_t)bits + 31u) / 32u) * 4u;
+    top_down = header->biHeight < 0;
+    pixels = (const BYTE*)dib + header->biSize;
+    if (bits == 8) {
+        unsigned colors = header->biClrUsed != 0
+                        ? (unsigned)header->biClrUsed : 256u;
+        palette = (const RGBQUAD*)pixels;
+        pixels += (size_t)colors * sizeof(RGBQUAD);
+    }
+    for (y = 0; y < m->height; ++y) {
+        int source_y = top_down ? y : m->height - 1 - y;
+        const BYTE* src = pixels + (size_t)source_y * row_bytes;
+        uint8_t* dst = m->rgba + (size_t)y * m->rgba_pitch;
+        for (x = 0; x < m->width; ++x) {
+            unsigned r, g, b;
+            if (bits == 8) {
+                unsigned index = src[x];
+                unsigned colors = header->biClrUsed != 0
+                                ? (unsigned)header->biClrUsed : 256u;
+                if (index >= colors) {
+                    return -1;
+                }
+                b = palette[index].rgbBlue;
+                g = palette[index].rgbGreen;
+                r = palette[index].rgbRed;
+            } else if (bits == 16) {
+                unsigned v = ((const WORD*)src)[x];
+                r = movie_winapi_scale_component((v >> 10) & 31u, 31u);
+                g = movie_winapi_scale_component((v >> 5) & 31u, 31u);
+                b = movie_winapi_scale_component(v & 31u, 31u);
+            } else if (bits == 24) {
+                b = src[x * 3 + 0];
+                g = src[x * 3 + 1];
+                r = src[x * 3 + 2];
+            } else {
+                b = src[x * 4 + 0];
+                g = src[x * 4 + 1];
+                r = src[x * 4 + 2];
+            }
+            dst[x * 4 + 0] = (uint8_t)r;
+            dst[x * 4 + 1] = (uint8_t)g;
+            dst[x * 4 + 2] = (uint8_t)b;
+            dst[x * 4 + 3] = 255;
+        }
+    }
+    ++m->next_frame_index;
+    out->rgba = m->rgba;
+    out->rgba_pitch = m->rgba_pitch;
+    return 0;
+}
+
+uint32_t movie_frame_count(Movie* m)
+{
+    return m != NULL && m->ok ? m->frame_count : 0u;
+}
+
+int movie_seek_frame(Movie* m, uint32_t frame_index)
+{
+    if (m == NULL || !m->ok || frame_index >= m->frame_count) {
+        return 0;
+    }
+    m->next_frame_index = frame_index;
+    return 1;
+}
+
+#undef MOVIE_VFW_LOAD
+
+#else /* native movies disabled or unsupported backend */
 
 int movie_available(void) { return 0; }
 void movie_unload(void) { }
@@ -861,6 +1292,9 @@ Movie* movie_open_path(const char* os_path) { (void)os_path; return NULL; }
 void movie_close(Movie* m) { (void)m; }
 int movie_info(Movie* m, MovieInfo* out) { (void)m; (void)out; return -1; }
 int movie_next(Movie* m, MovieOut* out) { (void)m; (void)out; return 1; }
+uint32_t movie_frame_count(Movie* m) { (void)m; return 0u; }
+int movie_seek_frame(Movie* m, uint32_t frame_index)
+{ (void)m; (void)frame_index; return 0; }
 
 #endif /* LEGORRR_BACKEND_MINIWIN */
 
@@ -877,6 +1311,46 @@ static void* s_avi_display_mode_context;
 static AviReleaseHook s_avi_release_hook;
 static AviDisplayReleaseHook s_avi_display_release_hook;
 static void* s_avi_release_context;
+static void* s_avi_file_context;
+
+void avi_file_initialize(void* context)
+{
+    s_avi_file_context = context;
+    /* AVIFileInit's backend counterpart is resolving the runtime decoder. */
+    (void)movie_available();
+}
+
+// FUNCTION: LEGORR 0x0047e800
+void AviPlaybackState::frame_retriever_open(const char* path)
+{
+    Movie* movie;
+    MovieInfo info;
+    frame_ready = 0;
+    surface_locked = 0;
+    surface_pixels = NULL;
+    surface_pitch = 0;
+    frame_retriever_object = NULL;
+    stream_object = NULL;
+    stream_frame_count = 0;
+    frame_index = 0;
+    if (path == NULL || s_avi_playback_disabled) return;
+    movie = movie_open_path(path);
+    if (movie == NULL) return;
+    if (movie_info(movie, &info) != 0) {
+        movie_close(movie);
+        return;
+    }
+    stream_object = movie;
+    fps_numerator = (uint32_t)info.fps_num;
+    fps_denominator = (uint32_t)info.fps_den;
+    stream_frame_count = movie_frame_count(movie);
+    frame_ready = 1;
+}
+
+void avi_frame_retriever_open(AviPlaybackState* state, const char* path)
+{
+    if (state != NULL) state->frame_retriever_open(path);
+}
 
 void avi_time_hook_set(AviTimeHook hook, void* context)
 {
@@ -913,19 +1387,42 @@ void avi_release_hooks_set(AviReleaseHook release_object,
     s_avi_release_context = context;
 }
 
+// FUNCTION: LEGORR 0x0047e510
+int AviPlaybackState::display_mode_setup(uint32_t width, uint32_t height,
+                                         uint32_t bits_per_pixel,
+                                         int fullscreen)
+{
+    display_width = width != 0u ? width : display_width;
+    display_height = height != 0u ? height : display_height;
+    display_bits_per_pixel = bits_per_pixel;
+    display_fullscreen = fullscreen != 0;
+    if (s_avi_display_mode_hook == NULL) {
+        DisplaySurface* surface;
+        if (surface_object != NULL || width == 0u || height == 0u)
+            return surface_object != NULL;
+        surface = (DisplaySurface*)calloc(1, sizeof(DisplaySurface));
+        if (surface == NULL) return 0;
+        if (surface_create(surface, display_device, (int)width,
+                           (int)height) != 0) {
+            free(surface);
+            return 0;
+        }
+        surface_object = surface;
+        surface_owned = 1u;
+        return 1;
+    }
+    return s_avi_display_mode_hook(s_avi_display_mode_context, this,
+        width, height, bits_per_pixel, fullscreen, display_device) != 0;
+}
+
 int avi_display_mode_setup(AviPlaybackState* state, uint32_t width,
                            uint32_t height, uint32_t bits_per_pixel,
                            int fullscreen, void* display_device)
 {
     if (state == NULL) return 0;
-    state->display_width = width != 0u ? width : state->display_width;
-    state->display_height = height != 0u ? height : state->display_height;
-    state->display_bits_per_pixel = bits_per_pixel;
-    state->display_fullscreen = fullscreen != 0;
     state->display_device = display_device;
-    if (s_avi_display_mode_hook == NULL) return 0;
-    return s_avi_display_mode_hook(s_avi_display_mode_context, state,
-        width, height, bits_per_pixel, fullscreen, display_device) != 0;
+    return state->display_mode_setup(width, height, bits_per_pixel,
+                                     fullscreen);
 }
 
 void avi_playback_state_initialize(AviPlaybackState* state, uint32_t width,
@@ -939,53 +1436,105 @@ void avi_playback_state_initialize(AviPlaybackState* state, uint32_t width,
         bits_per_pixel, fullscreen, display_device);
 }
 
+// FUNCTION: LEGORR 0x0047e9a0
+void AviPlaybackState::frame_retriever_destroy()
+{
+    if (!s_avi_playback_disabled && s_avi_release_hook != NULL) {
+        if (stream_object != NULL)
+            s_avi_release_hook(s_avi_release_context, stream_object);
+        if (frame_retriever_object != NULL)
+            s_avi_release_hook(s_avi_release_context,
+                               frame_retriever_object);
+    }
+    else if (stream_object != NULL) {
+        movie_close((Movie*)stream_object);
+    }
+    stream_object = NULL;
+    frame_retriever_object = NULL;
+}
+
 void avi_frame_retriever_destroy(AviPlaybackState* state)
 {
-    if (state == NULL) return;
-    if (!s_avi_playback_disabled && s_avi_release_hook != NULL) {
-        if (state->stream_object != NULL)
-            s_avi_release_hook(s_avi_release_context, state->stream_object);
-        if (state->frame_retriever_object != NULL)
-            s_avi_release_hook(s_avi_release_context,
-                               state->frame_retriever_object);
+    if (state != NULL) state->frame_retriever_destroy();
+}
+
+// FUNCTION: LEGORR 0x0047e980
+void AviPlaybackState::player_destroy(uint8_t flags)
+{
+    frame_retriever_destroy();
+    if ((flags & 1u) != 0u) {
+        if (surface_owned != 0u) {
+            surface_destroy((DisplaySurface*)surface_object);
+            free(surface_object);
+            surface_object = NULL;
+            surface_owned = 0u;
+        }
+        if (s_avi_display_release_hook != NULL)
+            s_avi_display_release_hook(s_avi_release_context);
     }
-    state->stream_object = NULL;
-    state->frame_retriever_object = NULL;
 }
 
 void avi_player_destroy(AviPlaybackState* state, uint8_t flags)
 {
-    avi_frame_retriever_destroy(state);
-    if ((flags & 1u) != 0u && s_avi_display_release_hook != NULL)
-        s_avi_display_release_hook(s_avi_release_context);
+    if (state != NULL) state->player_destroy(flags);
+}
+
+// FUNCTION: LEGORR 0x0047e760
+uint32_t AviPlaybackState::surface_lock()
+{
+    uint32_t result;
+    void* pixels = NULL;
+    int pitch = 0;
+    int lock_result;
+    if (surface_locked != 0) return 1u;
+    if (s_avi_surface_lock_hook != NULL) {
+        result = s_avi_surface_lock_hook(s_avi_surface_lock_context,
+                                         surface_object, 1, 0x801u);
+    } else {
+        lock_result = ::surface_lock((DisplaySurface*)surface_object,
+                                     &pixels, &pitch);
+        result = lock_result == 0 ? 0u
+            : (uint32_t)lock_result & 0xffffff00u;
+        (void)pitch;
+    }
+    if (result == 0u) {
+        surface_locked = 1u;
+        surface_pixels = pixels;
+        surface_pitch = pitch;
+        return 1u;
+    }
+    return result;
+}
+
+// FUNCTION: LEGORR 0x0047e7b0
+uint32_t AviPlaybackState::surface_unlock()
+{
+    uint32_t result;
+    if (surface_locked == 0) return 0u;
+    if (s_avi_surface_lock_hook != NULL) {
+        result = s_avi_surface_lock_hook(s_avi_surface_lock_context,
+                                         surface_object, 0, 0u);
+    } else {
+        ::surface_unlock((DisplaySurface*)surface_object, surface_pixels);
+        result = 0u;
+    }
+    if (result == 0u) {
+        surface_locked = 0u;
+        surface_pixels = NULL;
+        surface_pitch = 0;
+        return 1u;
+    }
+    return result;
 }
 
 uint32_t avi_surface_lock(AviPlaybackState* state)
 {
-    uint32_t result;
-    if (state == NULL || state->surface_locked != 0
-        || s_avi_surface_lock_hook == NULL) return 0u;
-    result = s_avi_surface_lock_hook(s_avi_surface_lock_context,
-                                     state->surface_object, 1, 0x801u);
-    if (result == 0u) {
-        state->surface_locked = 1u;
-        return 1u;
-    }
-    return result;
+    return state != NULL ? state->surface_lock() : 0u;
 }
 
 uint32_t avi_surface_unlock(AviPlaybackState* state)
 {
-    uint32_t result;
-    if (state == NULL || state->surface_locked == 0
-        || s_avi_surface_lock_hook == NULL) return 0u;
-    result = s_avi_surface_lock_hook(s_avi_surface_lock_context,
-                                     state->surface_object, 0, 0u);
-    if (result == 0u) {
-        state->surface_locked = 0u;
-        return 1u;
-    }
-    return result;
+    return state != NULL ? state->surface_unlock() : 0u;
 }
 
 void avi_playback_mode_set(int disabled)
@@ -993,58 +1542,126 @@ void avi_playback_mode_set(int disabled)
     s_avi_playback_disabled = disabled != 0;
 }
 
+// FUNCTION: LEGORR 0x0047ebe0
+uint32_t AviPlaybackState::stream_frame_count_get() const
+{
+    if (s_avi_playback_disabled) return 0u;
+    if (stream_frame_count != 0u) return stream_frame_count;
+    return movie_frame_count((Movie*)stream_object);
+}
+
 uint32_t avi_stream_frame_count_get(const AviPlaybackState* state)
 {
-    if (s_avi_playback_disabled || state == NULL) return 0u;
-    return state->stream_frame_count;
+    return state != NULL ? state->stream_frame_count_get() : 0u;
+}
+
+// FUNCTION: LEGORR 0x0047ec60
+uint32_t AviPlaybackState::playback_frame_index_get() const
+{
+    if (s_avi_playback_disabled) return 0u;
+    return frame_index;
 }
 
 uint32_t avi_playback_frame_index_get(const AviPlaybackState* state)
 {
-    if (state == NULL) return 0u;
-    if (s_avi_playback_disabled) return 0u;
-    return state->frame_index;
+    return state != NULL ? state->playback_frame_index_get() : 0u;
+}
+
+// FUNCTION: LEGORR 0x0047ebf0
+void AviPlaybackState::frame_seek_and_clock_rebase(uint32_t frame_index_value)
+{
+    uint32_t now;
+    if (s_avi_playback_disabled) return;
+    frame_index = frame_index_value;
+    movie_seek_frame((Movie*)stream_object, frame_index_value);
+    if (s_avi_time_hook == NULL) return;
+    now = s_avi_time_hook(s_avi_time_context);
+    frame_clock = (float)now * 0.001f;
+    if (frame_rate != 0.0f) {
+        frame_delta = frame_clock - (float)frame_index / frame_rate;
+    }
 }
 
 void avi_frame_seek_and_clock_rebase(AviPlaybackState* state,
                                      uint32_t frame_index)
 {
-    uint32_t now;
-    if (state == NULL || s_avi_playback_disabled) return;
-    state->frame_index = frame_index;
-    if (s_avi_time_hook == NULL) return;
-    now = s_avi_time_hook(s_avi_time_context);
-    state->frame_clock = (float)now * 0.001f;
-    if (state->frame_rate != 0.0f)
-        state->frame_delta = state->frame_clock
-            - (float)state->frame_index / state->frame_rate;
+    if (state != NULL) state->frame_seek_and_clock_rebase(frame_index);
+}
+
+// FUNCTION: LEGORR 0x0047eb20
+int AviPlaybackState::frame_update_and_blit()
+{
+    int frame_updated = 0;
+    if (frame_ready == 0 || s_avi_playback_disabled) {
+        return 0;
+    }
+    if (s_avi_frame_update_hook != NULL) {
+        frame_updated = s_avi_frame_update_hook(s_avi_frame_hook_context,
+                                                this) != 0;
+    } else {
+        MovieOut frame;
+        MovieInfo info;
+        DisplaySurface* surface = (DisplaySurface*)surface_object;
+        Movie* movie = (Movie*)stream_object;
+        if (movie == NULL || surface == NULL || movie_info(movie, &info) != 0)
+            return 1;
+        if (s_avi_time_hook != NULL
+            && !movie_seek_frame(movie, frame_index)) return 1;
+        if (movie_next(movie, &frame) != 0) {
+            return 1;
+        }
+        frame_updated = 1;
+        if (s_avi_time_hook == NULL) ++frame_index;
+        if (surface_lock() != 0u) {
+            void* pixels = surface_pixels;
+            int pitch = surface_pitch;
+            if (pixels != NULL && pitch > 0) {
+                movie_scale_rgba(frame.rgba, info.width, info.height,
+                                 frame.rgba_pitch, (uint8_t*)pixels,
+                                 surface_width(surface),
+                                 surface_height(surface), pitch);
+            }
+            (void)surface_unlock();
+        }
+    }
+    if (frame_updated && s_avi_time_hook != NULL) {
+        uint32_t now = s_avi_time_hook(s_avi_time_context);
+        frame_rate = fps_denominator != 0u
+            ? (float)fps_numerator / (float)fps_denominator
+            : 0.0f;
+        frame_clock = (float)now * 0.001f;
+        if (frame_delta == 0.0f) frame_delta = frame_clock;
+        if (frame_rate != 0.0f) {
+            float next_frame = (frame_clock - frame_delta) * frame_rate;
+            if (next_frame >= 0.0f)
+                frame_index = (uint32_t)next_frame;
+        }
+    }
+    return 1;
+}
+
+uint8_t AviPlaybackState::frame_update()
+{
+    return (uint8_t)frame_update_and_blit();
 }
 
 int avi_frame_update_and_blit(AviPlaybackState* state)
 {
-    int result;
-    if (state == NULL || state->frame_ready == 0
-        || s_avi_playback_disabled || s_avi_frame_update_hook == NULL) {
-        return 0;
-    }
-    result = s_avi_frame_update_hook(s_avi_frame_hook_context, state);
-    if (result != 0 && s_avi_time_hook != NULL) {
-        uint32_t now = s_avi_time_hook(s_avi_time_context);
-        state->frame_rate = state->fps_numerator != 0u
-            ? (float)state->fps_denominator / (float)state->fps_numerator
-            : 0.0f;
-        state->frame_clock = (float)now * 0.001f;
-    }
-    return result != 0;
+    return state != NULL ? state->frame_update_and_blit() : 0;
 }
 
+// FUNCTION: LEGORR 0x0047ed00
 void avi_playback_frame_loop(AviPlaybackState* state, void* destination)
 {
     if (state == NULL || state->frame_ready == 0
-        || s_avi_playback_disabled || s_avi_frame_loop_hook == NULL) {
+        || s_avi_playback_disabled) {
         return;
     }
-    s_avi_frame_loop_hook(s_avi_frame_hook_context, state, destination);
+    if (s_avi_frame_loop_hook != NULL) {
+        s_avi_frame_loop_hook(s_avi_frame_hook_context, state, destination);
+    } else if (destination != NULL && state->surface_object != NULL) {
+        surface_blit_wait(destination, (DisplaySurface*)state->surface_object);
+    }
 }
 
 /* ------------------------------------------------------------------ *
@@ -1314,16 +1931,75 @@ int movie_path_resolve(const char* base_dir, const char* rel,
     return movie_path_resolve_tail(base_dir, rel, out, sz);
 }
 
-#else /* winapi stub */
+#else /* WinAPI movie runtime; playback backend remains unavailable. */
+
+static int movie_winapi_path_build(char* out, size_t capacity,
+                                   const char* base, const char* subdir,
+                                   const char* rel)
+{
+    size_t used = 0;
+    size_t i;
+    const char* parts[3];
+    parts[0] = base;
+    parts[1] = subdir;
+    parts[2] = rel;
+    for (i = 0; i < 3; ++i) {
+        const char* part = parts[i];
+        size_t j;
+        if (part == NULL || part[0] == '\0') continue;
+        if (used != 0 && out[used - 1] != '\\' && out[used - 1] != '/') {
+            if (used + 1 >= capacity) return 0;
+            out[used++] = '\\';
+        }
+        if (i == 2) {
+            while (*part == '\\' || *part == '/') ++part;
+        }
+        for (j = 0; part[j] != '\0'; ++j) {
+            char ch = part[j];
+            if (used + 1 >= capacity) return 0;
+            out[used++] = (ch == '/') ? '\\' : ch;
+        }
+    }
+    if (capacity == 0 || used >= capacity) return 0;
+    out[used] = '\0';
+    return 1;
+}
+
+static int movie_winapi_file_exists(const char* path)
+{
+    DWORD attributes = GetFileAttributesA(path);
+    return attributes != (DWORD)-1 &&
+        (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+}
 
 int movie_path_resolve(const char* base_dir, const char* rel,
                        char* out, size_t sz)
 {
-    (void)base_dir;
-    (void)rel;
-    (void)out;
-    (void)sz;
-    return 0;
+    char candidate[1024];
+    if (rel == NULL || rel[0] == '\0' || out == NULL || sz == 0)
+        return 0;
+    if (base_dir == NULL || base_dir[0] == '\0') base_dir = ".";
+
+    /* The config path is relative to Data first, then to the selected data
+     * directory itself. Windows resolves component case without the native
+     * backend's explicit directory scan. */
+    if (movie_winapi_path_build(candidate, sizeof(candidate), base_dir,
+                                "Data", rel) &&
+        movie_winapi_file_exists(candidate)) {
+        size_t length = strlen(candidate);
+        if (length >= sz) return 0;
+        memcpy(out, candidate, length + 1);
+        return 1;
+    }
+    if (!movie_winapi_path_build(candidate, sizeof(candidate), base_dir,
+                                 NULL, rel) ||
+        !movie_winapi_file_exists(candidate)) return 0;
+    {
+        size_t length = strlen(candidate);
+        if (length >= sz) return 0;
+        memcpy(out, candidate, length + 1);
+    }
+    return 1;
 }
 
 #endif /* LEGORRR_BACKEND_MINIWIN */

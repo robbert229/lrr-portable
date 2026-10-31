@@ -225,10 +225,11 @@ void engine_game_config_callback_registry_init(const char* root);
  * results passed to the later subsystem tickers. Returns 0 => quit frame.
  * (Ported into mainsim.* — see main_sim_step.) */
 
-/* Port-side shutdown dispatcher (not a direct match for either callback).
- * The reference selects LAB_00424cf0 for normal play or LAB_00424d00 for
- * loader mode in GameConfigCallbackRegistryInit @ 0x0041fa20 (finding 20).
- * The callback-specific cleanup paths remain unported. */
+/* Shutdown dispatcher for the callback selected by
+ * GameConfigCallbackRegistryInit @ 0x0041fa20. Normal play follows
+ * ResetLevelAndExit @ 0x4250a0; loader mode runs the available subset of
+ * EngineShutdown @ 0x424d00. Renderer globals and unbound entity arrays are
+ * not represented by EngineContext. */
 void EngineShutdown(EngineContext* ctx);
 
 /* RuntimeFlag40000000Get (FUN_0041f970, finding 03): the DAT_00556ecc

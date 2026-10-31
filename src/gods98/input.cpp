@@ -17,6 +17,7 @@ void input_direct_hooks_set(const DirectInputHooks* hooks)
     else s_direct_input_hooks = *hooks;
 }
 
+// FUNCTION: LEGORR 0x0047ed90
 int input_direct_initialize(void)
 {
     input_reset(&s_direct_input_state);
@@ -48,6 +49,7 @@ failed:
     return 0;
 }
 
+// FUNCTION: LEGORR 0x0047efd0
 void input_direct_shutdown(void)
 {
     if (s_direct_input_initialized &&
@@ -457,6 +459,67 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
 static uint32_t s_input_entry_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind1_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind4_flags[INPUT_FLAG_TABLE_SLOTS];
+static uint32_t* player_flags_table(int kind);
+static InputActionStateQueryFn s_input_action_state_query;
+static void* s_input_action_state_query_context;
+
+uint32_t input_action_state_word_get(int action)
+{
+    if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) return 0u;
+    return s_input_entry_flags[action];
+}
+
+void input_action_state_word_set(int action, uint32_t flags)
+{
+    if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) return;
+    s_input_entry_flags[action] = flags;
+}
+
+uint32_t input_binding_state_word_get(int kind, int entry)
+{
+    uint32_t* table = player_flags_table(kind);
+    if (table == NULL || entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS)
+        return 0u;
+    return table[entry];
+}
+
+void input_binding_state_word_set(int kind, int entry, uint32_t flags)
+{
+    uint32_t* table = player_flags_table(kind);
+    if (table == NULL || entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS)
+        return;
+    table[entry] = flags;
+}
+
+void input_action_state_query_set(InputActionStateQueryFn query,
+                                  void* context)
+{
+    s_input_action_state_query = query;
+    s_input_action_state_query_context = context;
+}
+
+// FUNCTION: LEGORR 0x0041c7b0
+/* InputActionStateUpdate: while mode bit 7 is set and the action entry lacks
+ * bit 1, ask the action helper. The helper may mutate the same word, so the
+ * word is deliberately re-read before clearing bit 0. */
+void input_action_state_update(int action)
+{
+    uint32_t flags = input_action_state_word_get(action);
+    if ((flags & 2u) == 0u &&
+        (global_state_low_word_get() & 0x80u) != 0u) {
+        int handled = 0;
+        if (s_input_action_state_query != NULL) {
+            handled = s_input_action_state_query(
+                s_input_action_state_query_context, action);
+        }
+        flags = input_action_state_word_get(action);
+        if (handled != 0) {
+            input_action_state_word_set(action, flags & ~1u);
+            return;
+        }
+    }
+    input_action_state_word_set(action, flags | 1u);
+}
 
 // FUNCTION: LEGORR 0x0041c9f0
 void input_entry_flag8_set_clear(int entry, int set)
