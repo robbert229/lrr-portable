@@ -13,17 +13,108 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #if defined(_MSC_VER)
 #define strcasecmp _stricmp
 #else
 #include <strings.h>
 #endif
 
+static char s_model_resource_cache_names[128][260];
+static Model* s_model_resource_cache[128];
+
+/* FUNCTION: LEGORR 0x00481fa0 */
+void mesh_vertex_coordinate_remap(int vertex_count, const float* positions_xyz,
+                                 float* coordinates_xy, float scale_x,
+                                 float scale_y, float scale_z, float offset_x,
+                                 float offset_y, float offset_z, uint32_t flags)
+{
+    int i;
+    if (positions_xyz == NULL || coordinates_xy == NULL) return;
+    for (i = 0; i < vertex_count; ++i) {
+        const float x = positions_xyz[i * 3];
+        const float y = positions_xyz[i * 3 + 1];
+        const float z = positions_xyz[i * 3 + 2];
+        coordinates_xy[i * 2] =
+            ((flags & 1u) != 0u ? z - offset_z : x - offset_x) /
+                ((flags & 1u) != 0u ? scale_z : scale_x) + 0.5f;
+        coordinates_xy[i * 2 + 1] =
+            ((flags & 2u) != 0u ? z - offset_z : y - offset_y) /
+                ((flags & 2u) != 0u ? scale_z : scale_y) + 0.5f;
+    }
+}
+
 #if !(defined(_MSC_VER) && (_MSC_VER <= 1100)) \
     && !(defined(__cplusplus) && (__cplusplus >= 201103L))
 #error "C++11"
 #endif
 static_assert(sizeof(float) == 4, "model loader reads IEEE-754 binary32");
+
+/* PrimitiveModelRecordCreate (FUN_00451ab0): six-word record with a
+ * heap-owned name; its object slot is empty, the caller kind is copied,
+ * flags start at 2, and the list link starts clear. */
+// FUNCTION: LEGORR 0x00451ab0
+ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
+                                                const char* name, int kind)
+{
+    ModelEntryRecord* record = (ModelEntryRecord*)engine_heap_alloc(
+        (long)sizeof(ModelEntryRecord));
+    if (record == NULL || name == NULL) {
+        engine_heap_free(record);
+        return NULL;
+    }
+    record->object = NULL;
+    record->instance = NULL;
+    const size_t length = strlen(name) + 1;
+    record->name = (char*)engine_heap_alloc((long)length);
+    if (record->name == NULL) {
+        engine_heap_free(record);
+        return NULL;
+    }
+    memcpy(record->name, name, length);
+    record->kind = kind;
+    record->flags = 2;
+    record->next = NULL;
+    if (previous != NULL) {
+        previous->next = record;
+    }
+    return record;
+}
+
+/* LinkedRecordListFlatten (FUN_00451b30): copy six fields from each
+ * linked record into a contiguous engine-heap array, reset instance, mark
+ * every entry active, mark the first entry as the list head, and terminate
+ * the final next link. */
+// FUNCTION: LEGORR 0x00451b30
+ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head)
+{
+    size_t count = 0;
+    const ModelEntryRecord* node;
+    for (node = head; node != NULL; node = node->next) {
+        ++count;
+    }
+    if (count == 0) {
+        return NULL;
+    }
+    if (count > (size_t)LONG_MAX / sizeof(ModelEntryRecord)) {
+        return NULL;
+    }
+    ModelEntryRecord* flat = (ModelEntryRecord*)engine_heap_alloc(
+        (long)(count * sizeof(ModelEntryRecord)));
+    if (flat == NULL) {
+        return NULL;
+    }
+    node = head;
+    for (size_t i = 0; i < count; ++i) {
+        flat[i] = *node;
+        flat[i].instance = NULL;
+        flat[i].flags = (flat[i].flags & ~2u) | 1u;
+        flat[i].next = (i + 1 < count) ? &flat[i + 1] : NULL;
+        node = node->next;
+    }
+    flat[0].flags |= 2u;
+    return flat;
+}
 
 /* --- big-endian readers ---------------------------------------------------- */
 
@@ -47,12 +138,14 @@ static float bef32(const uint8_t* p)
 // FUNCTION: LEGORR 0x0048c1d0
 int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4])
 {
-    const uint8_t* p = *cursor;
-    out[0] = p[3];
-    out[1] = p[2];
-    out[2] = p[1];
-    out[3] = p[0];
-    *cursor = p + 4;
+    out[3] = **cursor;
+    ++*cursor;
+    out[2] = **cursor;
+    ++*cursor;
+    out[1] = **cursor;
+    ++*cursor;
+    out[0] = **cursor;
+    ++*cursor;
     return 1;
 }
 
@@ -876,6 +969,7 @@ Model* model_open(const char* path)
     return m;
 }
 
+// FUNCTION: LEGORR 0x0048d870
 void model_free(Model* m)
 {
     if (!m)
@@ -896,6 +990,57 @@ void model_free(Model* m)
         free(m->surfaces);
     }
     free(m);
+}
+
+Model* model_resource_resolve_or_load(const char* prefix, const char* path)
+{
+    char resolved[260];
+    unsigned int i;
+    unsigned int free_slot = 128u;
+    Model* loaded;
+    size_t prefix_length;
+    if (path == NULL || path[0] == '\0') return NULL;
+    prefix_length = prefix != NULL ? strlen(prefix) : 0u;
+    if (prefix_length == 0u) {
+        snprintf(resolved, sizeof(resolved), "%s", path);
+    }
+    else if (prefix[prefix_length - 1u] == '/' ||
+             prefix[prefix_length - 1u] == '\\') {
+        snprintf(resolved, sizeof(resolved), "%s%s", prefix, path);
+    }
+    else {
+        snprintf(resolved, sizeof(resolved), "%s/%s", prefix, path);
+    }
+    resolved[sizeof(resolved) - 1u] = '\0';
+    for (i = 0; i < 128u; ++i) {
+        if (s_model_resource_cache[i] == NULL) {
+            if (free_slot == 128u) free_slot = i;
+            continue;
+        }
+        if (strcasecmp(s_model_resource_cache_names[i], resolved) == 0)
+            return s_model_resource_cache[i];
+    }
+    loaded = model_open(resolved);
+    if (loaded == NULL) return NULL;
+    if (free_slot < 128u) {
+        strncpy(s_model_resource_cache_names[free_slot], resolved,
+                sizeof(s_model_resource_cache_names[free_slot]) - 1u);
+        s_model_resource_cache_names[free_slot]
+            [sizeof(s_model_resource_cache_names[free_slot]) - 1u] = '\0';
+        s_model_resource_cache[free_slot] = loaded;
+    }
+    return loaded;
+}
+
+void model_resource_cache_clear(void)
+{
+    unsigned int i;
+    for (i = 0; i < 128u; ++i) {
+        if (s_model_resource_cache[i] != NULL)
+            model_free(s_model_resource_cache[i]);
+        s_model_resource_cache[i] = NULL;
+        s_model_resource_cache_names[i][0] = '\0';
+    }
 }
 
 /* --- digest -------------------------------------------------------------------

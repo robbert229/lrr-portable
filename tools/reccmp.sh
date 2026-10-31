@@ -86,5 +86,6 @@ mkdir -p "${report_dir}"
 "${reccmp_bin}" --target LEGORR --nolib \
   --html "${report_dir}/game-only.html" \
   --json "${report_dir}/game-only.json"
+python3 "${project_root}/tools/clean_reccmp_report_names.py" "${report_dir}"
 echo "Reccmp HTML report: ${report_dir}/index.html"
 echo "Reccmp game-only report: ${report_dir}/game-only.html"

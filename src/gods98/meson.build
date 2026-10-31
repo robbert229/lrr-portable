@@ -32,6 +32,8 @@ gods98_lib = static_library('gods98',
   'movie.cpp',
   'flic.cpp',
   'media.cpp',
+  'scene_pool.cpp',
+  'scene_resources.cpp',
   include_directories : gods98_incs,
   dependencies : [platsub_deps, platform_glue_dep],
   install : false)

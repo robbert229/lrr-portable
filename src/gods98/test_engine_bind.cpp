@@ -111,13 +111,15 @@ int main(void)
     /* The 0x425-0x426 engine-state band (2026-10-24). */
     {
         EngineContext ec = {};
-        CHECK(current_engine_mode_is_zero(NULL) == false
-                  && current_engine_mode_is_zero(&ec) == true,
-              "engine_bind: mode zero answers for the zero word and null");
+        engine_context_mode_global_set(0);
+        CHECK(current_engine_mode_is_zero(),
+              "engine_bind: mode zero answers for the zero word");
         ec.context_mode = 1;
-        CHECK(current_engine_mode_is_zero(&ec) == false,
+        engine_context_mode_global_set(ec.context_mode);
+        CHECK(!current_engine_mode_is_zero(),
               "engine_bind: a nonzero mode is not zero");
         ec.context_mode = 0;
+        engine_context_mode_global_set(ec.context_mode);
 
         global_state_flags_bit7_set(&ec, 1);
         CHECK((ec.debug & 0x80u) != 0u, "engine_bind: bit 7 raises");
@@ -166,11 +168,11 @@ int main(void)
     }
 
     /* The app-mode read (2026-10-24). */
-    EngineContext am = {};
-    CHECK(engine_app_mode_get(NULL) == 0, "the null context answers zero");
-    am.app_mode = 10;
-    CHECK(engine_app_mode_get(&am) == 10, "the mode word reads through");
-    am.app_mode = 0;
+    engine_app_mode_global_set(0);
+    CHECK(engine_app_mode_get() == 0, "the app-mode global starts clear");
+    engine_app_mode_global_set(10);
+    CHECK(engine_app_mode_get() == 10, "the mode word reads through");
+    engine_app_mode_global_set(0);
 
 
     /* The grid-cell record buffer (2026-10-24): allocate, release, replace. */

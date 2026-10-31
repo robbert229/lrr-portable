@@ -5,6 +5,7 @@
 
 #include "options.hpp"
 #include "savegame.hpp"
+#include "frontend.hpp"
 
 #include "gods98/engine.hpp"
 #include "gods98/heap.hpp"
@@ -108,10 +109,7 @@ static int* option_field(GameOptions* o, int id)
     return (int*)((char*)o + s_opts[id].off);
 }
 
-/* Partial OptionsLoadOrDefault (FUN_00416940): the original fallback branch
- * assigns these three effective settings. Slot selection and loading are
- * handled by the caller; the remaining option defaults are port additions. */
-// FUNCTION: LEGORR 0x00416940
+/* The corpus's fallback assigns only this effective option triple. */
 static void options_load_corpus_defaults(GameOptions* o)
 {
     if (o == NULL) {
@@ -120,6 +118,24 @@ static void options_load_corpus_defaults(GameOptions* o)
     o->game_speed = OPT_DFLT_GAME_SPEED;
     o->sfx_volume = OPT_DFLT_SFX_VOLUME;
     o->music_volume = OPT_DFLT_MUSIC_VOLUME;
+}
+
+/* OptionsLoadOrDefault (FUN_00416940): reset the front-end selection words
+ * when requested, then preserve the active context's loaded option values or
+ * seed the corpus's {speed, SFX, music} defaults. The port keeps the selected
+ * context's persisted values in GameContext::options instead of DAT fields. */
+// FUNCTION: LEGORR 0x00416940
+void options_load_or_default(struct GameContext* ctx, int load_options,
+                             int reset_frontend)
+{
+    if (reset_frontend != 0) {
+        frontend_flow_word_set(0, 0);
+        frontend_flow_word_set(1, -1);
+        frontend_flow_word_set(2, -1);
+    }
+    if (load_options != 0 && ctx != NULL && sav_build_ctx(ctx) == NULL) {
+        options_load_corpus_defaults(&ctx->options);
+    }
 }
 
 void options_defaults(GameOptions* o)
@@ -289,9 +305,12 @@ void options_context_six_field_set(struct GameContext* ctx,
     if (block == NULL || src == NULL) {
         return;
     }
-    for (int i = 0; i < 6; ++i) {
-        const uint32_t v = src[i];
-        __builtin_memcpy(block + 0x1c + (size_t)i * sizeof(v), &v, sizeof v);
+    uint8_t* dst = (uint8_t*)block + 0x1c;
+    const uint32_t* p = src;
+    for (int i = 6; i != 0; --i) {
+        __builtin_memcpy(dst, p, sizeof(*p));
+        dst += sizeof(*p);
+        ++p;
     }
 }
 
@@ -370,16 +389,38 @@ int scroll_to_slider_index(void)
 /* ScrollToSliderIndexStore (FUN_00414f90) stores the same speed band in the
  * context-owned option word; the corpus writes its module global. */
 // FUNCTION: LEGORR 0x414f90
-static void options_scroll_index_store(struct GameContext* ctx)
+void options_scroll_index_store(struct GameContext* ctx)
 {
     if (ctx == NULL) {
         return; /* deviation: the corpus stores the global blindly */
     }
-    ctx->options.game_speed = scroll_to_slider_index();
+    const double v = (double)scroll_scale_peek();
+    if (v < 0.6666667) {
+        ctx->options.game_speed = 0;
+        return;
+    }
+    if (v < 1.0) {
+        ctx->options.game_speed = 1;
+        return;
+    }
+    if (v < 1.3333334) {
+        ctx->options.game_speed = 2;
+        return;
+    }
+    if (v < 1.6666666) {
+        ctx->options.game_speed = 3;
+        return;
+    }
+    ctx->options.game_speed = 4;
+    if (2.0 <= v) {
+        ctx->options.game_speed = 5;
+    }
 }
 
 // FUNCTION: LEGORR 0x00415360
 void scroll_slider_refresh(struct GameContext* ctx)
 {
-    options_scroll_index_store(ctx);
+    if (ctx != NULL) {
+        ctx->options.game_speed = scroll_to_slider_index();
+    }
 }

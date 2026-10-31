@@ -111,7 +111,8 @@ add_library(gods98 STATIC
   ${ENGINE_DIR}/audio.cpp ${ENGINE_DIR}/camera.cpp ${ENGINE_DIR}/view.cpp
   ${ENGINE_DIR}/message.cpp ${ENGINE_DIR}/mainsim.cpp ${ENGINE_DIR}/simtick.cpp
   ${ENGINE_DIR}/block.cpp ${ENGINE_DIR}/model.cpp ${ENGINE_DIR}/entity.cpp
-  ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp ${ENGINE_DIR}/media.cpp)
+  ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp ${ENGINE_DIR}/media.cpp
+  ${ENGINE_DIR}/scene_pool.cpp ${ENGINE_DIR}/scene_resources.cpp)
 target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 
 add_library(game STATIC
@@ -120,7 +121,10 @@ add_library(game STATIC
   ${GAME_DIR}/cmd.cpp ${GAME_DIR}/select.cpp ${GAME_DIR}/ai.cpp
   ${GAME_DIR}/render.cpp ${GAME_DIR}/scene_render.cpp
   ${GAME_DIR}/frontend.cpp ${GAME_DIR}/options.cpp
-  ${GAME_DIR}/util.cpp)
+  ${GAME_DIR}/util.cpp ${GAME_DIR}/effects.cpp ${GAME_DIR}/terrain_grid.cpp
+  ${GAME_DIR}/weapon.cpp ${GAME_DIR}/upgrades.cpp
+  ${GAME_DIR}/video_graph.cpp ${GAME_DIR}/spawn.cpp
+  ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp)
 target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
 target_link_libraries(game PUBLIC gods98)
 

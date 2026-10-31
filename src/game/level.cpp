@@ -16,10 +16,15 @@
 #include "crt/crt.hpp"
 #include "gods98/view.hpp"
 #include "entity.hpp"
+#include "ai.hpp"
+#include "cmd.hpp"
 #include "frontend.hpp"
 #include "level.hpp"
 #include "objective.hpp"
 #include "util.hpp"
+#include "gods98/flic.hpp"
+#include "terrain_grid.hpp"
+#include "select.hpp"
 
 /* ------------------------------------------------------------------ *
  *  Corpus .rdata constants (identities from finding 07/22 and the
@@ -30,6 +35,181 @@
 #define LVL_SEC_TO_TICK   25.0f       /* _DAT_0049e2b4: 25 game ticks/second */
 #define LVL_OXYGEN_SCALE  1.0f        /* _DAT_0049e324: (unconfirmed scale)  */
 #define LVL_RGB_SCALE     0.0039215686f /* _DAT_0049e328: 1/255            */
+
+/* The original overlay resource owns the surface dimensions and cell-indexed
+ * quad handles. Keep an explicit renderer seam so the normal helper can run
+ * once a backend installs its vertex reader. */
+static void* s_terrain_quad_surface;
+static uint32_t s_terrain_quad_width;
+static uint32_t s_terrain_quad_height;
+static TerrainQuadVertexReadHook s_terrain_quad_vertex_read;
+static void* s_terrain_quad_vertex_context;
+
+void terrain_quad_vertex_source_set(void* surface, uint32_t width,
+                                    uint32_t height,
+                                    TerrainQuadVertexReadHook hook,
+                                    void* context)
+{
+    s_terrain_quad_surface = surface;
+    s_terrain_quad_width = width;
+    s_terrain_quad_height = height;
+    s_terrain_quad_vertex_read = hook;
+    s_terrain_quad_vertex_context = context;
+}
+
+int terrain_cell_surface_normal_get(uint32_t x, uint32_t y, float out[3])
+{
+    float vertices[4][3];
+    float first[3];
+    float second[3];
+    float nx, ny, nz, inverse_length;
+    uint32_t index;
+    if (out == NULL || x >= s_terrain_quad_width || y >= s_terrain_quad_height
+        || s_terrain_quad_surface == NULL
+        || s_terrain_quad_vertex_read == NULL) {
+        return 0;
+    }
+    index = y * s_terrain_quad_width + x;
+    if (!s_terrain_quad_vertex_read(s_terrain_quad_vertex_context,
+                                    s_terrain_quad_surface, index, vertices)) {
+        return 0;
+    }
+    /* The polygon reader returns the four points in the order consumed by
+     * FUN_00463590: triangles (0,1,2) and (2,3,0). */
+    surface_triangle_normal_calculate(first, vertices[0], vertices[1],
+                                      vertices[2]);
+    surface_triangle_normal_calculate(second, vertices[2], vertices[3],
+                                      vertices[0]);
+    nx = first[0] + second[0];
+    ny = first[1] + second[1];
+    nz = first[2] + second[2];
+    inverse_length = 1.0f / (float)sqrt((double)(nx * nx + ny * ny + nz * nz));
+    /* The game's output frame swaps the second and third normal components. */
+    out[0] = nx * inverse_length;
+    out[1] = nz * inverse_length;
+    out[2] = ny * inverse_length;
+    return 1;
+}
+
+void terrain_dirty_quad_normal_emit_pass(TerrainDirtyQuadNormalPass* pass)
+{
+    static const int neighbor_offsets[4][4][2] = {
+        { { 0, 0 }, { -1, 0 }, { 0, 1 }, { -1, 1 } },
+        { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } },
+        { { 0, 0 }, { 0, -1 }, { 1, -1 }, { 1, 0 } },
+        { { 0, 0 }, { -1, -1 }, { 0, -1 }, { -1, 0 } }
+    };
+    uint32_t y;
+    if (pass == NULL || pass->records == NULL || pass->dirty == NULL ||
+        pass->emit_normals == NULL || *pass->dirty == 0u) return;
+    *pass->dirty = 0u;
+    for (y = 0; y < pass->height; ++y) {
+        uint32_t x;
+        for (x = 0; x < pass->width; ++x) {
+            uint32_t index = y * pass->width + x;
+            uint8_t* record = pass->records + index * 8u;
+            float normals[4][3];
+            uint32_t corner;
+            int emitted;
+            int component;
+            if ((record[4] & 2u) == 0u) continue;
+            for (corner = 0; corner < 4u; ++corner) {
+                unsigned int table_corner = (record[4] & 4u) != 0u
+                    ? ((corner - 1u) & 3u) : corner;
+                unsigned int neighbor;
+                float length;
+                for (component = 0; component < 3; ++component)
+                    normals[corner][component] = 0.0f;
+                for (neighbor = 0; neighbor < 4u; ++neighbor) {
+                    const int nx = (int)x +
+                        neighbor_offsets[table_corner][neighbor][0];
+                    const int ny = (int)y +
+                        neighbor_offsets[table_corner][neighbor][1];
+                    float normal[3];
+                    if (nx >= 0 && ny >= 0 &&
+                        terrain_cell_surface_normal_get((uint32_t)nx,
+                                                        (uint32_t)ny,
+                                                        normal)) {
+                        normals[corner][0] += normal[0];
+                        normals[corner][1] += normal[1];
+                        normals[corner][2] += normal[2];
+                    }
+                }
+                length = (float)sqrt((double)(
+                    normals[corner][0] * normals[corner][0] +
+                    normals[corner][1] * normals[corner][1] +
+                    normals[corner][2] * normals[corner][2]));
+                length = 1.0f / length;
+                normals[corner][0] *= length;
+                normals[corner][1] *= length;
+                normals[corner][2] *= length;
+            }
+            emitted = pass->emit_normals(pass->context, index, normals);
+            if (emitted) record[4] = (uint8_t)(record[4] & ~2u);
+        }
+    }
+}
+
+int terrain_cell_quad_geometry_emit(TerrainCellQuadEmitGrid* grid,
+                                    uint32_t x, uint32_t y,
+                                    const float vertices[4][3])
+{
+    static const uint32_t face_order[4] = { 0u, 1u, 2u, 3u };
+    uint32_t index;
+    uint8_t* record;
+    uint8_t flags;
+    int quad;
+    int flipped;
+    float ordered[4][3];
+    uint32_t i;
+    if (grid == NULL || vertices == NULL || grid->records == NULL ||
+        x >= grid->width || y >= grid->height) return 0;
+    index = y * grid->width + x;
+    record = grid->records + index * 8u;
+    flags = record[4];
+    quad = (int)*(uint32_t*)record;
+    if ((flags & 1u) != 0u) {
+        if (grid->hooks.create_quad == NULL) return 0;
+        quad = grid->hooks.create_quad(grid->hooks.context, index,
+                                       face_order);
+        *(uint32_t*)record = (uint32_t)quad;
+        if (quad != -1) {
+            if (grid->hooks.texture_set != NULL)
+                grid->hooks.texture_set(grid->hooks.context, quad,
+                                        grid->texture);
+            if (grid->hooks.visibility_set != NULL)
+                grid->hooks.visibility_set(grid->hooks.context, quad, 1);
+            flags = (uint8_t)(flags & ~1u);
+        }
+    }
+    if (grid->dirty != NULL) *grid->dirty = 1u;
+    flags = (uint8_t)(flags | 2u);
+    flipped = !((vertices[2][2] <= vertices[0][2]
+                 ? vertices[2][2] : vertices[0][2]) <= vertices[1][2] &&
+                (vertices[2][2] <= vertices[0][2]
+                 ? vertices[2][2] : vertices[0][2]) <= vertices[3][2]);
+    if (flipped) {
+        const uint32_t order[4] = { 1u, 2u, 3u, 0u };
+        for (i = 0; i < 4u; ++i) {
+            ordered[i][0] = vertices[order[i]][0];
+            ordered[i][1] = vertices[order[i]][1];
+            ordered[i][2] = vertices[order[i]][2];
+        }
+        flags = (uint8_t)(flags | 4u);
+    }
+    else {
+        for (i = 0; i < 4u; ++i) {
+            ordered[i][0] = vertices[i][0];
+            ordered[i][1] = vertices[i][1];
+            ordered[i][2] = vertices[i][2];
+        }
+        flags = (uint8_t)(flags & ~4u);
+    }
+    record[4] = flags;
+    if (quad == -1 || grid->hooks.vertices_emit == NULL) return 0;
+    return grid->hooks.vertices_emit(grid->hooks.context, quad, ordered,
+                                     flags);
+}
 
 /* Config key names (labels confirmed in finding 07/22 or the corpus). */
 static const char* K_BOULDER_ANIM   = "BoulderAnimation";
@@ -408,20 +588,38 @@ static void predug_wall_cell(LevelState* s, int x, int y)
     __builtin_memcpy(rec + 0x08, &flags, sizeof(flags));
 }
 
-/* Explicit placeholder for the corpus's 20-entry predug-coordinate pool.
- * Its consumers are not ported yet, so this keeps the call boundary visible
- * without inventing pool ownership or changing current map behavior. */
-// STUB: LEGORR 0x0044a4b0
-static void predug_coordinate_pool_append_stub(int x, int y)
+/* The corpus keeps a bounded twenty-entry pool of the predug coordinates
+ * encountered while loading the layer. */
+// GLOBAL: LEGORR 0x004e844c
+static int s_predug_coordinates[20][2];
+// GLOBAL: LEGORR 0x004e853c
+static unsigned int s_predug_coordinate_count;
+unsigned int level_predug_coordinate_count_get(void)
 {
-    (void)x;
-    (void)y;
+    return s_predug_coordinate_count;
+}
+int level_predug_coordinate_get(unsigned int index, int cell_xy_out[2])
+{
+    if (cell_xy_out == NULL || index >= s_predug_coordinate_count) return 0;
+    cell_xy_out[0] = s_predug_coordinates[index][0];
+    cell_xy_out[1] = s_predug_coordinates[index][1];
+    return 1;
+}
+// FUNCTION: LEGORR 0x0044a4b0
+static void predug_coordinate_pool_append(const int cell_xy[2])
+{
+    if (s_predug_coordinate_count < 20u) {
+        s_predug_coordinates[s_predug_coordinate_count][0] = cell_xy[0];
+        s_predug_coordinates[s_predug_coordinate_count][1] = cell_xy[1];
+        s_predug_coordinate_count++;
+    }
 }
 
 /* LoadPredugLayer @ 0x42bd20 */
 // FUNCTION: LEGORR 0x0042bd20
 static int load_predug(LevelState* s, const char* name, int bias)
 {
+    s_predug_coordinate_count = 0;
     MapFile* m = level_map_open(name);
     if (m == NULL) {
         return 0;
@@ -455,7 +653,8 @@ static int load_predug(LevelState* s, const char* name, int bias)
             }
             if (v == 3) {
                 fC |= 0x20u;
-                predug_coordinate_pool_append_stub(x, y);
+                const int cell_xy[2] = {x, y};
+                predug_coordinate_pool_append(cell_xy);
             }
             if (v == 4) {
                 fC |= 0x200u;
@@ -468,17 +667,77 @@ static int load_predug(LevelState* s, const char* name, int bias)
     return 1;
 }
 
-/* The corpus creates/updates a per-cell Activity_Build scene record here.
- * Its scene object, linked-record list, and cell pointer table are unported;
- * keep the known call boundary as an explicit no-op for Reccmp. */
-// STUB: LEGORR 0x004311d0
-static void terrain_activity_build_record_stub(LevelState* s, int x, int y,
-                                                int enable)
+struct TerrainActivityBuildRecordModel {
+    LevelState* level;
+    int x;
+    int y;
+    int enabled;
+};
+static TerrainActivityBuildRecordModel s_terrain_activity_build_records[256];
+
+/* FUNCTION: LEGORR 0x004311d0. The scene object and linked record family
+ * are not ported, so preserve the observable per-level cell membership and
+ * enable state in a bounded sidecar table. */
+static void terrain_activity_build_record_update(LevelState* s, int x, int y,
+                                                  int enable)
 {
-    (void)s;
-    (void)x;
-    (void)y;
-    (void)enable;
+    if (s == NULL) return;
+    int free_slot = -1;
+    for (int i = 0; i < 256; ++i) {
+        TerrainActivityBuildRecordModel* record =
+            &s_terrain_activity_build_records[i];
+        if (record->level == s && record->x == x && record->y == y) {
+            if (enable == 0) {
+                record->level = NULL;
+                record->enabled = 0;
+            } else {
+                record->enabled = enable;
+            }
+            return;
+        }
+        if (record->level == NULL && free_slot < 0) free_slot = i;
+    }
+    if (enable != 0 && free_slot >= 0) {
+        s_terrain_activity_build_records[free_slot].level = s;
+        s_terrain_activity_build_records[free_slot].x = x;
+        s_terrain_activity_build_records[free_slot].y = y;
+        s_terrain_activity_build_records[free_slot].enabled = enable;
+    }
+}
+
+void* terrain_activity_build_record_get(LevelState* level, int x, int y)
+{
+    for (int i = 0; level != NULL && i < 256; ++i) {
+        TerrainActivityBuildRecordModel* record =
+            &s_terrain_activity_build_records[i];
+        if (record->level == level && record->x == x && record->y == y) {
+            return record;
+        }
+    }
+    return NULL;
+}
+
+/* FUNCTION: LEGORR 0x004314c0 */
+void terrain_activity_build_record_release(void* value)
+{
+    for (int i = 0; value != NULL && i < 256; ++i) {
+        if (value == &s_terrain_activity_build_records[i]) {
+            s_terrain_activity_build_records[i].level = NULL;
+            s_terrain_activity_build_records[i].enabled = 0;
+            return;
+        }
+    }
+}
+
+/* FUNCTION: LEGORR 0x00431530 */
+void terrain_activity_build_records_release_all(LevelState* level)
+{
+    for (int i = 0; level != NULL && i < 256; ++i) {
+        if (s_terrain_activity_build_records[i].level == level) {
+            terrain_activity_build_record_release(
+                &s_terrain_activity_build_records[i]);
+        }
+    }
 }
 
 /* LoadErodeCryoreLayers @ 0x42c480 — reads the TerrainMap (Surf materials),
@@ -506,7 +765,7 @@ static int load_erode_cryore(LevelState* s, const char* name, int bias)
                 rec[0x07] = 4; /* crystal seam -> entity spawn (stub) */
             } else if (v == 11) {
                 /* rock-monster / cavern spawn point */
-                terrain_activity_build_record_stub(s, x, y, 1);
+                terrain_activity_build_record_update(s, x, y, 1);
             }
         }
     }
@@ -1086,6 +1345,31 @@ int terrain_cell_predicate_check(TerrainDescriptorNode* list,
     return terrain_descriptor_find_exact(list, pair_key, NULL) != NULL;
 }
 
+/* CellResourceEntryMatches (FUN_0040af40): entries backed by a matching
+ * live task are accepted directly. Otherwise the first two words must
+ * match, and a nonzero bounded-mode flag applies the unsigned cell limit
+ * from entry word two to the cell record's +0xcc word. */
+// FUNCTION: LEGORR 0x0040AF40
+int terrain_cell_resource_entry_matches(const uint32_t* cell_record,
+                                        const uint32_t* resource_entry)
+{
+    if (cell_record == NULL || resource_entry == NULL) {
+        return 0;
+    }
+    if (task_kind_filtered_search((int)resource_entry[0]) != 0) {
+        return 1;
+    }
+    if (resource_entry[0] != cell_record[0]
+        || resource_entry[1] != cell_record[1]) {
+        return 0;
+    }
+    if (resource_entry[3] != 0u
+        && cell_record[0xcc / sizeof(uint32_t)] < resource_entry[2]) {
+        return 0;
+    }
+    return 1;
+}
+
 const char* level_next_name(const LevelState* s)
 {
     return s != NULL ? (const char*)s->ptr_next : NULL;
@@ -1403,10 +1687,14 @@ int level_cell_mask_180000(const LevelState* s, int cx, int cy)
 // FUNCTION: LEGORR 0x00433120
 void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set)
 {
-    uint8_t* rec = level_voxel(s, cx, cy);
-    if (rec == NULL) {
+    if (s == NULL || cx < 0 || cy < 0 ||
+        cx >= level_int(s, LEVEL_OFF_WIDTH) ||
+        cy >= level_int(s, LEVEL_OFF_HEIGHT)) {
         return;
     }
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    uint8_t* rec = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS)
+                 + ((size_t)cy * (size_t)w + (size_t)cx) * LEVEL_VOXEL_STRIDE;
     uint32_t* flags = (uint32_t*)(rec + 0x08);
     if (set != 0) {
         *flags |= 0x10000000u;
@@ -1538,41 +1826,66 @@ int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy)
     return marked == 0 || occupied_neighbors <= 1;
 }
 
-/* FUN_00432b00 / FUN_00432b50 / FUN_00432d90: dim-1-gated bit reads. */
-static uint32_t cell_flag_word_in_gate(const LevelState* s, int cx, int cy)
+// FUNCTION: LEGORR 0x00432b00
+uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
     const int h = level_int(s, LEVEL_OFF_HEIGHT);
     if ((unsigned)cx < ((unsigned)w - 1u) &&
         (unsigned)cy < ((unsigned)h - 1u)) {
-        return cell_flag_word(s, cx, cy);
+        const uint8_t* voxels = (const uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+        const size_t index = (size_t)cy * (size_t)w + (size_t)cx;
+        uint32_t flags;
+        __builtin_memcpy(&flags, voxels + index * LEVEL_VOXEL_STRIDE + 8,
+                         sizeof(flags));
+        return flags & 0x800u;
     }
     return 0u;
-}
-
-// FUNCTION: LEGORR 0x00432b00
-uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy)
-{
-    return cell_flag_word_in_gate(s, cx, cy) & 0x800u;
 }
 
 // FUNCTION: LEGORR 0x00432b50
 uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy)
 {
-    return cell_flag_word_in_gate(s, cx, cy) & 8u;
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if ((unsigned)cx < ((unsigned)w - 1u) &&
+        (unsigned)cy < ((unsigned)h - 1u)) {
+        const uint8_t* voxels = (const uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+        const size_t index = (size_t)cy * (size_t)w + (size_t)cx;
+        uint32_t flags;
+        __builtin_memcpy(&flags, voxels + index * LEVEL_VOXEL_STRIDE + 8,
+                         sizeof(flags));
+        return flags & 8u;
+    }
+    return 0u;
 }
 
 // FUNCTION: LEGORR 0x00432d90
 uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy)
 {
-    return cell_flag_word_in_gate(s, cx, cy) & 0x20u;
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    const int h = level_int(s, LEVEL_OFF_HEIGHT);
+    if ((unsigned)cx < ((unsigned)w - 1u) &&
+        (unsigned)cy < ((unsigned)h - 1u)) {
+        const uint8_t* voxels = (const uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+        const size_t index = (size_t)cy * (size_t)w + (size_t)cx;
+        uint32_t flags;
+        __builtin_memcpy(&flags, voxels + index * LEVEL_VOXEL_STRIDE + 8,
+                         sizeof(flags));
+        return flags & 0x20u;
+    }
+    return 0u;
 }
 
 /* FUN_00432b90: signed state byte in {8, 10, 11}. No cell reads absent. */
 // FUNCTION: LEGORR 0x00432b90
 int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy)
 {
-    const int type = level_tile_type(s, cx, cy);
+    const uint8_t* rec = level_voxel(s, cx, cy);
+    if (rec == NULL) {
+        return 0;
+    }
+    const int type = (int)(signed char)rec[2];
     return type == 8 || type == 10 || type == 11;
 }
 
@@ -1587,10 +1900,14 @@ uint32_t level_cell_flag_reserved(const LevelState* s, int cx, int cy)
 // FUNCTION: LEGORR 0x00432710
 void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set)
 {
-    uint8_t* rec = level_voxel(s, cx, cy);
-    if (rec == NULL) {
+    if (s == NULL || cx < 0 || cy < 0 ||
+        cx >= level_int(s, LEVEL_OFF_WIDTH) ||
+        cy >= level_int(s, LEVEL_OFF_HEIGHT)) {
         return;
     }
+    const int w = level_int(s, LEVEL_OFF_WIDTH);
+    uint8_t* rec = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS)
+                 + ((size_t)cy * (size_t)w + (size_t)cx) * LEVEL_VOXEL_STRIDE;
     uint32_t* flags = (uint32_t*)(rec + 0x08);
     if (set != 0) {
         *flags |= 0x80000u;
@@ -1621,6 +1938,37 @@ void level_cell_work_flag_set(LevelState* s, int cx, int cy)
             *flags |= 4u;
         }
     }
+}
+
+/* TerrainCellWorkFlagClear (FUN_00430320): clear the transient work flags
+ * when the three cell-local gates permit the update, then mark the cell's
+ * low refresh bits. The reference also consults a global descriptor list
+ * and dispatches a callback, FLIC, and four work operations; those owners
+ * are not represented by LevelState yet, so this implements the observed
+ * cell-state transition without fabricating those side effects. */
+// FUNCTION: LEGORR 0x00430320
+void terrain_cell_work_flag_clear(LevelState* s, const int coord[2],
+                                  uint32_t selector)
+{
+    if (s == NULL || coord == NULL) {
+        return;
+    }
+    uint8_t* rec = level_voxel(s, coord[0], coord[1]);
+    if (rec == NULL) {
+        return;
+    }
+    uint32_t* flags = (uint32_t*)(rec + 0x08);
+    if ((*flags & 0x400u) != 0u || (rec[0x0c] & 4u) != 0u ||
+        (*flags & 0x8000u) != 0u) {
+        return;
+    }
+
+    /* The corpus's FUN_004090a0(pair) descriptor veto has no level-owned
+     * table to query here. Keep the mutation visible while that seam remains
+     * documented; selector is consumed by the unported four-call work pass. */
+    (void)selector;
+    *flags &= 0x9fdfffffu;
+    *flags |= 3u;
 }
 
 /* FUN_004502c0: unsigned pair membership (negative coords wrap). */
@@ -1689,14 +2037,14 @@ int level_map_slot_allocate(size_t size)
 {
     /* Indexed, like the corpus's hit path (mov [esi*8+0x544a20]): the
      * scale-index operand rides the loop counter. */
-    for (int i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
+    for (uint32_t i = 0; i < LEVEL_MAP_SLOT_COUNT; ++i) {
         if ((s_map_slots[i].used & 1u) == 0u) {
             /* Blind like the corpus: no zero-fill, no NULL check (the
              * retry carrier's zero-size quirk covers size 0). */
             void* img = engine_heap_alloc((long)size);
             s_map_slots[i].ptr = (uint8_t*)img;
             *(uint32_t*)&s_map_slots[i].used |= 1u;
-            return i;
+            return (int)i;
         }
     }
     return -1; /* the corpus's or eax, 0xffffffff */
@@ -1914,12 +2262,466 @@ int always_accept_place_command_cell(void)
  * modeled as module statics; consumers land with their own clusters. */
 
 #define LEVEL_CELL_REFRESH_TRACK_CAP 200
-#define LEVEL_CELL_VISITED_TRACK_CAP 160
+#define LEVEL_CELL_VISITED_TRACK_CAP 100
 
+// GLOBAL: LEGORR 0x0055684c
 static int32_t s_cell_refresh_track[LEVEL_CELL_REFRESH_TRACK_CAP][2];
+// GLOBAL: LEGORR 0x00556e8c
 static int     s_cell_refresh_track_count;
+// GLOBAL: LEGORR 0x00556528
 static int32_t s_cell_visited_track[LEVEL_CELL_VISITED_TRACK_CAP][2];
+// GLOBAL: LEGORR 0x00556848
 static int     s_cell_visited_track_count;
+static TerrainNeighborPresenceHook s_terrain_neighbor_presence_hook;
+static TerrainNeighborRenderUpdateHook s_terrain_neighbor_render_hook;
+static void* s_terrain_neighbor_hook_context;
+static TerrainNeighborActionHook s_terrain_neighbor_build_action;
+static TerrainNeighborActionHook s_terrain_neighbor_clear_action;
+static void* s_terrain_neighbor_action_context;
+static TerrainCellVariantCompleteHook s_terrain_cell_variant_complete_hook;
+static void* s_terrain_cell_variant_complete_context;
+static TerrainCellStateProjectionHook s_terrain_cell_state_projection_hook;
+static void* s_terrain_cell_state_projection_context;
+static DockDefinitionCellGetHook s_dock_definition_cell_get_hook;
+static void* s_dock_definition_cell_get_context;
+static SpatialObjectQueryHook s_spatial_object_query_hook;
+static void* s_spatial_object_query_context;
+static TerrainCellRecordCountIncrementHook s_terrain_cell_record_count_hook;
+static void* s_terrain_cell_record_count_context;
+static GridCellEligibilityHooks s_grid_cell_eligibility_hooks;
+
+void grid_cell_eligibility_hooks_set(const GridCellEligibilityHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_grid_cell_eligibility_hooks, 0,
+                              sizeof(s_grid_cell_eligibility_hooks));
+    else s_grid_cell_eligibility_hooks = *hooks;
+}
+
+// FUNCTION: LEGORR 0x00433e30
+int grid_cell_entity_eligibility_check(int x, int y)
+{
+    GridCellEligibilityHooks* hooks = &s_grid_cell_eligibility_hooks;
+    uint32_t flags = 0;
+    if (hooks->cell_flags_get != NULL) {
+        flags = hooks->cell_flags_get(x, y, hooks->context);
+    }
+    if ((flags & 0x100u) != 0u) return 0;
+    return hooks->surface_entity_eligible != NULL &&
+           hooks->surface_entity_eligible(x, y, hooks->context) != 0;
+}
+
+void spatial_object_query_hook_install(SpatialObjectQueryHook hook,
+                                       void* context)
+{
+    s_spatial_object_query_hook = hook;
+    s_spatial_object_query_context = context;
+}
+
+void* spatial_object_query_execute(const SpatialObjectQueryRequest* request)
+{
+    if (request == NULL || s_spatial_object_query_hook == NULL) return NULL;
+    return s_spatial_object_query_hook(s_spatial_object_query_context,
+                                      request);
+}
+
+void terrain_cell_record_count_increment_hook_install(
+    TerrainCellRecordCountIncrementHook hook, void* context)
+{
+    s_terrain_cell_record_count_hook = hook;
+    s_terrain_cell_record_count_context = context;
+}
+
+void terrain_cell_record_count_increment(int a, int b, int c)
+{
+    if (s_terrain_cell_record_count_hook != NULL) {
+        s_terrain_cell_record_count_hook(a, b, c,
+                                         s_terrain_cell_record_count_context);
+    }
+}
+
+void terrain_cell_record_counts_prune(TerrainCellRecordCountState* state,
+                                      void* entity,
+                                      const TerrainCellRecordPruneHooks* hooks)
+{
+    int a, b, c;
+    if (state == NULL || hooks == NULL) return;
+    for (a = 0; a < 4; ++a) {
+        for (b = 0; b < 15; ++b) {
+            for (c = 0; c < 16; ++c) {
+                uint32_t ordinal, removed = 0;
+                uint32_t count = state->counts[a][b][c];
+                for (ordinal = 0; ordinal < count; ++ordinal) {
+                    int exists = hooks->matching_record_exists != NULL
+                        ? hooks->matching_record_exists(hooks->context, entity,
+                                                        a, b, c, ordinal)
+                        : 0;
+                    if (!exists || (hooks->entity_cell_matches != NULL &&
+                        hooks->entity_cell_matches(hooks->context, entity,
+                                                   a, b, c))) ++removed;
+                }
+                state->counts[a][b][c] -= removed;
+            }
+        }
+    }
+}
+
+void task_record_create_and_scan_grid(
+    TerrainCellRecordCountState* state, void* entity,
+    const TaskRecordGridScanHooks* task_hooks,
+    const TerrainCellRecordPruneHooks* prune_hooks)
+{
+    void* record = NULL;
+    if (task_hooks != NULL && task_hooks->record_create != NULL) {
+        record = task_hooks->record_create(task_hooks->context, entity,
+                                           0, -1, 0);
+        if (record != NULL && task_hooks->record_kind_apply != NULL)
+            task_hooks->record_kind_apply(task_hooks->context, record, 9);
+    }
+    terrain_cell_record_counts_prune(state, entity, prune_hooks);
+}
+
+int terrain_cell_surface_update_dispatch(
+    const uint8_t* cell, int x, int y, void* param_a, void* param_b,
+    const TerrainCellSurfaceUpdateHooks* hooks)
+{
+    float coordinates[12];
+    uint32_t flags;
+    uint32_t packed_surface;
+    void* resource;
+    if (cell == NULL || hooks == NULL || hooks->resource_get == NULL ||
+        hooks->geometry_get == NULL || hooks->dispatch == NULL) return 0;
+    memcpy(&flags, cell + 8, sizeof(flags));
+    if ((flags & 0x18u) == 0u) return 0;
+    packed_surface = cell[1];
+    resource = hooks->resource_get(hooks->context,
+                                   packed_surface & 0x0fu,
+                                   (packed_surface >> 4) & 0x0fu);
+    if (resource == NULL) return 0;
+    if (!hooks->geometry_get(hooks->context, x, y, coordinates)) return 0;
+    hooks->dispatch(hooks->context, resource, coordinates, packed_surface,
+                    cell[3], param_a, param_b);
+    return 1;
+}
+
+int terrain_cell_mutation_progress(const TerrainCellMutationGrid* grid,
+                                   uint32_t x, uint32_t y,
+                                   const TerrainCellMutationHooks* hooks)
+{
+    const TerrainMutationCell* cells[4];
+    float heights[4];
+    uint32_t index;
+    float impact;
+    unsigned int i;
+    if (grid == NULL || hooks == NULL || grid->cells == NULL ||
+        hooks->corner_heights_get == NULL || hooks->surface_apply == NULL ||
+        x >= grid->width - (grid->width != 0u) ||
+        y >= grid->height - (grid->height != 0u)) return 0;
+    if (grid->width == 0u || grid->height == 0u) return 0;
+    index = y * grid->width + x;
+    cells[0] = &grid->cells[index];
+    cells[1] = &grid->cells[index + 1u];
+    cells[2] = &grid->cells[index + grid->width + 1u];
+    cells[3] = &grid->cells[index + grid->width];
+    if (!hooks->corner_heights_get(hooks->context, x, y, heights)) return 0;
+    impact = grid->impact_a + grid->impact_b;
+    if ((cells[0]->flags & 8u) != 0u) {
+        for (i = 0; i < 4; ++i) heights[i] -= impact;
+    }
+    else {
+        if ((cells[0]->flags & 0x10u) == 0u) return 0;
+        for (i = 0; i < 4; ++i) {
+            if (cells[i]->material == 1u) heights[i] -= impact;
+        }
+    }
+    hooks->surface_apply(hooks->context, x, y, heights);
+    return 1;
+}
+
+int terrain_stamp_impact_handle(uint32_t x, uint32_t y, int direction,
+                                int mode,
+                                const TerrainStampImpactHooks* hooks)
+{
+    static const int neighbor_x[4] = { 1, 0, -1, 0 };
+    static const int neighbor_y[4] = { 0, 1, 0, -1 };
+    static const int effect_x[4] = { 0, 1, 0, -1 };
+    static const int effect_y[4] = { 1, 0, -1, 0 };
+    int cell_x, cell_y;
+    int neighbors = 0;
+    int i;
+    float base_height, effect_height;
+    if (hooks == NULL || hooks->cell_flags_get == NULL ||
+        hooks->impact_cell_resolve == NULL || hooks->height_get == NULL ||
+        hooks->effect_create == NULL || direction < 0 || direction >= 4)
+        return 0;
+    for (i = 0; i < 4; ++i) {
+        if (hooks->cell_flags_get(hooks->context,
+                (int)x + neighbor_x[i], (int)y + neighbor_y[i]) & 8u)
+            ++neighbors;
+    }
+    if (!hooks->impact_cell_resolve(hooks->context, x, y, mode,
+                                    &cell_x, &cell_y)) return 0;
+    base_height = hooks->height_get(hooks->context, cell_x, cell_y, 0, 0);
+    if (hooks->impact_event != NULL)
+        hooks->impact_event(hooks->context, cell_x, cell_y, 0, 4,
+                            base_height);
+    effect_height = hooks->height_get(hooks->context, cell_x, cell_y,
+                                      (float)effect_x[direction],
+                                      (float)effect_y[direction]);
+    if (!hooks->effect_create(hooks->context, neighbors > 1, x, y,
+                              cell_x, cell_y, effect_height))
+        return 0;
+    if (hooks->cell_flags_or != NULL)
+        hooks->cell_flags_or(hooks->context, x, y, 0x800u);
+    return 1;
+}
+
+void surface_type_descriptions_load(SurfaceTypeDescriptionEntry entries[18],
+                                    const SurfaceTypeDescriptionHooks* hooks)
+{
+    unsigned int i;
+    if (entries == NULL || hooks == NULL || hooks->value_get == NULL ||
+        hooks->parse == NULL) return;
+    for (i = 0; i < 18u; ++i) {
+        const char* value = hooks->value_get(hooks->context,
+                                             entries[i].config_key);
+        uint32_t parsed = 0;
+        uint32_t flags = 0;
+        char buffer[1024];
+        size_t length = 0;
+        if (value == NULL) continue;
+        while (length < sizeof(buffer) - 1u && value[length] != '\0') {
+            buffer[length] = value[length];
+            ++length;
+        }
+        buffer[length] = '\0';
+        (void)hooks->parse(hooks->context, buffer, &parsed, &flags);
+        entries[i].parsed_value = parsed;
+        entries[i].flags = flags;
+    }
+}
+
+TileModelEntityRegistration* tile_model_entity_register(
+    void* manager, const char* first_entry, const char* second_entry,
+    float scale_percent, int parameter,
+    const TileModelEntityRegistrationHooks* hooks)
+{
+    TileModelEntityRegistration* registration;
+    const char* names[2];
+    unsigned int model_index;
+    if (hooks == NULL || hooks->model_load == NULL || first_entry == NULL)
+        return NULL;
+    names[0] = first_entry;
+    names[1] = second_entry != NULL ? second_entry : first_entry;
+    registration = (TileModelEntityRegistration*)calloc(
+        1, sizeof(TileModelEntityRegistration));
+    if (registration == NULL) return NULL;
+    registration->scale_percent = scale_percent;
+    registration->scale_integer = (int32_t)scale_percent;
+    registration->parameter = parameter;
+    for (model_index = 0; model_index < 2u; ++model_index) {
+        registration->models[model_index] = hooks->model_load(
+            hooks->context, manager, (int)model_index, names[model_index], 1);
+        if (registration->models[model_index] == NULL && model_index == 1u)
+            registration->models[model_index] = hooks->model_load(
+                hooks->context, manager, 1, first_entry, 1);
+        if (registration->models[model_index] == NULL) {
+            tile_model_entity_registration_release(registration, hooks);
+            return NULL;
+        }
+    }
+    for (model_index = 0; model_index < 2u; ++model_index) {
+        void* model = registration->models[model_index];
+        float* uv_records = NULL;
+        int count = 0;
+        unsigned int i;
+        float scale = scale_percent * 0.01f;
+        if (hooks->model_scale != NULL)
+            hooks->model_scale(hooks->context, model, scale, scale, scale);
+        if (hooks->model_mode_set != NULL)
+            hooks->model_mode_set(hooks->context, model, 0, 1);
+        if (hooks->model_mode_set != NULL)
+            hooks->model_mode_set(hooks->context, model, 1, 1);
+        if (hooks->mesh_uv_get != NULL)
+            count = hooks->mesh_uv_get(hooks->context, model, &uv_records);
+        if (count < 0) count = 0;
+        if (model_index != 0u && uv_records != NULL) {
+            for (i = 0; i < (unsigned int)count; ++i) {
+                uv_records[i * 9u + 7u] = 1.0f - uv_records[i * 9u + 7u];
+                uv_records[i * 9u + 8u] = 1.0f - uv_records[i * 9u + 8u];
+            }
+        }
+        if (hooks->mesh_uv_set != NULL)
+            hooks->mesh_uv_set(hooks->context, model, 0, count, uv_records);
+        if (hooks->uv_records_release != NULL && uv_records != NULL)
+            hooks->uv_records_release(hooks->context, uv_records);
+    }
+    return registration;
+}
+
+void tile_model_entity_registration_release(
+    TileModelEntityRegistration* registration,
+    const TileModelEntityRegistrationHooks* hooks)
+{
+    unsigned int i;
+    if (registration == NULL) return;
+    if (hooks != NULL && hooks->model_release != NULL) {
+        for (i = 0; i < 2u; ++i) {
+            if (registration->models[i] != NULL)
+                hooks->model_release(hooks->context,
+                                     registration->models[i]);
+        }
+    }
+    free(registration);
+}
+
+typedef struct TerrainProjectedCellCandidate {
+    int x;
+    int y;
+    float distance;
+    float metric;
+} TerrainProjectedCellCandidate;
+
+uint32_t terrain_projected_cell_state_refresh(
+    const TerrainProjectedCellRefreshState* state,
+    const TerrainProjectedCellRefreshHooks* hooks)
+{
+    TerrainProjectedCellCandidate* deferred;
+    uint32_t deferred_count = 0, immediate_count = 0, accepted = 0;
+    int x_min, x_max, y_min, y_max;
+    int x, y;
+    size_t capacity;
+    if (state == NULL || hooks == NULL || hooks->cell_flags_get == NULL ||
+        hooks->candidate_measure == NULL || state->map_width == 0u ||
+        state->map_height == 0u || state->radius < 0) return 0;
+    x_min = state->center_x - state->radius;
+    y_min = state->center_y - state->radius;
+    x_max = state->center_x + state->radius;
+    y_max = state->center_y + state->radius;
+    if (x_min < 0) x_min = 0;
+    if (y_min < 0) y_min = 0;
+    if (x_max >= (int)state->map_width) x_max = (int)state->map_width - 1;
+    if (y_max >= (int)state->map_height) y_max = (int)state->map_height - 1;
+    if (x_min >= x_max || y_min >= y_max) return 0;
+    capacity = (size_t)(x_max - x_min) * (size_t)(y_max - y_min);
+    deferred = (TerrainProjectedCellCandidate*)malloc(
+        capacity * sizeof(*deferred));
+    if (deferred == NULL) return 0;
+    for (y = y_min; y < y_max; ++y) {
+        for (x = x_min; x < x_max; ++x) {
+            float distance, facing, metric;
+            uint32_t flags = hooks->cell_flags_get(hooks->context, x, y);
+            if ((flags & 0x18u) == 0u) continue;
+            if (!hooks->candidate_measure(hooks->context, x, y,
+                                          &distance, &facing, &metric) ||
+                distance >= state->distance_limit ||
+                facing <= state->facing_limit) continue;
+            if (metric <= 0.0f) {
+                ++immediate_count;
+                continue;
+            }
+            deferred[deferred_count].x = x;
+            deferred[deferred_count].y = y;
+            deferred[deferred_count].distance = distance;
+            deferred[deferred_count].metric = metric;
+            ++deferred_count;
+        }
+    }
+    for (x = 0; x < (int)deferred_count; ++x) {
+        TerrainProjectedCellCandidate* candidate = &deferred[x];
+        uint32_t flags = hooks->cell_flags_get(hooks->context,
+                                               candidate->x, candidate->y);
+        int forced = accepted >= state->deferred_limit ||
+            candidate->distance >= state->distance_limit * 0.6666667f;
+        int overlay = 0;
+        if (!forced && state->overlay_enabled != 0u &&
+            hooks->cell_overlay_update != NULL)
+            overlay = hooks->cell_overlay_update(hooks->context,
+                                                 candidate->x, candidate->y);
+        if (!forced && overlay) {
+            if (hooks->cell_flags_set != NULL)
+                hooks->cell_flags_set(hooks->context, candidate->x,
+                                      candidate->y, flags | 0x100u);
+            ++accepted;
+        }
+        else {
+            if (hooks->cell_flags_set != NULL)
+                hooks->cell_flags_set(hooks->context, candidate->x,
+                                      candidate->y, flags & ~0x100u);
+            if (hooks->cell_refresh != NULL)
+                hooks->cell_refresh(hooks->context, candidate->x,
+                                    candidate->y);
+            if ((flags & 0x4000u) != 0u && hooks->cell_sound != NULL)
+                hooks->cell_sound(hooks->context, candidate->x,
+                                  candidate->y);
+        }
+        if (hooks->frame_tick != NULL) hooks->frame_tick(hooks->context);
+    }
+    while (immediate_count-- != 0u) {
+        if (hooks->frame_tick != NULL) hooks->frame_tick(hooks->context);
+    }
+    free(deferred);
+    return accepted;
+}
+
+void dock_definition_cell_get_hook_install(DockDefinitionCellGetHook hook,
+                                          void* context)
+{
+    s_dock_definition_cell_get_hook = hook;
+    s_dock_definition_cell_get_context = context;
+}
+
+// FUNCTION: LEGORR 0x00438f60
+int dock_definition_matches_cell(const int cell_xy[2])
+{
+    int dock_xy[2];
+    if (cell_xy == NULL || s_dock_definition_cell_get_hook == NULL) return 0;
+    if (!s_dock_definition_cell_get_hook(dock_xy,
+                                         s_dock_definition_cell_get_context)) {
+        return 0;
+    }
+    return dock_xy[0] == cell_xy[0] && dock_xy[1] == cell_xy[1];
+}
+static TerrainCellLinkedEntryRemoveHook s_terrain_cell_linked_entry_remove_hook;
+static void* s_terrain_cell_linked_entry_remove_context;
+
+void terrain_neighbor_flag_hooks_install(
+    TerrainNeighborPresenceHook presence,
+    TerrainNeighborRenderUpdateHook render_update, void* context)
+{
+    s_terrain_neighbor_presence_hook = presence;
+    s_terrain_neighbor_render_hook = render_update;
+    s_terrain_neighbor_hook_context = context;
+}
+
+void terrain_neighbor_refresh_hooks_install(
+    TerrainNeighborActionHook build_action,
+    TerrainNeighborActionHook clear_action, void* context)
+{
+    s_terrain_neighbor_build_action = build_action;
+    s_terrain_neighbor_clear_action = clear_action;
+    s_terrain_neighbor_action_context = context;
+}
+
+void terrain_cell_variant_complete_hook_install(
+    TerrainCellVariantCompleteHook hook, void* context)
+{
+    s_terrain_cell_variant_complete_hook = hook;
+    s_terrain_cell_variant_complete_context = context;
+}
+
+void terrain_cell_state_projection_hook_install(
+    TerrainCellStateProjectionHook hook, void* context)
+{
+    s_terrain_cell_state_projection_hook = hook;
+    s_terrain_cell_state_projection_context = context;
+}
+
+void terrain_cell_linked_entry_remove_hook_install(
+    TerrainCellLinkedEntryRemoveHook hook, void* context)
+{
+    s_terrain_cell_linked_entry_remove_hook = hook;
+    s_terrain_cell_linked_entry_remove_context = context;
+}
 
 static void cell_refresh_track_push(int cx, int cy)
 {
@@ -1945,6 +2747,204 @@ static void cell_refresh_seam(LevelState* s, int cx, int cy)
     (void)s; (void)cx; (void)cy;
     /* TODO(corpus): FUN_0042f6f0(manager, x, y, 0) per-cell refresh. The
      * load-path cell_init_pass is only a scoped bulk approximation. */
+}
+
+/* MapCellTrackingFlagsClearAndRefresh (FUN_004302b0): clear the cell's
+ * tracking/variant bits, update the entity activity scene state, run the
+ * coordinate callback over the live pool, and preserve the FLIC fallback
+ * call (a pure return in the reference). */
+// FUNCTION: LEGORR 0x004302B0
+void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
+                                               const int cell_xy[2])
+{
+    uint8_t* rec;
+    uint32_t* flags;
+    if (s == NULL || cell_xy == NULL) {
+        return;
+    }
+    rec = level_voxel(s, cell_xy[0], cell_xy[1]);
+    if (rec == NULL) {
+        return;
+    }
+    flags = (uint32_t*)(rec + 0x08);
+    *flags &= 0xdfffffffu;
+    *flags &= 0xbfffffffu;
+    entity_activity_scene_state_update(entity_pool_callback_context_get());
+    coordinate_callback_dispatch(cell_xy, 0);
+    flic_opcode27_fallback_noop();
+}
+
+/* TerrainCellStateUpdate (FUN_00432c90): consume the low two-bit terrain
+ * state one step at a time; once it reaches zero, latch the 0x200000 work
+ * flag, remove linked pending entries, cancel selection at the cell, and
+ * dispatch the mode-zero coordinate callback. The terrain projection is
+ * routed through a hook because its pose/effect owner is backend-specific. */
+// FUNCTION: LEGORR 0x00432C90
+int terrain_cell_state_update(LevelState* s, const int cell_xy[2])
+{
+    uint8_t* rec;
+    uint32_t* flags;
+    uint32_t value;
+    float position[3];
+    if (s == NULL || cell_xy == NULL) {
+        return 0;
+    }
+    rec = level_voxel(s, cell_xy[0], cell_xy[1]);
+    if (rec == NULL) {
+        return 0;
+    }
+    flags = (uint32_t*)(rec + 0x08);
+    value = *flags;
+    if ((value & 0x200000u) != 0u) {
+        return 1;
+    }
+    value &= 3u;
+    if (value != 0u) {
+        *flags = (*flags & ~3u) | ((value - 1u) & 3u);
+        cell_refresh_seam(s, cell_xy[0], cell_xy[1]);
+        return 0;
+    }
+    *flags |= 0x200000u;
+    if (s_terrain_cell_linked_entry_remove_hook != NULL) {
+        s_terrain_cell_linked_entry_remove_hook(
+            cell_xy, s_terrain_cell_linked_entry_remove_context);
+    }
+    selection_mode5_cancel_at_point((const uint32_t*)cell_xy);
+    coordinate_callback_dispatch_by_mode(cell_xy, 0);
+    if (terrain_cell_world_position_get(cell_xy[0], cell_xy[1], position) != 0) {
+        position[2] = (float)terrain_surface_height_get(
+            s->ptr_terrain, cell_xy[0], cell_xy[1]);
+        if (s_terrain_cell_state_projection_hook != NULL) {
+            s_terrain_cell_state_projection_hook(
+                cell_xy, position, s_terrain_cell_state_projection_context);
+        }
+    }
+    cell_refresh_seam(s, cell_xy[0], cell_xy[1]);
+    return 1;
+}
+
+/* TerrainNeighborFlagSet (FUN_00430470): for an interior, flagged cell,
+ * query the spatial neighbor helper; on a match move the primary flag from
+ * bit 3 to bit 4, refresh the cell, and update its render-side neighbor. */
+// FUNCTION: LEGORR 0x00430470
+void terrain_neighbor_flag_set(LevelState* s, int manager,
+                               uint32_t x, uint32_t y)
+{
+    uint8_t* rec;
+    uint32_t* flags;
+    (void)manager;
+    if (s == NULL || x == 0u || y == 0u || level_width(s) < 2 ||
+        level_height(s) < 2 || x >= (uint32_t)level_width(s) - 2u ||
+        y >= (uint32_t)level_height(s) - 2u) {
+        return;
+    }
+    rec = level_voxel(s, (int)x, (int)y);
+    if (rec == NULL) {
+        return;
+    }
+    flags = (uint32_t*)(rec + 0x08);
+    if ((*flags & 8u) == 0u || s_terrain_neighbor_presence_hook == NULL ||
+        s_terrain_neighbor_presence_hook(x, y, 0,
+                                         s_terrain_neighbor_hook_context) == 0) {
+        return;
+    }
+    *flags &= ~8u;
+    *flags |= 0x10u;
+    cell_refresh_seam(s, (int)x, (int)y);
+    if (s_terrain_neighbor_render_hook != NULL) {
+        s_terrain_neighbor_render_hook(x, y,
+                                       s_terrain_neighbor_hook_context);
+    }
+}
+
+/* TerrainNeighborRefresh (FUN_00430df0): inspect the first eligible
+ * bit-3 neighbor in north/east/south/west order. Current state 8 requests
+ * the build action; state 10 requests the clear action. */
+// FUNCTION: LEGORR 0x00430DF0
+void terrain_neighbor_refresh(LevelState* s, const int cell_xy[2])
+{
+    static const int offsets[4][2] = {
+        {0, -1}, {1, 0}, {0, 1}, {-1, 0}
+    };
+    uint8_t* current;
+    int x, y, i;
+    int neighbor[2];
+    uint8_t* found = NULL;
+    if (s == NULL || cell_xy == NULL) {
+        return;
+    }
+    x = cell_xy[0];
+    y = cell_xy[1];
+    for (i = 0; i < 4; ++i) {
+        neighbor[0] = x + offsets[i][0];
+        neighbor[1] = y + offsets[i][1];
+        found = level_voxel(s, neighbor[0], neighbor[1]);
+        if (found != NULL &&
+            ((*(uint32_t*)(found + 0x08) & 8u) != 0u) &&
+            found[2] != 9 && found[2] != 6) {
+            break;
+        }
+        found = NULL;
+    }
+    if (found == NULL) {
+        return;
+    }
+    current = level_voxel(s, x, y);
+    if (current == NULL) {
+        return;
+    }
+    if (current[2] == 8 && s_terrain_neighbor_build_action != NULL) {
+        s_terrain_neighbor_build_action(neighbor,
+                                        s_terrain_neighbor_action_context);
+    } else if (current[2] == 10 &&
+               s_terrain_neighbor_clear_action != NULL) {
+        s_terrain_neighbor_clear_action(neighbor,
+                                        s_terrain_neighbor_action_context);
+    }
+}
+
+/* TerrainCellVariantFlagPropagate (FUN_00432600): validate the variant
+ * work bit and state, mark the alternate path, clear the consumed bit,
+ * update erosion ownership when the high flag was present, refresh the
+ * center and four axial neighbors, then dispatch the global completion. */
+// FUNCTION: LEGORR 0x00432600
+int terrain_cell_variant_flag_propagate(LevelState* s, const int cell_xy[2])
+{
+    static const int offsets[5][2] = {
+        {0, 0}, {0, -1}, {1, 0}, {0, 1}, {-1, 0}
+    };
+    uint8_t* rec;
+    uint32_t* flags;
+    uint32_t old_flags;
+    int i;
+    if (s == NULL || cell_xy == NULL) {
+        return 0;
+    }
+    rec = level_voxel(s, cell_xy[0], cell_xy[1]);
+    if (rec == NULL) {
+        return 0;
+    }
+    flags = (uint32_t*)(rec + 0x08);
+    old_flags = *flags;
+    if ((old_flags & 0x200000u) == 0u || rec[2] == 6) {
+        return 0;
+    }
+    if ((old_flags & 0x80000000u) == 0u) {
+        *flags |= 0x20000000u;
+    } else {
+        lava_erosion_pending_cell_add(cell_xy, 0);
+        rec[7] = 0;
+    }
+    *flags &= 0xbfffffffu;
+    for (i = 0; i < 5; ++i) {
+        cell_refresh_seam(s, cell_xy[0] + offsets[i][0],
+                          cell_xy[1] + offsets[i][1]);
+    }
+    if (s_terrain_cell_variant_complete_hook != NULL) {
+        s_terrain_cell_variant_complete_hook(
+            s_terrain_cell_variant_complete_context);
+    }
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x00432100
@@ -2075,6 +3075,7 @@ void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
 // FUNCTION: LEGORR 0x004508a0
 int cell_neighbor_direction_code(int x1, int y1, int x2, int y2)
 {
+    int result = -1;
     if (x1 == x2) {
         if (y2 == y1 - 1) {
             return 0;
@@ -2082,29 +3083,37 @@ int cell_neighbor_direction_code(int x1, int y1, int x2, int y2)
         if (y2 == y1 + 1) {
             return 2;
         }
-    } else if (y1 == y2) {
-        if (x2 == x1 + 1) {
-            return 1;
+    }
+    else {
+        const int x1_next = x1 + 1;
+        if (y1 == y2) {
+            if (x1_next == x2) {
+                return 1;
+            }
+            if (x1 - 1 == x2) {
+                return 3;
+            }
         }
-        if (x2 == x1 - 1) {
-            return 3;
-        }
-    } else if (x2 == x1 + 1) {
-        if (y2 == y1 - 1) {
-            return 4;
-        }
-        if (y2 == y1 + 1) {
-            return 5;
-        }
-    } else if (x2 == x1 - 1) {
-        if (y2 == y1 + 1) {
-            return 6;
-        }
-        if (y2 == y1 - 1) {
-            return 7;
+        else {
+            if (x1_next == x2) {
+                if (y1 - 1 == y2) {
+                    return 4;
+                }
+                if (x1_next == x2 && y1 + 1 == y2) {
+                    return 5;
+                }
+            }
+            if (x1 - 1 == x2) {
+                if (y1 + 1 == y2) {
+                    return 6;
+                }
+                if (x1 - 1 == x2 && y1 - 1 == y2) {
+                    result = 7;
+                }
+            }
         }
     }
-    return -1;
+    return result;
 }
 
 /* --- neighbor-refresh / circle / edge-flag cluster (see level.hpp) ------- */
@@ -2158,6 +3167,26 @@ void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
         }
     }
     cell_refresh_seam(s, cx, cy);
+}
+
+static TerrainEdgeMidpointUpdateFn s_terrain_edge_midpoint_update_hook;
+static void* s_terrain_edge_midpoint_update_user;
+
+void terrain_edge_midpoint_update_hook_set(TerrainEdgeMidpointUpdateFn hook,
+                                           void* user)
+{
+    s_terrain_edge_midpoint_update_hook = hook;
+    s_terrain_edge_midpoint_update_user = user;
+}
+
+/* FUNCTION: LEGORR 0x0046e610. The edge mesh/scene resource pass is
+ * delegated to the renderer through its owning level hook. */
+void terrain_edge_flag_midpoint_update(LevelState* level, float delta)
+{
+    if (s_terrain_edge_midpoint_update_hook != NULL) {
+        s_terrain_edge_midpoint_update_hook(level, delta,
+                                            s_terrain_edge_midpoint_update_user);
+    }
 }
 
 // FUNCTION: LEGORR 0x00435010
@@ -2274,10 +3303,21 @@ void terrain_neighbor_work_flag_scan(LevelState* s, unsigned int seed_x,
  * 1000 entries. */
 #define LEVEL_TS_COUNT 1000
 
-static int32_t  s_ts_x[LEVEL_TS_COUNT];
-static int32_t  s_ts_y[LEVEL_TS_COUNT];
-static int32_t  s_ts_active[LEVEL_TS_COUNT];
+typedef struct CellCoordinateTimestamp {
+    int32_t x;
+    int32_t y;
+} CellCoordinateTimestamp;
+
+typedef char cell_coordinate_timestamp_stride_check[
+    sizeof(CellCoordinateTimestamp) == 8u ? 1 : -1];
+
+// GLOBAL: LEGORR 0x004d3a34
+static CellCoordinateTimestamp s_ts_coordinates[LEVEL_TS_COUNT];
+// GLOBAL: LEGORR 0x004d5974
 static int32_t  s_ts_stamps[LEVEL_TS_COUNT];
+// GLOBAL: LEGORR 0x004d6914
+static uint32_t s_ts_active[LEVEL_TS_COUNT];
+// GLOBAL: LEGORR 0x004d78c0
 static int32_t  s_ts_now; /* _DAT_004d78c0: erosion_timing_state_init seeds the float bits (zero until then) */
 
 // FUNCTION: LEGORR 0x0040ee00
@@ -2286,8 +3326,8 @@ void cell_coordinate_timestamp_remember(int x, int y)
     unsigned int i;
     for (i = 0; i < LEVEL_TS_COUNT; ++i) {
         if (s_ts_active[i] == 0) {
-            s_ts_x[i] = x;
-            s_ts_y[i] = y;
+            s_ts_coordinates[i].x = x;
+            s_ts_coordinates[i].y = y;
             s_ts_stamps[i] = s_ts_now;
             s_ts_active[i] = 1;
             return;
@@ -2301,7 +3341,8 @@ uint32_t cell_coordinate_timestamp_exists(int x, int y)
 {
     int i;
     for (i = 0; i < LEVEL_TS_COUNT; ++i) {
-        if (s_ts_active[i] != 0 && s_ts_x[i] == x && s_ts_y[i] == y) {
+        if (s_ts_active[i] != 0 && s_ts_coordinates[i].x == x
+            && s_ts_coordinates[i].y == y) {
             return 1u;
         }
     }
@@ -2516,17 +3557,13 @@ void terrain_cell_record_get(int x, int y, int field,
     }
 }
 
-/* The cell-entry readiness bits are the zero-init DAT_004b8c4c table.
- * This source model has no writer for nonempty resource-entry lists, so
- * the current record accessor supplies count zero; that path succeeds just
- * like the corpus loop's empty-list case. Nonempty lists reject until the
- * cell resource records are modeled. */
+/* The cell-entry readiness bits occupy bytes at DAT_004b8c4c, inside the
+ * mapped grid-record region. This source model has no writer for nonempty
+ * resource-entry lists, so the current record accessor supplies count zero;
+ * nonempty lists reject until the cell resource records are modeled. */
 #define CELL_ENTRY_SLOT_TYPES 16
 #define CELL_ENTRY_SLOT_ROWS 15
 #define CELL_ENTRY_SLOT_COUNT 49
-static uint8_t s_cell_entry_ready_flags[CELL_ENTRY_SLOT_TYPES
-                                         * CELL_ENTRY_SLOT_ROWS
-                                         * CELL_ENTRY_SLOT_COUNT];
 
 // FUNCTION: LEGORR 0x0040AEA0
 int ensure_cell_entries_loaded(uint32_t kind, int row, int slot)
@@ -2542,7 +3579,7 @@ int ensure_cell_entries_loaded(uint32_t kind, int row, int slot)
     const size_t index = ((size_t)kind * CELL_ENTRY_SLOT_ROWS
                           + (size_t)row) * CELL_ENTRY_SLOT_COUNT
                          + (size_t)slot;
-    uint8_t* const ready = &s_cell_entry_ready_flags[index];
+    uint8_t* const ready = (uint8_t*)s_grid_rec + 0x84u + index;
     if ((*ready & 2u) != 0u) {
         return 1;
     }
@@ -2597,6 +3634,7 @@ uint32_t cell_flag100_is_set(int x, int y, int field)
 /* The present table lands NULL: its heap owner (the grid-initialize
  * leaf, address deliberately unquoted) is unported. */
 static uint32_t* s_grid_present_table;
+// GLOBAL: LEGORR 0x004c7dfc
 static const uint32_t* s_grid_record_manager;
 
 // FUNCTION: LEGORR 0x0040e460
@@ -2659,9 +3697,11 @@ int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
 /* --- surface-type config leaves (see level.hpp) ----------------------------
  * Both DAT tables belong to the unported surface-type descriptions loader,
  * so they land zero-initialized / NULL as module statics. */
-#define SURFACE_TYPE_SLOTS 64
+#define SURFACE_TYPE_SLOTS 18
 
+// GLOBAL: LEGORR 0x005562d8
 static const char* s_surface_type_names[SURFACE_TYPE_SLOTS];
+// GLOBAL: LEGORR 0x00556320
 static uint32_t s_surface_type_values[SURFACE_TYPE_SLOTS];
 
 // FUNCTION: LEGORR 0x00435170
@@ -2720,15 +3760,15 @@ uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
 }
 
 /* --- grid-record count tables (see level.hpp) ------------------------------
- * The corpus's two adjacent tables (DAT pairs 0x4dee44/0x4e3944) as two
- * zero-initialized module statics: no ported code feeds them. Table 0 is
- * the first table (the read leaf's source / the difference's subtrahend),
- * table 1 the second (the difference's minimend). */
+ * The corpus's two adjacent tables (DAT pairs 0x4e3944/0x4dee44) as two
+ * zero-initialized module statics: no ported code feeds them. The first
+ * table is at 0x4e3944; the second, read as the difference's minuend, is at
+ * 0x4dee44. */
 #define GRID_COUNT_TABLE_DWORDS 0x12c0 /* 300 cells * 16 slots */
 
-// GLOBAL: LEGORR 0x004dee44
-static uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
 // GLOBAL: LEGORR 0x004e3944
+static uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
+// GLOBAL: LEGORR 0x004dee44
 static uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
 
 static int64_t grid_count_index(int row, int column, int slot)
@@ -2746,7 +3786,10 @@ void grid_record_count_tables_clear(void)
 {
     for (size_t k = 0; k < GRID_COUNT_TABLE_DWORDS; ++k) {
         s_grid_count_first[k] = 0u;
-        s_grid_count_second[k] = 0u;
+    }
+    for (size_t second_index = 0; second_index < GRID_COUNT_TABLE_DWORDS;
+         ++second_index) {
+        s_grid_count_second[second_index] = 0u;
     }
 }
 
@@ -2875,22 +3918,59 @@ void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
     terrain_cell_surface_type_reset(lvl->ptr_terrain, x, y);
 }
 
-// STUB: LEGORR 0x00402b30
-void coordinate_callback_dispatch(const void* coord_pair, int value)
+static CoordinateEntityDispatchHook s_coordinate_direct_callback;
+static CoordinateEntityDispatchHook s_coordinate_mode_zero_callback;
+static CoordinateEntityDispatchHook s_coordinate_mode_nonzero_callback;
+static void* s_coordinate_dispatch_context;
+
+void coordinate_entity_dispatch_hooks_install(
+    CoordinateEntityDispatchHook direct_callback,
+    CoordinateEntityDispatchHook mode_zero_callback,
+    CoordinateEntityDispatchHook mode_nonzero_callback, void* context)
 {
-    (void)coord_pair;
-    (void)value;
-    /* Seam: pair the coordinate word with zero and traverse the entity
-     * pool with the fixed callback — the callback machinery is the
-     * unported entity seam above. */
+    s_coordinate_direct_callback = direct_callback;
+    s_coordinate_mode_zero_callback = mode_zero_callback;
+    s_coordinate_mode_nonzero_callback = mode_nonzero_callback;
+    s_coordinate_dispatch_context = context;
 }
 
-// STUB: LEGORR 0x00402b60
+struct CoordinateEntityDispatchPayload {
+    const void* coordinate_pair;
+    int extra;
+    CoordinateEntityDispatchHook callback;
+};
+
+static int coordinate_entity_dispatch_adapter(EntitySlot* entity,
+                                              void* payload)
+{
+    CoordinateEntityDispatchPayload* const data =
+        (CoordinateEntityDispatchPayload*)payload;
+    if (data == NULL || data->callback == NULL) {
+        return 0;
+    }
+    return data->callback(entity, data->coordinate_pair, data->extra,
+                          s_coordinate_dispatch_context);
+}
+
+// FUNCTION: LEGORR 0x00402b30
+void coordinate_callback_dispatch(const void* coord_pair, int value)
+{
+    CoordinateEntityDispatchPayload payload;
+    payload.coordinate_pair = coord_pair;
+    payload.extra = value;
+    payload.callback = s_coordinate_direct_callback;
+    entity_pool_callback_search(coordinate_entity_dispatch_adapter, &payload);
+}
+
+// FUNCTION: LEGORR 0x00402b60
 void coordinate_callback_dispatch_by_mode(const void* coord_pair, int mode)
 {
-    (void)coord_pair;
-    (void)mode;
-    /* Seam: same pair context, callback chosen by the mode word. */
+    CoordinateEntityDispatchPayload payload;
+    payload.coordinate_pair = coord_pair;
+    payload.extra = 0;
+    payload.callback = mode != 0 ? s_coordinate_mode_nonzero_callback
+                                 : s_coordinate_mode_zero_callback;
+    entity_pool_callback_search(coordinate_entity_dispatch_adapter, &payload);
 }
 
 /* --- the global-object field band (see level.hpp) ---------------------------
@@ -3281,6 +4361,7 @@ int terrain_cell_has_occupied_or_flagged_neighbor(
 /* DAT_004b8a20 role */
 // GLOBAL: LEGORR 0x004b8a20
 static uint32_t s_path_record_count;
+// GLOBAL: LEGORR 0x004b8a24
 static void* s_path_record_last;     /* DAT_004b8a24 role */
 
 // FUNCTION: LEGORR 0x00409350
@@ -3310,8 +4391,63 @@ void* path_record_allocate_and_link(const uint32_t* coord_pair)
     return rec;
 }
 
+/* FUNCTION: LEGORR 0x00409300
+ * The original first checks whether the coordinate pair already has a
+ * path descriptor, then creates and links a 0xd4-byte path record and
+ * sets bit 1 in its final dword. This portable entry point models the
+ * creation branch; callers that need duplicate suppression perform that
+ * check before calling it. */
+void* tutorial_path_descriptor_create(const uint32_t* coord_pair)
+{
+    char* record;
+    if (coord_pair == NULL) return NULL;
+    record = (char*)path_record_allocate_and_link(coord_pair);
+    if (record == NULL) return NULL;
+    *(uint32_t*)(record + 0xd0) |= 2u;
+    return record;
+}
+
 uint32_t path_record_count_peek(void) { return s_path_record_count; }
 void* path_record_last_peek(void) { return s_path_record_last; }
+
+/* PathRecordRelease (FUN_004099f0): unlink the selected record from the
+ * path-record chain, then release its optional owned payload and record. */
+// FUNCTION: LEGORR 0x004099f0
+static void path_record_remove_and_free(void* record)
+{
+    void* previous = NULL;
+    void* current = s_path_record_last;
+
+    while (current != NULL && current != record) {
+        previous = current;
+        current = *(void**)((char*)current + 0x24);
+    }
+    if (current == record && current != NULL) {
+        void* next = *(void**)((char*)current + 0x24);
+        if (previous == NULL) {
+            s_path_record_last = next;
+        }
+        else {
+            *(void**)((char*)previous + 0x24) = next;
+        }
+    }
+
+    engine_heap_free(*(void**)((char*)record + 0x14));
+    engine_heap_free(record);
+}
+
+/* ReleaseAllGroupRecords (FUN_004099d0) saves each successor before the
+ * unlinking/freeing leaf, so the full list can be released head-first. */
+// FUNCTION: LEGORR 0x004099d0
+void path_record_release_all(void)
+{
+    void* current = s_path_record_last;
+    while (current != NULL) {
+        void* next = *(void**)((char*)current + 0x24);
+        path_record_remove_and_free(current);
+        current = next;
+    }
+}
 
 /* TutorialPathCoordinateIndex (FUN_00456b80) — see level.hpp. The corpus
  * sweeps x-outer/y-inner over the grid dims and head-pushes each cell's
@@ -3398,7 +4534,7 @@ void terrain_cell_queued_work_transition(const struct GameContext* ctx,
     *word = *word | 0x20u;
 
     terrain_cell_refresh_dispatch(ctx, x, y);   /* 0x42f6f0 pair */
-    terrain_activity_build_record_stub((LevelState*)lvl, x, y, 0);
+    terrain_activity_build_record_update((LevelState*)lvl, x, y, 0);
     const int pair[2] = { x, y };
     coordinate_callback_dispatch(pair, 0);      /* 0x402b30 seam */
     message_dispatch(0x1c, 0, 0, pair);         /* 0x419b80 */
@@ -3466,13 +4602,30 @@ uint32_t rng_thunk_draw15(void)
  * consumers are the hook-stubbed tickers FUN_0040e7f0 / FUN_0040e990).
  * _DAT_004d78c0 rides the existing timestamp tick model (s_ts_now). */
 #define EROSION_MARK_COUNT 2000   /* DAT_004cfbb4 */
-#define EROSION_TICKET_COUNT 1000 /* DAT_004d6914 */
+#define EROSION_TICKET_COUNT LEVEL_TS_COUNT /* DAT_004d6914 */
 
-static float s_erosion_decay_scale;    /* _DAT_004d78b8 */
-static float s_erosion_delay_scale;    /* _DAT_004d78bc */
-static uint32_t s_erosion_clear_word;  /* DAT_004cbd30 */
+// GLOBAL: LEGORR 0x004d78b8
+static float s_erosion_decay_scale;
+// GLOBAL: LEGORR 0x004d78bc
+static float s_erosion_delay_scale;
+// GLOBAL: LEGORR 0x004cbd30
+static uint32_t s_erosion_clear_word;
+// GLOBAL: LEGORR 0x004cfbb4
 static uint32_t s_erosion_marks[EROSION_MARK_COUNT];
-static uint32_t s_erosion_tickets[EROSION_TICKET_COUNT];
+static LevelState* s_lava_erosion_level_context;
+struct LavaErosionPendingCell {
+    int x;
+    int y;
+};
+static LavaErosionPendingCell s_lava_erosion_pending_cells[EROSION_MARK_COUNT];
+static unsigned int s_lava_erosion_pending_count;
+static unsigned int s_lava_erosion_mutation_threshold = 0xffffffffu;
+static LavaErosionEdgeApplyHook s_lava_erosion_edge_apply;
+static LavaErosionCellActionHook s_lava_erosion_work_clear;
+static LavaErosionCellActionHook s_lava_erosion_cell_change;
+static LavaErosionSoundHook s_lava_erosion_sound;
+static LavaErosionEventHook s_lava_erosion_event;
+static void* s_lava_erosion_hook_context;
 
 // FUNCTION: LEGORR 0x0040e930
 void erosion_timing_state_init(float value_a, float value_b, float value_c)
@@ -3485,7 +4638,7 @@ void erosion_timing_state_init(float value_a, float value_b, float value_c)
      * timestamp model reads the tick as a count, so the float bits ride. */
     s_erosion_clear_word = 0u;
     memset(s_erosion_marks, 0, sizeof s_erosion_marks);
-    memset(s_erosion_tickets, 0, sizeof s_erosion_tickets);
+    memset(s_ts_active, 0, sizeof s_ts_active);
 }
 
 float erosion_decay_scale_peek(void) { return s_erosion_decay_scale; }
@@ -3499,7 +4652,7 @@ int erosion_scratch_peek(int which, int index)
                    ? (int)s_erosion_marks[index] : -1;
     }
     return (index >= 0 && index < EROSION_TICKET_COUNT)
-               ? (int)s_erosion_tickets[index] : -1;
+               ? (int)s_ts_active[index] : -1;
 }
 
 // FUNCTION: LEGORR 0x0040e9c0
@@ -3548,6 +4701,210 @@ int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
     return 0;
 }
 
+void lava_erosion_level_context_set(LevelState* s)
+{
+    if (s_lava_erosion_level_context != s) {
+        s_lava_erosion_pending_count = 0;
+    }
+    s_lava_erosion_level_context = s;
+}
+
+/* LavaErosionNeighborEligible (FUN_0040f2b0): bit 3 is the base candidate
+ * gate; reserved cells and terrain types 6, 9, and 7 are excluded. The
+ * reference checks an optional surface owner before honoring the edge-wall
+ * flag. The portable level record does not expose that owner yet, so a raised
+ * edge-wall flag is conservatively treated as a rejection. */
+// FUNCTION: LEGORR 0x0040f2b0
+int lava_erosion_neighbor_eligible(const LevelState* s, int x, int y)
+{
+    const int type = level_tile_type(s, x, y);
+    if (s == NULL || level_cell_flag_8_bounded(s, x, y) == 0u ||
+        level_cell_flag_reserved(s, x, y) != 0u || type == 6 || type == 9 ||
+        type == 7) {
+        return 0;
+    }
+    return level_cell_flag_edge_wall(s, x, y) == 0u;
+}
+
+int lava_erosion_neighbor_eligible_current(const int xy[2])
+{
+    if (xy == NULL) return 0;
+    return lava_erosion_neighbor_eligible(s_lava_erosion_level_context,
+                                          xy[0], xy[1]);
+}
+
+/* LavaErosionPendingCellAdd (FUN_0040ee50): maintain the compact 2,000-cell
+ * candidate list and mirror membership in voxel flag bit 31. Removal uses
+ * swap-with-last like the reference; the optional timing side table remains
+ * owned by the erosion ticker. */
+// FUNCTION: LEGORR 0x0040ee50
+void lava_erosion_pending_cell_add(const int xy[2], int add)
+{
+    uint8_t* const cell = xy != NULL
+        ? level_voxel(s_lava_erosion_level_context, xy[0], xy[1]) : NULL;
+    unsigned int i;
+    uint32_t flags;
+    if (cell == NULL) return;
+    __builtin_memcpy(&flags, cell + 8, sizeof flags);
+    if (add == 0) {
+        for (i = 0; i < s_lava_erosion_pending_count; ++i) {
+            if (s_lava_erosion_pending_cells[i].x == xy[0] &&
+                s_lava_erosion_pending_cells[i].y == xy[1]) {
+                --s_lava_erosion_pending_count;
+                s_lava_erosion_pending_cells[i] =
+                    s_lava_erosion_pending_cells[s_lava_erosion_pending_count];
+                break;
+            }
+        }
+        flags &= 0x7fffffffu;
+    }
+    else if ((flags & 0x80000000u) == 0u &&
+             s_lava_erosion_pending_count < EROSION_MARK_COUNT) {
+        LavaErosionPendingCell* const pending =
+            &s_lava_erosion_pending_cells[s_lava_erosion_pending_count++];
+        pending->x = xy[0];
+        pending->y = xy[1];
+        flags |= 0x80000000u;
+    }
+    __builtin_memcpy(cell + 8, &flags, sizeof flags);
+}
+
+void lava_erosion_hooks_set(LavaErosionEdgeApplyHook edge_apply,
+                            LavaErosionCellActionHook work_clear,
+                            LavaErosionCellActionHook cell_change,
+                            LavaErosionSoundHook sound,
+                            LavaErosionEventHook event,
+                            void* context)
+{
+    s_lava_erosion_edge_apply = edge_apply;
+    s_lava_erosion_work_clear = work_clear;
+    s_lava_erosion_cell_change = cell_change;
+    s_lava_erosion_sound = sound;
+    s_lava_erosion_event = event;
+    s_lava_erosion_hook_context = context;
+}
+
+void lava_erosion_mutation_threshold_set(unsigned int threshold)
+{
+    s_lava_erosion_mutation_threshold = threshold;
+}
+
+/* LavaErosionNeighborMutate (FUN_0040f330). The scene edge calculation is
+ * supplied by the terrain/render owner; cell flags, repeat count, dirty
+ * notification, and recursive propagation stay local to the level model. */
+int lava_erosion_neighbor_mutate(const int xy[2], unsigned int direction,
+                                 int propagate)
+{
+    static const int edge_for_type[15] = {
+        -1, 0, 2, 3, 4, 4, 5, 6, 6, 1, 2, 4, 7, 2, 0
+    };
+    uint8_t* cell;
+    uint32_t flags;
+    int type;
+    int edge;
+    int changed = 0;
+    if (xy == NULL || s_lava_erosion_level_context == NULL) return 0;
+    cell = level_voxel(s_lava_erosion_level_context, xy[0], xy[1]);
+    if (cell == NULL) return 0;
+    type = (int)(direction & 0xfu);
+    edge = type < 15 ? edge_for_type[type] : -1;
+    if (edge < 0) return 0;
+    if (s_lava_erosion_work_clear != NULL) {
+        s_lava_erosion_work_clear(xy[0], xy[1], 0x2f,
+                                  s_lava_erosion_hook_context);
+    }
+    if (s_lava_erosion_edge_apply != NULL) {
+        changed = s_lava_erosion_edge_apply(xy[0], xy[1], direction, edge,
+                                             s_lava_erosion_hook_context);
+    }
+    if (changed != 0) {
+        __builtin_memcpy(&flags, cell + 8, sizeof flags);
+        flags |= 0x800u | 0x1000u;
+        __builtin_memcpy(cell + 8, &flags, sizeof flags);
+        if (s_lava_erosion_cell_change != NULL) {
+            s_lava_erosion_cell_change(xy[0], xy[1], 1,
+                                       s_lava_erosion_hook_context);
+        }
+        if (s_lava_erosion_sound != NULL) {
+            s_lava_erosion_sound(xy[0], xy[1], s_lava_erosion_hook_context);
+        }
+    }
+    if (propagate != 0) {
+        uint32_t count;
+        __builtin_memcpy(&count, cell + 0x24, sizeof count);
+        ++count;
+        __builtin_memcpy(cell + 0x24, &count, sizeof count);
+        if (count >= s_lava_erosion_mutation_threshold) {
+            lava_erosion_eight_neighbor_propagate(xy, direction);
+            if (s_lava_erosion_event != NULL) {
+                s_lava_erosion_event(xy[0], xy[1],
+                                     s_lava_erosion_hook_context);
+            }
+        }
+    }
+    if (s_lava_erosion_cell_change != NULL) {
+        s_lava_erosion_cell_change(xy[0], xy[1], 0,
+                                   s_lava_erosion_hook_context);
+    }
+    return changed;
+}
+
+/* FUN_0040f190: gate an erosion candidate, form a four-direction mask from
+ * its walkable neighbors, and mutate only when at least one neighbor carries
+ * the material marker while none carries the protected state/flag. */
+int lava_erosion_cell_eligible_and_mutate(const int xy[2], int hint)
+{
+    static const int dx[4] = { 0, 1, 0, -1 };
+    static const int dy[4] = { -1, 0, 1, 0 };
+    unsigned int mask = 0;
+    int valid = 1;
+    int marked = 0;
+    int i;
+    if (xy == NULL || lava_erosion_neighbor_eligible_current(xy) == 0) {
+        return 0;
+    }
+    for (i = 0; i < 4; ++i) {
+        const int nx = xy[0] + dx[i];
+        const int ny = xy[1] + dy[i];
+        if (level_cell_walkable_flag(s_lava_erosion_level_context, nx, ny)) {
+            if (level_cell_state_is_1(s_lava_erosion_level_context, nx, ny) ||
+                level_cell_flag_20_bounded(s_lava_erosion_level_context,
+                                           nx, ny) != 0u) {
+                valid = 0;
+            }
+            mask |= 1u << i;
+            if (level_cell_mask_c0(s_lava_erosion_level_context, nx, ny) != 0u) {
+                marked++;
+            }
+        }
+    }
+    if (valid && mask != 0u && marked != 0) {
+        lava_erosion_neighbor_mutate(xy, mask, hint);
+        return 1;
+    }
+    return 0;
+}
+
+void lava_erosion_eight_neighbor_propagate(const int xy[2],
+                                           unsigned int direction)
+{
+    static const int dx[8] = { 0, 1, 1, 1, 0, -1, -1, -1 };
+    static const int dy[8] = { 1, 1, 0, -1, -1, -1, 0, 1 };
+    int i;
+    if (xy == NULL || s_lava_erosion_level_context == NULL) return;
+    for (i = 0; i < 8; ++i) {
+        int neighbor[2];
+        neighbor[0] = xy[0] + dx[i];
+        neighbor[1] = xy[1] + dy[i];
+        if (level_voxel(s_lava_erosion_level_context,
+                        neighbor[0], neighbor[1]) != NULL &&
+            lava_erosion_cell_eligible_and_mutate(neighbor, 0) == 0 &&
+            lava_erosion_neighbor_eligible_current(neighbor) != 0) {
+            lava_erosion_neighbor_mutate(neighbor, direction, 0);
+        }
+    }
+}
+
 /* --- the cell route + neighbour pick band (2026-10-25) -----------------------
  * TerrainCellRouteAndOccupancyCheck (FUN_00431da0) answers whether an
  * entity may move from cell (from_x, from_y) to (to_x, to_y). The corpus
@@ -3571,6 +4928,7 @@ int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
  * Both rows guard NULL entity/level where the corpus strides blindly. */
 static const int s_cardinal_deltas[4][2] = {{0, -1}, {1, 0}, {0, 1},
                                             {-1, 0}};
+// GLOBAL: LEGORR 0x004de588
 static uint32_t s_neighbor_pick_rotation; /* DAT_004de588 role */
 
 uint32_t neighbor_pick_rotation_peek(void) { return s_neighbor_pick_rotation; }
@@ -3732,4 +5090,67 @@ int first_free_neighbor_cell_pick(const struct EntitySlot* entity,
         }
     }
     return 0;
+}
+
+/* The six-dword render snapshot is a separate zero-filled global block in
+ * the corpus (DAT_004ea7ac). Its individual values are unresolved; keep the
+ * storage opaque and expose only the exact copy/clear operations. */
+// GLOBAL: LEGORR 0x004ea7ac
+static uint32_t s_render_config_snapshot[6];
+
+// FUNCTION: LEGORR 0x004370b0
+void render_config_six_field_copy_out(uint32_t out[6])
+{
+    if (out == NULL) {
+        return; /* deviation: the corpus copies through the pointer blindly */
+    }
+    const uint32_t* source = s_render_config_snapshot;
+    int remaining = 6;
+    do {
+        *out++ = *source++;
+        --remaining;
+    } while (remaining != 0);
+}
+
+// FUNCTION: LEGORR 0x004370d0
+void render_config_six_field_copy_in_or_clear(const uint32_t in[6])
+{
+    if (in != NULL) {
+        uint32_t* destination = s_render_config_snapshot;
+        int remaining = 6;
+        do {
+            *destination++ = *in++;
+            --remaining;
+        } while (remaining != 0);
+        return;
+    }
+    uint32_t* destination = s_render_config_snapshot;
+    int remaining = 6;
+    do {
+        *destination++ = 0;
+        --remaining;
+    } while (remaining != 0);
+}
+
+// FUNCTION: LEGORR 0x00437100
+int grid_record_count_difference_sum(int type, int skip_flagged_rows)
+{
+    int total = 0;
+    unsigned row;
+    unsigned slot;
+
+    row = 0;
+    do {
+        slot = 0;
+        do {
+            if (skip_flagged_rows == 0
+                || (stats_table_word_at_144(type, (int)row) & 8u) == 0u) {
+                total += grid_record_count_difference_get(type, (int)row,
+                                                           (int)slot, 1);
+            }
+            ++slot;
+        } while (slot < 16);
+        ++row;
+    } while (row < 15u);
+    return total;
 }

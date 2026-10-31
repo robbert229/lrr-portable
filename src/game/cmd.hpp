@@ -70,10 +70,29 @@ void cmd_create_move(EntitySlot* e, float x, float y, int flag);
 void cmd_create_target(EntitySlot* e, void* target);
 void cmd_create_gated(EntitySlot* e, void* target);
 void cmd_create_task(EntitySlot* e);   /* kind derived from the entity type */
+void* cmd_entity_task_record_create_and_append(EntitySlot* e, void* payload,
+                                               int parameter);
+typedef struct CommandKindRecordHooks {
+    void* context;
+    float (*random_range)(float minimum, float maximum, void* context);
+    void (*terrain_cell_update)(const int cell_xy[2], int a, int b, int c,
+                                void* context);
+} CommandKindRecordHooks;
+void cmd_kind_record_hooks_set(const CommandKindRecordHooks* hooks);
+void cmd_command_kind_record_issue(uint32_t a, uint32_t b, uint32_t c,
+                                   const int cell_xy[2], uint32_t zone,
+                                   const float* random_pair, int set_flag);
 
 /* --- chain ops ---------------------------------------------------------- */
 /* CmdChainWalk: return the tail record of the entity's chain (or NULL). */
 void* cmd_chain_walk(const EntitySlot* e);
+typedef int (*CmdPurgeCellPredicate)(int x, int y, void* context);
+typedef int (*CmdPurgeCompare)(const void* left, const void* right,
+                              void* context);
+void cmd_chain_purge_hooks_install(CmdPurgeCellPredicate cell_usable,
+                                   CmdPurgeCellPredicate neighbor_eligible,
+                                   CmdPurgeCompare compare, void* context);
+void cmd_chain_purge(EntitySlot* e); /* CmdChainPurge */
 
 /* FUN_00403d10 (generic drop): unlink and free every command record of the
  * given type from the entity's chain (the corpus walks the +0xbc record
@@ -103,12 +122,22 @@ void  cmd_chain_purge(EntitySlot* e);
 /* Current global command-list head (DAT_004b3354) — the most recent
  * link_head'd record (tasks land here via CmdLinkHead). */
 void* cmd_global_head(void);
+void* cmd_global_pending_head(void);
+void* cmd_global_next(const void* rec);
 /* Advance along the global list; cmd_rec_next advances an entity chain. */
 void* cmd_global_next(const void* rec);
 
 /* Unlink `rec` from the global command list (a record is also chained on
  * its entity; completion unlinks here before cmd_free). */
 void cmd_global_unlink(const void* rec);
+typedef struct PendingCommandScanHooks {
+    void* context;
+    int (*timer_fire)(void* record, void* context);
+    int (*entity_assign)(void* record, void* context);
+} PendingCommandScanHooks;
+void pending_command_scan_hooks_set(const PendingCommandScanHooks* hooks);
+void pending_command_timer_fire_scan(void); /* 0x405950 */
+void pending_command_entity_assignment_tick(void); /* 0x405c10 */
 
 /* PendingRecordEntityReferenceClear (FUN_004063e0): walks the global
  * command list and zeroes every record whose +0x48 pending-entity
@@ -239,6 +268,13 @@ int selection_command_dispatch(int param);
  * corpus's +0x3e8 mirror. Answers 1 only when it removed. */
 void entity_random_valid_cell_command_create(void* entity);
 int selection_entity_remove(void* entity);
+/* SelectionObjectDetach (FUN_004524b0): cancel matching queued commands,
+ * remove the entity from selection, clear a matching UI context, and post
+ * the HUD reset when it was the first selection entry. */
+void selection_object_detach(void* entity);
+typedef void (*SelectedEntityDetachPoseHook)(EntitySlot* entity);
+void selected_entity_detach_pose_hook_set(SelectedEntityDetachPoseHook hook);
+int selected_entity_detach_callback(EntitySlot* entity); /* FUN_0041f6c0 */
 
 /* --- selection filter / state monitor (2026-10-24) ---------------------------
  * SelectionCandidateFilter (FUN_004526e0, findings 06/10/77/85/468): the
@@ -399,8 +435,35 @@ void cmd_rec_type_set(void* rec, int type);
  * the unported pool-callback machinery, so the port records the seams. */
 void entity_record_array_apply_zero_state(void* rec, int mode);
 void entity_kind_command_issue(EntitySlot* e);
+typedef int (*CoordinatePairEntityCallback)(EntitySlot* entity,
+                                            const void* coordinate_pair,
+                                            int extra, void* context);
+typedef int (*ArgumentEntityCallback)(EntitySlot* entity, void* argument,
+                                      void* context);
+typedef int (*TaskCallbackEntityFn)(EntitySlot* entity, void* payload,
+                                    void* context);
+void cmd_callback_dispatch_hooks_install(
+    CoordinatePairEntityCallback coordinate_callback,
+    ArgumentEntityCallback argument_callback, void* context);
 void coordinate_pair_callback_dispatch(const void* coord_pair);
 void argument_callback_dispatch(void* arg);
+void task_callback_dispatch_hook_install(TaskCallbackEntityFn callback,
+                                         void* context);
+void task_callback_dispatch(void* payload); /* FUN_00403a10 */
+void pending_record_callback_dispatch_hook_install(
+    TaskCallbackEntityFn callback, void* context);
+void pending_record_callback_dispatch(void* payload); /* FUN_00403ef0 */
+typedef struct EntityTaskQueueFlushHooks {
+    void* context;
+    int (*scheduler_blocked)(void* context);
+    void (*remove_activity)(EntitySlot* entity, int mode, void* command,
+                            void* context);
+    void (*queue_relink)(EntitySlot* entity, void* context);
+    void (*state_recompute)(EntitySlot* entity, void* context);
+} EntityTaskQueueFlushHooks;
+void entity_task_queue_flush_hooks_set(
+    const EntityTaskQueueFlushHooks* hooks);
+void entity_task_queue_flush(EntitySlot* entity); /* FUN_004040a0 */
 
 /* Diagnostics: the record's +0x44 buffer entry count and +0x3c word. */
 unsigned cmd_rec_count_get(const void* rec);

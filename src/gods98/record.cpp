@@ -15,6 +15,86 @@
 #include <string.h>
 #include <stdlib.h>
 
+static void* s_large_record_free;
+static void* s_large_record_blocks[32];
+static unsigned int s_large_record_block_count;
+static void* s_small_record_free;
+static void* s_small_record_blocks[32];
+static unsigned int s_small_record_block_count;
+
+static void pool_link_write(void* record, size_t offset, void* next)
+{
+    __builtin_memcpy((char*)record + offset, &next, sizeof(next));
+}
+
+static void* pool_link_read(void* record, size_t offset)
+{
+    void* next = NULL;
+    __builtin_memcpy(&next, (char*)record + offset, sizeof(next));
+    return next;
+}
+
+/* FUNCTION: LEGORR 0x0047a5c0 */
+void fixed_size_large_record_pool_grow(void)
+{
+    if (s_large_record_block_count >= 32u) return;
+    unsigned int count = 1u << (s_large_record_block_count & 31u);
+    const size_t stride = 0xbf0u + sizeof(void*);
+    void* block = engine_heap_alloc((long)(count * stride));
+    if (block == NULL) return;
+    s_large_record_blocks[s_large_record_block_count++] = block;
+    for (unsigned int i = 0; i < count; ++i) {
+        void* record = (char*)block + (size_t)i * stride;
+        void* next = i + 1u < count
+            ? (char*)record + stride : s_large_record_free;
+        pool_link_write(record, 0xbf0u, next);
+    }
+    s_large_record_free = block;
+}
+
+/* FUNCTION: LEGORR 0x0047a580 */
+void* fixed_size_large_record_acquire(uint32_t first_dword)
+{
+    if (s_large_record_free == NULL) fixed_size_large_record_pool_grow();
+    void* record = s_large_record_free;
+    if (record == NULL) return NULL;
+    s_large_record_free = pool_link_read(record, 0xbf0u);
+    memset(record, 0, 0xbf0u);
+    pool_link_write(record, 0xbf0u, record);
+    __builtin_memcpy(record, &first_dword, sizeof(first_dword));
+    return record;
+}
+
+/* FUNCTION: LEGORR 0x0047e0c0 */
+void fixed_size_small_record_pool_grow(void)
+{
+    if (s_small_record_block_count >= 32u) return;
+    unsigned int count = 1u << (s_small_record_block_count & 31u);
+    const size_t stride = 0x1cu + sizeof(void*);
+    void* block = engine_heap_alloc((long)(count * stride));
+    if (block == NULL) return;
+    s_small_record_blocks[s_small_record_block_count++] = block;
+    scene_object_registry_pool_block_register(block);
+    for (unsigned int i = 0; i < count; ++i) {
+        void* record = (char*)block + (size_t)i * stride;
+        void* next = i + 1u < count
+            ? (char*)record + stride : s_small_record_free;
+        pool_link_write(record, 0x1cu, next);
+    }
+    s_small_record_free = block;
+}
+
+void fixed_size_small_record_pool_teardown(void)
+{
+    unsigned int i;
+    for (i = 0u; i < s_small_record_block_count; ++i) {
+        engine_heap_free(s_small_record_blocks[i]);
+        s_small_record_blocks[i] = NULL;
+    }
+    s_small_record_block_count = 0u;
+    s_small_record_free = NULL;
+}
+
 /* Byte-safe field reads: corpus dword/float slots at offsets that may
  * not be pointer-aligned on 64-bit hosts. */
 static uint32_t rec_dword(const void* base, size_t off)
@@ -60,6 +140,81 @@ static uint32_t cells_dword(const void* cells, size_t off)
     return v;
 }
 
+/* Render-resource instance records are 0x34 bytes in the 32-bit corpus.
+ * Their free-list link occupies +0x30, so this port widens the stride to
+ * 0x38 and stores a native pointer in that slot on 64-bit hosts. The
+ * allocation/table/head lifecycle follows the corpus in findings 371/373/387. */
+#define RENDER_RESOURCE_INSTANCE_POOL_SLOTS 32
+#define RENDER_RESOURCE_INSTANCE_RECORD_SIZE 0x38
+#define RENDER_RESOURCE_INSTANCE_LINK_OFFSET 0x30
+static uint32_t s_render_resource_instance_pool_count;
+static void* s_render_resource_instance_pool_blocks[
+    RENDER_RESOURCE_INSTANCE_POOL_SLOTS];
+static void* s_render_resource_instance_pool_head;
+
+// FUNCTION: LEGORR 0x004807a0
+void* render_resource_instance_record_acquire(void)
+{
+    if (s_render_resource_instance_pool_head == NULL) {
+        render_resource_instance_pool_grow();
+    }
+    char* record = (char*)s_render_resource_instance_pool_head;
+    if (record == NULL) {
+        return NULL; /* deviation: the corpus dereferences a null head */
+    }
+    void* next = NULL;
+    __builtin_memcpy(&next,
+                     record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
+                     sizeof(next));
+    s_render_resource_instance_pool_head = next;
+    memset(record, 0, 0x34);
+    __builtin_memcpy(record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
+                     &record, sizeof(record));
+    return record;
+}
+
+// FUNCTION: LEGORR 0x004807d0
+void render_resource_instance_record_release(void* record)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus writes through the supplied pointer */
+    }
+    __builtin_memcpy((char*)record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
+                     &s_render_resource_instance_pool_head,
+                     sizeof(s_render_resource_instance_pool_head));
+    s_render_resource_instance_pool_head = record;
+}
+
+// FUNCTION: LEGORR 0x004807f0
+void render_resource_instance_pool_grow(void)
+{
+    const uint32_t count = 1u <<
+        ((uint32_t)(unsigned char)s_render_resource_instance_pool_count & 0x1fu);
+    void* base = engine_heap_alloc((long)count *
+                                   RENDER_RESOURCE_INSTANCE_RECORD_SIZE);
+    if (base == NULL) {
+        return; /* deviation: the corpus links the allocator result blindly */
+    }
+    if (s_render_resource_instance_pool_count <
+        RENDER_RESOURCE_INSTANCE_POOL_SLOTS) {
+        s_render_resource_instance_pool_blocks[
+            s_render_resource_instance_pool_count] = base;
+    }
+    s_render_resource_instance_pool_count++;
+
+    char* record = (char*)base;
+    for (uint32_t i = 1; i < count; ++i) {
+        void* next = record + RENDER_RESOURCE_INSTANCE_RECORD_SIZE;
+        __builtin_memcpy(record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
+                         &next, sizeof(next));
+        record += RENDER_RESOURCE_INSTANCE_RECORD_SIZE;
+    }
+    __builtin_memcpy(record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
+                     &s_render_resource_instance_pool_head,
+                     sizeof(s_render_resource_instance_pool_head));
+    s_render_resource_instance_pool_head = base;
+}
+
 /* RecordField14Get (FUN_00435f0b). */
 // FUNCTION: LEGORR 0x00435f0b
 uint32_t record_field14_get(const void* record)
@@ -71,14 +226,17 @@ uint32_t record_field14_get(const void* record)
 // FUNCTION: LEGORR 0x004850e0
 uint32_t object_field10_get(const void* object)
 {
-    return rec_dword(object, 0x10);
+    uint32_t value;
+    __builtin_memcpy(&value, (const char*)object + 0x10, sizeof(value));
+    return value;
 }
 
 /* RecordFieldD8EqualsOne (FUN_0046c3d0): int == 1, not "nonzero". */
 // FUNCTION: LEGORR 0x0046c3d0
 int record_field_d8_equals_one(const void* record)
 {
-    const int32_t v = (int32_t)rec_dword(record, 0xd8);
+    int32_t v;
+    __builtin_memcpy(&v, (const char*)record + 0xd8, sizeof(v));
     return v == 1;
 }
 
@@ -88,7 +246,10 @@ int record_field_d8_equals_one(const void* record)
 uint32_t read_indexed_pair_slot_dword(const void* base, uint32_t i,
                                       uint32_t j)
 {
-    return rec_dword(base, (size_t)i * 8u + (size_t)j * 4u);
+    uint32_t value;
+    const size_t offset = (size_t)i * 8u + (size_t)j * 4u;
+    __builtin_memcpy(&value, (const char*)base + offset, sizeof(value));
+    return value;
 }
 
 /* VelocitySlotPrimaryObjectGet / SecondaryObjectGet (FUN_00471a40 /
@@ -97,31 +258,30 @@ uint32_t read_indexed_pair_slot_dword(const void* base, uint32_t i,
 uint32_t velocity_slot_primary_object_get(const void* record,
                                           uint32_t index)
 {
-    return rec_dword(record, 0x18u + (size_t)index * 4u);
+    uint32_t value;
+    __builtin_memcpy(&value, (const char*)record + 0x18u +
+                     (size_t)index * 4u, sizeof(value));
+    return value;
 }
 
 // FUNCTION: LEGORR 0x00471a50
 uint32_t velocity_slot_secondary_object_get(const void* record,
                                             uint32_t index)
 {
-    return rec_dword(record, 0x24u + (size_t)index * 4u);
+    uint32_t value;
+    __builtin_memcpy(&value, (const char*)record + 0x24u +
+                     (size_t)index * 4u, sizeof(value));
+    return value;
 }
 
-/* VelocitySlotVectorRead (FUN_00471c70) — see record.hpp. The corpus
- * copies the three dwords bit-for-bit; the port reads them as floats
- * through the NULL-guarded reader, so the words ride unchanged. */
+/* VelocitySlotVectorRead (FUN_00471c70): copy the three slot dwords
+ * directly, preserving their bit patterns. */
 // FUNCTION: LEGORR 0x00471c70
 void velocity_slot_vector_read(const void* record, float out[3],
                                uint32_t index)
 {
-    if (out == NULL) {
-        return; /* deviation: the corpus strides the caller's buffer */
-    }
     const size_t off = 0x44u + (size_t)index * 12u;
-    for (int i = 0; i != 3; ++i) {
-        const float v = rec_float(record, off + (size_t)i * 4u);
-        __builtin_memcpy(&out[i], &v, sizeof v);
-    }
+    __builtin_memcpy(out, (const char*)record + off, 3u * sizeof(uint32_t));
 }
 
 /* EntityVelocityStateRecordGet (FUN_004712c0): the corpus loads the type,
@@ -184,10 +344,18 @@ void entity_flag_80_set(void* record, int set)
     if (record == NULL) {
         return; /* deviation: the corpus strides the record blindly */
     }
-    uint32_t word = 0;
-    __builtin_memcpy(&word, (char*)record + 0x14, sizeof word);
-    word = (set != 0) ? (word | 0x80u) : (word & ~0x80u);
-    __builtin_memcpy((char*)record + 0x14, &word, sizeof word);
+    if (set != 0) {
+        uint32_t word = 0;
+        __builtin_memcpy(&word, (char*)record + 0x14, sizeof word);
+        word |= 0x80u;
+        __builtin_memcpy((char*)record + 0x14, &word, sizeof word);
+    }
+    else {
+        uint32_t word = 0;
+        __builtin_memcpy(&word, (char*)record + 0x14, sizeof word);
+        word &= ~0x80u;
+        __builtin_memcpy((char*)record + 0x14, &word, sizeof word);
+    }
 }
 
 /* CategoryValueIsNeitherZeroNorFifteen (FUN_0041b470). */
@@ -220,7 +388,9 @@ int interpolated_z_within_bounds(const void* record_a, const void* record_b,
 // FUNCTION: LEGORR 0x00436b79
 float camera_rotation_get(const void* camera)
 {
-    return rec_float(camera, 0x84);
+    float rotation;
+    __builtin_memcpy(&rotation, (const char*)camera + 0x84, sizeof(rotation));
+    return rotation;
 }
 
 /* MapCellToWorldCenter (FUN_0044f640, finding 225): the descriptor's
@@ -256,7 +426,11 @@ int map_cell_to_world_center(const void* map, uint32_t cell_x,
 uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
 {
     const uint32_t mask = 1u << (bit & 0x1fu);
-    const uint32_t flags = rec_dword(task, 0x98);
+    uint32_t flags;
+    if (task == NULL) {
+        return 0u;
+    }
+    __builtin_memcpy(&flags, (const char*)task + 0x98, sizeof(flags));
     if (suppress != 0 && (flags & mask) != 0) {
         return 0;
     }
@@ -342,49 +516,73 @@ uint32_t entity_type_flag_bit1_get(const void* record)
 // FUNCTION: LEGORR 0x0046db60
 uint32_t object_record_field11c_get(const void* record)
 {
-    return rec_dword(record, 0x11c);
+    uint32_t value;
+    __builtin_memcpy(&value, (const char*)record + 0x11c, sizeof(value));
+    return value;
 }
 
 // FUNCTION: LEGORR 0x0047a540
 uint32_t object_field_be4_dword_get(const void* record)
 {
-    return rec_dword(record, 0xbe4);
+    uint32_t value;
+    if (record == NULL) {
+        return 0u;
+    }
+    __builtin_memcpy(&value, (const char*)record + 0xbe4, sizeof(value));
+    return value;
 }
 
 // FUNCTION: LEGORR 0x0046cf80
 uint32_t entity_type_mask_get(const void* record)
 {
-    return rec_dword(record, 300);
+    if (record == NULL) {
+        return 0u; /* pinned deviation: the corpus loads blindly */
+    }
+    return *(const uint32_t*)((const char*)record + 300);
 }
 
 // FUNCTION: LEGORR 0x00482210
 uint32_t pointer_value_get(const void* pointed)
 {
-    return rec_dword(pointed, 0);
+    if (pointed == NULL) {
+        return 0u; /* pinned deviation: the corpus loads blindly */
+    }
+    return *(const uint32_t*)pointed;
 }
 
 // FUNCTION: LEGORR 0x00408850
 uint32_t scene_object_flags_get(const void* scene_object)
 {
-    return rec_dword(scene_object, 0x70);
+    uint32_t flags;
+    __builtin_memcpy(&flags, (const char*)scene_object + 0x70,
+                     sizeof(flags));
+    return flags;
 }
 
 // FUNCTION: LEGORR 0x00473db0
 uint32_t scene_object_owner_get(const void* scene_object)
 {
-    return rec_dword(scene_object, 0x20);
+    uint32_t owner;
+    __builtin_memcpy(&owner, (const char*)scene_object + 0x20,
+                     sizeof(owner));
+    return owner;
 }
 
 // FUNCTION: LEGORR 0x0046d9e0
 uint32_t scene_object_resource_get(const void* scene_object)
 {
-    return rec_dword(scene_object, 0x08);
+    uint32_t resource;
+    __builtin_memcpy(&resource, (const char*)scene_object + 0x08,
+                     sizeof(resource));
+    return resource;
 }
 
 // FUNCTION: LEGORR 0x00473680
 uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
 {
-    return rec_dword(wrapped, 0);
+    uint32_t value;
+    __builtin_memcpy(&value, wrapped, sizeof(value));
+    return value;
 }
 
 /* SceneObjectFlagBit3Get (FUN_00473ba0): one corpus mov on +0x14, so the
@@ -404,13 +602,59 @@ uint32_t scene_object_flag_bit3_get(const void* scene_object)
 // FUNCTION: LEGORR 0x00406980
 int scene_object_mode_is_one(const void* scene_object)
 {
-    return rec_dword(scene_object, 0x28) == 1u ? 1 : 0;
+    int32_t mode;
+    __builtin_memcpy(&mode, (const char*)scene_object + 0x28, sizeof(mode));
+    return mode == 1;
 }
 
 // FUNCTION: LEGORR 0x00406e30
 uint32_t animation_object_handle_get(const void* animation_object)
 {
-    return rec_dword(animation_object, 0x04);
+    uint32_t handle;
+    __builtin_memcpy(&handle, (const char*)animation_object + 0x04,
+                     sizeof(handle));
+    return handle;
+}
+
+/* RendererObjectUpdateFromRecordField64/68/6c (FUN_00406c00,
+ * FUN_00406c30, FUN_00406c60): feed the selected list, renderer library,
+ * update switch, and key to the resource-list adapter. The original passes
+ * `param_2 == 0` as a dword-valued opaque pointer; retain that call shape so
+ * installed native hooks observe the same zero/one value. */
+static void renderer_object_update_from_record(void* record,
+                                               unsigned int list_offset,
+                                               int enabled,
+                                               void* update_value)
+{
+    void* list;
+    void* library;
+    if (record == NULL) {
+        return;
+    }
+    __builtin_memcpy(&list, (const char*)record + list_offset, sizeof(list));
+    __builtin_memcpy(&library, (const char*)record + 0x04, sizeof(library));
+    resource_list_update_matching_key(list, library, update_value, 0u);
+}
+
+// FUNCTION: LEGORR 0x00406c00
+void renderer_object_update_from_record_field64(void* record, int enabled)
+{
+    renderer_object_update_from_record(record, 0x64u, enabled,
+                                       (void*)(uintptr_t)(enabled == 0));
+}
+
+// FUNCTION: LEGORR 0x00406c30
+void renderer_object_update_from_record_field68(void* record, int enabled)
+{
+    renderer_object_update_from_record(record, 0x68u, enabled,
+                                       (void*)(uintptr_t)(enabled == 0));
+}
+
+// FUNCTION: LEGORR 0x00406c60
+void renderer_object_update_from_record_field6c(void* record, int enabled,
+                                                void* update_value)
+{
+    renderer_object_update_from_record(record, 0x6cu, enabled, update_value);
 }
 
 // FUNCTION: LEGORR 0x004877d0
@@ -445,6 +689,33 @@ uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
     }
     const size_t off = (size_t)index * 0x70u + 0x6cu;
     return rec_dword(base + off, 0) & 1u;
+}
+
+// FUNCTION: LEGORR 0x004827a0
+void indexed_record_flag6c_bit0_set(void* record, int index, int set)
+{
+    char* base = (char*)rec_ptr(record, 0x08);
+    if (base == NULL) {
+        return; /* follows the indexed getter's null-table convention */
+    }
+    const size_t off = (size_t)index * 0x70u + 0x6cu;
+    uint32_t flags = rec_dword(base, off);
+    flags = set != 0 ? flags | 1u : flags & ~1u;
+    rec_dword_put(base, off, flags);
+}
+
+// FUNCTION: LEGORR 0x004827d0
+void record_flag2c_bit0_set(void* record, int set)
+{
+    if (record == NULL) {
+        return;
+    }
+    if (set != 0) {
+        rec_dword_put(record, 0x2c, rec_dword(record, 0x2c) | 1u);
+    }
+    else {
+        rec_dword_put(record, 0x2c, rec_dword(record, 0x2c) & ~1u);
+    }
 }
 
 // FUNCTION: LEGORR 0x00483400
@@ -501,7 +772,10 @@ uint32_t avi_player_ready_get(const void* movie)
 // FUNCTION: LEGORR 0x0047fe20
 uint32_t game_file_system_type_get(const void* handle)
 {
-    return rec_dword(handle, 0);
+    if (handle == NULL) {
+        return 0u; /* pinned deviation: the corpus loads blindly */
+    }
+    return *(const uint32_t*)handle;
 }
 
 /* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
@@ -688,6 +962,20 @@ void entity_b8_bit3_set_or_clear(void* record, int set)
 
 /* --- the record-field write band (see record.hpp) --------------------------- */
 // FUNCTION: LEGORR 0x00462ab0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void record_field18_set(void* record, uint32_t value)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        test eax, eax
+        je record_field18_done
+        fld dword ptr [esp + 8]
+        fstp dword ptr [eax + 18h]
+    record_field18_done:
+        ret
+    }
+}
+#else
 void record_field18_set(void* record, uint32_t value)
 {
     if (record == NULL) {
@@ -695,6 +983,7 @@ void record_field18_set(void* record, uint32_t value)
     }
     __builtin_memcpy((char*)record + 0x18, &value, sizeof(value));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00462ac0
 void record_flags_24_or(void* record, uint32_t flags)
@@ -702,10 +991,7 @@ void record_flags_24_or(void* record, uint32_t flags)
     if (record == NULL) {
         return; /* deviation: the corpus reads blindly */
     }
-    uint32_t f = 0u;
-    __builtin_memcpy(&f, (char*)record + 0x24, sizeof(f));
-    f |= flags;
-    __builtin_memcpy((char*)record + 0x24, &f, sizeof(f));
+    *(uint32_t*)((char*)record + 0x24) |= flags;
 }
 
 // FUNCTION: LEGORR 0x0045d8a0
@@ -863,7 +1149,9 @@ void scene_visibility_last_call(void** out_object, int* out_flag)
 /* GraphicsOverlayVisibilitySet (FUN_004634b0) — the overlay words
  * DAT_00552180/DAT_0055218c (handle, cache) have no ported owner; they land
  * here as zero-init statics (deviation: corpus strides them blindly). */
+// GLOBAL: LEGORR 0x00552180
 static uint32_t s_overlay_word;  /* DAT_00552180 role */
+// GLOBAL: LEGORR 0x0055218c
 static uint32_t s_overlay_cache; /* DAT_0055218c role */
 
 // FUNCTION: LEGORR 0x004634b0
@@ -887,6 +1175,56 @@ void graphics_overlay_word_set(uint32_t handle_word)
 }
 
 uint32_t graphics_overlay_word_peek(void) { return s_overlay_word; }
+
+/* The corpus's indexed-surface grid is owned by the overlay resource
+ * loader, which is still unported. This sidecar exposes a small install
+ * seam and preserves the hide-stack order without fabricating that loader. */
+#define INDEXED_SURFACE_ENTRY_LIMIT 256
+static uint32_t s_indexed_surface_width;
+static uint32_t s_indexed_surface_entry_count;
+static const void* const* s_indexed_surface_entries;
+static const void* s_indexed_surface_hidden[INDEXED_SURFACE_ENTRY_LIMIT];
+static uint32_t s_indexed_surface_hidden_count;
+
+void indexed_surface_grid_install(uint32_t width, const void* const* entries,
+                                  uint32_t entry_count)
+{
+    s_indexed_surface_width = width;
+    s_indexed_surface_entries = entries;
+    s_indexed_surface_entry_count = entry_count;
+    s_indexed_surface_hidden_count = 0u;
+}
+
+/* IndexedSurfaceEntryHideAndRecord (FUN_004634f0): compute y*width+x,
+ * hide the selected surface and save its handle for a later restore. */
+// FUNCTION: LEGORR 0x004634f0
+void indexed_surface_entry_hide_and_record(int x, int y)
+{
+    if (s_indexed_surface_width == 0u || s_indexed_surface_entries == NULL
+        || x < 0 || y < 0) {
+        return;
+    }
+    const uint32_t index = (uint32_t)y * s_indexed_surface_width
+        + (uint32_t)x;
+    if (index >= s_indexed_surface_entry_count
+        || s_indexed_surface_hidden_count >= INDEXED_SURFACE_ENTRY_LIMIT) {
+        return;
+    }
+    const void* handle = s_indexed_surface_entries[index];
+    scene_visibility_hook_call((void*)handle, 0);
+    s_indexed_surface_hidden[s_indexed_surface_hidden_count++] = handle;
+}
+
+/* IndexedSurfaceEntriesRestore (FUN_00463540): show each handle saved by
+ * the hide pass and reset the temporary list. */
+// FUNCTION: LEGORR 0x00463540
+void indexed_surface_entries_restore(void)
+{
+    for (uint32_t i = 0; i < s_indexed_surface_hidden_count; ++i) {
+        scene_visibility_hook_call((void*)s_indexed_surface_hidden[i], 1);
+    }
+    s_indexed_surface_hidden_count = 0u;
+}
 
 /* SurfaceVisibilitySet (FUN_00464720) — record +0 handle through the leaf. */
 // FUNCTION: LEGORR 0x00464720
@@ -1017,7 +1355,7 @@ uint32_t animation_object_visibility_get(const void* anim)
 // FUNCTION: LEGORR 0x00408380
 void scene_assign_entity_owner(const void* scene, uint32_t owner)
 {
-    scene_object_owner_set(rec_ptr(scene, 0x04), owner);
+    scene_object_owner_set(*(void* const*)((const char*)scene + 0x04), owner);
 }
 
 /* SceneCurrentObjectSet (FUN_00477240) — see record.hpp. The store lands
@@ -1660,13 +1998,37 @@ int menu_item_image_set(void* item, const char* image_config, int primary)
     return 1;
 }
 
+static int menu_ascii_casecmp_n(const char* a, const char* b, size_t n)
+{
+    for (size_t i = 0; i < n; ++i) {
+        unsigned char ca = (unsigned char)a[i];
+        unsigned char cb = (unsigned char)b[i];
+        if (ca >= 'A' && ca <= 'Z') ca = (unsigned char)(ca + ('a' - 'A'));
+        if (cb >= 'A' && cb <= 'Z') cb = (unsigned char)(cb + ('a' - 'A'));
+        if (ca != cb) return (int)ca - (int)cb;
+        if (ca == '\0') return 0;
+    }
+    return 0;
+}
+
+/* FilenameExtensionClassify compares these exact .data strings in order;
+ * their mapped addresses and bytes are verified in the data annotation
+ * inventory. */
+// GLOBAL: LEGORR 0x004a23ec
+static const char s_filename_avi_suffix[5] = ".avi";
+// GLOBAL: LEGORR 0x004a2360
+static const char s_filename_bitmap_suffix[5] = ".bmp";
+// GLOBAL: LEGORR 0x004a23e4
+static const char s_filename_lightwave_suffix[5] = ".lws";
+
 // FUNCTION: LEGORR 0x00413f30
 int filename_extension_classify(const void* record)
 {
-    const char* suffix = crt_strchr((char*)*(const char* const*)record, '.');
-    if (strcasecmp_lite(suffix, ".avi") == 0) return 1;
-    if (strcasecmp_lite(suffix, ".bmp") == 0) return 2;
-    if (strcasecmp_lite(suffix, ".lws") == 0) return 3;
+    const char* suffix = *(const char* const*)record;
+    while (*suffix != '.') ++suffix;
+    if (strcmp(suffix, s_filename_avi_suffix) == 0) return 1;
+    if (strcmp(suffix, s_filename_bitmap_suffix) == 0) return 2;
+    if (strcmp(suffix, s_filename_lightwave_suffix) == 0) return 3;
     return 0;
 }
 
@@ -1994,6 +2356,19 @@ static void rec_float_put(void* base, size_t off, float v)
 static void rec_dword_put(void* base, size_t off, uint32_t v)
 {
     __builtin_memcpy((char*)base + off, &v, sizeof v);
+}
+
+/* ThreeValueRecordCopyAndMarkReady (FUN_0040fdb0). */
+// FUNCTION: LEGORR 0x0040fdb0
+void three_value_record_copy_and_mark_ready(void* record,
+                                            const uint32_t values[3])
+{
+    void* destination_pointer = *(void**)record;
+    uint32_t* destination = (uint32_t*)destination_pointer;
+    destination[0] = values[0];
+    destination[1] = values[1];
+    destination[2] = values[2];
+    ((uint32_t*)record)[4] = 1;
 }
 
 static char* mesh_block(const void* record, int block)

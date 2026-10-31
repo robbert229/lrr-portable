@@ -26,6 +26,9 @@
 #define LEGORRR_GAME_MISSION_HPP
 
 #include "game.hpp"
+#include "pointer_cursor.hpp"
+#include "port_loop_ports.hpp"
+#include "../gods98/flic.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -96,6 +99,80 @@ void mission_add_score(GameContext* ctx, int32_t v);
 void mission_incident(GameContext* ctx, int id);
 
 /* --- reward screen + save zone (finding 09 display half) ---------------- */
+typedef struct RewardScreenState {
+    GameContext* game;
+    int displayed_task_count;  /* FUN_00461410 local_34 */
+    int transition_stage;       /* local_30: intro, task, completion, exit */
+    int score_text_gate;        /* local_28 */
+    int transition_state;       /* local_1c */
+    float elapsed;              /* local_2c */
+    float task_duration;        /* DAT_0055298c */
+    uint32_t last_clock_ms;
+    int pointer_override_active;
+    uint32_t pointer_x;
+    uint32_t pointer_y;
+    Flic* task_flics[GAME_TASK_COUNT];
+    PointerCursorState* pointer_cursor;
+    const PointerCursorHooks* pointer_cursor_hooks;
+    RewardScrollTickerState* scroll_ticker;
+} RewardScreenState;
+
+/* The reward loop owns its state transitions, task timing, FLIC lifetime,
+ * and callback order. These operations bridge state owned by the engine or
+ * renderer that is not represented by GameContext. */
+typedef struct RewardScreenOps {
+    void* context;
+    uint32_t (*time_get_ms)(void* context);
+    int (*save_button_check)(void* context, GameContext* game);
+    int (*loop_should_continue)(void* context,
+                                const RewardScreenState* state);
+    int (*fast_forward_pressed)(void* context);
+    int (*transition_events)(void* context, int* return_to_game,
+                             int* reset_reward);
+    int (*display_mode_get)(void* context, GameContext* game);
+    int (*score_text_gate_ready)(void* context, GameContext* game);
+    int (*reward_zone_check)(void* context, RewardScreenState* state);
+    void (*reward_scroll_cleanup)(void* context);
+    void (*return_to_game)(void* context);
+    void (*task_visual_draw)(void* context, GameTask* task, int task_index,
+                             uint32_t draw_mask, int displayed_count,
+                             float elapsed, Flic* flic);
+    void (*task_text_draw)(void* context, GameTask* task, int task_index,
+                           int displayed_count, float elapsed);
+    int (*score_text_draw)(void* context, GameContext* game,
+                           int displayed_count, float elapsed);
+    void (*reward_stats_draw)(void* context, GameContext* game);
+    void (*render_finish)(void* context);
+    void (*input_restore)(void* context, int mode);
+    void (*cursor_position_get)(void* context, uint32_t* x, uint32_t* y);
+    void (*cursor_input_update)(void* context);
+    void (*pointer_override_clear)(void* context);
+    void (*screen_effect_update)(void* context, float delta);
+    void (*pointer_effect_update)(void* context, uint32_t x, uint32_t y,
+                                  float elapsed_ms);
+    void (*frame_pump)(void* context, int mode);
+    void (*completion_audio)(void* context, GameContext* game);
+} RewardScreenOps;
+
+void reward_screen_state_init(RewardScreenState* state, GameContext* game,
+                              PointerCursorState* pointer_cursor,
+                              const PointerCursorHooks* pointer_hooks);
+/* Bind before entering the no-argument reference ABI adapters below. The
+ * current game/runtime owner has not yet been wired to this binding point. */
+void reward_screen_runtime_bind(RewardScreenState* state,
+                               const RewardScreenOps* ops);
+int reward_screen_tick(RewardScreenState* state, const RewardScreenOps* ops);
+int reward_screen_tick_bound(void);
+void reward_screen_transition_tick(RewardScreenState* state,
+                                   const RewardScreenOps* ops);
+void reward_screen_transition_tick_abi(int* displayed_task_count,
+                                       int* transition_stage,
+                                       int* score_text_gate, float* elapsed);
+void reward_pointer_override_expiry_tick(RewardScreenState* state,
+                                         float delta,
+                                         const RewardScreenOps* ops);
+void reward_pointer_override_expiry_tick_bound(float delta);
+
 /* The corpus gates the overlay on the Reward/Enable blob + the button
  * surfaces; the demo uses a reconstruction-side `reward_active` flag. */
 int  mission_reward_active(const GameContext* ctx);

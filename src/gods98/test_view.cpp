@@ -95,12 +95,12 @@ int main(void)
     }
 
     /* geometry helpers */
-    CHECK(point_distance_within_radius(0, 0, 3, 4, 5.1f) == 1,
+    CHECK(point_distance_within_radius(0, 0, 3, 4, 6) == 1,
           "distance under radius");
-    CHECK(point_distance_within_radius(0, 0, 3, 4, 5.0f) == 0,
+    CHECK(point_distance_within_radius(0, 0, 3, 4, 5) == 0,
           "strictly under: equality is not under");
     {
-        float rect[4] = { 10, 20, 30, 40 }; /* x, y, w, h */
+        float rect[5] = { 0, 10, 20, 30, 40 }; /* record + 0x4: x, y, w, h */
         CHECK(rect_contains_point_half_open(rect, 10, 20) == 1,
               "origin corner inside");
         CHECK(rect_contains_point_half_open(rect, 40, 20) == 0,
@@ -472,15 +472,17 @@ int main(void)
         camera_distance_bounds_set(cam, 0.0f, 100.0f);
         camera_distance_set(cam, 10.0f);
         float d = 0.0f;
-        camera_zoom_step_adjust(cam, 1, 1.0f);
+        camera_zoom_step_context_set(cam);
+        camera_zoom_step_adjust(1, 1.0f);
         __builtin_memcpy(&d, cam + 0x90, 4);
         CHECK(d == 13.0f, "the +3x step zooms out");
-        camera_zoom_step_adjust(cam, 0, 1.0f);
+        camera_zoom_step_adjust(0, 1.0f);
         __builtin_memcpy(&d, cam + 0x90, 4);
         CHECK(d == 10.0f, "the -3x step zooms back");
-        camera_zoom_step_adjust(cam, 7, 1.0f); /* inert direction */
+        camera_zoom_step_adjust(7, 1.0f); /* inert direction */
         __builtin_memcpy(&d, cam + 0x90, 4);
         CHECK(d == 10.0f, "other directions stay put");
+        camera_zoom_step_context_set(NULL);
     }
 
     /* SelectionRecordPointGet (2026-10-24): the follow-mode readback. */

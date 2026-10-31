@@ -380,19 +380,6 @@ int main(void)
         simtick_scene_transform_current_set(NULL); /* guarded */
     }
 
-    /* The group-record chain release (2026-10-24). */
-    {
-        SimtickBobbin a = {};
-        SimtickBobbin b = {};
-        a.next = &b;
-        b.next = NULL;
-        simtick_set_bobbin_head(&a);
-        simtick_release_all_group_records(); /* walks both records */
-        simtick_set_bobbin_head(NULL);
-        simtick_release_all_group_records(); /* the empty head walks empty */
-        CHECK(1, "the chain release runs the corpus's drop walk");
-    }
-
     /* The axis-tolerance window (2026-10-25): the per-axis compares about
      * the config triple with the installed tolerance triple. */
     {

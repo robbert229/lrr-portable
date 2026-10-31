@@ -197,19 +197,38 @@ int EngineTick(EngineContext* ctx, float dt);
 void EnginePreTick(EngineContext* ctx);
 
 /* Quit-poll probe (corpus KeepRunning @ 0x435940). 0 => quit requested. */
+typedef int (*EngineKeepRunningHook)(EngineContext* context, void* user);
+void engine_keep_running_hook_set(EngineKeepRunningHook hook, void* user);
 int EngineKeepRunning(EngineContext* ctx);
 
 /* Time-scale factor (corpus FUN_0041fb40 call site). */
 float EngineTimeScale(EngineContext* ctx);
+
+/* GameConfigCallbackRegistryInit (FUN_0041fa20) ports the callback triplet
+ * through the frame-loop registry. The reference clears a shared 0x3be-dword
+ * block and invokes GameConfigInit; the portable engine exposes reset/init
+ * seams because those module-owned states and the full config initializer are
+ * not represented by this engine context. Install the context and hooks before
+ * calling the registry initializer. An absent init hook reports failure from
+ * the registered init adapter. */
+typedef void (*EngineConfigRegistryResetHook)(void* user);
+typedef int (*EngineGameConfigInitHook)(const char* root, void* user);
+void engine_game_config_callback_registry_hooks_set(
+    EngineContext* context,
+    EngineConfigRegistryResetHook reset_hook,
+    EngineGameConfigInitHook init_hook,
+    void* user);
+void engine_game_config_callback_registry_init(const char* root);
 
 /* Main simulation step / quit gate (corpus MainSimStep @ 0x4250c0).
  * Consumes input+app state for the frame; the three outs are the step's
  * results passed to the later subsystem tickers. Returns 0 => quit frame.
  * (Ported into mainsim.* — see main_sim_step.) */
 
-/* Engine teardown (triplet slot DAT_00505934): corpus LAB_00424cf0 is the
- * normal-play stub forwarding to FUN_004250a0; LAB_00424d00 is the full
- * teardown used in loader mode (finding 20). */
+/* Port-side shutdown dispatcher (not a direct match for either callback).
+ * The reference selects LAB_00424cf0 for normal play or LAB_00424d00 for
+ * loader mode in GameConfigCallbackRegistryInit @ 0x0041fa20 (finding 20).
+ * The callback-specific cleanup paths remain unported. */
 void EngineShutdown(EngineContext* ctx);
 
 /* RuntimeFlag40000000Get (FUN_0041f970, finding 03): the DAT_00556ecc
@@ -225,7 +244,8 @@ uint32_t runtime_flag40000000_get(const EngineContext* ctx);
 int mode_dependent_field24_get(const EngineContext* ctx);
 
 /* --- the 0x425-0x426 engine-state band (2026-10-24; findings 295/324/392) ---
- * CurrentEngineModeIsZero (FUN_00425d80): the context-mode word reads zero.
+ * CurrentEngineModeIsZero (FUN_00425d80): the DAT_00556ec8 mode global reads
+ * zero; startup setup installs it through the global setter below.
  * GlobalStateFlagsBit7Set (FUN_004263a0): cheat-word bit 7 on/off. Both
  * thread through EngineContext (the corpus's DAT_00556ec8 / DAT_00556ed0).
  * GlobalScrollGuardSet (FUN_00425cd0) stores the scroll-scale guard global
@@ -235,7 +255,9 @@ int mode_dependent_field24_get(const EngineContext* ctx);
  * documented: the corpus's only writer is the unported sim-interaction
  * renderer update. Deviation: the corpus strides the caller's buffer
  * blindly; the port guards it (NULL skips the three stores). */
-bool   current_engine_mode_is_zero(const EngineContext* ctx);
+bool   current_engine_mode_is_zero(void);
+void   engine_context_mode_global_set(int32_t mode);
+void   window_mode_flag_set(uint32_t mode);
 
 /* ObjectiveScoreTextOriginSet (FUN_004262e0): the objective/score text
  * origin pair, ONE cdecl argument (b60: the corpus callee reads only
@@ -257,6 +279,7 @@ uint32_t engine_debug_word_peek(void);
 int engine_mode_set(EngineContext* ctx, const int* mode);
 uint32_t engine_overlay_word_peek(int which); /* 0: DAT_00503610,
                                                * 1: DAT_00503614 (hook) */
+void engine_overlay_words_set(uint32_t flags, uint32_t request);
 void   global_state_flags_bit7_set(EngineContext* ctx, int value);
 void   global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
                                           int set_bit9); /* FUN_00426360 */
@@ -310,10 +333,11 @@ void panel_selection_highlight_toggle(EngineContext* ctx, int on);
                                                 /* FUN_00435aa0 */
 void   global_triple_copy_out(uint32_t* out);
 
-/* GlobalField505f88Get (FUN_00401bf0, finding 02): the corpus's app-mode
- * word read — the EngineContext's own field. NULL answers 0 (deviation:
- * the corpus reads its global blindly). */
-int engine_app_mode_get(const EngineContext* ctx);
+/* GlobalField505f88Get (FUN_00401bf0, finding 02): application-mode global
+ * at DAT_00505f88. The startup parser's writer is not ported yet, so native
+ * setup code installs the value through this seam. */
+int engine_app_mode_get(void);
+void engine_app_mode_global_set(int32_t mode);
 
 /* --- the grid-cell record buffer (2026-10-24; finding 463) ------------------
  * The entity-cell field grid: its own buffer (dimensions at the state

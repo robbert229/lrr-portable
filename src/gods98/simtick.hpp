@@ -52,6 +52,10 @@ typedef struct SimtickEffect {
 } SimtickEffect;
 void simtick_effect_table(SimtickEffect* table, int count);
 int  simtick_effect_last_fired(void);
+/* Effect-entry seams: update each indexed item and release the effect owner. */
+void simtick_effect_set_hooks(void (*set_opacity)(uint32_t handle, int index,
+                                                   float opacity, int mode),
+                              void (*release)(uint32_t handle, int mode));
 
 /* marker sweep (0x44eff0) — cells cleared in the last sweep. */
 int  simtick_marker_count(void);
@@ -110,6 +114,8 @@ void simtick_set_tree_hook(int (*h)(int idx, int bits));       /* 0x49d000 */
 int  simtick_tree_fired(void);
 
 /* --- tranche 9 tickers --------------------------------------------------- */
+typedef void (*SimtickPostStepHook)(EngineContext* context, void* user);
+void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user);
 void simtick_post_step(EngineContext* c);              /* FUN_004665c0 */
 void simtick_minion_states(EngineContext* c, float dt, float scale); /* 0x4313b0 */
 void simtick_grid_cell_pass(EngineContext* c);         /* FUN_00424600 */
@@ -142,6 +148,27 @@ void simtick_render_pass(EngineContext* c, float dt, float scale,
 void simtick_render_step(EngineContext* c);                /* FUN_00449c00 */
 void simtick_vu_meter(EngineContext* c, float dt);         /* FUN_00426520 */
 void simtick_fx_bank_tick(EngineContext* c, float dt);     /* FUN_0046e390 */
+typedef struct SimtickFxSubEntry {
+    float value;
+    float fade_primary;
+    float fade_secondary;
+    float enabled;
+    float padding[2];
+} SimtickFxSubEntry;
+typedef struct SimtickFxEntry {
+    uint32_t count;
+    float initial;
+    float current;
+    uint32_t resource;
+    uint32_t flags;
+    uint32_t resource_count;
+    SimtickFxSubEntry* subentries;
+} SimtickFxEntry;
+typedef void (*SimtickFxResourceUpdateFn)(uint32_t resource, uint32_t index,
+                                          float value, void* user);
+void simtick_fx_bank_entries_install(SimtickFxEntry* entries, uint32_t count,
+                                     SimtickFxResourceUpdateFn update,
+                                     void* user);
 
 /* hooks / observable state for tranche-10 tickers */
 void simtick_set_pick_hook(int (*h)(int cx, int cy));
@@ -154,11 +181,27 @@ int  simtick_render_steps(void);
 
 /* bobbins (0x4091e0) — node flags at +0xd0. */
 typedef struct SimtickBobbin {
-    struct SimtickBobbin* next;  /* +0x24 */
-    uint32_t              flags; /* +0xd0 */
+    unsigned char         reserved00[0x08];
+    uint32_t              key;          /* +0x08: single-key lookup */
+    uint32_t              key_pair[2];  /* +0x0c/+0x10: coordinate key */
+    void*                 owned_buffer; /* +0x14: released with record */
+    unsigned char         reserved18[0x0c];
+    struct SimtickBobbin* next;       /* +0x24 */
+    void*                 members[20]; /* +0x2c .. +0xcb */
+    uint32_t              member_count; /* +0xcc */
+    uint32_t              flags;        /* +0xd0 */
 } SimtickBobbin;
+typedef void (*SimtickBobbinMarkHook)(SimtickBobbin* node, void* context);
+typedef int (*SimtickBobbinSpawnHook)(SimtickBobbin* node, void* context);
+typedef void (*SimtickBobbinActionHook)(SimtickBobbin* node, void* context);
 void simtick_set_bobbin_head(SimtickBobbin* head);
+void simtick_bobbin_mark_hook_set(SimtickBobbinMarkHook hook, void* context);
+void simtick_bobbin_action_hooks_set(SimtickBobbinSpawnHook spawn,
+    SimtickBobbinActionHook clear_delay, SimtickBobbinActionHook die,
+    void* context);
 int  simtick_bobbin_advanced(void); /* helper-invocation counter */
+void simtick_selection_group_release(const uint32_t key_pair[2]); /* FUN_00409110 */
+void simtick_selection_group_clear(const uint32_t key_pair[2]);   /* FUN_00409150 */
 
 /* SimulationGlobalWordSet (FUN_0041ba90, finding 474): the corpus assigns
  * its argument to the global DAT_004de1f4 — the mute word the simtick
@@ -204,11 +247,4 @@ const float* simtick_scene_transform_config_peek(void);
  * (deviation); the install hook stands in. */
 int simtick_vector_within_axis_tolerance(const float xyz[3]);
 void simtick_vector_tolerance_install(const float xyz[3]); /* hook */
-/* ReleaseAllGroupRecords (FUN_004099f0's chain walk — FUN_004099d0): walks
- * the bobbin chain (successor through the +0x24 link) from the global head
- * and drops each record through the drop leaf. The corpus's drop unlinks
- * from the chain as it walks; the port's drop is the corpus hook boundary
- * (no-op) so the walk is read-only (documented deviation). */
-void simtick_release_all_group_records(void);       /* FUN_004099d0 */
-
 #endif /* LEGORRR_SIMTICK_HPP */

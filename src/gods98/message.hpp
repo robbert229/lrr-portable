@@ -27,6 +27,8 @@
 
 #include "block.hpp"
 
+struct Sound;
+
 #define MESSAGE_MAX_ID 40     /* DAT_004dcd38 cap (0x28) */
 #define MESSAGE_FAMILY {10, 11, 12, 38}
 
@@ -52,7 +54,35 @@ typedef int  (*MessageCallback)(int id);             /* LAB_004199a0 role */
 typedef void (*MessageSoundHook)(int id, float vol); /* FUN_00464ef0 role */
 
 void message_init_defaults(void);   /* seed the 40-id catalog (finding 22) */
+void ui_message_strings_initialize(void* primary_font, void* secondary_font,
+                                   void* message_resource, void* subtitle_font,
+                                   float line_delay); /* FUN_0046a7f0 */
+void ui_message_overlay_state_initialize(void); /* FUN_0046aa90 */
+const char* ui_message_label_get(unsigned int index);
+int ui_message_label_index_find(const char* label, int* out_index); /* FUN_0046aad0 */
+void ui_message_text_slot_assign(int index, const char* text); /* FUN_0046ab10 */
+void ui_message_text_slot_assign_with_image(int index, const char* text,
+                                            const char* image_path,
+                                            const char* display_path); /* FUN_0046abb0 */
+const char* ui_message_text_slot_get(unsigned int index);
 void message_clear(void);           /* reset queue + config for tests */
+
+/* IncidentMessageCatalogInit / IncidentMessageTemplateReplace /
+ * IncidentMessageTemplateCompile (FUN_00419230 / 0x004194b0 / 0x00419530).
+ * The catalog names are statically seeded; the initializer retains its
+ * opaque caller word and raises the corpus's 0x18 flags. Template compile
+ * emits the format string and trailing substitution metadata. */
+void incident_message_catalog_init(uint32_t owner);
+uint32_t incident_message_catalog_owner_get(void); /* port state peek */
+void info_message_sound_load(int id, const char* path); /* FUN_00419650 */
+struct Sound* info_message_sound_peek(int id); /* port state peek */
+float remaining_timer_duration_get(void); /* FUN_00419b50 */
+void incident_message_template_replace(int id, const char* text);
+void incident_message_template_compile(const char* text, char** out);
+void* incident_message_node_create(const uint32_t* first_pair,
+                                   uint32_t value, const char* text);
+const char* incident_message_node_text_get(const void* node);
+void incident_message_node_release(void* node);
 
 void message_config_set(int id, const char* sound, float cooldown,
                         uint32_t flags);
@@ -89,6 +119,22 @@ void message_update(float dt);
 
 /* corpus FUN_0041a2c0: decrement every configured cooldown toward 0. */
 void message_cooldown_tick(float dt);
+
+/* CatalogSlotFlagUpdate (FUN_0041c800): category 1 and 4 rows each retain a
+ * low-bit state word. The corpus consults four game-specific predicates;
+ * their implementation is supplied by the catalog owner. */
+typedef int (*CatalogSlotPredicateHook)(int category, int slot, void* context);
+typedef int (*CatalogSlotRankHook)(int category, int slot, void* context);
+typedef int (*CatalogSlotLimitHook)(int category, void* context);
+void catalog_slot_flag_hooks_set(CatalogSlotPredicateHook eligible,
+                                 CatalogSlotPredicateHook available,
+                                 CatalogSlotRankHook rank,
+                                 CatalogSlotLimitHook limit,
+                                 void* context);
+void catalog_slot_flag_word_set(int category, int slot, uint32_t flags);
+uint32_t catalog_slot_flag_word_get(int category, int slot);
+void catalog_slot_flag_global_state_set(uint32_t flags);
+void catalog_slot_flag_update(int category, int slot);
 
 /* active queue census (tests/diagnostics). */
 int  message_active_count(void);
@@ -156,9 +202,20 @@ int has_active_resource(const void* record);       /* FUN_004119d0 */
 /* IndexedLinkedListEntryGet (FUN_00419780): walk the corpus's indexed
  * list table (five-dword entries: head +0, count +4, chained through
  * the node's +0x10 link) to the entry at index param_2; out-of-range
- * answers 0. The corpus's table writers stay unported, so the table
- * model starts empty (documented deviation) with install hooks. */
+ * answers 0. IncidentMessageQueueAppend (FUN_004196f0) is the ported
+ * append writer; other corpus table writers remain unported. */
 void indexed_list_install(int list, void* head, int count); /* test hook */
 void* indexed_linked_list_entry_get(int list, int index);   /* FUN_00419780 */
+void incident_message_queue_append(int list, void* entry); /* FUN_004196f0 */
+typedef int (*MessageSubscriberCallback)(void* entry, void* context);
+int message_subscriber_dispatch(int list, MessageSubscriberCallback callback,
+                                void* context); /* FUN_004196a0 */
+typedef void (*MessagePanelRefreshHook)(void* auxiliary, void* queue,
+                                        int reserved, void* context);
+void incident_message_panel_refresh_hook_install(
+    MessagePanelRefreshHook hook, void* context);
+void incident_message_panel_aux_install(void* auxiliary); /* port hook */
+void incident_message_panel_refresh_if_active(void); /* FUN_00419da0 */
+void* incident_message_queue_remove_at(int list, int index); /* FUN_004197b0 */
 
 #endif /* LEGORRR_MESSAGE_HPP */

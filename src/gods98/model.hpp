@@ -70,12 +70,29 @@ typedef struct Model {
     int          uv_applied;/* a .uv sidecar was parsed and applied */
 } Model;
 
+/* Legacy model/resource list node (the six-word record used by the
+ * 0x451ab0 constructor and 0x451b30 flatten operation). */
+typedef struct ModelEntryRecord {
+    void* object;
+    void* instance;
+    char* name;
+    int kind;
+    uint32_t flags;
+    struct ModelEntryRecord* next;
+} ModelEntryRecord;
+
+ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
+                                                const char* name, int kind);
+ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head);
+
 /* Open through the resource layer (finding 01 resolution) and parse. When
  * the name ends in ".lwo" a sibling ".uv" is tried too — present-and-good
  * sidecars apply, anything else leaves the model as the LWO states it
  * (the corpus opens the sidecar only when the uv slot is requested).
  * Returns NULL on open/read/parse failure. */
 Model* model_open(const char* path);
+Model* model_resource_resolve_or_load(const char* prefix, const char* path);
+void model_resource_cache_clear(void);
 
 /* Parse a caller-owned buffer; for tests and already-resident data. */
 Model* model_parse(const uint8_t* data, size_t len);
@@ -99,6 +116,11 @@ uint32_t model_digest(const Model* m);
  * port's model path parses through the rrlwo converter (finding 11), so the
  * reader ships as a standalone primitive. */
 int lwo_read_big_endian_float(const uint8_t** cursor, uint8_t out[4]);
+void mesh_vertex_coordinate_remap(int vertex_count, const float* positions_xyz,
+                                 float* coordinates_xy, float scale_x,
+                                 float scale_y, float scale_z, float offset_x,
+                                 float offset_y, float offset_z, uint32_t flags);
+                                                      /* FUN_00481fa0 */
 
 /* LwoStringDuplicate (FUN_0048c0c0): the corpus's dup allocates strlen + 1
  * rounded UP TO THE NEXT EVEN size through the engine heap, zeroes the

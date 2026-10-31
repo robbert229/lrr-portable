@@ -385,7 +385,7 @@ uint32_t flic_opcode25_success_stub(void)
     return 1u;
 }
 
-// STUB: LEGORR 0x00484c90
+// FUNCTION: LEGORR 0x00484c90
 void flic_opcode27_fallback_noop(void)
 {
     /* FUN_00484c90: pure return — faithful. */

@@ -703,6 +703,8 @@ int  global_value_word_peek(void);
 void linked_list_push_at_global_head(void* record); /* FUN_0046a470 */
 void* linked_list_global_head_peek(void);           /* port hook */
 void  linked_list_global_head_set(void* record);      /* port hook */
+void linked_list_conditional_float_advance(float delta); /* FUN_0046a700 */
+uint32_t first_set_flag_ordinal(uint32_t mask); /* FUN_0046a760 */
 void global_record_list_push_head(void* record);    /* FUN_004792c0 */
 void* global_record_list_head_peek(void);           /* port hook */
 int  scene_effect_registry_reset(void);             /* FUN_00465380 */

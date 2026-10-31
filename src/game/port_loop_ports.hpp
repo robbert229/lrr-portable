@@ -1,0 +1,530 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#ifndef LEGORRR_GAME_PORT_LOOP_PORTS_HPP
+#define LEGORRR_GAME_PORT_LOOP_PORTS_HPP
+
+#include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+struct EntitySlot;
+struct EngineContext;
+struct LevelState;
+
+typedef struct ObjectiveSidecarSnapshot {
+    int type;
+    uint32_t status;
+    uint32_t state;
+    uint32_t entity_flags;
+    uint32_t mode_flags;
+    float activity_timer;
+    int linked;
+} ObjectiveSidecarSnapshot;
+typedef void (*ObjectiveSidecarActionHook)(void* context, int action,
+                                            ObjectiveSidecarSnapshot* state);
+int objective_sidecar_append_gate(ObjectiveSidecarSnapshot* state,
+                                  void* context,
+                                  ObjectiveSidecarActionHook action);
+
+typedef struct UpgradeLevelEntry {
+    uint32_t level;
+    uint32_t amount;
+    uint32_t value;
+    uint32_t resource_id;
+    char resource_name[64];
+} UpgradeLevelEntry;
+typedef int (*UpgradeLevelEntryReadHook)(void* context, uint32_t level,
+                                         uint32_t ordinal,
+                                         UpgradeLevelEntry* entry);
+typedef struct UpgradeLevelTable {
+    UpgradeLevelEntry entries[1000];
+    uint32_t count;
+    uint32_t level_mask;
+} UpgradeLevelTable;
+void upgrade_level_table_parse(UpgradeLevelTable* table, void* context,
+                               UpgradeLevelEntryReadHook read_entry);
+
+typedef struct VehicleTypeDefinition {
+    uint32_t words[0x7b];
+} VehicleTypeDefinition;
+typedef int (*VehicleTypeFieldReadHook)(void* context, uint32_t field,
+                                        uint32_t* value);
+int vehicle_type_definition_parse(VehicleTypeDefinition* definition,
+                                  void* context,
+                                  VehicleTypeFieldReadHook read_field);
+
+typedef struct AttachedModelOrientationState {
+    uint32_t count;
+    float anchor[3];
+    float points[8][3];
+    float normal[3];
+    float up[3];
+    float radius;
+} AttachedModelOrientationState;
+typedef void (*AttachedModelOrientationApplyHook)(void* context,
+                                                   const float right[3],
+                                                   const float up[3],
+                                                   const float forward[3]);
+int attached_model_orientation_update(AttachedModelOrientationState* state,
+                                      void* context,
+                                      AttachedModelOrientationApplyHook apply);
+
+typedef float (*PortLoopRandomRangeHook)(void* context, float minimum,
+                                         float maximum);
+typedef struct MotionWaypointTimerState {
+    uint32_t flags;
+    float delay;
+    float delay_min;
+    float delay_max;
+    float duration;
+    float duration_min;
+    float duration_max;
+    float scale_min;
+    float scale_max;
+    float scale_rate[3];
+    float bounds_min[3];
+    float bounds_max[3];
+    float target[3];
+    float position[3];
+    float progress[3];
+    float velocity[3];
+};
+void motion_waypoint_timer_step(MotionWaypointTimerState* state, float delta,
+                                PortLoopRandomRangeHook random_range,
+                                void* context); /* FUN_0044d280 */
+
+typedef struct MotionJitterState {
+    uint32_t flags;
+    float delay;
+    float delay_min;
+    float delay_max;
+    float lifetime;
+    float lifetime_min;
+    float lifetime_max;
+    float magnitude_min;
+    float magnitude_max;
+    float position[3];
+    float direction[3];
+    float remaining;
+} MotionJitterState;
+typedef struct MotionConfigProfileEntry {
+    char* key;
+    int direct_value;
+    int fallback_value;
+} MotionConfigProfileEntry;
+typedef struct MotionConfigProfileReleaseHooks {
+    void* context;
+    void* (*profile_open)(void* context, void* config);
+    void (*profile_write)(void* context, void* profile, const char* key,
+                         const char* separator, int value);
+    void (*key_release)(void* context, char* key);
+} MotionConfigProfileReleaseHooks;
+uint32_t motion_config_profile_entries_release(
+    void* config, MotionConfigProfileEntry* entries, uint32_t count,
+    const MotionConfigProfileReleaseHooks* hooks);
+#define MOTION_KEY_VALUE_ENTRY_CAPACITY 50
+typedef struct MotionKeyValueLoadRequest {
+    void* config;
+    int profile_id;
+    int name_a_id;
+    int name_b_id;
+    int optional_name_id;
+    int text_resource_id;
+    uint32_t values[4];
+} MotionKeyValueLoadRequest;
+typedef struct MotionKeyValueEntry {
+    char* key;
+    int direct_value;
+    int fallback_value;
+} MotionKeyValueEntry;
+typedef struct MotionKeyValueTable {
+    void* name_a;
+    void* name_b;
+    void* optional_name;
+    void* text_resource;
+    uint32_t values[4];
+    MotionKeyValueEntry entries[MOTION_KEY_VALUE_ENTRY_CAPACITY];
+} MotionKeyValueTable;
+typedef struct MotionKeyValueLoadHooks {
+    void* context;
+    void* (*profile_open)(void* context, void* config, int profile_id);
+    int (*profile_line_get)(void* context, void* profile, uint32_t line,
+                            char buffer[256]);
+    int (*line_split)(void* context, char* line, char** key, char** value);
+    char* (*string_duplicate)(void* context, const char* text);
+    void* (*string_resolve)(void* context, int text_id);
+    int (*integer_parse)(void* context, const char* text);
+    void (*string_release)(void* context, char* text);
+    void (*deferred_callback_register)(void* context, uint32_t callback_id);
+} MotionKeyValueLoadHooks;
+int motion_key_value_equals_file_load(
+    const MotionKeyValueLoadRequest* request, MotionKeyValueTable* table,
+    const MotionKeyValueLoadHooks* hooks);
+typedef float (*EntityTypeActivityTickHook)(void* context,
+                                           struct EntitySlot* entity,
+                                           float scaled_delta);
+typedef void (*EntityBehaviorTickHook)(void* context, struct EntitySlot* entity,
+                                       float input_delta);
+typedef void (*EntityActivityFinishHook)(void* context,
+                                         struct EntitySlot* entity);
+typedef struct EntityActivityTickHooks {
+    void* context;
+    float (*delta_scale)(void* context, struct EntitySlot* entity,
+                         float input_delta);
+    EntityTypeActivityTickHook type1_tick;
+    EntityTypeActivityTickHook type2_tick;
+    EntityTypeActivityTickHook type3_tick;
+    EntityTypeActivityTickHook type4_tick;
+    EntityTypeActivityTickHook type10_tick;
+    EntityBehaviorTickHook behavior_update;
+    EntityActivityFinishHook activity_finish;
+} EntityActivityTickHooks;
+float entity_activity_tick_step(struct EntitySlot* entity, float delta,
+                                const EntityActivityTickHooks* hooks);
+typedef struct EntityTypeBehaviorHooks {
+    void* context;
+    int (*animation_tick)(void* context, struct EntitySlot* entity,
+                          float delta);
+    void (*animation_play)(void* context, struct EntitySlot* entity,
+                           const char* animation);
+    void (*boulder_behavior)(void* context, struct EntitySlot* entity,
+                             float delta);
+    void (*terrain_activity)(void* context, struct EntitySlot* entity);
+} EntityTypeBehaviorHooks;
+void entity_type_behavior_update(struct EntitySlot* entity, float delta,
+                                 const EntityTypeBehaviorHooks* hooks);
+typedef struct EntityCellPathEffectHooks {
+    void* context;
+    int (*placement_cells_get)(void* context, struct EntitySlot* entity,
+                               const int** cells, uint32_t* count);
+    int (*rotation_get)(void* context, struct EntitySlot* entity);
+    void (*cell_prepare)(void* context, int cell_x, int cell_y);
+    void (*cell_effect_apply)(void* context, struct EntitySlot* entity,
+                              int cell_x, int cell_y, int repeated_cell);
+    void (*cell_refresh)(void* context, int cell_x, int cell_y);
+    void (*placement_commands_build)(void* context,
+                                     struct EntitySlot* entity);
+} EntityCellPathEffectHooks;
+void entity_cell_path_effects_apply(
+    struct EntitySlot* entity, struct LevelState* level,
+    const EntityCellPathEffectHooks* hooks);
+typedef struct EntityDebugCellRetargetHooks {
+    void* context;
+    uint32_t (*target_state_flags)(void* context,
+                                   struct EntitySlot* target);
+    int (*target_flag20_query)(void* context, struct EntitySlot* target,
+                               uint32_t state);
+    int (*fallback_retarget)(void* context, struct EntitySlot* entity,
+                            struct EntitySlot* target,
+                            struct LevelState* level);
+} EntityDebugCellRetargetHooks;
+int entity_debug_cell_retarget_dispatch(
+    struct EntitySlot* entity, struct EntitySlot* target,
+    const EntityDebugCellRetargetHooks* hooks);
+typedef struct RewardScrollTickerEntry {
+    int kind;
+    int x;
+    int y;
+    int line_height;
+    uint32_t flags;
+    void* text_handle;
+    void* surface_handle;
+} RewardScrollTickerEntry;
+typedef struct RewardScrollTickerState {
+    float minimum_y;
+    float current_y;
+    float lower_clip;
+    float scroll_speed;
+    float scroll_height;
+    uint32_t entry_count;
+    uint32_t flags;
+    void* context;
+    int (*entry_get)(void* context, uint32_t index,
+                     RewardScrollTickerEntry* entry);
+    void (*entry_draw)(void* context, const RewardScrollTickerEntry* entry,
+                       int x, int y, int clipped);
+    int (*debug_key_get)(void* context, uint32_t key_index);
+} RewardScrollTickerState;
+int reward_scroll_ticker_advance_and_draw(RewardScrollTickerState* state);
+typedef struct SceneQuadGridRecord {
+    void* mesh;
+    uint32_t parameter;
+} SceneQuadGridRecord;
+typedef struct SceneQuadGridEmitHooks {
+    void* context;
+    void* (*mesh_create)(void* context, void* scene, int kind);
+    int (*face_index_buffer_create)(void* context, void* mesh,
+                                    uint32_t face, uint32_t vertex_count,
+                                    uint32_t primitive_count,
+                                    const uint32_t* indices);
+    int (*face_vertices_get)(void* context, uint32_t face, uint32_t quad,
+                             float vertices[4][9]);
+    int (*face_vertices_emit)(void* context, void* mesh, uint32_t face,
+                              uint32_t quad, const float vertices[4][9]);
+    void (*face_finalize)(void* context, void* mesh, uint32_t face,
+                          uint32_t mode);
+    void (*visibility_set)(void* context, void* mesh, int visible);
+    void (*mesh_release)(void* context, void* mesh);
+} SceneQuadGridEmitHooks;
+SceneQuadGridRecord* scene_quad_grid_emit(
+    void* scene, uint32_t parameter, const SceneQuadGridEmitHooks* hooks);
+typedef int (*MotionJitterVectorHook)(void* context, float out[3]);
+typedef int (*MotionJitterCandidateHook)(void* context,
+                                         const float position[3]);
+typedef void (*MotionJitterPositionHook)(void* context,
+                                         const float position[3]);
+typedef struct MotionJitterHooks {
+    void* context;
+    MotionJitterVectorHook random_vector;
+    MotionJitterCandidateHook candidate_valid;
+    MotionJitterPositionHook position_apply;
+} MotionJitterHooks;
+void motion_jitter_step(MotionJitterState* state, float delta,
+                        PortLoopRandomRangeHook random_range,
+                        const MotionJitterHooks* hooks); /* FUN_0044d760 */
+
+#ifdef __cplusplus
+}
+
+namespace unported_ledger_stubs {
+/* StartupStreamsClose/StartupStreamStateReset (FUN_0048b290/260): the
+ * four file handles and window-mode word that the startup stream routines
+ * own. `slot` follows the reference dword order at 0x575ce0..0x575cec. */
+void startup_stream_handle_set(int slot, void* handle);
+void* startup_stream_handle_get(int slot);
+void startup_stream_window_mode_set(uint32_t value);
+uint32_t startup_stream_window_mode_get(void);
+void startup_stream_state_reset(void);
+void startup_streams_close(void);
+typedef int (*BufferedCharReadHook)(void* context, void* stream);
+void buffered_char_stream_read_hook_set(BufferedCharReadHook read_char,
+                                        void* context);
+int buffered_char_stream_read_to_string(void* stream, char* output);
+typedef void* (*RegistryCreateKeyHook)(void* parent, const char* component,
+                                       void* context);
+typedef int (*RegistryQueryValueHook)(void* key, const char* value_name,
+                                      void* output, uint32_t* size,
+                                      uint32_t* value_type, void* context);
+typedef void (*RegistryCloseKeyHook)(void* key, void* context);
+void registry_path_hooks_set(RegistryCreateKeyHook create_key,
+                             RegistryQueryValueHook query_value,
+                             RegistryCloseKeyHook close_key, void* context);
+int registry_path_create_keys(void* root, const char* subkey_path,
+                              const char* value_name, void* output,
+                              uint32_t* size, uint32_t* value_type);
+typedef int (*DependencyConfigEntryHook)(void* context, int level,
+                                         const char* entity_name,
+                                         const char* dependency_value);
+void dependency_config_entry_hook_set(DependencyConfigEntryHook hook,
+                                      void* context);
+int dependency_grid_config_load(void* config, int level);
+
+#define DEPENDENCY_GRID_ROWS 20u
+#define DEPENDENCY_GRID_COLUMNS 15u
+#define DEPENDENCY_GRID_VARIANTS 16u
+#define DEPENDENCY_GRID_MATCH_CAPACITY 32u
+typedef struct DependencyGridTuple {
+    uint32_t first;
+    uint32_t second;
+    uint32_t selector;
+    uint32_t wildcard;
+} DependencyGridTuple;
+typedef struct DependencyGridRecordList {
+    const DependencyGridTuple* records;
+    uint32_t count;
+} DependencyGridRecordList;
+typedef struct DependencyGridCell {
+    uint32_t variant_records_present;
+    uint32_t flags[DEPENDENCY_GRID_VARIANTS];
+    DependencyGridRecordList base_records;
+    DependencyGridRecordList variant_records[DEPENDENCY_GRID_VARIANTS];
+} DependencyGridCell;
+typedef struct DependencyGridState {
+    DependencyGridCell cells[DEPENDENCY_GRID_ROWS][DEPENDENCY_GRID_COLUMNS];
+    void* context;
+    int (*occupancy_get)(void* context, uint32_t row, uint32_t column,
+                         uint32_t variant);
+} DependencyGridState;
+typedef struct DependencyGridMatches {
+    uint32_t count;
+    uint32_t x[DEPENDENCY_GRID_MATCH_CAPACITY];
+    uint32_t y[DEPENDENCY_GRID_MATCH_CAPACITY];
+    uint32_t variant[DEPENDENCY_GRID_MATCH_CAPACITY];
+    uint32_t variant_present[DEPENDENCY_GRID_MATCH_CAPACITY];
+} DependencyGridMatches;
+void dependency_grid_state_bind(DependencyGridState* state);
+int dependency_grid_matches_collect(uint32_t first, uint32_t second,
+                                    uint32_t selector,
+                                    DependencyGridMatches* output);
+uint32_t dependency_grid_occupancy_pass(void);
+
+#define UI_HIT_ENTRY_CAPACITY 40u
+typedef struct UiEntryHitRecord {
+    uint32_t fields[3];
+    int32_t height_offset;
+    float vertical_offset;
+} UiEntryHitRecord;
+typedef struct UiEntryHitTestState {
+    UiEntryHitRecord* entries;
+    uint32_t count;
+    uint32_t flags;
+    void* context;
+    int (*object_bounds_get)(void* context, uint32_t object_index,
+                             int* width, int* height);
+} UiEntryHitTestState;
+void ui_entry_hit_test_state_bind(UiEntryHitTestState* state);
+
+typedef struct ObjectTaskTargetFilterRecord {
+    uint32_t type;
+    void* entity_handle;
+    uint32_t target_name;
+    int32_t target_selector;
+    uint32_t target_companion;
+} ObjectTaskTargetFilterRecord;
+typedef struct ObjectTaskTargetPool {
+    const ObjectTaskTargetFilterRecord* records;
+    uint32_t count;
+} ObjectTaskTargetPool;
+void object_task_target_pool_bind(const ObjectTaskTargetPool* pool);
+const ObjectTaskTargetFilterRecord* object_task_target_filter_find(
+    uint32_t type, uint32_t selector, uint32_t companion);
+
+/* Explicit view of the legacy entity/task fields consumed by
+ * PlaceCommandEligibilityCheck (0x404fc0). The compact EntitySlot does not
+ * own all of these stats/config words, so the runtime owner supplies them. */
+typedef struct ObjectTaskEligibilityEntityView {
+    int32_t type;
+    uint32_t flags_3e8;
+    uint32_t flags_f8;
+    uint32_t flags_f9;
+    uint32_t flags_fb;
+    uint32_t flags_fc;
+    int32_t field_bc;
+    int32_t field_db;
+    float field_d0;
+    float field_d1;
+    float field_f5;
+    int32_t nested_type_2fc;
+    uint32_t activity_flags;
+    uint32_t task_owner_cc;
+} ObjectTaskEligibilityEntityView;
+typedef struct ObjectTaskEligibilityRecord {
+    int32_t kind;
+    struct EntitySlot* target;
+    int32_t x;
+    int32_t y;
+    uint32_t flags_5c;
+    uint32_t field_38;
+    uint32_t field_3c;
+    uint32_t field_5c;
+    uint32_t field_17;
+    uint32_t field_e;
+    uint32_t field_f;
+    float task_scalar_18;
+} ObjectTaskEligibilityRecord;
+typedef struct ObjectTaskEligibilityOps {
+    void* context;
+    int (*entity_view_get)(void*, const struct EntitySlot*,
+                           ObjectTaskEligibilityEntityView*);
+    uint32_t* global_feature_word;
+    float activity_scale;
+    int (*entity_special_gate)(void*, const struct EntitySlot*);
+    int (*kind1_activity_gate)(void*, const struct EntitySlot*);
+    int (*kind3_target_gate)(void*, const struct EntitySlot*, const struct EntitySlot*, int);
+    int (*entity_can_target_kind)(void*, const struct EntitySlot*, int);
+    int (*entity_target_gate)(void*, const struct EntitySlot*, const struct EntitySlot*);
+    int (*entity_radius_gate)(void*, const struct EntitySlot*, const struct EntitySlot*);
+    int (*entity_ray_gate)(void*, const struct EntitySlot*, const struct EntitySlot*);
+    int (*entity_eligible)(void*, const struct EntitySlot*, int);
+    int (*target_kind_resolve)(void*, const struct EntitySlot*);
+    int (*target_activity_flags)(void*, const struct EntitySlot*);
+    int (*target_position_get)(void*, const struct EntitySlot*, int*, int*);
+    int (*position_to_world)(void*, int, int, int*, int*);
+    int (*terrain_walkable)(void*, const struct EntitySlot*, int, int, int);
+    int (*entity_target_relation)(void*, const struct EntitySlot*, int);
+    int (*target_route_position_get)(void*, const struct EntitySlot*, int*, int*);
+    int (*target_type4_activity_get)(void*, const struct EntitySlot*, int*);
+    int (*target_activity_position_get)(void*, const struct EntitySlot*, int*, int*);
+    int (*target_distance_check)(void*, const struct EntitySlot*, float);
+    float (*simulation_time_get)(void*);
+    int (*target_world_position_get)(void*, const struct EntitySlot*, int*, int*);
+    int (*task_coordinate_check)(void*, int, int);
+    int (*command_kind_gate)(void*, const struct EntitySlot*, int);
+    int (*target_visibility_check)(void*, const struct EntitySlot*, int);
+    int (*target_activity_gate)(void*, const struct EntitySlot*);
+    struct EntitySlot* (*kind13_target_resolve)(void*, const struct EntitySlot*,
+                                                uint32_t);
+} ObjectTaskEligibilityOps;
+void object_task_eligibility_ops_bind(ObjectTaskEligibilityOps* ops);
+typedef struct CellVisualChannelTable {
+    void* roots[2];
+    void* resources[2][100];
+    uint32_t resource_count;
+} CellVisualChannelTable;
+typedef void (*CellVisualChannelReleaseHook)(void* context, void* resource);
+void cell_visual_channel_release_hook_set(CellVisualChannelReleaseHook hook,
+                                           void* context);
+CellVisualChannelTable* cell_visual_channel_table_create(void);
+int cell_visual_channel_table_resource_set(CellVisualChannelTable* table,
+                                            uint32_t channel,
+                                            uint32_t index, void* resource);
+void cell_visual_channel_table_resources_clear(CellVisualChannelTable* table);
+void cell_visual_channel_table_dispose(CellVisualChannelTable* table);
+
+typedef struct InputDeviceReleaseHooks {
+    void* context;
+    void (*primary_release)(void* context);
+    void (*secondary_reenable)(void* context, int enabled);
+    void (*advisor_clear)(void* context);
+    void (*stream_stop)(void* context, int mode);
+    void (*transition_control)(void* context, int a, int b);
+    void (*sound_cleanup)(void* context, int mode);
+    int (*system_state_get)(void* context, int argument);
+} InputDeviceReleaseHooks;
+void input_device_release_state_set(uint32_t input_flags,
+                                    uint32_t system_flags,
+                                    int active_track);
+void input_device_release_hooks_set(const InputDeviceReleaseHooks* hooks);
+void input_device_release(void);
+uint32_t input_device_release_flags_get(void);
+uint32_t input_device_release_system_flags_get(void);
+int input_device_release_active_track_get(void);
+
+/* TransitionControl (FUN_00425c30) reads DAT_00556ed0 as its feature word.
+ * The active GameContext owns that word in the portable model; this binding
+ * is available for callers that run without an active entity-pool context. */
+void ui_transition_control_feature_word_bind(uint32_t* feature_word);
+
+/* CellGridPointHitTest reads a global row of 16-byte action records and two
+ * optional cursor rectangles.  The native owner binds the active row and
+ * size query here; the function itself owns the reference hit-test order. */
+typedef struct CellGridPointHitRecord {
+    uint32_t action;
+    uint32_t x;
+    uint32_t y;
+    uint32_t reserved;
+} CellGridPointHitRecord;
+typedef struct CellGridPointHitTestState {
+    uint32_t flags;
+    const CellGridPointHitRecord* records;
+    uint32_t record_count;
+    int rectangles_present[2];
+    float rectangle_width[2];
+    float rectangle_height[2];
+    void* context;
+    int (*record_size_get)(void* context, uint32_t x, uint32_t y,
+                           float* width, float* height);
+} CellGridPointHitTestState;
+void cell_grid_point_hit_test_state_bind(CellGridPointHitTestState* state);
+
+typedef struct GlobalSubsystemResetState {
+    struct EngineContext* engine;
+    void* text_buffer;
+    uint32_t* word_00503618;
+} GlobalSubsystemResetState;
+void global_subsystem_reset_state_bind(GlobalSubsystemResetState* state);
+}
+#endif
+
+#endif

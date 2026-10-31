@@ -61,7 +61,9 @@ static void make_ctx(EngineContext* ctx, LevelState* lvl,
     }
     memset(ctx, 0, sizeof(*ctx));
     ctx->app_mode = ENGINE_APP_NORMAL;
+    engine_app_mode_global_set(ctx->app_mode);
     ctx->context_mode = 1;
+    engine_context_mode_global_set(ctx->context_mode);
     ctx->state_block = st;
     ctx->input = in;
     ctx->views[0] = &views[0];

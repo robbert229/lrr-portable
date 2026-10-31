@@ -14,8 +14,8 @@
  *   +0xb8        grid cell buffer (stride 0x48; +0x38 cell ptr, +0x3c busy,
  *                +0x40 a per-cell float timer decremented by dt)
  *   +0x268       spawn-reset interval (float)      (+0x26c spawn type)
- * Module globals mirror DAT_00556f14 (scale), DAT_00556f18 (grid enabled),
- * DAT_00556ed8 (chip-spawn countdown).
+ * Module globals mirror DAT_00556f14 (integer multiplier),
+ * DAT_00556f18 (grid enabled), and DAT_00556ed8 (chip-spawn countdown).
  */
 #ifndef LEGORRR_CAMERA_HPP
 #define LEGORRR_CAMERA_HPP
@@ -29,9 +29,9 @@ void camera_cluster(EngineContext* ctx, float dt, float scale);
 
 /* --- the six corpus functions, one-to-one ------------------------------- */
 
-/* FUN_0046a730 — dispatch into the move pipeline (DAT_004aa458) + a
- * post-step hook (DAT_004aa450 != 0). Helpers stubbed. */
-void camera_move_pipeline(EngineContext* ctx);
+/* FUN_0046a730 — advance the DAT_004aa458 chain by delta, then optionally
+ * dispatch the unresolved post-step hook when DAT_004aa450 is nonzero. */
+void camera_move_pipeline(EngineContext* ctx, float delta);
 
 /* FUN_00435a50 — when the engine state bit 0x8000000 is set, probe the
  * control registry (FUN_0046a4c0(0x40b)) and raise the debug flag 0x2. */
@@ -56,13 +56,44 @@ void camera_grid_expiry(EngineContext* ctx, float dt);
 void camera_spawn_countdown(EngineContext* ctx, float dt);
 
 /* --- reconstruction-owned globals ---------------------------------------- */
-extern float g_camera_scale_14;   /* DAT_00556f14 */
+extern int   g_camera_scale_14;   /* DAT_00556f14 */
 extern int   g_camera_grid_enabled;/* DAT_00556f18 */
 extern float g_camera_countdown;  /* DAT_00556ed8 */
 
 /* DAT_004aa450 movement-hook enable (reconstruction-owned). */
 int g_move_hook_enabled(void);
 void camera_set_move_hook_enabled(int v);
+
+typedef int (*CameraSpawnRandomIndexHook)(int limit, void* context);
+typedef float (*CameraSpawnRandomAngleHook)(void* context);
+typedef int (*CameraSpawnObjectCellHook)(int source_object, int* cell_x,
+                                         int* cell_y, void* context);
+typedef int (*CameraSpawnCoordinateHook)(int cell_x, int cell_y,
+                                         float* world_x, float* world_y,
+                                         void* context);
+typedef void* (*CameraSpawnCreateHook)(int source_object, int type,
+                                       float world_x, float world_y,
+                                       float angle, void* context);
+typedef void (*CameraSpawnInitializeHook)(void* entity, void* context);
+typedef int (*CameraGridSpawnHook)(const uint32_t cell_xy[2], uint32_t hint,
+                                   void* context);
+void camera_grid_spawn_hook_set(CameraGridSpawnHook hook, void* context);
+typedef int (*CameraSpawnRegistryProbeHook)(int first, int second,
+                                            void* context);
+void camera_spawn_registry_probe_hook_set(CameraSpawnRegistryProbeHook hook,
+                                          void* context);
+void camera_predug_spawn_state_install(const int* cell_xy, uint32_t count,
+                                      int enabled);
+void camera_predug_spawn_state_clear(void); /* FUN_004372a0 */
+void camera_spawn_hooks_install(CameraSpawnRandomIndexHook random_index,
+                                CameraSpawnRandomAngleHook random_angle,
+                                CameraSpawnObjectCellHook object_cell,
+                                CameraSpawnCoordinateHook coordinate,
+                                CameraSpawnCreateHook create,
+                                CameraSpawnInitializeHook initialize,
+                                void* context);
+void* predug_spawn_coordinate_select_and_create(int source_object,
+                                                int type); /* FUN_0043ad50 */
 
 /* Stub boundaries (corpus addresses; fill one at a time):
  *  FUN_0046a700 / LAB_0046a5c0 (callback through FUN_004377b0) /

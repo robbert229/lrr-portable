@@ -192,6 +192,14 @@ int scene_object_mode_is_one(const void* scene_object);
 
 /* AnimationObjectHandleGet (FUN_00406e30, findings 356/435): +0x04. */
 uint32_t animation_object_handle_get(const void* animation_object);
+/* Renderer-record adapters for the resource-list updater (FUN_00406c00,
+ * FUN_00406c30, FUN_00406c60). `enabled` is forwarded as the corpus's
+ * boolean update value (`enabled == 0`), while `update_value` is the third
+ * wrapper's opaque value. */
+void renderer_object_update_from_record_field64(void* record, int enabled);
+void renderer_object_update_from_record_field68(void* record, int enabled);
+void renderer_object_update_from_record_field6c(void* record, int enabled,
+                                                void* update_value);
 
 /* ResourceEntryIdGet (FUN_004877d0, findings 381/416): the 16-bit entry
  * id word at +2 (zero-extended, as the corpus returns it). */
@@ -206,6 +214,19 @@ uint32_t indexed_word_table_lookup(uint32_t index, const void* table);
  * the indexed record's +0x6c word — base table from the record's +0x8
  * pointer slot, stride 0x70. */
 uint32_t indexed_record_flag6c_bit0_get(const void* record, int index);
+
+/* IndexedRecordFlag6CBit0Set (FUN_004827a0): update bit zero in the
+ * indexed +0x6c word, using the table pointer at record +0x08 (stride
+ * 0x70). */
+void indexed_record_flag6c_bit0_set(void* record, int index, int set);
+
+/* RecordFlag2CBit0Set (FUN_004827d0): set or clear bit zero at +0x2c. */
+void record_flag2c_bit0_set(void* record, int set);
+
+/* ThreeValueRecordCopyAndMarkReady (FUN_0040fdb0): copy three dwords to
+ * the record's pointed-to vector and raise the ready word at +0x10. */
+void three_value_record_copy_and_mark_ready(void* record,
+                                            const uint32_t values[3]);
 
 /* IndexedRecordDataAddressGet (FUN_00483400, findings 372/431): the
  * INDEXED RECORD's data address, base + 0x10 + index*0x70 — the address
@@ -382,6 +403,10 @@ void graphics_overlay_visibility_set(uint32_t flag);
                                                 /* FUN_004634b0 */
 void graphics_overlay_word_set(uint32_t handle);    /* port hook */
 uint32_t graphics_overlay_word_peek(void);          /* port hook */
+void indexed_surface_grid_install(uint32_t width, const void* const* entries,
+                                  uint32_t entry_count);
+void indexed_surface_entry_hide_and_record(int x, int y); /* FUN_004634f0 */
+void indexed_surface_entries_restore(void); /* FUN_00463540 */
 void surface_visibility_set(const void* record, uint32_t flag);
                                                 /* FUN_00464720 */
 void animation_object_visibility_set(const void* anim, uint32_t flag);
@@ -498,6 +523,13 @@ void* menu_section_record_create(const char* name, const char* title,
                                                       /* FUN_00411100 */
 void resource_variant_record_release(void* record); /* FUN_00410c70 */
 void resource_record_and_children_release(void* record); /* FUN_00410f30 */
+
+/* Render-resource instance pool (findings 371/373/387): 0x34-byte
+ * records linked through +0x30. The native port widens the link slot and
+ * record stride to hold pointers on 64-bit hosts. */
+void* render_resource_instance_record_acquire(void); /* FUN_004807a0 */
+void render_resource_instance_record_release(void* record); /* FUN_004807d0 */
+void render_resource_instance_pool_grow(void); /* FUN_004807f0 */
 int menu_item_image_set(void* item, const char* image_config,
                         int primary); /* FUN_00410fb0 */
 int filename_extension_classify(const void* record); /* FUN_00413f30 */
@@ -634,5 +666,13 @@ uint32_t screen_effect_item_opacity_set(void* record, int block,
 uint32_t render_object_color_vector_set(void* record, int block, float red,
                                         float green, float blue, int slot);
                                                 /* FUN_00483270 */
+
+/* Fixed-size record pools (findings 368/387). The original pools use
+ * 32-bit links; the portable backing uses host-sized links and padded
+ * strides so returned records remain callable on 64-bit builds. */
+void* fixed_size_large_record_acquire(uint32_t first_dword); /* 0x0047a580 */
+void fixed_size_large_record_pool_grow(void);                 /* 0x0047a5c0 */
+void fixed_size_small_record_pool_grow(void);                 /* 0x0047e0c0 */
+void fixed_size_small_record_pool_teardown(void);
 
 #endif /* LEGORRR_GODS98_RECORD_HPP */

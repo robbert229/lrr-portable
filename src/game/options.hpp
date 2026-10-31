@@ -82,6 +82,14 @@ int options_default(int id);
 /* Load `o` with the documented defaults. */
 void options_defaults(GameOptions* o);
 
+/* OptionsLoadOrDefault (FUN_00416940): when `load_options` is nonzero,
+ * retain the selected slot's loaded speed/SFX/music triple or apply the
+ * corpus defaults if no slot is selected. `reset_frontend` clears the
+ * modeled front-end selection words. */
+struct GameContext;
+void options_load_or_default(struct GameContext* ctx, int load_options,
+                             int reset_frontend); /* FUN_00416940 */
+
 /* Get/set by id. `options_set` clamps to the shipped range and silently
  * ignores unknown ids; `options_get` yields 0 for unknown ids. */
 int  options_get(const GameOptions* o, int id);
@@ -132,7 +140,6 @@ int  options_load_header(GameOptions* o, const uint8_t* blk);
  * (the corpus writes +8 sfx / +12 speed / +16 music). Deviation: the port's
  * slot context is the active context block (sav_slot_ctx), so the writes
  * land as dwords in that block's byte window (port-side composition). */
-struct GameContext;
 void options_write_to_slot(struct GameContext* ctx); /* FUN_00416910 */
 
 /* OptionsContextSixFieldSet (FUN_00417f20, findings 438/372): with a save
@@ -168,6 +175,7 @@ void*    options_slot_resource_peek(void); /* FUN_00417f20 */
  * port models as GameOptions.game_speed). Deviation: the port threads a
  * GameContext argument; a NULL context stores nothing. */
 int  scroll_to_slider_index(void);                    /* FUN_00415030 */
+void options_scroll_index_store(struct GameContext* ctx); /* FUN_00414f90 */
 void scroll_slider_refresh(struct GameContext* ctx);  /* FUN_00415360 */
 
 

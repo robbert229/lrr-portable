@@ -94,6 +94,7 @@ enum AiActivity {
 
 /* DAT_004decc4 lookup: activity name for `id` (NULL when out of range). */
 const char* ai_activity_name(int id);
+void ai_activity_name_table_initialize(void); /* FUN_00436c20 */
 
 /* FUN_004409e0 semantics: set the entity's activity (name-table index),
  * store the param, reset the activity timer. Out-of-range ids ignored. */
@@ -106,6 +107,29 @@ void ai_set_activity(EntitySlot* e, int id, int param);
  * port's last-name mirror is synced by ai_set_activity). Deviation: the
  * corpus strides the entity blindly. */
 void entity_activity_toggle(EntitySlot* e, int on);
+
+/* Tick-down marker flow (FUN_004489a0 / FUN_0041f840): the corpus creates
+ * a kind-13 TickDown scene object when activity 6 is available. The port
+ * models this as a type-13 entity at the source entity's pose. */
+int entity_kind6_tick_down_marker_spawn(GameContext* ctx, EntitySlot* e);
+int entity_remove_object_if_class6(GameContext* ctx, EntitySlot* e);
+
+/* BubbleActionNameToIndex (FUN_00407300): the 39-entry case-insensitive
+ * name table and its registration hook. BubbleConfigTextureLoad reads the
+ * Bubbles child list, honors the global !-entry gate, and routes resource
+ * load/initialize operations through the host renderer. */
+typedef struct BlockFile BlockFile;
+int bubble_action_name_register(int index, const char* name);
+int bubble_action_name_to_index(const char* name);
+typedef uint32_t (*BubbleTextureResourceLoadFn)(
+    void* context, const char* resource_name, int x, int y);
+typedef void (*BubbleTextureInitializeFn)(void* context, uint32_t handle);
+void bubble_texture_load_hooks_set(BubbleTextureResourceLoadFn load,
+                                   BubbleTextureInitializeFn initialize,
+                                   void* context);
+void bubble_config_global_flags_set(uint32_t flags);
+void bubble_config_texture_load(BlockFile* cfg);
+uint32_t bubble_texture_handle_peek(int index);
 
 /* Append a waypoint to the entity's path list (corpus +0x24 buffer, entry
  * stride 5 dwords — the port stores {x, y, pending} per entry; see

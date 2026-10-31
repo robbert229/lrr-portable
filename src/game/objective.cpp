@@ -4,11 +4,166 @@
 #include <string.h>
 
 #include "gods98/block.hpp"
+#include "gods98/engine.hpp"
 #include "gods98/media.hpp"
+#include "gods98/scene_resources.hpp"
 #include "gods98/string.hpp"
+#include "gods98/texture.hpp"
+#include "gods98/surface.hpp"
+#include "gods98/sound.hpp"
 #include "level.hpp"
 #include "objective.hpp"
 #include "util.hpp"
+#include "crt/crt.hpp"
+
+static ObjectiveDeferredCallback s_objective_deferred_callback;
+static AdvisorTimerActionFn s_advisor_timer_action;
+static AdvisorTimerFinalizeFn s_advisor_timer_finalize;
+static void* s_advisor_timer_user;
+static int s_advisor_sound_alias = -1;
+static CoordinateListHeadGetHook s_coordinate_list_head_get;
+static void* s_coordinate_list_head_context;
+static RewardTaskResourceRecord s_reward_task_resources[10];
+
+void advisor_sound_alias_set(int alias)
+{
+    s_advisor_sound_alias = alias;
+}
+
+/* SoundAliasPlayGlobal (FUN_00456810): the script-owned alias is optional;
+ * when configured, play it once on the global channel (sound mode 2). */
+void advisor_sound_alias_play_global(void)
+{
+    if (s_advisor_sound_alias != -1) {
+        sound_alias_play(s_advisor_sound_alias, 0);
+    }
+}
+
+void coordinate_list_visit_hooks_set(CoordinateListHeadGetHook head_get,
+                                     void* context)
+{
+    s_coordinate_list_head_get = head_get;
+    s_coordinate_list_head_context = context;
+}
+
+/* CoordinateListCallbackVisit (FUN_00456cb0): resolve the current list,
+ * visit each {x,y,next} record, and stop as soon as the visitor returns 0. */
+void coordinate_list_callback_visit(void* list_key,
+                                    CoordinateListVisitCallback callback,
+                                    void* user)
+{
+    struct CoordinateListNode {
+        int x;
+        int y;
+        CoordinateListNode* next;
+    };
+    void* record;
+    if (callback == NULL || s_coordinate_list_head_get == NULL) return;
+    record = s_coordinate_list_head_get(list_key,
+                                        s_coordinate_list_head_context);
+    while (record != NULL) {
+        CoordinateListNode* const node = (CoordinateListNode*)record;
+        if (!callback(record, node->x, node->y, user)) break;
+        record = node->next;
+    }
+}
+
+void reward_task_resource_slot_set(unsigned int slot, uint32_t flags,
+                                   void* image_surface, void* font_record)
+{
+    if (slot >= 10u) return;
+    s_reward_task_resources[slot].flags = flags;
+    s_reward_task_resources[slot].image_surface = image_surface;
+    s_reward_task_resources[slot].font_record = font_record;
+}
+
+/* TaskFlushImages @ 0x0045f7b0: release the task's owned image surface. */
+// FUNCTION: LEGORR 0x0045F7B0
+void reward_task_flush_images(RewardTaskResourceRecord* task)
+{
+    if (task != NULL) {
+        texture_release((TextureSurface*)task->image_surface);
+    }
+}
+
+/* TaskFlushFont @ 0x0045f7d0: release the task's font-atlas record. */
+// FUNCTION: LEGORR 0x0045F7D0
+void reward_task_flush_font(RewardTaskResourceRecord* task)
+{
+    if (task != NULL) {
+        font_atlas_record_release(task->font_record);
+    }
+}
+
+/* TaskBlockFinish @ 0x0045f750: the ten 0x210-byte task records select
+ * image release with flag bit 1 and font release with bit 0. */
+// FUNCTION: LEGORR 0x0045F750
+void reward_task_block_finish(void)
+{
+    unsigned int i;
+    for (i = 0; i < 10u; ++i) {
+        RewardTaskResourceRecord* task = &s_reward_task_resources[i];
+        if ((task->flags & 2u) != 0u) reward_task_flush_images(task);
+        if ((task->flags & 1u) != 0u) reward_task_flush_font(task);
+        task->flags = 0;
+        task->image_surface = NULL;
+        task->font_record = NULL;
+    }
+}
+
+void objective_deferred_callback_set(ObjectiveDeferredCallback callback)
+{
+    s_objective_deferred_callback = callback;
+}
+
+// FUNCTION: LEGORR 0x00453910
+void objective_deferred_callback_invoke_if_set(void)
+{
+    if (s_objective_deferred_callback != NULL)
+        s_objective_deferred_callback();
+}
+
+void advisor_timer_hooks_set(AdvisorTimerActionFn action,
+                             AdvisorTimerFinalizeFn finalize, void* user)
+{
+    s_advisor_timer_action = action;
+    s_advisor_timer_finalize = finalize;
+    s_advisor_timer_user = user;
+}
+
+// FUNCTION: LEGORR 0x00453BB0
+void advisor_timer_array_advance_and_advisor_clear(AdvisorTimerState* state,
+                                                   float delta)
+{
+    float advance;
+    int i;
+    if (state == NULL) return;
+    advance = delta * 1000.0f * 0.04f;
+    for (i = 0; i < 4; ++i) state->timers[i] += advance;
+    if (state->countdown == 0.0f) return;
+    if (state->countdown >= 0.0f) {
+        if (state->advisor_active == 0 || state->hold_countdown != 0) {
+            state->countdown -= advance;
+            if (state->countdown > 0.0f) goto finalize;
+        }
+        else {
+            if (state->stored_toggle != 0 &&
+                ((state->advisor_scroll > 0 && state->final_timer != 0.0f) ||
+                 state->final_timer == 0.0f)) {
+                if (s_advisor_timer_action != NULL)
+                    s_advisor_timer_action(state->update_pending, 1,
+                                           s_advisor_timer_user);
+            }
+            state->stored_toggle = state->update_pending;
+            if (state->update_pending != 0) goto finalize;
+        }
+    }
+    state->countdown = 0.0f;
+finalize:
+    if (state->finalize_pending != 0 && state->countdown < 1000.0f &&
+        s_advisor_timer_finalize != NULL)
+        s_advisor_timer_finalize(s_advisor_timer_user);
+}
 
 /* Config key names (finding 22). */
 static const char* K_DONT_ADV      = "DontShowObjectiveAdvisor";
@@ -20,6 +175,111 @@ static const char* K_ORE_OBJ       = "OreObjective";
 static const char* K_TIMER_OBJ     = "TimerObjective";
 static const char* K_CONSTRUCT_OBJ = "ConstructionObjective";
 static const char* K_BLOCK_OBJ     = "BlockObjective";
+
+static int obj_strcasecmp(const char* a, const char* b)
+{
+    for (;;) {
+        int ca = (unsigned char)*a++;
+        int cb = (unsigned char)*b++;
+        if (ca >= 'a' && ca <= 'z') ca -= 0x20;
+        if (cb >= 'a' && cb <= 'z') cb -= 0x20;
+        if (ca != cb) return ca - cb;
+        if (ca == 0) return 0;
+    }
+}
+
+// GLOBAL: LEGORR 0x004a13cc
+static const char s_advisor_name_objective[] = "Advisor_Objective";
+// GLOBAL: LEGORR 0x004a13b0
+static const char s_advisor_name_objective_achieved[] = "Advisor_ObjectiveAcheived";
+// GLOBAL: LEGORR 0x004a1398
+static const char s_advisor_name_objective_failed[] = "Advisor_ObjectiveFailed";
+// GLOBAL: LEGORR 0x004a137c
+static const char s_advisor_name_icon_normal[] = "Advisor_IconPoint_Normal";
+// GLOBAL: LEGORR 0x004a135c
+static const char s_advisor_name_icon_back[] = "Advisor_IconPoint_BackButton";
+// GLOBAL: LEGORR 0x004a133c
+static const char s_advisor_name_icon_top[] = "Advisor_IconPoint_TopButtons";
+// GLOBAL: LEGORR 0x004a131c
+static const char s_advisor_name_radar_toggle[] = "Advisor_PanelPoint_RadarToggle";
+// GLOBAL: LEGORR 0x004a12f0
+static const char s_advisor_name_radar_tagged[] = "Advisor_PanelPoint_RadarTaggedObjectView";
+// GLOBAL: LEGORR 0x004a12d0
+static const char s_advisor_name_radar_zoom_in[] = "Advisor_PanelPoint_RadarZoomIn";
+// GLOBAL: LEGORR 0x004a12b0
+static const char s_advisor_name_radar_zoom_out[] = "Advisor_PanelPoint_RadarZoomOut";
+// GLOBAL: LEGORR 0x004a1290
+static const char s_advisor_name_radar_map_view[] = "Advisor_PanelPoint_RadarMapView";
+// GLOBAL: LEGORR 0x004a1270
+static const char s_advisor_name_info_dock_goto[] = "Advisor_PanelPoint_InfoDockGoto";
+// GLOBAL: LEGORR 0x004a124c
+static const char s_advisor_name_info_dock_close[] = "Advisor_PanelPoint_InfoDockClose";
+// GLOBAL: LEGORR 0x004a122c
+static const char s_advisor_name_top_info[] = "Advisor_PanelPoint_TopPanelInfo";
+// GLOBAL: LEGORR 0x004a1208
+static const char s_advisor_name_top_options[] = "Advisor_PanelPoint_TopPanelOptions";
+// GLOBAL: LEGORR 0x004a11e0
+static const char s_advisor_name_top_priorities[] = "Advisor_PanelPoint_TopPanelPriorities";
+// GLOBAL: LEGORR 0x004a11b8
+static const char s_advisor_name_top_call_to_arms[] = "Advisor_PanelPoint_TopPanelCallToArms";
+// GLOBAL: LEGORR 0x004a1194
+static const char s_advisor_name_top_go_back[] = "Advisor_PanelPoint_TopPanelGoBack";
+// GLOBAL: LEGORR 0x004a1170
+static const char s_advisor_name_control_zoom_in[] = "Advisor_PanelPoint_ControlZoomIn";
+// GLOBAL: LEGORR 0x004a114c
+static const char s_advisor_name_control_zoom_out[] = "Advisor_PanelPoint_ControlZoomOut";
+// GLOBAL: LEGORR 0x004a1138
+static const char s_advisor_name_talk_in_game[] = "Advisor_TalkInGame";
+// GLOBAL: LEGORR 0x004a1120
+static const char s_advisor_anim_point_to_map[] = "Advisor_Anim_PointToMap";
+// GLOBAL: LEGORR 0x004a1108
+static const char s_advisor_anim_point_n[] = "Advisor_Anim_Point_N";
+// GLOBAL: LEGORR 0x004a10f0
+static const char s_advisor_anim_point_ne[] = "Advisor_Anim_Point_NE";
+// GLOBAL: LEGORR 0x004a10d8
+static const char s_advisor_anim_point_e[] = "Advisor_Anim_Point_E";
+// GLOBAL: LEGORR 0x004a10c0
+static const char s_advisor_anim_point_se[] = "Advisor_Anim_Point_SE";
+// GLOBAL: LEGORR 0x004a10a8
+static const char s_advisor_anim_point_s[] = "Advisor_Anim_Point_S";
+// GLOBAL: LEGORR 0x004a1090
+static const char s_advisor_anim_point_sw[] = "Advisor_Anim_Point_SW";
+// GLOBAL: LEGORR 0x004a1078
+static const char s_advisor_anim_point_w[] = "Advisor_Anim_Point_W";
+// GLOBAL: LEGORR 0x004a1060
+static const char s_advisor_anim_point_nw[] = "Advisor_Anim_Point_NW";
+// GLOBAL: LEGORR 0x004a1048
+static const char s_advisor_anim_point_up[] = "Advisor_Anim_Point_Up";
+// GLOBAL: LEGORR 0x004a1030
+static const char s_advisor_anim_talk_top[] = "Advisor_Anim_Talk_Top";
+// GLOBAL: LEGORR 0x004b2db0
+static const char* s_advisor_position_names[21];
+// GLOBAL: LEGORR 0x004b30f8
+static const char* s_advisor_animation_names[11];
+
+// FUNCTION: LEGORR 0x004013e0
+int advisor_position_name_to_index(const char* name, int* index)
+{
+    for (int i = 0; i < 21; ++i) {
+        if (obj_strcasecmp(s_advisor_position_names[i], name) == 0) {
+            *index = i;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004014c0
+int advisor_animation_name_to_index(const char* name, int* index)
+{
+    for (int i = 0; i < 11; ++i) {
+        if (obj_strcasecmp(s_advisor_animation_names[i], name) == 0) {
+            *index = i;
+            return 1;
+        }
+    }
+    return 0;
+}
 
 static const char* obj_cfg_str(BlockFile* cfg, const char* level, const char* key,
                                char* out, size_t out_sz)
@@ -356,11 +616,383 @@ int objective_voice_alias_raise_gate_bit27(LevelState* s)
 
 /* --- the advisor action window band (see objective.hpp) ------------------- */
 
-#define ADV_ACTION_ROWS 32 /* deviation: the corpus strides the rows blindly */
+#define ADV_ACTION_ROWS 21
 
-/* Row layout (dwords, stride 9): mode +0x00, pair +0x04/+0x08,
- * read-out pair +0x0c/+0x10, flag word +0x14. */
+/* The 21 records each occupy nine dwords (stride 0x24); the flags overlap
+ * the getter's second read-out word at +0x20 in the recovered layout. */
+// GLOBAL: LEGORR 0x004b2e04
 static uint32_t s_adv_actions[ADV_ACTION_ROWS][9];
+// GLOBAL: LEGORR 0x004b31a8
+static int s_adv_scene_active_row;
+// GLOBAL: LEGORR 0x004b31ac
+static uint32_t s_adv_scene_root_handle;
+// GLOBAL: LEGORR 0x004b31b0
+static uint32_t s_adv_scene_transform_context;
+// GLOBAL: LEGORR 0x004b31b4
+static float s_adv_scene_scale;
+// GLOBAL: LEGORR 0x004b31b8
+static uint32_t s_adv_scene_companion_handle;
+static AdvisorSceneActionHook s_adv_scene_action_hook;
+static void* s_adv_scene_action_user;
+static AdvisorCompanionSceneCreateHook s_adv_companion_scene_create_hook;
+static void* s_adv_companion_scene_create_user;
+typedef struct AdvisorAnimationSlot {
+    uint32_t handle;
+    float start_time;
+    float end_time;
+} AdvisorAnimationSlot;
+// GLOBAL: LEGORR 0x004b3124
+static AdvisorAnimationSlot s_adv_animation_slots[11];
+static AdvisorAnimationHooks s_adv_animation_hooks;
+static AdvisorTransformApplyHook s_adv_transform_apply_hook;
+static void* s_adv_transform_apply_user;
+
+void advisor_animation_hooks_set(const AdvisorAnimationHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_adv_animation_hooks, 0, sizeof(s_adv_animation_hooks));
+    } else {
+        s_adv_animation_hooks = *hooks;
+    }
+}
+
+void advisor_animation_slot_install(int slot, uint32_t handle,
+                                    float start_time, float end_time)
+{
+    if (slot < 0 || slot >= 11) return;
+    s_adv_animation_slots[slot].handle = handle;
+    s_adv_animation_slots[slot].start_time = start_time;
+    s_adv_animation_slots[slot].end_time = end_time;
+}
+
+// FUNCTION: LEGORR 0x00401a70
+int advisor_scene_advance_completion_check(int animation_slot, float delta)
+{
+    uint32_t handle;
+    float progress = 0.0f;
+    float current;
+    if (animation_slot < 0 || animation_slot >= 11) return 1;
+    handle = s_adv_animation_slots[animation_slot].handle;
+    if (handle != 0u && s_adv_animation_hooks.update != NULL) {
+        progress = s_adv_animation_hooks.update(handle, delta,
+                                                s_adv_animation_hooks.user);
+    }
+    if ((advisor_state_word_peek() & 2u) == 0u) {
+        return progress > 0.0f ? 0 : 1;
+    }
+    if (progress > 0.0f) {
+        if (handle != 0u && s_adv_animation_hooks.seek != NULL) {
+            s_adv_animation_hooks.seek(handle,
+                s_adv_animation_slots[animation_slot].start_time + progress,
+                s_adv_animation_hooks.user);
+        }
+        return 1;
+    }
+    current = handle != 0u && s_adv_animation_hooks.time_get != NULL
+        ? s_adv_animation_hooks.time_get(handle, s_adv_animation_hooks.user)
+        : 0.0f;
+    if (s_adv_animation_slots[animation_slot].end_time <= current) {
+        if (handle != 0u && s_adv_animation_hooks.seek != NULL) {
+            s_adv_animation_hooks.seek(handle,
+                (current - s_adv_animation_slots[animation_slot].end_time) +
+                    s_adv_animation_slots[animation_slot].start_time,
+                s_adv_animation_hooks.user);
+        }
+    }
+    return 1;
+}
+
+void advisor_scene_ready_set(int ready)
+{
+    engine_context_mode_global_set(ready);
+}
+
+void advisor_scene_action_hook_set(AdvisorSceneActionHook hook, void* user)
+{
+    s_adv_scene_action_hook = hook;
+    s_adv_scene_action_user = user;
+}
+
+void advisor_companion_scene_create_hook_set(
+    AdvisorCompanionSceneCreateHook hook, void* user)
+{
+    s_adv_companion_scene_create_hook = hook;
+    s_adv_companion_scene_create_user = user;
+}
+
+// FUNCTION: LEGORR 0x00401000
+void advisor_scene_controller_initialize(void* config_context,
+                                         const uint32_t* scene_context_words,
+                                         uint32_t transform_context_handle)
+{
+    uint32_t base_scene;
+    (void)config_context;
+    if (scene_context_words == NULL) return;
+    s_advisor_position_names[0] = s_advisor_name_objective;
+    s_advisor_position_names[1] = s_advisor_name_objective_achieved;
+    s_advisor_position_names[2] = s_advisor_name_objective_failed;
+    s_advisor_position_names[3] = s_advisor_name_icon_normal;
+    s_advisor_position_names[4] = s_advisor_name_icon_back;
+    s_advisor_position_names[5] = s_advisor_name_icon_top;
+    s_advisor_position_names[6] = s_advisor_name_radar_toggle;
+    s_advisor_position_names[7] = s_advisor_name_radar_tagged;
+    s_advisor_position_names[8] = s_advisor_name_radar_zoom_in;
+    s_advisor_position_names[9] = s_advisor_name_radar_zoom_out;
+    s_advisor_position_names[10] = s_advisor_name_radar_map_view;
+    s_advisor_position_names[11] = s_advisor_name_info_dock_goto;
+    s_advisor_position_names[12] = s_advisor_name_info_dock_close;
+    s_advisor_position_names[13] = s_advisor_name_top_info;
+    s_advisor_position_names[14] = s_advisor_name_top_options;
+    s_advisor_position_names[15] = s_advisor_name_top_priorities;
+    s_advisor_position_names[16] = s_advisor_name_top_call_to_arms;
+    s_advisor_position_names[17] = s_advisor_name_top_go_back;
+    s_advisor_position_names[18] = s_advisor_name_control_zoom_in;
+    s_advisor_position_names[19] = s_advisor_name_control_zoom_out;
+    s_advisor_position_names[20] = s_advisor_name_talk_in_game;
+    s_advisor_animation_names[0] = s_advisor_anim_point_to_map;
+    s_advisor_animation_names[1] = s_advisor_anim_point_n;
+    s_advisor_animation_names[2] = s_advisor_anim_point_ne;
+    s_advisor_animation_names[3] = s_advisor_anim_point_e;
+    s_advisor_animation_names[4] = s_advisor_anim_point_se;
+    s_advisor_animation_names[5] = s_advisor_anim_point_s;
+    s_advisor_animation_names[6] = s_advisor_anim_point_sw;
+    s_advisor_animation_names[7] = s_advisor_anim_point_w;
+    s_advisor_animation_names[8] = s_advisor_anim_point_nw;
+    s_advisor_animation_names[9] = s_advisor_anim_point_up;
+    s_advisor_animation_names[10] = s_advisor_anim_talk_top;
+    base_scene = scene_context_words[9]; /* param_2 + 0x24 */
+    s_adv_scene_root_handle = base_scene;
+    s_adv_scene_transform_context = transform_context_handle;
+    s_adv_scene_companion_handle =
+        s_adv_companion_scene_create_hook != NULL
+            ? s_adv_companion_scene_create_hook(
+                  base_scene, s_adv_companion_scene_create_user)
+            : 0u;
+    advisor_state_word_set(0u);
+    if (s_adv_scene_action_hook != NULL) {
+        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_CONTROLLER_INIT, -1,
+                                transform_context_handle,
+                                s_adv_scene_action_user);
+    }
+}
+
+// FUNCTION: LEGORR 0x00401990
+void advisor_transition_worker(float delta)
+{
+    int row = s_adv_scene_active_row;
+    uint32_t animation_slot;
+    uint32_t animation;
+    animation_slot = s_adv_actions[row][0];
+    animation = s_adv_animation_slots[animation_slot].handle;
+    if (animation != 0u && (advisor_state_word_peek() & 1u) != 0u &&
+        !current_engine_mode_is_zero()) {
+        if ((s_adv_actions[row][8] & 0x40000u) != 0u &&
+            s_adv_scene_action_hook != NULL) {
+            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_NOTIFY, row,
+                                    animation, s_adv_scene_action_user);
+        }
+        if (s_adv_scene_action_hook != NULL) {
+            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, row,
+                                    animation, s_adv_scene_action_user);
+            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, -1,
+                                    s_adv_scene_companion_handle,
+                                    s_adv_scene_action_user);
+            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_ATTACH, row,
+                                    animation, s_adv_scene_action_user);
+        }
+        advisor_apply_slot_transform(row);
+        if (advisor_scene_advance_completion_check((int)animation_slot,
+                                                   delta) != 0) {
+            return;
+        }
+        advisor_state_word_set(advisor_state_word_peek() & ~1u);
+    }
+    if (s_adv_scene_action_hook != NULL) {
+        if (animation != 0u)
+            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, row,
+                                    animation, s_adv_scene_action_user);
+        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, -1,
+                                    s_adv_scene_companion_handle,
+                                s_adv_scene_action_user);
+    }
+}
+
+// FUNCTION: LEGORR 0x00401210
+void advisor_scene_visual_state_initialize(void)
+{
+    lego::resource_interface_call_slot8c(
+        (void*)(uintptr_t)s_adv_scene_transform_context);
+    lego::resource_interface_call_slot90(
+        (void*)(uintptr_t)s_adv_scene_transform_context);
+    s_adv_scene_scale = 0.96f;
+}
+
+float advisor_scene_scale_get(void)
+{
+    return s_adv_scene_scale;
+}
+
+void advisor_transform_apply_hook_set(AdvisorTransformApplyHook hook,
+                                      void* user)
+{
+    s_adv_transform_apply_hook = hook;
+    s_adv_transform_apply_user = user;
+}
+
+// FUNCTION: LEGORR 0x00401b30
+void advisor_apply_slot_transform(int row)
+{
+    uint32_t animation_slot;
+    uint32_t handle;
+    float x;
+    float y;
+    animation_slot = s_adv_actions[row][0];
+    handle = s_adv_animation_slots[animation_slot].handle;
+    memcpy(&x, &s_adv_actions[row][5], sizeof(x));
+    memcpy(&y, &s_adv_actions[row][6], sizeof(y));
+    if (s_adv_transform_apply_hook != NULL)
+        s_adv_transform_apply_hook(row, handle, x, y, s_adv_scene_scale,
+                                   s_adv_transform_apply_user);
+}
+
+// FUNCTION: LEGORR 0x00401930
+void advisor_request_reset_and_submit_sound(int row)
+{
+    uint32_t animation_slot;
+    uint32_t animation;
+    animation_slot = s_adv_actions[row][0];
+    animation = s_adv_animation_slots[animation_slot].handle;
+    if (animation != 0u && s_adv_scene_action_hook != NULL) {
+        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_RESET, row, animation,
+                                s_adv_scene_action_user);
+        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_SOUND, row, animation,
+                                s_adv_scene_action_user);
+    }
+}
+
+// FUNCTION: LEGORR 0x004018c0
+int advisor_request_admit(int row, int immediate)
+{
+    if ((s_adv_actions[row][8] & 0x20000u) != 0u &&
+        !current_engine_mode_is_zero() &&
+        (advisor_state_word_peek() & 1u) == 0u) {
+        uint32_t state;
+        s_adv_scene_active_row = row;
+        advisor_request_reset_and_submit_sound(row);
+        state = advisor_state_word_peek();
+        if (immediate != 0) {
+            state |= 3u;
+        } else {
+            state = (state & ~2u) | 1u;
+        }
+        advisor_state_word_set(state);
+        return 1;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004011c0
+void advisor_animation_end_cleanup(void)
+{
+    if (s_adv_scene_active_row >= 0 && s_adv_scene_active_row < ADV_ACTION_ROWS &&
+        s_adv_scene_action_hook != NULL) {
+        uint32_t animation_slot = s_adv_actions[s_adv_scene_active_row][0];
+        uint32_t animation = animation_slot < 11u
+            ? s_adv_animation_slots[animation_slot].handle : 0u;
+        if (animation != 0u)
+            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE,
+                                    s_adv_scene_active_row, animation,
+                                    s_adv_scene_action_user);
+    }
+    advisor_state_word_set(advisor_state_word_peek() & ~1u);
+    if (s_adv_scene_action_hook != NULL)
+        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, -1,
+                                s_adv_scene_companion_handle,
+                                s_adv_scene_action_user);
+}
+
+// FUNCTION: LEGORR 0x004017b0
+void advisor_position_record_initialize(int row, uint32_t animation_index,
+                                        int position_index,
+                                        uint32_t position_mode,
+                                        int action_mode, uint32_t x,
+                                        uint32_t y)
+{
+    uint32_t* rec = s_adv_actions[row];
+    rec[8] = 0x20000u;
+    rec[0] = animation_index;
+    rec[1] = (uint32_t)position_index;
+    rec[2] = position_mode;
+    rec[4] = (uint32_t)action_mode;
+    rec[5] = x;
+    rec[6] = y;
+    rec[7] = x;
+    rec[8] = y;
+    if (action_mode == 0x0c) {
+        rec[8] |= 0x10000u;
+    }
+    if (position_index != 0x1a) {
+        rec[8] |= 0x40000u;
+    }
+}
+
+/* AdvisorPositionConfigLoad (FUN_00401530): translate the two configured
+ * names to their table slots, then initialize each valid action row. The
+ * caller supplies parsed records because the engine's block iterator and
+ * localized action-name resolver are separate subsystems. */
+// FUNCTION: LEGORR 0x00401530
+int advisor_position_config_load(const AdvisorPositionConfigEntry* entries,
+                                 uint32_t count)
+{
+    uint32_t i;
+    int loaded = 0;
+    if (entries == NULL) return 0;
+    for (i = 0; i < count; ++i) {
+        int position_index;
+        int animation_index;
+        uint32_t x_bits;
+        uint32_t y_bits;
+        if (entries[i].position_name == NULL ||
+            entries[i].animation_name == NULL ||
+            !advisor_position_name_to_index(entries[i].position_name,
+                                            &position_index) ||
+            !advisor_animation_name_to_index(entries[i].animation_name,
+                                             &animation_index)) {
+            continue;
+        }
+        memcpy(&x_bits, &entries[i].x, sizeof(x_bits));
+        memcpy(&y_bits, &entries[i].y, sizeof(y_bits));
+        advisor_position_record_initialize(position_index,
+            (uint32_t)animation_index, entries[i].position_type,
+            entries[i].position_mode, entries[i].action_mode, x_bits, y_bits);
+        ++loaded;
+    }
+    return loaded;
+}
+
+/* AdvisorConfigSlotLookup (FUN_00401270): resolve the configured animation
+ * names into the bounded animation handle table. */
+// FUNCTION: LEGORR 0x00401270
+int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
+                              void* user)
+{
+    int i;
+    int loaded = 0;
+    if (lookup == NULL) return 0;
+    for (i = 0; i < 11; ++i) {
+        uint32_t handle = 0u;
+        float start_time = 0.0f;
+        float end_time = 0.0f;
+        if (lookup(s_advisor_animation_names[i], &handle, &start_time,
+                   &end_time, user)) {
+            start_time *= 25.0f;
+            end_time *= 25.0f;
+            advisor_animation_slot_install(i, handle, start_time, end_time);
+            ++loaded;
+        }
+    }
+    return loaded;
+}
 
 // FUNCTION: LEGORR 0x00401840
 void advisor_action_position_and_mode_set(int row, int mode,
@@ -370,13 +1002,13 @@ void advisor_action_position_and_mode_set(int row, int mode,
         return; /* deviation: blind stride */
     }
     uint32_t* rec = s_adv_actions[row];
-    rec[0] = (uint32_t)mode;   /* DAT base + 0x00 */
-    rec[1] = dword_a;          /* DAT base + 0x04 */
-    rec[2] = dword_b;          /* DAT base + 0x08 */
+    rec[4] = (uint32_t)mode;   /* DAT base + 0x10 */
+    rec[5] = dword_a;          /* DAT base + 0x14 */
+    rec[6] = dword_b;          /* DAT base + 0x18 */
     if ((uint32_t)mode == 0xcu) {
-        rec[5] |= 0x10000u;    /* DAT base + 0x14 */
+        rec[8] |= 0x10000u;    /* DAT base + 0x20 */
     } else {
-        rec[5] &= 0xfffeffffu;
+        rec[8] &= 0xfffeffffu;
     }
 }
 
@@ -387,23 +1019,25 @@ void advisor_action_position_get(int row, uint32_t* dword_c, uint32_t* dword_d)
         return; /* deviation: blind stride */
     }
     if (dword_c != NULL) {
-        *dword_c = s_adv_actions[row][3]; /* DAT base + 0x0c */
+        *dword_c = s_adv_actions[row][7]; /* DAT base + 0x1c */
     }
     if (dword_d != NULL) {
-        *dword_d = s_adv_actions[row][4]; /* DAT base + 0x10 */
+        *dword_d = s_adv_actions[row][8]; /* DAT base + 0x20 */
     }
 }
 
 uint32_t advisor_action_flags_peek(int row)
 {
-    return (row >= 0 && row < ADV_ACTION_ROWS) ? s_adv_actions[row][5] : 0u;
+    return (row >= 0 && row < ADV_ACTION_ROWS) ? s_adv_actions[row][8] : 0u;
 }
 
 /* ObjectiveAdvisorTokenLookup (FUN_00453200). The corpus's table pair
  * (count word + table pointer) has no ported writers, so the model
  * starts empty (documented deviation) and an install hook lets the
  * faithful read shape be exercised. */
+// GLOBAL: LEGORR 0x00555da8
 static const uint32_t* s_adv_tokens;
+// GLOBAL: LEGORR 0x00555da4
 static uint32_t        s_adv_token_count;
 
 void objective_advisor_tokens_install(const uint32_t* table, uint32_t count)

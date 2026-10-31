@@ -24,11 +24,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
 #include <time.h>
 
 #include "frontend.hpp"
 #include "savegame.hpp"
 #include "gods98/audio.hpp"
+#include "gods98/engine.hpp"
 #include "gods98/message.hpp"
 #include "gods98/flic.hpp"
 #include "crt/crt.hpp"
@@ -198,14 +200,20 @@ static uint32_t s_menu_wipe;
 static uint32_t s_menu_wipe_stop;
 // GLOBAL: LEGORR 0x005574f8
 static float s_menu_wipe_clock;
-static float s_menu_plane_pan[2]; /* DAT_005574dc/e0 roles */
+// GLOBAL: LEGORR 0x005574dc
+static float s_menu_plane_pan[2];
 static int s_main_menu_text_item_pending;
+// GLOBAL: LEGORR 0x004dcd40
 static TextureSurface* s_interface_message_tab_info_text;
+// GLOBAL: LEGORR 0x004dcec4
 static int s_back_button_width;
 static int fe_sav_menu_list_from_config(FrontEnd* fe, int list_id,
                                         const char* start_level);
+// GLOBAL: LEGORR 0x004dcec8
 static int s_back_button_height;
+// GLOBAL: LEGORR 0x004dce64
 static TextureSurface* s_back_button_highlight;
+// GLOBAL: LEGORR 0x004dce68
 static TextureSurface* s_back_button_pressed;
 static char s_back_button_action[FE_NAME_MAX];
 static FeSurroundImage s_interface_surround_images[FE_SURROUND_IMAGES_MAX];
@@ -321,9 +329,22 @@ static const FeKeyboardNameEntry s_keyboard_name_entries[] = {
 };
 /* DAT_005765e0 is a zero-filled virtual tail; keyboard_key_names_init
  * builds this table at runtime, so both sides start zero and the
- * whole-object annotation is byte-safe. */
+ * whole-object annotation is byte-safe. The FUN_00485e30 walk ends at
+ * table+0x400 = 0x5769e0 (the zero-filled dword that the unported
+ * directory-token band opens), so the table and a four-byte end marker
+ * ride one winapi-gated zero-init segment in declaration order (the
+ * cmd.cpp s_blocks precedent) and the cmp operand resolves through the
+ * marker's annotation. */
+#if defined(LEGORRR_BACKEND_WINAPI)
+#pragma data_seg(".data$keynames")
+#endif
 // GLOBAL: LEGORR 0x005765e0
-static const char* s_keyboard_key_names[256];
+static const char* s_keyboard_key_names[256] = { 0 };
+// GLOBAL: LEGORR 0x005769e0
+static uint32_t s_keyboard_key_names_walk_end = 0; /* DAT_005769e0 end marker */
+#if defined(LEGORRR_BACKEND_WINAPI)
+#pragma data_seg()
+#endif
 #include "gods98/resource.hpp"
 #include "entity.hpp"
 
@@ -332,6 +353,9 @@ static int s_toupper(int c)
     return (c >= 'a' && c <= 'z') ? toupper((unsigned char)c) : c;
 }
 static int s_strcaseeq(const char* a, const char* b);
+
+// GLOBAL: LEGORR 0x004db748
+static char s_ui_text_underscore_buffer[256];
 
 // FUNCTION: LEGORR 0x00485a20
 void keyboard_key_names_init(void)
@@ -353,8 +377,8 @@ void keyboard_key_names_init(void)
 int named_option_index_find_case_insensitive(const char* name,
                                              uint8_t* out_index)
 {
-    const char* const* p = s_keyboard_key_names;
     int index = 0;
+    const char* const* p = s_keyboard_key_names;
     while (p < s_keyboard_key_names +
                 (sizeof(s_keyboard_key_names) / sizeof(s_keyboard_key_names[0]))) {
         const char* entry = *p;
@@ -374,19 +398,22 @@ int named_option_index_find_case_insensitive(const char* name,
 // FUNCTION: LEGORR 0x004102b0
 const char* ui_text_underscores_to_spaces(const char* text)
 {
-    static char display[256];
+    char* const display = s_ui_text_underscore_buffer;
     if (text == NULL) {
         return NULL;
     }
-    const char* terminator = (const char*)memchr(text, '\0', sizeof(display));
-    if (terminator == NULL) {
+    const size_t length = strlen(text);
+    if (length > 0xffu) {
         return text;
     }
-    size_t length = (size_t)(terminator - text);
-    strncpy(display, text, length + 1);
-    char* underscore = display;
-    while ((underscore = crt_strchr(underscore, '_')) != NULL) {
-        *underscore++ = ' ';
+    strcpy(display, text);
+    /* The original scans the full 256-byte scratch region after copying;
+     * bytes after the terminator are not visible as part of the returned
+     * C string, but retaining the full scan also matches its loop shape. */
+    for (size_t i = 0; i < sizeof(s_ui_text_underscore_buffer); ++i) {
+        if (display[i] == '_') {
+            display[i] = ' ';
+        }
     }
     return display;
 }
@@ -3843,6 +3870,218 @@ int case_insensitive_name_table_lookup(const char* name, int* out_index)
     return 0;
 }
 
+static const char* s_ui_panel_names[12];
+static const char* s_ui_panel_indexed_names[64][24];
+static unsigned int s_ui_panel_indexed_name_count;
+
+void ui_panel_name_tables_install(const char* const names[12],
+                                  const char* const indexed_names[][24],
+                                  unsigned int indexed_count)
+{
+    unsigned int i;
+    unsigned int j;
+    if (indexed_count > 64u) indexed_count = 64u;
+    for (i = 0; i < 12u; ++i) {
+        s_ui_panel_names[i] = names != NULL ? names[i] : NULL;
+    }
+    for (i = 0; i < 64u; ++i) {
+        for (j = 0; j < 24u; ++j) {
+            s_ui_panel_indexed_names[i][j] =
+                indexed_names != NULL && i < indexed_count
+                    ? indexed_names[i][j] : NULL;
+        }
+    }
+    s_ui_panel_indexed_name_count = indexed_names != NULL ? indexed_count : 0u;
+}
+
+static int ui_panel_string_equal_case_insensitive(const char* first,
+                                                   const char* second)
+{
+    if (first == NULL || second == NULL) return 0;
+    while (*first != '\0' && *second != '\0') {
+        if (tolower((unsigned char)*first) !=
+            tolower((unsigned char)*second)) return 0;
+        ++first;
+        ++second;
+    }
+    return *first == '\0' && *second == '\0';
+}
+
+/* UiPanelNameTableLookup (FUN_0045a370): walk the twelve installed global
+ * panel-name slots and return the zero-based matching slot. */
+int ui_panel_name_table_lookup(const char* name, int* out_index)
+{
+    unsigned int i;
+    if (name == NULL || out_index == NULL) return 0;
+    for (i = 0; i < 12u; ++i) {
+        if (ui_panel_string_equal_case_insensitive(name, s_ui_panel_names[i])) {
+            *out_index = (int)i;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* UiPanelIndexedNameLookup (FUN_0045a410): each category owns 24 optional
+ * names; the first matching slot is written to the caller. */
+int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
+                                 unsigned int* out_index)
+{
+    unsigned int i;
+    if (name == NULL || out_index == NULL ||
+        table_index >= s_ui_panel_indexed_name_count) return 0;
+    for (i = 0; i < 24u; ++i) {
+        if (ui_panel_string_equal_case_insensitive(
+                name, s_ui_panel_indexed_names[table_index][i])) {
+            *out_index = i;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* UiPanelNameTablesInit (FUN_0045a030): the corpus publishes twelve panel
+ * names and the named controls at their 24-slot category positions. */
+void ui_panel_name_tables_init(void)
+{
+    static const char* const names[12] = {
+        "Panel_Radar", "Panel_RadarFill", "Panel_RadarOverlay",
+        "Panel_Messages", "Panel_MessagesSide", "Panel_CrystalSideBar",
+        "Panel_TopPanel", "Panel_Information", "Panel_PriorityList",
+        "Panel_CameraControl", "Panel_InfoDock", "Panel_Encyclopedia"
+    };
+    static const char* indexed[12][24] = {{ NULL }};
+    indexed[0][0] = "PanelButton_Radar_Toggle";
+    indexed[0][1] = "PanelButton_Radar_TaggedObjectView";
+    indexed[0][2] = "PanelButton_Radar_ZoomIn";
+    indexed[0][3] = "PanelButton_Radar_ZoomOut";
+    indexed[0][4] = "PanelButton_Radar_MapView";
+    indexed[5][0] = "PanelButton_CrystalSideBar_Ore";
+    indexed[5][1] = "PanelButton_CrystalSideBar_Crystals";
+    indexed[6][0] = "PanelButton_TopPanel_Options";
+    indexed[6][1] = "PanelButton_TopPanel_Priorities";
+    indexed[6][2] = "PanelButton_TopPanel_CallToArms";
+    indexed[7][0] = "PanelButton_Information_Toggle";
+    indexed[7][1] = "PanelButton_Information_Function";
+    indexed[8][0] = "PanelButton_PriorityList_Disable0";
+    indexed[8][1] = "PanelButton_PriorityList_Disable1";
+    indexed[8][2] = "PanelButton_PriorityList_Disable2";
+    indexed[8][3] = "PanelButton_PriorityList_Disable3";
+    indexed[8][4] = "PanelButton_PriorityList_Disable4";
+    indexed[8][5] = "PanelButton_PriorityList_Disable5";
+    indexed[8][6] = "PanelButton_PriorityList_Disable6";
+    indexed[8][7] = "PanelButton_PriorityList_Disable7";
+    indexed[8][8] = "PanelButton_PriorityList_UpOne1";
+    indexed[8][9] = "PanelButton_PriorityList_UpOne2";
+    indexed[8][10] = "PanelButton_PriorityList_UpOne3";
+    indexed[8][11] = "PanelButton_PriorityList_UpOne4";
+    indexed[8][12] = "PanelButton_PriorityList_UpOne5";
+    indexed[8][13] = "PanelButton_PriorityList_UpOne6";
+    indexed[8][14] = "PanelButton_PriorityList_UpOne7";
+    indexed[8][15] = "PanelButton_PriorityList_UpOne8";
+    indexed[8][16] = "PanelButton_PriorityList_Close";
+    indexed[8][17] = "PanelButton_PriorityList_Reset";
+    indexed[9][0] = "PanelButton_CameraControl_ZoomIn";
+    indexed[9][1] = "PanelButton_CameraControl_ZoomOut";
+    indexed[9][2] = "PanelButton_CameraControl_Cycle";
+    indexed[9][3] = "PanelButton_CameraControl_Rotate";
+    indexed[10][0] = "PanelButton_InfoDock_Goto";
+    indexed[10][1] = "PanelButton_InfoDock_Close";
+    indexed[11][0] = "PanelButton_Encyclopedia_Close";
+    ui_panel_name_tables_install(names, indexed, 12u);
+}
+
+static ToolTipIconConfigHooks s_tooltip_icon_config_hooks;
+static const char* s_tooltip_primary_names[11];
+static const char* s_tooltip_secondary_names[6];
+static void* s_tooltip_primary_handles[11];
+static void* s_tooltip_secondary_handles[6];
+static void* s_tooltip_blank_handle;
+static void* s_tooltip_cursor_handle;
+
+void tooltip_icon_config_hooks_set(const ToolTipIconConfigHooks* hooks,
+                                   const char* const primary_names[11],
+                                   const char* const secondary_names[6])
+{
+    unsigned int i;
+    if (hooks == NULL) {
+        memset(&s_tooltip_icon_config_hooks, 0,
+               sizeof(s_tooltip_icon_config_hooks));
+    }
+    else {
+        s_tooltip_icon_config_hooks = *hooks;
+    }
+    for (i = 0; i < 11u; ++i)
+        s_tooltip_primary_names[i] =
+            primary_names != NULL ? primary_names[i] : NULL;
+    for (i = 0; i < 6u; ++i)
+        s_tooltip_secondary_names[i] =
+            secondary_names != NULL ? secondary_names[i] : NULL;
+}
+
+void* tooltip_icon_handle_get(unsigned int bank, unsigned int index)
+{
+    if (bank == 0u && index < 11u) return s_tooltip_primary_handles[index];
+    if (bank == 1u && index < 6u) return s_tooltip_secondary_handles[index];
+    if (bank == 2u && index == 0u) return s_tooltip_blank_handle;
+    if (bank == 2u && index == 1u) return s_tooltip_cursor_handle;
+    return NULL;
+}
+
+/* ToolTipIconsConfigLoad (FUN_00437150): load matching images from the
+ * ToolTipIcons config section into the two named icon banks and special
+ * Blank/Cursor slots. */
+void tooltip_icons_config_load(void* config)
+{
+    ToolTipIconConfigHooks* const hooks = &s_tooltip_icon_config_hooks;
+    void* section;
+    void* entry;
+    if (hooks->section_open == NULL || hooks->entry_first == NULL ||
+        hooks->entry_next == NULL || hooks->entry_name_get == NULL ||
+        hooks->entry_value_get == NULL || hooks->image_load == NULL) return;
+    section = hooks->section_open(config, "ToolTipIcons", hooks->context);
+    if (section == NULL) {
+        if (s_tooltip_cursor_handle != NULL && hooks->image_release != NULL) {
+            hooks->image_release(s_tooltip_cursor_handle, hooks->context);
+        }
+        s_tooltip_cursor_handle = NULL;
+        return;
+    }
+    entry = hooks->entry_first(section, hooks->context);
+    while (entry != NULL) {
+        const char* name = hooks->entry_name_get(entry, hooks->context);
+        const char* value = hooks->entry_value_get(entry, hooks->context);
+        unsigned int i;
+        int matched = 0;
+        for (i = 0; i < 11u; ++i) {
+            if (ui_panel_string_equal_case_insensitive(
+                    name, s_tooltip_primary_names[i])) {
+                s_tooltip_primary_handles[i] = hooks->image_load(
+                    value, hooks->context);
+                matched = 1;
+                break;
+            }
+        }
+        if (!matched) {
+            for (i = 0; i < 6u; ++i) {
+                if (ui_panel_string_equal_case_insensitive(
+                        name, s_tooltip_secondary_names[i])) {
+                    s_tooltip_secondary_handles[i] = hooks->image_load(
+                        value, hooks->context);
+                    matched = 1;
+                    break;
+                }
+            }
+        }
+        if (!matched && ui_panel_string_equal_case_insensitive(name, "Blank"))
+            s_tooltip_blank_handle = hooks->image_load(value, hooks->context);
+        else if (!matched && ui_panel_string_equal_case_insensitive(
+                                 name, "Cursor"))
+            s_tooltip_cursor_handle = hooks->image_load(value, hooks->context);
+        entry = hooks->entry_next(entry, hooks->context);
+    }
+}
+
 /* MenuButtonRecordMake (FUN_00410e20): create a 15-slot image-backed menu
  * item, including its optional tooltip-name index. */
 // FUNCTION: LEGORR 0x00410e20
@@ -4332,9 +4571,7 @@ void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
 // FUNCTION: LEGORR 0x00419430
 void interface_message_tab_info_text_load(const char* path)
 {
-    s_interface_message_tab_info_text =
-        (path != NULL && path[0] != '\0')
-            ? image_surface_load(path, 0u, 0u) : NULL;
+    s_interface_message_tab_info_text = image_surface_load(path, 0u, 0u);
     resource_record_add_ref(s_interface_message_tab_info_text);
 }
 
@@ -4611,16 +4848,20 @@ void current_selection_context_set(void* context)
  * button hit-test routines are ported; the help-window layout loader and
  * other state writers remain unported, so their inputs land at zero until
  * installed through the port hooks. The corpus's 0x1c-stride handle tables
- * index blindly; the port
- * guards a 16-entry window per table (index * 7 dwords). */
+ * index blindly; the explicit slot setters and diagnostics guard their
+ * 16-entry windows (index * 7 dwords). */
 #define SEL_HANDLE_ENTRIES 16
 #define SEL_HANDLE_STRIDE 7 /* dwords per 0x1c-stride entry */
 
 // GLOBAL: LEGORR 0x004dc650
 static uint32_t s_sel_state;                    /* DAT_004dc650 */
+// GLOBAL: LEGORR 0x004dc648
 static int      s_sel_hit_index;                /* DAT_004dc648 */
+// GLOBAL: LEGORR 0x004db914
 static uint32_t s_sel_handles_a[SEL_HANDLE_ENTRIES * SEL_HANDLE_STRIDE];
+// GLOBAL: LEGORR 0x004db918
 static uint32_t s_sel_handles_b[SEL_HANDLE_ENTRIES * SEL_HANDLE_STRIDE];
+// GLOBAL: LEGORR 0x004db934
 static uint32_t s_sel_handle_extra;             /* DAT_004db934 */
 
 // FUNCTION: LEGORR 0x004181a0
@@ -4636,14 +4877,10 @@ uint32_t selection_state_handle_get(int index)
         return s_sel_handle_extra;
     }
     if ((s_sel_state & 0x10u) != 0 && s_sel_hit_index == index) {
-        if (index < 0 || index >= SEL_HANDLE_ENTRIES) {
-            return 0u; /* deviation: the corpus indexes blindly */
-        }
-        const size_t off = (size_t)index * SEL_HANDLE_STRIDE;
         if ((s_sel_state & 0x20u) != 0) {
-            return s_sel_handles_b[off];
+            return s_sel_handles_b[index * SEL_HANDLE_STRIDE];
         }
-        return s_sel_handles_a[off];
+        return s_sel_handles_a[index * SEL_HANDLE_STRIDE];
     }
     return 0u;
 }
@@ -4693,23 +4930,63 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value)
  * the corpus's 0x27c-stride band entries live with the unported
  * update dispatch; the flag and time fields land as guarded windows. */
 #define TIMED_EFFECT_ENTRIES 16
+#define TIMED_EFFECT_RECORD_COUNT 40
+#define TIMED_EFFECT_RECORD_STRIDE_DWORDS 0x9f
 #define LAYOUT_POSITION_ENTRIES 2   /* corpus: two help-window buttons */
 #define LAYOUT_POSITION_STRIDE 7    /* corpus advances 0x1c bytes per entry */
 
-static int      s_band_mode;                    /* DAT_004dc64c */
+// GLOBAL: LEGORR 0x004dc64c
+static int      s_band_mode;
 static uint32_t s_timed_effect_flags[TIMED_EFFECT_ENTRIES];
-static uint32_t s_timed_effect_time[TIMED_EFFECT_ENTRIES];
-static uint32_t s_timed_effect_tick; /* DAT_0054bf3c role: unowned */
+/* Corpus records span DAT_0054c000..DAT_0055235f at 0x27c-byte strides;
+ * the update walk's exclusive flag bound is DAT_0055235c (record 39's
+ * +0x278 field), so the timestamp band has 40 records. */
+// GLOBAL: LEGORR 0x0054c000
+static uint32_t s_timed_effect_time[TIMED_EFFECT_RECORD_COUNT
+                                    * TIMED_EFFECT_RECORD_STRIDE_DWORDS];
+// GLOBAL: LEGORR 0x0054bf3c
+static uint32_t s_timed_effect_tick;
+// GLOBAL: LEGORR 0x004db904
 static int32_t  s_layout_position[LAYOUT_POSITION_ENTRIES]
                                   [LAYOUT_POSITION_STRIDE];
 static float s_help_window_button_rects[LAYOUT_POSITION_ENTRIES][4];
 static int (*s_ui_resource_reposition_hook)(uint32_t handle, int x, int y);
 static float s_help_background_offset_x;
 static float s_help_background_offset_y;
+// GLOBAL: LEGORR 0x004db8f8
 static uint32_t s_help_background_handle;
+// GLOBAL: LEGORR 0x004db974
 static uint32_t s_help_text_area_handle;
 static char s_help_window_labels[3][256];
+static char s_tooltip_info_strings[9][256];
+static uint32_t s_tooltip_overlay_scratch[0x1839];
+static AdvisorTutorialIconLoadFn s_tutorial_icon_load;
+static AdvisorTutorialIconInitializeFn s_tutorial_icon_initialize;
+static void* s_tutorial_icon_context;
+static void* s_tutorial_icon;
+static AdvisorTextRequestActionFn s_advisor_text_request_action;
+static void* s_advisor_text_request_context;
+static uint32_t s_advisor_text_state_flags;
+static int s_advisor_text_current_slot = 0x1a;
+static float s_advisor_text_animation_timer;
+static float s_advisor_text_animation_reset_timer;
+static AdvisorTextAnimationOps s_advisor_text_animation_ops;
+static AdvisorTextBoxExtentFn s_advisor_text_box_extent_hook;
+static void* s_advisor_text_box_extent_context;
+static AdvisorTextDisplayOps s_advisor_text_display_ops;
+static SelectedGroundMarkerOps s_selected_ground_marker_ops;
+static OverlayTextBufferOps s_overlay_text_buffer_ops;
+static AdvisorDialogStackOps s_advisor_dialog_stack_ops;
+static uint32_t s_advisor_dialog_stack_width = 0xffffffffu;
+static uint32_t s_advisor_dialog_stack_height = 0xffffffffu;
+static DebugPanelTextOps s_debug_panel_text_ops;
+static float s_debug_panel_text_timer;
+static int s_debug_panel_text_alternate;
+static InterfaceSpawnRequestOps s_interface_spawn_request_ops;
+static InterfaceSpawnRequestState s_interface_spawn_request_state;
+// GLOBAL: LEGORR 0x004dc640
 static float s_help_window_feedback_position;
+// GLOBAL: LEGORR 0x004dc644
 static float s_help_window_feedback_limit;
 static void (*s_help_window_feedback_reset)(int, int);
 static void (*s_help_window_feedback_cleanup)(void);
@@ -4768,7 +5045,7 @@ bool ui_mode_transition_request(int index, int p2, int p3)
         }
     } else if (s_band_mode == index) {
         s_sel_state |= 0x20u;
-        return true;
+        return s_band_mode == index;
     }
     return mode == index;
 }
@@ -4888,7 +5165,6 @@ void help_render_transition_clear_hook_set(void (*hook)(int, int))
  * flic.cpp's 0x00484c90 fallback, the port carries a file-local no-op so the
  * call site lands the corpus's two pushes; the ledger_stubs entry stays the
  * link-time no-op for the unported callers. */
-// STUB: LEGORR 0x00425c30
 static void help_transition_control_noop(int a, int b)
 {
     (void)a;
@@ -4989,6 +5265,759 @@ static void help_window_label_copy(char* out, size_t out_size,
     while ((underscore = crt_strchr(underscore, '_')) != NULL) {
         *underscore++ = ' ';
     }
+}
+
+/* ToolTipInfoStringsLoad (FUN_00427e00) loads the nine fixed labels from
+ * the ToolTipInfo group. The corpus heap-copies each value into a global;
+ * this model keeps bounded module-owned copies so they survive block_close. */
+// FUNCTION: LEGORR 0x00427e00
+void tooltip_info_strings_load(BlockFile* cfg)
+{
+    static const char* const paths[9] = {
+        "ToolTipInfo HealthText",
+        "ToolTipInfo EnergyText",
+        "ToolTipInfo CrystalsText",
+        "ToolTipInfo OreText",
+        "ToolTipInfo StudsText",
+        "ToolTipInfo ToolsText",
+        "ToolTipInfo CarryObjectText",
+        "ToolTipInfo DrivenByText",
+        "ToolTipInfo OreRequiredText"
+    };
+    int i;
+    for (i = 0; i < 9; ++i) {
+        s_tooltip_info_strings[i][0] = '\0';
+        (void)block_get_str(cfg, paths[i], s_tooltip_info_strings[i],
+                            sizeof(s_tooltip_info_strings[i]));
+    }
+}
+
+void advisor_tutorial_icon_hooks_set(AdvisorTutorialIconLoadFn load,
+                                     AdvisorTutorialIconInitializeFn initialize,
+                                     void* context)
+{
+    s_tutorial_icon_load = load;
+    s_tutorial_icon_initialize = initialize;
+    s_tutorial_icon_context = context;
+}
+
+/* AdvisorTutorialIconImageLoad (FUN_00434a00): read the root-level
+ * TutorialIcon resource name, load it, and initialize a successful image. */
+// FUNCTION: LEGORR 0x00434a00
+void advisor_tutorial_icon_image_load(BlockFile* cfg)
+{
+    char path[128];
+    const char* icon_path;
+    void* icon;
+    if (cfg == NULL || s_tutorial_icon_load == NULL) return;
+    snprintf(path, sizeof(path), "%s TutorialIcon", util_root_name(cfg));
+    icon_path = block_get_strptr(cfg, path);
+    if (icon_path == NULL) return;
+    icon = s_tutorial_icon_load(icon_path, s_tutorial_icon_context);
+    if (icon == NULL) return;
+    s_tutorial_icon = icon;
+    if (s_tutorial_icon_initialize != NULL) {
+        s_tutorial_icon_initialize(icon, s_tutorial_icon_context);
+    }
+}
+
+void* advisor_tutorial_icon_get(void)
+{
+    return s_tutorial_icon;
+}
+
+void advisor_text_request_action_hook_set(AdvisorTextRequestActionFn hook,
+                                          void* context)
+{
+    s_advisor_text_request_action = hook;
+    s_advisor_text_request_context = context;
+}
+
+/* AdvisorTextRequestSetup (FUN_0046ac20): normalize the request mask,
+ * publish the two overlay globals, notify the actor, and set pending bit 0. */
+// FUNCTION: LEGORR 0x0046ac20
+void advisor_text_request_setup(uint32_t request, uint32_t flags)
+{
+    if (flags == 0u) flags = 0x8000u;
+    flags |= 0x10000u;
+    engine_overlay_words_set(flags, request);
+    if (s_advisor_text_request_action != NULL) {
+        s_advisor_text_request_action(request, 0, 1,
+                                     s_advisor_text_request_context);
+    }
+    s_advisor_text_state_flags |= 1u;
+}
+
+uint32_t advisor_text_request_flags_get(void)
+{
+    return s_advisor_text_state_flags;
+}
+
+void debug_panel_text_ops_set(const DebugPanelTextOps* ops)
+{
+    if (ops != NULL) s_debug_panel_text_ops = *ops;
+    else memset(&s_debug_panel_text_ops, 0,
+                sizeof(s_debug_panel_text_ops));
+}
+
+/* DebugPanelTextDrawUpdate (FUN_004230c0): pulse the alternate palette every
+ * 12.5 seconds, resolve an empty string from the active selection, clamp its
+ * horizontal placement, and draw it centered vertically on its font row. */
+// FUNCTION: LEGORR 0x004230c0
+void debug_panel_text_draw_update(float elapsed, int screen_width,
+                                  const char* text)
+{
+    int x = 0;
+    int y = 0;
+    int font_height = 0;
+    int text_width = 0;
+    int scroll_width = 0;
+    s_debug_panel_text_timer -= elapsed;
+    if (s_debug_panel_text_timer <= 0.0f) {
+        s_debug_panel_text_timer += 12.5f;
+        s_debug_panel_text_alternate =
+            (s_debug_panel_text_alternate == 0) ? 1 : 0;
+    }
+    if (text == NULL) return;
+    if (text[0] == '\0' &&
+        s_debug_panel_text_ops.fallback_text_get != NULL) {
+        text = s_debug_panel_text_ops.fallback_text_get(
+            s_debug_panel_text_ops.context);
+        if (text == NULL) return;
+    }
+    if (s_debug_panel_text_ops.origin_get != NULL) {
+        s_debug_panel_text_ops.origin_get(s_debug_panel_text_ops.context,
+                                          &x, &y);
+    }
+    if (s_debug_panel_text_ops.font_line_height != NULL) {
+        font_height = s_debug_panel_text_ops.font_line_height(
+            s_debug_panel_text_ops.context);
+    }
+    if (s_debug_panel_text_ops.text_width != NULL) {
+        text_width = s_debug_panel_text_ops.text_width(
+            s_debug_panel_text_ops.context, text);
+    }
+    if (s_debug_panel_text_ops.scroll_width != NULL) {
+        scroll_width = s_debug_panel_text_ops.scroll_width(
+            s_debug_panel_text_ops.context, 0x22u);
+    }
+    if (screen_width - 40 < x + text_width) x -= text_width;
+    if (s_debug_panel_text_ops.text_draw != NULL) {
+        int offset = (s_debug_panel_text_alternate == 0) ? scroll_width : 0;
+        s_debug_panel_text_ops.text_draw(
+            s_debug_panel_text_ops.context, x + offset,
+            y - font_height / 2, s_debug_panel_text_alternate, text);
+    }
+}
+
+void interface_spawn_request_ops_set(const InterfaceSpawnRequestOps* ops)
+{
+    if (ops != NULL) s_interface_spawn_request_ops = *ops;
+    else memset(&s_interface_spawn_request_ops, 0,
+                sizeof(s_interface_spawn_request_ops));
+}
+
+void interface_spawn_request_state_get(InterfaceSpawnRequestState* state_out)
+{
+    if (state_out != NULL) *state_out = s_interface_spawn_request_state;
+}
+
+/* InterfaceSpawnRequestEnqueue (FUN_00434e80): clear the interface pending
+ * bit, update the directional request state for the two special types, or
+ * dispatch to the first matching category from the object flags. */
+// FUNCTION: LEGORR 0x00434e80
+int interface_spawn_request_enqueue(int type, uint32_t parameter)
+{
+    uint32_t flags;
+    uint32_t category;
+    uint32_t state_flags = global_state_low_word_get();
+    global_state_low_word_set(state_flags & ~0x80u);
+    if (s_interface_spawn_request_ops.prepare != NULL) {
+        s_interface_spawn_request_ops.prepare(
+            s_interface_spawn_request_ops.context, 1);
+    }
+    if (type == 4 || type == 0xb) {
+        float direction[2] = { 0.0f, 0.0f };
+        state_flags = global_state_low_word_get();
+        global_state_low_word_set(state_flags | 0x80u);
+        s_interface_spawn_request_state.type = type;
+        s_interface_spawn_request_state.parameter = parameter;
+        if (s_interface_spawn_request_ops.camera_direction_get != NULL) {
+            s_interface_spawn_request_ops.camera_direction_get(
+                s_interface_spawn_request_ops.context, direction);
+        }
+        if (fabs((double)direction[0]) <= fabs((double)direction[1])) {
+            s_interface_spawn_request_state.facing =
+                (direction[1] > 0.0f) ? 2 : 0;
+        }
+        else {
+            s_interface_spawn_request_state.facing =
+                (direction[0] > 0.0f) ? 3 : 1;
+        }
+        return 1;
+    }
+    if (s_interface_spawn_request_ops.request_flags_get == NULL ||
+        s_interface_spawn_request_ops.request_dispatch == NULL) return 0;
+    flags = s_interface_spawn_request_ops.request_flags_get(
+        s_interface_spawn_request_ops.context, type, parameter);
+    if ((flags & 0x1000u) != 0u) category = 0u;
+    else if ((flags & 0x800u) != 0u) category = 1u;
+    else if ((flags & 0x2000u) != 0u) category = 2u;
+    else if ((flags & 0x400000u) != 0u) category = 3u;
+    else return 0;
+    return s_interface_spawn_request_ops.request_dispatch(
+        s_interface_spawn_request_ops.context, category,
+        category < 3u && s_interface_spawn_request_ops.saved_slot_get != NULL
+            ? s_interface_spawn_request_ops.saved_slot_get(
+                s_interface_spawn_request_ops.context, category)
+            : NULL,
+        type, parameter);
+}
+
+void advisor_dialog_stack_ops_set(const AdvisorDialogStackOps* ops)
+{
+    if (ops != NULL) s_advisor_dialog_stack_ops = *ops;
+    else memset(&s_advisor_dialog_stack_ops, 0,
+                sizeof(s_advisor_dialog_stack_ops));
+    s_advisor_dialog_stack_width = 0xffffffffu;
+    s_advisor_dialog_stack_height = 0xffffffffu;
+}
+
+/* AdvisorDialogStackLayout (FUN_0041eca0): refresh geometry when dimensions
+ * change, then lay out icons and queued entries upward from the top point. */
+// FUNCTION: LEGORR 0x0041eca0
+void advisor_dialog_stack_layout(float y, uint32_t parameter,
+                                 uint32_t width, uint32_t height)
+{
+    AdvisorDialogStackEntry* entries = NULL;
+    uint32_t count = 0;
+    uint32_t index;
+    (void)parameter;
+    if (width != s_advisor_dialog_stack_width ||
+        height != s_advisor_dialog_stack_height) {
+        if (s_advisor_dialog_stack_ops.layout_reset != NULL) {
+            s_advisor_dialog_stack_ops.layout_reset(
+                s_advisor_dialog_stack_ops.context, width, height);
+        }
+        s_advisor_dialog_stack_width = width;
+        s_advisor_dialog_stack_height = height;
+    }
+    if (s_advisor_dialog_stack_ops.active == NULL ||
+        !s_advisor_dialog_stack_ops.active(
+            s_advisor_dialog_stack_ops.context) ||
+        s_advisor_dialog_stack_ops.entries_get == NULL ||
+        !s_advisor_dialog_stack_ops.entries_get(
+            s_advisor_dialog_stack_ops.context, width, height,
+            &entries, &count) || entries == NULL) return;
+
+    y -= 15.0f;
+    for (index = 0; index < count; ++index) {
+        void* icon = NULL;
+        void* item = NULL;
+        int resource_height = 0;
+        if (s_advisor_dialog_stack_ops.icon_get != NULL) {
+            icon = s_advisor_dialog_stack_ops.icon_get(
+                s_advisor_dialog_stack_ops.context, index == 0 ? 0u : 1u);
+        }
+        if (icon == NULL) y -= 20.0f;
+        else {
+            if (s_advisor_dialog_stack_ops.icon_height != NULL) {
+                resource_height = s_advisor_dialog_stack_ops.icon_height(
+                    s_advisor_dialog_stack_ops.context, icon);
+            }
+            y -= (float)resource_height;
+            if (s_advisor_dialog_stack_ops.icon_place != NULL) {
+                s_advisor_dialog_stack_ops.icon_place(
+                    s_advisor_dialog_stack_ops.context, icon, y);
+            }
+        }
+        if (s_advisor_dialog_stack_ops.item_resolve != NULL) {
+            int eligible = 0;
+            if (s_advisor_dialog_stack_ops.entry_eligible != NULL) {
+                eligible = s_advisor_dialog_stack_ops.entry_eligible(
+                    s_advisor_dialog_stack_ops.context, entries[index].record);
+            }
+            item = s_advisor_dialog_stack_ops.item_resolve(
+                s_advisor_dialog_stack_ops.context, entries[index].record,
+                eligible);
+        }
+        if (item == NULL) y -= 40.0f;
+        else {
+            resource_height = 0;
+            if (s_advisor_dialog_stack_ops.item_height != NULL) {
+                resource_height = s_advisor_dialog_stack_ops.item_height(
+                    s_advisor_dialog_stack_ops.context, item);
+            }
+            y -= (float)resource_height;
+            if (s_advisor_dialog_stack_ops.item_place != NULL) {
+                s_advisor_dialog_stack_ops.item_place(
+                    s_advisor_dialog_stack_ops.context, item, y);
+            }
+            if (entries[index].has_special && entries[index].item_id != 0u &&
+                s_advisor_dialog_stack_ops.special_item_apply != NULL) {
+                s_advisor_dialog_stack_ops.special_item_apply(
+                    s_advisor_dialog_stack_ops.context,
+                    entries[index].item_id);
+            }
+        }
+    }
+}
+
+/* AdvisorOverlayHitResolve (FUN_0041c1c0): first hit-test the active overlay
+ * rectangle; if it misses, defer to the configurable control-tree search. */
+// FUNCTION: LEGORR 0x0041c1c0
+int advisor_overlay_hit_resolve(
+    float x, float y, const AdvisorOverlayRect* focused_rect,
+    float offset_x, float offset_y, AdvisorOverlayFallbackHitFn fallback,
+    void* context, uint32_t* result0, uint32_t* result1,
+    uint32_t* result2)
+{
+    uint32_t hit0 = 0u;
+    uint32_t hit1 = 0u;
+    uint32_t hit2 = 0u;
+    if (focused_rect != NULL && focused_rect->enabled != 0 &&
+        x >= focused_rect->x + offset_x &&
+        x <= focused_rect->x + focused_rect->width + offset_x &&
+        y >= focused_rect->y + offset_y &&
+        y <= focused_rect->y + focused_rect->height + offset_y) {
+        if (result0 != NULL) *result0 = 0u;
+        return 1;
+    }
+    if (fallback == NULL ||
+        fallback(context, x, y, offset_x, offset_y,
+                 &hit0, &hit1, &hit2) == 0) {
+        return 0;
+    }
+    if (result0 != NULL) *result0 = hit0;
+    if (result1 != NULL) *result1 = hit1;
+    if (result2 != NULL) *result2 = hit2;
+    return 1;
+}
+
+void advisor_text_animation_ops_set(const AdvisorTextAnimationOps* ops,
+                                    float reset_timer)
+{
+    if (ops != NULL) s_advisor_text_animation_ops = *ops;
+    else memset(&s_advisor_text_animation_ops, 0,
+                sizeof(s_advisor_text_animation_ops));
+    s_advisor_text_animation_reset_timer = reset_timer;
+}
+
+/* AdvisorTextAnimationUpdate (FUN_0046ac60): update the active text slot,
+ * optionally restart its timeout, advance an available animation, and
+ * maintain the slot-selected flag. */
+// FUNCTION: LEGORR 0x0046ac60
+void advisor_text_animation_update(int slot, int force, int selected)
+{
+    if (force == 0) {
+        if (s_advisor_text_animation_timer <= 0.0f) {
+            s_advisor_text_current_slot = slot;
+        }
+    }
+    else {
+        s_advisor_text_current_slot = slot;
+        s_advisor_text_animation_timer = s_advisor_text_animation_reset_timer;
+    }
+    if (s_advisor_text_animation_ops.is_paused == NULL ||
+        s_advisor_text_animation_ops.is_paused(
+            s_advisor_text_animation_ops.context) == 0) {
+        int request = 0;
+        if (s_advisor_text_animation_ops.animation_find != NULL &&
+            s_advisor_text_animation_ops.animation_find(
+                s_advisor_text_animation_ops.context, slot, &request) != 0 &&
+            s_advisor_text_animation_ops.animation_play != NULL) {
+            s_advisor_text_animation_ops.animation_play(
+                s_advisor_text_animation_ops.context, request, 0);
+        }
+    }
+    if (s_advisor_text_current_slot == slot && selected != 0) {
+        s_advisor_text_state_flags |= 4u;
+    }
+    else {
+        s_advisor_text_state_flags &= ~4u;
+    }
+}
+
+void advisor_text_display_ops_set(const AdvisorTextDisplayOps* ops)
+{
+    if (ops != NULL) s_advisor_text_display_ops = *ops;
+    else memset(&s_advisor_text_display_ops, 0,
+                sizeof(s_advisor_text_display_ops));
+}
+
+/* AdvisorTextDisplayWorker (FUN_0046ad00): update the active advisor slot
+ * or message timer, render the selected text path, then close or finish the
+ * interface overlay according to the global display state. */
+int advisor_text_display_worker(float delta)
+{
+    AdvisorTextDisplayOps* ops = &s_advisor_text_display_ops;
+    AdvisorTextDisplayState state;
+    int old_slot;
+    int alternate;
+    if (ops->state_get == NULL) return 0;
+    memset(&state, 0, sizeof(state));
+    if (!ops->state_get(ops->context, &state)) return 0;
+    old_slot = state.current_slot;
+    if (state.message_flags == 0u) {
+        int available = ops->slot_is_available != NULL ?
+            ops->slot_is_available(ops->context, state.current_slot) : 0;
+        if (available && state.current_slot != 0x1a) {
+            alternate = state.hidden_slot != 0;
+            if (ops->slot_text_draw != NULL) {
+                ops->slot_text_draw(ops->context, state.current_slot,
+                                    alternate, state.x, state.y);
+            }
+            if (state.message_timer <= 0.0f) {
+                state.current_slot = 0x1a;
+                if (ops->current_slot_set != NULL)
+                    ops->current_slot_set(ops->context, state.current_slot);
+            }
+            state.message_timer -= delta;
+            if (ops->message_timer_set != NULL)
+                ops->message_timer_set(ops->context, state.message_timer);
+        }
+    }
+    else if (state.message_id == 0) {
+        state.message_flags = 0u;
+        if (ops->message_flags_set != NULL)
+            ops->message_flags_set(ops->context, 0u);
+    }
+    else {
+        if (ops->message_text_draw != NULL) {
+            ops->message_text_draw(ops->context, state.message_id,
+                                   state.x, state.y);
+        }
+        if ((state.message_flags & 0x8000u) == 0u) {
+            state.message_flags--;
+            if (ops->message_flags_set != NULL)
+                ops->message_flags_set(ops->context, state.message_flags);
+        }
+    }
+    if (ops->overlay_active != NULL &&
+        ops->overlay_active(ops->context) && old_slot != 0x16) {
+        if (ops->overlay_close != NULL) ops->overlay_close(ops->context);
+        return 1;
+    }
+    if (ops->interface_finish != NULL)
+        ops->interface_finish(ops->context, &state, delta);
+    return 1;
+}
+
+void selected_ground_marker_ops_set(const SelectedGroundMarkerOps* ops)
+{
+    if (ops != NULL) s_selected_ground_marker_ops = *ops;
+    else memset(&s_selected_ground_marker_ops, 0,
+                sizeof(s_selected_ground_marker_ops));
+}
+
+/* SelectedEntityGroundMarkerRender (FUN_004248b0): project the entity's
+ * ground point, reject off-screen markers, build the beveled eight-point
+ * ground outline, then update its optional label tint. */
+int selected_entity_ground_marker_render(void* entity, void* camera,
+                                         float red, float green, float blue)
+{
+    SelectedGroundMarkerOps* ops = &s_selected_ground_marker_ops;
+    float world[3];
+    float screen[3];
+    float edge_world[3];
+    float edge_screen[3];
+    float width = 0.0f;
+    float viewport_height = 0.0f;
+    float entity_height = 0.0f;
+    float radius = 0.0f;
+    float pixel_radius;
+    float bevel;
+    float points[16];
+    const char* label = NULL;
+    uint32_t global_flags;
+    float dx;
+    float dy;
+    float dz;
+    if (entity == NULL || ops->entity_renderable == NULL ||
+        !ops->entity_renderable(ops->context, entity) ||
+        ops->marker_data_get == NULL || ops->world_to_screen == NULL ||
+        ops->viewport_get == NULL) return 0;
+    global_flags = ops->global_flags_get != NULL ?
+        ops->global_flags_get(ops->context) : 0u;
+    if ((global_flags & 0x100000u) != 0u) {
+        red *= 0.3f;
+        green *= 0.3f;
+        blue *= 0.3f;
+    }
+    if (!ops->marker_data_get(ops->context, entity, world, &radius,
+                              &entity_height, &label)) return 0;
+    world[2] -= entity_height * 0.5f;
+    if (!ops->world_to_screen(ops->context, camera, world, screen)) return 0;
+    ops->viewport_get(ops->context, &width, &viewport_height);
+    if (screen[0] < 0.0f || screen[1] < 0.0f ||
+        screen[0] > width || screen[1] > viewport_height) return 0;
+    edge_world[0] = world[0] + radius;
+    edge_world[1] = world[1];
+    edge_world[2] = world[2];
+    if (!ops->world_to_screen(ops->context, camera, edge_world, edge_screen))
+        return 0;
+    dx = screen[0] - edge_screen[0];
+    dy = screen[1] - edge_screen[1];
+    dz = screen[2] - edge_screen[2];
+    pixel_radius = (float)sqrt(dx * dx + dy * dy + dz * dz) / 2.5f;
+    bevel = pixel_radius / 5.0f + 3.0f;
+    points[0] = screen[0] - pixel_radius;
+    points[1] = screen[1] - pixel_radius + bevel;
+    points[2] = screen[0] - pixel_radius + 1.0f;
+    points[3] = screen[1] - pixel_radius;
+    points[4] = screen[0] - pixel_radius + bevel;
+    points[5] = screen[1] - pixel_radius;
+    points[6] = screen[0] + pixel_radius - bevel;
+    points[7] = screen[1] - pixel_radius;
+    points[8] = screen[0] + pixel_radius;
+    points[9] = screen[1] - pixel_radius + bevel;
+    points[10] = screen[0] + pixel_radius;
+    points[11] = screen[1] + pixel_radius - bevel;
+    points[12] = screen[0] + pixel_radius - bevel;
+    points[13] = screen[1] + pixel_radius;
+    points[14] = screen[0] - pixel_radius + bevel;
+    points[15] = screen[1] + pixel_radius;
+    if (ops->polyline_draw != NULL)
+        ops->polyline_draw(ops->context, points, red, green, blue);
+    if ((global_flags & 0x100000u) == 0u && label != NULL && *label != '\0' &&
+        ops->label_update != NULL) {
+        ops->label_update(ops->context, label, red, green, blue);
+    }
+    return 1;
+}
+
+void overlay_text_buffer_ops_set(const OverlayTextBufferOps* ops)
+{
+    if (ops != NULL) s_overlay_text_buffer_ops = *ops;
+    else memset(&s_overlay_text_buffer_ops, 0,
+                sizeof(s_overlay_text_buffer_ops));
+}
+
+/* OverlayTextBufferRefresh (FUN_00418a00): refresh the help overlay,
+ * validate interface/input gates, render its header and scrolled entries,
+ * then finish the overlay frame. */
+int overlay_text_buffer_refresh(void)
+{
+    OverlayTextBufferOps* ops = &s_overlay_text_buffer_ops;
+    uint32_t flags;
+    uint32_t input_flags;
+    int count;
+    int start;
+    int index;
+    float bottom = 0.0f;
+    float y;
+    float clip_y;
+    int primary_drawn;
+    if (ops->ensure_initialized == NULL) return 0;
+    if (!ops->ensure_initialized(ops->context)) return 0;
+    flags = ops->interface_flags_get != NULL ?
+        ops->interface_flags_get(ops->context) : 0u;
+    if ((flags & 2u) == 0u || (flags & 1u) == 0u) return 0;
+    input_flags = ops->input_flags_get != NULL ?
+        ops->input_flags_get(ops->context) : 0u;
+    if ((input_flags & 0x800u) != 0u) return 0;
+    if (ops->transition_begin != NULL)
+        ops->transition_begin(ops->context);
+    count = ops->entry_count_get != NULL ?
+        ops->entry_count_get(ops->context) : 0;
+    if (count <= 0) {
+        if (ops->reset != NULL) ops->reset(ops->context);
+        return 1;
+    }
+    primary_drawn = ops->primary_text_draw != NULL ?
+        ops->primary_text_draw(ops->context, &bottom) : 0;
+    if ((flags & 8u) != 0u) {
+        if (primary_drawn && ops->header_draw != NULL)
+            ops->header_draw(ops->context);
+        if (ops->header_dirty_clear != NULL)
+            ops->header_dirty_clear(ops->context);
+    }
+    y = bottom + 10.0f;
+    if (ops->scroll_position_get != NULL)
+        y += ops->scroll_position_get(ops->context);
+    start = ops->scroll_start_index_get != NULL ?
+        ops->scroll_start_index_get(ops->context, count) : 0;
+    if (start < 0) start = 0;
+    if (start >= count) start = count - 1;
+    clip_y = ops->scroll_clip_y_get != NULL ?
+        ops->scroll_clip_y_get(ops->context) : 0.0f;
+    for (index = start; index < count; ++index) {
+        OverlayTextLine line;
+        memset(&line, 0, sizeof(line));
+        if (ops->entry_get == NULL ||
+            !ops->entry_get(ops->context, index, &line)) continue;
+        if (clip_y != 0.0f && y + line.height >= clip_y) {
+            if (ops->line_focus != NULL)
+                ops->line_focus(ops->context, &line);
+            if (ops->scroll_limit_reached != NULL)
+                ops->scroll_limit_reached(ops->context);
+            break;
+        }
+        line.y = y;
+        if (ops->line_draw != NULL &&
+            !ops->line_draw(ops->context, &line, line.x, y)) {
+            if (ops->line_focus != NULL)
+                ops->line_focus(ops->context, &line);
+            break;
+        }
+        y += line.height + 10.0f;
+    }
+    if (ops->finish != NULL) ops->finish(ops->context);
+    return 1;
+}
+
+void advisor_text_box_extent_hook_set(AdvisorTextBoxExtentFn hook,
+                                      void* context)
+{
+    s_advisor_text_box_extent_hook = hook;
+    s_advisor_text_box_extent_context = context;
+}
+
+/* AdvisorTextBoxRecordCommit (FUN_0046a9e0): apply the integer extents,
+ * retain the last floating geometry, and clear the pending-layout bit. */
+// FUNCTION: LEGORR 0x0046a9e0
+void advisor_text_box_record_commit(AdvisorTextBoxLayoutState* state)
+{
+    if (state == NULL) return;
+    if (s_advisor_text_box_extent_hook != NULL) {
+        s_advisor_text_box_extent_hook(s_advisor_text_box_extent_context,
+            float_to_long(state->value), float_to_long(state->bottom));
+    }
+    state->flags &= ~1u;
+}
+
+/* TextLayoutGeometryStoreAndApply (FUN_0046a950): save the requested box,
+ * derive its lower bound from the font line height, then commit it. */
+// FUNCTION: LEGORR 0x0046a950
+void text_layout_geometry_store_and_apply(
+    AdvisorTextBoxLayoutState* state, uint32_t object_id,
+    uint32_t request_id, float value, const float geometry[4],
+    uint32_t mode)
+{
+    if (state == NULL || geometry == NULL) return;
+    state->object_id = object_id;
+    state->request_id = request_id;
+    state->value = value;
+    state->geometry[0] = geometry[0];
+    state->geometry[1] = geometry[1];
+    state->geometry[2] = geometry[2];
+    state->geometry[3] = geometry[3];
+    state->bottom = geometry[1] + geometry[3] - state->font_line_height;
+    state->mode = mode;
+    advisor_text_box_record_commit(state);
+}
+
+/* UiTextEntryLoad (FUN_0046b520): a leading @ selects an image resource;
+ * ordinary text translates escaped newlines and underscores, then resets
+ * the entry's animation/stat fields. */
+// FUNCTION: LEGORR 0x0046b520
+void ui_text_entry_load(UiTextEntryState* entry, const char* source,
+                        UiTextImageLoadFn image_load, void* context)
+{
+    const char* input;
+    size_t out = 0;
+    if (entry == NULL) return;
+    entry->image = NULL;
+    if (source == NULL) source = "";
+    if (source[0] == '@') {
+        input = source + 1;
+        while (*input != '\0' && out + 1 < sizeof(entry->text)) {
+            entry->text[out++] = *input++;
+        }
+        entry->text[out] = '\0';
+        if (image_load != NULL) {
+            entry->image = image_load(entry->text, context);
+        }
+        entry->flags |= 8u;
+    }
+    else {
+        input = source;
+        while (*input != '\0' && out + 1 < sizeof(entry->text)) {
+            if (*input == '\\' && input[1] == 'n') {
+                entry->text[out++] = '\n';
+                input += 2;
+            }
+            else if (*input == '_') {
+                entry->text[out++] = ' ';
+                ++input;
+            }
+            else {
+                entry->text[out++] = *input++;
+            }
+        }
+        entry->text[out] = '\0';
+        entry->flags &= ~8u;
+    }
+    memset(entry->counters, 0, sizeof(entry->counters));
+    entry->flags |= 3u;
+}
+
+const char* tooltip_info_string_peek(int index)
+{
+    return (index >= 0 && index < 9) ? s_tooltip_info_strings[index] : NULL;
+}
+
+/* TooltipOverlayStateInitialize (FUN_0046b1d0): install the 38 canonical
+ * tooltip labels, capture the font/overlay values, derive 1.4x/0.6x colors,
+ * clamp those colors to [0,1], and clear transient tooltip storage. */
+// FUNCTION: LEGORR 0x0046b1d0
+void tooltip_overlay_state_initialize(
+    TooltipOverlayState* state, void* font,
+    uint32_t value2, uint32_t value3, float scale,
+    uint32_t value5, uint32_t value6, uint32_t value7,
+    float color_r, float color_g, float color_b,
+    TooltipFontMetricQueryFn metric_query, void* context)
+{
+    static const char* const names[38] = {
+        "ToolTip_RadarBlock", "ToolTip_UnitSelect", "ToolTip_Construction",
+        "ToolTip_InterfaceMenu", "ToolTip_InterfaceMenuBackButton",
+        "ToolTip_MapBlock", "ToolTip_Priority", "ToolTip_InfoMenuContinue",
+        "ToolTip_InfoMenuDisableFuture", "ToolTip_RadarToggle",
+        "ToolTip_RadarObjectView", "ToolTip_RadarZoomIn",
+        "ToolTip_RadarZoomOut", "ToolTip_RadarMapView",
+        "ToolTip_InfoDockGoto", "ToolTip_InfoDockClose",
+        "ToolTip_TopPanelCallToArms", "ToolTip_TopPanelInfo",
+        "ToolTip_TopPanelOptions", "ToolTip_TopPanelPriorities",
+        "ToolTip_PriorityDisable", "ToolTip_PriorityUpOne",
+        "ToolTip_PriorityReset", "ToolTip_CamControlZoomIn",
+        "ToolTip_CamControlZoomOut", "ToolTip_CamControlCycle",
+        "ToolTip_CamControlRotate", "ToolTip_SideBar_Ore",
+        "ToolTip_SideBar_Crystals", "ToolTip_Close",
+        "ToolTip_PreviousMessage", "ToolTip_NextMessage", "ToolTip_More",
+        "ToolTip_Back", "ToolTip_CamControlCycleMinifigur",
+        "ToolTip_Reward_Save", "ToolTip_Reward_Advance",
+        "ToolTip_FrontEnd_Back"
+    };
+    int i;
+    if (state == NULL) return;
+    for (i = 0; i < 38; ++i) state->names[i] = names[i];
+    state->font = font;
+    state->font_metric = metric_query != NULL
+        ? metric_query(font, context) : 0u;
+    state->values[0] = value2;
+    state->values[1] = value3;
+    state->values[2] = value5;
+    state->values[3] = value6;
+    state->values[4] = value7;
+    state->scale = scale * 25.0f;
+    state->color_base[0] = color_r;
+    state->color_base[1] = color_g;
+    state->color_base[2] = color_b;
+    state->color_high[0] = color_r * 1.4f;
+    state->color_high[1] = color_g * 1.4f;
+    state->color_high[2] = color_b * 1.4f;
+    state->color_low[0] = color_r * 0.6f;
+    state->color_low[1] = color_g * 0.6f;
+    state->color_low[2] = color_b * 0.6f;
+    for (i = 0; i < 3; ++i) {
+        if (state->color_base[i] > 1.0f) state->color_base[i] = 1.0f;
+        if (state->color_base[i] < 0.0f) state->color_base[i] = 0.0f;
+        if (state->color_high[i] > 1.0f) state->color_high[i] = 1.0f;
+        if (state->color_high[i] < 0.0f) state->color_high[i] = 0.0f;
+        if (state->color_low[i] > 1.0f) state->color_low[i] = 1.0f;
+        if (state->color_low[i] < 0.0f) state->color_low[i] = 0.0f;
+    }
+    memset(s_tooltip_overlay_scratch, 0, sizeof(s_tooltip_overlay_scratch));
 }
 
 // FUNCTION: LEGORR 0x00418450
@@ -5304,11 +6333,13 @@ void frontend_flow_word_set(int which, int value)
 // FUNCTION: LEGORR 0x4191a0
 int main_sim_state_admission_predicate(void)
 {
+    const uint32_t ui_mode = ui_mode_resource_bit40_get();
     const uint32_t sel = s_sel_state;
-    return ui_mode_resource_bit40_get() != 0u
+    const uint32_t system_state = system_state_flags_get();
+    return ui_mode != 0u
         && (sel & 2u) != 0u
         && (sel & 1u) != 0u
-        && system_state_flags_get() == 0u;
+        && system_state == 0u;
 }
 
 /* SelectionModeStateSet (FUN_00418190) — zero-init module static (the
@@ -5366,10 +6397,14 @@ void menu_wipe_flags_set(uint32_t flags)
  * Zero-initialized statics per the unowned-global convention: the corpus's
  * words have no ported owner (its UI/hit-test writers are unported), so
  * the zero load image is the faithful state (deviation). */
-static uint32_t s_sel_c0c;        /* DAT_004ddd0c */
-static uint32_t s_sel_c10;        /* DAT_004ddd10 */
-static float    s_sel_c14;        /* DAT_004ddd14 */
-static float    s_sel_c18;        /* DAT_004ddd18 */
+// GLOBAL: LEGORR 0x004ddd0c
+static uint32_t s_sel_c0c;
+// GLOBAL: LEGORR 0x004ddd10
+static uint32_t s_sel_c10;
+// GLOBAL: LEGORR 0x004ddd14
+static float    s_sel_c14;
+// GLOBAL: LEGORR 0x004ddd18
+static float    s_sel_c18;
 /* The corpus's parameter register quintet, DAT_004ddce0..f0 at stride 4.
  * Each float carries its own GLOBAL annotation: Reccmp only resolves
  * whole-object operands, so a shared-array base never matches the corpus's
@@ -5482,9 +6517,9 @@ void selection_region_parameters_set(uint32_t a, uint32_t b, uint32_t c,
 {
     s_reg_e0 = (float)c;
     s_reg_e4 = (float)d;
-    s_reg_f0 = e * s_region_scale_004;
     s_reg_e8 = (float)a;
     s_reg_ec = (float)b;
+    s_reg_f0 = e * s_region_scale_004;
 }
 
 // FUNCTION: LEGORR 0x0041a990
@@ -5695,6 +6730,7 @@ int advisor_animation_slot_id_resolve(uint32_t animation_kind,
 
 /* --- the cell-action permission window (see frontend.hpp) ------------------- */
 #define CELL_PERMISSION_ENTRIES 300 /* corpus's 300-dword clear loop */
+// GLOBAL: LEGORR 0x004ddd34
 static uint32_t s_cell_perm[CELL_PERMISSION_ENTRIES];
 
 // FUNCTION: LEGORR 0x0041e990
@@ -5763,7 +6799,7 @@ void sim_status_banner_word_set(uint32_t value)
 }
 
 // FUNCTION: LEGORR 0x00419200
-uint32_t ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
+void ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
 {
     uint32_t v;
     if (probe != 0) {
@@ -5783,7 +6819,6 @@ uint32_t ui_mode_resource_bit40_set_clear(int probe, uint32_t value)
     } else {
         s_sel_state = s_sel_state | 0x40u;
     }
-    return s_sel_state;
 }
 
 /* MenuWipeStart (FUN_004103f0) — see frontend.hpp. */
@@ -5911,8 +6946,13 @@ void panel_texture_slots_blit(int panel)
 // FUNCTION: LEGORR 0x46b7a0
 void timed_effect_timestamp_reset(int index)
 {
-    if (index >= 0 && index < TIMED_EFFECT_ENTRIES) {
-        s_timed_effect_time[index] = s_timed_effect_tick;
+    if (index >= 0 && index < TIMED_EFFECT_RECORD_COUNT) {
+        /* The corpus stamps the field through the FPU (fld _DAT_0054bf3c /
+         * fstp record+0, docs/findings/459), so mirror the float semantics
+         * with a cast at the copy rather than retype the shared band. */
+        *(float*)(s_timed_effect_time
+                  + index * TIMED_EFFECT_RECORD_STRIDE_DWORDS) =
+            *(const float*)&s_timed_effect_tick;
     }
     /* deviation: the corpus strides the table blindly at any index. */
 }
@@ -5922,14 +6962,15 @@ uint32_t timed_effect_tick_word_peek(void) { return s_timed_effect_tick; }
 
 uint32_t timed_effect_time_peek(int index)
 {
-    if (index < 0 || index >= TIMED_EFFECT_ENTRIES) {
+    if (index < 0 || index >= TIMED_EFFECT_RECORD_COUNT) {
         return 0u;
     }
-    return s_timed_effect_time[index];
+    return s_timed_effect_time[index * TIMED_EFFECT_RECORD_STRIDE_DWORDS];
 }
 
 /* ScreenRightEdgeCacheRefresh (FUN_0041a290) — see frontend.hpp. */
-static uint32_t s_screen_right_edge; /* DAT_004dcd44 role: unowned */
+// GLOBAL: LEGORR 0x004dcd44
+static uint32_t s_screen_right_edge;
 
 // FUNCTION: LEGORR 0x41a290
 void screen_right_edge_cache_refresh(void)
@@ -5943,14 +6984,21 @@ uint32_t screen_right_edge_cache_peek(void) { return s_screen_right_edge; }
 
 /* BitmapFontGlyphMeasureWidth (FUN_0047a520) — see frontend.hpp. */
 // FUNCTION: LEGORR 0x47a520
-void bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
+int bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
 {
-    (void)font; /* deviation: no corpus font record is addressed */
-    const unsigned row = ((unsigned)(glyph - 0x20u)) / FE_FONT_GRID_COLS;
-    if (row < FE_FONT_GRID_ROWS) {
-        /* the corpus's flag-clear measure lane keeps its recomputed floats
-         * in locals — nothing observable here, faithful to the wrapper. */
+    const TextureSurface* surface = (const TextureSurface*)font;
+    const int glyph_index = (int)glyph - 0x20;
+    int cell_width = 0;
+    int cell_height = 0;
+    uint32_t keys[2];
+    if (glyph_index < 0 ||
+        glyph_index >= FE_FONT_GRID_COLS * FE_FONT_GRID_ROWS ||
+        !fe_font_cell(surface, &cell_width, &cell_height)) {
+        return 0;
     }
+    fe_font_keys(surface, cell_width, cell_height, keys);
+    return fe_font_advance(surface, cell_width, cell_height,
+                           glyph_index, keys);
 }
 
 /* --- the panel resource + scroll leaf band (see frontend.hpp) --------------
@@ -5960,20 +7008,27 @@ void bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
  * blit FUN_0047dcb0, surface load FUN_0047d9d0) are hook boundaries with
  * no ported body — the seam calls record and the load answers NULL (the
  * view object-layer precedent). */
-static uint32_t s_panel_enable_word; /* DAT_004ffe68 role */
-static float    s_bubble_offset_x;   /* DAT_004ffed8 role */
-static float    s_bubble_offset_y;   /* DAT_004ffedc role */
-static void*    s_panel_surface_handle; /* DAT_00500810 role */
-static float    s_panel_width;       /* DAT_00500814 role */
-static float    s_panel_height;      /* DAT_00500818 role */
-static uint32_t s_panel_extra;       /* DAT_0050081c role */
+static uint32_t s_panel_enable_word;
+static float    s_bubble_offset_x;
+static float    s_bubble_offset_y;
+// GLOBAL: LEGORR 0x00500810
+static void*    s_panel_surface_handle;
+// GLOBAL: LEGORR 0x00500814
+static float    s_panel_width;
+// GLOBAL: LEGORR 0x00500818
+static float    s_panel_height;
+// GLOBAL: LEGORR 0x0050081c
+static uint32_t s_panel_extra;
 // GLOBAL: LEGORR 0x005007d8
 static void*    s_panel_ui_record;   /* DAT_005007d8 role */
 static void*    s_panel_text_slot;   /* DAT_005007dc role: holder-slot address */
 
-static void*    s_panel_position_slots[5]; /* DAT_004ffec4 role: panel slots */
-static float    s_panel_position_offset_x; /* DAT_004ffebc role */
-static float    s_panel_position_offset_y; /* DAT_004ffec0 role */
+// GLOBAL: LEGORR 0x004ffec4
+static void*    s_panel_position_slots[5];
+// GLOBAL: LEGORR 0x004ffebc
+static float    s_panel_position_offset_x;
+// GLOBAL: LEGORR 0x004ffec0
+static float    s_panel_position_offset_y;
 
 static int    s_panel_seam_calls;
 static void*  s_panel_seam_last_res;
@@ -6077,11 +7132,15 @@ uint32_t panel_enable_word_peek(void) { return s_panel_enable_word; }
  * ported corpus owner — zero-init own storage (the unowned-global
  * deviation). The corpus surface loads (FUN_0047d9d0) stay hook boundaries
  * answering NULL (the panel-load precedent), and the blits ride the seam. */
-static void* s_panel_layout_surface;     /* DAT_005007f0 role */
-static void* s_panel_layout_glyph;       /* DAT_005007f4 role */
+// GLOBAL: LEGORR 0x005007f0
+static void* s_panel_layout_surface;
+// GLOBAL: LEGORR 0x005007f4
+static void* s_panel_layout_glyph;
 static float s_panel_layout_size[2];     /* DAT_005007f8/7fc role */
-static uint32_t s_panel_layout_extra;    /* DAT_00500800 role */
-static float s_panel_layout_offset[2];   /* DAT_00500804/808 role */
+// GLOBAL: LEGORR 0x00500800
+static uint32_t s_panel_layout_extra;
+// GLOBAL: LEGORR 0x00500804
+static float s_panel_layout_offset[2];
 
 // FUNCTION: LEGORR 0x0045c340
 void panel_resource_layout_store(void* face_resource, uint32_t width,
@@ -6167,8 +7226,10 @@ void panel_layout_surface_install(void* surface)
     /* test hook: the load seam's face word (deviation as in glyph_install) */
 }
 
-static uint32_t s_interface_button_surfaces[2]; /* DAT_004de1e4/e8 roles */
-static uint32_t s_advisor_bar_surfaces[3];      /* DAT_005007e0/e8/e4 roles */
+// GLOBAL: LEGORR 0x004de1e4
+static uint32_t s_interface_button_surfaces[2];
+// GLOBAL: LEGORR 0x005007e0
+static uint32_t s_advisor_bar_surfaces[3];
 static uint32_t s_menu_blit_record[16];         /* corpus record window */
 
 static uint32_t surface_load_handle(const char* path)
@@ -6370,7 +7431,7 @@ static const float s_snorm_colors_init[90] = {
 static float s_snorm_colors[90];                /* DAT band role */
 static float s_snorm_cells[2][20];              /* stride-16 unit lanes */
 static float s_snorm_pairs[2][7][2];            /* seven rows of mirrors */
-static uint32_t s_snorm_rows;                   /* DAT_004a9318 role */
+static uint32_t s_snorm_rows;
 static uint32_t s_snorm_sentinels[2];           /* DAT band sentinels */
 
 static const float s_snorm_pair_consts[2][7][2] = {
@@ -6561,10 +7622,10 @@ int text_layout_offset_for_centering(int x, int y, int rect_x, int rect_y,
 // FUNCTION: LEGORR 0x41b9c0
 int selection_entity_code_resolve(const GameContext* ctx, int* code_out)
 {
+    const EntitySlot* first = selection_first(ctx);
     if ((s_inter_flags & 0x80u) == 0u && (s_inter_flags & 0x100u) != 0u) {
         return (code_out != NULL) ? *code_out : 0;
     }
-    const EntitySlot* first = selection_first(ctx);
     const int code = ((first != NULL
                        && (first->flags_3e8 & 0x80000000u) != 0u)
                           ? 0x22 : 0x23);
@@ -6620,7 +7681,8 @@ void scroll_rect_resource_record_create(int view, int mode,
  * The DAT_00500820 animation float is reference state with no port owner,
  * so it lands as a guarded static (the unowned-global deviation) and the
  * corpus x87 float10 lands as plain float. */
-static float s_overlay_anim_float; /* DAT_00500820 */
+// GLOBAL: LEGORR 0x00500820
+static float s_overlay_anim_float;
 
 float overlay_anim_float_peek(void)
 {
@@ -6806,8 +7868,10 @@ void ui_entry_bounds_get(int panel, int item, float* out_bounds)
  * raises flag bit 2; otherwise an equal state just raises the flag. The
  * answer is the pre-call state against the candidate (the corpus threads
  * the stale word through the fall-through). */
-static int32_t  s_priority_image_state;  /* DAT_005013b8 */
-static uint32_t s_priority_image_flags;  /* DAT_005013bc */
+// GLOBAL: LEGORR 0x005013b8
+static int32_t  s_priority_image_state;
+// GLOBAL: LEGORR 0x005013bc
+static uint32_t s_priority_image_flags;
 
 // FUNCTION: LEGORR 0x0045d300
 int priority_image_selection_state_update(int candidate, int gate, int skip)
@@ -6883,10 +7947,14 @@ UiRenderRecord* ui_render_record_create(void* source,
  * tree-load / menu-list paths), so the tables land as zero-init own
  * storage behind install/peek hooks (the unowned-global convention). */
 #define SAV_VISITED_ENTRIES 16
-static void*    s_sav_visited_items_out[SAV_VISITED_ENTRIES]; /* DAT_00556ff0 */
-static uint32_t s_sav_visited_words_out[SAV_VISITED_ENTRIES]; /* DAT_00556ff4 */
-static void*    s_sav_visited_items_in[SAV_VISITED_ENTRIES];  /* DAT_00556fdc */
-static uint32_t s_sav_visited_words_in[SAV_VISITED_ENTRIES];  /* DAT_00556fe0 */
+// GLOBAL: LEGORR 0x00556ff0
+static void*    s_sav_visited_items_out[SAV_VISITED_ENTRIES];
+// GLOBAL: LEGORR 0x00556ff4
+static uint32_t s_sav_visited_words_out[SAV_VISITED_ENTRIES];
+// GLOBAL: LEGORR 0x00556fdc
+static void*    s_sav_visited_items_in[SAV_VISITED_ENTRIES];
+// GLOBAL: LEGORR 0x00556fe0
+static uint32_t s_sav_visited_words_in[SAV_VISITED_ENTRIES];
 
 /* SavClearVisited (FUN_00416e70): the corpus walks the out-of-game band
  * first (DAT_00556fe4 / DAT_00556ff0 / DAT_00556ff4), then the in-game

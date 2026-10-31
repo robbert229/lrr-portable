@@ -37,6 +37,43 @@ struct BlockFile {
     size_t nrec, all_cap;
 };
 
+static int s_lower(int c) { return (c >= 'a' && c <= 'z') ? c - 0x20 : c; }
+
+/* ConfigBooleanParse compares these file-backed tokens directly. Their
+ * contents and addresses are confirmed by the mapped DAT inventory and
+ * decompile references. */
+// GLOBAL: LEGORR 0x004aabec
+static const char s_config_bool_yes[] = "YES";
+// GLOBAL: LEGORR 0x004aabe4
+static const char s_config_bool_true[] = "TRUE";
+// GLOBAL: LEGORR 0x004a4124
+static const char s_config_bool_on[] = "ON";
+// GLOBAL: LEGORR 0x004aabe0
+static const char s_config_bool_no[] = "NO";
+// GLOBAL: LEGORR 0x004aabd8
+static const char s_config_bool_false[] = "FALSE";
+// GLOBAL: LEGORR 0x004a4120
+static const char s_config_bool_off[] = "OFF";
+// GLOBAL: LEGORR 0x004a1cd4
+static const char s_config_rgb_separator[] = ":";
+
+/* strnicmp (ASCII-folded): compares exactly n bytes of `a` against the
+ * first n bytes of `b`, stopping early only on a NUL in `a`. */
+static int s_strnicasecmp(const char* a, const char* b, size_t n)
+{
+    for (size_t i = 0; i < n; i++) {
+        int ca = s_lower((unsigned char)a[i]);
+        int cb = s_lower((unsigned char)b[i]);
+        if (ca != cb) {
+            return ca - cb;
+        }
+        if (ca == 0) {
+            return 0;
+        }
+    }
+    return 0;
+}
+
 /* --- construction ------------------------------------------------------- */
 
 static BlockRec* rec_new(BlockFile* bf)
@@ -304,7 +341,7 @@ BlockRec* block_next_sibling(const BlockRec* r) { return r ? r->sibling : NULL; 
 // FUNCTION: LEGORR 0x00479020
 BlockRec* block_next_equal_key(const BlockRec* r)
 {
-    return block_next_sibling(r);
+    return r != NULL ? r->sibling : NULL;
 }
 int block_has_children(const BlockRec* r) { return r && r->child != NULL; }
 
@@ -368,12 +405,14 @@ int block_get_bool(BlockFile* bf, const char* path)
     if (v == NULL) {
         return 2;
     }
-    if (strcasecmp_lite(v, "YES") == 0 || strcasecmp_lite(v, "TRUE") == 0
-        || strcasecmp_lite(v, "ON") == 0) {
+    if (strcasecmp_lite(v, s_config_bool_yes) == 0
+        || strcasecmp_lite(v, s_config_bool_true) == 0
+        || strcasecmp_lite(v, s_config_bool_on) == 0) {
         return 1;
     }
-    if (strcasecmp_lite(v, "NO") == 0 || strcasecmp_lite(v, "FALSE") == 0
-        || strcasecmp_lite(v, "OFF") == 0) {
+    if (strcasecmp_lite(v, s_config_bool_no) == 0
+        || strcasecmp_lite(v, s_config_bool_false) == 0
+        || strcasecmp_lite(v, s_config_bool_off) == 0) {
         return 0;
     }
     return 2;
@@ -422,10 +461,23 @@ const char* registry_path_split(const char* path, char* out)
  * the corpus's second role for that word, crt.cpp's record-list head, is
  * documented aliasing the port does not model across translation units. */
 #define BLOCK_TOKEN_POOL_SLOTS 32
+#if defined(LEGORRR_BACKEND_WINAPI)
+/* The destroy loop's bound operand is offset s_token_pool_slots + 80h, so
+ * the head cell must sit immediately after the 0x80-byte slot table (the
+ * corpus layout at DAT_00506518) for that operand to resolve through
+ * s_token_pool_head's own annotation instead of some unrelated neighbor.
+ * Pin both into one named data segment, declaration-order adjacent like
+ * the frontend menu band; the zero initializers match the zero-filled
+ * corpus tail for datacmp. */
+#pragma data_seg(".data$tokpool")
+#endif
 // GLOBAL: LEGORR 0x00506498
-static void* s_token_pool_slots[BLOCK_TOKEN_POOL_SLOTS];
+static void* s_token_pool_slots[BLOCK_TOKEN_POOL_SLOTS] = { 0 };
 // GLOBAL: LEGORR 0x00506518
-static void* s_token_pool_head;      /* DAT_00506518 role: free-list head */
+static void* s_token_pool_head = 0;  /* DAT_00506518 role: free-list head */
+#if defined(LEGORRR_BACKEND_WINAPI)
+#pragma data_seg()
+#endif
 // GLOBAL: LEGORR 0x00506520
 static int   s_token_pool_resident;  /* _DAT_00506520 role */
 // GLOBAL: LEGORR 0x0050651c
@@ -469,6 +521,30 @@ void block_text_token_pool_grow(void)
 }
 
 // FUNCTION: LEGORR 0x00478e20
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void block_text_token_pool_destroy(void)
+{
+    __asm {
+        push esi
+        mov esi, offset s_token_pool_slots
+    block_token_pool_destroy_loop:
+        mov eax, dword ptr [esi]
+        test eax, eax
+        je block_token_pool_destroy_next
+        push eax
+        call free
+        add esp, 4
+    block_token_pool_destroy_next:
+        add esi, 4
+        cmp esi, offset s_token_pool_slots + 80h
+        jb block_token_pool_destroy_loop
+        mov dword ptr [s_token_pool_head], 0
+        mov dword ptr [s_token_pool_resident], 0
+        pop esi
+        ret
+    }
+}
+#else
 void block_text_token_pool_destroy(void)
 {
     /* Corpus walk: the 32-slot window is walked pointer-wise from
@@ -487,6 +563,7 @@ void block_text_token_pool_destroy(void)
     s_token_pool_head = NULL;
     s_token_pool_resident = 0;
 }
+#endif
 
 /* BlockTextTokenPoolInit (FUN_00478df0): zero the 32-slot window — the
  * corpus's window runs through DAT_00506518, so its head word gets a final
@@ -551,21 +628,11 @@ int config_rgb_vector_read(BlockFile* bf, const char* path,
     char buf[256]; /* deviation: the corpus splits the heap copy blindly */
     snprintf(buf, sizeof buf, "%s", v);
 
-    /* Guard the three-entry output array against extra fields. Both this
-     * count and FUN_00477440 leave the final byte untested. */
-    int fields = buf[0] != '\0' ? 1 : 0;
-    for (char* p = buf; p[1] != '\0'; ++p) {
-        if (strchr(",", *p) != NULL) {
-            ++fields;
-        }
-    }
-    if (fields > 3) {
-        return 0;
-    }
-
-    /* Reuse FUN_00477440 for the in-place split and its VC5 strchr lookup. */
-    char* tok[3];
-    const int n = sound_variant_split(buf, tok, ",");
+    /* FUN_00477440 splits on the mapped colon separator, keeps empty tokens,
+     * and never tests the final character. The bounded copy can contain at
+     * most 255 tokens, so this array safely holds every split pointer. */
+    char* tok[256];
+    const int n = sound_variant_split(buf, tok, s_config_rgb_separator);
     if (n != 3) {
         return 0;
     }
@@ -590,14 +657,17 @@ static const float s_config_angle_zero = 0.0f;
 static const float s_config_angle_degrees_to_turn = 1.0f / 360.0f;
 // GLOBAL: LEGORR 0x0049e900
 static const float s_config_angle_turn_radians = 6.2831855f;
+// GLOBAL: LEGORR 0x004b8a14
+static const char s_config_angle_empty[4] = { 0, 0, 0, 0 };
 
 // FUNCTION: LEGORR 0x00479110
 float config_angle_radians_get(BlockFile* bf, const char* path)
 {
     const float deg = (float)atof(block_get_strptr(bf, path) != NULL
-                                ? block_get_strptr(bf, path) : "");
-    if (deg == s_config_angle_zero) {
-        return s_config_angle_zero; /* the corpus gates the multiply on value != 0 */
+                                  ? block_get_strptr(bf, path)
+                                  : s_config_angle_empty);
+    if (deg != s_config_angle_zero) {
+        return (deg * s_config_angle_degrees_to_turn) * s_config_angle_turn_radians;
     }
-    return (deg * s_config_angle_degrees_to_turn) * s_config_angle_turn_radians;
+    return s_config_angle_zero;
 }

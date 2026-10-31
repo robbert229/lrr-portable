@@ -367,6 +367,28 @@ void* menu_text_record_make(const char* text, const TextureSurface* font_a,
                             uint32_t f8, uint32_t f9); /* FUN_00410d50 */
 int case_insensitive_name_table_lookup(const char* name,
                                        int* out_index); /* FUN_0046b4d0 */
+void ui_panel_name_tables_install(const char* const names[12],
+                                  const char* const indexed_names[][24],
+                                  unsigned int indexed_count);
+void ui_panel_name_tables_init(void);
+int ui_panel_name_table_lookup(const char* name, int* out_index);
+int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
+                                 unsigned int* out_index);
+typedef struct ToolTipIconConfigHooks {
+    void* context;
+    void* (*section_open)(void* config, const char* section, void* context);
+    void* (*entry_first)(void* section, void* context);
+    void* (*entry_next)(void* entry, void* context);
+    const char* (*entry_name_get)(void* entry, void* context);
+    const char* (*entry_value_get)(void* entry, void* context);
+    void* (*image_load)(const char* name, void* context);
+    void (*image_release)(void* image, void* context);
+} ToolTipIconConfigHooks;
+void tooltip_icon_config_hooks_set(const ToolTipIconConfigHooks* hooks,
+                                   const char* const primary_names[11],
+                                   const char* const secondary_names[6]);
+void tooltip_icons_config_load(void* config); /* 0x437150 */
+void* tooltip_icon_handle_get(unsigned int bank, unsigned int index);
 void* menu_button_record_make(const char* text,
                               const TextureSurface* normal_font,
                               const TextureSurface* selected_font,
@@ -685,6 +707,224 @@ void     help_window_info_config_strings_load(
              void (*store)(void* context, int group, size_t catalog_index,
                            int line_index, const char* text),
              void* context);
+/* ToolTipInfoStringsLoad (FUN_00427e00): load nine fixed labels from the
+ * ToolTipInfo config group into module-owned strings. */
+void tooltip_info_strings_load(BlockFile* cfg);
+typedef void* (*UiTextImageLoadFn)(const char* path, void* context);
+typedef struct UiTextEntryState {
+    char text[256];
+    void* image;
+    uint32_t flags;
+    int32_t counters[5];
+} UiTextEntryState;
+void ui_text_entry_load(UiTextEntryState* entry, const char* source,
+                        UiTextImageLoadFn image_load, void* context);
+typedef void* (*AdvisorTutorialIconLoadFn)(const char* path, void* context);
+typedef void (*AdvisorTutorialIconInitializeFn)(void* icon, void* context);
+void advisor_tutorial_icon_hooks_set(AdvisorTutorialIconLoadFn load,
+                                     AdvisorTutorialIconInitializeFn initialize,
+                                     void* context);
+void advisor_tutorial_icon_image_load(BlockFile* cfg); /* FUN_00434a00 */
+void* advisor_tutorial_icon_get(void);
+typedef void (*AdvisorTextRequestActionFn)(uint32_t request, int p1, int p2,
+                                           void* context);
+void advisor_text_request_action_hook_set(AdvisorTextRequestActionFn hook,
+                                          void* context);
+void advisor_text_request_setup(uint32_t request, uint32_t flags);
+uint32_t advisor_text_request_flags_get(void);
+typedef struct AdvisorTextDisplayState {
+    int current_slot;
+    int hidden_slot;
+    int message_id;
+    uint32_t message_flags;
+    uint32_t interface_flags;
+    float message_timer;
+    float x;
+    float y;
+} AdvisorTextDisplayState;
+typedef struct AdvisorTextDisplayOps {
+    void* context;
+    int (*state_get)(void* context, AdvisorTextDisplayState* state);
+    int (*slot_is_available)(void* context, int slot);
+    int (*slot_text_draw)(void* context, int slot, int alternate,
+                          float x, float y);
+    int (*message_text_draw)(void* context, int message_id,
+                             float x, float y);
+    int (*overlay_active)(void* context);
+    void (*overlay_close)(void* context);
+    void (*current_slot_set)(void* context, int slot);
+    void (*message_flags_set)(void* context, uint32_t flags);
+    void (*message_timer_set)(void* context, float timer);
+    void (*interface_finish)(void* context, const AdvisorTextDisplayState* state,
+                             float delta);
+} AdvisorTextDisplayOps;
+void advisor_text_display_ops_set(const AdvisorTextDisplayOps* ops);
+int advisor_text_display_worker(float delta); /* FUN_0046ad00 */
+typedef struct SelectedGroundMarkerOps {
+    void* context;
+    int (*entity_renderable)(void* context, void* entity);
+    uint32_t (*global_flags_get)(void* context);
+    int (*marker_data_get)(void* context, void* entity,
+                           float world_position[3], float* radius_out,
+                           float* height_out, const char** label_out);
+    int (*world_to_screen)(void* context, void* camera,
+                           const float world_position[3],
+                           float screen_position[3]);
+    void (*viewport_get)(void* context, float* width_out,
+                         float* height_out);
+    void (*polyline_draw)(void* context, const float points_xy[16],
+                          float red, float green, float blue);
+    void (*label_update)(void* context, const char* label, float red,
+                         float green, float blue);
+} SelectedGroundMarkerOps;
+void selected_ground_marker_ops_set(const SelectedGroundMarkerOps* ops);
+int selected_entity_ground_marker_render(void* entity, void* camera,
+                                         float red, float green, float blue);
+typedef struct OverlayTextLine {
+    void* entry;
+    int kind;
+    float height;
+    float x;
+    float y;
+} OverlayTextLine;
+typedef struct OverlayTextBufferOps {
+    void* context;
+    int (*ensure_initialized)(void* context);
+    uint32_t (*interface_flags_get)(void* context);
+    uint32_t (*input_flags_get)(void* context);
+    void (*transition_begin)(void* context);
+    int (*entry_count_get)(void* context);
+    int (*entry_get)(void* context, int index, OverlayTextLine* line);
+    int (*primary_text_draw)(void* context, float* bottom_out);
+    void (*header_draw)(void* context);
+    void (*header_dirty_clear)(void* context);
+    float (*scroll_position_get)(void* context);
+    int (*scroll_start_index_get)(void* context, int count);
+    float (*scroll_clip_y_get)(void* context);
+    int (*line_draw)(void* context, const OverlayTextLine* line,
+                     float x, float y);
+    void (*line_focus)(void* context, const OverlayTextLine* line);
+    void (*scroll_limit_reached)(void* context);
+    void (*finish)(void* context);
+    void (*reset)(void* context);
+} OverlayTextBufferOps;
+void overlay_text_buffer_ops_set(const OverlayTextBufferOps* ops);
+int overlay_text_buffer_refresh(void); /* FUN_00418a00 */
+typedef struct AdvisorDialogStackEntry {
+    void* record;
+    uint32_t item_id;
+    int has_special;
+} AdvisorDialogStackEntry;
+typedef struct AdvisorDialogStackOps {
+    void* context;
+    int (*active)(void* context);
+    void (*layout_reset)(void* context, uint32_t width, uint32_t height);
+    int (*entries_get)(void* context, uint32_t width, uint32_t height,
+                       AdvisorDialogStackEntry** entries_out,
+                       uint32_t* count_out);
+    void* (*icon_get)(void* context, uint32_t index);
+    int (*icon_height)(void* context, void* icon);
+    void (*icon_place)(void* context, void* icon, float y);
+    int (*entry_eligible)(void* context, void* record);
+    void* (*item_resolve)(void* context, void* record, int eligible);
+    int (*item_height)(void* context, void* item);
+    void (*item_place)(void* context, void* item, float y);
+    void (*special_item_apply)(void* context, uint32_t item_id);
+} AdvisorDialogStackOps;
+void advisor_dialog_stack_ops_set(const AdvisorDialogStackOps* ops);
+void advisor_dialog_stack_layout(float y, uint32_t parameter,
+                                 uint32_t width, uint32_t height); /* FUN_0041eca0 */
+typedef struct DebugPanelTextOps {
+    void* context;
+    int (*origin_get)(void* context, int* x_out, int* y_out);
+    int (*font_line_height)(void* context);
+    int (*text_width)(void* context, const char* text);
+    int (*scroll_width)(void* context, uint32_t token);
+    const char* (*fallback_text_get)(void* context);
+    void (*text_draw)(void* context, int x, int y, int alternate,
+                      const char* text);
+} DebugPanelTextOps;
+void debug_panel_text_ops_set(const DebugPanelTextOps* ops);
+void debug_panel_text_draw_update(float elapsed, int screen_width,
+                                  const char* text); /* FUN_004230c0 */
+typedef struct InterfaceSpawnRequestState {
+    int type;
+    uint32_t parameter;
+    int facing;
+} InterfaceSpawnRequestState;
+typedef struct InterfaceSpawnRequestOps {
+    void* context;
+    void (*prepare)(void* context, int mode);
+    int (*camera_direction_get)(void* context, float direction_out[2]);
+    uint32_t (*request_flags_get)(void* context, int type,
+                                  uint32_t parameter);
+    void* (*saved_slot_get)(void* context, uint32_t category);
+    int (*request_dispatch)(void* context, uint32_t category, void* slot,
+                            int type, uint32_t parameter);
+} InterfaceSpawnRequestOps;
+void interface_spawn_request_ops_set(const InterfaceSpawnRequestOps* ops);
+int interface_spawn_request_enqueue(int type, uint32_t parameter); /* FUN_00434e80 */
+void interface_spawn_request_state_get(InterfaceSpawnRequestState* state_out);
+typedef struct AdvisorOverlayRect {
+    float x;
+    float y;
+    float width;
+    float height;
+    int enabled;
+} AdvisorOverlayRect;
+typedef int (*AdvisorOverlayFallbackHitFn)(
+    void* context, float x, float y, float offset_x, float offset_y,
+    uint32_t* result0, uint32_t* result1, uint32_t* result2);
+int advisor_overlay_hit_resolve(
+    float x, float y, const AdvisorOverlayRect* focused_rect,
+    float offset_x, float offset_y, AdvisorOverlayFallbackHitFn fallback,
+    void* context, uint32_t* result0, uint32_t* result1,
+    uint32_t* result2); /* FUN_0041c1c0 */
+typedef struct AdvisorTextAnimationOps {
+    void* context;
+    int (*is_paused)(void* context);
+    int (*animation_find)(void* context, int slot, int* request_out);
+    void (*animation_play)(void* context, int request, int mode);
+} AdvisorTextAnimationOps;
+void advisor_text_animation_ops_set(const AdvisorTextAnimationOps* ops,
+                                    float reset_timer);
+void advisor_text_animation_update(int slot, int force, int selected); /* FUN_0046ac60 */
+typedef struct AdvisorTextBoxLayoutState {
+    uint32_t object_id;
+    uint32_t request_id;
+    uint32_t mode;
+    float value;
+    float geometry[4];
+    float bottom;
+    float font_line_height;
+    uint32_t flags;
+} AdvisorTextBoxLayoutState;
+typedef void (*AdvisorTextBoxExtentFn)(void* context, int width, int height);
+void advisor_text_box_extent_hook_set(AdvisorTextBoxExtentFn hook,
+                                      void* context);
+void advisor_text_box_record_commit(AdvisorTextBoxLayoutState* state); /* FUN_0046a9e0 */
+void text_layout_geometry_store_and_apply(
+    AdvisorTextBoxLayoutState* state, uint32_t object_id,
+    uint32_t request_id, float value, const float geometry[4],
+    uint32_t mode); /* FUN_0046a950 */
+const char* tooltip_info_string_peek(int index);
+typedef struct TooltipOverlayState {
+    const char* names[38];
+    void* font;
+    uint32_t font_metric;
+    uint32_t values[5];
+    float scale;
+    float color_base[3];
+    float color_high[3];
+    float color_low[3];
+} TooltipOverlayState;
+typedef uint32_t (*TooltipFontMetricQueryFn)(void* font, void* context);
+void tooltip_overlay_state_initialize(
+    TooltipOverlayState* state, void* font,
+    uint32_t value2, uint32_t value3, float scale,
+    uint32_t value5, uint32_t value6, uint32_t value7,
+    float color_r, float color_g, float color_b,
+    TooltipFontMetricQueryFn metric_query, void* context); /* FUN_0046b1d0 */
 void     help_window_resources_init(BlockFile* cfg,
                                     const FeHelpWindowResourceOps* ops);
 void     help_window_button_layout_load(
@@ -878,8 +1118,8 @@ UiRenderRecord* ui_render_record_create(void* source,
  * set the corpus takes the current bit 0x40 as its second argument,
  * then installs the word with the bit set when that answer is clear and
  * cleared when it is not — the bit-0x40 rule over the modeled selection
- * word, faithful; the installed word answers in eax. */
-uint32_t ui_mode_resource_bit40_set_clear(int probe, uint32_t value);
+ * word, faithful; the corpus function has no return value. */
+void ui_mode_resource_bit40_set_clear(int probe, uint32_t value);
 
 /* MenuWipeStart (FUN_004103f0, finding 37): when the wipe-arm word is
  * set, stop the running wipe clock, raise the start/pending bits in the
@@ -919,12 +1159,11 @@ uint32_t timed_effect_time_peek(int index);        /* diagnostics */
  * as a module static with a peek hook. */
 void     screen_right_edge_cache_refresh(void); /* FUN_0041a290 */
 uint32_t screen_right_edge_cache_peek(void);    /* port hook */
-/* BitmapFontGlyphMeasureWidth (FUN_0047a520): runs the glyph layout lane
- * with the draw flag clear and zero coordinates — the corpus lane recomputes
- * the measure float and returns void, changing nothing observable. Deviation:
- * the port re-derives glyph advances inside the render lane, so the wrapper
- * lands as the bounds-guarded call-through. */
-void bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
+/* BitmapFontGlyphMeasureWidth (FUN_0047a520): measures one glyph without
+ * drawing. The decompiler labels the wrapper void, but its callers consume
+ * the advance returned by FUN_0047a470; this port derives the same value from
+ * the bitmap ink bounds used by its renderer. */
+int bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
                                                 /* FUN_0047a520 */
 
 /* --- panel resource + scroll leaf band (2026-10-24; findings 386/439/436/

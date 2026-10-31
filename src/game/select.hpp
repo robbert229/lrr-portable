@@ -35,6 +35,12 @@ int  selection_count(const GameContext* ctx);
 /* SelectedEntitySetHasAny (FUN_004525b0): nonzero when the selection is
  * non-empty — the corpus's gate on DAT_004ff298. */
 int selection_has_any(const GameContext* ctx);
+typedef void (*SelectedObjectOutlineDrawFn)(void* context, EntitySlot* entity,
+                                            float red, float green,
+                                            float blue);
+void selected_object_outlines_draw(
+    const GameContext* ctx, SelectedObjectOutlineDrawFn draw,
+    void* context); /* FUN_00424830 */
 
 /* SelectionRecordArrayGet (FUN_004525e0): the DAT_004fef2c selection
  * array itself. NULL GameContext yields NULL (the port has no static). */

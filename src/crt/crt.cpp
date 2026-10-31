@@ -865,13 +865,15 @@ int bit_count32(uint32_t value)
 // FUNCTION: LEGORR 0x0047d700
 int pop_count32(uint32_t value)
 {
-    int n = 0;
-    for (unsigned i = 0; i < 32u; ++i) {
-        if ((value & (1u << (i & 31u))) != 0u) {
-            ++n;
+    int count = 0;
+    uint32_t position = 0u;
+    do {
+        if ((value & (1u << ((uint8_t)position & 0x1fu))) != 0u) {
+            ++count;
         }
-    }
-    return n;
+        ++position;
+    } while (position < 0x20u);
+    return count;
 }
 
 /* FUN_0047d720: index of the lowest set bit, 0xffffffff for zero. The
@@ -894,7 +896,15 @@ uint32_t find_first_set_bit32(uint32_t value)
 // FUNCTION: LEGORR 0x0047e7e0
 int bit_count32_by_position(uint32_t value)
 {
-    return pop_count32(value);
+    int count = 0;
+    uint32_t position = 0u;
+    do {
+        if ((value & (1u << ((uint8_t)position & 0x1fu))) != 0u) {
+            ++count;
+        }
+        ++position;
+    } while (position < 0x20u);
+    return count;
 }
 
 /* VC5 LIBC.LIB intrncvt.obj supplies this three-dword zero test. */
@@ -1408,8 +1418,18 @@ uint32_t global_value_004ff9bc_store_and_return(const void* value)
  * zero-initialized module static (the s_system_state precedent). */
 // GLOBAL: LEGORR 0x004ff990
 static uint32_t s_counter_004ff990 = 0u;
+// GLOBAL: LEGORR 0x00554adc
 static float    s_float_00554adc   = 0.0f;
+// GLOBAL: LEGORR 0x00554efc
 static float    s_float_00554efc   = 0.0f;
+
+/* The two add-one helpers share the corpus's .rdata subtrahend: both
+ * 0x462836 and 0x462856 fsub dword ptr [0x0049e6bc], whose bytes are
+ * verified 00 00 80 bf (-1.0f). A const static keeps the operand a
+ * memory reference Reccmp resolves through the annotation (the
+ * audio.cpp s_menu_volume_scale pattern). */
+// GLOBAL: LEGORR 0x0049e6bc
+static const float s_minus_one_0049e6bc = -1.0f;
 // GLOBAL: LEGORR 0x00555324
 static uint32_t s_counter_00555324 = 0u;
 // GLOBAL: LEGORR 0x00555328
@@ -1436,13 +1456,13 @@ void global_counter_004ff990_reset(void)
 // FUNCTION: LEGORR 0x00462830
 void global_float_at_00554adc_add_one(void)
 {
-    s_float_00554adc = s_float_00554adc + 1.0f; /* corpus: x - -1.0 */
+    s_float_00554adc = s_float_00554adc - s_minus_one_0049e6bc; /* corpus: x - -1.0 */
 }
 
 // FUNCTION: LEGORR 0x00462850
 void global_float_at_00554efc_add_one(void)
 {
-    s_float_00554efc = s_float_00554efc + 1.0f;
+    s_float_00554efc = s_float_00554efc - s_minus_one_0049e6bc; /* corpus: x - -1.0 */
 }
 
 // FUNCTION: LEGORR 0x00462870
@@ -1943,6 +1963,7 @@ uint32_t request_record_flags_peek(int index)
 /* --- the remaining DAT one-liner stores/reads (see crt.hpp) ----------------- */
 // GLOBAL: LEGORR 0x0050080c
 static uint32_t s_value_0050080c = 0u;
+// GLOBAL: LEGORR 0x00500a9c
 static uint32_t s_font_words[16];   /* DAT_00500a9c window */
 static uint32_t s_cursor_slot = 0u; /* DAT_00500a98 */
 
@@ -2593,6 +2614,46 @@ void* linked_list_global_head_peek(void) { return s_linked_list_head; }
 void linked_list_global_head_set(void* record)
 {
     s_linked_list_head = record;
+}
+
+/* LinkedRecordConditionalFloatAdvance (FUN_0046a700): walk the global
+ * +0x1c chain and advance +8 by (+0xc * delta) only when +0x10 is nonzero
+ * and +0x18 equals 2. The native chain pointer is widened in the port; the
+ * observed record offsets and branch conditions are unchanged. */
+// FUNCTION: LEGORR 0x0046A700
+void linked_list_conditional_float_advance(float delta)
+{
+    void* record = s_linked_list_head;
+    while (record != NULL) {
+        uint32_t active = 0u;
+        uint32_t mode = 0u;
+        float value = 0.0f;
+        float rate = 0.0f;
+        void* next = NULL;
+        memcpy(&active, (const char*)record + 0x10, sizeof(active));
+        memcpy(&mode, (const char*)record + 0x18, sizeof(mode));
+        if (active != 0u && mode == 2u) {
+            memcpy(&value, (const char*)record + 8, sizeof(value));
+            memcpy(&rate, (const char*)record + 0x0c, sizeof(rate));
+            value = rate * delta + value;
+            memcpy((char*)record + 8, &value, sizeof(value));
+        }
+        memcpy(&next, (const char*)record + 0x1c, sizeof(next));
+        record = next;
+    }
+}
+
+/* FirstSetFlagOrdinal (FUN_0046a760): return the one-based index of the
+ * lowest selected bit in the 13-bit state selector, or zero when empty. */
+// FUNCTION: LEGORR 0x0046A760
+uint32_t first_set_flag_ordinal(uint32_t mask)
+{
+    for (uint32_t bit = 0u; bit < 13u; ++bit) {
+        if ((mask & (1u << bit)) != 0u) {
+            return bit + 1u;
+        }
+    }
+    return 0u;
 }
 
 // FUNCTION: LEGORR 0x004792c0
