@@ -10154,29 +10154,35 @@ void legacy_entity_screen_ring_render(void* entity, int x, int y)
 // FUNCTION: LEGORR 0x0045a240
 void legacy_scroll_panel_controls_initialize(void)
 {
+    /* The original initialises the scroll info panel, creates the
+       configured overlay element, then calls FUN_0045abb0(6, 1, 1) and
+       FUN_0045abb0(6, 2, 1) — the panel-item request-state setter. */
     ui_scroll_info_panel_initialize(s_legacy_hud_ops.overlay_init_sink);
     ui_overlay_create_configured_element(s_legacy_hud_ops.overlay_init_sink);
-    if (s_legacy_hud_ops.scroll_control_initialize != NULL) {
-        s_legacy_hud_ops.scroll_control_initialize(
-            s_legacy_hud_ops.context, 6, 1, 1);
-        s_legacy_hud_ops.scroll_control_initialize(
-            s_legacy_hud_ops.context, 6, 2, 1);
-    }
+    panel_item_flag32_set(6, 1, 1);
+    panel_item_flag32_set(6, 2, 1);
 }
 
 // FUNCTION: LEGORR 0x0045a270
 void legacy_panel_category_interaction_state_reset(void)
 {
     int i;
-    for (i = 0; i < 18; ++i) {
+    /* The original walks the twelve records between DAT_00500110 and
+       0x500350 (stride 0x30), restores the two view-offset dwords from
+       their initial pair, forces the record flags to (f & ~0xa) | 4, and
+       clears each selection entry's value word and its 0x48 flag bits.
+       It does not touch the HUD state-flag word. */
+    for (i = 0; i < 12; ++i) {
         uint32_t j;
-        memcpy(s_legacy_panels[i].current, s_legacy_panels[i].initial,
-               sizeof(s_legacy_panels[i].current));
-        s_legacy_panels[i].flags = (s_legacy_panels[i].flags & ~0xau) | 4u;
-        for (j = 0; j < s_legacy_panels[i].selection_count && j < 64; ++j)
-            s_legacy_panels[i].selection_flags[j] &= ~0x48u;
+        LegacyPanelPortRecord* record = &s_legacy_panels[i];
+        record->current[0] = record->initial[0];
+        record->current[1] = record->initial[1];
+        record->flags = (record->flags & ~0xau) | 4u;
+        for (j = 0; j < record->selection_count && j < 64; ++j) {
+            record->selection_values[j] = 0;
+            record->selection_flags[j] &= ~0x48u;
+        }
     }
-    s_legacy_hud_state_flags = 0;
     overlay_anim_float_install(0.0f);
 }
 
