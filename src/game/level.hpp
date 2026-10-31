@@ -548,17 +548,19 @@ void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set);
 /* FUN_004332c0: record byte +3 as an unsigned value. */
 int level_cell_record_byte3(const LevelState* s, int cx, int cy);
 
-/* FUN_004332f0: raise the in-gate work bit (flag 0x4) — the bit the
- * update-queue flush tests; OOB cells stay untouched. */
+/* Explicit-LevelState work-bit helper used by map/load callers. */
 void level_cell_work_flag_set(LevelState* s, int cx, int cy);
+/* TerrainCellWorkFlagSet @ 0x004332f0: current-level target ABI. */
+void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy);
 
-/* TerrainCellWorkFlagClear (FUN_00430320): clear the three transient
- * work flags for a coordinate when the cell's static/secondary gates permit
- * it, then mark the cell for the next refresh pass. The corpus's global
- * descriptor query and four side-effect callbacks remain outside the current
- * LevelState model. */
+/* Explicit-LevelState worker used by erosion and the current-level mapped
+ * target below. It applies the descriptor veto, cell flag changes, available
+ * entity/callback/FLIC services, and four queued coordinate events. */
 void terrain_cell_work_flag_clear(LevelState* s, const int coord[2],
                                   uint32_t selector);
+/* TerrainCellWorkFlagClear @ 0x00430320: current-level target ABI. */
+void terrain_cell_work_flag_clear_current(const int coord[2],
+                                          uint32_t selector);
 
 /* FUN_004502c0: unsigned membership of a coordinate pair against the
  * grid dimensions (the corpus reads the pair from a struct pointer;
@@ -953,31 +955,23 @@ void random_variant_cell_scatter(int center_x, int center_y, int radius,
  * contract; the corpus's scanning consumers stay unported. */
 int terrain_cell_dirty_flag(const void* terrain, int x, int y);
 
-/* --- cell timestamp dedup and the terrain dirty queue (2026-10-24) ------
- * Both are corpus DAT/context stores without ported owners, modeled as
- * module statics with documented values/bounds (the s_system_state and
- * tracking-queue precedents). */
+/* --- cell timestamp lock table and terrain dirty queue (2026-10-24) ------
+ * The timestamp table mirrors the corpus globals; the terrain queue is
+ * module-owned with the bounds documented below. */
 
 /* CellCoordinateTimestampRemember (FUN_0040ee00): store the coordinate
- * pair and the CURRENT TIMESTAMP GLOBAL into the first free record of
- * the 1000-entry dedup table; a full table stores nothing. The corpus's
- * timestamp word (_DAT_004d78c0) is seeded by ErosionTimingStateInit
- * (port: erosion_timing_state_init); until one runs it reads zero. */
+ * pair and the configured lock countdown into the first free record of the
+ * 1000-entry table; a full table stores nothing. ErosionTimingStateInit
+ * seeds _DAT_004d78c0 from ErodeLockTime * 25. */
 void cell_coordinate_timestamp_remember(int x, int y);
 
 /* CellCoordinateTimestampExists (FUN_0040efb0): answer 1 when an active
  * record holds the exact pair, 0 when the scan runs off the table. */
 uint32_t cell_coordinate_timestamp_exists(int x, int y);
 
-/* ErosionTimingStateInit (FUN_0040e930): seed the erosion timing band and
- * wipe its scratch. The three float parameters land scaled by 25 (the
- * second additionally by 0.2) in corpus-order; the timing word lands as
- * the port's timestamp tick with its float bits riding (the corpus keeps
- * it as a float word while the port's timestamp model reads a count —
- * deviation). The two scratch regions (2000 and 1000 dwords) and the
- * clear word land as module statics — the unowned-global deviation; the
- * corpus's scratch consumers are the hook-stubbed tickers
- * (FUN_0040e7f0 / FUN_0040e990). */
+/* ErosionTimingStateInit (FUN_0040e930): scale the configured trigger,
+ * erosion, and lock durations, then clear the ordered pending list, 2,000
+ * stage slots, and 1,000 timed coordinate records. */
 void erosion_timing_state_init(float value_a, float value_b, float value_c);
 float erosion_decay_scale_peek(void);          /* port hook */
 float erosion_delay_scale_peek(void);          /* port hook */
@@ -1010,6 +1004,14 @@ void lava_erosion_level_context_release(LevelState* s);
 int lava_erosion_neighbor_eligible(const LevelState* s, int x, int y);
 int lava_erosion_neighbor_eligible_current(const int xy[2]);
 void lava_erosion_pending_cell_add(const int xy[2], int add);
+/* Ordered EmergeMap registration and its tick-side state. Pending cells are
+ * exposed in the same swap-removed order used by the reference table. */
+int lava_erosion_stage_register(const int xy[2], uint32_t stage);
+unsigned int lava_erosion_pending_cell_count_get(void);
+int lava_erosion_pending_cell_get(unsigned int index, int xy_out[2]);
+int lava_erosion_stage_get(unsigned int slot, int xy_out[2],
+                           float* timer_out, uint8_t* cell_stage_out);
+int lava_erosion_pending_cell_tick(float scale);
 
 /* The geometric terrain operation behind erosion depends on renderer-owned
  * surfaces. Keep that edge as a typed callback; the cell/state transition and

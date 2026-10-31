@@ -2951,7 +2951,9 @@ void ledger_stub_004288e0_LevelDebugInputCellMutatorDispatch(
     terrain_cell_material_set(grid, x, y, material, rotation);
 }
 
-// FUNCTION: LEGORR 0x004293b0
+/* Adapter only: SelectionRectangleRender (FUN_004293b0) is zero-argument
+ * global input/view state and draws through the active render interface.
+ * This explicit state/hooks API is not the retail ABI. */
 void ledger_stub_004293b0_SelectionRectangleRender(
     const SelectionRectangleRenderState* state,
     const SelectionRectangleRenderHooks* hooks)
@@ -2959,7 +2961,9 @@ void ledger_stub_004293b0_SelectionRectangleRender(
     selection_rectangle_render(state, hooks);
 }
 
-// FUNCTION: LEGORR 0x00429470
+/* Adapter only: CameraPointerRayRoute (FUN_00429470) takes screen x/y and
+ * two output pointers, using the active global camera. The explicit hooks
+ * argument below has no retail counterpart or production installer. */
 int ledger_stub_00429470_CameraPointerRayRoute(
     const CameraPointerRayHooks* hooks, float x, float y,
     float* out_x, float* out_y)
@@ -3112,7 +3116,9 @@ void ledger_stub_0042da20_ObjectTheNamesLoad(
     object_names_load(tables, section, hooks);
 }
 
-// FUNCTION: LEGORR 0x0042de40
+/* Adapter only: ViewportTargetPositionClamp (FUN_0042de40) takes a manager,
+ * coordinate pair, and target selector, then updates global viewport state.
+ * The state/position clamp seam below does not implement that route. */
 int ledger_stub_0042de40_ViewportTargetPositionClamp(
     ViewportTargetClampState* state, const int position[2])
 {
@@ -4328,16 +4334,16 @@ void ledger_stub_00440a10_AttachedEntityDirectionVectorUpdate(
 
 // GridRouteSearchAdapter
 // FUNCTION: LEGORR 0x00440c30
-int ledger_stub_00440c30_GridRouteSearchAdapter(
-    void* level, uint32_t start_x, uint32_t start_y,
+void ledger_stub_00440c30_GridRouteSearchAdapter(
+    void* entity, uint32_t start_x, uint32_t start_y,
     uint32_t goal_x, uint32_t goal_y, int** out_x, int** out_y,
     uint32_t* out_count)
 {
-    /* The reference adapter selects the no-stop-callback path. The portable
-     * owner uses the same bounded cardinal grid search in that mode. */
-    return terrain_neighbor_path_check(level, start_x, start_y, goal_x,
-                                       goal_y, out_x, out_y, out_count,
-                                       0, 0);
+    /* FUN_00440c30 is a void eight-argument forwarder. The reference passes
+     * its final count pointer unchanged and supplies null callback/context. */
+    (void)terrain_neighbor_path_check(entity, start_x, start_y, goal_x,
+                                      goal_y, out_x, out_y, out_count,
+                                      NULL, NULL);
 }
 
 // TerrainGridPathSearch
@@ -4352,13 +4358,16 @@ int ledger_stub_00440c70_TerrainGridPathSearch(
 
 // TerrainNeighborPathCheck
 int ledger_stub_004410f0_TerrainNeighborPathCheck(
-    void* level, uint32_t start_x, uint32_t start_y,
+    void* entity, uint32_t start_x, uint32_t start_y,
     uint32_t goal_x, uint32_t goal_y, int** out_x, int** out_y,
-    uint32_t* out_count, TerrainPathStopHook stop, void* user)
+    float* out_count, TerrainPathStopHook stop, void* user)
 {
-    return terrain_neighbor_path_check(level, start_x, start_y, goal_x,
-                                       goal_y, out_x, out_y, out_count,
-                                       stop, user);
+    uint32_t route_count = 0;
+    int found = terrain_neighbor_path_check(
+        entity, start_x, start_y, goal_x, goal_y, out_x, out_y,
+        &route_count, stop, user);
+    if (found && out_count != NULL) *out_count = (float)route_count;
+    return found;
 }
 
 // SubobjectPoseDeltaNormalizeAndDispatch
@@ -6107,7 +6116,9 @@ int ledger_stub_0044b680_EntitySceneObjectTreeAttach(
     return attach(context, entity, scene_object, parent);
 }
 
-// FUNCTION: LEGORR 0x0044bc30
+/* Adapter only: EntityMotionToSceneNodeSync (FUN_0044bc30) takes an entity
+ * and delta, and drives its registered scene node. The additional hooks
+ * object has no installed production owner in this port. */
 void ledger_stub_0044bc30_EntityMotionToSceneNodeSync(
     EntitySlot* entity, float delta,
     const EntityMotionSceneSyncHooks* hooks)
@@ -6115,7 +6126,9 @@ void ledger_stub_0044bc30_EntityMotionToSceneNodeSync(
     entity_motion_to_scene_node_sync(entity, delta, hooks);
 }
 
-// FUNCTION: LEGORR 0x0044be30
+/* Adapter only: EntityAuxiliaryPayloadRelease (FUN_0044be30) takes one
+ * entity and operates on its attached node plus a global deferred-release
+ * list. The explicit release hooks are not its ABI or installed owner. */
 void ledger_stub_0044be30_EntityAuxiliaryPayloadRelease(
     EntitySlot* entity, const EntityAuxiliaryReleaseHooks* hooks)
 {
@@ -6749,7 +6762,6 @@ void ledger_stub_0045cc70_PointerCursorDraw(
 }
 
 // PriorityImagesConfigLoad
-// FUNCTION: LEGORR 0x0045cdc0
 uint32_t ledger_stub_0045cdc0_PriorityImagesConfigLoad(
     PriorityConfigState* state, const PriorityImageConfigRow* rows,
     uint32_t count)
@@ -6759,7 +6771,6 @@ uint32_t ledger_stub_0045cdc0_PriorityImagesConfigLoad(
 
 
 // PrioritiesConfigLoad
-// FUNCTION: LEGORR 0x0045cf50
 uint32_t ledger_stub_0045cf50_PrioritiesConfigLoad(
     PriorityConfigState* state, const PriorityConfigRow* rows,
     uint32_t count, const PriorityConfigHooks* hooks)
@@ -6768,7 +6779,6 @@ uint32_t ledger_stub_0045cf50_PrioritiesConfigLoad(
 }
 
 // PrioritiesImagePositionsConfigLoad
-// FUNCTION: LEGORR 0x0045d060
 uint32_t ledger_stub_0045d060_PrioritiesImagePositionsConfigLoad(
     PriorityConfigState* state, const PriorityImagePositionRow* rows,
     uint32_t count)
@@ -6875,7 +6885,8 @@ void ledger_stub_00461790_RewardDisplayTick(GameTask* task,
     reward_display_task_abi(task, draw_mask, task_number, elapsed);
 }
 
-// FUNCTION: LEGORR 0x00461c90
+/* Portable framebuffer text adapter; the retail address expects task-count
+ * and elapsed-time inputs and is implemented in mission.cpp. */
 void ledger_stub_00461c90_RewardScoreTaskTextDraw(
     const TextureSurface* font, void* pixels, int pitch, int width, int height,
     int x, int y, const char* text)
@@ -7206,8 +7217,9 @@ int ledger_stub_0046c6f0_VehicleTypeDefinitionParse(
     return vehicle_type_definition_parse(definition, context, read_field);
 }
 
-// AttachedModelOrientationUpdate
-// FUNCTION: LEGORR 0x0046d380
+/* Adapter only: AttachedModelOrientationUpdate (FUN_0046d380) takes a
+ * render record, four callback arguments, and directly mutates attached scene
+ * nodes. This compact state/apply-hook model is not its ABI. */
 int ledger_stub_0046d380_AttachedModelOrientationUpdate(
     AttachedModelOrientationState* state, void* context,
     AttachedModelOrientationApplyHook apply)
@@ -7233,8 +7245,9 @@ void ledger_stub_0046dd10_StagedCellCandidateSelect(
     staged_cell_candidate_select(unused, level);
 }
 
-// CellQuadRunEmit
-// FUNCTION: LEGORR 0x0046de80
+/* Adapter only: CellQuadRunEmit (FUN_0046de80) takes the scene and level
+ * owners, then consumes the global cell-quad run table. This explicit
+ * records/count/hooks entry has no production run-table owner. */
 void ledger_stub_0046de80_CellQuadRunEmit(
     LevelState* level, TerrainCellQuadRunRecord* records,
     unsigned int record_count, const TerrainCellQuadRunEmitHooks* hooks)
@@ -7889,7 +7902,6 @@ void ledger_stub_00475c00_DDiSceneAnimationCallbacksSet(
 }
 
 // DDiScenePayloadRelease
-// FUNCTION: LEGORR 0x00475c80
 void ledger_stub_00475c80_DDiScenePayloadRelease(void* scene_object)
 {
     ddiscene_payload_release(scene_object);
@@ -7923,7 +7935,6 @@ void ledger_stub_00475f70_DDiSceneAnimationHookCreate(
 }
 
 // AttachedObjectDataReleaseAndClear
-// FUNCTION: LEGORR 0x004760e0
 void ledger_stub_004760e0_AttachedObjectDataReleaseAndClear(void* property)
 {
     attached_object_data_release_and_clear(property);
@@ -8048,10 +8059,11 @@ void* ledger_stub_00476850_DDiSceneResourceOpen(const char* name,
 
 
 
-// RenderTargetViewportScaleSet
+/* Adapter only: retail RenderTargetViewportScaleSet queries the global
+ * Direct3DRM device and allocates a bounded screen surface. This explicit
+ * dimension/hook function is not its ABI or complete behavior. */
 typedef void (*RenderTargetViewportScaleHook)(void* context, void* target,
                                               float scale_x, float scale_y);
-// FUNCTION: LEGORR 0x00476dc0
 int ledger_stub_00476dc0_RenderTargetViewportScaleSet(
     void* target, float viewport_width, float viewport_height,
     float target_width, float target_height,
@@ -8087,7 +8099,6 @@ void ledger_stub_00477010_DDiSceneDrawBegin(void* render_object, int begin)
 
 
 // ComPropertyResultGet
-// FUNCTION: LEGORR 0x00477310
 void* ledger_stub_00477310_ComPropertyResultGet(void* resource_owner)
 {
     return com_resource_enumeration_result_get(resource_owner);
@@ -8106,7 +8117,6 @@ void ledger_stub_00477f30_MainLoopFramePump(int mode_transition)
 }
 
 // DisplayDeviceCapsQueryDiscard
-// FUNCTION: LEGORR 0x00477f80
 void ledger_stub_00477f80_DisplayDeviceCapsQueryDiscard()
 {
     window_runtime_display_caps_query_discard();
@@ -8127,7 +8137,6 @@ int ledger_stub_00478010_WindowMessageDispatchFilter(uint32_t message)
 }
 
 // WindowRectAdjustForWindowedMode
-// FUNCTION: LEGORR 0x00478310
 int ledger_stub_00478310_WindowRectAdjustForWindowedMode(WindowPortRect* rect)
 {
     return window_runtime_adjust_rect(rect);
@@ -8453,15 +8462,15 @@ Model* ledger_stub_004809e0_LwoModelEntryLoad(const char* path, void* flags,
     return lwo_model_entry_load(path, flags, context);
 }
 
-// MaterialPass
-// FUNCTION: LEGORR 0x00480ac0
+/* Portable adapter only. Retail MaterialPass takes (device, task/material
+ * record, parsed model, flags) and owns geometry/scene submission. */
 int ledger_stub_00480ac0_MaterialPass(void* device, void* model, void* layer)
 {
     return material_pass_execute(device, model, layer);
 }
 
-// BindModelTextures
-// FUNCTION: LEGORR 0x00481820
+/* Portable adapter only. Retail BindModelTextures takes (device, native
+ * model record, native material-record array, force-source-color). */
 int ledger_stub_00481820_BindModelTextures(
     void* device, const ModelTextureInput* inputs,
     ModelTextureBinding* bindings, uint32_t count, int force_source_color)
@@ -9956,10 +9965,14 @@ int legacy_health_bar_config_load(BlockFile* values, BlockFile* names)
     if (!legacy_config_rgb(cfg, "ObjInfo::HealthBarRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.health_rgb, rgb, sizeof(rgb));
     vertical = block_get_bool(cfg, "ObjInfo::HealthBarVertical");
+    /* Mirrors the original's writes to the shared HUD state word
+       (DAT_004ffe68): the loaded bit (2) is always set and the vertical
+       bit (8) is set only when the key reads as 1; neither is cleared.
+       The port models those two bits on the health-bar state record that
+       the renderer gates on. */
     s_legacy_health_bar.vertical = vertical == 1 ? 1u : 0u;
     s_legacy_health_bar.flags |= 2u;
     if (vertical == 1) s_legacy_health_bar.flags |= 8u;
-    else s_legacy_health_bar.flags &= ~8u;
     return 1;
 }
 
@@ -10181,8 +10194,10 @@ void legacy_overlay_image_record_load(BlockFile* cfg, int panel,
         return;
     }
     if (path != NULL && s_legacy_hud_ops.surface_alternate_load != NULL) {
+        /* The original's alternate path is FUN_00483c80(path, record, 3);
+           the panel stands in for the record and 3 is its load mode. */
         record->image = s_legacy_hud_ops.surface_alternate_load(
-            cfg, path, panel, 0, s_legacy_hud_ops.context);
+            cfg, path, panel, 3, s_legacy_hud_ops.context);
         if (record->image != NULL) {
             record->image_mode = 1;
             record->image_flags |= 1u;

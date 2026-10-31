@@ -104,6 +104,15 @@ const char* resource_wad_entry_name(int wad_idx, int entry_idx);
 /* Open a resource by name. mode selects the branch policy (see defines).
  * Returns a handle or NULL on failure. */
 Resource* resource_open(const char* name, int mode);
+/* Independent seekable view over a loose file or WAD payload. Expanded
+ * raw-copy entries are read directly; implemented WAD codecs 1/2 are
+ * expanded into owned memory so the resulting logical resource is seekable. */
+typedef struct ResourceStream ResourceStream;
+ResourceStream* resource_stream_open(const char* name, int mode,
+                                     uint32_t* size_out);
+int resource_stream_read_at(ResourceStream* stream, uint32_t offset,
+                            void* bytes, uint32_t length);
+void resource_stream_close(ResourceStream* stream);
 typedef struct MapOpenOps {
     void* context;
     int (*map_index_find)(void* context, const Resource* resource);
@@ -118,6 +127,13 @@ typedef struct ResourceFileTokenList {
     uint32_t count;
     char tokens[512][256];
 } ResourceFileTokenList;
+/* Root used by the retail-shaped one-argument token/tree entrypoints. The
+ * loader initializes it from resource_mount; hosts may set the same owner
+ * root explicitly when they don't mount numbered archives. */
+void resource_directory_scan_root_set(const char* root);
+const char* resource_directory_scan_root_get(void);
+void resource_file_token_list_load_and_tree_scan_target(
+    const char* token_file); /* FUN_004802d0, one-argument retail shape */
 typedef struct ResourceFileTokenListOps {
     void* context;
     void (*directory_tree_scan)(void* context, const char* root,
@@ -125,7 +141,7 @@ typedef struct ResourceFileTokenListOps {
 } ResourceFileTokenListOps;
 int resource_file_token_list_load_and_tree_scan(
     const char* token_file, const char* root, ResourceFileTokenList* list,
-    const ResourceFileTokenListOps* ops); /* FUN_004802d0 */
+    const ResourceFileTokenListOps* ops);
 int resource_directory_token_list_contains(
     const ResourceFileTokenList* list, const char* token); /* FUN_00480570 */
 typedef struct ResourceDirectoryScanOps {
@@ -138,7 +154,9 @@ typedef struct ResourceDirectoryScanOps {
 } ResourceDirectoryScanOps;
 void resource_directory_tree_scan(const char* root,
                                   const ResourceFileTokenList* tokens,
-                                  const ResourceDirectoryScanOps* ops); /* FUN_00480390 */
+                                  const ResourceDirectoryScanOps* ops);
+void resource_directory_tree_scan_target(
+    const char* root); /* FUN_00480390, one-argument retail shape */
 
 /* Read the payload into handle->data (lazy; no-op if already read or NULL).
  * Returns the payload size, or -1 on failure (dormant codec / read error). */

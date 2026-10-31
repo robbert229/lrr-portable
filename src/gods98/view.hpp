@@ -884,6 +884,10 @@ void ddiscene_frame_callbacks_set(DDiSceneSampleHook sample_hook,
                                   void* sample_context, int sample_enabled,
                                   DDiSceneEndHook end_hook,
                                   void* end_context);
+/* Add a sample callback without replacing the scene owner's callback.
+ * Re-adding the same callback/context pair is harmless. */
+int ddiscene_sample_hook_add(DDiSceneSampleHook sample_hook,
+                             void* sample_context);
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
 void ddiscene_advance_by_time(void* scene_object, float delta); /* 0x00475120 */
 typedef float (*SceneTimingValueGetHook)(void* frame, void* argument,
@@ -1368,9 +1372,9 @@ uint32_t map_row_span_record_count(void);
 const void* map_row_span_record_get(uint32_t index);
 int float_round_to_nearest_int(float value); /* FUN_00463e40 */
 
-/* Lazy renderer-subobject cache adapters (FUN_00406f80 / 0x004085f0).
- * The owning scene-object layout is still partial; a resolver hook gives
- * the renderer/model modules a callable seam while retaining cache state. */
+/* ActivityRunnerStateRead is mapped at 0x00406f80. The activity-specific
+ * SceneActivityChangeSecondary helper below is an adapter only: the renderer
+ * activity record and creation contract have no production owner here. */
 typedef void* (*RendererSubobjectResolveFn)(void* owner, void* source,
                                             int index);
 void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver);

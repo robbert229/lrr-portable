@@ -118,7 +118,11 @@ typedef void (*SimtickPostStepHook)(EngineContext* context, void* user);
 void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user);
 void simtick_post_step(EngineContext* c);              /* FUN_004665c0 */
 void simtick_minion_states(EngineContext* c, float dt, float scale); /* 0x4313b0 */
-void simtick_grid_cell_pass(EngineContext* c);         /* FUN_00424600 */
+/* Target-shaped path receives EngineTick's subsystem scale and processes cells
+ * whose configured scene resources completed loading during the sweep. */
+void simtick_grid_cell_pass(EngineContext* c, float scale); /* FUN_00424600 */
+/* Deterministic seeded-cell adapter retained for existing local callers. */
+void simtick_grid_cell_pass(EngineContext* c);
 void simtick_scene_pass(EngineContext* c, float dt);   /* FUN_0043b270 */
 void simtick_sfx_bank(EngineContext* c, float dt);     /* FUN_0046f550 */
 
@@ -155,7 +159,10 @@ int  simtick_sfx_releases(void);
 /* --- tranche 10: the remaining table tickers ----------------------------- */
 void simtick_mouse_world(EngineContext* c, float dt);      /* FUN_00425d90 */
 void simtick_frame_counter(EngineContext* c);              /* FUN_00402220 */
-void simtick_ambient_spawn(EngineContext* c, float dt);    /* FUN_0040eab0 */
+/* Target ABI: one subsystem-scale float (FUN_0040eab0). */
+void simtick_ambient_spawn_tick(float scale);
+/* Test adapter retained for existing local simtick tests. */
+void simtick_ambient_spawn(EngineContext* c, float dt);
 void simtick_sound_bank_tick(EngineContext* c, float dt);  /* FUN_00465b00 */
 void simtick_render_pass(EngineContext* c, float dt, float scale,
                          uint32_t o1);                     /* FUN_004291a0 */

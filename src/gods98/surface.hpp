@@ -20,6 +20,8 @@
 
 #include "texture.hpp"
 #include "scene_resources.hpp"
+
+typedef struct Model Model;
 #if defined(LEGORRR_BACKEND_MINIWIN)
 #include <miniwin/d3drm.h>
 #endif
@@ -114,6 +116,8 @@ typedef struct ModelTextureInput {
     uint8_t color_from_source;
     uint8_t reserved1[2];
     float values[8];
+    /* Portable path used when no renderer-owned name resolver is installed. */
+    const char* image_name;
 } ModelTextureInput;
 typedef struct ModelTextureBinding {
     void* texture;
@@ -121,6 +125,9 @@ typedef struct ModelTextureBinding {
     uint32_t animation_frame_count;
     float color[3];
     float values[10];
+    uint8_t texture_surface_owned;
+    uint8_t animation_array_owned;
+    uint8_t reserved[2];
 } ModelTextureBinding;
 typedef struct ModelTextureBindOps {
     void* context;
@@ -136,6 +143,13 @@ void model_texture_bind_ops_set(const ModelTextureBindOps* ops);
 int bind_model_textures(void* device, const ModelTextureInput* inputs,
                         ModelTextureBinding* bindings, uint32_t count,
                         int force_source_color);
+/* Bind LWO SRFS/TIMG records to the portable texture cache. This API does
+ * not use the retail 0x481820 material-record ABI. */
+int bind_lwo_model_textures(void* device, const Model* model,
+                            ModelTextureBinding* bindings, uint32_t count,
+                            int force_source_color);
+void model_texture_bindings_release(ModelTextureBinding* bindings,
+                                    uint32_t count);
 typedef struct MaterialPassOps {
     void* context;
     int (*geometry_prepare)(void* context, void* device, void* model,
@@ -170,17 +184,22 @@ int surface_description_get(const DisplaySurface* surface,
 /* Lock returns the framebuffer pointer + row pitch (RGBA32 R,G,B,A on LE). */
 int  surface_lock(DisplaySurface* s, void** pixels, int* pitch);
 void surface_unlock(DisplaySurface* s, void* pixels);
+/* Portable adapters with explicit DisplaySurface records. Retail 0x47cc20
+ * and 0x47cc50 are no-argument functions over renderer-owned globals. */
 void render_surface_restore_from_primary(DisplaySurface* destination,
                                          DisplaySurface* primary,
-                                         int restore_enabled); /* FUN_0047cc20 */
+                                         int restore_enabled);
 void windowed_render_surface_blit(DisplaySurface* primary,
-                                  DisplaySurface* back_surface); /* FUN_0047cc50 */
+                                  DisplaySurface* back_surface);
 void surface_blit_wait(void* destination_surface,
                        DisplaySurface* source); /* FUN_0047ed00 */
+/* These DisplaySurface/output-record queries are portable adapters. Retail
+ * 0x47de60 and 0x47def0 operate on DirectDraw interface slots and use
+ * different output contracts. */
 int surface_directdraw_description_get(DisplaySurface* surface,
-                                       SurfaceDescriptionInfo* out); /* FUN_0047de60 */
+                                       SurfaceDescriptionInfo* out);
 int surface_directdraw_pixel_format_get(DisplaySurface* surface,
-                                        SurfacePixelFormat* out); /* FUN_0047def0 */
+                                        SurfacePixelFormat* out);
 typedef struct RenderObjectStateOps {
     void* context;
     int (*object_kind)(void* context, void* object);
@@ -564,7 +583,8 @@ uint32_t renderer_record_table_word_peek(int index);
 void renderer_record_table_word_set(int index, uint32_t value);
 typedef void (*RendererBeginFrameHook)(void* device);
 void renderer_begin_frame_hook_set(RendererBeginFrameHook hook, void* device);
-int renderer_begin_frame_once(void); /* FUN_00477fa0 */
+/* Portable hook adapter; no target mapping until the global device/flag exist. */
+int renderer_begin_frame_once(void);
 void renderer_begin_frame_once_reset(void);
 void surface_descriptor_initialize(void* record); /* FUN_0047e710 */
 typedef void (*SurfacePixelWriteFn)(void* context, int x, int y,
@@ -715,7 +735,7 @@ typedef struct PalettizedSurfaceDecodeJob {
     uint32_t blue_mask;
 } PalettizedSurfaceDecodeJob;
 int palettized_bitmap_surface_decode(
-    const PalettizedSurfaceDecodeJob* job); /* FUN_0047d000 */
+    const PalettizedSurfaceDecodeJob* job);
 
 /* Bitmap24BitSurfaceConvert (FUN_0047D800): the 24-bit sibling — the three
  * source bytes per pixel land through the masks REVERSED (byte 0 takes

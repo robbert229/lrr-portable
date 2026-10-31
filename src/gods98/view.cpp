@@ -90,6 +90,12 @@ static DDiSceneFrameRecordFindHooks s_ddiscene_frame_record_find_hooks;
 static DDiSceneSampleHook s_ddiscene_sample_hook;
 static void* s_ddiscene_sample_context;
 static int s_ddiscene_sample_enabled;
+typedef struct DDiSceneSampleHookEntry {
+    DDiSceneSampleHook callback;
+    void* context;
+} DDiSceneSampleHookEntry;
+static DDiSceneSampleHookEntry s_ddiscene_additional_sample_hooks[8];
+static unsigned int s_ddiscene_additional_sample_hook_count;
 static DDiSceneEndHook s_ddiscene_end_hook;
 static void* s_ddiscene_end_context;
 static DDiSceneLightCreateHooks s_ddiscene_light_create_hooks;
@@ -118,6 +124,53 @@ static SceneObjectRecordRetainHook s_scene_object_record_retain_hook;
 static void* s_scene_object_record_retain_context;
 static RenderQualityApplyHook s_render_quality_apply_hook;
 static void* s_render_quality_apply_context;
+
+#if defined(_MSC_VER)
+typedef void (__stdcall *DDiScenePayloadReleaseMethod)(void*);
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+typedef void (__attribute__((stdcall)) *DDiScenePayloadReleaseMethod)(void*);
+#else
+typedef void (*DDiScenePayloadReleaseMethod)(void*);
+#endif
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+static void ddiscene_payload_owner_detach_call(void* owner, void* payload,
+                                                void* method)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov edx, dword ptr [esp + 8]
+        mov eax, dword ptr [esp + 12]
+        push edx
+        call eax
+    }
+}
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+typedef void (__attribute__((thiscall)) *DDiScenePayloadDetachMethod)(
+    void*, void*);
+static void ddiscene_payload_owner_detach_call(void* owner, void* payload,
+                                                void* method)
+{
+    ((DDiScenePayloadDetachMethod)method)(owner, payload);
+}
+#else
+typedef void (*DDiScenePayloadDetachMethod)(void*, void*);
+static void ddiscene_payload_owner_detach_call(void* owner, void* payload,
+                                                void* method)
+{
+    ((DDiScenePayloadDetachMethod)method)(owner, payload);
+}
+#endif
+
+static void ddiscene_payload_interface_release(void* interface_object)
+{
+    void** vtable;
+    if (interface_object == NULL) return;
+    vtable = *(void***)interface_object;
+    if (vtable != NULL && vtable[2] != NULL) {
+        ((DDiScenePayloadReleaseMethod)vtable[2])(interface_object);
+    }
+}
 
 void scene_object_bounds_hooks_set(const SceneObjectBoundsHooks* hooks)
 {
@@ -943,6 +996,7 @@ void ddiscene_draw_begin(void* render_object, int begin)
  * interface outputs. The first is queried through +0x68 and the second is
  * the returned interface; both slot +0x08 calls are part of the recovered
  * ownership sequence. */
+// FUNCTION: LEGORR 0x00477310
 void* com_resource_enumeration_result_get(void* resource_owner)
 {
 #if defined(_MSC_VER)
@@ -1188,6 +1242,7 @@ void ddiscene_payload_release_hooks_set(
 
 /* DDiScenePayloadRelease (FUN_00475c80): release kind-specific resources,
  * free the payload, and clear the scene's +0x0c slot. */
+// FUNCTION: LEGORR 0x00475c80
 void ddiscene_payload_release(void* scene_object)
 {
     void* payload;
@@ -1203,11 +1258,13 @@ void ddiscene_payload_release(void* scene_object)
     if (kind == 4u) {
         if (fields[0] != NULL) engine_heap_free(fields[0]);
     }
-    else if (kind == 5u) {
-        if (fields[1] != NULL &&
-            s_ddiscene_payload_release_hooks.interface_release != NULL) {
+    else if (kind == 5u && fields[1] != NULL) {
+        if (s_ddiscene_payload_release_hooks.interface_release != NULL) {
             s_ddiscene_payload_release_hooks.interface_release(
                 fields[1], s_ddiscene_payload_release_hooks.context);
+        }
+        else {
+            ddiscene_payload_interface_release(fields[1]);
         }
     }
     else if (kind == 1u && fields[2] != NULL) {
@@ -1215,9 +1272,19 @@ void ddiscene_payload_release(void* scene_object)
             s_ddiscene_payload_release_hooks.kind1_detach(
                 owner, fields[2], s_ddiscene_payload_release_hooks.context);
         }
+        else if (owner != NULL) {
+            void** vtable = *(void***)owner;
+            if (vtable != NULL && vtable[0xa0 / 4] != NULL) {
+                ddiscene_payload_owner_detach_call(
+                    owner, fields[2], vtable[0xa0 / 4]);
+            }
+        }
         if (s_ddiscene_payload_release_hooks.interface_release != NULL) {
             s_ddiscene_payload_release_hooks.interface_release(
                 fields[2], s_ddiscene_payload_release_hooks.context);
+        }
+        else {
+            ddiscene_payload_interface_release(fields[2]);
         }
     }
     else if (kind == 8u && fields[3] != NULL &&
@@ -1264,6 +1331,30 @@ void ddiscene_frame_callbacks_set(DDiSceneSampleHook sample_hook,
     s_ddiscene_end_context = end_context;
 }
 
+int ddiscene_sample_hook_add(DDiSceneSampleHook sample_hook,
+                             void* sample_context)
+{
+    unsigned int index;
+    if (sample_hook == NULL) return 0;
+    for (index = 0; index < s_ddiscene_additional_sample_hook_count; ++index) {
+        if (s_ddiscene_additional_sample_hooks[index].callback == sample_hook &&
+            s_ddiscene_additional_sample_hooks[index].context == sample_context) {
+            s_ddiscene_sample_enabled = 1;
+            return 1;
+        }
+    }
+    if (s_ddiscene_additional_sample_hook_count >=
+        sizeof(s_ddiscene_additional_sample_hooks) /
+        sizeof(s_ddiscene_additional_sample_hooks[0])) return 0;
+    s_ddiscene_additional_sample_hooks[
+        s_ddiscene_additional_sample_hook_count].callback = sample_hook;
+    s_ddiscene_additional_sample_hooks[
+        s_ddiscene_additional_sample_hook_count].context = sample_context;
+    ++s_ddiscene_additional_sample_hook_count;
+    s_ddiscene_sample_enabled = 1;
+    return 1;
+}
+
 // FUNCTION: LEGORR 0x00475140
 /* DDiSceneFrameUpdateAndCallbacks (FUN_00475140): select the kind-specific
  * frame, consume the action-entry sample bit, update its timing record, run
@@ -1296,10 +1387,21 @@ float ddiscene_frame_update_and_callbacks(void* scene_object, float time)
         }
         if (frame_interface != NULL && (flags & 2u) != 0u) {
             sample_name = ddiscene_animation_sample_name_get(frame_interface);
-            if (sample_name != NULL && s_ddiscene_sample_hook != NULL &&
-                s_ddiscene_sample_enabled != 0) {
-                s_ddiscene_sample_hook(sample_name, scene_object,
-                                       s_ddiscene_sample_context);
+            if (sample_name != NULL && s_ddiscene_sample_enabled != 0) {
+                unsigned int hook_index;
+                if (s_ddiscene_sample_hook != NULL) {
+                    s_ddiscene_sample_hook(sample_name, scene_object,
+                                           s_ddiscene_sample_context);
+                }
+                for (hook_index = 0;
+                     hook_index < s_ddiscene_additional_sample_hook_count;
+                     ++hook_index) {
+                    DDiSceneSampleHookEntry* entry =
+                        &s_ddiscene_additional_sample_hooks[hook_index];
+                    if (entry->callback == s_ddiscene_sample_hook &&
+                        entry->context == s_ddiscene_sample_context) continue;
+                    entry->callback(sample_name, scene_object, entry->context);
+                }
             }
             *(uint32_t*)((char*)scene_object + 0x14) = flags & ~2u;
             flags &= ~2u;
@@ -6680,6 +6782,7 @@ static void* scene_property_value_record_get(void* property)
 
 /* AttachedObjectDataReleaseAndClear (FUN_004760e0): release the optional
  * record-owned buffer and record, then clear the interface's value slot. */
+// FUNCTION: LEGORR 0x004760e0
 void attached_object_data_release_and_clear(void* property)
 {
     void* record = scene_property_value_record_get(property);
@@ -6869,9 +6972,11 @@ void* activity_runner_state_read(void* runner, int index)
     return cached;
 }
 
-/* SceneActivityChangeSecondary (FUN_004085f0): the secondary scene object
- * cache uses source +0x0c and slot table +0x40. */
-// FUNCTION: LEGORR 0x004085f0
+/* Portable cache adapter for SceneActivityChangeSecondary. The retail owner
+ * is a renderer activity record with a 32-bit handle table at +0x40 and its
+ * scene source at +0x0c. No production owner binds that record layout here;
+ * creation also needs the renderer's three-argument subobject lookup/apply
+ * contract, which the current resolver callback does not expose. */
 void* scene_activity_change_secondary(void* activity, int index)
 {
     return scene_object_cached_subobject_get(activity, 0x0cu, 0x40u,

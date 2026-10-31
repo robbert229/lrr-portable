@@ -4,6 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <dirent.h>
+#include <sys/stat.h>
+#endif
+
 #include "resource.hpp"
 #include "heap.hpp"
 #include "record.hpp"
@@ -2612,9 +2619,18 @@ typedef struct ResourceWad {
     WadEntry* entries;
 } ResourceWad;
 
+struct ResourceStream {
+    FILE* file;
+    uint32_t data_offset;
+    uint32_t size;
+    uint8_t* expanded_data;
+};
+
 static ResourceWad s_wads[RESOURCE_MAX_WADS];
 static int       s_wad_count = 0;
 static char      s_wad_prefix[RESOURCE_PATH_MAX] = "LegoRR";
+static ResourceFileTokenList s_resource_file_tokens;
+static char s_resource_directory_root[RESOURCE_PATH_MAX];
 // GLOBAL: LEGORR 0x005339a0
 static char      s_wad_mount_path_cache[0x400];
 // GLOBAL: LEGORR 0x005343b8
@@ -2634,6 +2650,26 @@ static char  s_cd_root[RESOURCE_PATH_MAX] = ""; /* "" = "%c:\" default */
 static ResourceDriveTypeQueryFn s_cd_drive_type_query;
 static ResourcePathExistsFn s_cd_path_exists;
 static void* s_cd_probe_context;
+
+void resource_directory_scan_root_set(const char* root)
+{
+    size_t length;
+    if (root == NULL) {
+        s_resource_directory_root[0] = '\0';
+        return;
+    }
+    length = strlen(root);
+    if (length >= sizeof(s_resource_directory_root)) {
+        s_resource_directory_root[0] = '\0';
+        return;
+    }
+    memcpy(s_resource_directory_root, root, length + 1u);
+}
+
+const char* resource_directory_scan_root_get(void)
+{
+    return s_resource_directory_root;
+}
 
 static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
 {
@@ -3000,6 +3036,25 @@ void mount_wad_from_path(const char* path)
 {
     resource_unmount_all();
     if (path != NULL) {
+        char root[RESOURCE_PATH_MAX];
+        char* slash;
+        snprintf(root, sizeof(root), "%s", path);
+        slash = strrchr(root, '/');
+        {
+            char* backslash = strrchr(root, '\\');
+            if (backslash != NULL && (slash == NULL || backslash > slash))
+                slash = backslash;
+        }
+        if (slash == NULL) {
+            snprintf(root, sizeof(root), ".");
+        }
+        else if (slash == root) {
+            root[1] = '\0';
+        }
+        else {
+            *slash = '\0';
+        }
+        resource_directory_scan_root_set(root);
         (void)wwad_archive_index_load(path);
     }
 }
@@ -3014,6 +3069,7 @@ void mount_wad_from_path(const char* path)
 // FUNCTION: LEGORR 0x0047f130
 int resource_mount(const char* dir, const char* prefix)
 {
+    if (dir != NULL) resource_directory_scan_root_set(dir);
     for (int i = 0; i < RESOURCE_MAX_WADS; ++i) {
         char path[RESOURCE_PATH_MAX];
         snprintf(path, sizeof(path), "%s/%s%u.wad", dir, prefix,
@@ -3306,6 +3362,160 @@ Resource* resource_open(const char* name, int mode)
     return NULL;
 }
 
+/* A ResourceStream owns an independent FILE cursor. WAD streams reopen the
+ * archive instead of sharing ResourceWad::fp, so read_at calls do not disturb
+ * concurrent Resource::resource_read operations. */
+ResourceStream* resource_stream_open(const char* name, int mode,
+                                     uint32_t* size_out)
+{
+    Resource* resource;
+    ResourceStream* stream = NULL;
+    if (size_out != NULL) *size_out = 0u;
+    resource = resource_open(name, mode);
+    if (resource == NULL) return NULL;
+    stream = (ResourceStream*)calloc(1, sizeof(*stream));
+    if (stream == NULL) {
+        resource_free(resource);
+        return NULL;
+    }
+    if (resource->branch == RESOURCE_STD_BRANCH) {
+        long file_size;
+        stream->file = fopen(resource->name, "rb");
+        if (stream->file == NULL || fseek(stream->file, 0, SEEK_END) != 0 ||
+            (file_size = ftell(stream->file)) < 0 ||
+            (unsigned long)file_size > 0x7ffffffful ||
+            fseek(stream->file, 0, SEEK_SET) != 0) {
+            resource_stream_close(stream);
+            resource_free(resource);
+            return NULL;
+        }
+        stream->size = (uint32_t)file_size;
+    }
+    else if (resource->branch == RESOURCE_WAD_BRANCH &&
+             resource->wad_idx >= 0 && resource->wad_idx < s_wad_count &&
+             resource->entry_idx >= 0 &&
+             (uint32_t)resource->entry_idx <
+                 s_wads[resource->wad_idx].entry_count) {
+        ResourceWad* wad = &s_wads[resource->wad_idx];
+        WadEntry* entry = &wad->entries[resource->entry_idx];
+        uint32_t stored_end = entry->off + entry->stored;
+        if (stored_end < entry->off || stored_end > wad->file_size ||
+            stored_end > 0x7fffffffu ||
+            entry->off > 0x7fffffffu) {
+            resource_stream_close(stream);
+            resource_free(resource);
+            return NULL;
+        }
+        stream->file = fopen(wad->path, "rb");
+        if (stream->file == NULL) {
+            resource_stream_close(stream);
+            resource_free(resource);
+            return NULL;
+        }
+        if ((entry->flags & ENTRY_FLAG_EXPANDED) == 0u) {
+            stream->data_offset = entry->off;
+            stream->size = entry->stored;
+        }
+        else {
+            uint8_t expand_header[EXPAND_HEADER_SZ];
+            uint32_t expanded_size;
+            uint8_t type;
+            if (entry->stored < EXPAND_HEADER_SZ ||
+                fseek(stream->file, (long)entry->off, SEEK_SET) != 0 ||
+                fread(expand_header, 1, sizeof(expand_header), stream->file) !=
+                    sizeof(expand_header)) {
+                resource_stream_close(stream);
+                resource_free(resource);
+                return NULL;
+            }
+            type = expand_header[3];
+            expanded_size = ((uint32_t)expand_header[4] << 24) |
+                            ((uint32_t)expand_header[5] << 16) |
+                            ((uint32_t)expand_header[6] << 8) |
+                            (uint32_t)expand_header[7];
+            if (expanded_size > 0x7fffffffu) {
+                resource_stream_close(stream);
+                resource_free(resource);
+                return NULL;
+            }
+            stream->size = expanded_size;
+            if (type == 0u) {
+                if (expanded_size > entry->stored - EXPAND_HEADER_SZ ||
+                    entry->off + EXPAND_HEADER_SZ > 0x7fffffffu) {
+                    resource_stream_close(stream);
+                    resource_free(resource);
+                    return NULL;
+                }
+                stream->data_offset = entry->off + EXPAND_HEADER_SZ;
+            }
+            else if (type == 1u || type == 2u) {
+                uint8_t* stored;
+                if (memcmp(expand_header, "RNC", 3) != 0) {
+                    resource_stream_close(stream);
+                    resource_free(resource);
+                    return NULL;
+                }
+                stored = (uint8_t*)malloc(entry->stored);
+                stream->expanded_data = (uint8_t*)malloc(
+                    expanded_size != 0u ? expanded_size : 1u);
+                if (stored == NULL || stream->expanded_data == NULL ||
+                    fseek(stream->file, (long)entry->off, SEEK_SET) != 0 ||
+                    fread(stored, 1, entry->stored, stream->file) !=
+                        entry->stored ||
+                    wad_payload_decode_dispatch(stored,
+                                                stream->expanded_data) != 0) {
+                    free(stored);
+                    resource_stream_close(stream);
+                    resource_free(resource);
+                    return NULL;
+                }
+                free(stored);
+            }
+            else {
+                resource_stream_close(stream);
+                resource_free(resource);
+                return NULL;
+            }
+        }
+    }
+    else {
+        resource_stream_close(stream);
+        resource_free(resource);
+        return NULL;
+    }
+    resource_free(resource);
+    if (size_out != NULL) *size_out = stream->size;
+    return stream;
+}
+
+int resource_stream_read_at(ResourceStream* stream, uint32_t offset,
+                            void* bytes, uint32_t length)
+{
+    uint32_t file_offset;
+    if (stream == NULL || stream->file == NULL ||
+        (length != 0u && bytes == NULL) || offset > stream->size ||
+        length > stream->size - offset ||
+        (stream->expanded_data == NULL &&
+         stream->data_offset > 0x7fffffffu - offset)) return 0;
+    if (stream->expanded_data != NULL) {
+        if (length != 0u)
+            memcpy(bytes, stream->expanded_data + offset, length);
+        return 1;
+    }
+    file_offset = stream->data_offset + offset;
+    if (fseek(stream->file, (long)file_offset, SEEK_SET) != 0) return 0;
+    if (length == 0u) return 1;
+    return fread(bytes, 1, length, stream->file) == length;
+}
+
+void resource_stream_close(ResourceStream* stream)
+{
+    if (stream == NULL) return;
+    if (stream->file != NULL) fclose(stream->file);
+    free(stream->expanded_data);
+    free(stream);
+}
+
 /* MapOpen2 (FUN_00480170): open a map resource, expose its progress and
  * payload to the map-index callbacks, dispatch the resolved record, and
  * optionally transfer an engine-heap copy of the payload to the caller. */
@@ -3370,21 +3580,18 @@ int map_open2(const char* path, const MapOpenOps* ops,
     return result;
 }
 
-/* FileTokenListLoadAndTreeScan (FUN_004802d0): tokenize the configured file
- * into fixed 256-byte entries, then hand the list and root to the directory
- * walker. Whitespace-delimited parsing matches the token-reader boundary. */
-// FUNCTION: LEGORR 0x004802d0
-int resource_file_token_list_load_and_tree_scan(
-    const char* token_file, const char* root, ResourceFileTokenList* list,
-    const ResourceFileTokenListOps* ops)
+static int resource_file_token_list_parse(const char* token_file,
+                                          ResourceFileTokenList* list,
+                                          int clear_before_open)
 {
     Resource* resource;
     int32_t size;
     int32_t position = 0;
     if (list == NULL || token_file == NULL) return -1;
-    list->count = 0u;
+    if (clear_before_open) list->count = 0u;
     resource = resource_open(token_file, RESOURCE_AUTO);
     if (resource == NULL) return -1;
+    list->count = 0u;
     size = resource_read(resource);
     if (size < 0 || resource->data == NULL) {
         resource_free(resource);
@@ -3411,10 +3618,36 @@ int resource_file_token_list_load_and_tree_scan(
         if (length != 0u) list->count++;
     }
     resource_free(resource);
+    return (int)list->count;
+}
+
+/* Portable adapter: tokenize a named file into an explicit list and invoke
+ * the optional caller-owned directory callback. */
+int resource_file_token_list_load_and_tree_scan(
+    const char* token_file, const char* root, ResourceFileTokenList* list,
+    const ResourceFileTokenListOps* ops)
+{
+    int count = resource_file_token_list_parse(token_file, list, 1);
+    if (count < 0) return count;
     if (ops != NULL && ops->directory_tree_scan != NULL) {
         ops->directory_tree_scan(ops->context, root, list);
     }
-    return (int)list->count;
+    return count;
+}
+
+/* FileTokenListLoadAndTreeScan (FUN_004802d0): retail ABI takes only the
+ * token filename; root and token table are module-owned loader state. */
+// FUNCTION: LEGORR 0x004802d0
+void resource_file_token_list_load_and_tree_scan_target(
+    const char* token_file)
+{
+    int result;
+    if (token_file == NULL) return;
+    result = resource_file_token_list_parse(token_file,
+                                            &s_resource_file_tokens, 0);
+    if (result < 0) return;
+    if (s_resource_directory_root[0] != '\0')
+        resource_directory_tree_scan_target(s_resource_directory_root);
 }
 
 /* DirectoryTokenListCompare (FUN_00480570): find a token with the same
@@ -3432,6 +3665,130 @@ int resource_directory_token_list_contains(
     return 0;
 }
 
+typedef struct ResourceDirectoryScanHandle {
+#if defined(_WIN32)
+    HANDLE search;
+    WIN32_FIND_DATAA data;
+    int first;
+#else
+    DIR* directory;
+    char root[1024];
+#endif
+} ResourceDirectoryScanHandle;
+
+static int resource_directory_scan_default_open(void*, const char* pattern,
+                                               void** scan_out)
+{
+    ResourceDirectoryScanHandle* scan;
+    if (pattern == NULL || scan_out == NULL) return 0;
+    *scan_out = NULL;
+    scan = (ResourceDirectoryScanHandle*)calloc(1, sizeof(*scan));
+    if (scan == NULL) return 0;
+#if defined(_WIN32)
+    scan->search = FindFirstFileA(pattern, &scan->data);
+    if (scan->search == INVALID_HANDLE_VALUE) {
+        free(scan);
+        return 0;
+    }
+    scan->first = 1;
+#else
+    {
+        size_t length = strlen(pattern);
+        size_t root_length;
+        char root[1024];
+        if (length < 3u || strcmp(pattern + length - 3u, "*.*") != 0) {
+            free(scan);
+            return 0;
+        }
+        root_length = length - 3u;
+        if (root_length != 0u &&
+            (pattern[root_length - 1u] == '/' ||
+             pattern[root_length - 1u] == '\\')) --root_length;
+        if (root_length >= sizeof(root)) {
+            free(scan);
+            return 0;
+        }
+        memcpy(root, pattern, root_length);
+        root[root_length] = '\0';
+        {
+            size_t i;
+            for (i = 0u; i < root_length; ++i)
+                if (root[i] == '\\') root[i] = '/';
+        }
+        scan->directory = opendir(root_length != 0u ? root : ".");
+        if (scan->directory == NULL) {
+            free(scan);
+            return 0;
+        }
+        memcpy(scan->root, root, root_length + 1u);
+    }
+#endif
+    *scan_out = scan;
+    return 1;
+}
+
+static int resource_directory_scan_default_next(void*, void* handle,
+                                                char name_out[260],
+                                                int* is_directory_out)
+{
+    ResourceDirectoryScanHandle* scan =
+        (ResourceDirectoryScanHandle*)handle;
+    if (scan == NULL || name_out == NULL || is_directory_out == NULL)
+        return 0;
+#if defined(_WIN32)
+    if (scan->first) {
+        scan->first = 0;
+    }
+    else if (!FindNextFileA(scan->search, &scan->data)) {
+        return 0;
+    }
+    if (strlen(scan->data.cFileName) >= 260u) return 1;
+    strcpy(name_out, scan->data.cFileName);
+    *is_directory_out =
+        (scan->data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+#else
+    for (;;) {
+        struct dirent* entry = readdir(scan->directory);
+        struct stat info;
+        char path[1280];
+        size_t root_length;
+        size_t name_length;
+        if (entry == NULL) return 0;
+        name_length = strlen(entry->d_name);
+        if (name_length >= 260u) continue;
+        root_length = strlen(scan->root);
+        if (root_length + name_length + 2u > sizeof(path)) continue;
+        if (root_length != 0u) {
+            memcpy(path, scan->root, root_length);
+            path[root_length] = '/';
+            memcpy(path + root_length + 1u, entry->d_name,
+                   name_length + 1u);
+        }
+        else {
+            memcpy(path, entry->d_name, name_length + 1u);
+        }
+        if (stat(path, &info) != 0) continue;
+        strcpy(name_out, entry->d_name);
+        *is_directory_out = S_ISDIR(info.st_mode) != 0;
+        return 1;
+    }
+#endif
+    return 1;
+}
+
+static void resource_directory_scan_default_close(void*, void* handle)
+{
+    ResourceDirectoryScanHandle* scan =
+        (ResourceDirectoryScanHandle*)handle;
+    if (scan == NULL) return;
+#if defined(_WIN32)
+    if (scan->search != INVALID_HANDLE_VALUE) FindClose(scan->search);
+#else
+    if (scan->directory != NULL) closedir(scan->directory);
+#endif
+    free(scan);
+}
+
 static void resource_directory_tree_scan_walk(
     const char* root, const ResourceFileTokenList* tokens,
     const ResourceDirectoryScanOps* ops)
@@ -3441,8 +3798,16 @@ static void resource_directory_tree_scan_walk(
     char pattern[1024];
     unsigned int root_length;
     unsigned int offset;
-    if (root == NULL || ops == NULL || ops->scan_open == NULL ||
-        ops->scan_next == NULL) return;
+    ResourceDirectoryScanOps default_ops;
+    if (root == NULL) return;
+    if (ops == NULL) {
+        default_ops.context = NULL;
+        default_ops.scan_open = resource_directory_scan_default_open;
+        default_ops.scan_next = resource_directory_scan_default_next;
+        default_ops.scan_close = resource_directory_scan_default_close;
+        ops = &default_ops;
+    }
+    if (ops->scan_open == NULL || ops->scan_next == NULL) return;
     root_length = (unsigned int)strlen(root);
     if (root_length + 5u >= sizeof(pattern)) return;
     memcpy(pattern, root, root_length);
@@ -3486,14 +3851,21 @@ static void resource_directory_tree_scan_walk(
     if (ops->scan_close != NULL) ops->scan_close(ops->context, scan);
 }
 
-/* DirectoryTreeScan (FUN_00480390): search root\\*.*, skip the dot entries,
- * recurse into directories, and compare each file path against the token list. */
-// FUNCTION: LEGORR 0x00480390
+/* Portable adapter: search an explicit root with an explicit token list and
+ * optional host scan operations. */
 void resource_directory_tree_scan(const char* root,
                                   const ResourceFileTokenList* tokens,
                                   const ResourceDirectoryScanOps* ops)
 {
     resource_directory_tree_scan_walk(root, tokens, ops);
+}
+
+/* DirectoryTreeScan (FUN_00480390): retail ABI takes one root and reads the
+ * process-wide token state populated by FileTokenListLoadAndTreeScan. */
+// FUNCTION: LEGORR 0x00480390
+void resource_directory_tree_scan_target(const char* root)
+{
+    resource_directory_tree_scan_walk(root, &s_resource_file_tokens, NULL);
 }
 
 int32_t resource_read(Resource* r)

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <ctype.h>
 
 #include "resource.hpp"
 #include "heap.hpp"
@@ -10,6 +11,72 @@
 #include "audio.hpp"
 #include "string.hpp"
 #include "record.hpp"
+#include "view.hpp"
+
+/* The reference scene interfaces are 32-bit COM-style objects. Keep the
+ * property calls in this module so SoundInstanceTrackRegister can attach its
+ * own callback payload even when no renderer adapter has been installed. */
+static void* sound_instance_property_get(void* object)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    void* result;
+    __asm {
+        mov ecx, object
+        mov eax, [ecx]
+        call dword ptr [eax + 1Ch]
+        mov result, eax
+    }
+    return result;
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+    typedef void* (__attribute__((thiscall)) *GetProperty)(void*);
+    void** vtable;
+    GetProperty get_property;
+    if (object == NULL) return NULL;
+    vtable = *(void***)object;
+    if (vtable == NULL || vtable[0x1c / sizeof(void*)] == NULL) return NULL;
+    get_property = (GetProperty)vtable[0x1c / sizeof(void*)];
+    return get_property(object);
+#else
+    typedef void* (*GetProperty)(void*);
+    void** vtable;
+    GetProperty get_property;
+    if (object == NULL) return NULL;
+    vtable = *(void***)object;
+    if (vtable == NULL || vtable[0x1c / sizeof(void*)] == NULL) return NULL;
+    get_property = (GetProperty)vtable[0x1c / sizeof(void*)];
+    return get_property(object);
+#endif
+}
+
+static void sound_instance_property_set(void* object, void* value)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov ecx, object
+        push value
+        mov eax, [ecx]
+        call dword ptr [eax + 18h]
+    }
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+    typedef void (__attribute__((thiscall)) *SetProperty)(void*, void*);
+    void** vtable;
+    SetProperty set_property;
+    if (object == NULL) return;
+    vtable = *(void***)object;
+    if (vtable == NULL || vtable[0x18 / sizeof(void*)] == NULL) return;
+    set_property = (SetProperty)vtable[0x18 / sizeof(void*)];
+    set_property(object, value);
+#else
+    typedef void (*SetProperty)(void*, void*);
+    void** vtable;
+    SetProperty set_property;
+    if (object == NULL) return;
+    vtable = *(void***)object;
+    if (vtable == NULL || vtable[0x18 / sizeof(void*)] == NULL) return;
+    set_property = (SetProperty)vtable[0x18 / sizeof(void*)];
+    set_property(object, value);
+#endif
+}
 
 void sound_wave_data_reader_init(SoundWaveDataReader* reader,
                                  const uint8_t* data, uint32_t size)
@@ -863,6 +930,12 @@ static const char* const s_alias_builtins[SOUND_ALIAS_BUILTINS] = {
     "SFX_AmbientMusicLoop",      /* 44 (0x2c) */
 };
 
+/* SoundAliasLookup compares the GameStringHashCompute result, not the
+ * original text. Retain the hashes in slot order so collisions resolve to
+ * the first registered alias as they do in the reference. */
+static uint32_t s_alias_hashes[SOUND_ALIAS_MAX];
+static int s_alias_hashes_initialized;
+
 /* Dynamic (config-registered) aliases appended by the lookup, mirroring
  * the corpus DAT_00502a24 slots behind the 45 built-ins. */
 static char* s_alias_dynamic[SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS];
@@ -1037,12 +1110,54 @@ void sound_instance_hooks_set(SoundInstanceRegisterHook register_hook,
     s_instance_hook_context = context;
 }
 
+static int sound_instance_callback_record_attach(void* instance)
+{
+    uint32_t* payload;
+    uint32_t* callback_record;
+    void* frame_interface;
+    void* existing_record;
+    if (sizeof(void*) != 4u || instance == NULL) return 0;
+
+    frame_interface = sound_instance_property_get(instance);
+    payload = (uint32_t*)engine_heap_alloc(0x14L);
+    if (payload == NULL) return 0;
+    memset(payload, 0, 0x14u);
+    payload[0] = (uint32_t)(uintptr_t)instance;
+    if (frame_interface != NULL)
+        payload[4] = *(uint32_t*)((char*)frame_interface + 0x24);
+
+    existing_record = sound_instance_property_get(instance);
+    if (existing_record == NULL) {
+        callback_record = (uint32_t*)engine_heap_alloc(0x28L);
+        if (callback_record == NULL) {
+            engine_heap_free(payload);
+            return 0;
+        }
+        memset(callback_record, 0, 0x28u);
+        callback_record[0] = (uint32_t)(uintptr_t)instance;
+        callback_record[8] = (uint32_t)(uintptr_t)payload;
+        sound_instance_property_set(instance, callback_record);
+        if (sound_instance_property_get(instance) != callback_record) {
+            engine_heap_free(callback_record);
+            engine_heap_free(payload);
+            return 0;
+        }
+    }
+    else {
+        callback_record = (uint32_t*)existing_record;
+        callback_record[0] = (uint32_t)(uintptr_t)instance;
+        callback_record[8] = (uint32_t)(uintptr_t)payload;
+    }
+    return 1;
+}
+
 // FUNCTION: LEGORR 0x0047b1a0
 void sound_instance_track_register(void* instance)
 {
     int index;
     if (instance == NULL) return;
-    if (s_instance_register_hook != NULL)
+    if (!sound_instance_callback_record_attach(instance) &&
+        s_instance_register_hook != NULL)
         (void)s_instance_register_hook(s_instance_hook_context, instance);
     for (index = 0; index < 20; index++) {
         if (s_sound_instances[index] == NULL) {
@@ -1105,19 +1220,62 @@ static char* s_dupstr(const char* s)
 #endif
 }
 
+static uint32_t sound_alias_hash_compute(const char* name)
+{
+    const unsigned char* cursor = (const unsigned char*)name;
+    uint32_t hash = 0u;
+    uint32_t factor = 0x00600937u;
+    uint32_t position = 1u;
+    while (*cursor != 0u) {
+        uint32_t value = (uint32_t)(unsigned char)toupper((int)*cursor);
+        hash += position * factor * value;
+        factor *= 0x00600937u;
+        ++position;
+        ++cursor;
+    }
+    return hash;
+}
+
+static void sound_alias_builtin_hashes_init(void)
+{
+    int index;
+    if (s_alias_hashes_initialized != 0) return;
+    for (index = 0; index < SOUND_ALIAS_BUILTINS; ++index)
+        s_alias_hashes[index] = sound_alias_hash_compute(s_alias_builtins[index]);
+    s_alias_hashes_initialized = 1;
+}
+
+static void sound_alias_scene_sample_callback(const char* sample_name,
+                                              void* scene_object,
+                                              void* context)
+{
+    int alias;
+    (void)context;
+    if (sound_alias_lookup(sample_name, &alias))
+        sound_submission_route_wrapper(scene_object, alias, 0, 1, NULL);
+}
+
 // FUNCTION: LEGORR 0x00464740
 void sound_alias_registry_init(void)
 {
+    int i;
     /* Corpus: the built-in hashes are written into a fresh allocation;
      * the port's built-ins are static. Deviation (documented): the
      * corpus's repeated call leaks the table yet keeps the stale dynamic
      * count; the port frees and zeroes the dynamic side and leaves the
      * registration flag as-is, exactly the DAT_00502a2c behaviour. */
-    for (int i = 0; i < s_alias_dynamic_count; ++i) {
+    for (i = 0; i < s_alias_dynamic_count; ++i) {
         free(s_alias_dynamic[i]);
         s_alias_dynamic[i] = NULL;
     }
     s_alias_dynamic_count = 0;
+    s_alias_hashes_initialized = 0;
+    sound_alias_builtin_hashes_init();
+
+    /* SoundAliasRegistryInit registers LAB_00464c20 through the scene sample
+     * callback globals. Keep the existing owner callback and add the sound
+     * resolver as an independent, idempotent subscriber. */
+    (void)ddiscene_sample_hook_add(sound_alias_scene_sample_callback, NULL);
 }
 
 // FUNCTION: LEGORR 0x00464c50
@@ -1135,22 +1293,17 @@ void sound_alias_registration_set(int enable)
 // FUNCTION: LEGORR 0x00464c70
 int sound_alias_lookup(const char* name, int* out_index)
 {
-    /* SoundAliasLookup @ 0x00464c70. The corpus compares hash keys under
-     * the KeyToAscii uppercase fold; strcasecmp_lite applies the same fold
-     * to the names. */
+    /* SoundAliasLookup @ 0x00464c70 compares GameStringHashCompute values
+     * and returns the first matching slot. */
     if (name == NULL || out_index == NULL) {
         return 0; /* corpus's param_1 != 0 guard */
     }
+    sound_alias_builtin_hashes_init();
     int i;
-    for (i = 0; i < SOUND_ALIAS_BUILTINS; ++i) {
-        if (strcasecmp_lite(name, s_alias_builtins[i]) == 0) {
+    uint32_t hash = sound_alias_hash_compute(name);
+    for (i = 0; i < SOUND_ALIAS_BUILTINS + s_alias_dynamic_count; ++i) {
+        if (s_alias_hashes[i] == hash) {
             *out_index = i;
-            return 1;
-        }
-    }
-    for (i = 0; i < s_alias_dynamic_count; ++i) {
-        if (strcasecmp_lite(name, s_alias_dynamic[i]) == 0) {
-            *out_index = SOUND_ALIAS_BUILTINS + i;
             return 1;
         }
     }
@@ -1164,6 +1317,7 @@ int sound_alias_lookup(const char* name, int* out_index)
         if (copy == NULL) {
             return 0;
         }
+        s_alias_hashes[index] = hash;
         s_alias_dynamic[s_alias_dynamic_count] = copy;
         ++s_alias_dynamic_count;
         *out_index = index;

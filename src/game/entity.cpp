@@ -1449,44 +1449,147 @@ void entity_mark_and_finish_state_1a(EntitySlot* entity)
 // FUNCTION: LEGORR 0x00441940
 void entity_action_sequence_reset(EntitySlot* entity, int preserve_mode)
 {
+    int had_waypoints;
     if (entity == NULL) return;
+    had_waypoints = entity->wp_count > 0 || entity->wp_dynamic != NULL;
+    if (preserve_mode == 0 && entity->type == 3 &&
+        (entity->flags_3e0 & 0x400u) != 0u &&
+        entity->carry_link_308 != NULL &&
+        *(const int*)entity->carry_link_308 == 5) {
+        unported_ledger_stubs::entity_attached_object_list_detach(entity, 0);
+    }
+    /* The retail path releases its route sequence allocation. The portable
+     * route extension owns a separate allocation after the inline waypoints. */
+    free(entity->wp_dynamic);
+    entity->wp_dynamic = NULL;
+    entity->wp_capacity = 0u;
     entity->wp_count = 0;
     entity->wp_index = 0;
-    entity->activity_last = 0;
     entity->flags_3e0 &= 0xff7ffffeu;
-    entity->flags_3e4 &= 0xffffbbffu;
+    entity->flags_3e8 &= 0xffffbbffu;
+    if (entity->link_2fc != 0) {
+        EntitySlot* partner = (EntitySlot*)entity->link_2fc;
+        partner->flags_3ec &= ~0x10u;
+    }
     if ((entity->flags_3e0 & 2u) != 0) {
-        entity->rot = -entity->rot;
-        entity->rot = -entity->rot;
+        entity->attached_direction[0] = -entity->attached_direction[0];
+        entity->attached_direction[1] = -entity->attached_direction[1];
+        entity->attached_direction[2] = -entity->attached_direction[2];
         entity->flags_3e0 &= ~2u;
     }
-    if (preserve_mode == 0) {
-        entity->activity_timer = 0.0f;
-        entity->activity = -1;
-        entity->activity_param = 0;
-    }
+    ai_set_activity(entity, 0, 0);
+    if (had_waypoints) entity_task_state_update_after_cleanup(entity,
+                                                               preserve_mode);
 }
 
 // FUNCTION: LEGORR 0x00441b30
 void entity_state_reset(EntitySlot* entity, int clear_mode, int reset_mode)
 {
+    uint32_t old_flags_3e0;
+    uint32_t old_flags_3e4;
+    EntitySlot* partner;
+    int preserve_link_flags;
     if (entity == NULL) return;
     entity_action_sequence_reset(entity, 0);
-    entity->flags_3e4 &= 0xfffcfcffu;
-    entity->flags_3e0 &= 0x7bfa7fffu;
-    entity->activity_timer = 0.0f;
-    entity->wake_timer = 0.0f;
-    entity->field_340 = 0.0f;
-    entity->progress_344 = 0.0f;
-    if ((entity->flags_3e4 & 4u) != 0) entity->link_2fc = 0;
-    if (clear_mode != 0) {
-        entity->activity = -1;
-        entity->activity_param = 0;
-        entity->activity_last = -1;
+    if (reset_mode != 0)
+        unported_ledger_stubs::entity_attached_object_list_detach(entity, 0);
+
+    partner = (EntitySlot*)entity->pair_link_3c0;
+    if ((entity->flags_3e4 & 2u) != 0u) {
+        entity->flags_3e4 &= ~2u;
+        ai_set_activity(entity, 0x27, 0);
+        entity->flags_3e4 |= 0x100u;
+        if (partner != NULL && (partner->flags_3e4 & 1u) != 0u) {
+            partner->flags_3e4 &= ~1u;
+            ai_set_activity(entity, 0, 0);
+        }
     }
-    if (reset_mode != 0) {
-        entity->last_action_event = 0;
-        entity->last_action_event_flags = 0;
+    if ((entity->flags_3e4 & 1u) != 0u) {
+        entity->flags_3e4 &= ~1u;
+        ai_set_activity(entity, 0, 0);
+        if (partner != NULL && (partner->flags_3e4 & 2u) != 0u) {
+            partner->flags_3e4 &= ~2u;
+            ai_set_activity(partner, 0x27, 0);
+            partner->flags_3e4 |= 0x100u;
+        }
+    }
+
+    old_flags_3e4 = entity->flags_3e4;
+    entity->flags_3e4 &= 0xfe3fbfdfu;
+    old_flags_3e0 = entity->flags_3e0;
+    entity->flags_3e0 = old_flags_3e0 & 0x6ffff7ffu;
+    if ((old_flags_3e0 & 0x2000u) != 0u) {
+        entity->flags_3e0 = old_flags_3e0 & 0x6fffd7ffu;
+        cmd_chain_drop(entity, 5);
+        entity_simulation_queue_flush(entity);
+        if (entity->link_2fc != 0) {
+            EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+            linked->flags_3ec &= 0xfeffffffu;
+        }
+    }
+    entity->flags_3e0 &= 0xdffffdffu;
+    entity->flags_3e8 &= 0xffffbfffu;
+    if ((old_flags_3e4 & 0x200000u) != 0u)
+        entity->flags_3e4 &= 0xffdfffffu;
+    old_flags_3e4 = entity->flags_3e4;
+    entity->flags_3e4 = old_flags_3e4 & 0xfffbffffu;
+    if ((old_flags_3e0 & 0x1000000u) != 0u) {
+        entity->flags_3e4 = old_flags_3e4 & 0xfff3ffffu;
+        cmd_chain_drop(entity, 10);
+        entity->flags_3e0 &= 0xfeffffffu;
+    }
+
+    if ((entity->flags_3e0 & 0x40000000u) != 0u)
+        entity->flags_3e0 &= 0xbfffffffu;
+    if ((entity->flags_3e4 & 0x40u) != 0u)
+        entity->flags_3e4 &= ~0x40u;
+    if ((entity->flags_3e4 & 0x400u) != 0u)
+        entity->flags_3e4 &= ~0x400u;
+
+    if ((entity->flags_3e4 & 0x8000u) != 0u) {
+        EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+        preserve_link_flags = 0;
+        if (linked != NULL && (entity_stats_word_get(linked) & 2u) != 0u) {
+            if ((linked->flags_3e4 & 0x8000u) != 0u) {
+                preserve_link_flags = 1;
+            }
+            else {
+                cmd_chain_drop(entity, 0x15);
+                linked->route_partner_300 = NULL;
+                entity->link_2fc = 0;
+            }
+        }
+        if (!preserve_link_flags)
+            entity->flags_3e4 &= ~0x8000u;
+    }
+
+    if ((entity->flags_3e0 & 0x80000u) != 0u) {
+        entity->flags_3e0 &= 0xfff7ffffu;
+        entity_type5_finalize_if_allowed(entity);
+    }
+
+    old_flags_3e0 = entity->flags_3e0;
+    entity->flags_3e0 = old_flags_3e0 & 0xffffefffu;
+    if ((old_flags_3e0 & 0x40u) != 0u) {
+        int cell_x = level_cell_of(entity->x);
+        int cell_y = level_cell_of(entity->y);
+        entity->flags_3e0 = (old_flags_3e0 & 0xffffefbfu) | 0x80000000u;
+        if (entity->owner_ctx != NULL && entity->owner_ctx->level != NULL)
+            level_tile_mark(entity->owner_ctx->level, cell_x, cell_y, 0);
+    }
+
+    old_flags_3e0 = entity->flags_3e0;
+    entity->flags_3e0 = old_flags_3e0 & 0xfbffffffu;
+    if ((entity->flags_3e4 & 4u) != 0u) {
+        entity->link_2fc = 0;
+        entity->flags_3e4 &= ~4u;
+    }
+    entity->flags_3e0 = old_flags_3e0 & 0x7bfa7fffu;
+    entity->flags_3e4 &= 0xfffcfcffu;
+
+    if (clear_mode != 0) {
+        task_record_kind14_remove_if_head(entity);
+        ai_set_activity(entity, 0, 1);
     }
 }
 
@@ -1727,7 +1830,7 @@ int entity_teardown(EntitySlot* entity)
     flags = (uint32_t)entity->flags_3ec;
     state_flags = s_entity_teardown_hooks.state_flags_get != NULL ?
         s_entity_teardown_hooks.state_flags_get(entity,
-            s_entity_teardown_hooks.context) : 0;
+            s_entity_teardown_hooks.context) : entity_stats_word_get(entity);
     if (s_entity_teardown_hooks.counter_increment != NULL) {
         unsigned int slot = ((unsigned int)entity->etype +
                              (unsigned int)type * 15U) * 16U;
@@ -1760,11 +1863,23 @@ int entity_teardown(EntitySlot* entity)
     if ((flags & 0x40U) != 0) {
         entity->flags_3ec = (int32_t)(flags & ~0x40U);
         flags &= ~0x40U;
+        if (entity->link_2fc != 0) {
+            EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+            linked->flags_3ec &= ~0x40u;
+        }
     }
     if ((flags & 0x80U) != 0) {
-        entity->route_partner_300 = NULL;
+        if (entity->link_2fc != 0) {
+            EntitySlot* linked = (EntitySlot*)entity->link_2fc;
+            linked->flags_3ec &= ~0x80u;
+        }
+        entity->link_2fc = 0;
         entity->flags_3ec = (int32_t)(flags & ~0x80U);
         flags &= ~0x80U;
+    }
+    if (entity->attach_304 != NULL) {
+        unported_ledger_stubs::entity_attached_object_list_detach(
+            (EntitySlot*)entity->attach_304, 0);
     }
     /* Remove the token from the scene before the release callback can return
      * that renderer record to its pool. Keep the entity token valid through
@@ -1793,6 +1908,7 @@ int entity_teardown(EntitySlot* entity)
             s_entity_teardown_hooks.operation(entity,
                 ENTITY_TEARDOWN_RELEASE_TYPE_DATA,
                 s_entity_teardown_hooks.context);
+        else task_callback_dispatch(entity);
     }
     if (s_entity_teardown_hooks.type_resource_release != NULL)
         s_entity_teardown_hooks.type_resource_release(entity, type,

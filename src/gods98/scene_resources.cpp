@@ -245,10 +245,12 @@ int shared_texture_root_initialize()
      * The portable port models those chains as loader-owned, so the slot
      * refill runs through the installed load hook instead. */
     unsigned int i;
+    s_shared_texture_initialized = 0;
+    memset(s_shared_texture_resources, 0, sizeof(s_shared_texture_resources));
+    if (s_shared_texture_load_hook == 0) return 0;
     for (i = 0; i < 20u; ++i) {
         void* resource = 0;
-        if (s_shared_texture_load_hook != 0 &&
-            !s_shared_texture_load_hook(s_shared_texture_root, i, &resource,
+        if (!s_shared_texture_load_hook(s_shared_texture_root, i, &resource,
                                         s_shared_texture_load_context)) {
             return 0;
         }

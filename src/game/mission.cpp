@@ -429,14 +429,29 @@ static void mission_blob_word_set(uint8_t* blob, size_t offset,
     __builtin_memcpy(blob + offset, &value, sizeof(value));
 }
 
-/* CheckpointBlobTaskProgressRefresh (FUN_00460360) prepares the per-level
- * task snapshot consumed by RewardStatsPanelDraw. Keep the map-derived
- * counters local to this GameContext and route the percentage fold through
- * the separate 0x460950 implementation. The reference also snapshots
- * the shared CRT-backed score/stat globals through their live accessors.
- * The DAT_005529a0 scratch copy and DAT_00555118 still have no ported writer. */
+/* Keep explicit-context callers on the same no-argument target path as the
+ * retail entry point. Save/restore the temporary owner so callbacks may
+ * re-enter the calculation without leaking another GameContext. */
+static GameContext* s_checkpoint_refresh_context_override;
+
 int mission_checkpoint_task_progress_refresh(GameContext* ctx)
 {
+    GameContext* previous = s_checkpoint_refresh_context_override;
+    int result;
+    s_checkpoint_refresh_context_override = ctx;
+    result = mission_checkpoint_task_progress_refresh_bound();
+    s_checkpoint_refresh_context_override = previous;
+    return result;
+}
+
+/* CheckpointBlobTaskProgressRefresh prepares the per-level task snapshot.
+ * Map counters stay local to the active GameContext, while the percentage
+ * fold and CRT-backed score/stat reads use their existing helpers. The
+ * DAT_005529a0 scratch copy and DAT_00555118 still have no ported writer. */
+// FUNCTION: LEGORR 0x00460360
+int mission_checkpoint_task_progress_refresh_bound(void)
+{
+    GameContext* ctx = s_checkpoint_refresh_context_override;
     LevelState* level;
     uint8_t* blob;
     int width;
@@ -448,6 +463,13 @@ int mission_checkpoint_task_progress_refresh(GameContext* ctx)
     float eligible_non_solid = 0.0f;
     float marked_cells = 0.0f;
     int y;
+
+    if (ctx == NULL && s_reward_screen_state != NULL) {
+        ctx = s_reward_screen_state->game;
+    }
+    if (ctx == NULL) {
+        ctx = s_reward_screen_default_state.game;
+    }
 
     if (ctx == NULL || ctx->level == NULL || ctx->checkpoint_blob == NULL)
         return 0;
@@ -602,13 +624,7 @@ int mission_checkpoint_task_progress_refresh(GameContext* ctx)
     if (!checkpoint_blob_task_progress_recalculate(ctx)) return 0;
     (void)reward_stats_panel_draw_bound();
     return 1;
-}
 
-// FUNCTION: LEGORR 0x00460360
-int mission_checkpoint_task_progress_refresh_bound(void)
-{
-    if (s_reward_screen_state == NULL) return 0;
-    return mission_checkpoint_task_progress_refresh(s_reward_screen_state->game);
 }
 
 /* Partial RewardInit port: reproduces the display/config settings while
@@ -864,7 +880,7 @@ void reward_screen_runtime_bind(RewardScreenState* state,
 
 int reward_screen_tick_bound(void)
 {
-    return reward_screen_tick(s_reward_screen_state, s_reward_screen_ops);
+    return reward_screen_tick();
 }
 
 /* RewardStatsTextFormat (FUN_00461070). The checkpoint snapshot stores the
@@ -1171,6 +1187,31 @@ void reward_display_task_abi(GameTask* task, uint32_t draw_mask,
     }
 }
 
+/* RewardScoreTaskTextDraw (FUN_00461c90). The native caller supplies the
+ * current displayed-task count and elapsed time; the score record is the
+ * final task slot in the active reward context. Its ordinary task text is
+ * submitted through RewardDisplayTick before the separate score string. */
+// FUNCTION: LEGORR 0x00461c90
+int reward_score_task_text_draw(int displayed_task_count, float elapsed)
+{
+    RewardScreenState* state = s_reward_screen_state;
+    const RewardScreenOps* ops = s_reward_screen_ops;
+    GameContext* game;
+    int drawn = 0;
+    if (state == NULL || state->game == NULL || state->game->level == NULL)
+        return 0;
+    game = state->game;
+    if (game->level->objective_result != 1) return 0;
+
+    reward_display_task_abi(&game->tasks[GAME_TASK_COUNT - 1], 1u,
+                            (uint32_t)displayed_task_count, elapsed);
+    if (ops != NULL && ops->score_text_draw != NULL) {
+        drawn = ops->score_text_draw(ops->context, game,
+                                     displayed_task_count, elapsed);
+    }
+    return drawn;
+}
+
 /* RewardFlhContextTick (FUN_004624a0) updates the timer/index tuple supplied
  * by the reward loop, and performs task audio and transition cleanup. */
 // FUNCTION: LEGORR 0x004624a0
@@ -1237,8 +1278,10 @@ extern "C" int reward_scroll_ticker_advance_and_draw(
 }
 
 // FUNCTION: LEGORR 0x00461410
-int reward_screen_tick(RewardScreenState* state, const RewardScreenOps* ops)
+int reward_screen_tick(void)
 {
+    RewardScreenState* state = s_reward_screen_state;
+    const RewardScreenOps* ops = s_reward_screen_ops;
     GameContext* game;
     uint32_t now;
     int display_mode;
@@ -1302,11 +1345,9 @@ int reward_screen_tick(RewardScreenState* state, const RewardScreenOps* ops)
                                     state->displayed_task_count,
                                     state->elapsed);
         }
-        if (state->score_text_gate && game->reward.display_text != 0 &&
-            ops->score_text_draw != NULL) {
-            score_text_drawn = ops->score_text_draw(
-                ops->context, game, state->displayed_task_count,
-                state->elapsed);
+        if (state->score_text_gate && game->reward.display_text != 0) {
+            score_text_drawn = reward_score_task_text_draw(
+                state->displayed_task_count, state->elapsed);
             if (score_text_drawn && state->transition_stage < 3 &&
                 ops->reward_zone_check != NULL)
                 ops->reward_zone_check(ops->context, state);
@@ -1330,4 +1371,22 @@ int reward_screen_tick(RewardScreenState* state, const RewardScreenOps* ops)
         if (ops->frame_pump != NULL) ops->frame_pump(ops->context, 1);
     }
     return 1;
+}
+
+/* Explicit-state adapter for portable callers. The retail entry point above
+ * is global and no-argument; save and restore the binding so nested UI work
+ * cannot replace the caller's reward state after returning. */
+int reward_screen_tick_with_ops(RewardScreenState* state,
+                                const RewardScreenOps* ops)
+{
+    RewardScreenState* const previous_state = s_reward_screen_state;
+    const RewardScreenOps* const previous_ops = s_reward_screen_ops;
+    int result;
+    if (state == NULL) return 0;
+    s_reward_screen_state = state;
+    s_reward_screen_ops = ops;
+    result = reward_screen_tick();
+    s_reward_screen_state = previous_state;
+    s_reward_screen_ops = previous_ops;
+    return result;
 }

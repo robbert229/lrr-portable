@@ -302,10 +302,24 @@ void audio_music_mixer_volume_get(float* music, float* sfx)
 int audio_mixer_control_init(float* music, float* sfx, int apply_volume)
 {
     if (music == NULL || sfx == NULL) return 0;
+    if (apply_volume == 0) {
+        return audio_cd_mixer_volume_get(music, sfx);
+    }
     audio_music_mixer_volume_get(music, sfx);
-    if (apply_volume != 0) music_mixer_volume_set(*music, *sfx);
-    return s_active_audio_player != NULL
-        && s_active_audio_player->dev != NULL;
+    music_mixer_volume_set(*music, *sfx);
+    return s_active_audio_player != NULL && s_active_audio_player->dev != NULL;
+}
+
+int audio_cd_mixer_volume_get(float* music, float* sfx)
+{
+    if (music == NULL || sfx == NULL) return 0;
+    *music = 0.0f;
+    *sfx = 0.0f;
+#if defined(LEGORRR_BACKEND_WINAPI)
+    return platform_cd_mixer_volume_get(music, sfx);
+#else
+    return 0;
+#endif
 }
 
 void audio_listener_rolloff_hook_set(AudioListenerRolloffHook hook,

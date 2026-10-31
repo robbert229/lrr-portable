@@ -251,6 +251,10 @@ static const char* K_NEXTLEVEL      = "nextlevel";
 static const char* K_FULLNAME       = "FullName";
 static const char* K_INITCRYSTALS   = "InitialCrystals";
 static const char* K_INITORE        = "InitialOre";
+static const char* K_ERODETRIGGER   = "ErodeTriggerTime";
+static const char* K_ERODETIME      = "ErodeErodeTime";
+static const char* K_ERODELOCK      = "ErodeLockTime";
+static const char* K_LANDSLIDECOUNT = "NumberOfLandSlidesTillCaveIn";
 
 /* Cheat-word bits (DAT_00556ed0) set by LevelLoad (finding 07/config): kept
  * accessible for the frame loop but not written by the load itself (the
@@ -835,8 +839,8 @@ static int load_erode_cryore(LevelState* s, const char* name, int bias)
     return 1;
 }
 
-/* LoadEmergeLayer @ 0x42bf40 — reads the ErodeMap, writes emerge byte
- * (value >> 1) at voxel +0x06, with the odd-value random scatter. */
+/* LoadEmergeLayer @ 0x42bf40 — even nonzero values seed an erosion stage;
+ * zero and odd values are rounded up before the voxel's +0x06 write. */
 // FUNCTION: LEGORR 0x0042bf40
 static int load_emerge(LevelState* s, const char* name)
 {
@@ -852,16 +856,18 @@ static int load_emerge(LevelState* s, const char* name)
         for (int x = 0; x < m->width; ++x) {
             uint16_t c = level_map_cell(m, x, y);
             uint8_t* rec = voxel_at(s, x, y);
+            int seed_stage = 0;
             rec[0x06] = (uint8_t)(c >> 1);
-            if ((c & 1) != 0) {
-                /* odd value: scatter to a random neighbour (FUN_0040ea10). */
-                uint8_t d = (uint8_t)(level_rand_u16() & 3u);
-                int tx = x, ty = y;
-                if (d == 0)      { tx = x > 0 ? x - 1 : x; }
-                else if (d == 1) { tx = x + 1 < m->width ? x + 1 : x; }
-                else if (d == 2) { ty = y > 0 ? y - 1 : y; }
-                else             { ty = y + 1 < m->height ? y + 1 : y; }
-                voxel_at(s, tx, ty)[0x06] = rec[0x06];
+            if (c == 0 || (c & 1u) != 0u) {
+                ++c;
+                rec[0x06] = (uint8_t)(c >> 1);
+            } else {
+                seed_stage = 1;
+            }
+            if (seed_stage) {
+                const int cell_xy[2] = { x, y };
+                lava_erosion_stage_register(
+                    cell_xy, (uint32_t)level_rand_u16() & 3u);
             }
         }
     }
@@ -1073,51 +1079,171 @@ static int load_layer_m(LevelState* s, const char* name)
     return 1;
 }
 
-/* CellInitPass @ 0x42f6f0 — scoped load-path approximation. The corpus entry
- * handles one cell and its neighbours per call; this port folds the retained
- * cave/block flag subset into a bulk grid sweep. Activity, renderer, and
- * message paths from the per-cell body are not represented. */
+/* CellInitPass @ 0x42f6f0. The target processes one cell coordinate at a
+ * time. This port applies the neighbor mask and the record-type/flag
+ * transitions whose inputs are present in LevelState. The two-solid
+ * diagonal's edge-height comparison, descriptor veto, scene registration,
+ * FLIC/effect calls, erosion work records, and final mesh update still need
+ * renderer/global owners that are not present in this load path. */
 // FUNCTION: LEGORR 0x0042f6f0
-static void cell_init_pass(LevelState* s)
+static void cell_init_pass(LevelState* s, float cell_x, uint32_t cell_y)
 {
-    int w = level_int(s, LEVEL_OFF_WIDTH);
-    int h = level_int(s, LEVEL_OFF_HEIGHT);
-    for (int y = 0; y < h - 1; ++y) {
-        for (int x = 0; x < w - 1; ++x) {
-            uint8_t* rec = voxel_at(s, x, y);
-            uint32_t f8, fC;
-            __builtin_memcpy(&f8, rec + 0x08, 4);
-            __builtin_memcpy(&fC, rec + 0x0C, 4);
-            /* Count the 4-neighbour solidity from the erosion byte. */
-            static const int dxs[4] = { -1, 0, 1, 0 };
-            static const int dys[4] = { 0, 1, 0, -1 };
-            int solid = 0;
-            for (int i = 0; i < 4; ++i) {
-                int qx = x + dxs[i], qy = y + dys[i];
-                if (qx >= 0 && qy >= 0 && qx < w && qy < h
-                    && voxel_at(s, qx, qy)[0x02] == 1) {
-                    ++solid;
-                }
-            }
-            f8 &= ~0x800000u;
-            f8 &= ~0x400000u;
-            f8 &= ~0x20000000u;
-            fC &= 0xfffff0ffu;
-            if (solid == 4) {
-                f8 &= ~0x8u;
-            } else {
-                f8 |= 0x8u;
-                if (solid == 0) {
-                    f8 |= 0x400000u;
-                }
-            }
-            if (rec[0x02] == 6) {
-                fC |= 0x100u;
-            }
-            __builtin_memcpy(rec + 0x08, &f8, 4);
-            __builtin_memcpy(rec + 0x0C, &fC, 4);
+    static const int neighbour_x[4] = { 0, 1, 1, 0 };
+    static const int neighbour_y[4] = { 0, 0, 1, 1 };
+    int x = (int)cell_x;
+    int width;
+    int height;
+    uint8_t* rec;
+    uint32_t primary;
+    uint32_t original_primary;
+    uint8_t empty_neighbours[4];
+    int empty_count = 0;
+    uint32_t secondary;
+    int solid_count = 0;
+    int last_solid = 0;
+    int i;
+    if (s == NULL) return;
+    width = level_int(s, LEVEL_OFF_WIDTH);
+    height = level_int(s, LEVEL_OFF_HEIGHT);
+    if ((uint32_t)x >= (uint32_t)(width - 1) ||
+        cell_y >= (uint32_t)(height - 1)) return;
+    rec = voxel_at(s, x, (int)cell_y);
+    if (rec == NULL) return;
+    primary = *(uint32_t*)(rec + 0x08);
+    original_primary = primary;
+    secondary = *(uint32_t*)(rec + 0x0c);
+    if ((primary & 0x20000000u) != 0) secondary |= 0x400u;
+    else secondary &= ~0x400u;
+    *(uint32_t*)(rec + 0x0c) = secondary;
+    for (i = 0; i < 4; ++i) {
+        uint8_t* neighbour = voxel_at(s, x + neighbour_x[i],
+                                      (int)cell_y + neighbour_y[i]);
+        if (neighbour != NULL && neighbour[0] == 1) {
+            ++solid_count;
+            last_solid = i;
+        }
+        else {
+            empty_neighbours[empty_count++] = (uint8_t)i;
         }
     }
+    primary &= 0xffffdf27u;
+    if (solid_count == 4) {
+        primary = (primary & 0xffffdf07u) | 0x0cu;
+        rec[3] = 0;
+    } else if (solid_count == 1 || solid_count == 3) {
+        primary = (primary & 0xffffdf07u) | 0x14u;
+        if (solid_count == 1)
+            rec[3] = (uint8_t)((last_solid + 2) & 3);
+        switch (rec[2]) {
+        case 1:
+        case 7:
+            rec[1] = (uint8_t)(solid_count == 1 ? 0x35 : 0x55);
+            break;
+        case 2:
+            rec[1] = (uint8_t)(solid_count == 1 ? 0x34 : 0x54);
+            break;
+        case 3:
+            rec[1] = (uint8_t)(solid_count == 1 ? 0x33 : 0x53);
+            break;
+        case 4:
+            rec[1] = (uint8_t)(solid_count == 1 ? 0x32 : 0x52);
+            break;
+        case 5:
+            rec[1] = (uint8_t)(solid_count == 1 ? 0x31 : 0x51);
+            break;
+        default:
+            break;
+        }
+        if (solid_count == 1)
+            primary = (primary & 0xffffdf07u) | 0x54u;
+        else
+            primary |= 0x80u;
+    } else {
+        if (solid_count == 0) {
+            rec[1] = 0x70;
+            if ((primary & 4u) != 0u && rec[2] != 1 && rec[2] != 2 &&
+                rec[2] != 3 && rec[2] != 4 && rec[2] != 5)
+                rec[3] = 0;
+        }
+        else {
+            static const uint8_t empty_pairs[6][2] = {
+                { 0, 1 }, { 1, 2 }, { 2, 3 },
+                { 0, 3 }, { 0, 2 }, { 1, 3 }
+            };
+            static const uint8_t partial_shapes[5] = {
+                0x25, 0x24, 0x23, 0x22, 0x21
+            };
+            uint8_t orientation = (uint8_t)x;
+            int pair;
+            for (pair = 0; pair < 6; ++pair) {
+                if ((empty_neighbours[0] == empty_pairs[pair][0] &&
+                     empty_neighbours[1] == empty_pairs[pair][1]) ||
+                    (empty_neighbours[1] == empty_pairs[pair][0] &&
+                     empty_neighbours[0] == empty_pairs[pair][1])) {
+                    orientation = (uint8_t)pair;
+                    break;
+                }
+            }
+            primary = (primary & 0xffffdf07u) | 0x14u;
+            if (orientation > 3u) {
+                if (rec[2] >= 1 && rec[2] <= 5)
+                    rec[1] = 0x77;
+                primary |= 0x2000u;
+                rec[3] = (uint8_t)(orientation - 4u);
+            }
+            else if ((original_primary & 0x20u) != 0u) {
+                if (rec[2] >= 1 && rec[2] <= 5)
+                    rec[1] = partial_shapes[rec[2] - 1];
+                rec[3] = orientation;
+            }
+            else {
+                switch (rec[2]) {
+                case 1:
+                case 7: rec[1] = 5; break;
+                case 2: rec[1] = 4; break;
+                case 3: rec[1] = 3; break;
+                case 4: rec[1] = 2; break;
+                case 5: rec[1] = 1; break;
+                case 8: rec[1] = 0x40; break;
+                case 10: rec[1] = 0x20; break;
+                case 11: rec[1] = 0x67; break;
+                default: break;
+                }
+                rec[3] = orientation;
+            }
+        }
+    }
+    *(uint32_t*)(rec + 0x08) = primary;
+    if (solid_count == 4 && (original_primary & 8u) == 0u) {
+        GameContext* game = entity_pool_callback_context_get();
+        terrain_cell_refresh_dispatch(game, x, (int)cell_y);
+        terrain_neighbor_flag_refresh(s, x, (int)cell_y, 1);
+    }
+    else if (solid_count == 1 || solid_count == 3) {
+        terrain_neighbor_flag_refresh(s, x, (int)cell_y, 1);
+    }
+
+    /* CellInitPass clears the temporary color override for these cell
+     * families before asking the renderer to rebuild the final surface. */
+    if ((primary & 0x800004u) == 0x800004u &&
+        (rec[2] == 1 || rec[2] == 7 || (primary & 8u) != 0u)) {
+        primary &= ~0x800000u;
+        *(uint32_t*)(rec + 0x08) = primary;
+        if (s->ptr_terrain != NULL)
+            terrain_cell_surface_type_reset(s->ptr_terrain, x, (int)cell_y);
+    }
+}
+
+/* The level loader sweeps cells by calling the target-shaped per-cell entry.
+ * Keep the sweep separate so it cannot be mistaken for the mapped function. */
+static void cell_init_all(LevelState* s)
+{
+    int x, y;
+    int width = level_int(s, LEVEL_OFF_WIDTH);
+    int height = level_int(s, LEVEL_OFF_HEIGHT);
+    for (y = 0; y < height - 1; ++y)
+        for (x = 0; x < width - 1; ++x)
+            cell_init_pass(s, (float)x, (uint32_t)y);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1170,7 +1296,7 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases)
     if (ok) {
         level_set_int(s, LEVEL_OFF_TERRAIN_LOADED, 1);
     }
-    cell_init_pass(s);
+    cell_init_all(s);
     return 1;
 }
 
@@ -1295,9 +1421,13 @@ static int map_bias_name(BlockFile* cfg, const char* level, const char* key,
 // FUNCTION: LEGORR 0x00429890
 LevelState* level_load(BlockFile* cfg, const char* level_name)
 {
+    GameContext* game;
+    LevelState* previous_level;
     if (cfg == NULL || level_name == NULL) {
         return NULL;
     }
+    game = entity_pool_callback_context_get();
+    previous_level = game != NULL ? game->level : NULL;
 
     /* PendingLevelName clears the cross-level pools before loading the new
      * level (FUN_004372a0); this is the shared production level-load path. */
@@ -1306,6 +1436,29 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
     LevelState* s = (LevelState*)calloc(1, sizeof(LevelState));
     if (s == NULL) {
         return NULL;
+    }
+    /* DAT_005560d4 is current throughout LevelLoad, including the map
+     * loaders that register EmergeMap stages. Mirror that lifetime in the
+     * GameContext instead of waiting for the caller's assignment. */
+    if (game != NULL) game->level = s;
+    /* The erosion tables are process globals in the reference, but their
+     * active coordinates belong to this level's EmergeMap. Bind and clear
+     * them before loading any sparse map that can register a stage. */
+    lava_erosion_level_context_set(s);
+    {
+        float trigger_time = cfg_float(cfg, level_name,
+                                       K_ERODETRIGGER, 0.0f);
+        float erosion_time = cfg_float(cfg, level_name,
+                                        K_ERODETIME, 0.0f);
+        float lock_time = cfg_float(cfg, level_name, K_ERODELOCK, 0.0f);
+        long mutation_count = cfg_int(cfg, level_name,
+                                      K_LANDSLIDECOUNT, 0);
+        if (trigger_time == 0.0f) trigger_time = 10.0f;
+        if (erosion_time == 0.0f) erosion_time = 5.0f;
+        if (lock_time == 0.0f) lock_time = 60.0f;
+        if (mutation_count == 0) mutation_count = 3;
+        erosion_timing_state_init(trigger_time, erosion_time, lock_time);
+        lava_erosion_mutation_threshold_set((unsigned int)mutation_count);
     }
 
     /* --- scalar config keys (finding 07 §"What a level is") ------------- */
@@ -1357,6 +1510,7 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
 
     if (!map_pipeline(s, names, biases)) {
         level_destroy(s);
+        if (game != NULL) game->level = previous_level;
         return NULL;
     }
     camera_predug_spawn_state_seed(s);
@@ -1393,15 +1547,17 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
     (void)K_OLISTFILE;
     (void)K_FULLNAME;
     (void)fallin_mult;
-    lava_erosion_level_context_set(s);
     return s;
 }
 
 void level_destroy(LevelState* s)
 {
+    GameContext* game;
     if (s == NULL) {
         return;
     }
+    game = entity_pool_callback_context_get();
+    if (game != NULL && game->level == s) game->level = NULL;
     camera_spawn_level_block_bind(NULL);
     lava_erosion_level_context_release(s);
     /* Level teardown's corpus path teardown includes ReleaseAllGroupRecords
@@ -2047,8 +2203,7 @@ int level_cell_record_byte3(const LevelState* s, int cx, int cy)
     return rec != NULL ? (int)rec[3] : 0;
 }
 
-/* FUN_004332f0: the in-gate work-bit raise. */
-// FUNCTION: LEGORR 0x004332f0
+/* Level-owned form used by map loading and simulation helpers. */
 void level_cell_work_flag_set(LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
@@ -2063,13 +2218,30 @@ void level_cell_work_flag_set(LevelState* s, int cx, int cy)
     }
 }
 
-/* TerrainCellWorkFlagClear (FUN_00430320): clear the transient work flags
- * when the three cell-local gates permit the update, then mark the cell's
- * low refresh bits. The reference also consults a global descriptor list
- * and dispatches a callback, FLIC, and four work operations; those owners
- * are not represented by LevelState yet, so this implements the observed
- * cell-state transition without fabricating those side effects. */
-// FUNCTION: LEGORR 0x00430320
+/* TerrainCellWorkFlagSet @ 0x004332f0 reads the current level global and
+ * raises bit 2 only for coordinates strictly inside the final row/column. */
+// FUNCTION: LEGORR 0x004332f0
+void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy)
+{
+    GameContext* game = entity_pool_callback_context_get();
+    LevelState* s;
+    uint32_t width, height;
+    if (game == NULL || game->level == NULL) {
+        return;
+    }
+    s = game->level;
+    width = (uint32_t)level_int(s, LEVEL_OFF_WIDTH);
+    height = (uint32_t)level_int(s, LEVEL_OFF_HEIGHT);
+    if (cx < width - 1u && cy < height - 1u) {
+        level_cell_work_flag_set(s, (int)cx, (int)cy);
+    }
+}
+
+/* TerrainCellWorkFlagClear (FUN_00430320): target-shaped implementation
+ * below obtains the current level from GameContext. This explicit-level
+ * worker is also used by the erosion path. The descriptor veto walks the
+ * live path/descriptor list rooted at DAT_004b8a24; these records carry the
+ * pair at +0x0c/+0x10 and next at +0x24. */
 void terrain_cell_work_flag_clear(LevelState* s, const int coord[2],
                                   uint32_t selector)
 {
@@ -2086,12 +2258,44 @@ void terrain_cell_work_flag_clear(LevelState* s, const int coord[2],
         return;
     }
 
-    /* The corpus's FUN_004090a0(pair) descriptor veto has no level-owned
-     * table to query here. Keep the mutation visible while that seam remains
-     * documented; selector is consumed by the unported four-call work pass. */
-    (void)selector;
-    *flags &= 0x9fdfffffu;
+    {
+        void* record = path_record_last_peek();
+        while (record != NULL) {
+            const uint32_t* words = (const uint32_t*)record;
+            if (words[3] == (uint32_t)coord[0] &&
+                words[4] == (uint32_t)coord[1]) {
+                return;
+            }
+            record = *(void**)((uint8_t*)record + 0x24);
+        }
+    }
+
+    *flags &= 0xffdfffffu;
+    *flags &= 0xdfffffffu;
+    *flags &= 0xbfffffffu;
+    entity_activity_scene_state_update(entity_pool_callback_context_get());
+    coordinate_callback_dispatch(coord, 0);
+    flic_opcode27_fallback_noop();
+    {
+        int repeat;
+        for (repeat = 0; repeat < 4; ++repeat) {
+            coordinate_pair_event_queue(
+                coord, (void*)(uintptr_t)selector);
+        }
+    }
     *flags |= 3u;
+}
+
+/* TerrainCellWorkFlagClear @ 0x00430320 takes only the coordinate pair and
+ * event selector; DAT_005560d4 supplies its level. */
+// FUNCTION: LEGORR 0x00430320
+void terrain_cell_work_flag_clear_current(const int coord[2],
+                                          uint32_t selector)
+{
+    GameContext* game = entity_pool_callback_context_get();
+    if (game != NULL) {
+        terrain_cell_work_flag_clear(game->level, coord, selector);
+    }
 }
 
 /* FUN_004502c0: unsigned pair membership (negative coords wrap). */
@@ -3434,7 +3638,7 @@ void terrain_neighbor_work_flag_scan(LevelState* s, unsigned int seed_x,
     engine_heap_free(buf);
 }
 
-/* --- cell timestamp dedup (see level.hpp) --------------------------------
+/* --- cell timestamp lock table (see level.hpp) --------------------------
  * Corpus regions: the (x,y) pair slots (stride 8) end at the per-entry
  * active flags (stride 4), the stamps live in their own stride-4 region,
  * and the scan bound is the first address past the flag region — all
@@ -3456,7 +3660,7 @@ static int32_t  s_ts_stamps[LEVEL_TS_COUNT];
 // GLOBAL: LEGORR 0x004d6914
 static uint32_t s_ts_active[LEVEL_TS_COUNT];
 // GLOBAL: LEGORR 0x004d78c0
-static int32_t  s_ts_now; /* _DAT_004d78c0: erosion_timing_state_init seeds the float bits (zero until then) */
+static int32_t  s_ts_now; /* _DAT_004d78c0: ErodeLockTime * 25 float bits */
 
 // FUNCTION: LEGORR 0x0040ee00
 void cell_coordinate_timestamp_remember(int x, int y)
@@ -5062,10 +5266,8 @@ uint32_t rng_thunk_draw15(void)
 #endif
 
 /* --- erosion timing band (2026-10-25) -------------------------------------
- * The timing floats, the clear word, and the two scratch regions land as
- * module statics (the unowned-global deviation; the corpus's scratch
- * consumers are the hook-stubbed tickers FUN_0040e7f0 / FUN_0040e990).
- * _DAT_004d78c0 rides the existing timestamp tick model (s_ts_now). */
+ * These module statics mirror the reference timing, stage, and lock tables;
+ * EmergeMap and the live ticker now own their initialization and updates. */
 #define EROSION_MARK_COUNT 2000   /* DAT_004cfbb4 */
 #define EROSION_TICKET_COUNT LEVEL_TS_COUNT /* DAT_004d6914 */
 
@@ -5082,8 +5284,15 @@ struct LavaErosionPendingCell {
     int x;
     int y;
 };
+struct LavaErosionStageSlot {
+    int x;
+    int y;
+    float timer;
+};
 static LavaErosionPendingCell s_lava_erosion_pending_cells[EROSION_MARK_COUNT];
 static unsigned int s_lava_erosion_pending_count;
+static LavaErosionStageSlot s_lava_erosion_stage_slots[EROSION_MARK_COUNT];
+static float s_erosion_trigger_accumulator;
 static unsigned int s_lava_erosion_mutation_threshold = 4u;
 static LavaErosionEdgeApplyHook s_lava_erosion_edge_apply;
 static LavaErosionCellActionHook s_lava_erosion_work_clear;
@@ -5092,18 +5301,30 @@ static LavaErosionSoundHook s_lava_erosion_sound;
 static LavaErosionEventHook s_lava_erosion_event;
 static void* s_lava_erosion_hook_context;
 
+static void lava_erosion_runtime_tables_clear(void)
+{
+    memset(s_erosion_marks, 0, sizeof(s_erosion_marks));
+    memset(s_lava_erosion_pending_cells, 0,
+           sizeof(s_lava_erosion_pending_cells));
+    memset(s_lava_erosion_stage_slots, 0,
+           sizeof(s_lava_erosion_stage_slots));
+    memset(s_ts_active, 0, sizeof(s_ts_active));
+    memset(s_ts_coordinates, 0, sizeof(s_ts_coordinates));
+    memset(s_ts_stamps, 0, sizeof(s_ts_stamps));
+    s_lava_erosion_pending_count = 0u;
+    s_erosion_trigger_accumulator = 0.0f;
+    s_ts_now = 0;
+}
+
 // FUNCTION: LEGORR 0x0040e930
 void erosion_timing_state_init(float value_a, float value_b, float value_c)
 {
     s_erosion_decay_scale = value_a * 25.0f;
     s_erosion_delay_scale = value_b * 25.0f * 0.2f;
     const float tick = value_c * 25.0f;
-    __builtin_memcpy(&s_ts_now, &tick, sizeof s_ts_now);
-    /* deviation: the corpus keeps the seed as a float word; the port's
-     * timestamp model reads the tick as a count, so the float bits ride. */
     s_erosion_clear_word = 0u;
-    memset(s_erosion_marks, 0, sizeof s_erosion_marks);
-    memset(s_ts_active, 0, sizeof s_ts_active);
+    lava_erosion_runtime_tables_clear();
+    __builtin_memcpy(&s_ts_now, &tick, sizeof s_ts_now);
 }
 
 float erosion_decay_scale_peek(void) { return s_erosion_decay_scale; }
@@ -5166,10 +5387,73 @@ int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
     return 0;
 }
 
+/* LavaErosionStageRegister (FUN_0040ea10): claim the first inactive stage
+ * slot, seed the cell byte and countdown, then append it to the ordered
+ * pending-candidate table. */
+int lava_erosion_stage_register(const int xy[2], uint32_t stage)
+{
+    unsigned int i;
+    uint8_t* cell;
+    if (xy == NULL || s_lava_erosion_level_context == NULL) return 0;
+    cell = level_voxel(s_lava_erosion_level_context, xy[0], xy[1]);
+    if (cell == NULL) return 0;
+    for (i = 0; i < EROSION_MARK_COUNT; ++i) {
+        if (s_erosion_marks[i] == 0u) {
+            float delay;
+            cell[7] = (uint8_t)stage;
+            s_lava_erosion_stage_slots[i].x = xy[0];
+            s_lava_erosion_stage_slots[i].y = xy[1];
+            delay = lava_erosion_delay_from_cell(
+                s_lava_erosion_level_context, xy[0], xy[1]);
+            s_lava_erosion_stage_slots[i].timer = delay / (float)(stage + 1u);
+            s_erosion_marks[i] = 1u;
+            lava_erosion_pending_cell_add(xy, 1);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+unsigned int lava_erosion_pending_cell_count_get(void)
+{
+    return s_lava_erosion_pending_count;
+}
+
+int lava_erosion_pending_cell_get(unsigned int index, int xy_out[2])
+{
+    if (xy_out == NULL || index >= s_lava_erosion_pending_count) return 0;
+    xy_out[0] = s_lava_erosion_pending_cells[index].x;
+    xy_out[1] = s_lava_erosion_pending_cells[index].y;
+    return 1;
+}
+
+int lava_erosion_stage_get(unsigned int slot, int xy_out[2],
+                           float* timer_out, uint8_t* cell_stage_out)
+{
+    const LavaErosionStageSlot* stage;
+    const uint8_t* cell;
+    if (slot >= EROSION_MARK_COUNT || s_erosion_marks[slot] == 0u) return 0;
+    stage = &s_lava_erosion_stage_slots[slot];
+    if (xy_out != NULL) {
+        xy_out[0] = stage->x;
+        xy_out[1] = stage->y;
+    }
+    if (timer_out != NULL) *timer_out = stage->timer;
+    cell = level_voxel(s_lava_erosion_level_context, stage->x, stage->y);
+    if (cell_stage_out != NULL) *cell_stage_out = cell != NULL ? cell[7] : 0u;
+    return 1;
+}
+
 void lava_erosion_level_context_set(LevelState* s)
 {
     if (s_lava_erosion_level_context != s) {
-        s_lava_erosion_pending_count = 0;
+        lava_erosion_runtime_tables_clear();
+        if (s == NULL) {
+            s_erosion_decay_scale = 0.0f;
+            s_erosion_delay_scale = 0.0f;
+            s_erosion_clear_word = 0u;
+            s_lava_erosion_mutation_threshold = 4u;
+        }
     }
     s_lava_erosion_level_context = s;
 }
@@ -5208,8 +5492,7 @@ int lava_erosion_neighbor_eligible_current(const int xy[2])
 
 /* LavaErosionPendingCellAdd (FUN_0040ee50): maintain the compact 2,000-cell
  * candidate list and mirror membership in voxel flag bit 31. Removal uses
- * swap-with-last like the reference; the optional timing side table remains
- * owned by the erosion ticker. */
+ * swap-with-last and retires the matching stage slot, as in the reference. */
 // FUNCTION: LEGORR 0x0040ee50
 void lava_erosion_pending_cell_add(const int xy[2], int add)
 {
@@ -5231,6 +5514,14 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
                 break;
             }
         }
+        for (i = 0; i < EROSION_MARK_COUNT; ++i) {
+            if (s_erosion_marks[i] != 0u &&
+                s_lava_erosion_stage_slots[i].x == xy[0] &&
+                s_lava_erosion_stage_slots[i].y == xy[1]) {
+                s_erosion_marks[i] = 0u;
+                break;
+            }
+        }
         cell_coordinate_timestamp_remember(xy[0], xy[1]);
     }
     else if ((flags & 0x80000000u) == 0u &&
@@ -5245,6 +5536,131 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
         flags |= 0x80000000u;
         __builtin_memcpy(cell + 8, &flags, sizeof flags);
     }
+}
+
+/* LavaErosionPendingCellTick (FUN_0040eab0): keep the engine-scale trigger
+ * gate, walk the pending coordinates in their live insertion/swap order,
+ * then advance all active stage timers. */
+int lava_erosion_pending_cell_tick(float scale)
+{
+    int triggered = 0;
+    LevelState* s = s_lava_erosion_level_context;
+    s_erosion_trigger_accumulator += scale;
+    if (s_erosion_decay_scale < s_erosion_trigger_accumulator) {
+        unsigned int slot;
+        unsigned int n;
+        triggered = 1;
+        if (s != NULL && s_lava_erosion_pending_count != 0u) {
+            for (slot = 0; slot < EROSION_MARK_COUNT; ++slot) {
+                if (s_erosion_marks[slot] == 0u) break;
+            }
+            if (slot < EROSION_MARK_COUNT) {
+                const unsigned int start =
+                    (unsigned int)level_rand_u16() %
+                    s_lava_erosion_pending_count;
+                for (n = 0; n < s_lava_erosion_pending_count; ++n) {
+                    const unsigned int index =
+                        (start + n) % s_lava_erosion_pending_count;
+                    const int seed_xy[2] = {
+                        s_lava_erosion_pending_cells[index].x,
+                        s_lava_erosion_pending_cells[index].y
+                    };
+                    int candidate_xy[2];
+                    if (lava_erosion_neighbor_check(
+                            s, seed_xy[0], seed_xy[1], candidate_xy) != 0) {
+                        uint8_t* cell = level_voxel(
+                            s, candidate_xy[0], candidate_xy[1]);
+                        if (cell == NULL) continue;
+                        if (level_cell_occupied_at(s, candidate_xy[0],
+                                                   candidate_xy[1]) == 0 ||
+                            (cell[0x0c] & 0x10u) != 0u) {
+                            float delay;
+                            uint32_t secondary;
+                            __builtin_memcpy(&secondary, cell + 0x0c,
+                                             sizeof secondary);
+                            secondary &= ~0x10u;
+                            __builtin_memcpy(cell + 0x0c, &secondary,
+                                             sizeof secondary);
+                            s_lava_erosion_stage_slots[slot].x =
+                                candidate_xy[0];
+                            s_lava_erosion_stage_slots[slot].y =
+                                candidate_xy[1];
+                            delay = lava_erosion_delay_from_cell(
+                                s, candidate_xy[0], candidate_xy[1]);
+                            s_lava_erosion_stage_slots[slot].timer = delay;
+                            s_erosion_marks[slot] = 1u;
+                            cell[7] = 0u;
+                            lava_erosion_pending_cell_add(candidate_xy, 1);
+                            message_dispatch(0x1e, 0, 0, candidate_xy);
+                            break;
+                        }
+                        cell_coordinate_timestamp_remember(
+                            candidate_xy[0], candidate_xy[1]);
+                        cell[0x0c] |= 0x10u;
+                    }
+                }
+            }
+        }
+        s_erosion_trigger_accumulator = 0.0f;
+    }
+
+    if (s != NULL) {
+        unsigned int slot;
+        for (slot = 0; slot < EROSION_MARK_COUNT; ++slot) {
+            LavaErosionStageSlot* stage;
+            uint8_t* cell;
+            int before, after;
+            if (s_erosion_marks[slot] == 0u) continue;
+            stage = &s_lava_erosion_stage_slots[slot];
+            before = crt_float_to_long(stage->timer);
+            stage->timer -= scale;
+            after = crt_float_to_long(stage->timer);
+            if (after == before) continue;
+            cell = level_voxel(s, stage->x, stage->y);
+            if (cell == NULL) {
+                s_erosion_marks[slot] = 0u;
+                continue;
+            }
+            cell[7] = (uint8_t)(4 - after);
+            if (after == 0) {
+                s_erosion_marks[slot] = 0u;
+                cell[2] = 6u;
+            }
+            if (after >= 0 && after <= 3) {
+                float position[3];
+                float rotation[3];
+                float xy[2];
+                if (terrain_cell_world_center_xy_get(
+                        s->ptr_terrain, stage->x, stage->y, xy)) {
+                    position[0] = xy[0];
+                    position[1] = xy[1];
+                    position[2] = (float)terrain_surface_height_get(
+                        s->ptr_terrain, stage->x, stage->y);
+                    d3drm_vector_random(rotation);
+                    lava_effect_select_and_place(after + 4, position,
+                                                 rotation);
+                }
+            }
+            cell_init_pass(s, (float)stage->x, (uint32_t)stage->y);
+        }
+    }
+
+    /* The lock entries share the configured ErodeLockTime float word. */
+    {
+        unsigned int i;
+        for (i = 0; i < EROSION_TICKET_COUNT; ++i) {
+            if (s_ts_active[i] != 0u) {
+                float remaining;
+                __builtin_memcpy(&remaining, &s_ts_stamps[i],
+                                 sizeof remaining);
+                remaining -= scale;
+                __builtin_memcpy(&s_ts_stamps[i], &remaining,
+                                 sizeof remaining);
+                if (remaining < 0.0f) s_ts_active[i] = 0u;
+            }
+        }
+    }
+    return triggered;
 }
 
 void lava_erosion_hooks_set(LavaErosionEdgeApplyHook edge_apply,

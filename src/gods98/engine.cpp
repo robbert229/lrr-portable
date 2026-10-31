@@ -18,6 +18,7 @@
 #include "game/entity.hpp"
 #include "game/objective.hpp"
 #include "heap.hpp"
+#include <ctype.h>
 #include <stdlib.h>
 
 /* PanelSelectionHighlightToggle/EngineTick DAT globals (see the function
@@ -28,6 +29,7 @@
 static uint32_t s_panel_highlight_flags; /* DAT_00556ed0 bit 0 */
 // GLOBAL: LEGORR 0x00556efc
 static float s_panel_highlight_timer;    /* DAT_00556efc 250-ms cooldown */
+static EngineContext* s_engine_pre_tick_context;
 // GLOBAL: LEGORR 0x00556ec8
 static int32_t s_context_mode;
 
@@ -147,11 +149,13 @@ int EngineTick(EngineContext* ctx, float dt)
         dt = 0.0f;
     }
 
-    /* 2. Per-frame housekeeping (EnginePreTick @ 0x4231f0). The text pump
-     *    consumes the current frame's captured keys; the frame-loop drives
-     *    the table lifecycle (capture before this, input_begin_frame at the
-     *    frame end) — see frameloop.cpp. */
-    EnginePreTick(ctx);
+    /* 2. Per-frame housekeeping (EnginePreTick @ 0x4231f0). When text entry is
+     *    active it consumes this frame's key table; the frame-loop drives the
+     *    normal capture/input_begin_frame lifecycle — see frameloop.cpp. */
+    EngineContext* previous_pre_tick_context = s_engine_pre_tick_context;
+    s_engine_pre_tick_context = ctx;
+    EnginePreTick();
+    s_engine_pre_tick_context = previous_pre_tick_context;
 
     /* 3. Scaled delta: subsystem tickers run scaled time, raw dt drives
      *    timers. Editor/preview (context_mode==0) runs raw dt. */
@@ -209,27 +213,71 @@ int EngineTick(EngineContext* ctx, float dt)
     return 1;
 }
 
-/* Per-frame housekeeping — corpus EnginePreTick @ 0x4231f0. The real body is
- * text/entity-name input handling (keyboard echo through DAT_00556fa0); the
- * input core (findings 04/05) supplies the text pump. cur is NOT cleared here
- * (the frame-loop clears it at the frame boundary; the corpus's in-place
- * clear is incompatible with per-frame device capture).
- */
-// FUNCTION: LEGORR 0x004231f0
-void EnginePreTick(EngineContext* ctx)
+static void engine_pre_tick_context_run(EngineContext* ctx)
 {
-    if (ctx->input == NULL) {
-        return;
+    InputState* input;
+    char* target;
+    int length = 0;
+    int scan_limit;
+    int key;
+    int cancel;
+    if (ctx == NULL || ctx->input == NULL) return;
+    input = ctx->input;
+    target = input->text_target;
+    if (target == NULL) return;
+
+    /* The retail routine only edits strings shorter than eleven characters;
+     * the explicit cap also protects this portable owner buffer. */
+    scan_limit = input->text_cap > 0 ? input->text_cap : 12;
+    if (scan_limit > 12) scan_limit = 12;
+    while (length < scan_limit && target[length] != '\0') ++length;
+
+    if (input->cur[0x8e] == 0u ||
+        input->mirror[0x8e] == input->cur[0x8e]) {
+        cancel = (input->cur[0x9c] == 0u &&
+                  input->mirror[0x9c] != 0u) ||
+                 (input->cur[0x01] == 0u &&
+                  input->mirror[0x01] != 0u);
+        if (cancel) {
+            input->text_target = NULL;
+        }
+        else {
+            int text_limit = input->text_cap > 0
+                ? input->text_cap - 1 : 11;
+            if (text_limit > 11) text_limit = 11;
+            for (key = 0; key < INPUT_KEY_COUNT && length < text_limit;
+                 ++key) {
+                uint32_t mapped;
+                if (input->cur[key] == 0u ||
+                    input->mirror[key] == input->cur[key]) continue;
+                mapped = input_key_context(input, (uint32_t)key);
+                if (mapped == 0u) continue;
+                target[length++] = (char)toupper((unsigned char)mapped);
+                target[length] = '\0';
+            }
+        }
     }
-    char*  target = ctx->input->text_target;
-    int    cap    = ctx->input->text_cap;
-    int    len    = ctx->input->text_len;
-    if (target != NULL) {
-        input_text_pump(ctx->input, target, cap, &len, 0);
-        ctx->input->text_len = len;
-    } else {
-        input_mirror(ctx->input);
+    else if (length != 0) {
+        target[length - 1] = '\0';
+        --length;
     }
+    input->text_len = length;
+    /* Retail snapshots the current table into the text mirror and clears it
+     * only while a text target is active. This prevents edited keys from
+     * leaking into the following MainSimStep key-edge handling. */
+    input_mirror_and_clear(input);
+}
+
+void engine_pre_tick_adapter(EngineContext* ctx)
+{
+    engine_pre_tick_context_run(ctx);
+}
+
+/* Retail-shaped EnginePreTick @ 0x4231f0 uses global input/text state. */
+// FUNCTION: LEGORR 0x004231f0
+void EnginePreTick(void)
+{
+    engine_pre_tick_context_run(s_engine_pre_tick_context);
 }
 
 /* KeepRunning's global app-state and resource predicates are owned by the

@@ -351,10 +351,30 @@ unsigned int string_table_index_lookup(const char* value)
     unsigned int i;
     if (s_string_table_count == 0 || value == NULL) return 0;
     for (i = 0; i < s_string_table_count; ++i) {
-        if (s_string_table_entries[i] != NULL &&
-            strcmp(s_string_table_entries[i], value) == 0) {
-            return i;
+        const unsigned char* left = (const unsigned char*)
+            s_string_table_entries[i];
+        const unsigned char* right = (const unsigned char*)value;
+        int equal = 1;
+        if (left == NULL) continue;
+        for (;;) {
+            unsigned char first = *left;
+            unsigned char second = *right;
+            if (first != second) {
+                equal = 0;
+                break;
+            }
+            if (first == 0) break;
+            first = left[1];
+            second = right[1];
+            if (first != second) {
+                equal = 0;
+                break;
+            }
+            left += 2;
+            right += 2;
+            if (second == 0) break;
         }
+        if (equal) return i;
     }
     return s_string_table_count;
 }
@@ -406,6 +426,11 @@ void bubble_action_strings_initialize(void)
 const char* bubble_action_string_get(unsigned int index)
 {
     if (index >= BUBBLE_ACTION_STRING_COUNT) return NULL;
+    /* GameConfigInit's portable boot counterpart initializes this table. Keep
+     * direct utility callers safe when they run before that boot path. */
+    if (s_bubble_action_strings[0] == NULL) {
+        bubble_action_strings_initialize();
+    }
     return s_bubble_action_strings[index];
 }
 

@@ -40,6 +40,7 @@ struct EventTimerState;
 #include "gods98/block.hpp"
 #include "gods98/texture.hpp"
 #include "options.hpp"
+#include "priority_config_ports.hpp"
 
 struct EngineContext;
 
@@ -736,8 +737,8 @@ typedef struct UiTextEntryState {
     uint32_t flags;
     int32_t counters[5];
 } UiTextEntryState;
-void ui_text_entry_load(UiTextEntryState* entry, const char* source,
-                        UiTextImageLoadFn image_load, void* context);
+void ui_text_entry_state_load(UiTextEntryState* entry, const char* source,
+                              UiTextImageLoadFn image_load, void* context);
 typedef void* (*AdvisorTutorialIconLoadFn)(const char* path, void* context);
 typedef void (*AdvisorTutorialIconInitializeFn)(void* icon, void* context);
 void advisor_tutorial_icon_hooks_set(AdvisorTutorialIconLoadFn load,
@@ -925,11 +926,14 @@ typedef struct AdvisorTextBoxLayoutState {
 typedef void (*AdvisorTextBoxExtentFn)(void* context, int width, int height);
 void advisor_text_box_extent_hook_set(AdvisorTextBoxExtentFn hook,
                                       void* context);
-void advisor_text_box_record_commit(AdvisorTextBoxLayoutState* state); /* FUN_0046a9e0 */
-void text_layout_geometry_store_and_apply(
+/* Portable state adapters for the text-box geometry path. The mapped target
+ * functions are renderer-global/no-argument APIs and are left unmapped until
+ * their native text-widget owner is available. */
+void advisor_text_box_record_commit_state(AdvisorTextBoxLayoutState* state);
+void text_layout_geometry_store_and_apply_state(
     AdvisorTextBoxLayoutState* state, uint32_t object_id,
     uint32_t request_id, float value, const float geometry[4],
-    uint32_t mode); /* FUN_0046a950 */
+    uint32_t mode);
 const char* tooltip_info_string_peek(int index);
 typedef struct TooltipOverlayState {
     const char* names[38];
@@ -942,20 +946,23 @@ typedef struct TooltipOverlayState {
     float color_low[3];
 } TooltipOverlayState;
 typedef uint32_t (*TooltipFontMetricQueryFn)(void* font, void* context);
+/* Native GameConfigInit ABI: font, two geometry words, duration multiplier,
+ * display width/height, inset word, and normalized tooltip RGB. */
 void tooltip_overlay_state_initialize(
+    void* font, uint32_t geometry_a, uint32_t geometry_b, float duration_scale,
+    uint32_t display_width, uint32_t display_height, uint32_t inset_word,
+    float color_r, float color_g, float color_b); /* FUN_0046b1d0 */
+void tooltip_overlay_state_initialize_state(
     TooltipOverlayState* state, void* font,
     uint32_t value2, uint32_t value3, float scale,
     uint32_t value5, uint32_t value6, uint32_t value7,
     float color_r, float color_g, float color_b,
-    TooltipFontMetricQueryFn metric_query, void* context); /* FUN_0046b1d0 */
+    TooltipFontMetricQueryFn metric_query, void* context);
+void tooltip_overlay_state_current(TooltipOverlayState* state);
 void     help_window_resources_init(BlockFile* cfg,
                                     const FeHelpWindowResourceOps* ops);
 void     help_window_button_layout_load(
-             BlockFile* cfg, float offset_x, float offset_y,
-             uint32_t (*resource_load)(void* context, const char* name,
-                                       int x, int y),
-             void (*text_load)(void* context, int slot, const char* name),
-             void* context);
+             BlockFile* cfg, BlockFile* config_root);
 void     help_window_sound_clear_hook_set(void (*hook)(int));
 int      help_window_button_hit_test(uint32_t x, uint32_t y, int mode,
                                      int transition_flags, int active,
@@ -1124,6 +1131,14 @@ int priority_image_selection_state_update(int candidate, int gate, int skip);
                                         /* FUN_0045d300 */
 void priority_image_state_set(int32_t state, uint32_t flags); /* port hook */
 void priority_image_state_peek(int32_t* state, uint32_t* flags);
+void frontend_priority_images_config_load(BlockFile* values,
+                                          BlockFile* names);
+int frontend_priorities_config_load(BlockFile* values, BlockFile* names,
+                                    const char* section_name);
+void frontend_priorities_image_positions_config_load(BlockFile* values,
+                                                      BlockFile* names);
+void frontend_priority_config_state_get(PriorityConfigState* state);
+int frontend_priority_sound_alias_get(int kind);
 
 /* UiRenderRecordCreate (FUN_0045da90): the 0x3c UI render record — the
  * source, its payload words copied from the caller's array, the extra
@@ -1170,10 +1185,10 @@ void menu_clock_millis_set(uint32_t millis); /* port tick hook */
  * word (`sim_status_banner_word_get`) exactly where the corpus does. */
 void panel_texture_slots_blit(int panel); /* FUN_0045a9c0 */
 
-/* TimedEffectTimestampReset (FUN_0046b7a0): stamps the corpus's global tick
- * word into the shared record timestamp. The corpus tick word
- * (DAT_0054bf3c) is mapped as a zero-init module static with a set hook; its
- * production producer remains outside this module. Out-of-range indices are
+/* TimedEffectTimestampReset (FUN_0046b7a0): stamps DAT_0054bf3c's float bits
+ * into the shared record timestamp. TooltipOverlayStateInitialize sets that
+ * word to the configured duration threshold (scale * 25); a setter remains
+ * available for the port's external clock adapter. Out-of-range indices are
  * guarded (documented deviation: the corpus strides blindly). */
 void    timed_effect_timestamp_reset(int index);  /* FUN_0046b7a0 */
 void    timed_effect_tick_word_set(uint32_t tick); /* port hook */

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <string.h>
+#include <stdlib.h>
 
 #include "platform/platform.h"
 #include "surface.hpp"
+#include "model.hpp"
 
 #include "crt/crt.hpp"
 #include "heap.hpp"
@@ -212,7 +214,98 @@ void model_texture_bind_ops_set(const ModelTextureBindOps* ops)
                 sizeof(s_model_texture_bind_ops));
 }
 
-/* BindModelTextures (FUN_00481820): choose source colors versus texture
+static int model_texture_frame_name(const char* name, uint32_t frame,
+                                    char output[260])
+{
+    size_t length;
+    size_t extension;
+    size_t digits;
+    size_t prefix;
+    size_t extension_length;
+    uint32_t value;
+    uint32_t width;
+    uint32_t number_width;
+    char number[16];
+    uint32_t number_length = 0u;
+    uint32_t i;
+    if (name == NULL) return 0;
+    length = strlen(name);
+    if (length == 0u || length >= 260u) return 0;
+    extension = length;
+    for (i = 0u; i < length; ++i) {
+        if (name[i] == '.' && i > 0u) extension = i;
+        if (name[i] == '/' || name[i] == '\\') {
+            if (extension < i) extension = length;
+        }
+    }
+    digits = extension;
+    while (digits > 0u && name[digits - 1u] >= '0' &&
+           name[digits - 1u] <= '9') --digits;
+    if (digits == extension) return 0;
+    prefix = digits;
+    width = (uint32_t)(extension - digits);
+    value = 0u;
+    for (i = (uint32_t)digits; i < (uint32_t)extension; ++i) {
+        uint32_t digit = (uint32_t)(name[i] - '0');
+        if (value > (0xffffffffu - digit) / 10u) return 0;
+        value = value * 10u + digit;
+    }
+    if (value > 0xffffffffu - frame) return 0;
+    value += frame;
+    do {
+        number[number_length++] = (char)('0' + value % 10u);
+        value /= 10u;
+    } while (value != 0u && number_length < sizeof(number));
+    extension_length = length - extension;
+    number_width = width > number_length ? width : number_length;
+    if (prefix + number_width + extension_length >= 260u) return 0;
+    memcpy(output, name, prefix);
+    for (i = number_length; i < number_width; ++i)
+        output[prefix + (i - number_length)] = '0';
+    for (i = 0u; i < number_length; ++i)
+        output[prefix + (number_width - number_length) + i] =
+            number[number_length - i - 1u];
+    memcpy(output + prefix + number_width, name + extension, extension_length);
+    output[prefix + number_width + extension_length] = '\0';
+    return 1;
+}
+
+static void model_texture_binding_load_path(ModelTextureBinding* binding,
+                                            const char* name,
+                                            int animated)
+{
+    TextureSurface* texture;
+    if (!animated) {
+        binding->texture = texture_get_or_load(NULL, name);
+        binding->texture_surface_owned = binding->texture != NULL;
+        return;
+    }
+    binding->animation_frames = (void**)malloc(100u * sizeof(void*));
+    if (binding->animation_frames == NULL) return;
+    binding->animation_array_owned = 1u;
+    binding->texture_surface_owned = 1u;
+    while (binding->animation_frame_count < 100u) {
+        char frame_name[260];
+        uint32_t frame = binding->animation_frame_count;
+        if (!model_texture_frame_name(name, frame, frame_name)) break;
+        texture = texture_get_or_load(NULL, frame_name);
+        if (texture == NULL) break;
+        binding->animation_frames[frame] = texture;
+        ++binding->animation_frame_count;
+    }
+    if (binding->animation_frame_count == 0u) {
+        free(binding->animation_frames);
+        binding->animation_frames = NULL;
+    }
+    else {
+        void** frames = (void**)realloc(
+            binding->animation_frames,
+            (size_t)binding->animation_frame_count * sizeof(void*));
+        if (frames != NULL) binding->animation_frames = frames;
+    }
+}
+
+/* Portable texture-binding adapter: choose source colors versus texture
  * binding per input, expand numbered texture sequences (up to 100 frames),
  * then copy each input's render parameters into its binding record. */
 int bind_model_textures(void* device, const ModelTextureInput* inputs,
@@ -283,6 +376,11 @@ int bind_model_textures(void* device, const ModelTextureInput* inputs,
                     }
                 }
             }
+            else if (input->image_name != NULL &&
+                     input->image_name[0] != '\0') {
+                model_texture_binding_load_path(binding, input->image_name,
+                                                input->animated_name != 0u);
+            }
             if (input->color_from_source != 0u) {
                 binding->color[0] = (float)input->color[0] / 256.0f;
                 binding->color[1] = (float)input->color[1] / 256.0f;
@@ -299,15 +397,70 @@ int bind_model_textures(void* device, const ModelTextureInput* inputs,
     return 1;
 }
 
+/* LWO texture binding uses the parser's explicit SRFS/TIMG representation.
+ * The native renderer's 0x481820 path consumes a different 0x54-byte record
+ * and writes a 0x3c-byte material record, so this remains a portable API. */
+int bind_lwo_model_textures(void* device, const Model* model,
+                            ModelTextureBinding* bindings, uint32_t count,
+                            int force_source_color)
+{
+    uint32_t index;
+    (void)device;
+    if (model == NULL || (size_t)count != model->n_surfaces ||
+        (count != 0u && model->surfaces == NULL) ||
+        (count != 0u && bindings == NULL)) return 0;
+    for (index = 0u; index < count; ++index) {
+        const ModelSurface* source = &model->surfaces[index];
+        ModelTextureBinding* binding = &bindings[index];
+        memset(binding, 0, sizeof(*binding));
+        if (source->timg != NULL && source->timg[0] != '\0' &&
+            force_source_color == 0) {
+            binding->texture = texture_get_or_load(NULL, source->timg);
+            binding->texture_surface_owned = binding->texture != NULL;
+            binding->color[0] = 1.0f;
+            binding->color[1] = 1.0f;
+            binding->color[2] = 1.0f;
+        }
+        else if (source->has_colr != 0) {
+            binding->color[0] = source->colr[0];
+            binding->color[1] = source->colr[1];
+            binding->color[2] = source->colr[2];
+        }
+    }
+    return 1;
+}
+
+void model_texture_bindings_release(ModelTextureBinding* bindings,
+                                    uint32_t count)
+{
+    uint32_t i;
+    if (bindings == NULL) return;
+    for (i = 0u; i < count; ++i) {
+        uint32_t frame;
+        if (bindings[i].texture_surface_owned != 0u &&
+            bindings[i].texture != NULL)
+            texture_release((TextureSurface*)bindings[i].texture);
+        for (frame = 0u; bindings[i].texture_surface_owned != 0u &&
+             frame < bindings[i].animation_frame_count; ++frame) {
+            if (bindings[i].animation_frames != NULL &&
+                bindings[i].animation_frames[frame] != NULL)
+                texture_release((TextureSurface*)
+                    bindings[i].animation_frames[frame]);
+        }
+        if (bindings[i].animation_array_owned != 0u)
+            free(bindings[i].animation_frames);
+        memset(&bindings[i], 0, sizeof(bindings[i]));
+    }
+}
+
 void material_pass_ops_set(const MaterialPassOps* ops)
 {
     if (ops != NULL) s_material_pass_ops = *ops;
     else memset(&s_material_pass_ops, 0, sizeof(s_material_pass_ops));
 }
 
-/* MaterialPass (FUN_00480ac0): prepare expanded layer geometry, then bind
- * each material pass, apply its state, submit it, and release the temporary
- * geometry on both success and failure. */
+/* Renderer pass adapter. Its callback contract is not the retail 0x480ac0
+ * ABI; no production scene/mesh owner installs these callbacks. */
 int material_pass_execute(void* device, void* model, void* layer)
 {
     void* geometry = NULL;
@@ -1615,9 +1768,9 @@ void renderer_begin_frame_hook_set(RendererBeginFrameHook hook, void* device)
     s_renderer_frame_started = 0;
 }
 
-/* RendererBeginFrameOnce (FUN_00477fa0): invoke the device's scene-begin
- * method once per frame; reset is driven by the frame owner. */
-// FUNCTION: LEGORR 0x00477fa0
+/* Portable adapter for RendererBeginFrameOnce. The retail routine uses the
+ * global feature bit and global Direct3DRM device; this hook keeps a local
+ * once-per-frame seam until those owners are bound. */
 int renderer_begin_frame_once(void)
 {
     if (s_renderer_frame_started) return 1;
@@ -2788,8 +2941,9 @@ static int surface_directdraw_pixel_format_query(DisplaySurface* surface,
 /* ---- backend-neutral pixel helpers ------------------------------------- */
 
 /* RenderSurfaceRestoreFromPrimary (FUN_0047cc20): restore the current
- * windowed back surface by copying the primary surface when enabled. */
-// FUNCTION: LEGORR 0x0047cc20
+ * windowed back surface by copying the primary surface when enabled. The
+ * retail entrypoint is no-argument and reads renderer globals; this portable
+ * adapter takes explicit DisplaySurface owners and is not ABI-compatible. */
 void render_surface_restore_from_primary(DisplaySurface* destination,
                                          DisplaySurface* primary,
                                          int restore_enabled)
@@ -2798,8 +2952,9 @@ void render_surface_restore_from_primary(DisplaySurface* destination,
 }
 
 /* WindowedRenderSurfaceBlit (FUN_0047cc50): place the back surface at the
- * window's client origin on the primary surface and wait for the blit. */
-// FUNCTION: LEGORR 0x0047cc50
+ * window's client origin on the primary surface and wait for the blit. The
+ * retail entrypoint is no-argument and reads renderer globals, unlike this
+ * portable adapter. */
 void windowed_render_surface_blit(DisplaySurface* primary,
                                   DisplaySurface* back_surface)
 {
@@ -2813,18 +2968,17 @@ void surface_blit_wait(void* destination, DisplaySurface* source)
     surface_blit_wait_impl(destination, source);
 }
 
-/* DirectDrawSurfaceDescriptionGet (FUN_0047de60): retrieve the active
- * surface descriptor through the backend-specific DirectDraw query. */
-// FUNCTION: LEGORR 0x0047de60
+/* Portable surface descriptor query. The retail helper consumes a raw
+ * DirectDraw interface slot and returns selected values through separate
+ * ABI outputs; this DisplaySurface record is not that interface contract. */
 int surface_directdraw_description_get(DisplaySurface* surface,
                                        SurfaceDescriptionInfo* out)
 {
     return surface_directdraw_description_query(surface, out);
 }
 
-/* DirectDrawSurfacePixelFormatGet (FUN_0047def0): fetch the active
- * surface's depth and RGB masks through its DirectDraw pixel format. */
-// FUNCTION: LEGORR 0x0047def0
+/* Portable pixel-format query. The retail helper consumes a raw DirectDraw
+ * interface slot and returns packed format data, not this output record. */
 int surface_directdraw_pixel_format_get(DisplaySurface* surface,
                                         SurfacePixelFormat* out)
 {
@@ -3067,10 +3221,9 @@ int surface_palette8_to_16bit_surface_expand(SurfaceRecord* rec,
     return 1;
 }
 
-/* PalettizedBitmapSurfaceDecode (FUN_0047d000): expand 8-bit palette
- * indices into a mask-packed 16-bit surface, validating dimensions and
- * honoring both locked-surface strides. */
-// FUNCTION: LEGORR 0x0047d000
+/* Portable palettized bitmap decoder. The retail 0x47d000 entrypoint instead
+ * takes two DirectDraw surface interfaces plus a palette pointer, locks and
+ * unlocks those surfaces, and requires the retail 0x7c-byte descriptor ABI. */
 int palettized_bitmap_surface_decode(const PalettizedSurfaceDecodeJob* job)
 {
     uint32_t red_bits;

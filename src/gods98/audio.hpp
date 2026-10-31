@@ -69,8 +69,20 @@ void audio_menu_sfx_volume_set(int index);
  * corpus's paired music-mixer channels. */
 void audio_menu_volume_set(int value);
 void music_mixer_volume_set(float music, float sfx);
+/* Legacy mixer helper: read mode queries the actual compact-disc source;
+ * apply mode retains the portable output-gain path. */
 int audio_mixer_control_init(float* music, float* sfx, int apply_volume);
 void audio_music_mixer_volume_get(float* music, float* sfx);
+/* Read the legacy compact-disc mixer source. Returns 1 when WinMM finds a
+ * volume control on a MIXERLINE_COMPONENTTYPE_SRC_COMPACTDISC source.
+ * `music` receives its first channel; `sfx` receives its second channel for
+ * stereo, or mirrors the first for mono. Both are normalized 0..1 values
+ * from the same source control, not separate music/SFX devices. Portable
+ * backends return 0 and clear both outputs. */
+int audio_cd_mixer_volume_get(float* music, float* sfx);
+#if defined(LEGORRR_BACKEND_WINAPI)
+int platform_cd_mixer_volume_get(float* music, float* sfx);
+#endif
 typedef void (*AudioListenerRolloffHook)(void* context, float rolloff);
 void audio_listener_rolloff_hook_set(AudioListenerRolloffHook hook,
                                      void* context);

@@ -549,6 +549,142 @@ void platform_audio_stop(PlatformAudio* a)
     }
 }
 
+/* Read only volume controls on compact-disc source lines. The retail options
+ * getter enumerates every mixer device/destination/source and ignores the
+ * PCM output gain; keep those two controls separate in the portable build. */
+int platform_cd_mixer_volume_get(float* music, float* sfx)
+{
+    UINT device_count;
+    UINT device_index;
+    int found = 0;
+
+    if (music == NULL || sfx == NULL) return 0;
+    *music = 0.0f;
+    *sfx = 0.0f;
+    device_count = mixerGetNumDevs();
+    for (device_index = 0; device_index < device_count; ++device_index) {
+        HMIXER mixer = NULL;
+        MIXERCAPSA caps;
+        UINT destination_index;
+
+        if (mixerOpen(&mixer, device_index, 0, 0, CALLBACK_NULL) !=
+            MMSYSERR_NOERROR) {
+            continue;
+        }
+        memset(&caps, 0, sizeof(caps));
+        if (mixerGetDevCapsA((UINT)device_index, &caps,
+                             sizeof(caps)) == MMSYSERR_NOERROR) {
+            for (destination_index = 0;
+                 destination_index < caps.cDestinations;
+                 ++destination_index) {
+                MIXERLINEA destination_line;
+                DWORD source_index;
+
+                memset(&destination_line, 0, sizeof(destination_line));
+                destination_line.cbStruct = sizeof(destination_line);
+                destination_line.dwDestination = destination_index;
+                if (mixerGetLineInfoA((HMIXEROBJ)mixer, &destination_line,
+                                      MIXER_GETLINEINFOF_DESTINATION) !=
+                    MMSYSERR_NOERROR) {
+                    continue;
+                }
+                for (source_index = 0;
+                     source_index < destination_line.cConnections;
+                     ++source_index) {
+                    MIXERLINEA source_line;
+                    MIXERCONTROL control;
+                    MIXERLINECONTROLSA line_controls;
+                    MIXERCONTROLDETAILS details;
+                    MIXERCONTROLDETAILS_UNSIGNED* values;
+                    DWORD channel_count;
+                    LONG minimum;
+                    LONG maximum;
+                    float first;
+                    float second;
+
+                    memset(&source_line, 0, sizeof(source_line));
+                    source_line.cbStruct = sizeof(source_line);
+                    source_line.dwDestination = destination_index;
+                    source_line.dwSource = source_index;
+                    if (mixerGetLineInfoA((HMIXEROBJ)mixer, &source_line,
+                                          MIXER_GETLINEINFOF_SOURCE) !=
+                        MMSYSERR_NOERROR ||
+                        source_line.dwComponentType !=
+                            MIXERLINE_COMPONENTTYPE_SRC_COMPACTDISC) {
+                        continue;
+                    }
+
+                    memset(&control, 0, sizeof(control));
+                    memset(&line_controls, 0, sizeof(line_controls));
+                    line_controls.cbStruct = sizeof(line_controls);
+                    line_controls.dwLineID = source_line.dwLineID;
+                    line_controls.dwControlType =
+                        MIXERCONTROL_CONTROLTYPE_VOLUME;
+                    line_controls.cControls = 1;
+                    line_controls.cbmxctrl = sizeof(control);
+                    line_controls.pamxctrl = &control;
+                    if (mixerGetLineControlsA((HMIXEROBJ)mixer,
+                                              &line_controls,
+                                              MIXER_GETLINECONTROLSF_ONEBYTYPE)
+                        != MMSYSERR_NOERROR ||
+                        control.dwControlType !=
+                            MIXERCONTROL_CONTROLTYPE_VOLUME) {
+                        continue;
+                    }
+
+                    channel_count = source_line.cChannels;
+                    if (channel_count == 0u ||
+                        channel_count > 0x7fffffffu /
+                            sizeof(MIXERCONTROLDETAILS_UNSIGNED)) {
+                        continue;
+                    }
+                    values = (MIXERCONTROLDETAILS_UNSIGNED*)calloc(
+                        channel_count, sizeof(*values));
+                    if (values == NULL) continue;
+
+                    memset(&details, 0, sizeof(details));
+                    details.cbStruct = sizeof(details);
+                    details.dwControlID = control.dwControlID;
+                    details.cChannels = channel_count;
+                    details.cMultipleItems = 0;
+                    details.cbDetails = sizeof(*values);
+                    details.paDetails = values;
+                    if (mixerGetControlDetailsA((HMIXEROBJ)mixer, &details,
+                                                MIXER_GETCONTROLDETAILSF_VALUE)
+                        != MMSYSERR_NOERROR) {
+                        free(values);
+                        continue;
+                    }
+
+                    minimum = control.Bounds.lMinimum;
+                    maximum = control.Bounds.lMaximum;
+                    if (maximum <= minimum) {
+                        free(values);
+                        continue;
+                    }
+                    first = (float)((LONG)values[0].dwValue - minimum) /
+                            (float)(maximum - minimum);
+                    if (first < 0.0f) first = 0.0f;
+                    if (first > 1.0f) first = 1.0f;
+                    second = first;
+                    if (channel_count == 2u) {
+                        second = (float)((LONG)values[1].dwValue - minimum) /
+                                 (float)(maximum - minimum);
+                        if (second < 0.0f) second = 0.0f;
+                        if (second > 1.0f) second = 1.0f;
+                    }
+                    *music = first;
+                    *sfx = second;
+                    found = 1;
+                    free(values);
+                }
+            }
+        }
+        mixerClose((HMIXER)mixer);
+    }
+    return found;
+}
+
 static int s_platform_cd_audio_open;
 
 static int platform_cd_audio_command(const char* command, int* error_code)

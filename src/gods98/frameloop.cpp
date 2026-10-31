@@ -131,6 +131,7 @@ void window_runtime_state_initialize(void* window)
     s_window_runtime_state.window = window;
 }
 
+// FUNCTION: LEGORR 0x00477f80
 void window_runtime_display_caps_query_discard(void)
 {
     if (s_window_runtime_ops.device_caps_query != NULL) {
@@ -168,6 +169,7 @@ int window_runtime_message_filter(uint32_t message)
     return 1;
 }
 
+// FUNCTION: LEGORR 0x00478310
 int window_runtime_adjust_rect(WindowPortRect* rect)
 {
     if (rect == NULL) return 0;
@@ -1653,6 +1655,10 @@ int LegorrrRun(void)
     int rock_x = 24, rock_y = 24;
 
     while (!quit) {
+        /* Begin-frame adapter state is per iteration. The retail bit is
+         * cleared by FUN_0047c8d0 after RendererBeginFrameOnce; no renderer
+         * device is bound in this portable loop yet. */
+        renderer_begin_frame_once_reset();
         /* 1. Device capture for this frame (the finding-05 "writer" half):
          *    platform events -> canonical codes -> input tables. */
         PlatformEvent evbuf[32];
@@ -2131,6 +2137,11 @@ int LegorrrRun(void)
         }
 
         EngineTick(&ctx, dt);
+
+        /* Retail MainLoop calls RendererBeginFrameOnce after the registered
+         * per-frame tick callback returns and before its next frame-time
+         * calculation. EngineTick is that callback in this portable loop. */
+        (void)renderer_begin_frame_once();
 
         void* pixels = NULL;
         int   pitch = 0;

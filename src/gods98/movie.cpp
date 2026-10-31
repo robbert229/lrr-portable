@@ -1298,7 +1298,8 @@ int movie_seek_frame(Movie* m, uint32_t frame_index)
 
 #endif /* LEGORRR_BACKEND_MINIWIN */
 
-static int s_avi_playback_disabled;
+// GLOBAL: LEGORR 0x00533998
+static uint8_t s_avi_playback_disabled;
 static AviTimeHook s_avi_time_hook;
 static void* s_avi_time_context;
 static AviFrameUpdateHook s_avi_frame_update_hook;
@@ -1558,8 +1559,8 @@ uint32_t avi_stream_frame_count_get(const AviPlaybackState* state)
 // FUNCTION: LEGORR 0x0047ec60
 uint32_t AviPlaybackState::playback_frame_index_get() const
 {
-    if (s_avi_playback_disabled) return 0u;
-    return frame_index;
+    return frame_index &
+        ~(uint32_t)(0u - (uint32_t)(s_avi_playback_disabled != 0));
 }
 
 uint32_t avi_playback_frame_index_get(const AviPlaybackState* state)

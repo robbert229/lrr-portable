@@ -193,8 +193,10 @@ static inline uint8_t engine_voxel_byte(const EngineContext* ctx,
  * Returns 0 when the frame loop must quit, 1 otherwise. dt is seconds. */
 int EngineTick(EngineContext* ctx, float dt);
 
-/* Per-frame housekeeping (corpus EnginePreTick @ 0x4231f0). */
-void EnginePreTick(EngineContext* ctx);
+/* Retail-shaped EnginePreTick uses the context temporarily bound by
+ * EngineTick. Local callers can use the explicit adapter. */
+void EnginePreTick(void); /* FUN_004231f0 */
+void engine_pre_tick_adapter(EngineContext* ctx);
 
 /* Quit-poll probe (corpus KeepRunning @ 0x435940). 0 => quit requested. */
 typedef int (*EngineKeepRunningHook)(EngineContext* context, void* user);

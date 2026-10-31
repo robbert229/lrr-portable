@@ -170,7 +170,9 @@ void reward_screen_state_init(RewardScreenState* state, GameContext* game,
  * current game/runtime owner has not yet been wired to this binding point. */
 void reward_screen_runtime_bind(RewardScreenState* state,
                                const RewardScreenOps* ops);
-int reward_screen_tick(RewardScreenState* state, const RewardScreenOps* ops);
+int reward_screen_tick(void); /* FUN_00461410: active global reward screen */
+int reward_screen_tick_with_ops(RewardScreenState* state,
+                                const RewardScreenOps* ops);
 int reward_screen_tick_bound(void);
 /* Reward display cluster ABI adapters. These use the bound screen state and
  * renderer callbacks installed by reward_screen_runtime_bind. */
@@ -178,6 +180,7 @@ int reward_stats_panel_draw_bound(void);
 int reward_stats_text_format_bound(void);
 void reward_display_task_abi(GameTask* task, uint32_t draw_mask,
                              uint32_t task_number, float elapsed);
+int reward_score_task_text_draw(int displayed_task_count, float elapsed);
 void reward_flic_context_tick_abi(int* displayed_task_count,
                                   int* transition_stage, float* elapsed);
 void reward_screen_transition_tick(RewardScreenState* state,

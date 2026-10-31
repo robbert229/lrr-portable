@@ -2340,12 +2340,11 @@ int terrain_surface_point_project_offset(TerrainSurfaceGrid* grid,
 void grid_cell_read_surface_values(TerrainSurfaceGrid* grid, uint32_t x,
                                    uint32_t y, float out[12])
 {
-    uint32_t index;
-    const float* values;
-    if (!terrain_grid_cell_valid(grid, x, y) || grid->surface_vectors == NULL ||
-        out == NULL) return;
-    index = terrain_grid_cell_index(grid, x, y);
-    values = grid->surface_vectors + index * 12;
+    const float* values = grid->surface_vectors +
+                          ((size_t)y * grid->width + x) * 12u;
+    /* The reference forwards (row * width + column) to the terrain
+     * surface's four-corner property getter and copies its twelve-word
+     * result to the caller. The portable surface stores that payload inline. */
     out[0] = values[0];
     out[1] = values[1];
     out[2] = values[2];
@@ -2535,10 +2534,8 @@ int terrain_cell_edge_vector_query(TerrainSurfaceGrid* grid, uint32_t x,
 void grid_surface_write_at_xy(TerrainSurfaceGrid* grid, int x, int y,
                               uint8_t value)
 {
-    unsigned int index;
-    if (grid == NULL || grid->surface_values == NULL || x < 0 || y < 0 ||
-        (uint32_t)x >= grid->width || (uint32_t)y >= grid->height) return;
-    index = (uint32_t)y * grid->width + (uint32_t)x;
+    uint32_t index = (uint32_t)y * grid->width + (uint32_t)x;
+    /* FUN_00450700 delegates this exact index to the surface-value setter. */
     grid->surface_values[index] = value;
 }
 

@@ -46,6 +46,9 @@
 #include "crt/crt.hpp"
 #include "util.hpp"
 #include "select.hpp"
+#include "cmd.hpp"
+#include "priority_config_ports.hpp"
+#include "tutorial_hud_ports.hpp"
 #include "gods98/view.hpp"
 #include "gods98/string.hpp"
 
@@ -206,6 +209,11 @@ static float s_menu_wipe_clock;
 // GLOBAL: LEGORR 0x005574dc
 static float s_menu_plane_pan[2];
 static int s_main_menu_text_item_pending;
+/* The original reward-save entry point has no explicit front-end argument.
+ * Keep its active menu owner in the module so the mapped entry retains that
+ * ABI while the portable frame loop can still use its instance-taking
+ * adapter below. */
+static FrontEnd* s_reward_save_frontend;
 // GLOBAL: LEGORR 0x004dcd40
 static TextureSurface* s_interface_message_tab_info_text;
 // GLOBAL: LEGORR 0x004dcec4
@@ -1305,6 +1313,7 @@ void frontend_init(FrontEnd* fe)
     if (fe == NULL) {
         return;
     }
+    s_reward_save_frontend = fe;
     ui_panel_name_tables_init();
     s_main_menu_text_item_pending = 0;
     memset(fe, 0, sizeof(*fe));
@@ -2389,13 +2398,26 @@ int menu_enter(FrontEnd* fe, int mode)
     return 1;
 }
 
-/* SaveMenuOpenFromReward (FUN_00462030): the original runs a synchronous
- * save-slot dialog. The frame loop owns input/rendering here, so open that
- * same menu in save-selection mode and let it advance one frame at a time. */
+/* SaveMenuOpenFromReward (FUN_00462030) has no explicit front-end argument;
+ * it uses the active menu/global state and enters the reward save picker.
+ * The portable frame loop owns input/rendering, so menu_enter opens that same
+ * picker and the frame loop advances it one frame at a time. */
+namespace reference_target {
 // FUNCTION: LEGORR 0x00462030
+void save_menu_open_from_reward(void)
+{
+    if (s_reward_save_frontend != NULL) {
+        (void)menu_enter(s_reward_save_frontend, FE_STATE_SAVE_REWARD);
+    }
+}
+}
+
 int save_menu_open_from_reward(FrontEnd* fe)
 {
-    return menu_enter(fe, 4);
+    if (fe == NULL) return 0;
+    s_reward_save_frontend = fe;
+    reference_target::save_menu_open_from_reward();
+    return fe->open && fe->save_action;
 }
 
 void frontend_set_audio(FrontEnd* fe, struct AudioPlayer* audio)
@@ -2443,10 +2465,9 @@ void frontend_save_thumbnail_invalidate(FrontEnd* fe, int slot)
     }
 }
 
-/* The menu callback enters the scrolling-text path using the resources
- * captured while the front end is initialized. The frame loop consumes the
- * request on its next tick. */
-// FUNCTION: LEGORR 0x0040a0c0
+/* Adapter for the main-menu callback: request the credits event on the next
+ * frame. The actual scroll/draw loop is frameloop_credits(); this function's
+ * portable argument records are not the retail loop's renderer globals. */
 static void scrolling_text_display(void* text, void* font, void* background)
 {
     (void)text;
@@ -2614,7 +2635,8 @@ static FeEvent fe_activate(FrontEnd* fe)
      * credits display; the other plain triggers remain no-ops here. */
     if (it->kind == FE_ITEM_TRIGGER && fe->menu == FE_MENU_MAIN
         && s_stristr(it->label, "credits")) {
-        return FE_EVT_CREDITS;
+        main_menu_text_item();
+        return FE_EVT_NONE;
     }
 
     /* Next -> navigate submenus ("Menu%i" target) */
@@ -3847,8 +3869,33 @@ void* menu_text_record_make(const char* text, const TextureSurface* font_a,
 }
 #endif
 
-/* CaseInsensitiveNameTableLookup (FUN_0046b4d0): TooltipOverlayStateInitialize
- * installs these 38 names consecutively at DAT_0054bf68. Results are 1-based. */
+/* The native initializer publishes this list to DAT_0054bf68. */
+static const char* const s_tooltip_names[38] = {
+    "ToolTip_RadarBlock", "ToolTip_UnitSelect", "ToolTip_Construction",
+    "ToolTip_InterfaceMenu", "ToolTip_InterfaceMenuBackButton",
+    "ToolTip_MapBlock", "ToolTip_Priority", "ToolTip_InfoMenuContinue",
+    "ToolTip_InfoMenuDisableFuture", "ToolTip_RadarToggle",
+    "ToolTip_RadarObjectView", "ToolTip_RadarZoomIn",
+    "ToolTip_RadarZoomOut", "ToolTip_RadarMapView",
+    "ToolTip_InfoDockGoto", "ToolTip_InfoDockClose",
+    "ToolTip_TopPanelCallToArms", "ToolTip_TopPanelInfo",
+    "ToolTip_TopPanelOptions", "ToolTip_TopPanelPriorities",
+    "ToolTip_PriorityDisable", "ToolTip_PriorityUpOne",
+    "ToolTip_PriorityReset", "ToolTip_CamControlZoomIn",
+    "ToolTip_CamControlZoomOut", "ToolTip_CamControlCycle",
+    "ToolTip_CamControlRotate", "ToolTip_SideBar_Ore",
+    "ToolTip_SideBar_Crystals", "ToolTip_Close",
+    "ToolTip_PreviousMessage", "ToolTip_NextMessage", "ToolTip_More",
+    "ToolTip_Back", "ToolTip_CamControlCycleMinifigur",
+    "ToolTip_Reward_Save", "ToolTip_Reward_Advance",
+    "ToolTip_FrontEnd_Back"
+};
+static const char* s_tooltip_name_table[38];
+
+/* CaseInsensitiveNameTableLookup (FUN_0046b4d0) searches the table published
+ * by TooltipOverlayStateInitialize. Results are one-based. The fallback to
+ * canonical labels keeps config-only callers usable before GameConfigInit's
+ * renderer setup path has initialized the global table in this port. */
 // FUNCTION: LEGORR 0x0046b4d0
 int case_insensitive_name_table_lookup(const char* name, int* out_index)
 {
@@ -3857,37 +3904,17 @@ int case_insensitive_name_table_lookup(const char* name, int* out_index)
      * and answers through the raw out pointer. Deviation: the name NULL
      * gate stays (the port's menu caller can pass a null optional name;
      * the corpus strides it blindly). */
-    static const char* const names[] = {
-        "ToolTip_RadarBlock", "ToolTip_UnitSelect", "ToolTip_Construction",
-        "ToolTip_InterfaceMenu", "ToolTip_InterfaceMenuBackButton",
-        "ToolTip_MapBlock", "ToolTip_Priority", "ToolTip_InfoMenuContinue",
-        "ToolTip_InfoMenuDisableFuture", "ToolTip_RadarToggle",
-        "ToolTip_RadarObjectView", "ToolTip_RadarZoomIn",
-        "ToolTip_RadarZoomOut", "ToolTip_RadarMapView",
-        "ToolTip_InfoDockGoto", "ToolTip_InfoDockClose",
-        "ToolTip_TopPanelCallToArms", "ToolTip_TopPanelInfo",
-        "ToolTip_TopPanelOptions", "ToolTip_TopPanelPriorities",
-        "ToolTip_PriorityDisable", "ToolTip_PriorityUpOne",
-        "ToolTip_PriorityReset", "ToolTip_CamControlZoomIn",
-        "ToolTip_CamControlZoomOut", "ToolTip_CamControlCycle",
-        "ToolTip_CamControlRotate", "ToolTip_SideBar_Ore",
-        "ToolTip_SideBar_Crystals", "ToolTip_Close",
-        "ToolTip_PreviousMessage", "ToolTip_NextMessage", "ToolTip_More",
-        "ToolTip_Back", "ToolTip_CamControlCycleMinifigur",
-        "ToolTip_Reward_Save", "ToolTip_Reward_Advance",
-        "ToolTip_FrontEnd_Back",
-    };
     if (name == NULL) {
         return 0;
     }
-    const char* const* p = names;
     int index = 1;
-    while (p < names + (sizeof(names) / sizeof(names[0]))) {
-        if (strcasecmp_lite(name, *p) == 0) {
+    while (index <= 38) {
+        const char* candidate = s_tooltip_name_table[index - 1];
+        if (candidate == NULL) candidate = s_tooltip_names[index - 1];
+        if (strcasecmp_lite(name, candidate) == 0) {
             *out_index = index;
             return 1;
         }
-        ++p;
         ++index;
     }
     return 0;
@@ -3993,51 +4020,62 @@ int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
 // FUNCTION: LEGORR 0x0045a030
 void ui_panel_name_tables_init(void)
 {
-    static const char* const names[12] = {
-        "Panel_Radar", "Panel_RadarFill", "Panel_RadarOverlay",
-        "Panel_Messages", "Panel_MessagesSide", "Panel_CrystalSideBar",
-        "Panel_TopPanel", "Panel_Information", "Panel_PriorityList",
-        "Panel_CameraControl", "Panel_InfoDock", "Panel_Encyclopedia"
-    };
-    static const char* indexed[12][24] = {{ NULL }};
-    indexed[0][0] = "PanelButton_Radar_Toggle";
-    indexed[0][1] = "PanelButton_Radar_TaggedObjectView";
-    indexed[0][2] = "PanelButton_Radar_ZoomIn";
-    indexed[0][3] = "PanelButton_Radar_ZoomOut";
-    indexed[0][4] = "PanelButton_Radar_MapView";
-    indexed[5][0] = "PanelButton_CrystalSideBar_Ore";
-    indexed[5][1] = "PanelButton_CrystalSideBar_Crystals";
-    indexed[6][0] = "PanelButton_TopPanel_Options";
-    indexed[6][1] = "PanelButton_TopPanel_Priorities";
-    indexed[6][2] = "PanelButton_TopPanel_CallToArms";
-    indexed[7][0] = "PanelButton_Information_Toggle";
-    indexed[7][1] = "PanelButton_Information_Function";
-    indexed[8][0] = "PanelButton_PriorityList_Disable0";
-    indexed[8][1] = "PanelButton_PriorityList_Disable1";
-    indexed[8][2] = "PanelButton_PriorityList_Disable2";
-    indexed[8][3] = "PanelButton_PriorityList_Disable3";
-    indexed[8][4] = "PanelButton_PriorityList_Disable4";
-    indexed[8][5] = "PanelButton_PriorityList_Disable5";
-    indexed[8][6] = "PanelButton_PriorityList_Disable6";
-    indexed[8][7] = "PanelButton_PriorityList_Disable7";
-    indexed[8][8] = "PanelButton_PriorityList_UpOne1";
-    indexed[8][9] = "PanelButton_PriorityList_UpOne2";
-    indexed[8][10] = "PanelButton_PriorityList_UpOne3";
-    indexed[8][11] = "PanelButton_PriorityList_UpOne4";
-    indexed[8][12] = "PanelButton_PriorityList_UpOne5";
-    indexed[8][13] = "PanelButton_PriorityList_UpOne6";
-    indexed[8][14] = "PanelButton_PriorityList_UpOne7";
-    indexed[8][15] = "PanelButton_PriorityList_UpOne8";
-    indexed[8][16] = "PanelButton_PriorityList_Close";
-    indexed[8][17] = "PanelButton_PriorityList_Reset";
-    indexed[9][0] = "PanelButton_CameraControl_ZoomIn";
-    indexed[9][1] = "PanelButton_CameraControl_ZoomOut";
-    indexed[9][2] = "PanelButton_CameraControl_Cycle";
-    indexed[9][3] = "PanelButton_CameraControl_Rotate";
-    indexed[10][0] = "PanelButton_InfoDock_Goto";
-    indexed[10][1] = "PanelButton_InfoDock_Close";
-    indexed[11][0] = "PanelButton_Encyclopedia_Close";
-    ui_panel_name_tables_install(names, indexed, 12u);
+    /* Keep the writes in the same table order and slot positions as the
+     * original's global pointer stores. */
+    s_ui_panel_name_count = 12u;
+    s_ui_panel_name_slot_count = 24u;
+    s_ui_panel_indexed_name_count = 12u;
+    s_ui_panel_names[0] = "Panel_Radar";
+    s_ui_panel_names[1] = "Panel_RadarFill";
+    s_ui_panel_names[2] = "Panel_RadarOverlay";
+    s_ui_panel_names[3] = "Panel_Messages";
+    s_ui_panel_names[4] = "Panel_MessagesSide";
+    s_ui_panel_names[5] = "Panel_CrystalSideBar";
+    s_ui_panel_names[6] = "Panel_TopPanel";
+    s_ui_panel_names[7] = "Panel_Information";
+    s_ui_panel_names[8] = "Panel_PriorityList";
+    s_ui_panel_names[9] = "Panel_CameraControl";
+    s_ui_panel_names[10] = "Panel_InfoDock";
+    s_ui_panel_names[11] = "Panel_Encyclopedia";
+
+    s_ui_panel_indexed_names[0][0] = "PanelButton_Radar_Toggle";
+    s_ui_panel_indexed_names[0][1] = "PanelButton_Radar_TaggedObjectView";
+    s_ui_panel_indexed_names[0][2] = "PanelButton_Radar_ZoomIn";
+    s_ui_panel_indexed_names[0][3] = "PanelButton_Radar_ZoomOut";
+    s_ui_panel_indexed_names[0][4] = "PanelButton_Radar_MapView";
+    s_ui_panel_indexed_names[5][0] = "PanelButton_CrystalSideBar_Ore";
+    s_ui_panel_indexed_names[5][1] = "PanelButton_CrystalSideBar_Crystals";
+    s_ui_panel_indexed_names[6][0] = "PanelButton_TopPanel_Options";
+    s_ui_panel_indexed_names[6][1] = "PanelButton_TopPanel_Priorities";
+    s_ui_panel_indexed_names[6][2] = "PanelButton_TopPanel_CallToArms";
+    s_ui_panel_indexed_names[7][0] = "PanelButton_Information_Toggle";
+    s_ui_panel_indexed_names[7][1] = "PanelButton_Information_Function";
+    s_ui_panel_indexed_names[8][0] = "PanelButton_PriorityList_Disable1";
+    s_ui_panel_indexed_names[8][1] = "PanelButton_PriorityList_Disable2";
+    s_ui_panel_indexed_names[8][2] = "PanelButton_PriorityList_Disable3";
+    s_ui_panel_indexed_names[8][3] = "PanelButton_PriorityList_Disable4";
+    s_ui_panel_indexed_names[8][4] = "PanelButton_PriorityList_Disable5";
+    s_ui_panel_indexed_names[8][5] = "PanelButton_PriorityList_Disable6";
+    s_ui_panel_indexed_names[8][6] = "PanelButton_PriorityList_Disable7";
+    s_ui_panel_indexed_names[8][7] = "PanelButton_PriorityList_Disable8";
+    s_ui_panel_indexed_names[8][8] = "PanelButton_PriorityList_Disable9";
+    s_ui_panel_indexed_names[8][9] = "PanelButton_PriorityList_UpOne1";
+    s_ui_panel_indexed_names[8][10] = "PanelButton_PriorityList_UpOne2";
+    s_ui_panel_indexed_names[8][11] = "PanelButton_PriorityList_UpOne3";
+    s_ui_panel_indexed_names[8][12] = "PanelButton_PriorityList_UpOne4";
+    s_ui_panel_indexed_names[8][13] = "PanelButton_PriorityList_UpOne5";
+    s_ui_panel_indexed_names[8][14] = "PanelButton_PriorityList_UpOne6";
+    s_ui_panel_indexed_names[8][15] = "PanelButton_PriorityList_UpOne7";
+    s_ui_panel_indexed_names[8][16] = "PanelButton_PriorityList_UpOne8";
+    s_ui_panel_indexed_names[8][17] = "PanelButton_PriorityList_Close";
+    s_ui_panel_indexed_names[8][18] = "PanelButton_PriorityList_Reset";
+    s_ui_panel_indexed_names[9][0] = "PanelButton_CameraControl_ZoomIn";
+    s_ui_panel_indexed_names[9][1] = "PanelButton_CameraControl_ZoomOut";
+    s_ui_panel_indexed_names[9][2] = "PanelButton_CameraControl_CycleBuildings";
+    s_ui_panel_indexed_names[9][3] = "PanelButton_CameraControl_Rotate";
+    s_ui_panel_indexed_names[10][0] = "PanelButton_InfoDock_Goto";
+    s_ui_panel_indexed_names[10][1] = "PanelButton_InfoDock_Close";
+    s_ui_panel_indexed_names[11][0] = "PanelButton_Encyclopedia_Close";
 }
 
 static ToolTipIconConfigHooks s_tooltip_icon_config_hooks;
@@ -5136,14 +5174,24 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value)
 static int      s_band_mode;
 /* Corpus records span DAT_0054c000..DAT_0055235f at 0x27c-byte strides;
  * the update walk's exclusive flag bound is DAT_0055235c (record 39's
- * +0x278 field), so the timestamp band has 40 records. */
+ * +0x278 field), so the timestamp band has 40 records. Tooltip overlay
+ * initialization clears records 0 through 38 and leaves record 39 intact. */
 // GLOBAL: LEGORR 0x0054c000
 static TimedEffectRecord s_timed_effect_records[TIMED_EFFECT_RECORD_COUNT];
+/* DAT_0054bf3c is the tooltip duration threshold (scale * 25). Timed-effect
+ * timestamp reset uses these same float bits as its fallback time value. */
 // GLOBAL: LEGORR 0x0054bf3c
 static uint32_t s_timed_effect_tick;
 // GLOBAL: LEGORR 0x004db904
-static int32_t  s_layout_position[LAYOUT_POSITION_ENTRIES]
-                                  [LAYOUT_POSITION_STRIDE];
+typedef union HelpWindowLayoutWord {
+    uint32_t u;
+    int32_t i;
+    float f;
+} HelpWindowLayoutWord;
+static HelpWindowLayoutWord s_layout_position[LAYOUT_POSITION_ENTRIES]
+                                              [LAYOUT_POSITION_STRIDE];
+static const char* s_layout_position_text[LAYOUT_POSITION_ENTRIES];
+static int32_t s_layout_position_debug[LAYOUT_POSITION_ENTRIES][2];
 static float s_help_window_button_rects[LAYOUT_POSITION_ENTRIES][4];
 static int (*s_ui_resource_reposition_hook)(uint32_t handle, int x, int y);
 static float s_help_background_offset_x;
@@ -5154,7 +5202,7 @@ static uint32_t s_help_background_handle;
 static uint32_t s_help_text_area_handle;
 static char s_help_window_labels[3][256];
 static char s_tooltip_info_strings[9][256];
-static uint32_t s_tooltip_overlay_scratch[0x1839];
+static TooltipOverlayState s_tooltip_overlay_state;
 static AdvisorTutorialIconLoadFn s_tutorial_icon_load;
 static AdvisorTutorialIconInitializeFn s_tutorial_icon_initialize;
 static void* s_tutorial_icon_context;
@@ -5276,7 +5324,9 @@ void ui_mode_resource_positions_apply(void)
         if (handle != 0u) {
             if (s_ui_resource_reposition_hook != NULL) {
                 (void)s_ui_resource_reposition_hook(
-                    handle, s_layout_position[i][0], s_layout_position[i][1]);
+                    handle,
+                    crt_float_to_long(s_layout_position[i][0].f),
+                    crt_float_to_long(s_layout_position[i][1].f));
             }
         }
     }
@@ -5418,9 +5468,6 @@ static int help_window_button_record_parse(const char* value, int* x, int* y,
             return 0;
         }
         const int parsed = atoi(cursor);
-        if (parsed < -32768 || parsed > 32767) {
-            return 0;
-        }
         *dimensions[i] = parsed;
         cursor = i < 3 ? separator + 1 : separator;
     }
@@ -6117,8 +6164,7 @@ void advisor_text_box_extent_hook_set(AdvisorTextBoxExtentFn hook,
 
 /* AdvisorTextBoxRecordCommit (FUN_0046a9e0): apply the integer extents,
  * retain the last floating geometry, and clear the pending-layout bit. */
-// FUNCTION: LEGORR 0x0046a9e0
-void advisor_text_box_record_commit(AdvisorTextBoxLayoutState* state)
+void advisor_text_box_record_commit_state(AdvisorTextBoxLayoutState* state)
 {
     if (state == NULL) return;
     if (s_advisor_text_box_extent_hook != NULL) {
@@ -6130,8 +6176,7 @@ void advisor_text_box_record_commit(AdvisorTextBoxLayoutState* state)
 
 /* TextLayoutGeometryStoreAndApply (FUN_0046a950): save the requested box,
  * derive its lower bound from the font line height, then commit it. */
-// FUNCTION: LEGORR 0x0046a950
-void text_layout_geometry_store_and_apply(
+void text_layout_geometry_store_and_apply_state(
     AdvisorTextBoxLayoutState* state, uint32_t object_id,
     uint32_t request_id, float value, const float geometry[4],
     uint32_t mode)
@@ -6146,15 +6191,15 @@ void text_layout_geometry_store_and_apply(
     state->geometry[3] = geometry[3];
     state->bottom = geometry[1] + geometry[3] - state->font_line_height;
     state->mode = mode;
-    advisor_text_box_record_commit(state);
+    advisor_text_box_record_commit_state(state);
 }
 
-/* UiTextEntryLoad (FUN_0046b520): a leading @ selects an image resource;
- * ordinary text translates escaped newlines and underscores, then resets
- * the entry's animation/stat fields. */
-// FUNCTION: LEGORR 0x0046b520
-void ui_text_entry_load(UiTextEntryState* entry, const char* source,
-                        UiTextImageLoadFn image_load, void* context)
+/* UiTextEntryStateLoad is the portable state adapter for the UI text slot.
+ * The target at 0x0046b520 takes a slot index and uses renderer-owned global
+ * text buffers, font state, and draw context, none of which this record owns.
+ * Keep this helper unmapped until that runtime owner is available. */
+void ui_text_entry_state_load(UiTextEntryState* entry, const char* source,
+                              UiTextImageLoadFn image_load, void* context)
 {
     const char* input;
     size_t out = 0;
@@ -6199,43 +6244,18 @@ const char* tooltip_info_string_peek(int index)
     return (index >= 0 && index < 9) ? s_tooltip_info_strings[index] : NULL;
 }
 
-/* TooltipOverlayStateInitialize (FUN_0046b1d0): install the 38 canonical
- * tooltip labels, capture the font/overlay values, derive 1.4x/0.6x colors,
- * clamp those colors to [0,1], and clear transient tooltip storage. */
-// FUNCTION: LEGORR 0x0046b1d0
-void tooltip_overlay_state_initialize(
+static void tooltip_overlay_state_fill(
     TooltipOverlayState* state, void* font,
     uint32_t value2, uint32_t value3, float scale,
     uint32_t value5, uint32_t value6, uint32_t value7,
     float color_r, float color_g, float color_b,
-    TooltipFontMetricQueryFn metric_query, void* context)
+    uint32_t font_metric)
 {
-    static const char* const names[38] = {
-        "ToolTip_RadarBlock", "ToolTip_UnitSelect", "ToolTip_Construction",
-        "ToolTip_InterfaceMenu", "ToolTip_InterfaceMenuBackButton",
-        "ToolTip_MapBlock", "ToolTip_Priority", "ToolTip_InfoMenuContinue",
-        "ToolTip_InfoMenuDisableFuture", "ToolTip_RadarToggle",
-        "ToolTip_RadarObjectView", "ToolTip_RadarZoomIn",
-        "ToolTip_RadarZoomOut", "ToolTip_RadarMapView",
-        "ToolTip_InfoDockGoto", "ToolTip_InfoDockClose",
-        "ToolTip_TopPanelCallToArms", "ToolTip_TopPanelInfo",
-        "ToolTip_TopPanelOptions", "ToolTip_TopPanelPriorities",
-        "ToolTip_PriorityDisable", "ToolTip_PriorityUpOne",
-        "ToolTip_PriorityReset", "ToolTip_CamControlZoomIn",
-        "ToolTip_CamControlZoomOut", "ToolTip_CamControlCycle",
-        "ToolTip_CamControlRotate", "ToolTip_SideBar_Ore",
-        "ToolTip_SideBar_Crystals", "ToolTip_Close",
-        "ToolTip_PreviousMessage", "ToolTip_NextMessage", "ToolTip_More",
-        "ToolTip_Back", "ToolTip_CamControlCycleMinifigur",
-        "ToolTip_Reward_Save", "ToolTip_Reward_Advance",
-        "ToolTip_FrontEnd_Back"
-    };
     int i;
     if (state == NULL) return;
-    for (i = 0; i < 38; ++i) state->names[i] = names[i];
+    for (i = 0; i < 38; ++i) state->names[i] = s_tooltip_names[i];
     state->font = font;
-    state->font_metric = metric_query != NULL
-        ? metric_query(font, context) : 0u;
+    state->font_metric = font_metric;
     state->values[0] = value2;
     state->values[1] = value3;
     state->values[2] = value5;
@@ -6259,7 +6279,50 @@ void tooltip_overlay_state_initialize(
         if (state->color_low[i] > 1.0f) state->color_low[i] = 1.0f;
         if (state->color_low[i] < 0.0f) state->color_low[i] = 0.0f;
     }
-    memset(s_tooltip_overlay_scratch, 0, sizeof(s_tooltip_overlay_scratch));
+}
+
+/* Adapter retained for callers that own a separate state object. This is not
+ * the mapped target ABI; the native entry below writes the module globals. */
+void tooltip_overlay_state_initialize_state(
+    TooltipOverlayState* state, void* font,
+    uint32_t value2, uint32_t value3, float scale,
+    uint32_t value5, uint32_t value6, uint32_t value7,
+    float color_r, float color_g, float color_b,
+    TooltipFontMetricQueryFn metric_query, void* context)
+{
+    const uint32_t metric = metric_query != NULL
+        ? metric_query(font, context) : object_field_be4_dword_get(font);
+    tooltip_overlay_state_fill(state, font, value2, value3, scale,
+                               value5, value6, value7,
+                               color_r, color_g, color_b, metric);
+}
+
+/* TooltipOverlayStateInitialize @ 0x46b1d0: the native ten-argument entry
+ * publishes its fixed labels and geometry/color globals, sets the timed
+ * tooltip duration in 25-unit ticks, and clears the first 39 0x27c-byte
+ * overlay records. Record 39 remains the traversal sentinel. */
+// FUNCTION: LEGORR 0x0046b1d0
+void tooltip_overlay_state_initialize(
+    void* font, uint32_t value2, uint32_t value3, float scale,
+    uint32_t value5, uint32_t value6, uint32_t value7,
+    float color_r, float color_g, float color_b)
+{
+    float threshold = scale * 25.0f;
+    int i;
+    tooltip_overlay_state_fill(&s_tooltip_overlay_state, font,
+                               value2, value3, scale,
+                               value5, value6, value7,
+                               color_r, color_g, color_b,
+                               object_field_be4_dword_get(font));
+    for (i = 0; i < 38; ++i) s_tooltip_name_table[i] = s_tooltip_names[i];
+    memcpy(&s_timed_effect_tick, &threshold, sizeof(s_timed_effect_tick));
+    memset(s_timed_effect_records, 0,
+           (size_t)0x1839u * sizeof(uint32_t));
+}
+
+void tooltip_overlay_state_current(TooltipOverlayState* state)
+{
+    if (state != NULL) *state = s_tooltip_overlay_state;
 }
 
 // FUNCTION: LEGORR 0x00418450
@@ -6305,6 +6368,9 @@ void help_window_info_config_strings_load(
     }
 }
 
+static void help_window_button_layout_load_with_ops(
+    BlockFile* cfg, const FeHelpWindowResourceOps* ops);
+
 // FUNCTION: LEGORR 0x004181b0
 void help_window_resources_init(BlockFile* cfg,
                                 const FeHelpWindowResourceOps* ops)
@@ -6344,11 +6410,7 @@ void help_window_resources_init(BlockFile* cfg,
         }
     }
 
-    help_window_button_layout_load(
-        cfg, s_help_background_offset_x, s_help_background_offset_y,
-        ops != NULL ? ops->resource_load : NULL,
-        ops != NULL ? ops->text_load : NULL,
-        ops != NULL ? ops->context : NULL);
+    help_window_button_layout_load_with_ops(cfg, ops);
 
     const char* text_area = block_get_strptr(cfg,
         "HelpWindow::TextWindowArea");
@@ -6379,12 +6441,8 @@ void help_window_resources_init(BlockFile* cfg,
     }
 }
 
-// FUNCTION: LEGORR 0x004185f0
-void help_window_button_layout_load(
-    BlockFile* cfg, float offset_x, float offset_y,
-    uint32_t (*resource_load)(void* context, const char* name, int x, int y),
-    void (*text_load)(void* context, int slot, const char* name),
-    void* context)
+static void help_window_button_layout_load_with_ops(
+    BlockFile* cfg, const FeHelpWindowResourceOps* ops)
 {
     static const char* const keys[LAYOUT_POSITION_ENTRIES] = {
         "HelpWindow::ContinueButton", "HelpWindow::CancelFutureButton"
@@ -6397,8 +6455,8 @@ void help_window_button_layout_load(
                                              &resource_a, &resource_b, &text)) {
             continue;
         }
-        const float final_x = (float)x + offset_x;
-        const float final_y = (float)y + offset_y;
+        const float final_x = (float)x + s_help_background_offset_x;
+        const float final_y = (float)y + s_help_background_offset_y;
 
         char first[256], second[256];
         const char* end = strchr(resource_a, ':');
@@ -6418,19 +6476,58 @@ void help_window_button_layout_load(
 
         help_window_button_rect_set(i, final_x, final_y,
                                     (float)width, (float)height);
-        layout_position_set(i, (int)final_x, (int)final_y);
-        const uint32_t handle_a = resource_load != NULL
-            ? resource_load(context, first, 0, 0) : 0u;
-        const uint32_t handle_b = resource_load != NULL
-            ? resource_load(context, second, 0, 0) : 0u;
-        selection_state_handle_slot_set(0, i, handle_a);
-        selection_state_handle_slot_set(1, i, handle_b);
-        if (i == 1) {
-            selection_state_handle_extra_set(handle_b);
+        s_layout_position[i][0].f = final_x;
+        s_layout_position[i][1].f = final_y;
+        s_layout_position[i][2].f = (float)width;
+        s_layout_position[i][3].f = (float)height;
+        s_layout_position[i][4].u = ops != NULL &&
+            ops->resource_load != NULL
+            ? ops->resource_load(ops->context, first, 0, 0) : 0u;
+        s_layout_position[i][5].u = ops != NULL &&
+            ops->resource_load != NULL
+            ? ops->resource_load(ops->context, second, 0, 0) : 0u;
+        s_layout_position_text[i] = text;
+        if (ops != NULL && ops->text_load != NULL) {
+            ops->text_load(ops->context, i == 0 ? 8 : 9, text);
         }
-        if (text_load != NULL) {
-            text_load(context, i == 0 ? 8 : 9, text);
+    }
+}
+
+// FUNCTION: LEGORR 0x004185f0
+void help_window_button_layout_load(BlockFile* cfg, BlockFile* config_root)
+{
+    /* The reference passes the parsed value table and its config-path root.
+     * block_get_strptr accepts the resolved HelpWindow path directly. The
+     * renderer-owned resource handles and text-entry table are unavailable
+     * through these two config arguments, so only the config-backed layout
+     * portion is performed by this address-level body. */
+    static const char* const keys[LAYOUT_POSITION_ENTRIES] = {
+        "HelpWindow::ContinueButton", "HelpWindow::CancelFutureButton"
+    };
+    (void)config_root;
+    for (int i = 0; i < LAYOUT_POSITION_ENTRIES; ++i) {
+        const char* const value = block_get_strptr(cfg, keys[i]);
+        int x, y, width, height;
+        const char *resource_a, *resource_b, *text;
+        if (!help_window_button_record_parse(value, &x, &y, &width, &height,
+                                             &resource_a, &resource_b,
+                                             &text)) {
+            continue;
         }
+        (void)resource_a;
+        (void)resource_b;
+        (void)text;
+        const float final_x = (float)x + s_help_background_offset_x;
+        const float final_y = (float)y + s_help_background_offset_y;
+        help_window_button_rect_set(i, final_x, final_y,
+                                    (float)width, (float)height);
+        s_layout_position[i][0].f = final_x;
+        s_layout_position[i][1].f = final_y;
+        s_layout_position[i][2].f = (float)width;
+        s_layout_position[i][3].f = (float)height;
+        s_layout_position[i][4].u = 0u;
+        s_layout_position[i][5].u = 0u;
+        s_layout_position_text[i] = text;
     }
 }
 
@@ -6492,8 +6589,8 @@ int help_window_button_hit_test(uint32_t x, uint32_t y, int mode,
 void layout_position_set(int entry, int x, int y)
 {
     if (entry >= 0 && entry < LAYOUT_POSITION_ENTRIES) {
-        s_layout_position[entry][0] = x;
-        s_layout_position[entry][1] = y;
+        s_layout_position_debug[entry][0] = x;
+        s_layout_position_debug[entry][1] = y;
     }
 }
 
@@ -6503,10 +6600,10 @@ int layout_position_get(int entry, int* x, int* y)
         return 0;
     }
     if (x != NULL) {
-        *x = s_layout_position[entry][0];
+        *x = s_layout_position_debug[entry][0];
     }
     if (y != NULL) {
-        *y = s_layout_position[entry][1];
+        *y = s_layout_position_debug[entry][1];
     }
     return 1;
 }
@@ -6546,14 +6643,16 @@ int menu_options_flag(void)
 }
 
 /* OptionMusicDefault (FUN_00414e10) queries a WinMM audio-CD mixer source
- * and returns its current value, or zero when no such source is available.
- * The port's streamed music has no CD mixer source, so it follows that
- * unavailable-source result instead of treating the DirectSound/WAV gain as
- * a CD volume. */
+ * and returns the rounded mean channel level on the original 0..9 scale,
+ * or zero when no such source is available. Backends without a hardware CD
+ * mixer return unavailable rather than substituting streamed-output gain. */
 // FUNCTION: LEGORR 0x00414e10
 int option_music_default(void)
 {
-    return 0;
+    float left;
+    float right;
+    if (!audio_cd_mixer_volume_get(&left, &right)) return 0;
+    return crt_float_to_long((left + right) * 4.5f);
 }
 
 void frontend_flow_word_set(int which, int value)
@@ -8205,6 +8304,211 @@ void priority_image_state_peek(int32_t* state, uint32_t* flags)
     if (flags != NULL) {
         *flags = s_priority_image_flags;
     }
+}
+
+/* The three priority loaders consume the two BlockFile views passed by the
+ * original engine: `names` identifies the config paths and entry names,
+ * while `values` supplies their strings.  Keep their loaded tables here in
+ * command-kind/order form so callers can use the same records without
+ * manufacturing PriorityConfigRows. */
+static PriorityConfigState s_priority_config_loaded;
+static int s_priority_alias_index[27];
+
+static int frontend_config_fields(const char* value, char* storage,
+                                  unsigned int storage_size,
+                                  char** fields, unsigned int field_count,
+                                  char separator)
+{
+    unsigned int i;
+    unsigned int found = 1;
+    size_t length;
+    if (value == NULL || storage == NULL || fields == NULL ||
+        storage_size == 0 || field_count == 0) return 0;
+    length = strlen(value);
+    if (length >= storage_size) return 0;
+    memcpy(storage, value, length + 1);
+    fields[0] = storage;
+    for (i = 0; i < (unsigned int)length; ++i) {
+        if (storage[i] == separator) {
+            storage[i] = '\0';
+            if (found < field_count) fields[found] = storage + i + 1;
+            ++found;
+        }
+    }
+    return found == field_count;
+}
+
+static int frontend_config_path(char* out, size_t out_size,
+                                const char* prefix, const char* group,
+                                const char* key)
+{
+    size_t length = 0;
+    const char* parts[3];
+    int p;
+    parts[0] = prefix;
+    parts[1] = group;
+    parts[2] = key;
+    if (out == NULL || out_size == 0) return 0;
+    out[0] = '\0';
+    for (p = 0; p < 3; ++p) {
+        size_t part_length;
+        if (parts[p] == NULL || parts[p][0] == '\0') continue;
+        part_length = strlen(parts[p]);
+        if (length != 0) {
+            if (length + 2 >= out_size) return 0;
+            out[length++] = ':';
+            out[length++] = ':';
+        }
+        if (length + part_length >= out_size) return 0;
+        memcpy(out + length, parts[p], part_length);
+        length += part_length;
+        out[length] = '\0';
+    }
+    return length != 0;
+}
+
+static int frontend_config_boolean(const char* value)
+{
+    if (value == NULL) return 2;
+    if (strcasecmp_lite(value, "TRUE") == 0 ||
+        strcasecmp_lite(value, "YES") == 0 ||
+        strcasecmp_lite(value, "ON") == 0) return 1;
+    if (strcasecmp_lite(value, "FALSE") == 0 ||
+        strcasecmp_lite(value, "NO") == 0 ||
+        strcasecmp_lite(value, "OFF") == 0) return 0;
+    return 2;
+}
+
+/* FUNCTION: LEGORR 0x0045CDC0 */
+// FUNCTION: LEGORR 0x0045cdc0
+void frontend_priority_images_config_load(BlockFile* values,
+                                          BlockFile* names)
+{
+    BlockFile* name_cfg = names != NULL ? names : values;
+    BlockFile* value_cfg = values != NULL ? values : names;
+    BlockRec* section;
+    BlockRec* entry;
+    if (name_cfg == NULL || value_cfg == NULL) return;
+    s_priority_config_loaded.image_count = 0;
+    section = block_subgroup(name_cfg, "PriorityImages");
+    for (entry = block_first_child(section); entry != NULL;
+         entry = block_next_sibling(entry)) {
+        char path[512];
+        char row_storage[512];
+        char name_storage[256];
+        char* fields[4];
+        char* name_fields[2];
+        const char* entry_name = block_name(entry);
+        const char* value;
+        int kind;
+        int alias = -1;
+        int name_count;
+        if (entry_name == NULL ||
+            !cmd_kind_by_name(entry_name, &kind) || kind < 0 || kind >= 27 ||
+            !frontend_config_path(path, sizeof(path), NULL,
+                                  "PriorityImages", entry_name)) continue;
+        value = block_get_strptr(value_cfg, path);
+        if (value == NULL) value = block_value(entry);
+        if (!frontend_config_fields(value, row_storage,
+                (unsigned int)sizeof(row_storage), fields, 4, ':')) continue;
+        name_count = frontend_config_fields(fields[0], name_storage,
+                (unsigned int)sizeof(name_storage), name_fields, 2, '|') ? 2 : 1;
+        s_priority_config_loaded.labels[kind] = string_duplicate(name_fields[0]);
+        s_priority_config_loaded.images[kind][0] =
+            texture_get_or_load(NULL, fields[1]);
+        s_priority_config_loaded.images[kind][1] =
+            texture_get_or_load(NULL, fields[2]);
+        s_priority_config_loaded.images[kind][2] =
+            texture_get_or_load(NULL, fields[3]);
+        if (name_count == 2 && sound_alias_lookup(name_fields[1], &alias)) {
+            s_priority_alias_index[kind] = alias;
+            s_priority_config_loaded.sound_aliases[kind] =
+                string_duplicate(name_fields[1]);
+        }
+        ++s_priority_config_loaded.image_count;
+    }
+}
+
+/* FUNCTION: LEGORR 0x0045CF50 */
+// FUNCTION: LEGORR 0x0045cf50
+int frontend_priorities_config_load(BlockFile* values, BlockFile* names,
+                                    const char* section_name)
+{
+    BlockFile* name_cfg = names != NULL ? names : values;
+    BlockFile* value_cfg = values != NULL ? values : names;
+    char section_path[512];
+    BlockRec* section;
+    BlockRec* entry;
+    unsigned int count = 0;
+    s_priority_config_loaded.priority_count = 0;
+    if (name_cfg == NULL || value_cfg == NULL || section_name == NULL ||
+        !frontend_config_path(section_path, sizeof(section_path),
+                              section_name, "Priorities", NULL)) return 1;
+    section = block_subgroup(name_cfg, section_path);
+    for (entry = block_first_child(section); entry != NULL;
+         entry = block_next_sibling(entry)) {
+        char path[512];
+        const char* entry_name = block_name(entry);
+        const char* value;
+        int kind;
+        int enabled;
+        if (entry_name == NULL || !cmd_kind_by_name(entry_name, &kind)) continue;
+        if (!frontend_config_path(path, sizeof(path), section_name,
+                                  "Priorities", entry_name)) continue;
+        value = block_get_strptr(value_cfg, path);
+        if (value == NULL) value = block_value(entry);
+        enabled = frontend_config_boolean(value) == 1 ? 0 : 1;
+        s_priority_config_loaded.kinds[count] = (uint32_t)kind;
+        s_priority_config_loaded.weights[count] = 0x50 - (int)count * 5;
+        s_priority_config_loaded.enabled[count] = enabled;
+        priority_entry_order_value_set(kind,
+                                       s_priority_config_loaded.weights[count]);
+        priority_entry_state_set(kind, enabled);
+        ++count;
+        if (count >= 64) break;
+    }
+    s_priority_config_loaded.priority_count = count;
+    return 1;
+}
+
+/* FUNCTION: LEGORR 0x0045D060 */
+// FUNCTION: LEGORR 0x0045d060
+void frontend_priorities_image_positions_config_load(BlockFile* values,
+                                                      BlockFile* names)
+{
+    BlockFile* name_cfg = names != NULL ? names : values;
+    BlockFile* value_cfg = values != NULL ? values : names;
+    int i;
+    if (name_cfg == NULL || value_cfg == NULL) return;
+    for (i = 1; i <= 27; ++i) {
+        char index[16];
+        char path[512];
+        char pair_storage[128];
+        char* fields[2];
+        const char* value;
+        sprintf(index, "%d", i);
+        if (!frontend_config_path(path, sizeof(path), NULL,
+                                 "PrioritiesImagePositions", index)) continue;
+        if (block_find(name_cfg, path) == NULL) continue;
+        value = block_get_strptr(value_cfg, path);
+        if (value == NULL) continue;
+        if (!frontend_config_fields(value, pair_storage,
+                (unsigned int)sizeof(pair_storage), fields, 2, ':')) continue;
+        s_priority_config_loaded.positions[i - 1].x = atoi(fields[0]);
+        s_priority_config_loaded.positions[i - 1].y = atoi(fields[1]);
+        s_priority_config_loaded.positions[i - 1].visible = 1;
+    }
+    s_priority_config_loaded.position_count = 27;
+}
+
+void frontend_priority_config_state_get(PriorityConfigState* state)
+{
+    if (state != NULL) *state = s_priority_config_loaded;
+}
+
+int frontend_priority_sound_alias_get(int kind)
+{
+    return (kind >= 0 && kind < 27) ? s_priority_alias_index[kind] : -1;
 }
 
 /* UiRenderRecordCreate (FUN_0045da90): build the 0x3c corpus record —

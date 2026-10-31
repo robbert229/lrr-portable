@@ -29,8 +29,8 @@ static void ticker_00402220(EngineContext* c, float dt, float scale)
 
 static void ticker_00424600(EngineContext* c, float dt, float scale)
 {
-    (void)dt; (void)scale;
-    simtick_grid_cell_pass(c);
+    (void)dt;
+    simtick_grid_cell_pass(c, scale);
 }
 
 static void ticker_0040aa10(EngineContext* c, float dt, float scale)
@@ -52,8 +52,9 @@ static void ticker_0046f550(EngineContext* c, float dt, float scale)
 
 static void ticker_0040eab0(EngineContext* c, float dt, float scale)
 {
-    (void)scale;
-    simtick_ambient_spawn(c, dt);
+    (void)c;
+    (void)dt;
+    simtick_ambient_spawn_tick(scale);
 }
 
 static void ticker_004313b0(EngineContext* c, float dt, float scale)
@@ -257,10 +258,6 @@ void EngineRenderFrame(EngineContext* ctx, float dt, float scale, uint32_t* sim_
          * unlock need DAT_005560e0, DAT_005560d8 and DAT_005560f4, none of
          * which has a corresponding EngineContext/API handle. */
     }
-
-    /* FUN_00477fa0 is available as a renderer-owned once-per-frame hook and
-     * is unconditional at this point in the reference sequence. */
-    (void)renderer_begin_frame_once();
 
     /* World renderers (FUN_00435300/FUN_00454600), viewport update, primary
      * surface change-queue flush, and the preceding regular/editor surface

@@ -673,19 +673,13 @@ int osf_write_path(GameContext* ctx, int slot)
  * entering the same no-argument target path. */
 static GameContext* s_osf_read_reset_context;
 
-static void osf_read_state_reset_context(GameContext* ctx)
-{
-    if (ctx == NULL) {
-        return;
-    }
-    ctx->osf_count = 0;
-    ctx->osf_capacity = 0;
-}
-
 // FUNCTION: LEGORR 0x004592a0
 static void osf_read_state_reset(void)
 {
-    osf_read_state_reset_context(s_osf_read_reset_context);
+    GameContext* ctx = s_osf_read_reset_context;
+    if (ctx == NULL) return;
+    ctx->osf_count = 0;
+    ctx->osf_capacity = 0;
 }
 
 /* GameFileLengthGet (FUN_0047fca0): query the stream length and restore its

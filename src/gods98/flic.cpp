@@ -54,6 +54,14 @@ struct Flic {
     uint16_t* pix;    /* RGB555 frame buffer */
     uint8_t* rgba;    /* lazy RGBA32 conversion */
     int current_chunk;
+    int stream_mode;
+    FlicStreamOps stream_ops;
+    uint32_t stream_length;
+    uint8_t* stream_buffer;
+    uint32_t stream_buffer_capacity;
+    FlicChunk stream_chunk;
+    size_t stream_loop_cursor;
+    void (*stream_context_close)(void* context);
 };
 
 static uint16_t le16(const uint8_t* p)
@@ -255,6 +263,48 @@ static int fli_decode_chunk(Flic* f, const FlicChunk* ch)
     return 1;
 }
 
+static int flic_stream_buffer_reserve(Flic* f, uint32_t capacity)
+{
+    uint8_t* buffer;
+    if (f == NULL) return 0;
+    if (capacity <= f->stream_buffer_capacity) return 1;
+    buffer = (uint8_t*)realloc(f->stream_buffer, (size_t)capacity);
+    if (buffer == NULL) return 0;
+    f->stream_buffer = buffer;
+    f->stream_buffer_capacity = capacity;
+    return 1;
+}
+
+static int flic_stream_chunk_header_read(Flic* f)
+{
+    uint32_t size;
+    if (f == NULL || f->stream_mode == 0 ||
+        f->cursor > f->stream_length ||
+        f->stream_length - f->cursor < FLIC_CHUNK_HDR ||
+        !flic_stream_buffer_reserve(f, FLIC_CHUNK_HDR)) return 0;
+    if (!f->stream_ops.read_at(f->stream_ops.context, (uint32_t)f->cursor,
+                               f->stream_buffer, FLIC_CHUNK_HDR)) return 0;
+    size = le32(f->stream_buffer);
+    if (size < FLIC_CHUNK_HDR || size > f->stream_length - f->cursor)
+        return 0;
+    f->stream_chunk.data = f->stream_buffer;
+    f->stream_chunk.size = size;
+    f->stream_chunk.type = le16(f->stream_buffer + 4);
+    f->stream_chunk.count = le16(f->stream_buffer + 6);
+    return 1;
+}
+
+static int flic_stream_chunk_load(Flic* f)
+{
+    if (f == NULL || f->stream_mode == 0 ||
+        !flic_stream_buffer_reserve(f, f->stream_chunk.size)) return 0;
+    if (!f->stream_ops.read_at(f->stream_ops.context, (uint32_t)f->cursor,
+                               f->stream_buffer, f->stream_chunk.size))
+        return 0;
+    f->stream_chunk.data = f->stream_buffer;
+    return 1;
+}
+
 // FUNCTION: LEGORR 0x004844b0
 /* FlicFrameRecordWalk: walk the declared subrecords from the
  * 16-byte chunk header, advancing the byte cursor by each record's size. RAM
@@ -263,15 +313,23 @@ static int fli_decode_chunk(Flic* f, const FlicChunk* ch)
 int flic_frame_record_walk(Flic* f)
 {
     const FlicChunk* ch;
-    if (f == NULL || f->chunks == NULL || f->current_chunk < 0
-        || f->current_chunk >= f->chunk_n) {
+    if (f == NULL) {
         return 0;
     }
-    ch = &f->chunks[f->current_chunk];
+    if (f->stream_mode != 0) {
+        if (!flic_stream_chunk_load(f)) return 0;
+        ch = &f->stream_chunk;
+    }
+    else {
+        if (f->chunks == NULL || f->current_chunk < 0 ||
+            f->current_chunk >= f->chunk_n) return 0;
+        ch = &f->chunks[f->current_chunk];
+    }
     if (ch->type != 0xf1fau) {
         return 0;
     }
-    f->cursor = (size_t)(ch->data - f->raw) + FLIC_CHUNK_HDR;
+    if (f->stream_mode == 0)
+        f->cursor = (size_t)(ch->data - f->raw) + FLIC_CHUNK_HDR;
     if (!fli_decode_chunk(f, ch)) {
         return 0;
     }
@@ -282,38 +340,64 @@ int flic_frame_record_walk(Flic* f)
             uint32_t rec_size = le32(ch->data + pos);
             pos += rec_size;
         }
-        f->cursor = (size_t)(ch->data - f->raw) + pos;
+        if (f->stream_mode == 0)
+            f->cursor = (size_t)(ch->data - f->raw) + pos;
     }
     return 1;
 }
 
 // FUNCTION: LEGORR 0x00484720
-/* Both target handlers are no-ops in RAM mode. Their stream-mode paths need
- * the original file handle, seek position, and reallocatable scratch buffer;
- * those resources are not part of the in-memory Flic interface. */
+/* FlicChunkBufferAndContinueLK: RAM mode is a no-op. In stream mode, ensure
+ * the complete current chunk is in the growable scratch buffer. */
 int flic_chunk_buffer_and_continue_lk(Flic* f)
 {
-    (void)f;
+    if (f != NULL && f->stream_mode != 0) flic_stream_chunk_load(f);
     return 0;
 }
 
 // FUNCTION: LEGORR 0x004847d0
+/* FlicChunkBufferAndContinueType0B has the same successful stream path. The
+ * original uniquely returns 1 when scratch allocation fails. */
 int flic_chunk_buffer_and_continue_type0b(Flic* f)
 {
-    (void)f;
+    if (f != NULL && f->stream_mode != 0 &&
+        !flic_stream_buffer_reserve(f, f->stream_chunk.size)) return 1;
+    if (f != NULL && f->stream_mode != 0) flic_stream_chunk_load(f);
     return 0;
 }
 
 // FUNCTION: LEGORR 0x00484320
 /* FlicChunkWalk: advance through non-frame chunks until the next F1FA frame
- * is found. RAM mode has the complete chunk image already buffered, so LK
- * and type-0B use their observed no-op branches. */
+ * is found. The RAM branch uses the indexed image; stream mode reads a header
+ * then dispatches LK/type-0B through their seek-and-buffer handlers. */
 int flic_chunk_walk(Flic* f)
 {
     if (f == NULL) {
         return 0;
     }
     f->last_walk_frame_valid = 0;
+    if (f->stream_mode != 0) {
+        while (f->cursor < f->stream_length) {
+            uint32_t chunk_size;
+            uint16_t chunk_type;
+            if (!flic_stream_chunk_header_read(f)) return 0;
+            chunk_size = f->stream_chunk.size;
+            chunk_type = f->stream_chunk.type;
+            if (chunk_type == 0x000bu) {
+                flic_chunk_buffer_and_continue_type0b(f);
+            }
+            else if (chunk_type == 0x4b4cu) {
+                flic_chunk_buffer_and_continue_lk(f);
+            }
+            else if (chunk_type == 0xf1fau) {
+                f->last_walk_frame_valid = flic_frame_record_walk(f);
+                f->cursor += chunk_size;
+                return 0;
+            }
+            f->cursor += chunk_size;
+        }
+        return 0;
+    }
     if (f->chunks == NULL || f->chunk_n == 0) {
         return 0;
     }
@@ -343,9 +427,12 @@ int flic_chunk_walk(Flic* f)
 // FUNCTION: LEGORR 0x00483c80
 Flic* flic_open(const char* name)
 {
+    Flic* stream_flic;
     if (name == NULL || name[0] == '\0') {
         return NULL;
     }
+    stream_flic = flic_open_resource_stream(name);
+    if (stream_flic != NULL) return stream_flic;
     Resource* r = resource_open(name, RESOURCE_AUTO);
     if (r == NULL) {
         /* Loose `Data/AVI/...` overlay copies (avi\PB1.flh etc.) resolve
@@ -453,6 +540,95 @@ Flic* flic_open(const char* name)
     return f;
 }
 
+Flic* flic_open_stream(const FlicStreamOps* ops, uint32_t file_size)
+{
+    uint8_t header_bytes[FLIC_HEADER];
+    FlicHeaderInfo header;
+    Flic* f;
+    if (ops == NULL || ops->read_at == NULL || file_size < FLIC_HEADER ||
+        !ops->read_at(ops->context, 0u, header_bytes, FLIC_HEADER) ||
+        !flic_file_header_validate(header_bytes, file_size, &header) ||
+        header.magic != FLIC_MAGIC_AF43 || header.depth != 16 ||
+        header.width == 0 || header.height == 0 || header.width > 4096 ||
+        header.height > 4096) return NULL;
+    f = (Flic*)calloc(1, sizeof(*f));
+    if (f == NULL) return NULL;
+    f->width = header.width;
+    f->height = header.height;
+    f->frames = (int)header.frames + 1;
+    f->first_frame_chunk = -1;
+    f->current_chunk = -1;
+    f->stream_mode = 1;
+    f->stream_ops = *ops;
+    f->stream_length = file_size;
+    f->cursor = FLIC_CHUNK_START;
+    f->pix = (uint16_t*)malloc((size_t)header.width * header.height * 2u);
+    if (f->pix == NULL || !flic_stream_buffer_reserve(f, FLIC_CHUNK_HDR)) {
+        flic_close(f);
+        return NULL;
+    }
+    flic_chunk_walk(f); /* target-compatible walker return is always zero */
+    if (!f->last_walk_frame_valid) {
+        flic_close(f);
+        return NULL;
+    }
+    f->idx = 0;
+    f->eof = 0;
+    f->stream_loop_cursor = f->cursor;
+    return f;
+}
+
+static int flic_resource_stream_read_at(void* context, uint32_t offset,
+                                        void* bytes, uint32_t length)
+{
+    return resource_stream_read_at((ResourceStream*)context, offset, bytes,
+                                   length);
+}
+
+static void flic_resource_stream_close(void* context)
+{
+    resource_stream_close((ResourceStream*)context);
+}
+
+Flic* flic_open_resource_stream(const char* name)
+{
+    ResourceStream* stream;
+    FlicStreamOps ops;
+    Flic* f;
+    uint32_t file_size = 0u;
+    if (name == NULL || name[0] == '\0') return NULL;
+    stream = resource_stream_open(name, RESOURCE_AUTO, &file_size);
+    if (stream == NULL) {
+        char normalized[256];
+        const char* wad_dir = getenv("LEGORRR_WAD_DIR");
+        char os_path[512];
+        const char* slash;
+        strncpy(normalized, name, sizeof(normalized) - 1u);
+        normalized[sizeof(normalized) - 1u] = '\0';
+        slash = strchr(normalized, '\\');
+        while (slash != NULL) {
+            normalized[slash - normalized] = '/';
+            slash = strchr(slash + 1, '\\');
+        }
+        if (!movie_path_resolve(wad_dir != NULL && wad_dir[0] != '\0'
+                                    ? wad_dir : ".",
+                                normalized, os_path, sizeof(os_path)))
+            return NULL;
+        stream = resource_stream_open(os_path, RESOURCE_STD_ONLY,
+                                      &file_size);
+        if (stream == NULL) return NULL;
+    }
+    ops.context = stream;
+    ops.read_at = flic_resource_stream_read_at;
+    f = flic_open_stream(&ops, file_size);
+    if (f == NULL) {
+        resource_stream_close(stream);
+        return NULL;
+    }
+    f->stream_context_close = flic_resource_stream_close;
+    return f;
+}
+
 void flic_close(Flic* f)
 {
     if (f == NULL) {
@@ -462,6 +638,9 @@ void flic_close(Flic* f)
     free(f->raw);
     free(f->pix);
     free(f->rgba);
+    free(f->stream_buffer);
+    if (f->stream_context_close != NULL)
+        f->stream_context_close(f->stream_ops.context);
     free(f);
 }
 
@@ -478,7 +657,12 @@ int flic_tick_loop(Flic* f, int loop)
         }
         /* RAM mode keeps the decoded keyframe and restarts at frame 1. */
         f->idx = 0;
-        f->next_chunk = f->first_frame_chunk + 1;
+        if (f->stream_mode != 0) {
+            f->cursor = f->stream_loop_cursor;
+        }
+        else {
+            f->next_chunk = f->first_frame_chunk + 1;
+        }
     }
     flic_chunk_walk(f);
     if (!f->last_walk_frame_valid) {

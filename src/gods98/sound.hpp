@@ -218,36 +218,28 @@ uint32_t sound_pcm_hash(Sound* s);
  *
  *  The corpus builds the index-to-alias-name table at startup in
  *  SoundAliasRegistryInit @ 0x00464740: allocate a 0x7bc-byte (495-slot)
- *  word table, write the uppercase string hash (GameStringHashCompute,
- *  unported here — its only observable effect is the uppercase fold) of
- *  each of 45 hard-coded "SFX_*"
- *  names to slots 0..44, and register the scene sample hook
- *  (DDiSceneSampleHookRegister, engine-side, TODO(corpus) here).
- *  SoundAliasLookup @ 0x464c70 resolves a name through
- *  that table (case-insensitive: both sides pass the KeyToAscii uppercase
- *  fold, which the port
- *  applies directly with s_strcasecmp), and — only while
+ *  word table, write the GameStringHashCompute value for each of 45
+ *  hard-coded "SFX_*" names to slots 0..44, and register the scene sample
+ *  callback that resolves frame sample names and submits positional sound.
+ *  SoundAliasLookup @ 0x464c70 hashes each query and returns the first
+ *  matching slot, including hash collisions, and — only while
  *  SoundDynamicAliasRegistrationSet @ 0x00464c50 has raised DAT_00502a2c
  *  bit 2 — appends unknown names at the end of the table (dynamic
  *  aliases, DAT_00502a24 count) so `Sounds.*`-style names resolve to
  *  fresh indices without a config re-read.
  *
- *  Port modelling: the corpus slots hold only the 32-bit hash key; the
- *  port keeps the alias *names* (built-ins as static literals, dynamic
- *  copies allocated), so equality is decided with the same fold the
- *  corpus's hash keys collapse to. Hash-collision resolution is the one
- *  corpus behaviour not reproduced (collisions are unobservable for
- *  distinct shipped names).
+ *  The port keeps hashes in slot order and retains names separately for
+ *  sound_alias_name(). This preserves the corpus's first-match behavior
+ *  when distinct names produce the same hash.
  * ------------------------------------------------------------------ */
 
 #define SOUND_ALIAS_BUILTINS 45  /* DAT_00502a24 base 0x2d in the lookup */
 #define SOUND_ALIAS_MAX 495      /* 0x7bc-byte table, one alias per word */
 
-/* SoundAliasRegistryInit @ 0x00464740: (re)build the registry. Deviations:
- * the corpus's second call leaks the old allocation while keeping the
- * stale dynamic count (uninitialised reads); the port frees the dynamic
- * copies and zeroes the count, keeping the registration flag (the corpus
- * leaves DAT_00502a2c untouched here). */
+/* SoundAliasRegistryInit @ 0x00464740: rebuild the 45 built-in hashes in
+ * reference order and idempotently register the scene sample callback.
+ * The port frees dynamic names on reinitialization; the reference replaces
+ * its allocation and leaves the dynamic count untouched. */
 void sound_alias_registry_init(void);
 
 /* SoundDynamicAliasRegistrationSet @ 0x00464c50: enable (nonzero) or

@@ -4,10 +4,12 @@
 #include <string.h>
 
 #include "resource.hpp"
+#include "scene_resources.hpp"
 #include "string.hpp"
 #include "texture.hpp"
 
 #define TEX_CACHE_MAX 4096
+#define TEXTURE_RESOURCE_NAME_MAX 260
 
 typedef struct CacheEntry {
     char*            name;
@@ -16,6 +18,8 @@ typedef struct CacheEntry {
 
 static CacheEntry s_cache[TEX_CACHE_MAX];
 static int        s_cache_count = 0;
+static CacheEntry s_shared_cache[TEX_CACHE_MAX];
+static int        s_shared_cache_count = 0;
 
 /* ------------------------------------------------------------------ *
  *  BMP decode (finding 13; the shipped corpus is BITMAPINFOHEADER 40,
@@ -239,9 +243,23 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
 TextureSurface* image_surface_load(const char* name, uint32_t flags,
                                    uint32_t color_key)
 {
+    Resource* resource;
+    TextureSurface* surface;
+    /* The retail entry receives only the resource name; these two values are
+       retained by the portable adapter for callers with a DDraw-style API. */
     (void)flags;
     (void)color_key;
-    return texture_load(name);
+    if (name == NULL) return NULL;
+    resource = resource_open(name, RESOURCE_AUTO);
+    if (resource == NULL) return NULL;
+    if (resource_read(resource) < 0) {
+        resource_free(resource);
+        return NULL;
+    }
+    surface = texture_decode((const uint8_t*)resource->data,
+                             (uint32_t)resource->size);
+    resource_free(resource);
+    return surface;
 }
 
 /* ------------------------------------------------------------------ *
@@ -267,36 +285,64 @@ TextureSurface* texture_load(const char* name)
     return t;
 }
 
-/* TextureGetOrCreate: name-keyed hit/refcount or load-and-cache path. The
- * port has one cache and no original secondary shared-texture fallback. */
+/* TextureGetOrCreate: name-keyed hit/refcount, then secondary shared-root
+ * lookup and load on a primary miss. */
 // FUNCTION: LEGORR 0x00482e70
 TextureSurface* texture_get_or_load(const char* base, const char* file)
 {
-    char joined[1024];
+    char joined[TEXTURE_RESOURCE_NAME_MAX];
+    char shared_name[TEXTURE_RESOURCE_NAME_MAX];
     const char* name;
+    const char* shared_root;
+    int shared_load = 0;
+    int i;
+    TextureSurface* t;
+    size_t name_length;
     if (base != NULL && base[0] != '\0') {
-        if (strlen(base) + strlen(file) + 1 >= sizeof(joined)) {
+        if (file == NULL) return NULL;
+        if (strlen(base) + strlen(file) + 1 > sizeof(joined)) {
             return NULL;
         }
-        snprintf(joined, sizeof(joined), "%s%s", base, file);
+        memcpy(joined, base, strlen(base));
+        memcpy(joined + strlen(base), file, strlen(file) + 1);
         name = joined;
     } else {
         name = file;
     }
 
-    for (int i = 0; i < s_cache_count; ++i) {
+    if (name == NULL) return NULL;
+    for (i = 0; i < s_cache_count; ++i) {
         if (strcasecmp_lite(s_cache[i].name, name) == 0) {
-            TextureSurface* t = s_cache[i].surf;
+            t = s_cache[i].surf;
             ++t->refcount;
             return t;
         }
     }
 
-    TextureSurface* t = texture_load(name);
+    t = texture_load(name);
+    shared_root = lego::shared_texture_root_get();
+    if (t == NULL && shared_root != NULL && shared_root[0] != '\0') {
+        name_length = strlen(name);
+        if (strlen(shared_root) + name_length < sizeof(shared_name)) {
+            memcpy(shared_name, shared_root, strlen(shared_root));
+            memcpy(shared_name + strlen(shared_root), name, name_length + 1);
+            name = shared_name;
+            for (i = 0; i < s_shared_cache_count; ++i) {
+                if (strcasecmp_lite(s_shared_cache[i].name, name) == 0) {
+                    t = s_shared_cache[i].surf;
+                    ++t->refcount;
+                    return t;
+                }
+            }
+            t = texture_load(name);
+            shared_load = 1;
+        }
+    }
     if (t == NULL) {
         return NULL;
     }
-    if (s_cache_count < TEX_CACHE_MAX) {
+    if ((!shared_load && s_cache_count < TEX_CACHE_MAX) ||
+        (shared_load && s_shared_cache_count < TEX_CACHE_MAX)) {
 #if defined(_MSC_VER)
         t->name = _strdup(name);
 #else
@@ -310,9 +356,15 @@ TextureSurface* texture_get_or_load(const char* base, const char* file)
         strcpy(t->name, name);
 #endif
         t->refcount = 1;
-        s_cache[s_cache_count].name = t->name;
-        s_cache[s_cache_count].surf = t;
-        ++s_cache_count;
+        if (shared_load) {
+            s_shared_cache[s_shared_cache_count].name = t->name;
+            s_shared_cache[s_shared_cache_count].surf = t;
+            ++s_shared_cache_count;
+        } else {
+            s_cache[s_cache_count].name = t->name;
+            s_cache[s_cache_count].surf = t;
+            ++s_cache_count;
+        }
     } else {
         t->refcount = 1; /* uncached fallback: still usable */
     }
@@ -322,6 +374,7 @@ TextureSurface* texture_get_or_load(const char* base, const char* file)
 // FUNCTION: LEGORR 0x00474710
 void texture_release(TextureSurface* t)
 {
+    int i;
     if (t == NULL) {
         return;
     }
@@ -332,10 +385,17 @@ void texture_release(TextureSurface* t)
     if (--t->refcount > 0) {
         return;
     }
-    for (int i = 0; i < s_cache_count; ++i) {
+    for (i = 0; i < s_cache_count; ++i) {
         if (s_cache[i].surf == t) {
             s_cache[i] = s_cache[s_cache_count - 1];
             --s_cache_count;
+            break;
+        }
+    }
+    for (i = 0; i < s_shared_cache_count; ++i) {
+        if (s_shared_cache[i].surf == t) {
+            s_shared_cache[i] = s_shared_cache[s_shared_cache_count - 1];
+            --s_shared_cache_count;
             break;
         }
     }
@@ -363,10 +423,15 @@ void texture_free(TextureSurface* t)
 
 void texture_cache_clear(void)
 {
-    for (int i = 0; i < s_cache_count; ++i) {
+    int i;
+    for (i = 0; i < s_cache_count; ++i) {
         texture_free(s_cache[i].surf);
     }
     s_cache_count = 0;
+    for (i = 0; i < s_shared_cache_count; ++i) {
+        texture_free(s_shared_cache[i].surf);
+    }
+    s_shared_cache_count = 0;
 }
 
 uint32_t texture_pixel_hash(TextureSurface* t)

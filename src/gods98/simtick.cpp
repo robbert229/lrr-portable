@@ -8,6 +8,7 @@
 #include "sound.hpp"
 #include "heap.hpp"
 #include "crt/crt.hpp"
+#include "resource.hpp"
 #include "game/level.hpp"
 #include "game/cmd.hpp"
 #include "game/select.hpp"
@@ -806,13 +807,7 @@ void simtick_minion_states(EngineContext* c, float dt, float scale)
     }
 }
 
-/* FUN_00424600: the tested port keeps a seeded-cell flag-clear model. The
- * corpus is a larger terrain cleanup: 0x424614 calls FUN_0040c3a0 for a work
- * count, 0x42463c/0x424645 load coordinate pairs, and 0x424649 calls
- * FUN_0040c570 before addressing state+0xb8. Those two callees are ledger
- * stubs here, and the later 0x4246b6 dispatch consumes another coordinate.
- * Replacing the tested one-cell contract with that helper-driven walk needs
- * the missing callee signatures/state, not a loop-only respelling. */
+/* Deterministic seeded-cell adapter retained for existing local callers. */
 static int s_cells_n = 0;
 static int s_cells_x[64], s_cells_y[64];
 static int s_cell_disp = 0;
@@ -831,7 +826,49 @@ void simtick_cell_seed(int n, const int* xs, const int* ys)
 
 int simtick_cell_dispatches(void) { return s_cell_disp; }
 
+/* TerrainCellFlagCleanup (FUN_00424600): sweep resource state for newly
+ * completed scene loads, read each completion's configured grid coordinate,
+ * clear its cell gates, and enqueue opcode 0x14 when the cell is not gated by
+ * bit 0x1000. The renderer's resource-completion callbacks remain owned by
+ * the scene/resource layer; the exposed sweep supplies its completed pairs. */
 // FUNCTION: LEGORR 0x00424600
+void simtick_grid_cell_pass(EngineContext* c, float scale)
+{
+    EngineState* st = c != NULL ? c->state_block : NULL;
+    uint32_t* groups = NULL;
+    uint32_t* slots = NULL;
+    int count;
+    int i;
+    s_cell_disp = 0;
+    count = scene_resource_availability_sweep(scale, &groups, &slots);
+    if (count <= 0 || groups == NULL || slots == NULL || st == NULL ||
+        st->grid_cells == NULL || st->grid_w == 0u || st->grid_h == 0u) {
+        return;
+    }
+    for (i = 0; i < count; ++i) {
+        uint32_t x = 0u;
+        uint32_t y = 0u;
+        uint32_t index;
+        int coordinate_pair[2];
+        uint8_t* cell;
+        uint32_t* flags;
+        scene_cell_table_pair_read((int)groups[i], (int)slots[i], &x, &y);
+        if (x >= st->grid_w || y >= st->grid_h) continue;
+        index = st->grid_w * y + x;
+        cell = (uint8_t*)st->grid_cells + index * 0x48u;
+        flags = (uint32_t*)(cell + 8);
+        *flags &= ~0x800u;
+        if ((*flags & 0x1000u) == 0u) {
+            coordinate_pair[0] = (int)x;
+            coordinate_pair[1] = (int)y;
+            cmd_produce(0x14, NULL, 0, coordinate_pair);
+            ++s_cell_disp;
+        }
+        *flags &= ~0x1000u;
+        *flags &= ~0x08000000u;
+    }
+}
+
 void simtick_grid_cell_pass(EngineContext* c)
 {
     EngineState* st = c != NULL ? c->state_block : NULL;
@@ -840,8 +877,12 @@ void simtick_grid_cell_pass(EngineContext* c)
         return;
     }
     for (int i = 0; i < s_cells_n; ++i) {
-        uint32_t idx = st->grid_w * (uint32_t)s_cells_y[i] + (uint32_t)s_cells_x[i];
-        uint8_t* cell = (uint8_t*)st->grid_cells + idx * 0x48;
+        if (s_cells_x[i] < 0 || s_cells_y[i] < 0 ||
+            (uint32_t)s_cells_x[i] >= st->grid_w ||
+            (uint32_t)s_cells_y[i] >= st->grid_h) continue;
+        uint32_t idx = st->grid_w * (uint32_t)s_cells_y[i] +
+                       (uint32_t)s_cells_x[i];
+        uint8_t* cell = (uint8_t*)st->grid_cells + idx * 0x48u;
         uint32_t* flags = (uint32_t*)(cell + 8);
         *flags &= ~0x800u;
         if ((*flags & 0x1000u) == 0) {
@@ -1089,31 +1130,38 @@ void simtick_frame_counter(EngineContext* c)
     ++s_frame;
 }
 
-/* FUN_0040eab0: the tested port models a one-second spawn accumulator.
- * The corpus is LavaErosionPendingCellTick: 0x40eac2..0x40ead5 adds dt to
- * DAT_004d78b4 and compares it with DAT_004d78b8, then 0x40eaef calls
- * FUN_0040e990 and 0x40eb2b calls FUN_0040f000 while scanning pending cells;
- * later paths update stage timers/effects and reset the accumulator at
- * 0x40ec3d. That state and helper-driven behavior are outside the tested
- * hook contract, so keep the threshold behavior rather than fake the walk. */
-static float s_spawn_acc = 0.0f;
-static int   s_spawns = 0;
-static int   (*s_spawn_hook)(int) = NULL;
-
-void simtick_set_spawn_hook(int (*h)(int)) { s_spawn_hook = h; }
-int  simtick_spawn_calls(void) { return s_spawns; }
+/* The level module owns the ordered pending coordinates and stage slots.
+ * Its tick returns when the ErodeTriggerTime gate elapsed, whether or not a
+ * candidate was found. */
+static int s_ambient_spawn_triggers;
 
 // FUNCTION: LEGORR 0x0040eab0
+void simtick_ambient_spawn_tick(float scale)
+{
+    if (lava_erosion_pending_cell_tick(scale))
+        ++s_ambient_spawn_triggers;
+}
+
+/* Retained only for the existing simtick unit-test seam. Production EngineTick
+ * dispatches simtick_ambient_spawn_tick with the reference's scale argument. */
+static float s_test_spawn_acc;
+static int s_test_spawns;
+static int (*s_spawn_hook)(int);
+
+void simtick_set_spawn_hook(int (*h)(int)) { s_spawn_hook = h; }
+int simtick_spawn_calls(void)
+{
+    return s_ambient_spawn_triggers + s_test_spawns;
+}
+
 void simtick_ambient_spawn(EngineContext* c, float dt)
 {
     (void)c;
-    s_spawn_acc += dt;
-    if (s_spawn_acc >= 1.0f) {
-        s_spawn_acc = 0.0f;
-        if (s_spawn_hook != NULL) {
-            s_spawn_hook(0); /* slot pick = FUN_0040e990 distance-modulo */
-        }
-        ++s_spawns;
+    s_test_spawn_acc += dt;
+    if (s_test_spawn_acc >= 1.0f) {
+        s_test_spawn_acc = 0.0f;
+        if (s_spawn_hook != NULL) s_spawn_hook(0);
+        ++s_test_spawns;
     }
 }
 
