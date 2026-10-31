@@ -120,6 +120,9 @@ float platform_audio_get_gain(PlatformAudio* a);
 
 /* Bytes currently buffered in the stream (diagnostics/tests). */
 int  platform_audio_queued(PlatformAudio* a);
+/* Duration of queued output, in milliseconds; unlike queued bytes this is
+ * comparable across backend sample-rate conversions. */
+int  platform_audio_queued_milliseconds(PlatformAudio* a);
 
 /* Stop / clear pending output + the loop track. */
 void platform_audio_stop(PlatformAudio* a);

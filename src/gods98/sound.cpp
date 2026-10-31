@@ -995,14 +995,6 @@ void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
     s_buffer_object_stop_context = context;
 }
 
-// FUNCTION: LEGORR 0x0047ba20
-int sound_stream_stop_and_release(int stream_index)
-{
-    AudioPlayer* player = audio_system_player_get();
-    audio_stream_stop(player, stream_index == 0 ? 0 : 1);
-    return 1;
-}
-
 // FUNCTION: LEGORR 0x0047b970
 int sound_stream_playback_start(int stream_index, const Sound* sample)
 {
@@ -1017,13 +1009,6 @@ int sound_stream_format_setup(int stream_index, const WavSample* format,
     if (stream_index < 0 || stream_index > 1 || format == NULL) return 0;
     return audio_stream_setup(audio_system_player_get(), stream_index, format,
                               buffer_bytes);
-}
-
-// FUNCTION: LEGORR 0x0047bc30
-int sound_stream_drain_check(int stream_index)
-{
-    return audio_stream_drain_check(audio_system_player_get(),
-                                    stream_index == 0 ? 0 : 1);
 }
 
 void sound_position_apply_hook_set(SoundPositionApplyHook hook,
@@ -1088,18 +1073,13 @@ void sound_spatial_refresh_hooks_set(SoundSpatialRefreshHook refresh,
     s_spatial_refresh_context = context;
 }
 
-// FUNCTION: LEGORR 0x0047b410
+/* Direct3DRM Frame/provider refresh is unavailable in the SDL and waveOut
+ * backends: the opaque caller object has no source-position adapter here.
+ * Keep this seam unmapped until a real provider interface is available. */
 void sound_source_spatial_refresh(void* sound_object)
 {
     if (sound_object != NULL && s_spatial_refresh_hook != NULL)
         (void)s_spatial_refresh_hook(s_spatial_refresh_context, sound_object);
-}
-
-// FUNCTION: LEGORR 0x0047bdb0
-void sound_stream_ring_buffer_tick(int stream_index)
-{
-    AudioPlayer* player = audio_system_player_get();
-    audio_stream_tick(player, stream_index == 0 ? 0 : 1);
 }
 
 /* _DAT_00502b2c — the global-cooldown word (the corpus types it as a

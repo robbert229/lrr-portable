@@ -20,6 +20,7 @@ typedef struct AudioBuffer AudioBuffer;
 
 typedef struct AudioPlayer {
     PlatformAudio* dev;   /* owned platform audio device */
+    PlatformAudio* stream_dev[2]; /* independently stoppable streamed voices */
     float          volume; /* master gain 0..1 */
     /* looping 3D track: the source sound + current pan; re-rendered and
      * re-seeded lazily when the pan changes. */
@@ -27,13 +28,12 @@ typedef struct AudioPlayer {
     float    loop_pan;
     int      loop_render_dirty;
     AudioBuffer* loop_buffer;
-    /* The platform backend has one shared queued output. Keep logical stream
-     * state here so streamed WAV submissions can be tracked independently. */
+    /* Streamed WAV slots own separate platform queues so stop/refill stays
+     * local to one voice. */
     const Sound* stream_sample[2];
     WavSample stream_format[2];
     uint32_t stream_buffer_bytes[2];
     uint32_t stream_cursor_bytes[2];
-    uint32_t stream_queued_frames[2];
     int      stream_active[2];
 } AudioPlayer;
 
@@ -102,8 +102,7 @@ void audio_update(AudioPlayer* p);
 void audio_stop(AudioPlayer* p);
 
 /* Portable counterparts for bank-owned duplicate buffers and the two
- * reference streamed-wave slots. Buffers retain converted PCM and volume;
- * playback uses the installed player's shared output queue. */
+ * reference streamed-wave slots. Each stream slot owns its stoppable queue. */
 AudioBuffer* audio_buffer_create(const Sound* sample);
 void audio_buffer_destroy(AudioBuffer* buffer);
 void audio_buffer_volume_set(AudioBuffer* buffer, int millibels);
@@ -117,8 +116,6 @@ int audio_stream_setup(AudioPlayer* p, int stream_index,
                        const WavSample* format, uint32_t buffer_bytes);
 int audio_stream_start(AudioPlayer* p, int stream_index, const Sound* sample);
 void audio_stream_stop(AudioPlayer* p, int stream_index);
-int audio_stream_drain_check(AudioPlayer* p, int stream_index);
-void audio_stream_tick(AudioPlayer* p, int stream_index);
 
 /* Convert a bank Sound to mono 16-bit signed PCM (the seam's transport).
  * Returns frame count; *out is allocated (free with audio_free_pcm). */

@@ -134,6 +134,7 @@ void scene_object_bounds_hooks_set(const SceneObjectBoundsHooks* hooks)
  * output, then each child contributes a componentwise min/max. The original
  * obtains both the root and child collection through scene-interface calls;
  * those accessors stay replaceable while the union behavior is local. */
+// FUNCTION: LEGORR 0x00474f10
 uint32_t scene_object_bounds_union(void* scene_object,
                                   float bounds_min_max[6])
 {
@@ -182,6 +183,7 @@ void render_packed_rgba_hooks_set(const RenderPackedRgbaHooks* hooks)
 /* RenderObjectSetPackedRgbaFromFloatChannels (FUN_004750b0): convert the
  * four caller-supplied float channels in reference order, then update the
  * render interface stored in the kind-five mesh record. */
+// FUNCTION: LEGORR 0x004750b0
 void render_object_set_packed_rgba_from_float_channels(
     void* scene_object, float red, float green, float blue, float alpha)
 {
@@ -534,9 +536,8 @@ void* ddiscene_context_get(void* scene_object)
     return result;
 }
 
-/* SceneObjectOwnerLinkEnsure (FUN_00475880): return the existing owner-link
- * record when present, otherwise ask the scene owner to create and attach it. */
-// FUNCTION: LEGORR 0x00475880
+/* SceneObjectOwnerLinkEnsure port hook. The original FUN_00475880 performs
+ * property lookup and DDiSceneObject allocation, which is not modeled here. */
 void* scene_object_owner_link_ensure(void* owner_interface)
 {
     if (owner_interface == NULL ||
@@ -1665,6 +1666,7 @@ void scene_object_record_retain_hook_set(SceneObjectRecordRetainHook hook,
     s_scene_object_record_retain_context = context;
 }
 
+// FUNCTION: LEGORR 0x00408620
 void scene_object_record_clone_retain_handles(
     const SceneObjectRecord* source, SceneObjectRecord* destination)
 {
@@ -1697,6 +1699,7 @@ static float scene_frame_vector_length(const float vector[3])
                                  vector[2] * vector[2]));
 }
 
+// FUNCTION: LEGORR 0x0040bb90
 void scene_frame_from_triplet_apply(void* object, float projection_scale,
                                    const float first[3],
                                    const float second[3],
@@ -1754,6 +1757,7 @@ void scene_frame_from_triplet_apply(void* object, float projection_scale,
  * the current channel slot, then apply the selected and opposite corner
  * frames. The record follows the recovered dword layout on x86 while its
  * pointer-bearing banks widen naturally in the portable build. */
+// FUNCTION: LEGORR 0x0040b880
 void scene_cell_visual_channels_apply(SceneCellVisualRelayRecord* record,
                                       const float corner_points[12],
                                       uint32_t lookup_selector,
@@ -3965,7 +3969,6 @@ void cam_set_pos(CameraHandle* c, float x, float y, float z)
     c->pos[2] = z;
 }
 
-// FUNCTION: LEGORR 0x00475500
 void cam_get_facing(CameraHandle* c, float out[3])
 {
     if (c != NULL && out != NULL) {

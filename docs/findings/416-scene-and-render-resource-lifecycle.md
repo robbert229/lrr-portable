@@ -169,6 +169,12 @@ sound callback and clone state.
 | `0x004895c0` | `ResourceTreeCallbackContextCreateForResource` | Creates the alternate resource-mode context and index array from the same enumerator; mode/index semantics remain unresolved (finding 380). |
 | `0x00489660` | `SceneActFrameRecordCloneOrCreate` | Creates a new scene-frame record and resource-tree clone when no prior record exists, or clones a shared-object record when one is available (findings 246, 275). |
 
+The port has no production Direct3DRM object-array/enumerator interface for
+these context constructors. Their former ledger wrappers treated the second
+argument as a `PortableResourceTreeNode`, which does not match the observed
+COM AddRef and array traversal contract; those mappings were removed until a
+real scene-resource owner can provide that interface.
+
 ## Index corrections and limits
 
 The Issue #191 addresses were all present in the area CSV, but the area assignment

@@ -80,7 +80,7 @@ void window_runtime_mode_set(int fullscreen, int32_t style);
 void window_runtime_flags_set(uint32_t flags);
 uint32_t window_runtime_flags_get(void);
 const WindowRuntimeState* window_runtime_state_get(void);
-void window_runtime_state_initialize(void* owner);
+void window_runtime_state_initialize(void* window); /* 0x0047c170 */
 void window_runtime_display_caps_query_discard(void);
 int window_runtime_callback_triplet_set(const size_t* triplet);
 int window_runtime_callback_triplet_get(size_t triplet[3]);

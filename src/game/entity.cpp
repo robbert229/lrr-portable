@@ -1831,6 +1831,7 @@ void entity_command_status_feedback_hooks_set(
 /* EntityCommandStatusFeedbackDispatch (FUN_00428020): suppresses the first
  * observed entity after a selection switch, clears stale empty command text,
  * and routes changed command/status text through the UI adapter. */
+// FUNCTION: LEGORR 0x00428020
 void entity_command_status_feedback_dispatch(EntitySlot* entity)
 {
     const char* command;
@@ -6458,7 +6459,10 @@ static uint32_t stats_table_read(int type, int row, int off, int stride_index)
 }
 
 // FUNCTION: LEGORR 0x00469b20
-uint32_t stats_table_word_at_b8(int type, int row) { return stats_table_read(type, row, 0xb8, 0); }
+uint32_t stats_table_word_at_b8(int type, int row, int stride_index)
+{
+    return stats_table_read(type, row, 0xb8, stride_index);
+}
 /* FUN_00469b20 */
 
 // FUNCTION: LEGORR 0x00469af0

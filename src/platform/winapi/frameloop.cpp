@@ -137,7 +137,7 @@ PlatformWindow* platform_create_window(const char* title, int width, int height)
     win->width = width > 0 ? width : 640;
     win->height = height > 0 ? height : 480;
     s_active_window = win;
-    window_runtime_window_handle_set((void*)hwnd);
+    window_runtime_state_initialize((void*)hwnd);
     SetFocus(hwnd);
     return win;
 }
@@ -148,7 +148,7 @@ void platform_destroy_window(PlatformWindow* win)
     if (win->hwnd != NULL) DestroyWindow(win->hwnd);
     if (s_active_window == win) {
         s_active_window = NULL;
-        window_runtime_window_handle_set(NULL);
+        window_runtime_state_initialize(NULL);
     }
     free(win);
 }
@@ -497,6 +497,41 @@ int platform_audio_queued(PlatformAudio* a)
         total += queued;
         if (total > 0x7fffffffUL) return 0x7fffffff;
     }
+    return (int)total;
+}
+
+int platform_audio_queued_milliseconds(PlatformAudio* a)
+{
+    PlatformAudioSubmission* item;
+    double total = 0.0;
+    if (a == NULL) return 0;
+    platform_audio_reap(a);
+    for (item = a->submissions; item != NULL; item = item->next) {
+        DWORD played = 0;
+        DWORD queued;
+        MMTIME position;
+        if (item->is_loop) {
+            queued = item->bytes;
+        }
+        else {
+            memset(&position, 0, sizeof(position));
+            position.wType = TIME_BYTES;
+            if (waveOutGetPosition(item->output, &position,
+                                   sizeof(position)) == MMSYSERR_NOERROR) {
+                if (position.wType == TIME_BYTES) played = position.u.cb;
+                else if (position.wType == TIME_MS) {
+                    played = (DWORD)((double)position.u.ms *
+                        (double)item->sample_rate * item->channels * 2.0 /
+                        1000.0);
+                }
+            }
+            if (played > item->bytes) played = item->bytes;
+            queued = item->bytes - played;
+        }
+        total += ((double)queued * 1000.0) /
+                 ((double)item->sample_rate * item->channels * 2.0);
+    }
+    if (total > 0x7fffffff) return 0x7fffffff;
     return (int)total;
 }
 

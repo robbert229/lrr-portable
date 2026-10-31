@@ -124,10 +124,11 @@ const WindowRuntimeState* window_runtime_state_get(void)
     return &s_window_runtime_state;
 }
 
-void window_runtime_state_initialize(void* owner)
+// FUNCTION: LEGORR 0x0047c170
+void window_runtime_state_initialize(void* window)
 {
     memset(&s_window_runtime_state, 0, sizeof(s_window_runtime_state));
-    s_window_runtime_state.owner = owner;
+    s_window_runtime_state.window = window;
 }
 
 void window_runtime_display_caps_query_discard(void)

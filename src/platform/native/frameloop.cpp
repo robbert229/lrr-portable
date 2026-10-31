@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "platform/platform.h"
+#include "gods98/frameloop.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_timer.h>
@@ -62,6 +63,7 @@ PlatformWindow* platform_create_window(const char* title, int width, int height)
     pw->h = height;
     pw->window_surface = SDL_GetWindowSurface(win);
     s_active_window = pw;
+    window_runtime_state_initialize((void*)win);
     /* The game draws its own bitmap pointer into the framebuffer. */
     SDL_HideCursor();
     return pw;
@@ -78,6 +80,7 @@ void platform_destroy_window(PlatformWindow* pw)
     SDL_ShowCursor();
     if (s_active_window == pw) {
         s_active_window = NULL;
+        window_runtime_state_initialize(NULL);
     }
     pw->sdl = NULL;
     free(pw);
@@ -433,6 +436,13 @@ int platform_audio_queued(PlatformAudio* a)
         return 0;
     }
     return SDL_GetAudioStreamQueued(a->stream);
+}
+
+int platform_audio_queued_milliseconds(PlatformAudio* a)
+{
+    int queued = platform_audio_queued(a);
+    if (queued <= 0) return 0;
+    return (int)(((double)queued * 1000.0) / (44100.0 * 4.0));
 }
 
 void platform_audio_stop(PlatformAudio* a)

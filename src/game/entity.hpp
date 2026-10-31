@@ -1313,7 +1313,7 @@ const void* stats_type_table_cell(int type, int row);
 /* FUN_00469f40: raw float word for the stats loader's parsed level count. */
 uint32_t building_upgrade_admission_check(int type, int row);
 
-uint32_t stats_table_word_at_b8(int type, int row);  /* FUN_00469b20 */
+uint32_t stats_table_word_at_b8(int type, int row, int stride_index = 0); /* FUN_00469b20 */
 float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */
 uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
 uint32_t stats_table_word_at_148(int type, int row); /* FUN_00469ee0 */

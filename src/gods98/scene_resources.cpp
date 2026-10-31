@@ -6,6 +6,7 @@
 #include "record.hpp"
 #include "heap.hpp"
 #include "view.hpp"
+#include "crt/crt.hpp"
 namespace lego {
 namespace {
 void* s_resource_slots[SCENE_RESOURCE_SLOT_COUNT];
@@ -165,21 +166,28 @@ void animated_texture_frame_apply_hook_set(AnimatedTextureFrameApplyHook hook,
     s_texture_frame_apply_hook = hook;
     s_texture_frame_apply_context = context;
 }
+/* AnimatedTextureFrameSurfaceSet (FUN_004830c0): the frame state's slot-zero
+ * method is called with the record's shared-surface selector word and the
+ * indexed frame record (records + 0x60 + frame * 0x70); the portable port
+ * routes that call through the installed apply hook.  The state's third
+ * dword then raises or clears the 0x00400000 shared-surface bit in the
+ * frame record's flag word at +0x0c. */
+// FUNCTION: LEGORR 0x004830c0
 void animated_texture_frame_surface_set(void* texture, int frame_index,
                                         const void* frame_state)
 {
     unsigned char* record = static_cast<unsigned char*>(texture);
-    unsigned char* state = (unsigned char*)frame_state;
+    const unsigned char* state =
+        static_cast<const unsigned char*>(frame_state);
     unsigned char* records;
     void* interface_object = 0;
-    unsigned int flags = 0;
+    unsigned int flags;
     unsigned char* frame_record;
     if (record == 0 || state == 0 || frame_index < 0) return;
     memcpy(&records, record + 8, sizeof(records));
     if (records == 0) return;
     frame_record = records + 0x60 + (size_t)frame_index * 0x70;
     memcpy(&interface_object, state, sizeof(interface_object));
-    memcpy(&flags, state + 8, sizeof(flags));
     if (interface_object != 0 && s_texture_frame_apply_hook != 0)
         s_texture_frame_apply_hook(interface_object, frame_record,
                                    s_texture_frame_apply_context);
@@ -197,19 +205,31 @@ void shared_texture_root_load_hook_set(SharedTextureRootLoadHook hook,
 // FUNCTION: LEGORR 0x004805b0
 int shared_texture_root_register(const char* root)
 {
+    /* SharedTextureRootRegister drops the shared-pool link and releases the
+     * model-render list (DAT_005343c4 + FUN_00482d30) before re-seeding;
+     * crt.cpp owns that list head, so the walk-and-free runs there. */
+    model_render_list_clear();
     if (root != 0) {
         size_t length = strlen(root);
+        size_t written;
         if (length >= sizeof(s_shared_texture_root))
-            length = sizeof(s_shared_texture_root) - 2u;
+            length = sizeof(s_shared_texture_root) - 1u; /* port bound */
+        written = length;
+        /* Reference quirk: the final stored byte is always the appended
+         * backslash, replacing whatever was copied there; when the byte
+         * two before the end is already a backslash the root loses one
+         * extra byte.  The reference also repoints the model-render list
+         * head (DAT_00534558) at this freshly allocated string; this port
+         * keeps the root in the module static instead. */
+        if (length >= 2u && root[length - 2u] == '\\')
+            written = length - 1u;
         if (length != 0u) memcpy(s_shared_texture_root, root, length);
-        /* SharedTextureRootRegister checks for the reference's backslash
-         * separator specifically; a forward slash is retained and followed
-         * by the backslash it appends. */
-        if (length != 0u && s_shared_texture_root[length - 1u] != '\\') {
-            s_shared_texture_root[length++] = '\\';
-        }
-        s_shared_texture_root[length] = '\0';
+        if (written != 0u) s_shared_texture_root[written - 1u] = '\\';
+        s_shared_texture_root[written] = '\0';
     }
+    /* The reference zeroes the twenty-slot table (DAT_00540584) and the two
+     * trailing state words (DAT_005405d4/d8) the port models as the count
+     * and initialized flag. */
     memset(s_shared_texture_resources, 0, sizeof(s_shared_texture_resources));
     s_shared_texture_resource_count = 20u;
     s_shared_texture_initialized = 0;
@@ -219,6 +239,11 @@ int shared_texture_root_register(const char* root)
 // FUNCTION: LEGORR 0x00480650
 int shared_texture_root_initialize()
 {
+    /* SharedTextureRootInitialize releases the resident slot-node chains
+     * (FUN_00480780/FUN_004807a0 over the DAT_005405d8 and DAT_005343ac
+     * windows) and refills the twenty slots under the shared texture root.
+     * The portable port models those chains as loader-owned, so the slot
+     * refill runs through the installed load hook instead. */
     unsigned int i;
     for (i = 0; i < 20u; ++i) {
         void* resource = 0;

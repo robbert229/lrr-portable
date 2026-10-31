@@ -1305,6 +1305,7 @@ void frontend_init(FrontEnd* fe)
     if (fe == NULL) {
         return;
     }
+    ui_panel_name_tables_init();
     s_main_menu_text_item_pending = 0;
     memset(fe, 0, sizeof(*fe));
     fe->pointer_x = fe->pointer_y = -1;
@@ -5929,6 +5930,7 @@ void selected_ground_marker_ops_set(const SelectedGroundMarkerOps* ops)
 /* SelectedEntityGroundMarkerRender (FUN_004248b0): project the entity's
  * ground point, reject off-screen markers, build the beveled eight-point
  * ground outline, then update its optional label tint. */
+// FUNCTION: LEGORR 0x004248B0
 int selected_entity_ground_marker_render(void* entity, void* camera,
                                          float red, float green, float blue)
 {

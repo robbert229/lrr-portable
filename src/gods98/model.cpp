@@ -5,6 +5,7 @@
  * models): chunk walk, POLS origin auto-detect, SRFS names, SURF records
  * anchored on SRFS names, and the finding 19 `.uv` grammar. */
 #include "model.hpp"
+#include "crt/crt.hpp"
 #include "heap.hpp"
 #include "resource.hpp"
 #include "string.hpp"
@@ -20,12 +21,44 @@
 #include <strings.h>
 #endif
 
-/* The reference reserves two adjacent 8-byte path/handle tables, each
- * 0x1f40 bytes apart: 1000 entries at an 8-byte stride.  The parser cache
- * keeps owned model pointers beside the same number of canonical paths. */
+/* The reference keeps two adjacent 8-byte-stride path/record pair tables,
+ * 0x1f40 bytes apart: 1000 entries each, scanned case-insensitively through
+ * the shared pair-table helpers (FUN_00488730/FUN_00488790).  The primary
+ * table (DAT_00540838, count DAT_005446bc) keys on the joined request path;
+ * the secondary table (DAT_00542778, count DAT_005446c0) keys on the raw
+ * path and is consulted under the fallback prefix (DAT_005446b8). */
 #define MODEL_RESOURCE_CACHE_CAPACITY 1000u
-static char s_model_resource_cache_names[MODEL_RESOURCE_CACHE_CAPACITY][260];
-static Model* s_model_resource_cache[MODEL_RESOURCE_CACHE_CAPACITY];
+typedef struct ModelResourcePair {
+    char* key;
+    void* value;
+} ModelResourcePair;
+static ModelResourcePair
+    s_model_resource_primary[MODEL_RESOURCE_CACHE_CAPACITY];
+// GLOBAL: LEGORR 0x005446bc
+static int s_model_resource_primary_count;
+static ModelResourcePair
+    s_model_resource_secondary[MODEL_RESOURCE_CACHE_CAPACITY];
+// GLOBAL: LEGORR 0x005446c0
+static int s_model_resource_secondary_count;
+/* DAT_005446b8: the fallback prefix the resolver retries with; installed by
+ * the port through model_resource_fallback_prefix_set. */
+static const char* s_model_resource_fallback_prefix;
+/* FUN_00480900 instance-create seam: called as (cached_record, flags) on
+ * every table hit; the engine installs its instantiation hook here. */
+typedef void (*ModelResourceInstanceHook)(void* record, void* flags);
+static ModelResourceInstanceHook s_model_resource_instance_hook;
+void model_resource_instance_hook_set(ModelResourceInstanceHook hook)
+{
+    s_model_resource_instance_hook = hook;
+}
+void model_resource_fallback_prefix_set(const char* prefix)
+{
+    s_model_resource_fallback_prefix = prefix;
+}
+const char* model_resource_fallback_prefix_get(void)
+{
+    return s_model_resource_fallback_prefix;
+}
 
 /* FUNCTION: LEGORR 0x00481fa0 */
 void mesh_vertex_coordinate_remap(int vertex_count, const float* positions_xyz,
@@ -998,75 +1031,125 @@ void model_free(Model* m)
     free(m);
 }
 
-/* The reference's model resolver builds into a 260-byte stack path before
- * doing its case-insensitive cache lookup. Keep the same bounded path
- * contract without snprintf, which is not part of the VC5 CRT. */
-static int model_resource_path_build(char* output, size_t output_size,
-                                     const char* prefix, const char* path)
+/* LwoModelEntryLoad (FUN_004809e0): the reference copies the joined path
+ * into a 260-byte stack buffer, truncates it just after the last backslash
+ * (an empty directory when the path carries no separator at all), opens the
+ * file from the full path, and drives the record loader (FUN_00480870) and
+ * the MaterialPass stream loader (FUN_00480ac0) with the directory buffer,
+ * the flags word, and the caller context.  The portable port opens through
+ * the resource layer; the directory scan is kept because it is the
+ * reference's entry-name derivation. */
+// FUNCTION: LEGORR 0x004809e0
+Model* lwo_model_entry_load(const char* path, void* flags, void* context)
 {
-    size_t prefix_length;
-    size_t path_length;
-    size_t separator_length = 0;
-    if (output == NULL || output_size == 0 || path == NULL || path[0] == '\0')
-        return 0;
-    prefix_length = (prefix != NULL) ? strlen(prefix) : 0;
-    path_length = strlen(path);
-    if (prefix_length != 0) {
-        char last = prefix[prefix_length - 1];
-        if (last != '/' && last != '\\')
-            separator_length = 1;
-    }
-    if (prefix_length >= output_size ||
-        separator_length > output_size - prefix_length - 1 ||
-        path_length > output_size - prefix_length - separator_length - 1)
-        return 0;
-    if (prefix_length != 0) {
-        memcpy(output, prefix, prefix_length);
-        if (separator_length != 0)
-            output[prefix_length++] = '\\';
-    }
-    memcpy(output + prefix_length, path, path_length);
-    output[prefix_length + path_length] = '\0';
-    return 1;
+    char directory[260];
+    size_t length;
+    size_t last_separator;
+    size_t i;
+
+    (void)flags;    /* the reference threads these into the unported
+                     * record/MaterialPass loaders */
+    (void)context;
+    if (path == NULL) return NULL;
+    length = strlen(path);
+    if (length >= sizeof(directory)) length = sizeof(directory) - 1u;
+    memcpy(directory, path, length);
+    directory[length] = '\0';
+    last_separator = 0u;
+    for (i = 0; i < length; ++i)
+        if (directory[i] == '\\') last_separator = i + 1u;
+    directory[last_separator] = '\0';   /* keeps the backslash, else empties */
+    return model_open(path);
 }
 
-Model* model_resource_resolve_or_load(const char* prefix, const char* path)
+/* The reference's model resolver joins prefix and path with the raw
+ * "%s%s" template (DAT_004a50d4) into a 260-byte stack path before its
+ * case-insensitive pair-table lookup; no separator is inserted and a NULL
+ * prefix copies the path verbatim.  Keep the same bounded contract without
+ * snprintf, which is not part of the VC5 CRT. */
+static void model_resource_path_join(char* output, size_t output_size,
+                                     const char* prefix, const char* path)
+{
+    size_t position = 0u;
+    const char* source;
+    source = prefix;
+    while (source != NULL && *source != '\0' &&
+           position + 1u < output_size)
+        output[position++] = *source++;
+    source = path;
+    while (*source != '\0' && position + 1u < output_size)
+        output[position++] = *source++;
+    output[position] = '\0';
+}
+
+// FUNCTION: LEGORR 0x004885c0
+Model* model_resource_resolve_or_load(const char* prefix, const char* path,
+                                      void* flags, void* context)
 {
     char resolved[260];
-    unsigned int i;
-    unsigned int free_slot = MODEL_RESOURCE_CACHE_CAPACITY;
-    Model* loaded;
-    if (!model_resource_path_build(resolved, sizeof(resolved), prefix, path))
-        return NULL;
-    for (i = 0; i < MODEL_RESOURCE_CACHE_CAPACITY; ++i) {
-        if (s_model_resource_cache[i] == NULL) {
-            if (free_slot == MODEL_RESOURCE_CACHE_CAPACITY) free_slot = i;
-            continue;
+    Model* record;
+    if (path == NULL) return NULL;
+    model_resource_path_join(resolved, sizeof(resolved), prefix, path);
+    record = (Model*)pair_table_find(s_model_resource_primary,
+                                     (uint32_t)s_model_resource_primary_count,
+                                     resolved);
+    if (record != NULL) {
+        if (s_model_resource_instance_hook != NULL)
+            s_model_resource_instance_hook(record, flags);
+        return record;
+    }
+    record = lwo_model_entry_load(resolved, flags, context);
+    if (record != NULL) {
+        /* Deviation: the corpus appends blindly past the 1000-entry
+         * window; the port guards it. */
+        if (s_model_resource_primary_count <
+            (int)MODEL_RESOURCE_CACHE_CAPACITY)
+            pair_table_append(s_model_resource_primary,
+                              &s_model_resource_primary_count, resolved,
+                              record);
+        return record;
+    }
+    if (s_model_resource_fallback_prefix != NULL) {
+        model_resource_path_join(resolved, sizeof(resolved),
+                                 s_model_resource_fallback_prefix, path);
+        record = (Model*)pair_table_find(
+            s_model_resource_secondary,
+            (uint32_t)s_model_resource_secondary_count, path);
+        if (record != NULL) {
+            if (s_model_resource_instance_hook != NULL)
+                s_model_resource_instance_hook(record, flags);
+            return record;
         }
-        if (strcasecmp(s_model_resource_cache_names[i], resolved) == 0)
-            return s_model_resource_cache[i];
+        record = lwo_model_entry_load(resolved, flags, context);
+        if (record != NULL) {
+            if (s_model_resource_secondary_count <
+                (int)MODEL_RESOURCE_CACHE_CAPACITY)
+                pair_table_append(s_model_resource_secondary,
+                                  &s_model_resource_secondary_count, path,
+                                  record);
+            return record;
+        }
     }
-    loaded = model_open(resolved);
-    if (loaded == NULL) return NULL;
-    if (free_slot < MODEL_RESOURCE_CACHE_CAPACITY) {
-        strncpy(s_model_resource_cache_names[free_slot], resolved,
-                sizeof(s_model_resource_cache_names[free_slot]) - 1u);
-        s_model_resource_cache_names[free_slot]
-            [sizeof(s_model_resource_cache_names[free_slot]) - 1u] = '\0';
-        s_model_resource_cache[free_slot] = loaded;
-    }
-    return loaded;
+    return NULL;
 }
 
 void model_resource_cache_clear(void)
 {
-    unsigned int i;
-    for (i = 0; i < MODEL_RESOURCE_CACHE_CAPACITY; ++i) {
-        if (s_model_resource_cache[i] != NULL)
-            model_free(s_model_resource_cache[i]);
-        s_model_resource_cache[i] = NULL;
-        s_model_resource_cache_names[i][0] = '\0';
+    int i;
+    for (i = 0; i < s_model_resource_primary_count; ++i) {
+        engine_heap_free(s_model_resource_primary[i].key);
+        model_free((Model*)s_model_resource_primary[i].value);
+        s_model_resource_primary[i].key = NULL;
+        s_model_resource_primary[i].value = NULL;
     }
+    s_model_resource_primary_count = 0;
+    for (i = 0; i < s_model_resource_secondary_count; ++i) {
+        engine_heap_free(s_model_resource_secondary[i].key);
+        model_free((Model*)s_model_resource_secondary[i].value);
+        s_model_resource_secondary[i].key = NULL;
+        s_model_resource_secondary[i].value = NULL;
+    }
+    s_model_resource_secondary_count = 0;
 }
 
 /* --- digest -------------------------------------------------------------------

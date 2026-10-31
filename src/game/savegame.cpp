@@ -668,17 +668,24 @@ int osf_write_path(GameContext* ctx, int slot)
     return osf_write(ctx, path);
 }
 
-/* The corpus drops its live OSF table and resets its count/capacity before
- * reading another sidecar. The port's fixed table has no allocation to free;
- * its count/capacity words are the corresponding state. */
-// FUNCTION: LEGORR 0x004592a0
-static void osf_read_state_reset(GameContext* ctx)
+/* The original reset operates on the module's live OSF table. The portable
+ * table belongs to GameContext, so the reader binds that owner briefly while
+ * entering the same no-argument target path. */
+static GameContext* s_osf_read_reset_context;
+
+static void osf_read_state_reset_context(GameContext* ctx)
 {
     if (ctx == NULL) {
         return;
     }
     ctx->osf_count = 0;
     ctx->osf_capacity = 0;
+}
+
+// FUNCTION: LEGORR 0x004592a0
+static void osf_read_state_reset(void)
+{
+    osf_read_state_reset_context(s_osf_read_reset_context);
 }
 
 /* GameFileLengthGet (FUN_0047fca0): query the stream length and restore its
@@ -716,7 +723,9 @@ int osf_read(GameContext* ctx, const char* path)
     /* The port also clears its shadow here (the corpus frees/reallocs its
      * shadow on the next snapshot; clearing is the fixed-array equivalent,
      * leaving nothing shadowed or stale from an earlier slot). */
-    osf_read_state_reset(ctx);
+    s_osf_read_reset_context = ctx;
+    osf_read_state_reset();
+    s_osf_read_reset_context = NULL;
     ctx->osf_shadow_count = 0;
     ctx->osf_shadow_dirty = 0;
     FILE* fp = fopen(path, MODE_RB);

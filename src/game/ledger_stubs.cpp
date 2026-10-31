@@ -1482,7 +1482,6 @@ int ledger_stub_00407d60_BuildingTypeConfigRecordParse(
     return type_config_table_load(table, section, 2u, hooks);
 }
 
-// FUNCTION: LEGORR 0x00408620
 void ledger_stub_00408620_SceneObjectRecordCloneRetainHandles(
     const SceneObjectRecord* source, SceneObjectRecord* destination)
 {
@@ -2065,7 +2064,6 @@ TileModelEntityRegistration* ledger_stub_0040b5f0_TileModelEntityRegister(
                                       scale_percent, parameter, hooks);
 }
 
-// FUNCTION: LEGORR 0x0040b880
 void ledger_stub_0040b880_CellVisualChannelRelay(
     SceneCellVisualRelayRecord* record, const float corner_points[12],
     uint32_t lookup_selector, uint32_t corner_index, float scale,
@@ -2086,7 +2084,6 @@ void ledger_stub_0040ba00_SceneRotationFlagsApply(
                                flags);
 }
 
-// FUNCTION: LEGORR 0x0040bb90
 void ledger_stub_0040bb90_SceneFrameFromTripletApply(
     void* object, float projection_scale, const float first[3],
     const float second[3], const float third[3])
@@ -2259,7 +2256,6 @@ int ledger_stub_0041a1a0_UIEntryHitTestAndDispatch(
     return 0;
 }
 
-// FUNCTION: LEGORR 0x0041baa0
 int ledger_stub_0041baa0_SimulationPointerActionDispatch(
     int action, int kind, int entry, int active, int suppress_initial)
 {
@@ -2763,7 +2759,6 @@ int ledger_stub_0041dca0_UiActionDispatch(int action)
     return ui_action_dispatch(action);
 }
 
-// FUNCTION: LEGORR 0x0041eac0
 void ledger_stub_0041eac0_EventTimerCountdownAdvance(float delta)
 {
     event_timer_countdown_advance(delta);
@@ -2855,7 +2850,6 @@ uint32_t ledger_stub_0041fa80_StartLevelPilots(
 }
 
 // SelectedEntityGroundMarkerRender
-// FUNCTION: LEGORR 0x004248b0
 int ledger_stub_004248b0_SelectedEntityGroundMarkerRender(
     void* entity, void* camera, float red, float green, float blue)
 {
@@ -2893,14 +2887,17 @@ void ledger_stub_00425c30_TransitionControl(int enabled, uint32_t parameter)
     *feature_word &= ~0x1000u;
 }
 
-// FUNCTION: LEGORR 0x00425d50
+/* Adapter only: GlobalRenderRecordSetFromInput (FUN_00425d50) takes one
+ * input entity and operates on DAT_005560e8; this port seam takes explicit
+ * render-state dependencies and is not the corpus ABI. */
 void ledger_stub_00425d50_GlobalRenderRecordSetFromInput(
     void* record, void* view, const GlobalRenderRecordHooks* hooks)
 {
     global_render_record_set_from_input(record, view, hooks);
 }
 
-// FUNCTION: LEGORR 0x00426250
+/* Adapter only: UpdateRenderViewportState (FUN_00426250) is a zero-argument
+ * global-state routine. The explicit state/hooks API is not its ABI. */
 void ledger_stub_00426250_UpdateRenderViewportState(
     RenderViewportState* state, const RenderViewportHooks* hooks)
 {
@@ -2918,14 +2915,15 @@ void ledger_stub_004263c0_GlobalSubsystemStateReset(void)
     text_buffer_reset(state->text_buffer);
 }
 
-// FUNCTION: LEGORR 0x00426420
+/* CursorRayToCameraRoute (FUN_00426420) performs camera ray and pan updates;
+ * this call only resets the view record's +0x9c cursor-ray accumulator
+ * (FUN_00435f16), so it is deliberately left unmapped here. */
 void ledger_stub_00426420_CursorRayToCameraRoute(ViewContext* view)
 {
     cursor_screen_ray_context_reset(view);
 }
 
 // EntityCommandStatusFeedbackDispatch
-// FUNCTION: LEGORR 0x00428020
 void ledger_stub_00428020_EntityCommandStatusFeedbackDispatch(EntitySlot* entity)
 {
     entity_command_status_feedback_dispatch(entity);
@@ -2943,7 +2941,9 @@ int ledger_stub_00428330_TerrainCommandFeedbackDispatch(
                                              parameter_four, hooks);
 }
 
-// FUNCTION: LEGORR 0x004288e0
+/* Adapter only: LevelDebugInputCellMutatorDispatch (FUN_004288e0) consumes
+ * global key transitions and performs several commands; this material setter
+ * is not an ABI-compatible implementation. */
 void ledger_stub_004288e0_LevelDebugInputCellMutatorDispatch(
     TerrainSurfaceGrid* grid, uint32_t x, uint32_t y, uint8_t material,
     uint8_t rotation)
@@ -3163,7 +3163,9 @@ int ledger_stub_00433380_TerrainCellMutationProgress(
     return terrain_cell_mutation_progress(grid, x, y, hooks);
 }
 
-// FUNCTION: LEGORR 0x004334f0
+/* Adapter only: RenderQualityConfigApply (FUN_004334f0) has no explicit
+ * arguments; it reads the global config and render device state. This port
+ * seam accepts parsed settings and does not provide those global owners. */
 int ledger_stub_004334f0_RenderQualityConfigApply(
     const RenderQualitySettings* settings)
 {
@@ -3192,7 +3194,9 @@ int ledger_stub_00433c10_EntityNeighborBlockedCellStepProbe(
     return -1;
 }
 
-// FUNCTION: LEGORR 0x00433e80
+/* Adapter only: TerrainProjectedCellStateRefresh (FUN_00433e80) is a
+ * zero-argument routine over global view and terrain state. The explicit
+ * state/hooks model below has a different ABI and incomplete render owners. */
 uint32_t ledger_stub_00433e80_TerrainProjectedCellStateRefresh(
     const TerrainProjectedCellRefreshState* state,
     const TerrainProjectedCellRefreshHooks* hooks)
@@ -3200,7 +3204,9 @@ uint32_t ledger_stub_00433e80_TerrainProjectedCellStateRefresh(
     return terrain_projected_cell_state_refresh(state, hooks);
 }
 
-// FUNCTION: LEGORR 0x00434480
+/* Adapter only: CellSurfaceUpdateDispatch (FUN_00434480) takes the live
+ * terrain grid, cell coordinates, and two render parameters. The extra hook
+ * bundle and cell-record pointer here are not the retail ABI. */
 int ledger_stub_00434480_CellSurfaceUpdateDispatch(
     const uint8_t* cell, int x, int y, void* param_a, void* param_b,
     const TerrainCellSurfaceUpdateHooks* hooks)
@@ -3347,7 +3353,9 @@ void ledger_stub_00434da0_AdvisorTooltipAndTooltipSoundConfigLoad(
     advisor_tooltip_and_sound_config_load(config);
 }
 
-// FUNCTION: LEGORR 0x004350a0
+/* Adapter only: SurfaceTypeDescriptionsConfigLoad (FUN_004350a0) takes the
+ * config and section owners, then writes the original global tables. The
+ * caller-supplied entries/hooks seam does not reproduce those owners. */
 void ledger_stub_004350a0_SurfaceTypeDescriptionsConfigLoad(
     SurfaceTypeDescriptionEntry entries[18],
     const SurfaceTypeDescriptionHooks* hooks)
@@ -6345,7 +6353,9 @@ uint32_t ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease(
 }
 
 // TerrainCellMaterialTransitionBegin
-// FUNCTION: LEGORR 0x0044e6d0
+/* Adapter only: TerrainCellMaterialTransitionBegin (FUN_0044e6d0) reserves
+ * and fills one of ten live transition slots before calling the material
+ * setter. This wrapper performs only the final cell material update. */
 void ledger_stub_0044e6d0_TerrainCellMaterialTransitionBegin(
     TerrainSurfaceGrid* grid, int x, int y, unsigned int material,
     unsigned int rotation)
@@ -6587,7 +6597,6 @@ void ledger_stub_0045a2e0_OverlayImageRecordLoad(BlockFile* cfg, int panel,
 }
 
 // CaseInsensitiveStringTableLookup
-// FUNCTION: LEGORR 0x0045a370
 int ledger_stub_0045a370_CaseInsensitiveStringTableLookup(
     const char* name, int* out_index)
 {
@@ -6786,7 +6795,9 @@ void ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad(
 }
 
 // TerrainViewTileGeometryBuild
-// FUNCTION: LEGORR 0x0045dbc0
+/* Adapter only: TerrainViewTileGeometryBuild (FUN_0045dbc0) consumes global
+ * render-view and terrain state. The explicit grid callback seam is not its
+ * zero-argument ABI or complete geometry owner. */
 void ledger_stub_0045dbc0_TerrainViewTileGeometryBuild(TerrainViewTileGrid* grid)
 {
     terrain_view_tile_geometry_build(grid);
@@ -6801,7 +6812,9 @@ int ledger_stub_0045e9e0_TerrainTileStyleResolve(
     return terrain_tile_style_resolve(output, x, y, style, context, resolver);
 }
 
-// FUNCTION: LEGORR 0x00460220
+/* Adapter only: StartLevelSelected (FUN_00460220) operates on the selected
+ * level and global game state with no arguments. This explicit GameContext
+ * seam currently only performs the separate checkpoint query from FUN_00460200. */
 void ledger_stub_00460220_StartLevelSelected(GameContext* ctx)
 {
     selected_level_start_object_update(ctx);
@@ -6935,7 +6948,9 @@ int ledger_stub_00462ad0_RewardScrollTickerAdvanceAndDraw(
 }
 
 // TerrainCellQuadGeometryEmit
-// FUNCTION: LEGORR 0x00462f20
+/* Adapter only: TerrainCellQuadGeometryEmit (FUN_00462f20) takes two
+ * coordinates and four separate vertex pointers, using global quad state.
+ * The explicit grid plus packed vertex array has a different ABI. */
 void ledger_stub_00462f20_TerrainCellQuadGeometryEmit(
     TerrainCellQuadEmitGrid* grid, unsigned int x, unsigned int y,
     const float vertices[4][3])
@@ -6944,7 +6959,9 @@ void ledger_stub_00462f20_TerrainCellQuadGeometryEmit(
 }
 
 // TerrainDirtyCellQuadNormalEmitPass
-// FUNCTION: LEGORR 0x00463230
+/* Adapter only: TerrainDirtyCellQuadNormalEmitPass (FUN_00463230) is a
+ * zero-argument pass over global dirty-quad state; the pass pointer below is
+ * a reconstruction seam without the retail global owner. */
 void ledger_stub_00463230_TerrainDirtyCellQuadNormalEmitPass(
     TerrainDirtyQuadNormalPass* pass)
 {
@@ -6959,8 +6976,10 @@ int ledger_stub_00463590_TerrainCellSurfaceNormalGet(uint32_t x, uint32_t y,
     return terrain_cell_surface_normal_get(x, y, normal);
 }
 
-// InfoPanelStringEntriesInitialize
-// FUNCTION: LEGORR 0x004636b0
+/* Adapter only: InfoPanelStringEntriesInitialize (FUN_004636b0) takes four
+ * fixed arguments followed by a variable stack record list and writes a
+ * global 0x20-byte table. This explicit table/array resolver has a different
+ * ABI and no live global table owner. */
 uint32_t ledger_stub_004636b0_InfoPanelStringEntriesInitialize(
     UiInfoPanelStringTable* table, const UiInfoPanelStringInit* entries,
     uint32_t count, void* context, UiInfoPanelStringResolveHook resolve)
@@ -7041,8 +7060,9 @@ SceneQuadGridRecord* ledger_stub_00463f00_SceneQuadGridEmit(
     return scene_quad_grid_emit(scene, parameter, hooks);
 }
 
-// BuildingPlacementFootprintRenderAndValidate
-// FUNCTION: LEGORR 0x004641c0
+/* Adapter only: BuildingPlacementFootprintRenderAndValidate (FUN_004641c0)
+ * consumes the selected object, placement state, global terrain, and render
+ * layer in seven arguments. This explicit surface/hooks seam is not its ABI. */
 const int* ledger_stub_004641c0_BuildingPlacementFootprintRenderAndValidate(
     TerrainSurfaceGrid* surface, const int offset[2], const int* source_xy,
     unsigned int count, int rotation, float maximum_height_span,
@@ -7167,8 +7187,9 @@ void ledger_stub_0046b7a0_TimedEffectTimestampReset(unsigned int slot)
     timed_effect_timestamp_reset(slot);
 }
 
-// UpgradeLevelTableParse
-// FUNCTION: LEGORR 0x0046c160
+/* Adapter only: UpgradeLevelTableParse (FUN_0046c160) receives the live
+ * table record and two config owners, then parses the sixteen Upgrades level
+ * groups. This hook-driven port table does not match that record/config ABI. */
 void ledger_stub_0046c160_UpgradeLevelTableParse(
     UpgradeLevelTable* table, void* context,
     UpgradeLevelEntryReadHook read_entry)
@@ -7716,7 +7737,6 @@ uint32_t ledger_stub_00474e90_RenderObjectHierarchyFloat3Set(
 }
 
 // SceneObjectBoundsUnion
-// FUNCTION: LEGORR 0x00474f10
 uint32_t ledger_stub_00474f10_SceneObjectBoundsUnion(
     void* scene_object, float bounds_min_max[6])
 {
@@ -7724,7 +7744,6 @@ uint32_t ledger_stub_00474f10_SceneObjectBoundsUnion(
 }
 
 // RenderObjectSetPackedRgbaFromFloatChannels
-// FUNCTION: LEGORR 0x004750b0
 void ledger_stub_004750b0_RenderObjectSetPackedRgbaFromFloatChannels(
     void* scene_object, float red, float green, float blue, float alpha)
 {
@@ -8178,13 +8197,6 @@ float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff)
     return audio_listener_rolloff_set(rolloff);
 }
 
-// WindowStateInitialize
-// FUNCTION: LEGORR 0x0047c170
-void ledger_stub_0047c170_WindowStateInitialize(void* owner)
-{
-    window_runtime_state_initialize(owner);
-}
-
 // InterfaceMethod18StructApply
 // FUNCTION: LEGORR 0x0047e300
 int ledger_stub_0047e300_InterfaceMethod18StructApply(
@@ -8434,15 +8446,11 @@ void* ledger_stub_00480900_CachedRenderResourceInstanceCreate(
     return instance;
 }
 
-// LwoModelEntryLoad
-// FUNCTION: LEGORR 0x004809e0
-Model* ledger_stub_004809e0_LwoModelEntryLoad(const char* path,
-                                               const char* entry_name,
-                                               void* context)
+// LwoModelEntryLoad (implemented in gods98/model.cpp)
+Model* ledger_stub_004809e0_LwoModelEntryLoad(const char* path, void* flags,
+                                              void* context)
 {
-    (void)entry_name;
-    (void)context;
-    return model_open(path);
+    return lwo_model_entry_load(path, flags, context);
 }
 
 // MaterialPass
@@ -8508,14 +8516,103 @@ int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
     return 1;
 }
 
-// MeshRecordAllocateAndFill
+// MeshRecordAllocateAndFill (FUN_00482220): append one 0x70-byte render
+// record to the pool.  The pool starts at ten slots (0x460 bytes); on the
+// first call it seeds count at 1, and when the count reaches capacity it
+// grows capacity by 150 percent through the pool's allocator.  The record
+// gets an index_count of rows*columns copied from every other source word
+// and a zeroed 0x20-byte-per-vertex block, then reports through the pool's
+// registration seam (FUN_00483170).
+static void* ledger_mesh_record_default_allocate(void*, size_t bytes)
+{
+    return engine_heap_alloc((long)bytes);
+}
+
+static void ledger_mesh_record_default_release(void*, void* memory)
+{
+    engine_heap_free(memory);
+}
+
 // FUNCTION: LEGORR 0x00482220
 int ledger_stub_00482220_MeshRecordAllocateAndFill(
     MeshRecordPool* pool, uint32_t vertex_count, uint32_t index_rows,
     uint32_t index_columns, const uint16_t* source_indices)
 {
-    return mesh_record_allocate_and_fill(pool, vertex_count, index_rows,
-                                         index_columns, source_indices);
+    void* (*allocate)(void*, size_t);
+    void (*release)(void*, void*);
+    uint32_t index_count;
+    uint32_t index;
+    size_t slot_bytes;
+    size_t index_bytes;
+    size_t vertex_bytes;
+    MeshRenderRecord* record;
+    uint32_t i;
+
+    if (pool == NULL || (index_rows != 0 &&
+        index_columns > 0xffffffffu / index_rows)) return -1;
+    index_count = index_rows * index_columns;
+    if (index_count != 0 && source_indices == NULL) return -1;
+    if (vertex_count > (size_t)-1 / 32u ||
+        index_count > (size_t)-1 / sizeof(uint16_t)) return -1;
+    allocate = pool->allocate != NULL ? pool->allocate :
+                                        ledger_mesh_record_default_allocate;
+    release = pool->release != NULL ? pool->release :
+                                      ledger_mesh_record_default_release;
+
+    if (pool->records == NULL) {
+        pool->capacity = 10;
+        pool->count = 1;
+        slot_bytes = (size_t)pool->capacity * sizeof(MeshRenderRecord);
+        pool->records = (MeshRenderRecord*)allocate(pool->context, slot_bytes);
+        if (pool->records == NULL) {
+            pool->count = 0;
+            pool->capacity = 0;
+            return -1;
+        }
+    }
+    else {
+        index = pool->count;
+        pool->count++;
+        if (index == pool->capacity) {
+            uint32_t new_capacity = (pool->capacity * 150u) / 100u;
+            MeshRenderRecord* grown;
+            if (new_capacity <= pool->capacity)
+                new_capacity = pool->capacity + 1;
+            slot_bytes = (size_t)new_capacity * sizeof(MeshRenderRecord);
+            grown = (MeshRenderRecord*)allocate(pool->context, slot_bytes);
+            if (grown == NULL) return -1;
+            memcpy(grown, pool->records,
+                   (size_t)pool->capacity * sizeof(MeshRenderRecord));
+            release(pool->context, pool->records);
+            pool->records = grown;
+            pool->capacity = new_capacity;
+        }
+    }
+
+    index = pool->count - 1u;
+    record = &pool->records[index];
+    memset(record, 0, sizeof(*record));
+    index_bytes = (size_t)index_count * sizeof(uint16_t);
+    record->indices = index_bytes != 0 ?
+        (uint16_t*)allocate(pool->context, index_bytes) : NULL;
+    if (index_bytes != 0 && record->indices == NULL) return -1;
+    record->index_count = index_count;
+    for (i = 0; i < index_count; ++i)
+        record->indices[i] = source_indices[i * 2u];
+
+    vertex_bytes = (size_t)vertex_count * 32u;
+    record->vertices = vertex_bytes != 0 ?
+        allocate(pool->context, vertex_bytes) : NULL;
+    if (vertex_bytes != 0 && record->vertices == NULL) {
+        if (record->indices != NULL) release(pool->context, record->indices);
+        memset(record, 0, sizeof(*record));
+        return -1;
+    }
+    if (record->vertices != NULL) memset(record->vertices, 0, vertex_bytes);
+    record->vertex_count = vertex_count;
+    if (pool->record_registered != NULL)
+        pool->record_registered(pool->context, index);
+    return (int)index;
 }
 
 
@@ -8526,8 +8623,7 @@ void ledger_stub_00482d60_ModelRenderPassDispatch(void* device)
     model_render_pass_dispatch(device);
 }
 
-// AnimatedTextureFrameSurfaceSet
-// FUNCTION: LEGORR 0x004830c0
+// AnimatedTextureFrameSurfaceSet (implemented in gods98/scene_resources.cpp)
 void ledger_stub_004830c0_AnimatedTextureFrameSurfaceSet(
     void* texture, int frame_index, const void* frame_state)
 {
@@ -8835,16 +8931,13 @@ void ledger_stub_004882e0_SceneNodeTransformMatrixApply(void* owner,
                                         scale);
 }
 
-// ModelResourceResolveOrLoad
-// FUNCTION: LEGORR 0x004885c0
+// ModelResourceResolveOrLoad (implemented in gods98/model.cpp)
 Model* ledger_stub_004885c0_ModelResourceResolveOrLoad(const char* prefix,
                                                        const char* path,
                                                        void* flags,
                                                        void* context)
 {
-    (void)flags;
-    (void)context;
-    return model_resource_resolve_or_load(prefix, path);
+    return model_resource_resolve_or_load(prefix, path, flags, context);
 }
 
 // SceneHierarchyInterfaceRegisterRecursive
@@ -8919,130 +9012,11 @@ void* ledger_stub_004894c0_ComInterfaceQueryOrFallback(
     return fallback;
 }
 
-// ResourceTreeCallbackContextCreateForEnumerator
-typedef struct PortableResourceCallbackContext {
-    uint32_t flags;
-    void* resource;
-    void* user_context;
-    uint32_t resource_mode;
-    PortableResourceTreeNode* root;
-    PortableResourceTreeNode** entries;
-    uint32_t entry_count;
-    uint32_t enumerated_count;
-} PortableResourceCallbackContext;
-typedef struct PortableResourceCollector {
-    PortableResourceTreeNode** entries;
-    uint32_t capacity;
-    uint32_t count;
-} PortableResourceCollector;
-static int portable_resource_collect_node(PortableResourceTreeNode* node,
-                                          void* context)
-{
-    PortableResourceCollector* collector =
-        (PortableResourceCollector*)context;
-    if (node != NULL && collector != NULL &&
-        collector->count < collector->capacity)
-        collector->entries[collector->count++] = node;
-    return 0;
-}
-static uint32_t portable_resource_subtree_size(PortableResourceTreeNode* node,
-                                               uint32_t depth)
-{
-    uint32_t count = 1u;
-    uint32_t i;
-    if (node == NULL || depth > 64u) return 0u;
-    for (i = 0; i < node->child_count; ++i) {
-        uint32_t child_count = portable_resource_subtree_size(
-            node->children[i], depth + 1u);
-        if (0xffffffffu - count < child_count) return 0xffffffffu;
-        count += child_count;
-    }
-    return count;
-}
-static void portable_resource_tree_collect(PortableResourceTreeNode* node,
-                                           uint32_t depth,
-                                           PortableResourceCollector* c)
-{
-    uint32_t i;
-    if (node == NULL || c == NULL || depth > 64u || c->count >= c->capacity)
-        return;
-    portable_resource_collect_node(node, c);
-    for (i = 0; i < node->child_count && c->count < c->capacity; ++i)
-        portable_resource_tree_collect(node->children[i], depth + 1u, c);
-}
-static PortableResourceCallbackContext* portable_resource_context_create(
-    void* resource, void* user_context, PortableResourceTreeNode* root,
-    uint32_t resource_mode)
-{
-    PortableResourceCallbackContext* result;
-    PortableResourceCollector collector;
-    uint32_t capacity;
-    if (root == NULL) return NULL;
-    capacity = portable_resource_subtree_size(root, 0u);
-    if (capacity == 0xffffffffu || capacity == 0u) return NULL;
-    result = (PortableResourceCallbackContext*)engine_heap_alloc(
-        (long)sizeof(*result));
-    if (result == NULL) return NULL;
-    memset(result, 0, sizeof(*result));
-    result->root = root;
-    result->resource = resource;
-    result->user_context = user_context;
-    result->resource_mode = resource_mode;
-    result->entry_count = capacity;
-    if (capacity != 0u) {
-        result->entries = (PortableResourceTreeNode**)engine_heap_alloc(
-            (long)(capacity * sizeof(*result->entries)));
-        if (result->entries == NULL) {
-            engine_heap_free(result);
-            return NULL;
-        }
-        collector.entries = result->entries;
-        collector.capacity = capacity;
-        collector.count = 0;
-        portable_resource_tree_collect(root, 0u, &collector);
-        result->enumerated_count = collector.count;
-    }
-    return result;
-}
-// FUNCTION: LEGORR 0x00489520
-PortableResourceCallbackContext*
-ledger_stub_00489520_ResourceTreeCallbackContextCreateForEnumerator(
-    void* enumerator, PortableResourceTreeNode* root)
-{
-    return portable_resource_context_create(NULL, enumerator, root, 0u);
-}
-
-// ResourceTreeCallbackContextCreateForResource
-// FUNCTION: LEGORR 0x004895c0
-PortableResourceCallbackContext*
-ledger_stub_004895c0_ResourceTreeCallbackContextCreateForResource(
-    void* resource, PortableResourceTreeNode* root)
-{
-    return portable_resource_context_create(resource, NULL, root, 1u);
-}
-
 // DDiSceneTimedHookDispatch
 void ledger_stub_004897e0_DDiSceneTimedHookDispatch(
     void* hook_record, float time, void* output)
 {
     ddiscene_timed_hook_dispatch(hook_record, time, output);
-}
-
-// ResourceTreeCallbackCount
-// FUNCTION: LEGORR 0x00489910
-uint32_t ledger_stub_00489910_ResourceTreeCallbackCount(
-    PortableResourceTreeNode* node, uint32_t depth,
-    int (*callback)(PortableResourceTreeNode*, void*), void* context)
-{
-    uint32_t i;
-    if (node == NULL || callback == NULL || depth > 64u) return 0;
-    if (callback(node, context)) return 1;
-    for (i = 0; i < node->child_count; ++i) {
-        if (ledger_stub_00489910_ResourceTreeCallbackCount(
-                node->children[i], depth + 1u, callback, context) != 0)
-            break;
-    }
-    return node->child_count;
 }
 
 // ObjectHierarchyRecursiveClone
@@ -9185,13 +9159,6 @@ void ledger_stub_0048b290_StartupStreamsClose()
     unported_ledger_stubs::s_startup_streams[2] = NULL;
     unported_ledger_stubs::s_startup_streams[1] = NULL;
     unported_ledger_stubs::s_startup_streams[0] = NULL;
-}
-
-// FUNCTION: LEGORR 0x0048b2f0
-BlockFile* ledger_stub_0048b2f0_StartupConfigStreamLoad(const char* path)
-{
-    unported_ledger_stubs::startup_streams_close();
-    return block_open(path);
 }
 
 // FUNCTION: LEGORR 0x0048b390
@@ -10191,14 +10158,17 @@ void legacy_overlay_image_record_load(BlockFile* cfg, int panel,
                                      const char* path)
 {
     LegacyPanelPortRecord* record;
+    /* The original clears the record's entry count, stores the caller's
+       state word (mapped to 0 through this port seam), and then tries the
+       primary resource load with mode 0 followed by initialisation, or the
+       alternate resource load with mode 1.  It never releases the previous
+       surface; the resource layer owns surface lifetime. */
     if (panel < 0 || panel >= 18) return;
     record = &s_legacy_panels[panel];
-    if (record->image != NULL && s_legacy_hud_ops.surface_release != NULL)
-        s_legacy_hud_ops.surface_release(record->image,
-                                        s_legacy_hud_ops.context);
-    record->image = NULL;
+    record->selection_count = 0;
     record->image_mode = 0;
     record->image_flags = 0;
+    record->image = NULL;
     if (path != NULL && s_legacy_hud_ops.surface_load != NULL)
         record->image = s_legacy_hud_ops.surface_load(
             cfg, path, 0, 0, s_legacy_hud_ops.context);
@@ -10225,6 +10195,8 @@ int legacy_panel_slot_coordinate_hit_test(int panel, int x, int y)
 {
     LegacyPanelPortRecord* record;
     int hit;
+    /* Preserve the port record-array bound; the corpus directly indexes its
+       panel record and has no corresponding range branch. */
     if (panel < 0 || panel >= 18) return 1;
     record = &s_legacy_panels[panel];
     if (record->image_mode != 0 || record->image == NULL ||
@@ -10309,8 +10281,10 @@ void legacy_panel_category_record_install(int panel, const float rect[4],
     record->flags = flags;
     if (selection_count > 64) selection_count = 64;
     record->selection_count = selection_count;
-    for (i = 0; i < selection_count; ++i)
+    for (i = 0; i < selection_count; ++i) {
         record->selection_flags[i] = selections != NULL ? selections[i] : 0;
+        record->selection_values[i] = 0;
+    }
 }
 
 void* legacy_panel_image_get(int panel)

@@ -91,7 +91,23 @@ ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head);
  * (the corpus opens the sidecar only when the uv slot is requested).
  * Returns NULL on open/read/parse failure. */
 Model* model_open(const char* path);
-Model* model_resource_resolve_or_load(const char* prefix, const char* path);
+
+/* LwoModelEntryLoad (FUN_004809e0): derive the entry directory from the
+ * joined path (text through the last backslash, empty when none) and open
+ * the model from the full path; the flags word and caller context are the
+ * reference's loader arguments. */
+Model* lwo_model_entry_load(const char* path, void* flags, void* context);
+
+/* ModelResourceResolveOrLoad (FUN_004885c0): case-insensitive pair-table
+ * resolver over the joined "%s%s" path, with the raw-path secondary table
+ * consulted under the fallback prefix.  Table hits run the FUN_00480900
+ * instance seam installed through model_resource_instance_hook_set. */
+typedef void (*ModelResourceInstanceHook)(void* record, void* flags);
+void model_resource_instance_hook_set(ModelResourceInstanceHook hook);
+void model_resource_fallback_prefix_set(const char* prefix);
+const char* model_resource_fallback_prefix_get(void);
+Model* model_resource_resolve_or_load(const char* prefix, const char* path,
+                                      void* flags, void* context);
 void model_resource_cache_clear(void);
 
 /* Parse a caller-owned buffer; for tests and already-resident data. */

@@ -167,6 +167,7 @@ uint32_t event_timer_interaction_flags_get(void)
               s_event_timer_interaction_flags_context) : 0u;
 }
 
+// FUNCTION: LEGORR 0x0041EAC0
 void event_timer_countdown_advance(float delta)
 {
     EventTimerState state;
