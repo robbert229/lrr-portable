@@ -13,6 +13,7 @@
 #define MESSAGE_CD_RESET 25.0f /* 0x41c80000 */
 #define IDX_LIST_SLOTS 16 /* deviation: the corpus strides the list index */
 
+// GLOBAL: LEGORR 0x00503190
 static const char* s_ui_message_labels[26] = {
     "Text_Walk", "Text_Drill", "Text_NoDrill", "Text_CantDrill",
     "Text_Reinforce", "Text_NoReinforce", "Text_CantReinforce",
@@ -726,14 +727,16 @@ static int message_pre_check(int id)
 // FUNCTION: LEGORR 0x004193e0
 int incident_message_config_lookup(const char* name, int* out_id)
 {
+    /* Load the table base before the port-side null guards, matching the
+     * corpus entry sequence while keeping the tested guarded API. */
+    const char* const* entry = s_catalog;
     if (name == NULL || out_id == NULL) {
         return 0; /* pinned deviation: the corpus strides both blindly */
     }
     /* stride-4 name-table walk, as the corpus: unsigned end compare (the
      * loop-back is jb) with the index counter beside the pointer (edi) */
-    const char* const* entry = s_catalog;
-    const char* const* end = s_catalog + MESSAGE_MAX_ID;
     int i = 0;
+    const char* const* end = s_catalog + MESSAGE_MAX_ID;
     for (; entry < end; ++entry, ++i) {
         if (strcasecmp_lite(*entry, name) == 0) {
             *out_id = i;
@@ -934,6 +937,7 @@ uint32_t incident_message_state_get(void)
 
 /* DeferredCallbackSet (FUN_00453900) — zero-init module static (the
  * corpus's DAT_004a673c presence word). */
+// GLOBAL: LEGORR 0x004a673c
 static uint32_t s_deferred_callback_presence;
 
 // FUNCTION: LEGORR 0x00453900

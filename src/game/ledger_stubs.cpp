@@ -7647,7 +7647,7 @@ void ledger_stub_0047bdb0_StreamedWaveRingBufferTick(int stream_index)
 // FUNCTION: LEGORR 0x0047c100
 float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff)
 {
-    if (!sound_bank_sound_on()) return rolloff;
+    if (s_bank_sound_on == 0) return rolloff;
     if (rolloff < 0.0f) rolloff = 0.0f;
     if (rolloff > 10.0f) rolloff = 10.0f;
     return audio_listener_rolloff_set(rolloff);

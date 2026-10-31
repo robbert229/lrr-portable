@@ -1305,10 +1305,11 @@ void terrain_grid_operation_apply_all(TerrainSurfaceGrid* grid,
 {
     uint32_t x;
     uint32_t y;
-    if (grid == NULL || hook == NULL) return;
-    for (y = 0; y < grid->height; ++y) {
-        for (x = 0; x < grid->width; ++x)
-            hook(context, y * grid->width + x, operation);
+    if (grid != NULL && hook != NULL) {
+        for (y = 0; y < grid->height; ++y) {
+            for (x = 0; x < grid->width; ++x)
+                hook(context, y * grid->width + x, operation);
+        }
     }
 }
 

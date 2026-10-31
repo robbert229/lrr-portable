@@ -340,22 +340,23 @@ void entity_velocity_slot_value_set(void* record, uint32_t value, int slot)
 
 /* EntityFlag80Set (FUN_00473b20) — see record.hpp. */
 // FUNCTION: LEGORR 0x00473b20
-void entity_flag_80_set(void* record, int set)
+void entity_flag_80_set_corpus(void* record, int set)
 {
+    uint32_t* word = (uint32_t*)((char*)record + 0x14);
     if (set != 0) {
-        if (record == NULL) {
-            return; /* deviation: the corpus strides the record blindly */
-        }
-        uint32_t* word = (uint32_t*)((char*)record + 0x14);
         *word |= 0x80u;
     }
     else {
-        if (record == NULL) {
-            return; /* deviation: the corpus strides the record blindly */
-        }
-        uint32_t* word = (uint32_t*)((char*)record + 0x14);
         *word &= ~0x80u;
     }
+}
+
+void entity_flag_80_set(void* record, int set)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus strides the record blindly */
+    }
+    entity_flag_80_set_corpus(record, set);
 }
 
 /* CategoryValueIsNeitherZeroNorFifteen (FUN_0041b470). */

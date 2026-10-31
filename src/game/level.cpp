@@ -3979,28 +3979,25 @@ void coordinate_callback_dispatch_by_mode(const void* coord_pair, int mode)
 // FUNCTION: LEGORR 0x0041f870
 void global_object_field8c_increment(LevelState* s)
 {
-    if (s == NULL) {
-        return;
+    if (s != NULL) {
+        level_set_int(s, 0x8C, level_int(s, 0x8C) + 1);
     }
-    level_set_int(s, 0x8C, level_int(s, 0x8C) + 1);
 }
 
 // FUNCTION: LEGORR 0x0041f880
 void global_object_field8c_subtract(LevelState* s, int amount)
 {
-    if (s == NULL) {
-        return;
+    if (s != NULL) {
+        level_set_int(s, 0x8C, level_int(s, 0x8C) - amount);
     }
-    level_set_int(s, 0x8C, level_int(s, 0x8C) - amount);
 }
 
 // FUNCTION: LEGORR 0x0041f8a0
 void global_object_field98_add(LevelState* s, int amount)
 {
-    if (s == NULL) {
-        return;
+    if (s != NULL) {
+        level_set_int(s, 0x98, level_int(s, 0x98) + amount);
     }
-    level_set_int(s, 0x98, level_int(s, 0x98) + amount);
 }
 
 // FUNCTION: LEGORR 0x0041f8c0
@@ -4014,28 +4011,25 @@ void global_object_field98_clear(LevelState* s)
 // FUNCTION: LEGORR 0x0041f920
 void level_state_field9c_add(LevelState* s, int amount)
 {
-    if (s == NULL) {
-        return;
+    if (s != NULL) {
+        level_set_int(s, 0x9C, level_int(s, 0x9C) + amount);
     }
-    level_set_int(s, 0x9C, level_int(s, 0x9C) + amount);
 }
 
 // FUNCTION: LEGORR 0x0041f980
 void global_object_field94_increment(LevelState* s)
 {
-    if (s == NULL) {
-        return;
+    if (s != NULL) {
+        level_set_int(s, 0x94, level_int(s, 0x94) + 1);
     }
-    level_set_int(s, 0x94, level_int(s, 0x94) + 1);
 }
 
 // FUNCTION: LEGORR 0x0041f990
 void global_object_fielda8_increment(LevelState* s)
 {
-    if (s == NULL) {
-        return;
+    if (s != NULL) {
+        level_set_int(s, 0xA8, level_int(s, 0xA8) + 1);
     }
-    level_set_int(s, 0xA8, level_int(s, 0xA8) + 1);
 }
 
 uint32_t level_field8c_get(const LevelState* s)
@@ -4428,20 +4422,26 @@ static void path_record_remove_and_free(void* record)
     void* previous = NULL;
     void* current = s_path_record_last;
 
-    while (current != NULL && current != record) {
+    /* The corpus enters a do/while and tests the link before comparing the
+     * requested record.  Keep that shape: an empty list goes straight to the
+     * common payload/record release path. */
+    do {
+        if (current == NULL) goto release_record;
+        if (current == record) {
+            if (previous != NULL) {
+                *(void**)((char*)previous + 0x24) =
+                    *(void**)((char*)current + 0x24);
+            }
+            else {
+                s_path_record_last = *(void**)((char*)current + 0x24);
+            }
+            goto release_record;
+        }
         previous = current;
         current = *(void**)((char*)current + 0x24);
-    }
-    if (current == record && current != NULL) {
-        void* next = *(void**)((char*)current + 0x24);
-        if (previous == NULL) {
-            s_path_record_last = next;
-        }
-        else {
-            *(void**)((char*)previous + 0x24) = next;
-        }
-    }
+    } while (1);
 
+release_record:
     engine_heap_free(*(void**)((char*)record + 0x14));
     engine_heap_free(record);
 }
