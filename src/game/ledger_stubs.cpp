@@ -323,6 +323,7 @@ void buffered_char_stream_read_hook_set(BufferedCharReadHook read_char,
     s_buffered_char_read_context = context;
 }
 
+// FUNCTION: LEGORR 0x0048b4a0
 int buffered_char_stream_read_to_string(void* stream, char* output)
 {
     char* cursor = output;
@@ -447,6 +448,7 @@ int cell_visual_channel_table_resource_set(CellVisualChannelTable* table,
     return 1;
 }
 
+// FUNCTION: LEGORR 0x0040b810
 void cell_visual_channel_table_resources_clear(CellVisualChannelTable* table)
 {
     uint32_t channel;
@@ -464,6 +466,7 @@ void cell_visual_channel_table_resources_clear(CellVisualChannelTable* table)
     }
 }
 
+// FUNCTION: LEGORR 0x0040b7d0
 void cell_visual_channel_table_dispose(CellVisualChannelTable* table)
 {
     int index;
@@ -938,7 +941,6 @@ void ledger_stub_00403810_TerrainCellRecordCountUpdate(
 {
     void* record;
     EntitySlot* entity;
-    if (cell_xy == NULL) return;
     record = ledger_stub_00438a60_SpatialObjectQueryCenterMask01(
         cell_xy, (uint32_t)a, (uint32_t)b, (uint32_t)c);
     if (record != NULL) {
@@ -961,7 +963,7 @@ void ledger_stub_00403810_TerrainCellRecordCountUpdate(
             return;
         }
     }
-    terrain_cell_record_count_increment(a, b, c);
+    ++cmd_pending_command_counts[b * 0x10 + a * 0xf0 + c];
 }
 
 // FUNCTION: LEGORR 0x00403910
@@ -1749,20 +1751,6 @@ TileModelEntityRegistration* ledger_stub_0040b5f0_TileModelEntityRegister(
 {
     return tile_model_entity_register(manager, first_entry, second_entry,
                                       scale_percent, parameter, hooks);
-}
-
-// FUNCTION: LEGORR 0x0040b7d0
-void ledger_stub_0040b7d0_CellVisualChannelTableDispose(
-    unported_ledger_stubs::CellVisualChannelTable* table)
-{
-    unported_ledger_stubs::cell_visual_channel_table_dispose(table);
-}
-
-// FUNCTION: LEGORR 0x0040b810
-void ledger_stub_0040b810_CellVisualChannelTableResourcesClear(
-    unported_ledger_stubs::CellVisualChannelTable* table)
-{
-    unported_ledger_stubs::cell_visual_channel_table_resources_clear(table);
 }
 
 // FUNCTION: LEGORR 0x0040b880
@@ -4797,17 +4785,18 @@ int ledger_stub_00449880_BlockedCellApproachWeightWrite(
 int ledger_stub_00449010_EntityKind6RecordApproachRouteIssue(EntitySlot* entity)
 {
     int cell[2];
+    EntitySlot* kind_six_record;
     AiWaypoint* step;
-    if (entity == NULL || entity->type != 2
-        || (entity->flags_3e0 & 0x400u) == 0u || entity->activity != 6
-        || (entity->flags_3e8 & 0x80000000u) == 0u) return 0;
+    if (entity->type != 2 || (entity->flags_3e0 & 0x400u) == 0u) return 0;
+    kind_six_record = (EntitySlot*)entity->carry_link_308;
+    if (kind_six_record->type != 6
+        || (kind_six_record->flags_3e8 & 0x80000000u) == 0u) return 0;
     if (!ledger_stub_0044a3d0_PlaceCellNearestResolve(entity, cell)) return 0;
     if (!ledger_stub_00449880_BlockedCellApproachWeightWrite(
-            entity, (unsigned int)cell[0], (unsigned int)cell[1], 3.0f) ||
-        entity->wp_count <= 0) return 0;
+            entity, (unsigned int)cell[0], (unsigned int)cell[1], 3.0f))
+        return 0;
     step = &entity->wp[entity->wp_count - 1];
     step->step_kind = 18u;
-    entity->activity = 18;
     entity->pos_pair_2f4 = (float)cell[0];
     entity->pos_pair_2f8 = (float)cell[1];
     return 1;
@@ -5193,35 +5182,28 @@ void ledger_stub_0044a310_ObjectMovementInputAccumulate(EntitySlot* object,
 {
     unsigned char* bytes = (unsigned char*)object;
     int type;
-    EntitySlot* target = object;
     uint32_t capability;
     unsigned char flags;
-    int accumulator_x;
-    int accumulator_y;
-    int accumulator_z;
+    int* accumulators;
+    float* accumulator_z;
     void* linked;
-    if (bytes == NULL) return;
     memcpy(&type, bytes, sizeof(type));
     if (type == ENTITY_TYPE_MINIFIG) {
         memcpy(&linked, bytes + 0x36c, sizeof(linked));
         if (linked != NULL) {
-            target = (EntitySlot*)linked;
-            bytes = (unsigned char*)target;
+            bytes = (unsigned char*)linked;
         }
     }
     flags = bytes[0x3e0];
-    if ((flags & 1u) != 0) entity_action_sequence_reset(target, 0);
-    capability = entity_capability_flags_get(target);
+    if ((flags & 1u) != 0)
+        entity_action_sequence_reset((EntitySlot*)bytes, 0);
+    capability = entity_capability_flags_get((EntitySlot*)bytes);
     if ((capability & 4u) == 0) input_x = 0;
-    memcpy(&accumulator_x, bytes + 0x2bc, sizeof(accumulator_x));
-    memcpy(&accumulator_y, bytes + 0x2c0, sizeof(accumulator_y));
-    memcpy(&accumulator_z, bytes + 0x2c4, sizeof(accumulator_z));
-    accumulator_x += input_x;
-    accumulator_y += input_y;
-    accumulator_z = (int)(input_z + (float)accumulator_z);
-    memcpy(bytes + 0x2bc, &accumulator_x, sizeof(accumulator_x));
-    memcpy(bytes + 0x2c0, &accumulator_y, sizeof(accumulator_y));
-    memcpy(bytes + 0x2c4, &accumulator_z, sizeof(accumulator_z));
+    accumulators = (int*)(bytes + 0x2bc);
+    accumulator_z = (float*)(bytes + 0x2c4);
+    *accumulator_z = input_z + *accumulator_z;
+    accumulators[0] += input_x;
+    accumulators[1] += input_y;
 }
 
 // Type11CellCoordinateAppend
@@ -5520,7 +5502,6 @@ int ledger_stub_0044c150_EntityPairScalarFieldsSet(EntitySlot* entity,
                                                   const int32_t pair[2],
                                                   int32_t scalar)
 {
-    if (entity == NULL || pair == NULL) return 0;
     if (entity->type != 1 && entity->type != 2 && entity->type != 3) return 0;
     entity_state_reset(entity, 0, 1);
     entity->task_pair_3b4[0] = pair[0];
@@ -7698,7 +7679,10 @@ void ledger_stub_0047e3e0_InterfaceMethodResultRecordInitialize(
     unsigned int* result, void* device, unsigned int interface_value,
     void* context, unsigned int first_color, unsigned int second_color)
 {
-    if (result == 0) return;
+    if (result == NULL) return;
+    if (s_small_record_free == NULL) {
+        fixed_size_small_record_pool_grow();
+    }
     result[1] = interface_value;
     result[7] = (unsigned int)result;
     result[6] = 0;
@@ -7834,11 +7818,14 @@ uint32_t ledger_stub_0047ebe0_AviStreamFrameCountGet(
     return avi_stream_frame_count_get(state);
 }
 
+struct AviFrameSeekRebaseMethod {
+    void seek(uint32_t frame_index);
+};
+
 // FUNCTION: LEGORR 0x0047ebf0
-void ledger_stub_0047ebf0_AviFrameSeekAndClockRebase(
-    AviPlaybackState* state, uint32_t frame_index)
+void AviFrameSeekRebaseMethod::seek(uint32_t frame_index)
 {
-    avi_frame_seek_and_clock_rebase(state, frame_index);
+    avi_frame_seek_and_clock_rebase((AviPlaybackState*)this, frame_index);
 }
 
 // FUNCTION: LEGORR 0x0047ec60
@@ -7887,7 +7874,7 @@ void ledger_stub_0047ed00_AviPlaybackFrameLoop(AviPlaybackState* state,
 void ledger_stub_0047ed40_AviFrameIndexAndClockReset(
     AviPlaybackState* state, uint32_t frame_index)
 {
-    avi_frame_seek_and_clock_rebase(state, frame_index);
+    ((AviFrameSeekRebaseMethod*)state)->seek(frame_index);
 }
 
 // FUNCTION: LEGORR 0x0047ed50
@@ -8868,14 +8855,6 @@ int ledger_stub_0048b390_RegistryPathCreateKeys(
 {
     return unported_ledger_stubs::registry_path_create_keys(
         root, subkey_path, value_name, output, size, value_type);
-}
-
-// FUNCTION: LEGORR 0x0048b4a0
-int ledger_stub_0048b4a0_BufferedCharStreamReadToString(void* stream,
-                                                        char* output)
-{
-    return unported_ledger_stubs::buffered_char_stream_read_to_string(
-        stream, output);
 }
 
 // LwoCurves

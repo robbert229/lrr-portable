@@ -127,7 +127,7 @@ static int     s_pool_level = 0;
 
 // GLOBAL: LEGORR 0x004b3354
 static CmdRec* s_global_head = NULL; /* DAT_004b3354 */
-static CmdRec* s_global_tail = NULL; /* DAT_004b3358 */
+static CmdRec* s_global_tail = NULL; /* DAT_004b3358: pending-list head */
 // GLOBAL: LEGORR 0x004b8060
 static int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
 static CmdPurgeCellPredicate s_cmd_purge_cell_usable;
@@ -1484,8 +1484,11 @@ void entity_deferred_work_schedule(EntitySlot* e)
 
 /* --- registry accessors / match marker (see cmd.hpp) -------------------------
  * DAT_004b7ff4: the per-priority state table, zeroed by the (unported)
- * registry initializer loop — zero-init static, 27 entries. */
+ * registry initializer loop — zero-init static, 27 entries. The preceding
+ * command-count matrix occupies 0x12c0 dwords and ends at this table. */
 #define PRIORITY_ENTRY_COUNT 27
+// GLOBAL: LEGORR 0x004b34f4
+uint32_t cmd_pending_command_counts[CMD_PENDING_COMMAND_COUNT_TABLE_SIZE];
 // GLOBAL: LEGORR 0x004b7ff4
 static int s_priority_state[PRIORITY_ENTRY_COUNT];
 // FUNCTION: LEGORR 0x00402000
@@ -1572,11 +1575,17 @@ void cmd_flush_all(int disable_mode)
         return;
     }
     /* The entity callback sweep (LAB_004021f0) is the unported registry
-     * seam; the corpus additionally zeroes the cell-record counter block
-     * (0x12c0 entries) — registry data absent from the port. */
+     * seam. The corpus clears the full pending-command count matrix here. */
     s_global_enabled |= 2;
     s_global_head = NULL;
     s_global_tail = NULL;
+    uint32_t* count = cmd_pending_command_counts;
+    uint32_t remaining = CMD_PENDING_COMMAND_COUNT_TABLE_SIZE;
+    while (remaining != 0u) {
+        *count = 0u;
+        ++count;
+        --remaining;
+    }
     for (int i = 0; i < PRIORITY_ENTRY_COUNT; ++i) {
         s_priority_state[i] = 0;
     }
@@ -1658,10 +1667,10 @@ void level_no_gather_object_setup(int mode)
      * in-tree callers are the two test cases, both after cmd_init(). */
     cmd_set_kind(gather, 0x17);
     gather->state |= 0x40u;
-    /* Corpus 0x4021a3..0x4021ad manually pushes onto the tail pointer;
-     * the port uses its forward global-chain link (and its timestamp / state
-     * housekeeping) to preserve cmd_global_next() behavior. */
-    cmd_link_tail(gather);
+    /* Corpus 0x4021a3..0x4021ad prepends this record to the separate timer
+     * list through the +0x60 link; it does not call CmdLinkTail. */
+    gather->next = s_global_tail;
+    s_global_tail = gather;
     CmdRec* other = (CmdRec*)cmd_alloc(0x1b);
     /* Corpus 0x4021bb..0x4021c0 likewise links the allocation blindly. */
     cmd_link_head(other, 0);

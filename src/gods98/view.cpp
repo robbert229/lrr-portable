@@ -12,14 +12,9 @@
 #include "heap.hpp"
 #include "crt/crt.hpp"
 
-/* The reference uses the shared VC5 _rand entry. Other builds expose the
- * same stream through the game RNG's mapped range helper. */
-#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
-#define VIEW_RANDOM_DRAW15() rand()
-#else
-extern int level_rand_u16(void);
-#define VIEW_RANDOM_DRAW15() level_rand_u16()
-#endif
+/* The shared game thunk maps to VC5 _rand on the reference toolchain and to
+ * the same 15-bit stream on portable builds. */
+extern uint32_t rng_thunk_draw15(void);
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
@@ -3199,10 +3194,9 @@ void point_along_ray(float* out, const float* origin, const float* dir,
 // FUNCTION: LEGORR 0x004798b0
 float random_float_range(float minimum, float maximum)
 {
-    const float random_value = (float)VIEW_RANDOM_DRAW15();
+    const float random_value = (float)(int16_t)rng_thunk_draw15();
     return random_value * 3.051851e-05f * (maximum - minimum) + minimum;
 }
-#undef VIEW_RANDOM_DRAW15
 
 /* ViewRayIntersectionTest (FUN_004798e0): normalizes both direction
  * vectors (the corpus sums each normalization as z²+y²+x², its SQRT
@@ -5963,7 +5957,9 @@ float scene_property_float_at14_get(void* property)
 // FUNCTION: LEGORR 0x00476120
 uint32_t scene_property_primary_value_get(void* property)
 {
-    void* record = scene_property_value_record_get(property);
+    void** vtable = *(void***)property;
+    typedef void* (*ScenePropertyValueRecordGetFn)(void*);
+    void* record = ((ScenePropertyValueRecordGetFn)vtable[7])(property);
     if (record != NULL) {
         return *(uint32_t*)record;
     }
@@ -5975,7 +5971,9 @@ uint32_t scene_property_primary_value_get(void* property)
 // FUNCTION: LEGORR 0x00476140
 uint32_t scene_property_secondary_value_get(void* property)
 {
-    void* record = scene_property_value_record_get(property);
+    void** vtable = *(void***)property;
+    typedef void* (*ScenePropertyValueRecordGetFn)(void*);
+    void* record = ((ScenePropertyValueRecordGetFn)vtable[7])(property);
     if (record != NULL) {
         return *(uint32_t*)((char*)record + 4);
     }

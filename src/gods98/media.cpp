@@ -255,38 +255,36 @@ void media_action_feedback_sound_dispatch(int event)
 {
     int saved = sound_batch_mode_get();
     sound_batch_queue_drain(0, 0);      /* force batch mode off, no replay */
-    int cue = 0;
     switch (event) {
     case 0:
         media_pointer_cursor_override_set(0x14, 12.5f);
-        cue = 0x13;
+        sound_alias_play(0x13, 0);
         break;
     case 1:
         media_pointer_cursor_override_set(0x15, 12.5f);
-        cue = 0x14;
+        sound_alias_play(0x14, 0);
         break;
     case 2:
         media_pointer_cursor_override_set(0x15, 12.5f);
-        cue = 0x1f;
+        sound_alias_play(0x1f, 0);
         break;
     case 3:
         media_pointer_cursor_override_set(0x14, 12.5f);
-        cue = 0x1e;
+        sound_alias_play(0x1e, 0);
         break;
     case 4:
         media_pointer_cursor_override_set(0x14, 12.5f);
-        cue = 0x20;
+        sound_alias_play(0x20, 0);
         break;
     case 5:
         media_pointer_cursor_override_set(0x14, 12.5f);
-        cue = 0x21;
+        sound_alias_play(0x21, 0);
         break;
     default:
         /* Unknown event: submit nothing, but still restore the mode. */
         sound_batch_queue_drain(saved, 0);
         return;
     }
-    sound_alias_play(cue, 0);
     sound_batch_queue_drain(saved, 0);  /* restore the saved mode */
 }
 
@@ -411,7 +409,8 @@ float media_min_distance_ref_distance(void)
 /* --- the CD-audio availability seam (see media.hpp) -------------------------- */
 // GLOBAL: LEGORR 0x0054486c
 static int s_cd_audio_open; /* DAT_0054486c role: unowned, zero-init */
-static int s_cd_audio_current_track = -1; /* DAT_00544a04 */
+// GLOBAL: LEGORR 0x00544a04
+static int s_cd_audio_current_track; /* DAT_00544a04 */
 static MediaCdAudioInitHook s_cd_audio_init_hook;
 static void* s_cd_audio_init_context;
 static MediaCdAudioErrorTextHook s_cd_audio_error_hook;

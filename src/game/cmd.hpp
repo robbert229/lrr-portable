@@ -40,6 +40,11 @@ extern "C" {
 #endif
 
 #define CMD_RECORD_SIZE 0x68
+#define CMD_PENDING_COMMAND_COUNT_TABLE_SIZE 0x12c0
+
+/* Entity-type/action pending-command count table (DAT_004b34f4). */
+extern uint32_t cmd_pending_command_counts[
+    CMD_PENDING_COMMAND_COUNT_TABLE_SIZE];
 
 /* Record state flags (+0x5c, finding 10). */
 #define CMD_STATE_PENDING   0x10u

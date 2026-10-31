@@ -256,10 +256,10 @@ void catalog_slot_flag_update(int category, int slot)
     s_catalog_slot_flags[table][slot] = flags;
 }
 
-/* The InfoMessages catalog — finding 22's 40 names, in table order.
- * The corpus fills its stride-4 table at DAT_004dc658 at runtime through
- * CatalogInit; this static initializer supplies the table at startup. */
-static const char* const s_catalog[MESSAGE_MAX_ID] = {
+/* The InfoMessages catalog — finding 22's 40 names, in table order. The
+ * corpus copies these pointers into the zero-filled runtime table at
+ * DAT_004dc658 during CatalogInit. */
+static const char* const s_catalog_defaults[MESSAGE_MAX_ID] = {
     "CrystalFound", "OreSeamFound", "RockMonster", "LavaRockMonster",
     "IceRockMonster", "UnderAttack", "Landslide", "CaveIn", "Constructed",
     "CavernLocated", "LegoManDeath", "VehicleDeath", "BuildingDeath",
@@ -271,6 +271,8 @@ static const char* const s_catalog[MESSAGE_MAX_ID] = {
     "CanTrainMinifigure", "CrystalSeamFound", "GenericSeamFound",
     "GenericDeath", "GenericMonster",
 };
+// GLOBAL: LEGORR 0x004dc658
+static const char* s_catalog[MESSAGE_MAX_ID];
 
 static int s_in_family(int id)
 {
@@ -300,6 +302,7 @@ void message_init_defaults(void)
 {
     message_clear();
     for (int i = 0; i < MESSAGE_MAX_ID; ++i) {
+        s_catalog[i] = s_catalog_defaults[i];
         s_cfg[i].name = s_catalog[i];
     }
     s_flags = 0x4u; /* system on */
@@ -349,6 +352,9 @@ void message_clear(void)
 // FUNCTION: LEGORR 0x00419230
 void incident_message_catalog_init(uint32_t owner)
 {
+    for (int i = 0; i < MESSAGE_MAX_ID; ++i) {
+        s_catalog[i] = s_catalog_defaults[i];
+    }
     s_catalog_owner = owner;
     s_flags |= 0x18u;
 }

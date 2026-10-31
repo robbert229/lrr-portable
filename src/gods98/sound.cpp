@@ -1598,6 +1598,7 @@ int sound_stream_play_tutorial(int level)
 }
 
 /* SoundBufferAssociationAdd (FUN_0047b020) — see sound.hpp. */
+// GLOBAL: LEGORR 0x00506684
 static void* s_buffer_assoc_head; /* DAT_00506684 role: unowned */
 // GLOBAL: LEGORR 0x0050668c
 static uint32_t s_tracked_buffer_min_distance;
@@ -1741,10 +1742,11 @@ public:
 // FUNCTION: LEGORR 0x0047b4a0
 void sound_tracked_buffers_set_min_distance(uint32_t value)
 {
-    s_tracked_buffer_min_distance = value;
+    const uint32_t distance = value;
     void** record = (void**)s_buffer_assoc_head;
+    s_tracked_buffer_min_distance = distance;
     while (record != NULL) {
-        ((SoundTrackedBufferInterface*)record[2])->min_distance_set(value, 0);
+        ((SoundTrackedBufferInterface*)record[2])->min_distance_set(distance, 0);
         record = (void**)record[3];
     }
 }
@@ -1752,10 +1754,11 @@ void sound_tracked_buffers_set_min_distance(uint32_t value)
 // FUNCTION: LEGORR 0x0047b4d0
 void sound_tracked_buffers_set_max_distance(uint32_t value)
 {
-    s_tracked_buffer_max_distance = value;
+    const uint32_t distance = value;
     void** record = (void**)s_buffer_assoc_head;
+    s_tracked_buffer_max_distance = distance;
     while (record != NULL) {
-        ((SoundTrackedBufferInterface*)record[2])->max_distance_set(value, 0);
+        ((SoundTrackedBufferInterface*)record[2])->max_distance_set(distance, 0);
         record = (void**)record[3];
     }
 }
