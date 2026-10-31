@@ -1003,6 +1003,7 @@ void mode_flag_pair_apply_if_bit2(int value);
  * both. */
 float    selection_coordinates_peek(int which); /* 0..3 */
 void     selection_region_parameters_peek(float out[5]);
+extern uint32_t s_obj_sel_word; /* DAT_004ddccc: objective selection mode */
 uint32_t objective_selection_word_peek(void);   /* port hook */
 float    interaction_timer_peek(void);          /* port hook */
 uint32_t interaction_flags_peek(void);          /* port hook */

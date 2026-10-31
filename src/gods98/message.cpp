@@ -33,6 +33,7 @@ static float s_ui_message_line_delay = 100.0f;
 static unsigned int s_ui_message_count = 26u;
 static unsigned int s_ui_message_current;
 static uint32_t s_ui_message_flags;
+// GLOBAL: LEGORR 0x005031f8
 static char* s_ui_message_text_slots[26];
 static TextureSurface* s_ui_message_image_slots[26];
 static char s_ui_message_image_names[26][32];
@@ -120,9 +121,10 @@ const char* ui_message_label_get(unsigned int index)
 int ui_message_label_index_find(const char* label, int* out_index)
 {
     int i;
-    if (label == NULL || out_index == NULL) return 0;
+    if (label == NULL) return 0;
     for (i = 0; i < 26; ++i) {
         if (strcasecmp_lite(s_ui_message_labels[i], label) == 0) {
+            if (out_index == NULL) return 0;
             *out_index = i;
             return 1;
         }

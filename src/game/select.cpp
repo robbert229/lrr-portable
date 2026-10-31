@@ -1149,7 +1149,7 @@ void selection_object_command_update(GameContext* ctx, EntitySlot* entity)
 // FUNCTION: LEGORR 0x0041CF20
 void selection_target_command_update(GameContext* ctx, EntitySlot* entity)
 {
-    const uint32_t mode = objective_selection_word_peek();
+    const uint32_t mode = s_obj_sel_word;
     if (mode == 10u || mode == 18u || mode == 11u) {
         const int count = selection_count(ctx);
         EntitySlot* const* records = selection_record_array(ctx);
