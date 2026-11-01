@@ -4481,12 +4481,96 @@ void ledger_stub_004456e0_EntityBehaviorCallbackTick(
 }
 
 // EntityMovementTickScaleAndDeltaGet
+static float entity_movement_default_base_speed_get(void* context,
+                                                     void* entity,
+                                                     int kind)
+{
+    (void)context;
+    (void)kind;
+    return entity_stats_float_at20((const EntitySlot*)entity);
+}
+
+static int entity_movement_default_terrain_data_get(
+    void* context, void* entity, int* cell_cost, int* terrain_type,
+    int* occupiable)
+{
+    EntitySlot* slot = (EntitySlot*)entity;
+    LevelState* level;
+    float position[2];
+    int cell_x;
+    int cell_y;
+    uint8_t* cell;
+    (void)context;
+    if (slot == NULL || slot->owner_ctx == NULL ||
+        slot->owner_ctx->level == NULL) return 0;
+    level = slot->owner_ctx->level;
+    if (level->ptr_terrain == NULL) return 0;
+    entity_transform_position_get(slot, position);
+    if (!terrain_world_xy_to_cell(level->ptr_terrain, position[0],
+                                  position[1], &cell_x, &cell_y)) return 0;
+    cell = level_voxel(level, cell_x, cell_y);
+    if (cell == NULL) return 0;
+    if (cell_cost != NULL)
+        *cell_cost = level_cell_speed_class(level, cell_x, cell_y);
+    if (terrain_type != NULL) *terrain_type = (int)(signed char)cell[2];
+    if (occupiable != NULL)
+        *occupiable = level_cell_flag_8_bounded(level, cell_x, cell_y) != 0u;
+    return 1;
+}
+
+static float entity_movement_default_surface_scale_get(void* context,
+                                                        void* entity)
+{
+    (void)context;
+    return entity_stats_float_atd4((const EntitySlot*)entity);
+}
+
+static float entity_movement_default_entity_scale_get(void* context,
+                                                       void* entity)
+{
+    (void)context;
+    return entity_stats_float_atd8((const EntitySlot*)entity);
+}
+
+static float entity_movement_default_animation_scale_get(void* context,
+                                                          void* entity)
+{
+    (void)context;
+    return entity_speed_component_get((const EntitySlot*)entity);
+}
+
 // FUNCTION: LEGORR 0x00446610
 void ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
     EntityMovementTickScaleState* state, void* entity, float delta,
     float* movement_delta, float* movement_scale,
     const EntityMovementTickScaleHooks* hooks)
 {
+    EntityMovementTickScaleState entity_state;
+    EntityMovementTickScaleHooks entity_hooks;
+    const EntitySlot* slot = (const EntitySlot*)entity;
+    if (hooks == NULL && state != NULL && slot != NULL) {
+        entity_state = *state;
+        entity_state.kind = slot->type;
+        entity_state.flags_f8 = slot->flags_3e0;
+        entity_state.flags_f9 = slot->flags_3e4;
+        entity_state.flags_fa = slot->flags_3e8;
+        entity_state.stats_flags = entity_stats_word_get(slot);
+        entity_state.surface_scale = entity_stats_float_atd4(slot);
+        entity_hooks.base_speed_get = entity_movement_default_base_speed_get;
+        entity_hooks.terrain_data_get =
+            entity_movement_default_terrain_data_get;
+        entity_hooks.surface_scale_get =
+            entity_movement_default_surface_scale_get;
+        entity_hooks.entity_scale_get =
+            entity_movement_default_entity_scale_get;
+        entity_hooks.animation_scale_get =
+            entity_movement_default_animation_scale_get;
+        entity_hooks.context = NULL;
+        entity_movement_tick_scale_and_delta_get(
+            &entity_state, entity, delta, movement_delta, movement_scale,
+            &entity_hooks);
+        return;
+    }
     entity_movement_tick_scale_and_delta_get(state, entity, delta,
                                               movement_delta, movement_scale,
                                               hooks);

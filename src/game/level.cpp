@@ -1014,7 +1014,7 @@ static int load_layer_l(LevelState* s, const char* name)
 {
     MapFile* m = level_map_open(name);
     if (m == NULL) {
-        return 1; /* sparse; optional */
+        return 0; /* corpus reports no map handle; the caller may ignore it */
     }
     if (!dims_ok(m, s)) {
         level_map_close(m);

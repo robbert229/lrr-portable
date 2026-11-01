@@ -390,7 +390,7 @@ static inline void entity_movement_tick_scale_and_delta_get(
         base_speed = hooks->base_speed_get(hooks->context, entity,
                                            state->kind);
     if ((state->flags_fa & 0x20000u) != 0u || state->kind == 10) {
-        *movement_delta = delta;
+        *movement_scale = delta;
         return;
     }
     speed = base_speed;
