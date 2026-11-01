@@ -5510,8 +5510,10 @@ static uint32_t s_scene_fog_color;
 static uint32_t s_scene_fog_mode;
 
 /* Reconstruction owner for the corpus DDiScene render-surface record pool. */
-static void* s_render_surface_pool_blocks[32];
-static unsigned int s_render_surface_pool_level_count;
+// GLOBAL: LEGORR 0x0076ace0
+void* s_render_surface_pool_blocks[32];
+// GLOBAL: LEGORR 0x0076ad64
+unsigned int s_render_surface_pool_level_count;
 // GLOBAL: LEGORR 0x0076ad60
 void* s_render_surface_pool_free_head;
 

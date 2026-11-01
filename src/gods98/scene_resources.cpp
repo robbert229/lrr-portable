@@ -9,8 +9,7 @@
 #include "crt/crt.hpp"
 namespace lego {
 namespace {
-void* s_resource_slots[SCENE_RESOURCE_SLOT_COUNT];
-int s_slot_count = 0;
+// GLOBAL: LEGORR 0x0076ad68
 int s_slots_live = 0;
 SceneResourceReleaseHook s_release_hook = 0;
 void* s_release_context = 0;
@@ -33,33 +32,36 @@ int s_shared_texture_initialized = 0;
 SharedTextureRootLoadHook s_shared_texture_load_hook = 0;
 void* s_shared_texture_load_context = 0;
 }
-void scene_resource_release_hook_set(SceneResourceReleaseHook hook, void* context)
+void scene_resource_release_hook_set(SceneResourceReleaseHook hook,
+                                     void* context)
 { s_release_hook = hook; s_release_context = context; }
 // FUNCTION: LEGORR 0x00476d50
 void scene_resource_slots_initialize()
 {
-    memset(s_resource_slots, 0, sizeof(s_resource_slots));
-    s_slot_count = 0;
+    memset(s_render_surface_pool_blocks, 0,
+           sizeof(s_render_surface_pool_blocks));
+    s_render_surface_pool_free_head = 0;
+    s_render_surface_pool_level_count = 0;
     s_slots_live = 1;
-    ddiscene_render_surface_pool_initialize();
 }
 // FUNCTION: LEGORR 0x00476d80
 void scene_resource_slots_release_all()
 {
-    int i;
+    unsigned int i;
     scene_resource_tracked_references_release_all();
-    if (s_release_hook != 0) for (i = 0; i < s_slot_count; ++i)
-        if (s_resource_slots[i] != 0) s_release_hook(s_resource_slots[i], s_release_context);
-    ddiscene_render_surface_pool_release_all();
-    memset(s_resource_slots, 0, sizeof(s_resource_slots)); s_slot_count = 0; s_slots_live = 0;
+    for (i = 0; i < SCENE_RESOURCE_SLOT_COUNT; ++i) {
+        if (s_render_surface_pool_blocks[i] != 0)
+            engine_heap_free(s_render_surface_pool_blocks[i]);
+    }
+    s_render_surface_pool_free_head = 0;
+    s_slots_live = 0;
 }
 void* scene_resource_slot_get(unsigned int index)
-{ return index < SCENE_RESOURCE_SLOT_COUNT ? s_resource_slots[index] : 0; }
+{ return s_slots_live && index < SCENE_RESOURCE_SLOT_COUNT ? s_render_surface_pool_blocks[index] : 0; }
 int scene_resource_slot_set(unsigned int index, void* resource)
 {
     if (!s_slots_live || index >= SCENE_RESOURCE_SLOT_COUNT) return 0;
-    s_resource_slots[index] = resource;
-    if ((int)index >= s_slot_count) s_slot_count = (int)index + 1;
+    s_render_surface_pool_blocks[index] = resource;
     return 1;
 }
 int animated_texture_frame_count(const void* texture)

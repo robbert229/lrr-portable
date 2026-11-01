@@ -976,6 +976,8 @@ int light_interface_call_slot_40(void* record, uint32_t value);
 void ddiscene_render_surface_pool_grow(void);
 void* ddiscene_render_surface_pool_acquire(void);
 void ddiscene_render_surface_pool_release(void* record);
+extern void* s_render_surface_pool_blocks[32];
+extern unsigned int s_render_surface_pool_level_count;
 extern void* s_render_surface_pool_free_head;
 void ddiscene_render_surface_pool_head_push(void* record);
 void ddiscene_render_surface_pool_initialize(void);

@@ -5,7 +5,8 @@
 namespace lego {
 enum { SCENE_RESOURCE_SLOT_COUNT = 32 };
 typedef void (*SceneResourceReleaseHook)(void* resource, void* context);
-void scene_resource_release_hook_set(SceneResourceReleaseHook hook, void* context);
+void scene_resource_release_hook_set(SceneResourceReleaseHook hook,
+                                     void* context);
 void scene_resource_slots_initialize(); /* 0x00476d50 */
 void scene_resource_slots_release_all(); /* 0x00476d80 */
 void* scene_resource_slot_get(unsigned int index);
