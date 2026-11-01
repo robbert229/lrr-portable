@@ -1655,6 +1655,8 @@ int ledger_stub_00409470_NeighborCellEntitySearchRecurse(
                                           cell_xy[1], resource_amount);
 }
 
+void ledger_stub_00409940_RefreshEightNeighborCells(const int cell_xy[2]);
+
 // FUNCTION: LEGORR 0x00409600
 void ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
     const int cell_xy[2])
@@ -1699,7 +1701,7 @@ void ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
             if (duplicate) *cell_flags &= ~0x8000u;
             *cell_flags &= ~0x100000u;
             (void)level_cell_path_record_set(context->level, x, y, NULL);
-            terrain_cell_refresh_dispatch(context, x, y);
+            level_cell_init_pass(context->level, x, y);
             cancel_action_for_matching_coordinates(
                 (const uint32_t*)coordinates + progress * 2u);
         }
@@ -1776,20 +1778,12 @@ uint32_t ledger_stub_00409790_CellPathRecordRegisterApply(
             y == coordinate_copy[(index + 1u) * 2u + 1u];
         if (cell != NULL) {
             uint32_t* cell_flags = (uint32_t*)(cell + 0x08);
-            static const int neighbor_xy[8][2] = {
-                { 0, -1 }, { 1, -1 }, { 1, 0 }, { 1, 1 },
-                { 0, 1 }, { -1, 1 }, { -1, 0 }, { -1, -1 }
-            };
-            int neighbor;
             if (duplicate) *cell_flags |= 0x8000u;
             *cell_flags |= 0x100000u;
             (void)level_cell_path_record_set(context->level, x, y, record);
-            terrain_cell_refresh_dispatch(context, x, y);
-            for (neighbor = 0; neighbor < 8; ++neighbor) {
-                terrain_cell_refresh_dispatch(
-                    context, x + neighbor_xy[neighbor][0],
-                    y + neighbor_xy[neighbor][1]);
-            }
+            level_cell_init_pass(context->level, x, y);
+            ledger_stub_00409940_RefreshEightNeighborCells(
+                coordinate_copy + index * 2u);
             cancel_action_for_matching_coordinates(
                 (const uint32_t*)coordinate_copy + index * 2u);
             if (duplicate) ++index;
@@ -1800,21 +1794,24 @@ uint32_t ledger_stub_00409790_CellPathRecordRegisterApply(
 }
 
 // RefreshEightNeighborCells
-typedef void (*CellRefreshHook)(void* context, int x, int y);
+/* The corpus applies TerrainCellMutationProgress through the active level's
+ * renderer-owned corner-height and surface-write services. The port's
+ * TerrainCellMutationGrid hook bundle mirrors that update; when no renderer
+ * binding exists, the corresponding surface mutation is unavailable. */
 // FUNCTION: LEGORR 0x00409940
-uint32_t ledger_stub_00409940_RefreshEightNeighborCells(
-    const int cell_xy[2], CellRefreshHook refresh, void* context)
+void ledger_stub_00409940_RefreshEightNeighborCells(const int cell_xy[2])
 {
-    int dx, dy;
-    uint32_t count = 0u;
-    if (cell_xy == NULL || refresh == NULL) return 0u;
-    for (dy = -1; dy <= 1; ++dy)
-        for (dx = -1; dx <= 1; ++dx) {
-            if (dx == 0 && dy == 0) continue;
-            refresh(context, cell_xy[0] + dx, cell_xy[1] + dy);
-            ++count;
-        }
-    return count;
+    static const int offset[8][2] = {
+        { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 },
+        { 1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 1 }
+    };
+    int index;
+    if (cell_xy == NULL) return;
+    for (index = 0; index < 8; ++index) {
+        terrain_cell_mutation_progress_current(
+            cell_xy[0] + offset[index][0],
+            cell_xy[1] + offset[index][1]);
+    }
 }
 
 // EntityCellPathEffectsApply

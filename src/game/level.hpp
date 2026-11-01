@@ -803,6 +803,11 @@ typedef struct TerrainCellMutationHooks {
 int terrain_cell_mutation_progress(const TerrainCellMutationGrid* grid,
                                    uint32_t x, uint32_t y,
                                    const TerrainCellMutationHooks* hooks); /* 0x00433380 */
+/* Active terrain renderer binding used by the global-level neighbor path. */
+void terrain_cell_mutation_context_bind(
+    const TerrainCellMutationGrid* grid,
+    const TerrainCellMutationHooks* hooks);
+void terrain_cell_mutation_progress_current(int x, int y);
 typedef struct TerrainStampImpactHooks {
     void* context;
     uint32_t (*cell_flags_get)(void* context, int x, int y);
@@ -1287,6 +1292,9 @@ struct GameContext;
 void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
                                    int y);
 void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode);
+/* CellInitPass (FUN_0042f6f0), exposed for path-record mutations that must
+ * rebuild the cell variant after changing its path flags. */
+void level_cell_init_pass(LevelState* level, int x, int y);
 void coordinate_callback_dispatch(const void* coord_pair, int value);
 void coordinate_callback_dispatch_current(const void* coord_pair);
 typedef int (*CoordinateEntityDispatchHook)(struct EntitySlot* entity,

@@ -1409,6 +1409,14 @@ static void cell_init_pass(LevelState* s, float cell_x, uint32_t cell_y)
     }
 }
 
+/* Keep the retail per-cell entry available to the path-record registration
+ * and teardown routines. The map-load sweep remains on the private helper
+ * above so it can preserve the original float coordinate call shape. */
+void level_cell_init_pass(LevelState* level, int x, int y)
+{
+    cell_init_pass(level, (float)x, (uint32_t)y);
+}
+
 /* The level loader sweeps cells by calling the target-shaped per-cell entry.
  * Keep the sweep separate so it cannot be mistaken for the mapped function. */
 static void cell_init_all(LevelState* s)
@@ -1740,6 +1748,7 @@ void level_destroy(LevelState* s)
     path_record_release_all();
     path_record_cell_links_release(s, NULL);
     path_record_surface_grid_bind(NULL);
+    terrain_cell_mutation_context_bind(NULL, NULL);
     free(s->ptr_voxels);
     free(s->ptr_layerl);
     terrain_destroy(s->ptr_terrain);
@@ -2982,6 +2991,34 @@ int terrain_cell_mutation_progress(const TerrainCellMutationGrid* grid,
     }
     hooks->surface_apply(hooks->context, x, y, heights);
     return 1;
+}
+
+static TerrainCellMutationGrid s_active_mutation_grid;
+static TerrainCellMutationHooks s_active_mutation_hooks;
+static int s_active_mutation_context_bound;
+
+void terrain_cell_mutation_context_bind(
+    const TerrainCellMutationGrid* grid,
+    const TerrainCellMutationHooks* hooks)
+{
+    if (grid == NULL || hooks == NULL) {
+        memset(&s_active_mutation_grid, 0, sizeof(s_active_mutation_grid));
+        memset(&s_active_mutation_hooks, 0, sizeof(s_active_mutation_hooks));
+        s_active_mutation_context_bound = 0;
+        return;
+    }
+    s_active_mutation_grid = *grid;
+    s_active_mutation_hooks = *hooks;
+    s_active_mutation_context_bound = 1;
+}
+
+void terrain_cell_mutation_progress_current(int x, int y)
+{
+    if (s_active_mutation_context_bound && x >= 0 && y >= 0) {
+        (void)terrain_cell_mutation_progress(
+            &s_active_mutation_grid, (uint32_t)x, (uint32_t)y,
+            &s_active_mutation_hooks);
+    }
 }
 
 int terrain_stamp_impact_handle(uint32_t x, uint32_t y, int direction,

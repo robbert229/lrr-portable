@@ -11,6 +11,7 @@
 #include "gods98/texture.hpp"
 #include "gods98/surface.hpp"
 #include "gods98/sound.hpp"
+#include "gods98/view.hpp"
 #include "level.hpp"
 #include "objective.hpp"
 #include "util.hpp"
@@ -1002,13 +1003,17 @@ void advisor_request_reset_and_submit_sound(int row)
 {
     uint32_t animation_slot;
     uint32_t animation;
+    if (row < 0 || row >= ADV_ACTION_ROWS) return;
     animation_slot = s_adv_actions[row][0];
+    if (animation_slot >= 11u) return;
     animation = s_adv_animation_slots[animation_slot].handle;
-    if (animation != 0u && s_adv_scene_action_hook != NULL) {
-        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_RESET, row, animation,
-                                s_adv_scene_action_user);
-        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_SOUND, row, animation,
-                                s_adv_scene_action_user);
+    if (animation != 0u) {
+        /* FUN_00401930 resets the selected DDiScene, plays the configured
+         * sound alias from the action record, then queues SFX 0x2a. */
+        ddiscene_frame_update_and_callbacks((void*)(uintptr_t)animation,
+                                            0.0f);
+        sound_alias_play((int)s_adv_actions[row][3], 0);
+        sound_request_queue_submit(0x2a, 0);
     }
 }
 
@@ -1036,12 +1041,12 @@ int advisor_request_admit(int row, int immediate)
 // FUNCTION: LEGORR 0x004011c0
 void advisor_animation_end_cleanup(void)
 {
-    if (s_adv_scene_active_row >= 0 && s_adv_scene_active_row < ADV_ACTION_ROWS &&
-        s_adv_scene_action_hook != NULL) {
+    if (s_adv_scene_active_row >= 0 &&
+        s_adv_scene_active_row < ADV_ACTION_ROWS) {
         uint32_t animation_slot = s_adv_actions[s_adv_scene_active_row][0];
         uint32_t animation = animation_slot < 11u
             ? s_adv_animation_slots[animation_slot].handle : 0u;
-        if (animation != 0u)
+        if (animation != 0u && s_adv_scene_action_hook != NULL)
             s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE,
                                     s_adv_scene_active_row, animation,
                                     s_adv_scene_action_user);
