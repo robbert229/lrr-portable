@@ -4163,32 +4163,37 @@ static uint32_t s_ts_active[LEVEL_TS_COUNT];
 static int32_t  s_ts_now; /* _DAT_004d78c0: ErodeLockTime * 25 float bits */
 
 // FUNCTION: LEGORR 0x0040ee00
-void cell_coordinate_timestamp_remember(int x, int y)
+void cell_coordinate_timestamp_remember(const int xy[2])
 {
-    unsigned int i;
-    for (i = 0; i < LEVEL_TS_COUNT; ++i) {
-        if (s_ts_active[i] == 0) {
-            s_ts_coordinates[i].x = x;
-            s_ts_coordinates[i].y = y;
-            s_ts_stamps[i] = s_ts_now;
-            s_ts_active[i] = 1;
+    uint32_t* active = s_ts_active;
+    int index = 0;
+    do {
+        if (*active == 0u) {
+            s_ts_coordinates[index].x = xy[0];
+            s_ts_coordinates[index].y = xy[1];
+            s_ts_stamps[index] = s_ts_now;
+            *active = 1u;
             return;
         }
-    }
+        ++active;
+        ++index;
+    } while (active < s_ts_active + LEVEL_TS_COUNT);
     /* full table: stores nothing (faithful) */
 }
 
 // FUNCTION: LEGORR 0x0040efb0
-uint32_t cell_coordinate_timestamp_exists(int x, int y)
+uint32_t cell_coordinate_timestamp_exists(const int xy[2])
 {
-    int i;
-    for (i = 0; i < LEVEL_TS_COUNT; ++i) {
-        if (s_ts_active[i] != 0 && s_ts_coordinates[i].x == x
-            && s_ts_coordinates[i].y == y) {
-            return 1u;
-        }
+    uint32_t* active = s_ts_active;
+    CellCoordinateTimestamp* coordinate = s_ts_coordinates;
+    if (xy == NULL) return 0u;
+    while (*active == 0u || coordinate->x != xy[0] ||
+           coordinate->y != xy[1]) {
+        ++active;
+        ++coordinate;
+        if (active >= s_ts_active + LEVEL_TS_COUNT) return 0u;
     }
-    return 0u;
+    return 1u;
 }
 
 /* --- terrain dirty queue (see level.hpp) ---------------------------------
@@ -5921,7 +5926,8 @@ int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
         __builtin_memcpy(&flags, rec + 8, sizeof flags);
         if ((flags & 0x80000000u) == 0 && (flags & 8u) != 0 &&
             rec[6] != 0) {
-            if (cell_coordinate_timestamp_exists(nx, ny) == 0u) {
+            const int candidate_xy[2] = { nx, ny };
+            if (cell_coordinate_timestamp_exists(candidate_xy) == 0u) {
                 return 1;
             }
         }
@@ -6058,7 +6064,7 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
                 break;
             }
         }
-        cell_coordinate_timestamp_remember(xy[0], xy[1]);
+        cell_coordinate_timestamp_remember(xy);
     }
     else if ((flags & 0x80000000u) == 0u &&
              s_lava_erosion_pending_count < EROSION_MARK_COUNT) {
@@ -6128,8 +6134,7 @@ int lava_erosion_pending_cell_tick(float scale)
                         message_dispatch(0x1e, 0, 0, candidate_xy);
                         break;
                     }
-                    cell_coordinate_timestamp_remember(
-                        candidate_xy[0], candidate_xy[1]);
+                    cell_coordinate_timestamp_remember(candidate_xy);
                     cell[0x0c] |= 0x10u;
                 }
             }

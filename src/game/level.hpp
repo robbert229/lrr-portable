@@ -969,11 +969,11 @@ int terrain_cell_dirty_flag(const void* terrain, int x, int y);
  * pair and the configured lock countdown into the first free record of the
  * 1000-entry table; a full table stores nothing. ErosionTimingStateInit
  * seeds _DAT_004d78c0 from ErodeLockTime * 25. */
-void cell_coordinate_timestamp_remember(int x, int y);
+void cell_coordinate_timestamp_remember(const int xy[2]);
 
 /* CellCoordinateTimestampExists (FUN_0040efb0): answer 1 when an active
  * record holds the exact pair, 0 when the scan runs off the table. */
-uint32_t cell_coordinate_timestamp_exists(int x, int y);
+uint32_t cell_coordinate_timestamp_exists(const int xy[2]);
 
 /* ErosionTimingStateInit (FUN_0040e930): scale the configured trigger,
  * erosion, and lock durations, then clear the ordered pending list, 2,000

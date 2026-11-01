@@ -423,24 +423,26 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
     s_task_init_binding = previous;
 }
 
-/* TaskImportanceRefresh @ 0x4600a0: load one task's Reward Importance
- * value into record +0x24. The global level/config become explicit port
- * context; mission_task_refresh preserves the corpus's per-task ordering. */
+/* TaskImportanceRefresh @ 0x4600a0 takes the task record; its config
+ * context is the currently bound mission owner. */
 // FUNCTION: LEGORR 0x004600a0
-static void mission_task_importance_refresh(BlockFile* cfg, const char* root,
-                                            const char* level, GameTask* t)
+static void mission_task_importance_refresh(GameTask* t)
 {
-    float imp = rw_float(cfg, root, level, "Importance", task_name(t), 0.0f);
+    MissionTaskInitBinding* binding = &s_task_init_binding;
+    float imp = rw_float(binding->config, NULL, binding->level_name,
+                         "Importance", task_name(t), 0.0f);
     __builtin_memcpy(t->data + TASK_OFF_IMPORTANCE, &imp, 4);
 }
 
 /* TaskQuotaRefresh @ 0x460140: load one task's Reward Quota value into
- * record +0x28. */
+ * record +0x28 from the currently bound mission config. */
 // FUNCTION: LEGORR 0x00460140
-static void mission_task_quota_refresh(BlockFile* cfg, const char* root,
-                                       const char* level, GameTask* t)
+static void mission_task_quota_refresh(GameTask* t)
 {
-    int32_t quota = (int32_t)rw_int(cfg, root, level, "Quota", task_name(t), 0);
+    MissionTaskInitBinding* binding = &s_task_init_binding;
+    int32_t quota = (int32_t)rw_int(binding->config, NULL,
+                                    binding->level_name, "Quota",
+                                    task_name(t), 0);
     __builtin_memcpy(t->data + TASK_OFF_QUOTA, &quota, 4);
 }
 
@@ -459,21 +461,28 @@ static void mission_crystal_quota_setup(BlockFile* cfg, const char* root,
 
 void mission_task_refresh(GameContext* ctx)
 {
+    MissionTaskInitBinding previous;
+    const char* level;
+    int i;
     if (ctx == NULL) {
         return;
     }
-    const char* level = ctx->level != NULL ? (const char*)ctx->level->ptr_name : NULL;
+    level = ctx->level != NULL ? (const char*)ctx->level->ptr_name : NULL;
     if (ctx->cfg == NULL || level == NULL) {
         return;
     }
-    const char* root = util_root_name(ctx->cfg);
-    for (int i = 0; i < GAME_TASK_COUNT; ++i) {
+    previous = s_task_init_binding;
+    s_task_init_binding.game = ctx;
+    s_task_init_binding.config = ctx->cfg;
+    s_task_init_binding.level_name = level;
+    for (i = 0; i < GAME_TASK_COUNT; ++i) {
         GameTask* t = &ctx->tasks[i];
-        mission_task_importance_refresh(ctx->cfg, root, level, t);
-        mission_task_quota_refresh(ctx->cfg, root, level, t);
+        mission_task_importance_refresh(t);
+        mission_task_quota_refresh(t);
         /* Defaults: absence parses as 0; the corpus reads the same way. */
     }
-    mission_crystal_quota_setup(ctx->cfg, root, level, ctx);
+    mission_crystal_quota_setup(ctx->cfg, NULL, level, ctx);
+    s_task_init_binding = previous;
 }
 
 void mission_set_crystals(GameContext* ctx, int32_t v)
