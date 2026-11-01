@@ -170,6 +170,12 @@ typedef struct MovieOut {
      * movie_next. */
     const uint8_t* rgba;
     int            rgba_pitch;
+    /* Windows VfW keeps the source DIB available for the frame-copy path.
+     * Native FFmpeg frames leave dib NULL and expose RGBA above. */
+    const uint8_t* dib;
+    int            dib_pitch;
+    int            dib_bits_per_pixel;
+    int            dib_header_bytes;
     /* Interleaved stereo s16 PCM for all audio samples that fall on or
      * before this frame's presentation time — the caller feeds it to the
      * audio seam per video frame. Owned; valid until the next movie_next. */

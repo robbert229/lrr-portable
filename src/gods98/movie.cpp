@@ -940,13 +940,31 @@ typedef HRESULT (WINAPI *movie_avi_open_fn)(void**, LPCSTR, DWORD, LONG,
 typedef void (WINAPI *movie_avi_file_fn)(void);
 typedef void* (WINAPI *movie_avi_getframe_open_fn)(void*, LPBITMAPINFOHEADER);
 typedef LPVOID (WINAPI *movie_avi_getframe_fn)(void*, LONG);
-typedef HRESULT (WINAPI *movie_avi_getframe_close_fn)(void*);
 typedef ULONG (WINAPI *movie_avi_release_fn)(void*);
-typedef LONG (WINAPI *movie_avi_length_fn)(void*);
 typedef LONG (WINAPI *movie_avi_start_fn)(void*);
-typedef LONG (WINAPI *movie_avi_sample_time_fn)(void*, LONG);
-typedef HRESULT (WINAPI *movie_avi_read_format_fn)(void*, LONG, LPVOID,
-                                                    LONG*);
+typedef struct movie_avi_stream_info {
+    DWORD fccType;
+    DWORD fccHandler;
+    DWORD dwFlags;
+    DWORD dwCaps;
+    WORD wPriority;
+    WORD wLanguage;
+    DWORD dwScale;
+    DWORD dwRate;
+    DWORD dwStart;
+    DWORD dwLength;
+    DWORD dwInitialFrames;
+    DWORD dwSuggestedBufferSize;
+    DWORD dwQuality;
+    DWORD dwSampleSize;
+    RECT rcFrame;
+    DWORD dwEditCount;
+    DWORD dwFormatChangeCount;
+    CHAR szName[64];
+} movie_avi_stream_info;
+typedef HRESULT (WINAPI *movie_avi_stream_info_fn)(void*,
+                                                    movie_avi_stream_info*,
+                                                    LONG);
 
 typedef struct movie_winapi_binding {
     HMODULE module;
@@ -956,12 +974,9 @@ typedef struct movie_winapi_binding {
     movie_avi_open_fn stream_open;
     movie_avi_getframe_open_fn frame_open;
     movie_avi_getframe_fn get_frame;
-    movie_avi_getframe_close_fn frame_close;
     movie_avi_release_fn stream_release;
-    movie_avi_length_fn stream_length;
     movie_avi_start_fn stream_start;
-    movie_avi_sample_time_fn sample_to_time;
-    movie_avi_read_format_fn read_format;
+    movie_avi_stream_info_fn stream_info;
 } movie_winapi_binding;
 
 static movie_winapi_binding movie_vfw;
@@ -1009,16 +1024,11 @@ static int movie_vfw_bind(void)
     MOVIE_VFW_LOAD(frame_open, "AVIStreamGetFrameOpen",
                    movie_avi_getframe_open_fn);
     MOVIE_VFW_LOAD(get_frame, "AVIStreamGetFrame", movie_avi_getframe_fn);
-    MOVIE_VFW_LOAD(frame_close, "AVIStreamGetFrameClose",
-                   movie_avi_getframe_close_fn);
     MOVIE_VFW_LOAD(stream_release, "AVIStreamRelease",
                    movie_avi_release_fn);
-    MOVIE_VFW_LOAD(stream_length, "AVIStreamLength", movie_avi_length_fn);
     MOVIE_VFW_LOAD(stream_start, "AVIStreamStart", movie_avi_start_fn);
-    MOVIE_VFW_LOAD(sample_to_time, "AVIStreamSampleToTime",
-                   movie_avi_sample_time_fn);
-    MOVIE_VFW_LOAD(read_format, "AVIStreamReadFormat",
-                   movie_avi_read_format_fn);
+    MOVIE_VFW_LOAD(stream_info, "AVIStreamInfoA",
+                   movie_avi_stream_info_fn);
     movie_vfw.file_init();
     movie_vfw.initialized = 1;
     return 1;
@@ -1042,60 +1052,30 @@ void movie_unload(void)
 
 static int movie_winapi_read_info(Movie* m)
 {
-    LONG format_size = 0;
-    BYTE* format;
-    BITMAPINFOHEADER* header;
+    movie_avi_stream_info info;
     HRESULT result;
-    LONG first_time, second_time, intervals;
-    movie_vfw.read_format(m->stream, m->stream_start, NULL, &format_size);
-    if (format_size < (LONG)sizeof(BITMAPINFOHEADER)
-        || format_size > 1024L * 1024L) {
+    memset(&info, 0, sizeof(info));
+    result = movie_vfw.stream_info(m->stream, &info, sizeof(info));
+    if (result != 0 || info.dwLength == 0 || info.dwScale == 0
+        || info.dwRate == 0 || info.rcFrame.right <= info.rcFrame.left
+        || info.rcFrame.bottom <= info.rcFrame.top) {
         return 0;
     }
-    format = (BYTE*)malloc((size_t)format_size);
-    if (format == NULL) {
+    m->width = (int)(info.rcFrame.right - info.rcFrame.left);
+    m->height = (int)(info.rcFrame.bottom - info.rcFrame.top);
+    if (m->width <= 0 || m->width > 8192
+        || m->height <= 0 || m->height > 8192) {
         return 0;
     }
-    result = movie_vfw.read_format(m->stream, m->stream_start, format,
-                                   &format_size);
-    if (result != 0 || format_size < (LONG)sizeof(BITMAPINFOHEADER)) {
-        free(format);
-        return 0;
-    }
-    header = (BITMAPINFOHEADER*)format;
-    if (header->biSize < sizeof(BITMAPINFOHEADER)
-        || header->biSize > (DWORD)format_size
-        || header->biWidth <= 0 || header->biWidth > 8192
-        || header->biHeight == 0 || header->biHeight > 8192
-        || header->biHeight == (LONG)0x80000000) {
-        free(format);
-        return 0;
-    }
-    m->width = (int)header->biWidth;
-    m->height = (int)(header->biHeight < 0
-                    ? -header->biHeight : header->biHeight);
-    free(format);
-    intervals = m->frame_count > 10u ? 10 : (LONG)m->frame_count - 1;
-    if (intervals < 1) {
-        intervals = 1;
-    }
-    first_time = movie_vfw.sample_to_time(m->stream, m->stream_start);
-    second_time = movie_vfw.sample_to_time(m->stream,
-                                           m->stream_start + intervals);
-    if (first_time >= 0 && second_time > first_time) {
-        m->fps_num = (int)(1000L * intervals);
-        m->fps_den = (int)(second_time - first_time);
-    } else {
-        m->fps_num = 15;
-        m->fps_den = 1;
-    }
+    m->frame_count = info.dwLength;
+    m->fps_num = (int)info.dwRate;
+    m->fps_den = (int)info.dwScale;
     return 1;
 }
 
 Movie* movie_open_path(const char* os_path)
 {
     Movie* m;
-    LONG length;
     if (os_path == NULL || os_path[0] == '\0' || !movie_vfw_bind()) {
         return NULL;
     }
@@ -1109,12 +1089,6 @@ Movie* movie_open_path(const char* os_path)
         return NULL;
     }
     m->stream_start = movie_vfw.stream_start(m->stream);
-    length = movie_vfw.stream_length(m->stream);
-    if (length <= 0) {
-        movie_close(m);
-        return NULL;
-    }
-    m->frame_count = (uint32_t)length;
     /* AVIGETFRAMEF_BESTDISPLAYFMT is documented as value 1; the original
      * constructor passes this same value to AVIStreamGetFrameOpen. */
     m->retriever = movie_vfw.frame_open(m->stream,
@@ -1138,9 +1112,8 @@ void movie_close(Movie* m)
     if (m == NULL) {
         return;
     }
-    if (m->retriever != NULL && movie_vfw.frame_close != NULL) {
-        movie_vfw.frame_close(m->retriever);
-    }
+    /* The reference AVI teardown releases the stream but never resolves or
+     * calls AVIStreamGetFrameClose; retain that lifetime behavior here. */
     if (m->stream != NULL && movie_vfw.stream_release != NULL) {
         movie_vfw.stream_release(m->stream);
     }
@@ -1178,7 +1151,6 @@ int movie_next(Movie* m, MovieOut* out)
     LPVOID dib;
     BITMAPINFOHEADER* header;
     const BYTE* pixels;
-    const RGBQUAD* palette = NULL;
     int bits, top_down, x, y;
     size_t row_bytes;
     if (out == NULL) {
@@ -1206,55 +1178,41 @@ int movie_next(Movie* m, MovieOut* out)
         return -1;
     }
     bits = (int)header->biBitCount;
+    out->dib = (const uint8_t*)dib;
+    out->dib_bits_per_pixel = bits;
+    out->dib_header_bytes = (int)header->biSize;
+    row_bytes = (((size_t)m->width * (size_t)bits + 31u) / 32u) * 4u;
+    out->dib_pitch = row_bytes <= 0x7fffffffU ? (int)row_bytes : 0;
     if (header->biCompression != BI_RGB
-        || (bits != 8 && bits != 16 && bits != 24 && bits != 32)) {
-        return -1;
+        || (bits != 15 && bits != 16)) {
+        ++m->next_frame_index;
+        return 0;
     }
     if (m->rgba == NULL) {
         m->rgba = (uint8_t*)malloc((size_t)m->width * m->height * 4);
         if (m->rgba == NULL) {
-            return -1;
+            ++m->next_frame_index;
+            return 0;
         }
     }
     m->rgba_pitch = m->width * 4;
-    row_bytes = (((size_t)m->width * (size_t)bits + 31u) / 32u) * 4u;
     top_down = header->biHeight < 0;
     pixels = (const BYTE*)dib + header->biSize;
-    if (bits == 8) {
-        unsigned colors = header->biClrUsed != 0
-                        ? (unsigned)header->biClrUsed : 256u;
-        palette = (const RGBQUAD*)pixels;
-        pixels += (size_t)colors * sizeof(RGBQUAD);
-    }
     for (y = 0; y < m->height; ++y) {
         int source_y = top_down ? y : m->height - 1 - y;
         const BYTE* src = pixels + (size_t)source_y * row_bytes;
         uint8_t* dst = m->rgba + (size_t)y * m->rgba_pitch;
         for (x = 0; x < m->width; ++x) {
             unsigned r, g, b;
-            if (bits == 8) {
-                unsigned index = src[x];
-                unsigned colors = header->biClrUsed != 0
-                                ? (unsigned)header->biClrUsed : 256u;
-                if (index >= colors) {
-                    return -1;
-                }
-                b = palette[index].rgbBlue;
-                g = palette[index].rgbGreen;
-                r = palette[index].rgbRed;
-            } else if (bits == 16) {
-                unsigned v = ((const WORD*)src)[x];
+            unsigned v = ((const WORD*)src)[x];
+            if (bits == 15) {
                 r = movie_winapi_scale_component((v >> 10) & 31u, 31u);
                 g = movie_winapi_scale_component((v >> 5) & 31u, 31u);
                 b = movie_winapi_scale_component(v & 31u, 31u);
-            } else if (bits == 24) {
-                b = src[x * 3 + 0];
-                g = src[x * 3 + 1];
-                r = src[x * 3 + 2];
             } else {
-                b = src[x * 4 + 0];
-                g = src[x * 4 + 1];
-                r = src[x * 4 + 2];
+                r = movie_winapi_scale_component((v >> 11) & 31u, 31u);
+                g = movie_winapi_scale_component((v >> 5) & 63u, 63u);
+                b = movie_winapi_scale_component(v & 31u, 31u);
             }
             dst[x * 4 + 0] = (uint8_t)r;
             dst[x * 4 + 1] = (uint8_t)g;
@@ -1327,6 +1285,7 @@ void AviPlaybackState::frame_retriever_open(const char* path)
 {
     Movie* movie;
     MovieInfo info;
+    uint32_t now = 0;
     frame_ready = 0;
     surface_locked = 0;
     surface_pixels = NULL;
@@ -1346,6 +1305,21 @@ void AviPlaybackState::frame_retriever_open(const char* path)
     fps_numerator = (uint32_t)info.fps_num;
     fps_denominator = (uint32_t)info.fps_den;
     stream_frame_count = movie_frame_count(movie);
+    frame_index = 0;
+    frame_rate = fps_denominator != 0u
+        ? (float)fps_numerator / (float)fps_denominator : 0.0f;
+    if (s_avi_time_hook != NULL) {
+        now = s_avi_time_hook(s_avi_time_context);
+    }
+    frame_clock = (float)now * 0.001f;
+    frame_delta = frame_clock;
+    /* The reference marks the retriever ready before allocating its
+     * surface.  A failed surface allocation therefore leaves a ready
+     * retriever with a null surface, matching the staged constructor. */
+    (void)display_mode_setup((uint32_t)info.width,
+                             (uint32_t)info.height,
+                             display_bits_per_pixel,
+                             display_fullscreen);
     frame_ready = 1;
 }
 
@@ -1579,9 +1553,8 @@ void AviPlaybackState::frame_seek_and_clock_rebase(uint32_t frame_index_value)
     if (s_avi_time_hook == NULL) return;
     now = s_avi_time_hook(s_avi_time_context);
     frame_clock = (float)now * 0.001f;
-    if (frame_rate != 0.0f) {
-        frame_delta = frame_clock - (float)frame_index / frame_rate;
-    }
+    frame_delta = frame_rate != 0.0f
+        ? frame_clock - (float)frame_index / frame_rate : frame_clock;
 }
 
 void avi_frame_seek_and_clock_rebase(AviPlaybackState* state,
@@ -1605,19 +1578,39 @@ int AviPlaybackState::frame_update_and_blit()
         MovieInfo info;
         DisplaySurface* surface = (DisplaySurface*)surface_object;
         Movie* movie = (Movie*)stream_object;
-        if (movie == NULL || surface == NULL || movie_info(movie, &info) != 0)
+        if (movie == NULL || movie_info(movie, &info) != 0)
             return 1;
         if (s_avi_time_hook != NULL
             && !movie_seek_frame(movie, frame_index)) return 1;
         if (movie_next(movie, &frame) != 0) {
+            /* AVIStreamGetFrame returning null leaves the old surface and
+             * index intact; the caller still performs its normal blit. */
             return 1;
         }
         frame_updated = 1;
         if (s_avi_time_hook == NULL) ++frame_index;
-        if (surface_lock() != 0u) {
+        if (surface != NULL && surface_lock() != 0u) {
             void* pixels = surface_pixels;
             int pitch = surface_pitch;
-            if (pixels != NULL && pitch > 0) {
+            if (pixels != NULL && frame.dib != NULL
+                && (frame.dib_bits_per_pixel == 15
+                    || frame.dib_bits_per_pixel == 16)
+                && surface_width(surface) == info.width
+                && surface_height(surface) == info.height
+                && pitch >= info.width * 2
+                && frame.dib_pitch >= info.width * 2
+                && frame.dib_header_bytes >= 40) {
+                const uint8_t* source = frame.dib + frame.dib_header_bytes
+                    + (size_t)(info.height - 1) * frame.dib_pitch;
+                uint8_t* target = (uint8_t*)pixels;
+                int y;
+                for (y = 0; y < info.height; ++y) {
+                    memcpy(target, source, (size_t)info.width * 2);
+                    target += pitch;
+                    source -= frame.dib_pitch;
+                }
+            } else if (pixels != NULL && frame.dib == NULL
+                       && pitch >= surface_width(surface) * 4) {
                 movie_scale_rgba(frame.rgba, info.width, info.height,
                                  frame.rgba_pitch, (uint8_t*)pixels,
                                  surface_width(surface),
@@ -1632,7 +1625,6 @@ int AviPlaybackState::frame_update_and_blit()
             ? (float)fps_numerator / (float)fps_denominator
             : 0.0f;
         frame_clock = (float)now * 0.001f;
-        if (frame_delta == 0.0f) frame_delta = frame_clock;
         if (frame_rate != 0.0f) {
             float next_frame = (frame_clock - frame_delta) * frame_rate;
             if (next_frame >= 0.0f)
@@ -1716,7 +1708,30 @@ int avi_frame_decode_and_copy(Movie* movie, uint8_t* destination,
     if (result != 0) {
         return result;
     }
-    if (movie_info(movie, &info) != 0 || frame.rgba == NULL) {
+    if (movie_info(movie, &info) != 0) {
+        return -1;
+    }
+    if (frame.dib != NULL) {
+        if (frame.dib_pitch < width * 2
+            || frame.dib_header_bytes < 40
+            || (frame.dib_bits_per_pixel != 15
+                && frame.dib_bits_per_pixel != 16)
+            || width != info.width || height != info.height
+            || pitch < width * 2) {
+            return 0;
+        }
+        const uint8_t* source = frame.dib + frame.dib_header_bytes
+            + (size_t)(height - 1) * frame.dib_pitch;
+        uint8_t* target = destination;
+        int y;
+        for (y = 0; y < height; ++y) {
+            memcpy(target, source, (size_t)width * 2);
+            target += pitch;
+            source -= frame.dib_pitch;
+        }
+        return 0;
+    }
+    if (frame.rgba == NULL) {
         return -1;
     }
     movie_scale_rgba(frame.rgba, info.width, info.height, frame.rgba_pitch,

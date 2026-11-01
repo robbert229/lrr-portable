@@ -98,6 +98,27 @@ static DDiSceneSampleHookEntry s_ddiscene_additional_sample_hooks[8];
 static unsigned int s_ddiscene_additional_sample_hook_count;
 static DDiSceneEndHook s_ddiscene_end_hook;
 static void* s_ddiscene_end_context;
+
+/* Keep the portable callback fanout behind one callback-shaped dispatch.
+ * The reference draw step itself invokes one registered callback. */
+static void ddiscene_sample_hook_dispatch(const char* sample_name,
+                                          void* scene_object)
+{
+    unsigned int hook_index;
+    if (s_ddiscene_sample_hook != NULL) {
+        s_ddiscene_sample_hook(sample_name, scene_object,
+                               s_ddiscene_sample_context);
+    }
+    for (hook_index = 0;
+         hook_index < s_ddiscene_additional_sample_hook_count;
+         ++hook_index) {
+        DDiSceneSampleHookEntry* entry =
+            &s_ddiscene_additional_sample_hooks[hook_index];
+        if (entry->callback == s_ddiscene_sample_hook &&
+            entry->context == s_ddiscene_sample_context) continue;
+        entry->callback(sample_name, scene_object, entry->context);
+    }
+}
 static DDiSceneLightCreateHooks s_ddiscene_light_create_hooks;
 static DDiSceneKindModeSetupHooks s_ddiscene_kind_mode_setup_hooks;
 static DDiSceneDrawBeginHook s_ddiscene_draw_begin_hook;
@@ -833,7 +854,6 @@ void ddiscene_timed_hook_dispatch(void* hook_record, float time,
  * the selected frame through channel 0; kind 3 stores that channel directly. */
 void ddiscene_apply_act_frame_timing(void* scene_object)
 {
-    void* timing_channel = NULL;
     void* frame_record = NULL;
     void* action_slot;
     const char* action_name;
@@ -848,15 +868,13 @@ void ddiscene_apply_act_frame_timing(void* scene_object)
     if (kind == 4u) {
         action_slot = *(void**)((char*)scene_object + 0x0c);
         action_name = action_slot != NULL ? *(const char**)action_slot : NULL;
-        timing_channel = *(void**)((char*)scene_object + 4);
-        if (timing_channel != NULL && action_name != NULL) {
+        if (action_name != NULL) {
             frame_record = ddiscene_frame_record_find(
-                timing_channel, action_name, 0);
+                *(void**)((char*)scene_object + 4), action_name, 0);
         }
     }
     else if (kind == 3u) {
-        timing_channel = *(void**)((char*)scene_object + 4);
-        frame_record = timing_channel;
+        frame_record = *(void**)((char*)scene_object + 4);
     }
     if (frame_record != NULL) {
         hook_record = ddiscene_action_record_field_1c_get(frame_record);
@@ -1448,23 +1466,14 @@ float ddiscene_frame_update_and_callbacks(void* scene_object, float time)
             frame_interface = ddiscene_frame_record_find(
                 *(void**)((char*)scene_object + 4), action_name, 0);
         }
+        if (frame_interface != NULL) {
+            timing_record = (void*)(uintptr_t)
+                ddiscene_action_record_field_1c_get(frame_interface);
+        }
         if (frame_interface != NULL && (flags & 2u) != 0u) {
             sample_name = ddiscene_animation_sample_name_get(frame_interface);
             if (sample_name != NULL && s_ddiscene_sample_enabled != 0) {
-                unsigned int hook_index;
-                if (s_ddiscene_sample_hook != NULL) {
-                    s_ddiscene_sample_hook(sample_name, scene_object,
-                                           s_ddiscene_sample_context);
-                }
-                for (hook_index = 0;
-                     hook_index < s_ddiscene_additional_sample_hook_count;
-                     ++hook_index) {
-                    DDiSceneSampleHookEntry* entry =
-                        &s_ddiscene_additional_sample_hooks[hook_index];
-                    if (entry->callback == s_ddiscene_sample_hook &&
-                        entry->context == s_ddiscene_sample_context) continue;
-                    entry->callback(sample_name, scene_object, entry->context);
-                }
+                ddiscene_sample_hook_dispatch(sample_name, scene_object);
             }
             *(uint32_t*)((char*)scene_object + 0x14) = flags & ~2u;
             flags &= ~2u;
@@ -1472,11 +1481,13 @@ float ddiscene_frame_update_and_callbacks(void* scene_object, float time)
     }
     else if (kind == 3u) {
         frame_interface = *(void**)((char*)scene_object + 4);
+        if (frame_interface != NULL) {
+            timing_record = (void*)(uintptr_t)
+                ddiscene_action_record_field_1c_get(frame_interface);
+        }
     }
     if (frame_interface == NULL) return 0.0f;
 
-    timing_record = (void*)(uintptr_t)
-        ddiscene_action_record_field_1c_get(frame_interface);
     frame_count = ddiscene_action_record_field_0c_get(frame_interface);
     length = ddiscene_object_length_get(scene_object);
 
