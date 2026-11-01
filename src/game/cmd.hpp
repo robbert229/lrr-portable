@@ -190,6 +190,7 @@ void        cmd_rec_set_next(void* rec, void* next);
  * the corpus stores these at +0x08/+0x0C and +0x14). */
 float cmd_rec_move_x(const void* rec);
 float cmd_rec_move_y(const void* rec);
+void cmd_rec_move_xy_set(void* rec, float x, float y);
 float cmd_rec_now(const void* rec);
 void  cmd_rec_set_now(void* rec, float v);
 

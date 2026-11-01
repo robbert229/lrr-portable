@@ -365,8 +365,33 @@ void simtick_selection_group_clear(const uint32_t key_pair[2])
 // FUNCTION: LEGORR 0x004027a0
 static void bobbin_clear_delay(SimtickBobbin* node)
 {
-    if (node != NULL && s_bobbin_clear_delay_hook != NULL)
+    if (node == NULL) return;
+    if (s_bobbin_clear_delay_hook != NULL) {
         s_bobbin_clear_delay_hook(node, s_bobbin_action_context);
+        return;
+    }
+
+    /* BobbinClearDelay (FUN_004027a0) only queues the coordinate command
+     * when the keyed cell is clear, has a nonzero speed class, and its
+     * entry resources are ready. The retail body then allocates type 0x16,
+     * stores the pair in +8/+c, and links it globally with kind 0xe. */
+    GameContext* game = entity_pool_callback_context_get();
+    int cell_xy[2];
+    void* command;
+    cell_xy[0] = (int)node->key_pair[0];
+    cell_xy[1] = (int)node->key_pair[1];
+    if (game == NULL || game->level == NULL ||
+        level_cell_occupied_at_current(cell_xy) != 0u ||
+        level_cell_speed_class(game->level, (int)node->key_pair[0],
+                               (int)node->key_pair[1]) == 0 ||
+        ensure_cell_entries_loaded(0xfu, 0, 0) == 0) {
+        return;
+    }
+    command = cmd_alloc(0x16);
+    if (command == NULL) return;
+    cmd_rec_move_xy_set(command, (float)node->key_pair[0],
+                        (float)node->key_pair[1]);
+    cmd_link_global_head(command, 0xe);
 } /* FUN_004027a0 */
 // FUNCTION: LEGORR 0x00409550
 static void bobbin_die(SimtickBobbin* node)

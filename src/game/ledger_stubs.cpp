@@ -7499,8 +7499,15 @@ int ledger_stub_0046f270_TypeMotionScaleApplyDispatch(
         }
         return 1;
     }
-    if (entity->type == ENTITY_TYPE_OBJ && hooks->type3_entry_miss != NULL)
-        hooks->type3_entry_miss(hooks->context, entity);
+    if (entity->type == ENTITY_TYPE_OBJ) {
+        if (hooks->type3_entry_miss != NULL) {
+            hooks->type3_entry_miss(hooks->context, entity);
+        }
+        else {
+            /* FUN_0046f270 calls FUN_00462890 on a type-3 table miss. */
+            global_counter_at_0055532c_increment();
+        }
+    }
     hooks->motion_apply(hooks->context, entity, base_value, 1, scale);
     if (apply_index && hooks->finish_apply != NULL)
         hooks->finish_apply(hooks->context, entity, finish_argument, 1);

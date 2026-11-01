@@ -1769,11 +1769,17 @@ int terrain_cell_surface_vertices_get(TerrainSurfaceGrid* grid, uint32_t x,
     int flip;
     static const uint8_t flipped_order[4] = { 1, 2, 3, 0 };
     uint32_t i;
-    if (!terrain_grid_cell_valid(grid, x, y) || grid->surface_vectors == NULL ||
-        out == NULL) return 0;
+    if (grid == NULL || out == NULL) return 0;
+    if (x >= grid->width || y >= grid->height) return (int)grid->width;
+    if (grid->surface_vectors == NULL) return 0;
     index = terrain_grid_cell_index(grid, x, y);
-    flip = grid->triangulation_flags != NULL &&
-           (grid->triangulation_flags[index] & 1u) != 0;
+    if (grid->cell_records != NULL) {
+        flip = (grid->cell_records[index * 0x28u + 0x19u] & 1u) != 0;
+    }
+    else {
+        flip = grid->triangulation_flags != NULL &&
+               (grid->triangulation_flags[index] & 1u) != 0;
+    }
     for (i = 0; i < 4; ++i) {
         uint32_t src_corner = flip ? flipped_order[i] : i;
         memcpy(out + i * 3, grid->surface_vectors + (index * 4 + src_corner) * 3,
