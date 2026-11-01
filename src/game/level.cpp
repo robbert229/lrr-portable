@@ -2915,6 +2915,14 @@ int grid_cell_entity_eligibility_check(int x, int y)
     if (hooks->cell_flags_get != NULL) {
         flags = hooks->cell_flags_get(x, y, hooks->context);
     }
+    else {
+        GameContext* game = entity_pool_callback_context_get();
+        const uint8_t* cell;
+        if (game == NULL || game->level == NULL) return 0;
+        cell = level_voxel(game->level, x, y);
+        if (cell == NULL) return 0;
+        memcpy(&flags, cell + 8, sizeof(flags));
+    }
     if ((flags & 0x100u) != 0u) return 0;
     return hooks->surface_entity_eligible != NULL &&
            hooks->surface_entity_eligible(x, y, hooks->context) != 0;

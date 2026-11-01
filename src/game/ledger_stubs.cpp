@@ -3338,7 +3338,6 @@ void ledger_stub_00437150_ToolTipIconsConfigLoad(void* config)
 }
 
 // ProcessQueuedGridAnimations
-// FUNCTION: LEGORR 0x00437300
 void ledger_stub_00437300_ProcessQueuedGridAnimations(
     void* anchor, int mode, float delta)
 {
@@ -6814,16 +6813,15 @@ void ledger_stub_00462390_RewardScreenTransitionTick(
 }
 
 // FUNCTION: LEGORR 0x00462460
-int ledger_stub_00462460_RewardFlhContextReload(Flic** player,
-                                                 const char* path)
+void ledger_stub_00462460_RewardFlhContextReload(void* task_context)
 {
-    Flic* opened;
-    if (player == NULL) return 0;
+    unsigned char* context = (unsigned char*)task_context;
+    Flic** player;
+    if (context == NULL || (context[0] & 4u) == 0u) return;
+    player = (Flic**)(context + 0x1fc);
     if (*player != NULL) flic_close(*player);
     *player = NULL;
-    opened = flic_open(path);
-    *player = opened;
-    return opened != NULL;
+    *player = flic_open((const char*)(context + 0x16c));
 }
 
 void ledger_stub_004624a0_RewardFlhContextTick(int* displayed_task_count,

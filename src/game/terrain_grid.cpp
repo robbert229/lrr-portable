@@ -13,6 +13,7 @@
 #include "../gods98/heap.hpp"
 #include "../gods98/resource.hpp"
 #include "../gods98/texture.hpp"
+#include "../gods98/surface.hpp"
 #include "../gods98/view.hpp"
 
 #include <stdlib.h>
@@ -719,9 +720,8 @@ void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid)
     grid->meshes = NULL;
 }
 
-/* TextureSetConfigLoad (FUN_0042bb60): read the selected texture-set
- * subgroup, commit its surface-text dimensions, initialize the terrain
- * cell/mesh state, then load the tile bitmap set and roof bitmap. */
+/* TextureSetConfigLoad (FUN_0042bb60): surface-text dimensions are stored
+ * separately from the map dimensions used by LoadTileMeshes. */
 int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
                                     BlockFile* config,
                                     const char* group_name)
@@ -754,13 +754,18 @@ int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
     height = atoi(height_text);
     if (width <= 0 || height <= 0) return 0;
 
-    grid->width = (uint32_t)width;
-    grid->height = (uint32_t)height;
+    grid->surface_text_width = (uint32_t)width;
+    grid->surface_text_height = (uint32_t)height;
     grid->mesh_basename = mesh_name;
     grid->texture_basename = texture_name;
 
-    /* Surface-text character remapping and the scene's cell initialization
-     * callbacks have no compatible hook on TerrainTileMeshGrid yet. */
+    if (grid->surface_text_map != NULL &&
+        grid->surface_text_map_insert != NULL) {
+        surface_text_character_map_initialize(
+            grid->surface_text_map, grid->surface_text_map_insert);
+    }
+    terrain_grid_cells_initialize(grid->surface_grid);
+
     if (mesh_name == NULL) return 0;
     if (!terrain_tile_mesh_grid_load(grid, mesh_name)) return 0;
     if (texture_name == NULL) return 0;
@@ -768,6 +773,10 @@ int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
     grid->textures = terrain_cell_resource_grid_load(texture_name,
         (uint32_t)width, (uint32_t)height);
     if (grid->textures == NULL) return 0;
+    if (grid->surface_texture_grid_attach != NULL) {
+        grid->surface_texture_grid_attach(grid->scene, grid->textures,
+                                          grid->context);
+    }
     if (roof_name == NULL) return 0;
     grid->roof_texture = texture_load(roof_name);
     return grid->roof_texture != NULL;

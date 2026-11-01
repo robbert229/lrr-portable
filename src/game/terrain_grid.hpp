@@ -42,6 +42,8 @@ typedef void (*TerrainTileMeshReleaseHook)(void* mesh, void* context);
 typedef struct TerrainTileMeshGrid {
     uint32_t width;
     uint32_t height;
+    uint32_t surface_text_width;
+    uint32_t surface_text_height;
     void** meshes;
     void* scene;
     void* material;
@@ -57,6 +59,12 @@ typedef struct TerrainTileMeshGrid {
     void* roof_texture;
     const char* mesh_basename;
     const char* texture_basename;
+    void* surface_text_map;
+    void (*surface_text_map_insert)(void* map, uint8_t key, uint8_t value);
+    TerrainSurfaceGrid* surface_grid;
+    void (*surface_texture_grid_attach)(void* scene,
+                                        struct TerrainCellResourceGrid* grid,
+                                        void* context);
 } TerrainTileMeshGrid;
 int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid,
                                 const char* bitmap_prefix);

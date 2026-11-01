@@ -2356,15 +2356,55 @@ void queued_grid_animation_accumulator_clear(void)
     s_queued_grid_animation_fraction = 0.0f;
 }
 
+static int queued_grid_animation_anchor_cell_get(void* anchor,
+                                                  float position[2])
+{
+    EntitySlot* entity = (EntitySlot*)anchor;
+    int cell_x, cell_y;
+    if (entity == NULL || entity->owner_ctx == NULL ||
+        entity->owner_ctx->level == NULL || position == NULL) return 0;
+    cell_x = level_cell_of(entity->x);
+    cell_y = level_cell_of(entity->y);
+    entity_position_to_terrain_cell(entity, entity->owner_ctx->level,
+                                    &cell_x, &cell_y);
+    position[0] = (float)cell_x;
+    position[1] = (float)cell_y;
+    return 1;
+}
+
+static EntitySlot* queued_grid_animation_spatial_find(
+    const float position[2], int type, int filter_a, int filter_b)
+{
+    SpatialObjectQueryRequest request;
+    float world_position[3];
+    int cell_x, cell_y;
+    if (position == NULL) return NULL;
+    cell_x = (int)position[0];
+    cell_y = (int)position[1];
+    request.center[0] = 0.0f;
+    request.center[1] = 0.0f;
+    request.radius = 10000.0f;
+    request.mask = 1u;
+    request.filters[0] = (uint32_t)type;
+    request.filters[1] = (uint32_t)filter_a;
+    request.filters[2] = (uint32_t)filter_b;
+    request.filters[3] = 0u;
+    request.center_is_cell = 0;
+    if (terrain_cell_world_position_get(cell_x, cell_y, world_position)) {
+        request.center[0] = world_position[0];
+        request.center[1] = world_position[1];
+    }
+    return (EntitySlot*)spatial_object_query_execute(&request);
+}
+
 /* ProcessQueuedGridAnimations (FUN_00437300): accumulate scaled fractional
  * work, then consume one queued type-six animation for each whole unit. */
+// FUNCTION: LEGORR 0x00437300
 void process_queued_grid_animations(void* anchor, int mode, float delta)
 {
     QueuedGridAnimationHooks* const hooks = &s_queued_grid_animation_hooks;
     float position[2];
     float scaled_delta;
-    if (hooks->anchor_position_get == NULL || hooks->entity_find == NULL ||
-        hooks->animation_entity_get == NULL) return;
     if (mode == -1) {
         scaled_delta = delta;
     }
@@ -2372,17 +2412,24 @@ void process_queued_grid_animations(void* anchor, int mode, float delta)
         scaled_delta = hooks->mode_scale_get(mode, hooks->context) * delta;
     }
     else {
-        scaled_delta = 0.0f;
+        scaled_delta = lego::weapon_type_discharge_rate_get(mode) * delta;
     }
     s_queued_grid_animation_fraction += scaled_delta;
-    if (!hooks->anchor_position_get(anchor, position, hooks->context)) return;
+    if (hooks->anchor_position_get != NULL) {
+        if (!hooks->anchor_position_get(anchor, position, hooks->context))
+            return;
+    }
+    else if (!queued_grid_animation_anchor_cell_get(anchor, position)) return;
     while (s_queued_grid_animation_fraction >= 1.0f) {
-        EntitySlot* candidate = hooks->entity_find(position, 6, 0, 0,
-                                                   hooks->context);
+        EntitySlot* candidate = hooks->entity_find != NULL
+            ? hooks->entity_find(position, 6, 0, 0, hooks->context)
+            : queued_grid_animation_spatial_find(position, 6, 0, 0);
         EntitySlot* animation_entity;
         if (candidate == NULL) break;
-        animation_entity = hooks->animation_entity_get(candidate, 6, 0, 0,
-                                                       hooks->context);
+        animation_entity = hooks->animation_entity_get != NULL
+            ? hooks->animation_entity_get(candidate, 6, 0, 0, hooks->context)
+            : entity_action_kind_entity_create_and_command_issue(
+                  candidate, 6, 0, 0);
         if (animation_entity == NULL) break;
         animation_entity->flags_3e8 |= 0x80000000u;
         if (hooks->work_queue_update != NULL) {
