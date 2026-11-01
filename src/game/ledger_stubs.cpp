@@ -2844,10 +2844,13 @@ void ledger_stub_004263c0_GlobalSubsystemStateReset(void)
 {
     static const int mode = 1;
     GlobalSubsystemResetState* state = s_global_subsystem_reset_state;
-    if (state == NULL) return;
-    (void)engine_mode_set(state->engine, &mode);
-    if (state->word_00503618 != NULL) *state->word_00503618 = 0u;
-    text_buffer_reset(state->text_buffer);
+    (void)engine_mode_set_target(&mode);
+    if (state != NULL) {
+        if (state->word_00503618 != NULL) *state->word_00503618 = 0u;
+        text_buffer_reset(state->text_buffer);
+    }
+    engine_global_state_flags_bits6_and_9_set_target(0, 0);
+    engine_global_state_flags_bit7_set_target(0);
 }
 
 /* CursorRayToCameraRoute (FUN_00426420) performs camera ray and pan updates;

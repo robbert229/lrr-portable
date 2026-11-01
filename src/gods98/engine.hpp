@@ -288,6 +288,10 @@ uint32_t engine_debug_word_peek(void);
  * answers the mode. Deviation: the corpus strides the caller's mode
  * pointer blindly — the port guards it and answers zero. */
 int engine_mode_set(EngineContext* ctx, const int* mode);
+int engine_mode_set_target(const int* mode); /* target ABI: 0x004565f0 */
+void engine_global_state_flags_bit7_set_target(int value);
+void engine_global_state_flags_bits6_and_9_set_target(int value,
+                                                       int set_bit9);
 uint32_t engine_overlay_word_peek(int which); /* 0: DAT_00503610,
                                                * 1: DAT_00503614 (hook) */
 void engine_overlay_words_set(uint32_t flags, uint32_t request);

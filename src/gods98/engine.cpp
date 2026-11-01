@@ -505,20 +505,37 @@ static uint32_t s_overlay_word_03610; /* DAT_00503610 role */
 // GLOBAL: LEGORR 0x00503614
 static uint32_t s_overlay_word_03614; /* DAT_00503614 role */
 
+void engine_global_state_flags_bit7_set_target(int value);
+void engine_global_state_flags_bits6_and_9_set_target(
+    int value, int set_bit9);
+
+/* The mapped body takes only the mode pointer; keep the portable context
+ * adapter separate to preserve that x86 argument layout. */
 // FUNCTION: LEGORR 0x004565f0
-int engine_mode_set(EngineContext* ctx, const int* mode)
+int engine_mode_set_target(const int* mode)
 {
-    if (mode == NULL) {
-        return 0; /* deviation: the corpus strides the pointer blindly */
-    }
     global_flag_004ff978_install((uint32_t)*mode);
     if (*mode == 1) {
-        global_state_flags_bits6_and_9_set(ctx, 0, 1);
-        global_state_flags_bit7_set(ctx, 0);
+        engine_global_state_flags_bits6_and_9_set_target(0, 1);
+        engine_global_state_flags_bit7_set_target(0);
     }
     s_overlay_word_03610 = 0u;
     s_overlay_word_03614 = 0u;
     return *mode;
+}
+
+int engine_mode_set(EngineContext* ctx, const int* mode)
+{
+    int result;
+    if (mode == NULL) {
+        return 0; /* portable adapter guard; mapped body dereferences */
+    }
+    result = engine_mode_set_target(mode);
+    if (ctx != NULL && *mode == 1) {
+        ctx->debug &= ~(0x40u | 0x80u);
+        ctx->debug |= 0x200u;
+    }
+    return result;
 }
 
 uint32_t engine_overlay_word_peek(int which)
@@ -570,6 +587,15 @@ void objective_score_text_origin_peek(float out[2])
 }
 
 // FUNCTION: LEGORR 0x004263a0
+void engine_global_state_flags_bit7_set_target(int value)
+{
+    if (value != 0) {
+        s_panel_highlight_flags |= 0x80u;
+        return;
+    }
+    s_panel_highlight_flags &= ~0x80u;
+}
+
 void global_state_flags_bit7_set(EngineContext* ctx, int value)
 {
     if (ctx == NULL) {
@@ -583,6 +609,16 @@ void global_state_flags_bit7_set(EngineContext* ctx, int value)
 }
 
 // FUNCTION: LEGORR 0x00426360
+void engine_global_state_flags_bits6_and_9_set_target(
+    int value, int set_bit9)
+{
+    uint32_t flags = value != 0 ? s_panel_highlight_flags | 0x40u
+                                : s_panel_highlight_flags & ~0x40u;
+    if (set_bit9 != 0) flags |= 0x200u;
+    else flags &= ~0x200u;
+    s_panel_highlight_flags = flags;
+}
+
 void global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
                                         int set_bit9)
 {
