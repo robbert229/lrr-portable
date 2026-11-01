@@ -1381,10 +1381,6 @@ void entity_health_threshold_read_hook_install(
     EntityHealthThresholdReadHook hook, void* context);
 int entity_flag400_and_health_threshold_check(
     const EntitySlot* entity); /* FUN_004399c0 */
-typedef int (*EntityAnimationStateApplyHook)(EntitySlot* entity,
-                                             uint32_t state, void* context);
-void entity_animation_state_apply_hook_install(
-    EntityAnimationStateApplyHook hook, void* context);
 int entity_animation_state_set(EntitySlot* entity,
                                uint32_t state); /* FUN_00439cd0 */
 typedef EntitySlot* (*EntityDDiSceneOwnerResolveHook)(uint32_t owner_token,

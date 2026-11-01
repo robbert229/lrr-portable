@@ -1064,14 +1064,10 @@ int advisor_request_admit(int row, int immediate)
 // FUNCTION: LEGORR 0x004011c0
 void advisor_animation_end_cleanup(void)
 {
-    if (s_adv_scene_active_row >= 0 &&
-        s_adv_scene_active_row < ADV_ACTION_ROWS) {
-        uint32_t animation_slot = s_adv_actions[s_adv_scene_active_row][0];
-        uint32_t animation = animation_slot < 11u
-            ? s_adv_animation_slots[animation_slot].handle : 0u;
-        if (animation != 0u)
-            scene_render_lock_toggle((void*)(uintptr_t)animation, 1);
-    }
+    uint32_t animation_slot = s_adv_actions[s_adv_scene_active_row][0];
+    uint32_t animation = s_adv_animation_slots[animation_slot].handle;
+    if (animation != 0u)
+        scene_render_lock_toggle((void*)(uintptr_t)animation, 1);
     advisor_state_word_set(advisor_state_word_peek() & ~1u);
     scene_render_lock_toggle(
         (void*)(uintptr_t)s_adv_scene_companion_handle, 1);
@@ -1164,9 +1160,6 @@ int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
 void advisor_action_position_and_mode_set(int row, int mode,
                                           uint32_t dword_a, uint32_t dword_b)
 {
-    if (row < 0 || row >= ADV_ACTION_ROWS) {
-        return; /* deviation: bound the table access */
-    }
     uint32_t* rec = s_adv_actions[row];
     rec[4] = (uint32_t)mode;   /* DAT base + 0x10 */
     rec[5] = dword_a;          /* DAT base + 0x14 */

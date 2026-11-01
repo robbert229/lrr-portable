@@ -32,6 +32,8 @@ static char s_entity_localized_the_names[16][32][128];
 static uint32_t s_entity_localized_name_counts[16];
 static const char* s_entity_localized_name_entries[16][32];
 static const char* s_entity_localized_the_name_entries[16][32];
+static const void* s_stats_cell_ptr[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
+static int s_stats_cell_span[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
 
 /* EntityTypeComponentGet (FUN_0044a200): dispatch through the legacy record's
  * payload slots. This mapped leaf accepts that corpus-layout record directly;
@@ -230,8 +232,6 @@ void entity_simulation_queue_flush(EntitySlot* source)
     else s_entity_simulation_queues = queue->next;
     free(queue);
 }
-static EntityAnimationStateApplyHook s_entity_animation_state_apply_hook;
-static void* s_entity_animation_state_context;
 static EntityPeriodicTickHook s_entity_periodic_tick_hook;
 static void* s_entity_periodic_tick_context;
 static float s_periodic_timer25;
@@ -574,21 +574,46 @@ int entity_flag400_and_health_threshold_check(const EntitySlot* entity)
     return 1;
 }
 
-void entity_animation_state_apply_hook_install(
-    EntityAnimationStateApplyHook hook, void* context)
+/* EntityBuildingIndexSet (FUN_00469c10): select one of the entity type's
+ * 0x150-byte records and update the two transition counters. */
+// FUNCTION: LEGORR 0x00469c10
+static int entity_building_index_set(EntitySlot* entity, uint32_t state)
 {
-    s_entity_animation_state_apply_hook = hook;
-    s_entity_animation_state_context = context;
+    int type;
+    int row;
+    int current;
+    int span;
+    const uint8_t* record;
+    if (entity == NULL) return 0;
+    type = entity->type;
+    row = entity->etype;
+    if (type < 0 || type >= STATS_TYPE_TABLE_TYPES || row < 0
+        || row >= STATS_TYPE_TABLE_ROWS) {
+        return 0;
+    }
+    span = s_stats_cell_span[type][row];
+    record = (const uint8_t*)s_stats_cell_ptr[type][row];
+    if (record == NULL || state >= (uint32_t)span) return 0;
+    current = entity->indexed_record_slot_330;
+    if (state != (uint32_t)current) {
+        if (current >= 0 && current < 16) {
+            grid_count_table_slot_poke(type, row, current, 0,
+                (uint32_t)(grid_count_table_slot_peek(type, row, current, 0)
+                    + 1));
+        }
+        grid_count_table_slot_poke(type, row, (int)state, 1,
+            (uint32_t)(grid_count_table_slot_peek(type, row, (int)state, 1)
+                + 1));
+    }
+    entity->indexed_record_slot_330 = (int32_t)state;
+    entity->stats_record = record + (size_t)state * 0x150u;
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x00439CD0
 int entity_animation_state_set(EntitySlot* entity, uint32_t state)
 {
-    if (entity == NULL || s_entity_animation_state_apply_hook == NULL) {
-        return 0;
-    }
-    return s_entity_animation_state_apply_hook(entity, state,
-                                               s_entity_animation_state_context);
+    return entity_building_index_set(entity, state);
 }
 
 /* Apply the requested animation state only when the entity capability word
@@ -6595,9 +6620,6 @@ int resolved_entity_operation_dispatch(const char* name, int slot,
  * guards every stride (deviations documented per the DAT-window convention).
  * The corpus float fields read as x87 float10 of the stored float; the port
  * hands back the plain float. */
-
-static const void* s_stats_cell_ptr[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
-static int s_stats_cell_span[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
 
 void stats_type_table_install(int type, int row, const void* record,
                               int stride_count)
