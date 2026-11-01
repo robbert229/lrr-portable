@@ -267,7 +267,7 @@ int wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840
 long wad_expand_payload(const void* header, void** out_payload); /* FUN_0049c7c0 */
 
 /* Zero 16-byte table entries: 0, word 0xffff, 0, word 0. */
-void wad_huffman_table_clear(void* table, int count);            /* FUN_0049cf50 */
+void wad_huffman_table_clear(void* table, uint8_t count);         /* FUN_0049cf50 */
 
 /* Kind 1: flagged handle record, no stream buffer. Kind 0: carries the
  * 12-byte stream buffer behind; releases the record if it fails. */

@@ -135,27 +135,16 @@ void input_key_mapping_add_bidirectional(InputKeyMappingTable* table,
                                          uint8_t key_a, uint8_t key_b)
 {
     uint32_t i;
-    int found = 0;
     if (table == NULL) return;
     for (i = 0; i < table->count[key_a]; ++i) {
         if (table->values[key_a][i] == key_b) {
-            found = 1;
-            break;
+            return;
         }
     }
-    if (!found && table->count[key_a] < INPUT_KEY_MAPPING_CAPACITY) {
-        table->values[key_a][table->count[key_a]++] = key_b;
-    }
-    found = 0;
-    for (i = 0; i < table->count[key_b]; ++i) {
-        if (table->values[key_b][i] == key_a) {
-            found = 1;
-            break;
-        }
-    }
-    if (!found && table->count[key_b] < INPUT_KEY_MAPPING_CAPACITY) {
-        table->values[key_b][table->count[key_b]++] = key_a;
-    }
+    table->values[key_a][table->count[key_a]] = key_b;
+    ++table->count[key_a];
+    table->values[key_b][table->count[key_b]] = key_a;
+    ++table->count[key_b];
 }
 
 void input_reset(InputState* s)

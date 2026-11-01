@@ -41,11 +41,14 @@
 #include "platform/platform.h"  /* PlatformEvent + canonical key codes */
 
 #define INPUT_KEY_COUNT 256
+#define INPUT_KEY_MAPPING_KEY_COUNT 128
 #define INPUT_KEY_MAPPING_CAPACITY 128
 
 typedef struct InputKeyMappingTable {
-    uint8_t count[INPUT_KEY_COUNT];
-    uint8_t values[INPUT_KEY_COUNT][INPUT_KEY_MAPPING_CAPACITY];
+    /* The retail record reserves 0x34 bytes before the mapping matrix. */
+    uint8_t reserved[0x34];
+    uint8_t values[INPUT_KEY_MAPPING_KEY_COUNT][INPUT_KEY_MAPPING_CAPACITY];
+    uint8_t count[INPUT_KEY_MAPPING_KEY_COUNT];
 } InputKeyMappingTable;
 
 void input_key_mapping_reset(InputKeyMappingTable* table);

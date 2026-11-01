@@ -4947,24 +4947,21 @@ long wad_expand_payload(const void* header, void** out_payload)
     return size;
 }
 
-/* WadHuffmanTableClear (FUN_0049cf50): zero the decode table's `count`
- * 16-byte entries: DWORD 0 at +0, the WORD 0xffff at +4, DWORD 0 at +8,
- * and the WORD 0 at +12. A zero count clears nothing. Deviations: the
- * corpus's count is char-truncated (multiples of 256 alias to nothing),
- * documented rather than replayed, and the blind table stride is guarded. */
+/* WadHuffmanTableClear (FUN_0049cf50): the count is an unsigned byte. Clear
+ * each 16-byte entry as DWORD 0, WORD 0xffff, DWORD 0, WORD 0. */
 // FUNCTION: LEGORR 0x0049cf50
-void wad_huffman_table_clear(void* table, int count)
+void wad_huffman_table_clear(void* table, uint8_t count)
 {
-    if (table == NULL || count <= 0) {
-        return;
-    }
-    for (int i = 0; i != count; ++i) {
-        unsigned char* e = (unsigned char*)table + (size_t)i * 16u;
-        *(uint32_t*)(e + 0)  = 0u;        /* corpus: mov DWORD [x],0    */
-        *(uint16_t*)(e + 4)  = 0xffffu;   /* corpus: mov WORD [x+4],0xffff */
-        *(uint32_t*)(e + 8)  = 0u;        /* corpus: mov DWORD [x+8],0  */
-        *(uint16_t*)(e + 12) = 0u;        /* corpus: mov WORD [x+12],0  */
-    }
+    uint32_t* entry = (uint32_t*)table;
+    if (table == NULL || count == 0u) return;
+    do {
+        entry[0] = 0u;
+        *(uint16_t*)(entry + 1) = 0xffffu;
+        entry[2] = 0u;
+        *(uint16_t*)(entry + 3) = 0u;
+        entry += 4;
+        --count;
+    } while (count != 0u);
 }
 
 /* GameFileHandleAllocate (FUN_0047fed0): the file-layer handle pair. Kind 1
