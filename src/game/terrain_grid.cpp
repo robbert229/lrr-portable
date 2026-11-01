@@ -1884,32 +1884,31 @@ void staged_cell_candidate_selection_state_install(
 void staged_cell_candidate_select(void* unused, LevelState* level)
 {
     uint32_t record_index;
-    int width = level_width(level);
-    int height = level_height(level);
+    int width = (int)level->word[LEVEL_OFF_WIDTH / sizeof(uint32_t)];
+    int height = (int)level->word[LEVEL_OFF_HEIGHT / sizeof(uint32_t)];
+    const uint8_t* voxels = (const uint8_t*)level->ptr_voxels;
     StagedCellCandidateSelectionRecord* const records =
         s_staged_selection_records;
     const uint32_t record_count = s_staged_selection_record_count;
     (void)unused;
-    for (record_index = 0; records != NULL && record_index < record_count;
+    for (record_index = 0; record_index < record_count;
          ++record_index) {
         StagedCellCandidateSelectionRecord* record = &records[record_index];
         uint32_t item;
         record->selected_count = 0u;
-        if (record->candidate_xy == NULL || record->selected_items == NULL ||
-            record->selected_alternatives == NULL || width <= 0 || height <= 0)
-            continue;
         for (item = 0; item < record->item_count; ++item) {
             uint32_t alternative;
             const float* candidates = record->candidate_xy + item * 8u;
             for (alternative = 0; alternative < 4u; ++alternative) {
-                int x = crt_float_to_long(candidates[alternative * 2u]);
-                int y = crt_float_to_long(candidates[alternative * 2u + 1u]);
-                uint32_t cell_type;
-                if (x < 0 || y < 0 || x >= width || y >= height ||
-                    !level_cell_type_get_at(level, (uint32_t)x, (uint32_t)y,
-                                            &cell_type) ||
-                    cell_type == 7u || cell_type == 1u) continue;
-                if (record->selected_count >= record->selected_capacity) break;
+                int x = (int)candidates[alternative * 2u];
+                int y = (int)candidates[alternative * 2u + 1u];
+                uint32_t index;
+                uint8_t cell_type;
+                if (x < 0 || x >= width || y < 0 || y >= height) continue;
+                index = ((uint32_t)y * (uint32_t)width + (uint32_t)x) *
+                    LEVEL_VOXEL_STRIDE;
+                cell_type = voxels[index + 2u];
+                if (cell_type == 7u || cell_type == 1u) continue;
                 record->selected_items[record->selected_count] = item;
                 record->selected_alternatives[record->selected_count] =
                     alternative;

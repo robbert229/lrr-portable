@@ -141,16 +141,16 @@ static uint32_t cells_dword(const void* cells, size_t off)
     return v;
 }
 
-/* Render-resource instance records are 0x34 bytes in the 32-bit corpus.
- * Their free-list link occupies +0x30, so this port widens the stride to
- * 0x38 and stores a native pointer in that slot on 64-bit hosts. The
- * allocation/table/head lifecycle follows the corpus in findings 371/373/387. */
-#define RENDER_RESOURCE_INSTANCE_POOL_SLOTS 32
-#define RENDER_RESOURCE_INSTANCE_RECORD_SIZE 0x38
+/* Render-resource instance records have their free-list link at +0x30.
+ * Include the native pointer width in the stride so x86 keeps the corpus's
+ * 0x34-byte records. */
+#define RENDER_RESOURCE_INSTANCE_RECORD_SIZE (0x30u + sizeof(void*))
 #define RENDER_RESOURCE_INSTANCE_LINK_OFFSET 0x30
+// GLOBAL: LEGORR 0x005405d8
 static uint32_t s_render_resource_instance_pool_count;
-static void* s_render_resource_instance_pool_blocks[
-    RENDER_RESOURCE_INSTANCE_POOL_SLOTS];
+// GLOBAL: LEGORR 0x00540584
+static void* s_render_resource_instance_pool_blocks[20];
+// GLOBAL: LEGORR 0x005405d4
 static void* s_render_resource_instance_pool_head;
 
 // FUNCTION: LEGORR 0x004807a0
@@ -160,9 +160,6 @@ void* render_resource_instance_record_acquire(void)
         render_resource_instance_pool_grow();
     }
     char* record = (char*)s_render_resource_instance_pool_head;
-    if (record == NULL) {
-        return NULL; /* deviation: the corpus dereferences a null head */
-    }
     void* next = NULL;
     __builtin_memcpy(&next,
                      record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
@@ -177,9 +174,6 @@ void* render_resource_instance_record_acquire(void)
 // FUNCTION: LEGORR 0x004807d0
 void render_resource_instance_record_release(void* record)
 {
-    if (record == NULL) {
-        return; /* deviation: the corpus writes through the supplied pointer */
-    }
     __builtin_memcpy((char*)record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
                      &s_render_resource_instance_pool_head,
                      sizeof(s_render_resource_instance_pool_head));
@@ -193,14 +187,9 @@ void render_resource_instance_pool_grow(void)
         ((uint32_t)(unsigned char)s_render_resource_instance_pool_count & 0x1fu);
     void* base = engine_heap_alloc((long)count *
                                    RENDER_RESOURCE_INSTANCE_RECORD_SIZE);
-    if (base == NULL) {
-        return; /* deviation: the corpus links the allocator result blindly */
-    }
-    if (s_render_resource_instance_pool_count <
-        RENDER_RESOURCE_INSTANCE_POOL_SLOTS) {
-        s_render_resource_instance_pool_blocks[
-            s_render_resource_instance_pool_count] = base;
-    }
+    s_render_resource_instance_pool_blocks[
+        s_render_resource_instance_pool_count] = base;
+    if (base == NULL) return;
     s_render_resource_instance_pool_count++;
 
     char* record = (char*)base;
