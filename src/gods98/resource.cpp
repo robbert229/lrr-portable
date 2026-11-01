@@ -15,6 +15,7 @@
 #include "heap.hpp"
 #include "record.hpp"
 #include "string.hpp"
+#include "texture.hpp"
 #include "view.hpp"
 
 /* Direct3DRM object and object-array ABI used by the recursive resource-tree
@@ -390,6 +391,7 @@ static void* s_scene_resource_slot_instances[10][10];
 static SceneEffectPoseHook s_scene_effect_pose_hook;
 static void* s_scene_effect_pose_context;
 static void* s_numbered_bitmap_slots[11];
+static unsigned char s_numbered_bitmap_slot_owned[11];
 static NumberedBitmapLoadHook s_numbered_bitmap_load_hook;
 static void* s_numbered_bitmap_context;
 static SceneAnimationDurationHook s_animation_duration_hook;
@@ -1340,9 +1342,7 @@ void preload_numbered_bitmaps(const char* directory, const char* prefix)
 {
     unsigned int index;
     char path[512];
-    if (directory == NULL || s_numbered_bitmap_load_hook == NULL) {
-        return;
-    }
+    if (directory == NULL) return;
     for (index = 0u; index < 11u; ++index) {
         char suffix[24];
         size_t length;
@@ -1364,8 +1364,19 @@ void preload_numbered_bitmaps(const char* directory, const char* prefix)
         }
         sprintf(suffix, "%u.bmp", index);
         strncat(path, suffix, sizeof(path) - strlen(path) - 1u);
-        s_numbered_bitmap_slots[index] = s_numbered_bitmap_load_hook(
-            path, s_numbered_bitmap_context);
+        if (s_numbered_bitmap_slot_owned[index]) {
+            texture_release((TextureSurface*)s_numbered_bitmap_slots[index]);
+            s_numbered_bitmap_slot_owned[index] = 0;
+        }
+        if (s_numbered_bitmap_load_hook != NULL) {
+            s_numbered_bitmap_slots[index] = s_numbered_bitmap_load_hook(
+                path, s_numbered_bitmap_context);
+        }
+        else {
+            TextureSurface* surface = image_surface_load(path, 0u, 0u);
+            s_numbered_bitmap_slots[index] = surface;
+            s_numbered_bitmap_slot_owned[index] = surface != NULL;
+        }
     }
 }
 

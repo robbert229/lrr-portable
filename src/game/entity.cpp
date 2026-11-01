@@ -787,7 +787,8 @@ int entity_segment_center_proximity_check(const EntitySlot* entity,
     dx = projected_x - entity->x;
     dy = projected_y - entity->y;
     radius = s_entity_segment_radius_hook != NULL
-        ? s_entity_segment_radius_hook(entity) : 0.0f;
+        ? s_entity_segment_radius_hook(entity)
+        : entity_stats_float_at6c(entity);
     return radius > (float)sqrt(dx * dx + dy * dy);
 }
 

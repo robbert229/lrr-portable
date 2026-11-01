@@ -363,8 +363,8 @@ int terrain_grid_path_search(void* level, uint32_t start_x,
                              uint32_t* out_count, TerrainPathStopHook stop,
                              void* user)
 {
-    static const int dx[4] = { -1, 0, 1, 0 };
-    static const int dy[4] = { 0, 1, 0, -1 };
+    static const int dx[4] = { 0, 1, 0, -1 };
+    static const int dy[4] = { -1, 0, 1, 0 };
     uint32_t width, height, cell_count, start, goal;
     uint32_t* depth;
     uint32_t* queue;
