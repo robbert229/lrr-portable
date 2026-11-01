@@ -142,6 +142,14 @@ void* cmd_global_next(const void* rec);
 void cmd_global_unlink(const void* rec);
 void pending_command_timer_fire_scan(void); /* 0x405950 */
 void pending_command_entity_assignment_tick(void); /* 0x405c10 */
+/* PlaceCommandEligibilityCheck (0x404fc0), evaluated against the live
+ * command/entity and the operations bound from cmd_context_set. Position
+ * outputs are world coordinates; cell outputs are grid coordinates. */
+int cmd_place_command_eligibility_check(void* record, EntitySlot* entity,
+                                        float position_xy[2],
+                                        float cell_xy[2], uint32_t* out_flag,
+                                        int require_command_gate,
+                                        int relaxed_entity_gate);
 
 /* PendingRecordEntityReferenceClear (FUN_004063e0): walks the global
  * command list and zeroes every record whose +0x48 pending-entity

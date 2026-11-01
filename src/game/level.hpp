@@ -807,6 +807,9 @@ typedef struct TerrainCellMutationHooks {
 int terrain_cell_mutation_progress(const TerrainCellMutationGrid* grid,
                                    uint32_t x, uint32_t y,
                                    const TerrainCellMutationHooks* hooks); /* 0x00433380 */
+int terrain_cell_mutation_progress_level(LevelState* level,
+                                         struct TerrainSurfaceGrid* surface,
+                                         int x, int y); /* LevelState fallback for FUN_00433380 */
 /* Active terrain renderer binding used by the global-level neighbor path. */
 void terrain_cell_mutation_context_bind(
     const TerrainCellMutationGrid* grid,
@@ -1444,6 +1447,9 @@ void path_record_surface_grid_bind(struct TerrainSurfaceGrid* grid);
 struct TerrainSurfaceGrid* path_record_surface_grid_get(void);
 int level_cell_path_record_set(LevelState* level, int x, int y,
                                void* record);
+int level_cell_path_record_state_apply(LevelState* level, int x, int y,
+                                      void* record, int is_registering,
+                                      int duplicate_point);
 void* level_cell_path_record_get(const LevelState* level, int x, int y);
 int path_record_entity_append(void* record, struct EntitySlot* entity);
 uint32_t path_record_entity_count_get(const void* record);

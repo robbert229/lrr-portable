@@ -862,6 +862,80 @@ void scene_hierarchy_register_hooks_set(
     const SceneHierarchyRegisterHooks* hooks);
 void scene_hierarchy_interface_register_recursive(unsigned short* next_index,
                                                   void* root, void* node); /* 0x4887c0 */
+
+/* Shared-object scene resource loader. 0x4876c0 stores a path and callbacks
+ * used later by the LWS entry expander; it does not enumerate directories. */
+typedef int (*SharedObjectEntryResolveFn)(const char* entry_name,
+                                          void* entry_record);
+typedef int (*SharedObjectSoundEnabledFn)(void);
+typedef void* (*SharedObjectSoundSubmitFn)(void* sound_object,
+                                          void* resource, int changed,
+                                          int mode, int loop);
+void shared_object_directory_scan_configure(
+    const char* directory, SharedObjectEntryResolveFn resolve,
+    SharedObjectSoundEnabledFn sound_enabled,
+    SharedObjectSoundSubmitFn sound_submit); /* 0x4876c0 */
+const char* shared_object_directory_root_get(void);
+void shared_object_sound_callbacks_get(
+    SharedObjectSoundEnabledFn* enabled_out,
+    SharedObjectSoundSubmitFn* submit_out);
+
+typedef struct SceneEntryExpandInfo {
+    const char* name;
+    uint32_t flags;
+    uint8_t slot_index;
+} SceneEntryExpandInfo;
+typedef struct SceneEntryExpandedRecord {
+    unsigned char bytes[0xd0];
+} SceneEntryExpandedRecord;
+typedef struct SceneEntryExpandOps {
+    void* context;
+    int (*counts_get)(void* scene, uint16_t* source_count,
+                      uint16_t* expanded_capacity, void* context);
+    int (*entry_get)(void* scene, uint16_t index,
+                     SceneEntryExpandInfo* info, void* context);
+    void (*entry_slot_set)(void* scene, uint16_t index, uint8_t slot,
+                           void* context);
+    void (*expanded_table_set)(void* scene,
+                               SceneEntryExpandedRecord* table,
+                               void* context);
+    void (*expanded_capacity_set)(void* scene, uint16_t capacity,
+                                  void* context);
+    uint32_t (*debug_flags_get)(void* context);
+} SceneEntryExpandOps;
+void scene_entry_expand_ops_set(const SceneEntryExpandOps* ops);
+void shared_object_scene_entry_slot_table_expand(void* scene); /* 0x4877e0 */
+
+/* The reference clone copies the fixed header but rebuilds child registration
+ * and each interface-backed component through its owning scene/runtime. */
+typedef struct SharedObjectCloneOps {
+    void* context;
+    void* (*source_base_get)(void* source, void* context);
+    void* (*child_first_get)(void* source, void* context);
+    void* (*child_next_get)(void* child, void* context);
+    uint16_t (*entry_count_get)(void* source, void* context);
+    uint32_t (*entry_flags_get)(void* source, uint16_t index,
+                                void* context);
+    void* (*component_get)(void* source, uint16_t index, void* context);
+    void (*component_table_set)(void* clone, void** table,
+                                void* context);
+    void (*source_link_set)(void* clone, void* source, void* context);
+    void (*clone_reference_set)(void* clone, uint32_t count,
+                                void* context);
+    void (*source_reference_increment)(void* source, void* context);
+    void (*child_register)(void* clone, void* child, void* caller_context,
+                           void* context);
+    void (*component_clone)(void* source_interface, void* clone_interface,
+                            void* clone, uint16_t index, void* context);
+    void (*component_resource_create)(void* source_interface,
+                                      void* clone_interface,
+                                      void* clone, uint16_t index,
+                                      void* context);
+    void (*time_update)(void* clone, float time, void* context);
+} SharedObjectCloneOps;
+void shared_object_clone_ops_set(const SharedObjectCloneOps* ops);
+void* shared_object_clone(void* source, void* caller_context); /* 0x487a00 */
+
 typedef void (*DDiSceneObjectDestroyHook)(void* scene_object, int mode,
                                           void* context);
 void ddiscene_object_destroy_hook_set(DDiSceneObjectDestroyHook hook,

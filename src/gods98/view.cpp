@@ -131,6 +131,12 @@ static SceneFormattedStringHooks s_scene_formatted_string_hooks;
 static RenderInterfacePairHooks s_render_interface_pair_hooks;
 static DDiScenePayloadReleaseHooks s_ddiscene_payload_release_hooks;
 static RendererRecordCloneHooks s_renderer_record_clone_hooks;
+static char* s_shared_object_directory_root;
+static SharedObjectEntryResolveFn s_shared_object_entry_resolve;
+static SharedObjectSoundEnabledFn s_shared_object_sound_enabled;
+static SharedObjectSoundSubmitFn s_shared_object_sound_submit;
+static SceneEntryExpandOps s_scene_entry_expand_ops;
+static SharedObjectCloneOps s_shared_object_clone_ops;
 static SceneObjectListApplyHook s_scene_object_list_apply_hook;
 static void* s_scene_object_list_apply_context;
 static uint32_t s_quad_mesh_render_records[10][8];
@@ -1174,6 +1180,228 @@ void scene_hierarchy_interface_register_recursive(unsigned short* next_index,
                                                   void* root, void* node)
 {
     scene_hierarchy_register_node(next_index, root, node, 0u);
+}
+
+/* SharedObjectDirectoryScan (FUN_004876c0) installs the directory prefix and
+ * three callbacks consumed by the scene-entry and timed-sound paths. */
+// FUNCTION: LEGORR 0x004876c0
+void shared_object_directory_scan_configure(
+    const char* directory, SharedObjectEntryResolveFn resolve,
+    SharedObjectSoundEnabledFn sound_enabled,
+    SharedObjectSoundSubmitFn sound_submit)
+{
+    if (directory != NULL) {
+        size_t length = strlen(directory);
+        int has_separator = length != 0u && directory[length - 1u] == '\\';
+        size_t output_length = length + (has_separator ? 0u : 1u);
+        char* path = (char*)engine_heap_alloc((long)(output_length + 1u));
+        if (path != NULL) {
+            memcpy(path, directory, length);
+            if (!has_separator) path[length] = '\\';
+            path[output_length] = '\0';
+            if (s_shared_object_directory_root != NULL)
+                engine_heap_free(s_shared_object_directory_root);
+            s_shared_object_directory_root = path;
+        }
+        else {
+            if (s_shared_object_directory_root != NULL)
+                engine_heap_free(s_shared_object_directory_root);
+            s_shared_object_directory_root = NULL;
+        }
+    }
+    s_shared_object_entry_resolve = resolve;
+    s_shared_object_sound_enabled = sound_enabled;
+    s_shared_object_sound_submit = sound_submit;
+}
+
+const char* shared_object_directory_root_get(void)
+{
+    return s_shared_object_directory_root;
+}
+
+void shared_object_sound_callbacks_get(
+    SharedObjectSoundEnabledFn* enabled_out,
+    SharedObjectSoundSubmitFn* submit_out)
+{
+    if (enabled_out != NULL) *enabled_out = s_shared_object_sound_enabled;
+    if (submit_out != NULL) *submit_out = s_shared_object_sound_submit;
+}
+
+void scene_entry_expand_ops_set(const SceneEntryExpandOps* ops)
+{
+    if (ops == NULL) memset(&s_scene_entry_expand_ops, 0,
+                            sizeof(s_scene_entry_expand_ops));
+    else s_scene_entry_expand_ops = *ops;
+}
+
+static int scene_entry_comma_split(char* text, char** tokens,
+                                   int token_capacity)
+{
+    char* position;
+    int count = 1;
+    size_t separator_length = 1u;
+    if (text == NULL || text[0] == '\0' || token_capacity <= 0) return 0;
+    tokens[0] = text;
+    for (position = text; position[1] != '\0'; ++position) {
+        if (strncmp(",", position, separator_length) == 0) {
+            if (count >= token_capacity) return count;
+            *position = '\0';
+            tokens[count++] = position + separator_length;
+        }
+    }
+    return count;
+}
+
+/* SceneEntrySlotTableExpand (FUN_004877e0) consumes the directory callback
+ * from 0x4876c0, resolves only records with entry flag bit 1, then records the
+ * numeric prefix/suffix of each post-comma token in the 0xd0-byte output row. */
+// FUNCTION: LEGORR 0x004877e0
+void shared_object_scene_entry_slot_table_expand(void* scene)
+{
+    SceneEntryExpandOps* const ops = &s_scene_entry_expand_ops;
+    uint16_t source_count = 0;
+    uint16_t expanded_capacity = 0;
+    SceneEntryExpandedRecord* table;
+    uint16_t source_index;
+    uint8_t output_index = 0;
+    if (scene == NULL || ops->counts_get == NULL ||
+        ops->expanded_capacity_set == NULL) return;
+    if (s_shared_object_entry_resolve == NULL) {
+        ops->expanded_capacity_set(scene, 0u, ops->context);
+        return;
+    }
+    if (ops->entry_get == NULL || ops->entry_slot_set == NULL ||
+        ops->expanded_table_set == NULL ||
+        !ops->counts_get(scene, &source_count, &expanded_capacity,
+                         ops->context)) return;
+    if (expanded_capacity == 0u) return;
+    table = (SceneEntryExpandedRecord*)engine_heap_alloc(
+        (long)((size_t)expanded_capacity * sizeof(*table)));
+    if (table == NULL) return;
+    ops->expanded_table_set(scene, table, ops->context);
+    for (source_index = 0u; source_index < source_count; ++source_index) {
+        SceneEntryExpandInfo info;
+        SceneEntryExpandedRecord* expanded;
+        char name_copy[1024];
+        char* tokens[1024];
+        size_t name_length;
+        int token_count;
+        int token_index;
+        int loaded;
+        if (!ops->entry_get(scene, source_index, &info, ops->context) ||
+            (info.flags & 2u) == 0u) continue;
+        if ((uint16_t)output_index >= expanded_capacity) break;
+        ops->entry_slot_set(scene, source_index, output_index, ops->context);
+        expanded = &table[output_index++];
+        if (info.name == NULL) {
+            expanded->bytes[0xcc] = 0;
+            expanded->bytes[0xcd] = 0;
+            continue;
+        }
+        name_length = strlen(info.name);
+        if (name_length >= sizeof(name_copy)) name_length = sizeof(name_copy) - 1u;
+        memcpy(name_copy, info.name, name_length);
+        name_copy[name_length] = '\0';
+        token_count = scene_entry_comma_split(name_copy, tokens, 1024);
+        if (token_count < 2) continue;
+        *(uint16_t*)(expanded->bytes + 0xcc) = (uint16_t)(token_count - 2);
+        loaded = s_shared_object_entry_resolve(tokens[1], expanded);
+        if (ops->debug_flags_get != NULL &&
+            (ops->debug_flags_get(ops->context) & 0x00100000u) != 0u &&
+            loaded == 0) {
+            memset(expanded->bytes, 0, sizeof(uint32_t));
+        }
+        for (token_index = 2; token_index < token_count; ++token_index) {
+            char* dash = strstr(tokens[token_index], "-");
+            int first = atoi(tokens[token_index]);
+            int second = dash != NULL ? atoi(dash + 1) : first;
+            size_t first_offset = 4u + (size_t)(token_index - 2) * 2u;
+            size_t second_offset = 0x36u + (size_t)(token_index - 2) * 2u;
+            uint16_t first_word = (uint16_t)first;
+            uint16_t second_word = (uint16_t)second;
+            if (first_offset + sizeof(first_word) <= sizeof(expanded->bytes))
+                memcpy(expanded->bytes + first_offset, &first_word,
+                       sizeof(first_word));
+            if (second_offset + sizeof(second_word) <= sizeof(expanded->bytes))
+                memcpy(expanded->bytes + second_offset, &second_word,
+                       sizeof(second_word));
+        }
+    }
+}
+
+void shared_object_clone_ops_set(const SharedObjectCloneOps* ops)
+{
+    if (ops == NULL) memset(&s_shared_object_clone_ops, 0,
+                            sizeof(s_shared_object_clone_ops));
+    else s_shared_object_clone_ops = *ops;
+}
+
+/* SharedObjectClone (FUN_00487a00): copy the 14-dword header, allocate a
+ * fresh interface array, register the linked children, rebuild each eligible
+ * interface component through its scene owner, link/refcount the source, and
+ * finish by updating the clone at time zero. The interface callbacks preserve
+ * the renderer-owned COM method sequence without byte-cloning interfaces. */
+// FUNCTION: LEGORR 0x00487a00
+void* shared_object_clone(void* source, void* caller_context)
+{
+    SharedObjectCloneOps* const ops = &s_shared_object_clone_ops;
+    void* source_base;
+    void* clone;
+    void** component_table;
+    uint16_t entry_count;
+    uint16_t index;
+    void* child;
+    if (source == NULL || ops->source_base_get == NULL ||
+        ops->child_first_get == NULL || ops->child_next_get == NULL ||
+        ops->child_register == NULL || ops->entry_flags_get == NULL ||
+        ops->entry_count_get == NULL || ops->component_get == NULL ||
+        ops->component_table_set == NULL || ops->source_link_set == NULL ||
+        ops->clone_reference_set == NULL ||
+        ops->source_reference_increment == NULL ||
+        ops->component_clone == NULL || ops->component_resource_create == NULL ||
+        ops->time_update == NULL) return NULL;
+    source_base = ops->source_base_get(source, ops->context);
+    if (source_base == NULL) return NULL;
+    entry_count = ops->entry_count_get(source_base, ops->context);
+    clone = engine_heap_alloc(0x38L);
+    if (clone == NULL) return NULL;
+    memset(clone, 0, 0x38u);
+    memcpy(clone, source_base, 0x38u);
+    ops->clone_reference_set(clone, 1u, ops->context);
+    component_table = NULL;
+    if (entry_count != 0u) {
+        component_table = (void**)engine_heap_alloc(
+            (long)((size_t)entry_count * sizeof(void*)));
+        if (component_table == NULL) {
+            engine_heap_free(clone);
+            return NULL;
+        }
+        memset(component_table, 0, (size_t)entry_count * sizeof(void*));
+    }
+    ops->component_table_set(clone, component_table, ops->context);
+    child = ops->child_first_get(source_base, ops->context);
+    while (child != NULL) {
+        ops->child_register(clone, child, caller_context, ops->context);
+        child = ops->child_next_get(child, ops->context);
+    }
+    for (index = 0u; index < entry_count; ++index) {
+        void* source_interface = ops->component_get(source_base, index,
+                                                     ops->context);
+        void* clone_interface = ops->component_get(clone, index,
+                                                   ops->context);
+        uint32_t flags = ops->entry_flags_get(source_base, index,
+                                              ops->context);
+        ops->component_clone(source_interface, clone_interface, clone,
+                             index, ops->context);
+        if ((flags & 1u) == 0u)
+            ops->component_resource_create(source_interface,
+                                           clone_interface, clone, index,
+                                           ops->context);
+    }
+    ops->source_link_set(clone, source_base, ops->context);
+    ops->source_reference_increment(source_base, ops->context);
+    ops->time_update(clone, 0.0f, ops->context);
+    return clone;
 }
 
 void ddiscene_object_destroy_hook_set(DDiSceneObjectDestroyHook hook,
@@ -7061,6 +7289,7 @@ void attached_object_data_release_and_clear(void* property)
 
 /* CallbackRecordSetFlag10AndRefresh (FUN_00475e10): treat the primary value
  * as a record pointer, set its flag, then invalidate the property payload. */
+// FUNCTION: LEGORR 0x00475e10
 void callback_record_set_flag10_and_refresh(void* property)
 {
     if (property == NULL) return;

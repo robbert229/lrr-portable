@@ -1137,14 +1137,15 @@ void* ledger_stub_00404f10_FindMatchingObjectRecord(
 // FUNCTION: LEGORR 0x00404fc0
 int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
     const ObjectTaskEligibilityRecord* command, EntitySlot* entity,
-    int screen_xy[2], int world_xy[2], uint32_t* out_flag,
+    float screen_xy[2], float world_xy[2], uint32_t* out_flag,
     int require_command_gate, int relaxed_entity_gate)
 {
     ObjectTaskEligibilityOps* ops = s_object_task_eligibility_ops;
     ObjectTaskEligibilityEntityView entity_view;
     ObjectTaskEligibilityEntityView target_view;
     EntitySlot* target;
-    int kind, x = 0, y = 0, value;
+    int kind, value;
+    float x = 0.0f, y = 0.0f;
     float simulation_time;
     int have_xy = 0;
     int transform_screen = 0;
@@ -1243,8 +1244,8 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
         if (kind == 8 && ((entity_view.flags_3e8 & 2u) == 0u ||
             !walkable || ((command->field_17 & 8u) != 0u &&
             (entity_view.activity_flags & 1u) == 0u))) return 0;
-        x = command->x;
-        y = command->y;
+        x = (float)command->x;
+        y = (float)command->y;
         have_xy = 1;
         transform_screen = 1;
     }
@@ -1310,8 +1311,8 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
         if (entity_view.type != 2 || ops->task_coordinate_check == NULL ||
             !ops->task_coordinate_check(ops->context, command->x, command->y))
             return 0;
-        x = command->x;
-        y = command->y;
+        x = (float)command->x;
+        y = (float)command->y;
         have_xy = 1;
         transform_screen = 1;
     }
@@ -1694,13 +1695,8 @@ void ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
         int duplicate = progress + 1u < count &&
             x == coordinates[(progress + 1u) * 2u] &&
             y == coordinates[(progress + 1u) * 2u + 1u];
-        uint8_t* cell = level_voxel(context->level, x, y);
-        if (cell != NULL) {
-            uint32_t* cell_flags = (uint32_t*)(cell + 0x08);
-            if (duplicate) *cell_flags &= ~0x8000u;
-            *cell_flags &= ~0x100000u;
-            (void)level_cell_path_record_set(context->level, x, y, NULL);
-            level_cell_init_pass(context->level, x, y);
+        if (level_cell_path_record_state_apply(
+                context->level, x, y, NULL, 0, duplicate)) {
             cancel_action_for_matching_coordinates(
                 (const uint32_t*)coordinates + progress * 2u);
         }
@@ -1774,12 +1770,8 @@ uint32_t ledger_stub_00409790_CellPathRecordRegisterApply(
         int duplicate = index + 1u < footprint_count &&
             x == coordinate_copy[(index + 1u) * 2u] &&
             y == coordinate_copy[(index + 1u) * 2u + 1u];
-        if (cell != NULL) {
-            uint32_t* cell_flags = (uint32_t*)(cell + 0x08);
-            if (duplicate) *cell_flags |= 0x8000u;
-            *cell_flags |= 0x100000u;
-            (void)level_cell_path_record_set(context->level, x, y, record);
-            level_cell_init_pass(context->level, x, y);
+        if (cell != NULL && level_cell_path_record_state_apply(
+                context->level, x, y, record, 1, duplicate)) {
             ledger_stub_00409940_RefreshEightNeighborCells(
                 coordinate_copy + index * 2u);
             cancel_action_for_matching_coordinates(
@@ -8141,7 +8133,6 @@ void ledger_stub_00475c80_DDiScenePayloadRelease(void* scene_object)
 }
 
 // CallbackRecordSetFlag10AndRefresh
-// FUNCTION: LEGORR 0x00475e10
 void ledger_stub_00475e10_CallbackRecordSetFlag10AndRefresh(void* property)
 {
     callback_record_set_flag10_and_refresh(property);
@@ -8928,77 +8919,24 @@ void* ledger_stub_004869f0_LoadLWSCScene(
     return scene_load(path, context);
 }
 
-// SharedObjectDirectoryScan
-typedef int (*SharedObjectDirectoryEntryHook)(void* context,
-                                              const char* name,
-                                              uint32_t attributes);
-typedef int (*SharedObjectDirectoryWalkHook)(void* context,
-    const char* directory, SharedObjectDirectoryEntryHook entry_hook,
-    void* entry_context);
-typedef struct SharedObjectDirectoryScanState {
-    const char* directory;
-    SharedObjectDirectoryWalkHook walk;
-    SharedObjectDirectoryEntryHook entry;
-    void* context;
-} SharedObjectDirectoryScanState;
-// FUNCTION: LEGORR 0x004876c0
-int ledger_stub_004876c0_SharedObjectDirectoryScan(
-    SharedObjectDirectoryScanState* state)
+void ledger_stub_004876c0_SharedObjectDirectoryScan(
+    const char* directory, SharedObjectEntryResolveFn resolve,
+    SharedObjectSoundEnabledFn sound_enabled,
+    SharedObjectSoundSubmitFn sound_submit)
 {
-    if (state == NULL || state->directory == NULL || state->walk == NULL ||
-        state->entry == NULL) return 0;
-    return state->walk(state->context, state->directory, state->entry,
-                       state->context);
+    shared_object_directory_scan_configure(directory, resolve, sound_enabled,
+                                           sound_submit);
 }
 
-// SceneEntrySlotTableExpand
-typedef struct SceneEntrySlotTable {
-    void** entries;
-    uint32_t count;
-    uint32_t capacity;
-} SceneEntrySlotTable;
-// FUNCTION: LEGORR 0x004877e0
-int ledger_stub_004877e0_SceneEntrySlotTableExpand(
-    SceneEntrySlotTable* table, uint32_t minimum_capacity)
+void ledger_stub_004877e0_SceneEntrySlotTableExpand(void* scene)
 {
-    void** entries;
-    uint32_t capacity;
-    if (table == NULL) return 0;
-    if (minimum_capacity <= table->capacity) return 1;
-    if (table->count > table->capacity) return 0;
-    capacity = table->capacity != 0u ? table->capacity : 8u;
-    while (capacity < minimum_capacity) {
-        if (capacity > 0x3fffffffu) return 0;
-        capacity *= 2u;
-    }
-    entries = (void**)engine_heap_alloc((size_t)capacity * sizeof(void*));
-    if (entries == NULL) return 0;
-    memset(entries, 0, (size_t)capacity * sizeof(void*));
-    if (table->entries != NULL && table->count != 0u)
-        memcpy(entries, table->entries,
-               (size_t)table->count * sizeof(void*));
-    if (table->entries != NULL) engine_heap_free(table->entries);
-    table->entries = entries;
-    table->capacity = capacity;
-    return 1;
+    shared_object_scene_entry_slot_table_expand(scene);
 }
 
-// SharedObjectClone
-typedef void* (*SharedObjectCloneAllocHook)(size_t size, void* context);
-typedef void (*SharedObjectCloneRetainHook)(void* clone, const void* source,
-                                            void* context);
-// FUNCTION: LEGORR 0x00487a00
-void* ledger_stub_00487a00_SharedObjectClone(
-    const void* source, size_t size, SharedObjectCloneAllocHook allocate,
-    SharedObjectCloneRetainHook retain, void* context)
+void* ledger_stub_00487a00_SharedObjectClone(void* source,
+                                             void* caller_context)
 {
-    void* clone;
-    if (source == NULL || size == 0u || allocate == NULL) return NULL;
-    clone = allocate(size, context);
-    if (clone == NULL) return NULL;
-    memcpy(clone, source, size);
-    if (retain != NULL) retain(clone, source, context);
-    return clone;
+    return shared_object_clone(source, caller_context);
 }
 
 // SharedObjectAnimationAndTimedEventUpdate

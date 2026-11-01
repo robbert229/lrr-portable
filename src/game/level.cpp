@@ -3068,12 +3068,68 @@ void terrain_cell_mutation_context_bind(
     s_active_mutation_context_bound = 1;
 }
 
+/* TerrainCellMutationProgress (FUN_00433380) against the LevelState and
+ * terrain surface already owned by the active game. The renderer quad
+ * owner itself remains separate; update the port's four stored corner
+ * vectors so callers without an installed renderer hook still get the
+ * recovered height transition. */
+int terrain_cell_mutation_progress_level(LevelState* level,
+                                         TerrainSurfaceGrid* surface,
+                                         int x, int y)
+{
+    uint8_t* cell;
+    uint8_t* corner_cell[4];
+    uint32_t flags;
+    size_t index;
+    float corners[12];
+    float impact;
+    int i;
+    if (level == NULL || surface == NULL || surface->surface_vectors == NULL ||
+        surface->width < 2u || surface->height < 2u ||
+        x < 0 || y < 0 || (uint32_t)x >= surface->width - 1u ||
+        (uint32_t)y >= surface->height - 1u) return 0;
+    if ((size_t)surface->width > ((size_t)-1) / (size_t)surface->height ||
+        (size_t)surface->width * (size_t)surface->height >
+            ((size_t)-1) / (12u * sizeof(float))) return 0;
+    cell = level_voxel(level, x, y);
+    if (cell == NULL) return 0;
+    flags = *(uint32_t*)(cell + 0x08);
+    if ((flags & (8u | 0x10u)) == 0u) return 0;
+    grid_cell_read_surface_values(surface, (uint32_t)x, (uint32_t)y, corners);
+    corner_cell[0] = cell;
+    corner_cell[1] = level_voxel(level, x + 1, y);
+    corner_cell[2] = level_voxel(level, x + 1, y + 1);
+    corner_cell[3] = level_voxel(level, x, y + 1);
+    if ((flags & 8u) == 0u) {
+        for (i = 0; i < 4; ++i) {
+            if (corner_cell[i] != NULL && corner_cell[i][0] == 1u)
+                corners[i * 3 + 1] -= level_float(level, 0x20) +
+                                      level_float(level, 0x24);
+        }
+    }
+    else {
+        impact = level_float(level, 0x20) + level_float(level, 0x24);
+        for (i = 0; i < 4; ++i) corners[i * 3 + 1] -= impact;
+    }
+    index = (size_t)(uint32_t)y * (size_t)surface->width + (uint32_t)x;
+    memcpy(surface->surface_vectors + index * 12u, corners, sizeof(corners));
+    return 1;
+}
+
 void terrain_cell_mutation_progress_current(int x, int y)
 {
     if (s_active_mutation_context_bound && x >= 0 && y >= 0) {
         (void)terrain_cell_mutation_progress(
             &s_active_mutation_grid, (uint32_t)x, (uint32_t)y,
             &s_active_mutation_hooks);
+        return;
+    }
+    if (x >= 0 && y >= 0) {
+        GameContext* game = entity_pool_callback_context_get();
+        if (game != NULL && game->level != NULL) {
+            (void)terrain_cell_mutation_progress_level(
+                game->level, path_record_surface_grid_get(), x, y);
+        }
     }
 }
 
@@ -5564,6 +5620,31 @@ int level_cell_path_record_set(LevelState* level, int x, int y,
         (uint32_t)(record_address & 0xffffffffu);
     return 1;
 #endif
+}
+
+/* The two terrain path-record operations share this exact voxel transition:
+ * registration sets the active bit and record link, while teardown clears
+ * them; an adjacent duplicate point controls the paired-point bit. */
+int level_cell_path_record_state_apply(LevelState* level, int x, int y,
+                                       void* record, int is_registering,
+                                       int duplicate_point)
+{
+    uint8_t* cell = level_voxel(level, x, y);
+    uint32_t* flags;
+    if (cell == NULL) return 0;
+    flags = (uint32_t*)(cell + 0x08);
+    if (is_registering) {
+        if (!level_cell_path_record_set(level, x, y, record)) return 0;
+        if (duplicate_point) *flags |= 0x8000u;
+        *flags |= 0x100000u;
+    }
+    else {
+        if (!level_cell_path_record_set(level, x, y, NULL)) return 0;
+        if (duplicate_point) *flags &= ~0x8000u;
+        *flags &= ~0x100000u;
+    }
+    level_cell_init_pass(level, x, y);
+    return 1;
 }
 
 void* level_cell_path_record_get(const LevelState* level, int x, int y)
