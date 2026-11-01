@@ -187,8 +187,8 @@ int  surface_create(DisplaySurface* out, void* hwnd, int w, int h);
 void surface_destroy(DisplaySurface* s);
 int  surface_width(DisplaySurface* s);
 int  surface_height(DisplaySurface* s);
-int surface_description_get(const DisplaySurface* surface,
-                            int* width_out, int* height_out); /* FUN_0047cdd0 */
+void surface_description_interface_set(void* interface_pointer);
+int surface_description_get(int* width_out, int* height_out); /* FUN_0047cdd0 */
 
 /* Lock returns the framebuffer pointer + row pitch (RGBA32 R,G,B,A on LE). */
 int  surface_lock(DisplaySurface* s, void** pixels, int* pitch);

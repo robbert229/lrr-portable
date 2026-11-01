@@ -5286,18 +5286,18 @@ static TimedEffectRecord s_timed_effect_records[TIMED_EFFECT_RECORD_COUNT];
  * timestamp reset uses these same float bits as its fallback time value. */
 // GLOBAL: LEGORR 0x0054bf3c
 static uint32_t s_timed_effect_tick;
-// GLOBAL: LEGORR 0x004db904
 typedef union HelpWindowLayoutWord {
     uint32_t u;
     int32_t i;
     float f;
 } HelpWindowLayoutWord;
-static HelpWindowLayoutWord s_layout_position[LAYOUT_POSITION_ENTRIES]
-                                              [LAYOUT_POSITION_STRIDE];
+// GLOBAL: LEGORR 0x004db904
+static HelpWindowLayoutWord s_layout_position[LAYOUT_POSITION_ENTRIES *
+                                              LAYOUT_POSITION_STRIDE];
 static const char* s_layout_position_text[LAYOUT_POSITION_ENTRIES];
 static int32_t s_layout_position_debug[LAYOUT_POSITION_ENTRIES][2];
 static float s_help_window_button_rects[LAYOUT_POSITION_ENTRIES][4];
-static int (*s_ui_resource_reposition_hook)(uint32_t handle, int x, int y);
+static UiModeResourceBlitRectHook s_ui_resource_reposition_hook;
 static float s_help_background_offset_x;
 static float s_help_background_offset_y;
 // GLOBAL: LEGORR 0x004db8f8
@@ -5423,21 +5423,31 @@ void selection_mode_set_by_index(int index)
 // FUNCTION: LEGORR 0x00419100
 void ui_mode_resource_positions_apply(void)
 {
-    for (int i = 0; i < LAYOUT_POSITION_ENTRIES; ++i) {
-        const uint32_t handle = selection_state_handle_get(i);
+    float* position_ptr = (float*)((char*)s_layout_position + sizeof(uint32_t));
+    int i = 0;
+    do {
+        float position[2];
+        uint32_t handle;
+        position[0] = position_ptr[-1];
+        position[1] = position_ptr[0];
+        handle = selection_state_handle_get(i);
         if (handle != 0u) {
             if (s_ui_resource_reposition_hook != NULL) {
-                (void)s_ui_resource_reposition_hook(
-                    handle,
-                    crt_float_to_long(s_layout_position[i][0].f),
-                    crt_float_to_long(s_layout_position[i][1].f));
+                /* SurfaceBlitRect consumes the raw pair and performs the
+                 * floor/__ftol conversions itself. */
+                (void)s_ui_resource_reposition_hook(handle, NULL, position,
+                                                    NULL);
             }
         }
-    }
+        position_ptr += LAYOUT_POSITION_STRIDE;
+        ++i;
+    } while ((char*)position_ptr <
+             (char*)s_layout_position + sizeof(s_layout_position) +
+                 sizeof(uint32_t));
 }
 
 void ui_mode_resource_reposition_hook_set(
-    int (*hook)(uint32_t handle, int x, int y))
+    UiModeResourceBlitRectHook hook)
 {
     s_ui_resource_reposition_hook = hook;
 }
@@ -6605,14 +6615,14 @@ static void help_window_button_layout_load_with_ops(
 
         help_window_button_rect_set(i, final_x, final_y,
                                     (float)width, (float)height);
-        s_layout_position[i][0].f = final_x;
-        s_layout_position[i][1].f = final_y;
-        s_layout_position[i][2].f = (float)width;
-        s_layout_position[i][3].f = (float)height;
-        s_layout_position[i][4].u = ops != NULL &&
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 0].f = final_x;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 1].f = final_y;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 2].f = (float)width;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 3].f = (float)height;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 4].u = ops != NULL &&
             ops->resource_load != NULL
             ? ops->resource_load(ops->context, first, 0, 0) : 0u;
-        s_layout_position[i][5].u = ops != NULL &&
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 5].u = ops != NULL &&
             ops->resource_load != NULL
             ? ops->resource_load(ops->context, second, 0, 0) : 0u;
         s_layout_position_text[i] = text;
@@ -6650,12 +6660,12 @@ void help_window_button_layout_load(BlockFile* cfg, BlockFile* config_root)
         const float final_y = (float)y + s_help_background_offset_y;
         help_window_button_rect_set(i, final_x, final_y,
                                     (float)width, (float)height);
-        s_layout_position[i][0].f = final_x;
-        s_layout_position[i][1].f = final_y;
-        s_layout_position[i][2].f = (float)width;
-        s_layout_position[i][3].f = (float)height;
-        s_layout_position[i][4].u = 0u;
-        s_layout_position[i][5].u = 0u;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 0].f = final_x;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 1].f = final_y;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 2].f = (float)width;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 3].f = (float)height;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 4].u = 0u;
+        s_layout_position[i * LAYOUT_POSITION_STRIDE + 5].u = 0u;
         s_layout_position_text[i] = text;
     }
 }

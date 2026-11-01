@@ -2206,6 +2206,62 @@ int terrain_surface_vertex_span_validate(TerrainSurfaceGrid* grid,
     return 1;
 }
 
+/* FUN_004514f0: refresh both stored triangle normals from the cell's four
+ * surface vectors. */
+// FUNCTION: LEGORR 0x004514f0
+void terrain_cell_surface_vectors_rebuild(TerrainSurfaceGrid* grid,
+                                          uint32_t x, uint32_t y)
+{
+    const float* vertices;
+    float first[3];
+    float second[3];
+    uint32_t index;
+    uint8_t* record;
+    if (grid == NULL || grid->cell_records == NULL ||
+        grid->surface_vectors == NULL || x >= grid->width ||
+        y >= grid->height) return;
+    index = terrain_grid_cell_index(grid, x, y);
+    vertices = grid->surface_vectors + index * 12u;
+    record = grid->cell_records + index * 0x28u;
+    surface_triangle_normal_calculate(first, vertices, vertices + 3,
+                                      vertices + 9);
+    surface_triangle_normal_calculate(second, vertices + 3, vertices + 6,
+                                      vertices + 9);
+    memcpy(record, first, sizeof(first));
+    memcpy(record + 0x0c, second, sizeof(second));
+}
+
+/* TerrainVoxelNeighborsMutate (FUN_0044f380): move the selected world-space
+ * vertex in each adjacent cell's corner table, then rebuild both triangles
+ * for the four cells sharing that vertex. */
+// FUNCTION: LEGORR 0x0044f380
+void terrain_cell_surface_voxel_neighbors_mutate(TerrainSurfaceGrid* grid,
+                                                uint32_t x, uint32_t y,
+                                                float height_delta)
+{
+    float corners[8] = { 0.0f, 0.0f, -1.0f, 0.0f,
+                         -1.0f, -1.0f, 0.0f, -1.0f };
+    float offset[3] = { height_delta, 0.0f, 0.0f };
+    uint32_t corner;
+    uint32_t cell_y;
+    for (corner = 0; corner < 4; ++corner) {
+        corners[corner * 2u] += (float)x;
+        corners[corner * 2u + 1u] += (float)y;
+    }
+    for (corner = 0; corner < 4; ++corner) {
+        const int cell_x = (int)corners[corner * 2u];
+        const int vertex_y = (int)corners[corner * 2u + 1u];
+        terrain_cell_surface_vector_offset_add(
+            grid, (uint32_t)cell_x, (uint32_t)vertex_y, corner, offset);
+    }
+    for (cell_y = y - 1u; cell_y <= y; ++cell_y) {
+        uint32_t cell_x;
+        for (cell_x = x - 1u; cell_x <= x; ++cell_x) {
+            terrain_cell_surface_vectors_rebuild(grid, cell_x, cell_y);
+        }
+    }
+}
+
 /* TerrainCellListSurfaceHeightClampMutate (FUN_0044ead0): use unprocessed
  * cell corners to compute one target height, bounded by already-processed
  * cells, then clamp each new corner to the tolerance band around that target. */
@@ -2215,11 +2271,14 @@ void terrain_cell_surface_height_clamp(TerrainSurfaceGrid* grid,
                                        uint32_t cell_count,
                                        float maximum_offset)
 {
+    const int corner_offsets[8] = { 0, 0, 1, 0, 1, 1, 0, 1 };
+    float staged_vertices[118];
     uint32_t i;
+    uint32_t staged_count = 0;
     float half_offset;
     float average = 0.0f;
     float flagged_minimum = 10000.0f;
-    float flagged_maximum = -25000.0f;
+    float flagged_maximum = -10000.0f;
     uint32_t unprocessed_count = 0;
     int have_flagged_height = 0;
     if (grid == NULL || grid->surface_vectors == NULL ||
@@ -2233,17 +2292,27 @@ void terrain_cell_surface_height_clamp(TerrainSurfaceGrid* grid,
     for (i = 0; i < cell_count; ++i) {
         int x = cell_xy[i * 2];
         int y = cell_xy[i * 2 + 1];
-        uint32_t index;
+        float* vertices;
         uint32_t corner;
-        uint8_t flags;
         if (i != 0u && x == cell_xy[(i - 1u) * 2u] &&
             y == cell_xy[(i - 1u) * 2u + 1u]) continue;
         if (x < 0 || y < 0 || (uint32_t)x >= grid->width ||
             (uint32_t)y >= grid->height) continue;
-        index = terrain_grid_cell_index(grid, (uint32_t)x, (uint32_t)y);
-        flags = grid->cell_records[index * 0x28u + 0x19u];
+        vertices = staged_vertices + staged_count * 12u;
+        terrain_cell_surface_vertices_get(grid, (uint32_t)x,
+                                          (uint32_t)y, vertices);
         for (corner = 0; corner < 4; ++corner) {
-            float height = grid->surface_vectors[(index * 4u + corner) * 3u];
+            float height = vertices[corner * 3u];
+            const int neighbor_x = x + corner_offsets[corner * 2u];
+            const int neighbor_y = y + corner_offsets[corner * 2u + 1u];
+            uint32_t neighbor_index;
+            uint8_t flags;
+            if (neighbor_x < 0 || neighbor_y < 0 ||
+                (uint32_t)neighbor_x >= grid->width ||
+                (uint32_t)neighbor_y >= grid->height) continue;
+            neighbor_index = terrain_grid_cell_index(
+                grid, (uint32_t)neighbor_x, (uint32_t)neighbor_y);
+            flags = grid->cell_records[neighbor_index * 0x28u + 0x19u];
             if ((flags & 8u) != 0u) {
                 if (height < flagged_minimum) flagged_minimum = height;
                 if (height > flagged_maximum) flagged_maximum = height;
@@ -2254,6 +2323,7 @@ void terrain_cell_surface_height_clamp(TerrainSurfaceGrid* grid,
                 unprocessed_count++;
             }
         }
+        staged_count++;
     }
     if (unprocessed_count == 0u) return;
     average /= (float)unprocessed_count;
@@ -2264,32 +2334,39 @@ void terrain_cell_surface_height_clamp(TerrainSurfaceGrid* grid,
             average = flagged_minimum + half_offset;
     }
 
+    staged_count = 0;
     for (i = 0; i < cell_count; ++i) {
         int x = cell_xy[i * 2];
         int y = cell_xy[i * 2 + 1];
-        uint32_t index;
+        float* vertices;
         uint32_t corner;
-        uint8_t* flags;
         if (i != 0u && x == cell_xy[(i - 1u) * 2u] &&
             y == cell_xy[(i - 1u) * 2u + 1u]) continue;
         if (x < 0 || y < 0 || (uint32_t)x >= grid->width ||
             (uint32_t)y >= grid->height) continue;
-        index = terrain_grid_cell_index(grid, (uint32_t)x, (uint32_t)y);
-        flags = &grid->cell_records[index * 0x28u + 0x19u];
-        if ((*flags & 8u) != 0u) continue;
-        /* The reference forwards each corner delta to FUN_0044f380, which
-         * rebuilds the surrounding 2x2 surface vectors.  TerrainSurfaceGrid
-         * has no voxel-neighbor mutator seam, so preserve the supported local
-         * height update here and leave that fan-out for the terrain API port. */
+        vertices = staged_vertices + staged_count * 12u;
         for (corner = 0; corner < 4; ++corner) {
-            float* height = &grid->surface_vectors[(index * 4u + corner) * 3u];
-            float difference = *height - average;
-            if (difference > half_offset)
-                *height = average + half_offset;
-            else if (difference < -half_offset)
-                *height = average - half_offset;
+            const int neighbor_x = x + corner_offsets[corner * 2u];
+            const int neighbor_y = y + corner_offsets[corner * 2u + 1u];
+            uint32_t neighbor_index;
+            uint8_t* flags;
+            float difference = vertices[corner * 3u] - average;
+            if (neighbor_x < 0 || neighbor_y < 0 ||
+                (uint32_t)neighbor_x >= grid->width ||
+                (uint32_t)neighbor_y >= grid->height) continue;
+            neighbor_index = terrain_grid_cell_index(
+                grid, (uint32_t)neighbor_x, (uint32_t)neighbor_y);
+            flags = &grid->cell_records[neighbor_index * 0x28u + 0x19u];
+            if ((*flags & 8u) != 0u) continue;
+            if (difference > half_offset || difference < -half_offset) {
+                terrain_cell_surface_voxel_neighbors_mutate(
+                    grid, (uint32_t)neighbor_x, (uint32_t)neighbor_y,
+                    ((difference / difference) * half_offset + average) -
+                        vertices[corner * 3u]);
+            }
+            *flags |= 8u;
         }
-        *flags |= 8u;
+        staged_count++;
     }
 }
 

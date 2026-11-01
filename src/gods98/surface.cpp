@@ -649,6 +649,9 @@ static ModelChildMaterialOps s_model_child_material_ops;
 static Direct3DInterfaceOps s_direct3d_interface_ops;
 static DirectDrawDeviceCreateOps s_directdraw_device_create_ops;
 static DirectDrawRendererInitOps s_directdraw_renderer_init_ops;
+#if !defined(_WIN32)
+static void* s_surface_description_interface;
+#endif
 static Direct3DTextureMemoryCapsQueryFn s_texture_memory_caps_query;
 static void* s_texture_memory_caps_context;
 static uint32_t s_texture_memory_last_value;
@@ -3101,19 +3104,42 @@ int surface_directdraw_pixel_format_get(DisplaySurface* surface,
     return surface_directdraw_pixel_format_query(surface, out);
 }
 
-/* SurfaceDescriptionGet (FUN_0047cdd0): retrieve the active surface's
- * dimensions; this backend-neutral record already stores the queried values. */
-// FUNCTION: LEGORR 0x0047cdd0
-int surface_description_get(const DisplaySurface* surface,
-                            int* width_out, int* height_out)
+void surface_description_interface_set(void* interface_pointer)
 {
-    if (surface == NULL || width_out == NULL || height_out == NULL ||
-        surface->w <= 0 || surface->h <= 0) {
-        return 0;
-    }
-    *width_out = surface->w;
-    *height_out = surface->h;
-    return 1;
+#if defined(_WIN32)
+    s_renderer_global_dword = (uint32_t)interface_pointer;
+#else
+    s_surface_description_interface = interface_pointer;
+#endif
+}
+
+/* SurfaceDescriptionGet (FUN_0047cdd0): pass a 0x1000 description request
+ * through slot 0x5c of the renderer's DirectDraw wrapper. */
+// FUNCTION: LEGORR 0x0047cdd0
+int surface_description_get(int* width_out, int* height_out)
+{
+    typedef long (__stdcall *SurfaceDescriptionProc)(void*, uint32_t*,
+                                                    int*, int*);
+    uint32_t description[4];
+    void* interface_pointer;
+    void** vtable;
+    SurfaceDescriptionProc get_description;
+    description[0] = 0x1000u;
+    description[1] = 0u;
+    description[2] = 0u;
+    description[3] = 0u;
+    *width_out = 0;
+    *height_out = 0;
+#if defined(_WIN32)
+    interface_pointer = (void*)s_renderer_global_dword;
+#else
+    interface_pointer = s_surface_description_interface;
+    if (interface_pointer == NULL) return 0;
+#endif
+    vtable = *(void***)interface_pointer;
+    get_description = (SurfaceDescriptionProc)vtable[0x5c / 4];
+    return get_description(interface_pointer, description,
+                           width_out, height_out) == 0;
 }
 
 /* DirectDrawSurfacePixelRead (FUN_0047dfa0): read one in-bounds pixel from

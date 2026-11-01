@@ -689,8 +689,12 @@ int      band_mode_peek(void);                        /* diagnostics */
 void     band_mode_set(int mode);                     /* diagnostics */
 void     selection_mode_set_by_index(int index);
 void     ui_mode_resource_positions_apply(void);
+typedef int (*UiModeResourceBlitRectHook)(uint32_t handle,
+                                          const float* source_rect,
+                                          const float* destination_position,
+                                          const float* destination_rect);
 void     ui_mode_resource_reposition_hook_set(
-             int (*hook)(uint32_t handle, int x, int y));
+             UiModeResourceBlitRectHook hook);
 void     help_window_button_feedback_update(int action, float amount);
 void     help_window_feedback_state_set(float position, float limit);
 float    help_window_feedback_position_get(void);

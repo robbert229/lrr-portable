@@ -961,6 +961,7 @@ extern uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
 void     renderer_words_set(uint32_t a, uint32_t b, uint32_t c); /* install */
 
 /* GlobalDwordGet (FUN_004065d0): the DAT_0076ac84 global dword. */
+extern uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
 uint32_t renderer_global_dword_get(void);
 void     renderer_global_dword_set(uint32_t value); /* install */
 

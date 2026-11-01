@@ -284,6 +284,11 @@ void terrain_cell_surface_vector_offset_add(TerrainSurfaceGrid* grid,
                                             uint32_t x, uint32_t y,
                                             uint32_t corner,
                                             const float offset[3]); /* 0x00451450 */
+void terrain_cell_surface_voxel_neighbors_mutate(
+    TerrainSurfaceGrid* grid, uint32_t x, uint32_t y,
+    float height_delta); /* 0x0044f380 */
+void terrain_cell_surface_vectors_rebuild(TerrainSurfaceGrid* grid,
+                                          uint32_t x, uint32_t y); /* 0x004514f0 */
 int terrain_cell_edge_vector_query(TerrainSurfaceGrid* grid, uint32_t x,
                                    uint32_t y, float out[3]); /* 0x004507d0 */
 void grid_surface_write_at_xy(TerrainSurfaceGrid* grid, int x, int y,

@@ -3782,7 +3782,7 @@ static uint32_t s_renderer_word_b;      /* DAT_0076ab28 */
 // GLOBAL: LEGORR 0x0076ab3c
 uint32_t g_renderer_word_c;             /* DAT_0076ab3c */
 // GLOBAL: LEGORR 0x0076ac84
-static uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
+uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
 // GLOBAL: LEGORR 0x0076ac8c
 static uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
 // GLOBAL: LEGORR 0x0050608c
