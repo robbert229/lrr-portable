@@ -232,12 +232,11 @@ void simtick_scene_entity_hook_set(SimtickSceneEntityHook hook, void* user)
 // FUNCTION: LEGORR 0x0040d450
 void simtick_post_cluster(EngineContext* c)
 {
-    GameContext* game = entity_pool_callback_context_get();
     (void)c;
     post_cluster_active_records();
-    entity_pool_find_by_callback_filtered(game,
+    entity_pool_find_by_callback_filtered_current(
         post_cluster_entity_first, NULL);
-    entity_pool_find_by_callback_filtered(game,
+    entity_pool_find_by_callback_filtered_current(
         post_cluster_entity_second, NULL);
     s_post_steps += 3;
 }
@@ -999,8 +998,8 @@ void simtick_scene_pass(EngineContext* c, float dt)
     /* FUN_004377d0(callback, &dt, 0): visit every live, unflagged entity.
      * The callback body updates renderer-owned scene state; it is kept at
      * that ownership seam until the renderer record is present in context. */
-    entity_pool_find_by_callback(entity_pool_callback_context_get(),
-                                 scene_entity_callback, (void*)&dt, 0);
+    entity_pool_find_by_callback_current(scene_entity_callback,
+                                         (void*)&dt, 0);
     ++s_post_n;
     s_scene_word &= ~0x10u;
     if ((s_scene_word & 4u) != 0) {
@@ -1219,8 +1218,7 @@ static int render_entity_callback(EntitySlot* entity, void* payload)
 void simtick_render_step(EngineContext* c)
 {
     (void)c;
-    entity_pool_find_by_callback(entity_pool_callback_context_get(),
-        render_entity_callback, NULL, 0);
+    entity_pool_find_by_callback_current(render_entity_callback, NULL, 0);
     ++s_post_n;
 }
 

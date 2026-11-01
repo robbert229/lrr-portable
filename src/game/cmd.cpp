@@ -2794,7 +2794,7 @@ void terrain_cell_command_create(int x, int y, int flag, int raise20)
     if (level_cell_state_is_6(lvl, x, y) != 0) {
         return;
     }
-    if (level_cell_flag_4(lvl, x, y) == 0u) {
+    if (level_cell_flag_4_current(x, y) == 0u) {
         return;
     }
     CmdRec* rec = (CmdRec*)cmd_alloc(8);

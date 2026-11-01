@@ -2095,17 +2095,48 @@ int level_cell_mask18_clear(const LevelState* s, int cx, int cy)
     return 1;
 }
 
-/* FUN_00432f90: flag bit 4 inside the gate, 0 outside. */
-// FUNCTION: LEGORR 0x00432f90
+/* Explicit-level adapter for code which already owns a level instance. */
 uint32_t level_cell_flag_4(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
     const int h = level_int(s, LEVEL_OFF_HEIGHT);
     if ((unsigned)cx < ((unsigned)w - 1u) &&
         (unsigned)cy < ((unsigned)h - 1u)) {
-        return cell_flag_word(s, cx, cy) & 4u;
+        const uint8_t* voxels =
+            (const uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+        const uint32_t index = (uint32_t)cy * (uint32_t)w + (uint32_t)cx;
+        const uint32_t flags =
+            *(const uint32_t*)(voxels + index * LEVEL_VOXEL_STRIDE + 8u);
+        return flags & 4u;
     }
     return 0u;
+}
+
+/* TerrainCellFlag4TestInBounds (FUN_00432f90) reads the active level. */
+// FUNCTION: LEGORR 0x00432f90
+uint32_t level_cell_flag_4_current(int cx, int cy)
+{
+    GameContext* game = entity_pool_callback_context_get();
+    const LevelState* s;
+    int w;
+    int h;
+    const uint8_t* voxels;
+    uint32_t index;
+    uint32_t flags;
+    if (game == NULL || game->level == NULL) {
+        return 0u;
+    }
+    s = game->level;
+    w = level_int(s, LEVEL_OFF_WIDTH);
+    h = level_int(s, LEVEL_OFF_HEIGHT);
+    if ((unsigned)cx >= ((unsigned)w - 1u) ||
+        (unsigned)cy >= ((unsigned)h - 1u)) {
+        return 0u;
+    }
+    voxels = (const uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    index = (uint32_t)cy * (uint32_t)w + (uint32_t)cx;
+    flags = *(const uint32_t*)(voxels + index * LEVEL_VOXEL_STRIDE + 8u);
+    return flags & 4u;
 }
 
 /* FUN_00432fd0 / FUN_00433000 / FUN_00433030: single-bit masks. */

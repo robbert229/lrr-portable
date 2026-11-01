@@ -328,6 +328,11 @@ int entity_pool_find_by_callback(GameContext* ctx,
 int entity_pool_find_by_callback_filtered(GameContext* ctx,
                                           int (*callback)(EntitySlot*, void*),
                                           void* payload);
+/* Retail ABI wrappers read the active pool context (FUN_004377d0/b0). */
+int entity_pool_find_by_callback_current(
+    int (*callback)(EntitySlot*, void*), void* payload, int filter_flagged);
+int entity_pool_find_by_callback_filtered_current(
+    int (*callback)(EntitySlot*, void*), void* payload);
 void entity_pool_callback_context_set(GameContext* ctx);
 GameContext* entity_pool_callback_context_get(void);
 int entity_pool_callback_search(int (*callback)(EntitySlot*, void*),

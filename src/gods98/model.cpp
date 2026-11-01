@@ -261,7 +261,7 @@ typedef struct Parse {
     float*  verts; /* host-order PNTS coordinates, replaced by later chunks */
     size_t  nverts;
     PolyRec* polys;
-    size_t   npolys, pcap;
+    size_t   npolys;
     int     saw_zero;
     size_t  pols_used_len; /* first POLS chunk only (python one()) */
 
@@ -353,33 +353,46 @@ static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
 
 /* --- POLS --------------------------------------------------------------------- */
 
-/* POLS: {u16 count, count x i16 indices, u16 surface}; stop safely on a
- * zero count or truncated record.  The runtime stores the 16-bit surface
- * number minus one, including unsigned wrap for a zero input. */
+/* LwoPolygons (FUN_0048c3e0) stores one 3-word record per polygon:
+ * {u32 vertex count, u32 surface index, i16* ring}.  The table is expanded
+ * by allocating a new (count + 1) record block, copying the old records,
+ * then freeing the old block.  The on-disk ring and surface words are
+ * big-endian; surface is decremented with 16-bit wrap. */
 // FUNCTION: LEGORR 0x0048c3e0
 static int parse_pols(Parse* P, const uint8_t* d, size_t size)
 {
     size_t p = 0;
-    while (p + 2 <= size) {
+    while (p < size) {
+        /* The retail reader works from a size + 0x10 scratch buffer and does
+         * not validate each read.  Keep the equivalent well-formed record
+         * handling while refusing to read beyond this caller-owned buffer. */
+        if (size - p < 2)
+            break;
         size_t cnt = be16(d + p);
         p += 2;
-        if (cnt == 0 || p + 2 * cnt + 2 > size)
+        if (cnt > (size - p) / 2 || size - p - cnt * 2 < 2)
             break;
-        if (P->npolys == P->pcap) {
-            size_t ncap = P->pcap ? P->pcap * 2 : 8;
-            if (ncap < P->pcap || ncap > ((size_t)-1) / sizeof(*P->polys))
-                return 0;
-            PolyRec* grown = (PolyRec*)realloc(P->polys, ncap * sizeof(*grown));
-            if (grown == NULL)
-                return 0;
-            P->polys = grown;
-            P->pcap = ncap;
+        if (P->npolys >= ((size_t)-1) / sizeof(*P->polys) - 1)
+            return 0;
+        PolyRec* grown;
+        if (P->npolys == 0) {
+            grown = (PolyRec*)malloc(sizeof(*grown));
         }
+        else {
+            grown = (PolyRec*)malloc((P->npolys + 1) * sizeof(*grown));
+            if (grown != NULL)
+                memcpy(grown, P->polys, P->npolys * sizeof(*grown));
+        }
+        if (grown == NULL)
+            return 0;
+        free(P->polys);
+        P->polys = grown;
+
         PolyRec* poly = &P->polys[P->npolys];
         poly->count = (uint32_t)cnt;
-        poly->surface = (uint16_t)(be16(d + p + 2 * cnt) - 1u);
+        poly->surface = (uint32_t)(uint16_t)(be16(d + p + 2 * cnt) - 1u);
         poly->ring = (int16_t*)malloc(cnt * sizeof(*poly->ring));
-        if (poly->ring == NULL)
+        if (poly->ring == NULL && cnt != 0)
             return 0;
         for (size_t k = 0; k < cnt; k++) {
             poly->ring[k] = (int16_t)be16(d + p + 2 * k);

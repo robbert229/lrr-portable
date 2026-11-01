@@ -1797,7 +1797,7 @@ const EntitySlot* entity_at(GameContext* ctx, int type, int index)
  * entity chunk, accepts only self-linked live records, optionally filters
  * the +0x3e8 0x80000 bit, and returns on the first callback match. The port's
  * typed arrays and entity_count values are its live-record registry. */
-// FUNCTION: LEGORR 0x004377D0
+static GameContext* s_entity_pool_callback_context;
 int entity_pool_find_by_callback(GameContext* ctx,
                                  int (*callback)(EntitySlot*, void*),
                                  void* payload, int filter_flagged)
@@ -1829,8 +1829,51 @@ int entity_pool_find_by_callback(GameContext* ctx,
     return 0;
 }
 
+/* The retail pool walkers use the active context instead of receiving it as
+ * an argument. Keep context-taking forms above as portable caller adapters. */
+// FUNCTION: LEGORR 0x004377D0
+int entity_pool_find_by_callback_current(
+    int (*callback)(EntitySlot*, void*), void* payload, int filter_flagged)
+{
+    GameContext* ctx = s_entity_pool_callback_context;
+    int table;
+    if (ctx == NULL) {
+        return 0;
+    }
+    for (table = 0; table < ENTITY_TYPES; ++table) {
+        int count = ctx->entity_count[table];
+        int i;
+        if (count < 0) {
+            count = 0;
+        }
+        if (count > ENTITY_CAP) {
+            count = ENTITY_CAP;
+        }
+        for (i = 0; i < count; ++i) {
+            EntitySlot* entity = &ctx->entity[table][i];
+            if (entity->type == 0) {
+                continue;
+            }
+            if (filter_flagged != 0 &&
+                (entity->flags_3e8 & 0x80000u) != 0u) {
+                continue;
+            }
+            if (callback(entity, payload) != 0) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
 /* EntityPoolFindByCallbackFiltered (FUN_004377b0) fixes the filter on. */
 // FUNCTION: LEGORR 0x004377B0
+int entity_pool_find_by_callback_filtered_current(
+    int (*callback)(EntitySlot*, void*), void* payload)
+{
+    return entity_pool_find_by_callback_current(callback, payload, 1);
+}
+
 int entity_pool_find_by_callback_filtered(GameContext* ctx,
                                           int (*callback)(EntitySlot*, void*),
                                           void* payload)
@@ -1838,7 +1881,6 @@ int entity_pool_find_by_callback_filtered(GameContext* ctx,
     return entity_pool_find_by_callback(ctx, callback, payload, 1);
 }
 
-static GameContext* s_entity_pool_callback_context;
 static EntityCallbackDispatchHook s_entity_callback_dispatch_hook;
 static void* s_entity_callback_dispatch_context;
 static EntityActionPrerequisiteHooks s_entity_action_prerequisite_hooks;
@@ -2184,8 +2226,10 @@ EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
     request.flags = 0x1000u | (include_secondary != 0 ? 0x400u : 0u);
     request.position = position;
     context = entity_pool_callback_context_get();
-    entity_pool_find_by_callback_filtered(
-        context, entity_route_marker_candidate_visit, &request);
+    if (context != NULL) {
+        entity_pool_find_by_callback_filtered_current(
+            entity_route_marker_candidate_visit, &request);
+    }
     return request.match;
 }
 
@@ -2501,8 +2545,7 @@ uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
 int entity_pool_callback_search(int (*callback)(EntitySlot*, void*),
                                 void* payload)
 {
-    return entity_pool_find_by_callback(s_entity_pool_callback_context,
-                                        callback, payload, 0);
+    return entity_pool_find_by_callback_current(callback, payload, 0);
 }
 
 void periodic_entity_callback_install(PeriodicEntityCallback callback,
@@ -2528,9 +2571,8 @@ static int periodic_entity_callback_adapter(EntitySlot* entity,
 // FUNCTION: LEGORR 0x00425B40
 void periodic_entity_callback_dispatch(void* payload)
 {
-    entity_pool_find_by_callback_filtered(
-        s_entity_pool_callback_context, periodic_entity_callback_adapter,
-        payload);
+    entity_pool_find_by_callback_filtered_current(
+        periodic_entity_callback_adapter, payload);
 }
 
 void entity_default_transform_apply_hook_set(
@@ -2600,8 +2642,8 @@ EntitySlot* entity_at_grid_position_find(const int cell_xy[2])
     query.x = cell_xy[0];
     query.y = cell_xy[1];
     query.found = NULL;
-    entity_pool_find_by_callback_filtered(s_entity_pool_callback_context,
-                                          entity_grid_position_match, &query);
+    entity_pool_find_by_callback_filtered_current(
+        entity_grid_position_match, &query);
     return query.found;
 }
 
@@ -3168,8 +3210,8 @@ void scene_object_state_dispatch(GameContext* ctx, uint32_t selector,
         }
     }
     if (ctx != NULL && callback != NULL) {
-        entity_pool_find_by_callback_filtered(
-            ctx, scene_state_dispatch_callback, &context);
+        entity_pool_find_by_callback_filtered_current(
+            scene_state_dispatch_callback, &context);
     }
 }
 
@@ -3184,7 +3226,7 @@ void entity_iteration_callback_guard(GameContext* ctx,
 {
     s_entity_iteration_guard_flags |= 2u;
     if (ctx != NULL && callback != NULL) {
-        entity_pool_find_by_callback_filtered(ctx, callback, payload);
+        entity_pool_find_by_callback_filtered_current(callback, payload);
     }
     s_entity_iteration_guard_flags &= ~2u;
 }
@@ -3212,8 +3254,8 @@ int entity_flag_mask_callbacks_all_pass(GameContext* ctx, uint32_t mask,
         context.user = user;
         context.all_pass = 1;
         if ((mask & bit) != 0u) {
-            entity_pool_find_by_callback_filtered(
-                ctx, flag_mask_predicate_callback, &context);
+            entity_pool_find_by_callback_filtered_current(
+                flag_mask_predicate_callback, &context);
             if (context.all_pass == 0) {
                 return 0;
             }
@@ -5572,8 +5614,11 @@ int entity_type_four_callback_dispatch(GameContext* ctx,
     EntityTypeFourDispatch dispatch;
     dispatch.callback = callback;
     dispatch.payload = payload;
-    return entity_pool_find_by_callback_filtered(
-        ctx, entity_type_four_dispatch_match, &dispatch);
+    if (ctx == NULL) {
+        return 0;
+    }
+    return entity_pool_find_by_callback_filtered_current(
+        entity_type_four_dispatch_match, &dispatch);
 }
 
 /* EntityEffectCountersApplyFromRecord (FUN_0042b2f0): the original's

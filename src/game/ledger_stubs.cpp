@@ -6764,31 +6764,50 @@ void ledger_stub_00460220_StartLevelSelected(GameContext* ctx)
     selected_level_start_object_update(ctx);
 }
 
-// FUNCTION: LEGORR 0x00460290
-uint32_t ledger_stub_00460290_EntityType4IndexListBuild(
-    GameContext* ctx, EntitySlot** entries, uint32_t capacity)
-{
-    int i, total;
-    uint32_t count = 0;
-    if (ctx == NULL || (entries == NULL && capacity != 0u)) return 0;
-    total = entity_count(ctx, 4);
-    for (i = 0; i < total && count < capacity; ++i) {
-        const EntitySlot* entity = entity_at(ctx, 4, i);
-        if (entity != NULL) entries[count++] = (EntitySlot*)entity;
-    }
-    return count;
-}
+typedef struct EntityType4IndexNameList {
+    const char* names[100];
+    uint32_t count;
+    uint32_t grid_count;
+} EntityType4IndexNameList;
 
+/* The callback state mirrors the retail 100-name array followed by its
+ * count and the grid count accumulated by EntityType4IndexListBuild. */
 // FUNCTION: LEGORR 0x00460310
 int ledger_stub_00460310_EntityType4IndexListAppend(
-    EntitySlot** entries, uint32_t* count, uint32_t capacity,
-    EntitySlot* entity)
+    EntitySlot* entity, void* payload)
 {
-    if (entries == NULL || count == NULL || entity == NULL
-        || entity->type != 4 || *count >= capacity) return 0;
-    entries[*count] = entity;
-    ++*count;
-    return 1;
+    EntityType4IndexNameList* list = (EntityType4IndexNameList*)payload;
+    uint32_t kind;
+    uint32_t index;
+    copy_two_dword_pair_to_outputs(entity, &kind, &index);
+    if (kind == 4) {
+        list->names[list->count] = item_name_by_kind_lookup(4u,
+                                                           (int)index);
+        list->count = list->count + 1u;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00460290
+void ledger_stub_00460290_EntityType4IndexListBuild(
+    EntityType4IndexNameList* output)
+{
+    EntityType4IndexNameList local;
+    uint32_t row;
+    uint32_t column;
+    local.count = 0;
+    entity_pool_find_by_callback_filtered_current(
+        ledger_stub_00460310_EntityType4IndexListAppend, &local);
+    local.grid_count = 0;
+    for (row = 0; row < 15u; ++row) {
+        for (column = 0; column < 16u; ++column) {
+            local.grid_count += grid_record_count_get(4, (int)row,
+                                                      (int)column);
+        }
+    }
+    if (output != NULL) {
+        memcpy(output, &local, sizeof(local));
+    }
 }
 
 int ledger_stub_00460360_CheckpointBlobTaskProgressRefresh()

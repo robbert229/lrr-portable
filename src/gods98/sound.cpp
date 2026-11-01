@@ -289,9 +289,13 @@ uint32_t sound_wave_file_open_read_chunks(const char* path,
                                           SoundWaveChunk* parent_chunk_out)
 {
     Resource* resource;
-    SoundWaveMemoryStream* stream = NULL;
+    SoundWaveMemoryStream* stream;
     SoundWaveFileHandle* handle;
-    uint8_t* format = NULL;
+    uint8_t* format;
+    const uint8_t* data;
+    uint32_t size, riff_end, pos, chunk_size, body, padded_size;
+    uint32_t format_size;
+    uint16_t extra_size;
     uint32_t result;
     if (handle_out == NULL || format_out == NULL || parent_chunk_out == NULL)
         return 0xe101u;
@@ -306,25 +310,104 @@ uint32_t sound_wave_file_open_read_chunks(const char* path,
         resource_free(resource);
         return 0xe102u;
     }
-    result = sound_wave_memory_format_read(
-        (const uint8_t*)resource->data, (int32_t)resource->size,
-        &stream, &format, parent_chunk_out);
-    if (result != 0u) {
+    data = (const uint8_t*)resource->data;
+    size = (uint32_t)resource->size;
+    if (data == NULL || size < 12u || data[0] != 'R' || data[1] != 'I' ||
+        data[2] != 'F' || data[3] != 'F') {
         resource_free(resource);
-        return result;
+        return 0xe101u;
     }
-    handle = (SoundWaveFileHandle*)calloc(1, sizeof(*handle));
-    if (handle == NULL) {
-        sound_wave_memory_format_close(&stream, &format);
-        memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+    riff_end = s_le32(data + 4u) + 8u;
+    if (riff_end < 12u || riff_end > size || data[8] != 'W' ||
+        data[9] != 'A' || data[10] != 'V' || data[11] != 'E') {
         resource_free(resource);
-        return 0xe000u;
+        return 0xe101u;
     }
-    handle->resource = resource;
-    handle->stream = stream;
-    *handle_out = handle;
-    *format_out = format;
-    return 0u;
+    parent_chunk_out->chunk_id = 0x46464952u;
+    parent_chunk_out->chunk_size = riff_end - 8u;
+    parent_chunk_out->form_type = 0x45564157u;
+    parent_chunk_out->data_offset = 8u;
+    parent_chunk_out->flags = 0u;
+
+    pos = 12u;
+    while (riff_end - pos >= 8u) {
+        chunk_size = s_le32(data + pos + 4u);
+        body = pos + 8u;
+        if (chunk_size > riff_end - body) {
+            memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+            resource_free(resource);
+            return 0xe102u;
+        }
+        padded_size = chunk_size + (chunk_size & 1u);
+        if (padded_size < chunk_size || padded_size > riff_end - body) {
+            memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+            resource_free(resource);
+            return 0xe102u;
+        }
+        if (data[pos] == 'f' && data[pos + 1u] == 'm' &&
+            data[pos + 2u] == 't' && data[pos + 3u] == ' ') {
+            if (chunk_size <= 15u) {
+                memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+                resource_free(resource);
+                return 0xe101u;
+            }
+            extra_size = 0u;
+            if (s_le16(data + body) != 1u) {
+                if (chunk_size < 18u) {
+                    memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+                    resource_free(resource);
+                    return 0xe102u;
+                }
+                extra_size = s_le16(data + body + 16u);
+                if ((uint32_t)extra_size > chunk_size - 18u) {
+                    memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+                    resource_free(resource);
+                    return 0xe102u;
+                }
+            }
+            format_size = (uint32_t)extra_size + 18u;
+            format = (uint8_t*)calloc(format_size, 1u);
+            if (format == NULL) {
+                memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+                resource_free(resource);
+                return 0xe000u;
+            }
+            memcpy(format, data + body, 16u);
+            format[16] = (uint8_t)(extra_size & 0xffu);
+            format[17] = (uint8_t)(extra_size >> 8);
+            if (extra_size != 0u)
+                memcpy(format + 18u, data + body + 18u, extra_size);
+
+            stream = (SoundWaveMemoryStream*)malloc(sizeof(*stream));
+            if (stream == NULL) {
+                free(format);
+                memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+                resource_free(resource);
+                return 0xe000u;
+            }
+            stream->memory = data;
+            stream->length = size;
+            stream->cursor = body + padded_size;
+
+            handle = (SoundWaveFileHandle*)calloc(1, sizeof(*handle));
+            if (handle == NULL) {
+                sound_wave_memory_format_close(&stream, &format);
+                memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+                resource_free(resource);
+                return 0xe000u;
+            }
+            handle->resource = resource;
+            handle->stream = stream;
+            *handle_out = handle;
+            *format_out = format;
+            return 0u;
+        }
+        pos = body + padded_size;
+    }
+    memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+    resource_free(resource);
+    result = 0xe101u;
+    return result;
 }
 
 // FUNCTION: LEGORR 0x004890c0
