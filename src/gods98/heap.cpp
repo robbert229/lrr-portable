@@ -393,135 +393,100 @@ static int text_buffer_draw_glyph(void* font, int x, int y,
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,
                                      int* height_out)
 {
-    unsigned int starts[257];
-    unsigned int widths[256];
-    void* font;
+    int starts[257];
+    int widths[257];
     const char* text;
+    void* font;
     int line_height;
-    int line_count;
-    unsigned int line_start;
-    unsigned int i;
-    unsigned int last_break;
-    unsigned int width_at_break;
-    unsigned int width;
-    int x;
-    int y;
+    int line_count = 1;
+    int line_width = 0;
+    int word_width = 0;
+    int index = 0;
+    int line = 0;
     int max_y = 0;
     int result = 0;
-    unsigned int top_lines;
-    unsigned int line;
-    uint32_t flags;
-    float timer;
-    float max_width;
-    float x_float;
-    float y_float;
+    float elapsed_timer;
+    char ch;
     if (height_out != NULL) *height_out = 0;
     if (record == NULL) return 0;
+    text = (const char*)record + 0x18;
+    ch = text[0];
     font = text_buffer_font_get(record);
     line_height = text_buffer_line_height(font);
-    x_float = text_buffer_read_float(record, 4);
-    y_float = text_buffer_read_float(record, 8);
-    x = (int)x_float;
-    y = (int)y_float;
-    text = (const char*)record + 0x18;
-    max_width = text_buffer_read_float(record, 0x0c);
-    line_count = 1;
-    line_start = 0;
-    i = 0;
-    last_break = 0xffffffffu;
-    width_at_break = 0;
-    width = 0;
     starts[0] = 0;
     widths[0] = 0;
-    while (i < 0x400u && text[i] != '\0' && line_count < 256) {
-        unsigned char ch = (unsigned char)text[i];
-        if (ch == '\n') {
-            widths[line_count - 1] = width;
-            ++line_count;
-            line_start = i + 1u;
-            starts[line_count - 1] = line_start;
-            widths[line_count - 1] = 0;
-            last_break = 0xffffffffu;
-            width_at_break = 0;
-            width = 0;
-            ++i;
-            continue;
-        }
-        {
-            if (text_buffer_is_break(ch)) {
-                last_break = i;
-                width_at_break = width;
+    if (ch != '\0') {
+        do {
+            if (ch == '\n') {
+                widths[line_count - 1] = line_width;
+                ++line_count;
+                starts[line_count - 1] = index + 1;
+                line_width = 0;
+                word_width = 0;
             }
-            unsigned int advance = (unsigned int)
-                text_buffer_glyph_width(font, ch);
-            if (max_width > 0.0f &&
-                (float)(width + advance) > max_width &&
-                i > line_start && line_count < 256) {
-                if (last_break != 0xffffffffu && last_break >= line_start) {
-                    unsigned int next_start = last_break + 1u;
-                    widths[line_count - 1] = width_at_break;
-                    ++line_count;
-                    while (next_start < 0x400u &&
-                           text_buffer_is_break(
-                               (unsigned char)text[next_start])) ++next_start;
-                    line_start = next_start;
-                    i = next_start;
+            else {
+                if (text_buffer_is_break((unsigned char)ch)) {
+                    widths[line_count - 1] = line_width;
+                    starts[line_count] = index;
+                    word_width = 0;
                 }
-                else {
-                    widths[line_count - 1] = width;
-                    ++line_count;
-                    line_start = i;
+                {
+                    int advance = text_buffer_glyph_width(
+                        font, (unsigned char)ch);
+                    line_width += advance;
+                    word_width += advance;
                 }
-                starts[line_count - 1] = line_start;
-                widths[line_count - 1] = 0;
-                width = 0;
-                last_break = 0xffffffffu;
-                width_at_break = 0;
-                continue;
+                if ((float)line_width > *(float*)((char*)record + 0x0c)) {
+                    ++line_count;
+                    line_width = word_width;
+                }
             }
-            width += advance;
-        }
-        ++i;
+            ++index;
+            ch = text[index];
+        } while (ch != '\0');
     }
-    widths[line_count - 1] = width;
-    starts[line_count] = i;
-    top_lines = text_buffer_read_u32(record, 0x824);
-    flags = text_buffer_read_u32(record, 0x82c);
-    for (line = 0; line < (unsigned int)line_count; ++line) {
-        unsigned int j;
-        unsigned int end = starts[line + 1];
-        int pen_x = x;
-        int pen_y;
-        unsigned int visible_first;
-        while (end > starts[line] &&
-               (text[end - 1] == '\n' || text[end - 1] == '\r' ||
-                text_buffer_is_break((unsigned char)text[end - 1]))) --end;
-        if ((flags & 4u) != 0u && max_width > (float)widths[line]) {
-            pen_x += (int)((max_width - (float)widths[line]) * 0.5f);
+    widths[line_count - 1] = line_width;
+    starts[line_count] = index;
+    line = 0;
+    while (line < line_count) {
+        int x = (int)*(float*)((char*)record + 4);
+        int y;
+        int end = starts[line + 1];
+        int pos = starts[line];
+        if ((*(uint32_t*)((char*)record + 0x82c) & 4) != 0 &&
+            *(float*)((char*)record + 0x0c) >
+            (float)widths[line]) {
+            x += (int)((*(float*)((char*)record + 0x0c) -
+                        (float)widths[line]) * 0.5f);
         }
-        if (top_lines < (unsigned int)line_count) {
-            visible_first = (unsigned int)line_count - top_lines;
-            if (line >= visible_first) {
-                pen_y = y + (int)(line - visible_first) * line_height;
+        if (*(uint32_t*)((char*)record + 0x824) <
+            (unsigned int)line_count) {
+            if ((unsigned int)line < (unsigned int)(line_count -
+                    *(uint32_t*)((char*)record + 0x824))) {
+                y = 0;
+            }
+            else {
+                y = (int)*(float*)((char*)record + 8) +
+                    (line + (int)*(uint32_t*)((char*)record + 0x824) -
+                     line_count) *
+                    line_height;
                 result = 1;
             }
-            else pen_y = 0;
         }
-        else pen_y = y + (int)line * line_height;
-        for (j = starts[line]; j < end; ++j) {
-            unsigned char ch = (unsigned char)text[j];
-            pen_x += text_buffer_draw_glyph(font, pen_x, pen_y, ch);
+        else y = (int)*(float*)((char*)record + 8) + line * line_height;
+        while (pos < end) {
+            unsigned char glyph = (unsigned char)text[pos];
+            x += text_buffer_draw_glyph(font, x, y, glyph);
+            ++pos;
         }
-        if (pen_y > max_y) max_y = pen_y;
+        if (y > max_y) max_y = y;
+        ++line;
     }
-    if (height_out != NULL) *height_out = max_y;
-    timer = text_buffer_read_float(record, 0x828) - elapsed;
-    memcpy((char*)record + 0x828, &timer, sizeof(timer));
-    flags = text_buffer_read_u32(record, 0x82c);
-    if (timer < 0.0f) {
-        flags &= ~2u;
-        text_buffer_write_u32(record, 0x82c, flags);
-    }
+    if (height_out != NULL) *height_out = max_y + line_height;
+    elapsed_timer = *(float*)((char*)record + 0x828) - elapsed;
+    *(float*)((char*)record + 0x828) = elapsed_timer;
+    if (elapsed_timer < 0.0f)
+        *(uint32_t*)((char*)record + 0x82c) &= ~2u;
     return result;
 }
 
@@ -529,174 +494,123 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
 int text_buffer_draw_wrapped(void* record, uint32_t start_line,
                              float line_scale, int* height_out)
 {
-    unsigned int widths[257];
+    int* words = (int*)record;
+    int widths[257];
     void* font;
     char* buffer;
     uint32_t capacity;
-    uint32_t read_at;
+    uint32_t cursor;
+    uint32_t old_lines;
     uint32_t flags;
+    uint32_t position = 0;
     uint32_t line_count = 0;
-    uint32_t index;
-    uint32_t line_start;
-    uint32_t break_index;
-    uint32_t steps;
-    unsigned int line_width;
-    unsigned int word_width;
-    uint32_t word_break;
-    unsigned int max_width;
-    unsigned int top_lines;
-    unsigned int start_count;
-    unsigned int first_position;
-    unsigned int last_position;
+    uint32_t line;
+    int line_width = 0;
+    int word_width = 0;
     int line_height;
+    int max_y = 0;
     int x;
     int y;
-    int max_y = 0;
-    float x_float;
-    float y_float;
+    float top_height;
+    float wrapped_width;
     if (height_out != NULL) *height_out = 0;
     if (record == NULL) return 0;
-    font = text_buffer_font_get(record);
+    font = *(void**)record;
     line_height = text_buffer_line_height(font);
-    top_lines = (unsigned int)(int)text_buffer_read_float(record, 0x10) /
-                (unsigned int)line_height;
-    text_buffer_write_u32(record, 0x824, top_lines);
-    flags = text_buffer_read_u32(record, 0x82c);
-    if ((flags & 2u) != 0u) {
+    top_height = *(float*)((char*)record + 0x10);
+    words[0x209] = (int)top_height / line_height;
+    flags = (uint32_t)words[0x20b];
+    if ((flags & 2u) != 0u)
         return text_wrap_measure_and_draw_lines(record, line_scale,
                                                 height_out);
+    buffer = *(char**)((char*)record + 0x14);
+    capacity = (uint32_t)words[0x106];
+    cursor = (uint32_t)words[0x107];
+    old_lines = (uint32_t)words[0x208];
+    if ((flags & 1u) != 0u && old_lines != 0u) {
+        int nearest = (int)capacity;
+        int* saved = words + 0x108;
+        uint32_t n;
+        for (n = 0; n < old_lines; ++n) {
+            int distance = saved[n] - (int)cursor;
+            if (distance > 0 && distance < nearest) {
+                nearest = distance;
+                position = (uint32_t)saved[n];
+            }
+        }
     }
-    buffer = NULL;
-    memcpy(&buffer, (char*)record + 0x14, sizeof(buffer));
-    capacity = text_buffer_read_u32(record, 0x418);
-    read_at = text_buffer_read_u32(record, 0x41c);
-    if (buffer == NULL || capacity == 0u) return 0;
-    if (read_at >= capacity) read_at %= capacity;
-    {
-        float width = text_buffer_read_float(record, 0x0c);
-        max_width = width > 0.0f ? (unsigned int)width : 0u;
-    }
-    x_float = text_buffer_read_float(record, 4);
-    y_float = text_buffer_read_float(record, 8);
-    x = (int)x_float;
-    y = (int)y_float;
-    line_start = read_at;
-    line_width = 0;
-    word_width = 0;
-    word_break = 0xffffffffu;
-    text_buffer_write_u32(record, 0x420, line_start);
-    widths[0] = 0;
+    words[0x208] = 0;
+    words[0x108] = (int)position;
+    words[0x208]++;
     line_count = 1;
-    index = read_at;
-    steps = 0;
-    while (steps < capacity && line_count < 256u) {
-        uint32_t at = index % capacity;
-        unsigned char ch = (unsigned char)buffer[at];
-        if (ch == 7u) break;
-        if (ch == '\n') {
-            widths[line_count - 1] = line_width;
-            ++line_count;
-            ++index;
-            ++steps;
-            line_start = index % capacity;
-            text_buffer_write_u32(record, 0x420u + (line_count - 1u) * 4u,
-                                  line_start);
-            line_width = 0;
-            word_width = 0;
-            word_break = 0xffffffffu;
-            continue;
-        }
-        {
-            if (text_buffer_is_break(ch)) {
-                word_break = at;
-                break_index = index;
+    if (position != cursor && buffer != NULL) {
+        do {
+            unsigned char ch;
+            ch = (unsigned char)buffer[position];
+            if (ch == 7u) break;
+            if (ch == '\n') {
+                words[0x108 + line_count] = (int)(position + 1u);
+                widths[line_count - 1u] = line_width;
+                ++line_count;
+                words[0x208] = (int)line_count;
                 word_width = 0;
+                line_width = 0;
             }
-            unsigned int advance = (unsigned int)
-                text_buffer_glyph_width(font, ch);
-            line_width += advance;
-            word_width += advance;
-            if (max_width != 0u && line_width > max_width &&
-                at != line_start) {
-                if (word_break != 0xffffffffu) {
-                    uint32_t next_index = break_index + 1u;
-                    widths[line_count - 1] = line_width - word_width;
-                    ++line_count;
-                    while (steps < capacity &&
-                           text_buffer_is_break((unsigned char)
-                               buffer[next_index % capacity])) {
-                        ++next_index;
-                        ++steps;
-                    }
-                    line_start = next_index % capacity;
-                    text_buffer_write_u32(record,
-                                          0x420u + line_count * 4u,
-                                          line_start);
-                    index = next_index;
-                    steps = index - read_at;
-                    line_width = 0;
+            else {
+                int advance;
+                if (text_buffer_is_break(ch)) {
                     word_width = 0;
-                    word_break = 0xffffffffu;
-                    continue;
+                    words[0x108 + line_count] = (int)(position + 1u);
+                    widths[line_count - 1u] = line_width;
                 }
-                else {
-                    widths[line_count - 1] = line_width - advance;
+                advance = text_buffer_glyph_width(font, ch);
+                line_width += advance;
+                word_width += advance;
+                if ((float)line_width > *(float*)((char*)record + 0x0c)) {
                     ++line_count;
-                    line_start = at;
-                    text_buffer_write_u32(record,
-                                          0x420u + (line_count - 1u) * 4u,
-                                          line_start);
-                    line_width = advance;
-                    word_width = advance;
+                    words[0x208] = (int)line_count;
+                    line_width = word_width;
                 }
-                word_break = 0xffffffffu;
-                ++index;
-                ++steps;
-                continue;
             }
-        }
-        ++index;
-        ++steps;
+            ++position;
+            if (position >= capacity) position = 0;
+        } while (position != cursor);
     }
-    widths[line_count - 1] = line_width;
-    text_buffer_write_u32(record, 0x420u + line_count * 4u,
-                          index % capacity);
-    text_buffer_write_u32(record, 0x820, line_count);
-    /* FUN_00485390's third argument is only forwarded as elapsed time when
-     * bit 1 selects the animated text path above.  In the ordinary path the
-     * corpus spaces rows by the font's line height; it does not scale that
-     * spacing by this argument. */
-    start_count = line_count - top_lines + 1u;
-    if (start_count != 0u) start_line %= start_count;
-    else start_line = 0;
-    first_position = line_count - start_line - top_lines;
-    last_position = line_count - start_line;
-    for (index = 0; index < line_count; ++index) {
-        uint32_t line = index;
-        uint32_t at = text_buffer_read_u32(record,
-                                           0x420u + line * 4u);
-        uint32_t end = text_buffer_read_u32(record,
-                                            0x420u + (line + 1u) * 4u);
+    words[0x108 + line_count] = (int)position;
+    widths[line_count - 1u] = line_width;
+    words[0x208] = (int)line_count;
+    wrapped_width = *(float*)((char*)record + 0x0c);
+    {
+        uint32_t rows = line_count - (uint32_t)words[0x209] + 1u;
+        if (rows == 0u) start_line = 0u;
+        else start_line %= rows;
+    }
+    x = (int)*(float*)((char*)record + 4);
+    y = (int)*(float*)((char*)record + 8);
+    for (line = 0; line < line_count; ++line) {
+        uint32_t at = (uint32_t)words[0x108 + line];
+        uint32_t end = (uint32_t)words[0x108 + line + 1u];
         int pen_x = x;
         int pen_y;
-        uint32_t guard = 0;
-        if (top_lines < line_count) {
-            if (index < first_position || index >= last_position) {
+        if ((uint32_t)words[0x209] < line_count) {
+            if (line < line_count - (uint32_t)words[0x209] ||
+                line_count - start_line <= line) {
                 pen_y = 0;
             }
             else {
-                pen_y = y + (int)(start_line + index + top_lines -
-                                  line_count) * line_height;
+                pen_y = y + ((int)(start_line + line +
+                          (uint32_t)words[0x209] - line_count)) *
+                          line_height;
             }
         }
-        else pen_y = y + (int)index * line_height;
-        if ((flags & 4u) != 0u && max_width > widths[line]) {
-            pen_x += (int)((max_width - widths[line]) / 2u);
-        }
-        while (at != end && guard++ < capacity) {
+        else pen_y = y + (int)line * line_height;
+        if ((flags & 4u) != 0u && wrapped_width > (float)widths[line])
+            pen_x += (int)((wrapped_width - (float)widths[line]) * 0.5f);
+        while (at != end) {
             unsigned char ch = (unsigned char)buffer[at];
             pen_x += text_buffer_draw_glyph(font, pen_x, pen_y, ch);
-            at = (at + 1u) % capacity;
+            ++at;
+            if (at >= capacity) at = 0;
         }
         if (pen_y > max_y) max_y = pen_y;
     }

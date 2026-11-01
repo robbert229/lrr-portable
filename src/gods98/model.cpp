@@ -242,6 +242,15 @@ typedef struct SurfRec {
     Buf    blocks_data; /* payloads, appended in file order */
 } SurfRec;
 
+/* The retail POLS handler grows a three-word polygon table.  The portable
+ * public Model adds UV and winding fields, so this compact parse record keeps
+ * the stream result intact until that view is built. */
+typedef struct PolyRec {
+    uint32_t count;
+    uint32_t surface;
+    int16_t* ring;
+} PolyRec;
+
 typedef struct Parse {
     const uint8_t* d;
     size_t         n;
@@ -249,12 +258,10 @@ typedef struct Parse {
     Buf     chunks_buf; /* native Chunk array */
     size_t  nchunks;
 
-    Buf     vb;   /* raw 12-byte PNTS triples (BE bit patterns as stored) */
-    Buf     ring;  /* native i16, raw signed POLS values in order */
-    Buf     poff;  /* native uint32 start per poly */
-    Buf     pcnt;  /* native uint16 per poly */
-    Buf     psurf; /* native uint16 per poly (surface field minus one) */
-    Buf     pflip; /* native uint8 per poly */
+    float*  verts; /* host-order PNTS coordinates, replaced by later chunks */
+    size_t  nverts;
+    PolyRec* polys;
+    size_t   npolys, pcap;
     int     saw_zero;
     size_t  pols_used_len; /* first POLS chunk only (python one()) */
 
@@ -352,30 +359,30 @@ static int parse_pols(Parse* P, const uint8_t* d, size_t size)
         p += 2;
         if (cnt == 0 || p + 2 * cnt + 2 > size)
             break;
-        uint32_t off = (uint32_t)(P->ring.len / sizeof(int16_t));
-        if (!buf_append(&P->poff, &off, sizeof off))
-            return 0;
-        int flip = 0;
-        for (size_t k = 0; k < cnt; k++) {
-            int16_t v = (int16_t)be16(d + p + 2 * k);
-            if (v == 0)
-                P->saw_zero = 1;
-            if (v < 0)
-                flip = 1;
-            if (!buf_append(&P->ring, &v, sizeof v))
+        if (P->npolys == P->pcap) {
+            size_t ncap = P->pcap ? P->pcap * 2 : 8;
+            if (ncap < P->pcap || ncap > ((size_t)-1) / sizeof(*P->polys))
                 return 0;
+            PolyRec* grown = (PolyRec*)realloc(P->polys, ncap * sizeof(*grown));
+            if (grown == NULL)
+                return 0;
+            P->polys = grown;
+            P->pcap = ncap;
+        }
+        PolyRec* poly = &P->polys[P->npolys];
+        poly->count = (uint32_t)cnt;
+        poly->surface = (uint16_t)(be16(d + p + 2 * cnt) - 1u);
+        poly->ring = (int16_t*)malloc(cnt * sizeof(*poly->ring));
+        if (poly->ring == NULL)
+            return 0;
+        for (size_t k = 0; k < cnt; k++) {
+            poly->ring[k] = (int16_t)be16(d + p + 2 * k);
+            if (poly->ring[k] == 0)
+                P->saw_zero = 1;
         }
         p += 2 * cnt;
-        /* LwoPolygons stores the file's 1-based surface number minus one in
-         * a 16-bit field.  The reference arithmetic is unsigned here, so a
-         * zero surface value wraps to 0xffff. */
-        uint16_t su = (uint16_t)(be16(d + p) - 1u);
         p += 2;
-        uint16_t cc = (uint16_t)cnt, f8 = 0;
-        f8 = (uint16_t)flip;
-        if (!buf_append(&P->pcnt, &cc, sizeof cc)) return 0;
-        if (!buf_append(&P->psurf, &su, sizeof su)) return 0;
-        if (!buf_append(&P->pflip, &f8, 1)) return 0;
+        P->npolys++;
     }
     return 1;
 }
@@ -579,37 +586,34 @@ static Model* build_model(Parse* P)
     Model* m = (Model*)calloc(1, sizeof *m);
     if (!m)
         return NULL;
-    size_t nv = P->vb.len / 12;
-    m->n_verts = nv;
-    if (nv) {
-        m->verts = (float*)malloc(nv * 3 * sizeof(float));
-        if (!m->verts) { free(m); return NULL; }
-        memcpy(m->verts, P->vb.d, nv * 12); /* BE bytes already bit-correct */
-    }
+    m->n_verts = P->nverts;
+    m->verts = P->verts;
+    P->verts = NULL;
+    P->nverts = 0;
 
-    size_t np = P->pcnt.len / sizeof(uint16_t);
+    size_t np = P->npolys;
     m->n_polys = np;
     if (np) {
         m->polys = (ModelPoly*)calloc(np, sizeof(ModelPoly));
-        if (!m->polys) { free(m); return NULL; }
+        if (!m->polys) { model_free(m); return NULL; }
     }
     const int base = P->saw_zero ? 0 : 1;
     for (size_t i = 0; i < np; i++) {
-        uint32_t off;
-        memcpy(&off, P->poff.d + i * sizeof(off), sizeof(off));
-        uint16_t cnt = ((const uint16_t*)P->pcnt.d)[i];
+        const PolyRec* raw_poly = &P->polys[i];
+        uint16_t cnt = (uint16_t)raw_poly->count;
         ModelPoly* p = &m->polys[i];
         p->count = cnt;
         p->ring = (uint16_t*)malloc((cnt ? cnt : 1) * sizeof(uint16_t));
         if (!p->ring) { model_free(m); return NULL; }
-        const int16_t* raw = (const int16_t*)P->ring.d + off;
+        const int16_t* raw = raw_poly->ring;
         for (uint16_t k = 0; k < cnt; k++) {
             int v = raw[k] < 0 ? -raw[k] : raw[k];
             v -= base;
             p->ring[k] = (uint16_t)(v < 0 ? 0 : v);
+            if (raw[k] < 0)
+                p->flipped = 1;
         }
-        p->surface = ((const uint16_t*)P->psurf.d)[i];
-        p->flipped = ((const uint8_t*)P->pflip.d)[i] != 0;
+        p->surface = (uint16_t)raw_poly->surface;
     }
 
     m->n_surfaces = P->nsname;
@@ -711,12 +715,9 @@ static Model* build_model(Parse* P)
 static void parse_free(Parse* P)
 {
     buf_free(&P->chunks_buf);
-    buf_free(&P->vb);
-    buf_free(&P->ring);
-    buf_free(&P->poff);
-    buf_free(&P->pcnt);
-    buf_free(&P->psurf);
-    buf_free(&P->pflip);
+    for (size_t poly_index = 0; poly_index < P->npolys; poly_index++)
+        free(P->polys[poly_index].ring);
+    free(P->polys);
     for (size_t name_index = 0; name_index < P->nsname; name_index++)
         free(P->sname[name_index]);
     free(P->sname);
@@ -729,19 +730,28 @@ static void parse_free(Parse* P)
     free(P->recs);
 }
 
-/* LwoPoints: convert each PNTS triple from big-endian float bits and append
- * the host-order coordinates to the model's vertex buffer. */
+/* LwoPoints: replace the current coordinate table with host-order triples.
+ * Keeping the handler's output as one allocation mirrors the retail record
+ * and avoids building a second copy when the public Model is assembled. */
 // FUNCTION: LEGORR 0x0048c210
 static int parse_points(Parse* P, const Chunk* c)
 {
-    for (size_t q = 0; q + 12 <= c->size; q += 12) {
-        for (int k = 0; k < 3; k++) {
-            float f = bef32(c->pay + q + 4 * k);
-            if (!buf_append(&P->vb, &f, sizeof f)) {
-                return 0;
-            }
+    size_t nverts = c->size / 12;
+    float* verts = NULL;
+    if (nverts != 0) {
+        if (nverts > ((size_t)-1) / (3 * sizeof(float)))
+            return 0;
+        verts = (float*)malloc(nverts * 3 * sizeof(float));
+        if (verts == NULL)
+            return 0;
+        for (size_t i = 0; i < nverts; i++) {
+            for (int k = 0; k < 3; k++)
+                verts[i * 3 + (size_t)k] = bef32(c->pay + i * 12 + (size_t)k * 4);
         }
     }
+    free(P->verts);
+    P->verts = verts;
+    P->nverts = nverts;
     return 1;
 }
 
@@ -784,7 +794,6 @@ Model* model_parse(const uint8_t* data, size_t len)
     for (size_t i = 0; i < P.nchunks && ok; i++) {
         const Chunk* c = (const Chunk*)P.chunks_buf.d + i;
         if (strcmp(c->tag, "PNTS") == 0) {
-            buf_free(&P.vb);
             ok = parse_points(&P, c);
         }
         else if (strcmp(c->tag, "POLS") == 0) {

@@ -1716,26 +1716,36 @@ void cmd_keybind_tick(int (*keyheld)(int key))
 // FUNCTION: LEGORR 0x004520d0
 void cmd_queue_tick(void)
 {
+    int i;
     /* 1. Producer block: the held-key pre-pass (SelectionRoot step 1 —
      *    cheat-keybinds; the demo binds keys via cmd_bind_key). */
     if (s_ctx != NULL && s_ctx->input_keyheld != NULL) {
         cmd_keybind_tick(s_ctx->input_keyheld);
     }
 
-    /* 2. Active buffer -> swap (DAT_004fef28). */
+    /* 2. Remap the first dword of every queued record while the old bank
+     *    is still active. This is FUN_0045d870 over each 0x14-byte record. */
     int block = s_ping;
     int count = s_queue_count[block];
+    for (i = 0; i < count; ++i) {
+        command_entity_reference_remap((uint32_t*)&s_queue[block][i]);
+    }
+
+    /* 3. Retire the old producer bank, flip the ping-pong selector, and
+     *    clear the newly active bank before dispatching the saved count. */
     s_queue_count[block] = 0;
     s_ping = !s_ping;
+    s_queue_count[s_ping] = 0;
 
-    /* 3. The opcode switch (finding 06/10 §"The queue executor"). */
-    for (int i = 0; i < count; ++i) {
+    /* 4. The opcode switch (finding 06/10 §"The queue executor"). */
+    for (i = 0; i < count; ++i) {
         QueueRec* q = &s_queue[block][i];
         EntitySlot* ent = (EntitySlot*)q->a1;
         switch (q->opcode) {
         case 5:
         case 6:
-            cmd_create_move(ent, (float)q->a3, (float)q->a4, q->a2);
+            cmd_create_move(ent, ((float*)&q->a3)[0],
+                            ((float*)&q->a3)[1], q->a2);
             break;
         case 8:
             /* add up to N entities to the selection (FUN_00403270 path) */
