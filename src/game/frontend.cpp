@@ -8387,69 +8387,13 @@ uint32_t cursor_tile_pair_peek(int which)
 
 #define PANEL_CATEGORY_WINDOWS 18
 
-typedef struct PanelCategoryRecord {
-    float    x1;    /* corpus DAT_00500118 role (record+0x08) */
-    float    y1;    /* corpus DAT_0050011c role (record+0x0c) */
-    float    x2;    /* corpus DAT_00500120 role (record+0x10) */
-    float    y2;    /* corpus DAT_00500124 role (record+0x14) */
-    uint32_t word;  /* corpus DAT_00500130 word (record+0x20) */
-} PanelCategoryRecord;
-
-static PanelCategoryRecord
-    s_panel_categories[PANEL_CATEGORY_WINDOWS];
-
-static uint32_t float_bits(float value)
-{
-    uint32_t bits;
-    __builtin_memcpy(&bits, &value, sizeof bits);
-    return bits;
-}
-
-/* PanelCategoryBoundsSet (FUN_0045a650): store the category rectangle as
- * ints-cast-to-floats, clear the record's word, and route the pair at
- * record+0x18/+0x1c — the first corner while the flag byte's bit 2 rides,
- * the second corner otherwise. Deviations: the window is guarded (the
- * corpus strides blindly) and the corpus's byte-wide bit-2 read is the
- * word's bit 1 on the modeled flag. */
-// FUNCTION: LEGORR 0x0045a650
-void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2)
-{
-    if (panel < 0 || panel >= PANEL_CATEGORY_WINDOWS) {
-        return; /* deviation: the corpus strides blindly */
-    }
-    const float fx1 = (float)x1, fy1 = (float)y1;
-    const float fx2 = (float)x2, fy2 = (float)y2;
-    s_panel_categories[panel].x1 = fx1;
-    s_panel_categories[panel].y1 = fy1;
-    s_panel_categories[panel].x2 = fx2;
-    s_panel_categories[panel].y2 = fy2;
-    s_panel_categories[panel].word = 0u;
-    if ((request_record_flags_peek(panel) & 2u) != 0u) {
-        indexed_pair_set(panel, float_bits(fx1), float_bits(fy1));
-    } else {
-        indexed_pair_set(panel, float_bits(fx2), float_bits(fy2));
-    }
-}
-
 void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
                                 float* out_x2, float* out_y2)
 {
     if (panel < 0 || panel >= PANEL_CATEGORY_WINDOWS) {
         return;
     }
-    const PanelCategoryRecord* r = &s_panel_categories[panel];
-    if (out_x1 != NULL) {
-        *out_x1 = r->x1;
-    }
-    if (out_y1 != NULL) {
-        *out_y1 = r->y1;
-    }
-    if (out_x2 != NULL) {
-        *out_x2 = r->x2;
-    }
-    if (out_y2 != NULL) {
-        *out_y2 = r->y2;
-    }
+    request_record_panel_bounds_peek(panel, out_x1, out_y1, out_x2, out_y2);
 }
 
 /* UiEntryBoundsGet (FUN_0045bf70): read the entry's record out of the

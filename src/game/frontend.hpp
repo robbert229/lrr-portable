@@ -1128,8 +1128,8 @@ void     sim_status_banner_word_set(uint32_t value); /* port hook */
  * PanelCategoryBoundsSet (FUN_0045a650): stores the rectangle (ints cast
  * to floats), clears the record's word, and routes the pair behind — the
  * first corner while the modeled flag word's bit 2 rides, else the second.
- * The record's float fields have no ported owner — own storage; the pair/
- * flag windows ride the crt.* windows already modeled for them.
+ * The complete 0x30-byte record is owned by the crt.* request-record table,
+ * including its rectangle, pair, category word, and flags.
  * UiEntryBoundsGet (FUN_0045bf70): position plus derived size from the
  * panel's installed draw-record block (stride 0x2c, far minus near). */
 void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2);

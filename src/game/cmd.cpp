@@ -2265,15 +2265,12 @@ void cmd_mark_matching(int type, int payload, const int coords[2])
 // FUNCTION: LEGORR 0x00402060
 void cmd_set_kind(void* rec, int kind)
 {
-    if (rec == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    CmdRec* r = as_rec(rec);
+    /* Keep this cast at the call site: the original accesses the record's
+     * words directly and has no out-of-line conversion helper. */
+    CmdRec* r = (CmdRec*)rec;
     if ((r->state & 0x30000u) == 0u) {
-        const int behaviour = (kind >= 0 && kind < 27)
-                                  ? s_behaviour[kind] : 0x31;
         r->kind = kind;
-        r->behaviour = behaviour;
+        r->behaviour = s_behaviour[kind];
     } else {
         r->behaviour = 99;
         r->kind = kind;

@@ -566,6 +566,9 @@ int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
 int  request_record_flag8_is_set(int index);  /* FUN_0045ab90 */
 void request_record_flags_set(int index, uint32_t flags); /* port hook */
 uint32_t request_record_flags_peek(int index); /* port hook */
+void request_record_panel_bounds_peek(int index, float* out_x1,
+                                      float* out_y1, float* out_x2,
+                                      float* out_y2);
 
 /* --- the remaining DAT one-liner stores/reads (2026-10-24; finding 392) -----
  * GlobalValueSet_0050080c (FUN_0045c4a0): the unresolved store's word.

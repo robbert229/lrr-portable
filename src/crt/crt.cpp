@@ -1968,22 +1968,56 @@ void display_dimensions_set(int w, int h)
     s_display_h = h;
 }
 
-/* DAT_00500110 record block: 0x30-byte panel-category records. The corpus
- * 0x45a6e0 pair setter addresses +0x18/+0x1c at that stride; 0x45ab00 reads
- * the flag dword at +0x2c. The image bytes are zero-filled and populated at
- * runtime, so model only the fields used by this port. */
+/* DAT_00500110 record block: 0x30-byte panel-category records. Bounds, pair,
+ * category word, and flags all share this storage. */
 #define REQUEST_RECORD_COUNT 18
 
 typedef struct RequestRecord {
-    uint8_t  pad[0x18];
+    uint8_t  prefix[0x08];
+    float    bounds_x1; /* +0x08 */
+    float    bounds_y1; /* +0x0c */
+    float    bounds_x2; /* +0x10 */
+    float    bounds_y2; /* +0x14 */
     uint32_t pair_x;  /* +0x18: DAT_00500128, 0x30-byte category stride */
     uint32_t pair_y;  /* +0x1c: DAT_0050012c, 0x30-byte category stride */
-    uint8_t  reserved[0x0c];
+    uint32_t category_word; /* +0x20 */
+    uint8_t  reserved[0x08];
     uint32_t flags;   /* +0x2c */
 } RequestRecord;
 
 // GLOBAL: LEGORR 0x00500110
 static RequestRecord s_request_records[REQUEST_RECORD_COUNT];
+
+// FUNCTION: LEGORR 0x0045a650
+void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2)
+{
+    RequestRecord* record = s_request_records + panel;
+    uint8_t flags;
+    record->bounds_x1 = (float)x1;
+    record->bounds_x2 = (float)x2;
+    flags = (uint8_t)record->flags;
+    record->bounds_y1 = (float)y1;
+    record->bounds_y2 = (float)y2;
+    record->category_word = 0u;
+    if ((flags & 2u) != 0u) {
+        *(float*)&record->pair_x = (float)x1;
+        *(float*)&record->pair_y = (float)y1;
+        return;
+    }
+    *(float*)&record->pair_x = (float)x2;
+    *(float*)&record->pair_y = (float)y2;
+}
+
+void request_record_panel_bounds_peek(int panel, float* out_x1,
+                                      float* out_y1, float* out_x2,
+                                      float* out_y2)
+{
+    RequestRecord* record = s_request_records + panel;
+    if (out_x1 != NULL) *out_x1 = record->bounds_x1;
+    if (out_y1 != NULL) *out_y1 = record->bounds_y1;
+    if (out_x2 != NULL) *out_x2 = record->bounds_x2;
+    if (out_y2 != NULL) *out_y2 = record->bounds_y2;
+}
 
 // FUNCTION: LEGORR 0x0045ab30
 int request_record_ready_flag4(int index)

@@ -27,7 +27,7 @@ static uint32_t entity_type_config_entry_count(void* context, void* section)
     uint32_t count = 0u;
     (void)context;
     for (child = block_first_child((BlockRec*)section); child != NULL;
-         child = block_next_sibling(child)) ++count;
+         child = block_next_equal_key(child)) ++count;
     return count;
 }
 
@@ -38,7 +38,7 @@ static int entity_type_config_entry_get(void* context, void* section,
     BlockRec* child = block_first_child((BlockRec*)section);
     (void)context;
     while (child != NULL && index != 0u) {
-        child = block_next_sibling(child);
+        child = block_next_equal_key(child);
         --index;
     }
     if (child == NULL) return 0;
@@ -422,7 +422,7 @@ void entity_type_config_row_finalize(void* context, void* row,
             type_config_table_release(table); return 0; \
         } \
         memcpy(names[i], source_name, name_length + 1u); \
-        child = block_next_sibling(child); \
+        child = block_next_equal_key(child); \
     } \
     return 1
 
@@ -467,7 +467,7 @@ static const char* entity_config_value_find(void* context, void* section,
     while (child != NULL) {
         if (entity_config_name_equal(block_name(child), type_name))
             return block_value(child);
-        child = block_next_sibling(child);
+        child = block_next_equal_key(child);
     }
     return NULL;
 }
@@ -536,7 +536,7 @@ static void entity_config_name_table_build(BlockFile* cfg,
     *count = 0u;
     for (child = block_first_child(section);
          child != NULL && *count < 32u;
-         child = block_next_sibling(child)) {
+         child = block_next_equal_key(child)) {
         names[*count] = block_name(child);
         ++*count;
     }
