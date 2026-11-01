@@ -68,6 +68,15 @@ TextureSurface* texture_get_or_load(const char* base, const char* file);
  * COM interfaces from its resource record. */
 void texture_release(TextureSurface* t);
 
+/* Retail TextureRelease record: two independently reference-counted COM
+ * surfaces at offsets 0 and 4 on the 32-bit target. This is intentionally
+ * distinct from the port's CPU-backed TextureSurface. */
+typedef struct TextureReleaseRecord {
+    void* surface;
+    void* texture;
+} TextureReleaseRecord;
+void texture_release_record(TextureReleaseRecord* record); /* 0x00474710 */
+
 /* ResourceRecordAddRef's software equivalent of IDirectDrawSurface
  * SetColorKey(DDCKEY_SRCBLT, range). */
 void texture_source_color_key_set(TextureSurface* t, uint32_t low,

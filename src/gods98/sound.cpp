@@ -1141,13 +1141,147 @@ void sound_spatial_refresh_hooks_set(SoundSpatialRefreshHook refresh,
     s_spatial_refresh_context = context;
 }
 
-/* Direct3DRM Frame/provider refresh is unavailable in the SDL and waveOut
- * backends: the opaque caller object has no source-position adapter here.
- * Keep this seam unmapped until a real provider interface is available. */
+/* The retail provider is an IDirect3DRMFrame3. Its GetScene and GetPosition
+ * slots are +0x68 and +0x60, while linked source records live in the private
+ * scene-animation record returned by the provider's +0x1c accessor. Each
+ * linked source record is five dwords: DirectSound buffer, cached xyz, next.
+ * These COM layouts are only valid in the 32-bit reference backend; the SDL
+ * backend's AudioBuffer is a port object and cannot be called as DirectSound. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+static void sound_frame_scene_get(void* frame, void** scene_out)
+{
+    __asm {
+        mov ecx, frame
+        mov eax, [ecx]
+        mov edx, scene_out
+        push edx
+        call dword ptr [eax + 68h]
+    }
+}
+
+static void sound_frame_position_get(void* frame, void* scene,
+                                     float position[3])
+{
+    __asm {
+        mov ecx, frame
+        mov eax, [ecx]
+        mov edx, position
+        push edx
+        push scene
+        call dword ptr [eax + 60h]
+    }
+}
+
+static void sound_frame_release(void* frame)
+{
+    __asm {
+        mov ecx, frame
+        mov eax, [ecx]
+        call dword ptr [eax + 8]
+    }
+}
+
+static void sound_buffer_position_set(void* buffer,
+                                      const float position[3])
+{
+    __asm {
+        mov ecx, buffer
+        mov eax, [ecx]
+        push 0
+        mov edx, position
+        push dword ptr [edx + 8]
+        push dword ptr [edx + 4]
+        push dword ptr [edx]
+        call dword ptr [eax + 4Ch]
+    }
+}
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+typedef long (__attribute__((thiscall)) *SoundFrameGetSceneFn)(
+    void*, void**);
+typedef long (__attribute__((thiscall)) *SoundFrameGetPositionFn)(
+    void*, void*, float*);
+typedef unsigned long (__attribute__((thiscall)) *SoundFrameReleaseFn)(void*);
+typedef long (__attribute__((thiscall)) *SoundBufferSetPositionFn)(
+    void*, float, float, float, unsigned long);
+
+static void sound_frame_scene_get(void* frame, void** scene_out)
+{
+    void** vtable = *(void***)frame;
+    ((SoundFrameGetSceneFn)vtable[0x68 / sizeof(void*)])(frame, scene_out);
+}
+
+static void sound_frame_position_get(void* frame, void* scene,
+                                     float position[3])
+{
+    void** vtable = *(void***)frame;
+    ((SoundFrameGetPositionFn)vtable[0x60 / sizeof(void*)])(
+        frame, scene, position);
+}
+
+static void sound_frame_release(void* frame)
+{
+    void** vtable = *(void***)frame;
+    ((SoundFrameReleaseFn)vtable[8])(frame);
+}
+
+static void sound_buffer_position_set(void* buffer,
+                                      const float position[3])
+{
+    void** vtable = *(void***)buffer;
+    ((SoundBufferSetPositionFn)vtable[0x4c / sizeof(void*)])(
+        buffer, position[0], position[1], position[2], 0ul);
+}
+#endif
+
+// FUNCTION: LEGORR 0x0047B410
+static int sound_source_spatial_refresh_direct(void* sound_object)
+{
+#if (defined(_MSC_VER) && defined(_M_IX86)) || \
+    (defined(__i386__) && (defined(__GNUC__) || defined(__clang__)))
+    void* property;
+    void* scene = NULL;
+    void* record;
+    float position[3] = { 0.0f, 0.0f, 0.0f };
+    if (sound_object == NULL) return 0;
+    property = sound_instance_property_get(sound_object);
+    if (property == NULL) return 0;
+
+    /* GetScene and GetPosition HRESULTs are deliberately ignored, matching
+     * the retail routine. Its source cache advances even if SetPosition
+     * reports failure. */
+    sound_frame_scene_get(sound_object, &scene);
+    record = *(void**)((char*)property + 0x24);
+    while (record != NULL) {
+        char* words = (char*)record;
+        void* buffer = NULL;
+        void* next = NULL;
+        float cached[3];
+        memcpy(&buffer, words, sizeof(buffer));
+        memcpy(cached, words + sizeof(void*), sizeof(cached));
+        memcpy(&next, words + 4 * sizeof(void*), sizeof(next));
+
+        sound_frame_position_get(sound_object, scene, position);
+        if (position[0] != cached[0] || position[1] != cached[1] ||
+            position[2] != cached[2]) {
+            if (buffer != NULL) sound_buffer_position_set(buffer, position);
+            memcpy(words + sizeof(void*), position, sizeof(position));
+        }
+        record = next;
+    }
+    if (scene != NULL) sound_frame_release(scene);
+    return 1;
+#else
+    (void)sound_object;
+    return 0;
+#endif
+}
+
 void sound_source_spatial_refresh(void* sound_object)
 {
-    if (sound_object != NULL && s_spatial_refresh_hook != NULL)
+    if (sound_source_spatial_refresh_direct(sound_object) == 0 &&
+        sound_object != NULL && s_spatial_refresh_hook != NULL) {
         (void)s_spatial_refresh_hook(s_spatial_refresh_context, sound_object);
+    }
 }
 
 /* _DAT_00502b2c — the global-cooldown word (the corpus types it as a

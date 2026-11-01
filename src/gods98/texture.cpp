@@ -11,6 +11,16 @@
 #define TEX_CACHE_MAX 4096
 #define TEXTURE_RESOURCE_NAME_MAX 260
 
+#if defined(_MSC_VER)
+#define TEXTURE_COM_STDCALL __stdcall
+#elif defined(__i386__)
+#define TEXTURE_COM_STDCALL __attribute__((stdcall))
+#else
+#define TEXTURE_COM_STDCALL
+#endif
+
+typedef uint32_t (TEXTURE_COM_STDCALL *TextureComReleaseFn)(void*);
+
 typedef struct CacheEntry {
     char*            name;
     TextureSurface*  surf;
@@ -405,6 +415,48 @@ void texture_release(TextureSurface* t)
         }
     }
     texture_free(t);
+}
+
+/* Retail TextureRelease releases both COM surfaces in its two-pointer
+ * record. Each reference is released repeatedly until the COM object's
+ * Release method reports that its count reached zero. This record is not a
+ * TextureSurface: that port type owns CPU pixels and has a separate cache
+ * reference policy above. */
+// FUNCTION: LEGORR 0x00474710
+void texture_release_record(TextureReleaseRecord* record)
+{
+    void* interface_object;
+    void** interface_vtable;
+    TextureComReleaseFn release;
+    uint32_t reference_count;
+
+    if (record == NULL) return;
+
+    interface_object = record->surface;
+    if (interface_object != NULL) {
+        interface_vtable = *(void***)interface_object;
+        release = (TextureComReleaseFn)interface_vtable[2];
+        reference_count = release(interface_object);
+        while (reference_count != 0u) {
+            interface_object = record->surface;
+            interface_vtable = *(void***)interface_object;
+            release = (TextureComReleaseFn)interface_vtable[2];
+            reference_count = release(interface_object);
+        }
+    }
+
+    interface_object = record->texture;
+    if (interface_object != NULL) {
+        interface_vtable = *(void***)interface_object;
+        release = (TextureComReleaseFn)interface_vtable[2];
+        reference_count = release(interface_object);
+        while (reference_count != 0u) {
+            interface_object = record->texture;
+            interface_vtable = *(void***)interface_object;
+            release = (TextureComReleaseFn)interface_vtable[2];
+            reference_count = release(interface_object);
+        }
+    }
 }
 
 void texture_source_color_key_set(TextureSurface* t, uint32_t low,

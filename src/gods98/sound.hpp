@@ -322,8 +322,12 @@ void sound_instance_hooks_set(SoundInstanceRegisterHook register_hook,
 void sound_instance_track_register(void* instance);
 void sound_instance_track_stop_and_remove(void* provider, void* instance);
 typedef int (*SoundSpatialRefreshHook)(void* context, void* sound_object);
+/* SoundSourceSpatialRefresh uses the retail Direct3DRM/DirectSound vtables
+ * in the 32-bit reference backend. This hook is only the fallback adapter
+ * for non-COM providers; the SDL queue cannot reposition a submitted voice. */
 void sound_spatial_refresh_hooks_set(SoundSpatialRefreshHook refresh,
                                      void* context);
+/* SoundSourceSpatialRefresh @ 0x47b410; called by the production sound tick. */
 void sound_source_spatial_refresh(void* sound_object);
 void sound_source_spatial_refresh_all(void);
 void sound_stream_ring_buffer_tick(int stream_index);
