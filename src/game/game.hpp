@@ -406,11 +406,11 @@ typedef struct GameContext {
     uint8_t* checkpoint_blob;     /* DAT_00552994 (12 688 B) */
 
     /* --- completed-objectives table (DAT_004ffe50..) -------------------- */
-    GameOsfEntry osf[GAME_OSF_MAX];
+    GameOsfEntry* osf;          /* DAT_004ffe50 — growable live table */
     int   osf_count;              /* DAT_004ffe54 */
     int   osf_capacity;           /* DAT_004ffe58 */
     int   osf_dirty;              /* DAT_004ffe64 */
-    GameOsfEntry osf_shadow[GAME_OSF_MAX];
+    GameOsfEntry* osf_shadow;   /* DAT_004ffe5c — snapshot allocation */
     int   osf_shadow_count;       /* DAT_004ffe60 */
     int   osf_shadow_dirty;       /* DAT_004ffe64 (snapshot) */
 

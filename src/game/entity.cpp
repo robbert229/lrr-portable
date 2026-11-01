@@ -32,6 +32,39 @@ static char s_entity_localized_the_names[16][32][128];
 static uint32_t s_entity_localized_name_counts[16];
 static const char* s_entity_localized_name_entries[16][32];
 static const char* s_entity_localized_the_name_entries[16][32];
+
+/* EntityTypeComponentGet (FUN_0044a200): dispatch through the legacy record's
+ * payload slots. This mapped leaf accepts that corpus-layout record directly;
+ * the higher-level EntitySlot sidecar is intentionally not treated as a
+ * binary-compatible record. */
+// FUNCTION: LEGORR 0x0044a200
+void* entity_type_component_get(const void* entity_record)
+{
+    const uint32_t* words = (const uint32_t*)entity_record;
+    switch (words[0]) {
+    case 1:
+        return (void*)(uintptr_t)scene_object_resource_get(
+            (const void*)(uintptr_t)words[3]);
+    case 2:
+        return (void*)(uintptr_t)animation_object_handle_get(
+            (const void*)(uintptr_t)words[4]);
+    case 3:
+        return (void*)(uintptr_t)animation_object_handle_get(
+            (const void*)(uintptr_t)words[5]);
+    case 4:
+        return (void*)(uintptr_t)animation_object_handle_get(
+            (const void*)(uintptr_t)words[6]);
+    case 10:
+        return (void*)(uintptr_t)animation_object_handle_get(
+            (const void*)(uintptr_t)words[8]);
+    default:
+        if ((words[0xfa] & 0x00020000u) != 0u) {
+            return (void*)(uintptr_t)words[7];
+        }
+        return (void*)entity_record;
+    }
+}
+
 // GLOBAL: LEGORR 0x00556254
 static const char** s_object_name_kind1;
 // GLOBAL: LEGORR 0x00556258

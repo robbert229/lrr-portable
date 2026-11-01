@@ -301,6 +301,87 @@ void motion_waypoint_vector_random_scale_apply(void)
 static const char* s_string_table_entries[STRING_TABLE_MAX_ENTRIES];
 // GLOBAL: LEGORR 0x004b8a50
 static unsigned int s_string_table_count;
+
+/* The initialized bubble-name pointers reference distinct original .rdata
+ * strings; keep same-spelling labels distinct where retail did. */
+// GLOBAL: LEGORR 0x004a1ca4
+static const char s_bubble_cant_do[] = "Bubble_CantDo";
+// GLOBAL: LEGORR 0x004a1c98
+static const char s_bubble_idle[] = "Bubble_Idle";
+// GLOBAL: LEGORR 0x004a1c80
+static const char s_bubble_collect_crystal[] = "Bubble_CollectCrystal";
+// GLOBAL: LEGORR 0x004a1c6c
+static const char s_bubble_collect_ore[] = "Bubble_CollectOre";
+// GLOBAL: LEGORR 0x004a1c58
+static const char s_bubble_collect_stud[] = "Bubble_CollectStud";
+// GLOBAL: LEGORR 0x004a1c40
+static const char s_bubble_collect_dynamite[] = "Bubble_CollectDynamite";
+// GLOBAL: LEGORR 0x004a1c28
+static const char s_bubble_collect_elec_fence[] = "Bubble_CollectElecFence";
+// GLOBAL: LEGORR 0x004a1c10
+static const char s_bubble_collect_barrier[] = "Bubble_CollectBarrier";
+// GLOBAL: LEGORR 0x004a1bfc
+static const char s_bubble_collect_drill[] = "Bubble_CollectDrill";
+// GLOBAL: LEGORR 0x004a1be8
+static const char s_bubble_collect_spade[] = "Bubble_CollectSpade";
+// GLOBAL: LEGORR 0x004a1bd0
+static const char s_bubble_collect_hammer[] = "Bubble_CollectHammer";
+// GLOBAL: LEGORR 0x004a1bb8
+static const char s_bubble_collect_spanner[] = "Bubble_CollectSpanner";
+// GLOBAL: LEGORR 0x004a1ba4
+static const char s_bubble_collect_laser[] = "Bubble_CollectLaser";
+// GLOBAL: LEGORR 0x004a1b8c
+static const char s_bubble_collect_pusher[] = "Bubble_CollectPusher";
+// GLOBAL: LEGORR 0x004a1b74
+static const char s_bubble_collect_freezer[] = "Bubble_CollectFreezer";
+// GLOBAL: LEGORR 0x004a1b58
+static const char s_bubble_collect_bird_scarer[] = "Bubble_CollectBirdScarer";
+// GLOBAL: LEGORR 0x004a1b44
+static const char s_bubble_carry_crystal[] = "Bubble_CarryCrystal";
+// GLOBAL: LEGORR 0x004a1b34
+static const char s_bubble_carry_ore[] = "Bubble_CarryOre";
+// GLOBAL: LEGORR 0x004a1b20
+static const char s_bubble_carry_stud[] = "Bubble_CarryStud";
+// GLOBAL: LEGORR 0x004a1b08
+static const char s_bubble_carry_dynamite[] = "Bubble_CarryDynamite";
+// GLOBAL: LEGORR 0x004a1af4
+static const char s_bubble_carry_barrier[] = "Bubble_CarryBarrier";
+// GLOBAL: LEGORR 0x004a1adc
+static const char s_bubble_carry_elec_fence[] = "Bubble_CarryElecFence";
+// GLOBAL: LEGORR 0x004a1ad0
+static const char s_bubble_goto[] = "Bubble_Goto";
+// GLOBAL: LEGORR 0x004a1ac0
+static const char s_bubble_dynamite[] = "Bubble_Dynamite";
+// GLOBAL: LEGORR 0x004a1aac
+static const char s_bubble_reinforce[] = "Bubble_Reinforce";
+// GLOBAL: LEGORR 0x004a1a9c
+static const char s_bubble_drill[] = "Bubble_Drill";
+// GLOBAL: LEGORR 0x004a1a8c
+static const char s_bubble_repair[] = "Bubble_Repair";
+// GLOBAL: LEGORR 0x004a1a80
+static const char s_bubble_dig[] = "Bubble_Dig";
+// GLOBAL: LEGORR 0x004a1a74
+static const char s_bubble_flee[] = "Bubble_Flee";
+// GLOBAL: LEGORR 0x004a1a64
+static const char s_bubble_power_off[] = "Bubble_PowerOff";
+// GLOBAL: LEGORR 0x004a1a50
+static const char s_bubble_call_to_arms[] = "Bubble_CallToArms";
+// GLOBAL: LEGORR 0x004a1a3c
+static const char s_bubble_elec_fence[] = "Bubble_ElecFence";
+// GLOBAL: LEGORR 0x004a1a30
+static const char s_bubble_eat[] = "Bubble_Eat";
+// GLOBAL: LEGORR 0x004a1a20
+static const char s_bubble_drive[] = "Bubble_Drive";
+// GLOBAL: LEGORR 0x004a1a10
+static const char s_bubble_upgrade[] = "Bubble_Upgrade";
+// GLOBAL: LEGORR 0x004a19fc
+static const char s_bubble_build_path[] = "Bubble_BuildPath";
+// GLOBAL: LEGORR 0x004a19ec
+static const char s_bubble_train[] = "Bubble_Train";
+// GLOBAL: LEGORR 0x004a19dc
+static const char s_bubble_recharge[] = "Bubble_Recharge";
+// GLOBAL: LEGORR 0x004a19cc
+static const char s_bubble_request[] = "Bubble_Request";
 // GLOBAL: LEGORR 0x00557900
 static const char* s_bubble_action_strings[BUBBLE_ACTION_STRING_COUNT];
 
@@ -387,39 +468,45 @@ unsigned int string_table_index_lookup(const char* value)
 // FUNCTION: LEGORR 0x004070b0
 void bubble_action_strings_initialize(void)
 {
-    s_bubble_action_strings[0] = "Bubble_CantDo";
-    s_bubble_action_strings[1] = "Bubble_Idle";
-    s_bubble_action_strings[2] = "Bubble_CollectCrystal";
-    s_bubble_action_strings[3] = "Bubble_CollectOre";
-    s_bubble_action_strings[4] = "Bubble_CollectStud";
-    s_bubble_action_strings[5] = "Bubble_CollectDynamite";
-    s_bubble_action_strings[7] = "Bubble_CollectElecFence";
-    s_bubble_action_strings[6] = "Bubble_CollectBarrier";
-    s_bubble_action_strings[8] = "Bubble_CollectDrill";
-    s_bubble_action_strings[9] = "Bubble_CollectSpade";
-    s_bubble_action_strings[10] = "Bubble_CollectHammer";
-    s_bubble_action_strings[11] = "Bubble_CollectSpanner";
-    s_bubble_action_strings[12] = "Bubble_CollectLaser";
-    s_bubble_action_strings[13] = "Bubble_CollectPusher";
-    s_bubble_action_strings[14] = "Bubble_CollectFreezer";
-    s_bubble_action_strings[15] = "Bubble_CollectBirdScarer";
-    s_bubble_action_strings[16] = "Bubble_CarryCrystal";
-    s_bubble_action_strings[17] = "Bubble_CarryOre";
-    s_bubble_action_strings[18] = "Bubble_CarryStud";
-    s_bubble_action_strings[19] = "Bubble_CarryDynamite";
-    s_bubble_action_strings[20] = "Bubble_CarryBarrier";
-    s_bubble_action_strings[21] = "Bubble_CarryElecFence";
-    s_bubble_action_strings[22] = "Bubble_Goto";
-    s_bubble_action_strings[23] = "Bubble_Dynamite";
-    s_bubble_action_strings[24] = "Bubble_Reinforce";
-    s_bubble_action_strings[25] = "Bubble_Drill";
-    s_bubble_action_strings[26] = "Bubble_Repair";
-    s_bubble_action_strings[27] = "Bubble_Dig";
-    s_bubble_action_strings[28] = "Bubble_Flee";
-    s_bubble_action_strings[29] = "Bubble_PowerOff";
-    s_bubble_action_strings[30] = "Bubble_CallToArms";
-    s_bubble_action_strings[31] = "Bubble_ElecFence";
-    s_bubble_action_strings[32] = "Bubble_Eat";
+    s_bubble_action_strings[0] = s_bubble_cant_do;
+    s_bubble_action_strings[1] = s_bubble_idle;
+    s_bubble_action_strings[2] = s_bubble_collect_crystal;
+    s_bubble_action_strings[3] = s_bubble_collect_ore;
+    s_bubble_action_strings[4] = s_bubble_collect_stud;
+    s_bubble_action_strings[5] = s_bubble_collect_dynamite;
+    s_bubble_action_strings[7] = s_bubble_collect_elec_fence;
+    s_bubble_action_strings[6] = s_bubble_collect_barrier;
+    s_bubble_action_strings[8] = s_bubble_collect_drill;
+    s_bubble_action_strings[9] = s_bubble_collect_spade;
+    s_bubble_action_strings[10] = s_bubble_collect_hammer;
+    s_bubble_action_strings[11] = s_bubble_collect_spanner;
+    s_bubble_action_strings[12] = s_bubble_collect_laser;
+    s_bubble_action_strings[13] = s_bubble_collect_pusher;
+    s_bubble_action_strings[14] = s_bubble_collect_freezer;
+    s_bubble_action_strings[15] = s_bubble_collect_bird_scarer;
+    s_bubble_action_strings[16] = s_bubble_carry_crystal;
+    s_bubble_action_strings[17] = s_bubble_carry_ore;
+    s_bubble_action_strings[18] = s_bubble_carry_stud;
+    s_bubble_action_strings[19] = s_bubble_carry_dynamite;
+    s_bubble_action_strings[20] = s_bubble_carry_barrier;
+    s_bubble_action_strings[21] = s_bubble_carry_elec_fence;
+    s_bubble_action_strings[22] = s_bubble_goto;
+    s_bubble_action_strings[23] = s_bubble_dynamite;
+    s_bubble_action_strings[24] = s_bubble_reinforce;
+    s_bubble_action_strings[25] = s_bubble_drill;
+    s_bubble_action_strings[26] = s_bubble_repair;
+    s_bubble_action_strings[27] = s_bubble_dig;
+    s_bubble_action_strings[28] = s_bubble_flee;
+    s_bubble_action_strings[29] = s_bubble_power_off;
+    s_bubble_action_strings[30] = s_bubble_call_to_arms;
+    s_bubble_action_strings[31] = s_bubble_elec_fence;
+    s_bubble_action_strings[32] = s_bubble_eat;
+    s_bubble_action_strings[33] = s_bubble_drive;
+    s_bubble_action_strings[34] = s_bubble_upgrade;
+    s_bubble_action_strings[35] = s_bubble_build_path;
+    s_bubble_action_strings[36] = s_bubble_train;
+    s_bubble_action_strings[37] = s_bubble_recharge;
+    s_bubble_action_strings[38] = s_bubble_request;
 }
 
 const char* bubble_action_string_get(unsigned int index)

@@ -2406,9 +2406,17 @@ namespace reference_target {
 // FUNCTION: LEGORR 0x00462030
 void save_menu_open_from_reward(void)
 {
-    if (s_reward_save_frontend != NULL) {
-        (void)menu_enter(s_reward_save_frontend, FE_STATE_SAVE_REWARD);
-    }
+    FrontEnd* fe = s_reward_save_frontend;
+    if (fe == NULL || !frontend_state_change(fe, FE_STATE_SAVE_REWARD))
+        return;
+    /* SaveMenuOpenFromReward selects submenu zero in the separate save-menu
+     * set. The legacy routine then runs a blocking input loop; the portable
+     * frame loop owns that loop, so this entry prepares the same live state
+     * and returns to its caller. */
+    if (fe->menus[FE_MENU_SAVE].submenu_count <= 0 ||
+        !frontend_open(fe, FE_MENU_SAVE))
+        return;
+    fe->save_action = 1;
 }
 }
 

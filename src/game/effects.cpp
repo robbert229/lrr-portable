@@ -8,6 +8,9 @@
 #include "sound.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/record.hpp"
+#include "gods98/scene_pool.hpp"
+#include "gods98/scene_resources.hpp"
+#include "gods98/surface.hpp"
 #include "gods98/texture.hpp"
 #include "gods98/view.hpp"
 #include "level.hpp"
@@ -53,6 +56,10 @@ typedef struct TransientEffectInstanceLinks {
 static TransientEffectInstanceLinks* s_transient_effect_links;
 static int s_transient_effect_enabled = 1;
 static TimedEffectRuntimeHooks s_timed_effect_runtime_hooks;
+static TimedEffectSlotRenderHooks s_timed_effect_slot_render_hooks;
+/* The legacy UI owns these globals and renders synchronously. Reuse one
+ * snapshot to keep the mapped slot renderer's frame-local record small. */
+static TooltipOverlayState s_timed_effect_overlay_state;
 // GLOBAL: LEGORR 0x004aa64c
 static uint32_t s_timed_effect_cue_gate = 1u;
 static SceneTransformState s_scene_transform_state;
@@ -325,9 +332,9 @@ void timed_effect_slot_render(const TimedEffectSlotRenderState* state,
     if (state->view_height < y + height)
         y = state->wanted_height - height - 1.0f;
     memset(&overlay, 0, sizeof(overlay));
-    overlay.x = x;
+    overlay.x = top + inset;
     overlay.y = y;
-    overlay.width = top;
+    overlay.width = x;
     overlay.height = height;
     overlay.bands = state->bands;
     memcpy(overlay.fill_color, state->colors[0], sizeof(overlay.fill_color));
@@ -346,24 +353,33 @@ void timed_effect_slot_render(const TimedEffectSlotRenderState* state,
         if (state->special_item.enabled && state->special_item.handle != NULL &&
             hooks->render_item != NULL) {
             hooks->render_item(hooks->context, state->special_item.handle,
-                               overlay.x + (float)state->padding,
-                               overlay.y + (float)state->padding,
+                               overlay.x + (float)(state->bands + state->padding),
+                               overlay.y + (float)(state->bands + state->padding),
                                state->special_item.width,
                                state->special_item.height);
         }
         return;
     }
     if (state->items == NULL) return;
-    row_x = overlay.x;
+    row_x = overlay.x + (float)(state->bands + state->padding);
     row_height = 0.0f;
-    for (i = 0; i < state->item_count; ++i) {
-        const TimedEffectRenderItem* item = &state->items[i];
-        if (!item->enabled || item->handle == NULL) continue;
-        if (hooks->render_item != NULL)
-            hooks->render_item(hooks->context, item->handle, row_x, overlay.y,
-                               item->width, item->height);
-        row_x += item->width;
-        if (row_height < item->height) row_height = item->height;
+    {
+        float row_y = overlay.y + (float)(state->bands + state->padding) +
+            state->column * state->column_width;
+        for (i = 0; i < state->item_count; ++i) {
+            const TimedEffectRenderItem* item = &state->items[i];
+            if (!item->enabled || item->handle == NULL) {
+                row_y += row_height;
+                row_height = 0.0f;
+                row_x = overlay.x + (float)(state->bands + state->padding);
+                continue;
+            }
+            if (hooks->render_item != NULL)
+                hooks->render_item(hooks->context, item->handle, row_x,
+                                   row_y, item->width, item->height);
+            row_x += item->width;
+            if (row_height < item->height) row_height = item->height;
+        }
     }
     (void)row_height;
 }
@@ -1162,26 +1178,222 @@ void transient_effect_textures_preload(const char* filename_prefix,
         s_transient_effect_texture_count = i;
 }
 
-void* transient_effect_emitter_create(int scene_context,
+/* Renderer-owned resource creation stays behind the narrow record and mesh
+ * hooks; the emitter record setup, simulation warm-up, and registry do not. */
+// FUNCTION: LEGORR 0x00465430
+void* transient_effect_emitter_create(void* scene_context,
                                       uint32_t position_x,
                                       uint32_t position_y, int* direction,
                                       float red, float green, float blue,
-                                      float rate, int sound_id, int mode,
+                                      float rate, int parameter_9, int mode,
                                       uint32_t seed, int auxiliary)
 {
+    static const uint16_t mesh_indices[6] = { 0u, 3u, 2u, 2u, 1u, 0u };
+    unsigned char* bytes;
+    uint32_t* words;
+    const void* terrain = NULL;
+    void* scene_object = NULL;
+    void* render_record = NULL;
+    uint32_t slot_count;
+    unsigned int slot;
+    float center[2];
+    float position_x_world = 0.0f;
+    float position_y_world = 0.0f;
+    float position_z_world = 0.0f;
+    float dx, dy, dz, inverse_length;
     void* instance;
-    if (s_transient_effect_hooks.emitter_create == NULL) return NULL;
-    instance = s_transient_effect_hooks.emitter_create(
-        s_transient_effect_hooks.context, scene_context, position_x,
-        position_y, direction, red, green, blue, rate, sound_id, mode,
-        seed, auxiliary);
-    if (instance == NULL) return NULL;
+    int owns_scene_object = 0;
+    int render_failed = 0;
+
+    instance = engine_heap_alloc(0x2a8L);
+    if (instance == NULL || direction == NULL) {
+        if (instance != NULL) engine_heap_free(instance);
+        return NULL;
+    }
+    memset(instance, 0, 0x2a8u);
+    bytes = (unsigned char*)instance;
+    words = (uint32_t*)instance;
+
+    if (mode == 0 || mode == 2) {
+        float block_size;
+        int block_size_integer;
+        int cell_x, cell_y;
+        int sample_x, sample_y;
+        uint32_t jitter_x, jitter_y;
+        if (s_transient_effect_hooks.current_terrain_get == NULL) {
+            engine_heap_free(instance);
+            return NULL;
+        }
+        terrain = s_transient_effect_hooks.current_terrain_get(
+            s_transient_effect_hooks.context);
+        block_size = terrain_blocksize_get(terrain);
+        block_size_integer = crt_float_to_long(block_size);
+        if (terrain == NULL || block_size_integer <= 0 ||
+            !terrain_cell_world_center_xy_get(
+                terrain, (int)position_x, (int)position_y, center)) {
+            engine_heap_free(instance);
+            return NULL;
+        }
+        jitter_x = ((seed % 0x109eu) % (uint32_t)block_size_integer);
+        jitter_y = ((seed % 0x5ebu) % (uint32_t)block_size_integer);
+        position_x_world = (float)jitter_x - block_size * 0.5f + center[0];
+        position_y_world = (float)jitter_y - block_size * 0.5f + center[1];
+        if (terrain_world_xy_to_cell(terrain, position_x_world,
+                                     position_y_world, &sample_x, &sample_y)) {
+            position_z_world = (float)terrain_surface_height_get(
+                terrain, sample_x, sample_y);
+        }
+        else {
+            sample_x = (int)position_x;
+            sample_y = (int)position_y;
+            position_z_world = (float)terrain_surface_height_get(
+                terrain, sample_x, sample_y);
+        }
+        scene_object = lego::ddiscene_object_allocate(
+            (const lego::DDiSceneObjectDescriptor*)scene_root_object_get());
+        if (scene_object == NULL) {
+            engine_heap_free(instance);
+            return NULL;
+        }
+        owns_scene_object = 1;
+        (void)ddiscene_object_position_set(scene_object, NULL,
+                                           position_x_world,
+                                           position_y_world,
+                                           position_z_world);
+        words[0x97] = (uint32_t)crt_float_to_long(position_x_world);
+        words[0x98] = (uint32_t)crt_float_to_long(position_y_world);
+        words[0x99] = (uint32_t)crt_float_to_long(position_z_world);
+        words[0xa5] = 2u;
+        if ((seed & 3u) == 0u) words[0xa8] = (uint32_t)auxiliary;
+    }
+    else if (mode == 1) {
+        scene_object = scene_context;
+        words[0xa5] = 4u;
+    }
+    else {
+        engine_heap_free(instance);
+        return NULL;
+    }
+
+    dx = (float)direction[0];
+    dy = (float)direction[1];
+    dz = (float)direction[2];
+    inverse_length = 1.0f / (float)sqrt(dx * dx + dy * dy + dz * dz);
+    words[0x9a] = (uint32_t)(int)(dx * inverse_length);
+    words[0x9b] = (uint32_t)(int)(dy * inverse_length);
+    words[0x9c] = (uint32_t)(int)(dz * inverse_length);
+    words[0x9d] = (uint32_t)(int)red;
+    words[0x9e] = (uint32_t)(int)green;
+    words[0x9f] = (uint32_t)(int)blue;
+
+    if (mode == 2) {
+        words[0xa0] = 4u;
+        words[0xa1] = 0u;
+        words[0xa5] |= 8u;
+        words[0xa2] = 0x40000000u;
+    }
+    else {
+        if ((0.0f < rate) || (rate < 1.0f))
+            slot_count = (uint32_t)crt_float_to_long(rate);
+        else
+            slot_count = 10u;
+        words[0xa0] = slot_count;
+        words[0xa2] = (uint32_t)parameter_9;
+    }
+    if (scene_object == NULL ||
+        s_transient_effect_hooks.render_record_create == NULL) {
+        if (owns_scene_object) ddiscene_object_destroy(scene_object);
+        engine_heap_free(instance);
+        return NULL;
+    }
+    render_record = s_transient_effect_hooks.render_record_create(
+        s_transient_effect_hooks.context,
+        *(void**)((unsigned char*)scene_object + 4), 0x00465ee0u,
+        0x4800u, instance);
+    if (render_record == NULL) {
+        if (owns_scene_object) ddiscene_object_destroy(scene_object);
+        engine_heap_free(instance);
+        return NULL;
+    }
+    transient_effect_instance_handles_set(instance, scene_object,
+                                           render_record);
+
+    if (words[0xa0] != 0u) {
+        if (s_transient_effect_texture_count == 0u) {
+            render_failed = 1;
+        }
+        for (slot = 0; !render_failed && slot < words[0xa0]; ++slot) {
+            int render_slot = mesh_record_allocate_or_append(
+                render_record, 4u, 2u, 3u, mesh_indices);
+            if (render_slot < 0) {
+                render_failed = 1;
+                break;
+            }
+            lego::animated_texture_frame_surface_set(
+                render_record, render_slot,
+                s_transient_effect_textures[
+                    slot % s_transient_effect_texture_count]);
+            (void)render_object_color_vector_set(
+                render_record, render_slot, red, green, blue, 0);
+            (void)render_object_color_vector_set(
+                render_record, render_slot, red * 0.2f, green * 0.2f,
+                blue * 0.2f, 3);
+            indexed_record_flag6c_bit0_set(render_record, render_slot, 1);
+            {
+                uint32_t random_value = (uint32_t)level_rand_u16();
+                int32_t* particle = (int32_t*)(bytes +
+                    (size_t)render_slot * 0x3cu);
+                float first = (float)(random_value % 4u) + 6.0f;
+                random_value = (uint32_t)level_rand_u16();
+                particle[10] = (int32_t)first;
+                particle[11] = (int32_t)((float)(random_value % 4u) +
+                                           first + 2.0f);
+                if ((words[0xa5] & 8u) == 0u)
+                    particle[10] = (int32_t)((float)particle[10] * 0.5f);
+                else
+                    particle[11] = (int32_t)((float)particle[11] * 2.0f);
+            }
+        }
+    }
+    if (render_failed) {
+        if (s_transient_effect_hooks.render_record_release != NULL)
+            s_transient_effect_hooks.render_record_release(
+                s_transient_effect_hooks.context, render_record);
+        if (owns_scene_object) ddiscene_object_destroy(scene_object);
+        engine_heap_free(instance);
+        return NULL;
+    }
+
+    *(float*)(bytes + 0x258) = 0.0f;
+    if (mode != 2) {
+        int frame;
+        for (frame = 0; frame < 10; ++frame) {
+            if (*(float*)(bytes + 0x258) <= 0.0f) {
+                for (slot = 0; slot < words[0xa0]; ++slot) {
+                    if (*(uint32_t*)(bytes + (size_t)slot * 0x3cu) == 0u) {
+                        (void)transient_effect_particle_slot_initialize(
+                            instance, slot);
+                        break;
+                    }
+                }
+            }
+            *(float*)(bytes + 0x258) -= 5.0f;
+            for (slot = 0; slot < words[0xa0]; ++slot) {
+                if (*(uint32_t*)(bytes + (size_t)slot * 0x3cu) != 0u)
+                    transient_effect_segment_advance(instance, slot, 5.0f);
+            }
+        }
+    }
     {
         TransientEffectInstanceLinks* links =
             transient_effect_links_add(instance);
         TransientEffectInstanceLinks* tail =
             transient_effect_links_find(s_transient_effect_tail);
         if (links == NULL) {
+            if (s_transient_effect_hooks.render_record_release != NULL)
+                s_transient_effect_hooks.render_record_release(
+                    s_transient_effect_hooks.context, render_record);
+            if (owns_scene_object) ddiscene_object_destroy(scene_object);
             if (s_transient_effect_hooks.instance_release != NULL)
                 s_transient_effect_hooks.instance_release(
                     s_transient_effect_hooks.context, instance, NULL);
@@ -1448,6 +1660,16 @@ void timed_effect_runtime_hooks_set(const TimedEffectRuntimeHooks* hooks)
         s_timed_effect_runtime_hooks = *hooks;
 }
 
+void timed_effect_slot_render_hooks_set(
+    const TimedEffectSlotRenderHooks* hooks)
+{
+    if (hooks == NULL)
+        memset(&s_timed_effect_slot_render_hooks, 0,
+               sizeof(s_timed_effect_slot_render_hooks));
+    else
+        s_timed_effect_slot_render_hooks = *hooks;
+}
+
 TimedEffectRecord* timed_effect_record_get(unsigned int slot)
 {
     return (TimedEffectRecord*)timed_effect_record_storage_get(slot);
@@ -1491,10 +1713,131 @@ void timed_effect_timestamp_reset(unsigned int slot)
 void timed_effect_slot_render_record(const TimedEffectRecord* record,
                                      uint32_t render_x, uint32_t render_y)
 {
-    if (record != NULL && s_timed_effect_runtime_hooks.slot_render != NULL)
-        s_timed_effect_runtime_hooks.slot_render(
-            s_timed_effect_runtime_hooks.context, record,
-            render_x, render_y);
+    TooltipOverlayState* config = &s_timed_effect_overlay_state;
+    RectangularGridOverlayState overlay;
+    uint32_t colors[4][3];
+    const uint32_t* words;
+    uint32_t flags, padding, bands, count, i;
+    float inset, top, left, width, height, y, row_x, row_y, row_height;
+    void* resource = NULL;
+    if (record == NULL) return;
+    words = (const uint32_t*)record;
+    flags = words[0x278 / 4];
+    tooltip_overlay_state_current(config);
+    padding = config->values[0];
+    bands = config->values[1];
+    inset = (float)((padding + bands) * 2u);
+    if ((flags & 8u) != 0u) {
+        uint32_t handle = words[0x270 / 4];
+        if (s_timed_effect_runtime_hooks.resource_handle_resolve != NULL)
+            resource = s_timed_effect_runtime_hooks.resource_handle_resolve(
+                s_timed_effect_runtime_hooks.context, handle);
+        else if (sizeof(void*) == 4)
+            resource = (void*)(uintptr_t)handle;
+        top = 0.0f;
+        left = 0.0f;
+        if (resource != NULL &&
+            s_timed_effect_runtime_hooks.resource_extent_get != NULL)
+            s_timed_effect_runtime_hooks.resource_extent_get(
+                s_timed_effect_runtime_hooks.context, resource, &top, &left);
+        else if (resource != NULL && sizeof(void*) == 4) {
+            top = (float)*(uint32_t*)((unsigned char*)resource + 4);
+            left = (float)*(uint32_t*)((unsigned char*)resource + 8);
+        }
+    }
+    else {
+        uint32_t first = words[0x204 / 4];
+        uint32_t second = words[0x26c / 4];
+        top = (float)(first > second ? first : second);
+        left = (float)(words[0x208 / 4] * config->font_metric +
+                       words[0x264 / 4]);
+    }
+    top += inset;
+    left += inset;
+    if ((flags & 0x10u) == 0u) {
+        if ((int)config->values[2] < (int)top + (int)render_x)
+            width = (float)((int)config->values[2] - (int)top);
+        else
+            width = (float)render_x;
+    }
+    else if ((float)render_x + 32.0f <= (float)config->values[2])
+        width = (float)render_x + 32.0f - (float)(uint32_t)top;
+    else
+        width = (float)((int)config->values[2] - (int)top);
+    y = (float)(config->values[4] + render_y);
+    height = left;
+    if ((float)config->values[3] < y + height)
+        y = (float)(render_y - (uint32_t)height) - 1.0f;
+    memset(&overlay, 0, sizeof(overlay));
+    overlay.x = top;
+    overlay.y = y;
+    overlay.width = width;
+    overlay.height = height;
+    overlay.bands = bands;
+    for (i = 0; i < 3u; ++i) {
+        colors[0][i] = (uint32_t)(config->color_base[i] * 255.0f);
+        colors[1][i] = (uint32_t)(config->color_high[i] * 255.0f);
+        colors[2][i] = (uint32_t)(config->color_low[i] * 255.0f);
+        colors[3][i] = 0u;
+    }
+    memcpy(overlay.fill_color, colors[0], sizeof(overlay.fill_color));
+    memcpy(overlay.first_line_color, colors[1],
+           sizeof(overlay.first_line_color));
+    memcpy(overlay.second_line_color, colors[2],
+           sizeof(overlay.second_line_color));
+    overlay.overlay_mode = (flags & 8u) != 0u;
+    rectangular_grid_overlay_geometry_draw(&overlay,
+        &s_timed_effect_slot_render_hooks.overlay_hooks);
+    if (s_timed_effect_slot_render_hooks.overlay_background != NULL)
+        s_timed_effect_slot_render_hooks.overlay_background(
+            s_timed_effect_slot_render_hooks.context, top, y, width, height,
+            colors, overlay.overlay_mode ? 2 : 0);
+    if ((flags & 8u) != 0u) {
+        if (resource != NULL &&
+            s_timed_effect_slot_render_hooks.render_item != NULL)
+            s_timed_effect_slot_render_hooks.render_item(
+                s_timed_effect_slot_render_hooks.context, resource,
+                top + (float)(padding + bands),
+                y + (float)(padding + bands), top - inset, left - inset);
+        return;
+    }
+    count = words[0x25c / 4];
+    if (count > 20u) count = 20u;
+    row_x = top + (float)(padding + bands);
+    row_y = y + (float)(padding + bands) +
+        (float)words[0x208 / 4] * (float)config->font_metric;
+    row_height = 0.0f;
+    for (i = 0; i < count; ++i) {
+        uint32_t handle = words[0x20c / 4 + i];
+        float item_width = 0.0f;
+        float item_height = 0.0f;
+        resource = NULL;
+        if (s_timed_effect_runtime_hooks.resource_handle_resolve != NULL)
+            resource = s_timed_effect_runtime_hooks.resource_handle_resolve(
+                s_timed_effect_runtime_hooks.context, handle);
+        else if (sizeof(void*) == 4)
+            resource = (void*)(uintptr_t)handle;
+        if (resource == NULL) {
+            row_y += row_height;
+            row_height = 0.0f;
+            row_x = top + (float)(padding + bands);
+            continue;
+        }
+        if (s_timed_effect_runtime_hooks.resource_extent_get != NULL)
+            s_timed_effect_runtime_hooks.resource_extent_get(
+                s_timed_effect_runtime_hooks.context, resource,
+                &item_width, &item_height);
+        else if (sizeof(void*) == 4) {
+            item_width = (float)*(uint32_t*)((unsigned char*)resource + 4);
+            item_height = (float)*(uint32_t*)((unsigned char*)resource + 8);
+        }
+        if (s_timed_effect_slot_render_hooks.render_item != NULL)
+            s_timed_effect_slot_render_hooks.render_item(
+                s_timed_effect_slot_render_hooks.context, resource, row_x,
+                row_y, item_width, item_height);
+        row_x += item_width;
+        if (row_height < item_height) row_height = item_height;
+    }
 }
 
 // FUNCTION: LEGORR 0x0046b7c0

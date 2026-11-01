@@ -191,22 +191,22 @@ typedef struct TransientEffectHooks {
     int (*textures_preload)(void* context, const char* filename_prefix,
                             const char* filename_format,
                             uint32_t texture_count);
-    void* (*emitter_create)(void* context, int scene_context,
-                            uint32_t position_x, uint32_t position_y,
-                            int* direction, float red, float green, float blue,
-                            float rate, int sound_id, int mode,
-                            uint32_t seed, int auxiliary);
+    const void* (*current_terrain_get)(void* context);
+    void* (*render_record_create)(void* context, void* scene_interface,
+                                  uint32_t callback_address,
+                                  uint32_t callback_mode, void* owner);
+    void (*render_record_release)(void* context, void* render_record);
     void (*instance_release)(void* context, void* instance, void* resource);
 } TransientEffectHooks;
 void transient_effect_hooks_set(const TransientEffectHooks* hooks);
 void transient_effect_textures_preload(const char* filename_prefix,
                                        const char* filename_format,
                                        uint32_t texture_count);
-void* transient_effect_emitter_create(int scene_context,
+void* transient_effect_emitter_create(void* scene_context,
                                       uint32_t position_x,
                                       uint32_t position_y, int* direction,
                                       float red, float green, float blue,
-                                      float rate, int sound_id, int mode,
+                                      float rate, int parameter_9, int mode,
                                       uint32_t seed, int auxiliary);
 /* On wide hosts, the legacy emitter stores these interfaces in adjacent
  * 32-bit words; bind their native pointers through this sidecar. */
@@ -240,8 +240,9 @@ typedef struct TimedEffectRuntimeHooks {
     void (*cue_gate_set)(void* context, uint32_t enabled);
     int (*attached_effect_update)(void* context, uint32_t effect, int mode);
     uint32_t (*global_flags_get)(void* context);
-    void (*slot_render)(void* context, const TimedEffectRecord* record,
-                        uint32_t render_x, uint32_t render_y);
+    void* (*resource_handle_resolve)(void* context, uint32_t handle);
+    void (*resource_extent_get)(void* context, void* resource,
+                                float* width, float* height);
 } TimedEffectRuntimeHooks;
 void timed_effect_runtime_hooks_set(const TimedEffectRuntimeHooks* hooks);
 TimedEffectRecord* timed_effect_record_get(unsigned int slot);
@@ -358,6 +359,8 @@ typedef struct TimedEffectSlotRenderHooks {
 } TimedEffectSlotRenderHooks;
 void timed_effect_slot_render(const TimedEffectSlotRenderState* state,
                               const TimedEffectSlotRenderHooks* hooks); /* 0x0046bc30 */
+void timed_effect_slot_render_hooks_set(
+    const TimedEffectSlotRenderHooks* hooks);
 
 #ifdef __cplusplus
 }

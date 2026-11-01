@@ -185,7 +185,10 @@ void integer_pair_divide_to_float_pair(int x, int y, int divisor,
                                        float* out_x, float* out_y);
 
 /* FUN_0045b930: __ftol applied twice — the float pair truncated toward
- * zero into the integer pair (same deviation as float_to_long). */
+ * zero into the integer pair. The mapped retail ABI receives the destination
+ * pointers while its two source values are already on the x87 stack. The
+ * four-argument overload is the portable typed adapter. */
+void float_pair_to_integer_pair_x87(int* out_x, int* out_y); /* FUN_0045b930 */
 void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y);
 
 /* VC5 LIBC.LIB supplies this add-with-carry primitive on MSVC. */

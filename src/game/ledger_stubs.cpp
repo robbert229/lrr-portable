@@ -7089,9 +7089,8 @@ void ledger_stub_004653a0_TransientEffectTexturesPreload(
                                       texture_count);
 }
 
-// FUNCTION: LEGORR 0x00465430
 void* ledger_stub_00465430_TransientEffectEmitterCreate(
-    int scene_context, uint32_t position_x, uint32_t position_y,
+    void* scene_context, uint32_t position_x, uint32_t position_y,
     int* direction, float red, float green, float blue, float rate,
     int sound_id, int mode, uint32_t seed, int auxiliary)
 {
@@ -7245,15 +7244,62 @@ void ledger_stub_0046de80_CellQuadRunEmit(
     terrain_cell_quad_run_emit(level, records, record_count, hooks);
 }
 
-// CellSurfaceQuadHeightFill
+/* CellSurfaceQuadHeightFill (FUN_0046e220): locate the renderer-owned record
+ * for a cell, activate its indexed slot, and store the lower of the selected
+ * triangle's two corner heights. The wrapper's three-argument ABI follows
+ * the decompile; user_record is the raw +0x420/+0x424 backing record carried
+ * by the world-spatial sidecar. */
 // FUNCTION: LEGORR 0x0046e220
-int ledger_stub_0046e220_CellSurfaceQuadHeightFill(
-    TerrainSurfaceGrid* surface, TerrainCellQuadRunRecord* records,
-    unsigned int record_count, unsigned int x, unsigned int y,
-    const TerrainCellQuadSlotMutationHooks* hooks)
+void ledger_stub_0046e220_CellSurfaceQuadHeightFill(
+    void* surface_context, int x, int y)
 {
-    return terrain_cell_surface_quad_height_fill(surface, records,
-                                                  record_count, x, y, hooks);
+    WorldSpatialRecordModel* record;
+    TerrainSurfaceGrid* surface;
+    char* raw_record;
+    char* slot;
+    int corner_pair_indices[8];
+    uint32_t item_index = 0u;
+    uint32_t flags;
+    int orientation;
+    float vertices[12];
+    float first_height, second_height;
+    corner_pair_indices[3] = 2;
+    corner_pair_indices[4] = 2;
+    corner_pair_indices[5] = 3;
+    corner_pair_indices[6] = 3;
+    corner_pair_indices[0] = 0;
+    corner_pair_indices[1] = 1;
+    corner_pair_indices[2] = 1;
+    corner_pair_indices[7] = 0;
+    if (surface_context == NULL) return;
+    record = world_spatial_record_find_at_grid_coordinate(x, y,
+                                                           &item_index);
+    if (record == NULL || record->user_record == NULL) return;
+    raw_record = (char*)record->user_record;
+    memcpy(&flags, raw_record + 0x424, sizeof(flags));
+    flags = (flags & ~4u) | 1u;
+    memcpy(raw_record + 0x424, &flags, sizeof(flags));
+    /* SceneRenderLockToggle(handle, 0) is renderer-owned; this target's
+     * source tree exposes no callable operation for that COM transition. */
+    slot = raw_record + 0x324u + (size_t)item_index * 0x18u;
+    {
+        const uint32_t active = 1u;
+        const uint32_t zero = 0u;
+        memcpy(slot + 0x14, &active, sizeof(active));
+        memcpy(slot + 0x0c, &zero, sizeof(zero));
+        memcpy(slot + 0x10, &zero, sizeof(zero));
+    }
+    memcpy(&surface, (char*)surface_context + 4, sizeof(surface));
+    if (surface == NULL ||
+        !terrain_cell_surface_vertices_get(surface, (uint32_t)x,
+                                           (uint32_t)y, vertices)) return;
+    memcpy(&orientation, slot + 4, sizeof(orientation));
+    if (orientation < 0 || orientation > 3) return;
+    first_height = vertices[corner_pair_indices[orientation * 2] * 3u];
+    second_height = vertices[
+        corner_pair_indices[orientation * 2 + 1] * 3u];
+    if (second_height < first_height) first_height = second_height;
+    memcpy(slot + 8, &first_height, sizeof(first_height));
 }
 
 // StagedCellCandidateCollect

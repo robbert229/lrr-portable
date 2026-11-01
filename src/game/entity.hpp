@@ -754,6 +754,9 @@ float entity_stats_float_at98(const EntitySlot* e);   /* FUN_0046a020 */
 float entity_stats_float_at94(const EntitySlot* e);   /* FUN_0046a040 */
 float entity_stats_float_atf4(const EntitySlot* e);   /* FUN_0046a080 */
 float entity_speed_component_get(const EntitySlot* e); /* FUN_0046a0a0 (+f8) */
+/* EntityTypeComponentGet (FUN_0044a200): inspect the legacy entity-record
+ * layout and return the type-specific renderer component handle. */
+void* entity_type_component_get(const void* entity_record);
 float entity_stats_float_at130(const EntitySlot* e);  /* FUN_0046a170 */
 float entity_stats_float_at134(const EntitySlot* e);  /* FUN_0046a190 */
 float entity_stats_float_at120(const EntitySlot* e);  /* FUN_0046a1b0 */

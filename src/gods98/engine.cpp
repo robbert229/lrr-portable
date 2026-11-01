@@ -285,7 +285,56 @@ void engine_pre_tick_adapter(EngineContext* ctx)
 // FUNCTION: LEGORR 0x004231f0
 void EnginePreTick(void)
 {
-    engine_pre_tick_context_run(s_engine_pre_tick_context);
+    EngineContext* ctx = s_engine_pre_tick_context;
+    InputState* input;
+    char* target;
+    int length = 0;
+    int scan_limit;
+    int key;
+    int cancel;
+
+    if (ctx == NULL || ctx->input == NULL) return;
+    input = ctx->input;
+    target = input->text_target;
+    if (target == NULL) return;
+
+    scan_limit = input->text_cap > 0 ? input->text_cap : 12;
+    if (scan_limit > 12) scan_limit = 12;
+    while (length < scan_limit && target[length] != '\0') ++length;
+
+    if (input->cur[0x8e] == 0u ||
+        input->mirror[0x8e] == input->cur[0x8e]) {
+        cancel = (input->cur[0x9c] == 0u &&
+                  input->mirror[0x9c] != 0u) ||
+                 (input->cur[0x01] == 0u &&
+                  input->mirror[0x01] != 0u);
+        if (cancel) {
+            input->text_target = NULL;
+        }
+        else {
+            int text_limit = input->text_cap > 0
+                ? input->text_cap - 1 : 11;
+            if (text_limit > 11) text_limit = 11;
+            for (key = 0; key < INPUT_KEY_COUNT && length < text_limit;
+                 ++key) {
+                uint32_t mapped;
+                if (input->cur[key] == 0u ||
+                    input->mirror[key] == input->cur[key]) continue;
+                mapped = input_key_context(input, (uint32_t)key);
+                if (mapped == 0u) continue;
+                target[length++] = (char)toupper((unsigned char)mapped);
+                target[length] = '\0';
+            }
+        }
+    }
+    else if (length != 0) {
+        target[length - 1] = '\0';
+        --length;
+    }
+    input->text_len = length;
+    /* TransitionControl(0,0), called by the original cancel branch, is an
+     * intentional no-op in the checked-in decompile. */
+    input_mirror_and_clear(input);
 }
 
 /* KeepRunning's global app-state and resource predicates are owned by the

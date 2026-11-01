@@ -4189,7 +4189,6 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
     (void)engine_context_grid_pick(ctx, out, gx, gy);
 }
 
-// FUNCTION: LEGORR 0x0044a200
 static int object_lookup(int id)
 {
     return s_view_object_lookup_hook != NULL

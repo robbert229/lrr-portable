@@ -982,9 +982,38 @@ void integer_pair_divide_to_float_pair(int x, int y, int divisor,
     *out_y = (float)y / (float)divisor;
 }
 
-/* FUN_0045b930: the compiler's two-shot __ftol — each float truncates
- * toward zero into its int output (same deviation as float_to_long). */
+/* FUN_0045b930's caller has the two source values in ST(0)/ST(1); its
+ * arguments are only the output pointers. Keep that x87 ABI on the x86
+ * reference backend, where each _ftol consumes the next stack value. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+extern "C" int __cdecl _ftol(void);
 // FUNCTION: LEGORR 0x0045b930
+__declspec(naked) void float_pair_to_integer_pair_x87(int* out_x, int* out_y)
+{
+    __asm {
+        push esi
+        push edi
+        mov esi, dword ptr [esp + 0x0c]
+        mov edi, dword ptr [esp + 0x10]
+        call _ftol
+        mov dword ptr [esi], eax
+        call _ftol
+        mov dword ptr [edi], eax
+        pop edi
+        pop esi
+        ret
+    }
+}
+#else
+void float_pair_to_integer_pair_x87(int* out_x, int* out_y)
+{
+    /* Portable callers cannot supply the legacy x87 stack as an ABI input.
+     * Callers on these targets use the explicit four-argument adapter below. */
+    if (out_x != NULL) *out_x = 0;
+    if (out_y != NULL) *out_y = 0;
+}
+#endif
+
 void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y)
 {
     *out_x = (int)x;

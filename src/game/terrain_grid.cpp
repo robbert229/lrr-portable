@@ -2012,9 +2012,9 @@ int terrain_cell_surface_quad_height_fill(
             if (surface == NULL || surface->surface_vectors == NULL ||
                 x >= surface->width || y >= surface->height) return 0;
             terrain_cell_surface_vertices_get(surface, x, y, vertices);
-            height_a = vertices[corners[0] * 3u + 2u];
-            height_b = vertices[corners[1] * 3u + 2u];
-            record->slot_heights[item] = height_a > height_b
+            height_a = vertices[corners[0] * 3u];
+            height_b = vertices[corners[1] * 3u];
+            record->slot_heights[item] = height_a < height_b
                 ? height_a : height_b;
             return 1;
         }

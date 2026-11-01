@@ -673,12 +673,13 @@ void level_predug_coordinate_pool_clear(void)
 // FUNCTION: LEGORR 0x0044A4B0
 void predug_coordinate_pool_append(const int cell_xy[2])
 {
-    if (s_predug_coordinate_count < 20u) {
-        unsigned int slot = s_predug_coordinate_count;
-        int* const destination = s_predug_coordinates[slot];
-        destination[0] = cell_xy[0];
-        destination[1] = cell_xy[1];
-        s_predug_coordinate_count = slot + 1u;
+    volatile unsigned int* count = &s_predug_coordinate_count;
+    unsigned int slot = *count;
+    if (slot < 20u) {
+        s_predug_coordinates[slot][0] = cell_xy[0];
+        slot = *count;
+        s_predug_coordinates[slot][1] = cell_xy[1];
+        *count = slot + 1u;
     }
 }
 
@@ -3025,6 +3026,7 @@ int terrain_stamp_impact_handle(uint32_t x, uint32_t y, int direction,
  * tables consumed by the surface-type query helpers below. */
 #define SURFACE_TYPE_SLOTS 18
 static const char* s_surface_type_names[SURFACE_TYPE_SLOTS];
+// GLOBAL: LEGORR 0x00556320
 static uint32_t s_surface_type_values[SURFACE_TYPE_SLOTS];
 
 void surface_type_descriptions_load(SurfaceTypeDescriptionEntry entries[18],
