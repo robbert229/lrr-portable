@@ -4,6 +4,8 @@
 #include "ui_list.hpp"
 
 static float s_pointer_cursor_override_timer;
+// GLOBAL: LEGORR 0x005013c0
+static int s_ui_track_pointer_outer_gate;
 // GLOBAL: LEGORR 0x00500e1c
 static const char* s_pointer_cursor_names[56];
 
@@ -401,7 +403,7 @@ int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
                 }
                 handled = 1;
             }
-            else if (!handled) {
+            else {
                 current->button_flags[side] &= ~6u;
             }
         }
@@ -410,6 +412,7 @@ int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
             if (hooks->outer_region_hit(hooks->context, slot, x, y,
                                         (int)state->outer_horizontal,
                                         &selected)) {
+                if (mode == 0) s_ui_track_pointer_outer_gate = 1;
                 if (slot_index_out != NULL) *slot_index_out = current->index;
                 if (mode == 0) {
                     if (state->mode == 3u) {
@@ -424,8 +427,18 @@ int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
                 }
                 handled = 1;
             }
+            else if (mode == 0) {
+                s_ui_track_pointer_outer_gate = 0;
+            }
+        }
+        else if (mode == 0) {
+            /* The retail pass clears DAT_005013c0 after a button hit or
+             * when the active track misses its outer-region bounds. */
+            s_ui_track_pointer_outer_gate = 0;
         }
     }
+    if (mode == 0 && s_ui_track_pointer_outer_gate == 0)
+        state->mode = 3u;
     return handled;
 }
 

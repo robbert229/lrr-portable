@@ -4894,21 +4894,35 @@ float ledger_stub_00447b30_EntityActivityTick(
     return scaled_delta;
 }
 
+static void entity_type_behavior_cell_flag_80000_set(EntitySlot* entity,
+                                                      int set)
+{
+    LevelState* level;
+    int cell_x = -1;
+    int cell_y = -1;
+    if (entity == NULL || entity->owner_ctx == NULL) return;
+    level = entity->owner_ctx->level;
+    if (level == NULL) return;
+    entity_position_to_terrain_cell(entity, level, &cell_x, &cell_y);
+    level_cell_flag_80000_set(level, cell_x, cell_y, set);
+}
+
 // EntityTypeBehaviorUpdate
 // FUNCTION: LEGORR 0x00447ea0
 void ledger_stub_00447ea0_EntityTypeBehaviorUpdate(
     EntitySlot* entity, float delta, const EntityTypeBehaviorHooks* hooks)
 {
     int animation_done;
-    if (entity == NULL || hooks == NULL) return;
+    if (entity == NULL) return;
     switch (entity->type) {
     case 5:
         if ((entity->flags_3e8 & 0x2000u) != 0u &&
-            hooks->boulder_behavior != NULL)
+            hooks != NULL && hooks->boulder_behavior != NULL)
             hooks->boulder_behavior(hooks->context, entity, delta);
         return;
     case 6:
-        if (entity->attach_304 == NULL && hooks->animation_tick != NULL)
+        if (entity->attach_304 == NULL && hooks != NULL &&
+            hooks->animation_tick != NULL)
             hooks->animation_tick(hooks->context, entity, delta * 0.01f);
         return;
     case 8:
@@ -4917,31 +4931,32 @@ void ledger_stub_00447ea0_EntityTypeBehaviorUpdate(
             (entity->flags_3e0 & 0x80000u) != 0u) {
             entity->flags_3e0 &= ~0x80000u;
             entity->flags_3e8 |= 0x10000u;
-            if (hooks->animation_play != NULL)
+            if (hooks != NULL && hooks->animation_play != NULL)
                 hooks->animation_play(hooks->context, entity, "TickDown");
-            if (hooks->terrain_activity != NULL)
+            entity_type_behavior_cell_flag_80000_set(entity, 1);
+            if (hooks != NULL && hooks->terrain_activity != NULL)
                 hooks->terrain_activity(hooks->context, entity);
             return;
         }
         if ((entity->flags_3e8 & 0x10000u) != 0u) {
-            animation_done = hooks->animation_tick == NULL ? 0
+            animation_done = hooks == NULL || hooks->animation_tick == NULL ? 0
                 : hooks->animation_tick(hooks->context, entity, delta);
             if (animation_done || entity->field_340 <= 0.0f) {
                 entity->flags_3e8 &= ~0x10000u;
                 entity->flags_3e8 |= 0x800000u;
-                entity->flags_3e0 |= 0x80000u;
-                if (hooks->terrain_activity != NULL)
+                entity_type_behavior_cell_flag_80000_set(entity, 0);
+                if (hooks != NULL && hooks->terrain_activity != NULL)
                     hooks->terrain_activity(hooks->context, entity);
             }
             return;
         }
-        if (hooks->animation_tick != NULL)
+        if (hooks != NULL && hooks->animation_tick != NULL)
             hooks->animation_tick(hooks->context, entity, delta);
         return;
     case 11:
         if ((entity->flags_3e0 & 0x80000u) != 0u) {
             entity->flags_3e0 &= ~0x80000u;
-            if (hooks->terrain_activity != NULL)
+            if (hooks != NULL && hooks->terrain_activity != NULL)
                 hooks->terrain_activity(hooks->context, entity);
         }
         return;
@@ -4951,7 +4966,7 @@ void ledger_stub_00447ea0_EntityTypeBehaviorUpdate(
     case 16:
     case 17:
     case 19:
-        if (hooks->animation_tick != NULL)
+        if (hooks != NULL && hooks->animation_tick != NULL)
             hooks->animation_tick(hooks->context, entity, delta);
         return;
     default:
