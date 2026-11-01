@@ -187,6 +187,8 @@ void coordinate_list_callback_visit(void* list_key,
                                    CoordinateListVisitCallback callback,
                                    void* user); /* FUN_00456cb0 */
 typedef struct AdvisorPositionConfigEntry {
+    /* These are parsed config names/values; the loader resolves the two
+     * names through the fixed Advisor position and animation tables. */
     const char* position_name;
     const char* animation_name;
     int position_type;
@@ -195,6 +197,9 @@ typedef struct AdvisorPositionConfigEntry {
     float x;
     float y;
 } AdvisorPositionConfigEntry;
+/* lookup resolves one Advisor animation entry and supplies its created scene
+ * handle plus raw configured start/end times. The loader converts times to
+ * integer frame counts at 25 frames per configured time unit. */
 typedef int (*AdvisorAnimationConfigLookupHook)(const char* name,
                                                 uint32_t* handle,
                                                 float* start_time,

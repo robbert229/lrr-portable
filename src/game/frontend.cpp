@@ -5349,9 +5349,6 @@ static InterfaceSpawnRequestState s_interface_spawn_request_state;
 static float s_help_window_feedback_position;
 // GLOBAL: LEGORR 0x004dc644
 static float s_help_window_feedback_limit;
-static void (*s_help_window_feedback_reset)(int, int);
-static void (*s_help_window_feedback_cleanup)(void);
-static void (*s_help_window_feedback_finish)(int);
 static void (*s_help_window_sound_clear)(int);
 static void (*s_help_render_transition_clear)(int, int);
 
@@ -5471,17 +5468,11 @@ void help_window_button_feedback_update(int action, float amount)
 {
     switch (action) {
     case 0:
-        if (s_help_window_feedback_cleanup != NULL) {
-            s_help_window_feedback_cleanup();
-        }
+        help_render_transition_cleanup_if_active();
         return;
     case 1:
-        if (s_help_window_feedback_reset != NULL) {
-            s_help_window_feedback_reset(1, 0);
-        }
-        if (s_help_window_feedback_cleanup != NULL) {
-            s_help_window_feedback_cleanup();
-        }
+        ui_mode_resource_bit40_set_clear(1, 0u);
+        help_render_transition_cleanup_if_active();
         return;
     case 2:
         if (0.0f < s_help_window_feedback_position) {
@@ -5497,9 +5488,7 @@ void help_window_button_feedback_update(int action, float amount)
             s_help_window_feedback_position += amount * 0.2f;
             if (s_help_window_feedback_limit <= s_help_window_feedback_position) {
                 s_help_window_feedback_position = s_help_window_feedback_limit;
-                if (s_help_window_feedback_finish != NULL) {
-                    s_help_window_feedback_finish(0);
-                }
+                objective_score_text_origin_set(NULL);
             }
         }
         break;
@@ -5517,15 +5506,6 @@ void help_window_feedback_state_set(float position, float limit)
 float help_window_feedback_position_get(void)
 {
     return s_help_window_feedback_position;
-}
-
-void help_window_feedback_hooks_set(void (*reset)(int, int),
-                                    void (*cleanup)(void),
-                                    void (*finish)(int))
-{
-    s_help_window_feedback_reset = reset;
-    s_help_window_feedback_cleanup = cleanup;
-    s_help_window_feedback_finish = finish;
 }
 
 /* Install API for the transition-clear hook. Deviation: the corpus's

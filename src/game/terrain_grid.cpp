@@ -5,6 +5,7 @@
 #include <limits.h>
 
 #include "terrain_grid.hpp"
+#include "../gods98/block.hpp"
 #include "level.hpp"
 #include "game.hpp"
 #include "entity.hpp"
@@ -716,6 +717,74 @@ void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid)
     }
     free(grid->meshes);
     grid->meshes = NULL;
+}
+
+/* TextureSetConfigLoad (FUN_0042bb60): read the selected texture-set
+ * subgroup, commit its surface-text dimensions, initialize the terrain
+ * cell/mesh state, then load the tile bitmap set and roof bitmap. */
+int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
+                                    BlockFile* config,
+                                    const char* group_name)
+{
+    BlockRec* group;
+    BlockRec* entry;
+    const char* width_text = NULL;
+    const char* height_text = NULL;
+    const char* mesh_name = NULL;
+    const char* texture_name = NULL;
+    const char* roof_name = NULL;
+    int width;
+    int height;
+    if (grid == NULL || config == NULL || group_name == NULL) return 0;
+    group = block_subgroup(config, group_name);
+    if (group == NULL) return 0;
+    for (entry = block_first_child(group); entry != NULL;
+         entry = block_next_sibling(entry)) {
+        const char* name = block_name(entry);
+        const char* value = block_value(entry);
+        if (name == NULL || value == NULL) continue;
+        if (strcmp(name, "surftextwidth") == 0) width_text = value;
+        else if (strcmp(name, "surftextheight") == 0) height_text = value;
+        else if (strcmp(name, "meshbasename") == 0) mesh_name = value;
+        else if (strcmp(name, "texturebasename") == 0) texture_name = value;
+        else if (strcmp(name, "rooftexture") == 0) roof_name = value;
+    }
+    if (width_text == NULL || height_text == NULL) return 0;
+    width = atoi(width_text);
+    height = atoi(height_text);
+    if (width <= 0 || height <= 0) return 0;
+
+    grid->width = (uint32_t)width;
+    grid->height = (uint32_t)height;
+    grid->mesh_basename = mesh_name;
+    grid->texture_basename = texture_name;
+
+    /* Surface-text character remapping and the scene's cell initialization
+     * callbacks have no compatible hook on TerrainTileMeshGrid yet. */
+    if (mesh_name == NULL) return 0;
+    if (!terrain_tile_mesh_grid_load(grid, mesh_name)) return 0;
+    if (texture_name == NULL) return 0;
+    if (grid->textures != NULL) terrain_cell_resource_grid_dispose(grid->textures);
+    grid->textures = terrain_cell_resource_grid_load(texture_name,
+        (uint32_t)width, (uint32_t)height);
+    if (grid->textures == NULL) return 0;
+    if (roof_name == NULL) return 0;
+    grid->roof_texture = texture_load(roof_name);
+    return grid->roof_texture != NULL;
+}
+
+void terrain_texture_set_release(TerrainTileMeshGrid* grid)
+{
+    if (grid == NULL) return;
+    if (grid->textures != NULL) {
+        terrain_cell_resource_grid_dispose(grid->textures);
+        grid->textures = NULL;
+    }
+    if (grid->roof_texture != NULL) {
+        texture_release((TextureSurface*)grid->roof_texture);
+        grid->roof_texture = NULL;
+    }
+    terrain_tile_mesh_grid_release(grid);
 }
 
 /* TerrainGridEntryResourcesReleaseAll (FUN_00434530): release every loaded

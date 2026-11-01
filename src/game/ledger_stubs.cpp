@@ -1432,12 +1432,9 @@ int ledger_stub_00408d70_TerrainDescriptorCoordinateCountLimitCheck(
     uint8_t* record = (uint8_t*)path_record_last_peek();
     uint32_t descriptor_flags;
     uint32_t descriptor_value;
-    uint32_t coordinate_count;
-    uint32_t matching_count = 0u;
+    uint32_t matching_count;
     uint32_t limit;
-    uint32_t index;
     int selector;
-    int result;
 
     /* TerrainDescriptorFindExact(0, &key) walks the path-record chain and
      * compares the key against record +8.  The port stores that same chain
@@ -1450,19 +1447,9 @@ int ledger_stub_00408d70_TerrainDescriptorCoordinateCountLimitCheck(
     }
     if (record == NULL) return 0;
 
+    matching_count = (uint32_t)count_matching_coordinates_in_list(
+        record, type, row);
     memcpy(&descriptor_value, record, sizeof(descriptor_value));
-    memcpy(&coordinate_count, record + 0x20, sizeof(coordinate_count));
-    if (coordinate_count != 0u) {
-        uint32_t** coordinates = (uint32_t**)(record + 0x2c);
-        for (index = 0u; index < coordinate_count; ++index) {
-            const uint32_t* pair = coordinates[index];
-            if (pair != NULL && pair[0] == (uint32_t)type &&
-                pair[1] == (uint32_t)row) {
-                ++matching_count;
-            }
-        }
-    }
-
     memcpy(&descriptor_flags, record + 0xd0, sizeof(descriptor_flags));
     selector = (descriptor_flags & 2u) != 0u ? 15 : 4;
     if (type == 6) {
@@ -1481,8 +1468,7 @@ int ledger_stub_00408d70_TerrainDescriptorCoordinateCountLimitCheck(
     else {
         return 1;
     }
-    result = matching_count < limit;
-    return result;
+    return matching_count < limit;
 }
 
 // FUNCTION: LEGORR 0x00408ec0
@@ -2917,45 +2903,12 @@ int ledger_stub_0042b330_LoadTileMeshes(TerrainTileMeshGrid* grid,
 }
 
 // TextureSetConfigLoad
-static const char* texture_set_config_value(BlockRec* group,
-                                            const char* key)
-{
-    BlockRec* entry;
-    if (group == NULL || key == NULL) return NULL;
-    for (entry = block_first_child(group); entry != NULL;
-         entry = block_next_sibling(entry)) {
-        const char* name = block_name(entry);
-        if (name != NULL && strcmp(name, key) == 0)
-            return block_value(entry);
-    }
-    return NULL;
-}
 // FUNCTION: LEGORR 0x0042bb60
 int ledger_stub_0042bb60_TextureSetConfigLoad(TerrainTileMeshGrid* grid,
                                               BlockFile* config,
                                               const char* group_name)
 {
-    BlockRec* group;
-    const char* width_text;
-    const char* height_text;
-    const char* mesh_name;
-    int width;
-    int height;
-    if (grid == NULL || config == NULL || group_name == NULL) return 0;
-    group = block_subgroup(config, group_name);
-    if (group == NULL) return 0;
-    width_text = texture_set_config_value(group, "surftextwidth");
-    height_text = texture_set_config_value(group, "surftextheight");
-    mesh_name = texture_set_config_value(group, "meshbasename");
-    if (width_text == NULL || height_text == NULL || mesh_name == NULL)
-        return 0;
-    width = atoi(width_text);
-    height = atoi(height_text);
-    if (width <= 0 || height <= 0) return 0;
-    grid->width = (uint32_t)width;
-    grid->height = (uint32_t)height;
-    if (!terrain_tile_mesh_grid_load(grid, mesh_name)) return 0;
-    return 1;
+    return terrain_texture_set_config_load(grid, config, group_name);
 }
 
 // FUNCTION: LEGORR 0x0042c330

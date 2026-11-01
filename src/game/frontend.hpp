@@ -698,9 +698,6 @@ void     ui_mode_resource_reposition_hook_set(
 void     help_window_button_feedback_update(int action, float amount);
 void     help_window_feedback_state_set(float position, float limit);
 float    help_window_feedback_position_get(void);
-void     help_window_feedback_hooks_set(void (*reset)(int, int),
-                                        void (*cleanup)(void),
-                                        void (*finish)(int));
 void     help_render_transition_clear_hook_set(void (*hook)(int, int));
 void     help_render_transition_cleanup_if_active(void);
 void     help_window_button_rect_set(int index, float x, float y,

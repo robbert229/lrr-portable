@@ -3272,40 +3272,62 @@ void rgb_channels_unpack(uint32_t color, uint8_t* red, uint8_t* green,
     }
 }
 
-/* SurfacePixelRowsFlipWithScratch (FUN_0047D740) — see surface.hpp. The
- * corpus walks the row pairs from the outside in, three stage copies per
- * pair (top row to the scratch, bottom row onto the top, scratch onto the
- * bottom), each stage (row_bytes/2) DWORDs plus (even-rounded row_bytes) & 3
- * trailing bytes, advancing both cursors by the even-rounded row_bytes.
- * The dword/tail split sums to exactly that, so the port copies the whole
- * even span per stage. Deviations: NULL record/pixels return (the corpus
- * strides its surface blindly) and a non-positive row count skips the walk. */
+/* SurfacePixelRowsFlipWithScratch (FUN_0047D740): reverse row pairs using
+ * the original dword loop and its trailing-byte loop. */
 // FUNCTION: LEGORR 0x0047d740
 void surface_pixel_rows_flip_with_scratch(SurfaceRecord* rec)
 {
-    if (rec == NULL || rec->pixels == NULL) {
-        return; /* deviation: the corpus strides the surface blindly */
-    }
-    const int half = rec->row_bytes / 2;          /* corpus's uVar2 */
-    const long span = (long)half * 2;             /* even-rounded row_bytes */
-    char* const first = (char*)rec->pixels;
-    char* const last = first + (ptrdiff_t)(rec->row_count - 1) * span;
-    char* scratch = (char*)engine_heap_alloc(span);
+    uint32_t half_bytes = (uint32_t)(rec->row_bytes / 2);
+    uint32_t span = half_bytes * 2u;
+    uint32_t* top = (uint32_t*)rec->pixels;
+    uint32_t* bottom = (uint32_t*)((char*)top +
+        ((uint32_t)rec->row_count - 1u) * span);
+    uint32_t* scratch = (uint32_t*)engine_heap_alloc((long)span);
     uint32_t lap = 0u;
-    if (rec->row_count > 1) { /* deviation: guarded; corpus tests (rows & ~1) */
-        char* top = first;
-        char* bottom = last;
-        for (;;) {
-            memcpy(scratch, top, (size_t)span);              /* A -> scratch */
-            memcpy(top, bottom, (size_t)span);               /* B -> A */
-            memcpy(bottom, scratch, (size_t)span);           /* scratch -> B */
-            lap = lap + 1u;
-            top = top + span;
-            bottom = bottom - span;
-            if (lap >= (uint32_t)((uint32_t)rec->row_count >> 1)) {
-                break;
+
+    if (((uint32_t)rec->row_count & 0xfffffffeu) != 0u) {
+        do {
+            uint32_t* source = top;
+            uint32_t* destination = scratch;
+            uint32_t count;
+            for (count = (half_bytes & 0x7fffffffu) >> 1;
+                 count != 0u; --count) {
+                *destination++ = *source++;
             }
-        }
+            for (count = span & 3u; count != 0u; --count) {
+                *(uint8_t*)destination = *(uint8_t*)source;
+                destination = (uint32_t*)((char*)destination + 1);
+                source = (uint32_t*)((char*)source + 1);
+            }
+
+            source = bottom;
+            destination = top;
+            for (count = (half_bytes & 0x7fffffffu) >> 1;
+                 count != 0u; --count) {
+                *destination++ = *source++;
+            }
+            for (count = span & 3u; count != 0u; --count) {
+                *(uint8_t*)destination = *(uint8_t*)source;
+                destination = (uint32_t*)((char*)destination + 1);
+                source = (uint32_t*)((char*)source + 1);
+            }
+
+            source = scratch;
+            destination = bottom;
+            for (count = (half_bytes & 0x7fffffffu) >> 1;
+                 count != 0u; --count) {
+                *destination++ = *source++;
+            }
+            for (count = span & 3u; count != 0u; --count) {
+                *(uint8_t*)destination = *(uint8_t*)source;
+                destination = (uint32_t*)((char*)destination + 1);
+                source = (uint32_t*)((char*)source + 1);
+            }
+
+            ++lap;
+            top = (uint32_t*)((char*)top + span);
+            bottom = (uint32_t*)((char*)bottom - span);
+        } while (lap < ((uint32_t)rec->row_count >> 1));
     }
     engine_heap_free(scratch);
 }

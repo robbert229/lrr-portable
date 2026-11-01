@@ -2182,9 +2182,27 @@ int level_cell_occupied_at(const LevelState* s, int cx, int cy)
 uint32_t level_cell_occupied_at_current(const int cell_xy[2])
 {
     GameContext* game = entity_pool_callback_context_get();
-    if (cell_xy == NULL || game == NULL) return 0u;
-    return cell_flag_word(game->level, cell_xy[0], cell_xy[1]) &
-           0x20000000u;
+    LevelState* level;
+    int x;
+    int y;
+    int width;
+    int height;
+    uint32_t index;
+    const uint8_t* voxels;
+    uint32_t flags;
+    if (cell_xy == NULL || game == NULL || game->level == NULL) return 0u;
+    level = game->level;
+    x = cell_xy[0];
+    y = cell_xy[1];
+    width = level_int(level, LEVEL_OFF_WIDTH);
+    height = level_int(level, LEVEL_OFF_HEIGHT);
+    if (x >= 0 && y >= 0 && x < width && y < height) {
+        voxels = (const uint8_t*)level_load_ptr(level, LEVEL_OFF_VOXELS);
+        index = (uint32_t)(width * y + x);
+        flags = *(const uint32_t*)(voxels + 8u + index * LEVEL_VOXEL_STRIDE);
+        return flags & 0x20000000u;
+    }
+    return 0u;
 }
 
 /* FUN_004330e0: terrain/wave pair mask 0x180000. */

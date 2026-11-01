@@ -1098,10 +1098,10 @@ void advisor_position_record_initialize(int row, uint32_t animation_index,
     }
 }
 
-/* AdvisorPositionConfigLoad (FUN_00401530): translate the two configured
- * names to their table slots, then initialize each valid action row. The
- * caller supplies parsed records because the engine's block iterator and
- * localized action-name resolver are separate subsystems. */
+/* AdvisorPositionConfigLoad (FUN_00401530): the block iterator and token
+ * resolvers have already produced these fields. Translate the configured
+ * position and animation names, then initialize the corresponding action
+ * row with the parsed indices, modes, and coordinates. */
 // FUNCTION: LEGORR 0x00401530
 int advisor_position_config_load(const AdvisorPositionConfigEntry* entries,
                                  uint32_t count)
@@ -1132,8 +1132,10 @@ int advisor_position_config_load(const AdvisorPositionConfigEntry* entries,
     return loaded;
 }
 
-/* AdvisorConfigSlotLookup (FUN_00401270): resolve the configured animation
- * names into the bounded animation handle table. */
+/* AdvisorConfigSlotLookup (FUN_00401270): walk all eleven configured names.
+ * The callback performs config lookup/resource creation; successful entries
+ * store the resulting scene handle and the configured time window in frames.
+ * The reference multiplies each time by 25 and converts it to an integer. */
 // FUNCTION: LEGORR 0x00401270
 int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
                               void* user)
@@ -1147,9 +1149,11 @@ int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
         float end_time = 0.0f;
         if (lookup(s_advisor_animation_names[i], &handle, &start_time,
                    &end_time, user)) {
-            start_time *= 25.0f;
-            end_time *= 25.0f;
-            advisor_animation_slot_install(i, handle, start_time, end_time);
+            int start_frame = (int)(start_time * 25.0f);
+            int end_frame = (int)(end_time * 25.0f);
+            advisor_animation_slot_install(i, handle,
+                                           (float)start_frame,
+                                           (float)end_frame);
             ++loaded;
         }
     }

@@ -51,10 +51,21 @@ typedef struct TerrainTileMeshGrid {
     void* context;
     TerrainTileMeshRegisterHook register_mesh;
     TerrainTileMeshReleaseHook release_mesh;
+    /* TextureSetConfigLoad state. The decoded bitmap handles are owned by
+     * this grid and released with terrain_texture_set_release(). */
+    struct TerrainCellResourceGrid* textures;
+    void* roof_texture;
+    const char* mesh_basename;
+    const char* texture_basename;
 } TerrainTileMeshGrid;
 int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid,
                                 const char* bitmap_prefix);
 void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid);
+struct BlockFile;
+int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
+                                    struct BlockFile* config,
+                                    const char* group_name); /* 0x0042bb60 */
+void terrain_texture_set_release(TerrainTileMeshGrid* grid);
 typedef struct TerrainCellResourceGrid {
     uint32_t width;
     uint32_t height;
