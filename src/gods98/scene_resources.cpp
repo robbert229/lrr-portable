@@ -217,16 +217,18 @@ int shared_texture_root_register(const char* root)
         if (length >= sizeof(s_shared_texture_root))
             length = sizeof(s_shared_texture_root) - 1u; /* port bound */
         written = length;
-        /* Reference quirk: the final stored byte is always the appended
-         * backslash, replacing whatever was copied there; when the byte
-         * two before the end is already a backslash the root loses one
-         * extra byte.  The reference also repoints the model-render list
+        /* The reference checks the final input character: if the root
+         * lacks a trailing backslash, it appends one.  The reference also
+         * repoints the model-render list
          * head (DAT_00534558) at this freshly allocated string; this port
          * keeps the root in the module static instead. */
-        if (length >= 2u && root[length - 2u] == '\\')
-            written = length - 1u;
+        if (length == 0u || root[length - 1u] != '\\') {
+            if (length >= sizeof(s_shared_texture_root) - 1u)
+                length = sizeof(s_shared_texture_root) - 2u;
+            written = length + 1u;
+        }
         if (length != 0u) memcpy(s_shared_texture_root, root, length);
-        if (written != 0u) s_shared_texture_root[written - 1u] = '\\';
+        s_shared_texture_root[written - 1u] = '\\';
         s_shared_texture_root[written] = '\0';
     }
     /* The reference zeroes the twenty-slot table (DAT_00540584) and the two
