@@ -77,6 +77,7 @@ static unsigned int s_directx_error_count;
 static const char* s_directx_error_source;
 static const char* s_directx_error_module;
 extern float random_float_range(float minimum, float maximum);
+extern uint32_t rng_thunk_draw15(void);
 // GLOBAL: LEGORR 0x005343c8
 static InputActionToggleState s_input_action_toggle_state;
 static uint32_t* s_ui_transition_feature_word;
@@ -6251,6 +6252,23 @@ void ledger_stub_0044d0d0_DriftOffsetStepApply(float delta)
 }
 
 // RandomWaypointTimerStepApply
+typedef struct MotionWaypointDefaultRandomContext {
+    unsigned int calls;
+} MotionWaypointDefaultRandomContext;
+
+static float motion_waypoint_timer_default_random(void* context,
+                                                   float minimum,
+                                                   float maximum)
+{
+    MotionWaypointDefaultRandomContext* random_context =
+        (MotionWaypointDefaultRandomContext*)context;
+    unsigned int call = random_context != NULL ? random_context->calls++ : 0u;
+    if (call == 2u) {
+        return (float)(rng_thunk_draw15() % 1000u) * 0.001f;
+    }
+    return random_float_range(minimum, maximum);
+}
+
 // FUNCTION: LEGORR 0x0044d280
 void ledger_stub_0044d280_RandomWaypointTimerStepApply(
     MotionWaypointTimerState* state, float delta,
@@ -6258,8 +6276,14 @@ void ledger_stub_0044d280_RandomWaypointTimerStepApply(
 {
     int i;
     float first_step;
-    if (state == NULL || random_range == NULL || (state->flags & 4u) == 0u)
+    MotionWaypointDefaultRandomContext default_random_context;
+    if (state == NULL || (state->flags & 4u) == 0u)
         return;
+    if (random_range == NULL) {
+        default_random_context.calls = 0u;
+        random_range = motion_waypoint_timer_default_random;
+        context = &default_random_context;
+    }
     if ((state->flags & 8u) == 0u) {
         state->delay -= delta;
         if (state->delay > 0.0f) return;

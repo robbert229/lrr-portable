@@ -304,9 +304,9 @@ uint32_t render_object_hierarchy_float3_set(void* scene_object,
     if (mesh == NULL) return 0;
     memcpy(&mesh_record, (char*)mesh + 0x0c, sizeof(mesh_record));
     if (mesh_record != NULL) {
-        if (hooks->mesh_record_set != NULL) {
-            hooks->mesh_record_set(mesh_record, xyz, hooks->context);
-        }
+        /* FUN_00474e90 calls FUN_00482370 directly for the mesh-record
+         * branch; scale the stored vertex positions in place. */
+        mesh_vertices_scale_apply(mesh_record, xyz[0], xyz[1], xyz[2]);
         return 0;
     }
     memcpy(&scene_interface, (char*)mesh + 8, sizeof(scene_interface));
