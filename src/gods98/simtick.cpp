@@ -693,24 +693,31 @@ void simtick_bitfield_tree(int* base, int code)
     if (base == NULL) {
         return;
     }
-    /* corpus 0x49cf90: 16-bit code ladder, 0x80000000.. scale, scanning the
-     * entry stream (stride 4) for a low-short code match. */
+    /* WadHuffmanCanonicalCodesBuild assigns canonical codes in increasing
+     * bit-length order, then stores the low-bit-reversed code used by the
+     * LSB-first decoder. Each entry is 16 bytes: code at +8, length at +12. */
     int      bits = 1;
-    int      acc = 0;
+    uint32_t next_code = 0u;
     uint32_t scale = 0x80000000u;
-    int      target = 0;
     do {
         uint32_t n = (uint32_t)code;
         if (code != 0) {
             int* entry = base + 8;
             do {
                 if ((int16_t)(unsigned)(uint32_t)entry[1] == (int16_t)bits) {
+                    uint32_t canonical = next_code / scale;
+                    uint32_t reversed = 0u;
+                    int bit;
+                    for (bit = 0; bit < bits; ++bit) {
+                        reversed = (reversed << 1) | (canonical & 1u);
+                        canonical >>= 1;
+                    }
                     if (s_tree_hook != NULL) {
-                        s_tree_hook(acc / (int)scale, bits);
+                        s_tree_hook((int)(next_code / scale), bits);
                     }
                     ++s_tree_fired;
-                    entry[0] = target;
-                    acc += (int)scale;
+                    entry[0] = (int)reversed;
+                    next_code += scale;
                 }
                 entry += 4;
                 --n;
