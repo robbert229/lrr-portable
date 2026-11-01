@@ -868,9 +868,9 @@ void scene_hierarchy_interface_register_recursive(unsigned short* next_index,
 typedef int (*SharedObjectEntryResolveFn)(const char* entry_name,
                                           void* entry_record);
 typedef int (*SharedObjectSoundEnabledFn)(void);
-typedef void* (*SharedObjectSoundSubmitFn)(void* sound_object,
-                                          void* resource, int changed,
-                                          int mode, int loop);
+typedef int (*SharedObjectSoundSubmitFn)(void* sound_object, int alias,
+                                         uint32_t loop, uint32_t positional,
+                                         const float* xyz);
 void shared_object_directory_scan_configure(
     const char* directory, SharedObjectEntryResolveFn resolve,
     SharedObjectSoundEnabledFn sound_enabled,
@@ -879,6 +879,7 @@ const char* shared_object_directory_root_get(void);
 void shared_object_sound_callbacks_get(
     SharedObjectSoundEnabledFn* enabled_out,
     SharedObjectSoundSubmitFn* submit_out);
+void shared_object_timed_sound_event_update(void* owner, void* track); /* 0x487de0 */
 
 typedef struct SceneEntryExpandInfo {
     const char* name;

@@ -4,6 +4,7 @@
 
 #include "entity.hpp"
 #include "frontend.hpp"
+#include "cmd.hpp"
 #include "type_config_ports.hpp"
 #include "gods98/entity.hpp"
 #include "gods98/block.hpp"
@@ -146,6 +147,123 @@ static int entity_type_config_shape_parse(void* row, const char* shape_text,
     return 1;
 }
 
+/* UpgradeLevelTableParse (FUN_0046c160) writes a four-word header at the
+ * building row's +0x8c and five-word records in a 0x14-byte array. The
+ * portable owner keeps the name/value pointers out of the retail dword
+ * image while preserving its indices and counts. */
+static int entity_type_config_building_upgrades_parse(
+    void* row, TypeConfigTable* table, uint32_t row_index)
+{
+    TypeConfigShapeOwner* owner;
+    uint32_t level;
+    if (row == NULL || table == NULL || table->row_owned == NULL ||
+        row_index >= table->count) return 0;
+    owner = (TypeConfigShapeOwner*)table->row_owned[row_index];
+    if (owner == NULL) return 0;
+    owner->upgrade_records = (uint32_t*)engine_heap_alloc(4000L);
+    owner->upgrade_values = (char**)calloc(200u, sizeof(char*));
+    owner->upgrade_names = (const void**)calloc(200u, sizeof(void*));
+    if (owner->upgrade_records == NULL || owner->upgrade_values == NULL ||
+        owner->upgrade_names == NULL) {
+        engine_heap_free(owner->upgrade_records);
+        free(owner->upgrade_values);
+        free(owner->upgrade_names);
+        owner->upgrade_records = NULL;
+        owner->upgrade_values = NULL;
+        owner->upgrade_names = NULL;
+        return 0;
+    }
+    memset(owner->upgrade_records, 0, 4000u);
+    owner->upgrade_count = 0u;
+    owner->upgrade_level_mask = 0u;
+    for (level = 0u; level < 16u; ++level) {
+        char path[48];
+        BlockRec* section;
+        BlockRec* entry;
+        path[0] = 'U'; path[1] = 'p'; path[2] = 'g'; path[3] = 'r';
+        path[4] = 'a'; path[5] = 'd'; path[6] = 'e'; path[7] = 's';
+        path[8] = ' ';
+        path[9] = 'L'; path[10] = 'e'; path[11] = 'v'; path[12] = 'e';
+        path[13] = 'l';
+        path[14] = (char)('0' + ((level >> 3) & 1u));
+        path[15] = (char)('0' + ((level >> 2) & 1u));
+        path[16] = (char)('0' + ((level >> 1) & 1u));
+        path[17] = (char)('0' + (level & 1u));
+        path[18] = 0;
+        section = s_entity_type_config_file != NULL
+            ? block_subgroup(s_entity_type_config_file, path) : NULL;
+        if (section == NULL) continue;
+        owner->upgrade_level_mask |= level;
+        for (entry = block_first_child(section); entry != NULL;
+             entry = block_next_equal_key(entry)) {
+            const char* source = block_value(entry);
+            const char* first_comma;
+            const char* second_comma;
+            size_t value_length;
+            size_t third_length;
+            char* value_copy;
+            char* third_copy;
+            char* second_copy;
+            uint32_t* record;
+            uint32_t ordinal;
+            if (source == NULL || owner->upgrade_count >= 200u) continue;
+            first_comma = strchr(source, ',');
+            second_comma = first_comma != NULL
+                ? strchr(first_comma + 1, ',') : NULL;
+            if (first_comma == NULL || second_comma == NULL ||
+                strchr(second_comma + 1, ',') != NULL) continue;
+            value_length = (size_t)(second_comma - source);
+            third_length = strlen(second_comma + 1);
+            if (value_length >= 256u || third_length >= 256u) continue;
+            value_copy = (char*)engine_heap_alloc((long)(value_length + 1u));
+            third_copy = (char*)engine_heap_alloc((long)(third_length + 1u));
+            second_copy = (char*)engine_heap_alloc(
+                (long)((size_t)(first_comma - source) + 1u));
+            if (value_copy == NULL || third_copy == NULL ||
+                second_copy == NULL) {
+                engine_heap_free(value_copy);
+                engine_heap_free(third_copy);
+                engine_heap_free(second_copy);
+                continue;
+            }
+            memcpy(second_copy, source, (size_t)(first_comma - source));
+            second_copy[first_comma - source] = '\0';
+            memcpy(value_copy, first_comma + 1, value_length -
+                   (size_t)(first_comma - source) - 1u);
+            value_copy[value_length -
+                (size_t)(first_comma - source) - 1u] = '\0';
+            memcpy(third_copy, second_comma + 1, third_length + 1u);
+            record = owner->upgrade_records + owner->upgrade_count * 5u;
+            record[0] = level;
+            record[1] = (uint32_t)(atoi(value_copy) - 1);
+            record[2] = (uint32_t)atoi(second_copy);
+            ordinal = owner->upgrade_count;
+            owner->upgrade_values[ordinal] = third_copy;
+            owner->upgrade_names[ordinal] =
+                upgrade_name_entry_find(block_name(entry));
+            owner->upgrade_count = ordinal + 1u;
+            record[3] = ordinal + 1u;
+            record[4] = owner->upgrade_names[ordinal] != NULL
+                ? ordinal + 1u : 0u;
+            engine_heap_free(second_copy);
+        }
+    }
+    entity_type_config_word_set(row, 0x90u, owner->upgrade_count);
+    entity_type_config_word_set(row, 0x98u, owner->upgrade_level_mask);
+    if (owner->upgrade_count == 0u) {
+        engine_heap_free(owner->upgrade_records);
+        free(owner->upgrade_values);
+        free(owner->upgrade_names);
+        owner->upgrade_records = NULL;
+        owner->upgrade_values = NULL;
+        owner->upgrade_names = NULL;
+    }
+    else {
+        entity_type_config_word_set(row, 0x8cu, row_index + 1u);
+    }
+    return 1;
+}
+
 static void entity_type_config_string_append(char* destination,
                                               size_t capacity,
                                               const char* value)
@@ -196,19 +314,18 @@ static const char* entity_type_config_ae_value(BlockFile* ae,
 /* Concrete row parser for the two table families in Finding 409. The
  * renderer-facing handles are opaque 32-bit backend tokens supplied by the
  * installed runtime adapter; config text and numeric fields are parsed here. */
-int entity_type_config_row_parse(void* context, void* entry,
-                                 void* destination, uint32_t row_kind)
+static int entity_type_config_row_parse_path(void* context,
+                                             const char* asset_path,
+                                             void* destination,
+                                             uint32_t row_kind)
 {
-    BlockRec* config_entry = (BlockRec*)entry;
-    const char* asset_path;
     char ae_path[520];
     const char* base;
     BlockFile* ae;
     uint32_t scene = 0u;
-    if (config_entry == NULL || destination == NULL ||
+    if (asset_path == NULL || destination == NULL ||
         (row_kind != 1u && row_kind != 2u)) return 0;
-    asset_path = block_value(config_entry);
-    if (asset_path == NULL || *asset_path == '\0') return 0;
+    if (*asset_path == '\0') return 0;
 
     base = strrchr(asset_path, '\\');
     if (base == NULL) base = strrchr(asset_path, '/');
@@ -227,14 +344,14 @@ int entity_type_config_row_parse(void* context, void* entry,
         block_close(ae);
         return 0;
     }
-    /* These records are only valid once the renderer has built the required
-     * scene. The portable backend currently has no .ae scene constructor;
-     * accepting a row with a zero scene token would make later named-handle
-     * and render-mode operations silently target nothing. */
-    if (s_entity_type_runtime_ops.visual_load == NULL ||
-        !s_entity_type_runtime_ops.visual_load(
-            s_entity_type_runtime_ops.context, asset_path, &scene) ||
-        scene == 0u) {
+    /* The host renderer may not expose the retail ACT scene constructor yet.
+     * Preserve all deterministic config fields in that case, using zero for
+     * opaque scene handles; when a loader is installed, its failure remains
+     * the same row rejection as in the retail path. */
+    if (s_entity_type_runtime_ops.visual_load != NULL &&
+        (!s_entity_type_runtime_ops.visual_load(
+             s_entity_type_runtime_ops.context, asset_path, &scene) ||
+         scene == 0u)) {
         block_close(ae);
         return 0;
     }
@@ -343,13 +460,83 @@ int entity_type_config_row_parse(void* context, void* entry,
                 row_index = (uint32_t)(row_offset / table->row_stride);
         }
         if (!entity_type_config_shape_parse(destination,
-                entity_type_config_ae_value(ae, "Shape"), table, row_index)) {
+                entity_type_config_ae_value(ae, "Shape"), table, row_index) ||
+            !entity_type_config_building_upgrades_parse(
+                destination, table, row_index)) {
             block_close(ae);
             return 0;
         }
     }
     block_close(ae);
     return 1;
+}
+
+int entity_type_config_row_parse(void* context, void* entry,
+                                 void* destination, uint32_t row_kind)
+{
+    BlockRec* config_entry = (BlockRec*)entry;
+    if (config_entry == NULL) return 0;
+    return entity_type_config_row_parse_path(
+        context, block_value(config_entry), destination, row_kind);
+}
+
+// FUNCTION: LEGORR 0x00406990
+int entity_type_config_resource_row_load(void* destination,
+                                        uint32_t row_index,
+                                        void* scene_context,
+                                        const char* asset_path,
+                                        void* engine_config,
+                                        uint32_t row_kind)
+{
+    TypeConfigTable* table = NULL;
+    uint32_t row_slot = 0xffffffffu;
+    uintptr_t row_address;
+    uintptr_t table_address;
+    (void)scene_context;
+    (void)engine_config;
+    if (destination == NULL) return 0;
+    if (row_kind == 1u) table = &s_minifigure_type_config;
+    else if (row_kind == 2u) table = &s_building_type_config;
+    if (row_kind == 2u) memset(destination, 0, 0x14cu);
+    row_address = (uintptr_t)destination;
+    table_address = table != NULL ? (uintptr_t)table->rows : 0u;
+    if (table != NULL && table->rows != NULL && table->row_owned != NULL &&
+        table->row_stride != 0u && row_address >= table_address &&
+        row_address - table_address <
+            (uintptr_t)table->capacity * table->row_stride) {
+        size_t offset = (size_t)(row_address - table_address);
+        if (offset % table->row_stride == 0u &&
+            offset / table->row_stride < table->capacity)
+            row_slot = (uint32_t)(offset / table->row_stride);
+    }
+    if (row_kind == 2u && row_slot == 0xffffffffu) return 0;
+    if (!entity_type_config_row_parse_path(table, asset_path, destination,
+                                           row_kind)) return 0;
+    entity_type_config_word_set(destination, 0u, row_index);
+    if (row_kind == 2u) {
+        entity_type_config_word_set(destination, 0x148u, 0u);
+        if (s_entity_type_runtime_ops.scene_apply_mode != NULL) {
+            uint32_t scene = 0u;
+            memcpy(&scene, (char*)destination + 4u, sizeof(scene));
+            if (scene != 0u)
+                s_entity_type_runtime_ops.scene_apply_mode(
+                    s_entity_type_runtime_ops.context, scene, 1);
+        }
+    }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00407d60
+int entity_building_type_config_record_parse(void* destination,
+                                             uint32_t row_index,
+                                             void* scene_context,
+                                             const char* asset_path,
+                                             void* engine_config)
+{
+    if (destination == NULL) return 0;
+    memset(destination, 0, 0x14cu);
+    return entity_type_config_resource_row_load(
+        destination, row_index, scene_context, asset_path, engine_config, 2u);
 }
 
 void entity_type_config_row_finalize(void* context, void* row,

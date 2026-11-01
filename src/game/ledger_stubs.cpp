@@ -1394,12 +1394,12 @@ void ledger_stub_00405c10_PendingCommandEntityAssignmentTick()
 }
 
 // TypeTableResourceRowLoad
-// FUNCTION: LEGORR 0x00406990
 int ledger_stub_00406990_TypeTableResourceRowLoad(
-    TypeConfigTable* table, void* section, uint32_t row_kind,
-    const TypeConfigHooks* hooks)
+    void* row, uint32_t row_index, void* scene_context,
+    const char* asset_path, void* engine_config)
 {
-    return type_config_table_load(table, section, row_kind, hooks);
+    return entity_type_config_resource_row_load(
+        row, row_index, scene_context, asset_path, engine_config, 1u);
 }
 
 // RendererRecordClone
@@ -1424,11 +1424,12 @@ void ledger_stub_004078c0_EntityCursorTargetStepResolveAndTimerAdvance(
 }
 
 // BuildingTypeConfigRecordParse
-// FUNCTION: LEGORR 0x00407d60
 int ledger_stub_00407d60_BuildingTypeConfigRecordParse(
-    TypeConfigTable* table, void* section, const TypeConfigHooks* hooks)
+    void* row, uint32_t row_index, void* scene_context,
+    const char* asset_path, void* engine_config)
 {
-    return type_config_table_load(table, section, 2u, hooks);
+    return entity_building_type_config_record_parse(
+        row, row_index, scene_context, asset_path, engine_config);
 }
 
 void ledger_stub_00408620_SceneObjectRecordCloneRetainHandles(
@@ -2188,22 +2189,11 @@ int ledger_stub_0041baa0_SimulationPointerActionDispatch(
                                          suppress_initial);
 }
 
-// FUNCTION: LEGORR 0x0041c4f0
 void ledger_stub_0041c4f0_AdvisorAnimationPositionAndRequestUpdate(
     int position_mode, int input_a, int input_b, float* position)
 {
-    /* The retail function first requires DAT_004de1f8 bit 0x20 and a clear
-     * global bit 0. Its remaining positioning path reads DAT_004ddd24 and
-     * DAT_004ddd28/2c/30; those input-owner words are not yet modeled, so do
-     * not substitute the unrelated per-row transform/request helpers. */
-    if ((interaction_flags_peek() & 0x20u) == 0u ||
-        global_flag_bit0_is_set() != 0u) {
-        return;
-    }
-    (void)position_mode;
-    (void)input_a;
-    (void)input_b;
-    (void)position;
+    advisor_animation_position_and_request_update(
+        position_mode, input_a, input_b, position);
 }
 
 int ledger_stub_0041c7b0_InputActionStateUpdate(const EngineContext* context,
@@ -8995,6 +8985,7 @@ void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
             lego::shared_object_float_track_interpolate_apply(
                 owner, track, scalar_segment, scalar_fraction);
         }
+        shared_object_timed_sound_event_update(owner, track);
         if (hooks != NULL && hooks->timed_event_update != NULL)
             hooks->timed_event_update(owner, track, current_time,
                                       hooks->context);
@@ -9023,30 +9014,10 @@ int ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
 }
 
 // SharedObjectTimedSoundEventUpdate
-typedef struct SharedObjectTimedSoundEvent {
-    float time;
-    uint32_t sound_id;
-    uint32_t flags;
-} SharedObjectTimedSoundEvent;
-typedef void (*SharedObjectTimedSoundPlayHook)(void* owner,
-    uint32_t sound_id, uint32_t flags, void* context);
-// FUNCTION: LEGORR 0x00487de0
-uint32_t ledger_stub_00487de0_SharedObjectTimedSoundEventUpdate(
-    void* owner, const SharedObjectTimedSoundEvent* events,
-    uint32_t event_count, float previous_time, float current_time,
-    SharedObjectTimedSoundPlayHook play, void* context)
+void ledger_stub_00487de0_SharedObjectTimedSoundEventUpdate(void* owner,
+                                                            void* track)
 {
-    uint32_t i;
-    uint32_t played = 0u;
-    if (owner == NULL || events == NULL || play == NULL ||
-        current_time < previous_time) return 0u;
-    for (i = 0u; i < event_count; ++i) {
-        if (events[i].time > previous_time && events[i].time <= current_time) {
-            play(owner, events[i].sound_id, events[i].flags, context);
-            ++played;
-        }
-    }
-    return played;
+    shared_object_timed_sound_event_update(owner, track);
 }
 
 // SharedObjectFloatTrackInterpolateApply

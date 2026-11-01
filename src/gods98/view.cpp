@@ -8,6 +8,8 @@
 
 #include "view.hpp"
 #include "record.hpp"
+#include "scene_resources.hpp"
+#include "sound.hpp"
 #include "texture.hpp"
 #include "heap.hpp"
 #include "crt/crt.hpp"
@@ -1225,6 +1227,66 @@ void shared_object_sound_callbacks_get(
 {
     if (enabled_out != NULL) *enabled_out = s_shared_object_sound_enabled;
     if (submit_out != NULL) *submit_out = s_shared_object_sound_submit;
+}
+
+/* SharedObjectTimedSoundEventUpdate (FUN_00487de0) walks the event times and
+ * saved sound handles in the expanded entry selected by track byte +8. */
+// FUNCTION: LEGORR 0x00487de0
+void shared_object_timed_sound_event_update(void* owner, void* track)
+{
+    unsigned char* owner_bytes = (unsigned char*)owner;
+    unsigned char* track_bytes = (unsigned char*)track;
+    void** sound_objects;
+    unsigned char* entries;
+    unsigned char* entry;
+    uint16_t interface_index;
+    uint16_t event_count;
+    uint16_t i;
+    uint8_t entry_index;
+    SharedObjectSoundEnabledFn enabled_callback;
+    SharedObjectSoundSubmitFn submit_callback;
+    void* sound_object;
+    if (owner_bytes == NULL || track_bytes == NULL) return;
+    if ((track_bytes[0x28] & 2u) == 0u) return;
+    memcpy(&interface_index, track_bytes + 6, sizeof(interface_index));
+    memcpy(&sound_objects, owner_bytes + 0x14, sizeof(sound_objects));
+    memcpy(&entries, owner_bytes + 0x18, sizeof(entries));
+    if (sound_objects == NULL || entries == NULL) return;
+    entry_index = track_bytes[8];
+    entry = entries + (size_t)entry_index * 0xd0u;
+    memcpy(&event_count, entry + 0xcc, sizeof(event_count));
+    if (event_count == 0u) return;
+    sound_object = sound_objects[interface_index];
+    enabled_callback = s_shared_object_sound_enabled;
+    submit_callback = s_shared_object_sound_submit;
+    for (i = 0; i < event_count; ++i) {
+        int16_t start_time;
+        int16_t end_time;
+        uint32_t handle;
+        int changed;
+        memcpy(&start_time, entry + 4u + (size_t)i * 2u,
+               sizeof(start_time));
+        memcpy(&end_time, entry + 0x36u + (size_t)i * 2u,
+               sizeof(end_time));
+        changed = start_time != end_time;
+        if (lego::shared_object_sample_time_matches(owner,
+                (uint32_t)(int32_t)start_time) != 0 &&
+            enabled_callback != NULL && enabled_callback() != 0 &&
+            submit_callback != NULL) {
+            int alias;
+            memcpy(&alias, entry, sizeof(alias));
+            handle = (uint32_t)submit_callback(sound_object, alias,
+                                                (uint32_t)changed, 1u, NULL);
+            memcpy(entry + 0x68u + (size_t)i * 4u, &handle,
+                   sizeof(handle));
+        }
+        if (changed != 0 && lego::shared_object_sample_time_matches(owner,
+                (uint32_t)(int32_t)end_time) != 0) {
+            memcpy(&handle, entry + 0x68u + (size_t)i * 4u,
+                   sizeof(handle));
+            sound_buffer_stop_handle((int)handle);
+        }
+    }
 }
 
 void scene_entry_expand_ops_set(const SceneEntryExpandOps* ops)

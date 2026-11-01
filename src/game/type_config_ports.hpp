@@ -30,6 +30,11 @@ typedef struct TypeConfigShapeOwner {
     uint32_t entries[20];
     char* strings[18];
     uint32_t string_count;
+    uint32_t* upgrade_records;
+    char** upgrade_values;
+    const void** upgrade_names;
+    uint32_t upgrade_count;
+    uint32_t upgrade_level_mask;
 } TypeConfigShapeOwner;
 
 static inline const uint32_t* type_config_shape_table_resolve(
@@ -52,6 +57,46 @@ static inline const char* type_config_shape_string_resolve(
     owner = (const TypeConfigShapeOwner*)table->row_owned[table_token - 1u];
     if (owner == NULL || string_token > owner->string_count) return NULL;
     return owner->strings[string_token - 1u];
+}
+
+static inline const uint32_t* type_config_building_upgrades_resolve(
+    const TypeConfigTable* table, uint32_t row_token, uint32_t* count_out,
+    uint32_t* level_mask_out)
+{
+    const TypeConfigShapeOwner* owner;
+    if (count_out != NULL) *count_out = 0u;
+    if (level_mask_out != NULL) *level_mask_out = 0u;
+    if (table == NULL || row_token == 0u || row_token > table->count ||
+        table->row_owned == NULL) return NULL;
+    owner = (const TypeConfigShapeOwner*)table->row_owned[row_token - 1u];
+    if (owner == NULL) return NULL;
+    if (count_out != NULL) *count_out = owner->upgrade_count;
+    if (level_mask_out != NULL) *level_mask_out = owner->upgrade_level_mask;
+    return owner->upgrade_records;
+}
+
+static inline const char* type_config_building_upgrade_value_resolve(
+    const TypeConfigTable* table, uint32_t row_token, uint32_t value_token)
+{
+    const TypeConfigShapeOwner* owner;
+    if (table == NULL || row_token == 0u || row_token > table->count ||
+        table->row_owned == NULL || value_token == 0u) return NULL;
+    owner = (const TypeConfigShapeOwner*)table->row_owned[row_token - 1u];
+    if (owner == NULL || owner->upgrade_values == NULL ||
+        value_token > owner->upgrade_count) return NULL;
+    return owner->upgrade_values[value_token - 1u];
+}
+
+static inline const void* type_config_building_upgrade_name_resolve(
+    const TypeConfigTable* table, uint32_t row_token, uint32_t name_token)
+{
+    const TypeConfigShapeOwner* owner;
+    if (table == NULL || row_token == 0u || row_token > table->count ||
+        table->row_owned == NULL || name_token == 0u) return NULL;
+    owner = (const TypeConfigShapeOwner*)table->row_owned[row_token - 1u];
+    if (owner == NULL || owner->upgrade_names == NULL ||
+        name_token > owner->upgrade_count) return NULL;
+    return owner->upgrade_names[name_token - 1u];
 }
 
 typedef struct TypeConfigHooks {
@@ -85,6 +130,17 @@ void entity_type_config_runtime_ops_install(
     const EntityTypeConfigRuntimeOps* ops);
 int entity_type_config_row_parse(void* context, void* entry,
                                  void* destination, uint32_t row_kind);
+int entity_type_config_resource_row_load(void* destination,
+                                        uint32_t row_index,
+                                        void* scene_context,
+                                        const char* asset_path,
+                                        void* engine_config,
+                                        uint32_t row_kind);
+int entity_building_type_config_record_parse(void* destination,
+                                             uint32_t row_index,
+                                             void* scene_context,
+                                             const char* asset_path,
+                                             void* engine_config);
 void entity_type_config_row_finalize(void* context, void* row,
                                      uint32_t row_kind);
 
@@ -101,6 +157,13 @@ static inline void type_config_table_release(TypeConfigTable* table)
             if (shape->string_count > 18u) shape->string_count = 18u;
             for (j = 0u; j < shape->string_count; ++j)
                 engine_heap_free(shape->strings[j]);
+            if (shape->upgrade_values != NULL) {
+                for (j = 0u; j < shape->upgrade_count; ++j)
+                    engine_heap_free(shape->upgrade_values[j]);
+            }
+            free(shape->upgrade_values);
+            free(shape->upgrade_names);
+            engine_heap_free(shape->upgrade_records);
             free(shape);
         }
         free(table->row_owned);

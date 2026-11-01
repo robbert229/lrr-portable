@@ -251,6 +251,33 @@ void advisor_action_position_and_mode_set(int row, int mode,
 void advisor_action_position_get(int row, uint32_t* dword_c,
                                  uint32_t* dword_d);          /* FUN_00401890 */
 
+/* AdvisorAnimationPositionAndRequestUpdate (FUN_0041c4f0). The controller
+ * uses live frontend mode/interaction state, while the target's indicator
+ * row, trigger tuple, point table and vertical origin have no source owner.
+ * Keep those unowned inputs explicit and bounded instead of inventing them. */
+#define ADVISOR_POSITION_UPDATE_MAX_POINTS 32
+typedef struct AdvisorPositionUpdatePoint {
+    float x;
+    float y;
+} AdvisorPositionUpdatePoint;
+typedef struct AdvisorAnimationPositionUpdateState {
+    int action_row;
+    int trigger_selector;
+    int cached_input_a;
+    int cached_input_b;
+    float vertical_origin;
+    uint32_t point_count;
+    AdvisorPositionUpdatePoint points[ADVISOR_POSITION_UPDATE_MAX_POINTS];
+} AdvisorAnimationPositionUpdateState;
+typedef int (*AdvisorPositionUpdateValueResolveFn)(
+    int selector, int input_a, int input_b, int* value, void* user);
+void advisor_animation_position_update_state_set(
+    const AdvisorAnimationPositionUpdateState* state);
+void advisor_animation_position_update_value_resolver_set(
+    AdvisorPositionUpdateValueResolveFn resolver, void* user);
+void advisor_animation_position_and_request_update(
+    int position_mode, int input_a, int input_b, const float* position);
+
 /* Observer hook for the flag word (test pin; not corpus API). */
 uint32_t advisor_action_flags_peek(int row);
 

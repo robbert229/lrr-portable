@@ -13,8 +13,11 @@
 #include "gods98/surface.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/view.hpp"
+#include "gods98/resource.hpp"
 #include "level.hpp"
 #include "objective.hpp"
+#include "frontend.hpp"
+#include "effects.hpp"
 #include "util.hpp"
 #include "crt/crt.hpp"
 
@@ -32,6 +35,9 @@ static int s_objective_voice_stream_handle = -1;
 static float s_objective_voice_stream_timeout;
 static int s_objective_voice_result_active;
 static int s_objective_tick_resolved;
+static AdvisorAnimationPositionUpdateState s_advisor_position_update_state;
+static AdvisorPositionUpdateValueResolveFn s_advisor_position_value_resolver;
+static void* s_advisor_position_value_resolver_user;
 // GLOBAL: LEGORR 0x004a6768
 static int s_advisor_sound_slot = -1;
 static CoordinateListHeadGetHook s_coordinate_list_head_get;
@@ -1180,6 +1186,118 @@ void advisor_action_position_get(int row, uint32_t* dword_c, uint32_t* dword_d)
 {
     *dword_c = s_adv_actions[row][7]; /* DAT base + 0x1c */
     *dword_d = s_adv_actions[row][8]; /* DAT base + 0x20 */
+}
+
+void advisor_animation_position_update_state_set(
+    const AdvisorAnimationPositionUpdateState* state)
+{
+    if (state == NULL) {
+        memset(&s_advisor_position_update_state, 0,
+               sizeof(s_advisor_position_update_state));
+        return;
+    }
+    if (state->action_row < 0 || state->action_row >= ADV_ACTION_ROWS ||
+        state->point_count > ADVISOR_POSITION_UPDATE_MAX_POINTS) return;
+    s_advisor_position_update_state = *state;
+}
+
+void advisor_animation_position_update_value_resolver_set(
+    AdvisorPositionUpdateValueResolveFn resolver, void* user)
+{
+    s_advisor_position_value_resolver = resolver;
+    s_advisor_position_value_resolver_user = user;
+}
+
+/* AdvisorAnimationPositionAndRequestUpdate (FUN_0041c4f0). The live mode,
+ * interaction word, scroll/lower offsets, and back-button extents come from
+ * their existing owners. The point table and row/trigger tuple are the four
+ * unowned DAT inputs represented by the explicit bounded state above. */
+// FUNCTION: LEGORR 0x0041c4f0
+void advisor_animation_position_and_request_update(
+    int position_mode, int input_a, int input_b, const float* position)
+{
+    EventTimerState frontend_state;
+    const AdvisorAnimationPositionUpdateState* state =
+        &s_advisor_position_update_state;
+    int matched = 0;
+    int use_catalog_point = 0;
+    int resolved_value = 0;
+    float offset_x, offset_y;
+    int width = 0, height = 0;
+    float new_x, new_y;
+    uint32_t old_x_bits, old_y_bits;
+    float old_x, old_y;
+    uint32_t new_x_bits, new_y_bits;
+
+    frontend_event_timer_state_get(&frontend_state);
+    if ((frontend_state.flags & 0x20u) == 0u ||
+        global_flag_bit0_is_set() != 0u) return;
+
+    if (state->trigger_selector == 0x49) {
+        if (state->cached_input_a == input_a &&
+            state->cached_input_b == input_b &&
+            s_advisor_position_value_resolver != NULL &&
+            s_advisor_position_value_resolver(
+                0x49, input_a, input_b, &resolved_value,
+                s_advisor_position_value_resolver_user)) {
+            matched = 1;
+        }
+    }
+    else if (position_mode == state->trigger_selector) {
+        matched = 1;
+        if (position_mode == 0) {
+            use_catalog_point = 1;
+        }
+        else if (s_advisor_position_value_resolver == NULL ||
+            !s_advisor_position_value_resolver(
+                position_mode, input_a, input_b, &resolved_value,
+                s_advisor_position_value_resolver_user)) {
+            matched = 0;
+        }
+    }
+    if (!matched) return;
+
+    if (use_catalog_point) {
+        const int mode = (int)s_obj_sel_word;
+        uint32_t point_index;
+        if (mode < 0 || mode > 0x12) return;
+        point_index = resource_handle_set_band_word_peek(mode);
+        if (point_index >= state->point_count ||
+            point_index >= ADVISOR_POSITION_UPDATE_MAX_POINTS) return;
+        (void)interface_back_button_dimensions(&width, &height);
+        offset_x = (frontend_state.flags & 0x80u) != 0u
+            ? frontend_state.timer : frontend_state.lower;
+        offset_y = state->vertical_origin;
+        new_x = state->points[point_index].x + offset_x +
+                (float)width * 0.5f;
+        new_y = state->points[point_index].y + offset_y +
+                (float)height * 0.5f;
+    }
+    else {
+        /* The decompile's zero mapped-value arm uses a fixed 40-pixel
+         * height. A nonzero value is a pointer-like UI record whose +8
+         * height has no live owner in the portable frontend. */
+        if (resolved_value != 0 || position == NULL) return;
+        new_x = position[0];
+        if ((frontend_state.flags & 0x80u) == 0u)
+            new_x = frontend_state.lower;
+        new_y = 20.0f + position[1];
+    }
+
+    if (state->action_row < 0 || state->action_row >= ADV_ACTION_ROWS) return;
+    advisor_action_position_get(state->action_row, &old_x_bits, &old_y_bits);
+    memcpy(&old_x, &old_x_bits, sizeof(old_x));
+    memcpy(&old_y, &old_y_bits, sizeof(old_y));
+    old_x += new_x;
+    old_y += new_y;
+    memcpy(&new_x_bits, &old_x, sizeof(new_x_bits));
+    memcpy(&new_y_bits, &old_y, sizeof(new_y_bits));
+    advisor_action_position_and_mode_set(state->action_row, 0x0c,
+                                          new_x_bits, new_y_bits);
+    (void)advisor_request_admit(state->action_row,
+                                (frontend_state.flags & 0x40u) != 0u);
+    frontend_state.flags &= ~0x20u;
+    frontend_event_timer_state_set(&frontend_state);
 }
 
 uint32_t advisor_action_flags_peek(int row)
