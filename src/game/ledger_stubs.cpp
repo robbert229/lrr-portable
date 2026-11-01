@@ -4637,125 +4637,26 @@ int ledger_stub_0044702d_RegisterRelativeStateUpdateFragment(
 }
 
 // EntityConditionalTypeFiveSpawn
-int ledger_stub_0044a5d0_NearestOpenCellCoordSearch(
-    EntitySlot* entity, int* output_x, int* output_y,
-    int require_minimum_distance, int allow_maskc0, int allow_flag20);
-// FUNCTION: LEGORR 0x004470d0
 int ledger_stub_004470d0_EntityConditionalTypeFiveSpawn(EntitySlot* entity)
 {
-    GameContext* ctx;
-    LevelState* level;
-    int destination[2];
-    int slot;
-    EntitySlot* spawned;
-    float route_x;
-    float route_y;
-
-    if (entity == NULL || (entity->flags_3e8 & 0x04000000u) == 0u ||
-        entity->owner_ctx == NULL) return 0;
-    if (entity_stats_float_at90(entity) >= entity->field_340) return 0;
-    ctx = entity->owner_ctx;
-    level = ctx->level;
-    if (level == NULL) return 0;
-    if (!ledger_stub_0044a5d0_NearestOpenCellCoordSearch(
-            entity, &destination[0], &destination[1], 1, 0, 0))
-        return 0;
-
-    slot = entity_create(ctx, 5, "Type5", (float)destination[0],
-                         (float)destination[1], 0.0f, 0.0f);
-    if (slot < 0) return 0;
-    spawned = (EntitySlot*)entity_at(ctx, 5, slot);
-    if (spawned == NULL) return 0;
-    entity_world_position_set(spawned, (float)destination[0],
-                              (float)destination[1], 0.0f, 0);
-    route_x = (float)destination[0];
-    route_y = (float)destination[1];
-    if (!entity_route_setup_and_marker_associate(entity, 1, &route_x,
-                                                  &route_y, 0)) {
-        entity_type5_finalize_if_allowed(spawned);
-        return 0;
-    }
-    entity->link_2fc = (uintptr_t)spawned;
-    spawned->attach_304 = entity;
-    entity->field_340 = 0.0f;
-    return 1;
+    return lego::entity_conditional_type_five_spawn(entity);
 }
 
 // TryCreateLinkedEntityAtPosition
-// FUNCTION: LEGORR 0x004471b0
 int ledger_stub_004471b0_TryCreateLinkedEntityAtPosition(
     EntitySlot* entity, float cell_x, float cell_y, EntitySlot* linked)
 {
-    LevelState* level;
-    int source_cell[2];
-    AiWaypoint* step;
-    float weight;
-    unsigned int direction;
-    float route_x;
-    float route_y;
-
-    if (entity == NULL || linked == NULL
-        || (entity->flags_3e0 & 0x400u) != 0u) {
-        return 0;
-    }
-    level = (entity->owner_ctx != NULL) ? entity->owner_ctx->level : NULL;
-    if (!entity_route_cell_candidate_accept(entity, level,
-                                             (int)cell_x, (int)cell_y, 1)) {
-        return 0;
-    }
-    route_x = cell_x;
-    route_y = cell_y;
-    if (!entity_route_setup_and_marker_associate(entity, 1, &route_x,
-                                                  &route_y, 0)) {
-        return 0;
-    }
-    ENTITY_WAYPOINTS(entity)[0].pending = 3u;
-    entity->link_2fc = (uintptr_t)linked;
-    linked->attach_304 = entity;
-    return 1;
+    return lego::entity_try_create_linked_at_position(
+        entity, cell_x, cell_y, linked);
 }
 
 // EntityAdjacentPlacementCellSearch
 int ledger_stub_004473b0_RouteToCellCommandIssue(
     EntitySlot* entity, int target_x, int target_y, EntitySlot* target);
-// FUNCTION: LEGORR 0x00447210
 int ledger_stub_00447210_EntityAdjacentPlacementCellSearch(
     EntitySlot* entity, EntitySlot* target)
 {
-    static const int offsets[12][2] = {
-        { 2, 0 }, { 0, 2 }, { -2, 0 }, { 0, -2 },
-        { 2, -1 }, { 2, 1 }, { 1, 2 }, { -1, 2 },
-        { -2, 1 }, { -2, -1 }, { -1, -2 }, { 1, -2 }
-    };
-    LevelState* level;
-    int target_cell[2];
-    unsigned int start;
-    int direction;
-    unsigned int pass;
-    unsigned int i;
-    if (entity == NULL || target == NULL || entity->type != 3 ||
-        entity->owner_ctx == NULL) return 0;
-    level = entity->owner_ctx->level;
-    if (level == NULL) return 0;
-    entity_position_to_terrain_cell(target, level, &target_cell[0],
-                                    &target_cell[1]);
-    start = neighbor_pick_rotation_peek() % 12u;
-    direction = (start & 1u) ? -1 : 1;
-    for (pass = 0; pass != 2; ++pass) {
-        for (i = 0; i < 12; ++i) {
-            const unsigned int index = (start +
-                (unsigned int)((int)i * direction + 12 * 12)) % 12u;
-            const int x = target_cell[0] + offsets[index][0];
-            const int y = target_cell[1] + offsets[index][1];
-            if (pass == 0 &&
-                !entity_route_cell_candidate_accept(entity, level, x, y, 1))
-                continue;
-            if (ledger_stub_004473b0_RouteToCellCommandIssue(
-                    entity, x, y, target)) return 1;
-        }
-    }
-    entity_attached_object_list_detach(entity, 0);
-    return 0;
+    return lego::entity_adjacent_placement_cell_search(entity, target);
 }
 
 // RouteToCellCommandIssue

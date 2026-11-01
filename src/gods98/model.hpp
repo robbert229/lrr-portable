@@ -24,10 +24,10 @@
  *         else 1-based (1-based forbids zero; 4 shipped files are 0-based).
  *         Surface = u16 - 1, stored with 16-bit wraparound.
  *   SRFS  NUL-terminated names, even-padded records              surfaces
- *   SURF  records anchored on the SRFS names (`name\0` at an even offset);
- *         the portable view retains color, image/projection, texture flags,
- *         size/center, and six scalar material values. Last matching record
- *         wins per field, first record per name wins for visibility.
+ *   SURF  one named record per chunk (`name\0` followed by even-padded
+ *         subchunks); the portable view retains color, image/projection,
+ *         texture flags, size/center, and six scalar material values. A later
+ *         record with the same name replaces the earlier settings.
  *   .uv   text sidecar next to the .lwo: per-surface texture-path lines
  *         replace that surface's TIMG, and per-polygon-corner "u v" blocks
  *         attach per-corner UVs (v negated as stored). Trailing keyframe

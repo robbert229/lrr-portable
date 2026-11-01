@@ -12,6 +12,15 @@ namespace unported_ledger_stubs {
 void ledger_stub_0044afb0_ConfiguredTinyMonsterSpawnAndTeardown(
     EntitySlot* source);
 void ledger_stub_0044af90_EntityAttachedSpawnRecordProcess(EntitySlot* owner);
+int ledger_stub_0044a5d0_NearestOpenCellCoordSearch(
+    EntitySlot* entity, int* output_x, int* output_y,
+    int require_minimum_distance, int allow_maskc0, int allow_flag20);
+int ledger_stub_00449880_BlockedCellApproachWeightWrite(
+    EntitySlot* entity, unsigned int cell_x, unsigned int cell_y,
+    float amount);
+int ledger_stub_004473b0_RouteToCellCommandIssue(
+    EntitySlot* entity, int target_x, int target_y, EntitySlot* target);
+void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode);
 }
 float random_float_range(float minimum, float maximum);
 
@@ -44,6 +53,102 @@ static int global_scatter_find(int mode)
     return entity_pool_callback_search(global_scatter_find_adapter, &mode);
 }
 }
+
+/* The blocked-cell approach helper chooses a connected neighbor and appends
+ * its weighted waypoint. This entry then marks that waypoint and establishes
+ * the reciprocal object link. */
+// FUNCTION: LEGORR 0x004471b0
+int entity_try_create_linked_at_position(EntitySlot* entity, float cell_x,
+                                         float cell_y, EntitySlot* linked)
+{
+    if (entity == NULL || linked == NULL ||
+        (entity->flags_3e0 & 0x400u) != 0u) return 0;
+    if (!unported_ledger_stubs::
+            ledger_stub_00449880_BlockedCellApproachWeightWrite(
+                entity, (unsigned int)(int)cell_x,
+                (unsigned int)(int)cell_y, 4.0f)) return 0;
+    if (entity->wp_count <= 0) return 0;
+    ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].step_kind = 3u;
+    entity->link_2fc = (uintptr_t)linked;
+    linked->attach_304 = entity;
+    return 1;
+}
+
+/* Spawn the type-five object at the corpus's sentinel position, then let
+ * the linked-position routine construct its approach route. */
+// FUNCTION: LEGORR 0x004470d0
+int entity_conditional_type_five_spawn(EntitySlot* entity)
+{
+    GameContext* context;
+    int destination[2];
+    int slot;
+    EntitySlot* spawned;
+    if (entity == NULL || (entity->flags_3e8 & 0x04000000u) == 0u ||
+        entity->owner_ctx == NULL ||
+        !(entity_stats_float_at90(entity) < entity->field_340)) return 0;
+    context = entity->owner_ctx;
+    if (context->level == NULL ||
+        !unported_ledger_stubs::
+            ledger_stub_0044a5d0_NearestOpenCellCoordSearch(
+                entity, &destination[0], &destination[1], 1, 0, 0)) return 0;
+    slot = entity_create(context, 5, NULL, 0.0f, 0.0f, 0.0f, 0.0f);
+    if (slot < 0) return 0;
+    spawned = (EntitySlot*)entity_at(context, 5, slot);
+    if (spawned == NULL) return 0;
+    entity_world_position_set(spawned, 10000.0f, 10000.0f, 0.0f, 1);
+    if (entity_try_create_linked_at_position(
+            entity, (float)destination[0], (float)destination[1], spawned)) {
+        entity->field_33c = 0.0f;
+        return 1;
+    }
+    entity_type5_finalize_if_allowed(spawned);
+    return 0;
+}
+
+/* The two RNG draws select a starting neighbor and whether to walk the
+ * twelve offsets forward or backward. The second pass drops the terrain-mask
+ * filter; exhaustion detaches the entity from its attached-object list. */
+// FUNCTION: LEGORR 0x00447210
+int entity_adjacent_placement_cell_search(EntitySlot* entity,
+                                          EntitySlot* target)
+{
+    static const int offsets[12][2] = {
+        { 2, 0 }, { 0, 2 }, { -2, 0 }, { 0, -2 },
+        { 2, -1 }, { 2, 1 }, { 1, 2 }, { -1, 2 },
+        { -2, 1 }, { -2, -1 }, { -1, -2 }, { 1, -2 }
+    };
+    LevelState* level;
+    int target_cell[2];
+    int start;
+    int direction;
+    int pass;
+    int i;
+    if (entity == NULL || target == NULL || entity->type != 3 ||
+        entity->owner_ctx == NULL || entity->owner_ctx->level == NULL)
+        return 0;
+    level = entity->owner_ctx->level;
+    entity_position_to_terrain_cell(target, level, &target_cell[0],
+                                    &target_cell[1]);
+    start = (short)level_rand_u16() % 12;
+    direction = (((short)level_rand_u16() & 1) != 0) ? -1 : 1;
+    for (pass = 0; pass < 2; ++pass) {
+        for (i = 0; i < 12; ++i) {
+            int index = (start + i * direction) % 12;
+            int x;
+            int y;
+            if (index < 0) index += 12;
+            x = target_cell[0] + offsets[index][0];
+            y = target_cell[1] + offsets[index][1];
+            if (pass == 0 && level_cell_mask_180000(level, x, y)) continue;
+            if (unported_ledger_stubs::
+                    ledger_stub_004473b0_RouteToCellCommandIssue(
+                        entity, x, y, target)) return 1;
+        }
+    }
+    unported_ledger_stubs::entity_attached_object_list_detach(entity, 0);
+    return 0;
+}
+
 void spawn_hooks_set(SpawnRandomTriggerHook trigger, SpawnScatterHook scatter, void* context)
 { s_trigger_hook = trigger; s_scatter_hook = scatter; s_hook_context = context; }
 void spawn_scene_position_get_hook_set(SpawnScenePositionGetHook hook,

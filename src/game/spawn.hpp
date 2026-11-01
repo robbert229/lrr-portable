@@ -15,6 +15,12 @@ void spawn_scene_position_get_hook_set(SpawnScenePositionGetHook hook,
 void pairing_activity_prepare_hook_set(PairingActivityPrepareHook hook,
                                       void* context);
 void pairing_activity_prepare(::EntitySlot* target);
+int entity_conditional_type_five_spawn(::EntitySlot* entity); /* 0x004470d0 */
+int entity_try_create_linked_at_position(::EntitySlot* entity, float cell_x,
+                                         float cell_y,
+                                         ::EntitySlot* linked); /* 0x004471b0 */
+int entity_adjacent_placement_cell_search(::EntitySlot* entity,
+                                          ::EntitySlot* target); /* 0x00447210 */
 void scatter_spawn_gate_set(int enabled); /* 0x0044adc0 */
 int scatter_spawn_gate_get();
 void entity_kind_one_random_spawn_trigger(void* entity); /* 0x0044ade0 */

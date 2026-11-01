@@ -274,22 +274,25 @@ typedef struct Parse {
 
 /* --- helpers ----------------------------------------------------------------- */
 
-static void* xmemmem(const void* h, size_t hl, const void* nd, size_t nl)
-{
-    const uint8_t* hp = (const uint8_t*)h;
-    const uint8_t* np = (const uint8_t*)nd;
-    if (nl == 0 || nl > hl)
-        return NULL;
-    for (size_t i = 0; i + nl <= hl; i++)
-        if (hp[i] == np[0] && memcmp(hp + i, np, nl) == 0)
-            return (void*)(hp + i);
-    return NULL;
-}
-
 static size_t strnlen_n(const char* s, size_t maxlen)
 {
     const char* terminator = (const char*)memchr(s, '\0', maxlen);
     return terminator != NULL ? (size_t)(terminator - s) : maxlen;
+}
+
+static int tag_equal_ci(const uint8_t* tag, const char* expected)
+{
+    for (int i = 0; i < 4; ++i) {
+        unsigned char a = tag[i];
+        unsigned char b = (unsigned char)expected[i];
+        if (a >= 'a' && a <= 'z')
+            a = (unsigned char)(a - 'a' + 'A');
+        if (b >= 'a' && b <= 'z')
+            b = (unsigned char)(b - 'a' + 'A');
+        if (a != b)
+            return 0;
+    }
+    return 1;
 }
 
 /* strip ASCII whitespace both ends (corpus sidecar/TIMG lines are ASCII) */
@@ -328,10 +331,13 @@ static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
         const uint8_t* e = (const uint8_t*)memchr(pay + p, 0, size - p);
         if (!e)
             break;
-        /* python: decode("latin1").strip() */
-        char* nm = dup_strip((const char*)(pay + p), (size_t)(e - (pay + p)));
+        /* LwoSurfaceNames duplicates through the NUL, without trimming. */
+        size_t length = (size_t)(e - (pay + p));
+        char* nm = (char*)malloc(length + 1);
         if (!nm)
             return 0;
+        memcpy(nm, pay + p, length);
+        nm[length] = 0;
         if (P->nsname == P->scap) {
             size_t ncap = P->scap ? P->scap * 2 : 4;
             char** np = (char**)realloc(P->sname, ncap * sizeof *np);
@@ -410,7 +416,7 @@ static int surfrec_addblock(Parse* P, SurfRec* r, const char* tag,
     if (!buf_append(&r->blocks_data, pay, size))
         return 0;
     for (size_t i = 0; i < r->nblocks; i++) {
-        if (strcmp(r->tags[i], tag) == 0) { /* python dict overwrite */
+        if (strcasecmp(r->tags[i], tag) == 0) {
             r->off[i] = off;
             r->size[i] = size;
             return 1;
@@ -448,7 +454,7 @@ static int surfrec_addblock(Parse* P, SurfRec* r, const char* tag,
 static int block_find(const SurfRec* r, const char* tag, const uint8_t** out, size_t* nout)
 {
     for (size_t i = 0; i < r->nblocks; i++) {
-        if (strcmp(r->tags[i], tag) == 0) {
+        if (strcasecmp(r->tags[i], tag) == 0) {
             *out = r->blocks_data.d + r->off[i];
             *nout = r->size[i];
             return 1;
@@ -457,126 +463,67 @@ static int block_find(const SurfRec* r, const char* tag, const uint8_t** out, si
     return 0;
 }
 
-static int surf_start_compare(const void* left, const void* right)
-{
-    const size_t a = *(const size_t*)left;
-    const size_t b = *(const size_t*)right;
-    if (a < b) return -1;
-    if (a > b) return 1;
-    return 0;
-}
-
-/* python surf_records(): SRFS-name anchors delimit records inside SURF
- * chunks; between them {4 printable tag bytes, u16 size, payload, pad}. */
+/* LwoSurfaceSettings is called once for each SURF chunk. Its payload starts
+ * with one NUL-terminated surface name, even-padded, then subchunks of the
+ * form {4-byte tag, u16 size, payload, even pad}. */
 // FUNCTION: LEGORR 0x0048c820
 static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
 {
-    size_t* starts = NULL;
-    size_t nst = 0, scap = 0;
-    int ok = 1;
+    const uint8_t* terminator;
+    size_t name_length, q;
+    char* name;
+    SurfRec* r;
 
-    for (size_t name_index = 0; name_index < P->nsname && ok; name_index++) {
-        size_t nlen = strlen(P->sname[name_index]);
-#if defined(_MSC_VER)
-        uint8_t* needle = (uint8_t*)_strdup(P->sname[name_index]);
-#else
-        uint8_t* needle = (uint8_t*)malloc(nlen + 1);
-#endif
-        if (!needle) { ok = 0; break; }
-#if !defined(_MSC_VER)
-        memcpy(needle, P->sname[name_index], nlen);
-        needle[nlen] = 0;
-#endif
-        for (size_t pos = 0; pos + nlen + 1 <= size;) {
-            const uint8_t* hit = (const uint8_t*)xmemmem(d + pos, size - pos, needle, nlen + 1);
-            if (!hit)
-                break;
-            size_t e = (size_t)(hit - d);
-            if (e % 2 == 0) {
-                int dup = 0;
-                for (size_t k = 0; k < nst; k++)
-                    if (starts[k] == e)
-                        dup = 1;
-                if (!dup) {
-                    if (nst == scap) {
-                        size_t nc = scap ? scap * 2 : 16;
-                        size_t* ns = (size_t*)realloc(starts, nc * sizeof *starts);
-                        if (!ns) { ok = 0; break; }
-                        starts = ns;
-                        scap = nc;
-                    }
-                    starts[nst++] = e;
-                }
-            }
-            pos = e + 1;
-        }
-        free(needle);
+    if (size == 0)
+        return 1;
+    terminator = (const uint8_t*)memchr(d, 0, size);
+    if (terminator == NULL)
+        return 1;
+    name_length = (size_t)(terminator - d);
+    name = (char*)malloc(name_length + 1);
+    if (name == NULL)
+        return 0;
+    memcpy(name, d, name_length);
+    name[name_length] = 0;
+    if (!surfrec_reserve(P)) {
+        free(name);
+        return 0;
     }
-    /* Starts are deduplicated above, so qsort's ordering of equal values is
-     * irrelevant; the VC5 CRT supplies the same ascending offset order. */
-    if (nst > 1) {
-        qsort(starts, nst, sizeof(*starts), surf_start_compare);
-    }
+    r = &P->recs[P->nrecs];
+    memset(r, 0, sizeof *r);
+    r->name = name;
 
-    for (size_t k = 0; k < nst && ok; k++) {
-        size_t e = starts[k];
-        size_t limit = (k + 1 < nst) ? starts[k + 1] : size;
-        /* first anchor (SRFS order) matching here */
-        size_t slot = P->nsname;
-        size_t alen = 0;
-        for (size_t anchor_index = 0; anchor_index < P->nsname; anchor_index++) {
-            alen = strlen(P->sname[anchor_index]);
-            if (memcmp(d + e, P->sname[anchor_index], alen) == 0 && d[e + alen] == 0) {
-                slot = anchor_index;
-                break;
-            }
-        }
-        if (slot == P->nsname)
-            continue;
-        /* python `seen`: exact names, first record wins */
-        int dup = 0;
-        for (int rec_index =  0; rec_index < P->nrecs && !dup; rec_index++)
-            if (strcmp(P->recs[rec_index].name, P->sname[slot]) == 0)
-                dup = 1;
-        if (dup)
-            continue;
-        if (!surfrec_reserve(P)) { ok = 0; break; }
-
-        SurfRec* r = &P->recs[P->nrecs];
-        memset(r, 0, sizeof *r);
-        r->name = P->sname[slot];
-        size_t q = (e + alen + 2) & ~(size_t)1; /* python (e + len(a) + 1) & ~1 */
-        while (q + 6 <= limit) {
-            const uint8_t* bt = d + q;
-            int printable = 1;
-            for (int t = 0; t < 4; t++)
-                if (bt[t] < 0x20 || bt[t] > 0x7E)
-                    printable = 0;
-            if (!printable)
-                break;
-            size_t bsz = be16(d + q + 4);
-            if (bsz > limit - q - 6)
-                break;
-            /* python key = tag.decode.strip("\x00 ") */
-            char tag[5];
-            memcpy(tag, bt, 4);
-            tag[4] = 0;
-            size_t a = 0, b = 4;
-            while (a < b && (tag[a] == 0 || tag[a] == ' '))
-                a++;
-            while (b > a && (tag[b - 1] == 0 || tag[b - 1] == ' '))
-                b--;
-            size_t tn = b - a;
+    q = (name_length + 2) & ~(size_t)1;
+    while (q + 6 <= size) {
+        const uint8_t* bt = d + q;
+        size_t bsz = be16(d + q + 4);
+        char tag[5];
+        size_t a, b, tn;
+        if (bsz > size - q - 6)
+            break;
+        memcpy(tag, bt, 4);
+        tag[4] = 0;
+        a = 0;
+        b = 4;
+        while (a < b && (tag[a] == 0 || tag[a] == ' '))
+            ++a;
+        while (b > a && (tag[b - 1] == 0 || tag[b - 1] == ' '))
+            --b;
+        tn = b - a;
+        {
             char key[5];
             memcpy(key, tag + a, tn);
             key[tn] = 0;
-            if (!surfrec_addblock(P, r, key, d + q + 6, bsz)) { ok = 0; break; }
-            q += 6 + bsz + (bsz & 1);
+            if (!surfrec_addblock(P, r, key, d + q + 6, bsz)) {
+                /* Include the partially populated record in cleanup. */
+                ++P->nrecs;
+                return 0;
+            }
         }
-        P->nrecs++;
+        q += 6 + bsz + (bsz & 1);
     }
-    free(starts);
-    return ok;
+    ++P->nrecs;
+    return 1;
 }
 
 /* --- model build ----------------------------------------------------------------- */
@@ -620,13 +567,20 @@ static Model* build_model(Parse* P)
     if (P->nsname) {
         m->surfaces = (ModelSurface*)calloc(P->nsname, sizeof(ModelSurface));
         if (!m->surfaces) { model_free(m); return NULL; }
-        for (size_t i = 0; i < P->nsname; i++)
-            m->surfaces[i].name = strdup(P->sname[i]);
+        for (size_t i = 0; i < P->nsname; i++) {
+            size_t length = strlen(P->sname[i]);
+            m->surfaces[i].name = (char*)malloc(length + 1);
+            if (m->surfaces[i].name == NULL) {
+                model_free(m);
+                return NULL;
+            }
+            memcpy(m->surfaces[i].name, P->sname[i], length + 1);
+        }
     }
 
-    /* SURF records apply to every surface whose SRFS name matches
-     * case-insensitively (python: meta keyed by name.lower(), looked up by
-     * names[si].lower()); records apply in file order, field-wise last-wins. */
+    /* Each SURF chunk produces a fresh record. The retail loader copies the
+     * whole matching record onto every case-insensitive SRFS match, so a
+     * later SURF chunk for the same name replaces the earlier settings. */
     for (size_t r = 0; r < P->nrecs; r++) {
         const SurfRec* rec = &P->recs[r];
         const uint8_t* bp;
@@ -635,6 +589,13 @@ static Model* build_model(Parse* P)
             if (strcasecmp(P->sname[i], rec->name) != 0)
                 continue;
             ModelSurface* s = &m->surfaces[i];
+            free(s->timg);
+            free(s->texture_definition);
+            {
+                char* surface_name = s->name;
+                memset(s, 0, sizeof *s);
+                s->name = surface_name;
+            }
             if (block_find(rec, "COLR", &bp, &bs) && bs >= 3) {
                 for (int c = 0; c < 3; c++)
                     s->colr[c] = (float)((double)bp[c] / 255.0); /* == python c/255 */
@@ -715,6 +676,7 @@ static Model* build_model(Parse* P)
 static void parse_free(Parse* P)
 {
     buf_free(&P->chunks_buf);
+    free(P->verts);
     for (size_t poly_index = 0; poly_index < P->npolys; poly_index++)
         free(P->polys[poly_index].ring);
     free(P->polys);
@@ -722,6 +684,7 @@ static void parse_free(Parse* P)
         free(P->sname[name_index]);
     free(P->sname);
     for (int rec_index =  0; rec_index < P->nrecs; rec_index++) {
+        free(P->recs[rec_index].name);
         free(P->recs[rec_index].tags);
         free(P->recs[rec_index].off);
         free(P->recs[rec_index].size);
@@ -758,19 +721,21 @@ static int parse_points(Parse* P, const Chunk* c)
 // FUNCTION: LEGORR 0x0048d2c0
 Model* model_parse(const uint8_t* data, size_t len)
 {
-    if (len < 12 || memcmp(data, "FORM", 4) != 0 || memcmp(data + 8, "LWOB", 4) != 0)
+    if (data == NULL || len < 12 || !tag_equal_ci(data, "FORM") ||
+        !tag_equal_ci(data + 8, "LWOB"))
         return NULL;
     Parse P;
     memset(&P, 0, sizeof P);
     P.d = data;
     P.n = len;
 
-    size_t end = 8 + (size_t)be32(data + 4);
-    if (end > len)
-        end = len;
+    size_t form_size = (size_t)be32(data + 4);
+    if (form_size < 4 || form_size > len - 8)
+        return NULL;
+    size_t end = 8 + form_size;
     int ok = 1;
     size_t p = 12;
-    while (p + 8 <= end) {
+    while (end - p >= 8) {
         Chunk c;
         memset(&c, 0, sizeof c);
         memcpy(c.tag, data + p, 4);
@@ -779,13 +744,26 @@ Model* model_parse(const uint8_t* data, size_t len)
         while (tn && c.tag[tn - 1] == 0)
             c.tag[--tn] = 0;
         uint32_t size = be32(data + p + 4);
+        if ((size_t)size > end - p - 8) {
+            ok = 0;
+            break;
+        }
         const uint8_t* pay = data + p + 8;
         c.pay = pay;
-        c.size = (pay + size > data + len) ? (size_t)(data + len - pay) : size;
+        c.size = (size_t)size;
         if (!buf_append(&P.chunks_buf, &c, sizeof c)) { ok = 0; break; }
         P.nchunks++;
-        p += 8 + (size_t)size + (size & 1);
+        p += 8 + (size_t)size;
+        if (size & 1) {
+            if (p == end) {
+                ok = 0;
+                break;
+            }
+            ++p;
+        }
     }
+    if (p != end)
+        ok = 0;
     if (!ok) { parse_free(&P); return NULL; }
 
     /* The retail FORM walker dispatches chunks in file order.  POLS and
@@ -793,16 +771,16 @@ Model* model_parse(const uint8_t* data, size_t len)
      * point array when another PNTS chunk is encountered. */
     for (size_t i = 0; i < P.nchunks && ok; i++) {
         const Chunk* c = (const Chunk*)P.chunks_buf.d + i;
-        if (strcmp(c->tag, "PNTS") == 0) {
+        if (strcasecmp(c->tag, "PNTS") == 0) {
             ok = parse_points(&P, c);
         }
-        else if (strcmp(c->tag, "POLS") == 0) {
+        else if (strcasecmp(c->tag, "POLS") == 0) {
             ok = parse_pols(&P, c->pay, c->size);
         }
-        else if (strcmp(c->tag, "SRFS") == 0) {
+        else if (strcasecmp(c->tag, "SRFS") == 0) {
             ok = parse_srfs(&P, c->pay, c->size);
         }
-        else if (strcmp(c->tag, "SURF") == 0) {
+        else if (strcasecmp(c->tag, "SURF") == 0) {
             ok = parse_surf_chunk(&P, c->pay, c->size);
         }
     }

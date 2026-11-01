@@ -340,6 +340,8 @@ typedef struct EntitySlot {
     int32_t task_pair_3b4[2];
     int32_t task_scalar_3bc;
     uintptr_t pair_link_3c0; /* reciprocal entity link at corpus +0x3c0 */
+    float field_33c;         /* +0x33c spawn timer mirror, stored at the
+                              * end to avoid shifting other port fields. */
 } EntitySlot;
 
 /* Waypoint consumers use this accessor so routes grown past the inline
