@@ -4963,6 +4963,10 @@ void ledger_stub_00447ea0_EntityTypeBehaviorUpdate(
     }
 }
 
+int ledger_stub_00449880_BlockedCellApproachWeightWrite(
+    EntitySlot* entity, unsigned int cell_x, unsigned int cell_y,
+    float amount);
+
 // EntityMoveToCellCoordinates
 // FUNCTION: LEGORR 0x00448800
 int ledger_stub_00448800_EntityMoveToCellCoordinates(
@@ -4986,17 +4990,12 @@ int ledger_stub_00448800_EntityMoveToCellCoordinates(
     if (!entity_move_destination_cell_usable(entity, level, x, y)) {
         return 0;
     }
-
-    /* The source queues the route through its command record. The portable
-     * model keeps the same destination in its inline waypoint list. */
-    ENTITY_WAYPOINTS(entity)[0].x = (float)x;
-    ENTITY_WAYPOINTS(entity)[0].y = (float)y;
-    ENTITY_WAYPOINTS(entity)[0].pending = 9u;
-    entity->wp_count = 1;
-    entity->wp_index = 0;
+    if (!ledger_stub_00449880_BlockedCellApproachWeightWrite(
+            entity, (unsigned int)x, (unsigned int)y, 7.0f)) {
+        return 0;
+    }
     entity->pos_pair_2f4 = (float)x;
     entity->pos_pair_2f8 = (float)y;
-    entity->flags_3e0 |= 0x00000008u;
     return 1;
 }
 
@@ -5009,8 +5008,14 @@ int ledger_stub_00448880_RecordGatedStepCommandIssue(
     LevelState* level;
     int x;
     int y;
-    float route_x;
-    float route_y;
+    int source_x;
+    int source_y;
+    int* path_x;
+    int* path_y;
+    uint32_t path_count;
+    float route_x_values[AI_WAYPOINTS_MAX];
+    float route_y_values[AI_WAYPOINTS_MAX];
+    uint32_t i;
 
     if (entity == NULL || cell == NULL || entity->carry_link_308 == NULL) {
         return 0;
@@ -5022,19 +5027,48 @@ int ledger_stub_00448880_RecordGatedStepCommandIssue(
     level = (entity->owner_ctx != NULL) ? entity->owner_ctx->level : NULL;
     x = cell[0];
     y = cell[1];
-    if (!entity_move_destination_cell_usable(entity, level, x, y)) {
+    if (level == NULL || !level_cell_flag8_check(level, x, y)) {
         return 0;
     }
-
-    route_x = (float)x;
-    route_y = (float)y;
-    if (!entity_route_setup_and_marker_associate(entity, 1, &route_x,
-                                                  &route_y, 0)) {
+    source_x = 0;
+    source_y = 0;
+    entity_position_to_terrain_cell(entity, level, &source_x, &source_y);
+    if (source_x == x && source_y == y) {
+        route_x_values[0] = (float)x;
+        route_y_values[0] = (float)y;
+        path_count = 1;
+    }
+    else {
+        path_x = NULL;
+        path_y = NULL;
+        path_count = 0;
+        if (!terrain_neighbor_path_check(level, (uint32_t)source_x,
+                (uint32_t)source_y, (uint32_t)x, (uint32_t)y,
+                &path_x, &path_y, &path_count, NULL, NULL)) {
+            free(path_x);
+            free(path_y);
+            return 0;
+        }
+        if (path_count == 0 || path_count > AI_WAYPOINTS_MAX) {
+            free(path_x);
+            free(path_y);
+            return 0;
+        }
+        for (i = 0; i < path_count; ++i) {
+            route_x_values[i] = (float)path_x[i];
+            route_y_values[i] = (float)path_y[i];
+        }
+        free(path_x);
+        free(path_y);
+    }
+    if (!entity_route_setup_and_marker_associate(entity, path_count,
+            route_x_values, route_y_values, 0)) {
         return 0;
     }
-    ENTITY_WAYPOINTS(entity)[0].pending = 9u;
-    entity->pos_pair_2f4 = route_x;
-    entity->pos_pair_2f8 = route_y;
+    if (entity->wp_count > 0)
+        ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].step_kind = 9u;
+    entity->pos_pair_2f4 = (float)x;
+    entity->pos_pair_2f8 = (float)y;
     return 1;
 }
 
@@ -5048,36 +5082,79 @@ int ledger_stub_00448a60_EntityNeighborCellMoveCommandHandle(
 {
     LevelState* level;
     int source_cell[2];
+    int* path_x;
+    int* path_y;
+    uint32_t path_count;
+    float route_x[AI_WAYPOINTS_MAX];
+    float route_y[AI_WAYPOINTS_MAX];
+    uint32_t i;
     AiWaypoint* step;
     float weight;
     unsigned int direction;
+    int32_t random_value;
     if (entity == NULL || target_cell == NULL || entity->owner_ctx == NULL
         || entity->activity != 11) return 0;
     level = entity->owner_ctx->level;
-    if (level == NULL || !level_walkable(level, target_cell[0], target_cell[1]))
+    if (level == NULL || !terrain_cell_has_occupied_or_flagged_neighbor(
+            level, target_cell[0], target_cell[1], NULL))
         return 0;
-    /* The reference uses TerrainNeighborPathCheck when the requested cell is
-     * not the entity's current cell, then installs activity step 9. The
-     * shared route commit owns that search, route storage, and target pair. */
+    source_cell[0] = 0;
+    source_cell[1] = 0;
     entity_position_to_terrain_cell(entity, level, &source_cell[0],
                                     &source_cell[1]);
-    if (!entity_route_to_cell_commit(entity, target_cell[0], target_cell[1],
-                                     9u) || entity->wp_count <= 0) return 0;
+    if (source_cell[0] == target_cell[0] &&
+        source_cell[1] == target_cell[1]) {
+        route_x[0] = (float)target_cell[0];
+        route_y[0] = (float)target_cell[1];
+        path_count = 1;
+    }
+    else {
+        path_x = NULL;
+        path_y = NULL;
+        path_count = 0;
+        if (!terrain_neighbor_path_check(level,
+                (uint32_t)source_cell[0], (uint32_t)source_cell[1],
+                (uint32_t)target_cell[0], (uint32_t)target_cell[1],
+                &path_x, &path_y, &path_count, NULL, NULL)) {
+            free(path_x);
+            free(path_y);
+            return 0;
+        }
+        if (path_count == 0 || path_count > AI_WAYPOINTS_MAX) {
+            free(path_x);
+            free(path_y);
+            return 0;
+        }
+        for (i = 0; i < path_count; ++i) {
+            route_x[i] = (float)path_x[i];
+            route_y[i] = (float)path_y[i];
+        }
+        free(path_x);
+        free(path_y);
+    }
+    if (!entity_route_setup_and_marker_associate(entity, path_count,
+            route_x, route_y, 0) || entity->wp_count <= 0) return 0;
     step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     step->step_kind = 9u;
     if (entity->type == 1) {
-        direction = entity_route_cardinal_direction(source_cell[0],
-            source_cell[1], target_cell[0], target_cell[1]);
-        weight = entity_route_weight_random(0.55f, 0.75f);
+        random_value = (int16_t)rng_thunk_draw15();
+        if (random_value < 0) random_value = -random_value;
+        direction = (unsigned int)random_value & 3u;
+        weight = s_cell_step_random_hook != NULL
+            ? s_cell_step_random_hook(0.55f, 0.75f, s_cell_step_hook_user)
+            : random_float_range(0.55f, 0.75f);
         switch (direction) {
-        case 0u: step->weight_x = weight; step->weight_y = 0.5f; break;
-        case 1u: step->weight_x = 0.5f; step->weight_y = weight; break;
-        case 2u: step->weight_x = 1.0f - weight; step->weight_y = 0.5f; break;
-        default: step->weight_x = 0.5f;
+        case 0u: step->weight_x = 0.5f; step->weight_y = weight; break;
+        case 1u: step->weight_y = 0.5f; step->weight_x = weight; break;
+        case 2u: step->weight_x = 0.5f;
                  step->weight_y = 1.0f - weight; break;
+        default: step->weight_y = 0.5f;
+                 step->weight_x = 1.0f - weight; break;
         }
         step->pending = (uint8_t)(step->pending | 8u);
     }
+    entity->pos_pair_2f4 = (float)target_cell[0];
+    entity->pos_pair_2f8 = (float)target_cell[1];
     return 1;
 }
 
@@ -5110,7 +5187,6 @@ int ledger_stub_00448c90_CardinalStepCommandIssueAndLink(
     int source_cell[2];
     AiWaypoint* step;
     unsigned int direction;
-    float weight;
     if (entity == NULL || target == NULL || target->type != 4) return 0;
     if (entity->type == 2)
         return ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
@@ -5127,13 +5203,6 @@ int ledger_stub_00448c90_CardinalStepCommandIssueAndLink(
     step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     direction = entity_route_cardinal_direction(source_cell[0], source_cell[1],
                                                  target_cell[0], target_cell[1]);
-    weight = entity_route_weight_random(0.55f, 0.75f);
-    switch (direction) {
-    case 0u: step->weight_x = weight; step->weight_y = 0.5f; break;
-    case 1u: step->weight_x = 0.5f; step->weight_y = weight; break;
-    case 2u: step->weight_x = 1.0f - weight; step->weight_y = 0.5f; break;
-    default: step->weight_x = 0.5f; step->weight_y = 1.0f - weight; break;
-    }
     step->step_kind = 15u;
     step->pending = (uint8_t)(step->pending | 4u | direction);
     entity->link_2fc = (uintptr_t)target;
@@ -5166,8 +5235,12 @@ int ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
             (unsigned int)target_cell[1], 0, &candidate, 1) ||
         entity->wp_count <= 0) return 0;
     direction = (candidate - 2u) & 3u;
-    edge_weight = entity_route_weight_random(0.1f, 0.9f);
-    step_fraction = 4.0f / entity_surface_scale_get();
+    edge_weight = s_cell_step_random_hook != NULL
+        ? s_cell_step_random_hook(0.3f, 0.9f, s_cell_step_hook_user)
+        : random_float_range(0.3f, 0.9f);
+    step_fraction = 4.0f / (level->ptr_terrain != NULL
+        ? terrain_context_scale_get(level->ptr_terrain)
+        : entity_surface_scale_get());
     step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
     switch (direction) {
     case 0u: step->weight_y = edge_weight;
@@ -5180,8 +5253,7 @@ int ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
             step->weight_x = edge_weight; break;
     }
     step->step_kind = marker ? 15u : 14u;
-    step->pending = (uint8_t)(step->pending | 4u | direction |
-                              (marker ? 0x20u : 0u));
+    step->pending = (uint8_t)(step->pending | 4u | direction);
     entity->activity = marker ? 15 : 14;
     entity->activity_timer = 0.0f;
     entity->pos_pair_2f4 = (float)target_cell[0];

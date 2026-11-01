@@ -54,9 +54,9 @@ typedef struct SoundWaveChunk {
 } SoundWaveChunk;
 void sound_wave_data_reader_init(SoundWaveDataReader* reader,
                                  const uint8_t* data, uint32_t size);
-uint32_t sound_wave_data_read(SoundWaveDataReader* reader,
-                              uint32_t requested, void* destination,
-                              uint32_t capacity, uint32_t* bytes_read);
+uint32_t sound_wave_data_reader_read(SoundWaveDataReader* reader,
+                                     uint32_t requested, void* destination,
+                                     uint32_t capacity, uint32_t* bytes_read);
 
 /* A loaded sound. `data` is the raw PCM payload of the data chunk. */
 typedef struct Sound {
@@ -90,6 +90,12 @@ uint32_t sound_wave_file_open_read_chunks(const char* path,
 void sound_wave_data_chunk_open(SoundWaveFileHandle** handle,
                                 SoundWaveChunk* data_chunk_out,
                                 SoundWaveChunk* parent_chunk);
+/* WaveDataRead @ 0x489100: `data_chunk` is the MMCKINFO-compatible record
+ * returned by sound_wave_data_chunk_open; its chunk_size is remaining bytes. */
+uint32_t sound_wave_data_read(SoundWaveFileHandle* handle,
+                              uint32_t requested, void* destination,
+                              SoundWaveChunk* data_chunk,
+                              uint32_t* bytes_read);
 void sound_wave_file_handle_close(SoundWaveFileHandle** handle,
                                  uint8_t** format);
 uint32_t sound_wave_handle_and_buffer_release(SoundWaveFileHandle** handle,

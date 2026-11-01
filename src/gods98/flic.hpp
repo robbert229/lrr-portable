@@ -71,7 +71,7 @@ int flic_chunk_buffer_and_continue_type0b(Flic* flic);
  * failure. The keyframe is decoded at open, so flic_tick starts at frame 1. */
 Flic* flic_open(const char* name);
 
-void flic_close(Flic* f);
+int flic_close(Flic* f);
 
 /* --- geometry / inventory ------------------------------------------------- */
 

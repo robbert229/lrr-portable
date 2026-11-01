@@ -267,12 +267,13 @@ static void fli_delta(uint16_t* pix, int w, int h, const uint8_t* body,
  * chunk 0, deltas otherwise; holds have none). */
 static int fli_decode_chunk(Flic* f, const FlicChunk* ch)
 {
-    if (ch->count == 0) {
+    int records = (int)(int8_t)ch->data[6];
+    if (records <= 0) {
         return 1; /* hold: pixels unchanged */
     }
     size_t pos = FLIC_CHUNK_HDR; /* subrecords start at chunk + 0x10 */
-    for (uint16_t r = 0; r < ch->count; ++r) {
-        if (pos + 6 > ch->size) {
+    for (int r = 0; r < records; ++r) {
+        if (pos > ch->size || ch->size - pos < 6u) {
             return 0; /* truncated size/opcode header */
         }
         const uint8_t* rec = ch->data + pos;
@@ -292,6 +293,7 @@ static int fli_decode_chunk(Flic* f, const FlicChunk* ch)
         pos += rec_size;
     }
     if (f->rgba != NULL) {
+        free(f->rgba);
         f->rgba = NULL; /* invalidate the conversion */
     }
     return 1;
@@ -330,8 +332,9 @@ static int flic_stream_chunk_header_read(Flic* f)
 
 static int flic_stream_chunk_load(Flic* f)
 {
-    if (f == NULL || f->stream_mode == 0 ||
-        !flic_stream_buffer_reserve(f, f->stream_chunk.size)) return 0;
+    if (f == NULL || f->stream_mode == 0) return 0;
+    f->stream_chunk.data = NULL;
+    if (!flic_stream_buffer_reserve(f, f->stream_chunk.size)) return 0;
     if (!f->stream_ops.read_at(f->stream_ops.context, (uint32_t)f->cursor,
                                f->stream_buffer, f->stream_chunk.size))
         return 0;
@@ -340,10 +343,9 @@ static int flic_stream_chunk_load(Flic* f)
 }
 
 // FUNCTION: LEGORR 0x004844b0
-/* FlicFrameRecordWalk: walk the declared subrecords from the
- * 16-byte chunk header, advancing the byte cursor by each record's size. RAM
- * mode has already buffered the chunk; stream-mode refill/capacity work is
- * not representable by this resource-independent in-memory player. */
+/* FlicFrameRecordWalk: walk the signed byte count of subrecords from the
+ * 16-byte chunk header. Stream mode fills the reusable scratch area before
+ * decoding; RAM mode uses the retained file image. */
 int flic_frame_record_walk(Flic* f)
 {
     const FlicChunk* ch;
@@ -364,15 +366,17 @@ int flic_frame_record_walk(Flic* f)
     }
     if (f->stream_mode == 0)
         f->cursor = (size_t)(ch->data - f->raw) + FLIC_CHUNK_HDR;
-    if (!fli_decode_chunk(f, ch)) {
-        return 0;
-    }
+    if (!fli_decode_chunk(f, ch)) return 0;
     {
         size_t pos = FLIC_CHUNK_HDR;
-        uint16_t r;
-        for (r = 0; r < ch->count; ++r) {
-            uint32_t rec_size = le32(ch->data + pos);
+        int remaining = (int)(int8_t)ch->data[6];
+        while (remaining > 0 && pos < ch->size) {
+            uint32_t rec_size;
+            if (pos > ch->size || ch->size - pos < 6u) return 0;
+            rec_size = le32(ch->data + pos);
+            if (rec_size < 6u || rec_size > ch->size - pos) return 0;
             pos += rec_size;
+            --remaining;
         }
         if (f->stream_mode == 0)
             f->cursor = (size_t)(ch->data - f->raw) + pos;
@@ -405,9 +409,11 @@ int flic_chunk_buffer_and_continue_lk(Flic* f)
  * original uniquely returns 1 when scratch allocation fails. */
 int flic_chunk_buffer_and_continue_type0b(Flic* f)
 {
-    if (f != NULL && f->stream_mode != 0 &&
-        !flic_stream_buffer_reserve(f, f->stream_chunk.size)) return 1;
-    if (f != NULL && f->stream_mode != 0) flic_stream_chunk_load(f);
+    if (f != NULL && f->stream_mode != 0) {
+        f->stream_chunk.data = NULL;
+        if (!flic_stream_buffer_reserve(f, f->stream_chunk.size)) return 1;
+        flic_stream_chunk_load(f);
+    }
     return 0;
 }
 
@@ -675,10 +681,10 @@ Flic* flic_open_resource_stream(const char* name)
 }
 
 // FUNCTION: LEGORR 0x00483f00
-void flic_close(Flic* f)
+int flic_close(Flic* f)
 {
     if (f == NULL) {
-        return;
+        return 0;
     }
     free(f->chunks);
     free(f->raw);
@@ -688,6 +694,7 @@ void flic_close(Flic* f)
     if (f->stream_context_close != NULL)
         f->stream_context_close(f->stream_ops.context);
     free(f);
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x004841d0

@@ -394,10 +394,9 @@ void sound_wave_file_handle_close(SoundWaveFileHandle** handle_inout,
     *handle_inout = NULL;
 }
 
-// FUNCTION: LEGORR 0x00489100
-uint32_t sound_wave_data_read(SoundWaveDataReader* reader,
-                              uint32_t requested, void* destination,
-                              uint32_t capacity, uint32_t* bytes_read)
+uint32_t sound_wave_data_reader_read(SoundWaveDataReader* reader,
+                                     uint32_t requested, void* destination,
+                                     uint32_t capacity, uint32_t* bytes_read)
 {
     uint32_t amount;
     if (bytes_read != NULL) *bytes_read = 0;
@@ -413,6 +412,36 @@ uint32_t sound_wave_data_read(SoundWaveDataReader* reader,
         memcpy(destination, reader->data + reader->cursor, amount);
         reader->cursor += amount;
         reader->remaining -= amount;
+    }
+    if (bytes_read != NULL) *bytes_read = amount;
+    return 0u;
+}
+
+// FUNCTION: LEGORR 0x00489100
+uint32_t sound_wave_data_read(SoundWaveFileHandle* handle,
+                              uint32_t requested, void* destination,
+                              SoundWaveChunk* data_chunk,
+                              uint32_t* bytes_read)
+{
+    uint32_t amount;
+    uint32_t remaining;
+    if (bytes_read != NULL) *bytes_read = 0u;
+    if (handle == NULL || handle->stream == NULL || data_chunk == NULL ||
+        (destination == NULL && requested != 0u)) return 0xe103u;
+
+    remaining = data_chunk->chunk_size;
+    amount = requested;
+    if (remaining < amount) amount = remaining;
+    data_chunk->chunk_size = remaining - amount;
+
+    if (handle->stream->memory == NULL ||
+        handle->stream->cursor > handle->stream->length ||
+        amount > handle->stream->length - handle->stream->cursor ||
+        (amount != 0u && destination == NULL)) return 0xe103u;
+    if (amount != 0u) {
+        memcpy(destination, handle->stream->memory + handle->stream->cursor,
+               amount);
+        handle->stream->cursor += amount;
     }
     if (bytes_read != NULL) *bytes_read = amount;
     return 0u;
