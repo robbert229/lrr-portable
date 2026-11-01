@@ -1141,7 +1141,7 @@ void advisor_action_position_and_mode_set(int row, int mode,
                                           uint32_t dword_a, uint32_t dword_b)
 {
     if (row < 0 || row >= ADV_ACTION_ROWS) {
-        return; /* deviation: blind stride */
+        return; /* deviation: bound the table access */
     }
     uint32_t* rec = s_adv_actions[row];
     rec[4] = (uint32_t)mode;   /* DAT base + 0x10 */
@@ -1157,15 +1157,8 @@ void advisor_action_position_and_mode_set(int row, int mode,
 // FUNCTION: LEGORR 0x00401890
 void advisor_action_position_get(int row, uint32_t* dword_c, uint32_t* dword_d)
 {
-    if (row < 0 || row >= ADV_ACTION_ROWS) {
-        return; /* deviation: blind stride */
-    }
-    if (dword_c != NULL) {
-        *dword_c = s_adv_actions[row][7]; /* DAT base + 0x1c */
-    }
-    if (dword_d != NULL) {
-        *dword_d = s_adv_actions[row][8]; /* DAT base + 0x20 */
-    }
+    *dword_c = s_adv_actions[row][7]; /* DAT base + 0x1c */
+    *dword_d = s_adv_actions[row][8]; /* DAT base + 0x20 */
 }
 
 uint32_t advisor_action_flags_peek(int row)

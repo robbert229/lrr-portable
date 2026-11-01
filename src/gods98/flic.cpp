@@ -821,15 +821,6 @@ void flic_packed_triplet_table_to_word_build(void* record)
  * stream+8. The corpus strides all of it blindly; the port guards only the
  * record pointer (deviation, the dispatch precedent). */
 
-/* The corpus palette store: rec + 0x41c + index*2, folded as the ported
- * indexed-word-table lookup (the byte window stands in for the table). */
-static uint16_t rec_palette_word(const char* rec, unsigned index)
-{
-    uint16_t w = 0u;
-    __builtin_memcpy(&w, rec + 0x41c + (size_t)(index & 0xffu) * 2u, sizeof w);
-    return w;
-}
-
 /* The corpus record is 32-bit: the stream link +0x6d0 and the pixel buffer
  * +0x6cc sit four bytes apart, so no LP64 pointer fits in the byte window
  * (the pixel store overwrites the stream's low half). Install-hook side
@@ -951,7 +942,7 @@ int flic_decode8_bit_opcode25_mode4(void* record)
                     src = next + 1;
                     if (b0 != 0u) {
                         for (uint32_t k = b0; k != 0u; k = k - 1u) {
-                            const uint16_t w = rec_palette_word(rec, v);
+                            const uint16_t w = (uint16_t)indexed_word_table_lookup(v, rec);
                             __builtin_memcpy(pixel, &w, sizeof w);
                             pixel += 2;
                         }
@@ -961,7 +952,8 @@ int flic_decode8_bit_opcode25_mode4(void* record)
                     left = (short)(left - (short)(uint16_t)run);
                     src = next;
                     for (uint32_t k = run; k != 0u; k = k - 1u) {
-                        const uint16_t w = rec_palette_word(rec, (uint8_t)*src);
+                        const uint16_t w = (uint16_t)indexed_word_table_lookup(
+                            (uint8_t)*src, rec);
                         src = src + 1;
                         __builtin_memcpy(pixel, &w, sizeof w);
                         pixel += 2;
@@ -974,17 +966,6 @@ int flic_decode8_bit_opcode25_mode4(void* record)
         } while (rows != 0u);
     }
     return 1;
-}
-
-/* The corpus 16-bit pixel expansion: the green field shifts one lane up
- * (flag +0x6e4 keeps the field where it is), and the low five ride along. */
-static uint16_t expand16_word(const char* rec, uint16_t w)
-{
-    int flag = 0;
-    __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
-    const uint16_t g = (flag != 0) ? (uint16_t)(w & 0x7fe0u)
-                                   : (uint16_t)(((unsigned)(w & 0xffe0u)) << 1);
-    return (uint16_t)(g | (w & 0x1fu));
 }
 
 /* FlicDecode16BitKeyframe (FUN_004849d0) — see flic.hpp. The word stream
@@ -1031,7 +1012,13 @@ int flic_decode16_bit_keyframe(void* record)
                     cursor += 3;
                     if ((uint8_t)w != 0u) {
                         for (uint32_t k = count; k != 0u; k = k - 1u) {
-                            const uint16_t px = expand16_word(rec, v);
+                            int flag = 0;
+                            __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+                            uint16_t px = (uint16_t)(((unsigned)(v & 0xffe0u)) << 1);
+                            if (flag != 0) {
+                                px = (uint16_t)(v & 0x7fe0u);
+                            }
+                            px = (uint16_t)(px | (v & 0x1fu));
                             __builtin_memcpy(pixel, &px, sizeof px);
                             pixel += 2;
                         }
@@ -1045,7 +1032,13 @@ int flic_decode16_bit_keyframe(void* record)
                         uint16_t v = 0u;
                         __builtin_memcpy(&v, read, sizeof v);
                         read += 2;
-                        const uint16_t px = expand16_word(rec, v);
+                        int flag = 0;
+                        __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+                        uint16_t px = (uint16_t)(((unsigned)(v & 0xffe0u)) << 1);
+                        if (flag != 0) {
+                            px = (uint16_t)(v & 0x7fe0u);
+                        }
+                        px = (uint16_t)(px | (v & 0x1fu));
                         __builtin_memcpy(pixel, &px, sizeof px);
                         pixel += 2;
                     }
@@ -1139,7 +1132,13 @@ int flic_decode16_bit_delta(void* record)
                             uint16_t v = 0u;
                             __builtin_memcpy(&v, next, sizeof v);
                             next += 2;
-                            const uint16_t px = expand16_word(rec, v);
+                            int flag = 0;
+                            __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+                            uint16_t px = (uint16_t)(((unsigned)(v & 0xffe0u)) << 1);
+                            if (flag != 0) {
+                                px = (uint16_t)(v & 0x7fe0u);
+                            }
+                            px = (uint16_t)(px | (v & 0x1fu));
                             __builtin_memcpy(pixel, &px, sizeof px);
                             pixel += 2;
                         }
@@ -1151,7 +1150,13 @@ int flic_decode16_bit_delta(void* record)
                     const uint32_t run = 0x100u - (uint32_t)b1;
                     if ((short)run != 0) {
                         for (uint32_t k = run; k != 0u; k = k - 1u) {
-                            const uint16_t px = expand16_word(rec, v);
+                            int flag = 0;
+                            __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+                            uint16_t px = (uint16_t)(((unsigned)(v & 0xffe0u)) << 1);
+                            if (flag != 0) {
+                                px = (uint16_t)(v & 0x7fe0u);
+                            }
+                            px = (uint16_t)(px | (v & 0x1fu));
                             __builtin_memcpy(pixel, &px, sizeof px);
                             pixel += 2;
                         }

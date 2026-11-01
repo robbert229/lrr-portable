@@ -2683,25 +2683,35 @@ static void wad_huffman_canonical_codes_build(void* table, int count)
 }
 
 /* WAD codec state mirrors the executable's shared, non-reentrant decoder. */
+// GLOBAL: LEGORR 0x00558080
 static const unsigned char* wad_codec_in;
+// GLOBAL: LEGORR 0x00558084
 static unsigned char* wad_codec_out;
+// GLOBAL: LEGORR 0x00558090
 static unsigned char* wad_codec_end;
-static unsigned int wad_codec_bits, wad_codec_lsb, wad_codec_msb;
+// GLOBAL: LEGORR 0x00557d68
+static unsigned char wad_codec_bits;
+// GLOBAL: LEGORR 0x0055808c
+static unsigned int wad_codec_lsb;
+// GLOBAL: LEGORR 0x00558088
+static unsigned char wad_codec_msb;
 
 // FUNCTION: LEGORR 0x0049cc70
 static void wad_bitstream_output_initialize(const void* src, void* dst)
 {
     const unsigned char* p;
-    uint32_t n;
+    uint32_t n, raw;
     p = (const unsigned char*)src;
     wad_codec_in = p ? p + 0x12 : NULL;
     wad_codec_out = (unsigned char*)dst;
-    n = p ? ((uint32_t)p[4]<<24)|((uint32_t)p[5]<<16)|((uint32_t)p[6]<<8)|p[7] : 0;
+    raw = p ? *(const uint32_t*)(p + 4) : 0;
+    n = ((raw << 24) & 0xff000000u) | ((raw << 8) & 0x00ff0000u)
+      | ((raw >> 8) & 0x0000ff00u) | (raw >> 24);
     wad_codec_end = dst ? (unsigned char*)dst + n : NULL;
     wad_codec_bits = wad_codec_lsb = wad_codec_msb = 0;
 }
 // FUNCTION: LEGORR 0x0049ccc0
-static unsigned int wad_read_bits_lsb_first(unsigned int n)
+static unsigned int wad_read_bits_lsb_first(unsigned char n)
 {
     unsigned int v, mask;
     v = 0;
@@ -2720,7 +2730,7 @@ static unsigned int wad_read_bits_lsb_first(unsigned int n)
     return v;
 }
 // FUNCTION: LEGORR 0x0049cd30
-static unsigned int wad_read_bits_msb_first(unsigned int n)
+static unsigned int wad_read_bits_msb_first(unsigned char n)
 {
     unsigned int v;
     v=0;
@@ -4700,8 +4710,11 @@ void wad_memory_stream_buffer_get(int slot)
  * buffers ride wider so the corpus's blind scan in WadHuffmanSymbolDecode
  * (0x0049ce0e..0x0049ce2d, `while (len == 0 || mask&&lsb != code) ++i;`)
  * stays inside one object when no entry matches. */
+// GLOBAL: LEGORR 0x00557d80
 static WadCodecTableEntry s_wad_huff_literal[128];
+// GLOBAL: LEGORR 0x00557e80
 static WadCodecTableEntry s_wad_huff_offset[128];
+// GLOBAL: LEGORR 0x00557f80
 static WadCodecTableEntry s_wad_huff_length[128];
 
 /* DecodeWadPayloadType1 (FUN_0049c8e0): the RNC type-1 stream. One or more
