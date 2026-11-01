@@ -70,6 +70,12 @@
 #include <string.h>
 
 static char s_directx_error_message[1024];
+static int s_directx_error_code;
+static int s_directx_error_line;
+static int s_directx_error_category;
+static unsigned int s_directx_error_count;
+static const char* s_directx_error_source;
+static const char* s_directx_error_module;
 extern float random_float_range(float minimum, float maximum);
 // GLOBAL: LEGORR 0x005343c8
 static InputActionToggleState s_input_action_toggle_state;
@@ -2937,8 +2943,10 @@ int ledger_stub_0042c330_EmergeMapTriggerSpawn(
         memcpy(&record_x, record + 4, sizeof(record_x));
         memcpy(&record_y, record + 8, sizeof(record_y));
         memcpy(&timer, record + 0x0c, sizeof(timer));
+        /* The retail branch is timer <= 0.0. Express the negation directly
+         * so unordered NaN values remain ineligible, as they are there. */
         if (record_x != cell_xy[0] || record_y != cell_xy[1] ||
-            timer > 0.0f) continue;
+            !(timer <= 0.0f)) continue;
         for (slot_index = 0u; slot_index < 5u; ++slot_index) {
             unsigned char* entry = record + 0x18u + slot_index * 0x0cu;
             int spawn_x, spawn_y;
@@ -4952,6 +4960,12 @@ int ledger_stub_00448800_EntityMoveToCellCoordinates(
     if (!ledger_stub_00449880_BlockedCellApproachWeightWrite(
             entity, (unsigned int)x, (unsigned int)y, 7.0f)) {
         return 0;
+    }
+    if (entity->wp_count > 0 &&
+        (entity->wp_dynamic == NULL
+            ? entity->wp_count <= AI_WAYPOINTS_MAX
+            : (unsigned int)entity->wp_count <= entity->wp_capacity)) {
+        ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].step_kind = 9u;
     }
     entity->pos_pair_2f4 = (float)x;
     entity->pos_pair_2f8 = (float)y;
@@ -9030,14 +9044,27 @@ uint32_t ledger_stub_00489bc0_ComChildItemsVisit(
 void ledger_stub_00489d90_DirectXErrorMessageFormat(const char* name,
                                                     const char* description)
 {
+    const char* module;
+    const char* source;
     if (name == NULL) name = "Unknown";
-    if (description == NULL) description = "No description available";
+    if (description == NULL) description = "Unknown error";
+    module = s_directx_error_module != NULL
+        ? s_directx_error_module : "Unknown module";
+    source = s_directx_error_source != NULL ? s_directx_error_source : "?";
 #if defined(_MSC_VER)
     _snprintf(s_directx_error_message, sizeof(s_directx_error_message) - 1,
-              "%s: %s", name, description);
+              "A DirectX error was set in module %s at line no %i.\n"
+              "Error : %s (code %i)\nDX Module : %s\n"
+              "Error Description : %s",
+              source, s_directx_error_line, name, s_directx_error_code,
+              module, description);
 #else
     snprintf(s_directx_error_message, sizeof(s_directx_error_message) - 1,
-             "%s: %s", name, description);
+             "A DirectX error was set in module %s at line no %i.\n"
+             "Error : %s (code %i)\nDX Module : %s\n"
+             "Error Description : %s",
+             source, s_directx_error_line, name, s_directx_error_code,
+             module, description);
 #endif
     s_directx_error_message[sizeof(s_directx_error_message) - 1] = '\0';
 }
@@ -9047,23 +9074,209 @@ void ledger_stub_00489d90_DirectXErrorMessageFormat(const char* name,
 int ledger_stub_00489dd0_DirectXResultDiagnosticDispatch(
     int result, int diagnostic_kind, const char* source_file, int source_line)
 {
-    char name[64];
-    char detail[256];
-    if (result >= 0) return result;
-#if defined(_MSC_VER)
-    _snprintf(name, sizeof(name) - 1, "DirectX 0x%08x", (unsigned int)result);
-    _snprintf(detail, sizeof(detail) - 1, "%s:%d (kind %d)",
-              source_file != NULL ? source_file : "?", source_line,
-              diagnostic_kind);
-#else
-    snprintf(name, sizeof(name) - 1, "DirectX 0x%08x", (unsigned int)result);
-    snprintf(detail, sizeof(detail) - 1, "%s:%d (kind %d)",
-             source_file != NULL ? source_file : "?", source_line,
-             diagnostic_kind);
-#endif
-    name[sizeof(name) - 1] = '\0';
-    detail[sizeof(detail) - 1] = '\0';
-    ledger_stub_00489d90_DirectXErrorMessageFormat(name, detail);
+    const char* name = "Unknown";
+    const char* description = "An error in an unknown DirectX module/object was raised";
+    static const char* module_names[8] = {
+        "Unknown module", "Direct3D Retained Mode", "Direct Input",
+        "Direct Draw", "Direct3D Immediate mode", "Direct Play",
+        "Direct Sound", "Unknown module"
+    };
+    int category = diagnostic_kind;
+
+    s_directx_error_code = result;
+    s_directx_error_line = source_line;
+    s_directx_error_source = source_file;
+    s_directx_error_count = s_directx_error_count + 1u;
+    if (category < 1 || category > 7) category = 0;
+    s_directx_error_category = category;
+    s_directx_error_module = module_names[category];
+
+    /* These common results are the symbolic cases called out by the
+     * checked-in DirectInput, DirectDraw, and D3DRM decompile. Other codes
+     * retain the original generic fallback until their message table is
+     * ported. */
+    if (category == 1) {
+        switch ((unsigned int)result) {
+        case 0u:
+            name = "D3DRM_OK";
+            description = "No error.";
+            break;
+        case 0x8876030du:
+            name = "D3DRMERR_BADOBJECT";
+            description = "Object expected in argument.";
+            break;
+        case 0x8876030eu:
+            name = "D3DRMERR_BADTYPE";
+            description = "Bad argument type passed.";
+            break;
+        case 0x8876030fu:
+            name = "D3DRMERR_BADALLOC";
+            description = "Out of memory.";
+            break;
+        case 0x88760310u:
+            name = "D3DRMERR_FACEUSED";
+            description = "Face already used in a mesh.";
+            break;
+        case 0x88760311u:
+            name = "D3DRMERR_NOTFOUND";
+            description = "Object not found in specified place.";
+            break;
+        case 0x88760312u:
+            name = "D3DRMERR_NOTDONEYET";
+            description = "Unimplemented.";
+            break;
+        case 0x88760313u:
+            name = "D3DRMERR_FILENOTFOUND";
+            description = "File cannot be opened.";
+            break;
+        case 0x88760314u:
+            name = "D3DRMERR_BADFILE";
+            description = "Data file is corrupt.";
+            break;
+        case 0x88760315u:
+            name = "D3DRMERR_BADDEVICE";
+            description = "Device is not compatible with renderer.";
+            break;
+        case 0x88760316u:
+            name = "D3DRMERR_BADVALUE";
+            description = "Bad argument value passed.";
+            break;
+        case 0x88760317u:
+            name = "D3DRMERR_BADMAJORVERSION";
+            description = "Bad DLL major version.";
+            break;
+        case 0x88760318u:
+            name = "D3DRMERR_BADMINORVERSION";
+            description = "Bad DLL minor version.";
+            break;
+        case 0x88760319u:
+            name = "D3DRMERR_UNABLETOEXECUTE";
+            description = "Unable to carry out procedure.";
+            break;
+        case 0x8876031cu:
+            name = "D3DRMERR_PENDING";
+            description = "The data required to supply the request is not yet available.";
+            break;
+        case 0x8876031du:
+            name = "D3DRMERR_NOTENOUGHDATA";
+            description = "Not enough data has been loaded to satisfy the request.";
+            break;
+        case 0x8876031eu:
+            name = "D3DRMERR_REQUESTTOOLARGE";
+            description = "An attempt was made to set a level of detail that is too large.";
+            break;
+        case 0x8876031fu:
+            name = "D3DRMERR_REQUESTTOOSMALL";
+            description = "An attempt was made to set the minimum level of detail too small.";
+            break;
+        case 0x88760320u:
+            name = "D3DRMERR_CONNECTIONLOST";
+            description = "Data connection was lost during a file operation.";
+            break;
+        case 0x88760324u:
+            name = "D3DRMERR_BOXNOTSET";
+            description = "An attempt was made to access a bounding box before it was set.";
+            break;
+        case 0x88760325u:
+            name = "D3DRMERR_BADPMDATA";
+            description = "The data in the X File is corrupt.";
+            break;
+        default:
+            break;
+        }
+    }
+    else if (category == 2) {
+        switch ((unsigned int)result) {
+        case 0x80004001u:
+            name = "DIERR_UNSUPPORTED";
+            description = "The function called is not supported.";
+            break;
+        case 0x8000000au:
+            name = "E_PENDING";
+            description = "Data is not yet available.";
+            break;
+        case 0x80004005u:
+            name = "DIERR_GENERIC";
+            description = "An undetermined error occurred inside the DirectInput subsystem.";
+            break;
+        case 0x80004002u:
+            name = "DIERR_NOINTERFACE";
+            description = "The specified interface is not supported.";
+            break;
+        case 0x80040154u:
+            name = "DIERR_DEVICENOTREG";
+            description = "The device or device instance is not registered.";
+            break;
+        case 0x80040110u:
+            name = "DIERR_NOAGGREGATION";
+            description = "This object does not support aggregation.";
+            break;
+        case 0x80070002u:
+            name = "DIERR_NOTFOUND";
+            description = "The requested object does not exist.";
+            break;
+        case 0x8007000eu:
+            name = "DIERR_OUTOFMEMORY";
+            description = "The DirectInput subsystem could not allocate sufficient memory to complete the call.";
+            break;
+        case 0x80070057u:
+            name = "DIERR_INVALIDPARAM";
+            description = "An invalid parameter was passed to the returning function.";
+            break;
+        case 0x8007001eu:
+            name = "DIERR_INPUTLOST";
+            description = "Access to the input device has been lost.";
+            break;
+        case 0u:
+            name = "DI_OK";
+            description = "The operation completed successfully.";
+            break;
+        default:
+            break;
+        }
+    }
+    else if (category == 3) {
+        switch ((unsigned int)result) {
+        case 0x88760005u:
+            name = "DDERR_GENERIC";
+            description = "There is an undefined error condition.";
+            break;
+        case 0x80004001u:
+            name = "DDERR_UNSUPPORTED";
+            description = "The operation is not supported.";
+            break;
+        case 0x8007000eu:
+            name = "DDERR_OUTOFMEMORY";
+            description = "DirectDraw does not have enough memory to perform the operation.";
+            break;
+        case 0x800401f0u:
+            name = "DDERR_NOTINITIALIZED";
+            description = "An attempt was made to call an interface that has not been initialized.";
+            break;
+        case 0x88760064u:
+            name = "DDERR_INVALIDPARAMS";
+            description = "One or more of the parameters passed to the function are incorrect.";
+            break;
+        case 0u:
+            name = "DD_OK";
+            description = "The request completed successfully.";
+            break;
+        default:
+            break;
+        }
+    }
+    else if (category == 7) {
+        name = "QUERY_INTERFACE";
+        description = "The requested interface could not be obtained.";
+    }
+    else if (category >= 4 && category <= 6) {
+        /* The retail switch emits the unsupported-module diagnostic and
+         * falls through to the D3DRM result handling for these categories. */
+        name = "Unknown";
+        description = "Error handling is unsupported in this DirectX module.";
+    }
+
+    ledger_stub_00489d90_DirectXErrorMessageFormat(name, description);
     return result;
 }
 
