@@ -693,7 +693,7 @@ void entity_linked_list_entries_remove_by_key(uint32_t key)
             EntityLinkNode* node = *node_link;
             if (node->key == key) {
                 *node_link = node->next;
-                if (list->count != 0) --list->count;
+                --list->count;
                 if (s_entity_link_node_release_hook != NULL)
                     s_entity_link_node_release_hook(node);
             }
@@ -701,7 +701,7 @@ void entity_linked_list_entries_remove_by_key(uint32_t key)
                 node_link = &node->next;
             }
         }
-        if (list->head == NULL || list->count == 0) {
+        if (list->count == 0) {
             *list_link = list->next;
             if (s_entity_link_list_release_hook != NULL)
                 s_entity_link_list_release_hook(list);
@@ -729,7 +729,7 @@ void terrain_cell_linked_entries_remove(uint32_t key)
             EntityLinkNode* node = *node_link;
             if (node->key == key) {
                 *node_link = node->next;
-                if (list->count != 0) --list->count;
+                --list->count;
                 if (s_entity_link_node_release_hook != NULL)
                     s_entity_link_node_release_hook(node);
             }
@@ -737,7 +737,7 @@ void terrain_cell_linked_entries_remove(uint32_t key)
                 node_link = &node->next;
             }
         }
-        if (list->head == NULL || list->count == 0) {
+        if (list->count == 0) {
             *list_link = list->next;
             if (s_entity_link_list_release_hook != NULL)
                 s_entity_link_list_release_hook(list);

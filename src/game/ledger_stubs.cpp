@@ -7594,7 +7594,10 @@ typedef struct PortableResourceTreeNode {
 typedef struct PortableResourceNameQuery {
     const char* name;
     void* resource;
-    int compare_prefix;
+    uint32_t match_count;
+    uint32_t selected_index;
+    int search_mode;
+    int case_sensitive;
 } PortableResourceNameQuery;
 static int portable_resource_tree_walk(
     PortableResourceTreeNode* node,
@@ -7617,6 +7620,7 @@ static int portable_resource_name_match(PortableResourceTreeNode* node,
     PortableResourceNameQuery* query = (PortableResourceNameQuery*)context;
     const char* a;
     const char* b;
+    int matched = 1;
     if (node == NULL || query == NULL || node->name == NULL ||
         query->name == NULL) return 0;
     a = node->name;
@@ -7624,38 +7628,56 @@ static int portable_resource_name_match(PortableResourceTreeNode* node,
     while (*a != '\0' && *b != '\0') {
         int ca = (unsigned char)*a;
         int cb = (unsigned char)*b;
-        if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
-        if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
-        if (ca != cb) return 0;
+        if (!query->case_sensitive) {
+            if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
+            if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
+        }
+        if (ca != cb) {
+            matched = 0;
+            break;
+        }
         ++a;
         ++b;
     }
-    if (query->compare_prefix) {
-        if (*b != '\0') return 0;
+    if (*a != '\0' || *b != '\0') matched = 0;
+    if (!matched) return 0;
+    if (query->search_mode == 1) {
+        ++query->match_count;
+        return 0;
     }
-    else if (*a != '\0' || *b != '\0') return 0;
+    if (query->search_mode == 2) {
+        ++query->match_count;
+        if (query->match_count != query->selected_index + 1u) return 0;
+    }
+    else if (query->search_mode != 0) return 0;
     query->resource = node->resource;
     return 1;
 }
 // FUNCTION: LEGORR 0x00473bc0
 void* ledger_stub_00473bc0_ResourceNameRegisterOrQuery(
     PortableResourceTreeNode* root, const char* name, int mode,
-    void** resource_out)
+    uint32_t* match_count_or_index)
 {
     PortableResourceNameQuery query;
-    if (resource_out != NULL) *resource_out = NULL;
+    if (mode == 1 && match_count_or_index != NULL)
+        *match_count_or_index = 0u;
     if (root == NULL || name == NULL ||
         (mode != 0 && mode != 1 && mode != 2)) return NULL;
     query.name = name;
     query.resource = NULL;
-    query.compare_prefix = (mode == 2);
-    if (!portable_resource_tree_walk(root, portable_resource_name_match,
-                                     &query)) return NULL;
+    query.match_count = 0u;
+    query.selected_index = mode == 2 && match_count_or_index != NULL
+        ? *match_count_or_index : 0u;
+    query.search_mode = mode;
+    query.case_sensitive = 0;
+    portable_resource_tree_walk(root, portable_resource_name_match, &query);
     if (mode == 1) {
-        if (resource_out != NULL) *resource_out = query.resource;
+        if (match_count_or_index != NULL)
+            *match_count_or_index = query.match_count;
         return NULL;
     }
-    return query.resource;
+    return query.resource != NULL
+        ? scene_object_owner_link_ensure(query.resource) : NULL;
 }
 
 // XfTextureNameFormat

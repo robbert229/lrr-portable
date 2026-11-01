@@ -4482,6 +4482,7 @@ void entity_indexed_flag_set_and_refresh(EntitySlot* entity)
     if (entity == NULL || entity->type != 1) return;
     bit = 1u << (entity->indexed_record_flag_index & 0x1fu);
     entity->indexed_record_flags |= bit;
+    (void)entity_animation_state_set(entity, entity->indexed_record_flags);
     if (s_entity_indexed_flag_publish_hook != NULL) {
         s_entity_indexed_flag_publish_hook(entity,
                                            entity->indexed_record_flags,
