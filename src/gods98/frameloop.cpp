@@ -1230,6 +1230,9 @@ int LegorrrRun(void)
     game.cfg = block_open("Lego.cfg");
     if (game.cfg != NULL) {
         entity_names_config_load(game.cfg);
+        if (block_get_bool(game.cfg, "HelpWindow::HelpWindowOn") == 1) {
+            help_window_resources_init(game.cfg, NULL);
+        }
         tooltip_icons_config_load(game.cfg);
         /* InfoMessages section -> per-id bus sounds (finding 22 §1). */
         message_load_infomessages(game.cfg);

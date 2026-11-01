@@ -4709,10 +4709,19 @@ int ledger_stub_0044702d_RegisterRelativeStateUpdateFragment(
     EntitySlot* entity, float target_x, float target_y)
 {
     int result;
+    AiWaypoint* step;
     if (entity == NULL) return 0;
     result = entity_route_to_cell_commit(entity, (int)target_x,
                                          (int)target_y, 3u);
-    if (result) entity->flags_3e8 &= ~0x02000000u;
+    if (!result || entity->wp_count <= 0 ||
+        (entity->wp_dynamic == NULL
+            ? entity->wp_count > AI_WAYPOINTS_MAX
+            : (unsigned int)entity->wp_count > entity->wp_capacity))
+        return 0;
+    step = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
+    step->weight_x = random_float_range(0.3f, 0.7f);
+    step->weight_y = random_float_range(0.3f, 0.7f);
+    entity->flags_3e8 &= ~0x02000000u;
     return result;
 }
 
@@ -9478,10 +9487,16 @@ void ledger_stub_0048b290_StartupStreamsClose()
 // FUNCTION: LEGORR 0x0048b390
 int ledger_stub_0048b390_RegistryPathCreateKeys(
     void* root, const char* subkey_path, const char* value_name,
-    void* output, uint32_t* size, uint32_t* value_type)
+    int query_mode, void* output, uint32_t output_size)
 {
+    uint32_t size = output_size;
+    uint32_t value_type = 0u;
+    /* The retail routine passes the value type and byte count as local
+     * variables to RegQueryValueExA. Its fourth argument only accepts the
+     * two supported query modes; neither result is returned to the caller. */
+    if (query_mode != 0 && query_mode != 1) return 0;
     return unported_ledger_stubs::registry_path_create_keys(
-        root, subkey_path, value_name, output, size, value_type);
+        root, subkey_path, value_name, output, &size, &value_type);
 }
 
 // LwoCurves
