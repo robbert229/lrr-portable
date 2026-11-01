@@ -30,11 +30,13 @@ typedef struct GridCellObjectNode {
 } GridCellObjectNode;
 typedef struct GridCellObjectChunk {
     struct GridCellObjectChunk* next;
-    GridCellObjectNode nodes[32];
+    GridCellObjectNode* nodes;
+    size_t node_count;
 } GridCellObjectChunk;
 static void** s_grid_cell_object_heads;
 static GridCellObjectChunk* s_grid_cell_object_chunks;
 static GridCellObjectNode* s_grid_cell_object_free;
+static uint32_t s_grid_cell_object_chunk_count;
 static GridCellObjectCoordinatesHook s_grid_object_coordinates_hook;
 static GridCellObjectFlagHook s_grid_object_flag_hook;
 static void* s_grid_cell_object_context;
@@ -90,16 +92,16 @@ void map_cell_record_grid_initialize(void* level)
         free(s_grid_cell_object_heads);
         s_grid_cell_object_heads = NULL;
     }
-    s_grid_cell_object_free = NULL;
-    for (chunk = s_grid_cell_object_chunks; chunk != NULL; chunk = chunk->next) {
-        int node_index;
-        for (node_index = 0; node_index < 32; ++node_index) {
-            memset(&chunk->nodes[node_index], 0,
-                   sizeof(chunk->nodes[node_index]));
-            chunk->nodes[node_index].next_free = s_grid_cell_object_free;
-            s_grid_cell_object_free = &chunk->nodes[node_index];
-        }
+    chunk = s_grid_cell_object_chunks;
+    while (chunk != NULL) {
+        GridCellObjectChunk* next = chunk->next;
+        free(chunk->nodes);
+        free(chunk);
+        chunk = next;
     }
+    s_grid_cell_object_chunks = NULL;
+    s_grid_cell_object_free = NULL;
+    s_grid_cell_object_chunk_count = 0u;
     s_map_cell_record_level = level;
     if (level == NULL) {
         return;
@@ -187,14 +189,33 @@ void grid_cell_object_hooks_install(GridCellObjectCoordinatesHook coordinates,
 void terrain_record_pool_chunk_allocate(void)
 {
     GridCellObjectChunk* chunk;
-    int index;
+    size_t node_count;
+    size_t node_bytes;
+    size_t index;
+    if (s_grid_cell_object_chunk_count >= 32u
+        || s_grid_cell_object_chunk_count >= sizeof(size_t) * CHAR_BIT) {
+        return;
+    }
+    node_count = (size_t)1u << s_grid_cell_object_chunk_count;
+    if (node_count > ((size_t)-1) / sizeof(GridCellObjectNode)) {
+        return;
+    }
+    node_bytes = node_count * sizeof(GridCellObjectNode);
     chunk = (GridCellObjectChunk*)malloc(sizeof(GridCellObjectChunk));
     if (chunk == NULL) {
         return;
     }
+    chunk->nodes = (GridCellObjectNode*)malloc(node_bytes);
+    if (chunk->nodes == NULL) {
+        free(chunk);
+        return;
+    }
+    chunk->node_count = node_count;
     chunk->next = s_grid_cell_object_chunks;
     s_grid_cell_object_chunks = chunk;
-    for (index = 0; index < 32; ++index) {
+    ++s_grid_cell_object_chunk_count;
+    for (index = 0; index < node_count; ++index) {
+        memset(&chunk->nodes[index], 0, sizeof(chunk->nodes[index]));
         chunk->nodes[index].next_free = s_grid_cell_object_free;
         s_grid_cell_object_free = &chunk->nodes[index];
     }
@@ -840,7 +861,8 @@ void* grid_cell_object_link_insert(void* object, int x, int y)
     node->object = object;
     node->x = x;
     node->y = y;
-    node->next_cell = (GridCellObjectNode*)s_grid_cell_object_heads[index];
+    node->next_free = node;
+    node->next_cell = NULL;
     s_grid_cell_object_heads[index] = node;
     if (s_grid_object_flag_hook != NULL) {
         s_grid_object_flag_hook(object, s_grid_cell_object_context);
@@ -873,7 +895,6 @@ void terrain_cell_entity_record_unlink(void* record, int x, int y)
     uint32_t height;
     uint32_t index;
     GridCellObjectNode* node;
-    (void)record;
     if (s_map_cell_record_level == NULL || s_grid_cell_object_heads == NULL) {
         return;
     }
@@ -885,14 +906,13 @@ void terrain_cell_entity_record_unlink(void* record, int x, int y)
         return;
     }
     index = (uint32_t)y * width + (uint32_t)x;
-    node = (GridCellObjectNode*)s_grid_cell_object_heads[index];
-    s_grid_cell_object_heads[index] = NULL;
-    while (node != NULL) {
-        GridCellObjectNode* next = node->next_cell;
-        node->next_free = s_grid_cell_object_free;
-        s_grid_cell_object_free = node;
-        node = next;
+    node = (GridCellObjectNode*)record;
+    if (node == NULL) {
+        return;
     }
+    node->next_free = s_grid_cell_object_free;
+    s_grid_cell_object_free = node;
+    s_grid_cell_object_heads[index] = NULL;
     terrain_cell_and_neighbors_update(x, y);
 }
 
@@ -907,7 +927,10 @@ void terrain_entity_cell_record_remove(void* object)
     uint32_t height;
     uint32_t index;
     GridCellObjectNode* node;
-    if (object == NULL || s_grid_object_coordinates_hook == NULL
+    if (object == NULL
+        || (((*(const uint32_t*)((const unsigned char*)object + 0x3e4))
+             & 0x02000000u) == 0u)
+        || s_grid_object_coordinates_hook == NULL
         || s_grid_object_coordinates_hook(object, &x, &y,
                                           s_grid_cell_object_context) == 0
         || s_map_cell_record_level == NULL || s_grid_cell_object_heads == NULL) {

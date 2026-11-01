@@ -1221,9 +1221,26 @@ static void* ddiscene_object_frame_record_get(void* scene_object)
 // FUNCTION: LEGORR 0x00475390
 float ddiscene_object_length_get(void* scene_object)
 {
-    void* interface_object = ddiscene_object_frame_record_get(scene_object);
-    return interface_object != NULL ?
-        ddiscene_animation_duration_get(interface_object) : 0.0f;
+    uint32_t kind;
+    void* interface_object;
+    if (scene_object == NULL) return 0.0f;
+    kind = *(uint32_t*)((char*)scene_object + 0x10);
+    if (kind == 4u) {
+        void* channel = *(void**)((char*)scene_object + 4);
+        void* action_slot = *(void**)((char*)scene_object + 0x0c);
+        const char* action_name = action_slot != NULL
+            ? *(const char**)action_slot : NULL;
+        interface_object = channel != NULL && action_name != NULL
+            ? ddiscene_frame_record_find(channel, action_name, 0) : NULL;
+        if (interface_object != NULL)
+            return ddiscene_animation_duration_get(interface_object);
+    }
+    else if (kind == 3u) {
+        interface_object = *(void**)((char*)scene_object + 4);
+        if (interface_object != NULL)
+            return ddiscene_animation_duration_get(interface_object);
+    }
+    return 0.0f;
 }
 
 /* DDiSceneObjectFramePositionGet (FUN_004753f0): follow the same kind
@@ -1231,9 +1248,24 @@ float ddiscene_object_length_get(void* scene_object)
 // FUNCTION: LEGORR 0x004753f0
 uint32_t ddiscene_object_frame_position_get(void* scene_object)
 {
-    void* interface_object = ddiscene_object_frame_record_get(scene_object);
-    return interface_object != NULL ?
-        ddiscene_action_record_field_0c_get(interface_object) : 0u;
+    uint32_t kind;
+    void* interface_object = NULL;
+    if (scene_object == NULL) return 0u;
+    kind = *(uint32_t*)((char*)scene_object + 0x10);
+    if (kind == 4u) {
+        void* channel = *(void**)((char*)scene_object + 4);
+        void* action_slot = *(void**)((char*)scene_object + 0x0c);
+        const char* action_name = action_slot != NULL
+            ? *(const char**)action_slot : NULL;
+        if (channel != NULL && action_name != NULL)
+            interface_object = ddiscene_frame_record_find(
+                channel, action_name, 0);
+    }
+    else if (kind == 3u) {
+        interface_object = *(void**)((char*)scene_object + 4);
+    }
+    return interface_object != NULL
+        ? ddiscene_action_record_field_0c_get(interface_object) : 0u;
 }
 
 /* DDiSceneAnimationCallbacksSet (FUN_00475c00): allocate the four-callback

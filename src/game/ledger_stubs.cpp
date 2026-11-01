@@ -3186,7 +3186,7 @@ void ledger_stub_004345f0_PanelsConfigEntryApply(BlockFile* config,
     BlockRec* section;
     BlockRec* entry;
     if (config == NULL) return;
-    sprintf(path, "Panels_%d_%d", display_width, display_height);
+    sprintf(path, "Panels_%i_%i", display_width, display_height);
     section = block_subgroup(config, path);
     if (section == NULL) return;
     for (entry = block_first_child(section); entry != NULL;
@@ -3208,28 +3208,75 @@ void ledger_stub_004345f0_PanelsConfigEntryApply(BlockFile* config,
     }
 }
 
-// PanelButtonLayoutConfigLoad
-typedef int (*PanelButtonLayoutApplyHook)(void* context, const char* name,
-                                          const char* value);
 // FUNCTION: LEGORR 0x00434710
-uint32_t ledger_stub_00434710_PanelButtonLayoutConfigLoad(
-    BlockFile* config, const char* group_name,
-    PanelButtonLayoutApplyHook apply, void* context)
+void ledger_stub_00434710_PanelButtonLayoutConfigLoad(
+    BlockFile* config, int display_width, int display_height)
 {
+    enum { PANEL_COUNT = 12, BUTTONS_PER_PANEL = 24, LAYOUT_FIELDS = 9 };
+    int counts[PANEL_COUNT];
+    int slots[PANEL_COUNT][BUTTONS_PER_PANEL];
+    int textures[3][PANEL_COUNT][BUTTONS_PER_PANEL];
+    int ids[PANEL_COUNT][BUTTONS_PER_PANEL];
+    float geometry[PANEL_COUNT][BUTTONS_PER_PANEL][4];
+    char path[64];
     BlockRec* group;
     BlockRec* entry;
-    uint32_t applied = 0u;
-    if (config == NULL || group_name == NULL || apply == NULL) return 0u;
-    group = block_subgroup(config, group_name);
-    if (group == NULL) return 0u;
+    int panel;
+
+    if (config == NULL) return;
+    sprintf(path, "Buttons%ix%i", display_width, display_height);
+    group = block_subgroup(config, path);
+    if (group == NULL) return;
+    memset(counts, 0, sizeof(counts));
+    memset(textures, 0, sizeof(textures));
+    memset(ids, 0, sizeof(ids));
+
     for (entry = block_first_child(group); entry != NULL;
          entry = block_next_sibling(entry)) {
-        const char* name = block_name(entry);
+        const char* panel_name = block_name(entry);
         const char* value = block_value(entry);
-        if (name != NULL && value != NULL && apply(context, name, value))
-            ++applied;
+        char value_copy[512];
+        char* fields[LAYOUT_FIELDS];
+        int count;
+        unsigned int button;
+        int row;
+
+        if (panel_name == NULL || value == NULL ||
+            !ui_panel_name_table_lookup(panel_name, &panel) ||
+            panel < 0 || panel >= PANEL_COUNT ||
+            counts[panel] >= BUTTONS_PER_PANEL) continue;
+        strncpy(value_copy, value, sizeof(value_copy) - 1u);
+        value_copy[sizeof(value_copy) - 1u] = '\0';
+        count = ledger_config_split_limited(value_copy, fields,
+                                            LAYOUT_FIELDS, ",");
+        if (count != LAYOUT_FIELDS ||
+            !ui_panel_indexed_name_lookup((unsigned int)panel, fields[0],
+                                          &button) ||
+            button >= BUTTONS_PER_PANEL) continue;
+
+        row = counts[panel];
+        slots[panel][row] = (int)button;
+        textures[0][panel][row] =
+            strcmp(fields[1], "NULL") != 0;
+        textures[1][panel][row] =
+            strcmp(fields[2], "NULL") != 0;
+        textures[2][panel][row] =
+            strcmp(fields[3], "NULL") != 0;
+        geometry[panel][row][0] = (float)atoi(fields[4]);
+        geometry[panel][row][1] = (float)atoi(fields[5]);
+        geometry[panel][row][2] = (float)atoi(fields[6]);
+        geometry[panel][row][3] = (float)atoi(fields[7]);
+        if (!case_insensitive_name_table_lookup(fields[8], &ids[panel][row]))
+            ids[panel][row] = 0;
+        ++counts[panel];
     }
-    return applied;
+
+    for (panel = 0; panel < PANEL_COUNT; ++panel) {
+        panel_texture_slots_allocate(
+            panel, counts[panel], slots[panel], &geometry[panel][0][0],
+            textures[0][panel], textures[1][panel], textures[2][panel],
+            ids[panel]);
+    }
 }
 
 // FUNCTION: LEGORR 0x00434a50
