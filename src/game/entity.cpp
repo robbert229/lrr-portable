@@ -3566,53 +3566,15 @@ static const char* obj_val(BlockFile* bf, const char* root, const char* obj,
     return block_get_strptr(bf, path);
 }
 
-/* --- model cache (finding 30) --------------------------------------------
- * One parsed LWO model per resource path, process-lifetime for the demo —
- * models are never freed (documented; the renderer only reads them). */
-#define MODEL_CACHE_MAX 16
-static struct {
-    const char* path;
-    const void* model;
-} s_model_cache[MODEL_CACHE_MAX];
-static int s_model_cache_n = 0;
-
-static char* model_dup(const char* s)
-{
-#if defined(_MSC_VER)
-    return _strdup(s);
-#else
-    size_t n = strlen(s);
-    char* d = (char*)malloc(n + 1);
-    if (d != NULL) {
-        memcpy(d, s, n);
-        d[n] = '\0';
-    }
-    return d;
-#endif
-}
-
+/* The entity renderer consumes the portable parsed-model representation.
+ * Share the engine model path/cache so entity loads and scene resource
+ * lookups do not parse and own duplicate models for the same path. */
 static const void* model_for_path(const char* path)
 {
     if (path == NULL || path[0] == '\0') {
         return NULL;
     }
-    for (int i = 0; i < s_model_cache_n; ++i) {
-        if (s_model_cache[i].path != NULL
-            && strcmp(s_model_cache[i].path, path) == 0) {
-            return s_model_cache[i].model;
-        }
-    }
-    const void* m = NULL;
-    if (s_model_cache_n < MODEL_CACHE_MAX) {
-        m = model_open(path);
-        char* kept = m != NULL ? model_dup(path) : NULL;
-        if (kept != NULL) {
-            s_model_cache[s_model_cache_n].path = kept;
-            s_model_cache[s_model_cache_n].model = m;
-            ++s_model_cache_n;
-        }
-    }
-    return m;
+    return model_resource_resolve_or_load(NULL, path, NULL, NULL);
 }
 
 void entity_set_model(EntitySlot* e, const char* path)
