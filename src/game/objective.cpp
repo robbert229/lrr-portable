@@ -6,6 +6,7 @@
 #include "gods98/block.hpp"
 #include "gods98/engine.hpp"
 #include "gods98/media.hpp"
+#include "gods98/record.hpp"
 #include "gods98/scene_resources.hpp"
 #include "gods98/string.hpp"
 #include "gods98/texture.hpp"
@@ -816,30 +817,57 @@ int advisor_scene_advance_completion_check(int animation_slot, float delta)
     float current;
     if (animation_slot < 0 || animation_slot >= 11) return 1;
     handle = s_adv_animation_slots[animation_slot].handle;
-    if (handle != 0u && s_adv_animation_hooks.update != NULL) {
-        progress = s_adv_animation_hooks.update(handle, delta,
-                                                s_adv_animation_hooks.user);
+    if (handle != 0u) {
+        if (s_adv_animation_hooks.update != NULL) {
+            progress = s_adv_animation_hooks.update(
+                handle, delta, s_adv_animation_hooks.user);
+        } else if (s_adv_animation_hooks.time_get == NULL &&
+                   s_adv_animation_hooks.seek == NULL) {
+            progress = ddiscene_advance_by_time(
+                (void*)(uintptr_t)handle, delta);
+        }
     }
     if ((advisor_state_word_peek() & 2u) == 0u) {
         return progress > 0.0f ? 0 : 1;
     }
     if (progress > 0.0f) {
         if (handle != 0u && s_adv_animation_hooks.seek != NULL) {
-            s_adv_animation_hooks.seek(handle,
-                s_adv_animation_slots[animation_slot].start_time + progress,
-                s_adv_animation_hooks.user);
+            const float target = s_adv_animation_slots[animation_slot].start_time
+                + progress;
+            s_adv_animation_hooks.seek(handle, target,
+                                       s_adv_animation_hooks.user);
+        } else if (handle != 0u && s_adv_animation_hooks.update == NULL &&
+                   s_adv_animation_hooks.time_get == NULL) {
+            const float target = s_adv_animation_slots[animation_slot].start_time
+                + progress;
+            (void)ddiscene_frame_update_and_callbacks(
+                (void*)(uintptr_t)handle, target);
         }
         return 1;
     }
-    current = handle != 0u && s_adv_animation_hooks.time_get != NULL
-        ? s_adv_animation_hooks.time_get(handle, s_adv_animation_hooks.user)
-        : 0.0f;
+    if (handle == 0u) current = 0.0f;
+    else if (s_adv_animation_hooks.time_get != NULL)
+        current = s_adv_animation_hooks.time_get(
+            handle, s_adv_animation_hooks.user);
+    else if (s_adv_animation_hooks.update == NULL &&
+             s_adv_animation_hooks.seek == NULL)
+        current = ddiscene_object_length_get((void*)(uintptr_t)handle);
+    else
+        current = 0.0f;
     if (s_adv_animation_slots[animation_slot].end_time <= current) {
         if (handle != 0u && s_adv_animation_hooks.seek != NULL) {
-            s_adv_animation_hooks.seek(handle,
+            const float target =
                 (current - s_adv_animation_slots[animation_slot].end_time) +
-                    s_adv_animation_slots[animation_slot].start_time,
-                s_adv_animation_hooks.user);
+                s_adv_animation_slots[animation_slot].start_time;
+            s_adv_animation_hooks.seek(handle, target,
+                                       s_adv_animation_hooks.user);
+        } else if (handle != 0u && s_adv_animation_hooks.update == NULL &&
+                   s_adv_animation_hooks.time_get == NULL) {
+            const float target =
+                (current - s_adv_animation_slots[animation_slot].end_time) +
+                s_adv_animation_slots[animation_slot].start_time;
+            (void)ddiscene_frame_update_and_callbacks(
+                (void*)(uintptr_t)handle, target);
         }
     }
     return 1;
@@ -934,12 +962,10 @@ void advisor_transition_worker(float delta)
             s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_NOTIFY, row,
                                     animation, s_adv_scene_action_user);
         }
+        scene_render_lock_toggle((void*)(uintptr_t)animation, 0);
+        scene_render_lock_toggle(
+            (void*)(uintptr_t)s_adv_scene_companion_handle, 0);
         if (s_adv_scene_action_hook != NULL) {
-            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, row,
-                                    animation, s_adv_scene_action_user);
-            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, -1,
-                                    s_adv_scene_companion_handle,
-                                    s_adv_scene_action_user);
             s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_ATTACH, row,
                                     animation, s_adv_scene_action_user);
         }
@@ -950,14 +976,10 @@ void advisor_transition_worker(float delta)
         }
         advisor_state_word_set(advisor_state_word_peek() & ~1u);
     }
-    if (s_adv_scene_action_hook != NULL) {
-        if (animation != 0u)
-            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, row,
-                                    animation, s_adv_scene_action_user);
-        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, -1,
-                                    s_adv_scene_companion_handle,
-                                s_adv_scene_action_user);
-    }
+    if (animation != 0u)
+        scene_render_lock_toggle((void*)(uintptr_t)animation, 1);
+    scene_render_lock_toggle(
+        (void*)(uintptr_t)s_adv_scene_companion_handle, 1);
 }
 
 // FUNCTION: LEGORR 0x00401210
@@ -1008,8 +1030,9 @@ void advisor_request_reset_and_submit_sound(int row)
     if (animation_slot >= 11u) return;
     animation = s_adv_animation_slots[animation_slot].handle;
     if (animation != 0u) {
-        /* FUN_00401930 resets the selected DDiScene, plays the configured
-         * sound alias from the action record, then queues SFX 0x2a. */
+        /* FUN_00401930 unlocks the selected DDiScene, evaluates it at time
+         * zero, plays the configured sound, then queues SFX 0x2a. */
+        scene_render_lock_toggle((void*)(uintptr_t)animation, 0);
         ddiscene_frame_update_and_callbacks((void*)(uintptr_t)animation,
                                             0.0f);
         sound_alias_play((int)s_adv_actions[row][3], 0);
@@ -1046,16 +1069,12 @@ void advisor_animation_end_cleanup(void)
         uint32_t animation_slot = s_adv_actions[s_adv_scene_active_row][0];
         uint32_t animation = animation_slot < 11u
             ? s_adv_animation_slots[animation_slot].handle : 0u;
-        if (animation != 0u && s_adv_scene_action_hook != NULL)
-            s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE,
-                                    s_adv_scene_active_row, animation,
-                                    s_adv_scene_action_user);
+        if (animation != 0u)
+            scene_render_lock_toggle((void*)(uintptr_t)animation, 1);
     }
     advisor_state_word_set(advisor_state_word_peek() & ~1u);
-    if (s_adv_scene_action_hook != NULL)
-        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_HIDE, -1,
-                                s_adv_scene_companion_handle,
-                                s_adv_scene_action_user);
+    scene_render_lock_toggle(
+        (void*)(uintptr_t)s_adv_scene_companion_handle, 1);
 }
 
 // FUNCTION: LEGORR 0x004017b0

@@ -108,7 +108,7 @@ static uint16_t s_le16(const uint8_t* p)
 static uint32_t sound_wave_format_find(const uint8_t* data, uint32_t size,
                                       WavSample* format_out)
 {
-    uint32_t pos;
+    uint32_t pos, riff_end;
     if (format_out == NULL) return 0xe101u;
     memset(format_out, 0, sizeof(*format_out));
     if (data == NULL || size < 12u) return 0xe101u;
@@ -116,11 +116,17 @@ static uint32_t sound_wave_format_find(const uint8_t* data, uint32_t size,
         data[3] != 'F' || data[8] != 'W' || data[9] != 'A' ||
         data[10] != 'V' || data[11] != 'E') return 0xe101u;
 
+    riff_end = s_le32(data + 4u) + 8u;
+    if (riff_end < 12u || riff_end > size) return 0xe102u;
     pos = 12u;
-    while (pos <= size && size - pos >= 8u) {
+    while (pos <= riff_end && riff_end - pos >= 8u) {
         uint32_t chunk_size = s_le32(data + pos + 4u);
         uint32_t body = pos + 8u;
-        if (chunk_size > size - body) return 0xe102u;
+        uint32_t padded_size;
+        if (chunk_size > riff_end - body) return 0xe102u;
+        padded_size = chunk_size + (chunk_size & 1u);
+        if (padded_size < chunk_size || padded_size > riff_end - body)
+            return 0xe102u;
         if (data[pos] == 'f' && data[pos + 1] == 'm' &&
             data[pos + 2] == 't' && data[pos + 3] == ' ') {
             if (chunk_size < 16u) return 0xe101u;
@@ -132,8 +138,7 @@ static uint32_t sound_wave_format_find(const uint8_t* data, uint32_t size,
             format_out->bits_per_sample = s_le16(data + body + 14u);
             return 0u;
         }
-        if (size - body - chunk_size < (chunk_size & 1u)) return 0xe102u;
-        pos = body + chunk_size + (chunk_size & 1u);
+        pos = body + padded_size;
     }
     return 0xe101u;
 }
@@ -266,7 +271,7 @@ uint32_t sound_wave_file_average_bytes_per_second_read(const char* path)
     WavSample format;
     uint32_t result = 0u;
     if (path == NULL) return 0u;
-    resource = resource_open(path, RESOURCE_AUTO);
+    resource = resource_open(path, RESOURCE_STD_ONLY);
     if (resource == NULL) return 0u;
     if (resource_read(resource) >= 0 &&
         sound_wave_format_find((const uint8_t*)resource->data,
@@ -294,7 +299,7 @@ uint32_t sound_wave_file_open_read_chunks(const char* path,
     *format_out = NULL;
     memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
     if (path == NULL) return 0xe100u;
-    resource = resource_open(path, RESOURCE_AUTO);
+    resource = resource_open(path, RESOURCE_STD_ONLY);
     if (resource == NULL) return 0xe100u;
     if (resource_read(resource) < 0 || resource->size < 0 ||
         (uint32_t)resource->size > 0x7fffffffu) {
@@ -342,8 +347,11 @@ void sound_wave_data_chunk_open(SoundWaveFileHandle** handle_inout,
     size = (uint32_t)handle->resource->size;
     riff_end = s_le32(data + 4u) + 8u;
     if (riff_end < 12u || riff_end > size) return;
+    if (parent_chunk->chunk_id != 0x46464952u ||
+        parent_chunk->form_type != 0x45564157u ||
+        parent_chunk->data_offset > 0xfffffffbu) return;
     pos = parent_chunk->data_offset + 4u;
-    if (pos < 12u || pos > riff_end) pos = 12u;
+    if (pos < 12u || pos > riff_end) return;
     while (riff_end - pos >= 8u) {
         uint32_t chunk_size = s_le32(data + pos + 4u);
         uint32_t body = pos + 8u;
@@ -398,8 +406,9 @@ uint32_t sound_wave_data_read(SoundWaveDataReader* reader,
     amount = requested;
     if (amount > reader->remaining) amount = reader->remaining;
     if (amount > capacity) amount = capacity;
-    if (reader->data == NULL || reader->cursor > reader->data_size ||
+    if (reader->cursor > reader->data_size ||
         amount > reader->data_size - reader->cursor) return 0xe103u;
+    if (reader->data == NULL && amount != 0u) return 0xe103u;
     if (amount != 0u) {
         memcpy(destination, reader->data + reader->cursor, amount);
         reader->cursor += amount;
@@ -410,9 +419,11 @@ uint32_t sound_wave_data_read(SoundWaveDataReader* reader,
 }
 
 // FUNCTION: LEGORR 0x004891d0
-void sound_wave_handle_and_buffer_release(Sound* sound)
+uint32_t sound_wave_handle_and_buffer_release(SoundWaveFileHandle** handle,
+                                              uint8_t** format)
 {
-    sound_free(sound);
+    sound_wave_file_handle_close(handle, format);
+    return 0u;
 }
 
 Sound* sound_parse(const uint8_t* data, uint32_t size)

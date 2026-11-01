@@ -1826,11 +1826,24 @@ void ledger_stub_00409d50_EntityCellPathEffectsApply(
     uint32_t count = 0u;
     uint32_t i;
     const int* rotated;
-    if (entity == NULL || level == NULL || hooks == NULL ||
+    if (entity == NULL) return;
+    if (level == NULL) {
+        GameContext* context = entity_pool_callback_context_get();
+        if (context == NULL || context->level == NULL)
+            context = entity->owner_ctx;
+        level = context != NULL ? context->level : NULL;
+    }
+    if (level == NULL || hooks == NULL ||
         hooks->placement_cells_get == NULL || hooks->rotation_get == NULL ||
         !hooks->placement_cells_get(hooks->context, entity, &source_cells,
                                     &count) ||
-        (count != 0u && source_cells == NULL)) return;
+        (count != 0u && source_cells == NULL)) {
+        /* The reference always performs its once-gated command build after
+         * the path footprint walk. Keep that final state transition live
+         * when a backend has not installed the optional footprint services. */
+        entity_placement_commands_build_once(entity);
+        return;
+    }
     entity_position_to_terrain_cell(entity, level, &source_cell[0],
                                     &source_cell[1]);
     rotation = hooks->rotation_get(hooks->context, entity);
@@ -1852,25 +1865,14 @@ void ledger_stub_00409d50_EntityCellPathEffectsApply(
     }
     if (hooks->placement_commands_build != NULL)
         hooks->placement_commands_build(hooks->context, entity);
+    else
+        entity_placement_commands_build_once(entity);
 }
 
 // EntityPlacementCommandsBuildOnce
-typedef struct EntityPlacementCommandBuildState {
-    void* entity;
-    void* context;
-    int built;
-    int (*build)(void* context, void* entity);
-} EntityPlacementCommandBuildState;
-// FUNCTION: LEGORR 0x00409f20
-int ledger_stub_00409f20_EntityPlacementCommandsBuildOnce(
-    EntityPlacementCommandBuildState* state)
+void ledger_stub_00409f20_EntityPlacementCommandsBuildOnce(EntitySlot* entity)
 {
-    if (state == NULL || state->entity == NULL || state->build == NULL)
-        return 0;
-    if (state->built) return 1;
-    if (!state->build(state->context, state->entity)) return 0;
-    state->built = 1;
-    return 1;
+    entity_placement_commands_build_once(entity);
 }
 
 // FUNCTION: LEGORR 0x0040ab70

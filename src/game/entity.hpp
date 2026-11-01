@@ -899,6 +899,7 @@ int entity_build_placement_command_setup(const int cell_xy[2], int entity_id,
 void entity_build_placement_command_pair_create(const int cell_xy[2],
                                                 int entity_id);
 void entity_build_placement_command_batch_expand(const int cell_xy[2]);
+void entity_placement_commands_build_once(EntitySlot* entity); /* FUN_00409f20 */
 typedef struct EntityActionIssueHooks {
     void* context;
     EntitySlot* (*create)(void* context, EntitySlot* source, int kind,
@@ -1317,6 +1318,7 @@ const void* stats_type_table_cell(int type, int row);
 uint32_t building_upgrade_admission_check(int type, int row);
 
 uint32_t stats_table_word_at_b8(int type, int row, int stride_index = 0); /* FUN_00469b20 */
+uint32_t stats_table_word_at_b0(int type, int row, int stride_index); /* FUN_00469ac0 */
 float stats_table_float_at_dc(int type, int row);    /* FUN_00469e00 */
 uint32_t stats_table_word_at_144(int type, int row); /* FUN_00469ec0 */
 uint32_t stats_table_word_at_148(int type, int row); /* FUN_00469ee0 */

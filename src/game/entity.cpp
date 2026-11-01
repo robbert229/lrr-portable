@@ -4858,6 +4858,44 @@ void entity_build_placement_command_batch_expand(const int cell_xy[2])
     }
 }
 
+/* EntityPlacementCommandsBuildOnce (FUN_00409f20): read the three indexed
+ * stats words for this entity, enqueue the corresponding type-6/type-7
+ * placement commands at its current terrain cell, and latch the per-entity
+ * once bit. Empty/unloaded stats cells read as zero through the live table
+ * seam, matching the other stats consumers in this reconstruction. */
+// FUNCTION: LEGORR 0x00409f20
+void entity_placement_commands_build_once(EntitySlot* entity)
+{
+    GameContext* context;
+    LevelState* level;
+    int cell_xy[2];
+    int32_t type6_count;
+    int32_t type7_count;
+    int index;
+    if (entity == NULL || (entity->flags_3ec & 0x800u) != 0u) return;
+    context = entity_pool_callback_context_get();
+    if (context == NULL) context = entity->owner_ctx;
+    if (context == NULL || context->level == NULL) return;
+    level = context->level;
+    entity_position_to_terrain_cell(entity, level, &cell_xy[0], &cell_xy[1]);
+    if (!level_coord_pair_within_bounds(level, cell_xy[0], cell_xy[1])) return;
+
+    /* The reference getters index through entity +0 (stats type), +4
+     * (stats row), and +0x330 (strided stats instance). */
+    type6_count = (int32_t)stats_table_word_at_b4(
+        4, entity->etype, entity->indexed_record_slot_330);
+    type7_count = (int32_t)stats_table_word_at_b0(
+        4, entity->etype, entity->indexed_record_slot_330);
+    (void)stats_table_word_at_b8(
+        4, entity->etype, entity->indexed_record_slot_330);
+
+    for (index = type6_count; index != 0; --index)
+        (void)entity_build_placement_command_setup(cell_xy, 0, NULL, 0, 0);
+    for (index = type7_count; index != 0; --index)
+        (void)entity_build_placement_command_setup(cell_xy, 0, NULL, 0, 1);
+    entity->flags_3ec |= 0x800u;
+}
+
 /* EntityActionKindSupported (FUN_0043a7c0): the no-op callback used by the
  * kind-6 branch has no defined nonzero return in the port, while kind 7
  * checks the selected live level resource. */
@@ -6633,6 +6671,11 @@ uint32_t stats_table_word_at_b8(int type, int row, int stride_index)
 uint32_t stats_table_word_at_b4(int type, int row, int stride_index)
 {
     return stats_table_read(type, row, 0xb4, stride_index); /* FUN_00469af0 */
+}
+// FUNCTION: LEGORR 0x00469ac0
+uint32_t stats_table_word_at_b0(int type, int row, int stride_index)
+{
+    return stats_table_read(type, row, 0xb0, stride_index); /* FUN_00469ac0 */
 }
 // FUNCTION: LEGORR 0x00469f60
 uint32_t stats_table_word_at_d0(int type, int row, int stride_index)

@@ -1113,14 +1113,12 @@ void object_state_pair_get(const void* record, uint32_t* out_a,
 }
 
 /* --- the scene-visibility wrapper band (see record.hpp) ---------------------
- * FUN_00473b40 (the corpus surface lock/unlock leaf) is the port's hook
- * boundary: the wrappers reproduce their own gates and stores and route the
- * leaf through the recorded no-op below. */
+ * The renderer visibility leaf remains an observation seam. FUN_00473b40 is
+ * a separate DDiScene render-lock toggle implemented below. */
 static int s_scene_vis_calls;
 static void* s_scene_vis_last_obj;
 static int s_scene_vis_last_flag;
 
-// FUNCTION: LEGORR 0x00473b40
 static void scene_visibility_hook_call(void* object, int flag)
 {
     ++s_scene_vis_calls;
@@ -1259,18 +1257,43 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
     }
 }
 
+/* SceneRenderLockToggle (FUN_00473b40): update the paired render interfaces
+ * on the transition into or out of lock mode, then toggle flag bit 3. The
+ * channel slots use the corpus offsets; rec_ptr preserves this port's
+ * native-width pointer-slot convention. */
+// FUNCTION: LEGORR 0x00473B40
+void scene_render_lock_toggle(void* scene_object, int enabled)
+{
+    uint32_t flags;
+    if (scene_object == NULL) return;
+    flags = rec_dword(scene_object, 0x14);
+    if (enabled != 0) {
+        if ((flags & 8u) == 0u) {
+            render_interface_pair_update(rec_ptr(scene_object, 0x08u),
+                                         rec_ptr(scene_object, 0x04u));
+            rec_dword_put(scene_object, 0x14, flags | 8u);
+        }
+        return;
+    }
+    if ((flags & 8u) != 0u) {
+        render_interface_pair_update(rec_ptr(scene_object, 0x00u),
+                                     rec_ptr(scene_object, 0x04u));
+        rec_dword_put(scene_object, 0x14, flags & ~8u);
+    }
+}
+
 /* SceneResourceVisibilitySet (FUN_0046d2c0): raise (+0x1e8 |= 2) or clear
  * (&= ~2) the record's visibility word, then route the raw flag through the
- * leaf (FUN_00473b40) — unconditionally on the +8 object, on +0xc when it
+ * observation seam — unconditionally on the +8 object, on +0xc when it
  * is set, and on every live child in the +0x10 window counted at +0x40.
  * Deviations: the corpus's +8/+0xc object fields are adjacent 32-bit
  * dwords, which the port's native-size pointer-slot model cannot carry
  * four bytes apart — the port routes the field values as raw handles,
- * exactly as the corpus does (what routes through the corpus's leaf is the
- * dword itself). The children keep the band's native-size stride (the
+ * exactly as the corpus does (the helper call remains an observation seam).
+ * The children keep the band's native-size stride (the
  * slot-window precedent) walked only to the window's six entries before
  * +0x40 (the corpus strides its dword slots blindly past the count field);
- * the count is read once (the leaf never touches the record) and NULL
+ * the count is read once (the visibility helper never touches the record) and NULL
  * records are guarded. The flag rides the leaf raw, unlike the overlay's
  * folded call. */
 // FUNCTION: LEGORR 0x0046d2c0

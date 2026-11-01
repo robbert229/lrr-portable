@@ -379,10 +379,11 @@ void object_state_pair_get(const void* record, uint32_t* out_a,
 
 /* --- scene-visibility wrapper band (2026-10-24; findings 446/370/435/356/
  * 373/476/28) --------------------------------------------------------------
- * The corpus's visibility leaf (FUN_00473b40, the surface lock/unlock) is
- * the port's hook boundary — quoted in tickers.cpp, no body here — so the
- * wrappers below reproduce their own gates and field work and route the
- * leaf through the documented no-op hook (the simtick drop-leaf precedent).
+ * The render visibility backend remains a no-op observation seam, so the
+ * wrappers below reproduce their own gates and field work and record the
+ * requested handles. FUN_00473b40 is separately modeled by
+ * scene_render_lock_toggle below; it toggles DDiScene flag bit 3 and updates
+ * the paired render interfaces.
  * Handle slots that the corpus fills with record addresses are read as
  * native pointer slots (the module's established widening).
  * GraphicsOverlayVisibilitySet (FUN_004634b0): the overlay word changes
@@ -413,10 +414,13 @@ void animation_object_visibility_set(const void* anim, uint32_t flag);
                                                 /* FUN_00406c90 */
 void scene_object_pair_apply_mode(const void* record, uint32_t flag);
                                                 /* FUN_00408670 */
+/* SceneRenderLockToggle (FUN_00473b40): update the selected render-interface
+ * pair and toggle scene flag bit 3. */
+void scene_render_lock_toggle(void* scene_object, int enabled);
 
 /* SceneResourceVisibilitySet (FUN_0046d2c0): raise or clear bit 1 of the
  * record's +0x1e8 word, then route the raw flag through the visibility
- * leaf: unconditionally on +8, on +0xc when set, and on every live child
+ * observation seam: unconditionally on +8, on +0xc when set, and on every live child
  * of the +0x10 window counted at +0x40. Deviations in the module notes
  * (window-guarded native-size slot stride, single count read, NULL guard). */
 void scene_resource_visibility_set(void* record, uint32_t flag);

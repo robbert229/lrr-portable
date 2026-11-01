@@ -92,7 +92,8 @@ void sound_wave_data_chunk_open(SoundWaveFileHandle** handle,
                                 SoundWaveChunk* parent_chunk);
 void sound_wave_file_handle_close(SoundWaveFileHandle** handle,
                                  uint8_t** format);
-void sound_wave_handle_and_buffer_release(Sound* sound);
+uint32_t sound_wave_handle_and_buffer_release(SoundWaveFileHandle** handle,
+                                              uint8_t** format);
 
 /* Parse a RIFF/WAVE buffer. Chunk order-independent; PCM (tag 1) only; NULL
  * for anything else (missing fmt/data, non-WAVE, truncated, RLE'd etc.). */

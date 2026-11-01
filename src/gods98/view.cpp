@@ -1481,12 +1481,12 @@ float ddiscene_frame_update_and_callbacks(void* scene_object, float time)
 // FUNCTION: LEGORR 0x00475120
 /* DDiSceneAdvanceByTime (FUN_00475120): add the delta to the current object
  * length and discard the frame update's remainder, as the target does. */
-void ddiscene_advance_by_time(void* scene_object, float delta)
+float ddiscene_advance_by_time(void* scene_object, float delta)
 {
     float current;
-    if (scene_object == NULL) return;
+    if (scene_object == NULL) return 0.0f;
     current = ddiscene_object_length_get(scene_object);
-    ddiscene_frame_update_and_callbacks(scene_object, current + delta);
+    return ddiscene_frame_update_and_callbacks(scene_object, current + delta);
 }
 
 /* TypedChildResourceScalarGet (FUN_004757f0): only type-4 scene objects with
