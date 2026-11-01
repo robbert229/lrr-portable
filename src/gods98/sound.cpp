@@ -941,9 +941,6 @@ uint32_t sound_bank_entry_flags(int slot)
 int sound_bank_entry_volume(int slot)
 {
     /* IndexedRecordStride134WordGet @ 0x47b0d0 (record +0x110 word). */
-    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
-        return 0;
-    }
     return s_bank[slot].volume;
 }
 
@@ -1138,11 +1135,12 @@ int sound_bank_entry_play_mode(int slot, int loop, int mode)
 // FUNCTION: LEGORR 0x0047b0f0
 AudioBuffer* sound_handle_buffer_get(int buffer_handle)
 {
-    int slot;
-    if (buffer_handle == -1 || buffer_handle < 0
-        || buffer_handle >= SOUND_BANK_SLOTS * 3) return NULL;
-    slot = buffer_handle / 3;
-    return s_bank[slot].buffers[buffer_handle % 3];
+    uint32_t slot;
+    int buffer_index;
+    if (buffer_handle == -1) return NULL;
+    buffer_index = buffer_handle % 3;
+    slot = (uint32_t)(buffer_handle - buffer_index) / 3u;
+    return s_bank[slot].buffers[buffer_index];
 }
 
 // FUNCTION: LEGORR 0x0047b130

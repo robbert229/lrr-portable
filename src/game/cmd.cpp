@@ -1401,7 +1401,8 @@ void cmd_chain_purge(EntitySlot* e)
         CmdRec* rec = records[i];
         int behavior = (rec->kind >= 0 && rec->kind < 27)
             ? s_behaviour[rec->kind] : 0;
-        if (behavior == 0 || (rec->state & CMD_STATE_CANCEL) != 0u) {
+        if (s_priority_state[rec->kind] == 0 ||
+            (rec->state & CMD_STATE_CANCEL) != 0u) {
             rec->state &= ~0x80000u;
             rec->behaviour = ((rec->state & 0x30000u) != 0u)
                 ? 99 : behavior;
