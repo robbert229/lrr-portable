@@ -1801,7 +1801,7 @@ int terrain_cell_predicate_check(TerrainDescriptorNode* list,
 /* CellResourceEntryMatches (FUN_0040af40): entries backed by a matching
  * live task are accepted directly. Otherwise the first two words must
  * match, and a nonzero bounded-mode flag applies the unsigned cell limit
- * from entry word two to the cell record's +0xcc word. */
+ * from entry word two to the cell record's word index 0xcc (+0x330 bytes). */
 // FUNCTION: LEGORR 0x0040AF40
 int terrain_cell_resource_entry_matches(const uint32_t* cell_record,
                                         const uint32_t* resource_entry)
@@ -1817,7 +1817,7 @@ int terrain_cell_resource_entry_matches(const uint32_t* cell_record,
         return 0;
     }
     if (resource_entry[3] != 0u
-        && cell_record[0xcc / sizeof(uint32_t)] < resource_entry[2]) {
+        && cell_record[0xcc] < resource_entry[2]) {
         return 0;
     }
     return 1;

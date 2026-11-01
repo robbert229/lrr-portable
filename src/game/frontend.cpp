@@ -1482,6 +1482,8 @@ static void fe_interface_tooltip_parse(const char* token, size_t length,
 // FUNCTION: LEGORR 0x0041ada0
 int interface_images_config_load(BlockFile* cfg)
 {
+    BlockRec* section;
+    BlockRec* entry;
     if (cfg == NULL) {
         return 0;
     }
@@ -1489,19 +1491,21 @@ int interface_images_config_load(BlockFile* cfg)
     char section_path[FE_PATH_MAX * 2];
     snprintf(section_path, sizeof(section_path), "%s InterfaceImages",
              util_root_name(cfg));
-    if (block_subgroup(cfg, section_path) == NULL) {
+    section = block_subgroup(cfg, section_path);
+    entry = section != NULL ? block_first_child(section) : NULL;
+    if (entry == NULL) {
         /* Corpus fallback when the generic action-image section is absent. */
         (void)interface_build_images_config_load(cfg);
         (void)interface_back_button_config_load(cfg);
         return 0;
     }
     int loaded = 0;
-    for (int i = 0; i < FE_INTERFACE_ACTION_COUNT; ++i) {
-        char key[FE_PATH_MAX * 2];
-        snprintf(key, sizeof(key), "%s InterfaceImages %s",
-                 util_root_name(cfg), s_interface_menu_action_labels[i]);
-        const char* value = block_get_strptr(cfg, key);
-        if (value == NULL) {
+    for (; entry != NULL; entry = block_next_sibling(entry)) {
+        const char* label = block_name(entry);
+        const char* value = block_value(entry);
+        int image_index;
+        if (label == NULL || value == NULL ||
+            !interface_menu_action_label_find(label, &image_index)) {
             continue;
         }
 
@@ -1533,7 +1537,7 @@ int interface_images_config_load(BlockFile* cfg)
             continue;
         }
 
-        FeInterfaceImage* image = &s_interface_images[i];
+        FeInterfaceImage* image = &s_interface_images[image_index];
         memset(image, 0, sizeof(*image));
         image->normal_sound = -1;
         image->disabled_sound = -1;
