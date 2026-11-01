@@ -7059,11 +7059,13 @@ void attached_object_data_release_and_clear(void* property)
     }
 }
 
-/* CallbackRecordSetFlag10AndRefresh (FUN_00475e10): set the record's flag
- * before invalidating its cached property payload. */
+/* CallbackRecordSetFlag10AndRefresh (FUN_00475e10): treat the primary value
+ * as a record pointer, set its flag, then invalidate the property payload. */
 void callback_record_set_flag10_and_refresh(void* property)
 {
-    void* record = scene_property_value_record_get(property);
+    if (property == NULL) return;
+    const uint32_t primary_value = scene_property_primary_value_get(property);
+    void* record = (void*)(size_t)primary_value;
     if (record == NULL) return;
     *(uint32_t*)((char*)record + 0x14) |= 0x10u;
     attached_object_data_release_and_clear(property);

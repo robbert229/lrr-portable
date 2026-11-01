@@ -59,6 +59,7 @@ void tutorial_camera_focus_tween_update(float delta);
 void tutorial_inline_token_render(char* source, char* output, int draw);
 uint32_t tutorial_script_word_count(void);
 uint32_t tutorial_token_count(void);
+uint32_t tutorial_literal_token_count(void);
 const char* tutorial_token_name_get(uint32_t index);
 uint32_t tutorial_token_value_get(uint32_t index);
 

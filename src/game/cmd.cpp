@@ -2228,6 +2228,27 @@ void entity_command15_validated_record_queue(EntitySlot* e)
         rec->state = rec->state | 0x40040u; /* +0x5c, post-payload half */
     }
 }
+static int cmd_has_entity_task_record(const EntitySlot* entity)
+{
+    CmdRec* record;
+    for (record = s_global_head; record != NULL;
+         record = as_rec(record->global_next)) {
+        if (record->type == 3 &&
+            (const void*)record->payload == (const void*)entity) return 1;
+    }
+    for (record = s_global_tail; record != NULL;
+         record = as_rec(record->global_next)) {
+        if (record->type == 3 &&
+            (const void*)record->payload == (const void*)entity) return 1;
+    }
+    for (record = as_rec(entity->cmd_head); record != NULL;
+         record = as_rec(record->next)) {
+        if (record->type == 3 &&
+            (const void*)record->payload == (const void*)entity) return 1;
+    }
+    return 0;
+}
+
 // FUNCTION: LEGORR 0x004026c0
 void entity_deferred_work_schedule(EntitySlot* e)
 {
@@ -2235,10 +2256,12 @@ void entity_deferred_work_schedule(EntitySlot* e)
         return; /* deviation: the corpus dereferences blindly */
     }
     if (e->attach_304 == NULL && (e->flags_3ec & 0x100u) == 0u) {
-        /* EntityPoolCallbackSearch with the fixed callback: the pool
-         * registry seam always misses here, so the fallback task is
-         * created (corpus shape). */
-        cmd_create_task(e);
+        /* LAB_00402700 in EntityPoolCallbackSearch matches a live type-3
+         * command whose +0x10 payload is this entity. The portable command
+         * owner exposes live records through its pending and entity chains. */
+        if (!cmd_has_entity_task_record(e)) {
+            cmd_create_task(e);
+        }
     }
 }
 

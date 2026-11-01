@@ -309,11 +309,9 @@ int selected_entity_state_monitor(void);
  * clearing bit 4. The corpus's first statement calls CurrentLevelGet for
  * its touch only; the port's link lands the record on the task list.
  * EntityDeferredWorkSchedule (FUN_004026c0, finding 465): with the +0x304
- * attach mirror clear and the +0x3ec bit-0x100 flag clear, searches the
- * object-record pool through EntityPoolCallbackSearch — the registry and
- * callback are the unported entity seam, so the search always misses and
- * the fallback task is created (the corpus's observable half). NULL entity
- * answers inert (deviation). */
+ * attach mirror clear and the +0x3ec bit-0x100 flag clear, searches live
+ * command records for a type-3 entry whose payload is this entity before
+ * creating a fallback task. NULL entity answers inert (deviation). */
 void entity_command15_validated_record_queue(EntitySlot* e);
 void entity_deferred_work_schedule(EntitySlot* e);
 

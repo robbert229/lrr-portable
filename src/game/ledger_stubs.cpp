@@ -9777,6 +9777,7 @@ static uint32_t s_tutorial_program_words[8192];
 static uint32_t s_tutorial_program_count;
 static TutorialTokenEntry s_tutorial_tokens[512];
 static uint32_t s_tutorial_token_count;
+static uint32_t s_tutorial_literal_token_count;
 static uint32_t s_tutorial_scroll_pending;
 static uint32_t s_tutorial_scroll_max;
 static uint32_t s_tutorial_scroll_step;
@@ -9820,6 +9821,7 @@ static void tutorial_tokens_clear(void)
         s_tutorial_tokens[i].kind = 0;
     }
     s_tutorial_token_count = 0;
+    s_tutorial_literal_token_count = 0;
 }
 
 static int tutorial_token_add(const char* start, uint32_t length, int kind)
@@ -9903,6 +9905,8 @@ int tutorial_objective_token_load(uint32_t source_limit, char** output_tokens)
     char* mutable_source;
     uint32_t length;
     uint32_t i = 0;
+    s_tutorial_literal_token_count = 0;
+    if (output_tokens != NULL) output_tokens[0] = NULL;
     if (s_tutorial_script_data == NULL) return 0;
     if (s_tutorial_script_ops.resource_state_initialize != NULL)
         s_tutorial_script_ops.resource_state_initialize(
@@ -9932,7 +9936,13 @@ int tutorial_objective_token_load(uint32_t source_limit, char** output_tokens)
             for (j = start; j < i; ++j) {
                 if (mutable_source[j] == '_') mutable_source[j] = ' ';
             }
-            tutorial_token_add(mutable_source + start, i - start, kind);
+            if (tutorial_token_add(mutable_source + start, i - start, kind) &&
+                kind == 0) {
+                if (output_tokens != NULL)
+                    output_tokens[s_tutorial_literal_token_count] =
+                        s_tutorial_tokens[s_tutorial_token_count - 1].name;
+                ++s_tutorial_literal_token_count;
+            }
         }
         if (i < length) mutable_source[i++] = '\0';
     }
@@ -10252,6 +10262,10 @@ void tutorial_inline_token_render(char* source, char* output, int draw)
 
 uint32_t tutorial_script_word_count(void) { return s_tutorial_program_count; }
 uint32_t tutorial_token_count(void) { return s_tutorial_token_count; }
+uint32_t tutorial_literal_token_count(void)
+{
+    return s_tutorial_literal_token_count;
+}
 const char* tutorial_token_name_get(uint32_t index)
 {
     return index < s_tutorial_token_count ? s_tutorial_tokens[index].name : NULL;
