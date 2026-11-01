@@ -346,6 +346,16 @@ static float  s_mind_clip_base  = 0.0f;   /* DAT_00556114 analog */
 static float  s_mind_ref_base   = 150.0f; /* DAT_00556ec4 analog (150.0) */
 static float  s_mind_dist_base  = 0.0f;   /* DAT_005560d4 + 0x1c analog */
 
+static uint32_t media_float_bits(float value)
+{
+    union FloatBits {
+        float value;
+        uint32_t bits;
+    } converted;
+    converted.value = value;
+    return converted.bits;
+}
+
 void media_min_distance_config_set(float cell_scale, float clip_base,
                                    float ref_base, float min_dist_base)
 {
@@ -364,7 +374,9 @@ void media_min_distance_update_mode(int mode, void* context,
          * constants 0x3f666666 / 0x3f19999a). */
         s_mind_listener = scalar_selector != 0 ? 0.6f : 0.9f;
         s_mind_clip = s_mind_dist_base * s_mind_cell_scale;
-        s_mind_ref = 5.0f; /* 0x42480000 */
+        s_mind_ref = 50.0f; /* 0x42480000 */
+        sound_tracked_buffers_set_min_distance(
+            media_float_bits(s_mind_ref));
         /* Context release / entity-kind hooks land at the entity layer
          * (unported seams); storing is the observable half. The corpus
          * dereferences the context unchecked; the port guards NULL. */
@@ -379,6 +391,8 @@ void media_min_distance_update_mode(int mode, void* context,
         s_mind_listener = 0.5f; /* 0x3f000000 */
         s_mind_clip = s_mind_clip_base;
         s_mind_ref = s_mind_ref_base;
+        sound_tracked_buffers_set_min_distance(
+            media_float_bits(s_mind_ref));
     }
     /* Other modes update only the mode global, like the corpus. */
     s_mind_mode = mode;

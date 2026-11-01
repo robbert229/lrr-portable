@@ -580,4 +580,8 @@ void sound_buffer_association_add(uint32_t a, uint32_t b, uint32_t c);
 void  sound_buffer_association_head_set(void* node); /* port hook */
 void* sound_buffer_association_head_peek(void);      /* port hook */
 
+/* SoundMinimumDistanceUpdateMode (FUN_004295f0) applies this raw float
+ * bit pattern to every tracked buffer through its min-distance method. */
+void sound_tracked_buffers_set_min_distance(uint32_t value);
+
 #endif /* LEGORRR_SOUND_HPP */

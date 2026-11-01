@@ -4763,10 +4763,19 @@ void ledger_stub_004477d0_PathStepLookaheadEntryWrite(EntitySlot* entity)
 {
     EntitySlot* linked;
     EntitySlot* target;
+    LevelState* level;
+    void* terrain;
     AiWaypoint* waypoint;
+    float start_world[2];
+    float target_world[2];
+    float moved_world[2];
+    float center[2];
+    float blocksize;
     float dx;
     float dy;
     float length;
+    int cell_x;
+    int cell_y;
 
     if (entity == NULL || entity->wp_count <= 0
         || (entity->wp_dynamic == NULL
@@ -4774,6 +4783,10 @@ void ledger_stub_004477d0_PathStepLookaheadEntryWrite(EntitySlot* entity)
             : (unsigned int)entity->wp_count > entity->wp_capacity)) {
         return;
     }
+    if (entity->owner_ctx == NULL || entity->owner_ctx->level == NULL) return;
+    level = entity->owner_ctx->level;
+    terrain = level->ptr_terrain;
+    if (terrain == NULL) return;
     linked = (EntitySlot*)entity->carry_link_308;
     if (linked == NULL) {
         return;
@@ -4784,16 +4797,27 @@ void ledger_stub_004477d0_PathStepLookaheadEntryWrite(EntitySlot* entity)
     }
 
     waypoint = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
-    dx = target->x - waypoint->x;
-    dy = target->y - waypoint->y;
+    if (!terrain_cell_world_center_xy_get(terrain, (int)waypoint->x,
+                                          (int)waypoint->y, start_world))
+        return;
+    entity_transform_position_get(target, target_world);
+    dx = target_world[0] - start_world[0];
+    dy = target_world[1] - start_world[1];
     length = (float)sqrt((double)(dx * dx + dy * dy));
-    if (length != 0.0f) {
-        waypoint->x += (dx / length) * 0.1f;
-        waypoint->y += (dy / length) * 0.1f;
-    }
+    if (length == 0.0f) return;
+    moved_world[0] = start_world[0] + (dx / length) * 0.1f;
+    moved_world[1] = start_world[1] + (dy / length) * 0.1f;
+    if (!terrain_world_xy_to_cell(terrain, moved_world[0], moved_world[1],
+                                  &cell_x, &cell_y) ||
+        !terrain_cell_world_center_xy_get(terrain, cell_x, cell_y, center))
+        return;
+    blocksize = terrain_blocksize_get(terrain);
+    if (blocksize == 0.0f) return;
+    waypoint->weight_x = (moved_world[0] - center[0]) / blocksize + 0.5f;
+    waypoint->weight_y = (moved_world[1] - center[1]) / blocksize + 0.5f;
     waypoint->pending = (uint8_t)(waypoint->pending | 8u);
-    linked->pos_pair_2f4 = target->x;
-    linked->pos_pair_2f8 = target->y;
+    linked->pos_pair_2f4 = target_world[0];
+    linked->pos_pair_2f8 = target_world[1];
     linked->link_2fc = 0;
 }
 

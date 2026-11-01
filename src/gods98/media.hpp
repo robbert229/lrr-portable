@@ -19,7 +19,7 @@
  *  - SoundMinimumDistanceUpdateMode @ 0x4295f0: the minimum-distance
  *    mode. Mode 0 stores the supplied entity/context and applies the
  *    distance scalars for the caller-selected value (0.9 / 0.6 listener
- *    scale, clip = min-distance base * cell distance scale, 5.0 tracked
+ *    scale, clip = min-distance base * cell distance scale, 50.0 tracked
  *    reference distance); mode 1 clears the stored context and restores
  *    the config-derived previous values (listener scale 0.5, the config
  *    clip distance, the config reference distance). Other mode values

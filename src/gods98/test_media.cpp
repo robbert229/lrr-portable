@@ -181,7 +181,7 @@ static void test_min_distance(void)
     int ctx_b = 2;
     media_min_distance_config_set(2.0f, 17.0f, 150.0f, 9.0f);
 
-    /* Mode 0, selector 0: store the context, apply 0.9 / base*cell / 5. */
+    /* Mode 0, selector 0: store the context, apply 0.9 / base*cell / 50. */
     media_min_distance_update_mode(0, &ctx_a, 0);
     CHECK(media_min_distance_mode() == 0, "mode 0 records mode 0");
     CHECK(media_min_distance_context() == &ctx_a, "mode 0 stores the context");
@@ -189,8 +189,8 @@ static void test_min_distance(void)
           "selector 0 applies the 0.9 scale");
     CHECK(float_eq(media_min_distance_clip_distance(), 18.0f),
           "mode 0 clip multiplies the min-distance base by the cell scale");
-    CHECK(float_eq(media_min_distance_ref_distance(), 5.0f),
-          "mode 0 applies the 5.0 reference distance");
+    CHECK(float_eq(media_min_distance_ref_distance(), 50.0f),
+          "mode 0 applies the 50.0 reference distance");
 
     /* Repeated entry without an intervening mode 1: the newer context
      * and scalar simply replace what was stored. */
