@@ -5,6 +5,7 @@
 
 #include "gods98/block.hpp"
 #include "gods98/message.hpp"
+#include "gods98/string.hpp"
 #include "crt/crt.hpp"
 #include "entity.hpp"
 #include "level.hpp"
@@ -43,6 +44,9 @@ static const char s_task_copy_format[] = "%s";
 
 #define MISS_CRYSTAL_QUOTA 26 /* crystal display budget (CrystalQuotaSetup) */
 #define REWARD_TASK_DURATION_DEFAULT 76.9375f
+
+// GLOBAL: LEGORR 0x005007ec
+static int s_crystal_quota;
 
 /* The reference entry points carry no context pointers. The game/runtime
  * owner must bind its active reward state and engine callbacks before calling
@@ -455,17 +459,26 @@ static void mission_task_quota_refresh(GameTask* t)
     __builtin_memcpy(t->data + TASK_OFF_QUOTA, &quota, 4);
 }
 
-/* CrystalQuotaSetup @ 0x45c040: read the configured crystal quota, using
- * the corpus's zero/over-limit fallback. The context owns the ported value. */
+/* CrystalQuotaSetup @ 0x45c040: build Reward::Quota::Crystals, parse it,
+ * and clamp zero or values above the display budget to 26. */
 // FUNCTION: LEGORR 0x0045c040
 static void mission_crystal_quota_setup(BlockFile* cfg, const char* root,
-                                        const char* level, GameContext* ctx)
+                                        const char* level)
 {
-    int quota = rw_int(cfg, root, level, "Quota", "Crystals", 0);
-    if (quota > MISS_CRYSTAL_QUOTA || quota == 0) {
-        quota = MISS_CRYSTAL_QUOTA;
+    const char* path = string_path_join(root, level, "Reward", "Quota",
+                                        "Crystals", (const char*)0);
+    const char* value = block_get_strptr(cfg, path);
+    int quota;
+    if (value == NULL) {
+        value = "";
+    } else {
+        value = block_get_strptr(cfg, path);
     }
-    ctx->crystal_quota = quota;
+    quota = atoi(value != NULL ? value : "");
+    s_crystal_quota = quota;
+    if (s_crystal_quota > MISS_CRYSTAL_QUOTA || s_crystal_quota == 0) {
+        s_crystal_quota = MISS_CRYSTAL_QUOTA;
+    }
 }
 
 void mission_task_refresh(GameContext* ctx)
@@ -490,7 +503,9 @@ void mission_task_refresh(GameContext* ctx)
         mission_task_quota_refresh(t);
         /* Defaults: absence parses as 0; the corpus reads the same way. */
     }
-    mission_crystal_quota_setup(ctx->cfg, NULL, level, ctx);
+    mission_crystal_quota_setup(ctx->cfg, util_root_name(ctx->cfg),
+        string_path_join("Levels", level, (const char*)0));
+    ctx->crystal_quota = s_crystal_quota;
     s_task_init_binding = previous;
 }
 

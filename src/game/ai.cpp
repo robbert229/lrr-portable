@@ -66,6 +66,7 @@ static const char* const s_activity_initial[AI_ACTIVITY_COUNT] = {
     "Activity_Waiting19", "Activity_Waiting20", "Activity_Waiting21"
 };
 
+// GLOBAL: LEGORR 0x004decc4
 static const char* s_activity[AI_ACTIVITY_COUNT];
 static int s_activity_initialized;
 
@@ -77,6 +78,7 @@ static int s_activity_initialized;
 void ai_activity_name_table_initialize(void)
 {
     int i;
+    memset(s_activity, 0, sizeof(s_activity));
     for (i = 0; i < AI_ACTIVITY_COUNT; ++i) {
         s_activity[i] = s_activity_initial[i];
     }

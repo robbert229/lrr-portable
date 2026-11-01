@@ -3387,7 +3387,7 @@ void* wad_archive_record_at_index(int index)
     return &s_wads[index];
 }
 
-/* FUNCTION: LEGORR 0x0048bcf0 */
+// FUNCTION: LEGORR 0x0048bcf0
 uint32_t wad_entry_length_get(int wad_idx, int entry_idx)
 {
     if (wad_idx < 0 || wad_idx >= s_wad_count || entry_idx < 0
@@ -4364,10 +4364,8 @@ void* fixed_record_slot_resource_get(int slot)
     return s_fixed_slots[slot].in_use != 0 ? s_fixed_slots[slot].resource : NULL;
 }
 
-/* WadStreamLengthGet (FUN_0048c010): resolve the stream slot's resource and
- * report its materialized payload length. */
-// FUNCTION: LEGORR 0x0048c010
-int wad_stream_length_get(int slot)
+/* Port-side payload length used by the file seek implementation. */
+static int resource_slot_length_get(int slot)
 {
     Resource* resource;
     int32_t length;
@@ -4377,6 +4375,16 @@ int wad_stream_length_get(int slot)
     }
     length = resource_read(resource);
     return length > 0 ? (int)length : 0;
+}
+
+/* WadStreamLengthGet (FUN_0048c010) resolves the two WAD indices held by the
+ * stream slot and performs the reference's indexed length lookup. */
+// FUNCTION: LEGORR 0x0048c010
+void wad_stream_length_get(int slot)
+{
+    Resource* resource =
+        (Resource*)fixed_record_slot_resource_get(slot);
+    (void)wad_entry_length_get(resource->wad_idx, resource->entry_idx);
 }
 
 /* WadFileSeek (FUN_0047f850): update the WAD stream cursor for SET/CUR/END.
@@ -4402,18 +4410,18 @@ int wad_file_seek(GameFileHandle* handle, int offset, int origin)
     state = (WadFileStreamState*)handle->stream;
     if (origin == 0) {
         state->cursor = offset;
-        length = wad_stream_length_get(state->slot);
+        length = resource_slot_length_get(state->slot);
         if (length < state->cursor) state->cursor = length;
         if (state->cursor < 0) state->cursor = 0;
     }
     else if (origin == 1) {
         state->cursor += offset;
-        length = wad_stream_length_get(state->slot);
+        length = resource_slot_length_get(state->slot);
         if (length < state->cursor) state->cursor = length;
         if (state->cursor < 0) state->cursor = 0;
     }
     else if (origin == 2) {
-        state->cursor = wad_stream_length_get(state->slot) + offset;
+        state->cursor = resource_slot_length_get(state->slot) + offset;
     }
     else {
         resource_debug_output_format(s_game_file_seek_mode_format, origin);
