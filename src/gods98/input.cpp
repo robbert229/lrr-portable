@@ -550,8 +550,9 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
 /* --- input-entry / player-input flag-8 leaves (see input.hpp) --------------
  * Zero-initialized module statics with the documented window; the corpus
  * indexes through (possibly heap) pointers blindly. */
-#define INPUT_FLAG_TABLE_SLOTS 256
+#define INPUT_FLAG_TABLE_SLOTS 74
 
+// GLOBAL: LEGORR 0x004dd60c
 static uint32_t s_input_entry_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind1_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind4_flags[INPUT_FLAG_TABLE_SLOTS];
@@ -620,9 +621,6 @@ void input_action_state_update(int action)
 // FUNCTION: LEGORR 0x0041c9f0
 void input_entry_flag8_set_clear(int entry, int set)
 {
-    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
-        return; /* deviation: the corpus indexes blindly */
-    }
     if (set != 0) {
         s_input_entry_flags[entry] = s_input_entry_flags[entry] | 8u;
     } else {
@@ -633,9 +631,6 @@ void input_entry_flag8_set_clear(int entry, int set)
 // FUNCTION: LEGORR 0x0041ca60
 uint32_t input_entry_flag8_get(int entry)
 {
-    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
-        return 0u;
-    }
     return s_input_entry_flags[entry] & 8u;
 }
 

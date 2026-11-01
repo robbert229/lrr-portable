@@ -41,7 +41,9 @@ static ScreenEffectTickHooks s_screen_effect_tick_hooks;
 static float s_screen_effect_pulse_timer;
 static void* s_screen_space_effect_dispatch_context;
 static TransientEffectHooks s_transient_effect_hooks;
+// GLOBAL: LEGORR 0x00552100
 static TextureSurface* s_transient_effect_textures[12];
+// GLOBAL: LEGORR 0x00552130
 static uint32_t s_transient_effect_texture_count;
 static void* s_transient_effect_head;
 static void* s_transient_effect_tail;

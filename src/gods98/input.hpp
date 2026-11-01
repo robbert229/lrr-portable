@@ -191,12 +191,9 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
  * findings 376/444): raise/clear/read bit 0x8 of the corpus's indexed
  * input-entry flag word. PlayerInputFlag8SetClear / PlayerInputFlag8Get
  * (FUN_0041ca20 / FUN_0041ca70): the same bit over the two player-input
- * tables selected by kind 1 / kind 4. None of the corpus's table owners
- * (the pointer-table allocator and the action-state leaves, still
- * unported) lands, so all three tables land zero-initialized with a
- * documented 256-entry window (the corpus's own sizes come from heap
- * allocations; the port bounds-checks, answering zero outside the window
- * and skipping writes — deviation). */
+ * tables selected by kind 1 / kind 4. The entry table is the zero-initialized
+ * 74-word DAT_004dd60c array; its indexed leaves follow the corpus's unchecked
+ * access. The player tables remain portable zero-initialized stand-ins. */
 void input_entry_flag8_set_clear(int entry, int set);
 uint32_t input_entry_flag8_get(int entry);
 /* Full action/binding words used by InputActionStateUpdate and the catalog

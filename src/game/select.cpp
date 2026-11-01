@@ -53,7 +53,13 @@ void selection_clear(GameContext* ctx)
         return;
     }
     for (int i = 0; i < ctx->selection_count; ++i) {
-        ctx->selection[i]->flags &= ~ENTITY_SELECTED;
+        EntitySlot* entity = ctx->selection[i];
+        entity->flags &= ~ENTITY_SELECTED;
+        if ((entity->flags_3e8 & ENTITY_SELECTED) != 0u) {
+            entity->flags_3ec |= 2u;
+        }
+        entity->flags_3e8 &= ~ENTITY_SELECTED;
+        entity->flags_3ec &= ~1u;
     }
     ctx->selection_count = 0;
 }
