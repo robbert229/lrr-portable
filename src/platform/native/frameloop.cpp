@@ -26,6 +26,9 @@ struct PlatformWindow {
 
 static PlatformWindow* s_active_window;
 static PlatformRenderSurfaceOps s_platform_render_surface_ops;
+void* g_platform_cursor_window_handle;
+int g_platform_cursor_width;
+int g_platform_cursor_height;
 
 void platform_render_surface_ops_set(const PlatformRenderSurfaceOps* ops)
 {
@@ -63,6 +66,9 @@ PlatformWindow* platform_create_window(const char* title, int width, int height)
     pw->h = height;
     pw->window_surface = SDL_GetWindowSurface(win);
     s_active_window = pw;
+    g_platform_cursor_window_handle = (void*)win;
+    g_platform_cursor_width = width;
+    g_platform_cursor_height = height;
     window_runtime_state_initialize((void*)win);
     /* The game draws its own bitmap pointer into the framebuffer. */
     SDL_HideCursor();
@@ -80,6 +86,9 @@ void platform_destroy_window(PlatformWindow* pw)
     SDL_ShowCursor();
     if (s_active_window == pw) {
         s_active_window = NULL;
+        g_platform_cursor_window_handle = NULL;
+        g_platform_cursor_width = 0;
+        g_platform_cursor_height = 0;
         window_runtime_state_initialize(NULL);
     }
     pw->sdl = NULL;
@@ -109,12 +118,12 @@ int platform_window_height(PlatformWindow* pw)
     return pw != NULL ? pw->h : 0;
 }
 
-int platform_window_cursor_position_get(PlatformWindow* pw, int* x, int* y)
+int platform_cursor_position_get(int* x, int* y)
 {
     float mouse_x = 0.0f;
     float mouse_y = 0.0f;
-    if (pw == NULL || pw->sdl == NULL || x == NULL || y == NULL ||
-        pw != s_active_window) {
+    if (s_active_window == NULL || s_active_window->sdl == NULL ||
+        x == NULL || y == NULL) {
         return 0;
     }
     SDL_GetMouseState(&mouse_x, &mouse_y);

@@ -41,6 +41,11 @@
 
 typedef struct PlatformWindow PlatformWindow;
 
+/* Active window and configured client limits mirrored for the input sampler. */
+extern void* g_platform_cursor_window_handle;
+extern int g_platform_cursor_width;
+extern int g_platform_cursor_height;
+
 /* --- Canonical key codes (platform-neutral event vocabulary) --------------
  * The engine's input tables (findings 04/05) are indexed by 1-byte codes.
  * Printable ASCII (0x20..0x7e) passes through; non-printable controls get
@@ -78,10 +83,9 @@ void* platform_window_hwnd(PlatformWindow* win);
 int  platform_window_width(PlatformWindow* win);
 int  platform_window_height(PlatformWindow* win);
 
-/* Read the cursor in client-relative coordinates for the supplied window.
- * Returns nonzero when the backend can produce a sample. */
-int  platform_window_cursor_position_get(PlatformWindow* win,
-                                         int* x, int* y);
+/* Read the active window's cursor in client-relative coordinates. Returns
+ * nonzero when the backend can produce a sample. */
+int  platform_cursor_position_get(int* x, int* y);
 
 /* Pump platform events into `out` (up to cap); returns the number written.
  * A PLATFORM_EVENT_QUIT entry counts toward that total. */

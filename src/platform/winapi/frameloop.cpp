@@ -18,6 +18,12 @@ struct PlatformWindow {
 
 static const char s_platform_window_class[] = "LegoRRPortableWindow";
 static PlatformWindow* s_active_window;
+// GLOBAL: LEGORR 0x00505800
+void* g_platform_cursor_window_handle;
+// GLOBAL: LEGORR 0x00505924
+int g_platform_cursor_width;
+// GLOBAL: LEGORR 0x00505928
+int g_platform_cursor_height;
 
 namespace unported_ledger_stubs {
 ptrdiff_t ledger_stub_004784c0_GameWindowProcedure(
@@ -82,6 +88,8 @@ static LRESULT CALLBACK platform_window_proc(HWND hwnd, UINT message,
         message == WM_SIZE) {
         s_active_window->width = (int)(lparam & 0xffff);
         s_active_window->height = (int)((lparam >> 16) & 0xffff);
+        g_platform_cursor_width = s_active_window->width;
+        g_platform_cursor_height = s_active_window->height;
     }
     return (LRESULT)unported_ledger_stubs::ledger_stub_004784c0_GameWindowProcedure(
         (void*)hwnd, (uint32_t)message, (size_t)wparam,
@@ -137,6 +145,9 @@ PlatformWindow* platform_create_window(const char* title, int width, int height)
     win->width = width > 0 ? width : 640;
     win->height = height > 0 ? height : 480;
     s_active_window = win;
+    g_platform_cursor_window_handle = (void*)hwnd;
+    g_platform_cursor_width = win->width;
+    g_platform_cursor_height = win->height;
     window_runtime_state_initialize((void*)hwnd);
     SetFocus(hwnd);
     return win;
@@ -148,6 +159,9 @@ void platform_destroy_window(PlatformWindow* win)
     if (win->hwnd != NULL) DestroyWindow(win->hwnd);
     if (s_active_window == win) {
         s_active_window = NULL;
+        g_platform_cursor_window_handle = NULL;
+        g_platform_cursor_width = 0;
+        g_platform_cursor_height = 0;
         window_runtime_state_initialize(NULL);
     }
     free(win);
@@ -174,20 +188,21 @@ int platform_window_height(PlatformWindow* win)
     return win != NULL ? win->height : 0;
 }
 
-int platform_window_cursor_position_get(PlatformWindow* win, int* x, int* y)
+int platform_cursor_position_get(int* x, int* y)
 {
     RECT client_rect;
     POINT client_origin;
     POINT cursor;
-    if (win == NULL || win->hwnd == NULL || x == NULL || y == NULL ||
-        !GetClientRect(win->hwnd, &client_rect)) {
+    HWND hwnd = (HWND)g_platform_cursor_window_handle;
+    if (hwnd == NULL || x == NULL || y == NULL ||
+        !GetClientRect(hwnd, &client_rect)) {
         return 0;
     }
     client_origin.x = 0;
     client_origin.y = 0;
     cursor.x = 0;
     cursor.y = 0;
-    ClientToScreen(win->hwnd, &client_origin);
+    ClientToScreen(hwnd, &client_origin);
     GetCursorPos(&cursor);
     *x = cursor.x - client_origin.x;
     *y = cursor.y - client_origin.y;

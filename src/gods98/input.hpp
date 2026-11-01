@@ -149,7 +149,8 @@ typedef void (*InputSetCursorPositionHook)(int x, int y, void* context);
 void input_cursor_position_hooks_install(InputClientToScreenHook convert,
                                         InputSetCursorPositionHook set_cursor,
                                         void* context);
-void input_cursor_position_update(InputState* state, PlatformWindow* window);
+void input_cursor_position_update(void); /* FUN_0047f010 */
+void input_cursor_position_sync(InputState* state);
 void input_cursor_client_position_set(int x, int y); /* FUN_0047f0d0 */
 void input_cursor_client_position_get(int* x, int* y);
 void input_cursor_delta_get(int* x, int* y);

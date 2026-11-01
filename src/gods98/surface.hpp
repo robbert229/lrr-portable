@@ -662,17 +662,17 @@ uint32_t rgb_channels_pack(uint8_t red, uint8_t green, uint8_t blue);
 void rgb_channels_unpack(uint32_t color, uint8_t* red, uint8_t* green,
                          uint8_t* blue);
 
-/* The pixel-conversion surface record (corpus 0x47d520/0x47d740/0x47d800):
- * the corpus's surface object, modeled LP64-safe as fields (the byte
- * offsets ride in comments). Rows +0x8, row bytes +0x10, pixel buffer
- * +0x24, depth +0x54, the three channel masks +0x58/+0x5c/+0x60. The
- * conversion jobs ride a parallel descriptor (the corpus's int array;
- * width [0], height [1], source stride [6], source pointer [7], and —
- * for the palette walk — the palette pointer [14]). */
+/* Pixel conversion records. Keep the retail field offsets on both 32-bit
+ * builds and LP64 hosts; pointer-sized padding lets tests use native pointers
+ * without moving the depth/masks or job palette fields. */
 typedef struct SurfaceRecord {
-    int row_count;      /* +0x8  */
+    uint8_t reserved_00[0x08];
+    int row_count;      /* +0x08 */
+    uint8_t reserved_0c[0x04];
     int row_bytes;      /* +0x10 */
+    uint8_t reserved_14[0x10];
     void* pixels;       /* +0x24 */
+    uint8_t reserved_2c[0x54 - 0x24 - sizeof(void*)];
     int depth;          /* +0x54 */
     uint32_t mask_low;  /* +0x58 */
     uint32_t mask_mid;  /* +0x5c */
@@ -680,11 +680,13 @@ typedef struct SurfaceRecord {
 } SurfaceRecord;
 
 typedef struct SurfaceConvertJob {
-    int width;          /* param_2[0]  */
-    int height;         /* param_2[1]  */
-    int src_stride;     /* param_2[6]  */
-    const void* src;    /* param_2[7]  */
-    const void* palette;/* param_2[14] (palette walk only) */
+    int width;          /* +0x00 / param_2[0] */
+    int height;         /* +0x04 / param_2[1] */
+    uint8_t reserved_08[0x10];
+    int src_stride;     /* +0x18 / param_2[6] */
+    const void* src;    /* +0x1c / param_2[7] */
+    uint8_t reserved_24[0x38 - 0x1c - sizeof(void*)];
+    const void* palette;/* +0x38 / param_2[14] */
 } SurfaceConvertJob;
 
 struct SurfacePixelFormat {

@@ -44,11 +44,12 @@ static const unsigned char s_resource_tree_child_iid[16] = {
     0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66
 };
 
+// FUNCTION: LEGORR 0x004898e0
 static int resource_tree_callback_count_increment(void* object, void* context)
 {
     uint32_t* count = (uint32_t*)context;
     (void)object;
-    if (count != NULL) ++*count;
+    ++*count;
     return 0;
 }
 
@@ -56,13 +57,15 @@ typedef struct ResourceTreeArrayWriter {
     unsigned char reserved[0x14];
     void** entries;
     uint32_t count;
+    uint32_t reserved_tail;
 } ResourceTreeArrayWriter;
 
+// FUNCTION: LEGORR 0x004898f0
 static int resource_tree_callback_array_append(void* object, void* context)
 {
     ResourceTreeArrayWriter* writer = (ResourceTreeArrayWriter*)context;
-    if (writer != NULL && writer->entries != NULL)
-        writer->entries[writer->count++] = object;
+    writer->entries[writer->count] = object;
+    ++writer->count;
     return 0;
 }
 
@@ -72,23 +75,25 @@ static int resource_tree_callback_array_append(void* object, void* context)
  * object, queried interface, and array each have distinct COM references and
  * are released at the same points as in the retail routine. */
 // FUNCTION: LEGORR 0x00489910
-uint32_t resource_tree_callback_count(void* object, uint32_t depth,
+uint32_t resource_tree_callback_count(void* object, int depth,
                                       ResourceTreeCallback callback,
                                       void* context)
 {
+    void* callback_context = context;
+    ResourceTreeCallback callback_function = callback;
+    void* current_object = object;
     void** object_vtable;
+    void** array_vtable;
     ResourceTreeGetChildrenFn get_children;
     void* child_array;
     uint32_t child_count;
     uint32_t index;
     int found = 0;
-    if (callback(object, context) != 0) return 1u;
-    object_vtable = *(void***)object;
+    if (callback_function(current_object, callback_context) != 0) return 1u;
+    object_vtable = *(void***)current_object;
     get_children = (ResourceTreeGetChildrenFn)object_vtable[0x4c / 4];
-    if (get_children(object, &child_array) != 0) return 0u;
-
-    {
-        void** array_vtable = *(void***)child_array;
+    if (get_children(current_object, &child_array) == 0) {
+        array_vtable = *(void***)child_array;
         ResourceTreeArraySizeFn get_size;
         get_size = (ResourceTreeArraySizeFn)array_vtable[0x0c / 4];
         child_count = get_size(child_array);
@@ -108,8 +113,9 @@ uint32_t resource_tree_callback_count(void* object, uint32_t depth,
                                   &child_interface);
             release_child = (ResourceTreeReferenceFn)child_vtable[2];
             (void)release_child(child);
-            if (resource_tree_callback_count(child_interface, depth + 1u,
-                                             callback, context) != 0u) {
+            if (resource_tree_callback_count(child_interface, depth + 1,
+                                             callback_function,
+                                             callback_context) != 0u) {
                 void** child_interface_vtable = *(void***)child_interface;
                 ResourceTreeReferenceFn release_interface =
                     (ResourceTreeReferenceFn)child_interface_vtable[2];
@@ -124,9 +130,7 @@ uint32_t resource_tree_callback_count(void* object, uint32_t depth,
                 (void)release_interface(child_interface);
             }
         }
-    }
-    {
-        void** array_vtable = *(void***)child_array;
+        array_vtable = *(void***)child_array;
         ResourceTreeReferenceFn release_array =
             (ResourceTreeReferenceFn)array_vtable[2];
         (void)release_array(child_array);
@@ -150,15 +154,15 @@ ResourceTreeCallbackContext* resource_tree_callback_context_create_for_enumerato
     context_record = (ResourceTreeCallbackContext*)engine_heap_alloc(
         (long)sizeof(ResourceTreeCallbackContext));
     context_record->kind = 0;
-    context_record->child_chain = NULL;
     context_record->first_handle = owner;
+    context_record->child_chain = NULL;
     context_record->shared_mode = 0;
     context_record->second_handle = enumerator;
     vtable = *(void***)enumerator;
     add_ref = (ResourceTreeReferenceFn)vtable[1];
     (void)add_ref(enumerator);
-    context_record->owner = enumerator;
     context_record->handle_count = 0u;
+    context_record->owner = enumerator;
     (void)resource_tree_callback_count(enumerator, 0u,
                                       resource_tree_callback_count_increment,
                                       &context_record->handle_count);
@@ -186,15 +190,15 @@ ResourceTreeCallbackContext* resource_tree_callback_context_create_for_resource(
     context_record = (ResourceTreeCallbackContext*)engine_heap_alloc(
         (long)sizeof(ResourceTreeCallbackContext));
     context_record->kind = 0;
-    context_record->child_chain = owner;
     context_record->first_handle = NULL;
+    context_record->child_chain = owner;
     context_record->shared_mode = 1;
     context_record->second_handle = resource;
     vtable = *(void***)resource;
     add_ref = (ResourceTreeReferenceFn)vtable[1];
     (void)add_ref(resource);
-    context_record->owner = resource;
     context_record->handle_count = 0u;
+    context_record->owner = resource;
     (void)resource_tree_callback_count(resource, 0u,
                                       resource_tree_callback_count_increment,
                                       &context_record->handle_count);

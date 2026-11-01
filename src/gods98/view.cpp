@@ -4829,6 +4829,16 @@ void camera_tilt_set(void* camera, float value)
     render_object_rotate_axis(scene_object, 1u, 1.0f, 0.0f, 0.0f, -value);
 }
 
+/* CameraPanAxisUpdate (FUN_00436900): add the delta to the controller's
+ * current +0x78 angle and route through CameraSetTilt for the same bounds and
+ * scene-transform update. */
+// FUNCTION: LEGORR 0x00436900
+void camera_pan_axis_update(void* camera, float delta)
+{
+    camera_tilt_set(camera,
+                    delta + *(float*)((char*)camera + 0x78));
+}
+
 /* ScreenEffectRecordSet (FUN_00435ebb): copy the four effect parameters
  * around the camera tilt operation in the original record. */
 // FUNCTION: LEGORR 0x00435ebb

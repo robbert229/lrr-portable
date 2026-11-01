@@ -153,7 +153,7 @@ typedef struct ResourceTreeCallbackContext {
     uint32_t handle_count;
     void* owner;
 } ResourceTreeCallbackContext;
-uint32_t resource_tree_callback_count(void* object, uint32_t depth,
+uint32_t resource_tree_callback_count(void* object, int depth,
                                       ResourceTreeCallback callback,
                                       void* context); /* FUN_00489910 */
 ResourceTreeCallbackContext* resource_tree_callback_context_create_for_enumerator(

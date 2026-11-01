@@ -1172,6 +1172,9 @@ typedef void (*CameraPoseDispatchHook)(void* scene_object, void* pose_context,
 void camera_pose_dispatch_hook_install(CameraPoseDispatchHook hook,
                                        void* context);
 void camera_tilt_set(void* camera, float value); /* FUN_00436860 */
+/* Signature also fits CameraDragHooks' camera_vertical_apply callback when
+ * its context is the controller record. */
+void camera_pan_axis_update(void* camera, float delta); /* FUN_00436900 */
 void screen_effect_record_set(void* camera_record,
                               uint32_t field4, uint32_t field8,
                               uint32_t fieldc, float tilt,

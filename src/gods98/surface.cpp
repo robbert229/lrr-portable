@@ -87,10 +87,10 @@ ScreenBoundedSurfaceRecord* screen_bounded_surface_allocate(
     return record;
 }
 
-/* RenderTargetViewportScaleSet (FUN_00476dc0): the GameConfigInit caller
- * supplies normalized origin/size values (0, 0, 1, 1) for a full-device
- * viewport. Convert each value with the same __ftol-compatible helper used
- * by the renderer before entering the bounded-surface allocator. */
+/* RenderTargetViewportScaleSet (FUN_00476dc0): its actual stack ABI has four
+ * normalized origin/size floats followed by a camera pointer. GameConfigInit
+ * passes (0, 0, 1, 1, camera); convert x/width against device width and
+ * y/height against device height before allocating the viewport. */
 ScreenBoundedSurfaceRecord* render_target_viewport_scale_set(
     float x, float y, float width_scale, float height_scale, void* camera)
 {
@@ -3310,12 +3310,12 @@ int surface_palette8_to_16bit_surface_expand(SurfaceRecord* rec,
     const uint32_t mask_low = rec->mask_low;
     const uint32_t mask_mid = rec->mask_mid;
     const uint32_t mask_hi = rec->mask_hi;
-    const uint32_t ffs_low = find_first_set_bit32(mask_low);
-    const uint32_t ffs_mid = find_first_set_bit32(mask_mid);
-    const uint32_t ffs_hi = find_first_set_bit32(mask_hi);
     const uint32_t shr_low = (uint32_t)(8 - pop_count32(mask_low)) & 0x1fu;
     const uint32_t shr_mid = (uint32_t)(8 - pop_count32(mask_mid)) & 0x1fu;
     const uint32_t shr_hi = (uint32_t)(8 - pop_count32(mask_hi)) & 0x1fu;
+    const uint32_t ffs_low = find_first_set_bit32(mask_low);
+    const uint32_t ffs_mid = find_first_set_bit32(mask_mid);
+    const uint32_t ffs_hi = find_first_set_bit32(mask_hi);
     const char* src = (const char*)job->src;
     const char* palette = (const char*)job->palette;
     uint16_t* dst = (uint16_t*)rec->pixels;
@@ -3331,7 +3331,7 @@ int surface_palette8_to_16bit_surface_expand(SurfaceRecord* rec,
             *dst++ = word;
         }
         src += job->src_stride - job->width;
-        dst += (size_t)((rec->row_bytes >> 1) - job->width);
+        dst += (rec->row_bytes >> 1) - job->width;
     }
     surface_pixel_rows_flip_with_scratch(rec);
     return 1;
@@ -3392,42 +3392,46 @@ int surface_bitmap24_bit_surface_convert(SurfaceRecord* rec,
     if (rec == NULL || job == NULL || rec->pixels == NULL) {
         return 1; /* deviation: the corpus strides the record blindly */
     }
-    if (rec->depth == 8 || rec->depth == 24 || rec->depth == 32) {
+    if (rec->depth == 8) {
         return 0;
     }
-    if (rec->depth != 16) {
+    if (rec->depth == 16) {
+        if (job->src == NULL) {
+            return 1; /* deviation: the corpus strides the job blindly */
+        }
+        const uint32_t mask_low = rec->mask_low;
+        const uint32_t mask_mid = rec->mask_mid;
+        const uint32_t mask_hi = rec->mask_hi;
+        const uint32_t shr_low =
+            (uint32_t)(8 - pop_count32(mask_low)) & 0x1fu;
+        const uint32_t shr_mid =
+            (uint32_t)(8 - pop_count32(mask_mid)) & 0x1fu;
+        const uint32_t shr_hi =
+            (uint32_t)(8 - pop_count32(mask_hi)) & 0x1fu;
+        const uint32_t ffs_low = find_first_set_bit32(mask_low);
+        const uint32_t ffs_mid = find_first_set_bit32(mask_mid);
+        const uint32_t ffs_hi = find_first_set_bit32(mask_hi);
+        const char* src = (const char*)job->src;
+        uint16_t* dst = (uint16_t*)rec->pixels;
+        for (int y = 0; y < job->height; ++y) {
+            for (int x = 0; x < job->width; ++x) {
+                const uint32_t b0 = (uint8_t)src[0];
+                const uint32_t b1 = (uint8_t)src[1];
+                const uint32_t b2 = (uint8_t)src[2];
+                src += 3;
+                const uint16_t word = (uint16_t)(
+                    ((b0 >> shr_hi) << (ffs_hi & 0x1fu))
+                    | ((b1 >> shr_mid) << (ffs_mid & 0x1fu))
+                    | ((b2 >> shr_low) << (ffs_low & 0x1fu)));
+                *dst++ = word;
+            }
+            src += job->src_stride - 3 * job->width;
+            dst += (rec->row_bytes >> 1) - job->width;
+        }
+        surface_pixel_rows_flip_with_scratch(rec);
         return 1;
     }
-    if (job->src == NULL) {
-        return 1; /* deviation: the corpus strides the job blindly */
-    }
-    const uint32_t mask_low = rec->mask_low;
-    const uint32_t mask_mid = rec->mask_mid;
-    const uint32_t mask_hi = rec->mask_hi;
-    const uint32_t ffs_low = find_first_set_bit32(mask_low);
-    const uint32_t ffs_mid = find_first_set_bit32(mask_mid);
-    const uint32_t ffs_hi = find_first_set_bit32(mask_hi);
-    const uint32_t shr_low = (uint32_t)(8 - pop_count32(mask_low)) & 0x1fu;
-    const uint32_t shr_mid = (uint32_t)(8 - pop_count32(mask_mid)) & 0x1fu;
-    const uint32_t shr_hi = (uint32_t)(8 - pop_count32(mask_hi)) & 0x1fu;
-    const char* src = (const char*)job->src;
-    uint16_t* dst = (uint16_t*)rec->pixels;
-    for (int y = 0; y < job->height; ++y) {
-        for (int x = 0; x < job->width; ++x) {
-            const uint32_t b0 = (uint8_t)src[0];
-            const uint32_t b1 = (uint8_t)src[1];
-            const uint32_t b2 = (uint8_t)src[2];
-            src += 3;
-            const uint16_t word = (uint16_t)(
-                ((b0 >> shr_hi) << (ffs_hi & 0x1fu))
-                | ((b1 >> shr_mid) << (ffs_mid & 0x1fu))
-                | ((b2 >> shr_low) << (ffs_low & 0x1fu)));
-            *dst++ = word;
-        }
-        src += job->src_stride - 3 * job->width;
-        dst += (size_t)((rec->row_bytes >> 1) - job->width);
-    }
-    surface_pixel_rows_flip_with_scratch(rec);
+    if (rec->depth == 24 || rec->depth == 32) return 0;
     return 1;
 }
 

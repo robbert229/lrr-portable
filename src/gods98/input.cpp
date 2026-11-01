@@ -345,21 +345,36 @@ void input_cursor_position_hooks_install(InputClientToScreenHook convert,
     s_input_cursor_hook_context = context;
 }
 
-/* CursorPositionUpdate (FUN_0047f010): sample the platform cursor, clamp it
- * to the configured client dimensions, then publish the client pair and
- * per-sample movement delta. The platform backend performs coordinate-space
- * conversion; only a successful sample updates the cached values. */
+/* CursorPositionUpdate (FUN_0047f010): sample the active cursor, clamp it to
+ * the configured client dimensions, then publish the client pair and
+ * per-sample movement delta. The Win32 build keeps the retail API call order;
+ * the native build reads SDL's client-relative mouse coordinates. */
 // FUNCTION: LEGORR 0x0047F010
-void input_cursor_position_update(InputState* state, PlatformWindow* window)
+void input_cursor_position_update(void)
 {
     int x;
     int y;
     int width;
     int height;
-    if (!platform_window_cursor_position_get(window, &x, &y)) return;
-    width = platform_window_width(window);
-    height = platform_window_height(window);
-    if (width <= 0 || height <= 0) return;
+#if defined(LEGORRR_BACKEND_WINAPI)
+    HWND hwnd = (HWND)g_platform_cursor_window_handle;
+    RECT client_rect;
+    POINT client_origin;
+    POINT cursor;
+    if (!GetClientRect(hwnd, &client_rect)) return;
+    client_origin.x = 0;
+    client_origin.y = 0;
+    cursor.x = 0;
+    cursor.y = 0;
+    ClientToScreen(hwnd, &client_origin);
+    GetCursorPos(&cursor);
+    x = cursor.x - client_origin.x;
+    y = cursor.y - client_origin.y;
+#else
+    if (!platform_cursor_position_get(&x, &y)) return;
+#endif
+    width = g_platform_cursor_width;
+    height = g_platform_cursor_height;
     if (x >= width) x = width - 1;
     if (y >= height) y = height - 1;
     if (x < 0) x = 0;
@@ -368,10 +383,13 @@ void input_cursor_position_update(InputState* state, PlatformWindow* window)
     s_cursor_delta_y = y - s_cursor_client_y;
     s_cursor_client_x = x;
     s_cursor_client_y = y;
-    if (state != NULL) {
-        state->mouse_x = x;
-        state->mouse_y = y;
-    }
+}
+
+void input_cursor_position_sync(InputState* state)
+{
+    if (state == NULL) return;
+    state->mouse_x = s_cursor_client_x;
+    state->mouse_y = s_cursor_client_y;
 }
 
 /* CursorSetClientPosition (FUN_0047f0d0): update the client-relative mouse
