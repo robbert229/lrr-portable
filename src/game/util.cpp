@@ -7,6 +7,8 @@
 #include <stdint.h>
 
 #include "gods98/resource.hpp"
+#include "gods98/heap.hpp"
+#include "port_loop_ports.hpp"
 #include "util.hpp"
 
 static ParsedEntityHealthValue s_parsed_entity_health_value;
@@ -765,9 +767,15 @@ void rectangular_resource_table_destroy(RectangularResourceTable* table)
     for (i = 0; i < total; ++i) {
         if (s_resource_entry_release_hook != NULL)
             s_resource_entry_release_hook(table->resources[i]);
+        else
+            unported_ledger_stubs::cell_visual_channel_table_dispose(
+                (unported_ledger_stubs::CellVisualChannelTable*)
+                    table->resources[i]);
     }
     if (s_resource_array_release_hook != NULL)
         s_resource_array_release_hook(table->resources);
+    else
+        engine_heap_free(table->resources);
     table->resources = NULL;
 }
 

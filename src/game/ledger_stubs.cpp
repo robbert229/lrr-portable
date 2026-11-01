@@ -486,9 +486,13 @@ void cell_visual_channel_table_resources_clear(CellVisualChannelTable* table)
     for (channel = 0; channel < 2u; channel++) {
         for (index = 0; index < 100u; index++) {
             void* resource = table->resources[channel][index];
-            if (resource != NULL && s_cell_visual_release_hook != NULL)
-                s_cell_visual_release_hook(s_cell_visual_release_context,
-                                           resource);
+            if (resource != NULL) {
+                if (s_cell_visual_release_hook != NULL)
+                    s_cell_visual_release_hook(s_cell_visual_release_context,
+                                               resource);
+                else
+                    ddiscene_object_destroy(resource);
+            }
             table->resources[channel][index] = NULL;
         }
     }
@@ -500,11 +504,13 @@ void cell_visual_channel_table_dispose(CellVisualChannelTable* table)
     int index;
     if (table == NULL) return;
     cell_visual_channel_table_resources_clear(table);
-    if (s_cell_visual_release_hook != NULL) {
-        for (index = 0; index < 2; index++) {
-            if (table->roots[index] != NULL)
+    for (index = 0; index < 2; index++) {
+        if (table->roots[index] != NULL) {
+            if (s_cell_visual_release_hook != NULL)
                 s_cell_visual_release_hook(s_cell_visual_release_context,
                                            table->roots[index]);
+            else
+                ddiscene_object_destroy(table->roots[index]);
         }
     }
     engine_heap_free(table);
@@ -7511,12 +7517,12 @@ void ledger_stub_0046f3b0_RayHitScanAndEffectApply(
 
 // LaserSpatialSoundAndImpact
 // FUNCTION: LEGORR 0x0046ffb0
-void ledger_stub_0046ffb0_LaserSpatialSoundAndImpact(
+void* ledger_stub_0046ffb0_LaserSpatialSoundAndImpact(
     void* request, int kind, float scale, const float origin[3],
     const float direction[3], const LaserImpactHooks* hooks)
 {
-    laser_spatial_sound_and_impact(request, kind, scale, origin, direction,
-                                   hooks);
+    return laser_spatial_sound_and_impact(request, kind, scale, origin,
+                                           direction, hooks);
 }
 
 // EntitySurfaceSegmentCollisionCheck
@@ -9967,6 +9973,7 @@ static uint32_t tutorial_compare_values(uint32_t op, uint32_t left,
                                         uint32_t right)
 {
     switch (op) {
+    case 2: return left != 0 || right != 0;
     case 3: return left < right;
     case 4: return left > right;
     case 5: return left == right;

@@ -82,7 +82,7 @@ typedef struct LaserImpactHooks {
     void* context;
 } LaserImpactHooks;
 
-static inline void laser_spatial_sound_and_impact(
+static inline void* laser_spatial_sound_and_impact(
     void* request, int kind, float scale, const float origin[3],
     const float direction[3], const LaserImpactHooks* hooks)
 {
@@ -92,7 +92,7 @@ static inline void laser_spatial_sound_and_impact(
     float hit_fraction = 1.0f;
     int surface = 0;
     void* hit;
-    if (hooks == 0 || origin == 0 || direction == 0) return;
+    if (hooks == 0 || origin == 0 || direction == 0) return 0;
     end[0] = origin[0] + direction[0] * scale;
     end[1] = origin[1] + direction[1] * scale;
     end[2] = origin[2] + direction[2] * scale;
@@ -127,6 +127,7 @@ static inline void laser_spatial_sound_and_impact(
     }
     if (hooks->progress_queue != 0)
         hooks->progress_queue(hooks->context, request, kind, scale);
+    return hit;
 }
 
 #endif
