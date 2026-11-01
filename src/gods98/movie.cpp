@@ -28,6 +28,7 @@
 #include "resource.hpp"
 #include "string.hpp"
 #include "surface.hpp"
+#include "platform/platform.h"
 
 #if defined(LEGORRR_BACKEND_WINAPI)
 #include <windows.h>
@@ -1273,6 +1274,13 @@ static void* s_avi_release_context;
 // GLOBAL: LEGORR 0x0053399c
 static void* s_avi_file_context;
 
+static uint32_t avi_clock_milliseconds(void)
+{
+    if (s_avi_time_hook != NULL)
+        return s_avi_time_hook(s_avi_time_context);
+    return platform_time_milliseconds();
+}
+
 // FUNCTION: LEGORR 0x0047ec80
 void avi_file_initialize(void* context)
 {
@@ -1309,9 +1317,7 @@ void AviPlaybackState::frame_retriever_open(const char* path)
     frame_index = 0;
     frame_rate = fps_denominator != 0u
         ? (float)fps_numerator / (float)fps_denominator : 0.0f;
-    if (s_avi_time_hook != NULL) {
-        now = s_avi_time_hook(s_avi_time_context);
-    }
+    now = avi_clock_milliseconds();
     frame_clock = (float)now * 0.001f;
     frame_delta = frame_clock;
     /* The reference marks the retriever ready before allocating its
@@ -1551,8 +1557,7 @@ void AviPlaybackState::frame_seek_and_clock_rebase(uint32_t frame_index_value)
     if (s_avi_playback_disabled) return;
     frame_index = frame_index_value;
     movie_seek_frame((Movie*)stream_object, frame_index_value);
-    if (s_avi_time_hook == NULL) return;
-    now = s_avi_time_hook(s_avi_time_context);
+    now = avi_clock_milliseconds();
     frame_clock = (float)now * 0.001f;
     frame_delta = frame_rate != 0.0f
         ? frame_clock - (float)frame_index / frame_rate : frame_clock;
@@ -1581,15 +1586,13 @@ int AviPlaybackState::frame_update_and_blit()
         Movie* movie = (Movie*)stream_object;
         if (movie == NULL || movie_info(movie, &info) != 0)
             return 1;
-        if (s_avi_time_hook != NULL
-            && !movie_seek_frame(movie, frame_index)) return 1;
+        if (!movie_seek_frame(movie, frame_index)) return 1;
         if (movie_next(movie, &frame) != 0) {
             /* AVIStreamGetFrame returning null leaves the old surface and
              * index intact; the caller still performs its normal blit. */
             return 1;
         }
         frame_updated = 1;
-        if (s_avi_time_hook == NULL) ++frame_index;
         if (surface != NULL && surface_lock() != 0u) {
             void* pixels = surface_pixels;
             int pitch = surface_pitch;
@@ -1620,8 +1623,8 @@ int AviPlaybackState::frame_update_and_blit()
             (void)surface_unlock();
         }
     }
-    if (frame_updated && s_avi_time_hook != NULL) {
-        uint32_t now = s_avi_time_hook(s_avi_time_context);
+    if (frame_updated) {
+        uint32_t now = avi_clock_milliseconds();
         frame_rate = fps_denominator != 0u
             ? (float)fps_numerator / (float)fps_denominator
             : 0.0f;

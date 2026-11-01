@@ -396,26 +396,32 @@ float block_get_float(BlockFile* bf, const char* path, float dflt)
     return (end == r->value) ? dflt : v;
 }
 
-/* Corpus FUN_00477710: YES/TRUE/ON → 1; NO/FALSE/OFF → 0; else 2.
- * Missing path is also 2 (FUN_004790d0's init value). */
+/* ConfigBooleanParse (FUN_00477710): YES/TRUE/ON → 1; NO/FALSE/OFF → 0;
+ * otherwise 2. */
 // FUNCTION: LEGORR 0x00477710
-int block_get_bool(BlockFile* bf, const char* path)
+int block_get_bool(const char* value)
 {
-    const char* v = block_get_strptr(bf, path);
-    if (v == NULL) {
-        return 2;
-    }
-    if (strcasecmp_lite(v, s_config_bool_yes) == 0
-        || strcasecmp_lite(v, s_config_bool_true) == 0
-        || strcasecmp_lite(v, s_config_bool_on) == 0) {
+    if (value == NULL) return 2;
+    if (strcasecmp_lite(value, s_config_bool_yes) == 0
+        || strcasecmp_lite(value, s_config_bool_true) == 0
+        || strcasecmp_lite(value, s_config_bool_on) == 0) {
         return 1;
     }
-    if (strcasecmp_lite(v, s_config_bool_no) == 0
-        || strcasecmp_lite(v, s_config_bool_false) == 0
-        || strcasecmp_lite(v, s_config_bool_off) == 0) {
+    if (strcasecmp_lite(value, s_config_bool_no) == 0
+        || strcasecmp_lite(value, s_config_bool_false) == 0
+        || strcasecmp_lite(value, s_config_bool_off) == 0) {
         return 0;
     }
     return 2;
+}
+
+/* Path convenience used by the portable callers. Retail's two-argument
+ * ConfigBooleanGetDefault2 at 0x4790d0 copies the value, parses it, and frees
+ * the copy; the BlockFile tree already owns a stable value string. */
+int block_get_bool(BlockFile* bf, const char* path)
+{
+    const char* value = block_get_strptr(bf, path);
+    return value != NULL ? block_get_bool(value) : 2;
 }
 
 /* RegistryPathSplit (FUN_0048b330, finding 402): the corpus copies the
