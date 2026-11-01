@@ -6083,6 +6083,7 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
 /* LavaErosionPendingCellTick (FUN_0040eab0): keep the engine-scale trigger
  * gate, walk the pending coordinates in their live insertion/swap order,
  * then advance all active stage timers. */
+// FUNCTION: LEGORR 0x0040eab0
 int lava_erosion_pending_cell_tick(float scale)
 {
     int triggered = 0;

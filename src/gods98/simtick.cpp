@@ -1134,7 +1134,6 @@ void simtick_frame_counter(EngineContext* c)
  * candidate was found. */
 static int s_ambient_spawn_triggers;
 
-// FUNCTION: LEGORR 0x0040eab0
 void simtick_ambient_spawn_tick(float scale)
 {
     if (lava_erosion_pending_cell_tick(scale))
