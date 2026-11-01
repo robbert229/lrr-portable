@@ -808,6 +808,15 @@ typedef struct SelectedGroundMarkerOps {
 void selected_ground_marker_ops_set(const SelectedGroundMarkerOps* ops);
 int selected_entity_ground_marker_render(void* entity, void* camera,
                                          float red, float green, float blue);
+typedef struct PositionTrackerBoxDrawOps {
+    void* context;
+    uint32_t (*interface_flags_get)(void* context);
+    void (*outline_draw)(void* context, const float* points0,
+                         const float* points1, int point_count, int mode,
+                         float scale, int parameter1, int parameter2);
+} PositionTrackerBoxDrawOps;
+void position_tracker_box_draw_ops_set(const PositionTrackerBoxDrawOps* ops);
+void position_tracker_box_draw(const float bounds[4]); /* FUN_0041cd30 */
 typedef struct OverlayTextLine {
     void* entry;
     int kind;

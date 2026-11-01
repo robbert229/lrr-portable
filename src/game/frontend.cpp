@@ -5330,6 +5330,7 @@ static AdvisorTextBoxExtentFn s_advisor_text_box_extent_hook;
 static void* s_advisor_text_box_extent_context;
 static AdvisorTextDisplayOps s_advisor_text_display_ops;
 static SelectedGroundMarkerOps s_selected_ground_marker_ops;
+static PositionTrackerBoxDrawOps s_position_tracker_box_draw_ops;
 static OverlayTextBufferOps s_overlay_text_buffer_ops;
 static AdvisorDialogStackOps s_advisor_dialog_stack_ops;
 static uint32_t s_advisor_dialog_stack_width = 0xffffffffu;
@@ -6199,6 +6200,47 @@ int selected_entity_ground_marker_render(void* entity, void* camera,
         ops->label_update(ops->context, label, red, green, blue);
     }
     return 1;
+}
+
+void position_tracker_box_draw_ops_set(const PositionTrackerBoxDrawOps* ops)
+{
+    if (ops != NULL) s_position_tracker_box_draw_ops = *ops;
+    else memset(&s_position_tracker_box_draw_ops, 0,
+                sizeof(s_position_tracker_box_draw_ops));
+}
+
+/* PositionTrackerBoxDraw (FUN_0041cd30): draw the two nested outline quads
+ * unless the interface's transition flag is active. The corpus submits each
+ * four point contour through the same transformed polygon primitive. */
+// FUNCTION: LEGORR 0x0041cd30
+void position_tracker_box_draw(const float bounds[4])
+{
+    PositionTrackerBoxDrawOps* ops = &s_position_tracker_box_draw_ops;
+    uint32_t flags;
+    float points[10];
+    int inset;
+    if (bounds == NULL || ops->outline_draw == NULL) return;
+    flags = ops->interface_flags_get != NULL ?
+        ops->interface_flags_get(ops->context) : 0u;
+    if ((flags & 0x100000u) != 0u) return;
+    for (inset = 1; inset <= 2; ++inset) {
+        const float left = bounds[0] - (float)inset;
+        const float top = bounds[1] - (float)inset;
+        const float right = bounds[0] + bounds[2] + (float)inset;
+        const float bottom = bounds[1] + bounds[3] + (float)inset;
+        points[0] = left;
+        points[1] = top;
+        points[2] = right;
+        points[3] = top;
+        points[4] = right;
+        points[5] = bottom;
+        points[6] = left;
+        points[7] = bottom;
+        points[8] = left;
+        points[9] = top;
+        ops->outline_draw(ops->context, points, points + 2,
+                          4, 0, 1.0f, 0, 0);
+    }
 }
 
 void overlay_text_buffer_ops_set(const OverlayTextBufferOps* ops)

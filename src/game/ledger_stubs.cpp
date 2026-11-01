@@ -3153,23 +3153,59 @@ int ledger_stub_00434480_CellSurfaceUpdateDispatch(
 }
 
 // PanelsConfigEntryApply
-typedef int (*PanelsConfigApplyHook)(void* context, const char* key,
-                                     const char* value);
-// FUNCTION: LEGORR 0x004345f0
-uint32_t ledger_stub_004345f0_PanelsConfigEntryApply(
-    BlockRec* section, PanelsConfigApplyHook apply, void* context)
+static int ledger_config_split_limited(char* text, char** fields,
+                                       unsigned int field_limit,
+                                       const char* separator)
 {
+    size_t separator_length;
+    unsigned int count;
+    char* p;
+    if (text == NULL || fields == NULL || field_limit == 0u ||
+        separator == NULL || separator[0] == '\0' || text[0] == '\0')
+        return 0;
+    separator_length = strlen(separator);
+    fields[0] = text;
+    count = 1u;
+    /* BlockTextTokenSplit tests the character after the candidate before
+     * comparing the separator, so a trailing delimiter stays in the token. */
+    for (p = text; p[1] != '\0' && count < field_limit; ++p) {
+        if (strncmp(separator, p, separator_length) == 0) {
+            *p = '\0';
+            fields[count++] = p + separator_length;
+        }
+    }
+    return (int)count;
+}
+
+// FUNCTION: LEGORR 0x004345f0
+void ledger_stub_004345f0_PanelsConfigEntryApply(BlockFile* config,
+                                                  int display_width,
+                                                  int display_height)
+{
+    char path[256];
+    BlockRec* section;
     BlockRec* entry;
-    uint32_t applied = 0u;
-    if (section == NULL || apply == NULL) return 0u;
+    if (config == NULL) return;
+    sprintf(path, "Panels_%d_%d", display_width, display_height);
+    section = block_subgroup(config, path);
+    if (section == NULL) return;
     for (entry = block_first_child(section); entry != NULL;
          entry = block_next_sibling(entry)) {
-        const char* name = block_name(entry);
+        int panel;
         const char* value = block_value(entry);
-        if (name != NULL && value != NULL && apply(context, name, value))
-            ++applied;
+        char copy[256];
+        char* fields[6];
+        int count;
+        if (!ui_panel_name_table_lookup(block_name(entry), &panel) ||
+            value == NULL) continue;
+        strncpy(copy, value, sizeof(copy) - 1u);
+        copy[sizeof(copy) - 1u] = '\0';
+        count = ledger_config_split_limited(copy, fields, 6u, ",");
+        if (count != 5) continue;
+        legacy_overlay_image_record_load(fields[0], panel, 4u);
+        panel_category_bounds_set(panel, atoi(fields[4]), atoi(fields[3]),
+                                  atoi(fields[2]), atoi(fields[1]));
     }
-    return applied;
 }
 
 // PanelButtonLayoutConfigLoad
@@ -3181,32 +3217,21 @@ uint32_t ledger_stub_00434710_PanelButtonLayoutConfigLoad(
     PanelButtonLayoutApplyHook apply, void* context)
 {
     BlockRec* group;
+    BlockRec* entry;
+    uint32_t applied = 0u;
     if (config == NULL || group_name == NULL || apply == NULL) return 0u;
     group = block_subgroup(config, group_name);
     if (group == NULL) return 0u;
-    return ledger_stub_004345f0_PanelsConfigEntryApply(group, apply, context);
+    for (entry = block_first_child(group); entry != NULL;
+         entry = block_next_sibling(entry)) {
+        const char* name = block_name(entry);
+        const char* value = block_value(entry);
+        if (name != NULL && value != NULL && apply(context, name, value))
+            ++applied;
+    }
+    return applied;
 }
 
-// SoundSamplesConfigLoad
-typedef void* (*SoundSampleConfigResolveHook)(const char* name,
-                                              void* context);
-typedef void (*SoundSampleConfigRegisterHook)(const char* alias,
-                                               void* sample,
-                                               void* context);
-typedef void (*SoundSampleConfigModeHook)(int enabled, void* context);
-typedef struct SoundSampleConfigHooks {
-    SoundSampleConfigResolveHook resolve;
-    SoundSampleConfigRegisterHook register_sample;
-    SoundSampleConfigModeHook mode_set;
-    void* context;
-} SoundSampleConfigHooks;
-static SoundSampleConfigHooks s_sound_sample_config_hooks;
-void sound_sample_config_hooks_set(const SoundSampleConfigHooks* hooks)
-{
-    if (hooks == NULL) memset(&s_sound_sample_config_hooks, 0,
-                              sizeof(s_sound_sample_config_hooks));
-    else s_sound_sample_config_hooks = *hooks;
-}
 // FUNCTION: LEGORR 0x00434a50
 void ledger_stub_00434a50_SoundSamplesConfigLoad(BlockFile* config,
                                                   int allow_marked)
@@ -3216,28 +3241,19 @@ void ledger_stub_00434a50_SoundSamplesConfigLoad(BlockFile* config,
     if (config == NULL) return;
     group = block_subgroup(config, "Samples");
     if (group == NULL) return;
-    if (s_sound_sample_config_hooks.mode_set != NULL)
-        s_sound_sample_config_hooks.mode_set(1,
-            s_sound_sample_config_hooks.context);
+    sound_alias_registration_set(1);
     for (entry = block_first_child(group); entry != NULL;
          entry = block_next_sibling(entry)) {
         const char* value = block_value(entry);
-        const char* sample_name = value;
-        void* sample;
-        if (sample_name == NULL) continue;
-        if (sample_name[0] == '!' && allow_marked) ++sample_name;
-        else if (sample_name[0] == '!' && !allow_marked) continue;
-        if (s_sound_sample_config_hooks.resolve == NULL ||
-            s_sound_sample_config_hooks.register_sample == NULL) continue;
-        sample = s_sound_sample_config_hooks.resolve(sample_name,
-            s_sound_sample_config_hooks.context);
-        if (sample != NULL)
-            s_sound_sample_config_hooks.register_sample(block_name(entry),
-                sample, s_sound_sample_config_hooks.context);
+        const char* alias_name = value;
+        int alias;
+        if (alias_name == NULL) continue;
+        if (alias_name[0] == '!' && allow_marked) ++alias_name;
+        else if (alias_name[0] == '!' && !allow_marked) continue;
+        if (sound_alias_lookup(alias_name, &alias))
+            (void)sound_sample_marker_parse(block_name(entry), alias);
     }
-    if (s_sound_sample_config_hooks.mode_set != NULL)
-        s_sound_sample_config_hooks.mode_set(0,
-            s_sound_sample_config_hooks.context);
+    sound_alias_registration_set(0);
 }
 
 // TextMessagesConfigLoad
@@ -6505,10 +6521,10 @@ void ledger_stub_0045a270_PanelCategoryInteractionStateReset()
 }
 
 // OverlayImageRecordLoad
-void ledger_stub_0045a2e0_OverlayImageRecordLoad(BlockFile* cfg, int panel,
-                                                  const char* path)
+void ledger_stub_0045a2e0_OverlayImageRecordLoad(const char* path, int panel,
+                                                 uint32_t state)
 {
-    legacy_overlay_image_record_load(cfg, panel, path);
+    legacy_overlay_image_record_load(path, panel, state);
 }
 
 // CaseInsensitiveStringTableLookup
@@ -10076,24 +10092,20 @@ void legacy_panel_category_interaction_state_reset(void)
 }
 
 // FUNCTION: LEGORR 0x0045a2e0
-void legacy_overlay_image_record_load(BlockFile* cfg, int panel,
-                                     const char* path)
+void legacy_overlay_image_record_load(const char* path, int panel,
+                                      uint32_t state)
 {
     LegacyPanelPortRecord* record;
-    /* The original clears the record's entry count, stores the caller's
-       state word (mapped to 0 through this port seam), and then tries the
-       primary resource load with mode 0 followed by initialisation, or the
-       alternate resource load with mode 1.  It never releases the previous
-       surface; the resource layer owns surface lifetime. */
     if (panel < 0 || panel >= 18) return;
     record = &s_legacy_panels[panel];
     record->selection_count = 0;
+    record->flags = state;
     record->image_mode = 0;
     record->image_flags = 0;
     record->image = NULL;
     if (path != NULL && s_legacy_hud_ops.surface_load != NULL)
         record->image = s_legacy_hud_ops.surface_load(
-            cfg, path, 0, 0, s_legacy_hud_ops.context);
+            NULL, path, 0, 0, s_legacy_hud_ops.context);
     if (record->image != NULL) {
         if (s_legacy_hud_ops.surface_initialize != NULL)
             s_legacy_hud_ops.surface_initialize(record->image,
@@ -10103,10 +10115,8 @@ void legacy_overlay_image_record_load(BlockFile* cfg, int panel,
         return;
     }
     if (path != NULL && s_legacy_hud_ops.surface_alternate_load != NULL) {
-        /* The original's alternate path is FUN_00483c80(path, record, 3);
-           the panel stands in for the record and 3 is its load mode. */
         record->image = s_legacy_hud_ops.surface_alternate_load(
-            cfg, path, panel, 3, s_legacy_hud_ops.context);
+            NULL, path, panel, 3, s_legacy_hud_ops.context);
         if (record->image != NULL) {
             record->image_mode = 1;
             record->image_flags |= 1u;

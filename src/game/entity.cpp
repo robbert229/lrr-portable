@@ -5502,11 +5502,9 @@ void entity_linked_route_flag_clear(GameContext* ctx, EntitySlot* e)
     }
 }
 
-/* EntityClearNestedState8Fields (FUN_004487c0): clears the +0x2f4/+0x2f8
- * pair on the linked type-8 object when the entity's 0x400 mode bit is
- * raised. The corpus then performs a wider attached-object detach pass;
- * this port keeps the coordinate/state writes and leaves that registry
- * cleanup behind its still-unmodeled owner. */
+/* EntityClearNestedState8Fields (FUN_004487c0): clear the linked type-8
+ * object's +0x2f4 position and run the entity's attached-object detach
+ * pass. The separate nested +0xbe field has no EntitySlot mirror yet. */
 // FUNCTION: LEGORR 0x004487c0
 void entity_clear_nested_state_8_fields(EntitySlot* e)
 {
@@ -5519,7 +5517,7 @@ void entity_clear_nested_state_8_fields(EntitySlot* e)
         return;
     }
     nested->pos_pair_2f4 = 0.0f;
-    nested->pos_pair_2f8 = 0.0f;
+    unported_ledger_stubs::entity_attached_object_list_detach(e, 1);
 }
 
 typedef struct EntityTypeFourDispatch {

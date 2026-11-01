@@ -984,8 +984,8 @@ int entity_progress_advance_by_25(EntitySlot* e);
  * the entity and its optional +0x2fc linked entity. */
 void entity_linked_route_flag_clear(GameContext* ctx, EntitySlot* e);
 
-/* EntityClearNestedState8Fields (FUN_004487c0): when gated, clear the two
- * coordinate words on a linked type-8 entity. */
+/* EntityClearNestedState8Fields (FUN_004487c0): when gated and linked to a
+ * type-8 entity, clear its +0x2f4 word and detach attached objects. */
 void entity_clear_nested_state_8_fields(EntitySlot* e);
 
 /* TypeFourEntityCallbackDispatch (FUN_00447900): filtered pool walk whose
