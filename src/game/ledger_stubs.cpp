@@ -2191,11 +2191,21 @@ int ledger_stub_0041baa0_SimulationPointerActionDispatch(
 }
 
 // FUNCTION: LEGORR 0x0041c4f0
-int ledger_stub_0041c4f0_AdvisorAnimationPositionAndRequestUpdate(
-    int row, int immediate)
+void ledger_stub_0041c4f0_AdvisorAnimationPositionAndRequestUpdate(
+    int position_mode, int input_a, int input_b, float* position)
 {
-    advisor_apply_slot_transform(row);
-    return advisor_request_admit(row, immediate);
+    /* The retail function first requires DAT_004de1f8 bit 0x20 and a clear
+     * global bit 0. Its remaining positioning path reads DAT_004ddd24 and
+     * DAT_004ddd28/2c/30; those input-owner words are not yet modeled, so do
+     * not substitute the unrelated per-row transform/request helpers. */
+    if ((interaction_flags_peek() & 0x20u) == 0u ||
+        global_flag_bit0_is_set() != 0u) {
+        return;
+    }
+    (void)position_mode;
+    (void)input_a;
+    (void)input_b;
+    (void)position;
 }
 
 int ledger_stub_0041c7b0_InputActionStateUpdate(const EngineContext* context,

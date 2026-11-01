@@ -4680,17 +4680,20 @@ void entity_task_count_context_set(GameContext* context,
 void entity_task_count_at_grid_coordinate_query(uint32_t x, uint32_t y,
                                                 uint32_t* out_count)
 {
+    GameContext* context;
     int type, index;
     if (out_count == NULL) return;
     *out_count = 0;
-    if (s_entity_task_count_context == NULL) return;
+    context = s_entity_task_count_context != NULL ?
+        s_entity_task_count_context : entity_pool_callback_context_get();
+    if (context == NULL) return;
     for (type = 0; type < ENTITY_TYPES; ++type) {
-        int count = s_entity_task_count_context->entity_count[type];
+        int count = context->entity_count[type];
         if (count < 0) count = 0;
         if (count > ENTITY_CAP) count = ENTITY_CAP;
         for (index = 0; index < count; ++index) {
             const EntitySlot* entity =
-                &s_entity_task_count_context->entity[type][index];
+                &context->entity[type][index];
             int matches;
             if (entity->type == 0) continue;
             if (s_entity_task_coordinate_match_hook != NULL) {

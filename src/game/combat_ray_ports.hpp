@@ -16,9 +16,9 @@ typedef struct CombatRayState {
 
 typedef struct CombatRayHooks {
     float (*configured_range_get)(void* context, int kind);
-    void* (*raycast)(void* context, const float origin[3],
-                     const float direction[3], float* hit_fraction,
-                     float hit_point[3]);
+    int (*raycast)(void* context, const float origin[3],
+                   const float direction[3], float* hit_fraction,
+                   float hit_point[3], void** hit_object_out);
     void (*entity_release)(void* context, void* entity);
     void (*impact_apply)(void* context, void* entity, int mode,
                          const float hit_point[3], int kind, int effect_kind);
@@ -32,7 +32,8 @@ static inline void combat_ray_hit_scan_and_effect_apply(
     float hit_point[3];
     float fraction = 1.0f;
     float distance;
-    void* hit;
+    void* hit_object = 0;
+    int collided;
     int i;
     if (state == 0 || hooks == 0 || state->tracked_entity == 0 ||
         hooks->configured_range_get == 0 || hooks->raycast == 0) return;
@@ -50,14 +51,14 @@ static inline void combat_ray_hit_scan_and_effect_apply(
         return;
     }
     for (i = 0; i < 3; ++i) hit_point[i] = 0.0f;
-    hit = hooks->raycast(hooks->context, state->origin, delta, &fraction,
-                         hit_point);
-    if (hit == 0) return;
+    collided = hooks->raycast(hooks->context, state->origin, delta,
+                              &fraction, hit_point, &hit_object);
+    if (!collided) return;
     if (hooks->entity_release != 0)
         hooks->entity_release(hooks->context, state->tracked_entity);
     state->tracked_entity = 0;
-    if (hooks->impact_apply != 0)
-        hooks->impact_apply(hooks->context, hit, state->effect_mode,
+    if (hit_object != 0 && hooks->impact_apply != 0)
+        hooks->impact_apply(hooks->context, hit_object, state->effect_mode,
                             hit_point, state->type_kind, state->effect_kind);
 }
 
