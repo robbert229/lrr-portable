@@ -6649,22 +6649,16 @@ void ledger_stub_0045a590_ScrollingAdvisorTextAppend(void* record,
 void ledger_stub_0045a5b0_UITextOutputPositionAndDraw(
     void* record, uint32_t start_line, float line_scale)
 {
-    void* output;
-    void* offsets;
-    int base_x, base_y;
-    float offset_x, offset_y;
+    uint32_t* words = (uint32_t*)record;
+    void* output = (void*)words[0];
+    float* offsets = (float*)words[3];
     int x, y;
-    if (record == NULL) return;
-    memcpy(&output, (char*)record, sizeof(output));
-    memcpy(&base_y, (char*)record + 4, sizeof(base_y));
-    memcpy(&base_x, (char*)record + 8, sizeof(base_x));
-    memcpy(&offsets, (char*)record + 12, sizeof(offsets));
-    if (output == NULL || offsets == NULL) return;
-    memcpy(&offset_y, (char*)offsets + 0x18, sizeof(offset_y));
-    memcpy(&offset_x, (char*)offsets + 0x1c, sizeof(offset_x));
-    /* The retail path converts x (+0x1c) before y (+0x18). */
-    x = crt_float_to_long((float)base_x + offset_x);
-    y = crt_float_to_long((float)base_y + offset_y);
+    /* The retail path converts x (+0x1c) before y (+0x18), calling the CRT
+     * floor helper before __ftol so coordinates round downward. */
+    x = (int)crt_round_to_integral_with_math_error_handling(
+        (double)((float)(int32_t)words[2] + offsets[7]));
+    y = (int)crt_round_to_integral_with_math_error_handling(
+        (double)((float)(int32_t)words[1] + offsets[6]));
     float_pair_at_offset4_set_from_ints(output, x, y);
     (void)text_buffer_draw_wrapped(output, start_line, line_scale, NULL);
 }

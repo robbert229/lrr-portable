@@ -5865,6 +5865,24 @@ int erosion_scratch_peek(int which, int index)
                ? (int)s_ts_active[index] : -1;
 }
 
+/* Find the first zero in the 2,000-dword DAT_004cfbb4 stage-active table.
+ * Stage registration and the pending-cell ticker share this allocator. */
+// FUNCTION: LEGORR 0x0040e990
+int lava_erosion_stage_slot_find_free(int* slot_out)
+{
+    uint32_t* cursor = s_erosion_marks;
+    int slot = 0;
+    do {
+        if (*cursor == 0u) {
+            *slot_out = slot;
+            return 1;
+        }
+        ++cursor;
+        ++slot;
+    } while (cursor < s_erosion_marks + EROSION_MARK_COUNT);
+    return 0;
+}
+
 // FUNCTION: LEGORR 0x0040e9c0
 float lava_erosion_delay_from_cell(const LevelState* s, int x, int y)
 {
@@ -5916,26 +5934,20 @@ int lava_erosion_neighbor_check(const LevelState* s, int seed_x, int seed_y,
  * pending-candidate table. */
 int lava_erosion_stage_register(const int xy[2], uint32_t stage)
 {
-    unsigned int i;
+    int slot;
     uint8_t* cell;
     if (xy == NULL || s_lava_erosion_level_context == NULL) return 0;
     cell = level_voxel(s_lava_erosion_level_context, xy[0], xy[1]);
     if (cell == NULL) return 0;
-    for (i = 0; i < EROSION_MARK_COUNT; ++i) {
-        if (s_erosion_marks[i] == 0u) {
-            float delay;
-            cell[7] = (uint8_t)stage;
-            s_lava_erosion_stage_slots[i].x = xy[0];
-            s_lava_erosion_stage_slots[i].y = xy[1];
-            delay = lava_erosion_delay_from_cell(
-                s_lava_erosion_level_context, xy[0], xy[1]);
-            s_lava_erosion_stage_slots[i].timer = delay / (float)(stage + 1u);
-            s_erosion_marks[i] = 1u;
-            lava_erosion_pending_cell_add(xy, 1);
-            return 1;
-        }
-    }
-    return 0;
+    if (!lava_erosion_stage_slot_find_free(&slot)) return 0;
+    cell[7] = (uint8_t)stage;
+    s_lava_erosion_stage_slots[slot].x = xy[0];
+    s_lava_erosion_stage_slots[slot].y = xy[1];
+    s_lava_erosion_stage_slots[slot].timer = lava_erosion_delay_from_cell(
+        s_lava_erosion_level_context, xy[0], xy[1]) / (float)(stage + 1u);
+    s_erosion_marks[slot] = 1u;
+    lava_erosion_pending_cell_add(xy, 1);
+    return 1;
 }
 
 unsigned int lava_erosion_pending_cell_count_get(void)
@@ -6071,57 +6083,54 @@ int lava_erosion_pending_cell_tick(float scale)
     LevelState* s = s_lava_erosion_level_context;
     s_erosion_trigger_accumulator += scale;
     if (s_erosion_decay_scale < s_erosion_trigger_accumulator) {
-        unsigned int slot;
+        int free_slot;
         unsigned int n;
         triggered = 1;
-        if (s != NULL && s_lava_erosion_pending_count != 0u) {
-            for (slot = 0; slot < EROSION_MARK_COUNT; ++slot) {
-                if (s_erosion_marks[slot] == 0u) break;
-            }
-            if (slot < EROSION_MARK_COUNT) {
-                const unsigned int start =
-                    (unsigned int)level_rand_u16() %
-                    s_lava_erosion_pending_count;
-                for (n = 0; n < s_lava_erosion_pending_count; ++n) {
-                    const unsigned int index =
-                        (start + n) % s_lava_erosion_pending_count;
-                    const int seed_xy[2] = {
-                        s_lava_erosion_pending_cells[index].x,
-                        s_lava_erosion_pending_cells[index].y
-                    };
-                    int candidate_xy[2];
-                    if (lava_erosion_neighbor_check(
-                            s, seed_xy[0], seed_xy[1], candidate_xy) != 0) {
-                        uint8_t* cell = level_voxel(
+        if (s != NULL && s_lava_erosion_pending_count != 0u &&
+            lava_erosion_stage_slot_find_free(&free_slot)) {
+            const unsigned int slot = (unsigned int)free_slot;
+            const unsigned int start =
+                (unsigned int)level_rand_u16() %
+                s_lava_erosion_pending_count;
+            for (n = 0; n < s_lava_erosion_pending_count; ++n) {
+                const unsigned int index =
+                    (start + n) % s_lava_erosion_pending_count;
+                const int seed_xy[2] = {
+                    s_lava_erosion_pending_cells[index].x,
+                    s_lava_erosion_pending_cells[index].y
+                };
+                int candidate_xy[2];
+                if (lava_erosion_neighbor_check(
+                        s, seed_xy[0], seed_xy[1], candidate_xy) != 0) {
+                    uint8_t* cell = level_voxel(
+                        s, candidate_xy[0], candidate_xy[1]);
+                    if (cell == NULL) continue;
+                    if (level_cell_occupied_at(s, candidate_xy[0],
+                                               candidate_xy[1]) == 0 ||
+                        (cell[0x0c] & 0x10u) != 0u) {
+                        float delay;
+                        uint32_t secondary;
+                        __builtin_memcpy(&secondary, cell + 0x0c,
+                                         sizeof secondary);
+                        secondary &= ~0x10u;
+                        __builtin_memcpy(cell + 0x0c, &secondary,
+                                         sizeof secondary);
+                        s_lava_erosion_stage_slots[slot].x =
+                            candidate_xy[0];
+                        s_lava_erosion_stage_slots[slot].y =
+                            candidate_xy[1];
+                        delay = lava_erosion_delay_from_cell(
                             s, candidate_xy[0], candidate_xy[1]);
-                        if (cell == NULL) continue;
-                        if (level_cell_occupied_at(s, candidate_xy[0],
-                                                   candidate_xy[1]) == 0 ||
-                            (cell[0x0c] & 0x10u) != 0u) {
-                            float delay;
-                            uint32_t secondary;
-                            __builtin_memcpy(&secondary, cell + 0x0c,
-                                             sizeof secondary);
-                            secondary &= ~0x10u;
-                            __builtin_memcpy(cell + 0x0c, &secondary,
-                                             sizeof secondary);
-                            s_lava_erosion_stage_slots[slot].x =
-                                candidate_xy[0];
-                            s_lava_erosion_stage_slots[slot].y =
-                                candidate_xy[1];
-                            delay = lava_erosion_delay_from_cell(
-                                s, candidate_xy[0], candidate_xy[1]);
-                            s_lava_erosion_stage_slots[slot].timer = delay;
-                            s_erosion_marks[slot] = 1u;
-                            cell[7] = 0u;
-                            lava_erosion_pending_cell_add(candidate_xy, 1);
-                            message_dispatch(0x1e, 0, 0, candidate_xy);
-                            break;
-                        }
-                        cell_coordinate_timestamp_remember(
-                            candidate_xy[0], candidate_xy[1]);
-                        cell[0x0c] |= 0x10u;
+                        s_lava_erosion_stage_slots[slot].timer = delay;
+                        s_erosion_marks[slot] = 1u;
+                        cell[7] = 0u;
+                        lava_erosion_pending_cell_add(candidate_xy, 1);
+                        message_dispatch(0x1e, 0, 0, candidate_xy);
+                        break;
                     }
+                    cell_coordinate_timestamp_remember(
+                        candidate_xy[0], candidate_xy[1]);
+                    cell[0x0c] |= 0x10u;
                 }
             }
         }

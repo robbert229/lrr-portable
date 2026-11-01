@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
+#include <limits.h>
 
 #include "terrain_grid.hpp"
 #include "level.hpp"
@@ -2537,6 +2538,53 @@ void grid_surface_write_at_xy(TerrainSurfaceGrid* grid, int x, int y,
     uint32_t index = (uint32_t)y * grid->width + (uint32_t)x;
     /* FUN_00450700 delegates this exact index to the surface-value setter. */
     grid->surface_values[index] = value;
+}
+
+/* FUN_00450600: clear and queue every in-bounds cell in the inclusive circle.
+ * The callback runs after the surface value is cleared but before the
+ * coordinate is appended, matching the reference's observable order. */
+// FUNCTION: LEGORR 0x00450600
+void terrain_surface_clear_circle(TerrainSurfaceGrid* grid, int center_x,
+                                  int center_y, int radius,
+                                  TerrainGridCircleCellCallback callback)
+{
+    if (grid == NULL || grid->surface_values == NULL || radius < 0 ||
+        radius > 32767 || center_x < INT_MIN + radius ||
+        center_x > INT_MAX - radius || center_y < INT_MIN + radius ||
+        center_y > INT_MAX - radius)
+        return;
+    {
+        int y_offset;
+        const int radius_squared = radius * radius;
+        for (y_offset = -radius; y_offset <= radius; ++y_offset) {
+            int x_offset;
+            for (x_offset = -radius; x_offset <= radius; ++x_offset) {
+                const int x = center_x + x_offset;
+                const int y = center_y + y_offset;
+                if (x_offset * x_offset + y_offset * y_offset >
+                    radius_squared || x < 0 || y < 0 ||
+                    (uint32_t)x >= grid->width ||
+                    (uint32_t)y >= grid->height) continue;
+
+                grid_surface_write_at_xy(grid, x, y, 0);
+                if (callback != NULL) callback(x, y);
+                if (grid->changed_count < TERRAIN_GRID_CHANGE_CAPACITY) {
+                    grid->changed_xy[grid->changed_count][0] =
+                        (int16_t)(x_offset + center_x);
+                    grid->changed_xy[grid->changed_count][1] =
+                        (int16_t)(y_offset + center_y);
+                    ++grid->changed_count;
+                }
+            }
+        }
+    }
+}
+
+/* The terrain context's block-size float is the dword at +0x10. */
+// FUNCTION: LEGORR 0x00450890
+float terrain_context_scale_get(const void* context)
+{
+    return *(const float*)((const uint8_t*)context + 0x10);
 }
 
 // FUNCTION: LEGORR 0x00450730

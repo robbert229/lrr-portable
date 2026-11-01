@@ -4158,10 +4158,6 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
     (void)engine_context_grid_pick(ctx, out, gx, gy);
 }
 
-static void cam_surface_height_stub()
-{
-    /* TODO(view): FUN_00431570 terrain handle -> FUN_0044fe70 surface height. */
-}
 // FUNCTION: LEGORR 0x0044a200
 static int object_lookup(int id)
 {
@@ -4237,10 +4233,10 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
             }
             float h = terrain_height(ctx, pos[0], pos[1]);
             cam_set_pos(&v->cam_facing, pos[0], pos[1], h);
-            cam_surface_height_stub();
-            /* Corpus adds the negative interpolated terrain height to the
+            cam_set_facing(&v->cam_facing, fac);
+            /* The corpus subtracts the sampled terrain surface from the
              * follow span before positioning the world camera. */
-            float z = v->follow_span + (-0.0f);
+            float z = v->follow_span - h;
             cam_set_pos(&v->cam_world, 0.0f, 0.0f, -z);
         }
         view_tail(v, scale);
@@ -4267,26 +4263,51 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
     }
 
     if (v->mode == 3) {
-        /* Free/cruise: velocity-EMA toward the target + dirty-flag gating. */
+        /* Free/cruise: ease the camera position and facing toward the
+         * velocity target.  The factor is 4 / dt, so smaller frame deltas
+         * keep the camera closer to the target while larger deltas retain
+         * more of the current camera state. */
         float pos[3], facing[3];
+        float target_pos[3], target_facing[3];
+        float mixed_pos[3], mixed_facing[3];
+        float distance, facing_dot, factor, inverse_factor;
+        int target_dirty;
         cam_get_pos(&v->cam_world, pos);
         cam_get_facing(&v->cam_world, facing);
-        float blend[3], tface[3];
-        /* TODO(view): FUN_0044a070 velocity-EMA; when the target is not
-         * dirty (flags & 0x10) the cached target is used closer. */
-        if (target_blend(v->follow_id, v->a5, blend, tface) == 0) {
+        if (v->follow_id == 0 || dt == 0.0f ||
+            target_blend(v->follow_id, v->a5, target_pos,
+                         target_facing) == 0) {
             view_tail(v, scale);
             return;
         }
-        float d1 = vec_dist(tface, facing);
-        float d2 = vec_dot(tface, facing);
-        (void)d1; (void)d2;
-        /* --_DAT_0049e378/dt*_e384 modelling using the real dt */
-        float frame = dt > 0.0f ? (0.0333333f / dt) * 0.5f : 1.0f;
-        vec_scale(tface, tface, frame);
-        vec_add(facing, facing, tface);
-        cam_set_pos(&v->cam_world, tface[0], tface[1], tface[2]);
-        cam_set_facing(&v->cam_world, facing);
+
+        target_dirty = (v->flags & 0x10u) != 0;
+        distance = vec_dist(target_pos, pos);
+        facing_dot = vec_dot(target_facing, facing);
+        if (!target_dirty || distance > 100.0f || facing_dot < 0.0f) {
+            memcpy(pos, target_pos, sizeof(pos));
+            memcpy(facing, target_facing, sizeof(facing));
+        }
+
+        /* The reference normalizes both facing vectors after applying its
+         * dirty-target fallback, then blends the current vector toward the
+         * target vector. */
+        vec_normalize(facing);
+        vec_normalize(target_facing);
+        factor = 4.0f / dt;
+        inverse_factor = 1.0f / (factor + 1.0f);
+        vec_scale(mixed_facing, facing, factor);
+        vec_add(mixed_facing, mixed_facing, target_facing);
+        vec_scale(mixed_facing, mixed_facing, inverse_factor);
+        vec_scale(mixed_pos, pos, factor);
+        vec_add(mixed_pos, mixed_pos, target_pos);
+        vec_scale(mixed_pos, mixed_pos, inverse_factor);
+
+        if (distance > 0.01f)
+            cam_set_pos(&v->cam_world, mixed_pos[0], mixed_pos[1],
+                        mixed_pos[2]);
+        if (facing_dot < 0.99999f)
+            cam_set_facing(&v->cam_world, mixed_facing);
         v->flags |= 0x10;
         view_tail(v, scale);
         return;

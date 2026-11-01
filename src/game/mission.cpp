@@ -180,29 +180,77 @@ static char* mission_replace_char(char* text, char from, char to)
  *  Field loaders (corpus order in TaskBlockInit).
  * ------------------------------------------------------------------ */
 
-/* FUN_0045f3e0 — `Reward Images.<name>`: coords at +0x57/0x58, flag |2. */
+/* TaskLoaderImages @ 0x0045f3e0 takes only the task record; the config,
+ * root, and level belong to the active TaskBlockInit binding. */
 // FUNCTION: LEGORR 0x0045f3e0
-static void task_loader_images(BlockFile* cfg, const char* root,
-                               const char* level, GameTask* t)
+static void task_loader_images(GameTask* t)
 {
-    const char* v = rw_str(cfg, root, level, "Images", task_name(t));
+    BlockFile* cfg = s_task_init_binding.config;
+    const char* level = s_task_init_binding.level_name;
+    const char* root;
+    const char* name;
+    const char* v;
+    if (cfg == NULL || level == NULL || t == NULL) return;
+    root = util_root_name(cfg);
+    name = task_name(t);
+    v = rw_str(cfg, root, level, "Images", name);
+    if (v == NULL && (engine_feature_word_peek() & 0x2000000u) == 0u) {
+        char fallback_name[64];
+        size_t name_length = strlen(name);
+        if (name_length > sizeof(fallback_name) - 2u)
+            name_length = sizeof(fallback_name) - 2u;
+        fallback_name[0] = '!';
+        memcpy(fallback_name + 1, name, name_length);
+        fallback_name[name_length + 1u] = '\0';
+        v = rw_str(cfg, root, level, "Images", fallback_name);
+    }
     if (v == NULL) {
         return;
     }
-    char f[UTIL_QUERY_MAX_FIELDS][256];
-    if (task_fields(v, f) == 0) {
-        return;
-    }
-    task_put_int(t, TASK_OFF_IMG_XY, (int32_t)atoi(f[1]));
-    task_put_int(t, TASK_OFF_IMG_XY + 4, (int32_t)atoi(f[2]));
+    /* FUN_00477440 splits the config block's mutable value in place on its
+     * pipe delimiter. It does not try to open the first field as a resource
+     * or split on whitespace (the general-purpose query helper does both). */
+    char value[256];
+    char* fields[3];
+    size_t value_length = strlen(v);
+    if (value_length >= sizeof(value)) value_length = sizeof(value) - 1u;
+    memcpy(value, v, value_length);
+    value[value_length] = '\0';
+    fields[0] = value;
+    fields[1] = NULL;
+    fields[2] = NULL;
     {
-        TextureSurface* image = image_surface_load(f[0], 0u, 0u);
-        if (image != NULL) {
-            task_put_int(t, TASK_OFF_IMAGE,
-                         (int32_t)(uint32_t)(uintptr_t)image);
-            task_add_flag(t, TASK_FLAG_IMG);
-            reward_task_resource_slot_set(task_slot_index(t), TASK_FLAG_IMG,
-                                          image, NULL);
+        char* p = value;
+        int field_count = 1;
+        while (*p != '\0' && field_count < 3) {
+            if (*p == '|') {
+                *p = '\0';
+                fields[field_count++] = p + 1;
+            }
+            ++p;
+        }
+        if (field_count < 3) return;
+    }
+    {
+        char image_path[128];
+        size_t path_length = strlen(fields[0]);
+        if (path_length >= sizeof(image_path))
+            path_length = sizeof(image_path) - 1u;
+        memcpy(image_path, fields[0], path_length);
+        image_path[path_length] = '\0';
+        task_put_int(t, TASK_OFF_IMG_XY, (int32_t)atoi(fields[1]));
+        task_put_int(t, TASK_OFF_IMG_XY + 4, (int32_t)atoi(fields[2]));
+        {
+            TextureSurface* image = image_surface_load(image_path, 0u, 0u);
+            if (image != NULL) {
+                texture_source_color_key_set(image, 0u, 0u);
+                image->resource_flags |= 2u;
+                task_put_int(t, TASK_OFF_IMAGE,
+                             (int32_t)(uint32_t)(uintptr_t)image);
+                task_add_flag(t, TASK_FLAG_IMG);
+                reward_task_resource_slot_set(task_slot_index(t), TASK_FLAG_IMG,
+                                              image, NULL);
+            }
         }
     }
 }
@@ -341,7 +389,7 @@ int mission_task_init_target(void)
      * each pass writes independent task fields, so the resulting records are
      * unchanged from the former per-task grouping. */
     for (t = ctx->tasks; t < ctx->tasks + GAME_TASK_COUNT; ++t) {
-        task_loader_images(cfg, root, level_name, t);
+        task_loader_images(t);
     }
     for (t = ctx->tasks; t < ctx->tasks + GAME_TASK_COUNT; ++t) {
         task_loader_text(cfg, root, level_name, t);

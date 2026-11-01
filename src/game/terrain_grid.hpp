@@ -287,6 +287,12 @@ int terrain_cell_edge_vector_query(TerrainSurfaceGrid* grid, uint32_t x,
                                    uint32_t y, float out[3]); /* 0x004507d0 */
 void grid_surface_write_at_xy(TerrainSurfaceGrid* grid, int x, int y,
                               uint8_t value); /* FUN_00450700 */
+typedef void (*TerrainGridCircleCellCallback)(int x, int y);
+void terrain_surface_clear_circle(TerrainSurfaceGrid* grid, int center_x,
+                                  int center_y, int radius,
+                                  TerrainGridCircleCellCallback callback);
+                                                        /* FUN_00450600 */
+float terrain_context_scale_get(const void* context); /* FUN_00450890 */
 void terrain_cell_change_queue_append(TerrainSurfaceGrid* grid, int x,
                                       int y); /* FUN_00450730 */
 void terrain_cell_change_queue_flush(TerrainSurfaceGrid* grid); /* FUN_00450780 */

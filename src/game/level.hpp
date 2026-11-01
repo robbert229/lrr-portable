@@ -985,6 +985,7 @@ int   erosion_timestamp_tick_peek(void);       /* port hook */
 int   erosion_scratch_peek(int which, int index); /* which 0: 2000-mark
                                                    * region, 1: 1000-ticket
                                                    * region (port hook) */
+int lava_erosion_stage_slot_find_free(int* slot_out); /* 0x0040e990 */
 
 /* LavaErosionDelayFromCell (FUN_0040e9c0): the cell's +6 erosion byte
  * counts down from 6 and rides the timing scale times 25; the corpus
