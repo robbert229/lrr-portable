@@ -4310,8 +4310,8 @@ void cam_set_facing(CameraHandle* c, const float* r)
  *  with separate pan/zoom operations and has no one-to-one source boundary.
  *  FUN_004798b0 is RandomFloatRange, not a camera helper; the port models the
  *  shared RNG draw but has no float-range wrapper.
- *  FUN_0041f940 is instead the engine-state bit-0x20000 setter; no direct
- *  port setter exists yet. */
+ *  FUN_0041f940 is the engine-state bit-0x20000 setter, now modeled through
+ *  EngineContext::state in the scripted-follow branch below. */
 
 static int engine_context_grid_pick(EngineContext* ctx, const float* pos,
                                     int* gx, int* gy)
@@ -4451,10 +4451,20 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
     if (v->mode == 2) {
         /* Scripted / lagged follow: interpolate toward the target with
          * k = |d|/(|d|+A) once an object target exists (object_lookup). */
+        if (v->follow_id == 0) {
+            if (ctx != NULL) {
+                ctx->state &= ~0x20000u;
+            }
+            view_tail(v, scale);
+            return;
+        }
         int target = object_lookup(v->follow_id);
         if (target == 0) {
             view_tail(v, scale);
             return;
+        }
+        if (ctx != NULL) {
+            ctx->state |= 0x20000u;
         }
         float goal3[3], facing[3];
         cam_get_pos(&v->cam_world, goal3);
