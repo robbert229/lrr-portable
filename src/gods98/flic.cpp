@@ -347,11 +347,22 @@ int flic_frame_record_walk(Flic* f)
 }
 
 // FUNCTION: LEGORR 0x00484720
-/* FlicChunkBufferAndContinueLK: RAM mode is a no-op. In stream mode, ensure
- * the complete current chunk is in the growable scratch buffer. */
+/* FlicChunkBufferAndContinueLK (FUN_00484720): the in-memory file-image
+ * path is a no-op. In external-stream mode, grow the chunk buffer to the
+ * current chunk's declared size, seek to the chunk start through read_at,
+ * and refill the whole chunk. read_at is the port's equivalent of the
+ * reference seek/read pair; the reference routine always returns zero. */
 int flic_chunk_buffer_and_continue_lk(Flic* f)
 {
-    if (f != NULL && f->stream_mode != 0) flic_stream_chunk_load(f);
+    if (f == NULL || f->stream_mode == 0) return 0;
+    f->stream_chunk.data = NULL;
+    if (!flic_stream_buffer_reserve(f, f->stream_chunk.size)) return 0;
+    if (f->stream_ops.read_at == NULL ||
+        !f->stream_ops.read_at(f->stream_ops.context, (uint32_t)f->cursor,
+                               f->stream_buffer, f->stream_chunk.size)) {
+        return 0;
+    }
+    f->stream_chunk.data = f->stream_buffer;
     return 0;
 }
 

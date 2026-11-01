@@ -535,46 +535,49 @@ int objective_check(LevelState* s, int* mark, float dt)
     return 1;
 }
 
-static void objective_announce_for_level(LevelState* s, int who,
-                                         int target_gate)
+static int s_objective_announce_target_gate = 1;
+
+/* The retail function reads the current level from FUN_00431560 and has one
+ * stack argument. `objective_load` binds that owner, while mission frame
+ * updates rebind the live context before objective processing. */
+// FUNCTION: LEGORR 0x00458670
+void objective_announce_current(int who)
 {
-    if (s == NULL) {
-        return;
-    }
-    s_objective_active_level = s;
-    /* The reference returns when a result is already active and, on its
-     * global entry path, also when the crystal-result gate is present. The
-     * explicit-level adapter keeps its historical local-call behavior. */
-    if ((s_objective_result_word & 7u) != 0 ||
-        (target_gate != 0 && (s_objective_result_word & 0x100u) != 0)) {
-        return;
-    }
-    s_objective_voice_alias_pending = 0;
+    LevelState* s = s_objective_active_level;
+    char alias[256];
     int result = 0;
     const char* outcome = "";
     const char* family = "_Levels::";
-    const char* level = s->ptr_name != NULL ? (const char*)s->ptr_name : "";
+    const char* level;
+    if (s == NULL) return;
+    s_objective_active_level = s;
+    if ((s_objective_result_word & 7u) != 0 ||
+        (s_objective_announce_target_gate != 0 &&
+         (s_objective_result_word & 0x100u) != 0)) {
+        return;
+    }
+    s_objective_voice_alias_pending = 0;
+    level = s->ptr_name != NULL ? (const char*)s->ptr_name : "";
     switch (who) {
-    case 0: /* pending */
+    case 0:
         s_objective_result_word |= 1u;
         s->objective |= LVL_OBJECTIVE_STILL_PENDING;
-        result = 0;
         break;
-    case 1: /* achieved */
+    case 1:
         s_objective_result_word |= 2u;
         s->objective_result = 1;
         s->objective |= LVL_OBJECTIVE_ACHIEVED;
         outcome = "Acheived";
         result = 1;
         break;
-    case 2: /* failed */
+    case 2:
         s_objective_result_word |= 4u;
         s->objective_result = 0;
         s->objective |= LVL_OBJECTIVE_FAILED;
         outcome = "Failed";
         result = 2;
         break;
-    case 3: /* failed-with-crystals */
+    case 3:
         s_objective_result_word |= 0x104u;
         s->objective_result = 0;
         s->objective |= LVL_OBJECTIVE_FAILED | LVL_OBJECTIVE_CRYSTALS;
@@ -584,41 +587,31 @@ static void objective_announce_for_level(LevelState* s, int who,
         result = 2;
         break;
     default:
-        /* Unknown selectors still reach the reference's pending bit and
-         * scene-state tail, but have no outcome alias. */
         s_objective_result_word |= 8u;
         s->objective |= LVL_OBJECTIVE_ANNOUNCED;
         return;
     }
     level_set_int(s, OBJ_OFF_RESULT_INDEX, result);
-    /* FUN_00458670 interns the voice alias as
-     * "Stream_Objective%s%s%s". The configured family token is
-     * "_Levels::"; the failed-crystals alias is global to its outcome. */
-    objective_voice_alias_format(s_objective_voice_alias,
-                                 sizeof(s_objective_voice_alias),
-                                 outcome, family, level);
-    strncpy(s->obj_stream, s_objective_voice_alias,
-            sizeof(s->obj_stream) - 1);
+    objective_voice_alias_format(alias, sizeof(alias), outcome, family, level);
+    strncpy(s_objective_voice_alias, alias, sizeof(s_objective_voice_alias) - 1);
+    s_objective_voice_alias[sizeof(s_objective_voice_alias) - 1] = '\0';
+    strncpy(s->obj_stream, s_objective_voice_alias, sizeof(s->obj_stream) - 1);
     s->obj_stream[sizeof(s->obj_stream) - 1] = '\0';
     s_objective_voice_alias_pending = 1;
     s_objective_result_word |= 8u;
-    s->objective |= LVL_OBJECTIVE_ANNOUNCED; /* hint shown; cleared per-frame */
-}
-
-/* The retail function reads the current level from FUN_00431560 and has one
- * stack argument. `objective_load` binds that owner, while mission frame
- * updates rebind the live context before objective processing. */
-// FUNCTION: LEGORR 0x00458670
-void objective_announce_current(int who)
-{
-    objective_announce_for_level(s_objective_active_level, who, 1);
+    s->objective |= LVL_OBJECTIVE_ANNOUNCED;
 }
 
 /* Explicit-level adapter used by port call sites that already own the level
  * pointer. It shares state transitions but does not claim the target ABI. */
 void objective_announce(LevelState* s, int who)
 {
-    objective_announce_for_level(s, who, 0);
+    int previous_gate = s_objective_announce_target_gate;
+    if (s == NULL) return;
+    s_objective_active_level = s;
+    s_objective_announce_target_gate = 0;
+    objective_announce_current(who);
+    s_objective_announce_target_gate = previous_gate;
 }
 
 void objective_active_level_bind(LevelState* s)

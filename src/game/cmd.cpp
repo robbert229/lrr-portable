@@ -3221,9 +3221,9 @@ void cmd_link_global_head(void* rec, int kind)
 }
 
 /* ValidatedRecordCloneQueue (FUN_004030e0): retain a command record only
- * when its leading code is present in the grouped code table.  The original
- * stores the clone at source +0x58 and keeps both source links on the new
- * record; its optional payload is a count of dwords. */
+ * when its leading code is present in the grouped code table. The optional
+ * payload allocation uses the full count word, while the copy loop masks it
+ * to 30 bits, matching the reference's encoded-count handling. */
 // FUNCTION: LEGORR 0x004030e0
 void cmd_validated_record_queue(void* record)
 {
@@ -3231,6 +3231,7 @@ void cmd_validated_record_queue(void* record)
     CmdRec* copy;
     int group;
     uint32_t i;
+    uint32_t copy_count;
     if (source == NULL
         || entity_grouped_code_table_find_value_index(
                (uint32_t)source->type, &group) == 0) {
@@ -3240,15 +3241,22 @@ void cmd_validated_record_queue(void* record)
     copy = (CmdRec*)cmd_alloc(0x13);
     if (copy == NULL) return;
     if ((source->state & 0x100u) != 0u) {
-        copy->buffer = malloc((size_t)source->count * sizeof(uint32_t));
-        if (copy->buffer == NULL && source->count != 0u) {
+        copy->buffer = engine_heap_alloc((long)(source->count << 2));
+        copy_count = source->count & 0x3fffffffu;
+        if (copy->buffer == NULL && copy_count != 0u) {
             cmd_free(copy, 0);
             return;
         }
-        copy->count = source->count;
-        for (i = 0; i < source->count; ++i) {
-            ((uint32_t*)copy->buffer)[i] = ((const uint32_t*)source->buffer)[i];
+        {
+            uint32_t* destination = (uint32_t*)copy->buffer;
+            const uint32_t* input = (const uint32_t*)source->buffer;
+            for (i = copy_count; i != 0u; --i) {
+                *destination = *input;
+                ++destination;
+                ++input;
+            }
         }
+        copy->count = source->count;
         copy->state |= 0x100u;
     }
     copy->state |= 0x10u;
