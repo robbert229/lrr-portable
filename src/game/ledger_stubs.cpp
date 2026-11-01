@@ -2031,7 +2031,7 @@ void ledger_stub_0040bb90_SceneFrameFromTripletApply(
 // FUNCTION: LEGORR 0x0040bdc0
 void ledger_stub_0040bdc0_SetTimeoutTo10000(void)
 {
-    uint32_t* ignored_output = NULL;
+    uint32_t* ignored_output;
     (void)scene_resource_availability_sweep(10000.0f, &ignored_output,
                                              &ignored_output);
 }

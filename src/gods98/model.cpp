@@ -368,7 +368,7 @@ static int parse_pols(Parse* P, const uint8_t* d, size_t size)
          * handling while refusing to read beyond this caller-owned buffer. */
         if (size - p < 2)
             break;
-        size_t cnt = be16(d + p);
+        size_t cnt = (uint16_t)((uint16_t)d[p] * 0x100u + d[p + 1]);
         p += 2;
         if (cnt > (size - p) / 2 || size - p - cnt * 2 < 2)
             break;
@@ -390,12 +390,15 @@ static int parse_pols(Parse* P, const uint8_t* d, size_t size)
 
         PolyRec* poly = &P->polys[P->npolys];
         poly->count = (uint32_t)cnt;
-        poly->surface = (uint32_t)(uint16_t)(be16(d + p + 2 * cnt) - 1u);
+        poly->surface = (uint32_t)(uint16_t)(
+            (uint16_t)((uint16_t)d[p + 2 * cnt] * 0x100u +
+                       d[p + 2 * cnt + 1]) - 1u);
         poly->ring = (int16_t*)malloc(cnt * sizeof(*poly->ring));
         if (poly->ring == NULL && cnt != 0)
             return 0;
         for (size_t k = 0; k < cnt; k++) {
-            poly->ring[k] = (int16_t)be16(d + p + 2 * k);
+            poly->ring[k] = (int16_t)((uint16_t)d[p + 2 * k] * 0x100u +
+                                      d[p + 2 * k + 1]);
             if (poly->ring[k] == 0)
                 P->saw_zero = 1;
         }

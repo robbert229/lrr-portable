@@ -2114,7 +2114,7 @@ uint32_t level_cell_flag_4(const LevelState* s, int cx, int cy)
 
 /* TerrainCellFlag4TestInBounds (FUN_00432f90) reads the active level. */
 // FUNCTION: LEGORR 0x00432f90
-uint32_t level_cell_flag_4_current(int cx, int cy)
+uint32_t level_cell_flag_4_current(uint32_t cx, uint32_t cy)
 {
     GameContext* game = entity_pool_callback_context_get();
     const LevelState* s;
@@ -2129,8 +2129,8 @@ uint32_t level_cell_flag_4_current(int cx, int cy)
     s = game->level;
     w = level_int(s, LEVEL_OFF_WIDTH);
     h = level_int(s, LEVEL_OFF_HEIGHT);
-    if ((unsigned)cx >= ((unsigned)w - 1u) ||
-        (unsigned)cy >= ((unsigned)h - 1u)) {
+    if (cx >= ((uint32_t)w - 1u) ||
+        cy >= ((uint32_t)h - 1u)) {
         return 0u;
     }
     voxels = (const uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);

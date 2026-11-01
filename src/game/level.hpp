@@ -468,7 +468,7 @@ int level_cell_mask18_clear(const LevelState* s, int cx, int cy);
  * The mapped entry uses the live level; the explicit-level form is an
  * adapter for callers which already own a LevelState. */
 uint32_t level_cell_flag_4(const LevelState* s, int cx, int cy);
-uint32_t level_cell_flag_4_current(int cx, int cy);
+uint32_t level_cell_flag_4_current(uint32_t cx, uint32_t cy);
 
 /* FUN_00432fd0 / FUN_00433000 / FUN_00433030: single-bit flag tests
  * (0x2000, 0x80, 0x8000). Return the masked word. */
