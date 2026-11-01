@@ -5314,6 +5314,11 @@ static uint32_t s_help_background_handle;
 static uint32_t s_help_text_area_handle;
 static char s_help_window_labels[3][256];
 static char s_tooltip_info_strings[9][256];
+/* HelpWindowInfoConfigStringsLoad fills three adjacent 15-by-16 pointer
+ * tables. The catalog loader owns the name tables/counts; these rows retain
+ * the config-backed strings just as the reference DAT tables do. */
+// GLOBAL: LEGORR 0x004db978
+static const char* s_help_info_strings[3][15 * 16];
 static TooltipOverlayState s_tooltip_overlay_state;
 static AdvisorTutorialIconLoadFn s_tutorial_icon_load;
 static AdvisorTutorialIconInitializeFn s_tutorial_icon_initialize;
@@ -5631,6 +5636,47 @@ static void help_window_label_copy(char* out, size_t out_size,
     char* underscore = out;
     while ((underscore = crt_strchr(underscore, '_')) != NULL) {
         *underscore++ = ' ';
+    }
+}
+
+static void help_window_info_config_strings_load_native(BlockFile* cfg)
+{
+    static const int catalog_kinds[3] = { 0, 1, 3 };
+    int group;
+    for (group = 0; group < 3; ++group) {
+        const int kind = catalog_kinds[group];
+        const char* const* names = (const char* const*)
+            catalog_name_table_peek(kind);
+        uint32_t count = catalog_count_peek(kind);
+        uint32_t catalog_index;
+        if (count > 15u) count = 15u;
+        if (names == NULL) continue;
+        for (catalog_index = 0; catalog_index < count; ++catalog_index) {
+            int line_index;
+            for (line_index = 0; line_index < 16; ++line_index) {
+                char path[1024];
+                const char* value = NULL;
+                const char* catalog = names[catalog_index];
+                int written = -1;
+                if (catalog != NULL) {
+                    written = snprintf(path, sizeof(path),
+                        "HelpWindow::HelpWindowInfo::%sL%d",
+                        catalog, line_index);
+                }
+                if (written >= 0 && written < (int)sizeof(path)) {
+                    value = block_get_strptr(cfg, path);
+                }
+                s_help_info_strings[group][catalog_index * 16u +
+                    (uint32_t)line_index] = value;
+                if (value != NULL) {
+                    char* mutable_value = (char*)value;
+                    while (*mutable_value != '\0') {
+                        if (*mutable_value == '_') *mutable_value = ' ';
+                        ++mutable_value;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -6559,6 +6605,7 @@ void help_window_info_config_strings_load(
 
 static void help_window_button_layout_load_with_ops(
     BlockFile* cfg, const FeHelpWindowResourceOps* ops);
+static uint32_t surface_load_handle(const char* path);
 
 // FUNCTION: LEGORR 0x004181b0
 void help_window_resources_init(BlockFile* cfg,
@@ -6570,6 +6617,8 @@ void help_window_resources_init(BlockFile* cfg,
         help_window_info_config_strings_load(
             cfg, ops->info_group_names, ops->info_group_counts,
             ops->info_string_store, ops->context);
+    } else {
+        help_window_info_config_strings_load_native(cfg);
     }
 
     const char* background = block_get_strptr(cfg,
@@ -6589,7 +6638,8 @@ void help_window_resources_init(BlockFile* cfg,
                 s_help_background_offset_y = (float)atoi(second_separator + 1);
                 s_help_background_handle = ops != NULL &&
                     ops->resource_load != NULL
-                    ? ops->resource_load(ops->context, name, 0, 0) : 0u;
+                    ? ops->resource_load(ops->context, name, 0, 0)
+                    : surface_load_handle(name);
                 if (s_help_background_handle != 0u && ops != NULL &&
                     ops->background_apply != NULL) {
                     ops->background_apply(ops->context,
@@ -6675,6 +6725,12 @@ static void help_window_button_layout_load_with_ops(
         s_layout_position[i * LAYOUT_POSITION_STRIDE + 5].u = ops != NULL &&
             ops->resource_load != NULL
             ? ops->resource_load(ops->context, second, 0, 0) : 0u;
+        if (ops == NULL || ops->resource_load == NULL) {
+            s_layout_position[i * LAYOUT_POSITION_STRIDE + 4].u =
+                surface_load_handle(first);
+            s_layout_position[i * LAYOUT_POSITION_STRIDE + 5].u =
+                surface_load_handle(second);
+        }
         s_layout_position_text[i] = text;
         if (ops != NULL && ops->text_load != NULL) {
             ops->text_load(ops->context, i == 0 ? 8 : 9, text);
@@ -6685,39 +6741,10 @@ static void help_window_button_layout_load_with_ops(
 // FUNCTION: LEGORR 0x004185f0
 void help_window_button_layout_load(BlockFile* cfg, BlockFile* config_root)
 {
-    /* The reference passes the parsed value table and its config-path root.
-     * block_get_strptr accepts the resolved HelpWindow path directly. The
-     * renderer-owned resource handles and text-entry table are unavailable
-     * through these two config arguments, so only the config-backed layout
-     * portion is performed by this address-level body. */
-    static const char* const keys[LAYOUT_POSITION_ENTRIES] = {
-        "HelpWindow::ContinueButton", "HelpWindow::CancelFutureButton"
-    };
+    /* The root is folded into the port's BlockFile path lookup. Native
+     * surfaces are loaded through the frontend resource cache. */
     (void)config_root;
-    for (int i = 0; i < LAYOUT_POSITION_ENTRIES; ++i) {
-        const char* const value = block_get_strptr(cfg, keys[i]);
-        int x, y, width, height;
-        const char *resource_a, *resource_b, *text;
-        if (!help_window_button_record_parse(value, &x, &y, &width, &height,
-                                             &resource_a, &resource_b,
-                                             &text)) {
-            continue;
-        }
-        (void)resource_a;
-        (void)resource_b;
-        (void)text;
-        const float final_x = (float)x + s_help_background_offset_x;
-        const float final_y = (float)y + s_help_background_offset_y;
-        help_window_button_rect_set(i, final_x, final_y,
-                                    (float)width, (float)height);
-        s_layout_position[i * LAYOUT_POSITION_STRIDE + 0].f = final_x;
-        s_layout_position[i * LAYOUT_POSITION_STRIDE + 1].f = final_y;
-        s_layout_position[i * LAYOUT_POSITION_STRIDE + 2].f = (float)width;
-        s_layout_position[i * LAYOUT_POSITION_STRIDE + 3].f = (float)height;
-        s_layout_position[i * LAYOUT_POSITION_STRIDE + 4].u = 0u;
-        s_layout_position[i * LAYOUT_POSITION_STRIDE + 5].u = 0u;
-        s_layout_position_text[i] = text;
-    }
+    help_window_button_layout_load_with_ops(cfg, NULL);
 }
 
 void help_window_sound_clear_hook_set(void (*hook)(int))

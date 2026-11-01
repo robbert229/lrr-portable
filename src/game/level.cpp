@@ -1300,65 +1300,68 @@ static void cell_init_pass(LevelState* s, float cell_x, uint32_t cell_y)
         selection_mode7_cancel_at_point((const uint32_t*)cell_xy);
     }
 
-    /* Record +1 is the render variant selected from the current cell flags.
-     * The erosion queue and terrain's real dirty queue are available even
-     * though the emitter handle for the special stage remains renderer-owned. */
-    primary = *(uint32_t*)(rec + 0x08);
-    secondary = *(uint32_t*)(rec + 0x0c);
-    if (rec[2] == 6 || (primary & 0x80000000u) != 0u) {
-        int cell_xy[2];
-        cell_xy[0] = x;
-        cell_xy[1] = (int)cell_y;
-        lava_erosion_pending_cell_add(cell_xy, 1);
-        if ((secondary & 0x200u) == 0u) {
-            if (rec[7] == 4u) {
-                rec[1] = 0x46u;
-                terrain_cell_dirty_queue_push_and_clear(
-                    s->ptr_terrain, x, (int)cell_y, 1);
+    /* The target selects erosion and flag-driven material variants only in
+     * its four-solid-cell branch. Other neighbor counts retain the shape
+     * variant selected above for the common terrain update below. */
+    if (solid_count == 4) {
+        primary = *(uint32_t*)(rec + 0x08);
+        secondary = *(uint32_t*)(rec + 0x0c);
+        if (rec[2] == 6 || (primary & 0x80000000u) != 0u) {
+            int cell_xy[2];
+            cell_xy[0] = x;
+            cell_xy[1] = (int)cell_y;
+            lava_erosion_pending_cell_add(cell_xy, 1);
+            if ((secondary & 0x200u) == 0u) {
+                if (rec[7] == 4u) {
+                    rec[1] = 0x46u;
+                    terrain_cell_dirty_queue_push_and_clear(
+                        s->ptr_terrain, x, (int)cell_y, 1);
+                }
+                else {
+                    terrain_cell_dirty_queue_push_and_clear(
+                        s->ptr_terrain, x, (int)cell_y, 0);
+                    switch (rec[7]) {
+                    case 0: rec[1] = 6u; break;
+                    case 1: rec[1] = 0x16u; break;
+                    case 2: rec[1] = 0x26u; break;
+                    case 3: rec[1] = 0x36u; break;
+                    default: break;
+                    }
+                }
             }
             else {
                 terrain_cell_dirty_queue_push_and_clear(
                     s->ptr_terrain, x, (int)cell_y, 0);
-                switch (rec[7]) {
-                case 0: rec[1] = 6u; break;
-                case 1: rec[1] = 0x16u; break;
-                case 2: rec[1] = 0x26u; break;
-                case 3: rec[1] = 0x36u; break;
-                default: break;
-                }
+                rec[1] = 0x47u;
+            }
+        }
+        else if (rec[2] == 9u) {
+            rec[1] = 0x45u;
+            terrain_cell_dirty_queue_push_and_clear(
+                s->ptr_terrain, x, (int)cell_y, 1);
+        }
+        else if ((primary & 0x100000u) == 0u) {
+            if ((primary & 0x20000000u) != 0u) {
+                uint8_t kind = rec[3];
+                rec[1] = (uint8_t)terrain_neighbor_coordinate_check(
+                    s, x, (int)cell_y, &kind, (secondary & 0x100u) != 0u);
+                rec[3] = kind;
+            }
+            else if ((secondary & 0x20u) != 0u) {
+                rec[1] = 0x30u;
+            }
+            else if ((primary & 0x200000u) != 0u) {
+                rec[1] = (uint8_t)(((primary & 0x40000000u) != 0u)
+                                   ? 0x61u : 0u);
+            }
+            else {
+                rec[1] = (uint8_t)(0x13u - (primary & 3u));
             }
         }
         else {
-            terrain_cell_dirty_queue_push_and_clear(
-                s->ptr_terrain, x, (int)cell_y, 0);
-            rec[1] = 0x47u;
+            rec[1] = (uint8_t)(((secondary & 0x100u) != 0u)
+                               ? 0x66u : 0x76u);
         }
-    }
-    else if (rec[2] == 9u) {
-        rec[1] = 0x45u;
-        terrain_cell_dirty_queue_push_and_clear(
-            s->ptr_terrain, x, (int)cell_y, 1);
-    }
-    else if ((primary & 0x100000u) == 0u) {
-        if ((primary & 0x20000000u) != 0u) {
-            uint8_t kind = rec[3];
-            rec[1] = (uint8_t)terrain_neighbor_coordinate_check(
-                s, x, (int)cell_y, &kind, (secondary & 0x100u) != 0u);
-            rec[3] = kind;
-        }
-        else if ((secondary & 0x20u) != 0u) {
-            rec[1] = 0x30u;
-        }
-        else if ((primary & 0x200000u) != 0u) {
-            rec[1] = (uint8_t)(((primary & 0x40000000u) != 0u)
-                               ? 0x61u : 0u);
-        }
-        else {
-            rec[1] = (uint8_t)(0x13u - (primary & 3u));
-        }
-    }
-    else {
-        rec[1] = (uint8_t)(((secondary & 0x100u) != 0u) ? 0x66u : 0x76u);
     }
 
     if (solid_count == 1 || solid_count == 3) {
