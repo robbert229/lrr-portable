@@ -1583,13 +1583,14 @@ void scene_assign_owner_from_model(ScenePairedAnimationState* state,
 }
 
 // FUNCTION: LEGORR 0x0046D1A0
-void scene_object_attached_resource_release(ScenePairedAnimationState* state)
+void scene_object_attached_resource_release(void* record)
 {
-    if (state != NULL && state->primary_resource != NULL
-        && s_scene_attached_resource_release_hook != NULL) {
-        s_scene_attached_resource_release_hook(state->primary_resource,
-                                               s_scene_resource_owner_context);
-        state->primary_resource = NULL;
+    /* FUN_0046d1a0 reads its scene object from argument +8 and queries the
+     * object's duration. The length query has no result use at this callsite;
+     * this entry point does not release or clear an attached resource. */
+    if (record != NULL) {
+        void* scene_object = *(void**)((char*)record + 8);
+        (void)ddiscene_object_length_get(scene_object);
     }
 }
 

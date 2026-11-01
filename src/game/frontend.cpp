@@ -1347,6 +1347,33 @@ static int fe_parse_int_tuple(const char* text, int* out, int count)
     return 1;
 }
 
+/* BlockTextTokenSplit-backed config records used by SaveMenuLayoutLoad
+ * separate fields with the vertical bar DAT string. Preserve empty fields:
+ * the original integer parser turns an empty numeric token into zero. */
+static int fe_parse_int_tuple_bar(const char* text, int* out, int count)
+{
+    const char* p;
+    int i;
+    if (text == NULL || out == NULL || count <= 0) {
+        return 0;
+    }
+    p = text;
+    for (i = 0; i < count; ++i) {
+        const char* separator = strchr(p, '|');
+        if (i + 1 < count && separator == NULL) {
+            return 0;
+        }
+        if (i + 1 == count && separator != NULL) {
+            return 0;
+        }
+        out[i] = atoi(p);
+        if (separator != NULL) {
+            p = separator + 1;
+        }
+    }
+    return 1;
+}
+
 /* InterfaceBackButtonConfigLoad (FUN_0041b1b0): the Lego.cfg record is
  * `width:height:highlight-image:pressed-image:action`. The corpus also
  * initializes its legacy UI text entry 5; the port's menu model has no such
@@ -1942,7 +1969,7 @@ int save_menu_layout_load(FrontEnd* fe, const char* group,
     snprintf(path, sizeof(path), "%s %s Window", util_root_name(fe->cfg),
              group);
     int window[4];
-    if (fe_parse_int_tuple(block_get_strptr(fe->cfg, path), window, 4)) {
+    if (fe_parse_int_tuple_bar(block_get_strptr(fe->cfg, path), window, 4)) {
         layout->window_x = window[0];
         layout->window_y = window[1];
         layout->window_w = window[2];
@@ -1955,14 +1982,24 @@ int save_menu_layout_load(FrontEnd* fe, const char* group,
              group);
     const char* panel = block_get_strptr(fe->cfg, path);
     if (panel != NULL) {
-        const char* colon = strchr(panel, ':');
-        if (colon != NULL && colon != panel) {
-            size_t name_len = (size_t)(colon - panel);
+        const char* separator = strchr(panel, '|');
+        const char* end = panel;
+        int rect[4];
+        int i;
+        if (separator != NULL && separator != panel) {
+            size_t name_len = (size_t)(separator - panel);
             if (name_len < sizeof(layout->panel_path)) {
-                memcpy(layout->panel_path, panel, name_len);
-                layout->panel_path[name_len] = '\0';
-                int rect[4];
-                if (fe_parse_int_tuple(colon + 1, rect, 4)) {
+                for (i = 0; i < 4; ++i) {
+                    end = strchr(end, '|');
+                    if (end == NULL) {
+                        break;
+                    }
+                    ++end;
+                }
+                if (i == 4 && end != NULL && strchr(end, '|') == NULL
+                    && fe_parse_int_tuple_bar(separator + 1, rect, 4)) {
+                    memcpy(layout->panel_path, panel, name_len);
+                    layout->panel_path[name_len] = '\0';
                     layout->panel_x = rect[0];
                     layout->panel_y = rect[1];
                     layout->panel_w = rect[2];

@@ -29,6 +29,8 @@
 #include "terrain_grid.hpp"
 #include "select.hpp"
 
+extern float random_float_range(float minimum, float maximum);
+
 /* ------------------------------------------------------------------ *
  *  Corpus .rdata constants (identities from finding 07/22 and the
  *  decompile corpus; numeric values are best-effort re-derivations — the
@@ -436,22 +438,15 @@ void* terrain_create(const char* surface_map, float blocksize)
             rec[0x18] = 0;
             rec[0x19] = 0;
             rec[0x1A] = (uint8_t)level_map_cell(m, x, y);
-            /* Normal pair (+0x1C/+0x20). The corpus randomises then
-             * normalises with a fixed 0.5 scaling; deterministic here for
-             * tests, same structural meaning. */
-            float nx = (float)(((uint32_t)x * 2654435761u) % 1000u) / 1000.0f - 0.5f;
-            float ny = (float)(((uint32_t)y * 40503u) % 1000u) / 1000.0f - 0.5f;
-            float len = nx * nx + ny * ny;
-            float inv = 0.5f;
-            if (len > 1e-4f) {
-                inv = 0.5f / len;
-            }
-            nx *= inv;
-            ny *= inv;
-            nx *= 0.5f;
-            ny *= 0.5f;
-            __builtin_memcpy(rec + 0x1C, &nx, 4);
-            __builtin_memcpy(rec + 0x20, &ny, 4);
+            /* FUN_0044e0c0 draws two shared-stream values, normalizes their
+             * vector, and stores it at +0x1c/+0x20 with magnitude 0.3. */
+            float nx = random_float_range(0.0f, 1.0f);
+            float ny = random_float_range(0.0f, 1.0f);
+            float inv = 1.0f / (float)sqrt((double)(nx * nx + ny * ny));
+            nx *= inv * 0.3f;
+            ny *= inv * 0.3f;
+            memcpy(rec + 0x1C, &nx, sizeof(nx));
+            memcpy(rec + 0x20, &ny, sizeof(ny));
         }
     }
     /* Edge-continuity fix-ups (corpus FUN_0044edf0 / FUN_004514f0). */

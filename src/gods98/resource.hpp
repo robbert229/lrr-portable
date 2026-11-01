@@ -566,8 +566,7 @@ void scene_entity_animation_tracks_set_enabled(
     ScenePairedAnimationState* state, int enabled); /* FUN_0046cf20 */
 void scene_assign_owner_from_model(ScenePairedAnimationState* state,
                                    void* owner); /* FUN_0046d140 */
-void scene_object_attached_resource_release(
-    ScenePairedAnimationState* state); /* FUN_0046d1a0 */
+void scene_object_attached_resource_release(void* record); /* FUN_0046d1a0 */
 typedef void (*SceneOwnedMemoryReleaseHook)(void* memory, void* context);
 void scene_payload_memory_release_hook_install(
     SceneOwnedMemoryReleaseHook release, void* context);
