@@ -70,9 +70,12 @@ int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid,
                                 const char* bitmap_prefix);
 void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid);
 struct BlockFile;
+void terrain_texture_set_config_context_bind(struct BlockFile* config);
 int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
                                     struct BlockFile* config,
-                                    const char* group_name); /* 0x0042bb60 */
+                                    const char* group_name);
+int terrain_texture_set_config_load_current(TerrainTileMeshGrid* grid,
+                                            const char* group_name); /* 0x0042bb60 */
 void terrain_texture_set_release(TerrainTileMeshGrid* grid);
 typedef struct TerrainCellResourceGrid {
     uint32_t width;

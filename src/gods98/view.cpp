@@ -137,6 +137,7 @@ static char* s_shared_object_directory_root;
 static SharedObjectEntryResolveFn s_shared_object_entry_resolve;
 static SharedObjectSoundEnabledFn s_shared_object_sound_enabled;
 static SharedObjectSoundSubmitFn s_shared_object_sound_submit;
+static void* s_scene_material_manager;
 static SceneEntryExpandOps s_scene_entry_expand_ops;
 static SharedObjectCloneOps s_shared_object_clone_ops;
 static SceneObjectListApplyHook s_scene_object_list_apply_hook;
@@ -1287,6 +1288,55 @@ void shared_object_timed_sound_event_update(void* owner, void* track)
             sound_buffer_stop_handle((int)handle);
         }
     }
+}
+
+void scene_material_manager_set(void* manager)
+{
+    s_scene_material_manager = manager;
+}
+
+/* The manager's +0x34 creates an IDirect3DRMMaterial. The reference then
+ * applies two RGB triples through material slots +0x34 and +0x30. */
+// FUNCTION: LEGORR 0x004894c0
+void* scene_material_create(float color0, float color1, float color2,
+                            float color3, float color4, float color5,
+                            float power)
+{
+#if defined(_MSC_VER)
+#define SCENE_MATERIAL_STDCALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define SCENE_MATERIAL_STDCALL __attribute__((stdcall))
+#else
+#define SCENE_MATERIAL_STDCALL
+#endif
+    typedef int32_t (SCENE_MATERIAL_STDCALL *MaterialCreateMethod)(
+        void*, float, void**);
+    typedef int32_t (SCENE_MATERIAL_STDCALL *MaterialColorMethod)(
+        void*, float, float, float);
+    void** manager_vtable;
+    void** material_vtable;
+    MaterialCreateMethod create_material;
+    MaterialColorMethod apply_color;
+    void* material = NULL;
+    if (s_scene_material_manager == NULL) return NULL;
+    manager_vtable = *(void***)s_scene_material_manager;
+    if (manager_vtable == NULL || manager_vtable[0x34 / 4] == NULL)
+        return NULL;
+    create_material = (MaterialCreateMethod)manager_vtable[0x34 / 4];
+    if (create_material(s_scene_material_manager, power, &material) != 0 ||
+        material == NULL) return NULL;
+    material_vtable = *(void***)material;
+    if (material_vtable == NULL) return material;
+    if (material_vtable[0x34 / 4] != NULL) {
+        apply_color = (MaterialColorMethod)material_vtable[0x34 / 4];
+        (void)apply_color(material, color0, color1, color2);
+    }
+    if (material_vtable[0x30 / 4] != NULL) {
+        apply_color = (MaterialColorMethod)material_vtable[0x30 / 4];
+        (void)apply_color(material, color3, color4, color5);
+    }
+#undef SCENE_MATERIAL_STDCALL
+    return material;
 }
 
 void scene_entry_expand_ops_set(const SceneEntryExpandOps* ops)

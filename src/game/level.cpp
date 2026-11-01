@@ -1607,6 +1607,9 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
     if (cfg == NULL || level_name == NULL) {
         return NULL;
     }
+    /* TextureSetConfigLoad (0x0042bb60) receives the map's texture-set key
+     * and resolves it against the active configuration root. */
+    terrain_texture_set_config_context_bind(cfg);
     game = entity_pool_callback_context_get();
     previous_level = game != NULL ? game->level : NULL;
 
@@ -4788,7 +4791,6 @@ uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
 static uint32_t s_grid_count_first[GRID_COUNT_TABLE_DWORDS];
 // GLOBAL: LEGORR 0x004dee44
 static uint32_t s_grid_count_second[GRID_COUNT_TABLE_DWORDS];
-
 static int64_t grid_count_index(int row, int column, int slot)
 {
     const int64_t cell = (int64_t)row * 15 + column;

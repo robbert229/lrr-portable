@@ -113,6 +113,9 @@ typedef struct EngineContext {
  * while the port keeps the state inside EngineContext. EngineTick updates
  * this before running any frame work. */
 uint32_t* engine_current_feature_word(void);
+/* Current engine state word (DAT_00556ecc), while an EngineContext owns the
+ * active frame. NULL outside an active engine context. */
+uint32_t* engine_current_state_word(void);
 
 /* --- engine-level binding ------------------------------------------------
  * The corpus uses ONE 0x284-byte block (DAT_005560d4) for both engine state

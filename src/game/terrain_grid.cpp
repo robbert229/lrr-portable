@@ -20,6 +20,7 @@
 
 static void* s_map_cell_record_grid;
 static void* s_map_cell_record_level;
+static BlockFile* s_texture_set_config_context;
 static TerrainCellInBoundsHook s_terrain_cell_in_bounds_hook;
 static TerrainCellStateUpdateHook s_terrain_cell_state_update_hook;
 static void* s_terrain_cell_neighbor_context;
@@ -42,6 +43,19 @@ static uint32_t s_grid_cell_object_chunk_count;
 static GridCellObjectCoordinatesHook s_grid_object_coordinates_hook;
 static GridCellObjectFlagHook s_grid_object_flag_hook;
 static void* s_grid_cell_object_context;
+
+static int terrain_config_key_equal(const char* a, const char* b)
+{
+    if (a == NULL || b == NULL) return 0;
+    while (*a != '\0' && *b != '\0') {
+        int ca = (unsigned char)*a++;
+        int cb = (unsigned char)*b++;
+        if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
+        if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
+        if (ca != cb) return 0;
+    }
+    return *a == '\0' && *b == '\0';
+}
 static TerrainCellObjectAvailableHook s_cell_object_available_hook;
 static TerrainCellObjectCreateHook s_cell_object_create_hook;
 static TerrainCellObjectDeleteHook s_cell_object_delete_hook;
@@ -722,6 +736,19 @@ void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid)
 
 /* TextureSetConfigLoad (FUN_0042bb60): surface-text dimensions are stored
  * separately from the map dimensions used by LoadTileMeshes. */
+void terrain_texture_set_config_context_bind(BlockFile* config)
+{
+    s_texture_set_config_context = config;
+}
+
+int terrain_texture_set_config_load_current(TerrainTileMeshGrid* grid,
+                                            const char* group_name)
+{
+    if (s_texture_set_config_context == NULL) return 0;
+    return terrain_texture_set_config_load(grid, s_texture_set_config_context,
+                                           group_name);
+}
+
 int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
                                     BlockFile* config,
                                     const char* group_name)
@@ -743,11 +770,16 @@ int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
         const char* name = block_name(entry);
         const char* value = block_value(entry);
         if (name == NULL || value == NULL) continue;
-        if (strcmp(name, "surftextwidth") == 0) width_text = value;
-        else if (strcmp(name, "surftextheight") == 0) height_text = value;
-        else if (strcmp(name, "meshbasename") == 0) mesh_name = value;
-        else if (strcmp(name, "texturebasename") == 0) texture_name = value;
-        else if (strcmp(name, "rooftexture") == 0) roof_name = value;
+        if (terrain_config_key_equal(name, "SurfTextWidth"))
+            width_text = value;
+        else if (terrain_config_key_equal(name, "SurfTextHeight"))
+            height_text = value;
+        else if (terrain_config_key_equal(name, "MeshBaseName"))
+            mesh_name = value;
+        else if (terrain_config_key_equal(name, "TextureBaseName"))
+            texture_name = value;
+        else if (terrain_config_key_equal(name, "RoofTexture"))
+            roof_name = value;
     }
     if (width_text == NULL || height_text == NULL) return 0;
     width = atoi(width_text);

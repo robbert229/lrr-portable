@@ -1870,7 +1870,145 @@ void ledger_stub_00409f20_EntityPlacementCommandsBuildOnce(EntitySlot* entity)
 int ledger_stub_0040ab70_DependencyGridConfigLoad(BlockFile* config,
                                                   int level)
 {
-    return unported_ledger_stubs::dependency_grid_config_load(config, level);
+    static DependencyGridState default_state;
+    static DependencyGridTuple tuples[DEPENDENCY_GRID_ROWS]
+        [DEPENDENCY_GRID_COLUMNS][DEPENDENCY_GRID_VARIANTS + 1u]
+        [DEPENDENCY_GRID_MATCH_CAPACITY];
+    DependencyGridState* state;
+    BlockRec* section;
+    BlockRec* entry;
+    int processed = 0;
+    uint32_t row, column;
+    (void)level;
+    if (config == NULL) return 0;
+    if (s_dependency_grid_state == NULL) {
+        memset(&default_state, 0, sizeof(default_state));
+        s_dependency_grid_state = &default_state;
+    }
+    state = s_dependency_grid_state;
+    memset(state->cells, 0, sizeof(state->cells));
+    memset(tuples, 0, sizeof(tuples));
+    section = block_subgroup(config, "Dependencies");
+    if (section == NULL) return 0;
+    for (entry = block_first_child(section); entry != NULL;
+         entry = block_next_equal_key(entry)) {
+        const char* raw_name = block_name(entry);
+        const char* raw_value = block_value(entry);
+        char name_copy[512];
+        char value_copy[512];
+        char* name_part[3];
+        char* value_part[10];
+        uint32_t name_count = 1u;
+        uint32_t value_count = 1u;
+        uint32_t i;
+        uint32_t variant = 0u;
+        uint32_t type_index;
+        uint32_t record_index;
+        int type_code, type_row;
+        int hit_once;
+        DependencyGridCell* cell;
+        DependencyGridRecordList* list;
+        if (raw_name == NULL || raw_value == NULL) continue;
+        if (s_dependency_config_hook != NULL &&
+            !s_dependency_config_hook(s_dependency_config_context, level,
+                                      raw_name, raw_value)) continue;
+        if (strlen(raw_name) >= sizeof(name_copy) ||
+            strlen(raw_value) >= sizeof(value_copy)) continue;
+        strcpy(name_copy, raw_name);
+        strcpy(value_copy, raw_value);
+        name_part[0] = name_copy;
+        for (i = 0u; name_copy[i] != '\0'; ++i) {
+            if (name_copy[i] == ':') {
+                name_copy[i] = '\0';
+                if (name_count < 3u) name_part[name_count] = name_copy + i + 1u;
+                ++name_count;
+            }
+        }
+        if (name_count < 2u) continue;
+        hit_once = 1;
+        {
+            const char* key = name_part[0];
+            const char* expected = "HitOnceStay";
+            while (*key != '\0' && *expected != '\0') {
+                int a = (unsigned char)*key++;
+                int b = (unsigned char)*expected++;
+                if (a >= 'A' && a <= 'Z') a += 'a' - 'A';
+                if (b >= 'A' && b <= 'Z') b += 'a' - 'A';
+                if (a != b) { hit_once = 0; break; }
+            }
+            if (*key != '\0' || *expected != '\0') hit_once = 0;
+        }
+        type_code = 0;
+        type_row = 0;
+        if (!entity_type_row_for_name(name_part[1], &type_code, &type_row) ||
+            type_row < 0 || type_row >= (int)DEPENDENCY_GRID_COLUMNS)
+            continue;
+        if (type_code < 0 || type_code >= (int)DEPENDENCY_GRID_ROWS) continue;
+        type_index = (uint32_t)type_code;
+        if (name_count == 3u) {
+            variant = (uint32_t)atoi(name_part[2]);
+            if (atoi(name_part[2]) < 0 ||
+                variant >= DEPENDENCY_GRID_VARIANTS) continue;
+        }
+        cell = &state->cells[type_index][(uint32_t)type_row];
+        if (name_count == 3u) {
+            cell->variant_records_present = 1u;
+            if (hit_once) cell->flags[variant] |= 1u;
+            list = &cell->variant_records[variant];
+        }
+        else {
+            if (hit_once) {
+                for (i = 0u; i < DEPENDENCY_GRID_VARIANTS; ++i)
+                    cell->flags[i] |= 1u;
+            }
+            list = &cell->base_records;
+        }
+        value_part[0] = value_copy;
+        for (i = 0u; value_copy[i] != '\0'; ++i) {
+            if (value_copy[i] == ',') {
+                value_copy[i] = '\0';
+                if (value_count < 10u) value_part[value_count] = value_copy + i + 1u;
+                ++value_count;
+            }
+        }
+        if (list->records == NULL) {
+            uint32_t storage_variant = name_count == 3u ? variant + 1u : 0u;
+            list->records = tuples[type_index][(uint32_t)type_row]
+                [storage_variant];
+        }
+        for (i = 0u; i < value_count && i < 10u; ++i) {
+            char* dependency_part[2];
+            uint32_t part_count = 1u;
+            int dependency_type, dependency_row;
+            DependencyGridTuple* tuple;
+            uint32_t storage_variant = name_count == 3u ? variant + 1u : 0u;
+            char* token = value_part[i];
+            char* comma = strchr(token, ':');
+            if (comma != NULL) {
+                *comma = '\0';
+                dependency_part[1] = comma + 1;
+                part_count = 2u;
+            }
+            dependency_part[0] = token;
+            if (!entity_type_row_for_name(dependency_part[0],
+                                          &dependency_type,
+                                          &dependency_row)) continue;
+            record_index = list->count;
+            if (record_index >= DEPENDENCY_GRID_MATCH_CAPACITY) continue;
+            tuple = &tuples[type_index][(uint32_t)type_row]
+                [storage_variant][record_index];
+            tuple->first = (uint32_t)dependency_type;
+            tuple->second = (uint32_t)dependency_row;
+            if (part_count == 2u) {
+                tuple->selector = (uint32_t)atoi(dependency_part[1]);
+                tuple->wildcard = 1u;
+            }
+            ++list->count;
+        }
+        ++processed;
+    }
+    (void)dependency_grid_occupancy_pass();
+    return processed;
 }
 
 void ledger_stub_0040b000_TileMatchingCellsCollect(
@@ -2092,19 +2230,28 @@ int ledger_stub_00418040_CampaignChainSnapshotCreate(
 {
     unsigned char* bytes = (unsigned char*)snapshot;
     size_t records_size;
-    if (ctx == NULL || bytes == NULL || ctx->record_count < 0) return 0;
+    uint32_t record_count;
+    uint32_t records_offset;
+    if (ctx == NULL || bytes == NULL ||
+        sav_build_ctx((GameContext*)ctx) == NULL || ctx->record_count < 0)
+        return 0;
     records_size = (size_t)ctx->record_count * SAVE_RECORD_SIZE;
     if ((size_t)ctx->record_count != 0u
         && records_size / (size_t)ctx->record_count != SAVE_RECORD_SIZE)
         return 0;
     if (capacity < 0xb8u + records_size
         || (records_size != 0u && ctx->records == NULL)) return 0;
+    /* The retail snapshot is a byte-for-byte 0xb8 slot-context copy.  The
+     * portable GameContext is not layout-compatible, and its host pointer
+     * cannot fit in the retail +0x34 dword.  Preserve the known record-count
+     * field at +0x18 and encode the contiguous record payload's offset in
+     * that pointer slot; the caller owns the supplied buffer.  Unmodeled
+     * context words remain zero instead of inventing field meanings. */
     memset(bytes, 0, 0xb8u);
-    memcpy(bytes + 0x00, &ctx->save_slot, sizeof(ctx->save_slot));
-    memcpy(bytes + 0x04, &ctx->active_slot, sizeof(ctx->active_slot));
-    memcpy(bytes + 0x08, &ctx->record_count, sizeof(ctx->record_count));
-    memcpy(bytes + 0x0c, &ctx->osf_count, sizeof(ctx->osf_count));
-    memcpy(bytes + 0x10, ctx->saves_dir, sizeof(ctx->saves_dir));
+    record_count = (uint32_t)ctx->record_count;
+    records_offset = records_size != 0u ? 0xb8u : 0u;
+    memcpy(bytes + 0x18, &record_count, sizeof(record_count));
+    memcpy(bytes + 0x34, &records_offset, sizeof(records_offset));
     if (records_size != 0u)
         memcpy(bytes + 0xb8u, ctx->records, records_size);
     return 1;
@@ -2752,26 +2899,56 @@ int ledger_stub_0041ee80_CellGridPointHitTest(
     return 0;
 }
 
+// GLOBAL: LEGORR 0x00555118
+static uint32_t s_start_level_pilot_grid_count;
+static uint32_t s_start_level_pilots_latched;
+void ledger_stub_00425c30_TransitionControl(int enabled, uint32_t parameter);
+
 // FUNCTION: LEGORR 0x0041fa80
-uint32_t ledger_stub_0041fa80_StartLevelPilots(
-    GameContext* ctx, EntitySlot** type_four_entities, uint32_t capacity,
-    int* pilot_type, int* pilot_row)
+void ledger_stub_0041fa80_StartLevelPilots(void)
 {
-    int resolved_type, resolved_row;
-    int i, total;
-    uint32_t count = 0;
-    if (ctx == NULL || (type_four_entities == NULL && capacity != 0u)) return 0;
-    total = entity_count(ctx, 4);
-    for (i = 0; i < total && count < capacity; ++i) {
-        const EntitySlot* entity = entity_at(ctx, 4, i);
-        if (entity != NULL) type_four_entities[count++] = (EntitySlot*)entity;
+    GameContext* ctx = entity_pool_callback_context_get();
+    uint32_t* engine_state = engine_current_state_word();
+    uint32_t selector[4];
+    uint32_t panel_flags;
+
+    /* FUN_00431560's current-level getter is unconditional and its returned
+     * pointer is discarded.  The port has no side effect to reproduce. */
+    if ((engine_state != NULL && (*engine_state & 0x08000000u) != 0u) ||
+        s_start_level_pilots_latched != 0u)
+        return;
+
+    /* FUN_00455300("Pilot", 0) resolves the catalog row and reads its
+     * slot-zero grid count.  GridRecordCountGet is the same state table in
+     * the port; the type/row resolver is intentionally not exposed here. */
+    s_start_level_pilot_grid_count =
+        entity_type_grid_record_count_get("Pilot", 0);
+    if (engine_state != NULL) *engine_state |= 0x08000000u;
+    s_start_level_pilots_latched = 1u;
+    level_state_stored_value_set(1u);
+    lego::scatter_spawn_gate_set(1);
+
+    /* The decompile passes selector, mode=1, flags=1 for each of these.
+     * Its per-entity callback body remains unresolved in the checked-in
+     * corpus; the dispatch helper's known state path is still invoked. */
+    selector[0] = 1u;
+    selector[1] = 2u;
+    selector[2] = 8u;
+    selector[3] = 0x400u;
+    scene_object_state_dispatch(ctx, selector[0], 1u, 1u, NULL, NULL);
+    scene_object_state_dispatch(ctx, selector[1], 1u, 1u, NULL, NULL);
+    scene_object_state_dispatch(ctx, selector[2], 1u, 1u, NULL, NULL);
+    scene_object_state_dispatch(ctx, selector[3], 1u, 1u, NULL, NULL);
+    ledger_stub_00425c30_TransitionControl(0, 0u);
+    selection_clear_request_and_hud_reset();
+
+    /* DAT_0050013c is the first request/panel record in the portable CRT
+     * window.  Only its observed bit-1 gate controls the two toggles. */
+    panel_flags = request_record_flags_peek(0);
+    if ((panel_flags & 2u) != 0u) {
+        panel_state_flags_toggle(0);
+        panel_state_flags_toggle(1);
     }
-    if (!entity_type_row_for_name("Pilot", &resolved_type,
-                                                  &resolved_row)) return 0;
-    if (pilot_type != NULL) *pilot_type = resolved_type;
-    if (pilot_row != NULL) *pilot_row = resolved_row;
-    selected_level_start_object_update(ctx);
-    return count;
 }
 
 // SelectedEntityGroundMarkerRender
@@ -2938,10 +3115,9 @@ int ledger_stub_0042b330_LoadTileMeshes(TerrainTileMeshGrid* grid,
 // TextureSetConfigLoad
 // FUNCTION: LEGORR 0x0042bb60
 int ledger_stub_0042bb60_TextureSetConfigLoad(TerrainTileMeshGrid* grid,
-                                              BlockFile* config,
                                               const char* group_name)
 {
-    return terrain_texture_set_config_load(grid, config, group_name);
+    return terrain_texture_set_config_load_current(grid, group_name);
 }
 
 // FUNCTION: LEGORR 0x0042c330
@@ -8936,6 +9112,8 @@ typedef struct SharedObjectAnimationHooks {
                               void* context);
     void* context;
 } SharedObjectAnimationHooks;
+void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
+    void* owner, void* track);
 // FUNCTION: LEGORR 0x00487ba0
 void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
     void* shared_object, float time, const void* hook_context)
@@ -8985,6 +9163,7 @@ void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
             lego::shared_object_float_track_interpolate_apply(
                 owner, track, scalar_segment, scalar_fraction);
         }
+        ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(owner, track);
         shared_object_timed_sound_event_update(owner, track);
         if (hooks != NULL && hooks->timed_event_update != NULL)
             hooks->timed_event_update(owner, track, current_time,
@@ -9001,17 +9180,98 @@ float ledger_stub_00487cb0_AnimationTrackFindKeyframeAndFraction(
 }
 
 // ComInterfaceQueryAndContextDispatch
-typedef int (*ComInterfaceContextDispatchHook)(void* context, void* object,
-                                                uint32_t method,
-                                                void* argument);
+#if defined(_MSC_VER)
+#define LEDGER_SCENE_COM_STDCALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define LEDGER_SCENE_COM_STDCALL __attribute__((stdcall))
+#else
+#define LEDGER_SCENE_COM_STDCALL
+#endif
+typedef struct LedgerSceneGuid {
+    uint32_t data1;
+    uint16_t data2;
+    uint16_t data3;
+    uint8_t data4[8];
+} LedgerSceneGuid;
+typedef int32_t (LEDGER_SCENE_COM_STDCALL *SceneInterfacePairGetMethod)(
+    void* object, void** result, void** previous_result);
+typedef int32_t (LEDGER_SCENE_COM_STDCALL *SceneQueryInterfaceMethod)(
+    void* object, const LedgerSceneGuid* interface_id, void** result);
+typedef uint32_t (LEDGER_SCENE_COM_STDCALL *SceneInterfaceReleaseMethod)(
+    void* object);
+typedef void* (LEDGER_SCENE_COM_STDCALL *SceneAnimationResourceGetMethod)(
+    void* object);
+int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
+    void* animation_owner, int frame_offset);
 // FUNCTION: LEGORR 0x00487d50
-int ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
-    void* object, uint32_t method, void* argument,
-    ComInterfaceContextDispatchHook dispatch, void* context)
+void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
+    void* owner, void* track)
 {
-    if (object == NULL || dispatch == NULL) return 0;
-    return dispatch(context, object, method, argument);
+    unsigned char* owner_bytes = (unsigned char*)owner;
+    unsigned char* track_bytes = (unsigned char*)track;
+    void** interfaces;
+    void* object;
+    void* pair = NULL;
+    void* user_visual = NULL;
+    void* user_visual_interface = NULL;
+    void* animation_resource;
+    void** vtable;
+    uint16_t interface_index;
+    int frame_offset;
+    LedgerSceneGuid user_visual_id;
+    SceneInterfacePairGetMethod interface_pair_get;
+    SceneQueryInterfaceMethod query_interface;
+    SceneInterfaceReleaseMethod release;
+    SceneAnimationResourceGetMethod animation_resource_get;
+    if (owner_bytes == NULL || track_bytes == NULL ||
+        (track_bytes[0x28] & 1u) != 0u) return;
+    memcpy(&interface_index, track_bytes + 6, sizeof(interface_index));
+    memcpy(&interfaces, owner_bytes + 0x14, sizeof(interfaces));
+    if (interfaces == NULL) return;
+    object = interfaces[interface_index];
+    if (object == NULL) return;
+    vtable = *(void***)object;
+    if (vtable == NULL || vtable[0x80 / 4] == NULL) return;
+    interface_pair_get = (SceneInterfacePairGetMethod)vtable[0x80 / 4];
+    (void)interface_pair_get(object, &pair, NULL);
+    (void)interface_pair_get(object, &user_visual, &pair);
+    if (user_visual == NULL) return;
+    user_visual_id.data1 = 0x59163de0u;
+    user_visual_id.data2 = 0x6d43u;
+    user_visual_id.data3 = 0x11cfu;
+    user_visual_id.data4[0] = 0xacu;
+    user_visual_id.data4[1] = 0x4au;
+    user_visual_id.data4[2] = 0x00u;
+    user_visual_id.data4[3] = 0x00u;
+    user_visual_id.data4[4] = 0xc0u;
+    user_visual_id.data4[5] = 0x38u;
+    user_visual_id.data4[6] = 0x25u;
+    user_visual_id.data4[7] = 0xa1u;
+    vtable = *(void***)user_visual;
+    if (vtable == NULL || vtable[0] == NULL) return;
+    query_interface = (SceneQueryInterfaceMethod)vtable[0];
+    (void)query_interface(user_visual, &user_visual_id,
+                          &user_visual_interface);
+    vtable = *(void***)user_visual;
+    if (vtable[2] != NULL) {
+        release = (SceneInterfaceReleaseMethod)vtable[2];
+        (void)release(user_visual);
+    }
+    if (user_visual_interface == NULL) return;
+    vtable = *(void***)user_visual_interface;
+    if (vtable == NULL || vtable[0x1c / 4] == NULL) return;
+    animation_resource_get =
+        (SceneAnimationResourceGetMethod)vtable[0x1c / 4];
+    animation_resource = animation_resource_get(user_visual_interface);
+    if (vtable[2] != NULL) {
+        release = (SceneInterfaceReleaseMethod)vtable[2];
+        (void)release(user_visual_interface);
+    }
+    memcpy(&frame_offset, owner_bytes + 0x10, sizeof(frame_offset));
+    (void)ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
+        animation_resource, frame_offset);
 }
+#undef LEDGER_SCENE_COM_STDCALL
 
 // SharedObjectTimedSoundEventUpdate
 void ledger_stub_00487de0_SharedObjectTimedSoundEventUpdate(void* owner,
@@ -9112,18 +9372,12 @@ void ledger_stub_00488bb0_CdAudioTrackStart(int track, int restart_when_done,
 }
 
 // ComInterfaceQueryOrFallback
-typedef int (*ComInterfaceQueryHook)(void* object, uint32_t interface_id,
-                                     void** result, void* context);
-// FUNCTION: LEGORR 0x004894c0
 void* ledger_stub_004894c0_ComInterfaceQueryOrFallback(
-    void* object, uint32_t interface_id, void* fallback,
-    ComInterfaceQueryHook query, void* context)
+    float color0, float color1, float color2,
+    float color3, float color4, float color5, float power)
 {
-    void* result = NULL;
-    if (object != NULL && query != NULL &&
-        query(object, interface_id, &result, context) && result != NULL)
-        return result;
-    return fallback;
+    return scene_material_create(color0, color1, color2, color3, color4,
+                                 color5, power);
 }
 
 // DDiSceneTimedHookDispatch

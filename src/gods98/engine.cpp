@@ -53,6 +53,12 @@ uint32_t* engine_current_feature_word(void)
         ? &s_engine_current_context->feature : NULL;
 }
 
+uint32_t* engine_current_state_word(void)
+{
+    return s_engine_current_context != NULL
+        ? &s_engine_current_context->state : NULL;
+}
+
 /* The reference's initialization callback clears this state before storing
  * the executable basename at DAT_005560c4. The portable modules do not share
  * a byte-identical 0x3be-dword global block, so reset of their owned state is

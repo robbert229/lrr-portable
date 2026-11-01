@@ -880,6 +880,10 @@ void shared_object_sound_callbacks_get(
     SharedObjectSoundEnabledFn* enabled_out,
     SharedObjectSoundSubmitFn* submit_out);
 void shared_object_timed_sound_event_update(void* owner, void* track); /* 0x487de0 */
+void scene_material_manager_set(void* manager);
+void* scene_material_create(float color0, float color1, float color2,
+                            float color3, float color4, float color5,
+                            float power); /* 0x4894c0 */
 
 typedef struct SceneEntryExpandInfo {
     const char* name;
