@@ -5331,7 +5331,10 @@ int ledger_stub_004490a0_ProximityStepCommandIssueWithLink(
     if (!ledger_stub_004469c0_EntityNearestConnectedTerrainCellRouteSelect(
             entity, (unsigned int)target_cell[0],
             (unsigned int)target_cell[1], 0, &candidate, entity->type != 3) ||
-        entity->wp_count <= 0) return 0;
+        entity->wp_count <= 0 ||
+        (entity->wp_dynamic == NULL
+            ? entity->wp_count > AI_WAYPOINTS_MAX
+            : (unsigned int)entity->wp_count > entity->wp_capacity)) return 0;
     direction = (candidate - 2u) & 3u;
     if (entity->type == 3 && (entity->flags_3e8 & 0x80000u) == 0u)
         edge_weight = 0.5f;
@@ -5351,16 +5354,9 @@ int ledger_stub_004490a0_ProximityStepCommandIssueWithLink(
     }
     step->step_kind = 6u;
     step->pending = (uint8_t)(step->pending | 4u | direction |
-                              (set_global_gate ? 0x20u : 0u));
-    entity->activity = 6;
-    entity->activity_timer = 0.0f;
-    entity->pos_pair_2f4 = (float)target_cell[0];
-    entity->pos_pair_2f8 = (float)target_cell[1];
+                              (mode != 0 ? 0x20u : 0u));
     entity->link_2fc = (uintptr_t)target;
-    /* The original writes the caller's mode to +0x404 and sets the mode bit
-     * in the +0x3ec activity flags when requested. */
     if (set_global_gate) entity->flags_3ec |= 0x00400000u;
-    entity->command_mode_404 = mode;
     return 1;
 }
 
@@ -7919,8 +7915,30 @@ void ledger_stub_00475c00_DDiSceneAnimationCallbacksSet(
     void* scene_object, void* callback_a, void* callback_b,
     void* callback_c, void* callback_d)
 {
-    ddiscene_animation_callbacks_set(scene_object, callback_a, callback_b,
-                                     callback_c, callback_d);
+    void** callbacks = NULL;
+    void* values[4];
+    unsigned int i;
+    if (scene_object == NULL) return;
+    memcpy(&callbacks, (unsigned char*)scene_object + 0x0c,
+           sizeof(callbacks));
+    if (callbacks == NULL) {
+        callbacks = (void**)engine_heap_alloc((long)(4u * sizeof(void*)));
+        if (callbacks == NULL) return;
+        memcpy((unsigned char*)scene_object + 0x0c, &callbacks,
+               sizeof(callbacks));
+        callbacks[0] = callback_a;
+        callbacks[1] = callback_b;
+        callbacks[2] = callback_c;
+        callbacks[3] = callback_d;
+        return;
+    }
+    values[0] = callback_a;
+    values[1] = callback_b;
+    values[2] = callback_c;
+    values[3] = callback_d;
+    for (i = 0; i < 4u; ++i) {
+        if (values[i] != NULL) callbacks[i] = values[i];
+    }
 }
 
 // DDiScenePayloadRelease
