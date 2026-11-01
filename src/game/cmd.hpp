@@ -166,7 +166,7 @@ void entity_record_attach_and_relink(void* record, void* previous,
                                      EntitySlot* entity);
 
 /* --- global tick list ---------------------------------------------------- */
-void cmd_tick_global(void);     /* CmdTickGlobal @ 0x402220 (scoped) */
+void cmd_tick_global(void);     /* CmdTickGlobal @ 0x402220 */
 
 /* --- record accessors ---------------------------------------------------- */
 int         cmd_rec_type(const void* rec);

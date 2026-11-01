@@ -157,7 +157,7 @@ int  simtick_sfx_releases(void);
 
 /* --- tranche 10: the remaining table tickers ----------------------------- */
 void simtick_mouse_world(EngineContext* c, float dt);      /* FUN_00425d90 */
-void simtick_frame_counter(EngineContext* c);              /* FUN_00402220 */
+void simtick_frame_counter(EngineContext* c); /* legacy/test helper */
 /* Target ABI: one subsystem-scale float (FUN_0040eab0). */
 void simtick_ambient_spawn_tick(float scale);
 /* Test adapter retained for existing local simtick tests. */

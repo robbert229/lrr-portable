@@ -1083,6 +1083,8 @@ void sound_instance_hooks_set(SoundInstanceRegisterHook register_hook,
     s_instance_hook_context = context;
 }
 
+static void sound_frame_release(void* frame);
+
 static int sound_instance_callback_record_attach(void* instance)
 {
     uint32_t* payload;
@@ -1124,9 +1126,67 @@ void sound_instance_track_register(void* instance)
 void sound_instance_track_stop_and_remove(void* provider, void* instance)
 {
     int index;
+    int adapter = 0;
+
+    /* The first argument is the provider frame (the reference obtains it
+     * from the caller's this register). The second is the sound instance.
+     * Release the instance before unlinking its source record, as the retail
+     * vtable call does. */
+#if (defined(_MSC_VER) && defined(_M_IX86)) || \
+    (defined(__i386__) && (defined(__GNUC__) || defined(__clang__)))
+    if (s_instance_stop_hook != NULL) {
+        s_instance_stop_hook(s_instance_hook_context, provider, instance);
+        adapter = 1;
+    }
+    else if (instance != NULL) {
+        sound_frame_release(instance);
+    }
+#else
     if (s_instance_stop_hook != NULL)
         s_instance_stop_hook(s_instance_hook_context, provider, instance);
+    adapter = 1;
+#endif
+
+    if (provider == NULL) {
+        sound_buffer_association_remove_instance(instance);
+        return;
+    }
+
+#if (defined(_MSC_VER) && defined(_M_IX86)) || \
+    (defined(__i386__) && (defined(__GNUC__) || defined(__clang__)))
+    if (!adapter) {
+        void* property = sound_instance_property_get(provider);
+        if (property != NULL) {
+            void* previous = NULL;
+            void* record = *(void**)((char*)property + 0x24);
+            while (record != NULL) {
+                char* words = (char*)record;
+                void* key = NULL;
+                void* next = NULL;
+                memcpy(&key, words, sizeof(key));
+                memcpy(&next, words + 4 * sizeof(void*), sizeof(next));
+                if (key == instance) {
+                    sound_buffer_association_remove_instance(instance);
+                    if (previous == NULL)
+                        memcpy((char*)property + 0x24, &next,
+                               sizeof(next));
+                    else
+                        memcpy((char*)previous + 4 * sizeof(void*), &next,
+                               sizeof(next));
+                    engine_heap_free(record);
+                    break;
+                }
+                previous = record;
+                record = next;
+            }
+        }
+    }
+    else {
+        sound_buffer_association_remove_instance(instance);
+    }
+#else
     sound_buffer_association_remove_instance(instance);
+#endif
     for (index = 0; index < 20; index++) {
         if (s_sound_instances[index] == provider) {
             s_sound_instances[index] = NULL;
@@ -1234,7 +1294,7 @@ static void sound_buffer_position_set(void* buffer,
 #endif
 
 // FUNCTION: LEGORR 0x0047B410
-static int sound_source_spatial_refresh_direct(void* sound_object)
+void sound_source_spatial_refresh(void* sound_object)
 {
 #if (defined(_MSC_VER) && defined(_M_IX86)) || \
     (defined(__i386__) && (defined(__GNUC__) || defined(__clang__)))
@@ -1242,9 +1302,14 @@ static int sound_source_spatial_refresh_direct(void* sound_object)
     void* scene = NULL;
     void* record;
     float position[3] = { 0.0f, 0.0f, 0.0f };
-    if (sound_object == NULL) return 0;
+    if (sound_object == NULL) return;
     property = sound_instance_property_get(sound_object);
-    if (property == NULL) return 0;
+    if (property == NULL) {
+        if (s_spatial_refresh_hook != NULL)
+            (void)s_spatial_refresh_hook(s_spatial_refresh_context,
+                                         sound_object);
+        return;
+    }
 
     /* GetScene and GetPosition HRESULTs are deliberately ignored, matching
      * the retail routine. Its source cache advances even if SetPosition
@@ -1269,19 +1334,10 @@ static int sound_source_spatial_refresh_direct(void* sound_object)
         record = next;
     }
     if (scene != NULL) sound_frame_release(scene);
-    return 1;
 #else
-    (void)sound_object;
-    return 0;
-#endif
-}
-
-void sound_source_spatial_refresh(void* sound_object)
-{
-    if (sound_source_spatial_refresh_direct(sound_object) == 0 &&
-        sound_object != NULL && s_spatial_refresh_hook != NULL) {
+    if (sound_object != NULL && s_spatial_refresh_hook != NULL)
         (void)s_spatial_refresh_hook(s_spatial_refresh_context, sound_object);
-    }
+#endif
 }
 
 /* _DAT_00502b2c — the global-cooldown word (the corpus types it as a

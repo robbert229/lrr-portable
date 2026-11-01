@@ -1108,13 +1108,13 @@ void simtick_mouse_world(EngineContext* c, float dt)
     }
 }
 
-/* FUN_00402220: task/frame counter with clamps + a whitelisted-list walk. */
+/* Legacy frame-counter helper retained for callers/tests; 0x402220 is the
+ * command subsystem's CmdTickGlobal entry (see game/cmd.cpp). */
 static uint32_t s_frame = 0, s_frame_a = 0, s_frame_b = 0, s_frame_c = 0;
 
 uint32_t simtick_frame(void) { return s_frame; }
 int simtick_frame_bump(void) { return (int)s_frame; }
 
-// FUNCTION: LEGORR 0x00402220
 void simtick_frame_counter(EngineContext* c)
 {
     (void)c;

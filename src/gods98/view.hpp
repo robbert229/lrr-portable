@@ -439,8 +439,8 @@ float point_to_polyline_minimum_segment_distance(const float* point,
                                                  const float* points,
                                                  unsigned int segment_count);
 void matrix_rotation_compose_xyz(float* record); /* FUN_0040fb00 */
-void d3drm_vector_random(float* out); /* FUN_00479500, approximate import */
-void d3drm_vector_rotate(float* out, const float* vector, const float* axis,
+void d3drm_vector_random(float* out); /* FUN_00479500, D3DRM import behavior */
+void d3drm_vector_rotate(float* out, const float* vector, float* axis,
                          float angle); /* FUN_00479510 */
 void vector_scale_components_in_place(float* vector, float sx, float sy,
                                       float sz); /* FUN_0040fcc0 */

@@ -3276,8 +3276,9 @@ void matrix_rotation_compose_xyz(float* record)
 // FUNCTION: LEGORR 0x00479500
 void d3drm_vector_random(float* out)
 {
-    /* D3DRM supplies a random direction. The native approximation samples
-     * three signed components and normalizes; distribution differs. */
+    /* The bundled D3DRM export draws each component in [-1, 1] and normalizes
+     * the resulting vector. Its internal random state belongs to D3DRM, so
+     * the portable build uses the CRT stream here. */
     float x = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
     float y = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
     float z = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
@@ -3294,13 +3295,13 @@ void d3drm_vector_random(float* out)
 }
 
 // FUNCTION: LEGORR 0x00479510
-void d3drm_vector_rotate(float* out, const float* vector, const float* axis,
+void d3drm_vector_rotate(float* out, const float* vector, float* axis,
                          float angle)
 {
-    /* Rough Rodrigues rotation for the D3DRM import. The reference DLL's
-     * axis normalization and exceptional-value behavior are unavailable. */
-    float axis_length = sqrtf(axis[0] * axis[0] + axis[1] * axis[1] +
-                              axis[2] * axis[2]);
+    /* D3DRMVectorRotate normalizes its axis in place, then applies Rodrigues'
+     * formula using the negated angle. D3DRMVectorNormalize maps a zero vector
+     * to (1, 0, 0), so even a zero axis becomes a rotation about X. */
+    float axis_length;
     float x;
     float y;
     float z;
@@ -3308,24 +3309,32 @@ void d3drm_vector_rotate(float* out, const float* vector, const float* axis,
     float c;
     float s;
     float one_minus_c;
-    float n[3];
+    float nx;
+    float ny;
+    float nz;
+    axis_length = sqrtf(axis[0] * axis[0] + axis[1] * axis[1] +
+                        axis[2] * axis[2]);
     if (axis_length == 0.0f) {
-        out[0] = vector[0];
-        out[1] = vector[1];
-        out[2] = vector[2];
-        return;
+        axis[0] = 1.0f;
+        axis[1] = 0.0f;
+        axis[2] = 0.0f;
     }
-    n[0] = axis[0] / axis_length;
-    n[1] = axis[1] / axis_length;
-    n[2] = axis[2] / axis_length;
+    else {
+        axis[0] /= axis_length;
+        axis[1] /= axis_length;
+        axis[2] /= axis_length;
+    }
+    nx = axis[0];
+    ny = axis[1];
+    nz = axis[2];
     x = vector[0]; y = vector[1]; z = vector[2];
-    dot = n[0] * x + n[1] * y + n[2] * z;
+    dot = nx * x + ny * y + nz * z;
     c = cosf(angle);
-    s = sinf(angle);
+    s = -sinf(angle);
     one_minus_c = 1.0f - c;
-    out[0] = x * c + (n[1] * z - n[2] * y) * s + n[0] * dot * one_minus_c;
-    out[1] = y * c + (n[2] * x - n[0] * z) * s + n[1] * dot * one_minus_c;
-    out[2] = z * c + (n[0] * y - n[1] * x) * s + n[2] * dot * one_minus_c;
+    out[0] = x * c + (ny * z - nz * y) * s + nx * dot * one_minus_c;
+    out[1] = y * c + (nz * x - nx * z) * s + ny * dot * one_minus_c;
+    out[2] = z * c + (nx * y - ny * x) * s + nz * dot * one_minus_c;
 }
 
 // FUNCTION: LEGORR 0x0040fcc0
@@ -3946,6 +3955,130 @@ float random_float_range(float minimum, float maximum)
  * accumulator order), runs the ray (p, dir_a) against the plane through q
  * with normal dir_b, and advances along dir_a when they meet. */
 // FUNCTION: LEGORR 0x004798e0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int view_ray_intersection_test(
+    float* out, const float* p, const float* dir_a, const float* q,
+    const float* dir_b)
+{
+    __asm {
+        sub esp, 18h
+        mov ecx, dword ptr [esp + 2ch]
+        mov eax, dword ptr [esp + 24h]
+        push ebx
+        push esi
+        mov ebx, dword ptr [ecx]
+        push edi
+        mov edi, dword ptr [eax]
+        mov dword ptr [esp + 18h], ebx
+        fld dword ptr [esp + 18h]
+        mov ebx, dword ptr [ecx + 4]
+        mov dword ptr [esp + 0ch], edi
+        fld dword ptr [esp + 0ch]
+        fmul dword ptr [esp + 0ch]
+        mov edi, dword ptr [eax + 4]
+        mov dword ptr [esp + 1ch], ebx
+        fld dword ptr [esp + 1ch]
+        mov eax, dword ptr [eax + 8]
+        mov dword ptr [esp + 10h], edi
+        fld dword ptr [esp + 10h]
+        fmul dword ptr [esp + 10h]
+        fxch st(3)
+        fmul dword ptr [esp + 18h]
+        mov ecx, dword ptr [ecx + 8]
+        mov dword ptr [esp + 14h], eax
+        fld dword ptr [esp + 14h]
+        fxch st(2)
+        fmul dword ptr [esp + 1ch]
+        mov dword ptr [esp + 20h], ecx
+        lea edx, [esp + 18h]
+        fld dword ptr [esp + 20h]
+        fxch st(3)
+        fmul dword ptr [esp + 14h]
+        fxch st(3)
+        fmul dword ptr [esp + 20h]
+        fxch st(5)
+        faddp st(4), st
+        push edx
+        mov edx, dword ptr [esp + 38h]
+        lea esi, [esp + 10h]
+        push edx
+        faddp st(1), st
+        fxch st(1)
+        faddp st(2), st
+        fxch st(2)
+        faddp st(2), st
+        push esi
+        mov esi, dword ptr [esp + 38h]
+        lea eax, [esp + 3ch]
+        push esi
+        fsqrt
+        push eax
+        fxch st(1)
+        fsqrt
+        fst dword ptr [esp + 44h]
+        fxch st(1)
+        fdivr dword ptr [s_matrix_one]
+        fxch st(1)
+        fdivr dword ptr [s_matrix_one]
+        fxch st(1)
+        fst dword ptr [esp + 44h]
+        fld dword ptr [esp + 44h]
+        fld dword ptr [esp + 44h]
+        fxch st(3)
+        fst dword ptr [esp + 44h]
+        fld dword ptr [esp + 44h]
+        fld dword ptr [esp + 44h]
+        fxch st(4)
+        fmul dword ptr [esp + 20h]
+        fxch st(3)
+        fmul dword ptr [esp + 24h]
+        fxch st(5)
+        fmul dword ptr [esp + 28h]
+        fxch st(3)
+        fstp dword ptr [esp + 20h]
+        fxch st(1)
+        fmul dword ptr [esp + 2ch]
+        fxch st(4)
+        fstp dword ptr [esp + 24h]
+        fmul dword ptr [esp + 30h]
+        fxch st(1)
+        fstp dword ptr [esp + 28h]
+        fxch st(1)
+        fmul dword ptr [esp + 34h]
+        fxch st(2)
+        fstp dword ptr [esp + 2ch]
+        fstp dword ptr [esp + 30h]
+        fstp dword ptr [esp + 34h]
+        call ray_plane_intersection_parameter
+        add esp, 14h
+        test eax, eax
+        je view_ray_intersection_failed
+        mov ecx, dword ptr [esp + 30h]
+        mov eax, dword ptr [esp + 28h]
+        lea edx, [esp + 0ch]
+        push ecx
+        push edx
+        push esi
+        push eax
+        call point_along_ray
+        add esp, 10h
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebx
+        add esp, 18h
+        ret
+
+    view_ray_intersection_failed:
+        pop edi
+        pop esi
+        xor eax, eax
+        pop ebx
+        add esp, 18h
+        ret
+    }
+}
+#else
 int view_ray_intersection_test(float* out, const float* p,
                                const float* dir_a, const float* q,
                                const float* dir_b)
@@ -3963,6 +4096,7 @@ int view_ray_intersection_test(float* out, const float* p,
     }
     return 0;
 }
+#endif
 
 /* Matrix4SetIdentity (FUN_00479e70): row loop, column loop, store 1 when
  * the indices meet (the corpus's dword-0x3f800000 form). */

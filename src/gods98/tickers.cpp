@@ -7,6 +7,7 @@
 #include "simtick.hpp"
 #include "surface.hpp"
 #include "tickers.hpp"
+#include "game/cmd.hpp"
 
 /* ------------------------------------------------------------------ *
  * Per-ticker stubs. Each `ticker_<hex>` corresponds to the corpus's
@@ -23,8 +24,8 @@ static void ticker_00425d90(EngineContext* c, float dt, float scale)
 
 static void ticker_00402220(EngineContext* c, float dt, float scale)
 {
-    (void)dt; (void)scale;
-    simtick_frame_counter(c);
+    (void)c; (void)dt; (void)scale;
+    cmd_tick_global();
 }
 
 static void ticker_00424600(EngineContext* c, float dt, float scale)

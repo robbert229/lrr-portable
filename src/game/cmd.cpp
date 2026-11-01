@@ -268,6 +268,13 @@ static int pending_command_cell_walkable(GameContext* context,
 }
 // GLOBAL: LEGORR 0x004b8060
 static int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
+// GLOBAL: LEGORR 0x004b3424
+static int   s_global_tick_counter_a = 0;
+// GLOBAL: LEGORR 0x004b34f0
+static int   s_global_tick_counter_b = 0;
+#define PRIORITY_ENTRY_COUNT 27
+// GLOBAL: LEGORR 0x004b7ff4
+static int s_priority_state[PRIORITY_ENTRY_COUNT];
 static CmdPurgeCellPredicate s_cmd_purge_cell_usable;
 static CmdPurgeCellPredicate s_cmd_purge_neighbor_eligible;
 static CmdPurgeCompare s_cmd_purge_compare;
@@ -1452,27 +1459,122 @@ void cmd_chain_purge(EntitySlot* e)
     }
 }
 
+static void cmd_global_list_purge(CmdRec** head)
+{
+    CmdRec* records[300];
+    CmdRec* current;
+    CmdRec* previous;
+    CmdRec* overflow = NULL;
+    int count = 0;
+    int i;
+
+    previous = NULL;
+    current = *head;
+    while (current != NULL) {
+        CmdRec* next = as_rec(current->global_next);
+        if ((current->state & CMD_STATE_DONE) != 0u) {
+            if (previous == NULL) *head = next;
+            else previous->global_next = next;
+            current->global_next = NULL;
+            cmd_free(current, 0);
+        } else {
+            previous = current;
+        }
+        current = next;
+    }
+
+    current = *head;
+    while (current != NULL && count < 300) {
+        int behavior;
+        records[count++] = current;
+        behavior = (current->kind >= 0 && current->kind < 27)
+            ? s_behaviour[current->kind] : 0;
+        if (s_priority_state[current->kind] == 0 ||
+            (current->state & CMD_STATE_CANCEL) != 0u) {
+            current->state &= ~0x80000u;
+            current->behaviour = ((current->state & 0x30000u) != 0u)
+                ? 99 : behavior;
+        } else {
+            current->state |= 0x80000u;
+        }
+
+        if (current->type == 8) {
+            int cell_x;
+            int cell_y;
+            memcpy(&cell_x, &current->x, sizeof(cell_x));
+            memcpy(&cell_y, &current->y, sizeof(cell_y));
+            if ((current->state & 8u) == 0u) {
+                if (s_cmd_purge_cell_usable != NULL &&
+                    s_cmd_purge_cell_usable(cell_x, cell_y,
+                                            s_cmd_purge_context) != 0)
+                    current->behaviour = 0;
+            } else {
+                static const int offsets[4][2] = {
+                    {0, 0}, {0, -1}, {-1, -1}, {-1, 0}
+                };
+                int found = 0;
+                int n;
+                for (n = 0; n < 4; ++n) {
+                    if (s_cmd_purge_neighbor_eligible != NULL &&
+                        s_cmd_purge_neighbor_eligible(
+                            cell_x + offsets[n][0], cell_y + offsets[n][1],
+                            s_cmd_purge_context) != 0)
+                        found = 1;
+                }
+                if (found) {
+                    if (current->behaviour == 0) current->behaviour = 100;
+                } else {
+                    current->behaviour = 0;
+                }
+            }
+        }
+        current = as_rec(current->global_next);
+    }
+    if (current != NULL) overflow = current;
+    if (count > 1 && s_cmd_purge_compare != NULL) {
+        qsort(records, (size_t)count, sizeof(records[0]),
+              cmd_purge_compare_adapter);
+    }
+    if (count != 0) {
+        for (i = 0; i + 1 < count; ++i)
+            records[i]->global_next = records[i + 1];
+        records[count - 1]->global_next = overflow;
+        *head = records[0];
+    }
+}
+
+// FUNCTION: LEGORR 0x00402220
 void cmd_tick_global(void)
 {
-    if (!s_global_enabled) {
-        return;
+    int threshold;
+    CmdRec* current;
+    if (((uint32_t)s_global_enabled & 0x80000000u) != 0u) return;
+
+    threshold = s_behaviour[0];
+    if (s_behaviour[1] > threshold) threshold = s_behaviour[1];
+    if (s_behaviour[4] > threshold) threshold = s_behaviour[4];
+    /* DAT_004b3328 aliases behaviour entry 16 in the recovered data. */
+    s_behaviour[16] = threshold + 1;
+
+    /* LAB_00404250 is still an unported entity callback. Its neighboring
+     * record sweep is available directly and has observable flag effects. */
+    for (current = s_global_head; current != NULL;
+         current = as_rec(current->global_next)) {
+        EntitySlot* entity;
+        if (current->type != 10 ||
+            (current->state & 0x200000u) != 0u || current->payload == NULL)
+            continue;
+        entity = (EntitySlot*)current->payload;
+        if (entity->field_340 <= 0.0f || entity->field_340 >= 100.0f)
+            current->state |= CMD_STATE_DONE;
     }
-    /* The corpus's per-command processing (the AI task switch that reads
-     * +0x4c/+0x1c) is a stub boundary (finding 10 §"Still open"). Keep the
-     * structural walk; the global list is drained each tick. */
-    for (CmdRec* cur = s_global_head; cur != NULL; ) {
-        CmdRec* next = as_rec(cur->global_next);
-        (void)cur->state;
-        cur->global_next = NULL;
-        cur = next;
-    }
-    s_global_head = NULL;
-    for (CmdRec* tail_cur = s_global_tail; tail_cur != NULL; ) {
-        CmdRec* next = as_rec(tail_cur->global_next);
-        tail_cur->global_next = NULL;
-        tail_cur = next;
-    }
-    s_global_tail = NULL;
+
+    cmd_global_list_purge(&s_global_head);
+    cmd_global_list_purge(&s_global_tail);
+    s_global_tick_counter_a = 0;
+    s_global_tick_counter_b = 0;
+    pending_command_entity_assignment_tick();
+    pending_command_timer_fire_scan();
 }
 
 /* ------------------------------------------------------------------ *
@@ -1614,23 +1716,6 @@ void cmd_keybind_tick(int (*keyheld)(int key))
 // FUNCTION: LEGORR 0x004520d0
 void cmd_queue_tick(void)
 {
-    /* CmdTickGlobal's two pending-list scans are part of the live command
-     * frame path.  Its full callback dispatch has no port equivalent, so the
-     * scans rebuild their candidate views from the active GameContext. */
-    if (((uint32_t)s_global_enabled & 0x80000000u) == 0u) {
-        CmdRec* pending;
-        for (pending = s_global_head; pending != NULL;
-             pending = as_rec(pending->global_next)) {
-            if (pending->type == 10 &&
-                (pending->state & 0x200000u) == 0u &&
-                pending->payload != NULL &&
-                (((EntitySlot*)pending->payload)->field_340 <= 0.0f ||
-                 ((EntitySlot*)pending->payload)->field_340 >= 100.0f))
-                pending->state |= 0x20u;
-        }
-        pending_command_entity_assignment_tick();
-        pending_command_timer_fire_scan();
-    }
     /* 1. Producer block: the held-key pre-pass (SelectionRoot step 1 —
      *    cheat-keybinds; the demo binds keys via cmd_bind_key). */
     if (s_ctx != NULL && s_ctx->input_keyheld != NULL) {
@@ -2143,11 +2228,8 @@ void entity_deferred_work_schedule(EntitySlot* e)
  * DAT_004b7ff4: the per-priority state table, zeroed by the (unported)
  * registry initializer loop — zero-init static, 27 entries. The preceding
  * command-count matrix occupies 0x12c0 dwords and ends at this table. */
-#define PRIORITY_ENTRY_COUNT 27
 // GLOBAL: LEGORR 0x004b34f4
 uint32_t cmd_pending_command_counts[CMD_PENDING_COMMAND_COUNT_TABLE_SIZE];
-// GLOBAL: LEGORR 0x004b7ff4
-static int s_priority_state[PRIORITY_ENTRY_COUNT];
 // FUNCTION: LEGORR 0x00402000
 void cmd_mark_matching(int type, int payload, const int coords[2])
 {
