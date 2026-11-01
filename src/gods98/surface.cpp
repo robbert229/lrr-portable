@@ -613,6 +613,7 @@ static FontPixelFormatQueryFn s_font_pixel_format_query;
 static FontPixelFormatReleaseFn s_font_pixel_format_release;
 static void* s_font_atlas_record_free_list;
 static SurfacePixelBitsQueryFn s_surface_pixel_bits_query;
+// GLOBAL: LEGORR 0x005407e8
 static SurfacePixelWriteFn s_surface_pixel_writer;
 static SurfaceWriterUnlockHook s_surface_writer_unlock_hook;
 static RendererBeginFrameHook s_renderer_begin_frame_hook;

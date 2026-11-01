@@ -1641,7 +1641,7 @@ int ledger_stub_00409450_FindNearbyPlacementCandidate(
     if (context == NULL || context->level == NULL || start_xy == NULL) return 0;
     found = nearby_placement_entity_search(context->level, start_xy[0],
                                            start_xy[1], resource_amount);
-    terrain_cell_visited_flags_clear_all(context->level);
+    terrain_cell_visited_flags_clear_all_current();
     return found;
 }
 

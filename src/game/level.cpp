@@ -3674,7 +3674,6 @@ void terrain_cell_visited_flag_set_and_track(LevelState* s, int cx, int cy)
     cell_visited_track_push(cx, cy);
 }
 
-// FUNCTION: LEGORR 0x00432300
 void terrain_cell_visited_flags_clear_all(LevelState* s)
 {
     int i;
@@ -3686,6 +3685,30 @@ void terrain_cell_visited_flags_clear_all(LevelState* s)
         }
         uint32_t* word = (uint32_t*)(rec + 0x0C);
         *word &= ~2u;
+    }
+    s_cell_visited_track_count = 0;
+}
+
+/* The retail entry point is parameterless and reads the current level from
+ * DAT_005560d4. Keep the LevelState-taking form above as a portable adapter
+ * for callers that already own an explicit level. */
+// FUNCTION: LEGORR 0x00432300
+void terrain_cell_visited_flags_clear_all_current(void)
+{
+    GameContext* game = entity_pool_callback_context_get();
+    LevelState* s;
+    int i;
+    if (game == NULL || game->level == NULL) {
+        return;
+    }
+    s = game->level;
+    for (i = 0; i < s_cell_visited_track_count; ++i) {
+        uint8_t* rec = level_voxel(s, s_cell_visited_track[i][0],
+                                  s_cell_visited_track[i][1]);
+        if (rec != NULL) {
+            uint32_t* word = (uint32_t*)(rec + 0x0C);
+            *word &= ~2u;
+        }
     }
     s_cell_visited_track_count = 0;
 }

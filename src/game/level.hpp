@@ -654,6 +654,7 @@ void terrain_cell_visited_flag_set_and_track(LevelState* s, int cx, int cy);
 /* TerrainCellVisitedFlagsClearAll (FUN_00432300): walk the visited
  * queue clearing each listed cell's mark, then reset the counter. */
 void terrain_cell_visited_flags_clear_all(LevelState* s);
+void terrain_cell_visited_flags_clear_all_current(void);
 
 /* TerrainCellPrimaryFlagsMaskClearAndRefresh (FUN_00432360): target ABI
  * takes an x/y pair; the explicit-LevelState form is a caller adapter. */

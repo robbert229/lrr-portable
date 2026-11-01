@@ -6891,12 +6891,14 @@ void frontend_flow_word_set(int which, int value)
 int main_sim_state_admission_predicate(void)
 {
     const uint32_t ui_mode = ui_mode_resource_bit40_get();
-    const uint32_t sel = s_sel_state;
+    const uint32_t bit1 = s_sel_state & 1u;
+    const uint32_t bit2 = s_sel_state & 2u;
     const uint32_t system_state = system_state_flags_get();
-    return ui_mode != 0u
-        && (sel & 2u) != 0u
-        && (sel & 1u) != 0u
-        && system_state == 0u;
+    if (ui_mode != 0u && bit2 != 0u && bit1 != 0u
+        && system_state == 0u) {
+        return 1;
+    }
+    return 0;
 }
 
 /* SelectionModeStateSet (FUN_00418190) — zero-init module static (the
