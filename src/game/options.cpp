@@ -132,9 +132,23 @@ void options_load_or_default(struct GameContext* ctx, int load_options,
         frontend_flow_word_set(0, 0);
         frontend_flow_word_set(1, -1);
         frontend_flow_word_set(2, -1);
+        frontend_flow_word_set(3, 0);
     }
-    if (load_options != 0 && ctx != NULL && sav_build_ctx(ctx) == NULL) {
-        options_load_corpus_defaults(&ctx->options);
+    if (load_options != 0 && ctx != NULL) {
+        char* block = (char*)sav_build_ctx(ctx);
+        if (block == NULL) {
+            options_load_corpus_defaults(&ctx->options);
+        } else {
+            uint32_t sfx;
+            uint32_t speed;
+            uint32_t music;
+            __builtin_memcpy(&sfx, block + 8, sizeof(sfx));
+            __builtin_memcpy(&speed, block + 12, sizeof(speed));
+            __builtin_memcpy(&music, block + 16, sizeof(music));
+            ctx->options.sfx_volume = (int)sfx;
+            ctx->options.game_speed = (int)speed;
+            ctx->options.music_volume = (int)music;
+        }
     }
 }
 
