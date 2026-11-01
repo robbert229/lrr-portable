@@ -5061,6 +5061,7 @@ void ledger_stub_00447ea0_EntityTypeBehaviorUpdate(
             if (animation_done || entity->field_340 <= 0.0f) {
                 entity->flags_3e8 &= ~0x10000u;
                 entity->flags_3e8 |= 0x800000u;
+                entity->field_340 = -4.0f;
                 entity_type_behavior_cell_flag_80000_set(entity, 0);
                 if (hooks != NULL && hooks->terrain_activity != NULL)
                     hooks->terrain_activity(hooks->context, entity);

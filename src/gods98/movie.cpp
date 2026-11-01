@@ -1415,6 +1415,9 @@ void avi_playback_state_initialize(AviPlaybackState* state, uint32_t width,
 {
     if (state == NULL) return;
     memset(state, 0, sizeof(*state));
+    /* The retail constructor initializes its fifth argument as the
+     * DirectDraw surface descriptor before setting up the display mode. */
+    surface_descriptor_initialize(display_device);
     state->frame_ready = (uint8_t)avi_display_mode_setup(state, width, height,
         bits_per_pixel, fullscreen, display_device);
 }

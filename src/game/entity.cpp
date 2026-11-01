@@ -5630,6 +5630,7 @@ void entity_clear_nested_state_8_fields(EntitySlot* e)
     if (nested->type != 8) {
         return;
     }
+    nested->pos_pair_2f8 = 0.0f;
     nested->pos_pair_2f4 = 0.0f;
     unported_ledger_stubs::entity_attached_object_list_detach(e, 1);
 }
