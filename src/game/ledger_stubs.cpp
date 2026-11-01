@@ -1691,7 +1691,6 @@ void ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
             cancel_action_for_matching_coordinates(
                 (const uint32_t*)coordinates + progress * 2u);
         }
-        if (duplicate) ++progress;
         ++progress;
     }
 
@@ -3319,12 +3318,17 @@ void ledger_stub_004350a0_SurfaceTypeDescriptionsConfigLoad(
     surface_type_descriptions_load(entries, hooks);
 }
 
+// GLOBAL: LEGORR 0x004de424
+static uint32_t s_global_zero_transition_previous_primary;
+
 // FUNCTION: LEGORR 0x00435550
 int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void)
 {
-    if (global_state_low_word_get() != 0u) return 0;
-    global_state_low_byte_clear_and_refresh();
-    return 1;
+    uint32_t current = renderer_word_c_get();
+    int transitioned_to_zero = current == 0u &&
+        s_global_zero_transition_previous_primary != 0u;
+    s_global_zero_transition_previous_primary = current;
+    return transitioned_to_zero;
 }
 
 // ToolTipIconsConfigLoad
@@ -7060,12 +7064,20 @@ int ledger_stub_00466490_CellSightRayCheckAndFlag(
     const EntitySlot* observer, const EntitySlot* target,
     uint32_t* visibility_flags)
 {
-    int visible = !entity_pair_ray_hit_check(observer, target);
+    int hit = entity_pair_ray_hit_check(observer, target);
+    if (hit) {
+        EntitySlot* mutable_observer = (EntitySlot*)observer;
+        EntitySlot* mutable_target = (EntitySlot*)target;
+        if (mutable_observer != NULL)
+            mutable_observer->flags_3e0 |= 0x02000000u;
+        if (mutable_target != NULL)
+            mutable_target->flags_3e0 |= 0x02000000u;
+    }
     if (visibility_flags != NULL) {
-        if (visible) *visibility_flags |= 1u;
+        if (hit) *visibility_flags |= 1u;
         else *visibility_flags &= ~1u;
     }
-    return visible;
+    return hit;
 }
 
 unsigned int ledger_stub_004667e0_EntityStatsConfigLoad(
@@ -7160,7 +7172,7 @@ void ledger_stub_0046de80_CellQuadRunEmit(
 }
 
 /* CellSurfaceQuadHeightFill (FUN_0046e220): locate the renderer-owned record
- * for a cell, activate its indexed slot, and store the lower of the selected
+ * for a cell, activate its indexed slot, and store the higher of the selected
  * triangle's two corner heights. The wrapper's three-argument ABI follows
  * the decompile; user_record is the raw +0x420/+0x424 backing record carried
  * by the world-spatial sidecar. */
@@ -7213,7 +7225,7 @@ void ledger_stub_0046e220_CellSurfaceQuadHeightFill(
     first_height = vertices[corner_pair_indices[orientation * 2] * 3u];
     second_height = vertices[
         corner_pair_indices[orientation * 2 + 1] * 3u];
-    if (second_height < first_height) first_height = second_height;
+    if (second_height > first_height) first_height = second_height;
     memcpy(slot + 8, &first_height, sizeof(first_height));
 }
 
