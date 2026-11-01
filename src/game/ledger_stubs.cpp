@@ -2046,7 +2046,9 @@ void ledger_stub_0040b1b0_DependencyGridOccupancyPass(void)
 int ledger_stub_0040b310_LoadTileVariants(TerrainTileMeshGrid* grid,
                                           int editor_mode)
 {
-    return terrain_tile_mesh_grid_load(grid, editor_mode);
+    if (grid == NULL) return 0;
+    grid->editor_mode = editor_mode;
+    return terrain_tile_mesh_grid_load(grid, grid->bitmap_prefix);
 }
 
 TerrainCellResourceGrid* ledger_stub_0040b310_LoadTileVariants(
@@ -2972,13 +2974,10 @@ int ledger_stub_00429470_CameraPointerRayRoute(
 }
 
 // LoadTileMeshes
-// FUNCTION: LEGORR 0x0042b330
 int ledger_stub_0042b330_LoadTileMeshes(TerrainTileMeshGrid* grid,
                                         const char* bitmap_prefix)
 {
-    if (grid == NULL) return 0;
-    grid->bitmap_prefix = bitmap_prefix;
-    return terrain_tile_mesh_grid_load(grid, grid->editor_mode);
+    return terrain_tile_mesh_grid_load(grid, bitmap_prefix);
 }
 
 // TextureSetConfigLoad
@@ -3019,8 +3018,7 @@ int ledger_stub_0042bb60_TextureSetConfigLoad(TerrainTileMeshGrid* grid,
     if (width <= 0 || height <= 0) return 0;
     grid->width = (uint32_t)width;
     grid->height = (uint32_t)height;
-    grid->bitmap_prefix = mesh_name;
-    if (!terrain_tile_mesh_grid_load(grid, grid->editor_mode)) return 0;
+    if (!terrain_tile_mesh_grid_load(grid, mesh_name)) return 0;
     return 1;
 }
 

@@ -52,7 +52,8 @@ typedef struct TerrainTileMeshGrid {
     TerrainTileMeshRegisterHook register_mesh;
     TerrainTileMeshReleaseHook release_mesh;
 } TerrainTileMeshGrid;
-int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid, int editor_mode);
+int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid,
+                                const char* bitmap_prefix);
 void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid);
 typedef struct TerrainCellResourceGrid {
     uint32_t width;

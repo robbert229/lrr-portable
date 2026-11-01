@@ -636,7 +636,9 @@ int terrain_neighbor_path_check(void* level, uint32_t start_x,
 /* LoadTileMeshes (FUN_0042b330): the level owns a row-major pointer table.
  * The editor path leaves it zeroed; normal play registers one paired bitmap
  * resource for every cell. */
-int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid, int editor_mode)
+// FUNCTION: LEGORR 0x0042b330
+int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid,
+                                const char* bitmap_prefix)
 {
     size_t count;
     uint32_t x, y;
@@ -645,11 +647,12 @@ int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid, int editor_mode)
         || (size_t)grid->width > ((size_t)-1) / (size_t)grid->height
         || (size_t)grid->width * (size_t)grid->height
             > ((size_t)-1) / sizeof(void*)) return 0;
+    grid->bitmap_prefix = bitmap_prefix;
     terrain_tile_mesh_grid_release(grid);
     count = (size_t)grid->width * (size_t)grid->height;
     grid->meshes = (void**)calloc(count, sizeof(void*));
     if (grid->meshes == NULL) return 0;
-    if (editor_mode) return 1;
+    if (grid->editor_mode) return 1;
     if (grid->bitmap_prefix == NULL || grid->register_mesh == NULL) {
         terrain_tile_mesh_grid_release(grid);
         return 0;
