@@ -221,15 +221,12 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size)
                 }
             } else if (bpp == 16) {
                 uint32_t v = t_le16(row + x * 2);
-                if (v & 0x8000u) { /* 5-5-5 */
-                    pr = (v >> 7 & 0x1f) * 255 / 31;
-                    pg = (v >> 2 & 0x1f) * 255 / 31;
-                    pb = (v & 0x1f) * 255 / 31;
-                } else {           /* 5-6-5 */
-                    pr = (v >> 11 & 0x1f) * 255 / 31;
-                    pg = (v >> 5 & 0x3f) * 255 / 63;
-                    pb = (v & 0x1f) * 255 / 31;
-                }
+                /* BI_RGB 16-bit DIBs use 5-5-5; the high bit is reserved,
+                 * not a discriminator for 5-6-5. BI_BITFIELDS is rejected
+                 * by the header parser above. */
+                pr = (v >> 10 & 0x1f) * 255 / 31;
+                pg = (v >> 5 & 0x1f) * 255 / 31;
+                pb = (v & 0x1f) * 255 / 31;
             } else if (bpp == 24) {
                 const uint8_t* p = row + x * 3;
                 pb = p[0]; pg = p[1]; pr = p[2];

@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern uint32_t rng_thunk_draw15(void);
+extern float random_float_range(float minimum, float maximum);
+
 /* Reconstruction symbols for corpus globals. */
 int   g_camera_scale_14   = 1;      /* DAT_00556f14, integer multiplier */
 int   g_camera_grid_enabled = 1;    /* DAT_00556f18 */
@@ -218,7 +221,7 @@ void* predug_spawn_coordinate_select_and_create(int source_object, int type)
         selected = s_spawn_random_index_hook != NULL
             ? s_spawn_random_index_hook((int)s_predug_spawn_count,
                                         s_spawn_hook_context)
-            : rand() % (int)s_predug_spawn_count;
+            : (int)(rng_thunk_draw15() % s_predug_spawn_count);
         if (selected < 0 || (uint32_t)selected >= s_predug_spawn_count) {
             selected = 0;
         }
@@ -232,7 +235,7 @@ void* predug_spawn_coordinate_select_and_create(int source_object, int type)
     if (s_spawn_random_angle_hook != NULL) {
         angle = s_spawn_random_angle_hook(s_spawn_hook_context);
     } else {
-        angle = ((float)rand() / (float)RAND_MAX) * 6.283185307179586f;
+        angle = random_float_range(0.0f, 6.2831855f);
     }
     if (s_spawn_coordinate_hook(cell_x, cell_y, &world_x, &world_y,
                                 s_spawn_coordinate_context) == 0) {
