@@ -3,7 +3,8 @@
  *
  * Ported against the rrlwo.py reference (corpus-validated over all shipped
  * models): chunk walk, POLS origin auto-detect, SRFS names, SURF records
- * anchored on SRFS names, and the finding 19 `.uv` grammar. */
+ * anchored on SRFS names (including the renderer's color, texture, flag,
+ * mapping, and material-value fields), and the finding 19 `.uv` grammar. */
 #include "model.hpp"
 #include "crt/crt.hpp"
 #include "heap.hpp"
@@ -252,7 +253,7 @@ typedef struct Parse {
     Buf     ring;  /* native i16, raw signed POLS values in order */
     Buf     poff;  /* native uint32 start per poly */
     Buf     pcnt;  /* native uint16 per poly */
-    Buf     psurf; /* native uint16 per poly (signed-1 clamped) */
+    Buf     psurf; /* native uint16 per poly (surface field minus one) */
     Buf     pflip; /* native uint8 per poly */
     int     saw_zero;
     size_t  pols_used_len; /* first POLS chunk only (python one()) */
@@ -339,8 +340,9 @@ static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
 
 /* --- POLS --------------------------------------------------------------------- */
 
-/* python polys(): {u16 count, count x i16 indices, u16 surface}; stops on
- * count 0 or truncation; surface = max(signed - 1, 0). */
+/* POLS: {u16 count, count x i16 indices, u16 surface}; stop safely on a
+ * zero count or truncated record.  The runtime stores the 16-bit surface
+ * number minus one, including unsigned wrap for a zero input. */
 // FUNCTION: LEGORR 0x0048c3e0
 static int parse_pols(Parse* P, const uint8_t* d, size_t size)
 {
@@ -364,11 +366,12 @@ static int parse_pols(Parse* P, const uint8_t* d, size_t size)
                 return 0;
         }
         p += 2 * cnt;
-        int sv = (int)(int16_t)be16(d + p) - 1;
-        if (sv < 0)
-            sv = 0;
+        /* LwoPolygons stores the file's 1-based surface number minus one in
+         * a 16-bit field.  The reference arithmetic is unsigned here, so a
+         * zero surface value wraps to 0xffff. */
+        uint16_t su = (uint16_t)(be16(d + p) - 1u);
         p += 2;
-        uint16_t cc = (uint16_t)cnt, su = (uint16_t)sv, f8 = 0;
+        uint16_t cc = (uint16_t)cnt, f8 = 0;
         f8 = (uint16_t)flip;
         if (!buf_append(&P->pcnt, &cc, sizeof cc)) return 0;
         if (!buf_append(&P->psurf, &su, sizeof su)) return 0;
@@ -407,19 +410,26 @@ static int surfrec_addblock(Parse* P, SurfRec* r, const char* tag,
         }
     }
     size_t ncap = r->blocks_cap ? r->blocks_cap * 2 : 8;
-    char (*nt)[5] = (char (*)[5])realloc(r->tags, ncap * sizeof *r->tags);
-    if (!nt)
+    char (*nt)[5] = (char (*)[5])malloc(ncap * sizeof *r->tags);
+    size_t* no = (size_t*)malloc(ncap * sizeof *r->off);
+    size_t* ns = (size_t*)malloc(ncap * sizeof *r->size);
+    if (!nt || !no || !ns) {
+        free(nt);
+        free(no);
+        free(ns);
         return 0;
-    size_t* no = (size_t*)realloc(r->off, ncap * sizeof *r->off);
-    if (!no) { free(nt); return 0; } /* original off is stale-freed below */
+    }
+    if (r->nblocks != 0) {
+        memcpy(nt, r->tags, r->nblocks * sizeof *r->tags);
+        memcpy(no, r->off, r->nblocks * sizeof *r->off);
+        memcpy(ns, r->size, r->nblocks * sizeof *r->size);
+    }
+    free(r->tags);
+    free(r->off);
+    free(r->size);
     r->tags = nt;
     r->off = no;
-    if (r->size)
-        r->size = (size_t*)realloc(r->size, ncap * sizeof *r->size);
-    else
-        r->size = (size_t*)malloc(ncap * sizeof *r->size);
-    if (!r->size)
-        return 0;
+    r->size = ns;
     memcpy(r->tags[r->nblocks], tag, 5);
     r->off[r->nblocks] = off;
     r->size[r->nblocks] = size;
@@ -625,17 +635,71 @@ static Model* build_model(Parse* P)
                 for (int c = 0; c < 3; c++)
                     s->colr[c] = (float)((double)bp[c] / 255.0); /* == python c/255 */
                 s->colr[3] = 1.0f;
+                s->colr_bytes[0] = bp[0];
+                s->colr_bytes[1] = bp[1];
+                s->colr_bytes[2] = bp[2];
+                s->colr_bytes[3] = bs >= 4 ? bp[3] : 255;
                 s->has_colr = 1;
             }
             if (block_find(rec, "TIMG", &bp, &bs) && bs > 0) {
                 size_t n = strnlen_n((const char*)bp, bs);
                 if (!dup_assign(&s->timg, (const char*)bp, n))
                     { model_free(m); return NULL; }
+                if (case_insensitive_substring_find(s->timg, "(sequence)") != NULL) {
+                    s->animated_image_sequence = 1;
+                    s->texture_flags |= 0x0080u;
+                    s->has_texture_flags = 1;
+                }
+            }
+            if (block_find(rec, "TFLG", &bp, &bs) && bs >= 2) {
+                s->texture_flags |= be16(bp);
+                s->has_texture_flags = 1;
+            }
+            if (block_find(rec, "FLAG", &bp, &bs) && bs >= 2) {
+                s->material_flags = be16(bp);
+                s->has_material_flags = 1;
+            }
+            if (block_find(rec, "TTEX", &bp, &bs) && bs > 0) {
+                size_t n = strnlen_n((const char*)bp, bs);
+                char* mode = dup_strip((const char*)bp, n);
+                if (mode == NULL) { model_free(m); return NULL; }
+                s->projection_mode = lwo_texture_projection_mode_parse(mode);
+                s->has_projection_mode = 1;
+                free(mode);
+            }
+            if (block_find(rec, "CTEX", &bp, &bs) && bs > 0) {
+                size_t n = strnlen_n((const char*)bp, bs);
+                if (!dup_assign(&s->texture_definition, (const char*)bp, n))
+                    { model_free(m); return NULL; }
             }
             if (block_find(rec, "TSIZ", &bp, &bs) && bs >= 8) {
                 s->tsiz[0] = bef32(bp);
                 s->tsiz[1] = bef32(bp + 4);
+                if (bs >= 12)
+                    s->tsiz[2] = bef32(bp + 8);
                 s->has_tsiz = 1;
+            }
+            if (block_find(rec, "TCTR", &bp, &bs) && bs >= 12) {
+                s->tctr[0] = bef32(bp);
+                s->tctr[1] = bef32(bp + 4);
+                s->tctr[2] = bef32(bp + 8);
+                s->has_tctr = 1;
+            }
+            {
+                static const char* const value_tags[6] = {
+                    "LUMI", "DIFF", "SPEC", "REFL", "GLOS", "TRAN"
+                };
+                float* values[6] = {
+                    &s->luminosity, &s->diffuse, &s->specular,
+                    &s->reflection, &s->glossiness, &s->transparency
+                };
+                int value_index;
+                for (value_index = 0; value_index < 6; ++value_index) {
+                    if (block_find(rec, value_tags[value_index], &bp, &bs) && bs >= 2) {
+                        *values[value_index] = (float)be16(bp) / 256.0f;
+                        s->material_values_mask |= (uint8_t)(1u << value_index);
+                    }
+                }
             }
         }
     }
@@ -663,14 +727,6 @@ static void parse_free(Parse* P)
         buf_free(&P->recs[rec_index].blocks_data);
     }
     free(P->recs);
-}
-
-static const Chunk* chunk_find_first(const Parse* P, const char* tag)
-{
-    for (size_t i = 0; i < P->nchunks; i++)
-        if (strcmp(((const Chunk*)P->chunks_buf.d + i)->tag, tag) == 0)
-            return (const Chunk*)P->chunks_buf.d + i;
-    return NULL;
 }
 
 /* LwoPoints: convert each PNTS triple from big-endian float bits and append
@@ -722,26 +778,23 @@ Model* model_parse(const uint8_t* data, size_t len)
     }
     if (!ok) { parse_free(&P); return NULL; }
 
-    const Chunk* c;
-    if ((c = chunk_find_first(&P, "PNTS"))) {
-        ok = parse_points(&P, c);
-    }
-    /* POLS / SRFS: first occurrence each */
-    if (ok) {
-        const Chunk* pc = chunk_find_first(&P, "POLS");
-        if (pc)
-            ok = parse_pols(&P, pc->pay, pc->size);
-    }
-    if (ok) {
-        const Chunk* sc = chunk_find_first(&P, "SRFS");
-        if (sc)
-            ok = parse_srfs(&P, sc->pay, sc->size);
-    }
-    if (ok) {
-        for (size_t i = 0; i < P.nchunks && ok; i++) {
-            const Chunk* c = (const Chunk*)P.chunks_buf.d + i;
-            if (strcmp(c->tag, "SURF") == 0)
-                ok = parse_surf_chunk(&P, c->pay, c->size);
+    /* The retail FORM walker dispatches chunks in file order.  POLS and
+     * SRFS handlers grow their tables as they go; PNTS replaces the current
+     * point array when another PNTS chunk is encountered. */
+    for (size_t i = 0; i < P.nchunks && ok; i++) {
+        const Chunk* c = (const Chunk*)P.chunks_buf.d + i;
+        if (strcmp(c->tag, "PNTS") == 0) {
+            buf_free(&P.vb);
+            ok = parse_points(&P, c);
+        }
+        else if (strcmp(c->tag, "POLS") == 0) {
+            ok = parse_pols(&P, c->pay, c->size);
+        }
+        else if (strcmp(c->tag, "SRFS") == 0) {
+            ok = parse_srfs(&P, c->pay, c->size);
+        }
+        else if (strcmp(c->tag, "SURF") == 0) {
+            ok = parse_surf_chunk(&P, c->pay, c->size);
         }
     }
     if (!ok) { parse_free(&P); return NULL; }
@@ -1024,6 +1077,7 @@ void model_free(Model* m)
         for (size_t i = 0; i < m->n_surfaces; i++) {
             free(m->surfaces[i].name);
             free(m->surfaces[i].timg);
+            free(m->surfaces[i].texture_definition);
         }
         free(m->surfaces);
     }

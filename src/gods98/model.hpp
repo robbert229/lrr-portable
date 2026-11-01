@@ -10,22 +10,24 @@
  * then 4-byte-tag chunks {tag, u32 BE size, payload, pad to even} while the
  * chunk table stays inside `8 + FORM size`. Everything multi-byte is big
  * endian. The engine ignores everything outside PNTS/POLS/SRFS/SURF (CRVS,
- * VMAP, TEXT, ...) — our loader does too; SURF sub-blocks keep only the
- * vocabulary the engine binds: COLR (material colour), TIMG (texture path)
- * and TSIZ (planar-map scale), everything else parsed over.
+ * VMAP, TEXT, ...) — our loader does too. The portable SURF view retains the
+ * renderer fields COLR/TIMG/CTEX/TTEX, TFLG/FLAG, TSIZ/TCTR, and six scalar
+ * material values. Other SURF blocks are safely skipped.
  *
  * Semantics mirrored (finding 11 §3 + finding 19, corpus-validated by the
  * rrlwo.py converter over all 1,132 shipped models):
- *   PNTS  f32 BE triples, concatenated across chunks             vertices
+ *   PNTS  f32 BE triples; the latest chunk supplies vertices (the retail
+ *         loader replaces its current point array for each PNTS chunk)
  *   POLS  per poly: u16 count, count x i16 indices, u16 surface.
  *         Negative index = the polygon is wound backwards -> `flipped`.
  *         Index origin auto-detected per file: zero anywhere -> 0-based,
  *         else 1-based (1-based forbids zero; 4 shipped files are 0-based).
- *         Surface = signed u16 - 1, clamped at 0.
+ *         Surface = u16 - 1, stored with 16-bit wraparound.
  *   SRFS  NUL-terminated names, even-padded records              surfaces
  *   SURF  records anchored on the SRFS names (`name\0` at an even offset);
- *         last matching record wins per field, first record per name wins
- *         for record visibility.
+ *         the portable view retains color, image/projection, texture flags,
+ *         size/center, and six scalar material values. Last matching record
+ *         wins per field, first record per name wins for visibility.
  *   .uv   text sidecar next to the .lwo: per-surface texture-path lines
  *         replace that surface's TIMG, and per-polygon-corner "u v" blocks
  *         attach per-corner UVs (v negated as stored). Trailing keyframe
@@ -46,15 +48,33 @@ typedef struct ModelSurface {
     char*  name;      /* SRFS name (may be empty) */
     char*  timg;      /* TIMG path, or NULL; the .uv path line replaces it */
     float  colr[4];   /* COLR rgb / 255 with alpha 1 — valid iff has_colr */
+    uint8_t colr_bytes[4]; /* original RGBA bytes, including file alpha */
     int    has_colr;
-    float  tsiz[2];   /* TSIZ planar scale — valid iff has_tsiz */
+    uint16_t texture_flags; /* TFLG bit field; chunks accumulate bits */
+    uint16_t material_flags; /* FLAG bit field */
+    int    has_texture_flags;
+    int    has_material_flags;
+    int    projection_mode; /* TTEX: PLANAR=0, CYLINDRICAL=1, SPHERICAL=2 */
+    int    has_projection_mode;
+    int    animated_image_sequence; /* TIMG name contains `(sequence)` */
+    char*  texture_definition; /* CTEX text, if present */
+    float  tsiz[3];   /* TSIZ planar scale — valid iff has_tsiz */
     int    has_tsiz;
+    float  tctr[3];   /* TCTR texture center — valid iff has_tctr */
+    int    has_tctr;
+    float  luminosity; /* LUMI, normalized from u16 / 256 */
+    float  diffuse;    /* DIFF, normalized from u16 / 256 */
+    float  specular;   /* SPEC, normalized from u16 / 256 */
+    float  reflection; /* REFL, normalized from u16 / 256 */
+    float  glossiness; /* GLOS, normalized from u16 / 256 */
+    float  transparency; /* TRAN, normalized from u16 / 256 */
+    uint8_t material_values_mask; /* bit order follows fields above */
 } ModelSurface;
 
 typedef struct ModelPoly {
     uint16_t* ring;   /* vertex indices, 0-based, ring order */
     uint16_t  count;
-    uint16_t  surface;/* surface index (POLS field - 1, clamped to >= 0) */
+    uint16_t  surface;/* surface index (POLS field - 1, with 16-bit wrap) */
     int       flipped;/* the ring declared any negative index */
     float*    uv;     /* uv_count pairs (u, -v) per corner from the sidecar */
     size_t    uv_count;

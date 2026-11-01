@@ -72,21 +72,23 @@ static void entity_type_config_float_set(void* row, uint32_t offset,
  * when the delimiter is the final byte. Shape has room for the empty pair
  * plus nine source tokens in its reference 0x50-byte table. */
 static int entity_type_config_shape_parse(void* row, const char* shape_text,
-                                          void** owned_table_out)
+                                          TypeConfigTable* table,
+                                          uint32_t row_index)
 {
     char* copy;
     char* token;
     char* cursor;
-    char* shape_table;
+    TypeConfigShapeOwner* owner;
     uint32_t count = 1u;
     size_t length;
 
-    shape_table = (char*)engine_heap_alloc(0x50L);
-    if (owned_table_out != NULL) *owned_table_out = shape_table;
-    entity_type_config_word_set(row, 0x84u, (uint32_t)(size_t)shape_table);
+    if (table == NULL || table->row_owned == NULL ||
+        row_index >= table->capacity || row_index == 0xffffffffu) return 0;
+    owner = (TypeConfigShapeOwner*)calloc(1u, sizeof(*owner));
+    if (owner == NULL) return 0;
+    table->row_owned[row_index] = owner;
+    entity_type_config_word_set(row, 0x84u, row_index + 1u);
     entity_type_config_word_set(row, 0x88u, 1u);
-    if (shape_table == NULL) return 0;
-    memset(shape_table, 0, 0x50u);
     if (shape_text == NULL || *shape_text == '\0') return 1;
 
     length = strlen(shape_text);
@@ -118,19 +120,22 @@ static int entity_type_config_shape_parse(void* row, const char* shape_text,
                 engine_heap_free(copy);
                 return 0;
             }
-            ((char**)shape_table)[count * 2u] = full;
+            owner->strings[owner->string_count] = full;
+            ++owner->string_count;
+            owner->entries[count * 2u] = owner->string_count;
             ++count;
             entity_type_config_word_set(row, 0x88u, count);
             if (comma == NULL) {
                 engine_heap_free(copy);
                 return 0;
             }
-            ((char**)shape_table)[count * 2u - 1u] =
-                string_duplicate(comma + 1);
-            if (((char**)shape_table)[count * 2u - 1u] == NULL) {
+            owner->strings[owner->string_count] = string_duplicate(comma + 1);
+            if (owner->strings[owner->string_count] == NULL) {
                 engine_heap_free(copy);
                 return 0;
             }
+            ++owner->string_count;
+            owner->entries[count * 2u - 1u] = owner->string_count;
         }
 
         if (!separated) break;
@@ -215,6 +220,13 @@ int entity_type_config_row_parse(void* context, void* entry,
     entity_type_config_string_append(ae_path, sizeof(ae_path), ".ae");
     ae = block_open(ae_path);
     if (ae == NULL) return 0;
+    /* FUN_00406990 and FUN_00407d60 look up the "Lego*" record before
+     * accepting the visual.  An existing .ae file with no such record is
+     * still a failed type row in the reference loader. */
+    if (block_subgroup(ae, "Lego*") == NULL) {
+        block_close(ae);
+        return 0;
+    }
     /* These records are only valid once the renderer has built the required
      * scene. The portable backend currently has no .ae scene constructor;
      * accepting a row with a zero scene token would make later named-handle
@@ -230,16 +242,20 @@ int entity_type_config_row_parse(void* context, void* entry,
     if (row_kind == 1u) {
         uint32_t i;
         uint32_t camera_frames;
+        uint32_t camera_null;
         entity_type_config_word_set(destination, 0u, 0u);
         entity_type_config_word_set(destination, 4u, scene);
-        camera_frames = entity_type_config_frames(ae, "CameraNullFrames");
+        camera_null = entity_type_config_named_get(scene,
+            entity_type_config_ae_value(ae, "CameraNullName"), 0);
+        entity_type_config_word_set(destination, 32u, camera_null);
+        camera_frames = camera_null != 0u
+            ? entity_type_config_frames(ae, "CameraNullFrames") : 0u;
         entity_type_config_word_set(destination, 36u, camera_frames);
-        entity_type_config_word_set(destination, 32u,
-            entity_type_config_named_get(scene,
-                entity_type_config_ae_value(ae, "CameraNullName"), 0));
-        entity_type_config_word_set(destination, 40u,
-            entity_type_config_named_get(scene,
-                entity_type_config_ae_value(ae, "CameraFlipDir"), 0));
+        if (camera_null != 0u) {
+            entity_type_config_word_set(destination, 40u,
+                entity_type_config_named_get(scene,
+                    entity_type_config_ae_value(ae, "CameraFlipDir"), 0));
+        }
         entity_type_config_word_set(destination, 44u,
             entity_type_config_named_get(scene,
                 entity_type_config_ae_value(ae, "DrillNullName"), 0));
@@ -316,19 +332,18 @@ int entity_type_config_row_parse(void* context, void* entry,
                 entity_type_config_word_set(destination, 124u, power_scene);
             }
         }
-        void** owned_shape = NULL;
         TypeConfigTable* table = (TypeConfigTable*)context;
+        uint32_t row_index = 0xffffffffu;
         if (table != NULL && table->row_owned != NULL &&
             table->rows != NULL && table->row_stride != 0u) {
             size_t row_offset = (size_t)((char*)destination -
                                           (char*)table->rows);
-            size_t row_index = row_offset / table->row_stride;
             if (row_offset % table->row_stride == 0u &&
-                row_index < table->capacity)
-                owned_shape = &table->row_owned[row_index];
+                row_offset / table->row_stride < table->capacity)
+                row_index = (uint32_t)(row_offset / table->row_stride);
         }
         if (!entity_type_config_shape_parse(destination,
-                entity_type_config_ae_value(ae, "Shape"), owned_shape)) {
+                entity_type_config_ae_value(ae, "Shape"), table, row_index)) {
             block_close(ae);
             return 0;
         }

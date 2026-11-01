@@ -13,13 +13,46 @@
 typedef struct TypeConfigTable {
     void* rows;
     char** names;
-    /* Native pointers for per-row allocations whose reference slots are
-     * fixed-width dwords (currently BuildingType Shape tables). */
+    /* Native ownership records for data referenced through fixed-width
+     * dword tokens in the original rows (currently BuildingType Shape). */
     void** row_owned;
     uint32_t count;
     uint32_t capacity;
     uint32_t row_stride;
 } TypeConfigTable;
+
+/* The original BuildingType Shape field points at a 0x50-byte table of ten
+ * pairs of 32-bit pointers. Keep that exact layout in entries, and retain the
+ * host pointers separately so 64-bit builds neither truncate pointers nor
+ * overwrite adjacent entries. Each nonzero entry word is a 1-based index
+ * into strings; the row's +0x84 word is a 1-based row index in TypeConfigTable. */
+typedef struct TypeConfigShapeOwner {
+    uint32_t entries[20];
+    char* strings[18];
+    uint32_t string_count;
+} TypeConfigShapeOwner;
+
+static inline const uint32_t* type_config_shape_table_resolve(
+    const TypeConfigTable* table, uint32_t table_token)
+{
+    const TypeConfigShapeOwner* owner;
+    if (table == NULL || table_token == 0u ||
+        table_token > table->count || table->row_owned == NULL) return NULL;
+    owner = (const TypeConfigShapeOwner*)table->row_owned[table_token - 1u];
+    return owner != NULL ? owner->entries : NULL;
+}
+
+static inline const char* type_config_shape_string_resolve(
+    const TypeConfigTable* table, uint32_t table_token, uint32_t string_token)
+{
+    const TypeConfigShapeOwner* owner;
+    if (table == NULL || table_token == 0u ||
+        table_token > table->count || table->row_owned == NULL ||
+        string_token == 0u) return NULL;
+    owner = (const TypeConfigShapeOwner*)table->row_owned[table_token - 1u];
+    if (owner == NULL || string_token > owner->string_count) return NULL;
+    return owner->strings[string_token - 1u];
+}
 
 typedef struct TypeConfigHooks {
     uint32_t (*entry_count)(void* context, void* section);
@@ -61,19 +94,14 @@ static inline void type_config_table_release(TypeConfigTable* table)
     if (table == NULL) return;
     if (table->row_owned != NULL) {
         for (i = 0; i < table->count; ++i) {
-            char** shape = (char**)table->row_owned[i];
-            uint32_t shape_count = 0u;
+            TypeConfigShapeOwner* shape =
+                (TypeConfigShapeOwner*)table->row_owned[i];
             uint32_t j;
             if (shape == NULL) continue;
-            memcpy(&shape_count,
-                   (char*)table->rows + (size_t)i * table->row_stride + 0x88u,
-                   sizeof(shape_count));
-            if (shape_count > 10u) shape_count = 10u;
-            for (j = 1u; j < shape_count; ++j) {
-                engine_heap_free(shape[j * 2u]);
-                engine_heap_free(shape[j * 2u + 1u]);
-            }
-            engine_heap_free(shape);
+            if (shape->string_count > 18u) shape->string_count = 18u;
+            for (j = 0u; j < shape->string_count; ++j)
+                engine_heap_free(shape->strings[j]);
+            free(shape);
         }
         free(table->row_owned);
     }
