@@ -10,6 +10,7 @@
 #include "heap.hpp"
 #include "resource.hpp"
 #include "string.hpp"
+#include "surface.hpp"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -44,8 +45,9 @@ static int s_model_resource_secondary_count;
 /* DAT_005446b8: the fallback prefix the resolver retries with; installed by
  * the port through model_resource_fallback_prefix_set. */
 static const char* s_model_resource_fallback_prefix;
-/* FUN_00480900 instance-create seam: called as (cached_record, flags) on
- * every table hit; the engine installs its instantiation hook here. */
+/* Portable notification for a parsed-model cache hit. It is not the
+ * FUN_00480900 source record: that routine expects a 13-dword resource
+ * template with per-entry 0x70-byte renderer records, absent from Model. */
 typedef void (*ModelResourceInstanceHook)(void* record, void* flags);
 static ModelResourceInstanceHook s_model_resource_instance_hook;
 void model_resource_instance_hook_set(ModelResourceInstanceHook hook)
@@ -327,10 +329,17 @@ static int dup_assign(char** dst, const char* src, size_t len)
 static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
 {
     size_t p = 0;
+    /* Each retail SRFS dispatch allocates a fresh surface-name table and
+     * replaces the caller's pointer/count. Earlier tables are leaked by the
+     * binary; release the old names here while preserving the replacement
+     * semantics. */
+    for (size_t i = 0; i < P->nsname; ++i)
+        free(P->sname[i]);
+    P->nsname = 0;
     while (p < size) {
         const uint8_t* e = (const uint8_t*)memchr(pay + p, 0, size - p);
         if (!e)
-            break;
+            return 0;
         /* LwoSurfaceNames duplicates through the NUL, without trimming. */
         size_t length = (size_t)(e - (pay + p));
         char* nm = (char*)malloc(length + 1);
@@ -347,6 +356,8 @@ static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
         }
         P->sname[P->nsname++] = nm;
         p = ((size_t)(e - pay) + 2) & ~(size_t)1;
+        if (p > size)
+            return 0;
     }
     return 1;
 }
@@ -362,16 +373,27 @@ static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
 static int parse_pols(Parse* P, const uint8_t* d, size_t size)
 {
     size_t p = 0;
+    /* The FORM walker dispatches every POLS chunk to the same three output
+     * fields. Retail starts its polygon index at zero for each dispatch, so a
+     * later POLS chunk replaces the previous polygon table and count instead
+     * of appending to it. Release the previous portable table before parsing
+     * this chunk; the retail code leaks the superseded allocation. */
+    for (size_t i = 0; i < P->npolys; ++i)
+        free(P->polys[i].ring);
+    free(P->polys);
+    P->polys = NULL;
+    P->npolys = 0;
+    P->saw_zero = 0;
     while (p < size) {
         /* The retail reader works from a size + 0x10 scratch buffer and does
          * not validate each read.  Keep the equivalent well-formed record
          * handling while refusing to read beyond this caller-owned buffer. */
         if (size - p < 2)
-            break;
+            return 0;
         size_t cnt = (uint16_t)((uint16_t)d[p] * 0x100u + d[p + 1]);
         p += 2;
         if (cnt > (size - p) / 2 || size - p - cnt * 2 < 2)
-            break;
+            return 0;
         if (P->npolys >= ((size_t)-1) / sizeof(*P->polys) - 1)
             return 0;
         PolyRec* grown;
@@ -409,6 +431,29 @@ static int parse_pols(Parse* P, const uint8_t* d, size_t size)
     return 1;
 }
 
+/* The retail CRVS handler consumes records shaped as
+ * {u16 index_count, index_count * u16, two trailing u16 values}, then frees
+ * its temporary copy without retaining curve data. A truncated final record
+ * is bounded here and discarded; the retail scratch buffer's zero tail lets
+ * it finish scanning without an out-of-bounds read. */
+static int parse_curves_payload(const uint8_t* data, size_t size)
+{
+    size_t offset = 0u;
+    if (data == NULL && size != 0u) return 1;
+    while (size - offset >= 2u) {
+        size_t index_count = (size_t)be16(data + offset);
+        size_t index_bytes;
+        offset += 2u;
+        if (index_count > ((size_t)-1) / 2u) break;
+        index_bytes = index_count * 2u;
+        if (index_bytes > size - offset) break;
+        offset += index_bytes;
+        if (size - offset < 4u) break;
+        offset += 4u;
+    }
+    return 1;
+}
+
 /* --- SURF ---------------------------------------------------------------------- */
 
 static int surfrec_reserve(Parse* P)
@@ -431,13 +476,13 @@ static int surfrec_addblock(Parse* P, SurfRec* r, const char* tag,
     size_t off = r->blocks_data.len;
     if (!buf_append(&r->blocks_data, pay, size))
         return 0;
-    for (size_t i = 0; i < r->nblocks; i++) {
-        if (strcasecmp(r->tags[i], tag) == 0) {
-            r->off[i] = off;
-            r->size[i] = size;
-            return 1;
-        }
-    }
+    /* Keep every subchunk occurrence in file order. Most settings overwrite
+     * earlier values, but some retail paths accumulate repeated TFLG bits or
+     * remember a sequence marker from any TIMG occurrence. block_find() can
+     * still select the last occurrence for ordinary replacement fields. */
+    if (r->nblocks == r->blocks_cap &&
+        r->blocks_cap > ((size_t)-1) / 2 / sizeof *r->tags)
+        return 0;
     size_t ncap = r->blocks_cap ? r->blocks_cap * 2 : 8;
     char (*nt)[5] = (char (*)[5])malloc(ncap * sizeof *r->tags);
     size_t* no = (size_t*)malloc(ncap * sizeof *r->off);
@@ -469,14 +514,23 @@ static int surfrec_addblock(Parse* P, SurfRec* r, const char* tag,
 
 static int block_find(const SurfRec* r, const char* tag, const uint8_t** out, size_t* nout)
 {
+    int found = 0;
+    const uint8_t* found_data = NULL;
+    size_t found_size = 0;
     for (size_t i = 0; i < r->nblocks; i++) {
         if (strcasecmp(r->tags[i], tag) == 0) {
-            *out = r->blocks_data.d + r->off[i];
-            *nout = r->size[i];
-            return 1;
+            /* LwoSurfaceSettings walks every subchunk and assigns fields as
+             * it goes, so a repeated tag replaces the prior value. */
+            found_data = r->blocks_data.d + r->off[i];
+            found_size = r->size[i];
+            found = 1;
         }
     }
-    return 0;
+    if (found) {
+        *out = found_data;
+        *nout = found_size;
+    }
+    return found;
 }
 
 /* LwoSurfaceSettings is called once for each SURF chunk. Its payload starts
@@ -491,10 +545,10 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
     SurfRec* r;
 
     if (size == 0)
-        return 1;
+        return 0;
     terminator = (const uint8_t*)memchr(d, 0, size);
     if (terminator == NULL)
-        return 1;
+        return 0;
     name_length = (size_t)(terminator - d);
     name = (char*)malloc(name_length + 1);
     if (name == NULL)
@@ -510,13 +564,20 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
     r->name = name;
 
     q = (name_length + 2) & ~(size_t)1;
+    if (q > size) {
+        ++P->nrecs;
+        return 0;
+    }
     while (q + 6 <= size) {
         const uint8_t* bt = d + q;
         size_t bsz = be16(d + q + 4);
         char tag[5];
         size_t a, b, tn;
-        if (bsz > size - q - 6)
-            break;
+        if (bsz > size - q - 6 ||
+            (bsz & 1u) > size - q - 6 - bsz) {
+            ++P->nrecs;
+            return 0;
+        }
         memcpy(tag, bt, 4);
         tag[4] = 0;
         a = 0;
@@ -537,6 +598,10 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
             }
         }
         q += 6 + bsz + (bsz & 1);
+    }
+    if (q != size) {
+        ++P->nrecs;
+        return 0;
     }
     ++P->nrecs;
     return 1;
@@ -594,13 +659,22 @@ static Model* build_model(Parse* P)
         }
     }
 
-    /* Each SURF chunk produces a fresh record. The retail loader copies the
-     * whole matching record onto every case-insensitive SRFS match, so a
-     * later SURF chunk for the same name replaces the earlier settings. */
+    /* Each SURF chunk produces a fresh record. The retail loader scans those
+     * records from the beginning for each SRFS name and copies the first
+     * case-insensitive match; later records with that name are ignored. */
     for (size_t r = 0; r < P->nrecs; r++) {
         const SurfRec* rec = &P->recs[r];
         const uint8_t* bp;
         size_t bs;
+        int earlier_same_name = 0;
+        for (size_t prior = 0; prior < r; ++prior) {
+            if (strcasecmp(P->recs[prior].name, rec->name) == 0) {
+                earlier_same_name = 1;
+                break;
+            }
+        }
+        if (earlier_same_name)
+            continue;
         for (size_t i = 0; i < P->nsname; i++) {
             if (strcasecmp(P->sname[i], rec->name) != 0)
                 continue;
@@ -626,15 +700,41 @@ static Model* build_model(Parse* P)
                 size_t n = strnlen_n((const char*)bp, bs);
                 if (!dup_assign(&s->timg, (const char*)bp, n))
                     { model_free(m); return NULL; }
-                if (case_insensitive_substring_find(s->timg, "(sequence)") != NULL) {
-                    s->animated_image_sequence = 1;
-                    s->texture_flags |= 0x0080u;
-                    s->has_texture_flags = 1;
+                for (size_t bi = 0; bi < rec->nblocks; ++bi) {
+                    if (strcasecmp(rec->tags[bi], "TIMG") == 0) {
+                        const uint8_t* image_data =
+                            rec->blocks_data.d + rec->off[bi];
+                        size_t image_size = rec->size[bi];
+                        char* image_text = (char*)malloc(image_size + 1u);
+                        if (image_text == NULL) {
+                            model_free(m);
+                            return NULL;
+                        }
+                        memcpy(image_text, image_data, image_size);
+                        image_text[image_size] = '\0';
+                        if (case_insensitive_substring_find(
+                                image_text, "(sequence)") != NULL) {
+                            s->animated_image_sequence = 1;
+                        }
+                        free(image_text);
+                    }
                 }
             }
-            if (block_find(rec, "TFLG", &bp, &bs) && bs >= 2) {
-                s->texture_flags |= be16(bp);
-                s->has_texture_flags = 1;
+            {
+                int found_texture_flags = 0;
+                uint16_t texture_flags = 0;
+                for (size_t bi = 0; bi < rec->nblocks; ++bi) {
+                    if (strcasecmp(rec->tags[bi], "TFLG") == 0 &&
+                        rec->size[bi] >= 2u) {
+                        texture_flags |= be16(
+                            rec->blocks_data.d + rec->off[bi]);
+                        found_texture_flags = 1;
+                    }
+                }
+                if (found_texture_flags) {
+                    s->texture_flags |= texture_flags;
+                    s->has_texture_flags = 1;
+                }
             }
             if (block_find(rec, "FLAG", &bp, &bs) && bs >= 2) {
                 s->material_flags = be16(bp);
@@ -715,6 +815,8 @@ static void parse_free(Parse* P)
 // FUNCTION: LEGORR 0x0048c210
 static int parse_points(Parse* P, const Chunk* c)
 {
+    if (c->size % 12u != 0u)
+        return 0;
     size_t nverts = c->size / 12;
     float* verts = NULL;
     if (nverts != 0) {
@@ -792,6 +894,9 @@ Model* model_parse(const uint8_t* data, size_t len)
         }
         else if (strcasecmp(c->tag, "POLS") == 0) {
             ok = parse_pols(&P, c->pay, c->size);
+        }
+        else if (strcasecmp(c->tag, "CRVS") == 0) {
+            ok = parse_curves_payload(c->pay, c->size);
         }
         else if (strcasecmp(c->tag, "SRFS") == 0) {
             ok = parse_srfs(&P, c->pay, c->size);
@@ -1068,6 +1173,16 @@ void model_free(Model* m)
 {
     if (!m)
         return;
+    model_render_dispatch_model_remove(m);
+    free(m->render_source);
+    m->render_source = NULL;
+    if (m->material_bindings != NULL) {
+        model_texture_bindings_release(m->material_bindings,
+                                       (uint32_t)m->material_binding_count);
+        free(m->material_bindings);
+        m->material_bindings = NULL;
+        m->material_binding_count = 0u;
+    }
     free(m->verts);
     if (m->polys) {
         for (size_t i = 0; i < m->n_polys; i++) {
@@ -1087,24 +1202,22 @@ void model_free(Model* m)
     free(m);
 }
 
-/* Port adapter for LwoModelEntryLoad (FUN_004809e0): the reference copies
- * the joined path
- * into a 260-byte stack buffer, truncates it just after the last backslash
- * (an empty directory when the path carries no separator at all), opens the
- * file from the full path, and drives the record loader (FUN_00480870) and
- * the MaterialPass stream loader (FUN_00480ac0) with the directory buffer,
- * the flags word, and the caller context. This helper only opens the
- * portable parsed-model representation. */
+/* LwoModelEntryLoad (FUN_004809e0) derives a directory prefix, opens and
+ * parses the model, then binds each parsed surface's texture through the
+ * existing host resource/cache path. The task-record and renderer-object
+ * inputs still have no portable owner. The bounded copy preserves the valid
+ * path prefix behavior without reproducing the retail stack overwrite. */
+// FUNCTION: LEGORR 0x004809e0
 Model* lwo_model_entry_load(const char* path, void* flags, void* context)
 {
     char directory[260];
     size_t length;
     size_t last_separator;
     size_t i;
+    Model* model;
 
-    (void)flags;    /* the reference threads these into the unported
-                     * record/MaterialPass loaders */
-    (void)context;
+    (void)flags;    /* task callback flags have no host material equivalent */
+    (void)context;  /* renderer object creation remains a backend operation */
     if (path == NULL) return NULL;
     length = strlen(path);
     if (length >= sizeof(directory)) length = sizeof(directory) - 1u;
@@ -1112,9 +1225,39 @@ Model* lwo_model_entry_load(const char* path, void* flags, void* context)
     directory[length] = '\0';
     last_separator = 0u;
     for (i = 0; i < length; ++i)
-        if (directory[i] == '\\') last_separator = i + 1u;
+        if (directory[i] == '\\' || directory[i] == '/')
+            last_separator = i + 1u;
     directory[last_separator] = '\0';   /* keeps the backslash, else empties */
-    return model_open(path);
+    model = model_open(path);
+    if (model != NULL) {
+        model->render_source = (ModelRenderSourceRecord*)calloc(
+            1u, sizeof(*model->render_source));
+        if (model->render_source != NULL) {
+            model->render_source->model = model;
+            memcpy(model->render_source->path_prefix, directory,
+                   strlen(directory) + 1u);
+        }
+    }
+    if (model != NULL && model->n_surfaces != 0u &&
+        model->n_surfaces <= (size_t)(0x7fffffffL /
+                                      sizeof(ModelTextureBinding))) {
+        size_t bytes = model->n_surfaces * sizeof(ModelTextureBinding);
+        ModelTextureBinding* bindings =
+            (ModelTextureBinding*)calloc(1u, bytes);
+        if (bindings != NULL && bind_model_textures_for_model(
+                directory, model, bindings, 0)) {
+            model->material_bindings = bindings;
+            model->material_binding_count = model->n_surfaces;
+        }
+        else {
+            if (bindings != NULL) {
+                model_texture_bindings_release(bindings,
+                    (uint32_t)model->n_surfaces);
+                free(bindings);
+            }
+        }
+    }
+    return model;
 }
 
 /* The reference's model resolver joins prefix and path with the raw
@@ -1137,9 +1280,11 @@ static void model_resource_path_join(char* output, size_t output_size,
     output[position] = '\0';
 }
 
-/* Port adapter for ModelResourceResolveOrLoad. Its path and cache flow
- * mirrors the target, but it returns a parsed Model rather than the
- * renderer-owned resource instance created by the retail loader. */
+/* ModelResourceResolveOrLoad (FUN_004885c0): concatenate prefix/path, use
+ * the primary case-insensitive cache, load and cache on a miss, then retry
+ * through the shared model root. The renderer instance operation remains a
+ * backend seam; the portable cache owns parsed Model records. */
+// FUNCTION: LEGORR 0x004885c0
 Model* model_resource_resolve_or_load(const char* prefix, const char* path,
                                       void* flags, void* context)
 {
@@ -1193,6 +1338,9 @@ Model* model_resource_resolve_or_load(const char* prefix, const char* path,
 void model_resource_cache_clear(void)
 {
     int i;
+    /* Queued render entries borrow cached Model pointers until the next
+     * DDiSceneDrawEnd pass; drop them before releasing the model records. */
+    model_render_dispatch_queue_clear();
     for (i = 0; i < s_model_resource_primary_count; ++i) {
         engine_heap_free(s_model_resource_primary[i].key);
         model_free((Model*)s_model_resource_primary[i].value);
@@ -1330,3 +1478,47 @@ int lwo_texture_projection_mode_parse(const char* name)
     if (i == 3u) i = 0u; /* corpus 0x48c16f-0x48c174 resets exhausted scan */
     return (int)i;
 }
+
+namespace unported_ledger_stubs {
+// LwoModelEntryLoad (implemented in gods98/model.cpp)
+Model* ledger_stub_004809e0_LwoModelEntryLoad(const char* path, void* flags,
+                                              void* context)
+{
+    return lwo_model_entry_load(path, flags, context);
+}
+
+
+// ModelResourceResolveOrLoad (implemented in gods98/model.cpp)
+Model* ledger_stub_004885c0_ModelResourceResolveOrLoad(const char* prefix,
+                                                       const char* path,
+                                                       void* flags,
+                                                       void* context)
+{
+    return model_resource_resolve_or_load(prefix, path, flags, context);
+}
+
+
+// LwoCurves
+// FUNCTION: LEGORR 0x0048c360
+uint32_t ledger_stub_0048c360_LwoCurves(GameFileHandle* stream,
+                                         int byte_count)
+{
+    uint8_t* data;
+    if (stream == NULL || byte_count < 0 || byte_count > 0x7ffffff0) return 0u;
+    data = (uint8_t*)engine_heap_alloc((long)byte_count + 16L);
+    if (data == NULL) return 0u;
+    memset(data, 0, (size_t)byte_count + 16u);
+    if (byte_count != 0) {
+        /* FUN_0048c360 ignores WadFileRead's element count. The allocation
+         * is pre-zeroed with a 16-byte tail, so a short/truncated read still
+         * proceeds through the bounded record walk and returns success. */
+        (void)wad_file_read(data, byte_count, 1, stream);
+    }
+
+    (void)parse_curves_payload(data, (size_t)byte_count);
+    engine_heap_free(data);
+    return 1u;
+}
+
+
+} // namespace unported_ledger_stubs

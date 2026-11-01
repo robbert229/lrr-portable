@@ -218,17 +218,17 @@ fail:
 // FUNCTION: LEGORR 0x00478e60
 BlockFile* block_open(const char* path)
 {
-    Resource* res = resource_open(path, RESOURCE_AUTO);
-    if (res == NULL) {
+    int32_t length = 0;
+    char* text = (char*)read_whole_file(path, &length);
+    BlockFile* bf;
+    if (text == NULL || length < 0) {
+        if (text != NULL) {
+            engine_heap_free(text);
+        }
         return NULL;
     }
-    int32_t n = resource_read(res);
-    if (n <= 0) {
-        resource_free(res);
-        return NULL;
-    }
-    BlockFile* bf = block_parse((char*)res->data, (size_t)n);
-    resource_free(res);
+    bf = block_parse(text, (size_t)length);
+    engine_heap_free(text);
     return bf;
 }
 

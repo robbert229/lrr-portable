@@ -86,6 +86,7 @@ int  platform_window_height(PlatformWindow* win);
 /* Read the active window's cursor in client-relative coordinates. Returns
  * nonzero when the backend can produce a sample. */
 int  platform_cursor_position_get(int* x, int* y);
+void platform_cursor_position_set(int x, int y);
 
 /* Pump platform events into `out` (up to cap); returns the number written.
  * A PLATFORM_EVENT_QUIT entry counts toward that total. */
@@ -110,6 +111,11 @@ void           platform_audio_close(PlatformAudio* a);
  * Hz. Returns 0 on success, -1 on failure (device/stream unavailable). */
 int  platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
                          int sample_rate);
+/* Submit a one-shot owned by a host-width voice token. Backends with
+ * independently stoppable submissions retain the token for selective stop. */
+int  platform_audio_play_voice(PlatformAudio* a, const int16_t* pcm,
+                               int frames, int sample_rate, uintptr_t voice);
+void platform_audio_stop_voice(PlatformAudio* a, uintptr_t voice);
 
 /* Play one shot: interleaved L,R 16-bit signed PCM (stereo). */
 int  platform_audio_play_stereo(PlatformAudio* a, const int16_t* lr,

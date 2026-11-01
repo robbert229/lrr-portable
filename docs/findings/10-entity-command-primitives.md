@@ -422,13 +422,18 @@ the `DAT_00502bd8[type]` base table (stride 336 / `0x150`), the minion
 static templates (`0x4a98f0`/`0x4a9a40`/`0x4a9b90`) the switch assigns,
 and the `+0x144`/`+0xcc`/`+0x24`/`+0x148` accessors —
 but the *instance fill* stays open: the shipped templates are all-zero
-apart from a leading `0x30` dword and take their real values from config
-at runtime. Of what rides these, the speed table `+0x24 + terrain*4` is now
-ported as the game-wide `stats_speed_sec` mirror (§"Per-terrain mover
-speed"), and the minion task state + the permitted-activity capacity
-(`+0xcc`) as `EntitySlot.task_state`/`activity_cap`; the per-type instance
-stats fill, the state word `+0x144` behind `FUN_00469e60`, and the runner
-scale constant (`0x49e3b4`, unrecorded) stay TODO.
+apart from a leading `0x30` dword. The `+0xcc` permitted-activity capacity
+is now populated in the port from a same-name Stats row's
+`NumOfToolsCanCarry` field when that row is available; otherwise the static
+template's zero capacity is preserved. Finding 131 proves this field for
+selected instance Stats records; the checked-in decompile does not show a
+copy into these static templates, so applying the same-name row here is a
+port-side config adapter. Of what rides these, the speed table
+`+0x24 + terrain*4` is
+now ported as the game-wide `stats_speed_sec` mirror (§"Per-terrain mover
+speed"). The other static-template fields, the per-type instance stats
+fill, the state word `+0x144` behind `FUN_00469e60`, and the runner scale
+constant (`0x49e3b4`, unrecorded) stay TODO.
 The old "`ent+0xbc` record list" TODO resolves away: `param_1[0xbc]` is
 just the dword-indexed view of `ent + 0x2f0`, i.e. the *same* command
 chain the port mirrors (kinds: 8=move, 12=tile flags, 0xE=idle, `0x17`;
@@ -459,9 +464,9 @@ Permitted-activity list (`+0x370` ids / `+0x384` count; closed 2026-10-21):
   3 for reinforce (7), else 0; `FUN_0044c530` wraps that behind the type-2
   gate and the cheat-word branch (0x43c90b) reads it from the list.
 - `FUN_0044b370` (the install appender, e.g. the append write at `0x44b44a`):
-  capacity is `FUN_0046a060(ent)` = `*(state + 0xcc)` — the stats-block
-  instance fill stays TODO (the port models `ctx->stats_activity_cap`,
-  defaulting to the span width); the setter's `+0x3f4 = 0` write has no
+  capacity is `FUN_0046a060(ent)` = `*(state + 0xcc)` — instance rows read
+  the loaded Stats word and static task states bind the matching
+  `NumOfToolsCanCarry` value in the port when available; the setter's `+0x3f4 = 0` write has no
   port-side reader (TODO(corpus)); it sets `+0x3ec` bit `0x4` iff the list
   already carries a can-do value or the grant is special (`FUN_0044b350` =
   the {4,5,7} predicate). A special grant *replaces* the first special entry
@@ -532,12 +537,15 @@ selector:
   `FUN_00469cc0` `+0x24` per-terrain speed table, `FUN_00469e80` `+0x148`.
 - **Templates**: the three static blocks are 336 bytes (stride `0x150`,
   equal to the instance-state stride), shipped as a leading dword `0x30`
-  followed by zeroes; the real capacity/state values are filled at runtime
-  (config-driven — the shipped file carries none). The port models them as
+  followed by zeroes. The source does not show writes to these blocks. The
+  port models their selector as
   `EntitySlot.task_state` (`ai_minion_state_for` mirrors the selector) plus
-  `EntitySlot.activity_cap` (the state's `+0xcc`, `ai_activity_cap`), and
-  `entity_create` assigns both to static-template spawns; the appender's
-  per-entity capacity gate (`FUN_0046a060`) is what consumes it.
+  `EntitySlot.activity_cap` (the state's `+0xcc`, `ai_activity_cap`). Creation
+  maps a same-name Stats row to that capacity when available; otherwise it
+  preserves the zero-template value. The appender's per-entity capacity gate
+  (`FUN_0046a060`) consumes it. This mapping is a port-side adapter based on
+  the proven instance-record field source; the decompile shows no config write
+  into static templates.
 
 The deferred-grant flag (`+0x3e4` bit `0x40`) is *not* raised anywhere on
 this branch (bounded TODO — see the permitted-activity call-sites note).

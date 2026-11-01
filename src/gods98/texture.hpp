@@ -48,6 +48,32 @@ typedef struct TextureSurface {
  * else (including RLE). Caller owns the returned surface. */
 TextureSurface* texture_decode(const uint8_t* data, uint32_t size);
 
+/* Retail IndexedBitmapPaletteDataPrepare @ 0x00489c30 writes this 15-slot
+ * layout. On the 32-bit target it is exactly 0x3c bytes; pointer members are
+ * widened on portable 64-bit builds. `palette` is a zero-filled 256-entry
+ * table of four-byte palette values with red/blue swapped, owned by caller. */
+typedef struct IndexedBitmapPaletteData {
+    int32_t width;             /* +0x00 */
+    int32_t height;            /* +0x04 */
+    uint32_t flag_08;           /* +0x08 = 1 */
+    uint32_t flag_0c;           /* +0x0c = 1 */
+    uint32_t bits_per_pixel;    /* +0x10 */
+    uint32_t indexed_flag;      /* +0x14: 0 for 8-bit, 1 otherwise */
+    uint32_t scanline_stride;   /* +0x18 */
+    const uint8_t* pixels;      /* +0x1c */
+    uint32_t reserved_20;       /* +0x20 = 0 */
+    uint32_t channel_fields[4]; /* +0x24..+0x30; 8-bit = 0xfc each */
+    uint32_t palette_count;     /* +0x34 */
+    uint32_t* palette;          /* +0x38 */
+} IndexedBitmapPaletteData;
+typedef char IndexedBitmapPaletteDataTargetSizeCheck[
+    sizeof(void*) == 4u && sizeof(IndexedBitmapPaletteData) != 0x3cu
+        ? -1 : 1];
+void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap,
+                                         uint32_t unused,
+                                         IndexedBitmapPaletteData* output);
+void indexed_bitmap_palette_data_release(IndexedBitmapPaletteData* data);
+
 /* Portable adapter that opens and decodes a named image into TextureSurface;
  * retail BitmapSurfaceLoad uses renderer-owned Direct3D surface state. */
 TextureSurface* image_surface_load(const char* name, uint32_t flags,
@@ -76,6 +102,13 @@ typedef struct TextureReleaseRecord {
     void* texture;
 } TextureReleaseRecord;
 void texture_release_record(TextureReleaseRecord* record); /* 0x00474710 */
+/* Host record produced by the software TextureSurfaceCreate mode-1 path.
+ * Mode 0 uses IDirect3DRM3::LoadTexture and a texture-owned indexed-surface
+ * table, which the path/name CPU cache below does not represent. The release
+ * helper recognizes only records allocated by mode 1; ordinary renderer
+ * records keep the COM release behavior above. */
+void* texture_surface_create_host_record(const char* name, uint32_t mode);
+int texture_surface_create_host_record_release(void* record);
 
 /* ResourceRecordAddRef's software equivalent of IDirectDrawSurface
  * SetColorKey(DDCKEY_SRCBLT, range). */
@@ -87,6 +120,13 @@ void texture_free(TextureSurface* t);
 
 /* Drop every cached surface. */
 void texture_cache_clear(void);
+
+/* XfTextureNameFormat (FUN_00473c60): the retail helper writes and returns a
+ * shared registration-name buffer. `texture_record` carries the kind and
+ * renderer-facing frame handles; `frame_index` is optional. */
+const char* xf_texture_name_format(void* texture_record,
+                                  const char* name_base,
+                                  const int* frame_index);
 
 /* FNV-1a over the canonical RGBA byte stream (R,G,B,A per pixel, top row
  * first) — deterministic across machines; the validation test compares this

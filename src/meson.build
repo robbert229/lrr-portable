@@ -31,7 +31,9 @@ else
 endif
 
 executable('LegoRR',
-  sources : ['main.cpp', platform_entry, extra_sources],
+  sources : ['main.cpp', 'game/seh_runtime.cpp', 'game/dependency_grid.cpp',
+             'game/screen_pick.cpp',
+             platform_entry, extra_sources],
   include_directories : [proj_inc, miniwin_inc],
   dependencies : [platsub_deps, gods98_dep, game_dep],
   install : true,

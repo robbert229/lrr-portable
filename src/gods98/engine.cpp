@@ -12,11 +12,13 @@
 #include "audio.hpp"
 #include "media.hpp"
 #include "resource.hpp"
+#include "heap.hpp"
 #include "scene_resources.hpp"
 #include "view.hpp"
 #include "game/frontend.hpp"
 #include "game/entity.hpp"
 #include "game/objective.hpp"
+#include "game/port_loop_ports.hpp"
 #include "heap.hpp"
 #include <ctype.h>
 #include <stdlib.h>
@@ -46,6 +48,39 @@ static int32_t s_application_mode;
 static EngineContext* s_engine_current_context;
 static EngineKeepRunningHook s_keep_running_hook;
 static void* s_keep_running_user;
+static EngineTutorialDispatchHook s_tutorial_dispatch_hook;
+static void* s_tutorial_dispatch_context;
+
+void engine_tutorial_dispatch_hook_set(EngineTutorialDispatchHook hook,
+                                       void* context)
+{
+    s_tutorial_dispatch_hook = hook;
+    s_tutorial_dispatch_context = context;
+}
+static unported_ledger_stubs::GlobalSubsystemResetState*
+    s_global_subsystem_reset_state;
+
+void unported_ledger_stubs::global_subsystem_reset_state_bind(
+    unported_ledger_stubs::GlobalSubsystemResetState* state)
+{
+    s_global_subsystem_reset_state = state;
+}
+
+// FUNCTION: LEGORR 0x004263c0
+void unported_ledger_stubs::ledger_stub_004263c0_GlobalSubsystemStateReset(
+    void)
+{
+    static const int mode = 1;
+    unported_ledger_stubs::GlobalSubsystemResetState* state =
+        s_global_subsystem_reset_state;
+    (void)engine_mode_set_target(&mode);
+    if (state != NULL) {
+        if (state->word_00503618 != NULL) *state->word_00503618 = 0u;
+        text_buffer_reset(state->text_buffer);
+    }
+    engine_global_state_flags_bits6_and_9_set_target(0, 0);
+    engine_global_state_flags_bit7_set_target(0);
+}
 
 uint32_t* engine_current_feature_word(void)
 {
@@ -210,7 +245,6 @@ int EngineTick(EngineContext* ctx, float dt)
      *    0xb,5,7,10 interleaved with the named manager tickers. Stub table. */
     if ((ctx->state & ENGINE_STATE_INDEXED_SUBSYS) != 0) {
         EngineManagerDispatch(ctx, dt);
-        timed_status_and_event_tick(dt);
     }
 
     /* 8. Render begin/end pairs, world-draw vs editor pass, and the
@@ -220,6 +254,14 @@ int EngineTick(EngineContext* ctx, float dt)
     /* 9. Air-supply beat mechanic (corpus tail): fires the air-low/empty
      *    notifications and loops SND_AirBeat; writes air_prev back. */
     EngineAirBeat(ctx, scale);
+
+    /* TutorialScriptCommandDispatch follows the manager/render tick cluster
+     * in the corpus and is disabled by DAT_00556ecc bit 0x01000000. Keep its
+     * game-owned interpreter behind a narrow callback so EngineTick does not
+     * depend on the game layer. */
+    if ((ctx->state & 0x01000000u) == 0u &&
+        s_tutorial_dispatch_hook != NULL)
+        s_tutorial_dispatch_hook(dt, s_tutorial_dispatch_context);
 
     /* Exit timer counts down in scaled time (corpus: DAT_00556efc -= scale). */
     s_panel_highlight_timer = s_panel_highlight_timer - scale;
@@ -410,14 +452,23 @@ void EngineShutdown(EngineContext* ctx)
     media_cd_watchdog_update(0);
     media_audio_playback_toggle(0);
     resource_handle_set_release();
+    /* EntityTableMapsAllocate registers its six exact-width allocations in
+     * the resource release band; clear the native owner after that band has
+     * released them so a later config re-init cannot retain dangling maps. */
+    entity_table_maps_current_release();
 
     /* The three view globals are represented by the context's view slots. */
+    if (ctx->views[0] != NULL) ctx->views[0]->target_record = NULL;
+    if (ctx->views[1] != NULL) ctx->views[1]->target_record = NULL;
+    if (ctx->views[2] != NULL) ctx->views[2]->target_record = NULL;
     camera_view_context_close(ctx->views[0]);
     camera_view_context_close(ctx->views[1]);
     camera_view_context_close(ctx->views[2]);
     ctx->views[0] = NULL;
     ctx->views[1] = NULL;
     ctx->views[2] = NULL;
+    memset(ctx->camera_targets, 0, sizeof(ctx->camera_targets));
+    ctx->camera_target_count = 0u;
 
     /* Existing resource and entity-pool owners corresponding to later
      * teardown calls. Renderer-only release calls and the five unbound
@@ -582,6 +633,12 @@ void objective_score_text_origin_set(const float* pair)
 uint32_t engine_debug_word_peek(void)
 {
     return s_panel_highlight_flags;
+}
+
+void engine_debug_word_bit_set(uint32_t mask, int enabled)
+{
+    if (enabled != 0) s_panel_highlight_flags |= mask;
+    else s_panel_highlight_flags &= ~mask;
 }
 
 void objective_score_text_origin_peek(float out[2])
@@ -951,6 +1008,25 @@ static char* field_grid_cell(int x, int y)
                    ((size_t)sizeof(void*) + 8u));
 }
 
+int entity_field_grid_cell_get(int x, int y, void** entity_out,
+                               uint32_t* flags_out)
+{
+    const EngineState* desc = s_field_grid_desc;
+    char* cell;
+    void* entity = NULL;
+    uint32_t flags = 0u;
+    if (desc == NULL || x < 0 || y < 0 ||
+        (uint32_t)x >= desc->grid_w || (uint32_t)y >= desc->grid_h)
+        return 0;
+    cell = field_grid_cell(x, y);
+    if (cell == NULL) return 0;
+    __builtin_memcpy(&entity, cell, sizeof(entity));
+    __builtin_memcpy(&flags, cell + sizeof(void*) + 4, sizeof(flags));
+    if (entity_out != NULL) *entity_out = entity;
+    if (flags_out != NULL) *flags_out = flags;
+    return 1;
+}
+
 // FUNCTION: LEGORR 0x00466380
 void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
 {
@@ -1035,3 +1111,16 @@ int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out)
     }
     return 1;
 }
+
+namespace unported_ledger_stubs {
+// FUNCTION: LEGORR 0x00480870
+EngineTaskCallbackRecord* ledger_stub_00480870_TaskCallbackRecordAllocateAndInitialize(
+    void* owner, void* callback, uint32_t mode, void* context,
+    uint32_t flag_value)
+{
+    return engine_task_callback_record_allocate_and_initialize(
+        owner, callback, mode, context, flag_value);
+}
+
+
+} // namespace unported_ledger_stubs

@@ -1584,7 +1584,6 @@ typedef struct FilterTuple {
     uint8_t padding[0x104]; /* the corpus advances by 0x110 bytes per row */
 } FilterTuple;
 
-#define FILTER_TUPLE_ENTRIES 16
 #define DISPLAY_MODE_ENTRIES CRT_DISPLAY_MODE_ENTRIES
 #define DISPLAY_MODE_KINDS 2
 static CrtDisplayModeEntry
@@ -1595,8 +1594,9 @@ static CrtDisplayResolutionEntry
     s_display_resolutions[CRT_DISPLAY_RESOLUTION_ENTRIES];
 static int s_display_resolution_count;
 static int s_display_resolution_enumeration_succeeded;
-static FilterTuple s_filter_tuples[FILTER_TUPLE_ENTRIES];
+static FilterTuple* s_filter_tuples;
 static int         s_filter_tuple_count;
+static int         s_filter_tuple_capacity;
 
 /* Caller-side DirectDraw enumeration replacement. This record occupies
  * 0x110 bytes, with `name` at the same +0x0c offset as the native list. */
@@ -1788,15 +1788,39 @@ void display_resolution_combo_populate(CrtDisplayResolutionList* out)
     }
 }
 
+void display_resolution_filter_tuples_reset(void)
+{
+    free(s_filter_tuples);
+    s_filter_tuples = NULL;
+    s_filter_tuple_count = 0;
+    s_filter_tuple_capacity = 0;
+}
+
 // FUNCTION: LEGORR 0x0049d870
 void display_resolution_filter_tuple_append(int width, int height, int bpp)
 {
-    if (s_filter_tuple_count < FILTER_TUPLE_ENTRIES) {
-        s_filter_tuples[s_filter_tuple_count].w = width;
-        s_filter_tuples[s_filter_tuple_count].h = height;
-        s_filter_tuples[s_filter_tuple_count].bpp = bpp;
+    if (s_filter_tuple_count >= s_filter_tuple_capacity) {
+        int new_capacity;
+        FilterTuple* new_tuples;
+        if (s_filter_tuple_capacity == 0) {
+            new_capacity = 16;
+        } else {
+            if (s_filter_tuple_capacity > 0x7fffffff / 2) return;
+            new_capacity = s_filter_tuple_capacity * 2;
+        }
+        if ((size_t)new_capacity > (size_t)-1 / sizeof(FilterTuple)) {
+            return;
+        }
+        new_tuples = (FilterTuple*)realloc(s_filter_tuples,
+            (size_t)new_capacity * sizeof(FilterTuple));
+        if (new_tuples == NULL) return;
+        s_filter_tuples = new_tuples;
+        s_filter_tuple_capacity = new_capacity;
     }
-    s_filter_tuple_count = s_filter_tuple_count + 1;
+    s_filter_tuples[s_filter_tuple_count].w = width;
+    s_filter_tuples[s_filter_tuple_count].h = height;
+    s_filter_tuples[s_filter_tuple_count].bpp = bpp;
+    ++s_filter_tuple_count;
 }
 
 int display_resolution_filter_tuple_count(void)
@@ -1806,9 +1830,7 @@ int display_resolution_filter_tuple_count(void)
 
 void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp)
 {
-    const int n = (index >= 0 && index < s_filter_tuple_count
-                   && index < FILTER_TUPLE_ENTRIES)
-        ? index : -1;
+    const int n = (index >= 0 && index < s_filter_tuple_count) ? index : -1;
     if (w != NULL) {
         *w = (n >= 0) ? s_filter_tuples[n].w : 0;
     }
@@ -1834,11 +1856,7 @@ int display_mode_matches_filter_tuple(int mode_index)
     }
     const CrtDisplayModeEntry* mode =
         &s_display_modes[s_active_display_mode][mode_index];
-    int count = s_filter_tuple_count;
-    if (count > FILTER_TUPLE_ENTRIES) {
-        count = FILTER_TUPLE_ENTRIES;
-    }
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; i < s_filter_tuple_count; ++i) {
         const FilterTuple* tuple = &s_filter_tuples[i];
         if ((tuple->w == 0 || tuple->w == mode->width) &&
             (tuple->h == 0 || tuple->h == mode->height) &&
@@ -2663,6 +2681,51 @@ void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
     }
 }
 
+void panel_texture_slots_allocate_named(
+    int panel, int count, const int* slot_index, const float* stream,
+    const char* const* tex1, const char* const* tex2,
+    const char* const* tex3, const int* ids)
+{
+    if (panel < 0 || panel >= DAT_WINDOW_COUNT || count <= 0 ||
+        slot_index == NULL || stream == NULL) {
+        return;
+    }
+    float* block = (float*)engine_heap_alloc((long)count * 0x2c);
+    panel_draw_records_set(panel, block);
+    panel_draw_count_set(panel, count);
+    if (block == NULL) return;
+
+    for (int i = 0; i < count; ++i) {
+        const int slot = slot_index[i];
+        if (slot < 0 || slot >= count) continue;
+        float* rec = block + (size_t)slot * 11;
+        const float* s = stream + (size_t)i * 4;
+        rec[0] = s[0];
+        rec[1] = s[1];
+        rec[2] = s[2] + s[0];
+        rec[3] = s[3] + s[1];
+        rec[4] = 0.0f;
+        rec[5] = 0.0f;
+        rec[6] = 0.0f;
+        rec[10] = 0.0f;
+        if (ids != NULL) rec[8] = crt_float_bits((uint32_t)ids[i]);
+
+        const char* const* names[3] = { tex1, tex2, tex3 };
+        const int fields[3] = { 6, 4, 5 };
+        for (int t = 0; t < 3; ++t) {
+            const char* name = names[t] != NULL ? names[t][i] : NULL;
+            void* surface;
+            uint32_t handle;
+            if (name == NULL || name[0] == '\0') continue;
+            surface = string_cache_lookup_or_load(name);
+            if (surface == NULL) continue;
+            handle = (uint32_t)(uintptr_t)surface;
+            rec[fields[t]] = crt_float_bits(handle);
+            crt_surface_blit_record(handle, 0.0f, 0.0f);
+        }
+    }
+}
+
 /* VC5 LIBC.LIB intrncvt.obj supplies this zeroing helper. */
 // LIBRARY: LEGORR 0x00497aa0 SYMBOL
 // __FillZeroMan
@@ -2781,11 +2844,8 @@ void* global_record_list_head_peek(void) { return s_record_list_head; }
  * 0x00552128/0x0055212c/0x00552130, so each word is its own annotated
  * static (the s_indexed_window precedent); all three are zero-filled
  * virtual tail, matching the zero-initialized statics here. */
-// GLOBAL: LEGORR 0x00552128
 static uint32_t s_scene_effect_head;     /* DAT_00552128 role: transient-effect head */
-// GLOBAL: LEGORR 0x0055212c
 static uint32_t s_scene_effect_tail;     /* DAT_0055212c role: transient-effect tail */
-// GLOBAL: LEGORR 0x00552130
 static uint32_t s_scene_effect_shared;   /* DAT_00552130 role: shared texture */
 
 // FUNCTION: LEGORR 0x00465380
@@ -3838,9 +3898,7 @@ void pair_table_append(void* table, int* count, const char* key,
  * has no ported writer; each word lands as a zero-init static and the six
  * getters answer their installed half (the unowned-global deviation, per the
  * DAT-window convention). The install hooks are port-side. */
-// GLOBAL: LEGORR 0x0076ab24
 static uint32_t s_renderer_word_a;      /* DAT_0076ab24 */
-// GLOBAL: LEGORR 0x0076ab28
 static uint32_t s_renderer_word_b;      /* DAT_0076ab28 */
 // GLOBAL: LEGORR 0x0076ab3c
 uint32_t g_renderer_word_c;             /* DAT_0076ab3c */
@@ -3857,6 +3915,7 @@ uint32_t renderer_word_a_get(void) { return s_renderer_word_a; } /* FUN_00410b30
 uint32_t renderer_word_b_get(void) { return s_renderer_word_b; } /* FUN_00410b40 */
 // FUNCTION: LEGORR 0x00410b50
 uint32_t renderer_word_c_get(void) { return g_renderer_word_c; } /* FUN_00410b50 */
+void renderer_word_c_set(uint32_t value) { g_renderer_word_c = value; }
 void renderer_words_set(uint32_t a, uint32_t b, uint32_t c)
 {
     s_renderer_word_a = a;
@@ -8003,8 +8062,10 @@ int crt_standard_stream_buffer_install(int* stream)
             }
         }
         fields[6] = 0x1000u;
-        fields[2] = (uint32_t)s_standard_stream_buffers[stream_index];
-        fields[0] = (uint32_t)s_standard_stream_buffers[stream_index];
+        fields[2] = (uint32_t)(uintptr_t)
+            s_standard_stream_buffers[stream_index];
+        fields[0] = (uint32_t)(uintptr_t)
+            s_standard_stream_buffers[stream_index];
         fields[1] = 0x1000u;
         fields[3] |= 0x1102u;
         return 1;
@@ -9613,3 +9674,100 @@ int crt_double_to_integer_round(uint32_t status, double* value,
     return remaining == 0u;
 }
 #endif
+
+namespace unported_ledger_stubs {
+
+// PanelsConfigEntryApply
+// GLOBAL: LEGORR 0x004de424
+static uint32_t s_global_zero_transition_previous_primary;
+
+// FUNCTION: LEGORR 0x00435550
+int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void)
+{
+    uint32_t current = g_renderer_word_c;
+    int transitioned_to_zero = current == 0u &&
+        s_global_zero_transition_previous_primary != 0u;
+    s_global_zero_transition_previous_primary = current;
+    return transitioned_to_zero;
+}
+
+
+// VC5 LIBC.LIB realloc.obj supplies the heap reallocation entry.
+// LIBRARY: LEGORR 0x0048dc80 SYMBOL
+// _realloc
+#if !defined(_MSC_VER)
+void* ledger_stub_0048dc80_GrowHeapArray(void* allocation,
+                                         uint32_t requested_size)
+{
+    uint32_t size = requested_size;
+    if (allocation == NULL) {
+        if (size == 0u) size = 1u;
+        return engine_heap_alloc((long)size);
+    }
+    if (size == 0u) {
+        engine_heap_free(allocation);
+        return NULL;
+    }
+    /* The CRT rounds ordinary allocations to its 16-byte small-block unit. */
+    if (size >= 0xffffffe1u) return NULL;
+    size = (size + 15u) & ~15u;
+    return realloc(allocation, (size_t)size);
+}
+#endif
+
+// CharacterClassifyMask
+
+// VC5 LIBC.LIB sbheap.obj supplies the in-place small-block resize routine.
+// LIBRARY: LEGORR 0x00491cc0 SYMBOL
+// ___sbh_resize_block
+#if !defined(_MSC_VER)
+int ledger_stub_00491cc0_SmallHeapBlockResizeInPlace(
+    void* heap, uint32_t* group, uint8_t* block, uint32_t requested_units)
+{
+    uintptr_t group_offset;
+    uint32_t* bucket;
+    uint32_t old_units;
+    if (heap == NULL || group == NULL || block == NULL ||
+        requested_units > 0xffu) return 0;
+    group_offset = (uintptr_t)group -
+                   (uintptr_t)(*(uint8_t**) ((uint8_t*)heap + 0x10));
+    bucket = (uint32_t*)((uint8_t*)heap + 0x18u +
+                         (group_offset >> 12) * 8u);
+    old_units = block[0];
+    if (old_units <= requested_units) {
+        uint8_t* new_end;
+        uint8_t* scan;
+        if (old_units == requested_units) return 0;
+        new_end = block + requested_units;
+        if (new_end > (uint8_t*)(group + 0x3e)) return 0;
+        for (scan = block + old_units; scan < new_end; ++scan)
+            if (*scan != 0u) return 0;
+        block[0] = (uint8_t)requested_units;
+        if ((uint8_t*)group[0] >= block && (uint8_t*)group[0] < new_end) {
+            uint8_t* first_free = new_end;
+            uint8_t* group_end = (uint8_t*)(group + 0x3e);
+            while (first_free < group_end && *first_free == 0u)
+                ++first_free;
+            if (first_free < group_end) {
+                group[0] = (uint32_t)(uintptr_t)first_free;
+                group[1] = (uint32_t)(first_free - new_end);
+            }
+            else {
+                /* The reference restores the group's initial free pointer
+                 * when the expanded block consumes its final free bytes. */
+                group[0] = (uint32_t)(uintptr_t)(group + 2);
+                group[1] = 0u;
+            }
+        }
+        bucket[0] += old_units - requested_units;
+        return 1;
+    }
+    block[0] = (uint8_t)requested_units;
+    bucket[1] = 0xf1u;
+    bucket[0] += old_units - requested_units;
+    return 1;
+}
+#endif
+
+
+} // namespace unported_ledger_stubs

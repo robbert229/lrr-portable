@@ -104,6 +104,8 @@ int input_action_state_toggle(InputActionToggleState* state,
                               unsigned int action, const void* data);
 typedef struct DirectInputHooks {
     void* context;
+    /* Initialize requires interface/device creation, configuration, acquire,
+     * and release callbacks. The mouse callback is an optional port extension. */
     int (*interface_create)(void* context);
     int (*keyboard_create)(void* context);
     int (*mouse_create)(void* context);
@@ -120,6 +122,7 @@ void input_direct_hooks_set(const DirectInputHooks* hooks);
 int input_direct_initialize(void); /* FUN_0047ed90 */
 void input_direct_shutdown(void);
 InputState* input_direct_state_get(void);
+void input_direct_state_bind(InputState* state);
 /* Port adapter for InputStatePoll. Retail takes no arguments and reads
  * DirectInput plus two global polling gates; this helper receives those
  * state inputs explicitly. */
@@ -132,9 +135,9 @@ void input_reset(InputState* s);
 void input_begin_frame(InputState* s);
 
 /* Device capture — the "writer" half (finding 05's device layer, deferred
- * from PR #8 to the frame loop). Consumes a batch of platform events into
- * the current-frame tables: KEYDOWN sets cur[code], KEYUP clears,
- * MOUSE updates mouse_x/y. Canonical codes come from platform.h. */
+ * from PR #8 to the frame loop). Consumes platform events into the current
+ * frame edge table and the held-key snapshot used by KeyboardDownKeyCount:
+ * KEYDOWN sets, KEYUP clears, MOUSE updates mouse_x/y. */
 void input_capture_events(InputState* s, const PlatformEvent* evs, int count);
 
 /* EnginePreTick tail: snapshot cur into the text mirror (cur kept for the
@@ -146,6 +149,7 @@ void input_mirror(InputState* s);
 void input_mirror_and_clear(InputState* s);
 
 int  input_key_down(const InputState* s, int key);
+int  input_keyboard_key_held(int key); /* current 256-byte backend snapshot */
 int  input_keyboard_down_key_count(void); /* FUN_0047efb0 */
 typedef int (*InputClientToScreenHook)(int* x, int* y, void* context);
 typedef void (*InputSetCursorPositionHook)(int x, int y, void* context);

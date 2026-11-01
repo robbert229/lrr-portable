@@ -286,8 +286,7 @@ void audio_menu_volume_set(int value)
 // FUNCTION: LEGORR 0x00478980
 void music_mixer_volume_set(float music, float sfx)
 {
-    (void)sfx;
-    audio_set_volume(s_active_audio_player, music);
+    (void)audio_mixer_control_init(&music, &sfx, 1);
 }
 
 void audio_music_mixer_volume_get(float* music, float* sfx)
@@ -303,15 +302,24 @@ int audio_mixer_control_init(float* music, float* sfx, int apply_volume)
 {
     if (music == NULL || sfx == NULL) return 0;
     if (apply_volume == 0) {
-        audio_music_mixer_volume_get(music, sfx);
-        return s_active_audio_player != NULL && s_active_audio_player->dev != NULL;
+        /* FUN_004789c0 enumerates the WinMM mixer and reads the compact-disc
+         * source control in query mode. The portable player gain is a
+         * separate output setting and must not stand in for that device
+         * query. Native backends report the source as unavailable and clear
+         * both output values through audio_cd_mixer_volume_get. */
+        return audio_cd_mixer_volume_get(music, sfx);
     }
     if (*music > 1.0f) *music = 1.0f;
     if (*music < 0.0f) *music = 0.0f;
     if (*sfx > 1.0f) *sfx = 1.0f;
     if (*sfx < 0.0f) *sfx = 0.0f;
-    music_mixer_volume_set(*music, *sfx);
-    return s_active_audio_player != NULL && s_active_audio_player->dev != NULL;
+#if defined(LEGORRR_BACKEND_WINAPI)
+    return audio_cd_mixer_volume_set(*music, *sfx);
+#else
+    /* Native SDL has no CD-audio source mixer control. Do not substitute the
+     * unrelated PCM output gain for the retail Music_Volume target. */
+    return 0;
+#endif
 }
 
 int audio_cd_mixer_volume_get(float* music, float* sfx)
@@ -322,6 +330,21 @@ int audio_cd_mixer_volume_get(float* music, float* sfx)
 #if defined(LEGORRR_BACKEND_WINAPI)
     return platform_cd_mixer_volume_get(music, sfx);
 #else
+    return 0;
+#endif
+}
+
+int audio_cd_mixer_volume_set(float music, float sfx)
+{
+    if (music > 1.0f) music = 1.0f;
+    if (music < 0.0f) music = 0.0f;
+    if (sfx > 1.0f) sfx = 1.0f;
+    if (sfx < 0.0f) sfx = 0.0f;
+#if defined(LEGORRR_BACKEND_WINAPI)
+    return platform_cd_mixer_volume_set(music, sfx);
+#else
+    (void)music;
+    (void)sfx;
     return 0;
 #endif
 }
@@ -647,16 +670,21 @@ int audio_buffer_play_attenuated(AudioBuffer* buffer, int extra_millibels)
     if (extra_millibels != 0 && buffer->millibels + extra_millibels >= -10000)
         gain = powf(10.0f,
                     (float)(buffer->millibels + extra_millibels) / 2000.0f);
+    /* DirectSound replays the selected buffer object itself, so restart any
+     * unfinished one-shot previously submitted by this portable buffer. */
+    platform_audio_stop_voice(player->dev, (uintptr_t)buffer);
     if (gain == 1.0f) {
-        rc = platform_audio_play(player->dev, buffer->pcm, buffer->frames,
-                                 buffer->sample_rate);
+        rc = platform_audio_play_voice(player->dev, buffer->pcm,
+                                       buffer->frames, buffer->sample_rate,
+                                       (uintptr_t)buffer);
     } else {
         scaled = (int16_t*)calloc((size_t)buffer->frames, sizeof(int16_t));
         if (scaled == NULL) return -1;
         for (i = 0; i < buffer->frames; ++i)
             scaled[i] = (int16_t)(buffer->pcm[i] * gain);
-        rc = platform_audio_play(player->dev, scaled, buffer->frames,
-                                 buffer->sample_rate);
+        rc = platform_audio_play_voice(player->dev, scaled, buffer->frames,
+                                       buffer->sample_rate,
+                                       (uintptr_t)buffer);
         free(scaled);
     }
     buffer->playing = rc == 0;
@@ -675,7 +703,8 @@ void audio_buffer_stop(AudioBuffer* buffer)
         player->loop_buffer = NULL;
         player->loop_render_dirty = 0;
     }
-    /* The SDL queue has no voice identifiers for one-shot samples. */
+    if (player != NULL && player->dev != NULL)
+        platform_audio_stop_voice(player->dev, (uintptr_t)buffer);
     buffer->playing = 0;
     buffer->playing_loop = 0;
 }
@@ -904,3 +933,11 @@ void sound_stream_ring_buffer_tick(int stream_index)
     }
     (void)sound_stream_drain_check(slot);
 }
+
+namespace unported_ledger_stubs {
+// FUNCTION: LEGORR 0x004789a0
+void ledger_stub_004789a0_MusicMixerVolumeGet(float* music, float* sfx)
+{
+    (void)audio_mixer_control_init(music, sfx, 0);
+}
+} // namespace unported_ledger_stubs

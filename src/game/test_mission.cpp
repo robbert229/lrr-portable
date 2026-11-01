@@ -156,7 +156,14 @@ int main(void)
     CHECK((task_flags(&ctx.tasks[0]) & TASK_FLAG_IMG) != 0, "Crystals image flag");
     CHECK((task_flags(&ctx.tasks[0]) & TASK_FLAG_BOXIMG) != 0, "Crystals box flag");
     CHECK((task_flags(&ctx.tasks[0]) & TASK_FLAG_FLIC) != 0, "Crystals flic flag");
-    CHECK(memcmp(ctx.tasks[0].data + TASK_OFF_FONT, "FNTX", 4) == 0, "font token");
+    {
+        uint32_t font_handle = 1u;
+        __builtin_memcpy(&font_handle,
+                         ctx.tasks[0].data + TASK_OFF_FONT, 4);
+        CHECK(font_handle == 0u &&
+              reward_task_font_record_get(0) == NULL,
+              "unloadable task font leaves no atlas handle");
+    }
     CHECK(memcmp(ctx.tasks[0].data + TASK_OFF_SOUND, "SNDX", 4) == 0, "sound token");
 
     /* Text loader (FUN_0045f530): field 0 -> +0x54 with '_'->' ', fields
@@ -223,8 +230,11 @@ int main(void)
         CHECK(mission_reward_zone(&ctx, 15, 15, &hs, &ha) == 0,
               "save zone inert when not achieved");
     }
-    CHECK(mission_reward_click(&ctx, 1) != 0, "reward click commits");
-    CHECK(mission_reward_active(&ctx) == 0, "overlay closed after the click");
+    CHECK(mission_reward_click(&ctx, 1) == 0,
+          "save click needs the initialized frontend picker");
+    CHECK(mission_reward_active(&ctx) != 0,
+          "reward stays open when the save picker cannot open");
+    mission_reward_set_active(&ctx, 0);
 
     /* Next-level progression (findings 07/09): advance swaps in Level02. */
     {

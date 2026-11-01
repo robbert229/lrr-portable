@@ -2,8 +2,9 @@
 /* gods98 engine — AVI movie module (finding 14 §4, finding 23 callbacks).
  *
  * AVI playback follows the corpus's AVIFIL32 path on Windows —
- * AviStreamModule @ 0x47e800 / MovieOpen @ 0x47ec90, whose
- * AVIStreamGetFrame returns DIB bytes blitted straight to the surface. The
+ * AviStreamModule @ 0x47e800 / MovieOpen @ 0x47ec90. VfW returns a DIB for
+ * each frame; supported RGB DIBs are decoded to RGBA for the portable API,
+ * while the original DIB remains available to the DirectDraw copy path. The
  * native backend uses FFmpeg, loaded dynamically, to produce RGBA32 pixels
  * and pass decoded audio to the platform PCM seam.
  *
@@ -59,11 +60,15 @@ void movie_unload(void);
 /* --- decode -------------------------------------------------------------- */
 
 typedef struct Movie Movie;
+struct MovieOut;
 
 /* Open an AVI by filesystem path. Native playback decodes the first frame on
  * the first movie_info/movie_next call; Windows reads stream metadata at open
  * and pulls frames on movie_next. Returns NULL on open/decoder failure. */
 Movie* movie_open_path(const char* os_path);
+/* AVI constructor path: return the stream owner after stream acquisition even
+ * when the later frame-retriever or stream-info stage fails. */
+Movie* movie_avi_retriever_open(const char* os_path);
 
 void movie_close(Movie* m);
 
@@ -94,12 +99,15 @@ typedef struct AviPlaybackState {
     void* surface_object; /* host-width sidecar for movie display surface */
     uint32_t display_width;
     uint32_t display_height;
+    uint32_t stream_width;  /* source rectangle used by AviFrameDecodeAndCopy */
+    uint32_t stream_height;
     uint32_t display_bits_per_pixel;
     int display_fullscreen;
     void* display_device;
     void* surface_pixels; /* host-width lock result sidecar */
     int surface_pitch;    /* host-width row pitch paired with surface_pixels */
     uint8_t surface_owned;
+    uint8_t player_owned; /* set only by avi_player_create */
     void* stream_object;
     void* frame_retriever_object;
     /* Target thiscall entry points use the player object in ECX on x86. */
@@ -112,6 +120,8 @@ typedef struct AviPlaybackState {
     uint32_t playback_frame_index_get() const;
     void frame_seek_and_clock_rebase(uint32_t frame_index);
     int frame_update_and_blit();
+    void frame_decode_and_copy(const uint8_t* dib);
+    void frame_copy_rgba(const struct MovieOut* frame);
     uint8_t frame_update();
     void frame_retriever_destroy();
     void player_destroy(uint8_t flags);
@@ -137,6 +147,8 @@ void avi_release_hooks_set(AviReleaseHook release_object,
                            AviDisplayReleaseHook release_display,
                            void* context);
 void avi_file_initialize(void* context); /* 0x0047ec80 */
+/* Creates the player record and opens its frame retriever. */
+AviPlaybackState* avi_player_create(const char* path); /* 0x0047ec90 */
 int avi_frame_decode_and_copy(Movie* movie, uint8_t* destination,
                               int width, int height, int pitch);
 void avi_frame_retriever_open(AviPlaybackState* state, const char* path);
@@ -146,7 +158,7 @@ int avi_display_mode_setup(AviPlaybackState* state, uint32_t width,
 void avi_playback_state_initialize(AviPlaybackState* state, uint32_t width,
                                    uint32_t height,
                                    uint32_t bits_per_pixel, int fullscreen,
-                                   void* display_device);
+                                   void* surface_descriptor);
 void avi_frame_retriever_destroy(AviPlaybackState* state);
 void avi_player_destroy(AviPlaybackState* state, uint8_t flags);
 uint32_t avi_surface_lock(AviPlaybackState* state); /* 0x0047e760 */
@@ -171,11 +183,18 @@ typedef struct MovieOut {
     const uint8_t* rgba;
     int            rgba_pitch;
     /* Windows VfW keeps the source DIB available for the frame-copy path.
-     * Native FFmpeg frames leave dib NULL and expose RGBA above. */
+     * Native FFmpeg frames leave dib NULL and expose RGBA above. Compressed
+     * VfW formats without a parsed RGB layout fail movie_next. */
     const uint8_t* dib;
     int            dib_pitch;
     int            dib_bits_per_pixel;
+    /* Byte offset from dib to pixel rows, including any palette or masks. */
     int            dib_header_bytes;
+    /* For indexed VfW DIBs, points at `dib_palette_entries` RGBQUAD values
+     * (blue, green, red, reserved). Like dib, this remains valid only until
+     * the next movie_next call. Native FFmpeg frames leave it NULL/zero. */
+    const uint8_t* dib_palette;
+    unsigned int   dib_palette_entries;
     /* Interleaved stereo s16 PCM for all audio samples that fall on or
      * before this frame's presentation time — the caller feeds it to the
      * audio seam per video frame. Owned; valid until the next movie_next. */
@@ -185,7 +204,10 @@ typedef struct MovieOut {
 } MovieOut;
 
 /* Decode one video frame's worth of media. Returns 0 on a frame, 1 at
- * end-of-stream (the FIFO drained), -1 on a decode error. */
+ * end-of-stream (the FIFO drained), -1 on a decode error. VfW BI_RGB frames
+ * at 1/4/8/15/16/24/32 bpp and BI_BITFIELDS/BI_ALPHABITFIELDS at 16/32 bpp
+ * are converted to RGBA; compressed DIB encodings without a supported RGB
+ * layout are rejected. */
 int movie_next(Movie* m, MovieOut* out);
 
 /* --- pixels -------------------------------------------------------------- */

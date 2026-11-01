@@ -9,8 +9,10 @@ namespace lego {
 enum { UPGRADE_NAME_SLOT_COUNT = 16, UPGRADE_TYPE_CAPACITY = 64 };
 
 struct UpgradeTypeRecord {
-    char name[64];
-    void* resource;
+    uint32_t index;
+    uint32_t resource_token;
+    uint32_t reserved_8;
+    uint32_t reserved_c;
 };
 
 struct LevelCounterState {
@@ -46,13 +48,15 @@ void level_upgrade_config_hooks_set(UpgradeConfigEntryHook entry_hook,
                                     uint32_t (*entry_count_hook)(void*));
 void level_upgrade_name_strings_load(void* config); /* FUN_00427f80 */
 uint32_t level_upgrade_name_value_get(uint32_t index);
+const char* level_upgrade_name_string_get(uint32_t index);
 
 typedef uint32_t (*UpgradeTypeLoadHook)(UpgradeTypeRecord* records,
                                         uint32_t capacity);
 void upgrade_type_load_hook_set(UpgradeTypeLoadHook hook);
-int upgrade_types_load(void); /* FUN_0042d460 */
+int upgrade_types_load(void* config); /* FUN_0042d460 */
 uint32_t upgrade_type_count_get(void);
 const UpgradeTypeRecord* upgrade_type_record_get(uint32_t index);
+const char* upgrade_type_name_get(uint32_t index);
 
 typedef void (*BuildingUpgradeEventHook)(int type, int row, int column,
                                          int state);

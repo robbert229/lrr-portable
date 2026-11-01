@@ -3,8 +3,12 @@
 #define LEGORRR_GAME_TUTORIAL_HUD_PORTS_HPP
 
 #include <stdint.h>
+#include <stdarg.h>
 
 struct BlockFile;
+struct GameContext;
+struct EngineContext;
+struct InputState;
 
 typedef void* (*TutorialScriptLoadFn)(const char* path, uint32_t* size_out,
                                       void* context);
@@ -41,11 +45,21 @@ typedef struct TutorialScriptOps {
 } TutorialScriptOps;
 
 void tutorial_script_ops_set(const TutorialScriptOps* ops);
+void tutorial_runtime_context_set(struct GameContext* game,
+                                  struct EngineContext* engine,
+                                  const struct InputState* input);
+void tutorial_nerp_pointer_release_record(int action, int cell_x, int cell_y);
 int tutorial_script_file_load(const char* path);
 void tutorial_script_program_install(const uint32_t* words, uint32_t word_count);
-int tutorial_objective_token_load(uint32_t source_limit, char** output_tokens);
+/* FUN_00452e70 receives the configured NERPMessageFile path. Parsed rows and
+ * resolved handles are retained in the objective token tables. */
+int tutorial_objective_token_load(const char* path);
+int tutorial_objective_token_file_load(const char* path,
+                                       char** output_tokens);
+const char* tutorial_objective_token_lookup(uint32_t index);
 int tutorial_display_resources_release(void);
 void tutorial_indirect_handle_resolve(uint32_t* value);
+void tutorial_frame_timer_array_advance(float delta);
 void tutorial_script_command_dispatch(float delta);
 void tutorial_advisor_scroll_step_advance(void);
 void tutorial_advisor_scroll_state_set(uint32_t pending, uint32_t maximum,
@@ -74,6 +88,11 @@ typedef void (*LegacyHudRectDrawFn)(const float rect[4], uint32_t color,
                                     void* context);
 typedef void (*LegacyHudPolylineDrawFn)(const float* xy, uint32_t count,
                                         uint32_t color, void* context);
+typedef void (*LegacyHudRingStripDrawFn)(const float first_xy[20],
+                                         const float second_xy[20],
+                                         uint32_t point_count,
+                                         const float rgb[3], int mode,
+                                         void* context);
 typedef int (*LegacyHudTextMeasureFn)(const char* text, void* context);
 typedef void (*LegacyHudTextDrawFn)(const char* text, int x, int y,
                                     void* context);
@@ -88,6 +107,7 @@ typedef struct LegacyHudOps {
     LegacyHudSurfaceDrawFn surface_draw;
     LegacyHudRectDrawFn rect_draw;
     LegacyHudPolylineDrawFn polyline_draw;
+    LegacyHudRingStripDrawFn ring_strip_draw;
     LegacyHudTextMeasureFn text_measure;
     LegacyHudTextDrawFn text_draw;
     int (*config_pair)(BlockFile* cfg, const char* path, int* x, int* y,
@@ -124,6 +144,8 @@ int legacy_bubble_images_position_config_load(BlockFile* values,
                                                BlockFile* names);
 void legacy_health_bar_config_peek(LegacyHealthBarState* state);
 void legacy_entity_screen_ring_render(void* entity, int x, int y);
+void legacy_entity_screen_ring_render_with_ops(
+    void* entity, int x, int y, const LegacyHudOps* ops);
 void legacy_scroll_panel_controls_initialize(void);
 void legacy_panel_category_interaction_state_reset(void);
 void legacy_overlay_image_record_load(const char* path, int panel,
@@ -132,7 +154,9 @@ int legacy_panel_slot_coordinate_hit_test(int panel, int x, int y);
 void* legacy_panel_image_slot_entry_allocate(int panel, const char* path,
                                              const int rect[4],
                                              uint32_t flags);
-void legacy_scrolling_advisor_text_append(void* record, const char* text);
+void legacy_scrolling_advisor_text_append(void* record, const char* format, ...);
+void legacy_scrolling_advisor_text_append_v(void* record, const char* format,
+                                            va_list args);
 void legacy_ui_text_output_position_and_draw(void* record, const char* text,
                                             const char* fallback);
 uint32_t legacy_panel_category_flags_get(int panel);

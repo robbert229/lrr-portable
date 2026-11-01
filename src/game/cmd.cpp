@@ -6,12 +6,15 @@
 
 #include "cmd.hpp"
 #include "ai.hpp"
+#include "spawn.hpp"
 #include "select.hpp"
 #include "level.hpp"
 #include "terrain_grid.hpp"
 #include "frontend.hpp"
 #include "util.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/view.hpp"
+#include "gods98/block.hpp"
 #include "entity.hpp"
 #include "crt/crt.hpp"
 #include "gods98/heap.hpp"
@@ -22,12 +25,54 @@
 
 namespace unported_ledger_stubs {
 int entity_capacity_or_state_predicate(const EntitySlot* entity);
-int ledger_stub_004470d0_EntityConditionalTypeFiveSpawn(EntitySlot* entity);
+int ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
+    EntitySlot* entity);
 int ledger_stub_00447210_EntityAdjacentPlacementCellSearch(
     EntitySlot* entity, EntitySlot* target);
+int entity_cell_step_command_issue_with_jitter(
+    EntitySlot* entity, const int target_xy[2], const float input_xy[2],
+    int action_mode, int mark_pending);
+int ledger_stub_004446e40_EntityNearestCellRouteCommit(
+    EntitySlot* entity, unsigned int goal_x, unsigned int goal_y, int mode);
+int ledger_stub_00448800_EntityMoveToCellCoordinates(
+    EntitySlot* entity, const int cell[2]);
+int ledger_stub_00448880_RecordGatedStepCommandIssue(
+    EntitySlot* entity, const int cell[2]);
+int ledger_stub_00448a60_EntityNeighborCellMoveCommandHandle(
+    EntitySlot* entity, const int cell[2]);
+int ledger_stub_00449010_EntityKind6RecordApproachRouteIssue(
+    EntitySlot* entity);
+int ledger_stub_004490a0_ProximityStepCommandIssueWithLink(
+    EntitySlot* entity, EntitySlot* target, int mode, int set_global_gate);
+int ledger_stub_00449240_EntityWalkableTargetCellRouteIssue(
+    EntitySlot* entity, const int cell[2]);
+int ledger_stub_004492b0_CellStepCommandIssueWithTargetMark(
+    EntitySlot* entity, const int cell[2]);
+int ledger_stub_00449430_EntityTargetCellRouteAndAssociate(
+    EntitySlot* entity, EntitySlot* target);
+int ledger_stub_00449520_EntityTargetCellRouteMarker14(
+    EntitySlot* entity, EntitySlot* target);
+int ledger_stub_00449610_EntityCoordinateRouteAndMark(
+    EntitySlot* entity, const int cell[2]);
+int ledger_stub_00449700_RouteStepCommandIssue(EntitySlot* entity);
+int ledger_stub_00446e40_EntityNearestCellRouteCommit(
+    EntitySlot* entity, unsigned int goal_x, unsigned int goal_y, int mode);
+int ledger_stub_00449ac0_ProximityStepCommandIssueClearingGate(
+    EntitySlot* entity, EntitySlot* target);
+int ledger_stub_0044b500_ObjectPositionStepCommandIssueAndLink(
+    EntitySlot* entity, const float target_position[2], uint32_t flags);
+int ledger_stub_004403d0_LevelDebugCellRetargetDispatch(
+    EntitySlot* entity, EntitySlot* target,
+    const EntityDebugCellRetargetHooks* hooks);
+int ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
+    EntitySlot* entity, EntitySlot* target, int marker);
+void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
+    const EntitySlot* entity, const int cell_xy[2], uint32_t filter_a,
+    uint32_t filter_b);
 }
 
 static CommandKindRecordHooks s_command_kind_record_hooks;
+extern float random_float_range(float minimum, float maximum);
 #include "gods98/string.hpp"
 
 /* ------------------------------------------------------------------ *
@@ -56,7 +101,7 @@ typedef struct CmdRec {
     int32_t  zone;       /* +0x2c zone-command id (kind-7; the corpus writer
                           * of this word is unported — zero-init)             */
     uint8_t  pad_30[8];  /* +0x30..+0x37 (keeps the corpus +0x38 slot)          */
-    void*    arg38;      /* +0x38 second payload slot (the 0x13 queue's word)   */
+    void*    arg38;      /* +0x38 raw word/payload (type 0x13 selector)        */
     uint32_t field_3c;   /* +0x3c task-kind selector (when supplied)          */
     void*    buffer;     /* +0x40 owned buffer (freed on cmd_free)             */
     uint32_t count;      /* +0x44 the buffer's entry count                     */
@@ -73,6 +118,154 @@ typedef struct CmdRec {
     int32_t  extra;      /* port-only task selector (type-8 tasks set 8)        */
 } CmdRec;
 
+static CmdEntityChainExternalOps s_cmd_entity_chain_external_ops;
+
+void cmd_entity_chain_external_ops_set(const CmdEntityChainExternalOps* ops)
+{
+    if (ops == NULL) memset(&s_cmd_entity_chain_external_ops, 0,
+                            sizeof(s_cmd_entity_chain_external_ops));
+    else s_cmd_entity_chain_external_ops = *ops;
+}
+
+static int cmd_entity_chain_kind_dispatch(EntitySlot* entity, CmdRec* record)
+{
+    const int cell[2] = { (int)record->x, (int)record->y };
+    EntitySlot* target = (EntitySlot*)record->payload;
+    int result = 1;
+
+    switch (record->type) {
+    case 3:
+        result = entity_gated_step_command_issue(entity, target);
+        break;
+    case 4:
+        result = lego::entity_conditional_type_five_spawn(entity);
+        break;
+    case 5:
+        result = entity_deposit_activity_gate(entity, target);
+        break;
+    case 6:
+    case 7:
+        result = unported_ledger_stubs::entity_cell_step_command_issue_with_jitter(
+            entity, cell, (const float*)((const char*)record + 0x30), 1,
+            (record->state & 0x800u) != 0u);
+        break;
+    case 8:
+        if ((record->state & 8u) != 0u &&
+            (entity_stats_word_get(entity) & 1u) == 0u) {
+            result = 1;
+        }
+        else {
+            result = unported_ledger_stubs::
+                ledger_stub_00446e40_EntityNearestCellRouteCommit(
+                    entity, (unsigned int)cell[0], (unsigned int)cell[1],
+                    (int)(record->state & 8u));
+        }
+        break;
+    case 9:
+        result = unported_ledger_stubs::
+            ledger_stub_00448800_EntityMoveToCellCoordinates(entity, cell);
+        break;
+    case 10:
+        result = unported_ledger_stubs::
+            ledger_stub_004490a0_ProximityStepCommandIssueWithLink(
+                entity, target, 1,
+                (record->state & 0x00200000u) != 0u);
+        break;
+    case 11:
+        result = unported_ledger_stubs::
+            ledger_stub_00449240_EntityWalkableTargetCellRouteIssue(entity,
+                                                                    cell);
+        break;
+    case 12:
+        result = unported_ledger_stubs::
+            ledger_stub_004492b0_CellStepCommandIssueWithTargetMark(
+                entity, cell);
+        break;
+    case 13:
+    case 14:
+        result = 1;
+        break;
+    case 18:
+        result = unported_ledger_stubs::
+            ledger_stub_004403d0_LevelDebugCellRetargetDispatch(
+                entity, target, NULL);
+        break;
+    case 15:
+        result = unported_ledger_stubs::
+            ledger_stub_00448a60_EntityNeighborCellMoveCommandHandle(
+                entity, cell);
+        break;
+    case 16:
+    case 17:
+    case 20:
+        if (record->type == 20)
+            result = unported_ledger_stubs::
+                ledger_stub_00448880_RecordGatedStepCommandIssue(entity, cell);
+        else
+            result = unported_ledger_stubs::
+                ledger_stub_00449ac0_ProximityStepCommandIssueClearingGate(
+                    entity, target);
+        break;
+    case 19:
+        /* 0x44b500 consumes record +0x38 as a task record, resolves the
+         * entity's scene position through 0x438df0, then builds a route. */
+        result = s_cmd_entity_chain_external_ops.object_position_step != NULL
+            ? s_cmd_entity_chain_external_ops.object_position_step(
+                entity, record->arg38,
+                s_cmd_entity_chain_external_ops.context) : -1;
+        break;
+    case 21:
+        /* 0x444690 consumes the current waypoint and task-record payload;
+         * its DDiScene/task operation remains behind this typed owner seam. */
+        result = s_cmd_entity_chain_external_ops.waypoint_task_step != NULL
+            ? s_cmd_entity_chain_external_ops.waypoint_task_step(
+                entity, record->payload, (uint32_t)record->cell_count,
+                s_cmd_entity_chain_external_ops.context) : -1;
+        break;
+    case 22:
+        result = entity_set_activity_place(entity);
+        break;
+    case 23:
+        result = unported_ledger_stubs::
+            ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
+                entity, target, 0);
+        break;
+    case 24:
+        result = unported_ledger_stubs::
+            ledger_stub_00449700_RouteStepCommandIssue(entity);
+        break;
+    case 25:
+        result = unported_ledger_stubs::
+            ledger_stub_00449610_EntityCoordinateRouteAndMark(entity, cell);
+        break;
+    case 26:
+        result = unported_ledger_stubs::
+            ledger_stub_00449430_EntityTargetCellRouteAndAssociate(
+                entity, target);
+        break;
+    case 27:
+        result = unported_ledger_stubs::
+            ledger_stub_00449010_EntityKind6RecordApproachRouteIssue(entity);
+        break;
+    case 28:
+        result = entity_route_marker_setup(entity);
+        break;
+    case 29:
+        result = unported_ledger_stubs::
+            ledger_stub_00449520_EntityTargetCellRouteMarker14(
+                entity, target);
+        break;
+    case 30:
+        result = entity_route_to_explicit_target(entity, target);
+        break;
+    default:
+        result = 1;
+        break;
+    }
+    return result;
+}
+
+
 #define CMD_STRIDE sizeof(CmdRec)
 
 static CmdRec* as_rec(void* p) { return (CmdRec*)p; }
@@ -83,6 +276,10 @@ const void* cmd_rec_payload(const void* rec) { return cas_rec(rec)->payload; }
 int cmd_rec_kind(const void* rec) { return cas_rec(rec)->kind; }
 int cmd_rec_behaviour(const void* rec) { return cas_rec(rec)->behaviour; }
 int cmd_rec_activity(const void* rec) { return cas_rec(rec)->grant_act; }
+uint32_t cmd_rec_value_38(const void* rec)
+{
+    return (uint32_t)(uintptr_t)cas_rec(rec)->arg38;
+}
 void cmd_rec_set_activity(void* rec, int act) { as_rec(rec)->grant_act = act; }
 uint32_t cmd_rec_state(const void* rec) { return cas_rec(rec)->state; }
 void* cmd_rec_next(const void* rec) { return cas_rec(rec)->next; }
@@ -142,6 +339,33 @@ static int     s_pool_level = 0;
 #if defined(LEGORRR_BACKEND_WINAPI)
 #pragma data_seg()
 #endif
+/* CmdAlloc writes a self-pointer to retail +0x64; CmdFree replaces it with a
+ * freelist link. The host record reuses that dword for other staging, so keep
+ * live membership in an index-parallel sidecar instead of inferring it from
+ * the freelist or treating the record as an EntitySlot. */
+static uint8_t* s_block_live[CMD_POOL_MAX_BLOCKS] = { 0 };
+
+static void cmd_pool_record_live_set(CmdRec* record, int live)
+{
+    int block_index;
+    const uintptr_t address = (uintptr_t)record;
+    for (block_index = 0; block_index < s_pool_level; ++block_index) {
+        CmdRec* const block = s_blocks[block_index];
+        const uint32_t capacity = 1u << (block_index & 0x1f);
+        const uintptr_t start = (uintptr_t)block;
+        const uintptr_t end = start +
+            (uintptr_t)capacity * (uintptr_t)CMD_STRIDE;
+        if (block != NULL && address >= start && address < end) {
+            const uintptr_t offset = address - start;
+            if (offset % (uintptr_t)CMD_STRIDE == 0u &&
+                s_block_live[block_index] != NULL) {
+                s_block_live[block_index][offset / CMD_STRIDE] =
+                    live != 0 ? 1u : 0u;
+            }
+            return;
+        }
+    }
+}
 
 // GLOBAL: LEGORR 0x004b3354
 static CmdRec* s_global_head = NULL; /* DAT_004b3354 */
@@ -153,12 +377,176 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
     const ObjectTaskEligibilityRecord* command, EntitySlot* entity,
     float screen_xy[2], float world_xy[2], uint32_t* out_flag,
     int require_command_gate, int relaxed_entity_gate);
+void ledger_stub_00404ed0_CheckObjectCandidate(const EntitySlot* candidate);
+int ledger_stub_0044b4c0_TypeTwoEntityTargetResolveAndApply(
+    EntitySlot* entity, uint32_t code);
+void* ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
+    const EntitySlot* entity, const float center[2], uint32_t extra);
 }
 
 static unported_ledger_stubs::ObjectTaskEligibilityOps s_place_eligibility_ops;
+static EntityRayHitSweepOps s_place_ray_hit_ops;
 static int pending_command_cell_walkable(GameContext* context,
                                          const EntitySlot* entity,
                                          int x, int y, int mode);
+
+typedef struct CmdRayCandidateWalk {
+    GameContext* game;
+    EntityRayHitSweepState* state;
+} CmdRayCandidateWalk;
+
+static int cmd_place_ray_object_position_get(void*, void* object,
+                                            float position[3])
+{
+    return entity_world_center_position_read((const EntitySlot*)object,
+                                             position);
+}
+
+static int cmd_place_ray_see_through_walls_enabled(void*)
+{
+    return s_ctx != NULL && s_ctx->cfg != NULL &&
+           block_get_bool(s_ctx->cfg, "SeeThroughWalls") == 1;
+}
+
+static int cmd_place_ray_grid_dimensions_get(void*, uint32_t* width,
+                                             uint32_t* height)
+{
+    TerrainSurfaceGrid* grid = path_record_surface_grid_get();
+    if (grid == NULL || width == NULL || height == NULL ||
+        grid->surface_vectors == NULL) return 0;
+    *width = grid->width;
+    *height = grid->height;
+    return grid->width != 0u && grid->height != 0u;
+}
+
+static int cmd_place_ray_world_to_cell(void*, const float position[3],
+                                       uint32_t* x, uint32_t* y)
+{
+    int cell_x, cell_y;
+    if (s_ctx == NULL || s_ctx->level == NULL || position == NULL ||
+        x == NULL || y == NULL ||
+        !terrain_world_xy_to_cell(s_ctx->level->ptr_terrain, position[0],
+                                  position[1], &cell_x, &cell_y) ||
+        cell_x < 0 || cell_y < 0) return 0;
+    *x = (uint32_t)cell_x;
+    *y = (uint32_t)cell_y;
+    return 1;
+}
+
+static int cmd_place_ray_cell_intersection(void*, uint32_t x, uint32_t y,
+                                           const float start[3],
+                                           const float direction[3],
+                                           float hit[3])
+{
+    TerrainSurfaceGrid* grid = path_record_surface_grid_get();
+    return grid != NULL && x <= 0x7fffffffu && y <= 0x7fffffffu
+        ? terrain_cell_ray_hit_test(grid, (int)x, (int)y, start, direction,
+                                    hit)
+        : 0;
+}
+
+/* LAB_00471370: the scene callback receives each live entity and the ray
+ * record. It skips the ray source, projects the entity center onto the
+ * horizontal ray, tests the Stats radius at +0x6c, then checks the ray's Z
+ * against the terrain-to-Stats-height interval (Stats +0x74). The callback
+ * always returns zero so the pool walker examines every candidate. The ray
+ * uses the game's logical [X,Y,height] basis; terrain geometry stores the
+ * same horizontal axes at vertex components 0/2 and height at component 1. */
+// FUNCTION: LEGORR 0x00471370
+static int cmd_place_ray_candidate_check(EntitySlot* entity, void* payload)
+{
+    CmdRayCandidateWalk* walk = (CmdRayCandidateWalk*)payload;
+    EntityRayHitSweepState* state;
+    float candidate_xy[2];
+    float dx, dy, dz;
+    float horizontal_length;
+    float along;
+    float projected_x, projected_y;
+    float perp_x, perp_y;
+    float radius;
+    float height;
+    float ground;
+    float entry_distance;
+    float entry_fraction;
+    if (walk == NULL || (state = walk->state) == NULL || entity == NULL ||
+        entity == state->ignored_object || walk->game == NULL ||
+        walk->game->level == NULL ||
+        walk->game->level->ptr_terrain == NULL || state->start == NULL ||
+        state->direction == NULL) return 0;
+
+    dx = state->direction[0];
+    dy = state->direction[1];
+    dz = state->direction[2];
+    horizontal_length = (float)sqrt(dx * dx + dy * dy);
+    if (horizontal_length <= 0.00001f) return 0;
+
+    entity_transform_position_get(entity, candidate_xy);
+    along = (candidate_xy[0] - state->start[0]) * dx / horizontal_length +
+            (candidate_xy[1] - state->start[1]) * dy / horizontal_length;
+    projected_x = state->start[0] + along * dx / horizontal_length;
+    projected_y = state->start[1] + along * dy / horizontal_length;
+    perp_x = candidate_xy[0] - projected_x;
+    perp_y = candidate_xy[1] - projected_y;
+    radius = entity_stats_float_at6c(entity);
+    if (radius <= 0.0f || perp_x * perp_x + perp_y * perp_y >=
+        radius * radius) return 0;
+
+    entry_distance = along - (float)sqrt(
+        radius * radius - perp_x * perp_x - perp_y * perp_y);
+    /* A segment that starts inside the candidate's radius reports an
+     * immediate hit, after the same vertical interval check at t = 0. */
+    entry_fraction = entry_distance > 0.0f
+        ? entry_distance / horizontal_length : 0.0f;
+    if (entry_fraction >= state->max_distance)
+        return 0;
+
+    height = entity_stats_float_at74(entity);
+    ground = terrain_surface_height_interpolate(
+        walk->game->level->ptr_terrain, candidate_xy[0], candidate_xy[1]);
+    /* 0x44f940 returns the terrain quad's vertical component directly.
+     * Scene rays store that same vertical value in component +2; components
+     * 0/1 are the horizontal pair corresponding to terrain X/Z. */
+    if (height <= 0.0f ||
+        state->start[2] + dz * entry_fraction > ground + height ||
+        state->start[2] + dz * entry_fraction < ground) return 0;
+
+    state->hit_object = entity;
+    state->max_distance = entry_fraction;
+    state->hit = 1;
+    return 0;
+}
+
+static void cmd_place_ray_scene_trace_prepare(
+    void* context, EntityRayHitSweepState* state)
+{
+    CmdRayCandidateWalk walk;
+    walk.game = (GameContext*)context;
+    walk.state = state;
+    if (walk.game != NULL && state != NULL)
+        (void)entity_pool_find_by_callback(walk.game,
+                                           cmd_place_ray_candidate_check,
+                                           &walk, 1);
+}
+
+static void cmd_place_ray_hit_ops_bind(void)
+{
+    memset(&s_place_ray_hit_ops, 0, sizeof(s_place_ray_hit_ops));
+    s_place_ray_hit_ops.context = s_ctx;
+    s_place_ray_hit_ops.object_position_get =
+        cmd_place_ray_object_position_get;
+    s_place_ray_hit_ops.see_through_walls_enabled =
+        cmd_place_ray_see_through_walls_enabled;
+    s_place_ray_hit_ops.scene_trace_prepare =
+        cmd_place_ray_scene_trace_prepare;
+    s_place_ray_hit_ops.grid_dimensions_get =
+        cmd_place_ray_grid_dimensions_get;
+    s_place_ray_hit_ops.world_to_cell = cmd_place_ray_world_to_cell;
+    s_place_ray_hit_ops.cell_intersection =
+        cmd_place_ray_cell_intersection;
+    /* The entity pool is the live host-side scene candidate list; terrain
+     * triangles remain the second pass in the retail trace. */
+    ray_hit_cell_sweep_ops_set(&s_place_ray_hit_ops);
+}
 
 static int cmd_place_entity_view_get(
     void*, const EntitySlot* entity,
@@ -181,8 +569,10 @@ static int cmd_place_entity_view_get(
     view->activity_flags = entity_stats_word_get(entity);
     nested = (const EntitySlot*)entity->carry_link_308;
     view->nested_type_2fc = nested != NULL ? nested->type : 0;
-    view->task_owner_cc = entity->activity_cap > 0
-        ? (uint32_t)entity->activity_cap : 0u;
+    /* CheckObjectCandidate reads retail +0xcc, mirrored by the indexed
+     * selector sidecar at +0x330. Activity-list capacity is a different
+     * Stats field and must not be substituted here. */
+    view->task_owner_cc = (uint32_t)entity->indexed_record_slot_330;
     return 1;
 }
 
@@ -209,6 +599,88 @@ static int cmd_place_target_cell_position_get(void*, const EntitySlot* entity,
     *x = (float)cell[0];
     *y = (float)cell[1];
     return 1;
+}
+
+static void* cmd_place_visual_resource_get(const EntitySlot* entity)
+{
+    EntitySlot* mutable_entity = (EntitySlot*)entity;
+    void* resource;
+    if (mutable_entity == NULL || mutable_entity->type < 1 ||
+        mutable_entity->type > 4) return NULL;
+    resource = mutable_entity->visual_resource_handles[
+        mutable_entity->type - 1];
+    if (resource != NULL) return resource;
+    /* The type-config owners retain native scene pointers even when the
+     * legacy renderer-record handle has not been installed. Those are the
+     * same loaded scene objects consumed by the type-specific resource
+     * helpers, so they can answer the position-only command branches. */
+    if (mutable_entity->type == 1 &&
+        entity_type1_scene_resource_bind(mutable_entity)) {
+        resource = mutable_entity->scene_resource_type1.scene_resource;
+        if (resource != NULL) return resource;
+    }
+    if ((mutable_entity->type == 2 || mutable_entity->type == 3) &&
+        entity_activity_runner_type_config_bind(mutable_entity)) {
+        EntityActivityRunnerSidecar* runner = mutable_entity->type == 2
+            ? &mutable_entity->activity_runner_type2
+            : &mutable_entity->activity_runner_type3;
+        if (runner->child_scene != NULL) return runner->child_scene;
+    }
+    entity_visual_resource_get_or_create(mutable_entity);
+    return mutable_entity->visual_resource_handles[
+        mutable_entity->type - 1];
+}
+
+static int cmd_place_target_kind_resolve(void*, const EntitySlot* entity)
+{
+    return cmd_place_visual_resource_get(entity) != NULL;
+}
+
+static int cmd_place_target_route_position_get(void*,
+                                               const EntitySlot* entity,
+                                               float* x, float* y)
+{
+    float position[3];
+    void* resource;
+    if (x == NULL || y == NULL) return 0;
+    resource = cmd_place_visual_resource_get(entity);
+    if (resource == NULL ||
+        !ddiscene_object_position_get(resource, NULL, position)) return 0;
+    *x = position[0];
+    *y = position[1];
+    return 1;
+}
+
+static int cmd_place_target_activity_position_get(void*,
+                                                  const EntitySlot* entity,
+                                                  float* x, float* y)
+{
+    int cell[2];
+    if (entity == NULL || x == NULL || y == NULL ||
+        !entity_record_flag20_query(entity, cell)) return 0;
+    *x = (float)cell[0];
+    *y = (float)cell[1];
+    return 1;
+}
+
+static int cmd_place_target_nested_scene_pose_get(const EntitySlot* entity,
+                                                  float position[3])
+{
+    const EntitySlot* nested;
+    void* scene_object;
+    if (entity == NULL || position == NULL ||
+        (entity->flags_3ec & 0x40u) == 0u || entity->link_2fc == 0u)
+        return 0;
+    nested = (const EntitySlot*)entity->link_2fc;
+    if (nested->type != 4 ||
+        nested->attached_direction_record_type4 == NULL) return 0;
+    /* FUN_00404fc0 resolves nested type-4 field +0x18 through
+     * SceneObjectSecondaryHandleGetOrCreate (FUN_004087e0), then reads that
+     * resolved object's scene position. */
+    scene_object = scene_object_secondary_handle_get_or_create(
+        nested->attached_direction_record_type4);
+    return scene_object != NULL &&
+           ddiscene_object_position_get(scene_object, NULL, position);
 }
 
 static int cmd_place_position_to_world(void*, int x, int y,
@@ -242,22 +714,72 @@ static int cmd_place_activity_flags(void*, const EntitySlot* entity)
     return (int)entity_stats_word_get(entity);
 }
 
+static int cmd_place_target_type4_activity_get(void*,
+                                              const EntitySlot* entity,
+                                              int* value_out)
+{
+    if (entity == NULL || value_out == NULL) return 0;
+    *value_out = (entity_capability_flags_get(entity) & 2u) != 0u;
+    return 1;
+}
+
 static int cmd_place_eligibility_gate(void*, const EntitySlot* entity, int relaxed)
 {
     return entity_shared_eligibility_check(entity, relaxed);
 }
 
-static int cmd_place_target_radius_gate(void*, const EntitySlot* entity,
-                                        const EntitySlot* target)
+static int cmd_place_entity_task_gate(void*, const EntitySlot* entity,
+                                      const EntitySlot*)
 {
-    return scene_object_has_task_type_4_5_7(entity) &&
-        entity_centers_within_object_radius(entity, target);
+    return scene_object_has_task_type_4_5_7(entity);
 }
 
-static int cmd_place_configured_radius_gate(void*, const EntitySlot* entity,
-                                            const EntitySlot* target)
+static int cmd_place_kind1_activity_gate(void*, const EntitySlot* entity)
 {
-    return entity_centers_within_configured_radius(entity, target);
+    /* FUN_00404fc0's type-1 kind-3 predicate calls FUN_00469bb0, which is
+     * the indexed Stats record's +0xec deposit count. */
+    return entity_stats_word_at_ec(entity) != 0u;
+}
+
+static int cmd_place_object_radius_gate(void*, const EntitySlot* entity,
+                                       const EntitySlot* target)
+{
+    /* FUN_00472130 first checks FUN_0043c440's activity class (4/5/7),
+     * which differs from the cheat-gate helper FUN_0044c530. */
+    return ai_activity_probe(entity) != 0 &&
+           entity_centers_within_object_radius(entity, target);
+}
+
+static int cmd_place_entity_can_target_kind(void*, const EntitySlot* entity,
+                                            int kind)
+{
+    return unported_ledger_stubs::
+        ledger_stub_0044b4c0_TypeTwoEntityTargetResolveAndApply(
+            (EntitySlot*)entity, (uint32_t)kind);
+}
+
+static int cmd_place_target_activity_gate(void*, const EntitySlot* entity)
+{
+    return s_ctx != NULL && ai_activity_cap(s_ctx, entity) != 0;
+}
+
+static int cmd_place_target_visibility_check(void*, const EntitySlot* entity,
+                                             int activity)
+{
+    /* FUN_00404fc0's kind-0x13 arm rejects when the activity scan finds a
+     * matching active record. */
+    return ai_activity_scan(entity, activity) == 0;
+}
+
+static EntitySlot* cmd_place_kind13_target_resolve(void*,
+                                                   const EntitySlot* entity,
+                                                   uint32_t activity)
+{
+    float position[2];
+    (void)activity; /* Activity filtering is performed by visibility above. */
+    if (entity == NULL) return NULL;
+    entity_transform_position_get(entity, position);
+    return entity_lookup_at_world_position(position);
 }
 
 static int cmd_place_ray_gate(void*, const EntitySlot* entity,
@@ -279,39 +801,69 @@ static int cmd_place_special_gate(void*, const EntitySlot* entity)
 
 static int cmd_place_task_coordinate_check(void*, int x, int y)
 {
-    return s_ctx != NULL && s_ctx->level != NULL &&
-        level_coord_pair_within_bounds(s_ctx->level, x, y);
+    (void)x;
+    (void)y;
+    /* FUN_00432550 (called for kind 0x16) unconditionally returns 1. */
+    return 1;
+}
+
+static float cmd_place_simulation_time_get(void*)
+{
+    return s_ctx != NULL && s_ctx->level != NULL
+        ? engine_float_field260_get(s_ctx->level) : 0.0f;
 }
 
 static void cmd_place_eligibility_ops_bind(void)
 {
     memset(&s_place_eligibility_ops, 0, sizeof(s_place_eligibility_ops));
     s_place_eligibility_ops.context = s_ctx;
+    s_place_eligibility_ops.activity_scale =
+        s_ctx != NULL && s_ctx->cfg != NULL
+        ? block_get_float(s_ctx->cfg, "Main MinEnergyForEat", 0.0f)
+        : 0.0f;
     s_place_eligibility_ops.entity_view_get = cmd_place_entity_view_get;
     s_place_eligibility_ops.global_feature_word =
         s_ctx != NULL ? &s_ctx->cheat : NULL;
     s_place_eligibility_ops.entity_special_gate = cmd_place_special_gate;
+    s_place_eligibility_ops.kind1_activity_gate =
+        cmd_place_kind1_activity_gate;
+    s_place_eligibility_ops.entity_can_target_kind =
+        cmd_place_entity_can_target_kind;
     s_place_eligibility_ops.kind3_target_gate = cmd_place_kind3_target_gate;
-    s_place_eligibility_ops.entity_target_gate = cmd_place_target_radius_gate;
-    s_place_eligibility_ops.entity_radius_gate =
-        cmd_place_configured_radius_gate;
+    s_place_eligibility_ops.entity_target_gate = cmd_place_entity_task_gate;
+    s_place_eligibility_ops.entity_radius_gate = cmd_place_object_radius_gate;
     s_place_eligibility_ops.entity_ray_gate = cmd_place_ray_gate;
     s_place_eligibility_ops.entity_eligible = cmd_place_eligibility_gate;
     s_place_eligibility_ops.target_activity_flags = cmd_place_activity_flags;
+    s_place_eligibility_ops.target_type4_activity_get =
+        cmd_place_target_type4_activity_get;
+    s_place_eligibility_ops.target_activity_gate =
+        cmd_place_target_activity_gate;
+    s_place_eligibility_ops.target_visibility_check =
+        cmd_place_target_visibility_check;
+    s_place_eligibility_ops.kind13_target_resolve =
+        cmd_place_kind13_target_resolve;
+    s_place_eligibility_ops.target_kind_resolve =
+        cmd_place_target_kind_resolve;
     s_place_eligibility_ops.target_position_get =
         cmd_place_target_position_get;
     s_place_eligibility_ops.position_to_world = cmd_place_position_to_world;
     s_place_eligibility_ops.terrain_walkable = cmd_place_terrain_walkable;
     s_place_eligibility_ops.command_kind_gate =
         cmd_place_command_kind_gate;
+    s_place_eligibility_ops.target_route_position_get =
+        cmd_place_target_route_position_get;
     s_place_eligibility_ops.target_activity_position_get =
-        cmd_place_target_cell_position_get;
+        cmd_place_target_activity_position_get;
     s_place_eligibility_ops.target_world_position_get =
         cmd_place_target_cell_position_get;
     s_place_eligibility_ops.task_coordinate_check =
         cmd_place_task_coordinate_check;
+    s_place_eligibility_ops.simulation_time_get =
+        cmd_place_simulation_time_get;
     unported_ledger_stubs::object_task_eligibility_ops_bind(
         &s_place_eligibility_ops);
+    cmd_place_ray_hit_ops_bind();
 }
 
 int cmd_place_command_eligibility_check(void* record, EntitySlot* entity,
@@ -326,8 +878,10 @@ int cmd_place_command_eligibility_check(void* record, EntitySlot* entity,
     memset(&command, 0, sizeof(command));
     command.kind = source->type;
     command.target = (EntitySlot*)source->payload;
-    command.x = level_cell_of(source->x);
-    command.y = level_cell_of(source->y);
+    /* The retail predicate reads these words as integers for cell commands;
+     * they are not float world coordinates despite sharing +8/+0xc with
+     * move records. */
+    cmd_rec_cell_xy_get(source, &command.x, &command.y);
     command.flags_5c = source->state;
     command.field_38 = (uint32_t)(uintptr_t)source->arg38;
     command.field_3c = source->field_3c;
@@ -341,17 +895,18 @@ int cmd_place_command_eligibility_check(void* record, EntitySlot* entity,
         require_command_gate, relaxed_entity_gate);
 }
 
-/* The original keeps two independent 50-entry candidate arrays: the
- * assignment pass at +0x335c and the timer pass at +0x3428. Their callback
- * bodies are anonymous, but the decompile shows the assignment walker is
- * unfiltered and the timer walker excludes +0x3e8 bit 0x80000. Rebuild each
- * view from the live typed pools and keep them separate because each pass
- * consumes entries with its own swap-with-last rule. */
+/* The callback writes independent 50-entry arrays at +0x335c and +0x3428.
+ * Assignment and timer scans consume them with separate swap-with-last
+ * rules. The pool builder below only supports direct scan entry calls. */
 #define PENDING_CANDIDATE_CAPACITY 50
 static EntitySlot* s_pending_assignment_candidates[PENDING_CANDIDATE_CAPACITY];
 static EntitySlot* s_pending_timer_candidates[PENDING_CANDIDATE_CAPACITY];
 static unsigned s_pending_assignment_count;
+// GLOBAL: LEGORR 0x004b34f0
 static unsigned s_pending_timer_count;
+/* CmdTickGlobal builds these two retail arrays during its preceding filtered
+ * entity walk. Direct callers of the scans still get a live-pool fallback. */
+static int s_pending_candidates_from_entity_walk;
 
 static GameContext* pending_scan_context_get(void)
 {
@@ -363,25 +918,44 @@ static unsigned pending_candidate_pool_build(GameContext* context,
                                               int filter_flagged)
 {
     unsigned count = 0;
-    int type;
     int index;
     if (context == NULL || output == NULL) return 0;
-    /* Entity types 5..19 share one special-object table in GameContext. */
-    for (type = 1; type <= 5 && count < PENDING_CANDIDATE_CAPACITY; ++type) {
-        const int entity_count_for_type = entity_count(context, type);
-        for (index = 0; index < entity_count_for_type &&
+    if (filter_flagged != 0) {
+        const int candidate_count = entity_count(context, 3);
+        for (index = 0; index < candidate_count &&
                             count < PENDING_CANDIDATE_CAPACITY; ++index) {
-            EntitySlot* entity = (EntitySlot*)entity_at(context, type, index);
-            if (entity != NULL && entity->type != 0 &&
-                (filter_flagged == 0 ||
-                 (entity->flags_3e8 & 0x80000u) == 0u))
-                output[count++] = entity;
+            EntitySlot* entity = (EntitySlot*)entity_at(context, 3, index);
+            /* The gameplay builder adds timer candidates only from the
+             * type-3, no-head arm of LAB_00404280. The surrounding filtered
+             * entity walk excludes +0x3e8 bit 0x80000; the callback then
+             * excludes +0x3e8 bit 0x80000000. Mirror both gates for direct
+             * calls of the timer scan when CmdTickGlobal did not build its
+             * candidate array. */
+            if (entity == NULL || entity->type != 3 ||
+                entity->ddiscene_owner_token == 0u ||
+                entity->cmd_head != NULL ||
+                (entity->flags_3e8 & (0x00080000u | 0x80000000u)) != 0u ||
+                (entity->flags_3e8 & 0x00400000u) == 0u ||
+                entity->field_340 <= 0.0f ||
+                entity_matches_current_selection_or_owner(entity) != 0 ||
+                entity->attach_304 != NULL ||
+                (entity->flags_3e4 & 0x08004000u) != 0u ||
+                (entity->flags_3e0 & 0x00800000u) != 0u ||
+                entity->command_chain_idle_elapsed_338 >= 250.0f ||
+                entity_flag400_and_health_threshold_check(entity) != 0)
+                continue;
+            output[count++] = entity;
         }
+        return count;
     }
     {
-        const unsigned live_count = count;
-        while (count < PENDING_CANDIDATE_CAPACITY) output[count++] = NULL;
-        count = live_count;
+        int active_count = active_entity_list_count();
+        if (active_count > PENDING_CANDIDATE_CAPACITY)
+            active_count = PENDING_CANDIDATE_CAPACITY;
+        for (index = 0; index < active_count; ++index) {
+            const EntitySlot* entity = active_entity_list_entry_get(index);
+            if (entity != NULL) output[count++] = (EntitySlot*)entity;
+        }
     }
     return count;
 }
@@ -397,6 +971,208 @@ static int pending_record_matches_entity(const CmdRec* record,
     }
     /* FUN_00452610(entity, 0): the +0x3e8 entity flag word, bit 0x200000. */
     return (entity->flags_3e8 & 0x200000u) != 0u;
+}
+
+static int cmd_entity_global_record_special_step(EntitySlot* entity,
+                                                  CmdRec* record,
+                                                  CmdRec* previous);
+
+/* LAB_00404280's DAT_004b3354 subwalk. The head-list is owned by CmdRec and
+ * uses the same host pointer sidecar as the other command-list operations.
+ * This is the first assignment lane: it only considers non-expired global
+ * records, applies the retail membership form, then checks Place eligibility
+ * and exact cell/adjacency before attaching the first matching record. */
+static int cmd_entity_global_record_assign(EntitySlot* entity)
+{
+    GameContext* context = pending_scan_context_get();
+    CmdRec* previous = NULL;
+    CmdRec* record = s_global_head;
+    while (record != NULL) {
+        CmdRec* next = as_rec(record->global_next);
+        int eligible = 1;
+        if ((record->state & 0x80000u) != 0u) {
+            eligible = 0;
+        }
+        else if ((record->state & 0x100000u) == 0u &&
+                 (entity_flag400_and_health_threshold_check(entity) != 0 ||
+                  (record->state & 0x400u) != 0u)) {
+            eligible = 0;
+        }
+        if (eligible && (record->state & 0x100u) == 0u &&
+            selection_contains_entity_target(NULL, entity, NULL) != 0) {
+            eligible = 0;
+        }
+        if (eligible && (record->state & 0x100u) != 0u &&
+            !cmd_array_find_value_index((const int*)record->buffer,
+                                        record->count,
+                                        (int)(uintptr_t)entity, NULL)) {
+            eligible = 0;
+        }
+        if (eligible) {
+            float eligibility_cell[2] = { 0.0f, 0.0f };
+            uint32_t out_flag = 0u;
+            int actor_cell[2] = { -1, -1 };
+            int target_x, target_y;
+            if (!cmd_place_command_eligibility_check(
+                    record, entity, NULL, eligibility_cell, &out_flag, 1, 1) ||
+                out_flag != 0u) {
+                eligible = 0;
+            }
+            else if ((record->state & 0x100000u) == 0u) {
+                entity_position_to_terrain_cell(entity,
+                    context != NULL ? context->level : NULL,
+                    &actor_cell[0], &actor_cell[1]);
+                target_x = crt_float_to_long(eligibility_cell[0]);
+                target_y = crt_float_to_long(eligibility_cell[1]);
+                if (actor_cell[0] < 0 || actor_cell[1] < 0) {
+                    eligible = 0;
+                }
+                else if (record->type == 8 &&
+                         (record->state & 8u) == 0u) {
+                    if (!((actor_cell[0] == target_x &&
+                           abs(actor_cell[1] - target_y) == 1) ||
+                          (actor_cell[1] == target_y &&
+                           abs(actor_cell[0] - target_x) == 1)))
+                        eligible = 0;
+                }
+                else if (record->type == 10 || record->type == 11 ||
+                         record->type == 23 || record->type == 21) {
+                    if (!((actor_cell[0] == target_x &&
+                           abs(actor_cell[1] - target_y) == 1) ||
+                          (actor_cell[1] == target_y &&
+                           abs(actor_cell[0] - target_x) == 1)))
+                        eligible = 0;
+                }
+                else if (actor_cell[0] != target_x ||
+                         actor_cell[1] != target_y) {
+                    eligible = 0;
+                }
+            }
+        }
+        if (eligible) {
+            entity_record_attach_and_relink(record, previous, entity);
+            return 1;
+        }
+        {
+            const int special = cmd_entity_global_record_special_step(
+                entity, record, previous);
+            if (special != 0) return special;
+        }
+        previous = record;
+        record = next;
+    }
+    return 0;
+}
+
+/* The flag-0x400 half of LAB_00404280 handles carried-object task records
+ * and checks whether the entity can reach their encoded cell. */
+static int cmd_entity_global_record_special_step(EntitySlot* entity,
+                                                  CmdRec* record,
+                                                  CmdRec* previous)
+{
+    EntitySlot* carried = (EntitySlot*)entity->carry_link_308;
+    int route_lane = 0;
+    int route_failed = 0;
+    int goal[2];
+
+    if ((record->state & 0x400u) == 0u) return 0;
+    if (entity_flag400_and_health_threshold_check(entity) != 0 &&
+        (entity->flags_3e8 & 0x200000u) == 0u && entity->type != 3) {
+        if (carried != NULL &&
+            (carried->flags_3e8 & 0x80000000u) != 0u) {
+            if (record->type == 0x1b) {
+                entity_record_attach_and_relink(record, previous, entity);
+                return 1;
+            }
+        }
+        else if (carried != NULL &&
+                 carried->indexed_record_slot_330 == record->cell_count &&
+                 (record->cell_target == -1 ||
+                  carried->etype == record->cell_target) &&
+                 carried->type == record->type) {
+            switch (record->type) {
+            case 7:
+            case 9:
+            case 15:
+            case 20:
+                route_lane = 1;
+                break;
+            case 5:
+                if (record->payload != NULL &&
+                    entity_shared_eligibility_check(
+                        (EntitySlot*)record->payload, 0) != 0) {
+                    if (entity_deposit_activity_gate(
+                            entity, (EntitySlot*)record->payload) != 0) {
+                        entity_record_attach_and_relink(record, previous,
+                                                        entity);
+                        return 1;
+                    }
+                    route_failed = 1;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
+    if (route_lane) {
+        LevelState* level = entity->owner_ctx != NULL
+            ? entity->owner_ctx->level : NULL;
+        int start[2] = { -1, -1 };
+        int* path_x = NULL;
+        int* path_y = NULL;
+        uint32_t path_count = 0u;
+        int found;
+        (void)cmd_rec_cell_xy_get(record, &goal[0], &goal[1]);
+        if (record->type == 9) {
+            int neighbor[2] = { -1, -1 };
+            if (level == NULL || !first_free_neighbor_cell_pick(
+                    entity, level, goal, neighbor, 1)) {
+                route_failed = 1;
+            }
+            else {
+                goal[0] = neighbor[0];
+                goal[1] = neighbor[1];
+            }
+        }
+        entity_position_to_terrain_cell(entity, level, &start[0], &start[1]);
+        if (!route_failed && level != NULL && start[0] >= 0 && start[1] >= 0) {
+            found = terrain_neighbor_path_check(
+                entity, (uint32_t)start[0], (uint32_t)start[1],
+                (uint32_t)goal[0], (uint32_t)goal[1], &path_x, &path_y,
+                &path_count, NULL, NULL);
+            if (path_x != NULL) engine_heap_free(path_x);
+            if (path_y != NULL) engine_heap_free(path_y);
+            if (!found) route_failed = 1;
+        }
+        else if (!route_failed) {
+            route_failed = 1;
+        }
+    }
+    if (route_failed) record->param2 = (int32_t)0x42960000u;
+
+    if ((record->state & 0x100u) != 0u &&
+        cmd_array_find_value_index((const int*)record->buffer,
+                                   record->count,
+                                   (int)(uintptr_t)entity, NULL))
+        return 2; /* stop record walk, then run unmatched-candidate gating */
+    return 0;
+}
+
+static void cmd_entity_pending_candidates_append(EntitySlot* entity)
+{
+    if (entity == NULL ||
+        entity_flag400_and_health_threshold_check(entity) != 0)
+        return;
+    if (s_pending_assignment_count < PENDING_CANDIDATE_CAPACITY) {
+        s_pending_assignment_candidates[s_pending_assignment_count++] = entity;
+    }
+    if (entity->type == 3 &&
+        (entity->flags_3e8 & 0x80000000u) == 0u &&
+        s_pending_timer_count < PENDING_CANDIDATE_CAPACITY) {
+        s_pending_timer_candidates[s_pending_timer_count++] = entity;
+    }
 }
 
 /* FUN_0044b4c0: non-type-2 entities pass the command-activity gate. For a
@@ -438,13 +1214,15 @@ static int pending_command_cell_walkable(GameContext* context,
         entity->owner_36c == NULL) return 0;
     if (mode != 0 && (entity_stats_word_get(entity) & 1u) == 0u)
         return 0;
+    /* PlaceCommandEligibilityCheck passes param_5 == 1 to FUN_00432770. */
+    if ((entity->flags_3e0 & 0x400u) != 0u) return 0;
     if ((entity->flags_3e8 & 2u) == 0u) return 0;
     if ((unsigned)x >= (unsigned)level_width(level) - 2u ||
         (unsigned)y >= (unsigned)level_height(level) - 2u) return 0;
     cell = level_voxel(level, x, y);
     if (cell == NULL) return 0;
     type = (int)(signed char)cell[2];
-    if (ai_stats_speed(context, type) == 0.0f) return 0;
+    if (entity_stats_float_at24_indexed(entity, type) == 0.0f) return 0;
 
     if (mode == 0) {
         memcpy(&flags, cell + 8, sizeof(flags));
@@ -469,10 +1247,6 @@ static int pending_command_cell_walkable(GameContext* context,
 }
 // GLOBAL: LEGORR 0x004b8060
 static int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
-// GLOBAL: LEGORR 0x004b3424
-static int   s_global_tick_counter_a = 0;
-// GLOBAL: LEGORR 0x004b34f0
-static int   s_global_tick_counter_b = 0;
 #define PRIORITY_ENTRY_COUNT 27
 // GLOBAL: LEGORR 0x004b7ff4
 static int s_priority_state[PRIORITY_ENTRY_COUNT];
@@ -490,10 +1264,17 @@ static void cmd_pool_grow(void)
     }
     uint32_t n = 1u << (level & 0x1f);
     CmdRec* block = (CmdRec*)malloc((size_t)n * CMD_STRIDE);
+    uint8_t* live;
     if (block == NULL) {
         return;
     }
+    live = (uint8_t*)calloc((size_t)n, sizeof(*live));
+    if (live == NULL) {
+        free(block);
+        return;
+    }
     s_blocks[level] = block;
+    s_block_live[level] = live;
     ++s_pool_level;
     if (n > 1) {
         for (uint32_t i = 0; i + 1 < n; ++i) {
@@ -518,6 +1299,7 @@ void* cmd_alloc(int type)
     memset(rec, 0, CMD_STRIDE);
     rec->next = NULL;
     rec->type = type;
+    cmd_pool_record_live_set(rec, 1);
     return rec;
 }
 
@@ -537,6 +1319,7 @@ void cmd_free(void* rec, int cancel)
         /* corpus: the pointer is never cleared — cmd_alloc zeroes the
          * whole record, so the next owner starts from NULL. */
     }
+    cmd_pool_record_live_set(r, 0);
     /* corpus: load ds:0x4b31f8, link it at [rec+0x64], store the record
      * back as that head — s_free is this freelist head. */
     CMD_POOL_LINK_SET(r, s_free);
@@ -575,6 +1358,9 @@ void cmd_init(void)
 {
     int i;
     for (i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
+        if (s_blocks[i] != NULL) free(s_blocks[i]);
+        if (s_block_live[i] != NULL) free(s_block_live[i]);
+        s_block_live[i] = NULL;
         s_blocks[i] = NULL;
     }
     s_pool_level = 0;
@@ -690,40 +1476,167 @@ void* cmd_chain_walk(const EntitySlot* e)
     }
 }
 
+int cmd_chain_contains_kind(const EntitySlot* e, int kind)
+{
+    const CmdRec* cur;
+    if (e == NULL) return 0;
+    cur = (const CmdRec*)e->cmd_head;
+    while (cur != NULL) {
+        if (cur->type == kind) return 1;
+        cur = (const CmdRec*)cur->next;
+    }
+    return 0;
+}
+
 static void idle_register(EntitySlot* e);
 
-/* FUN_00403d10 (generic drop): unlink and free every chain record whose
- * type (+0x00) equals `type`, mirroring the corpus loop over the entity's
- * +0xbc record list. Like the corpus, records with per-type side effects
- * (its types 7/0xc/0x17/3 branches) are not included here — the port only
- * needs the plain drop FUN_00403d10(ent, 0x13, 0, 1) performs on the
- * deferred-grant path. */
-// FUNCTION: LEGORR 0x00403d10
-int cmd_chain_drop(EntitySlot* e, int type)
+/* The 0x408d70/0x408ce0 helpers share the live path-descriptor list owned by
+ * level.cpp. The descriptor key is its serial dword at +0x08; its +0x2c list
+ * contains EntitySlot pointers, mirrored by the native sidecar accessors. */
+static void* cmd_path_descriptor_find(uint32_t key)
 {
-    if (e == NULL || e->cmd_head == NULL) {
-        return 0;
+    void* record;
+    for (record = path_record_last_peek(); record != NULL;
+         record = *(void**)((char*)record + 0x24)) {
+        uint32_t record_key;
+        memcpy(&record_key, (char*)record + 0x08, sizeof(record_key));
+        if (record_key == key) return record;
     }
-    int dropped = 0;
+    return NULL;
+}
+
+// FUNCTION: LEGORR 0x00408CE0
+static void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity)
+{
+    void* descriptor = cmd_path_descriptor_find(key);
+    uint32_t expected_count = 0u;
+    uint32_t current_count = 0u;
+    uint32_t flags = 0u;
+    if (descriptor == NULL) {
+        if (entity != NULL)
+            cmd_produce(entity->type == 6 ? 0x16 : 0x1c,
+                        entity, 0, NULL);
+        return;
+    }
+
+    if (entity != NULL) {
+        /* Retail sets +0x3ec bit 0x100 before appending the entity pointer.
+         * The sidecar append mirrors the descriptor's +0xcc and +0x20 counts. */
+        entity->flags_3ec |= 0x100u;
+        if (!path_record_entity_append(descriptor, entity)) return;
+    }
+
+    memcpy(&expected_count, (char*)descriptor + 0x1c,
+           sizeof(expected_count));
+    memcpy(&current_count, (char*)descriptor + 0x20,
+           sizeof(current_count));
+    if (expected_count == current_count) {
+        const float completed_progress = 1.3125f;
+        memcpy((char*)descriptor + 0x28, &completed_progress,
+               sizeof(completed_progress));
+        memcpy(&flags, (char*)descriptor + 0xd0, sizeof(flags));
+        flags |= 1u;
+        memcpy((char*)descriptor + 0xd0, &flags, sizeof(flags));
+    }
+}
+
+// FUNCTION: LEGORR 0x00403d10
+void entity_command_unlink_by_kind(EntitySlot* e, int type,
+                                   const void* extra, int unlink)
+{
+    if (e == NULL || (s_global_enabled & 2) != 0) return;
+
+    /* Type 3 first reports the matching spatial object, before walking the
+     * command chain. The retail extra is an EntitySlot pointer; +0xcc is its
+     * indexed-record selector. */
+    if (type == 3 && extra != NULL) {
+        const EntitySlot* payload = (const EntitySlot*)extra;
+        void* object = unported_ledger_stubs::
+            ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
+            e, NULL, (uint32_t)payload->type,
+            payload->indexed_record_slot_330);
+        if (object != NULL) cmd_produce(0x18, e, (int)(uintptr_t)object, NULL);
+    }
+
     CmdRec* prev = NULL;
     CmdRec* cur = as_rec(e->cmd_head);
     while (cur != NULL) {
         CmdRec* next = as_rec(cur->next);
         if (cur->type == type) {
-            cmd_global_unlink(cur);
-            if (prev != NULL) {
-                prev->next = next;
-            } else {
-                e->cmd_head = next;
+            int append_zone_object = 0;
+            const uint32_t zone_key = (uint32_t)cur->zone;
+            if (type == 7 && extra != NULL) {
+                EntitySlot* object = (EntitySlot*)extra;
+                if (terrain_descriptor_coordinate_count_limit_check(
+                        (uint32_t)cur->zone, object->type,
+                        object->etype)) {
+                    append_zone_object = 1;
+                }
+                else {
+                    cmd_cancel_by_coords(cur->zone, 1,
+                                         object->type, object->etype);
+                }
             }
-            cmd_free(cur, 0);
-            ++dropped;
+            if (type == 0x0c) {
+                int pair[2];
+                LevelState* level = e->owner_ctx != NULL
+                    ? e->owner_ctx->level : (s_ctx != NULL ? s_ctx->level : NULL);
+                memcpy(&pair[0], &cur->x, sizeof(int));
+                memcpy(&pair[1], &cur->y, sizeof(int));
+                if (level != NULL) {
+                    if (e->type == 1) {
+                        uint8_t* cell = level_voxel(level, pair[0], pair[1]);
+                        unsigned repeat = 0;
+                        if (cell != NULL) {
+                            uint32_t flags;
+                            memcpy(&flags, cell + 8, sizeof(flags));
+                            repeat = flags & 3u;
+                        }
+                        while (repeat-- != 0u) {
+                            terrain_cell_state_update(level, pair);
+                            cmd_produce((int)(uintptr_t)cur->event_payload,
+                                        NULL, 0, pair);
+                        }
+                    }
+                    terrain_cell_state_update(level, pair);
+                    cmd_produce((int)(uintptr_t)cur->event_payload,
+                                NULL, 0, pair);
+                    level_cell_flag_80000_set(level, pair[0], pair[1], 0);
+                    level_cell_flag_10000000_set(level, pair[0], pair[1], 0);
+                }
+            }
+            else if (type == 0x17) {
+                entity_linked_activity_event_dispatch(e, cur->field_3c);
+                advisor_text_animation_update(0x18, 1, 0);
+            }
+            if (unlink) {
+                cmd_global_unlink(cur);
+                if (prev != NULL) prev->next = next;
+                else e->cmd_head = next;
+                cmd_free(cur, 0);
+            }
+            if (append_zone_object)
+                cmd_operation_group_append_object(zone_key,
+                                                  (EntitySlot*)extra);
         } else {
             prev = cur;
         }
         cur = next;
     }
-    return dropped;
+    if (type == 3) pending_record_callback_dispatch((void*)extra);
+}
+
+int cmd_chain_drop(EntitySlot* e, int type)
+{
+    int before = 0;
+    const CmdRec* record;
+    if (e == NULL) return 0;
+    for (record = (const CmdRec*)e->cmd_head; record != NULL;
+         record = (const CmdRec*)record->next) {
+        if (record->type == type) ++before;
+    }
+    entity_command_unlink_by_kind(e, type, NULL, 1);
+    return before;
 }
 
 void* cmd_global_head(void)
@@ -737,21 +1650,22 @@ void* cmd_global_pending_head(void)
 }
 
 // FUNCTION: LEGORR 0x00405950
-/* PendingCommandTimerFireScan (FUN_00405950).  The decompile walks the
- * tail-linked list and the separate DAT_004b3428 candidate pool.  The pool
- * is reconstructed from the live typed entity tables because its original
- * anonymous callback has no port owner yet.  Preserve the observed timer,
- * per-kind flag, record unlink, entity-head install/copy, and swap-removal
- * effects for branches whose predicates are represented by existing APIs. */
+/* PendingCommandTimerFireScan (FUN_00405950). The decompile walks the
+ * tail-linked list and the separate DAT_004b3428 candidate pool. CmdTickGlobal
+ * builds that pool in LAB_00404280; direct calls reconstruct the no-head
+ * type-3 subset from the live entity table, including the filtered-walk and
+ * callback flag gates. Preserve the observed timer, per-kind predicate,
+ * record unlink, entity-head install/copy, and swap-removal effects. */
 void pending_command_timer_fire_scan(void)
 {
     GameContext* context = pending_scan_context_get();
     CmdRec* previous = NULL;
     CmdRec* record = s_global_tail;
-    unsigned count = pending_candidate_pool_build(context,
-                                                   s_pending_timer_candidates,
-                                                   1);
-    s_pending_timer_count = count;
+    if (!s_pending_candidates_from_entity_walk) {
+        unsigned count = pending_candidate_pool_build(
+            context, s_pending_timer_candidates, 1);
+        s_pending_timer_count = count;
+    }
     while (record != NULL) {
         CmdRec* next = as_rec(record->global_next);
         int removed = 0;
@@ -862,22 +1776,23 @@ void pending_command_timer_fire_scan(void)
 // FUNCTION: LEGORR 0x00405c10
 /* PendingCommandEntityAssignmentTick (FUN_00405c10). Candidate membership
  * uses the recovered 0x452610 stats mask or the record's explicit pointer
- * array (0x452650). Coordinate/target kinds 0, 8, 0xb, 0xc, 0x12, 0x16,
- * 0x17 and 10 use live entity and terrain fields; compatible candidates are
- * selected by distance and attached through the common transfer/copy helper.
+ * array (0x452650). Coordinate/target kinds 0, 3, 8, 0xb, 0xc, 0x12, 0x13,
+ * 0x16, 0x17 and 10 use live entity and terrain fields; compatible candidates
+ * are selected by distance and attached through the common transfer/copy
+ * helper. Default predicate kinds use the returned immediate-assignment flag
+ * and select the first compatible candidate without requiring coordinates.
  *
  * The cheat feature gate uses ai_can_do; kind 8 uses the full terrain and
- * entity gates from FUN_00432770. Kinds 3, 0x11, 0x13, 0x15, 0x1a, and
- * 0x1e still need target/config state that has no production owner. Kind
- * 0x12's scene-resource pose alternative is unavailable, while its direct
+ * entity gates from FUN_00432770. Kinds 0x15 and 0x1e resolve the target's
+ * cached visual resource and read its DDiScene pose. Kind 0x1a uses the live
+ * radius, ray, target-eligibility, and global-feature APIs below. Kind 0x11 reads its
+ * `Main MinEnergyForEat` threshold from the active Lego.cfg. Kind 0x12's
+ * nested type-4 pose uses the retained scene sidecar when present, and its
  * capability-0x20 and stats-flag position branches use live entity/level
  * state.
- * PlaceCommandEligibilityCheck's live ops are installed from cmd_context_set;
- * kind 0x1a uses its decompile-backed activity, object-radius, configured-
- * radius, ray, and target-eligibility gates here. The remaining ops that
- * require target/resource/visibility/route resolvers, the scene-object pose
- * path, or (for kind 0x11) the configured energy threshold have no production
- * owner. Kinds 8/0xb/10/0x17 validate distant
+ * PlaceCommandEligibilityCheck's live ops are installed from cmd_context_set.
+ * Kind 0x12's alternate scene pose still depends on the renderer resource
+ * provider. Kinds 8/0xb/10/0x13/0x17 validate distant
  * candidates through TerrainNeighborPathCheck, then queue their decompiled
  * operation and consume the candidate. Route failure resets the record's
  * timer to the reference 75.0 bits. The displaced-cell messages for kinds
@@ -888,34 +1803,52 @@ void pending_command_entity_assignment_tick(void)
     GameContext* context = pending_scan_context_get();
     CmdRec* previous = NULL;
     CmdRec* record = s_global_head;
-    unsigned count = pending_candidate_pool_build(
-        context, s_pending_assignment_candidates, 0);
-    s_pending_assignment_count = count;
+    float nearest = 99999.0f;
+    if (!s_pending_candidates_from_entity_walk) {
+        unsigned count = pending_candidate_pool_build(
+            context, s_pending_assignment_candidates, 0);
+        s_pending_assignment_count = count;
+    }
     while (record != NULL) {
         CmdRec* next = as_rec(record->global_next);
         if ((*(float*)&record->param2 <= 0.0f) &&
             (record->state & 0x80400u) == 0u) {
             unsigned i;
-            float nearest = 99999.0f;
             unsigned selected_index = s_pending_assignment_count;
             EntitySlot* selected = NULL;
-            int target_cell_x, target_cell_y;
+            int target_cell_x = 0, target_cell_y = 0;
             int selected_cell_x = 0, selected_cell_y = 0;
             int selected_requires_route = 0;
-            float target_world[2];
+            float target_world[2] = { 0.0f, 0.0f };
             int target_world_valid = 0;
             const int coordinate_kind = record->type == 0 ||
+                                        record->type == 3 ||
                                         record->type == 8 ||
                                         record->type == 0x0b ||
                                         record->type == 0x0c ||
                                         record->type == 0x16 ||
                                         record->type == 0x17 ||
+                                        record->type == 0x13 ||
+                                        record->type == 0x15 ||
+                                        record->type == 0x1e ||
                                         record->type == 10 ||
                                         record->type == 0x12 ||
                                         record->type == 0x1a;
-            int has_direct_placement = 0;
+            /* Some command kinds have no coordinate result: their
+             * PlaceCommandEligibilityCheck default arm sets its result flag
+             * to request immediate assignment. They still participate in
+             * the candidate walk, before the coordinate-specific cases. */
+            int has_direct_placement = !coordinate_kind;
             if (coordinate_kind && context != NULL && context->level != NULL) {
-                if ((record->type == 0x17 || record->type == 10) &&
+                if (record->type == 3 && record->payload != NULL) {
+                    entity_transform_position_get(
+                        (EntitySlot*)record->payload, target_world);
+                    target_world_valid = 1;
+                    has_direct_placement = terrain_world_xy_to_cell(
+                        context->level->ptr_terrain, target_world[0],
+                        target_world[1], &target_cell_x, &target_cell_y);
+                }
+                else if ((record->type == 0x17 || record->type == 10) &&
                     record->payload != NULL) {
                     float target_position[2];
                     entity_transform_position_get(
@@ -926,6 +1859,16 @@ void pending_command_entity_assignment_tick(void)
                     has_direct_placement = terrain_world_xy_to_cell(
                         context->level->ptr_terrain, target_position[0],
                         target_position[1], &target_cell_x, &target_cell_y);
+                }
+                else if ((record->type == 0x15 || record->type == 0x1e) &&
+                         record->payload != NULL &&
+                         cmd_place_target_route_position_get(
+                             NULL, (EntitySlot*)record->payload,
+                             &target_world[0], &target_world[1])) {
+                    target_world_valid = 1;
+                    has_direct_placement = terrain_world_xy_to_cell(
+                        context->level->ptr_terrain, target_world[0],
+                        target_world[1], &target_cell_x, &target_cell_y);
                 }
                 else if (record->type == 0x12 && record->payload != NULL) {
                     EntitySlot* target = (EntitySlot*)record->payload;
@@ -940,20 +1883,35 @@ void pending_command_entity_assignment_tick(void)
                             context->level->ptr_terrain, target_position[0],
                             target_position[1], &target_cell_x, &target_cell_y);
                     }
-                    else if (entity_record_flag20_query(target, target_xy) &&
+                    else {
+                        float nested_scene_position[3];
+                        if (cmd_place_target_nested_scene_pose_get(
+                                target, nested_scene_position)) {
+                            target_world[0] = nested_scene_position[0];
+                            target_world[1] = nested_scene_position[1];
+                            target_world_valid = 1;
+                            has_direct_placement = terrain_world_xy_to_cell(
+                                context->level->ptr_terrain,
+                                nested_scene_position[0],
+                                nested_scene_position[1], &target_cell_x,
+                                &target_cell_y);
+                        }
+                        else if (entity_record_flag20_query(target,
+                                                            target_xy) &&
                              level_coord_pair_within_bounds(
                                  context->level, target_xy[0], target_xy[1])) {
-                        /* FUN_00404fc0's kind-0x12 fallback calls
-                         * FUN_00439e40 to derive an adjacent task cell. The
-                         * scene-resource pose branch preceding it is not
-                         * representable by EntitySlot, so retain the direct
-                         * capability-0x20 path exposed by that helper. */
-                        target_cell_x = target_xy[0];
-                        target_cell_y = target_xy[1];
-                        has_direct_placement = terrain_cell_world_center_xy_get(
-                            context->level->ptr_terrain, target_cell_x,
-                            target_cell_y, target_world);
-                        target_world_valid = has_direct_placement;
+                            /* FUN_00404fc0 first resolves the nested type-4
+                             * scene pose, then falls back to FUN_00439e40's
+                             * adjacent task cell. */
+                            target_cell_x = target_xy[0];
+                            target_cell_y = target_xy[1];
+                            has_direct_placement =
+                                terrain_cell_world_center_xy_get(
+                                    context->level->ptr_terrain,
+                                    target_cell_x, target_cell_y,
+                                    target_world);
+                            target_world_valid = has_direct_placement;
+                        }
                     }
                 }
                 else if (record->type == 0x1a && record->payload != NULL) {
@@ -963,6 +1921,12 @@ void pending_command_entity_assignment_tick(void)
                     has_direct_placement = terrain_world_xy_to_cell(
                         context->level->ptr_terrain, target_world[0],
                         target_world[1], &target_cell_x, &target_cell_y);
+                }
+                else if (record->type == 0x13) {
+                    /* Kind 0x13 resolves its target from each candidate's
+                     * current world position in PlaceCommandEligibilityCheck;
+                     * there is no coordinate pair in the command record. */
+                    has_direct_placement = 1;
                 }
                 else if (record->type != 0x17 && record->type != 10 &&
                     record->type != 0x12 &&
@@ -980,10 +1944,18 @@ void pending_command_entity_assignment_tick(void)
             for (i = 0; has_direct_placement &&
                         i < s_pending_assignment_count; ++i) {
                 EntitySlot* entity = s_pending_assignment_candidates[i];
+                float eligibility_position[2] = { 0.0f, 0.0f };
+                uint32_t eligibility_immediate = 0u;
                 float position[2];
+                float candidate_target_world[2] = { target_world[0],
+                                                     target_world[1] };
                 int cell_x, cell_y;
+                int candidate_target_cell_x = target_cell_x;
+                int candidate_target_cell_y = target_cell_y;
+                int candidate_target_world_valid = target_world_valid;
                 float dx, dy, distance;
                 int requires_route = 0;
+                int use_approach_cell = 0;
                 if (!pending_record_matches_entity(record, entity) ||
                     ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
                      entity->owner_36c == NULL) ||
@@ -992,22 +1964,89 @@ void pending_command_entity_assignment_tick(void)
                     ((context->cheat & 1u) != 0u &&
                      record->type != 0x1a && ai_can_do(entity) != 0))
                     continue;
-                if (record->type == 0x1a) {
-                    float target_position[2];
-                    float target_cell[2];
-                    uint32_t out_flag = 0u;
-                    if (!cmd_place_command_eligibility_check(
-                            record, entity, target_position, target_cell,
-                            &out_flag, 1, 1))
-                        continue;
-                    target_world[0] = target_position[0];
-                    target_world[1] = target_position[1];
+                /* The retail assignment loop calls 0x404fc0 for every
+                 * candidate before path validation. Its final output flag
+                 * marks the default command-kind branch as an immediate
+                 * selection, so keep that result separate from the derived
+                 * coordinate outputs. */
+                if (!cmd_place_command_eligibility_check(
+                        record, entity,
+                        coordinate_kind ? eligibility_position : NULL,
+                        NULL, &eligibility_immediate, 1, 1))
+                    continue;
+                if (!coordinate_kind) {
+                    if (eligibility_immediate == 0u) continue;
+                    selected = entity;
+                    selected_index = i;
+                    selected_cell_x = 0;
+                    selected_cell_y = 0;
+                    selected_requires_route = 0;
+                    break;
+                }
+                if (record->type == 3) {
+                    target_world[0] = eligibility_position[0];
+                    target_world[1] = eligibility_position[1];
                     target_world_valid = 1;
                     if (!terrain_world_xy_to_cell(
-                            context->level->ptr_terrain, target_position[0],
-                            target_position[1], &target_cell_x,
+                            context->level->ptr_terrain,
+                            eligibility_position[0], eligibility_position[1],
+                            &target_cell_x, &target_cell_y)) continue;
+                    candidate_target_world[0] = target_world[0];
+                    candidate_target_world[1] = target_world[1];
+                    candidate_target_world_valid = target_world_valid;
+                    candidate_target_cell_x = target_cell_x;
+                    candidate_target_cell_y = target_cell_y;
+                }
+                if (record->type == 0x1a) {
+                    target_world[0] = eligibility_position[0];
+                    target_world[1] = eligibility_position[1];
+                    target_world_valid = 1;
+                    if (!terrain_world_xy_to_cell(
+                            context->level->ptr_terrain,
+                            eligibility_position[0],
+                            eligibility_position[1], &target_cell_x,
                             &target_cell_y))
                         continue;
+                    candidate_target_world[0] = target_world[0];
+                    candidate_target_world[1] = target_world[1];
+                    candidate_target_world_valid = target_world_valid;
+                    candidate_target_cell_x = target_cell_x;
+                    candidate_target_cell_y = target_cell_y;
+                }
+                if (record->type == 0x15 || record->type == 0x1e) {
+                    target_world[0] = eligibility_position[0];
+                    target_world[1] = eligibility_position[1];
+                    target_world_valid = 1;
+                    candidate_target_world[0] = eligibility_position[0];
+                    candidate_target_world[1] = eligibility_position[1];
+                    candidate_target_world_valid = 1;
+                    if (!terrain_world_xy_to_cell(
+                            context->level->ptr_terrain,
+                            eligibility_position[0], eligibility_position[1],
+                            &candidate_target_cell_x,
+                            &candidate_target_cell_y)) continue;
+                }
+                if (record->type == 0x13) {
+                    candidate_target_world[0] = eligibility_position[0];
+                    candidate_target_world[1] = eligibility_position[1];
+                    if (!terrain_world_xy_to_cell(
+                            context->level->ptr_terrain,
+                            candidate_target_world[0],
+                            candidate_target_world[1],
+                            &candidate_target_cell_x,
+                            &candidate_target_cell_y))
+                        continue;
+                    candidate_target_world_valid = 1;
+                }
+                if (record->type == 0x12) {
+                    candidate_target_world[0] = eligibility_position[0];
+                    candidate_target_world[1] = eligibility_position[1];
+                    candidate_target_world_valid = 1;
+                    if (!terrain_world_xy_to_cell(
+                            context->level->ptr_terrain,
+                            eligibility_position[0], eligibility_position[1],
+                            &candidate_target_cell_x,
+                            &candidate_target_cell_y)) continue;
                 }
                 if (record->type == 0x0c &&
                     (entity_stats_word_get(entity) & 0x10000u) == 0u)
@@ -1073,45 +2112,76 @@ void pending_command_entity_assignment_tick(void)
                     continue;
                 if ((record->type == 8 && (record->state & 8u) == 0u) ||
                     record->type == 0x0b || record->type == 10 ||
-                    record->type == 0x17) {
-                    const int dx = cell_x - target_cell_x;
-                    const int dy = cell_y - target_cell_y;
+                    record->type == 0x17 || record->type == 0x13) {
+                    const int dx = cell_x - candidate_target_cell_x;
+                    const int dy = cell_y - candidate_target_cell_y;
                     requires_route =
                         !(((dx == 1 || dx == -1) && dy == 0) ||
                           (dx == 0 && (dy == 1 || dy == -1)));
+                    use_approach_cell = requires_route;
                 }
-                if (requires_route) {
-                    int goal_xy[2];
+                if (record->type == 3 &&
+                    (cell_x != candidate_target_cell_x ||
+                     cell_y != candidate_target_cell_y))
+                    requires_route = 1;
+                {
                     int route_goal_xy[2];
                     int* path_x = NULL;
                     int* path_y = NULL;
                     uint32_t path_count = 0;
-                    goal_xy[0] = target_cell_x;
-                    goal_xy[1] = target_cell_y;
-                    if (!first_free_neighbor_cell_pick(
-                            entity, context->level, goal_xy,
-                            route_goal_xy, 1))
-                        continue;
-                    if (!terrain_neighbor_path_check(
-                            entity, (uint32_t)cell_x, (uint32_t)cell_y,
-                            (uint32_t)route_goal_xy[0],
-                            (uint32_t)route_goal_xy[1],
-                            &path_x, &path_y, &path_count, NULL, NULL)) {
+                    int route_found;
+                    route_goal_xy[0] = candidate_target_cell_x;
+                    route_goal_xy[1] = candidate_target_cell_y;
+                    /* Retail probes a route for every candidate after
+                     * PlaceCommandEligibilityCheck. A subset of command
+                     * kinds first changes the route goal to an adjacent
+                     * approach cell when the actor is not already adjacent;
+                     * other kinds still require a path to the command cell
+                     * before they can be assigned. */
+                    if (use_approach_cell) {
+                        int goal_xy[2];
+                        goal_xy[0] = candidate_target_cell_x;
+                        goal_xy[1] = candidate_target_cell_y;
+                        if (!first_free_neighbor_cell_pick(
+                                entity, context->level, goal_xy,
+                                route_goal_xy, 1))
+                            continue;
+                    }
+                    /* FUN_00405c10 calls FUN_00440c30 for every otherwise
+                     * eligible candidate, including one already in the
+                     * destination cell. That route query also validates
+                     * the target cell; skipping the coincident-coordinate
+                     * case could therefore assign an unreachable command. */
+                    route_found = terrain_neighbor_path_check(
+                        entity, (uint32_t)cell_x, (uint32_t)cell_y,
+                        (uint32_t)route_goal_xy[0],
+                        (uint32_t)route_goal_xy[1],
+                        &path_x, &path_y, &path_count, NULL, NULL);
+                    free(path_x);
+                    free(path_y);
+                    if (!route_found) {
                         record->param2 = (int32_t)0x42960000u;
                         continue;
                     }
-                    if (path_x != NULL) free(path_x);
-                    if (path_y != NULL) free(path_y);
                 }
-                if (target_world_valid) {
-                    dx = position[0] - target_world[0];
-                    dy = position[1] - target_world[1];
+                if (candidate_target_world_valid) {
+                    dx = position[0] - candidate_target_world[0];
+                    dy = position[1] - candidate_target_world[1];
                 }
                 else {
-                    dx = (float)(cell_x - target_cell_x);
-                    dy = (float)(cell_y - target_cell_y);
+                    dx = (float)(cell_x - candidate_target_cell_x);
+                    dy = (float)(cell_y - candidate_target_cell_y);
                 }
                 distance = (float)sqrt((double)(dx * dx + dy * dy));
+                if (eligibility_immediate != 0u) {
+                    selected = entity;
+                    selected_index = i;
+                    nearest = distance;
+                    selected_cell_x = cell_x;
+                    selected_cell_y = cell_y;
+                    selected_requires_route = 0;
+                    break;
+                }
                 if (selected == NULL || distance < nearest) {
                     selected = entity;
                     selected_index = i;
@@ -1119,6 +2189,66 @@ void pending_command_entity_assignment_tick(void)
                     selected_cell_x = cell_x;
                     selected_cell_y = cell_y;
                     selected_requires_route = requires_route;
+                    if (record->type == 0x13) {
+                        target_cell_x = candidate_target_cell_x;
+                        target_cell_y = candidate_target_cell_y;
+                        target_world[0] = candidate_target_world[0];
+                        target_world[1] = candidate_target_world[1];
+                        target_world_valid = candidate_target_world_valid;
+                    }
+                }
+            }
+            if (selected == NULL) {
+                unsigned fallback_index;
+                if ((record->state & 0x1000u) == 0u) {
+                    for (fallback_index = 0u;
+                         fallback_index < s_pending_assignment_count;
+                         ++fallback_index) {
+                        EntitySlot* entity =
+                            s_pending_assignment_candidates[fallback_index];
+                        if (pending_record_matches_entity(record, entity) &&
+                            cmd_place_command_eligibility_check(
+                                record, entity, NULL, NULL, NULL, 0, 1)) {
+                            cmd_validated_record_queue(record);
+                            break;
+                        }
+                    }
+                }
+                if (record->type != 0x17 && record->field_3c != 0 &&
+                    (record->state & 0x8000u) == 0u) {
+                    EntitySlot* category_entity = NULL;
+                    float category_position[2] = { 0.0f, 0.0f };
+                    int category_ready = 0;
+                    for (fallback_index = 0u;
+                         fallback_index < s_pending_assignment_count;
+                         ++fallback_index) {
+                        EntitySlot* entity =
+                            s_pending_assignment_candidates[fallback_index];
+                        if (!pending_record_matches_entity(record, entity) ||
+                            !cmd_place_command_eligibility_check(
+                                record, entity, category_position, NULL,
+                                NULL, 0, 0)) continue;
+                        category_entity = entity;
+                        if (cmd_place_command_eligibility_check(
+                                record, entity, category_position, NULL,
+                                NULL, 0, 1)) {
+                            category_ready = 1;
+                            break;
+                        }
+                    }
+                    if (category_entity != NULL && !category_ready) {
+                        EntitySlot* found = (EntitySlot*)
+                            unported_ledger_stubs::
+                                ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
+                                    NULL, category_position,
+                                    (uint32_t)record->field_3c);
+                        if (found != NULL) {
+                            task_type23_create_for_category_mask(
+                                found, record->field_3c,
+                                record->field_3c != 0x10);
+                            record->state |= 0x8000u;
+                        }
+                    }
                 }
             }
             if (selected != NULL) {
@@ -1128,6 +2258,21 @@ void pending_command_entity_assignment_tick(void)
                     int message_opcode = 0;
                     goal_xy[0] = target_cell_x;
                     goal_xy[1] = target_cell_y;
+                    if (record->type == 3) {
+                        route_xy[0] = target_cell_x;
+                        route_xy[1] = target_cell_y;
+                        if ((record->state & 0x100u) == 0u)
+                            record->entity_ref = selected;
+                        cmd_produce(0x17, selected,
+                                    (int)(uintptr_t)record, route_xy);
+                        --s_pending_assignment_count;
+                        s_pending_assignment_candidates[selected_index] =
+                            s_pending_assignment_candidates[
+                                s_pending_assignment_count];
+                        previous = record;
+                        record = next;
+                        continue;
+                    }
                     if (!first_free_neighbor_cell_pick(
                             selected, context->level, goal_xy, route_xy, 1)) {
                         --record->behaviour;
@@ -1137,6 +2282,7 @@ void pending_command_entity_assignment_tick(void)
                         else if (record->type == 10) message_opcode = 0x0f;
                         else if (record->type == 0x0b) message_opcode = 0x11;
                         else if (record->type == 0x17) message_opcode = 0x32;
+                        else if (record->type == 0x13) message_opcode = 0x2c;
                         if (message_opcode != 0) {
                             cmd_produce(message_opcode, selected,
                                         (int)(uintptr_t)record, route_xy);
@@ -1152,7 +2298,8 @@ void pending_command_entity_assignment_tick(void)
                     record = next;
                     continue;
                 }
-                if ((record->type == 0x0c || record->type == 0x16) &&
+                if ((record->type == 0x0c || record->type == 0x15 ||
+                     record->type == 0x16) &&
                     (selected_cell_x != target_cell_x ||
                      selected_cell_y != target_cell_y)) {
                     int message_cell_xy[2];
@@ -1163,7 +2310,8 @@ void pending_command_entity_assignment_tick(void)
                         record->entity_ref = selected;
                     message_cell_xy[0] = target_cell_x;
                     message_cell_xy[1] = target_cell_y;
-                    cmd_produce(record->type == 0x0c ? 0x27 : 0x30,
+                    cmd_produce(record->type == 0x0c ? 0x27 :
+                                record->type == 0x15 ? 0x38 : 0x30,
                                 selected, (int)(uintptr_t)record,
                                 message_cell_xy);
                     if (record->type == 0x0c && selected->type == 1) {
@@ -1289,18 +2437,8 @@ void entity_record_attach_and_relink(void* record, void* previous,
     idle_register(entity);                         /* FUN_00407450 */
 }
 
-/* Append a record to the entity's chain (entity +0x2f0 analog).
- * Corpus shape (finding 10): the move/target/gated creators chain the
- * record *only* onto the entity chain — CmdCreateMove @ 0x4035c0 walks
- * FUN_00404190 (CmdChainWalk) and writes `tail->next = rec` (or the +0x2f0
- * head), plus the type-2 IdleQueueRegister; they never link onto the global
- * list (DAT_004b3354/4b3358), which is the task-only list (CmdCreateTask
- * links there through CmdLinkHead @ 0x404030). The +0x60 next field is one
- * pointer, so a record must live on exactly one of the two overlays: using
- * it for both at once chains two entities' live commands together through
- * the first command's tail link, giving double ownership of one record.
- * (Exposed by the executor move test: a move issued to a *selection* of two
- * entities creates exactly that conflict.) */
+/* Append a record to the entity's chain. This helper is used by other
+ * command constructors; CmdCreateMove has its own retail-shaped path below. */
 
 static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
 {
@@ -1323,29 +2461,30 @@ static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
  * ------------------------------------------------------------------ */
 
 // FUNCTION: LEGORR 0x004035c0
+void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag)
+{
+    CmdRec* rec;
+    CmdRec* tail;
+    if (e == NULL || position_xy == NULL) return;
+    rec = (CmdRec*)cmd_alloc(0);
+    if (rec == NULL) return;
+    rec->x = position_xy[0];
+    rec->y = position_xy[1];
+    rec->param = flag;
+    tail = as_rec(cmd_chain_walk(e));
+    if (tail != NULL) {
+        tail->next = rec;
+    }
+    else {
+        e->cmd_head = rec;
+        idle_register(e);
+    }
+}
+
 void cmd_create_move(EntitySlot* e, float x, float y, int flag)
 {
-    if (e == NULL) {
-        return;
-    }
-    CmdRec* rec = (CmdRec*)cmd_alloc(0);
-    if (rec == NULL) {
-        return;
-    }
-    rec->x = x;
-    rec->y = y;
-    rec->param = flag;
-    /* Corpus move state +0x3e0 bit 0x8 is the creator side of the mover
-     * branch, and the dispatch installs the path list per command
-     * (0x4418d0): build a real path, falling back to the one-hop seed when
-     * there is no grid or no path. */
-    e->flags_3e0 |= ENT_FLAG3E0_MOVING;
-    e->wp_count = 0;
-    e->wp_index = 0;
-    if (ai_path_build(s_ctx, e, x, y) == 0) {
-        ai_path_append(e, x, y);
-    }
-    cmd_chain_append(e, rec, 1);
+    const float position_xy[2] = { x, y };
+    cmd_create_move(e, position_xy, flag);
 }
 
 // FUNCTION: LEGORR 0x004036c0
@@ -1385,7 +2524,7 @@ void cmd_create_gated(EntitySlot* e, void* target)
 
 static int task_kind_for(EntitySlot* e)
 {
-    switch (e->etype) {
+    switch (e->type) {
     case 6:  return (e->flags_3e8 & 0x80000000u) != 0 ? 0x12 : 0;
     case 7:  return 1;
     case 9:  return 0x10;
@@ -1401,7 +2540,7 @@ static void cmd_minion_companion(EntitySlot* e)
 {
     /* Corpus parity: strides the entity blindly, uses the record blindly,
      * and routes the kind through the corpus's own cmd_set_kind. */
-    if (e->etype != 6) {
+    if (e->type != 6) {
         return;
     }
     CmdRec* rec = (CmdRec*)cmd_alloc(3);
@@ -1425,7 +2564,7 @@ void cmd_create_task(EntitySlot* e)
     rec->payload = e;
     rec->param2 = 0;
     int kind = task_kind_for(e);
-    if (e->etype == 8) {
+    if (e->type == 8) {
         rec->extra = 8; /* type-8 trains set the extra slot */
     }
     cmd_link_head(rec, kind);
@@ -1438,12 +2577,19 @@ void* cmd_entity_task_record_create_and_append(EntitySlot* e, void* payload,
                                                int parameter)
 {
     CmdRec* rec;
+    CmdRec* tail;
     if (e == NULL || payload == NULL) return NULL;
     rec = (CmdRec*)cmd_alloc(0x15);
     if (rec == NULL) return NULL;
     rec->payload = payload;
     rec->cell_count = parameter;
-    cmd_chain_append(e, rec, 0);
+    /* FUN_00403320 allocates and fills the new record before sweeping the
+     * existing chain, then appends it through FUN_00404190's tail walk. */
+    command_queue_sweep_relink(e);
+    tail = as_rec(cmd_chain_walk(e));
+    if (tail != NULL) tail->next = rec;
+    else e->cmd_head = rec;
+    rec->next = NULL;
     return rec;
 }
 
@@ -1453,7 +2599,7 @@ void* cmd_entity_task_record_create_and_append(EntitySlot* e, void* payload,
 // FUNCTION: LEGORR 0x00404e00
 int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
                                       const int target_xy[2],
-                                      int final_marker)
+                                      const float* final_marker_position)
 {
     int start_xy[2] = { -1, -1 };
     int* route_x = NULL;
@@ -1473,7 +2619,7 @@ int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
         direct_x = (float)start_xy[0];
         direct_y = (float)start_xy[1];
         (void)entity_route_setup_and_marker_associate(
-            entity, 1u, &direct_x, &direct_y, final_marker);
+            entity, 1u, &direct_x, &direct_y, final_marker_position);
         return 1;
     }
     if (!terrain_neighbor_path_check(level->ptr_terrain,
@@ -1499,7 +2645,7 @@ int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
         points_y[i] = (float)route_y[i];
     }
     (void)entity_route_setup_and_marker_associate(
-        entity, route_count, points_x, points_y, final_marker);
+        entity, route_count, points_x, points_y, final_marker_position);
     free(points_x);
     free(points_y);
     free(route_x);
@@ -1536,8 +2682,8 @@ void cmd_command_kind_record_issue(uint32_t a, uint32_t b, uint32_t c,
             0.4f, 0.6f, s_command_kind_record_hooks.context);
     }
     else {
-        first = 0.5f;
-        second = 0.5f;
+        first = random_float_range(0.4f, 0.6f);
+        second = random_float_range(0.4f, 0.6f);
     }
     memcpy(&rec->pad_30[0], &first, sizeof(first));
     memcpy(&rec->pad_30[4], &second, sizeof(second));
@@ -1550,10 +2696,13 @@ void cmd_command_kind_record_issue(uint32_t a, uint32_t b, uint32_t c,
             cell_xy, (int)a, (int)b, (int)c,
             s_command_kind_record_hooks.context);
     }
+    else {
+        terrain_cell_record_count_update(cell_xy, (int)a, (int)b, (int)c);
+    }
 }
 
 /* ------------------------------------------------------------------ *
- *  Global tick + purge (scoped; AI execution receivers are stubs).
+ *  Global tick + purge. AI activity and command/task execution live in ai.cpp.
  * ------------------------------------------------------------------ */
 
 void cmd_chain_purge_hooks_install(CmdPurgeCellPredicate cell_usable,
@@ -1574,7 +2723,32 @@ static int cmd_purge_compare_adapter(const void* left, const void* right)
     return s_cmd_purge_compare(left, right, s_cmd_purge_context);
 }
 
-// FUNCTION: LEGORR 0x00402310
+static int cmd_purge_compare_default(const void* left, const void* right)
+{
+    const CmdRec* a = *(const CmdRec* const*)left;
+    const CmdRec* b = *(const CmdRec* const*)right;
+    const uint32_t a_state = a->state & 0x100u;
+    const uint32_t b_state = b->state & 0x100u;
+    int a_behaviour = a->behaviour;
+    int b_behaviour = b->behaviour;
+    if (a_state != 0u && b_state == 0u) return -1;
+    if (a_state != 0u && b_state != 0u) {
+        const uintptr_t a_order = (uintptr_t)a->global_next;
+        const uintptr_t b_order = (uintptr_t)b->global_next;
+        if (a_order > b_order) return -1;
+        if (a_order < b_order) return 1;
+    }
+    if (a_behaviour < 0) a_behaviour = 0;
+    if (b_behaviour < 0) b_behaviour = 0;
+    if (a_behaviour > 99) a_behaviour = 99;
+    if (b_behaviour > 99) b_behaviour = 99;
+    return a_behaviour < b_behaviour ? -1 :
+           (a_behaviour > b_behaviour ? 1 : 0);
+}
+
+/* Portable helper for callers that own an EntitySlot command chain. Retail
+ * CmdChainPurge takes a command-list head pointer; its mapped implementation
+ * is cmd_global_list_purge below. */
 void cmd_chain_purge(EntitySlot* e)
 {
     CmdRec* records[300];
@@ -1643,9 +2817,15 @@ void cmd_chain_purge(EntitySlot* e)
                 int cell_x, cell_y;
                 memcpy(&cell_x, &rec->x, sizeof(cell_x));
                 memcpy(&cell_y, &rec->y, sizeof(cell_y));
-                if (s_cmd_purge_cell_usable != NULL &&
-                    s_cmd_purge_cell_usable(cell_x, cell_y,
-                                            s_cmd_purge_context) != 0) {
+                LevelState* level = e->owner_ctx != NULL
+                    ? e->owner_ctx->level :
+                      (s_ctx != NULL ? s_ctx->level : NULL);
+                const int clear_state = s_cmd_purge_cell_usable != NULL
+                    ? s_cmd_purge_cell_usable(cell_x, cell_y,
+                                              s_cmd_purge_context)
+                    : (level != NULL &&
+                       level_cell_mask18_clear(level, cell_x, cell_y));
+                if (clear_state != 0) {
                     rec->behaviour = 0;
                 }
             } else {
@@ -1660,15 +2840,21 @@ void cmd_chain_purge(EntitySlot* e)
                 for (n = 0; n < 4; ++n) {
                     int x = cell_x + offsets[n][0];
                     int y = cell_y + offsets[n][1];
-                    if (s_cmd_purge_neighbor_eligible != NULL &&
-                        s_cmd_purge_neighbor_eligible(x, y,
-                            s_cmd_purge_context) != 0) {
+                    LevelState* level = e->owner_ctx != NULL
+                        ? e->owner_ctx->level :
+                          (s_ctx != NULL ? s_ctx->level : NULL);
+                    const int eligible = s_cmd_purge_neighbor_eligible != NULL
+                        ? s_cmd_purge_neighbor_eligible(
+                            x, y, s_cmd_purge_context)
+                        : (level != NULL &&
+                           level_cell_walkable_flag(level, x, y));
+                    if (eligible != 0) {
                         found = 1;
                     }
                 }
                 if (found) {
                     if (rec->behaviour == 0) {
-                        rec->behaviour = 100;
+                        rec->param2 = (int32_t)0x42c80000u;
                     }
                 } else {
                     rec->behaviour = 0;
@@ -1676,9 +2862,10 @@ void cmd_chain_purge(EntitySlot* e)
             }
         }
     }
-    if (count > 1 && s_cmd_purge_compare != NULL) {
+    if (count > 1) {
         qsort(records, (size_t)count, sizeof(records[0]),
-              cmd_purge_compare_adapter);
+              s_cmd_purge_compare != NULL ? cmd_purge_compare_adapter
+                                          : cmd_purge_compare_default);
     }
     if (count != 0) {
         for (i = 0; i + 1 < count; ++i) {
@@ -1689,6 +2876,7 @@ void cmd_chain_purge(EntitySlot* e)
     }
 }
 
+// FUNCTION: LEGORR 0x00402310
 static void cmd_global_list_purge(CmdRec** head)
 {
     CmdRec* records[300];
@@ -1731,12 +2919,16 @@ static void cmd_global_list_purge(CmdRec** head)
         if (current->type == 8) {
             int cell_x;
             int cell_y;
+            LevelState* level = s_ctx != NULL ? s_ctx->level : NULL;
             memcpy(&cell_x, &current->x, sizeof(cell_x));
             memcpy(&cell_y, &current->y, sizeof(cell_y));
             if ((current->state & 8u) == 0u) {
-                if (s_cmd_purge_cell_usable != NULL &&
-                    s_cmd_purge_cell_usable(cell_x, cell_y,
-                                            s_cmd_purge_context) != 0)
+                const int usable = s_cmd_purge_cell_usable != NULL
+                    ? s_cmd_purge_cell_usable(cell_x, cell_y,
+                                              s_cmd_purge_context)
+                    : (level != NULL &&
+                       level_cell_mask18_clear(level, cell_x, cell_y));
+                if (usable != 0)
                     current->behaviour = 0;
             } else {
                 static const int offsets[4][2] = {
@@ -1745,14 +2937,19 @@ static void cmd_global_list_purge(CmdRec** head)
                 int found = 0;
                 int n;
                 for (n = 0; n < 4; ++n) {
-                    if (s_cmd_purge_neighbor_eligible != NULL &&
-                        s_cmd_purge_neighbor_eligible(
+                    const int eligible = s_cmd_purge_neighbor_eligible != NULL
+                        ? s_cmd_purge_neighbor_eligible(
                             cell_x + offsets[n][0], cell_y + offsets[n][1],
-                            s_cmd_purge_context) != 0)
+                            s_cmd_purge_context)
+                        : (level != NULL && level_cell_walkable_flag(
+                            level, cell_x + offsets[n][0],
+                            cell_y + offsets[n][1]));
+                    if (eligible != 0)
                         found = 1;
                 }
                 if (found) {
-                    if (current->behaviour == 0) current->behaviour = 100;
+                    if (current->behaviour == 0)
+                        current->param2 = (int32_t)0x42c80000u;
                 } else {
                     current->behaviour = 0;
                 }
@@ -1761,9 +2958,10 @@ static void cmd_global_list_purge(CmdRec** head)
         current = as_rec(current->global_next);
     }
     if (current != NULL) overflow = current;
-    if (count > 1 && s_cmd_purge_compare != NULL) {
+    if (count > 1) {
         qsort(records, (size_t)count, sizeof(records[0]),
-              cmd_purge_compare_adapter);
+              s_cmd_purge_compare != NULL ? cmd_purge_compare_adapter
+                                          : cmd_purge_compare_default);
     }
     if (count != 0) {
         for (i = 0; i + 1 < count; ++i)
@@ -1773,8 +2971,219 @@ static void cmd_global_list_purge(CmdRec** head)
     }
 }
 
+/* LAB_00404250 is a pool-walker callback: argument one is a CmdRec and
+ * argument two points at the caller's frame delta. The retail pool walk
+ * tests each record's +0x64 self-link; the port live-slot sidecar represents
+ * that same allocated-record set. */
+// FUNCTION: LEGORR 0x00404250
+static int cmd_pool_timer_delta_apply(CmdRec* record, void* delta_payload)
+{
+    const float delta = *(const float*)delta_payload;
+    float timer18;
+    if ((record->state & 0x80u) == 0u)
+        record->now -= delta;
+    memcpy(&timer18, &record->param2, sizeof(timer18));
+    timer18 -= delta;
+    memcpy(&record->param2, &timer18, sizeof(record->param2));
+    return 0;
+}
+
+/* FUN_00406540 walks the pool and invokes LAB_00404250 only for allocated
+ * records. The sidecar preserves the retail +0x64 self-link predicate. */
+static void cmd_pool_timer_delta_walk(float* delta)
+{
+    int block_index;
+    for (block_index = 0; block_index < s_pool_level; ++block_index) {
+        CmdRec* const block = s_blocks[block_index];
+        const uint32_t count = 1u << (block_index & 0x1fu);
+        uint32_t index;
+        if (block == NULL || s_block_live[block_index] == NULL) continue;
+        for (index = 0u; index < count; ++index) {
+            if (s_block_live[block_index][index] != 0u)
+                (void)cmd_pool_timer_delta_apply(&block[index], delta);
+        }
+    }
+}
+
+/* LAB_00404280 (called by CmdTickGlobal through FUN_004377b0): the pool
+ * callback always returns zero so the filtered live-entity walk visits every
+ * slot.  The recovered outer gate and the chain-head expiry transitions are
+ * represented here.  Record kinds with renderer/task-specific dispatch stay
+ * in their own entity helpers; this callback does not substitute ai_tick. */
+// FUNCTION: LEGORR 0x00404280
+int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload)
+{
+    const float delta = *(const float*)delta_payload;
+    CmdRec* head;
+    LevelState* level;
+    float actor_position[2];
+    float target_position[2];
+    int actor_cell[2];
+    int target_cell[2];
+
+    if (entity == NULL) return 0;
+    s_global_enabled |= 4;
+
+    /* Retail requires the active-type bit, a positive +0x340 value, and a
+     * false 0x4295c0 predicate; attached, owned type-2, and the two flag
+     * families below are excluded before touching the command chain. */
+    if ((entity->flags_3e8 & 0x00400000u) == 0u ||
+        entity->field_340 <= 0.0f ||
+        entity_matches_current_selection_or_owner(entity) != 0 ||
+        (entity->owner_36c != NULL && entity->type == 2) ||
+        entity->attach_304 != NULL ||
+        (entity->flags_3e4 & 0x08004000u) != 0u ||
+        (entity->flags_3e0 & 0x00800000u) != 0u) {
+        s_global_enabled &= ~4;
+        return 0;
+    }
+
+    head = as_rec(entity->cmd_head);
+    if (head == NULL) {
+        entity->command_chain_idle_elapsed_338 += delta;
+        if (entity->command_chain_idle_elapsed_338 >= 250.0f) {
+            if (entity->type == 2 &&
+                entity_matches_current_selection_or_owner(entity) == 0) {
+                (void)entity_random_activity_attempt(entity);
+            }
+            entity->command_chain_idle_elapsed_338 = 0.0f;
+        }
+        else {
+            /* The no-head arm walks DAT_004b3354 before adding this entity to
+             * either pending candidate array. It attaches the first matching
+             * global command; only an unmatched entity reaches the arrays. */
+            {
+                const int assignment =
+                    cmd_entity_global_record_assign(entity);
+                if (assignment == 0 || assignment == 2)
+                    cmd_entity_pending_candidates_append(entity);
+            }
+        }
+        s_global_enabled &= ~4;
+        return 0;
+    }
+    entity->command_chain_idle_elapsed_338 = 0.0f;
+
+    if ((head->state & CMD_STATE_DONE) != 0u) {
+        (void)entity_command_chain_head_remove(entity);
+        entity_action_sequence_reset(entity, 0);
+        s_global_enabled &= ~4;
+        return 0;
+    }
+
+    /* Type 0x0d is a timed chain marker.  Once its +0x14 timer reaches zero,
+     * retail drops the head without running the regular action reset. */
+    if (head->type == 0x0d && head->now <= 0.0f) {
+        (void)entity_command_chain_head_remove(entity);
+        s_global_enabled &= ~4;
+        return 0;
+    }
+
+    if (head->type == 1) {
+        EntitySlot* target = (EntitySlot*)head->payload;
+        if (head->now <= 0.0f && target != NULL) {
+            level = entity->owner_ctx != NULL ? entity->owner_ctx->level : NULL;
+            if (level != NULL && level->ptr_terrain != NULL) {
+                entity_position_to_terrain_cell(entity, level,
+                                                &actor_cell[0], &actor_cell[1]);
+                entity_position_to_terrain_cell(target, level,
+                                                &target_cell[0], &target_cell[1]);
+                if (actor_cell[0] == target_cell[0] &&
+                    actor_cell[1] == target_cell[1]) {
+                    head->now = 50.0f;
+                }
+                else {
+                    (void)object_path_submit_to_grid_target(
+                        entity, level, target_cell, NULL);
+                    head->now = 50.0f;
+                }
+            }
+        }
+        s_global_enabled &= ~4;
+        return 0;
+    }
+    else if (head->type == 2) {
+        EntitySlot* target = (EntitySlot*)head->payload;
+        if (head->now <= 0.0f && target != NULL &&
+            entity->field_340 <= entity_stats_float_ate8(target)) {
+            head->state |= CMD_STATE_DONE;
+        }
+        else if (head->now <= 0.0f && target != NULL) {
+            entity_transform_position_get(entity, actor_position);
+            entity_transform_position_get(target, target_position);
+            {
+                const float dx = actor_position[0] - target_position[0];
+                const float dy = actor_position[1] - target_position[1];
+                const float distance = (float)sqrt(dx * dx + dy * dy);
+                if (distance <= 100.0f) {
+                    head->now = entity_face_target_action_start(
+                        entity, target, 2) ? 100.0f : 25.0f;
+                }
+                else {
+                    level = entity->owner_ctx != NULL ?
+                        entity->owner_ctx->level : NULL;
+                    if (level != NULL && level->ptr_terrain != NULL) {
+                        entity_position_to_terrain_cell(
+                            entity, level, &actor_cell[0], &actor_cell[1]);
+                        entity_position_to_terrain_cell(
+                            target, level, &target_cell[0], &target_cell[1]);
+                        if (actor_cell[0] != target_cell[0] ||
+                            actor_cell[1] != target_cell[1]) {
+                            (void)object_path_submit_to_grid_target(
+                                entity, level, target_cell, NULL);
+                        }
+                        head->now = 50.0f;
+                    }
+                }
+            }
+        }
+        s_global_enabled &= ~4;
+        return 0;
+    }
+
+    /* The non-timed record-kind switch is the body’s main dispatch table.
+     * Kind zero carries explicit cell coordinates; the other cases call the
+     * matching route/activity leaf already represented by entity modules. */
+    {
+        int result;
+        if (head->type == 0) {
+            level = entity->owner_ctx != NULL ? entity->owner_ctx->level : NULL;
+            if (level != NULL && level->ptr_terrain != NULL &&
+                cmd_rec_cell_xy_get(head, &target_cell[0], &target_cell[1])) {
+                result = object_path_submit_to_grid_target(
+                    entity, level, target_cell, NULL);
+            }
+            else result = 0;
+        }
+        else if (head->type > 30) result = 1;
+        else result = cmd_entity_chain_kind_dispatch(entity, head);
+
+        if (result < 0) {
+            /* An absent external owner must not consume its command record. */
+            s_global_enabled &= ~4;
+            return 0;
+        }
+        if (result != 0) {
+            head->state |= 1u;
+        }
+        else {
+            if (head->type == 8 && (head->state & 8u) != 0u)
+                head->param2 = (int32_t)0x42c80000u;
+            if ((head->state & 0x10u) != 0u && head->now == 0.0f)
+                head->now = 1500.0f;
+            (void)entity_command_chain_head_remove(entity);
+        }
+    }
+
+    /* +0x338 is the idle/path accumulator. The portable entity mirror keeps
+     * its source float even when the renderer-owned threshold action cannot
+     * be created. */
+    s_global_enabled &= ~4;
+    return 0;
+}
+
 // FUNCTION: LEGORR 0x00402220
-void cmd_tick_global(void)
+void cmd_tick_global_delta(float delta)
 {
     int threshold;
     CmdRec* current;
@@ -1786,8 +3195,8 @@ void cmd_tick_global(void)
     /* DAT_004b3328 aliases behaviour entry 16 in the recovered data. */
     s_behaviour[16] = threshold + 1;
 
-    /* LAB_00404250 is still an unported entity callback. Its neighboring
-     * record sweep is available directly and has observable flag effects. */
+    cmd_pool_timer_delta_walk(&delta);
+
     for (current = s_global_head; current != NULL;
          current = as_rec(current->global_next)) {
         EntitySlot* entity;
@@ -1801,10 +3210,19 @@ void cmd_tick_global(void)
 
     cmd_global_list_purge(&s_global_head);
     cmd_global_list_purge(&s_global_tail);
-    s_global_tick_counter_a = 0;
-    s_global_tick_counter_b = 0;
+    s_pending_assignment_count = 0u;
+    s_pending_timer_count = 0u;
+    s_pending_candidates_from_entity_walk = 1;
+    (void)entity_pool_find_by_callback_filtered_current(
+        cmd_entity_command_chain_tick, &delta);
     pending_command_entity_assignment_tick();
     pending_command_timer_fire_scan();
+    s_pending_candidates_from_entity_walk = 0;
+}
+
+void cmd_tick_global(void)
+{
+    cmd_tick_global_delta(0.0f);
 }
 
 /* ------------------------------------------------------------------ *
@@ -1842,6 +3260,11 @@ static void idle_register(EntitySlot* e)
     }
 }
 
+void idle_queue_register(EntitySlot* e)
+{
+    idle_register(e);
+}
+
 /* port hook: EntityPointerRegistriesRemove clears idle-queue records from
  * the window this table models; the corpus leaves the timer words. */
 void idle_queue_clear(EntitySlot* e)
@@ -1876,6 +3299,8 @@ static int      s_ping; /* active producer block (DAT_004fef28) */
 void cmd_context_set(GameContext* ctx)
 {
     s_ctx = ctx;
+    if (entity_pool_callback_context_get() != ctx)
+        entity_pool_callback_context_set(ctx);
     cmd_place_eligibility_ops_bind();
     s_ping = 0;
     for (int i = 0; i < 2; ++i) {
@@ -1911,7 +3336,10 @@ void cmd_enqueue(int opcode, const EntitySlot* e, int param, int p1, int p2)
 }
 
 /* Cheat/debug keybinds (FUN_00452010). */
-#define KEYBIND_MAX 8
+/* The byte key table at 0x004ff0bc has twelve slots before the five-dword
+ * records beginning at 0x004ff0c8.  Keep the portable table within that
+ * retail storage window. */
+#define KEYBIND_MAX 12
 typedef struct KeyBind {
     int key;
     int op, a1, a2, a3, a4;
@@ -1926,7 +3354,7 @@ void cmd_bind_key(int key, int op, int a1, int a2, int a3, int a4)
         return;
     }
     KeyBind* b = &s_keybinds[s_keybind_count++];
-    b->key = key;
+    b->key = key & 0xff;
     b->op = op; b->a1 = a1; b->a2 = a2; b->a3 = a3; b->a4 = a4;
 }
 
@@ -1950,7 +3378,10 @@ void cmd_queue_tick(void)
     int i;
     /* 1. Producer block: the held-key pre-pass (SelectionRoot step 1 —
      *    cheat-keybinds; the demo binds keys via cmd_bind_key). */
-    if (s_ctx != NULL && s_ctx->input_keyheld != NULL) {
+    uint32_t* engine_state = engine_current_state_word();
+    if ((engine_state == NULL ||
+         (*engine_state & ENGINE_STATE_TIME_FROZEN) == 0u) &&
+        s_ctx != NULL && s_ctx->input_keyheld != NULL) {
         cmd_keybind_tick(s_ctx->input_keyheld);
     }
 
@@ -1975,8 +3406,7 @@ void cmd_queue_tick(void)
         switch (q->opcode) {
         case 5:
         case 6:
-            cmd_create_move(ent, ((float*)&q->a3)[0],
-                            ((float*)&q->a3)[1], q->a2);
+            cmd_create_move(ent, (const float*)&q->a3, q->a2);
             break;
         case 8:
             /* add up to N entities to the selection (FUN_00403270 path) */
@@ -2015,10 +3445,13 @@ void cmd_queue_tick(void)
              * renderer hooks; the queue entry supplies neither. */
             break;
         case 0x13:
-            /* The entry splits a2 into low/high 16-bit direction/mode and
-             * passes a3/a4 as coordinates. TerrainStampImpactHandler needs
-             * the runtime terrain/effect hook bundle, which is not bound
-             * here. */
+            /* CmdQueueFlush calls TerrainStampImpactHandler(a3, a4,
+             * low16(a2), high16(a2)); the helper now reads the active level
+             * and terrain owners directly. */
+            (void)terrain_stamp_impact_handle_current(
+                (uint32_t)q->a3, (uint32_t)q->a4,
+                (int)((uint32_t)q->a2 & 0xffffu),
+                (int)((uint32_t)q->a2 >> 16));
             break;
         case 0x15:
         case 0x1b:
@@ -2031,12 +3464,28 @@ void cmd_queue_tick(void)
             break;
         }
         case 0x1f:
-            /* EmergenceRandomSpawnAttempt's port API requires entity/owner
-             * indices and level dimensions absent from this queue entry. */
+        {
+            GameContext* context = pending_scan_context_get();
+            LevelState* level = context != NULL ? context->level : NULL;
+            int owner_index;
+            /* The reference ignores the queue payload here: it takes the
+             * type-3 entity index from level +0xb0, uses that same index as
+             * the spawned entity's owner, and samples the active terrain's
+             * width and height. */
+            if (level != NULL) {
+                owner_index = (int)active_engine_field_b0_get(level);
+                if (owner_index >= 0 &&
+                    entity_at(context, 3, owner_index) != NULL) {
+                    (void)unported_ledger_stubs::
+                        emergence_random_spawn_attempt(owner_index,
+                            owner_index, level_width(level),
+                            level_height(level));
+                }
+            }
             break;
+        }
         case 0x21:
-            (void)unported_ledger_stubs::
-                ledger_stub_004470d0_EntityConditionalTypeFiveSpawn(ent);
+            (void)lego::entity_conditional_type_five_spawn(ent);
             break;
         case 0x23:
             entity_random_valid_cell_command_create(ent);
@@ -2078,8 +3527,8 @@ void cmd_queue_tick(void)
  * swap-with-last removals, forward index never rechecking the slot a
  * swap landed on (so a swapped-in match stays if it lands behind the
  * cursor; the loop bound is the running count).
- * Comparison deviation: the corpus matches the 32-bit second field, the
- * port matches the stored pointer through the uintptr cast. */
+ * The comparison uses the same low 32-bit word as the 32-bit corpus even on
+ * the native host, where entity pointers can be wider. */
 // FUNCTION: LEGORR 0x00451f60
 void cmd_queue_cancel_match(int value)
 {
@@ -2087,7 +3536,7 @@ void cmd_queue_cancel_match(int value)
     int count = s_queue_count[block];
     unsigned i = 0;
     while ((int)i < count) {
-        if ((uintptr_t)s_queue[block][i].a1 == (uintptr_t)value) {
+        if ((uint32_t)(uintptr_t)s_queue[block][i].a1 == (uint32_t)value) {
             count = count - 1;
             s_queue[block][i] = s_queue[block][count];
             s_queue_count[block] = count;
@@ -2100,10 +3549,8 @@ const void* active_context_record_get(int* count_out)
 {
     const int count = selection_count(s_ctx);
     if (count == 0) {
-        if (count_out != NULL) {
-            *count_out = 0;
-        }
-        return NULL; /* deviation: corpus hands the array address anyway */
+        if (count_out != NULL) *count_out = 0;
+        return NULL;
     }
     if (count_out != NULL) {
         *count_out = count;
@@ -2243,28 +3690,18 @@ void entity_random_valid_cell_command_create(void* entity)
 // FUNCTION: LEGORR 0x00452c50
 int selection_entity_remove(void* entity)
 {
+    uint32_t index;
     if (s_ctx == NULL || entity == NULL) {
         return 0;
     }
     const int count = selection_count(s_ctx);
-    if (count == 0) {
-        return 0;
-    }
     EntitySlot** arr = (EntitySlot**)selection_record_array(s_ctx);
-    int index = -1;
-    for (int i = 0; i < count; ++i) {
-        if (arr[i] == (EntitySlot*)entity) {
-            index = i;
-            break;
-        }
-    }
-    if (index < 0) {
+    if (count == 0 || !selection_contains_entity_target(
+            s_ctx, (EntitySlot*)entity, &index)) {
         return 0;
     }
     if (index == 0) {
-        /* Corpus posts the HUD context here; the leaves now land as
-         * command_context_post_to_hud, but this call site's arguments are
-         * lost register residue, so no ported state moves (hook boundary). */
+        command_context_post_to_hud(0, NULL);
     }
     s_ctx->selection_count = count - 1;
     arr[index] = arr[count - 1];
@@ -2275,48 +3712,35 @@ int selection_entity_remove(void* entity)
 
 /* SelectionObjectDetach (FUN_004524b0): cancel queued commands for the
  * object, remove it from the selected set, and clear the current selection
- * context when it refers to that object. The corpus's final context-pair
- * coordinate refresh has no owner in this module; for removal of the first
- * selected object, route the ported HUD reset through the existing post. */
+ * context when it refers to that object. */
 // FUNCTION: LEGORR 0x004524b0
 void selection_object_detach(void* entity)
 {
     if (entity == NULL) {
         return;
     }
-    const int was_first = (selection_first(s_ctx) == (EntitySlot*)entity);
     cmd_queue_cancel_match((int)(uintptr_t)entity);
     (void)selection_entity_remove(entity);
-    if (current_selection_context_get() == entity) {
-        current_selection_context_set(NULL);
+    if (media_min_distance_context() == entity) {
+        media_min_distance_update_mode(1, NULL, 0);
     }
-    if (was_first) {
-        command_context_post_to_hud(0, NULL);
-    }
-}
-
-static SelectedEntityDetachPoseHook s_selected_entity_detach_pose_hook;
-
-void selected_entity_detach_pose_hook_set(SelectedEntityDetachPoseHook hook)
-{
-    s_selected_entity_detach_pose_hook = hook;
 }
 
 /* SelectedEntityDetachCallback (FUN_0041f6c0): capability bit 0 chooses
- * between the attachment detach path and the carried-object pose/activity
- * path. The latter is a seam owned by the pose/activity module. */
+ * between the attachment detach path and RecordPairPoseCopyAndActivityRaise
+ * for the carried object. */
 // FUNCTION: LEGORR 0x0041f6c0
 int selected_entity_detach_callback(EntitySlot* entity)
 {
     EntitySlot* attached;
     uint32_t capabilities;
-    if (entity == NULL) return 0;
     capabilities = entity_capability_flags_get(entity);
     attached = (EntitySlot*)entity->carry_link_308;
     if ((capabilities & 1u) != 0u) {
-        if ((entity->flags_3e0 & 0x400u) != 0u && attached != NULL
-            && s_selected_entity_detach_pose_hook != NULL) {
-            s_selected_entity_detach_pose_hook(attached);
+        if ((entity->flags_3e0 & 0x400u) != 0u && attached != NULL) {
+            unported_ledger_stubs::
+                ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
+                    attached);
         }
     }
     else if ((entity->flags_3e0 & 0x400u) == 0u || attached == NULL
@@ -2345,26 +3769,24 @@ int selection_candidate_filter(void* entity, int mode, int param_3)
     }
     if (mode == 0
         && selection_candidate_already_selected_or_marked(s_ctx, e) != 0) {
-        /* Corpus: SelectionClearMarkerAndResetHud — unported marker/HUD
-         * seam (finding 77's enqueue+reset) — then reject. */
+        /* The command and HUD reset are available; this command-layer entry
+         * has no EngineContext for the helper's threaded state-word write. */
+        selection_clear_marker_and_reset_hud(e);
         return 0;
     }
-    if (selection_contains_entity(s_ctx, e) != 0) {
-        return 0;
-    }
-    if (s_ctx->selection_count >= 100) {
+    /* FUN_00452610(entity, NULL) tests +0x3e8 bit 0x200000, even if the
+     * record is not currently present in the selected-pointer array. */
+    if ((e->flags_3e8 & 0x200000u) != 0u) {
         return 0;
     }
     /* Corpus pool refresh: EntityPoolFindByCallbackFiltered is ported but
      * its callback is a corpus code literal (an unported seam). */
-    ((EntitySlot**)selection_record_array(s_ctx))[s_ctx->selection_count] = e;
-    s_ctx->selection_count = s_ctx->selection_count + 1;
-    e->flags_3e8 |= 0x200000u;
+    if (!selection_add(s_ctx, e)) return 0;
     if (e->type != 4
         && (e->flags_3e0 & 0x24002000u) == 0u
         && (e->flags_3e4 & 0x100u) == 0u) {
-        /* Activity refresh + action reset: EntityActivityRecordsRefresh
-         * / EntityActionSequenceReset — unported entity-layer seams. */
+        entity_action_sequence_reset(e, 0);
+        entity_activity_records_refresh(e);
         if (e->type == 2 && param_3 != 0) {
             /* Type-2 turn issue: the follow camera's facing (portable via
              * the engine's view) plus EntityStateReset / turn-activity
@@ -2410,8 +3832,17 @@ int selected_entity_state_monitor(void)
                 owner->owner_36c = NULL;
             }
         }
-        /* Per-type teardown (type 4 / type 0xb / the generic EntityTeardown)
-         * is the unported entity-layer teardown family — documented seam. */
+        if (head->type == 4) {
+            /* FUN_00409ff0 replaces tracked object pointers before teardown. */
+            entity_destroy_tracked_pointer_cleanup(head);
+        }
+        else {
+            if (head->type == 0xb) {
+                /* FUN_0040d0a0 removes type-11 objects from the cell chain. */
+                terrain_entity_cell_record_remove(head);
+            }
+            (void)entity_teardown(head);
+        }
     }
     return count;
 }
@@ -2624,6 +4055,10 @@ void handle_array_release_and_reset(void)
         if (*walk != NULL) {
             engine_heap_free(*walk);
         }
+        if (s_block_live[walk - s_blocks] != NULL) {
+            free(s_block_live[walk - s_blocks]);
+            s_block_live[walk - s_blocks] = NULL;
+        }
         ++walk;
     } while (walk < end);
     s_free = NULL;
@@ -2777,10 +4212,9 @@ void cmd_rec_type_set(void* rec, int type)
     }
 }
 /* --- selection-record array / entity-kind issuer (see cmd.hpp) ---------------
- * The record array's per-entry callees (the entity action-sequence reset and
- * the attached-object list detach) belong to the unported teardown family, so
- * the loop below is the seam half — the guard, the raised bits, and the
- * snapshot's ownership by the record are the ported observable half. */
+ * FUN_00402600 snapshots the selected entity pointers onto the command
+ * record, resets each entity's action sequence, and optionally detaches its
+ * carried object. */
 // FUNCTION: LEGORR 0x00402600
 void entity_record_array_apply_zero_state(void* rec, int mode)
 {
@@ -2800,16 +4234,13 @@ void entity_record_array_apply_zero_state(void* rec, int mode)
     r->buffer = array; /* owned: cmd_free releases it (no 0x200 flag) */
     r->count = count;
     for (unsigned i = 0; i < count; ++i) {
-        void* entry = (array != NULL) ? ((void**)array)[i] : NULL;
-        (void)entry;
-        /* Corpus: EntityActionSequenceReset(entry, 0) and, with the mode
-         * argument set, EntityAttachedObjectListDetach(entry, 0) — the
-         * teardown seam; the port changes no entity state here. */
+        EntitySlot* entry = (array != NULL)
+            ? (EntitySlot*)((void**)array)[i] : NULL;
+        entity_action_sequence_reset(entry, 0);
         if (mode != 0) {
-            (void)entry;
+            unported_ledger_stubs::entity_attached_object_list_detach(entry, 0);
         }
     }
-    (void)mode;
 }
 // FUNCTION: LEGORR 0x00402960
 void entity_kind_command_issue(EntitySlot* e)
@@ -2970,7 +4401,66 @@ void task_callback_dispatch(void* payload)
 // FUNCTION: LEGORR 0x00403ef0
 void pending_record_callback_dispatch(void* payload)
 {
-    entity_pool_callback_search(pending_record_callback_adapter, payload);
+    int block_index;
+    if (s_pending_record_callback_fn != NULL) {
+        entity_pool_callback_search(pending_record_callback_adapter, payload);
+        return;
+    }
+
+    /* FUN_00403ef0 calls the pool walker (0x406540), not the entity-pool
+     * walker: LAB_00403f10 matches live type-3 records by +0x10 payload and
+     * raises +0x5c bit 0x20. The host tracks live slots separately because
+     * its +0x64 word is a typed staging field, not retail's self-link. */
+    for (block_index = 0; block_index < s_pool_level; ++block_index) {
+        CmdRec* const block = s_blocks[block_index];
+        uint32_t record_index;
+        const uint32_t capacity = 1u << (block_index & 0x1f);
+        if (block == NULL || s_block_live[block_index] == NULL) continue;
+        for (record_index = 0; record_index < capacity; ++record_index) {
+            CmdRec* const candidate = &block[record_index];
+            if (s_block_live[block_index][record_index] != 0u &&
+                candidate->type == 3 &&
+                candidate->payload == payload) {
+                candidate->state |= 0x20u;
+            }
+        }
+    }
+}
+
+/* LAB_00402bb0, called by EntityPoolCallbackSearch from
+ * TerrainCellRefreshDispatch. The callback record is a 0x68-byte CmdRec:
+ * its raw +8/+0xc coordinate words are the host `x`/`y` slots, and +0x5c is
+ * `state`. CmdAlloc's retail +0x64 self-link is represented by the live-slot
+ * sidecar so this scan never mistakes an EntitySlot or a free record for a
+ * callback candidate. */
+void cmd_pool_cell_refresh_dispatch(const int cell_xy[2], int mode)
+{
+    int block_index;
+    if (cell_xy == NULL) return;
+    for (block_index = 0; block_index < s_pool_level; ++block_index) {
+        CmdRec* const block = s_blocks[block_index];
+        const uint32_t capacity = 1u << (block_index & 0x1f);
+        uint32_t record_index;
+        if (block == NULL || s_block_live[block_index] == NULL) continue;
+        for (record_index = 0; record_index < capacity; ++record_index) {
+            CmdRec* const record = &block[record_index];
+            int x, y;
+            int type;
+            if (s_block_live[block_index][record_index] == 0u) continue;
+            type = record->type;
+            if (type == 8) {
+                const int has_type8_flag = (record->state & 8u) != 0u;
+                if ((mode != 0) != has_type8_flag) continue;
+            }
+            else if (type != 9 && type != 11) {
+                continue;
+            }
+            cmd_rec_cell_xy_get(record, &x, &y);
+            if (x != cell_xy[0] || y != cell_xy[1]) continue;
+            record->state |= 0x20u;
+            level_tile_mark_current(cell_xy, 0);
+        }
+    }
 }
 
 // EntityTaskQueueFlush (FUN_004040a0).
@@ -3100,8 +4590,10 @@ int kind_nine_cell_command_issue(int x, int y, int mode)
         entity_record_array_apply_zero_state(rec, 1);
     }
     cmd_link_head(rec, 3);
-    /* Counter update: the spatial-query/action-issue family and the
-     * cell-record counter block are unported (documented seam). */
+    {
+        const int cell_xy[2] = { x, y };
+        terrain_cell_record_count_update(cell_xy, 8, 0, 0);
+    }
     level_tile_mark(lvl, x, y, 1);
     if (lvl->ptr_terrain != NULL) {
         /* The corpus tail loses the setter's register arguments; the type
@@ -3133,7 +4625,10 @@ void cell_command_type13_issue(int x, int y)
     rec->state |= 0x400u;
     entity_record_array_apply_zero_state(rec, 1);
     cmd_link_head(rec, 3);
-    /* Counter update: the seam half above. */
+    {
+        const int cell_xy[2] = { x, y };
+        terrain_cell_record_count_update(cell_xy, 0xd, 0, 0);
+    }
 }
 // FUNCTION: LEGORR 0x00402fb0
 void cell_command_type11_issue(int x, int y)
@@ -3151,7 +4646,10 @@ void cell_command_type11_issue(int x, int y)
     rec->state |= 0x400u;
     entity_record_array_apply_zero_state(rec, 1);
     cmd_link_head(rec, 4);
-    /* Counter update: the seam half above. */
+    {
+        const int cell_xy[2] = { x, y };
+        terrain_cell_record_count_update(cell_xy, 0xb, 0, 0);
+    }
     if (s_ctx != NULL && s_ctx->level != NULL) {
         level_cell_secondary_bit8_set((LevelState*)s_ctx->level, x, y, 1);
     }
@@ -3390,6 +4888,14 @@ void task_registry_remove_type0_entry_by_pair(const int pair[2])
         cur = next;
     }
 }
+
+void cmd_tutorial_congregation_set(int x, int y, int enable)
+{
+    const int pair[2] = { x, y };
+    if (enable != 0) coordinate_pair_task_record_queue(pair);
+    else task_registry_remove_type0_entry_by_pair(pair);
+}
+
 // FUNCTION: LEGORR 0x00403560
 void task_registry_remove_type10_entries_for_entity(const EntitySlot* e)
 {
@@ -3717,9 +5223,9 @@ void object_attached_record_allocate(EntitySlot* e)
 }
 
 /* PendingRecordCopyToEntityAndFlag (FUN_00406400) — see cmd.hpp. The corpus
- * copies the 26-dword window, restores its free-list self-link at +0x19
- * (the port keeps that bookkeeping in `next` during pooling, so a fresh
- * alloc is clean), flags +0x17 |= 0x200 and zeroes +0x18. */
+ * copies the 26-dword record window, then restores the allocator self-link at
+ * +0x64, clears the entity-chain link at +0x60, and sets state bit 0x200.
+ * The timer at +0x18 is part of the copied window and remains unchanged. */
 // FUNCTION: LEGORR 0x00406400
 void* cmd_pending_record_copy(const void* rec)
 {
@@ -3732,7 +5238,7 @@ void* cmd_pending_record_copy(const void* rec)
         return NULL; /* deviation: the corpus strides the allocation blindly */
     }
     *dst = *src;
-    dst->next = NULL;        /* corpus +0x18 = 0 */
+    dst->next = NULL;        /* corpus +0x60 = 0 */
     dst->global_next = NULL; /* port-only bookkeeping: unattached */
     dst->state |= 0x200u;    /* corpus +0x17 |= 0x200 */
     return dst;
@@ -4144,9 +5650,8 @@ const void* upgrade_name_entry_find(const char* name)
  * KindSixRandomMessageDispatchSweep (FUN_0040f0e0): subtract the frame delta
  * from the sweep timer, and once it reaches zero draw up to one hundred
  * random grid pairs modulo the current level's width and height; a pair the
- * grid-spawn route accepts dispatches message 6 with the coordinate pair
- * (the route is the quote-only seam precedent — it never lands, so neither
- * the dispatch nor its break fires). Either way the sweep re-arms the timer
+ * erosion eligibility/mutation path accepts dispatches message 6 with the
+ * coordinate pair and stops the search. Either way the sweep re-arms the timer
  * from one final draw at (draw % 50) + 750.0 and answers draw / 50. The
  * corpus's flag fold over the three timer comparisons pins the positive-
  * timer return to zero (a finite positive trips no comparison; NaN rides
@@ -4179,10 +5684,8 @@ uint32_t kind_six_random_sweep_dispatch(float delta)
                 int cell[2];
                 cell[0] = (int)(short)rng_thunk_draw15() % w;
                 cell[1] = (int)(short)rng_thunk_draw15() % h;
-                /* Grid-spawn route (FUN_0040f190 quote-only seam): never
-                 * lands, so the dispatch and the break cannot fire; the
-                 * coordinate pair would ride the message 6 call. */
-                const int spawn = 0;
+                const int spawn = lava_erosion_cell_eligible_and_mutate(
+                    cell, 1);
                 if (spawn != 0) {
                     message_dispatch(6, 0, 0, cell);
                     break;
@@ -4207,25 +5710,27 @@ void simulation_mode_counter_add(int mode, int count)
     }
 }
 
-/* --- command sample stats (2026-10-25) -----------------------------------
- * CommandSampleStatsAccumulate (FUN_0046b660): per-kind sliding-window
- * statistics. A null sample clears the window head and the running total;
- * a sample slides the window when the stored head falls below the sample's
- * +8 word (the new total is (old total − old head) + the new head), then
- * adds the sample's +4 word to the running total and raises the high-water
- * mark. Every call appends the sample pointer to the kind's log and bumps
- * the index. Deviations: the corpus strides its slot block blindly — the
- * port guards the kind (the corpus's stride is 0x27c bytes per kind, of
- * which this function touches dwords 0..24: the log at 0..+19, the index
- * at +0x50, head +0x54, total +0x58, sum +0x5c, high +0x60) and stops the
- * log writes at the slot edge, where the corpus's twenty-first store would
- * stride onto the index word and corrupt it (faithfully pinned: the port
- * keeps counting while it stops storing). */
-#define CMD_STATS_KINDS 110u /* corpus window span / slot stride */
+/* --- command sample stats -----------------------------------------------
+ * CommandSampleStatsAccumulate (FUN_0046b660) operates on one 0x27c-byte
+ * record per type. The record's twenty sample pointers begin at +0x20c;
+ * its count/head/window-total/cumulative-total/high-water words live at
+ * +0x25c..+0x26c. The initialization loop at 0x46b3xx clears 0x1839 dwords,
+ * exactly 39 records of 0x9f dwords each. Keep that physical layout here;
+ * command_sample_stats_peek() below exposes the compact 0..24 inspection
+ * view used by port callers. The reference blindly writes past the twenty
+ * pointer log when its count exceeds twenty. Preserve the count but bound
+ * those out-of-record writes in the portable implementation. */
+#define CMD_STATS_KINDS 39u
+#define CMD_STATS_LOG_DWORD 131u /* +0x20c */
 #define CMD_STATS_LOG_DWORDS 20u
-#define CMD_STATS_SLOT_DWORDS 25u
+#define CMD_STATS_COUNT_DWORD 151u /* +0x25c */
+#define CMD_STATS_HEAD_DWORD 152u /* +0x260 */
+#define CMD_STATS_WINDOW_DWORD 153u /* +0x264 */
+#define CMD_STATS_TOTAL_DWORD 154u /* +0x268 */
+#define CMD_STATS_HIGH_DWORD 155u /* +0x26c */
+#define CMD_STATS_RECORD_DWORDS 159u /* stride +0x27c */
 
-static uint32_t s_cmd_stats[CMD_STATS_KINDS][CMD_STATS_SLOT_DWORDS];
+static uint32_t s_cmd_stats[CMD_STATS_KINDS][CMD_STATS_RECORD_DWORDS];
 
 // FUNCTION: LEGORR 0x0046b660
 void command_sample_stats_accumulate(int kind, const void* sample)
@@ -4235,34 +5740,883 @@ void command_sample_stats_accumulate(int kind, const void* sample)
     }
     uint32_t* slot = s_cmd_stats[kind];
     if (sample == NULL) {
-        slot[21] = 0u;                       /* +0x54 head */
-        slot[23] = 0u;                       /* +0x5c sum  */
+        slot[CMD_STATS_HEAD_DWORD] = 0u;
+        slot[CMD_STATS_TOTAL_DWORD] = 0u;
     } else {
         uint32_t v4 = 0u, v8 = 0u;           /* sample+4, sample+8 */
         __builtin_memcpy(&v4, (const char*)sample + 4, sizeof v4);
         __builtin_memcpy(&v8, (const char*)sample + 8, sizeof v8);
-        if ((int)slot[21] < (int)v8) {       /* slide the window */
-            slot[22] = (uint32_t)((int)slot[22] - (int)slot[21]);
-            slot[21] = v8;
-            slot[22] = (uint32_t)((int)slot[22] + (int)v8);
+        if ((int)slot[CMD_STATS_HEAD_DWORD] < (int)v8) {
+            slot[CMD_STATS_WINDOW_DWORD] = (uint32_t)(
+                (int)slot[CMD_STATS_WINDOW_DWORD] -
+                (int)slot[CMD_STATS_HEAD_DWORD]);
+            slot[CMD_STATS_HEAD_DWORD] = v8;
+            slot[CMD_STATS_WINDOW_DWORD] = (uint32_t)(
+                (int)slot[CMD_STATS_WINDOW_DWORD] + (int)v8);
         }
-        slot[23] = (uint32_t)((int)slot[23] + (int)v4);
-        if ((int)slot[24] < (int)slot[23]) { /* high-water mark */
-            slot[24] = slot[23];
+        slot[CMD_STATS_TOTAL_DWORD] = (uint32_t)(
+            (int)slot[CMD_STATS_TOTAL_DWORD] + (int)v4);
+        if ((int)slot[CMD_STATS_HIGH_DWORD] <
+            (int)slot[CMD_STATS_TOTAL_DWORD]) {
+            slot[CMD_STATS_HIGH_DWORD] = slot[CMD_STATS_TOTAL_DWORD];
         }
     }
-    const uint32_t idx = slot[20];
+    const uint32_t idx = slot[CMD_STATS_COUNT_DWORD];
     if (idx < CMD_STATS_LOG_DWORDS) {
-        slot[idx] = (uint32_t)(uintptr_t)sample;
+        slot[CMD_STATS_LOG_DWORD + idx] = (uint32_t)(uintptr_t)sample;
     }
-    slot[20] = idx + 1u;
+    slot[CMD_STATS_COUNT_DWORD] = idx + 1u;
 }
 
 uint32_t command_sample_stats_peek(int kind, int field)
 {
-    if (kind < 0 || (unsigned)kind >= CMD_STATS_KINDS
-        || field < 0 || (unsigned)field >= CMD_STATS_SLOT_DWORDS) {
+    if (kind < 0 || (unsigned)kind >= CMD_STATS_KINDS ||
+        field < 0 || field > 24) {
         return 0u;
     }
-    return s_cmd_stats[kind][field];
+    if (field < (int)CMD_STATS_LOG_DWORDS) {
+        return s_cmd_stats[kind][CMD_STATS_LOG_DWORD + field];
+    }
+    switch (field) {
+    case 20: return s_cmd_stats[kind][CMD_STATS_COUNT_DWORD];
+    case 21: return s_cmd_stats[kind][CMD_STATS_HEAD_DWORD];
+    case 22: return s_cmd_stats[kind][CMD_STATS_WINDOW_DWORD];
+    case 23: return s_cmd_stats[kind][CMD_STATS_TOTAL_DWORD];
+    case 24: return s_cmd_stats[kind][CMD_STATS_HIGH_DWORD];
+    default: return 0u;
+    }
 }
+
+namespace unported_ledger_stubs {
+
+static int object_task_target_record_matches(
+    const CmdRec* record, const uint32_t key[3])
+{
+    if (record->type != 5 && record->type != 7 && record->type != 9 &&
+        record->type != 0xf) return 0;
+    if (record->type != 5 && record->payload != NULL &&
+        !entity_shared_eligibility_check((const EntitySlot*)record->payload,
+                                         0)) return 0;
+    if (record->cell_act != 0 &&
+        ((uint32_t)record->cell_act != key[0] ||
+         (record->cell_target != -1 &&
+          (uint32_t)record->cell_target != key[1]) ||
+         (uint32_t)record->cell_count != key[2])) return 0;
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00404F10
+int object_task_target_filter_find(
+    uint32_t type, uint32_t selector, uint32_t companion)
+{
+    const uint32_t key[3] = { type, selector, companion };
+    int block_index;
+    for (block_index = 0; block_index < s_pool_level; ++block_index) {
+        CmdRec* block = s_blocks[block_index];
+        uint8_t* live = s_block_live[block_index];
+        const uint32_t capacity = 1u << (block_index & 0x1f);
+        uint32_t slot;
+        if (block == NULL || live == NULL) continue;
+        for (slot = 0u; slot < capacity; ++slot) {
+            if (live[slot] != 0u &&
+                object_task_target_record_matches(&block[slot], key))
+                return 1;
+        }
+    }
+    return 0;
+}
+
+}
+
+namespace unported_ledger_stubs {
+
+static ObjectTaskEligibilityOps* s_object_task_eligibility_ops;
+void object_task_eligibility_ops_bind(ObjectTaskEligibilityOps* ops)
+{
+    s_object_task_eligibility_ops = ops;
+}
+
+// FUNCTION: LEGORR 0x00404fc0
+int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
+    const ObjectTaskEligibilityRecord* command, EntitySlot* entity,
+    float screen_xy[2], float world_xy[2], uint32_t* out_flag,
+    int require_command_gate, int relaxed_entity_gate)
+{
+    ObjectTaskEligibilityOps* ops = s_object_task_eligibility_ops;
+    ObjectTaskEligibilityEntityView entity_view;
+    ObjectTaskEligibilityEntityView target_view;
+    EntitySlot* target;
+    int kind, value;
+    float x = 0.0f, y = 0.0f;
+    float simulation_time;
+    int have_xy = 0;
+    int transform_screen = 0;
+    int world_from_entity = 0;
+    if (out_flag != NULL) *out_flag = 0u;
+    if (command == NULL || entity == NULL) return 0;
+
+    /* FUN_00404fc0's kind-0x17 branch is fully described by entity and
+     * level fields: type 2, reject a matching category flag/value pair, and
+     * require the entity's +0x3d4 progress to reach the level's +0x260
+     * threshold. Keep this path live even when no renderer ops are bound. */
+    if (command->kind == 0x17) {
+        GameContext* context = pending_scan_context_get();
+        EntitySlot* target = command->target;
+        const uint32_t flags = entity->flags_3f0;
+        if (command->task_scalar_18 > 0.0f ||
+            ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+             entity->owner_36c == NULL) ||
+            (entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u || entity->type != 2 ||
+            (context != NULL && (context->cheat & 1u) != 0u &&
+             ai_activity_probe(entity) != 0) ||
+            ((flags & 1u) != 0u && command->field_f == 1u) ||
+            ((flags & 2u) != 0u && command->field_f == 2u) ||
+            ((flags & 4u) != 0u && command->field_f == 4u) ||
+            ((flags & 8u) != 0u && command->field_f == 8u) ||
+            ((flags & 0x10u) != 0u && command->field_f == 0x10u) ||
+            ((flags & 0x20u) != 0u && command->field_f == 0x20u) ||
+            context == NULL || context->level == NULL ||
+            entity->activity_counter_3d4 <
+                engine_float_field260_get(context->level)) return 0;
+        if (screen_xy != NULL) {
+            if (target == NULL) return 0;
+            entity_transform_position_get(target, screen_xy);
+        }
+        if (world_xy != NULL) {
+            int cell_x = 0;
+            int cell_y = 0;
+            if (target == NULL) return 0;
+            entity_position_to_terrain_cell(target, context->level,
+                                            &cell_x, &cell_y);
+            world_xy[0] = (float)cell_x;
+            world_xy[1] = (float)cell_y;
+        }
+        (void)require_command_gate;
+        (void)relaxed_entity_gate;
+        return 1;
+    }
+
+    /* FUN_00404fc0 kind 0x1a is fully expressible through the live entity,
+     * terrain, and ray-sweep adapters. Keep its separate global-feature gate
+     * and preserve the reference's zero result-flag behavior. */
+    if (command->kind == 0x1a) {
+        GameContext* context = pending_scan_context_get();
+        EntitySlot* target = command->target;
+        int cell_x, cell_y;
+        if (target == NULL || command->task_scalar_18 > 0.0f ||
+            ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+             entity->owner_36c == NULL) ||
+            (entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u ||
+            !scene_object_has_task_type_4_5_7(entity) ||
+            ai_activity_probe(entity) == 0 ||
+            !entity_centers_within_object_radius(entity, target) ||
+            see_through_walls_ray_check(entity, target) != 0 ||
+            entity_shared_eligibility_check(target, 1) == 0 ||
+            context == NULL || (context->cheat & 1u) == 0u) return 0;
+        if (screen_xy != NULL)
+            entity_transform_position_get(target, screen_xy);
+        if (world_xy != NULL) {
+            if (context->level == NULL) return 0;
+            entity_position_to_terrain_cell(target, context->level,
+                                            &cell_x, &cell_y);
+            world_xy[0] = (float)cell_x;
+            world_xy[1] = (float)cell_y;
+        }
+        return 1;
+    }
+
+    /* GameConfigInit reads Main.MinEnergyForEat into DAT_00556458. The
+     * portable context owns the same open Lego.cfg, so resolve the live
+     * configured scale here instead of depending on an uninstalled ops value. */
+    if (command->kind == 0x11) {
+        GameContext* context = pending_scan_context_get();
+        EntitySlot* target = command->target;
+        const float min_energy = context != NULL && context->cfg != NULL
+            ? block_get_float(context->cfg, "Main MinEnergyForEat", 0.0f)
+            : 0.0f;
+        if (target == NULL || command->task_scalar_18 > 0.0f ||
+            ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+             entity->owner_36c == NULL) ||
+            (entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u ||
+            (context != NULL && (context->cheat & 1u) != 0u &&
+             ai_can_do(entity) != 0) ||
+            entity_shared_eligibility_check(target, 0) == 0 ||
+            entity->type != 2 || (entity->flags_3e4 & 0x800u) != 0u ||
+            entity->progress_344 > entity->field_340 * 0.01f * min_energy ||
+            (entity->flags_3e0 & 0x400u) != 0u) return 0;
+        (void)screen_xy;
+        (void)world_xy;
+        (void)require_command_gate;
+        (void)relaxed_entity_gate;
+        return 1;
+    }
+
+    /* FUN_00404fc0's kind-3 arm is also representable from the live entity
+     * and task-record APIs. Its optional first output is the target's scene
+     * position; its second output is the target's terrain cell. */
+    if (command->kind == 3) {
+        GameContext* context = pending_scan_context_get();
+        EntitySlot* task_target = command->target;
+        int target_cell[2] = { 0, 0 };
+        if (task_target == NULL ||
+            (task_target->type != 8 && command->task_scalar_18 > 0.0f) ||
+            ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+             entity->owner_36c == NULL) ||
+            (entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u ||
+            (context != NULL && (context->cheat & 1u) != 0u &&
+             ai_can_do(entity) != 0) ||
+            (entity->flags_3e8 & 0x40u) == 0u ||
+            !entity_accepts_target_for_task_check(entity, task_target, 1) ||
+            (entity->type == 1 && entity_stats_word_at_ec(entity) == 0u))
+            return 0;
+        if (task_target->type == 8 &&
+            (entity->flags_3f0 & 8u) == 0u && relaxed_entity_gate)
+            return 0;
+        if (entity->type == 3 && task_target->type != 6) return 0;
+        if (entity->type == 1 &&
+            (task_target->type == 9 ||
+             (task_target->type == 6 &&
+              (task_target->flags_3e8 & 0x80000000u) != 0u) ||
+             ((entity->flags_3e0 & 0x400u) != 0u &&
+              entity->carry_link_308 != NULL &&
+              ((EntitySlot*)entity->carry_link_308)->type == 0xb)))
+            return 0;
+        /* FUN_00404ed0 is a void helper: it performs the type/name/index
+         * filter walk, but FUN_00404fc0 does not use a match result as an
+         * eligibility gate. FUN_00439b80 supplies that gate. */
+        (void)unported_ledger_stubs::
+            ledger_stub_00404ed0_CheckObjectCandidate(
+                task_target);
+        if (!entity_task_target_cell_eligibility_check(entity, task_target))
+            return 0;
+        if (screen_xy != NULL)
+            entity_transform_position_get(task_target, screen_xy);
+        if (world_xy != NULL) {
+            if (context == NULL || context->level == NULL) return 0;
+            entity_position_to_terrain_cell(task_target, context->level,
+                                            &target_cell[0], &target_cell[1]);
+            world_xy[0] = (float)target_cell[0];
+            world_xy[1] = (float)target_cell[1];
+        }
+        (void)require_command_gate;
+        return 1;
+    }
+
+    /* FUN_00404fc0's kind-0x13 branch uses only live minifigure state,
+     * grouped activity lookup, and the mask-8 world-position query. It does
+     * not depend on the renderer/task adapter used by the other branches. */
+    if (command->kind == 0x13) {
+        GameContext* context = pending_scan_context_get();
+        float actor_position[2];
+        EntitySlot* target;
+        if (command->task_scalar_18 > 0.0f || entity->type != 2 ||
+            ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+             entity->owner_36c == NULL) ||
+            (entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u ||
+            (context != NULL && (context->cheat & 1u) != 0u &&
+             ai_can_do(entity) != 0) ||
+            ai_activity_cap(context, entity) == 0 ||
+            ai_activity_scan(entity, (int)command->field_e) != 0) return 0;
+        entity_transform_position_get(entity, actor_position);
+        target = entity_lookup_at_world_position(actor_position);
+        if (target == NULL) return 0;
+        if (screen_xy != NULL)
+            entity_transform_position_get(target, screen_xy);
+        /* The reference's kind-0x13 arm does not write param_4 or the
+         * optional result flag after its initial clear. */
+        (void)world_xy;
+        (void)require_command_gate;
+        (void)relaxed_entity_gate;
+        return 1;
+    }
+
+    /* FUN_00404fc0 has a complete kind-0x12 path in the checked-in body:
+     * its target can supply an explicit scene position, a nested type-4
+     * scene pose, or the adjacent cell returned by FUN_00439e40. Keep these
+     * cases on the live EntitySlot/LevelState adapters so they also work
+     * when the optional eligibility-ops table has not been installed. */
+    if (command->kind == 0x12) {
+        GameContext* context = pending_scan_context_get();
+        EntitySlot* target = command->target;
+        int target_cell[2];
+        float target_position[3];
+        int scene_position = 0;
+        if (target == NULL || command->task_scalar_18 > 0.0f ||
+            ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+             entity->owner_36c == NULL) ||
+            (entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u ||
+            (context != NULL && (context->cheat & 1u) != 0u &&
+             ai_can_do(entity) != 0) || entity->type != 2 ||
+            entity->cmd_head != NULL || entity->owner_36c != NULL ||
+            ((command->field_f & entity->flags_3f0) == 0u &&
+             relaxed_entity_gate)) return 0;
+
+        if ((entity_stats_word_get(target) & 0x2000000u) != 0u) {
+            entity_transform_position_get(target, target_position);
+            scene_position = 1;
+            if (world_xy != NULL) {
+                if (context == NULL || context->level == NULL) return 0;
+                entity_position_to_terrain_cell(target, context->level,
+                                                &target_cell[0],
+                                                &target_cell[1]);
+                world_xy[0] = (float)target_cell[0];
+                world_xy[1] = (float)target_cell[1];
+            }
+        }
+        else if (cmd_place_target_nested_scene_pose_get(
+                     target, target_position)) {
+            scene_position = 1;
+            if (world_xy != NULL) {
+                int cell_x, cell_y;
+                if (context == NULL || context->level == NULL ||
+                    !terrain_world_xy_to_cell(
+                        context->level->ptr_terrain, target_position[0],
+                        target_position[1], &cell_x, &cell_y)) return 0;
+                world_xy[0] = (float)cell_x;
+                world_xy[1] = (float)cell_y;
+            }
+        }
+        else if (entity_record_flag20_query(target, target_cell)) {
+            if (screen_xy != NULL &&
+                !cmd_place_position_to_world(NULL, target_cell[0],
+                                             target_cell[1], &screen_xy[0],
+                                             &screen_xy[1])) return 0;
+            if (world_xy != NULL) {
+                world_xy[0] = (float)target_cell[0];
+                world_xy[1] = (float)target_cell[1];
+            }
+        }
+        else return 0;
+
+        if (screen_xy != NULL && scene_position) {
+            screen_xy[0] = target_position[0];
+            screen_xy[1] = target_position[1];
+        }
+        return 1;
+    }
+
+    /* The kind-0x15 branch needs only the candidate type/owner link and the
+     * target's live scene pose. The model/resource and DDiScene adapters are
+     * already part of the gameplay path, so don't make this branch depend on
+     * the optional ObjectTaskEligibilityOps registration. */
+    if (command->kind == 0x15) {
+        GameContext* context = pending_scan_context_get();
+        float target_x, target_y;
+        int cell_x, cell_y;
+        if (command->target == NULL || command->task_scalar_18 > 0.0f ||
+            ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+             entity->owner_36c == NULL) ||
+            (entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u ||
+            (context != NULL && (context->cheat & 1u) != 0u &&
+             ai_can_do(entity) != 0) || entity->type != 1 ||
+            entity->owner_36c == NULL ||
+            !cmd_place_target_route_position_get(
+                NULL, command->target, &target_x, &target_y)) return 0;
+        if (screen_xy != NULL) {
+            screen_xy[0] = target_x;
+            screen_xy[1] = target_y;
+        }
+        if (world_xy != NULL) {
+            if (context == NULL || context->level == NULL ||
+                !terrain_world_xy_to_cell(context->level->ptr_terrain,
+                                          target_x, target_y,
+                                          &cell_x, &cell_y)) return 0;
+            world_xy[0] = (float)cell_x;
+            world_xy[1] = (float)cell_y;
+        }
+        return 1;
+    }
+
+    /* Kind 0x1e uses the same scene-pose lookup as kind 0x15, plus the
+     * candidate's Stats capability bit 1 (FUN_00469ea0). */
+    if (command->kind == 0x1e) {
+        GameContext* context = pending_scan_context_get();
+        float target_x, target_y;
+        int cell_x, cell_y;
+        if (command->target == NULL || command->task_scalar_18 > 0.0f ||
+            ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+             entity->owner_36c == NULL) ||
+            (entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u ||
+            (context != NULL && (context->cheat & 1u) != 0u &&
+             ai_can_do(entity) != 0) ||
+            (entity_capability_flags_get(entity) & 2u) == 0u ||
+            !cmd_place_target_route_position_get(
+                NULL, command->target, &target_x, &target_y)) return 0;
+        if (screen_xy != NULL) {
+            screen_xy[0] = target_x;
+            screen_xy[1] = target_y;
+        }
+        if (world_xy != NULL) {
+            if (context == NULL || context->level == NULL ||
+                !terrain_world_xy_to_cell(context->level->ptr_terrain,
+                                          target_x, target_y,
+                                          &cell_x, &cell_y)) return 0;
+            world_xy[0] = (float)cell_x;
+            world_xy[1] = (float)cell_y;
+        }
+        return 1;
+    }
+
+    /* Coordinate, kind-10, and kind-16 branches use only command words and
+     * live entity/terrain state. Keep them executable without the optional
+     * renderer view adapter. This follows the direct branches in FUN_00404fc0
+     * and its FUN_00432770 terrain predicate. */
+    if (command->kind == 0 || command->kind == 8 ||
+        command->kind == 0x0b || command->kind == 0x0c ||
+        command->kind == 10 || command->kind == 0x16) {
+        GameContext* context = pending_scan_context_get();
+        const int kind = command->kind;
+        int cell_x = command->x;
+        int cell_y = command->y;
+        int eligible = 1;
+        if ((kind != 3 || command->target == NULL ||
+             command->target->type != 8) &&
+            command->task_scalar_18 > 0.0f) return 0;
+        if ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+            entity->owner_36c == NULL) return 0;
+        if ((entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u) return 0;
+        if (context != NULL && (context->cheat & 1u) != 0u &&
+            kind != 0x1a && ai_can_do(entity) != 0) return 0;
+
+        if (kind == 8) {
+            eligible = pending_command_cell_walkable(
+                context, entity, cell_x, cell_y,
+                (command->field_17 & 8u) != 0u);
+            if ((entity->flags_3e8 & 2u) == 0u || eligible == 0 ||
+                ((command->field_17 & 8u) != 0u &&
+                 (entity_stats_word_get(entity) & 1u) == 0u)) return 0;
+        }
+        if (require_command_gate && kind != 0 &&
+            !pending_command_activity_gate(entity, kind)) return 0;
+        if ((kind == 0x0b && entity->type != 2) ||
+            (kind == 0x0c &&
+             (entity_stats_word_get(entity) & 0x10000u) == 0u)) return 0;
+        if (kind == 10 &&
+            ((relaxed_entity_gate &&
+              (entity->flags_3f0 & 0x10u) == 0u &&
+              (command->field_17 & 0x200000u) == 0u) ||
+             entity->type != 2)) return 0;
+        if (kind == 0x16) {
+            if (entity->type != 2) return 0;
+            /* FUN_00432550 is the unconditional-success coordinate gate. */
+        }
+        if (screen_xy != NULL) {
+            if (kind == 10) {
+                if (command->target == NULL) return 0;
+                entity_transform_position_get(command->target, screen_xy);
+            }
+            else if (context == NULL || context->level == NULL ||
+                !terrain_cell_world_center_xy_get(
+                    context->level->ptr_terrain, cell_x, cell_y,
+                    screen_xy)) return 0;
+        }
+        if (world_xy != NULL) {
+            if (kind == 10) {
+                if (command->target == NULL || context == NULL ||
+                    context->level == NULL) return 0;
+                entity_position_to_terrain_cell(command->target,
+                    context->level, &cell_x, &cell_y);
+            }
+            world_xy[0] = (float)cell_x;
+            world_xy[1] = (float)cell_y;
+        }
+        return 1;
+    }
+
+    if (ops == NULL ||
+        ops->global_feature_word == NULL ||
+        ops->entity_view_get == NULL) {
+        GameContext* context = pending_scan_context_get();
+        const int kind = command->kind;
+        EntitySlot* target = command->target;
+        if ((kind != 3 || target == NULL || target->type != 8) &&
+            command->task_scalar_18 > 0.0f) return 0;
+        if ((entity_stats_word_get(entity) & 0x20000u) != 0u &&
+            entity->owner_36c == NULL) return 0;
+        if ((entity->flags_3e0 & 0x800000u) != 0u ||
+            (entity->flags_3ec & 0x400u) != 0u) return 0;
+        if (context != NULL && (context->cheat & 1u) != 0u &&
+            kind != 0x1a && ai_can_do(entity) != 0) return 0;
+        if (kind == 0x1a || kind == 0x1e || kind == 3 ||
+            kind == 0x11 || kind == 0x12 || kind == 0x15 ||
+            kind == 0x13 || kind == 0x17) return 0;
+        if (out_flag != NULL) *out_flag = 1u;
+        return 1;
+    }
+    target = command->target;
+    if (!ops->entity_view_get(ops->context, entity, &entity_view)) return 0;
+    memset(&target_view, 0, sizeof(target_view));
+    if (target != NULL &&
+        !ops->entity_view_get(ops->context, target, &target_view)) return 0;
+    kind = command->kind;
+
+    /* Shared command and entity gates. */
+    if ((kind != 3 || target_view.type != 8) &&
+        command->task_scalar_18 > 0.0f) return 0;
+    if ((entity_view.activity_flags & 0x20000u) != 0u &&
+        entity_view.field_db == 0) return 0;
+    if ((entity_view.flags_f8 & 0x800000u) != 0u ||
+        (entity_view.flags_fb & 0x400u) != 0u) return 0;
+    if ((*ops->global_feature_word & 1u) != 0u && kind != 0x1a) {
+        if (ops->entity_special_gate == NULL ||
+            ops->entity_special_gate(ops->context, entity)) return 0;
+    }
+
+    if (kind == 0x1a) {
+        if (ops->entity_target_gate == NULL ||
+            !ops->entity_target_gate(ops->context, entity, target) ||
+            ops->entity_radius_gate == NULL ||
+            !ops->entity_radius_gate(ops->context, entity, target) ||
+            ops->entity_ray_gate == NULL ||
+            ops->entity_ray_gate(ops->context, entity, target) ||
+            ops->entity_eligible == NULL ||
+            !ops->entity_eligible(ops->context, target, 1) ||
+            ((*ops->global_feature_word & 1u) == 0u)) return 0;
+        if (screen_xy != NULL && (ops->target_position_get == NULL ||
+            !ops->target_position_get(ops->context, target,
+                                      &screen_xy[0], &screen_xy[1]))) return 0;
+        if (world_xy != NULL && (ops->target_world_position_get == NULL ||
+            !ops->target_world_position_get(ops->context, target,
+                                            &world_xy[0], &world_xy[1]))) return 0;
+        return 1;
+    }
+    if (kind == 0x1e) {
+        GameContext* context = pending_scan_context_get();
+        if (ops->target_kind_resolve == NULL ||
+            ops->target_kind_resolve(ops->context, target) == 0 ||
+            ops->target_type4_activity_get == NULL ||
+            !ops->target_type4_activity_get(ops->context, entity, &value) ||
+            value == 0 ||
+            ops->target_route_position_get == NULL ||
+            !ops->target_route_position_get(ops->context, target, &x, &y))
+            return 0;
+        if (screen_xy != NULL) {
+            screen_xy[0] = x;
+            screen_xy[1] = y;
+        }
+        if (world_xy != NULL) {
+            int cell_x, cell_y;
+            if (context == NULL || context->level == NULL ||
+                !terrain_world_xy_to_cell(context->level->ptr_terrain,
+                                          x, y, &cell_x, &cell_y)) return 0;
+            world_xy[0] = (float)cell_x;
+            world_xy[1] = (float)cell_y;
+        }
+        return 1;
+    }
+    else if (kind == 3) {
+        if ((entity_view.flags_3e8 & 0x40u) == 0u ||
+            ops->kind3_target_gate == NULL ||
+            !ops->kind3_target_gate(ops->context, entity, target, 1)) return 0;
+        if (entity_view.type == 1 &&
+            (ops->kind1_activity_gate == NULL ||
+             !ops->kind1_activity_gate(ops->context, entity))) return 0;
+        if (target_view.type == 8 &&
+            (entity_view.flags_fc & 8u) == 0u && relaxed_entity_gate) return 0;
+        if (entity_view.type == 3 && target_view.type != 6) return 0;
+        if (entity_view.type == 1) {
+            if (target_view.type == 9 ||
+                (target_view.type == 6 &&
+                 (target_view.flags_3e8 & 0x80000000u) != 0u) ||
+                ((entity_view.flags_f8 & 0x400u) != 0u &&
+                 target_view.nested_type_2fc == 0xb)) return 0;
+        }
+        /* FUN_00404ed0 returns void in the retail ABI; only the following
+         * FUN_00439b80 relation check determines eligibility. */
+        (void)ledger_stub_00404ed0_CheckObjectCandidate(
+            target);
+        if (ops->entity_target_relation == NULL ||
+            !ops->entity_target_relation(ops->context, entity, 0)) return 0;
+        if (screen_xy != NULL &&
+            (ops->target_position_get == NULL ||
+             !ops->target_position_get(ops->context, target, &x, &y)))
+            return 0;
+        have_xy = screen_xy != NULL || world_xy != NULL;
+        world_from_entity = 1;
+    }
+    else if (kind == 8 || kind == 0 || kind == 0xb || kind == 0xc) {
+        int walkable = 1;
+        if (kind == 8) {
+            walkable = ops->terrain_walkable != NULL &&
+                ops->terrain_walkable(ops->context, entity, command->x,
+                                      command->y,
+                                      (command->field_17 & 8u) != 0u);
+        }
+        if (require_command_gate && kind != 0 && kind != 9 &&
+            (ops->command_kind_gate == NULL ||
+             !ops->command_kind_gate(ops->context, entity, kind))) return 0;
+        if ((kind == 0xb && entity_view.type != 2) ||
+            (kind == 0xc && (entity_view.activity_flags & 0x10000u) == 0u))
+            return 0;
+        if (kind == 8 && ((entity_view.flags_3e8 & 2u) == 0u ||
+            !walkable || ((command->field_17 & 8u) != 0u &&
+            (entity_view.activity_flags & 1u) == 0u))) return 0;
+        x = (float)command->x;
+        y = (float)command->y;
+        have_xy = 1;
+        transform_screen = 1;
+    }
+    else if (kind == 10) {
+        if ((require_command_gate &&
+             (ops->command_kind_gate == NULL ||
+              !ops->command_kind_gate(ops->context, entity, 10))) ||
+            (relaxed_entity_gate && (entity_view.flags_fc & 0x10u) == 0u &&
+             (command->field_17 & 0x200000u) == 0u) ||
+            entity_view.type != 2) return 0;
+        if (screen_xy != NULL) {
+            if (ops->target_position_get == NULL ||
+                !ops->target_position_get(ops->context, target, &x, &y))
+                return 0;
+        }
+        /* The retail path writes the scene position only when param_3 is
+         * present, but it still falls through to FUN_004424f0 for param_4
+         * when only the cell-pair output is requested. Keep the shared tail
+         * active for either optional output. */
+        if (screen_xy != NULL || world_xy != NULL) {
+            have_xy = 1;
+            world_from_entity = 1;
+        }
+    }
+    else if (kind == 0x11) {
+        if (ops->entity_eligible == NULL ||
+            !ops->entity_eligible(ops->context, target, 0) ||
+            entity_view.type != 2 || (entity_view.flags_f9 & 0x800u) != 0u ||
+            entity_view.field_d1 > entity_view.field_d0 * 0.01f *
+                                   ops->activity_scale ||
+            (entity_view.flags_f8 & 0x400u) != 0u) return 0;
+        return 1;
+    }
+    else if (kind == 0x12) {
+        if (entity_view.type != 2 || entity_view.field_bc != 0 ||
+            entity_view.field_db != 0 ||
+            ((command->field_f & entity_view.flags_fc) == 0u &&
+             relaxed_entity_gate) || ops->target_activity_flags == NULL)
+            return 0;
+        value = ops->target_activity_flags != NULL
+            ? ops->target_activity_flags(ops->context, target) : 0;
+        if ((value & 0x2000000) == 0) {
+            float scene_position[3];
+            if (cmd_place_target_nested_scene_pose_get(target,
+                                                       scene_position)) {
+                if (screen_xy != NULL) {
+                    screen_xy[0] = scene_position[0];
+                    screen_xy[1] = scene_position[1];
+                }
+                /* Retail writes the optional screen position and optional
+                 * cell pair independently. A caller asking only for the
+                 * cell output still receives the nested type-4 scene pose. */
+                if (world_xy != NULL) {
+                    GameContext* context = pending_scan_context_get();
+                    int cell_x, cell_y;
+                    if (context == NULL || context->level == NULL ||
+                        !terrain_world_xy_to_cell(
+                            context->level->ptr_terrain,
+                            scene_position[0], scene_position[1],
+                            &cell_x, &cell_y)) return 0;
+                    world_xy[0] = (float)cell_x;
+                    world_xy[1] = (float)cell_y;
+                }
+                return 1;
+            }
+        }
+        if ((value & 0x2000000) == 0) {
+            if (ops->target_activity_position_get == NULL ||
+                !ops->target_activity_position_get(ops->context, target,
+                                                   &x, &y)) return 0;
+            have_xy = 1;
+            transform_screen = 1;
+        }
+        else {
+            if (screen_xy != NULL &&
+                (ops->target_position_get == NULL ||
+                 !ops->target_position_get(ops->context, target, &x, &y)))
+                return 0;
+            have_xy = screen_xy != NULL || world_xy != NULL;
+            world_from_entity = 1;
+        }
+    }
+    else if (kind == 0x15) {
+        GameContext* context = pending_scan_context_get();
+        if (entity_view.type != 1 || entity_view.field_db == 0 ||
+            ops->target_kind_resolve == NULL ||
+            ops->target_route_position_get == NULL ||
+            !ops->target_route_position_get(ops->context, target, &x, &y))
+            return 0;
+        value = ops->target_kind_resolve(ops->context, target);
+        (void)value;
+        if (screen_xy != NULL) {
+            screen_xy[0] = x;
+            screen_xy[1] = y;
+        }
+        if (world_xy != NULL) {
+            int cell_x, cell_y;
+            if (context == NULL || context->level == NULL ||
+                !terrain_world_xy_to_cell(context->level->ptr_terrain,
+                                          x, y, &cell_x, &cell_y)) return 0;
+            world_xy[0] = (float)cell_x;
+            world_xy[1] = (float)cell_y;
+        }
+        return 1;
+    }
+    else if (kind == 0x16) {
+        if (entity_view.type != 2 || ops->task_coordinate_check == NULL ||
+            !ops->task_coordinate_check(ops->context, command->x, command->y))
+            return 0;
+        x = (float)command->x;
+        y = (float)command->y;
+        have_xy = 1;
+        transform_screen = 1;
+    }
+    else if (kind == 0x13) {
+        EntitySlot* resolved_target;
+        if (entity_view.type != 2 || ops->target_activity_gate == NULL ||
+            !ops->target_activity_gate(ops->context, entity) ||
+            ops->target_visibility_check == NULL ||
+            !ops->target_visibility_check(ops->context, entity,
+                                          (int)command->field_e) ||
+            ops->kind13_target_resolve == NULL ||
+            ops->target_position_get == NULL) return 0;
+        resolved_target = ops->kind13_target_resolve(
+            ops->context, entity, command->field_e);
+        if (resolved_target == NULL) return 0;
+        if (screen_xy == NULL) return 1;
+        if (!ops->target_position_get(ops->context, resolved_target, &x, &y))
+            return 0;
+        have_xy = 1;
+        world_from_entity = 1;
+    }
+    else if (kind == 0x17) {
+        if (entity_view.type != 2 ||
+            ((entity_view.flags_fc & 1u) != 0u && command->field_f == 1u) ||
+            ((entity_view.flags_fc & 2u) != 0u && command->field_f == 2u) ||
+            ((entity_view.flags_fc & 4u) != 0u && command->field_f == 4u) ||
+            ((entity_view.flags_fc & 8u) != 0u && command->field_f == 8u) ||
+            ((entity_view.flags_fc & 0x10u) != 0u && command->field_f == 0x10u) ||
+            ((entity_view.flags_fc & 0x20u) != 0u && command->field_f == 0x20u) ||
+            ops->simulation_time_get == NULL) return 0;
+        simulation_time = ops->simulation_time_get(ops->context);
+        if (entity_view.field_f5 < simulation_time) return 0;
+        if (screen_xy != NULL) {
+            if (ops->target_position_get == NULL ||
+                !ops->target_position_get(ops->context, target, &x, &y)) return 0;
+        }
+        have_xy = screen_xy != NULL || world_xy != NULL;
+        world_from_entity = 1;
+    }
+    else if (kind != 0x1a && kind != 0x1e) {
+        if (out_flag == NULL) return 1;
+        *out_flag = 1u;
+        return 1;
+    }
+
+    if (have_xy) {
+        if (screen_xy != NULL && transform_screen) {
+            if (ops->position_to_world == NULL ||
+                !ops->position_to_world(ops->context, x, y,
+                                        &screen_xy[0], &screen_xy[1])) return 0;
+        }
+        else if (screen_xy != NULL) {
+            screen_xy[0] = x;
+            screen_xy[1] = y;
+        }
+        if (world_xy != NULL && kind != 0x13) {
+            if (world_from_entity) {
+                if (ops->target_world_position_get == NULL) return 0;
+                if (!ops->target_world_position_get(ops->context, target,
+                                                    &world_xy[0], &world_xy[1]))
+                    return 0;
+            }
+            else { world_xy[0] = x; world_xy[1] = y; }
+        }
+    }
+    return 1;
+}
+
+
+// FUNCTION: LEGORR 0x00403320
+void ledger_stub_00403320_ObjectCommandTaskCreate(EntitySlot* entity,
+                                                  int parameter)
+{
+    void* target = NULL;
+    if (entity == NULL) return;
+    if (entity->type == 2 && (entity->flags_3e0 & 0x400u) == 0u) {
+        float position[2];
+        entity_transform_position_get(entity, position);
+        target = entity_lookup_at_world_position(position);
+    }
+    else if (entity->type == 1) {
+        target = ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(entity);
+    }
+    if (target != NULL) {
+        cmd_entity_task_record_create_and_append(entity, target, parameter);
+    }
+}
+
+void ledger_stub_00403750_CommandKindRecordIssueAndLink(
+    uint32_t a, uint32_t b, uint32_t c, const int cell_xy[2], uint32_t zone,
+    const float* random_pair, int set_flag)
+{
+    cmd_command_kind_record_issue(a, b, c, cell_xy, zone, random_pair,
+                                  set_flag);
+}
+
+void ledger_stub_00403810_TerrainCellRecordCountUpdate(
+    const int cell_xy[2], int a, int b, int c)
+{
+    terrain_cell_record_count_update(cell_xy, a, b, c);
+}
+
+// ObjectPathSubmitToGridTarget forwards the target ABI to the command path
+// implementation, which owns route allocation and entity route setup.
+int ledger_stub_00404e00_ObjectPathSubmitToGridTarget(
+    EntitySlot* entity, LevelState* level, const int target_xy[2],
+    const float* final_marker_position)
+{
+    return object_path_submit_to_grid_target(entity, level, target_xy,
+                                             final_marker_position);
+}
+
+// FUNCTION: LEGORR 0x00404ed0
+void ledger_stub_00404ed0_CheckObjectCandidate(
+    const EntitySlot* candidate)
+{
+    if (candidate == NULL) return;
+    if (candidate->type == 6 &&
+        (candidate->flags_3e8 & 0x80000000u) != 0u) {
+        (void)type11_cell_coordinate_nearest_resolve(candidate, NULL);
+        return;
+    }
+    (void)object_task_target_filter_find(
+        (uint32_t)candidate->type, (uint32_t)candidate->etype,
+        (uint32_t)candidate->indexed_record_slot_330);
+}
+
+int ledger_stub_00404f10_FindMatchingObjectRecord(
+    uint32_t type, uint32_t selector, uint32_t companion)
+{
+    return object_task_target_filter_find(type, selector, companion);
+}
+
+// PendingCommandTimerFireScan
+void ledger_stub_00405950_PendingCommandTimerFireScan()
+{
+    pending_command_timer_fire_scan();
+}
+
+// PendingCommandEntityAssignmentTick
+void ledger_stub_00405c10_PendingCommandEntityAssignmentTick()
+{
+    pending_command_entity_assignment_tick();
+}
+
+
+} // namespace unported_ledger_stubs

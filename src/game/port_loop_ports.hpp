@@ -12,6 +12,8 @@ struct EntitySlot;
 struct EngineContext;
 struct LevelState;
 struct TerrainSurfaceGrid;
+typedef struct BlockFile BlockFile;
+typedef struct BlockRec BlockRec;
 
 typedef struct BuildingPlacementPreviewHooks {
     void* context;
@@ -30,20 +32,7 @@ void building_placement_preview_owner_bind(
     const BuildingPlacementPreviewHooks* hooks);
 int building_placement_preview_owner_update(void);
 
-typedef struct ObjectiveSidecarSnapshot {
-    int type;
-    uint32_t status;
-    uint32_t state;
-    uint32_t entity_flags;
-    uint32_t mode_flags;
-    float activity_timer;
-    int linked;
-} ObjectiveSidecarSnapshot;
-typedef void (*ObjectiveSidecarActionHook)(void* context, int action,
-                                            ObjectiveSidecarSnapshot* state);
-int objective_sidecar_append_gate(ObjectiveSidecarSnapshot* state,
-                                  void* context,
-                                  ObjectiveSidecarActionHook action);
+int objective_sidecar_append_gate(struct EntitySlot* entity);
 
 typedef struct UpgradeLevelEntry {
     uint32_t level;
@@ -100,6 +89,7 @@ typedef struct MotionWaypointTimerState {
     float duration_max;
     float scale_min;
     float scale_max;
+    float configured_position[3];
     float scale_rate[3];
     float bounds_min[3];
     float bounds_max[3];
@@ -108,10 +98,6 @@ typedef struct MotionWaypointTimerState {
     float progress[3];
     float velocity[3];
 };
-void motion_waypoint_timer_step(MotionWaypointTimerState* state, float delta,
-                                PortLoopRandomRangeHook random_range,
-                                void* context); /* FUN_0044d280 */
-
 typedef struct MotionJitterState {
     uint32_t flags;
     float delay;
@@ -136,6 +122,7 @@ typedef struct MotionConfigProfileReleaseHooks {
     void* (*profile_open)(void* context, void* config);
     void (*profile_write)(void* context, void* profile, const char* key,
                          const char* separator, int value);
+    void (*profile_close)(void* context, void* profile);
     void (*key_release)(void* context, char* key);
 } MotionConfigProfileReleaseHooks;
 uint32_t motion_config_profile_entries_release(
@@ -174,6 +161,7 @@ typedef struct MotionKeyValueLoadHooks {
     void* (*string_resolve)(void* context, int text_id);
     int (*integer_parse)(void* context, const char* text);
     void (*string_release)(void* context, char* text);
+    void (*profile_close)(void* context, void* profile);
     void (*deferred_callback_register)(void* context, uint32_t callback_id);
 } MotionKeyValueLoadHooks;
 int motion_key_value_equals_file_load(
@@ -307,6 +295,20 @@ void motion_jitter_step(MotionJitterState* state, float delta,
 }
 
 namespace unported_ledger_stubs {
+uint32_t ledger_stub_0040e1e0_CellCornerOccupancyScan(
+    struct LevelState* level, int cell_x, int cell_y);
+void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
+    const struct EntitySlot* entity, const int cell_xy[2],
+    uint32_t filter_a, uint32_t filter_b);
+void ledger_stub_0044b140_SmallSpiderCellSwarmSpawn(
+    int cell_x, int cell_y, uint32_t variation);
+int ledger_stub_004403d0_LevelDebugCellRetargetDispatch(
+    struct EntitySlot* entity, struct EntitySlot* target,
+    const struct EntityDebugCellRetargetHooks* hooks);
+int ledger_stub_00448eb0_ProximityStepCommandIssueWithJitter(
+    struct EntitySlot* entity, struct EntitySlot* target, int marker);
+void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2]);
+void entity_cell_path_effects_apply_current(struct EntitySlot* entity);
 /* StartupStreamsClose/StartupStreamStateReset (FUN_0048b290/260): the
  * four file handles and window-mode word that the startup stream routines
  * own. `slot` follows the reference dword order at 0x575ce0..0x575cec. */
@@ -316,6 +318,11 @@ void startup_stream_window_mode_set(uint32_t value);
 uint32_t startup_stream_window_mode_get(void);
 void startup_stream_state_reset(void);
 void startup_streams_close(void);
+/* StartupConfigStreamLoad (FUN_0048b2f0). The path globals are initialized
+ * outside the recovered routine, so the host supplies them here. */
+void startup_config_stream_paths_set(const char* output_path,
+                                     const char* token_list_path);
+void startup_config_stream_load(void);
 typedef int (*BufferedCharReadHook)(void* context, void* stream);
 void buffered_char_stream_read_hook_set(BufferedCharReadHook read_char,
                                         void* context);
@@ -330,19 +337,38 @@ void registry_path_hooks_set(RegistryCreateKeyHook create_key,
                              RegistryQueryValueHook query_value,
                              RegistryCloseKeyHook close_key, void* context);
 int registry_path_create_keys(void* root, const char* subkey_path,
-                              const char* value_name, void* output,
-                              uint32_t* size, uint32_t* value_type);
+                              const char* value_name, int query_mode,
+                              void* output, uint32_t* size,
+                              uint32_t* value_type);
+int registry_path_accessor(const char* subkey_path, const char* value_name,
+                           int query_mode, void* output,
+                           uint32_t output_size);
 typedef int (*DependencyConfigEntryHook)(void* context, int level,
                                          const char* entity_name,
                                          const char* dependency_value);
 void dependency_config_entry_hook_set(DependencyConfigEntryHook hook,
                                       void* context);
-int dependency_grid_config_load(void* config, int level);
+void dependency_grid_config_load(BlockRec* level_block,
+                                 BlockFile* global_config); /* 0x0040ab70 */
+void dependency_grid_level_load(struct LevelState* level,
+                                BlockRec* level_block,
+                                BlockFile* global_config);
+void dependency_grid_level_release(struct LevelState* level);
+void dependency_grid_mode_zero_input_set(struct LevelState* level, int value);
+uint32_t dependency_grid_mode_zero_input_get(const struct LevelState* level);
+int dependency_grid_cell_entries_validate(const struct LevelState* level,
+    uint32_t kind, uint32_t row, uint32_t variant);
+uint32_t dependency_grid_cell_flags_get(const struct LevelState* level,
+    uint32_t kind, uint32_t row, uint32_t variant);
+int dependency_config_entry_should_load(int level, const char* name,
+                                        const char* value);
 
 #define DEPENDENCY_GRID_ROWS 20u
 #define DEPENDENCY_GRID_COLUMNS 15u
 #define DEPENDENCY_GRID_VARIANTS 16u
+#define DEPENDENCY_GRID_CELL_SLOTS 49u
 #define DEPENDENCY_GRID_MATCH_CAPACITY 32u
+#define DEPENDENCY_GRID_CATEGORY_CANDIDATE_CAPACITY 30u
 typedef struct DependencyGridTuple {
     uint32_t first;
     uint32_t second;
@@ -355,28 +381,60 @@ typedef struct DependencyGridRecordList {
 } DependencyGridRecordList;
 typedef struct DependencyGridCell {
     uint32_t variant_records_present;
-    uint32_t flags[DEPENDENCY_GRID_VARIANTS];
+    /* The byte flag table advances 0x31 dwords per cell. Variant records
+     * use its first 16 fields; the remaining fields are still addressable
+     * by the direct flag helpers' caller-supplied selector. */
+    uint32_t flags[DEPENDENCY_GRID_CELL_SLOTS];
     DependencyGridRecordList base_records;
     DependencyGridRecordList variant_records[DEPENDENCY_GRID_VARIANTS];
 } DependencyGridCell;
 typedef struct DependencyGridState {
     DependencyGridCell cells[DEPENDENCY_GRID_ROWS][DEPENDENCY_GRID_COLUMNS];
-    void* context;
-    int (*occupancy_get)(void* context, uint32_t row, uint32_t column,
-                         uint32_t variant);
+    /* DAT_004c7178 is process-wide in retail.  Keep an explicit per-level
+     * value when a caller binds one; otherwise use the global fallback. */
+    uint32_t mode_zero_input;
+    uint32_t mode_zero_input_bound;
 } DependencyGridState;
+/* Native-width view of TerrainCellRecordGet's pointer/count pair. The retail
+ * table stores a 32-bit pointer; the LevelState producer owns host pointers in
+ * its sidecar, so native consumers must use this accessor rather than the
+ * low-word ABI mirror. x/y select the 20x15 cell and field selects one of its
+ * 16 variants when that cell has variant records. The returned records stay
+ * valid until that LevelState's dependency grid is reloaded or released. */
+int dependency_grid_cell_record_get_native(const struct LevelState* level,
+    int x, int y, int field, const DependencyGridTuple** records_out,
+    uint32_t* count_out);
 typedef struct DependencyGridMatches {
-    uint32_t count;
+    /* Retail output arrays hold 32 dwords each at offsets 0, 0x80, 0x100,
+     * and 0x180; count is at +0x200. */
     uint32_t x[DEPENDENCY_GRID_MATCH_CAPACITY];
     uint32_t y[DEPENDENCY_GRID_MATCH_CAPACITY];
     uint32_t variant[DEPENDENCY_GRID_MATCH_CAPACITY];
     uint32_t variant_present[DEPENDENCY_GRID_MATCH_CAPACITY];
+    uint32_t count;
 } DependencyGridMatches;
+typedef struct DependencyGridCategoryCandidates {
+    uint32_t count;
+    uint32_t category;
+    uint32_t row;
+    uint32_t selector;
+    uint32_t x[DEPENDENCY_GRID_CATEGORY_CANDIDATE_CAPACITY];
+    uint32_t y[DEPENDENCY_GRID_CATEGORY_CANDIDATE_CAPACITY];
+    uint32_t variant[DEPENDENCY_GRID_CATEGORY_CANDIDATE_CAPACITY];
+} DependencyGridCategoryCandidates;
 void dependency_grid_state_bind(DependencyGridState* state);
-int dependency_grid_matches_collect(uint32_t first, uint32_t second,
-                                    uint32_t selector,
-                                    DependencyGridMatches* output);
-uint32_t dependency_grid_occupancy_pass(void);
+void dependency_grid_matches_collect(uint32_t first, uint32_t second,
+                                     uint32_t selector,
+                                     DependencyGridMatches* output);
+void dependency_grid_occupancy_pass(void);
+uint32_t dependency_grid_flag4_get(int x, int y, int field);
+int dependency_grid_flag100_set(int x, int y, int field);
+uint32_t dependency_grid_flag100_get(int x, int y, int field);
+void dependency_grid_category_candidates_build(uint32_t category,
+                                               uint32_t row,
+                                               uint32_t selector);
+const DependencyGridCategoryCandidates*
+dependency_grid_category_candidates_get(void);
 
 #define UI_HIT_ENTRY_CAPACITY 40u
 typedef struct UiEntryHitRecord {
@@ -394,19 +452,7 @@ typedef struct UiEntryHitTestState {
 } UiEntryHitTestState;
 void ui_entry_hit_test_state_bind(UiEntryHitTestState* state);
 
-typedef struct ObjectTaskTargetFilterRecord {
-    uint32_t type;
-    void* entity_handle;
-    uint32_t target_name;
-    int32_t target_selector;
-    uint32_t target_companion;
-} ObjectTaskTargetFilterRecord;
-typedef struct ObjectTaskTargetPool {
-    const ObjectTaskTargetFilterRecord* records;
-    uint32_t count;
-} ObjectTaskTargetPool;
-void object_task_target_pool_bind(const ObjectTaskTargetPool* pool);
-const ObjectTaskTargetFilterRecord* object_task_target_filter_find(
+int object_task_target_filter_find(
     uint32_t type, uint32_t selector, uint32_t companion);
 
 /* Explicit view of the legacy entity/task fields consumed by
@@ -510,10 +556,8 @@ uint32_t input_device_release_flags_get(void);
 uint32_t input_device_release_system_flags_get(void);
 int input_device_release_active_track_get(void);
 
-/* TransitionControl (FUN_00425c30) reads DAT_00556ed0 as its feature word.
- * The active GameContext owns that word in the portable model; this binding
- * is available for callers that run without an active entity-pool context. */
-void ui_transition_control_feature_word_bind(uint32_t* feature_word);
+void ledger_stub_00425c30_TransitionControl(int enabled,
+                                            uint32_t parameter);
 
 /* CellGridPointHitTest reads a global row of 16-byte action records and two
  * optional cursor rectangles.  The native owner binds the active row and
@@ -532,7 +576,8 @@ typedef struct CellGridPointHitTestState {
     float rectangle_width[2];
     float rectangle_height[2];
     void* context;
-    int (*record_size_get)(void* context, uint32_t x, uint32_t y,
+    int (*record_size_get)(void* context, uint32_t record_word0,
+                           uint32_t record_word1,
                            float* width, float* height);
 } CellGridPointHitTestState;
 void cell_grid_point_hit_test_state_bind(CellGridPointHitTestState* state);
@@ -543,7 +588,18 @@ typedef struct GlobalSubsystemResetState {
     uint32_t* word_00503618;
 } GlobalSubsystemResetState;
 void global_subsystem_reset_state_bind(GlobalSubsystemResetState* state);
+void ledger_stub_004263c0_GlobalSubsystemStateReset(void);
 }
+#endif
+
+#ifdef __cplusplus
+void registry_path_hooks_set(
+    unported_ledger_stubs::RegistryCreateKeyHook create_key,
+    unported_ledger_stubs::RegistryQueryValueHook query_value,
+    unported_ledger_stubs::RegistryCloseKeyHook close_key, void* context);
+int registry_path_accessor(const char* subkey_path, const char* value_name,
+                           int query_mode, void* output,
+                           uint32_t output_size);
 #endif
 
 #endif

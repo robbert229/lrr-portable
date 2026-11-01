@@ -20,15 +20,17 @@
  *     0x1 pending result, 0x2 achieved, 0x4 failed, 0x104 failed-with-
  *     crystals, 0x8 result announced (shown once, then cleared).
  *
- * The corpus couples the checker/announcer to the HUD/message/transition
- * lanes; those calls are stubbed here (each marked `(stub)`), while the word
- * bit-flow — the part other game systems and the save blob depend on — is
- * ported faithfully.
+ * The corpus couples the checker/announcer to HUD, message, checkpoint, and
+ * scene-transition lanes. Objective/result state and the available
+ * checkpoint-selection effects are modeled here; renderer-owned advisor
+ * callbacks and several global transition inputs remain explicit gaps.
  */
 #ifndef LEGORRR_GAME_OBJECTIVE_HPP
 #define LEGORRR_GAME_OBJECTIVE_HPP
 
 #include "level.hpp"
+
+struct EntitySlot;
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,9 +39,15 @@ typedef struct RewardTaskResourceRecord {
     uint32_t flags;
     void* image_surface;
     void* font_record;
+    void* box_image_surface;
 } RewardTaskResourceRecord;
 void reward_task_resource_slot_set(unsigned int slot, uint32_t flags,
                                    void* image_surface, void* font_record);
+void reward_task_font_record_set(unsigned int slot, void* font_record);
+void* reward_task_font_record_get(unsigned int slot);
+void* reward_task_image_surface_get(unsigned int slot);
+void reward_task_box_image_surface_set(unsigned int slot, void* surface);
+void* reward_task_box_image_surface_get(unsigned int slot);
 void reward_task_flush_images(RewardTaskResourceRecord* task);
 void reward_task_flush_font(RewardTaskResourceRecord* task);
 void reward_task_block_finish(void);
@@ -126,6 +134,10 @@ void objective_tick_target(void* engine, LevelState* s,
 /* Explicit-level adapter used by the portable frame loop. Returns 0 once a
  * result is active or resolves this tick, else 1. */
 int objective_tick(LevelState* s, float dt);
+
+/* ObjectiveSidecarAppendGate (FUN_0043bc40), applied to the live entity
+ * record. Returns 1 when a represented state transition was applied. */
+int objective_sidecar_append_gate(struct EntitySlot* entity);
 
 #ifdef __cplusplus
 }
@@ -234,7 +246,7 @@ int advisor_scene_advance_completion_check(int animation_slot,
 /* AdvisorPositionRecordInitialize (FUN_004017b0) initializes the action
  * record and flags. */
 void advisor_position_record_initialize(int row, uint32_t animation_index,
-                                        int position_index,
+                                        int position_type,
                                         uint32_t position_mode,
                                         int action_mode, uint32_t x,
                                         uint32_t y);
@@ -245,9 +257,9 @@ void advisor_action_position_and_mode_set(int row, int mode,
                                           uint32_t dword_a,
                                           uint32_t dword_b); /* FUN_00401840 */
 
-/* AdvisorActionPositionGet (FUN_00401890): reads the record's +0x1c and
- * +0x20 dwords (the corpus's separate read-out window — this band's set
- * never writes them, a faithful quirk). NULL outputs skipped. */
+/* AdvisorActionPositionGet (FUN_00401890): reads the record's +0x18 and
+ * +0x1c dwords. The setter writes its second coordinate to +0x18; +0x1c
+ * remains the initialized current-position value. NULL outputs are skipped. */
 void advisor_action_position_get(int row, uint32_t* dword_c,
                                  uint32_t* dword_d);          /* FUN_00401890 */
 
@@ -288,7 +300,34 @@ uint32_t advisor_action_flags_peek(int row);
  * empty (documented deviation). */
 int objective_advisor_token_lookup(uint32_t index);
 
-/* Test hook installing the token table (corpus writer unported). */
+/* ObjectiveAdvisorTokenLoad (FUN_00452e70) owns a mutable script copy and
+ * builds the ordinary text table plus separate image/sound name tables.
+ * The resolver receives kind 1 for images and 2 for sounds; a returned zero
+ * omits that resource token, matching the reference's failed-load gate. */
+typedef uintptr_t (*ObjectiveAdvisorTokenResolveFn)(int kind,
+                                                     const char* value,
+                                                     void* user);
+typedef void (*ObjectiveAdvisorTokenReleaseFn)(int kind, uintptr_t handle,
+                                               void* user);
+int objective_advisor_tokens_parse(const char* source, uint32_t source_length,
+                                   ObjectiveAdvisorTokenResolveFn resolve,
+                                   ObjectiveAdvisorTokenReleaseFn release,
+                                   void* user);
+/* Objective/advisor stream loader: RESOURCE_AUTO path lookup plus the
+ * native bitmap and sound-bank loaders used by the retail token tables. */
+int objective_advisor_token_file_load(const char* path);
+void objective_advisor_tokens_release(void);
+const char* objective_advisor_token_text_get(uint32_t index);
+uint32_t objective_advisor_image_token_count(void);
+const char* objective_advisor_image_token_name_get(uint32_t index);
+uintptr_t objective_advisor_image_token_handle_get(uint32_t index);
+void* objective_advisor_image_token_resource_get(uint32_t index);
+uint32_t objective_advisor_sound_token_count(void);
+const char* objective_advisor_sound_token_name_get(uint32_t index);
+uintptr_t objective_advisor_sound_token_handle_get(uint32_t index);
+uint32_t objective_advisor_token_generation_get(void);
+
+/* Optional raw-table installer for callers that already own a legacy table. */
 void objective_advisor_tokens_install(const uint32_t* table, uint32_t count);
 
 /* Advisor name tables (FUN_004013e0/FUN_004014c0). */

@@ -1,17 +1,33 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <math.h>
+#include <locale.h>
 
+#include "crt/crt.hpp"
 #include "gods98/resource.hpp"
 #include "gods98/heap.hpp"
+#include "gods98/view.hpp"
+#include "effects.hpp"
 #include "port_loop_ports.hpp"
 #include "util.hpp"
 
+extern float random_float_range(float minimum, float maximum);
+extern uint32_t rng_thunk_draw15(void);
+
 static ParsedEntityHealthValue s_parsed_entity_health_value;
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+extern "C" uint32_t __cdecl __strgtold12(uint16_t*, char**,
+                                           const char*, uint32_t,
+                                           int, int, int);
+extern "C" uint32_t __cdecl _ld12tod(const uint16_t*, uint32_t*);
+#endif
 
 /* FUNCTION: LEGORR 0x004774B0 */
 int whitespace_tokenize(char* text, char** fields)
@@ -151,15 +167,17 @@ void counter_format_string_build(const char* prefix, char* out,
     strcat(out, digits);
 }
 
-// FUNCTION: LEGORR 0x004907f0
+/* FUNCTION: LEGORR 0x004907f0 */
 const ParsedEntityHealthValue* parse_entity_health_value(
     const char* text, int length, int flags, int mode)
 {
-    char buffer[260];
-    char* end;
-    size_t count;
-    size_t i;
-    int has_real_syntax = 0;
+    uint32_t scan_status = 0u;
+    uint32_t conversion_status = 0u;
+    char* end = NULL;
+    char* conversion_text = NULL;
+    size_t consumed = 0u;
+    double value = 0.0;
+    (void)length;
     (void)flags;
     (void)mode;
     memset(&s_parsed_entity_health_value, 0,
@@ -168,41 +186,129 @@ const ParsedEntityHealthValue* parse_entity_health_value(
         s_parsed_entity_health_value.flags = 0x200u;
         return &s_parsed_entity_health_value;
     }
-    if (length < 0) length = 0;
-    count = (length == 0) ? strlen(text) : (size_t)length;
-    if (count >= sizeof(buffer)) count = sizeof(buffer) - 1u;
-    memcpy(buffer, text, count);
-    buffer[count] = '\0';
-    s_parsed_entity_health_value.value = strtod(buffer, &end);
-    if (end == buffer) {
-        s_parsed_entity_health_value.flags = 0x200u;
-        return &s_parsed_entity_health_value;
+
+#if defined(_MSC_VER) && defined(_M_IX86)
+    {
+        uint16_t extended[6];
+        char* cursor = (char*)text;
+        memset(extended, 0, sizeof(extended));
+        /* Target FUN_004907f0 calls ___strgtold12 with all four optional
+         * controls zero, then converts its 12-byte extended result via the
+         * VC5 binary64 format wrapper. */
+        scan_status = __strgtold12(extended, &cursor, text, 0u, 0, 0, 0);
+        end = cursor;
+        if ((scan_status & 4u) == 0u)
+            conversion_status = _ld12tod(
+                extended, (uint32_t*)&s_parsed_entity_health_value.value);
+        else
+            conversion_status = 0u;
+        consumed = (size_t)(cursor - text);
     }
-    s_parsed_entity_health_value.consumed = (uint32_t)(end - buffer);
-    for (i = 0; i < s_parsed_entity_health_value.consumed; ++i) {
-        if (buffer[i] == '.' || buffer[i] == 'e' || buffer[i] == 'E') {
-            has_real_syntax = 1;
-            break;
+#else
+    {
+        const char* cursor = text;
+        const char* token_end;
+        const char* decimal_point = ".";
+        struct lconv* locale = localeconv();
+        size_t digits_before = 0u;
+        size_t digits_after = 0u;
+        size_t token_length;
+
+        if (locale != NULL && locale->decimal_point != NULL &&
+            locale->decimal_point[0] != '\0')
+            decimal_point = locale->decimal_point;
+        while (*cursor == ' ' || *cursor == '\t' || *cursor == '\n' ||
+               *cursor == '\r') ++cursor;
+        if (*cursor == '+' || *cursor == '-') ++cursor;
+        while (*cursor >= '0' && *cursor <= '9') {
+            ++digits_before;
+            ++cursor;
+        }
+        if ((unsigned char)*cursor == (unsigned char)decimal_point[0]) {
+            ++cursor;
+            while (*cursor >= '0' && *cursor <= '9') {
+                ++digits_after;
+                ++cursor;
+            }
+        }
+        if (digits_before + digits_after == 0u) {
+            end = (char*)cursor;
+            scan_status = 4u;
+            consumed = (size_t)(cursor - text);
+        }
+        else {
+            if (*cursor == 'e' || *cursor == 'E') {
+                const char* exponent = cursor;
+                const char* exponent_digits;
+                ++cursor;
+                if (*cursor == '+' || *cursor == '-') ++cursor;
+                exponent_digits = cursor;
+                while (*cursor >= '0' && *cursor <= '9') ++cursor;
+                if (cursor == exponent_digits) cursor = exponent;
+            }
+            token_end = cursor;
+            end = (char*)token_end;
+            consumed = (size_t)(token_end - text);
+            token_length = (size_t)(token_end - text);
+            if (token_length > 0x7ffffffeu) {
+                scan_status = 4u;
+            }
+            else {
+                conversion_text = (char*)engine_heap_alloc(
+                    (long)(token_length + 1u));
+                if (conversion_text != NULL) {
+                    memcpy(conversion_text, text, token_length);
+                    conversion_text[token_length] = '\0';
+                    errno = 0;
+                    conversion_status = crt_number_string_to_binary64(
+                        (uint32_t*)&value, conversion_text);
+                    if (errno == ERANGE) {
+                        if (isinf(value)) conversion_status = 1u;
+                        else conversion_status = 2u;
+                    }
+                    s_parsed_entity_health_value.value = value;
+                    engine_heap_free(conversion_text);
+                }
+                else {
+                    scan_status = 4u;
+                }
+            }
         }
     }
-    s_parsed_entity_health_value.flags = has_real_syntax ? 0x100u : 0x80u;
+#endif
+
+    if ((scan_status & 4u) != 0u) {
+        s_parsed_entity_health_value.flags = 0x200u;
+        s_parsed_entity_health_value.value = 0.0;
+    }
+    else {
+        if ((scan_status & 2u) != 0u || conversion_status == 1u)
+            s_parsed_entity_health_value.flags |= 0x80u;
+        if ((scan_status & 1u) != 0u || conversion_status == 2u)
+            s_parsed_entity_health_value.flags |= 0x100u;
+    }
+    s_parsed_entity_health_value.consumed =
+        consumed > 0xffffffffu ? 0xffffffffu : (uint32_t)consumed;
+    (void)end;
     return &s_parsed_entity_health_value;
 }
 
-static MotionUtilityState* s_motion_utility_state;
-static MotionRandomRangeFn s_motion_random_range;
-static void* s_motion_utility_user;
 static MotionDriftState* s_motion_drift_state;
 static MotionRandomRangeFn s_motion_drift_random_range;
 static void* s_motion_drift_user;
+static MotionWaypointTimerState s_motion_waypoint_storage;
+static MotionWaypointTimerState* s_motion_waypoint_state =
+    &s_motion_waypoint_storage;
+static PortLoopRandomRangeHook s_motion_waypoint_random_range;
+static void* s_motion_waypoint_user;
+static void* s_motion_gameplay_scene_object;
+static uint32_t s_motion_gameplay_scene_flags;
 
-void motion_utility_state_install(MotionUtilityState* state,
-                                  MotionRandomRangeFn random_range,
-                                  void* user)
+static float motion_waypoint_default_random(void* context, float minimum,
+                                            float maximum)
 {
-    s_motion_utility_state = state;
-    s_motion_random_range = random_range;
-    s_motion_utility_user = user;
+    (void)context;
+    return random_float_range(minimum, maximum);
 }
 
 void motion_drift_state_install(MotionDriftState* state,
@@ -212,6 +318,55 @@ void motion_drift_state_install(MotionDriftState* state,
     s_motion_drift_state = state;
     s_motion_drift_random_range = random_range;
     s_motion_drift_user = user;
+}
+
+void motion_waypoint_timer_state_install(MotionWaypointTimerState* state,
+                                         PortLoopRandomRangeHook random_range,
+                                         void* context)
+{
+    s_motion_waypoint_state = state != NULL ? state :
+        &s_motion_waypoint_storage;
+    s_motion_waypoint_random_range = random_range;
+    s_motion_waypoint_user = context;
+}
+
+void motion_gameplay_scene_bind(void* target, uint32_t flags)
+{
+    s_motion_gameplay_scene_object = target;
+    s_motion_gameplay_scene_flags = flags;
+}
+
+void motion_waypoint_position_bind(float x, float y, float z)
+{
+    MotionWaypointTimerState* state = s_motion_waypoint_state;
+    state->configured_position[0] = x;
+    state->configured_position[1] = y;
+    state->configured_position[2] = z;
+    state->position[0] = x;
+    state->position[1] = y;
+    state->position[2] = z;
+}
+
+void motion_waypoint_parameters_store(float min_x, float min_y, float min_z,
+                                      float max_x, float max_y, float max_z,
+                                      float hold_min, float hold_max,
+                                      float scale_min, float scale_max,
+                                      float duration_min, float duration_max)
+{
+    MotionWaypointTimerState* state = s_motion_waypoint_state;
+    state->bounds_min[0] = min_x;
+    state->bounds_min[1] = min_y;
+    state->bounds_min[2] = min_z;
+    state->bounds_max[0] = max_x;
+    state->bounds_max[1] = max_y;
+    state->bounds_max[2] = max_z;
+    state->delay_min = hold_min;
+    state->delay_max = hold_max;
+    state->scale_min = scale_min;
+    state->scale_max = scale_max;
+    state->duration_min = duration_min;
+    state->duration_max = duration_max;
+    state->flags |= 4u;
 }
 
 /* DriftOffsetStepApply (FUN_0044d0d0): periodically choose a three-axis
@@ -255,32 +410,31 @@ void motion_drift_offset_step(float delta)
 /* FUNCTION: LEGORR 0x0044da50 */
 void motion_three_channel_tween_step(float delta)
 {
-    MotionUtilityState* state = s_motion_utility_state;
+    MotionWaypointTimerState* state = s_motion_waypoint_state;
+    int i;
     if (state == NULL) return;
     if ((state->flags & 0x200u) == 0u) {
         if ((state->flags & 0x400u) == 0u) {
             const float step = delta * 0.1f;
-            state->channel[0] += step;
-            state->channel[1] += step;
-            state->channel[2] += step;
-            if (state->lower_limit <= state->channel[0]) {
+            for (i = 0; i < 3; ++i) state->position[i] += step;
+            if (state->configured_position[0] <= state->position[0]) {
                 state->flags |= 0x400u;
-                state->channel[0] = state->upper_limit;
+                state->position[0] = state->configured_position[2];
             }
         }
     } else {
         if ((state->flags & 0x1000u) != 0u) {
-            state->channel[0] = 0.0f;
-            state->channel[1] = 0.0f;
-            state->channel[2] = 0.0f;
+            state->position[0] = 0.0f;
+            state->position[1] = 0.0f;
+            state->position[2] = 0.0f;
             return;
         }
         const float step = delta * 0.1f;
-        state->channel[0] -= step;
-        state->channel[1] -= step;
-        state->channel[2] -= step;
-        if (state->channel[0] <= 0.0f) {
-            state->channel[0] = 0.0f;
+        for (i = 0; i < 3; ++i) state->position[i] -= step;
+        if (state->position[0] <= 0.0f) {
+            state->position[0] = 0.0f;
+            state->position[1] = 0.0f;
+            state->position[2] = 0.0f;
             state->flags |= 0x1000u;
         }
     }
@@ -289,14 +443,123 @@ void motion_three_channel_tween_step(float delta)
 /* FUNCTION: LEGORR 0x0044d710 */
 void motion_waypoint_vector_random_scale_apply(void)
 {
-    MotionUtilityState* state = s_motion_utility_state;
-    if (state == NULL || s_motion_random_range == NULL) return;
-    const float scale = s_motion_random_range(state->random_min,
-                                               state->random_max,
-                                               s_motion_utility_user);
-    state->scaled_vector[0] = state->source_vector[0] / scale;
-    state->scaled_vector[1] = state->source_vector[1] / scale;
-    state->scaled_vector[2] = state->source_vector[2] / scale;
+    MotionWaypointTimerState* state = s_motion_waypoint_state;
+    float scale;
+    PortLoopRandomRangeHook random_range = s_motion_waypoint_random_range;
+    void* context = s_motion_waypoint_user;
+    if (state == NULL) return;
+    if (random_range == NULL) {
+        random_range = motion_waypoint_default_random;
+        context = NULL;
+    }
+    scale = random_range(context, state->scale_min, state->scale_max);
+    state->velocity[0] = state->target[0] / scale;
+    state->velocity[1] = state->target[1] / scale;
+    state->velocity[2] = state->target[2] / scale;
+}
+
+// FUNCTION: LEGORR 0x0044d280
+void motion_waypoint_timer_tick(float delta)
+{
+    MotionWaypointTimerState* state = s_motion_waypoint_state;
+    int i;
+    float first_step;
+    PortLoopRandomRangeHook random_range = s_motion_waypoint_random_range;
+    void* context = s_motion_waypoint_user;
+
+    if (state == NULL || (state->flags & 4u) == 0u) return;
+    if (random_range == NULL) {
+        random_range = motion_waypoint_default_random;
+        context = NULL;
+    }
+    if ((state->flags & 8u) == 0u) {
+        state->delay -= delta;
+        if (state->delay > 0.0f) return;
+        state->delay = random_range(context, state->delay_min,
+                                    state->delay_max);
+        state->duration = random_range(context, state->duration_min,
+                                       state->duration_max);
+        for (i = 0; i < 3; ++i) state->progress[i] = 0.0f;
+        {
+            const float fraction = (float)((int)(int16_t)rng_thunk_draw15() %
+                                             1000) * 0.001f;
+            for (i = 0; i < 3; ++i) {
+                const float span = state->bounds_max[i] - state->bounds_min[i];
+                state->target[i] = (float)fabs((double)span) * fraction +
+                                   state->bounds_min[i];
+            }
+        }
+        motion_waypoint_vector_random_scale_apply();
+        state->flags |= 0x18u;
+        return;
+    }
+    if ((state->flags & 0x10u) == 0u) {
+        if ((state->flags & 0x20u) == 0u) {
+            state->duration -= delta;
+            if (state->duration > 0.0f) return;
+            motion_waypoint_vector_random_scale_apply();
+            for (i = 0; i < 3; ++i) state->progress[i] = state->target[i];
+            state->flags |= 0x20u;
+            return;
+        }
+        first_step = delta * state->velocity[0];
+        for (i = 0; i < 3; ++i) {
+            const float step = delta * state->velocity[i];
+            state->position[i] -= step;
+            state->progress[i] -= step;
+        }
+        if ((first_step < 0.0f && state->progress[0] >= 0.0f) ||
+            (first_step >= 0.0f && state->progress[0] <= 0.0f)) {
+            for (i = 0; i < 3; ++i)
+                state->position[i] -= state->progress[i];
+            state->flags &= ~0x38u;
+        }
+        return;
+    }
+    first_step = delta * state->velocity[0];
+    for (i = 0; i < 3; ++i) {
+        const float step = delta * state->velocity[i];
+        state->position[i] += step;
+        state->progress[i] += step;
+    }
+    if ((first_step < 0.0f && state->progress[0] <= state->target[0]) ||
+        (first_step >= 0.0f && state->progress[0] >= state->target[0])) {
+        for (i = 0; i < 3; ++i)
+            state->position[i] += state->target[i] - state->progress[i];
+        state->flags &= ~0x10u;
+    }
+}
+
+/* FUNCTION: LEGORR 0x0044CFA0 */
+/* The corpus caller steps drift, waypoint, jitter, tween and then publishes
+ * the position-derived color. Only the owned drift/waypoint/tween state has
+ * a source-level owner in this build; the engine ticker still drives those
+ * live records with the caller's delta. */
+void motion_gameplay_tick(float delta)
+{
+    float drift_before[3];
+    int i;
+    if (s_motion_gameplay_scene_object == NULL ||
+        (s_motion_gameplay_scene_flags & 0x100u) != 0u ||
+        (s_motion_waypoint_state != NULL &&
+         (s_motion_waypoint_state->flags & 0x100u) != 0u)) return;
+    if (s_motion_waypoint_state == NULL) return;
+    for (i = 0; i < 3; ++i) {
+        drift_before[i] = s_motion_drift_state != NULL
+            ? s_motion_drift_state->offset[i] : 0.0f;
+    }
+    motion_drift_offset_step(delta);
+    if (s_motion_drift_state != NULL) {
+        for (i = 0; i < 3; ++i)
+            s_motion_waypoint_state->position[i] +=
+                s_motion_drift_state->offset[i] - drift_before[i];
+    }
+    motion_waypoint_timer_tick(delta);
+    motion_three_channel_tween_step(delta);
+    scene_transform_current_set(s_motion_waypoint_state->position[0],
+                                s_motion_waypoint_state->position[1],
+                                s_motion_waypoint_state->position[2]);
+    scene_transform_rgb_clamp_apply();
 }
 
 #define STRING_TABLE_MAX_ENTRIES 256
@@ -683,7 +946,7 @@ void entity_link_release_hooks_set(void (*node_hook)(EntityLinkNode*),
 }
 
 // FUNCTION: LEGORR 0x00419830
-void entity_linked_list_entries_remove_by_key(uint32_t key)
+void entity_linked_list_entries_remove_by_key(uintptr_t key)
 {
     EntityLinkList** list_link;
     if (s_entity_link_lists == NULL) return;
@@ -694,19 +957,19 @@ void entity_linked_list_entries_remove_by_key(uint32_t key)
         while (*node_link != NULL) {
             EntityLinkNode* node = *node_link;
             if (node->key == key) {
+                /* FUN_004197b0 returns the removed entry, but 0x419830
+                 * discards that pointer; this path does not release it. */
                 *node_link = node->next;
                 --list->count;
-                if (s_entity_link_node_release_hook != NULL)
-                    s_entity_link_node_release_hook(node);
             }
             else {
                 node_link = &node->next;
             }
         }
         if (list->count == 0) {
+            /* FUN_00419e80 compacts the empty indexed registry record; it
+             * does not free the host mirror record itself. */
             *list_link = list->next;
-            if (s_entity_link_list_release_hook != NULL)
-                s_entity_link_list_release_hook(list);
         }
         else {
             list_link = &list->next;
@@ -974,3 +1237,102 @@ int util_query_fields(const char* path_or_value,
     int n = util_tokenize_fields(path_or_value, out, out_sz);
     return util_status_from_count(n);
 }
+
+namespace unported_ledger_stubs {
+
+static CellVisualChannelReleaseHook s_cell_visual_release_hook;
+static void* s_cell_visual_release_context;
+
+void cell_visual_channel_release_hook_set(CellVisualChannelReleaseHook hook,
+                                           void* context)
+{
+    s_cell_visual_release_hook = hook;
+    s_cell_visual_release_context = context;
+}
+
+CellVisualChannelTable* cell_visual_channel_table_create(void)
+{
+    CellVisualChannelTable* table = (CellVisualChannelTable*)
+        engine_heap_alloc((long)sizeof(CellVisualChannelTable));
+    if (table != NULL) memset(table, 0, sizeof(*table));
+    return table;
+}
+
+int cell_visual_channel_table_resource_set(CellVisualChannelTable* table,
+                                            uint32_t channel,
+                                            uint32_t index, void* resource)
+{
+    if (table == NULL || channel >= 2u || index >= 100u) return 0;
+    table->resources[channel][index] = resource;
+    if (resource != NULL && table->resource_count <= index)
+        table->resource_count = index + 1u;
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x0040b810
+void cell_visual_channel_table_resources_clear(CellVisualChannelTable* table)
+{
+    uint32_t channel;
+    uint32_t index;
+    if (table == NULL) return;
+    table->resource_count = 0;
+    for (channel = 0; channel < 2u; channel++) {
+        for (index = 0; index < 100u; index++) {
+            void* resource = table->resources[channel][index];
+            if (resource != NULL) {
+                if (s_cell_visual_release_hook != NULL)
+                    s_cell_visual_release_hook(s_cell_visual_release_context,
+                                               resource);
+                else
+                    ddiscene_object_destroy(resource);
+            }
+            table->resources[channel][index] = NULL;
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x0040b7d0
+void cell_visual_channel_table_dispose(CellVisualChannelTable* table)
+{
+    int index;
+    if (table == NULL) return;
+    cell_visual_channel_table_resources_clear(table);
+    for (index = 0; index < 2; index++) {
+        if (table->roots[index] != NULL) {
+            if (s_cell_visual_release_hook != NULL)
+                s_cell_visual_release_hook(s_cell_visual_release_context,
+                                           table->roots[index]);
+            else
+                ddiscene_object_destroy(table->roots[index]);
+        }
+    }
+    engine_heap_free(table);
+}
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+// LevelIdentifierRemapTableLoad
+// FUNCTION: LEGORR 0x0045d7e0
+void ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad(
+    const uint32_t* identifier_pairs, uint32_t pair_count)
+{
+    level_identifier_remap_table_install(identifier_pairs, pair_count);
+}
+
+
+
+
+
+void ledger_stub_0040b880_CellVisualChannelRelay(
+    SceneCellVisualRelayRecord* record, const float corner_points[12],
+    uint32_t lookup_selector, uint32_t corner_index, float scale,
+    float uniform_scale)
+{
+    scene_cell_visual_channels_apply(record, corner_points, lookup_selector,
+                                     corner_index, scale, uniform_scale);
+}
+
+
+} // namespace unported_ledger_stubs

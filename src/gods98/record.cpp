@@ -15,6 +15,14 @@
 #include <string.h>
 #include <stdlib.h>
 
+#if defined(_MSC_VER)
+#define RECORD_COM_CALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define RECORD_COM_CALL __attribute__((stdcall))
+#else
+#define RECORD_COM_CALL
+#endif
+
 static void* s_large_record_free;
 static void* s_large_record_blocks[32];
 static unsigned int s_large_record_block_count;
@@ -159,6 +167,7 @@ void* render_resource_instance_record_acquire(void)
     if (s_render_resource_instance_pool_head == NULL) {
         render_resource_instance_pool_grow();
     }
+    if (s_render_resource_instance_pool_head == NULL) return NULL;
     char* record = (char*)s_render_resource_instance_pool_head;
     void* next = NULL;
     __builtin_memcpy(&next,
@@ -203,6 +212,18 @@ void render_resource_instance_pool_grow(void)
                      &s_render_resource_instance_pool_head,
                      sizeof(s_render_resource_instance_pool_head));
     s_render_resource_instance_pool_head = base;
+}
+
+/* SharedTextureRootRegister clears DAT_00540584/D4/D8 after dropping the
+ * model-render list. Keep that owner state in this pool module instead of
+ * mirroring it as a synthetic twenty-resource texture table. The retail
+ * reset drops the block references without freeing them. */
+void render_resource_instance_pool_reset(void)
+{
+    memset(s_render_resource_instance_pool_blocks, 0,
+           sizeof(s_render_resource_instance_pool_blocks));
+    s_render_resource_instance_pool_head = NULL;
+    s_render_resource_instance_pool_count = 0;
 }
 
 /* RecordField14Get (FUN_00435f0b). */
@@ -1497,8 +1518,7 @@ typedef struct MenuResourceEntry {
 } MenuResourceEntry;
 #endif
 
-// FUNCTION: LEGORR 0x0047d470
-void image_surface_release(TextureSurface* surface)
+static void menu_texture_surface_release(TextureSurface* surface)
 {
     texture_release(surface);
 }
@@ -1509,7 +1529,7 @@ static void menu_resource_entry_release(MenuResourceEntry* entry)
         engine_heap_free(entry->owned_string);
     } else if ((entry->flags & 2u) != 0) {
         for (int i = 0; i < 3; ++i) {
-            image_surface_release(entry->textures[i]);
+            menu_texture_surface_release(entry->textures[i]);
         }
     }
 }
@@ -2750,3 +2770,33 @@ void scene_object_scalar_adjust_by_direction(void* record, int direction)
     flags |= 2u;
     __builtin_memcpy((char*)record + 0x148, &flags, sizeof flags);
 }
+
+namespace unported_ledger_stubs {
+
+// IndexedRecordInterfaceRelease
+// FUNCTION: LEGORR 0x00483140
+void ledger_stub_00483140_IndexedRecordInterfaceRelease(void* owner, int index)
+{
+    unsigned char* bytes = (unsigned char*)owner;
+    void* records;
+    void* interface_object;
+    void** vtable;
+    typedef uint32_t (RECORD_COM_CALL *ReleaseMethod)(void*);
+    if (bytes == 0 || index < 0) return;
+    memcpy(&records, bytes + 8, sizeof(records));
+    if (records == 0) return;
+    bytes = (unsigned char*)records + (size_t)index * 0x70u;
+    memcpy(&interface_object, bytes + 0x60, sizeof(interface_object));
+    if (interface_object == 0) return;
+    vtable = *(void***)interface_object;
+    if (vtable != 0 && vtable[2] != 0) {
+        ReleaseMethod release = (ReleaseMethod)vtable[2];
+        release(interface_object);
+    }
+    memset(bytes + 0x60, 0, sizeof(void*));
+}
+
+
+} // namespace unported_ledger_stubs
+
+#undef RECORD_COM_CALL

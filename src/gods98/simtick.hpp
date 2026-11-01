@@ -20,12 +20,13 @@
  *                                       flag byte has bit 2, walk the grid
  *                                       (+0x8 x +0xc, +0x28 buffer, cell
  *                                       stride 0x28) and clear the per-cell
- *                                       "marker" bit (cell+0x19 bit 4) via a
- *                                       callback, then two render passes.
+ *                                       "marker" bit (cell+0x19 bit 4),
+ *                                       rebuilds its terrain surface vectors,
+ *                                       then advances material transitions.
  *
- * Helpers (FUN_0040aa40 / 0040d490 / 00464ef0 / 00409270…/00450f30 /
- * 00450b60 / 0044f090) stay hook boundaries with corpus addresses; engines
- * of the game layer land them later.
+ * The terrain-vector callback uses the game layer's FUN_00450f30 port, and
+ * the transition pass calls terrain_material_transition_tick (FUN_0044f090).
+ * FUN_00450b60 still needs the renderer-owned cell-list vertex records.
  */
 #ifndef LEGORRR_SIMTICK_HPP
 #define LEGORRR_SIMTICK_HPP
@@ -101,7 +102,7 @@ void simtick_manager_set_timer_word(uint32_t w);  /* DAT_00500860 seed */
 
 /* --- tranche 8 tickers ---------------------------------------------------- */
 void simtick_sound_keepalive(EngineContext* c);  /* FUN_0047aba0 */
-void simtick_editor_steps(EngineContext* c);     /* FUN_0044cfa0 */
+void simtick_editor_steps(EngineContext* c);     /* legacy editor-step seam */
 void simtick_cooldown_tick(EngineContext* c, float dt); /* FUN_0041a2c0 -> bus */
 void simtick_bitfield_tree(int* base, int code); /* FUN_0049cf90 */
 
@@ -152,7 +153,36 @@ void simtick_post_cluster_records_set(void** tables, uint32_t table_count,
     SimtickPostClusterRecordHook active_record_hook,
     SimtickPostClusterRecordHook entity_first_hook,
     SimtickPostClusterRecordHook entity_second_hook, void* user);
-void simtick_sfx_seed(int n, const void** entries);     /* stride 0xac */
+/* The combat-effect bank contains ten 0x2b0 projectile records and ten
+ * 0x10 timed-visual records. effects.cpp installs typed views over its live
+ * sidecars from the production ticker; `tracked_entity` models the +0x2a4
+ * gate and `owner_record` retains its full mutable record. */
+#define SIMTICK_SFX_BANK_SLOTS 10
+typedef struct SimtickSfxProjectileRecord {
+    void* tracked_entity;
+    void* owner_record;
+} SimtickSfxProjectileRecord;
+typedef struct SimtickSfxTimedVisualRecord {
+    void* first_handle;
+    void* second_handle;
+    void* resource_owner;
+    float remaining;
+} SimtickSfxTimedVisualRecord;
+typedef struct SimtickSfxBankHooks {
+    void* context;
+    SimtickSfxProjectileRecord* (*projectile_record_get)(int slot,
+                                                          void* context);
+    void (*projectile_update)(void* owner_record, float dt, void* context);
+    void (*entity_segment_scan)(void* entity, float dt, void* context);
+    void (*ray_hit_scan)(void* owner_record, void* context);
+    SimtickSfxTimedVisualRecord* (*timed_visual_record_get)(int slot,
+                                                            void* context);
+    void (*resource_release)(void* handle, void* resource_owner,
+                             void* context);
+} SimtickSfxBankHooks;
+void simtick_sfx_bank_hooks_set(const SimtickSfxBankHooks* hooks);
+/* Test adapter retained for the former 16-byte timer-entry fixture. */
+void simtick_sfx_seed(int n, const void** entries);
 int  simtick_sfx_releases(void);
 
 /* --- tranche 10: the remaining table tickers ----------------------------- */

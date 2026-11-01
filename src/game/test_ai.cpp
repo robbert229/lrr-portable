@@ -511,8 +511,15 @@ int main(int argc, char** argv)
     CHECK(ai_activity_name(0) != NULL &&
               strcmp(ai_activity_name(0), "Activity_Stand") == 0,
           "activity id 0 is Activity_Stand");
-    CHECK(ai_activity_name(-1) == NULL && ai_activity_name(77) == NULL,
-          "out-of-range activity ids have no name");
+    CHECK(ai_activity_name(AI_ACT_CRUMBLE) != NULL &&
+              strcmp(ai_activity_name(AI_ACT_CRUMBLE),
+                     "Activity_Crumble") == 0 &&
+              ai_activity_name(AI_ACT_TELEPORT_IN) != NULL &&
+              strcmp(ai_activity_name(AI_ACT_TELEPORT_IN),
+                     "Activity_TeleportIn") == 0 &&
+              ai_activity_name(-1) == NULL &&
+              ai_activity_name(AI_ACTIVITY_COUNT) == NULL,
+          "activity name lookup covers all labels and rejects invalid ids");
     EntitySlot* actor = place(&ctx, 3, "actor", 0, 0);
     ai_set_activity(actor, AI_ACT_COLLECT, 7);
     CHECK(actor->activity == AI_ACT_COLLECT && actor->activity_param == 7 &&
@@ -1136,14 +1143,16 @@ int main(int argc, char** argv)
         e.type = 1;
         entity_queue_for_rockfall_processing_if_eligible(NULL);
         entity_queue_for_rockfall_processing_if_eligible(&e);
-        CHECK(ai_idle_count() == before + 1, "the eligible lands in the table");
+        CHECK(ai_idle_count() == before,
+              "no level means the terrain-qualified record is skipped");
         entity_queue_for_rockfall_processing_if_eligible(&e);
-        CHECK(ai_idle_count() == before + 1, "the dedupe keeps it single");
+        CHECK(ai_idle_count() == before,
+              "a repeated record without a level remains skipped");
         EntitySlot other;
         memset(&other, 0, sizeof(other));
         other.type = 5;
         entity_queue_for_rockfall_processing_if_eligible(&other);
-        CHECK(ai_idle_count() == before + 1, "a type-5 entity never lands");
+        CHECK(ai_idle_count() == before, "a type-5 entity never lands");
     }
 
     /* Activity-request wrappers (2026-10-24): corpus indices 5 and 30. */

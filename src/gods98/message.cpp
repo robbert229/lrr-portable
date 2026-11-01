@@ -11,9 +11,10 @@
 #include "sound.hpp"
 #include "string.hpp"
 #include "texture.hpp"
+#include "record.hpp"
 
 #define MESSAGE_CD_RESET 25.0f /* 0x41c80000 */
-#define IDX_LIST_SLOTS 16 /* deviation: the corpus strides the list index */
+#define IDX_LIST_SLOTS MESSAGE_MAX_ID
 
 // GLOBAL: LEGORR 0x00503190
 static const char* s_ui_message_labels[26] = {
@@ -33,6 +34,7 @@ static void* s_ui_message_resource;
 static void* s_ui_message_subtitle_font;
 static float s_ui_message_line_delay = 100.0f;
 static unsigned int s_ui_message_count = 26u;
+static unsigned int s_ui_message_slot_count = 26u;
 static unsigned int s_ui_message_current;
 static uint32_t s_ui_message_flags;
 // GLOBAL: LEGORR 0x005031f8
@@ -84,6 +86,9 @@ void ui_message_text_slot_assign_with_image(int index, const char* text,
              display_path != NULL ? display_path : "");
     s_ui_message_image_slots[index] = image_path != NULL
         ? image_surface_load(image_path, 0u, 0u) : NULL;
+    if (s_ui_message_image_slots[index] != NULL) {
+        texture_source_color_key_set(s_ui_message_image_slots[index], 0u, 0u);
+    }
 }
 
 const char* ui_message_text_slot_get(unsigned int index)
@@ -101,8 +106,14 @@ void ui_message_strings_initialize(void* primary_font, void* secondary_font,
     s_ui_message_resource = message_resource;
     s_ui_message_subtitle_font = subtitle_font;
     s_ui_message_count = 26u;
-    s_ui_message_current = 0u;
+    s_ui_message_slot_count = 26u;
     s_ui_message_line_delay = (line_delay == 0.0f) ? 100.0f : line_delay;
+}
+
+void* ui_message_text_output_get(int alternate)
+{
+    return alternate != 0 ? s_ui_message_secondary_font :
+                            s_ui_message_primary_font;
 }
 
 // FUNCTION: LEGORR 0x0046aa90
@@ -111,7 +122,8 @@ void ui_message_overlay_state_initialize(void)
     s_ui_message_count = 26u;
     s_ui_message_current = 0u;
     s_ui_message_flags = 0u;
-    if (s_ui_message_line_delay == 0.0f) s_ui_message_line_delay = 100.0f;
+    text_buffer_reset(s_ui_message_primary_font);
+    text_buffer_reset(s_ui_message_secondary_font);
 }
 
 const char* ui_message_label_get(unsigned int index)
@@ -144,14 +156,15 @@ static const float s_cooldown_zero = 0.0f;   /* DAT_0049e264, verified */
  * the countdown at +0x00 is what the corpus walk reads and resets. */
 // GLOBAL: LEGORR 0x004dc704
 static MessageConfig s_cfg[MESSAGE_MAX_ID];
+static char* s_info_message_sound_names[MESSAGE_MAX_ID];
 /* The corpus keeps each queued message as one 0x14-byte record at
- * DAT_004dca20 with the id at +0 (the timestamp rides inside the record);
- * the parallel-array model emitted add ecx, 4 where the corpus strides
- * 0x14. Own storage, zero-init like the corpus's zero-filled tail. */
+ * DAT_004dca20: ID at +0, two timer floats at +4/+8, and two opaque dwords.
+ * Own storage, zero-init like the corpus's zero-filled tail. */
 struct MessageQueueRecord {
-    uint32_t id;
-    float timestamp;
-    unsigned char pad[12];
+    int32_t id;
+    float transition_value; /* retail +4; initialized from -int(resource+4) */
+    float remaining_value;  /* retail +8; initialized by 0x419b50 */
+    unsigned char pad[8];
 };
 // GLOBAL: LEGORR 0x004dca20
 static MessageQueueRecord s_queue_records[MESSAGE_MAX_ID];
@@ -161,10 +174,12 @@ static int           s_queue_count = 0;
 static uint32_t      s_flags = 0u;          /* DAT_004dcd48 */
 // GLOBAL: LEGORR 0x004ff980
 static uint32_t      s_system_state = 0u;   /* DAT_004ff980 */
+static uint32_t      s_objective_switch = 0u; /* DAT_004ff9bc */
 static float         s_now = 0.0f;          /* _DAT_0049e264 analog */
 static MessageCallback  s_callback = NULL;
 static MessageSoundHook s_sound = NULL;
 static char* s_compiled_template[MESSAGE_MAX_ID];
+static TextureSurface* s_info_message_surfaces[MESSAGE_MAX_ID];
 static Sound* s_info_message_sounds[MESSAGE_MAX_ID];
 static uint32_t s_catalog_owner;
 struct IncidentNodeTextSlot {
@@ -176,24 +191,44 @@ static IncidentNodeTextSlot s_node_text[INCIDENT_NODE_TEXT_SLOTS];
 static void* s_idx_head[IDX_LIST_SLOTS];  /* DAT_004dca18 role */
 static int   s_idx_count[IDX_LIST_SLOTS]; /* DAT_004dca1c role */
 static void* s_idx_aux[IDX_LIST_SLOTS];
+#define MESSAGE_NODE_LIMIT (MESSAGE_MAX_ID * 9)
+static void* s_message_nodes[MESSAGE_NODE_LIMIT];
+static int s_message_node_count;
 static MessagePanelRefreshHook s_panel_refresh_hook;
 static void* s_panel_refresh_context;
 #define CATALOG_SLOT_CAPACITY 256
 static CatalogSlotPredicateHook s_catalog_slot_eligible;
 static CatalogSlotPredicateHook s_catalog_slot_available;
 static CatalogSlotRankHook s_catalog_slot_rank;
-static CatalogSlotLimitHook s_catalog_slot_limit;
 static void* s_catalog_slot_context;
+
+static void message_node_track(void* node)
+{
+    if (node != NULL && s_message_node_count < MESSAGE_NODE_LIMIT) {
+        s_message_nodes[s_message_node_count++] = node;
+    }
+}
+
+static void message_node_untrack(void* node)
+{
+    int i;
+    for (i = 0; i < s_message_node_count; ++i) {
+        if (s_message_nodes[i] == node) {
+            --s_message_node_count;
+            s_message_nodes[i] = s_message_nodes[s_message_node_count];
+            s_message_nodes[s_message_node_count] = NULL;
+            return;
+        }
+    }
+}
 
 void catalog_slot_flag_hooks_set(CatalogSlotPredicateHook eligible,
                                  CatalogSlotPredicateHook available,
-                                 CatalogSlotRankHook rank,
-                                 CatalogSlotLimitHook limit, void* context)
+                                 CatalogSlotRankHook rank, void* context)
 {
     s_catalog_slot_eligible = eligible;
     s_catalog_slot_available = available;
     s_catalog_slot_rank = rank;
-    s_catalog_slot_limit = limit;
     s_catalog_slot_context = context;
 }
 
@@ -243,17 +278,15 @@ void catalog_slot_flag_update(int category, int slot)
                 should_clear = 1;
             }
             else {
-                /* FUN_0041f8e0 is an empty callback. In the original call
-                 * sequence EAX therefore retains the preceding rank result,
-                 * making the observed rank <= limit comparison rank <= rank. */
-                if (s_catalog_slot_rank == NULL ||
-                    s_catalog_slot_limit == NULL ||
-                    s_catalog_slot_rank(category, slot,
-                                        s_catalog_slot_context)
-                      <= s_catalog_slot_limit(category,
-                                              s_catalog_slot_context)) {
-                    should_clear = 1;
-                }
+                /* The retail path calls FUN_00469af0, then the empty
+                 * FUN_0041f8e0. Its EAX is therefore still the rank, so the
+                 * caller's `rank <= result` test is rank <= rank. Preserve
+                 * the rank query's side effects when a live owner supplies
+                 * one, but don't replace that no-op with an invented limit. */
+                if (s_catalog_slot_rank != NULL)
+                    (void)s_catalog_slot_rank(category, slot,
+                                              s_catalog_slot_context);
+                should_clear = 1;
             }
         }
         if (should_clear) flags &= ~1u;
@@ -282,6 +315,16 @@ static const char* const s_catalog_defaults[MESSAGE_MAX_ID] = {
 };
 // GLOBAL: LEGORR 0x004dc658
 static const char* s_catalog[MESSAGE_MAX_ID];
+#define MSG_DAT_WINDOW 0x28
+typedef struct IncidentMessageCatalogRecord {
+    uint32_t resource;
+    uint32_t secondary_sound;
+    uint32_t reserved[3];
+} IncidentMessageCatalogRecord;
+// GLOBAL: LEGORR 0x004dc6fc
+static IncidentMessageCatalogRecord s_msg_catalog[MSG_DAT_WINDOW];
+// GLOBAL: LEGORR 0x004dcd58
+static uint32_t s_incident_state;
 
 static int s_in_family(int id)
 {
@@ -320,7 +363,18 @@ void message_init_defaults(void)
 void message_clear(void)
 {
     int i;
+    for (i = 0; i < s_message_node_count; ++i) {
+        if (s_message_nodes[i] != NULL) {
+            incident_message_node_release(s_message_nodes[i]);
+            s_message_nodes[i] = NULL;
+        }
+    }
+    s_message_node_count = 0;
     for (i = 0; i < MESSAGE_MAX_ID; ++i) {
+        if (s_info_message_sound_names[i] != NULL) {
+            engine_heap_free(s_info_message_sound_names[i]);
+            s_info_message_sound_names[i] = NULL;
+        }
         if (s_compiled_template[i] != NULL) {
             engine_heap_free(s_compiled_template[i]);
             s_compiled_template[i] = NULL;
@@ -328,6 +382,10 @@ void message_clear(void)
         if (s_info_message_sounds[i] != NULL) {
             sound_free(s_info_message_sounds[i]);
             s_info_message_sounds[i] = NULL;
+        }
+        if (s_info_message_surfaces[i] != NULL) {
+            texture_release(s_info_message_surfaces[i]);
+            s_info_message_surfaces[i] = NULL;
         }
     }
     for (i = 0; i < INCIDENT_NODE_TEXT_SLOTS; ++i) {
@@ -348,10 +406,12 @@ void message_clear(void)
     s_catalog_owner = 0u;
     memset(s_cfg, 0, sizeof(s_cfg));
     memset(s_queue_records, 0, sizeof(s_queue_records));
+    memset(s_msg_catalog, 0, sizeof(s_msg_catalog));
     s_queue_count = 0;
     s_now = 0.0f;
     s_flags = 0;
     s_system_state = 0;
+    s_objective_switch = 0u;
 }
 
 /* IncidentMessageCatalogInit (FUN_00419230): the corpus copies the static
@@ -368,23 +428,47 @@ void incident_message_catalog_init(uint32_t owner)
     s_flags |= 0x18u;
 }
 
-/* InfoMessageSoundLoad (FUN_00419650): the native port loads the configured
- * message sound through the sound subsystem and retains the resulting handle.
- * The DirectDraw resource-enable call that followed the original DDiResource
- * constructor has no direct native equivalent. */
+/* InfoMessageSoundLoad (FUN_00419650) is named by the corpus, but its body
+ * calls BitmapSurfaceLoad (0x47d9d0) and ResourceRecordAddRef (0x47dbc0).
+ * The returned image resource is also what RemainingTimerDurationGet reads. */
 // FUNCTION: LEGORR 0x00419650
-void info_message_sound_load(int id, const char* path)
+void info_message_surface_load(int id, const char* path)
 {
     if (id < 0 || id >= MESSAGE_MAX_ID) {
-        return; /* deviation: corpus indexes the sound table blindly */
+        return; /* deviation: corpus indexes the resource table blindly */
     }
+    if (s_info_message_surfaces[id] != NULL) {
+        texture_release(s_info_message_surfaces[id]);
+        s_info_message_surfaces[id] = NULL;
+    }
+    s_msg_catalog[id].resource = 0u;
+    if (path != NULL && path[0] != '\0') {
+        s_info_message_surfaces[id] = image_surface_load(path, 0u, 0u);
+        if (s_info_message_surfaces[id] != NULL) {
+            resource_record_add_ref(s_info_message_surfaces[id]);
+            s_msg_catalog[id].resource = (uint32_t)(uintptr_t)
+                s_info_message_surfaces[id];
+        }
+    }
+}
+
+TextureSurface* info_message_surface_peek(int id)
+{
+    if (id < 0 || id >= MESSAGE_MAX_ID) return NULL;
+    return s_info_message_surfaces[id];
+}
+
+/* Optional port audio adapter; it is not the resource table used by the
+ * decompiled 0x419650/0x419b50 path. */
+void info_message_sound_load(int id, const char* path)
+{
+    if (id < 0 || id >= MESSAGE_MAX_ID) return;
     if (s_info_message_sounds[id] != NULL) {
         sound_free(s_info_message_sounds[id]);
         s_info_message_sounds[id] = NULL;
     }
-    if (path != NULL && path[0] != '\0') {
+    if (path != NULL && path[0] != '\0')
         s_info_message_sounds[id] = sound_load(path);
-    }
 }
 
 struct Sound* info_message_sound_peek(int id)
@@ -395,10 +479,13 @@ struct Sound* info_message_sound_peek(int id)
     return s_info_message_sounds[id];
 }
 
-/* RemainingTimerDurationGet (FUN_00419b50): the corpus starts at 333 and
- * subtracts each queued resource's +8 duration. The native sound owner uses
- * PCM byte-rate metadata to derive that duration; missing resource handles
- * contribute zero (documented partial-resource deviation). */
+/* RemainingTimerDurationGet (FUN_00419b50): the retail code reads the
+ * signed dword at +8 of each configured BitmapSurface resource record and
+ * converts that integer directly to float. BitmapSurfaceLoad's +8 field is
+ * its DirectDraw surface pointer, so this deliberately preserves the odd
+ * pointer-to-number operation; it is not WAV duration or elapsed time. The
+ * portable texture owner has no DirectDraw record, so its TextureSurface
+ * address is the corresponding opaque resource word. */
 // FUNCTION: LEGORR 0x00419B50
 float remaining_timer_duration_get(void)
 {
@@ -406,10 +493,12 @@ float remaining_timer_duration_get(void)
     for (int i = 0; i < s_queue_count; ++i) {
         int id = (int)s_queue_records[i].id;
         if (id >= 0 && id < MESSAGE_MAX_ID
-            && s_info_message_sounds[id] != NULL
-            && s_info_message_sounds[id]->format.byte_rate != 0u) {
-            remaining -= (float)s_info_message_sounds[id]->data_len
-                / (float)s_info_message_sounds[id]->format.byte_rate;
+            && s_info_message_surfaces[id] != NULL) {
+            uint32_t resource_word =
+                (uint32_t)(uintptr_t)s_info_message_surfaces[id];
+            int32_t resource_value;
+            memcpy(&resource_value, &resource_word, sizeof resource_value);
+            remaining -= (float)resource_value;
         }
     }
     return remaining;
@@ -644,6 +733,21 @@ uint32_t system_state_flags_set(const uint32_t* value)
     return *value;
 }
 
+uint32_t objective_switch_state_set(uint32_t value)
+{
+    s_objective_switch = value;
+    return value;
+}
+
+// FUNCTION: LEGORR 0x004567d0
+uint32_t objective_switch_state_get(void)
+{
+    /* FUN_004567d0 consumes the pending state and returns a boolean. */
+    if (s_objective_switch == 0u) return 0u;
+    s_objective_switch = 0u;
+    return 1u;
+}
+
 void message_set_callback(MessageCallback cb) { s_callback = cb; }
 void message_set_sound_hook(MessageSoundHook h) { s_sound = h; }
 
@@ -658,6 +762,9 @@ const char* message_sound(int id)
 // FUNCTION: LEGORR 0x00434c10
 void message_load_infomessages(BlockFile* cfg)
 {
+    static const char separators[] = ":";
+    static const char slow_mode[] = "SLOW";
+    static const char always_play[] = "ALWAYSPLAYSFX";
     if (cfg == NULL) {
         return;
     }
@@ -692,17 +799,56 @@ void message_load_infomessages(BlockFile* cfg)
             if (id < 0) {
                 continue;
             }
-            uint32_t flags = 0;
-            const char* sound = NULL;
-            if (val != NULL && strcasecmp_lite(val, "AlwaysPlaySFX") != 0
-                && strlen(val) >= 4) {
-                sound = val; /* corpus: short/empty flag strings mute */
+            char value[1024];
+            char* fields[1024];
+            int field_count;
+            size_t value_length;
+            int sound_alias;
+            char* sound_name = NULL;
+            if (val == NULL) continue;
+            value_length = strlen(val);
+            if (value_length >= sizeof(value))
+                value_length = sizeof(value) - 1u;
+            memcpy(value, val, value_length);
+            value[value_length] = '\0';
+            field_count = sound_variant_split(value, fields, separators);
+            if (field_count < 2) continue;
+
+            if (field_count > 2 && fields[2][0] != '\0') {
+                size_t sound_length = strlen(fields[2]);
+                sound_name = (char*)engine_heap_alloc(
+                    (long)(sound_length + 1u));
+                if (sound_name != NULL) {
+                    memcpy(sound_name, fields[2], sound_length + 1u);
+                }
             }
-            if (val == NULL || strcasecmp_lite(val, "AlwaysPlaySFX") == 0
-                || strlen(val) < 4) {
-                flags |= MESSAGE_FLAG_PLAY_ALWAYS;
+            if (s_info_message_sound_names[id] != NULL)
+                engine_heap_free(s_info_message_sound_names[id]);
+            s_info_message_sound_names[id] = sound_name;
+
+            /* InfoMessages stores display text, image resource, optional
+             * sound alias, and two independent mode markers as colon fields. */
+            message_config_set(id, sound_name, 0.0f, 0u);
+            incident_message_template_replace(id, fields[0]);
+            info_message_surface_load(id, fields[1]);
+
+            if (field_count > 2 &&
+                sound_alias_lookup(fields[2], &sound_alias) != 0) {
+                info_message_secondary_sound_set(id,
+                                                   (uint32_t)sound_alias);
             }
-            message_config_set(id, sound, 0.0f, flags);
+            if (field_count < 4) {
+                info_message_always_play_flag_set(id, 1);
+                indexed_selection_flag_20000_set_clear(id, 0);
+            }
+            else {
+                info_message_always_play_flag_set(
+                    id, strcasecmp_lite(fields[3], slow_mode) == 0);
+                indexed_selection_flag_20000_set_clear(id,
+                    strcasecmp_lite(fields[3], always_play) == 0 ||
+                    (field_count >= 5 &&
+                     strcasecmp_lite(fields[4], always_play) == 0));
+            }
         }
     }
 }
@@ -714,14 +860,12 @@ static int message_pre_check(int id)
     if (id == 10 || id == 11 || id == 12 || id == 38) {
         return 0; /* exception list skips dedupe */
     }
-    for (int i = 0; i < s_queue_count; ++i) {
-        if (s_queue_records[i].id == id) {
-            /* the queued entry's stored callback runs immediately; when a
-             * callback hook exists and handles it, the re-dispatch is
-             * suppressed. */
-            if (s_callback == NULL || s_callback(id) != 0) {
-                return 1;
-            }
+    if (message_queue_find_id(id) >= 0) {
+        /* The queued entry's stored callback runs immediately; when a
+         * callback hook exists and handles it, the re-dispatch is
+         * suppressed. */
+        if (s_callback == NULL || s_callback(id) != 0) {
+            return 1;
         }
     }
     return 0;
@@ -754,9 +898,9 @@ int incident_message_config_lookup(const char* name, int* out_id)
     return 0;
 }
 
-/* InfoMessageQueueFindId (FUN_00419b20): the queue's index-by-id walk.
- * The corpus strides the 5-dword queue records against the count word;
- * the port's record array mirrors that layout. */
+/* InfoMessageQueueFindId (FUN_00419b20): compare the ID dword at +0 of each
+ * active queue record, in insertion order, advancing by the 0x14-byte
+ * record stride. Return the first matching index, or -1. */
 // FUNCTION: LEGORR 0x00419b20
 int message_queue_find_id(int id)
 {
@@ -769,9 +913,8 @@ int message_queue_find_id(int id)
 }
 
 // FUNCTION: LEGORR 0x00419b80
-void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4)
+void message_dispatch(int id, const char* p2, uint32_t p3, const void* p4)
 {
-    (void)p2; (void)p3; (void)p4;
     if (id < 0 || id >= MESSAGE_MAX_ID) {
         return;
     }
@@ -818,10 +961,23 @@ void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4)
         int idx = message_queue_find_id(id);
         if (idx < 0) {
             idx = s_queue_count;
-            s_queue_records[idx].timestamp = s_now;
+            /* Retail stores -(float)*(int*)(resource + 4) at queue +4.
+             * BitmapSurfaceLoad is called with a zero second argument on
+             * this path, so this host resource's corresponding word is 0. */
+            s_queue_records[idx].transition_value = 0.0f;
             s_queue_count += 1;
+            s_queue_records[idx].remaining_value =
+                remaining_timer_duration_get();
         }
         s_queue_records[idx].id = id;
+        {
+            void* node = incident_message_node_create(
+                (const uint32_t*)p4, p3, p2);
+            if (node != NULL) {
+                message_node_track(node);
+                incident_message_queue_append(idx, node);
+            }
+        }
         if (s_callback != NULL) {
             s_callback(id);
         }
@@ -909,31 +1065,19 @@ void indexed_selection_flag_20000_set_clear(int id, int set)
 }
 
 /* --- the incident/message DAT-global band (see message.hpp) -----------------
- * Zero-init storage per the unowned-global convention (finding 05's all-zero
- * byte-read is the faithful initial state); the corpus's index math and the
- * stride-0x14 record window are reproduced. */
-#define MSG_DAT_WINDOW 0x28 /* the corpus's 40-entry block per finding 05 */
-// GLOBAL: LEGORR 0x004dc6fc
-static uint32_t s_msg_catalog[MSG_DAT_WINDOW]; /* DAT_004dc6fc stride-0x14 block */
-// GLOBAL: LEGORR 0x004dc700
-static uint32_t s_msg_secondary[MSG_DAT_WINDOW]; /* DAT_004dc700 stride-0x14 block */
-// GLOBAL: LEGORR 0x004dcd58
-static uint32_t s_incident_state;              /* DAT_004dcd58 */
-
+ * The globals at DAT_004dc6fc and DAT_004dc700 are the first two dwords of
+ * 0x14-byte records. Keep that stride in the portable storage. */
 // FUNCTION: LEGORR 0x00419420
 uint32_t incident_message_text_catalog_get(int id)
 {
-    if (id < 0 || id >= MSG_DAT_WINDOW) {
-        return 0u; /* deviation: the corpus strides blindly past the block */
-    }
-    return s_msg_catalog[id];
+    return s_msg_catalog[id].resource;
 }
 
 // FUNCTION: LEGORR 0x00419680
 void info_message_secondary_sound_set(int id, uint32_t value)
 {
     if (id >= 0 && id < MSG_DAT_WINDOW) {
-        s_msg_secondary[id] = value;
+        s_msg_catalog[id].secondary_sound = value;
     }
 }
 
@@ -1135,5 +1279,6 @@ void* incident_message_queue_remove_at(int list, int index)
         memcpy((char*)previous + 0x10, &next, sizeof next);
     }
     --s_idx_count[list];
+    message_node_untrack(entry);
     return entry;
 }

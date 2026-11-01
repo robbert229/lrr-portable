@@ -79,15 +79,24 @@ int main_sim_step(EngineContext* ctx, float scale,
         }
     }
 
-    /* Air cheat key (held): drains the air-supply counter (corpus
-     * DAT_0076ab98 -> state+0x1fc -= _DAT_0049e2b0). */
-    if (ctx->state_block != NULL && m_held(ctx, MNSIM_K_AIRCHEAT)) {
-        float v = (float)ctx->state_block->air_beat;
-        v -= 0.1f;
-        if (v < 0.0f) {
-            v = 0.0f;
-        }
-        ctx->state_block->air_beat = (uint32_t)v;
+    /* The retail air cheat is enabled by feature bit 0x8000 and decrements
+     * the live LevelState float at +0x1fc by 1.0 while its key is held.
+     * EngineState::air_beat is only a reconstruction-side ticker counter;
+     * the level block is the source used by the game logic. */
+    if ((ctx->feature & 0x8000u) != 0u && ctx->level_block != NULL &&
+        m_held(ctx, MNSIM_K_AIRCHEAT)) {
+        float air;
+        memcpy(&air, (const char*)ctx->level_block + 0x1fc, sizeof(air));
+        air -= 1.0f;
+        memcpy((char*)ctx->level_block + 0x1fc, &air, sizeof(air));
+    }
+    else if (ctx->level_block == NULL && ctx->state_block != NULL &&
+             m_held(ctx, MNSIM_K_AIRCHEAT) &&
+             ctx->state_block->air_beat != 0u) {
+        /* Isolated engine tests and preview contexts may have only the
+         * ticker sidecar bound. Keep that adapter useful without changing
+         * the live level-block path above. */
+        ctx->state_block->air_beat--;
     }
 
     /* The source camera keys and deltas are identified (see mainsim.hpp and

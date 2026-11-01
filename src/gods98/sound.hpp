@@ -20,6 +20,8 @@
 #include <cstdint>
 #include <cstddef>
 
+typedef struct BlockFile BlockFile;
+
 #define SOUND_LOOPING  0x4u
 #define SOUND_STREAMED 0x8u
 #define SOUND_BANK_SLOTS 600 /* finding 14 §1: (0x5339a8 - 0x506798)/0x134 */
@@ -109,7 +111,7 @@ void sound_free(Sound* s);
 
 /* Load by resource name (disk or WAD) through the resource layer. */
 Sound* sound_load(const char* name);
-Sound* sound_sample_file_open_by_name(const char* name); /* 0x0047fb60 */
+int sound_sample_file_open_by_name(const char* name); /* 0x0047fb60 */
 int sound_sample_load_into(Sound* output, const char* name, int mode_flags);
 void sound_sample_clear(Sound* sound);
 
@@ -166,8 +168,7 @@ int sound_bank_entry_load(const char* name, int streamed, int looping,
 
 /* SoundBankEntryRelease @ 0x47ab00: clear the busy bit and free the
  * record's sample memory and its portable PCM duplicate buffers. Returns 1
- * when the sound system is enabled and the slot is valid, otherwise 0.
- * The SDL queue cannot selectively cancel already queued audio. */
+ * when the sound system is enabled and the slot is valid, otherwise 0. */
 int sound_bank_entry_release(int slot);
 
 /* SoundVolumeValueValid @ 0x47a850: the millibel sanity gate — valid
@@ -243,10 +244,9 @@ uint32_t sound_pcm_hash(Sound* s);
 #define SOUND_ALIAS_BUILTINS 45  /* DAT_00502a24 base 0x2d in the lookup */
 #define SOUND_ALIAS_MAX 495      /* 0x7bc-byte table, one alias per word */
 
-/* SoundAliasRegistryInit @ 0x00464740: rebuild the 45 built-in hashes in
- * reference order and idempotently register the scene sample callback.
- * The port frees dynamic names on reinitialization; the reference replaces
- * its allocation and leaves the dynamic count untouched. */
+/* SoundAliasRegistryInit @ 0x00464740: rebuild the built-in and retained
+ * dynamic hashes in reference order and idempotently register the scene
+ * sample callback. Reinitialization preserves dynamic names and indices. */
 void sound_alias_registry_init(void);
 
 /* SoundDynamicAliasRegistrationSet @ 0x00464c50: enable (nonzero) or
@@ -295,9 +295,10 @@ void sound_subsystem_enable_set(int enable, int stop_active);
  * seam armed. */
 void sound_subsystem_enable_set_and_stop(int enable);
 
-/* SoundBufferStopHandle @ 0x47b130: stop bookkeeping for the selected
- * portable duplicate buffer. The SDL queue cannot stop one queued voice. */
+/* SoundBufferStopHandle @ 0x47b130: stop the selected duplicate buffer's
+ * active voice when the backend supports per-submission cancellation. */
 void sound_buffer_stop_handle(int buffer_handle);
+void sound_handle_stop_forward(int buffer_handle); /* 0x465190 */
 struct AudioBuffer;
 struct AudioBuffer* sound_handle_buffer_get(int buffer_handle); /* 0x47b0f0 */
 typedef void (*SoundBufferObjectStopHook)(void* context, void* buffer_object);
@@ -328,6 +329,7 @@ void sound_instance_hooks_set(SoundInstanceRegisterHook register_hook,
                               void* context);
 void sound_instance_track_register(void* instance);
 void sound_instance_track_stop_and_remove(void* provider, void* instance);
+void sound_buffer_association_remove_instance(void* instance);
 typedef int (*SoundSpatialRefreshHook)(void* context, void* sound_object);
 /* SoundSourceSpatialRefresh uses the retail Direct3DRM/DirectSound vtables
  * in the 32-bit reference backend. This hook is only the fallback adapter
@@ -450,6 +452,9 @@ int sound_deferred_handle(void);
  * alias's variant chain. 1 if every path loaded, 0 if any failed (the
  * chain still keeps the successes, like the corpus). */
 int sound_sample_marker_parse(const char* spec, int alias_index);
+/* Load the Samples section after the audio bank has been enabled.
+ * allow_marked controls the reference's leading-`!` reduce-samples gate. */
+void sound_samples_config_load(BlockFile* config, int allow_marked);
 
 /* SoundSampleVariantSelect @ 0x464e20: rotate the chain with the
  * corpus's 15-bit draw and return the head's bank slot (-1 for the
@@ -492,13 +497,15 @@ int sound_variant_chain(int alias_index, int* out_slots, int max);
 
 /* SoundAliasPlay @ 0x464fa0: play `alias` (looping when `loop`) —
  * immediately when not batching (variant draw + play seam when the
- * chain's head holds a record), or deferred to the batch table. */
-void sound_alias_play(int alias, int loop);
+ * chain's head holds a record), or deferred to the batch table. Returns
+ * the encoded bank/buffer handle on successful immediate playback, else -1. */
+int sound_alias_play(int alias, int loop);
 
 /* PositionalSoundSubmit @ 0x465090: like sound_alias_play but carries a
  * position: `positional` selects the position-word form (`position`) or
  * the coordinate-vector form (`xyz`, three floats); the deferred form
- * keeps both. Returns 0 as shipped. */
+ * keeps both. Immediate playback returns its encoded bank/buffer handle;
+ * deferred or unsuccessful playback returns 0. */
 int sound_positional_sound_submit(int position, int alias, int loop,
                                   int positional, const float* xyz);
 /* SoundSubmissionRouteWrapper @ 0x465050: unwraps the optional position

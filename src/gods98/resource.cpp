@@ -14,6 +14,7 @@
 #include "resource.hpp"
 #include "heap.hpp"
 #include "record.hpp"
+#include "sound.hpp"
 #include "string.hpp"
 #include "texture.hpp"
 #include "view.hpp"
@@ -226,6 +227,11 @@ static const char s_game_file_seek_name[] = "File_Seek";
 static const char s_game_file_seek_mode_format[] = "Uknown seek mode (%i)";
 // GLOBAL: LEGORR 0x004ab0a0
 static const char s_game_file_tell_name[] = "File_Tell";
+static const char s_game_file_open_name[] = "File_Open";
+static const char s_game_file_close_name[] = "File_Close";
+static const char s_game_file_write_name[] = "File_Write";
+static const char s_game_file_write_wad_error[] =
+    "Cannot write to a file stored in a WAD";
 // GLOBAL: LEGORR 0x004ab0b8
 static const char s_game_file_gets_name[] = "File_GetS";
 // GLOBAL: LEGORR 0x004ab0ac
@@ -391,7 +397,6 @@ static void* s_scene_resource_slot_instances[10][10];
 static SceneEffectPoseHook s_scene_effect_pose_hook;
 static void* s_scene_effect_pose_context;
 static void* s_numbered_bitmap_slots[11];
-static unsigned char s_numbered_bitmap_slot_owned[11];
 static NumberedBitmapLoadHook s_numbered_bitmap_load_hook;
 static void* s_numbered_bitmap_context;
 static SceneAnimationDurationHook s_animation_duration_hook;
@@ -617,7 +622,6 @@ void scene_timeout_set_callback_set(SceneTimeoutSetCallback callback)
     s_scene_timeout_set_callback = callback;
 }
 
-/* FUNCTION: LEGORR 0x0040bdc0 */
 void scene_timeout_set_10000(void)
 {
     unsigned char output_a[4] = { 0, 0, 0, 0 };
@@ -1335,8 +1339,10 @@ void numbered_bitmap_load_hook_install(NumberedBitmapLoadHook hook,
     s_numbered_bitmap_context = context;
 }
 
-/* PreloadNumberedBitmaps (FUN_0040a400): format and load indexes 0..10,
- * retaining the first ten in the indexed table and the final one separately. */
+/* PreloadNumberedBitmaps (FUN_0040a400): format <directory>\\ followed by
+ * either <index>.bmp or <prefix><index>.bmp, then get-or-create each of the
+ * eleven textures. The retail function overwrites its slots without a
+ * release; the texture cache owns the loaded surfaces. */
 // FUNCTION: LEGORR 0x0040A400
 void preload_numbered_bitmaps(const char* directory, const char* prefix)
 {
@@ -1357,25 +1363,15 @@ void preload_numbered_bitmaps(const char* directory, const char* prefix)
             size_t available = 480u - length;
             strncat(path, prefix, available);
             length = strlen(path);
-            if (length < sizeof(path) - 1u) {
-                path[length++] = '_';
-                path[length] = '\0';
-            }
         }
         sprintf(suffix, "%u.bmp", index);
         strncat(path, suffix, sizeof(path) - strlen(path) - 1u);
-        if (s_numbered_bitmap_slot_owned[index]) {
-            texture_release((TextureSurface*)s_numbered_bitmap_slots[index]);
-            s_numbered_bitmap_slot_owned[index] = 0;
-        }
         if (s_numbered_bitmap_load_hook != NULL) {
             s_numbered_bitmap_slots[index] = s_numbered_bitmap_load_hook(
                 path, s_numbered_bitmap_context);
         }
         else {
-            TextureSurface* surface = image_surface_load(path, 0u, 0u);
-            s_numbered_bitmap_slots[index] = surface;
-            s_numbered_bitmap_slot_owned[index] = surface != NULL;
+            s_numbered_bitmap_slots[index] = texture_get_or_load(NULL, path);
         }
     }
 }
@@ -1931,14 +1927,16 @@ int lava_effect_select_and_place(int index, const float* position,
 {
     SceneResourceSlotModel* slot = resource_slot_address_by_index(index);
     void* instance;
+    int pose_applied;
     float rx = 0.0f;
     float ry = 1.0f;
     float rz = 0.0f;
     if (slot == NULL || position == NULL || slot->handle == NULL
-        || slot->count >= 10u || s_resource_child_create_hook == NULL
-        || s_scene_effect_pose_hook == NULL) {
+        || slot->count >= 10u || s_resource_child_create_hook == NULL) {
         return 0;
     }
+    /* FUN_0040cce0 clears the slot word at +0x2c before cloning. */
+    slot->selected = 0u;
     if (rotation != NULL) {
         rx = rotation[0];
         ry = rotation[1];
@@ -1949,8 +1947,25 @@ int lava_effect_select_and_place(int index, const float* position,
     if (instance == NULL) {
         return 0;
     }
-    if (s_scene_effect_pose_hook(instance, position[0], position[1],
-            position[2], rx, ry, rz, s_scene_effect_pose_context) == 0) {
+    if (s_scene_effect_pose_hook != NULL) {
+        pose_applied = s_scene_effect_pose_hook(instance, position[0],
+            position[1], position[2], rx, ry, rz,
+            s_scene_effect_pose_context);
+    }
+    else {
+        /* The retail path advances the clone at time zero, sets its position,
+         * then dispatches its pose vtable method with the supplied rotation
+         * and terminal -1. These DDiScene leaves are available even when a
+         * host-specific pose adapter is not installed. */
+        (void)ddiscene_frame_update_and_callbacks(instance, 0.0f);
+        pose_applied = ddiscene_object_position_set(instance, NULL,
+            position[0], position[1], position[2]);
+        if (pose_applied != 0) {
+            pose_applied = ddiscene_object_pose_method_dispatch(instance,
+                NULL, rx, ry, rz, 0.0f, 0.0f, -1.0f);
+        }
+    }
+    if (pose_applied == 0) {
         if (s_scene_release_hook != NULL) {
             s_scene_release_hook(instance, s_scene_lifecycle_context);
         }
@@ -2502,7 +2517,7 @@ int transient_effect_render_slot_configure(int group, float x, float y,
                                            float dx, float dy)
 {
     int slot;
-    if (group < 0 || group >= 2 || s_transient_effect_configure_hook == NULL) {
+    if (group < 0 || group >= 2) {
         return 0;
     }
     for (slot = 0; slot < 30; ++slot) {
@@ -2512,10 +2527,25 @@ int transient_effect_render_slot_configure(int group, float x, float y,
             || entry->handle == NULL) {
             continue;
         }
-        if (s_transient_effect_configure_hook(entry->handle, group, x, y,
-                size, heading, dx, dy,
-                s_transient_effect_configure_context) == 0) {
-            return 0;
+        if (s_transient_effect_configure_hook != NULL) {
+            if (s_transient_effect_configure_hook(entry->handle, group, x, y,
+                    size, heading, dx, dy,
+                    s_transient_effect_configure_context) == 0) {
+                return 0;
+            }
+        }
+        else {
+            /* The retail slot configurator's four calls are already exposed
+             * by the portable DDiScene wrappers. Keep a concrete path for
+             * slots populated by an installed scene-resource backend. The
+             * wrapper return values are intentionally ignored: the retail
+             * body marks this resource pending once it has selected a slot. */
+            scene_render_lock_toggle(entry->handle, 0);
+            (void)ddiscene_frame_update_and_callbacks(entry->handle, 0.0f);
+            (void)ddiscene_object_position_set(entry->handle, NULL,
+                                               x, y, size);
+            (void)ddiscene_object_pose_method_dispatch(entry->handle, NULL,
+                heading, dx, dy, 0.0f, 0.0f, -1.0f);
         }
         entry->pending = 1;
         entry->enabled = 0;
@@ -3126,7 +3156,7 @@ static int ares_parse(FILE* fp, ResourceWad* out)
         return 0;
     }
     long size = ftell(fp);
-    if (size < 0) {
+    if (size < 0 || (unsigned long)size > 0xfffffffful) {
         return 0;
     }
     out->file_size = (uint32_t)size;
@@ -3286,9 +3316,14 @@ void mount_wad_from_path(const char* path)
 // FUNCTION: LEGORR 0x0047f130
 int resource_mount(const char* dir, const char* prefix)
 {
+    char mount_root[RESOURCE_PATH_MAX];
+    if (dir == NULL || prefix == NULL) return s_wad_count;
     if (dir != NULL) resource_directory_scan_root_set(dir);
+    ares_cd_path("", mount_root, sizeof(mount_root));
+    wad_mount_path_cache_store(mount_root);
     for (int i = 0; i < RESOURCE_MAX_WADS; ++i) {
         char path[RESOURCE_PATH_MAX];
+        if (s_wad_count >= RESOURCE_MAX_WADS) break;
         snprintf(path, sizeof(path), "%s/%s%u.wad", dir, prefix,
                  (unsigned)i);
         FILE* fp = fopen(path, "rb");
@@ -3296,10 +3331,14 @@ int resource_mount(const char* dir, const char* prefix)
             continue;
         }
         ResourceWad* w = &s_wads[s_wad_count];
+        memset(w, 0, sizeof(*w));
         w->fp = fp;
         if (!ares_parse(fp, w)) {
             fprintf(stderr, "resource_mount: bad or truncated wad: %s\n",
                     path);
+            free(w->names);
+            free(w->entries);
+            memset(w, 0, sizeof(*w));
             fclose(fp);
             continue;
         }
@@ -3348,7 +3387,7 @@ void resource_unmount_all(void)
 // FUNCTION: LEGORR 0x0048bda0
 int resource_wad_lookup(int wad_idx, const char* name)
 {
-    if (wad_idx < 0 || wad_idx >= s_wad_count) {
+    if (wad_idx < 0 || wad_idx >= s_wad_count || name == NULL) {
         return -1;
     }
     ResourceWad* w = &s_wads[wad_idx];
@@ -3465,7 +3504,8 @@ char* game_file_mounted_path_prefix_rewrite(const char* path)
 int game_file_open_route_select(const char* path, const char* mode)
 {
     char* rewritten;
-    if (path == NULL || mode == NULL) return 2;
+    if (path == NULL || path[0] == '\0' || mode == NULL || mode[0] == '\0')
+        return 2;
     if (mode[0] == 'w' || mode[0] == 'W') return 1;
     rewritten = game_file_mounted_path_prefix_rewrite(path);
     return wad_entry_find_across_mounted_archives(rewritten, -1) == -1;
@@ -3503,8 +3543,11 @@ static Resource* ares_open_wad_path(const char* name, int mode)
             Resource* r = ares_open_wad(w, e, name);
             if (r != NULL) {
                 r->mode = mode;
+                return r;
             }
-            return r;
+            /* WadPathOpen continues to the next older mounted archive when
+             * opening a matching entry fails (for example, slot allocation
+             * failure). Keep that fallback if this handle allocation fails. */
         }
     }
     return NULL;
@@ -3539,9 +3582,8 @@ static Resource* ares_open_std(const char* name, int mode)
     return r;
 }
 
-/* GameFileOpenDispatch (FUN_0047f6e0): choose the WAD or loose-file path
- * for the requested mode. Payload reading is deferred to resource_read. */
-// FUNCTION: LEGORR 0x0047f6e0
+/* Open a resource by name. This portable API returns a Resource handle;
+ * GameFileOpenDispatch has the separate GameFileHandle contract below. */
 Resource* resource_open(const char* name, int mode)
 {
     if (name == NULL || name[0] == '\0') {
@@ -3640,7 +3682,8 @@ ResourceStream* resource_stream_open(const char* name, int mode,
             if (entry->stored < EXPAND_HEADER_SZ ||
                 fseek(stream->file, (long)entry->off, SEEK_SET) != 0 ||
                 fread(expand_header, 1, sizeof(expand_header), stream->file) !=
-                    sizeof(expand_header)) {
+                    sizeof(expand_header) ||
+                memcmp(expand_header, "RNC", 3) != 0) {
                 resource_stream_close(stream);
                 resource_free(resource);
                 return NULL;
@@ -3667,11 +3710,6 @@ ResourceStream* resource_stream_open(const char* name, int mode,
             }
             else if (type == 1u || type == 2u) {
                 uint8_t* stored;
-                if (memcmp(expand_header, "RNC", 3) != 0) {
-                    resource_stream_close(stream);
-                    resource_free(resource);
-                    return NULL;
-                }
                 stored = (uint8_t*)malloc(entry->stored);
                 stream->expanded_data = (uint8_t*)malloc(
                     expanded_size != 0u ? expanded_size : 1u);
@@ -3733,68 +3771,49 @@ void resource_stream_close(ResourceStream* stream)
     free(stream);
 }
 
-/* MapOpen2 (FUN_00480170): open a map resource, expose its progress and
- * payload to the map-index callbacks, dispatch the resolved record, and
- * optionally transfer an engine-heap copy of the payload to the caller. */
+/* MapOpen2 (FUN_00480170): open the named file in binary mode, seek to its
+ * end to get the payload size, notify the registered progress hook, allocate
+ * a map-image slot, rewind, and read the payload into that slot. The slot
+ * owner supplies the table operations because its pointer/flag table is
+ * owned by the game level layer (MapFileResourceSlot @ 0x4893f0..). */
 // FUNCTION: LEGORR 0x00480170
 int map_open2(const char* path, const MapOpenOps* ops,
-              void** map_data_out, int32_t* size_out)
+              int32_t* size_out)
 {
-    Resource* resource;
-    Resource callback_resource;
-    void* map_data = NULL;
-    void* map_record;
+    GameFileHandle* handle;
+    void* map_data;
     int32_t size;
-    int map_index;
-    int result = -1;
-    if (map_data_out != NULL) *map_data_out = NULL;
+    int slot;
     if (size_out != NULL) *size_out = 0;
-    if (path == NULL || ops == NULL || ops->map_index_find == NULL ||
-        ops->map_record_get == NULL || ops->map_record_open == NULL) return -1;
-    resource = resource_open(path, RESOURCE_AUTO);
-    if (resource == NULL) return -1;
-    size = resource_read(resource);
-    if (size < 0 || resource->data == NULL) {
-        resource_free(resource);
+    if (path == NULL || ops == NULL || ops->slot_allocate == NULL ||
+        ops->slot_get == NULL || ops->slot_release == NULL) return -1;
+    handle = game_file_open_dispatch(path, "rb");
+    if (handle == NULL) return -1;
+    (void)wad_file_seek(handle, 0, 2);
+    size = wad_file_cursor_get(handle);
+    if (size < 0) {
+        game_file_close(handle);
         return -1;
     }
     if (ops->progress != NULL) {
         ops->progress(ops->context, path, (uint32_t)size);
     }
-    map_index = ops->map_index_find(ops->context, resource);
-    if (map_index < 0) {
-        resource_free(resource);
+    slot = ops->slot_allocate(ops->context, (uint32_t)size);
+    if (slot < 0) {
+        game_file_close(handle);
         return -1;
     }
-    map_record = ops->map_record_get(ops->context, map_index);
-    if (map_record == NULL) {
-        resource_free(resource);
-        return -1;
-    }
-    map_data = engine_heap_alloc(size > 0 ? (long)size : 1L);
+    map_data = ops->slot_get(ops->context, (uint32_t)slot);
     if (map_data == NULL) {
-        resource_free(resource);
+        ops->slot_release(ops->context, (uint32_t)slot);
+        game_file_close(handle);
         return -1;
     }
-    if (size > 0) memcpy(map_data, resource->data, (size_t)size);
-    callback_resource = *resource;
-    callback_resource.data = (uint8_t*)map_data;
-    if (ops->map_record_open(ops->context, map_record,
-                             &callback_resource) != 0) {
-        if (map_data != NULL) engine_heap_free(map_data);
-        resource_free(resource);
-        return -1;
-    }
-    if (map_data_out != NULL) {
-        *map_data_out = map_data;
-        if (size_out != NULL) *size_out = size;
-    }
-    else {
-        engine_heap_free(map_data);
-    }
-    result = map_index;
-    resource_free(resource);
-    return result;
+    (void)wad_file_seek(handle, 0, 0);
+    if (size > 0) (void)wad_file_read(map_data, 1, size, handle);
+    if (size_out != NULL) *size_out = size;
+    game_file_close(handle);
+    return slot;
 }
 
 static int resource_file_token_list_parse(const char* token_file,
@@ -4201,11 +4220,9 @@ int32_t resource_read(Resource* r)
     uint32_t type = stored[3];
     uint32_t len  = ((uint32_t)stored[4] << 24) | ((uint32_t)stored[5] << 16)
                   | ((uint32_t)stored[6] << 8) | (uint32_t)stored[7];
-    if (type != 0) {
-        /* FUN_0049c8e0 (1) / FUN_0049ca60 (2): the codecs are ported in the
-         * wad payload band below and wired through the dispatch; no shipped
-         * entry sets the expanded flag, so this reader still answers -1 for
-         * the compressed types (finding 01 §"dormant" is now history). */
+    if (len > 0x7fffffffu ||
+        (type == 0u && len > e->stored - EXPAND_HEADER_SZ) ||
+        (type > 2u) || memcmp(stored, "RNC", 3) != 0) {
         free(stored);
         return -1;
     }
@@ -4214,12 +4231,11 @@ int32_t resource_read(Resource* r)
         free(stored);
         return -1;
     }
-    if (e->stored < EXPAND_HEADER_SZ + len) {
+    if (wad_payload_decode_dispatch(stored, buf) != 0) {
         free(stored);
         free(buf);
         return -1;
     }
-    memcpy(buf, stored + EXPAND_HEADER_SZ, len);
     free(stored);
     r->data = buf;
     r->size = (int32_t)len;
@@ -4243,23 +4259,25 @@ static void* s_whole_file_progress_user;
 void* read_whole_file_with_progress(const char* path, int32_t* size_out,
                                     int binary_mode)
 {
-    Resource* resource;
+    GameFileHandle* handle;
     int32_t length;
     void* buffer;
-    (void)binary_mode; /* resource payloads are byte streams in this port */
+    int read_count;
+    const char* mode = binary_mode != 0 ? "rb" : "r";
     if (size_out != NULL) {
         *size_out = 0;
     }
     if (path == NULL) {
         return NULL;
     }
-    resource = resource_open(path, RESOURCE_AUTO);
-    if (resource == NULL) {
+    handle = game_file_open_dispatch(path, mode);
+    if (handle == NULL) {
         return NULL;
     }
-    length = resource_read(resource);
+    (void)wad_file_seek(handle, 0, 2);
+    length = wad_file_cursor_get(handle);
     if (length < 0) {
-        resource_free(resource);
+        game_file_close(handle);
         return NULL;
     }
     if (s_whole_file_progress_hook != NULL) {
@@ -4268,16 +4286,19 @@ void* read_whole_file_with_progress(const char* path, int32_t* size_out,
     }
     buffer = engine_heap_alloc(length > 0 ? (long)length : 1L);
     if (buffer == NULL) {
-        resource_free(resource);
+        game_file_close(handle);
         return NULL;
     }
-    if (length > 0 && resource->data != NULL) {
-        memcpy(buffer, resource->data, (size_t)length);
+    (void)wad_file_seek(handle, 0, 0);
+    read_count = wad_file_read(buffer, 1, length, handle);
+    game_file_close(handle);
+    if (read_count != length) {
+        engine_heap_free(buffer);
+        return NULL;
     }
     if (size_out != NULL) {
         *size_out = length;
     }
-    resource_free(resource);
     return buffer;
 }
 
@@ -4328,7 +4349,7 @@ int file_resource_record_slot_allocate(void)
  * scales the index shl 4 and strides blindly). The +0x08/+0x0c words
  * belong to the unported reader (FUN_0048c010) — pad only. */
 typedef struct FixedRecordSlot {
-    void*    resource;  /* +0x00 */
+    uint32_t resource;  /* +0x00: reference pointer word */
     uint32_t in_use;    /* +0x04 */
     uint8_t  pad[8];    /* +0x08..0x0f */
 } FixedRecordSlot;
@@ -4337,6 +4358,18 @@ typedef char fixed_record_slot_stride_check[sizeof(FixedRecordSlot) == 16u ? 1 :
 
 // GLOBAL: LEGORR 0x005756a0
 static FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
+#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
+/* The retail record stores a 32-bit pointer. Keep its 16-byte layout and
+ * retain native pointers separately on wider hosts. */
+static void* s_fixed_slot_resources[FIXED_RECORD_SLOTS];
+#endif
+
+#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
+#define fixed_record_slot_pointer_get(slot) s_fixed_slot_resources[(slot)]
+#else
+#define fixed_record_slot_pointer_get(slot) \
+    ((void*)(uintptr_t)s_fixed_slots[(slot)].resource)
+#endif
 
 typedef struct WadFileStreamState {
     int slot;
@@ -4362,7 +4395,7 @@ void fixed_record_slot_resource_release(int slot)
      * release in-range slots) and clears ONLY the flag — the stale pointer
      * is unobservable because the get path checks the flag first. */
     if (s_fixed_slots[slot].in_use != 0) {
-        engine_heap_free(s_fixed_slots[slot].resource);
+        engine_heap_free(fixed_record_slot_pointer_get(slot));
         s_fixed_slots[slot].in_use = 0;
     }
 }
@@ -4373,7 +4406,8 @@ void* fixed_record_slot_resource_get(int slot)
     if ((unsigned int)slot >= FIXED_RECORD_SLOTS) {
         return NULL; /* deviation: the corpus strides blindly */
     }
-    return s_fixed_slots[slot].in_use != 0 ? s_fixed_slots[slot].resource : NULL;
+    return s_fixed_slots[slot].in_use != 0
+        ? fixed_record_slot_pointer_get(slot) : NULL;
 }
 
 /* Port-side payload length used by the file seek implementation. */
@@ -4595,7 +4629,12 @@ char* game_file_read_crlf_line(char* buffer, int capacity,
 void fixed_record_slot_install(int slot, void* resource)
 {
     if (slot >= 0 && slot < FIXED_RECORD_SLOTS) {
-        s_fixed_slots[slot].resource = resource;
+#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
+        s_fixed_slot_resources[slot] = resource;
+        s_fixed_slots[slot].resource = 0u;
+#else
+        s_fixed_slots[slot].resource = (uint32_t)(uintptr_t)resource;
+#endif
         s_fixed_slots[slot].in_use = 1;
     }
 }
@@ -4608,12 +4647,16 @@ int fixed_record_slot_flag_peek(int slot)
 static void fixed_record_slot_release(int slot)
 {
     if (slot < 0 || slot >= FIXED_RECORD_SLOTS) return;
-    if (s_fixed_slots[slot].resource != NULL) {
-        resource_free((Resource*)s_fixed_slots[slot].resource);
+    if (fixed_record_slot_pointer_get(slot) != NULL) {
+        resource_free((Resource*)fixed_record_slot_pointer_get(slot));
     }
-    s_fixed_slots[slot].resource = NULL;
+#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
+    s_fixed_slot_resources[slot] = NULL;
+#endif
+    s_fixed_slots[slot].resource = 0u;
     s_fixed_slots[slot].in_use = 0;
 }
+#undef fixed_record_slot_pointer_get
 
 // FUNCTION: LEGORR 0x0047ff50
 void game_file_handle_release(GameFileHandle* handle)
@@ -4640,9 +4683,13 @@ void game_file_handle_release(GameFileHandle* handle)
 // FUNCTION: LEGORR 0x0047fac0
 int game_file_close(GameFileHandle* handle)
 {
-    if (handle != NULL && (handle->flag == 0 || handle->flag == 1)) {
+    if (handle == NULL) return 0;
+    if (handle->flag == 0 || handle->flag == 1) {
         game_file_handle_release(handle);
+        return 0;
     }
+    resource_debug_output_format(s_game_file_unknown_type_format,
+        s_game_file_source_path, 0x1af, s_game_file_close_name);
     return 0;
 }
 
@@ -4652,10 +4699,22 @@ int game_file_close(GameFileHandle* handle)
 uint32_t game_file_write(const void* data, uint32_t size,
                          uint32_t count, GameFileHandle* handle)
 {
-    if (handle == NULL || handle->flag != 1 || handle->stream == NULL ||
-        data == NULL || size == 0u || count == 0u) {
+    uint32_t type;
+    if (handle == NULL) {
         return 0u;
     }
+    type = game_file_system_type_get(handle);
+    if (type == 0u) {
+        resource_debug_output_format(s_game_file_write_wad_error);
+        return 0u;
+    }
+    if (type != 1u) {
+        resource_debug_output_format(s_game_file_unknown_type_format,
+            s_game_file_source_path, 0x19e, s_game_file_write_name);
+        return 0u;
+    }
+    if (handle->stream == NULL || data == NULL || size == 0u || count == 0u)
+        return 0u;
     return (uint32_t)fwrite(data, (size_t)size, (size_t)count,
                             (FILE*)handle->stream);
 }
@@ -5015,6 +5074,92 @@ void* game_file_handle_allocate(int kind)
     return NULL;
 }
 
+/* GameFileOpenDispatch (FUN_0047f6e0): resolve the path, select WAD versus
+ * loose-file storage, then return the corresponding GameFileHandle. The WAD
+ * stream owns a fixed resource slot plus a cursor record; loose streams keep
+ * their CRT FILE handle directly. */
+// FUNCTION: LEGORR 0x0047f6e0
+GameFileHandle* game_file_open_dispatch(const char* path, const char* mode)
+{
+    const char* resolved;
+    GameFileHandle* handle;
+    int route;
+    if (path == NULL || mode == NULL) return NULL;
+    resolved = resource_path_resolve_against_base(path);
+    if (resolved == NULL) return NULL;
+    route = game_file_open_route_select(resolved, mode);
+    if (route == 0) {
+        char* wad_name = game_file_mounted_path_prefix_rewrite(resolved);
+        Resource* resource = resource_open(wad_name, RESOURCE_WAD_ONLY);
+        WadFileStreamState* state;
+        int slot;
+        if (resource == NULL) return NULL;
+        slot = wad_entry_slot_allocate();
+        if (slot < 0) {
+            resource_free(resource);
+            return NULL;
+        }
+        handle = (GameFileHandle*)game_file_handle_allocate(0);
+        if (handle == NULL) {
+            resource_free(resource);
+            return NULL;
+        }
+        state = (WadFileStreamState*)handle->stream;
+        state->slot = slot;
+        state->cursor = 0;
+        fixed_record_slot_install(slot, resource);
+        return handle;
+    }
+    if (route != 1) {
+        resource_debug_output_format(s_game_file_unknown_type_format,
+            s_game_file_source_path, 0x14a, s_game_file_open_name);
+        return NULL;
+    }
+
+    handle = (GameFileHandle*)game_file_handle_allocate(1);
+    if (handle == NULL) return NULL;
+    handle->stream = fopen(resolved, mode);
+    /* The corpus gates its CD fallback on CaseInsensitiveSubstringFind(mode,
+     * "w"), rather than checking the first byte. That distinction matters
+     * for update modes such as "r+w": fopen may accept the path, but the
+     * fallback must not redirect that writable stream to the data directory. */
+    if (handle->stream == NULL &&
+        case_insensitive_substring_find(mode, "w") == NULL) {
+        char fallback[RESOURCE_PATH_MAX];
+        if (ares_cd_fallback_path(path, fallback, sizeof(fallback)))
+            handle->stream = fopen(fallback, mode);
+    }
+    if (handle->stream == NULL) {
+        game_file_close(handle);
+        return NULL;
+    }
+    return handle;
+}
+
+/* Narrow startup adapter retained for callers that explicitly require a
+ * loose file (including output paths); the retail dispatch handles both
+ * storage branches. */
+GameFileHandle* game_file_open_loose_path(const char* path,
+                                          const char* mode)
+{
+    const char* resolved;
+    GameFileHandle* handle;
+    FILE* stream;
+    if (path == NULL || mode == NULL) return NULL;
+    resolved = resource_path_resolve_against_base(path);
+    if (resolved == NULL || game_file_open_route_select(resolved, mode) != 1)
+        return NULL;
+    handle = (GameFileHandle*)game_file_handle_allocate(1);
+    if (handle == NULL) return NULL;
+    stream = fopen(resolved, mode);
+    if (stream == NULL) {
+        game_file_close(handle);
+        return NULL;
+    }
+    handle->stream = stream;
+    return handle;
+}
+
 /* WadEntryReadIntoStreamSlot (FUN_0047fea0): zero the slot pair behind the
  * handle, resolve the entry through the corpus's wad path opener with the
  * search-all selector, and answer whether the entry exists. Deviations:
@@ -5208,4 +5353,517 @@ void resource_handle_list_append(ResourceHandleList* list, const char* value)
     strncpy(copy, value, length + 1);
     list->handles[list->count] = copy;
     ++list->count;
+}
+
+namespace unported_ledger_stubs {
+
+static MiscObjectResourceHooks s_misc_resource_hooks;
+static void* s_misc_resource_handles[22];
+
+void misc_object_resource_hooks_set(const MiscObjectResourceHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_misc_resource_hooks, 0,
+                              sizeof(s_misc_resource_hooks));
+    else s_misc_resource_hooks = *hooks;
+}
+
+void* misc_object_resource_peek(unsigned int slot)
+{
+    return slot < 22u ? s_misc_resource_handles[slot] : NULL;
+}
+
+typedef struct MiscResourceSpec {
+    const char* name;
+    int kind;
+    int fallback_kind;
+    int load_flag;
+} MiscResourceSpec;
+
+// FUNCTION: LEGORR 0x00422850
+void misc_object_resources_load(void* config)
+{
+    static const MiscResourceSpec specs[22] = {
+        { "Boulder", 1, 2, 1 },
+        { "BoulderExplodeIce", 3, -1, 1 },
+        { "BoulderExplode", 3, -1, 1 },
+        { "SmashPath", 3, -1, 1 },
+        { "Explosion", 5, -1, 1 },
+        { "Crystal", 1, 2, 1 },
+        { "Dynamite", 4, -1, 1 },
+        { "OohScary", 4, -1, 1 },
+        { "Barrier", 4, -1, 1 },
+        { "Ore", 1, 2, 1 },
+        { "ProcessedOre", 1, 2, 1 },
+        { "ElectricFence", 1, -1, 1 },
+        { "ElectricFenceStud", 3, -1, 1 },
+        { "ShortElectricFenceBeam", 6, -1, 0 },
+        { "LongElectricFenceBeam", 7, -1, 1 },
+        { "SpiderWeb", 4, -1, 1 },
+        { "RechargeSparkle", 3, -1, 1 },
+        { "MiniTeleportUp", 3, -1, 0 },
+        { "IceCube", 4, -1, 1 },
+        { "Pusher", 3, -1, 1 },
+        { "Freezer", 3, -1, 1 },
+        { "LaserShot", 3, -1, 1 }
+    };
+    unsigned int i;
+    memset(s_misc_resource_handles, 0, sizeof(s_misc_resource_handles));
+    if (s_misc_resource_hooks.load != NULL) {
+        for (i = 0u; i < 22u; ++i) {
+            void* handle = s_misc_resource_hooks.load(config, "MiscObjects",
+                specs[i].name, specs[i].kind, specs[i].load_flag,
+                s_misc_resource_hooks.user);
+            if (handle == NULL && specs[i].fallback_kind >= 0) {
+                handle = s_misc_resource_hooks.load(config, "MiscObjects",
+                    specs[i].name, specs[i].fallback_kind,
+                    specs[i].load_flag, s_misc_resource_hooks.user);
+            }
+            s_misc_resource_handles[i] = handle;
+            if (handle != NULL && s_misc_resource_hooks.enable != NULL)
+                s_misc_resource_hooks.enable(handle,
+                                             s_misc_resource_hooks.user);
+        }
+    }
+    if (s_misc_resource_hooks.post_load != NULL)
+        s_misc_resource_hooks.post_load(config, s_misc_resource_hooks.user);
+}
+
+
+static char s_directx_error_message[1024];
+static int s_directx_error_code;
+static int s_directx_error_line;
+static int s_directx_error_category;
+static unsigned int s_directx_error_count;
+static const char* s_directx_error_source;
+static const char* s_directx_error_module;
+
+// DirectXErrorMessageFormat
+// FUNCTION: LEGORR 0x00489d90
+void directx_error_message_format(const char* name,
+                                                    const char* description)
+{
+    const char* module;
+    const char* source;
+    if (name == NULL) name = "Unknown";
+    if (description == NULL) description = "Unknown error";
+    module = s_directx_error_module != NULL
+        ? s_directx_error_module : "Unknown module";
+    source = s_directx_error_source != NULL ? s_directx_error_source : "?";
+#if defined(_MSC_VER)
+    _snprintf(s_directx_error_message, sizeof(s_directx_error_message) - 1,
+              "A DirectX error was set in module %s at line no %i.\n"
+              "Error : %s (code %i)\nDX Module : %s\n"
+              "Error Description : %s",
+              source, s_directx_error_line, name, s_directx_error_code,
+              module, description);
+#else
+    snprintf(s_directx_error_message, sizeof(s_directx_error_message) - 1,
+             "A DirectX error was set in module %s at line no %i.\n"
+             "Error : %s (code %i)\nDX Module : %s\n"
+             "Error Description : %s",
+             source, s_directx_error_line, name, s_directx_error_code,
+             module, description);
+#endif
+    s_directx_error_message[sizeof(s_directx_error_message) - 1] = '\0';
+}
+
+typedef struct DirectXErrorMapping {
+    uint32_t category;
+    uint32_t result;
+    const char* name;
+    const char* description;
+} DirectXErrorMapping;
+
+// DirectXResultDiagnosticDispatch
+// FUNCTION: LEGORR 0x00489dd0
+int directx_result_diagnostic_dispatch(
+    int result, int diagnostic_kind, const char* source_file, int source_line)
+{
+    const char* name = "UNKNOWN_ERROR";
+    const char* description = "Invalid error code specified.";
+    static const char* module_names[8] = {
+        "Unknown module", "Direct3D Retained Mode", "Direct Input",
+        "Direct Draw", "Direct3D Immediate mode", "Direct Play",
+        "Direct Sound", "Unknown module"
+    };
+    static const DirectXErrorMapping mappings[] = {
+        {2u, 0x80004001u, "DIERR_UNSUPPORTED", "The function called is not supported at this time.\nThis value is equal to the E_NOTIMPL\nstandard COM return value."},
+        {2u, 0x8000000au, "E_PENDING", "Data is not yet availabe."},
+        {2u, 0x80004005u, "DIERR_GENERIC", "An undetermined error occurred inside the DirectInput subsystem.\nThis value is equal to the E_FAIL standard\nCOM return value."},
+        {2u, 0x80004002u, "DIERR_NOINTERFACE", "The specified interface is not supported by\nthe object. This value is equal to the E_NOINTERFACE\nstandard COM return value."},
+        {2u, 0x80040154u, "DIERR_DEVICENOTREG", "The device or device instance is not registered with\nDirectInput. This value is equal to the\nREGDB_E_CLASSNOTREG standard COM return value."},
+        {2u, 0x80040110u, "DIERR_NOAGGREGATION", "This object does not support aggregation."},
+        {2u, 0x80070002u, "DIERR_NOTFOUND", "The requested object does not exist."},
+        {2u, 0x80040201u, "DIERR_DEVICEFULL", "The device is full."},
+        {2u, 0x80040202u, "DIERR_MOREDATA", "Not all the requested information fitted into the buffer"},
+        {2u, 0x80040203u, "DIERR_NOTDOWNLOADED", "The effect is not downloaded"},
+        {2u, 0x80040204u, "DIERR_HASEFFECTS", "The device cannot be reinitialized because there\nare still effects attached to it"},
+        {2u, 0x80040205u, "DIERR_NOTEXCLUSIVEACQUIRED", "The operation cannot be performed unless the device\nis acquired in DISCL_EXCLUSIVE mode."},
+        {2u, 0x80040206u, "DIERR_INCOMPLETEEFFECT", "The effect could not be downloaded because essential\ninformation is missing. For example, no axes have\nbeen associated with the effect, or no type-specific\ninformation has been supplied"},
+        {2u, 0x80040207u, "DIERR_NOTBUFFERED", "The device is not buffered.\nSet the DIPROP_BUFFERSIZE property to enable buffering"},
+        {2u, 0x80040208u, "DIERR_EFFECTPLAYING", "The parameters were updated in memory but were not\ndownloaded to the device because the device does not\nsupport updating an effect while it is still playing."},
+        {2u, 0x8007000cu, "DIERR_NOTACQUIRED", "The operation cannot be performed unless\nthe device is acquired."},
+        {2u, 0x80070005u, "DIERR_HANDLEEXISTS", "The device already has an event notification associated\nwith it. This value is equal to the E_ACCESSDENIED\nstandard COM return value."},
+        {2u, 0x80070015u, "DIERR_NOTINITIALIZED", "This object has not been initialized."},
+        {2u, 0x8007000eu, "DIERR_OUTOFMEMORY", "The DirectInput subsystem couldn't allocate\nsufficient memory to complete the call.\nThis value is equal to the E_OUTOFMEMORY\nstandard COM return value."},
+        {2u, 0x80070057u, "DIERR_INVALIDPARAM", "An invalid parameter was passed to the returning function, or the object was not in a state that permitted the function to be called. This value is equal to the E_INVALIDARG standard COM return value."},
+        {2u, 0x8007001eu, "DIERR_INPUTLOST", "Access to the input device has been lost. It must be reacquired."},
+        {2u, 0x800700aau, "DIERR_ACQUIRED", "The operation cannot be performed while\nthe device is acquired."},
+        {2u, 0x80070077u, "DIERR_BADDRIVERVER", "The object could not be created due to an\nincompatible driver version or mismatched or\nincomplete driver components."},
+        {2u, 0x80070481u, "DIERR_BETADIRECTINPUTVERSION", "The application was written for an unsupported\nprerelease version of DirectInput."},
+        {2u, 0x8007047eu, "DIERR_OLDDIRECTINPUTVERSION", "The application requires a newer version of DirectInput."},
+        {2u, 0x00000000u, "DI_OK", "The operation completed successfully.\nThis value is equal to the S_OK standard\nCOM return value."},
+        {2u, 0x800704dfu, "DIERR_ALREADYINITIALIZED", "This object is already initialized"},
+        {2u, 0x00000001u, "DI_BUFFEROVERFLOW", "The device buffer overflowed and some input was lost.\nThis value is equal to the S_FALSE\nstandard COM return value."},
+        {2u, 0x00000002u, "DI_POLLEDDEVICE", "The device is a polled device.\nAs a result, device buffering will not collect\nany data and event notifications will not be signaled\nuntil the IDirectInputDevice2::Poll method is called."},
+        {2u, 0x00000003u, "DI_DOWNLOADSKIPPED", "The parameters of the effect were successfully updated,\nbut the effect could not be downloaded because the associated\ndevice was not acquired in exclusive mode."},
+        {2u, 0x00000004u, "DI_EFFECTRESTARTED", "The effect was stopped,\nthe parameters were updated,\nand the effect was restarted."},
+        {2u, 0x00000008u, "DI_TRUNCATED", "The parameters of the effect were successfully updated,\nbut some of them were beyond the capabilities of the\ndevice and were truncated to the nearest supported value."},
+        {2u, 0x0000000cu, "DI_TRUNCATEDANDRESTARTED", "Equal to DI_EFFECTRESTARTED | DI_TRUNCATED"},
+        {3u, 0x80004005u, "DDERR_GENERIC", "There is an undefined error condition."},
+        {3u, 0x80004001u, "DDERR_UNSUPPORTED", "The operation is not supported."},
+        {3u, 0x8007000eu, "DDERR_OUTOFMEMORY", "DirectDraw does not have enough\nmemory to perform the operation."},
+        {3u, 0x800401f0u, "DDERR_NOTINITIALIZED", "An attempt was made to call an interface method\nof a DirectDraw object created by CoCreateInstance before\nthe object was initialized."},
+        {3u, 0x88760005u, "DDERR_ALREADYINITIALIZED", "The object has already been initialized."},
+        {3u, 0x80070057u, "DDERR_INVALIDPARAMS", "One or more of the parameters passed to the\nmethod are incorrect."},
+        {3u, 0x88760014u, "DDERR_CANNOTDETACHSURFACE", "A surface cannot be detached from another\nrequested surface."},
+        {3u, 0x8876000au, "DDERR_CANNOTATTACHSURFACE", "A surface cannot be attached to\nanother requested surface."},
+        {3u, 0x88760037u, "DDERR_EXCEPTION", "An exception was encountered while performing the requested operation."},
+        {3u, 0x88760028u, "DDERR_CURRENTLYNOTAVAIL", "No support is currently available."},
+        {3u, 0x8876005fu, "DDERR_INCOMPATIBLEPRIMARY", "The primary surface creation request does\nnot match with the existing primary surface."},
+        {3u, 0x8876005au, "DDERR_HEIGHTALIGN", "The height of the provided rectangle is not\na multiple of the required alignment."},
+        {3u, 0x8876006eu, "DDERR_INVALIDCLIPLIST", "DirectDraw does not support the provided clip list."},
+        {3u, 0x88760064u, "DDERR_INVALIDCAPS", "One or more of the capability bits passed to\nthe callback function are incorrect."},
+        {3u, 0x88760082u, "DDERR_INVALIDOBJECT", "DirectDraw received a pointer that was an\ninvalid DirectDraw object."},
+        {3u, 0x88760078u, "DDERR_INVALIDMODE", "DirectDraw does not support the requested mode."},
+        {3u, 0x88760096u, "DDERR_INVALIDRECT", "The provided rectangle was invalid."},
+        {3u, 0x88760091u, "DDERR_INVALIDPIXELFORMAT", "The pixel format was invalid as specified."},
+        {3u, 0x887600aau, "DDERR_NO3D", "No 3-D hardware or emulation is present."},
+        {3u, 0x887600a0u, "DDERR_LOCKEDSURFACES", "One or more surfaces are locked, causing the failure of\nthe requested operation."},
+        {3u, 0x887600cdu, "DDERR_NOCLIPLIST", "No clip list is available."},
+        {3u, 0x887600b4u, "DDERR_NOALPHAHW", "No alpha acceleration hardware is present or\navailable, causing the failure of\nthe requested operation."},
+        {3u, 0x887600dcu, "DDERR_NOCOLORKEYHW", "The operation cannot be carried out because there is\nno hardware support for the destination color key."},
+        {3u, 0x887600d2u, "DDERR_NOCOLORCONVHW", "The operation cannot be carried out because no\ncolor-conversion hardware is present or available."},
+        {3u, 0x887600d4u, "DDERR_NOCOOPERATIVELEVELSET", "A create function is called without the\nIDirectDraw2::SetCooperativeLevel method being called."},
+        {3u, 0x887600d7u, "DDERR_NOCOLORKEY", "The surface does not currently have a color key."},
+        {3u, 0x887600e1u, "DDERR_NOEXCLUSIVEMODE", "The operation requires the application to have exclusive mode,\nbut the application does not have exclusive mode."},
+        {3u, 0x887600deu, "DDERR_NODIRECTDRAWSUPPORT", "DirectDraw support is not possible\nwith the current display driver."},
+        {3u, 0x887600f0u, "DDERR_NOGDI", "No GDI is present."},
+        {3u, 0x887600e6u, "DDERR_NOFLIPHW", "Flipping visible surfaces is not supported."},
+        {3u, 0x887600ffu, "DDERR_NOTFOUND", "The requested item was not found."},
+        {3u, 0x887600fau, "DDERR_NOMIRRORHW", "The operation cannot be carried out because no mirroring\nhardware is present or available."},
+        {3u, 0x88760118u, "DDERR_NORASTEROPHW", "The operation cannot be carried out because no appropriate\nraster operation hardware is present or available."},
+        {3u, 0x88760104u, "DDERR_NOOVERLAYHW", "The operation cannot be carried out because no\noverlay hardware is present or available."},
+        {3u, 0x88760136u, "DDERR_NOSTRETCHHW", "The operation cannot be carried out because\nthere is no hardware support for stretching."},
+        {3u, 0x88760122u, "DDERR_NOROTATIONHW", "The operation cannot be carried out because\nno rotation hardware is present or available."},
+        {3u, 0x8876014au, "DDERR_NOTEXTUREHW", "The operation cannot be carried out because no\ntexture-mapping hardware is present or available."},
+        {3u, 0x8876013cu, "DDERR_NOT4BITCOLOR", "The DirectDrawSurface object is not using a 4-bit color palette\nand the requested operation requires a 4-bit color palette."},
+        {3u, 0x8876013du, "DDERR_NOT4BITCOLORINDEX", "The DirectDrawSurface object is not using a 4-bit color index\npalette and the requested operation requires a\n4-bit color index palette."},
+        {3u, 0x88760140u, "DDERR_NOT8BITCOLOR", "The DirectDrawSurface object is not using an 8-bit color\npalette and the requested operation requires\nan 8-bit color palette."},
+        {3u, 0x88760154u, "DDERR_NOZBUFFERHW", "The operation to create a z-buffer in display memory\nor to perform a blit using a z-buffer cannot be\ncarried out because there is no hardware support\nfor z-buffers."},
+        {3u, 0x8876014fu, "DDERR_NOVSYNCHW", "The operation cannot be carried out because\nthere is no hardware support for vertical\nblank synchronized operations."},
+        {3u, 0x88760168u, "DDERR_OUTOFCAPS", "The hardware needed for the requested\noperation has already been allocated."},
+        {3u, 0x8876015eu, "DDERR_NOZOVERLAYHW", "The overlay surfaces cannot be z-layered based on the\nz-order because the hardware does not support\nz-ordering of overlays."},
+        {3u, 0x88760190u, "DDERR_COLORKEYNOTSET", "No source color key is specified for this operation."},
+        {3u, 0x8876017cu, "DDERR_OUTOFVIDEOMEMORY", "DirectDraw does not have enough display\nmemory to perform the operation."},
+        {3u, 0x8876017eu, "DDERR_OVERLAYCANTCLIP", "The hardware does not support clipped overlays."},
+        {3u, 0x88760180u, "DDERR_OVERLAYCOLORKEYONLYONEACTIVE", "An attempt was made to have more than one\ncolor key active on an overlay."},
+        {3u, 0x88760183u, "DDERR_PALETTEBUSY", "Access to this palette is refused because\nthe palette is locked by another thread."},
+        {3u, 0x887601a4u, "DDERR_SURFACEALREADYDEPENDENT", "An attempt was made to make a surface a dependency\nof another surface to which it is\nalready dependent."},
+        {3u, 0x8876019au, "DDERR_SURFACEALREADYATTACHED", "An attempt was made to attach a surface to another\nsurface to which it is already attached."},
+        {3u, 0x887601b3u, "DDERR_CANTLOCKSURFACE", "Access to this surface is refused because an\nattempt was made to lock the primary\nsurface without DCI support."},
+        {3u, 0x887601aeu, "DDERR_SURFACEBUSY", "Access to the surface is refused because\nthe surface is locked by another thread."},
+        {3u, 0x887601c2u, "DDERR_SURFACELOST", "Access to the surface is refused because the surface\nmemory is gone. The DirectDrawSurface object representing this\nsurface should have the IDirectDrawSurface3::Restore\nmethod called on it."},
+        {3u, 0x887601b8u, "DDERR_SURFACEISOBSCURED", "Access to the surface is refused\nbecause the surface is obscured."},
+        {3u, 0x887601d6u, "DDERR_TOOBIGHEIGHT", "The height requested by DirectDraw is too large."},
+        {3u, 0x887601ccu, "DDERR_SURFACENOTATTACHED", "The requested surface is not attached."},
+        {3u, 0x887601eau, "DDERR_TOOBIGWIDTH", "The width requested by DirectDraw\nis too large."},
+        {3u, 0x887601e0u, "DDERR_TOOBIGSIZE", "The size requested by DirectDraw is too large.\nHowever, the individual height and\nwidth are OK."},
+        {3u, 0x88760208u, "DDERR_UNSUPPORTEDMASK", "The bitmask in the pixel format requested\nis not supported by DirectDraw."},
+        {3u, 0x887601feu, "DDERR_UNSUPPORTEDFORMAT", "The FourCC format requested is\nnot supported by DirectDraw."},
+        {3u, 0x8876021cu, "DDERR_WASSTILLDRAWING", "The previous blit operation that is transferring\ninformation to or from this\nsurface is incomplete."},
+        {3u, 0x88760219u, "DDERR_VERTICALBLANKINPROGRESS", "A vertical blank is in progress."},
+        {3u, 0x88760276u, "DDERR_NONONLOCALVIDME", "An attempt was made to allocate non-local video\nmemory from a device that does not support non-local\nvideo memory"},
+        {3u, 0x88760230u, "DDERR_XALIGN", "The provided rectangle was not horizontally\naligned on a required boundary."},
+        {3u, 0x88760231u, "DDERR_INVALIDDIRECTDRAWGUID", "The globally unique identifier (GUID) passed to the\nDirectDrawCreate function is not a valid DirectDraw\ndriver identifier."},
+        {3u, 0x88760232u, "DDERR_DIRECTDRAWALREADYCREATED", "A DirectDraw object representing this driver\nhas already been created for this process."},
+        {3u, 0x88760233u, "DDERR_NODIRECTDRAWHW", "Hardware-only DirectDraw object creation is not possible;\nthe driver does not support any hardware."},
+        {3u, 0x88760234u, "DDERR_PRIMARYSURFACEALREADYEXISTS", "This process has already created a primary surface."},
+        {3u, 0x88760235u, "DDERR_NOEMULATION", "Software emulation is not available."},
+        {3u, 0x88760236u, "DDERR_REGIONTOOSMALL", "The region passed to the\nIDirectDrawClipper::GetClipList\nmethod is too small."},
+        {3u, 0x88760237u, "DDERR_CLIPPERISUSINGHWND", "An attempt was made to set a clip list for a\nDirectDrawClipper object that is already monitoring\na window handle."},
+        {3u, 0x88760238u, "DDERR_NOCLIPPERATTACHED", "No DirectDrawClipper object is attached\nto the surface object."},
+        {3u, 0x88760239u, "DDERR_NOHWND", "Clipper notification requires a window handle,\nor no window handle has been previously set as\nthe cooperative level window handle."},
+        {3u, 0x8876023au, "DDERR_HWNDSUBCLASSED", "DirectDraw is prevented from restoring state\nbecause the DirectDraw cooperative level window\nhandle has been subclassed."},
+        {3u, 0x8876023bu, "DDERR_HWNDALREADYSET", "The DirectDraw cooperative level window handle\nhas already been set. It cannot be reset while the process\nhas surfaces or palettes created."},
+        {3u, 0x8876023cu, "DDERR_NOPALETTEATTACHED", "No palette object is attached to this surface."},
+        {3u, 0x8876023du, "DDERR_NOPALETTEHW", "There is no hardware support for 16- or 256-color palettes."},
+        {3u, 0x8876023eu, "DDERR_BLTFASTCANTCLIP", "A DirectDrawClipper object is attached to a source\nsurface that has passed into a call to the\nIDirectDrawSurface3::BltFast method."},
+        {3u, 0x8876023fu, "DDERR_NOBLTHW", "No blitter hardware is present."},
+        {3u, 0x88760240u, "DDERR_NODDROPSHW", "No DirectDraw raster operation (ROP) hardware is available."},
+        {3u, 0x88760241u, "DDERR_OVERLAYNOTVISIBLE", "The IDirectDrawSurface3::GetOverlayPosition method\nis called on a hidden overlay."},
+        {3u, 0x88760242u, "DDERR_NOOVERLAYDEST", "The IDirectDrawSurface3::GetOverlayPosition method is called\non an overlay that the IDirectDrawSurface3::UpdateOverlay method\nhas not been called on to establish a destination."},
+        {3u, 0x88760243u, "DDERR_INVALIDPOSITION", "The position of the overlay on the destination is no longer legal."},
+        {3u, 0x88760244u, "DDERR_NOTAOVERLAYSURFACE", "An overlay component is called for a non-overlay surface."},
+        {3u, 0x88760245u, "DDERR_EXCLUSIVEMODEALREADYSET", "An attempt was made to set the cooperative level\nwhen it was already set to exclusive."},
+        {3u, 0x88760246u, "DDERR_NOTFLIPPABLE", "An attempt has been made to flip\na surface that cannot be flipped."},
+        {3u, 0x88760247u, "DDERR_CANTDUPLICATE", "Primary and 3-D surfaces, or surfaces that\nare implicitly created, cannot be duplicated."},
+        {3u, 0x88760248u, "DDERR_NOTLOCKED", "An attempt is made to unlock a\nsurface that was not locked."},
+        {3u, 0x88760249u, "DDERR_CANTCREATEDC", "Windows cannot create any more device\ncontexts (DCs)."},
+        {3u, 0x8876024au, "DDERR_NODC", "No DC has ever been created for this surface."},
+        {3u, 0x8876024bu, "DDERR_WRONGMODE", "This surface cannot be restored because it\nwas created in a different mode."},
+        {3u, 0x8876024cu, "DDERR_IMPLICITLYCREATED", "The surface cannot be restored because\nit is an implicitly created surface."},
+        {3u, 0x8876024du, "DDERR_NOTPALETTIZED", "The surface being used is not a\npalette-based surface."},
+        {3u, 0x8876024eu, "DDERR_UNSUPPORTEDMODE", "The display is currently in\nan unsupported mode."},
+        {3u, 0x8876024fu, "DDERR_NOMIPMAPHW", "The operation cannot be carried out because no mipmap\ntexture mapping hardware is present or available."},
+        {3u, 0x88760250u, "DDERR_INVALIDSURFACETYPE", "The requested operation could not be performed\nbecause the surface was of the wrong type."},
+        {3u, 0x88760258u, "DDERR_NOOPTIMIZEH", "The device does not support optimized surfaces"},
+        {3u, 0x88760259u, "DDERR_NOTLOADE", "The surface is an optimized surface,\nbut it has not yet been allocated any memory"},
+        {3u, 0x8876026cu, "DDERR_DCALREADYCREATED", "A device context (DC) has already been returned\nfor this surface. Only one DC can be retrieved for each surface."},
+        {3u, 0x88760294u, "DDERR_CANTPAGEUNLOCK", "An attempt to page unlock a surface failed.\nPage unlock will not work on a display-memory\nsurface or an emulated primary surface."},
+        {3u, 0x88760280u, "DDERR_CANTPAGELOCK", "An attempt to page lock a surface failed.\nPage lock will not work on a display-memory surface or\nan emulated primary surface."},
+        {3u, 0x887602b2u, "DDERR_MOREDAT", "There is more data available than the\nspecified buffer size can hold"},
+        {3u, 0x887602a8u, "DDERR_NOTPAGELOCKED", "An attempt is made to page unlock a\nsurface with no outstanding page locks."},
+        {3u, 0x887602b7u, "DDERR_VIDEONOTACTIV", "The video port is not active"},
+        {3u, 0x887602bbu, "DDERR_DEVICEDOESNTOWNSURFAC", "Surfaces created by one direct draw device cannot\nbe used directly by another direct draw device"},
+        {3u, 0x00000000u, "DD_OK", "The request completed successfully."},
+        {1u, 0x00000000u, "D3DRM_OK", "No error."},
+        {1u, 0x8876030du, "D3DRMERR_BADOBJECT", "Object expected in argument."},
+        {1u, 0x8876030eu, "D3DRMERR_BADTYPE", "Bad argument type passed."},
+        {1u, 0x8876030fu, "D3DRMERR_BADALLOC", "Out of memory."},
+        {1u, 0x88760310u, "D3DRMERR_FACEUSED", "Face already used in a mesh."},
+        {1u, 0x88760311u, "D3DRMERR_NOTFOUND", "Object not found in specified place."},
+        {1u, 0x88760312u, "D3DRMERR_NOTDONEYET", "Unimplemented."},
+        {1u, 0x88760313u, "D3DRMERR_FILENOTFOUND", "File cannot be opened."},
+        {1u, 0x88760314u, "D3DRMERR_BADFILE", "Data file is corrupt."},
+        {1u, 0x88760315u, "D3DRMERR_BADDEVICE", "Device is not compatible with renderer."},
+        {1u, 0x88760316u, "D3DRMERR_BADVALUE", "Bad argument value passed."},
+        {1u, 0x88760317u, "D3DRMERR_BADMAJORVERSION", "Bad DLL major version."},
+        {1u, 0x88760318u, "D3DRMERR_BADMINORVERSION", "Bad DLL minor version."},
+        {1u, 0x88760319u, "D3DRMERR_UNABLETOEXECUTE", "Unable to carry out procedure."},
+        {1u, 0x8876031cu, "D3DRMERR_PENDING", "The data required to supply the requested\ninformation has not finished loading."},
+        {1u, 0x8876031du, "D3DRMERR_NOTENOUGHDATA", "Not enough data has been loaded to\nperform the requested operation."},
+        {1u, 0x8876031eu, "D3DRMERR_REQUESTTOOLARGE", "An attempt was made to set a level\nof detail in a progressive mesh greater than the maximum available."},
+        {1u, 0x8876031fu, "D3DRMERR_REQUESTTOOSMALL", "An attempt was made to set the minimum\nrendering detail of a progressive mesh smaller than\nthe detail in the base mesh\n(the minimum for rendering)."},
+        {1u, 0x88760320u, "D3DRMERR_CONNECTIONLOST", "Data connection was lost during a load,\nclone, or duplicate."},
+        {1u, 0x88760324u, "D3DRMERR_BOXNOTSET", "An attempt was made to access a bounding box\n(for example, with IDirect3DRMFrame2::GetBox)\nwhen no bounding box was set on the frame."},
+        {1u, 0x88760325u, "D3DRMERR_BADPMDATA", "The data in the X File is corrupted.\nThe conversion to a progressive mesh succeeded but\nproduced an invalid progressive mesh in\nthe X File."},
+    };
+    int category = diagnostic_kind;
+
+    s_directx_error_code = result;
+    s_directx_error_line = source_line;
+    s_directx_error_source = source_file;
+    s_directx_error_count = s_directx_error_count + 1u;
+    if (category < 1 || category > 7) category = 0;
+    s_directx_error_category = category;
+    s_directx_error_module = module_names[category];
+
+    if (category == 0) {
+        name = "Unknown";
+        description = "An error in an unknown DirectX module/object was raised";
+    }
+    else if (category >= 4 && category <= 6) {
+        /* Retail reports the unsupported category, then falls through to
+         * category 1's D3DRM result switch. Keep the original category for
+         * the module label while selecting that result table. */
+        directx_error_message_format(
+            "Unknown", "Error handling is unsupported in this DirectX module.");
+        category = 1;
+    }
+
+    for (size_t mapping_index = 0u;
+         mapping_index < sizeof(mappings) / sizeof(mappings[0]);
+         ++mapping_index) {
+        const DirectXErrorMapping* mapping = &mappings[mapping_index];
+        if (mapping->category == (uint32_t)category &&
+            mapping->result == (uint32_t)result) {
+            directx_error_message_format(mapping->name,
+                                         mapping->description);
+            return result;
+        }
+    }
+
+    if (category == 7) {
+        name = "QUERY_INTERFACE";
+        description = "The requested interface could not be obtained.";
+    }
+    directx_error_message_format(name, description);
+    return result;
+}
+
+// SetTimeoutTo10000
+// FUNCTION: LEGORR 0x0040bdc0
+void ledger_stub_0040bdc0_SetTimeoutTo10000(void)
+{
+    uint32_t* ignored_output;
+    (void)scene_resource_availability_sweep(10000.0f, &ignored_output,
+                                             &ignored_output);
+}
+
+
+typedef struct PortableResourceNameQuery {
+    const char* name;
+    void* resource;
+    uint32_t match_count;
+    uint32_t selected_index;
+    int search_mode;
+    int case_sensitive;
+} PortableResourceNameQuery;
+
+// FUNCTION: LEGORR 0x00476330
+int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
+                                ResourceTreeNodeCallback callback,
+                                void* context)
+{
+    uint32_t i;
+    int result;
+    if (root == NULL || callback == NULL) return 0;
+    if (callback(root, context) != 0) return 1;
+    for (i = 0u; i < root->child_count; ++i) {
+        result = resource_tree_callback_walk(root->children[i], depth + 1,
+                                             callback, context);
+        if (result != 0) return 1;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00476410
+static int resource_name_match_callback(ResourceTreeNode* node,
+                                        void* context)
+{
+    PortableResourceNameQuery* query = (PortableResourceNameQuery*)context;
+    const char* a;
+    const char* b;
+    int matched = 1;
+    if (node == NULL || query == NULL || node->resource == NULL ||
+        node->name == NULL ||
+        query->name == NULL) return 0;
+    if (strlen(node->name) != strlen(query->name)) return 0;
+    a = node->name;
+    b = query->name;
+    while (*a != '\0' && *b != '\0') {
+        int ca = (unsigned char)*a;
+        int cb = (unsigned char)*b;
+        if (!query->case_sensitive) {
+            if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
+            if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
+        }
+        if (ca != cb) {
+            matched = 0;
+            break;
+        }
+        ++a;
+        ++b;
+    }
+    if (*a != '\0' || *b != '\0') matched = 0;
+    if (!matched) return 0;
+    if (query->search_mode == 1) {
+        ++query->match_count;
+        return 0;
+    }
+    if (query->search_mode == 2) {
+        ++query->match_count;
+        if (query->match_count != query->selected_index + 1u) return 0;
+    }
+    else if (query->search_mode != 0) return 0;
+    query->resource = node->resource;
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00473bc0
+void* resource_name_register_or_query(ResourceTreeNode* root,
+                                      const char* name, int mode,
+                                      uint32_t* match_count_or_index)
+{
+    PortableResourceNameQuery query;
+    if (mode == 1 && match_count_or_index != NULL)
+        *match_count_or_index = 0u;
+    if (root == NULL || name == NULL ||
+        (mode != 0 && mode != 1 && mode != 2)) return NULL;
+    query.name = name;
+    query.resource = NULL;
+    query.match_count = 0u;
+    query.selected_index = mode == 2 && match_count_or_index != NULL
+        ? *match_count_or_index : 0u;
+    query.search_mode = mode;
+    query.case_sensitive = 0;
+    (void)resource_tree_callback_walk(root, 0,
+        (ResourceTreeNodeCallback)resource_name_match_callback, &query);
+    if (mode == 1) {
+        if (match_count_or_index != NULL)
+            *match_count_or_index = query.match_count;
+        return NULL;
+    }
+    return query.resource != NULL
+        ? scene_object_owner_link_ensure(query.resource) : NULL;
+}
+
+
+// ResourceNameRegisterOrQuery
+void* ledger_stub_00473bc0_ResourceNameRegisterOrQuery(
+    ResourceTreeNode* root, const char* name, int mode,
+    uint32_t* match_count_or_index)
+{
+    return resource_name_register_or_query(root, name, mode,
+                                           match_count_or_index);
+}
+
+// ResourceTreeCallbackWalk
+int ledger_stub_00476330_ResourceTreeCallbackWalk(
+    ResourceTreeNode* root, int depth,
+    ResourceTreeNodeCallback callback, void* context)
+{
+    return resource_tree_callback_walk(root, depth, callback, context);
+}
+
+// NestedRecordListRemoveMatchingKey
+typedef struct NestedResourceRecord {
+    void* key;
+    void* reserved[3];
+    struct NestedResourceRecord* child_or_next;
+} NestedResourceRecord;
+// FUNCTION: LEGORR 0x0047b330
+static int nested_record_list_remove_matching_key_impl(
+    void* owner, void* key, void* opaque_record)
+{
+    NestedResourceRecord* record = (NestedResourceRecord*)opaque_record;
+    NestedResourceRecord* child;
+    if (record == NULL) return 0;
+    child = record->child_or_next;
+    if (nested_record_list_remove_matching_key_impl(owner, key, child)) {
+        /* The retail call removes the matching key from DAT_00506684;
+         * its owner argument is forwarded but ignored by that helper. */
+        (void)owner;
+        sound_buffer_association_remove_instance(key);
+        record->child_or_next = child->child_or_next;
+        engine_heap_free(child);
+    }
+    return record->key == key ? 1 : 0;
+}
+
+
+} // namespace unported_ledger_stubs
+
+int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
+                                ResourceTreeNodeCallback callback,
+                                void* context)
+{
+    return unported_ledger_stubs::resource_tree_callback_walk(
+        root, depth, callback, context);
+}
+
+void* resource_name_register_or_query(ResourceTreeNode* root,
+                                      const char* name, int mode,
+                                      uint32_t* match_count_or_index)
+{
+    return unported_ledger_stubs::resource_name_register_or_query(
+        root, name, mode, match_count_or_index);
+}
+
+int nested_record_list_remove_matching_key(void* owner, void* key,
+                                           void* record)
+{
+    return unported_ledger_stubs::nested_record_list_remove_matching_key_impl(
+        owner, key, record);
 }

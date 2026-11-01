@@ -8,6 +8,11 @@
 #include "surface.hpp"
 #include "tickers.hpp"
 #include "game/cmd.hpp"
+#include "game/entity.hpp"
+#include "game/effects.hpp"
+#include "game/frontend.hpp"
+#include "game/util.hpp"
+#include "media.hpp"
 
 /* ------------------------------------------------------------------ *
  * Per-ticker stubs. Each `ticker_<hex>` corresponds to the corpus's
@@ -15,6 +20,24 @@
  * The table order below is the observed EngineTick call order and must
  * stay stable (finding 03 §4; corpus lines 93-119).
  * ------------------------------------------------------------------ */
+
+static EngineRenderSceneListGetHook s_positioned_scene_list_get;
+static void* s_positioned_scene_list_context;
+static float s_positioned_medium_range;
+static float s_positioned_high_range;
+
+void engine_render_scene_list_get_hook_set(EngineRenderSceneListGetHook hook,
+                                           void* context)
+{
+    s_positioned_scene_list_get = hook;
+    s_positioned_scene_list_context = context;
+}
+
+void engine_render_poly_ranges_set(float medium_range, float high_range)
+{
+    s_positioned_medium_range = medium_range;
+    s_positioned_high_range = high_range;
+}
 
 static void ticker_00425d90(EngineContext* c, float dt, float scale)
 {
@@ -24,8 +47,8 @@ static void ticker_00425d90(EngineContext* c, float dt, float scale)
 
 static void ticker_00402220(EngineContext* c, float dt, float scale)
 {
-    (void)c; (void)dt; (void)scale;
-    cmd_tick_global();
+    (void)c; (void)dt;
+    cmd_tick_global_delta(scale);
 }
 
 static void ticker_00424600(EngineContext* c, float dt, float scale)
@@ -48,6 +71,7 @@ static void ticker_0043b270(EngineContext* c, float dt, float scale)
 static void ticker_0046f550(EngineContext* c, float dt, float scale)
 {
     (void)scale;
+    effects_simtick_sfx_hooks_install();
     simtick_sfx_bank(c, dt);
 }
 
@@ -66,10 +90,10 @@ static void ticker_004313b0(EngineContext* c, float dt, float scale)
 static void ticker_004520d0(EngineContext* c, float dt, float scale)
 {
     (void)c; (void)dt; (void)scale;
-    /* corpus FUN_004520d0 — the per-player command-queue executor
-     * (finding 10 §"The queue executor"). The ported primitives live in
-     * src/game/cmd.cpp and the executor runs from the game layer's per
-     * frame hook (see frameloop.cpp) so gods98 stays linker-independent. */
+    /* SelectionRoot (FUN_004520d0): drain the command bank here, after the
+     * minion-state ticker and before the three view ticks, matching the
+     * EngineTick call order. */
+    cmd_queue_tick();
 }
 
 static void ticker_004091e0(EngineContext* c, float dt, float scale)
@@ -139,8 +163,8 @@ static void ticker_004665c0(EngineContext* c, float dt, float scale)
 
 static void ticker_0044cfa0(EngineContext* c, float dt, float scale)
 {
-    (void)dt; (void)scale;
-    simtick_editor_steps(c);
+    (void)c; (void)scale;
+    motion_gameplay_tick(dt);
 }
 
 static void ticker_0041a2c0(EngineContext* c, float dt, float scale)
@@ -197,29 +221,57 @@ void EngineSubsystemTickers(EngineContext* ctx, float dt, float scale)
  * camera_grid_timers / camera_grid_expiry / camera_spawn_countdown). The
  * cluster is no longer a ticker here. */
 
-/* Indexed manager dispatch — corpus ManagerTick FUN_0045a730. Under
- * ENGINE_STATE_INDEXED_SUBSYS the corpus calls it with idx
- *   1, 2, 4, 9, 6, 8, 0xb, 5, 7, 10
- * interleaved with the named manager tickers FUN_0045d6d0, FUN_0040e7f0,
- * FUN_0041b490, FUN_0041b930, FUN_0041a080, FUN_00419f30. Once an index is
- * identified (AI, particles, FX…), give it a name here.
- */
-static const int MANAGER_ORDER[] = { 1, 2, 4, 9, 6, 8, 0xb, 5, 7, 10 };
-
 static void ManagerTick(EngineContext* ctx, int idx, float dt)
 {
     /* ported in simtick.* (FUN_0045a730): positional trackers with the
      * exponential smoothing; ingame = ~state bit 0x40000 (corpus). */
     int ingame = ((ctx->state & 0x40000u) == 0) ? 1 : 0;
     simtick_manager_tick(idx, dt, ingame);
+    /* ManagerTick's final operation draws this indexed panel's texture
+     * slots after advancing its position and animation state. */
+    panel_texture_slots_blit(idx);
 }
 
 void EngineManagerDispatch(EngineContext* ctx, float dt)
 {
-    for (size_t i = 0; i < sizeof(MANAGER_ORDER) / sizeof(MANAGER_ORDER[0]); ++i) {
-        ManagerTick(ctx, MANAGER_ORDER[i], dt);
+    /* Retail's indexed block is conditionally interleaved. In particular,
+     * slots 1 and 2 have distinct engine-state gates and slot 0 is always
+     * visited. The target calls are all under ENGINE_STATE_INDEXED_SUBSYS
+     * in EngineTick. */
+    if ((ctx->state & 2u) == 0u) {
+        ManagerTick(ctx, 1, dt);
         ++ctx->tickers_ran;
     }
+    ManagerTick(ctx, 0, dt);
+    ++ctx->tickers_ran;
+    if ((ctx->state & 2u) != 0u && (ctx->state & 0x2000u) != 0u &&
+        (ctx->state & 0x20000u) == 0u) {
+        ManagerTick(ctx, 2, dt);
+        ++ctx->tickers_ran;
+    }
+    ManagerTick(ctx, 4, dt);
+    ++ctx->tickers_ran;
+    ManagerTick(ctx, 9, dt);
+    ++ctx->tickers_ran;
+    ManagerTick(ctx, 6, dt);
+    ++ctx->tickers_ran;
+    ManagerTick(ctx, 8, dt);
+    ++ctx->tickers_ran;
+
+    /* PositionTrackerUpdateAll (0x45d6d0), the encyclopedia text tick
+     * (0x40e7f0), AdvisorOverlayUpdate (0x41b490), and the info-message
+     * display/queue consumers (0x41a080/0x19f30) still need their owning
+     * global record tables and renderer handles. Preserve the available
+     * indexed and timed calls around those unavailable owners. */
+    ManagerTick(ctx, 0xb, dt);
+    ++ctx->tickers_ran;
+    timed_status_and_event_tick(dt);
+    ManagerTick(ctx, 5, dt);
+    ++ctx->tickers_ran;
+    ManagerTick(ctx, 7, dt);
+    ++ctx->tickers_ran;
+    ManagerTick(ctx, 10, dt);
+    ++ctx->tickers_ran;
 }
 
 /* Render orchestration — corpus EngineTick lines 130-215. The port has the
@@ -232,10 +284,24 @@ void EngineManagerDispatch(EngineContext* ctx, float dt)
  * camera/graph operations remain unavailable at these call sites. */
 void EngineRenderFrame(EngineContext* ctx, float dt, float scale, uint32_t* sim_out1)
 {
+    const EntitySlot* positioned_source;
     (void)dt;
     (void)sim_out1;
     if (ctx == NULL) {
         return;
+    }
+
+    positioned_source = (const EntitySlot*)media_min_distance_context();
+    if (ctx->context_mode == 1 && positioned_source != NULL &&
+        s_positioned_scene_list_get != NULL) {
+        void* scene_list = s_positioned_scene_list_get(
+            s_positioned_scene_list_context, ctx);
+        if (scene_list != NULL) {
+            /* EngineTick 0x4237c6: DAT_556400/404 are Med/HighPolyRange. */
+            entity_type_two_positioned_callback_dispatch(
+                positioned_source, scene_list, s_positioned_medium_range,
+                s_positioned_high_range, 1);
+        }
     }
 
     if (ctx->context_mode == 0) {
@@ -263,6 +329,12 @@ void EngineRenderFrame(EngineContext* ctx, float dt, float scale, uint32_t* sim_
     /* World renderers (FUN_00435300/FUN_00454600), viewport update, primary
      * surface change-queue flush, and the preceding regular/editor surface
      * passes need renderer-owned roots/targets absent from the engine API. */
+
+    if (ctx->context_mode == 0 && positioned_source != NULL) {
+        /* EngineTick 0x4238d5: editor pass clears all positioned state. */
+        entity_type_two_positioned_callback_dispatch(
+            positioned_source, NULL, 0.0f, 0.0f, 0);
+    }
 }
 
 /* Air-supply beat mechanic — corpus EngineTick tail. When the air supply

@@ -7,6 +7,7 @@
 
 #include "heap.hpp"
 #include "string.hpp"
+#include "crt/crt.hpp"
 
 /* Engine heap records and text helpers. CRT allocation implementation lives
  * in ../crt/crt_heap.cpp. */
@@ -374,7 +375,7 @@ static int text_buffer_glyph_width(void* font, unsigned char glyph)
         width = s_text_buffer_draw_ops.glyph_advance(
             s_text_buffer_draw_ops.context, font, glyph);
     }
-    return width > 0 ? width : 1;
+    return width > 0 ? width : 0;
 }
 
 static int text_buffer_draw_glyph(void* font, int x, int y,
@@ -391,7 +392,7 @@ static int text_buffer_draw_glyph(void* font, int x, int y,
 
 // FUNCTION: LEGORR 0x00485710
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,
-                                     int* height_out)
+                                     int* height_out, int visible_lines)
 {
     int starts[257];
     int widths[257];
@@ -403,11 +404,9 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
     int word_width = 0;
     int index = 0;
     int line = 0;
-    int max_y = 0;
     int result = 0;
     float elapsed_timer;
     char ch;
-    if (height_out != NULL) *height_out = 0;
     if (record == NULL) return 0;
     text = (const char*)record + 0x18;
     ch = text[0];
@@ -449,40 +448,38 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
     starts[line_count] = index;
     line = 0;
     while (line < line_count) {
-        int x = (int)*(float*)((char*)record + 4);
+        int x = crt_float_to_long(*(float*)((char*)record + 4));
         int y;
         int end = starts[line + 1];
         int pos = starts[line];
         if ((*(uint32_t*)((char*)record + 0x82c) & 4) != 0 &&
             *(float*)((char*)record + 0x0c) >
             (float)widths[line]) {
-            x += (int)((*(float*)((char*)record + 0x0c) -
-                        (float)widths[line]) * 0.5f);
+            x += crt_float_to_long((*(float*)((char*)record + 0x0c) -
+                                    (float)widths[line]) * 0.5f);
         }
-        if (*(uint32_t*)((char*)record + 0x824) <
-            (unsigned int)line_count) {
+        if ((unsigned int)visible_lines < (unsigned int)line_count) {
             if ((unsigned int)line < (unsigned int)(line_count -
-                    *(uint32_t*)((char*)record + 0x824))) {
+                    (uint32_t)visible_lines)) {
                 y = 0;
             }
             else {
-                y = (int)*(float*)((char*)record + 8) +
-                    (line + (int)*(uint32_t*)((char*)record + 0x824) -
-                     line_count) *
+                y = crt_float_to_long(*(float*)((char*)record + 8)) +
+                    ((int)line + visible_lines - line_count) *
                     line_height;
                 result = 1;
             }
         }
-        else y = (int)*(float*)((char*)record + 8) + line * line_height;
+        else y = crt_float_to_long(*(float*)((char*)record + 8)) +
+                 line * line_height;
         while (pos < end) {
             unsigned char glyph = (unsigned char)text[pos];
             x += text_buffer_draw_glyph(font, x, y, glyph);
             ++pos;
         }
-        if (y > max_y) max_y = y;
+        if (height_out != NULL && *height_out < y) *height_out = y;
         ++line;
     }
-    if (height_out != NULL) *height_out = max_y + line_height;
     elapsed_timer = *(float*)((char*)record + 0x828) - elapsed;
     *(float*)((char*)record + 0x828) = elapsed_timer;
     if (elapsed_timer < 0.0f)
@@ -518,11 +515,11 @@ int text_buffer_draw_wrapped(void* record, uint32_t start_line,
     font = *(void**)record;
     line_height = text_buffer_line_height(font);
     top_height = *(float*)((char*)record + 0x10);
-    words[0x209] = (int)top_height / line_height;
+    words[0x209] = crt_float_to_long(top_height) / line_height;
     flags = (uint32_t)words[0x20b];
     if ((flags & 2u) != 0u)
         return text_wrap_measure_and_draw_lines(record, line_scale,
-                                                height_out);
+                                                height_out, words[0x209]);
     buffer = *(char**)((char*)record + 0x14);
     capacity = (uint32_t)words[0x106];
     cursor = (uint32_t)words[0x107];
@@ -585,8 +582,8 @@ int text_buffer_draw_wrapped(void* record, uint32_t start_line,
         if (rows == 0u) start_line = 0u;
         else start_line %= rows;
     }
-    x = (int)*(float*)((char*)record + 4);
-    y = (int)*(float*)((char*)record + 8);
+    x = crt_float_to_long(*(float*)((char*)record + 4));
+    y = crt_float_to_long(*(float*)((char*)record + 8));
     for (line = 0; line < line_count; ++line) {
         uint32_t at = (uint32_t)words[0x108 + line];
         uint32_t end = (uint32_t)words[0x108 + line + 1u];
@@ -605,7 +602,8 @@ int text_buffer_draw_wrapped(void* record, uint32_t start_line,
         }
         else pen_y = y + (int)line * line_height;
         if ((flags & 4u) != 0u && wrapped_width > (float)widths[line])
-            pen_x += (int)((wrapped_width - (float)widths[line]) * 0.5f);
+            pen_x += crt_float_to_long(
+                (wrapped_width - (float)widths[line]) * 0.5f);
         while (at != end) {
             unsigned char ch = (unsigned char)buffer[at];
             pen_x += text_buffer_draw_glyph(font, pen_x, pen_y, ch);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #ifndef LEGORRR_GAME_SPAWN_HPP
 #define LEGORRR_GAME_SPAWN_HPP
+#include "gods98/texture.hpp"
 struct EntitySlot;
 namespace lego {
 typedef void (*SpawnRandomTriggerHook)(void* entity, void* context);
@@ -16,6 +17,18 @@ void pairing_activity_prepare_hook_set(PairingActivityPrepareHook hook,
                                       void* context);
 void pairing_activity_prepare(::EntitySlot* target);
 int entity_conditional_type_five_spawn(::EntitySlot* entity); /* 0x004470d0 */
+typedef struct SpawnTypeFiveFrameResourceOps {
+    void* context;
+    /* Converts the portable CPU bitmap to the renderer-owned surface format
+     * and assigns it to one frame of the entity's +0x1c frame container. */
+    void (*frame_surface_set)(void* context, void* frame_container,
+                              unsigned int frame_index,
+                              TextureSurface* surface);
+} SpawnTypeFiveFrameResourceOps;
+void spawn_type_five_frame_resource_ops_set(
+    const SpawnTypeFiveFrameResourceOps* ops);
+void object_list_field_assign_all(::EntitySlot* entity,
+                                  TextureSurface* surface); /* 0x00440bf0 */
 int entity_try_create_linked_at_position(::EntitySlot* entity, float cell_x,
                                          float cell_y,
                                          ::EntitySlot* linked); /* 0x004471b0 */
@@ -47,5 +60,11 @@ void global_scatter_spawn_find_hook_set(GlobalScatterSpawnFindHook hook,
 void global_scatter_spawn_state_set(int flag_a, int flag_b);
 void global_scatter_spawn_enable_and_drain(void); /* FUN_0044c550 */
 int configured_monster_spawn_behavior_tick(::EntitySlot* entity);
+}
+
+namespace unported_ledger_stubs {
+void type11_cell_coordinate_append(const int* coordinate);
+int type11_cell_coordinate_nearest_resolve(const ::EntitySlot* target,
+                                           int cell_xy_out[2]);
 }
 #endif

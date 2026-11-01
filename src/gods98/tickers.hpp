@@ -15,6 +15,16 @@
 #include "audio.hpp"
 #include "engine.hpp"
 
+struct EntitySlot;
+
+/* EngineTick's two positioned-entity calls need the view's +0x24 render-list
+ * pointer. Keep that owner explicit until the portable view exposes it. */
+typedef void* (*EngineRenderSceneListGetHook)(void* context,
+                                               EngineContext* engine);
+void engine_render_scene_list_get_hook_set(EngineRenderSceneListGetHook hook,
+                                           void* context);
+void engine_render_poly_ranges_set(float medium_range, float high_range);
+
 /* Run the ordered EngineTick subsystem sequence (finding 03 §4). */
 void EngineSubsystemTickers(EngineContext* ctx, float dt, float scale);
 

@@ -3,11 +3,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #include "game/game.hpp"
 #include "game/ai.hpp"
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
+#include "game/effects.hpp"
 #include "game/frontend.hpp"
 #include "game/level.hpp"
 #include "game/mission.hpp"
@@ -16,27 +18,754 @@
 #include "game/render.hpp"
 #include "game/savegame.hpp"
 #include "game/select.hpp"
+#include "game/tutorial_hud_ports.hpp"
+#include "game/ui_action_dispatch.hpp"
+#include "game/upgrades.hpp"
 #include "platform/platform.h"
 #include "audio.hpp"
 #include "engine.hpp"
 #include "frameloop.hpp"
 #include "input.hpp"
 #include "movie.hpp"
+#include "media.hpp"
+#include "flic.hpp"
+#include "message.hpp"
 #include "resource.hpp"
 #include "surface.hpp"
 #include "sound.hpp"
+
+namespace unported_ledger_stubs {
+int ledger_stub_004401b0_TerrainCellToWorldPosition(EntitySlot* entity,
+                                                    int force);
+void ledger_stub_00403320_ObjectCommandTaskCreate(EntitySlot* entity,
+                                                  int parameter);
+}
 #include "string.hpp"
 #include "texture.hpp"
 #include "tickers.hpp"
 #include "view.hpp"
 #include "camera.hpp"
+#include "crt/crt.hpp"
+
+#define WINDOW_W 640
+#define WINDOW_H 480
+#define FRAME_MS 33 /* ~30 fps */
+
+typedef struct MenuSoundTickClock {
+    uint32_t last_ms;
+    float dt;
+} MenuSoundTickClock;
+
+static void menu_sound_tick_clock_init(MenuSoundTickClock* clock)
+{
+    if (clock == NULL) return;
+    clock->last_ms = platform_time_milliseconds();
+    clock->dt = 1.0f;
+}
+
+static void menu_sound_tick_clock_advance(MenuSoundTickClock* clock)
+{
+    uint32_t now;
+    if (clock == NULL) return;
+    now = platform_time_milliseconds();
+    clock->dt = (float)(now - clock->last_ms) * 0.025f;
+    clock->last_ms = now;
+}
 
 static MainLoopFramePumpHooks s_main_loop_frame_pump_hooks;
-static int s_main_loop_renderer_frame_started;
 static WindowRuntimeOps s_window_runtime_ops;
 static WindowRuntimeState s_window_runtime_state;
 static WindowDefaultProc s_window_default_proc;
 static void* s_window_default_proc_context;
+
+typedef struct RewardFramePumpContext {
+    PlatformWindow* window;
+    DisplaySurface* surface;
+    GameContext* game;
+    InputState* input;
+    AudioPlayer* audio;
+    FrontEnd* frontend;
+    FILE* log;
+    long* frames;
+    long frame_cap;
+    int* quit;
+    const char** stop;
+    uint32_t task_draw_masks[GAME_TASK_COUNT];
+    Flic* task_flics[GAME_TASK_COUNT];
+    int score_text_requested;
+    int stats_result_requested;
+    int zone_action_consumed;
+} RewardFramePumpContext;
+
+static uint32_t reward_frame_time_get(void* context)
+{
+    (void)context;
+    return platform_time_milliseconds();
+}
+
+static int reward_frame_loop_abort(void* opaque)
+{
+    RewardFramePumpContext* context = (RewardFramePumpContext*)opaque;
+    return context != NULL && context->quit != NULL && *context->quit != 0;
+}
+
+static void reward_task_visual_queue(void* opaque, GameTask* task,
+                                     int task_index, uint32_t draw_mask,
+                                     int displayed_count, float elapsed,
+                                     Flic* flic)
+{
+    RewardFramePumpContext* context = (RewardFramePumpContext*)opaque;
+    (void)task;
+    (void)displayed_count;
+    (void)elapsed;
+    if (context == NULL || task_index < 0 || task_index >= GAME_TASK_COUNT)
+        return;
+    context->task_draw_masks[task_index] |= draw_mask;
+    if (draw_mask == 4u) context->task_flics[task_index] = flic;
+}
+
+static void reward_task_text_queue(void* opaque, GameTask* task,
+                                   int task_index, int displayed_count,
+                                   float elapsed)
+{
+    RewardFramePumpContext* context = (RewardFramePumpContext*)opaque;
+    (void)task;
+    (void)displayed_count;
+    (void)elapsed;
+    if (context == NULL || task_index < 0 || task_index >= GAME_TASK_COUNT)
+        return;
+    context->task_draw_masks[task_index] |= 1u;
+}
+
+static int reward_score_text_queue(void* opaque, GameContext* game,
+                                   int displayed_count, float elapsed)
+{
+    RewardFramePumpContext* context = (RewardFramePumpContext*)opaque;
+    (void)game;
+    (void)displayed_count;
+    (void)elapsed;
+    if (context == NULL) return 0;
+    context->score_text_requested = 1;
+    return 1;
+}
+
+/* RewardStatsPanelDraw selects and formats stats_result_text in the mission
+ * module. The frame owner already has the configured text position, task
+ * font atlas, and software surface renderer used by the score text path;
+ * queue that result through the same concrete renderer. */
+static void reward_stats_result_queue(void* opaque, GameContext* game)
+{
+    RewardFramePumpContext* context = (RewardFramePumpContext*)opaque;
+    if (context == NULL || context->game != game || game == NULL) return;
+    context->stats_result_requested = 1;
+}
+
+static int reward_zone_dispatch(void* opaque, RewardScreenState* state)
+{
+    RewardFramePumpContext* context = (RewardFramePumpContext*)opaque;
+    int hit_save = 0;
+    int hit_advance = 0;
+    if (context == NULL || state == NULL || state->game == NULL ||
+        context->input == NULL || !input_mouse_pressed(context->input) ||
+        !mission_reward_zone(state->game, context->input->mouse_x,
+                             context->input->mouse_y, &hit_save,
+                             &hit_advance)) return 0;
+    if (hit_save) {
+        if (context->frontend != NULL)
+            (void)save_menu_open_from_reward(context->frontend);
+        state->transition_state = 1;
+        sound_request_queue_submit(0x29, 1);
+        context->zone_action_consumed = 1;
+        return 1;
+    }
+    if (hit_advance) {
+        checkpoint_step(state->game);
+        state->transition_stage = 3;
+        context->zone_action_consumed = 1;
+        return 1;
+    }
+    return 0;
+}
+
+static void reward_frame_draw_task(RewardFramePumpContext* context,
+                                   int index, uint32_t draw_pass,
+                                   void* pixels, int pitch)
+{
+    GameTask* task;
+    uint32_t masks;
+    int x;
+    int y;
+    if (context == NULL || context->game == NULL || index < 0 ||
+        index >= GAME_TASK_COUNT) return;
+    task = &context->game->tasks[index];
+    masks = context->task_draw_masks[index];
+    if (draw_pass == 2u && (masks & 2u) != 0u) {
+        TextureSurface* image = (TextureSurface*)
+            reward_task_image_surface_get((unsigned int)index);
+        memcpy(&x, task->data + TASK_OFF_IMG_XY, sizeof(x));
+        memcpy(&y, task->data + TASK_OFF_IMG_XY + 4, sizeof(y));
+        if (image != NULL)
+            surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
+                                 image, x, y);
+    }
+    if (draw_pass == 0x40u && (masks & 0x40u) != 0u) {
+        TextureSurface* image = (TextureSurface*)
+            reward_task_box_image_surface_get((unsigned int)index);
+        memcpy(&x, task->data + TASK_OFF_BOXIMG_XY, sizeof(x));
+        memcpy(&y, task->data + TASK_OFF_BOXIMG_XY + 4, sizeof(y));
+        if (image != NULL)
+            surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
+                                 image, x, y);
+    }
+    if (draw_pass == 4u && (masks & 4u) != 0u &&
+        context->task_flics[index] != NULL) {
+        Flic* flic = context->task_flics[index];
+        const uint8_t* rgba = flic_frame_rgba(flic);
+        if (rgba != NULL) {
+            TextureSurface frame;
+            int32_t rect_x;
+            int32_t rect_y;
+            memset(&frame, 0, sizeof(frame));
+            frame.width = flic_width(flic);
+            frame.height = flic_height(flic);
+            frame.pixels = (uint32_t*)rgba;
+            memcpy(&rect_x, task->data + TASK_OFF_FLIC_RECT,
+                   sizeof(rect_x));
+            memcpy(&rect_y, task->data + TASK_OFF_FLIC_RECT + 4,
+                   sizeof(rect_y));
+            surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
+                                 &frame, rect_x, rect_y);
+        }
+    }
+    if (draw_pass == 1u && (masks & 1u) != 0u) {
+        void* font_record = reward_task_font_record_get((unsigned int)index);
+        TextureSurface* font = font_atlas_record_surface_get(font_record);
+        const char* text = (const char*)task->data + TASK_OFF_TEXT;
+        memcpy(&x, task->data + TASK_OFF_TEXT_XY, sizeof(x));
+        memcpy(&y, task->data + TASK_OFF_TEXT_XY + 4, sizeof(y));
+        if (font != NULL && text[0] != '\0')
+            reward_text_draw(font, pixels, pitch, WINDOW_W, WINDOW_H,
+                             x, y, "%s", text);
+    }
+}
+
+static void reward_frame_pump(void* opaque, int mode)
+{
+    RewardFramePumpContext* context = (RewardFramePumpContext*)opaque;
+    PlatformEvent events[32];
+    int event_count;
+    int i;
+    void* pixels = NULL;
+    int pitch = 0;
+    (void)mode;
+    if (context == NULL || context->window == NULL ||
+        context->surface == NULL || context->input == NULL ||
+        context->game == NULL) return;
+
+    if (context->quit != NULL && *context->quit == 0 &&
+        context->frame_cap > 0 && context->frames != NULL &&
+        *context->frames >= context->frame_cap) {
+        *context->quit = 1;
+        if (context->stop != NULL) *context->stop = "autostop";
+    }
+    if (context->quit != NULL && *context->quit != 0) {
+        renderer_word_c_set(0u);
+        return;
+    }
+    /* Preserve this frame's edge through the next RewardScreenTick body;
+     * its zone check runs before the next pump, then this boundary advances
+     * `prev` before capturing the following events. */
+    input_begin_frame(context->input);
+    event_count = platform_pump_events(context->window, events, 32);
+    input_capture_events(context->input, events, event_count);
+    input_cursor_position_update();
+    input_cursor_position_sync(context->input);
+    renderer_word_c_set(context->input->mouse_down != 0 ? 1u : 0u);
+    for (i = 0; i < event_count; ++i) {
+        if (events[i].kind == PLATFORM_EVENT_QUIT) {
+            if (context->quit != NULL) *context->quit = 1;
+            if (context->stop != NULL) *context->stop = "closed";
+        }
+    }
+
+    renderer_begin_frame_once_reset();
+    (void)renderer_begin_frame_once();
+    if (surface_lock(context->surface, &pixels, &pitch) == 0) {
+        if (context->game->level != NULL) {
+            level_render_scene(context->game->level, context->game,
+                               WINDOW_W, WINDOW_H, pixels, pitch);
+            frontend_help_overlay(pixels, pitch, WINDOW_W, WINDOW_H,
+                                  objective_stream(context->game->level),
+                                  &context->game->options);
+        } else {
+            surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 16, 48);
+        }
+        {
+            static const uint32_t reward_draw_passes[] = { 2u, 0x40u, 4u, 1u };
+            unsigned int pass;
+            for (pass = 0; pass < 4u; ++pass) {
+                for (i = 0; i < GAME_TASK_COUNT; ++i)
+                    reward_frame_draw_task(context, i,
+                        reward_draw_passes[pass], pixels, pitch);
+            }
+        }
+        if ((context->score_text_requested || context->stats_result_requested) &&
+            context->game->reward_screen.stats_result_text[0] != '\0') {
+            TextureSurface* font = (TextureSurface*)
+                font_atlas_record_surface_get(
+                    reward_task_font_record_get(GAME_TASK_COUNT - 1));
+            if (font != NULL)
+                reward_text_draw(font, pixels, pitch, WINDOW_W, WINDOW_H,
+                    context->game->reward_screen.text_pos[0],
+                    context->game->reward_screen.text_pos[1], "%s",
+                    context->game->reward_screen.stats_result_text);
+        }
+        /* RewardZoneCheck follows the task and score text passes in the
+         * retail modal loop, keeping the button art in the foreground. */
+        mission_reward_buttons_draw(context->game, pixels, pitch,
+                                    WINDOW_W, WINDOW_H,
+                                    context->input->mouse_x,
+                                    context->input->mouse_y,
+                                    context->input->mouse_down);
+        render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                                context->game->options.brightness);
+        platform_present_pixels(context->window, pixels, pitch,
+                                WINDOW_W, WINDOW_H);
+        surface_unlock(context->surface, pixels);
+    }
+    memset(context->task_draw_masks, 0, sizeof(context->task_draw_masks));
+    memset(context->task_flics, 0, sizeof(context->task_flics));
+    context->score_text_requested = 0;
+    context->stats_result_requested = 0;
+    if (context->audio != NULL) audio_update(context->audio);
+    Sleep((DWORD)FRAME_MS);
+    if (context->frames != NULL) ++*context->frames;
+}
+
+/* RewardSaveButtonZoneCheck @ 0x00462780 gates the modal reward loop on the
+ * configured Display value and checkpoint Reward/Enable word. It then polls
+ * the DirectInput Space byte (current and previous snapshots) until release,
+ * clears the per-frame mouse-press latch, and only then queues cue 0x29 in
+ * mission.cpp. The portable event adapter keeps held keys until KEYUP, with
+ * Space represented by its canonical ASCII code. */
+static int reward_save_button_check(void* opaque, GameContext* game)
+{
+    RewardFramePumpContext* context = (RewardFramePumpContext*)opaque;
+    InputState* input;
+    uint32_t enabled;
+    int release_tail = 0;
+    if (context == NULL || game == NULL || game->level == NULL ||
+        game->checkpoint_blob == NULL || game->reward_screen.display == 0 ||
+        context->input == NULL) return 0;
+    memcpy(&enabled, game->checkpoint_blob, sizeof(enabled));
+    if (enabled == 0u) return 0;
+    input = context->input;
+    for (;;) {
+        const int space_down = input_keyboard_key_held(' ') ||
+            input_keyboard_key_held(0x39) || input->cur[' '] != 0u ||
+            input->prev[' '] != 0u || input->cur[0x39] != 0u ||
+            input->prev[0x39] != 0u;
+        if (!space_down) {
+            if (!release_tail) break;
+            /* Retail checks both snapshots, so perform one final poll after
+             * the held-key table observes KEYUP. */
+            release_tail = 0;
+        } else {
+            release_tail = 1;
+        }
+        input->mouse_press = 0;
+        if (context->quit != NULL && *context->quit != 0) break;
+        reward_frame_pump(context, 1);
+        if (context->quit != NULL && *context->quit != 0) break;
+    }
+    input->mouse_press = 0;
+    return 1;
+}
+
+typedef struct FramePointerDispatchContext {
+    GameContext* game;
+    LevelState* level;
+    EngineContext* engine;
+    int screen_width;
+    int screen_height;
+    UiActionDispatchState* ui_action_state;
+} FramePointerDispatchContext;
+
+static void* frame_ui_action_current_selection(void* context)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    return state != NULL ? selection_first(state->game) : NULL;
+}
+
+static int frame_ui_action_already_held(void* context, int action, int mode)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    return input_action_pressed_get(state != NULL ? state->engine : NULL,
+                                    action, mode);
+}
+
+static uint32_t frame_ui_action_entity_flags(void* context, void* entity,
+                                             int offset)
+{
+    EntitySlot* slot = (EntitySlot*)entity;
+    (void)context;
+    if (slot == NULL) return 0u;
+    if (offset == 0x3e8) return entity_stats_word_get(slot);
+    if (offset == 0x3ec) return slot->flags_3ec;
+    return 0u;
+}
+
+static uint8_t frame_ui_action_entity_byte_flags(void* context, void* entity,
+                                                 int offset)
+{
+    EntitySlot* slot = (EntitySlot*)entity;
+    (void)context;
+    if (slot == NULL || offset != 0x3ec) return 0u;
+    return (uint8_t)slot->flags_3ec;
+}
+
+static int frame_ui_action_entity_type(void* context, void* entity)
+{
+    (void)context;
+    return entity != NULL ? ((EntitySlot*)entity)->type : 0;
+}
+
+/* UiActionDispatch's case 0x25 selects one of three targets according to the
+ * exact stats-word tests at 0x439cf0/0x439d10/0x439d30. These data and helpers
+ * are available in the live EntitySlot, so bind the predicates directly. */
+static int frame_ui_action_selected_entity_predicate(void* context,
+        void* entity, int predicate_id)
+{
+    const EntitySlot* slot = (const EntitySlot*)entity;
+    (void)context;
+    if (slot == NULL) return 0;
+    switch (predicate_id) {
+    case 0x39cf0: return entity_stats_flag10_test(slot) != 0u;
+    case 0x39d10: return entity_stats_flag20_test(slot) != 0u;
+    case 0x39d30: return entity_stats_flag40_test(slot) != 0u;
+    default: return 0;
+    }
+}
+
+static uint32_t frame_ui_action_cell_flags(void* context, int x, int y)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    uint8_t* voxel;
+    uint32_t flags = 0u;
+    if (state == NULL || state->level == NULL) return 0u;
+    voxel = level_voxel(state->level, x, y);
+    if (voxel != NULL) memcpy(&flags, voxel + 8, sizeof(flags));
+    return flags;
+}
+
+/* UiActionDispatch supplies these exact arguments at its cell-action cases:
+ * 0x0b calls 0x402510(pair, 0, 1), 0x0c calls 0x403030(pair), 0x0d calls
+ * 0x402d50(pair, 0), 0x0e calls 0x402fb0(pair), and 0x0f calls
+ * 0x402ae0(pair, 0). */
+static void frame_ui_action_cell_command_02510(void* context, int x, int y)
+{
+    (void)context;
+    terrain_cell_command_create(x, y, 0, 1);
+}
+
+static void frame_ui_action_cell_command_03030(void* context, int x, int y)
+{
+    (void)context;
+    cell_command_type3_issue(x, y);
+}
+
+static void frame_ui_action_cell_refresh_02ae0(void* context, int x, int y)
+{
+    int cell_xy[2];
+    (void)context;
+    cell_xy[0] = x;
+    cell_xy[1] = y;
+    terrain_cell_refresh_dispatch_current(cell_xy, 0);
+}
+
+static void frame_ui_action_terrain_cell_to_world(void* context,
+                                                  void* entity, int mode)
+{
+    (void)context;
+    (void)unported_ledger_stubs::
+        ledger_stub_004401b0_TerrainCellToWorldPosition(
+            (EntitySlot*)entity, mode);
+}
+
+static void frame_ui_action_cell_command_02d50(void* context, int x, int y)
+{
+    (void)context;
+    (void)kind_nine_cell_command_issue(x, y, 0);
+}
+
+static void frame_ui_action_cell_command_02fb0(void* context, int x, int y)
+{
+    (void)context;
+    cell_command_type11_issue(x, y);
+}
+
+static void frame_ui_action_mode_request(void* context, int mode,
+                                         int argument)
+{
+    (void)context;
+    (void)argument;
+    command_context_post_to_hud(mode, NULL);
+}
+
+static void frame_ui_action_input_request(void* context, int kind,
+                                           void* entity, int argument_a,
+                                           int argument_b)
+{
+    int pair[2];
+    (void)context;
+    pair[0] = argument_a;
+    pair[1] = argument_b;
+    cmd_produce(kind, entity, argument_a, pair);
+}
+
+static void frame_ui_action_map_request(void* context, int action, int mode,
+                                         int x, int y)
+{
+    int pair[2];
+    (void)context;
+    pair[0] = x;
+    pair[1] = y;
+    cmd_produce(action, NULL, mode, pair);
+}
+
+static void frame_ui_action_selection_clear(void* context)
+{
+    (void)context;
+    selection_clear_request_and_hud_reset();
+}
+
+static void frame_ui_action_helper_00452be0(void* context)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    if (state != NULL && state->game != NULL) selection_clear(state->game);
+}
+
+static void frame_ui_action_entity_kind_command(void* context, void* entity)
+{
+    (void)context;
+    entity_kind_command_issue((EntitySlot*)entity);
+}
+
+static void frame_ui_action_entity_flag_80000000(void* context, void* entity,
+                                                  int set)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    if (state != NULL && state->game != NULL)
+        entity_flag80000000_set_or_clear(state->game,
+            (EntitySlot*)entity, set);
+}
+
+static void frame_ui_action_conditional_task_schedule(void* context,
+                                                       void* entity)
+{
+    (void)context;
+    entity_conditional_task_schedule((EntitySlot*)entity);
+}
+
+static void* frame_ui_action_record_find(void* context, void* entity,
+                                          int mode, int mask)
+{
+    (void)context;
+    if (mode != 0) return NULL;
+    return unported_ledger_stubs::
+        ledger_stub_00438e50_SpatialObjectQueryCenterMask100(
+            (const EntitySlot*)entity, NULL, (uint32_t)mask);
+}
+
+static void frame_ui_action_record_apply(void* context, void* record,
+                                          int mask, int enabled)
+{
+    (void)context;
+    if (record != NULL)
+        task_type23_create_for_category_mask((EntitySlot*)record, mask,
+                                             enabled);
+}
+
+static void frame_ui_action_object_command_task_create(void* context,
+                                                        void* entity,
+                                                        int mode)
+{
+    (void)context;
+    unported_ledger_stubs::ledger_stub_00403320_ObjectCommandTaskCreate(
+        (EntitySlot*)entity, mode);
+}
+
+static void frame_ui_action_entity_field_f6_clear(void* context,
+                                                   void* entity)
+{
+    (void)context;
+    if (entity != NULL)
+        ((EntitySlot*)entity)->activity_counter_3d8 = 0.0f;
+}
+
+static int frame_ui_action_cursor_action_rejected(void* context, int first,
+                                                   int second, int mode)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    return input_binding_pressed_get(state != NULL ? state->engine : NULL,
+                                     first, second, mode);
+}
+
+static void frame_ui_action_coordinate_validate(void* context, int x, int y)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    if (state != NULL && state->level != NULL)
+        (void)level_coord_pair_within_bounds(state->level, x, y);
+}
+
+static void frame_ui_action_cell_mask_clear(void* context, int x, int y,
+                                             uint32_t mask)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    uint8_t* voxel;
+    uint32_t flags;
+    if (state == NULL || state->level == NULL) return;
+    voxel = level_voxel(state->level, x, y);
+    if (voxel == NULL) return;
+    memcpy(&flags, voxel + 8, sizeof(flags));
+    flags &= ~mask;
+    memcpy(voxel + 8, &flags, sizeof(flags));
+    terrain_cell_changed_flag_set(state->level->ptr_terrain, x, y);
+}
+
+static void frame_ui_action_cell_update(void* context, int x, int y)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    if (state != NULL && state->level != NULL)
+        level_cell_init_pass(state->level, x, (uint32_t)y);
+}
+
+static void frame_ui_action_terrain_descriptor_reset(void* context,
+                                                      int x, int y)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    int cell_xy[2];
+    if (state == NULL || state->level == NULL) return;
+    cell_xy[0] = x;
+    cell_xy[1] = y;
+    unported_ledger_stubs::ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
+        cell_xy);
+}
+
+static void frame_ui_action_global_flags_clear(void* context)
+{
+    (void)context;
+    global_state_low_byte_clear_and_refresh();
+}
+
+static void frame_ui_action_selection_group_clear(void* context)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    if (state != NULL && state->game != NULL) selection_clear(state->game);
+}
+
+static void frame_ui_action_cursor_request(void* context, int action,
+                                            int value)
+{
+    (void)context;
+    (void)interface_spawn_request_enqueue(action, (uint32_t)value);
+}
+
+static void frame_ui_action_building_upgrade_commit(void* context,
+                                                    void* entity)
+{
+    (void)context;
+    building_upgrade_commit((EntitySlot*)entity);
+}
+
+static void frame_ui_action_complete(void* context, int action, int cell_x,
+                                    int cell_y)
+{
+    FramePointerDispatchContext* frame =
+        (FramePointerDispatchContext*)context;
+    UiActionDispatchState* state;
+    int result;
+    if (frame == NULL || frame->ui_action_state == NULL) return;
+    state = frame->ui_action_state;
+    state->current_mode = (int)objective_selection_word_peek();
+    state->selected_cell_x = cell_x;
+    state->selected_cell_y = cell_y;
+    state->cursor_action_x = (int)cursor_tile_pair_peek(0);
+    state->cursor_action_y = (int)cursor_tile_pair_peek(1);
+    state->action_flags = global_state_low_word_get();
+    state->cursor_flags = terrain_choice_flags_peek();
+    tutorial_nerp_pointer_release_record(action, cell_x, cell_y);
+    ui_action_dispatch_state_install(state);
+    result = ui_action_dispatch(action);
+    global_state_low_word_set(state->action_flags);
+    terrain_choice_flags_set(state->cursor_flags);
+    ui_action_dispatch_state_install(NULL);
+    media_action_feedback_sound_dispatch(result == 0 ? 1 : 0);
+}
+
+static void frame_tutorial_script_dispatch(float delta, void* context)
+{
+    (void)context;
+    tutorial_frame_timer_array_advance(delta);
+    tutorial_script_command_dispatch(delta);
+}
+
+static int frame_pointer_overlay_hit(void* context, float x, float y,
+                                     float offset_x, float offset_y,
+                                     uint32_t* action_out,
+                                     uint32_t* cell_x_out,
+                                     uint32_t* cell_y_out)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    GameContext* game;
+    LevelState* level;
+    EntitySlot* entity;
+    float cell_x;
+    float cell_y;
+    int mouse_x;
+    int mouse_y;
+    int on_terrain;
+    (void)offset_x;
+    (void)offset_y;
+    if (state == NULL || state->game == NULL || state->level == NULL ||
+        action_out == NULL || cell_x_out == NULL || cell_y_out == NULL)
+        return 0;
+    game = state->game;
+    level = state->level;
+    mouse_x = (int)x;
+    mouse_y = (int)y;
+    cell_x = 0.0f;
+    cell_y = 0.0f;
+    entity = level_scene_pick_entity(game, level, state->screen_width,
+                                     state->screen_height, mouse_x, mouse_y,
+                                     30.0f);
+    on_terrain = level_scene_mouse_cell(
+        game, level, state->screen_width, state->screen_height,
+        mouse_x, mouse_y, &cell_x, &cell_y);
+    if (entity == NULL && !on_terrain) return 0;
+    *action_out = 0x49u;
+    if (entity != NULL) {
+        *cell_x_out = (uint32_t)entity->x;
+        *cell_y_out = (uint32_t)entity->y;
+    }
+    else {
+        *cell_x_out = (uint32_t)cell_x;
+        *cell_y_out = (uint32_t)cell_y;
+    }
+    return 1;
+}
 
 void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks)
 {
@@ -49,26 +778,29 @@ void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks)
     }
 }
 
-/* MainLoopFramePump (FUN_00477f30): preserve the reference dispatch order,
- * begin rendering once per frame, and clear the begin guard after frame end. */
-void main_loop_frame_pump(int mode_transition)
+/* MainLoopFramePump (FUN_00477f30): drain messages, poll input, sample the
+ * cursor, begin/present one renderer frame, optionally submit the projection
+ * overlay, then clear the once-per-frame feature bit. The outer portable
+ * frame loop owns its own event/tick/draw sequence and does not call this
+ * helper recursively. */
+// FUNCTION: LEGORR 0x00477f30
+void main_loop_frame_pump(int draw_projection_overlay)
 {
     MainLoopFramePumpHooks* const hooks = &s_main_loop_frame_pump_hooks;
     if (hooks->window_messages != NULL)
         hooks->window_messages(hooks->context);
-    if (hooks->timer_and_task_updates != NULL)
-        hooks->timer_and_task_updates(hooks->context);
-    if (hooks->deferred_work != NULL)
-        hooks->deferred_work(hooks->context);
-    if (!s_main_loop_renderer_frame_started) {
-        if (hooks->renderer_begin != NULL)
-            hooks->renderer_begin(hooks->context);
-        s_main_loop_renderer_frame_started = 1;
-    }
-    if (hooks->frame_end != NULL) hooks->frame_end(hooks->context);
-    if (mode_transition != 0 && hooks->mode_transition != NULL)
-        hooks->mode_transition(hooks->context, 0, 0);
-    s_main_loop_renderer_frame_started = 0;
+    if (hooks->input_poll != NULL)
+        hooks->input_poll(hooks->context);
+    input_cursor_position_update();
+    if (hooks->renderer_begin != NULL)
+        hooks->renderer_begin(hooks->context);
+    else
+        (void)renderer_begin_frame_once();
+    if (hooks->renderer_present != NULL)
+        hooks->renderer_present(hooks->context);
+    if (draw_projection_overlay != 0 && hooks->projection_overlay != NULL)
+        hooks->projection_overlay(hooks->context, 0, 0);
+    renderer_begin_frame_once_reset();
 }
 
 void window_runtime_ops_set(const WindowRuntimeOps* ops)
@@ -128,11 +860,12 @@ const WindowRuntimeState* window_runtime_state_get(void)
 void window_runtime_state_initialize(void* window)
 {
     memset(&s_window_runtime_state, 0, sizeof(s_window_runtime_state));
+    renderer_word_c_set(0u);
     s_window_runtime_state.window = window;
 }
 
 // FUNCTION: LEGORR 0x00477f80
-void window_runtime_display_caps_query_discard(void)
+void window_runtime_display_caps_query(void)
 {
     if (s_window_runtime_ops.device_caps_query != NULL) {
         (void)s_window_runtime_ops.device_caps_query(
@@ -140,6 +873,7 @@ void window_runtime_display_caps_query_discard(void)
     }
 }
 
+// FUNCTION: LEGORR 0x00477fd0
 int window_runtime_callback_triplet_set(const size_t* triplet)
 {
     if (triplet == NULL) return 0;
@@ -160,26 +894,32 @@ int window_runtime_callback_triplet_get(size_t triplet[3])
     return 1;
 }
 
-int window_runtime_message_filter(uint32_t message)
+// FUNCTION: LEGORR 0x00478010
+int window_runtime_message_dispatch_filter(const void* message)
 {
+    uint32_t message_id;
+    if (message == NULL) return 1;
+    memcpy(&message_id, (const char*)message + 4, sizeof(message_id));
     if ((s_window_runtime_state.flags & 2u) != 0u &&
-        (message == 0x1cu || message == 0x104u || message == 0x105u)) {
+        (message_id == 0x1cu || message_id == 0x104u ||
+         message_id == 0x105u)) {
         return 0;
     }
     return 1;
 }
 
 // FUNCTION: LEGORR 0x00478310
-int window_runtime_adjust_rect(WindowPortRect* rect)
+void window_runtime_adjust_rect(WindowPortRect* rect)
 {
-    if (rect == NULL) return 0;
+    if (rect == NULL) return;
+    /* Retail adjusts a windowed rectangle using the saved style and a false
+     * menu flag. Fullscreen leaves all four coordinates untouched. */
     if ((s_window_runtime_state.flags & 2u) == 0u &&
         s_window_runtime_ops.adjust_window_rect != NULL) {
-        return s_window_runtime_ops.adjust_window_rect(
+        (void)s_window_runtime_ops.adjust_window_rect(
             s_window_runtime_ops.context, rect,
             s_window_runtime_state.window_style, 0);
     }
-    return 1;
 }
 
 static ptrdiff_t window_runtime_default(void* window, uint32_t message,
@@ -209,11 +949,12 @@ static void window_runtime_release_capture(void)
     s_window_runtime_state.mouse_capture = 0;
 }
 
+// FUNCTION: LEGORR 0x004784c0
 ptrdiff_t window_runtime_game_window_proc(void* window, uint32_t message,
                                           size_t wparam, ptrdiff_t lparam)
 {
     WindowRuntimeState* state = &s_window_runtime_state;
-    if (message == 2u || message == 0x10u || message == 0x12u) {
+    if (message == 2u || message == 0x10u) {
         state->close_requested = 1;
     }
     if (message == 0x1cu) {
@@ -227,7 +968,8 @@ ptrdiff_t window_runtime_game_window_proc(void* window, uint32_t message,
         }
         return 0;
     }
-    if (message == 0x86u || message == 0x100u || message == 0x101u ||
+    if (message == 3u || message == 5u || message == 6u ||
+        message == 0x86u || message == 0x100u || message == 0x101u ||
         message == 0x104u || message == 0x200u || message == 0x211u ||
         message == 0x212u) {
         return 0;
@@ -238,39 +980,58 @@ ptrdiff_t window_runtime_game_window_proc(void* window, uint32_t message,
         int right = message == 0x204u || message == 0x205u;
         if ((state->flags & 0x4000u) == 0u) {
             if (down) {
-                if (state->mouse_capture == 0u) {
-                    state->left_button_down = 1;
-                    state->right_button_down = 1;
+                if (state->mouse_word_3c == 0u) {
+                    state->mouse_word_4c = 1u;
+                    state->mouse_word_50 = 1u;
                 }
-                if (right) state->right_button_down = 1;
-                else state->left_button_down = 1;
-                state->mouse_activity = 1;
-                state->mouse_capture = 1;
+                state->mouse_word_40 = 1u;
+                state->mouse_word_3c = 1u;
+                state->mouse_word_54 = 1u;
+                state->left_button_down = 1u;
+                state->right_button_down = 1u;
+                state->mouse_activity = 1u;
                 return 0;
             }
+            state->mouse_word_4c = 0u;
+            state->mouse_word_50 = 0u;
+            state->mouse_word_40 = 0u;
+            state->mouse_word_3c = 0u;
+            state->mouse_word_54 = 1u;
             state->left_button_down = 0;
             state->right_button_down = 0;
-            state->mouse_activity = 0;
-            state->mouse_capture = 0;
+            state->mouse_activity = 1u;
+            return 0;
         }
         else {
-            if (right) state->right_button_down = down != 0;
-            else state->left_button_down = down != 0;
-            state->mouse_activity = 1;
+            if (right) {
+                state->mouse_word_50 = down != 0 ? 1u : 0u;
+                state->mouse_word_40 = down != 0 ? 1u : 0u;
+                state->right_button_down = down != 0 ? 1u : 0u;
+            }
+            else {
+                state->mouse_word_4c = down != 0 ? 1u : 0u;
+                state->mouse_word_3c = down != 0 ? 1u : 0u;
+                state->left_button_down = down != 0 ? 1u : 0u;
+            }
             return 0;
         }
     }
     if (message == 0x203u) {
         state->left_double_click = 1;
+        state->mouse_activity = 1u;
+        state->mouse_word_54 = 1u;
         return 0;
     }
     if (message == 0x206u) {
         state->right_double_click = 1;
+        state->mouse_activity = 1u;
+        state->mouse_word_58 = 1u;
         return 0;
     }
     return window_runtime_default(window, message, wparam, lparam);
 }
 
+// FUNCTION: LEGORR 0x004786c0
 ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
                                                size_t wparam,
                                                ptrdiff_t lparam)
@@ -289,11 +1050,13 @@ ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
     if (message == 0x203u) {
         state->mouse_activity = 1;
         state->left_double_click = 1;
+        state->mouse_word_54 = 1u;
         return 0;
     }
     if (message == 0x206u) {
         state->mouse_activity = 1;
         state->right_double_click = 1;
+        state->mouse_word_58 = 1u;
         return 0;
     }
     if (message >= 0x201u && message <= 0x205u) {
@@ -303,59 +1066,160 @@ ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
             int right = button == 3 || button == 4;
             if ((state->flags & 0x4000u) == 0u) {
                 if (down) {
-                    int was_captured = state->mouse_capture != 0u;
                     window_runtime_capture(window);
-                    if (!was_captured) {
-                        state->left_button_down = 1;
-                        state->right_button_down = 1;
+                    if (state->mouse_word_3c == 0u) {
+                        state->mouse_word_4c = 1u;
+                        state->mouse_word_50 = 1u;
                     }
+                    state->mouse_word_40 = 1u;
+                    state->mouse_word_3c = 1u;
+                    state->mouse_word_54 = 1u;
                     state->left_button_down = 1;
                     state->right_button_down = 1;
                     state->mouse_activity = 1;
                     return 0;
                 }
                 window_runtime_release_capture();
+                state->mouse_word_4c = 0u;
+                state->mouse_word_50 = 0u;
+                state->mouse_word_40 = 0u;
+                state->mouse_word_3c = 0u;
+                state->mouse_word_54 = 1u;
                 state->left_button_down = 0;
                 state->right_button_down = 0;
-                state->mouse_activity = 0;
+                state->mouse_activity = 1u;
+                return 0;
             }
             else {
                 if (button == 0) {
                     window_runtime_capture(window);
+                    state->mouse_word_4c = 1u;
+                    state->mouse_word_3c = 1u;
+                    state->mouse_word_54 = 1u;
                     state->left_button_down = 1;
                     state->mouse_activity = 1;
                     return 0;
                 }
                 if (button == 1) {
                     window_runtime_release_capture();
+                    state->mouse_word_54 = 1u;
+                    state->mouse_word_4c = 0u;
+                    state->mouse_word_3c = 0u;
                     state->mouse_activity = 1;
                     state->left_button_down = 0;
                     return 0;
                 }
-                if (right) state->right_button_down = down != 0;
+                if (right) {
+                    state->mouse_word_50 = down != 0 ? 1u : 0u;
+                    state->mouse_word_40 = down != 0 ? 1u : 0u;
+                    state->right_button_down = down != 0 ? 1u : 0u;
+                }
+                state->mouse_word_54 = 1u;
                 state->mouse_activity = 1;
                 return 0;
             }
         }
     }
-    if (message == 0x10u || message == 2u) state->close_requested = 1;
     return window_runtime_default(window, message, wparam, lparam);
 }
 
 /* WindowTitleSet (FUN_004783d0): forwards the title to the active platform
- * window. The native backend owns the SDL window; winapi's window seam is
- * still a stub, so its adapter currently ignores this request. */
+ * window; the native and WinAPI adapters both update their owned window. */
 // FUNCTION: LEGORR 0x004783d0
 void window_title_set(const char* title)
 {
     platform_set_window_title(title);
 }
-#include "message.hpp"
-#include "game/util.hpp"
+static void* frame_camera_target_indexed_scene_resolve(
+    void* source, uint32_t target_id, uint32_t* component_present)
+{
+    EntitySlot* entity = (EntitySlot*)source;
+    EntityActivityRunnerSidecar* runner;
+    void* scene_object;
+    if (component_present != NULL) *component_present = 0u;
+    if (entity == NULL) return NULL;
+    if (entity->type == 1) {
+        return entity_type1_scene_resource_indexed_get(
+            entity, target_id, component_present);
+    }
+    if ((entity->type != 2 && entity->type != 3) ||
+        !entity_activity_runner_type_config_bind(entity)) return NULL;
+    runner = entity->type == 2 ? &entity->activity_runner_type2
+                               : &entity->activity_runner_type3;
+    if (component_present != NULL)
+        *component_present = runner->component_gate_value == 1u ? 1u : 0u;
+    scene_object = entity_activity_runner_indexed_get(entity, entity->type,
+                                                       target_id);
+    return scene_object;
+}
 
-#define WINDOW_W 640
-#define WINDOW_H 480
-#define FRAME_MS 33 /* ~30 fps */
+static void frame_camera_target_registry_update(EngineContext* engine,
+                                               GameContext* game)
+{
+    EngineCameraTargetRecord previous[10];
+    uint32_t count = 0u;
+    uint32_t i;
+    if (engine == NULL) return;
+    memcpy(previous, engine->camera_targets, sizeof(previous));
+    memset(engine->camera_targets, 0, sizeof(engine->camera_targets));
+    if (game != NULL && game->level != NULL)
+        count = object_pointer_registry_count_get();
+    if (count > 10u) count = 10u;
+    for (i = 0u; i < count; ++i) {
+        EntitySlot* entity = object_pointer_registry_entity_get(i);
+        EngineCameraTargetRecord* target = &engine->camera_targets[i];
+        float xy[2];
+        float angle;
+        if (entity == NULL) continue;
+        if (entity->type < 1 || entity->type > 3) continue;
+        target->type = (uint32_t)entity->type;
+        target->source[entity->type - 1] = entity;
+        if (entity->type == 2 || entity->type == 3) {
+            (void)entity_activity_runner_type_config_bind(entity);
+            target->indexed_scene_resolve =
+                frame_camera_target_indexed_scene_resolve;
+            target->cache_id = previous[i].type == target->type &&
+                               previous[i].source[entity->type - 1] == entity
+                ? previous[i].cache_id : -1;
+            continue;
+        }
+        if (entity_type1_scene_resource_bind(entity)) {
+            target->indexed_scene_resolve =
+                frame_camera_target_indexed_scene_resolve;
+        }
+        target->scene_cache = entity->attached_scene_object;
+        target->cache_id = previous[i].type == target->type &&
+                           previous[i].source[entity->type - 1] == entity &&
+                           previous[i].scene_cache == target->scene_cache
+            ? previous[i].cache_id : -1;
+        entity_transform_position_get(entity, xy);
+        target->position[0] = xy[0];
+        target->position[1] = xy[1];
+        target->position[2] = entity->z;
+        if (target->scene_cache != NULL) {
+            float scene_position[3];
+            if (ddiscene_object_position_get(target->scene_cache, NULL,
+                                             scene_position)) {
+                memcpy(target->position, scene_position,
+                       sizeof(scene_position));
+            }
+        }
+        angle = entity->rot;
+        target->facing[0] = cosf(angle);
+        target->facing[1] = sinf(angle);
+        target->facing[2] = 0.0f;
+        if (target->scene_cache != NULL) {
+            float scene_facing[3];
+            if (ddiscene_object_facing_get(target->scene_cache, NULL,
+                                           scene_facing)) {
+                memcpy(target->facing, scene_facing, sizeof(scene_facing));
+            }
+        }
+        target->component_present = 0u;
+    }
+    engine->camera_target_count = count;
+}
+#include "game/util.hpp"
 
 static const char* env_get(const char* name, const char* fallback)
 {
@@ -383,7 +1247,11 @@ static void frameloop_game_context_dispose(GameContext* game)
         return;
     }
     checkpoint_blob_free(game);
+    mission_reward_resources_release(game);
     free(game->records);
+    tutorial_runtime_context_set(NULL, NULL, NULL);
+    engine_tutorial_dispatch_hook_set(NULL, NULL);
+    (void)tutorial_display_resources_release();
     level_destroy(game->level);
     block_close(game->cfg);
 }
@@ -401,11 +1269,10 @@ static const char* menu_music_resource(BlockFile* cfg)
 }
 
 /* Held-key probe for the executor's cheat-keybind pre-pass (finding 06):
- * reads the current frame's input tables. */
-static const InputState* s_demo_input = NULL;
+ * reads the backend's current keyboard snapshot, not the frame-edge table. */
 static int demo_keyheld(int key)
 {
-    return s_demo_input != NULL ? input_key_down(s_demo_input, key) : 0;
+    return input_keyboard_key_held(key);
 }
 
 /* Message-bus demo hooks (finding 22 §1): incidents dispatch a per-id
@@ -646,6 +1513,7 @@ static int movie_play_avi_rect(const char* os_path, const char* label,
 
 /* CreditsTextFile + CreditsBackAVI: scroll centered text over the configured
  * AVI until the player presses a key or clicks. */
+// FUNCTION: LEGORR 0x0040a0c0
 static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
                               BlockFile* cfg, const char* wad_dir,
                               AudioPlayer* ap, int audio_status, int* quit,
@@ -700,6 +1568,7 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
         PlatformEvent evbuf[32];
         int nev = platform_pump_events(win, evbuf, 32);
         input_capture_events(&input, evbuf, nev);
+        renderer_word_c_set(input.mouse_down != 0 ? 1u : 0u);
         input_cursor_position_update();
         input_cursor_position_sync(&input);
         for (int i = 0; i < nev; ++i) {
@@ -768,6 +1637,9 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
             platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
             surface_unlock(surf, pixels);
         }
+        /* ScrollingTextDisplay calls SoundSubsystemFrameTick after its
+         * text/video draw and before the next frame boundary. */
+        sound_subsystem_frame_tick(1.0f);
         if (audio_status == 0) {
             audio_update(ap);
         }
@@ -816,16 +1688,19 @@ static void frameloop_load_level(FILE* log, const char* wad_dir,
                 }
             }
         }
-        /* Mission plumbing (finding 09/10): seed the 10-task table +
-         * reward screen from the level's Reward group, then place the
-         * `.ol` object list into the entity tables. */
+        level_no_gather_config_setup(game->cfg, level_name);
+        /* Mission plumbing (finding 09/10): seed the 10-task table and
+         * reward screen from the level's Reward group. LevelLoad has already
+         * parsed the `.ol` object list. */
         mission_task_init(game, game->cfg, level_name);
         mission_reward_init(game, game->cfg, level_name);
-        int placed = object_list_load(game, game->cfg, level_name);
+        /* Retail StartLevelSelected snapshots the type-4 name list and Pilot
+         * count after the level object list has populated the entity tables. */
+        start_level_selected(game);
         fprintf(log, "frameloop: mission tasks seeded, %s, %d object(s) "
                      "placed, crystal quota=%d\n",
                 game->cfg != NULL ? "reward config ok" : "no cfg",
-                placed, game->crystal_quota);
+                game->entity_placed, game->crystal_quota);
     } else {
         fprintf(log, "frameloop: level %s load FAILED (maps/config missing)\n",
                 level_name);
@@ -1195,8 +2070,8 @@ int LegorrrRun(void)
         log = stderr;
     }
 
-    int mounted = resource_mount(wad_dir, resource_get_wad_prefix());
     resource_set_cd_root(wad_dir);
+    int mounted = resource_mount(wad_dir, resource_get_wad_prefix());
     fprintf(log, "frameloop: mounted %d wad(s) from %s\n", mounted, wad_dir);
     if (mounted == 0) {
         if (log != stderr) {
@@ -1229,11 +2104,24 @@ int LegorrrRun(void)
     cmd_context_set(&game);
     game.cfg = block_open("Lego.cfg");
     if (game.cfg != NULL) {
+        engine_render_poly_ranges_set(
+            block_get_float(game.cfg, "Lego* Main MedPolyRange", 0.0f),
+            block_get_float(game.cfg, "Lego* Main HighPolyRange", 0.0f));
+        /* GameConfigInit loads HUD config before the later bubble and font
+         * resource passes. */
+        bubble_config_global_flags_set(engine_feature_word_peek());
+        (void)lego::upgrade_types_load(game.cfg);
         entity_names_config_load(game.cfg);
         if (block_get_bool(game.cfg, "HelpWindow::HelpWindowOn") == 1) {
             help_window_resources_init(game.cfg, NULL);
         }
+        frontend_hud_runtime_install();
+        frontend_render_three_pass_update(game.cfg, game.cfg);
+        (void)light_effect_waypoint_config_load(game.cfg, "Lego*");
+        bubble_config_texture_load(game.cfg);
+        preload_numbered_bitmaps("Interface\\FONTS\\HealthFont", "a000_");
         tooltip_icons_config_load(game.cfg);
+        lego::level_upgrade_name_strings_load(game.cfg);
         /* InfoMessages section -> per-id bus sounds (finding 22 §1). */
         message_load_infomessages(game.cfg);
     }
@@ -1244,6 +2132,7 @@ int LegorrrRun(void)
     EngineState state = { 0 };
     InputState  input = { 0 };
     input_reset(&input);
+    input_direct_state_bind(&input);
     /* The three view contexts (DAT_005560e4/e8/ec): free/cruise cameras with
      * a glide step; the demo has no world yet, so they tick quietly. */
     ViewContext views[3] = { 0 };
@@ -1260,6 +2149,8 @@ int LegorrrRun(void)
         NULL, /* level_terrain */
         0.0f, 1.0f, 0,
     };
+    tutorial_runtime_context_set(&game, &ctx, &input);
+    engine_tutorial_dispatch_hook_set(frame_tutorial_script_dispatch, NULL);
     /* Engine <-> level binding happens after the front end below — the level
      * loads only once the player picks one — so ctx.level_block/voxels/
      * terrain are bound there, not here. */
@@ -1298,6 +2189,7 @@ int LegorrrRun(void)
         }
         return 2;
     }
+    surface_active_render_target_set(&surf);
 
     /* Real corpus textures through the merged texture loader. */
     TextureSurface* rock = texture_get_or_load(NULL,
@@ -1312,7 +2204,21 @@ int LegorrrRun(void)
     /* Audio: open the DirectSound-analog surface + play a real corpus wav. */
     AudioPlayer ap = { 0 };
     audio_system_player_set(&ap);
+#if defined(LEGORRR_BACKEND_WINAPI)
+    /* CDAudioDeviceStateUpdate is the retail startup bridge: it records the
+     * DirectSound availability gate before invoking DirectSoundSystemInit.
+     * That gate enables the later MCI CD-audio calls on WinAPI. */
+    (void)media_cd_audio_device_state_update(0);
+#else
     audio_system_init(platform_window_hwnd(win));
+#endif
+    if (game.cfg != NULL) {
+        /* GameConfigInit loads the Samples aliases after enabling the sound
+         * bank. This portable startup has the Lego.cfg tree ready earlier,
+         * so load the same section once the audio backend opens. */
+        sound_samples_config_load(game.cfg, 1);
+        advisor_tooltip_and_sound_config_load(game.cfg);
+    }
     int audio_status = sound_bank_sound_on() ? 0 : -1;
     int sfx_frames = 0;
     if (audio_status == 0) {
@@ -1346,6 +2252,34 @@ int LegorrrRun(void)
     int thumb_slot = -1;   /* pending `.dat` thumbnail dump (see below) */
     int quit = 0;
     const char* stop = "closed";
+    RewardFramePumpContext reward_frame;
+    RewardScreenOps reward_ops;
+    memset(&reward_frame, 0, sizeof(reward_frame));
+    memset(&reward_ops, 0, sizeof(reward_ops));
+    reward_frame.window = win;
+    reward_frame.surface = &surf;
+    reward_frame.game = &game;
+    reward_frame.input = &input;
+    reward_frame.audio = audio_status == 0 ? &ap : NULL;
+    reward_frame.frontend = &fe;
+    reward_frame.log = log;
+    reward_frame.frames = &frames;
+    reward_frame.frame_cap = frame_cap;
+    reward_frame.quit = &quit;
+    reward_frame.stop = &stop;
+    reward_ops.context = &reward_frame;
+    reward_ops.time_get_ms = reward_frame_time_get;
+    reward_ops.save_button_check = reward_save_button_check;
+    reward_ops.loop_should_abort = reward_frame_loop_abort;
+    reward_ops.reward_zone_check = reward_zone_dispatch;
+    reward_ops.task_visual_draw = reward_task_visual_queue;
+    reward_ops.task_text_draw = reward_task_text_queue;
+    reward_ops.score_text_draw = reward_score_text_queue;
+    reward_ops.reward_stats_draw = reward_stats_result_queue;
+    reward_ops.frame_pump = reward_frame_pump;
+    /* mission_reward_init creates and binds its default state after level
+     * load; preinstall the live frame operations so that state inherits them. */
+    reward_screen_runtime_bind(NULL, &reward_ops);
 
     /* --- Boot movies (finding 14 §4 + finding 23 callbacks) ----------------
      * The corpus's boot hub (FUN_0041fb50) plays the LMI logo (`LegoAvi`)
@@ -1434,6 +2368,7 @@ int LegorrrRun(void)
             }
             slots[sn].id = s;
             slots[sn].present = filled > 0;
+            slots[sn].completed = completed;
             sn++;
         }
         frontend_build_slots(&fe, slots, sn);
@@ -1455,6 +2390,8 @@ int LegorrrRun(void)
         menu_enter(&fe, 0);
         fprintf(log, "frameloop: front end up — main menu (arrows select, "
                      "Enter/Space act, Esc quits)\n");
+        MenuSoundTickClock menu_sound_clock;
+        menu_sound_tick_clock_init(&menu_sound_clock);
         while (!quit) {
             PlatformEvent evbuf[32];
             int nev = platform_pump_events(win, evbuf, 32);
@@ -1577,6 +2514,10 @@ int LegorrrRun(void)
                                   audio_status, &quit, log, &frames);
             }
 
+            /* MenuRunLoop drains/rotates deferred aliases after menu logic
+             * and before its frame pump. This preserves the one-frame queue
+             * boundary for FLIC and menu sound requests. */
+            sound_subsystem_frame_tick(menu_sound_clock.dt);
             frameloop_menu_render(win, &surf, &fe, hi_font, lo_font, &game,
                                   (int)frames);
             if (audio_status == 0) {
@@ -1584,6 +2525,7 @@ int LegorrrRun(void)
             }
             Sleep((DWORD)FRAME_MS);
             ++frames;
+            menu_sound_tick_clock_advance(&menu_sound_clock);
             input_begin_frame(&input);
         }
     }
@@ -1655,6 +2597,10 @@ int LegorrrRun(void)
     }
 
     const float dt = 1.0f / 30.0f;
+    LevelState* pointer_dispatch_level = NULL;
+    int pointer_dispatch_previous_down = 0;
+    LevelState* reward_tick_level = NULL;
+    int reward_tick_started = 0;
     /* Game Speed (issue #85): options_scale_frame stamps the store's factor
      * into ctx.time_scale (EngineTick's subsystem tickers) and returns the
      * scaled dt for the game-layer tickers (ai/objective). */
@@ -1719,6 +2665,8 @@ int LegorrrRun(void)
          * opens the slot picker, consume frames here until a slot is saved or
          * the user backs out. The level sim remains paused under the menu. */
         if (fe.open && fe.save_action) {
+            MenuSoundTickClock save_sound_clock;
+            menu_sound_tick_clock_init(&save_sound_clock);
             const FeSubmenu* fs = frontend_active_submenu(&fe);
             TextureSurface* hi_font = fs != NULL && fs->hifont[0] != '\0'
                                           ? texture_get_or_load(NULL, fs->hifont)
@@ -1752,6 +2700,7 @@ int LegorrrRun(void)
                     memset(&saved_slot, 0, sizeof(saved_slot));
                     saved_slot.id = fe.load_slot;
                     saved_slot.present = filled > 0;
+                    saved_slot.completed = completed;
                     snprintf(saved_slot.label, sizeof(saved_slot.label),
                              "Save Game %d", fe.load_slot);
                     if (resume >= 0) {
@@ -1774,6 +2723,7 @@ int LegorrrRun(void)
                 fprintf(log, "frameloop: reward checkpoint saved to slot %d\n",
                         fe.load_slot);
             }
+            sound_subsystem_frame_tick(save_sound_clock.dt);
             if (fe.open) {
                 frameloop_menu_render(win, &surf, &fe, hi_font, lo_font,
                                       &game, (int)frames);
@@ -1783,6 +2733,7 @@ int LegorrrRun(void)
             }
             Sleep((DWORD)FRAME_MS);
             ++frames;
+            menu_sound_tick_clock_advance(&save_sound_clock);
             input_begin_frame(&input);
             continue;
         }
@@ -1802,6 +2753,8 @@ int LegorrrRun(void)
             fprintf(log, "frameloop: paused (Continue / Options / Restart / "
                          "Quit)\n");
             int want_reload = 0;
+            MenuSoundTickClock pause_sound_clock;
+            menu_sound_tick_clock_init(&pause_sound_clock);
             while (fe.open && !quit) {
                 PlatformEvent pev[32];
                 int pn = platform_pump_events(win, pev, 32);
@@ -1892,10 +2845,12 @@ int LegorrrRun(void)
                     want_reload = 1;
                     break;
                 }
+                sound_subsystem_frame_tick(pause_sound_clock.dt);
                 frameloop_menu_render(win, &surf, &fe, hi_font, lo_font,
                                       &game, (int)frames);
                 Sleep((DWORD)FRAME_MS);
                 ++frames;
+                menu_sound_tick_clock_advance(&pause_sound_clock);
                 input_begin_frame(&input);
             }
             if (want_reload && !quit) {
@@ -1903,6 +2858,7 @@ int LegorrrRun(void)
                 fprintf(log, "frameloop: restarting level %s\n", level_name);
                 level_destroy(game.level);
                 game.level = NULL;
+                pointer_dispatch_level = NULL;
                 frameloop_load_level(log, wad_dir, play_movies, win, &surf,
                                      &ap, audio_status, &quit, &game, &ctx,
                                      views, level_name);
@@ -2002,7 +2958,116 @@ int LegorrrRun(void)
          * selection there, 'n' clears. Commands are produced into the
          * double-buffered queue and dispatched by cmd_queue_tick below. */
         if (game.level != NULL) {
-            s_demo_input = &input;
+            FramePointerDispatchContext pointer_context;
+            SimulationPointerDispatchOps pointer_ops;
+            UiActionDispatchOps ui_action_ops;
+            static UiActionDispatchState ui_action_state;
+            if (pointer_dispatch_level != game.level) {
+                /* ObjectiveSelectionStateReset enables the target's 0x4/0x80
+                 * pointer gate. The first inactive dispatch seeds its 0x4a
+                 * action sentinel before hover samples begin. */
+                objective_selection_state_reset();
+                (void)pointer_action_state_dispatch(0, 0, 0, 0, 0);
+                memset(&ui_action_state, 0, sizeof(ui_action_state));
+                pointer_dispatch_level = game.level;
+                pointer_dispatch_previous_down = 0;
+            }
+            pointer_context.game = &game;
+            pointer_context.level = game.level;
+            pointer_context.engine = &ctx;
+            pointer_context.screen_width = WINDOW_W;
+            pointer_context.screen_height = WINDOW_H;
+            pointer_context.ui_action_state = &ui_action_state;
+            memset(&pointer_ops, 0, sizeof(pointer_ops));
+            memset(&ui_action_ops, 0, sizeof(ui_action_ops));
+            pointer_ops.context = &pointer_context;
+            pointer_ops.feature_word = ctx.debug;
+            pointer_ops.overlay_fallback = frame_pointer_overlay_hit;
+            pointer_ops.action_complete = frame_ui_action_complete;
+            ui_action_ops.context = &pointer_context;
+            ui_action_ops.current_selection_get =
+                frame_ui_action_current_selection;
+            ui_action_ops.action_already_held =
+                frame_ui_action_already_held;
+            ui_action_ops.entity_flags_get = frame_ui_action_entity_flags;
+            ui_action_ops.entity_byte_flags_get =
+                frame_ui_action_entity_byte_flags;
+            ui_action_ops.entity_type_get = frame_ui_action_entity_type;
+            ui_action_ops.selected_entity_predicate =
+                frame_ui_action_selected_entity_predicate;
+            ui_action_ops.selected_cell_flags_get =
+                frame_ui_action_cell_flags;
+            ui_action_ops.terrain_cell_command_02510 =
+                frame_ui_action_cell_command_02510;
+            ui_action_ops.terrain_cell_command_03030 =
+                frame_ui_action_cell_command_03030;
+            ui_action_ops.terrain_cell_command_02ae0 =
+                frame_ui_action_cell_refresh_02ae0;
+            ui_action_ops.terrain_cell_to_world_position =
+                frame_ui_action_terrain_cell_to_world;
+            ui_action_ops.terrain_cell_command_02d50 =
+                frame_ui_action_cell_command_02d50;
+            ui_action_ops.terrain_cell_command_02fb0 =
+                frame_ui_action_cell_command_02fb0;
+            ui_action_ops.ui_mode_request = frame_ui_action_mode_request;
+            ui_action_ops.input_request_enqueue =
+                frame_ui_action_input_request;
+            ui_action_ops.selected_map_action_enqueue =
+                frame_ui_action_map_request;
+            ui_action_ops.selection_clear_request_and_hud_reset =
+                frame_ui_action_selection_clear;
+            ui_action_ops.ui_action_helper_00452be0 =
+                frame_ui_action_helper_00452be0;
+            ui_action_ops.entity_kind_command_issue =
+                frame_ui_action_entity_kind_command;
+            ui_action_ops.entity_flag_80000000_set_clear =
+                frame_ui_action_entity_flag_80000000;
+            ui_action_ops.selected_entity_action_02ec0 =
+                frame_ui_action_conditional_task_schedule;
+            ui_action_ops.entity_action_record_find =
+                frame_ui_action_record_find;
+            ui_action_ops.entity_action_record_apply =
+                frame_ui_action_record_apply;
+            ui_action_ops.object_command_task_create =
+                frame_ui_action_object_command_task_create;
+            ui_action_ops.selected_entity_field_f6_clear =
+                frame_ui_action_entity_field_f6_clear;
+            ui_action_ops.cursor_action_rejected =
+                frame_ui_action_cursor_action_rejected;
+            ui_action_ops.selected_map_coordinate_validate =
+                frame_ui_action_coordinate_validate;
+            ui_action_ops.selected_cell_reveal_mask_clear =
+                frame_ui_action_cell_mask_clear;
+            ui_action_ops.terrain_cell_update = frame_ui_action_cell_update;
+            ui_action_ops.terrain_descriptor_tiles_reset_and_free =
+                frame_ui_action_terrain_descriptor_reset;
+            ui_action_ops.global_state_low_byte_clear_and_refresh =
+                frame_ui_action_global_flags_clear;
+            ui_action_ops.selection_group_clear =
+                frame_ui_action_selection_group_clear;
+            ui_action_ops.cursor_action_pair_request =
+                frame_ui_action_cursor_request;
+            ui_action_ops.building_upgrade_commit =
+                frame_ui_action_building_upgrade_commit;
+            ui_action_state.ops = &ui_action_ops;
+            /* MainSimInteractionAndCellUpdate calls 0x41baa0 only after its
+             * 0x100 engine-state and 0x1000 debug-state gates. Its fourth
+             * argument is the previous held state; the fifth is the release
+             * edge used for action counting. Keep this adapter alive only
+             * across the synchronous call because its fallback retains the
+             * stack context. */
+            if ((ctx.state & 0x100u) == 0u &&
+                (ctx.debug & 0x1000u) == 0u) {
+                simulation_pointer_dispatch_ops_set(&pointer_ops);
+                (void)simulation_pointer_action_dispatch(
+                    input.mouse_x, input.mouse_y, input.mouse_down,
+                    pointer_dispatch_previous_down,
+                    pointer_dispatch_previous_down != 0 &&
+                        input.mouse_down == 0,
+                    ctx.views[0]);
+                simulation_pointer_dispatch_ops_set(NULL);
+            }
+            pointer_dispatch_previous_down = input.mouse_down;
             int lw = level_width(game.level);
             int lh = level_height(game.level);
             float cx = 0.0f, cy = 0.0f;
@@ -2014,6 +3079,10 @@ int LegorrrRun(void)
                 cx = lw > 0 ? (float)input.mouse_x / (float)WINDOW_W * (float)lw : 0.0f;
                 cy = lh > 0 ? (float)input.mouse_y / (float)WINDOW_H * (float)lh : 0.0f;
             }
+            /* MainSimInteractionAndCellUpdate calls this dispatcher after
+             * resolving the current cell coordinates, under debug bit 0x10. */
+            level_debug_input_cell_mutator_dispatch(
+                &ctx, &game, &input, (int)cx, (int)cy);
 
             /* Left-click a Raider to select it; click open ground to send
              * the selected group there. Both operations use the rendered
@@ -2082,11 +3151,13 @@ int LegorrrRun(void)
         if (rock_x > WINDOW_W - 64) { rock_x = WINDOW_W - 64; }
         if (rock_y > WINDOW_H - 64) { rock_y = WINDOW_H - 64; }
 
-        /* Mission plumbing: per-frame progress bridge, command-queue
-         * executor, AI receivers, and objective state machine
-         * (findings 09/10/22). */
+        /* Mission plumbing: per-frame progress bridge, AI receivers, and
+         * objective state machine (findings 09/10/22). */
         if (game.level != NULL) {
-            cmd_queue_tick();
+            if (reward_tick_level != game.level) {
+                reward_tick_level = game.level;
+                reward_tick_started = 0;
+            }
             float sdt = options_scale_frame(&game.options, &ctx, dt);
             int ai_done = ai_tick(&game, sdt);
             if (ai_done != 0) {
@@ -2120,7 +3191,21 @@ int LegorrrRun(void)
             /* Reward-screen buttons (finding 09): a real mouse press inside
              * the Save/Advance zone commits the checkpoint. 'b' is the
              * keyboard fallback (headless). */
+            if (!mission_reward_active(&game)) reward_tick_started = 0;
             if (mission_reward_active(&game)) {
+                if (!reward_tick_started) {
+                    /* The enclosing gameplay frame supplied this input
+                     * snapshot already. Start the modal sequence on a fresh
+                     * edge boundary; its pump owns subsequent capture and
+                     * input_begin_frame calls until the task reveal ends. */
+                    input_begin_frame(&input);
+                    reward_tick_started = 1;
+                    (void)reward_screen_tick_bound();
+                    if (reward_frame.zone_action_consumed) {
+                        input_begin_frame(&input);
+                        reward_frame.zone_action_consumed = 0;
+                    }
+                }
                 int hit_save = 0, hit_advance = 0;
                 int clicked = input_mouse_pressed(&input);
                 if (clicked
@@ -2147,7 +3232,9 @@ int LegorrrRun(void)
             }
         }
 
+        frame_camera_target_registry_update(&ctx, &game);
         EngineTick(&ctx, dt);
+        screen_effects_tick(dt);
 
         /* Retail MainLoop calls RendererBeginFrameOnce after the registered
          * per-frame tick callback returns and before its next frame-time
@@ -2229,10 +3316,13 @@ int LegorrrRun(void)
             "exit=%s\n", frames, ctx.state, ctx.tickers_ran, stop);
 
     EngineShutdown(&ctx);
+    reward_screen_runtime_bind(NULL, NULL);
     sound_subsystem_stop_all();
     audio_active_shutdown();
     audio_system_player_set(NULL);
     texture_cache_clear();
+    surface_active_render_target_set(NULL);
+    input_direct_state_bind(NULL);
     surface_destroy(&surf);
     platform_destroy_window(win);
 
@@ -2246,3 +3336,25 @@ int LegorrrRun(void)
     }
     return 0;
 }
+
+namespace unported_ledger_stubs {
+
+// MainLoopFramePump
+void ledger_stub_00477f30_MainLoopFramePump(int draw_projection_overlay)
+{
+    main_loop_frame_pump(draw_projection_overlay);
+}
+
+// DisplayDeviceCapsQueryDiscard
+void ledger_stub_00477f80_DisplayDeviceCapsQueryDiscard()
+{
+    window_runtime_display_caps_query();
+}
+
+// WindowRectAdjustForWindowedMode
+void ledger_stub_00478310_WindowRectAdjustForWindowedMode(WindowPortRect* rect)
+{
+    window_runtime_adjust_rect(rect);
+}
+
+} // namespace unported_ledger_stubs

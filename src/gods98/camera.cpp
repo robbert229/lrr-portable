@@ -134,7 +134,7 @@ static int control_probe(uint32_t mask)
     if (s_control_registry_predicate == NULL) {
         return 0;
     }
-    return entity_flag_mask_callbacks_all_pass(
+    return entity_flag_mask_callbacks_predicate_all_pass(
         game, mask, control_registry_predicate_dispatch, NULL);
 }
 

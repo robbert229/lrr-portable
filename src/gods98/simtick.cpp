@@ -10,11 +10,17 @@
 #include "crt/crt.hpp"
 #include "resource.hpp"
 #include "game/level.hpp"
+#include "game/ai.hpp"
 #include "game/cmd.hpp"
 #include "game/select.hpp"
 #include "game/entity.hpp"
 #include "game/effects.hpp"
 #include "game/render.hpp"
+#include "game/terrain_grid.hpp"
+
+namespace unported_ledger_stubs {
+int ledger_stub_00466490_CellSightRayCheckAndFlag(const EntitySlot* observer);
+}
 
 #define SIMTICK_MUTE_RESET 25.0f
 
@@ -218,6 +224,10 @@ static int post_cluster_entity_second(EntitySlot* entity, void* payload)
 static int scene_entity_callback(EntitySlot* entity, void* payload)
 {
     float dt = *(float*)payload;
+    /* LAB_0043c810 updates live EntitySlot/runner state. Always continue the
+     * pool walk here: its nonzero return is reserved for early branch exits
+     * inside one entity, not for stopping FUN_004377d0. */
+    ai_entity_frame_update(entity, dt);
     if (s_scene_entity_hook != NULL)
         s_scene_entity_hook(entity, dt, s_scene_entity_user);
     return 0;
@@ -394,11 +404,29 @@ static void bobbin_clear_delay(SimtickBobbin* node)
     cmd_link_global_head(command, 0xe);
 } /* FUN_004027a0 */
 // FUNCTION: LEGORR 0x00409550
-static void bobbin_die(SimtickBobbin* node)
+static void descriptor_transition_apply(SimtickBobbin* node)
 {
-    if (node != NULL && s_bobbin_die_hook != NULL)
-        s_bobbin_die_hook(node, s_bobbin_action_context);
-    if (node != NULL) node->flags &= ~4u;
+    int* cell_xy;
+    void* matching_entity;
+    uint32_t kind6_count;
+    uint32_t kind7_default_count;
+    uint32_t kind7_variant_count;
+    int kind7_variant;
+    if (node == NULL || !always_accept_place_command_cell()) return;
+    cell_xy = (int*)node->key_pair;
+    matching_entity = unported_ledger_stubs::
+        ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
+        NULL, cell_xy, 7u, 0u);
+    kind6_count = entity_indexed_record_word_at_b4_get(15, 0, 0);
+    kind7_default_count = entity_indexed_record_word_at_b0_get(15, 0, 0);
+    kind7_variant_count = entity_indexed_record_word_at_b8_get(15, 0, 0);
+
+    entity_repeated_resource_instances_create(cell_xy, 6, 0, 0u,
+                                               (int)kind6_count);
+    kind7_variant = matching_entity != NULL && kind7_variant_count != 0u;
+    entity_repeated_resource_instances_create(cell_xy, 7, kind7_variant,
+        0u, (int)(kind7_variant ? kind7_variant_count : kind7_default_count));
+    node->flags |= 4u;
 } /* FUN_00409550 */
 
 // FUNCTION: LEGORR 0x004091e0
@@ -424,7 +452,7 @@ void simtick_bobbins(EngineContext* c)
                 }
             }
         } else {
-            bobbin_die(node);
+            descriptor_transition_apply(node);
         }
         node = next;
     }
@@ -436,42 +464,53 @@ static int s_marker_fired = 0;int simtick_marker_count(void)
     return s_marker_fired;
 }
 
-static void marker_cell(EngineState* /*st*/, uint32_t x, uint32_t y)
+static void marker_cell(EngineState* st, uint32_t x, uint32_t y)
 {
-    (void)x; (void)y;
-    /* TODO(simtick): the corpus's per-cell terrain-init marker
-     * callback — its body is a cell-geometry builder that lands with
-     * the terrain-data wave (address deliberately unquoted: quoting an
-     * unported function flips its ledger row). */
+    TerrainSurfaceGrid* grid = path_record_surface_grid_get();
+    if (st != NULL && grid != NULL && grid->width == st->sim_w &&
+        grid->height == st->sim_h) {
+        terrain_cell_surface_vectors_initialize(grid, x, y);
+    }
     ++s_marker_fired;
 }
 
 // FUNCTION: LEGORR 0x0044eff0
 void simtick_marker_sweep(EngineContext* c, float dt, float scale)
 {
-    (void)dt; (void)scale;
+    (void)scale;
     EngineState* st = c != NULL ? c->state_block : NULL;
-    if (st == NULL || !st->sim_marker_flags) {
-        return;
+    LevelState* level = level_current_owner_get();
+    if (level != NULL) {
+        /* The retail +0x73d0 dirty word and +0x28 cell records belong to the
+         * active LevelState's TerrainState. EngineState::sim_grid is only a
+         * test/legacy adapter and is not populated by the production level
+         * loader. */
+        s_marker_fired = 0;
+        terrain_dirty_cell_vectors_refresh(level);
     }
-    s_marker_fired = 0;
-    for (uint32_t y = 0; y < st->sim_h; ++y) {
-        for (uint32_t x = 0; x < st->sim_w; ++x) {
-            uint8_t* cell = (uint8_t*)st->sim_grid + (y * st->sim_w + x) * 0x28;
-            if ((cell[0x19] & 4u) != 0) {
-                marker_cell(st, x, y);
-                cell[0x19] = cell[0x19] & ~4u;
+    else if (st != NULL && (st->sim_marker_flags & 2u) != 0u) {
+        s_marker_fired = 0;
+        for (uint32_t y = 0; y < st->sim_h; ++y) {
+            for (uint32_t x = 0; x < st->sim_w; ++x) {
+                uint8_t* cell = (uint8_t*)st->sim_grid +
+                    (y * st->sim_w + x) * 0x28;
+                if ((cell[0x19] & 4u) != 0u) {
+                    marker_cell(st, x, y);
+                    cell[0x19] = cell[0x19] & ~4u;
+                }
             }
         }
+        st->sim_marker_flags = (uint8_t)(st->sim_marker_flags & ~2u);
     }
-    st->sim_marker_flags = 0;
-    /* TODO(simtick): render passes FUN_00450b60 / FUN_0044f090. */
+    terrain_material_transition_tick(path_record_surface_grid_get(), dt);
+    /* FUN_00450b60's terrain-vertex interpolation pass still needs its
+     * cell-list and renderer-owned vertex records. */
 }
 
 /* ---- ManagerTick (corpus FUN_0045a730, finding 04) ---------------------- */
 
-float g_manager_smooth_a = 1.0f;   /* _DAT_0049e5e8 (unpinned; stable EMA) */
-float g_manager_smooth_b = -1.0f;  /* _DAT_0049e5ec (corpus constants unknown) */
+float g_manager_smooth_a = 4.0f;   /* FUN_0045a730's 4.0 / dt */
+float g_manager_smooth_b = -1.0f;  /* denominator subtracts -1.0 */
 float g_manager_snap     = 1.0f;   /* _DAT_0049e5e0 */
 float g_manager_dt_const = 0.0f;  /* _DAT_0049e5d8 (skip when dt == ) */
 
@@ -565,12 +604,6 @@ void simtick_manager_tick(int index, float dt, int ingame)
     /* exponential smoothing (skip when dt equals the stored constant). */
     if (dt != g_manager_dt_const) {
         float denom = g_manager_smooth_a / dt - g_manager_smooth_b;
-        if ((g_manager_smooth_a / dt) == 0.0f) {
-            denom = 1.0f;
-        }
-        if (denom == 0.0f) {
-            denom = 1.0f;
-        }
         if (fabsf(slot->smoothed[0] - tx) <= g_manager_snap) {
             slot->smoothed[0] = tx;
         } else {
@@ -594,8 +627,6 @@ void simtick_manager_tick(int index, float dt, int ingame)
         if (s_repos != NULL) {
             s_repos(slot->handle, ix, iy);
         }
-        // signal-rep: whatever the corpus does after repositions
-        slot->flags &= ~1u;
     } else if (slot->mode == 1) {
         ++s_attach_n;
         if (s_attach != NULL) {
@@ -674,7 +705,6 @@ int simtick_editor_steps_run(void)
     return s_edit_steps;
 }
 
-// FUNCTION: LEGORR 0x0044cfa0
 void simtick_editor_steps(EngineContext* c)
 {
     (void)c;
@@ -761,6 +791,15 @@ static SimtickPostStepHook s_post_step_hook = NULL;
 static void* s_post_step_user = NULL;
 int simtick_post_steps_count(void) { return s_post_n; }
 
+static int post_step_cell_sight_callback(EntitySlot* entity, void* payload)
+{
+    (void)payload;
+    (void)unported_ledger_stubs::
+        ledger_stub_00466490_CellSightRayCheckAndFlag(entity);
+    /* LAB_004665e0's result does not terminate the entity-pool walk. */
+    return 0;
+}
+
 void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user)
 {
     s_post_step_hook = hook;
@@ -770,6 +809,11 @@ void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user)
 // FUNCTION: LEGORR 0x004665c0
 void simtick_post_step(EngineContext* c)
 {
+    (void)c;
+    /* FUN_004665c0 calls FUN_004377b0 with this relay. That walker excludes
+     * the same 0x80000-filtered records as the existing filtered pool API. */
+    entity_pool_find_by_callback_filtered_current(
+        post_step_cell_sight_callback, NULL);
     if (s_post_step_hook != NULL)
         s_post_step_hook(c, s_post_step_user);
     ++s_post_n;
@@ -923,8 +967,7 @@ void simtick_grid_cell_pass(EngineContext* c)
     }
 }
 
-/* FUN_0043b270: scene pass with a flag word + terrain-cell staging. */
-static uint32_t s_scene_word = 0;
+/* FUN_0043b270: scene pass uses the shared DAT_004dee14 manager word. */
 static void (*s_scene_broadcast)(int) = NULL;
 static int s_scene_bcasts = 0;
 static float s_scene_timer = 0.0f;
@@ -937,8 +980,8 @@ static uint32_t s_scene_pending_count = 0;
 static uint32_t s_scene_pending_capacity = 0;
 static void (*s_scene_cell_init)(EngineState*, int, int) = NULL;
 
-uint32_t simtick_scene_word(void)      { return s_scene_word; }
-void simtick_set_scene_word(uint32_t w) { s_scene_word = w; }
+uint32_t simtick_scene_word(void)      { return entity_state_flags_peek(); }
+void simtick_set_scene_word(uint32_t w) { entity_state_flags_set(w); }
 void simtick_set_scene_broadcast(void (*h)(int)) { s_scene_broadcast = h; }
 int  simtick_scene_broadcasts(void)    { return s_scene_bcasts; }
 
@@ -1023,50 +1066,76 @@ static void scene_cell_update_queue_flush(EngineState* st)
 void simtick_scene_pass(EngineContext* c, float dt)
 {
     EngineState* st = c != NULL ? c->state_block : NULL;
-    if ((s_scene_word & 4u) != 0) {
-        scene_cell_previous_state_track(st);
+    uint32_t scene_word = entity_state_flags_peek();
+    if ((scene_word & 4u) != 0) {
+        if (s_scene_tracked_count != 0u)
+            scene_cell_previous_state_track(st); /* explicit test adapter */
+        else
+            terrain_cell_previous_state_track_current();
     }
-    s_scene_word |= 0x10u;
-    /* FUN_004377d0(callback, &dt, 0): visit every live, unflagged entity.
-     * The callback body updates renderer-owned scene state; it is kept at
-     * that ownership seam until the renderer record is present in context. */
+    entity_state_flags_set(scene_word | 0x10u);
+    /* FUN_004377d0(callback, &dt, 0): visit every live, unflagged entity and
+     * run the recovered per-entity behavior callback. */
     entity_pool_find_by_callback_current(scene_entity_callback,
                                          (void*)&dt, 0);
     ++s_post_n;
-    s_scene_word &= ~0x10u;
-    if ((s_scene_word & 4u) != 0) {
-        scene_cell_update_queue_flush(st);
+    scene_word = entity_state_flags_peek() & ~0x10u;
+    entity_state_flags_set(scene_word);
+    if ((scene_word & 4u) != 0) {
+        if (s_scene_pending_count != 0u)
+            scene_cell_update_queue_flush(st); /* explicit test adapter */
+        else
+            terrain_cell_update_queue_flush_current();
     }
-    if ((s_scene_word & 8u) == 0) {
-        s_scene_word &= ~4u;
+    if ((scene_word & 8u) == 0) {
+        entity_state_flags_set(scene_word & ~4u);
     } else {
+        entity_activity_scene_state_update(entity_pool_callback_context_get());
         if (s_scene_broadcast != NULL) {
             s_scene_broadcast(0);
         }
         ++s_scene_bcasts;
-        s_scene_word &= ~8u;
+        entity_state_flags_set(entity_state_flags_peek() & ~8u);
     }
     s_scene_timer -= dt;
     if (s_scene_timer <= 0.0f) {
         s_scene_timer = 125.0f;
+        periodic_entity_callback_dispatch((void*)(uintptr_t)1u);
         if (s_scene_broadcast != NULL) {
             s_scene_broadcast(1);
         }
         ++s_scene_bcasts;
     }
+    /* FUN_0044bf00's global deferred callback list still needs its renderer
+     * record/callback owner; no portable producer is installed for that list. */
 }
 
-/* FUN_0046f550: the tested port models only the timed-entry release pass.
- * The corpus first walks records 0x50391c..0x5053fc by 0x2b0 (0x46f56e,
- * 0x46f574), calls FUN_0046f920 for occupied +0x2a4 slots, then calls the
- * segment callback and FUN_0046f3b0. Its timer walk is a separate table
- * 0x50387c..0x50391c by 0x10 (0x46f5f8, 0x46f5fb); a negative timer calls
- * FUN_004820d0 twice before clearing the slot and subtracting dt. The first
- * record pass and FUN_0046f3b0's behavior are not represented by this seed
- * API, so synthesizing their calls here would not preserve its tested model. */
+/* FUN_0046f550: ten 0x2b0 projectile records, an unfiltered entity walk,
+ * another pass over all ten records, then ten 0x10 timed-visual records.
+ * The owners provide typed sidecar views because their portable records are
+ * not binary-compatible with the retail global arrays. */
 static const void** s_sfx_entries = NULL;
 static int s_sfx_n = 0;
 static int s_sfx_rels = 0;
+static SimtickSfxBankHooks s_sfx_bank_hooks;
+
+static int sfx_entity_scan_callback(EntitySlot* entity, void* payload)
+{
+    const float dt = *(const float*)payload;
+    if (s_sfx_bank_hooks.entity_segment_scan != NULL)
+        s_sfx_bank_hooks.entity_segment_scan(
+            entity, dt, s_sfx_bank_hooks.context);
+    return 0;
+}
+
+void simtick_sfx_bank_hooks_set(const SimtickSfxBankHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_sfx_bank_hooks, 0, sizeof(s_sfx_bank_hooks));
+    } else {
+        s_sfx_bank_hooks = *hooks;
+    }
+}
 
 void simtick_sfx_seed(int n, const void** entries)
 {
@@ -1079,23 +1148,77 @@ int simtick_sfx_releases(void) { return s_sfx_rels; }
 // FUNCTION: LEGORR 0x0046f550
 void simtick_sfx_bank(EngineContext* c, float dt)
 {
-    (void)c;
-    s_sfx_rels = 0;
-    /* pass 1: active stride-0xac entries -> effect hook. */
     int i;
-    for (i = 0; i < s_sfx_n; ++i) {
-        ++s_post_n; /* FUN_0046f920 effect hook */
-    }
-    /* post-step. */
-    ++s_post_n;
-    /* pass 3: stride-4 timer slots: negative timer -> release + reset. */
-    for (i =  0; i < s_sfx_n; ++i) {
-        float* f = (float*)((uint8_t*)s_sfx_entries[i] + 12);
-        if (*f < 0.0f) {
-            ++s_sfx_rels; /* FUN_004820d0 release hook x2 */
-            *(uint32_t*)((uint8_t*)s_sfx_entries[i] + 0) = 0;
+    s_sfx_rels = 0;
+
+    /* Ten projectile records: update only records with a spawned entity at
+     * +0x2a4. The update owner performs the scene-resource movement from
+     * FUN_0046f920 using its retained full record. */
+    if (s_sfx_bank_hooks.projectile_record_get != NULL) {
+        for (i = 0; i < SIMTICK_SFX_BANK_SLOTS; ++i) {
+            SimtickSfxProjectileRecord* record =
+                s_sfx_bank_hooks.projectile_record_get(
+                    i, s_sfx_bank_hooks.context);
+            if (record != NULL && record->tracked_entity != NULL &&
+                s_sfx_bank_hooks.projectile_update != NULL) {
+                s_sfx_bank_hooks.projectile_update(record->owner_record, dt,
+                                                   s_sfx_bank_hooks.context);
+            }
         }
-        *f -= dt;
+    }
+
+    /* LAB_0046f610 is called through the unfiltered entity-pool walk between
+     * projectile movement and per-record hit scans. The checked-in full
+     * decompile contains no body for that label, so its narrow callback stays
+     * optional while the live pool walk and surrounding order are retained. */
+    (void)c;
+    entity_pool_find_by_callback_current(sfx_entity_scan_callback, &dt, 0);
+
+    /* The hit scanner runs for all ten records, including empty records; the
+     * retail helper itself gates on the record's +0x2a4 entity pointer. */
+    if (s_sfx_bank_hooks.projectile_record_get != NULL) {
+        for (i = 0; i < SIMTICK_SFX_BANK_SLOTS; ++i) {
+            SimtickSfxProjectileRecord* record =
+                s_sfx_bank_hooks.projectile_record_get(
+                    i, s_sfx_bank_hooks.context);
+            if (record != NULL && s_sfx_bank_hooks.ray_hit_scan != NULL)
+                s_sfx_bank_hooks.ray_hit_scan(record->owner_record,
+                                              s_sfx_bank_hooks.context);
+        }
+    }
+
+    /* Ten 0x10 timed-visual records: negative timers release both handles,
+     * clear the first handle as the occupancy sentinel, then every active
+     * timer is decremented (including one just released). */
+    if (s_sfx_bank_hooks.timed_visual_record_get != NULL) {
+        for (i = 0; i < SIMTICK_SFX_BANK_SLOTS; ++i) {
+            SimtickSfxTimedVisualRecord* record =
+                s_sfx_bank_hooks.timed_visual_record_get(
+                    i, s_sfx_bank_hooks.context);
+            if (record == NULL || record->first_handle == NULL) continue;
+            if (record->remaining < 0.0f) {
+                if (s_sfx_bank_hooks.resource_release != NULL) {
+                    s_sfx_bank_hooks.resource_release(record->first_handle,
+                        record->resource_owner, s_sfx_bank_hooks.context);
+                    s_sfx_bank_hooks.resource_release(record->second_handle,
+                        record->resource_owner, s_sfx_bank_hooks.context);
+                }
+                record->first_handle = NULL;
+                ++s_sfx_rels;
+            }
+            record->remaining -= dt;
+        }
+    } else {
+        /* Keep the small raw timer fixture available to existing simtick
+         * tests; production records use the typed bank hooks above. */
+        for (i = 0; i < s_sfx_n; ++i) {
+            float* remaining = (float*)((uint8_t*)s_sfx_entries[i] + 12);
+            if (*remaining < 0.0f) {
+                ++s_sfx_rels;
+                *(uint32_t*)((uint8_t*)s_sfx_entries[i]) = 0;
+            }
+            *remaining -= dt;
+        }
     }
 }
 
@@ -1167,7 +1290,7 @@ static int s_ambient_spawn_triggers;
 
 void simtick_ambient_spawn_tick(float scale)
 {
-    if (lava_erosion_pending_cell_tick(scale))
+    if (lava_erosion_pending_cell_tick_result(scale))
         ++s_ambient_spawn_triggers;
 }
 
@@ -1375,7 +1498,7 @@ void simtick_fx_bank_tick(EngineContext* c, float dt)
         }
     }
     if (c != NULL) {
-        terrain_edge_flag_midpoint_update((LevelState*)c->level_block, dt);
+        terrain_edge_flag_midpoint_update((LevelState*)c->level_block);
     }
 }
 /* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the

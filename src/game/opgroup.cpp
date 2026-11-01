@@ -32,7 +32,6 @@ void operation_group_member_flag_hook_set(OperationGroupTable* table,
     if (table != NULL) table->mark_member_flag = callback;
 }
 
-// FUNCTION: LEGORR 0x00408ce0
 void operation_group_append_object(OperationGroupTable* table, uint32_t key,
                                    void* object, int object_type)
 {

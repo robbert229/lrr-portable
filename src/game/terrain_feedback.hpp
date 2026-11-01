@@ -29,19 +29,19 @@ typedef struct TerrainCommandFeedbackHooks {
     void* context;
 } TerrainCommandFeedbackHooks;
 
-static inline int terrain_command_feedback_dispatch(
+static inline void terrain_command_feedback_dispatch(
     TerrainCommandFeedbackState* state, int details_requested,
     int parameter_three, int parameter_four,
     const TerrainCommandFeedbackHooks* hooks)
 {
     int message_id = -1;
     char text[256];
-    if (state == 0 || hooks == 0) return 0;
+    if (state == 0 || hooks == 0) return;
     if (state->last_cell_x != state->cell_x ||
         state->last_cell_y != state->cell_y) {
         state->last_cell_x = state->cell_x;
         state->last_cell_y = state->cell_y;
-        return 0;
+        return;
     }
     if ((state->cell_flags & 0x100000u) != 0u &&
         (state->cell_flags & 0x400u) == 0u &&
@@ -57,7 +57,7 @@ static inline int terrain_command_feedback_dispatch(
             hooks->message_cue_set(hooks->context, 3, 0u);
         if (hooks->message_update != 0)
             hooks->message_update(hooks->context, 3);
-        return 1;
+        return;
     }
     if ((state->cell_flags & 8u) == 0u) {
         if ((state->cell_flags & 0x10u) == 0u &&
@@ -82,7 +82,6 @@ static inline int terrain_command_feedback_dispatch(
     }
     if (hooks->message_update != 0)
         hooks->message_update(hooks->context, 6);
-    return 1;
 }
 
 #endif

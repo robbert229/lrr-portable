@@ -2,11 +2,13 @@
 #include <string.h>
 
 #include "game.hpp"
+#include "ai.hpp"
 #include "cmd.hpp"
 #include "entity.hpp"
 #include "frontend.hpp"
 #include "savegame.hpp"
 #include "crt/crt.hpp"
+#include "gods98/surface.hpp"
 #include "sound.hpp"
 #include "util.hpp"
 
@@ -42,7 +44,7 @@ static EntitySlot* game_ddiscene_owner_resolve(uint32_t owner_token,
 
 static void* game_font_resource_cache_load(const char* name)
 {
-    return bitmap_font_resource_load(name);
+    return font_atlas_record_create(name);
 }
 
 /* GameConfigInit installs the built-in sound alias table once during boot.
@@ -59,6 +61,10 @@ void game_context_init(GameContext* ctx)
         return;
     }
     memset(ctx, 0, sizeof(*ctx));
+    /* GameConfigInit calls ActivityNameTableInit before opening Lego.cfg.
+     * This resets only the owned activity-name slice; entity-pool state has
+     * its own lifecycle and is not part of this lazy-safe table reset. */
+    ai_activity_name_table_initialize();
     options_defaults(&ctx->options);
     /* Corpus activity-list capacity comes from the stats block (+0xcc,
      * FUN_0046a060 — instance fill TODO(corpus)); the port defaults it to

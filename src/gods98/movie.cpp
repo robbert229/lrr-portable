@@ -373,6 +373,11 @@ int movie_available(void)
     return ff_bind();
 }
 
+static void movie_avi_file_initialize(void)
+{
+    /* The native FFmpeg backend has no AVIFIL32 global lifecycle. */
+}
+
 void movie_unload(void)
 {
     ff_dlopen_close();
@@ -750,7 +755,6 @@ int movie_seek_frame(Movie* m, uint32_t frame_index)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x0047ec90
 Movie* movie_open_path(const char* os_path)
 {
     if (!ff_bind() || os_path == NULL || os_path[0] == '\0') {
@@ -866,6 +870,14 @@ Movie* movie_open_path(const char* os_path)
 
     m->ok = 1;
     return m;
+}
+
+Movie* movie_avi_retriever_open(const char* os_path)
+{
+    /* FFmpeg combines the target's stream/frame-retriever setup in its movie
+     * decoder object. The caller still performs the metadata query as a
+     * separate stage and retains this object if that query fails. */
+    return movie_open_path(os_path);
 }
 
 void movie_close(struct Movie* m)
@@ -1030,9 +1042,18 @@ static int movie_vfw_bind(void)
     MOVIE_VFW_LOAD(stream_start, "AVIStreamStart", movie_avi_start_fn);
     MOVIE_VFW_LOAD(stream_info, "AVIStreamInfoA",
                    movie_avi_stream_info_fn);
-    movie_vfw.file_init();
-    movie_vfw.initialized = 1;
     return 1;
+}
+
+/* AviFileInitialize is a separate retail startup operation. Resolving movie
+ * APIs must not silently stand in for AVIFileInit: the target stores the
+ * renderer's DirectDraw interface and then initializes AVIFIL32. */
+static void movie_avi_file_initialize(void)
+{
+    if (movie_vfw_bind() && !movie_vfw.initialized) {
+        movie_vfw.file_init();
+        movie_vfw.initialized = 1;
+    }
 }
 
 int movie_available(void)
@@ -1055,31 +1076,31 @@ static int movie_winapi_read_info(Movie* m)
 {
     movie_avi_stream_info info;
     HRESULT result;
+    int64_t width;
+    int64_t height;
     memset(&info, 0, sizeof(info));
     result = movie_vfw.stream_info(m->stream, &info, sizeof(info));
-    if (result != 0 || info.dwLength == 0 || info.dwScale == 0
-        || info.dwRate == 0 || info.rcFrame.right <= info.rcFrame.left
-        || info.rcFrame.bottom <= info.rcFrame.top) {
-        return 0;
-    }
-    m->width = (int)(info.rcFrame.right - info.rcFrame.left);
-    m->height = (int)(info.rcFrame.bottom - info.rcFrame.top);
-    if (m->width <= 0 || m->width > 8192
-        || m->height <= 0 || m->height > 8192) {
-        return 0;
-    }
+    if (result != 0) return 0;
+    width = (int64_t)info.rcFrame.right - (int64_t)info.rcFrame.left;
+    height = (int64_t)info.rcFrame.bottom - (int64_t)info.rcFrame.top;
+    if (width <= 0 || width > 8192 || height <= 0 || height > 8192 ||
+        info.dwRate > 0x7fffffffu || info.dwScale > 0x7fffffffu) return 0;
+    m->width = (int)width;
+    m->height = (int)height;
     m->frame_count = info.dwLength;
     m->fps_num = (int)info.dwRate;
     m->fps_den = (int)info.dwScale;
     return 1;
 }
 
-Movie* movie_open_path(const char* os_path)
+static Movie* movie_vfw_stream_retriever_open(const char* os_path)
 {
     Movie* m;
     if (os_path == NULL || os_path[0] == '\0' || !movie_vfw_bind()) {
         return NULL;
     }
+    movie_avi_file_initialize();
+    if (!movie_vfw.initialized) return NULL;
     m = (Movie*)calloc(1, sizeof(*m));
     if (m == NULL) {
         return NULL;
@@ -1094,7 +1115,22 @@ Movie* movie_open_path(const char* os_path)
      * constructor passes this same value to AVIStreamGetFrameOpen. */
     m->retriever = movie_vfw.frame_open(m->stream,
                                         (LPBITMAPINFOHEADER)1);
-    if (m->retriever == NULL || !movie_winapi_read_info(m)) {
+    if (m->retriever == NULL || !movie_winapi_read_info(m)) return m;
+    m->ok = 1;
+    return m;
+}
+
+Movie* movie_avi_retriever_open(const char* os_path)
+{
+    /* Preserve a stream acquired before the frame-retriever/info stages fail;
+     * AviFrameRetrieverDestroy owns its later AVIStreamRelease. */
+    return movie_vfw_stream_retriever_open(os_path);
+}
+
+Movie* movie_open_path(const char* os_path)
+{
+    Movie* m = movie_vfw_stream_retriever_open(os_path);
+    if (m == NULL || !m->ok) {
         movie_close(m);
         return NULL;
     }
@@ -1104,7 +1140,6 @@ Movie* movie_open_path(const char* os_path)
         return NULL;
     }
     strcpy(m->path, os_path);
-    m->ok = 1;
     return m;
 }
 
@@ -1142,9 +1177,137 @@ int movie_info(Movie* m, MovieInfo* out)
     return 0;
 }
 
-static uint8_t movie_winapi_scale_component(unsigned value, unsigned max)
+static uint8_t movie_winapi_mask_component(uint32_t pixel, uint32_t mask)
 {
-    return (uint8_t)((value * 255u + max / 2u) / max);
+    uint32_t maximum;
+    uint32_t value;
+    unsigned int source_bit;
+    if (mask == 0u) return 0u;
+    for (source_bit = 0u; source_bit < 32u; ++source_bit) {
+        if ((mask & ((uint32_t)1u << source_bit)) != 0u) break;
+    }
+    maximum = mask >> source_bit;
+    value = (pixel & mask) >> source_bit;
+    return (uint8_t)(((uint64_t)value * 255u + maximum / 2u) / maximum);
+}
+
+static int movie_winapi_mask_contiguous(uint32_t mask)
+{
+    unsigned int shift;
+    uint32_t shifted;
+    if (mask == 0u) return 0;
+    for (shift = 0u; shift < 32u; ++shift) {
+        if ((mask & ((uint32_t)1u << shift)) != 0u) break;
+    }
+    shifted = mask >> shift;
+    return (shifted & (shifted + 1u)) == 0u;
+}
+
+static int movie_winapi_dib_layout(const BITMAPINFOHEADER* header,
+                                   size_t* pixel_offset,
+                                   size_t* row_bytes, size_t* image_bytes,
+                                   uint32_t masks[4],
+                                   const BYTE** palette,
+                                   unsigned int* palette_count)
+{
+    uint32_t compression;
+    unsigned int bits;
+    size_t offset;
+    size_t row_bits;
+    size_t calculated_image;
+    uint32_t maximum_palette;
+    unsigned int expected_masks = 0u;
+    if (header == NULL || pixel_offset == NULL || row_bytes == NULL ||
+        image_bytes == NULL || masks == NULL || palette == NULL ||
+        palette_count == NULL) return 0;
+    bits = (unsigned int)header->biBitCount;
+    compression = (uint32_t)header->biCompression;
+    if (header->biSize < sizeof(BITMAPINFOHEADER) || header->biSize > 4096u)
+        return 0;
+    if (bits != 1u && bits != 4u && bits != 8u && bits != 15u &&
+        bits != 16u && bits != 24u && bits != 32u) return 0;
+    if (compression != BI_RGB && compression != BI_BITFIELDS &&
+        compression != 6u) return 0; /* BI_ALPHABITFIELDS */
+    if ((compression == BI_BITFIELDS || compression == 6u) &&
+        bits != 16u && bits != 32u) return 0;
+
+    masks[0] = masks[1] = masks[2] = masks[3] = 0u;
+    offset = (size_t)header->biSize;
+    if (compression == BI_BITFIELDS || compression == 6u) {
+        const uint32_t* dib_masks;
+        expected_masks = compression == 6u ? 4u : 3u;
+        if (header->biSize >= 52u) {
+            if (expected_masks == 4u && header->biSize < 56u) return 0;
+            dib_masks = (const uint32_t*)((const BYTE*)header + 40u);
+            masks[0] = dib_masks[0];
+            masks[1] = dib_masks[1];
+            masks[2] = dib_masks[2];
+            if (header->biSize >= 56u) masks[3] = dib_masks[3];
+        }
+        else {
+            dib_masks = (const uint32_t*)((const BYTE*)header + offset);
+            masks[0] = dib_masks[0];
+            masks[1] = dib_masks[1];
+            masks[2] = dib_masks[2];
+            if (expected_masks == 4u) masks[3] = dib_masks[3];
+            offset += (size_t)expected_masks * sizeof(uint32_t);
+        }
+        if (masks[0] == 0u || masks[1] == 0u || masks[2] == 0u ||
+            (masks[0] & masks[1]) != 0u ||
+            (masks[0] & masks[2]) != 0u ||
+            (masks[1] & masks[2]) != 0u ||
+            (masks[3] & (masks[0] | masks[1] | masks[2])) != 0u ||
+            !movie_winapi_mask_contiguous(masks[0]) ||
+            !movie_winapi_mask_contiguous(masks[1]) ||
+            !movie_winapi_mask_contiguous(masks[2]) ||
+            (masks[3] != 0u &&
+             !movie_winapi_mask_contiguous(masks[3])) ||
+            (bits == 16u && ((masks[0] | masks[1] | masks[2] |
+                              masks[3]) & 0xffff0000u) != 0u))
+            return 0;
+    }
+    else if (bits == 15u || bits == 16u) {
+        /* BI_RGB 16-bit DIBs use the documented 5:5:5 layout. */
+        masks[0] = 0x7c00u;
+        masks[1] = 0x03e0u;
+        masks[2] = 0x001fu;
+    }
+    else if (bits == 32u) {
+        masks[0] = 0x00ff0000u;
+        masks[1] = 0x0000ff00u;
+        masks[2] = 0x000000ffu;
+    }
+
+    *palette = NULL;
+    *palette_count = 0u;
+    if (bits <= 8u) {
+        maximum_palette = (uint32_t)1u << bits;
+        *palette_count = header->biClrUsed != 0u
+            ? header->biClrUsed : (unsigned int)maximum_palette;
+        if (*palette_count > maximum_palette)
+            *palette_count = (unsigned int)maximum_palette;
+        if (*palette_count == 0u) return 0;
+        *palette = (const BYTE*)header + offset;
+        offset += (size_t)*palette_count * 4u;
+    }
+    else if (header->biClrUsed != 0u) {
+        if (header->biClrUsed > 65536u) return 0;
+        offset += (size_t)header->biClrUsed * 4u;
+    }
+
+    row_bits = (size_t)(uint32_t)header->biWidth * (size_t)bits;
+    if (row_bits > ((size_t)-1) - 31u) return 0;
+    *row_bytes = ((row_bits + 31u) / 32u) * 4u;
+    if (*row_bytes != 0u &&
+        (size_t)(header->biHeight < 0 ? -header->biHeight : header->biHeight)
+            > ((size_t)-1) / *row_bytes) return 0;
+    calculated_image = *row_bytes *
+        (size_t)(header->biHeight < 0 ? -header->biHeight : header->biHeight);
+    if (header->biSizeImage != 0u &&
+        (size_t)header->biSizeImage < calculated_image) return 0;
+    *pixel_offset = offset;
+    *image_bytes = calculated_image;
+    return 1;
 }
 
 int movie_next(Movie* m, MovieOut* out)
@@ -1152,8 +1315,15 @@ int movie_next(Movie* m, MovieOut* out)
     LPVOID dib;
     BITMAPINFOHEADER* header;
     const BYTE* pixels;
-    int bits, top_down, x, y;
+    const BYTE* palette;
+    uint32_t masks[4];
+    unsigned int palette_count;
+    unsigned int bits;
+    int top_down, x, y;
     size_t row_bytes;
+    size_t pixel_offset;
+    size_t image_bytes;
+    int64_t sample_index;
     if (out == NULL) {
         return -1;
     }
@@ -1164,13 +1334,17 @@ int movie_next(Movie* m, MovieOut* out)
     if (m->next_frame_index >= m->frame_count) {
         return 1;
     }
-    dib = movie_vfw.get_frame(m->retriever,
-                              m->stream_start + (LONG)m->next_frame_index);
+    sample_index = (int64_t)m->stream_start +
+        (int64_t)m->next_frame_index;
+    if (sample_index < (int64_t)(-2147483647L - 1L) ||
+        sample_index > 0x7fffffffL) return -1;
+    dib = movie_vfw.get_frame(m->retriever, (LONG)sample_index);
     if (dib == NULL) {
         return -1;
     }
     header = (BITMAPINFOHEADER*)dib;
     if (header->biSize < sizeof(BITMAPINFOHEADER)
+        || header->biSize > 4096u
         || header->biWidth != m->width || header->biHeight == 0
         || header->biHeight == (LONG)0x80000000
         || header->biHeight > 8192 || header->biHeight < -8192
@@ -1178,50 +1352,83 @@ int movie_next(Movie* m, MovieOut* out)
                                  : header->biHeight) != m->height) {
         return -1;
     }
-    bits = (int)header->biBitCount;
-    out->dib = (const uint8_t*)dib;
-    out->dib_bits_per_pixel = bits;
-    out->dib_header_bytes = (int)header->biSize;
-    row_bytes = (((size_t)m->width * (size_t)bits + 31u) / 32u) * 4u;
-    out->dib_pitch = row_bytes <= 0x7fffffffU ? (int)row_bytes : 0;
-    if (header->biCompression != BI_RGB
-        || (bits != 15 && bits != 16)) {
-        ++m->next_frame_index;
-        return 0;
+    bits = (unsigned int)header->biBitCount;
+    if (header->biWidth <= 0 || header->biWidth > 8192 ||
+        m->height <= 0 || m->height > 8192 ||
+        !movie_winapi_dib_layout(header, &pixel_offset, &row_bytes,
+                                 &image_bytes, masks, &palette,
+                                 &palette_count) ||
+        row_bytes > 0x7fffffffu || pixel_offset > 0x7fffffffu ||
+        image_bytes == 0u || pixel_offset > ((size_t)-1) - image_bytes) {
+        return -1;
     }
     if (m->rgba == NULL) {
-        m->rgba = (uint8_t*)malloc((size_t)m->width * m->height * 4);
+        size_t rgba_bytes;
+        if ((size_t)m->width > ((size_t)-1) / 4u ||
+            (size_t)m->height > ((size_t)-1) /
+                ((size_t)m->width * 4u)) return -1;
+        rgba_bytes = (size_t)m->width * (size_t)m->height * 4u;
+        m->rgba = (uint8_t*)malloc(rgba_bytes);
         if (m->rgba == NULL) {
-            ++m->next_frame_index;
-            return 0;
+            return -1;
         }
     }
     m->rgba_pitch = m->width * 4;
     top_down = header->biHeight < 0;
-    pixels = (const BYTE*)dib + header->biSize;
+    pixels = (const BYTE*)dib + pixel_offset;
     for (y = 0; y < m->height; ++y) {
         int source_y = top_down ? y : m->height - 1 - y;
         const BYTE* src = pixels + (size_t)source_y * row_bytes;
         uint8_t* dst = m->rgba + (size_t)y * m->rgba_pitch;
         for (x = 0; x < m->width; ++x) {
             unsigned r, g, b;
-            unsigned v = ((const WORD*)src)[x];
-            if (bits == 15) {
-                r = movie_winapi_scale_component((v >> 10) & 31u, 31u);
-                g = movie_winapi_scale_component((v >> 5) & 31u, 31u);
-                b = movie_winapi_scale_component(v & 31u, 31u);
-            } else {
-                r = movie_winapi_scale_component((v >> 11) & 31u, 31u);
-                g = movie_winapi_scale_component((v >> 5) & 63u, 63u);
-                b = movie_winapi_scale_component(v & 31u, 31u);
+            unsigned a = 255u;
+            if (bits <= 8u) {
+                unsigned int index;
+                if (bits == 8u) index = src[x];
+                else if (bits == 4u)
+                    index = (x & 1) == 0 ? src[x >> 1] >> 4
+                                         : src[x >> 1] & 0x0fu;
+                else
+                    index = (src[x >> 3] >> (7u - ((unsigned int)x & 7u)))
+                        & 1u;
+                if (index >= palette_count) return -1;
+                r = palette[index * 4u + 2u];
+                g = palette[index * 4u + 1u];
+                b = palette[index * 4u + 0u];
+            }
+            else if (bits == 24u) {
+                r = src[(size_t)x * 3u + 2u];
+                g = src[(size_t)x * 3u + 1u];
+                b = src[(size_t)x * 3u + 0u];
+            }
+            else {
+                uint32_t value;
+                if (bits == 15u || bits == 16u) {
+                    value = (uint32_t)((const WORD*)src)[x];
+                }
+                else {
+                    value = ((const uint32_t*)src)[x];
+                }
+                r = movie_winapi_mask_component(value, masks[0]);
+                g = movie_winapi_mask_component(value, masks[1]);
+                b = movie_winapi_mask_component(value, masks[2]);
+                if (masks[3] != 0u)
+                    a = movie_winapi_mask_component(value, masks[3]);
             }
             dst[x * 4 + 0] = (uint8_t)r;
             dst[x * 4 + 1] = (uint8_t)g;
             dst[x * 4 + 2] = (uint8_t)b;
-            dst[x * 4 + 3] = 255;
+            dst[x * 4 + 3] = (uint8_t)a;
         }
     }
     ++m->next_frame_index;
+    out->dib = (const uint8_t*)dib;
+    out->dib_bits_per_pixel = (int)bits;
+    out->dib_header_bytes = (int)pixel_offset;
+    out->dib_palette = bits <= 8u ? palette : NULL;
+    out->dib_palette_entries = bits <= 8u ? palette_count : 0u;
+    out->dib_pitch = (int)row_bytes;
     out->rgba = m->rgba;
     out->rgba_pitch = m->rgba_pitch;
     return 0;
@@ -1246,8 +1453,11 @@ int movie_seek_frame(Movie* m, uint32_t frame_index)
 #else /* native movies disabled or unsupported backend */
 
 int movie_available(void) { return 0; }
+static void movie_avi_file_initialize(void) { }
 void movie_unload(void) { }
 Movie* movie_open_path(const char* os_path) { (void)os_path; return NULL; }
+Movie* movie_avi_retriever_open(const char* os_path)
+{ (void)os_path; return NULL; }
 void movie_close(Movie* m) { (void)m; }
 int movie_info(Movie* m, MovieInfo* out) { (void)m; (void)out; return -1; }
 int movie_next(Movie* m, MovieOut* out) { (void)m; (void)out; return 1; }
@@ -1285,8 +1495,20 @@ static uint32_t avi_clock_milliseconds(void)
 void avi_file_initialize(void* context)
 {
     s_avi_file_context = context;
-    /* AVIFileInit's backend counterpart is resolving the runtime decoder. */
-    (void)movie_available();
+    /* Retail DAT_0076ac84 is the DirectDraw interface used by the surface
+     * description path as well as the AVI display-mode code. */
+    surface_description_interface_set(context);
+    movie_avi_file_initialize();
+}
+
+// FUNCTION: LEGORR 0x0047ec90
+AviPlaybackState* avi_player_create(const char* path)
+{
+    AviPlaybackState* state = (AviPlaybackState*)calloc(1, sizeof(*state));
+    if (state == NULL) return NULL;
+    state->player_owned = 1u;
+    state->frame_retriever_open(path);
+    return state;
 }
 
 // FUNCTION: LEGORR 0x0047e800
@@ -1301,33 +1523,46 @@ void AviPlaybackState::frame_retriever_open(const char* path)
     surface_pitch = 0;
     frame_retriever_object = NULL;
     stream_object = NULL;
+    surface_object = NULL;
+    surface_owned = 0u;
     stream_frame_count = 0;
     frame_index = 0;
+    fps_numerator = 0u;
+    fps_denominator = 0u;
+    frame_rate = 0.0f;
+    frame_clock = 0.0f;
+    frame_delta = 0.0f;
+    display_width = 0u;
+    display_height = 0u;
+    stream_width = 0u;
+    stream_height = 0u;
     if (path == NULL || s_avi_playback_disabled) return;
-    movie = movie_open_path(path);
+    movie = movie_avi_retriever_open(path);
     if (movie == NULL) return;
+    /* Retail stores the AVI stream as soon as it opens. A later frame
+     * retriever or AVIStreamInfo failure leaves it for the object's destructor
+     * to release. The Movie wrapper owns both VFW handles on WinAPI. */
+    stream_object = movie;
     if (movie_info(movie, &info) != 0) {
-        movie_close(movie);
         return;
     }
-    stream_object = movie;
     fps_numerator = (uint32_t)info.fps_num;
     fps_denominator = (uint32_t)info.fps_den;
+    stream_width = (uint32_t)info.width;
+    stream_height = (uint32_t)info.height;
     stream_frame_count = movie_frame_count(movie);
     frame_index = 0;
-    frame_rate = fps_denominator != 0u
-        ? (float)fps_numerator / (float)fps_denominator : 0.0f;
     now = avi_clock_milliseconds();
-    frame_clock = (float)now * 0.001f;
-    frame_delta = frame_clock;
+    frame_delta = (float)now * 0.001f;
+    frame_clock = 0.0f;
     /* The reference marks the retriever ready before allocating its
      * surface.  A failed surface allocation therefore leaves a ready
      * retriever with a null surface, matching the staged constructor. */
+    frame_ready = 1u;
     (void)display_mode_setup((uint32_t)info.width,
                              (uint32_t)info.height,
                              display_bits_per_pixel,
                              display_fullscreen);
-    frame_ready = 1;
 }
 
 void avi_frame_retriever_open(AviPlaybackState* state, const char* path)
@@ -1381,17 +1616,27 @@ int AviPlaybackState::display_mode_setup(uint32_t width, uint32_t height,
     display_fullscreen = fullscreen != 0;
     if (s_avi_display_mode_hook == NULL) {
         DisplaySurface* surface;
-        if (surface_object != NULL || width == 0u || height == 0u)
+        if (surface_object != NULL)
             return surface_object != NULL;
         surface = (DisplaySurface*)calloc(1, sizeof(DisplaySurface));
         if (surface == NULL) return 0;
-        if (surface_create(surface, display_device, (int)width,
-                           (int)height) != 0) {
+        if (surface_create_display_mode(surface, display_device,
+                (int)width, (int)height, (int)bits_per_pixel,
+                fullscreen) != 0) {
             free(surface);
             return 0;
         }
         surface_object = surface;
+        display_width = (uint32_t)surface->w;
+        display_height = (uint32_t)surface->h;
         surface_owned = 1u;
+        /* DirectDrawDisplayModeSetup calls AviSurfaceLock followed by
+         * AviFrameSurfaceUnlock after CreateSurface, even when the requested
+         * dimensions were already supplied. The result is discarded; this
+         * also verifies the newly-created AVI surface through the same
+         * backend path used during frame updates. */
+        (void)surface_lock();
+        (void)surface_unlock();
         return 1;
     }
     return s_avi_display_mode_hook(s_avi_display_mode_context, this,
@@ -1411,32 +1656,47 @@ int avi_display_mode_setup(AviPlaybackState* state, uint32_t width,
 void avi_playback_state_initialize(AviPlaybackState* state, uint32_t width,
                                    uint32_t height,
                                    uint32_t bits_per_pixel, int fullscreen,
-                                   void* display_device)
+                                   void* surface_descriptor)
 {
     if (state == NULL) return;
     memset(state, 0, sizeof(*state));
-    /* The retail constructor initializes its fifth argument as the
-     * DirectDraw surface descriptor before setting up the display mode. */
-    surface_descriptor_initialize(display_device);
-    state->frame_ready = (uint8_t)avi_display_mode_setup(state, width, height,
-        bits_per_pixel, fullscreen, display_device);
+    /* The fifth retail argument is descriptor storage passed to
+     * DirectDrawSurfaceDescriptorInitialize. It is not an HWND or display
+     * device. Retail setup consumes the global interface bound by
+     * AviFileInitialize; this host adapter still creates its backend surface
+     * through the portable DisplaySurface API. */
+    surface_descriptor_initialize(surface_descriptor);
+    state->frame_ready = (uint8_t)state->display_mode_setup(
+        width, height, bits_per_pixel, fullscreen);
 }
 
 // FUNCTION: LEGORR 0x0047e9a0
 void AviPlaybackState::frame_retriever_destroy()
 {
-    if (!s_avi_playback_disabled && s_avi_release_hook != NULL) {
-        if (stream_object != NULL)
+    if (s_avi_playback_disabled) return;
+    if (stream_object != NULL) {
+        if (s_avi_release_hook != NULL)
             s_avi_release_hook(s_avi_release_context, stream_object);
-        if (frame_retriever_object != NULL)
-            s_avi_release_hook(s_avi_release_context,
-                               frame_retriever_object);
-    }
-    else if (stream_object != NULL) {
-        movie_close((Movie*)stream_object);
+        else
+            movie_close((Movie*)stream_object);
     }
     stream_object = NULL;
     frame_retriever_object = NULL;
+    frame_ready = 0u;
+    if (surface_object != NULL) {
+        if (surface_owned != 0u) {
+            surface_destroy((DisplaySurface*)surface_object);
+            free(surface_object);
+        }
+        else if (s_avi_display_release_hook != NULL) {
+            s_avi_display_release_hook(s_avi_release_context);
+        }
+    }
+    surface_object = NULL;
+    surface_owned = 0u;
+    surface_locked = 0u;
+    surface_pixels = NULL;
+    surface_pitch = 0;
 }
 
 void avi_frame_retriever_destroy(AviPlaybackState* state)
@@ -1447,17 +1707,10 @@ void avi_frame_retriever_destroy(AviPlaybackState* state)
 // FUNCTION: LEGORR 0x0047e980
 void AviPlaybackState::player_destroy(uint8_t flags)
 {
+    int release_player;
     frame_retriever_destroy();
-    if ((flags & 1u) != 0u) {
-        if (surface_owned != 0u) {
-            surface_destroy((DisplaySurface*)surface_object);
-            free(surface_object);
-            surface_object = NULL;
-            surface_owned = 0u;
-        }
-        if (s_avi_display_release_hook != NULL)
-            s_avi_display_release_hook(s_avi_release_context);
-    }
+    release_player = (flags & 1u) != 0u && player_owned != 0u;
+    if (release_player) free(this);
 }
 
 void avi_player_destroy(AviPlaybackState* state, uint8_t flags)
@@ -1572,6 +1825,11 @@ void avi_frame_seek_and_clock_rebase(AviPlaybackState* state,
     if (state != NULL) state->frame_seek_and_clock_rebase(frame_index);
 }
 
+static int movie_surface_raw_dib_compatible(AviPlaybackState* state,
+                                            const MovieOut* frame);
+static int movie_surface_indexed_dib_copy(AviPlaybackState* state,
+                                          const MovieOut* frame);
+
 // FUNCTION: LEGORR 0x0047eb20
 int AviPlaybackState::frame_update_and_blit()
 {
@@ -1584,11 +1842,8 @@ int AviPlaybackState::frame_update_and_blit()
                                                 this) != 0;
     } else {
         MovieOut frame;
-        MovieInfo info;
-        DisplaySurface* surface = (DisplaySurface*)surface_object;
         Movie* movie = (Movie*)stream_object;
-        if (movie == NULL || movie_info(movie, &info) != 0)
-            return 1;
+        if (movie == NULL) return 1;
         if (!movie_seek_frame(movie, frame_index)) return 1;
         if (movie_next(movie, &frame) != 0) {
             /* AVIStreamGetFrame returning null leaves the old surface and
@@ -1596,35 +1851,12 @@ int AviPlaybackState::frame_update_and_blit()
             return 1;
         }
         frame_updated = 1;
-        if (surface != NULL && surface_lock() != 0u) {
-            void* pixels = surface_pixels;
-            int pitch = surface_pitch;
-            if (pixels != NULL && frame.dib != NULL
-                && (frame.dib_bits_per_pixel == 15
-                    || frame.dib_bits_per_pixel == 16)
-                && surface_width(surface) == info.width
-                && surface_height(surface) == info.height
-                && pitch >= info.width * 2
-                && frame.dib_pitch >= info.width * 2
-                && frame.dib_header_bytes >= 40) {
-                const uint8_t* source = frame.dib + frame.dib_header_bytes
-                    + (size_t)(info.height - 1) * frame.dib_pitch;
-                uint8_t* target = (uint8_t*)pixels;
-                int y;
-                for (y = 0; y < info.height; ++y) {
-                    memcpy(target, source, (size_t)info.width * 2);
-                    target += pitch;
-                    source -= frame.dib_pitch;
-                }
-            } else if (pixels != NULL && frame.dib == NULL
-                       && pitch >= surface_width(surface) * 4) {
-                movie_scale_rgba(frame.rgba, info.width, info.height,
-                                 frame.rgba_pitch, (uint8_t*)pixels,
-                                 surface_width(surface),
-                                 surface_height(surface), pitch);
-            }
-            (void)surface_unlock();
-        }
+        if (movie_surface_raw_dib_compatible(this, &frame))
+            frame_decode_and_copy(frame.dib);
+        else if (frame.dib_bits_per_pixel == 8)
+            (void)movie_surface_indexed_dib_copy(this, &frame);
+        else
+            frame_copy_rgba(&frame);
     }
     if (frame_updated) {
         uint32_t now = avi_clock_milliseconds();
@@ -1651,13 +1883,302 @@ int avi_frame_update_and_blit(AviPlaybackState* state)
     return state != NULL ? state->frame_update_and_blit() : 0;
 }
 
+static uint32_t movie_read_u32le(const uint8_t* bytes)
+{
+    return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8) |
+        ((uint32_t)bytes[2] << 16) | ((uint32_t)bytes[3] << 24);
+}
+
+static uint16_t movie_read_u16le(const uint8_t* bytes)
+{
+    return (uint16_t)((uint16_t)bytes[0] |
+        ((uint16_t)bytes[1] << 8));
+}
+
+static int movie_surface_raw_dib_compatible(AviPlaybackState* state,
+                                            const MovieOut* frame)
+{
+    DisplaySurface* surface = state != NULL
+        ? (DisplaySurface*)state->surface_object : NULL;
+    SurfacePixelFormat format;
+    uint32_t header_size;
+    uint16_t bits;
+    uint32_t compression;
+    int acquired = 0;
+    int compatible = 0;
+    if (frame == NULL || frame->dib == NULL || surface == NULL ||
+        (frame->dib_bits_per_pixel != 15 &&
+         frame->dib_bits_per_pixel != 16)) return 0;
+    header_size = movie_read_u32le(frame->dib);
+    if (header_size < 40u || header_size > 4096u) return 0;
+    bits = movie_read_u16le(frame->dib + 14u);
+    compression = movie_read_u32le(frame->dib + 16u);
+    if ((bits != 15u && bits != 16u) || compression != 0u ||
+        movie_read_u32le(frame->dib + 32u) != 0u ||
+        frame->dib_header_bytes != (int)header_size) return 0;
+    if (state->surface_locked == 0u) {
+        if (state->surface_lock() == 0u) return 0;
+        acquired = 1;
+    }
+    if (state->surface_pixels != NULL && state->surface_pitch > 0 &&
+        frame->dib_pitch == state->surface_pitch) {
+        if ((surface->format_flags & 1u) != 0u) {
+            compatible = 1;
+        }
+        else {
+            memset(&format, 0, sizeof(format));
+            if (surface_directdraw_pixel_format_get(surface, &format) &&
+                format.bits_per_pixel == 16u &&
+                format.red_mask == 0x7c00u &&
+                format.green_mask == 0x03e0u &&
+                format.blue_mask == 0x001fu) compatible = 1;
+        }
+    }
+    if (acquired) (void)state->surface_unlock();
+    return compatible;
+}
+
+/* VfW returns an RGBQUAD palette beside 8-bit frame indices. Copy that table
+ * into the destination's owned DirectDraw palette and copy the indexed rows
+ * without expanding them. The frame memory belongs to AVIStreamGetFrame and
+ * is only valid until the next retrieval, so both operations happen here. */
+static int movie_surface_indexed_dib_copy(AviPlaybackState* state,
+                                          const MovieOut* frame)
+{
+    DisplaySurface* surface = state != NULL
+        ? (DisplaySurface*)state->surface_object : NULL;
+    SurfacePixelFormat format;
+    SurfacePaletteEntry entries[256];
+    const uint8_t* source;
+    uint8_t* target;
+    uint32_t header_size;
+    uint32_t compression;
+    int32_t dib_height;
+    unsigned int index;
+    int width, height, x, y;
+    int acquired = 0;
+    if (state == NULL || frame == NULL || surface == NULL ||
+        frame->dib == NULL || frame->dib_palette == NULL ||
+        frame->dib_bits_per_pixel != 8 ||
+        frame->dib_palette_entries == 0u ||
+        frame->dib_palette_entries > 256u || frame->dib_pitch <= 0 ||
+        frame->dib_header_bytes < 40 ||
+        state->stream_width == 0u || state->stream_height == 0u ||
+        state->stream_width > 8192u || state->stream_height > 8192u ||
+        state->display_width == 0u || state->display_height == 0u ||
+        state->display_width > 8192u || state->display_height > 8192u)
+        return 0;
+    header_size = movie_read_u32le(frame->dib);
+    compression = movie_read_u32le(frame->dib + 16u);
+    dib_height = (int32_t)movie_read_u32le(frame->dib + 8u);
+    if (header_size < 40u || header_size > 4096u ||
+        compression != 0u ||
+        movie_read_u16le(frame->dib + 14u) != 8u ||
+        frame->dib_header_bytes < (int)header_size ||
+        (dib_height < 0 ? -(int64_t)dib_height : (int64_t)dib_height)
+            != (int64_t)state->stream_height ||
+        frame->dib_pitch < (int)state->stream_width ||
+        surface->palette == NULL)
+        return 0;
+    memset(&format, 0, sizeof(format));
+    if (!surface_directdraw_pixel_format_get(surface, &format) ||
+        format.bits_per_pixel != 8u) return 0;
+    for (index = 0u; index < frame->dib_palette_entries; ++index) {
+        entries[index].red = frame->dib_palette[index * 4u + 2u];
+        entries[index].green = frame->dib_palette[index * 4u + 1u];
+        entries[index].blue = frame->dib_palette[index * 4u + 0u];
+        entries[index].flags = 0u;
+    }
+    if (!surface_palette_entries_set(surface, 0u,
+                                     frame->dib_palette_entries, entries))
+        return 0;
+    width = (int)state->display_width;
+    height = (int)state->display_height;
+    if (state->surface_locked == 0u) {
+        if (state->surface_lock() == 0u) return 0;
+        acquired = 1;
+    }
+    if (state->surface_pixels == NULL || state->surface_pitch < width)
+        goto done;
+    source = frame->dib + frame->dib_header_bytes;
+    target = (uint8_t*)state->surface_pixels;
+    for (y = 0; y < height; ++y) {
+        uint32_t source_y = (uint32_t)(((uint64_t)(uint32_t)y *
+            state->stream_height) / (uint32_t)height);
+        uint32_t dib_y = dib_height < 0
+            ? source_y : state->stream_height - 1u - source_y;
+        const uint8_t* source_row = source +
+            (size_t)dib_y * (size_t)frame->dib_pitch;
+        uint8_t* target_row = target + (size_t)y *
+            (size_t)state->surface_pitch;
+        for (x = 0; x < width; ++x) {
+            uint32_t source_x = (uint32_t)(((uint64_t)(uint32_t)x *
+                state->stream_width) / (uint32_t)width);
+            target_row[x] = source_row[source_x];
+        }
+    }
+    if (acquired) (void)state->surface_unlock();
+    return 1;
+done:
+    if (acquired) (void)state->surface_unlock();
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x0047e9e0
+void AviPlaybackState::frame_decode_and_copy(const uint8_t* dib)
+{
+    DisplaySurface* surface = (DisplaySurface*)surface_object;
+    int acquired = 0;
+    int width = (int)stream_width;
+    int height = (int)stream_height;
+    int row_bytes;
+    uint32_t header_bytes;
+    uint32_t source_pitch;
+    uint32_t surface_bits_per_pixel = 0u;
+    SurfacePixelFormat surface_format;
+    const uint8_t* source;
+    uint8_t* target;
+    int y;
+
+    if (dib == NULL || surface == NULL) return;
+    if (surface_locked == 0u) {
+        if (surface_lock() == 0u) return;
+        acquired = 1;
+    }
+    if (surface_pixels == NULL || surface_pitch <= 0) goto done;
+    memset(&surface_format, 0, sizeof(surface_format));
+    if ((surface->format_flags & 1u) != 0u) {
+        surface_bits_per_pixel = 15u;
+    }
+    else if (surface_directdraw_pixel_format_get(surface,
+                                                  &surface_format)) {
+        surface_bits_per_pixel = surface_format.bits_per_pixel;
+    }
+    if (surface_bits_per_pixel != 15u && surface_bits_per_pixel != 16u)
+        goto done;
+    if (width <= 0 || height <= 0) goto done;
+    header_bytes = (uint32_t)dib[0] | ((uint32_t)dib[1] << 8)
+        | ((uint32_t)dib[2] << 16) | ((uint32_t)dib[3] << 24);
+    row_bytes = width * 2;
+    if (header_bytes < 40u || surface_pitch < row_bytes) goto done;
+    /* Retail steps the frame source using the locked DirectDraw pitch, just
+     * as it steps the destination. AVIStreamGetFrame's selected output is
+     * expected to have that same row stride. */
+    source_pitch = (uint32_t)surface_pitch;
+    source = dib + header_bytes + (size_t)(height - 1) * source_pitch;
+    target = (uint8_t*)surface_pixels;
+    for (y = 0; y < height; ++y) {
+        memcpy(target, source, (size_t)row_bytes);
+        target += surface_pitch;
+        source -= source_pitch;
+    }
+done:
+    if (acquired) (void)surface_unlock();
+}
+
+void AviPlaybackState::frame_copy_rgba(const MovieOut* frame)
+{
+    DisplaySurface* surface = (DisplaySurface*)surface_object;
+    int acquired = 0;
+    int width = (int)display_width;
+    int height = (int)display_height;
+    uint32_t bits_per_pixel;
+    uint32_t red_mask;
+    uint32_t green_mask;
+    uint32_t blue_mask;
+    uint32_t bytes_per_pixel;
+    SurfacePixelFormat format;
+    int x, y;
+    if (frame == NULL || frame->rgba == NULL || surface == NULL
+        || width <= 0 || height <= 0 || stream_width == 0u ||
+        stream_width > 0x7fffffffu / 4u || stream_height == 0u ||
+        frame->rgba_pitch < (int)(stream_width * 4u))
+        return;
+    if (surface_locked == 0u) {
+        if (surface_lock() == 0u) return;
+        acquired = 1;
+    }
+    memset(&format, 0, sizeof(format));
+    if ((surface->format_flags & 1u) != 0u) {
+        bits_per_pixel = 15u;
+        red_mask = 0x7c00u;
+        green_mask = 0x03e0u;
+        blue_mask = 0x001fu;
+    }
+    else if (surface_directdraw_pixel_format_get(surface, &format)) {
+        bits_per_pixel = format.bits_per_pixel;
+        red_mask = format.red_mask;
+        green_mask = format.green_mask;
+        blue_mask = format.blue_mask;
+    }
+    else goto done;
+    if (bits_per_pixel != 15u && bits_per_pixel != 16u &&
+        bits_per_pixel != 24u && bits_per_pixel != 32u) goto done;
+    bytes_per_pixel = (bits_per_pixel + 7u) / 8u;
+    if (width > 0x7fffffff / (int)bytes_per_pixel ||
+        surface_pixels == NULL || surface_pitch < width * (int)bytes_per_pixel)
+        goto done;
+    if (bits_per_pixel == 24u || bits_per_pixel == 32u) {
+        if (red_mask == 0u) red_mask = 0x00ff0000u;
+        if (green_mask == 0u) green_mask = 0x0000ff00u;
+        if (blue_mask == 0u) blue_mask = 0x000000ffu;
+    }
+    for (y = 0; y < height; ++y) {
+        uint32_t source_y = (uint32_t)(((uint64_t)(uint32_t)y *
+            stream_height) / (uint32_t)height);
+        const uint8_t* source = frame->rgba +
+            (size_t)source_y * (size_t)frame->rgba_pitch;
+        uint8_t* target = (uint8_t*)surface_pixels +
+            (size_t)y * (size_t)surface_pitch;
+        for (x = 0; x < width; ++x) {
+            uint32_t source_x = (uint32_t)(((uint64_t)(uint32_t)x *
+                stream_width) / (uint32_t)width);
+            const uint8_t* rgba = source + (size_t)source_x * 4u;
+            uint32_t packed;
+            unsigned int bit;
+            uint32_t masks[3];
+            unsigned int channel;
+            masks[0] = red_mask;
+            masks[1] = green_mask;
+            masks[2] = blue_mask;
+            packed = 0u;
+            for (channel = 0u; channel < 3u; ++channel) {
+                uint32_t mask = masks[channel];
+                uint32_t maximum;
+                uint32_t value;
+                if (mask == 0u) continue;
+                for (bit = 0u; bit < 32u; ++bit) {
+                    if ((mask & ((uint32_t)1u << bit)) != 0u) break;
+                }
+                maximum = mask >> bit;
+                value = (uint32_t)(((uint64_t)rgba[channel] * maximum +
+                                    127u) / 255u);
+                packed |= (value << bit) & mask;
+            }
+            target[(size_t)x * bytes_per_pixel + 0u] =
+                (uint8_t)(packed & 0xffu);
+            if (bytes_per_pixel > 1u)
+                target[(size_t)x * bytes_per_pixel + 1u] =
+                    (uint8_t)((packed >> 8) & 0xffu);
+            if (bytes_per_pixel > 2u)
+                target[(size_t)x * bytes_per_pixel + 2u] =
+                    (uint8_t)((packed >> 16) & 0xffu);
+            if (bytes_per_pixel > 3u)
+                target[(size_t)x * bytes_per_pixel + 3u] =
+                    (uint8_t)((packed >> 24) & 0xffu);
+        }
+    }
+done:
+    if (acquired) (void)surface_unlock();
+}
+
 /* Portable frame blit adapter. Retail 0x0047ed00 reads its source surface
  * from a renderer-owned player record at +0xc0/+0x18; AviPlaybackState keeps
  * its portable DisplaySurface pointer in a host sidecar instead. */
+// FUNCTION: LEGORR 0x0047ed00
 void avi_playback_frame_loop(AviPlaybackState* state, void* destination)
 {
-    if (state == NULL || state->frame_ready == 0
-        || s_avi_playback_disabled) {
+    if (state == NULL || state->frame_ready == 0) {
         return;
     }
     if (s_avi_frame_loop_hook != NULL) {
@@ -1676,7 +2197,8 @@ void movie_scale_rgba(const uint8_t* src, int sw, int sh, int spitch,
                       uint8_t* dst, int dw, int dh, int dpitch)
 {
     if (src == NULL || dst == NULL || sw <= 0 || sh <= 0 || dw <= 0
-        || dh <= 0 || dpitch < dw * 4 || spitch < sw * 4) {
+        || dh <= 0 || dw > 0x7fffffff / 4 || sw > 0x7fffffff / 4
+        || dpitch < dw * 4 || spitch < sw * 4) {
         return;
     }
     for (int y = 0; y < dh; ++y) {
@@ -1700,7 +2222,6 @@ void movie_scale_rgba(const uint8_t* src, int sw, int sh, int spitch,
     }
 }
 
-// FUNCTION: LEGORR 0x0047e9e0
 int avi_frame_decode_and_copy(Movie* movie, uint8_t* destination,
                               int width, int height, int pitch)
 {
@@ -1708,7 +2229,7 @@ int avi_frame_decode_and_copy(Movie* movie, uint8_t* destination,
     MovieInfo info;
     int result;
     if (movie == NULL || destination == NULL || width <= 0 || height <= 0
-        || pitch < width * 4) {
+        || width > 0x7fffffff / 4 || pitch < width * 4) {
         return -1;
     }
     result = movie_next(movie, &frame);
@@ -1717,26 +2238,6 @@ int avi_frame_decode_and_copy(Movie* movie, uint8_t* destination,
     }
     if (movie_info(movie, &info) != 0) {
         return -1;
-    }
-    if (frame.dib != NULL) {
-        if (frame.dib_pitch < width * 2
-            || frame.dib_header_bytes < 40
-            || (frame.dib_bits_per_pixel != 15
-                && frame.dib_bits_per_pixel != 16)
-            || width != info.width || height != info.height
-            || pitch < width * 2) {
-            return 0;
-        }
-        const uint8_t* source = frame.dib + frame.dib_header_bytes
-            + (size_t)(height - 1) * frame.dib_pitch;
-        uint8_t* target = destination;
-        int y;
-        for (y = 0; y < height; ++y) {
-            memcpy(target, source, (size_t)width * 2);
-            target += pitch;
-            source -= frame.dib_pitch;
-        }
-        return 0;
     }
     if (frame.rgba == NULL) {
         return -1;
@@ -2052,3 +2553,122 @@ int movie_path_resolve(const char* base_dir, const char* rel,
 }
 
 #endif /* LEGORRR_BACKEND_MINIWIN */
+
+
+namespace unported_ledger_stubs {
+// FUNCTION: LEGORR 0x0047e4c0
+void ledger_stub_0047e4c0_AviPlaybackStateInitialize(
+    AviPlaybackState* state, uint32_t width, uint32_t height,
+    uint32_t bits_per_pixel, int fullscreen, void* surface_descriptor)
+{
+    avi_playback_state_initialize(state, width, height, bits_per_pixel,
+                                  fullscreen, surface_descriptor);
+}
+
+int ledger_stub_0047e510_DirectDrawDisplayModeSetup(
+    AviPlaybackState* state, uint32_t width, uint32_t height,
+    uint32_t bits_per_pixel, int fullscreen)
+{
+    return state != NULL ? state->display_mode_setup(width, height,
+        bits_per_pixel, fullscreen) : 0;
+}
+
+uint32_t ledger_stub_0047e760_AviSurfaceLock(AviPlaybackState* state)
+{
+    return avi_surface_lock(state);
+}
+
+uint32_t ledger_stub_0047e7b0_AviFrameSurfaceUnlock(AviPlaybackState* state)
+{
+    return avi_surface_unlock(state);
+}
+
+void ledger_stub_0047e980_AviPlayerDestroy(AviPlaybackState* state,
+                                            uint8_t flags)
+{
+    avi_player_destroy(state, flags);
+}
+
+void ledger_stub_0047e9a0_AviFrameRetrieverDestroy(AviPlaybackState* state)
+{
+    avi_frame_retriever_destroy(state);
+}
+
+void ledger_stub_0047e9e0_AviFrameDecodeAndCopy(
+    AviPlaybackState* state, const uint8_t* dib)
+{
+    if (state != NULL) state->frame_decode_and_copy(dib);
+}
+
+int ledger_stub_0047eb20_AviFrameUpdateAndBlit(AviPlaybackState* state)
+{
+    return avi_frame_update_and_blit(state);
+}
+
+uint32_t ledger_stub_0047ebe0_AviStreamFrameCountGet(
+    const AviPlaybackState* state)
+{
+    return avi_stream_frame_count_get(state);
+}
+
+struct AviFrameSeekRebaseMethod {
+    void seek(uint32_t frame_index);
+};
+
+void AviFrameSeekRebaseMethod::seek(uint32_t frame_index)
+{
+    avi_frame_seek_and_clock_rebase((AviPlaybackState*)this, frame_index);
+}
+
+uint32_t ledger_stub_0047ec60_AviPlaybackFrameIndexGet(
+    const AviPlaybackState* state)
+{
+    return avi_playback_frame_index_get(state);
+}
+
+void ledger_stub_0047ec80_AviFileInitialize(void* context)
+{
+    avi_file_initialize(context);
+}
+
+void ledger_stub_0047e800_AviFrameRetrieverOpen(AviPlaybackState* state,
+                                                 const char* path)
+{
+    avi_frame_retriever_open(state, path);
+}
+
+// FUNCTION: LEGORR 0x0047ecf0
+uint8_t ledger_stub_0047ecf0_AviFrameUpdate(AviPlaybackState* state)
+{
+    return (uint8_t)state->frame_update_and_blit();
+}
+
+void ledger_stub_0047ed00_AviPlaybackFrameLoop(AviPlaybackState* state,
+                                                void* destination)
+{
+    avi_playback_frame_loop(state, destination);
+}
+
+// FUNCTION: LEGORR 0x0047ed40
+void ledger_stub_0047ed40_AviFrameIndexAndClockReset(
+    AviPlaybackState* state, uint32_t frame_index)
+{
+    ((AviFrameSeekRebaseMethod*)state)->seek(frame_index);
+}
+
+// FUNCTION: LEGORR 0x0047ed50
+uint32_t ledger_stub_0047ed50_AviCurrentFrameIndexGet(
+    const AviPlaybackState* state)
+{
+    return state->playback_frame_index_get();
+}
+
+// FUNCTION: LEGORR 0x0047ed60
+uint32_t ledger_stub_0047ed60_AviStreamFrameCountGet(
+    const AviPlaybackState* state)
+{
+    return state->stream_frame_count_get();
+}
+
+
+} // namespace unported_ledger_stubs

@@ -597,12 +597,10 @@ int media_cd_audio_device_open(int initial_track)
         opened = platform_cd_audio_open(&error_code);
     }
     if (!opened) {
-        s_cd_audio_open = 0;
         s_cd_audio_last_error = error_code;
         media_cd_audio_error_text_get();
         return 0;
     }
-    s_cd_audio_open = 1;
     if (s_cd_audio_command_hook != NULL) {
         opened = s_cd_audio_command_hook(s_cd_audio_command_context,
                                          "set-tmsf", 0, &error_code);
@@ -611,17 +609,8 @@ int media_cd_audio_device_open(int initial_track)
         opened = platform_cd_audio_set_tmsf(&error_code);
     }
     if (!opened) {
-        s_cd_audio_open = 0;
         s_cd_audio_last_error = error_code;
         media_cd_audio_error_text_get();
-        if (s_cd_audio_command_hook != NULL) {
-            int ignored_error = 0;
-            (void)s_cd_audio_command_hook(s_cd_audio_command_context,
-                                          "close", 0, &ignored_error);
-        }
-        else {
-            (void)platform_cd_audio_close(NULL);
-        }
         return 0;
     }
     return media_cd_audio_track_play_from(initial_track);
@@ -666,8 +655,6 @@ int media_cd_audio_stop_and_close(void)
         media_cd_audio_error_text_get();
         return 0;
     }
-    s_cd_audio_open = 0;
-    s_cd_audio_current_track = -1;
     return 1;
 }
 
@@ -717,3 +704,14 @@ void loader_progress_callback_set(void* callback, void* context)
 
 void* loader_progress_callback_peek(void) { return s_loader_progress_callback; }
 void* loader_progress_context_peek(void) { return s_loader_progress_context; }
+
+namespace unported_ledger_stubs {
+// FUNCTION: LEGORR 0x00488bb0
+void ledger_stub_00488bb0_CdAudioTrackStart(int track, int restart_when_done,
+    MediaCdAudioCompletionHook callback)
+{
+    media_cd_audio_track_start(track, restart_when_done, callback);
+}
+
+
+} // namespace unported_ledger_stubs

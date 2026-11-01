@@ -8,17 +8,20 @@
 extern "C" {
 #endif
 
+struct LevelState;
+struct EntitySlot;
+
 #define TERRAIN_GRID_CHANGE_CAPACITY 512
 
 typedef struct TerrainSurfaceGrid {
     uint32_t width;
     uint32_t height;
+    uint32_t record_width; /* +0x28 table stride; map width, not quad width */
     uint8_t* surface_values;
     float* surface_vectors;
     uint8_t* triangulation_flags;
-    uint32_t selected_payload_index;
     uint8_t* cell_records; /* corpus cell record stride 0x28 */
-    uint8_t* texture_corner_values; /* four packed corner values per cell */
+    uint8_t* texture_corner_values; /* four reference corner codes per cell */
     void* material_context;
     uint32_t (*material_handle_resolve)(void* context, uint8_t material);
     void (*surface_palette_apply)(void* context, uint32_t cell_index,
@@ -28,35 +31,45 @@ typedef struct TerrainSurfaceGrid {
     void* initialize_context;
     void (*initialize_cell)(void* context, uint32_t x, uint32_t y);
     const void* terrain_window; /* original cell-variant/normal sampling view */
+    struct LevelState* owner_level; /* owning level's transition sidecar */
 } TerrainSurfaceGrid;
 
-/* Tile mesh grid owned by a level record (LoadTileMeshes, FUN_0042b330).
- * Each cell stores the object returned by the model registration callback;
- * the callback receives the `a` and `b` bitmap names and the two opaque
- * registration values carried by the original level record. */
-typedef void* (*TerrainTileMeshRegisterHook)(void* scene, const char* bitmap_a,
-                                             const char* bitmap_b,
-                                             void* material, void* options,
-                                             void* context);
-typedef void (*TerrainTileMeshReleaseHook)(void* mesh, void* context);
+/* Tile visual grid owned by a level record (LoadTileMeshes, FUN_0042b330).
+ * Each cell stores the TileModelEntityRegister result, whose native record
+ * is a SceneCellVisualRelayRecord with two roots and two 100-slot channels.
+ * The grid dimensions are SurfTextWidth/SurfTextHeight, not map dimensions. */
+struct SceneCellVisualRelayRecord;
+/* A successful registrar returns a complete scene relay record; it must
+ * release any temporary models/resources before returning NULL. The grid
+ * owns successful records and falls back to the native scene-object release
+ * path when no explicit release callback is installed. */
+typedef struct SceneCellVisualRelayRecord* (*TerrainTileMeshRegisterHook)(
+    void* scene, const char* bitmap_a, const char* bitmap_b,
+    void* material, void* options, void* context);
+typedef void (*TerrainTileMeshReleaseHook)(
+    struct SceneCellVisualRelayRecord* visual, void* context);
 typedef struct TerrainTileMeshGrid {
+    struct LevelState* owner_level;
     uint32_t width;
     uint32_t height;
     uint32_t surface_text_width;
     uint32_t surface_text_height;
-    void** meshes;
+    struct SceneCellVisualRelayRecord** meshes;
     void* scene;
     void* material;
     void* options;
+    float cell_projection_scale;
+    void* visual_lookup_table;
+    uint32_t* visual_lookup_entries;
     const char* bitmap_prefix;
     int editor_mode;
     void* context;
     TerrainTileMeshRegisterHook register_mesh;
     TerrainTileMeshReleaseHook release_mesh;
-    /* TextureSetConfigLoad state. The decoded bitmap handles are owned by
-     * this grid and released with terrain_texture_set_release(). */
+    /* TextureSetConfigLoad's static cell bitmap handles are owned by this
+     * grid. The RoofTexture animation handle is owned by the indexed-surface
+     * resource state, not by this level grid. */
     struct TerrainCellResourceGrid* textures;
-    void* roof_texture;
     const char* mesh_basename;
     const char* texture_basename;
     void* surface_text_map;
@@ -68,21 +81,31 @@ typedef struct TerrainTileMeshGrid {
 } TerrainTileMeshGrid;
 int terrain_tile_mesh_grid_load(TerrainTileMeshGrid* grid,
                                 const char* bitmap_prefix);
+int terrain_tile_mesh_grid_load_level(struct LevelState* level,
+                                      const char* bitmap_prefix); /* 0x0042b330 */
+int entity_neighbor_blocked_cell_step_probe(struct EntitySlot* entity,
+                                             float cadence, int mode);
 void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid);
+struct SceneCellVisualRelayRecord* terrain_tile_mesh_visual_channels_get(
+    TerrainTileMeshGrid* grid, uint8_t packed_surface);
 struct BlockFile;
 void terrain_texture_set_config_context_bind(struct BlockFile* config);
 int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
-                                    struct BlockFile* config,
                                     const char* group_name);
+int terrain_texture_set_config_load_level(struct LevelState* level,
+                                          const char* group_name);
 int terrain_texture_set_config_load_current(TerrainTileMeshGrid* grid,
-                                            const char* group_name); /* 0x0042bb60 */
+                                            const char* group_name);
 void terrain_texture_set_release(TerrainTileMeshGrid* grid);
 typedef struct TerrainCellResourceGrid {
     uint32_t width;
     uint32_t height;
     void** handles;
 } TerrainCellResourceGrid;
+/* Explicit bitmap-resource grid release adapter; retail 0x434530 clears the
+ * current level's visual-channel resources without freeing its cell records. */
 void terrain_grid_entry_resources_release_all(TerrainCellResourceGrid* grid);
+void terrain_grid_entry_resources_release_all_current(void); /* 0x00434530 */
 TerrainCellResourceGrid* terrain_cell_resource_grid_load(
     const char* bitmap_prefix, uint32_t width, uint32_t height); /* 0x0040b310 */
 void terrain_cell_resource_grid_dispose(TerrainCellResourceGrid* grid);
@@ -99,15 +122,26 @@ void terrain_surface_grid_material_hooks_set(
     void (*apply)(void*, uint32_t, uint32_t));
 void terrain_surface_grid_terrain_window_set(TerrainSurfaceGrid* grid,
                                              const void* terrain_window);
+void terrain_cell_variant_table_insert(void* terrain_window, uint8_t key,
+                                      uint8_t value);
 void terrain_cell_material_set(TerrainSurfaceGrid* grid, uint32_t x,
                                uint32_t y, uint8_t material,
                                uint8_t rotation); /* FUN_0044f230 */
-void grid_cell_set_payload_index(TerrainSurfaceGrid* grid, uint32_t x,
-                                 uint32_t y); /* FUN_0044e860 */
+void terrain_cell_material_transition_begin(TerrainSurfaceGrid* grid,
+                                            uint32_t x, uint32_t y,
+                                            int material,
+                                            int rotation); /* 0x0044e6d0 */
+void terrain_material_transition_tick(TerrainSurfaceGrid* grid,
+                                      float delta); /* 0x0044f090 */
+/* FUN_0044e860 eligibility adapter. TerrainCreate's indexed mesh enable bit
+ * is mirrored in a host-width per-cell sidecar initialized from its
+ * LwoLayerEnabledSet(scene, index, 1) loop. */
+int grid_cell_set_payload_index(void* terrain, uint32_t x,
+                                uint32_t y);
 void terrain_grid_cell_initializer_set(TerrainSurfaceGrid* grid, void* context,
                                        void (*initialize_cell)(void*, uint32_t,
                                                                uint32_t));
-void terrain_grid_cells_initialize(TerrainSurfaceGrid* grid); /* FUN_0044e880 */
+void terrain_grid_cells_initialize(TerrainSurfaceGrid* grid); /* 0x0044e880; default worker is 0x00450f30 */
 typedef void (*TerrainGridOperationHook)(void* context, uint32_t cell_index,
                                         uint32_t operation);
 void terrain_grid_operation_apply_all(TerrainSurfaceGrid* grid,
@@ -121,7 +155,9 @@ typedef struct TerrainPaletteGrid {
     void (*palette_resource_select)(void* context, uint32_t packed_index);
 } TerrainPaletteGrid;
 void terrain_cell_palette_resource_at_grid_position(
-    const TerrainPaletteGrid* grid, uint32_t x, uint32_t y); /* FUN_00429160 */
+    const TerrainPaletteGrid* grid, uint32_t x, uint32_t y);
+void* terrain_cell_palette_resource_at_grid_position_current(
+    const int cell_xy[2]); /* 0x00429160 */
 typedef struct TerrainVertexBuildGrid {
     uint32_t width;
     uint32_t height;
@@ -135,7 +171,7 @@ typedef struct TerrainVertexBuildGrid {
     const uint8_t* cell_records; /* height byte at +0x1a, stride 0x28 */
     void* context;
     void (*vertices_write)(void* context, uint32_t cell,
-                           const float vertices[12]);
+                           const float vertices[12]); /* X,Z,height; 00,10,11,01 */
 } TerrainVertexBuildGrid;
 void terrain_grid_vertex_build(TerrainVertexBuildGrid* grid); /* FUN_0044e4d0 */
 /* Terrain view rendering (FUN_0045dbc0/FUN_0045e9e0): per-cell style is
@@ -156,9 +192,9 @@ typedef struct TerrainViewTileGrid {
     TerrainTileStyleHook style_resolve;
     TerrainViewTileEmitHook emit;
 } TerrainViewTileGrid;
-int terrain_tile_style_resolve(void* output, uint32_t x, uint32_t y,
-                               uint32_t style, void* context,
-                               TerrainTileStyleHook resolver);
+/* FUN_0045e9e0 reads the live cell and selects one of the retail palette
+ * triplets.  The output triplet is written at byte offset 0x10. */
+int terrain_tile_style_resolve(void* output, int x, int y);
 void terrain_view_tile_geometry_build(TerrainViewTileGrid* grid);
 typedef struct NestedPointerRecord {
     void* first_handle;
@@ -171,6 +207,9 @@ void nested_pointer_record_release_hooks_set(NestedPointerReleaseHook handle_hoo
 void nested_pointer_record_destroy(NestedPointerRecord* record); /* FUN_0044e670 */
 int terrain_cell_surface_vertices_get(TerrainSurfaceGrid* grid, uint32_t x,
                                       uint32_t y, float out[12]); /* 0x004500d0 */
+void terrain_cell_surface_orientation_set(TerrainSurfaceGrid* grid,
+                                         uint32_t x, uint32_t y,
+                                         int flipped); /* 0x0044edf0 */
 void terrain_cell_surface_triangle_vertices_select(
     TerrainSurfaceGrid* grid, float x, float z, uint32_t out_vertices[3]);
 int terrain_cell_ray_hit_test(TerrainSurfaceGrid* grid, int x,
@@ -183,7 +222,7 @@ int terrain_surface_vertex_span_validate(TerrainSurfaceGrid* grid,
                                          float maximum_edge_delta); /* 0x0044e8c0 */
 typedef struct StagedCellCandidateRecord {
     void* record;
-    void* predecessor;
+    void* predecessor; /* adapter metadata; retail merges use first match */
     uint32_t pair_count;
     const float* cell_pairs; /* pair_count consecutive (x,y) float pairs */
 } StagedCellCandidateRecord;
@@ -221,6 +260,11 @@ void terrain_cell_quad_run_stage(
     TerrainCellTypeReadHook read_cell_type,
     TerrainCellQuadRunFlushHook flush_run,
     TerrainCellQuadRunFinishHook finish);
+void terrain_cell_quad_run_stage_level(void* scene,
+                                       struct LevelState* level); /* 0x0046db90 */
+void terrain_cell_quad_run_stage_level_release(struct LevelState* level);
+void world_spatial_records_install(struct LevelState* level, void* records);
+void terrain_world_spatial_edge_midpoints_update(struct LevelState* level);
 typedef struct TerrainCellQuadRunRecord {
     uint32_t item_count;
     const float* cell_xy; /* item_count consecutive (x,y) pairs */
@@ -228,10 +272,12 @@ typedef struct TerrainCellQuadRunRecord {
     uint32_t flags;
     int mesh;
     uint32_t slot_capacity;
+    uint32_t selected_count;
+    uint32_t* slot_source_items; /* selected slot -> source run item */
     uint8_t* slot_active;
     float* slot_offsets; /* slot_capacity consecutive (x,y) pairs */
     float* slot_heights;
-    const uint32_t* slot_orientations; /* selects one of four corner pairs */
+    uint32_t* slot_orientations; /* selects one of four corner pairs */
 } TerrainCellQuadRunRecord;
 typedef struct TerrainCellQuadRunEmitHooks {
     void* context;
@@ -262,6 +308,14 @@ int terrain_cell_surface_quad_height_fill(
     TerrainSurfaceGrid* surface, TerrainCellQuadRunRecord* records,
     uint32_t record_count, uint32_t x, uint32_t y,
     const TerrainCellQuadSlotMutationHooks* hooks);
+void terrain_cell_surface_quad_height_fill_current(struct LevelState* level,
+                                                    int x, int y); /* 0x0046e220 */
+void terrain_cell_surface_quad_reset_level(struct LevelState* level, int x,
+                                           int y);
+void terrain_cell_surface_quad_reset_current(int x, int y); /* 0x0046e330 */
+int terrain_cell_quad_run_slot_state_get(struct LevelState* level, int x,
+                                         int y, float* height_out,
+                                         uint32_t* active_out);
 typedef struct BuildingFootprintPreviewHooks {
     void* context;
     /* FUN_00433090 && !FUN_00433030 for one cardinal neighbor. */
@@ -294,10 +348,16 @@ int terrain_surface_point_project_offset(TerrainSurfaceGrid* grid,
                                          float x, float z,
                                          int orientation, float offset,
                                          float* out_x, float* out_z); /* 0x0044fb90 */
-void grid_cell_read_surface_values(TerrainSurfaceGrid* grid, uint32_t x,
-                                   uint32_t y, float out[12]); /* 0x00450220 */
+void terrain_surface_grid_values_get(TerrainSurfaceGrid* grid, uint32_t x,
+                                     uint32_t y, float out[12]);
+/* Read live mesh XYZ positions from the owning level's SceneRender cache. */
+int grid_cell_read_surface_values_level(struct LevelState* level, uint32_t x,
+                                       uint32_t y, float out[12]);
 int grid_cell_read_surface_vector(TerrainSurfaceGrid* grid, uint32_t x,
                                   uint32_t y, float out[3]); /* 0x00450060 */
+int grid_cell_read_surface_vector_level(struct LevelState* level,
+                                        uint32_t x, uint32_t y,
+                                        float out[3]);
 void terrain_cell_surface_vector_write(TerrainSurfaceGrid* grid,
                                        uint32_t x, uint32_t y,
                                        uint32_t corner,
@@ -331,9 +391,14 @@ void terrain_cell_change_queue_flush(TerrainSurfaceGrid* grid); /* FUN_00450780 
  * FUN_0040ce80): own the map's width*height array of 0x14-byte cell records. */
 void map_cell_record_grid_initialize(void* level);
 void map_cell_state_buffer_rebuild(void* level);
+void map_cell_record_grid_activate(void* level);
+void map_cell_record_grid_release(void* level);
+void map_cell_record_grid_release_current(void);
 void* map_cell_record_grid_get(void);
 void* map_cell_record_grid_level_get(void);
 int terrain_cell_object_record_present(int x, int y);
+int terrain_cell_object_record_present_for_level(const struct LevelState* level,
+                                                 int x, int y);
 typedef int (*TerrainCellInBoundsHook)(void* level, int x, int y,
                                        void* context);
 typedef void (*TerrainCellStateUpdateHook)(void* level, int x, int y,
@@ -361,6 +426,17 @@ void terrain_cell_object_hooks_install(TerrainCellObjectAvailableHook available,
                                       void* context);
 int create_cell_object_if_available(int x, int y); /* FUN_0040d170 */
 int delete_cell_object(int x, int y); /* FUN_0040d1f0 */
+typedef void* (*TerrainCellSceneObjectCreateHook)(
+    struct LevelState* level, uint32_t x, uint32_t y,
+    float world_x, float world_y, void* context);
+typedef void (*TerrainCellSceneObjectReleaseHook)(
+    struct LevelState* level, void* object, void* context);
+void terrain_cell_scene_object_hooks_install(
+    TerrainCellSceneObjectCreateHook create,
+    TerrainCellSceneObjectReleaseHook release, void* context);
+void terrain_cell_scene_object_update(struct LevelState* level,
+                                      uint32_t x, uint32_t y,
+                                      int should_exist); /* FUN_0040e350 */
 typedef void (*TerrainActivationPrepareHook)(void* context);
 typedef int (*TerrainActivationResolveHook)(void* object, int* x, int* y,
                                             uint32_t* entity_flags,
@@ -375,9 +451,10 @@ void terrain_activation_hooks_install(TerrainActivationPrepareHook prepare,
                                      TerrainActivationFloodHook flood,
                                      void* context);
 int terrain_cell_activation_try(void* object, int x, int y); /* FUN_0040d4f0 */
-/* Flood-state queries mirror TerrainCellSpecialStatePredicate: mode 0 tests
- * primary bit 0x400; mode 1 tests that base predicate and secondary bit
- * 0x100. Edge creation remains renderer-owned. */
+/* Flood-state query overrides for the active level. Without an override the
+ * implementation uses TerrainCellSpecialStatePredicate directly: mode 0
+ * tests primary bit 0x400; mode 1 also requires secondary bit 0x100. Edge
+ * creation remains renderer-owned. */
 typedef int (*TerrainFloodStateHook)(int x, int y, int mode, void* context);
 typedef void (*TerrainFloodEffectHook)(int from_x, int from_y, int to_x,
                                        int to_y, void* context);
@@ -425,24 +502,25 @@ void terrain_fence_spark_hooks_install(
 int entity_fence_spark_terrain_interaction(void* entity); /* FUN_0040de40 */
 void terrain_record_pool_chunk_allocate(void); /* FUN_0040d030 */
 
-/* TerrainCellVariantUpdateQueue (FUN_0043abf0). The world globals and
- * rendering operations are supplied by the active level/scene owner. */
-typedef int (*TerrainVariantCellResolveHook)(void* entity, int* x, int* y,
+/* TerrainCellVariantUpdateQueue (FUN_0043abf0) uses native entity/level APIs
+ * for position, random scatter, cell gates, work clearing, and CellInitPass.
+ * The marker is a DDi scene object, and the trailing LAB_0043ac90 body is an
+ * entity-specific visitor not represented by the CPU renderer; keep only
+ * those operations behind typed owner hooks. */
+typedef void (*TerrainVariantSceneMarkerHook)(void* entity, void* context);
+typedef int (*TerrainVariantEntityVisitHook)(void* owner_entity,
+                                             struct EntitySlot* candidate,
                                              void* context);
-typedef int (*TerrainVariantRandomHook)(void* context);
-typedef int (*TerrainVariantCellStateHook)(int x, int y, void* context);
-typedef void (*TerrainVariantOperationHook)(int operation, void* entity,
-                                            int x, int y, int value_a,
-                                            int value_b, void* context);
-void terrain_variant_update_hooks_set(TerrainVariantCellResolveHook resolve,
-                                      TerrainVariantRandomHook random_value,
-                                      TerrainVariantCellStateHook cell_state,
-                                      TerrainVariantOperationHook operation,
-                                      void* context);
+void terrain_variant_scene_hooks_set(TerrainVariantSceneMarkerHook marker,
+                                     TerrainVariantEntityVisitHook visit,
+                                     void* context);
 void terrain_cell_variant_update_queue(void* entity); /* FUN_0043abf0 */
 
-/* TerrainGridPathSearch (FUN_00440c70): cardinal breadth-first search with
- * caller supplied cell bounds, route predicate, and optional stop callback. */
+/* TerrainGridPathSearch (FUN_00440c70): cardinal breadth-first search over
+ * the active LevelState with alternating frontiers and a reusable per-cell
+ * depth map, passing an optional actor to the route predicate and an
+ * optional stop callback. The typed grid/route hooks are host overrides;
+ * normal gameplay resolves dimensions and cell state natively. */
 typedef int (*TerrainPathGridSizeHook)(void* level, uint32_t* width,
                                        uint32_t* height, void* context);
 typedef int (*TerrainPathRouteHook)(void* level, uint32_t x, uint32_t y,
@@ -457,17 +535,28 @@ void terrain_grid_path_hooks_set(TerrainPathGridSizeHook grid_size,
                                  TerrainPathRouteHook route,
                                  void* context);
 void terrain_neighbor_path_half_cost_hook_set(TerrainPathHalfCostHook hook);
-int terrain_grid_path_search(void* level, uint32_t start_x, uint32_t start_y,
+int terrain_grid_path_search(void* actor, uint32_t start_x, uint32_t start_y,
                              uint32_t goal_x, uint32_t goal_y,
                              int** out_x, int** out_y, uint32_t* out_count,
                              TerrainPathStopHook stop, void* user);
-int terrain_neighbor_path_check(void* level, uint32_t start_x,
+int terrain_neighbor_path_check(void* actor, uint32_t start_x,
                                 uint32_t start_y, uint32_t goal_x,
                                 uint32_t goal_y, int** out_x, int** out_y,
                                 uint32_t* out_count, TerrainPathStopHook stop,
-                                void* user); /* 0x004410f0 */
+                                void* user);
+int terrain_neighbor_path_check_current(void* actor, uint32_t start_x,
+    uint32_t start_y, uint32_t goal_x, uint32_t goal_y, int** out_x,
+    int** out_y, float* out_count, TerrainPathStopHook stop, void* user);
+                                                        /* 0x004410f0 */
+/* Release the reusable DAT_004dee00 cost field during entity-pool teardown. */
+void terrain_neighbor_path_cost_release(void);
 
 #ifdef __cplusplus
+}
+
+namespace unported_ledger_stubs {
+uint32_t terrain_placement_blocked_adjacent_cell_scan(
+    int x, int y, int mode, int duplicate_pair); /* 0x00431b20 */
 }
 #endif
 

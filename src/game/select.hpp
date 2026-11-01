@@ -87,8 +87,8 @@ int queue_callback_request_390(GameContext* ctx, int x, int y);
 
 /* TutorialPathMenuAction (FUN_0041d040). All explicit switch branches,
  * default no-op behavior, and the final global-mode gate are implemented.
- * Callbacks supply neighboring subsystems that remain independently
- * unported in the corpus. */
+ * Callbacks override the live entity/config defaults where supplied. The
+ * unnamed 0x14/0x15 route predicate remains an external runtime dependency. */
 int tutorial_path_menu_action(
     GameContext* ctx, const struct EngineContext* engine,
     struct TerrainDescriptorNode* descriptors,
@@ -138,10 +138,14 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e);
 }
 #endif
 
-/* SelectionContainsEntity (FUN_00452610): the dedupe scan — nonzero when
- * `e` is in the selection array below the count. NULL context answers 0
- * (the corpus reads its global array blindly). */
+/* Host convenience: pointer membership in the selection array. */
 int selection_contains_entity(const GameContext* ctx, const EntitySlot* e);
+/* SelectionContainsEntity (FUN_00452610): when index_out is non-NULL, scan
+ * the live selection array in order and write the first matching 32-bit
+ * index; when NULL, test the entity's +0x3e8 selected bit. */
+int selection_contains_entity_target(const GameContext* ctx,
+                                     const EntitySlot* e,
+                                     uint32_t* index_out);
 
 /* Coordinate-matched UI action cancellation helpers (FUN_0041cf80,
  * FUN_0041cfb0 and FUN_0041cfe0). `coordinate` points to two map words. */
@@ -162,9 +166,8 @@ void selection_cancel_if_cursor_hits_object(struct EngineContext* engine,
 
 /* SelectionCandidateAlreadySelectedOrMarked / SelectionCandidateEligibilityCheck
  * (FUN_00452690 / FUN_00452870, findings 77/85/468): the selection filter's
- * candidate leaves. Already-selected-or-marked answers through the
- * selection array or the +0x3ec word's bit 2 (the corpus reads that word
- * as a byte; the flag-word read is the documented deviation). The
+ * candidate leaves. Already-selected-or-marked tests the +0x3e8 selected
+ * bit or +0x3ec byte bit 1. The
  * eligibility leaf requires the +0x3e8 bit-0x100 state gate, the ported
  * shared-eligibility predicate, the +0x3e4/+0x3e0 clear-bit gates, and
  * the type-1 +0x3e0 bit-0x40000 rejection. NULL entities reject both. */
@@ -180,15 +183,11 @@ int selection_candidate_already_selected_or_marked(const GameContext* ctx,
 int current_level_state_flags_contain_mask(const GameContext* ctx,
                                            uint32_t mask);
 
-/* SelectionClearMarkerAndResetHud (FUN_0044c4a0): a marked entity whose
- * stats word carries bit 0x20000 raises the DAT_00556ecc state word's
- * 0x10000000 bit (threaded through the engine handle, deviation) and its
- * own +0x3ec bit 1 — but only when the state-flags word's same bit is
- * clear or the +0x36c owner is set. The selection-clear command post and
- * HUD context post always run. NULL handles and entities stay inert on
- * the raise path (deviations). */
+/* Retail SelectionClearMarkerAndResetHud takes one entity and writes the
+ * active DAT_00556ecc mirror when its state/stat gates pass. */
+void selection_clear_marker_and_reset_hud(EntitySlot* e); /* FUN_0044c4a0 */
+/* Explicit-context compatibility entry used by tests and context owners. */
 void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
                                           EntitySlot* e);
-                                                /* FUN_0044c4a0 */
 
 #endif /* LEGORRR_GAME_SELECT_HPP */

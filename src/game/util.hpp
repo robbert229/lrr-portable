@@ -25,6 +25,7 @@
 #include <stdint.h>
 
 #include "gods98/block.hpp"
+#include "port_loop_ports.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,31 +63,39 @@ void counter_format_string_build(const char* prefix, char* out,
                                  int* counter, int width);
 
 typedef struct ParsedEntityHealthValue {
-    uint32_t flags;       /* 0x80 integer, 0x100 real, 0x200 invalid */
+    uint32_t flags;       /* 0x80 overflow, 0x100 underflow, 0x200 invalid */
     uint32_t consumed;
     uint32_t reserved[2];
     double value;         /* corpus result at +0x10 */
 } ParsedEntityHealthValue;
+typedef char ParsedEntityHealthValueSizeCheck[
+    sizeof(ParsedEntityHealthValue) == 0x18u ? 1 : -1];
+/* FUN_004907f0 consumes the NUL-terminated text; extra args are ignored. */
 const ParsedEntityHealthValue* parse_entity_health_value(
-    const char* text, int length, int flags, int mode); /* FUN_004907f0 */
+    const char* text, int length, int flags, int mode);
 
-typedef struct MotionUtilityState {
-    uint32_t flags;
-    float channel[3];
-    float lower_limit;
-    float upper_limit;
-    float source_vector[3];
-    float random_min;
-    float random_max;
-    float scaled_vector[3];
-} MotionUtilityState;
 typedef float (*MotionRandomRangeFn)(float minimum, float maximum,
                                      void* user);
-void motion_utility_state_install(MotionUtilityState* state,
-                                  MotionRandomRangeFn random_range,
-                                  void* user);
 void motion_three_channel_tween_step(float delta); /* 0x0044da50 */
 void motion_waypoint_vector_random_scale_apply(void); /* 0x0044d710 */
+
+/* RandomWaypointTimerStepApply (0x0044d280) owns this timer/position record.
+ * The retail configuration loader supplies its values; the engine ticker
+ * advances it through motion_waypoint_timer_tick. */
+void motion_waypoint_timer_state_install(MotionWaypointTimerState* state,
+                                         PortLoopRandomRangeHook random_range,
+                                         void* context);
+void motion_waypoint_parameters_store(float min_x, float min_y, float min_z,
+                                      float max_x, float max_y, float max_z,
+                                      float hold_min, float hold_max,
+                                      float scale_min, float scale_max,
+                                      float duration_min, float duration_max);
+void motion_gameplay_scene_bind(void* target, uint32_t flags);
+void motion_waypoint_position_bind(float x, float y, float z);
+void motion_waypoint_timer_tick(float delta); /* 0x0044d280 */
+
+/* MotionUtilityTick (0x0044cfa0) is the registered engine ticker. */
+void motion_gameplay_tick(float delta);
 
 /* DriftOffsetStepApply (0x0044d0d0) advances the module's randomized drift
  * offset. The state keeps the recovered timer, per-axis amplitude, and
@@ -148,10 +157,11 @@ void level_identifier_remap_table_install(const uint32_t* pairs,
                                           unsigned int count);
 void command_entity_reference_remap(uint32_t* entity_reference); /* FUN_0045d870 */
 
-/* Port-side intrusive incident-list model for EntityLinkedListEntriesRemoveByKey.
- * Nodes and list records are caller-owned; the hooks release removed storage. */
+/* Port-side linked-list mirror of the indexed registry records. The retail
+ * entry key is at +8 and the next link at +0x10; widen keys so entity pointers
+ * remain comparable in the 64-bit host build. */
 struct EntityLinkNode {
-    uint32_t key;
+    uintptr_t key;
     EntityLinkNode* next;
 };
 struct EntityLinkList {
@@ -161,9 +171,11 @@ struct EntityLinkList {
     EntityLinkList* next;
 };
 void entity_link_lists_install(EntityLinkList** head);
+/* Hooks are used by the terrain-cell adapter; 0x419830 itself only unlinks
+ * entries and empty registry records, matching FUN_004197b0/FUN_00419e80. */
 void entity_link_release_hooks_set(void (*node_hook)(EntityLinkNode*),
                                   void (*list_hook)(EntityLinkList*));
-void entity_linked_list_entries_remove_by_key(uint32_t key); /* FUN_00419830 */
+void entity_linked_list_entries_remove_by_key(uintptr_t key); /* FUN_00419830 */
 void terrain_cell_linked_entries_remove(uint32_t key); /* FUN_004198f0 */
 
 /* Resource-table owner matching the width/height/data fields at +0x74/+0x78/+0x80. */

@@ -115,6 +115,11 @@ typedef struct FeItem {
     /* Slider / Cycle interaction state (Options menus). `value` lives in
      * [min, max]; cycles min=0, max=count-1 and carry their option texts. */
     int   min, max, value;
+    int   slider_x, slider_y; /* slider bar offset from the item anchor */
+    /* Slider config owns the colon-separated bar/cap/arrow image tuple.
+     * Keep its stable BlockFile string and per-open cache references. */
+    const char* slider_config;
+    TextureSurface* slider_images[8];
     int   cycle_count;
     char  cycle_opts[4][24];
 } FeItem;
@@ -167,6 +172,7 @@ typedef struct FeSlot {
     char  label[FE_NAME_MAX];
     char  status[FE_NAME_MAX];
     int   present;
+    int   completed;             /* completed configured levels in this slot */
 } FeSlot;
 
 /* SaveMenuLayoutLoad (FUN_00415d00): the corpus stores these paths and
@@ -185,6 +191,7 @@ typedef struct FeSaveMenuLayout {
     char panel_path[FE_PATH_MAX];
     int panel_x, panel_y, panel_w, panel_h;
     int has_panel;
+    TextureSurface* panel_surface;
 } FeSaveMenuLayout;
 
 #define FE_LEVEL_MENU_LISTS 2
@@ -429,6 +436,11 @@ void frontend_options_sync(FrontEnd* fe);
  * (The corpus ANDs the loader-mode check DAT_00505f88 < 3; the port only
  * tracks the flag — the loader-mode notion is Win32-side.) */
 int  frontend_enabled(BlockFile* cfg);
+/* RenderThreePassUpdate (FUN_00459530): initialize health-bar geometry and
+ * colors, hunger images and position, then the bubble position from the
+ * value/key config pair. Called during game config setup before rendering. */
+void frontend_hud_runtime_install(void);
+void frontend_render_three_pass_update(BlockFile* values, BlockFile* names);
 /* UiTextUnderscoresToSpaces (FUN_004102b0): return a shared display copy
  * with underscores changed to spaces for strings up to 255 bytes. */
 const char* ui_text_underscores_to_spaces(const char* text);
@@ -456,6 +468,7 @@ int  frontend_open(FrontEnd* fe, int menu);
 int  frontend_state_change(FrontEnd* fe, int state); /* FUN_004169c0 */
 int  menu_enter(FrontEnd* fe, int mode); /* FUN_00416c80 */
 int  save_menu_open_from_reward(FrontEnd* fe); /* FUN_00462030 */
+int  save_menu_open_from_reward_bound(void);
 void frontend_close(FrontEnd* fe);
 void interface_resource_handles_release(FrontEnd* fe); /* FUN_00413b50 */
 void frontend_save_thumbnail_invalidate(FrontEnd* fe, int slot);
@@ -728,6 +741,9 @@ void     help_window_info_config_strings_load(
              void (*store)(void* context, int group, size_t catalog_index,
                            int line_index, const char* text),
              void* context);
+const char* help_window_info_string_get(int group, size_t catalog_index,
+                                        int line_index);
+uintptr_t help_window_text_area_handle_peek(void);
 /* ToolTipInfoStringsLoad (FUN_00427e00): load nine fixed labels from the
  * ToolTipInfo config group into module-owned strings. */
 void tooltip_info_strings_load(BlockFile* cfg);
@@ -752,6 +768,7 @@ typedef void (*AdvisorTextRequestActionFn)(uint32_t request, int p1, int p2,
 void advisor_text_request_action_hook_set(AdvisorTextRequestActionFn hook,
                                           void* context);
 void advisor_text_request_setup(uint32_t request, uint32_t flags);
+void advisor_text_request_setup_text(const char* source, uint32_t flags);
 uint32_t advisor_text_request_flags_get(void);
 typedef struct AdvisorTextDisplayState {
     int current_slot;
@@ -766,6 +783,14 @@ typedef struct AdvisorTextDisplayState {
      * alternate record when slot_text_draw is not supplied. */
     void* primary_text_output;
     void* alternate_text_output;
+    /* Optional source for the queued advisor request. The reference stores a
+     * source pointer at DAT_00503614; token_index is a portable alternative
+     * for owners that retain the parsed ordinary-token table. */
+    const char* message_text;
+    uint32_t message_token_index;
+    uint32_t message_token_index_valid;
+    int advisor_mode;
+    int advisor_mode_valid;
 } AdvisorTextDisplayState;
 typedef struct AdvisorTextDisplayOps {
     void* context;
@@ -785,6 +810,28 @@ typedef struct AdvisorTextDisplayOps {
 } AdvisorTextDisplayOps;
 void advisor_text_display_ops_set(const AdvisorTextDisplayOps* ops);
 void advisor_text_display_worker(float delta); /* FUN_0046ad00 */
+typedef void (*AdvisorInlineImageDrawFn)(void* context, void* image_handle,
+                                         uint32_t image_index, float x,
+                                         float y);
+typedef float (*AdvisorInlineSoundDurationFn)(void* context,
+                                              uint32_t sound_handle);
+typedef void (*AdvisorInlineSoundTransitionFn)(void* context,
+                                               uint32_t sound_handle,
+                                               float duration);
+typedef struct AdvisorInlineTokenOps {
+    void* context;
+    AdvisorInlineImageDrawFn image_draw;
+    AdvisorInlineSoundDurationFn sound_duration;
+    AdvisorInlineSoundTransitionFn sound_transition;
+    float image_x;
+    float image_y;
+    float image_step_x;
+    float image_step_y;
+    float duration_origin;
+} AdvisorInlineTokenOps;
+void advisor_inline_token_ops_set(const AdvisorInlineTokenOps* ops);
+void advisor_inline_token_render(char* source, char* output, int draw);
+float advisor_inline_token_duration_get(void);
 typedef struct SelectedGroundMarkerOps {
     void* context;
     int (*entity_renderable)(void* context, void* entity);
@@ -909,6 +956,38 @@ typedef struct AdvisorOverlayRect {
 typedef int (*AdvisorOverlayFallbackHitFn)(
     void* context, float x, float y, float offset_x, float offset_y,
     uint32_t* result0, uint32_t* result1, uint32_t* result2);
+struct TerrainSurfaceGrid;
+struct CameraPointerRayHooks;
+typedef struct SimulationPointerDispatchOps {
+    void* context;
+    float cell_region_x;
+    float cell_region_y;
+    AdvisorOverlayRect focused_rect;
+    float overlay_offset_x;
+    float overlay_offset_y;
+    uint32_t feature_word;
+    AdvisorOverlayFallbackHitFn overlay_fallback;
+    struct TerrainSurfaceGrid* terrain_grid;
+    const struct CameraPointerRayHooks* ray_hooks;
+    int (*global_word_resolve)(void* context, int action, int cell_x,
+                               int cell_y, uint32_t* value_out);
+    const char* (*action_label_get)(void* context, int action,
+                                    int cell_x, int cell_y);
+    void (*feedback)(void* context, int feedback_kind, int action,
+                     int cell_x, int cell_y, const char* text,
+                     uint32_t repeat_count);
+    void (*world_hit_apply)(void* context, int cell_x, int cell_y,
+                            const float hit_xyz[3], int count_action);
+    void (*action_count)(void* context, int action, int cell_y);
+    void (*action_complete)(void* context, int action, int cell_x,
+                            int cell_y);
+} SimulationPointerDispatchOps;
+void simulation_pointer_dispatch_ops_set(
+    const SimulationPointerDispatchOps* ops);
+int simulation_pointer_action_dispatch(int x, int y, int active,
+                                       int suppress_initial,
+                                       int count_action,
+                                       void* main_sim_context); /* 0x41baa0 */
 int advisor_overlay_hit_resolve(
     float x, float y, const AdvisorOverlayRect* focused_rect,
     float offset_x, float offset_y, AdvisorOverlayFallbackHitFn fallback,
@@ -1047,6 +1126,48 @@ float    selection_coordinates_peek(int which); /* 0..3 */
 void     selection_region_parameters_peek(float out[5]);
 extern uint32_t s_obj_sel_word; /* DAT_004ddccc: objective selection mode */
 uint32_t objective_selection_word_peek(void);   /* port hook */
+/* UITextOutputPositionAndDraw @ 0x45a5b0 receives this exact 16-byte x86
+ * record: text buffer pointer, base Y, base X, and panel-coordinate pointer.
+ * The final pointer addresses a panel record whose +0x18/+0x1c floats are
+ * added to Y/X respectively. On wider hosts the pointer tokens are resolved
+ * through the sidecar below. */
+typedef struct UiTextOutputRecord32 {
+    uint32_t text_buffer_pointer;
+    int32_t  base_y;
+    int32_t  base_x;
+    uint32_t panel_coordinates_pointer;
+} UiTextOutputRecord32;
+typedef char UiTextOutputRecord32SizeCheck[
+    (sizeof(UiTextOutputRecord32) == 16) ? 1 : -1];
+
+/* Portable UI text-output allocator. rect is the x/y/w/h float tuple; mode
+ * and buffer_size are passed to TextBufferCreate. */
+void* ui_text_output_record_allocate(int panel, uint32_t mode,
+                                     const float rect[4],
+                                     uint32_t buffer_size);
+typedef struct UiTextOutputElementCreateContext {
+    uint32_t mode;
+} UiTextOutputElementCreateContext;
+void* ui_text_output_element_create(void* context, int panel, int kind,
+                                    float x, float y, float width,
+                                    float height, int buffer_size);
+int ui_text_output_record_slot_allocate(void** holder, int panel,
+                                        uint32_t mode, const float rect[4],
+                                        uint32_t buffer_size);
+/* The native-width panel record needs an adapter on hosts wider than x86. */
+int ui_text_output_panel_coordinates_set(int panel, float y_offset,
+                                         float x_offset);
+/* Port ownership cleanup; the retail release target resets rather than frees
+ * this record. */
+void ui_text_output_record_destroy(void* record);
+void ui_text_output_record_slot_destroy(void** holder);
+int ui_text_output_pointer_binding_set(void* record, void* text_buffer,
+                                       const float* offsets);
+void ui_text_output_pointer_binding_clear(void* record);
+void ui_text_output_position_and_draw(void* record, uint32_t start_line,
+                                      float line_scale);
+void ui_text_output_record_slot_draw(void* const* holder,
+                                     uint32_t start_line, float line_scale);
 void frontend_event_timer_state_get(EventTimerState* state);
 void frontend_event_timer_state_set(const EventTimerState* state);
 void timed_status_and_event_tick(float delta); /* FUN_0041b930 */

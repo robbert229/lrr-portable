@@ -49,6 +49,7 @@ typedef struct ViewContext {
     int    timer_acc;  /* [0x2a] */
     float  velocity[3];/* [0x2b..2d] */
     uint8_t flags;     /* [0x2e] bit 0x10 = dirty */
+    void*  target_record; /* host-owned retail target-record sidecar */
 } ViewContext;
 
 /* Per-frame view update: ViewContextTick(view, state, dt, scale). */
@@ -103,7 +104,7 @@ void animation_track_keys_interpolate(void* owner, const void* track,
 void scene_node_transform_matrix_apply(void* owner, const void* track,
                                        const float position[3],
                                        const float rotation[3],
-                                       const float scale[3]); /* portable adapter */
+                                       const float scale[3]); /* 0x004882e0 */
 void matrix_apply_rotation_about_z_with_offset(void* target,
                                                float matrix[16],
                                                float offset); /* 0x0044b7a0 */
@@ -220,29 +221,35 @@ typedef struct GlobalRenderRecordHooks {
 void global_render_record_set_from_input(void* record, void* view,
                                          const GlobalRenderRecordHooks* hooks); /* 0x00425d50 */
 typedef struct EngineTaskCallbackRecord {
-    void* resource_interface;
-    void* callback;
-    void* handler;
-    void* self;
-    void* owner;
-    uint32_t value;
-    uint32_t flags;
+    /* Retail record is 0x34 bytes. Pointer-bearing words retain their
+     * x86 offsets here; portable code must keep full-width interface values
+     * in its adapter hooks rather than widening this target record. */
+    uint32_t words[13];
 } EngineTaskCallbackRecord;
+typedef char EngineTaskCallbackRecordSizeCheck[
+    sizeof(EngineTaskCallbackRecord) == 0x34u ? 1 : -1];
 typedef struct EngineTaskCallbackHooks {
     void* context;
-    EngineTaskCallbackRecord* (*record_allocate)(void* context);
-    void (*record_release)(void* context, EngineTaskCallbackRecord* record);
-    void (*global_initialize)(void* context);
-    void (*manager_event)(void* context, void* manager);
-    void* (*resource_interface_get)(void* context,
-                                    EngineTaskCallbackRecord* record);
+    /* D3DRM3::CreateUserVisual is IDirect3DRM3 slot +0x58. The callback
+     * manager object is renderer-owned; `resource_out` represents record
+     * +0x0c on x86. */
+    void (*user_visual_create)(void* context, uint32_t callback_address,
+                               EngineTaskCallbackRecord* record,
+                               void** resource_out);
+    /* Remaining calls are represented by their observed call shapes; their
+     * concrete owner/resource interface contracts have no production
+     * adapters in this checkout. */
     void (*owner_bind)(void* context, void* owner, void* resource_interface);
     void (*callback_attach)(void* context, void* resource_interface,
                             EngineTaskCallbackRecord* record);
 } EngineTaskCallbackHooks;
+void engine_task_callback_hooks_set(const EngineTaskCallbackHooks* hooks);
+/* Five retail stack arguments, in callsite order. */
 EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
-    void* manager, void* owner, void* callback, int mode,
-    const EngineTaskCallbackHooks* hooks); /* 0x00480870 */
+    void* owner, void* callback, uint32_t mode, void* context,
+    uint32_t flag_value); /* 0x00480870 */
+void engine_task_callback_record_release(
+    EngineTaskCallbackRecord* record);
 typedef struct SceneRotationApplyHooks {
     void* context;
     unsigned int (*child_count)(void* context, void* object);
@@ -440,8 +447,10 @@ float point_to_polyline_minimum_segment_distance(const float* point,
                                                  unsigned int segment_count);
 void matrix_rotation_compose_xyz(float* record); /* FUN_0040fb00 */
 void d3drm_vector_random(float* out); /* FUN_00479500, D3DRM import behavior */
+/* FUN_00479510: rotates vector by angle around axis; the import normalizes
+ * axis in place. out may alias either vector input or axis. */
 void d3drm_vector_rotate(float* out, const float* vector, float* axis,
-                         float angle); /* FUN_00479510 */
+                         float angle);
 void vector_scale_components_in_place(float* vector, float sx, float sy,
                                       float sz); /* FUN_0040fcc0 */
 int   vec_exact_equal(const float* a, const float* b);
@@ -569,13 +578,15 @@ int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
  * 32-bit pointer slots are read native-size (the port's model of
  * corpus pointer fields); NULL head answers 0. */
 int menu_overlay_list_count(const void* menu);
-/* t = dot(q-p, n) / dot(n, d) into t_out for ray (p,d) × plane (q,n);
- * answers 1 when not parallel, 0 otherwise (FUN_00479a30). */
+/* t = dot(q-p, n) / dot(d, n) into t_out for ray (p,d) × plane (q,n);
+ * answers 0 for zero/unordered denominator and leaves t_out unchanged.
+ * Negative t is accepted (FUN_00479a30). */
 int ray_plane_intersection_parameter(float* t_out, const float* p,
                                      const float* d, const float* q,
                                      const float* n);
 /* Line1 (p1,d1) × line2 (p2,d2): writes the hit into out, returns it;
- * NULL when parallel (FUN_00479af0). */
+ * NULL for zero/unordered determinant, leaving out untouched
+ * (FUN_00479af0). */
 float* line_intersection_2d_compute(float* out, const float* p1,
                                     const float* d1, const float* p2,
                                     const float* d2);
@@ -594,7 +605,9 @@ uint32_t ddiscene_animation_state_get(void* scene_interface);
 const char* ddiscene_animation_sample_name_get(void* scene_interface);
 uint32_t ddiscene_animation_last_frame_get(void* scene_interface);
 uint32_t ddiscene_action_record_field_1c_get(void* scene_interface);
+void* ddiscene_action_record_field_1c_pointer_get(void* scene_interface);
 uint32_t ddiscene_action_record_field_0c_get(void* scene_interface);
+const char* scene_property_secondary_name_get(void* property);
 uint32_t scene_property_value_at08_get(void* scene_interface);
 float scene_property_float_at14_get(void* property); /* 0x004761c0 */
 float typed_child_resource_scalar_get(void* scene_object); /* 0x004757f0 */
@@ -719,6 +732,28 @@ void scene_act_frame_record_clone_hooks_set(
 SceneActFrameRecord* scene_act_frame_record_clone_or_create(
     const SceneActFrameRecord* source, uint32_t clone_argument,
     uintptr_t* output_value);
+
+/* The retail object-hierarchy path uses renderer-owned COM interfaces. The
+ * enumerator and QueryInterface calls are performed here; these two adapters
+ * cover only the host record translation and Direct3DRM child registration
+ * that have no portable owner in this repository. Returned child interfaces
+ * are retained and released by the recursive walker. */
+namespace lego { struct CachedRenderResourceTemplateRecord; }
+typedef struct ObjectHierarchyResourceHooks {
+    void* context;
+    lego::CachedRenderResourceTemplateRecord* (*template_resolve)(
+        void* resource, uint32_t mode, void* context);
+    int (*child_clone_register)(void* source_parent, void* clone_parent,
+                                void* child_interface,
+                                void** source_child_out,
+                                void** clone_child_out, void* context);
+} ObjectHierarchyResourceHooks;
+void object_hierarchy_resource_hooks_set(
+    const ObjectHierarchyResourceHooks* hooks);
+void com_child_items_visit(void* parent); /* 0x00489bc0 */
+void object_interface_array_resource_create(void* object, uint32_t mode);
+void object_hierarchy_recursive_clone(void* source, void* clone,
+                                      uint32_t mode); /* 0x004899f0 */
 typedef struct EntityVisualResourceLoadHooks {
     void* context;
     int (*kind_get)(void* scene_object, void* context);
@@ -787,8 +822,10 @@ void ddiscene_animation_hook_create(void* scene_object, int callback,
                                     const uint32_t* value_14,
                                     int value_18, int value_24,
                                     const uint32_t* value_20); /* 0x475f70 */
+/* The third argument is the interface-value slot used by the nested +0x5c /
+ * +0x74 dispatch; it is not a float output buffer. */
 void ddiscene_timed_hook_dispatch(void* hook_record, float time,
-                                  void* output); /* 0x4897e0 */
+                                  void* interface_value); /* 0x4897e0 */
 void ddiscene_apply_act_frame_timing(void* scene_object); /* 0x475300 */
 typedef struct DDiSceneFrameRecordFindHooks {
     void* context;
@@ -838,6 +875,8 @@ typedef void (*DDiSceneDrawBeginHook)(void* render_object, int begin,
 void ddiscene_draw_begin_hook_set(DDiSceneDrawBeginHook hook,
                                   void* context);
 void ddiscene_draw_begin(void* render_object, int begin); /* 0x477010 */
+void ddiscene_draw_end(void* render_object, const void* commit_source,
+                       float frame_delta); /* 0x477150 */
 void* com_resource_enumeration_result_get(void* resource_owner); /* 0x477310 */
 typedef struct SceneHierarchyNodeInfo {
     void* scene_interface;
@@ -963,6 +1002,30 @@ void ddiscene_payload_release_hooks_set(
     const DDiScenePayloadReleaseHooks* hooks);
 void ddiscene_payload_release(void* scene_object); /* 0x00475c80 */
 char* ddiscene_resource_name_resolve(const char* name); /* 0x00476770 */
+typedef int (*DdiSceneResourceExistsHook)(const void* file_data,
+                                          uint32_t file_size,
+                                          const char* path,
+                                          void* scene_interface,
+                                          void* context);
+/* The existence adapter receives bytes owned by the query and must not keep
+ * the pointer after it returns. */
+/* DDiSceneResourceOpen is called with a whole-file buffer that the caller
+ * frees immediately after return. A successful adapter result is the owned
+ * renderer resource returned to the scene-object factory. The adapter must
+ * synchronously consume the bytes and reproduce the renderer's mesh-builder
+ * load, builder release, and scene-interface attach sequence. */
+typedef void* (*DdiSceneResourceOpenHook)(const void* file_data,
+                                          uint32_t file_size,
+                                          const char* path,
+                                          void* scene_interface,
+                                          uint32_t optional_flag,
+                                          void* context);
+void ddiscene_resource_hooks_set(DdiSceneResourceExistsHook exists_hook,
+                                 DdiSceneResourceOpenHook open_hook,
+                                 void* context);
+void* ddiscene_resource_open(const void* file_data, uint32_t file_size,
+                             const char* path, void* scene_interface,
+                             uint32_t optional_flag); /* 0x00476850 */
 typedef void (*DDiSceneSampleHook)(const char* sample_name,
                                    void* scene_object, void* context);
 typedef void (*DDiSceneEndHook)(void* scene_object, void* context);
@@ -1034,6 +1097,8 @@ void scene_object_coordinate_transform_in_place(void* object,
  * call the scene object's +0x60/+0xf0/+0xec interface methods. */
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3]);
+int ddiscene_object_facing_get(void* object, void* alternate_frame,
+                               float facing[3]); /* FUN_00475500 */
 int ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z);
 int ddiscene_object_pose_method_dispatch(void* object,
@@ -1065,10 +1130,12 @@ void* ddiscene_render_surface_pool_block_get(unsigned int index);
 void ddiscene_render_surface_pool_release_all(void);
 
 /* SceneObjectRegistryReleaseAll/Teardown (FUN_0047e130/FUN_0047d430).
- * The small-record pool owner registers each newly allocated block here;
- * live records are released through the installed surface callback before
- * the blocks and free-list state are cleared. */
-typedef void (*SceneRegistrySurfaceReleaseFn)(void* surface);
+ * The small-record pool owner registers each allocated block here. Live
+ * records carry a 32-bit interface token at +0 and a self marker at +0x1c;
+ * an optional callback resolves/releases that token on hosts where the
+ * reference's 32-bit interface pointer cannot be called directly. */
+typedef void (*SceneRegistrySurfaceReleaseFn)(uint32_t interface_token);
+void image_surface_release(void* record); /* 0x0047d470 */
 void scene_object_registry_surface_release_set(
     SceneRegistrySurfaceReleaseFn release);
 void scene_object_registry_pool_block_register(void* block);

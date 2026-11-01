@@ -373,7 +373,7 @@ int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
         for (side = 0; side < 2u; ++side) {
             if (!handled && ui_track_point_in_rect(current->button_rects[side],
                                                    x, y)) {
-                if (slot_index_out != NULL) *slot_index_out = current->index;
+                if (slot_index_out != NULL) *slot_index_out = slot;
                 if (mode == 0) {
                     if (state->mode == 3u || side == state->mode) {
                         if (state->mode != 3u && current->selected_index != NULL) {
@@ -413,7 +413,7 @@ int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
                                         (int)state->outer_horizontal,
                                         &selected)) {
                 if (mode == 0) s_ui_track_pointer_outer_gate = 1;
-                if (slot_index_out != NULL) *slot_index_out = current->index;
+                if (slot_index_out != NULL) *slot_index_out = slot;
                 if (mode == 0) {
                     if (state->mode == 3u) {
                         state->mode = 2u;

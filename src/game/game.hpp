@@ -27,6 +27,8 @@
 #include "level.hpp"
 #include "options.hpp"
 
+struct TextureSurface;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -137,15 +139,22 @@ typedef struct RewardScreen {
     char  complete_text[128];
     char  failed_text[128];
     char  quit_text[128];
+    /* Formatted result label selected by RewardStatsPanelDraw for the
+     * renderer callback; sourced from the three config strings above. */
+    char  stats_result_text[256];
     int   text_pos[2];      /* `TextPos` token pair */
     /* SaveButton / AdvanceButton hit zones (corpus DAT_00555b60..b98). */
     float save_x, save_y;
     float advance_x, advance_y;
-    /* Button sizes — the corpus derives these from the widget surface
-     * (image dims, FUN_0047dbf0); defaults cover the demo until the
-     * surface lane exists. */
+    /* Button hit/draw sizes — derived from the normal widget surfaces just
+     * as the corpus reads the loaded bitmap dimensions. */
     float save_w, save_h;
     float advance_w, advance_h;
+    /* RewardSaveButtonZonesInit loads four bitmap states per button. The
+     * normal surfaces define the interactive dimensions; all refs belong to
+     * this GameContext reward config and are released on reinit/disposal. */
+    struct TextureSurface* save_button_images[4];
+    struct TextureSurface* advance_button_images[4];
 } RewardScreen;
 
 /* Entity slot model (finding 10 §"EntityPointer"): the corpus keeps four
@@ -187,6 +196,51 @@ typedef struct AiWaypoint {
 } AiWaypoint;
 typedef char AiWaypointSizeCheck[(sizeof(AiWaypoint) == 0x14) ? 1 : -1];
 
+/* Portable owner for the renderer-backed ActivityRunner records at retail
+ * entity offsets +0x10/+0x14. Source and chain values are dword handles
+ * copied from a type-resource row; host pointers stay in sidecars so they
+ * are never truncated on 64-bit builds. The retail +0x54 cache has eight
+ * slots inside the 0x74-byte runner record. */
+#define ENTITY_ACTIVITY_RUNNER_CACHE_MAX 8u
+typedef struct EntityActivityRunnerSidecar {
+    uint32_t scene_token;
+    uint32_t source_token;
+    uint32_t slot_count;
+    uint32_t template_row;
+    uint32_t component_gate_value;
+    uint32_t chain_tokens[3];
+    uint32_t activity_values[5];
+    void* child_scene;
+    void* resource_chains[3];
+    void* indexed_cache[ENTITY_ACTIVITY_RUNNER_CACHE_MAX];
+    uint32_t bound;
+} EntityActivityRunnerSidecar;
+
+/* Type-1 camera source record. Retail EntityActivityChangeDispatch reads its
+ * scene resource at +0xe0 and caches indexed camera children from +0x10c;
+ * the host keeps the scene instance and cache in native-width sidecars. */
+#define ENTITY_SCENE_RESOURCE_INDEX_CACHE_MAX 56u
+typedef struct EntitySceneResourceSidecar {
+    uint32_t scene_token;
+    uint32_t template_row;
+    void* scene_resource;
+    void* indexed_cache[ENTITY_SCENE_RESOURCE_INDEX_CACHE_MAX];
+    uint32_t bound;
+} EntitySceneResourceSidecar;
+
+/* Host-width node for SceneEntitySlotTableRebuild's renderer-owned list.
+ * The retail record stores its renderer at +4, optional resource payload at
+ * +0xc, and the next record at +0x20. Keep the exact semantic links here so
+ * 64-bit renderer pointers never pass through retail dwords. */
+typedef struct EntitySceneSlotNode {
+    void* renderer_record; /* retail node +4 */
+    void* payload;         /* retail node +0xc */
+    struct EntitySceneSlotNode* next; /* retail node +0x20 */
+    void* slot_handles[4];
+    uint32_t slot_handle_count;
+    int32_t animation_mode;
+} EntitySceneSlotNode;
+
 typedef struct EntitySlot {
     int32_t type;       /* corpus entity-type code (1..9)         */
     int32_t etype;      /* same, stored for the cmd task mapping  */
@@ -219,32 +273,29 @@ typedef struct EntitySlot {
     /* --- entity-tick state (callback 0x43c810, finding 10) --------- */
     uint32_t flags_3e4; /* +0x3e4 (bit 0x8000000 = wake-timer running)  */
     uint32_t flags_3ec; /* +0x3ec (activity/behaviour flags)            */
+    uint32_t flags_390; /* +0x390: BuildingTypes path-effect veto bits */
     int32_t command_mode_404; /* per-entity mode written by route commands */
     /* +0x3f0: level-state mask word. The corpus's two readers are this
      * module's selection gate (CurrentLevelStateFlagsContainMask) and the
      * unported sim-interaction update; no ported writer feeds it — a
      * zero-init mirror per the flags_3e0 precedent. */
     uint32_t flags_3f0;           /* +0x3f0 (level-state mask word)         */
-    /* --- minion task-state (spawn-dispatch switch 0x438150) --------- *
-     * The entity spawn dispatcher (FUN_00437d00) assigns the minion types
-     * a +0x334 stats block — its "task state" — through the selector at
-     * 0x438150 (ai_minion_state_for). activity_cap mirrors the state's
-     * +0xcc dword, which the permitted-activity appender reads
-     * (FUN_0046a060) to size each entity's list; the shipped static
-     * templates are zero and take their real values from config at runtime
-     * (TODO(corpus)), so the port defaults the per-entity cap to the span
-     * width when a minion task state is assigned (entity_create). */
-    int      task_state;    /* +0x334 role: minion task-state id, or
+    uint32_t activity_grant_state_3f4; /* +0x3f4: cleared by FUN_0044b370 */
+    /* --- static task-state (spawn-dispatch switch 0x438150) -------- *
+     * EntityCreateByType assigns one of three static +0x334 templates to
+     * types 8, 9, 0xc..0xe, and 0x10..0x13. activity_cap mirrors +0xcc for
+     * the permitted-activity appender. The port uses a same-name Stats row's
+     * NumOfToolsCanCarry as a capacity adapter when available; retail's
+     * static template word is zero and stays zero without that row. */
+    int      task_state;    /* +0x334 role: static task-state id, or
                              * AI_TASK_STATE_NONE (= -1) for instance stats */
     int      activity_cap;  /* state +0xcc: permitted-activity capacity;
-                             * 0 = unset -> ctx->stats_activity_cap          */
+                             * task-state value or context fallback          */
     const void* stats_record; /* +0x334 record side (finding 457): the
                                * selected stats record image read by the
                                * entity record accessors in entity.hpp. NULL
-                               * = the zero template — the Stats config
-                               * loader that fills real records is unported
-                               * (TODO(corpus)), so reads default to zero as
-                               * the shipped static templates do. */
+                               * for static task-state templates; instance
+                               * rows are populated by the Stats config loader. */
     int      activity;       /* +0x2e8: activity-table index, -1 = none */
     int      activity_last;  /* +0xbb: last completed activity, -1 none */
     int      activity_param; /* +0x2d8 (activity argument)              */
@@ -254,6 +305,8 @@ typedef struct EntitySlot {
     void*    wake_target;    /* +0x364: attached wake target (FUN_0044c110;
                                * the corpus fills it via the attach-pair
                                * writer 0x44c0e2, which is not ported)      */
+    uintptr_t field_300;      /* retail +0x300 pointer tested by the spatial
+                               * filter; no portable producer is recovered */
     const void* attach_304;  /* +0x304: attached object the selection
                               * filter follows in place of the candidate   */
     const void* owner_36c;   /* +0x36c: owner pointer read by the
@@ -268,8 +321,10 @@ typedef struct EntitySlot {
     int32_t  carry_state_324; /* +0x324: carry state word               */
     uint32_t field_328;       /* +0x328 counter read by tutorial 0x14/0x15 */
     void*    carry_ref_348;   /* +0x348: carried reference (dword read) */
+    float    command_chain_idle_elapsed_338; /* +0x338 callback timer */
     float    field_340;      /* +0x340 float; the wake mirror sets 100.0
                               * (its general corpus readers are TODO)       */
+    int32_t  positioned_render_state_34c; /* proximity-driven render state */
     /* --- route-progress advance (corpus +0x344/+0x2fc, finding 448) -----
      * The corpus advances a routing progress float by a fixed step and
      * clamps it to the entity's own +0x340 bound, clearing the +0x2fc
@@ -322,6 +377,7 @@ typedef struct EntitySlot {
     void* attached_direction_record_type2;
     void* attached_direction_record_type3;
     void* attached_direction_record_type4;
+    void* type_operation_fallback_1c; /* retail entity +0x1c component */
     /* Direction state written by AttachedEntityDirectionVectorUpdate
      * (+0x2ac..+0x2b8 in the corpus image). */
     float attached_direction[3];
@@ -333,15 +389,41 @@ typedef struct EntitySlot {
     void* payload_aux_handle_7c;
     void* payload_resource_chains[3];
     void* visual_resource_handles[4]; /* per-type cached scene visual */
+    void* type_component_handle; /* retail 0x4a200 result consumed by
+                                  * SurfaceVectorNormalize */
     void* payload_owned_blocks[5];
     uint32_t payload_flags_70;
     void* scene_slot_cache[12];
     uint32_t scene_slot_generation;
+    /* Retail +0xa0/+0xb8/+0xc4 windows are separate per-payload arrays:
+     * two repeated +0x1c registrations, then one +0x24 and one +0x20. */
+    void* scene_slot_owner_1c_handles[3][2];
+    void* scene_slot_owner_24_handles[3];
+    void* scene_slot_owner_20_handles[3];
+    uint32_t scene_slot_owner_1c_counts[3];
     int32_t task_pair_3b4[2];
     int32_t task_scalar_3bc;
     uintptr_t pair_link_3c0; /* reciprocal entity link at corpus +0x3c0 */
     float field_33c;         /* +0x33c spawn timer mirror, stored at the
                               * end to avoid shifting other port fields. */
+    uint32_t tutorial_unit_at_block_3f8; /* +0x3f8 tutorial cell membership
+                                          * marker written by callback 0x4570d0. */
+    /* Type-10 records retain their animation-resource record at retail
+     * +0x20; the resource getter in EntityTypeOperationRelease reads it. */
+    void* attached_direction_record_type10;
+    /* Spawn-request child link from retail +0x3cc. The generic entity pool
+     * can retain the relationship even when its renderer wrapper is absent. */
+    struct EntitySlot* spawn_child_3cc;
+    EntityActivityRunnerSidecar activity_runner_type2;
+    EntityActivityRunnerSidecar activity_runner_type3;
+    EntitySceneResourceSidecar scene_resource_type1;
+    EntitySceneSlotNode* scene_slot_nodes;
+    uint32_t scene_slot_node_count;
+    uint32_t scene_slot_registration_count;
+    uint32_t scene_slot_cache_count;
+    void* scene_slot_payloads[12];
+    uint32_t scene_slot_owner_keys[3]; /* retail owner +0x1c/+0x20/+0x24 */
+    uintptr_t pool_link_408; /* +0x408 self-pointer while live, free-list link after teardown */
 } EntitySlot;
 
 /* Waypoint consumers use this accessor so routes grown past the inline

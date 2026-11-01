@@ -12,8 +12,8 @@
  * The corpus players are FUN_00483c80 (open) / FUN_00484070 (tick) /
  * FUN_004841d0+260 (frame steppers); MoviePlayWait @ 0x415700 drives them
  * modal. This module keeps the same RAM-mode semantics: the whole chunk
- * stream is preloaded at open and frames are decoded on tick, with loop
- * restarting at index 1 (the keyframe is already in the buffer).
+ * stream is preloaded at open and frames are decoded on tick. RAM loops keep
+ * the decoded keyframe and restart at frame 1; streamed loops replay it.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,6 +28,7 @@
 #define FLIC_HEADER 136      /* the engine's read size (context +0x640) */
 #define FLIC_CHUNK_START 0x80 /* frame data starts at file offset 0x80 (§2) */
 #define FLIC_CHUNK_HDR 16
+#define FLIC_STREAM_INITIAL_BUFFER 20000u
 
 struct FlicChunk {
     const uint8_t* data; /* chunk start (16-byte header included) */
@@ -58,6 +59,7 @@ struct Flic {
     FlicStreamOps stream_ops;
     uint32_t stream_length;
     uint8_t* stream_buffer;
+    uint32_t stream_buffer_allocated;
     uint32_t stream_buffer_capacity;
     FlicChunk stream_chunk;
     size_t stream_loop_cursor;
@@ -74,6 +76,11 @@ static uint32_t le32(const uint8_t* p)
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16)
            | ((uint32_t)p[3] << 24);
 }
+
+static int flic_resource_route_resolve(const char* name,
+                                       const char** open_path,
+                                       int* resource_mode,
+                                       int* route);
 
 /* FlicFileHeaderValidate (FUN_00483f60): the original reads 0x88 bytes,
  * compares the declared file length with the stream length, and accepts the
@@ -108,9 +115,15 @@ int flic_file_header_validate_path(const char* path, void* context)
     uint32_t file_size = 0u;
     ResourceStream* stream;
     FlicHeaderInfo header;
+    const char* open_path;
+    int resource_mode;
+    int route;
     int valid;
-    if (path == NULL || context == NULL) return 0;
-    stream = resource_stream_open(path, RESOURCE_AUTO, &file_size);
+    if (path == NULL || context == NULL ||
+        !flic_resource_route_resolve(path, &open_path, &resource_mode,
+                                     &route)) return 0;
+    (void)route;
+    stream = resource_stream_open(open_path, resource_mode, &file_size);
     if (stream != NULL) {
         valid = file_size >= FLIC_HEADER &&
             resource_stream_read_at(stream, 0u, header_bytes, FLIC_HEADER);
@@ -118,7 +131,7 @@ int flic_file_header_validate_path(const char* path, void* context)
         if (!valid) return 0;
     }
     else {
-        Resource* resource = resource_open(path, RESOURCE_AUTO);
+        Resource* resource = resource_open(open_path, resource_mode);
         int32_t loaded;
         if (resource == NULL) return 0;
         loaded = resource_read(resource);
@@ -279,7 +292,12 @@ static int fli_decode_chunk(Flic* f, const FlicChunk* ch)
         const uint8_t* rec = ch->data + pos;
         uint32_t rec_size = le32(rec);
         uint16_t opcode = le16(rec + 4);
-        uint32_t header_size = opcode == 25 ? 7u : 8u;
+        /* The generic record header is six bytes. Only the two implemented
+         * pixel opcodes consume the format-specific trailing header bytes;
+         * the retail opcode dispatcher returns immediately for every other
+         * opcode and the frame walker still advances by its declared size. */
+        uint32_t header_size = opcode == 25 ? 7u :
+                               opcode == 27 ? 8u : 6u;
         if (rec_size < header_size || rec_size > ch->size - pos) {
             return 0; /* record overruns its chunk — bounded */
         }
@@ -303,10 +321,18 @@ static int flic_stream_buffer_reserve(Flic* f, uint32_t capacity)
 {
     uint8_t* buffer;
     if (f == NULL) return 0;
-    if (capacity <= f->stream_buffer_capacity) return 1;
-    buffer = (uint8_t*)realloc(f->stream_buffer, (size_t)capacity);
+    if (f->stream_buffer != NULL &&
+        capacity <= f->stream_buffer_capacity) return 1;
+    /* The reference frees the old chunk buffer and allocates exactly the
+     * newly observed chunk size. Avoid realloc here: its failure semantics
+     * retain the old allocation, unlike the stream player's pool calls. */
+    free(f->stream_buffer);
+    f->stream_buffer = NULL;
+    f->stream_buffer_allocated = 0u;
+    buffer = (uint8_t*)malloc((size_t)capacity);
     if (buffer == NULL) return 0;
     f->stream_buffer = buffer;
+    f->stream_buffer_allocated = capacity;
     f->stream_buffer_capacity = capacity;
     return 1;
 }
@@ -316,8 +342,11 @@ static int flic_stream_chunk_header_read(Flic* f)
     uint32_t size;
     if (f == NULL || f->stream_mode == 0 ||
         f->cursor > f->stream_length ||
-        f->stream_length - f->cursor < FLIC_CHUNK_HDR ||
-        !flic_stream_buffer_reserve(f, FLIC_CHUNK_HDR)) return 0;
+        f->stream_length - f->cursor < FLIC_CHUNK_HDR) return 0;
+    if (f->stream_buffer == NULL ||
+        f->stream_buffer_allocated < FLIC_CHUNK_HDR) {
+        if (!flic_stream_buffer_reserve(f, FLIC_CHUNK_HDR)) return 0;
+    }
     if (!f->stream_ops.read_at(f->stream_ops.context, (uint32_t)f->cursor,
                                f->stream_buffer, FLIC_CHUNK_HDR)) return 0;
     size = le32(f->stream_buffer);
@@ -479,13 +508,18 @@ int flic_chunk_walk(Flic* f)
 Flic* flic_open(const char* name)
 {
     Flic* stream_flic;
+    const char* open_path;
+    int resource_mode;
+    int route;
     if (name == NULL || name[0] == '\0') {
         return NULL;
     }
     stream_flic = flic_open_resource_stream(name);
     if (stream_flic != NULL) return stream_flic;
-    Resource* r = resource_open(name, RESOURCE_AUTO);
-    if (r == NULL) {
+    if (!flic_resource_route_resolve(name, &open_path, &resource_mode,
+                                     &route)) return NULL;
+    Resource* r = resource_open(open_path, resource_mode);
+    if (r == NULL && route == 1) {
         /* Loose `Data/AVI/...` overlay copies (avi\PB1.flh etc.) resolve
          * through the movie path helper (case-insensitive, base = game dir). */
         char norm[256];
@@ -614,10 +648,18 @@ Flic* flic_open_stream(const FlicStreamOps* ops, uint32_t file_size)
     f->stream_length = file_size;
     f->cursor = FLIC_CHUNK_START;
     f->pix = (uint16_t*)malloc((size_t)header.width * header.height * 2u);
-    if (f->pix == NULL || !flic_stream_buffer_reserve(f, FLIC_CHUNK_HDR)) {
+    if (f->pix == NULL) {
         flic_close(f);
         return NULL;
     }
+    /* Retail opens the stream with a 20,000-byte scratch allocation; its
+     * logical chunk capacity remains zero until a chunk handler grows it. */
+    f->stream_buffer = (uint8_t*)malloc(FLIC_STREAM_INITIAL_BUFFER);
+    if (f->stream_buffer == NULL) {
+        flic_close(f);
+        return NULL;
+    }
+    f->stream_buffer_allocated = FLIC_STREAM_INITIAL_BUFFER;
     flic_chunk_walk(f); /* target-compatible walker return is always zero */
     if (!f->last_walk_frame_valid) {
         flic_close(f);
@@ -625,7 +667,10 @@ Flic* flic_open_stream(const FlicStreamOps* ops, uint32_t file_size)
     }
     f->idx = 0;
     f->eof = 0;
-    f->stream_loop_cursor = f->cursor;
+    /* FUN_00484260 captures its loop mark before reading the first streamed
+     * frame chunk. Stream loops therefore replay the keyframe at 0x80; only
+     * RAM mode retains its decoded keyframe and restarts at frame 1. */
+    f->stream_loop_cursor = FLIC_CHUNK_START;
     return f;
 }
 
@@ -641,15 +686,53 @@ static void flic_resource_stream_close(void* context)
     resource_stream_close((ResourceStream*)context);
 }
 
+/* FlicFileOpenAndStateCreate uses GameFileOpenDispatch, which selects a WAD
+ * member before a same-named loose file. ResourceStream's AUTO mode prefers
+ * loose files, so reproduce the dispatch decision before choosing its stream
+ * mode and WAD-relative path. */
+static int flic_resource_route_resolve(const char* name,
+                                       const char** open_path,
+                                       int* resource_mode,
+                                       int* route)
+{
+    const char* resolved;
+    int selected;
+    if (name == NULL || open_path == NULL || resource_mode == NULL ||
+        route == NULL) return 0;
+    resolved = resource_path_resolve_against_base(name);
+    if (resolved == NULL) return 0;
+    selected = game_file_open_route_select(resolved, "rb");
+    if (selected == 0) {
+        *open_path = game_file_mounted_path_prefix_rewrite(resolved);
+        *resource_mode = RESOURCE_WAD_ONLY;
+    }
+    else if (selected == 1) {
+        *open_path = resolved;
+        /* AUTO preserves the loose-file/CD fallback after the WAD query has
+         * already established that no mounted entry shadows this path. */
+        *resource_mode = RESOURCE_AUTO;
+    }
+    else {
+        return 0;
+    }
+    *route = selected;
+    return *open_path != NULL;
+}
+
 Flic* flic_open_resource_stream(const char* name)
 {
     ResourceStream* stream;
     FlicStreamOps ops;
     Flic* f;
+    const char* open_path;
+    int resource_mode;
+    int route;
     uint32_t file_size = 0u;
-    if (name == NULL || name[0] == '\0') return NULL;
-    stream = resource_stream_open(name, RESOURCE_AUTO, &file_size);
-    if (stream == NULL) {
+    if (name == NULL || name[0] == '\0' ||
+        !flic_resource_route_resolve(name, &open_path, &resource_mode,
+                                     &route)) return NULL;
+    stream = resource_stream_open(open_path, resource_mode, &file_size);
+    if (stream == NULL && route == 1) {
         char normalized[256];
         const char* wad_dir = getenv("LEGORRR_WAD_DIR");
         char os_path[512];
@@ -1411,3 +1494,47 @@ int flic_opcode27_decode_dispatch(void* record)
     }
     return 1;
 }
+
+namespace unported_ledger_stubs {
+
+int ledger_stub_00483f00_FlicPlayerClose(Flic* player)
+{
+    if (player == NULL) return 0;
+    flic_close(player);
+    return 1;
+}
+
+int ledger_stub_00483f60_FlicFileHeaderValidate(const char* path,
+                                                int* context)
+{
+    return flic_file_header_validate_path(path, context);
+}
+
+// FUNCTION: LEGORR 0x00484610
+int ledger_stub_00484610_FlicSubrecordOpcodeDispatch(void* record)
+{
+    uint8_t* rec = (uint8_t*)record;
+    void* stream = NULL;
+    int16_t opcode;
+    if (rec == NULL) return 0;
+    /* The retail dispatch reads the subrecord type at stream + 4, where
+     * stream is the pointer stored at record + 0x6d0. The record's own
+     * dword at +0x6d4 is a separate mode/op field consumed by selected
+     * handlers; treating it as the subrecord type misroutes records. On
+     * LP64 the portable window registry owns the full stream pointer. */
+    if (flic_window_find(rec, &stream, NULL) == 0 || stream == NULL) return 0;
+    memcpy(&opcode, (const char*)stream + 4, sizeof(opcode));
+    if (opcode == 4u) return flic_decode16_bit_row_records(rec);
+    if (opcode == 0x0bu || opcode == 0x0cu || opcode == 0x0du
+        || opcode == 0x5344u || opcode == 0x5555u) return 1;
+    if (opcode == 0x0fu || opcode == 0x19u)
+        return flic_opcode25_decode_dispatch(rec);
+    if (opcode == 0x10u) return flic_opcode16_mode_dispatch(rec);
+    /* FUN_00484610 routes both 0x07 and 0x1b through FUN_00485030. */
+    if (opcode == 0x07u || opcode == 0x1bu)
+        return flic_opcode27_decode_dispatch(rec);
+    return 0;
+}
+
+
+} // namespace unported_ledger_stubs

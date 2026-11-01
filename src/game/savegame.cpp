@@ -4,14 +4,17 @@
 #include <string.h>
 
 #include "game.hpp"
+#include "entity.hpp"
 #include "gods98/block.hpp"
 #include "crt/crt.hpp"
 #include "gods98/engine.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/resource.hpp"
+#include "gods98/record.hpp"
 #include "frontend.hpp"
 #include "level.hpp"
 #include "savegame.hpp"
+#include "options.hpp"
 #include "util.hpp"
 
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -593,8 +596,20 @@ void checkpoint_step(GameContext* ctx)
         save_mark_record(ctx, rec);
     }
     if (orig == -1) {
-        /* First checkpoint with no active slot: commit the default slot
-         * then reload its metadata (the corpus's SavCommit + reload). */
+        /* FUN_00462270 clears every default-slot level record after the
+         * first one, then reapplies the current checkpoint before commit.
+         * The initial write above ensures the table has grown far enough for
+         * this active level's record. */
+        if (ctx->records != NULL && ctx->record_count > 1) {
+            memset(ctx->records + SAVE_RECORD_SIZE, 0,
+                   (size_t)(ctx->record_count - 1) * SAVE_RECORD_SIZE);
+        }
+        (void)save_write_record(ctx, rec, ctx->checkpoint_blob);
+        if (result == 1) {
+            save_mark_record(ctx, rec);
+        }
+        /* The corpus commits the cleared/reapplied default slot, then
+         * reloads slot-5 metadata. */
         save_commit(ctx);
         save_read_slot(ctx, SAVE_DEFAULT_SLOT, 0);
     }
@@ -1619,3 +1634,128 @@ void sav_refresh_slots(GameContext* ctx)
         }
     }
 }
+
+namespace unported_ledger_stubs {
+
+/* The corpus globals at DAT_005529c4 and DAT_00555118 hold the selected
+ * type-4 name list and Pilot grid count. Keep their state module-owned, as
+ * GameContext is the port's owner for the active level and checkpoint. */
+static EntityType4IndexNameList s_start_level_type4_list;
+static uint32_t s_start_level_pilot_count;
+
+void ledger_stub_00460290_EntityType4IndexListBuild(
+    EntityType4IndexNameList* output);
+
+} // namespace unported_ledger_stubs
+
+void start_level_selected(GameContext* ctx)
+{
+    if (ctx == NULL || ctx->level == NULL || checkpoint_blob_get(ctx) == NULL) {
+        return;
+    }
+    unported_ledger_stubs::ledger_stub_00460290_EntityType4IndexListBuild(
+        &unported_ledger_stubs::s_start_level_type4_list);
+    unported_ledger_stubs::s_start_level_pilot_count =
+        entity_type_grid_record_count_get("Pilot", 0);
+}
+
+const EntityType4IndexNameList* start_level_entity_type4_list_get(void)
+{
+    return &unported_ledger_stubs::s_start_level_type4_list;
+}
+
+uint32_t start_level_pilot_grid_count_get(void)
+{
+    return unported_ledger_stubs::s_start_level_pilot_count;
+}
+
+namespace unported_ledger_stubs {
+
+/* Adapter signature for the no-argument retail entry. */
+void ledger_stub_00460220_StartLevelSelected(GameContext* ctx)
+{
+    start_level_selected(ctx);
+}
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+// FUNCTION: LEGORR 0x00460310
+int ledger_stub_00460310_EntityType4IndexListAppend(
+    EntitySlot* entity, void* payload)
+{
+    EntityType4IndexNameList* list = (EntityType4IndexNameList*)payload;
+    uint32_t kind;
+    uint32_t index;
+    if (list == NULL || entity == NULL) return 0;
+    copy_two_dword_pair_to_outputs(entity, &kind, &index);
+    if (kind == 4u && list->count < 100u) {
+        list->names[list->count] = item_name_by_kind_lookup(4u,
+                                                           (int)index);
+        list->count = list->count + 1u;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00460290
+void ledger_stub_00460290_EntityType4IndexListBuild(
+    EntityType4IndexNameList* output)
+{
+    EntityType4IndexNameList local;
+    uint32_t row;
+    uint32_t column;
+    memset(&local, 0, sizeof(local));
+    entity_pool_find_by_callback_filtered_current(
+        ledger_stub_00460310_EntityType4IndexListAppend, &local);
+    for (row = 0; row < 15u; ++row) {
+        for (column = 0; column < 16u; ++column) {
+            local.grid_count += grid_record_count_get(4, (int)row,
+                                                      (int)column);
+        }
+    }
+    if (output != NULL) {
+        memcpy(output, &local, sizeof(local));
+    }
+}
+
+
+// FUNCTION: LEGORR 0x00418040
+int ledger_stub_00418040_CampaignChainSnapshotCreate(
+    const GameContext* ctx, void* snapshot, size_t capacity)
+{
+    unsigned char* bytes = (unsigned char*)snapshot;
+    size_t records_size;
+    uint32_t record_count;
+    uint32_t records_offset;
+    uint32_t header_word;
+    uint32_t word_index;
+    if (ctx == NULL || bytes == NULL ||
+        sav_build_ctx((GameContext*)ctx) == NULL || ctx->record_count < 0)
+        return 0;
+    records_size = (size_t)ctx->record_count * SAVE_RECORD_SIZE;
+    if ((size_t)ctx->record_count != 0u
+        && records_size / (size_t)ctx->record_count != SAVE_RECORD_SIZE)
+        return 0;
+    if (capacity < 0xb8u + records_size
+        || (records_size != 0u && ctx->records == NULL)) return 0;
+    /* Copy the active 46-dword slot-context window, matching the decompile's
+     * first 0xB8-byte copy. The active GameContext owns the live record count
+     * and record bytes; encode their in-buffer location in the copied +0x34
+     * pointer slot because the portable snapshot is a caller-owned buffer. */
+    for (word_index = 0u; word_index < 0x2eu; ++word_index) {
+        header_word = options_slot_window_dword_peek((int)word_index);
+        memcpy(bytes + word_index * sizeof(header_word), &header_word,
+               sizeof(header_word));
+    }
+    record_count = (uint32_t)ctx->record_count;
+    records_offset = records_size != 0u ? 0xb8u : 0u;
+    memcpy(bytes + 0x18, &record_count, sizeof(record_count));
+    memcpy(bytes + 0x34, &records_offset, sizeof(records_offset));
+    if (records_size != 0u)
+        memcpy(bytes + 0xb8u, ctx->records, records_size);
+    return 1;
+}
+
+
+} // namespace unported_ledger_stubs

@@ -15,7 +15,19 @@
 #include "gods98/view.hpp"
 #include "gods98/resource.hpp"
 #include "level.hpp"
+#include "game.hpp"
 #include "objective.hpp"
+#include "entity.hpp"
+#include "ai.hpp"
+#include "cmd.hpp"
+#include "select.hpp"
+#include "spawn.hpp"
+#include "terrain_grid.hpp"
+#include "savegame.hpp"
+#include "mission.hpp"
+#include "gods98/message.hpp"
+#include "simulation_ui_ports.hpp"
+#include "port_loop_ports.hpp"
 #include "frontend.hpp"
 #include "effects.hpp"
 #include "util.hpp"
@@ -81,9 +93,20 @@ void coordinate_list_callback_visit(void* list_key,
         CoordinateListNode* next;
     };
     void* record;
-    if (callback == NULL || s_coordinate_list_head_get == NULL) return;
-    record = s_coordinate_list_head_get(list_key,
-                                        s_coordinate_list_head_context);
+    if (callback == NULL) return;
+    if (s_coordinate_list_head_get != NULL) {
+        record = s_coordinate_list_head_get(
+            list_key, s_coordinate_list_head_context);
+    }
+    else {
+        const unsigned int list_index = (unsigned int)(uintptr_t)list_key;
+        GameContext* const game = entity_pool_callback_context_get();
+        LevelState* const level = game != NULL && game->level != NULL
+            ? game->level : s_objective_active_level;
+        if (level == NULL || list_index >= 0x37u)
+            return;
+        record = level->pool_heads[list_index];
+    }
     while (record != NULL) {
         CoordinateListNode* const node = (CoordinateListNode*)record;
         if (!callback(record, node->x, node->y, user)) break;
@@ -98,6 +121,35 @@ void reward_task_resource_slot_set(unsigned int slot, uint32_t flags,
     s_reward_task_resources[slot].flags = flags;
     s_reward_task_resources[slot].image_surface = image_surface;
     s_reward_task_resources[slot].font_record = font_record;
+}
+
+void reward_task_font_record_set(unsigned int slot, void* font_record)
+{
+    if (slot >= 10u) return;
+    s_reward_task_resources[slot].font_record = font_record;
+    if (font_record != NULL) s_reward_task_resources[slot].flags |= 1u;
+    else s_reward_task_resources[slot].flags &= ~1u;
+}
+
+void* reward_task_font_record_get(unsigned int slot)
+{
+    return slot < 10u ? s_reward_task_resources[slot].font_record : NULL;
+}
+
+void* reward_task_image_surface_get(unsigned int slot)
+{
+    return slot < 10u ? s_reward_task_resources[slot].image_surface : NULL;
+}
+
+void reward_task_box_image_surface_set(unsigned int slot, void* surface)
+{
+    if (slot >= 10u) return;
+    s_reward_task_resources[slot].box_image_surface = surface;
+}
+
+void* reward_task_box_image_surface_get(unsigned int slot)
+{
+    return slot < 10u ? s_reward_task_resources[slot].box_image_surface : NULL;
 }
 
 /* TaskFlushImages @ 0x0045f7b0: release the task's owned image surface. */
@@ -128,9 +180,12 @@ void reward_task_block_finish(void)
         RewardTaskResourceRecord* task = &s_reward_task_resources[i];
         if ((task->flags & 2u) != 0u) reward_task_flush_images(task);
         if ((task->flags & 1u) != 0u) reward_task_flush_font(task);
+        if (task->box_image_surface != NULL)
+            texture_release((TextureSurface*)task->box_image_surface);
         task->flags = 0;
         task->image_surface = NULL;
         task->font_record = NULL;
+        task->box_image_surface = NULL;
     }
 }
 
@@ -154,7 +209,6 @@ void advisor_timer_hooks_set(AdvisorTimerActionFn action,
     s_advisor_timer_user = user;
 }
 
-// FUNCTION: LEGORR 0x00453BB0
 void advisor_timer_array_advance_and_advisor_clear(AdvisorTimerState* state,
                                                    float delta)
 {
@@ -299,14 +353,34 @@ static const char s_advisor_anim_point_up[] = "Advisor_Anim_Point_Up";
 // GLOBAL: LEGORR 0x004a1030
 static const char s_advisor_anim_talk_top[] = "Advisor_Anim_Talk_Top";
 // GLOBAL: LEGORR 0x004b2db0
-static const char* s_advisor_position_names[21];
+static const char* s_advisor_position_names[21] = {
+    s_advisor_name_objective, s_advisor_name_objective_achieved,
+    s_advisor_name_objective_failed, s_advisor_name_icon_normal,
+    s_advisor_name_icon_back, s_advisor_name_icon_top,
+    s_advisor_name_radar_toggle, s_advisor_name_radar_tagged,
+    s_advisor_name_radar_zoom_in, s_advisor_name_radar_zoom_out,
+    s_advisor_name_radar_map_view, s_advisor_name_info_dock_goto,
+    s_advisor_name_info_dock_close, s_advisor_name_top_info,
+    s_advisor_name_top_options, s_advisor_name_top_priorities,
+    s_advisor_name_top_call_to_arms, s_advisor_name_top_go_back,
+    s_advisor_name_control_zoom_in, s_advisor_name_control_zoom_out,
+    s_advisor_name_talk_in_game
+};
 // GLOBAL: LEGORR 0x004b30f8
-static const char* s_advisor_animation_names[11];
+static const char* s_advisor_animation_names[11] = {
+    s_advisor_anim_point_to_map, s_advisor_anim_point_n,
+    s_advisor_anim_point_ne, s_advisor_anim_point_e,
+    s_advisor_anim_point_se, s_advisor_anim_point_s,
+    s_advisor_anim_point_sw, s_advisor_anim_point_w,
+    s_advisor_anim_point_nw, s_advisor_anim_point_up,
+    s_advisor_anim_talk_top
+};
 
 // FUNCTION: LEGORR 0x004013e0
 int advisor_position_name_to_index(const char* name, int* index)
 {
-    for (int i = 0; i < 21; ++i) {
+    int i;
+    for (i = 0; i < 21; ++i) {
         if (obj_strcasecmp(s_advisor_position_names[i], name) == 0) {
             *index = i;
             return 1;
@@ -318,7 +392,8 @@ int advisor_position_name_to_index(const char* name, int* index)
 // FUNCTION: LEGORR 0x004014c0
 int advisor_animation_name_to_index(const char* name, int* index)
 {
-    for (int i = 0; i < 11; ++i) {
+    int i;
+    for (i = 0; i < 11; ++i) {
         if (obj_strcasecmp(s_advisor_animation_names[i], name) == 0) {
             *index = i;
             return 1;
@@ -376,10 +451,12 @@ static void obj_set_resources(LevelState* s, long crystal, long ore)
 {
     if (crystal != 0) {
         s->objective |= LVL_OBJECTIVE_CRYSTALS;
+        s_objective_result_word |= LVL_OBJECTIVE_CRYSTALS;
         level_set_int(s, OBJ_OFF_CRYSTAL_TARGET, (int32_t)crystal);
     }
     if (ore != 0) {
         s->objective |= LVL_OBJECTIVE_ORE;
+        s_objective_result_word |= LVL_OBJECTIVE_ORE;
         level_set_int(s, OBJ_OFF_ORE_TARGET, (int32_t)ore);
     }
 }
@@ -389,6 +466,7 @@ static void obj_set_resources(LevelState* s, long crystal, long ore)
 static void obj_set_block(LevelState* s, long a, long b)
 {
     s->objective |= LVL_OBJECTIVE_BLOCK;
+    s_objective_result_word |= LVL_OBJECTIVE_BLOCK;
     level_set_int(s, OBJ_OFF_BLOCK_A, (int32_t)a);
     level_set_int(s, OBJ_OFF_BLOCK_B, (int32_t)b);
 }
@@ -398,9 +476,11 @@ static void obj_set_block(LevelState* s, long a, long b)
 static void obj_set_timer(LevelState* s, float ticks, int hit_time_fail)
 {
     s->objective |= LVL_OBJECTIVE_TIMER;
+    s_objective_result_word |= LVL_OBJECTIVE_TIMER;
     level_set_float(s, OBJ_OFF_TIMER_TARGET, ticks);
     if (hit_time_fail) {
         s->objective |= LVL_OBJECTIVE_NO_ACH_ADV;
+        s_objective_result_word |= LVL_OBJECTIVE_NO_ACH_ADV;
     }
 }
 
@@ -409,6 +489,7 @@ static void obj_set_timer(LevelState* s, float ticks, int hit_time_fail)
 static void obj_set_construction(LevelState* s, long a, long b)
 {
     s->objective |= LVL_OBJECTIVE_CONSTRUCTION;
+    s_objective_result_word |= LVL_OBJECTIVE_CONSTRUCTION;
     level_set_int(s, OBJ_OFF_CONSTRUCT_A, (int32_t)a);
     level_set_int(s, OBJ_OFF_CONSTRUCT_B, (int32_t)b);
 }
@@ -437,12 +518,15 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
     /* Advisor-suppression keys: bit set when the key is NOT 1. */
     if (obj_typed_int(cfg, level_name, K_DONT_ADV, 0) != 1) {
         s->objective |= LVL_OBJECTIVE_NO_ADVISOR;
+        s_objective_result_word |= LVL_OBJECTIVE_NO_ADVISOR;
     }
     if (obj_typed_int(cfg, level_name, K_DONT_ACH_ADV, 0) != 1) {
         s->objective |= LVL_OBJECTIVE_NO_ACH_ADV;
+        s_objective_result_word |= LVL_OBJECTIVE_NO_ACH_ADV;
     }
     if (obj_typed_int(cfg, level_name, K_DONT_FAIL_ADV, 0) != 1) {
         s->objective |= LVL_OBJECTIVE_NO_FAIL_ADV;
+        s_objective_result_word |= LVL_OBJECTIVE_NO_FAIL_ADV;
     }
 
     /* Achieved-AVI slot: the corpus loads an AVI by name and stores dims at
@@ -503,44 +587,79 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
      * stored on the level block — HUD milestone. */
     (void)K_DONT_ADV;
 
-    if (s->objective == 0) {
+    if (s_objective_result_word == 0u) {
         s->objective = LVL_OBJECTIVE_NO_ADVISOR;
+        s_objective_result_word = LVL_OBJECTIVE_NO_ADVISOR;
     }
 }
 
 // FUNCTION: LEGORR 0x00459050
+typedef struct ObjectiveEntityMatchContext {
+    LevelState* level;
+    uint32_t flags;
+} ObjectiveEntityMatchContext;
+
+/* LAB_00459100 is passed to the filtered entity walk by FUN_00459050.
+ * Finding 110 records its type-1/type-2 cell-pair path and its separate
+ * construction-pair path.  EntitySlot currently exposes the scene position
+ * needed by the first path; the raw +0x4c/+0x50 construction pair has no
+ * portable field mapping, so that second path remains unavailable here. */
+static int objective_entity_pair_match(EntitySlot* entity, void* payload)
+{
+    ObjectiveEntityMatchContext* match =
+        (ObjectiveEntityMatchContext*)payload;
+    if (entity == NULL || match == NULL || match->level == NULL) return 0;
+    if ((match->flags & LVL_OBJECTIVE_BLOCK) != 0u &&
+        (entity->type == 1 || entity->type == 2)) {
+        int cell_x = -1;
+        int cell_y = -1;
+        entity_position_to_terrain_cell(entity, match->level,
+                                        &cell_x, &cell_y);
+        if (level_coord_pair_within_bounds(match->level, cell_x, cell_y) &&
+            cell_x == level_int(match->level, OBJ_OFF_BLOCK_A) &&
+            cell_y == level_int(match->level, OBJ_OFF_BLOCK_B)) return 1;
+    }
+    return 0;
+}
+
 int objective_check(LevelState* s, int* mark, float dt)
 {
     if (s == NULL) {
         return 0;
     }
-    if ((s->objective & LVL_OBJECTIVE_NO_ADVISOR) != 0) {
+    if ((s_objective_result_word & LVL_OBJECTIVE_NO_ADVISOR) != 0u) {
         return 0;
     }
     int m = 1;
-    if ((s->objective & LVL_OBJECTIVE_TIMER) != 0) {
+    if ((s_objective_result_word & LVL_OBJECTIVE_TIMER) != 0u) {
         float timer = level_float(s, OBJ_OFF_TIMER_TARGET) - dt;
         level_set_float(s, OBJ_OFF_TIMER_TARGET, timer);
         if (timer <= 0.0f) {
-            if ((s->objective & LVL_OBJECTIVE_NO_ACH_ADV) != 0) {
+            if ((s_objective_result_word & LVL_OBJECTIVE_NO_ACH_ADV) != 0u) {
                 m = 0; /* HitTimeFail: timer expiry marks success */
             }
             *mark = m;
             return 1;
         }
     }
-    if ((s->objective & LVL_OBJECTIVE_CRYSTALS) != 0
+    if ((s_objective_result_word & LVL_OBJECTIVE_CRYSTALS) != 0u
         && (uint32_t)level_int(s, OBJ_OFF_CRYSTAL_LIVE)
            < (uint32_t)level_int(s, OBJ_OFF_CRYSTAL_TARGET)) {
         return 0;
     }
-    if ((s->objective & LVL_OBJECTIVE_ORE) != 0
+    if ((s_objective_result_word & LVL_OBJECTIVE_ORE) != 0u
         && (uint32_t)level_int(s, OBJ_OFF_ORE_LIVE)
            < (uint32_t)level_int(s, OBJ_OFF_ORE_TARGET)) {
         return 0;
     }
     *mark = m;
-    return 1;
+    {
+        ObjectiveEntityMatchContext match;
+        match.level = s;
+        match.flags = s_objective_result_word;
+        return entity_pool_find_by_callback_filtered_current(
+            objective_entity_pair_match, &match) != 0;
+    }
 }
 
 static int s_objective_announce_target_gate = 1;
@@ -553,6 +672,7 @@ void objective_announce_current(int who)
 {
     LevelState* s = s_objective_active_level;
     char alias[256];
+    uint32_t* engine_state;
     int result = 0;
     const char* outcome = "";
     const char* family = "_Levels::";
@@ -575,6 +695,8 @@ void objective_announce_current(int who)
         s_objective_result_word |= 2u;
         s->objective_result = 1;
         s->objective |= LVL_OBJECTIVE_ACHIEVED;
+        (void)mission_reward_success_snapshot_prepare(s);
+        unported_ledger_stubs::ledger_stub_004263c0_GlobalSubsystemStateReset();
         outcome = "Acheived";
         result = 1;
         break;
@@ -582,6 +704,7 @@ void objective_announce_current(int who)
         s_objective_result_word |= 4u;
         s->objective_result = 0;
         s->objective |= LVL_OBJECTIVE_FAILED;
+        unported_ledger_stubs::ledger_stub_004263c0_GlobalSubsystemStateReset();
         outcome = "Failed";
         result = 2;
         break;
@@ -589,6 +712,7 @@ void objective_announce_current(int who)
         s_objective_result_word |= 0x104u;
         s->objective_result = 0;
         s->objective |= LVL_OBJECTIVE_FAILED | LVL_OBJECTIVE_CRYSTALS;
+        unported_ledger_stubs::ledger_stub_004263c0_GlobalSubsystemStateReset();
         outcome = "FailedCrystals";
         family = "";
         level = "";
@@ -599,15 +723,47 @@ void objective_announce_current(int who)
         s->objective |= LVL_OBJECTIVE_ANNOUNCED;
         return;
     }
+    /* FUN_00458670 calls StartLevelSelected after the shared subsystem
+     * reset for each terminal result. The portable implementation owns the
+     * active GameContext through the entity-pool callback binding. */
+    if (result != 0) {
+        start_level_selected(entity_pool_callback_context_get());
+    }
     level_set_int(s, OBJ_OFF_RESULT_INDEX, result);
-    objective_voice_alias_format(alias, sizeof(alias), outcome, family, level);
-    strncpy(s_objective_voice_alias, alias, sizeof(s_objective_voice_alias) - 1);
-    s_objective_voice_alias[sizeof(s_objective_voice_alias) - 1] = '\0';
-    strncpy(s->obj_stream, s_objective_voice_alias, sizeof(s->obj_stream) - 1);
-    s->obj_stream[sizeof(s->obj_stream) - 1] = '\0';
-    s_objective_voice_alias_pending = 1;
     s_objective_result_word |= 8u;
     s->objective |= LVL_OBJECTIVE_ANNOUNCED;
+    if (result != 0) {
+        GameContext* ctx = entity_pool_callback_context_get();
+        /* The original creates four linked scene-state records and raises
+         * the level/scatter gates for terminal objectives. DAT_004ffe48 is
+         * initialized to zero in the portable CRT window and currently has
+         * no production writer, so its observed false branch supplies the
+         * record flags value 4 here. The per-entity LAB_0046a3c0 callback
+         * remains renderer-owned and is not represented by this dispatch. */
+        scene_object_state_dispatch(ctx, 1u, 2u, 4u, NULL, NULL);
+        scene_object_state_dispatch(ctx, 2u, 2u, 4u, NULL, NULL);
+        scene_object_state_dispatch(ctx, 8u, 2u, 4u, NULL, NULL);
+        scene_object_state_dispatch(ctx, 0x400u, 2u, 4u, NULL, NULL);
+        level_state_stored_value_set(1u);
+        lego::scatter_spawn_gate_set(1);
+    }
+    engine_state = engine_current_state_word();
+    if (engine_state != NULL && (*engine_state & 0x10u) != 0u) {
+        /* FUN_00458670 only resolves a result stream while bit 0x10 of the
+         * engine state word (DAT_00556ecc) enables the advisor overlay. */
+        objective_voice_alias_format(alias, sizeof(alias), outcome, family,
+                                     level);
+        strncpy(s_objective_voice_alias, alias,
+                sizeof(s_objective_voice_alias) - 1u);
+        s_objective_voice_alias[sizeof(s_objective_voice_alias) - 1u] = '\0';
+        strncpy(s->obj_stream, s_objective_voice_alias,
+                sizeof(s->obj_stream) - 1u);
+        s->obj_stream[sizeof(s->obj_stream) - 1u] = '\0';
+        s_objective_voice_alias_pending = 1;
+    } else {
+        s_objective_voice_alias[0] = '\0';
+        s->obj_stream[0] = '\0';
+    }
 }
 
 /* Explicit-level adapter used by port call sites that already own the level
@@ -674,16 +830,42 @@ void objective_tick_target(void* engine, LevelState* s,
 {
     int resolved_now = 0;
     (void)engine; /* the renderer/global owner is not represented here */
+    /* Retail releases input-device/advisor/audio state before the objective
+     * transition logic in loader and benchmark modes (app mode > 3). */
+    if (engine_app_mode_get() > 3) {
+        unported_ledger_stubs::input_device_release();
+    }
     if (s == NULL) {
         s_objective_tick_resolved = 1;
         return;
     }
     s_objective_active_level = s;
-    /* Consume an announced hint: the state machine clears bit 8 once the
-     * advisor overlay has been shown (the show call is a stub). */
-    if ((s_objective_result_word & 8u) != 0) {
-        s_objective_result_word &= ~8u;
-        s->objective &= ~LVL_OBJECTIVE_ANNOUNCED;
+    /* The result word's announcement bit is consumed only in one of the
+     * three result branches.  The retail path requests advisor row zero
+     * when that outcome allows an advisor message. */
+    if ((s_objective_result_word & 1u) != 0u) {
+        if ((s_objective_result_word & 8u) != 0u) {
+            if ((s_objective_result_word & LVL_OBJECTIVE_NO_ADVISOR) != 0u)
+                (void)advisor_request_admit(0, 1);
+            s_objective_result_word &= ~8u;
+            s->objective &= ~LVL_OBJECTIVE_ANNOUNCED;
+        }
+    }
+    else if ((s_objective_result_word & 2u) != 0u) {
+        if ((s_objective_result_word & 8u) != 0u) {
+            if ((s_objective_result_word & LVL_OBJECTIVE_NO_ACH_ADV) != 0u)
+                (void)advisor_request_admit(0, 1);
+            s_objective_result_word &= ~8u;
+            s->objective &= ~LVL_OBJECTIVE_ANNOUNCED;
+        }
+    }
+    else if ((s_objective_result_word & 4u) != 0u) {
+        if ((s_objective_result_word & 8u) != 0u) {
+            if ((s_objective_result_word & LVL_OBJECTIVE_NO_FAIL_ADV) != 0u)
+                (void)advisor_request_admit(0, 1);
+            s_objective_result_word &= ~8u;
+            s->objective &= ~LVL_OBJECTIVE_ANNOUNCED;
+        }
     }
     if ((s_objective_result_word & 7u) == 0) {
         int mark = 0;
@@ -693,14 +875,24 @@ void objective_tick_target(void* engine, LevelState* s,
                 (s->objective & (LVL_OBJECTIVE_ACHIEVED |
                                  LVL_OBJECTIVE_FAILED)) != 0;
         }
+        else {
+            /* ObjectiveTick adds the check interval to the reward score on
+             * every unresolved frame (FUN_00462800(param_3)). This is the
+             * elapsed-time component later copied into the checkpoint blob. */
+            reward_score_add(checker_dt);
+        }
     }
 
-    /* DAT_004ffe44 is the result-screen stream gate. The pending branch is
-     * represented directly. Terminal branches also test
-     * SceneObjectStateDispatch(0x40b); without that renderer-owned result,
-     * leave their gate clear rather than assuming the scene is ready. */
+    /* DAT_004ffe44 is the result-screen stream gate. Terminal branches wait
+     * on FlagMaskCallbacksAllPass(0x40b), which is represented by the entity
+     * pool walker and does not require a renderer-owned result callback. */
     int result_active_next =
         (s_objective_result_word & 1u) != 0 ? 1 : 0;
+    if ((s_objective_result_word & 6u) != 0u &&
+        entity_flag_mask_callbacks_all_pass(0x40bu)) {
+        result_active_next = 1;
+        resolved_now = 1;
+    }
 
     /* The target decrements an active stream timer before it considers a
      * newly prepared alias, and invalidates the stream sentinel on expiry. */
@@ -768,8 +960,9 @@ int objective_voice_alias_raise_gate_bit27(LevelState* s)
 
 #define ADV_ACTION_ROWS 21
 
-/* The 21 records each occupy nine dwords (stride 0x24); the flags overlap
- * the getter's second read-out word at +0x20 in the recovered layout. */
+/* The 21 records each occupy nine dwords (stride 0x24). Word 8 is the
+ * initialization/position-mode flag word; the position getter reads words
+ * 6 and 7 at +0x18/+0x1c. */
 // GLOBAL: LEGORR 0x004b2e04
 static uint32_t s_adv_actions[ADV_ACTION_ROWS][9];
 // GLOBAL: LEGORR 0x004b31a8
@@ -781,7 +974,10 @@ static uint32_t s_adv_scene_transform_context;
 // GLOBAL: LEGORR 0x004b31b4
 static float s_adv_scene_scale;
 // GLOBAL: LEGORR 0x004b31b8
-static uint32_t s_adv_scene_companion_handle;
+static void* s_adv_scene_companion_handle;
+/* DAT_004b31bc is the controller's active/transition word. It is distinct
+ * from the advisor display word owned by the CRT adapter. */
+static uint32_t s_adv_scene_state_word;
 static AdvisorSceneActionHook s_adv_scene_action_hook;
 static void* s_adv_scene_action_user;
 static AdvisorCompanionSceneCreateHook s_adv_companion_scene_create_hook;
@@ -833,7 +1029,7 @@ int advisor_scene_advance_completion_check(int animation_slot, float delta)
                 (void*)(uintptr_t)handle, delta);
         }
     }
-    if ((advisor_state_word_peek() & 2u) == 0u) {
+    if ((s_adv_scene_state_word & 2u) == 0u) {
         return progress > 0.0f ? 0 : 1;
     }
     if (progress > 0.0f) {
@@ -903,49 +1099,29 @@ void advisor_scene_controller_initialize(void* config_context,
                                          uint32_t transform_context_handle)
 {
     uint32_t base_scene;
+    void* companion;
     (void)config_context;
     if (scene_context_words == NULL) return;
-    s_advisor_position_names[0] = s_advisor_name_objective;
-    s_advisor_position_names[1] = s_advisor_name_objective_achieved;
-    s_advisor_position_names[2] = s_advisor_name_objective_failed;
-    s_advisor_position_names[3] = s_advisor_name_icon_normal;
-    s_advisor_position_names[4] = s_advisor_name_icon_back;
-    s_advisor_position_names[5] = s_advisor_name_icon_top;
-    s_advisor_position_names[6] = s_advisor_name_radar_toggle;
-    s_advisor_position_names[7] = s_advisor_name_radar_tagged;
-    s_advisor_position_names[8] = s_advisor_name_radar_zoom_in;
-    s_advisor_position_names[9] = s_advisor_name_radar_zoom_out;
-    s_advisor_position_names[10] = s_advisor_name_radar_map_view;
-    s_advisor_position_names[11] = s_advisor_name_info_dock_goto;
-    s_advisor_position_names[12] = s_advisor_name_info_dock_close;
-    s_advisor_position_names[13] = s_advisor_name_top_info;
-    s_advisor_position_names[14] = s_advisor_name_top_options;
-    s_advisor_position_names[15] = s_advisor_name_top_priorities;
-    s_advisor_position_names[16] = s_advisor_name_top_call_to_arms;
-    s_advisor_position_names[17] = s_advisor_name_top_go_back;
-    s_advisor_position_names[18] = s_advisor_name_control_zoom_in;
-    s_advisor_position_names[19] = s_advisor_name_control_zoom_out;
-    s_advisor_position_names[20] = s_advisor_name_talk_in_game;
-    s_advisor_animation_names[0] = s_advisor_anim_point_to_map;
-    s_advisor_animation_names[1] = s_advisor_anim_point_n;
-    s_advisor_animation_names[2] = s_advisor_anim_point_ne;
-    s_advisor_animation_names[3] = s_advisor_anim_point_e;
-    s_advisor_animation_names[4] = s_advisor_anim_point_se;
-    s_advisor_animation_names[5] = s_advisor_anim_point_s;
-    s_advisor_animation_names[6] = s_advisor_anim_point_sw;
-    s_advisor_animation_names[7] = s_advisor_anim_point_w;
-    s_advisor_animation_names[8] = s_advisor_anim_point_nw;
-    s_advisor_animation_names[9] = s_advisor_anim_point_up;
-    s_advisor_animation_names[10] = s_advisor_anim_talk_top;
     base_scene = scene_context_words[9]; /* param_2 + 0x24 */
     s_adv_scene_root_handle = base_scene;
     s_adv_scene_transform_context = transform_context_handle;
-    s_adv_scene_companion_handle =
-        s_adv_companion_scene_create_hook != NULL
-            ? s_adv_companion_scene_create_hook(
-                  base_scene, s_adv_companion_scene_create_user)
-            : 0u;
-    advisor_state_word_set(0u);
+    if (s_adv_companion_scene_create_hook != NULL) {
+        companion = (void*)(uintptr_t)s_adv_companion_scene_create_hook(
+            base_scene, s_adv_companion_scene_create_user);
+    }
+    else {
+        companion = ddiscene_light_create(
+            (void*)(uintptr_t)base_scene, 3u, 0x3f800000u,
+            0x3f800000u, 0x3f800000u);
+    }
+    s_adv_scene_companion_handle = companion;
+    if (companion != NULL) {
+        (void)ddiscene_object_pose_method_dispatch(
+            companion, (void*)(uintptr_t)base_scene,
+            0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f);
+        scene_render_lock_toggle(companion, 1);
+    }
+    s_adv_scene_state_word = 0u;
     if (s_adv_scene_action_hook != NULL) {
         s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_CONTROLLER_INIT, -1,
                                 transform_context_handle,
@@ -961,7 +1137,7 @@ void advisor_transition_worker(float delta)
     uint32_t animation;
     animation_slot = s_adv_actions[row][0];
     animation = s_adv_animation_slots[animation_slot].handle;
-    if (animation != 0u && (advisor_state_word_peek() & 1u) != 0u &&
+    if (animation != 0u && (s_adv_scene_state_word & 1u) != 0u &&
         !current_engine_mode_is_zero()) {
         if ((s_adv_actions[row][8] & 0x40000u) != 0u &&
             s_adv_scene_action_hook != NULL) {
@@ -969,8 +1145,7 @@ void advisor_transition_worker(float delta)
                                     animation, s_adv_scene_action_user);
         }
         scene_render_lock_toggle((void*)(uintptr_t)animation, 0);
-        scene_render_lock_toggle(
-            (void*)(uintptr_t)s_adv_scene_companion_handle, 0);
+        scene_render_lock_toggle(s_adv_scene_companion_handle, 0);
         if (s_adv_scene_action_hook != NULL) {
             s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_ATTACH, row,
                                     animation, s_adv_scene_action_user);
@@ -980,12 +1155,11 @@ void advisor_transition_worker(float delta)
                                                    delta) != 0) {
             return;
         }
-        advisor_state_word_set(advisor_state_word_peek() & ~1u);
+        s_adv_scene_state_word &= ~1u;
     }
     if (animation != 0u)
         scene_render_lock_toggle((void*)(uintptr_t)animation, 1);
-    scene_render_lock_toggle(
-        (void*)(uintptr_t)s_adv_scene_companion_handle, 1);
+    scene_render_lock_toggle(s_adv_scene_companion_handle, 1);
 }
 
 // FUNCTION: LEGORR 0x00401210
@@ -1019,8 +1193,8 @@ void advisor_apply_slot_transform(int row)
     float y;
     animation_slot = s_adv_actions[row][0];
     handle = s_adv_animation_slots[animation_slot].handle;
-    memcpy(&x, &s_adv_actions[row][5], sizeof(x));
-    memcpy(&y, &s_adv_actions[row][6], sizeof(y));
+    memcpy(&x, &s_adv_actions[row][4], sizeof(x));
+    memcpy(&y, &s_adv_actions[row][5], sizeof(y));
     if (s_adv_transform_apply_hook != NULL)
         s_adv_transform_apply_hook(row, handle, x, y, s_adv_scene_scale,
                                    s_adv_transform_apply_user);
@@ -1041,7 +1215,7 @@ void advisor_request_reset_and_submit_sound(int row)
         scene_render_lock_toggle((void*)(uintptr_t)animation, 0);
         ddiscene_frame_update_and_callbacks((void*)(uintptr_t)animation,
                                             0.0f);
-        sound_alias_play((int)s_adv_actions[row][3], 0);
+        sound_alias_play((int)s_adv_actions[row][2], 0);
         sound_request_queue_submit(0x2a, 0);
     }
 }
@@ -1051,17 +1225,17 @@ int advisor_request_admit(int row, int immediate)
 {
     if ((s_adv_actions[row][8] & 0x20000u) != 0u &&
         !current_engine_mode_is_zero() &&
-        (advisor_state_word_peek() & 1u) == 0u) {
+        (s_adv_scene_state_word & 1u) == 0u) {
         uint32_t state;
         s_adv_scene_active_row = row;
         advisor_request_reset_and_submit_sound(row);
-        state = advisor_state_word_peek();
+        state = s_adv_scene_state_word;
         if (immediate != 0) {
             state |= 3u;
         } else {
             state = (state & ~2u) | 1u;
         }
-        advisor_state_word_set(state);
+        s_adv_scene_state_word = state;
         return 1;
     }
     return 0;
@@ -1074,32 +1248,33 @@ void advisor_animation_end_cleanup(void)
     uint32_t animation = s_adv_animation_slots[animation_slot].handle;
     if (animation != 0u)
         scene_render_lock_toggle((void*)(uintptr_t)animation, 1);
-    advisor_state_word_set(advisor_state_word_peek() & ~1u);
-    scene_render_lock_toggle(
-        (void*)(uintptr_t)s_adv_scene_companion_handle, 1);
+    s_adv_scene_state_word &= ~1u;
+    scene_render_lock_toggle(s_adv_scene_companion_handle, 1);
 }
 
 // FUNCTION: LEGORR 0x004017b0
 void advisor_position_record_initialize(int row, uint32_t animation_index,
-                                        int position_index,
+                                        int position_type,
                                         uint32_t position_mode,
                                         int action_mode, uint32_t x,
                                         uint32_t y)
 {
-    uint32_t* rec = s_adv_actions[row];
+    uint32_t* rec;
+    if (row < 0 || row >= ADV_ACTION_ROWS) return;
+    rec = s_adv_actions[row];
     rec[8] = 0x20000u;
     rec[0] = animation_index;
-    rec[1] = (uint32_t)position_index;
+    rec[1] = (uint32_t)position_type;
     rec[2] = position_mode;
-    rec[4] = (uint32_t)action_mode;
-    rec[5] = x;
-    rec[6] = y;
-    rec[7] = x;
-    rec[8] = y;
+    rec[3] = (uint32_t)action_mode;
+    rec[4] = x;
+    rec[5] = y;
+    rec[6] = x;
+    rec[7] = y;
     if (action_mode == 0x0c) {
         rec[8] |= 0x10000u;
     }
-    if (position_index != 0x1a) {
+    if (position_type != 0x1a) {
         rec[8] |= 0x40000u;
     }
 }
@@ -1170,7 +1345,9 @@ int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
 void advisor_action_position_and_mode_set(int row, int mode,
                                           uint32_t dword_a, uint32_t dword_b)
 {
-    uint32_t* rec = s_adv_actions[row];
+    uint32_t* rec;
+    if (row < 0 || row >= ADV_ACTION_ROWS) return;
+    rec = s_adv_actions[row];
     rec[4] = (uint32_t)mode;   /* DAT base + 0x10 */
     rec[5] = dword_a;          /* DAT base + 0x14 */
     rec[6] = dword_b;          /* DAT base + 0x18 */
@@ -1184,8 +1361,10 @@ void advisor_action_position_and_mode_set(int row, int mode,
 // FUNCTION: LEGORR 0x00401890
 void advisor_action_position_get(int row, uint32_t* dword_c, uint32_t* dword_d)
 {
-    *dword_c = s_adv_actions[row][7]; /* DAT base + 0x1c */
-    *dword_d = s_adv_actions[row][8]; /* DAT base + 0x20 */
+    if (row < 0 || row >= ADV_ACTION_ROWS || dword_c == NULL ||
+        dword_d == NULL) return;
+    *dword_c = s_adv_actions[row][6]; /* DAT base + 0x18 */
+    *dword_d = s_adv_actions[row][7]; /* DAT base + 0x1c */
 }
 
 void advisor_animation_position_update_state_set(
@@ -1305,17 +1484,231 @@ uint32_t advisor_action_flags_peek(int row)
     return (row >= 0 && row < ADV_ACTION_ROWS) ? s_adv_actions[row][8] : 0u;
 }
 
-/* ObjectiveAdvisorTokenLookup (FUN_00453200). The corpus's table pair
- * (count word + table pointer) has no ported writers, so the model
- * starts empty (documented deviation) and an install hook lets the
- * faithful read shape be exercised. */
+typedef struct ObjectiveAdvisorResourceToken {
+    const char* name;
+    uintptr_t handle;
+} ObjectiveAdvisorResourceToken;
+
+/* The reference's DAT_00555da0 buffer owns every text/name pointer below.
+ * Keep one copied buffer and grow the three tables as their entries appear. */
+static char* s_adv_token_source;
+static const char** s_adv_text_tokens;
+static uint32_t s_adv_text_token_count;
+static ObjectiveAdvisorResourceToken* s_adv_image_tokens;
+static uint32_t s_adv_image_token_count;
+static ObjectiveAdvisorResourceToken* s_adv_sound_tokens;
+static uint32_t s_adv_sound_token_count;
+static ObjectiveAdvisorTokenReleaseFn s_adv_token_release;
+static void* s_adv_token_release_user;
+static uint32_t s_adv_token_generation;
+
+/* Compatibility table for the old 32-bit pointer-return interface and its
+ * test installer. Parsed callers should use objective_advisor_token_text_get
+ * on 64-bit hosts, where a native pointer cannot fit in the target dword. */
 // GLOBAL: LEGORR 0x00555da8
 static const uint32_t* s_adv_tokens;
 // GLOBAL: LEGORR 0x00555da4
-static uint32_t        s_adv_token_count;
+static uint32_t s_adv_token_count;
+
+void objective_advisor_tokens_release(void)
+{
+    uint32_t i;
+    ++s_adv_token_generation;
+    if (s_adv_token_generation == 0u) ++s_adv_token_generation;
+    if (s_adv_token_release != NULL) {
+        for (i = 0; i < s_adv_image_token_count; ++i) {
+            if (s_adv_image_tokens[i].handle != (uintptr_t)0)
+                s_adv_token_release(1, s_adv_image_tokens[i].handle,
+                                    s_adv_token_release_user);
+        }
+        for (i = 0; i < s_adv_sound_token_count; ++i) {
+            if (s_adv_sound_tokens[i].handle != (uintptr_t)0)
+                s_adv_token_release(2, s_adv_sound_tokens[i].handle,
+                                    s_adv_token_release_user);
+        }
+    }
+    free(s_adv_token_source);
+    free(s_adv_text_tokens);
+    free(s_adv_image_tokens);
+    free(s_adv_sound_tokens);
+    s_adv_token_source = NULL;
+    s_adv_text_tokens = NULL;
+    s_adv_text_token_count = 0u;
+    s_adv_image_tokens = NULL;
+    s_adv_image_token_count = 0u;
+    s_adv_sound_tokens = NULL;
+    s_adv_sound_token_count = 0u;
+    s_adv_token_release = NULL;
+    s_adv_token_release_user = NULL;
+    s_adv_tokens = NULL;
+    s_adv_token_count = 0u;
+}
+
+static char* objective_advisor_next_line(char* source, uint32_t length,
+                                         uint32_t* cursor)
+{
+    uint32_t start;
+    while (*cursor < length && (unsigned char)source[*cursor] < 0x20u) {
+        source[*cursor] = '\0';
+        ++*cursor;
+    }
+    if (*cursor >= length) return NULL;
+    start = *cursor;
+    while (*cursor < length && (unsigned char)source[*cursor] >= 0x20u) {
+        if (source[*cursor] == '_') source[*cursor] = ' ';
+        ++*cursor;
+    }
+    if (*cursor < length) {
+        source[*cursor] = '\0';
+        ++*cursor;
+    }
+    return source + start;
+}
+
+static int objective_advisor_text_append(const char* text)
+{
+    const char** grown;
+    if (s_adv_text_token_count == 0xffffffffu / sizeof(*grown)) return 0;
+    grown = (const char**)realloc((void*)s_adv_text_tokens,
+        (size_t)(s_adv_text_token_count + 1u) * sizeof(*grown));
+    if (grown == NULL) return 0;
+    s_adv_text_tokens = grown;
+    s_adv_text_tokens[s_adv_text_token_count++] = text;
+    return 1;
+}
+
+static int objective_advisor_resource_append(
+    ObjectiveAdvisorResourceToken** table, uint32_t* count,
+    const char* name, uintptr_t handle)
+{
+    ObjectiveAdvisorResourceToken* grown;
+    if (*count == 0xffffffffu / sizeof(*grown)) return 0;
+    grown = (ObjectiveAdvisorResourceToken*)realloc(*table,
+        (size_t)(*count + 1u) * sizeof(*grown));
+    if (grown == NULL) return 0;
+    *table = grown;
+    grown[*count].name = name;
+    grown[*count].handle = handle;
+    ++*count;
+    return 1;
+}
+
+int objective_advisor_tokens_parse(const char* source, uint32_t source_length,
+                                   ObjectiveAdvisorTokenResolveFn resolve,
+                                   ObjectiveAdvisorTokenReleaseFn release,
+                                   void* user)
+{
+    uint32_t cursor = 0u;
+    if (source == NULL && source_length != 0u) return 0;
+    objective_advisor_tokens_release();
+    s_adv_token_release = release;
+    s_adv_token_release_user = user;
+    if (source_length == 0u) return 1;
+    s_adv_token_source = (char*)malloc((size_t)source_length + 1u);
+    if (s_adv_token_source == NULL) {
+        objective_advisor_tokens_release();
+        return 0;
+    }
+    memcpy(s_adv_token_source, source, source_length);
+    s_adv_token_source[source_length] = '\0';
+
+    while (cursor < source_length) {
+        char* line = objective_advisor_next_line(s_adv_token_source,
+                                                  source_length, &cursor);
+        int kind = 0;
+        if (line == NULL) break;
+        if (*line == ':' || *line == '$') {
+            const char* name = line + 1;
+            char* value_line;
+            uintptr_t handle;
+            kind = (*line == ':') ? 1 : 2;
+            value_line = objective_advisor_next_line(s_adv_token_source,
+                                                      source_length, &cursor);
+            if (value_line == NULL || *name == '\0' || *value_line == '\0' ||
+                resolve == NULL) continue;
+            handle = resolve(kind, value_line, user);
+            if (handle == 0u) continue;
+            if (kind == 1) {
+                if (!objective_advisor_resource_append(&s_adv_image_tokens,
+                        &s_adv_image_token_count, name, handle)) {
+                    if (release != NULL) release(kind, handle, user);
+                    continue;
+                }
+            } else {
+                if (!objective_advisor_resource_append(&s_adv_sound_tokens,
+                        &s_adv_sound_token_count, name, handle)) {
+                    if (release != NULL) release(kind, handle, user);
+                    continue;
+                }
+            }
+        } else if (*line != '\0') {
+            if (!objective_advisor_text_append(line)) {
+                objective_advisor_tokens_release();
+                return 0;
+            }
+        }
+    }
+    s_adv_token_count = s_adv_text_token_count;
+    return 1;
+}
+
+static uintptr_t objective_advisor_live_token_resolve(int kind,
+                                                       const char* value,
+                                                       void* user)
+{
+    (void)user;
+    if (value == NULL || value[0] == '\0') return (uintptr_t)0;
+    if (kind == 1) {
+        TextureSurface* image = image_surface_load(value, 0u, 0u);
+        return (uintptr_t)image;
+    }
+    if (kind == 2) {
+        int slot = sound_bank_entry_load(value, 0, 0, 0);
+        /* Zero is a valid bank slot; reserve encoded zero for a load miss. */
+        return slot >= 0 ? (uintptr_t)(uint32_t)(slot + 1) : (uintptr_t)0;
+    }
+    return (uintptr_t)0;
+}
+
+static void objective_advisor_live_token_release(int kind, uintptr_t handle,
+                                                  void* user)
+{
+    (void)user;
+    if (handle == (uintptr_t)0) return;
+    if (kind == 1) {
+        texture_release((TextureSurface*)handle);
+    }
+    else if (kind == 2) {
+        int slot = (int)(uint32_t)handle - 1;
+        if (slot >= 0) (void)sound_bank_entry_release(slot);
+    }
+}
+
+int objective_advisor_token_file_load(const char* path)
+{
+    Resource* resource;
+    int32_t size;
+    int result;
+    objective_advisor_tokens_release();
+    if (path == NULL || path[0] == '\0') return 0;
+    resource = resource_open(path, RESOURCE_AUTO);
+    if (resource == NULL) return 0;
+    size = resource_read(resource);
+    if (size < 0) {
+        resource_free(resource);
+        return 0;
+    }
+    result = objective_advisor_tokens_parse(
+        (const char*)resource->data, (uint32_t)size,
+        objective_advisor_live_token_resolve,
+        objective_advisor_live_token_release, NULL);
+    resource_free(resource);
+    return result;
+}
 
 void objective_advisor_tokens_install(const uint32_t* table, uint32_t count)
 {
+    objective_advisor_tokens_release();
     s_adv_tokens = table;
     s_adv_token_count = count;
 }
@@ -1326,5 +1719,279 @@ int objective_advisor_token_lookup(uint32_t index)
     if (index < s_adv_token_count && s_adv_tokens != NULL) {
         return (int)s_adv_tokens[index];
     }
+    if (index < s_adv_text_token_count && s_adv_text_tokens != NULL)
+        return (int)(uint32_t)(uintptr_t)s_adv_text_tokens[index];
     return 0;
 }
+
+const char* objective_advisor_token_text_get(uint32_t index)
+{
+    return (index < s_adv_text_token_count && s_adv_text_tokens != NULL)
+        ? s_adv_text_tokens[index] : NULL;
+}
+
+uint32_t objective_advisor_image_token_count(void)
+{
+    return s_adv_image_token_count;
+}
+
+const char* objective_advisor_image_token_name_get(uint32_t index)
+{
+    return (index < s_adv_image_token_count && s_adv_image_tokens != NULL)
+        ? s_adv_image_tokens[index].name : NULL;
+}
+
+uintptr_t objective_advisor_image_token_handle_get(uint32_t index)
+{
+    return (index < s_adv_image_token_count && s_adv_image_tokens != NULL)
+        ? s_adv_image_tokens[index].handle : 0u;
+}
+
+void* objective_advisor_image_token_resource_get(uint32_t index)
+{
+    return (void*)objective_advisor_image_token_handle_get(index);
+}
+
+uint32_t objective_advisor_sound_token_count(void)
+{
+    return s_adv_sound_token_count;
+}
+
+const char* objective_advisor_sound_token_name_get(uint32_t index)
+{
+    return (index < s_adv_sound_token_count && s_adv_sound_tokens != NULL)
+        ? s_adv_sound_tokens[index].name : NULL;
+}
+
+uintptr_t objective_advisor_sound_token_handle_get(uint32_t index)
+{
+    return (index < s_adv_sound_token_count && s_adv_sound_tokens != NULL)
+        ? s_adv_sound_tokens[index].handle : 0u;
+}
+
+uint32_t objective_advisor_token_generation_get(void)
+{
+    return s_adv_token_generation;
+}
+
+/* ObjectiveSidecarAppendGate (FUN_0043bc40). The entity's stats accessors,
+ * activity, owner, carried-object, selection, task, and OSF state are live in
+ * the portable model. Scene-object creation/labels remain renderer-owned. */
+static void objective_sidecar_activity_set(EntitySlot* entity, int activity)
+{
+    ai_set_activity(entity, activity, 0);
+    ai_idle_chain_record_attach(entity);
+    entity->activity_last = entity->activity;
+    entity->activity_timer = 0.0f;
+}
+
+static void objective_sidecar_owner_detach(GameContext* ctx,
+                                           EntitySlot* entity)
+{
+    EntitySlot* owner = (EntitySlot*)entity->owner_36c;
+    if (owner == NULL) return;
+    selection_target_command_update(ctx, entity);
+    owner->flags_3e4 &= ~8u;
+    owner->owner_36c = NULL;
+    entity->owner_36c = NULL;
+}
+
+// FUNCTION: LEGORR 0x0043bc40
+int objective_sidecar_append_gate(EntitySlot* entity)
+{
+    GameContext* ctx;
+    LevelState* level;
+    uint32_t stats_flags;
+    int cell_x = 0;
+    int cell_y = 0;
+    int cell_xy[2];
+    int cell_valid = 0;
+    EntitySlot* owner;
+
+    if (entity == NULL) return 0;
+    ctx = entity->owner_ctx;
+    if (ctx == NULL) ctx = entity_pool_callback_context_get();
+    level = ctx != NULL ? ctx->level : NULL;
+
+    if (entity->type != 4
+        && ((entity->flags_3e4 & 0x08000000u) != 0u
+            || (entity->flags_3e0 & 0x00200000u) != 0u)) return 0;
+    if (entity->field_340 > 0.0f) return 0;
+
+    stats_flags = entity_stats_word_get(entity);
+
+    /* FUN_0043bc40 first completes a linked +0x3cc child when the source
+     * stats word has one of the three documented state groups. EntitySlot's
+     * spawn_child_3cc mirror owns that exact link. */
+    if ((stats_flags & 0x80000070u) != 0u &&
+        entity->spawn_child_3cc != NULL &&
+        (entity->spawn_child_3cc->flags_3e0 & 0x00200000u) != 0u) {
+        EntitySlot* child = entity->spawn_child_3cc;
+        child->field_340 = -1.0f;
+        child->flags_3e0 &= ~0x00200000u;
+        entity_kind_record_update_dispatch(entity);
+        ai_set_activity(child, 0, 1);
+        activity_register_bookkeeping(child);
+    }
+
+    /* The first linked-activity path reads the pointer at +0x3cc. That field
+     * is represented by spawn_child_3cc; it is distinct from carried-object
+     * (+0x308) and reciprocal pair (+0x3c0) links. */
+
+    if ((entity->flags_3e8 & 0x00800000u) != 0u) {
+        objective_sidecar_owner_detach(ctx, entity);
+        if (entity->type == 2 && (entity->flags_3ec & 8u) != 0u
+            && ctx != NULL) {
+            osf_add(ctx, (int32_t)entity->flags_3f0,
+                    (int32_t)entity->indexed_record_slot_330,
+                    entity->name);
+        }
+        /* FUN_0046cf90 is a resource/display callback with no game-side
+         * equivalent. The remaining spawn/finalize/teardown operations are
+         * represented by existing module APIs. */
+        if (entity->type == 1) {
+            /* Deliberately no guessed replacement for FUN_0046cf90. */
+        }
+        lego::entity_kind_one_random_spawn_trigger(entity);
+        if (entity->type != 5) {
+            if (entity->type == 4)
+                entity_destroy_tracked_pointer_cleanup(entity);
+            else
+                (void)entity_teardown(entity);
+            return 1;
+        }
+        entity_type5_finalize_if_allowed(entity);
+        return 1;
+    }
+
+    if (entity->type == 3) {
+        if ((entity_state_flags_get(entity) & 0x8000u) == 0u) {
+            if ((entity_state_flags_get(entity) & 0x00100000u) == 0u)
+                return 0;
+            entity_state_reset(entity, 0, 1);
+            entity->flags_3e0 |= 0x00020000u;
+            objective_sidecar_activity_set(entity, 0x0d);
+            return 1;
+        }
+        if ((entity->flags_3e0 & 0x00100000u) != 0u) return 0;
+        entity_action_route_state_initialize(entity);
+        return 1;
+    }
+
+    /* The type-4 path branch reads the dword at +0x390 and the byte at
+     * +0x3ec. Retail applies the BuildingTypes cell-line effects only when
+     * both veto bits are clear, then marks the one-shot bit before calling
+     * 0x409d50. */
+    if (entity->type == 4 && (entity->flags_390 & 4u) == 0u &&
+        (entity->flags_3ec & 8u) == 0u) {
+        if ((entity->flags_3e4 & 0x00100000u) != 0u) return 0;
+        entity->flags_3e4 |= 0x00100000u;
+        unported_ledger_stubs::entity_cell_path_effects_apply_current(entity);
+        objective_sidecar_activity_set(entity, 0x2a);
+        task_registry_remove_type10_entries_for_entity(entity);
+        return 1;
+    }
+
+    if (entity->type != 1 && entity->type != 2 && entity->type != 0xb
+        && entity->type != 4 && entity->type != 6) return 0;
+    if (entity->type == 6) {
+        entity->flags_3e8 |= 0x00800000u;
+        return 1;
+    }
+
+    if ((entity->flags_3e8 & 0x00040000u) == 0u
+        || (entity->flags_3e0 & 0x00400000u) != 0u) return 0;
+
+    entity_position_to_terrain_cell(entity, level, &cell_x, &cell_y);
+    cell_valid = level != NULL;
+    if ((entity->flags_3ec & 8u) != 0u)
+        lego::entity_kind_one_random_spawn_trigger(entity);
+
+    if ((entity->flags_3ec & 0x80u) != 0u) {
+        owner = (EntitySlot*)entity->owner_36c;
+        if (owner != NULL) owner->flags_3ec &= ~0x80u;
+        entity->owner_36c = NULL;
+    }
+
+    if (entity->owner_36c != NULL && cell_valid) {
+        EntitySlot* carried = (EntitySlot*)entity->carry_link_308;
+        owner = (EntitySlot*)entity->owner_36c;
+        if ((stats_flags & 1u) != 0u
+            && (entity->flags_3e0 & 0x400u) != 0u
+            && carried != NULL
+            && terrain_cell_route_and_occupancy_check(
+                   carried, level, cell_x, cell_y, cell_x, cell_y, 1) == 0) {
+            carried->field_340 = -1.0f;
+        }
+        if ((stats_flags & 0x20000u) == 0u
+            || terrain_cell_route_and_occupancy_check(
+                   owner, level, cell_x, cell_y, cell_x, cell_y, 1) == 0) {
+            objective_sidecar_owner_detach(ctx, entity);
+        }
+        else {
+            owner->field_340 = -1.0f;
+        }
+    }
+
+    if (entity->type == 0xb)
+        terrain_entity_cell_record_remove(entity);
+
+    if (cell_valid) {
+        cell_xy[0] = cell_x;
+        cell_xy[1] = cell_y;
+        if (entity->type == 2 || entity->type == 1 || entity->type == 4)
+            message_dispatch(0x26, 0, 0, cell_xy);
+        if (entity->type == 2)
+            message_dispatch(10, 0, 0, cell_xy);
+        else if (entity->type == 1)
+            message_dispatch(0xb, 0, 0, cell_xy);
+        else if (entity->type == 4)
+            message_dispatch(0xc, 0, 0, cell_xy);
+    }
+
+    if ((entity->flags_3e4 & 2u) == 0u) {
+        entity_state_reset(entity, 0, 1);
+        entity->activity_last = entity->activity;
+    }
+    else {
+        entity_state_reset(entity, 1, 1);
+    }
+    entity->flags_3e0 |= 0x00400000u;
+    /* Renderer sidecar allocation, transform copy, and labels are absent
+     * from GameContext. The final selection detach is directly represented. */
+    (void)selection_entity_remove(entity);
+    selection_object_detach(entity);
+    return 1;
+}
+
+namespace unported_ledger_stubs {
+
+// CoordinateListCallbackVisit
+// FUNCTION: LEGORR 0x00456cb0
+void ledger_stub_00456cb0_CoordinateListCallbackVisit(
+    void* list_key, CoordinateListVisitCallback callback, void* user)
+{
+    coordinate_list_callback_visit(list_key, callback, user);
+}
+
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+// AdvisorAnimationSceneLookupAndRequest
+// FUNCTION: LEGORR 0x0045c670
+int ledger_stub_0045c670_AdvisorAnimationSceneLookupAndRequest(
+    int scene, int animation, int request_mode)
+{
+    uint32_t slot;
+    if (!advisor_animation_slot_id_resolve((uint32_t)scene,
+                                           (uint32_t)animation, &slot))
+        return 0;
+    (void)advisor_request_admit((int)slot, request_mode);
+    return 1;
+}
+
+
+
+} // namespace unported_ledger_stubs

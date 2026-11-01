@@ -27,14 +27,13 @@
 typedef struct MainLoopFramePumpHooks {
     void* context;
     void (*window_messages)(void* context);
-    void (*timer_and_task_updates)(void* context);
-    void (*deferred_work)(void* context);
+    void (*input_poll)(void* context);
     void (*renderer_begin)(void* context);
-    void (*frame_end)(void* context);
-    void (*mode_transition)(void* context, int first, int second);
+    void (*renderer_present)(void* context);
+    void (*projection_overlay)(void* context, int first, int second);
 } MainLoopFramePumpHooks;
 void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks);
-void main_loop_frame_pump(int mode_transition); /* FUN_00477f30 */
+void main_loop_frame_pump(int draw_projection_overlay); /* FUN_00477f30 */
 
 typedef struct WindowPortRect {
     int32_t left;
@@ -55,6 +54,13 @@ typedef struct WindowRuntimeState {
     uint32_t mouse_activity;
     uint32_t left_double_click;
     uint32_t right_double_click;
+    /* Mouse words written by the retail window procedures at 0x76ab3c..58. */
+    uint32_t mouse_word_3c;
+    uint32_t mouse_word_40;
+    uint32_t mouse_word_4c;
+    uint32_t mouse_word_50;
+    uint32_t mouse_word_54;
+    uint32_t mouse_word_58;
     int32_t window_style;
     size_t callback_triplet[3];
     uint32_t callback_triplet_valid;
@@ -81,11 +87,11 @@ void window_runtime_flags_set(uint32_t flags);
 uint32_t window_runtime_flags_get(void);
 const WindowRuntimeState* window_runtime_state_get(void);
 void window_runtime_state_initialize(void* window); /* 0x0047c170 */
-void window_runtime_display_caps_query_discard(void);
+void window_runtime_display_caps_query(void); /* 0x00477f80 */
 int window_runtime_callback_triplet_set(const size_t* triplet);
 int window_runtime_callback_triplet_get(size_t triplet[3]);
-int window_runtime_message_filter(uint32_t message);
-int window_runtime_adjust_rect(WindowPortRect* rect);
+int window_runtime_message_dispatch_filter(const void* message); /* 0x00478010 */
+void window_runtime_adjust_rect(WindowPortRect* rect);
 ptrdiff_t window_runtime_game_window_proc(void* window, uint32_t message,
     size_t wparam, ptrdiff_t lparam);
 ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,

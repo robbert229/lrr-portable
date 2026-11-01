@@ -132,6 +132,12 @@ int platform_cursor_position_get(int* x, int* y)
     return 1;
 }
 
+void platform_cursor_position_set(int x, int y)
+{
+    if (s_active_window != NULL && s_active_window->sdl != NULL)
+        SDL_WarpMouseInWindow(s_active_window->sdl, (float)x, (float)y);
+}
+
 int platform_pump_events(PlatformWindow* pw, PlatformEvent* out, int cap)
 {
     if (pw == NULL || out == NULL || cap <= 0) {
@@ -139,10 +145,10 @@ int platform_pump_events(PlatformWindow* pw, PlatformEvent* out, int cap)
     }
     SDL_Event e;
     int n = 0;
-    while (SDL_PollEvent(&e)) {
-        if (n >= cap) {
-            break;
-        }
+    /* Do not remove an event that cannot fit in this call's output buffer.
+     * The next frame will drain it, matching PeekMessage's bounded adapter
+     * behavior without silently discarding the cap+1 event. */
+    while (n < cap && SDL_PollEvent(&e)) {
         PlatformEvent* ev = &out[n];
         ev->kind = PLATFORM_EVENT_NONE;
         ev->code = 0;
@@ -377,6 +383,20 @@ int platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
         return -1;
     }
     return SDL_PutAudioStreamData(a->stream, pcm, frames * 2) ? 0 : -1;
+}
+
+int platform_audio_play_voice(PlatformAudio* a, const int16_t* pcm,
+                              int frames, int sample_rate, uintptr_t voice)
+{
+    (void)voice;
+    return platform_audio_play(a, pcm, frames, sample_rate);
+}
+
+void platform_audio_stop_voice(PlatformAudio* a, uintptr_t voice)
+{
+    /* SDL's shared one-shot stream has no per-submission queue handles. */
+    (void)a;
+    (void)voice;
 }
 
 int platform_audio_play_stereo(PlatformAudio* a, const int16_t* lr,

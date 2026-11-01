@@ -87,9 +87,9 @@ int flic_eof(const Flic* f);
 /* --- stepping -------------------------------------------------------------- */
 
 /* Advance one frame: applies the next delta record, or repeats the current
- * frame on a hold chunk. If `loop` is set, wrapping past the last frame
- * restarts at index 1 (the keyframe is already decoded — the corpus's RAM
- * mode rule). Returns the new frame index. */
+ * frame on a hold chunk. On wrap, RAM mode keeps the decoded keyframe and
+ * restarts at frame 1; stream mode seeks to the first chunk and replays the
+ * keyframe, matching the two corpus frame steppers. Returns the new index. */
 int flic_tick_loop(Flic* f, int loop);
 
 /* --- pixels ----------------------------------------------------------------- */

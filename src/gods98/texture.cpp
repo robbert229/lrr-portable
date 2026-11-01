@@ -7,6 +7,9 @@
 #include "scene_resources.hpp"
 #include "string.hpp"
 #include "texture.hpp"
+#include "view.hpp"
+#include "heap.hpp"
+#include "crt/crt.hpp"
 
 #define TEX_CACHE_MAX 4096
 #define TEXTURE_RESOURCE_NAME_MAX 260
@@ -30,6 +33,13 @@ static CacheEntry s_cache[TEX_CACHE_MAX];
 static int        s_cache_count = 0;
 static CacheEntry s_shared_cache[TEX_CACHE_MAX];
 static int        s_shared_cache_count = 0;
+
+typedef struct TextureSurfaceCreateHostRecord {
+    TextureSurface* surface;
+    void* texture;
+    struct TextureSurfaceCreateHostRecord* next;
+} TextureSurfaceCreateHostRecord;
+static TextureSurfaceCreateHostRecord* s_surface_create_records;
 
 /* ------------------------------------------------------------------ *
  *  BMP decode (finding 13; the shipped corpus is BITMAPINFOHEADER 40,
@@ -55,14 +65,88 @@ typedef struct TextureBitmapLayout {
     uint8_t r[256], g[256], b[256];
 } TextureBitmapLayout;
 
-/* IndexedBitmapPaletteDataPrepare: read bitmap dimensions/format/scanline
- * layout and normalize the optional indexed palette for the software path.
- * The port validates file bounds and supports OS/2 headers as deviations. */
 // FUNCTION: LEGORR 0x00489c30
+void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap,
+                                         uint32_t unused,
+                                         IndexedBitmapPaletteData* output)
+{
+    uint32_t bpp;
+    uint32_t bytes_per_pixel;
+    uint32_t color_count;
+    uint32_t index;
+    uint32_t row_bytes;
+    uint8_t* palette_bytes;
+    (void)unused;
+    if (bitmap == NULL || output == NULL) return;
+    bpp = t_le16(bitmap + 0x1cu);
+    if (bpp == 8u) {
+        color_count = t_le32(bitmap + 0x2eu);
+        if (color_count == 0u) color_count = 0x100u;
+        /* The retail loader allocates/zeroes the full 0x400 palette and then
+         * copies only the declared entries from the fixed +0x36 BMP offset. */
+        output->palette = (uint32_t*)engine_heap_alloc(0x400L);
+        if (output->palette == NULL) {
+            output->palette_count = 0u;
+            return;
+        }
+        memset(output->palette, 0, 0x400u);
+        if (color_count > 0x100u) color_count = 0x100u;
+        memcpy(output->palette, bitmap + 0x36u,
+               (size_t)color_count * sizeof(uint32_t));
+        palette_bytes = (uint8_t*)output->palette;
+        for (index = 0u; index < color_count; ++index) {
+            uint8_t red = palette_bytes[index * 4u];
+            palette_bytes[index * 4u] = palette_bytes[index * 4u + 2u];
+            palette_bytes[index * 4u + 2u] = red;
+        }
+        output->indexed_flag = 0u;
+        output->channel_fields[0] = 0xfcu;
+        output->channel_fields[1] = 0xfcu;
+        output->channel_fields[2] = 0xfcu;
+        output->channel_fields[3] = 0xfcu;
+        output->palette_count = color_count;
+    }
+    else {
+        output->indexed_flag = 1u;
+        output->palette_count = 0u;
+        output->palette = NULL;
+    }
+
+    output->width = (int32_t)t_le32(bitmap + 0x12u);
+    output->height = (int32_t)t_le32(bitmap + 0x16u);
+    output->flag_08 = 1u;
+    output->flag_0c = 1u;
+    output->bits_per_pixel = bpp;
+    switch (bpp) {
+    case 8u: bytes_per_pixel = 1u; break;
+    case 15u:
+    case 16u: bytes_per_pixel = 2u; break;
+    case 24u: bytes_per_pixel = 3u; break;
+    case 32u: bytes_per_pixel = 4u; break;
+    default: bytes_per_pixel = 0u; break;
+    }
+    row_bytes = bytes_per_pixel * (uint32_t)output->width;
+    output->scanline_stride = (row_bytes + 3u) & 0xfffffffcu;
+    output->pixels = bitmap + t_le32(bitmap + 0x0au);
+    output->reserved_20 = 0u;
+}
+
+void indexed_bitmap_palette_data_release(IndexedBitmapPaletteData* data)
+{
+    if (data == NULL || data->palette == NULL) return;
+    engine_heap_free(data->palette);
+    data->palette = NULL;
+    data->palette_count = 0u;
+}
+
+/* Portable validation wrapper. It bounds-checks the whole-file resource and
+ * keeps OS/2 headers/1-bit/4-bit depths outside the retail target routine;
+ * valid 40-byte Windows BMPs use the exact output-record helper above. */
 static int texture_bitmap_layout_prepare(const uint8_t* data, uint32_t size,
                                          TextureBitmapLayout* layout)
 {
-    if (layout == NULL || size < 26 || data[0] != 'B' || data[1] != 'M') {
+    if (layout == NULL || data == NULL || size < 26 ||
+        data[0] != 'B' || data[1] != 'M') {
         return 0;
     }
 
@@ -94,6 +178,7 @@ static int texture_bitmap_layout_prepare(const uint8_t* data, uint32_t size,
         if (comp != 0) {
             return NULL; /* BI_RGB only in the shipped corpus */
         }
+        if (h == (int32_t)0x80000000u) return 0;
         if (h < 0) {
             top_down = 1;
             h = -h;
@@ -115,6 +200,7 @@ static int texture_bitmap_layout_prepare(const uint8_t* data, uint32_t size,
 
     /* Palette entries may be fewer than the implied count (files sometimes
      * store a truncated palette); clamp so only in-file entries are read. */
+    if (data_off < pal_start) return 0;
     uint64_t avail_entries = ((uint64_t)data_off - pal_start) / pal_stride;
     if (avail_entries < num_colors) {
         num_colors = (uint32_t)avail_entries;
@@ -127,24 +213,13 @@ static int texture_bitmap_layout_prepare(const uint8_t* data, uint32_t size,
     }
 
     /* Row stride: each row padded to a multiple of 4 bytes. */
-    uint32_t row_bits = (uint32_t)w * (uint32_t)bpp;
-    uint32_t row_stride = ((row_bits + 31u) / 32u) * 4u;
+    uint64_t row_bits = (uint64_t)(uint32_t)w * (uint32_t)bpp;
+    uint64_t row_stride_wide = ((row_bits + 31u) / 32u) * 4u;
+    if (row_stride_wide > 0xffffffffu) return 0;
+    uint32_t row_stride = (uint32_t)row_stride_wide;
     uint64_t pixel_bytes = (uint64_t)row_stride * (uint64_t)h;
     if (pixel_bytes > (uint64_t)size - data_off) {
         return 0;
-    }
-
-    /* Palette table, converted to 24-bit RGB. Zero-filled: entries past the
-     * table read as black, mirroring the zero-padded 0x400 palette copy in
-     * the corpus loader (FUN_00489c30). */
-    for (uint32_t i = 0; i < num_colors; ++i) {
-        const uint8_t* e = data + pal_start + i * pal_stride;
-        if (e + pal_stride > data + size) {
-            break; /* palette table ends early; rest reads as black */
-        }
-        layout->b[i] = e[0];
-        layout->g[i] = e[1];
-        layout->r[i] = e[2];
     }
 
     layout->width = w;
@@ -154,6 +229,49 @@ static int texture_bitmap_layout_prepare(const uint8_t* data, uint32_t size,
     layout->row_stride = row_stride;
     layout->num_colors = num_colors;
     layout->top_down = top_down;
+
+    if (hdr_size == 40u && !top_down && (bpp == 8 || bpp == 16 ||
+        bpp == 24 || bpp == 32) &&
+        (bpp != 8 || (t_le32(data + 46u) == 0u
+            ? num_colors >= 0x100u : t_le32(data + 46u) <= num_colors))) {
+        IndexedBitmapPaletteData prepared;
+        memset(&prepared, 0, sizeof(prepared));
+        indexed_bitmap_palette_data_prepare(data, size, &prepared);
+        if (prepared.width != w || prepared.height != h ||
+            prepared.bits_per_pixel != (uint32_t)bpp ||
+            prepared.scanline_stride != row_stride ||
+            prepared.pixels != data + data_off ||
+            (bpp == 8 && (prepared.palette == NULL ||
+                          prepared.palette_count < num_colors))) {
+            indexed_bitmap_palette_data_release(&prepared);
+            return 0;
+        }
+        if (bpp == 8) {
+            const uint8_t* palette = (const uint8_t*)prepared.palette;
+            uint32_t palette_count = prepared.palette_count;
+            if (palette_count > num_colors) palette_count = num_colors;
+            layout->num_colors = palette_count;
+            for (uint32_t i = 0u; i < palette_count; ++i) {
+                layout->r[i] = palette[i * 4u];
+                layout->g[i] = palette[i * 4u + 1u];
+                layout->b[i] = palette[i * 4u + 2u];
+            }
+        }
+        layout->data_off = (uint32_t)(prepared.pixels - data);
+        layout->row_stride = prepared.scanline_stride;
+        indexed_bitmap_palette_data_release(&prepared);
+    }
+    else {
+        /* Non-retail but safely supported formats continue through this
+         * bounds-checked decoder's own palette interpretation. */
+        for (uint32_t i = 0; i < num_colors; ++i) {
+            const uint8_t* e = data + pal_start + i * pal_stride;
+            if (e + pal_stride > data + size) break;
+            layout->b[i] = e[0];
+            layout->g[i] = e[1];
+            layout->r[i] = e[2];
+        }
+    }
     return 1;
 }
 
@@ -428,6 +546,7 @@ void texture_release_record(TextureReleaseRecord* record)
     uint32_t reference_count;
 
     if (record == NULL) return;
+    if (texture_surface_create_host_record_release(record)) return;
 
     interface_object = record->surface;
     if (interface_object != NULL) {
@@ -454,6 +573,46 @@ void texture_release_record(TextureReleaseRecord* record)
             reference_count = release(interface_object);
         }
     }
+}
+
+void* texture_surface_create_host_record(const char* name, uint32_t mode)
+{
+    TextureSurfaceCreateHostRecord* record;
+    TextureSurface* surface;
+    /* Mode 1 is the direct bitmap creation route used by the retail tile and
+     * animation callers. Mode 0 enumerates the renderer's configured surface
+     * database and has no portable owner in the current tree. */
+    if (name == NULL || mode != 1u) return NULL;
+    surface = texture_load(name);
+    if (surface == NULL) return NULL;
+    record = (TextureSurfaceCreateHostRecord*)calloc(1,
+                                                     sizeof(*record));
+    if (record == NULL) {
+        texture_release(surface);
+        return NULL;
+    }
+    record->surface = surface;
+    record->next = s_surface_create_records;
+    s_surface_create_records = record;
+    return record;
+}
+
+int texture_surface_create_host_record_release(void* opaque_record)
+{
+    TextureSurfaceCreateHostRecord* record = s_surface_create_records;
+    TextureSurfaceCreateHostRecord* previous = NULL;
+    while (record != NULL) {
+        if (record == (TextureSurfaceCreateHostRecord*)opaque_record) {
+            if (previous == NULL) s_surface_create_records = record->next;
+            else previous->next = record->next;
+            texture_release(record->surface);
+            free(record);
+            return 1;
+        }
+        previous = record;
+        record = record->next;
+    }
+    return 0;
 }
 
 void texture_source_color_key_set(TextureSurface* t, uint32_t low,
@@ -544,3 +703,116 @@ void texture_cache_name_slot_append(void* table, int* count,
     __builtin_memcpy(entry + 2 * field, &slot_b, sizeof slot_b);
     *count += 1;
 }
+
+// FUNCTION: LEGORR 0x00473c60
+const char* xf_texture_name_format(void* texture_record,
+                                   const char* name_base,
+                                   const int* frame_index)
+{
+    static char output[1024];
+    char path[1024];
+    const char* frame_name = NULL;
+    const char* base_name = name_base != NULL ? name_base : "";
+    void* frame_record = NULL;
+    const char* path_name;
+    uint32_t kind = 0u;
+    void* action_name_list = NULL;
+    const char* action_name = NULL;
+    void* action_state = NULL;
+    void* resolved_object = NULL;
+    int written = 0;
+
+    output[0] = '\0';
+    if (texture_record == NULL) return output;
+    memcpy(&kind, (char*)texture_record + 0x10, sizeof(kind));
+    if (kind == 4u) {
+        memcpy(&action_name_list, (char*)texture_record + 0x0c,
+               sizeof(action_name_list));
+        if (action_name_list != NULL)
+            memcpy(&action_name, action_name_list, sizeof(action_name));
+        if (action_name != NULL)
+            frame_record = ddiscene_frame_record_find(
+                texture_record, action_name, 0);
+    }
+    else if (kind == 3u) {
+        memcpy(&frame_record, (char*)texture_record + 4,
+               sizeof(frame_record));
+    }
+
+    action_state = frame_record != NULL
+        ? ddiscene_action_record_field_1c_pointer_get(frame_record) : NULL;
+    if (action_state != NULL)
+        memcpy(&resolved_object, (char*)action_state + 0x0c,
+               sizeof(resolved_object));
+
+    if (resolved_object == NULL) {
+        path_name = frame_record != NULL
+            ? scene_property_secondary_name_get(frame_record) : NULL;
+        if (path_name != NULL) {
+            size_t length = strlen(path_name);
+            if (length >= sizeof(path)) length = sizeof(path) - 1u;
+            memcpy(path, path_name, length);
+            path[length] = '\0';
+            crt_string_to_lower(path);
+            frame_name = path;
+            {
+                const char* scan = path;
+                while (*scan != '\0') {
+                    if (*scan == '\\') frame_name = scan + 1;
+                    ++scan;
+                }
+            }
+        }
+        if (frame_index != NULL) {
+#if defined(_MSC_VER)
+            written = _snprintf(output, sizeof(output) - 1u,
+                "xf_????????_%s_%s_%0.2d_DDc_00", base_name,
+                frame_name != NULL ? frame_name : "", *frame_index);
+#else
+            written = snprintf(output, sizeof(output) - 1u,
+                "xf_????????_%s_%s_%0.2d_DDc_00", base_name,
+                frame_name != NULL ? frame_name : "", *frame_index);
+#endif
+        }
+        else {
+#if defined(_MSC_VER)
+            written = _snprintf(output, sizeof(output) - 1u,
+                "xf_????????_%s_%s_??_DDc_00", base_name,
+                frame_name != NULL ? frame_name : "");
+#else
+            written = snprintf(output, sizeof(output) - 1u,
+                "xf_????????_%s_%s_??_DDc_00", base_name,
+                frame_name != NULL ? frame_name : "");
+#endif
+        }
+    }
+    else if (frame_index != NULL) {
+#if defined(_MSC_VER)
+        written = _snprintf(output, sizeof(output) - 1u, "%s_%0.2i",
+                            base_name, *frame_index);
+#else
+        written = snprintf(output, sizeof(output) - 1u, "%s_%0.2i",
+                           base_name, *frame_index);
+#endif
+    }
+    else {
+#if defined(_MSC_VER)
+        written = _snprintf(output, sizeof(output) - 1u, "%s_??", base_name);
+#else
+        written = snprintf(output, sizeof(output) - 1u, "%s_??", base_name);
+#endif
+    }
+    (void)written;
+    output[sizeof(output) - 1u] = '\0';
+    return output;
+}
+
+namespace unported_ledger_stubs {
+const char* ledger_stub_00473c60_XfTextureNameFormat(
+    void* texture_record, const char* name_base, const int* frame_index)
+{
+    return ::xf_texture_name_format(texture_record, name_base, frame_index);
+}
+
+
+} // namespace unported_ledger_stubs

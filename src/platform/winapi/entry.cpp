@@ -7,6 +7,7 @@
  */
 #include "platform/platform.h"
 #include "gods98/resource.hpp"
+#include "game/port_loop_ports.hpp"
 #include <stdio.h>
 #include <string.h>
 
@@ -20,26 +21,47 @@ static char s_application_prefix[1024];
 static DWORD s_startup_no_sound;
 static DWORD s_startup_insist_on_cd;
 
-/* Fixed-key subset of WinMain's RegistryPathAccessor (finding 402). */
-// FUNCTION: LEGORR 0x0048b360
+/* WinAPI registry operations used by RegistryPathAccessor (finding 402). */
+static void* winmain_registry_create_key(void* parent, const char* component,
+                                         void*)
+{
+    HKEY child = NULL;
+    /* RegistryPathCreateKeys ignores RegCreateKeyA's status and tests only
+     * whether its output handle is null. Preserve that target condition. */
+    (void)RegCreateKeyA((HKEY)parent, component, &child);
+    return child;
+}
+
+static int winmain_registry_query_value(void* key, const char* value_name,
+                                        void* output, uint32_t* size,
+                                        uint32_t* value_type, void*)
+{
+    DWORD native_size;
+    DWORD native_type = 0;
+    LONG result;
+    if (size == NULL) return 0;
+    native_size = (DWORD)*size;
+    result = RegQueryValueExA((HKEY)key, value_name, NULL, &native_type,
+                              (LPBYTE)output, &native_size);
+    *size = (uint32_t)native_size;
+    if (value_type != NULL) *value_type = (uint32_t)native_type;
+    return result == ERROR_SUCCESS;
+}
+
+static void winmain_registry_close_key(void* key, void*)
+{
+    if (key != NULL) RegCloseKey((HKEY)key);
+}
+
 static int winmain_registry_read(const char* value_name, char* value,
                                  DWORD value_size)
 {
-    HKEY key = NULL;
-    DWORD type = 0;
-    DWORD capacity = value_size;
-    LONG status = RegCreateKeyA(
-        HKEY_LOCAL_MACHINE, "SOFTWARE\\LEGO Media\\Games\\Rock Raiders", &key);
-    if (status != ERROR_SUCCESS || key == NULL) {
+    uint32_t capacity = (uint32_t)value_size;
+    const char* key_path = "SOFTWARE\\LEGO Media\\Games\\Rock Raiders";
+    if (value == NULL || value_size == 0u) return 0;
+    if (!registry_path_accessor(key_path, value_name, 0, value, capacity))
         return 0;
-    }
-    status = RegQueryValueExA(key, value_name, NULL, &type,
-                              (LPBYTE)value, &value_size);
-    RegCloseKey(key);
-    if (status != ERROR_SUCCESS) {
-        return 0;
-    }
-    value[value_size < capacity ? value_size : capacity - 1] = '\0';
+    value[value_size - 1u] = '\0';
     return 1;
 }
 
@@ -67,6 +89,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     char standard_parameters[1024];
     volatile DWORD startup_state[4] = { 0, 0, 0, 0 };
     volatile float frame_delta = 0.0f;
+    registry_path_hooks_set(winmain_registry_create_key,
+                            winmain_registry_query_value,
+                            winmain_registry_close_key, NULL);
     sprintf(mutex_name, "%s_Mutex", "Lego_Rock_Raiders");
     CreateMutexA(NULL, TRUE, mutex_name);
     if (GetLastError() == ERROR_ALREADY_EXISTS) {

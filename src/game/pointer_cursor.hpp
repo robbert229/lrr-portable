@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#include "gods98/engine.hpp"
+
 enum { POINTER_CURSOR_COUNT = 56 };
 typedef struct PointerCursorSlot {
     void* resource;
@@ -23,15 +25,43 @@ typedef struct PointerCursorHooks {
     int (*entry_get)(void* context, void* section, uint32_t index,
                      const char** name_out, const char** path_out,
                      int* animated_out, int* hot_x_out, int* hot_y_out);
-    uint32_t (*render_flags_get)(void* context);
+    uint32_t (*feature_flags_get)(void* context);
+    uint32_t (*state_flags_get)(void* context);
     void* (*bitmap_load)(void* context, const char* path);
     void* (*animation_load)(void* context, const char* path);
+    /* Animated pointers use the resource's width and height in their target
+     * draw record, even though the placement begins at the hotspot offset. */
+    int (*animation_size_get)(void* context, void* animation,
+                              float* width_out, float* height_out);
     void (*bitmap_initialize)(void* context, void* bitmap);
     void (*bitmap_draw)(void* context, void* bitmap, float x, float y);
     void (*animation_draw)(void* context, void* animation, float x, float y,
-                           int phase, int mode);
+                           float width, float height, int phase, int mode);
 } PointerCursorHooks;
 
+static inline uint32_t pointer_cursor_feature_flags_get(
+    const PointerCursorHooks* hooks)
+{
+    uint32_t* flags;
+    if (hooks != NULL && hooks->feature_flags_get != NULL)
+        return hooks->feature_flags_get(hooks->context);
+    flags = engine_current_feature_word();
+    return flags != NULL ? *flags : 0u;
+}
+
+static inline uint32_t pointer_cursor_state_flags_get(
+    const PointerCursorHooks* hooks)
+{
+    uint32_t* flags;
+    if (hooks != NULL && hooks->state_flags_get != NULL)
+        return hooks->state_flags_get(hooks->context);
+    flags = engine_current_state_word();
+    return flags != NULL ? *flags : 0u;
+}
+
+/* PointerCursorNameRegistryInit (FUN_0045c830) writes only the 56 canonical
+ * name pointers. The selected index, override timer, and resource table are
+ * owned by separate target globals and are not reset here. */
 static inline void pointer_cursor_registry_init(PointerCursorState* state)
 {
     static const char* names[POINTER_CURSOR_COUNT] = {
@@ -61,14 +91,7 @@ static inline void pointer_cursor_registry_init(PointerCursorState* state)
     if (state == NULL) return;
     for (i = 0; i < POINTER_CURSOR_COUNT; ++i) {
         state->names[i] = names[i];
-        state->slots[i].resource = NULL;
-        state->slots[i].animated = 0;
-        state->slots[i].hot_x = 0;
-        state->slots[i].hot_y = 0;
     }
-    state->default_surface = NULL;
-    state->selected = 0;
-    state->override_timer = 0.0f;
 }
 
 static inline int pointer_cursor_name_equal(const char* first,
@@ -107,7 +130,7 @@ static inline uint32_t pointer_cursor_config_load(
     uint32_t entry_index;
     if (state == NULL || hooks == NULL || hooks->entry_get == NULL) return 0;
     if (state->names[0] == NULL) pointer_cursor_registry_init(state);
-    for (entry_index = 0; entry_index < 256; ++entry_index) {
+    for (entry_index = 0; entry_index != (uint32_t)-1; ++entry_index) {
         const char* name = NULL;
         const char* path = NULL;
         int animated = 0;
@@ -117,8 +140,7 @@ static inline uint32_t pointer_cursor_config_load(
         if (!hooks->entry_get(hooks->context, section, entry_index, &name,
                               &path, &animated, &hot_x, &hot_y)) break;
         if (name != NULL && name[0] == '!') {
-            const uint32_t flags = hooks->render_flags_get == NULL ? 0u
-                : hooks->render_flags_get(hooks->context);
+            const uint32_t flags = pointer_cursor_feature_flags_get(hooks);
             if ((flags & 0x02000000u) != 0u) continue;
             ++name;
         }
@@ -162,21 +184,26 @@ static inline void pointer_cursor_draw(PointerCursorState* state,
     if (!slot->animated) {
         void* bitmap = slot->resource != NULL ? slot->resource
                                                : state->slots[0].resource;
-        if (bitmap == NULL) bitmap = state->default_surface;
         if (bitmap != NULL && hooks->bitmap_draw != NULL)
             hooks->bitmap_draw(hooks->context, bitmap, (float)x, (float)y);
         return;
     }
     if (slot->resource != NULL && hooks->animation_draw != NULL) {
-        const uint32_t flags = hooks->render_flags_get == NULL ? 0u
-            : hooks->render_flags_get(hooks->context);
+        uint32_t flags;
+        float width = 0.0f;
+        float height = 0.0f;
+        if (hooks->animation_size_get != NULL)
+            hooks->animation_size_get(hooks->context, slot->resource,
+                                      &width, &height);
         /* The original draws the blank cursor surface before the animated
          * cursor so the animation has a clean background at the pointer. */
         if (state->slots[1].resource != NULL && hooks->bitmap_draw != NULL)
             hooks->bitmap_draw(hooks->context, state->slots[1].resource,
                                (float)x, (float)y);
+        flags = pointer_cursor_state_flags_get(hooks);
         hooks->animation_draw(hooks->context, slot->resource,
             (float)((int)x + slot->hot_x), (float)((int)y + slot->hot_y),
+            width, height,
             (int)((~flags >> 20) & 1u), 1);
     }
 }

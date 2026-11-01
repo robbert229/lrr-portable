@@ -210,6 +210,17 @@ void* sav_record_ptr(GameContext* ctx, int index);
  * the getter answers the blob word itself). */
 void selected_level_start_object_update(GameContext* ctx); /* FUN_00460200 */
 
+/* SelectedLevelStart (FUN_00460220) publishes the active type-4 name list
+ * and Pilot grid-record count after the current level/checkpoint gate. */
+typedef struct EntityType4IndexNameList {
+    const char* names[100];
+    uint32_t count;
+    uint32_t grid_count;
+} EntityType4IndexNameList;
+void start_level_selected(GameContext* ctx); /* FUN_00460220 */
+const EntityType4IndexNameList* start_level_entity_type4_list_get(void);
+uint32_t start_level_pilot_grid_count_get(void);
+
 /* --- generic list window band (2026-10-25) --------------------------------
  * The 0x416exx/0x4170xx band works over caller-supplied list-header
  * windows: header slots {count, entry-key pointer array, value array A,

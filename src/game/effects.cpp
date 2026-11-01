@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "effects.hpp"
+#include "combat_ray_ports.hpp"
 #include "entity.hpp"
 #include "frontend.hpp"
 #include "crt/crt.hpp"
 #include "engine.hpp"
+#include "ai.hpp"
 #include "simtick.hpp"
 #include "sound.hpp"
 #include "gods98/heap.hpp"
@@ -13,7 +15,12 @@
 #include "gods98/surface.hpp"
 #include "gods98/texture.hpp"
 #include "gods98/view.hpp"
+#include "gods98/resource.hpp"
+#include "gods98/block.hpp"
 #include "level.hpp"
+#include "weapon.hpp"
+#include "util.hpp"
+#include "util.hpp"
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -29,7 +36,9 @@ static EntityDirectionApplyHook s_entity_direction_hook;
 static TimedSegmentVisualHooks s_timed_segment_visual_hooks;
 static void* s_timed_segment_visuals[10][2];
 static void* s_timed_segment_visual_owners[10];
-static MeshSegmentQuadEmitHook s_mesh_segment_quad_emit_hook;
+static SimtickSfxTimedVisualRecord s_timed_segment_tick_records[10];
+static SimtickSfxProjectileRecord s_active_effect_tick_records[10];
+static int s_sfx_tick_hooks_installed;
 static KindEffectDispatchHooks s_kind_effect_dispatch_hooks;
 static EffectApplyHooks s_effect_apply_hooks;
 static ScreenSpaceEffectDispatchHook s_screen_space_effect_dispatch_hook;
@@ -41,6 +50,8 @@ static ScreenEffectTickHooks s_screen_effect_tick_hooks;
 static float s_screen_effect_pulse_timer;
 static void* s_screen_space_effect_dispatch_context;
 static TransientEffectHooks s_transient_effect_hooks;
+static TransientEffectQuadBasisGetHook s_transient_effect_quad_basis_hook;
+static void* s_transient_effect_quad_basis_context;
 // GLOBAL: LEGORR 0x00552100
 static TextureSurface* s_transient_effect_textures[12];
 // GLOBAL: LEGORR 0x00552130
@@ -424,6 +435,106 @@ void entity_node_scale_update(void* entity_ptr, int doubled)
 static LightEffectConfigLoadHook s_light_effect_config_load_hook;
 static void* s_light_effect_config_load_context;
 
+static int light_effect_config_range_pair_read(BlockFile* config,
+                                               const char* path,
+                                               float* minimum,
+                                               float* maximum)
+{
+    const char* value = block_get_strptr(config, path);
+    char copy[256];
+    char* separator;
+    char* end;
+    double first;
+    double second;
+    size_t length = 0u;
+    if (value == NULL || minimum == NULL || maximum == NULL) return 0;
+    while (length + 1u < sizeof(copy) && value[length] != '\0') {
+        copy[length] = value[length];
+        ++length;
+    }
+    if (value[length] != '\0') return 0;
+    copy[length] = '\0';
+    separator = strchr(copy, ':');
+    if (separator == NULL || strchr(separator + 1, ':') != NULL) return 0;
+    *separator++ = '\0';
+    first = strtod(copy, &end);
+    if (end == copy) return 0;
+    while (*end == ' ' || *end == '\t') ++end;
+    if (*end != '\0') return 0;
+    second = strtod(separator, &end);
+    if (end == separator) return 0;
+    while (*end == ' ' || *end == '\t') ++end;
+    if (*end != '\0') return 0;
+    *minimum = (float)first;
+    *maximum = (float)second;
+    return 1;
+}
+
+static uint32_t light_effect_float_word(float value)
+{
+    uint32_t word;
+    memcpy(&word, &value, sizeof(word));
+    return word;
+}
+
+int light_effect_waypoint_config_load(void* config,
+                                     const char* config_root)
+{
+    BlockFile* file = (BlockFile*)config;
+    const char* root = config_root != NULL ? config_root : "Lego*";
+    char path[256];
+    float minimum[3];
+    float maximum[3];
+    float range_min[3];
+    float range_max[3];
+    float parameters[12];
+    static const char* const keys[5] = {
+        "FadeRGBMin", "FadeRGBMax", "RandomRangeForTimeBetweenFades",
+        "RandomRangeForFadeTimeFade", "RandomRangeForHoldTimeOfFade"
+    };
+    unsigned int i;
+    if (file == NULL) return 0;
+    snprintf(path, sizeof(path), "%s LightEffects::%s", root, keys[0]);
+    if (!config_rgb_vector_read(file, path, &minimum[0], &minimum[1],
+                                &minimum[2])) return 0;
+    snprintf(path, sizeof(path), "%s LightEffects::%s", root, keys[1]);
+    if (!config_rgb_vector_read(file, path, &maximum[0], &maximum[1],
+                                &maximum[2])) return 0;
+    for (i = 0u; i < 3u; ++i) {
+        snprintf(path, sizeof(path), "%s LightEffects::%s", root,
+                 keys[i + 2u]);
+        if (!light_effect_config_range_pair_read(file, path,
+                &range_min[i], &range_max[i])) return 0;
+        range_min[i] *= 25.0f;
+        range_max[i] *= 25.0f;
+    }
+    for (i = 0u; i < 3u; ++i) {
+        parameters[i] = minimum[i];
+        parameters[i + 3u] = maximum[i];
+        parameters[i + 6u] = range_min[i];
+        parameters[i + 9u] = range_max[i];
+    }
+    motion_waypoint_parameters_store(
+        parameters[0], parameters[1], parameters[2],
+        parameters[3], parameters[4], parameters[5],
+        parameters[6], parameters[9], parameters[7], parameters[10],
+        parameters[8], parameters[11]);
+    light_effect_fade_parameters_store(
+        light_effect_float_word(parameters[0]),
+        light_effect_float_word(parameters[1]),
+        light_effect_float_word(parameters[2]),
+        light_effect_float_word(parameters[3]),
+        light_effect_float_word(parameters[4]),
+        light_effect_float_word(parameters[5]),
+        light_effect_float_word(range_min[0]),
+        light_effect_float_word(range_max[0]),
+        light_effect_float_word(range_min[1]),
+        light_effect_float_word(range_max[1]),
+        light_effect_float_word(range_min[2]),
+        light_effect_float_word(range_max[2]));
+    return 1;
+}
+
 void light_effect_config_load_hook_set(LightEffectConfigLoadHook hook,
                                        void* context)
 {
@@ -539,6 +650,8 @@ void scene_transform_state_initialize(void* target, void* owner,
     s_scene_transform_state.current[0] = x;
     s_scene_transform_state.current[1] = y;
     s_scene_transform_state.current[2] = z;
+    motion_gameplay_scene_bind(target, s_scene_transform_state.flags);
+    motion_waypoint_position_bind(x, y, z);
     if (s_scene_transform_apply_hook != NULL) {
         s_scene_transform_apply_hook(s_scene_transform_apply_context, target,
                                       x, y, z, 1.0f);
@@ -562,6 +675,8 @@ void scene_transform_enable_set(int enabled)
     else {
         s_scene_transform_state.flags &= ~0x100u;
     }
+    motion_gameplay_scene_bind(s_scene_transform_state.target,
+                               s_scene_transform_state.flags);
 }
 
 void scene_transform_current_set(float x, float y, float z)
@@ -611,7 +726,8 @@ int active_effect_record_slot_find(void)
 {
     int i;
     for (i = 0; i < 10; ++i) {
-        if (s_active_effect_occupied[i] == 0) return i;
+        if (s_active_effect_occupied[i] == 0 ||
+            s_active_effect_records[i].spawned_entity == NULL) return i;
     }
     return -1;
 }
@@ -621,7 +737,8 @@ int active_segment_visual_record_slot_find(void)
 {
     int i;
     for (i = 0; i < 10; ++i) {
-        if (s_active_segment_visual_occupied[i] == 0) return i;
+        if (s_active_segment_visual_occupied[i] == 0 ||
+            s_timed_segment_visuals[i][0] == NULL) return i;
     }
     return -1;
 }
@@ -644,13 +761,22 @@ void active_effect_record_slots_clear(void)
     for (i = 0; i < 10; ++i) {
         s_active_effect_occupied[i] = 0;
         memset(&s_active_effect_records[i], 0, sizeof(s_active_effect_records[i]));
+        memset(&s_active_effect_tick_records[i], 0,
+               sizeof(s_active_effect_tick_records[i]));
     }
 }
 
 void active_segment_visual_record_slots_clear(void)
 {
     int i;
-    for (i = 0; i < 10; ++i) s_active_segment_visual_occupied[i] = 0;
+    for (i = 0; i < 10; ++i) {
+        s_active_segment_visual_occupied[i] = 0;
+        s_timed_segment_visuals[i][0] = NULL;
+        s_timed_segment_visuals[i][1] = NULL;
+        s_timed_segment_visual_owners[i] = NULL;
+        memset(&s_timed_segment_tick_records[i], 0,
+               sizeof(s_timed_segment_tick_records[i]));
+    }
 }
 
 void entity_effect_motion_hooks_set(EntityImpulseApplyHook impulse_hook,
@@ -664,10 +790,19 @@ void entity_effect_motion_hooks_set(EntityImpulseApplyHook impulse_hook,
 void entity_apply_impulse_and_direction(void* entity, float magnitude,
                                         uint32_t direction)
 {
-    if (s_entity_impulse_hook != NULL)
+    if (s_entity_impulse_hook != NULL) {
         s_entity_impulse_hook(entity, magnitude, 1, 1.0f);
-    if (s_entity_direction_hook != NULL)
+    }
+    else {
+        entity_damage_apply((EntitySlot*)entity, magnitude, 1);
+    }
+    if (s_entity_direction_hook != NULL) {
         s_entity_direction_hook(entity, 0, direction);
+    }
+    else {
+        entity_directional_activity_start((EntitySlot*)entity, NULL,
+                                          (int)direction);
+    }
 }
 
 void timed_segment_visual_hooks_set(const TimedSegmentVisualHooks* hooks)
@@ -676,6 +811,8 @@ void timed_segment_visual_hooks_set(const TimedSegmentVisualHooks* hooks)
         s_timed_segment_visual_hooks.scene_get = NULL;
         s_timed_segment_visual_hooks.visual_create = NULL;
         s_timed_segment_visual_hooks.segment_build = NULL;
+        s_timed_segment_visual_hooks.resource_release = NULL;
+        s_timed_segment_visual_hooks.context = NULL;
         return;
     }
     s_timed_segment_visual_hooks = *hooks;
@@ -702,12 +839,13 @@ void timed_entity_segment_visual_create(void* entity, const float start[3],
                                                1.0f, start, end,
                                                0.1f, 0.2f, 0.5f, 1.0f);
     s_timed_segment_visual_owners[slot] = entity;
+    s_timed_segment_tick_records[slot].first_handle =
+        s_timed_segment_visuals[slot][0];
+    s_timed_segment_tick_records[slot].second_handle =
+        s_timed_segment_visuals[slot][1];
+    s_timed_segment_tick_records[slot].resource_owner = scene;
+    s_timed_segment_tick_records[slot].remaining = 5.0f;
     active_segment_visual_record_slot_set(slot, 1);
-}
-
-void mesh_segment_quad_emit_hook_set(MeshSegmentQuadEmitHook hook)
-{
-    s_mesh_segment_quad_emit_hook = hook;
 }
 
 // FUNCTION: LEGORR 0x00470760
@@ -716,59 +854,118 @@ void mesh_build_eight_sided_segment(void* mesh, float radius,
                                     float red, float green, float blue,
                                     float alpha)
 {
-    float axis[3];
-    float basis_a[3];
-    float basis_b[3];
-    float length;
+    static const uint16_t triangle_indices[48] = {
+        0, 1, 9, 9, 8, 0, 1, 2, 10, 10, 9, 1,
+        2, 3, 11, 11, 10, 2, 3, 4, 12, 12, 11, 3,
+        4, 5, 13, 13, 12, 4, 5, 6, 14, 14, 13, 5,
+        6, 7, 15, 15, 14, 6, 7, 0, 8, 8, 15, 7
+    };
+    static const uint32_t texture_pairs[32] = {
+        0u, 0x3f800000u, 0u, 0u, 0x3f800000u, 0u, 0x3f800000u, 0x3f800000u,
+        0u, 0x3f800000u, 0u, 0u, 0x3f800000u, 0u, 0x3f800000u, 0x3f800000u,
+        0u, 0x3f800000u, 0u, 0u, 0x3f800000u, 0u, 0x3f800000u, 0x3f800000u,
+        0u, 0x3f800000u, 0u, 0u, 0x3f800000u, 0u, 0x3f800000u, 0x3f800000u
+    };
+    uint16_t source_indices[96];
+    float positions[48];
+    float normals[24];
+    float dx;
+    float dy;
+    float dz;
     float inverse_length;
-    float vertices[16][3];
+    float axis_y;
+    float axis_z;
+    float frame_x;
+    float frame_y;
+    float off_x[8];
+    float off_y[8];
+    float off_z[8];
+    float f6;
+    float f9;
+    float f5;
+    float f8;
+    float fparam;
+    float diagonal_x;
+    float diagonal_y;
+    float diagonal_z;
+    float diagonal_r;
+    float diagonal_f9;
+    float normal_length;
+    int record_index;
     int i;
-    if (mesh == NULL || start == NULL || end == NULL ||
-        s_mesh_segment_quad_emit_hook == NULL) return;
-    axis[0] = end[0] - start[0];
-    axis[1] = end[1] - start[1];
-    axis[2] = end[2] - start[2];
-    length = (float)sqrt(axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]);
-    inverse_length = 1.0f / length;
-    axis[0] *= inverse_length;
-    axis[1] *= inverse_length;
-    axis[2] *= inverse_length;
-    if ((float)fabs(axis[1]) < 0.9f) {
-        basis_a[0] = -axis[2]; basis_a[1] = 0.0f; basis_a[2] = axis[0];
+    if (mesh == NULL || start == NULL || end == NULL) return;
+
+    dx = end[0] - start[0];
+    dy = end[1] - start[1];
+    dz = end[2] - start[2];
+    inverse_length = 1.0f / (float)sqrt(dx * dx + dy * dy + dz * dz);
+    axis_y = inverse_length * dy;
+    axis_z = inverse_length * dz;
+    if (axis_y == 0.0f && axis_z == 0.0f) {
+        frame_x = 1.0f;
+        frame_y = 0.0f;
+    }
+    else if (axis_y == 0.0f) {
+        frame_y = 1.0f;
+        frame_x = 0.0f;
     }
     else {
-        basis_a[0] = 0.0f; basis_a[1] = axis[2]; basis_a[2] = -axis[1];
+        frame_x = (float)sqrt(1.0f / ((axis_z * axis_z) /
+                                      (axis_y * axis_y) + 1.0f));
+        frame_y = -(axis_z / axis_y) * frame_x;
     }
-    inverse_length = 1.0f / (float)sqrt(basis_a[0] * basis_a[0] +
-                                        basis_a[1] * basis_a[1] +
-                                        basis_a[2] * basis_a[2]);
-    basis_a[0] *= inverse_length;
-    basis_a[1] *= inverse_length;
-    basis_a[2] *= inverse_length;
-    basis_b[0] = axis[1] * basis_a[2] - axis[2] * basis_a[1];
-    basis_b[1] = axis[2] * basis_a[0] - axis[0] * basis_a[2];
-    basis_b[2] = axis[0] * basis_a[1] - axis[1] * basis_a[0];
+
+    f6 = frame_y * radius;
+    f9 = frame_x * radius;
+    f5 = (frame_x * axis_y - frame_y * axis_z) * radius;
+    f8 = -(frame_x * inverse_length * dx) * radius;
+    fparam = frame_y * inverse_length * dx * radius;
+    diagonal_x = f6 * 0.41421354f;
+    diagonal_y = f5 * 0.41421354f;
+    diagonal_z = f8 * 0.41421354f;
+    diagonal_r = fparam * 0.41421354f;
+    diagonal_f9 = f9 * 0.41421354f;
+
+    off_x[0] = diagonal_y; off_y[0] = f6 + diagonal_z; off_z[0] = f9 + diagonal_r;
+    off_x[1] = f5; off_y[1] = f8 + diagonal_x; off_z[1] = fparam + diagonal_f9;
+    off_x[2] = f5; off_y[2] = f8 - diagonal_x; off_z[2] = fparam - diagonal_f9;
+    off_x[3] = diagonal_y; off_y[3] = diagonal_z - f6; off_z[3] = diagonal_r - f9;
+    off_x[4] = -diagonal_y; off_y[4] = -f6 - diagonal_z; off_z[4] = -f9 - diagonal_r;
+    off_x[5] = -f5; off_y[5] = -diagonal_x - f8; off_z[5] = -diagonal_f9 - fparam;
+    off_x[6] = -f5; off_y[6] = diagonal_x - f8; off_z[6] = diagonal_f9 - fparam;
+    off_x[7] = -diagonal_y; off_y[7] = f6 - diagonal_z; off_z[7] = f9 - diagonal_r;
+
     for (i = 0; i < 8; ++i) {
-        float angle = (float)i * 0.78539816339f;
-        float ca = (float)cos(angle) * radius;
-        float cb = (float)sin(angle) * radius;
-        int end_index = i + 8;
-        vertices[i][0] = start[0] + basis_a[0] * ca + basis_b[0] * cb;
-        vertices[i][1] = start[1] + basis_a[1] * ca + basis_b[1] * cb;
-        vertices[i][2] = start[2] + basis_a[2] * ca + basis_b[2] * cb;
-        vertices[end_index][0] = end[0] + basis_a[0] * ca + basis_b[0] * cb;
-        vertices[end_index][1] = end[1] + basis_a[1] * ca + basis_b[1] * cb;
-        vertices[end_index][2] = end[2] + basis_a[2] * ca + basis_b[2] * cb;
+        float nx;
+        float ny;
+        float nz;
+        int vertex = i * 3;
+        positions[vertex] = start[0] + off_x[i];
+        positions[vertex + 1] = start[1] + off_y[i];
+        positions[vertex + 2] = start[2] + off_z[i];
+        positions[24 + vertex] = end[0] + off_x[i];
+        positions[24 + vertex + 1] = end[1] + off_y[i];
+        positions[24 + vertex + 2] = end[2] + off_z[i];
+        nx = off_x[i];
+        ny = off_y[i];
+        nz = off_z[i];
+        normal_length = (float)sqrt(nx * nx + ny * ny + nz * nz);
+        normals[vertex] = nx / normal_length;
+        normals[vertex + 1] = ny / normal_length;
+        normals[vertex + 2] = nz / normal_length;
     }
-    for (i = 0; i < 8; ++i) {
-        int next = (i + 1) & 7;
-        float quad[12];
-        quad[0] = vertices[i][0]; quad[1] = vertices[i][1]; quad[2] = vertices[i][2];
-        quad[3] = vertices[next][0]; quad[4] = vertices[next][1]; quad[5] = vertices[next][2];
-        quad[6] = vertices[next + 8][0]; quad[7] = vertices[next + 8][1]; quad[8] = vertices[next + 8][2];
-        quad[9] = vertices[i + 8][0]; quad[10] = vertices[i + 8][1]; quad[11] = vertices[i + 8][2];
-        s_mesh_segment_quad_emit_hook(mesh, quad, red, green, blue, alpha);
+    for (i = 0; i < 48; ++i) {
+        source_indices[i * 2] = triangle_indices[i];
+        source_indices[i * 2 + 1] = 0;
     }
+
+    record_index = mesh_record_allocate_or_append(mesh, 16u, 16u, 3u,
+                                                   source_indices);
+    if (record_index < 0) return;
+    (void)render_object_color_vector_set(mesh, record_index, red, green, blue, 3);
+    (void)screen_effect_item_opacity_set(mesh, record_index, alpha, 4);
+    mesh_segment_vertex_fill(mesh, record_index, 0, 16, positions,
+                             (const uint32_t*)normals, texture_pairs);
 }
 
 void kind_effect_dispatch_hooks_set(const KindEffectDispatchHooks* hooks)
@@ -791,14 +988,14 @@ void kind_effect_dispatch_hooks_set(const KindEffectDispatchHooks* hooks)
 void kind_effect_slot_init_dispatch(void* entity, int kind)
 {
     const char* resource_name;
+    uint32_t resource_index;
     float position[3];
     float direction[3];
     float duration;
-    if (entity == NULL || s_kind_effect_dispatch_hooks.entity_position_get == NULL ||
-        s_kind_effect_dispatch_hooks.facing_vector_get == NULL ||
-        s_kind_effect_dispatch_hooks.terrain_height_get == NULL ||
-        s_kind_effect_dispatch_hooks.entity_half_height_get == NULL ||
-        s_kind_effect_dispatch_hooks.resource_duration_get == NULL) return;
+    EntitySlot* owner = (EntitySlot*)entity;
+    GameContext* game;
+    LevelState* level;
+    if (owner == NULL) return;
     switch (kind) {
     case 1: resource_name = "Lazer"; break;
     case 2: resource_name = "Pusher"; break;
@@ -806,20 +1003,71 @@ void kind_effect_slot_init_dispatch(void* entity, int kind)
     case 4: resource_name = "Lazer"; break;
     default: return;
     }
-    if (!s_kind_effect_dispatch_hooks.entity_position_get(
-            s_kind_effect_dispatch_hooks.context, entity, position)) return;
-    s_kind_effect_dispatch_hooks.facing_vector_get(
-        s_kind_effect_dispatch_hooks.context, entity, direction);
-    position[2] = s_kind_effect_dispatch_hooks.terrain_height_get(
-        s_kind_effect_dispatch_hooks.context, position[0], position[1]) -
-        s_kind_effect_dispatch_hooks.entity_half_height_get(
-            s_kind_effect_dispatch_hooks.context, entity);
-    duration = s_kind_effect_dispatch_hooks.resource_duration_get(
-        s_kind_effect_dispatch_hooks.context, resource_name);
-    if (s_kind_effect_dispatch_hooks.effect_spawn != NULL)
+    game = owner->owner_ctx;
+    if (game == NULL) game = entity_pool_callback_context_get();
+    level = game != NULL ? game->level : NULL;
+    if (s_kind_effect_dispatch_hooks.entity_position_get != NULL) {
+        if (!s_kind_effect_dispatch_hooks.entity_position_get(
+                s_kind_effect_dispatch_hooks.context, entity, position)) return;
+    }
+    else if (owner->attached_scene_object != NULL &&
+             ddiscene_object_position_get(owner->attached_scene_object, NULL,
+                                          position)) {
+        /* Use the live scene pose when it has been installed. */
+    }
+    else {
+        position[0] = owner->x;
+        position[1] = owner->y;
+        position[2] = owner->z;
+    }
+    if (s_kind_effect_dispatch_hooks.facing_vector_get != NULL) {
+        s_kind_effect_dispatch_hooks.facing_vector_get(
+            s_kind_effect_dispatch_hooks.context, entity, direction);
+    }
+    else if (owner->attached_scene_object != NULL &&
+             ddiscene_object_facing_get(owner->attached_scene_object, NULL,
+                                        direction)) {
+        /* The renderer's facing vector is authoritative when available. */
+    }
+    else {
+        direction[0] = (float)cos((double)owner->rot);
+        direction[1] = (float)sin((double)owner->rot);
+        direction[2] = 0.0f;
+    }
+    if (s_kind_effect_dispatch_hooks.terrain_height_get != NULL) {
+        position[2] = s_kind_effect_dispatch_hooks.terrain_height_get(
+            s_kind_effect_dispatch_hooks.context, position[0], position[1]);
+    }
+    else if (level != NULL && level->ptr_terrain != NULL) {
+        position[2] = terrain_surface_height_interpolate(
+            level->ptr_terrain, position[0], position[1]);
+    }
+    else {
+        return;
+    }
+    position[2] -= s_kind_effect_dispatch_hooks.entity_half_height_get != NULL
+        ? s_kind_effect_dispatch_hooks.entity_half_height_get(
+              s_kind_effect_dispatch_hooks.context, entity)
+        : entity_stats_float_at74(owner) * 0.5f;
+    resource_index = lego::object_type_name_index_find(resource_name);
+    duration = s_kind_effect_dispatch_hooks.resource_duration_get != NULL
+        ? s_kind_effect_dispatch_hooks.resource_duration_get(
+              s_kind_effect_dispatch_hooks.context, resource_name)
+        : lego::weapon_type_recharge_time_get((int)resource_index);
+    if (s_kind_effect_dispatch_hooks.effect_spawn != NULL) {
         s_kind_effect_dispatch_hooks.effect_spawn(
             s_kind_effect_dispatch_hooks.context, entity, kind, position,
             direction, duration);
+    }
+    else if (kind >= 1 && kind <= 3) {
+        /* FUN_0046faf0 owns the three direct-emitter modes. Its auxiliary
+         * argument is the resolved object-type index used by the spawn
+         * record, and the mode is the action kind. Kind 4 uses the separate
+         * flight-curve record and needs the endpoint at owner +0x3a8, which
+         * EntitySlot does not currently expose. */
+        (void)entity_spawn_record_slot_init(owner, position, direction,
+                                            resource_index, (uint32_t)kind);
+    }
     if (s_kind_effect_dispatch_hooks.cooldown_set != NULL)
         s_kind_effect_dispatch_hooks.cooldown_set(
             s_kind_effect_dispatch_hooks.context, entity, duration);
@@ -836,6 +1084,183 @@ void active_effect_build_hooks_set(const ActiveEffectBuildHooks* hooks)
 const ActiveEffectRecord* active_effect_record_peek(int slot)
 {
     return slot >= 0 && slot < 10 ? &s_active_effect_records[slot] : NULL;
+}
+
+static void* active_effect_component_get(ActiveEffectRecord* record)
+{
+    EntitySlot* entity;
+    if (record == NULL || record->spawned_entity == NULL) return NULL;
+    entity = (EntitySlot*)record->spawned_entity;
+    return entity->type_component_handle;
+}
+
+static int active_effect_curve_sample(const ActiveEffectRecord* record,
+                                      float distance, float point[2])
+{
+    unsigned int i;
+    float traversed = 0.0f;
+    if (record == NULL || point == NULL || record->sample_count == 0u)
+        return 0;
+    if (record->sample_count == 1u) {
+        point[0] = record->curve_samples[0][0];
+        point[1] = record->curve_samples[0][1];
+        return 1;
+    }
+    for (i = 0u; i + 1u < record->sample_count; ++i) {
+        float segment = record->curve_segment_lengths[i];
+        if (distance < traversed + segment && segment > 0.0f) {
+            float fraction = (distance - traversed) / segment;
+            point[0] = record->curve_samples[i][0] +
+                (record->curve_samples[i + 1u][0] -
+                 record->curve_samples[i][0]) * fraction;
+            point[1] = record->curve_samples[i][1] +
+                (record->curve_samples[i + 1u][1] -
+                 record->curve_samples[i][1]) * fraction;
+            return 1;
+        }
+        traversed += segment;
+    }
+    point[0] = record->curve_samples[record->sample_count - 1u][0];
+    point[1] = record->curve_samples[record->sample_count - 1u][1];
+    return 1;
+}
+
+static void active_effect_projectile_update(void* owner_record, float dt,
+                                            void*)
+{
+    ActiveEffectRecord* record = (ActiveEffectRecord*)owner_record;
+    void* component = active_effect_component_get(record);
+    float component_position[3];
+    float direction_x;
+    float direction_y;
+    float direction_z;
+    if (record == NULL || component == NULL ||
+        !ddiscene_object_position_get(component, NULL, component_position))
+        return;
+    record->previous_position[0] = component_position[0];
+    record->previous_position[1] = component_position[1];
+    record->previous_position[2] = component_position[2];
+    if (record->initialized == 0u) {
+        float step = record->speed * dt;
+        record->position[0] += record->direction[0] * step;
+        record->position[1] += record->direction[1] * step;
+        record->position[2] += record->direction[2] * step;
+        direction_x = record->direction[0];
+        direction_y = record->direction[1];
+        direction_z = record->direction[2];
+    }
+    else {
+        float curve_point[2];
+        record->curve_elapsed += record->speed * dt;
+        (void)active_effect_curve_sample(record, record->curve_elapsed,
+                                         curve_point);
+        record->position[0] = record->direction[0] * curve_point[0] +
+                              record->curve_origin[0];
+        record->position[1] = record->curve_origin[1] +
+                              record->direction[1] * curve_point[0];
+        record->position[2] = record->curve_origin[2] + curve_point[1];
+        direction_x = record->position[0] - component_position[0];
+        direction_y = record->position[1] - component_position[1];
+        direction_z = (record->position[2] - component_position[2]) * 0.25f;
+    }
+    (void)ddiscene_object_position_set(component, NULL, record->position[0],
+                                       record->position[1], record->position[2]);
+    (void)ddiscene_object_pose_method_dispatch(component, NULL, direction_x,
+        direction_y, direction_z, 0.0f, 0.0f, -1.0f);
+}
+
+static void active_effect_ray_hit_scan(void* owner_record, void*)
+{
+    ActiveEffectRecord* record = (ActiveEffectRecord*)owner_record;
+    float delta[3];
+    float hit_point[3];
+    float max_distance = 1.0f;
+    float range;
+    float distance;
+    void* hit_entity = NULL;
+    EntitySlot* projectile;
+    int hit;
+    if (record == NULL || record->spawned_entity == NULL) return;
+    projectile = (EntitySlot*)record->spawned_entity;
+    range = lego::weapon_type_range_get((int)record->auxiliary);
+    delta[0] = record->target[0] - record->position[0];
+    delta[1] = record->target[1] - record->position[1];
+    delta[2] = record->target[2] - record->position[2];
+    distance = (float)sqrt(delta[0] * delta[0] + delta[1] * delta[1] +
+                           delta[2] * delta[2]);
+    if (range != 0.0f && range <= distance) {
+        (void)entity_teardown(projectile);
+        record->spawned_entity = NULL;
+        s_active_effect_occupied[record - s_active_effect_records] = 0u;
+        return;
+    }
+    delta[0] = record->position[0] - record->previous_position[0];
+    delta[1] = record->position[1] - record->previous_position[1];
+    delta[2] = record->position[2] - record->previous_position[2];
+    hit = scene_segment_trace_nearest_hit(record->previous_position, delta,
+                                          &hit_entity, &max_distance,
+                                          record->spawned_entity);
+    if (!hit) return;
+    hit_point[0] = record->previous_position[0] + delta[0] * max_distance;
+    hit_point[1] = record->previous_position[1] + delta[1] * max_distance;
+    hit_point[2] = record->previous_position[2] + delta[2] * max_distance;
+    (void)entity_teardown(projectile);
+    record->spawned_entity = NULL;
+    s_active_effect_occupied[record - s_active_effect_records] = 0u;
+    if (hit_entity != NULL) {
+        effect_apply_by_kind_branch(hit_entity, record->direction, hit_point,
+                                    record->auxiliary, (int)record->mode);
+    }
+}
+
+static SimtickSfxProjectileRecord* active_effect_tick_record_get(int slot,
+                                                                 void*)
+{
+    if (slot < 0 || slot >= 10) return NULL;
+    s_active_effect_tick_records[slot].tracked_entity =
+        s_active_effect_records[slot].spawned_entity;
+    s_active_effect_tick_records[slot].owner_record =
+        &s_active_effect_records[slot];
+    return &s_active_effect_tick_records[slot];
+}
+
+static SimtickSfxTimedVisualRecord* timed_visual_tick_record_get(int slot,
+                                                                 void*)
+{
+    return slot >= 0 && slot < 10
+        ? &s_timed_segment_tick_records[slot] : NULL;
+}
+
+static void timed_visual_resource_release(void* handle, void* resource_owner,
+                                          void*)
+{
+    int i;
+    if (s_timed_segment_visual_hooks.resource_release != NULL) {
+        s_timed_segment_visual_hooks.resource_release(
+            handle, resource_owner, s_timed_segment_visual_hooks.context);
+    }
+    for (i = 0; i < 10; ++i) {
+        if (s_timed_segment_visuals[i][0] == handle) {
+            s_timed_segment_visuals[i][0] = NULL;
+            s_active_segment_visual_occupied[i] = 0u;
+        }
+        if (s_timed_segment_visuals[i][1] == handle)
+            s_timed_segment_visuals[i][1] = NULL;
+    }
+}
+
+void effects_simtick_sfx_hooks_install(void)
+{
+    SimtickSfxBankHooks hooks;
+    if (s_sfx_tick_hooks_installed) return;
+    memset(&hooks, 0, sizeof(hooks));
+    hooks.projectile_record_get = active_effect_tick_record_get;
+    hooks.projectile_update = active_effect_projectile_update;
+    hooks.ray_hit_scan = active_effect_ray_hit_scan;
+    hooks.timed_visual_record_get = timed_visual_tick_record_get;
+    hooks.resource_release = timed_visual_resource_release;
+    simtick_sfx_bank_hooks_set(&hooks);
+    s_sfx_tick_hooks_installed = 1;
 }
 
 static int active_effect_type_resolve(uint32_t mode, uint32_t* type,
@@ -864,6 +1289,43 @@ static void active_effect_direction_normalize(float direction[3])
     direction[2] *= inverse;
 }
 
+static void active_effect_curve_samples_build(ActiveEffectRecord* record,
+                                              const float endpoint[3])
+{
+    float control[4][2];
+    unsigned int i;
+    control[0][0] = 0.0f;
+    control[0][1] = 0.0f;
+    control[1][0] = 1.0f;
+    control[1][1] = -1.3f;
+    control[2][0] = record->duration;
+    control[2][1] = endpoint[2] - record->curve_origin[2];
+    control[3][0] = 0.3f;
+    control[3][1] = 1.0f;
+    record->curve_total_length = 0.0f;
+    for (i = 0u; i < record->sample_count; ++i) {
+        float t = (float)i / (float)(record->sample_count - 1u);
+        float one_minus_t = 1.0f - t;
+        float a = one_minus_t * one_minus_t * one_minus_t;
+        float b = 3.0f * one_minus_t * one_minus_t * t;
+        float c = 3.0f * one_minus_t * t * t;
+        float d = t * t * t;
+        record->curve_samples[i][0] = a * control[0][0] +
+            b * control[1][0] + c * control[2][0] + d * control[3][0];
+        record->curve_samples[i][1] = a * control[0][1] +
+            b * control[1][1] + c * control[2][1] + d * control[3][1];
+        if (i > 0u) {
+            float dx = record->curve_samples[i][0] -
+                       record->curve_samples[i - 1u][0];
+            float dy = record->curve_samples[i][1] -
+                       record->curve_samples[i - 1u][1];
+            float segment = (float)sqrt(dx * dx + dy * dy);
+            record->curve_segment_lengths[i - 1u] = segment;
+            record->curve_total_length += segment;
+        }
+    }
+}
+
 // FUNCTION: LEGORR 0x0046faf0
 int entity_spawn_record_slot_init(void* owner, const float position[3],
                                   const float direction[3],
@@ -873,14 +1335,24 @@ int entity_spawn_record_slot_init(void* owner, const float position[3],
     int slot;
     unsigned int i;
     ActiveEffectRecord* record;
+    /* Retail performs this owner/mode preparation before resolving the
+     * surface pair or testing its table pointer. Use the injected callback
+     * when present; otherwise run the live queued-grid animation path that
+     * implements FUN_00437300(owner, auxiliary, 1.0). */
+    if (mode == 1) {
+        if (s_active_effect_build_hooks.pre_spawn_prepare != NULL) {
+            s_active_effect_build_hooks.pre_spawn_prepare(
+                s_active_effect_build_hooks.context, owner, auxiliary);
+        }
+        else {
+            process_queued_grid_animations(owner, (int)auxiliary, 1.0f);
+        }
+    }
     if (position == NULL || direction == NULL ||
         !active_effect_type_resolve(mode, &type, &flags)) return 0;
     if (s_active_effect_build_hooks.surface_type_exists != NULL &&
         !s_active_effect_build_hooks.surface_type_exists(
             s_active_effect_build_hooks.context, type, flags)) return 0;
-    if (mode == 1 && s_active_effect_build_hooks.pre_spawn_prepare != NULL)
-        s_active_effect_build_hooks.pre_spawn_prepare(
-            s_active_effect_build_hooks.context, owner, auxiliary);
     slot = active_effect_record_slot_find();
     if (slot < 0) return 0;
     record = &s_active_effect_records[slot];
@@ -899,7 +1371,8 @@ int entity_spawn_record_slot_init(void* owner, const float position[3],
         record->spawned_entity = s_active_effect_build_hooks.entity_spawn(
             s_active_effect_build_hooks.context, type, flags, position);
     record->initialized = 0;
-    active_effect_record_slot_set(slot, 1);
+    active_effect_record_slot_set(slot,
+                                  record->spawned_entity != NULL);
     if (s_active_effect_build_hooks.record_activate != NULL)
         s_active_effect_build_hooks.record_activate(
             s_active_effect_build_hooks.context, record, slot);
@@ -937,6 +1410,7 @@ int object_flight_curve_record_init(void* owner, const float start[3],
     for (i = 0; i < 3; ++i) {
         record->position[i] = start[i];
         record->previous_position[i] = start[i];
+        record->curve_origin[i] = start[i];
         record->direction[i] = end[i] - start[i];
     }
     active_effect_direction_normalize(record->direction);
@@ -944,13 +1418,20 @@ int object_flight_curve_record_init(void* owner, const float start[3],
                            (end[1] - start[1]) * (end[1] - start[1]) +
                            (end[2] - start[2]) * (end[2] - start[2]));
     record->sample_count = 50;
-    record->duration = s_active_effect_build_hooks.flight_curve_build != NULL
-        ? s_active_effect_build_hooks.flight_curve_build(
-            s_active_effect_build_hooks.context, record, end) : distance;
+    record->duration = distance;
+    active_effect_curve_samples_build(record, end);
+    if (s_active_effect_build_hooks.flight_curve_build != NULL) {
+        record->duration = s_active_effect_build_hooks.flight_curve_build(
+            s_active_effect_build_hooks.context, record, end);
+    }
+    else {
+        record->duration = record->curve_total_length;
+    }
     if (s_active_effect_build_hooks.entity_spawn != NULL)
         record->spawned_entity = s_active_effect_build_hooks.entity_spawn(
             s_active_effect_build_hooks.context, type, flags, start);
-    active_effect_record_slot_set(slot, 1);
+    active_effect_record_slot_set(slot,
+                                  record->spawned_entity != NULL);
     if (s_active_effect_build_hooks.record_activate != NULL)
         s_active_effect_build_hooks.record_activate(
             s_active_effect_build_hooks.context, record, slot);
@@ -965,80 +1446,55 @@ void effect_apply_hooks_set(const EffectApplyHooks* hooks)
 
 // FUNCTION: LEGORR 0x0046f770
 void effect_apply_by_kind_branch(void* entity, const float direction_xy[2],
-                                 int command, uint32_t type, int mode)
+                                 const float effect_position[3],
+                                 uint32_t type, int mode)
 {
-    uint32_t flags = 0;
+    EntitySlot* target = (EntitySlot*)entity;
+    uint32_t flags;
     float direction[2];
     if (entity == NULL || direction_xy == NULL) return;
     direction[0] = direction_xy[0];
     direction[1] = direction_xy[1];
-    if (s_effect_apply_hooks.entity_motion_check != NULL &&
-        s_effect_apply_hooks.entity_motion_check(s_effect_apply_hooks.context,
-                                                 entity) != 0) {
-        if (command != 0 && s_effect_apply_hooks.command_effect_apply != NULL)
-            s_effect_apply_hooks.command_effect_apply(s_effect_apply_hooks.context,
-                                                     -1, command);
+    if (entity_type3_flag04000000_test(target) != 0 &&
+        effect_position != NULL) {
+        scene_light_create_at_position(effect_position);
     }
-    if (s_effect_apply_hooks.entity_flags_get != NULL)
-        flags = s_effect_apply_hooks.entity_flags_get(
-            s_effect_apply_hooks.context, entity);
+    flags = entity_state_flags_get(target);
     if (mode == 1) {
-        if ((flags & 0x02000000u) != 0 &&
-            s_effect_apply_hooks.impulse_apply != NULL) {
-            float amount = s_effect_apply_hooks.entity_value_get != NULL
-                ? s_effect_apply_hooks.entity_value_get(
-                      s_effect_apply_hooks.context, entity, 0x6a2d0u) : 0.0f;
-            s_effect_apply_hooks.impulse_apply(s_effect_apply_hooks.context,
-                                               entity, amount, 1);
+        if ((flags & 0x02000000u) != 0) {
+            entity_apply_impulse_and_direction(
+                entity, entity_stats_float_at11c(target), 1u);
         }
-        if (command != 0 && s_effect_apply_hooks.command_effect_apply != NULL)
-            s_effect_apply_hooks.command_effect_apply(s_effect_apply_hooks.context,
-                                                     0, command);
+        if (effect_position != NULL)
+            (void)lava_effect_select_and_place(0, effect_position, NULL);
     }
     else if (mode == 2) {
         if ((flags & 0x04000000u) != 0) {
-            float amount = s_effect_apply_hooks.entity_value_get != NULL
-                ? s_effect_apply_hooks.entity_value_get(
-                      s_effect_apply_hooks.context, entity, 0x6a2b0u) : 0.0f;
-            float duration = s_effect_apply_hooks.entity_value_get != NULL
-                ? s_effect_apply_hooks.entity_value_get(
-                      s_effect_apply_hooks.context, entity, 0x6a290u) : 0.0f;
+            float amount = entity_stats_float_at118(target);
+            float scalar = entity_stats_float_at114(target);
+            int32_t pair_words[2];
+            int32_t scalar_word;
             direction[0] *= 1.5f;
             direction[1] *= 1.5f;
-            if (s_effect_apply_hooks.impulse_apply != NULL)
-                s_effect_apply_hooks.impulse_apply(s_effect_apply_hooks.context,
-                                                   entity, amount, 1);
-            if (s_effect_apply_hooks.effect_apply != NULL)
-                s_effect_apply_hooks.effect_apply(s_effect_apply_hooks.context,
-                                                  entity, mode, direction,
-                                                  duration, amount);
+            entity_apply_impulse_and_direction(entity, amount, 1u);
+            memcpy(pair_words, direction, sizeof(pair_words));
+            memcpy(&scalar_word, &scalar, sizeof(scalar_word));
+            (void)entity_pair_scalar_fields_set(target, pair_words,
+                                                scalar_word);
         }
-        if (command != 0 && s_effect_apply_hooks.command_effect_apply != NULL)
-            s_effect_apply_hooks.command_effect_apply(s_effect_apply_hooks.context,
-                                                     1, command);
+        if (effect_position != NULL)
+            (void)lava_effect_select_and_place(1, effect_position, NULL);
     }
     else if (mode == 3) {
         if ((flags & 0x01000000u) != 0) {
-            float duration = s_effect_apply_hooks.entity_value_get != NULL
-                ? s_effect_apply_hooks.entity_value_get(
-                      s_effect_apply_hooks.context, entity, 0x6a310u) : 0.0f;
-            float amount = s_effect_apply_hooks.entity_value_get != NULL
-                ? s_effect_apply_hooks.entity_value_get(
-                      s_effect_apply_hooks.context, entity, 0x6a2f0u) : 0.0f;
+            float duration = entity_stats_float_at10c(target);
+            float amount = entity_stats_float_at110(target);
             if (duration <= 0.0f) duration = 10.0f;
-            if (s_effect_apply_hooks.impulse_apply != NULL)
-                s_effect_apply_hooks.impulse_apply(s_effect_apply_hooks.context,
-                                                   entity, amount, 0);
-            (void)entity_one_shot_attached_effect_start(
-                (EntitySlot*)entity, duration);
-            if (s_effect_apply_hooks.effect_apply != NULL)
-                s_effect_apply_hooks.effect_apply(s_effect_apply_hooks.context,
-                                                  entity, mode, direction,
-                                                  duration, amount);
+            entity_apply_impulse_and_direction(entity, amount, 0u);
+            (void)entity_one_shot_attached_effect_start(target, duration);
         }
-        if (command != 0 && s_effect_apply_hooks.command_effect_apply != NULL)
-            s_effect_apply_hooks.command_effect_apply(s_effect_apply_hooks.context,
-                                                     2, command);
+        if (effect_position != NULL)
+            (void)lava_effect_select_and_place(2, effect_position, NULL);
     }
     else if (s_effect_apply_hooks.generic_motion_apply != NULL) {
         s_effect_apply_hooks.generic_motion_apply(s_effect_apply_hooks.context,
@@ -1083,18 +1539,40 @@ void* screen_effect_slot_peek(int pool, int slot, float* remaining)
 void screen_effects_tick(float delta)
 {
     static const int capacities[3] = { 20, 20, 50 };
+    const int mode_zero = current_engine_mode_is_zero() ? 1 : 0;
     int paused = s_screen_effect_tick_hooks.simulation_paused != NULL
         ? s_screen_effect_tick_hooks.simulation_paused(
-              s_screen_effect_tick_hooks.context) : 0;
+              s_screen_effect_tick_hooks.context) : mode_zero;
     int pool;
     int slot;
+    /* The flagged-object ring window is owned by the AI registry module
+     * (FUN_00407540); TickEntityScreenEffects advances its float timer by
+     * reinterpreting the retained seed dword, clearing the pointer on expiry. */
+    for (slot = 0; slot < 20; ++slot) {
+        void* entity = NULL;
+        uint32_t timer_bits = 0u;
+        float timer;
+        ai_object_registry_slot_peek(0, slot, &entity, &timer_bits);
+        if (entity == NULL) continue;
+        memcpy(&timer, &timer_bits, sizeof(timer));
+        timer -= delta;
+        memcpy(&timer_bits, &timer, sizeof(timer_bits));
+        if (timer < 0.0f) entity = NULL;
+        ai_object_registry_slot_set(0, slot, entity, timer_bits);
+    }
     if (paused == 0) {
         if (s_screen_effect_pulse_timer >= 12.5f) {
             if (s_screen_effect_pulse_timer >= 25.0f) {
                 s_screen_effect_pulse_timer -= 25.0f;
             } else if (s_screen_effect_tick_hooks.pulse_tick != NULL) {
-                for (slot = 0; slot < capacities[2]; ++slot) {
-                    void* entity = s_screen_effect_tick_records[2][slot].entity;
+                /* TickEntityScreenEffects' 20-entry pulse window is the
+                 * type-4 registry (DAT_00557b24), not the independent
+                 * 50-entry effect sidecar. Use the registry populated by
+                 * Type4ObjectRegistryInsert (0x407410). */
+                const int pulse_count = ai_object_registry_window_count(1);
+                for (slot = 0; slot < pulse_count; ++slot) {
+                    void* entity = NULL;
+                    ai_object_registry_slot_peek(1, slot, &entity, NULL);
                     if (entity != NULL)
                         s_screen_effect_tick_hooks.pulse_tick(entity, delta,
                             s_screen_effect_tick_hooks.context);
@@ -1145,6 +1623,17 @@ void transient_effect_instance_handles_set(void* instance,
     links->render_record = render_record;
     transient_effect_link_pointer_set(instance, 0x28cu, scene_object);
     transient_effect_link_pointer_set(instance, 0x290u, render_record);
+}
+
+/* Keep the actual host-width registry in step with SceneEffectRegistryReset's
+ * three observed words. The CRT mirror preserves the target-word inspector;
+ * this owner holds the native pointers used by emitter traversal. */
+int transient_effect_registry_reset(void)
+{
+    s_transient_effect_head = NULL;
+    s_transient_effect_tail = NULL;
+    s_transient_effect_texture_count = 0u;
+    return scene_effect_registry_reset();
 }
 
 // FUNCTION: LEGORR 0x004653a0
@@ -1217,20 +1706,29 @@ void* transient_effect_emitter_create(void* scene_context,
     words = (uint32_t*)instance;
 
     if (mode == 0 || mode == 2) {
+        GameContext* game;
         float block_size;
         int block_size_integer;
         int cell_x, cell_y;
         int sample_x, sample_y;
         uint32_t jitter_x, jitter_y;
-        if (s_transient_effect_hooks.current_terrain_get == NULL) {
+        if (s_transient_effect_hooks.current_terrain_get != NULL)
+            terrain = s_transient_effect_hooks.current_terrain_get(
+                s_transient_effect_hooks.context);
+        else {
+            /* FUN_00465430 reads the active level's terrain handle. When no
+             * renderer override is installed, GameContext owns that handle. */
+            game = entity_pool_callback_context_get();
+            if (game != NULL && game->level != NULL)
+                terrain = game->level->ptr_terrain;
+        }
+        if (terrain == NULL) {
             engine_heap_free(instance);
             return NULL;
         }
-        terrain = s_transient_effect_hooks.current_terrain_get(
-            s_transient_effect_hooks.context);
         block_size = terrain_blocksize_get(terrain);
         block_size_integer = crt_float_to_long(block_size);
-        if (terrain == NULL || block_size_integer <= 0 ||
+        if (block_size_integer <= 0 ||
             !terrain_cell_world_center_xy_get(
                 terrain, (int)position_x, (int)position_y, center)) {
             engine_heap_free(instance);
@@ -1501,6 +1999,73 @@ void transient_effect_segment_advance(void* emitter, uint32_t slot,
         0.7f - (distance / (float)(int)particle[13]) * 0.7f, 4);
 }
 
+void transient_effect_quad_basis_hook_set(
+    TransientEffectQuadBasisGetHook hook, void* context)
+{
+    s_transient_effect_quad_basis_hook = hook;
+    s_transient_effect_quad_basis_context = context;
+}
+
+/* InstanceQuadVerticesBuild (FUN_00465f40): use the particle's current
+ * center/size/distance and scene orientation to build its four corners.
+ * Hosts may override the orientation lookup, while the normal scene object
+ * path uses the same pose interface as the retail +0x7c call. */
+// FUNCTION: LEGORR 0x00465f40
+void transient_effect_instance_quad_vertices_build(
+    void* instance, uint32_t slot, void* transform_source,
+    const float triple[3])
+{
+    static const uint32_t uv_pairs[8] = {
+        0u, 0x3f800000u, 0u, 0u,
+        0x3f800000u, 0u, 0x3f800000u, 0x3f800000u
+    };
+    unsigned char* bytes = (unsigned char*)instance;
+    float* particle;
+    float orientation[3];
+    float side[3];
+    float up[3] = { 0.0f, 0.0f, -1.0f };
+    float scale;
+    float side_scale;
+    float up_scale;
+    float positions[12];
+    void* record;
+    int axis;
+
+    if (instance == NULL || triple == NULL) return;
+    if (slot >= *(uint32_t*)(bytes + 0x280u)) return;
+    particle = (float*)(bytes + (size_t)slot * 0x3cu);
+    record = transient_effect_render_record_get(instance);
+    if (record == NULL) return;
+    if (s_transient_effect_quad_basis_hook != NULL) {
+        if (!s_transient_effect_quad_basis_hook(
+                s_transient_effect_quad_basis_context, transform_source,
+                orientation)) return;
+    }
+    else if (!ddiscene_object_facing_get(transform_source, NULL,
+                                         orientation)) return;
+
+    side[0] = orientation[1];
+    side[1] = -orientation[0];
+    side[2] = 0.0f;
+    if (orientation[2] > 0.3f)
+        d3drm_vector_rotate(up, up, side, 0.7f);
+
+    scale = particle[14] / (float)(int)particle[13] + 1.0f;
+    side_scale = particle[10] * scale;
+    up_scale = particle[11] * scale;
+    for (axis = 0; axis < 3; ++axis) {
+        float center = particle[7 + axis];
+        side[axis] *= side_scale;
+        up[axis] *= up_scale;
+        positions[axis] = center + side[axis];
+        positions[3 + axis] = center - side[axis];
+        positions[6 + axis] = positions[3 + axis] - up[axis];
+        positions[9 + axis] = positions[axis] - up[axis];
+    }
+    instance_quad_vertex_data_fill(record, (int)slot, 0, 4, positions,
+                                   triple, uv_pairs);
+}
+
 // FUNCTION: LEGORR 0x00465b00
 void transient_effect_instances_tick(float delta)
 {
@@ -1558,6 +2123,8 @@ void transient_effect_instances_tick(float delta)
 void transient_effect_instance_release(void* instance, void* resource)
 {
     unsigned char* bytes;
+    void* render_record;
+    uint32_t sound_handle;
     void* previous;
     void* next;
     TransientEffectInstanceLinks* links;
@@ -1569,6 +2136,8 @@ void transient_effect_instance_release(void* instance, void* resource)
      * whose render instance must be detached. */
     if ((bytes[0x294] & 2u) != 0u)
         resource = transient_effect_scene_object_get(instance);
+    render_record = transient_effect_render_record_get(instance);
+    memcpy(&sound_handle, bytes + 0x2a4u, sizeof(sound_handle));
     links = transient_effect_links_find(instance);
     next = transient_effect_next_get(instance);
     previous = transient_effect_previous_get(instance);
@@ -1599,13 +2168,23 @@ void transient_effect_instance_release(void* instance, void* resource)
             if (all_previous != NULL) all_previous->all_next = links->all_next;
         }
     }
+    /* FUN_004659b0 detaches the emitter render instance before releasing the
+     * owned scene object, then stops its latched sound handle before freeing
+     * the emitter record. */
+    if (render_record != NULL &&
+        s_transient_effect_hooks.render_record_release != NULL) {
+        s_transient_effect_hooks.render_record_release(
+            s_transient_effect_hooks.context, render_record);
+    }
+    if ((bytes[0x294] & 2u) != 0u && resource != NULL)
+        ddiscene_object_destroy(resource);
+    if (sound_handle != 0u)
+        sound_handle_stop_forward((int)sound_handle);
     if (s_transient_effect_hooks.instance_release != NULL) {
         s_transient_effect_hooks.instance_release(
             s_transient_effect_hooks.context, instance, resource);
     }
     else {
-        if ((bytes[0x294] & 2u) != 0u)
-            ddiscene_object_destroy(resource);
         engine_heap_free(instance);
     }
     if (links != NULL) free(links);
@@ -1616,7 +2195,7 @@ void transient_effect_registry_release_all(void)
 {
     while (s_transient_effect_head != NULL) {
         void* instance = s_transient_effect_head;
-        void* resource = NULL;
+        void* resource = transient_effect_scene_object_get(instance);
         transient_effect_instance_release(instance, resource);
     }
     s_transient_effect_head = NULL;
@@ -1865,7 +2444,8 @@ void timed_effect_runtime_update(uint32_t render_x, uint32_t render_y,
     global_flags = s_timed_effect_runtime_hooks.global_flags_get != NULL
         ? s_timed_effect_runtime_hooks.global_flags_get(
               s_timed_effect_runtime_hooks.context)
-        : global_state_low_word_get();
+        /* The reference tests DAT_00556ed0, the debug/cheat word. */
+        : engine_debug_word_peek();
     for (slot = 1u; slot < 39u; ++slot) {
         TimedEffectRecord* record = timed_effect_record_get(slot);
         if (record == NULL) continue;
@@ -1924,3 +2504,169 @@ void screen_space_effect_dispatch_if_enabled(uint8_t effect_flags,
     s_screen_space_effect_dispatch_hook(s_screen_space_effect_dispatch_context,
                                         effect, argument, 0, 1.0f, 0);
 }
+
+namespace unported_ledger_stubs {
+
+void ledger_stub_004653a0_TransientEffectTexturesPreload(
+    const char* filename_prefix, const char* filename_format,
+    uint32_t texture_count)
+{
+    transient_effect_textures_preload(filename_prefix, filename_format,
+                                      texture_count);
+}
+
+void* ledger_stub_00465430_TransientEffectEmitterCreate(
+    void* scene_context, uint32_t position_x, uint32_t position_y,
+    int* direction, float red, float green, float blue, float rate,
+    int sound_id, int mode, uint32_t seed, int auxiliary)
+{
+    return transient_effect_emitter_create(scene_context, position_x,
+        position_y, direction, red, green, blue, rate, sound_id, mode,
+        seed, auxiliary);
+}
+
+void ledger_stub_00465970_TransientEffectRegistryReleaseAll(void)
+{
+    transient_effect_registry_release_all();
+}
+
+void ledger_stub_004659b0_TransientEffectInstanceRelease(void* instance,
+                                                        void* alternate)
+{
+    transient_effect_instance_release(instance, alternate);
+}
+
+void ledger_stub_00465a90_TransientEffectRegistryEnableSet(int enabled)
+{
+    transient_effect_registry_enable_set(enabled);
+}
+
+void ledger_stub_00465ac0_TransientEffectEnableSet(void* instance,
+                                                  int enabled)
+{
+    transient_effect_enable_set(instance, enabled);
+}
+
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+void ledger_stub_00465f40_InstanceQuadVerticesBuild(
+    void* instance, uint32_t slot, void* transform_source,
+    const float triple[3])
+{
+    transient_effect_instance_quad_vertices_build(instance, slot,
+                                                  transform_source, triple);
+}
+
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+void ledger_stub_0046b7c0_TimedEffectAndCueUpdate(
+    uint32_t render_x, uint32_t render_y, float delta)
+{
+    timed_effect_runtime_update(render_x, render_y, delta);
+}
+
+void ledger_stub_0046b700_TimedEffectCueRequestSet(unsigned int slot,
+                                                  uint32_t cue)
+{
+    timed_effect_cue_request_set(slot, cue);
+}
+
+void ledger_stub_0046b730_TimedEffectPersistenceSet(unsigned int slot,
+                                                    int enabled)
+{
+    timed_effect_persistence_set(slot, enabled);
+}
+
+void ledger_stub_0046b770_TimedEffectUpdateRequestSet(unsigned int slot)
+{
+    timed_effect_update_request_set(slot);
+}
+
+void ledger_stub_0046b7a0_TimedEffectTimestampReset(unsigned int slot)
+{
+    timed_effect_timestamp_reset(slot);
+}
+
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+static float combat_ray_configured_range_get(void*, int kind)
+{
+    return lego::weapon_type_range_get(kind);
+}
+
+static int combat_ray_scene_trace(void*, const float origin[3],
+                                  const float direction[3],
+                                  float* hit_fraction, float hit_point[3],
+                                  void** hit_object_out)
+{
+    float distance;
+    float nearest_distance;
+    void* hit_object = NULL;
+    int hit;
+    if (hit_fraction == NULL || hit_point == NULL || origin == NULL ||
+        direction == NULL) return 0;
+    distance = (float)sqrt((double)(direction[0] * direction[0] +
+                                    direction[1] * direction[1] +
+                                    direction[2] * direction[2]));
+    if (distance <= 0.0f) return 0;
+    /* SceneSegmentTraceNearestHit bounds and returns distance in units of
+     * the supplied direction vector (0 at origin, 1 at its endpoint). */
+    nearest_distance = 1.0f;
+    hit = scene_segment_trace_nearest_hit(origin, direction, &hit_object,
+                                          &nearest_distance, NULL);
+    if (hit == 0) return 0;
+    *hit_fraction = nearest_distance;
+    hit_point[0] = origin[0] + direction[0] * *hit_fraction;
+    hit_point[1] = origin[1] + direction[1] * *hit_fraction;
+    hit_point[2] = origin[2] + direction[2] * *hit_fraction;
+    if (hit_object_out != NULL) *hit_object_out = hit_object;
+    return 1;
+}
+
+static void combat_ray_entity_release(void*, void* entity)
+{
+    (void)entity_teardown((EntitySlot*)entity);
+}
+
+// RayHitScanAndEffectApply
+// FUNCTION: LEGORR 0x0046f3b0
+void ledger_stub_0046f3b0_RayHitScanAndEffectApply(
+    CombatRayState* state, const CombatRayHooks* hooks)
+{
+    CombatRayHooks live_hooks;
+    if (hooks != NULL || state == NULL) {
+        combat_ray_hit_scan_and_effect_apply(state, hooks);
+        return;
+    }
+    live_hooks.configured_range_get = combat_ray_configured_range_get;
+    live_hooks.raycast = combat_ray_scene_trace;
+    live_hooks.entity_release = combat_ray_entity_release;
+    /* The retail call passes the effect direction stored at record +0x290.
+     * CombatRayState has no corresponding field, so leave this callback
+     * unset instead of substituting the ray's origin-to-target delta. */
+    live_hooks.impact_apply = NULL;
+    live_hooks.context = state;
+    combat_ray_hit_scan_and_effect_apply(state, &live_hooks);
+}
+
+// LaserSpatialSoundAndImpact
+// FUNCTION: LEGORR 0x0046ffb0
+void* ledger_stub_0046ffb0_LaserSpatialSoundAndImpact(
+    void* request, int kind, float scale, const float origin[3],
+    const float direction[3], const LaserImpactHooks* hooks)
+{
+    return laser_spatial_sound_and_impact(request, kind, scale, origin,
+                                           direction, hooks);
+}
+
+
+} // namespace unported_ledger_stubs

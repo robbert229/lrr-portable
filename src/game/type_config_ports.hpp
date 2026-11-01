@@ -8,6 +8,8 @@
 #include <string.h>
 #include "../gods98/heap.hpp"
 
+struct EntitySceneSlotNode;
+
 /* These adapters keep the loader's concrete work here while leaving only
  * config traversal and the type-specific parsers at the engine seam. */
 typedef struct TypeConfigTable {
@@ -124,6 +126,37 @@ typedef struct EntityTypeConfigRuntimeOps {
                                    const char* section_key,
                                    uint32_t variant, uint32_t frame_count);
     void (*scene_apply_mode)(void* context, uint32_t scene_token, int mode);
+    void* (*activity_scene_clone)(void* context, uint32_t scene_token);
+    void (*activity_scene_release)(void* context, void* scene);
+    void (*activity_scene_owner_bind)(void* context, void* scene,
+                                     struct EntitySlot* entity);
+    void* (*activity_resource_chain_clone)(void* context,
+                                           uint32_t chain_token);
+    void (*activity_resource_chain_release)(void* context, void* chain);
+    void* (*activity_indexed_resource_resolve)(void* context, void* scene,
+                                              uint32_t source_token,
+                                              uint32_t index);
+    void (*activity_scene_time_update)(void* context, void* scene,
+                                      void* value);
+    int (*activity_scene_component_gate_read)(void* context, void* scene,
+                                              uint32_t* value_out);
+    /* Build the host mirror of the loaded scene's +0x9c linked renderer
+     * node list. The callback appends nodes and installs the three owner
+     * resource-name keys through the entity scene-slot APIs. */
+    void (*scene_slot_nodes_load)(void* context, struct EntitySlot* entity,
+                                  uint32_t scene_token);
+    void (*scene_slot_renderer_position_prepare)(void* context,
+                                                 struct EntitySlot* entity,
+                                                 struct EntitySceneSlotNode* node);
+    void (*scene_slot_renderer_state_apply)(void* context,
+                                            struct EntitySceneSlotNode* node);
+    void (*scene_slot_node_animation_select)(void* context,
+                                             struct EntitySceneSlotNode* node,
+                                             int mode);
+    void* (*scene_slot_resource_register)(void* context,
+                                          struct EntitySceneSlotNode* node,
+                                          uint32_t owner_key,
+                                          uint32_t index);
 } EntityTypeConfigRuntimeOps;
 
 void entity_type_config_runtime_ops_install(
@@ -141,6 +174,7 @@ int entity_building_type_config_record_parse(void* destination,
                                              void* scene_context,
                                              const char* asset_path,
                                              void* engine_config);
+int entity_type_config_scene_slot_nodes_load(struct EntitySlot* entity);
 void entity_type_config_row_finalize(void* context, void* row,
                                      uint32_t row_kind);
 
@@ -344,7 +378,7 @@ static inline void object_names_load(ObjectNameTableSet* tables,
                 resolved = hooks->value_resolve != NULL
                     ? hooks->value_resolve(hooks->context, value) : NULL;
             }
-            values[j] = (i == 4u) ? NULL : resolved;
+            values[j] = resolved;
         }
     }
     for (i = 0u; i < 9u; ++i) {

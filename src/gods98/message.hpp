@@ -57,6 +57,7 @@ void message_init_defaults(void);   /* seed the 40-id catalog (finding 22) */
 void ui_message_strings_initialize(void* primary_font, void* secondary_font,
                                    void* message_resource, void* subtitle_font,
                                    float line_delay); /* FUN_0046a7f0 */
+void* ui_message_text_output_get(int alternate); /* DAT_0050361c/620 */
 void ui_message_overlay_state_initialize(void); /* FUN_0046aa90 */
 const char* ui_message_label_get(unsigned int index);
 int ui_message_label_index_find(const char* label, int* out_index); /* FUN_0046aad0 */
@@ -74,6 +75,11 @@ void message_clear(void);           /* reset queue + config for tests */
  * emits the format string and trailing substitution metadata. */
 void incident_message_catalog_init(uint32_t owner);
 uint32_t incident_message_catalog_owner_get(void); /* port state peek */
+struct TextureSurface;
+void info_message_surface_load(int id, const char* path); /* FUN_00419650 */
+struct TextureSurface* info_message_surface_peek(int id); /* port state peek */
+/* Legacy audio adapter retained for callers outside the retail message-image
+ * path; 0x419b50 reads the BitmapSurfaceLoad resource, not WAV duration. */
 void info_message_sound_load(int id, const char* path); /* FUN_00419650 */
 struct Sound* info_message_sound_peek(int id); /* port state peek */
 float remaining_timer_duration_get(void); /* FUN_00419b50 */
@@ -94,15 +100,15 @@ void message_set_sound_hook(MessageSoundHook hook);
 /* Per-id read accessors (tests/diagnostics + the sound hook). */
 const char* message_sound(int id);
 
-/* Populate per-id sounds/cooldowns from the `InfoMessages` config section
- * (corpus FUN_00434c10, finding 22 §1): each entry keyed by the Info name
- * carries its sound; an entry whose value is empty/short or `AlwaysPlaySFX`
- * sets the play-always flag instead. */
+/* Load `InfoMessages` (FUN_00434c10): each named row's colon-separated value
+ * contains display text, image resource, optional sound alias, and the SLOW /
+ * ALWAYSPLAYSFX mode fields. */
 void message_load_infomessages(BlockFile* cfg);
 
-/* fire a message (corpus MessageDispatch). p2/p3/p4 are payload carried to
- * the callback; unused flags are kept for signature fidelity. */
-void message_dispatch(int id, uint32_t p2, uint32_t p3, const void* p4);
+/* fire a message (corpus MessageDispatch). p2 is an optional text override,
+ * p3 is the node payload dword, and p4 points to the optional two-dword
+ * event data copied into the incident node. */
+void message_dispatch(int id, const char* p2, uint32_t p3, const void* p4);
 
 /* Index of the queued message id, or -1 (corpus InfoMessageQueueFindId). */
 int message_queue_find_id(int id);                /* FUN_00419b20 */
@@ -121,16 +127,14 @@ void message_update(float dt);
 void message_cooldown_tick(float dt);
 
 /* CatalogSlotFlagUpdate (FUN_0041c800): category 1 and 4 rows each retain a
- * low-bit state word. The corpus consults four game-specific predicates;
- * their implementation is supplied by the catalog owner. */
+ * low-bit state word. The catalog owner supplies the two eligibility checks
+ * and the category-1 rank query; the retail no-op comparison makes rank
+ * always pass once those checks succeed. */
 typedef int (*CatalogSlotPredicateHook)(int category, int slot, void* context);
 typedef int (*CatalogSlotRankHook)(int category, int slot, void* context);
-typedef int (*CatalogSlotLimitHook)(int category, void* context);
 void catalog_slot_flag_hooks_set(CatalogSlotPredicateHook eligible,
                                  CatalogSlotPredicateHook available,
-                                 CatalogSlotRankHook rank,
-                                 CatalogSlotLimitHook limit,
-                                 void* context);
+                                 CatalogSlotRankHook rank, void* context);
 void catalog_slot_flag_word_set(int category, int slot, uint32_t flags);
 uint32_t catalog_slot_flag_word_get(int category, int slot);
 void catalog_slot_flag_global_state_set(uint32_t flags);
@@ -156,6 +160,8 @@ uint32_t message_config_flags(int id);
  * (documented deviation; corpus callers pass live pointers). */
 uint32_t system_state_flags_get(void);
 uint32_t system_state_flags_set(const uint32_t* value);
+uint32_t objective_switch_state_set(uint32_t value);
+uint32_t objective_switch_state_get(void);
 
 /* --- corpus flag leaves (2026-10-24) --------------------------------------
  * SelectionFlag10SetClear (FUN_00419450, findings 376/441): raise or clear

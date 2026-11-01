@@ -9,16 +9,31 @@
 #include "gods98/entity.hpp"
 #include "gods98/block.hpp"
 #include "gods98/heap.hpp"
+#include "gods98/sound.hpp"
 #include "gods98/string.hpp"
+#include "util.hpp"
 
 static TypeConfigTable s_minifigure_type_config;
 static TypeConfigTable s_building_type_config;
+static TypeConfigTable s_vehicle_type_config;
+static TypeConfigTable s_rockmonster_type_config;
 static BlockFile* s_entity_type_config_file;
 
 const TypeConfigTable* entity_type_config_table_get(uint32_t row_kind)
 {
     if (row_kind == 1u) return &s_minifigure_type_config;
     if (row_kind == 2u) return &s_building_type_config;
+    if (row_kind == 3u) return &s_rockmonster_type_config;
+    if (row_kind == 4u) return &s_vehicle_type_config;
+    return NULL;
+}
+
+const TypeConfigTable* entity_type_config_table_for_entity_type(int type)
+{
+    if (type == 1) return &s_vehicle_type_config;
+    if (type == 2) return &s_minifigure_type_config;
+    if (type == 3) return &s_rockmonster_type_config;
+    if (type == 4) return &s_building_type_config;
     return NULL;
 }
 
@@ -53,8 +68,70 @@ static EntityTypeConfigRuntimeOps s_entity_type_runtime_ops;
 void entity_type_config_runtime_ops_install(
     const EntityTypeConfigRuntimeOps* ops)
 {
+    EntityActivityRunnerResourceOps runner_ops;
+    EntitySceneSlotRuntimeOps scene_slot_ops;
     if (ops != NULL) s_entity_type_runtime_ops = *ops;
     else memset(&s_entity_type_runtime_ops, 0, sizeof(s_entity_type_runtime_ops));
+    memset(&runner_ops, 0, sizeof(runner_ops));
+    if (ops != NULL) {
+        runner_ops.context = ops->context;
+        runner_ops.scene_clone = ops->activity_scene_clone;
+        runner_ops.scene_release = ops->activity_scene_release;
+        runner_ops.scene_owner_bind = ops->activity_scene_owner_bind;
+        runner_ops.resource_chain_clone =
+            ops->activity_resource_chain_clone;
+        runner_ops.resource_chain_release =
+            ops->activity_resource_chain_release;
+        runner_ops.indexed_resource_resolve =
+            ops->activity_indexed_resource_resolve;
+        runner_ops.scene_time_update = ops->activity_scene_time_update;
+        runner_ops.scene_component_gate_read =
+            ops->activity_scene_component_gate_read;
+    }
+    entity_activity_runner_resource_ops_set(&runner_ops);
+    memset(&scene_slot_ops, 0, sizeof(scene_slot_ops));
+    if (ops != NULL) {
+        scene_slot_ops.context = ops->context;
+        scene_slot_ops.renderer_position_prepare =
+            ops->scene_slot_renderer_position_prepare;
+        scene_slot_ops.renderer_state_apply =
+            ops->scene_slot_renderer_state_apply;
+        scene_slot_ops.node_animation_select =
+            ops->scene_slot_node_animation_select;
+        scene_slot_ops.resource_slot_register =
+            ops->scene_slot_resource_register;
+    }
+    entity_scene_slot_runtime_ops_set(&scene_slot_ops);
+}
+
+/* SceneEntitySlotTableRebuild's scene-node owner is supplied by the renderer
+ * that loaded the type's visual resource. Resolve only the scene token from
+ * the retained type row here; the renderer callback creates native-width
+ * nodes and installs the owner keys without storing pointers in config
+ * dwords. */
+int entity_type_config_scene_slot_nodes_load(EntitySlot* entity)
+{
+    const TypeConfigTable* table;
+    const uint8_t* row_data;
+    uint32_t scene_token;
+    int config_type;
+    int config_row;
+    if (entity == NULL || entity->type < 1 || entity->type > 4 ||
+        entity->type_name[0] == '\0' ||
+        s_entity_type_runtime_ops.scene_slot_nodes_load == NULL ||
+        !entity_type_row_for_name(entity->type_name, &config_type,
+                                  &config_row) ||
+        config_type != entity->type || config_row < 0) return 0;
+    table = entity_type_config_table_for_entity_type(entity->type);
+    if (table == NULL || table->rows == NULL || table->row_stride < 8u ||
+        (uint32_t)config_row >= table->count) return 0;
+    row_data = (const uint8_t*)table->rows +
+               (size_t)(uint32_t)config_row * table->row_stride;
+    memcpy(&scene_token, row_data + 4u, sizeof(scene_token));
+    if (scene_token == 0u) return 0;
+    s_entity_type_runtime_ops.scene_slot_nodes_load(
+        s_entity_type_runtime_ops.context, entity, scene_token);
+    return 1;
 }
 
 static void entity_type_config_word_set(void* row, uint32_t offset,
@@ -324,7 +401,8 @@ static int entity_type_config_row_parse_path(void* context,
     BlockFile* ae;
     uint32_t scene = 0u;
     if (asset_path == NULL || destination == NULL ||
-        (row_kind != 1u && row_kind != 2u)) return 0;
+        (row_kind != 1u && row_kind != 2u && row_kind != 3u &&
+         row_kind != 4u)) return 0;
     if (*asset_path == '\0') return 0;
 
     base = strrchr(asset_path, '\\');
@@ -356,7 +434,7 @@ static int entity_type_config_row_parse_path(void* context,
         return 0;
     }
 
-    if (row_kind == 1u) {
+    if (row_kind == 1u || row_kind == 3u || row_kind == 4u) {
         uint32_t i;
         uint32_t camera_frames;
         uint32_t camera_null;
@@ -497,6 +575,8 @@ int entity_type_config_resource_row_load(void* destination,
     if (destination == NULL) return 0;
     if (row_kind == 1u) table = &s_minifigure_type_config;
     else if (row_kind == 2u) table = &s_building_type_config;
+    else if (row_kind == 3u) table = &s_rockmonster_type_config;
+    else if (row_kind == 4u) table = &s_vehicle_type_config;
     if (row_kind == 2u) memset(destination, 0, 0x14cu);
     row_address = (uintptr_t)destination;
     table_address = table != NULL ? (uintptr_t)table->rows : 0u;
@@ -622,6 +702,23 @@ int entity_minifigure_type_table_load(void)
                                   "MiniFigureTypes", 1u, 0x74u);
 }
 
+/* RockMonsterTypesLoad (FUN_0042d100) uses the same 0x74-byte visual row
+ * reader as the vehicle and minifigure tables (FUN_00406990). */
+// FUNCTION: LEGORR 0x0042D100
+static int entity_rockmonster_type_table_load(void)
+{
+    ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_rockmonster_type_config,
+                                  "RockMonsterTypes", 3u, 0x74u);
+}
+
+/* VehicleTypesLoad (FUN_0042cda0) likewise loads 0x74-byte visual rows. */
+// FUNCTION: LEGORR 0x0042CDA0
+static int entity_vehicle_type_table_load(void)
+{
+    ENTITY_TYPE_CONFIG_TABLE_LOAD(&s_vehicle_type_config,
+                                  "VehicleTypes", 4u, 0x74u);
+}
+
 /* BuildingTypesLoad (FUN_0042d2b0) uses the same config walk with 0x14c-byte
  * rows and the building-specific `.ae` parser/finalizer. */
 // FUNCTION: LEGORR 0x0042D2B0
@@ -713,20 +810,41 @@ static void entity_config_named_value_set(void* context, const char* name,
     }
 }
 
-static void entity_config_name_table_build(BlockFile* cfg,
-                                           const char* section_name,
-                                           const char** names,
-                                           uint32_t* count)
+static const char** entity_config_name_table_build(BlockFile* cfg,
+                                                    const char* section_name,
+                                                    uint32_t* count)
 {
     BlockRec* section = block_subgroup(cfg, section_name);
     BlockRec* child;
+    const char** names;
+    uint32_t i;
     *count = 0u;
-    for (child = block_first_child(section);
-         child != NULL && *count < 32u;
+    for (child = block_first_child(section); child != NULL;
          child = block_next_equal_key(child)) {
-        names[*count] = block_name(child);
+        if (*count == 0xffffffffu) {
+            *count = 0u;
+            return NULL;
+        }
         ++*count;
     }
+    if (*count == 0u || (size_t)*count > ((size_t)-1) / sizeof(*names))
+        return NULL;
+    names = (const char**)malloc((size_t)*count * sizeof(*names));
+    if (names == NULL) {
+        *count = 0u;
+        return NULL;
+    }
+    child = block_first_child(section);
+    for (i = 0u; i < *count; ++i) {
+        if (child == NULL || block_name(child) == NULL) {
+            free((void*)names);
+            *count = 0u;
+            return NULL;
+        }
+        names[i] = block_name(child);
+        child = block_next_equal_key(child);
+    }
+    return names;
 }
 
 static void entity_config_values_release(void** values, uint32_t count)
@@ -764,6 +882,10 @@ static EntityObjectNameLoadState* s_entity_object_name_load_state;
         void** values; \
         uint32_t j; \
         if (tables->output_values[i] == NULL) continue; \
+        if ((size_t)count > ((size_t)-1) / sizeof(void*)) { \
+            *tables->output_values[i] = NULL; \
+            continue; \
+        } \
         values = (void**)malloc((size_t)count * sizeof(void*)); \
         *tables->output_values[i] = values; \
         if (count != 0u && values == NULL) continue; \
@@ -777,7 +899,16 @@ static EntityObjectNameLoadState* s_entity_object_name_load_state;
                 resolved = hooks->value_resolve != NULL \
                     ? hooks->value_resolve(hooks->context, value) : NULL; \
             } \
-            values[j] = i == 4u ? NULL : resolved; \
+            /* ObjectNamesLoad/ObjectTheNamesLoad resolve each upgrade's
+             * configured label, then immediately clear the just-written
+             * slot in the retail loop. Keep the observed table contents
+             * (all upgrade labels NULL) without retaining the discarded
+             * temporary string. */ \
+            if (i == 4u) { \
+                engine_heap_free(resolved); \
+                resolved = NULL; \
+            } \
+            values[j] = resolved; \
         } \
     } \
     for (i = 0u; i < 9u; ++i) { \
@@ -822,7 +953,7 @@ void entity_names_config_load(BlockFile* cfg)
         "VehicleTypes", "MiniFigureTypes", "RockMonsterTypes",
         "BuildingTypes", "UpgradeTypes"
     };
-    const char* names[5][32];
+    const char** names[5] = { NULL, NULL, NULL, NULL, NULL };
     uint32_t counts[5];
     void** object_values[5] = { NULL, NULL, NULL, NULL, NULL };
     void** the_values[5] = { NULL, NULL, NULL, NULL, NULL };
@@ -833,23 +964,50 @@ void entity_names_config_load(BlockFile* cfg)
     ObjectNameTableSet tables;
     ObjectNameLoadHooks hooks;
     EntityObjectNameLoadState object_load_state;
+    const TypeConfigTable* type_tables[4];
     static EntityNameResolveContext resolve_state;
     const char* special_names[16][2];
     const char* special_the_names[16][2];
     uint32_t i;
 
     if (cfg == NULL) return;
+    /* The prior table borrows BuildingTypes-owned strings. Clear those
+     * borrowed pointers before the type loaders release and replace them. */
+    string_table_install(NULL, 0u);
     s_entity_type_config_file = cfg;
+    /* GameConfigInit loads ToolNames from the same Lego.cfg tree before its
+     * ObjectNames/ObjectTheNames work. Keep the indexed tool-name handles
+     * ready at the boot-time config boundary, using the established root. */
+    entity_tool_name_strings_load(cfg, "Lego*");
+    (void)entity_vehicle_type_table_load();
     (void)entity_minifigure_type_table_load();
+    (void)entity_rockmonster_type_table_load();
     (void)entity_building_types_load();
+    type_tables[0] = entity_type_config_table_get(4u);
+    type_tables[1] = entity_type_config_table_get(1u);
+    type_tables[2] = entity_type_config_table_get(3u);
+    type_tables[3] = entity_type_config_table_get(2u);
     memset(&tables, 0, sizeof(tables));
     memset(special_names, 0, sizeof(special_names));
     memset(special_the_names, 0, sizeof(special_the_names));
     for (i = 0u; i < 5u; ++i) {
-        entity_config_name_table_build(cfg, sections[i], names[i], &counts[i]);
+        if (i < 4u) {
+            names[i] = type_tables[i] != NULL
+                ? (const char**)type_tables[i]->names : NULL;
+            counts[i] = type_tables[i] != NULL ? type_tables[i]->count : 0u;
+        }
+        else {
+            names[i] = entity_config_name_table_build(
+                cfg, sections[i], &counts[i]);
+        }
         tables.type_names[i] = names[i];
         tables.counts[i] = counts[i];
         tables.output_values[i] = &object_values[i];
+        catalog_count_install((int)i, counts[i]);
+        if (i < 4u) {
+            catalog_name_table_install((int)i,
+                type_tables[i] != NULL ? type_tables[i]->names : NULL);
+        }
     }
     for (i = 0u; i < 9u; ++i)
         tables.named_output_values[i] = &named_values[i];
@@ -907,10 +1065,711 @@ void entity_names_config_load(BlockFile* cfg)
         entity_localized_name_tables_install(15, special_names[15],
                                                 special_the_names[15], 1u);
     }
+    /* StringTableIndexLookup's only observed caller is Stats.BuildingBase.
+     * The retail pointer table's writer is not present in the decompile
+     * xrefs, so bind its portable equivalent to the live BuildingTypes name
+     * table, whose entries own the same configured names and remain alive
+     * for the Stats load and subsequent lookups. */
+    string_table_install(names[3], counts[3]);
+    /* Stats names resolve through the type-name tables installed above, and
+     * their records back the per-type/per-row getters used by entity logic. */
+    (void)entity_stats_config_load_from_block(cfg);
+    /* GameConfigInit allocates the vehicle/building maps after Stats has
+     * been loaded. Counts were installed from the type tables above. */
+    entity_table_maps_allocate();
     for (i = 0u; i < 5u; ++i) {
         entity_config_values_release(object_values[i], counts[i]);
         entity_config_values_release(the_values[i], counts[i]);
     }
+    free((void*)names[4]);
     for (i = 0u; i < 9u; ++i) engine_heap_free(named_values[i]);
     for (i = 0u; i < 9u; ++i) engine_heap_free(named_the_values[i]);
 }
+
+typedef struct EntityStatsBlockLoadContext {
+    BlockFile* config;
+    BlockRec* section;
+    BlockRec* current_entry;
+} EntityStatsBlockLoadContext;
+
+static void* s_entity_stats_record_allocations[STATS_TYPE_TABLE_TYPES]
+                                                [STATS_TYPE_TABLE_ROWS];
+typedef struct EntityStatsRetiredAllocation {
+    void* records;
+    struct EntityStatsRetiredAllocation* next;
+} EntityStatsRetiredAllocation;
+static EntityStatsRetiredAllocation* s_entity_stats_retired_allocations;
+
+static void entity_stats_allocation_retire(void* records)
+{
+    EntityStatsRetiredAllocation* retired;
+    if (records == NULL) return;
+    retired = (EntityStatsRetiredAllocation*)malloc(sizeof(*retired));
+    if (retired == NULL) return; /* retain the rows rather than dangle users */
+    retired->records = records;
+    retired->next = s_entity_stats_retired_allocations;
+    s_entity_stats_retired_allocations = retired;
+}
+
+static void entity_stats_retired_allocations_release(void)
+{
+    EntityStatsRetiredAllocation* retired = s_entity_stats_retired_allocations;
+    while (retired != NULL) {
+        EntityStatsRetiredAllocation* next = retired->next;
+        engine_heap_free(retired->records);
+        free(retired);
+        retired = next;
+    }
+    s_entity_stats_retired_allocations = NULL;
+}
+
+static BlockRec* entity_stats_field_find(BlockRec* entry, const char* name)
+{
+    BlockRec* field;
+    for (field = block_first_child(entry); field != NULL;
+         field = block_next_equal_key(field)) {
+        if (entity_config_name_equal(block_name(field), name)) return field;
+    }
+    return NULL;
+}
+
+static unsigned int entity_stats_block_entry_count(void* context,
+                                                  void* config,
+                                                  void* section)
+{
+    BlockRec* entry;
+    unsigned int count = 0u;
+    (void)context;
+    (void)config;
+    for (entry = block_first_child((BlockRec*)section); entry != NULL;
+         entry = block_next_equal_key(entry)) ++count;
+    return count;
+}
+
+static const char* entity_stats_block_entry_name(void* context,
+                                                  void* config,
+                                                  void* section,
+                                                  unsigned int index)
+{
+    EntityStatsBlockLoadContext* state =
+        (EntityStatsBlockLoadContext*)context;
+    BlockRec* entry = block_first_child((BlockRec*)section);
+    (void)config;
+    while (entry != NULL && index != 0u) {
+        entry = block_next_equal_key(entry);
+        --index;
+    }
+    if (state != NULL) state->current_entry = entry;
+    return entry != NULL ? block_name(entry) : NULL;
+}
+
+static int entity_stats_block_type_row_resolve(void* context,
+                                               const char* name,
+                                               int* type, int* row)
+{
+    (void)context;
+    return entity_type_row_for_name(name, type, row);
+}
+
+static unsigned int entity_stats_block_type_capacity(void* context,
+                                                      int type)
+{
+    EntityStatsBlockLoadContext* state =
+        (EntityStatsBlockLoadContext*)context;
+    BlockRec* levels;
+    const char* value;
+    float level_limit;
+    (void)type;
+    if (state == NULL || state->current_entry == NULL) return 0u;
+    levels = entity_stats_field_find(state->current_entry, "Levels");
+    value = levels != NULL ? block_value(levels) : NULL;
+    level_limit = value != NULL ? (float)atof(value) : 0.0f;
+    if (!(level_limit >= 0.0f)) return 0u;
+    if (level_limit > 16.0f) level_limit = 16.0f;
+    return (unsigned int)level_limit;
+}
+
+static int entity_stats_block_float_value_get(void* context,
+                                              const char* type_name,
+                                              const char* field_name,
+                                              unsigned int level,
+                                              float* output)
+{
+    EntityStatsBlockLoadContext* state =
+        (EntityStatsBlockLoadContext*)context;
+    BlockRec* field;
+    const char* value;
+    const char* token;
+    const char* end;
+    char number[64];
+    size_t length;
+    (void)type_name;
+    if (output == NULL) return 0;
+    *output = 0.0f;
+    if (state == NULL || state->current_entry == NULL) return 0;
+    field = entity_stats_field_find(state->current_entry, field_name);
+    value = field != NULL ? block_value(field) : NULL;
+    if (value == NULL) {
+        if (entity_config_name_equal(field_name, "BuildingBase")) {
+            const uint32_t missing_name = 0xffc00000u;
+            memcpy(output, &missing_name, sizeof(missing_name));
+            return 1;
+        }
+        return 0;
+    }
+    if (entity_config_name_equal(field_name, "DrillSound") ||
+        entity_config_name_equal(field_name, "DrillFadeSound") ||
+        entity_config_name_equal(field_name, "EngineSound")) {
+        level = 0u;
+    }
+    token = value;
+    while (level != 0u && *token != '\0') {
+        if (*token == ',') --level;
+        ++token;
+    }
+    if (*token == '\0' && level != 0u) return 0;
+    end = token;
+    while (*end != '\0' && *end != ',') ++end;
+    length = (size_t)(end - token);
+    if (length >= sizeof(number)) length = sizeof(number) - 1u;
+    memcpy(number, token, length);
+    number[length] = '\0';
+    if (entity_config_name_equal(field_name, "DrillSound") ||
+        entity_config_name_equal(field_name, "DrillFadeSound") ||
+        entity_config_name_equal(field_name, "EngineSound")) {
+        int alias;
+        const int fallback = entity_config_name_equal(field_name, "DrillSound")
+            ? 2 : (entity_config_name_equal(field_name, "DrillFadeSound")
+                ? 3 : 0);
+        *output = sound_alias_lookup(number, &alias)
+            ? (float)alias : (float)fallback;
+        return 1;
+    }
+    {
+        int bool_value = block_get_bool(number);
+        if (bool_value != 2) *output = bool_value != 0 ? 1.0f : 0.0f;
+        else if (entity_config_name_equal(field_name, "BuildingBase"))
+            *output = (float)string_table_index_lookup(number);
+        else *output = (float)atof(number);
+    }
+    return 1;
+}
+
+typedef struct EntityStatsFieldBinding {
+    const char* name;
+    uint32_t offset;
+    float scale;
+    int integer;
+} EntityStatsFieldBinding;
+
+static const EntityStatsFieldBinding s_entity_stats_field_bindings[] = {
+    { "RouteSpeed", 0x20u, 1.0f, 0 },
+    { "SoilDrillTime", 0x24u, 25.0f, 0 },
+    { "LooseDrillTime", 0x28u, 25.0f, 0 },
+    { "MedDrillTime", 0x2cu, 25.0f, 0 },
+    { "HardDrillTime", 0x30u, 25.0f, 0 },
+    { "SeamDrillTime", 0x34u, 25.0f, 0 },
+    { "CollHeight", 0x74u, 1.0f, 0 },
+    { "CollRadius", 0x6cu, 1.0f, 0 },
+    { "BuildingBase", 0xa8u, 1.0f, 0 },
+    { "PickSphere", 0x78u, 1.0f, 0 },
+    { "TrackDist", 0x7cu, 1.0f, 0 },
+    { "HealthDecayRate", 0x80u, 1.0f, 0 },
+    { "EnergyDecayRate", 0x84u, 1.0f, 0 },
+    { "DrillSound", 0xc0u, 1.0f, 1 },
+    { "DrillFadeSound", 0xc4u, 1.0f, 1 },
+    { "EngineSound", 0xc8u, 1.0f, 1 },
+    { "RepairValue", 0x88u, 1.0f, 0 },
+    { "RestPercent", 0x8cu, 1.0f, 0 },
+    { "CarryMinHealth", 0x90u, 1.0f, 0 },
+    { "StampRadius", 0x94u, 1.0f, 0 },
+    { "AttackRadius", 0x98u, 1.0f, 0 },
+    { "AlertRadius", 0x70u, 1.0f, 0 },
+    { "SurveyRadius", 0xacu, 1.0f, 1 },
+    { "CostOre", 0xb0u, 1.0f, 1 },
+    { "CostCrystal", 0xb4u, 1.0f, 1 },
+    { "CostRefinedOre", 0xb8u, 1.0f, 1 },
+    { "CrystalDrain", 0xbcu, 1.0f, 1 },
+    { "UpgradeCostOre", 0xfcu, 1.0f, 1 },
+    { "UpgradeCostStuds", 0x100u, 1.0f, 1 },
+    { "WaterEntrances", 0xd0u, 1.0f, 1 },
+    { "RubbleCoef", 0xd4u, 1.0f, 0 },
+    { "PathCoef", 0xd8u, 1.0f, 0 },
+    { "OxygenCoef", 0xdcu, 1.0f, 0 },
+    { "Capacity", 0xe0u, 1.0f, 1 },
+    { "AwarenessRange", 0xe4u, 1.0f, 0 },
+    { "PainThreshold", 0xe8u, 1.0f, 0 },
+    { "MaxCarry", 0xecu, 1.0f, 1 },
+    { "CarryStart", 0xf0u, 1.0f, 1 },
+    { "UpgradeTime", 0xf4u, 25.0f, 0 },
+    { "FunctionCoef", 0xf8u, 1.0f, 0 },
+    { "WakeRadius", 0x9cu, 1.0f, 0 },
+    { "FreezerTime", 0x10cu, 1.0f, 0 },
+    { "FreezerDamage", 0x110u, 1.0f, 0 },
+    { "PusherDist", 0x114u, 1.0f, 0 },
+    { "PusherDamage", 0x118u, 1.0f, 0 },
+    { "LaserDamage", 0x11cu, 1.0f, 0 },
+    { "Flocks_Turn", 0x120u, 1.0f, 0 },
+    { "Flocks_Speed", 0x124u, 1.0f, 0 },
+    { "Flocks_Tightness", 0x128u, 1.0f, 0 },
+    { "Flocks_GoalUpdate", 0x12cu, 1.0f, 0 },
+    { "Flocks_Height", 0x130u, 1.0f, 0 },
+    { "Flocks_Randomness", 0x134u, 1.0f, 0 },
+    { "Flocks_AttackTime", 0x138u, 1.0f, 0 },
+    { "Flocks_Size", 0x13cu, 1.0f, 0 },
+    { "RandomMoveTime", 0x140u, 1.0f, 0 },
+    { "NumOfToolsCanCarry", 0xccu, 1.0f, 1 }
+};
+
+static void entity_stats_block_record_commit(
+    void* context, const EntityStatsConfigRecord* config_record)
+{
+    const EntityStatsFieldBinding* binding;
+    uint8_t* records;
+    unsigned int level;
+    unsigned int field;
+    uint32_t flags;
+    uint32_t flags_14c;
+    if (config_record == NULL || config_record->type < 0 ||
+        config_record->type >= STATS_TYPE_TABLE_TYPES ||
+        config_record->row < 0 ||
+        config_record->row >= STATS_TYPE_TABLE_ROWS) return;
+    engine_heap_free(s_entity_stats_record_allocations[config_record->type]
+                                                   [config_record->row]);
+    s_entity_stats_record_allocations[config_record->type]
+                                     [config_record->row] = NULL;
+    records = NULL;
+    if (config_record->level_count != 0u) {
+        records = (uint8_t*)engine_heap_alloc(
+            (long)(config_record->level_count * 0x150u));
+        if (records == NULL) {
+            stats_type_table_install(config_record->type, config_record->row,
+                                     NULL, 0);
+            return;
+        }
+        memset(records, 0, config_record->level_count * 0x150u);
+    }
+    for (level = 0u; level < config_record->level_count; ++level) {
+        uint8_t* record = records + level * 0x150u;
+        float collision_radius = 0.0f;
+        float collision_box_x = 0.0f;
+        float collision_box_y = 0.0f;
+        int have_collision_box = 0;
+        if (context != NULL) {
+            EntityStatsBlockLoadContext* state =
+                (EntityStatsBlockLoadContext*)context;
+            entity_stats_block_float_value_get(context, config_record->name,
+                "CollRadius", level, &collision_radius);
+            entity_stats_block_float_value_get(context, config_record->name,
+                "CollBox", 0u, &collision_box_x);
+            entity_stats_block_float_value_get(context, config_record->name,
+                "CollBox", 1u, &collision_box_y);
+            have_collision_box = entity_stats_field_find(
+                state->current_entry, "CollBox") != NULL;
+        }
+        for (field = 0u; field < sizeof(s_entity_stats_field_bindings) /
+                                      sizeof(s_entity_stats_field_bindings[0]);
+             ++field) {
+            binding = &s_entity_stats_field_bindings[field];
+            {
+                unsigned int value_index;
+                for (value_index = 0u;
+                     value_index < ENTITY_STATS_CONFIG_FIELD_COUNT;
+                     ++value_index) {
+                    if (entity_config_name_equal(
+                            config_record->field_names[value_index],
+                            binding->name)) {
+                        float value = config_record->level_fields[level]
+                                                             [value_index] *
+                                      binding->scale;
+                        if (value == 0.0f) {
+                            if (entity_config_name_equal(binding->name,
+                                                         "RubbleCoef") ||
+                                entity_config_name_equal(binding->name,
+                                                         "PathCoef"))
+                                value = 1.0f;
+                            else if (entity_config_name_equal(binding->name,
+                                                            "Flocks_Turn"))
+                                value = 0.06f;
+                            else if (entity_config_name_equal(binding->name,
+                                                            "Flocks_Speed") ||
+                                     entity_config_name_equal(binding->name,
+                                                            "Flocks_Tightness") ||
+                                     entity_config_name_equal(binding->name,
+                                                            "Flocks_GoalUpdate") ||
+                                     entity_config_name_equal(binding->name,
+                                                            "Flocks_Randomness"))
+                                value = 2.0f;
+                            else if (entity_config_name_equal(binding->name,
+                                                            "Flocks_Height"))
+                                value = 30.0f;
+                            else if (entity_config_name_equal(binding->name,
+                                                            "Flocks_AttackTime"))
+                                value = 300.0f;
+                            else if (entity_config_name_equal(binding->name,
+                                                            "WakeRadius"))
+                                value = 20.0f;
+                            else if (entity_config_name_equal(binding->name,
+                                                            "RandomMoveTime"))
+                                value = 200.0f;
+                        }
+                        if (entity_config_name_equal(binding->name,
+                                                     "Flocks_Size")) {
+                            if (value == 0.0f)
+                                entity_type_config_word_set(record,
+                                    binding->offset, 1u);
+                            else
+                                entity_type_config_float_set(record,
+                                    binding->offset, (float)(uint32_t)value);
+                        } else if (binding->integer)
+                            entity_type_config_word_set(record,
+                                binding->offset, (uint32_t)value);
+                        else
+                            entity_type_config_float_set(record,
+                                binding->offset, value);
+                        break;
+                    }
+                }
+            }
+        }
+        flags = 0u;
+        if (collision_radius != 0.0f) flags |= 0x80u;
+        else if (have_collision_box) flags |= 0x100u;
+        for (field = 0u; field < ENTITY_STATS_CONFIG_FIELD_COUNT; ++field) {
+            const char* name = config_record->field_names[field];
+            float value = config_record->level_fields[level][field];
+            if (value == 0.0f) continue;
+            if (entity_config_name_equal(name, "SingleWidthDig")) flags |= 1u;
+            else if (entity_config_name_equal(name, "Flocks_AnimateByPitch"))
+                flags |= 0x10000000u;
+            else if (entity_config_name_equal(name, "Flocks"))
+                flags |= 0x200000u;
+            else if (entity_config_name_equal(name, "Flocks_Debug"))
+                flags |= 0x400000u;
+            else if (entity_config_name_equal(name, "Flocks_Smooth"))
+                flags |= 0x800000u;
+            else if (entity_config_name_equal(name, "Flocks_OnGround"))
+                flags |= 0x4000000u;
+            else if (entity_config_name_equal(name, "Flocks_QuickDestroy"))
+                flags |= 0x8000000u;
+            else if (entity_config_name_equal(name, "CrossLand"))
+                flags |= 0x2000000u;
+            else if (entity_config_name_equal(name, "CrossWater"))
+                flags |= 0x1000000u;
+            else if (entity_config_name_equal(name, "BumpDamage"))
+                flags |= 0x40000000u;
+            else if (entity_config_name_equal(name, "RouteAvoidance"))
+                flags |= 0x20000000u;
+            else if (entity_config_name_equal(name, "CanSteal"))
+                flags |= 0x80000u;
+            else if (entity_config_name_equal(name, "CanClearRubble"))
+                flags |= 0x10000u;
+            else if (entity_config_name_equal(name, "CanBeDriven"))
+                flags |= 0x20000u;
+            else if (entity_config_name_equal(name, "GrabMinifigure"))
+                flags |= 0x8000u;
+            else if (entity_config_name_equal(name, "ScaredByPlayer"))
+                flags |= 0x2000u;
+            else if (entity_config_name_equal(name, "RandomEnterWall"))
+                flags |= 0x1000u;
+            else if (entity_config_name_equal(name, "CanScareScorpion"))
+                flags |= 0x40000u;
+            else if (entity_config_name_equal(name, "CanScare"))
+                flags |= 0x800u;
+            else if (entity_config_name_equal(name, "RandomMove"))
+                flags |= 0x400u;
+            else if (entity_config_name_equal(name, "ProcessOre")) flags |= 2u;
+            else if (entity_config_name_equal(name, "ProcessCrystal")) flags |= 4u;
+            else if (entity_config_name_equal(name, "StoreObjects")) flags |= 8u;
+            else if (entity_config_name_equal(name, "SmallTeleporter")) flags |= 0x10u;
+            else if (entity_config_name_equal(name, "BigTeleporter")) flags |= 0x20u;
+            else if (entity_config_name_equal(name, "WaterTeleporter")) flags |= 0x40u;
+            else if (entity_config_name_equal(name, "CauseSlip")) flags |= 0x200u;
+            else if (entity_config_name_equal(name, "SnaxULike")) flags |= 0x4000u;
+            else if (entity_config_name_equal(name, "ToolStore")) flags |= 0x100000u;
+            else if (entity_config_name_equal(name, "ManTeleporter"))
+                flags |= 0x80000000u;
+        }
+        if (collision_radius == 0.0f && have_collision_box) {
+            float maximum = collision_box_x > collision_box_y
+                ? collision_box_x : collision_box_y;
+            collision_radius = maximum * 0.5f;
+            entity_type_config_float_set(record, 0xa0u, collision_box_x);
+            entity_type_config_float_set(record, 0xa4u, collision_box_y);
+            entity_type_config_float_set(record, 0x6cu, collision_radius);
+        }
+        entity_type_config_word_set(record, 0x144u, flags);
+        flags = 0u;
+        for (field = 0u; field < ENTITY_STATS_CONFIG_FIELD_COUNT; ++field) {
+            const char* name = config_record->field_names[field];
+            float value = config_record->level_fields[level][field];
+            if (value == 0.0f) continue;
+            if (entity_config_name_equal(name, "ScaredByBigBangs")) flags |= 1u;
+            else if (entity_config_name_equal(name, "UpgradeBuilding"))
+                flags |= 2u;
+            else if (entity_config_name_equal(name, "CanBeShotAt"))
+                flags |= 0x40000u;
+            else if (entity_config_name_equal(name, "UseBigTeleporter"))
+                flags |= 0x800u;
+            else if (entity_config_name_equal(name, "UseSmallTeleporter"))
+                flags |= 0x1000u;
+            else if (entity_config_name_equal(name, "UseWaterTeleporter"))
+                flags |= 0x2000u;
+            else if (entity_config_name_equal(name, "UseLegoManTeleporter"))
+                flags |= 0x400000u;
+            else if (entity_config_name_equal(name, "TrainPilot"))
+                flags |= 0x4u;
+            else if (entity_config_name_equal(name, "TrainSailor"))
+                flags |= 0x8u;
+            else if (entity_config_name_equal(name, "TrainDriver"))
+                flags |= 0x10u;
+            else if (entity_config_name_equal(name, "TrainDynamite"))
+                flags |= 0x20u;
+            else if (entity_config_name_equal(name, "TrainRepair"))
+                flags |= 0x40u;
+            else if (entity_config_name_equal(name, "TrainScanner"))
+                flags |= 0x80u;
+            else if (entity_config_name_equal(name, "Tracker"))
+                flags |= 0x100u;
+            else if (entity_config_name_equal(name, "PowerBuilding"))
+                flags |= 0x600u;
+            else if (entity_config_name_equal(name, "SelfPowered"))
+                flags |= 0x400u;
+            else if (entity_config_name_equal(name, "AttackPaths"))
+                flags |= 0x4000u;
+            else if (entity_config_name_equal(name, "SplitOnZeroHealth"))
+                flags |= 0x8000u;
+            else if (entity_config_name_equal(name, "CanBeHitByFence"))
+                flags |= 0x10000u;
+            else if (entity_config_name_equal(name, "CanDoubleSelect"))
+                flags |= 0x20000u;
+            else if (entity_config_name_equal(name, "DrainPower"))
+                flags |= 0x80000u;
+            else if (entity_config_name_equal(name, "UseHoles"))
+                flags |= 0x100000u;
+            else if (entity_config_name_equal(name, "CrossLava"))
+                flags |= 0x200000u;
+            else if (entity_config_name_equal(name, "DamageCausesCallToArms"))
+                flags |= 0x800000u;
+            else if (entity_config_name_equal(name, "CanFreeze"))
+                flags |= 0x1000000u;
+            else if (entity_config_name_equal(name, "CanLaser"))
+                flags |= 0x2000000u;
+            else if (entity_config_name_equal(name, "CanPush"))
+                flags |= 0x4000000u;
+            else if (entity_config_name_equal(name, "DontShowDamage"))
+                flags |= 0x8000000u;
+            else if (entity_config_name_equal(name, "RemoveReinforcement"))
+                flags |= 0x10000000u;
+            else if (entity_config_name_equal(name, "DontShowOnRadar"))
+                flags |= 0x20000000u;
+            else if (entity_config_name_equal(name, "InvisibleDriver"))
+                flags |= 0x40000000u;
+            else if (entity_config_name_equal(name, "Unselectable"))
+                flags |= 0x80000000u;
+        }
+        entity_type_config_word_set(record, 0x148u, flags);
+        flags_14c = 0u;
+        for (field = 0u; field < ENTITY_STATS_CONFIG_FIELD_COUNT; ++field) {
+            const char* name = config_record->field_names[field];
+            const float value = config_record->level_fields[level][field];
+            if (value == 0.0f) continue;
+            if (entity_config_name_equal(name, "ClassAsLarge"))
+                flags_14c |= 0x8u;
+            else if (entity_config_name_equal(name, "NeedsPilot"))
+                flags_14c |= 0x100u;
+            else if (entity_config_name_equal(name, "CarryVehicles"))
+                flags_14c |= 1u;
+            else if (entity_config_name_equal(name, "VehicleCanBeCarried"))
+                flags_14c |= 2u;
+            else if (entity_config_name_equal(name, "CanStrafe"))
+                flags_14c |= 4u;
+            else if (entity_config_name_equal(name, "GetOutAtLand"))
+                flags_14c |= 0x10u;
+            else if (entity_config_name_equal(name, "GetInAtLand"))
+                flags_14c |= 0x20u;
+            else if (entity_config_name_equal(name, "TakeCarryingDrivers"))
+                flags_14c |= 0x40u;
+            else if (entity_config_name_equal(name, "ShowHealthBar"))
+                flags_14c |= 0x80u;
+            else if (entity_config_name_equal(name, "EnterToolStore"))
+                flags_14c |= 0x200u;
+        }
+        entity_type_config_word_set(record, 0x14cu, flags_14c);
+    }
+    stats_type_table_install(config_record->type, config_record->row,
+                             records, (int)config_record->level_count);
+    stats_type_table_level_limit_install(config_record->type,
+        config_record->row, config_record->level_limit);
+    s_entity_stats_record_allocations[config_record->type]
+                                     [config_record->row] = records;
+}
+
+static int entity_stats_rebind_live_entity(EntitySlot* entity, void* unused)
+{
+    (void)unused;
+    if (entity != NULL && entity->task_state >= 0)
+        (void)entity_task_state_capacity_bind(entity);
+    else if (entity != NULL && entity->type >= 1 && entity->type <= 4)
+        (void)entity_stats_record_bind(entity);
+    return 0;
+}
+
+unsigned int entity_stats_config_load_from_block(BlockFile* config)
+{
+    EntityStatsBlockLoadContext state;
+    EntityStatsConfigHooks hooks;
+    int type;
+    int row;
+    unsigned int loaded;
+    GameContext* game;
+    if (config == NULL) return 0u;
+    state.config = config;
+    state.section = block_subgroup(config, "Stats");
+    state.current_entry = NULL;
+    if (state.section == NULL) return 0u;
+    for (type = 0; type < STATS_TYPE_TABLE_TYPES; ++type) {
+        for (row = 0; row < STATS_TYPE_TABLE_ROWS; ++row) {
+            entity_stats_allocation_retire(
+                s_entity_stats_record_allocations[type][row]);
+            s_entity_stats_record_allocations[type][row] = NULL;
+            stats_type_table_install(type, row, NULL, 0);
+        }
+    }
+    memset(&hooks, 0, sizeof(hooks));
+    hooks.context = &state;
+    hooks.entry_count = entity_stats_block_entry_count;
+    hooks.entry_name = entity_stats_block_entry_name;
+    hooks.type_row_resolve = entity_stats_block_type_row_resolve;
+    hooks.type_capacity = entity_stats_block_type_capacity;
+    hooks.float_value_get = entity_stats_block_float_value_get;
+    hooks.record_commit = entity_stats_block_record_commit;
+    loaded = entity_stats_config_load(config, state.section, &hooks);
+    /* Reloading Stats replaces its owned 0x150-byte rows. Repoint active
+     * entities after all rows are installed so no EntitySlot retains a
+     * pointer into the released table. */
+    game = entity_pool_callback_context_get();
+    if (game != NULL) {
+        entity_pool_find_by_callback(game, entity_stats_rebind_live_entity,
+                                     NULL, 0);
+        entity_stats_retired_allocations_release();
+    }
+    return loaded;
+}
+
+#include "port_loop_ports.hpp"
+
+/* VehicleTypeDefinitionParse (FUN_0046c6f0): the source parser zeroes its
+ * 0x7b-word vehicle record before reading config. Keep that initialization
+ * and provide an indexed field reader for the config library boundary. */
+int vehicle_type_definition_parse(VehicleTypeDefinition* definition,
+                                  void* context,
+                                  VehicleTypeFieldReadHook read_field)
+{
+    uint32_t index;
+    uint32_t present = 0;
+    if (definition == NULL) return 0;
+    memset(definition, 0, sizeof(*definition));
+    if (read_field == NULL) return 0;
+    for (index = 0; index < 0x7bu; ++index) {
+        uint32_t value = 0;
+        if (read_field(context, index, &value)) {
+            definition->words[index] = value;
+            ++present;
+        }
+    }
+    return present != 0u;
+}
+
+namespace unported_ledger_stubs {
+
+// TypeTableResourceRowLoad
+int ledger_stub_00406990_TypeTableResourceRowLoad(
+    void* row, uint32_t row_index, void* scene_context,
+    const char* asset_path, void* engine_config)
+{
+    return entity_type_config_resource_row_load(
+        row, row_index, scene_context, asset_path, engine_config, 1u);
+}
+
+
+// BuildingTypeConfigRecordParse
+int ledger_stub_00407d60_BuildingTypeConfigRecordParse(
+    void* row, uint32_t row_index, void* scene_context,
+    const char* asset_path, void* engine_config)
+{
+    return entity_building_type_config_record_parse(
+        row, row_index, scene_context, asset_path, engine_config);
+}
+
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+// Port-facing adapter retained for callers that provide a table and hooks.
+int ledger_stub_0042cf50_MiniFigureTypeTableLoad(
+    TypeConfigTable* table, void* section, const TypeConfigHooks* hooks)
+{
+    /* FUN_0042cf50 uses 0x74-byte rows and its shared type-row parser. */
+    return type_config_record_table_load(table, section, 1u, 0x74u, hooks);
+}
+
+// Port-facing adapter retained for callers that provide a table and hooks.
+int ledger_stub_0042d2b0_BuildingTypesLoad(
+    TypeConfigTable* table, void* section, const TypeConfigHooks* hooks)
+{
+    /* FUN_0042d2b0 uses 0x14c-byte building records. */
+    return type_config_record_table_load(table, section, 2u, 0x14cu, hooks);
+}
+
+// Port-facing adapter retained for callers that provide table and hooks.
+void ledger_stub_0042d600_ObjectNamesLoad(
+    ObjectNameTableSet* tables, void* section,
+    const ObjectNameLoadHooks* hooks)
+{
+    /* The five input name tables and counts are the vehicle, mini-figure,
+     * monster, building, and upgrade tables consumed by the decompile. */
+    object_names_load(tables, section, hooks);
+}
+
+// Port-facing adapter retained for callers that provide table and hooks.
+void ledger_stub_0042da20_ObjectTheNamesLoad(
+    ObjectNameTableSet* tables, BlockFile* config,
+    const ObjectNameLoadHooks* hooks)
+{
+    BlockRec* section;
+    if (tables == NULL || config == NULL || hooks == NULL) return;
+    /* Unlike ObjectNamesLoad, this loader first opens the named config
+     * subgroup and uses its own parallel table and handle globals. */
+    section = block_subgroup(config, "ObjectTheNames");
+    if (section == NULL) return;
+    object_names_load(tables, section, hooks);
+}
+
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+unsigned int ledger_stub_004667e0_EntityStatsConfigLoad(
+    void* config, void* section, const EntityStatsConfigHooks* hooks)
+{
+    return entity_stats_config_load(config, section, hooks);
+}
+
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+// VehicleTypeDefinitionParse
+int ledger_stub_0046c6f0_VehicleTypeDefinitionParse(
+    VehicleTypeDefinition* definition, void* context,
+    VehicleTypeFieldReadHook read_field)
+{
+    return vehicle_type_definition_parse(definition, context, read_field);
+}
+
+
+} // namespace unported_ledger_stubs

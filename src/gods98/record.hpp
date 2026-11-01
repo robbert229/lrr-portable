@@ -534,6 +534,7 @@ void resource_record_and_children_release(void* record); /* FUN_00410f30 */
 void* render_resource_instance_record_acquire(void); /* FUN_004807a0 */
 void render_resource_instance_record_release(void* record); /* FUN_004807d0 */
 void render_resource_instance_pool_grow(void); /* FUN_004807f0 */
+void render_resource_instance_pool_reset(void); /* SharedTextureRootRegister */
 int menu_item_image_set(void* item, const char* image_config,
                         int primary); /* FUN_00410fb0 */
 int filename_extension_classify(const void* record); /* FUN_00413f30 */

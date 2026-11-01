@@ -7,6 +7,7 @@
 
 static DirectInputHooks s_direct_input_hooks;
 static InputState s_direct_input_state;
+static InputState* s_active_input_state;
 static int s_direct_input_initialized;
 static int s_direct_input_keyboard_acquired;
 
@@ -23,20 +24,29 @@ int input_direct_initialize(void)
     input_reset(&s_direct_input_state);
     s_direct_input_initialized = 0;
     s_direct_input_keyboard_acquired = 0;
-    if (s_direct_input_hooks.interface_create != NULL &&
-        !s_direct_input_hooks.interface_create(s_direct_input_hooks.context))
+    /* Retail only reports success after DirectInputCreate, keyboard-device
+     * creation, data-format/cooperative configuration, and Acquire succeed.
+     * Missing adapters cannot stand in for those operations. */
+    if (s_direct_input_hooks.interface_create == NULL ||
+        s_direct_input_hooks.keyboard_create == NULL ||
+        s_direct_input_hooks.devices_configure == NULL ||
+        s_direct_input_hooks.devices_acquire == NULL ||
+        s_direct_input_hooks.devices_release == NULL) {
+        input_reset(&s_direct_input_state);
         return 0;
-    if (s_direct_input_hooks.keyboard_create != NULL &&
-        !s_direct_input_hooks.keyboard_create(s_direct_input_hooks.context))
+    }
+    if (!s_direct_input_hooks.interface_create(s_direct_input_hooks.context)) {
+        input_reset(&s_direct_input_state);
+        return 0;
+    }
+    if (!s_direct_input_hooks.keyboard_create(s_direct_input_hooks.context))
         goto failed;
     if (s_direct_input_hooks.mouse_create != NULL &&
         !s_direct_input_hooks.mouse_create(s_direct_input_hooks.context))
         goto failed;
-    if (s_direct_input_hooks.devices_configure != NULL &&
-        !s_direct_input_hooks.devices_configure(s_direct_input_hooks.context))
+    if (!s_direct_input_hooks.devices_configure(s_direct_input_hooks.context))
         goto failed;
-    if (s_direct_input_hooks.devices_acquire != NULL &&
-        !s_direct_input_hooks.devices_acquire(s_direct_input_hooks.context))
+    if (!s_direct_input_hooks.devices_acquire(s_direct_input_hooks.context))
         goto failed;
     s_direct_input_initialized = 1;
     s_direct_input_keyboard_acquired = 1;
@@ -57,12 +67,17 @@ void input_direct_shutdown(void)
         s_direct_input_hooks.devices_release(s_direct_input_hooks.context);
     s_direct_input_initialized = 0;
     s_direct_input_keyboard_acquired = 0;
-    input_reset(&s_direct_input_state);
 }
 
 InputState* input_direct_state_get(void)
 {
-    return &s_direct_input_state;
+    return s_active_input_state != NULL ? s_active_input_state
+                                       : &s_direct_input_state;
+}
+
+void input_direct_state_bind(InputState* state)
+{
+    s_active_input_state = state;
 }
 #include <ctype.h>
 
@@ -120,6 +135,9 @@ static const uint32_t s_key_context_table[INPUT_KEY_COUNT] = {
 
 static void input_global_current_keys_copy(const InputState* state)
 {
+    /* DirectInput polling supplies a full snapshot. Platform event capture
+     * updates this table per key instead, so frame-edge clearing does not
+     * make a still-held key appear released. */
     if (state != NULL) {
         memcpy(s_global_current_keys, state->cur, sizeof(s_global_current_keys));
     }
@@ -246,7 +264,6 @@ void input_begin_frame(InputState* s)
         s->cur[i] = 0;
     }
     s->mouse_press = 0;
-    input_global_current_keys_copy(s);
 }
 
 void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
@@ -260,11 +277,13 @@ void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
         case PLATFORM_EVENT_KEYDOWN:
             if (e->code >= 0 && e->code < INPUT_KEY_COUNT) {
                 s->cur[e->code] = 1;
+                s_global_current_keys[e->code] = 1;
             }
             break;
         case PLATFORM_EVENT_KEYUP:
             if (e->code >= 0 && e->code < INPUT_KEY_COUNT) {
                 s->cur[e->code] = 0;
+                s_global_current_keys[e->code] = 0;
             }
             break;
         case PLATFORM_EVENT_MOUSE:
@@ -279,7 +298,6 @@ void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
             break;
         }
     }
-    input_global_current_keys_copy(s);
 }
 
 void input_mirror(InputState* s)
@@ -301,7 +319,6 @@ void input_mirror_and_clear(InputState* s)
         s->mirror[i] = s->cur[i];
         s->cur[i] = 0;
     }
-    input_global_current_keys_copy(s);
 }
 
 int input_key_down(const InputState* s, int key)
@@ -309,9 +326,15 @@ int input_key_down(const InputState* s, int key)
     return (key >= 0 && key < INPUT_KEY_COUNT) ? s->cur[key] != 0 : 0;
 }
 
+int input_keyboard_key_held(int key)
+{
+    return key >= 0 && key < INPUT_KEY_COUNT
+        ? s_global_current_keys[key] != 0u : 0;
+}
+
 /* KeyboardDownKeyCount (FUN_0047efb0): count nonzero entries in the
- * module's current 256-byte key snapshot. The engine has one active input
- * table; capture/frame/reset keep this portable snapshot in sync with it. */
+ * module's current 256-byte key snapshot. DirectInput writes a full sample;
+ * the event backend maintains held state until it receives key-up. */
 // FUNCTION: LEGORR 0x0047EFB0
 int input_keyboard_down_key_count(void)
 {
@@ -403,6 +426,9 @@ void input_cursor_client_position_set(int x, int y)
     if (s_input_set_cursor_position_hook != NULL) {
         s_input_set_cursor_position_hook(screen_x, screen_y,
                                          s_input_cursor_hook_context);
+    }
+    else {
+        platform_cursor_position_set(x, y);
     }
 }
 
@@ -777,3 +803,21 @@ uint32_t input_indexed_window_peek(int which, int index)
     }
     return 0u;
 }
+
+namespace unported_ledger_stubs {
+
+static InputActionToggleState s_input_action_toggle_state;
+
+// FUNCTION: LEGORR 0x00483810
+int ledger_stub_00483810_InputActionStateToggle(unsigned int action,
+                                                 const void* data)
+{
+    return input_action_state_toggle(&s_input_action_toggle_state, NULL,
+                                     action, data);
+}
+
+
+
+
+
+} // namespace unported_ledger_stubs

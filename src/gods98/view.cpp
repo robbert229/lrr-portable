@@ -9,10 +9,22 @@
 #include "view.hpp"
 #include "record.hpp"
 #include "scene_resources.hpp"
+#include "scene_pool.hpp"
+#include "surface.hpp"
 #include "sound.hpp"
 #include "texture.hpp"
 #include "heap.hpp"
+#include "resource.hpp"
 #include "crt/crt.hpp"
+#include "model.hpp"
+
+#if defined(_MSC_VER)
+#define VIEW_COM_CALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define VIEW_COM_CALL __attribute__((stdcall))
+#else
+#define VIEW_COM_CALL
+#endif
 
 /* The shared game thunk maps to VC5 _rand on the reference toolchain and to
  * the same 15-bit stream on portable builds. */
@@ -128,6 +140,7 @@ static void* s_ddiscene_draw_begin_context;
 static SceneHierarchyRegisterHooks s_scene_hierarchy_register_hooks;
 static DDiSceneObjectDestroyHook s_ddiscene_object_destroy_hook;
 static void* s_ddiscene_object_destroy_context;
+static void* s_ddiscene_destroyed_list;
 static SceneChildSearchHooks s_scene_child_search_hooks;
 static SceneFormattedStringHooks s_scene_formatted_string_hooks;
 static RenderInterfacePairHooks s_render_interface_pair_hooks;
@@ -650,7 +663,7 @@ static DDiSceneAnimationHookRecord* ddiscene_animation_hook_record_get(
     void* scene_interface)
 {
     void** vtable;
-    typedef void* (*GetProperty)(void*);
+    typedef void* (VIEW_COM_CALL *GetProperty)(void*);
     GetProperty get_property;
     if (scene_interface == NULL) return NULL;
     vtable = *static_cast<void***>(scene_interface);
@@ -664,7 +677,7 @@ static int ddiscene_animation_hook_record_set(
     void* scene_interface, DDiSceneAnimationHookRecord* record)
 {
     void** vtable;
-    typedef void (*SetProperty)(void*, void*);
+    typedef void (VIEW_COM_CALL *SetProperty)(void*, void*);
     SetProperty set_property;
     if (scene_interface == NULL) return 0;
     vtable = *static_cast<void***>(scene_interface);
@@ -740,29 +753,37 @@ void ddiscene_animation_hook_create(void* scene_object, int callback,
     }
 }
 
-typedef void (*DdiTimedInterfaceCall)(void*, float, void*);
-typedef void (*DdiTimedInterfaceUpdate)(void*, float, void*, void*);
-typedef void (*DdiTimedInterfaceRelease)(void*);
+typedef void (VIEW_COM_CALL *DdiTimedInterfaceTimeCall)(void*, float);
+typedef uintptr_t (VIEW_COM_CALL *DdiTimedInterfaceRefresh)(void*, void**);
+typedef void (VIEW_COM_CALL *DdiTimedInterfaceApply)(void*, uintptr_t,
+                                                     void**);
+typedef void (VIEW_COM_CALL *DdiTimedInterfaceRecordCall)(void*, uint32_t,
+                                                          void**);
+typedef void (VIEW_COM_CALL *DdiTimedInterfaceValueCall)(void*, uintptr_t);
+typedef void (VIEW_COM_CALL *DdiTimedInterfaceRelease)(void*);
 
-/* SharedObjectAnimationAndTimedEventUpdate is implemented in the ledger
- * translation unit because its track layout is shared with game animation. */
 namespace unported_ledger_stubs {
 void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
     void* shared_object, float time, const void* hooks);
 void* ledger_stub_00475e40_DDiSceneFrameRecordFind(
     void* action_interface, const char* action_name, int selector);
+void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
+    void* owner, void* track);
 }
 
 // FUNCTION: LEGORR 0x004897e0
-/* DDiSceneTimedHookDispatch (FUN_004897e0): dispatch through the retained
- * renderer interfaces in the 0x20-byte frame record. */
+/* DDiSceneTimedHookDispatch (FUN_004897e0): root interfaces receive only the
+ * requested time. Nested child interfaces use the x86 ABI's +0x5c out-slot,
+ * pass its return value and a local out-slot to +0x74, release the interface
+ * produced by +0x5c, then run the record-child +0x38 callback. */
 void ddiscene_timed_hook_dispatch(void* hook_record, float time,
-                                  void* output)
+                                  void* interface_value)
 {
     SceneActFrameRecord* record = (SceneActFrameRecord*)hook_record;
     SceneActFrameRecord* shared;
     void** shared_children;
     void** record_children;
+    void* updated_interface = interface_value;
     uintptr_t i;
     if (record == NULL) return;
     shared = (SceneActFrameRecord*)record->words[0];
@@ -776,9 +797,10 @@ void ddiscene_timed_hook_dispatch(void* hook_record, float time,
             void* object = (void*)record->words[2];
             void** vtable = *static_cast<void***>(object);
             if (vtable != NULL && vtable[0x38 / 4] != NULL) {
-                DdiTimedInterfaceCall call =
-                    reinterpret_cast<DdiTimedInterfaceCall>(vtable[0x38 / 4]);
-                call(object, time, output);
+                DdiTimedInterfaceTimeCall call =
+                    reinterpret_cast<DdiTimedInterfaceTimeCall>(
+                        vtable[0x38 / 4]);
+                call(object, time);
             }
         }
         return;
@@ -792,9 +814,10 @@ void ddiscene_timed_hook_dispatch(void* hook_record, float time,
         void* object = (void*)shared->words[2];
         void** vtable = *static_cast<void***>(object);
         if (vtable != NULL && vtable[0x38 / 4] != NULL) {
-            DdiTimedInterfaceCall call =
-                reinterpret_cast<DdiTimedInterfaceCall>(vtable[0x38 / 4]);
-            call(object, time, output);
+            DdiTimedInterfaceTimeCall call =
+                reinterpret_cast<DdiTimedInterfaceTimeCall>(
+                    vtable[0x38 / 4]);
+            call(object, time);
         }
     }
     shared_children = (void**)shared->words[5];
@@ -802,29 +825,33 @@ void ddiscene_timed_hook_dispatch(void* hook_record, float time,
     for (i = 0u; i < record->words[6]; ++i) {
         void* child = shared_children != NULL ? shared_children[i] : NULL;
         if (child != NULL) {
-            void* updated_interface = NULL;
+            void* child_result = NULL;
+            void* released_interface;
+            uintptr_t update_value = 0u;
             void** vtable = *static_cast<void***>(child);
             if (vtable != NULL) {
                 if (vtable[0x5c / 4] != NULL) {
-                    DdiTimedInterfaceUpdate update =
-                        reinterpret_cast<DdiTimedInterfaceUpdate>(
+                    DdiTimedInterfaceRefresh refresh =
+                        reinterpret_cast<DdiTimedInterfaceRefresh>(
                             vtable[0x5c / 4]);
-                    update(child, time, output, &updated_interface);
+                    update_value = refresh(child, &updated_interface);
                 }
                 if (vtable[0x74 / 4] != NULL) {
-                    DdiTimedInterfaceCall call =
-                        reinterpret_cast<DdiTimedInterfaceCall>(
+                    DdiTimedInterfaceApply apply =
+                        reinterpret_cast<DdiTimedInterfaceApply>(
                             vtable[0x74 / 4]);
-                    call(child, time, output);
+                    apply(child, update_value, &child_result);
                 }
             }
-            if (updated_interface != NULL) {
-                void** updated_vtable = *static_cast<void***>(updated_interface);
+            released_interface = updated_interface;
+            if (released_interface != NULL) {
+                void** updated_vtable =
+                    *static_cast<void***>(released_interface);
                 if (updated_vtable != NULL && updated_vtable[2] != NULL) {
                     DdiTimedInterfaceRelease release =
                         reinterpret_cast<DdiTimedInterfaceRelease>(
                             updated_vtable[2]);
-                    release(updated_interface);
+                    release(released_interface);
                 }
             }
         }
@@ -833,27 +860,30 @@ void ddiscene_timed_hook_dispatch(void* hook_record, float time,
             void* child_output = NULL;
             void** vtable = *static_cast<void***>(record_child);
             if (vtable != NULL && vtable[0x38 / 4] != NULL) {
-                DdiTimedInterfaceCall call =
-                    reinterpret_cast<DdiTimedInterfaceCall>(vtable[0x38 / 4]);
-                call(record_child, 0.0f, &child_output);
+                DdiTimedInterfaceRecordCall call =
+                    reinterpret_cast<DdiTimedInterfaceRecordCall>(
+                        vtable[0x38 / 4]);
+                call(record_child, 0u, &child_output);
             }
         }
     }
-    if (output != NULL) {
-        float output_time;
-        memcpy(&output_time, output, sizeof(output_time));
+    if (updated_interface != NULL) {
         if (shared->words[3] != 0u) {
+            uint32_t output_bits = (uint32_t)(uintptr_t)updated_interface;
+            float output_value;
+            memcpy(&output_value, &output_bits, sizeof(output_value));
             unported_ledger_stubs::
                 ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
-                (void*)shared->words[1], output_time, NULL);
+                (void*)shared->words[1], output_value, NULL);
         }
         else if (shared->words[2] != 0u) {
             void* object = (void*)shared->words[2];
             void** vtable = *static_cast<void***>(object);
             if (vtable != NULL && vtable[0x38 / 4] != NULL) {
-                DdiTimedInterfaceCall call =
-                    reinterpret_cast<DdiTimedInterfaceCall>(vtable[0x38 / 4]);
-                call(object, output_time, NULL);
+                DdiTimedInterfaceValueCall call =
+                    reinterpret_cast<DdiTimedInterfaceValueCall>(
+                        vtable[0x38 / 4]);
+                call(object, (uintptr_t)updated_interface);
             }
         }
     }
@@ -1048,6 +1078,75 @@ void ddiscene_draw_begin(void* render_object, int begin)
                                s_ddiscene_draw_begin_context);
 }
 
+typedef struct DDiSceneDrawEndRecord {
+    uint32_t prefix[4];
+    void* render_interface;
+    float pending_value;
+    uint32_t busy;
+} DDiSceneDrawEndRecord;
+
+typedef float (VIEW_COM_CALL *DDiSceneGetCurrentValue)(void* interface_object);
+typedef void (VIEW_COM_CALL *DDiSceneSetCurrentValue)(void* interface_object,
+                                                      float value);
+typedef int (VIEW_COM_CALL *DDiSceneCommitValue)(void* interface_object,
+                                                  void* value);
+
+/* DDiSceneDrawEnd (FUN_00477150): guard the draw record while it eases a
+ * pending value through interface slots +0x88/+0x40, commits the caller's
+ * referenced value through +0x34, then runs the shared model pass. The
+ * recovered call sites pass a 32-bit-record pointer, its commit-source
+ * address, and a frame delta; the record layout below widens the interface
+ * pointer on 64-bit portable builds while keeping the target's field order. */
+// FUNCTION: LEGORR 0x00477150
+void ddiscene_draw_end(void* render_object, const void* commit_source,
+                       float frame_delta)
+{
+    DDiSceneDrawEndRecord* record =
+        (DDiSceneDrawEndRecord*)render_object;
+    void* interface_object;
+    void** vtable;
+    void* commit_value = NULL;
+    int result;
+    if (record == NULL) return;
+    record->busy = 1u;
+    interface_object = record->render_interface;
+    if (interface_object == NULL || commit_source == NULL) {
+        record->busy = 0u;
+        return;
+    }
+    vtable = *(void***)interface_object;
+    if (vtable == NULL || vtable[0x88 / 4] == NULL ||
+        vtable[0x40 / 4] == NULL || vtable[0x34 / 4] == NULL) {
+        record->busy = 0u;
+        return;
+    }
+    memcpy(&commit_value, commit_source, sizeof(commit_value));
+    if (record->pending_value != 0.0f) {
+        const float current =
+            ((DDiSceneGetCurrentValue)vtable[0x88 / 4])(interface_object);
+        float blend;
+        float value;
+        if (frame_delta == 0.0f) blend = 1.0f;
+        else blend = 4.0f / frame_delta;
+        value = (current * blend + record->pending_value) / (blend + 1.0f);
+        ((DDiSceneSetCurrentValue)vtable[0x40 / 4])(
+            interface_object, value);
+        if (value == record->pending_value) record->pending_value = 0.0f;
+    }
+    result = ((DDiSceneCommitValue)vtable[0x34 / 4])(
+        interface_object, commit_value);
+    if (result == 0) {
+        model_render_pass_dispatch(render_object);
+    }
+    else {
+        static const char source_file[] =
+            "C:\\Dev\\SourceSafe\\gods98\\dx6\\god.cpp";
+        (void)unported_ledger_stubs::directx_result_diagnostic_dispatch(
+            result, 1, source_file, 0x11e);
+    }
+    record->busy = 0u;
+}
+
 /* ComResourceEnumerationResultGet (FUN_00477310): slot +0x64 fills two
  * interface outputs. The first is queried through +0x68 and the second is
  * the returned interface; both slot +0x08 calls are part of the recovered
@@ -1211,6 +1310,10 @@ void shared_object_directory_scan_configure(
                 engine_heap_free(s_shared_object_directory_root);
             s_shared_object_directory_root = NULL;
         }
+        /* SharedObjectDirectoryScan owns DAT_005446b8, the same fallback
+         * model root consulted by ModelResourceResolveOrLoad. The model
+         * cache borrows this path until the next configuration update. */
+        model_resource_fallback_prefix_set(s_shared_object_directory_root);
     }
     s_shared_object_entry_resolve = resolve;
     s_shared_object_sound_enabled = sound_enabled;
@@ -1530,14 +1633,177 @@ void ddiscene_object_destroy(void* scene_object)
     ddiscene_object_destroy_with_mode(scene_object, 0);
 }
 
-/* DDiSceneObjectDestroy (FUN_00472a50): renderer-specific vtable resources
- * are released by the installed destructor callback. */
+static void ddiscene_destroy_action_frame_records(void* scene_object)
+{
+    unsigned int count;
+    void** records;
+    int* frame_indices;
+    unsigned int index;
+
+    count = scene_action_record_act_frame_scan(scene_object, NULL, NULL,
+                                                NULL);
+    if (count == 0u) return;
+    records = (void**)engine_heap_alloc((long)(count * sizeof(void*)));
+    if (records == NULL) return;
+    frame_indices = (int*)engine_heap_alloc((long)(count * sizeof(int)));
+    if (frame_indices == NULL) {
+        engine_heap_free(records);
+        return;
+    }
+    memset(records, 0, count * sizeof(void*));
+    memset(frame_indices, 0, count * sizeof(int));
+    count = scene_action_record_act_frame_scan(scene_object, records,
+                                                frame_indices, NULL);
+    for (index = 0u; index < count; ++index) {
+        if (records[index] == NULL) continue;
+        scene_property_owned_buffer_release(records[index]);
+        attached_object_data_release_and_clear(records[index]);
+        ddiscene_payload_interface_release(records[index]);
+    }
+    engine_heap_free(frame_indices);
+    engine_heap_free(records);
+}
+
+/* Kind-one objects keep a second, renderer-owned list of child interfaces in
+ * the payload's +8 interface.  FUN_00472a50 walks that list, detaches each
+ * child from the scene owner, releases it, then frees the item array and its
+ * two-word container.  The kind-one payload release below separately handles
+ * the payload's +8 retained interface, as FUN_00475c80 does. */
+static void ddiscene_destroy_kind1_child_interfaces(void* scene_object)
+{
+    unsigned char* scene = (unsigned char*)scene_object;
+    void* owner;
+    void* payload;
+    uint32_t nested_owner;
+    void* list_interface;
+    void** vtable;
+    void* container;
+    void** items;
+    uint32_t count;
+    uint32_t index;
+
+    /* The scene/payload record is the retail 32-bit layout. A wider host
+     * needs the renderer destroy hook's sidecar view instead of raw offsets. */
+    if (sizeof(void*) != 4u) return;
+    memcpy(&owner, scene + 4, sizeof(owner));
+    memcpy(&payload, scene + 0x0c, sizeof(payload));
+    if (owner == NULL || payload == NULL) return;
+    memcpy(&nested_owner, (unsigned char*)payload + 0x0c,
+           sizeof(nested_owner));
+    if (nested_owner != 0u) return;
+    memcpy(&list_interface, (unsigned char*)payload + 8,
+           sizeof(list_interface));
+    if (list_interface == NULL) return;
+    vtable = *(void***)list_interface;
+    if (vtable == NULL || vtable[0x1c / 4] == NULL) return;
+#if defined(_MSC_VER) && defined(_M_IX86)
+    {
+        void* result;
+        void* method = vtable[0x1c / 4];
+        __asm {
+            mov ecx, list_interface
+            mov eax, method
+            call eax
+            mov result, eax
+        }
+        container = result;
+    }
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+    {
+        typedef void* (__attribute__((thiscall)) *ChildListGet)(void*);
+        container = ((ChildListGet)vtable[0x1c / 4])(
+            list_interface);
+    }
+#else
+    {
+        typedef void* (*ChildListGet)(void*);
+        container = ((ChildListGet)vtable[0x1c / 4])(
+            list_interface);
+    }
+#endif
+    if (container == NULL) return;
+
+    memcpy(&items, container, sizeof(items));
+    memcpy(&count, (unsigned char*)container + 4, sizeof(count));
+    vtable = *(void***)owner;
+    if (items != NULL && vtable != NULL &&
+        vtable[0xa0 / 4] != NULL) {
+        for (index = 0; index < count; ++index) {
+            void* child = items[index];
+            if (child == NULL) continue;
+            ddiscene_payload_owner_detach_call(
+                owner, child, vtable[0xa0 / 4]);
+            ddiscene_payload_interface_release(child);
+        }
+    }
+    if (items != NULL) engine_heap_free(items);
+    engine_heap_free(container);
+}
+
+/* DDiSceneObjectDestroy (FUN_00472a50): use the renderer's full destructor
+ * when installed; the local fallback handles the recovered state and owned
+ * payload releases that do not need renderer traversal. */
+// FUNCTION: LEGORR 0x00472a50
 void ddiscene_object_destroy_with_mode(void* scene_object, int mode)
 {
+    uint32_t kind;
     if (scene_object == NULL) return;
-    if (s_ddiscene_object_destroy_hook == NULL) return;
-    s_ddiscene_object_destroy_hook(scene_object, mode,
-                                   s_ddiscene_object_destroy_context);
+    if (s_ddiscene_object_destroy_hook != NULL) {
+        s_ddiscene_object_destroy_hook(scene_object, mode,
+                                       s_ddiscene_object_destroy_context);
+        return;
+    }
+
+    memcpy(&kind, (char*)scene_object + 0x10, sizeof(kind));
+    if (kind != 6u) {
+        ddiscene_scene_object_attach_or_unlink(scene_object, NULL);
+    }
+
+    /* FUN_00472a50's mode-zero path for kinds 3 and 4 clears the linked
+     * scene record's +0x10 word and returns before the rest of destruction.
+     * The renderer-specific detach/release sequence remains owned by the
+     * installed hook, but this state transition is represented by the scene
+     * record layout already used by the animation helpers. */
+    if ((kind == 3u || kind == 4u) && mode == 0) {
+        void* linked_record;
+        memcpy(&linked_record, (char*)scene_object + 0x24,
+               sizeof(linked_record));
+        if (linked_record != NULL) {
+            const uint32_t inactive = 0u;
+            memcpy((char*)linked_record + 0x10, &inactive,
+                   sizeof(inactive));
+            return;
+        }
+    }
+
+    if (kind == 3u) {
+        void* scene_interface;
+        void* owner_link;
+        memcpy(&scene_interface, (char*)scene_object + 4,
+               sizeof(scene_interface));
+        owner_link = scene_interface != NULL
+            ? ddiscene_action_record_field_1c_pointer_get(scene_interface)
+            : NULL;
+        if (owner_link != NULL) {
+            scene_object_owner_link_release(
+                (SceneObjectOwnerLinkRecord*)owner_link);
+        }
+    }
+
+    if (kind == 1u)
+        ddiscene_destroy_kind1_child_interfaces(scene_object);
+
+    /* Kind three releases its retained owner-link record above; kind four
+     * releases each action-frame property's owned buffer and attached data. */
+    if (kind == 4u) ddiscene_destroy_action_frame_records(scene_object);
+
+    /* FUN_00472a50 calls FUN_00475c80 on the non-early-return path. That
+     * helper owns the kind-specific payload release and clears the +0x0c
+     * field even when the external scene manager is absent. */
+    ddiscene_payload_release(scene_object);
+    memcpy((char*)scene_object + 0x28, &s_ddiscene_destroyed_list,
+           sizeof(s_ddiscene_destroyed_list));
+    s_ddiscene_destroyed_list = scene_object;
 }
 
 static void* ddiscene_object_timing_interface_get(void* scene_object)
@@ -2139,38 +2405,57 @@ void global_render_record_set_from_input(
     hooks->record_set(hooks->context, view, record, 2, value);
 }
 
+static EngineTaskCallbackHooks s_engine_task_callback_hooks;
+
+void engine_task_callback_hooks_set(const EngineTaskCallbackHooks* hooks)
+{
+    if (hooks == NULL)
+        memset(&s_engine_task_callback_hooks, 0,
+               sizeof(s_engine_task_callback_hooks));
+    else
+        s_engine_task_callback_hooks = *hooks;
+}
+
 EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
-    void* manager, void* owner, void* callback, int mode,
-    const EngineTaskCallbackHooks* hooks)
+    void* owner, void* callback, uint32_t mode, void* context,
+    uint32_t flag_value)
 {
     EngineTaskCallbackRecord* record;
     void* resource_interface = NULL;
-    if (hooks != NULL && hooks->record_allocate != NULL)
-        record = hooks->record_allocate(hooks->context);
-    else
-        record = (EngineTaskCallbackRecord*)calloc(1, sizeof(*record));
+    const EngineTaskCallbackHooks* hooks = &s_engine_task_callback_hooks;
+    record = (EngineTaskCallbackRecord*)
+        render_resource_instance_record_acquire();
     if (record == NULL) return NULL;
-    memset(record, 0, sizeof(*record));
-    if (hooks != NULL && hooks->global_initialize != NULL)
-        hooks->global_initialize(hooks->context);
-    if (hooks != NULL && hooks->manager_event != NULL)
-        hooks->manager_event(hooks->context, manager);
-    if (hooks != NULL && hooks->resource_interface_get != NULL)
-        resource_interface = hooks->resource_interface_get(hooks->context,
-                                                            record);
-    if (hooks != NULL && hooks->owner_bind != NULL)
+    /* The fixed-size pool has already cleared +0..+0x2f and installed its
+     * self-link at +0x30; do not erase that link. */
+    /* FUN_00472940 is an observed root-global read whose return is discarded. */
+    (void)scene_root_object_get();
+    if (hooks->user_visual_create != NULL)
+        hooks->user_visual_create(hooks->context, 0x004827f0u,
+                                  record, &resource_interface);
+    if (hooks->owner_bind != NULL)
         hooks->owner_bind(hooks->context, owner, resource_interface);
-    if (hooks != NULL && hooks->callback_attach != NULL)
+    if (hooks->callback_attach != NULL)
         hooks->callback_attach(hooks->context, resource_interface, record);
-    record->resource_interface = resource_interface;
-    record->callback = callback;
-    record->handler = callback;
-    record->self = record;
-    record->owner = owner;
-    record->value = 1u;
-    if (mode == 1) record->flags |= 2u;
-    else if (mode == 2) record->flags |= 4u;
+    /* Disassembly passes the fixed LAB_004827f0 callback to CreateUserVisual;
+     * caller arg2 is separately stored at +0x10. The remaining caller args
+     * land at +0x14/+0x18/+0x28 and the fifth controls flags at +0x2c. */
+    record->words[3] = (uint32_t)(uintptr_t)resource_interface;
+    record->words[4] = (uint32_t)(uintptr_t)callback;
+    record->words[5] = (uint32_t)(uintptr_t)context;
+    record->words[6] = mode;
+    record->words[8] = 1u;
+    record->words[10] = (uint32_t)(uintptr_t)owner;
+    if (flag_value == 1u) record->words[11] |= 2u;
+    else if (flag_value == 2u) record->words[11] |= 4u;
     return record;
+}
+
+void engine_task_callback_record_release(
+    EngineTaskCallbackRecord* record)
+{
+    if (record == NULL) return;
+    render_resource_instance_record_release(record);
 }
 
 void scene_object_record_retain_hook_set(SceneObjectRecordRetainHook hook,
@@ -2602,12 +2887,12 @@ void animation_track_keys_interpolate(void* owner, const void* track,
     scene_node_transform_matrix_apply(owner, track, position, rotation, scale);
 }
 
-/* SceneNodeTransformMatrixApply adapter. The normal branch uses the
- * observed owner table and +0x38 matrix setter. The retail flag-4 branch
- * first queries interfaces through vtable slots +0x5c/+0x74; their argument
- * and returned-object contracts are not represented by the current scene
- * API, so this helper leaves that branch untouched and is not the mapped
- * retail target. */
+/* SceneNodeTransformMatrixApply (FUN_004882e0). For flag bit 4, slot +0x5c
+ * writes a transform interface to its out parameter; slot +0x74 reads the
+ * current matrix through that interface into the local matrix; Release then
+ * drops the temporary interface before scaling its diagonal and replacing
+ * translation. */
+// FUNCTION: LEGORR 0x004882e0
 void scene_node_transform_matrix_apply(void* owner, const void* track,
                                        const float position[3],
                                        const float rotation[3],
@@ -2618,10 +2903,12 @@ void scene_node_transform_matrix_apply(void* owner, const void* track,
     void** nodes;
     void* node;
     void** vtable;
-    typedef void (*MatrixSetMethod)(void*, uint32_t, const float*);
+    typedef void (VIEW_COM_CALL *MatrixSetMethod)(void*, uint32_t,
+                                                  const float*);
     MatrixSetMethod set_matrix;
     uint16_t handle;
     float matrix[16];
+    void* transform_interface;
     float sx, cx, sy, cy, sz, cz;
     float m3c, m40, m38, m44, m48, m10, m2c;
     float m30, m28, m1c, m20, m18;
@@ -2640,7 +2927,37 @@ void scene_node_transform_matrix_apply(void* owner, const void* track,
     set_matrix = reinterpret_cast<MatrixSetMethod>(vtable[0x38 / 4]);
     memset(matrix, 0, sizeof(matrix));
     if ((bytes[0x28] & 4u) != 0) {
-        return;
+        typedef void (VIEW_COM_CALL *TransformInterfaceGet)(void*, void**);
+        typedef void (VIEW_COM_CALL *TransformMatrixGet)(void*, void*,
+                                                         float*);
+        typedef void (VIEW_COM_CALL *TransformInterfaceRelease)(void*);
+        TransformInterfaceGet get_interface;
+        TransformMatrixGet get_matrix;
+        TransformInterfaceRelease release_interface;
+        void** interface_vtable;
+        if (vtable[0x5c / 4] == NULL || vtable[0x74 / 4] == NULL)
+            return;
+        transform_interface = NULL;
+        get_interface = reinterpret_cast<TransformInterfaceGet>(
+            vtable[0x5c / 4]);
+        get_interface(node, &transform_interface);
+        if (transform_interface == NULL) return;
+        get_matrix = reinterpret_cast<TransformMatrixGet>(
+            vtable[0x74 / 4]);
+        get_matrix(node, transform_interface, matrix);
+        interface_vtable = *static_cast<void***>(transform_interface);
+        if (interface_vtable != NULL && interface_vtable[2] != NULL) {
+            release_interface = reinterpret_cast<TransformInterfaceRelease>(
+                interface_vtable[2]);
+            release_interface(transform_interface);
+        }
+        matrix[0] *= scale[0];
+        matrix[5] *= scale[1];
+        matrix[10] *= scale[2];
+        matrix[12] = position[0];
+        matrix[13] = position[1];
+        matrix[14] = position[2];
+        matrix[15] = 1.0f;
     }
     else {
         memcpy(offset, bytes + 0x0c, sizeof(offset));
@@ -3210,6 +3527,14 @@ void scene_object_owner_link_release_hooks_set(
     s_owner_link_child_release = child_chain_release;
 }
 
+static void scene_owner_link_interface_release(void* object)
+{
+    if (s_owner_link_interface_release != NULL)
+        s_owner_link_interface_release(object);
+    else
+        ddiscene_payload_interface_release(object);
+}
+
 // FUNCTION: LEGORR 0x00489750
 void scene_object_owner_link_release(SceneObjectOwnerLinkRecord* record)
 {
@@ -3217,10 +3542,8 @@ void scene_object_owner_link_release(SceneObjectOwnerLinkRecord* record)
     if (record == NULL) return;
     if (record->kind == 0) {
         if (record->shared_mode == 0) {
-            if (s_owner_link_interface_release != NULL) {
-                s_owner_link_interface_release(record->first_handle);
-                s_owner_link_interface_release(record->second_handle);
-            }
+            scene_owner_link_interface_release(record->first_handle);
+            scene_owner_link_interface_release(record->second_handle);
         }
         else if (s_owner_link_child_release != NULL) {
             s_owner_link_child_release(record->child_chain);
@@ -3228,9 +3551,8 @@ void scene_object_owner_link_release(SceneObjectOwnerLinkRecord* record)
     }
     if (record->shared_mode == 0) {
         for (i = 0; i < record->handle_count; ++i) {
-            if (record->handles != NULL &&
-                s_owner_link_interface_release != NULL)
-                s_owner_link_interface_release(record->handles[i]);
+            if (record->handles != NULL)
+                scene_owner_link_interface_release(record->handles[i]);
         }
         engine_heap_free(record->handles);
     }
@@ -3650,72 +3972,126 @@ void matrix_rotation_compose_xyz(float* record)
     matrix4_set_rotation_x(rotation_x, record[0x28 / 4]);
     matrix4_set_rotation_y(rotation_y, record[0x24 / 4]);
     matrix4_set_rotation_z(rotation_z, record[0x2c / 4]);
-    matrix4_multiply(intermediate, rotation_x, rotation_y);
-    matrix4_multiply(record + 0x58 / 4, rotation_z, intermediate);
+    /* Matrix4Multiply takes (out, param2, param3) and computes param3 ×
+     * param2. The retail calls therefore produce X × Y, then Z × that
+     * intermediate; keep the seemingly reversed argument order explicit. */
+    matrix4_multiply(intermediate, rotation_y, rotation_x);
+    matrix4_multiply(record + 0x58 / 4, intermediate, rotation_z);
 }
+
+static float d3drm_vector_modulus(const float* vector)
+{
+    float maximum;
+    float x, y, z;
+    if (fabs((double)vector[0]) >= fabs((double)vector[1]))
+        maximum = (float)fabs((double)vector[0]);
+    else
+        maximum = (float)fabs((double)vector[1]);
+    if (fabs((double)vector[2]) > (double)maximum)
+        maximum = (float)fabs((double)vector[2]);
+    if (maximum == 0.0f) return 0.0f;
+    x = vector[0] / maximum;
+    y = vector[1] / maximum;
+    z = vector[2] / maximum;
+    return maximum * (float)sqrt((double)(x * x + y * y + z * z));
+}
+
+static void d3drm_vector_normalize(float* vector)
+{
+    float modulus = d3drm_vector_modulus(vector);
+    if (modulus != 0.0f) {
+        float scale = 1.0f / modulus;
+        vector[0] = scale * vector[0];
+        vector[1] = scale * vector[1];
+        vector[2] = scale * vector[2];
+    }
+    else {
+        /* D3DRMVectorNormalize maps a zero vector to its +X basis vector. */
+        vector[0] = 1.0f;
+        vector[1] = 0.0f;
+        vector[2] = 0.0f;
+    }
+}
+
+#if defined(_MSC_VER)
+/* The D3DRM DLL keeps this LCG word in its per-thread context at +0x14. */
+__declspec(thread) static uint32_t s_d3drm_random_state = 1u;
+#elif defined(__GNUC__) || defined(__clang__)
+static __thread uint32_t s_d3drm_random_state = 1u;
+#else
+/* This fallback is for toolchains without a native TLS storage specifier. */
+static uint32_t s_d3drm_random_state = 1u;
+#endif
 
 // FUNCTION: LEGORR 0x00479500
 void d3drm_vector_random(float* out)
 {
-    /* The bundled D3DRM export draws each component in [-1, 1] and normalizes
-     * the resulting vector. Its internal random state belongs to D3DRM, so
-     * the portable build uses the CRT stream here. */
-    float x = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-    float y = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-    float z = ((float)rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-    float length = sqrtf(x * x + y * y + z * z);
-    if (length == 0.0f) {
-        x = 1.0f;
-        y = 0.0f;
-        z = 0.0f;
-        length = 1.0f;
-    }
-    out[0] = x / length;
-    out[1] = y / length;
-    out[2] = z / length;
+    float modulus;
+
+    /* D3DRM.DLL's TLS state starts at one. Each call applies its 0x343fd /
+     * 0x269ec3 LCG, takes bits 16..30, maps through 1/32767 and subtracts
+     * 0.5, then retries only if the vector modulus is zero. */
+    do {
+        uint32_t value;
+        s_d3drm_random_state =
+            s_d3drm_random_state * 0x343fdu + 0x269ec3u;
+        value = (s_d3drm_random_state >> 16) & 0x7fffu;
+        out[0] = (float)value * (1.0f / 32767.0f) - 0.5f;
+        s_d3drm_random_state =
+            s_d3drm_random_state * 0x343fdu + 0x269ec3u;
+        value = (s_d3drm_random_state >> 16) & 0x7fffu;
+        out[1] = (float)value * (1.0f / 32767.0f) - 0.5f;
+        s_d3drm_random_state =
+            s_d3drm_random_state * 0x343fdu + 0x269ec3u;
+        value = (s_d3drm_random_state >> 16) & 0x7fffu;
+        out[2] = (float)value * (1.0f / 32767.0f) - 0.5f;
+        modulus = d3drm_vector_modulus(out);
+    } while (modulus == 0.0f);
+    d3drm_vector_normalize(out);
 }
 
 // FUNCTION: LEGORR 0x00479510
 void d3drm_vector_rotate(float* out, const float* vector, float* axis,
                          float angle)
 {
-    /* D3DRMVectorRotate normalizes its axis in place, then applies Rodrigues'
-     * formula using the negated angle. D3DRMVectorNormalize maps a zero vector
-     * to (1, 0, 0), so even a zero axis becomes a rotation about X. */
-    float axis_length;
-    float x;
-    float y;
-    float z;
-    float dot;
-    float c;
-    float s;
-    float one_minus_c;
-    float nx;
-    float ny;
-    float nz;
-    axis_length = sqrtf(axis[0] * axis[0] + axis[1] * axis[1] +
-                        axis[2] * axis[2]);
-    if (axis_length == 0.0f) {
-        axis[0] = 1.0f;
-        axis[1] = 0.0f;
-        axis[2] = 0.0f;
-    }
-    else {
-        axis[0] /= axis_length;
-        axis[1] /= axis_length;
-        axis[2] /= axis_length;
-    }
-    nx = axis[0];
-    ny = axis[1];
-    nz = axis[2];
-    x = vector[0]; y = vector[1]; z = vector[2];
-    dot = nx * x + ny * y + nz * z;
-    c = cosf(angle);
-    s = -sinf(angle);
-    one_minus_c = 1.0f - c;
-    out[0] = x * c + (ny * z - nz * y) * s + nx * dot * one_minus_c;
-    out[1] = y * c + (nz * x - nx * z) * s + ny * dot * one_minus_c;
-    out[2] = z * c + (nx * y - ny * x) * s + nz * dot * one_minus_c;
+    float input[3];
+    float normalized_axis[3];
+    float cross[3];
+    float projection;
+    float one_minus_cosine;
+    float rotation_angle = -angle;
+    float sine;
+    float cosine;
+
+    /* The import normalizes the axis in place before loading the source
+     * vector. It then uses Rodrigues' formula with -theta; its result keeps
+     * the source vector's magnitude. Cache both vectors before writing so
+     * r may alias v or axis just as in the DLL. */
+    d3drm_vector_normalize(axis);
+    input[0] = vector[0];
+    input[1] = vector[1];
+    input[2] = vector[2];
+    normalized_axis[0] = axis[0];
+    normalized_axis[1] = axis[1];
+    normalized_axis[2] = axis[2];
+    cosine = (float)cos((double)rotation_angle);
+    sine = (float)sin((double)rotation_angle);
+    one_minus_cosine = 1.0f - cosine;
+    projection = normalized_axis[0] * input[0] +
+                 normalized_axis[1] * input[1] +
+                 normalized_axis[2] * input[2];
+    cross[0] = normalized_axis[1] * input[2] -
+               normalized_axis[2] * input[1];
+    cross[1] = normalized_axis[2] * input[0] -
+               normalized_axis[0] * input[2];
+    cross[2] = normalized_axis[0] * input[1] -
+               normalized_axis[1] * input[0];
+    out[0] = input[0] * cosine + cross[0] * sine +
+             normalized_axis[0] * projection * one_minus_cosine;
+    out[1] = input[1] * cosine + cross[1] * sine +
+             normalized_axis[1] * projection * one_minus_cosine;
+    out[2] = input[2] * cosine + cross[2] * sine +
+             normalized_axis[2] * projection * one_minus_cosine;
 }
 
 // FUNCTION: LEGORR 0x0040fcc0
@@ -3726,9 +4102,11 @@ void vector_scale_components_in_place(float* vector, float sx, float sy,
         return;
     }
     d3drm_vector_random(vector);
-    vector[0] *= sx;
-    vector[1] *= sy;
-    vector[2] *= sz;
+    /* Keep the scale operand first, matching FUN_0040fcc0's
+     * param_scale * vector_component order on the x87 path. */
+    vector[0] = sx * vector[0];
+    vector[1] = sy * vector[1];
+    vector[2] = sz * vector[2];
 }
 
 /* ---- geometry helpers (finding 363/323) --------------------------------
@@ -3930,11 +4308,10 @@ static const float s_matrix_one = 1.0f;   /* DAT_0049e920 */
 static const float s_matrix_zero = 0.0f;  /* DAT_0049e924 */
 
 /* RayPlaneIntersectionParameter (FUN_00479a30): writes t = dot(q-p, n) /
- * dot(d, n) into `t_out` for ray (p,d) against plane (q,n); answers 1 for a
- * non-zero denominator (the corpus gates with fcomp against the .rdata 0.0
- * dword at 0x49e924 and jumps to the 0 answer when that compare flags
- * equality, test ah, 0x40), 0 otherwise. Both dot products accumulate z,
- * y, x, matching the corpus's fadd order. */
+ * dot(d, n) into `t_out` for ray (p,d) against plane (q,n). The x87 compare
+ * tests C3 after FCOMP, so zero and unordered (NaN) denominators take the
+ * false path; on that path t_out is untouched. Negative t remains valid.
+ * Both dot products accumulate z, y, x, matching the corpus's fadd order. */
 // FUNCTION: LEGORR 0x00479a30
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) int ray_plane_intersection_parameter(
@@ -4000,18 +4377,17 @@ int ray_plane_intersection_parameter(float* t_out, const float* p,
                                      const float* n)
 {
     const float denom = d[2] * n[2] + d[1] * n[1] + d[0] * n[0];
-    if (denom != s_matrix_zero) {
-        *t_out = ((q[2] - p[2]) * n[2] + (q[1] - p[1]) * n[1]
-                  + (q[0] - p[0]) * n[0]) / denom;
-        return 1;
-    }
-    return 0;
+    if (denom == s_matrix_zero || denom != denom) return 0;
+    *t_out = ((q[2] - p[2]) * n[2] + (q[1] - p[1]) * n[1]
+              + (q[0] - p[0]) * n[0]) / denom;
+    return 1;
 }
 #endif
 
 /* LineIntersection2DCompute (FUN_00479af0): intersects line1
  * (point p1, direction d1) with line2 (point p2, direction d2); writes the
- * hit point into `out` and returns it, or NULL when parallel. */
+ * hit point into `out` and returns it, or NULL for a zero/unordered
+ * determinant. The x87 compare takes the parallel path for NaN before stores. */
 // FUNCTION: LEGORR 0x00479af0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) float* line_intersection_2d_compute(
@@ -4090,7 +4466,8 @@ float* line_intersection_2d_compute(float* out, const float* p1,
                                     const float* d2)
 {
     float cross = -d1[1] * d2[0] + d1[0] * d2[1];
-    if (cross != s_matrix_zero) {
+    if (cross == s_matrix_zero || cross != cross) return NULL;
+    {
         float t = (p1[0] - p2[0]) * -(d2[1] / cross)
                   + (d2[0] / cross) * (p1[1] - p2[1]);
         out[0] = t * d1[0];
@@ -4099,7 +4476,6 @@ float* line_intersection_2d_compute(float* out, const float* p1,
         out[1] = out[1] + p1[1];
         return out;
     }
-    return NULL;
 }
 #endif
 
@@ -4518,6 +4894,34 @@ void matrix4_copy(float* out, const float* src)
  * this Z, alongside FUN_00479df0): identity, then the rows 1–2 block with
  * the corpus's signs — m[5]=c, m[6]=−s, m[9]=s, m[10]=c. */
 // FUNCTION: LEGORR 0x00479d50
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void matrix4_set_rotation_x(float* out, float angle)
+{
+    __asm {
+        push ebx
+        mov ebx, dword ptr [esp + 8]
+        fld dword ptr [esp + 0ch]
+        fcos
+        fld dword ptr [esp + 0ch]
+        fsin
+        push ebx
+        call matrix4_set_identity
+        add esp, 4
+
+        fld st(0)
+        fchs
+        fstp dword ptr [ebx + 18h]
+        fxch st(1)
+        fst dword ptr [ebx + 14h]
+        fst dword ptr [ebx + 28h]
+        fxch st(1)
+        fstp dword ptr [ebx + 24h]
+        fstp st(0)
+        pop ebx
+        ret
+    }
+}
+#else
 void matrix4_set_rotation_x(float* out, float angle)
 {
     const float c = (float)cos(angle);
@@ -4528,34 +4932,93 @@ void matrix4_set_rotation_x(float* out, float angle)
     out[10] = c;
     out[9] = s;
 }
+#endif
 
-/* Matrix4SetRotationY (FUN_00479da0): identity, then m[0]=c, m[2]=s,
- * m[8]=−s, m[10]=c. */
+/* Matrix4SetRotationY (FUN_00479da0): identity, then the decompile's store
+ * order m[8]=−s, m[0]=c, m[10]=c, m[2]=s (the Y-axis block). */
 // FUNCTION: LEGORR 0x00479da0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void matrix4_set_rotation_y(float* out, float angle)
+{
+    __asm {
+        push ebx
+        mov ebx, dword ptr [esp + 8]
+        fld dword ptr [esp + 0ch]
+        fcos
+        fld dword ptr [esp + 0ch]
+        fsin
+        push ebx
+        call matrix4_set_identity
+        add esp, 4
+
+        fld st(0)
+        fchs
+        fstp dword ptr [ebx + 20h]
+        fxch st(1)
+        fst dword ptr [ebx]
+        fst dword ptr [ebx + 28h]
+        fxch st(1)
+        fstp dword ptr [ebx + 8]
+        fstp st(0)
+        pop ebx
+        ret
+    }
+}
+#else
 void matrix4_set_rotation_y(float* out, float angle)
 {
     const float c = (float)cos(angle);
     const float s = (float)sin(angle);
     matrix4_set_identity(out);
-    out[0] = c;
     out[8] = -s;
+    out[0] = c;
     out[10] = c;
     out[2] = s;
 }
+#endif
 
-/* Matrix4SetRotationZ (FUN_00479df0): identity, then m[0]=c, m[1]=−s,
- * m[4]=s, m[5]=c. */
+/* Matrix4SetRotationZ (FUN_00479df0): identity, then the decompile's store
+ * order m[1]=−s, m[0]=c, m[5]=c, m[4]=s (the Z-axis block). */
 // FUNCTION: LEGORR 0x00479df0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void matrix4_set_rotation_z(float* out, float angle)
+{
+    __asm {
+        push ebx
+        mov ebx, dword ptr [esp + 8]
+        fld dword ptr [esp + 0ch]
+        fcos
+        fld dword ptr [esp + 0ch]
+        fsin
+        push ebx
+        call matrix4_set_identity
+        add esp, 4
+
+        fld st(0)
+        fchs
+        fstp dword ptr [ebx + 4]
+        fxch st(1)
+        fst dword ptr [ebx]
+        fst dword ptr [ebx + 14h]
+        fxch st(1)
+        fstp dword ptr [ebx + 10h]
+        fstp st(0)
+        pop ebx
+        ret
+    }
+}
+#else
 void matrix4_set_rotation_z(float* out, float angle)
 {
     const float c = (float)cos(angle);
     const float s = (float)sin(angle);
     matrix4_set_identity(out);
-    out[0] = c;
     out[1] = -s;
+    out[0] = c;
     out[5] = c;
     out[4] = s;
 }
+#endif
 
 /* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zero the matrix, raise
  * m[10]/m[15], then the three quotients — the corpus's m[1] multiplies
@@ -4704,17 +5167,60 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
     (void)engine_context_grid_pick(ctx, out, gx, gy);
 }
 
-static int object_lookup(int id)
+static int object_lookup(EngineContext* ctx, int id)
 {
+    if (ctx != NULL && id > 0 && id <= (int)ctx->camera_target_count &&
+        ctx->camera_targets[id - 1].type != 0u) return 1;
     return s_view_object_lookup_hook != NULL
         ? s_view_object_lookup_hook(id, s_view_follow_target_context) : 0;
 }
 // FUNCTION: LEGORR 0x0044a070
-static int target_blend(int id, int mode, float* blend,
+static int target_blend(EngineCameraTargetRecord* record, int target_id,
+                        float* blend,
                         float* facing)
 {
+    if (record != NULL && record->type >= 1u && record->type <= 3u &&
+        record->source[record->type - 1u] != NULL &&
+        record->indexed_scene_resolve != NULL &&
+        blend != NULL && facing != NULL) {
+        uint32_t component_present = 0u;
+        void* scene_object = record->indexed_scene_resolve(
+            record->source[record->type - 1u], (uint32_t)target_id,
+            &component_present);
+        if (scene_object != NULL &&
+            ddiscene_object_position_get(scene_object, NULL, blend) &&
+            ddiscene_object_facing_get(scene_object, NULL, facing)) {
+            record->scene_cache = scene_object;
+            record->cache_id = target_id;
+            record->component_present = component_present;
+            vec_normalize(facing);
+            if (component_present == 1u) {
+                facing[0] = -facing[0];
+                facing[1] = -facing[1];
+                facing[2] = -facing[2];
+            }
+            return 1;
+        }
+    }
+    if (record != NULL && record->type == 1u &&
+        record->source[0] != NULL &&
+        blend != NULL && facing != NULL) {
+        memcpy(blend, record->position, sizeof(record->position));
+        memcpy(facing, record->facing, sizeof(record->facing));
+        record->cache_id = target_id;
+        vec_normalize(facing);
+        if (record->component_present != 0u) {
+            facing[0] = -facing[0];
+            facing[1] = -facing[1];
+            facing[2] = -facing[2];
+        }
+        (void)target_id;
+        return 1;
+    }
     if (s_view_target_blend_hook != NULL)
-        return s_view_target_blend_hook(id, mode, blend, facing,
+        return s_view_target_blend_hook(target_id,
+                                        record != NULL ? (int)record->type : 0,
+                                        blend, facing,
                                         s_view_follow_target_context);
     if (blend != NULL) {
         blend[0] = blend[1] = blend[2] = 0.0f;
@@ -4798,7 +5304,7 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
             view_tail(v, scale);
             return;
         }
-        int target = object_lookup(v->follow_id);
+        int target = object_lookup(ctx, v->follow_id);
         if (target == 0) {
             view_tail(v, scale);
             return;
@@ -4829,8 +5335,11 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
         int target_dirty;
         cam_get_pos(&v->cam_world, pos);
         cam_get_facing(&v->cam_world, facing);
-        if (v->follow_id == 0 || dt == 0.0f ||
-            target_blend(v->follow_id, v->a5, target_pos,
+        if ((v->target_record == NULL &&
+             s_view_target_blend_hook == NULL) || dt == 0.0f ||
+            target_blend((EngineCameraTargetRecord*)v->target_record,
+                         v->target_record != NULL ? v->a5 : v->follow_id,
+                         target_pos,
                          target_facing) == 0) {
             view_tail(v, scale);
             return;
@@ -5974,8 +6483,9 @@ void ddiscene_render_surface_pool_release_all(void)
 
 static void* s_scene_registry_blocks[32];
 static unsigned int s_scene_registry_block_count;
-static void* s_scene_registry_free_head;
 static SceneRegistrySurfaceReleaseFn s_scene_registry_surface_release;
+
+typedef uint32_t (VIEW_COM_CALL *SceneRegistryInterfaceReleaseFn)(void*);
 
 static size_t scene_registry_record_stride(void)
 {
@@ -6000,6 +6510,29 @@ void scene_object_registry_surface_release_set(
     s_scene_registry_surface_release = release;
 }
 
+// FUNCTION: LEGORR 0x0047d470
+void image_surface_release(void* record)
+{
+    uint32_t interface_token = 0u;
+    if (record == NULL) return;
+    memcpy(&interface_token, record, sizeof(interface_token));
+    /* ImageSurfaceRelease calls vtable slot +8 (IUnknown::Release) on the
+     * record's first dword. The record ABI stores that interface as a 32-bit
+     * value, so this direct call is valid only in the 32-bit reference ABI. */
+    if (s_scene_registry_surface_release != NULL) {
+        s_scene_registry_surface_release(interface_token);
+    }
+    else if (sizeof(void*) == sizeof(uint32_t) && interface_token != 0u) {
+        void* interface_object = (void*)(uintptr_t)interface_token;
+        void** vtable = *(void***)interface_object;
+        if (vtable != NULL && vtable[2] != NULL) {
+            ((SceneRegistryInterfaceReleaseFn)vtable[2])(interface_object);
+        }
+    }
+    scene_registry_record_next_set(record, s_small_record_free);
+    s_small_record_free = record;
+}
+
 void scene_object_registry_pool_block_register(void* block)
 {
     if (block != NULL && s_scene_registry_block_count < 32u) {
@@ -6020,16 +6553,7 @@ void scene_object_registry_release_all(void)
         for (i = 0u; i < count; ++i) {
             void* record = block + (size_t)i * stride;
             if (scene_registry_record_next_get(record) == record) {
-                void* surface;
-                memcpy(&surface, record, sizeof(surface));
-                if (s_scene_registry_surface_release != NULL) {
-                    s_scene_registry_surface_release(surface);
-                } else {
-                    texture_release((TextureSurface*)surface);
-                }
-                scene_registry_record_next_set(record,
-                                                s_scene_registry_free_head);
-                s_scene_registry_free_head = record;
+                image_surface_release(record);
             }
         }
     }
@@ -6045,7 +6569,6 @@ void scene_object_registry_teardown(void)
         s_scene_registry_blocks[i] = NULL;
     }
     s_scene_registry_block_count = 0u;
-    s_scene_registry_free_head = NULL;
 }
 
 void scene_root_install(void* root) { s_scene_root = root; }
@@ -6297,6 +6820,18 @@ uint32_t ddiscene_action_record_field_1c_get(void* scene_interface)
     return record != NULL ? *(uint32_t*)((char*)record + 0x1c) : 0u;
 }
 
+/* Host-width view of the auxiliary pointer at +0x1c. XfTextureNameFormat
+ * tests the pointed record's +0x0c state word. */
+void* ddiscene_action_record_field_1c_pointer_get(void* scene_interface)
+{
+    void* record = ((DDiScenePropertyInterface*)scene_interface)
+        ->current_property_get();
+    void* value = NULL;
+    if (record != NULL)
+        memcpy(&value, (char*)record + 0x1c, sizeof(value));
+    return value;
+}
+
 /* DDiSceneActionRecordField0CGet (FUN_00476180). */
 // FUNCTION: LEGORR 0x00476180
 uint32_t ddiscene_action_record_field_0c_get(void* scene_interface)
@@ -6410,6 +6945,26 @@ int ddiscene_object_position_get(void* object, void* alternate_frame,
                                             &normalized_frame);
     if (scene == NULL) return 0;
     scene->position_get(normalized_frame, position);
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00475500
+int ddiscene_object_facing_get(void* object, void* alternate_frame,
+                               float facing[3])
+{
+    void* normalized_frame = NULL;
+    float secondary[3];
+    DDiSceneObjectPoseInterface* scene;
+    void** vtable;
+    typedef void (VIEW_COM_CALL *DdiSceneOrientationGetFn)(
+        void* object, void* frame, float first[3], float second[3]);
+    if (facing == NULL) return 0;
+    scene = ddiscene_pose_interface_resolve(object, alternate_frame,
+                                            &normalized_frame);
+    if (scene == NULL) return 0;
+    vtable = *(void***)scene;
+    ((DdiSceneOrientationGetFn)vtable[0x7c / 4u])(
+        scene, normalized_frame, facing, secondary);
     return 1;
 }
 
@@ -6802,34 +7357,67 @@ void surface_triangle_normal_calculate(float* out, const float* p2,
     const float cx = e2[1] * e1[2] - e2[2] * e1[1];
     const float cy = e2[2] * e1[0] - e2[0] * e1[2];
     const float cz = e2[0] * e1[1] - e2[1] * e1[0];
-    const float scale = 1.0f / (float)sqrt(cz * cz + cy * cy + cx * cx);
+    /* Full.c accumulates fVar3^2 + fVar4^2 + fVar1^2, which maps to
+     * cross.x^2 + cross.z^2 + cross.y^2. Preserve that order and avoid
+     * rounding the sqrt result to float before the reciprocal. */
+    const double length_squared = (double)cx * (double)cx +
+                                  (double)cz * (double)cz +
+                                  (double)cy * (double)cy;
+    const float scale = (float)(1.0 / sqrt(length_squared));
     out[0] = scale * cx;
     out[1] = scale * cy;
     out[2] = scale * cz;
 }
 #endif
 
-/* FUNCTION: LEGORR 0x00479630
- * Deterministic port-side area: the corpus applies a random angular
- * perturbation to the longest edge. This keeps the triangle geometry and
- * downward-facing gate while omitting that unknown random-angle schedule. */
+// FUNCTION: LEGORR 0x00479630
+/* The reference measures the three directed edges, selects the longest,
+ * reverses that edge, then evaluates the included angle to the next edge.
+ * This deliberately follows its sqrt/acos/sin calculation instead of
+ * replacing it with an algebraically equivalent cross-product shortcut. */
 float surface_triangle_area_calculate(const float* p1, const float* p2,
                                       const float* p3,
                                       int only_downward)
 {
-    float e1[3], e2[3], normal[3];
-    float cx, cy, cz;
+    float edges[3][3];
+    float lengths[3];
+    float normal[3];
+    float dot;
+    unsigned int longest;
+    unsigned int next;
+    unsigned int edge;
     if (p1 == NULL || p2 == NULL || p3 == NULL) return 0.0f;
-    e1[0] = p2[0] - p1[0]; e1[1] = p2[1] - p1[1]; e1[2] = p2[2] - p1[2];
-    e2[0] = p3[0] - p1[0]; e2[1] = p3[1] - p1[1]; e2[2] = p3[2] - p1[2];
-    cx = e1[1] * e2[2] - e1[2] * e2[1];
-    cy = e1[2] * e2[0] - e1[0] * e2[2];
-    cz = e1[0] * e2[1] - e1[1] * e2[0];
     if (only_downward) {
         surface_triangle_normal_calculate(normal, p1, p2, p3);
         if (normal[2] >= 0.0f) return 0.0f;
     }
-    return 0.5f * (float)sqrt(cx * cx + cy * cy + cz * cz);
+    edges[0][0] = p2[0] - p1[0];
+    edges[0][1] = p2[1] - p1[1];
+    edges[0][2] = p2[2] - p1[2];
+    edges[1][0] = p3[0] - p2[0];
+    edges[1][1] = p3[1] - p2[1];
+    edges[1][2] = p3[2] - p2[2];
+    edges[2][0] = p1[0] - p3[0];
+    edges[2][1] = p1[1] - p3[1];
+    edges[2][2] = p1[2] - p3[2];
+    for (edge = 0; edge < 3u; ++edge) {
+        const float x = edges[edge][0];
+        const float y = edges[edge][1];
+        const float z = edges[edge][2];
+        lengths[edge] = (float)sqrt(x * x + y * y + z * z);
+    }
+    longest = 0u;
+    if (lengths[1] > lengths[longest]) longest = 1u;
+    if (lengths[2] > lengths[longest]) longest = 2u;
+    next = (longest + 1u) % 3u;
+    dot = -(edges[longest][0] / lengths[longest]) *
+            (edges[next][0] / lengths[next])
+        -(edges[longest][1] / lengths[longest]) *
+            (edges[next][1] / lengths[next])
+        -(edges[longest][2] / lengths[longest]) *
+            (edges[next][2] / lengths[next]);
+    return (float)(lengths[longest] * 0.5 *
+        sin(acos((double)dot)) * lengths[next]);
 }
 
 /* SceneMeshColorAndAlphaSet (FUN_00475020) — see view.hpp. */
@@ -7426,7 +8014,7 @@ float scene_property_float_at14_get(void* property)
 uint32_t scene_property_primary_value_get(void* property)
 {
     void** vtable = *(void***)property;
-    typedef void* (*ScenePropertyValueRecordGetFn)(void*);
+    typedef void* (VIEW_COM_CALL *ScenePropertyValueRecordGetFn)(void*);
     void* record = ((ScenePropertyValueRecordGetFn)vtable[7])(property);
     if (record != NULL) {
         return *(uint32_t*)record;
@@ -7440,12 +8028,29 @@ uint32_t scene_property_primary_value_get(void* property)
 uint32_t scene_property_secondary_value_get(void* property)
 {
     void** vtable = *(void***)property;
-    typedef void* (*ScenePropertyValueRecordGetFn)(void*);
+    typedef void* (VIEW_COM_CALL *ScenePropertyValueRecordGetFn)(void*);
     void* record = ((ScenePropertyValueRecordGetFn)vtable[7])(property);
     if (record != NULL) {
         return *(uint32_t*)((char*)record + 4);
     }
     return 0;
+}
+
+/* Host-width view of the string carried in the second word of this property
+ * result. XfTextureNameFormat uses the value as a path before lowercasing it. */
+const char* scene_property_secondary_name_get(void* property)
+{
+    void** vtable;
+    typedef void* (VIEW_COM_CALL *ScenePropertyValueRecordGetFn)(void*);
+    void* record;
+    const char* name = NULL;
+    if (property == NULL) return NULL;
+    vtable = *(void***)property;
+    if (vtable == NULL || vtable[7] == NULL) return NULL;
+    record = ((ScenePropertyValueRecordGetFn)vtable[7])(property);
+    if (record != NULL)
+        memcpy(&name, (char*)record + 4, sizeof(name));
+    return name;
 }
 
 /* Row-span staging records from FUN_0046eb30. The corpus has a 0x320-byte
@@ -7823,7 +8428,7 @@ void grid_surface_hooks_set(GridSurfaceLookupFn lookup,
     s_grid_surface_user = user;
 }
 
-/* FUNCTION: LEGORR 0x0046e330 */
+// FUNCTION: LEGORR 0x0046e330
 void grid_surface_entry_reset(void* surface, int key)
 {
     if (surface == NULL || s_grid_surface_lookup == NULL) return;
@@ -7876,3 +8481,987 @@ WorldSpatialRecordModel* world_spatial_record_find_at_grid_coordinate(
     }
     return NULL;
 }
+
+namespace unported_ledger_stubs {
+
+// SharedObjectAnimationAndTimedEventUpdate
+typedef struct SharedObjectAnimationHooks {
+    float (*clock_get)(void* context);
+    void (*timed_event_update)(void* owner, void* track, float time,
+                              void* context);
+    void* context;
+} SharedObjectAnimationHooks;
+void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
+    void* owner, void* track);
+// FUNCTION: LEGORR 0x00487ba0
+void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
+    void* shared_object, float time, const void* hook_context)
+{
+    unsigned char* owner = (unsigned char*)shared_object;
+    const SharedObjectAnimationHooks* hooks =
+        (const SharedObjectAnimationHooks*)hook_context;
+    uint16_t duration;
+    uint16_t track_count;
+    uint32_t flags;
+    unsigned char* tracks;
+    float current_time;
+    uint16_t i;
+    if (owner == NULL) return;
+    memcpy(&current_time, owner + 0x10, sizeof(current_time));
+    memcpy(owner + 0x0c, &current_time, sizeof(current_time));
+    memcpy(&duration, owner + 2, sizeof(duration));
+    memcpy(&flags, owner + 0x34, sizeof(flags));
+    if ((flags & 1u) != 0u && hooks != NULL && hooks->clock_get != NULL)
+        time = hooks->clock_get(hooks->context);
+    else if (time > (float)duration)
+        time = (float)duration;
+    memcpy(owner + 0x10, &time, sizeof(time));
+    current_time = time;
+    memcpy(&track_count, owner + 0x24, sizeof(track_count));
+    memcpy(&tracks, owner + 0x20, sizeof(tracks));
+    if (tracks == NULL) return;
+    for (i = 0; i < track_count; ++i) {
+        unsigned char* track = tracks + (size_t)i * 0x34u;
+        uint16_t vector_count;
+        uint16_t scalar_count;
+        uint16_t segment = 0;
+        uint16_t scalar_segment = 0;
+        float fraction;
+        float scalar_fraction;
+        memcpy(&vector_count, track + 0x24, sizeof(vector_count));
+        if (vector_count > 1u) {
+            fraction = animation_track_find_keyframe_and_fraction(
+                track, current_time, &segment);
+            lego::animation_track_keys_interpolate_apply(
+                owner, track, segment, fraction);
+        }
+        memcpy(&scalar_count, track + 0x26, sizeof(scalar_count));
+        if (scalar_count > 1u) {
+            scalar_fraction = lego::keyframe_time_segment_fraction(
+                track, current_time, &scalar_segment);
+            lego::shared_object_float_track_interpolate_apply(
+                owner, track, scalar_segment, scalar_fraction);
+        }
+        ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(owner, track);
+        shared_object_timed_sound_event_update(owner, track);
+        if (hooks != NULL && hooks->timed_event_update != NULL)
+            hooks->timed_event_update(owner, track, current_time,
+                                      hooks->context);
+    }
+}
+
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+// DDiSceneObjectDestroy
+void ledger_stub_00472a50_DDiSceneObjectDestroy(void* scene_object,
+                                                 int mode);
+
+// FUNCTION: LEGORR 0x00472a40
+void ledger_stub_00472a40_DDiSceneObjectDestroy(void* scene_object)
+{
+    ddiscene_object_destroy_with_mode(scene_object, 0);
+}
+
+// DDiSceneObjectDestroy
+void ledger_stub_00472a50_DDiSceneObjectDestroy(void* scene_object, int mode)
+{
+    ddiscene_object_destroy_with_mode(scene_object, mode);
+}
+
+// SceneActionNamePresent
+// FUNCTION: LEGORR 0x00473340
+uint32_t ledger_stub_00473340_SceneActionNamePresent(
+    void* scene_object, void* action_name)
+{
+    return scene_action_name_present(scene_object, action_name);
+}
+
+// DDiSceneLightCreate
+// FUNCTION: LEGORR 0x004734f0
+void* ledger_stub_004734f0_DDiSceneLightCreate(
+    void* owner, uint32_t value_a, uint32_t value_b,
+    uint32_t value_c, uint32_t value_d)
+{
+    return ddiscene_light_create(owner, value_a, value_b, value_c, value_d);
+}
+
+// DDiSceneObjectKindModeSetup
+// FUNCTION: LEGORR 0x00473560
+void* ledger_stub_00473560_DDiSceneObjectKindModeSetup(void* owner, int mode)
+{
+    return ddiscene_object_kind_mode_setup(owner, mode);
+}
+
+
+// DDiSceneAdvanceByTime
+void ledger_stub_00475120_DDiSceneAdvanceByTime(
+    void* scene_object, float delta)
+{
+    ddiscene_advance_by_time(scene_object, delta);
+}
+
+// DDiSceneFrameUpdateAndCallbacks
+float ledger_stub_00475140_DDiSceneFrameUpdateAndCallbacks(
+    void* scene_object, float time)
+{
+    return ddiscene_frame_update_and_callbacks(scene_object, time);
+}
+
+// DDiSceneApplyActFrameTiming
+void ledger_stub_00475300_DDiSceneApplyActFrameTiming(void* scene_object)
+{
+    ddiscene_apply_act_frame_timing(scene_object);
+}
+
+// DDiSceneObjectLengthGet
+float ledger_stub_00475390_DDiSceneObjectLengthGet(void* scene_object)
+{
+    return ddiscene_object_length_get(scene_object);
+}
+
+// DDiSceneObjectFramePositionGet
+uint32_t ledger_stub_004753f0_DDiSceneObjectFramePositionGet(
+    void* scene_object)
+{
+    return ddiscene_object_frame_position_get(scene_object);
+}
+
+
+
+namespace unported_ledger_stubs {
+// FUNCTION: LEGORR 0x004756d0
+float ledger_stub_004756d0_VideoObjectAspectRatioGet(void* video_object)
+{
+    return video_object_aspect_ratio_get(video_object);
+}
+} // namespace unported_ledger_stubs
+
+// DDiSceneResourceNameResolve
+// FUNCTION: LEGORR 0x00476770
+char* ledger_stub_00476770_DDiSceneResourceNameResolve(const char* name)
+{
+    return ddiscene_resource_name_resolve(name);
+}
+
+// DDiSceneResourceExists
+static DdiSceneResourceExistsHook s_ddiscene_resource_exists_hook;
+static DdiSceneResourceOpenHook s_ddiscene_resource_open_hook;
+static void* s_ddiscene_resource_hook_context;
+void ddiscene_resource_hooks_set(DdiSceneResourceExistsHook exists_hook,
+                                 DdiSceneResourceOpenHook open_hook,
+                                 void* context)
+{
+    s_ddiscene_resource_exists_hook = exists_hook;
+    s_ddiscene_resource_open_hook = open_hook;
+    s_ddiscene_resource_hook_context = context;
+}
+// FUNCTION: LEGORR 0x004767e0
+int ledger_stub_004767e0_DDiSceneResourceExists(const char* name,
+                                                 void* scene)
+{
+    Resource* file;
+    int32_t file_size;
+    int exists;
+    if (name == NULL || scene == NULL) return 0;
+    /* FUN_004767e0 reads the original path, then asks the supplied scene
+     * interface to parse that in-memory file. Resource::data stays alive
+     * through the query and is released on both success and parse failure. */
+    file = resource_open(name, RESOURCE_AUTO);
+    if (file == NULL) return 0;
+    file_size = resource_read(file);
+    if (file_size < 0) {
+        resource_free(file);
+        return 0;
+    }
+    exists = 0;
+    if (s_ddiscene_resource_exists_hook != NULL) {
+        exists = s_ddiscene_resource_exists_hook(
+            file->data, (uint32_t)file_size, name, scene,
+            s_ddiscene_resource_hook_context);
+    }
+    resource_free(file);
+    return exists;
+}
+
+// DDiSceneResourceOpen
+// FUNCTION: LEGORR 0x00476850
+void* ddiscene_resource_open(const void* file_data, uint32_t file_size,
+                             const char* path, void* scene_interface,
+                             uint32_t optional_flag)
+{
+    /* FUN_00472cd0 has already resolved/read this path with ReadWholeFile and
+     * frees its buffer as soon as this call returns. Retail then creates a
+     * D3DRM mesh builder, loads this memory block, obtains a mesh, releases
+     * the builder, and attaches the mesh through the scene interface. Keep
+     * the exact raw arguments intact for the renderer adapter; the separate
+     * name-resolve operation is not part of this open path. */
+    if (s_ddiscene_resource_open_hook == NULL) return NULL;
+    return s_ddiscene_resource_open_hook(
+        file_data, file_size, path, scene_interface, optional_flag,
+        s_ddiscene_resource_hook_context);
+}
+
+
+
+
+// RenderObjectHierarchyFloat3Set
+// FUNCTION: LEGORR 0x00474e90
+uint32_t ledger_stub_00474e90_RenderObjectHierarchyFloat3Set(
+    void* scene_object, float x, float y, float z)
+{
+    float xyz[3];
+    xyz[0] = x;
+    xyz[1] = y;
+    xyz[2] = z;
+    return render_object_hierarchy_float3_set(scene_object, xyz);
+}
+
+// SceneObjectBoundsUnion
+uint32_t ledger_stub_00474f10_SceneObjectBoundsUnion(
+    void* scene_object, float bounds_min_max[6])
+{
+    return scene_object_bounds_union(scene_object, bounds_min_max);
+}
+
+// RenderObjectSetPackedRgbaFromFloatChannels
+void ledger_stub_004750b0_RenderObjectSetPackedRgbaFromFloatChannels(
+    void* scene_object, float red, float green, float blue, float alpha)
+{
+    render_object_set_packed_rgba_from_float_channels(
+        scene_object, red, green, blue, alpha);
+}
+
+// DDiSceneObjectAttachOrUnlink
+void ledger_stub_00475710_DDiSceneObjectAttachOrUnlink(
+    void* pair_record, void* source_pair_record)
+{
+    ddiscene_scene_object_attach_or_unlink(pair_record, source_pair_record);
+}
+
+
+// DDiSceneContextGet
+// FUNCTION: LEGORR 0x004757a0
+void* ledger_stub_004757a0_DDiSceneContextGet(void* scene_object)
+{
+    return ddiscene_context_get(scene_object);
+}
+
+// TypedChildResourceScalarGet
+float ledger_stub_004757f0_TypedChildResourceScalarGet(void* scene_object)
+{
+    return typed_child_resource_scalar_get(scene_object);
+}
+
+// SceneObjectFirstNonKind6ChildGet
+void* ledger_stub_00475830_SceneObjectFirstNonKind6ChildGet(
+    void* child_interface)
+{
+    return scene_object_first_non_kind6_child_get(child_interface);
+}
+
+// SceneObjectOwnerLinkEnsure
+void* ledger_stub_00475880_SceneObjectOwnerLinkEnsure(void* owner_interface)
+{
+    return scene_object_owner_link_ensure(owner_interface);
+}
+
+// DDiSceneObjectArrayGrow
+void ledger_stub_004759f0_DDiSceneObjectArrayGrow()
+{
+    lego::ddiscene_object_array_grow();
+}
+
+// SceneActionRecordActFrameScan
+unsigned int ledger_stub_00475a70_SceneActionRecordActFrameScan(
+    void* scene_object, void** records, int* frame_indices, char** names)
+{
+    return scene_action_record_act_frame_scan(scene_object, records,
+                                              frame_indices, names);
+}
+
+// DDiSceneAnimationCallbacksSet
+// FUNCTION: LEGORR 0x00475c00
+void ledger_stub_00475c00_DDiSceneAnimationCallbacksSet(
+    void* scene_object, void* callback_a, void* callback_b,
+    void* callback_c, void* callback_d)
+{
+    void** callbacks = NULL;
+    void* values[4];
+    unsigned int i;
+    if (scene_object == NULL) return;
+    memcpy(&callbacks, (unsigned char*)scene_object + 0x0c,
+           sizeof(callbacks));
+    if (callbacks == NULL) {
+        callbacks = (void**)engine_heap_alloc((long)(4u * sizeof(void*)));
+        if (callbacks == NULL) return;
+        memcpy((unsigned char*)scene_object + 0x0c, &callbacks,
+               sizeof(callbacks));
+        callbacks[0] = callback_a;
+        callbacks[1] = callback_b;
+        callbacks[2] = callback_c;
+        callbacks[3] = callback_d;
+        return;
+    }
+    values[0] = callback_a;
+    values[1] = callback_b;
+    values[2] = callback_c;
+    values[3] = callback_d;
+    for (i = 0; i < 4u; ++i) {
+        if (values[i] != NULL) callbacks[i] = values[i];
+    }
+}
+
+// DDiScenePayloadRelease
+void ledger_stub_00475c80_DDiScenePayloadRelease(void* scene_object)
+{
+    ddiscene_payload_release(scene_object);
+}
+
+// CallbackRecordSetFlag10AndRefresh
+void ledger_stub_00475e10_CallbackRecordSetFlag10AndRefresh(void* property)
+{
+    callback_record_set_flag10_and_refresh(property);
+}
+
+// DDiSceneFrameRecordFind
+// FUNCTION: LEGORR 0x00475e40
+void* ledger_stub_00475e40_DDiSceneFrameRecordFind(
+    void* action_interface, const char* action_name, int selector)
+{
+    return ddiscene_frame_record_find(action_interface, action_name, selector);
+}
+
+// DDiSceneAnimationHookCreate
+void ledger_stub_00475f70_DDiSceneAnimationHookCreate(
+    void* scene_object, int callback, const char* name,
+    const uint32_t* value_0c, int value_08, const uint32_t* value_10,
+    const uint32_t* value_14, int value_18, int value_24,
+    const uint32_t* value_20)
+{
+    ddiscene_animation_hook_create(scene_object, callback, name, value_0c,
+                                   value_08, value_10, value_14, value_18,
+                                   value_24, value_20);
+}
+
+// AttachedObjectDataReleaseAndClear
+void ledger_stub_004760e0_AttachedObjectDataReleaseAndClear(void* property)
+{
+    attached_object_data_release_and_clear(property);
+}
+
+
+
+// ScenePropertyFloatAt14Get
+// FUNCTION: LEGORR 0x004761c0
+float ledger_stub_004761c0_ScenePropertyFloatAt14Get(void* property)
+{
+    return scene_property_float_at14_get(property);
+}
+
+// RenderInterfacePairUpdate
+// FUNCTION: LEGORR 0x00476220
+void ledger_stub_00476220_RenderInterfacePairUpdate(
+    void* first, void* second)
+{
+    render_interface_pair_update(first, second);
+}
+
+// SceneObjectSetFormattedString
+// FUNCTION: LEGORR 0x00476270
+void ledger_stub_00476270_SceneObjectSetFormattedString(
+    void* scene_object, const char* format, ...)
+{
+    va_list arguments;
+    char local[1024];
+    if (scene_object == NULL || format == NULL) return;
+    va_start(arguments, format);
+#if defined(_MSC_VER)
+    _vsnprintf(local, sizeof(local) - 1, format, arguments);
+#else
+    vsnprintf(local, sizeof(local) - 1, format, arguments);
+#endif
+    va_end(arguments);
+    local[sizeof(local) - 1] = '\0';
+    scene_object_set_formatted_string(scene_object, "%s", local);
+}
+
+
+
+// AnimationTrackApplyWrappedFrameOffset
+void ledger_stub_004830c0_AnimatedTextureFrameSurfaceSet(
+    void* texture, int frame_index, const void* frame_state);
+// FUNCTION: LEGORR 0x00482040
+int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
+    void* animation_owner, int frame_offset)
+{
+    unsigned char* owner = (unsigned char*)animation_owner;
+    unsigned char* records;
+    uint32_t count;
+    uint32_t flags;
+    uint32_t slot;
+    if (owner == NULL) return 0;
+    memcpy(&count, owner, sizeof(count));
+    memcpy(&flags, owner + 0x2c, sizeof(flags));
+    if ((flags & 4u) == 0u) return 0;
+    memcpy(&records, owner + 8, sizeof(records));
+    if (records == NULL) return 1;
+    for (slot = 0; slot < count; ++slot) {
+        unsigned char* record = records + (size_t)slot * 0x70u;
+        unsigned char* track;
+        uint32_t track_flags;
+        int frame_count;
+        int frame_base;
+        int frame_index;
+        void* frames;
+        void* frame;
+        memcpy(&track, record + 0x68, sizeof(track));
+        if (track == NULL) continue;
+        memcpy(&track_flags, track + 0x34, sizeof(track_flags));
+        if ((track_flags & 0x80u) == 0u) continue;
+        memcpy(&frame_count, track + 8, sizeof(frame_count));
+        memcpy(&frame_base, track + 0x38, sizeof(frame_base));
+        memcpy(&frames, track, sizeof(frames));
+        if (frame_count <= 0 || frames == NULL) continue;
+        frame_index = (frame_base + frame_offset) % frame_count;
+        /* The reference clamps a negative remainder to frame zero. */
+        if (frame_index < 0) frame_index = 0;
+        memcpy(&frame, (unsigned char*)frames +
+               (size_t)frame_index * sizeof(frame), sizeof(frame));
+        ledger_stub_004830c0_AnimatedTextureFrameSurfaceSet(
+            animation_owner, (int)slot, frame);
+    }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x004869f0
+void* ledger_stub_004869f0_LoadLWSCScene(
+    const char* path, void* context,
+    void* (*scene_load)(const char* path, void* context))
+{
+    if (path == NULL || path[0] == '\0' || scene_load == NULL) return NULL;
+    return scene_load(path, context);
+}
+
+void ledger_stub_004876c0_SharedObjectDirectoryScan(
+    const char* directory, SharedObjectEntryResolveFn resolve,
+    SharedObjectSoundEnabledFn sound_enabled,
+    SharedObjectSoundSubmitFn sound_submit)
+{
+    shared_object_directory_scan_configure(directory, resolve, sound_enabled,
+                                           sound_submit);
+}
+
+void ledger_stub_004877e0_SceneEntrySlotTableExpand(void* scene)
+{
+    shared_object_scene_entry_slot_table_expand(scene);
+}
+
+void* ledger_stub_00487a00_SharedObjectClone(void* source,
+                                             void* caller_context)
+{
+    return shared_object_clone(source, caller_context);
+}
+
+// AnimationTrackFindKeyframeAndFraction
+float ledger_stub_00487cb0_AnimationTrackFindKeyframeAndFraction(
+    const void* track, float time, uint16_t* segment_out)
+{
+    return ::animation_track_find_keyframe_and_fraction(track, time,
+                                                         segment_out);
+}
+
+// ComInterfaceQueryAndContextDispatch
+#if defined(_MSC_VER)
+#define LEDGER_SCENE_COM_STDCALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define LEDGER_SCENE_COM_STDCALL __attribute__((stdcall))
+#else
+#define LEDGER_SCENE_COM_STDCALL
+#endif
+typedef struct LedgerSceneGuid {
+    uint32_t data1;
+    uint16_t data2;
+    uint16_t data3;
+    uint8_t data4[8];
+} LedgerSceneGuid;
+typedef int32_t (LEDGER_SCENE_COM_STDCALL *SceneInterfacePairGetMethod)(
+    void* object, void** result, void** previous_result);
+typedef int32_t (LEDGER_SCENE_COM_STDCALL *SceneQueryInterfaceMethod)(
+    void* object, const LedgerSceneGuid* interface_id, void** result);
+typedef uint32_t (LEDGER_SCENE_COM_STDCALL *SceneInterfaceReleaseMethod)(
+    void* object);
+typedef void* (LEDGER_SCENE_COM_STDCALL *SceneAnimationResourceGetMethod)(
+    void* object);
+int ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
+    void* animation_owner, int frame_offset);
+// FUNCTION: LEGORR 0x00487d50
+void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
+    void* owner, void* track)
+{
+    unsigned char* owner_bytes = (unsigned char*)owner;
+    unsigned char* track_bytes = (unsigned char*)track;
+    void** interfaces;
+    void* object;
+    void* pair = NULL;
+    void* user_visual = NULL;
+    void* user_visual_interface = NULL;
+    void* animation_resource;
+    void** vtable;
+    uint16_t interface_index;
+    int frame_offset;
+    LedgerSceneGuid user_visual_id;
+    SceneInterfacePairGetMethod interface_pair_get;
+    SceneQueryInterfaceMethod query_interface;
+    SceneInterfaceReleaseMethod release;
+    SceneAnimationResourceGetMethod animation_resource_get;
+    if (owner_bytes == NULL || track_bytes == NULL ||
+        (track_bytes[0x28] & 1u) != 0u) return;
+    memcpy(&interface_index, track_bytes + 6, sizeof(interface_index));
+    memcpy(&interfaces, owner_bytes + 0x14, sizeof(interfaces));
+    if (interfaces == NULL) return;
+    object = interfaces[interface_index];
+    if (object == NULL) return;
+    vtable = *(void***)object;
+    if (vtable == NULL || vtable[0x80 / 4] == NULL) return;
+    interface_pair_get = (SceneInterfacePairGetMethod)vtable[0x80 / 4];
+    (void)interface_pair_get(object, &pair, NULL);
+    (void)interface_pair_get(object, &user_visual, &pair);
+    if (user_visual == NULL) return;
+    user_visual_id.data1 = 0x59163de0u;
+    user_visual_id.data2 = 0x6d43u;
+    user_visual_id.data3 = 0x11cfu;
+    user_visual_id.data4[0] = 0xacu;
+    user_visual_id.data4[1] = 0x4au;
+    user_visual_id.data4[2] = 0x00u;
+    user_visual_id.data4[3] = 0x00u;
+    user_visual_id.data4[4] = 0xc0u;
+    user_visual_id.data4[5] = 0x38u;
+    user_visual_id.data4[6] = 0x25u;
+    user_visual_id.data4[7] = 0xa1u;
+    vtable = *(void***)user_visual;
+    if (vtable == NULL || vtable[0] == NULL) return;
+    query_interface = (SceneQueryInterfaceMethod)vtable[0];
+    (void)query_interface(user_visual, &user_visual_id,
+                          &user_visual_interface);
+    vtable = *(void***)user_visual;
+    if (vtable[2] != NULL) {
+        release = (SceneInterfaceReleaseMethod)vtable[2];
+        (void)release(user_visual);
+    }
+    if (user_visual_interface == NULL) return;
+    vtable = *(void***)user_visual_interface;
+    if (vtable == NULL || vtable[0x1c / 4] == NULL) return;
+    animation_resource_get =
+        (SceneAnimationResourceGetMethod)vtable[0x1c / 4];
+    animation_resource = animation_resource_get(user_visual_interface);
+    if (vtable[2] != NULL) {
+        release = (SceneInterfaceReleaseMethod)vtable[2];
+        (void)release(user_visual_interface);
+    }
+    memcpy(&frame_offset, owner_bytes + 0x10, sizeof(frame_offset));
+    (void)ledger_stub_00482040_AnimationTrackApplyWrappedFrameOffset(
+        animation_resource, frame_offset);
+}
+#undef LEDGER_SCENE_COM_STDCALL
+
+// SharedObjectTimedSoundEventUpdate
+void ledger_stub_00487de0_SharedObjectTimedSoundEventUpdate(void* owner,
+                                                            void* track)
+{
+    shared_object_timed_sound_event_update(owner, track);
+}
+
+// SharedObjectFloatTrackInterpolateApply
+// FUNCTION: LEGORR 0x00488070
+void ledger_stub_00488070_SharedObjectFloatTrackInterpolateApply(
+    void* owner, const void* track, uint32_t segment, float fraction)
+{
+    lego::shared_object_float_track_interpolate_apply(owner, track, segment,
+                                                       fraction);
+}
+
+// AnimationTrackKeysInterpolate
+void ledger_stub_00488170_AnimationTrackKeysInterpolate(
+    void* owner, const void* track, uint32_t segment, float fraction)
+{
+    ::animation_track_keys_interpolate(owner, track, segment, fraction);
+}
+
+// SceneNodeTransformMatrixApply
+void ledger_stub_004882e0_SceneNodeTransformMatrixApply(void* owner,
+    const void* track, const float position[3], const float rotation[3],
+    const float scale[3])
+{
+    ::scene_node_transform_matrix_apply(owner, track, position, rotation,
+                                        scale);
+}
+
+
+/* CursorRayToCameraRoute (FUN_00426420) performs camera ray and pan updates;
+ * this call only resets the view record's +0x9c cursor-ray accumulator
+ * (FUN_00435f16), so it is deliberately left unmapped here. */
+void ledger_stub_00426420_CursorRayToCameraRoute(ViewContext* view)
+{
+    cursor_screen_ray_context_reset(view);
+}
+
+
+// DDiSceneDrawBegin
+// FUNCTION: LEGORR 0x00477010
+void ledger_stub_00477010_DDiSceneDrawBegin(void* render_object, int begin)
+{
+    ddiscene_draw_begin(render_object, begin);
+}
+
+
+
+
+
+// SceneHierarchyInterfaceRegisterRecursive
+// FUNCTION: LEGORR 0x004887c0
+void ledger_stub_004887c0_SceneHierarchyInterfaceRegisterRecursive(
+    unsigned short* next_index, void* root, void* node)
+{
+    scene_hierarchy_interface_register_recursive(next_index, root, node);
+}
+
+// ResourceTreeCallbackReferenceChainRelease
+typedef void (*ResourceReferenceReleaseHook)(void* resource, void* context);
+typedef struct ResourceReferenceChain {
+    void* resource;
+    struct ResourceReferenceChain* next;
+} ResourceReferenceChain;
+// FUNCTION: LEGORR 0x004889d0
+uint32_t ledger_stub_004889d0_ResourceTreeCallbackReferenceChainRelease(
+    ResourceReferenceChain* chain, ResourceReferenceReleaseHook release,
+    void* context)
+{
+    uint32_t count = 0u;
+    while (chain != NULL) {
+        ResourceReferenceChain* next = chain->next;
+        if (chain->resource != NULL && release != NULL)
+            release(chain->resource, context);
+        engine_heap_free(chain);
+        chain = next;
+        ++count;
+    }
+    return count;
+}
+
+// LoadRecordInterfacesReleaseFree
+typedef struct LoadRecordInterfaceList {
+    void** interfaces;
+    uint32_t count;
+} LoadRecordInterfaceList;
+// FUNCTION: LEGORR 0x00488a70
+void ledger_stub_00488a70_LoadRecordInterfacesReleaseFree(
+    LoadRecordInterfaceList* list, void (*release)(void* interface_ptr))
+{
+    uint32_t i;
+    if (list == NULL) return;
+    for (i = 0u; i < list->count; ++i)
+        if (list->interfaces != NULL && list->interfaces[i] != NULL &&
+            release != NULL) release(list->interfaces[i]);
+    if (list->interfaces != NULL) engine_heap_free(list->interfaces);
+    list->interfaces = NULL;
+    list->count = 0u;
+}
+
+// ComInterfaceQueryOrFallback
+void* ledger_stub_004894c0_ComInterfaceQueryOrFallback(
+    float color0, float color1, float color2,
+    float color3, float color4, float color5, float power)
+{
+    return scene_material_create(color0, color1, color2, color3, color4,
+                                 color5, power);
+}
+
+// DDiSceneTimedHookDispatch
+void ledger_stub_004897e0_DDiSceneTimedHookDispatch(
+    void* hook_record, float time, void* output)
+{
+    ddiscene_timed_hook_dispatch(hook_record, time, output);
+}
+
+} // namespace unported_ledger_stubs
+
+static ObjectHierarchyResourceHooks s_object_hierarchy_resource_hooks;
+
+void object_hierarchy_resource_hooks_set(
+    const ObjectHierarchyResourceHooks* hooks)
+{
+    if (hooks == NULL)
+        memset(&s_object_hierarchy_resource_hooks, 0,
+               sizeof(s_object_hierarchy_resource_hooks));
+    else
+        s_object_hierarchy_resource_hooks = *hooks;
+}
+
+typedef void (VIEW_COM_CALL *ObjectHierarchyArrayGet)(void*, uint32_t*,
+                                                       void**);
+typedef void (VIEW_COM_CALL *ObjectHierarchyChildApply)(void*, void*);
+typedef uint32_t (VIEW_COM_CALL *ObjectHierarchyCountGet)(void*);
+typedef void (VIEW_COM_CALL *ObjectHierarchyChildGet)(void*, uint32_t,
+                                                       void**);
+typedef int32_t (VIEW_COM_CALL *ObjectHierarchyQueryInterface)(
+    void*, const void*, void**);
+typedef void* (VIEW_COM_CALL *ObjectHierarchyInterfaceGet)(void*);
+typedef void (VIEW_COM_CALL *ObjectHierarchyRelatedGet)(void*, void**);
+typedef uint32_t (VIEW_COM_CALL *ObjectHierarchyRelease)(void*);
+
+typedef struct ObjectHierarchyGuid {
+    uint32_t data1;
+    uint16_t data2;
+    uint16_t data3;
+    uint8_t data4[8];
+} ObjectHierarchyGuid;
+
+/* DAT_0049fb48 is the observed IID {59163DE0-6D43-11CF-AC4A-0000C03825A1}.
+ * Its interface name remains unknown, but its bytes and QueryInterface use
+ * are established by docs/dat/annotations.csv and the retail call sites. */
+static const ObjectHierarchyGuid s_object_hierarchy_resource_iid = {
+    0x59163de0u, 0x6d43u, 0x11cfu,
+    { 0xacu, 0x4au, 0x00u, 0x00u, 0xc0u, 0x38u, 0x25u, 0xa1u }
+};
+
+static void** object_hierarchy_vtable_get(void* object)
+{
+    void** vtable = NULL;
+    if (object != NULL) memcpy(&vtable, object, sizeof(vtable));
+    return vtable;
+}
+
+static void object_hierarchy_interface_array_get(void* object,
+                                                  uint32_t* count,
+                                                  void** items)
+{
+    void** vtable = object_hierarchy_vtable_get(object);
+    if (count == NULL) return;
+    if (vtable == NULL || vtable[0x80 / 4] == NULL) {
+        *count = 0u;
+        return;
+    }
+    ((ObjectHierarchyArrayGet)vtable[0x80 / 4])(object, count, items);
+}
+
+// FUNCTION: LEGORR 0x00489bc0
+void com_child_items_visit(void* parent)
+{
+    void** vtable;
+    void** items;
+    uint32_t count = 0u;
+    uint32_t actual_count;
+    uint32_t index;
+    size_t bytes;
+    object_hierarchy_interface_array_get(parent, &count, NULL);
+    if (count == 0u || count > 0x7fffffffu / sizeof(void*) ||
+        (size_t)count > (size_t)-1 / sizeof(void*)) return;
+    bytes = (size_t)count * sizeof(void*);
+    items = (void**)engine_heap_alloc((long)bytes);
+    if (items == NULL) return;
+    memset(items, 0, bytes);
+    actual_count = count;
+    object_hierarchy_interface_array_get(parent, &actual_count,
+                                         (void**)items);
+    if (actual_count > count) actual_count = count;
+    vtable = object_hierarchy_vtable_get(parent);
+    if (vtable != NULL && vtable[0x48 / 4] != NULL) {
+        ObjectHierarchyChildApply apply =
+            (ObjectHierarchyChildApply)vtable[0x48 / 4];
+        for (index = 0u; index < actual_count; ++index)
+            apply(parent, items[index]);
+    }
+    engine_heap_free(items);
+}
+
+// FUNCTION: LEGORR 0x00489b30
+void object_interface_array_resource_create(void* object, uint32_t mode)
+{
+    void** items;
+    uint32_t count = 0u;
+    uint32_t actual_count;
+    uint32_t index;
+    size_t bytes;
+    object_hierarchy_interface_array_get(object, &count, NULL);
+    if (count == 0u || count > 0x7fffffffu / sizeof(void*) ||
+        (size_t)count > (size_t)-1 / sizeof(void*)) return;
+    bytes = (size_t)count * sizeof(void*);
+    items = (void**)engine_heap_alloc((long)bytes);
+    if (items == NULL) return;
+    memset(items, 0, bytes);
+    actual_count = count;
+    object_hierarchy_interface_array_get(object, &actual_count,
+                                         (void**)items);
+    if (actual_count > count) actual_count = count;
+    for (index = 0u; index < actual_count; ++index) {
+        void* queried = NULL;
+        void** item_vtable = object_hierarchy_vtable_get(items[index]);
+        if (item_vtable != NULL && item_vtable[0] != NULL) {
+            int32_t result = ((ObjectHierarchyQueryInterface)item_vtable[0])(
+                items[index], &s_object_hierarchy_resource_iid, &queried);
+            if (result >= 0 && queried != NULL) {
+                void** queried_vtable = object_hierarchy_vtable_get(queried);
+                if (queried_vtable != NULL &&
+                    queried_vtable[0x1c / 4] != NULL &&
+                    s_object_hierarchy_resource_hooks.template_resolve != NULL)
+                {
+                    void* resource = ((ObjectHierarchyInterfaceGet)
+                        queried_vtable[0x1c / 4])(queried);
+                    lego::CachedRenderResourceTemplateRecord* source =
+                        s_object_hierarchy_resource_hooks.template_resolve(
+                            resource, mode,
+                            s_object_hierarchy_resource_hooks.context);
+                    if (resource != NULL && source != NULL)
+                        (void)lego::cached_render_resource_instance_create(
+                            source);
+                }
+            }
+        }
+        /* The reference retains the queried interface in the resource path;
+         * there is no Release call at 0x489b30. */
+    }
+    engine_heap_free(items);
+}
+
+static void object_hierarchy_release(void* object)
+{
+    void** vtable = object_hierarchy_vtable_get(object);
+    if (vtable != NULL && vtable[2] != NULL)
+        ((ObjectHierarchyRelease)vtable[2])(object);
+}
+
+// FUNCTION: LEGORR 0x004899f0
+void object_hierarchy_recursive_clone(void* source, void* clone,
+                                      uint32_t mode)
+{
+    void** source_vtable;
+    void** clone_vtable;
+    uint32_t state_bytes = 0u;
+    uint32_t state_value = 0u;
+    void* state_buffer = NULL;
+    void* related_interface = NULL;
+    void* related_result = NULL;
+    void* child_list = NULL;
+    uint32_t child_count;
+    uint32_t index;
+    if (source == NULL || clone == NULL) return;
+    if (mode != 0u)
+        object_interface_array_resource_create(source, mode);
+    else
+        com_child_items_visit(source);
+
+    source_vtable = object_hierarchy_vtable_get(source);
+    clone_vtable = object_hierarchy_vtable_get(clone);
+    if (source_vtable == NULL || clone_vtable == NULL) return;
+
+    /* Retail first asks slot +0x24 for a byte count, allocates that exact
+     * block, asks the same slot to fill it, and gives it to clone slot +0x20. */
+    if (source_vtable[0x24 / 4] != NULL &&
+        clone_vtable[0x20 / 4] != NULL) {
+        typedef void (VIEW_COM_CALL *StateRead)(void*, void*, void*);
+        typedef void (VIEW_COM_CALL *StateApply)(void*, void*);
+        ((StateRead)source_vtable[0x24 / 4])(source, &state_bytes, NULL);
+        if (state_bytes != 0u && state_bytes <= 0x7fffffffu) {
+            state_buffer = engine_heap_alloc((long)state_bytes);
+            if (state_buffer != NULL) {
+                ((StateRead)source_vtable[0x24 / 4])(source, &state_value,
+                                                     state_buffer);
+                ((StateApply)clone_vtable[0x20 / 4])(clone, state_buffer);
+                engine_heap_free(state_buffer);
+            }
+        }
+    }
+
+    /* Preserve the renderer's interface refresh/apply order and release the
+     * temporary interface returned by +0x5c. */
+    if (source_vtable[0x5c / 4] != NULL &&
+        source_vtable[0x74 / 4] != NULL) {
+        typedef void (VIEW_COM_CALL *RelatedApply)(void*, void*, void**);
+        ((ObjectHierarchyRelatedGet)source_vtable[0x5c / 4])(
+            source, &related_interface);
+        ((RelatedApply)source_vtable[0x74 / 4])(source, related_interface,
+                                                &related_result);
+        object_hierarchy_release(related_interface);
+    }
+    if (clone_vtable[0x38 / 4] != NULL) {
+        typedef void (VIEW_COM_CALL *CloneUpdate)(void*, uint32_t, void**);
+        ((CloneUpdate)clone_vtable[0x38 / 4])(clone, 0u, &related_result);
+    }
+
+    if (source_vtable[0x4c / 4] == NULL) return;
+    {
+        typedef int (VIEW_COM_CALL *ChildListGet)(void*, void**);
+        if (((ChildListGet)source_vtable[0x4c / 4])(source, &child_list) != 0 ||
+            child_list == NULL) return;
+    }
+    {
+        void** list_vtable = object_hierarchy_vtable_get(child_list);
+        if (list_vtable == NULL || list_vtable[0x0c / 4] == NULL ||
+            list_vtable[0x10 / 4] == NULL) {
+            object_hierarchy_release(child_list);
+            return;
+        }
+        child_count = ((ObjectHierarchyCountGet)list_vtable[0x0c / 4])(
+            child_list);
+        for (index = 0u; index < child_count; ++index) {
+            void* child = NULL;
+            ((ObjectHierarchyChildGet)list_vtable[0x10 / 4])(
+                child_list, index, &child);
+            if (child != NULL) {
+                if (s_object_hierarchy_resource_hooks.child_clone_register !=
+                    NULL) {
+                    void* source_child = NULL;
+                    void* clone_child = NULL;
+                    if (s_object_hierarchy_resource_hooks.child_clone_register(
+                            source, clone, child, &source_child, &clone_child,
+                            s_object_hierarchy_resource_hooks.context) &&
+                        source_child != NULL && clone_child != NULL) {
+                        object_hierarchy_recursive_clone(source_child,
+                                                         clone_child, mode);
+                        object_hierarchy_release(source_child);
+                        object_hierarchy_release(clone_child);
+                    }
+                }
+                object_hierarchy_release(child);
+            }
+        }
+        object_hierarchy_release(child_list);
+    }
+}
+
+namespace unported_ledger_stubs {
+
+
+void ledger_stub_00408620_SceneObjectRecordCloneRetainHandles(
+    const SceneObjectRecord* source, SceneObjectRecord* destination)
+{
+    scene_object_record_clone_retain_handles(source, destination);
+}
+
+
+
+
+void ledger_stub_0040ba00_SceneRotationFlagsApply(
+    void* object, float projection_scale, const float first[3],
+    const float second[3],
+    const float third[3], float scale, float uniform_scale,
+    float child_value, uint8_t flags)
+{
+    scene_rotation_flags_apply(object, projection_scale, first, second,
+                               third, scale, uniform_scale, child_value,
+                               flags);
+}
+
+void ledger_stub_0040bb90_SceneFrameFromTripletApply(
+    void* object, float projection_scale, const float first[3],
+    const float second[3], const float third[3])
+{
+    scene_frame_from_triplet_apply(object, projection_scale, first, second,
+                                   third);
+}
+
+
+} // namespace unported_ledger_stubs

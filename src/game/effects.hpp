@@ -41,14 +41,15 @@ typedef struct TimedSegmentVisualHooks {
     void* (*scene_get)(void* entity);
     TimedSegmentVisualCreateHook visual_create;
     TimedSegmentVisualBuildHook segment_build;
+    /* FUN_004820d0 calls a renderer-owned resource interface and COM methods;
+     * no compatible portable instance layout is available in this module. */
+    void (*resource_release)(void* visual, void* resource_owner,
+                             void* context);
+    void* context;
 } TimedSegmentVisualHooks;
 void timed_segment_visual_hooks_set(const TimedSegmentVisualHooks* hooks);
 void timed_entity_segment_visual_create(void* entity, const float start[3],
                                        const float end[3]); /* FUN_00470690 */
-typedef void (*MeshSegmentQuadEmitHook)(void* mesh, const float vertices[12],
-                                        float red, float green, float blue,
-                                        float alpha);
-void mesh_segment_quad_emit_hook_set(MeshSegmentQuadEmitHook hook);
 void mesh_build_eight_sided_segment(void* mesh, float radius,
                                     const float start[3], const float end[3],
                                     float red, float green, float blue,
@@ -80,6 +81,12 @@ typedef struct ActiveEffectRecord {
     float duration;
     float curve[4];
     uint32_t sample_count;
+    float target[3];
+    float curve_origin[3];
+    float curve_samples[50][2];
+    float curve_segment_lengths[49];
+    float curve_total_length;
+    float curve_elapsed;
 } ActiveEffectRecord;
 typedef struct ActiveEffectBuildHooks {
     void* context;
@@ -100,6 +107,8 @@ int entity_spawn_record_slot_init(void* owner, const float position[3],
 int object_flight_curve_record_init(void* owner, const float start[3],
                                     const float end[3], uint32_t auxiliary,
                                     uint32_t mode); /* FUN_0046fc70 */
+/* Installs the SFX bank's live callbacks on the first production tick. */
+void effects_simtick_sfx_hooks_install(void);
 typedef struct EffectApplyHooks {
     void* context;
     uint32_t (*entity_flags_get)(void* context, void* entity);
@@ -116,7 +125,8 @@ typedef struct EffectApplyHooks {
 } EffectApplyHooks;
 void effect_apply_hooks_set(const EffectApplyHooks* hooks);
 void effect_apply_by_kind_branch(void* entity, const float direction_xy[2],
-                                 int command, uint32_t type, int mode); /* FUN_0046f770 */
+                                 const float effect_position[3],
+                                 uint32_t type, int mode); /* FUN_0046f770 */
 typedef void (*ScreenSpaceEffectDispatchHook)(void* context, void* effect,
                                                void* argument, int mode,
                                                float scale, int flags);
@@ -186,6 +196,10 @@ uint32_t light_effect_blink_config_load(void* config, void* section);
 uint32_t light_effect_fade_config_load(void* config, void* section);
 uint32_t light_effect_move_config_load(void* config, void* section);
 void light_effect_configuration_load(void* config, void* section);
+/* LightEffects FadeRGBMin/Max and range pairs initialize the twelve values
+ * consumed by RandomWaypointTimerStepApply (0x0044d280). The config root is
+ * normally `Lego*`; returns 1 only when all required values parse. */
+int light_effect_waypoint_config_load(void* config, const char* config_root);
 typedef struct TransientEffectHooks {
     void* context;
     int (*textures_preload)(void* context, const char* filename_prefix,
@@ -213,6 +227,7 @@ void* transient_effect_emitter_create(void* scene_context,
 void transient_effect_instance_handles_set(void* instance,
                                            void* scene_object,
                                            void* render_record);
+int transient_effect_registry_reset(void); /* 0x00465380 */
 void transient_effect_instance_release(void* instance, void* resource);
 void transient_effect_registry_release_all(void);
 void transient_effect_registry_enable_set(int enabled);
@@ -222,6 +237,14 @@ int transient_effect_particle_slot_initialize(void* emitter,
                                               uint32_t slot); /* 0x465c50 */
 void transient_effect_segment_advance(void* emitter, uint32_t slot,
                                       float delta); /* 0x465e00 */
+typedef int (*TransientEffectQuadBasisGetHook)(void* context,
+                                               void* transform_source,
+                                               float values_out[3]);
+void transient_effect_quad_basis_hook_set(
+    TransientEffectQuadBasisGetHook hook, void* context);
+void transient_effect_instance_quad_vertices_build(
+    void* instance, uint32_t slot, void* transform_source,
+    const float triple[3]); /* 0x465f40 */
 void transient_effect_instances_tick(float delta); /* 0x465b00 */
 
 /* The executable stores 40 timed-effect records at 0x0054c000, each 0x27c

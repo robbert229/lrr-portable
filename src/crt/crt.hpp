@@ -509,8 +509,10 @@ int  display_resolution_entry_get(int index,
                                   CrtDisplayResolutionEntry* out);
 void display_resolution_combo_populate(CrtDisplayResolutionList* out);
 
-/* The filter table mirrors DAT_00568060/64/68. Its 16-entry guard is a
- * documented safety deviation from the corpus's blind write. */
+/* The filter table mirrors DAT_00568060/64/68. The port retains the
+ * 0x110-byte tuple stride and grows its backing store so every appended
+ * wildcard tuple remains available to the mode matcher. */
+void display_resolution_filter_tuples_reset(void);
 void display_resolution_filter_tuple_append(int width, int height, int bpp);
 int  display_resolution_filter_tuple_count(void);
 void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp);
@@ -659,6 +661,12 @@ void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
                                   const float* stream, const int* tex1,
                                   const int* tex2, const int* tex3,
                                   const int* ids); /* FUN_0045ac30 */
+/* Config adapter: retain the resource names from Buttons%ix%i and load them
+ * through the shared bitmap-surface cache before filling the same records. */
+void panel_texture_slots_allocate_named(
+    int panel, int count, const int* slot_index, const float* stream,
+    const char* const* tex1, const char* const* tex2,
+    const char* const* tex3, const int* ids);
 void view_blit_window_set(int view, uint32_t handle, void* rect_a,
                           void* rect_b, int region_index); /* port hook */
 void view_blit_window_peek(int view, uint32_t* handle, void** rect_a,
@@ -963,6 +971,7 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit);
 uint32_t renderer_word_a_get(void);
 uint32_t renderer_word_b_get(void);
 uint32_t renderer_word_c_get(void);
+void     renderer_word_c_set(uint32_t value);
 extern uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
 void     renderer_words_set(uint32_t a, uint32_t b, uint32_t c); /* install */
 

@@ -2,11 +2,20 @@
 #include "scene_resources.hpp"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "record.hpp"
+#include "model.hpp"
 #include "heap.hpp"
 #include "view.hpp"
 #include "crt/crt.hpp"
+#if defined(_MSC_VER)
+#define SCENE_RESOURCE_COM_CALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define SCENE_RESOURCE_COM_CALL __attribute__((stdcall))
+#else
+#define SCENE_RESOURCE_COM_CALL
+#endif
 namespace lego {
 namespace {
 // GLOBAL: LEGORR 0x0076ad68
@@ -26,12 +35,16 @@ void* s_node_matrix_apply_context = 0;
 AnimatedTextureFrameApplyHook s_texture_frame_apply_hook = 0;
 void* s_texture_frame_apply_context = 0;
 char s_shared_texture_root[1024];
-void* s_shared_texture_resources[20];
-unsigned int s_shared_texture_resource_count = 0;
-int s_shared_texture_initialized = 0;
-SharedTextureRootLoadHook s_shared_texture_load_hook = 0;
-void* s_shared_texture_load_context = 0;
+SharedTextureRootInitializeHook s_shared_texture_initialize_hook = 0;
+void* s_shared_texture_initialize_context = 0;
+CachedRenderResourceRendererHook s_cached_resource_renderer_hook = 0;
+void* s_cached_resource_renderer_context = 0;
+CachedRenderResourceRendererReleaseHook s_cached_resource_renderer_release_hook = 0;
+void* s_cached_resource_renderer_release_context = 0;
 }
+static InterfaceArrayForwardSyncHooks s_interface_array_forward_sync_hooks;
+static void** s_interface_forward_sync_items;
+static uint32_t s_interface_forward_sync_items_capacity;
 void scene_resource_release_hook_set(SceneResourceReleaseHook hook,
                                      void* context)
 { s_release_hook = hook; s_release_context = context; }
@@ -55,6 +68,9 @@ void scene_resource_slots_release_all()
     }
     s_render_surface_pool_free_head = 0;
     s_slots_live = 0;
+    free(s_interface_forward_sync_items);
+    s_interface_forward_sync_items = NULL;
+    s_interface_forward_sync_items_capacity = 0u;
 }
 void* scene_resource_slot_get(unsigned int index)
 { return s_slots_live && index < SCENE_RESOURCE_SLOT_COUNT ? s_render_surface_pool_blocks[index] : 0; }
@@ -64,6 +80,7 @@ int scene_resource_slot_set(unsigned int index, void* resource)
     s_render_surface_pool_blocks[index] = resource;
     return 1;
 }
+// FUNCTION: LEGORR 0x00474a20
 int animated_texture_frame_count(const void* texture)
 {
     const unsigned char* record = static_cast<const unsigned char*>(texture);
@@ -72,8 +89,8 @@ int animated_texture_frame_count(const void* texture)
     void* interface_object;
     void** vtable;
     void* frame_container;
-    typedef void* (*FrameContainerGet)(void*);
-    typedef int (*FrameCountGet)(void*);
+    typedef void* (SCENE_RESOURCE_COM_CALL *FrameContainerGet)(void*);
+    typedef int (SCENE_RESOURCE_COM_CALL *FrameCountGet)(void*);
     if (texture == 0) return 0;
     memcpy(&owner, record + 0x0c, sizeof(owner));
     if (owner == 0) return 0;
@@ -108,15 +125,19 @@ int animated_texture_frame_count(const void* texture)
     return 0;
 }
 
-void animated_texture_frame_bind(void* texture, void* frame, int mode)
+// FUNCTION: LEGORR 0x00474a60
+void animated_texture_frame_bind(void* texture, uint32_t frame_index, int mode)
 {
     unsigned char* record = static_cast<unsigned char*>(texture);
     void* owner;
     void* direct_count;
     void* interface_object;
+    void* resolved_interface;
+    int resolved_index;
     void** vtable;
     unsigned int selector = 0x40;
-    typedef void (*FrameBind)(void*, void*, unsigned int);
+    typedef void (SCENE_RESOURCE_COM_CALL *FrameBind)(
+        void*, void*, unsigned int);
     if (texture == 0) return;
     memcpy(&owner, record + 0x0c, sizeof(owner));
     if (owner == 0) return;
@@ -126,25 +147,35 @@ void animated_texture_frame_bind(void* texture, void* frame, int mode)
     memcpy(&interface_object, static_cast<unsigned char*>(owner) + 8,
            sizeof(interface_object));
     if (interface_object == 0) return;
-    if (mode != 0) selector = (unsigned int)(uintptr_t)frame;
+    if (mode != 0) selector = frame_index;
     if (mode == 1) selector = 0x80;
     if (mode == 2) selector = 0x88;
     if (mode == 3) selector = 0x89;
+    resolved_interface = interface_object;
+    resolved_index = (int)frame_index;
+    (void)animated_texture_frame_resolve(&resolved_interface,
+                                         &resolved_index);
     vtable = *static_cast<void***>(interface_object);
     if (vtable == 0 || vtable[0x4c / 4] == 0) return;
     {
         FrameBind bind = reinterpret_cast<FrameBind>(vtable[0x4c / 4]);
-        bind(interface_object, frame, selector);
+        bind(interface_object, resolved_interface, selector);
     }
 }
 
-int animated_texture_frame_resolve(void* interface_object, int frame,
-                                   void** resolved_out)
+// FUNCTION: LEGORR 0x00474c00
+int animated_texture_frame_resolve(void** interface_io,
+                                   int* frame_index_io)
 {
+    void* interface_object;
     void** vtable;
     void* frame_container;
-    typedef void* (*FrameContainerGet)(void*);
-    if (resolved_out != 0) *resolved_out = 0;
+    void* frame_array;
+    int frame_index;
+    int frame_count;
+    typedef void* (SCENE_RESOURCE_COM_CALL *FrameContainerGet)(void*);
+    if (interface_io == 0 || frame_index_io == 0) return 0;
+    interface_object = *interface_io;
     if (interface_object == 0) return 0;
     vtable = *static_cast<void***>(interface_object);
     if (vtable == 0 || vtable[0x1c / 4] == 0) return 0;
@@ -154,13 +185,87 @@ int animated_texture_frame_resolve(void* interface_object, int frame,
         frame_container = get_container(interface_object);
     }
     if (frame_container == 0) return 0;
-    if (resolved_out != 0 && frame != 0) {
-        void* value;
-        memcpy(&value, static_cast<unsigned char*>(frame_container) - 4 +
-               (size_t)frame * sizeof(void*), sizeof(value));
-        *resolved_out = value;
+    frame_index = *frame_index_io;
+    if (frame_index != 0) {
+        if (frame_index < 1) return 0;
+        memcpy(&frame_count, static_cast<unsigned char*>(frame_container) + 4,
+               sizeof(frame_count));
+        if (frame_index > frame_count) return 0;
+        memcpy(&frame_array, frame_container, sizeof(frame_array));
+        if (frame_array == 0) return 0;
+        memcpy(interface_io, static_cast<unsigned char*>(frame_array) +
+               (size_t)(frame_index - 1) * sizeof(void*),
+               sizeof(*interface_io));
     }
+    *frame_index_io = 0;
     return 1;
+}
+
+// FUNCTION: LEGORR 0x00474da0
+void animated_texture_frame_set(void* texture, uint32_t frame_index,
+                                const void* frame_state)
+{
+    unsigned char* texture_record = (unsigned char*)texture;
+    void* owner;
+    void* direct_pool;
+    void* interface_object;
+    void* frame_interface = NULL;
+    void** vtable;
+    int resolved_index = (int)frame_index;
+    typedef int32_t (SCENE_RESOURCE_COM_CALL *QueryInterfaceFn)(
+        void*, const void*, void**);
+    typedef uint32_t (SCENE_RESOURCE_COM_CALL *ReleaseFn)(void*);
+    typedef void (SCENE_RESOURCE_COM_CALL *FrameSurfaceSetFn)(
+        void*, uint32_t, void*);
+    static const unsigned char frame_surface_iid[16] = {
+        0x09, 0xcb, 0x16, 0xeb, 0x71, 0xd2, 0xce, 0x11,
+        0xac, 0x48, 0x00, 0x00, 0xc0, 0x38, 0x25, 0xa1
+    };
+
+    if (texture_record == NULL) return;
+    memcpy(&owner, texture_record + 0x0c, sizeof(owner));
+    if (owner == NULL) return;
+    memcpy(&direct_pool, static_cast<unsigned char*>(owner) + 0x0c,
+           sizeof(direct_pool));
+    if (direct_pool != NULL) {
+        animated_texture_frame_surface_set(direct_pool, (int)frame_index,
+                                           frame_state);
+        return;
+    }
+    memcpy(&interface_object, static_cast<unsigned char*>(owner) + 8,
+           sizeof(interface_object));
+    if (interface_object == NULL) return;
+    (void)animated_texture_frame_resolve(&interface_object,
+                                         &resolved_index);
+    if (frame_state != NULL) {
+        void* source_interface = NULL;
+        memcpy(&source_interface,
+               static_cast<const unsigned char*>(frame_state) + 4,
+               sizeof(source_interface));
+        if (source_interface != NULL) {
+            void** source_vtable = *static_cast<void***>(source_interface);
+            if (source_vtable != NULL && source_vtable[0] != NULL) {
+                QueryInterfaceFn query =
+                    reinterpret_cast<QueryInterfaceFn>(source_vtable[0]);
+                (void)query(source_interface, frame_surface_iid,
+                            &frame_interface);
+            }
+        }
+    }
+    vtable = *static_cast<void***>(interface_object);
+    if (vtable != NULL && vtable[0x54 / 4] != NULL) {
+        FrameSurfaceSetFn set_surface =
+            reinterpret_cast<FrameSurfaceSetFn>(vtable[0x54 / 4]);
+        set_surface(interface_object, (uint32_t)resolved_index,
+                    frame_interface);
+    }
+    if (frame_interface != NULL) {
+        void** frame_vtable = *static_cast<void***>(frame_interface);
+        if (frame_vtable != NULL && frame_vtable[2] != NULL) {
+            ReleaseFn release = reinterpret_cast<ReleaseFn>(frame_vtable[2]);
+            (void)release(frame_interface);
+        }
+    }
 }
 void animated_texture_frame_apply_hook_set(AnimatedTextureFrameApplyHook hook,
                                            void* context)
@@ -198,11 +303,11 @@ void animated_texture_frame_surface_set(void* texture, int frame_index,
     else flags &= ~0x00400000u;
     memcpy(frame_record + 0x0c, &flags, sizeof(flags));
 }
-void shared_texture_root_load_hook_set(SharedTextureRootLoadHook hook,
-                                       void* context)
+void shared_texture_root_initialize_hook_set(
+    SharedTextureRootInitializeHook hook, void* context)
 {
-    s_shared_texture_load_hook = hook;
-    s_shared_texture_load_context = context;
+    s_shared_texture_initialize_hook = hook;
+    s_shared_texture_initialize_context = context;
 }
 // FUNCTION: LEGORR 0x004805b0
 int shared_texture_root_register(const char* root)
@@ -231,54 +336,31 @@ int shared_texture_root_register(const char* root)
         s_shared_texture_root[written - 1u] = '\\';
         s_shared_texture_root[written] = '\0';
     }
-    /* The reference zeroes the twenty-slot table (DAT_00540584) and the two
-     * trailing state words (DAT_005405d4/d8) the port models as the count
-     * and initialized flag. */
-    memset(s_shared_texture_resources, 0, sizeof(s_shared_texture_resources));
-    s_shared_texture_resource_count = 20u;
-    s_shared_texture_initialized = 0;
+    /* DAT_00540584/D4/D8 are the render-resource instance pool owned by
+     * record.cpp. TextureGetOrCreate keys cached shared resources by their
+     * complete path, so changing this root does not require cache eviction. */
+    render_resource_instance_pool_reset();
     (void)shared_texture_root_initialize();
     return 1;
 }
-/* Port adapter for SharedTextureRootInitialize. Retail takes no arguments
- * but consumes renderer-owned Direct3D resource arrays and COM interfaces;
- * the portable helper can only refill resources through an installed hook. */
+/* SharedTextureRootInitialize uses the Direct3D interface globals and COM
+ * methods documented in LEGORR.full.c:86278. There is no portable texture
+ * resource loop here; the renderer owner may install that exact operation. */
 int shared_texture_root_initialize()
 {
-    /* SharedTextureRootInitialize releases the resident slot-node chains
-     * (FUN_00480780/FUN_004807a0 over the DAT_005405d8 and DAT_005343ac
-     * windows) and refills the twenty slots under the shared texture root.
-     * The portable port models those chains as loader-owned, so the slot
-     * refill runs through the installed load hook instead. */
-    unsigned int i;
-    s_shared_texture_initialized = 0;
-    memset(s_shared_texture_resources, 0, sizeof(s_shared_texture_resources));
-    if (s_shared_texture_load_hook == 0) return 0;
-    for (i = 0; i < 20u; ++i) {
-        void* resource = 0;
-        if (!s_shared_texture_load_hook(s_shared_texture_root, i, &resource,
-                                        s_shared_texture_load_context)) {
-            return 0;
-        }
-        s_shared_texture_resources[i] = resource;
-    }
-    s_shared_texture_initialized = 1;
-    return 1;
+    if (s_shared_texture_initialize_hook == 0) return 0;
+    return s_shared_texture_initialize_hook(s_shared_texture_initialize_context);
 }
 const char* shared_texture_root_get()
 {
     return s_shared_texture_root;
 }
-void* shared_texture_root_resource_get(unsigned int index)
-{
-    if (!s_shared_texture_initialized || index >= s_shared_texture_resource_count)
-        return 0;
-    return s_shared_texture_resources[index];
-}
+
+// FUNCTION: LEGORR 0x004773e0
 void scene_resource_tracked_references_release_all()
 {
     unsigned int pool;
-    typedef uint32_t (*ReleaseMethod)(void*);
+    typedef uint32_t (SCENE_RESOURCE_COM_CALL *ReleaseMethod)(void*);
     for (pool = 0; pool < ddiscene_render_surface_pool_block_count(); ++pool) {
         unsigned char* records = static_cast<unsigned char*>(
             ddiscene_render_surface_pool_block_get(pool));
@@ -344,18 +426,14 @@ void animation_track_keys_interpolate_apply(void* owner, const void* track,
     const unsigned char* bytes =
         static_cast<const unsigned char*>(track);
     const float* keys;
-    uint16_t count;
     float position[3];
     float rotation[3];
     float scale[3];
     unsigned int i;
-    if (track == 0 || s_animation_track_apply_hook == 0) return;
-    memcpy(&count, bytes + 0x26, sizeof(count));
-    if (count < 2) return;
+    if (track == 0) return;
     memcpy(&keys, bytes + 0x18, sizeof(keys));
     if (keys == 0) return;
     segment &= 0xffffu;
-    if (segment >= (uint32_t)count - 1u) segment = (uint32_t)count - 2u;
     keys = (const float*)((const unsigned char*)keys +
                           (size_t)segment * 0x28u);
     for (i = 0; i < 3; ++i) {
@@ -364,8 +442,17 @@ void animation_track_keys_interpolate_apply(void* owner, const void* track,
                       (keys[13 + i] - keys[3 + i]) * fraction;
         scale[i] = keys[6 + i] + (keys[16 + i] - keys[6 + i]) * fraction;
     }
-    s_animation_track_apply_hook(owner, track, position, rotation, scale,
-                                 s_animation_track_apply_context);
+    if (s_animation_track_apply_hook != 0) {
+        s_animation_track_apply_hook(owner, track, position, rotation, scale,
+                                     s_animation_track_apply_context);
+    }
+    else {
+        /* Use the mapped scene-node implementation directly. Its owner node
+         * table and COM transform methods are the data consumed by the retail
+         * target; the optional adapter hook is only for host overrides. */
+        ::scene_node_transform_matrix_apply(owner, track, position, rotation,
+                                            scale);
+    }
 }
 void scene_node_matrix_apply_hook_set(SceneNodeMatrixApplyHook hook,
                                       void* context)
@@ -442,6 +529,11 @@ void scene_resource_string_tables_set(void** first, unsigned int first_count,
 void scene_resource_string_tables_free()
 {
     unsigned int i;
+    /* The two retail tables freed at 0x87760 are the model-resource cache
+     * tables owned by model.cpp. Clear them here because engine teardown
+     * reaches this entrypoint; the portable cache also owns each parsed
+     * Model value and releases it alongside its copied key. */
+    model_resource_cache_clear();
     if (s_release_hook != 0) {
         for (i = 0; i < s_string_count_a; ++i)
             if (s_string_table_a != 0 && s_string_table_a[i] != 0) s_release_hook(s_string_table_a[i], s_release_context);
@@ -494,7 +586,7 @@ void resource_interface_call_slot48(void* wrapper, void* value)
 {
     void* interface_object;
     void** vtable;
-    typedef void (*Method)(void*, void*);
+    typedef void (SCENE_RESOURCE_COM_CALL *Method)(void*, void*);
     if (wrapper == 0) return;
     memcpy(&interface_object, static_cast<unsigned char*>(wrapper) + 0x10, sizeof(void*));
     if (interface_object == 0) return;
@@ -508,7 +600,7 @@ static void resource_interface_call_noargs(void* wrapper, unsigned int byte_offs
 {
     void* interface_object;
     void** vtable;
-    typedef void (*Method)(void*);
+    typedef void (SCENE_RESOURCE_COM_CALL *Method)(void*);
     if (wrapper == 0) return;
     memcpy(&interface_object, static_cast<unsigned char*>(wrapper) + 0x10, sizeof(void*));
     if (interface_object == 0) return;
@@ -522,4 +614,389 @@ static void resource_interface_call_noargs(void* wrapper, unsigned int byte_offs
 void resource_interface_call_slot8c(void* wrapper) { resource_interface_call_noargs(wrapper, 0x8c); }
 // FUNCTION: LEGORR 0x00476ff0
 void resource_interface_call_slot90(void* wrapper) { resource_interface_call_noargs(wrapper, 0x90); }
+
+void cached_render_resource_renderer_hook_set(
+    CachedRenderResourceRendererHook hook, void* context)
+{
+    s_cached_resource_renderer_hook = hook;
+    s_cached_resource_renderer_context = context;
 }
+
+void cached_render_resource_renderer_release_hook_set(
+    CachedRenderResourceRendererReleaseHook hook, void* context)
+{
+    s_cached_resource_renderer_release_hook = hook;
+    s_cached_resource_renderer_release_context = context;
+}
+
+// FUNCTION: LEGORR 0x00480900
+CachedRenderResourceInstanceRecord* cached_render_resource_instance_create(
+    CachedRenderResourceTemplateRecord* source)
+{
+    CachedRenderResourceTemplateRecord* template_record;
+    CachedRenderResourceInstanceRecord* instance;
+    uint32_t count;
+    uint32_t index;
+    size_t bytes;
+    void* pool_record;
+    if (source == NULL) return NULL;
+
+    template_record = source->shared_template != NULL
+        ? source->shared_template : source;
+    count = template_record->words[0];
+    if (count > 0x7fffffffu / 0x70u) return NULL;
+    bytes = (size_t)count * 0x70u;
+
+    pool_record = render_resource_instance_record_acquire();
+    if (pool_record == NULL) return NULL;
+    instance = (CachedRenderResourceInstanceRecord*)engine_heap_alloc(
+        (long)sizeof(*instance));
+    if (instance == NULL) {
+        render_resource_instance_record_release(pool_record);
+        return NULL;
+    }
+    memset(instance, 0, sizeof(*instance));
+    memcpy(instance->words, template_record->words,
+           sizeof(instance->words));
+    instance->pool_record = pool_record;
+    instance->words[1] = count;
+    instance->words[2] = 0u;
+    instance->words[3] = 0u;
+    instance->words[8] = 0u;
+    instance->words[9] = 0u;
+    instance->words[10] = 0u;
+    memcpy(pool_record, instance->words, sizeof(instance->words));
+    instance->source_template = template_record;
+
+    if (bytes != 0u) {
+        if (template_record->entry_block == NULL) {
+            render_resource_instance_record_release(pool_record);
+            engine_heap_free(instance);
+            return NULL;
+        }
+        instance->entry_block = (unsigned char*)engine_heap_alloc(
+            (long)bytes);
+        if (instance->entry_block == NULL) {
+            render_resource_instance_record_release(pool_record);
+            engine_heap_free(instance);
+            return NULL;
+        }
+        /* The source pointer includes a 0x10-byte header. Retail copies
+         * count * 0x70 bytes from it, then initializes and copies each
+         * per-entry 0x50-byte transform window at +0x10. */
+        memcpy(instance->entry_block, template_record->entry_block, bytes);
+        for (index = 0u; index < count; ++index) {
+            unsigned char* destination = instance->entry_block + 0x10u
+                + (size_t)index * 0x70u;
+            const unsigned char* entry_source =
+                template_record->entry_block + 0x10u
+                + (size_t)index * 0x70u;
+            uint32_t transform[20];
+            unsigned int word;
+            transform[0] = 0x50u;
+            transform[1] = 0x3f800000u;
+            transform[2] = 0x3f800000u;
+            transform[3] = 0x3f800000u;
+            transform[4] = 0x3f800000u;
+            for (word = 5u; word < 20u; ++word) transform[word] = 0u;
+            memcpy(destination, transform, sizeof(transform));
+            memcpy(destination, entry_source, sizeof(transform));
+        }
+    }
+
+    /* These renderer calls create and attach the wrapped interface. Their
+     * COM vtables belong to the platform renderer; the hook updates the
+     * host-side handles without guessing those ABI signatures here. */
+    if (s_cached_resource_renderer_hook != NULL)
+        s_cached_resource_renderer_hook(instance,
+                                        s_cached_resource_renderer_context);
+
+    ++template_record->words[8];
+    template_record->words[11] |= 0x00200000u;
+    return instance;
+}
+
+void cached_render_resource_instance_dispose(
+    CachedRenderResourceInstanceRecord* instance)
+{
+    if (instance == NULL) return;
+    if (s_cached_resource_renderer_release_hook != NULL)
+        s_cached_resource_renderer_release_hook(
+            instance, s_cached_resource_renderer_release_context);
+    engine_heap_free(instance->entry_block);
+    instance->entry_block = NULL;
+    render_resource_instance_record_release(instance->pool_record);
+    instance->pool_record = NULL;
+    engine_heap_free(instance);
+}
+}
+
+namespace unported_ledger_stubs {
+// SharedTextureRootRegister
+int ledger_stub_004805b0_SharedTextureRootRegister(const char* root)
+{
+    return lego::shared_texture_root_register(root);
+}
+
+// SharedTextureRootInitialize
+int ledger_stub_00480650_SharedTextureRootInitialize()
+{
+    return lego::shared_texture_root_initialize();
+}
+
+// CachedRenderResourceInstanceCreate
+lego::CachedRenderResourceInstanceRecord*
+ledger_stub_00480900_CachedRenderResourceInstanceCreate(
+    lego::CachedRenderResourceTemplateRecord* source)
+{
+    return lego::cached_render_resource_instance_create(source);
+}
+}
+
+namespace lego {
+static int interface_forward_sync_items_reserve(uint32_t count)
+{
+    uint32_t capacity;
+    void** items;
+    size_t bytes;
+    if (count <= s_interface_forward_sync_items_capacity) return 1;
+    capacity = s_interface_forward_sync_items_capacity != 0u
+        ? s_interface_forward_sync_items_capacity : 4u;
+    while (capacity < count) {
+        if (capacity > 0x7fffffffu / 2u) {
+            capacity = count;
+            break;
+        }
+        capacity *= 2u;
+    }
+    if ((size_t)capacity > (size_t)-1 / sizeof(void*)) return 0;
+    bytes = (size_t)capacity * sizeof(void*);
+    items = (void**)malloc(bytes);
+    if (items == NULL) return 0;
+    if (s_interface_forward_sync_items != NULL) {
+        memcpy(items, s_interface_forward_sync_items,
+               (size_t)s_interface_forward_sync_items_capacity *
+                   sizeof(void*));
+        free(s_interface_forward_sync_items);
+    }
+    s_interface_forward_sync_items = items;
+    s_interface_forward_sync_items_capacity = capacity;
+    return 1;
+}
+
+static void interface_array_forward_sync_slot80(void* object,
+                                                 uint32_t* count,
+                                                 void** items)
+{
+    void** vtable;
+    typedef void (SCENE_RESOURCE_COM_CALL *Method)(void*, void*, void*);
+    if (object == NULL || count == NULL) return;
+    if (s_interface_array_forward_sync_hooks.enumerate != NULL) {
+        s_interface_array_forward_sync_hooks.enumerate(
+            s_interface_array_forward_sync_hooks.context, object, count,
+            items);
+        return;
+    }
+    memcpy(&vtable, object, sizeof(vtable));
+    if (vtable == NULL || vtable[0x80 / 4] == NULL) return;
+    ((Method)vtable[0x80 / 4])(object, count, items);
+}
+
+static void interface_array_forward_sync_slot(void* object,
+                                               unsigned int byte_offset,
+                                               void* value)
+{
+    void** vtable;
+    typedef void (SCENE_RESOURCE_COM_CALL *Method)(void*, void*);
+    if (object == NULL) return;
+    if (s_interface_array_forward_sync_hooks.set_value != NULL) {
+        s_interface_array_forward_sync_hooks.set_value(
+            s_interface_array_forward_sync_hooks.context, object,
+            byte_offset, value);
+        return;
+    }
+    memcpy(&vtable, object, sizeof(vtable));
+    if (vtable == NULL || vtable[byte_offset / 4] == NULL) return;
+    ((Method)vtable[byte_offset / 4])(object, value);
+}
+
+void interface_array_forward_sync_hooks_set(
+    const InterfaceArrayForwardSyncHooks* hooks)
+{
+    if (hooks == NULL)
+        memset(&s_interface_array_forward_sync_hooks, 0,
+               sizeof(s_interface_array_forward_sync_hooks));
+    else
+        s_interface_array_forward_sync_hooks = *hooks;
+}
+
+// FUNCTION: LEGORR 0x00474760
+void interface_array_forward_sync(void* owner_link, void* source_record,
+                                  void* state_value)
+{
+    unsigned char* record = (unsigned char*)owner_link;
+    unsigned char* source = (unsigned char*)source_record;
+    uint32_t kind;
+    uint32_t count;
+    uint32_t i;
+    void* primary;
+    void* primary_a;
+    void* primary_b;
+    void* secondary;
+    void* secondary_child;
+    uint32_t flags;
+    void* selector;
+
+    if (record == NULL) return;
+    if (s_interface_array_forward_sync_hooks.record_read != NULL) {
+        if (!s_interface_array_forward_sync_hooks.record_read(
+                s_interface_array_forward_sync_hooks.context, owner_link,
+                &primary_a, &primary_b, &secondary, &secondary_child,
+                &kind, &flags)) return;
+        primary = kind == 6u ? primary_a : primary_b;
+    }
+    else {
+        /* The raw owner-link fields are four-byte pointers in the reference
+         * ABI. Wider hosts must bind the typed record accessor above. */
+        if (sizeof(void*) != 4u) return;
+        memcpy(&kind, record + 0x10, sizeof(kind));
+        memcpy(&primary_a, record + 0x00, sizeof(primary_a));
+        memcpy(&primary_b, record + 0x04, sizeof(primary_b));
+        primary = kind == 6u ? primary_a : primary_b;
+        memcpy(&secondary, record + 0x08, sizeof(secondary));
+        memcpy(&flags, record + 0x14, sizeof(flags));
+        secondary_child = NULL;
+        if (secondary != NULL)
+            memcpy(&secondary_child, (unsigned char*)secondary + 0x08,
+                   sizeof(secondary_child));
+    }
+    if (primary == NULL) return;
+
+    if (state_value != NULL) {
+        count = (uint32_t)(uintptr_t)state_value;
+        interface_array_forward_sync_slot80(primary, &count, NULL);
+        if (count != 0u) {
+            if (!interface_forward_sync_items_reserve(count)) return;
+            interface_array_forward_sync_slot80(primary, &count,
+                                                 s_interface_forward_sync_items);
+            for (i = 0u; i < count; ++i) {
+                interface_array_forward_sync_slot(primary, 0xa0,
+                    s_interface_forward_sync_items[i]);
+            }
+        }
+
+        if (secondary != NULL) {
+            uint32_t secondary_count = 0u;
+            interface_array_forward_sync_slot80(secondary,
+                                                 &secondary_count, NULL);
+            if (secondary_count != 0u) {
+                if (!interface_forward_sync_items_reserve(secondary_count))
+                    return;
+                interface_array_forward_sync_slot80(secondary,
+                    &secondary_count, s_interface_forward_sync_items);
+                for (i = 0u; i < secondary_count; ++i) {
+                    void* item = s_interface_forward_sync_items[i];
+                    interface_array_forward_sync_slot(primary, 0x48, item);
+                    interface_array_forward_sync_slot(secondary_child, 0xa0,
+                                                       item);
+                }
+            }
+        }
+        flags &= ~4u;
+        if (s_interface_array_forward_sync_hooks.record_flags_set != NULL)
+            s_interface_array_forward_sync_hooks.record_flags_set(
+                s_interface_array_forward_sync_hooks.context, owner_link,
+                flags);
+        else if (sizeof(void*) == 4u)
+            memcpy(record + 0x14, &flags, sizeof(flags));
+    }
+    else {
+        count = 0u;
+        interface_array_forward_sync_slot80(primary, &count,
+                                             NULL);
+        if (count != 0u) {
+            if (!interface_forward_sync_items_reserve(count)) return;
+            interface_array_forward_sync_slot80(primary, &count,
+                                                 s_interface_forward_sync_items);
+            for (i = 0u; i < count; ++i) {
+                void* item = s_interface_forward_sync_items[i];
+                interface_array_forward_sync_slot(secondary, 0x48, item);
+                interface_array_forward_sync_slot(primary, 0xa0, item);
+            }
+        }
+        selector = NULL;
+        if (source != NULL &&
+            s_interface_array_forward_sync_hooks.selector_get != NULL) {
+            (void)s_interface_array_forward_sync_hooks.selector_get(
+                s_interface_array_forward_sync_hooks.context,
+                source_record, &selector);
+        }
+        else if (source != NULL && sizeof(void*) == 4u) {
+            void* selector_owner = NULL;
+            void* selector_data = NULL;
+            memcpy(&selector_owner, source + 0x0c, sizeof(selector_owner));
+            if (selector_owner != NULL) {
+                memcpy(&selector, (unsigned char*)selector_owner + 0x08,
+                       sizeof(selector));
+                if (selector == NULL) {
+                    memcpy(&selector_data,
+                           (unsigned char*)selector_owner + 0x0c,
+                           sizeof(selector_data));
+                    if (selector_data != NULL)
+                        memcpy(&selector,
+                               (unsigned char*)selector_data + 0x0c,
+                               sizeof(selector));
+                }
+            }
+        }
+        interface_array_forward_sync_slot(primary, 0x48, selector);
+        flags |= 4u;
+        if (s_interface_array_forward_sync_hooks.record_flags_set != NULL)
+            s_interface_array_forward_sync_hooks.record_flags_set(
+                s_interface_array_forward_sync_hooks.context, owner_link,
+                flags);
+        else if (sizeof(void*) == 4u)
+            memcpy(record + 0x14, &flags, sizeof(flags));
+    }
+}
+}
+
+namespace unported_ledger_stubs {
+void ledger_stub_00474760_InterfaceArrayForwardSync(
+    void* owner_link, void* source_record, void* state_value)
+{
+    lego::interface_array_forward_sync(owner_link, source_record, state_value);
+}
+
+
+// AnimatedTextureFrameCount
+int ledger_stub_00474a20_AnimatedTextureFrameCount(const void* texture)
+{ return lego::animated_texture_frame_count(texture); }
+
+// SceneSurfaceTextureBindByMode
+void ledger_stub_00474a60_SceneSurfaceTextureBindByMode(
+    void* texture, uint32_t frame_index, int mode)
+{ lego::animated_texture_frame_bind(texture, frame_index, mode); }
+
+// AnimatedTextureFrameResolve
+int ledger_stub_00474c00_AnimatedTextureFrameResolve(void** interface_io,
+                                                       int* frame_index_io)
+{ return lego::animated_texture_frame_resolve(interface_io, frame_index_io); }
+
+// AnimatedTextureFrameSet compatibility entrypoint.
+void ledger_stub_00474da0_AnimatedTextureFrameSet(
+    void* texture, uint32_t frame_index, const void* frame_state)
+{
+    lego::animated_texture_frame_set(texture, frame_index, frame_state);
+}
+
+
+// RenderResourceTrackedReferencesRelease
+void ledger_stub_004773e0_RenderResourceTrackedReferencesRelease()
+{ lego::scene_resource_tracked_references_release_all(); }
+
+
+
+} // namespace unported_ledger_stubs
+
+#undef SCENE_RESOURCE_COM_CALL
