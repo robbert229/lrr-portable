@@ -479,17 +479,19 @@ static void idle100_register(EntitySlot* e)
     }
 }
 
-/* Partial EntityLavaCrustActivityRegister (FUN_0043a960): the corpus's own
- * gate order — the type-1 test (0x43a968) first, then the tile probe that
- * decides whether the entity joins the capped idle table. Deviations: a
- * missing level grid permits registration, the original stats-bit gate
- * (0x43a976) is not modeled here, the port deduplicates table entries, and
- * a NULL entity returns instead of faulting on the corpus's type test. */
+/* EntityLavaCrustActivityRegister (FUN_0043a960): require a type-one entity
+ * whose stats +0x144 word lacks bit 0x02000000, then inspect its terrain
+ * tile before registering it in the bounded idle table. Deviations: a
+ * missing level grid permits registration, the port deduplicates table
+ * entries, and a NULL entity returns instead of faulting on its type test. */
 // FUNCTION: LEGORR 0x0043a960
 static void ai_lava_crust_activity_register(GameContext* ctx, EntitySlot* e)
 {
     if (e == NULL || e->type != 1) {
         return; /* the corpus's type gate, in place at 0x43a968 */
+    }
+    if ((entity_stats_word_get(e) & 0x02000000u) != 0u) {
+        return; /* FUN_00469e60 result at 0x43a976 */
     }
     const LevelState* grid = grid_of(ctx);
     if (grid == NULL ||
