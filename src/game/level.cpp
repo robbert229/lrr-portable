@@ -2660,13 +2660,14 @@ uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
     return cell;
 }
 
-/* FUN_004334c0: header dims through the slot (NULL image -> 0/0, the
- * documented stand-in for the corpus's read through the unresolved 0). */
+/* FUN_004334c0: resolve the resource slot, then read its two header dwords. */
 // FUNCTION: LEGORR 0x004334c0
 void level_map_dimensions_get(uint32_t slot, uint32_t* width,
                               uint32_t* height)
 {
-    level_map_image_header(level_map_slot_get(slot), width, height);
+    uint8_t* image = level_map_slot_get(slot);
+    *width = *(uint32_t*)(image + 0x08);
+    *height = *(uint32_t*)(image + 0x0c);
 }
 
 /* FUN_004319e0: cell through the slot; the width comes from the header. */

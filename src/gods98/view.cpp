@@ -740,6 +740,8 @@ typedef void (*DdiTimedInterfaceRelease)(void*);
 namespace unported_ledger_stubs {
 void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
     void* shared_object, float time, const void* hooks);
+void* ledger_stub_00475e40_DDiSceneFrameRecordFind(
+    void* action_interface, const char* action_name, int selector);
 }
 
 // FUNCTION: LEGORR 0x004897e0
@@ -854,31 +856,27 @@ void ddiscene_timed_hook_dispatch(void* hook_record, float time,
  * the selected frame through channel 0; kind 3 stores that channel directly. */
 void ddiscene_apply_act_frame_timing(void* scene_object)
 {
-    void* frame_record = NULL;
-    void* action_slot;
-    const char* action_name;
-    uint32_t kind;
-    uint32_t hook_record;
-    float time = 0.0f;
-    if (scene_object == NULL ||
-        (*(uint32_t*)((char*)scene_object + 0x14) & 0x20u) == 0u) {
-        return;
-    }
-    kind = *(uint32_t*)((char*)scene_object + 0x10);
-    if (kind == 4u) {
-        action_slot = *(void**)((char*)scene_object + 0x0c);
-        action_name = action_slot != NULL ? *(const char**)action_slot : NULL;
-        if (action_name != NULL) {
-            frame_record = ddiscene_frame_record_find(
-                *(void**)((char*)scene_object + 4), action_name, 0);
+    void* selected = scene_object;
+    uint32_t hook_record = (uint32_t)(uintptr_t)scene_object;
+    float time;
+    memcpy(&time, &scene_object, sizeof(time));
+    if ((*(uint32_t*)((char*)scene_object + 0x14) & 0x20u) != 0u) {
+        uint32_t kind = *(uint32_t*)((char*)scene_object + 0x10);
+        if (kind == 4u) {
+            selected = unported_ledger_stubs::
+                ledger_stub_00475e40_DDiSceneFrameRecordFind(
+                    scene_object,
+                    **(const char***)((char*)scene_object + 0x0c), 0);
+            if (selected != NULL) {
+                hook_record = ddiscene_action_record_field_1c_get(selected);
+                time = ddiscene_animation_duration_get(selected);
+            }
         }
-    }
-    else if (kind == 3u) {
-        frame_record = *(void**)((char*)scene_object + 4);
-    }
-    if (frame_record != NULL) {
-        hook_record = ddiscene_action_record_field_1c_get(frame_record);
-        time = ddiscene_animation_duration_get(frame_record);
+        else if (kind == 3u) {
+            selected = *(void**)((char*)scene_object + 4);
+            hook_record = ddiscene_action_record_field_1c_get(selected);
+            time = ddiscene_animation_duration_get(selected);
+        }
         if (hook_record != 0u) {
             ddiscene_timed_hook_dispatch((void*)hook_record, time, NULL);
         }

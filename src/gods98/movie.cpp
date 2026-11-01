@@ -1270,6 +1270,7 @@ static void* s_avi_display_mode_context;
 static AviReleaseHook s_avi_release_hook;
 static AviDisplayReleaseHook s_avi_display_release_hook;
 static void* s_avi_release_context;
+// GLOBAL: LEGORR 0x0053399c
 static void* s_avi_file_context;
 
 // FUNCTION: LEGORR 0x0047ec80
