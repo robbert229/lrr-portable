@@ -77,6 +77,10 @@ void cmd_create_gated(EntitySlot* e, void* target);
 void cmd_create_task(EntitySlot* e);   /* kind derived from the entity type */
 void* cmd_entity_task_record_create_and_append(EntitySlot* e, void* payload,
                                                int parameter);
+int object_path_submit_to_grid_target(EntitySlot* entity,
+                                      struct LevelState* level,
+                                      const int target_xy[2],
+                                      int final_marker); /* 0x404e00 */
 typedef struct CommandKindRecordHooks {
     void* context;
     float (*random_range)(float minimum, float maximum, void* context);

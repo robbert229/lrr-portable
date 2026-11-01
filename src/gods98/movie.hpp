@@ -137,6 +137,8 @@ void avi_release_hooks_set(AviReleaseHook release_object,
                            AviDisplayReleaseHook release_display,
                            void* context);
 void avi_file_initialize(void* context); /* 0x0047ec80 */
+int avi_frame_decode_and_copy(Movie* movie, uint8_t* destination,
+                              int width, int height, int pitch);
 void avi_frame_retriever_open(AviPlaybackState* state, const char* path);
 int avi_display_mode_setup(AviPlaybackState* state, uint32_t width,
                            uint32_t height, uint32_t bits_per_pixel,

@@ -101,6 +101,40 @@ int flic_file_header_validate(const void* bytes, size_t length,
     return 1;
 }
 
+// FUNCTION: LEGORR 0x00483f60
+int flic_file_header_validate_path(const char* path, void* context)
+{
+    uint8_t header_bytes[FLIC_HEADER];
+    uint32_t file_size = 0u;
+    ResourceStream* stream;
+    FlicHeaderInfo header;
+    int valid;
+    if (path == NULL || context == NULL) return 0;
+    stream = resource_stream_open(path, RESOURCE_AUTO, &file_size);
+    if (stream != NULL) {
+        valid = file_size >= FLIC_HEADER &&
+            resource_stream_read_at(stream, 0u, header_bytes, FLIC_HEADER);
+        resource_stream_close(stream);
+        if (!valid) return 0;
+    }
+    else {
+        Resource* resource = resource_open(path, RESOURCE_AUTO);
+        int32_t loaded;
+        if (resource == NULL) return 0;
+        loaded = resource_read(resource);
+        if (loaded < (int32_t)FLIC_HEADER) {
+            resource_free(resource);
+            return 0;
+        }
+        file_size = (uint32_t)loaded;
+        memcpy(header_bytes, resource->data, FLIC_HEADER);
+        resource_free(resource);
+    }
+    memcpy((uint8_t*)context + 0x640, header_bytes, FLIC_HEADER);
+    valid = flic_file_header_validate(header_bytes, file_size, &header);
+    return valid;
+}
+
 int flic_width(const Flic* f)  { return f != NULL ? f->width : 0; }
 int flic_height(const Flic* f) { return f != NULL ? f->height : 0; }
 int flic_frames(const Flic* f) { return f != NULL ? f->frames : 0; }
@@ -640,6 +674,7 @@ Flic* flic_open_resource_stream(const char* name)
     return f;
 }
 
+// FUNCTION: LEGORR 0x00483f00
 void flic_close(Flic* f)
 {
     if (f == NULL) {

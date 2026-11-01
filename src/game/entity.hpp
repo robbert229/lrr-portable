@@ -460,7 +460,7 @@ void entity_spawn_special_finalize_hook_set(
 EntitySlot* entity_create_with_position(GameContext* context, int type,
                                         const char* name, int value,
                                         float x, float y,
-                                        float z); /* 0x438610 */
+                                        float heading); /* 0x438610 */
 typedef struct BuildingUpgradeAdmissionHooks {
     void* context;
     uint32_t (*maximum_level_get)(EntitySlot* building, void* context);

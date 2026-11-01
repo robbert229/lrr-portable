@@ -42,6 +42,7 @@ typedef struct FlicHeaderInfo {
 } FlicHeaderInfo;
 int flic_file_header_validate(const void* bytes, size_t length,
                               FlicHeaderInfo* header);
+int flic_file_header_validate_path(const char* path, void* context);
 /* Seek/read adapter for stream-mode FLIC input. read_at must seek and fill
  * the complete requested byte count, returning nonzero on success. The
  * caller retains ownership of context for the lifetime of the Flic. */

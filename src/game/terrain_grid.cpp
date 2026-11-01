@@ -1681,6 +1681,49 @@ int terrain_cell_surface_vertices_get(TerrainSurfaceGrid* grid, uint32_t x,
     return flip;
 }
 
+/* TerrainCellSurfaceTriangleVerticesSelect (FUN_0044fab0). Select between
+ * the two stored triplets using the point's signed distance from the cell
+ * edge. The reference compares against the terrain grid's +0x10 cell size;
+ * this grid stores unit map cells, so that threshold is one map unit. */
+// FUNCTION: LEGORR 0x0044FAB0
+void terrain_cell_surface_triangle_vertices_select(
+    TerrainSurfaceGrid* grid, float x, float z, uint32_t out_vertices[3])
+{
+    uint32_t cell_x;
+    uint32_t cell_z;
+    uint32_t index;
+    uint32_t corner_offset;
+    const uint32_t* triangle;
+    float vertices[12];
+    int flipped;
+    uint32_t i;
+    if (grid == NULL || out_vertices == NULL || x < 0.0f || z < 0.0f)
+        return;
+    cell_x = (uint32_t)x;
+    cell_z = (uint32_t)z;
+    if (!terrain_grid_cell_valid(grid, cell_x, cell_z) ||
+        grid->surface_vectors == NULL || grid->cell_records == NULL)
+        return;
+    index = terrain_grid_cell_index(grid, cell_x, cell_z);
+    flipped = terrain_cell_surface_vertices_get(grid, cell_x, cell_z,
+                                                vertices);
+    if (!flipped) {
+        if ((vertices[1] - z) + (x - vertices[0]) < 1.0f)
+            corner_offset = 0u;
+        else
+            corner_offset = 3u;
+    }
+    else if (1.0f <= (vertices[4] - z) + (vertices[3] - x)) {
+        corner_offset = 0u;
+    }
+    else {
+        corner_offset = 3u;
+    }
+    triangle = (const uint32_t*)(grid->cell_records + index * 0x28u +
+                                  (corner_offset == 0u ? 0u : 0x0cu));
+    for (i = 0u; i < 3u; ++i) out_vertices[i] = triangle[i];
+}
+
 static int terrain_ray_triangle_hit(const float origin[3],
                                     const float direction[3],
                                     const float a[3], const float b[3],
@@ -1713,8 +1756,9 @@ static int terrain_ray_triangle_hit(const float origin[3],
     return 1;
 }
 
-int terrain_cell_ray_hit_test(TerrainSurfaceGrid* grid, uint32_t x,
-                              uint32_t y, const float origin[3],
+// FUNCTION: LEGORR 0x004515E0
+int terrain_cell_ray_hit_test(TerrainSurfaceGrid* grid, int x,
+                              int y, const float origin[3],
                               const float direction[3], float hit[3])
 {
     float vertices[12];
@@ -1722,9 +1766,11 @@ int terrain_cell_ray_hit_test(TerrainSurfaceGrid* grid, uint32_t x,
     int first, second;
     int i;
     if (origin == NULL || direction == NULL || hit == NULL || grid == NULL ||
-        grid->surface_vectors == NULL || !terrain_grid_cell_valid(grid, x, y))
+        grid->surface_vectors == NULL || x < 0 || y < 0 ||
+        !terrain_grid_cell_valid(grid, (uint32_t)x, (uint32_t)y))
         return 0;
-    terrain_cell_surface_vertices_get(grid, x, y, vertices);
+    terrain_cell_surface_vertices_get(grid, (uint32_t)x, (uint32_t)y,
+                                      vertices);
     first = terrain_ray_triangle_hit(origin, direction, vertices,
                                      vertices + 3, vertices + 6, first_hit);
     second = terrain_ray_triangle_hit(origin, direction, vertices + 6,
@@ -2014,7 +2060,10 @@ int terrain_cell_surface_quad_height_fill(
             terrain_cell_surface_vertices_get(surface, x, y, vertices);
             height_a = vertices[corners[0] * 3u];
             height_b = vertices[corners[1] * 3u];
-            record->slot_heights[item] = height_a < height_b
+            /* FUN_0046e220 negates both corner heights, selects the larger
+             * negated value, then negates it again: the stored value is the
+             * higher of the selected corners. */
+            record->slot_heights[item] = height_a > height_b
                 ? height_a : height_b;
             return 1;
         }

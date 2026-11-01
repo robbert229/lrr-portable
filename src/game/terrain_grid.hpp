@@ -149,8 +149,10 @@ void nested_pointer_record_release_hooks_set(NestedPointerReleaseHook handle_hoo
 void nested_pointer_record_destroy(NestedPointerRecord* record); /* FUN_0044e670 */
 int terrain_cell_surface_vertices_get(TerrainSurfaceGrid* grid, uint32_t x,
                                       uint32_t y, float out[12]); /* 0x004500d0 */
-int terrain_cell_ray_hit_test(TerrainSurfaceGrid* grid, uint32_t x,
-                              uint32_t y, const float origin[3],
+void terrain_cell_surface_triangle_vertices_select(
+    TerrainSurfaceGrid* grid, float x, float z, uint32_t out_vertices[3]);
+int terrain_cell_ray_hit_test(TerrainSurfaceGrid* grid, int x,
+                              int y, const float origin[3],
                               const float direction[3], float hit[3]);
 int terrain_surface_vertex_span_validate(TerrainSurfaceGrid* grid,
                                          const int* cell_xy,

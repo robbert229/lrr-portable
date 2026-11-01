@@ -1314,6 +1314,7 @@ static AviDisplayReleaseHook s_avi_display_release_hook;
 static void* s_avi_release_context;
 static void* s_avi_file_context;
 
+// FUNCTION: LEGORR 0x0047ec80
 void avi_file_initialize(void* context)
 {
     s_avi_file_context = context;
@@ -1698,6 +1699,29 @@ void movie_scale_rgba(const uint8_t* src, int sw, int sh, int spitch,
             d[x * 4 + 3] = p[3];
         }
     }
+}
+
+// FUNCTION: LEGORR 0x0047e9e0
+int avi_frame_decode_and_copy(Movie* movie, uint8_t* destination,
+                              int width, int height, int pitch)
+{
+    MovieOut frame;
+    MovieInfo info;
+    int result;
+    if (movie == NULL || destination == NULL || width <= 0 || height <= 0
+        || pitch < width * 4) {
+        return -1;
+    }
+    result = movie_next(movie, &frame);
+    if (result != 0) {
+        return result;
+    }
+    if (movie_info(movie, &info) != 0 || frame.rgba == NULL) {
+        return -1;
+    }
+    movie_scale_rgba(frame.rgba, info.width, info.height, frame.rgba_pitch,
+                     destination, width, height, pitch);
+    return 0;
 }
 
 /* ------------------------------------------------------------------ *

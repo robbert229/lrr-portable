@@ -1211,6 +1211,66 @@ void* cmd_entity_task_record_create_and_append(EntitySlot* e, void* payload,
     return rec;
 }
 
+/* ObjectPathSubmitToGridTarget (FUN_00404e00): a target already on the
+ * actor's cell is submitted as a one-point path; otherwise resolve the
+ * cardinal route and pass its points to the entity route installer. */
+// FUNCTION: LEGORR 0x00404e00
+int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
+                                      const int target_xy[2],
+                                      int final_marker)
+{
+    int start_xy[2] = { -1, -1 };
+    int* route_x = NULL;
+    int* route_y = NULL;
+    uint32_t route_count = 0u;
+    float direct_x;
+    float direct_y;
+    float* points_x;
+    float* points_y;
+    uint32_t i;
+    if (entity == NULL || level == NULL || target_xy == NULL ||
+        level->ptr_terrain == NULL) return 0;
+    entity_position_to_terrain_cell(entity, level, &start_xy[0],
+                                    &start_xy[1]);
+    if (start_xy[0] < 0 || start_xy[1] < 0) return 0;
+    if (start_xy[0] == target_xy[0] && start_xy[1] == target_xy[1]) {
+        direct_x = (float)start_xy[0];
+        direct_y = (float)start_xy[1];
+        (void)entity_route_setup_and_marker_associate(
+            entity, 1u, &direct_x, &direct_y, final_marker);
+        return 1;
+    }
+    if (!terrain_neighbor_path_check(level->ptr_terrain,
+            (uint32_t)start_xy[0], (uint32_t)start_xy[1],
+            (uint32_t)target_xy[0], (uint32_t)target_xy[1],
+            &route_x, &route_y, &route_count, NULL, NULL)) return 0;
+    if (route_count == 0u || route_count > 4096u) {
+        free(route_x);
+        free(route_y);
+        return 0;
+    }
+    points_x = (float*)malloc((size_t)route_count * sizeof(float));
+    points_y = (float*)malloc((size_t)route_count * sizeof(float));
+    if (points_x == NULL || points_y == NULL) {
+        free(points_x);
+        free(points_y);
+        free(route_x);
+        free(route_y);
+        return 0;
+    }
+    for (i = 0u; i < route_count; ++i) {
+        points_x[i] = (float)route_x[i];
+        points_y[i] = (float)route_y[i];
+    }
+    (void)entity_route_setup_and_marker_associate(
+        entity, route_count, points_x, points_y, final_marker);
+    free(points_x);
+    free(points_y);
+    free(route_x);
+    free(route_y);
+    return 1;
+}
+
 // CommandKindRecordIssueAndLink (FUN_00403750).
 // FUNCTION: LEGORR 0x00403750
 void cmd_command_kind_record_issue(uint32_t a, uint32_t b, uint32_t c,

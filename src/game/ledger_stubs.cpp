@@ -1091,79 +1091,14 @@ void ledger_stub_00403810_TerrainCellRecordCountUpdate(
     ++cmd_pending_command_counts[b * 0x10 + a * 0xf0 + c];
 }
 
-/* Object placement operations depend on game-specific policy, so keep that
- * policy in typed hooks while this module owns the search and dispatch flow. */
-typedef struct ObjectPlacementHooks {
-    LevelState* level;
-    int (*candidate_allowed)(void* context, const int cell_xy[2],
-                             void* object, uint32_t flags);
-    int (*record_matches)(void* context, void* record, void* query);
-    void* (*record_at)(void* context, const int cell_xy[2]);
-    void* context;
-} ObjectPlacementHooks;
-
-// FUNCTION: LEGORR 0x00404e00
+// ObjectPathSubmitToGridTarget forwards the target ABI to the command path
+// implementation, which owns route allocation and entity route setup.
 int ledger_stub_00404e00_ObjectPathSubmitToGridTarget(
-    const ObjectPlacementHooks* hooks, void* object,
-    const int target_xy[2], uint32_t flags)
+    EntitySlot* entity, LevelState* level, const int target_xy[2],
+    int final_marker)
 {
-    EntitySlot* entity = (EntitySlot*)object;
-    int start_xy[2] = { -1, -1 };
-    int* route_x = NULL;
-    int* route_y = NULL;
-    uint32_t route_count = 0u;
-    float local_x;
-    float local_y;
-    float* points_x = NULL;
-    float* points_y = NULL;
-    uint32_t index;
-    int found;
-
-    if (hooks == NULL || hooks->level == NULL || entity == NULL ||
-        target_xy == NULL) return 0;
-    entity_position_to_terrain_cell(entity, hooks->level,
-                                    &start_xy[0], &start_xy[1]);
-    if (start_xy[0] < 0 || start_xy[1] < 0) return 0;
-
-    if (start_xy[0] == target_xy[0] && start_xy[1] == target_xy[1]) {
-        local_x = (float)start_xy[0];
-        local_y = (float)start_xy[1];
-        (void)entity_route_setup_and_marker_associate(
-            entity, 1u, &local_x, &local_y, (int)flags);
-        return 1;
-    }
-
-    found = terrain_neighbor_path_check(
-        hooks->level, (uint32_t)start_xy[0], (uint32_t)start_xy[1],
-        (uint32_t)target_xy[0], (uint32_t)target_xy[1], &route_x, &route_y,
-        &route_count, NULL, NULL);
-    if (!found) return 0;
-    if (route_count == 0u || route_count > AI_WAYPOINTS_MAX) {
-        free(route_x);
-        free(route_y);
-        return 0;
-    }
-
-    points_x = (float*)malloc((size_t)route_count * sizeof(float));
-    points_y = (float*)malloc((size_t)route_count * sizeof(float));
-    if (points_x == NULL || points_y == NULL) {
-        free(points_x);
-        free(points_y);
-        free(route_x);
-        free(route_y);
-        return 0;
-    }
-    for (index = 0u; index < route_count; ++index) {
-        points_x[index] = (float)route_x[index];
-        points_y[index] = (float)route_y[index];
-    }
-    (void)entity_route_setup_and_marker_associate(
-        entity, route_count, points_x, points_y, (int)flags);
-    free(points_x);
-    free(points_y);
-    free(route_x);
-    free(route_y);
-    return 1;
+    return object_path_submit_to_grid_target(entity, level, target_xy,
+                                             final_marker);
 }
 
 // FUNCTION: LEGORR 0x00404ed0
@@ -1825,11 +1760,10 @@ uint32_t ledger_stub_00409790_CellPathRecordRegisterApply(
         return 0u;
     }
     if (footprint_count != 0u && path_record_surface_grid_get() != NULL) {
-        /* The corpus passes 4.0f to TerrainCellListSurfaceHeightClampMutate;
-         * that helper works with half the value on either side of its mean. */
+        /* FUN_00409790 passes a four-unit clamp width. */
         terrain_cell_surface_height_clamp(path_record_surface_grid_get(),
                                           coordinate_copy,
-                                          footprint_count, 2.0f);
+                                          footprint_count, 4.0f);
     }
 
     while (index < footprint_count) {
@@ -3430,12 +3364,12 @@ void ledger_stub_00438460_EntityKindRecordUpdateDispatch(EntitySlot* entity)
 }
 
 // EntityCreateWithPosition
-// FUNCTION: LEGORR 0x00438610
 EntitySlot* ledger_stub_00438610_EntityCreateWithPosition(
     GameContext* context, int type, const char* name, int value,
-    float x, float y, float z)
+    float x, float y, float heading)
 {
-    return entity_create_with_position(context, type, name, value, x, y, z);
+    return entity_create_with_position(context, type, name, value, x, y,
+                                       heading);
 }
 
 // BuildingUpgradeResourceAdmissionCheck
@@ -6396,37 +6330,10 @@ void ledger_stub_0044ead0_TerrainCellListSurfaceHeightClampMutate(
 }
 
 // TerrainCellSurfaceTriangleVerticesSelect
-// FUNCTION: LEGORR 0x0044fab0
 void ledger_stub_0044fab0_TerrainCellSurfaceTriangleVerticesSelect(
     TerrainSurfaceGrid* grid, float x, float z, unsigned int out_vertices[3])
 {
-    unsigned int cell_x;
-    unsigned int cell_y;
-    unsigned int cell_index;
-    unsigned int triangle_offset;
-    unsigned int corner;
-    float fraction_x;
-    float fraction_z;
-    int flipped;
-    const unsigned int* triangle;
-    if (grid == NULL || out_vertices == NULL || grid->cell_records == NULL ||
-        grid->triangulation_flags == NULL || x < 0.0f || z < 0.0f)
-        return;
-    cell_x = (unsigned int)x;
-    cell_y = (unsigned int)z;
-    if (cell_x >= grid->width || cell_y >= grid->height) return;
-    cell_index = cell_y * grid->width + cell_x;
-    fraction_x = x - (float)cell_x;
-    fraction_z = z - (float)cell_y;
-    flipped = (grid->triangulation_flags[cell_index] & 1u) != 0;
-    if (!flipped)
-        triangle_offset = fraction_x + fraction_z < 1.0f ? 0u : 3u;
-    else
-        triangle_offset = fraction_z <= fraction_x ? 0u : 3u;
-    triangle = (const unsigned int*)(grid->cell_records +
-                 cell_index * 0x28u + triangle_offset * sizeof(unsigned int));
-    for (corner = 0; corner < 3; ++corner)
-        out_vertices[corner] = triangle[corner];
+    terrain_cell_surface_triangle_vertices_select(grid, x, z, out_vertices);
 }
 
 // TerrainSurfacePointProjectOffset
@@ -6452,14 +6359,12 @@ int ledger_stub_004502e0_ScreenRayTerrainCellPick(
 }
 
 // TerrainCellRayHitTest
-// FUNCTION: LEGORR 0x004515e0
 int ledger_stub_004515e0_TerrainCellRayHitTest(
     TerrainSurfaceGrid* grid, int cell_x, int cell_y, const float origin[3],
     const float direction[3], float hit[3])
 {
-    if (cell_x < 0 || cell_y < 0) return 0;
-    return terrain_cell_ray_hit_test(grid, (uint32_t)cell_x,
-                                     (uint32_t)cell_y, origin, direction, hit);
+    return terrain_cell_ray_hit_test(grid, cell_x, cell_y,
+                                     origin, direction, hit);
 }
 
 
@@ -8356,22 +8261,12 @@ void ledger_stub_0047e9a0_AviFrameRetrieverDestroy(AviPlaybackState* state)
     avi_frame_retriever_destroy(state);
 }
 
-// FUNCTION: LEGORR 0x0047e9e0
 int ledger_stub_0047e9e0_AviFrameDecodeAndCopy(Movie* movie,
                                                uint8_t* destination,
                                                int width, int height,
                                                int pitch)
 {
-    MovieOut frame;
-    MovieInfo info;
-    int result;
-    if (movie == NULL || destination == NULL) return -1;
-    result = movie_next(movie, &frame);
-    if (result != 0) return result;
-    if (movie_info(movie, &info) != 0) return -1;
-    movie_scale_rgba(frame.rgba, info.width, info.height, frame.rgba_pitch,
-                     destination, width, height, pitch);
-    return 0;
+    return avi_frame_decode_and_copy(movie, destination, width, height, pitch);
 }
 
 int ledger_stub_0047eb20_AviFrameUpdateAndBlit(AviPlaybackState* state)
@@ -8400,7 +8295,6 @@ uint32_t ledger_stub_0047ec60_AviPlaybackFrameIndexGet(
     return avi_playback_frame_index_get(state);
 }
 
-// FUNCTION: LEGORR 0x0047ec80
 void ledger_stub_0047ec80_AviFileInitialize(void* context)
 {
     avi_file_initialize(context);
@@ -8707,7 +8601,6 @@ int ledger_stub_00483810_InputActionStateToggle(unsigned int action,
                                      action, data);
 }
 
-// FUNCTION: LEGORR 0x00483f00
 int ledger_stub_00483f00_FlicPlayerClose(Flic* player)
 {
     if (player == NULL) return 0;
@@ -8715,33 +8608,10 @@ int ledger_stub_00483f00_FlicPlayerClose(Flic* player)
     return 1;
 }
 
-// FUNCTION: LEGORR 0x00483f60
 int ledger_stub_00483f60_FlicFileHeaderValidate(const char* path,
                                                 int* context)
 {
-    Resource* resource;
-    unsigned char* header;
-    uint32_t declared_size;
-    uint16_t magic;
-    int32_t file_size;
-    int result = 0;
-    if (path == NULL || context == NULL) return 0;
-    resource = resource_open(path, RESOURCE_AUTO);
-    if (resource == NULL) return 0;
-    file_size = resource_read(resource);
-    header = (unsigned char*)context + 0x640;
-    if (file_size >= 0x88) {
-        memcpy(header, resource->data, 0x88);
-        memcpy(&declared_size, header, sizeof(declared_size));
-        memcpy(&magic, header + 4, sizeof(magic));
-        if (declared_size == (uint32_t)file_size &&
-            (magic == 0x9119u || magic == 0x1234u ||
-             magic == 0xaf11u || magic == 0xaf12u || magic == 0xaf43u)) {
-            result = 1;
-        }
-    }
-    resource_free(resource);
-    return result;
+    return flic_file_header_validate_path(path, context);
 }
 
 // FUNCTION: LEGORR 0x00484610

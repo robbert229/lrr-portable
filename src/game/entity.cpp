@@ -3356,21 +3356,28 @@ void entity_spawn_special_finalize_hook_set(
 }
 
 /* EntityCreateWithPosition (FUN_00438610): create through the pooled entity
- * allocator, apply its world position at construction, then run the extra
- * mode setup used by pooled kinds six and seven. */
+ * allocator, apply the reference position update, then initialize the mode
+ * word for pooled kinds six and seven. */
+// FUNCTION: LEGORR 0x00438610
 EntitySlot* entity_create_with_position(GameContext* context, int type,
                                         const char* name, int value,
-                                        float x, float y, float z)
+                                        float x, float y, float heading)
 {
-    int index = entity_create(context, type, name, x, y, z, 0.0f);
+    int index = entity_create(context, type, name, x, y, 0.0f, heading);
     const EntitySlot* created;
     if (index < 0) return NULL;
     created = entity_at(context, type, index);
     if (created == NULL) return NULL;
-    if ((type == 6 || type == 7) &&
-        s_entity_spawn_special_finalize_hook != NULL) {
-        s_entity_spawn_special_finalize_hook((EntitySlot*)created, value,
-                                             s_entity_spawn_special_finalize_context);
+    entity_world_position_set((EntitySlot*)created, x, y, heading, 1);
+    if (type == 6 || type == 7) {
+        if (s_entity_spawn_special_finalize_hook != NULL) {
+            s_entity_spawn_special_finalize_hook((EntitySlot*)created, value,
+                s_entity_spawn_special_finalize_context);
+        }
+        else {
+            (void)entity_animation_state_set((EntitySlot*)created,
+                                             (uint32_t)value);
+        }
     }
     return (EntitySlot*)created;
 }
@@ -4752,7 +4759,9 @@ int entity_build_placement_command_setup(const int cell_xy[2], int entity_id,
     float position[2];
     float cell_position[3];
     EntitySlot* created;
-    GameContext* context = entity_pool_callback_context_get();
+    GameContext* context = s_entity_build_placement_context != NULL
+        ? s_entity_build_placement_context
+        : entity_pool_callback_context_get();
     uint8_t* cell_record;
     int kind = alternate ? 7 : 6;
     int opcode = alternate ? 0x1c : 0x16;
