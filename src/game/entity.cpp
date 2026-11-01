@@ -4210,6 +4210,10 @@ int object_list_load_file(GameContext* ctx, const char* olist)
     }
 
     int placed = 0;
+    size_t placed_slot_count = 0u;
+    size_t placed_slot_capacity = block_record_count(ol);
+    EntitySlot** placed_slots = (EntitySlot**)calloc(
+        placed_slot_capacity, sizeof(EntitySlot*));
     /* Root = the file's first record; objects are its children (document
      * order, like the entity list the corpus walks). */
     BlockRec* rootrec = block_record_at(ol, 0);
@@ -4272,9 +4276,58 @@ int object_list_load_file(GameContext* ctx, const char* olist)
             slot->rot = op.heading;
             slot->health = op.health > 0 ? op.health : 100;
             entity_set_model(slot, op.model[0] != '\0' ? op.model : NULL);
+            if (placed_slots != NULL &&
+                placed_slot_count < placed_slot_capacity) {
+                placed_slots[placed_slot_count++] = slot;
+            }
             ++placed;
         }
     }
+
+    /* The corpus resolves `driving` references after every object has been
+     * created, so forward references work. It links the source entity to the
+     * named object, raises +0x3e4 bit 2, dispatches the capability-derived
+     * activity event, then clears route bit 0x40 on both linked entities. */
+    if (placed_slots != NULL) {
+        size_t source_index;
+        for (source_index = 0u; source_index < placed_slot_count;
+             ++source_index) {
+            EntitySlot* source = placed_slots[source_index];
+            size_t target_index;
+            if (source == NULL || source->driving[0] == '\0') {
+                continue;
+            }
+            for (target_index = 0u; target_index < placed_slot_count;
+                 ++target_index) {
+                EntitySlot* target = placed_slots[target_index];
+                uint32_t events;
+                uint32_t capabilities;
+                if (target == NULL ||
+                    strcasecmp_lite(source->driving, target->name) != 0) {
+                    continue;
+                }
+                source->link_2fc = (uintptr_t)target;
+                source->flags_3e4 |= 4u;
+                capabilities = entity_capability_flags_get(target);
+                if ((capabilities & 0x100u) != 0u) {
+                    events = 1u;
+                }
+                else if ((target->flags_3e8 & 0x01000000u) == 0u) {
+                    events = 4u;
+                }
+                else if ((target->flags_3e8 & 0x02000000u) == 0u) {
+                    events = 2u;
+                }
+                else {
+                    events = 1u;
+                }
+                entity_linked_activity_event_dispatch(source, events);
+                entity_linked_route_flag_clear(ctx, source);
+                break;
+            }
+        }
+    }
+    free(placed_slots);
     block_close(ol);
     ctx->entity_placed = placed;
     return placed;

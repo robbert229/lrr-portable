@@ -5788,8 +5788,11 @@ void ledger_stub_00449ff0_EntityTypeOperationRelease(
 int ledger_stub_0044a2a0_EntityWorkObjectPositionGet(
     const EntitySlot* entity, float position[3])
 {
-    if (entity == NULL || position == NULL) return 0;
-    return entity_world_center_position_read(entity, position);
+    if (entity == NULL || position == NULL ||
+        (entity->type != 1 && entity->type != 2 && entity->type != 3) ||
+        entity->attached_scene_object == NULL) return 0;
+    return ddiscene_object_position_get(entity->attached_scene_object, NULL,
+                                        position);
 }
 
 // ObjectMovementInputAccumulate
@@ -7403,8 +7406,11 @@ void ledger_stub_0046e220_CellSurfaceQuadHeightFill(
     memcpy(&flags, raw_record + 0x424, sizeof(flags));
     flags = (flags & ~4u) | 1u;
     memcpy(raw_record + 0x424, &flags, sizeof(flags));
-    /* SceneRenderLockToggle(handle, 0) is renderer-owned; this target's
-     * source tree exposes no callable operation for that COM transition. */
+    {
+        void* render_handle = NULL;
+        memcpy(&render_handle, raw_record + 0x420, sizeof(render_handle));
+        scene_render_lock_toggle(render_handle, 0);
+    }
     slot = raw_record + 0x324u + (size_t)item_index * 0x18u;
     {
         const uint32_t active = 1u;
