@@ -9017,7 +9017,9 @@ void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
         uint16_t vector_count;
         uint16_t scalar_count;
         uint16_t segment = 0;
+        uint16_t scalar_segment = 0;
         float fraction;
+        float scalar_fraction;
         memcpy(&vector_count, track + 0x24, sizeof(vector_count));
         if (vector_count > 1u) {
             fraction = lego::keyframe_time_segment_fraction(
@@ -9026,9 +9028,12 @@ void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
                 owner, track, segment, fraction);
         }
         memcpy(&scalar_count, track + 0x26, sizeof(scalar_count));
-        if (scalar_count > 1u)
-            lego::shared_object_float_track_interpolate_apply(owner, track,
-                                                               segment, 0.0f);
+        if (scalar_count > 1u) {
+            scalar_fraction = lego::keyframe_time_segment_fraction(
+                track, current_time, &scalar_segment);
+            lego::shared_object_float_track_interpolate_apply(
+                owner, track, scalar_segment, scalar_fraction);
+        }
         if (hooks != NULL && hooks->timed_event_update != NULL)
             hooks->timed_event_update(owner, track, current_time,
                                       hooks->context);
@@ -10152,8 +10157,23 @@ void tutorial_inline_token_render(char* source, char* output, int draw)
     uint32_t used = 0;
     int text_x = 0;
     uint32_t i = 0;
+    uint32_t n;
+    int has_named_tokens = 0;
     if (source == NULL) return;
     if (output != NULL) output[0] = '\0';
+    for (n = 0; n < s_tutorial_token_count; ++n) {
+        if (s_tutorial_tokens[n].kind == 1 ||
+            s_tutorial_tokens[n].kind == 2) {
+            has_named_tokens = 1;
+            break;
+        }
+    }
+    if (!has_named_tokens && output != NULL) {
+        /* With no parsed named tokens, the corpus copies the source as-is;
+         * markup is only interpreted once one of its token tables exists. */
+        tutorial_inline_append(output, &used, source);
+        return;
+    }
     while (source[i] != '\0') {
         char marker = source[i];
         if ((marker == '<' || marker == '#') && source[i + 1] != '\0') {

@@ -3597,15 +3597,21 @@ char* formatted_text_escape_decode_and_emit(const char* format, ...)
     return string_duplicate(decoded);
 }
 
-/* FormattedTextPrintfWidth (FUN_00401c50): measure a literal using the
- * selected menu bitmap face. Format expansion is performed by its draw
- * caller in the original engine; this boundary receives the resolved text. */
+/* FormattedTextPrintfWidth (FUN_00401c50): format and measure without drawing.
+ * The retail wrapper forwards its variadic arguments through
+ * FormattedTextFormatDraw, including the engine's `%b` texture tokens. */
 // FUNCTION: LEGORR 0x00401c50
 uint32_t formatted_text_printf_width(const TextureSurface* font,
-                                     const char* text)
+                                     const char* text, ...)
 {
     if (font == NULL || text == NULL) return 0;
-    return (uint32_t)fe_font_text_width(text, font);
+    uint32_t width = 0u;
+    va_list args;
+    va_start(args, text);
+    formatted_text_format_draw(font, &width, NULL, NULL, 0, 0, 0,
+                               0, 0, text, args);
+    va_end(args);
+    return width;
 }
 
 static void fe_menu_panel_text_draw(void* px, int pitch, int w, int h,

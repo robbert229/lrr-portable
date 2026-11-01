@@ -343,7 +343,7 @@ void main_menu_text_item(void); /* FUN_004103d0; requests scrolling credits */
 /* FormattedTextPrintfWidth / MenuTextRecordMake: menu text measurement and
  * the 15-word text-record constructor used by legacy menu builders. */
 uint32_t formatted_text_printf_width(const TextureSurface* font,
-                                     const char* text); /* FUN_00401c50 */
+                                     const char* text, ...); /* FUN_00401c50 */
 void formatted_text_draw(const TextureSurface* font, void* px, int pitch,
                          int w, int h, int x, int y, const char* text);
 uint32_t formatted_text_draw_and_measure(const TextureSurface* font,
