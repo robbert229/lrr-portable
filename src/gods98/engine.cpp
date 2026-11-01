@@ -43,8 +43,15 @@ static const volatile float s_panel_highlight_zero = 0.0f;
 /* GlobalField505f88Get and CommandLineOptionParse share this app-mode word. */
 // GLOBAL: LEGORR 0x00505f88
 static int32_t s_application_mode;
+static EngineContext* s_engine_current_context;
 static EngineKeepRunningHook s_keep_running_hook;
 static void* s_keep_running_user;
+
+uint32_t* engine_current_feature_word(void)
+{
+    return s_engine_current_context != NULL
+        ? &s_engine_current_context->feature : NULL;
+}
 
 /* The reference's initialization callback clears this state before storing
  * the executable basename at DAT_005560c4. The portable modules do not share
@@ -140,6 +147,7 @@ void window_mode_flag_set(uint32_t mode)
 // FUNCTION: LEGORR 0x004232e0
 int EngineTick(EngineContext* ctx, float dt)
 {
+    s_engine_current_context = ctx;
     /* 1. Gate — loader/benchmark mode idles out of the frame. */
     if (ctx->app_mode == ENGINE_APP_LOADER && EngineKeepRunning(ctx) == 0) {
         return 0;

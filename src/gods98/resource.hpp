@@ -134,6 +134,33 @@ void resource_directory_scan_root_set(const char* root);
 const char* resource_directory_scan_root_get(void);
 void resource_file_token_list_load_and_tree_scan_target(
     const char* token_file); /* FUN_004802d0, one-argument retail shape */
+
+/* Direct3DRM resource-tree callback helpers (FUN_00489520, FUN_004895c0,
+ * FUN_00489910). These keep the retail COM slot contract behind the resource
+ * module boundary. `unused` is the first stack argument present at the two
+ * retail constructor call sites; it is not read by either constructor.
+ * The context's handle array contains the enumerated interface pointers.
+ * Cleanup follows the scene-owner link path, which expects the caller to
+ * install the matching interface-release hook. */
+typedef int (*ResourceTreeCallback)(void* object, void* context);
+typedef struct ResourceTreeCallbackContext {
+    int kind;
+    void* child_chain;
+    void* first_handle;
+    int shared_mode;
+    void* second_handle;
+    void** handles;
+    uint32_t handle_count;
+    void* owner;
+} ResourceTreeCallbackContext;
+uint32_t resource_tree_callback_count(void* object, uint32_t depth,
+                                      ResourceTreeCallback callback,
+                                      void* context); /* FUN_00489910 */
+ResourceTreeCallbackContext* resource_tree_callback_context_create_for_enumerator(
+    void* unused, void* owner, void* enumerator); /* FUN_00489520 */
+ResourceTreeCallbackContext* resource_tree_callback_context_create_for_resource(
+    void* unused, void* owner, void* resource); /* FUN_004895c0 */
+
 typedef struct ResourceFileTokenListOps {
     void* context;
     void (*directory_tree_scan)(void* context, const char* root,

@@ -1380,9 +1380,10 @@ uint32_t map_row_span_record_count(void);
 const void* map_row_span_record_get(uint32_t index);
 int float_round_to_nearest_int(float value); /* FUN_00463e40 */
 
-/* ActivityRunnerStateRead is mapped at 0x00406f80. The activity-specific
- * SceneActivityChangeSecondary helper below is an adapter only: the renderer
- * activity record and creation contract have no production owner here. */
+/* ActivityRunnerStateRead is mapped at 0x00406f80. Scene activity handle
+ * getters use the renderer subobject resolver below and cache the returned
+ * value in the original activity-record slots (0x004085f0, 0x00408770,
+ * 0x004087b0, 0x004087e0, 0x00408810). */
 typedef void* (*RendererSubobjectResolveFn)(void* owner, void* source,
                                             int index);
 void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver);

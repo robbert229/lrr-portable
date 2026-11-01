@@ -78,6 +78,11 @@ void* platform_window_hwnd(PlatformWindow* win);
 int  platform_window_width(PlatformWindow* win);
 int  platform_window_height(PlatformWindow* win);
 
+/* Read the cursor in client-relative coordinates for the supplied window.
+ * Returns nonzero when the backend can produce a sample. */
+int  platform_window_cursor_position_get(PlatformWindow* win,
+                                         int* x, int* y);
+
 /* Pump platform events into `out` (up to cap); returns the number written.
  * A PLATFORM_EVENT_QUIT entry counts toward that total. */
 int  platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap);

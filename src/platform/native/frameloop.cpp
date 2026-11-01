@@ -109,6 +109,20 @@ int platform_window_height(PlatformWindow* pw)
     return pw != NULL ? pw->h : 0;
 }
 
+int platform_window_cursor_position_get(PlatformWindow* pw, int* x, int* y)
+{
+    float mouse_x = 0.0f;
+    float mouse_y = 0.0f;
+    if (pw == NULL || pw->sdl == NULL || x == NULL || y == NULL ||
+        pw != s_active_window) {
+        return 0;
+    }
+    SDL_GetMouseState(&mouse_x, &mouse_y);
+    *x = (int)mouse_x;
+    *y = (int)mouse_y;
+    return 1;
+}
+
 int platform_pump_events(PlatformWindow* pw, PlatformEvent* out, int cap)
 {
     if (pw == NULL || out == NULL || cap <= 0) {

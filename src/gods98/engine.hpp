@@ -109,6 +109,11 @@ typedef struct EngineContext {
     int          tickers_ran;  /* scaffolding: count of dispatched tickers */
 } EngineContext;
 
+/* Current frame owner for engine services that mirror global retail state
+ * while the port keeps the state inside EngineContext. EngineTick updates
+ * this before running any frame work. */
+uint32_t* engine_current_feature_word(void);
+
 /* --- engine-level binding ------------------------------------------------
  * The corpus uses ONE 0x284-byte block (DAT_005560d4) for both engine state
  * and the loaded level (game/level.h). These accessors read the bound level

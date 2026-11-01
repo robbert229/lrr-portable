@@ -7,6 +7,7 @@
 #include "model.hpp"
 
 #include "crt/crt.hpp"
+#include "engine.hpp"
 #include "heap.hpp"
 #include "texture.hpp"
 #include "view.hpp"
@@ -84,6 +85,45 @@ ScreenBoundedSurfaceRecord* screen_bounded_surface_allocate(
     return NULL;
 #endif
     return record;
+}
+
+/* RenderTargetViewportScaleSet (FUN_00476dc0): the GameConfigInit caller
+ * supplies normalized origin/size values (0, 0, 1, 1) for a full-device
+ * viewport. Convert each value with the same __ftol-compatible helper used
+ * by the renderer before entering the bounded-surface allocator. */
+ScreenBoundedSurfaceRecord* render_target_viewport_scale_set(
+    float x, float y, float width_scale, float height_scale, void* camera)
+{
+    uint32_t screen_width;
+    uint32_t screen_height;
+    float pixel_x;
+    float pixel_y;
+    float pixel_width;
+    float pixel_height;
+    if (s_screen_bounded_surface_device == NULL || camera == NULL)
+        return NULL;
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    screen_width = ((IDirect3DRMDevice2*)s_screen_bounded_surface_device)->GetWidth();
+    screen_height = ((IDirect3DRMDevice2*)s_screen_bounded_surface_device)->GetHeight();
+#else
+    return NULL;
+#endif
+    if (screen_width == 0u || screen_height == 0u) return NULL;
+    pixel_x = x * (float)screen_width;
+    pixel_y = y * (float)screen_height;
+    pixel_width = width_scale * (float)screen_width;
+    pixel_height = height_scale * (float)screen_height;
+    if (pixel_x != pixel_x || pixel_y != pixel_y ||
+        pixel_width != pixel_width || pixel_height != pixel_height ||
+        pixel_x < -2147483648.0f || pixel_x > 2147483520.0f ||
+        pixel_y < -2147483648.0f || pixel_y > 2147483520.0f ||
+        pixel_width <= 0.0f || pixel_width > 2147483520.0f ||
+        pixel_height <= 0.0f || pixel_height > 2147483520.0f)
+        return NULL;
+    return screen_bounded_surface_allocate(
+        (uint32_t)crt_float_to_long(pixel_width),
+        (uint32_t)crt_float_to_long(pixel_height), camera,
+        crt_float_to_long(pixel_x), crt_float_to_long(pixel_y));
 }
 
 int mesh_record_allocate_or_append_ops_set(const MeshRecordAppendOps* ops)
@@ -577,7 +617,6 @@ static SurfacePixelWriteFn s_surface_pixel_writer;
 static SurfaceWriterUnlockHook s_surface_writer_unlock_hook;
 static RendererBeginFrameHook s_renderer_begin_frame_hook;
 static void* s_renderer_begin_frame_device;
-static int s_renderer_frame_started;
 static RenderStateApplyOps s_render_state_apply_ops;
 static uint32_t s_d3d_material_state_saved[200];
 static uint8_t s_d3d_material_state_dirty[200];
@@ -1812,24 +1851,54 @@ void renderer_begin_frame_hook_set(RendererBeginFrameHook hook, void* device)
 {
     s_renderer_begin_frame_hook = hook;
     s_renderer_begin_frame_device = device;
-    s_renderer_frame_started = 0;
 }
 
-/* Portable adapter for RendererBeginFrameOnce. The retail routine uses the
- * global feature bit and global Direct3DRM device; this hook keeps a local
- * once-per-frame seam until those owners are bound. */
+/* RendererBeginFrameOnce (FUN_00477fa0): test the engine feature bit, issue
+ * the renderer device update once, then set the bit. The current context and
+ * device are owned by EngineTick and Direct3DRM device initialization. */
 int renderer_begin_frame_once(void)
 {
-    if (s_renderer_frame_started) return 1;
-    if (s_renderer_begin_frame_hook == NULL) return 0;
-    s_renderer_begin_frame_hook(s_renderer_begin_frame_device);
-    s_renderer_frame_started = 1;
+    uint32_t* feature = engine_current_feature_word();
+    if (feature == NULL) return 0;
+    if ((*feature & 1u) != 0u) return 1;
+    if (s_renderer_begin_frame_hook != NULL) {
+        s_renderer_begin_frame_hook(s_renderer_begin_frame_device);
+    }
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    else {
+        if (s_screen_bounded_surface_device == NULL ||
+            ((IDirect3DRMDevice2*)s_screen_bounded_surface_device)->Update()
+                != DD_OK) return 0;
+    }
+#else
+    else {
+        return 0;
+    }
+#endif
+    *feature |= 1u;
     return 1;
 }
 
 void renderer_begin_frame_once_reset(void)
 {
-    s_renderer_frame_started = 0;
+    uint32_t* feature = engine_current_feature_word();
+    if (feature != NULL) *feature &= ~1u;
+}
+
+// FUNCTION: LEGORR 0x00477fa0
+void renderer_begin_frame_once_retail(void)
+{
+    uint32_t* feature = engine_current_feature_word();
+    if (feature == NULL || (*feature & 1u) != 0u) return;
+    if (s_renderer_begin_frame_hook != NULL) {
+        s_renderer_begin_frame_hook(s_renderer_begin_frame_device);
+    }
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    else if (s_screen_bounded_surface_device != NULL) {
+        (void)((IDirect3DRMDevice2*)s_screen_bounded_surface_device)->Update();
+    }
+#endif
+    *feature |= 1u;
 }
 
 /* DirectDrawSurfaceDescriptorInitialize (FUN_0047e710): clear the

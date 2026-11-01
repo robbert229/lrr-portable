@@ -44,6 +44,10 @@ typedef struct ScreenBoundedSurfaceRecord {
 void screen_bounded_surface_device_set(void* renderer, void* device);
 ScreenBoundedSurfaceRecord* screen_bounded_surface_allocate(
     uint32_t width, uint32_t height, void* camera, int x, int y);
+/* RenderTargetViewportScaleSet (FUN_00476dc0): turn normalized viewport
+ * origin and size values into device pixels, then allocate its viewport. */
+ScreenBoundedSurfaceRecord* render_target_viewport_scale_set(
+    float x, float y, float width_scale, float height_scale, void* camera);
 
 /* FUN_00482220: one 0x70-byte mesh render record. The corpus stores the
  * index count/pointer at offsets 0/8 and vertex count/pointer at 4/0xc. */
@@ -588,7 +592,6 @@ uint32_t renderer_record_table_word_peek(int index);
 void renderer_record_table_word_set(int index, uint32_t value);
 typedef void (*RendererBeginFrameHook)(void* device);
 void renderer_begin_frame_hook_set(RendererBeginFrameHook hook, void* device);
-/* Portable hook adapter; no target mapping until the global device/flag exist. */
 int renderer_begin_frame_once(void);
 void renderer_begin_frame_once_reset(void);
 void surface_descriptor_initialize(void* record); /* FUN_0047e710 */

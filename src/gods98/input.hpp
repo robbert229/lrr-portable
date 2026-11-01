@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* gods98 engine — input core scaffold (findings 04/05).
+/* gods98 engine — input state and translation tables (findings 04/05).
  *
- * The corpus's input model is three 256-byte key tables, mouse x/y, and a
- * per-key "context filter" (findings 04/05):
+ * The corpus's input model is three 256-byte key tables and mouse x/y. The
+ * separate DAT_004a1f60 table maps DirectInput scan-code indices to text
+ * bytes; its exact retail initializer is in input.cpp.
  *
  *   cur    DAT_0076ab80  current frame snapshot (1 byte per key)
  *   prev   DAT_0076aa00  previous frame snapshot
@@ -12,7 +13,7 @@
  * Edge detection everywhere in the corpus is (cur != 0 && prev != cur), i.e.
  * a key that became non-zero this frame — nothing fancier. EnginePreTick
  * (findings 04/05) turns edges into text via KeyContextCheck (context filter)
- * and a port-local ASCII helper, then clears the tables with the mirror trick.
+ * and CRT character conversion, then clears the tables with the mirror trick.
  *
  * QuitPoll's dwell machine (FUN_004589c0): corner-dwell quit gesture with
  * per-slot enter/leave counters. The original indexes those counters off a
@@ -27,9 +28,9 @@
  *  - input_key_to_ascii is a port-local ASCII helper. The reference entry at
  *    0x48e380 is CRT `_toupper`; DAT_00549180 is a CRT locale handle, not a
  *    keyboard-layout handle.
- *  - The KeyContextCheck filter table is reconstruction-owned (the shipped
- *    256x4 table in .rdata is not embedded); default = all entries zero
- *    ("no restriction").
+ *  - InputState::context_filter is port-local text-pump state. It is not the
+ *    retail KeyContextCheck table, which is process-global and initialized
+ *    from the shipped 256-entry scan-code-to-character data.
  */
 #ifndef LEGORRR_INPUT_HPP
 #define LEGORRR_INPUT_HPP
@@ -72,7 +73,7 @@ typedef struct InputState {
     uint32_t dwell_leave[5];          /* leave counts per slot */
 
     uint8_t  hkl_present;             /* DAT_00549180 analog */
-    uint32_t context_filter[INPUT_KEY_COUNT]; /* DAT_004a1f60 analog */
+    uint32_t context_filter[INPUT_KEY_COUNT]; /* port-local text filter */
 
     char*    text_target;             /* active text-entry buffer, else NULL */
     int32_t  text_len;
@@ -148,6 +149,7 @@ typedef void (*InputSetCursorPositionHook)(int x, int y, void* context);
 void input_cursor_position_hooks_install(InputClientToScreenHook convert,
                                         InputSetCursorPositionHook set_cursor,
                                         void* context);
+void input_cursor_position_update(InputState* state, PlatformWindow* window);
 void input_cursor_client_position_set(int x, int y); /* FUN_0047f0d0 */
 void input_cursor_client_position_get(int* x, int* y);
 void input_cursor_delta_get(int* x, int* y);
@@ -163,9 +165,10 @@ int  input_mouse_pressed(const InputState* s);
  * `_toupper`, represented separately in src/crt. */
 uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode);
 
-/* Port adapter for the KeyContextCheck table read. Retail takes only `key`
- * and reads a fixed global table; this helper also takes the owning state. */
+/* Port-local text filter stored per InputState. The retail KeyContextCheck
+ * table is a separate process-global scan-code-to-character map. */
 uint32_t input_key_context(const InputState* s, uint32_t key);
+uint32_t input_key_context_check(int key); /* FUN_00411f00 */
 
 /* EnginePreTick text pump: for each key edge allowed by the context filter,
  * append its ASCII character to buf (capacity cap); when `clear` is set the

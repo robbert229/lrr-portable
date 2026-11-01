@@ -700,6 +700,7 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
         PlatformEvent evbuf[32];
         int nev = platform_pump_events(win, evbuf, 32);
         input_capture_events(&input, evbuf, nev);
+        input_cursor_position_update(&input, win);
         for (int i = 0; i < nev; ++i) {
             if (evbuf[i].kind == PLATFORM_EVENT_QUIT) {
                 *quit = 1;
@@ -1454,6 +1455,7 @@ int LegorrrRun(void)
             PlatformEvent evbuf[32];
             int nev = platform_pump_events(win, evbuf, 32);
             input_capture_events(&input, evbuf, nev);
+            input_cursor_position_update(&input, win);
             for (int i = 0; i < nev; ++i) {
                 if (evbuf[i].kind == PLATFORM_EVENT_QUIT) {
                     quit = 1;
@@ -1664,6 +1666,7 @@ int LegorrrRun(void)
         PlatformEvent evbuf[32];
         int nev = platform_pump_events(win, evbuf, 32);
         input_capture_events(&input, evbuf, nev);
+        input_cursor_position_update(&input, win);
         for (int i = 0; i < nev; ++i) {
             if (evbuf[i].kind == PLATFORM_EVENT_QUIT) {
                 quit = 1;
@@ -1797,6 +1800,7 @@ int LegorrrRun(void)
                 PlatformEvent pev[32];
                 int pn = platform_pump_events(win, pev, 32);
                 input_capture_events(&input, pev, pn);
+                input_cursor_position_update(&input, win);
                 for (int i = 0; i < pn; ++i) {
                     if (pev[i].kind == PLATFORM_EVENT_QUIT) {
                         quit = 1;

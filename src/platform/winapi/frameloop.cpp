@@ -174,6 +174,26 @@ int platform_window_height(PlatformWindow* win)
     return win != NULL ? win->height : 0;
 }
 
+int platform_window_cursor_position_get(PlatformWindow* win, int* x, int* y)
+{
+    RECT client_rect;
+    POINT client_origin;
+    POINT cursor;
+    if (win == NULL || win->hwnd == NULL || x == NULL || y == NULL ||
+        !GetClientRect(win->hwnd, &client_rect)) {
+        return 0;
+    }
+    client_origin.x = 0;
+    client_origin.y = 0;
+    cursor.x = 0;
+    cursor.y = 0;
+    ClientToScreen(win->hwnd, &client_origin);
+    GetCursorPos(&cursor);
+    *x = cursor.x - client_origin.x;
+    *y = cursor.y - client_origin.y;
+    return 1;
+}
+
 int platform_poll_events(PlatformWindow* win)
 {
     PlatformEvent events[32];

@@ -4665,9 +4665,17 @@ int renderer_cached_handle_4c_is_not_one(void* record)
     return value != 1.0f;
 }
 
-/* Portable cache adapter for the retail indexed-resource resolver. The
- * record layout and cache behavior match, but renderer resource lookup is
- * unavailable unless renderer_subobject_hooks_install is bound. */
+static void* scene_object_subobject_resolve(void* owner, void* source,
+                                            int index);
+static void* scene_object_cached_subobject_get(void* owner,
+                                               size_t source_offset,
+                                               size_t cache_offset,
+                                               int index);
+
+/* SceneObjectIndexedHandleGetOrCreate (FUN_00408770): resolve the indexed
+ * child from +8 and cache it in the corresponding +0x28 slot. The installed
+ * resolver models the retail resource-tree lookup/apply sequence. */
+// FUNCTION: LEGORR 0x00408770
 void* scene_object_indexed_handle_get_or_create(void* record, int index)
 {
     void** source;
@@ -4676,43 +4684,47 @@ void* scene_object_indexed_handle_get_or_create(void* record, int index)
     source = (void**)((char*)record + 8);
     if (*source == NULL) return NULL;
     cached = (void**)((char*)record + 0x28) + index;
-    if (*cached == NULL) {
-        *cached = renderer_object_subobject_find_apply(record, *source);
-    }
+    if (*cached == NULL)
+        *cached = scene_object_subobject_resolve(record, *source, index);
     return *cached;
 }
 
-/* Portable cache adapter; the retail resource resolver is not installed. */
+/* SceneObjectPrimaryHandleGetOrCreate (FUN_004087b0). */
+// FUNCTION: LEGORR 0x004087b0
 void* scene_object_primary_handle_get_or_create(void* record)
 {
     void** source;
     void** cached;
     if (record == NULL) return NULL;
     source = (void**)((char*)record + 0x10);
-    cached = (void**)((char*)record + 0x68);
     if (*source == NULL) return NULL;
+    cached = (void**)((char*)record + 0x68);
     if (*cached == NULL) {
-        *cached = renderer_object_subobject_find_apply(record, *source);
+        *cached = scene_object_subobject_resolve(record, *source, 0);
+        return *cached;
     }
     return *cached;
 }
 
-/* Portable cache adapter; the retail resource resolver is not installed. */
+/* SceneObjectSecondaryHandleGetOrCreate (FUN_004087e0). */
+// FUNCTION: LEGORR 0x004087e0
 void* scene_object_secondary_handle_get_or_create(void* record)
 {
     void** source;
     void** cached;
     if (record == NULL) return NULL;
     source = (void**)((char*)record + 0x14);
-    cached = (void**)((char*)record + 0x6c);
     if (*source == NULL) return NULL;
+    cached = (void**)((char*)record + 0x6c);
     if (*cached == NULL) {
-        *cached = renderer_object_subobject_find_apply(record, *source);
+        *cached = scene_object_subobject_resolve(record, *source, 0);
+        return *cached;
     }
     return *cached;
 }
 
-/* Portable cache adapter; the retail resource resolver is not installed. */
+/* SceneObjectIndexedSecondaryHandleGetOrCreate (FUN_00408810). */
+// FUNCTION: LEGORR 0x00408810
 void* scene_object_indexed_secondary_handle_get_or_create(void* record,
                                                            int index)
 {
@@ -4722,9 +4734,8 @@ void* scene_object_indexed_secondary_handle_get_or_create(void* record,
     source = (void**)((char*)record + 0x18);
     if (*source == NULL) return NULL;
     cached = (void**)((char*)record + 0x50) + index;
-    if (*cached == NULL) {
-        *cached = renderer_object_subobject_find_apply(record, *source);
-    }
+    if (*cached == NULL)
+        *cached = scene_object_subobject_resolve(record, *source, index);
     return *cached;
 }
 
@@ -6931,6 +6942,14 @@ void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver)
     s_renderer_subobject_resolver = resolver;
 }
 
+static void* scene_object_subobject_resolve(void* owner, void* source,
+                                            int index)
+{
+    if (owner == NULL || source == NULL ||
+        s_renderer_subobject_resolver == NULL) return NULL;
+    return s_renderer_subobject_resolver(owner, source, index);
+}
+
 static void* scene_object_cached_subobject_get(void* owner,
                                                size_t source_offset,
                                                size_t cache_offset,
@@ -6944,9 +6963,8 @@ static void* scene_object_cached_subobject_get(void* owner,
     void* cached = NULL;
     const size_t slot_offset = cache_offset + (size_t)index * sizeof(void*);
     __builtin_memcpy(&cached, (char*)owner + slot_offset, sizeof(cached));
-    if (cached == NULL && source != NULL
-        && s_renderer_subobject_resolver != NULL) {
-        cached = s_renderer_subobject_resolver(owner, source, index);
+    if (cached == NULL && source != NULL) {
+        cached = scene_object_subobject_resolve(owner, source, index);
         __builtin_memcpy((char*)owner + slot_offset, &cached, sizeof(cached));
     }
     return cached;
@@ -6975,15 +6993,23 @@ void* activity_runner_state_read(void* runner, int index)
     return cached;
 }
 
-/* Portable cache adapter for SceneActivityChangeSecondary. The retail owner
- * is a renderer activity record with a 32-bit handle table at +0x40 and its
- * scene source at +0x0c. No production owner binds that record layout here;
- * creation also needs the renderer's three-argument subobject lookup/apply
- * contract, which the current resolver callback does not expose. */
+/* SceneActivityChangeSecondary (FUN_004085f0): resolve the requested indexed
+ * child from +0x0c and cache it in the +0x40 handle table. */
+// FUNCTION: LEGORR 0x004085f0
 void* scene_activity_change_secondary(void* activity, int index)
 {
-    return scene_object_cached_subobject_get(activity, 0x0cu, 0x40u,
-                                              index);
+    void** cached;
+    void* result = NULL;
+    if (activity == NULL) return NULL;
+    if (*(void**)((char*)activity + 0x0c) != NULL) {
+        cached = (void**)((char*)activity + 0x40) + index;
+        if (*cached == NULL) {
+            *cached = scene_object_subobject_resolve(
+                activity, *(void**)((char*)activity + 0x0c), index);
+        }
+        result = *cached;
+    }
+    return result;
 }
 
 /* FUNCTION: LEGORR 0x00406fb0 */

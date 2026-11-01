@@ -345,6 +345,12 @@ void string_table_install(const char* const* entries, unsigned int count)
     }
 }
 
+/* StringTableIndexLookup (FUN_00408c80): scan the configured name-pointer
+ * table in order and return the first exact byte-string match.  The retail
+ * comparator loads two bytes per iteration, but still checks both bytes and
+ * stops at the same NUL terminator as an ordinary byte walk.  A miss returns
+ * the table count. */
+// FUNCTION: LEGORR 0x00408c80
 unsigned int string_table_index_lookup(const char* value)
 {
     unsigned int i;
