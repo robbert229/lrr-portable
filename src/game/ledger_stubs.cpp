@@ -2859,15 +2859,44 @@ void ledger_stub_00428020_EntityCommandStatusFeedbackDispatch(EntitySlot* entity
 }
 
 // TerrainCommandFeedbackDispatch
+static uint32_t terrain_feedback_message_cue_get(void* context,
+                                                  int message_id)
+{
+    (void)context;
+    return surface_type_configured_value_at_index(message_id);
+}
+
+static void terrain_feedback_message_cue_set(void* context, int message_group,
+                                              uint32_t cue)
+{
+    (void)context;
+    timed_effect_cue_request_set(message_group, cue);
+}
+
+static void terrain_feedback_message_update(void* context, int message_group)
+{
+    (void)context;
+    timed_effect_update_request_set(message_group);
+}
+
 // FUNCTION: LEGORR 0x00428330
 int ledger_stub_00428330_TerrainCommandFeedbackDispatch(
     TerrainCommandFeedbackState* state, int details_requested,
-    int unused_parameter, int parameter_four,
+    int parameter_three, int parameter_four,
     const TerrainCommandFeedbackHooks* hooks)
 {
-    (void)unused_parameter;
+    TerrainCommandFeedbackHooks runtime_hooks;
+    if (hooks != NULL) runtime_hooks = *hooks;
+    else memset(&runtime_hooks, 0, sizeof(runtime_hooks));
+    if (runtime_hooks.message_cue_get == NULL)
+        runtime_hooks.message_cue_get = terrain_feedback_message_cue_get;
+    if (runtime_hooks.message_cue_set == NULL)
+        runtime_hooks.message_cue_set = terrain_feedback_message_cue_set;
+    if (runtime_hooks.message_update == NULL)
+        runtime_hooks.message_update = terrain_feedback_message_update;
     return terrain_command_feedback_dispatch(state, details_requested,
-                                             parameter_four, hooks);
+                                             parameter_three, parameter_four,
+                                             &runtime_hooks);
 }
 
 /* Adapter only: LevelDebugInputCellMutatorDispatch (FUN_004288e0) consumes
@@ -5065,8 +5094,11 @@ int ledger_stub_00448a60_EntityNeighborCellMoveCommandHandle(
     float weight;
     unsigned int direction;
     int32_t random_value;
-    if (entity == NULL || target_cell == NULL || entity->owner_ctx == NULL
-        || entity->activity != 11) return 0;
+    EntitySlot* linked_entity;
+    if (entity == NULL || target_cell == NULL || entity->owner_ctx == NULL ||
+        entity->carry_link_308 == NULL) return 0;
+    linked_entity = (EntitySlot*)entity->carry_link_308;
+    if (linked_entity->type != 11) return 0;
     level = entity->owner_ctx->level;
     if (level == NULL || !terrain_cell_has_occupied_or_flagged_neighbor(
             level, target_cell[0], target_cell[1], NULL))
@@ -8146,14 +8178,6 @@ typedef struct NestedResourceRecord {
     unsigned char reserved[12];
     struct NestedResourceRecord* child_or_next;
 } NestedResourceRecord;
-typedef void (*NestedRecordRemoveHook)(void* owner, int key, void* context);
-static NestedRecordRemoveHook s_nested_record_remove_hook;
-static void* s_nested_record_remove_context;
-void nested_record_remove_hook_set(NestedRecordRemoveHook hook, void* context)
-{
-    s_nested_record_remove_hook = hook;
-    s_nested_record_remove_context = context;
-}
 // FUNCTION: LEGORR 0x0047b330
 int ledger_stub_0047b330_NestedRecordListRemoveMatchingKey(
     void* owner, int key, NestedResourceRecord* record)
@@ -8163,9 +8187,10 @@ int ledger_stub_0047b330_NestedRecordListRemoveMatchingKey(
     child = record->child_or_next;
     if (ledger_stub_0047b330_NestedRecordListRemoveMatchingKey(
             owner, key, child)) {
-        if (s_nested_record_remove_hook != NULL)
-            s_nested_record_remove_hook(owner, key,
-                                       s_nested_record_remove_context);
+        /* The retail call removes the matching key from DAT_00506684;
+         * its owner argument is forwarded but ignored by that helper. */
+        (void)owner;
+        keyed_resource_entry_remove(key);
         record->child_or_next = child->child_or_next;
         engine_heap_free(child);
     }
