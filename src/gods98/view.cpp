@@ -712,6 +712,7 @@ void ddiscene_animation_hook_create(void* scene_object, int callback,
 
 typedef void (*DdiTimedInterfaceCall)(void*, float, void*);
 typedef void (*DdiTimedInterfaceUpdate)(void*, float, void*, void*);
+typedef void (*DdiTimedInterfaceRelease)(void*);
 
 /* SharedObjectAnimationAndTimedEventUpdate is implemented in the ledger
  * translation unit because its track layout is shared with game animation. */
@@ -726,19 +727,21 @@ void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
 void ddiscene_timed_hook_dispatch(void* hook_record, float time,
                                   void* output)
 {
-    uint32_t* record = static_cast<uint32_t*>(hook_record);
-    uint32_t* shared;
-    uint32_t i;
+    SceneActFrameRecord* record = (SceneActFrameRecord*)hook_record;
+    SceneActFrameRecord* shared;
+    void** shared_children;
+    void** record_children;
+    uintptr_t i;
     if (record == NULL) return;
-    shared = reinterpret_cast<uint32_t*>(record[0]);
+    shared = (SceneActFrameRecord*)record->words[0];
     if (shared == NULL) {
-        if (record[3] != 0u) {
+        if (record->words[3] != 0u) {
             unported_ledger_stubs::
                 ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
-                reinterpret_cast<void*>(record[1]), time, NULL);
+                (void*)record->words[1], time, NULL);
         }
-        else if (record[2] != 0u) {
-            void* object = reinterpret_cast<void*>(record[2]);
+        else if (record->words[2] != 0u) {
+            void* object = (void*)record->words[2];
             void** vtable = *static_cast<void***>(object);
             if (vtable != NULL && vtable[0x38 / 4] != NULL) {
                 DdiTimedInterfaceCall call =
@@ -748,13 +751,13 @@ void ddiscene_timed_hook_dispatch(void* hook_record, float time,
         }
         return;
     }
-    if (shared[3] != 0u) {
+    if (shared->words[3] != 0u) {
         unported_ledger_stubs::
             ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
-            reinterpret_cast<void*>(shared[1]), time, NULL);
+            (void*)shared->words[1], time, NULL);
     }
-    else if (shared[2] != 0u) {
-        void* object = reinterpret_cast<void*>(shared[2]);
+    else if (shared->words[2] != 0u) {
+        void* object = (void*)shared->words[2];
         void** vtable = *static_cast<void***>(object);
         if (vtable != NULL && vtable[0x38 / 4] != NULL) {
             DdiTimedInterfaceCall call =
@@ -762,35 +765,63 @@ void ddiscene_timed_hook_dispatch(void* hook_record, float time,
             call(object, time, output);
         }
     }
-    for (i = 0u; i < shared[6]; ++i) {
-        void* child = reinterpret_cast<void*>(
-            static_cast<uint32_t*>(reinterpret_cast<void*>(shared[5]))[i]);
-        void** vtable;
-        if (child == NULL) continue;
-        vtable = *static_cast<void***>(child);
-        if (vtable == NULL) continue;
-        if (vtable[0x5c / 4] != NULL) {
-            DdiTimedInterfaceUpdate update =
-                reinterpret_cast<DdiTimedInterfaceUpdate>(vtable[0x5c / 4]);
-            update(child, time, output, NULL);
+    shared_children = (void**)shared->words[5];
+    record_children = (void**)record->words[5];
+    for (i = 0u; i < record->words[6]; ++i) {
+        void* child = shared_children != NULL ? shared_children[i] : NULL;
+        if (child != NULL) {
+            void* updated_interface = NULL;
+            void** vtable = *static_cast<void***>(child);
+            if (vtable != NULL) {
+                if (vtable[0x5c / 4] != NULL) {
+                    DdiTimedInterfaceUpdate update =
+                        reinterpret_cast<DdiTimedInterfaceUpdate>(
+                            vtable[0x5c / 4]);
+                    update(child, time, output, &updated_interface);
+                }
+                if (vtable[0x74 / 4] != NULL) {
+                    DdiTimedInterfaceCall call =
+                        reinterpret_cast<DdiTimedInterfaceCall>(
+                            vtable[0x74 / 4]);
+                    call(child, time, output);
+                }
+            }
+            if (updated_interface != NULL) {
+                void** updated_vtable = *static_cast<void***>(updated_interface);
+                if (updated_vtable != NULL && updated_vtable[2] != NULL) {
+                    DdiTimedInterfaceRelease release =
+                        reinterpret_cast<DdiTimedInterfaceRelease>(
+                            updated_vtable[2]);
+                    release(updated_interface);
+                }
+            }
         }
-        if (vtable[0x74 / 4] != NULL) {
-            DdiTimedInterfaceCall call =
-                reinterpret_cast<DdiTimedInterfaceCall>(vtable[0x74 / 4]);
-            call(child, time, output);
-        }
-    }
-    if (output != NULL) {
-        uint32_t* child_array = reinterpret_cast<uint32_t*>(record[5]);
-        for (i = 0u; child_array != NULL && i < record[6]; ++i) {
-            void* child = reinterpret_cast<void*>(child_array[i]);
-            void** vtable;
-            if (child == NULL) continue;
-            vtable = *static_cast<void***>(child);
+        if (record_children != NULL && record_children[i] != NULL) {
+            void* record_child = record_children[i];
+            void* child_output = NULL;
+            void** vtable = *static_cast<void***>(record_child);
             if (vtable != NULL && vtable[0x38 / 4] != NULL) {
                 DdiTimedInterfaceCall call =
                     reinterpret_cast<DdiTimedInterfaceCall>(vtable[0x38 / 4]);
-                call(child, time, output);
+                call(record_child, 0.0f, &child_output);
+            }
+        }
+    }
+    if (output != NULL) {
+        float output_time;
+        memcpy(&output_time, output, sizeof(output_time));
+        if (shared->words[3] != 0u) {
+            unported_ledger_stubs::
+                ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
+                (void*)shared->words[1], output_time, NULL);
+        }
+        else if (shared->words[2] != 0u) {
+            void* object = (void*)shared->words[2];
+            void** vtable = *static_cast<void***>(object);
+            if (vtable != NULL && vtable[0x38 / 4] != NULL) {
+                DdiTimedInterfaceCall call =
+                    reinterpret_cast<DdiTimedInterfaceCall>(vtable[0x38 / 4]);
+                call(object, output_time, NULL);
             }
         }
     }

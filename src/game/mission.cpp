@@ -429,8 +429,13 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
 static void mission_task_importance_refresh(GameTask* t)
 {
     MissionTaskInitBinding* binding = &s_task_init_binding;
-    float imp = rw_float(binding->config, NULL, binding->level_name,
-                         "Importance", task_name(t), 0.0f);
+    char path[512];
+    const char* value;
+    float imp;
+    rw_path(path, sizeof(path), binding->config, binding->level_name,
+            "Importance", task_name(t));
+    value = path[0] != '\0' ? block_get_strptr(binding->config, path) : NULL;
+    imp = (float)atof(value != NULL ? value : "");
     __builtin_memcpy(t->data + TASK_OFF_IMPORTANCE, &imp, 4);
 }
 
@@ -440,9 +445,13 @@ static void mission_task_importance_refresh(GameTask* t)
 static void mission_task_quota_refresh(GameTask* t)
 {
     MissionTaskInitBinding* binding = &s_task_init_binding;
-    int32_t quota = (int32_t)rw_int(binding->config, NULL,
-                                    binding->level_name, "Quota",
-                                    task_name(t), 0);
+    char path[512];
+    const char* value;
+    int32_t quota;
+    rw_path(path, sizeof(path), binding->config, binding->level_name,
+            "Quota", task_name(t));
+    value = path[0] != '\0' ? block_get_strptr(binding->config, path) : NULL;
+    quota = (int32_t)atoi(value != NULL ? value : "");
     __builtin_memcpy(t->data + TASK_OFF_QUOTA, &quota, 4);
 }
 

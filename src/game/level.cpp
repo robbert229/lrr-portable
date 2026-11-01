@@ -63,6 +63,7 @@ void terrain_quad_vertex_source_set(void* surface, uint32_t width,
     s_terrain_quad_vertex_context = context;
 }
 
+// FUNCTION: LEGORR 0x00463590
 int terrain_cell_surface_normal_get(uint32_t x, uint32_t y, float out[3])
 {
     float vertices[4][3];
@@ -4165,7 +4166,7 @@ static int32_t  s_ts_now; /* _DAT_004d78c0: ErodeLockTime * 25 float bits */
 // FUNCTION: LEGORR 0x0040ee00
 void cell_coordinate_timestamp_remember(const int xy[2])
 {
-    uint32_t* active = s_ts_active;
+    volatile uint32_t* active = s_ts_active;
     int index = 0;
     do {
         if (*active == 0u) {
@@ -5875,7 +5876,7 @@ int erosion_scratch_peek(int which, int index)
 // FUNCTION: LEGORR 0x0040e990
 int lava_erosion_stage_slot_find_free(int* slot_out)
 {
-    uint32_t* cursor = s_erosion_marks;
+    volatile uint32_t* cursor = s_erosion_marks;
     int slot = 0;
     do {
         if (*cursor == 0u) {

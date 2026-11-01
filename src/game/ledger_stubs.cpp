@@ -6649,18 +6649,16 @@ void ledger_stub_0045a590_ScrollingAdvisorTextAppend(void* record,
 void ledger_stub_0045a5b0_UITextOutputPositionAndDraw(
     void* record, uint32_t start_line, float line_scale)
 {
-    uint32_t* words = (uint32_t*)record;
-    void* output = (void*)words[0];
-    float* offsets = (float*)words[3];
+    int32_t* words = (int32_t*)record;
     int x, y;
     /* The retail path converts x (+0x1c) before y (+0x18), calling the CRT
      * floor helper before __ftol so coordinates round downward. */
     x = (int)crt_round_to_integral_with_math_error_handling(
-        (double)((float)(int32_t)words[2] + offsets[7]));
+        (double)((float)words[2] + ((float*)words[3])[7]));
     y = (int)crt_round_to_integral_with_math_error_handling(
-        (double)((float)(int32_t)words[1] + offsets[6]));
-    float_pair_at_offset4_set_from_ints(output, x, y);
-    (void)text_buffer_draw_wrapped(output, start_line, line_scale, NULL);
+        (double)((float)words[1] + ((float*)words[3])[6]));
+    float_pair_at_offset4_set_from_ints((void*)words[0], x, y);
+    (void)text_buffer_draw_wrapped((void*)words[0], start_line, line_scale, NULL);
 }
 
 // SimCursorInteractionTick
@@ -6975,7 +6973,6 @@ void ledger_stub_00463230_TerrainDirtyCellQuadNormalEmitPass(
 }
 
 // TerrainCellSurfaceNormalGet
-// FUNCTION: LEGORR 0x00463590
 int ledger_stub_00463590_TerrainCellSurfaceNormalGet(uint32_t x, uint32_t y,
                                                       float normal[3])
 {
