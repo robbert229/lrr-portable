@@ -14,6 +14,7 @@
 #include "texture.hpp"
 #include "view.hpp"
 #include "frameloop.hpp"
+#include "scene_resources.hpp"
 
 #if defined(_MSC_VER)
 #define SURFACE_COM_CALL __stdcall
@@ -3041,6 +3042,34 @@ void lwo_layer_enabled_set(void* object, unsigned int index, int enabled,
 
 // FUNCTION: LEGORR 0x00474c40
 uint32_t lwo_layer_polygon_vertex_count(
+    void* object, int block, uint32_t* field_out, uint32_t reserved,
+    uint32_t* kind_out, uint32_t* count_out, uint32_t* indices_out)
+{
+    void* owner = *(void**)((char*)object + 0x0c);
+    void* mesh = *(void**)((char*)owner + 0x0c);
+    if (mesh != NULL) {
+        indexed_record_entry_read(mesh, block, field_out, reserved, kind_out,
+                                  count_out, indices_out);
+        return 0u;
+    }
+    else {
+        void* interface_object = *(void**)((char*)owner + 8);
+        int resolved_block = block;
+        void** vtable;
+        typedef int32_t (SURFACE_COM_CALL *PolygonVertexCountFn)(
+            void*, int, uint32_t*, uint32_t, uint32_t*, uint32_t*,
+            uint32_t*);
+        (void)lego::animated_texture_frame_resolve(&interface_object,
+                                                  &resolved_block);
+        vtable = *(void***)interface_object;
+        return (uint32_t)(((PolygonVertexCountFn)
+            vtable[0x5c / sizeof(void*)])(
+                interface_object, resolved_block, field_out, reserved,
+                kind_out, count_out, indices_out) == 0);
+    }
+}
+
+uint32_t lwo_layer_polygon_vertex_count_dispatch(
     void* object, unsigned int layer_index, const void* request,
     const LwoLayerDispatchOps* ops)
 {
@@ -3063,6 +3092,34 @@ uint32_t lwo_layer_polygon_vertex_count(
 
 // FUNCTION: LEGORR 0x00474cc0
 uint32_t lwo_layer_polygon_vertex_data_read(
+    void* object, int block, int first_vertex, int count, void* output)
+{
+    void* owner = *(void**)((char*)object + 0x0c);
+    void* mesh = *(void**)((char*)owner + 0x0c);
+    if (mesh != NULL) {
+        indexed_geometry_data_copy_to_output(mesh, block, first_vertex,
+                                             count, output);
+        return 0u;
+    }
+    else {
+        void* interface_object = *(void**)((char*)owner + 8);
+        int resolved_block = block;
+        void** vtable;
+        typedef int32_t (SURFACE_COM_CALL *PolygonVertexDataReadFn)(
+            void*, int, int, int, void*);
+        (void)lego::animated_texture_frame_resolve(&interface_object,
+                                                  &resolved_block);
+        vtable = *(void***)interface_object;
+        if (((PolygonVertexDataReadFn)vtable[0x60 / sizeof(void*)])(
+                interface_object, resolved_block, first_vertex, count,
+                output) != 0) {
+            return 0xffffffffu;
+        }
+        return 0u;
+    }
+}
+
+uint32_t lwo_layer_polygon_vertex_data_read_dispatch(
     void* object, unsigned int layer_index, const void* request,
     const LwoLayerDispatchOps* ops)
 {
@@ -3111,7 +3168,38 @@ uint32_t terrain_cell_quad_vertex_emit(
  * base enabled value. If no child array is available, the original returns
  * the requested index. */
 // FUNCTION: LEGORR 0x00474ae0
-uint32_t terrain_detail_entry_get_at_index(
+uint32_t terrain_detail_entry_get_at_index(void* object,
+                                           unsigned int index)
+{
+    void* owner = *(void**)((char*)object + 0x0c);
+    void* mesh = *(void**)((char*)owner + 0x0c);
+    if (mesh != NULL) {
+        return indexed_record_flag6c_bit0_get(mesh, (int)index);
+    }
+    else {
+        void* layer = *(void**)((char*)owner + 8);
+        void** layer_vtable = *(void***)layer;
+        typedef void* (SURFACE_COM_CALL *LayerCollectionGetFn)(void*);
+        void* children = ((LayerCollectionGetFn)
+            layer_vtable[0x1c / sizeof(void*)])(layer);
+        if (children != NULL) {
+            if (index != 0u) {
+                void* data = *(void**)children;
+                void* child = *(void**)((char*)data - sizeof(uint32_t) +
+                    (size_t)index * sizeof(void*));
+                void** child_vtable = *(void***)child;
+                typedef uint32_t (SURFACE_COM_CALL *LayerFlagsGetFn)(void*);
+                uint32_t flags = ((LayerFlagsGetFn)
+                    child_vtable[0x1c / sizeof(void*)])(child);
+                return ~flags >> 31;
+            }
+            return *(uint32_t*)((char*)children + 0x0c);
+        }
+        return index;
+    }
+}
+
+uint32_t terrain_detail_entry_get_at_index_dispatch(
     void* object, unsigned int index, const TerrainDetailLookupOps* ops)
 {
     void* mesh;

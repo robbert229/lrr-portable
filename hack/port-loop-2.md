@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **52.78% accuracy**, **51.37% progress**
+- Full report: **97.33% implemented**, **52.85% accuracy**, **51.44% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **48.33% accuracy**,
-  **47.78% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **48.40% accuracy**,
+  **47.86% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1788,6 +1788,40 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   is **97.33% / 52.78% / 51.37%** full and **98.88% / 48.33% / 47.78%**
   game-only. `distrobox enter developer -- make reccmp-report` and
   `git diff --check` passed; tests were not run.
+- `DDiSceneFrameRecordFind` (`0x475e40`) now uses the mapped VC5 CRT
+  case-insensitive compare (`_strcmpi`) instead of a local character-folding
+  loop, matching the decompile's comparison call. Its score increased from
+  14.66% to **15.38%**. The latest report is **97.33% / 52.78% / 51.37%** full
+  and **98.88% / 48.33% / 47.79%** game-only. `distrobox enter developer --
+  make reccmp-report` and `git diff --check` passed; tests were not run.
+- `LwoLayerPolygonVertexDataRead` (`0x474cc0`) now has the decompiled
+  five-argument entry contract. It dispatches indexed meshes through
+  `IndexedGeometryDataCopyToOutput` and the layer path through the resolved
+  interface's `+0x60` method. The terrain surface and material-transition
+  readers now bridge their indexed-mesh sidecar into that entry, so these live
+  callers execute the mapped body. Its score rose from 4.92% to **51.69%**.
+  Reccmp completed: full **97.33% / 52.82% / 51.41%**, game-only
+  **98.88% / 48.36% / 47.82%**; `git diff --check` passed. Tests were not run.
+  Remaining boundary: portable terrain uses the indexed-mesh route; the direct
+  layer-interface branch still depends on the renderer's native object and
+  interface layout.
+- `LwoLayerPolygonVertexCount` (`0x474c40`) now exposes the decompiled
+  seven-argument contract. Its indexed-mesh route delegates to
+  `IndexedRecordEntryRead`; its layer route resolves the frame and calls
+  interface slot `+0x5c`. The separate portable callback adapter remains for
+  host-owned records, and no production caller currently targets this raw
+  entry directly. Its score rose from 19.35% to **57.69%**. Reccmp completed:
+  full **97.33% / 52.83% / 51.42%**, game-only
+  **98.88% / 48.37% / 47.83%**; `git diff --check` passed. Tests were not run.
+- `TerrainDetailEntryGetAtIndex` (`0x474ae0`) now has its retail two-argument
+  entry: mesh records read the `+0x6c` bit through
+  `IndexedRecordFlag6CBit0Get`, while layer records use the returned child
+  array and its flag accessor. `GridCellSetPayloadIndex` bridges its indexed
+  terrain record into this target body. The score rose from 19.86% to **100%**.
+  Reccmp completed: full **97.33% / 52.85% / 51.44%**, game-only
+  **98.88% / 48.40% / 47.86%**; `git diff --check` passed. Tests were not run.
+  `LwoLayerEnabledSet` (`0x474b30`) remains at 19.55%; its attach/detach calls
+  use a renderer owner not represented by the current runtime adapter.
 
 ## Port loop
 

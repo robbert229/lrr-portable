@@ -1119,18 +1119,6 @@ void ddiscene_frame_record_find_hooks_set(
     }
 }
 
-static int ddiscene_ascii_case_equal(const char* first, const char* second)
-{
-    if (first == NULL || second == NULL) return 0;
-    while (*first != '\0' && *second != '\0') {
-        if (tolower((unsigned char)*first) !=
-            tolower((unsigned char)*second)) return 0;
-        ++first;
-        ++second;
-    }
-    return *first == '\0' && *second == '\0';
-}
-
 /* DDiSceneFrameRecordFind (FUN_00475e40): search the selected action-frame
  * collection for the case-insensitive `ActFrame_<name>` record. */
 // FUNCTION: LEGORR 0x00475e40
@@ -1159,7 +1147,7 @@ void* ddiscene_frame_record_find(void* action_interface,
                                          hooks->context);
         const char* name = record != NULL
             ? hooks->record_name_get(record, hooks->context) : NULL;
-        if (ddiscene_ascii_case_equal(name, wanted)) {
+        if (name != NULL && strcasecmp_lite(name, wanted) == 0) {
             if (hooks->record_retain != NULL)
                 hooks->record_retain(record, hooks->context);
             return record;

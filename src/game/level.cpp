@@ -628,6 +628,26 @@ typedef struct TerrainVertexReadRequest {
     void* output;
 } TerrainVertexReadRequest;
 
+typedef struct TerrainIndexedMeshLayerOwner {
+    void* reserved[3];
+    void* mesh;
+} TerrainIndexedMeshLayerOwner;
+
+typedef struct TerrainIndexedMeshLayerObject {
+    void* reserved[3];
+    TerrainIndexedMeshLayerOwner* owner;
+} TerrainIndexedMeshLayerObject;
+
+static void terrain_indexed_mesh_layer_object_init(
+    TerrainState* terrain, TerrainIndexedMeshLayerObject* object,
+    TerrainIndexedMeshLayerOwner* owner)
+{
+    memset(object, 0, sizeof(*object));
+    memset(owner, 0, sizeof(*owner));
+    owner->mesh = &terrain->indexed_mesh;
+    object->owner = owner;
+}
+
 static void terrain_indexed_mesh_cell_sync(TerrainState* terrain,
                                            size_t quad_index)
 {
@@ -1068,7 +1088,8 @@ void grid_cell_read_surface_values(void* terrain, int x, int y,
 {
     TerrainState* state = (TerrainState*)terrain;
     float indexed_output[4][9];
-    TerrainVertexReadRequest request;
+    TerrainIndexedMeshLayerObject object;
+    TerrainIndexedMeshLayerOwner owner;
     size_t quad_index;
     uint32_t corner;
     uint32_t component;
@@ -1080,13 +1101,9 @@ void grid_cell_read_surface_values(void* terrain, int x, int y,
         state->indexed_mesh_vertices == NULL) return;
     terrain_indexed_mesh_cell_sync(state, quad_index);
     memset(indexed_output, 0, sizeof(indexed_output));
-    request.block_index = (int)quad_index;
-    request.first_vertex = 0;
-    request.count = 4;
-    request.output = indexed_output;
-    (void)lwo_layer_polygon_vertex_data_read(&state->detail_mesh_object, 0u,
-        &request,
-        &s_terrain_indexed_mesh_dispatch_ops);
+    terrain_indexed_mesh_layer_object_init(state, &object, &owner);
+    (void)lwo_layer_polygon_vertex_data_read(&object, (int)quad_index, 0,
+                                            4, indexed_output);
     for (corner = 0u; corner < 4u; ++corner)
         for (component = 0u; component < 3u; ++component)
             out_values[corner * 3u + component] =
@@ -1101,12 +1118,13 @@ void grid_cell_read_surface_values(void* terrain, int x, int y,
 void grid_cell_set_payload_index(void* terrain_handle, int x, int y)
 {
     TerrainState* terrain = (TerrainState*)terrain_handle;
+    TerrainIndexedMeshLayerObject object;
+    TerrainIndexedMeshLayerOwner owner;
     unsigned int entry_index;
     if (terrain == NULL) return;
     entry_index = (unsigned int)((int64_t)terrain->dim[2] * y + x);
-    (void)terrain_detail_entry_get_at_index(
-        &terrain->detail_mesh_object, entry_index,
-        &s_terrain_detail_lookup_ops);
+    terrain_indexed_mesh_layer_object_init(terrain, &object, &owner);
+    (void)terrain_detail_entry_get_at_index(&object, entry_index);
 }
 
 /* TerrainCreate initializes each indexed record's +0x6c bit, and
@@ -11144,7 +11162,8 @@ static int terrain_material_transition_vertices_get(
 static int terrain_material_transition_vertex_payload_get(
     TerrainState* terrain, uint32_t x, uint32_t y, float out[4][9])
 {
-    TerrainVertexReadRequest request;
+    TerrainIndexedMeshLayerObject object;
+    TerrainIndexedMeshLayerOwner owner;
     size_t quad_index;
     if (terrain == NULL || out == NULL ||
         x >= terrain->dim[0] || y >= terrain->dim[1] ||
@@ -11153,13 +11172,9 @@ static int terrain_material_transition_vertex_payload_get(
     quad_index = (size_t)y * terrain->dim[0] + x;
     terrain_indexed_mesh_cell_sync(terrain, quad_index);
     memset(out, 0, sizeof(float) * 4u * 9u);
-    request.block_index = (int)quad_index;
-    request.first_vertex = 0;
-    request.count = 4;
-    request.output = out;
-    (void)lwo_layer_polygon_vertex_data_read(
-        &terrain->detail_mesh_object, 0u, &request,
-        &s_terrain_indexed_mesh_dispatch_ops);
+    terrain_indexed_mesh_layer_object_init(terrain, &object, &owner);
+    (void)lwo_layer_polygon_vertex_data_read(&object, (int)quad_index, 0,
+                                            4, out);
     return 1;
 }
 
