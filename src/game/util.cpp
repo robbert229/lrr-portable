@@ -417,12 +417,27 @@ static void motion_jitter_center_refresh(void)
     }
 }
 
+// FUNCTION: LEGORR 0x0044cef0
 void motion_jitter_parameters_store(float delay_min, float delay_max,
                                     float speed_min, float speed_max,
                                     float magnitude_min, float magnitude_max,
                                     float tolerance_x, float tolerance_y,
                                     float tolerance_z)
 {
+#if defined(_WIN32)
+    s_motion_jitter_delay_min = delay_min;
+    s_motion_jitter_delay_max = delay_max;
+    s_motion_jitter_duration_max = speed_max;
+    s_motion_jitter_magnitude_min = magnitude_min;
+    s_motion_jitter_duration_min = speed_min;
+    s_motion_jitter_magnitude_max = magnitude_max;
+    (void)ddiscene_object_position_get(s_motion_jitter_retail_scene_object,
+        s_motion_jitter_retail_scene_owner, s_motion_jitter_center);
+    s_motion_jitter_tolerance[1] = tolerance_y;
+    s_motion_jitter_tolerance[0] = tolerance_x;
+    s_motion_jitter_tolerance[2] = tolerance_z;
+    s_motion_jitter_flags |= 0x40u;
+#else
     s_motion_jitter_state.delay_min = delay_min;
     s_motion_jitter_state.delay_max = delay_max;
     s_motion_jitter_state.lifetime_min = speed_min;
@@ -443,6 +458,7 @@ void motion_jitter_parameters_store(float delay_min, float delay_max,
     s_motion_jitter_state.flags |= 0x40u;
     s_motion_jitter_flags |= 0x40u;
     motion_jitter_center_refresh();
+#endif
 }
 
 static int motion_jitter_vector_random(void*, float out[3])

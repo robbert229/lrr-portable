@@ -1420,6 +1420,7 @@ void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
 void scroll_offset_from_cursor_update(void);    /* FUN_0041a250 */
 void     panel_enable_word_set(uint32_t word);  /* port hook */
 uint32_t panel_enable_word_peek(void);          /* port hook */
+extern uint32_t s_panel_enable_word; /* DAT_004ffe68 */
 void     bubble_offsets_set(float x, float y);  /* port hook */
 void     panel_surface_handle_set(void* h);     /* port hook */
 void*    panel_surface_handle_peek(void);       /* port hook */

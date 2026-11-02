@@ -2138,7 +2138,6 @@ static LegacyPanelPortRecord s_legacy_panels[18];
 static void* s_legacy_hunger_images[5];
 static float s_legacy_hunger_position[2];
 static float s_legacy_bubble_position[2];
-static uint32_t s_legacy_hud_state_flags;
 static float s_legacy_entity_ring_radius;
 static float s_legacy_entity_ring_height;
 
@@ -2226,15 +2225,6 @@ static int legacy_config_bool_from_root(BlockFile* values,
     return block_get_bool(values, path);
 }
 
-static void legacy_hud_state_flags_publish(void)
-{
-    /* DAT_004ffe68 is shared by the health, hunger, and bubble loaders and
-     * the panel-position worker. Preserve any bits installed by its other
-     * owners while publishing this module's OR-only config bits. */
-    s_legacy_hud_state_flags |= panel_enable_word_peek();
-    panel_enable_word_set(s_legacy_hud_state_flags);
-}
-
 static float legacy_clamp_01(float value)
 {
     if (value < 0.0f) return 0.0f;
@@ -2293,13 +2283,12 @@ int legacy_health_bar_config_load(BlockFile* values, const char* config_root)
             "HealthBarVertical");
     /* DAT_004ffe68 is shared by the other HUD loaders. The original only
        ORs these bits: a later horizontal reload does not clear vertical. */
-    if (vertical == 1) s_legacy_hud_state_flags |= 8u;
-    s_legacy_hud_state_flags |= 2u;
-    legacy_hud_state_flags_publish();
+    if (vertical == 1) s_panel_enable_word |= 8u;
+    s_panel_enable_word |= 2u;
     s_legacy_health_bar.vertical =
-        (s_legacy_hud_state_flags & 8u) != 0 ? 1u : 0u;
+        (s_panel_enable_word & 8u) != 0 ? 1u : 0u;
     s_legacy_health_bar.flags |= 2u;
-    if ((s_legacy_hud_state_flags & 8u) != 0)
+    if ((s_panel_enable_word & 8u) != 0)
         s_legacy_health_bar.flags |= 8u;
     return 1;
 }
@@ -2364,8 +2353,7 @@ int legacy_hunger_images_position_config_load(BlockFile* values,
     s_legacy_hunger_position[0] = (float)x;
     s_legacy_hunger_position[1] = (float)y;
     panel_position_offsets_set((float)x, (float)y);
-    s_legacy_hud_state_flags |= 1u;
-    legacy_hud_state_flags_publish();
+    s_panel_enable_word |= 1u;
     return 1;
 }
 
@@ -2384,10 +2372,9 @@ int legacy_bubble_images_position_config_load(BlockFile* values,
         !legacy_config_pair(value_cfg, path, &x, &y)) return 0;
     s_legacy_bubble_position[0] = (float)x;
     s_legacy_bubble_position[1] = (float)y;
-    s_legacy_hud_state_flags |= 0x10u;
+    s_panel_enable_word |= 0x10u;
     bubble_offsets_set(s_legacy_bubble_position[0],
                        s_legacy_bubble_position[1]);
-    legacy_hud_state_flags_publish();
     return 1;
 }
 
@@ -2417,7 +2404,7 @@ void legacy_entity_screen_ring_render(void* entity, int x, int y)
     float x0, y0;
     int i;
     int point_count;
-    if (slot == NULL || (s_legacy_hud_state_flags & 2u) == 0u) return;
+    if (slot == NULL || (s_panel_enable_word & 2u) == 0u) return;
     if (entity_quad_mesh_render_record_allowed(slot) == 0) return;
     health = slot->field_340;
     if (health < 0.0f) health = 0.0f;

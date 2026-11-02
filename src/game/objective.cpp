@@ -42,6 +42,7 @@ static char s_objective_voice_alias[256];
 static int s_objective_voice_alias_pending;
 /* DAT_004ffbc0 is the runtime result word. It is separate from the level's
  * configured objective mask in LevelState::objective. */
+// GLOBAL: LEGORR 0x004ffbc0
 static uint32_t s_objective_result_word;
 static int s_objective_voice_stream_handle = -1;
 static float s_objective_voice_stream_timeout;
@@ -463,53 +464,79 @@ static void obj_split_two(const char* s, int32_t* a, int32_t* b)
     }
 }
 
-/* Corpus FUN_00458580 — crystal/ore objectives. */
+/* Corpus FUN_00458580 — crystal/ore objective record words. */
 // FUNCTION: LEGORR 0x00458580
-static void obj_set_resources(LevelState* s, int32_t crystal, int32_t ore)
+static void obj_set_resources_target(uint32_t* level_record, int32_t crystal,
+                                     int32_t ore)
 {
     if (crystal != 0) {
-        s->objective |= LVL_OBJECTIVE_CRYSTALS;
         s_objective_result_word |= LVL_OBJECTIVE_CRYSTALS;
-        level_set_int(s, OBJ_OFF_CRYSTAL_TARGET, crystal);
+        level_record[OBJ_OFF_CRYSTAL_TARGET / 4] = (uint32_t)crystal;
     }
     if (ore != 0) {
-        s->objective |= LVL_OBJECTIVE_ORE;
         s_objective_result_word |= LVL_OBJECTIVE_ORE;
-        level_set_int(s, OBJ_OFF_ORE_TARGET, ore);
+        level_record[OBJ_OFF_ORE_TARGET / 4] = (uint32_t)ore;
     }
 }
 
-/* Corpus FUN_004585c0 — block objective (two targets). */
+/* Keep the configured objective mask in the portable level sidecar while
+ * the mapped target above preserves the retail global and record writes. */
+static void obj_set_resources(LevelState* s, int32_t crystal, int32_t ore)
+{
+    if (crystal != 0) s->objective |= LVL_OBJECTIVE_CRYSTALS;
+    if (ore != 0) s->objective |= LVL_OBJECTIVE_ORE;
+    obj_set_resources_target(s->word, crystal, ore);
+}
+
+/* Corpus FUN_004585c0 — block objective record words. */
 // FUNCTION: LEGORR 0x004585c0
+static void obj_set_block_target(uint32_t* level_record,
+                                 const int32_t targets[2])
+{
+    s_objective_result_word |= LVL_OBJECTIVE_BLOCK;
+    level_record[OBJ_OFF_BLOCK_A / 4] = (uint32_t)targets[0];
+    level_record[OBJ_OFF_BLOCK_B / 4] = (uint32_t)targets[1];
+}
+
 static void obj_set_block(LevelState* s, const int32_t targets[2])
 {
     s->objective |= LVL_OBJECTIVE_BLOCK;
-    s_objective_result_word |= LVL_OBJECTIVE_BLOCK;
-    level_set_int(s, OBJ_OFF_BLOCK_A, targets[0]);
-    level_set_int(s, OBJ_OFF_BLOCK_B, targets[1]);
+    obj_set_block_target(s->word, targets);
 }
 
-/* Corpus FUN_004585f0 — timer objective (ticks = seconds*25). */
+/* Corpus FUN_004585f0 — timer objective record word. */
 // FUNCTION: LEGORR 0x004585f0
-static void obj_set_timer(LevelState* s, float ticks, int hit_time_fail)
+static void obj_set_timer_target(uint32_t* level_record, float ticks,
+                                 int hit_time_fail)
 {
-    s->objective |= LVL_OBJECTIVE_TIMER;
     s_objective_result_word |= LVL_OBJECTIVE_TIMER;
-    level_set_float(s, OBJ_OFF_TIMER_TARGET, ticks);
+    ((float*)level_record)[OBJ_OFF_TIMER_TARGET / 4] = ticks;
     if (hit_time_fail) {
-        s->objective |= LVL_OBJECTIVE_NO_ACH_ADV;
         s_objective_result_word |= LVL_OBJECTIVE_NO_ACH_ADV;
     }
 }
 
-/* Corpus FUN_00458620 — construction objective. */
+static void obj_set_timer(LevelState* s, float ticks, int hit_time_fail)
+{
+    s->objective |= LVL_OBJECTIVE_TIMER;
+    if (hit_time_fail) s->objective |= LVL_OBJECTIVE_NO_ACH_ADV;
+    obj_set_timer_target(s->word, ticks, hit_time_fail);
+}
+
+/* Corpus FUN_00458620 — construction objective record words. */
 // FUNCTION: LEGORR 0x00458620
+static void obj_set_construction_target(uint32_t* level_record,
+                                        uint32_t a, uint32_t b)
+{
+    s_objective_result_word |= LVL_OBJECTIVE_CONSTRUCTION;
+    level_record[OBJ_OFF_CONSTRUCT_A / 4] = a;
+    level_record[OBJ_OFF_CONSTRUCT_B / 4] = b;
+}
+
 static void obj_set_construction(LevelState* s, long a, long b)
 {
     s->objective |= LVL_OBJECTIVE_CONSTRUCTION;
-    s_objective_result_word |= LVL_OBJECTIVE_CONSTRUCTION;
-    level_set_int(s, OBJ_OFF_CONSTRUCT_A, (int32_t)a);
-    level_set_int(s, OBJ_OFF_CONSTRUCT_B, (int32_t)b);
+    obj_set_construction_target(s->word, (uint32_t)a, (uint32_t)b);
 }
 
 // FUNCTION: LEGORR 0x00457d40

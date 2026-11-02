@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **46.16% accuracy**, **44.92% progress**
-  (2,326 compared entries out of 2,390).
-- Game-only report: **98.87% implemented**, **41.00% accuracy**,
-  **40.54% progress** (2,107/2,131).
+- Full report: **97.32% implemented**, **46.43% accuracy**, **45.19% progress**
+  (2,328 compared entries out of 2,392).
+- Game-only report: **98.87% implemented**, **41.31% accuracy**,
+  **40.84% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -404,6 +404,33 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   now includes one additional function. Latest report: **97.32% / 46.26% /
   45.03%** full and **98.87% / 41.12% / 40.66%** game-only. The developer
   distrobox Reccmp build and `git diff --check` passed; tests were not run.
+
+- `MotionJitterParametersStore` (`0x44cef0`) now maps to a target-shaped body
+  in `util.cpp`: it writes the six motion range globals in reference order,
+  refreshes the scene position through the existing scene accessor, stores
+  the three tolerance values, and sets the motion flag. Reconstruction-only
+  light-effect parameter bookkeeping remains in the config adapter in
+  `effects.cpp`, outside the mapped target. Its score rose from **5.33% to
+  65.52%**. Latest totals are **97.32% / 46.29% / 45.05%** full and
+  **98.87% / 41.15% / 40.69%** game-only. `distrobox enter developer -- make
+  reccmp-report` completed and `git diff --check` passed; tests were not run.
+
+- The four objective-arm targets now map to direct record/global write bodies;
+  their config adapters separately preserve the per-level objective mask. The
+  shared result word is annotated at its recovered address `0x4ffbc0`, which
+  removed the final operand mismatches. `ObjectiveCrystalOrOreArm`
+  (`0x458580`) rose **4.65% → 100%**, `ObjectiveBlockArm` (`0x4585c0`)
+  **6.06% → 100%**, `ObjectiveTimerArm` (`0x4585f0`) **11.76% → 100%**, and
+  `ObjectiveConstructionArm` (`0x458620`) **31.25% → 100%**. The timer target
+  uses the reference float argument and x87 store path. Latest totals:
+  **97.32% / 46.44% / 45.20%** full and **98.87% / 41.32% / 40.85%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
+
+- HUD health, hunger, and bubble configuration now share the mapped state word
+  `0x4ffe68` instead of publishing a second copy through setter/getter calls.
+  `legacy_health_bar_config_load` (`0x459560`) moved from **4.10% to 4.24%**.
+  Reccmp and `git diff --check` passed; current totals are **97.32% / 46.43% /
+  45.19%** full and **98.87% / 41.31% / 40.84%** game-only. Tests were not run.
 
 ## Port loop
 

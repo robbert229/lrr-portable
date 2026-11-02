@@ -8322,7 +8322,8 @@ int bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
  * blit FUN_0047dcb0, surface load FUN_0047d9d0) are hook boundaries with
  * no ported body — the seam calls record and the load answers NULL (the
  * view object-layer precedent). */
-static uint32_t s_panel_enable_word;
+// GLOBAL: LEGORR 0x004ffe68
+uint32_t s_panel_enable_word;
 static float    s_bubble_offset_x;
 static float    s_bubble_offset_y;
 // GLOBAL: LEGORR 0x00500810

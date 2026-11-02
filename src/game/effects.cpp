@@ -698,7 +698,6 @@ void light_effect_fade_parameters_store(uint32_t a, uint32_t b, uint32_t c,
     s_light_effect_parameters.flags |= 4u;
 }
 
-// FUNCTION: LEGORR 0x0044cef0
 void light_effect_move_parameters_store(uint32_t a, uint32_t b, uint32_t c,
                                         uint32_t d, uint32_t e, uint32_t f,
                                         uint32_t g, uint32_t h, uint32_t i)
