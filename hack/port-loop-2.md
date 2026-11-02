@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **47.97% accuracy**, **46.69% progress**
+- Full report: **97.32% implemented**, **48.22% accuracy**, **46.93% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **43.00% accuracy**,
-  **42.51% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **43.28% accuracy**,
+  **42.79% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -896,6 +896,91 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   game-only. `distrobox enter developer -- make reccmp-report` completed and
   `git diff --check` passed. Tests were not run. The pending-cell tick remains
   the next function in this cluster to align.
+
+- `CurrentLevelGet` (`0x431560`) now maps to `level_current_owner_get`, whose
+  MSVC x86 body directly returns the active-level global; the portable build
+  retains its context/registry fallback. This replaces the unrelated
+  `camera_state_root` annotation, which had an incompatible `EngineContext*`
+  parameter. The target now matches at **100%**. The refreshed report is
+  **97.32% / 48.01% / 46.73%** full and **98.87% / 43.05% / 42.56%**
+  game-only. `distrobox enter developer -- make reccmp-report` completed and
+  `git diff --check` passed; tests were not run.
+
+- `TerrainCellRefreshDispatch` (`0x402ae0`) now calls the mapped current-level
+  getter, performs the callback walk, and resets the cell surface type inline
+  in reference order. Its match rose from **6.67% to 92.31%**. The remaining
+  mismatch is the callback pointer/call to `0x406540`: the target passes local
+  callback `LAB_00402bb0`, while the portable entity pool uses a custom
+  `EntitySlot` layout and its callback remains an adapter. Do not substitute
+  guessed `+0x5c` and cell-coordinate reads until those fields have a live
+  owner. The latest report is **97.32% / 48.05% / 46.76%** full and
+  **98.87% / 43.09% / 42.60%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+
+- `TerrainObjectTypeSfxAtCellGet` (`0x44ad80`) now uses the retail x86 stack
+  convention to pass its input pair through `CopyTwoDwordPairToOutputs`
+  (`0x439930`), then performs the reference's `x * 15 + y` table lookup.
+  Its score rose from **7.41% to 96.97%**. The non-x86 path keeps the guarded
+  lookup. The latest report is **97.32% / 48.08% / 46.79%** full and
+  **98.87% / 43.12% / 42.64%** game-only. `distrobox enter developer -- make
+  reccmp-report` completed and `git diff --check` passed; tests were not run.
+
+- `CopyTwoDwordPairToOutputs` (`0x439930`) now has a retail x86 body that
+  copies both dwords without the portable null guards. The function rose from
+  **35.29% to 100%**. Its caller `TerrainObjectTypeSfxAtCellGet` remains at
+  **96.97%**. The refreshed report is **97.32% / 48.11% / 46.82%** full and
+  **98.87% / 43.15% / 42.67%** game-only. `distrobox enter developer -- make
+  reccmp-report` completed and `git diff --check` passed; tests were not run.
+
+- `MessagePreCheck` (`0x4199f0`) now follows the checked-in subscriber scan:
+  it skips IDs 10/11/12/38, visits subscriber nodes only for matching queued
+  IDs, and compares the node's payload dword and optional pair against the
+  dispatch arguments. This replaces the prior same-ID-only suppression and
+  raises the score from **7.55% to 94.55%**. The remaining diff is the callback
+  label resolving to the port's separate predicate symbol and a minor
+  comparison-order difference. At that checkpoint the report was
+  **97.32% / 48.15% / 46.86%** full and **98.87% / 43.20% / 42.71%**
+  game-only. The MSVC 5.0 Reccmp build and `git diff --check` passed; tests
+  were not run.
+
+- `CoordinatePairWithinBounds` (`0x4502c0`) now has a retail-shaped target
+  body that accepts the adjacent unsigned width/height pair and coordinate
+  dwords. Existing `LevelState` callers use a guarded adapter that passes the
+  dimensions at the corpus offsets, preserving their API and negative-input
+  wrapping. Its match rose from **29.63% to 100%**. The MSVC x86 body uses the
+  decompile's unsigned compare and return sequence; other targets retain the
+  equivalent portable C body. At that checkpoint the report was
+  **97.32% / 48.18% / 46.89%** full and **98.87% / 43.24% / 42.75%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
+
+- `TerrainCellFlag8CheckIfInBounds` (`0x4329d0`) now reads the active level,
+  checks the terrain dimension pair through `CoordinatePairWithinBounds`, and
+  tests bit 8 in the row-major voxel record. The existing explicit-level API
+  remains an adapter for non-active levels. The initial C target rose from
+  **28.57% to 62.16%**; its MSVC x86 body now follows the decompile's raw
+  stack, global, helper-call, and voxel-bit sequence and matches at **100%**.
+  The portable fallback retains null guards. The latest report is
+  **97.32% / 48.21% / 46.92%** full and **98.87% / 43.27% / 42.78%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
+
+- `TerrainCellOccupancyOrFlagCheck` (`0x432aa0`) now follows the retail x86
+  branch and address sequence for both modes: mode zero returns the masked
+  `0x400` word, and nonzero mode tests that word plus byte `+0x0c` bit 2.
+  The portable C path remains equivalent. The target rose from **64.41% to
+  100%**. The latest report is **97.32% / 48.22% / 46.93%** full and
+  **98.87% / 43.28% / 42.79%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+
+- `TerrainNeighborCoordinateCheck` (`0x42f350`) now has a four-argument
+  active-level target body and retains the explicit-level helper for other
+  callers. The current target separately probes the two terrain flag words
+  and keeps the portable bounds guard on the secondary probe. Its score is
+  **16.30%**, up from the prior **9.52%** implementation, but below an interim
+  **18.65%** build before the latest code-shape adjustments. This remains a
+  low match and needs further comparison against the reference disassembly.
+  The refreshed report is **97.32% / 48.23% / 46.94%** full and
+  **98.87% / 43.29% / 42.80%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
 
 ## Port loop
 

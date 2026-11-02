@@ -10,9 +10,9 @@
  *   - auto-cooldown rule (flags bit 8): ids flagged 0x20000 reset their
  *     25.0 cooldown and mute their sound; the linked family
  *     {10,11,12,0x26=38} resets together.
- *   - dedupe (MessagePreCheck): ids 10/11/12/38 skip; otherwise a queued id
- *     has its stored callback run immediately (LAB_004199a0) and suppresses
- *     a re-dispatch.
+ *   - dedupe (MessagePreCheck): ids 10/11/12/38 skip; otherwise subscriber
+ *     nodes under matching queued IDs are compared with the dispatch payload
+ *     by LAB_004199a0, and a matching node suppresses re-dispatch.
  *   - slow-mo path (flags bit 0x10 + cfg bit 0x10000) is a stub until the
  *     time-scale transition layer lands.
  * The InfoMessages catalog (finding 22) is seeded by message_init_defaults
@@ -50,7 +50,7 @@ typedef struct MessageConfig {
 } MessageConfig;
 
 /* hooks (reconstruction-owned; corpus uses function pointers/vtables) */
-typedef int  (*MessageCallback)(int id);             /* LAB_004199a0 role */
+typedef int  (*MessageCallback)(int id); /* port notification after append */
 typedef void (*MessageSoundHook)(int id, float vol); /* FUN_00464ef0 role */
 
 void message_init_defaults(void);   /* seed the 40-id catalog (finding 22) */

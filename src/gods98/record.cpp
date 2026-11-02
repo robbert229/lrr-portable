@@ -1086,6 +1086,22 @@ void linked_record_field4_clear(void* record)
 
 /* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
 // FUNCTION: LEGORR 0x00439930
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void copy_two_dword_pair_to_outputs(
+    const void* record, uint32_t* out_a, uint32_t* out_b)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [esp + 8]
+        mov ecx, dword ptr [eax]
+        mov dword ptr [edx], ecx
+        mov ecx, dword ptr [esp + 0ch]
+        mov eax, dword ptr [eax + 4]
+        mov dword ptr [ecx], eax
+        ret
+    }
+}
+#else
 void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
                                     uint32_t* out_b)
 {
@@ -1095,6 +1111,7 @@ void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
     __builtin_memcpy(out_a, (const char*)record, 4);
     __builtin_memcpy(out_b, (const char*)record + 4, 4);
 }
+#endif
 
 // FUNCTION: LEGORR 0x00473da0
 void scene_object_owner_set(void* scene_object, uint32_t owner)

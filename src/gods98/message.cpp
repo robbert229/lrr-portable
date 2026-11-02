@@ -873,18 +873,39 @@ void message_load_infomessages(BlockFile* cfg)
     }
 }
 
-/* Dedupe-with-live-callback (corpus MessagePreCheck FUN_004199f0). */
-// FUNCTION: LEGORR 0x004199f0
-static int message_pre_check(int id)
+typedef struct MessagePreCheckContext {
+    uint32_t value;
+    const uint32_t* pair;
+} MessagePreCheckContext;
+
+/* LAB_004199a0 compares the queued node against the dispatch payload. */
+static int message_pre_check_node_match(void* entry, void* context)
 {
+    const uint32_t* node = (const uint32_t*)entry;
+    const MessagePreCheckContext* request =
+        (const MessagePreCheckContext*)context;
+    if (request->value == 0u && request->pair == NULL) return 1;
+    if (request->value != 0u && node[2] == request->value) return 1;
+    if (request->pair != NULL && node[0] == request->pair[0] &&
+        node[1] == request->pair[1]) return 1;
+    return 0;
+}
+
+/* Dedupe-with-subscriber-scan (corpus MessagePreCheck FUN_004199f0). */
+// FUNCTION: LEGORR 0x004199f0
+static int message_pre_check(int id, uint32_t value, const void* pair)
+{
+    MessagePreCheckContext request;
+    uint32_t index;
     if (id == 10 || id == 11 || id == 12 || id == 38) {
         return 0; /* exception list skips dedupe */
     }
-    if (message_queue_find_id(id) >= 0) {
-        /* The queued entry's stored callback runs immediately; when a
-         * callback hook exists and handles it, the re-dispatch is
-         * suppressed. */
-        if (s_callback == NULL || s_callback(id) != 0) {
+    request.pair = (const uint32_t*)pair;
+    request.value = value;
+    for (index = 0; index < s_queue_count; ++index) {
+        if (id == s_queue_records[index].id &&
+            message_subscriber_dispatch(index, message_pre_check_node_match,
+                                        &request) != 0) {
             return 1;
         }
     }
@@ -954,7 +975,7 @@ void message_dispatch(int id, const char* p2, uint32_t p3, const void* p4)
         return;
     }
 
-    if (message_pre_check(id)) {
+    if (message_pre_check(id, p3, p4)) {
         return; /* duplicate handled live */
     }
 
