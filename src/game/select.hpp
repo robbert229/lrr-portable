@@ -42,8 +42,7 @@ void selected_object_outlines_draw(
     const GameContext* ctx, SelectedObjectOutlineDrawFn draw,
     void* context); /* FUN_00424830 */
 
-/* SelectionRecordArrayGet (FUN_004525e0): the DAT_004fef2c selection
- * array itself. NULL GameContext yields NULL (the port has no static). */
+/* Context-explicit selection array helper. */
 EntitySlot* const* selection_record_array(const GameContext* ctx);
 
 /* SelectionRecordCountReset (FUN_00452600): zeroes only the count — the
@@ -51,7 +50,25 @@ EntitySlot* const* selection_record_array(const GameContext* ctx);
  * overwrite the array); `selection_clear` is the flag-clean variant. */
 void selection_count_reset(GameContext* ctx);
 
-/* SelectedEntity (0x4525c0): first selection entry when nonzero, else NULL. */
+/* Bind the active application context used by the retail global-selection
+ * entry point. */
+void selection_active_context_bind(GameContext* ctx);
+void selection_active_context_sync(GameContext* ctx);
+
+/* Retail active-selection global accessors. */
+EntitySlot* const* selection_active_context_record_get(int* count_out);
+EntitySlot* const* selection_active_records_get(void);
+uint32_t selection_active_count_get(void);
+int selection_active_has_any_get(void);
+void selection_active_count_reset(void);
+
+/* SelectedEntity (0x4525c0): zero-argument retail getter over the active
+ * selection globals. */
+EntitySlot* selection_active_entity_get(void);
+uint32_t selection_contains_entity_active_target(
+    EntitySlot* entity, uint32_t* index_out);
+
+/* Context-explicit helper for portable callers. */
 EntitySlot* selection_first(const GameContext* ctx);
 
 /* SelectedEntitiesAnyMatch (FUN_0041f420): call `predicate` in selection
@@ -173,6 +190,8 @@ void selection_cancel_if_cursor_hits_object(struct EngineContext* engine,
  * the type-1 +0x3e0 bit-0x40000 rejection. NULL entities reject both. */
 int selection_candidate_already_selected_or_marked(const GameContext* ctx,
                                                    const EntitySlot* e);
+int selection_active_candidate_already_selected_or_marked(
+    EntitySlot* entity);
 /* The eligibility leaf is declared in entity.hpp (implemented there). */
 
 /* CurrentLevelStateFlagsContainMask (FUN_0041f720): ANDs the selected

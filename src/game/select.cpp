@@ -12,6 +12,35 @@
 #include "gods98/engine.hpp"
 #include "gods98/view.hpp"
 
+static GameContext* s_selection_active_context;
+// GLOBAL: LEGORR 0x004ff298
+static uint32_t s_selection_active_count;
+// GLOBAL: LEGORR 0x004fef2c
+static EntitySlot* s_selection_active_records[SELECTION_MAX];
+
+void selection_active_context_sync(GameContext* ctx)
+{
+    int i;
+    if (ctx == NULL) {
+        if (s_selection_active_context != NULL) return;
+        s_selection_active_count = 0u;
+        memset(s_selection_active_records, 0,
+               sizeof(s_selection_active_records));
+        return;
+    }
+    if (ctx != s_selection_active_context) return;
+    s_selection_active_count = (uint32_t)ctx->selection_count;
+    for (i = 0; i < SELECTION_MAX; ++i) {
+        s_selection_active_records[i] = ctx->selection[i];
+    }
+}
+
+void selection_active_context_bind(GameContext* ctx)
+{
+    s_selection_active_context = ctx;
+    selection_active_context_sync(ctx);
+}
+
 int selection_add(GameContext* ctx, EntitySlot* e)
 {
     if (ctx == NULL || e == NULL) {
@@ -26,6 +55,7 @@ int selection_add(GameContext* ctx, EntitySlot* e)
     ctx->selection[ctx->selection_count++] = e;
     e->flags |= ENTITY_SELECTED;
     e->flags_3e8 |= ENTITY_SELECTED;
+    selection_active_context_sync(ctx);
     return 1;
 }
 
@@ -40,6 +70,7 @@ void selection_remove(GameContext* ctx, const EntitySlot* e)
     ((EntitySlot*)e)->flags_3e8 &= ~ENTITY_SELECTED;
     ctx->selection[index] = ctx->selection[ctx->selection_count - 1];
     --ctx->selection_count;
+    selection_active_context_sync(ctx);
 }
 
 // FUNCTION: LEGORR 0x00452be0
@@ -58,19 +89,16 @@ void selection_clear(GameContext* ctx)
         entity->flags_3ec &= ~1u;
     }
     ctx->selection_count = 0;
+    selection_active_context_sync(ctx);
 }
 
-// FUNCTION: LEGORR 0x004525f0
 int selection_count(const GameContext* ctx)
 {
-    /* Corpus SelectionRecordCountGet @ 0x4525f0 — DAT_004ff298. */
     return ctx != NULL ? ctx->selection_count : 0;
 }
 
-// FUNCTION: LEGORR 0x004525b0
 int selection_has_any(const GameContext* ctx)
 {
-    /* Corpus SelectedEntitySetHasAny @ 0x4525b0 — DAT_004ff298 != 0. */
     return ctx != NULL && ctx->selection_count != 0;
 }
 
@@ -95,24 +123,90 @@ void selected_object_outlines_draw(
     }
 }
 
-// FUNCTION: LEGORR 0x004525e0
 EntitySlot* const* selection_record_array(const GameContext* ctx)
 {
-    /* Corpus SelectionRecordArrayGet @ 0x4525e0 — &DAT_004fef2c. */
     return ctx != NULL ? ctx->selection : NULL;
 }
 
-// FUNCTION: LEGORR 0x00452600
 void selection_count_reset(GameContext* ctx)
 {
     /* Corpus SelectionRecordCountReset @ 0x452600 — DAT_004ff298 = 0,
      * array entries (and their selected flags) untouched. */
     if (ctx != NULL) {
         ctx->selection_count = 0;
+        selection_active_context_sync(ctx);
     }
 }
 
+/* The reference reads its active selection globals. The portable runtime
+ * keeps those globals inside the currently bound GameContext. */
 // FUNCTION: LEGORR 0x004525c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
+EntitySlot* selection_active_entity_get(void)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [s_selection_active_count]
+        mov ecx, dword ptr [s_selection_active_records]
+        neg eax
+        sbb eax, eax
+        and eax, ecx
+        ret
+    }
+#else
+    return s_selection_active_count != 0u
+        ? s_selection_active_records[0] : NULL;
+#endif
+}
+
+// FUNCTION: LEGORR 0x00452580
+EntitySlot* const* selection_active_context_record_get(int* count_out)
+{
+    if (s_selection_active_count != 0u) {
+        if (count_out != NULL)
+            *count_out = (int)s_selection_active_count;
+        return s_selection_active_records;
+    }
+    if (count_out != NULL)
+        *count_out = 0;
+    return NULL;
+}
+
+// FUNCTION: LEGORR 0x004525e0
+EntitySlot* const* selection_active_records_get(void)
+{
+    return s_selection_active_records;
+}
+
+// FUNCTION: LEGORR 0x004525f0
+uint32_t selection_active_count_get(void)
+{
+    return s_selection_active_count;
+}
+
+// FUNCTION: LEGORR 0x004525b0
+int selection_active_has_any_get(void)
+{
+    return s_selection_active_count != 0u;
+}
+
+// FUNCTION: LEGORR 0x00452600
+void selection_active_count_reset(void)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov dword ptr [s_selection_active_count], 0
+    }
+#else
+    s_selection_active_count = 0u;
+#endif
+    if (s_selection_active_context != NULL) {
+        s_selection_active_context->selection_count = 0;
+    }
+}
+
 EntitySlot* selection_first(const GameContext* ctx)
 {
     if (ctx == NULL || ctx->selection_count == 0) {
@@ -1134,7 +1228,6 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e)
     }
 }
 
-// FUNCTION: LEGORR 0x00452610
 int selection_contains_entity_target(const GameContext* ctx,
                                      const EntitySlot* e,
                                      uint32_t* index_out)
@@ -1153,6 +1246,32 @@ int selection_contains_entity_target(const GameContext* ctx,
         }
     }
     return 0;
+}
+
+/* The retail entry point takes only the entity and optional index output;
+ * its array and count are the active selection globals mirrored above. */
+// FUNCTION: LEGORR 0x00452610
+uint32_t selection_contains_entity_active_target(
+    EntitySlot* entity, uint32_t* index_out)
+{
+    if (index_out != NULL) {
+#if defined(_MSC_VER) && defined(_M_IX86)
+        return (uint32_t)cmd_array_find_value_index(
+            (const int*)s_selection_active_records,
+            (unsigned)s_selection_active_count, (int)entity,
+            (unsigned*)index_out);
+#else
+        uint32_t i;
+        for (i = 0; i < s_selection_active_count; ++i) {
+            if (s_selection_active_records[i] == entity) {
+                *index_out = i;
+                return 1u;
+            }
+        }
+        return 0u;
+#endif
+    }
+    return entity->flags_3e8 & 0x200000u;
 }
 
 int selection_contains_entity(const GameContext* ctx, const EntitySlot* e)
@@ -1290,7 +1409,6 @@ void selection_cancel_if_cursor_hits_object(EngineContext* engine,
     }
 }
 
-// FUNCTION: LEGORR 0x00452690
 int selection_candidate_already_selected_or_marked(const GameContext* ctx,
                                                    const EntitySlot* e)
 {
@@ -1301,6 +1419,16 @@ int selection_candidate_already_selected_or_marked(const GameContext* ctx,
         return 1;
     }
     return (e->flags_3ec & 2u) != 0u ? 1 : 0;
+}
+
+// FUNCTION: LEGORR 0x00452690
+int selection_active_candidate_already_selected_or_marked(EntitySlot* entity)
+{
+    if (selection_contains_entity_active_target(entity, NULL) == 0
+        && (entity->flags_3ec & 2u) == 0u) {
+        return 0;
+    }
+    return 1;
 }
 
 /* CurrentLevelStateFlagsContainMask (FUN_0041f720) — see select.hpp. */

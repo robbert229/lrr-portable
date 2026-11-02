@@ -11,6 +11,7 @@
 #include "entity.hpp"
 #include "level.hpp"
 #include "mission.hpp"
+#include "select.hpp"
 #include "frontend.hpp"
 #include "objective.hpp"
 #include "savegame.hpp"
@@ -1314,6 +1315,7 @@ const char* mission_reward_advance(GameContext* ctx)
     level_destroy(ctx->level);
     ctx->level = NULL;
     ctx->selection_count = 0;
+    selection_active_context_sync(ctx);
     ctx->reward_active = 0;
     __builtin_memset(&ctx->mission, 0, sizeof(ctx->mission));
     __builtin_memset(&ctx->tasks, 0, sizeof(ctx->tasks));

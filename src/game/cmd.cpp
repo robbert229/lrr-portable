@@ -3358,6 +3358,7 @@ static int      s_ping; /* active producer block (DAT_004fef28) */
 void cmd_context_set(GameContext* ctx)
 {
     s_ctx = ctx;
+    selection_active_context_bind(ctx);
     if (entity_pool_callback_context_get() != ctx)
         entity_pool_callback_context_set(ctx);
     cmd_place_eligibility_ops_bind();
@@ -3603,7 +3604,6 @@ void cmd_queue_cancel_match(int value)
         i = i + 1;
     }
 }
-// FUNCTION: LEGORR 0x00452580
 const void* active_context_record_get(int* count_out)
 {
     const int count = selection_count(s_ctx);
@@ -3764,6 +3764,7 @@ int selection_entity_remove(void* entity)
     }
     s_ctx->selection_count = count - 1;
     arr[index] = arr[count - 1];
+    selection_active_context_sync(s_ctx);
     ((EntitySlot*)entity)->flags &= ~ENTITY_SELECTED;
     ((EntitySlot*)entity)->flags_3e8 &= ~ENTITY_SELECTED;
     return 1;
@@ -3827,7 +3828,7 @@ int selection_candidate_filter(void* entity, int mode, int param_3)
         return 0;
     }
     if (mode == 0
-        && selection_candidate_already_selected_or_marked(s_ctx, e) != 0) {
+        && selection_active_candidate_already_selected_or_marked(e) != 0) {
         /* The command and HUD reset are available; this command-layer entry
          * has no EngineContext for the helper's threaded state-word write. */
         selection_clear_marker_and_reset_hud(e);
@@ -3835,7 +3836,7 @@ int selection_candidate_filter(void* entity, int mode, int param_3)
     }
     /* FUN_00452610(entity, NULL) tests +0x3e8 bit 0x200000, even if the
      * record is not currently present in the selected-pointer array. */
-    if ((e->flags_3e8 & 0x200000u) != 0u) {
+    if (selection_contains_entity_active_target(e, NULL) != 0u) {
         return 0;
     }
     /* Corpus pool refresh: EntityPoolFindByCallbackFiltered is ported but

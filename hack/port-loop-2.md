@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **49.44% accuracy**, **48.12% progress**
+- Full report: **97.32% implemented**, **49.67% accuracy**, **48.34% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **44.63% accuracy**,
-  **44.12% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **44.88% accuracy**,
+  **44.37% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1198,6 +1198,29 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **98.87% / 44.63% / 44.12%** game-only. The MSVC 5.0
   `distrobox enter developer -- make reccmp-report` build and
   `git diff --check` passed; tests were not run.
+- The selection globals are mirrored from the bound application `GameContext`
+  and synchronized at all production count/array mutation sites. This enabled
+  the retail ABI for `ActiveContextRecordGet` (`0x452580`) and the zero-argument
+  `SelectedEntitySetHasAny` (`0x4525b0`),
+  `SelectedEntity` (`0x4525c0`), `SelectionRecordArrayGet` (`0x4525e0`), and
+  `SelectionRecordCountGet` (`0x4525f0`); all five now match at **100%**.
+  `ActiveContextRecordGet` rose from **27.27% to 100%** in this pass.
+  `SelectionContainsEntity` (`0x452610`) and
+  `SelectionCandidateAlreadySelectedOrMarked` (`0x452690`) now use their
+  decompiled argument lists and match at **93.75%** each. Their remaining
+  instruction mismatch is the portable `EntitySlot` flag-field offset.
+  `SelectionCandidateFilter` (`0x4526e0`) now calls those mapped helpers for
+  its selected/marked gates; its match rose from **40.30% to 45.93%**. The
+  active-selection binding is owned by `cmd_context_set`, which binds the
+  command and selection state together. The filter's pool refresh, type-2
+  camera turn, and final visual/message effects still use reconstructed
+  operations or lack the original engine owners.
+  `SelectionRecordCountReset` (`0x452600`) also has its zero-argument entry,
+  updating both the active context and mirror; its x86 path now begins with
+  the reference's immediate global store and matches at **30.77%**. Latest
+  report: **97.32% / 49.67% / 48.34%** full and **98.87% / 44.88% / 44.37%**
+  game-only. The MSVC 5.0 `distrobox enter developer -- make reccmp-report`
+  build and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

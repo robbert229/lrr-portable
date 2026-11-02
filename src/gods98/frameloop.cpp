@@ -1662,6 +1662,7 @@ static void frameloop_game_context_dispose(GameContext* game)
     if (game == NULL) {
         return;
     }
+    selection_active_context_bind(NULL);
     checkpoint_blob_free(game);
     mission_reward_resources_release(game);
     free(game->records);
