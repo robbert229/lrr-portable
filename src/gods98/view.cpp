@@ -283,10 +283,34 @@ void render_packed_rgba_hooks_set(const RenderPackedRgbaHooks* hooks)
 void render_object_set_packed_rgba_from_float_channels(
     void* scene_object, float red, float green, float blue, float alpha)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    const uint32_t red_byte = (uint32_t)crt_float_to_long(red * 255.0f);
+    const uint32_t green_byte = (uint32_t)crt_float_to_long(green * 255.0f);
+    const uint32_t blue_byte = (uint32_t)crt_float_to_long(blue * 255.0f);
+    const uint32_t alpha_byte = (uint32_t)crt_float_to_long(alpha * 255.0f);
+    const uint32_t packed = (red_byte << 24) | (green_byte << 16) |
+                            (blue_byte << 8) | alpha_byte;
+    if (*(uint32_t*)((char*)scene_object + 0x10) == 5u) {
+        void* mesh = *(void**)((char*)scene_object + 0x0c);
+        void* render_object = *(void**)((char*)mesh + 4);
+        void** vtable = *(void***)render_object;
+        typedef void (VIEW_COM_CALL *PackedColorSetFn)(void*, uint32_t);
+        ((PackedColorSetFn)vtable[0x30 / 4])(render_object, packed);
+    }
+#else
     RenderPackedRgbaHooks* hooks = &s_render_packed_rgba_hooks;
     void* mesh;
     void* render_object;
-    uint32_t packed;
+    const uint32_t red_byte =
+        (uint32_t)crt_float_to_long(red * 255.0f);
+    const uint32_t green_byte =
+        (uint32_t)crt_float_to_long(green * 255.0f);
+    const uint32_t blue_byte =
+        (uint32_t)crt_float_to_long(blue * 255.0f);
+    const uint32_t alpha_byte =
+        (uint32_t)crt_float_to_long(alpha * 255.0f);
+    const uint32_t packed = (red_byte << 24) | (green_byte << 16) |
+                            (blue_byte << 8) | alpha_byte;
     if (scene_object == NULL ||
         *(uint32_t*)((char*)scene_object + 0x10) != 5u ||
         hooks->packed_set == NULL) return;
@@ -294,11 +318,8 @@ void render_object_set_packed_rgba_from_float_channels(
     if (mesh == NULL) return;
     render_object = *(void**)((char*)mesh + 4);
     if (render_object == NULL) return;
-    packed = ((uint32_t)crt_float_to_long(red) << 24) |
-             ((uint32_t)crt_float_to_long(green) << 16) |
-             ((uint32_t)crt_float_to_long(blue) << 8) |
-             (uint32_t)crt_float_to_long(alpha);
     hooks->packed_set(render_object, packed, hooks->context);
+#endif
 }
 
 void render_hierarchy_float3_hooks_set(
@@ -1067,10 +1088,9 @@ void ddiscene_apply_act_frame_timing(void* scene_object)
     if ((*(uint32_t*)((char*)scene_object + 0x14) & 0x20u) != 0u) {
         uint32_t kind = *(uint32_t*)((char*)scene_object + 0x10);
         if (kind == 4u) {
-            selected = unported_ledger_stubs::
-                ledger_stub_00475e40_DDiSceneFrameRecordFind(
-                    scene_object,
-                    **(const char***)((char*)scene_object + 0x0c), 0);
+            selected = ddiscene_frame_record_find(
+                scene_object,
+                **(const char***)((char*)scene_object + 0x0c), 0);
             if (selected != NULL) {
                 hook_record = ddiscene_action_record_field_1c_get(selected);
                 time = ddiscene_animation_duration_get(selected);
@@ -1113,6 +1133,7 @@ static int ddiscene_ascii_case_equal(const char* first, const char* second)
 
 /* DDiSceneFrameRecordFind (FUN_00475e40): search the selected action-frame
  * collection for the case-insensitive `ActFrame_<name>` record. */
+// FUNCTION: LEGORR 0x00475e40
 void* ddiscene_frame_record_find(void* action_interface,
                                  const char* action_name, int selector)
 {
@@ -2010,24 +2031,17 @@ static void* ddiscene_object_frame_record_get(void* scene_object)
 // FUNCTION: LEGORR 0x00475390
 float ddiscene_object_length_get(void* scene_object)
 {
-    uint32_t kind;
-    void* interface_object;
-    if (scene_object == NULL) return 0.0f;
-    kind = *(uint32_t*)((char*)scene_object + 0x10);
+    const uint32_t kind = *(uint32_t*)((char*)scene_object + 0x10);
     if (kind == 4u) {
-        void* channel = *(void**)((char*)scene_object + 4);
         void* action_slot = *(void**)((char*)scene_object + 0x0c);
-        const char* action_name = action_slot != NULL
-            ? *(const char**)action_slot : NULL;
-        interface_object = channel != NULL && action_name != NULL
-            ? ddiscene_frame_record_find(channel, action_name, 0) : NULL;
+        void* interface_object = ddiscene_frame_record_find(
+            *(void**)((char*)scene_object + 4), *(const char**)action_slot, 0);
         if (interface_object != NULL)
             return ddiscene_animation_duration_get(interface_object);
     }
     else if (kind == 3u) {
-        interface_object = *(void**)((char*)scene_object + 4);
-        if (interface_object != NULL)
-            return ddiscene_animation_duration_get(interface_object);
+        return ddiscene_animation_duration_get(
+            *(void**)((char*)scene_object + 4));
     }
     return 0.0f;
 }
@@ -2037,18 +2051,12 @@ float ddiscene_object_length_get(void* scene_object)
 // FUNCTION: LEGORR 0x004753f0
 uint32_t ddiscene_object_frame_position_get(void* scene_object)
 {
-    uint32_t kind;
     void* interface_object = NULL;
-    if (scene_object == NULL) return 0u;
-    kind = *(uint32_t*)((char*)scene_object + 0x10);
+    const uint32_t kind = *(uint32_t*)((char*)scene_object + 0x10);
     if (kind == 4u) {
-        void* channel = *(void**)((char*)scene_object + 4);
         void* action_slot = *(void**)((char*)scene_object + 0x0c);
-        const char* action_name = action_slot != NULL
-            ? *(const char**)action_slot : NULL;
-        if (channel != NULL && action_name != NULL)
-            interface_object = ddiscene_frame_record_find(
-                channel, action_name, 0);
+        interface_object = ddiscene_frame_record_find(
+            *(void**)((char*)scene_object + 4), *(const char**)action_slot, 0);
     }
     else if (kind == 3u) {
         interface_object = *(void**)((char*)scene_object + 4);
@@ -2311,13 +2319,20 @@ float ddiscene_advance_by_time(void* scene_object, float delta)
 // FUNCTION: LEGORR 0x004757f0
 float typed_child_resource_scalar_get(void* scene_object)
 {
-    void* record;
-    if (scene_object == NULL ||
-        *(uint32_t*)((char*)scene_object + 0x10) != 4u) {
-        return 0.0f;
+    if (*(uint32_t*)((char*)scene_object + 0x10) == 4u) {
+        void* action_slot = *(void**)((char*)scene_object + 0x0c);
+        if (action_slot != NULL) {
+            const char* action_name = *(const char**)action_slot;
+            if (action_name != NULL) {
+                void* record = ddiscene_frame_record_find(
+                    scene_object, action_name, 0);
+                if (record != NULL) {
+                    return scene_property_float_at14_get(record);
+                }
+            }
+        }
     }
-    record = ddiscene_object_frame_record_get(scene_object);
-    return record != NULL ? scene_property_float_at14_get(record) : 0.0f;
+    return 0.0f;
 }
 
 void scene_child_search_hooks_set(const SceneChildSearchHooks* hooks)
@@ -2336,6 +2351,30 @@ void scene_child_search_hooks_set(const SceneChildSearchHooks* hooks)
 // FUNCTION: LEGORR 0x00475830
 void* scene_object_first_non_kind6_child_get(void* child_interface)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    void* current = child_interface;
+    void* result = NULL;
+    while (current != NULL && result == NULL) {
+        const uint32_t property_value =
+            scene_property_primary_value_get(current);
+        void* next = NULL;
+        void** vtable;
+        typedef void (VIEW_COM_CALL *ChildGetFn)(void*, void**);
+        if (property_value != 0u &&
+            *(uint32_t*)((char*)(size_t)property_value + 0x10) != 6u) {
+            result = (void*)(size_t)property_value;
+        }
+        vtable = *(void***)current;
+        ((ChildGetFn)vtable[0x5c / 4])(current, &next);
+        current = next;
+        if (current != NULL) {
+            void** current_vtable = *(void***)current;
+            typedef uint32_t (VIEW_COM_CALL *SceneInterfaceReleaseFn)(void*);
+            ((SceneInterfaceReleaseFn)current_vtable[2])(current);
+        }
+    }
+    return result;
+#else
     SceneChildSearchHooks* hooks = &s_scene_child_search_hooks;
     void* current = child_interface;
     void* result = NULL;
@@ -2356,6 +2395,7 @@ void* scene_object_first_non_kind6_child_get(void* child_interface)
         ++guard;
     }
     return result;
+#endif
 }
 
 void scene_formatted_string_hooks_set(const SceneFormattedStringHooks* hooks)
@@ -5329,7 +5369,6 @@ void perspective_projection_matrix_set(float* out, float p1, float p2,
 
 /* ---- camera-handle primitives (record-backed) --------------------------- */
 
-// FUNCTION: LEGORR 0x004755e0
 void cam_offset(CameraHandle* c, float x, float y, float z)
 {
     if (c == NULL) {
@@ -7259,6 +7298,26 @@ void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
 #endif
 }
 
+/* CameraTeleportOrOffset (FUN_004755e0), vtable slot +0x3c. */
+// FUNCTION: LEGORR 0x004755e0
+void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
+                                            float x, float y, float z)
+{
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    void* scene_object = *(void**)object;
+    void** vtable = *(void***)scene_object;
+    typedef void (VIEW_COM_CALL *CameraTeleportOrOffsetFn)(void*, uint32_t,
+                                                            float, float,
+                                                            float);
+    ((CameraTeleportOrOffsetFn)vtable[0x3c / 4])(
+        scene_object, mode, x, y, z);
+#else
+    SceneObjectTransformInterface* const scene =
+        (SceneObjectTransformInterface*)*(void**)object;
+    scene->slot_3c(mode, x, y, z);
+#endif
+}
+
 /* SceneObjectCoordinateTransformToOutput (FUN_00475090), interface slot
  * +0x84 as recovered in Finding 337. */
 // FUNCTION: LEGORR 0x00475090
@@ -7321,6 +7380,21 @@ static DDiSceneObjectPoseInterface* ddiscene_pose_interface_resolve(
 int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3])
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    const void* object_argument = object;
+    const void* alternate_argument = alternate_frame;
+    void* normalized_object = NULL;
+    const void* normalized_frame = NULL;
+    void** vtable;
+    typedef void (VIEW_COM_CALL *PositionGetFn)(void*, void*, float*);
+    scene_object_arguments_normalize(&object_argument,
+        alternate_frame != NULL ? &alternate_argument : NULL,
+        &normalized_object, &normalized_frame);
+    vtable = *(void***)normalized_object;
+    ((PositionGetFn)vtable[0x60 / 4])(normalized_object,
+        (void*)normalized_frame, position);
+    return 1;
+#else
     void* normalized_frame = NULL;
     DDiSceneObjectPoseInterface* scene;
     if (position == NULL) return 0;
@@ -7329,6 +7403,7 @@ int ddiscene_object_position_get(void* object, void* alternate_frame,
     if (scene == NULL) return 0;
     scene->position_get(normalized_frame, position);
     return 1;
+#endif
 }
 
 // FUNCTION: LEGORR 0x00475500
@@ -7362,6 +7437,22 @@ int ddiscene_object_facing_get(void* object, void* alternate_frame,
 int ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    const void* object_argument = object;
+    const void* alternate_argument = alternate_frame;
+    void* normalized_object = NULL;
+    const void* normalized_frame = NULL;
+    void** vtable;
+    typedef void (VIEW_COM_CALL *PositionSetFn)(void*, void*, float, float,
+                                                float);
+    scene_object_arguments_normalize(&object_argument,
+        alternate_frame != NULL ? &alternate_argument : NULL,
+        &normalized_object, &normalized_frame);
+    vtable = *(void***)normalized_object;
+    ((PositionSetFn)vtable[0xf0 / 4])(normalized_object,
+        (void*)normalized_frame, x, y, z);
+    return 1;
+#else
     void* normalized_frame = NULL;
     DDiSceneObjectPoseInterface* scene =
         ddiscene_pose_interface_resolve(object, alternate_frame,
@@ -7369,6 +7460,7 @@ int ddiscene_object_position_set(void* object, void* alternate_frame,
     if (scene == NULL) return 0;
     scene->position_set(normalized_frame, x, y, z);
     return 1;
+#endif
 }
 
 // FUNCTION: LEGORR 0x00475470
@@ -7381,6 +7473,23 @@ int ddiscene_object_pose_method_dispatch(void* object,
                                          float parameter_7,
                                          float parameter_8)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    const void* object_argument = object;
+    const void* alternate_argument = alternate_frame;
+    void* normalized_object = NULL;
+    const void* normalized_frame = NULL;
+    void** vtable;
+    typedef void (VIEW_COM_CALL *PoseMethodDispatchFn)(
+        void*, void*, float, float, float, float, float, float);
+    scene_object_arguments_normalize(&object_argument,
+        alternate_frame != NULL ? &alternate_argument : NULL,
+        &normalized_object, &normalized_frame);
+    vtable = *(void***)normalized_object;
+    ((PoseMethodDispatchFn)vtable[0xec / 4])(normalized_object,
+        (void*)normalized_frame, parameter_3, parameter_4, parameter_5,
+        parameter_6, parameter_7, parameter_8);
+    return 1;
+#else
     void* normalized_frame = NULL;
     DDiSceneObjectPoseInterface* scene =
         ddiscene_pose_interface_resolve(object, alternate_frame,
@@ -7389,6 +7498,7 @@ int ddiscene_object_pose_method_dispatch(void* object,
     scene->pose_method_dispatch(normalized_frame, parameter_3, parameter_4,
         parameter_5, parameter_6, parameter_7, parameter_8);
     return 1;
+#endif
 }
 
 /* Light interface forwarding leaves (Finding 430). The reference treats
@@ -7591,6 +7701,15 @@ void scene_node_position_set(void* node, const float pos[3])
 void scene_object_arguments_normalize(const void** obj, const void** alt,
                                       void** out_obj, const void** out_alt)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    *out_obj = (void*)*obj;
+    if (alt == NULL) {
+        *out_alt = *(const void**)s_scene_root;
+    }
+    else {
+        *out_alt = *alt;
+    }
+#else
     if (obj != NULL && out_obj != NULL) {
         *out_obj = (void*)*obj; /* corpus: blind dereference */
     }
@@ -7607,6 +7726,7 @@ void scene_object_arguments_normalize(const void** obj, const void** alt,
         __builtin_memcpy((void*)&root_slot, s_scene_root, sizeof root_slot);
     }
     *out_alt = root_slot;
+#endif
 }
 
 /* Matrix4IdentityInitialize (FUN_00483540): spell the float bit patterns as
@@ -9209,7 +9329,6 @@ void ledger_stub_00475e10_CallbackRecordSetFlag10AndRefresh(void* property)
 }
 
 // DDiSceneFrameRecordFind
-// FUNCTION: LEGORR 0x00475e40
 void* ledger_stub_00475e40_DDiSceneFrameRecordFind(
     void* action_interface, const char* action_name, int selector)
 {

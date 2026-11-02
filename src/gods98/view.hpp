@@ -7,13 +7,12 @@
  * (k = |d|/(|d|+A) interpolation), 3 = free/cruise (velocity-EMA, dirty flag
  * bit 0x10). Requested by the sim-fills tranche 2.
  *
- * The view's *camera handles* (corpus FUN_004754c0/00475500/00475430/
- * 00475470/004755e0) are modeled as position/facing records (the native port
- * has no 3D-world projection yet); the corpus functions are implemented
- * against the record. World-query boundaries (grid pick FUN_0044f6d0,
- * terrain height FUN_0044f940) stay stubs with corpus addresses until
- * level/world data lands. Entity target pose resolution is owned by the game
- * entity module and mapped at FUN_0044a070.
+ * Portable CameraHandle records hold view-tick position/facing state. They
+ * are separate from the DDiScene interface targets at 0x475430–0x4755e0,
+ * which normalize a scene object and dispatch through its vtable. The native
+ * view still lacks full 3D-world projection; grid pick FUN_0044f6d0 and terrain
+ * height FUN_0044f940 remain world-query boundaries. Entity target pose
+ * resolution is owned by the game entity module and mapped at FUN_0044a070.
  */
 #ifndef LEGORRR_VIEW_HPP
 #define LEGORRR_VIEW_HPP
@@ -642,6 +641,8 @@ void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* source_pair_record);
 void scene_object_transform_matrix_set(void* object, uint32_t mode,
                                        const float* matrix);
+void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
+                                            float x, float y, float z);
 void render_object_set_identity_transform(void* object);
 void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,
                                float z, float angle); /* 0x00475580 */
@@ -1277,7 +1278,7 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
                                         int* gx, int* gy, int rounds);
 
 /* --- camera-handle primitives (record-backed) ----------------------------- */
-void cam_offset(CameraHandle* c, float x, float y, float z); /* FUN_004755e0 */
+void cam_offset(CameraHandle* c, float x, float y, float z);
 void cam_get_pos(CameraHandle* c, float out[3]);            /* FUN_004754c0 */
 void cam_set_pos(CameraHandle* c, float x, float y, float z);/* FUN_00475430 */
 void cam_get_facing(CameraHandle* c, float out[3]);         /* FUN_00475500 */

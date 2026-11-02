@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **52.61% accuracy**, **51.21% progress**
+- Full report: **97.33% implemented**, **52.78% accuracy**, **51.37% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **48.14% accuracy**,
-  **47.60% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **48.33% accuracy**,
+  **47.78% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1740,6 +1740,54 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   report is **97.33% / 52.61% / 51.21%** full and
   **98.88% / 48.14% / 47.60%** game-only. `distrobox enter developer -- make
   reccmp-report` and `git diff --check` passed; tests were not run.
+- `DDiSceneObjectLengthGet` (`0x475390`) and
+  `DDiSceneObjectFramePositionGet` (`0x4753f0`) now follow the decompiled kind
+  dispatch and invoke the matching record accessor without extra null guards.
+  Their scores rose from 21.92% to **55.56%** and 55.56% to **80.77%**.
+  `DDiSceneObjectArgumentsNormalize` (`0x475900`) now uses the reference's
+  blind output writes and root-slot fallback on x86, raising its score from
+  17.78% to **100%**; non-x86 builds retain guarded handling. The latest report
+  is **97.33% / 52.67% / 51.27%** full and **98.88% / 48.21% / 47.66%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+- Corrected the `0x4755e0` mapping: the target is
+  `CameraTeleportOrOffset`, a five-argument scene-interface call through
+  vtable slot `+0x3c`; `cam_offset` mutates a separate portable camera record.
+  The target annotation now sits on
+  `scene_object_camera_teleport_or_offset`, which matches **100%**. The latest
+  report is **97.33% / 52.70% / 51.29%** full and
+  **98.88% / 48.23% / 47.69%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+- The three adjacent DDiScene pose targets now normalize their arguments and
+  call the decompiled vtable slots directly on x86: position get (`0x4754c0`,
+  14.93% → **30.30%**), position set (`0x475430`, 18.87% → **39.34%**), and
+  pose dispatch (`0x475470`, 15.15% → **40.54%**). Non-x86 builds retain the
+  guarded typed-interface paths. The latest report is **97.33% / 52.72% /
+  51.32%** full and **98.88% / 48.26% / 47.72%** game-only.
+  `distrobox enter developer -- make reccmp-report` and `git diff --check`
+  passed; tests were not run.
+- `RenderObjectSetPackedRgbaFromFloatChannels` (`0x4750b0`) now converts each
+  normalized channel with the reference's `channel * 255` then `__ftol` flow,
+  packs RGBA in reference order, and dispatches the mesh interface's `+0x30`
+  method directly on x86. Its score rose from 19.75% to **74.19%**. Non-x86
+  builds retain the registered setter hook and use the corrected channel
+  scaling. The latest report is **97.33% / 52.75% / 51.34%** full and
+  **98.88% / 48.29% / 47.75%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+- `TypedChildResourceScalarGet` (`0x4757f0`) now performs the decompiled
+  type-4 check, action-name gate, frame-record lookup, and `+0x14` scalar read
+  directly instead of forwarding through the broader frame-record helper.
+  Its score rose from 42.11% to **90.91%**. The latest report is
+  **97.33% / 52.77% / 51.36%** full and **98.88% / 48.31% / 47.77%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+- `SceneObjectFirstNonKind6ChildGet` (`0x475830`) now uses the actual x86
+  interface path: read each child property, follow vtable slot `+0x5c`, and
+  release the returned interface through slot `+0x08`. Non-x86 builds retain
+  the adapter path. Its score rose from 24.43% to **54.32%**. The latest report
+  is **97.33% / 52.78% / 51.37%** full and **98.88% / 48.33% / 47.78%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
 
 ## Port loop
 
