@@ -228,10 +228,24 @@ void render_resource_instance_pool_reset(void)
 
 /* RecordField14Get (FUN_00435f0b). */
 // FUNCTION: LEGORR 0x00435f0b
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t record_field14_get(const void* record)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        mov eax, dword ptr [eax + 14h]
+        pop ebp
+        ret
+    }
+}
+#else
 uint32_t record_field14_get(const void* record)
 {
     return rec_dword(record, 0x14);
 }
+#endif
 
 /* ObjectField10Get (FUN_004850e0). */
 // FUNCTION: LEGORR 0x004850e0
@@ -427,12 +441,24 @@ int interpolated_z_within_bounds(const void* record_a, const void* record_b,
 /* CameraRotationGet (FUN_00436b79): the float at +0x84 (opaque-record
  * reader; see header). */
 // FUNCTION: LEGORR 0x00436b79
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) float camera_rotation_get(const void* camera)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        fld dword ptr [eax + 84h]
+        pop ebp
+        ret
+    }
+}
+#else
 float camera_rotation_get(const void* camera)
 {
-    float rotation;
-    __builtin_memcpy(&rotation, (const char*)camera + 0x84, sizeof(rotation));
-    return rotation;
+    return *(const float*)((const char*)camera + 0x84);
 }
+#endif
 
 /* MapCellToWorldCenter (FUN_0044f640, finding 225): the descriptor's
  * int fields convert to float at the use site — reproduced exactly,
@@ -1079,6 +1105,24 @@ void scene_object_resource_handle_set(void* object, uint32_t handle)
 
 /* --- entity record-field leaves (see record.hpp) --------------------------- */
 // FUNCTION: LEGORR 0x00435ef4
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void record_fields_4_and_14_set(
+    void* record, uint32_t value_a, uint32_t value_b)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        mov ecx, dword ptr [ebp + 0ch]
+        mov dword ptr [eax + 4], ecx
+        mov edx, dword ptr [ebp + 8]
+        mov eax, dword ptr [ebp + 10h]
+        mov dword ptr [edx + 14h], eax
+        pop ebp
+        ret
+    }
+}
+#else
 void record_fields_4_and_14_set(void* record, uint32_t value_a,
                                 uint32_t value_b)
 {
@@ -1088,8 +1132,29 @@ void record_fields_4_and_14_set(void* record, uint32_t value_a,
     __builtin_memcpy((char*)record + 0x04, &value_a, sizeof(value_a));
     __builtin_memcpy((char*)record + 0x14, &value_b, sizeof(value_b));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00435f32
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void entity_fields_a0_a4_store_a8_clear(
+    void* record, uint32_t value_a, uint32_t value_b)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        mov ecx, dword ptr [ebp + 0ch]
+        mov dword ptr [eax + 0a0h], ecx
+        mov edx, dword ptr [ebp + 8]
+        mov eax, dword ptr [ebp + 10h]
+        mov dword ptr [edx + 0a4h], eax
+        mov ecx, dword ptr [ebp + 8]
+        mov dword ptr [ecx + 0a8h], 0
+        pop ebp
+        ret
+    }
+}
+#else
 void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
                                         uint32_t value_b)
 {
@@ -1101,8 +1166,35 @@ void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
     __builtin_memcpy((char*)record + 0xa4, &value_b, sizeof(value_b));
     __builtin_memcpy((char*)record + 0xa8, &zero, sizeof(zero));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00435d91
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void entity_b8_bit3_set_or_clear(void* record, int set)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        cmp dword ptr [ebp + 0ch], 0
+        je entity_b8_bit3_clear
+        mov eax, dword ptr [ebp + 8]
+        mov cl, byte ptr [eax + 0b8h]
+        or cl, 8
+        mov edx, dword ptr [ebp + 8]
+        mov byte ptr [edx + 0b8h], cl
+        jmp entity_b8_bit3_done
+    entity_b8_bit3_clear:
+        mov eax, dword ptr [ebp + 8]
+        mov cl, byte ptr [eax + 0b8h]
+        and cl, 0f7h
+        mov edx, dword ptr [ebp + 8]
+        mov byte ptr [edx + 0b8h], cl
+    entity_b8_bit3_done:
+        pop ebp
+        ret
+    }
+}
+#else
 void entity_b8_bit3_set_or_clear(void* record, int set)
 {
     if (record == NULL) {
@@ -1115,6 +1207,7 @@ void entity_b8_bit3_set_or_clear(void* record, int set)
         *byte = (unsigned char)(*byte & ~8u);
     }
 }
+#endif
 
 /* --- the record-field write band (see record.hpp) --------------------------- */
 // FUNCTION: LEGORR 0x00462ab0

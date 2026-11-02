@@ -2387,8 +2387,6 @@ static unsigned int s_deferred_olist_record_count;
 static DeferredOListEntityHooks s_deferred_olist_hooks;
 static PeriodicEntityCallback s_periodic_entity_callback;
 static void* s_periodic_entity_callback_context;
-static EntityDefaultTransformApplyHook s_default_transform_apply_hook;
-static void* s_default_transform_apply_context;
 
 #define ENTITY_INDEXED_VALUE_GROUPS 11
 #define ENTITY_INDEXED_VALUE_CAPACITY 3
@@ -3504,38 +3502,72 @@ void periodic_entity_callback_dispatch(void* payload)
         periodic_entity_callback_adapter, payload);
 }
 
-void entity_default_transform_apply_hook_set(
-    EntityDefaultTransformApplyHook hook, void* context)
-{
-    s_default_transform_apply_hook = hook;
-    s_default_transform_apply_context = context;
-}
-
 // FUNCTION: LEGORR 0x004247d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int entity_default_transform_apply_if_flagged(
+    EntitySlot* entity, void* argument)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        push ecx
+        mov eax, dword ptr [ebp + 0ch]
+        mov dword ptr [ebp - 4], eax
+        mov ecx, dword ptr [ebp + 8]
+        mov edx, dword ptr [ecx + 3ech]
+        and edx, 1
+        test edx, edx
+        je default_transform_done
+        push 0
+        push 0
+        push 3f800000h
+        mov eax, dword ptr [ebp - 4]
+        push eax
+        mov ecx, dword ptr [ebp + 8]
+        push ecx
+        call selected_entity_ground_marker_render
+        add esp, 14h
+    default_transform_done:
+        xor eax, eax
+        mov esp, ebp
+        pop ebp
+        ret
+    }
+}
+#else
 int entity_default_transform_apply_if_flagged(EntitySlot* entity,
                                               void* argument)
 {
-    if (entity != NULL && (entity->flags_3ec & 1u) != 0u &&
-        s_default_transform_apply_hook != NULL) {
-        s_default_transform_apply_hook(entity, argument, 1.0f, 0, 0,
-                                       s_default_transform_apply_context);
-    }
+    if (entity != NULL && (entity->flags_3ec & 1u) != 0u)
+        selected_entity_ground_marker_render(entity, argument, 1.0f, 0.0f,
+                                             0.0f);
     return 0;
 }
-
-static int entity_default_transform_apply_adapter(EntitySlot* entity,
-                                                  void* argument)
-{
-    (void)entity_default_transform_apply_if_flagged(entity, argument);
-    return 0;
-}
+#endif
 
 // FUNCTION: LEGORR 0x00424810
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void entity_default_transform_apply_all(void* argument)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        push eax
+        push offset entity_default_transform_apply_if_flagged
+        call entity_pool_find_by_callback_filtered_current
+        add esp, 8
+        pop ebp
+        ret
+    }
+}
+#else
 void entity_default_transform_apply_all(void* argument)
 {
-    entity_pool_callback_search(entity_default_transform_apply_adapter,
-                                argument);
+    entity_pool_find_by_callback_filtered_current(
+        entity_default_transform_apply_if_flagged, argument);
 }
+#endif
 
 struct EntityGridFindQuery {
     int x;

@@ -578,12 +578,6 @@ typedef int (*PeriodicEntityCallback)(EntitySlot* entity, void* payload,
 void periodic_entity_callback_install(PeriodicEntityCallback callback,
                                       void* context);
 void periodic_entity_callback_dispatch(void* payload); /* FUN_00425b40 */
-typedef void (*EntityDefaultTransformApplyHook)(EntitySlot* entity,
-                                                void* argument,
-                                                float scale, int mode_a,
-                                                int mode_b, void* context);
-void entity_default_transform_apply_hook_set(
-    EntityDefaultTransformApplyHook hook, void* context);
 int entity_default_transform_apply_if_flagged(EntitySlot* entity,
                                               void* argument);
 void entity_default_transform_apply_all(void* argument);

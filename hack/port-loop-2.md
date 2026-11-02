@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **49.94% accuracy**, **48.61% progress**
+- Full report: **97.33% implemented**, **50.34% accuracy**, **48.99% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **45.19% accuracy**,
-  **44.68% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **45.63% accuracy**,
+  **45.12% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1431,6 +1431,40 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **40.43%** and **50.53%**. Current totals remain **97.33% / 49.94% / 48.61%**
   full and **98.88% / 45.19% / 44.68%** game-only. Two consecutive developer
   distrobox Reccmp builds returned the same per-function scores, and
+  `git diff --check` passed; tests were not run.
+- `CameraRotationGet` (`0x436b79`) now has the reference x86 frame setup and
+  x87 load from record offset `+0x84`. Its match rose from **18.18% to 100%**.
+  The non-x86 path remains a direct float read. Two consecutive
+  `distrobox enter developer -- make reccmp-report` runs produced identical
+  results. `RecordField14Get` (`0x435f0b`) now uses the decompile's direct
+  `+0x14` dword load in its MSVC x86 body and rose from **16.67% to 100%**;
+  its non-x86 path retains the null-safe record helper. `EntityDefaultTransformApplyAll`
+  (`0x424810`) now calls the filtered pool walker with the original callback
+  and matches at **100%**, up from **16.67%**. Its callback now directly
+  reproduces the flagged check and ground-marker renderer call, and also
+  matches at **100%** (up from **23.81%**). The renderer still has no
+  production registration for its drawing operations. Latest totals are
+  **97.33% / 50.08% / 48.74%** full and **98.88% / 45.35% / 44.84%**
+  game-only. The MSVC 5.0 Reccmp build and `git diff --check` passed; tests
+  were not run.
+- The four weapon footer getters now read the recovered 0x4b68-stride indexed
+  records at their decompiled offsets. `WeaponTypeGetRechargeTime`
+  (`0x46f110`), `WeaponTypeGetDischargeRate` (`0x46f140`), and
+  `WeaponTypeGetRange` (`0x46f170`) rose from **11.11% to 100%**;
+  `WeaponTypeGetWallDestroyTime` (`0x46f1a0`) rose from **14.29% to 100%**.
+  The public accessors call these direct mapped bodies when the table is
+  installed and preserve their previous safe definition fallback otherwise.
+  The table loader/parser still has no in-project production caller. Current
+  totals are **97.33% / 50.23% / 48.89%** full and
+  **98.88% / 45.51% / 45.00%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+- Three record-field writers now use the retail unchecked x86 stores and
+  branch sequence, with the portable null-safe C paths retained. `RecordFields4And14Set`
+  (`0x435ef4`) improved from **22.22% to 100%**; `EntityFieldsA0A4StoreA8Clear`
+  (`0x435f32`) from **11.11% to 100%**; and `EntityB8Bit3SetOrClear`
+  (`0x435d91`) from **16.00% to 100%**. Current totals are
+  **97.33% / 50.34% / 48.99%** full and **98.88% / 45.63% / 45.12%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
   `git diff --check` passed; tests were not run.
 
 ## Port loop
