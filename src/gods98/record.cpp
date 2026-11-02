@@ -411,14 +411,24 @@ float camera_rotation_get(const void* camera)
 int map_cell_to_world_center(const void* map, uint32_t cell_x,
                              uint32_t cell_y, float* world_x, float* world_y)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    const uint32_t* fields = (const uint32_t*)map;
+    if (cell_x < fields[0] && cell_y < fields[1]) {
+        *world_x = *(const float*)((const char*)map + 0x10) * 0.5f +
+            (float)cell_x * *(const float*)((const char*)map + 0x10) +
+            *(const float*)((const char*)map + 0x18);
+        *world_y = *(const float*)((const char*)map + 0x1c) -
+            (*(const float*)((const char*)map + 0x10) * 0.5f +
+             (float)cell_y * *(const float*)((const char*)map + 0x10));
+        return 1;
+    }
+    return 0;
+#else
     const uint32_t width = rec_dword(map, 0x00);
     const uint32_t height = rec_dword(map, 0x04);
-    const int32_t scale_i = (int32_t)rec_dword(map, 0x10);
-    const int32_t origin_x_i = (int32_t)rec_dword(map, 0x18);
-    const int32_t origin_y_i = (int32_t)rec_dword(map, 0x1C);
-    const float scale = (float)scale_i;
-    const float origin_x = (float)origin_x_i;
-    const float origin_y = (float)origin_y_i;
+    const float scale = rec_float(map, 0x10);
+    const float origin_x = rec_float(map, 0x18);
+    const float origin_y = rec_float(map, 0x1C);
 
     if (cell_x < width && cell_y < height) {
         if (world_x != NULL) {
@@ -430,6 +440,7 @@ int map_cell_to_world_center(const void* map, uint32_t cell_x,
         return 1;
     }
     return 0;
+#endif
 }
 
 /* TaskFlagBitQuery (FUN_00408970, findings 366/465). */
@@ -879,9 +890,9 @@ int world_to_terrain_cell_bounds_check(const void* map, float world_x,
         return 0;
     }
     if (subcell != NULL) {
-        const float bs = (float)(int)rec_dword(map, 0x10);
-        const float ox = (float)(int)rec_dword(map, 0x18);
-        const float oy = (float)(int)rec_dword(map, 0x1C);
+        const float bs = *(const float*)((const char*)map + 0x10);
+        const float ox = *(const float*)((const char*)map + 0x18);
+        const float oy = *(const float*)((const char*)map + 0x1C);
         float px = (world_x - ((float)cx * bs + ox)) / (bs * 0.5f);
         float py = -((world_y - (oy - (float)cy * bs)) / (bs * 0.5f));
         if (1.0f < px) {

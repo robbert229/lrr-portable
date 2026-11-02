@@ -4034,69 +4034,6 @@ void resource_stream_close(ResourceStream* stream)
     free(stream);
 }
 
-/* MapOpen2 (FUN_00480170): open the named file in binary mode, seek to its
- * end to get the payload size, notify the registered progress hook, allocate
- * a map-image slot, rewind, and read the payload into that slot. The slot
- * owner supplies its callbacks through the global registration seam; the
- * retail entry itself takes only (path, size_out). */
-static const MapOpenOps* s_map_open_ops;
-
-void map_open2_ops_set(const MapOpenOps* ops)
-{
-    s_map_open_ops = ops;
-}
-
-// FUNCTION: LEGORR 0x00480170
-int map_open2(const char* path, int32_t* size_out)
-{
-    const MapOpenOps* ops = s_map_open_ops;
-    GameFileHandle* handle;
-    void* map_data;
-    int32_t size;
-    int slot;
-    if (size_out != NULL) *size_out = 0;
-    if (path == NULL || ops == NULL || ops->slot_allocate == NULL ||
-        ops->slot_get == NULL || ops->slot_release == NULL) return -1;
-    handle = game_file_open_dispatch(path, "rb");
-    if (handle == NULL) return -1;
-    (void)wad_file_seek(handle, 0, 2);
-    size = wad_file_cursor_get(handle);
-    if (size < 0) {
-        game_file_close(handle);
-        return -1;
-    }
-    if (ops->progress != NULL) {
-        ops->progress(ops->context, path, (uint32_t)size);
-    }
-    slot = ops->slot_allocate(ops->context, (uint32_t)size);
-    if (slot < 0) {
-        game_file_close(handle);
-        return -1;
-    }
-    map_data = ops->slot_get(ops->context, (uint32_t)slot);
-    if (map_data == NULL) {
-        ops->slot_release(ops->context, (uint32_t)slot);
-        game_file_close(handle);
-        return -1;
-    }
-    (void)wad_file_seek(handle, 0, 0);
-    if (size > 0) (void)wad_file_read(map_data, 1, size, handle);
-    if (size_out != NULL) *size_out = size;
-    game_file_close(handle);
-    return slot;
-}
-
-int map_open2_with_ops(const char* path, const MapOpenOps* ops,
-                       int32_t* size_out)
-{
-    const MapOpenOps* previous = s_map_open_ops;
-    int slot;
-    map_open2_ops_set(ops);
-    slot = map_open2(path, size_out);
-    map_open2_ops_set(previous);
-    return slot;
-}
-
 static int resource_file_token_list_parse(const char* token_file,
                                           ResourceFileTokenList* list,
                                           int clear_before_open)

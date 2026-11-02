@@ -203,6 +203,8 @@ void media_cd_audio_track_start(int track, int restart_when_done,
  * pair lands as zero-init module storage with setter/peek hooks. */
 void  loader_progress_callback_set(void* callback, void* context);
                                  /* FUN_004802b0 */
+extern void* s_loader_progress_callback;
+extern void* s_loader_progress_context;
 void* loader_progress_callback_peek(void);
 void* loader_progress_context_peek(void);
 #endif /* LEGORRR_MEDIA_HPP */

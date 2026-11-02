@@ -8,6 +8,7 @@
 #include "game.hpp"
 #include "gods98/block.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/media.hpp"
 #include "effects.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/message.hpp"
@@ -478,31 +479,39 @@ int level_random_draw15(void)
  *  `.map` file container (finding 07): raw image, direct-mapped.
  * ------------------------------------------------------------------ */
 
-static int level_map_open_slot_allocate(void* context, uint32_t size)
+/* MapOpen2 (FUN_00480170): preserve the retail open, seek/tell, progress,
+ * allocate, rewind/read, and close order against the level-owned map slots. */
+// GLOBAL: LEGORR 0x004a2770
+static const char s_map_open_binary_mode[] = "rb";
+// FUNCTION: LEGORR 0x00480170
+int map_open2(const char* path, int32_t* size_out)
 {
-    (void)context;
-    return level_map_slot_allocate((size_t)size);
+    GameFileHandle* handle = game_file_open_dispatch(
+        path, s_map_open_binary_mode);
+    if (handle != NULL) {
+        int size;
+        int slot;
+        void* map_data;
+        (void)wad_file_seek(handle, 0, 2);
+        size = wad_file_cursor_get(handle);
+        if (s_loader_progress_callback != NULL) {
+            typedef void (*ProgressProc)(const char*, uint32_t, void*);
+            ((ProgressProc)s_loader_progress_callback)(
+                path, (uint32_t)size, s_loader_progress_context);
+        }
+        slot = level_map_slot_allocate((size_t)size);
+        if (slot != -1) {
+            map_data = level_map_slot_get((uint32_t)slot);
+            (void)wad_file_seek(handle, 0, 0);
+            (void)wad_file_read(map_data, 1, size, handle);
+            if (size_out != NULL) *size_out = size;
+            (void)game_file_close(handle);
+            return slot;
+        }
+        (void)game_file_close(handle);
+    }
+    return -1;
 }
-
-static void* level_map_open_slot_get(void* context, uint32_t slot)
-{
-    (void)context;
-    return level_map_slot_get(slot);
-}
-
-static void level_map_open_slot_release(void* context, uint32_t slot)
-{
-    (void)context;
-    level_map_slot_release(slot);
-}
-
-static const MapOpenOps s_level_map_open_ops = {
-    NULL,
-    level_map_open_slot_allocate,
-    level_map_open_slot_get,
-    level_map_open_slot_release,
-    NULL
-};
 
 MapFile* level_map_open(const char* name)
 {
@@ -510,14 +519,9 @@ MapFile* level_map_open(const char* name)
     int32_t size = 0;
     uint8_t* data;
     MapFile* m;
-    /* Install before checking the path so a later target-shaped MapOpen2
-     * call also has the level slot owner when an earlier map key is empty. */
-    map_open2_ops_set(&s_level_map_open_ops);
     if (name == NULL || name[0] == '\0') {
         return NULL;
     }
-    /* The target MapOpen2 ABI reads its slot callbacks from the registered
-     * map owner, so unrelated resource users need no slot-table knowledge. */
     slot = map_open2(name, &size);
     if (slot < 0) {
         return NULL;
@@ -5906,18 +5910,26 @@ uint8_t* level_map_slot_get(uint32_t slot)
 void level_map_image_header(const uint8_t* image, uint32_t* width,
                             uint32_t* height)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    *width = *(const uint32_t*)(image + 0x08);
+    *height = *(const uint32_t*)(image + 0x0c);
+#else
     *width = 0;
     *height = 0;
     if (image != NULL) {
         __builtin_memcpy(width, image + 0x08, sizeof(*width));
         __builtin_memcpy(height, image + 0x0C, sizeof(*height));
     }
+#endif
 }
 
 /* FUN_004515c0: zero-extended u16 cell at +0x10 + (y*width+x)*2. */
 // FUNCTION: LEGORR 0x004515c0
 uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return *(const uint16_t*)(image + 0x10 + (y * width + x) * 2);
+#else
     if (image == NULL) {
         return 0;
     }
@@ -5929,6 +5941,7 @@ uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
     uint16_t cell;
     __builtin_memcpy(&cell, image + 0x10 + byte_offset, sizeof(cell));
     return cell;
+#endif
 }
 
 /* FUN_004334c0: resolve the resource slot, then read its two header dwords. */

@@ -148,17 +148,17 @@ static void test_camera_rotation(void)
     CHECK(camera_rotation_get(NULL) == 0.0f, "NULL camera answers zero");
 }
 
-/* MapCellToWorldCenter (FUN_0044f640): int descriptor fields convert to
- * float at the use site; unsigned bounds compare. */
+/* MapCellToWorldCenter (FUN_0044f640): unsigned dimension bounds and
+ * floating-point scale/origin fields. */
 static void test_map_cell_center(void)
 {
     uint8_t map[0x20];
     memset(map, 0, sizeof(map));
     poke_dword(map, 0x00, 4u);          /* width  */
     poke_dword(map, 0x04, 4u);          /* height */
-    poke_dword(map, 0x10, 2u);          /* scale  */
-    poke_dword(map, 0x18, -10);         /* origin X */
-    poke_dword(map, 0x1C, 100);         /* origin Y */
+    poke_float(map, 0x10, 2.0f);        /* scale  */
+    poke_float(map, 0x18, -10.0f);      /* origin X */
+    poke_float(map, 0x1C, 100.0f);      /* origin Y */
 
     float wx = 0.0f, wz = 0.0f;
     CHECK(map_cell_to_world_center(map, 1, 2, &wx, &wz) == 1,
@@ -522,16 +522,17 @@ static void test_transform_copy_in(void)
 }
 
 /* Grid-descriptor coordinate leaves (findings wave 2026-10-24). The
- * descriptor: w/h at +0/+4, int scale +0x10, int origins +0x18/+0x1C. */
+ * descriptor has dimensions at +0/+4 and float scale/origins at
+ * +0x10/+0x18/+0x1c. */
 static void test_descriptor_coordinates(void)
 {
     uint8_t desc[0x20];
     memset(desc, 0, sizeof(desc));
     poke_dword(desc, 0x00, 4u);
     poke_dword(desc, 0x04, 4u);
-    poke_dword(desc, 0x10, 2u);   /* scale as an int (bounds check's view) */
-    poke_dword(desc, 0x18, 10u);
-    poke_dword(desc, 0x1C, 10u);
+    poke_float(desc, 0x10, 2.0f);
+    poke_float(desc, 0x18, 10.0f);
+    poke_float(desc, 0x1C, 10.0f);
 
     int cx = 0, cy = 0;
     /* In range: cell coordinates store and the leaf answers 1. */
@@ -565,9 +566,7 @@ static void test_descriptor_coordinates(void)
     grid_coordinate_clamp_and_store(desc, 1.0f, 1.0f, NULL, NULL);
     CHECK(cx == 0 && cy == 3, "NULL stores change nothing");
 
-    /* The forwarder-shaped leaf: scale +0x10 read as FLOAT here, so the
-     * fixture stores float 1.0 while the center converts the same bits
-     * as an int (the corpus's own mismatch, reproduced faithfully). */
+    /* The forwarder-shaped leaf uses the same float transform fields. */
     uint8_t desc2[0x20];
     memset(desc2, 0, sizeof(desc2));
     poke_dword(desc2, 0x00, 4u);
@@ -586,9 +585,8 @@ static void test_descriptor_coordinates(void)
           "the leaf answers 0 (the corpus never answers otherwise)");
     CHECK(cell[0] == 1.0f && cell[1] == 1.0f, "the cell coordinates stream");
     /* Mirror the center computation for the offset check. */
-    float si = (float)(int)one_bits; /* = 1.0f: bits-as-int casts once */
-    float center_x = si * 0.5f + (float)1 * si + 0.0f;
-    float center_y = 0.0f - (si * 0.5f + (float)1 * si);
+    float center_x = 1.0f * 0.5f + 1.0f * 1.0f;
+    float center_y = 0.0f - (1.0f * 0.5f + 1.0f * 1.0f);
     CHECK(offset[0] == 1.5f - center_x + 0.5f, "x offsets by +1/2 step");
     CHECK(offset[1] == 1.5f - center_y + 0.5f, "y offsets by +1/2 step");
 

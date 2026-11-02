@@ -341,6 +341,9 @@ uint8_t* level_voxel(const LevelState* s, int x, int y);
 
 #define LEVEL_MAP_SLOT_COUNT 2000 /* the corpus table length */
 
+/* FUN_00480170: load a file through the level map-slot table. */
+int map_open2(const char* path, int32_t* size_out);
+
 /* FUN_004893f0: zero every slot pair. */
 void level_map_slots_reset(void);
 

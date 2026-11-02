@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **48.56% accuracy**, **47.26% progress**
+- Full report: **97.32% implemented**, **48.69% accuracy**, **47.39% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **43.65% accuracy**,
-  **43.16% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **43.80% accuracy**,
+  **43.31% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1115,6 +1115,35 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **97.32% / 48.56% / 47.26%** full and **98.87% / 43.65% / 43.16%**
   game-only. The MSVC 5.0 Reccmp build and `git diff --check` passed; tests
   were not run.
+- `MapOpen2` (`0x480170`) now maps to the target-shaped implementation beside
+  the level-owned slot table. It calls the existing file open/seek/tell/read/
+  close helpers, invokes the registered loader-progress callback, and uses the
+  real map-slot allocator/getter directly rather than an operations table.
+  The binary-read mode string is mapped to `DAT_004a2770`; this removed its
+  final operand mismatch and raised the target from **28.29% to 100%**. The
+  latest report is
+  **97.32% / 48.60% / 47.30%** full and **98.87% / 43.70% / 43.21%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+- `LevelMapImageCell` (`0x4515c0`) now uses the reference's unchecked x86
+  row-major 16-bit read from `image + 0x10`; the guarded portable path remains
+  for other targets. Its match rose from **8.00% to 100%**. The latest report
+  is **97.32% / 48.64% / 47.34%** full and **98.87% / 43.74% / 43.25%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+- `MapFileReadHeader` (`0x4515a0`) now copies the two header dwords directly
+  in its x86 body; the portable path retains its null-safe zero outputs. The
+  match rose from **19.35% to 100%**. Latest report: **97.32% / 48.67% /
+  47.37%** full and **98.87% / 43.78% / 43.29%** game-only. Reccmp and
+  `git diff --check` passed; tests were not run.
+- `MapCellToWorldCenter` (`0x44f640`) now reads scale and origins as floats,
+  matching the retail x86 `fld` instructions and the neighboring coordinate
+  helpers. Its Reccmp score rose from **8.96% to 55.26%**. This semantic
+  correction shifted `WorldToTerrainCellBoundsCheck` from **27.68% to 26.21%**;
+  its descriptor accesses still need further alignment. Latest report:
+  **97.32% / 48.69% / 47.39%** full and **98.87% / 43.80% / 43.31%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
 
 ## Port loop
 
