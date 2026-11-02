@@ -538,10 +538,12 @@ int terrain_cell_walkable_flag_current(uint32_t cx, uint32_t cy);
 
 /* FUN_00432c20: the wave-spawn flag bit. Returns the masked word. */
 uint32_t level_cell_flag_wave(const LevelState* s, int cx, int cy);
+uint32_t terrain_cell_flag_wave_current(int cx, int cy);
 
 /* FUN_00432c50: terrain speed class — 0 when flag bit 0x200000 is set,
  * otherwise the low two terrain-type bits + 1. */
 int level_cell_speed_class(const LevelState* s, int cx, int cy);
+int terrain_cell_speed_class_current(const int cell_xy[2]);
 
 /* Explicit-level flag-byte view; returns the masked 0xc0 bits. The target
  * returns a normalized boolean through the active-level pair below. */
@@ -563,6 +565,7 @@ int terrain_cell_state_equals_six_current(const int cell_xy[2]);
 /* FUN_00432f40: the two low terrain bits (0x18) clear — cells OUTSIDE
  * the grid-minus-one gate count as clear (as in the corpus). */
 int level_cell_mask18_clear(const LevelState* s, int cx, int cy);
+int terrain_cell_mask18_clear_current(uint32_t cx, uint32_t cy);
 
 /* FUN_00432f90: flag bit 4 inside the grid-minus-one gate (0 outside).
  * The mapped entry uses the live level; the explicit-level form is an
@@ -602,6 +605,7 @@ int level_cell_mask_180000(const LevelState* s, int cx, int cy);
 /* FUN_00433120: raise (set nonzero) or clear flag bit 0x10000000.
  * Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set);
+void terrain_cell_flag_10000000_set_current(const int cell_xy[2], int set);
 
 /* Raise (set nonzero) or clear flag bit 0x800000 — the cell-command
  * issuer's terrain half marks the cell through this leaf (finding 451);
@@ -648,19 +652,23 @@ uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy, int mode);
  * accessors (the corpus uses global state and unchecked cell addresses). */
 int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy);
 
-/* FUN_00432b00 / FUN_00432b50 / FUN_00432d90: bounded single-bit reads
- * (flags 0x800, 0x8, 0x20) — 0 outside the dim-1 gate. */
+/* Explicit-level bounded single-bit reads retained for portable callers. */
 uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy);
 uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy);
 uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy);
+/* Retail target forms read the active level and apply unsigned dim-1 gates. */
+uint32_t terrain_cell_flag_800_bounded_current(uint32_t cx, uint32_t cy);
+uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);
+uint32_t terrain_cell_flag_20_bounded_current(uint32_t cx, uint32_t cy);
 
-/* FUN_00432b90: the unchecked state byte (record+2, signed char) is 8,
- * 10 or 11. */
+/* Explicit-level version of the unchecked state-byte classifier. */
 int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy);
+int terrain_cell_type_is_8_or_10_or_11_current(int cx, int cy);
 
-/* FUN_00432dd0: the unchecked entity-reservation bit (flag 0x8000000) —
- * the read side of the level_tile_mark flag. Returns the masked word. */
+/* Explicit-level entity-reservation bit reader. */
 uint32_t level_cell_flag_reserved(const LevelState* s, int cx, int cy);
+/* Retail target form reads the active level from a coordinate-pair pointer. */
+uint32_t terrain_cell_flag_reserved_current(const int cell_xy[2]);
 
 /* FUN_00432710: raise (set nonzero) or clear flag bit 0x80000. The
  * corpus twin that raises 0x40000000 additionally refreshes the cell

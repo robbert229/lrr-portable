@@ -7260,6 +7260,53 @@ int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2])
 }
 
 // FUNCTION: LEGORR 0x00433180
+int entity_cell_type_speed_multiplier_resolve_current(
+    const EntitySlot* entity, int x, int y, float scale, float* out_scale)
+{
+    LevelState* level = g_active_level_retail;
+    if (entity->type == 6 || entity->type == 7 || entity->type == 5 ||
+        entity->type == 8 || entity->type == 11 || entity->type == 13 ||
+        entity->type == 14 || entity->type == 15 || entity->type == 16 ||
+        entity->type == 17 || entity->type == 18 || entity->type == 19) {
+        return 0;
+    }
+    if (entity->owner_36c != NULL &&
+        (entity_stats_word_get(entity) & 0x20000u) == 0u) return 0;
+
+    {
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int index = width * y + x;
+        uint8_t* cell = voxels + index * 0x48;
+        if (cell[2] == 6) {
+            uint32_t cell_flags = *(uint32_t*)(cell + 8);
+            if ((cell_flags & 0x200u) == 0u &&
+                (entity_state_flags_get(entity) & 0x200000u) == 0u) {
+                if (out_scale == NULL) return 1;
+                *out_scale = scale;
+                return 1;
+            }
+        }
+        if ((*(uint32_t*)(cell + 8) & 0x1000u) != 0u) {
+            if (out_scale != NULL) {
+                uint32_t rock_fall_type =
+                    lego::object_type_name_index_find("RockFallIn");
+                float motion_scale =
+                    lego::entity_indexed_float_lookup_with_minus_one_fallback(
+                        (int)rock_fall_type, entity);
+                *out_scale = motion_scale * scale;
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int entity_cell_type_speed_multiplier_resolve(const EntitySlot* entity,
                                               const LevelState* level,
                                               int x, int y, float scale,
@@ -7271,6 +7318,10 @@ int entity_cell_type_speed_multiplier_resolve(const EntitySlot* entity,
     uint32_t i;
     int type;
     if (entity == NULL || level == NULL) return 0;
+    if (level == g_active_level_retail) {
+        return entity_cell_type_speed_multiplier_resolve_current(
+            entity, x, y, scale, out_scale);
+    }
     for (i = 0; i < sizeof(excluded_types) / sizeof(excluded_types[0]); ++i) {
         if (entity->type == excluded_types[i]) return 0;
     }
@@ -7289,8 +7340,9 @@ int entity_cell_type_speed_multiplier_resolve(const EntitySlot* entity,
         if (out_scale != NULL) {
             uint32_t rock_fall_type =
                 lego::object_type_name_index_find("RockFallIn");
-            float motion_scale = lego::entity_indexed_float_lookup_with_minus_one_fallback(
-                (int)rock_fall_type, entity);
+            float motion_scale =
+                lego::entity_indexed_float_lookup_with_minus_one_fallback(
+                    (int)rock_fall_type, entity);
             *out_scale = motion_scale * scale;
         }
         return 1;

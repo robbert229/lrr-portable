@@ -15,15 +15,15 @@ Preserve the user's existing worktree changes. C/C++ must remain compatible
 with MSVC 5.0. The configured toolchain is available with
 `distrobox enter developer`.
 
-## Current verified baseline — 2026-11-01
+## Current verified baseline — 2026-11-02
 
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **45.44% accuracy**, **44.22% progress**
+- Full report: **97.32% implemented**, **46.02% accuracy**, **44.78% progress**
   (2,326 compared entries out of 2,390).
-- Game-only report: **98.87% implemented**, **40.21% accuracy**,
-  **39.75% progress** (2,107/2,131).
+- Game-only report: **98.87% implemented**, **40.84% accuracy**,
+  **40.38% progress** (2,107/2,131).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -253,10 +253,73 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   and reads the active level. Its new target-shaped body preserves the unsigned
   `dimension - 1` bounds gates, traversable bit `0x10`, and blocked bit `0x8`.
   The score rose from **12.24% to 73.33%**. Splitting the width and height
-  checks restored the decompile's short-circuit order. Latest report:
-  **97.32% / 45.44% / 44.22%** full and **98.87% / 40.21% / 39.75%** game-only.
-  Reccmp completed in the developer distrobox and `git diff --check` passed;
-  tests were not run.
+  checks restored the decompile's short-circuit order. The latest report at
+  that checkpoint was **97.32% / 45.44% / 44.22%** full and
+  **98.87% / 40.21% / 39.75%** game-only.
+- The adjacent terrain readers `TerrainCellFlag800TestInBounds` (`0x432b00`),
+  `TerrainWalkableNeighborSearch` (`0x432b50`), and
+  `TerrainCellFlag20TestInBounds` (`0x432d90`) had mappings on explicit-level
+  helpers. Their mapped bodies now use the two-unsigned-coordinate retail
+  interface, the active-level global, and the `0x48` voxel stride while keeping
+  the prior explicit-level helpers for portable callers. Each rose from
+  **42.31% to 69.23%**. The remaining diff is register selection and pointer
+  addressing in the generated code; a volatile pointer-slot load did not
+  change their scores. `TerrainCellTypeIs8Or10Or11` (`0x432b90`) now directly
+  reads the active-level record byte and scores **100%**, up from **28.57%**.
+  `TerrainCellFlag08000000Test` (`0x432dd0`) now takes the decompiled
+  coordinate-pair pointer and reads the active-level flag word; it scores
+  **100%**, up from **8.00%**. Two more current-level readers now match the
+  retail ABI: `TerrainCellFlag40000Test` (`0x432c20`) takes `(x, y)` and
+  `TerrainCellTypeSpeedClassGet` (`0x432c50`) takes a coordinate-pair pointer;
+  both score **100%**, up from **11.76%** and **8.00%**. The normalized
+  `TerrainCellFlagsMaskC0Test` (`0x432e60`) now reads the active-level record
+  directly and scores **66.67%**, up from **22.22%**. The three bounded
+  readers remain at **69.23%** each; their remaining mismatch is generated
+  register selection and pointer addressing. Reccmp completed in the
+  developer distrobox; `git diff --check` passed and tests were not run. Latest
+  report at that stage: **97.32% / 45.62% / 44.40%** full and
+  **98.87% / 40.41% / 39.96%** game-only.
+- The adjacent terrain mutation and record predicates now use the active-level
+  global and retail record layout. `TerrainCellPredugEdgeWallFlagSet`
+  (`0x432e00`) rose from **8.70% to 83.33%** after separating its set and clear
+  paths and using the target's in-place flag operations. The edge-wall reader
+  (`0x432e90`) rose from **39.02% to 76.92%**. The state-byte predicates
+  `TerrainCellStateEquals1` (`0x432ec0`) and `TerrainCellStateEquals6`
+  (`0x432f00`) now score **100%** each. A test with a volatile flag pointer
+  did not change the setter score and was reverted. Latest combined report:
+  **97.32% / 45.74% / 44.51%** full and **98.87% / 40.54% / 40.08%**
+  game-only. Reccmp completed in the developer distrobox;
+  `git diff --check` passed; tests were not run.
+- The next current-level terrain query batch added the retail two-coordinate
+  `TerrainCellFlagsMask18ClearInBounds` body (`0x432f40`, **72.41%**, from
+  17.02%), aligned the bounded flag-4 reader (`0x432f90`, **69.23%**, from
+  35.09%), and made the unchecked flag-`0x2000`, flag-`0x80`, and secondary
+  bit-0 reads direct active-level accesses (`0x432fd0`, `0x433000`,
+  `0x433060`, all **100%**). The coordinate-pair flag-`0x8000` reader
+  (`0x433030`) is **76.92%**, from 13.33%. Additional target-shaped paths
+  improved the bounded occupied-coordinate read (`0x433090`, **47.46%**, from
+  10.26%), the `0x180000` mask predicate (`0x4330e0`, **66.67%**, from
+  11.76%), the flag-`0x10000000` setter (`0x433120`, **54.55%**, from
+  24.14%), record-byte-3 reader (`0x4332c0`, **82.35%**, from 10.26%),
+  bounded work-flag setter (`0x4332f0`, **39.02%**, from 17.86%), and
+  cell-type out-parameter query (`0x433330`, **62.07%**, from 18.18%). The
+  target paths use the retail active-level global and record stride on Win32;
+  portable builds retain owner-resolving fallbacks where they existed.
+  Reccmp completed in the developer distrobox; `git diff --check` passed and
+  tests were not run. Latest report: **97.32% / 45.99% / 44.76%** full and
+  **98.87% / 40.82% / 40.36%** game-only.
+- `CellTypeSpeedMultiplierResolve` (`0x433180`) previously mapped to a
+  six-argument explicit-level helper, while the decompile takes an entity,
+  coordinate pair, scale, and optional output pointer, and reads the active
+  level global. The mapping now sits on a five-argument current-level body with
+  the decompiled excluded-type order, owner/stats gates, cell checks, and
+  optional RockFallIn multiplier. Existing explicit-level callers delegate to
+  this body when their level is active and retain the original adapter path for
+  other levels. Its score rose from **16.54% to 41.57%**. The `0x433120`
+  flag setter now scores **83.33%** (up from 24.14% in the earlier report).
+  Reccmp completed in the developer distrobox; `git diff --check` passed and
+  tests were not run. Latest report: **97.32% / 46.02% / 44.78%** full and
+  **98.87% / 40.84% / 40.38%** game-only.
 
 ## Port loop
 

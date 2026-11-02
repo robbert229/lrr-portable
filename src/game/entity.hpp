@@ -1025,6 +1025,9 @@ int entity_cell_type_speed_multiplier_resolve(const EntitySlot* entity,
                                               const struct LevelState* level,
                                               int x, int y, float scale,
                                               float* out_scale); /* FUN_00433180 */
+int entity_cell_type_speed_multiplier_resolve_current(
+    const EntitySlot* entity, int x, int y, float scale,
+    float* out_scale); /* FUN_00433180 retail ABI */
 int entity_route_cell_candidate_accept(const EntitySlot* entity,
                                        const struct LevelState* level,
                                        int x, int y, int mode); /* FUN_00443840 */
