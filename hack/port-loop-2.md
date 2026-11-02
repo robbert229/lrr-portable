@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **49.67% accuracy**, **48.34% progress**
-  (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **44.88% accuracy**,
-  **44.37% progress** (2,109/2,133).
+- Full report: **97.33% implemented**, **49.74% accuracy**, **48.41% progress**
+  (2,329 compared entries out of 2,393).
+- Game-only report: **98.88% implemented**, **44.97% accuracy**,
+  **44.46% progress** (2,110/2,134).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1221,6 +1221,58 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   report: **97.32% / 49.67% / 48.34%** full and **98.87% / 44.88% / 44.37%**
   game-only. The MSVC 5.0 `distrobox enter developer -- make reccmp-report`
   build and `git diff --check` passed; tests were not run.
+- `SelectionCandidateEligibilityCheck` (`0x452870`) now follows the
+  decompile's nested gate shape: test the `+0x3e8` state bit, call the shared
+  eligibility predicate, then check the low byte at `+0x3e4`, the
+  `0x24000000` mask, and the type-1 `0x40000` exclusion. The null guard remains
+  in non-MSVC/non-x86 builds; the MSVC x86 target follows the reference's
+  unchecked pointer contract. Its match rose from **38.89% to 88.46%**.
+  Latest Reccmp totals are **97.32% / 49.69% / 48.36%** full and
+  **98.87% / 44.90% / 44.40%** game-only. The report build and
+  `git diff --check` passed; tests were not run. The remaining target diff
+  reflects the portable `EntitySlot` field offsets and helper ABI.
+- The selection-clear and count-reset entries now use their retail global
+  ABIs. `SelectionClear` (`0x452be0`) moved to a no-argument body over the
+  mirrored active-selection globals, while the context-facing wrapper binds
+  the requested `GameContext` and maintains its selection count and mirror
+  flags. Its score rose from **26.51% to 40.62%**; remaining differences are
+  the portable `EntitySlot` flag offsets. `SelectionRecordCountReset`
+  (`0x452600`) now consists of the retail global-count store, with context
+  synchronization in its context wrapper; its score rose from **30.77% to
+  100%**. Latest totals: **97.32% / 49.73% / 48.40%** full and
+  **98.87% / 44.94% / 44.44%** game-only. The MSVC 5.0 Reccmp build and
+  `git diff --check` passed; tests were not run.
+
+- `SelectionStateTick` (`0x4528c0`) now has a zero-argument mapped body that
+  classifies and compacts the mirrored retail selection globals. Its
+  `GameContext` wrapper binds before dispatch and publishes the reduced count
+  and pointer array back after the tick. The match rose from **19.76% to
+  31.91%**. Other selection target scores remained stable. Latest totals are
+  **97.32% / 49.73% / 48.40%** full and **98.87% / 44.95% / 44.44%**
+  game-only. The remaining diff is mostly entity field offsets and control
+  flow/code generation versus the decompile. The MSVC 5.0 Reccmp build and
+  `git diff --check` passed; tests were not run.
+- `SelectionEntityRemove` (`0x452c50`) now scans, swap-removes, and clears the
+  selected bit through the active-selection global body. Its context wrapper
+  binds the runtime selection, publishes the changed count and pointer array,
+  and clears the reconstruction flag mirror. The target rose from **32.00% to
+  91.18%**; the remaining instruction mismatch is the portable entity flag
+  offset. All other inspected selection target scores remained stable. Latest
+  totals: **97.32% / 49.76% / 48.43%** full and
+  **98.87% / 44.98% / 44.47%** game-only. The MSVC 5.0 Reccmp build and
+  `git diff --check` passed; tests were not run.
+- `SelectionCandidateFilter` (`0x4526e0`) now runs through the active-selection
+  globals, executes the filtered entity-pool refresh walk, appends eligible
+  entities to the retail selection array, and performs the available action
+  sequence/activity resets. Its match rose from **45.93% to 57.14%**. The
+  recovered callback at `0x44c500` is now separately mapped and clears each
+  entity's transient marker plus the corresponding engine-state bit; it scores
+  **13.79%** because the portable entity and engine-state fields use sidecar
+  offsets and accessors. Adding that low-match row slightly reduced aggregate
+  accuracy. Latest totals: **97.33% / 49.74% / 48.41%** full and
+  **98.88% / 44.97% / 44.46%** game-only. Remaining selection-filter gaps are
+  the type-2 camera-turn activity and renderer-owned visual-resource update.
+  The MSVC 5.0 Reccmp build and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

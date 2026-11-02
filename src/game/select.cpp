@@ -73,23 +73,123 @@ void selection_remove(GameContext* ctx, const EntitySlot* e)
     selection_active_context_sync(ctx);
 }
 
+/* SelectionCandidateFilter (FUN_004526e0) operates on the active selection
+ * globals. The command-layer adapter binds and publishes the GameContext. */
+/* The reference callback at 0x0044c500 clears the transient selection marker
+ * on every filtered-pool entity and clears the engine-state dirty bit when
+ * that marker was present. Its body is visible in the reference executable's
+ * code at this address, though omitted from the checked-in decompile. */
+// FUNCTION: LEGORR 0x0044c500
+static int selection_candidate_filter_pool_refresh_callback(
+    EntitySlot* entity, void* payload)
+{
+    if ((entity->flags_3ec & 1u) != 0u) {
+        uint32_t* state = engine_current_state_word();
+        if (state != NULL) {
+            *state &= ~0x10000000u;
+        }
+    }
+    entity->flags_3ec &= ~1u;
+    (void)payload;
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004526e0
+int selection_candidate_filter_active(void* entity, int mode, int param_3)
+{
+    EntitySlot* e = (EntitySlot*)entity;
+    if (e->attach_304 != NULL) {
+        e = (EntitySlot*)e->attach_304;
+    }
+    if (selection_candidate_eligibility_check(e) == 0) {
+        return 0;
+    }
+    if (mode == 0
+        && selection_active_candidate_already_selected_or_marked(e) != 0) {
+        selection_clear_marker_and_reset_hud(e);
+        return 0;
+    }
+    if (selection_contains_entity_active_target(e, NULL) != 0u
+        || s_selection_active_count >= SELECTION_MAX) {
+        return 0;
+    }
+
+    (void)entity_pool_find_by_callback_filtered_current(
+        selection_candidate_filter_pool_refresh_callback, NULL);
+    s_selection_active_records[s_selection_active_count] = e;
+    ++s_selection_active_count;
+    e->flags_3e8 |= ENTITY_SELECTED;
+    if (e->type != 4
+        && (e->flags_3e0 & 0x24002000u) == 0u
+        && (e->flags_3e4 & 0x100u) == 0u) {
+        entity_action_sequence_reset(e, 0);
+        entity_activity_records_refresh(e);
+        if (e->type == 2 && param_3 != 0) {
+            /* The reference turns toward the follow camera; this state
+             * cannot be reached from the current selection runtime API. */
+        }
+    }
+    if ((e->flags_3e8 & 0x80u) != 0u
+        && ((entity_stats_word_get(e) & 0x20000u) == 0u
+            || e->owner_36c != NULL)) {
+        /* Object lookup and resource update require renderer-owned state. */
+        return 1;
+    }
+    return 0;
+}
+
 // FUNCTION: LEGORR 0x00452be0
+void selection_clear_active(void)
+{
+    uint32_t index = 0;
+    if (s_selection_active_count != 0u) {
+        EntitySlot** record = s_selection_active_records;
+        do {
+            EntitySlot* entity = *record;
+            if ((entity->flags_3e8 & ENTITY_SELECTED) != 0u) {
+                entity->flags_3ec |= 2u;
+            }
+            entity->flags_3e8 &= ~ENTITY_SELECTED;
+            entity->flags_3ec &= ~1u;
+            ++index;
+            ++record;
+        } while (index < s_selection_active_count);
+    }
+    s_selection_active_count = 0u;
+}
+
 void selection_clear(GameContext* ctx)
 {
+    int i;
     if (ctx == NULL) {
         return;
     }
-    for (int i = 0; i < ctx->selection_count; ++i) {
+    selection_active_context_bind(ctx);
+    for (i = 0; i < ctx->selection_count; ++i) {
         EntitySlot* entity = ctx->selection[i];
         entity->flags &= ~ENTITY_SELECTED;
-        if ((entity->flags_3e8 & ENTITY_SELECTED) != 0u) {
-            entity->flags_3ec |= 2u;
-        }
-        entity->flags_3e8 &= ~ENTITY_SELECTED;
-        entity->flags_3ec &= ~1u;
     }
+    selection_clear_active();
     ctx->selection_count = 0;
-    selection_active_context_sync(ctx);
+}
+
+// FUNCTION: LEGORR 0x00452c50
+int selection_entity_remove_active(EntitySlot* entity)
+{
+    uint32_t index;
+    if (s_selection_active_count != 0u) {
+        if (selection_contains_entity_active_target(entity, &index) != 0u) {
+            if (index == 0u) {
+                command_context_post_to_hud(0, NULL);
+            }
+            --s_selection_active_count;
+            s_selection_active_records[index] =
+                s_selection_active_records[s_selection_active_count];
+            entity->flags_3e8 &= ~ENTITY_SELECTED;
+            return 1;
+        }
+    }
+    return 0;
 }
 
 int selection_count(const GameContext* ctx)
@@ -134,7 +234,9 @@ void selection_count_reset(GameContext* ctx)
      * array entries (and their selected flags) untouched. */
     if (ctx != NULL) {
         ctx->selection_count = 0;
-        selection_active_context_sync(ctx);
+        if (ctx == s_selection_active_context) {
+            selection_active_count_reset();
+        }
     }
 }
 
@@ -202,9 +304,6 @@ void selection_active_count_reset(void)
 #else
     s_selection_active_count = 0u;
 #endif
-    if (s_selection_active_context != NULL) {
-        s_selection_active_context->selection_count = 0;
-    }
 }
 
 EntitySlot* selection_first(const GameContext* ctx)
@@ -1063,13 +1162,9 @@ int tutorial_path_menu_action(
 
 /* SelectionStateTick (FUN_004528c0) — see select.hpp. */
 // FUNCTION: LEGORR 0x004528c0
-void selection_state_tick(GameContext* ctx)
+void selection_state_tick_active(void)
 {
-    if (ctx == NULL) {
-        return; /* deviation: the corpus strides its global band blindly */
-    }
-    EntitySlot** sel = ctx->selection;
-    int* count = &ctx->selection_count;
+    EntitySlot** sel = s_selection_active_records;
 
     /* Pass 1: classify the whole selection into the highest class any
      * entry justifies. Deviations: the widened owner mirror stands in
@@ -1080,11 +1175,8 @@ void selection_state_tick(GameContext* ctx)
     int cls_two = 0, cls_bad = 0, cls_clean = 0, cls_flag = 0;
     int cls_four = 0, cls_eleven = 0;
     int i;
-    for (i = 0; i < *count; ++i) {
+    for (i = 0; i < (int)s_selection_active_count; ++i) {
         EntitySlot* e = sel[i];
-        if (e == NULL) {
-            continue; /* deviation: the corpus strides the slot blindly */
-        }
         const int type = e->type;
         const uint32_t stats = entity_stats_word_get(e);
         if (type == 2 && e->owner_36c == NULL) {
@@ -1142,7 +1234,7 @@ void selection_state_tick(GameContext* ctx)
      * compaction that revisits the swapped-in slot (the corpus's index
      * quirk) — and every dropped entity loses the selected bit. The
      * class-none shape drops everything (quirk pinned). */
-    for (i = 0; i < *count; ) {
+    for (i = 0; i < (int)s_selection_active_count; ) {
         EntitySlot* e = sel[i];
         const int type = e->type;
         const uint32_t stats = entity_stats_word_get(e);
@@ -1167,13 +1259,27 @@ void selection_state_tick(GameContext* ctx)
             drop = 1; /* the class-none shape removes every entry */
         }
         if (drop) {
-            *count = *count - 1;
-            sel[i] = sel[*count];
+            --s_selection_active_count;
+            sel[i] = sel[s_selection_active_count];
             e->flags_3e8 &= ~ENTITY_SELECTED;
             /* No index advance: the swapped-in entry gets revisited. */
         } else {
             ++i;
         }
+    }
+}
+
+void selection_state_tick(GameContext* ctx)
+{
+    int i;
+    if (ctx == NULL) {
+        return;
+    }
+    selection_active_context_bind(ctx);
+    selection_state_tick_active();
+    ctx->selection_count = (int)s_selection_active_count;
+    for (i = 0; i < ctx->selection_count; ++i) {
+        ctx->selection[i] = s_selection_active_records[i];
     }
 }
 

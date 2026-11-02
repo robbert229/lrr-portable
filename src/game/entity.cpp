@@ -8873,27 +8873,23 @@ int entity_matches_current_selection_or_owner(const void* entity)
 // FUNCTION: LEGORR 0x00452870
 int selection_candidate_eligibility_check(const EntitySlot* e)
 {
+#if !defined(_MSC_VER) || !defined(_M_IX86)
     if (e == NULL) {
         return 0; /* deviation: the corpus dereferences blindly */
     }
+#endif
     if ((e->flags_3e8 & 0x100u) == 0u) {
         return 0;
     }
-    if (entity_shared_eligibility_check(e, 1) == 0) {
-        return 0;
+    const int shared_eligible = entity_shared_eligibility_check(e, 1);
+    if ((shared_eligible != 0)
+        && ((uint8_t)e->flags_3e4 & 0x0Au) == 0u /* corpus: low byte & 10 */
+        && (e->flags_3e0 & 0x24000000u) == 0u
+        && ((e->type != 1)
+            || (e->flags_3e0 & 0x00040000u) == 0u)) {
+        return 1; /* type 1 has the additional 0x40000 rejection (finding 468). */
     }
-    if ((e->flags_3e4 & 0xAu) != 0u) { /* corpus: low byte & 10 (decimal) */
-        return 0;
-    }
-    if ((e->flags_3e0 & 0x24000000u) != 0u) {
-        return 0;
-    }
-    if (e->type == 1 && (e->flags_3e0 & 0x00040000u) != 0u) {
-        return 0; /* corpus: `*param_1 != 1 || (word & 0x40000)` — type 1
-                   * has the extra +0x3e0 bit-0x40000 rejection (finding
-                   * 468); every other type ignores the branch */
-    }
-    return 1;
+    return 0;
 }
 
 /* EntityFlag40000ThresholdCompare (see entity.hpp). */

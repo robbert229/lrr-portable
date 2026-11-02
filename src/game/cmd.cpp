@@ -3746,28 +3746,23 @@ void entity_random_valid_cell_command_create(void* entity)
         cmd_produce(0x24, entity, 0, pair);
     }
 }
-// FUNCTION: LEGORR 0x00452c50
 int selection_entity_remove(void* entity)
 {
-    uint32_t index;
+    int result;
+    int i;
     if (s_ctx == NULL || entity == NULL) {
         return 0;
     }
-    const int count = selection_count(s_ctx);
-    EntitySlot** arr = (EntitySlot**)selection_record_array(s_ctx);
-    if (count == 0 || !selection_contains_entity_target(
-            s_ctx, (EntitySlot*)entity, &index)) {
-        return 0;
+    selection_active_context_bind(s_ctx);
+    result = selection_entity_remove_active((EntitySlot*)entity);
+    if (result != 0) {
+        s_ctx->selection_count = (int)selection_active_count_get();
+        for (i = 0; i < s_ctx->selection_count; ++i) {
+            s_ctx->selection[i] = selection_active_records_get()[i];
+        }
+        ((EntitySlot*)entity)->flags &= ~ENTITY_SELECTED;
     }
-    if (index == 0) {
-        command_context_post_to_hud(0, NULL);
-    }
-    s_ctx->selection_count = count - 1;
-    arr[index] = arr[count - 1];
-    selection_active_context_sync(s_ctx);
-    ((EntitySlot*)entity)->flags &= ~ENTITY_SELECTED;
-    ((EntitySlot*)entity)->flags_3e8 &= ~ENTITY_SELECTED;
-    return 1;
+    return result;
 }
 
 /* SelectionObjectDetach (FUN_004524b0): cancel queued commands for the
@@ -3810,58 +3805,28 @@ int selected_entity_detach_callback(EntitySlot* entity)
     return 0;
 }
 
-/* --- selection filter / state monitor (see cmd.hpp) --------------------------
- * The corpus's selection-array append + flag-word set land on the port's
- * modeled selection storage; everything it would hand to the entity /
- * activity / visual layers is documented there as an unported seam. */
-// FUNCTION: LEGORR 0x004526e0
 int selection_candidate_filter(void* entity, int mode, int param_3)
 {
     if (s_ctx == NULL || entity == NULL) {
-        return 0; /* deviation: the corpus dereferences blindly */
-    }
-    EntitySlot* e = (EntitySlot*)entity;
-    if (e->attach_304 != NULL) {
-        e = (EntitySlot*)e->attach_304;
-    }
-    if (selection_candidate_eligibility_check(e) == 0) {
         return 0;
     }
-    if (mode == 0
-        && selection_active_candidate_already_selected_or_marked(e) != 0) {
-        /* The command and HUD reset are available; this command-layer entry
-         * has no EngineContext for the helper's threaded state-word write. */
-        selection_clear_marker_and_reset_hud(e);
-        return 0;
-    }
-    /* FUN_00452610(entity, NULL) tests +0x3e8 bit 0x200000, even if the
-     * record is not currently present in the selected-pointer array. */
-    if (selection_contains_entity_active_target(e, NULL) != 0u) {
-        return 0;
-    }
-    /* Corpus pool refresh: EntityPoolFindByCallbackFiltered is ported but
-     * its callback is a corpus code literal (an unported seam). */
-    if (!selection_add(s_ctx, e)) return 0;
-    if (e->type != 4
-        && (e->flags_3e0 & 0x24002000u) == 0u
-        && (e->flags_3e4 & 0x100u) == 0u) {
-        entity_action_sequence_reset(e, 0);
-        entity_activity_records_refresh(e);
-        if (e->type == 2 && param_3 != 0) {
-            /* Type-2 turn issue: the follow camera's facing (portable via
-             * the engine's view) plus EntityStateReset / turn-activity
-             * issue — unported, and the cmd context carries no view. */
+    selection_active_context_bind(s_ctx);
+    {
+        const unsigned int count_before = selection_active_count_get();
+        const int result = selection_candidate_filter_active(
+            entity, mode, param_3);
+        const unsigned int count_after = selection_active_count_get();
+        if (count_after > count_before) {
+            unsigned int i;
+            EntitySlot* added = selection_active_records_get()[count_before];
+            s_ctx->selection_count = (int)count_after;
+            added->flags |= ENTITY_SELECTED;
+            for (i = 0; i < count_after; ++i) {
+                s_ctx->selection[i] = selection_active_records_get()[i];
+            }
         }
+        return result;
     }
-    if ((e->flags_3e8 & 0x80u) != 0u) {
-        if ((entity_stats_word_get(e) & 0x20000u) == 0u
-            || e->owner_36c != NULL) {
-            /* Visual half: object lookup + the sound-route resource
-             * update — hook-boundary seams (cited in ai.cpp), no state. */
-            return 1;
-        }
-    }
-    return 0;
 }
 
 /* SelectionCandidateFilterDefault (FUN_004526c0) is the exact mode-1

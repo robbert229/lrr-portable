@@ -54,6 +54,9 @@ void selection_count_reset(GameContext* ctx);
  * entry point. */
 void selection_active_context_bind(GameContext* ctx);
 void selection_active_context_sync(GameContext* ctx);
+void selection_clear_active(void);
+int selection_entity_remove_active(EntitySlot* entity);
+int selection_candidate_filter_active(void* entity, int mode, int param_3);
 
 /* Retail active-selection global accessors. */
 EntitySlot* const* selection_active_context_record_get(int* count_out);
@@ -136,6 +139,7 @@ int tutorial_path_menu_action(
  * (an entry removed twice loses the selected bit twice — inert).
  * Deviations: the widened owner mirror (pointer convention), the +0x3ec
  * low-byte read, the NULL-slot guard. */
+void selection_state_tick_active(void);
 void selection_state_tick(GameContext* ctx);
 
 /* Pick the placed entity nearest grid cell (cx,cy) within `tol` cells.
