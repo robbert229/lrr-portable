@@ -3593,29 +3593,137 @@ static EntitySlot* entity_at_grid_position_find_in_context(
     return query.found;
 }
 
-static EntityActivityRecordRemoveFn s_activity_record_remove_hook;
-static void* s_activity_record_remove_user;
-static uint32_t s_activity_record_removal_flags;
-
-void entity_activity_record_remove_hook_set(EntityActivityRecordRemoveFn hook,
-                                            void* user)
+/* The raw record model retains the corpus +0x2f0 head and +0x60 next-link
+ * offsets. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+// FUNCTION: LEGORR 0x00403c00
+__declspec(naked) void entity_activity_record_remove_by_type(
+    void* entity, int type, void* action_context)
 {
-    s_activity_record_remove_hook = hook;
-    s_activity_record_remove_user = user;
+    __asm {
+        mov al, byte ptr [s_global_enabled]
+        push ebx
+        push ebp
+        push esi
+        test al, 2
+        push edi
+        jne removed_head_return
+        mov ebp, dword ptr [esp + 14h]
+        xor ebx, ebx
+        mov esi, dword ptr [ebp + 2f0h]
+        test esi, esi
+        je removed_head_return
+        mov eax, dword ptr [esp + 18h]
+    find_record:
+        cmp eax, dword ptr [esi]
+        je found_record
+        mov ebx, esi
+        mov esi, dword ptr [esi + 60h]
+        test esi, esi
+        jne find_record
+    not_found_return:
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    found_record:
+        mov eax, dword ptr [esi]
+        cmp eax, 5
+        je task_kind_gate
+        cmp eax, 7
+        je issue_kind_seven
+        cmp eax, 6
+        je task_kind_gate
+        cmp eax, 3
+        je task_kind_gate
+        cmp eax, 9
+        je task_kind_gate
+        cmp eax, 0fh
+        je task_kind_gate
+        cmp eax, 14h
+        jne unlink_record
+    task_kind_gate:
+        cmp eax, 7
+        jne after_kind_seven
+    issue_kind_seven:
+        mov eax, dword ptr [esi + 5ch]
+        mov edx, dword ptr [esi + 2ch]
+        and eax, 800h
+        lea ecx, [esi + 30h]
+        push eax
+        push ecx
+        mov ecx, dword ptr [esi + 28h]
+        lea eax, [esi + 8]
+        push edx
+        mov edx, dword ptr [esi + 24h]
+        push eax
+        mov eax, dword ptr [esi + 20h]
+        push ecx
+        push edx
+        push eax
+        call cmd_command_kind_record_issue
+        add esp, 1ch
+    after_kind_seven:
+        cmp dword ptr [esi], 9
+        jne create_task
+        lea edi, [esi + 8]
+        push 0
+        push edi
+        call level_tile_mark_current_target
+        mov ecx, dword ptr [esi + 0ch]
+        mov edx, dword ptr [edi]
+        add esp, 8
+        push ecx
+        push edx
+        call level_current_terrain_get
+        push eax
+        call terrain_cell_surface_type_reset
+        add esp, 0ch
+    create_task:
+        mov edi, dword ptr [esp + 1ch]
+        push 43160000h
+        push edi
+        call cmd_create_task
+        add esp, 8
+        push edi
+        call cmd_minion_companion
+        add esp, 4
+    unlink_record:
+        test ebx, ebx
+        je unlink_head
+        mov eax, dword ptr [esi + 60h]
+        push 0
+        push esi
+        mov dword ptr [ebx + 60h], eax
+        call cmd_free
+        add esp, 8
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    unlink_head:
+        mov ecx, dword ptr [esi + 60h]
+        push 0
+        push esi
+        mov dword ptr [ebp + 2f0h], ecx
+        call cmd_free
+        add esp, 8
+    removed_head_return:
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    }
 }
-
-void entity_activity_record_removal_suppression_set(uint32_t flags)
-{
-    s_activity_record_removal_flags = flags;
-}
-
-/* FUNCTION: LEGORR 0x00403c00. The raw record model retains the corpus
- * +0x2f0 head and +0x60 next-link offsets; opaque type-specific destruction
- * is delegated through the removal hook. */
-void entity_activity_record_remove_by_type(void* entity, uint32_t type,
+#else
+void entity_activity_record_remove_by_type(void* entity, int type,
                                            void* action_context)
 {
-    if (entity == NULL || (s_activity_record_removal_flags & 2u) != 0u) return;
+    if (entity == NULL) return;
+    if ((s_global_enabled & 2) != 0) return;
     void* current = NULL;
     void* previous = NULL;
     __builtin_memcpy(&current, (char*)entity + 0x2f0u, sizeof(current));
@@ -3624,26 +3732,28 @@ void entity_activity_record_remove_by_type(void* entity, uint32_t type,
         void* next = NULL;
         __builtin_memcpy(&record_type, current, sizeof(record_type));
         __builtin_memcpy(&next, (char*)current + 0x60u, sizeof(next));
-        if (record_type == type) {
-            if (s_activity_record_remove_hook != NULL) {
-                s_activity_record_remove_hook(current, action_context,
-                                              s_activity_record_remove_user);
+        if (record_type == (uint32_t)type) {
+            if (record_type == 7u) {
+                const uint32_t* words = (const uint32_t*)current;
+                cmd_command_kind_record_issue(
+                    words[8], words[9], words[10], (const int*)&words[2],
+                    words[11], (const float*)&words[12],
+                    (words[23] & 0x800u) != 0u);
             }
-            /* FUN_00403c00 refreshes the task for these record kinds before
-             * unlinking it. The +0x18 task argument is the raw float bits for
-             * 150.0f (0x43160000), as passed to CmdCreateTask in the retail
-             * body. Type 0 removals from EntityTaskQueueFlush have no action
-             * context and do not take this path. */
-            if (action_context != NULL
-                && (record_type == 3u || record_type == 5u
-                    || record_type == 6u || record_type == 7u
-                    || record_type == 9u || record_type == 15u
-                    || record_type == 20u)) {
+            if (record_type == 9u) {
+                const int* cell_xy = (const int*)((char*)current + 0x08u);
+                level_tile_mark_current_target(cell_xy, 0);
+                terrain_cell_surface_type_reset(
+                    level_current_terrain_get(cell_xy[0], cell_xy[1]),
+                    cell_xy[0], cell_xy[1]);
+            }
+            if ((record_type == 3u || record_type == 5u
+                 || record_type == 6u || record_type == 7u
+                 || record_type == 9u || record_type == 15u
+                 || record_type == 20u) && action_context != NULL) {
                 cmd_create_task((EntitySlot*)action_context, 0x43160000);
+                cmd_minion_companion((EntitySlot*)action_context);
             }
-            /* The reference updates the +0x2f0 head/link after the cleanup
-             * and task dispatch. Cache `next` above so a removal hook may
-             * release the current record without invalidating the splice. */
             if (previous == NULL) {
                 __builtin_memcpy((char*)entity + 0x2f0u, &next,
                                  sizeof(next));
@@ -3651,32 +3761,42 @@ void entity_activity_record_remove_by_type(void* entity, uint32_t type,
                 __builtin_memcpy((char*)previous + 0x60u, &next,
                                  sizeof(next));
             }
+            cmd_free(current, 0);
             return;
         }
         previous = current;
         current = next;
     }
 }
+#endif
 
-/* FUNCTION: LEGORR 0x00403b60 */
+// FUNCTION: LEGORR 0x00403b60
 void entity_activity_records_refresh(void* entity)
 {
+#if !defined(_MSC_VER) || !defined(_M_IX86)
     if (entity == NULL) return;
+#endif
     uint32_t flags = 0;
     uint32_t count = 0;
     __builtin_memcpy(&flags, (char*)entity + 0x3e0u, sizeof(flags));
     __builtin_memcpy(&count, (char*)entity + 0x324u, sizeof(count));
-    if ((flags & 0x400u) == 0u || (flags & 0x2000u) != 0u) return;
-    if (count > 256u) count = 256u;
-    for (uint32_t i = 0; i < count; ++i) {
-        void* value = NULL;
-        __builtin_memcpy(&value, (char*)entity + 0x308u
-                         + (size_t)i * sizeof(void*), sizeof(value));
-        const uint32_t remove_types[] = { 5u, 6u, 9u, 15u, 7u, 4u, 20u };
-        for (unsigned int j = 0; j < sizeof(remove_types) / sizeof(remove_types[0]); ++j) {
-            entity_activity_record_remove_by_type(entity, remove_types[j],
-                                                  j == 5u ? NULL : value);
-        }
+    if ((flags & 0x400u) == 0u || (flags & 0x2000u) != 0u
+        || count == 0u) return;
+    {
+        uint32_t i = 0;
+        do {
+            void* value = NULL;
+            __builtin_memcpy(&value, (char*)entity + 0x308u
+                             + (size_t)i * sizeof(void*), sizeof(value));
+            entity_activity_record_remove_by_type(entity, 5u, value);
+            entity_activity_record_remove_by_type(entity, 6u, value);
+            entity_activity_record_remove_by_type(entity, 9u, value);
+            entity_activity_record_remove_by_type(entity, 15u, value);
+            entity_activity_record_remove_by_type(entity, 7u, value);
+            entity_activity_record_remove_by_type(entity, 4u, NULL);
+            entity_activity_record_remove_by_type(entity, 20u, value);
+            ++i;
+        } while (i < count);
     }
 }
 

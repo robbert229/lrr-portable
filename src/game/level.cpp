@@ -3786,6 +3786,19 @@ LevelState* level_current_owner_get(void)
 }
 #endif
 
+// FUNCTION: LEGORR 0x00431570
+void* level_current_terrain_get(int cell_x, int cell_y)
+{
+    (void)cell_x;
+    (void)cell_y;
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+    LevelState* level = level_current_owner_get();
+    return level != NULL ? level->ptr_terrain : NULL;
+#else
+    return *(void**)((char*)level_current_owner_get() + 4);
+#endif
+}
+
 /* Retail erosion entry points read DAT_005560d4 on every call. Keep the
  * level-load sidecar as a fallback for explicit offline work, while letting
  * address-mapped current-level paths follow the live game/map owner. */

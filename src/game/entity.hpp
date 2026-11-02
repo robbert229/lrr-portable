@@ -588,14 +588,9 @@ int entity_default_transform_apply_if_flagged(EntitySlot* entity,
                                               void* argument);
 void entity_default_transform_apply_all(void* argument);
 EntitySlot* entity_at_grid_position_find(const int cell_xy[2]); /* 0x00438670 */
-typedef void (*EntityActivityRecordRemoveFn)(void* record, void* action,
-                                             void* user);
-void entity_activity_record_remove_hook_set(EntityActivityRecordRemoveFn hook,
-                                            void* user);
-void entity_activity_record_remove_by_type(void* entity, uint32_t type,
+void entity_activity_record_remove_by_type(void* entity, int type,
                                            void* action_context);
 void entity_activity_records_refresh(void* entity);
-void entity_activity_record_removal_suppression_set(uint32_t flags);
 typedef void (*ActivityRecordClearFn)(void* head, void* user);
 typedef int (*ActivityRunnerChangeFn)(void* scene_owner, void* state,
                                       void* value, void* user);
@@ -1525,6 +1520,8 @@ int entity_pair_scalar_fields_set(EntitySlot* entity, const int32_t pair[2],
                                   int32_t scalar); /* 0x0044c150 */
 
 namespace unported_ledger_stubs {
+void ledger_stub_00444fb0_EntityTurnToVectorActivityIssue(
+    EntitySlot* entity, const float target[2]);
 typedef int (*CellStepPathResolveHook)(int start_x, int start_y,
                                        int target_x, int target_y,
                                        int out_xy[2], void* user);

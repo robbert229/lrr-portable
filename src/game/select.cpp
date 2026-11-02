@@ -10,6 +10,7 @@
 #include "ai.hpp"
 #include "frontend.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/sound.hpp"
 #include "gods98/view.hpp"
 
 static GameContext* s_selection_active_context;
@@ -125,14 +126,25 @@ int selection_candidate_filter_active(void* entity, int mode, int param_3)
         entity_action_sequence_reset(e, 0);
         entity_activity_records_refresh(e);
         if (e->type == 2 && param_3 != 0) {
-            /* The reference turns toward the follow camera; this state
-             * cannot be reached from the current selection runtime API. */
+            ViewContext* view = engine_current_primary_view_get();
+            if (view != NULL) {
+                float facing[3];
+                float target[2];
+                cam_get_facing(&view->cam_follow, facing);
+                target[0] = -facing[0];
+                target[1] = -facing[1];
+                entity_state_reset(e, 0, 0);
+                unported_ledger_stubs::
+                    ledger_stub_00444fb0_EntityTurnToVectorActivityIssue(
+                        e, target);
+            }
         }
     }
     if ((e->flags_3e8 & 0x80u) != 0u
         && ((entity_stats_word_get(e) & 0x20000u) == 0u
             || e->owner_36c != NULL)) {
-        /* Object lookup and resource update require renderer-owned state. */
+        sound_submission_route_wrapper(entity_type_component_get(e),
+                                       0x11, 0, 1, NULL);
         return 1;
     }
     return 0;

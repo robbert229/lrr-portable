@@ -45,6 +45,8 @@ extern "C" {
 /* Entity-type/action pending-command count table (DAT_004b34f4). */
 extern uint32_t cmd_pending_command_counts[
     CMD_PENDING_COMMAND_COUNT_TABLE_SIZE];
+/* Shared command-operation word (DAT_004b8060). */
+extern int s_global_enabled;
 
 /* Record state flags (+0x5c, finding 10). */
 #define CMD_STATE_PENDING   0x10u
@@ -58,6 +60,7 @@ void cmd_init(void);            /* CmdRegistryInit */
 
 void* cmd_alloc(int type);      /* CmdAlloc — a zeroed 0x68 record */
 void  cmd_free(void* rec, int cancel); /* CmdFree */
+void cmd_minion_companion(EntitySlot* entity);
 
 /* Priority-name lookup (CmdKindByName): scans the 27-priority table,
  * returns 1 and sets *out when `name` matches, else 0. */

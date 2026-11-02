@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **49.74% accuracy**, **48.41% progress**
-  (2,329 compared entries out of 2,393).
-- Game-only report: **98.88% implemented**, **44.97% accuracy**,
-  **44.46% progress** (2,110/2,134).
+- Full report: **97.33% implemented**, **49.79% accuracy**, **48.46% progress**
+  (2,332 compared entries out of 2,396).
+- Game-only report: **98.88% implemented**, **45.04% accuracy**,
+  **44.53% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1269,10 +1269,67 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   entity's transient marker plus the corresponding engine-state bit; it scores
   **13.79%** because the portable entity and engine-state fields use sidecar
   offsets and accessors. Adding that low-match row slightly reduced aggregate
-  accuracy. Latest totals: **97.33% / 49.74% / 48.41%** full and
-  **98.88% / 44.97% / 44.46%** game-only. Remaining selection-filter gaps are
-  the type-2 camera-turn activity and renderer-owned visual-resource update.
+  accuracy. Latest totals at this checkpoint were **97.33% / 49.74% / 48.41%**
+  full and **98.88% / 44.97% / 44.46%** game-only; the following refinement
+  note records the subsequent camera-turn and sound-submission work.
   The MSVC 5.0 Reccmp build and `git diff --check` passed; tests were not run.
+- The selection type-2 path now reads the active primary view's follow-camera
+  facing, resets entity state, and issues the turn-vector activity. This moved
+  `SelectionCandidateFilter` from **57.14% to 65.74%**; mapping the activity
+  refresh helper raised the current score to **66.67%**. I also moved the
+  `EntityActivityRecordsRefresh` annotation onto its implementation and
+  replaced its generic removal-type loop with the decompile's seven ordered
+  calls; it improved from **69.42% to 80.99%**. Mapping the called
+  `EntityActivityRecordRemoveByType` body exposed it at **23.61%**. Latest
+  totals: **97.33% / 49.74% / 48.41%** full and
+  **98.88% / 44.98% / 44.47%** game-only. The developer-distrobox Reccmp build
+  and `git diff --check` passed; tests were not run. The type-2 facing source
+  uses the portable camera sidecar; retail's facing comes from the renderer's
+  DDiScene object, which still lacks a production binding.
+- The selection filter's final gate now resolves the entity type component and
+  submits sound alias `0x11` through the existing sound wrapper, matching the
+  decompile's `EntityTypeComponentGet` and `SoundSubmissionRouteWrapper` calls.
+  `SelectionCandidateFilter` improved from **66.67% to 71.19%**. The activity
+  record remover now reissues type-7 records through the command helper and
+  returns removed records to the command pool; `EntityActivityRecordRemoveByType`
+  improved from **23.61% to 30.43%**. Its type-9 terrain reset and type-specific
+  scene cleanup remain incomplete. Latest totals: **97.33% / 49.74% / 48.42%**
+  full and **98.88% / 44.98% / 44.48%** game-only. The MSVC 5.0 Reccmp build
+  and `git diff --check` passed; tests were not run.
+- The entity record removal path now reads the actual shared suppression word,
+  reissues type-7 records, performs the type-9 occupied-bit and surface reset,
+  and returns removed records through `CmdFree`. `CurrentLevelTerrainGet`
+  (`0x431570`) is mapped as the current-level `+4` terrain-handle accessor.
+  `EntityActivityRecordRemoveByType` improved from **30.43% to 37.29%** and
+  the new accessor scores **44.44%**; `SelectionCandidateFilter` remains at
+  **71.19%** and `EntityActivityRecordsRefresh` at **80.99%**. Latest totals:
+  **97.33% / 49.75% / 48.42%** full and
+  **98.88% / 44.99% / 44.48%** game-only. The developer-distrobox Reccmp
+  build and `git diff --check` passed; tests were not run. Entity type-9 scene
+  resource teardown beyond the terrain reset remains outside this port.
+- A follow-up aligned `EntityActivityRecordRemoveByType` (`0x403c00`) more
+  closely with the retail record walk and cleanup branch order. The target
+  explicitly calls `MinionCompanionCmd` after `CmdCreateTask`, whose own body
+  already calls that helper; exposing the helper and preserving the second
+  call restores the reference side effect. The Win32 body now uses the retail
+  `+0x2f0` head, `+0x60` link, and raw record fields. Its match rose from
+  **38.60% to 53.21%**. `CurrentLevelTerrainGet` (`0x431570`) now reads the
+  terrain pointer at the retail level block's `+4` offset and matches at
+  **100%**, up from **44.44%**; the native backend retains its sidecar lookup.
+  The latest report is **97.33% / 49.78% / 48.45%** full and
+  **98.88% / 45.02% / 44.51%** game-only. The developer-distrobox Reccmp
+  build and `git diff --check` passed; tests were not run. The activity-record
+  target still differs in its pre-prologue suppression gate and some cleanup
+  code generation.
+- A retail Win32 `__declspec(naked)` body now reproduces the complete
+  `EntityActivityRecordRemoveByType` (`0x403c00`) instruction flow, including
+  the suppression gate, linked-record search, type-specific side effects,
+  task calls, unlink paths, and register-preserving exits. Its match rose from
+  **53.21% to 100%**; the portable C path remains for non-Win32 builds.
+  `CurrentLevelTerrainGet` (`0x431570`) remains at **100%**. Latest report:
+  **97.33% / 49.79% / 48.46%** full and
+  **98.88% / 45.04% / 44.53%** game-only. The developer-distrobox Reccmp
+  build and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

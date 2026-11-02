@@ -137,6 +137,9 @@ uint32_t* engine_current_feature_word(void);
 /* Current engine state word (DAT_00556ecc), while an EngineContext owns the
  * active frame. NULL outside an active engine context. */
 uint32_t* engine_current_state_word(void);
+/* Current primary follow view (DAT_005560e4), while an EngineContext owns
+ * the active frame. NULL outside an active engine context or without a view. */
+ViewContext* engine_current_primary_view_get(void);
 
 /* --- engine-level binding ------------------------------------------------
  * The corpus uses ONE 0x284-byte block (DAT_005560d4) for both engine state

@@ -1259,7 +1259,7 @@ static int pending_command_cell_walkable(GameContext* context,
     return 0;
 }
 // GLOBAL: LEGORR 0x004b8060
-static int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
+int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
 #define PRIORITY_ENTRY_COUNT 27
 // GLOBAL: LEGORR 0x004b7ff4
 static int s_priority_state[PRIORITY_ENTRY_COUNT];
@@ -2562,7 +2562,7 @@ static int task_kind_for(EntitySlot* e)
 /* MinionCompanionCmd (FUN_00402850): append the extra kind-0x15 task that
  * accompanies a type-6 minion's primary task. */
 // FUNCTION: LEGORR 0x00402850
-static void cmd_minion_companion(EntitySlot* e)
+void cmd_minion_companion(EntitySlot* e)
 {
     /* Corpus parity: strides the entity blindly, uses the record blindly,
      * and routes the kind through the corpus's own cmd_set_kind. */
