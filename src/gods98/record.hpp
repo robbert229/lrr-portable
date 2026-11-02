@@ -53,12 +53,12 @@ void velocity_slot_vector_read(const void* record, float out[3],
  * state record: type 1 answers the +0x0c sub-record plus 0x138, type 4 the
  * +0x18 sub-record plus 0xa0, anything else NULL. The value pair
  * (FUN_004712f0 / FUN_00471310) reads/writes the float word at +0x98 of
- * that base (the corpus's x87 widening rides the bits unchanged).
- * Deviation: the corpus strides the type walk, the sub-record link, and
- * a null base blindly. */
+ * that base (the corpus's x87 widening rides the bits unchanged). The x86
+ * bodies follow the retail unchecked loads and slot indexing; the portable
+ * fallback guards NULL records, links, and negative slot indices. */
 void* entity_velocity_state_record_get(const void* record);
 float entity_velocity_slot_value_get(const void* record, int slot);
-void entity_velocity_slot_value_set(void* record, uint32_t value, int slot);
+void entity_velocity_slot_value_set(void* record, float value, int slot);
 
 /* EntityFlag80Set (FUN_00473b20): raises the record's +0x14 flag word's
  * bit 7 when set is nonzero, drops it otherwise. The port guards the
@@ -265,19 +265,17 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
                                           const void* source);
 
 /* --- grid-descriptor coordinate leaves (2026-10-24) ---------------------
- * The map descriptor map_cell_to_world_center reads — width +0x00, height
- * +0x04, scale +0x10, origins +0x18 / +0x1C (int fields converted at the
- * use site) — gains its inverse pair. Truncations are toward zero (the
- * corpus's __ftol under the ported control word, the crt precedent);
- * NULL descriptors skip the answer (documented deviation; corpus callers
- * pass live pointers). */
+ * The descriptor stores width/height at +0/+4 and float scale/origins at
+ * +0x10/+0x18/+0x1c. World-to-cell conversion subtracts the X origin or
+ * subtracts world Y from the Y origin, divides by scale, then truncates
+ * toward zero (the corpus's __ftol under the ported control word). */
 
 /* WorldToTerrainCellBoundsCheck (FUN_0044f700): truncate the world point
- * to cell coordinates — ALWAYS stored, NULL-safe — then check -1 < c < d.
- * In range, answers 1 and (when given) writes the subcell coordinate: the
- * center-relative position in half-cell units using the float scale and
- * origin fields at +0x10/+0x18/+0x1c, folded past 1 by 2-x-with-lowest.
- * Out of range answers 0. */
+ * to cell coordinates — ALWAYS stored — then check -1 < c < d. In range,
+ * answers 1 and (when given) writes the subcell coordinate: the
+ * center-relative position in half-cell units, folded past 1 by
+ * 2-x-with-lowest. Out of range answers 0. The retail x86 body expects a
+ * live descriptor; the portable fallback keeps its NULL behavior. */
 int world_to_terrain_cell_bounds_check(const void* map, float world_x,
                                        float world_y, int* cell_x,
                                        int* cell_y, float* subcell);

@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **48.69% accuracy**, **47.39% progress**
+- Full report: **97.32% implemented**, **49.32% accuracy**, **48.00% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **43.80% accuracy**,
-  **43.31% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **44.49% accuracy**,
+  **43.99% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1139,11 +1139,39 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
 - `MapCellToWorldCenter` (`0x44f640`) now reads scale and origins as floats,
   matching the retail x86 `fld` instructions and the neighboring coordinate
   helpers. Its Reccmp score rose from **8.96% to 55.26%**. This semantic
-  correction shifted `WorldToTerrainCellBoundsCheck` from **27.68% to 26.21%**;
-  its descriptor accesses still need further alignment. Latest report:
-  **97.32% / 48.69% / 47.39%** full and **98.87% / 43.80% / 43.31%**
-  game-only. `distrobox enter developer -- make reccmp-report` and
+  correction exposed that `WorldToTerrainCellBoundsCheck` must subtract the
+  descriptor origins and divide by scale before truncating. The port now uses
+  that conversion and the retail float fields; its score rose from **26.21%
+  to 57.29%**. `TerrainGridPick` now passes the address of its local output
+  pointer as the discarded subcell output, matching the retail wrapper; it
+  rose from **38.10% to 100%**. `TerrainWorldPointToCell` (`0x44f870`) now
+  follows the retail parameter-slot
+  reuse for the selected cell outputs and computes point-minus-center before
+  applying inverse scale; it rose from **21.19% to 41.67%**. Latest report:
+  **97.32% / 48.74% / 47.44%** full and **98.87% / 43.85% / 43.36%**
+  game-only. `distrobox enter developer -- make reccmp-report` completed and
+  `git diff --check` passed; tests were not run. Remaining differences in
+  `WorldToTerrainCellBoundsCheck` and `TerrainWorldPointToCell` are mainly
+  x87 expression/code layout.
+- The velocity-state accessor trio now has retail x86 paths. The type-keyed
+  base getter (`0x4712c0`) uses the unchecked loads and branch sequence from
+  the reference; the slot getter/setter (`0x4712f0/0x471310`) use the same
+  unchecked indexing and treat the stored value as a float. All three targets
+  now match at **100%**. The portable fallback retains its null and negative
+  slot guards. Latest report: **97.32% / 48.83% / 47.53%** full and
+  **98.87% / 43.96% / 43.46%** game-only.
+  `distrobox enter developer -- make reccmp-report` and
   `git diff --check` passed; tests were not run.
+- The indexed stats accessors now share the retail type-to-row pointer table
+  rooted at `DAT_00502bd8`. Their x86 bodies directly load the mapped field;
+  the three-argument readers use the retail `stride * 0x150` address
+  calculation. All 13 targets—`0x469ac0`, `0x469af0`, `0x469b20`,
+  `0x469b50`, `0x469b80`, `0x469bb0`, `0x469be0`, `0x469e00`,
+  `0x469ec0`, `0x469ee0`, `0x469f00`, `0x469f60`, and `0x46a0f0`—now match
+  at **100%**, up from **8.33–18.18%**. Latest report:
+  **97.32% / 49.32% / 48.00%** full and **98.87% / 44.49% / 43.99%**
+  game-only. The MSVC 5.0 `distrobox enter developer -- make reccmp-report`
+  build and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

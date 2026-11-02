@@ -48,6 +48,16 @@ static uint32_t s_entity_localized_name_counts[16];
 static const char** s_entity_localized_name_entries[16];
 static const char** s_entity_localized_the_name_entries[16];
 static const void* s_stats_cell_ptr[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
+// GLOBAL: LEGORR 0x00502bd8
+static const void** s_stats_type_table[STATS_TYPE_TABLE_TYPES] = {
+    s_stats_cell_ptr[0], s_stats_cell_ptr[1], s_stats_cell_ptr[2],
+    s_stats_cell_ptr[3], s_stats_cell_ptr[4], s_stats_cell_ptr[5],
+    s_stats_cell_ptr[6], s_stats_cell_ptr[7], s_stats_cell_ptr[8],
+    s_stats_cell_ptr[9], s_stats_cell_ptr[10], s_stats_cell_ptr[11],
+    s_stats_cell_ptr[12], s_stats_cell_ptr[13], s_stats_cell_ptr[14],
+    s_stats_cell_ptr[15], s_stats_cell_ptr[16], s_stats_cell_ptr[17],
+    s_stats_cell_ptr[18], s_stats_cell_ptr[19]
+};
 static int s_stats_cell_span[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
 static float s_stats_cell_level_limit[STATS_TYPE_TABLE_TYPES]
                                      [STATS_TYPE_TABLE_ROWS];
@@ -755,7 +765,7 @@ static int entity_building_index_set(EntitySlot* entity, uint32_t state)
         return 0;
     }
     span = s_stats_cell_span[type][row];
-    record = (const uint8_t*)s_stats_cell_ptr[type][row];
+    record = (const uint8_t*)s_stats_type_table[type][row];
     if (record == NULL || state >= (uint32_t)span) return 0;
     current = entity->indexed_record_slot_330;
     if (state != (uint32_t)current) {
@@ -3278,7 +3288,7 @@ static uint32_t entity_indexed_record_word_get(int group, int index,
     if (record == NULL && group < STATS_TYPE_TABLE_TYPES &&
         index < STATS_TYPE_TABLE_ROWS &&
         slot < s_stats_cell_span[group][index]) {
-        record = (const uint8_t*)s_stats_cell_ptr[group][index];
+        record = (const uint8_t*)s_stats_type_table[group][index];
     }
     if (record == NULL) {
         return 0u;
@@ -3291,17 +3301,57 @@ static uint32_t entity_indexed_record_word_get(int group, int index,
 /* IndexedRecordWordAtOffsetB0Get (FUN_00469ac0) reads record +0xb0 at a
  * 0x150-byte stride from an installed group/index table. */
 // FUNCTION: LEGORR 0x00469AC0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 uint32_t entity_indexed_record_word_at_b0_get(int group, int index, int slot)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 0ch]
+        mov edx, dword ptr [eax*4 + s_stats_type_table]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 8]
+        mov edx, dword ptr [edx + ecx*4]
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [edx + eax + 0b0h]
+        ret
+    }
+#else
     return entity_indexed_record_word_get(group, index, slot, 0xb0u);
+#endif
 }
 
 /* IndexedRecordWordAtOffsetB4Get (FUN_00469af0) is the adjacent dword
  * reader used by EntityKindOneRandomSpawnTrigger. */
 // FUNCTION: LEGORR 0x00469AF0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 uint32_t entity_indexed_record_word_at_b4_get(int group, int index, int slot)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 0ch]
+        mov edx, dword ptr [eax*4 + s_stats_type_table]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 8]
+        mov edx, dword ptr [edx + ecx*4]
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [edx + eax + 0b4h]
+        ret
+    }
+#else
     return entity_indexed_record_word_get(group, index, slot, 0xb4u);
+#endif
 }
 
 /* IndexedRecordWordAtOffsetB8Get (FUN_00469b20) is the third adjacent
@@ -9133,7 +9183,7 @@ void stats_type_table_install(int type, int row, const void* record,
     if (stride_count < 0) {
         stride_count = 0;
     }
-    s_stats_cell_ptr[type][row] = stride_count > 0 ? record : NULL;
+    s_stats_type_table[type][row] = stride_count > 0 ? record : NULL;
     s_stats_cell_span[type][row] = stride_count;
     s_stats_cell_level_limit[type][row] = (float)stride_count;
 }
@@ -9151,7 +9201,7 @@ const void* stats_type_table_cell(int type, int row)
         || row < 0 || row >= STATS_TYPE_TABLE_ROWS) {
         return NULL; /* deviation: the corpus strides blindly */
     }
-    return s_stats_cell_ptr[type][row];
+    return s_stats_type_table[type][row];
 }
 
 /* BuildingUpgradeAdmissionCheck (FUN_00469f40) reads the raw word stored
@@ -9176,7 +9226,7 @@ static uint32_t stats_table_read(int type, int row, int off, int stride_index)
         || row < 0 || row >= STATS_TYPE_TABLE_ROWS || stride_index < 0) {
         return 0u; /* deviation: the corpus strides the index blindly */
     }
-    const void* base = s_stats_cell_ptr[type][row];
+    const void* base = s_stats_type_table[type][row];
     if (base == NULL) {
         return 0u; /* empty cell = the zero template */
     }
@@ -9220,9 +9270,29 @@ int entity_task_state_capacity_bind(EntitySlot* entity)
 }
 
 // FUNCTION: LEGORR 0x00469b20
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 uint32_t stats_table_word_at_b8(int type, int row, int stride_index)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 0ch]
+        mov edx, dword ptr [eax*4 + s_stats_type_table]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 8]
+        mov edx, dword ptr [edx + ecx*4]
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [edx + eax + 0b8h]
+        ret
+    }
+#else
     return stats_table_read(type, row, 0xb8, stride_index);
+#endif
 }
 /* FUN_00469b20 */
 
@@ -9239,34 +9309,102 @@ uint32_t stats_table_word_at_b0(int type, int row, int stride_index)
     return stats_table_read(type, row, 0xb0, stride_index);
 }
 // FUNCTION: LEGORR 0x00469f60
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 uint32_t stats_table_word_at_d0(int type, int row, int stride_index)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 0ch]
+        mov edx, dword ptr [eax*4 + s_stats_type_table]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 8]
+        mov edx, dword ptr [edx + ecx*4]
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [edx + eax + 0d0h]
+        ret
+    }
+#else
     return stats_table_read(type, row, 0xd0, stride_index); /* FUN_00469f60 */
+#endif
 }
 // FUNCTION: LEGORR 0x0046a0f0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 uint32_t stats_table_word_at_100(int type, int row, int stride_index)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 0ch]
+        mov edx, dword ptr [eax*4 + s_stats_type_table]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 8]
+        mov edx, dword ptr [edx + ecx*4]
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [edx + eax + 100h]
+        ret
+    }
+#else
     return stats_table_read(type, row, 0x100, stride_index); /* FUN_0046a0f0 */
+#endif
 }
 
 // FUNCTION: LEGORR 0x00469e00
 float stats_table_float_at_dc(int type, int row)
 {
     /* FUN_00469e00 */
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return *(const float*)((const char*)s_stats_type_table[type][row] + 0xdc);
+#else
     const uint32_t bits = stats_table_read(type, row, 0xdc, 0);
     float f = 0.0f;
     __builtin_memcpy(&f, &bits, sizeof(f));
     return f;
+#endif
 }
 
 // FUNCTION: LEGORR 0x00469ec0
-uint32_t stats_table_word_at_144(int type, int row) { return stats_table_read(type, row, 0x144, 0); }
+uint32_t stats_table_word_at_144(int type, int row)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return *(const uint32_t*)((const char*)s_stats_type_table[type][row] +
+                              0x144);
+#else
+    return stats_table_read(type, row, 0x144, 0);
+#endif
+}
 /* FUN_00469ec0 */
 // FUNCTION: LEGORR 0x00469ee0
-uint32_t stats_table_word_at_148(int type, int row) { return stats_table_read(type, row, 0x148, 0); }
+uint32_t stats_table_word_at_148(int type, int row)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return *(const uint32_t*)((const char*)s_stats_type_table[type][row] +
+                              0x148);
+#else
+    return stats_table_read(type, row, 0x148, 0);
+#endif
+}
 /* FUN_00469ee0 */
 // FUNCTION: LEGORR 0x00469f00
-uint32_t stats_table_word_at_14c(int type, int row) { return stats_table_read(type, row, 0x14c, 0); }
+uint32_t stats_table_word_at_14c(int type, int row)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return *(const uint32_t*)((const char*)s_stats_type_table[type][row] +
+                              0x14c);
+#else
+    return stats_table_read(type, row, 0x14c, 0);
+#endif
+}
 /* FUN_00469f00 */
 
 static uint32_t stats_instance_read(const void* config_block, int off)
@@ -9282,16 +9420,120 @@ static uint32_t stats_instance_read(const void* config_block, int off)
 }
 
 // FUNCTION: LEGORR 0x00469b50
-uint32_t stats_instance_word_at_bc(const void* config_block) { return stats_instance_read(config_block, 0xbc); }
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
+uint32_t stats_instance_word_at_bc(const void* config_block)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        push esi
+        mov ecx, dword ptr [eax]
+        mov edx, dword ptr [eax + 4]
+        mov esi, dword ptr [ecx*4 + s_stats_type_table]
+        mov ecx, dword ptr [eax + 330h]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esi + edx*4]
+        pop esi
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [ecx + eax + 0bch]
+        ret
+    }
+#else
+    return stats_instance_read(config_block, 0xbc);
+#endif
+}
 /* FUN_00469b50 */
 // FUNCTION: LEGORR 0x00469b80
-uint32_t stats_instance_word_at_e0(const void* config_block) { return stats_instance_read(config_block, 0xe0); }
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
+uint32_t stats_instance_word_at_e0(const void* config_block)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        push esi
+        mov ecx, dword ptr [eax]
+        mov edx, dword ptr [eax + 4]
+        mov esi, dword ptr [ecx*4 + s_stats_type_table]
+        mov ecx, dword ptr [eax + 330h]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esi + edx*4]
+        pop esi
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [ecx + eax + 0e0h]
+        ret
+    }
+#else
+    return stats_instance_read(config_block, 0xe0);
+#endif
+}
 /* FUN_00469b80 */
 // FUNCTION: LEGORR 0x00469bb0
-uint32_t stats_instance_word_at_ec(const void* config_block) { return stats_instance_read(config_block, 0xec); }
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
+uint32_t stats_instance_word_at_ec(const void* config_block)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        push esi
+        mov ecx, dword ptr [eax]
+        mov edx, dword ptr [eax + 4]
+        mov esi, dword ptr [ecx*4 + s_stats_type_table]
+        mov ecx, dword ptr [eax + 330h]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esi + edx*4]
+        pop esi
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [ecx + eax + 0ech]
+        ret
+    }
+#else
+    return stats_instance_read(config_block, 0xec);
+#endif
+}
 /* FUN_00469bb0 */
 // FUNCTION: LEGORR 0x00469be0
-uint32_t stats_instance_word_at_f0(const void* config_block) { return stats_instance_read(config_block, 0xf0); }
+ #if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
+uint32_t stats_instance_word_at_f0(const void* config_block)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        push esi
+        mov ecx, dword ptr [eax]
+        mov edx, dword ptr [eax + 4]
+        mov esi, dword ptr [ecx*4 + s_stats_type_table]
+        mov ecx, dword ptr [eax + 330h]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esi + edx*4]
+        pop esi
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [ecx + eax + 0f0h]
+        ret
+    }
+#else
+    return stats_instance_read(config_block, 0xf0);
+#endif
+}
 /* FUN_00469be0 */
 
 /* --- entity query flag count (2026-10-25) ----------------------------------

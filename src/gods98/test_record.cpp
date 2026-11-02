@@ -535,26 +535,26 @@ static void test_descriptor_coordinates(void)
     poke_float(desc, 0x1C, 10.0f);
 
     int cx = 0, cy = 0;
-    /* In range: cell coordinates store and the leaf answers 1. */
-    CHECK(world_to_terrain_cell_bounds_check(desc, 1.5f, 2.5f, &cx, &cy, NULL)
+    /* World coordinates first subtract the origin, then divide by scale. */
+    CHECK(world_to_terrain_cell_bounds_check(desc, 12.5f, 5.5f, &cx, &cy, NULL)
               == 1,
           "an in-range world point checks in");
-    CHECK(cx == 1 && cy == 2, "cells truncate toward zero");
-    /* Truncation on negatives: -2.5 truncates to -2 (toward zero). */
-    CHECK(world_to_terrain_cell_bounds_check(desc, -2.5f, 0.0f, &cx, &cy, NULL)
+    CHECK(cx == 1 && cy == 2, "origin-relative cells truncate toward zero");
+    /* Truncation on negatives: (5-10)/2 = -2.5 truncates to -2. */
+    CHECK(world_to_terrain_cell_bounds_check(desc, 5.0f, 10.0f, &cx, &cy, NULL)
               == 0,
           "cell -2 fails the -1 bound");
     CHECK(cx == -2 && cy == 0, "out-of-range coordinates still store");
 
     /* Subcell: px = (wx - (cx*bs + ox)) / (bs/2); the y partner folds
      * past 1 and the pair answers by lowest. Hand-computed:
-     * wx=1.5 -> px = (1.5 - 12)/1 = -10.5; wy=2.5 -> py = -(2.5-6)/1
-     * = 3.5 -> fold 2-3.5 = -1.5 -> lowest -10.5. */
+     * wx=12.5 -> px = (12.5 - 12)/1 = 0.5; wy=5.5 -> py =
+     * -(5.5-6)/1 = 0.5; the lowest value is 0.5. */
     float sub = 0.0f;
-    CHECK(world_to_terrain_cell_bounds_check(desc, 1.5f, 2.5f, &cx, &cy, &sub)
+    CHECK(world_to_terrain_cell_bounds_check(desc, 12.5f, 5.5f, &cx, &cy, &sub)
               == 1,
           "the subcell path answers in range");
-    CHECK(sub == -10.5f, "the subcell is the lowest folded pair value");
+    CHECK(sub == 0.5f, "the subcell is the lowest folded pair value");
 
     /* Clamp-and-store. */
     grid_coordinate_clamp_and_store(desc, 1.9f, -0.5f, &cx, &cy);
@@ -571,14 +571,11 @@ static void test_descriptor_coordinates(void)
     memset(desc2, 0, sizeof(desc2));
     poke_dword(desc2, 0x00, 4u);
     poke_dword(desc2, 0x04, 4u);
-    float one = 1.0f;
-    uint32_t one_bits;
-    __builtin_memcpy(&one_bits, &one, sizeof(one_bits));
-    poke_dword(desc2, 0x10, one_bits);
-    poke_dword(desc2, 0x18, 0u);
-    poke_dword(desc2, 0x1C, 0u);
+    poke_float(desc2, 0x10, 1.0f);
+    poke_float(desc2, 0x18, 0.0f);
+    poke_float(desc2, 0x1C, 0.0f);
 
-    float point[2] = { 1.5f, 1.5f };
+    float point[2] = { 1.5f, -1.5f };
     float cell[2] = { 9, 9 };
     float offset[2] = { 9, 9 };
     CHECK(terrain_world_point_to_cell(desc2, point, cell, offset) == 0u,
@@ -1711,7 +1708,7 @@ int main(void)
         uint32_t bits = 0u;
         memcpy(&bits, &v, sizeof bits);
         const uint32_t keep35 = bits;
-        entity_velocity_slot_value_set(rec1, bits, 0);
+        entity_velocity_slot_value_set(rec1, v, 0);
         CHECK(entity_velocity_slot_value_get(rec1, 0) == 3.5f,
               "the slot value roundtrips through the window");
         uint32_t landed = 0u;
@@ -1720,7 +1717,7 @@ int main(void)
         float g = entity_velocity_slot_value_get(rec1, 7);
         memcpy(&bits, &g, sizeof bits);
         CHECK(bits == 0u, "the fresh slot reads zero");
-        entity_velocity_slot_value_set(rec1, 0x1234u, 9);
+        entity_velocity_slot_value_set(rec1, 1.0f, 9);
         CHECK(entity_velocity_slot_value_get(rec1, 9) != 0.0f,
               "the high slot rides the stride");
 
@@ -1737,7 +1734,7 @@ int main(void)
         v = -2.0f;
         memcpy(&bits, &v, sizeof bits);
         const uint32_t keepm2 = bits;
-        entity_velocity_slot_value_set(rec4, keepm2, 3);
+        entity_velocity_slot_value_set(rec4, v, 3);
         g = entity_velocity_slot_value_get(rec4, 3);
         memcpy(&bits, &g, sizeof bits);
         CHECK(bits == keepm2, "the type-4 slot value roundtrips (bits ride)");
@@ -1756,7 +1753,7 @@ int main(void)
               "the foreign type answers NULL");
         CHECK(entity_velocity_slot_value_get(recX, 0) == 0.0f,
               "the null base answers zero");
-        entity_velocity_slot_value_set(recX, 1u, 0);
+        entity_velocity_slot_value_set(recX, 1.0f, 0);
         CHECK(1, "the null base store no-ops (deviation)");
 
         static unsigned char recN[0x20];
@@ -1766,7 +1763,7 @@ int main(void)
         CHECK(entity_velocity_state_record_get(recN) == NULL,
               "the null sub-record link guards (deviation)");
         entity_velocity_state_record_get(NULL);
-        entity_velocity_slot_value_set(NULL, 1u, 0);
+        entity_velocity_slot_value_set(NULL, 1.0f, 0);
         CHECK(1, "the null record is guarded (deviation)");
     }
 

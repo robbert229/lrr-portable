@@ -1411,7 +1411,7 @@ int resolved_entity_operation_dispatch(const char* name, int slot,
 /* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) -------------------
  * The corpus family FUN_00469b20 … FUN_00469be0 / FUN_00469e00 /
  * FUN_00469ec0 … FUN_00469f00 resolves a template record through
- * DAT_00502bd8's two-level table (`*(*DAT_00502bd8 + type * 4) + row * 4`)
+ * DAT_00502bd8's two-level type/row pointer table
  * and reads fixed fields or stride-0x150 instance blocks from the template.
  * The Stats config loader installs guarded own storage for each type/row;
  * each registered window carries its record count, while reads from an

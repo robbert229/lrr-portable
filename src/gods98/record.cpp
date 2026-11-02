@@ -295,14 +295,35 @@ void velocity_slot_vector_read(const void* record, float out[3],
     __builtin_memcpy(out, (const char*)record + off, 3u * sizeof(uint32_t));
 }
 
-/* EntityVelocityStateRecordGet (FUN_004712c0): the corpus loads the type,
- * decrements it, then subtracts three for the type-4 arm (`dec eax; je`,
- * `sub eax,3; je`). Keep the NULL record/link guards pinned by test_record;
- * direct field loads and the same subtract/compare sequence remove helper
- * calls and track the corpus's non-NULL path. */
+/* EntityVelocityStateRecordGet (FUN_004712c0): the x86 body mirrors the
+ * unchecked type decrement/subtract and embedded-base returns. The portable
+ * path retains the NULL record/link guards pinned by test_record. */
 // FUNCTION: LEGORR 0x004712c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 void* entity_velocity_state_record_get(const void* record)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [ecx]
+        dec eax
+        je velocity_type_one
+        sub eax, 3
+        je velocity_type_four
+        xor eax, eax
+        ret
+    velocity_type_four:
+        mov eax, dword ptr [ecx + 18h]
+        add eax, 0a0h
+        ret
+    velocity_type_one:
+        mov eax, dword ptr [ecx + 0ch]
+        add eax, 138h
+        ret
+    }
+#else
     if (record == NULL) {
         return NULL; /* deviation: the corpus strides the record blindly */
     }
@@ -320,32 +341,41 @@ void* entity_velocity_state_record_get(const void* record)
                              : NULL; /* deviation: corpus strides blindly */
     }
     return NULL; /* deviation: the corpus walks a null base */
+#endif
 }
 
-/* EntityVelocitySlotValueGet (FUN_004712f0): the float word at
- * +0x98 + slot*4 of the state record. The corpus widens through x87;
- * the bit pattern rides unchanged. Deviation: the corpus strides a null
- * base. */
+/* EntityVelocitySlotValueGet (FUN_004712f0): the x86 body reads the float
+ * at +0x98 + slot*4 without a null or slot guard. The portable path keeps
+ * its guarded fallback. */
 // FUNCTION: LEGORR 0x004712f0
 float entity_velocity_slot_value_get(const void* record, int slot)
 {
     void* base = entity_velocity_state_record_get(record);
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return *(const float*)((const char*)base + 0x98u + slot * 4);
+#else
     if (base == NULL || slot < 0) {
         return 0.0f; /* deviation */
     }
     return rec_float(base, 0x98u + (size_t)slot * 4u);
+#endif
 }
 
-/* EntityVelocitySlotValueSet (FUN_00471310): the store counterpart. */
+/* EntityVelocitySlotValueSet (FUN_00471310): the x86 body stores the raw
+ * value word at +0x98 + slot*4 without guards. */
 // FUNCTION: LEGORR 0x00471310
-void entity_velocity_slot_value_set(void* record, uint32_t value, int slot)
+void entity_velocity_slot_value_set(void* record, float value, int slot)
 {
     void* base = entity_velocity_state_record_get(record);
+#if defined(_MSC_VER) && defined(_M_IX86)
+    *(float*)((char*)base + 0x98u + slot * 4) = value;
+#else
     if (base == NULL || slot < 0) {
         return; /* deviation */
     }
-    __builtin_memcpy((char*)base + 0x98u + (size_t)slot * 4u, &value,
-                     sizeof value);
+    __builtin_memcpy((char*)base + 0x98u + (size_t)slot * 4u,
+                     &value, sizeof value);
+#endif
 }
 
 /* EntityFlag80Set (FUN_00473b20) — see record.hpp. */
@@ -876,17 +906,39 @@ int world_to_terrain_cell_bounds_check(const void* map, float world_x,
                                        float world_y, int* cell_x,
                                        int* cell_y, float* subcell)
 {
-    const int cx = (int)world_x; /* __ftol: truncate toward zero */
-    const int cy = (int)world_y;
+    int cx;
+    int cy;
+#if defined(_MSC_VER) && defined(_M_IX86)
+    cx = (int)((world_x - *(const float*)((const char*)map + 0x18)) /
+               *(const float*)((const char*)map + 0x10));
+    cy = (int)((*(const float*)((const char*)map + 0x1c) - world_y) /
+               *(const float*)((const char*)map + 0x10));
+#else
+    if (map == NULL) {
+        if (cell_x != NULL) {
+            *cell_x = (int)world_x;
+        }
+        if (cell_y != NULL) {
+            *cell_y = (int)world_y;
+        }
+        return 0;
+    }
+    cx = (int)((world_x - rec_float(map, 0x18)) / rec_float(map, 0x10));
+    cy = (int)((rec_float(map, 0x1c) - world_y) / rec_float(map, 0x10));
+#endif
     if (cell_x != NULL) {
         *cell_x = cx;
     }
     if (cell_y != NULL) {
         *cell_y = cy;
     }
-    const int w = (int)rec_dword(map, 0x00);
-    const int h = (int)rec_dword(map, 0x04);
-    if (map == NULL || !(-1 < cx && cx < w && -1 < cy && cy < h)) {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    if (!(-1 < cx && cx < *(const int*)map && -1 < cy &&
+          cy < ((const int*)map)[1])) {
+#else
+    if (!(-1 < cx && cx < (int)rec_dword(map, 0x00) && -1 < cy &&
+          cy < (int)rec_dword(map, 0x04))) {
+#endif
         return 0;
     }
     if (subcell != NULL) {
@@ -915,9 +967,8 @@ int world_to_terrain_cell_bounds_check(const void* map, float world_x,
 int terrain_grid_pick(const void* map, float world_x, float world_y,
                       int* cell_x, int* cell_y)
 {
-    float unused_subcell = 0.0f;
     return world_to_terrain_cell_bounds_check(
-        map, world_x, world_y, cell_x, cell_y, &unused_subcell);
+        map, world_x, world_y, cell_x, cell_y, (float*)&cell_y);
 }
 
 // FUNCTION: LEGORR 0x0044f810
@@ -952,6 +1003,34 @@ void grid_coordinate_clamp_and_store(const void* map, float world_x,
 uint32_t terrain_world_point_to_cell(const void* map, const float* point,
                                      float* cell_out, float* offset_out)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    const void* map_source = map;
+    const float* point_source = point;
+    int picked;
+    picked = terrain_grid_pick(map, point[0], point[1],
+                               (int*)&map, (int*)&point);
+    if (picked != 0) {
+        const int cell_x = (int)(uint32_t)map;
+        const int cell_y = (int)(uint32_t)point;
+        if (cell_out != NULL) {
+            cell_out[0] = (float)cell_x;
+            cell_out[1] = (float)cell_y;
+        }
+        if (offset_out != NULL) {
+            float center_x;
+            float center_y;
+            float inverse_scale;
+            map_cell_to_world_center(map_source, (uint32_t)cell_x,
+                                     (uint32_t)cell_y, &center_x, &center_y);
+            offset_out[0] = point_source[0] - center_x;
+            offset_out[1] = point_source[1] - center_y;
+            inverse_scale = 1.0f /
+                *(const float*)((const char*)map_source + 0x10);
+            offset_out[0] = inverse_scale * offset_out[0] - -0.5f;
+            offset_out[1] = inverse_scale * offset_out[1] - -0.5f;
+        }
+    }
+#else
     int cx = 0, cy = 0;
     if (point != NULL
         && world_to_terrain_cell_bounds_check(map, point[0], point[1],
@@ -962,16 +1041,17 @@ uint32_t terrain_world_point_to_cell(const void* map, const float* point,
         }
         if (offset_out != NULL) {
             float wx = 0.0f, wy = 0.0f;
+            float inverse_scale;
             map_cell_to_world_center(map, (uint32_t)cx, (uint32_t)cy,
                                      &wx, &wy);
-            float scale_f = 0.0f;
-            __builtin_memcpy(&scale_f, (const char*)map + 0x10,
-                             sizeof(scale_f));
-            const float inv = 1.0f / scale_f;
-            offset_out[0] = inv * (point[0] - wx) + 0.5f;
-            offset_out[1] = inv * (point[1] - wy) + 0.5f;
+            offset_out[0] = point[0] - wx;
+            offset_out[1] = point[1] - wy;
+            inverse_scale = 1.0f / rec_float(map, 0x10);
+            offset_out[0] = inverse_scale * offset_out[0] - -0.5f;
+            offset_out[1] = inverse_scale * offset_out[1] - -0.5f;
         }
     }
+#endif
     return 0u;
 }
 
