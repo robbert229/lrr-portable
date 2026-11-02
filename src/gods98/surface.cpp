@@ -4605,6 +4605,7 @@ static int surface_create_winapi_display_mode(DisplaySurface* out,
     SurfaceCreateSurfaceFn create_surface;
     SurfaceCreatePaletteFn create_palette;
     SurfaceSetPaletteFn set_palette;
+    SurfaceSetCooperativeLevelFn set_cooperative_level;
     SurfaceLockFn lock;
     SurfaceUnlockFn unlock;
     void* direct_draw = NULL;
@@ -4632,16 +4633,32 @@ static int surface_create_winapi_display_mode(DisplaySurface* out,
     surface_com_release(direct_draw);
     direct_draw = NULL;
 
+    /* DirectDraw requires a cooperative level before it will create surfaces.
+     * The reconstruction creates an offscreen system-memory surface in the
+     * normal windowed mode, so bind that mode to the host window first. */
+    vtable = surface_com_vtable(direct_draw4);
+    set_cooperative_level = vtable != NULL && vtable[20] != NULL
+        ? (SurfaceSetCooperativeLevelFn)vtable[20] : NULL;
+    if (set_cooperative_level == NULL ||
+        set_cooperative_level(direct_draw4, (HWND)hwnd, 0x00000008u) != 0)
+        goto cleanup;
+
     memset(&desc, 0, sizeof(desc));
     desc.size = sizeof(desc);
     desc.flags = 0x00000001u;
-    if (width != 0) desc.flags |= 0x00000004u;
-    if (height != 0) desc.flags |= 0x00000002u;
+    if (width != 0) {
+        desc.flags |= 0x00000004u;
+        desc.width = (DWORD)width;
+    }
+    if (height != 0) {
+        desc.flags |= 0x00000002u;
+        desc.height = (DWORD)height;
+    }
     if (bits_per_pixel != 0) {
         desc.flags |= 0x00001000u;
         desc.pixel_format.size = sizeof(desc.pixel_format);
         desc.pixel_format.rgb_bits = (DWORD)effective_bits;
-        if (bits_per_pixel == 24) {
+        if (bits_per_pixel == 32 || bits_per_pixel == 24) {
             desc.pixel_format.flags = 0x40u;
             desc.pixel_format.red_mask = 0x00ff0000u;
             desc.pixel_format.green_mask = 0x0000ff00u;
@@ -4726,7 +4743,240 @@ cleanup:
     memset(out, 0, sizeof(*out));
     return -4;
 }
+
+typedef struct WinApiStartupDialogState {
+    DEVMODEA modes[128];
+    unsigned int mode_count;
+    unsigned int selected_mode;
+    int fullscreen;
+} WinApiStartupDialogState;
+
+static DEVMODEA s_winapi_startup_selected_mode;
+static void* s_winapi_startup_owner_window;
+
+typedef HRESULT (WINAPI *SurfaceEnumDisplayModesCallback)(
+    SurfaceDdrawDesc2*, void*);
+typedef HRESULT (WINAPI *SurfaceEnumDisplayModesFn)(void*, DWORD,
+    SurfaceDdrawDesc2*, void*, SurfaceEnumDisplayModesCallback);
+
+static HRESULT WINAPI surface_winapi_startup_mode_collect(
+    SurfaceDdrawDesc2* descriptor, void* context)
+{
+    WinApiStartupDialogState* state = (WinApiStartupDialogState*)context;
+    DEVMODEA* mode;
+    unsigned int i;
+    int accepted = display_resolution_filter_tuple_count() == 0;
+    if (descriptor == NULL || state == NULL || state->mode_count >= 128u)
+        return 1;
+    for (i = 0u; i < (unsigned int)display_resolution_filter_tuple_count();
+         ++i) {
+        int width;
+        int height;
+        int bits;
+        display_resolution_filter_tuple_get((int)i, &width, &height, &bits);
+        if ((width == 0 || width == (int)descriptor->width) &&
+            (height == 0 || height == (int)descriptor->height) &&
+            (bits == 0 || bits == (int)descriptor->pixel_format.rgb_bits)) {
+            accepted = 1;
+            break;
+        }
+    }
+    if (!accepted || descriptor->width == 0 || descriptor->height == 0 ||
+        descriptor->pixel_format.rgb_bits < 16u) return 1;
+    for (i = 0u; i < state->mode_count; ++i) {
+        if (state->modes[i].dmPelsWidth == descriptor->width &&
+            state->modes[i].dmPelsHeight == descriptor->height &&
+            state->modes[i].dmBitsPerPel ==
+                descriptor->pixel_format.rgb_bits) return 1;
+    }
+    mode = &state->modes[state->mode_count];
+    memset(mode, 0, sizeof(*mode));
+    mode->dmSize = sizeof(*mode);
+    mode->dmPelsWidth = descriptor->width;
+    mode->dmPelsHeight = descriptor->height;
+    mode->dmBitsPerPel = descriptor->pixel_format.rgb_bits;
+    mode->dmDisplayFrequency = descriptor->refresh_rate;
+    if (mode->dmPelsWidth == 640u && mode->dmPelsHeight == 480u &&
+        mode->dmBitsPerPel == 16u) state->selected_mode = state->mode_count;
+    ++state->mode_count;
+    return 1;
+}
+
+static int surface_winapi_startup_modes_enumerate(
+    WinApiStartupDialogState* state)
+{
+    SurfaceDdrawCreateFn create;
+    SurfaceQueryInterfaceFn query;
+    SurfaceEnumDisplayModesFn enumerate;
+    void* direct_draw = NULL;
+    void* direct_draw4 = NULL;
+    void** vtable;
+    HRESULT result;
+    int success = 0;
+    if (state == NULL || !surface_ddraw_api_get(&create)) return 0;
+    result = create(NULL, &direct_draw, NULL);
+    if (result != 0 || direct_draw == NULL) goto cleanup;
+    vtable = surface_com_vtable(direct_draw);
+    query = vtable != NULL ? (SurfaceQueryInterfaceFn)vtable[0] : NULL;
+    if (query == NULL || query(direct_draw, s_iid_direct_draw4,
+            &direct_draw4) != 0 || direct_draw4 == NULL) goto cleanup;
+    surface_com_release(direct_draw);
+    direct_draw = NULL;
+    vtable = surface_com_vtable(direct_draw4);
+    enumerate = vtable != NULL && vtable[8] != NULL
+        ? (SurfaceEnumDisplayModesFn)vtable[8] : NULL;
+    if (enumerate != NULL && enumerate(direct_draw4, 0u, NULL, state,
+            surface_winapi_startup_mode_collect) == 0 &&
+        state->mode_count != 0u) success = 1;
+cleanup:
+    if (direct_draw4 != NULL) surface_com_release(direct_draw4);
+    if (direct_draw != NULL) surface_com_release(direct_draw);
+    return success;
+}
+
+static BOOL CALLBACK surface_winapi_mode_dialog_proc(HWND dialog,
+    UINT message, WPARAM wparam, LPARAM lparam)
+{
+    WinApiStartupDialogState* state = (WinApiStartupDialogState*)
+        GetWindowLongA(dialog, GWL_USERDATA);
+    if (message == WM_INITDIALOG) {
+        unsigned int i;
+        char label[80];
+        state = (WinApiStartupDialogState*)lparam;
+        state->fullscreen = 1;
+        SetWindowLongA(dialog, GWL_USERDATA, (LONG)state);
+        SendMessageA(GetDlgItem(dialog, 1000), 0x0143, 0,
+                     (LPARAM)"Primary Display Adapter");
+        SendMessageA(GetDlgItem(dialog, 1000), 0x014e, 0, 0);
+        SendMessageA(GetDlgItem(dialog, 1002), 0x0143, 0,
+                     (LPARAM)"DirectDraw HAL");
+        SendMessageA(GetDlgItem(dialog, 1002), 0x014e, 0, 0);
+        for (i = 0; i < state->mode_count; ++i) {
+            sprintf(label, "%u x %u x %u",
+                (unsigned int)state->modes[i].dmPelsWidth,
+                (unsigned int)state->modes[i].dmPelsHeight,
+                (unsigned int)state->modes[i].dmBitsPerPel);
+            SendMessageA(GetDlgItem(dialog, 1003), 0x0143, 0,
+                         (LPARAM)label);
+            if (state->modes[i].dmPelsWidth == 640u &&
+                state->modes[i].dmPelsHeight == 480u) {
+                state->selected_mode = i;
+            }
+        }
+        SendMessageA(GetDlgItem(dialog, 1003), 0x014e, 0,
+                     state->selected_mode);
+        CheckRadioButton(dialog, 1004, 1005, 1004);
+        return TRUE;
+    }
+    if (message == WM_COMMAND && state != NULL) {
+        unsigned int command = (unsigned int)(wparam & 0xffffu);
+        if (command == 1u) {
+            LRESULT selected = SendMessageA(GetDlgItem(dialog, 1003),
+                                            0x0147, 0, 0);
+            if (selected < 0 || (unsigned int)selected >= state->mode_count)
+                return TRUE;
+            state->selected_mode = (unsigned int)selected;
+            state->fullscreen = IsDlgButtonChecked(dialog, 1004) != 0;
+            s_winapi_startup_selected_mode =
+                state->modes[state->selected_mode];
+            EndDialog(dialog, 1);
+            return TRUE;
+        }
+        if (command == 2u) {
+            EndDialog(dialog, 0);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static int surface_winapi_startup_adapter_count(void* context)
+{
+    SurfaceDdrawCreateFn create;
+    void* object = NULL;
+    int available;
+    (void)context;
+    if (!surface_ddraw_api_get(&create)) return 0;
+    available = create(NULL, &object, NULL) == 0 && object != NULL;
+    if (object != NULL) surface_com_release(object);
+    return available ? 1 : 0;
+}
+
+static int surface_winapi_startup_adapter_get(void* context, int index,
+    DirectDrawAdapterCandidate* adapter_out)
+{
+    if (context == NULL || index != 0 || adapter_out == NULL) return 0;
+    adapter_out->adapter = NULL;
+    adapter_out->flags = 0;
+    return surface_winapi_startup_adapter_count(context);
+}
+
+static int surface_winapi_startup_selection_dialog(void* context,
+    int error_mode, DirectDrawAdapterCandidate* adapter_out,
+    DirectDrawDisplayModeCandidate* mode_out, int* fullscreen_out)
+{
+    WinApiStartupDialogState state;
+    int result;
+    (void)error_mode;
+    if (adapter_out == NULL || mode_out == NULL || fullscreen_out == NULL)
+        return 0;
+    memset(&state, 0, sizeof(state));
+    if (!surface_winapi_startup_modes_enumerate(&state)) return 0;
+    result = (int)DialogBoxParamA(GetModuleHandleA(NULL),
+        MAKEINTRESOURCEA(101), (HWND)context,
+        (DLGPROC)surface_winapi_mode_dialog_proc, (LPARAM)&state);
+    if (result != 1) return 0;
+    adapter_out->adapter = NULL;
+    adapter_out->flags = 0;
+    mode_out->descriptor = &s_winapi_startup_selected_mode;
+    mode_out->width = (int)s_winapi_startup_selected_mode.dmPelsWidth;
+    mode_out->height = (int)s_winapi_startup_selected_mode.dmPelsHeight;
+    mode_out->bits_per_pixel =
+        (int)s_winapi_startup_selected_mode.dmBitsPerPel;
+    mode_out->flags = s_winapi_startup_selected_mode.dmDisplayFlags;
+    *fullscreen_out = state.fullscreen;
+    return 1;
+}
+
+static int surface_winapi_startup_renderer_initialize(void* context,
+    int fullscreen, void* adapter,
+    const DirectDrawDisplayModeCandidate* mode)
+{
+    DisplaySurface probe;
+    HWND window = (HWND)context;
+    (void)context;
+    (void)adapter;
+    if (mode == NULL || mode->width <= 0 || mode->height <= 0) return 0;
+    if (window != NULL) {
+        renderer_window_mode_apply(fullscreen, 100, 100, mode->width,
+                                   mode->height);
+        ShowWindow(window, 5);
+    }
+    memset(&probe, 0, sizeof(probe));
+    if (surface_create_winapi_display_mode(&probe, (void*)window,
+            mode->width, mode->height, mode->bits_per_pixel,
+            0) != 0) return 0;
+    surface_destroy(&probe);
+    return 1;
+}
 #endif
+
+void surface_winapi_startup_ops_install(void* owner_window)
+{
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    DirectDrawDeviceInitializeOps ops;
+    memset(&ops, 0, sizeof(ops));
+    ops.adapter_count_get = surface_winapi_startup_adapter_count;
+    ops.adapter_get = surface_winapi_startup_adapter_get;
+    ops.selection_dialog = surface_winapi_startup_selection_dialog;
+    ops.renderer_initialize = surface_winapi_startup_renderer_initialize;
+    s_winapi_startup_owner_window = owner_window;
+    ops.context = s_winapi_startup_owner_window;
+    directdraw_device_initialize_ops_set(&ops);
+#else
+    (void)owner_window;
+#endif
+}
 
 int surface_create(DisplaySurface* out, void* hwnd, int w, int h)
 {

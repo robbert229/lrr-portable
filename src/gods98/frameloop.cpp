@@ -2290,8 +2290,6 @@ int LegorrrRun(void)
         preload_numbered_bitmaps("Interface\\FONTS\\HealthFont", "a000_");
         tooltip_icons_config_load(game.cfg);
         lego::level_upgrade_name_strings_load(game.cfg);
-        /* InfoMessages section -> per-id bus sounds (finding 22 §1). */
-        message_load_infomessages(game.cfg);
     }
     int save_loaded = save_read_slot(&game, SAVE_DEFAULT_SLOT, 0);
     fprintf(log, "frameloop: save slot %d %s\n", SAVE_DEFAULT_SLOT,
@@ -2324,6 +2322,11 @@ int LegorrrRun(void)
      * terrain are bound there, not here. */
     /* The finding-22 InfoMessages catalog + bus enabled. */
     message_init_defaults();
+    /* Load config entries only after seeding the message-name catalog used by
+     * message_load_infomessages to resolve each configured Info_* record. */
+    if (game.cfg != NULL) {
+        message_load_infomessages(game.cfg);
+    }
 
     /* Selection/command wiring (finding 06): the executor's held-key probe
      * reads this frame's input tables; a keybind demo for a global op. */
@@ -2343,6 +2346,24 @@ int LegorrrRun(void)
         return 1;
     }
 
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    /* Retail WinMain opens DirectDrawDeviceInitialize's mode selector after
+     * creating the owner window and before entering the game callback loop. */
+    surface_winapi_startup_ops_install(platform_window_hwnd(win));
+    if (!directdraw_device_initialize(1, 0, 0, 0,
+            "No DirectX 3D accelerator could be found.")) {
+        fprintf(log, "frameloop: DirectDraw mode selection failed\n");
+        platform_destroy_window(win);
+        frameloop_game_context_dispose(&game);
+        free(game_storage);
+        free(fe_storage);
+        if (log != stderr) fclose(log);
+        return 3;
+    }
+    fprintf(log, "frameloop: DirectDraw mode selection accepted\n");
+    fflush(log);
+#endif
+
     DisplaySurface surf = { 0, 0, 0, 0, 0 };
     int rc = surface_create(&surf, platform_window_hwnd(win),
                             WINDOW_W, WINDOW_H);
@@ -2357,6 +2378,9 @@ int LegorrrRun(void)
         }
         return 2;
     }
+    fprintf(log, "frameloop: surface_create rc=0 (%dx%d)\n",
+            WINDOW_W, WINDOW_H);
+    fflush(log);
     surface_active_render_target_set(&surf);
     catalog_slot_flag_hooks_set(frame_catalog_slot_eligible,
                                 frame_catalog_slot_available,
@@ -2518,8 +2542,13 @@ int LegorrrRun(void)
         frontend_built = built;
         boot_menu = frontend_built && frontend_enabled(game.cfg)
                  && env_get("LEGORRR_LEVEL", "")[0] == '\0';
+        fprintf(log, "frameloop: frontend built=%d enabled=%d override=%d\n",
+                frontend_built, frontend_enabled(game.cfg),
+                env_get("LEGORRR_LEVEL", "")[0] != '\0');
+        fflush(log);
     } else {
         fprintf(log, "frameloop: Lego.cfg not found (wads need mounted game data)\n");
+        fflush(log);
     }
     if (frontend_built && audio_status == 0) {
         frontend_set_audio(&fe, &ap);

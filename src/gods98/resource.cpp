@@ -3732,6 +3732,7 @@ char* game_file_mounted_path_prefix_rewrite(const char* path)
 {
     size_t path_length;
     size_t prefix_length;
+    const char* relative_path;
     char prefix[0x400];
     if (!s_wad_mount_path_cache_valid || path == NULL) return (char*)path;
     path_length = strlen(path);
@@ -3742,8 +3743,16 @@ char* game_file_mounted_path_prefix_rewrite(const char* path)
     prefix[prefix_length] = '\0';
     if (strcasecmp_lite(prefix, s_wad_mount_path_cache) != 0)
         return (char*)path;
+    relative_path = path + prefix_length;
+    /* PathResolveAgainstBase forms `<Data root><separator><name>`, while the
+     * WAD directory stores names without a leading separator. Strip that
+     * join separator at the root boundary before looking up the archive
+     * entry; otherwise a valid `Lego.cfg` is treated as a loose file. */
+    while (*relative_path == '/' || *relative_path == '\\') {
+        ++relative_path;
+    }
     snprintf(s_wad_mount_path_rewrite, sizeof(s_wad_mount_path_rewrite),
-             "%s", path + prefix_length);
+             "%s", relative_path);
     return s_wad_mount_path_rewrite;
 }
 

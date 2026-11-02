@@ -4088,8 +4088,11 @@ The Reccmp report is written to
 defaults to `~/.local/share/reprobit/toolchains/msvc_5_0_rtm`; override it with
 `REPROBIT_MSVC_5_0_RTM_ROOT=/path/to/toolchain` when needed. `make reccmp-report`
 is an alias for `make reccmp`. Run the already-built MSVC candidate with
-`make reccmp-run`; it uses `~/.wine` by default and accepts
-`RECCMP_WINEPREFIX=/path/to/prefix` and `RECCMP_WINE_BIN=/path/to/wine` overrides.
+`make reccmp-run`; it uses the same Proton runner and compatdata as
+`make reference-run`, with the reference directory as its working directory.
+Override the runner with `RECCMP_PROTON_BIN=/path/to/proton` and the prefix with
+`RECCMP_COMPATDATA=/path/to/compatdata` (or the existing `RR_A2_PROTON` and
+`RR_A2_HOME` settings).
 Run `make reccmp-lint` to check that each
 production function definition under `src/` has a nearby Reccmp `FUNCTION:` or
 `STUB:` annotation; it exits with an error and lists missing annotations.

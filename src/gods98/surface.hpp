@@ -695,6 +695,9 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
                                  int auto_select, int windowed,
                                  const char* error_message); /* FUN_0049d030 */
 void directdraw_device_selection_get(DirectDrawDeviceSelection* out);
+/* Installs the WinAPI DirectDraw adapter and the retail mode-selection
+ * dialog resource before DirectDrawDeviceInitialize is called. */
+void surface_winapi_startup_ops_install(void* owner_window);
 typedef int (*Direct3DTextureMemoryCapsQueryFn)(void* context,
                                                 uint32_t capability,
                                                 uint32_t* memory_out);

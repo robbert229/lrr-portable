@@ -102,6 +102,8 @@ static LRESULT CALLBACK platform_window_proc(HWND hwnd, UINT message,
 }
 
 static PlatformRenderSurfaceOps s_platform_render_surface_ops;
+static unsigned char* s_platform_present_bgra;
+static size_t s_platform_present_capacity;
 
 void platform_render_surface_ops_set(const PlatformRenderSurfaceOps* ops)
 {
@@ -303,7 +305,14 @@ int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
 void platform_present_pixels(PlatformWindow* win, const void* pixels, int pitch,
                              int width, int height)
 {
+    BITMAPINFO bitmap_info;
+    RECT client;
+    HDC dc;
+    size_t required;
+    int y;
     int fullscreen = 0;
+    if (win == NULL || win->hwnd == NULL || pixels == NULL ||
+        pitch <= 0 || width <= 0 || height <= 0) return;
     if (s_platform_render_surface_ops.fullscreen_get != NULL) {
         fullscreen = s_platform_render_surface_ops.fullscreen_get(
             s_platform_render_surface_ops.context);
@@ -312,13 +321,54 @@ void platform_present_pixels(PlatformWindow* win, const void* pixels, int pitch,
         if (s_platform_render_surface_ops.surface_flip != NULL) {
             s_platform_render_surface_ops.surface_flip(
                 s_platform_render_surface_ops.context, win, 0, 1);
+            return;
         }
     }
     else if (s_platform_render_surface_ops.windowed_blit != NULL) {
         s_platform_render_surface_ops.windowed_blit(
             s_platform_render_surface_ops.context, win, pixels, pitch,
             width, height);
+        return;
     }
+
+    /* The WinAPI build has no DirectDraw primary/back-buffer renderer wired
+     * yet. Present its locked RGBA framebuffer through GDI so the reconstructed
+     * front end remains visible while surface creation still uses DirectDraw. */
+    required = (size_t)width * (size_t)height * 4u;
+    if (required > s_platform_present_capacity) {
+        unsigned char* resized = (unsigned char*)realloc(
+            s_platform_present_bgra, required);
+        if (resized == NULL) return;
+        s_platform_present_bgra = resized;
+        s_platform_present_capacity = required;
+    }
+    for (y = 0; y < height; ++y) {
+        const unsigned char* source = (const unsigned char*)pixels +
+            (size_t)y * (size_t)pitch;
+        unsigned char* destination = s_platform_present_bgra +
+            (size_t)y * (size_t)width * 4u;
+        int x;
+        for (x = 0; x < width; ++x) {
+            destination[(size_t)x * 4u + 0u] = source[(size_t)x * 4u + 2u];
+            destination[(size_t)x * 4u + 1u] = source[(size_t)x * 4u + 1u];
+            destination[(size_t)x * 4u + 2u] = source[(size_t)x * 4u + 0u];
+            destination[(size_t)x * 4u + 3u] = 0u;
+        }
+    }
+    memset(&bitmap_info, 0, sizeof(bitmap_info));
+    bitmap_info.bmiHeader.biSize = sizeof(bitmap_info.bmiHeader);
+    bitmap_info.bmiHeader.biWidth = width;
+    bitmap_info.bmiHeader.biHeight = -height;
+    bitmap_info.bmiHeader.biPlanes = 1;
+    bitmap_info.bmiHeader.biBitCount = 32;
+    bitmap_info.bmiHeader.biCompression = BI_RGB;
+    if (!GetClientRect(win->hwnd, &client)) return;
+    dc = GetDC(win->hwnd);
+    if (dc == NULL) return;
+    StretchDIBits(dc, 0, 0, client.right - client.left,
+        client.bottom - client.top, 0, 0, width, height,
+        s_platform_present_bgra, &bitmap_info, DIB_RGB_COLORS, SRCCOPY);
+    ReleaseDC(win->hwnd, dc);
 }
 
 void platform_screenshot(PlatformWindow* win, const void* pixels, int pitch,
