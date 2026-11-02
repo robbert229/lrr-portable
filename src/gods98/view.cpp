@@ -4035,31 +4035,38 @@ float vec2_dist_alt(const float* a, const float* b) /* FUN_00406730 */
 float segment_2d_point_distance(const float* point, const float* start,
                                 const float* end)
 {
-    const float dx = end[0] - start[0];
-    const float dy = end[1] - start[1];
-    const float length_sq = dx * dx + dy * dy;
-    float t;
-    float nearest[2];
+    float segment_x = end[0] - start[0];
+    float segment_y = end[1] - start[1];
+    float point_to_end_x = point[0] - end[0];
+    float point_to_end_y = point[1] - end[1];
+    float point_to_end_distance = sqrtf(
+        point_to_end_y * point_to_end_y +
+        point_to_end_x * point_to_end_x);
+    float inverse_segment_length = 1.0f / sqrtf(
+        segment_y * segment_y + segment_x * segment_x);
+    float unit_x = inverse_segment_length * segment_x;
+    float unit_y = inverse_segment_length * segment_y;
 
-    if (length_sq <= 0.0f) {
-        return vec2_dist(point, start);
+    if ((1.0f / point_to_end_distance) * point_to_end_y * unit_y +
+        (1.0f / point_to_end_distance) * point_to_end_x * unit_x < 0.0f) {
+        float point_to_start_x = point[0] - start[0];
+        float point_to_start_y = point[1] - start[1];
+        float point_to_start_distance = sqrtf(
+            point_to_start_y * point_to_start_y +
+            point_to_start_x * point_to_start_x);
+        if ((1.0f / point_to_start_distance) * point_to_start_y * unit_y +
+            (1.0f / point_to_start_distance) * point_to_start_x * unit_x <=
+                0.0f) {
+            return point_to_start_distance;
+        }
+        {
+            float perpendicular = point_to_start_x * unit_y -
+                                 point_to_start_y * unit_x;
+            if (perpendicular < 0.0f) perpendicular = -perpendicular;
+            return perpendicular;
+        }
     }
-
-    t = ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy) /
-        length_sq;
-    if (t < 0.0f) {
-        nearest[0] = start[0];
-        nearest[1] = start[1];
-    }
-    else if (t > 1.0f) {
-        nearest[0] = end[0];
-        nearest[1] = end[1];
-    }
-    else {
-        nearest[0] = start[0] + t * dx;
-        nearest[1] = start[1] + t * dy;
-    }
-    return vec2_dist(point, nearest);
+    return point_to_end_distance;
 }
 
 // FUNCTION: LEGORR 0x00408b00

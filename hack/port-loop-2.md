@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **49.89% accuracy**, **48.56% progress**
+- Full report: **97.33% implemented**, **49.90% accuracy**, **48.57% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **45.13% accuracy**,
-  **44.63% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **45.16% accuracy**,
+  **44.65% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1372,6 +1372,35 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **97.33% / 49.89% / 48.56%** full and **98.88% / 45.13% / 44.63%**
   game-only. `distrobox enter developer -- make reccmp-report` and
   `git diff --check` passed; tests were not run.
+- The target ABI for `EntityTransformPositionGet` (`0x442260`) is three
+  arguments: entity, x-output pointer, and y-output pointer. The mapped body
+  now exposes that contract, retains the two-float-buffer helper for existing
+  callers, and both nearest-coordinate searches use the separate-output form.
+  `Type11CellCoordinateNearestResolve` (`0x44a3d0`) improved from **41.46% to
+  44.97%**. `EntityTransformPositionGet` moved from **25.40% to 23.19%** and
+  `NearestCellCoordinateWorldResolve` from **45.30% to 44.81%** after the
+  signature/body change. Current totals are **97.33% / 49.88% / 48.55%** full
+  and **98.88% / 45.15% / 44.64%** game-only. The MSVC 5.0 Reccmp build and
+  `git diff --check` passed; tests were not run. The target body still uses
+  portable entity/scene sidecars instead of the retail component lookup.
+- `CmdRegistryInit` (`0x401cf0`) now initializes the annotated task-name and
+  priority-name pointer tables in decompile order, alongside the behavior
+  table and pool globals. The x86 MSVC target body follows the retail store and
+  register sequence; port-only pool release and pending-list cleanup now live
+  in the `cmd_init` wrapper, which remains the production startup entry. The
+  target improved from **9.09% to 36.96%**. Current totals are **97.33% /
+  49.89% / 48.56%** full and **98.88% / 45.15% / 44.64%** game-only. The
+  developer-distrobox Reccmp build and `git diff --check` passed; tests were
+  not run. The remaining diff is primarily the relocated string operands and
+  symbol/global layout in the reconstructed executable.
+- `Segment2DPointDistance` (`0x4089d0`) now follows the decompile's normalized
+  segment direction and two endpoint dot-product gates. Its match rose from
+  **14.91% to 33.64%**; the caller `PointToPolylineMinimumSegmentDistance`
+  currently scores **29.73%**. The port computes the interior perpendicular
+  distance with an absolute cross product instead of reproducing the retail
+  x87 `asin`/`sin` sequence. Current totals are **97.33% / 49.90% / 48.57%**
+  full and **98.88% / 45.16% / 44.65%** game-only. The developer-distrobox
+  Reccmp build and `git diff --check` passed; tests were not run.
 
 ## Port loop
 
