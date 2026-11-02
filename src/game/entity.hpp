@@ -822,6 +822,9 @@ float entity_speed_component_get(const EntitySlot* e); /* FUN_0046a0a0 (+f8) */
  * layout and return the type-specific renderer component handle. */
 void* entity_type_component_get(const void* entity_record);
 void entity_slot_type_component_set(EntitySlot* entity, void* component);
+void entity_follow_target_pose_get(EntitySlot* entity, int index,
+                                   float position[3], float facing[3]);
+                                  /* FUN_0044a070 */
 uint32_t entity_type_operation_release(const EntitySlot* entity); /* FUN_00449ff0 */
 void entity_type_operation_fallback_handle_set(EntitySlot* entity,
                                                void* handle_1c);

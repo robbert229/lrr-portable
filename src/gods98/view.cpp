@@ -19,6 +19,7 @@
 #include "crt/crt.hpp"
 #include "model.hpp"
 #include "../game/ai.hpp"
+#include "../game/entity.hpp"
 
 #if defined(_MSC_VER)
 #define VIEW_COM_CALL __stdcall
@@ -5385,47 +5386,16 @@ static int object_lookup(EngineContext* ctx, int id)
     return s_view_object_lookup_hook != NULL
         ? s_view_object_lookup_hook(id, s_view_follow_target_context) : 0;
 }
-// FUNCTION: LEGORR 0x0044a070
 static int target_blend(EngineCameraTargetRecord* record, int target_id,
                         float* blend,
                         float* facing)
 {
     if (record != NULL && record->type >= 1u && record->type <= 3u &&
         record->source[record->type - 1u] != NULL &&
-        record->indexed_scene_resolve != NULL &&
         blend != NULL && facing != NULL) {
-        uint32_t component_present = 0u;
-        void* scene_object = record->indexed_scene_resolve(
-            record->source[record->type - 1u], (uint32_t)target_id,
-            &component_present);
-        if (scene_object != NULL &&
-            ddiscene_object_position_get(scene_object, NULL, blend) &&
-            ddiscene_object_facing_get(scene_object, NULL, facing)) {
-            record->scene_cache = scene_object;
-            record->cache_id = target_id;
-            record->component_present = component_present;
-            vec_normalize(facing);
-            if (component_present == 1u) {
-                facing[0] = -facing[0];
-                facing[1] = -facing[1];
-                facing[2] = -facing[2];
-            }
-            return 1;
-        }
-    }
-    if (record != NULL && record->type == 1u &&
-        record->source[0] != NULL &&
-        blend != NULL && facing != NULL) {
-        memcpy(blend, record->position, sizeof(record->position));
-        memcpy(facing, record->facing, sizeof(record->facing));
-        record->cache_id = target_id;
-        vec_normalize(facing);
-        if (record->component_present != 0u) {
-            facing[0] = -facing[0];
-            facing[1] = -facing[1];
-            facing[2] = -facing[2];
-        }
-        (void)target_id;
+        entity_follow_target_pose_get(
+            (EntitySlot*)record->source[record->type - 1u], target_id,
+            blend, facing);
         return 1;
     }
     if (s_view_target_blend_hook != NULL)
@@ -5439,7 +5409,7 @@ static int target_blend(EngineCameraTargetRecord* record, int target_id,
     if (facing != NULL) {
         facing[0] = facing[1] = facing[2] = 0.0f;
     }
-    return g_view_test_blend; /* 0 = deferred (TODO: FUN_0044a070) */
+    return g_view_test_blend;
 }
 
 /* ---- the ported tick ---------------------------------------------------- */
@@ -5546,6 +5516,8 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
         int target_dirty;
         cam_get_pos(&v->cam_world, pos);
         cam_get_facing(&v->cam_world, facing);
+        memcpy(target_pos, pos, sizeof(target_pos));
+        memcpy(target_facing, facing, sizeof(target_facing));
         if ((v->target_record == NULL &&
              s_view_target_blend_hook == NULL) || dt == 0.0f ||
             target_blend((EngineCameraTargetRecord*)v->target_record,

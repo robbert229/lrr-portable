@@ -318,6 +318,9 @@ void        level_destroy(LevelState* s);
 /* Grid size left in the block after a successful load. */
 LevelState* level_current_owner_get(void);
 void* level_current_terrain_get(int cell_x, int cell_y); /* FUN_00431570 */
+/* Shared predug pool used by nearest-coordinate and spawn paths. */
+extern int s_predug_coordinates[20][2];
+extern unsigned int s_predug_coordinate_count;
 int level_width(const LevelState* s);
 int level_height(const LevelState* s);
 

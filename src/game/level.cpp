@@ -1545,9 +1545,9 @@ static void predug_wall_cell(LevelState* s, int x, int y)
 /* The corpus keeps a bounded twenty-entry pool of the predug coordinates
  * encountered while loading the layer. */
 // GLOBAL: LEGORR 0x004e844c
-static int s_predug_coordinates[20][2];
+int s_predug_coordinates[20][2];
 // GLOBAL: LEGORR 0x004e853c
-static unsigned int s_predug_coordinate_count;
+unsigned int s_predug_coordinate_count;
 unsigned int level_predug_coordinate_count_get(void)
 {
     return s_predug_coordinate_count;
@@ -1565,6 +1565,27 @@ void level_predug_coordinate_pool_clear(void)
     s_predug_coordinate_count = 0u;
 }
 // FUNCTION: LEGORR 0x0044A4B0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void predug_coordinate_pool_append(const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [s_predug_coordinate_count]
+        cmp ecx, 14h
+        jae predug_append_return
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [eax]
+        mov dword ptr [ecx*8 + s_predug_coordinates], edx
+        mov ecx, dword ptr [s_predug_coordinate_count]
+        mov eax, dword ptr [eax + 4]
+        mov dword ptr [ecx*8 + s_predug_coordinates + 4], eax
+        mov eax, dword ptr [s_predug_coordinate_count]
+        inc eax
+        mov dword ptr [s_predug_coordinate_count], eax
+    predug_append_return:
+        ret
+    }
+}
+#else
 void predug_coordinate_pool_append(const int cell_xy[2])
 {
     volatile unsigned int* count = &s_predug_coordinate_count;
@@ -1576,6 +1597,7 @@ void predug_coordinate_pool_append(const int cell_xy[2])
         *count = slot + 1u;
     }
 }
+#endif
 
 /* LoadPredugLayer @ 0x42bd20 */
 // FUNCTION: LEGORR 0x0042bd20

@@ -2023,10 +2023,10 @@ int entity_set_activity_place(EntitySlot* e)
 }
 
 /* --- the entity activity scene-state leaf (see ai.hpp) ---------------------
- * DAT_004dee14's observed halves ride here as a zero-init static; the
- * corpus reads its global level word through the threaded GameContext. */
+ * This shared zero-init word owns the ported DAT_004dee14 bits. The corpus
+ * reads its level pointer through the threaded GameContext. */
 // GLOBAL: LEGORR 0x004dee14
-static uint32_t s_entity_state_flags;
+uint32_t s_entity_state_flags;
 
 void entity_activity_scene_state_update(GameContext* ctx)
 {

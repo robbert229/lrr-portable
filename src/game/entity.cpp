@@ -13344,6 +13344,50 @@ void entity_type_operation_fallback_handle_set(EntitySlot* entity,
     if (entity != NULL) entity->type_operation_fallback_1c = handle_1c;
 }
 
+/* EntityFollowTargetPoseGet (FUN_0044a070): resolve the indexed scene handle
+ * for entity kinds 1-3, read its world position and facing, normalize the
+ * facing vector, and reverse it when the type-specific component gate is 1. */
+// FUNCTION: LEGORR 0x0044a070
+void entity_follow_target_pose_get(EntitySlot* entity, int index,
+                                   float position[3], float facing[3])
+{
+    void* scene_object = NULL;
+    uint32_t component_present = 0u;
+    float secondary_facing[3];
+    float inverse_length;
+    if (entity == NULL || position == NULL || facing == NULL) return;
+    if (entity->type == 1) {
+        scene_object = entity_type1_scene_resource_indexed_get(
+            entity, (uint32_t)index, &component_present);
+    }
+    else if (entity->type == 2 || entity->type == 3) {
+        EntityActivityRunnerSidecar* runner;
+        scene_object = entity_activity_runner_indexed_get(
+            entity, entity->type, (uint32_t)index);
+        runner = entity->type == 2 ? &entity->activity_runner_type2
+                                   : &entity->activity_runner_type3;
+        component_present = runner->component_gate_value == 1u ? 1u : 0u;
+    }
+    else {
+        return;
+    }
+    if (scene_object == NULL) return;
+    (void)ddiscene_object_position_get(scene_object, NULL, position);
+    (void)ddiscene_object_facing_pair_get(scene_object, NULL, facing,
+                                         secondary_facing);
+    inverse_length = 1.0f / sqrtf(facing[0] * facing[0] +
+                                 facing[1] * facing[1] +
+                                 facing[2] * facing[2]);
+    facing[0] = inverse_length * facing[0];
+    facing[1] = inverse_length * facing[1];
+    facing[2] = inverse_length * facing[2];
+    if (component_present != 0u) {
+        facing[0] = -facing[0];
+        facing[1] = -facing[1];
+        facing[2] = -facing[2];
+    }
+}
+
 int entity_work_object_position_get(const EntitySlot* entity,
                                     float out_xy[2])
 {
@@ -13426,34 +13470,40 @@ int ledger_stub_0044a4f0_NearestCellCoordinateWorldResolve(
 {
     float target_xy[2];
     float best_distance = 10000.0f;
+    const int* coordinate = &s_predug_coordinates[0][0];
     unsigned int i;
-    unsigned int count = level_predug_coordinate_count_get();
-    int best_cell[2] = { 0, 0 };
-    int found = 0;
+    unsigned int best_index = 0xffffffffu;
+    unsigned int count = s_predug_coordinate_count;
     if (target == NULL) return 0;
     entity_transform_position_get(target, target_xy);
-    for (i = 0; i < count; ++i) {
-        int cell[2];
-        float world[3];
-        float dx;
-        float dy;
-        float distance;
-        if (!level_predug_coordinate_get(i, cell) ||
-            !terrain_cell_world_position_get(cell[0], cell[1], world)) continue;
-        dy = target_xy[1] - world[1];
-        dx = target_xy[0] - world[0];
-        distance = sqrtf(dy * dy + dx * dx);
-        if (distance < best_distance) {
-            best_distance = distance;
-            best_cell[0] = cell[0];
-            best_cell[1] = cell[1];
-            found = 1;
-        }
+    if (count != 0u) {
+        i = 0u;
+        do {
+            float world_x;
+            float world_y;
+            float dx;
+            float dy;
+            float distance;
+            if (map_cell_to_world_center(level_current_terrain_get(
+                    coordinate[0], coordinate[1]),
+                    (uint32_t)coordinate[0], (uint32_t)coordinate[1],
+                    &world_x, &world_y)) {
+                dy = target_xy[1] - world_y;
+                dx = target_xy[0] - world_x;
+                distance = sqrtf(dy * dy + dx * dx);
+                if (distance < best_distance) {
+                    best_distance = distance;
+                    best_index = i;
+                }
+            }
+            ++i;
+            coordinate += 2;
+        } while (i < count);
     }
-    if (!found) return 0;
+    if (best_index == 0xffffffffu) return 0;
     if (cell_xy_out != NULL) {
-        cell_xy_out[0] = best_cell[0];
-        cell_xy_out[1] = best_cell[1];
+        cell_xy_out[0] = s_predug_coordinates[best_index][0];
+        cell_xy_out[1] = s_predug_coordinates[best_index][1];
     }
     return 1;
 }

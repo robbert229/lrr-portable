@@ -11,8 +11,9 @@
  * 00475470/004755e0) are modeled as position/facing records (the native port
  * has no 3D-world projection yet); the corpus functions are implemented
  * against the record. World-query boundaries (grid pick FUN_0044f6d0,
- * terrain height FUN_0044f940, target blend FUN_0044a070) stay stubs with
- * corpus addresses until level/world data lands.
+ * terrain height FUN_0044f940) stay stubs with corpus addresses until
+ * level/world data lands. Entity target pose resolution is owned by the game
+ * entity module and mapped at FUN_0044a070.
  */
 #ifndef LEGORRR_VIEW_HPP
 #define LEGORRR_VIEW_HPP

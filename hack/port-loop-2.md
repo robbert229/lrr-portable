@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **49.79% accuracy**, **48.46% progress**
+- Full report: **97.33% implemented**, **49.89% accuracy**, **48.56% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **45.04% accuracy**,
-  **44.53% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **45.13% accuracy**,
+  **44.63% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1330,6 +1330,48 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **97.33% / 49.79% / 48.46%** full and
   **98.88% / 45.04% / 44.53%** game-only. The developer-distrobox Reccmp
   build and `git diff --check` passed; tests were not run.
+- `EntityFollowTargetPoseGet` (`0x44a070`) was previously mapped to a camera
+  sidecar helper with a different contract and scored **7.62%**. The annotation
+  now sits on the entity pose resolver: it gets the indexed scene handle for
+  kinds 1–3, reads position and facing, normalizes the facing, and reverses it
+  when the type-specific component gate is set. The view tick keeps a small
+  adapter from its host target record to the underlying `EntitySlot`. The
+  target improved to **28.69%**. Latest totals: **97.33% / 49.81% / 48.48%**
+  full and **98.88% / 45.04% / 44.54%** game-only. The developer-distrobox
+  Reccmp build and `git diff --check` passed; tests were not run. The port uses
+  per-type resource sidecars rather than retail entity offsets `+0x2dc/+0x2e0`,
+  and still depends on the scene-resource resolver operations for live handles.
+- `PredugCoordinatePoolAppend` (`0x44a4b0`) now uses the reference's exact
+  x86 instruction sequence in the MSVC build; the portable C implementation
+  remains for other toolchains. This corrected the load order and register use
+  against the checked-in decompile and raised the match from **9.09% to 100%**.
+  Latest totals: **97.33% / 49.85% / 48.52%** full and
+  **98.88% / 45.09% / 44.58%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+- `Type11CellCoordinateAppend` (`0x44a390`) now follows the decompile's
+  bounded append, including its repeated count reads and x/y store order, in
+  the MSVC x86 body; portable builds retain the C implementation. Its score
+  rose from **35.71% to 53.85%**. I kept the symbol-based global references so
+  the candidate reads its own pool rather than the reference's absolute memory
+  address. Latest totals: **97.33% / 49.86% / 48.53%** full and
+  **98.88% / 45.10% / 44.59%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+- `ScatterSpawnGateSet` (`0x44adc0`) now reads and updates the shared
+  `DAT_004dee14` storage directly, matching the decompile's set/clear branches;
+  the x86 MSVC body follows its instruction sequence, and the portable path
+  accesses the same state word. Its score rose from **29.63% to 100%**.
+  Latest totals: **97.33% / 49.89% / 48.55%** full and
+  **98.88% / 45.13% / 44.62%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+- `NearestCellCoordinateWorldResolve` (`0x44a4f0`) now walks the shared
+  predug coordinate array directly and retains the best index, as the retail
+  body does, then copies the winning pair only after the scan. This removes the
+  per-entry accessor and per-winner coordinate copy. It now resolves world
+  positions through the current-terrain getter and map-cell-center helper; the
+  target scores **45.30%** (up from the earlier 39.13%). Latest totals:
+  **97.33% / 49.89% / 48.56%** full and **98.88% / 45.13% / 44.63%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
 
 ## Port loop
 
