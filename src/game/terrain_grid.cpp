@@ -2622,6 +2622,31 @@ void terrain_cell_palette_resource_at_grid_position(
 /* TerrainCellPaletteResourceAtGridPosition returns the cell's palette
  * texture handle from the current level's +0x7c resource grid. */
 // FUNCTION: LEGORR 0x00429160
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void* terrain_cell_palette_resource_at_grid_position_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov edx, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [ecx + 7ch]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        mov al, byte ptr [edx + eax*8 + 1]
+        push eax
+        push ecx
+        call packed_grid_cell_value_get
+        add esp, 8
+        pop esi
+        ret
+    }
+}
+#else
 void* terrain_cell_palette_resource_at_grid_position_current(
     const int cell_xy[2])
 {
@@ -2676,6 +2701,7 @@ void* terrain_cell_palette_resource_at_grid_position_current(
     }
 #endif
 }
+#endif
 
 // FUNCTION: LEGORR 0x0044e4d0
 void terrain_grid_vertex_build(TerrainVertexBuildGrid* grid)

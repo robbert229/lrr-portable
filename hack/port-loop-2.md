@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **48.22% accuracy**, **46.93% progress**
+- Full report: **97.32% implemented**, **48.46% accuracy**, **47.17% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **43.28% accuracy**,
-  **42.79% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **43.55% accuracy**,
+  **43.06% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -982,6 +982,56 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **98.87% / 43.29% / 42.80%** game-only. Reccmp and `git diff --check`
   passed; tests were not run.
 
+- The active-level getter cluster now matches the reference bodies directly:
+  `ActiveEngineFieldB0Get` (`0x429850`),
+  `EngineFloatField210GetByIndex` (`0x429860`),
+  `EngineFloatField260Get` (`0x429880`), and `GlobalStateField84Get`
+  (`0x42b500`) each score **100%**. The explicit-level helpers remain for
+  callers that operate on non-active level records. The indexed float getter
+  uses a small MSVC x86 body to preserve the reference's argument/global-load
+  order; other targets use the portable C fallback. The latest report is
+  **97.32% / 48.35% / 47.06%** full and **98.87% / 43.43% / 42.94%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+
+- `TerrainCellEdgeFlagSetAndUpdate` (`0x42f2e0`) now computes the row-major
+  voxel record directly, sets or clears bit `0x200`, and calls the cell-init
+  worker with the reference's fourth zero argument. This removes the
+  bounds-checked record helper from the mapped body while keeping the live
+  widened voxel pointer. Its score rose from **25.00% to 45.61%**. Remaining
+  differences are the portable `LevelState` pointer sidecar offset and the
+  compiler's branch/register layout; the target still calls the same cell-init
+  worker. The latest report is **97.32% / 48.36% / 47.07%** full and
+  **98.87% / 43.44% / 42.95%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+
+- `TerrainCellByteStateClassify` (`0x42c5b0`) now reads the byte from the
+  active level's row-major voxel grid, initializes its five-value lookup on
+  the stack, clears all four output words in reference order, and dispatches
+  the selected value to the corresponding output. The explicit-level helper
+  retains its guarded behavior for non-target callers. The target rose from
+  **30.26% to 57.93%**. Its remaining diff is mostly the compiler's load and
+  switch layout. The latest report is **97.32% / 48.38% / 47.09%** full and
+  **98.87% / 43.46% / 42.97%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+
+- `TerrainCellMaterialGet` (`0x4319b0`) now reads the active-level voxel
+  byte directly. Its MSVC x86 body follows the reference's global, row-major
+  address, byte-load, and zero-extend sequence; the portable fallback uses the
+  native voxel sidecar. Its match rose from **15.38% to 100%**. The latest
+  report is **97.32% / 48.41% / 47.12%** full and
+  **98.87% / 43.49% / 43.00%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+
+- `TerrainCellPaletteResourceAtGridPosition` (`0x429160`) now matches the
+  reference's direct active-level lookup and palette dispatch. Its x86 entry
+  reads the row-major cell byte, combines it with `index * 9`, and passes the
+  resource table and packed selector to `PackedGridCellValueGet`; it returns
+  the selected handle to its caller. The target rose from **16.13% to 100%**.
+  Other platforms retain the guarded portable fallback. The latest report is
+  **97.32% / 48.45% / 47.15%** full and **98.87% / 43.53% / 43.04%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
+
 ## Port loop
 
 1. Start from the current worktree and report. Check `git status` and inspect
@@ -1018,3 +1068,12 @@ frontend display/config functions, and LWO/FLIC loading. Their scores are a
 triage aid, not proof that behavior is absent: inspect the implementation and
 call graph first. The report's `ledger_stub_*` names also do not by themselves
 mean the implementation body is empty.
+
+- `LevelMapCellGet` (`0x4319e0`) now follows the reference helper sequence: it
+  gets the map image, gets dimensions through the slot-based dimensions helper,
+  then reads the 16-bit cell value directly from the image payload. This avoids
+  the extra header and bounds-checked cell helpers in the mapped body. Its
+  score rose from **31.75% to 65.22%**. Latest report: **97.32% / 48.46% /
+  47.17%** full and **98.87% / 43.55% / 43.06%** game-only.
+  `distrobox enter developer -- make reccmp-report` and `git diff --check`
+  passed; tests were not run.

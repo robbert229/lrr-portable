@@ -3588,16 +3588,34 @@ int level_tile_type(const LevelState* s, int cx, int cy)
  * or active-level validation; callers must have an active level and in-range
  * cell coordinates. */
 // FUNCTION: LEGORR 0x004319b0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint8_t terrain_cell_material_get_current(int x, int y)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        mov eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        imul eax, dword ptr [esp + 8]
+        add eax, edx
+        xor edx, edx
+        lea eax, dword ptr [eax + eax*8]
+        mov dl, byte ptr [ecx + eax*8 + 2]
+        mov eax, edx
+        ret
+    }
+}
+#else
 uint8_t terrain_cell_material_get_current(int x, int y)
 {
-    LevelState* level = level_current_owner_get();
-    if (level == NULL) return 0u;
+    LevelState* level = g_active_level_retail;
     const uint32_t width = level->word[LEVEL_OFF_WIDTH / 4u];
     const uint8_t* voxels = (const uint8_t*)level->ptr_voxels;
     const uint32_t index = (uint32_t)y * width + (uint32_t)x;
     const uint8_t* record = voxels + index * LEVEL_VOXEL_STRIDE;
     return record[2];
 }
+#endif
 
 /* --- terrain-cell flag primitives ----------------------------------------
  * Core readers over the voxel record. The corpus family computes the record
@@ -5833,9 +5851,11 @@ void level_map_dimensions_get(uint32_t slot, uint32_t* width,
 uint16_t level_map_cell_get(uint32_t slot, int x, int y)
 {
     const uint8_t* img = level_map_slot_get(slot);
-    uint32_t w = 0, h = 0;
-    level_map_image_header(img, &w, &h);
-    return level_map_image_cell(img, x, (int)w, y);
+    uint32_t width, height;
+    uint32_t index;
+    level_map_dimensions_get(slot, &width, &height);
+    index = (uint32_t)y * width + (uint32_t)x;
+    return *(const uint16_t*)(img + 0x10u + index * 2u);
 }
 
 /* FUN_00433330: gated state-byte read through an out param. */
@@ -5944,29 +5964,38 @@ int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
 int terrain_cell_byte_state_classify_current(const int xy[2],
     uint32_t* out_a, uint32_t* out_b, uint32_t* out_c, uint32_t* out_d)
 {
-    static const uint32_t kTable[5] = { 1, 3, 5, 10, 25 };
-    LevelState* level = level_current_owner_get();
-    const int x = xy != NULL ? xy[0] : -1;
-    const int y = xy != NULL ? xy[1] : -1;
-    const uint8_t* record;
+    uint32_t values[5];
     uint32_t value;
     uint32_t index;
-    *out_a = 0;
-    *out_b = 0;
-    *out_c = 0;
-    *out_d = 0;
-    record = level_voxel(level, x, y);
-    value = record != NULL ? (uint32_t)record[0x05] : 0u;
-    if (value == 0u) return 0;
+    LevelState* level = g_active_level_retail;
+    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4u];
+    uint32_t cell_index = (uint32_t)xy[1] * width + (uint32_t)xy[0];
+    const uint8_t* voxels;
+#if defined(_WIN32) && defined(_M_IX86)
+    voxels = (const uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4u];
+#else
+    voxels = (const uint8_t*)level->ptr_voxels;
+#endif
+    value = (uint32_t)voxels[(size_t)cell_index * 0x48u + 5u];
+    values[0] = 1u;
+    values[1] = 3u;
+    values[2] = 5u;
+    values[3] = 10u;
+    values[4] = 25u;
     index = value - 1u;
-    value = (index >> 2) < 5u ? kTable[index >> 2] : 0u;
+    *out_d = 0u;
+    *out_c = 0u;
+    *out_b = 0u;
+    *out_a = 0u;
+    if (value == 0u) return 0;
+    value = *(uint32_t*)((uint8_t*)values + (index & 0xfffffffcu));
     switch (index & 3u) {
-        case 0u: *out_a = value; break;
-        case 1u: *out_c = value; break;
-        case 2u: *out_b = value; break;
-        default: *out_d = value; break;
+        case 0u: *out_a = value; return 1;
+        case 1u: *out_c = value; return 1;
+        case 2u: *out_b = value; return 1;
+        default: *out_d = value; return 1;
     }
-    return 1;
 }
 
 /* ActiveEngineFieldB0Get (FUN_00429850, findings 295/392): the active
@@ -5979,7 +6008,8 @@ uint32_t active_engine_field_b0_get(const LevelState* s)
 // FUNCTION: LEGORR 0x00429850
 uint32_t active_engine_field_b0_get_current(void)
 {
-    return active_engine_field_b0_get(level_current_owner_get());
+    return *(const uint32_t*)((const uint8_t*)g_active_level_retail +
+                              LEVEL_OFF_ENGINE_B0);
 }
 
 /* EngineFloatField210GetByIndex (FUN_00429860, findings 295/392): the
@@ -5993,17 +6023,37 @@ float engine_float_field210_get_by_index(const LevelState* s, int index)
 }
 
 // FUNCTION: LEGORR 0x00429860
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) float engine_float_field210_get_by_index_current(int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        fld dword ptr [ecx + eax*4 + 210h]
+        ret
+    }
+}
+#else
 float engine_float_field210_get_by_index_current(int index)
 {
-    return engine_float_field210_get_by_index(level_current_owner_get(),
-                                              index);
+    const uint8_t* active = (const uint8_t*)g_active_level_retail;
+    return *(const float*)(active + LEVEL_OFF_ENGINE_FLOATS + index * 4);
 }
+#endif
 
 /* EngineFloatField260Get (FUN_00429880, findings 295/392): the float at
  * active engine-state +0x260. */
 // FUNCTION: LEGORR 0x00429880
+static float engine_float_field260_get_current_target(void)
+{
+    return *(const float*)((const uint8_t*)g_active_level_retail +
+                           LEVEL_OFF_ENGINE_F260);
+}
+
 float engine_float_field260_get(const LevelState* s)
 {
+    if (s != NULL && s == g_active_level_retail)
+        return engine_float_field260_get_current_target();
     return s != NULL ? level_float(s, LEVEL_OFF_ENGINE_F260) : 0.0f;
 }
 
@@ -6043,12 +6093,19 @@ void air_supply_amount_update_current(const struct EntitySlot* e, float delta)
     air_supply_amount_update(level_current_owner_get(), e, delta);
 }
 
-/* GlobalStateField84Get (FUN_0042b500, findings 324/392): the dword at
- * +0x84; the field's meaning stays unresolved (finding 324 says so),
- * this is the faithful read. */
+/* GlobalStateField84Get (FUN_0042b500, findings 324/392): the retail getter
+ * reads +0x84 from the active level global and takes no arguments. */
 // FUNCTION: LEGORR 0x0042b500
+static uint32_t global_state_field84_get_current_target(void)
+{
+    return *(const uint32_t*)((const uint8_t*)g_active_level_retail +
+                              LEVEL_OFF_STATE84);
+}
+
 uint32_t global_state_field84_get(const LevelState* s)
 {
+    if (s != NULL && s == g_active_level_retail)
+        return global_state_field84_get_current_target();
     return s != NULL ? (uint32_t)level_int(s, LEVEL_OFF_STATE84) : 0u;
 }
 
@@ -8665,16 +8722,15 @@ void terrain_cell_flag20_clear_and_refresh(LevelState* s, int cx, int cy)
 void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
                                            int set)
 {
-    uint8_t* rec = cell_record_unchecked(s, cx, cy);
-    if (rec != NULL) {
-        uint32_t* word = (uint32_t*)(rec + 0x08);
-        if (set != 0) {
-            *word |= 0x200u;
-        } else {
-            *word &= 0xfffffdffu;
-        }
-    }
-    cell_init_pass(s, (float)cx, (uint32_t)cy);
+    uint32_t index = s->word[LEVEL_OFF_WIDTH / 4u] * (uint32_t)cy +
+                     (uint32_t)cx;
+    uint32_t* flags = (uint32_t*)((uint8_t*)s->ptr_voxels +
+                                  (size_t)index * 0x48u + 8u);
+    if (set != 0)
+        *flags |= 0x200u;
+    else
+        *flags &= 0xfffffdffu;
+    cell_init_pass(s, (float)cx, (uint32_t)cy, 0);
 }
 
 static TerrainEdgeMidpointUpdateFn s_terrain_edge_midpoint_update_hook;
