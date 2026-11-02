@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **49.90% accuracy**, **48.57% progress**
+- Full report: **97.33% implemented**, **49.94% accuracy**, **48.61% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **45.16% accuracy**,
-  **44.65% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **45.19% accuracy**,
+  **44.68% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1396,11 +1396,42 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
 - `Segment2DPointDistance` (`0x4089d0`) now follows the decompile's normalized
   segment direction and two endpoint dot-product gates. Its match rose from
   **14.91% to 33.64%**; the caller `PointToPolylineMinimumSegmentDistance`
-  currently scores **29.73%**. The port computes the interior perpendicular
-  distance with an absolute cross product instead of reproducing the retail
-  x87 `asin`/`sin` sequence. Current totals are **97.33% / 49.90% / 48.57%**
+  at that checkpoint scored **29.73%**. That version computed the interior
+  perpendicular distance with an absolute cross product. A later refinement
+  replaced it with the retail x87 `asin`/`sin` path (see the latest entry
+  below). Current totals at that checkpoint were **97.33% / 49.90% / 48.57%**
   full and **98.88% / 45.16% / 44.65%** game-only. The developer-distrobox
   Reccmp build and `git diff --check` passed; tests were not run.
+
+- `PolylineSegmentLengthsAndTotalCalculate` (`0x4067b0`) now follows the
+  decompile's pointer walk over adjacent point pairs and length slots, and
+  accumulates lengths at single precision. Its match rose from **12.50% to
+  29.03%**. `PathArcLengthInterpolate` (`0x4068c0`) now walks the same length
+  table and reads/interpolates the point pairs directly; its match rose from
+  **15.95% to 34.25%**. The x86 MSVC bodies retain the retail unchecked pointer
+  contract, while non-x86 builds keep null guards. Current totals are
+  **97.33% / 49.93% / 48.59%** full and **98.88% / 45.17% / 44.67%**
+  game-only. Two consecutive `distrobox enter developer -- make reccmp-report`
+  builds completed with the same per-function results, and `git diff --check`
+  passed; tests were not run.
+- `PointToPolylineMinimumSegmentDistance` (`0x408b00`) now exposes the retail
+  four-argument contract: query point, first polyline point, last polyline
+  point, and segment count. It preserves the decompile's byte-delta segment
+  walk and running minimum; its match rose from **29.73% to 59.26%**. In the
+  same report, the unchanged `Segment2DPointDistance` (`0x4089d0`) shifted from
+  **33.64% to 32.71%**; the cause is not isolated. Current totals are
+  **97.33% / 49.94% / 48.61%** full and **98.88% / 45.19% / 44.68%**
+  game-only. Two consecutive developer-distrobox Reccmp builds produced the
+  same per-function scores, and `git diff --check` passed; tests were not run.
+- `Segment2DPointDistance` (`0x4089d0`) now derives the interior distance
+  through the decompiled `asin` then x87 `fsin` sequence, retaining the two
+  endpoint dot-product gates. Its match rose from **32.71% to 39.11%**. The
+  adjacent `PointToPolylineMinimumSegmentDistance` remains **59.26%**; the
+  unchanged `PointProjectOntoLine2D` and `Point2DProjectOntoDirection` score
+  **40.43%** and **50.53%**. Current totals remain **97.33% / 49.94% / 48.61%**
+  full and **98.88% / 45.19% / 44.68%** game-only. Two consecutive developer
+  distrobox Reccmp builds returned the same per-function scores, and
+  `git diff --check` passed; tests were not run.
 
 ## Port loop
 

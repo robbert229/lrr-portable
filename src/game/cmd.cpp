@@ -1346,28 +1346,72 @@ void cmd_free(void* rec, int cancel)
  *  27 AI priorities, in the *address order* CmdRegistryInit writes them.
  * ------------------------------------------------------------------ */
 
-static const char* const TASK_NAMES[31] = {
-    /* slot = (addr - 0x4b3200)/4 */
-    "Goto", "Follow", "FollowAttack", "Collect", "Gather", "Deposit",
-    "Dump", "Request", "Dig", "Dynamite", "Repair", "Reinforce", "Clear",
-    "Wait", "AnimationWait", "ElecFence", "Eat", "GotoEat", "FindDriver",
-    "GetTool", "BirdScarer", "Upgrade", "BuildPath", "Train", "Depart",
-    "AttackPath", "AttackRockMonster", "Recharge", "Dock", "AttackObject",
-    "FindLoad",
-};
-static const char* const PRIO_NAMES[27] = {
-    /* slot = (addr - 0x4b327c)/4 */
-    "Crystal", "Ore", "DefaultCollect", "Destruction", "Construction",
-    "Request", "Reinforce", "Repair", "Clearing", "Storage", "Refining",
-    "HealthLow", "GetIn", "Upgrade", "BuildPath", "AttackRockMonster",
-    "Barrier", "FindLoad", "Recharge", "UpgradeBuilding", "Gather", "Steal",
-    "Punch", "Depart", "AttackPath", "AttackObject", "Congregate",
-};
+static const char s_cmd_task_goto[] = "Goto";
+static const char s_cmd_task_follow[] = "Follow";
+static const char s_cmd_task_follow_attack[] = "FollowAttack";
+static const char s_cmd_task_collect[] = "Collect";
+static const char s_cmd_task_gather[] = "Gather";
+static const char s_cmd_task_deposit[] = "Deposit";
+static const char s_cmd_task_dump[] = "Dump";
+static const char s_cmd_task_request[] = "Request";
+static const char s_cmd_task_dig[] = "Dig";
+static const char s_cmd_task_dynamite[] = "Dynamite";
+static const char s_cmd_task_repair[] = "Repair";
+static const char s_cmd_task_reinforce[] = "Reinforce";
+static const char s_cmd_task_clear[] = "Clear";
+static const char s_cmd_task_wait[] = "Wait";
+static const char s_cmd_task_animation_wait[] = "AnimationWait";
+static const char s_cmd_task_elec_fence[] = "ElecFence";
+static const char s_cmd_task_eat[] = "Eat";
+static const char s_cmd_task_goto_eat[] = "GotoEat";
+static const char s_cmd_task_find_driver[] = "FindDriver";
+static const char s_cmd_task_get_tool[] = "GetTool";
+static const char s_cmd_task_bird_scarer[] = "BirdScarer";
+static const char s_cmd_task_upgrade[] = "Upgrade";
+static const char s_cmd_task_build_path[] = "BuildPath";
+static const char s_cmd_task_train[] = "Train";
+static const char s_cmd_task_depart[] = "Depart";
+static const char s_cmd_task_attack_path[] = "AttackPath";
+static const char s_cmd_task_attack_rock_monster[] = "AttackRockMonster";
+static const char s_cmd_task_recharge[] = "Recharge";
+static const char s_cmd_task_dock[] = "Dock";
+static const char s_cmd_task_attack_object[] = "AttackObject";
+static const char s_cmd_task_find_load[] = "FindLoad";
+static const char s_cmd_priority_crystal[] = "Crystal";
+static const char s_cmd_priority_ore[] = "Ore";
+static const char s_cmd_priority_default_collect[] = "DefaultCollect";
+static const char s_cmd_priority_destruction[] = "Destruction";
+static const char s_cmd_priority_construction[] = "Construction";
+static const char s_cmd_priority_request[] = "Request";
+static const char s_cmd_priority_reinforce[] = "Reinforce";
+static const char s_cmd_priority_repair[] = "Repair";
+static const char s_cmd_priority_clearing[] = "Clearing";
+static const char s_cmd_priority_storage[] = "Storage";
+static const char s_cmd_priority_refining[] = "Refining";
+static const char s_cmd_priority_health_low[] = "HealthLow";
+static const char s_cmd_priority_get_in[] = "GetIn";
+static const char s_cmd_priority_upgrade[] = "Upgrade";
+static const char s_cmd_priority_build_path[] = "BuildPath";
+static const char s_cmd_priority_attack_rock_monster[] = "AttackRockMonster";
+static const char s_cmd_priority_barrier[] = "Barrier";
+static const char s_cmd_priority_find_load[] = "FindLoad";
+static const char s_cmd_priority_recharge[] = "Recharge";
+static const char s_cmd_priority_upgrade_building[] = "UpgradeBuilding";
+static const char s_cmd_priority_gather[] = "Gather";
+static const char s_cmd_priority_steal[] = "Steal";
+static const char s_cmd_priority_punch[] = "Punch";
+static const char s_cmd_priority_depart[] = "Depart";
+static const char s_cmd_priority_attack_path[] = "AttackPath";
+static const char s_cmd_priority_attack_object[] = "AttackObject";
+static const char s_cmd_priority_congregate[] = "Congregate";
+// GLOBAL: LEGORR 0x004b3200
+static const char* s_task_names[31];
+// GLOBAL: LEGORR 0x004b327c
+static const char* s_priority_names[27];
 // GLOBAL: LEGORR 0x004b32e8
 static int32_t s_behaviour[27]; /* DAT_004b32e8 by kind, DWORD stride */
 
-// FUNCTION: LEGORR 0x00401cf0
-void cmd_init(void)
+static void cmd_port_state_reset(void)
 {
     int i;
     for (i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
@@ -1382,28 +1426,211 @@ void cmd_init(void)
     s_global_tail = NULL;
     s_pending_assignment_count = 0;
     s_pending_timer_count = 0;
-    s_global_enabled = 1;
+}
+
+// FUNCTION: LEGORR 0x00401cf0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void cmd_registry_init_target(void)
+{
+    __asm {
+        push edi
+        mov ecx, 0ch
+        xor eax, eax
+        mov edi, offset s_blocks
+        rep stosd
+        mov ecx, 1bh
+        mov eax, 31h
+        mov edi, offset s_behaviour
+        mov dword ptr [s_task_names + 0h], offset s_cmd_task_goto
+        mov dword ptr [s_task_names + 4h], offset s_cmd_task_follow
+        mov dword ptr [s_task_names + 8h], offset s_cmd_task_follow_attack
+        mov dword ptr [s_task_names + 0ch], offset s_cmd_task_collect
+        mov dword ptr [s_task_names + 10h], offset s_cmd_task_gather
+        mov dword ptr [s_task_names + 30h], offset s_cmd_task_clear
+        mov dword ptr [s_task_names + 14h], offset s_cmd_task_deposit
+        mov dword ptr [s_task_names + 18h], offset s_cmd_task_dump
+        mov dword ptr [s_task_names + 1ch], offset s_cmd_task_request
+        mov dword ptr [s_task_names + 28h], offset s_cmd_task_repair
+        mov dword ptr [s_task_names + 20h], offset s_cmd_task_dig
+        mov dword ptr [s_task_names + 24h], offset s_cmd_task_dynamite
+        mov dword ptr [s_task_names + 2ch], offset s_cmd_task_reinforce
+        mov dword ptr [s_task_names + 34h], offset s_cmd_task_wait
+        mov dword ptr [s_task_names + 38h], offset s_cmd_task_animation_wait
+        mov dword ptr [s_task_names + 3ch], offset s_cmd_task_elec_fence
+        mov dword ptr [s_task_names + 40h], offset s_cmd_task_eat
+        mov dword ptr [s_task_names + 44h], offset s_cmd_task_goto_eat
+        mov dword ptr [s_task_names + 48h], offset s_cmd_task_find_driver
+        mov dword ptr [s_task_names + 4ch], offset s_cmd_task_get_tool
+        mov dword ptr [s_task_names + 50h], offset s_cmd_task_bird_scarer
+        mov dword ptr [s_task_names + 54h], offset s_cmd_task_upgrade
+        mov dword ptr [s_task_names + 58h], offset s_cmd_task_build_path
+        mov dword ptr [s_task_names + 5ch], offset s_cmd_task_train
+        mov dword ptr [s_task_names + 60h], offset s_cmd_task_depart
+        mov dword ptr [s_task_names + 64h], offset s_cmd_task_attack_path
+        mov dword ptr [s_task_names + 68h], offset s_cmd_task_attack_rock_monster
+        mov dword ptr [s_task_names + 6ch], offset s_cmd_task_recharge
+        mov dword ptr [s_task_names + 70h], offset s_cmd_task_dock
+        mov dword ptr [s_task_names + 74h], offset s_cmd_task_attack_object
+        mov dword ptr [s_task_names + 78h], offset s_cmd_task_find_load
+        mov dword ptr [s_priority_names + 0h], offset s_cmd_priority_crystal
+        mov dword ptr [s_priority_names + 4h], offset s_cmd_priority_ore
+        mov dword ptr [s_priority_names + 8h], offset s_cmd_priority_default_collect
+        mov dword ptr [s_priority_names + 0ch], offset s_cmd_priority_destruction
+        mov dword ptr [s_priority_names + 10h], offset s_cmd_priority_construction
+        mov dword ptr [s_priority_names + 14h], offset s_cmd_priority_request
+        mov dword ptr [s_priority_names + 18h], offset s_cmd_priority_reinforce
+        mov dword ptr [s_priority_names + 1ch], offset s_cmd_priority_repair
+        mov dword ptr [s_priority_names + 20h], offset s_cmd_priority_clearing
+        mov dword ptr [s_priority_names + 24h], offset s_cmd_priority_storage
+        mov dword ptr [s_priority_names + 28h], offset s_cmd_priority_refining
+        mov dword ptr [s_priority_names + 2ch], offset s_cmd_priority_health_low
+        mov dword ptr [s_priority_names + 30h], offset s_cmd_priority_get_in
+        mov dword ptr [s_priority_names + 34h], offset s_cmd_priority_upgrade
+        mov dword ptr [s_priority_names + 38h], offset s_cmd_priority_build_path
+        mov dword ptr [s_priority_names + 3ch], offset s_cmd_priority_attack_rock_monster
+        mov dword ptr [s_priority_names + 40h], offset s_cmd_priority_barrier
+        mov dword ptr [s_priority_names + 44h], offset s_cmd_priority_find_load
+        mov dword ptr [s_priority_names + 48h], offset s_cmd_priority_recharge
+        mov dword ptr [s_priority_names + 4ch], offset s_cmd_priority_upgrade_building
+        mov dword ptr [s_priority_names + 50h], offset s_cmd_priority_gather
+        mov dword ptr [s_priority_names + 54h], offset s_cmd_priority_steal
+        mov dword ptr [s_priority_names + 58h], offset s_cmd_priority_punch
+        mov dword ptr [s_priority_names + 5ch], offset s_cmd_priority_depart
+        mov dword ptr [s_priority_names + 60h], offset s_cmd_priority_attack_path
+        mov dword ptr [s_priority_names + 68h], offset s_cmd_priority_congregate
+        mov dword ptr [s_priority_names + 64h], offset s_cmd_priority_attack_object
+        mov edx, 63h
+        rep stosd
+        mov ecx, 14h
+        mov dword ptr [s_behaviour + 10h], 3ch
+        mov dword ptr [s_behaviour + 0ch], 28h
+        mov dword ptr [s_behaviour], 37h
+        mov dword ptr [s_behaviour + 24h], 5
+        mov dword ptr [s_behaviour + 20h], ecx
+        mov dword ptr [s_behaviour + 28h], 0fh
+        mov dword ptr [s_behaviour + 14h], ecx
+        mov dword ptr [s_behaviour + 18h], 46h
+        mov dword ptr [s_behaviour + 3ch], 38h
+        mov dword ptr [s_behaviour + 4ch], edx
+        mov dword ptr [s_behaviour + 54h], 5ah
+        mov dword ptr [s_behaviour + 58h], eax
+        mov dword ptr [s_behaviour + 50h], eax
+        xor eax, eax
+        mov dword ptr [s_behaviour + 5ch], eax
+        mov dword ptr [s_behaviour + 60h], ecx
+        mov dword ptr [s_behaviour + 68h], edx
+        mov dword ptr [s_behaviour + 64h], 1eh
+        mov dword ptr [s_free], eax
+        mov dword ptr [s_pool_level], eax
+        mov dword ptr [s_global_enabled], 1
+        pop edi
+        ret
+    }
+}
+#else
+#define CMD_TASK_NAME_SET(index, value) \
+    (((const char* volatile*)s_task_names)[index] = value)
+#define CMD_PRIORITY_NAME_SET(index, value) \
+    (((const char* volatile*)s_priority_names)[index] = value)
+void cmd_registry_init_target(void)
+{
+    int i;
+    for (i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
+        s_blocks[i] = NULL;
+    }
+
+    CMD_TASK_NAME_SET(0, "Goto");
+    CMD_TASK_NAME_SET(1, "Follow");
+    CMD_TASK_NAME_SET(2, "FollowAttack");
+    CMD_TASK_NAME_SET(3, "Collect");
+    CMD_TASK_NAME_SET(4, "Gather");
+    CMD_TASK_NAME_SET(12, "Clear");
+    CMD_TASK_NAME_SET(5, "Deposit");
+    CMD_TASK_NAME_SET(6, "Dump");
+    CMD_TASK_NAME_SET(7, "Request");
+    CMD_TASK_NAME_SET(10, "Repair");
+    CMD_TASK_NAME_SET(8, "Dig");
+    CMD_TASK_NAME_SET(9, "Dynamite");
+    CMD_TASK_NAME_SET(11, "Reinforce");
+    CMD_TASK_NAME_SET(13, "Wait");
+    CMD_TASK_NAME_SET(14, "AnimationWait");
+    CMD_TASK_NAME_SET(15, "ElecFence");
+    CMD_TASK_NAME_SET(16, "Eat");
+    CMD_TASK_NAME_SET(17, "GotoEat");
+    CMD_TASK_NAME_SET(18, "FindDriver");
+    CMD_TASK_NAME_SET(19, "GetTool");
+    CMD_TASK_NAME_SET(20, "BirdScarer");
+    CMD_TASK_NAME_SET(21, "Upgrade");
+    CMD_TASK_NAME_SET(22, "BuildPath");
+    CMD_TASK_NAME_SET(23, "Train");
+    CMD_TASK_NAME_SET(24, "Depart");
+    CMD_TASK_NAME_SET(25, "AttackPath");
+    CMD_TASK_NAME_SET(26, "AttackRockMonster");
+    CMD_TASK_NAME_SET(27, "Recharge");
+    CMD_TASK_NAME_SET(28, "Dock");
+    CMD_TASK_NAME_SET(29, "AttackObject");
+    CMD_TASK_NAME_SET(30, "FindLoad");
+
+    CMD_PRIORITY_NAME_SET(0, "Crystal");
+    CMD_PRIORITY_NAME_SET(1, "Ore");
+    CMD_PRIORITY_NAME_SET(2, "DefaultCollect");
+    CMD_PRIORITY_NAME_SET(3, "Destruction");
+    CMD_PRIORITY_NAME_SET(4, "Construction");
+    CMD_PRIORITY_NAME_SET(5, "Request");
+    CMD_PRIORITY_NAME_SET(6, "Reinforce");
+    CMD_PRIORITY_NAME_SET(7, "Repair");
+    CMD_PRIORITY_NAME_SET(8, "Clearing");
+    CMD_PRIORITY_NAME_SET(9, "Storage");
+    CMD_PRIORITY_NAME_SET(10, "Refining");
+    CMD_PRIORITY_NAME_SET(11, "HealthLow");
+    CMD_PRIORITY_NAME_SET(12, "GetIn");
+    CMD_PRIORITY_NAME_SET(13, "Upgrade");
+    CMD_PRIORITY_NAME_SET(14, "BuildPath");
+    CMD_PRIORITY_NAME_SET(15, "AttackRockMonster");
+    CMD_PRIORITY_NAME_SET(16, "Barrier");
+    CMD_PRIORITY_NAME_SET(17, "FindLoad");
+    CMD_PRIORITY_NAME_SET(18, "Recharge");
+    CMD_PRIORITY_NAME_SET(19, "UpgradeBuilding");
+    CMD_PRIORITY_NAME_SET(20, "Gather");
+    CMD_PRIORITY_NAME_SET(21, "Steal");
+    CMD_PRIORITY_NAME_SET(22, "Punch");
+    CMD_PRIORITY_NAME_SET(23, "Depart");
+    CMD_PRIORITY_NAME_SET(24, "AttackPath");
+    CMD_PRIORITY_NAME_SET(26, "Congregate");
+    CMD_PRIORITY_NAME_SET(25, "AttackObject");
 
     for (i = 0; i < 27; ++i) {
         s_behaviour[i] = 0x31;
     }
-    s_behaviour[0]  = 0x37;
-    s_behaviour[3]  = 0x28;
-    s_behaviour[4]  = 0x3c;
-    s_behaviour[5]  = 0x14;
-    s_behaviour[6]  = 0x46;
-    s_behaviour[8]  = 0x14;
-    s_behaviour[9]  = 5;
+    s_behaviour[4] = 0x3c;
+    s_behaviour[3] = 0x28;
+    s_behaviour[0] = 0x37;
+    s_behaviour[9] = 5;
+    s_behaviour[8] = 0x14;
     s_behaviour[10] = 0xf;
+    s_behaviour[5] = 0x14;
+    s_behaviour[6] = 0x46;
     s_behaviour[15] = 0x38;
     s_behaviour[19] = 99;
-    s_behaviour[20] = 0x31;
     s_behaviour[21] = 0x5a;
     s_behaviour[22] = 0x31;
+    s_behaviour[20] = 0x31;
     s_behaviour[23] = 0;
     s_behaviour[24] = 0x14;
-    s_behaviour[25] = 0x1e;
     s_behaviour[26] = 99;
+    s_behaviour[25] = 0x1e;
+    s_free = NULL;
+    s_pool_level = 0;
+    s_global_enabled = 1;
+}
+#undef CMD_TASK_NAME_SET
+#undef CMD_PRIORITY_NAME_SET
+#endif
+
+void cmd_init(void)
+{
+    cmd_port_state_reset();
+    cmd_registry_init_target();
 }
 
 // FUNCTION: LEGORR 0x00401cb0
@@ -1411,8 +1638,8 @@ int cmd_kind_by_name(const char* name, int* out)
 {
     /* stride-4 name-table walk, as the corpus: unsigned end compare (the
      * loop-back is jb) with the index counter beside the pointer (edi) */
-    const char* const* entry = PRIO_NAMES;
-    const char* const* end = PRIO_NAMES + 27;   /* 0x4b32e8 - 0x4b327c */
+    const char* const* entry = s_priority_names;
+    const char* const* end = s_priority_names + 27;
     int i = 0;
     for (; entry < end; ++entry, ++i) {
         /* cdecl stack order: push the table entry, then the query name. */
@@ -1434,11 +1661,11 @@ int cmd_kind_behaviour(int kind)
 
 const char* cmd_task_name(int slot)
 {
-    return (slot >= 0 && slot < 31) ? TASK_NAMES[slot] : NULL;
+    return (slot >= 0 && slot < 31) ? s_task_names[slot] : NULL;
 }
 const char* cmd_priority_name(int slot)
 {
-    return (slot >= 0 && slot < 27) ? PRIO_NAMES[slot] : NULL;
+    return (slot >= 0 && slot < 27) ? s_priority_names[slot] : NULL;
 }
 
 /* ------------------------------------------------------------------ *

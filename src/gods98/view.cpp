@@ -4063,7 +4063,12 @@ float segment_2d_point_distance(const float* point, const float* start,
             float perpendicular = point_to_start_x * unit_y -
                                  point_to_start_y * unit_x;
             if (perpendicular < 0.0f) perpendicular = -perpendicular;
-            return perpendicular;
+            {
+                const double angle = asin((double)perpendicular /
+                                           (double)point_to_start_distance);
+                return (float)(sin(angle) *
+                               (double)point_to_start_distance);
+            }
         }
     }
     return point_to_end_distance;
@@ -4071,18 +4076,28 @@ float segment_2d_point_distance(const float* point, const float* start,
 
 // FUNCTION: LEGORR 0x00408b00
 float point_to_polyline_minimum_segment_distance(const float* point,
-                                                 const float* points,
+                                                 const float* first_point,
+                                                 const float* last_point,
                                                  unsigned int segment_count)
 {
-    unsigned int i;
-    float minimum = segment_2d_point_distance(point, points, points + 2);
-    for (i = 1; i < segment_count; ++i) {
-        const float* segment_start = points + i * 2;
-        const float distance = segment_2d_point_distance(point, segment_start,
-                                                          segment_start + 2);
-        if (distance < minimum) {
-            minimum = distance;
+    float minimum = segment_2d_point_distance(point, first_point, last_point);
+    if (segment_count > 1u) {
+        const ptrdiff_t segment_bytes =
+            (const char*)last_point - (const char*)first_point;
+        uint32_t remaining = segment_count - 1u;
+        do {
+            float distance;
+            first_point = (const float*)((const char*)first_point + 8);
+            last_point = (const float*)((const char*)first_point +
+                                        segment_bytes);
+            distance = segment_2d_point_distance(point, first_point,
+                                                  last_point);
+            if (distance < minimum) {
+                minimum = distance;
+            }
+            remaining = remaining - 1u;
         }
+        while (remaining != 0u);
     }
     return minimum;
 }
@@ -8005,49 +8020,45 @@ void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
 uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
                                      float* out)
 {
+#if !defined(_MSC_VER) || !defined(_M_IX86)
     if (curve == NULL || out == NULL) {
         return 0u; /* deviation: the corpus strides both blindly */
     }
+#endif
     const uint32_t count = curve[0];
     float accumulated = 0.0f;
     uint32_t segment = 1u;
     if (count > 1u) {
+        const float* length = (const float*)(curve + 0x66);
         for (;;) {
-            float len = 0.0f;
-            __builtin_memcpy(&len, (const char*)curve + 4u * (0x65u + segment),
-                             sizeof len);
-            accumulated = accumulated + len;
+            accumulated = accumulated + *length;
             if (travel < accumulated) {
                 break;
             }
             segment = segment + 1u;
+            length = length + 1;
             if (segment >= count) {
                 break;
             }
         }
     }
 
-    float sx = 0.0f, sy = 0.0f;
-    __builtin_memcpy(&sx, (const char*)curve + 4u * (2u * segment - 1u),
-                     sizeof sx);
-    __builtin_memcpy(&sy, (const char*)curve + 4u * (2u * segment), sizeof sy);
+    const float* points = (const float*)curve;
 
     if (segment < count) {
-        float len = 0.0f;
-        __builtin_memcpy(&len, (const char*)curve + 4u * (0x65u + segment),
-                         sizeof len);
-        const float frac =
-            (travel - (accumulated - len)) / len; /* corpus ratio shape */
-        float ax = sx, ay = sy, bx = 0.0f, by = 0.0f;
-        __builtin_memcpy(&bx, (const char*)curve + 4u * (2u * segment + 1u),
-                         sizeof bx);
-        __builtin_memcpy(&by, (const char*)curve + 4u * (2u * segment + 2u),
-                         sizeof by);
-        out[0] = (bx - ax) * frac + ax;
-        out[1] = (by - ay) * frac + ay;
+        const float* point = points + (2u * segment - 1u);
+        const float next_x = point[2];
+        const float next_y = point[3];
+        const float len = points[0x65u + segment];
+        const float fraction = (travel - (accumulated - len)) / len;
+        out[0] = point[0];
+        out[1] = point[1];
+        out[0] = (next_x - out[0]) * fraction + out[0];
+        out[1] = (next_y - out[1]) * fraction + out[1];
     } else {
-        out[0] = sx;
-        out[1] = sy;
+        const float* point = points + (2u * segment - 1u);
+        out[0] = point[0];
+        out[1] = point[1];
     }
     return segment;
 }
@@ -8089,32 +8100,29 @@ void view_point_to_screen_geometry_transform(const void* view, float p[4])
 // FUNCTION: LEGORR 0x004067b0
 float polyline_segment_lengths_total(uint32_t* curve)
 {
+#if !defined(_MSC_VER) || !defined(_M_IX86)
     if (curve == NULL) {
         return 0.0f; /* deviation: the corpus strides the record blindly */
     }
+#endif
     const uint32_t count = curve[0];
-    float zero = 0.0f;
-    __builtin_memcpy((char*)curve + 0x194, &zero, sizeof zero);
-    double total = 0.0;
+    float total = 0.0f;
+    curve[0x65] = 0;
     if (count > 1u) {
-        for (uint32_t i = 1u; i < count; ++i) {
-            /* Corpus point pairs ride adjacent floats: x at +4+8i, y at
-             * +8+8i (the walker steps two dwords a hop). */
-            const size_t base = 4u + (size_t)(i - 1u) * 8u;
-            float ax = 0.0f, ay = 0.0f, bx = 0.0f, by = 0.0f;
-            __builtin_memcpy(&ax, (char*)curve + base, sizeof ax);
-            __builtin_memcpy(&ay, (char*)curve + base + 4, sizeof ay);
-            __builtin_memcpy(&bx, (char*)curve + base + 8, sizeof bx);
-            __builtin_memcpy(&by, (char*)curve + base + 12, sizeof by);
-            const float a[2] = { ax, ay };
-            const float b[2] = { bx, by };
-            const float len = vec2_dist_alt(a, b);
-            __builtin_memcpy((char*)curve + 0x198 + (size_t)(i - 1) * 4u,
-                             &len, sizeof len);
-            total += (double)len;
-        }
+        uint32_t segment = 1u;
+        uint32_t* point = curve;
+        float* length = (float*)(curve + 0x66);
+        do {
+            float segment_length = vec2_dist_alt((float*)(point + 1),
+                                                 (float*)(point + 3));
+            *length = segment_length;
+            segment = segment + 1u;
+            length = length + 1;
+            total = (float)(segment_length + total);
+            point = point + 2;
+        } while (segment < count);
     }
-    return (float)total;
+    return total;
 }
 
 // FUNCTION: LEGORR 0x00408b60

@@ -704,7 +704,8 @@ int type11_cell_coordinate_nearest_resolve(const EntitySlot* target,
     unsigned int i;
     unsigned int best_index = 0xffffffffu;
     if (target == NULL) return 0;
-    entity_transform_position_get(target, target_xy);
+    entity_transform_position_get_outputs(target, &target_xy[0],
+                                          &target_xy[1]);
     for (i = 0; i < s_type11_cell_coordinate_count; ++i) {
         float world[3];
         float dx;

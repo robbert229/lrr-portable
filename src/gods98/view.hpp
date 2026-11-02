@@ -439,7 +439,8 @@ float vec2_dist_alt(const float* a, const float* b); /* 2D corpus variant */
 float segment_2d_point_distance(const float* point, const float* start,
                                 const float* end); /* FUN_004089d0 */
 float point_to_polyline_minimum_segment_distance(const float* point,
-                                                 const float* points,
+                                                 const float* first_point,
+                                                 const float* last_point,
                                                  unsigned int segment_count);
 void matrix_rotation_compose_xyz(float* record); /* FUN_0040fb00 */
 /* D3DRMVectorRandom takes one D3DVECTOR* (three adjacent floats). */

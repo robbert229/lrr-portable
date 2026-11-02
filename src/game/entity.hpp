@@ -1029,8 +1029,11 @@ int entity_cell_type_speed_multiplier_resolve_current(
 int entity_route_cell_candidate_accept(const EntitySlot* entity,
                                        const struct LevelState* level,
                                        int x, int y, int mode); /* FUN_00443840 */
+void entity_transform_position_get_outputs(const EntitySlot* entity,
+                                           float* out_x,
+                                           float* out_y); /* FUN_00442260 */
 void entity_transform_position_get(const EntitySlot* entity,
-                                   float out_xy[2]); /* FUN_00442260 */
+                                   float out_xy[2]);
 int entity_work_object_position_get(const EntitySlot* entity,
                                     float out_xy[2]); /* FUN_0044a2a0 */
 int entity_world_center_position_read(const EntitySlot* entity,

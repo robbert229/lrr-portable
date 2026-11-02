@@ -7763,10 +7763,11 @@ int entity_route_cell_candidate_accept(const EntitySlot* entity,
 }
 
 // FUNCTION: LEGORR 0x00442260
-void entity_transform_position_get(const EntitySlot* entity, float out_xy[2])
+void entity_transform_position_get_outputs(const EntitySlot* entity,
+                                           float* out_x, float* out_y)
 {
     float position[3];
-    if (entity == NULL || out_xy == NULL) return;
+    if (entity == NULL || out_x == NULL || out_y == NULL) return;
     /* The reference resolves the kind-specific transform, then reads its
      * slot-zero position.  The attached scene object is the port's live
      * transform for objects whose type component has reached the renderer;
@@ -7774,12 +7775,19 @@ void entity_transform_position_get(const EntitySlot* entity, float out_xy[2])
     if (entity->attached_scene_object != NULL &&
         ddiscene_object_position_get(entity->attached_scene_object, NULL,
                                      position)) {
-        out_xy[0] = position[0];
-        out_xy[1] = position[1];
+        *out_x = position[0];
+        *out_y = position[1];
         return;
     }
-    out_xy[0] = entity->x;
-    out_xy[1] = entity->y;
+    *out_x = entity->x;
+    *out_y = entity->y;
+}
+
+void entity_transform_position_get(const EntitySlot* entity,
+                                   float out_xy[2])
+{
+    if (out_xy == NULL) return;
+    entity_transform_position_get_outputs(entity, &out_xy[0], &out_xy[1]);
 }
 
 // FUNCTION: LEGORR 0x00471CA0
@@ -13475,7 +13483,8 @@ int ledger_stub_0044a4f0_NearestCellCoordinateWorldResolve(
     unsigned int best_index = 0xffffffffu;
     unsigned int count = s_predug_coordinate_count;
     if (target == NULL) return 0;
-    entity_transform_position_get(target, target_xy);
+    entity_transform_position_get_outputs(target, &target_xy[0],
+                                          &target_xy[1]);
     if (count != 0u) {
         i = 0u;
         do {

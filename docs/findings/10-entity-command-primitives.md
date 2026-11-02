@@ -56,7 +56,9 @@ cross-references, see below).
 ## Kind registry (`CmdRegistryInit @ 0x401cf0`)
 
 `DAT_4b32e8[]` is not function pointers but numeric behaviour ids (default `0x31`), indexed
-by kind. Names live in two string tables resolved by `CmdKindByName`:
+by kind. `CmdRegistryInit` initializes the task-name pointer table at `DAT_4b3200` and the
+priority-name pointer table at `DAT_4b327c`; `CmdKindByName` resolves names through the
+priority table:
 
 - **31 AI task types**: `Goto, Follow, FollowAttack, Collect, Gather, Clear, Deposit, Dump,
   Request, Repair, Dig, Dynamite, Reinforce, Wait, AnimationWait, ElecFence, Eat, GotoEat,
