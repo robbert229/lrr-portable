@@ -59,6 +59,7 @@ static const void** s_stats_type_table[STATS_TYPE_TABLE_TYPES] = {
     s_stats_cell_ptr[18], s_stats_cell_ptr[19]
 };
 static int s_stats_cell_span[STATS_TYPE_TABLE_TYPES][STATS_TYPE_TABLE_ROWS];
+// GLOBAL: LEGORR 0x00502c28
 static float s_stats_cell_level_limit[STATS_TYPE_TABLE_TYPES]
                                      [STATS_TYPE_TABLE_ROWS];
 
@@ -2391,9 +2392,13 @@ static void* s_default_transform_apply_context;
 
 #define ENTITY_INDEXED_VALUE_GROUPS 11
 #define ENTITY_INDEXED_VALUE_CAPACITY 3
-static uint32_t s_entity_indexed_values[ENTITY_INDEXED_VALUE_GROUPS]
-                                      [ENTITY_INDEXED_VALUE_CAPACITY];
-static uint32_t s_entity_indexed_value_count[ENTITY_INDEXED_VALUE_GROUPS];
+typedef struct EntityIndexedValueGroup {
+    uint32_t values[ENTITY_INDEXED_VALUE_CAPACITY];
+    uint32_t count;
+} EntityIndexedValueGroup;
+// GLOBAL: LEGORR 0x005030d8
+static EntityIndexedValueGroup
+    s_entity_indexed_value_groups[ENTITY_INDEXED_VALUE_GROUPS];
 #define ENTITY_INDEXED_RECORD_TABLES 320
 struct EntityIndexedRecordTable {
     const void* const* records;
@@ -3213,45 +3218,111 @@ void rover_work_queue_update(EntitySlot* entity, int mode)
 
 void entity_indexed_value_table_clear(void)
 {
-    memset(s_entity_indexed_values, 0, sizeof(s_entity_indexed_values));
-    memset(s_entity_indexed_value_count, 0,
-           sizeof(s_entity_indexed_value_count));
+    memset(s_entity_indexed_value_groups, 0,
+           sizeof(s_entity_indexed_value_groups));
 }
 
 /* IndexedValueAppend (FUN_00469a90): append to one of the eleven
  * three-value groups; the count dword occupies the fourth word of each
  * 16-byte group in the reference table. */
 // FUNCTION: LEGORR 0x00469A90
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 void entity_indexed_value_append(int group, uint32_t value)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, ecx
+        shl eax, 4
+        mov edx, dword ptr [eax + s_entity_indexed_value_groups + 0ch]
+        lea eax, [eax + s_entity_indexed_value_groups + 0ch]
+        lea ecx, [edx + ecx*4]
+        mov edx, dword ptr [esp + 8]
+        mov dword ptr [ecx*4 + s_entity_indexed_value_groups], edx
+        mov ecx, dword ptr [eax]
+        inc ecx
+        mov dword ptr [eax], ecx
+        ret
+    }
+#else
     uint32_t count;
     if (group < 0 || group >= ENTITY_INDEXED_VALUE_GROUPS) {
         return;
     }
-    count = s_entity_indexed_value_count[group];
+    count = s_entity_indexed_value_groups[group].count;
     if (count < ENTITY_INDEXED_VALUE_CAPACITY) {
-        s_entity_indexed_values[group][count] = value;
-        s_entity_indexed_value_count[group] = count + 1u;
+        s_entity_indexed_value_groups[group].values[count] = value;
+        s_entity_indexed_value_groups[group].count = count + 1u;
     }
+#endif
 }
 
 /* GroupedCodeTableFindValueIndex (FUN_0046a120): scan the count-prefixed
  * fixed groups in order and return the first group containing the value. */
 // FUNCTION: LEGORR 0x0046A120
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 int entity_grouped_code_table_find_value_index(uint32_t value,
                                                int* out_group)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        push ebx
+        push esi
+        push edi
+        mov edi, dword ptr [esp + 10h]
+        xor esi, esi
+        mov eax, offset s_entity_indexed_value_groups
+    grouped_value_group_loop:
+        mov edx, dword ptr [eax + 0ch]
+        xor ecx, ecx
+        test edx, edx
+        jbe grouped_value_next_group
+        mov edx, eax
+    grouped_value_item_loop:
+        cmp edi, dword ptr [edx]
+        je grouped_value_found
+        mov ebx, dword ptr [eax + 0ch]
+        inc ecx
+        add edx, 4
+        cmp ecx, ebx
+        jb grouped_value_item_loop
+    grouped_value_next_group:
+        add eax, 10h
+        inc esi
+        cmp eax, offset s_entity_indexed_value_groups + 0b0h
+        jb grouped_value_group_loop
+        xor eax, eax
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    grouped_value_found:
+        mov eax, dword ptr [esp + 14h]
+        mov dword ptr [eax], esi
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    }
+#endif
+#if !defined(_MSC_VER) || !defined(_M_IX86)
     int group;
     for (group = 0; group < ENTITY_INDEXED_VALUE_GROUPS; ++group) {
         uint32_t i;
-        for (i = 0; i < s_entity_indexed_value_count[group]; ++i) {
-            if (s_entity_indexed_values[group][i] == value) {
+        for (i = 0; i < s_entity_indexed_value_groups[group].count; ++i) {
+            if (s_entity_indexed_value_groups[group].values[i] == value) {
                 if (out_group != NULL) *out_group = group;
                 return 1;
             }
         }
     }
     return 0;
+#endif
 }
 
 void entity_indexed_record_table_set(int group, const void* const* records,
@@ -3371,10 +3442,30 @@ uint32_t entity_indexed_record_word_at_f0_get(int group, int index, int slot)
 /* MappedIndexedRecordWordAtFCGet (FUN_0046a0c0) is the corresponding
  * +0xfc accessor over the same table. */
 // FUNCTION: LEGORR 0x0046A0C0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
                                                      int slot)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 0ch]
+        mov edx, dword ptr [eax*4 + s_stats_type_table]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 8]
+        mov edx, dword ptr [edx + ecx*4]
+        lea eax, [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [edx + eax + 0fch]
+        ret
+    }
+#else
     return entity_indexed_record_word_get(group, index, slot, 0xfcu);
+#endif
 }
 
 /* FUNCTION: LEGORR 0x00406540
@@ -9208,8 +9299,22 @@ const void* stats_type_table_cell(int type, int row)
  * beside the stats table. The loader writes the parsed integer as a float;
  * callers then consume that float's bits through an integer table read. */
 // FUNCTION: LEGORR 0x00469f40
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 uint32_t building_upgrade_admission_check(int type, int row)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 8]
+        lea eax, [eax + eax*2]
+        lea edx, [ecx*4]
+        lea eax, [eax + eax*4]
+        mov eax, dword ptr [edx + eax*4 + s_stats_cell_level_limit]
+        ret
+    }
+#else
     if (type < 0 || type >= STATS_TYPE_TABLE_TYPES
         || row < 0 || row >= STATS_TYPE_TABLE_ROWS) {
         return 0u; /* deviation: the corpus indexes the table blindly */
@@ -9218,6 +9323,7 @@ uint32_t building_upgrade_admission_check(int type, int row)
     __builtin_memcpy(&raw_word, &s_stats_cell_level_limit[type][row],
                      sizeof(raw_word));
     return raw_word;
+#endif
 }
 
 static uint32_t stats_table_read(int type, int row, int off, int stride_index)

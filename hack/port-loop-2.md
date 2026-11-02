@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **49.32% accuracy**, **48.00% progress**
+- Full report: **97.32% implemented**, **49.44% accuracy**, **48.12% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **44.49% accuracy**,
-  **43.99% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **44.63% accuracy**,
+  **44.12% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1172,6 +1172,32 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **97.32% / 49.32% / 48.00%** full and **98.87% / 44.49% / 43.99%**
   game-only. The MSVC 5.0 `distrobox enter developer -- make reccmp-report`
   build and `git diff --check` passed; tests were not run.
+- `BuildingUpgradeAdmissionCheck` (`0x469f40`) now reads the raw word from the
+  reference-mapped `DAT_00502c28` table using the retail x86 address
+  calculation (`type * 0x3c + row * 4`), with the bounds-checked portable
+  fallback retained. Its match rose from **29.63% to 100%**. Latest report:
+  **97.32% / 49.35% / 48.03%** full and **98.87% / 44.52% / 44.02%**
+  game-only. The MSVC 5.0 `distrobox enter developer -- make reccmp-report`
+  build and `git diff --check` passed; tests were not run.
+- The grouped-code table now uses the reference's eleven 16-byte entries at
+  `DAT_005030d8`, with three values followed by the count. Its x86 append and
+  search paths operate on the linked storage symbol so runtime writes reach
+  the actual writable table. `IndexedValueAppend` (`0x469a90`) rose from
+  **10.81% to 75.00%**, and `GroupedCodeTableFindValueIndex` (`0x46a120`) rose
+  from **34.15% to 94.12%**. Remaining score differences are global operands:
+  Reccmp sees the linked storage address instead of retail's fixed address.
+  Latest report: **97.32% / 49.40% / 48.08%** full and
+  **98.87% / 44.58% / 44.08%** game-only. The MSVC 5.0
+  `distrobox enter developer -- make reccmp-report` build and
+  `git diff --check` passed; tests were not run.
+- `MappedIndexedRecordWordAtFCGet` (`0x46a0c0`) now reads the installed
+  `DAT_00502bd8` type/row table directly and applies the retail
+  `slot * 0x150 + 0xfc` offset in its x86 body. The portable fallback keeps
+  the guarded generic reader. Its match rose from **11.11% to 100%**. Latest
+  report: **97.32% / 49.44% / 48.12%** full and
+  **98.87% / 44.63% / 44.12%** game-only. The MSVC 5.0
+  `distrobox enter developer -- make reccmp-report` build and
+  `git diff --check` passed; tests were not run.
 
 ## Port loop
 
