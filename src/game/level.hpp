@@ -675,6 +675,9 @@ uint32_t terrain_cell_flag_reserved_current(const int cell_xy[2]);
  * corpus twin that raises 0x40000000 additionally refreshes the cell
  * queues; this one is an unchecked pure leaf. */
 void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set);
+/* Retail target form takes a coordinate pair and an unchecked set selector. */
+void terrain_cell_flag_80000_clear_or_set_current(const int cell_xy[2],
+                                                   int set);
 
 /* FUN_004332c0: current-level unchecked pair-pointer byte return. */
 uint8_t terrain_cell_record_byte3_current(int x, int y);

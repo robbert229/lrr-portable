@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **47.14% accuracy**, **45.88% progress**
+- Full report: **97.32% implemented**, **47.56% accuracy**, **46.28% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **42.09% accuracy**,
-  **41.61% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **42.55% accuracy**,
+  **42.07% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -679,6 +679,89 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **97.32% / 47.14% / 45.88%** full and **98.87% / 42.09% / 41.61%**
   game-only. `distrobox enter developer -- make reccmp-report` and
   `git diff --check` passed; tests were not run.
+
+- `TerrainCellFlag40000000ClearOrSet` (`0x432560`) and
+  `TerrainCellFlag20TestInBounds` (`0x432d90`) now have direct MSVC x86 bodies
+  following the checked-in register-level decompile. The first preserves the
+  set/clear flag update and `CellInitPass` call; its score rose from 8.82% to
+  100%. The second retains unsigned bounds checks and returns the masked cell
+  flag; its score rose from 69.23% to 100%. The portable implementations
+  remain available on other builds. Full totals moved from **97.32% / 47.14% /
+  45.88%** to **97.32% / 47.19% / 45.93%**; game-only totals moved from
+  **98.87% / 42.09% / 41.61%** to **98.87% / 42.15% / 41.67%**. A repeated
+  report confirmed the 0x432560 score and unchanged neighboring score rows;
+  `distrobox enter developer -- make reccmp-report` built successfully and
+  `git diff --check` passed. Tests were not run.
+
+- The adjacent bounded terrain flag readers at `0x432b00` and `0x432b50` now
+  use direct x86 bodies matching the checked-in bounds, row-major address, and
+  `0x800`/`0x8` mask operations. Both rose from 69.23% to 100%. Along with the
+  preceding terrain batch, full totals are **97.32% / 47.22% / 45.95%**, and
+  game-only totals are
+  **98.87% / 42.17% / 41.70%**. Comparing complete report summaries, these two
+  targets changed and `TerrainCellWorkFlagClear` (`0x430320`) shifted 12.61% →
+  12.39% without a source edit; a repeat report reproduced the shift and all
+  four terrain flag matches. `distrobox enter developer -- make reccmp-report`
+  and `git diff --check` passed; tests were not run.
+
+- The bounded readers `0x432e60` (mask `0xc0`) and `0x432f90` (mask `0x4`)
+  now match their decompiled direct tests at 100%, from 66.67% and 69.23%.
+  The edit also restores the decompile's exact x86 leaf bodies for
+  `0x432170`, `0x4322d0`, `0x4323c0`, `0x432e90`, and `0x433060`; all five
+  returned to 100% after register-order shifts had dropped them to 76.92%.
+  Compiler-layout changes raised `0x432ec0` and `0x432f00` from 83.33% to
+  100%. `TerrainCellWorkFlagClear` (`0x430320`) moved 12.39% → 12.61%, while
+  `TerrainCellNormalSample` (`0x4512d0`) moved 9.48% → 8.53%; neither body was
+  changed. Full totals are now **97.32% / 47.26% / 46.00%**, and game-only
+  totals are **98.87% / 42.22% / 41.75%**. A repeat Reccmp run reproduced all
+  2,324 per-function scores exactly. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `TerrainCellWalkableFlagCheck` (`0x432bd0`) now follows the checked-in x86
+  predicate, including both grid-minus-one bounds and the `0x10`/`0x8` flag
+  gates. Its match rose from 73.33% to 100%. The build also shifted the two
+  adjacent state-byte tests (`0x432ec0` and `0x432f00`) from 83.33% to 100%;
+  direct x86 bodies now preserve those results. Full totals are **97.32% /
+  47.27% / 46.01%**, game-only totals **98.87% / 42.23% / 41.76%**. The only
+  other score change against the prior repeated report was the unedited
+  `TerrainCellNormalSample` (`0x4512d0`), which moved 8.53% → 7.58%; a repeat
+  reproduced it and the target matches. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `TerrainCellVisitedFlagSetAndTrack` (`0x432270`) now matches the reference's
+  voxel update and unbounded coordinate-pair append at 100%, from 69.57%.
+  `TerrainCellTypeSpeedClassGet` (`0x432c50`) now matches the flag gate and
+  `(flags & 3) + 1` result at 100%, from 84.21%. The portable implementations
+  remain in their non-MSVC-x86 branches. Full totals increased from **97.32% /
+  47.27% / 46.01%** to **97.32% / 47.29% / 46.03%**; game-only totals are now
+  **98.87% / 42.25% / 41.78%**. `TerrainCellWorkFlagClear` (`0x430320`) moved
+  12.61% → 12.39%, and `TerrainCellNormalSample` (`0x4512d0`) moved 7.58% →
+  8.53%; neither was edited. A repeat report reproduced every one of the
+  2,324 per-function scores. `distrobox enter developer -- make reccmp-report`
+  and `git diff --check` passed; tests were not run.
+
+- The terrain cell-update cluster now maps nine target bodies to the retail
+  x86 operations: `0x432100` sets/tracks the 0x100 mark; `0x4321a0` flushes
+  queued cells; `0x432200` snapshots the queue and clears that mark;
+  `0x432360`/`0x4323f0` clear/set paired cell masks and refresh; `0x432450`/
+  `0x432490` set their primary masks and refresh; `0x4324d0` sets or clears the
+  secondary 0x8 bit; and `0x432710` sets or clears primary 0x80000. All nine
+  now score 100%, from 14.29%, 37.04%, 14.81%, 47.06%, 47.06%, 29.63%, 29.63%,
+  43.90%, and 15.79%, respectively. The `0x432710` retail target now has its
+  own coordinate-pair ABI body; the LevelState-taking helper remains available
+  to gameplay callers. From the prior **97.32% / 47.29% / 46.03%** full and
+  **98.87% / 42.25% / 41.78%** game-only totals, the latest report is
+  **97.32% / 47.56% / 46.28%** full and **98.87% / 42.55% / 42.07%** game-only.
+  Comparing the last two complete reports, unedited functions shifted:
+  `EntityCommandUnlinkByKind` (`0x403d10`) 22.39% → 21.88%,
+  `TerrainCellWorkFlagClear` (`0x430320`) 12.61% → 12.39%,
+  `EntityTurnToVectorActivityIssue` (`0x444fb0`) 26.04% → 25.56%,
+  `EntityKind6TickDownMarkerSpawn` (`0x4489a0`) 34.36% → 33.13%,
+  `CellStepCommandIssueWithTargetMark` (`0x4492b0`) 19.69% → 18.65%,
+  `TerrainStateSurfacePointProjectOffset` (`0x44fb90`) 22.40% → 22.89%, and
+  `SceneNodeTransformMatrixApply` (`0x4882e0`) 14.94% → 15.72%. A repeat
+  report reproduced all 2,324 scores. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
 
 ## Port loop
 
