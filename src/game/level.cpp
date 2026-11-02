@@ -4343,25 +4343,42 @@ int level_cell_occupied_at(const LevelState* s, int cx, int cy)
 /* TerrainCoordinateAndOccupancyCheck (FUN_00433090) uses the current level
  * global and returns the masked flag word (not a normalized boolean). */
 // FUNCTION: LEGORR 0x00433090
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t level_cell_occupied_at_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [g_active_level_retail]
+        push esi
+        mov ecx, dword ptr [eax]
+        test ecx, ecx
+        jl level_cell_occupied_at_failed
+        mov esi, dword ptr [eax + 4]
+        test esi, esi
+        jl level_cell_occupied_at_failed
+        mov eax, dword ptr [edx + 14h]
+        cmp ecx, eax
+        jge level_cell_occupied_at_failed
+        cmp esi, dword ptr [edx + 18h]
+        jge level_cell_occupied_at_failed
+        imul eax, esi
+        add eax, ecx
+        mov ecx, dword ptr [edx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        and eax, 20000000h
+        pop esi
+        ret
+    level_cell_occupied_at_failed:
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
 uint32_t level_cell_occupied_at_current(const int cell_xy[2])
 {
-#if defined(_WIN32) && defined(_M_IX86)
-    LevelState* level = g_active_level_retail;
-    int x = cell_xy[0];
-    if (x < 0) return 0u;
-    int y = cell_xy[1];
-    if (y < 0) return 0u;
-    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
-    int height = (int)level->word[LEVEL_OFF_HEIGHT / 4];
-    if (x < width && y < height) {
-        uint8_t* voxels = (uint8_t*)(uintptr_t)
-            level->word[LEVEL_OFF_VOXELS / 4];
-        int index = width * y + x;
-        uint32_t flags = *(uint32_t*)(voxels + 8 + index * 0x48);
-        return flags & 0x20000000u;
-    }
-    return 0u;
-#else
     LevelState* level;
     int x;
     int y;
@@ -4375,8 +4392,8 @@ uint32_t level_cell_occupied_at_current(const int cell_xy[2])
     x = cell_xy[0];
     y = cell_xy[1];
     return cell_flag_word(level, x, y) & 0x20000000u;
-#endif
 }
+#endif
 
 /* FUN_004330e0: terrain/wave pair mask 0x180000. */
 int level_cell_mask_180000(const LevelState* s, int cx, int cy)
@@ -5217,23 +5234,33 @@ int level_cell_record_byte3(const LevelState* s, int cx, int cy)
 }
 
 // FUNCTION: LEGORR 0x004332c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint8_t terrain_cell_record_byte3_current(int x, int y)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        mov eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        imul eax, dword ptr [esp + 8]
+        add eax, edx
+        xor edx, edx
+        lea eax, dword ptr [eax + eax*8]
+        mov dl, byte ptr [ecx + eax*8 + 3]
+        mov eax, edx
+        ret
+    }
+}
+#else
 uint8_t terrain_cell_record_byte3_current(int x, int y)
 {
-#if defined(_WIN32) && defined(_M_IX86)
-    LevelState* level = g_active_level_retail;
-    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
-    uint8_t* voxels = (uint8_t*)(uintptr_t)
-        level->word[LEVEL_OFF_VOXELS / 4];
-    int index = width * y + x;
-    return voxels[3 + index * 0x48];
-#else
     LevelState* level = level_current_owner_get();
     const uint8_t* rec;
     if (level == NULL) return 0u;
     rec = cell_record_unchecked_const(level, x, y);
     return rec != NULL ? rec[3] : 0u;
-#endif
 }
+#endif
 
 /* Level-owned form used by map loading and simulation helpers. */
 void level_cell_work_flag_set(LevelState* s, int cx, int cy)
@@ -5253,20 +5280,41 @@ void level_cell_work_flag_set(LevelState* s, int cx, int cy)
 /* TerrainCellWorkFlagSet @ 0x004332f0 reads the current level global and
  * raises bit 2 only for coordinates strictly inside the final row/column. */
 // FUNCTION: LEGORR 0x004332f0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_work_flag_set_current(uint32_t cx,
+                                                            uint32_t cy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_work_flag_set_done
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_work_flag_set_done
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        or ecx, 4
+        mov dword ptr [eax], ecx
+    terrain_cell_work_flag_set_done:
+        pop edi
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy)
 {
-#if defined(_WIN32) && defined(_M_IX86)
-    LevelState* level = g_active_level_retail;
-    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
-    if (cx < width - 1u &&
-        cy < level->word[LEVEL_OFF_HEIGHT / 4] - 1u) {
-        uint32_t index = cy * width + cx;
-        uint8_t* voxels = (uint8_t*)(uintptr_t)
-            level->word[LEVEL_OFF_VOXELS / 4];
-        uint32_t* flags = (uint32_t*)(voxels + 8u + index * 0x48u);
-        *flags = *flags | 4u;
-    }
-#else
     GameContext* game = entity_pool_callback_context_get();
     LevelState* s = game != NULL ? game->level : NULL;
     uint32_t width, height;
@@ -5285,8 +5333,8 @@ void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy)
         flags = (uint32_t*)(rec + 0x08);
         *flags = *flags | 4u;
     }
-#endif
 }
+#endif
 
 /* TerrainCellWorkFlagClear (FUN_00430320): target-shaped implementation
  * below obtains the current level from GameContext. This explicit-level
@@ -5342,35 +5390,113 @@ void terrain_cell_work_flag_clear(LevelState* s, const int coord[2],
 /* TerrainCellWorkFlagClear @ 0x00430320 takes only the coordinate pair and
  * event selector; DAT_005560d4 supplies its level. */
 // FUNCTION: LEGORR 0x00430320
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_work_flag_clear_current(
+    const int coord[2], uint32_t selector)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push ebx
+        push esi
+        mov esi, dword ptr [esp + 0ch]
+        mov eax, dword ptr [ecx + 14h]
+        mov ebx, dword ptr [ecx + 0b8h]
+        mov edx, dword ptr [esi + 4]
+        push edi
+        imul eax, edx
+        mov edi, dword ptr [esi]
+        add eax, edi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ebx + eax*8]
+        mov ebx, dword ptr [eax + 8]
+        test bh, 4
+        jne terrain_cell_work_flag_clear_done
+        test byte ptr [eax + 0ch], 4
+        jne terrain_cell_work_flag_clear_done
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, edx
+        add eax, edi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        test ch, 80h
+        jne terrain_cell_work_flag_clear_done
+        push esi
+        call terrain_cell_predicate_check_current
+        add esp, 4
+        test eax, eax
+        jne terrain_cell_work_flag_clear_done
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 0ffdfffffh
+        mov dword ptr [eax], ecx
+        mov ecx, dword ptr [g_active_level_retail]
+        mov ebx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, ebx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov edi, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and edi, 0dfffffffh
+        mov dword ptr [eax], edi
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ebx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ebx, 0bfffffffh
+        mov dword ptr [eax], ebx
+        call entity_activity_scene_state_update_retail
+        push esi
+        call coordinate_pair_callback_dispatch
+        add esp, 4
+        push esi
+        call flic_opcode27_fallback_noop
+        mov ebx, dword ptr [esp + 18h]
+        add esp, 4
+        mov edi, 4
+    terrain_cell_work_flag_clear_queue_loop:
+        push ebx
+        push esi
+        call coordinate_pair_event_queue
+        add esp, 8
+        dec edi
+        jne terrain_cell_work_flag_clear_queue_loop
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        or ecx, 3
+        mov dword ptr [eax], ecx
+    terrain_cell_work_flag_clear_done:
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    }
+}
+#else
 void terrain_cell_work_flag_clear_current(const int coord[2],
                                           uint32_t selector)
 {
-#if defined(_WIN32) && defined(_M_IX86)
-    LevelState* level = g_active_level_retail;
-    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
-    int cell_index = width * coord[1] + coord[0];
-    uint8_t* voxels = (uint8_t*)(uintptr_t)
-        level->word[LEVEL_OFF_VOXELS / 4];
-    uint8_t* rec = voxels + cell_index * 0x48;
-    volatile uint32_t* flags = (volatile uint32_t*)(rec + 8);
-
-    if ((*flags & 0x400u) != 0u || (rec[0x0c] & 4u) != 0u ||
-        (*flags & 0x8000u) != 0u) return;
-    if (terrain_cell_predicate_check_current(
-            (const uint32_t*)coord) != 0) return;
-
-    *flags = *flags & 0xffdfffffu;
-    *flags = *flags & 0xdfffffffu;
-    *flags = *flags & 0xbfffffffu;
-    entity_activity_scene_state_update_retail();
-    coordinate_pair_callback_dispatch(coord);
-    ((void (*)(const int*))flic_opcode27_fallback_noop)(coord);
-    coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
-    coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
-    coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
-    coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
-    *flags = *flags | 3u;
-#else
     GameContext* game = entity_pool_callback_context_get();
     LevelState* s;
     uint8_t* rec;
@@ -5400,8 +5526,8 @@ void terrain_cell_work_flag_clear_current(const int coord[2],
     coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
     coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
     *flags |= 3u;
-#endif
 }
+#endif
 
 /* FUN_004502c0: unsigned pair membership (negative coords wrap). */
 // FUNCTION: LEGORR 0x004502c0
@@ -5582,22 +5708,47 @@ int level_cell_type_get_at(const LevelState* s, uint32_t cx, uint32_t cy,
 }
 
 // FUNCTION: LEGORR 0x00433330
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_type_get_at_current(
+    uint32_t cx, uint32_t cy, uint32_t* out_type)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_type_get_at_failed
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_type_get_at_failed
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        xor ecx, ecx
+        mov cl, byte ptr [eax + edx*8 + 2]
+        mov edx, dword ptr [esp + 14h]
+        mov eax, 1
+        mov dword ptr [edx], ecx
+        pop edi
+        pop esi
+        ret
+    terrain_cell_type_get_at_failed:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
 int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
                                      uint32_t* out_type)
 {
-#if defined(_WIN32) && defined(_M_IX86)
-    LevelState* level = g_active_level_retail;
-    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
-    if (cx < width - 1u &&
-        cy < level->word[LEVEL_OFF_HEIGHT / 4] - 1u) {
-        uint32_t index = cy * width + cx;
-        uint8_t* voxels = (uint8_t*)(uintptr_t)
-            level->word[LEVEL_OFF_VOXELS / 4];
-        *out_type = (uint32_t)voxels[2 + index * 0x48u];
-        return 1;
-    }
-    return 0;
-#else
     LevelState* level = level_current_owner_get();
     const int width = level_int(level, LEVEL_OFF_WIDTH);
     const int height = level_int(level, LEVEL_OFF_HEIGHT);
@@ -5607,8 +5758,8 @@ int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
         return 1;
     }
     return 0;
-#endif
 }
+#endif
 
 /* FUN_0042c5b0: byte classification over the five-entry table. */
 int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
@@ -6938,6 +7089,46 @@ void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
 /* MapCellTrackingFlagsClearAndRefresh (FUN_004302b0) reads the active level
  * global and receives only the coordinate pair in the retail ABI. */
 // FUNCTION: LEGORR 0x004302B0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void map_cell_tracking_flags_clear_and_refresh_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        mov eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        imul eax, dword ptr [esi + 4]
+        add eax, dword ptr [esi]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 8]
+        mov ecx, dword ptr [eax]
+        and ecx, 0dfffffffh
+        mov dword ptr [eax], ecx
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 0bfffffffh
+        mov dword ptr [eax], ecx
+        call entity_activity_scene_state_update_retail
+        push esi
+        call coordinate_pair_callback_dispatch
+        add esp, 4
+        push esi
+        call flic_opcode27_fallback_noop
+        add esp, 4
+        pop esi
+        ret
+    }
+}
+#else
 void map_cell_tracking_flags_clear_and_refresh_current(
     const int cell_xy[2])
 {
@@ -6967,6 +7158,7 @@ void map_cell_tracking_flags_clear_and_refresh_current(
     coordinate_pair_callback_dispatch(cell_xy);
     ((void (*)(const int*))flic_opcode27_fallback_noop)(cell_xy);
 }
+#endif
 
 /* TerrainCellStateUpdate (FUN_00432c90): the retail entry takes only the
  * coordinate pair and reads the active level global. Keep the explicit-level
@@ -7242,6 +7434,106 @@ int terrain_cell_variant_flag_propagate(LevelState* s, const int cell_xy[2])
 }
 
 // FUNCTION: LEGORR 0x00432600
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_variant_flag_propagate_current(
+    const int cell_xy[2])
+{
+    __asm {
+        sub esp, 28h
+        push ebx
+        push ebp
+        mov ebp, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 38h]
+        push edi
+        mov eax, dword ptr [ebp + 14h]
+        mov ecx, dword ptr [ebp + 0b8h]
+        imul eax, dword ptr [esi + 4]
+        add eax, dword ptr [esi]
+        lea eax, dword ptr [eax + eax*8]
+        lea edx, dword ptr [ecx + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        test eax, 200000h
+        je terrain_cell_variant_flag_propagate_failed
+        cmp byte ptr [edx + 2], 6
+        je terrain_cell_variant_flag_propagate_failed
+        xor ecx, ecx
+        or ebx, -1
+        mov edi, 1
+        mov dword ptr [esp + 10h], ecx
+        test eax, 80000000h
+        mov dword ptr [esp + 14h], ecx
+        mov dword ptr [esp + 18h], ecx
+        mov dword ptr [esp + 1ch], ebx
+        mov dword ptr [esp + 20h], edi
+        mov dword ptr [esp + 24h], ecx
+        mov dword ptr [esp + 28h], ecx
+        mov dword ptr [esp + 2ch], edi
+        mov dword ptr [esp + 30h], ebx
+        mov dword ptr [esp + 34h], ecx
+        je terrain_cell_variant_flag_propagate_mark_refresh
+        push ecx
+        push esi
+        call lava_erosion_pending_cell_add
+        mov eax, dword ptr [ebp + 14h]
+        mov ecx, dword ptr [esi]
+        imul eax, dword ptr [esi + 4]
+        add esp, 8
+        add eax, ecx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ebp + 0b8h]
+        mov byte ptr [eax + edx*8 + 7], 0
+        jmp terrain_cell_variant_flag_propagate_refresh
+    terrain_cell_variant_flag_propagate_mark_refresh:
+        or eax, 20000000h
+        mov dword ptr [edx + 8], eax
+    terrain_cell_variant_flag_propagate_refresh:
+        mov eax, dword ptr [ebp + 14h]
+        mov edx, dword ptr [esi]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        mov edx, dword ptr [ebp + 0b8h]
+        lea edi, dword ptr [esp + 10h]
+        mov ebx, 5
+        lea ecx, dword ptr [eax + eax*8]
+        lea eax, dword ptr [edx + ecx*8 + 8]
+        mov ecx, dword ptr [edx + ecx*8 + 8]
+        and ecx, 0bfffffffh
+        mov dword ptr [eax], ecx
+    terrain_cell_variant_flag_propagate_cell_init_loop:
+        mov eax, dword ptr [edi + 4]
+        mov edx, dword ptr [esi + 4]
+        mov ecx, dword ptr [esi]
+        add eax, edx
+        push 0
+        push eax
+        add ecx, dword ptr [edi]
+        push ecx
+        push ebp
+        call cell_init_pass
+        add esp, 10h
+        add edi, 8
+        dec ebx
+        jne terrain_cell_variant_flag_propagate_cell_init_loop
+        call entity_activity_scene_state_update_retail
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        add esp, 28h
+        ret
+    terrain_cell_variant_flag_propagate_failed:
+        pop edi
+        pop esi
+        pop ebp
+        xor eax, eax
+        pop ebx
+        add esp, 28h
+        ret
+    }
+}
+#else
 int terrain_cell_variant_flag_propagate_current(const int cell_xy[2])
 {
     static const int offsets[5][2] = {
@@ -7277,6 +7569,7 @@ int terrain_cell_variant_flag_propagate_current(const int cell_xy[2])
         entity_pool_callback_context_get(), s);
     return 1;
 }
+#endif
 
 void terrain_cell_flag100_set_and_track(LevelState* s, int cx, int cy)
 {
@@ -7572,29 +7865,44 @@ void terrain_cell_visited_flags_clear_all(LevelState* s)
  * DAT_005560d4. Keep the LevelState-taking form above as a portable adapter
  * for callers that already own an explicit level. */
 // FUNCTION: LEGORR 0x00432300
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_visited_flags_clear_all_current(void)
+{
+    __asm {
+        mov eax, dword ptr [s_cell_visited_track_count]
+        xor edx, edx
+        push esi
+        mov esi, dword ptr [g_active_level_retail]
+        test eax, eax
+        jbe terrain_cell_visited_flags_clear_all_done
+        push edi
+        mov ecx, offset s_cell_visited_track
+    terrain_cell_visited_flags_clear_all_loop:
+        mov eax, dword ptr [ecx + 4]
+        mov edi, dword ptr [ecx]
+        imul eax, dword ptr [esi + 14h]
+        add eax, edi
+        mov edi, dword ptr [esi + 0b8h]
+        add ecx, 8
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [edi + eax*8 + 0ch]
+        mov edi, dword ptr [eax]
+        and edi, 0fffffffdh
+        inc edx
+        mov dword ptr [eax], edi
+        mov eax, dword ptr [s_cell_visited_track_count]
+        cmp edx, eax
+        jb terrain_cell_visited_flags_clear_all_loop
+        pop edi
+    terrain_cell_visited_flags_clear_all_done:
+        mov dword ptr [s_cell_visited_track_count], 0
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_visited_flags_clear_all_current(void)
 {
-#if defined(_WIN32) && defined(_M_IX86)
-    LevelState* level = g_active_level_retail;
-    int* pair = &s_cell_visited_track[0][0];
-    volatile int* visited_count = &s_cell_visited_track_count;
-    int i = 0;
-    if (*visited_count != 0) {
-        do {
-            int x = *pair;
-            int y = pair[1];
-            uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
-            int index = width * y + x;
-            uint8_t* voxels = (uint8_t*)(uintptr_t)
-                level->word[LEVEL_OFF_VOXELS / 4];
-            uint32_t* word = (uint32_t*)(voxels + 0x0c + index * 0x48);
-            pair += 2;
-            *word = *word & 0xfffffffdu;
-            ++i;
-        } while (i < *visited_count);
-    }
-    *visited_count = 0;
-#else
     LevelState* s = terrain_current_level_resolve();
     int i;
     if (s == NULL) return;
@@ -7607,8 +7915,8 @@ void terrain_cell_visited_flags_clear_all_current(void)
         }
     }
     s_cell_visited_track_count = 0;
-#endif
 }
+#endif
 
 void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
                                                        int cx, int cy)
@@ -8269,6 +8577,80 @@ void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
 /* Retail ABI: pointer to center pair, then radius; level comes from the
  * process-global current level. */
 // FUNCTION: LEGORR 0x00435010
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_work_flag_circle_set_current(
+    const int center_xy[2], int radius)
+{
+    __asm {
+        sub esp, 0ch
+        mov eax, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 14h]
+        mov dword ptr [esp], eax
+        mov eax, edx
+        imul eax, edx
+        push esi
+        mov esi, edx
+        neg esi
+        push edi
+        mov edi, esi
+        cmp edi, edx
+        mov dword ptr [esp + 0ch], eax
+        mov dword ptr [esp + 10h], esi
+        jg terrain_cell_work_flag_circle_set_early_done
+        push ebp
+        mov ebp, dword ptr [esp + 1ch]
+        push ebx
+    terrain_cell_work_flag_circle_set_outer_loop:
+        mov ebx, edi
+        imul ebx, edi
+        cmp esi, edx
+        jg terrain_cell_work_flag_circle_set_outer_next
+    terrain_cell_work_flag_circle_set_inner_loop:
+        mov ecx, esi
+        mov eax, dword ptr [esp + 14h]
+        imul ecx, esi
+        add ecx, ebx
+        cmp ecx, eax
+        jg terrain_cell_work_flag_circle_set_next_column
+        mov eax, dword ptr [ebp]
+        lea ecx, dword ptr [esi + eax]
+        test ecx, ecx
+        jl terrain_cell_work_flag_circle_set_next_column
+        mov eax, dword ptr [esp + 10h]
+        cmp ecx, dword ptr [eax + 14h]
+        jge terrain_cell_work_flag_circle_set_next_column
+        mov eax, dword ptr [ebp + 4]
+        add eax, edi
+        test eax, eax
+        jl terrain_cell_work_flag_circle_set_next_column
+        mov edx, dword ptr [esp + 10h]
+        cmp eax, dword ptr [edx + 18h]
+        jge terrain_cell_work_flag_circle_set_after_mark
+        push eax
+        push ecx
+        call terrain_cell_work_flag_set_current
+        add esp, 8
+    terrain_cell_work_flag_circle_set_after_mark:
+        mov edx, dword ptr [esp + 24h]
+    terrain_cell_work_flag_circle_set_next_column:
+        inc esi
+        cmp esi, edx
+        jle terrain_cell_work_flag_circle_set_inner_loop
+        mov esi, dword ptr [esp + 18h]
+    terrain_cell_work_flag_circle_set_outer_next:
+        inc edi
+        cmp edi, edx
+        jle terrain_cell_work_flag_circle_set_outer_loop
+        pop ebx
+        pop ebp
+    terrain_cell_work_flag_circle_set_early_done:
+        pop edi
+        pop esi
+        add esp, 0ch
+        ret
+    }
+}
+#else
 void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
                                                int radius)
 {
@@ -8296,6 +8678,7 @@ void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
         }
     }
 }
+#endif
 
 /* TerrainNeighborWorkFlagScan (FUN_00431580): the work-flag breadth-first
  * sweep. A double-buffered float-pair queue (two pages of (w+h)*2 entries

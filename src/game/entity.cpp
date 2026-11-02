@@ -7270,7 +7270,131 @@ int entity_record_flag20_query(const EntitySlot* entity, int out_xy[2])
     return entity_vehicle_unload_adjacent_cell_find(entity, out_xy);
 }
 
+static uint32_t entity_cell_speed_rock_fall_name_find(const char* name)
+{
+    return lego::object_type_name_index_find(name);
+}
+
+static float entity_cell_speed_indexed_scale_get(int type,
+                                                  const void* entity_record)
+{
+    return lego::entity_indexed_float_lookup_with_minus_one_fallback(
+        type, entity_record);
+}
+
 // FUNCTION: LEGORR 0x00433180
+#if defined(_MSC_VER) && defined(_M_IX86)
+static const char s_entity_rock_fall_in_name[] = "RockFallIn";
+__declspec(naked) int entity_cell_type_speed_multiplier_resolve_current(
+    const EntitySlot* entity, int x, int y, float scale, float* out_scale)
+{
+    __asm {
+        push ebx
+        push ebp
+        mov ebp, dword ptr [esp + 0ch]
+        push esi
+        push edi
+        mov edi, dword ptr [g_active_level_retail]
+        mov eax, dword ptr [ebp]
+        cmp eax, 6
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 7
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 5
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 8
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 0bh
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 0dh
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 0eh
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 0fh
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 10h
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 11h
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 12h
+        je entity_cell_type_speed_multiplier_failed
+        cmp eax, 13h
+        je entity_cell_type_speed_multiplier_failed
+        mov eax, dword ptr [ebp + 36ch]
+        test eax, eax
+        je entity_cell_type_speed_multiplier_cell_test
+        push ebp
+        call entity_stats_word_get
+        add esp, 4
+        test eax, 20000h
+        je entity_cell_type_speed_multiplier_failed
+    entity_cell_type_speed_multiplier_cell_test:
+        mov esi, dword ptr [esp + 1ch]
+        mov ebx, dword ptr [esp + 18h]
+        mov eax, esi
+        mov ecx, dword ptr [edi + 0b8h]
+        imul eax, dword ptr [edi + 14h]
+        add eax, ebx
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8]
+        cmp byte ptr [eax + 2], 6
+        jne entity_cell_type_speed_multiplier_fallback
+        mov ecx, dword ptr [eax + 8]
+        test ch, 2
+        jne entity_cell_type_speed_multiplier_fallback
+        push ebp
+        call entity_state_flags_get
+        add esp, 4
+        test eax, 200000h
+        jne entity_cell_type_speed_multiplier_fallback
+        mov eax, dword ptr [esp + 24h]
+        test eax, eax
+        je entity_cell_type_speed_multiplier_success
+        mov edx, dword ptr [esp + 20h]
+        mov dword ptr [eax], edx
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    entity_cell_type_speed_multiplier_fallback:
+        imul esi, dword ptr [edi + 14h]
+        mov ecx, dword ptr [edi + 0b8h]
+        add esi, ebx
+        lea eax, dword ptr [esi + esi*8]
+        mov edx, dword ptr [ecx + eax*8 + 8]
+        test dh, 10h
+        je entity_cell_type_speed_multiplier_failed
+        mov esi, dword ptr [esp + 24h]
+        test esi, esi
+        je entity_cell_type_speed_multiplier_success
+        push ebp
+        push offset s_entity_rock_fall_in_name
+        call entity_cell_speed_rock_fall_name_find
+        add esp, 4
+        push eax
+        call entity_cell_speed_indexed_scale_get
+        fmul dword ptr [esp + 28h]
+        add esp, 8
+        fstp dword ptr [esi]
+    entity_cell_type_speed_multiplier_success:
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    entity_cell_type_speed_multiplier_failed:
+        pop edi
+        pop esi
+        pop ebp
+        xor eax, eax
+        pop ebx
+        ret
+    }
+}
+#else
 int entity_cell_type_speed_multiplier_resolve_current(
     const EntitySlot* entity, int x, int y, float scale, float* out_scale)
 {
@@ -7317,6 +7441,7 @@ int entity_cell_type_speed_multiplier_resolve_current(
     }
     return 0;
 }
+#endif
 
 int entity_cell_type_speed_multiplier_resolve(const EntitySlot* entity,
                                               const LevelState* level,
