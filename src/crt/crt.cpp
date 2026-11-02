@@ -1961,9 +1961,9 @@ uint32_t global_config_word_peek(void)  { return s_config_word; }
 
 /* --- display dimensions + request-record predicates (see crt.hpp) ---------- */
 // GLOBAL: LEGORR 0x00505924
-static int s_display_w;   /* DAT_00505924 */
+int s_display_w;           /* DAT_00505924 */
 // GLOBAL: LEGORR 0x00505928
-static int s_display_h;   /* DAT_00505928 */
+int s_display_h;           /* DAT_00505928 */
 
 // FUNCTION: LEGORR 0x00401c30
 int display_width_get(void)  { return s_display_w; }
@@ -3888,8 +3888,10 @@ void pair_table_append(void* table, int* count, const char* key,
  * has no ported writer; each word lands as a zero-init static and the six
  * getters answer their installed half (the unowned-global deviation, per the
  * DAT-window convention). The install hooks are port-side. */
-static uint32_t s_renderer_word_a;      /* DAT_0076ab24 */
-static uint32_t s_renderer_word_b;      /* DAT_0076ab28 */
+// GLOBAL: LEGORR 0x0076ab24
+uint32_t s_renderer_word_a;              /* DAT_0076ab24 */
+// GLOBAL: LEGORR 0x0076ab28
+uint32_t s_renderer_word_b;              /* DAT_0076ab28 */
 // GLOBAL: LEGORR 0x0076ab3c
 uint32_t g_renderer_word_c;             /* DAT_0076ab3c */
 // GLOBAL: LEGORR 0x0076ab40

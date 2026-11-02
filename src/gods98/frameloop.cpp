@@ -38,6 +38,7 @@
 namespace unported_ledger_stubs {
 int ledger_stub_004401b0_TerrainCellToWorldPosition(EntitySlot* entity,
                                                     int force);
+int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void);
 void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode);
 int ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
     EntitySlot* entity);
@@ -997,6 +998,23 @@ static void window_message_dispatch_pump(void)
     }
 }
 
+/* PointerOverrideExpiryTick (FUN_00462700): expire overrides, draw the
+ * current cursor, advance the sound/effect work, then pump one frame. */
+// FUNCTION: LEGORR 0x00462700
+void pointer_override_expiry_tick(float delta)
+{
+    media_pointer_cursor_override_tick(1.0f);
+    media_pointer_cursor_select(0);
+    pointer_cursor_draw_target(s_renderer_word_a, s_renderer_word_b);
+    (void)unported_ledger_stubs::
+        ledger_stub_00435550_GlobalStateZeroTransitionDetect();
+    s_window_mouse_word_4c = 0u;
+    sound_subsystem_frame_tick(delta);
+    timed_effect_runtime_update(s_renderer_word_a, s_renderer_word_b,
+                                (delta * 0.04f) * 1000.0f);
+    main_loop_frame_pump(1);
+}
+
 /* MainLoopFramePump (FUN_00477f30): drain Win32 messages, poll the active
  * input state, update the cursor, begin/present one renderer frame, submit
  * the optional projection overlay, then clear the once-per-frame feature bit. */
@@ -1095,6 +1113,7 @@ void window_state_initialize_retail(void* window)
 void window_runtime_state_initialize(void* window)
 {
     memset(&s_window_runtime_state, 0, sizeof(s_window_runtime_state));
+    display_dimensions_set(g_platform_cursor_width, g_platform_cursor_height);
     s_window_application_active = 0u;
     s_window_close_requested = 0u;
     g_renderer_word_c = 0u;

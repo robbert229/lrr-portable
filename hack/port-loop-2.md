@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **44.97% accuracy**, **43.77% progress**
+- Full report: **97.32% implemented**, **45.07% accuracy**, **43.87% progress**
   (2,326 compared entries out of 2,390).
-- Game-only report: **98.87% implemented**, **39.69% accuracy**,
-  **39.25% progress** (2,107/2,131).
+- Game-only report: **98.87% implemented**, **39.80% accuracy**,
+  **39.35% progress** (2,107/2,131).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -153,6 +153,43 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   pass. The latest report is **97.32% / 44.97% / 43.77%** full and
   **98.87% / 39.69% / 39.25%** game-only; `make reccmp-report` and
   `git diff --check` passed. Tests were not run.
+- `PointerOverrideExpiryTick` (`0x462700`) was mapped to the wrong reward-screen
+  helper. Its annotation now sits on the actual modal frame sequence in
+  `frameloop.cpp`: expire the media cursor override, select and draw the cursor,
+  detect the global transition, clear the mouse word, tick sound and timed
+  effects, then pump the frame. Its score rose from 4.59% to 93.94%. Keeping
+  the scale factors as float literals preserves the reference's separate x87
+  multiplications. The modal
+  ledger adapter now calls that body. Cursor client coordinates and the renderer
+  words at `0x76ab24/0x76ab28` now share one storage location; this removed the
+  duplicate global annotations and raised their accessor rows (`0x410b30` and
+  `0x410b40`) from 50% to 100%. At that checkpoint the report was
+  **97.32% / 45.04% / 43.84%** full and **98.87% / 39.77% / 39.32%** game-only.
+  A full rebuild also changed
+  unrelated rows: `0x432e90` fell 39.02% → 15.00%, `0x444fb0` 26.04% → 25.56%,
+  `0x4512d0` 9.48% → 7.58%, `0x47d800` 29.17% → 28.74%, `0x47e190` 19.92% →
+  18.33%, and `0x4882e0` 14.63% → 12.11%. Their sources were not edited in this
+  pass; investigate before attributing these codegen/report shifts. The
+  developer-distrobox Reccmp build and `git diff --check` passed; tests were not
+  run. Reccmp still reports the existing duplicate `0x505f88` global annotation
+  in `platform/winapi/entry.cpp`.
+- `CursorPositionUpdate` (`0x47f010`) now uses the target's window global
+  directly, leaves the `GetCursorPos` output uninitialized before the API
+  fills it, and clamps against the reference dimension globals
+  `DAT_00505924/28`. The runtime wrapper initializes those globals from the
+  platform client size, and the WinAPI `WM_SIZE` path refreshes them on resize.
+  Client coordinates now share the renderer's `DAT_0076ab24/28` storage, so
+  cursor sampling, input snapshots, and modal cursor drawing use the same live
+  coordinates. The target rose from 44.86% to 98.08%; the remaining Reccmp
+  difference is a single stack initialization. Latest totals are
+  **97.32% / 45.07% / 43.87%** full and **98.87% / 39.80% / 39.35%** game-only.
+  Other changed rows from the preceding report include `0x444680` (6.74% →
+  6.39%), `0x444fb0` (25.56% → 26.04%), `0x4512d0` (7.58% → 8.53%),
+  `0x459470` (12.62% → 21.20%), `0x47d800` (28.74% → 29.34%), `0x47e190`
+  (18.33% → 19.12%), and `0x48c690` (10.57% → 7.11%). Their bodies were not
+  edited in this pass; the `0x48c690` regression and the earlier
+  `0x432e90` drop to 15% remain to be investigated. The developer-distrobox
+  Reccmp build and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

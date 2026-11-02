@@ -571,6 +571,8 @@ uint32_t global_config_word_peek(void);            /* port hook */
 int  display_width_get(void);
 int  display_height_get(void);
 void display_dimensions_set(int w, int h); /* port hook */
+extern int s_display_w; /* DAT_00505924 */
+extern int s_display_h; /* DAT_00505928 */
 int  request_record_ready_flag4(int index);   /* FUN_0045ab30 */
 int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
 int  request_record_flag8_is_set(int index);  /* FUN_0045ab90 */
@@ -980,6 +982,8 @@ uint32_t renderer_word_a_get(void);
 uint32_t renderer_word_b_get(void);
 uint32_t renderer_word_c_get(void);
 void     renderer_word_c_set(uint32_t value);
+extern uint32_t s_renderer_word_a; /* DAT_0076ab24 */
+extern uint32_t s_renderer_word_b; /* DAT_0076ab28 */
 extern uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
 extern uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
 extern uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */

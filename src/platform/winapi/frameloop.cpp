@@ -4,6 +4,7 @@
  */
 #include "platform/platform.h"
 #include "gods98/frameloop.hpp"
+#include "crt/crt.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -84,6 +85,8 @@ static LRESULT CALLBACK platform_window_proc(HWND hwnd, UINT message,
         s_active_window->height = (int)((lparam >> 16) & 0xffff);
         g_platform_cursor_width = s_active_window->width;
         g_platform_cursor_height = s_active_window->height;
+        display_dimensions_set(g_platform_cursor_width,
+                               g_platform_cursor_height);
     }
     /* Retail's registered LAB_00478880 trampoline selects the handler from
      * DAT_00505f84 bit 1: fullscreen uses GameWindowProcedure; windowed mode

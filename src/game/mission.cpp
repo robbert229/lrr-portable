@@ -21,6 +21,7 @@
 #include "../gods98/surface.hpp"
 #include "util.hpp"
 #include "../gods98/input.hpp"
+#include "../gods98/frameloop.hpp"
 #include "../platform/platform.h"
 
 /* TaskBlockInit's stack name list and format operand are fixed image data. */
@@ -1814,7 +1815,6 @@ void reward_screen_transition_tick_abi(int* displayed_task_count,
     *elapsed = state->elapsed;
 }
 
-// FUNCTION: LEGORR 0x00462700
 void reward_pointer_override_expiry_tick(RewardScreenState* state,
                                          float delta,
                                          const RewardScreenOps* ops)
@@ -2402,7 +2402,7 @@ namespace unported_ledger_stubs {
 void ledger_stub_00462700_PointerOverrideExpiryTick(
     float delta)
 {
-    reward_pointer_override_expiry_tick_bound(delta);
+    pointer_override_expiry_tick(delta);
 }
 
 // RewardScrollTickerAdvanceAndDraw

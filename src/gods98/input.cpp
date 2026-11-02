@@ -84,10 +84,6 @@ void input_direct_state_bind(InputState* state)
 #include <ctype.h>
 
 static uint8_t s_global_current_keys[INPUT_KEY_COUNT];
-// GLOBAL: LEGORR 0x0076AB24
-static int s_cursor_client_x;
-// GLOBAL: LEGORR 0x0076AB28
-static int s_cursor_client_y;
 // GLOBAL: LEGORR 0x0076AB34
 static int s_cursor_delta_x;
 // GLOBAL: LEGORR 0x0076AB38
@@ -420,42 +416,42 @@ void input_cursor_position_update(void)
 {
     int x;
     int y;
-    int width;
-    int height;
 #if defined(LEGORRR_BACKEND_WINAPI)
-    HWND hwnd = (HWND)g_platform_cursor_window_handle;
     RECT client_rect;
     POINT client_origin;
     POINT cursor;
-    if (!GetClientRect(hwnd, &client_rect)) return;
+    if (!GetClientRect((HWND)g_platform_cursor_window_handle,
+                       &client_rect)) return;
     client_origin.x = 0;
     client_origin.y = 0;
-    cursor.x = 0;
-    cursor.y = 0;
-    ClientToScreen(hwnd, &client_origin);
+    ClientToScreen((HWND)g_platform_cursor_window_handle, &client_origin);
     GetCursorPos(&cursor);
     x = cursor.x - client_origin.x;
     y = cursor.y - client_origin.y;
+    if (x >= s_display_w) x = s_display_w - 1;
+    if (y >= s_display_h) y = s_display_h - 1;
 #else
+    int width;
+    int height;
     if (!platform_cursor_position_get(&x, &y)) return;
-#endif
     width = g_platform_cursor_width;
     height = g_platform_cursor_height;
     if (x >= width) x = width - 1;
     if (y >= height) y = height - 1;
+#endif
     if (x < 0) x = 0;
     if (y < 0) y = 0;
-    s_cursor_delta_x = x - s_cursor_client_x;
-    s_cursor_delta_y = y - s_cursor_client_y;
-    s_cursor_client_x = x;
-    s_cursor_client_y = y;
+    s_cursor_delta_x = x - (int32_t)s_renderer_word_a;
+    s_cursor_delta_y = y - (int32_t)s_renderer_word_b;
+    s_renderer_word_a = (uint32_t)x;
+    s_renderer_word_b = (uint32_t)y;
 }
 
 void input_cursor_position_sync(InputState* state)
 {
     if (state == NULL) return;
-    state->mouse_x = s_cursor_client_x;
-    state->mouse_y = s_cursor_client_y;
+    state->mouse_x = (int32_t)s_renderer_word_a;
+    state->mouse_y = (int32_t)s_renderer_word_b;
 }
 
 /* CursorSetClientPosition (FUN_0047f0d0): update the client-relative mouse
@@ -466,8 +462,8 @@ void input_cursor_client_position_set(int x, int y)
 {
     int screen_x = x;
     int screen_y = y;
-    s_cursor_client_x = x;
-    s_cursor_client_y = y;
+    s_renderer_word_a = (uint32_t)x;
+    s_renderer_word_b = (uint32_t)y;
     s_cursor_delta_x = 0;
     s_cursor_delta_y = 0;
     if (s_input_client_to_screen_hook != NULL) {
@@ -488,8 +484,8 @@ void input_cursor_client_position_set(int x, int y)
 
 void input_cursor_client_position_get(int* x, int* y)
 {
-    if (x != NULL) *x = s_cursor_client_x;
-    if (y != NULL) *y = s_cursor_client_y;
+    if (x != NULL) *x = (int32_t)s_renderer_word_a;
+    if (y != NULL) *y = (int32_t)s_renderer_word_b;
 }
 
 void input_cursor_delta_get(int* x, int* y)
