@@ -19,16 +19,16 @@ void pairing_activity_prepare(::EntitySlot* target);
 int entity_conditional_type_five_spawn(::EntitySlot* entity); /* 0x004470d0 */
 typedef struct SpawnTypeFiveFrameResourceOps {
     void* context;
-    /* Converts the portable CPU bitmap to the renderer-owned surface format
-     * and assigns it to one frame of the entity's +0x1c frame container. */
+    /* Assigns the opaque TextureSurfaceCreate handle selected for the cell
+     * to one frame of the entity's +0x1c frame container. */
     void (*frame_surface_set)(void* context, void* frame_container,
                               unsigned int frame_index,
-                              TextureSurface* surface);
+                              void* texture_resource);
 } SpawnTypeFiveFrameResourceOps;
 void spawn_type_five_frame_resource_ops_set(
     const SpawnTypeFiveFrameResourceOps* ops);
 void object_list_field_assign_all(::EntitySlot* entity,
-                                  TextureSurface* surface); /* 0x00440bf0 */
+                                  void* texture_resource); /* 0x00440bf0 */
 int entity_try_create_linked_at_position(::EntitySlot* entity, float cell_x,
                                          float cell_y,
                                          ::EntitySlot* linked); /* 0x004471b0 */

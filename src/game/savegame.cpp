@@ -13,6 +13,7 @@
 #include "gods98/record.hpp"
 #include "frontend.hpp"
 #include "level.hpp"
+#include "mission.hpp"
 #include "savegame.hpp"
 #include "options.hpp"
 #include "util.hpp"
@@ -38,6 +39,114 @@
  * DAT_004a2794 ("wb"). */
 static const char* MODE_RB = "rb";
 static const char* MODE_WB = "wb";
+static void* s_sav_tree_root[2]; /* the two corpus tree-root globals' role */
+static void** s_sav_owned_tree_nodes[2];
+static uint32_t s_sav_owned_tree_node_count[2];
+static GameContext* s_save_current_context;
+static int s_save_current_slot = -1;
+/* The six 0xb8-byte per-slot contexts from DAT_00557080..DAT_005574d0. */
+// GLOBAL: LEGORR 0x00557080
+static uint8_t s_sav_slot_context_blocks[SAVE_SLOTS * 0xb8];
+/* Wider-host pointers cannot fit the retail context's 32-bit +0x34 slot.
+ * Keep each scanned slot's record allocation beside its 0xb8-byte header. */
+static uint8_t* s_sav_slot_records[SAVE_SLOTS];
+static int32_t s_sav_slot_record_counts[SAVE_SLOTS];
+static void save_slot_sidecar_release(int slot);
+typedef struct SavVisitedBand {
+    void** items;
+    uint32_t* words;
+    uint32_t count;
+    int root_bound;
+} SavVisitedBand;
+static SavVisitedBand s_sav_visited_bands[2];
+
+static void sav_visited_band_release(int which);
+static int sav_visited_band_install(int which, void* const* items,
+                                    uint32_t count);
+
+int save_write_record_target(int index, const uint8_t* blob);
+void* sav_build_ctx_target(void);
+int save_slot_get_target(void);
+void save_slot_set_target(int slot);
+void save_slot_selection_clear_target(void);
+void* sav_slot_ctx_target(int slot);
+void* sav_record_ptr_target(int index);
+
+void save_context_bind(GameContext* ctx)
+{
+    if (ctx != NULL) {
+        s_save_current_context = ctx;
+        s_save_current_slot = ctx->save_slot;
+    }
+}
+
+GameContext* save_current_context_get(void)
+{
+    return s_save_current_context;
+}
+
+static void sav_tree_owned_visit_flags_clear(int which)
+{
+    uint32_t i;
+    if (which < 0 || which > 1) return;
+    for (i = 0u; i < s_sav_owned_tree_node_count[which]; ++i) {
+        SavTreeNode* node = (SavTreeNode*)s_sav_owned_tree_nodes[which][i];
+        if (node != NULL) node->visited = 0u;
+    }
+}
+
+static void sav_tree_owned_nodes_release(int which)
+{
+    uint32_t i;
+    if (which < 0 || which > 1) return;
+    for (i = 0u; i < s_sav_owned_tree_node_count[which]; ++i) {
+        SavTreeNode* node = (SavTreeNode*)s_sav_owned_tree_nodes[which][i];
+        if (node != NULL) {
+            engine_heap_free(node->children);
+            engine_heap_free(node);
+        }
+    }
+    free(s_sav_owned_tree_nodes[which]);
+    s_sav_owned_tree_nodes[which] = NULL;
+    s_sav_owned_tree_node_count[which] = 0u;
+    s_sav_tree_root[which] = NULL;
+    sav_visited_band_release(which);
+    active_object_list_count_set(which, 0);
+}
+
+static int save_tree_count_visit(void* node, void* user)
+{
+    uint32_t* count = (uint32_t*)user;
+    (void)node;
+    ++*count;
+    return 0;
+}
+
+static int save_tree_level_count(int which, uint32_t* count_out)
+{
+    uint32_t count = 0u;
+    if (which < 0 || which > 1 || count_out == NULL ||
+        s_sav_tree_root[which] == NULL) return 0;
+    sav_tree_owned_visit_flags_clear(which);
+    (void)sav_tree_walk(s_sav_tree_root[which], save_tree_count_visit,
+                        &count);
+    sav_clear_visited();
+    sav_tree_owned_visit_flags_clear(which);
+    *count_out = count;
+    return 1;
+}
+
+static int save_current_level_counts(uint32_t* campaign_count,
+                                     uint32_t* tutorial_count)
+{
+    int campaign_found;
+    if (campaign_count == NULL || tutorial_count == NULL) return 0;
+    campaign_found = save_tree_level_count(0, campaign_count);
+    if (!campaign_found) *campaign_count = 0u;
+    if (!save_tree_level_count(1, tutorial_count))
+        *tutorial_count = 0u;
+    return campaign_found;
+}
 
 /* SaveDirectoryEnsureExists (FUN_0047f6a0): the engine's directory-create
  * wrapper. The port receives the resolved save path directly rather than
@@ -55,6 +164,10 @@ void save_init(GameContext* ctx)
     if (ctx == NULL) {
         return;
     }
+    for (int slot = 0; slot < SAVE_SLOTS; ++slot)
+        save_slot_sidecar_release(slot);
+    memset(s_sav_slot_context_blocks, 0, sizeof(s_sav_slot_context_blocks));
+    s_save_current_context = ctx;
     ctx->save_slot = -1;
     snprintf(ctx->saves_dir, sizeof(ctx->saves_dir), "Saves");
     ctx->current_record = 0;
@@ -69,18 +182,21 @@ void save_init(GameContext* ctx)
     ctx->osf_shadow = NULL;
     ctx->osf_shadow_count = 0;
     ctx->osf_shadow_dirty = 0;
+    s_save_current_slot = ctx->save_slot;
 }
 
-// FUNCTION: LEGORR 0x00417e90
 int save_slot_get(const GameContext* ctx)
 {
-    return ctx != NULL ? ctx->save_slot : -1;
+    if (ctx == NULL) return -1;
+    save_context_bind((GameContext*)ctx);
+    return ctx->save_slot;
 }
 
-// FUNCTION: LEGORR 0x00417ea0
 void save_slot_set(GameContext* ctx, int slot)
 {
     if (ctx != NULL) {
+        save_context_bind(ctx);
+        save_slot_set_target(slot);
         ctx->save_slot = slot;
     }
 }
@@ -100,6 +216,60 @@ static void save_release_records(GameContext* ctx)
     ctx->records = NULL;
     ctx->record_count = 0;
     ctx->active_slot = -1;
+}
+
+static void save_slot_sidecar_release(int slot)
+{
+    if (slot < 0 || slot >= SAVE_SLOTS) return;
+    free(s_sav_slot_records[slot]);
+    s_sav_slot_records[slot] = NULL;
+    s_sav_slot_record_counts[slot] = 0;
+}
+
+/* SavWriteSlot(slot, 0) creates an empty file sized for the current campaign
+ * tree. This path does not change the process-global active slot or its
+ * GameContext record allocation. */
+static int save_slot_write_fresh_file(GameContext* ctx, int slot,
+                                      uint32_t record_count)
+{
+    char path[280];
+    uint8_t header[SAVE_HEADER_SIZE];
+    uint8_t* records = NULL;
+    size_t wrote;
+    GameOptions defaults;
+    int ok = 0;
+    if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS ||
+        record_count > 0x1000u) return 0;
+    save_directory_ensure_exists(ctx->saves_dir[0] != '\0'
+                                     ? ctx->saves_dir : "Saves");
+    save_slot_path(ctx, path, sizeof(path), slot, "sav");
+    memset(header, 0, sizeof(header));
+    options_defaults(&defaults);
+    __builtin_memcpy(header + 0x08, &defaults.sfx_volume, 4);
+    __builtin_memcpy(header + 0x0c, &defaults.game_speed, 4);
+    __builtin_memcpy(header + 0x10, &defaults.music_volume, 4);
+    __builtin_memcpy(header + 0x18, &record_count, 4);
+    if (record_count != 0u) {
+        if ((size_t)record_count > ((size_t)-1) / SAVE_RECORD_SIZE)
+            return 0;
+        records = (uint8_t*)calloc((size_t)record_count, SAVE_RECORD_SIZE);
+        if (records == NULL) return 0;
+    }
+    FILE* fp = fopen(path, MODE_WB);
+    if (fp == NULL) {
+        free(records);
+        return 0;
+    }
+    wrote = fwrite(header, 1, sizeof(header), fp);
+    ok = wrote == sizeof(header);
+    if (ok && record_count != 0u) {
+        wrote = fwrite(records, 1,
+                       (size_t)record_count * SAVE_RECORD_SIZE, fp);
+        ok = wrote == (size_t)record_count * SAVE_RECORD_SIZE;
+    }
+    fclose(fp);
+    free(records);
+    return ok;
 }
 
 /* Fresh empty slot context — corpus SavWriteSlot's bootstrap: count 5,
@@ -138,10 +308,12 @@ static int sav_write_slot_file(GameContext* ctx)
     uint8_t header[SAVE_HEADER_SIZE] = { 0 };
     int32_t count = (int32_t)ctx->record_count;
     __builtin_memcpy(header + 0x18, &count, 4);
-    /* Options/Advanced stamp (issue #85): the corpus persists the slot's
-     * speed/volume/brightness words alongside the records (SavReadSlot ->
-     * OptionsApplyFromSlot); the port stamps an option block at +0x20. */
-    options_save_header(&ctx->options, header + 0x20);
+    /* The retail 0xb0-byte header is the slot context's raw prefix. The
+     * tracked option words occupy +0x08/+0x0c/+0x10; +0x20 is ordinary
+     * context data, not a port-specific options extension. */
+    __builtin_memcpy(header + 0x08, &ctx->options.sfx_volume, 4);
+    __builtin_memcpy(header + 0x0c, &ctx->options.game_speed, 4);
+    __builtin_memcpy(header + 0x10, &ctx->options.music_volume, 4);
     size_t wrote = fwrite(header, 1, SAVE_HEADER_SIZE, fp);
     if (wrote == SAVE_HEADER_SIZE && count > 0) {
         wrote = fwrite(ctx->records, 1, (size_t)count * SAVE_RECORD_SIZE, fp);
@@ -156,10 +328,18 @@ static int sav_write_slot_file(GameContext* ctx)
     return 1;
 }
 
+/* SavReadSlot's retail ABI is (slot, slot-context, mode). The portable
+ * slot block is not layout-compatible with the retail 0xb8-byte context;
+ * use the GameContext bound by save_init or the typed adapter. */
 // FUNCTION: LEGORR 0x00417a90
-int save_read_slot(GameContext* ctx, int slot, int create_if_missing)
+int save_read_slot_target(uint32_t slot, void* slot_context, int mode)
 {
-    if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS) {
+    GameContext* ctx = s_save_current_context;
+    const int per_slot_context = slot_context != NULL &&
+                                 slot_context != (void*)ctx;
+    uint32_t tree_counts[2] = { 0u, 0u };
+    int have_tree_counts = 0;
+    if (ctx == NULL || slot >= SAVE_SLOTS) {
         return 0;
     }
     save_directory_ensure_exists(ctx->saves_dir[0] != '\0'
@@ -168,10 +348,19 @@ int save_read_slot(GameContext* ctx, int slot, int create_if_missing)
     save_slot_path(ctx, path, sizeof(path), slot, "sav");
     FILE* fp = fopen(path, MODE_RB);
     if (fp == NULL) {
-        if (!create_if_missing) {
-            save_slot_set(ctx, slot);
-            save_bootstrap_records(ctx, SAVE_DEFAULT_RECORDS);
-            sav_write_slot_file(ctx);
+        if (mode == 0) {
+            uint32_t count = SAVE_DEFAULT_RECORDS;
+            (void)save_tree_level_count(0, &count);
+            if (per_slot_context) {
+                (void)save_slot_write_fresh_file(ctx, (int)slot, count);
+            } else {
+                /* Preserve the typed port's historical empty-slot bootstrap
+                 * used by checkpoint and direct-launch callers. */
+                save_slot_set_target((int)slot);
+                ctx->save_slot = (int)slot;
+                if (save_bootstrap_records(ctx, SAVE_DEFAULT_RECORDS))
+                    (void)sav_write_slot_file(ctx);
+            }
         }
         return 0;
     }
@@ -184,21 +373,37 @@ int save_read_slot(GameContext* ctx, int slot, int create_if_missing)
     }
     int32_t count;
     __builtin_memcpy(&count, header + 0x18, 4);
-    /* Option block (issue #85): restore it when present, else fall back to
-     * the documented defaults (an old/absent stamp loads a fresh options
-     * context, OptionsLoadOrDefault-style). */
-    if (!options_load_header(&ctx->options, header + 0x20)) {
-        options_defaults(&ctx->options);
+    have_tree_counts = save_current_level_counts(&tree_counts[0],
+                                                 &tree_counts[1]);
+    if (per_slot_context) {
+        memcpy(slot_context, header, SAVE_HEADER_SIZE);
     }
+    if (mode == 0 && have_tree_counts &&
+        (uint32_t)count != tree_counts[0]) {
+        /* Native SaveWriteSlot initializes this slot, then SavReadSlot clears
+         * exactly the supplied 0xb8-byte slot context and returns a miss. */
+        (void)save_slot_write_fresh_file(ctx, (int)slot, tree_counts[0]);
+        if (per_slot_context) {
+            save_slot_sidecar_release((int)slot);
+            memset(slot_context, 0, 0xb8);
+        } else {
+            save_release_records(ctx);
+        }
+        fclose(fp);
+        return 0;
+    }
+
     if (count <= 0 || count > 0x1000) {
         fclose(fp);
-        if (!create_if_missing) {
-            /* Inconsistent slot: the corpus zeroes and returns 0. */
+        if (mode == 0 && per_slot_context) {
+            save_slot_sidecar_release((int)slot);
+            memset(slot_context, 0, 0xb8);
+        } else if (mode == 0) {
             save_release_records(ctx);
-            return 0;
         }
         return 0;
     }
+
     uint8_t* rec = (uint8_t*)malloc((size_t)count * SAVE_RECORD_SIZE);
     if (rec == NULL) {
         fclose(fp);
@@ -210,12 +415,39 @@ int save_read_slot(GameContext* ctx, int slot, int create_if_missing)
         free(rec);
         return 0;
     }
+    if (per_slot_context) {
+        uint32_t retail_record_pointer = (uint32_t)(uintptr_t)rec;
+        save_slot_sidecar_release((int)slot);
+        s_sav_slot_records[slot] = rec;
+        s_sav_slot_record_counts[slot] = count;
+        __builtin_memcpy((uint8_t*)slot_context + 0x34,
+                         &retail_record_pointer, 4);
+        return 1;
+    }
+
+    /* Retail stores the three option words directly in the slot-context
+     * header. Accept the former GOPS extension only for saves written by
+     * earlier portable builds. */
+    options_defaults(&ctx->options);
+    if (!options_load_header(&ctx->options, header + 0x20)) {
+        __builtin_memcpy(&ctx->options.sfx_volume, header + 0x08, 4);
+        __builtin_memcpy(&ctx->options.game_speed, header + 0x0c, 4);
+        __builtin_memcpy(&ctx->options.music_volume, header + 0x10, 4);
+    }
     save_release_records(ctx);
     ctx->active_slot = slot;
     ctx->record_count = count;
     ctx->records = rec;
+    save_slot_set_target(slot);
     ctx->save_slot = slot;
     return 1;
+}
+
+int save_read_slot(GameContext* ctx, int slot, int create_if_missing)
+{
+    if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS) return 0;
+    save_context_bind(ctx);
+    return save_read_slot_target((uint32_t)slot, NULL, create_if_missing);
 }
 
 int save_write_slot(GameContext* ctx, int slot)
@@ -223,12 +455,15 @@ int save_write_slot(GameContext* ctx, int slot)
     if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS) {
         return 0;
     }
+    save_context_bind(ctx);
     int prev = ctx->save_slot;
+    save_slot_set_target(slot);
     ctx->save_slot = slot;
     if (ctx->records == NULL) {
         save_bootstrap_records(ctx, SAVE_DEFAULT_RECORDS);
     }
     int ok = sav_write_slot_file(ctx);
+    save_slot_set_target(prev);
     ctx->save_slot = prev;
     return ok;
 }
@@ -370,17 +605,16 @@ static int save_records_grow(GameContext* ctx, int index)
     return 1;
 }
 
-/* SavWriteRecord (FUN_00417f40) — see savegame.hpp. */
-// FUNCTION: LEGORR 0x00417f40
+/* Typed owner adapter: the target entry below keeps the corpus's two-argument
+ * global-context ABI, while normal port callers still grow the live table. */
 int save_write_record(GameContext* ctx, int index, const uint8_t* blob)
 {
     if (ctx == NULL || index < 0 || blob == NULL
         || !save_records_grow(ctx, index)) {
         return 0;
     }
-    __builtin_memcpy(ctx->records + (size_t)index * SAVE_RECORD_SIZE + 4,
-                     blob, SAVE_BLOB_SIZE);
-    return 1;
+    save_context_bind(ctx);
+    return save_write_record_target(index, blob);
 }
 
 /* ------------------------------------------------------------------ *
@@ -389,6 +623,15 @@ int save_write_record(GameContext* ctx, int index, const uint8_t* blob)
 
 static void checkpoint_reward_group(GameContext* ctx, const char* level_name)
 {
+    /* FUN_0045fda0 reads every key on each build. Missing values therefore
+     * take the retail empty/default parse instead of retaining a previous
+     * level's reward configuration. */
+    ctx->reward.enable = 0;
+    ctx->reward.modifier = 0;
+    ctx->reward.timer = LVL_REWARD_TIMER_DEFAULT;
+    ctx->reward.display_text = 0;
+    ctx->reward.display_images = 0;
+    ctx->reward.display_flics = 0;
     if (ctx->cfg == NULL || level_name == NULL) {
         return;
     }
@@ -433,10 +676,11 @@ void checkpoint_blob_build(GameContext* ctx)
     if (ctx == NULL) {
         return;
     }
-    uint8_t* blob = (uint8_t*)calloc(1, SAVE_BLOB_SIZE);
+    uint8_t* blob = (uint8_t*)engine_heap_alloc(SAVE_BLOB_SIZE);
     if (blob == NULL) {
         return;
     }
+    memset(blob, 0, SAVE_BLOB_SIZE);
     const char* level_name = ctx->level != NULL
                              ? (const char*)ctx->level->ptr_name : NULL;
     checkpoint_reward_group(ctx, level_name);
@@ -447,10 +691,11 @@ void checkpoint_blob_build(GameContext* ctx)
     __builtin_memcpy(blob + 0x00, &enable, 4);          /* Reward/Enable   */
     __builtin_memcpy(blob + 0x1C0, &mod, 4);            /* Reward/Modifier  */
     __builtin_memcpy(blob + 0x1CE4, &ten, 4);           /* task count       */
-    uint32_t self = 0x1CEC;
-    __builtin_memcpy(blob + 0x1CE8, &self, 4);          /* low32 self-ref   */
+    uint32_t self = (uint32_t)(uintptr_t)(blob + 0x1CECu);
+    __builtin_memcpy(blob + 0x1CE8, &self, 4);          /* task-table ptr   */
     /* Copy the ten task records (stride 0x210) verbatim. */
     __builtin_memcpy(blob + 0x1CEC, ctx->tasks, GAME_TASK_COUNT * GAME_TASK_STRIDE);
+    mission_task_snapshot_refresh(ctx, (GameTask*)(blob + 0x1CEC));
 
     /* Tutorial hard-code (CheckpointBlobBuild tail, corpus 0x460066-0x46008c):
      * when the level name matches "Levels::Level03", record_base + 0x868 —
@@ -473,7 +718,7 @@ void checkpoint_blob_build(GameContext* ctx)
         __builtin_memcpy(blob + 0x1CEC + 0x868, &one, 4);
     }
 
-    free(ctx->checkpoint_blob);
+    engine_heap_free(ctx->checkpoint_blob);
     ctx->checkpoint_blob = blob;
 }
 
@@ -484,7 +729,7 @@ void checkpoint_blob_build(GameContext* ctx)
 void checkpoint_blob_free(GameContext* ctx)
 {
     if (ctx != NULL) {
-        free(ctx->checkpoint_blob);
+        engine_heap_free(ctx->checkpoint_blob);
         ctx->checkpoint_blob = NULL;
     }
 }
@@ -494,12 +739,21 @@ void checkpoint_blob_apply(GameContext* ctx, const uint8_t* blob)
     if (ctx == NULL || blob == NULL) {
         return;
     }
+    if (ctx->checkpoint_blob == NULL)
+        checkpoint_blob_build(ctx);
+    if (ctx->checkpoint_blob == NULL)
+        return;
+    memmove(ctx->checkpoint_blob, blob, SAVE_BLOB_SIZE);
+    {
+        uint32_t self = (uint32_t)(uintptr_t)(ctx->checkpoint_blob + 0x1CECu);
+        __builtin_memcpy(ctx->checkpoint_blob + 0x1CE8, &self, 4);
+    }
     int32_t enable = 0, mod = 0;
-    __builtin_memcpy(&enable, blob + 0x00, 4);
-    __builtin_memcpy(&mod, blob + 0x1C0, 4);
+    __builtin_memcpy(&enable, ctx->checkpoint_blob + 0x00, 4);
+    __builtin_memcpy(&mod, ctx->checkpoint_blob + 0x1C0, 4);
     ctx->reward.enable = enable;
     ctx->reward.modifier = mod;
-    __builtin_memcpy(ctx->tasks, blob + 0x1CEC,
+    __builtin_memcpy(ctx->tasks, ctx->checkpoint_blob + 0x1CEC,
                      (size_t)GAME_TASK_COUNT * (size_t)GAME_TASK_STRIDE);
 }
 
@@ -523,18 +777,21 @@ int save_slot_state(GameContext* ctx, int slot, int* out_filled,
         return 0;
     }
     fclose(fp);
-    if (!save_read_slot(ctx, slot, 0)) {
+    save_context_bind(ctx);
+    uint8_t* slot_context = s_sav_slot_context_blocks +
+                            (size_t)slot * 0xb8u;
+    if (!save_read_slot_target((uint32_t)slot, slot_context, 0)) {
         return 0;
     }
-    int recs = ctx->record_count > 0 ? ctx->record_count : SAVE_DEFAULT_RECORDS;
+    uint8_t* slot_records = s_sav_slot_records[slot];
+    int recs = s_sav_slot_record_counts[slot];
     int filled = 0, completed = 0, resume = -1;
-    for (int i = 0; i < recs && i < 256; i++) {
-        uint32_t* fl = save_record_flags(ctx, i);
-        if (fl == NULL) {
-            continue;
-        }
-        const uint8_t* blob = (const uint8_t*)(fl + 1);
-        int present = (*fl & 0x3) != 0;
+    for (int i = 0; slot_records != NULL && i < recs && i < 256; i++) {
+        uint32_t flags = 0u;
+        const uint8_t* record = slot_records + (size_t)i * SAVE_RECORD_SIZE;
+        __builtin_memcpy(&flags, record, sizeof(flags));
+        const uint8_t* blob = record + sizeof(flags);
+        int present = (flags & 0x3u) != 0u;
         if (!present) {
             for (size_t b = 0; b < SAVE_BLOB_SIZE; b += 8) {
                 if (blob[b] != 0) {
@@ -545,7 +802,7 @@ int save_slot_state(GameContext* ctx, int slot, int* out_filled,
         }
         if (present) {
             filled++;
-            if (*fl & 1) {
+            if ((flags & 1u) != 0u) {
                 completed++;
                 resume = i;
             }
@@ -566,8 +823,9 @@ void checkpoint_refresh(GameContext* ctx)
 }
 
 // FUNCTION: LEGORR 0x00462270
-void checkpoint_step(GameContext* ctx)
+void checkpoint_step_target(void)
 {
+    GameContext* ctx = s_save_current_context;
     if (ctx == NULL) {
         return;
     }
@@ -575,7 +833,7 @@ void checkpoint_step(GameContext* ctx)
     int slot = orig == -1 ? SAVE_DEFAULT_SLOT : orig;
     if (ctx->records == NULL || ctx->active_slot != slot) {
         /* Bootstrap the slot context (`SavSetSlot(5)` path in the corpus). */
-        save_read_slot(ctx, slot, 0);
+        (void)save_read_slot_target((uint32_t)slot, NULL, 0);
     }
     int rec = ctx->current_record;
     /* The corpus marks the record dirty when the level's objective-result
@@ -611,8 +869,15 @@ void checkpoint_step(GameContext* ctx)
         /* The corpus commits the cleared/reapplied default slot, then
          * reloads slot-5 metadata. */
         save_commit(ctx);
-        save_read_slot(ctx, SAVE_DEFAULT_SLOT, 0);
+        (void)save_read_slot_target(SAVE_DEFAULT_SLOT, NULL, 0);
     }
+}
+
+void checkpoint_step(GameContext* ctx)
+{
+    if (ctx == NULL) return;
+    save_context_bind(ctx);
+    checkpoint_step_target();
 }
 
 /* ------------------------------------------------------------------ *
@@ -804,27 +1069,22 @@ int osf_read_path(GameContext* ctx, int slot)
 
 /* --- the save-slot band (2026-10-24; findings 21/408) ---------------------- */
 
-// FUNCTION: LEGORR 0x00415cf0
 void save_slot_selection_clear(GameContext* ctx)
 {
     if (ctx != NULL) {
-        ctx->save_slot = -1; /* the corpus's 0xffffffff sentinel */
+        save_context_bind(ctx);
+        save_slot_selection_clear_target();
+        ctx->save_slot = -1;
     }
 }
 
-// FUNCTION: LEGORR 0x00417e50
 void* sav_slot_ctx(GameContext* ctx, int slot)
 {
     if (ctx == NULL) {
         return NULL; /* deviation: the corpus reads its global blindly */
     }
-    if (slot < 0 || slot >= SAVE_SLOTS) {
-        return NULL; /* the corpus's bounds test, faithful */
-    }
-    /* Deviation: the port keeps one active-slot context (the corpus builds
-     * the per-slot contexts inside the unported SavReadSlot/SavBuildCtx
-     * flow), so the valid index answers the port's context block. */
-    return ctx;
+    save_context_bind(ctx);
+    return sav_slot_ctx_target(slot);
 }
 
 /* --- the save-side DAT accessor band (see savegame.hpp) --------------------- */
@@ -856,25 +1116,95 @@ uint32_t save_state_event_context_peek(void)
     return s_save_state_event_context;
 }
 
-/* SavBuildCtx (FUN_00417e70): slot-open probe through the port's models. */
-// FUNCTION: LEGORR 0x00417e70
+/* Typed SavBuildCtx adapter. */
 void* sav_build_ctx(GameContext* ctx)
 {
-    if (save_slot_get(ctx) == -1) {
+    if (ctx == NULL) {
         return NULL;
     }
-    return sav_slot_ctx(ctx, save_slot_get(ctx));
+    save_context_bind(ctx);
+    return sav_build_ctx_target();
+}
+
+/* SavBuildCtx @ 0x00417e70 reads the process-global slot and returns its
+ * context block. The portable owner is bound by save_init and typed APIs. */
+// FUNCTION: LEGORR 0x00417e70
+void* sav_build_ctx_target(void)
+{
+    if (s_save_current_slot != -1)
+        return sav_slot_ctx_target(s_save_current_slot);
+    return NULL;
+}
+
+/* SavSlotCtx @ 0x00417e50 receives the slot index and returns its context.
+ * The portable module has one active GameContext in place of six retail
+ * context records, so valid indices resolve to that bound owner. */
+// FUNCTION: LEGORR 0x00417e50
+void* sav_slot_ctx_target(int slot)
+{
+    if (slot >= 0 && slot < SAVE_SLOTS && s_save_current_context != NULL)
+        return s_save_current_context;
+    return NULL;
+}
+
+/* SavGetSlot @ 0x00417e90 is the no-argument read of the selected slot. */
+// FUNCTION: LEGORR 0x00417e90
+int save_slot_get_target(void)
+{
+    return s_save_current_slot;
+}
+
+/* SavSetSlot @ 0x00417ea0 writes the global slot and the bound context view. */
+// FUNCTION: LEGORR 0x00417ea0
+void save_slot_set_target(int slot)
+{
+    s_save_current_slot = slot;
+}
+
+/* SaveSlotSelectionClear @ 0x00415cf0 is the same process-global reset. */
+// FUNCTION: LEGORR 0x00415cf0
+void save_slot_selection_clear_target(void)
+{
+    s_save_current_slot = -1;
+}
+
+/* SavWriteRecord @ 0x00417f40 takes only the record index and blob pointer;
+ * the current save-slot context is process-global in the corpus. The typed
+ * save_write_record adapter above grows the portable record table before
+ * entering this target-shaped body. */
+// FUNCTION: LEGORR 0x00417f40
+int save_write_record_target(int index, const uint8_t* blob)
+{
+    GameContext* slot_ctx = (GameContext*)sav_build_ctx_target();
+    uint32_t* destination;
+    const uint32_t* source = (const uint32_t*)blob;
+    uint32_t count;
+    if (slot_ctx != NULL && index < slot_ctx->record_count) {
+        destination = (uint32_t*)(slot_ctx->records
+            + index * SAVE_RECORD_SIZE + 4);
+        for (count = 0xC63u; count != 0u; --count)
+            *destination++ = *source++;
+        return 1;
+    }
+    return 0;
 }
 
 /* SavRecordPtr (FUN_00417f90) — see savegame.hpp. */
-// FUNCTION: LEGORR 0x00417f90
 void* sav_record_ptr(GameContext* ctx, int index)
 {
-    if (sav_build_ctx(ctx) == NULL || index < 0
-        || index >= ctx->record_count) {
-        return NULL; /* the corpus's zero answer */
-    }
-    return (char*)ctx->records + (size_t)index * SAVE_RECORD_SIZE + 4;
+    if (ctx == NULL || index < 0) return NULL;
+    save_context_bind(ctx);
+    return sav_record_ptr_target(index);
+}
+
+/* SavRecordPtr @ 0x00417f90 receives one index and reads the bound context. */
+// FUNCTION: LEGORR 0x00417f90
+void* sav_record_ptr_target(int index)
+{
+    GameContext* slot_ctx = (GameContext*)sav_build_ctx_target();
+    if (slot_ctx != NULL && index < slot_ctx->record_count)
+        return slot_ctx->records + index * SAVE_RECORD_SIZE + 4;
+    return NULL;
 }
 
 /* SelectedLevelStartObjectUpdate (FUN_00460200) — see savegame.hpp. */
@@ -1178,6 +1508,7 @@ SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
         p = *end == ',' ? end + 1 : end;
     }
     if (count == 0) {
+        list_set_node(win, level_name, NULL);
         engine_heap_free(node);
         return NULL;
     }
@@ -1288,18 +1619,17 @@ int sav_tree_walk(void* node, sav_tree_visit visit, void* user)
     if (n == NULL) {
         return 0;
     }
-    /* The corpus flag is record +0x10; the host-widened pointer accounts
-     * for the gap before it (the x86 scored offset is 0x0c + sizeof(void*)). */
-    uint32_t* visited = (uint32_t*)((char*)node + 0x0c + sizeof(void*));
-    if (*visited != 0u) {
+    /* SavTreeNode preserves the corpus's reserved +0x0c word so the walk
+     * flag remains at +0x10 on x86; the pointer slot widens on the host. */
+    if (n->visited != 0u) {
         return 0;
     }
     int visit_result = 0;
     if (visit != NULL) {
-        *visited = 1u;
+        n->visited = 1u;
         visit_result = visit(node, user);
     } else {
-        *visited = 1u; /* test-pinned guard; corpus calls the callback blind */
+        n->visited = 1u; /* test-pinned guard; corpus calls callback blind */
     }
     if (visit_result != 0) {
         return 1;
@@ -1374,8 +1704,12 @@ void sav_tree_load(void* node, void* window_base, void** blocks,
     st.blocks = blocks;
     st.index = 0u;
     st.flag = flag;
+    if (node == s_sav_tree_root[0]) sav_tree_owned_visit_flags_clear(0);
+    if (node == s_sav_tree_root[1]) sav_tree_owned_visit_flags_clear(1);
     sav_tree_walk2(node, &st, 1, eng);
     sav_clear_visited();
+    if (node == s_sav_tree_root[0]) sav_tree_owned_visit_flags_clear(0);
+    if (node == s_sav_tree_root[1]) sav_tree_owned_visit_flags_clear(1);
 }
 
 /* RegistryValueLookupWithLock (FUN_00417280) — see savegame.hpp. The
@@ -1432,7 +1766,6 @@ uint32_t registry_value_index_lookup_or_not_found(void* root, uint32_t index)
  * guards through both walks). */
 static void**  s_sav_menu_windows[2]; /* the chain + 0x10 word's slot role */
 static void*   s_sav_slot_stride_window; /* the context + 0x34 word's role */
-static void*   s_sav_tree_root[2]; /* the two corpus tree-root globals' role */
 
 void sav_menu_window_install(int which, void** slot)
 {
@@ -1456,11 +1789,211 @@ void* sav_slot_stride_window_peek(void)
     return s_sav_slot_stride_window;
 }
 
+static void* sav_current_slot_record_window(void)
+{
+    int slot;
+    GameContext* ctx;
+    void* installed = sav_slot_stride_window_peek();
+    if (installed != NULL) return installed;
+    slot = save_slot_get_target();
+    if (slot < 0 || slot >= SAVE_SLOTS) return NULL;
+    if (s_sav_slot_records[slot] != NULL)
+        return s_sav_slot_records[slot];
+    ctx = save_current_context_get();
+    if (ctx != NULL && ctx->active_slot == slot && ctx->records != NULL)
+        return ctx->records;
+    return NULL;
+}
+
+/* Build the dynamic table for roots installed without an ownership list.
+ * sav_tree_walk marks each unique node before invoking this callback. */
+typedef struct SavVisitedCollectState {
+    void*** items;
+    uint32_t* count;
+    uint32_t* capacity;
+    int* failed;
+} SavVisitedCollectState;
+
+static int sav_visited_collect_visit(void* value, void* user)
+{
+    SavVisitedCollectState* st = (SavVisitedCollectState*)user;
+    if (*st->count == *st->capacity) {
+        uint32_t next = *st->capacity == 0u ? 8u : *st->capacity * 2u;
+        void** grown;
+        if (next < *st->capacity ||
+            (size_t)next > ((size_t)-1) / sizeof(**st->items)) {
+            *st->failed = 1;
+            ((SavTreeNode*)value)->visited = 0u;
+            return 1;
+        }
+        grown = (void**)realloc(*st->items, (size_t)next * sizeof(**st->items));
+        if (grown == NULL) {
+            *st->failed = 1;
+            ((SavTreeNode*)value)->visited = 0u;
+            return 1;
+        }
+        *st->items = grown;
+        *st->capacity = next;
+    }
+    (*st->items)[(*st->count)++] = value;
+    return 0;
+}
+
+static int sav_visited_band_install(int which, void* const* items,
+                                    uint32_t count)
+{
+    SavVisitedBand next;
+    uint32_t i;
+    if (which < 0 || which > 1 ||
+        (count != 0u && items == NULL) ||
+        (size_t)count > ((size_t)-1) / sizeof(*next.items) ||
+        (size_t)count > ((size_t)-1) / sizeof(*next.words)) return 0;
+    next.items = NULL;
+    next.words = NULL;
+    next.count = 0u;
+    next.root_bound = 1;
+    if (count != 0u) {
+        next.items = (void**)malloc((size_t)count * sizeof(*next.items));
+        next.words = (uint32_t*)malloc((size_t)count * sizeof(*next.words));
+        if (next.items == NULL || next.words == NULL) {
+            free(next.items);
+            free(next.words);
+            return 0;
+        }
+        for (i = 0u; i < count; ++i) {
+            /* LevelChainBuild zeroes both dynamic bands. The executable
+             * contains no stores that seed the record-pointer array. */
+            next.items[i] = NULL;
+            next.words[i] = 0u;
+        }
+        next.count = count;
+    }
+    sav_visited_band_release(which);
+    s_sav_visited_bands[which] = next;
+    return 1;
+}
+
+static void sav_visited_band_release(int which)
+{
+    if (which < 0 || which > 1) return;
+    free(s_sav_visited_bands[which].items);
+    free(s_sav_visited_bands[which].words);
+    s_sav_visited_bands[which].items = NULL;
+    s_sav_visited_bands[which].words = NULL;
+    s_sav_visited_bands[which].count = 0u;
+    s_sav_visited_bands[which].root_bound = 0;
+}
+
 void sav_tree_root_install(int which, void* node)
 {
-    if (which == 0 || which == 1) {
-        s_sav_tree_root[which] = node;
+    void** items = NULL;
+    uint32_t count = 0u;
+    uint32_t capacity = 0u;
+    int failed = 0;
+    SavVisitedCollectState collector;
+    if (which < 0 || which > 1) return;
+    if (node != NULL) {
+        collector.items = &items;
+        collector.count = &count;
+        collector.capacity = &capacity;
+        collector.failed = &failed;
+        (void)sav_tree_walk(node, sav_visited_collect_visit, &collector);
+        for (uint32_t i = 0u; i < count; ++i) {
+            ((SavTreeNode*)items[i])->visited = 0u;
+        }
+        if (failed) {
+            free(items);
+            items = NULL;
+            count = 0u;
+        }
     }
+    sav_tree_owned_nodes_release(which);
+    s_sav_tree_root[which] = node;
+    if (sav_visited_band_install(which, items, count) &&
+        count <= 0x7fffffffu) {
+        active_object_list_count_set(which, (int)count);
+    }
+    free(items);
+}
+
+static int sav_visited_band_reserve(int which, uint32_t count)
+{
+    SavVisitedBand* band;
+    void** items;
+    uint32_t* words;
+    uint32_t i;
+    if (which < 0 || which > 1) return 0;
+    band = &s_sav_visited_bands[which];
+    if (count <= band->count) return 1;
+    if ((size_t)count > ((size_t)-1) / sizeof(*items) ||
+        (size_t)count > ((size_t)-1) / sizeof(*words)) return 0;
+    items = (void**)malloc((size_t)count * sizeof(*items));
+    words = (uint32_t*)malloc((size_t)count * sizeof(*words));
+    if (items == NULL || words == NULL) {
+        free(items);
+        free(words);
+        return 0;
+    }
+    for (i = 0u; i < band->count; ++i) {
+        items[i] = band->items[i];
+        words[i] = band->words[i];
+    }
+    for (; i < count; ++i) {
+        items[i] = NULL;
+        words[i] = 0u;
+    }
+    free(band->items);
+    free(band->words);
+    band->items = items;
+    band->words = words;
+    band->count = count;
+    return 1;
+}
+
+void sav_tree_visited_band_clear(int which, uint32_t count)
+{
+    SavVisitedBand* band;
+    uint32_t i;
+    if (which < 0 || which > 1) return;
+    band = &s_sav_visited_bands[which];
+    /* The installed root owns the actual capacity. A stale or unrelated
+     * active-count word must not extend the table past that root. */
+    if (count > band->count) count = band->count;
+    for (i = 0u; i < count; ++i) {
+        void* record = band->items[i];
+        if (record != NULL) {
+            ((uint32_t*)record)[4] = 0u;
+            band->words[i] = 0u;
+        }
+    }
+}
+
+void sav_tree_visited_entry_set(int which, uint32_t index, void* record,
+                                uint32_t word)
+{
+    uint32_t count;
+    if (which < 0 || which > 1 || index == 0xffffffffu) return;
+    if ((s_sav_visited_bands[which].root_bound &&
+         index >= s_sav_visited_bands[which].count) ||
+        (!s_sav_visited_bands[which].root_bound &&
+         index > s_sav_visited_bands[which].count)) return;
+    count = index + 1u;
+    if (!s_sav_visited_bands[which].root_bound &&
+        index == s_sav_visited_bands[which].count &&
+        !sav_visited_band_reserve(which, count)) return;
+    s_sav_visited_bands[which].items[index] = record;
+    s_sav_visited_bands[which].words[index] = word;
+}
+
+void sav_tree_visited_entry_peek(int which, uint32_t index, void** record,
+                                 uint32_t* word)
+{
+    SavVisitedBand* band;
+    if (which < 0 || which > 1) return;
+    band = &s_sav_visited_bands[which];
+    if (index >= band->count) return;
+    if (record != NULL) *record = band->items[index];
+    if (word != NULL) *word = band->words[index];
 }
 
 void* sav_tree_root_peek(int which)
@@ -1468,16 +2001,62 @@ void* sav_tree_root_peek(int which)
     return (which == 0 || which == 1) ? s_sav_tree_root[which] : NULL;
 }
 
-// FUNCTION: LEGORR 0x004150b0
+int sav_tree_root_install_owned(int which, void* node,
+                                void* const* nodes, uint32_t node_count)
+{
+    void** owned = NULL;
+    uint32_t owned_count = 0u;
+    uint32_t i;
+    if (which < 0 || which > 1 || (node_count != 0u && nodes == NULL))
+        return 0;
+    if (node_count != 0u) {
+        if ((size_t)node_count > ((size_t)-1) / sizeof(*owned)) return 0;
+        owned = (void**)malloc((size_t)node_count * sizeof(*owned));
+        if (owned == NULL) return 0;
+        for (i = 0u; i < node_count; ++i) {
+            if (nodes[i] != NULL && (uintptr_t)nodes[i] > 1u)
+                owned[owned_count++] = nodes[i];
+        }
+    }
+    sav_tree_owned_nodes_release(which);
+    s_sav_tree_root[which] = node;
+    s_sav_owned_tree_nodes[which] = owned;
+    s_sav_owned_tree_node_count[which] = owned_count;
+    if (sav_visited_band_install(which, nodes, node_count) &&
+        node_count <= 0x7fffffffu) {
+        active_object_list_count_set(which, (int)node_count);
+    }
+    return 1;
+}
+
+void sav_tree_roots_clear(void)
+{
+    sav_tree_owned_nodes_release(0);
+    sav_tree_owned_nodes_release(1);
+}
+
 void save_menu_refresh(GameContext* ctx, int slot)
 {
-    save_slot_set(ctx, slot); /* FUN_00417ea0 */
-    void* rec = sav_build_ctx(ctx); /* FUN_00417e70 */
+    if (ctx == NULL) return;
+    save_context_bind(ctx);
+    save_menu_refresh_target(0u, slot);
+    ctx->save_slot = slot;
+}
+
+/* SaveMenuRefresh @ 0x004150b0 takes the old context word and new slot; the
+ * first word is unused by the recovered body, while save context is global. */
+// FUNCTION: LEGORR 0x004150b0
+void save_menu_refresh_target(uint32_t unused, int slot)
+{
+    void* rec;
     void* base = NULL;
     uint32_t flag = 1u;
+    (void)unused;
+    save_slot_set_target(slot);
+    rec = sav_build_ctx_target();
     if (rec != NULL) {
         flag = 0u;
-        base = sav_slot_stride_window_peek(); /* corpus: rec + 0x34 */
+        base = sav_current_slot_record_window(); /* corpus: rec + 0x34 */
     }
     sav_tree_load(sav_tree_root_peek(0), base, sav_menu_window_peek(0),
                   0u, flag, NULL);
@@ -1490,15 +2069,23 @@ void save_menu_refresh(GameContext* ctx, int slot)
  * The frame loop renders the selected level summary from its FrontEnd row;
  * this function handles the save and tree-refresh side effects that preceded
  * the original descriptor display. */
-// FUNCTION: LEGORR 0x00418000
 void show_level_overlay_for_current_selection(GameContext* ctx)
 {
-    const int slot = save_slot_get(ctx); /* FUN_00417e90 */
-    if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS) {
-        return;
-    }
+    if (ctx == NULL) return;
+    save_context_bind(ctx);
+    show_level_overlay_target();
+}
+
+/* ShowLevelOverlayForCurrentSelection @ 0x00418000 is a no-argument global
+ * entry. It commits the active slot before rebuilding the save views. */
+// FUNCTION: LEGORR 0x00418000
+void show_level_overlay_target(void)
+{
+    GameContext* ctx = save_current_context_get();
+    const int slot = save_slot_get_target();
+    if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS) return;
     (void)save_write_slot(ctx, slot); /* FUN_00417bd0 */
-    save_menu_refresh(ctx, slot);     /* FUN_004173e0 pair */
+    save_menu_refresh_target(0u, slot);
 }
 
 /* --- the checkpoint progress fold band (see savegame.hpp) ------------------ */
@@ -1516,18 +2103,21 @@ static void blob_float_put(char* blob, size_t off, float v)
 }
 
 /* Corpus fold shape: percent = 100 / den * num rides through only when
- * the denominator reads non-zero, then clamps after the (invisible)
- * first store. A zero denominator answers 100.0 whatever num holds. */
-static float blob_percent_fold(const char* blob, size_t den, size_t num)
+ * the denominator reads non-zero. It stores the raw result before the
+ * upper clamp, then stores the clamped result; zero denominator stores 100. */
+static float blob_percent_fold_store(char* blob, size_t den, size_t num,
+                                     size_t out)
 {
     float v = 100.0f;
     const float d = blob_float_get(blob, den);
     if (d != 0.0f) {
         v = (100.0f / d) * blob_float_get(blob, num);
     }
+    blob_float_put(blob, out, v);
     if (100.0f < v) {
         v = 100.0f;
     }
+    blob_float_put(blob, out, v);
     return v;
 }
 
@@ -1546,8 +2136,9 @@ static void blob_count_up(char* blob, size_t guard_off, size_t add_off)
 }
 
 // FUNCTION: LEGORR 0x00460950
-int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
+int checkpoint_blob_task_progress_recalculate_target(void)
 {
+    GameContext* ctx = s_save_current_context;
     if (ctx == NULL || ctx->level == NULL) {
         return 0; /* corpus: the CurrentLevelGet guard; deviation: threaded */
     }
@@ -1558,14 +2149,14 @@ int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
     blob_float_put(blob, 0x2fb0, 0.0f);
     blob_float_put(blob, 0x2fac, 0.0f);
     blob_float_put(blob, 0x2fb4, 0.0f);
-    blob_float_put(blob, 0x1d24, blob_percent_fold(blob, 0x1d1c, 0x1d20));
-    blob_float_put(blob, 0x1f34, blob_percent_fold(blob, 0x1f2c, 0x1f30));
-    blob_float_put(blob, 0x2144, blob_percent_fold(blob, 0x213c, 0x2140));
-    blob_float_put(blob, 0x1b0c, blob_percent_fold(blob, 0x1b04, 0x1b08));
-    blob_float_put(blob, 0x2b94, blob_percent_fold(blob, 0x2b8c, 0x2b90));
-    blob_float_put(blob, 0x2354, blob_percent_fold(blob, 0x234c, 0x2350));
-    blob_float_put(blob, 0x2774, blob_percent_fold(blob, 0x276c, 0x2770));
-    blob_float_put(blob, 0x2984, blob_percent_fold(blob, 0x297c, 0x2980));
+    (void)blob_percent_fold_store(blob, 0x1d1c, 0x1d20, 0x1d24);
+    (void)blob_percent_fold_store(blob, 0x1f2c, 0x1f30, 0x1f34);
+    (void)blob_percent_fold_store(blob, 0x213c, 0x2140, 0x2144);
+    (void)blob_percent_fold_store(blob, 0x1b04, 0x1b08, 0x1b0c);
+    (void)blob_percent_fold_store(blob, 0x2b8c, 0x2b90, 0x2b94);
+    (void)blob_percent_fold_store(blob, 0x234c, 0x2350, 0x2354);
+    (void)blob_percent_fold_store(blob, 0x276c, 0x2770, 0x2774);
+    (void)blob_percent_fold_store(blob, 0x297c, 0x2980, 0x2984);
     blob_count_up(blob, 0x2760, 0x2774);
     blob_count_up(blob, 0x1d10, 0x1d24);
     blob_count_up(blob, 0x2b80, 0x2b94);
@@ -1592,12 +2183,7 @@ int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
     if (blob_float_get(blob, 0x2fb0) < 0.0f) {
         blob_float_put(blob, 0x2fb0, 0.0f);
     }
-    float v = blob_percent_fold(blob, 0x2fac, 0x2fb0);
-    blob_float_put(blob, 0x2fb4, v);
-    if (100.0f < v) {
-        v = 100.0f;
-    }
-    blob_float_put(blob, 0x2fb4, v);
+    float v = blob_percent_fold_store(blob, 0x2fac, 0x2fb0, 0x2fb4);
     uint32_t bonus = 0u; /* the corpus's converted uint word */
     __builtin_memcpy(&bonus, blob + 0x1c0, sizeof bonus);
     v = (float)bonus + blob_float_get(blob, 0x2fb4);
@@ -1609,6 +2195,23 @@ int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
     return 1;
 }
 
+/* Explicit-context adapter for portable callers and isolated state tests.
+ * The retail target itself is the no-argument current-owner entry above. */
+int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
+{
+    GameContext* previous_context;
+    int previous_slot;
+    int result;
+    if (ctx == NULL) return 0;
+    previous_context = s_save_current_context;
+    previous_slot = s_save_current_slot;
+    save_context_bind(ctx);
+    result = checkpoint_blob_task_progress_recalculate_target();
+    s_save_current_context = previous_context;
+    s_save_current_slot = previous_slot;
+    return result;
+}
+
 /* SavRefreshSlots (2026-10-25) — FUN_00417df0. Walk the six slot
  * contexts so every slot file exists. The corpus samples the engine
  * feature word once before the walk: with bit 0x400 raised it writes
@@ -1617,22 +2220,38 @@ int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
  * single active-slot context stands in for the corpus's six
  * DAT_00557080 blocks (the SavSlotCtx precedent), the null context is
  * guarded, and the corpus reads its context-pointer block blind. */
-// FUNCTION: LEGORR 0x00417df0
 void sav_refresh_slots(GameContext* ctx)
 {
-    if (ctx == NULL) {
-        return; /* deviation: the corpus strides blindly */
-    }
+    if (ctx == NULL) return;
+    save_context_bind(ctx);
+    sav_refresh_slots_target();
+}
+
+// FUNCTION: LEGORR 0x00417df0
+void sav_refresh_slots_target(void)
+{
+    GameContext* ctx = s_save_current_context;
+    uint8_t* slot_context = s_sav_slot_context_blocks;
+    uint8_t* const slot_context_end =
+        s_sav_slot_context_blocks + sizeof(s_sav_slot_context_blocks);
+    int slot = 0;
+    if (ctx == NULL) return;
     const int write_first =
         (engine_feature_word_peek() & 0x400u) != 0u;
-    for (int slot = 0; slot < SAVE_SLOTS; ++slot) {
-        if (write_first) {
-            (void)save_write_slot(ctx, slot);
-            (void)save_read_slot(ctx, slot, 0);
-        } else if (save_read_slot(ctx, slot, 0) == 0) {
-            (void)save_read_slot(ctx, slot, 0);
+    do {
+        if (!write_first) {
+            if (save_read_slot_target((uint32_t)slot, slot_context, 0) != 0)
+                goto next_slot;
+        } else {
+            uint32_t record_count = SAVE_DEFAULT_RECORDS;
+            (void)save_tree_level_count(0, &record_count);
+            (void)save_slot_write_fresh_file(ctx, slot, record_count);
         }
-    }
+        (void)save_read_slot_target((uint32_t)slot, slot_context, 0);
+next_slot:
+        slot_context += 0xb8;
+        ++slot;
+    } while (slot_context < slot_context_end);
 }
 
 namespace unported_ledger_stubs {
@@ -1691,8 +2310,8 @@ int ledger_stub_00460310_EntityType4IndexListAppend(
     if (list == NULL || entity == NULL) return 0;
     copy_two_dword_pair_to_outputs(entity, &kind, &index);
     if (kind == 4u && list->count < 100u) {
-        list->names[list->count] = item_name_by_kind_lookup(4u,
-                                                           (int)index);
+        list->indices[list->count] = index;
+        list->names[list->count] = item_name_by_kind_lookup(4u, (int)index);
         list->count = list->count + 1u;
     }
     return 0;
@@ -1757,5 +2376,21 @@ int ledger_stub_00418040_CampaignChainSnapshotCreate(
     return 1;
 }
 
+/* The reference receives only the destination pointer; the active context
+ * supplies both the slot window and record table. The portable snapshot is
+ * contiguous and encodes its record offset instead of owning a separate
+ * allocation as the original does. */
+void campaign_chain_snapshot_create_target(void* snapshot)
+{
+    GameContext* ctx = save_current_context_get();
+    size_t capacity;
+    if (ctx == NULL || snapshot == NULL || ctx->record_count < 0) return;
+    if ((size_t)ctx->record_count > ((size_t)-1 - 0xb8u) / SAVE_RECORD_SIZE)
+        return;
+    capacity = 0xb8u + (size_t)ctx->record_count * SAVE_RECORD_SIZE;
+    (void)unported_ledger_stubs::
+        ledger_stub_00418040_CampaignChainSnapshotCreate(ctx, snapshot,
+                                                        capacity);
+}
 
 } // namespace unported_ledger_stubs

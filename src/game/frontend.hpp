@@ -131,7 +131,6 @@ typedef struct FeOverlay {
     char  sfx[FE_NAME_MAX];
     int   x, y;
     Flic* flic;   /* opened player, or NULL (missing file / not started) */
-    int   tried;  /* non-random overlays are only opened once per menu visit */
 } FeOverlay;
 
 typedef struct FeSubmenu {
@@ -153,6 +152,7 @@ typedef struct FeSubmenu {
     int   overlay_count;
     int   can_scroll;             /* CanScroll TRUE — item plane pans (0x413970) */
     int   scroll;                 /* plane offset in px (<= 0; reset on entry) */
+    uint32_t run_flags;           /* MenuShow clears submenu record +0x28 */
     int   scroll_extent;          /* content height = tallest item + row height */
 } FeSubmenu;
 
@@ -164,6 +164,7 @@ typedef struct FeMenu {
 
 #define FE_SLOT_COUNT 6    /* SAVE_SLOTS */
 #define FE_SAVE_THUMBNAIL_COUNT 5 /* InterfaceResourceHandlesRelease slots */
+#define FE_SAVE_LAYOUT_TEXT_MAX 256 /* 0x100-byte fields in the 0x728 record */
 
 /* A runtime save slot row (SaveMenuBuild @ 0x415a10 builds these from the
  * `Save_Game_%i` keys): the slot's label + whether it has any records. */
@@ -179,16 +180,16 @@ typedef struct FeSlot {
  * rectangles in a 0x728-byte resource record; this is its typed frontend
  * view. */
 typedef struct FeSaveMenuLayout {
-    char load[FE_PATH_MAX];
-    char save[FE_PATH_MAX];
-    char slot[FE_PATH_MAX];
-    char save_sel[FE_PATH_MAX];
-    char load_sel[FE_PATH_MAX];
-    char level[FE_PATH_MAX];
-    char tutorial[FE_PATH_MAX];
+    char load[FE_SAVE_LAYOUT_TEXT_MAX];
+    char save[FE_SAVE_LAYOUT_TEXT_MAX];
+    char slot[FE_SAVE_LAYOUT_TEXT_MAX];
+    char save_sel[FE_SAVE_LAYOUT_TEXT_MAX];
+    char load_sel[FE_SAVE_LAYOUT_TEXT_MAX];
+    char level[FE_SAVE_LAYOUT_TEXT_MAX];
+    char tutorial[FE_SAVE_LAYOUT_TEXT_MAX];
     int window_x, window_y, window_w, window_h;
     int has_window;
-    char panel_path[FE_PATH_MAX];
+    char panel_path[FE_SAVE_LAYOUT_TEXT_MAX];
     int panel_x, panel_y, panel_w, panel_h;
     int has_panel;
     TextureSurface* panel_surface;
@@ -337,6 +338,20 @@ const FeSurroundImage* interface_surround_image_peek(int index);
 int interface_images_config_load(BlockFile* cfg); /* FUN_0041ada0 */
 const FeInterfaceImage* interface_image_peek(int action_index);
 int interface_build_images_config_load(BlockFile* cfg); /* FUN_0041ab00 */
+/* PanelRotationControlConfigLoad @ 0x0045b9d0. The renderer-owned retail
+ * globals are represented here as queryable config state; image dimensions
+ * are the configured comma-separated pair, in left/right/up/down order. */
+typedef struct FrontendPanelRotationControlState {
+    int center_x;
+    int center_y;
+    int radius;
+    TextureSurface* images[4];
+    float image_sizes[4][2];
+} FrontendPanelRotationControlState;
+void frontend_panel_rotation_control_config_load(BlockFile* values,
+                                                   const char* config_root);
+void frontend_panel_rotation_control_state_get(
+    FrontendPanelRotationControlState* state);
 uint32_t interface_build_image_count(int group);
 const FeInterfaceBuildImage* interface_build_image_peek(int group, int index);
 TextureSurface* interface_build_image_binding_value_get(
@@ -425,6 +440,11 @@ int option_music_default(void); /* FUN_00414e10 */
  * names the level-picker art. Returns 1 when MainMenuFull parsed. The
  * level chain is populated from StartLevel/TutorialStartLevel + NextLevel. */
 int  frontend_build(FrontEnd* fe, BlockFile* cfg);
+/* Pointer cursor config/draw target entry points. Config rows are the child
+ * records of Lego.cfg's Pointers group. */
+void pointer_cursor_config_load_target(BlockRec* first_entry);
+int pointer_cursor_config_parse_target(const char* name, int* index_out);
+void pointer_cursor_draw_target(uint32_t x, uint32_t y);
 
 /* Sync the option widgets with `fe->opts` (issue #85): seed every option
  * Slider/Cycle value from the store, clamped to the item's cfg range. Called
@@ -441,6 +461,8 @@ int  frontend_enabled(BlockFile* cfg);
  * value/key config pair. Called during game config setup before rendering. */
 void frontend_hud_runtime_install(void);
 void frontend_render_three_pass_update(BlockFile* values, BlockFile* names);
+int frontend_bubble_images_position_config_load(BlockFile* values,
+                                                BlockFile* names);
 /* UiTextUnderscoresToSpaces (FUN_004102b0): return a shared display copy
  * with underscores changed to spaces for strings up to 255 bytes. */
 const char* ui_text_underscores_to_spaces(const char* text);
@@ -464,6 +486,8 @@ int  fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz);
 
 /* Enter the modal menu at `menu`/submenu 0, selection 0. */
 int  frontend_open(FrontEnd* fe, int menu);
+/* MenuShow's typed entry: reset submenu run flags and enter `submenu`. */
+int  frontend_open_submenu(FrontEnd* fe, int menu, int submenu);
 /* Prepare one native front-end flow (save-tree/global setup is port state). */
 int  frontend_state_change(FrontEnd* fe, int state); /* FUN_004169c0 */
 int  menu_enter(FrontEnd* fe, int mode); /* FUN_00416c80 */
@@ -526,10 +550,24 @@ const char* frontend_active_image(const FrontEnd* fe);
 void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);
+/* Software view of the renderer-owned frame-cell table consumed by
+ * RenderUiFrameCell. Each entry's low flag bit selects the direct surface;
+ * otherwise the function picks frame_surfaces[index * 8 + frame]. Native
+ * resource handles still need to be resolved by the renderer adapter. */
+typedef struct FeUiFrameCellEntry {
+    uint32_t flags;
+} FeUiFrameCellEntry;
+typedef struct FeUiFrameCellTable {
+    const FeUiFrameCellEntry* entries;
+    size_t entry_count;
+    const TextureSurface* const* frame_surfaces;
+    size_t frame_surface_count;
+} FeUiFrameCellTable;
 void menu_render_ui_frame_cell(void* px, int pitch, int w, int h,
-                               int x, int y, int text_row,
-                               const char* text,
-                               const TextureSurface* image);
+                               int x, int y,
+                               const TextureSurface* direct_surface,
+                               const FeUiFrameCellTable* table,
+                               int item_index, int frame_index);
 typedef struct FePercentSplitSurface {
     const TextureSurface* right_fill;      /* packed record +0x18 */
     const TextureSurface* left_fill;       /* packed record +0x1c */
@@ -725,7 +763,7 @@ typedef struct FeHelpWindowResourceOps {
                               const char* text);
     uint32_t (*resource_load)(void* context, const char* name, int x, int y);
     void (*background_apply)(void* context, uint32_t handle);
-    uint32_t (*text_area_create)(void* context, uint32_t mode,
+    uint32_t (*text_area_create)(void* context, uintptr_t font_handle,
                                  const int rect[4], uint32_t flags);
     void (*text_load)(void* context, int slot, const char* name);
     void (*label_set)(void* context, int index, const char* text);
@@ -1140,19 +1178,21 @@ typedef struct UiTextOutputRecord32 {
 typedef char UiTextOutputRecord32SizeCheck[
     (sizeof(UiTextOutputRecord32) == 16) ? 1 : -1];
 
-/* Portable UI text-output allocator. rect is the x/y/w/h float tuple; mode
- * and buffer_size are passed to TextBufferCreate. */
-void* ui_text_output_record_allocate(int panel, uint32_t mode,
+/* PanelImageSlotEntryAllocate (FUN_0045a500) builds the 16-byte text-output
+ * wrapper around TextBufferCreate. rect is the x/y/w/h float tuple; the
+ * font handle and buffer size are passed to TextBufferCreate. */
+void* ui_text_output_record_allocate(int panel, uintptr_t font_handle,
                                      const float rect[4],
                                      uint32_t buffer_size);
 typedef struct UiTextOutputElementCreateContext {
-    uint32_t mode;
+    uintptr_t font_handle;
 } UiTextOutputElementCreateContext;
 void* ui_text_output_element_create(void* context, int panel, int kind,
                                     float x, float y, float width,
                                     float height, int buffer_size);
 int ui_text_output_record_slot_allocate(void** holder, int panel,
-                                        uint32_t mode, const float rect[4],
+                                        uintptr_t font_handle,
+                                        const float rect[4],
                                         uint32_t buffer_size);
 /* The native-width panel record needs an adapter on hosts wider than x86. */
 int ui_text_output_panel_coordinates_set(int panel, float y_offset,
@@ -1177,10 +1217,13 @@ uint32_t interaction_flags_peek(void);          /* port hook */
  * latch and matching input-entry/player flags. */
 int pointer_action_state_dispatch(int action, int kind, int entry,
                                   int active, int suppress_initial);
-typedef void (*FeAdvisorCallbackSchedule)(uint32_t selector, void* context);
-void advisor_callback_schedule_enabled_set(int enabled); /* port hook */
-void advisor_callback_schedule_gate(FeAdvisorCallbackSchedule schedule,
-                                    void* context); /* FUN_0041c440 */
+/* Callback supplied for the unresolved LAB_0041c470 body. The gate passes it
+ * through CatalogCallbackByIdDispatch with the target's null payload. */
+typedef int (*FeAdvisorCatalogCallback)(int action, int lane, int row,
+                                        void* payload);
+void advisor_callback_schedule_callback_set(
+    FeAdvisorCatalogCallback callback); /* port binding */
+void advisor_callback_schedule_gate(void); /* FUN_0041c440 */
 int advisor_animation_slot_id_resolve(uint32_t animation_kind,
                                       uint32_t position_index,
                                       uint32_t* slot_id); /* FUN_0045c6b0 */
@@ -1467,21 +1510,18 @@ void     panel_seam_last(void** out_res, float* out_x, float* out_y);
 
 /* ActiveObjectList (FUN_00416e00, findings 371/378): the active-object word
  * selector — in-game answers the DAT_00556fd0 word, otherwise the
- * DAT_00556fe4 word. Neither corpus word has a ported owner, so both land
- * here as zero-init statics; the selector returns the live address. */
+ * DAT_00556fe4 word. Counts are refreshed when their SaveTree root and
+ * dynamic visited band are installed. */
 int* active_object_list_word(void); /* FUN_00416e00 */
+void active_object_list_count_set(int which, int count);
 
-/* --- the sav visited-table band (2026-10-25) -------------------------------
- * The corpus's two "visited" tables run parallel to the modeled
- * active-object count words (out-of-game: DAT_00556fe4 count behind
- * DAT_00556ff0/ff4 item/word arrays; in-game: DAT_00556fd0 count behind
- * DAT_00556fdc/e0). Their installers live in the unported sav-tree
- * loaders, so the tables ride zero-init own storage behind the install/
- * peek hooks below (the unowned-global convention).
- * SavClearVisited (FUN_00416e70): walk both bands, out-of-game first,
- * clearing every non-null entry record's +0x10 flag word and the word
- * word alongside. Deviations: entry windows and count bounds guarded,
- * records touched through the modeled +0x10 word. */
+/* --- the sav visited-table band --------------------------------------------
+ * The corpus's two visited tables are per-entry arrays allocated by
+ * LevelChainBuild and sized to each root's runtime count. The port owns
+ * widened-pointer sidecars alongside each installed SaveTree root.
+ * SavClearVisited (FUN_00416e70): walk both root-owned dynamic bands,
+ * out-of-game first, clearing every non-null entry record's +0x10 flag
+ * word and paired word. The port stores widened host pointers in sidecars. */
 void sav_clear_visited(void); /* FUN_00416e70 */
 void sav_visited_entry_set(int which, int index, void* record,
                            uint32_t word);             /* port hook */

@@ -112,6 +112,9 @@ typedef struct AviPlaybackState {
     void* frame_retriever_object;
     /* Target thiscall entry points use the player object in ECX on x86. */
     void frame_retriever_open(const char* path);
+    /* Host adapter for target 0x47e510. Retail ECX is a separately
+     * allocated 0x98-byte DirectDraw-state subobject; the portable state
+     * keeps its surface and descriptor data in this record's sidecars. */
     int display_mode_setup(uint32_t width, uint32_t height,
                            uint32_t bits_per_pixel, int fullscreen);
     uint32_t surface_lock();

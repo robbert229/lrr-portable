@@ -16,9 +16,9 @@
  *
  * Entry payload expansion (finding 01): recorded for entries whose flag word
  * has bit 1 set — a small header (4-byte magic, type byte at [3], byte-swapped
- * length at [4], payload from +0x12). Shipped wads never set the bit
- * (flags == 1 everywhere, stored == original), so types 1/2 (FUN_0049c8e0 /
- * FUN_0049ca60) remain dormant and are reported as not implemented.
+ * length at [4], payload from +0x12). Type-1 and type-2 payload codecs are
+ * implemented, though the shipped WAD set does not exercise them (its flags
+ * are 1 and stored length equals original length).
  *
  * Discipline (ADR 0003/0004): plain C, stdio only (portable across the
  * native/winapi backends), no DirectX/WinAPI headers below the seam.
@@ -63,6 +63,30 @@ const char* resource_path_resolve_against_base(const char* path); /* FUN_0048022
 int resource_cd_present(void);
 int resource_data_present(void);
 
+/* Startup WAD mount services supplied by the host. The retail routine gets
+ * localized strings through its registry-backed loader and shows modal
+ * MessageBoxes. Process termination is optional: without an exit callback,
+ * the startup entry records the status and returns to its caller. */
+typedef int (*ResourceStartupTextLookupFn)(
+    void* context, const char* registry_key, const char* text_key,
+    char* text_out, size_t text_capacity);
+typedef int (*ResourceStartupMessageBoxFn)(
+    void* context, const char* text, const char* caption, unsigned style);
+typedef void (*ResourceStartupExitFn)(void* context, int exit_code);
+typedef struct ResourceStartupOps {
+    void* context;
+    ResourceStartupTextLookupFn text_lookup;
+    ResourceStartupMessageBoxFn message_box;
+    ResourceStartupExitFn exit_process;
+} ResourceStartupOps;
+void resource_startup_ops_set(const ResourceStartupOps* ops);
+#define RESOURCE_STARTUP_OK 0
+#define RESOURCE_STARTUP_PATH_ERROR 1
+#define RESOURCE_STARTUP_MISSING_DATA 2
+#define RESOURCE_STARTUP_CD_CANCELLED 3
+#define RESOURCE_STARTUP_DEPENDENCY_MISSING 4
+int resource_startup_result_get(void);
+
 /* An opened resource. `data` is populated by resource_read() and is owned by
  * the handle (freed by resource_free). `mode` is the open() mode requested. */
 typedef struct Resource {
@@ -79,6 +103,17 @@ typedef struct Resource {
  * Returns the number of wads mounted (0 => none; error message -> stderr).
  * Only the first successful parse is required to be a valid WWAD. */
 int resource_mount(const char* dir, const char* prefix);
+/* WadMountStartup's retail ABI: exe-derived prefix, insist-on-CD flag, and
+ * registry key used by the localized CDMissing/DataMissing strings. The
+ * explicit-root `resource_mount` remains the modern test/host entry. */
+void resource_mount_startup_target(const char* prefix, int require_cd,
+                                   const char* registry_key);
+/* Calls the retail-shaped entry and returns RESOURCE_STARTUP_*. */
+int resource_mount_startup(const char* prefix, int require_cd,
+                           const char* registry_key);
+/* Startup command-line policy supplied by the platform entry point. */
+void resource_startup_require_cd_set(int require_cd);
+int resource_startup_require_cd_get(void);
 /* Entry-derived default prefix used by the main frame loop (LegoRR by default). */
 void resource_set_wad_prefix(const char* prefix);
 const char* resource_get_wad_prefix(void);
@@ -158,11 +193,28 @@ typedef int (*ResourceTreeNodeCallback)(ResourceTreeNode* node,
                                         void* context);
 int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
                                 ResourceTreeNodeCallback callback,
-                                void* context); /* 0x00476330 */
+                                void* context); /* portable tree helper */
+int resource_tree_callback_walk_target(void* object, int depth,
+                                       ResourceTreeCallback callback,
+                                       void* context); /* 0x00476330 */
+typedef struct ResourceNameMatchCallbackContext {
+    const char* name;
+    uint32_t name_length;
+    uint32_t case_sensitive;
+    void* matched_object;
+    uint32_t match_count;
+    int mode;
+    uint32_t selected_index;
+} ResourceNameMatchCallbackContext;
+int resource_name_match_callback_target(
+    void* object, void* context); /* 0x00476410 */
 void* resource_name_register_or_query(ResourceTreeNode* root,
                                       const char* name, int mode,
                                       uint32_t* match_count_or_index);
                                                 /* 0x00473bc0 */
+void* resource_name_register_or_query_target(
+    void** root, const char* name, int mode,
+    uint32_t* match_count_or_index); /* retail 0x00473bc0 ABI */
 int nested_record_list_remove_matching_key(void* owner, void* key,
                                            void* record); /* 0x0047b330 */
 typedef struct ResourceTreeCallbackContext {
@@ -272,16 +324,16 @@ void render_resource_track_and_retain(void* resource);
 void resource_interface_call_slot88(void* wrapper);
 
 /* --- wad payload band (2026-10-25; finding 01 codec story) ----------------
- * RNC-header decode dispatch, its expand wrapper, the type-1 Huffman table
- * clear, the file-layer handle pair, and the wad-entry stream-slot opener.
- * The codecs themselves stay dormant (no shipped wad sets the expanded
- * flag), documented in resource.cpp. */
+ * RNC-header decode dispatch, both compressed codecs, its expand wrapper,
+ * the type-1 Huffman table clear, the file-layer handle pair, and the
+ * wad-entry stream-slot opener. */
 #define WAD_DECODE_MAGIC_FAIL 0xffff /* corpus's not-RNC verdict */
 #define WAD_DECODE_TYPE_FAIL  0xfffe /* corpus's unknown-type verdict */
 
-/* Verify the "RNC" magic + type gate and copy/delegate the payload.
- * 0 raw copy, 1/2 the ported codecs (xor ax,ax verdict 0), verdicts
- * otherwise. */
+/* Verify the "RNC" magic + type gate and copy/delegate the payload. The raw
+ * type-0 path returns zero; type-1/2 return the output pointer's high word,
+ * whose low 16 bits are zero (the retail caller tests AX). Invalid magic and
+ * unknown types return the two 0xffxx failure values above. */
 int wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840 */
 
 /* Probe (out_payload NULL) or materialize an expanded payload; answers the

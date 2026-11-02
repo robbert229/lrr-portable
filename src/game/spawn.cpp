@@ -97,11 +97,10 @@ void spawn_type_five_frame_resource_ops_set(
 }
 
 /* ObjectListFieldAssignAll (FUN_00440bf0) walks the animated frame container
- * at the type-5 entity's +0x1c field. Frame count is available through the
- * existing scene-resource reader; converting a portable TextureSurface to
- * the renderer's frame-surface interface belongs to its runtime owner. */
+ * at the type-5 entity's +0x1c field and assigns the TextureSurfaceCreate
+ * handle selected by TerrainCellPaletteResourceAtGridPosition. */
 // FUNCTION: LEGORR 0x00440BF0
-void object_list_field_assign_all(EntitySlot* entity, TextureSurface* surface)
+void object_list_field_assign_all(EntitySlot* entity, void* texture_resource)
 {
     void* frame_container;
     int count;
@@ -114,7 +113,7 @@ void object_list_field_assign_all(EntitySlot* entity, TextureSurface* surface)
     for (frame = 0u; frame < (unsigned int)count; ++frame) {
         s_type_five_frame_resource_ops.frame_surface_set(
             s_type_five_frame_resource_ops.context, frame_container, frame,
-            surface);
+            texture_resource);
     }
 }
 
@@ -142,10 +141,10 @@ int entity_conditional_type_five_spawn(EntitySlot* entity)
     entity_world_position_set(spawned, 10000.0f, 10000.0f, 0.0f, 1);
     if (entity_try_create_linked_at_position(
             entity, (float)destination[0], (float)destination[1], spawned)) {
-        TextureSurface* surface = (TextureSurface*)
+        void* texture_resource =
             terrain_cell_palette_resource_at_grid_position_current(
                 destination);
-        object_list_field_assign_all(spawned, surface);
+        object_list_field_assign_all(spawned, texture_resource);
         entity->field_33c = 0.0f;
         return 1;
     }

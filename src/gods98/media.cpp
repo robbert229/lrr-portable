@@ -243,6 +243,13 @@ void media_pointer_cursor_override_set(int slot, float value)
     s_cursor_override = value;
 }
 
+// FUNCTION: LEGORR 0x0045cd90
+void media_pointer_cursor_override_tick(float delta)
+{
+    if (s_cursor_override > 0.0f)
+        s_cursor_override -= delta;
+}
+
 int media_pointer_cursor_slot(void)
 {
     return s_cursor_slot;

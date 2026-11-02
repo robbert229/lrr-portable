@@ -759,6 +759,8 @@ static const char* entity_config_value_find(void* context, void* section,
 typedef struct EntityNameResolveContext {
     char named_values[9][256];
     char named_the_values[9][256];
+    uint8_t named_values_found[9];
+    uint8_t named_the_values_found[9];
     int the_names;
 } EntityNameResolveContext;
 
@@ -791,22 +793,26 @@ static void entity_config_named_value_set(void* context, const char* name,
     if (state->the_names) {
         if (value == NULL) {
             state->named_the_values[index][0] = '\0';
+            state->named_the_values_found[index] = 1u;
             return;
         }
         strncpy(state->named_the_values[index], (const char*)value,
                 sizeof(state->named_the_values[index]) - 1u);
         state->named_the_values[index][
             sizeof(state->named_the_values[index]) - 1u] = '\0';
+        state->named_the_values_found[index] = 1u;
     }
     else {
         if (value == NULL) {
             state->named_values[index][0] = '\0';
+            state->named_values_found[index] = 1u;
             return;
         }
         strncpy(state->named_values[index], (const char*)value,
                 sizeof(state->named_values[index]) - 1u);
         state->named_values[index][
             sizeof(state->named_values[index]) - 1u] = '\0';
+        state->named_values_found[index] = 1u;
     }
 }
 
@@ -988,6 +994,7 @@ void entity_names_config_load(BlockFile* cfg)
     type_tables[2] = entity_type_config_table_get(3u);
     type_tables[3] = entity_type_config_table_get(2u);
     memset(&tables, 0, sizeof(tables));
+    memset(&resolve_state, 0, sizeof(resolve_state));
     memset(special_names, 0, sizeof(special_names));
     memset(special_the_names, 0, sizeof(special_the_names));
     for (i = 0u; i < 5u; ++i) {
@@ -1036,17 +1043,27 @@ void entity_names_config_load(BlockFile* cfg)
             (const char* const*)the_values[i], counts[i]);
     }
     /* Named labels share kind 7's two configured rows; the remaining labels
-     * each occupy the single configured row for their special kind. */
+     * each occupy the single configured row for their special kind. The
+     * retail loaders update named globals only when their config key exists,
+     * so keep the previous localized value for omitted keys on reload. */
     {
         static const int kinds[9] = { 7, 6, 7, 8, 9, 11, 12, 13, 15 };
         static const int rows[9] = { 0, 0, 1, 0, 0, 0, 0, 0, 0 };
         for (i = 0u; i < 9u; ++i) {
-            if (resolve_state.named_values[i][0] != '\0')
+            const char* old_name = localized_object_name_get(
+                (uint32_t)kinds[i], rows[i]);
+            const char* old_the_name = localized_object_the_name_get(
+                (uint32_t)kinds[i], rows[i]);
+            if (resolve_state.named_values_found[i] != 0u)
                 special_names[kinds[i]][rows[i]] =
                     resolve_state.named_values[i];
-            if (resolve_state.named_the_values[i][0] != '\0')
+            else
+                special_names[kinds[i]][rows[i]] = old_name;
+            if (resolve_state.named_the_values_found[i] != 0u)
                 special_the_names[kinds[i]][rows[i]] =
                     resolve_state.named_the_values[i];
+            else
+                special_the_names[kinds[i]][rows[i]] = old_the_name;
         }
         entity_localized_name_tables_install(6, special_names[6],
                                                special_the_names[6], 1u);

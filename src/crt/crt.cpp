@@ -1594,9 +1594,12 @@ static CrtDisplayResolutionEntry
     s_display_resolutions[CRT_DISPLAY_RESOLUTION_ENTRIES];
 static int s_display_resolution_count;
 static int s_display_resolution_enumeration_succeeded;
-static FilterTuple* s_filter_tuples;
-static int         s_filter_tuple_count;
-static int         s_filter_tuple_capacity;
+/* The retail table occupies 200 records of 0x110 bytes, immediately
+ * followed by its active count at DAT_005754e0. */
+// GLOBAL: LEGORR 0x00568060
+static FilterTuple s_filter_tuples[200];
+// GLOBAL: LEGORR 0x005754e0
+static int s_filter_tuple_count;
 
 /* Caller-side DirectDraw enumeration replacement. This record occupies
  * 0x110 bytes, with `name` at the same +0x0c offset as the native list. */
@@ -1790,33 +1793,12 @@ void display_resolution_combo_populate(CrtDisplayResolutionList* out)
 
 void display_resolution_filter_tuples_reset(void)
 {
-    free(s_filter_tuples);
-    s_filter_tuples = NULL;
     s_filter_tuple_count = 0;
-    s_filter_tuple_capacity = 0;
 }
 
 // FUNCTION: LEGORR 0x0049d870
 void display_resolution_filter_tuple_append(int width, int height, int bpp)
 {
-    if (s_filter_tuple_count >= s_filter_tuple_capacity) {
-        int new_capacity;
-        FilterTuple* new_tuples;
-        if (s_filter_tuple_capacity == 0) {
-            new_capacity = 16;
-        } else {
-            if (s_filter_tuple_capacity > 0x7fffffff / 2) return;
-            new_capacity = s_filter_tuple_capacity * 2;
-        }
-        if ((size_t)new_capacity > (size_t)-1 / sizeof(FilterTuple)) {
-            return;
-        }
-        new_tuples = (FilterTuple*)realloc(s_filter_tuples,
-            (size_t)new_capacity * sizeof(FilterTuple));
-        if (new_tuples == NULL) return;
-        s_filter_tuples = new_tuples;
-        s_filter_tuple_capacity = new_capacity;
-    }
     s_filter_tuples[s_filter_tuple_count].w = width;
     s_filter_tuples[s_filter_tuple_count].h = height;
     s_filter_tuples[s_filter_tuple_count].bpp = bpp;

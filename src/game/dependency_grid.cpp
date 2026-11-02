@@ -204,6 +204,10 @@ static int dependency_grid_parse(LevelState* level, BlockRec* level_block,
             list = &cell->variant_records[variant];
         }
         else {
+            /* Retail writes the per-cell selector for every parsed entry.
+             * A non-variant key clears it, even if an earlier key for this
+             * cell had installed variant-specific lists. */
+            cell->variant_records_present = 0u;
             if (hit_once) {
                 for (i = 0u; i < DEPENDENCY_GRID_VARIANTS; ++i)
                     cell->flags[i] |= 1u;

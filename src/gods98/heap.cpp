@@ -7,6 +7,7 @@
 
 #include "heap.hpp"
 #include "string.hpp"
+#include "surface.hpp"
 #include "crt/crt.hpp"
 
 /* Engine heap records and text helpers. CRT allocation implementation lives
@@ -40,11 +41,58 @@ void optional_resource_destroy(void* record)
     }
 }
 
+typedef struct TextBufferFontBinding {
+    struct TextBufferFontBinding* next;
+    void* record;
+    void* font;
+} TextBufferFontBinding;
+
+static TextBufferFontBinding* s_text_buffer_font_bindings;
+
+static int text_buffer_font_binding_add(void* record, uintptr_t font_handle)
+{
+    TextBufferFontBinding* binding;
+    if (font_handle <= 0xffffffffu) return 1;
+    binding = (TextBufferFontBinding*)engine_heap_alloc(
+        (long)sizeof(TextBufferFontBinding));
+    if (binding == NULL) return 0;
+    binding->record = record;
+    binding->font = (void*)font_handle;
+    binding->next = s_text_buffer_font_bindings;
+    s_text_buffer_font_bindings = binding;
+    return 1;
+}
+
+static void* text_buffer_font_binding_get(const void* record)
+{
+    TextBufferFontBinding* binding;
+    for (binding = s_text_buffer_font_bindings; binding != NULL;
+         binding = binding->next) {
+        if (binding->record == record) return binding->font;
+    }
+    return NULL;
+}
+
+static void text_buffer_font_binding_remove(const void* record)
+{
+    TextBufferFontBinding** link = &s_text_buffer_font_bindings;
+    while (*link != NULL) {
+        TextBufferFontBinding* binding = *link;
+        if (binding->record == record) {
+            *link = binding->next;
+            engine_heap_free(binding);
+            return;
+        }
+        link = &binding->next;
+    }
+}
+
 /* TextBufferDestroy (FUN_00485190) — see heap.hpp. */
 // FUNCTION: LEGORR 0x00485190
 void text_buffer_destroy(void* record)
 {
     void* buffer = NULL;
+    text_buffer_font_binding_remove(record);
     __builtin_memcpy(&buffer, (char*)record + 0x14, sizeof(buffer));
     engine_heap_free(buffer);
     engine_heap_free(record);
@@ -220,14 +268,22 @@ void ui_text_output_object_release(void* const* holder)
 
 /* TextBufferCreate (FUN_004850f0) — see heap.hpp. */
 // FUNCTION: LEGORR 0x004850f0
-void* text_buffer_create(uint32_t mode, const uint32_t* header, long size)
+void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
+                         long size)
 {
     char* record = (char*)engine_heap_alloc(0x830);
     if (record == NULL) {
         return NULL; /* corpus: je — the allocation guard exists in the original */
     }
     memset(record, 0, 0x830); /* the corpus's 0x20c-dword sweep */
-    __builtin_memcpy(record + 0x00, &mode, sizeof mode);
+    {
+        const uint32_t font_token = (uint32_t)font_handle;
+        __builtin_memcpy(record + 0x00, &font_token, sizeof font_token);
+    }
+    if (!text_buffer_font_binding_add(record, font_handle)) {
+        engine_heap_free(record);
+        return NULL;
+    }
     if (header != NULL) {
         for (int i = 0; i != 4; ++i) {
             __builtin_memcpy(record + 0x04 + i * 4, &header[i], 4);
@@ -318,6 +374,101 @@ void text_buffer_draw_ops_set(const TextBufferDrawOps* ops)
     else s_text_buffer_draw_ops = *ops;
 }
 
+static int text_buffer_software_font_line_height(void* context, void* font)
+{
+    (void)context;
+    return font_atlas_record_line_height_get(font);
+}
+
+static int text_buffer_software_glyph_advance(void* context, void* font,
+                                               unsigned char glyph)
+{
+    float rect[4];
+    (void)context;
+    if (!font_atlas_record_glyph_get(font, glyph, rect)) return 0;
+    return crt_float_to_long(rect[2]);
+}
+
+static int text_buffer_software_glyph_draw(void* context, void* font,
+                                            int x, int y,
+                                            unsigned char glyph,
+                                            int draw_mode)
+{
+    float rect[4];
+    TextureSurface* atlas;
+    DisplaySurface* target;
+    void* pixels = NULL;
+    int pitch = 0;
+    int src_x, src_y, width, height, row;
+    int advance;
+    uint32_t key0, key1;
+    (void)context;
+    if (!font_atlas_record_glyph_get(font, glyph, rect)) return 0;
+    src_x = crt_float_to_long(rect[0]);
+    src_y = crt_float_to_long(rect[1]);
+    width = crt_float_to_long(rect[2]);
+    height = crt_float_to_long(rect[3]);
+    advance = width;
+    if (draw_mode == 0 || width <= 0 || height <= 0) return advance;
+    atlas = font_atlas_record_surface_get(font);
+    target = surface_active_render_target_get();
+    if (atlas == NULL || atlas->pixels == NULL || target == NULL)
+        return advance;
+    if (surface_lock(target, &pixels, &pitch) != 0) return advance;
+    if (pixels == NULL || pitch < target->w * 4) {
+        surface_unlock(target, pixels);
+        return advance;
+    }
+    key0 = atlas->key_count >= 2 ? atlas->keys[0] : atlas->pixels[0];
+    key1 = atlas->key_count >= 2 ? atlas->keys[1] : key0;
+    for (row = 0; row < height; ++row) {
+        const int dest_y = y + row;
+        int column;
+        if (dest_y < 0 || dest_y >= target->h || src_y + row >= atlas->height)
+            continue;
+        for (column = 0; column < width; ++column) {
+            const int dest_x = x + column;
+            const int source_x = src_x + column;
+            uint32_t source;
+            uint8_t* destination;
+            if (dest_x < 0 || dest_x >= target->w || source_x < 0 ||
+                source_x >= atlas->width)
+                continue;
+            source = atlas->pixels[(size_t)(src_y + row) *
+                                   (size_t)atlas->width +
+                                   (size_t)source_x];
+            if (source == key0 || source == key1 || (source >> 24) == 0u)
+                continue;
+            destination = (uint8_t*)pixels + (size_t)dest_y * (size_t)pitch +
+                          (size_t)dest_x * 4u;
+            destination[0] = (uint8_t)(source >> 16);
+            destination[1] = (uint8_t)(source >> 8);
+            destination[2] = (uint8_t)source;
+            destination[3] = (uint8_t)(source >> 24);
+        }
+    }
+    surface_unlock(target, pixels);
+    return advance;
+}
+
+static int text_buffer_software_word_break(void* context,
+                                            unsigned char glyph)
+{
+    (void)context;
+    return crt_character_classify_mask((int)glyph, 8u) != 0u;
+}
+
+void text_buffer_draw_software_install(void)
+{
+    TextBufferDrawOps ops;
+    memset(&ops, 0, sizeof(ops));
+    ops.font_line_height = text_buffer_software_font_line_height;
+    ops.glyph_advance = text_buffer_software_glyph_advance;
+    ops.glyph_draw = text_buffer_software_glyph_draw;
+    ops.is_word_break = text_buffer_software_word_break;
+    text_buffer_draw_ops_set(&ops);
+}
+
 static uint32_t text_buffer_read_u32(const void* record, size_t offset)
 {
     uint32_t value = 0;
@@ -343,9 +494,13 @@ static float text_buffer_read_float(const void* record, size_t offset)
 
 static void* text_buffer_font_get(const void* record)
 {
-    void* font = NULL;
-    if (record != NULL) memcpy(&font, record, sizeof(font));
-    return font;
+    uint32_t token = 0u;
+    void* font;
+    if (record == NULL) return NULL;
+    font = text_buffer_font_binding_get(record);
+    if (font != NULL) return font;
+    memcpy(&token, record, sizeof(token));
+    return (void*)(uintptr_t)token;
 }
 
 static int text_buffer_line_height(void* font)
@@ -364,8 +519,7 @@ static int text_buffer_is_break(unsigned char glyph)
         return s_text_buffer_draw_ops.is_word_break(
             s_text_buffer_draw_ops.context, glyph) != 0;
     }
-    return glyph == ' ' || glyph == '\t' || glyph == '\r' ||
-           glyph == '\v' || glyph == '\f';
+    return crt_character_classify_mask((int)glyph, 8u) != 0u;
 }
 
 static int text_buffer_glyph_width(void* font, unsigned char glyph)
@@ -383,16 +537,15 @@ static int text_buffer_draw_glyph(void* font, int x, int y,
 {
     int width = text_buffer_glyph_width(font, glyph);
     if (s_text_buffer_draw_ops.glyph_draw != NULL) {
-        int advance = s_text_buffer_draw_ops.glyph_draw(
+        return s_text_buffer_draw_ops.glyph_draw(
             s_text_buffer_draw_ops.context, font, x, y, glyph, 1);
-        if (advance > 0) width = advance;
     }
     return width;
 }
 
 // FUNCTION: LEGORR 0x00485710
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,
-                                     int* height_out, int visible_lines)
+                                     int* height_out)
 {
     int starts[257];
     int widths[257];
@@ -405,9 +558,11 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
     int index = 0;
     int line = 0;
     int result = 0;
+    int visible_lines;
     float elapsed_timer;
     char ch;
     if (record == NULL) return 0;
+    visible_lines = (int)text_buffer_read_u32(record, 0x824);
     text = (const char*)record + 0x18;
     ch = text[0];
     font = text_buffer_font_get(record);
@@ -472,10 +627,12 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
         }
         else y = crt_float_to_long(*(float*)((char*)record + 8)) +
                  line * line_height;
-        while (pos < end) {
-            unsigned char glyph = (unsigned char)text[pos];
-            x += text_buffer_draw_glyph(font, x, y, glyph);
-            ++pos;
+        if (y != 0) {
+            while (pos < end) {
+                unsigned char glyph = (unsigned char)text[pos];
+                x += text_buffer_draw_glyph(font, x, y, glyph);
+                ++pos;
+            }
         }
         if (height_out != NULL && *height_out < y) *height_out = y;
         ++line;
@@ -519,7 +676,7 @@ int text_buffer_draw_wrapped(void* record, uint32_t start_line,
     flags = (uint32_t)words[0x20b];
     if ((flags & 2u) != 0u)
         return text_wrap_measure_and_draw_lines(record, line_scale,
-                                                height_out, words[0x209]);
+                                                height_out);
     buffer = *(char**)((char*)record + 0x14);
     capacity = (uint32_t)words[0x106];
     cursor = (uint32_t)words[0x107];

@@ -117,6 +117,7 @@ void media_audio_playback_toggle(int enable);
 void media_pointer_cursor_select(int slot);
 /* PointerCursorOverrideSet @ 0x45cc40. */
 void media_pointer_cursor_override_set(int slot, float value);
+void media_pointer_cursor_override_tick(float delta);
 int   media_pointer_cursor_slot(void);
 float media_pointer_cursor_override(void);
 

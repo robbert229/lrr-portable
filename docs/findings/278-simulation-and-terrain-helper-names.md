@@ -11,7 +11,7 @@ remain open where noted.
 | 0x451450 | TerrainCellSurfaceVectorOffsetAdd | Adds a supplied three-component vector to a per-cell/per-orientation vector. Coordinate frame and vector meaning remain unknown. |
 | 0x451c50 | OwnedObjectReferenceChainRelease | Walks a linked chain, frees payloads selected by flag bits, unlinks retained entries, and frees remaining chain nodes. Payload types and ownership bits remain unknown. |
 | 0x453220 | AdvisorDisplayStateResourcesRelease | Releases active resources and queued items, frees arrays, clears related globals/tables, and runs a global cleanup helper. The exact UI subsystem remains uncertain. |
-| 0x45a500 | PanelImageSlotEntryAllocate | Allocates a 0x10-byte entry, creates/loads an image resource, and stores geometry and an entry-table pointer. Coordinate units and flags remain unknown. |
+| 0x45a500 | PanelImageSlotEntryAllocate | Allocates a 0x10-byte text-output wrapper and a text buffer using the supplied font handle, rectangle dimensions, and capacity; stores converted Y/X coordinates and the indexed category pointer. Coordinate units and font-resource ownership remain caller-dependent. |
 | 0x45d7e0 | LevelIdentifierRemapTableLoad | Reads paired identifiers from a child list, converts each pair, and stores them in a global remap table. Identifier domain and table capacity remain unresolved. |
 
 **Direct pseudocode and callers.** The direct bodies and caller paths are in

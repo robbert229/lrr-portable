@@ -8,6 +8,7 @@
 #include "frontend.hpp"
 #include "savegame.hpp"
 #include "crt/crt.hpp"
+#include "gods98/heap.hpp"
 #include "gods98/surface.hpp"
 #include "sound.hpp"
 #include "util.hpp"
@@ -80,6 +81,7 @@ void game_context_init(GameContext* ctx)
         s_game_bubble_action_strings_initialized = 1;
     }
     string_cache_font_loader_set(game_font_resource_cache_load);
+    text_buffer_draw_software_install();
     entity_pool_callback_context_set(ctx);
     cmd_context_set(ctx);
     unported_ledger_stubs::entity_ddiscene_callbacks_install(

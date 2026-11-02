@@ -1859,9 +1859,8 @@ int main(int argc, char** argv)
               "the null payload answers NULL (dev)");
     }
 
-    /* Sav visited tables band (2026-10-25): install/peek over the
-     * own-storage tables, the clear walk with the out-of-game band first,
-     * the null-item skip, and the guarded counts. */
+    /* Sav visited tables: per-root entries, the out-of-game-first clear
+     * walk, and the null-item skip. */
     {
         char rec1[24];
         char rec2[24];
@@ -1878,8 +1877,8 @@ int main(int argc, char** argv)
         CHECK(p == rec1 && w == 1u, "install and peek land the pair");
         sav_visited_entry_peek(0, 1, &p, &w);
         CHECK(p == NULL && w == 2u, "the null item rides through");
-        sav_visited_entry_set(0, 16, rec1, 9u);  /* guarded (dev) */
-        sav_visited_entry_peek(0, 16, &p, &w);   /* guarded (dev) */
+        sav_visited_entry_set(0, 16, rec1, 9u);  /* outside this band */
+        sav_visited_entry_peek(0, 16, &p, &w);   /* outside this band */
 
         frontend_flow_word_set(2, -1);
         int* wc = active_object_list_word();
@@ -1898,25 +1897,25 @@ int main(int argc, char** argv)
         sav_visited_entry_peek(1, 0, &p, &w);
         CHECK(w == 0u, "the in-game table word clears");
 
-        /* Guarded counts (deviations): oversized writes nothing, the
-         * non-positive gate leaves the band. */
+        /* A stale active count beyond the two-entry root band clears its
+         * entries; the zero in-game count leaves that band untouched. */
         ((uint32_t*)rec1)[4] = 0xdeadu;
         ((uint32_t*)rec2)[4] = 0xbeefu;
         sav_visited_entry_set(0, 0, rec1, 1u);
         sav_visited_entry_set(1, 0, rec2, 3u);
         frontend_flow_word_set(2, -1);
         wc = active_object_list_word();
-        *wc = 17; /* past the modeled window */
+        *wc = 17; /* stale active count; root band still has two entries */
         frontend_flow_word_set(2, 0);
         wc = active_object_list_word();
         *wc = 0;
         sav_clear_visited();
-        CHECK(((uint32_t*)rec1)[4] == 0xdeadu,
-              "the oversized count skips the band (dev)");
+        CHECK(((uint32_t*)rec1)[4] == 0u,
+              "the root-sized band clears despite a larger active count");
         CHECK(((uint32_t*)rec2)[4] == 0xbeefu,
               "the zero count leaves the band");
         sav_visited_entry_peek(0, 0, &p, &w);
-        CHECK(w == 1u, "the guarded band leaves its words");
+        CHECK(w == 0u, "the root-sized band clears its paired word");
 
         /* Leave the modeled state clean. */
         frontend_flow_word_set(2, -1);

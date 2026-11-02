@@ -343,34 +343,71 @@ static SimtickBobbin* bobbin_find_key(const uint32_t key_pair[2])
     return NULL;
 }
 
+/* The two UI group operations resolve the shared DAT_004b8a24 path-record
+ * list. Their entity arrays live at +0x2c/+0xcc in the 32-bit record; native
+ * builds use level.cpp's widened-pointer sidecar accessors for that window. */
 // FUNCTION: LEGORR 0x00409110
 void simtick_selection_group_release(const uint32_t key_pair[2])
 {
-    SimtickBobbin* node = bobbin_find_key(key_pair);
-    if (node == NULL) return;
-    cancel_action_for_matching_coordinates(node->key_pair);
-    bobbin_delayed(node);
-    bobbin_record_remove_and_free(node);
+    void* record;
+    record = terrain_descriptor_find_exact_current(key_pair, NULL);
+    if (record != NULL) {
+        cancel_action_for_matching_coordinates(key_pair);
+#if defined(_WIN32)
+        bobbin_delayed((SimtickBobbin*)record);
+#else
+        {
+            uint32_t count = path_record_entity_count_get(record);
+            uint32_t i;
+            for (i = 0u; i < count; ++i) {
+                EntitySlot* entity = path_record_entity_get(record, i);
+                if (entity != NULL) {
+                    const float no_timeout = -1.0f;
+                    entity->field_340 = no_timeout;
+                    entity->flags_3e8 |= 0x800000u;
+                }
+            }
+        }
+#endif
+        path_record_remove_and_free(record);
+    }
 }
 
 // FUNCTION: LEGORR 0x00409150
 void simtick_selection_group_clear(const uint32_t key_pair[2])
 {
-    SimtickBobbin* node = bobbin_find_key(key_pair);
+    void* record;
+    uint32_t count;
     uint32_t i;
-    if (node == NULL) return;
-    for (i = 0; i < node->member_count && i < 20u; ++i) {
-        unsigned char* entity = (unsigned char*)node->members[i];
-        uint32_t flags;
+    uint32_t group_key;
+    int cell_xy[2];
+    record = terrain_descriptor_find_exact_current(key_pair, NULL);
+    if (record == NULL) return;
+    cell_xy[0] = (int)key_pair[0];
+    cell_xy[1] = (int)key_pair[1];
+    terrain_cell_flag40000000_clear_or_set_current(cell_xy, 0);
+#if defined(_WIN32)
+    count = *(uint32_t*)((char*)record + 0xcc);
+    for (i = 0u; i < count; ++i) {
+        EntitySlot* entity = (EntitySlot*)
+            *(uint32_t*)((char*)record + 0x2c + i * 4u);
         if (entity == NULL) continue;
-        memcpy(&flags, entity + 0x3ecu, sizeof(flags));
-        flags &= ~0x100u;
-        memcpy(entity + 0x3ecu, &flags, sizeof(flags));
-        cmd_create_task((EntitySlot*)entity); /* FUN_00402720(entity, 0) */
+        entity->flags_3ec &= ~0x100u;
+        cmd_create_task(entity, 0); /* FUN_00402720(entity, 0) */
     }
-    cancel_action_for_matching_coordinates(node->key_pair);
-    bobbin_delayed(node);
-    bobbin_record_remove_and_free(node);
+#else
+    count = path_record_entity_count_get(record);
+    for (i = 0u; i < count; ++i) {
+        EntitySlot* entity = path_record_entity_get(record, i);
+        if (entity == NULL) continue;
+        entity->flags_3ec &= ~0x100u;
+        cmd_create_task(entity, 0); /* FUN_00402720(entity, 0) */
+    }
+#endif
+    cancel_action_for_matching_coordinates(key_pair);
+    memcpy(&group_key, (const char*)record + 0x08, sizeof(group_key));
+    cmd_cancel_by_coords((int)group_key, 0, 0, 0);
+    path_record_remove_and_free(record);
 }
 // FUNCTION: LEGORR 0x004027a0
 static void bobbin_clear_delay(SimtickBobbin* node)
@@ -727,7 +764,7 @@ void simtick_cooldown_tick(EngineContext* c, float dt)
     message_cooldown_tick(dt);
 }
 
-/* ---- tranche 8: bit-field tree (FUN_0049cf90) --------------------------- */
+/* ---- tranche 8: bit-field tree utility ---------------------------------- */
 static int (*s_tree_hook)(int, int) = NULL;
 static int s_tree_fired = 0;
 
@@ -741,16 +778,14 @@ int simtick_tree_fired(void)
     return s_tree_fired;
 }
 
-// FUNCTION: LEGORR 0x0049cf90
 void simtick_bitfield_tree(int* base, int code)
 {
     s_tree_fired = 0;
     if (base == NULL) {
         return;
     }
-    /* WadHuffmanCanonicalCodesBuild assigns canonical codes in increasing
-     * bit-length order, then stores the low-bit-reversed code used by the
-     * LSB-first decoder. Each entry is 16 bytes: code at +8, length at +12. */
+    /* This independent test utility builds a canonical code table using
+     * 16-byte records; the retail decoder target lives in resource.cpp. */
     int      bits = 1;
     uint32_t next_code = 0u;
     uint32_t scale = 0x80000000u;

@@ -74,9 +74,11 @@ const char* cmd_priority_name(int slot); /* 27 AI priorities  */
 void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag);
 void cmd_create_target(EntitySlot* e, void* target);
 void cmd_create_gated(EntitySlot* e, void* target);
-void cmd_create_task(EntitySlot* e);   /* kind derived from the entity type */
-void* cmd_entity_task_record_create_and_append(EntitySlot* e, void* payload,
-                                               int parameter);
+/* EntityActivityRecordRemoveByType (FUN_00403c00) passes 0x43160000 (150.0f
+ * bits) for action-record removals; the port wires that through its +0x2f0
+ * command-chain representation. */
+void cmd_create_task(EntitySlot* e, int32_t parameter = 0); /* +0x18 argument */
+void object_command_task_create(EntitySlot* entity, int parameter);
 int object_path_submit_to_grid_target(EntitySlot* entity,
                                       struct LevelState* level,
                                       const int target_xy[2],

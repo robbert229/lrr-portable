@@ -250,20 +250,18 @@ typedef struct SurfRec {
 typedef struct PolyRec {
     uint32_t count;
     uint32_t surface;
-    int16_t* ring;
+    uint32_t ring_pointer;
 } PolyRec;
 
 typedef struct Parse {
     const uint8_t* d;
     size_t         n;
 
-    Buf     chunks_buf; /* native Chunk array */
-    size_t  nchunks;
-
     float*  verts; /* host-order PNTS coordinates, replaced by later chunks */
     size_t  nverts;
     PolyRec* polys;
     size_t   npolys;
+    int16_t** poly_rings; /* host-width sidecar for the retail pointer word */
     int     saw_zero;
     size_t  pols_used_len; /* first POLS chunk only (python one()) */
 
@@ -313,6 +311,49 @@ static char* dup_strip(const char* src, size_t len)
     return n;
 }
 
+/* LwoStringDuplicate allocates a zero-filled, even-sized copy. */
+static char* dup_lwo_string(const char* src, size_t len)
+{
+    size_t bytes = len + 1u;
+    char* copy;
+    if (bytes == 0u) return NULL;
+    if (bytes & 1u) ++bytes;
+    copy = (char*)malloc(bytes);
+    if (copy == NULL) return NULL;
+    memset(copy, 0, bytes);
+    if (len != 0u) memcpy(copy, src, len);
+    return copy;
+}
+
+static int dup_lwo_assign(char** dst, const char* src, size_t len)
+{
+    char* copy = dup_lwo_string(src, len);
+    if (copy == NULL) return 0;
+    free(*dst);
+    *dst = copy;
+    return 1;
+}
+
+static size_t lwo_sequence_marker_find(const char* text, size_t size)
+{
+    static const char marker[] = "(sequence)";
+    const size_t marker_size = sizeof(marker) - 1u;
+    size_t offset;
+    if (size < marker_size) return size;
+    for (offset = 0u; offset <= size - marker_size; ++offset) {
+        size_t i;
+        for (i = 0u; i < marker_size; ++i) {
+            unsigned char a = (unsigned char)text[offset + i];
+            unsigned char b = (unsigned char)marker[i];
+            if (a >= 'A' && a <= 'Z') a = (unsigned char)(a + ('a' - 'A'));
+            if (b >= 'A' && b <= 'Z') b = (unsigned char)(b + ('a' - 'A'));
+            if (a != b) break;
+        }
+        if (i == marker_size) return offset;
+    }
+    return size;
+}
+
 static int dup_assign(char** dst, const char* src, size_t len)
 {
     char* n = dup_strip(src, len);
@@ -335,26 +376,32 @@ static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
      * semantics. */
     for (size_t i = 0; i < P->nsname; ++i)
         free(P->sname[i]);
+    free(P->sname);
+    P->sname = NULL;
     P->nsname = 0;
+    P->scap = 0;
     while (p < size) {
         const uint8_t* e = (const uint8_t*)memchr(pay + p, 0, size - p);
         if (!e)
             return 0;
         /* LwoSurfaceNames duplicates through the NUL, without trimming. */
         size_t length = (size_t)(e - (pay + p));
-        char* nm = (char*)malloc(length + 1);
+        char* nm = dup_lwo_string((const char*)(pay + p), length);
         if (!nm)
             return 0;
-        memcpy(nm, pay + p, length);
-        nm[length] = 0;
-        if (P->nsname == P->scap) {
-            size_t ncap = P->scap ? P->scap * 2 : 4;
-            char** np = (char**)realloc(P->sname, ncap * sizeof *np);
-            if (!np) { free(nm); return 0; }
-            P->sname = np;
-            P->scap = ncap;
+        if (P->nsname >= ((size_t)-1) / sizeof(*P->sname) - 1u) {
+            free(nm);
+            return 0;
         }
-        P->sname[P->nsname++] = nm;
+        char** names = (char**)malloc((P->nsname + 1u) * sizeof(*names));
+        if (names == NULL) { free(nm); return 0; }
+        if (P->nsname != 0u)
+            memcpy(names, P->sname, P->nsname * sizeof(*names));
+        names[P->nsname] = nm;
+        free(P->sname);
+        P->sname = names;
+        P->nsname++;
+        P->scap = P->nsname;
         p = ((size_t)(e - pay) + 2) & ~(size_t)1;
         if (p > size)
             return 0;
@@ -365,9 +412,10 @@ static int parse_srfs(Parse* P, const uint8_t* pay, size_t size)
 /* --- POLS --------------------------------------------------------------------- */
 
 /* LwoPolygons (FUN_0048c3e0) stores one 3-word record per polygon:
- * {u32 vertex count, u32 surface index, i16* ring}.  The table is expanded
- * by allocating a new (count + 1) record block, copying the old records,
- * then freeing the old block.  The on-disk ring and surface words are
+ * {u32 vertex count, u32 surface index, pointer word}. The table is expanded
+ * by allocating a new (count + 1) 3-word record block, copying the old
+ * records, then freeing the old block. Host ring pointers live in a sidecar.
+ * The on-disk ring and surface words are
  * big-endian; surface is decremented with 16-bit wrap. */
 // FUNCTION: LEGORR 0x0048c3e0
 static int parse_pols(Parse* P, const uint8_t* d, size_t size)
@@ -379,9 +427,11 @@ static int parse_pols(Parse* P, const uint8_t* d, size_t size)
      * of appending to it. Release the previous portable table before parsing
      * this chunk; the retail code leaks the superseded allocation. */
     for (size_t i = 0; i < P->npolys; ++i)
-        free(P->polys[i].ring);
+        free(P->poly_rings[i]);
     free(P->polys);
+    free(P->poly_rings);
     P->polys = NULL;
+    P->poly_rings = NULL;
     P->npolys = 0;
     P->saw_zero = 0;
     while (p < size) {
@@ -394,34 +444,40 @@ static int parse_pols(Parse* P, const uint8_t* d, size_t size)
         p += 2;
         if (cnt > (size - p) / 2 || size - p - cnt * 2 < 2)
             return 0;
-        if (P->npolys >= ((size_t)-1) / sizeof(*P->polys) - 1)
+        if (P->npolys >= ((size_t)-1) / sizeof(*P->poly_rings) - 1)
             return 0;
-        PolyRec* grown;
-        if (P->npolys == 0) {
-            grown = (PolyRec*)malloc(sizeof(*grown));
-        }
-        else {
-            grown = (PolyRec*)malloc((P->npolys + 1) * sizeof(*grown));
-            if (grown != NULL)
-                memcpy(grown, P->polys, P->npolys * sizeof(*grown));
-        }
-        if (grown == NULL)
+        PolyRec* grown = (PolyRec*)malloc((P->npolys + 1u) * sizeof(*grown));
+        int16_t** ring_sidecar = (int16_t**)malloc(
+            (P->npolys + 1u) * sizeof(*ring_sidecar));
+        if (grown == NULL || ring_sidecar == NULL) {
+            free(grown);
+            free(ring_sidecar);
             return 0;
+        }
+        if (P->npolys != 0u) {
+            memcpy(grown, P->polys, P->npolys * sizeof(*grown));
+            memcpy(ring_sidecar, P->poly_rings,
+                   P->npolys * sizeof(*ring_sidecar));
+        }
         free(P->polys);
+        free(P->poly_rings);
         P->polys = grown;
+        P->poly_rings = ring_sidecar;
 
         PolyRec* poly = &P->polys[P->npolys];
+        int16_t* ring = (int16_t*)malloc(cnt * sizeof(*ring));
         poly->count = (uint32_t)cnt;
         poly->surface = (uint32_t)(uint16_t)(
             (uint16_t)((uint16_t)d[p + 2 * cnt] * 0x100u +
                        d[p + 2 * cnt + 1]) - 1u);
-        poly->ring = (int16_t*)malloc(cnt * sizeof(*poly->ring));
-        if (poly->ring == NULL && cnt != 0)
+        poly->ring_pointer = (uint32_t)(uintptr_t)ring;
+        P->poly_rings[P->npolys] = ring;
+        if (ring == NULL && cnt != 0u)
             return 0;
         for (size_t k = 0; k < cnt; k++) {
-            poly->ring[k] = (int16_t)((uint16_t)d[p + 2 * k] * 0x100u +
-                                      d[p + 2 * k + 1]);
-            if (poly->ring[k] == 0)
+            ring[k] = (int16_t)((uint16_t)d[p + 2 * k] * 0x100u +
+                                d[p + 2 * k + 1]);
+            if (ring[k] == 0)
                 P->saw_zero = 1;
         }
         p += 2 * cnt;
@@ -550,11 +606,9 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
     if (terminator == NULL)
         return 0;
     name_length = (size_t)(terminator - d);
-    name = (char*)malloc(name_length + 1);
+    name = dup_lwo_string((const char*)d, name_length);
     if (name == NULL)
         return 0;
-    memcpy(name, d, name_length);
-    name[name_length] = 0;
     if (!surfrec_reserve(P)) {
         free(name);
         return 0;
@@ -572,7 +626,6 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
         const uint8_t* bt = d + q;
         size_t bsz = be16(d + q + 4);
         char tag[5];
-        size_t a, b, tn;
         if (bsz > size - q - 6 ||
             (bsz & 1u) > size - q - 6 - bsz) {
             ++P->nrecs;
@@ -580,18 +633,8 @@ static int parse_surf_chunk(Parse* P, const uint8_t* d, size_t size)
         }
         memcpy(tag, bt, 4);
         tag[4] = 0;
-        a = 0;
-        b = 4;
-        while (a < b && (tag[a] == 0 || tag[a] == ' '))
-            ++a;
-        while (b > a && (tag[b - 1] == 0 || tag[b - 1] == ' '))
-            --b;
-        tn = b - a;
         {
-            char key[5];
-            memcpy(key, tag + a, tn);
-            key[tn] = 0;
-            if (!surfrec_addblock(P, r, key, d + q + 6, bsz)) {
+            if (!surfrec_addblock(P, r, tag, d + q + 6, bsz)) {
                 /* Include the partially populated record in cleanup. */
                 ++P->nrecs;
                 return 0;
@@ -633,7 +676,7 @@ static Model* build_model(Parse* P)
         p->count = cnt;
         p->ring = (uint16_t*)malloc((cnt ? cnt : 1) * sizeof(uint16_t));
         if (!p->ring) { model_free(m); return NULL; }
-        const int16_t* raw = raw_poly->ring;
+        const int16_t* raw = P->poly_rings[i];
         for (uint16_t k = 0; k < cnt; k++) {
             int v = raw[k] < 0 ? -raw[k] : raw[k];
             v -= base;
@@ -696,28 +739,30 @@ static Model* build_model(Parse* P)
                 s->colr_bytes[3] = bs >= 4 ? bp[3] : 255;
                 s->has_colr = 1;
             }
-            if (block_find(rec, "TIMG", &bp, &bs) && bs > 0) {
+            if (block_find(rec, "TIMG", &bp, &bs)) {
                 size_t n = strnlen_n((const char*)bp, bs);
-                if (!dup_assign(&s->timg, (const char*)bp, n))
-                    { model_free(m); return NULL; }
+                size_t marker = lwo_sequence_marker_find((const char*)bp, n);
                 for (size_t bi = 0; bi < rec->nblocks; ++bi) {
                     if (strcasecmp(rec->tags[bi], "TIMG") == 0) {
                         const uint8_t* image_data =
                             rec->blocks_data.d + rec->off[bi];
                         size_t image_size = rec->size[bi];
-                        char* image_text = (char*)malloc(image_size + 1u);
-                        if (image_text == NULL) {
-                            model_free(m);
-                            return NULL;
-                        }
-                        memcpy(image_text, image_data, image_size);
-                        image_text[image_size] = '\0';
-                        if (case_insensitive_substring_find(
-                                image_text, "(sequence)") != NULL) {
+                        size_t image_length = strnlen_n(
+                            (const char*)image_data, image_size);
+                        if (lwo_sequence_marker_find(
+                                (const char*)image_data, image_length) <
+                            image_length) {
                             s->animated_image_sequence = 1;
                         }
-                        free(image_text);
                     }
+                }
+                if (marker < n) {
+                    n = marker;
+                    s->animated_image_sequence = 1;
+                }
+                if (!dup_lwo_assign(&s->timg, (const char*)bp, n)) {
+                    model_free(m);
+                    return NULL;
                 }
             }
             {
@@ -742,7 +787,7 @@ static Model* build_model(Parse* P)
             }
             if (block_find(rec, "TTEX", &bp, &bs) && bs > 0) {
                 size_t n = strnlen_n((const char*)bp, bs);
-                char* mode = dup_strip((const char*)bp, n);
+                char* mode = dup_lwo_string((const char*)bp, n);
                 if (mode == NULL) { model_free(m); return NULL; }
                 s->projection_mode = lwo_texture_projection_mode_parse(mode);
                 s->has_projection_mode = 1;
@@ -750,7 +795,8 @@ static Model* build_model(Parse* P)
             }
             if (block_find(rec, "CTEX", &bp, &bs) && bs > 0) {
                 size_t n = strnlen_n((const char*)bp, bs);
-                if (!dup_assign(&s->texture_definition, (const char*)bp, n))
+                if (!dup_lwo_assign(&s->texture_definition,
+                                    (const char*)bp, n))
                     { model_free(m); return NULL; }
             }
             if (block_find(rec, "TSIZ", &bp, &bs) && bs >= 8) {
@@ -791,11 +837,11 @@ static Model* build_model(Parse* P)
 
 static void parse_free(Parse* P)
 {
-    buf_free(&P->chunks_buf);
     free(P->verts);
     for (size_t poly_index = 0; poly_index < P->npolys; poly_index++)
-        free(P->polys[poly_index].ring);
+        free(P->poly_rings[poly_index]);
     free(P->polys);
+    free(P->poly_rings);
     for (size_t name_index = 0; name_index < P->nsname; name_index++)
         free(P->sname[name_index]);
     free(P->sname);
@@ -853,15 +899,22 @@ Model* model_parse(const uint8_t* data, size_t len)
     size_t end = 8 + form_size;
     int ok = 1;
     size_t p = 12;
-    while (end - p >= 8) {
+    /* LoadLWO dispatches each chunk as it reads it. Keep that order here:
+     * handlers own their allocations immediately, so a later malformed
+     * chunk unwinds already parsed state through parse_free(). */
+    while (p < end && ok) {
         Chunk c;
+        uint32_t size;
+        const uint8_t* tag;
+        if (end - p < 8) {
+            ok = 0;
+            break;
+        }
+        tag = data + p;
         memset(&c, 0, sizeof c);
         memcpy(c.tag, data + p, 4);
         c.tag[4] = 0;
-        size_t tn = 4;
-        while (tn && c.tag[tn - 1] == 0)
-            c.tag[--tn] = 0;
-        uint32_t size = be32(data + p + 4);
+        size = be32(data + p + 4);
         if ((size_t)size > end - p - 8) {
             ok = 0;
             break;
@@ -869,8 +922,21 @@ Model* model_parse(const uint8_t* data, size_t len)
         const uint8_t* pay = data + p + 8;
         c.pay = pay;
         c.size = (size_t)size;
-        if (!buf_append(&P.chunks_buf, &c, sizeof c)) { ok = 0; break; }
-        P.nchunks++;
+        if (tag_equal_ci(tag, "PNTS")) {
+            ok = parse_points(&P, &c);
+        }
+        else if (tag_equal_ci(tag, "POLS")) {
+            ok = parse_pols(&P, c.pay, c.size);
+        }
+        else if (tag_equal_ci(tag, "CRVS")) {
+            ok = parse_curves_payload(c.pay, c.size);
+        }
+        else if (tag_equal_ci(tag, "SRFS")) {
+            ok = parse_srfs(&P, c.pay, c.size);
+        }
+        else if (tag_equal_ci(tag, "SURF")) {
+            ok = parse_surf_chunk(&P, c.pay, c.size);
+        }
         p += 8 + (size_t)size;
         if (size & 1) {
             if (p == end) {
@@ -882,29 +948,6 @@ Model* model_parse(const uint8_t* data, size_t len)
     }
     if (p != end)
         ok = 0;
-    if (!ok) { parse_free(&P); return NULL; }
-
-    /* The retail FORM walker dispatches chunks in file order.  POLS and
-     * SRFS handlers grow their tables as they go; PNTS replaces the current
-     * point array when another PNTS chunk is encountered. */
-    for (size_t i = 0; i < P.nchunks && ok; i++) {
-        const Chunk* c = (const Chunk*)P.chunks_buf.d + i;
-        if (strcasecmp(c->tag, "PNTS") == 0) {
-            ok = parse_points(&P, c);
-        }
-        else if (strcasecmp(c->tag, "POLS") == 0) {
-            ok = parse_pols(&P, c->pay, c->size);
-        }
-        else if (strcasecmp(c->tag, "CRVS") == 0) {
-            ok = parse_curves_payload(c->pay, c->size);
-        }
-        else if (strcasecmp(c->tag, "SRFS") == 0) {
-            ok = parse_srfs(&P, c->pay, c->size);
-        }
-        else if (strcasecmp(c->tag, "SURF") == 0) {
-            ok = parse_surf_chunk(&P, c->pay, c->size);
-        }
-    }
     if (!ok) { parse_free(&P); return NULL; }
     Model* m = build_model(&P);
     parse_free(&P);
@@ -1143,28 +1186,57 @@ done:
 // FUNCTION: LEGORR 0x0048d7c0
 Model* model_open(const char* path)
 {
+    size_t path_length;
+    size_t lwo_length;
+    char* lwo_path;
+    char* uv_path;
+    int has_lwo_suffix;
+    Resource* r;
+    int32_t n;
+    Model* m;
+
     if (path == NULL || path[0] == '\0')
         return NULL;
-    Resource* r = resource_open(path, RESOURCE_AUTO);
-    if (!r)
+    path_length = strlen(path);
+    has_lwo_suffix = path_length >= 4 &&
+        strcasecmp(path + path_length - 4, ".lwo") == 0;
+    if (path_length > (size_t)-1 - (has_lwo_suffix ? 1u : 5u))
         return NULL;
-    int32_t n = resource_read(r);
-    Model* m = (n > 0) ? model_parse(r->data, (size_t)n) : NULL;
+    lwo_length = path_length + (has_lwo_suffix ? 0u : 4u);
+    lwo_path = (char*)malloc(lwo_length + 1u);
+    if (lwo_path == NULL)
+        return NULL;
+    memcpy(lwo_path, path, path_length);
+    if (!has_lwo_suffix)
+        memcpy(lwo_path + path_length, ".lwo", 5u);
+    else
+        lwo_path[path_length] = '\0';
+
+    r = resource_open(lwo_path, RESOURCE_AUTO);
+    if (!r)
+    {
+        free(lwo_path);
+        return NULL;
+    }
+    n = resource_read(r);
+    m = (n > 0) ? model_parse(r->data, (size_t)n) : NULL;
     if (m) {
-        const char* dot = strrchr(path, '.');
-        char uvpath[1024];
-        if (dot && strcasecmp(dot, ".lwo") == 0 && strlen(path) + 4 < sizeof uvpath) {
-            size_t base = (size_t)(dot - path);
-            memcpy(uvpath, path, base);
-            uvpath[base] = 0;
-            strcat(uvpath, ".uv");
-            Resource* u = resource_open(uvpath, RESOURCE_AUTO);
-            if (u && resource_read(u) > 0)
-                model_apply_uv_text(m, (const char*)u->data, (size_t)u->size);
-            resource_free(u);
+        uv_path = (char*)malloc(lwo_length + 1u);
+        if (uv_path != NULL) {
+            memcpy(uv_path, lwo_path, lwo_length + 1u);
+            memcpy(uv_path + lwo_length - 4u, ".uv", 4u);
+            {
+                Resource* u = resource_open(uv_path, RESOURCE_AUTO);
+                if (u != NULL && resource_read(u) > 0)
+                    model_apply_uv_text(m, (const char*)u->data,
+                                        (size_t)u->size);
+                resource_free(u);
+            }
+            free(uv_path);
         }
     }
     resource_free(r);
+    free(lwo_path);
     return m;
 }
 
@@ -1244,8 +1316,8 @@ Model* lwo_model_entry_load(const char* path, void* flags, void* context)
         size_t bytes = model->n_surfaces * sizeof(ModelTextureBinding);
         ModelTextureBinding* bindings =
             (ModelTextureBinding*)calloc(1u, bytes);
-        if (bindings != NULL && bind_model_textures_for_model(
-                directory, model, bindings, 0)) {
+        if (bindings != NULL) {
+            bind_model_textures_for_model(directory, model, bindings, 0);
             model->material_bindings = bindings;
             model->material_binding_count = model->n_surfaces;
         }
@@ -1504,6 +1576,8 @@ uint32_t ledger_stub_0048c360_LwoCurves(GameFileHandle* stream,
                                          int byte_count)
 {
     uint8_t* data;
+    const uint8_t* cursor;
+    size_t remaining;
     if (stream == NULL || byte_count < 0 || byte_count > 0x7ffffff0) return 0u;
     data = (uint8_t*)engine_heap_alloc((long)byte_count + 16L);
     if (data == NULL) return 0u;
@@ -1514,8 +1588,26 @@ uint32_t ledger_stub_0048c360_LwoCurves(GameFileHandle* stream,
          * proceeds through the bounded record walk and returns success. */
         (void)wad_file_read(data, byte_count, 1, stream);
     }
-
-    (void)parse_curves_payload(data, (size_t)byte_count);
+    /* The retail walk consumes {u16 point count, point-count u16 values,
+     * then two opaque u16 words}. It neither builds a curve table nor reads
+     * the trailing words; they are only skipped before the next record. */
+    cursor = data;
+    remaining = (size_t)byte_count;
+    while (remaining != 0u) {
+        size_t point_count;
+        size_t point_bytes;
+        if (remaining < 2u) break;
+        point_count = (size_t)be16(cursor);
+        cursor += 2u;
+        remaining -= 2u;
+        if (point_count > remaining / 2u) break;
+        point_bytes = point_count * 2u;
+        cursor += point_bytes;
+        remaining -= point_bytes;
+        if (remaining < 4u) break;
+        cursor += 4u;
+        remaining -= 4u;
+    }
     engine_heap_free(data);
     return 1u;
 }

@@ -12,6 +12,18 @@
 #include "string.hpp"
 #include "texture.hpp"
 #include "record.hpp"
+#include "crt/crt.hpp"
+
+/* UI-owned operations used by IncidentMessageTextConsumer. The text output
+ * record layout and implementations live in game/frontend.cpp; forward
+ * declarations avoid pulling its broad header into the engine message module. */
+namespace unported_ledger_stubs {
+void ui_text_output_position_and_draw(void* record, uint32_t start_line,
+                                      float line_scale);
+}
+extern void scroll_offset_from_cursor_update(void);
+extern void* panel_ui_record_peek(void);
+extern uint32_t screen_right_edge_cache_peek(void);
 
 #define MESSAGE_CD_RESET 25.0f /* 0x41c80000 */
 #define IDX_LIST_SLOTS MESSAGE_MAX_ID
@@ -201,6 +213,8 @@ static CatalogSlotPredicateHook s_catalog_slot_eligible;
 static CatalogSlotPredicateHook s_catalog_slot_available;
 static CatalogSlotRankHook s_catalog_slot_rank;
 static void* s_catalog_slot_context;
+static InfoMessageQueueTickOps s_info_message_queue_tick_ops;
+static IncidentMessageTextConsumerOps s_incident_message_text_ops;
 
 static void message_node_track(void* node)
 {
@@ -403,6 +417,10 @@ void message_clear(void)
     memset(s_idx_aux, 0, sizeof(s_idx_aux));
     s_panel_refresh_hook = NULL;
     s_panel_refresh_context = NULL;
+    memset(&s_info_message_queue_tick_ops, 0,
+           sizeof(s_info_message_queue_tick_ops));
+    memset(&s_incident_message_text_ops, 0,
+           sizeof(s_incident_message_text_ops));
     s_catalog_owner = 0u;
     memset(s_cfg, 0, sizeof(s_cfg));
     memset(s_queue_records, 0, sizeof(s_queue_records));
@@ -987,6 +1005,217 @@ void message_dispatch(int id, const char* p2, uint32_t p3, const void* p4)
 void message_update(float dt)
 {
     s_now += dt;
+}
+
+void info_message_queue_tick_ops_set(const InfoMessageQueueTickOps* ops)
+{
+    if (ops != NULL) s_info_message_queue_tick_ops = *ops;
+    else memset(&s_info_message_queue_tick_ops, 0,
+                sizeof(s_info_message_queue_tick_ops));
+}
+
+/* InfoMessageQueueTick (FUN_00419f30): each per-ID record advances its
+ * display offset toward zero at 3 units/second and its remaining value
+ * toward the 333-unit ceiling at 8 units/second. Resource positioning and
+ * the state-owned text draw are renderer operations, so they remain narrow
+ * callbacks while the queue-owned timing runs in the normal message ticker. */
+// FUNCTION: LEGORR 0x00419f30
+void info_message_queue_tick(float dt)
+{
+    float ceiling = 333.0f;
+    int index;
+    float position[2];
+    void* global_resource;
+    if (s_queue_count == 0) return;
+    for (index = 0; index < s_queue_count; ++index) {
+        int id = (int)s_queue_records[index].id;
+        MessageQueueRecord* record = &s_queue_records[index];
+        TextureSurface* resource = NULL;
+        if (record->remaining_value < ceiling)
+            record->remaining_value += dt * 8.0f;
+        if (ceiling < record->remaining_value)
+            record->remaining_value = ceiling;
+        if (record->transition_value < 0.0f)
+            record->transition_value += dt * 3.0f;
+        if (record->transition_value > 0.0f)
+            record->transition_value = 0.0f;
+
+        position[0] = record->transition_value;
+        position[1] = record->remaining_value;
+        if (id >= 0 && id < MESSAGE_MAX_ID)
+            resource = s_info_message_surfaces[id];
+        if (s_info_message_queue_tick_ops.resource_update != NULL) {
+            s_info_message_queue_tick_ops.resource_update(
+                s_info_message_queue_tick_ops.context, resource, position);
+        }
+        if (record->remaining_value < 0.0f) {
+            global_resource =
+                s_info_message_queue_tick_ops.global_resource_get != NULL
+                ? s_info_message_queue_tick_ops.global_resource_get(
+                    s_info_message_queue_tick_ops.context)
+                : NULL;
+            position[1] = 0.0f;
+            if (s_info_message_queue_tick_ops.resource_update != NULL) {
+                s_info_message_queue_tick_ops.resource_update(
+                    s_info_message_queue_tick_ops.context, global_resource,
+                    position);
+            }
+            return;
+        }
+        if (s_info_message_queue_tick_ops.state_draw != NULL) {
+            s_info_message_queue_tick_ops.state_draw(
+                s_info_message_queue_tick_ops.context, s_incident_state);
+        }
+        if (s_info_message_queue_tick_ops.resource_limit_get != NULL) {
+            ceiling = record->remaining_value - (float)
+                s_info_message_queue_tick_ops.resource_limit_get(
+                    s_info_message_queue_tick_ops.context, resource);
+        }
+        else ceiling = record->remaining_value;
+    }
+}
+
+void incident_message_text_consumer_ops_set(
+    const IncidentMessageTextConsumerOps* ops)
+{
+    if (ops != NULL) s_incident_message_text_ops = *ops;
+    else memset(&s_incident_message_text_ops, 0,
+                sizeof(s_incident_message_text_ops));
+}
+
+static int incident_message_text_append_default(
+    void* output, const char* format, const uint8_t arguments[5],
+    unsigned int argument_count)
+{
+#if defined(_M_IX86) || defined(__i386__)
+    void* text_buffer;
+    if (output == NULL || format == NULL) return 0;
+    text_buffer = *(void**)output;
+    if (text_buffer == NULL) return 0;
+    if (argument_count == 0u) {
+        text_buffer_append_format(text_buffer, format);
+    }
+    else if (argument_count == 5u) {
+        text_buffer_append_format(text_buffer, format,
+            (int)arguments[0], (int)arguments[1], (int)arguments[2],
+            (int)arguments[3], (int)arguments[4]);
+    }
+    else return 0;
+    return 1;
+#else
+    (void)output;
+    (void)format;
+    (void)arguments;
+    (void)argument_count;
+    return 0; /* the host-width output record resolves its buffer by sidecar */
+#endif
+}
+
+/* IncidentMessageTextConsumer (FUN_0041a080): check the panel transition
+ * gates, replace the text from the leading message's first node (falling
+ * back to its configured template), update scrolling, clear the pending-text
+ * bit, then draw once more on every path. The UI record and its buffer live
+ * in the panel owner; their operations stay behind the narrow adapter above. */
+// FUNCTION: LEGORR 0x0041a080
+void incident_message_text_consumer(float frame_delta)
+{
+    uint32_t ui_flags = 0u;
+    uint32_t scroll_offset = 0u;
+    void* output = NULL;
+    if (s_incident_message_text_ops.ui_state_flags_get != NULL) {
+        ui_flags = s_incident_message_text_ops.ui_state_flags_get(
+            s_incident_message_text_ops.context);
+    }
+    if (s_incident_message_text_ops.text_output_get != NULL) {
+        output = s_incident_message_text_ops.text_output_get(
+            s_incident_message_text_ops.context);
+    }
+    else {
+        output = panel_ui_record_peek();
+    }
+
+    if ((s_flags & 1u) == 0u || s_queue_count == 0) {
+        if ((ui_flags & 4u) == 0u &&
+            s_incident_message_text_ops.panel_transition_request != NULL) {
+            s_incident_message_text_ops.panel_transition_request(
+                s_incident_message_text_ops.context, 7);
+        }
+        else if ((ui_flags & 4u) == 0u) {
+            panel_state_flags_toggle(7);
+        }
+    }
+    else {
+        if ((ui_flags & 2u) == 0u &&
+            s_incident_message_text_ops.panel_transition_request != NULL) {
+            s_incident_message_text_ops.panel_transition_request(
+                s_incident_message_text_ops.context, 7);
+        }
+        else if ((ui_flags & 2u) == 0u) {
+            panel_state_flags_toggle(7);
+        }
+        if ((s_flags & 2u) != 0u && output != NULL) {
+            int id = (int)s_queue_records[0].id;
+            const char* text = NULL;
+            uint8_t arguments[5];
+            unsigned int argument_count = 0u;
+            size_t length;
+            int appended = 0;
+            void* node = s_idx_head[0];
+            if (node != NULL) text = incident_message_node_text_get(node);
+            if (text == NULL && id >= 0 && id < MESSAGE_MAX_ID)
+                text = s_compiled_template[id];
+
+            if (s_incident_message_text_ops.text_output_reset != NULL)
+                s_incident_message_text_ops.text_output_reset(
+                    s_incident_message_text_ops.context, output);
+            else
+                ui_text_output_object_release((void* const*)output);
+            if (text != NULL) {
+                memset(arguments, 0, sizeof(arguments));
+                length = strlen(text);
+                if (text[length + 1u] != '\0') {
+                    unsigned int index;
+                    argument_count = 5u;
+                    for (index = 0u; index < argument_count; ++index)
+                        arguments[index] = (uint8_t)text[length + 2u + index];
+                }
+                if (s_incident_message_text_ops.text_output_append != NULL) {
+                    s_incident_message_text_ops.text_output_append(
+                        s_incident_message_text_ops.context, output, text,
+                        arguments, argument_count);
+                    appended = 1;
+                }
+                else if (incident_message_text_append_default(
+                             output, text, arguments, argument_count)) {
+                    appended = 1;
+                }
+            }
+            if (s_incident_message_text_ops.scroll_offset_get != NULL) {
+                scroll_offset =
+                    s_incident_message_text_ops.scroll_offset_get(
+                        s_incident_message_text_ops.context);
+            }
+            else {
+                scroll_offset = screen_right_edge_cache_peek();
+            }
+            unported_ledger_stubs::ui_text_output_position_and_draw(
+                output, scroll_offset, frame_delta);
+            if (appended) {
+                scroll_offset_from_cursor_update();
+                s_flags &= ~2u;
+            }
+        }
+    }
+
+    if (s_incident_message_text_ops.scroll_offset_get != NULL) {
+        scroll_offset = s_incident_message_text_ops.scroll_offset_get(
+            s_incident_message_text_ops.context);
+    }
+    else {
+        scroll_offset = screen_right_edge_cache_peek();
+    }
+    unported_ledger_stubs::ui_text_output_position_and_draw(
+        output, scroll_offset, frame_delta);
 }
 
 /* corpus FUN_0041a2c0 (InfoMessageTimerDecay): walks the 40 stride-0x14

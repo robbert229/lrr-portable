@@ -138,19 +138,24 @@ void object_field_38_release(void* record);
 void text_buffer_reset(void* record);           /* FUN_004859b0 */
 
 /* TextBufferCreate (FUN_004850f0): allocates the 0x830-byte text-output
- * record, zero-clears it, installs the caller's mode word and four header
+ * record, zero-clears it, installs the caller's font-resource handle and four header
  * dwords, allocates the buffer half (the port keeps the widened native
  * pointer slot at +0x14 like the reset/destroy twins), records the length
  * as a dword at +0x418, and raises the +0x82c bit 2. Deviations: the
  * buffer-slot widening, and the record half answering NULL where the
  * corpus strides the allocation blindly. */
-void* text_buffer_create(uint32_t mode, const uint32_t* header, long size);
+void* text_buffer_create(uintptr_t font_handle, const uint32_t* header,
+                         long size);
 void text_buffer_append_vformat(void* record, int skip_bells,
                                 const char* format, va_list args);
 void text_buffer_append_format(void* record, const char* format, ...);
 void formatted_text_append_to_ring_buffer(void* record, int skip_bells,
                                           const char* format, ...);
 
+/* TextBufferDrawWrapped uses the font-resource handle stored at record +0.
+ * Portable gameplay installs atlas-backed metrics and glyph blits through
+ * this interface; `glyph_draw` returns the same advance as the native
+ * draw-and-measure call. */
 typedef struct TextBufferDrawOps {
     void* context;
     int (*font_line_height)(void* context, void* font);
@@ -160,6 +165,8 @@ typedef struct TextBufferDrawOps {
     int (*is_word_break)(void* context, unsigned char glyph);
 } TextBufferDrawOps;
 void text_buffer_draw_ops_set(const TextBufferDrawOps* ops);
+/* Install the software bitmap-atlas renderer used by portable gameplay. */
+void text_buffer_draw_software_install(void);
 int text_buffer_draw_wrapped(void* record, uint32_t start_line,
                              float line_scale, int* height_out);
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,

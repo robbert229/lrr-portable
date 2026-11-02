@@ -154,6 +154,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     winmain_parse_basic_options(startup_parameters);
     startup_state[0] = s_startup_no_sound;
     startup_state[1] = s_startup_insist_on_cd;
+    resource_startup_require_cd_set((int)s_startup_insist_on_cd);
 
     if (!winmain_registry_read("NoHALMessage", no_hal_message,
                                sizeof(no_hal_message))) {

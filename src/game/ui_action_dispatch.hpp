@@ -22,7 +22,8 @@ typedef struct UiActionDispatchOps {
     void (*selected_map_action_enqueue)(void* context, int action, int mode,
                                         int x, int y);
     void (*selection_clear_request_and_hud_reset)(void* context);
-    void (*selected_map_coordinate_validate)(void* context, int x, int y);
+    /* TutorialPathDescriptorCreate @ 0x409300, used by actions 5 and 7. */
+    void (*tutorial_path_descriptor_create)(void* context, int x, int y);
     void (*selected_cell_reveal_mask_clear)(void* context, int x, int y,
                                             uint32_t mask);
     void (*terrain_cell_update)(void* context, int x, int y);
@@ -35,7 +36,7 @@ typedef struct UiActionDispatchOps {
     void (*terrain_cell_command_complete)(void* context, int x, int y);
     void (*terrain_descriptor_tiles_reset_and_free)(void* context,
                                                      int x, int y);
-    void (*selection_group_clear)(void* context);
+    void (*selection_group_clear)(void* context, int x, int y);
     void (*selected_entity_action_02ec0)(void* context, void* entity);
     void (*global_state_low_byte_clear_and_refresh)(void* context);
     void (*selected_entities_detach_or_pose)(void* context);
@@ -47,12 +48,13 @@ typedef struct UiActionDispatchOps {
     void (*selected_entity_action_24)(void* context);
     void (*selected_entity_action_2f)(void* context, void* entity);
     void (*selected_entity_action_31_group)(void* context, int argument);
+    /* ActionKindEntityCreateAndCommandIssue @ 0x43a650. */
+    void (*entity_action_kind_create)(void* context, void* entity, int kind);
     void (*entity_flag_80000000_set_clear)(void* context, void* entity,
                                            int set);
     int (*selected_entity_predicate)(void* context, void* entity,
                                      int predicate_id);
     void (*selected_entity_slot_set)(void* context, int slot, void* entity);
-    void (*entity_action_kind_create)(void* context, void* entity, int kind);
     void (*building_upgrade_commit)(void* context, void* entity);
     void (*selected_entity_field_f6_clear)(void* context, void* entity);
     void (*object_command_task_create)(void* context, void* entity,

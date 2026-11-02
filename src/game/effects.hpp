@@ -147,9 +147,6 @@ void screen_effect_tick_hooks_set(const ScreenEffectTickHooks* hooks);
 void screen_effect_slot_set(int pool, int slot, void* entity, float remaining);
 void* screen_effect_slot_peek(int pool, int slot, float* remaining);
 void screen_effects_tick(float delta); /* FUN_004075a0 */
-typedef void (*SceneTransformApplyHook)(void* context, void* target,
-                                        float x, float y, float z,
-                                        float scale);
 typedef struct SceneTransformState {
     void* target;
     void* owner;
@@ -157,8 +154,6 @@ typedef struct SceneTransformState {
     float current[3];
     uint32_t flags;
 } SceneTransformState;
-void scene_transform_apply_hook_set(SceneTransformApplyHook hook,
-                                    void* context);
 void scene_transform_state_initialize(void* target, void* owner,
                                       float x, float y, float z);
 void scene_transform_enable_set(int enabled);
@@ -194,8 +189,12 @@ void light_effect_config_load_hook_set(LightEffectConfigLoadHook hook,
                                        void* context);
 uint32_t light_effect_blink_config_load(void* config, void* section);
 uint32_t light_effect_fade_config_load(void* config, void* section);
-uint32_t light_effect_move_config_load(void* config, void* section);
-void light_effect_configuration_load(void* config, void* section);
+/* Reads the four LightEffects move keys from config_root, stores the movement
+ * ranges, and seeds the live jitter state when its scene target is bound. */
+uint32_t light_effect_move_config_load(void* config,
+                                       const char* config_root);
+void light_effect_configuration_load(void* config,
+                                     const char* config_root);
 /* LightEffects FadeRGBMin/Max and range pairs initialize the twelve values
  * consumed by RandomWaypointTimerStepApply (0x0044d280). The config root is
  * normally `Lego*`; returns 1 only when all required values parse. */

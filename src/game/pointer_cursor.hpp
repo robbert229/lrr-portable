@@ -195,8 +195,8 @@ static inline void pointer_cursor_draw(PointerCursorState* state,
         if (hooks->animation_size_get != NULL)
             hooks->animation_size_get(hooks->context, slot->resource,
                                       &width, &height);
-        /* The original draws the blank cursor surface before the animated
-         * cursor so the animation has a clean background at the pointer. */
+        /* DAT_00500aa0 is slot 1 (Pointer_Blank), submitted at the unshifted
+         * cursor position before the animation. */
         if (state->slots[1].resource != NULL && hooks->bitmap_draw != NULL)
             hooks->bitmap_draw(hooks->context, state->slots[1].resource,
                                (float)x, (float)y);

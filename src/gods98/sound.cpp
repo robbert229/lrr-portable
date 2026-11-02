@@ -154,8 +154,9 @@ struct SoundWaveMemoryStream {
 };
 
 struct SoundWaveFileHandle {
-    Resource* resource;
-    SoundWaveMemoryStream* stream;
+    GameFileHandle* file;
+    uint32_t file_length;
+    uint32_t riff_end;
     uint32_t data_offset;
     uint32_t data_size;
 };
@@ -296,128 +297,144 @@ uint32_t sound_wave_file_open_read_chunks(const char* path,
                                           uint8_t** format_out,
                                           SoundWaveChunk* parent_chunk_out)
 {
-    Resource* resource;
-    SoundWaveMemoryStream* stream;
-    SoundWaveFileHandle* handle;
-    uint8_t* format;
-    const uint8_t* data;
-    uint32_t size, riff_end, pos, chunk_size, body, padded_size;
+    GameFileHandle* file = NULL;
+    SoundWaveFileHandle* handle = NULL;
+    uint8_t* format = NULL;
+    uint8_t riff_header[12];
+    uint8_t chunk_header[8];
+    uint8_t base_format[16];
+    uint32_t file_length, riff_size, riff_end, pos;
+    uint32_t chunk_size, body, padded_size, chunk_end;
     uint32_t format_size;
     uint16_t extra_size;
-    uint32_t result;
+    uint32_t result = 0xe101u;
     if (handle_out == NULL || format_out == NULL || parent_chunk_out == NULL)
         return 0xe101u;
     *handle_out = NULL;
     *format_out = NULL;
     memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
     if (path == NULL) return 0xe100u;
-    resource = resource_open(path, RESOURCE_STD_ONLY);
-    if (resource == NULL) return 0xe100u;
-    if (resource_read(resource) < 0 || resource->size < 0 ||
-        (uint32_t)resource->size > 0x7fffffffu) {
-        resource_free(resource);
-        return 0xe102u;
+    file = game_file_open_loose_path(path, "rb");
+    if (file == NULL) return 0xe100u;
+    if (wad_file_seek(file, 0, SEEK_END) != 0) {
+        result = 0xe102u;
+        goto cleanup;
     }
-    data = (const uint8_t*)resource->data;
-    size = (uint32_t)resource->size;
-    if (data == NULL || size < 12u || data[0] != 'R' || data[1] != 'I' ||
-        data[2] != 'F' || data[3] != 'F') {
-        resource_free(resource);
-        return 0xe101u;
+    {
+        int length = wad_file_cursor_get(file);
+        if (length < 0 || wad_file_seek(file, 0, SEEK_SET) != 0) {
+            result = 0xe102u;
+            goto cleanup;
+        }
+        file_length = (uint32_t)length;
     }
-    riff_end = s_le32(data + 4u) + 8u;
-    if (riff_end < 12u || riff_end > size || data[8] != 'W' ||
-        data[9] != 'A' || data[10] != 'V' || data[11] != 'E') {
-        resource_free(resource);
-        return 0xe101u;
+    if (file_length < sizeof(riff_header) ||
+        wad_file_read(riff_header, 1, (int)sizeof(riff_header), file) !=
+            (int)sizeof(riff_header)) {
+        result = 0xe101u;
+        goto cleanup;
+    }
+    if (memcmp(riff_header, "RIFF", 4u) != 0 ||
+        memcmp(riff_header + 8u, "WAVE", 4u) != 0) {
+        result = 0xe101u;
+        goto cleanup;
+    }
+    riff_size = s_le32(riff_header + 4u);
+    if (riff_size > 0xfffffff7u) {
+        result = 0xe102u;
+        goto cleanup;
+    }
+    riff_end = riff_size + 8u;
+    if (riff_end < 12u || riff_end > file_length) {
+        result = 0xe102u;
+        goto cleanup;
     }
     parent_chunk_out->chunk_id = 0x46464952u;
-    parent_chunk_out->chunk_size = riff_end - 8u;
+    parent_chunk_out->chunk_size = riff_size;
     parent_chunk_out->form_type = 0x45564157u;
     parent_chunk_out->data_offset = 8u;
     parent_chunk_out->flags = 0u;
 
     pos = 12u;
     while (riff_end - pos >= 8u) {
-        chunk_size = s_le32(data + pos + 4u);
+        if (wad_file_seek(file, (int)pos, SEEK_SET) != 0 ||
+            wad_file_read(chunk_header, 1, (int)sizeof(chunk_header), file) !=
+                (int)sizeof(chunk_header)) {
+            result = 0xe102u;
+            goto cleanup;
+        }
+        chunk_size = s_le32(chunk_header + 4u);
         body = pos + 8u;
         if (chunk_size > riff_end - body) {
-            memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
-            resource_free(resource);
-            return 0xe102u;
+            result = 0xe102u;
+            goto cleanup;
         }
         padded_size = chunk_size + (chunk_size & 1u);
         if (padded_size < chunk_size || padded_size > riff_end - body) {
-            memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
-            resource_free(resource);
-            return 0xe102u;
+            result = 0xe102u;
+            goto cleanup;
         }
-        if (data[pos] == 'f' && data[pos + 1u] == 'm' &&
-            data[pos + 2u] == 't' && data[pos + 3u] == ' ') {
+        chunk_end = body + padded_size;
+        if (memcmp(chunk_header, "fmt ", 4u) == 0) {
+            uint32_t bytes_read;
             if (chunk_size <= 15u) {
-                memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
-                resource_free(resource);
-                return 0xe101u;
+                result = 0xe101u;
+                goto cleanup;
+            }
+            if (wad_file_read(base_format, 1, 16, file) != 16) {
+                result = 0xe102u;
+                goto cleanup;
             }
             extra_size = 0u;
-            if (s_le16(data + body) != 1u) {
-                /* Match mmioRead before mmioAscend: cbSize and extension
-                 * reads may cross the declared fmt chunk into later RIFF
-                 * bytes. Bound only against the retained file image. */
-                if (body > size || size - body < 18u) {
-                    memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
-                    resource_free(resource);
-                    return 0xe102u;
+            if (s_le16(base_format) != 1u) {
+                uint8_t extra_header[2];
+                if (wad_file_read(extra_header, 1, 2, file) != 2) {
+                    result = 0xe102u;
+                    goto cleanup;
                 }
-                extra_size = s_le16(data + body + 16u);
-                if ((uint32_t)extra_size > size - (body + 18u)) {
-                    memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
-                    resource_free(resource);
-                    return 0xe102u;
-                }
+                extra_size = s_le16(extra_header);
             }
             format_size = (uint32_t)extra_size + 18u;
             format = (uint8_t*)calloc(format_size, 1u);
             if (format == NULL) {
-                memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
-                resource_free(resource);
-                return 0xe000u;
+                result = 0xe000u;
+                goto cleanup;
             }
-            memcpy(format, data + body, 16u);
+            memcpy(format, base_format, 16u);
             format[16] = (uint8_t)(extra_size & 0xffu);
             format[17] = (uint8_t)(extra_size >> 8);
-            if (extra_size != 0u)
-                memcpy(format + 18u, data + body + 18u, extra_size);
-
-            stream = (SoundWaveMemoryStream*)malloc(sizeof(*stream));
-            if (stream == NULL) {
-                free(format);
-                memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
-                resource_free(resource);
-                return 0xe000u;
+            if (extra_size != 0u) {
+                bytes_read = (uint32_t)wad_file_read(
+                    format + 18u, 1, (int)extra_size, file);
+                if (bytes_read != (uint32_t)extra_size) {
+                    result = 0xe102u;
+                    goto cleanup;
+                }
             }
-            stream->memory = data;
-            stream->length = size;
-            stream->cursor = body + padded_size;
-
+            /* mmioAscend positions the handle at the padded end of fmt. */
+            if (wad_file_seek(file, (int)chunk_end, SEEK_SET) != 0) {
+                result = 0xe102u;
+                goto cleanup;
+            }
             handle = (SoundWaveFileHandle*)calloc(1, sizeof(*handle));
             if (handle == NULL) {
-                sound_wave_memory_format_close(&stream, &format);
-                memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
-                resource_free(resource);
-                return 0xe000u;
+                result = 0xe000u;
+                goto cleanup;
             }
-            handle->resource = resource;
-            handle->stream = stream;
+            handle->file = file;
+            handle->file_length = file_length;
+            handle->riff_end = riff_end;
             *handle_out = handle;
             *format_out = format;
             return 0u;
         }
-        pos = body + padded_size;
+        pos = chunk_end;
     }
-    memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
-    resource_free(resource);
     result = 0xe101u;
+
+cleanup:
+    free(format);
+    if (file != NULL) game_file_close(file);
     return result;
 }
 
@@ -427,35 +444,36 @@ void sound_wave_data_chunk_open(SoundWaveFileHandle** handle_inout,
                                 SoundWaveChunk* parent_chunk)
 {
     SoundWaveFileHandle* handle;
-    const uint8_t* data;
-    uint32_t size, riff_end, pos;
+    uint8_t chunk_header[8];
+    uint32_t pos;
     if (data_chunk_out == NULL) return;
     memset(data_chunk_out, 0, sizeof(*data_chunk_out));
     if (handle_inout == NULL || *handle_inout == NULL || parent_chunk == NULL)
         return;
     handle = *handle_inout;
-    if (handle->resource == NULL || handle->resource->data == NULL ||
-        handle->stream == NULL) return;
-    data = (const uint8_t*)handle->resource->data;
-    if (handle->resource->size < 12) return;
-    size = (uint32_t)handle->resource->size;
-    riff_end = s_le32(data + 4u) + 8u;
-    if (riff_end < 12u || riff_end > size) return;
+    if (handle->file == NULL || handle->riff_end < 12u ||
+        handle->riff_end > handle->file_length) return;
     if (parent_chunk->chunk_id != 0x46464952u ||
         parent_chunk->form_type != 0x45564157u ||
         parent_chunk->data_offset > 0xfffffffbu) return;
     pos = parent_chunk->data_offset + 4u;
-    if (pos < 12u || pos > riff_end) return;
-    while (riff_end - pos >= 8u) {
-        uint32_t chunk_size = s_le32(data + pos + 4u);
+    if (pos < 12u || pos > handle->riff_end) return;
+    while (handle->riff_end - pos >= 8u) {
+        uint32_t chunk_size;
         uint32_t body = pos + 8u;
         uint32_t padded_size;
-        if (chunk_size > riff_end - body) return;
+        uint32_t chunk_end;
+        if (wad_file_seek(handle->file, (int)pos, SEEK_SET) != 0 ||
+            wad_file_read(chunk_header, 1, (int)sizeof(chunk_header),
+                          handle->file) != (int)sizeof(chunk_header)) return;
+        chunk_size = s_le32(chunk_header + 4u);
+        if (chunk_size > handle->riff_end - body) return;
         padded_size = chunk_size + (chunk_size & 1u);
-        if (padded_size < chunk_size || padded_size > riff_end - body)
+        if (padded_size < chunk_size ||
+            padded_size > handle->riff_end - body)
             return;
-        if (data[pos] == 'd' && data[pos + 1u] == 'a' &&
-            data[pos + 2u] == 't' && data[pos + 3u] == 'a') {
+        chunk_end = body + padded_size;
+        if (memcmp(chunk_header, "data", 4u) == 0) {
             data_chunk_out->chunk_id = 0x61746164u;
             data_chunk_out->chunk_size = chunk_size;
             data_chunk_out->form_type = 0u;
@@ -463,11 +481,11 @@ void sound_wave_data_chunk_open(SoundWaveFileHandle** handle_inout,
             data_chunk_out->flags = 0u;
             handle->data_offset = body;
             handle->data_size = chunk_size;
-            handle->stream->cursor = body;
-            handle->stream->length = body + chunk_size;
+            if (wad_file_seek(handle->file, (int)body, SEEK_SET) != 0)
+                memset(data_chunk_out, 0, sizeof(*data_chunk_out));
             return;
         }
-        pos = body + padded_size;
+        pos = chunk_end;
     }
 }
 
@@ -481,9 +499,10 @@ void sound_wave_file_handle_close(SoundWaveFileHandle** handle_inout,
     }
     if (handle_inout == NULL || *handle_inout == NULL) return;
     handle = *handle_inout;
-    sound_wave_memory_format_close(&handle->stream, NULL);
-    resource_free(handle->resource);
-    handle->resource = NULL;
+    if (handle->file != NULL) {
+        game_file_close(handle->file);
+        handle->file = NULL;
+    }
     free(handle);
     *handle_inout = NULL;
 }
@@ -520,7 +539,7 @@ uint32_t sound_wave_data_read(SoundWaveFileHandle* handle,
     uint32_t amount;
     uint32_t remaining;
     if (bytes_read != NULL) *bytes_read = 0u;
-    if (handle == NULL || handle->stream == NULL || data_chunk == NULL ||
+    if (handle == NULL || handle->file == NULL || data_chunk == NULL ||
         (destination == NULL && requested != 0u)) return 0xe103u;
 
     remaining = data_chunk->chunk_size;
@@ -528,14 +547,20 @@ uint32_t sound_wave_data_read(SoundWaveFileHandle* handle,
     if (remaining < amount) amount = remaining;
     data_chunk->chunk_size = remaining - amount;
 
-    if (handle->stream->memory == NULL ||
-        handle->stream->cursor > handle->stream->length ||
-        amount > handle->stream->length - handle->stream->cursor ||
-        (amount != 0u && destination == NULL)) return 0xe103u;
     if (amount != 0u) {
-        memcpy(destination, handle->stream->memory + handle->stream->cursor,
-               amount);
-        handle->stream->cursor += amount;
+        int read_count;
+        int position;
+        if (handle->data_offset > 0x7fffffffu ||
+            amount > 0x7fffffffu ||
+            handle->data_offset > handle->file_length ||
+            amount > handle->file_length - handle->data_offset)
+            return 0xe103u;
+        position = wad_file_cursor_get(handle->file);
+        if (position < 0 || (uint32_t)position != handle->data_offset)
+            return 0xe103u;
+        read_count = wad_file_read(destination, 1, (int)amount, handle->file);
+        if (read_count != (int)amount) return 0xe103u;
+        handle->data_offset += amount;
     }
     if (bytes_read != NULL) *bytes_read = amount;
     return 0u;
@@ -628,19 +653,77 @@ void sound_free(Sound* s)
     free(s);
 }
 
+/* The retail streamed-sample path keeps the MMIO handle and format block
+ * together until the data chunk has been consumed. Reuse the same portable
+ * lifecycle for loose files before falling back to RESOURCE_AUTO (which is
+ * still needed for archive-backed samples). */
+static Sound* sound_sample_file_load_chunks(const char* name)
+{
+    SoundWaveFileHandle* handle = NULL;
+    SoundWaveChunk parent_chunk;
+    SoundWaveChunk data_chunk;
+    uint8_t* format = NULL;
+    Sound* sound = NULL;
+    uint32_t status;
+    uint32_t bytes_read = 0u;
+
+    status = sound_wave_file_open_read_chunks(name, &handle, &format,
+                                              &parent_chunk);
+    if (status != 0u || handle == NULL || format == NULL) goto cleanup;
+
+    sound_wave_data_chunk_open(&handle, &data_chunk, &parent_chunk);
+    if (data_chunk.chunk_id != 0x61746164u) goto cleanup;
+
+    /* Finding 108: the helper preserves non-PCM cbSize bytes in `format`,
+     * but the playback path rejects non-PCM before creating a buffer. */
+    if (s_le16(format) != 1u) goto cleanup;
+
+    sound = (Sound*)calloc(1, sizeof(*sound));
+    if (sound == NULL) goto cleanup;
+    sound->format.format_tag = s_le16(format);
+    sound->format.channels = s_le16(format + 2u);
+    sound->format.sample_rate = s_le32(format + 4u);
+    sound->format.byte_rate = s_le32(format + 8u);
+    sound->format.block_align = s_le16(format + 12u);
+    sound->format.bits_per_sample = s_le16(format + 14u);
+    sound->data_len = data_chunk.chunk_size;
+    sound->file_len = handle->file_length;
+    sound->data = (uint8_t*)malloc(sound->data_len != 0u
+        ? sound->data_len : 1u);
+    if (sound->data == NULL) {
+        free(sound);
+        sound = NULL;
+        goto cleanup;
+    }
+    status = sound_wave_data_read(handle, sound->data_len, sound->data,
+                                  &data_chunk, &bytes_read);
+    if (status != 0u || bytes_read != sound->data_len) {
+        sound_free(sound);
+        sound = NULL;
+        goto cleanup;
+    }
+
+cleanup:
+    (void)sound_wave_handle_and_buffer_release(&handle, &format);
+    return sound;
+}
+
 static Sound* sound_sample_file_load_by_name(const char* name)
 {
+    Resource* r;
+    Sound* s;
     if (name == NULL) return NULL;
-    Resource* r = resource_open(name, RESOURCE_AUTO);
-    if (r == NULL) {
-        return NULL;
-    }
-    if (resource_read(r) < 0) {
+    s = sound_sample_file_load_chunks(name);
+    if (s == NULL) {
+        r = resource_open(name, RESOURCE_AUTO);
+        if (r == NULL) return NULL;
+        if (resource_read(r) < 0) {
+            resource_free(r);
+            return NULL;
+        }
+        s = sound_parse((const uint8_t*)r->data, (uint32_t)r->size);
         resource_free(r);
-        return NULL;
     }
-    Sound* s = sound_parse((const uint8_t*)r->data, (uint32_t)r->size);
-    resource_free(r);
     if (s != NULL) {
 #if defined(_MSC_VER)
         s->name = _strdup(name);
@@ -1195,24 +1278,11 @@ AudioBuffer* sound_handle_buffer_get(int buffer_handle)
 // FUNCTION: LEGORR 0x0047b130
 void sound_buffer_stop_handle(int buffer_handle)
 {
-    AudioBuffer* buffer;
-    if (!sound_bank_sound_on() || buffer_handle < 0
-        || buffer_handle >= SOUND_BANK_SLOTS * 3) {
-        return;
-    }
-    buffer = sound_handle_buffer_get(buffer_handle);
-    audio_buffer_stop(buffer);
-    if (sizeof(void*) != 4u) {
-        SoundInstanceHostRecord* record = s_sound_instance_host_records;
-        while (record != NULL) {
-            if (record->buffer == buffer) {
-                sound_instance_track_stop_and_remove(record->provider,
-                                                     record->instance);
-                break;
-            }
-            record = record->next;
-        }
-    }
+    AudioBuffer* buffer = sound_handle_buffer_get(buffer_handle);
+    /* The retail body resolves the handle first, then checks the bank gate,
+     * the -1 sentinel, and the returned interface before calling Stop. */
+    if (s_bank_sound_on != 0 && buffer_handle != -1 && buffer != NULL)
+        audio_buffer_stop(buffer);
 }
 
 // FUNCTION: LEGORR 0x00465190
@@ -1870,8 +1940,8 @@ void sound_deferred_play_expire(void)
     /* DeferredSoundPlayExpire @ 0x464e80. */
     if (s_cooldown_handle != -1 && s_cooldown_timer > 0.0f) {
         /* SoundHandleStopForward -> SoundBufferStopHandle. The portable
-         * bank validates the slot and forwards the buffer index to its
-         * installed DirectSound-instance seam. */
+         * bank validates the handle and stops that duplicate buffer's
+         * active voice. */
         sound_handle_stop_forward(s_cooldown_handle);
         s_cooldown_handle = -1;
         s_cooldown_timer = 0.0f;

@@ -33,40 +33,59 @@ static inline int entity_subobject_pose_delta_normalize_and_dispatch(
     EntityPoseDeltaState* state, const EntityPoseDeltaHooks* hooks,
     float target_x, float target_y)
 {
+    float dx;
+    float dy;
     float length;
+    float current_x;
+    float current_y;
+    float current_z;
     if (state == 0 || hooks == 0) return 0;
-    state->target_x = target_x;
-    state->target_y = target_y;
     if (hooks->origin_get == 0 ||
         !hooks->origin_get(hooks->context, state->kind,
-                           &state->origin_x, &state->origin_y,
-                           &state->origin_z)) return 0;
-    state->direction_x = target_x - state->origin_x;
-    state->direction_y = target_y - state->origin_y;
-    state->direction_z = -state->origin_z;
-    state->direction_z = 0.0f;
-    length = (float)sqrt(state->direction_x * state->direction_x +
-                         state->direction_y * state->direction_y);
-    if (length > 0.0f) {
-        state->distance = length;
-        state->direction_x /= length;
-        state->direction_y /= length;
+                           &current_x, &current_y, &current_z)) return 0;
+
+    /* The retail record caches its source position at +0x2a0 and its
+     * normalized planar direction/length at +0x2ac/+0x2b8. It refreshes
+     * those fields only when the requested pair differs from the current
+     * pose; an unchanged pair still reaches the dispatch below with the
+     * previously cached direction. */
+    if (target_x != current_x || target_y != current_y) {
+        state->origin_x = current_x;
+        state->origin_y = current_y;
+        state->origin_z = current_z;
+        dx = target_x - current_x;
+        dy = target_y - current_y;
+        /* The decompile computes -origin_z and then explicitly overwrites
+         * the z component with zero before measuring the vector. */
+        state->direction_z = 0.0f - current_z;
         state->direction_z = 0.0f;
+        length = (float)sqrt(dx * dx + dy * dy +
+                             state->direction_z * state->direction_z);
+        state->distance = length;
+        state->direction_x = dx / length;
+        state->direction_y = dy / length;
+        state->direction_z /= length;
     }
-    else {
-        state->distance = 0.0f;
-        state->direction_x = 0.0f;
-        state->direction_y = 0.0f;
+
+    /* The three record families apply the pose flag differently. Kind 1
+     * reverses the full vector, kind 2 reverses its planar pair, and kind 3
+     * consumes the cached pair unchanged. */
+    dx = state->direction_x;
+    dy = state->direction_y;
+    length = state->direction_z;
+    if (state->kind == 1 && (state->flags_f8 & 2u) != 0u) {
+        dx = -dx;
+        dy = -dy;
+        length = -length;
     }
-    if ((state->flags_f8 & 2u) != 0u) {
-        state->direction_x = -state->direction_x;
-        state->direction_y = -state->direction_y;
-        state->direction_z = -state->direction_z;
+    else if (state->kind == 2 && (state->flags_f8 & 2u) != 0u) {
+        dx = -state->direction_x;
+        dy = -state->direction_y;
     }
     if (hooks->direction_apply != 0 &&
         (state->kind == 1 || state->kind == 2 || state->kind == 3))
         hooks->direction_apply(hooks->context, state->kind,
-            state->direction_x, state->direction_y, state->direction_z);
+            dx, dy, length);
     if (hooks->position_apply != 0 &&
         (state->kind == 1 || state->kind == 2 || state->kind == 3))
         hooks->position_apply(hooks->context, state->kind, target_x, target_y,

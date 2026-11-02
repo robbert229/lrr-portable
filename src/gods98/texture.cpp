@@ -67,7 +67,7 @@ typedef struct TextureBitmapLayout {
 
 // FUNCTION: LEGORR 0x00489c30
 void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap,
-                                         uint32_t unused,
+                                         uint32_t bitmap_size,
                                          IndexedBitmapPaletteData* output)
 {
     uint32_t bpp;
@@ -75,36 +75,47 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap,
     uint32_t color_count;
     uint32_t index;
     uint32_t row_bytes;
+    uint32_t palette_limit;
     uint8_t* palette_bytes;
-    (void)unused;
-    if (bitmap == NULL || output == NULL) return;
+    if (output == NULL) return;
+    memset(output, 0, sizeof(*output));
+    /* The retail caller has already loaded a complete bitmap. This adapter
+     * also receives that byte count, so reject short DIB/palette data before
+     * reading the fixed BITMAPINFOHEADER offsets. */
+    if (bitmap == NULL || bitmap_size < 0x1eu) return;
     bpp = t_le16(bitmap + 0x1cu);
     if (bpp == 8u) {
+        if (bitmap_size < 0x36u) return;
+        palette_limit = t_le32(bitmap + 0x0au);
+        if (palette_limit > bitmap_size) palette_limit = bitmap_size;
+        if (palette_limit < 0x36u) return;
         color_count = t_le32(bitmap + 0x2eu);
         if (color_count == 0u) color_count = 0x100u;
         /* The retail loader allocates/zeroes the full 0x400 palette and then
          * copies only the declared entries from the fixed +0x36 BMP offset. */
         output->palette = (uint32_t*)engine_heap_alloc(0x400L);
-        if (output->palette == NULL) {
-            output->palette_count = 0u;
-            return;
-        }
-        memset(output->palette, 0, 0x400u);
-        if (color_count > 0x100u) color_count = 0x100u;
-        memcpy(output->palette, bitmap + 0x36u,
-               (size_t)color_count * sizeof(uint32_t));
-        palette_bytes = (uint8_t*)output->palette;
-        for (index = 0u; index < color_count; ++index) {
-            uint8_t red = palette_bytes[index * 4u];
-            palette_bytes[index * 4u] = palette_bytes[index * 4u + 2u];
-            palette_bytes[index * 4u + 2u] = red;
+        if (output->palette != NULL) {
+            uint32_t available = (palette_limit - 0x36u) / 4u;
+            memset(output->palette, 0, 0x400u);
+            /* The reference copies the declared count blindly. Cap it to the
+             * fixed 256-entry destination and bytes present in this buffer. */
+            if (color_count > 0x100u) color_count = 0x100u;
+            if (color_count > available) color_count = available;
+            memcpy(output->palette, bitmap + 0x36u,
+                   (size_t)color_count * sizeof(uint32_t));
+            palette_bytes = (uint8_t*)output->palette;
+            for (index = 0u; index < color_count; ++index) {
+                uint8_t red = palette_bytes[index * 4u];
+                palette_bytes[index * 4u] = palette_bytes[index * 4u + 2u];
+                palette_bytes[index * 4u + 2u] = red;
+            }
+            output->palette_count = color_count;
         }
         output->indexed_flag = 0u;
         output->channel_fields[0] = 0xfcu;
         output->channel_fields[1] = 0xfcu;
         output->channel_fields[2] = 0xfcu;
         output->channel_fields[3] = 0xfcu;
-        output->palette_count = color_count;
     }
     else {
         output->indexed_flag = 1u;
@@ -127,7 +138,11 @@ void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap,
     }
     row_bytes = bytes_per_pixel * (uint32_t)output->width;
     output->scanline_stride = (row_bytes + 3u) & 0xfffffffcu;
-    output->pixels = bitmap + t_le32(bitmap + 0x0au);
+    {
+        uint32_t pixel_offset = t_le32(bitmap + 0x0au);
+        output->pixels = pixel_offset <= bitmap_size
+            ? bitmap + pixel_offset : NULL;
+    }
     output->reserved_20 = 0u;
 }
 

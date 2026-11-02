@@ -15,6 +15,7 @@
 #include "game/mission.hpp"
 #include "game/options.hpp"
 #include "game/objective.hpp"
+#include "game/port_loop_ports.hpp"
 #include "game/render.hpp"
 #include "game/savegame.hpp"
 #include "game/select.hpp"
@@ -37,12 +38,14 @@
 namespace unported_ledger_stubs {
 int ledger_stub_004401b0_TerrainCellToWorldPosition(EntitySlot* entity,
                                                     int force);
-void ledger_stub_00403320_ObjectCommandTaskCreate(EntitySlot* entity,
-                                                  int parameter);
+void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode);
+int ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
+    EntitySlot* entity);
 }
 #include "string.hpp"
 #include "texture.hpp"
 #include "tickers.hpp"
+#include "simtick.hpp"
 #include "view.hpp"
 #include "camera.hpp"
 #include "crt/crt.hpp"
@@ -406,6 +409,31 @@ static int frame_ui_action_already_held(void* context, int action, int mode)
                                     action, mode);
 }
 
+/* CatalogSlotFlagUpdate (FUN_0041c800) uses these exact helpers for its
+ * category-1/category-4 eligibility and cell-resource checks. The category-1
+ * rank read is retained even though the retail comparison's second operand
+ * is the return residue of a void no-op. */
+static int frame_catalog_slot_eligible(int category, int slot,
+                                       void* context)
+{
+    return object_interaction_flags_allow((GameContext*)context, category,
+                                          slot);
+}
+
+static int frame_catalog_slot_available(int category, int slot,
+                                        void* context)
+{
+    (void)context;
+    return ensure_cell_entries_loaded((uint32_t)category, slot, 0);
+}
+
+static int frame_catalog_slot_rank(int category, int slot, void* context)
+{
+    (void)context;
+    if (category != 1) return 0;
+    return (int)entity_indexed_record_word_at_b4_get(1, slot, 0);
+}
+
 static uint32_t frame_ui_action_entity_flags(void* context, void* entity,
                                              int offset)
 {
@@ -555,6 +583,15 @@ static void frame_ui_action_entity_kind_command(void* context, void* entity)
     entity_kind_command_issue((EntitySlot*)entity);
 }
 
+static void frame_ui_action_entity_action_kind_create(void* context,
+                                                       void* entity,
+                                                       int kind)
+{
+    (void)context;
+    (void)entity_action_kind_entity_create_and_command_issue(
+        (EntitySlot*)entity, kind, 0, 0);
+}
+
 static void frame_ui_action_entity_flag_80000000(void* context, void* entity,
                                                   int set)
 {
@@ -596,8 +633,7 @@ static void frame_ui_action_object_command_task_create(void* context,
                                                         int mode)
 {
     (void)context;
-    unported_ledger_stubs::ledger_stub_00403320_ObjectCommandTaskCreate(
-        (EntitySlot*)entity, mode);
+    object_command_task_create((EntitySlot*)entity, mode);
 }
 
 static void frame_ui_action_entity_field_f6_clear(void* context,
@@ -617,12 +653,41 @@ static int frame_ui_action_cursor_action_rejected(void* context, int first,
                                      first, second, mode);
 }
 
-static void frame_ui_action_coordinate_validate(void* context, int x, int y)
+/* TutorialPathDescriptorCreate (FUN_00409300): when the selected cell does
+ * not carry 0x20000000, allocate/link its coordinate record, raise the
+ * cell's 0x40000000 flag (including CellInitPass), set record +0xd0 bit 2,
+ * and cancel an action matching the coordinate. */
+static void frame_ui_action_tutorial_path_descriptor_create(void* context,
+                                                              int x, int y)
 {
     FramePointerDispatchContext* state =
         (FramePointerDispatchContext*)context;
-    if (state != NULL && state->level != NULL)
-        (void)level_coord_pair_within_bounds(state->level, x, y);
+    uint8_t* voxel;
+    uint32_t flags;
+    uint32_t pair[2];
+    void* record;
+    if (state == NULL || state->level == NULL) return;
+    voxel = level_voxel(state->level, x, y);
+    if (voxel == NULL) return;
+    memcpy(&flags, voxel + 8, sizeof(flags));
+    if ((flags & 0x20000000u) != 0u) return;
+    pair[0] = (uint32_t)x;
+    pair[1] = (uint32_t)y;
+    record = path_record_allocate_and_link(pair);
+    if (record == NULL) return;
+    terrain_cell_flag40000000_clear_or_set(state->level, x, y, 1);
+    *(uint32_t*)((uint8_t*)record + 0xd0) |= 2u;
+    cancel_action_for_matching_coordinates(pair);
+}
+
+static void frame_ui_action_selection_group_clear(void* context, int x,
+                                                  int y)
+{
+    uint32_t pair[2];
+    (void)context;
+    pair[0] = (uint32_t)x;
+    pair[1] = (uint32_t)y;
+    simtick_selection_group_clear(pair);
 }
 
 static void frame_ui_action_cell_mask_clear(void* context, int x, int y,
@@ -668,13 +733,6 @@ static void frame_ui_action_global_flags_clear(void* context)
     global_state_low_byte_clear_and_refresh();
 }
 
-static void frame_ui_action_selection_group_clear(void* context)
-{
-    FramePointerDispatchContext* state =
-        (FramePointerDispatchContext*)context;
-    if (state != NULL && state->game != NULL) selection_clear(state->game);
-}
-
 static void frame_ui_action_cursor_request(void* context, int action,
                                             int value)
 {
@@ -687,6 +745,53 @@ static void frame_ui_action_building_upgrade_commit(void* context,
 {
     (void)context;
     building_upgrade_commit((EntitySlot*)entity);
+}
+
+/* Cases 0x16/0x17 pass FUN_0041f6c0 to SelectedEntitiesAnyMatch. The
+ * callback always returns zero, so every selected entity is visited. */
+static void frame_ui_action_selected_entities_detach_or_pose(void* context)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    EntitySlot* const* entities;
+    int count, i;
+    if (state == NULL || state->game == NULL) return;
+    count = selection_count(state->game);
+    entities = selection_record_array(state->game);
+    for (i = 0; entities != NULL && i < count; ++i) {
+        EntitySlot* entity = entities[i];
+        EntitySlot* record;
+        uint32_t capabilities;
+        if (entity == NULL) continue;
+        capabilities = entity_capability_flags_get(entity);
+        record = (EntitySlot*)entity->carry_link_308;
+        if ((capabilities & 1u) == 0u) {
+            if ((entity->flags_3e0 & 0x400u) == 0u || record == NULL ||
+                record->type != 9) {
+                unported_ledger_stubs::
+                    entity_attached_object_list_detach(entity, 0);
+            }
+        }
+        else if ((entity->flags_3e0 & 0x400u) != 0u && record != NULL) {
+            (void)unported_ledger_stubs::
+                ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(record);
+        }
+    }
+}
+
+/* Action 0x21 walks the selection with FUN_0041f840. That target returns
+ * zero for every entity after applying its class-6 marker behavior. */
+static void frame_ui_action_selected_entity_action_21(void* context)
+{
+    FramePointerDispatchContext* state =
+        (FramePointerDispatchContext*)context;
+    EntitySlot* const* entities;
+    int count, i;
+    if (state == NULL || state->game == NULL) return;
+    count = selection_count(state->game);
+    entities = selection_record_array(state->game);
+    for (i = 0; entities != NULL && i < count; ++i)
+        (void)entity_remove_object_if_class6(state->game, entities[i]);
 }
 
 static void frame_ui_action_complete(void* context, int action, int cell_x,
@@ -1225,6 +1330,50 @@ static const char* env_get(const char* name, const char* fallback)
 {
     const char* v = getenv(name);
     return (v != NULL && v[0] != '\0') ? v : fallback;
+}
+
+static int frameloop_resource_startup_text_lookup(
+    void* context, const char* registry_key, const char* text_key,
+    char* text_out, size_t text_capacity)
+{
+    (void)context;
+#if defined(LEGORRR_BACKEND_WINAPI)
+    if (text_out == NULL || text_capacity == 0u ||
+        text_capacity > 0xffffffffu) return 0;
+    return registry_path_accessor(registry_key, text_key, 0, text_out,
+                                  (uint32_t)text_capacity);
+#else
+    (void)registry_key;
+    (void)text_key;
+    (void)text_out;
+    (void)text_capacity;
+    return 0;
+#endif
+}
+
+static int frameloop_resource_startup_message_box(
+    void* context, const char* text, const char* caption, unsigned style)
+{
+    (void)context;
+#if defined(LEGORRR_BACKEND_WINAPI)
+    return (int)MessageBoxA(NULL, text, caption, (UINT)style);
+#else
+    (void)style;
+    fprintf(stderr, "%s: %s\n", caption != NULL ? caption : "",
+            text != NULL ? text : "");
+    return 1;
+#endif
+}
+
+static void frameloop_resource_startup_services_install(void)
+{
+    ResourceStartupOps ops;
+    memset(&ops, 0, sizeof(ops));
+    ops.text_lookup = frameloop_resource_startup_text_lookup;
+    ops.message_box = frameloop_resource_startup_message_box;
+    /* The retail routine exits on cancel/missing data. The portable loop
+     * reports its status to the caller instead of terminating the process. */
+    resource_startup_ops_set(&ops);
 }
 
 static int s_icontains(const char* haystack, const char* needle)
@@ -2055,7 +2204,10 @@ static void menu_save_image_config_rect_blit(FrontEnd* fe,
 
 int LegorrrRun(void)
 {
-    const char* wad_dir = env_get("LEGORRR_WAD_DIR", ".");
+    const char* wad_dir_environment = getenv("LEGORRR_WAD_DIR");
+    const int explicit_wad_dir = wad_dir_environment != NULL &&
+                                 wad_dir_environment[0] != '\0';
+    const char* wad_dir = explicit_wad_dir ? wad_dir_environment : ".";
     const char* autostop = env_get("LEGORRR_AUTOSTOP_FRAMES", "0");
     long frame_cap = strtol(autostop, NULL, 10);
     if (frame_cap < 0) {
@@ -2070,8 +2222,23 @@ int LegorrrRun(void)
         log = stderr;
     }
 
-    resource_set_cd_root(wad_dir);
-    int mounted = resource_mount(wad_dir, resource_get_wad_prefix());
+    int mounted;
+    if (explicit_wad_dir) {
+        /* Keep the explicit WAD_DIR path used by make run and data tests:
+         * it mounts exactly the requested directory and skips retail startup
+         * prompts/CD policy. */
+        resource_set_cd_root(wad_dir);
+        mounted = resource_mount(wad_dir, resource_get_wad_prefix());
+    } else {
+        /* With no host override, enter the retail-shaped cwd/Data startup
+         * flow. Registry values and the WinAPI modal prompt use the platform
+         * services installed below; no process-exit hook is installed. */
+        frameloop_resource_startup_services_install();
+        resource_mount_startup_target(resource_get_wad_prefix(),
+            resource_startup_require_cd_get(),
+            "SOFTWARE\\LEGO Media\\Games\\Rock Raiders");
+        mounted = resource_mounted_count();
+    }
     fprintf(log, "frameloop: mounted %d wad(s) from %s\n", mounted, wad_dir);
     if (mounted == 0) {
         if (log != stderr) {
@@ -2118,6 +2285,7 @@ int LegorrrRun(void)
         frontend_hud_runtime_install();
         frontend_render_three_pass_update(game.cfg, game.cfg);
         (void)light_effect_waypoint_config_load(game.cfg, "Lego*");
+        light_effect_configuration_load(game.cfg, "Lego*");
         bubble_config_texture_load(game.cfg);
         preload_numbered_bitmaps("Interface\\FONTS\\HealthFont", "a000_");
         tooltip_icons_config_load(game.cfg);
@@ -2190,6 +2358,9 @@ int LegorrrRun(void)
         return 2;
     }
     surface_active_render_target_set(&surf);
+    catalog_slot_flag_hooks_set(frame_catalog_slot_eligible,
+                                frame_catalog_slot_available,
+                                frame_catalog_slot_rank, &game);
 
     /* Real corpus textures through the merged texture loader. */
     TextureSurface* rock = texture_get_or_load(NULL,
@@ -2327,6 +2498,18 @@ int LegorrrRun(void)
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
         int built = frontend_build(&fe, game.cfg);
+        /* GameConfigInit loads AdvisorPositions after panel-name setup, and
+         * only when DisplayAdvisor is enabled. frontend_build initializes
+         * the panel table used by the loader's optional action token. */
+        char advisor_config_path[128];
+        snprintf(advisor_config_path, sizeof(advisor_config_path),
+                 "%s DisplayAdvisor", util_root_name(game.cfg));
+        if (block_get_bool(game.cfg, advisor_config_path) == 1) {
+            advisor_position_config_load(game.cfg, WINDOW_W, WINDOW_H);
+        }
+        /* SaveMenuBuild builds and retains the campaign/tutorial trees before
+         * refreshing all six slots; SavReadSlot uses the campaign tree count. */
+        sav_refresh_slots(&game);
         /* Functional options (issue #85): attach the live store so the menu
          * widgets show and set the effective values. frontend_build ran
          * with no store (defaults); sync seeds the loaded slot's values. */
@@ -3020,10 +3203,16 @@ int LegorrrRun(void)
                 frame_ui_action_helper_00452be0;
             ui_action_ops.entity_kind_command_issue =
                 frame_ui_action_entity_kind_command;
+            ui_action_ops.entity_action_kind_create =
+                frame_ui_action_entity_action_kind_create;
             ui_action_ops.entity_flag_80000000_set_clear =
                 frame_ui_action_entity_flag_80000000;
             ui_action_ops.selected_entity_action_02ec0 =
                 frame_ui_action_conditional_task_schedule;
+            ui_action_ops.selected_entities_detach_or_pose =
+                frame_ui_action_selected_entities_detach_or_pose;
+            ui_action_ops.selected_entity_action_21 =
+                frame_ui_action_selected_entity_action_21;
             ui_action_ops.entity_action_record_find =
                 frame_ui_action_record_find;
             ui_action_ops.entity_action_record_apply =
@@ -3034,17 +3223,17 @@ int LegorrrRun(void)
                 frame_ui_action_entity_field_f6_clear;
             ui_action_ops.cursor_action_rejected =
                 frame_ui_action_cursor_action_rejected;
-            ui_action_ops.selected_map_coordinate_validate =
-                frame_ui_action_coordinate_validate;
+            ui_action_ops.tutorial_path_descriptor_create =
+                frame_ui_action_tutorial_path_descriptor_create;
             ui_action_ops.selected_cell_reveal_mask_clear =
                 frame_ui_action_cell_mask_clear;
             ui_action_ops.terrain_cell_update = frame_ui_action_cell_update;
             ui_action_ops.terrain_descriptor_tiles_reset_and_free =
                 frame_ui_action_terrain_descriptor_reset;
-            ui_action_ops.global_state_low_byte_clear_and_refresh =
-                frame_ui_action_global_flags_clear;
             ui_action_ops.selection_group_clear =
                 frame_ui_action_selection_group_clear;
+            ui_action_ops.global_state_low_byte_clear_and_refresh =
+                frame_ui_action_global_flags_clear;
             ui_action_ops.cursor_action_pair_request =
                 frame_ui_action_cursor_request;
             ui_action_ops.building_upgrade_commit =
@@ -3327,6 +3516,8 @@ int LegorrrRun(void)
     platform_destroy_window(win);
 
     frontend_close(&fe);
+    sav_tree_roots_clear();
+    catalog_slot_flag_hooks_set(NULL, NULL, NULL, NULL);
     frameloop_game_context_dispose(&game);
     free(fe_storage);
     free(game_storage);

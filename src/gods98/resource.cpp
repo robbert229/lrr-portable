@@ -6,9 +6,13 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+#ifndef INVALID_FILE_ATTRIBUTES
+#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
+#endif
 #else
 #include <dirent.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 #include "resource.hpp"
@@ -2680,7 +2684,7 @@ void resource_interface_call_slot40_and_clear_field14(
 #define ENTRY_FLAG_EXPANDED 0x2u
 #define EXPAND_HEADER_SZ  0x12u
 
-static void wad_huffman_canonical_codes_build(void* table, int count);
+static void wad_huffman_canonical_codes_build(void* table, uint8_t count);
 
 /* The corpus's 16-byte Huffman decode entry. The roles come from the corpus
  * bytes, not from the port's earlier guess: WadHuffmanTableRead (0x0049cd90)
@@ -2702,17 +2706,20 @@ typedef struct WadCodecTableEntry {
     uint16_t pad2;     /* +14 padding */
 } WadCodecTableEntry;
 
-static unsigned int wad_reverse_low_bits(unsigned int v, unsigned int n)
+// FUNCTION: LEGORR 0x0049d000
+static unsigned int wad_reverse_low_bits(unsigned int v, uint8_t n)
 {
     unsigned int out = 0;
     while (n--) { out = (out << 1) | (v & 1u); v >>= 1; }
     return out;
 }
-static void wad_huffman_canonical_codes_build(void* table, int count)
+
+// FUNCTION: LEGORR 0x0049cf90
+static void wad_huffman_canonical_codes_build(void* table, uint8_t count)
 {
     WadCodecTableEntry* e;
     unsigned int next, unit, len;
-    int i;
+    unsigned int i;
     e = (WadCodecTableEntry*)table;
     next = 0;
     unit = 0x80000000u;
@@ -2897,6 +2904,19 @@ static char  s_cd_root[RESOURCE_PATH_MAX] = ""; /* "" = "%c:\" default */
 static ResourceDriveTypeQueryFn s_cd_drive_type_query;
 static ResourcePathExistsFn s_cd_path_exists;
 static void* s_cd_probe_context;
+static ResourceStartupOps s_resource_startup_ops;
+static int s_resource_startup_result = RESOURCE_STARTUP_OK;
+static int s_resource_startup_require_cd;
+
+void resource_startup_require_cd_set(int require_cd)
+{
+    s_resource_startup_require_cd = require_cd != 0;
+}
+
+int resource_startup_require_cd_get(void)
+{
+    return s_resource_startup_require_cd;
+}
 
 void resource_directory_scan_root_set(const char* root)
 {
@@ -3053,8 +3073,25 @@ int resource_find_cd_key_drive(void)
         return resource_cd_key_path_exists(path);
     }
     for (drive = 'C'; drive <= 'Z'; ++drive) {
-        if (s_cd_drive_type_query != NULL &&
-            s_cd_drive_type_query(drive, s_cd_probe_context) != 5) {
+        int drive_type;
+        if (s_cd_drive_type_query != NULL) {
+            drive_type = s_cd_drive_type_query(drive, s_cd_probe_context);
+        }
+#if defined(_WIN32)
+        else {
+            char drive_root[4];
+            drive_root[0] = drive;
+            drive_root[1] = ':';
+            drive_root[2] = '\\';
+            drive_root[3] = '\0';
+            drive_type = (int)GetDriveTypeA(drive_root);
+        }
+#else
+        else {
+            drive_type = 0;
+        }
+#endif
+        if (drive_type != 5) {
             continue;
         }
         snprintf(path, sizeof(path), "%c:%c%s%ccd.key", drive,
@@ -3310,10 +3347,8 @@ void mount_wad_from_path(const char* path)
  *  Public API
  * ------------------------------------------------------------------ */
 
-/* Partial WadMountStartup (FUN_0047f130): try the numbered WAD archive
- * paths and mount every archive that exists. The original startup routine
- * also handles CD detection, retry dialogs, and missing-data exits. */
-// FUNCTION: LEGORR 0x0047f130
+/* Explicit-root mount API used by tests and portable hosts. Retail startup
+ * behavior is kept in resource_mount_startup_target below. */
 int resource_mount(const char* dir, const char* prefix)
 {
     char mount_root[RESOURCE_PATH_MAX];
@@ -3346,6 +3381,221 @@ int resource_mount(const char* dir, const char* prefix)
         ++s_wad_count;
     }
     return s_wad_count;
+}
+
+void resource_startup_ops_set(const ResourceStartupOps* ops)
+{
+    if (ops == NULL) {
+        memset(&s_resource_startup_ops, 0, sizeof(s_resource_startup_ops));
+    } else {
+        s_resource_startup_ops = *ops;
+    }
+}
+
+int resource_startup_result_get(void)
+{
+    return s_resource_startup_result;
+}
+
+static int resource_startup_current_directory(char* path, size_t capacity)
+{
+    if (path == NULL || capacity == 0u) return 0;
+#if defined(_WIN32)
+    {
+        DWORD length = GetCurrentDirectoryA((DWORD)capacity, path);
+        return length != 0u && length < capacity;
+    }
+#else
+    return getcwd(path, capacity) != NULL;
+#endif
+}
+
+static int resource_startup_directory_exists(const char* path)
+{
+#if defined(_WIN32)
+    DWORD attributes = GetFileAttributesA(path);
+    return attributes != INVALID_FILE_ATTRIBUTES
+        && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0u;
+#else
+    struct stat status;
+    return stat(path, &status) == 0 && S_ISDIR(status.st_mode);
+#endif
+}
+
+static void resource_startup_directory_create(const char* path)
+{
+#if defined(_WIN32)
+    (void)CreateDirectoryA(path, NULL);
+#else
+    (void)mkdir(path, 0755);
+#endif
+}
+
+static int resource_startup_localized_text(const char* registry_key,
+                                           const char* text_key,
+                                           char* output, size_t capacity)
+{
+    int loaded;
+    if (output == NULL || capacity == 0u) return 0;
+    output[0] = '\0';
+    if (s_resource_startup_ops.text_lookup == NULL) return 0;
+    loaded = s_resource_startup_ops.text_lookup(
+        s_resource_startup_ops.context, registry_key, text_key,
+        output, capacity);
+    output[capacity - 1u] = '\0';
+    return loaded != 0 && output[0] != '\0';
+}
+
+static void resource_startup_exit(int result)
+{
+    s_resource_startup_result = result;
+    if (s_resource_startup_ops.exit_process != NULL) {
+        s_resource_startup_ops.exit_process(s_resource_startup_ops.context, 0);
+    }
+}
+
+static int resource_startup_missing_data_dialog(const char* registry_key)
+{
+    char message[1024];
+    char caption[128];
+    if (s_resource_startup_ops.message_box == NULL ||
+        !resource_startup_localized_text(registry_key, "DataMissing",
+                                         message, sizeof(message)) ||
+        !resource_startup_localized_text(registry_key, "SetupError",
+                                         caption, sizeof(caption))) {
+        s_resource_startup_result = RESOURCE_STARTUP_DEPENDENCY_MISSING;
+        return 0;
+    }
+    (void)s_resource_startup_ops.message_box(s_resource_startup_ops.context,
+                                             message, caption, 0u);
+    resource_startup_exit(RESOURCE_STARTUP_MISSING_DATA);
+    return 1;
+}
+
+static int resource_startup_cd_retry(const char* registry_key)
+{
+    char message[1024];
+    char caption[128];
+    if (s_resource_startup_ops.message_box == NULL ||
+        !resource_startup_localized_text(registry_key, "CDMissing",
+                                         message, sizeof(message)) ||
+        !resource_startup_localized_text(registry_key, "SetupError",
+                                         caption, sizeof(caption))) {
+        s_resource_startup_result = RESOURCE_STARTUP_DEPENDENCY_MISSING;
+        return 0;
+    }
+    if (s_resource_startup_ops.message_box(s_resource_startup_ops.context,
+                                           message, caption, 1u) == 2) {
+        resource_startup_exit(RESOURCE_STARTUP_CD_CANCELLED);
+        return 0;
+    }
+    return 1;
+}
+
+static void resource_startup_delme_marker_remove(const char* path)
+{
+#if defined(_WIN32)
+    DWORD attributes = GetFileAttributesA(path);
+    if (attributes != INVALID_FILE_ATTRIBUTES) {
+        (void)SetFileAttributesA(path, attributes & ~FILE_ATTRIBUTE_READONLY);
+        (void)DeleteFileA(path);
+    }
+#else
+    struct stat status;
+    if (stat(path, &status) == 0) {
+        (void)chmod(path, status.st_mode | S_IWUSR);
+        (void)remove(path);
+    }
+#endif
+}
+
+/* WadMountStartup @ 0x0047f130. The startup owner supplies the executable
+ * prefix and registry key; the resource module owns numbered archive
+ * mounting, Data-root derivation, CD-marker probing, and mount-path caching.
+ * Localized prompts and modal UI are host operations; process exit remains
+ * optional so portable callers can inspect the startup result. */
+// FUNCTION: LEGORR 0x0047f130
+void resource_mount_startup_target(const char* prefix, int require_cd,
+                                   const char* registry_key)
+{
+    char working_directory[260];
+    char data_directory[RESOURCE_PATH_MAX];
+    char marker_path[RESOURCE_PATH_MAX];
+    size_t length;
+    int mounted;
+    int cd_found;
+    int data_directory_found;
+    int data_missing;
+
+    s_resource_startup_result = RESOURCE_STARTUP_OK;
+    if (prefix == NULL || prefix[0] == '\0') prefix = s_wad_prefix;
+    if (!resource_startup_current_directory(working_directory,
+                                            sizeof(working_directory))) {
+        s_resource_startup_result = RESOURCE_STARTUP_PATH_ERROR;
+        return;
+    }
+    length = strlen(working_directory);
+    if (length > 1u &&
+        (working_directory[length - 1u] == '/' ||
+         working_directory[length - 1u] == '\\')) {
+        working_directory[length - 1u] = '\0';
+    }
+    if (snprintf(data_directory, sizeof(data_directory), "%s%cData",
+                 working_directory, RES_PATH_SEP) < 0 ||
+        strlen(data_directory) >= sizeof(data_directory)) {
+        s_resource_startup_result = RESOURCE_STARTUP_PATH_ERROR;
+        return;
+    }
+
+    resource_unmount_all();
+    s_cd_root[0] = '\0';
+    s_cd_drive = 'A';
+    snprintf(s_cd_data_dir, sizeof(s_cd_data_dir), "%s", "Data");
+    resource_set_wad_prefix(prefix);
+    mounted = resource_mount(working_directory, prefix);
+    /* resource_mount is also the explicit-root test API; restore the retail
+     * startup Data directory after its modern-root cache setup. */
+    resource_directory_scan_root_set(data_directory);
+    wad_mount_path_cache_store(data_directory);
+
+    cd_found = resource_find_cd_key_drive();
+    while (!cd_found && require_cd != 0) {
+        if (!resource_startup_cd_retry(registry_key)) return;
+        cd_found = resource_find_cd_key_drive();
+    }
+
+    data_directory_found = resource_startup_directory_exists(data_directory);
+    if (!cd_found && data_directory_found) {
+        /* A loose Data tree is the retail fallback when neither a WAD nor a
+         * CD key drive is available. Mounted CD paths remain drive-rooted. */
+        snprintf(s_cd_root, sizeof(s_cd_root), "%s", working_directory);
+    }
+    data_missing = (!cd_found && mounted == 0 && !data_directory_found);
+    if (require_cd != 0 &&
+        snprintf(marker_path, sizeof(marker_path), "%s%cData%ccd.key",
+                 working_directory, RES_PATH_SEP, RES_PATH_SEP) >= 0 &&
+        resource_cd_key_path_exists(marker_path)) {
+        data_missing = 1;
+    }
+    if (data_missing) {
+        (void)resource_startup_missing_data_dialog(registry_key);
+        return;
+    }
+
+    resource_startup_directory_create(data_directory);
+
+    if (snprintf(marker_path, sizeof(marker_path), "%s%cData%cdelme.dat",
+                 working_directory, RES_PATH_SEP, RES_PATH_SEP) >= 0 &&
+        resource_cd_key_path_exists(marker_path)) {
+        resource_startup_delme_marker_remove(marker_path);
+    }
+}
+
+int resource_mount_startup(const char* prefix, int require_cd,
+                           const char* registry_key)
+{
+    resource_mount_startup_target(prefix, require_cd, registry_key);
+    return resource_startup_result_get();
 }
 
 void resource_set_wad_prefix(const char* prefix)
@@ -3717,8 +3967,8 @@ ResourceStream* resource_stream_open(const char* name, int mode,
                     fseek(stream->file, (long)entry->off, SEEK_SET) != 0 ||
                     fread(stored, 1, entry->stored, stream->file) !=
                         entry->stored ||
-                    wad_payload_decode_dispatch(stored,
-                                                stream->expanded_data) != 0) {
+                    (((uint32_t)wad_payload_decode_dispatch(
+                        stored, stream->expanded_data) & 0xffffu) != 0u)) {
                     free(stored);
                     resource_stream_close(stream);
                     resource_free(resource);
@@ -4231,7 +4481,7 @@ int32_t resource_read(Resource* r)
         free(stored);
         return -1;
     }
-    if (wad_payload_decode_dispatch(stored, buf) != 0) {
+    if (((uint32_t)wad_payload_decode_dispatch(stored, buf) & 0xffffu) != 0u) {
         free(stored);
         free(buf);
         return -1;
@@ -4781,20 +5031,24 @@ void wad_memory_stream_buffer_get(int slot)
 #define WAD_DECODE_MAGIC_FAIL 0xffff
 #define WAD_DECODE_TYPE_FAIL  0xfffe
 
-/* DAT_00557d80 / DAT_00557e80 / DAT_00557f80 roles, module-local: the type-1
- * codec's three 16-symbol Huffman tables (literal counts, back-reference
- * offsets, match lengths). The corpus bands are 256 bytes each (sixteen
- * 16-byte entries, count 16 at 0x0049c914/0x0049c923/0x0049c932) in
- * zero-init .data, and only those sixteen entries are ever written; these
- * buffers ride wider so the corpus's blind scan in WadHuffmanSymbolDecode
- * (0x0049ce0e..0x0049ce2d, `while (len == 0 || mask&&lsb != code) ++i;`)
- * stays inside one object when no entry matches. */
+/* DAT_00557d80 / DAT_00557e80 / DAT_00557f80: the type-1 codec's three
+ * 16-symbol Huffman tables (literal counts, back-reference offsets, match
+ * lengths). They occupy 0x100-byte bands: sixteen 16-byte entries, cleared
+ * and filled by WadHuffmanTableRead with count 16. The symbol decoder keeps
+ * the retail unbounded scan when no entry matches. */
 // GLOBAL: LEGORR 0x00557d80
-static WadCodecTableEntry s_wad_huff_literal[128];
+static WadCodecTableEntry s_wad_huff_literal[16];
 // GLOBAL: LEGORR 0x00557e80
-static WadCodecTableEntry s_wad_huff_offset[128];
+static WadCodecTableEntry s_wad_huff_offset[16];
 // GLOBAL: LEGORR 0x00557f80
-static WadCodecTableEntry s_wad_huff_length[128];
+static WadCodecTableEntry s_wad_huff_length[16];
+
+/* Both RNC codec entries return the output-end pointer with its low word
+ * cleared. ExpandWadPayload tests AX, so that nonzero upper word is success. */
+static uint32_t wad_codec_result_word(const void* pointer)
+{
+    return (uint32_t)(uintptr_t)pointer & 0xffff0000u;
+}
 
 /* DecodeWadPayloadType1 (FUN_0049c8e0): the RNC type-1 stream. One or more
  * outer passes reload the three tables, read the 16-bit block total
@@ -4802,8 +5056,9 @@ static WadCodecTableEntry s_wad_huff_length[128];
  * bytes copied straight from the input cursor) and back-reference matches
  * (out - u16(offset) - 1, length u16(sym + 2)); after every literal the
  * three bytes at the input cursor inject themselves into the LSB accumulator
- * at the live bit position without advancing it. Always answers 0 (corpus
- * xor ax,ax); the output cursor stores are blind, as in the corpus. */
+ * at the live bit position without advancing it. It returns the output-end
+ * pointer masked with 0xffff0000; its caller tests only AX. The output cursor
+ * stores are blind, as in the corpus. */
 // FUNCTION: LEGORR 0x0049c8e0
 static int wad_payload_decode_type1(const void* src, void* dst)
 {
@@ -4818,7 +5073,7 @@ static int wad_payload_decode_type1(const void* src, void* dst)
     wad_bitstream_output_initialize(src, dst);
     (void)wad_read_bits_lsb_first(2u);            /* 0x49c8f2: value dropped */
     if (wad_codec_out >= wad_codec_end) {         /* 0x49c907: unsigned jae */
-        return 0;
+        return wad_codec_result_word(wad_codec_end);
     }
     for (;;) {                                    /* outer_loop 0x49c912 */
         wad_huffman_table_read(s_wad_huff_literal, 16u);
@@ -4856,7 +5111,7 @@ static int wad_payload_decode_type1(const void* src, void* dst)
             break;
         }
     }
-    return 0;                                     /* 0x49ca5a: xor ax,ax */
+    return wad_codec_result_word(wad_codec_end);   /* end & 0xffff0000 */
 }
 
 /* DecodeWadPayloadType2 (FUN_0049ca60): the RNC type-2 stream, MSB-first.
@@ -4865,8 +5120,9 @@ static int wad_payload_decode_type1(const void* src, void* dst)
  * gate: 0-run-length block, 10+10 short match (offset byte + 1, two bytes),
  * 110 match (offset from the back-reference decoder, three bytes) or 111
  * match (length byte + 9, offset from the decoder; a zero length byte is
- * the end marker). Always answers 0 (corpus xor ax,ax); the output cursor
- * stores are blind, as in the corpus. */
+ * the end marker). The target returns its local copy-source pointer masked
+ * with 0xffff0000, or the output cursor at the end marker; callers test only
+ * AX. The output cursor stores are blind, as in the corpus. */
 // FUNCTION: LEGORR 0x0049ca60
 static int wad_payload_decode_type2(const void* src, void* dst)
 {
@@ -4875,11 +5131,13 @@ static int wad_payload_decode_type2(const void* src, void* dst)
     unsigned int count;
     unsigned int i;
     const unsigned char* back;
+    const unsigned char* result_pointer;
 
     wad_bitstream_output_initialize(src, dst);
+    result_pointer = wad_codec_end;
     (void)wad_read_bits_msb_first(2u);            /* 0x49ca72: value dropped */
     if (wad_codec_out >= wad_codec_end) {         /* 0x49ca87: unsigned jae */
-        return 0;
+        return wad_codec_result_word(result_pointer);
     }
     for (;;) {                                    /* loop_top 0x49ca90 */
         if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49ca9a */
@@ -4898,10 +5156,12 @@ static int wad_payload_decode_type2(const void* src, void* dst)
                 for (i = 0; i < count; ++i) {     /* copyD 0x49cbbf */
                     *wad_codec_out++ = *wad_codec_in++;
                 }
+                if (wad_codec_out >= wad_codec_end) break;
                 continue;
             }
             off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cbf1 */
             back = wad_codec_out - (unsigned short)off; /* 0x49cbf9/0x49cc07 */
+            result_pointer = back;
             if ((unsigned short)run == 0u) {      /* 0x49cc0f/0x49cc12 */
                 continue;
             }
@@ -4909,27 +5169,32 @@ static int wad_payload_decode_type2(const void* src, void* dst)
             for (i = 0; i < count; ++i) {         /* copyE 0x49cc1f */
                 *wad_codec_out++ = *back++;
             }
+            if (wad_codec_out >= wad_codec_end) break;
             continue;
         }
         if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49caf2: short match */
             off = (unsigned int)*wad_codec_in + 1u;        /* 0x49cb02 */
             ++wad_codec_in;
             back = wad_codec_out - (unsigned short)off;
+            result_pointer = back;
             count = 2u;                           /* esi = 2 at 0x49caf9 */
             for (i = 0; i < count; ++i) {         /* copyC 0x49cb6d */
                 *wad_codec_out++ = *back++;
             }
+            if (wad_codec_out >= wad_codec_end) break;
             continue;
         }
         if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49cb10/0x49cb1d */
             off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cb42 */
             back = wad_codec_out - (unsigned short)off;
+            result_pointer = back;
             count = 3u;                           /* esi = 3 at 0x49cb1f */
         } else {
             count = ((unsigned int)*wad_codec_in + 8u) & 0xffffu; /* 0x49cb2b */
             ++wad_codec_in;
             if (count == 8u) {                    /* 0x49cb3c: end marker */
                 (void)wad_read_bits_msb_first(1u);/* 0x49cc3f: value dropped */
+                result_pointer = wad_codec_out;
                 if (wad_codec_out < wad_codec_end) { /* 0x49cc56: jb loop_top */
                     continue;
                 }
@@ -4937,6 +5202,7 @@ static int wad_payload_decode_type2(const void* src, void* dst)
             }
             off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cb42 */
             back = wad_codec_out - (unsigned short)off;
+            result_pointer = back;
         }
         if (count == 0u) {                        /* 0x49cb5d: test ax,ax */
             continue;
@@ -4944,16 +5210,16 @@ static int wad_payload_decode_type2(const void* src, void* dst)
         for (i = 0; i < count; ++i) {             /* copyC 0x49cb6d */
             *wad_codec_out++ = *back++;
         }
+        if (wad_codec_out >= wad_codec_end) break;
     }
-    return 0;                                     /* 0x49cc5d: xor ax,ax */
+    return wad_codec_result_word(result_pointer);  /* pbVar4 & 0xffff0000 */
 }
 
 /* WadPayloadDecodeDispatch (FUN_0049c840): verify the "RNC" magic, then
  * branch on the type byte at [3]. Type 0 is a raw pass-through: the size
  * dword at +4 read big-endian, payload from +0x12, copied in DWORD chunks
- * plus the trailing (size & 3) bytes. Types 1/2 hand over to the ported
- * codecs, which answer the corpus's xor ax,ax verdict; any other byte
- * answers the unknown-type verdict. */
+ * plus the trailing (size & 3) bytes. Types 1/2 hand over to the RNC codecs;
+ * any other byte answers the unknown-type verdict. */
 // FUNCTION: LEGORR 0x0049c840
 int wad_payload_decode_dispatch(const void* header, void* dest)
 {
@@ -5010,7 +5276,8 @@ long wad_expand_payload(const void* header, void** out_payload)
     if (buf == NULL) {
         return 0;
     }
-    if (wad_payload_decode_dispatch(h, buf) != 0) { /* corpus tests ax,ax */
+    if (((uint32_t)wad_payload_decode_dispatch(h, buf) & 0xffffu) != 0u) {
+        /* The retail caller tests AX, not the full EAX masked-pointer return. */
         engine_heap_free(buf); /* FUN_0048db80 */
         return 0;
     }
@@ -5711,7 +5978,6 @@ typedef struct PortableResourceNameQuery {
     int case_sensitive;
 } PortableResourceNameQuery;
 
-// FUNCTION: LEGORR 0x00476330
 int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
                                 ResourceTreeNodeCallback callback,
                                 void* context)
@@ -5728,11 +5994,89 @@ int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00476410
+} // namespace unported_ledger_stubs
+
+/* Retail ResourceTreeCallbackWalk (FUN_00476330) operates on Direct3DRM
+ * interfaces, not ResourceTreeNode. Keep this target entry separate from the
+ * portable test/runtime tree API above. Its traversal mirrors the COM slots
+ * and reference ownership visible in the retail body. */
+// FUNCTION: LEGORR 0x00476330
+int resource_tree_callback_walk_target(void* object, int depth,
+                                       ResourceTreeCallback callback,
+                                       void* context)
+{
+    void** object_vtable;
+    ResourceTreeGetChildrenFn get_children;
+    void* child_array;
+    void** array_vtable;
+    ResourceTreeArraySizeFn get_size;
+    uint32_t child_count;
+    uint32_t index;
+    int found = 0;
+    if (callback(object, context) != 0) return 1;
+
+    object_vtable = *(void***)object;
+    get_children = (ResourceTreeGetChildrenFn)object_vtable[0x4c / 4];
+    child_array = NULL;
+    if (get_children(object, &child_array) != 0) return 0;
+
+    array_vtable = *(void***)child_array;
+    get_size = (ResourceTreeArraySizeFn)array_vtable[0x0c / 4];
+    child_count = get_size(child_array);
+    for (index = 0u; index < child_count; ++index) {
+        void* child;
+        void* child_interface;
+        void** child_vtable;
+        void** current_array_vtable;
+        ResourceTreeArrayElementFn get_element;
+        ResourceTreeQueryInterfaceFn query_interface;
+        ResourceTreeReferenceFn release_child;
+        ResourceTreeReferenceFn release_interface;
+
+        child = NULL;
+        child_interface = NULL;
+        current_array_vtable = *(void***)child_array;
+        get_element = (ResourceTreeArrayElementFn)
+            current_array_vtable[0x10 / 4];
+        (void)get_element(child_array, index, &child);
+
+        child_vtable = *(void***)child;
+        query_interface = (ResourceTreeQueryInterfaceFn)child_vtable[0];
+        (void)query_interface(child, s_resource_tree_child_iid,
+                              &child_interface);
+        release_child = (ResourceTreeReferenceFn)child_vtable[2];
+        (void)release_child(child);
+
+        if (resource_tree_callback_walk_target(child_interface, depth + 1,
+                                               callback, context) != 0) {
+            void** child_interface_vtable = *(void***)child_interface;
+            release_interface = (ResourceTreeReferenceFn)
+                child_interface_vtable[2];
+            (void)release_interface(child_interface);
+            found = 1;
+            break;
+        }
+        {
+            void** child_interface_vtable = *(void***)child_interface;
+            release_interface = (ResourceTreeReferenceFn)
+                child_interface_vtable[2];
+            (void)release_interface(child_interface);
+        }
+    }
+    {
+        void** current_array_vtable = *(void***)child_array;
+        ResourceTreeReferenceFn release_array =
+            (ResourceTreeReferenceFn)current_array_vtable[2];
+        (void)release_array(child_array);
+    }
+    return found;
+}
+
 static int resource_name_match_callback(ResourceTreeNode* node,
                                         void* context)
 {
-    PortableResourceNameQuery* query = (PortableResourceNameQuery*)context;
+    unported_ledger_stubs::PortableResourceNameQuery* query =
+        (unported_ledger_stubs::PortableResourceNameQuery*)context;
     const char* a;
     const char* b;
     int matched = 1;
@@ -5771,7 +6115,126 @@ static int resource_name_match_callback(ResourceTreeNode* node,
     return 1;
 }
 
+typedef uint32_t (RESOURCE_TREE_STDCALL *ResourceTreeGetNameFn)(
+    void*, uint32_t*, char*);
+
+static int resource_name_compare_bytes(const char* left, const char* right,
+                                       int case_sensitive)
+{
+    while (*left != '\0' && *right != '\0') {
+        unsigned char a = (unsigned char)*left;
+        unsigned char b = (unsigned char)*right;
+        if (case_sensitive == 0) {
+            if (a >= 'A' && a <= 'Z') a = (unsigned char)(a + ('a' - 'A'));
+            if (b >= 'A' && b <= 'Z') b = (unsigned char)(b + ('a' - 'A'));
+        }
+        if (a != b) return 0;
+        ++left;
+        ++right;
+    }
+    return *left == *right;
+}
+
+/* ResourceNameMatchCallback @ 0x00476410. The retail callback receives a
+ * Direct3DRM object and the seven-word query record built by
+ * ResourceNameRegisterOrQuery. Name retrieval uses the object's +0x24 slot;
+ * the portable ResourceTreeNode predicate above remains for portable callers. */
+// FUNCTION: LEGORR 0x00476410
+int resource_name_match_callback_target(void* object, void* context)
+{
+    ResourceNameMatchCallbackContext* query =
+        (ResourceNameMatchCallbackContext*)context;
+    void** object_vtable;
+    ResourceTreeGetNameFn get_name;
+    uint32_t object_name_bytes = 0u;
+    char* object_name;
+    uint32_t mode;
+    int equal;
+
+    object_vtable = *(void***)object;
+    get_name = (ResourceTreeGetNameFn)object_vtable[0x24 / 4];
+    if (get_name(object, &object_name_bytes, NULL) != 0u ||
+        object_name_bytes == 0u ||
+        object_name_bytes - 1u != query->name_length) {
+        return 0;
+    }
+    object_name = (char*)engine_heap_alloc((long)object_name_bytes);
+    if (object_name == NULL) return 0;
+    object_name[0] = '\0';
+    if (get_name(object, &object_name_bytes, object_name) != 0u) {
+        engine_heap_free(object_name);
+        return 0;
+    }
+
+    mode = (uint32_t)query->mode;
+    if (mode == 0u || mode == 2u) query->matched_object = NULL;
+    equal = resource_name_compare_bytes(object_name, query->name,
+                                        query->case_sensitive != 0u);
+    if (equal != 0) {
+        if (mode == 0u) {
+            query->matched_object = object;
+        } else if (mode == 1u) {
+            ++query->match_count;
+        } else if (mode == 2u) {
+            ++query->match_count;
+            if (query->match_count == query->selected_index + 1u) {
+                query->matched_object = object;
+            }
+        }
+    }
+    engine_heap_free(object_name);
+    return query->matched_object != NULL;
+}
+
+/* ResourceNameRegisterOrQuery (FUN_00473bc0) builds the seven-word callback
+ * record, walks the interface root, and resolves the selected object through
+ * SceneObjectOwnerLinkEnsure. The portable ResourceTreeNode helper below is
+ * kept for host-side callers; this is the retail pointer-to-root ABI. */
 // FUNCTION: LEGORR 0x00473bc0
+void* resource_name_register_or_query_target(
+    void** root, const char* name, int mode,
+    uint32_t* match_count_or_index)
+{
+    const char* cursor = name;
+    uint32_t remaining = 0xffffffffu;
+    ResourceNameMatchCallbackContext query;
+
+    do {
+        char value;
+        if (remaining == 0u) break;
+        --remaining;
+        value = *cursor;
+        ++cursor;
+        if (value == '\0') break;
+    } while (1);
+
+    query.name = name;
+    query.name_length = ~remaining - 1u;
+    query.case_sensitive = 0u;
+    query.matched_object = NULL;
+    query.match_count = 0u;
+    query.mode = mode;
+    query.selected_index = match_count_or_index != NULL
+        ? *match_count_or_index : 0u;
+
+    if (root != NULL && *root != NULL) {
+        (void)resource_tree_callback_walk_target(*root, 0,
+            resource_name_match_callback_target, &query);
+    }
+
+    if (mode == 0 || mode == 2) {
+        return query.matched_object != NULL
+            ? scene_object_owner_link_ensure(query.matched_object) : NULL;
+    }
+    if (mode == 1) {
+        if (match_count_or_index != NULL)
+            *match_count_or_index = query.match_count;
+    }
+    return NULL;
+}
+
+namespace unported_ledger_stubs {
+
 void* resource_name_register_or_query(ResourceTreeNode* root,
                                       const char* name, int mode,
                                       uint32_t* match_count_or_index)

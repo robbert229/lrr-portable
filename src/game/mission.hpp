@@ -82,6 +82,9 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
 /* Re-run Importance/Quota refreshers + crystal quota over every slot
  * (TaskImportanceRefresh/TaskQuotaRefresh/CrystalQuotaSetup). */
 void mission_task_refresh(GameContext* ctx);
+/* Refresh Importance/Quota in a checkpoint task-record copy using the
+ * current level config, without changing the live task records. */
+void mission_task_snapshot_refresh(GameContext* ctx, GameTask* tasks);
 
 /* Reward display config + Save/Advance button zones (RewardInit). */
 int mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_name);
@@ -140,7 +143,10 @@ typedef struct RewardScreenState {
 
 /* The reward loop owns its state transitions, task timing, FLIC lifetime,
  * and callback order. These operations bridge state owned by the engine or
- * renderer that is not represented by GameContext. */
+ * renderer that is not represented by GameContext. When image/text draw
+ * callbacks are absent, mission.cpp uses the active display target and the
+ * task's loaded surfaces/font atlas for a portable fallback. FLIC frame
+ * presentation remains renderer-owned. */
 typedef struct RewardScreenOps {
     void* context;
     uint32_t (*time_get_ms)(void* context);
@@ -167,6 +173,10 @@ typedef struct RewardScreenOps {
                            int displayed_count, float elapsed);
     int (*score_text_draw)(void* context, GameContext* game,
                            int displayed_count, float elapsed);
+    /* RewardTaskTextDrawAndScoreGate's final level/result labels use the
+     * reward title font and text context, which are renderer-owned. */
+    void (*task_result_text_draw)(void* context, GameContext* game,
+                                 float elapsed);
     /* Renderer receives formatted blob strings and
      * game->reward_screen.stats_result_text (config label decoded like the
      * retail escape/underscore helper). */
@@ -196,11 +206,17 @@ int reward_screen_tick_with_ops(RewardScreenState* state,
                                 const RewardScreenOps* ops);
 int reward_screen_tick_bound(void);
 /* Reward display cluster ABI adapters. These use the bound screen state and
- * renderer callbacks installed by reward_screen_runtime_bind. */
+ * use renderer callbacks where installed, with the portable framebuffer
+ * fallbacks described above for task images and text. */
 int reward_stats_panel_draw_bound(void);
 int reward_stats_text_format_bound(void);
 void reward_display_task_abi(GameTask* task, uint32_t draw_mask,
                              uint32_t displayed_count);
+void reward_task_text_draw_and_score_gate_abi(int* displayed_task_count,
+                                             int* score_text_gate,
+                                             float elapsed);
+/* RewardFlhContextReload: close and reopen one flagged task's FLIC context. */
+void reward_flic_context_reload_abi(void* task_context);
 int reward_score_task_text_draw(int displayed_task_count, float elapsed);
 void reward_flic_context_tick_abi(int* displayed_task_count,
                                   int* transition_stage, float* elapsed);

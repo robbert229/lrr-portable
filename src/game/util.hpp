@@ -91,8 +91,15 @@ void motion_waypoint_parameters_store(float min_x, float min_y, float min_z,
                                       float scale_min, float scale_max,
                                       float duration_min, float duration_max);
 void motion_gameplay_scene_bind(void* target, uint32_t flags);
+void motion_gameplay_scene_owner_bind(void* target, void* owner);
 void motion_waypoint_position_bind(float x, float y, float z);
 void motion_waypoint_timer_tick(float delta); /* 0x0044d280 */
+void motion_jitter_parameters_store(float delay_min, float delay_max,
+                                    float speed_min, float speed_max,
+                                    float magnitude_min, float magnitude_max,
+                                    float tolerance_x, float tolerance_y,
+                                    float tolerance_z);
+void motion_jitter_step(float delta); /* 0x0044d760 */
 
 /* MotionUtilityTick (0x0044cfa0) is the registered engine ticker. */
 void motion_gameplay_tick(float delta);

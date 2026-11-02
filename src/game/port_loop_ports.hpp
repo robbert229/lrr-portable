@@ -111,6 +111,8 @@ typedef struct MotionJitterState {
     float position[3];
     float direction[3];
     float remaining;
+    float center[3];
+    float tolerance[3];
 } MotionJitterState;
 typedef struct MotionConfigProfileEntry {
     char* key;
@@ -287,9 +289,9 @@ typedef struct MotionJitterHooks {
     MotionJitterCandidateHook candidate_valid;
     MotionJitterPositionHook position_apply;
 } MotionJitterHooks;
-void motion_jitter_step(MotionJitterState* state, float delta,
-                        PortLoopRandomRangeHook random_range,
-                        const MotionJitterHooks* hooks); /* FUN_0044d760 */
+void motion_jitter_state_step(MotionJitterState* state, float delta,
+                              PortLoopRandomRangeHook random_range,
+                              const MotionJitterHooks* hooks);
 
 #ifdef __cplusplus
 }
@@ -507,7 +509,8 @@ typedef struct ObjectTaskEligibilityOps {
     int (*target_position_get)(void*, const struct EntitySlot*, float*, float*);
     int (*position_to_world)(void*, int, int, float*, float*);
     int (*terrain_walkable)(void*, const struct EntitySlot*, int, int, int);
-    int (*entity_target_relation)(void*, const struct EntitySlot*, int);
+    int (*entity_target_relation)(void*, const struct EntitySlot*,
+                                  const struct EntitySlot*);
     int (*target_route_position_get)(void*, const struct EntitySlot*, float*, float*);
     int (*target_type4_activity_get)(void*, const struct EntitySlot*, int*);
     int (*target_activity_position_get)(void*, const struct EntitySlot*, float*, float*);

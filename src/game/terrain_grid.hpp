@@ -100,6 +100,7 @@ void terrain_texture_set_release(TerrainTileMeshGrid* grid);
 typedef struct TerrainCellResourceGrid {
     uint32_t width;
     uint32_t height;
+    /* TextureSurfaceCreate records, released through TextureRelease. */
     void** handles;
 } TerrainCellResourceGrid;
 /* Explicit bitmap-resource grid release adapter; retail 0x434530 clears the
@@ -133,11 +134,11 @@ void terrain_cell_material_transition_begin(TerrainSurfaceGrid* grid,
                                             int rotation); /* 0x0044e6d0 */
 void terrain_material_transition_tick(TerrainSurfaceGrid* grid,
                                       float delta); /* 0x0044f090 */
-/* FUN_0044e860 eligibility adapter. TerrainCreate's indexed mesh enable bit
- * is mirrored in a host-width per-cell sidecar initialized from its
- * LwoLayerEnabledSet(scene, index, 1) loop. */
-int grid_cell_set_payload_index(void* terrain, uint32_t x,
-                                uint32_t y);
+/* GridCellSetPayloadIndex @ 0x0044e860 forwards a width*row+column lookup
+ * through the terrain's detail object; its return is discarded. */
+void grid_cell_set_payload_index(void* terrain, int x, int y);
+/* Host gameplay predicate for TerrainCreate's mirrored detail-enable bit. */
+int grid_cell_detail_enabled_get(void* terrain, int x, int y);
 void terrain_grid_cell_initializer_set(TerrainSurfaceGrid* grid, void* context,
                                        void (*initialize_cell)(void*, uint32_t,
                                                                uint32_t));

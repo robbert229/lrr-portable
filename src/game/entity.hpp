@@ -996,6 +996,8 @@ typedef struct EntityActionConsumeHooks {
     void (*entity_records_cleanup)(void* context, EntitySlot* entity);
 } EntityActionConsumeHooks;
 void entity_action_consume_hooks_set(const EntityActionConsumeHooks* hooks);
+uint32_t entity_action_consume_counter_get(const EntitySlot* entity,
+                                           uint32_t slot);
 void entity_action_record_consume_and_cleanup(
     EntitySlot* entity, EntitySlot* record); /* 0x0043a850 */
 typedef int (*EntityPairRayHitCheckHook)(const EntitySlot* first,
@@ -1101,16 +1103,19 @@ void entity_cursor_target_hooks_set(const EntityCursorTargetHooks* hooks);
 int entity_cursor_target_screen_position_get(const EntitySlot* entity,
                                              float out_xy[2]);
 
-/* Entity payload ownership hooks and rough state model
- * (FUN_00406ec0/0x004083a0/0x00408940/0x004089a0). */
+/* Entity payload ownership hooks and scene-slot mirror
+ * (FUN_00406ec0/0x004083a0/0x00408940/0x004089a0). The native entity's
+ * +0x9c list is represented by host-width EntitySceneSlotNode sidecars; the
+ * target's +0xa0/+0xb8/+0xc4/+0xd8 windows and +0x144 count are mirrored in
+ * EntitySlot's scene-slot fields. */
 typedef void (*EntityPayloadReleaseFn)(void* resource);
 void entity_payload_release_hooks_set(EntityPayloadReleaseFn scene_release,
                                       EntityPayloadReleaseFn chain_release);
 void entity_scene_slot_table_rebuild(EntitySlot* e, int mode);
 typedef struct EntitySceneSlotRuntimeOps {
     void* context;
-    /* Supplied by the renderer owner for the operations whose DDiScene
-     * records are not represented by the portable scene API yet. */
+    /* Supplied by the renderer owner for the four DDiScene/resource
+     * operations whose records are not represented by the portable scene API. */
     void (*renderer_position_prepare)(void* context, EntitySlot* entity,
                                       EntitySceneSlotNode* node);
     void (*renderer_state_apply)(void* context,

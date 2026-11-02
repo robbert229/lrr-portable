@@ -353,28 +353,45 @@ static const char s_advisor_anim_point_up[] = "Advisor_Anim_Point_Up";
 // GLOBAL: LEGORR 0x004a1030
 static const char s_advisor_anim_talk_top[] = "Advisor_Anim_Talk_Top";
 // GLOBAL: LEGORR 0x004b2db0
-static const char* s_advisor_position_names[21] = {
-    s_advisor_name_objective, s_advisor_name_objective_achieved,
-    s_advisor_name_objective_failed, s_advisor_name_icon_normal,
-    s_advisor_name_icon_back, s_advisor_name_icon_top,
-    s_advisor_name_radar_toggle, s_advisor_name_radar_tagged,
-    s_advisor_name_radar_zoom_in, s_advisor_name_radar_zoom_out,
-    s_advisor_name_radar_map_view, s_advisor_name_info_dock_goto,
-    s_advisor_name_info_dock_close, s_advisor_name_top_info,
-    s_advisor_name_top_options, s_advisor_name_top_priorities,
-    s_advisor_name_top_call_to_arms, s_advisor_name_top_go_back,
-    s_advisor_name_control_zoom_in, s_advisor_name_control_zoom_out,
-    s_advisor_name_talk_in_game
-};
+static const char* s_advisor_position_names[21];
 // GLOBAL: LEGORR 0x004b30f8
-static const char* s_advisor_animation_names[11] = {
-    s_advisor_anim_point_to_map, s_advisor_anim_point_n,
-    s_advisor_anim_point_ne, s_advisor_anim_point_e,
-    s_advisor_anim_point_se, s_advisor_anim_point_s,
-    s_advisor_anim_point_sw, s_advisor_anim_point_w,
-    s_advisor_anim_point_nw, s_advisor_anim_point_up,
-    s_advisor_anim_talk_top
-};
+static const char* s_advisor_animation_names[11];
+
+static void advisor_name_tables_initialize(void)
+{
+    s_advisor_position_names[0] = s_advisor_name_objective;
+    s_advisor_position_names[1] = s_advisor_name_objective_achieved;
+    s_advisor_position_names[2] = s_advisor_name_objective_failed;
+    s_advisor_position_names[3] = s_advisor_name_icon_normal;
+    s_advisor_position_names[4] = s_advisor_name_icon_back;
+    s_advisor_position_names[5] = s_advisor_name_icon_top;
+    s_advisor_position_names[6] = s_advisor_name_radar_toggle;
+    s_advisor_position_names[7] = s_advisor_name_radar_tagged;
+    s_advisor_position_names[8] = s_advisor_name_radar_zoom_in;
+    s_advisor_position_names[9] = s_advisor_name_radar_zoom_out;
+    s_advisor_position_names[10] = s_advisor_name_radar_map_view;
+    s_advisor_position_names[11] = s_advisor_name_info_dock_goto;
+    s_advisor_position_names[12] = s_advisor_name_info_dock_close;
+    s_advisor_position_names[13] = s_advisor_name_top_info;
+    s_advisor_position_names[14] = s_advisor_name_top_options;
+    s_advisor_position_names[15] = s_advisor_name_top_priorities;
+    s_advisor_position_names[16] = s_advisor_name_top_call_to_arms;
+    s_advisor_position_names[17] = s_advisor_name_top_go_back;
+    s_advisor_position_names[18] = s_advisor_name_control_zoom_in;
+    s_advisor_position_names[19] = s_advisor_name_control_zoom_out;
+    s_advisor_position_names[20] = s_advisor_name_talk_in_game;
+    s_advisor_animation_names[0] = s_advisor_anim_point_to_map;
+    s_advisor_animation_names[1] = s_advisor_anim_point_n;
+    s_advisor_animation_names[2] = s_advisor_anim_point_ne;
+    s_advisor_animation_names[3] = s_advisor_anim_point_e;
+    s_advisor_animation_names[4] = s_advisor_anim_point_se;
+    s_advisor_animation_names[5] = s_advisor_anim_point_s;
+    s_advisor_animation_names[6] = s_advisor_anim_point_sw;
+    s_advisor_animation_names[7] = s_advisor_anim_point_w;
+    s_advisor_animation_names[8] = s_advisor_anim_point_nw;
+    s_advisor_animation_names[9] = s_advisor_anim_point_up;
+    s_advisor_animation_names[10] = s_advisor_anim_talk_top;
+}
 
 // FUNCTION: LEGORR 0x004013e0
 int advisor_position_name_to_index(const char* name, int* index)
@@ -430,8 +447,9 @@ static int obj_typed_int(BlockFile* cfg, const char* level, const char* key, int
     return block_get_bool(cfg, path);
 }
 
-/* Split "a b" / "a,b" value into two longs (block/construction targets). */
-static void obj_split_two(const char* s, long* a, long* b)
+/* BlockTextTokenSplit uses the corpus's comma delimiter for the two target
+ * pairs. Parse into fixed-width words because the target record is x86. */
+static void obj_split_two(const char* s, int32_t* a, int32_t* b)
 {
     *a = 0;
     *b = 0;
@@ -439,7 +457,7 @@ static void obj_split_two(const char* s, long* a, long* b)
         return;
     }
     *a = atoi(s);
-    const char* p = strpbrk(s, " ,|");
+    const char* p = strchr(s, ',');
     if (p != NULL) {
         *b = atoi(p + 1);
     }
@@ -447,28 +465,28 @@ static void obj_split_two(const char* s, long* a, long* b)
 
 /* Corpus FUN_00458580 — crystal/ore objectives. */
 // FUNCTION: LEGORR 0x00458580
-static void obj_set_resources(LevelState* s, long crystal, long ore)
+static void obj_set_resources(LevelState* s, int32_t crystal, int32_t ore)
 {
     if (crystal != 0) {
         s->objective |= LVL_OBJECTIVE_CRYSTALS;
         s_objective_result_word |= LVL_OBJECTIVE_CRYSTALS;
-        level_set_int(s, OBJ_OFF_CRYSTAL_TARGET, (int32_t)crystal);
+        level_set_int(s, OBJ_OFF_CRYSTAL_TARGET, crystal);
     }
     if (ore != 0) {
         s->objective |= LVL_OBJECTIVE_ORE;
         s_objective_result_word |= LVL_OBJECTIVE_ORE;
-        level_set_int(s, OBJ_OFF_ORE_TARGET, (int32_t)ore);
+        level_set_int(s, OBJ_OFF_ORE_TARGET, ore);
     }
 }
 
 /* Corpus FUN_004585c0 — block objective (two targets). */
 // FUNCTION: LEGORR 0x004585c0
-static void obj_set_block(LevelState* s, long a, long b)
+static void obj_set_block(LevelState* s, const int32_t targets[2])
 {
     s->objective |= LVL_OBJECTIVE_BLOCK;
     s_objective_result_word |= LVL_OBJECTIVE_BLOCK;
-    level_set_int(s, OBJ_OFF_BLOCK_A, (int32_t)a);
-    level_set_int(s, OBJ_OFF_BLOCK_B, (int32_t)b);
+    level_set_int(s, OBJ_OFF_BLOCK_A, targets[0]);
+    level_set_int(s, OBJ_OFF_BLOCK_B, targets[1]);
 }
 
 /* Corpus FUN_004585f0 — timer objective (ticks = seconds*25). */
@@ -550,7 +568,7 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
     /* Resource objectives (finding 22 table). */
     {
         char value[256];
-        long crystal = 0, ore = 0;
+        int32_t crystal = 0, ore = 0;
         if (obj_cfg_str(cfg, level_name, K_CRYSTAL_OBJ, value, sizeof(value)) != NULL) {
             crystal = atoi(value);
         }
@@ -562,15 +580,17 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
     {
         char value[64];
         if (obj_cfg_str(cfg, level_name, K_TIMER_OBJ, value, sizeof(value)) != NULL) {
+            const char* mode = strchr(value, ':');
             float ticks = (float)atoi(value) * 25.0f;
-            int htf = strcasecmp_lite(value, "HitTimeFailObjective") == 0;
+            int htf = mode != NULL &&
+                strcasecmp_lite(mode + 1, "HitTimeFailObjective") == 0;
             obj_set_timer(s, ticks, htf);
         }
     }
     {
         char value[64];
         if (obj_cfg_str(cfg, level_name, K_CONSTRUCT_OBJ, value, sizeof(value)) != NULL) {
-            long a = 0, b = 0;
+            int32_t a = 0, b = 0;
             obj_split_two(value, &a, &b);
             obj_set_construction(s, a, b);
         }
@@ -578,9 +598,9 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
     {
         char value[64];
         if (obj_cfg_str(cfg, level_name, K_BLOCK_OBJ, value, sizeof(value)) != NULL) {
-            long a = 0, b = 0;
-            obj_split_two(value, &a, &b);
-            obj_set_block(s, a, b);
+            int32_t targets[2] = { 0, 0 };
+            obj_split_two(value, &targets[0], &targets[1]);
+            obj_set_block(s, targets);
         }
     }
     /* ObjectiveText feeds the message registry (corpus FUN_004574e0); not
@@ -990,6 +1010,8 @@ typedef struct AdvisorAnimationSlot {
 // GLOBAL: LEGORR 0x004b3124
 static AdvisorAnimationSlot s_adv_animation_slots[11];
 static AdvisorAnimationHooks s_adv_animation_hooks;
+static AdvisorAnimationTargetConfigLookupHook s_advisor_config_target_lookup;
+static void* s_advisor_config_target_lookup_user;
 static AdvisorTransformApplyHook s_adv_transform_apply_hook;
 static void* s_adv_transform_apply_user;
 
@@ -1000,6 +1022,13 @@ void advisor_animation_hooks_set(const AdvisorAnimationHooks* hooks)
     } else {
         s_adv_animation_hooks = *hooks;
     }
+}
+
+void advisor_animation_target_config_lookup_set(
+    AdvisorAnimationTargetConfigLookupHook lookup, void* user)
+{
+    s_advisor_config_target_lookup = lookup;
+    s_advisor_config_target_lookup_user = user;
 }
 
 void advisor_animation_slot_install(int slot, uint32_t handle,
@@ -1100,33 +1129,53 @@ void advisor_scene_controller_initialize(void* config_context,
 {
     uint32_t base_scene;
     void* companion;
+    /* Keep these writes in the target body: the retail initializer fills the
+     * two global name tables here before it uses the scene resources. */
+    s_advisor_position_names[0] = s_advisor_name_objective;
+    s_advisor_position_names[1] = s_advisor_name_objective_achieved;
+    s_advisor_position_names[2] = s_advisor_name_objective_failed;
+    s_advisor_position_names[3] = s_advisor_name_icon_normal;
+    s_advisor_position_names[4] = s_advisor_name_icon_back;
+    s_advisor_position_names[5] = s_advisor_name_icon_top;
+    s_advisor_position_names[6] = s_advisor_name_radar_toggle;
+    s_advisor_position_names[7] = s_advisor_name_radar_tagged;
+    s_advisor_position_names[8] = s_advisor_name_radar_zoom_in;
+    s_advisor_position_names[9] = s_advisor_name_radar_zoom_out;
+    s_advisor_position_names[10] = s_advisor_name_radar_map_view;
+    s_advisor_position_names[11] = s_advisor_name_info_dock_goto;
+    s_advisor_position_names[12] = s_advisor_name_info_dock_close;
+    s_advisor_position_names[13] = s_advisor_name_top_info;
+    s_advisor_position_names[14] = s_advisor_name_top_options;
+    s_advisor_position_names[15] = s_advisor_name_top_priorities;
+    s_advisor_position_names[16] = s_advisor_name_top_call_to_arms;
+    s_advisor_position_names[17] = s_advisor_name_top_go_back;
+    s_advisor_position_names[18] = s_advisor_name_control_zoom_in;
+    s_advisor_position_names[19] = s_advisor_name_control_zoom_out;
+    s_advisor_position_names[20] = s_advisor_name_talk_in_game;
+    s_advisor_animation_names[0] = s_advisor_anim_point_to_map;
+    s_advisor_animation_names[1] = s_advisor_anim_point_n;
+    s_advisor_animation_names[2] = s_advisor_anim_point_ne;
+    s_advisor_animation_names[3] = s_advisor_anim_point_e;
+    s_advisor_animation_names[4] = s_advisor_anim_point_se;
+    s_advisor_animation_names[5] = s_advisor_anim_point_s;
+    s_advisor_animation_names[6] = s_advisor_anim_point_sw;
+    s_advisor_animation_names[7] = s_advisor_anim_point_w;
+    s_advisor_animation_names[8] = s_advisor_anim_point_nw;
+    s_advisor_animation_names[9] = s_advisor_anim_point_up;
+    s_advisor_animation_names[10] = s_advisor_anim_talk_top;
     (void)config_context;
-    if (scene_context_words == NULL) return;
     base_scene = scene_context_words[9]; /* param_2 + 0x24 */
     s_adv_scene_root_handle = base_scene;
     s_adv_scene_transform_context = transform_context_handle;
-    if (s_adv_companion_scene_create_hook != NULL) {
-        companion = (void*)(uintptr_t)s_adv_companion_scene_create_hook(
-            base_scene, s_adv_companion_scene_create_user);
-    }
-    else {
-        companion = ddiscene_light_create(
-            (void*)(uintptr_t)base_scene, 3u, 0x3f800000u,
-            0x3f800000u, 0x3f800000u);
-    }
+    companion = ddiscene_light_create(
+        (void*)(uintptr_t)base_scene, 3u, 0x3f800000u,
+        0x3f800000u, 0x3f800000u);
     s_adv_scene_companion_handle = companion;
-    if (companion != NULL) {
-        (void)ddiscene_object_pose_method_dispatch(
-            companion, (void*)(uintptr_t)base_scene,
-            0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f);
-        scene_render_lock_toggle(companion, 1);
-    }
+    (void)ddiscene_object_pose_method_dispatch(
+        companion, (void*)(uintptr_t)base_scene,
+        0.0f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f);
+    scene_render_lock_toggle(companion, 1);
     s_adv_scene_state_word = 0u;
-    if (s_adv_scene_action_hook != NULL) {
-        s_adv_scene_action_hook(ADVISOR_SCENE_ACTION_CONTROLLER_INIT, -1,
-                                transform_context_handle,
-                                s_adv_scene_action_user);
-    }
 }
 
 // FUNCTION: LEGORR 0x00401990
@@ -1259,18 +1308,16 @@ void advisor_position_record_initialize(int row, uint32_t animation_index,
                                         int action_mode, uint32_t x,
                                         uint32_t y)
 {
-    uint32_t* rec;
-    if (row < 0 || row >= ADV_ACTION_ROWS) return;
-    rec = s_adv_actions[row];
+    uint32_t* rec = &s_adv_actions[0][0] + row * 9;
     rec[8] = 0x20000u;
     rec[0] = animation_index;
     rec[1] = (uint32_t)position_type;
     rec[2] = position_mode;
-    rec[3] = (uint32_t)action_mode;
     rec[4] = x;
     rec[5] = y;
     rec[6] = x;
     rec[7] = y;
+    rec[3] = (uint32_t)action_mode;
     if (action_mode == 0x0c) {
         rec[8] |= 0x10000u;
     }
@@ -1279,13 +1326,94 @@ void advisor_position_record_initialize(int row, uint32_t animation_index,
     }
 }
 
-/* AdvisorPositionConfigLoad (FUN_00401530): the block iterator and token
- * resolvers have already produced these fields. Translate the configured
- * position and animation names, then initialize the corresponding action
- * row with the parsed indices, modes, and coordinates. */
+/* BlockTextTokenSplit (FUN_00477440): split a mutable copy in place, keeping
+ * empty fields just as the engine's token splitter does. */
+static int advisor_config_tokens_split(char* value, char** tokens, int capacity)
+{
+    int count = 0;
+    char* cursor = value;
+    if (value == NULL || tokens == NULL || capacity <= 0 || *value == '\0')
+        return 0;
+    tokens[count++] = cursor;
+    while (*cursor != '\0') {
+        if (*cursor == ',') {
+            *cursor = '\0';
+            if (count == capacity) return count + 1;
+            tokens[count++] = cursor + 1;
+        }
+        ++cursor;
+    }
+    return count;
+}
+
+/* AdvisorPositionConfigLoad (FUN_00401530): find the resolution-specific
+ * section, walk its entries, and resolve the name tables used by each row.
+ * The data is comma-delimited: animation, message label, sound alias, x, y,
+ * and optional panel name. NULL leaves the decompile's defaults (0x1a and
+ * 0x0c) intact. */
 // FUNCTION: LEGORR 0x00401530
-int advisor_position_config_load(const AdvisorPositionConfigEntry* entries,
-                                 uint32_t count)
+void advisor_position_config_load(BlockFile* config, int resolution_width,
+                                  int resolution_height)
+{
+    char section_path[128];
+    BlockRec* section;
+    BlockRec* entry;
+    if (config == NULL) return;
+    advisor_name_tables_initialize();
+    sprintf(section_path, "%s AdvisorPositions%ix%i", util_root_name(config),
+            resolution_width, resolution_height);
+    section = block_subgroup(config, section_path);
+    for (entry = block_first_child(section); entry != NULL;
+         entry = block_next_sibling(entry)) {
+        char value[512];
+        char* tokens[8];
+        const char* source_value = block_value(entry);
+        int token_count;
+        int position_index;
+        int animation_index;
+        int position_type = 0x1a;
+        int sound_index;
+        int action_mode = 0x0c;
+        float x;
+        float y;
+        uint32_t x_bits;
+        uint32_t y_bits;
+        size_t value_length;
+        if (source_value == NULL || block_name(entry) == NULL ||
+            !advisor_position_name_to_index(block_name(entry),
+                                            &position_index)) {
+            continue;
+        }
+        value_length = strlen(source_value);
+        if (value_length >= sizeof(value)) continue;
+        memcpy(value, source_value, value_length + 1u);
+        token_count = advisor_config_tokens_split(value, tokens, 8);
+        if (token_count < 5 || token_count > 8 ||
+            !advisor_animation_name_to_index(tokens[0], &animation_index) ||
+            !sound_alias_lookup(tokens[2], &sound_index)) {
+            continue;
+        }
+        if (obj_strcasecmp(tokens[1], "NULL") != 0 &&
+            !ui_message_label_index_find(tokens[1], &position_type)) {
+            continue;
+        }
+        if (token_count > 5 && obj_strcasecmp(tokens[5], "NULL") != 0 &&
+            !ui_panel_name_table_lookup(tokens[5], &action_mode)) {
+            continue;
+        }
+        x = (float)atof(tokens[3]);
+        y = (float)atof(tokens[4]);
+        memcpy(&x_bits, &x, sizeof(x_bits));
+        memcpy(&y_bits, &y, sizeof(y_bits));
+        advisor_position_record_initialize(position_index,
+            (uint32_t)animation_index, position_type,
+            (uint32_t)sound_index, action_mode, x_bits, y_bits);
+    }
+}
+
+/* Compatibility entry point for callers that already decoded the records. */
+int advisor_position_config_entries_load(
+    const AdvisorPositionConfigEntry* entries, uint32_t count)
 {
     uint32_t i;
     int loaded = 0;
@@ -1313,11 +1441,9 @@ int advisor_position_config_load(const AdvisorPositionConfigEntry* entries,
     return loaded;
 }
 
-/* AdvisorConfigSlotLookup (FUN_00401270): walk all eleven configured names.
- * The callback performs config lookup/resource creation; successful entries
- * store the resulting scene handle and the configured time window in frames.
- * The reference multiplies each time by 25 and converts it to an integer. */
-// FUNCTION: LEGORR 0x00401270
+/* Adapter used by portable callers with an already-resolved resource loader.
+ * It intentionally has no target annotation: the retail entry takes the
+ * scene and config contexts, not a function pointer and user-data pair. */
 int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
                               void* user)
 {
@@ -1332,13 +1458,56 @@ int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
                    &end_time, user)) {
             int start_frame = (int)(start_time * 25.0f);
             int end_frame = (int)(end_time * 25.0f);
-            advisor_animation_slot_install(i, handle,
-                                           (float)start_frame,
+            advisor_animation_slot_install(i, handle, (float)start_frame,
                                            (float)end_frame);
             ++loaded;
         }
     }
     return loaded;
+}
+
+/* AdvisorConfigSlotLookup @ 0x00401270 walks the eleven configured animation
+ * names. The scene/config operations are renderer-owned, so the installed
+ * resolver performs the observed direct-key lookup, optional `!%s` fallback,
+ * LWS resource creation and scene setup. It returns true when a config entry
+ * exists even if resource creation yields handle zero; the timing words are
+ * still written in that case. */
+// FUNCTION: LEGORR 0x00401270
+void advisor_config_slots_load_target(void* scene_context,
+                                      void* config_context)
+{
+    int i;
+    const int allow_fallback =
+        (engine_feature_word_peek() & 0x400000u) == 0u;
+    AdvisorAnimationTargetConfigLookupHook lookup =
+        s_advisor_config_target_lookup;
+    if (lookup == NULL) return;
+    for (i = 0; i < 11; ++i) {
+        uint32_t handle = 0u;
+        float start_time = 0.0f;
+        float end_time = 0.0f;
+        int found = lookup(scene_context, config_context,
+                           s_advisor_animation_names[i], &handle,
+                           &start_time, &end_time,
+                           s_advisor_config_target_lookup_user);
+        if (!found && allow_fallback) {
+            char fallback_key[64];
+            fallback_key[0] = '!';
+            strcpy(fallback_key + 1, s_advisor_animation_names[i]);
+            handle = 0u;
+            start_time = 0.0f;
+            end_time = 0.0f;
+            found = lookup(scene_context, config_context, fallback_key,
+                           &handle, &start_time, &end_time,
+                           s_advisor_config_target_lookup_user);
+        }
+        if (found) {
+            const int start_frame = (int)(start_time * 25.0f);
+            const int end_frame = (int)(end_time * 25.0f);
+            advisor_animation_slot_install(i, handle, (float)start_frame,
+                                           (float)end_frame);
+        }
+    }
 }
 
 // FUNCTION: LEGORR 0x00401840
@@ -1684,6 +1853,7 @@ static void objective_advisor_live_token_release(int kind, uintptr_t handle,
     }
 }
 
+// FUNCTION: LEGORR 0x00452e70
 int objective_advisor_token_file_load(const char* path)
 {
     Resource* resource;

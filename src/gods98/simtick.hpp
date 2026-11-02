@@ -104,14 +104,14 @@ void simtick_manager_set_timer_word(uint32_t w);  /* DAT_00500860 seed */
 void simtick_sound_keepalive(EngineContext* c);  /* FUN_0047aba0 */
 void simtick_editor_steps(EngineContext* c);     /* legacy editor-step seam */
 void simtick_cooldown_tick(EngineContext* c, float dt); /* FUN_0041a2c0 -> bus */
-void simtick_bitfield_tree(int* base, int code); /* FUN_0049cf90 */
+void simtick_bitfield_tree(int* base, int code);
 
 void simtick_set_sound_guards(int sound_on, int active);       /* 0x533878/0x506688 */
 void simtick_set_keepalive_hook(int (*h)(int entry, int a, int b)); /* 0x47abc0 */
 void simtick_set_editor_state(uint32_t word, int active);      /* 0x4eaec8/0x4eadd8 */
 void simtick_set_step_hook(void (*h)(int step));
 int  simtick_editor_steps_run(void);
-void simtick_set_tree_hook(int (*h)(int idx, int bits));       /* 0x49d000 */
+void simtick_set_tree_hook(int (*h)(int idx, int bits));
 int  simtick_tree_fired(void);
 
 /* --- tranche 9 tickers --------------------------------------------------- */

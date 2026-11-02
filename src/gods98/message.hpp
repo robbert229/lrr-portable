@@ -126,6 +126,49 @@ void message_update(float dt);
 /* corpus FUN_0041a2c0: decrement every configured cooldown toward 0. */
 void message_cooldown_tick(float dt);
 
+/* InfoMessageQueueTick (FUN_00419f30): advance each active message's
+ * display-offset and remaining-time words. The original then updates a
+ * renderer-owned bitmap handle and draws through a state-owned text object;
+ * those two operations are supplied by the active UI owner. */
+typedef void (*InfoMessageQueueResourceUpdateHook)(
+    void* context, void* resource, const float position[2]);
+typedef void (*InfoMessageQueueStateDrawHook)(void* context,
+                                             uint32_t state_handle);
+typedef void* (*InfoMessageQueueGlobalResourceHook)(void* context);
+/* Reads the signed dword at the renderer resource record's +8. The portable
+ * TextureSurface does not expose the retail bitmap-record/DirectDraw layout. */
+typedef int32_t (*InfoMessageQueueResourceLimitHook)(
+    void* context, void* resource);
+typedef struct InfoMessageQueueTickOps {
+    void* context;
+    InfoMessageQueueResourceUpdateHook resource_update;
+    InfoMessageQueueStateDrawHook state_draw;
+    InfoMessageQueueGlobalResourceHook global_resource_get;
+    InfoMessageQueueResourceLimitHook resource_limit_get;
+} InfoMessageQueueTickOps;
+void info_message_queue_tick_ops_set(const InfoMessageQueueTickOps* ops);
+void info_message_queue_tick(float dt); /* FUN_00419f30 */
+
+/* IncidentMessageTextConsumer (FUN_0041a080): the queue/catalog and update
+ * bit are message-owned. The scrolling panel record, UI state word, transition
+ * request, formatted text append, scroll metrics, and draw entry belong to the
+ * UI owner and are exposed here as narrow operations. */
+typedef struct IncidentMessageTextConsumerOps {
+    void* context;
+    uint32_t (*ui_state_flags_get)(void* context); /* DAT_0050028c */
+    void* (*text_output_get)(void* context);       /* DAT_005007d8 */
+    uint32_t (*scroll_offset_get)(void* context);  /* DAT_004dcd44 */
+    void (*panel_transition_request)(void* context, int mode); /* 7 */
+    void (*text_output_reset)(void* context, void* output);
+    void (*text_output_append)(void* context, void* output,
+                               const char* format,
+                               const uint8_t arguments[5],
+                               unsigned int argument_count);
+} IncidentMessageTextConsumerOps;
+void incident_message_text_consumer_ops_set(
+    const IncidentMessageTextConsumerOps* ops);
+void incident_message_text_consumer(float frame_delta);
+
 /* CatalogSlotFlagUpdate (FUN_0041c800): category 1 and 4 rows each retain a
  * low-bit state word. The catalog owner supplies the two eligibility checks
  * and the category-1 rank query; the retail no-op comparison makes rank

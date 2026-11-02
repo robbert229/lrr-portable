@@ -46,9 +46,9 @@ typedef struct SurfacePaletteEntry {
     uint8_t flags;
 } SurfacePaletteEntry;
 
-/* The renderer hook owns TextureSurfaceCreate's mode-specific database and
- * COM paths (including mode 0 IDirect3DRM3::LoadTexture lookup). The software
- * fallback supports mode 1 bitmap decode only. */
+/* The renderer hook owns the configured surface database and DirectDraw/COM
+ * creation path. Without it, mode 1 decodes a BMP into a release-tracked
+ * TextureSurface host record; mode 0 is unavailable. */
 typedef void* (*TextureSurfaceCreateHook)(void* context, const char* name,
                                           uint32_t mode, uint32_t* value_out,
                                           uint32_t mode_data);
@@ -118,6 +118,8 @@ typedef struct ModelRenderPassDispatchOps {
     void* (*next)(void* context, void* entry);
     void* (*model)(void* context, void* entry);
     const void* (*parameters)(void* context, void* entry);
+    /* Retail skip/alternate tests read model + 0x2c. This callback is only
+     * a compatibility fallback for adapters without model_flags. */
     uint32_t (*entry_flags)(void* context, void* entry);
     uint32_t (*model_flags)(void* context, void* model);
     uint32_t (*record_count)(void* context, void* model);
@@ -140,7 +142,12 @@ void model_render_pass_dispatch_ops_set(
     const ModelRenderPassDispatchOps* ops);
 /* Host-width queue owner for parsed Model records. Enqueue once per intended
  * draw: the model pointer is borrowed, the sixteen-float parameter block and
- * path prefix are copied, and a nonempty dispatch consumes the entries. */
+ * path prefix are copied, and a nonempty dispatch consumes the entries.
+ * `entry_flags` models the retail model's +0x2c flag word. Retail scene
+ * dispatch nodes contain a renderer-owned model record at +0x00 and sixteen
+ * dwords at +0x04..+0x40; they cannot be cast to this queue or to Model.
+ * The production scene/model instance owner must resolve that record and
+ * enqueue the parsed Model together with its target transform. */
 int model_render_dispatch_enqueue(const char* path_prefix, Model* model,
                                   const float parameters[16],
                                   uint32_t entry_flags);
@@ -182,9 +189,9 @@ typedef struct ModelTextureBinding {
     uint32_t animation_frame_count;
     float color[3];
     float values[10];
-    /* LWO SURF/TSIZ is planar-map scale consumed by MaterialPass. It is kept
-     * separate from the opaque retail material values above. */
-    float texture_scale[2];
+    /* LWO SURF/TSIZ and TCTR are the three-axis texture mapping transform. */
+    float texture_scale[3];
+    float texture_center[3];
     float surface_luminosity;
     float surface_diffuse;
     float surface_specular;
@@ -216,10 +223,10 @@ int bind_model_texture_inputs(void* device, const ModelTextureInput* inputs,
 /* Bind a parsed model's surface table. This is the portable body for retail
  * BindModelTextures; `bindings` is a host-width adapter array, not the
  * retail 0x3c-byte material-record array. */
-int bind_model_textures_for_model(const char* path_prefix,
-                                  const Model* model,
-                                  ModelTextureBinding* bindings,
-                                  int force_source_color);
+void bind_model_textures_for_model(const char* path_prefix,
+                                   const Model* model,
+                                   ModelTextureBinding* bindings,
+                                   int force_source_color);
 void model_texture_bindings_release(ModelTextureBinding* bindings,
                                     uint32_t count);
 typedef struct MaterialPassVertex {
@@ -242,20 +249,37 @@ typedef struct MaterialPassSurface {
     const ModelSurface* material;
     const ModelTextureBinding* texture;
 } MaterialPassSurface;
+/* Fully prepared, renderer-independent material packets. Geometry arrays and
+ * any owned texture bindings belong to this record; cached bindings may be
+ * borrowed from the Model. ModelSurface pointers borrow from the Model, which
+ * must remain alive until release. */
+typedef struct MaterialPassPreparedModel {
+    MaterialPassSurface* surfaces;
+    size_t surface_count;
+    const ModelTextureBinding* bindings;
+    ModelTextureBinding* owned_bindings;
+} MaterialPassPreparedModel;
 typedef struct MaterialPassOps {
     void* context;
     /* Synchronous renderer operation. The packet arrays and material pointers
      * are valid only for the duration of this call. A backend owns mesh-record
      * allocation, material-state application, and render-queue submission.
      * The checked-in renderer has no production installer for this operation:
-     * retail MaterialPass writes a material table at render_object + 0x1c,
-     * while MeshRecordPool is a separate portable adapter record, not that
-     * retail object/table owner. */
+     * retail MaterialPass writes a material table at render_object + 0x1c and
+     * allocates native mesh records through that object's renderer-owned
+     * pool. MeshRecordPool is only a portable adapter; no production owner
+     * binds it to the retail render object. */
     int (*surface_submit)(void* context, const char* path_prefix,
                           void* render_object,
                           const MaterialPassSurface* surface);
 } MaterialPassOps;
 void material_pass_ops_set(const MaterialPassOps* ops);
+int material_pass_prepare(const char* path_prefix, const Model* model,
+                          uint32_t flags,
+                          MaterialPassPreparedModel* prepared);
+void material_pass_prepared_release(MaterialPassPreparedModel* prepared);
+int material_pass_submit(const char* path_prefix, void* render_object,
+                         const MaterialPassPreparedModel* prepared);
 int material_pass_execute(const char* path_prefix, void* render_object,
                           const Model* model, uint32_t flags);
 typedef struct SurfacePixelFormat SurfacePixelFormat;
@@ -408,6 +432,12 @@ void surface_fill(void* px, int pitch, int w, int h, int r, int g, int b);
 /* Blit a texture (top-left at x,y), converting ARGB -> RGBA32. */
 void surface_blit_texture(void* px, int pitch, int w, int h,
                           const TextureSurface* t, int x, int y);
+/* ImageSurfaceBlitTransformed (FUN_0047dbf0): convert two RGB triples to
+ * color-key endpoints and mark the wrapped image resource initialized. */
+void image_surface_blit_transformed(TextureSurface* surface,
+                                    float low_red, float low_green,
+                                    float low_blue, float high_red,
+                                    float high_green, float high_blue);
 
 /* Moving bar (animation proof; magenta). */
 void surface_draw_sweep(void* px, int pitch, int w, int h, int frame);
@@ -629,12 +659,17 @@ typedef struct DirectDrawDisplayModeCandidate {
     uint32_t flags;
 } DirectDrawDisplayModeCandidate;
 typedef struct DirectDrawDeviceInitializeOps {
+    /* No production default is installed: these callbacks must be backed by
+     * an owner that can enumerate the retail adapter/mode records and commit
+     * the selected renderer state. SDL's window surface alone is insufficient. */
     void* context;
     void (*mode_register)(void* context, int width, int height,
                           int bits_per_pixel);
     int (*adapter_count_get)(void* context);
     int (*adapter_get)(void* context, int index,
                        DirectDrawAdapterCandidate* adapter_out);
+    /* Return -1 when DirectDraw creation/enumeration fails, zero when it
+     * succeeds with no modes, or the enumerated mode count. */
     int (*mode_count_get)(void* context, void* adapter, int windowed);
     int (*mode_get)(void* context, void* adapter, int index,
                     DirectDrawDisplayModeCandidate* mode_out);
@@ -649,11 +684,17 @@ typedef struct DirectDrawDeviceInitializeOps {
     int (*renderer_initialize)(void* context, int fullscreen, void* adapter,
                                const DirectDrawDisplayModeCandidate* mode);
 } DirectDrawDeviceInitializeOps;
+typedef struct DirectDrawDeviceSelection {
+    void* adapter;
+    void* mode_descriptor;
+    int fullscreen;
+} DirectDrawDeviceSelection;
 void directdraw_device_initialize_ops_set(
     const DirectDrawDeviceInitializeOps* ops);
 int directdraw_device_initialize(int show_dialog, int register_extra_modes,
                                  int auto_select, int windowed,
                                  const char* error_message); /* FUN_0049d030 */
+void directdraw_device_selection_get(DirectDrawDeviceSelection* out);
 typedef int (*Direct3DTextureMemoryCapsQueryFn)(void* context,
                                                 uint32_t capability,
                                                 uint32_t* memory_out);
@@ -860,9 +901,9 @@ int surface_active_pixel_format_query_convert(
  * channels to the currently locked surface's pixel format. */
 uint32_t surface_color_pack_to_pixel(float red, float green, float blue);
 
-/* FontDeviceColorConvert (FUN_0047e190): query the device pixel format,
- * pack the low three source color bytes into its RGB masks, then release
- * the queried format interface. */
+/* FontDeviceColorConvert (FUN_0047e190): lock the supplied raw DirectDraw
+ * surface interface, pack the low three source color bytes into its RGB
+ * masks, then unlock it. The hooks are for non-DirectDraw adapters. */
 typedef int (*FontPixelFormatQueryFn)(void* device, uint32_t* bits_per_pixel,
                                       uint32_t* red_mask,
                                       uint32_t* green_mask,
@@ -875,6 +916,7 @@ uint32_t font_device_color_convert(void* device, uint32_t color);
  * from a decoded font bitmap. The record owns one surface reference. */
 void* font_atlas_record_create(const char* name);
 TextureSurface* font_atlas_record_surface_get(const void* record);
+int font_atlas_record_line_height_get(const void* record);
 int font_atlas_record_glyph_get(const void* record, unsigned char glyph,
                                 float rect_out[4]);
 /* Parse the A###_ surface naming prefix from a path's final component. */

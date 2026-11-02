@@ -72,9 +72,11 @@ typedef struct Sound {
 } Sound;
 
 /* Portable counterparts for the reference WinMM/mmio WAVE helpers. The
- * in-memory opener returns an opaque stream context, an owned WAVEFORMATEX
- * byte block (including any non-PCM extension), and the RIFF parent chunk.
- * The caller must keep `data` alive until the stream is released. */
+ * in-memory parser returns an opaque stream context; the file opener below
+ * keeps a loose-file GameFileHandle open while the caller visits the data
+ * chunk. Both return an owned WAVEFORMATEX byte block (including any non-PCM
+ * extension) and the RIFF parent chunk. The in-memory caller must keep its
+ * input data alive until the stream is released. */
 uint32_t sound_wave_memory_format_read(const uint8_t* data, int32_t size,
                                       SoundWaveMemoryStream** stream_out,
                                       uint8_t** format_out,

@@ -29,6 +29,7 @@
 #define LEGORRR_GAME_OBJECTIVE_HPP
 
 #include "level.hpp"
+#include "gods98/block.hpp"
 
 struct EntitySlot;
 
@@ -199,8 +200,7 @@ void coordinate_list_callback_visit(void* list_key,
                                    CoordinateListVisitCallback callback,
                                    void* user); /* FUN_00456cb0 */
 typedef struct AdvisorPositionConfigEntry {
-    /* These are parsed config names/values; the loader resolves the two
-     * names through the fixed Advisor position and animation tables. */
+    /* Parsed position rows retained for callers that already decoded config. */
     const char* position_name;
     const char* animation_name;
     int position_type;
@@ -209,14 +209,21 @@ typedef struct AdvisorPositionConfigEntry {
     float x;
     float y;
 } AdvisorPositionConfigEntry;
-/* lookup resolves one Advisor animation entry and supplies its created scene
- * handle plus raw configured start/end times. The loader converts times to
- * integer frame counts at 25 frames per configured time unit. */
+/* Renderer-owned animation lookup supplies the scene handle and configured
+ * start/end times; the loader converts times to 25 Hz frame counts. */
 typedef int (*AdvisorAnimationConfigLookupHook)(const char* name,
                                                 uint32_t* handle,
                                                 float* start_time,
                                                 float* end_time,
                                                 void* user);
+/* Target loader adapter for the config lookup and renderer resource path.
+ * The target calls it first with the animation name and, when that fails and
+ * feature bit 0x400000 is clear, again with the `!<name>` fallback key. The
+ * hook owns the Advisor config lookup and LWS creation/initialization. Return
+ * true when the config value exists, even if `handle` is zero. */
+typedef int (*AdvisorAnimationTargetConfigLookupHook)(
+    void* scene_context, void* config_context, const char* animation_name,
+    uint32_t* handle, float* start_time, float* end_time, void* user);
 void advisor_scene_ready_set(int ready);
 void advisor_scene_action_hook_set(AdvisorSceneActionHook hook, void* user);
 void advisor_companion_scene_create_hook_set(
@@ -230,10 +237,17 @@ float advisor_scene_scale_get(void);
 void advisor_transform_apply_hook_set(AdvisorTransformApplyHook hook,
                                       void* user);
 void advisor_apply_slot_transform(int row); /* FUN_00401b30 */
-int advisor_position_config_load(const AdvisorPositionConfigEntry* entries,
-                                 uint32_t count); /* FUN_00401530 */
+void advisor_position_config_load(BlockFile* config,
+                                  int resolution_width,
+                                  int resolution_height); /* FUN_00401530 */
+int advisor_position_config_entries_load(
+    const AdvisorPositionConfigEntry* entries, uint32_t count);
 int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
-                              void* user); /* FUN_00401270 */
+                              void* user); /* portable adapter */
+void advisor_animation_target_config_lookup_set(
+    AdvisorAnimationTargetConfigLookupHook lookup, void* user);
+void advisor_config_slots_load_target(void* scene_context,
+                                      void* config_context); /* 0x00401270 */
 int advisor_request_admit(int row, int immediate); /* FUN_004018c0 */
 void advisor_request_reset_and_submit_sound(int row); /* FUN_00401930 */
 void advisor_animation_end_cleanup(void); /* FUN_004011c0 */

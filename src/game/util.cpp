@@ -302,7 +302,11 @@ static MotionWaypointTimerState* s_motion_waypoint_state =
 static PortLoopRandomRangeHook s_motion_waypoint_random_range;
 static void* s_motion_waypoint_user;
 static void* s_motion_gameplay_scene_object;
+static void* s_motion_gameplay_scene_owner;
 static uint32_t s_motion_gameplay_scene_flags;
+static MotionJitterState s_motion_jitter_state;
+static float s_motion_jitter_tolerance[3];
+static void motion_jitter_center_refresh(void);
 
 static float motion_waypoint_default_random(void* context, float minimum,
                                             float maximum)
@@ -334,6 +338,154 @@ void motion_gameplay_scene_bind(void* target, uint32_t flags)
 {
     s_motion_gameplay_scene_object = target;
     s_motion_gameplay_scene_flags = flags;
+}
+
+void motion_gameplay_scene_owner_bind(void* target, void* owner)
+{
+    if (target == s_motion_gameplay_scene_object) {
+        s_motion_gameplay_scene_owner = owner;
+        motion_jitter_center_refresh();
+    }
+}
+
+static void motion_jitter_center_refresh(void)
+{
+    float position[3];
+    if (s_motion_gameplay_scene_object != NULL &&
+        ddiscene_object_position_get(s_motion_gameplay_scene_object,
+            s_motion_gameplay_scene_owner, position)) {
+        memcpy(s_motion_jitter_state.center, position, sizeof(position));
+        memcpy(s_motion_jitter_state.position, position, sizeof(position));
+    }
+}
+
+void motion_jitter_parameters_store(float delay_min, float delay_max,
+                                    float speed_min, float speed_max,
+                                    float magnitude_min, float magnitude_max,
+                                    float tolerance_x, float tolerance_y,
+                                    float tolerance_z)
+{
+    s_motion_jitter_state.delay_min = delay_min;
+    s_motion_jitter_state.delay_max = delay_max;
+    s_motion_jitter_state.lifetime_min = speed_min;
+    s_motion_jitter_state.lifetime_max = speed_max;
+    s_motion_jitter_state.magnitude_min = magnitude_min;
+    s_motion_jitter_state.magnitude_max = magnitude_max;
+    s_motion_jitter_tolerance[0] = tolerance_x;
+    s_motion_jitter_tolerance[1] = tolerance_y;
+    s_motion_jitter_tolerance[2] = tolerance_z;
+    memcpy(s_motion_jitter_state.tolerance, s_motion_jitter_tolerance,
+           sizeof(s_motion_jitter_tolerance));
+    s_motion_jitter_state.flags |= 0x40u;
+    motion_jitter_center_refresh();
+}
+
+static int motion_jitter_vector_random(void*, float out[3])
+{
+    if (out == NULL) return 0;
+    d3drm_vector_random(out);
+    return 1;
+}
+
+static int motion_jitter_candidate_valid(void*, const float position[3])
+{
+    int i;
+    if (position == NULL) return 0;
+    for (i = 0; i < 3; ++i) {
+        const float difference = (float)fabs(
+            (double)(position[i] - s_motion_jitter_state.center[i]));
+        if (s_motion_jitter_tolerance[i] < difference) return 0;
+    }
+    return 1;
+}
+
+static void motion_jitter_position_apply(void*, const float position[3])
+{
+    if (s_motion_gameplay_scene_object == NULL || position == NULL) return;
+    (void)ddiscene_object_position_set(s_motion_gameplay_scene_object,
+        s_motion_gameplay_scene_owner, position[0], position[1], position[2]);
+}
+
+void motion_jitter_state_step(MotionJitterState* state, float delta,
+                              PortLoopRandomRangeHook random_range,
+                              const MotionJitterHooks* hooks)
+{
+    float length;
+    float candidate[3];
+    int i;
+    int valid;
+    if (state == NULL || hooks == NULL ||
+        hooks->candidate_valid == NULL || (state->flags & 0x40u) == 0u)
+        return;
+    if ((state->flags & 0x80u) == 0u) {
+        state->delay -= delta;
+        if (state->delay > 0.0f) return;
+        state->delay = random_range != NULL
+            ? random_range(hooks->context, state->delay_min, state->delay_max)
+            : motion_waypoint_default_random(NULL, state->delay_min,
+                                              state->delay_max);
+        state->lifetime = random_range != NULL
+            ? random_range(hooks->context, state->lifetime_min,
+                           state->lifetime_max)
+            : motion_waypoint_default_random(NULL, state->lifetime_min,
+                                              state->lifetime_max);
+        state->remaining = random_range != NULL
+            ? random_range(hooks->context, state->magnitude_min,
+                           state->magnitude_max)
+            : motion_waypoint_default_random(NULL, state->magnitude_min,
+                                              state->magnitude_max);
+        if (hooks->random_vector != NULL) {
+            if (!hooks->random_vector(hooks->context, state->direction))
+                return;
+        }
+        else {
+            d3drm_vector_random(state->direction);
+        }
+        length = (float)sqrt((double)(state->direction[0] * state->direction[0] +
+                                      state->direction[1] * state->direction[1] +
+                                      state->direction[2] * state->direction[2]));
+        if (length == 0.0f) return;
+        for (i = 0; i < 3; ++i)
+            state->direction[i] = state->direction[i] / length * state->remaining;
+        state->flags |= 0x80u;
+        return;
+    }
+    for (i = 0; i < 3; ++i)
+        candidate[i] = state->position[i] + state->direction[i];
+    valid = hooks->candidate_valid(hooks->context, candidate);
+    if (!valid) {
+        for (i = 0; i < 3; ++i)
+            candidate[i] = state->position[i] - state->direction[i];
+        valid = hooks->candidate_valid(hooks->context, candidate);
+    }
+    if (!valid) {
+        state->flags &= ~0x80u;
+        return;
+    }
+    for (i = 0; i < 3; ++i) state->position[i] = candidate[i];
+    if (hooks->position_apply != NULL)
+        hooks->position_apply(hooks->context, state->position);
+    state->remaining -= state->lifetime;
+    if (state->remaining <= 0.0f) state->flags &= ~0x80u;
+}
+
+// FUNCTION: LEGORR 0x0044D760
+void motion_jitter_step(float delta)
+{
+    MotionJitterHooks hooks;
+    float position[3];
+    if (s_motion_gameplay_scene_object == NULL ||
+        (s_motion_jitter_state.flags & 0x40u) == 0u ||
+        !ddiscene_object_position_get(s_motion_gameplay_scene_object,
+            s_motion_gameplay_scene_owner, position)) return;
+    memcpy(s_motion_jitter_state.position, position, sizeof(position));
+    memset(&hooks, 0, sizeof(hooks));
+    hooks.random_vector = motion_jitter_vector_random;
+    hooks.candidate_valid = motion_jitter_candidate_valid;
+    hooks.position_apply = motion_jitter_position_apply;
+    hooks.context = s_motion_waypoint_user;
+    motion_jitter_state_step(&s_motion_jitter_state, delta,
+        s_motion_waypoint_random_range, &hooks);
 }
 
 void motion_waypoint_position_bind(float x, float y, float z)
@@ -512,7 +664,10 @@ void motion_waypoint_timer_tick(float delta)
             (first_step >= 0.0f && state->progress[0] <= 0.0f)) {
             for (i = 0; i < 3; ++i)
                 state->position[i] -= state->progress[i];
-            state->flags &= ~0x38u;
+            /* The decompile clears mask 0x28 here. This branch already has
+             * bit 0x10 clear, so preserve its exact write mask rather than
+             * clearing that unrelated phase bit as well. */
+            state->flags &= ~0x28u;
         }
         return;
     }
@@ -555,6 +710,7 @@ void motion_gameplay_tick(float delta)
                 s_motion_drift_state->offset[i] - drift_before[i];
     }
     motion_waypoint_timer_tick(delta);
+    motion_jitter_step(delta);
     motion_three_channel_tween_step(delta);
     scene_transform_current_set(s_motion_waypoint_state->position[0],
                                 s_motion_waypoint_state->position[1],

@@ -104,8 +104,9 @@ const char* ai_activity_name(int id);
 const char* ai_ability_type_name_get(int id);
 const char* ai_tool_type_name_get(int id);
 uint32_t ai_activity_resource_slot_get(int id);
-/* FUN_00436c20: install activity/ability/tool names and selectors; reset the
- * entity record pool and the tracked idle-registration table. */
+/* FUN_00436c20: clear the entity-pool/grid-count state and install the
+ * activity/ability/tool names and selectors. The separate idle-registration
+ * table and global animation word are outside its cleared range. */
 void ai_activity_name_table_initialize(void);
 void ai_idle_chain_record_attach(EntitySlot* entity); /* FUN_00403f30 */
 
@@ -231,7 +232,8 @@ int ai_minion_state_for(int type);
  * entities use the port's same-name Stats-row adapter, or zero when that row
  * is unavailable. Only entities with neither source use the context
  * fallback. The result is clamped to the inline span. */
-int ai_activity_cap(const GameContext* ctx, const EntitySlot* e);
+int ai_activity_cap(const EntitySlot* e); /* 0x0046a060 raw Stats +0xcc read */
+int ai_activity_cap_for_context(const GameContext* ctx, const EntitySlot* e);
 
 /* FUN_0044b370: install one activity grant onto the entity's list — the
  * command/dispatch install appender. Semantics (corpus-pinned): capacity

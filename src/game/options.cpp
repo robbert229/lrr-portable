@@ -120,14 +120,21 @@ static void options_load_corpus_defaults(GameOptions* o)
     o->music_volume = OPT_DFLT_MUSIC_VOLUME;
 }
 
-/* OptionsLoadOrDefault (FUN_00416940): reset the front-end selection words
- * when requested, then preserve the active context's loaded option values or
- * seed the corpus's {speed, SFX, music} defaults. The port keeps the selected
- * context's persisted values in GameContext::options instead of DAT fields. */
-// FUNCTION: LEGORR 0x00416940
+/* Typed adapter for the target's two-argument ABI. */
 void options_load_or_default(struct GameContext* ctx, int load_options,
                              int reset_frontend)
 {
+    if (ctx != NULL) save_context_bind(ctx);
+    options_load_or_default_target(load_options, reset_frontend);
+}
+
+/* OptionsLoadOrDefault @ 0x00416940 takes (load_options, reset_frontend).
+ * The active GameContext owns the three runtime option words; the separate
+ * DAT_00557028 gate is not represented by the portable frontend state. */
+// FUNCTION: LEGORR 0x00416940
+void options_load_or_default_target(int load_options, int reset_frontend)
+{
+    GameContext* ctx = save_current_context_get();
     if (reset_frontend != 0) {
         frontend_flow_word_set(0, 0);
         frontend_flow_word_set(1, -1);
@@ -135,19 +142,8 @@ void options_load_or_default(struct GameContext* ctx, int load_options,
         frontend_flow_word_set(3, 0);
     }
     if (load_options != 0 && ctx != NULL) {
-        char* block = (char*)sav_build_ctx(ctx);
-        if (block == NULL) {
+        if (sav_build_ctx_target() == NULL) {
             options_load_corpus_defaults(&ctx->options);
-        } else {
-            uint32_t sfx;
-            uint32_t speed;
-            uint32_t music;
-            __builtin_memcpy(&sfx, block + 8, sizeof(sfx));
-            __builtin_memcpy(&speed, block + 12, sizeof(speed));
-            __builtin_memcpy(&music, block + 16, sizeof(music));
-            ctx->options.sfx_volume = (int)sfx;
-            ctx->options.game_speed = (int)speed;
-            ctx->options.music_volume = (int)music;
         }
     }
 }
@@ -293,39 +289,48 @@ int options_load_header(GameOptions* o, const uint8_t* blk)
     return 1;
 }
 
-/* OptionsWriteToSlot (FUN_00416910) — see options.hpp. */
-// FUNCTION: LEGORR 0x416910
+/* Typed OptionsWriteToSlot adapter. */
+/* The corpus's 0xb8-byte slot window is carried in host-width module state. */
+#define OPTIONS_SLOT_WINDOW_DWORDS 46
+static uint32_t s_options_slot_window[OPTIONS_SLOT_WINDOW_DWORDS];
+static void* s_options_slot_resource;
+
 void options_write_to_slot(GameContext* ctx)
 {
-    char* block = (char*)sav_build_ctx(ctx);
-    if (block == NULL) {
-        return;
-    }
-    /* corpus: DAT_00557034 -> +8, DAT_00557030 -> +12, DAT_0055703c -> +16 */
-    const uint32_t sfx = (uint32_t)ctx->options.sfx_volume;
-    const uint32_t speed = (uint32_t)ctx->options.game_speed;
-    const uint32_t music = (uint32_t)ctx->options.music_volume;
-    __builtin_memcpy(block + 8, &sfx, sizeof sfx);
-    __builtin_memcpy(block + 12, &speed, sizeof speed);
-    __builtin_memcpy(block + 16, &music, sizeof music);
+    if (ctx == NULL) return;
+    save_context_bind(ctx);
+    options_write_to_slot_target();
 }
 
-/* OptionsContextSixFieldSet (FUN_00417f20) — see options.hpp. */
-// FUNCTION: LEGORR 0x417f20
+/* OptionsWriteToSlot @ 0x00416910 reads the current game and save contexts. */
+// FUNCTION: LEGORR 0x00416910
+void options_write_to_slot_target(void)
+{
+    GameContext* ctx = (GameContext*)sav_build_ctx_target();
+    if (ctx == NULL) return;
+    /* The host-width slot-record sidecar corresponds to the retail +0x08,
+     * +0x0c, and +0x10 option words. */
+    s_options_slot_window[2] = (uint32_t)ctx->options.sfx_volume;
+    s_options_slot_window[3] = (uint32_t)ctx->options.game_speed;
+    s_options_slot_window[4] = (uint32_t)ctx->options.music_volume;
+}
+
+/* Typed OptionsContextSixFieldSet adapter. */
 void options_context_six_field_set(struct GameContext* ctx,
                                    const uint32_t* src)
 {
-    char* block = (char*)sav_build_ctx(ctx);
-    if (block == NULL || src == NULL) {
-        return;
-    }
-    uint8_t* dst = (uint8_t*)block + 0x1c;
-    const uint32_t* p = src;
-    for (int i = 6; i != 0; --i) {
-        __builtin_memcpy(dst, p, sizeof(*p));
-        dst += sizeof(*p);
-        ++p;
-    }
+    if (ctx == NULL || src == NULL) return;
+    save_context_bind(ctx);
+    options_context_six_field_set_target(src);
+}
+
+/* OptionsContextSixFieldSet @ 0x00417f20 has one source pointer argument. */
+// FUNCTION: LEGORR 0x00417f20
+void options_context_six_field_set_target(const uint32_t* src)
+{
+    if (sav_build_ctx_target() == NULL) return;
+    uint32_t* dst = s_options_slot_window + 7;
+    memcpy(dst, src, 6u * sizeof(*src));
 }
 
 /* --- the slot-context options window (see options.hpp) ---------------------
@@ -334,18 +339,21 @@ void options_context_six_field_set(struct GameContext* ctx,
  * land as zero-init own storage (the unowned-DAT convention; the corpus's
  * 32-bit pointer word is widened to void* for the port's LP64 addresses,
  * the fixed-record-slot precedent). */
-#define OPTIONS_SLOT_WINDOW_DWORDS 46
-static uint32_t s_options_slot_window[OPTIONS_SLOT_WINDOW_DWORDS];
-static void* s_options_slot_resource;
-
-/* OptionsContextCopyAndReplaceResource (FUN_004180c0) — see options.hpp. */
-// FUNCTION: LEGORR 0x4180c0
+/* Typed OptionsContextCopyAndReplaceResource adapter. */
 void options_context_copy_and_replace_resource(GameContext* ctx,
                                                const uint32_t* source)
 {
-    if (sav_build_ctx(ctx) == NULL || source == NULL) {
-        return; /* deviation: the corpus strides its context blindly */
-    }
+    if (ctx == NULL || source == NULL) return;
+    save_context_bind(ctx);
+    options_context_copy_and_replace_resource_target(source);
+}
+
+/* OptionsContextCopyAndReplaceResource @ 0x004180c0 copies the 0xb8-byte
+ * active slot window and transfers ownership of its resource word. */
+// FUNCTION: LEGORR 0x004180c0
+void options_context_copy_and_replace_resource_target(const uint32_t* source)
+{
+    if (sav_build_ctx_target() == NULL) return;
     if (s_options_slot_resource != NULL) {
         engine_heap_free(s_options_slot_resource);
     }

@@ -122,10 +122,10 @@ ModelEntryRecord* model_primitive_record_create(ModelEntryRecord* previous,
                                                 const char* name, int kind);
 ModelEntryRecord* model_entry_list_flatten(const ModelEntryRecord* head);
 
-/* Open through the resource layer (finding 01 resolution) and parse. When
- * the name ends in ".lwo" a sibling ".uv" is tried too — present-and-good
- * sidecars apply, anything else leaves the model as the LWO states it
- * (the corpus opens the sidecar only when the uv slot is requested).
+/* Open through the resource layer (finding 01 resolution) and parse. `path`
+ * may be a base name or an explicit `.lwo` path; the loader opens `<base>.lwo`
+ * and then tries the sibling `.uv` sidecar. Present-and-good sidecars apply,
+ * anything else leaves the model as the LWO states it.
  * Returns NULL on open/read/parse failure. */
 Model* model_open(const char* path);
 

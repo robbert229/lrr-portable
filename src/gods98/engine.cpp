@@ -1113,7 +1113,6 @@ int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out)
 }
 
 namespace unported_ledger_stubs {
-// FUNCTION: LEGORR 0x00480870
 EngineTaskCallbackRecord* ledger_stub_00480870_TaskCallbackRecordAllocateAndInitialize(
     void* owner, void* callback, uint32_t mode, void* context,
     uint32_t flag_value)

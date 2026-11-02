@@ -2,8 +2,9 @@
 #include <string.h>
 
 #include "ui_list.hpp"
+#include "frontend.hpp"
+#include "gods98/media.hpp"
 
-static float s_pointer_cursor_override_timer;
 // GLOBAL: LEGORR 0x005013c0
 static int s_ui_track_pointer_outer_gate;
 // GLOBAL: LEGORR 0x00500e1c
@@ -308,10 +309,14 @@ void ui_scroll_info_panel_initialize(const UiOverlayInitSink* sink)
         sink->element_add(sink->context, 0, 1, 0.0f, 0.0f, 0.0f, 0.0f,
                           "Interface_Buttons_scrollInfoSld_");
     }
-    if (sink->element_create != NULL && sink->handle_store != NULL) {
+    if (sink->element_create != NULL) {
         handle = sink->element_create(sink->context, 7, 0, 40.0f, 12.0f,
                                       180.0f, 43.0f, 0x100);
-        sink->handle_store(sink->context, 0, handle);
+        if (sink->handle_store != NULL)
+            sink->handle_store(sink->context, 0, handle);
+        /* DAT_005007d8 is the text-output wrapper consumed by the panel
+         * callback path; keep its portable owner in sync with the sink slot. */
+        panel_ui_record_set(handle);
     }
 }
 
@@ -361,12 +366,16 @@ int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
                                  uint32_t* slot_index_out)
 {
     uint32_t slot;
+    uint32_t slot_count;
     int handled = 0;
     if (state == NULL || state->slots == NULL) return 0;
-    for (slot = 0; slot < state->slot_count; ++slot) {
+    /* SimTrackCursorHitTest walks exactly four 0x20-byte entries beginning
+     * at DAT_00552140; the adapter may provide fewer initialized slots. */
+    slot_count = state->slot_count < 4u ? state->slot_count : 4u;
+    for (slot = 0; slot < slot_count; ++slot) {
         UiTrackCursorSlot* current = &state->slots[slot];
         uint32_t side;
-        int visible = current->enabled != 0u &&
+        int visible = (current->record_flags & 4u) != 0u &&
             (hooks == NULL || hooks->track_visible == NULL ||
              hooks->track_visible(hooks->context, slot));
         if (!visible) continue;
@@ -407,11 +416,16 @@ int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
                 current->button_flags[side] &= ~6u;
             }
         }
-        if (!handled && hooks != NULL && hooks->outer_region_hit != NULL) {
+        if (!handled) {
             uint32_t selected = 0u;
-            if (hooks->outer_region_hit(hooks->context, slot, x, y,
-                                        (int)state->outer_horizontal,
-                                        &selected)) {
+            const int has_selection_adapter =
+                hooks != NULL && hooks->outer_region_hit != NULL;
+            const int outer_hit = has_selection_adapter
+                ? hooks->outer_region_hit(
+                    hooks->context, slot, x, y,
+                    (current->record_flags & 8u) == 0u, &selected)
+                : ui_track_point_in_rect(current->outer_rect, x, y);
+            if (outer_hit) {
                 if (mode == 0) s_ui_track_pointer_outer_gate = 1;
                 if (slot_index_out != NULL) *slot_index_out = slot;
                 if (mode == 0) {
@@ -421,7 +435,8 @@ int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
                             hooks->pointer_state_set(hooks->context, 1);
                     }
                 }
-                else if (state->mode == 2u && current->selected_index != NULL) {
+                else if (has_selection_adapter && state->mode == 2u &&
+                         current->selected_index != NULL) {
                     *current->selected_index = selected;
                     current->selection_changed = 1u;
                 }
@@ -460,19 +475,17 @@ void ui_priority_label_layout_apply(UiPriorityLabelRow* rows, uint32_t count,
 
 void ui_pointer_cursor_override_set(float duration)
 {
-    s_pointer_cursor_override_timer = duration;
+    media_pointer_cursor_override_set(media_pointer_cursor_slot(), duration);
 }
 
 float ui_pointer_cursor_override_remaining(void)
 {
-    return s_pointer_cursor_override_timer;
+    return media_pointer_cursor_override();
 }
 
-// FUNCTION: LEGORR 0x0045cd90
 void ui_pointer_cursor_override_tick(float elapsed)
 {
-    if (s_pointer_cursor_override_timer > 0.0f)
-        s_pointer_cursor_override_timer -= elapsed;
+    media_pointer_cursor_override_tick(elapsed);
 }
 
 // FUNCTION: LEGORR 0x0045d640

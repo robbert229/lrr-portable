@@ -80,17 +80,20 @@ uint32_t ui_info_panel_string_entries_initialize(
     UiInfoPanelStringResolveHook resolve); /* FUN_004636b0 */
 typedef struct UiTrackCursorSlot {
     uint32_t index;
-    uint32_t enabled;
-    float button_rects[2][4]; /* left, top, right, bottom */
+    uint32_t record_flags; /* retail DAT_0055215c: bit 2 enables, bit 3 selects Y */
+    float button_rects[2][4]; /* screen-space left, top, right, bottom */
     uint32_t button_flags[2];
-    float outer_rect[4];
+    float outer_rect[4]; /* screen-space bounds when no outer-hit adapter exists */
     uint32_t* selected_index;
     uint32_t selected_count;
     uint32_t selection_changed;
 } UiTrackCursorSlot;
 typedef struct UiTrackCursorHitHooks {
     void* context;
+    /* Retail FUN_0045ab30 visibility gate for the indexed track record. */
     int (*track_visible)(void* context, uint32_t slot_index);
+    /* Optional native-record adapter. It tests the translated outer bounds
+     * and computes the projected item index from the payload record. */
     int (*outer_region_hit)(void* context, uint32_t slot_index,
                             int x, int y, int horizontal,
                             uint32_t* selected_index);
@@ -100,7 +103,6 @@ typedef struct UiTrackCursorState {
     UiTrackCursorSlot* slots;
     uint32_t slot_count;
     uint32_t mode; /* 3 = no active side */
-    uint32_t outer_horizontal;
 } UiTrackCursorState;
 int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
                                  int mode, int allow_mode_change,

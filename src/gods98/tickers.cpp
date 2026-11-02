@@ -259,10 +259,8 @@ void EngineManagerDispatch(EngineContext* ctx, float dt)
     ++ctx->tickers_ran;
 
     /* PositionTrackerUpdateAll (0x45d6d0), the encyclopedia text tick
-     * (0x40e7f0), AdvisorOverlayUpdate (0x41b490), and the info-message
-     * display/queue consumers (0x41a080/0x19f30) still need their owning
-     * global record tables and renderer handles. Preserve the available
-     * indexed and timed calls around those unavailable owners. */
+     * (0x40e7f0), and AdvisorOverlayUpdate (0x41b490) still need their
+     * owning tables. */
     ManagerTick(ctx, 0xb, dt);
     ++ctx->tickers_ran;
     timed_status_and_event_tick(dt);
@@ -270,8 +268,13 @@ void EngineManagerDispatch(EngineContext* ctx, float dt)
     ++ctx->tickers_ran;
     ManagerTick(ctx, 7, dt);
     ++ctx->tickers_ran;
+    incident_message_text_consumer(dt);
     ManagerTick(ctx, 10, dt);
     ++ctx->tickers_ran;
+    /* EngineTick's 0x800 in-game manager block calls the message text
+     * consumer between ManagerTick(7) and ManagerTick(10), then advances
+     * the info-message queue. */
+    info_message_queue_tick(dt);
 }
 
 /* Render orchestration — corpus EngineTick lines 130-215. The port has the

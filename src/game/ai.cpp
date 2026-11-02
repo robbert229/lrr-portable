@@ -12,6 +12,7 @@
 #include "cmd.hpp"
 #include "entity.hpp"
 #include "level.hpp"
+#include "terrain_grid.hpp"
 #include "mission.hpp"
 #include "select.hpp"
 #include "gods98/view.hpp"
@@ -42,22 +43,71 @@
 static const void* rec_payload(const void* rec) { return cmd_rec_payload(rec); }
 
 // GLOBAL: LEGORR 0x004decc4
-static const char* s_activity[AI_ACTIVITY_COUNT];
-static const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT];
-static const char* s_tool_type_names[AI_TOOL_TYPE_COUNT];
-static uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT];
-static int s_activity_initialized;
+static const char* s_activity[AI_ACTIVITY_COUNT] = {
+    "Activity_Stand", "Activity_Route", "Activity_RouteRubble",
+    "Activity_RunPanic", "Activity_Drill", "Activity_Teleport",
+    "Activity_Walk", "Activity_Reinforce", "Activity_Reverse",
+    "Activity_TurnLeft", "Activity_TurnRight", "Activity_CantDo",
+    "Activity_Emerge", "Activity_Enter", "Activity_EnterRein",
+    "Activity_Collect", "Activity_Gather", "Activity_Carry",
+    "Activity_CarryRubble", "Activity_Throw", "Activity_CarryTurnLeft",
+    "Activity_CarryTurnRight", "Activity_CarryStand", "Activity_HitLeft",
+    "Activity_HitRight", "Activity_HitFront", "Activity_HitBack",
+    "Activity_HitHard", "Activity_Dynamite", "Activity_Deposit",
+    "Activity_Clear", "Activity_Place", "Activity_Repair", "Activity_Slip",
+    "Activity_Rest", "Activity_Eat", "Activity_Stamp", "Activity_ThrowMan",
+    "Activity_ThrownByRockMonster", "Activity_GetUp", "Activity_BuildPath",
+    "Activity_Upgrade", "Activity_Explode", "Activity_Unpowered",
+    "Activity_FireLaser", "Activity_Freezed", "Activity_FreezeStart",
+    "Activity_FreezeMelt", "Activity_Recharge", "Activity_WakeUp",
+    "Activity_Train", "Activity_FloatOn", "Activity_FloatOff",
+    "Activity_Opening", "Activity_Closing", "Activity_Open",
+    "Activity_Waiting1", "Activity_Waiting2", "Activity_Waiting3",
+    "Activity_Waiting4", "Activity_Waiting5", "Activity_Waiting6",
+    "Activity_Waiting7", "Activity_Waiting8", "Activity_Waiting9",
+    "Activity_Waiting10", "Activity_Waiting11", "Activity_Waiting12",
+    "Activity_Waiting13", "Activity_Waiting14", "Activity_Waiting15",
+    "Activity_Waiting16", "Activity_Waiting17", "Activity_Waiting18",
+    "Activity_Waiting19", "Activity_Waiting20", "Activity_Waiting21",
+    "Activity_Crumble", "Activity_TeleportIn"
+};
+static const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT] = {
+    "LegoObject_AbilityType_Pilot", "LegoObject_AbilityType_Sailor",
+    "LegoObject_AbilityType_Driver", "LegoObject_AbilityType_Dynamite",
+    "LegoObject_AbilityType_Repair", "LegoObject_AbilityType_Scanner"
+};
+static const char* s_tool_type_names[AI_TOOL_TYPE_COUNT] = {
+    "LegoObject_ToolType_Drill", "LegoObject_ToolType_Spade",
+    "LegoObject_ToolType_Hammer", "LegoObject_ToolType_Spanner",
+    "LegoObject_ToolType_Laser", "LegoObject_ToolType_PusherGun",
+    "LegoObject_ToolType_BirdScarer", "LegoObject_ToolType_FreezerGun"
+};
+static uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT] = {
+    0u, 0u, 1u, 1u, 4u, 4u, 4u, 4u, 3u, 2u, 4u
+};
 
-/* ActivityNameTableInit (FUN_00436c20) clears the tracked entity-pool/idle
- * state, installs the activity, ability, and tool name tables, and initializes
- * the eleven resource-slot selectors. */
+/* ActivityNameTableInit (FUN_00436c20) resets state represented by the
+ * cleared global range, then installs activity, ability, and tool names. */
 // FUNCTION: LEGORR 0x00436C20
 void ai_activity_name_table_initialize(void)
 {
-    /* The reference's 0x318f-dword clear at DAT_004de790 spans the entity
-     * record-pool table and the 100-entry idle-registration table at
-     * DAT_004eabcc (count DAT_004ead5c). These owned APIs reproduce those
-     * resets without writing through a broad cross-module data window. */
+    /* The reference clears 0x318f dwords beginning at DAT_004de790, through
+     * 0x004eadc8. The port mirrors of every owned slice in that range must be
+     * reset along with the retail words. */
+    /* The retail 0x318f-dword clear at 0x4de790 also spans both parallel
+     * grid-record count tables (0x4dee44 and 0x4e3944). They live in the
+     * Level module's sidecar storage, so reset them through their owner. */
+    grid_record_count_tables_clear();
+    /* DAT_004dee00 lies inside the cleared range. Release its sidecar-backed
+     * allocation through its owner so the cleared pointer cannot go stale. */
+    terrain_neighbor_path_cost_release();
+    /* The same clear covers the queued-animation fractional accumulator at
+     * 0x4ea7a8 and the six-dword render snapshot at 0x4ea7ac. These are owned
+     * by the entity and level modules, respectively. */
+    queued_grid_animation_accumulator_clear();
+    render_config_six_field_copy_in_or_clear(NULL);
+    /* DAT_004eabcc and its count word at DAT_004ead5c are also in the clear
+     * span; clear the widened idle-registration sidecar through its owner. */
     ai_idle_table_reset();
     s_activity[0] = "Activity_Stand";
     s_activity[1] = "Activity_Route";
@@ -169,39 +219,26 @@ void ai_activity_name_table_initialize(void)
 
     pooled_record_pool_initialize();
     entity_iteration_guard_flags_set(1u);
-    s_activity_initialized = 1;
 }
 
 const char* ai_activity_name(int id)
 {
-    if (!s_activity_initialized) {
-        ai_activity_name_table_initialize();
-    }
     return (id >= 0 && id < AI_ACTIVITY_COUNT) ? s_activity[id] : NULL;
 }
 
 const char* ai_ability_type_name_get(int id)
 {
-    if (!s_activity_initialized) {
-        ai_activity_name_table_initialize();
-    }
     return (id >= 0 && id < AI_ABILITY_TYPE_COUNT)
         ? s_ability_type_names[id] : NULL;
 }
 
 const char* ai_tool_type_name_get(int id)
 {
-    if (!s_activity_initialized) {
-        ai_activity_name_table_initialize();
-    }
     return (id >= 0 && id < AI_TOOL_TYPE_COUNT) ? s_tool_type_names[id] : NULL;
 }
 
 uint32_t ai_activity_resource_slot_get(int id)
 {
-    if (!s_activity_initialized) {
-        ai_activity_name_table_initialize();
-    }
     return (id >= 0 && id < AI_ACTIVITY_RESOURCE_SLOT_COUNT)
         ? s_activity_resource_slots[id] : 0;
 }
@@ -542,24 +579,32 @@ int ai_minion_state_for(int type)
     }
 }
 
-/* FUN_0046a060: capacity = *(*(ent+0x334) + 0xcc). A loaded instance Stats
- * image is authoritative. For static task-state entities the port uses a
- * same-name Stats row as a capacity adapter; retail's static templates have
- * zero at this word, and an unconfigured template remains zero. */
+/* FUN_0046a060 is a raw reader: return the dword at +0xcc in the selected
+ * Stats record. The EntitySlot wrapper stores that selected record directly.
+ * A null guard is retained for the portable representation, where an entity
+ * can exist before its Stats binding. */
 // FUNCTION: LEGORR 0x0046a060
-int ai_activity_cap(const GameContext* ctx, const EntitySlot* e)
+int ai_activity_cap(const EntitySlot* e)
+{
+    uint32_t record_cap = 0u;
+    if (e == NULL || e->stats_record == NULL) return 0;
+    memcpy(&record_cap, (const uint8_t*)e->stats_record + 0xccu,
+           sizeof(record_cap));
+    return (int)record_cap;
+}
+
+/* Portable capacity selection used by activity-grant and command gates.
+ * This keeps the reconstruction's static task-state and context fallbacks
+ * outside the address-mapped raw reader above. */
+int ai_activity_cap_for_context(const GameContext* ctx, const EntitySlot* e)
 {
     int cap;
-    if (e != NULL && e->task_state != AI_TASK_STATE_NONE) {
+    if (e == NULL) return 0;
+    if (e->task_state != AI_TASK_STATE_NONE) {
         cap = e->activity_cap;
     }
-    else if (e != NULL && e->stats_record != NULL) {
-        /* FUN_0046a060 reads the selected stats record at +0xcc directly.
-         * activity_cap is not consulted for an instance Stats record. */
-        uint32_t record_cap = 0u;
-        memcpy(&record_cap, (const uint8_t*)e->stats_record + 0xccu,
-               sizeof(record_cap));
-        cap = (int)record_cap;
+    else if (e->stats_record != NULL) {
+        cap = ai_activity_cap(e);
     }
     else {
         cap = (ctx != NULL) ? ctx->stats_activity_cap : 0;
@@ -589,7 +634,7 @@ void ai_activity_grant(GameContext* ctx, EntitySlot* e, int value)
         return;
     }
     e->activity_grant_state_3f4 = 0u;
-    int cap = ai_activity_cap(ctx, e);
+    int cap = ai_activity_cap_for_context(ctx, e);
     if (cap <= 0) {
         return; /* cap-0 entity: the corpus's grant runs nothing (0x44b38d) */
     }
@@ -975,13 +1020,12 @@ static int wave_gate_blocked(WaveFlood* wf, int x, int y, int cell)
     return 0;
 }
 
-/* FUN_00430ee0 seed: validate the target — the corpus drops row/column 0
- * and everything at or past its w-2/h-2 margin (unsigned), and its
- * record+0 == 0 gate is per-build state, fresh here — then stamps the
- * seed cell walked (1) and raises the wave flag 0x40000 over record 12's
- * footprint offsets, a northwest 2x2 block including the seed itself.
- * Returns 0 (and installs no state) when the target is off-handle or
- * blocked by the ported queries. */
+/* FUN_00430ee0 seed: this routine gates only on its interior-coordinate
+ * bounds and the destination record's state byte being zero. It does not
+ * query walkability or occupancy: those are path-search policy, not part
+ * of the seed operation. Then it stamps the seed cell walked (1) and raises
+ * the wave flag 0x40000 over the northwest 2x2 footprint. The bytes and
+ * flag words here are per-build replacements for record+0 and record+8. */
 // FUNCTION: LEGORR 0x00430ee0
 static int wave_seed(WaveFlood* wf, int tx, int ty)
 {
@@ -991,7 +1035,7 @@ static int wave_seed(WaveFlood* wf, int tx, int ty)
         return 0;
     }
     int goal = ty * wf->w + tx;
-    if (wave_gate_blocked(wf, tx, ty, goal) != 0) {
+    if (wf->cell[goal] != 0) {
         return 0;
     }
     wf->cell[goal] = WAVE_STATE_WALKED;
@@ -1000,6 +1044,21 @@ static int wave_seed(WaveFlood* wf, int tx, int ty)
         int nx = tx + s_seed_off[i][0], ny = ty + s_seed_off[i][1];
         if (nx >= 0 && ny >= 0 && nx < wf->w && ny < wf->h) {
             wave_mark(wf, ny * wf->w + nx);
+        }
+    }
+
+    /* TerrainCellInitialize refreshes its northwest 2x2 cell-init region,
+     * then marks the surrounding 3x3 physical terrain patch dirty. The
+     * LevelState APIs own those same operations in this port. The seed's
+     * strict interior gate guarantees the 2x2 coordinates are valid; the
+     * dirty setter retains the terrain handle's own boundary checks. */
+    level_cell_init_pass((LevelState*)wf->grid, tx - 1, ty - 1);
+    level_cell_init_pass((LevelState*)wf->grid, tx,     ty - 1);
+    level_cell_init_pass((LevelState*)wf->grid, tx - 1, ty);
+    level_cell_init_pass((LevelState*)wf->grid, tx,     ty);
+    for (int y = ty - 1; y <= ty + 1; ++y) {
+        for (int x = tx - 1; x <= tx + 1; ++x) {
+            terrain_cell_changed_flag_set(wf->grid->ptr_terrain, x, y);
         }
     }
     return 1;
@@ -1142,7 +1201,12 @@ int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty)
     int len = 0;
     if (wf.cell != NULL && wf.flags != NULL && wf.dist != NULL &&
         wf.queue != NULL && wf.scan != NULL) {
-        if (wave_seed(&wf, gx, gy) != 0) {
+        /* FUN_00430ee0 itself only checks the seed record's state byte.
+         * The path builder separately rejects an unusable destination;
+         * its caller is a route search, whereas the mapped seed primitive
+         * is a terrain-cell initializer and has no walkability gate. */
+        if (wave_gate_blocked(&wf, gx, gy, gy * w + gx) == 0 &&
+            wave_seed(&wf, gx, gy) != 0) {
             int start = sy * w + sx;
             if (wf.cell[start] == 0) {
                 wave_spread(&wf, start); /* equal cells need no wave */

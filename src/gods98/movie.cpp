@@ -28,6 +28,7 @@
 #include "resource.hpp"
 #include "string.hpp"
 #include "surface.hpp"
+#include "heap.hpp"
 #include "platform/platform.h"
 
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -1504,9 +1505,20 @@ void avi_file_initialize(void* context)
 // FUNCTION: LEGORR 0x0047ec90
 AviPlaybackState* avi_player_create(const char* path)
 {
-    AviPlaybackState* state = (AviPlaybackState*)calloc(1, sizeof(*state));
+    AviPlaybackState* state = (AviPlaybackState*)engine_heap_alloc(
+        (long)sizeof(*state));
+    DisplaySurface* render_target;
     if (state == NULL) return NULL;
+    memset(state, 0, sizeof(*state));
+    /* Retail allocates 0xc4 bytes before invoking the frame-retriever
+     * constructor. This portable record adds backend sidecars, so use its
+     * full size and zero those sidecars before the constructor fills the
+     * fields modeled at retail offsets. */
     state->player_owned = 1u;
+    /* The retail DirectDraw global supplies the cooperative-level owner
+     * implicitly. The miniwin surface adapter needs its HWND explicitly. */
+    render_target = surface_active_render_target_get();
+    if (render_target != NULL) state->display_device = render_target->hwnd;
     state->frame_retriever_open(path);
     return state;
 }
@@ -1560,9 +1572,7 @@ void AviPlaybackState::frame_retriever_open(const char* path)
      * retriever with a null surface, matching the staged constructor. */
     frame_ready = 1u;
     (void)display_mode_setup((uint32_t)info.width,
-                             (uint32_t)info.height,
-                             display_bits_per_pixel,
-                             display_fullscreen);
+                             (uint32_t)info.height, 0u, 0);
 }
 
 void avi_frame_retriever_open(AviPlaybackState* state, const char* path)
@@ -1620,6 +1630,13 @@ int AviPlaybackState::display_mode_setup(uint32_t width, uint32_t height,
             return surface_object != NULL;
         surface = (DisplaySurface*)calloc(1, sizeof(DisplaySurface));
         if (surface == NULL) return 0;
+        /* The WinAPI surface adapter builds the requested DirectDraw pixel
+         * format, but creates its own DirectDraw object and does not set its
+         * cooperative level. Miniwin creates an offscreen surface and uses
+         * the HWND, but ignores pixel-format/fullscreen selection and the
+         * retail 8-bit mode enumeration. Sharing DAT_0053399c and its full
+         * display-mode behavior requires the absent renderer owner or the
+         * AviDisplayModeHook. */
         if (surface_create_display_mode(surface, display_device,
                 (int)width, (int)height, (int)bits_per_pixel,
                 fullscreen) != 0) {
@@ -1710,7 +1727,7 @@ void AviPlaybackState::player_destroy(uint8_t flags)
     int release_player;
     frame_retriever_destroy();
     release_player = (flags & 1u) != 0u && player_owned != 0u;
-    if (release_player) free(this);
+    if (release_player) engine_heap_free(this);
 }
 
 void avi_player_destroy(AviPlaybackState* state, uint8_t flags)

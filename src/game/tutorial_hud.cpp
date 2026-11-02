@@ -39,7 +39,7 @@ typedef struct TutorialTokenEntry {
 
 #define NERP_MESSAGE_RING_CAPACITY 10
 #define NERP_MESSAGE_TEXT_CAPACITY 256
-#define NERP_ICON_STATE_COUNT 27
+#define NERP_ICON_STATE_COUNT 29
 #define NERP_TUTORIAL_CELL_CAPACITY 2048
 
 typedef struct NerpTutorialCellState {
@@ -88,12 +88,18 @@ static GameContext* s_tutorial_game_context;
 static EngineContext* s_tutorial_engine_context;
 static void* s_tutorial_script_data;
 static uint32_t s_tutorial_script_size;
+static TutorialScriptFreeFn s_tutorial_script_release;
+static void* s_tutorial_script_release_context;
 static uint32_t* s_tutorial_program_words;
 static uint32_t s_tutorial_program_count;
 static uint32_t s_tutorial_program_capacity;
 static uint32_t s_tutorial_nerp_registers[8];
 static float s_tutorial_nerp_timers[4];
 static NerpRuntimeState s_nerp_runtime;
+// GLOBAL: LEGORR 0x00555d40
+static uint32_t s_tutorial_555d40_state[45];
+// GLOBAL: LEGORR 0x004ff958
+static uint32_t s_tutorial_4ff958_state[11];
 static TutorialTokenEntry s_tutorial_tokens[512];
 static uint32_t s_tutorial_token_count;
 static uint32_t s_tutorial_literal_token_count;
@@ -113,7 +119,23 @@ static float s_tutorial_focus_offset;
 static float s_tutorial_focus_angle;
 static float s_tutorial_focus_angle_velocity;
 
-static void tutorial_camera_runtime_state_reset(void)
+static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
+                                    uint32_t argc, uint32_t* result_out);
+static uint32_t tutorial_builtin_command_adapter(uint32_t command,
+                                                const uint32_t* args,
+                                                uint32_t arg_count,
+                                                void* context);
+
+static void tutorial_scroll_runtime_state_reset(void)
+{
+    s_tutorial_scroll_pending = 0u;
+    s_tutorial_scroll_max = 0u;
+    s_tutorial_scroll_step = 0u;
+    s_tutorial_scroll_action = 0u;
+    s_tutorial_scroll_flags = 0u;
+}
+
+static void tutorial_camera_focus_state_reset(void)
 {
     s_tutorial_focus_id = 0xffffffffu;
     s_tutorial_focus_valid = 0u;
@@ -124,6 +146,11 @@ static void tutorial_camera_runtime_state_reset(void)
     s_tutorial_focus_offset = 0.0f;
     s_tutorial_focus_angle = 0.0f;
     s_tutorial_focus_angle_velocity = 0.0f;
+}
+
+static void tutorial_camera_runtime_state_reset(void)
+{
+    tutorial_camera_focus_state_reset();
     if (s_tutorial_engine_context != NULL) {
         memset(s_tutorial_engine_context->camera_controller, 0,
                sizeof(s_tutorial_engine_context->camera_controller));
@@ -135,10 +162,10 @@ static void tutorial_camera_runtime_state_reset(void)
 }
 
 /* NERP callback metadata is the third dword of each 12-byte callback-table
- * row at 0x004a5948. It determines argument count and whether the result
- * feeds a condition; keep the bytecode cursor aligned even for callbacks
- * whose effects have not been ported yet. */
-static const uint8_t s_tutorial_command_kinds[256] = {
+ * row at 0x004a5948. The retail table has 293 rows. Metadata determines
+ * argument count and whether the result feeds a condition; keep the bytecode
+ * cursor aligned even for callbacks whose effects have not been ported yet. */
+static const uint8_t s_tutorial_command_kinds[293] = {
     3,0,0,0,0,0,0,0,3,3,3,3,0,0,0,0,
     5,0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,
     4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
@@ -154,16 +181,21 @@ static const uint8_t s_tutorial_command_kinds[256] = {
     0,0,0,0,0,1,0,1,3,4,3,3,3,3,4,0,
     0,0,4,4,4,0,4,4,0,4,4,0,4,4,0,4,
     0,0,0,4,4,4,4,4,4,4,4,4,0,0,0,0,
-    0,0,0,0,0,4,0,4,0,4,4,4,3,4,4,0
+    0,0,0,0,0,4,0,4,0,4,4,4,3,4,4,0,
+    4,4,0,4,4,1,4,0,4,4,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0
 };
 
 static void tutorial_script_data_release(void* data)
 {
     if (data == NULL) return;
-    if (s_tutorial_script_ops.release != NULL)
-        s_tutorial_script_ops.release(data, s_tutorial_script_ops.context);
+    if (s_tutorial_script_release != NULL)
+        s_tutorial_script_release(data, s_tutorial_script_release_context);
     else
         engine_heap_free(data);
+    s_tutorial_script_release = NULL;
+    s_tutorial_script_release_context = NULL;
 }
 
 static int tutorial_text_equal(const char* a, const char* b)
@@ -224,6 +256,8 @@ void tutorial_script_ops_set(const TutorialScriptOps* ops)
 {
     if (ops != NULL) s_tutorial_script_ops = *ops;
     else memset(&s_tutorial_script_ops, 0, sizeof(s_tutorial_script_ops));
+    if (s_tutorial_script_ops.command == NULL)
+        s_tutorial_script_ops.command = tutorial_builtin_command_adapter;
 }
 
 void tutorial_runtime_context_set(GameContext* game, EngineContext* engine,
@@ -232,6 +266,8 @@ void tutorial_runtime_context_set(GameContext* game, EngineContext* engine,
     s_tutorial_game_context = game;
     s_tutorial_engine_context = engine;
     (void)input;
+    if (s_tutorial_script_ops.command == NULL)
+        s_tutorial_script_ops.command = tutorial_builtin_command_adapter;
 }
 
 void tutorial_nerp_pointer_release_record(int action, int cell_x, int cell_y)
@@ -279,11 +315,11 @@ void tutorial_script_program_install(const uint32_t* words, uint32_t count)
     s_tutorial_program_count = count;
 }
 
-// FUNCTION: LEGORR 0x00452df0
-int tutorial_script_file_load(const char* path)
+/* Host-owned sidecars have no retail storage in the target's two cleared
+ * global blocks. Retire them in the portable wrapper before entering the
+ * mapped body, so the target keeps the retail call order and clear extents. */
+static void tutorial_script_host_state_reset(void)
 {
-    uint32_t size = 0;
-    void* data = NULL;
     objective_advisor_tokens_release();
     tutorial_tokens_clear();
     tutorial_script_data_release(s_tutorial_script_data);
@@ -293,15 +329,34 @@ int tutorial_script_file_load(const char* path)
     memset(s_tutorial_nerp_registers, 0, sizeof(s_tutorial_nerp_registers));
     memset(&s_nerp_runtime, 0, sizeof(s_nerp_runtime));
     tutorial_camera_runtime_state_reset();
-    s_tutorial_scroll_pending = 0;
-    s_tutorial_scroll_step = 0;
+    tutorial_scroll_runtime_state_reset();
     if (s_tutorial_script_ops.state_reset != NULL)
         s_tutorial_script_ops.state_reset(s_tutorial_script_ops.context);
     if (s_tutorial_script_ops.resource_state_initialize != NULL)
         s_tutorial_script_ops.resource_state_initialize(
             s_tutorial_script_ops.context);
+}
+
+/* TutorialNerpScriptFileLoad @ 0x00452df0. The two global clear bands have
+ * exact extents of 45 and 11 dwords; retain their unmapped fields as raw
+ * sidecars while keeping the observed engine calls in their original order. */
+// FUNCTION: LEGORR 0x00452df0
+static int tutorial_script_file_load_target(const char* path)
+{
+    uint32_t size = 0u;
+    void* data = NULL;
+    int mode = 1;
+    uint32_t* state_word = s_tutorial_555d40_state;
+    int state_count = 45;
+    for (; state_count != 0; --state_count) *state_word++ = 0u;
+    ui_message_overlay_state_initialize();
+    state_word = s_tutorial_4ff958_state;
+    state_count = 11;
+    for (; state_count != 0; --state_count) *state_word++ = 0u;
     if (s_tutorial_script_ops.mode_set != NULL)
-        s_tutorial_script_ops.mode_set(1, s_tutorial_script_ops.context);
+        s_tutorial_script_ops.mode_set(mode, s_tutorial_script_ops.context);
+    else
+        (void)engine_mode_set_target(&mode);
     if (path != NULL) {
         if (s_tutorial_script_ops.load != NULL)
             data = s_tutorial_script_ops.load(
@@ -314,11 +369,28 @@ int tutorial_script_file_load(const char* path)
     }
     s_tutorial_script_data = data;
     s_tutorial_script_size = size;
-    if (data != NULL && size >= sizeof(uint32_t)) {
-        uint32_t count = size / sizeof(uint32_t);
-        tutorial_script_program_install((const uint32_t*)data, count);
-    }
     return data != NULL;
+}
+
+int tutorial_script_file_load(const char* path)
+{
+    int loaded;
+    tutorial_script_host_state_reset();
+    /* The mapped body selects mode 1 once, immediately before loading the
+     * script. Its optional adapter replaces that engine call on hosts that
+     * provide their own mode owner. */
+    loaded = tutorial_script_file_load_target(path);
+    if (s_tutorial_script_data != NULL && s_tutorial_script_ops.load != NULL) {
+        s_tutorial_script_release = s_tutorial_script_ops.release;
+        s_tutorial_script_release_context = s_tutorial_script_ops.context;
+    }
+    if (s_tutorial_script_data != NULL &&
+        s_tutorial_script_size >= sizeof(uint32_t)) {
+        uint32_t count = s_tutorial_script_size / sizeof(uint32_t);
+        tutorial_script_program_install(
+            (const uint32_t*)s_tutorial_script_data, count);
+    }
+    return loaded;
 }
 
 static void tutorial_objective_token_output_snapshot(char** output_tokens)
@@ -349,7 +421,6 @@ static void tutorial_objective_token_release(int kind, uintptr_t handle,
         ops->resolved_token_release(kind, (uint32_t)handle, ops->context);
 }
 
-// FUNCTION: LEGORR 0x00452e70
 int tutorial_objective_token_load(const char* path)
 {
     return tutorial_objective_token_file_load(path, NULL);
@@ -411,16 +482,24 @@ int tutorial_display_resources_release(void)
     tutorial_script_program_clear();
     memset(s_tutorial_nerp_registers, 0, sizeof(s_tutorial_nerp_registers));
     memset(&s_nerp_runtime, 0, sizeof(s_nerp_runtime));
+    tutorial_camera_focus_state_reset();
+    tutorial_scroll_runtime_state_reset();
+    if (s_tutorial_engine_context != NULL &&
+        s_tutorial_engine_context->views[0] != NULL) {
+        s_tutorial_engine_context->views[0]->target_record = NULL;
+        s_tutorial_engine_context->views[0]->follow_id = 0;
+    }
     objective_advisor_tokens_release();
     tutorial_tokens_clear();
+    if (s_tutorial_script_ops.resource_state_release != NULL)
+        s_tutorial_script_ops.resource_state_release(
+            s_tutorial_script_ops.context);
     /* AdvisorDisplayStateResourcesRelease reinitializes the shared message
      * overlay after clearing the tutorial-owned resource tables. */
     ui_message_overlay_state_initialize();
     return 1;
 }
 
-static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
-                                    uint32_t argc, uint32_t* result_out);
 static uint32_t tutorial_command_kind_default(uint32_t command);
 
 // FUNCTION: LEGORR 0x004532e0
@@ -439,7 +518,9 @@ void tutorial_indirect_handle_resolve(uint32_t* value)
     if (s_tutorial_script_ops.indirect_resolve != NULL)
         *value = s_tutorial_script_ops.indirect_resolve(
             index, s_tutorial_script_ops.context);
-    else if (s_tutorial_script_ops.command != NULL)
+    else if (s_tutorial_script_ops.command != NULL &&
+             s_tutorial_script_ops.command !=
+                 tutorial_builtin_command_adapter)
         *value = s_tutorial_script_ops.command(
             index, NULL, 0u, s_tutorial_script_ops.context);
     else if (tutorial_builtin_command(index, NULL, 0u, &resolved))
@@ -464,7 +545,7 @@ static uint32_t tutorial_compare_values(uint32_t op, uint32_t previous,
 
 static uint32_t tutorial_command_kind_default(uint32_t command)
 {
-    return command < 256u ? s_tutorial_command_kinds[command] : 0u;
+    return command < 293u ? s_tutorial_command_kinds[command] : 0u;
 }
 
 static int tutorial_command_invoke(uint32_t command, const uint32_t* args,
@@ -551,6 +632,57 @@ static int tutorial_entity_type_count_get_at_slot(const char* type_name,
     first = grid_count_table_slot_peek(type, row, slot, 0);
     second = grid_count_table_slot_peek(type, row, slot, 1);
     return first < 0 || second < 0 ? 0 : second - first;
+}
+
+static int tutorial_building_level_command(uint32_t command,
+                                           const char** type_name,
+                                           int* count_slot)
+{
+    static const char* const names[9] = {
+        "Barracks", "Docks", "Geo-dome", "Powerstation",
+        "Toolstation", "GunStation", "TeleportPad", "TeleportBIG",
+        "Upgrade"
+    };
+    if (command >= 266u && command <= 274u) {
+        *type_name = names[command - 266u];
+        *count_slot = 1;
+        return 1;
+    }
+    if (command >= 275u && command <= 283u) {
+        *type_name = names[command - 275u];
+        *count_slot = 2;
+        return 1;
+    }
+    if (command >= 284u && command <= 292u) {
+        *type_name = names[command - 284u];
+        *count_slot = -2;
+        return 1;
+    }
+    return 0;
+}
+
+static int tutorial_powered_entity_count_get(const GameContext* game,
+                                             const char* type_name)
+{
+    int type = 0;
+    int row = 0;
+    int total = 0;
+    int table;
+    if (game == NULL || !entity_type_row_for_name(type_name, &type, &row))
+        return 0;
+    for (table = 0; table < ENTITY_TYPES; ++table) {
+        int i;
+        int limit = game->entity_count[table];
+        if (limit < 0) limit = 0;
+        if (limit > ENTITY_CAP) limit = ENTITY_CAP;
+        for (i = 0; i < limit; ++i) {
+            const EntitySlot* entity = &game->entity[table][i];
+            if (entity->type == type && entity->etype == row &&
+                (entity->flags_3e8 & 0x20000000u) != 0u)
+                ++total;
+        }
+    }
+    return total;
 }
 
 static int tutorial_selected_type_command_name(uint32_t command,
@@ -863,6 +995,65 @@ static int tutorial_entity_matches_coordinate_list(const EntitySlot* entity,
     return 0;
 }
 
+typedef struct TutorialCoordinateEntityCount {
+    LevelState* level;
+    int32_t x;
+    int32_t y;
+    uint32_t count;
+} TutorialCoordinateEntityCount;
+
+static int tutorial_coordinate_entity_count_callback(EntitySlot* entity,
+                                                       void* payload)
+{
+    TutorialCoordinateEntityCount* state =
+        (TutorialCoordinateEntityCount*)payload;
+    int cell_x = -1;
+    int cell_y = -1;
+    if (entity == NULL || state == NULL || state->level == NULL) return 0;
+    entity_position_to_terrain_cell(entity, state->level, &cell_x, &cell_y);
+    if (cell_x == state->x && cell_y == state->y) ++state->count;
+    return 0;
+}
+
+static uint32_t tutorial_entity_count_at_coordinate_list(
+    GameContext* game, uint32_t list_index)
+{
+    LevelState* level;
+    void* node;
+    uint32_t visited = 0u;
+    uint32_t total = 0u;
+    if (game == NULL || game->level == NULL || list_index >= 0x37u)
+        return 0u;
+    level = game->level;
+    node = level->pool_heads[list_index];
+    while (node != NULL && visited < NERP_TUTORIAL_CELL_CAPACITY) {
+        TutorialCoordinateEntityCount state;
+        memcpy(&state.x, node, sizeof(state.x));
+        memcpy(&state.y, (char*)node + 4, sizeof(state.y));
+        state.level = level;
+        state.count = 0u;
+        (void)entity_pool_find_by_callback_filtered(
+            game, tutorial_coordinate_entity_count_callback, &state);
+        total += state.count;
+        node = *(void**)((char*)node + 8);
+        ++visited;
+    }
+    return total;
+}
+
+static int tutorial_set_monster_attack_callback(EntitySlot* entity,
+                                                 void* payload)
+{
+    LevelState* level = (LevelState*)payload;
+    int cell_x = -1;
+    int cell_y = -1;
+    if (entity == NULL || level == NULL) return 0;
+    entity_position_to_terrain_cell(entity, level, &cell_x, &cell_y);
+    if (level_cell_occupied_or_flag(level, cell_x, cell_y, 1) != 0u)
+        task_record_kind10_queue(entity);
+    return 0;
+}
+
 static uint32_t tutorial_record_object_at_list(LevelState* level,
                                                uint32_t list_index)
 {
@@ -1045,8 +1236,10 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 8u || command == 10u) {
-        objective_announce_current(1);
-        *result_out = 1u;
+        /* Table IDs 8/10 point to ObjectiveVoiceAliasRaiseCommit. */
+        *result_out = (uint32_t)objective_voice_alias_raise_commit(
+            s_tutorial_game_context != NULL
+                ? s_tutorial_game_context->level : NULL);
         return 1;
     }
     if (command == 12u) {
@@ -1055,13 +1248,9 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 49u && argc == 1u && args != NULL) {
-        global_flag_004ff978_install(args[0]);
-        if (args[0] == 1u) {
-            engine_global_state_flags_bits6_and_9_set_target(1, 0);
-            engine_global_state_flags_bit7_set_target(0);
-        }
-        engine_overlay_words_set(0u, 0u);
-        *result_out = args[0];
+        /* SetMessagePermit is the one-argument EngineModeSet callback. */
+        int mode = (int32_t)args[0];
+        *result_out = (uint32_t)engine_mode_set_target(&mode);
         return 1;
     }
     if (command == 16u && argc == 2u && args != NULL) {
@@ -1327,15 +1516,10 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 9u) {
-        if (s_tutorial_engine_context == NULL ||
-            (s_tutorial_engine_context->state & 0x08000000u) == 0u)
-            objective_announce_current(2);
-        *result_out = 1u;
-        return 1;
-    }
-    if (command == 11u) {
-        objective_announce_current(2);
-        *result_out = 1u;
+        /* ID 9's callback applies the retail DAT_00556ecc bit-27 gate. */
+        *result_out = (uint32_t)objective_voice_alias_raise_gate_bit27(
+            s_tutorial_game_context != NULL
+                ? s_tutorial_game_context->level : NULL);
         return 1;
     }
     if (command == 4u) {
@@ -1423,9 +1607,37 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         *result_out = s_nerp_runtime.objective_switch != 0u;
         return 1;
     }
+    if (command == 261u && argc == 1u && args != NULL) {
+        *result_out = tutorial_entity_count_at_coordinate_list(
+            s_tutorial_game_context, args[0]);
+        return 1;
+    }
+    if (command == 262u && argc == 1u && args != NULL) {
+        if (args[0] == 1u && s_tutorial_game_context != NULL &&
+            s_tutorial_game_context->level != NULL) {
+            (void)entity_pool_find_by_callback_filtered(
+                s_tutorial_game_context,
+                tutorial_set_monster_attack_callback,
+                s_tutorial_game_context->level);
+        }
+        *result_out = 0u;
+        return 1;
+    }
     if (tutorial_grid_count_command_type(command, &count_type)) {
         *result_out = (uint32_t)tutorial_entity_type_count_get(count_type);
         return 1;
+    }
+    {
+        int count_slot;
+        if (tutorial_building_level_command(command, &count_type,
+                                            &count_slot)) {
+            *result_out = count_slot == -2
+                ? (uint32_t)tutorial_powered_entity_count_get(
+                    s_tutorial_game_context, count_type)
+                : (uint32_t)tutorial_entity_type_count_get_at_slot(
+                    count_type, count_slot);
+            return 1;
+        }
     }
     if (tutorial_selected_type_command_name(command, &selected_type)) {
         *result_out = (uint32_t)tutorial_selected_type_get(
@@ -1500,7 +1712,9 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
             {183,19,0}, {184,19,1}, {212,20,1}, {213,20,0}, {214,20,2},
             {215,21,1}, {216,21,0}, {217,21,2}, {218,22,1}, {219,22,0},
             {220,22,2}, {221,23,1}, {222,23,0}, {223,23,2}, {245,24,1},
-            {246,24,0}, {247,24,2}, {253,25,2}, {255,26,0}
+            {246,24,0}, {247,24,2}, {253,25,2}, {255,26,0},
+            {256,26,1}, {257,26,2}, {258,27,0}, {259,27,1}, {260,27,2},
+            {263,28,0}, {264,28,1}, {265,28,2}
         };
         uint32_t i;
         for (i = 0u; i < sizeof(icons) / sizeof(icons[0]); ++i) {
@@ -1532,7 +1746,23 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         *result_out = s_tutorial_nerp_registers[reg];
         return 1;
     }
+    /* ID 11 is named SetGameFail in the PE table, but its callback target
+     * has no checked-in body or matching port API; leave it unsupported. */
     return 0;
+}
+
+/* Install the ported callback subset through the same call slot as host
+ * command providers. The subset recognizes commands by the exact retail ID
+ * table; unrepresented IDs return zero without claiming a guessed effect. */
+static uint32_t tutorial_builtin_command_adapter(uint32_t command,
+                                                const uint32_t* args,
+                                                uint32_t arg_count,
+                                                void* context)
+{
+    uint32_t result = 0u;
+    (void)context;
+    (void)tutorial_builtin_command(command, args, arg_count, &result);
+    return result;
 }
 
 // FUNCTION: LEGORR 0x00453320
@@ -1558,8 +1788,7 @@ void tutorial_script_command_dispatch(float delta)
             if ((word & 0x10000u) != 0u) {
                 negate_next = 0;
                 if (command == 0u) {
-                    /* The zero compare record selects AND while preserving
-                     * the accumulated predicate in the retail interpreter. */
+                    /* Preserve the accumulated predicate and select AND. */
                     compare_op = 1u;
                 } else if (command == 1u) {
                     negate_next = 1;
@@ -1946,6 +2175,59 @@ static int legacy_config_rgb(BlockFile* cfg, const char* path, float rgb[3])
     return config_rgb_vector_read(cfg, path, &rgb[0], &rgb[1], &rgb[2]);
 }
 
+/* The retail loaders resolve each setting through a key-name file first,
+ * then fetch and parse the corresponding value from the value file. Most
+ * production callers pass the same Lego.cfg for both, but keep the two
+ * inputs distinct for callers which supply a separate key table. */
+static int legacy_config_pair_from_files(BlockFile* values, BlockFile* names,
+                                         const char* path, int* x, int* y)
+{
+    BlockFile* name_cfg = names != NULL ? names : values;
+    BlockFile* value_cfg = values != NULL ? values : names;
+    if (name_cfg == NULL || value_cfg == NULL ||
+        block_find(name_cfg, path) == NULL) return 0;
+    return legacy_config_pair(value_cfg, path, x, y);
+}
+
+static int legacy_config_rgb_from_files(BlockFile* values, BlockFile* names,
+                                        const char* path, float rgb[3])
+{
+    BlockFile* name_cfg = names != NULL ? names : values;
+    BlockFile* value_cfg = values != NULL ? values : names;
+    if (name_cfg == NULL || value_cfg == NULL ||
+        block_find(name_cfg, path) == NULL) return 0;
+    return legacy_config_rgb(value_cfg, path, rgb);
+}
+
+static int legacy_config_int_from_files(BlockFile* values, BlockFile* names,
+                                        const char* path, int fallback)
+{
+    BlockFile* name_cfg = names != NULL ? names : values;
+    BlockFile* value_cfg = values != NULL ? values : names;
+    if (name_cfg == NULL || value_cfg == NULL ||
+        block_find(name_cfg, path) == NULL) return fallback;
+    return block_get_int(value_cfg, path, fallback);
+}
+
+static int legacy_config_bool_from_files(BlockFile* values, BlockFile* names,
+                                         const char* path)
+{
+    BlockFile* name_cfg = names != NULL ? names : values;
+    BlockFile* value_cfg = values != NULL ? values : names;
+    if (name_cfg == NULL || value_cfg == NULL ||
+        block_find(name_cfg, path) == NULL) return 0;
+    return block_get_bool(value_cfg, path);
+}
+
+static void legacy_hud_state_flags_publish(void)
+{
+    /* DAT_004ffe68 is shared by the health, hunger, and bubble loaders and
+     * the panel-position worker. Preserve any bits installed by its other
+     * owners while publishing this module's OR-only config bits. */
+    s_legacy_hud_state_flags |= panel_enable_word_peek();
+    panel_enable_word_set(s_legacy_hud_state_flags);
+}
+
 static float legacy_clamp_01(float value)
 {
     if (value < 0.0f) return 0.0f;
@@ -1971,36 +2253,42 @@ int legacy_health_bar_config_load(BlockFile* values, BlockFile* names)
     int x, y;
     int width, height;
     BlockFile* cfg = values != NULL ? values : names;
-    BlockFile* key_cfg = names != NULL ? names : values;
     int border;
     int vertical;
     float rgb[3];
-    if (cfg == NULL || key_cfg == NULL) return 0;
-    if (!legacy_config_pair(cfg, "ObjInfo::HealthBarPosition", &x, &y)) return 0;
+    if (cfg == NULL) return 0;
+    if (!legacy_config_pair_from_files(values, names,
+            "ObjInfo::HealthBarPosition", &x, &y)) return 0;
     s_legacy_health_bar.x = (float)x;
     s_legacy_health_bar.y = (float)y;
-    if (!legacy_config_pair(cfg, "ObjInfo::HealthBarWidthHeight",
-                            &width, &height)) return 0;
+    if (!legacy_config_pair_from_files(values, names,
+            "ObjInfo::HealthBarWidthHeight", &width, &height)) return 0;
     s_legacy_health_bar.width = (float)width;
     s_legacy_health_bar.height = (float)height;
     // The original derives this through an integer conversion of the raw
     // value string, so a missing or empty key yields 0 rather than 1.
-    border = block_get_int(cfg, "ObjInfo::HealthBarBorderSize", 0);
+    border = legacy_config_int_from_files(values, names,
+            "ObjInfo::HealthBarBorderSize", 0);
     s_legacy_health_bar.border = (float)border;
-    if (!legacy_config_rgb(cfg, "ObjInfo::HealthBarBorderRGB", rgb)) return 0;
+    if (!legacy_config_rgb_from_files(values, names,
+            "ObjInfo::HealthBarBorderRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.border_rgb, rgb, sizeof(rgb));
     legacy_color_pair(s_legacy_health_bar.border_rgb,
                       s_legacy_health_bar.border_high,
                       s_legacy_health_bar.border_low);
-    if (!legacy_config_rgb(cfg, "ObjInfo::HealthBarBackgroundRGB", rgb)) return 0;
+    if (!legacy_config_rgb_from_files(values, names,
+            "ObjInfo::HealthBarBackgroundRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.background_rgb, rgb, sizeof(rgb));
-    if (!legacy_config_rgb(cfg, "ObjInfo::HealthBarRGB", rgb)) return 0;
+    if (!legacy_config_rgb_from_files(values, names,
+            "ObjInfo::HealthBarRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.health_rgb, rgb, sizeof(rgb));
-    vertical = block_get_bool(cfg, "ObjInfo::HealthBarVertical");
+    vertical = legacy_config_bool_from_files(values, names,
+            "ObjInfo::HealthBarVertical");
     /* DAT_004ffe68 is shared by the other HUD loaders. The original only
        ORs these bits: a later horizontal reload does not clear vertical. */
     if (vertical == 1) s_legacy_hud_state_flags |= 8u;
     s_legacy_hud_state_flags |= 2u;
+    legacy_hud_state_flags_publish();
     s_legacy_health_bar.vertical =
         (s_legacy_hud_state_flags & 8u) != 0 ? 1u : 0u;
     s_legacy_health_bar.flags |= 2u;
@@ -2046,6 +2334,10 @@ void legacy_hunger_images_load(BlockFile* values, BlockFile* names)
                     image, s_legacy_hud_ops.context);
         }
         s_legacy_hunger_images[i] = image;
+        /* These are the five DAT_004ffec4 slots consumed by
+         * IndexedPanelResourcePositionApply. Keep the config-loaded images
+         * in the same table used by the live panel drawing path. */
+        panel_position_slot_set(i, image);
     }
 }
 
@@ -2056,11 +2348,13 @@ int legacy_hunger_images_position_config_load(BlockFile* values,
     int x, y;
     BlockFile* cfg = values != NULL ? values : names;
     legacy_hunger_images_load(values, names);
-    if (cfg == NULL || !legacy_config_pair(cfg,
+    if (cfg == NULL || !legacy_config_pair_from_files(values, names,
             "ObjInfo::HungerImagesPosition", &x, &y)) return 0;
     s_legacy_hunger_position[0] = (float)x;
     s_legacy_hunger_position[1] = (float)y;
+    panel_position_offsets_set((float)x, (float)y);
     s_legacy_hud_state_flags |= 1u;
+    legacy_hud_state_flags_publish();
     return 1;
 }
 
@@ -2080,6 +2374,9 @@ int legacy_bubble_images_position_config_load(BlockFile* values,
     s_legacy_bubble_position[0] = (float)x;
     s_legacy_bubble_position[1] = (float)y;
     s_legacy_hud_state_flags |= 0x10u;
+    bubble_offsets_set(s_legacy_bubble_position[0],
+                       s_legacy_bubble_position[1]);
+    legacy_hud_state_flags_publish();
     return 1;
 }
 
@@ -2313,10 +2610,8 @@ int legacy_panel_slot_coordinate_hit_test(int panel, int x, int y)
     return hit ? panel == 0 : 1;
 }
 
-/* PanelImageSlotEntryAllocate (FUN_0045a500) allocates the image entry and
- * loads its configured surface. The wider port record keeps host-side image
- * ownership alongside the target's panel geometry. */
-// FUNCTION: LEGORR 0x0045a500
+/* Portable panel-image entry. This is separate from PanelImageSlotEntryAllocate
+ * (0x0045a500), whose 16-byte wrapper owns a TextBuffer record. */
 void* legacy_panel_image_slot_entry_allocate(int panel, const char* path,
                                              const int rect[4],
                                              uint32_t flags)

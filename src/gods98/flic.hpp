@@ -64,6 +64,9 @@ int flic_chunk_walk(Flic* flic);
 int flic_frame_record_walk(Flic* flic);
 int flic_chunk_buffer_and_continue_lk(Flic* flic);
 int flic_chunk_buffer_and_continue_type0b(Flic* flic);
+/* Advances one streamed frame and returns nonzero when the stream has passed
+ * its declared last frame. `loop` is set by flic_tick_loop before dispatch. */
+int flic_stream_frame_advance(Flic* flic);
 
 /* Open a `.flh` by resource name (WAD or loose path). Seekable loose and
  * directly stored WAD entries use ResourceStream; unsupported compressed
@@ -88,8 +91,9 @@ int flic_eof(const Flic* f);
 
 /* Advance one frame: applies the next delta record, or repeats the current
  * frame on a hold chunk. On wrap, RAM mode keeps the decoded keyframe and
- * restarts at frame 1; stream mode seeks to the first chunk and replays the
- * keyframe, matching the two corpus frame steppers. Returns the new index. */
+ * restarts at frame 1; stream mode resets its cursor/index at the boundary
+ * and decodes the keyframe on the following tick, matching the two corpus
+ * frame steppers. Returns the new index. */
 int flic_tick_loop(Flic* f, int loop);
 
 /* --- pixels ----------------------------------------------------------------- */

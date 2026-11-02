@@ -76,8 +76,6 @@ static TooltipOverlayState s_timed_effect_overlay_state;
 // GLOBAL: LEGORR 0x004aa64c
 static uint32_t s_timed_effect_cue_gate = 1u;
 static SceneTransformState s_scene_transform_state;
-static SceneTransformApplyHook s_scene_transform_apply_hook;
-static void* s_scene_transform_apply_context;
 static LightEffectParameterState s_light_effect_parameters;
 static EntityNodeScaleApplyHook s_entity_node_scale_apply_hook;
 static void* s_entity_node_scale_apply_context;
@@ -470,6 +468,60 @@ static int light_effect_config_range_pair_read(BlockFile* config,
     return 1;
 }
 
+static int light_effect_config_path_build(char* path, size_t path_capacity,
+                                          const char* config_root,
+                                          const char* key)
+{
+    static const char middle[] = " LightEffects::";
+    size_t root_length;
+    size_t middle_length = sizeof(middle) - 1u;
+    size_t key_length;
+    if (path == NULL || config_root == NULL || key == NULL ||
+        path_capacity == 0u) return 0;
+    root_length = strlen(config_root);
+    key_length = strlen(key);
+    if (root_length + middle_length + key_length + 1u > path_capacity)
+        return 0;
+    memcpy(path, config_root, root_length);
+    memcpy(path + root_length, middle, middle_length);
+    memcpy(path + root_length + middle_length, key, key_length + 1u);
+    return 1;
+}
+
+static int light_effect_config_float_triplet_read(BlockFile* config,
+                                                  const char* path,
+                                                  float values[3])
+{
+    const char* value = block_get_strptr(config, path);
+    char copy[256];
+    char* cursor;
+    unsigned int i;
+    size_t length = 0u;
+    if (value == NULL || values == NULL) return 0;
+    while (length + 1u < sizeof(copy) && value[length] != '\0') {
+        copy[length] = value[length];
+        ++length;
+    }
+    if (value[length] != '\0') return 0;
+    copy[length] = '\0';
+    cursor = copy;
+    for (i = 0u; i < 3u; ++i) {
+        char* end;
+        double parsed = strtod(cursor, &end);
+        if (end == cursor) return 0;
+        values[i] = (float)parsed;
+        while (*end == ' ' || *end == '\t') ++end;
+        if (i != 2u) {
+            if (*end != ':') return 0;
+            cursor = end + 1;
+        }
+        else if (*end != '\0') {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static uint32_t light_effect_float_word(float value)
 {
     uint32_t word;
@@ -559,19 +611,56 @@ uint32_t light_effect_fade_config_load(void* config, void* section)
 }
 
 // FUNCTION: LEGORR 0x0044cca0
-uint32_t light_effect_move_config_load(void* config, void* section)
+uint32_t light_effect_move_config_load(void* config,
+                                      const char* config_root)
 {
-    return s_light_effect_config_load_hook != NULL
-        ? s_light_effect_config_load_hook(s_light_effect_config_load_context,
-                                          2, config, section) : 0u;
+    BlockFile* file = (BlockFile*)config;
+    const char* root = config_root != NULL ? config_root : "Lego*";
+    static const char* const keys[4] = {
+        "RandomRangeForTimeBetweenMoves",
+        "RandomRangeForSpeedOfMove",
+        "RandomRangeForDistOfMove",
+        "MoveLimit"
+    };
+    char path[256];
+    float time_min, time_max;
+    float speed_min, speed_max;
+    float distance_min, distance_max;
+    float move_limit[3];
+    if (file == NULL ||
+        !light_effect_config_path_build(path, sizeof(path), root, keys[0]) ||
+        !light_effect_config_range_pair_read(file, path, &time_min,
+                                             &time_max) ||
+        !light_effect_config_path_build(path, sizeof(path), root, keys[1]) ||
+        !light_effect_config_range_pair_read(file, path, &speed_min,
+                                             &speed_max) ||
+        !light_effect_config_path_build(path, sizeof(path), root, keys[2]) ||
+        !light_effect_config_range_pair_read(file, path, &distance_min,
+                                             &distance_max) ||
+        !light_effect_config_path_build(path, sizeof(path), root, keys[3]) ||
+        !light_effect_config_float_triplet_read(file, path, move_limit)) {
+        return 0u;
+    }
+    light_effect_move_parameters_store(
+        light_effect_float_word(time_min * 25.0f),
+        light_effect_float_word(time_max * 25.0f),
+        light_effect_float_word(speed_min * 25.0f),
+        light_effect_float_word(speed_max * 25.0f),
+        light_effect_float_word(distance_min),
+        light_effect_float_word(distance_max),
+        light_effect_float_word(move_limit[0]),
+        light_effect_float_word(move_limit[1]),
+        light_effect_float_word(move_limit[2]));
+    return 1u;
 }
 
 // FUNCTION: LEGORR 0x0044c7c0
-void light_effect_configuration_load(void* config, void* section)
+void light_effect_configuration_load(void* config,
+                                    const char* config_root)
 {
-    (void)light_effect_blink_config_load(config, section);
-    (void)light_effect_fade_config_load(config, section);
-    (void)light_effect_move_config_load(config, section);
+    (void)light_effect_blink_config_load(config, (void*)config_root);
+    (void)light_effect_fade_config_load(config, (void*)config_root);
+    (void)light_effect_move_config_load(config, config_root);
 }
 
 // FUNCTION: LEGORR 0x0044c970
@@ -614,6 +703,16 @@ void light_effect_move_parameters_store(uint32_t a, uint32_t b, uint32_t c,
                                         uint32_t d, uint32_t e, uint32_t f,
                                         uint32_t g, uint32_t h, uint32_t i)
 {
+    float parameters[9];
+    memcpy(&parameters[0], &a, sizeof(a));
+    memcpy(&parameters[1], &b, sizeof(b));
+    memcpy(&parameters[2], &c, sizeof(c));
+    memcpy(&parameters[3], &d, sizeof(d));
+    memcpy(&parameters[4], &e, sizeof(e));
+    memcpy(&parameters[5], &f, sizeof(f));
+    memcpy(&parameters[6], &g, sizeof(g));
+    memcpy(&parameters[7], &h, sizeof(h));
+    memcpy(&parameters[8], &i, sizeof(i));
     s_light_effect_parameters.move[0] = a;
     s_light_effect_parameters.move[1] = b;
     s_light_effect_parameters.move[2] = c;
@@ -624,18 +723,15 @@ void light_effect_move_parameters_store(uint32_t a, uint32_t b, uint32_t c,
     s_light_effect_parameters.move[7] = h;
     s_light_effect_parameters.move[8] = i;
     s_light_effect_parameters.flags |= 0x40u;
+    motion_jitter_parameters_store(
+        parameters[0], parameters[1], parameters[2], parameters[3],
+        parameters[4], parameters[5], parameters[6], parameters[7],
+        parameters[8]);
 }
 
 const LightEffectParameterState* light_effect_parameter_state_peek(void)
 {
     return &s_light_effect_parameters;
-}
-
-void scene_transform_apply_hook_set(SceneTransformApplyHook hook,
-                                    void* context)
-{
-    s_scene_transform_apply_hook = hook;
-    s_scene_transform_apply_context = context;
 }
 
 // FUNCTION: LEGORR 0x0044c710
@@ -651,11 +747,10 @@ void scene_transform_state_initialize(void* target, void* owner,
     s_scene_transform_state.current[1] = y;
     s_scene_transform_state.current[2] = z;
     motion_gameplay_scene_bind(target, s_scene_transform_state.flags);
+    motion_gameplay_scene_owner_bind(target, owner);
     motion_waypoint_position_bind(x, y, z);
-    if (s_scene_transform_apply_hook != NULL) {
-        s_scene_transform_apply_hook(s_scene_transform_apply_context, target,
-                                      x, y, z, 1.0f);
-    }
+    render_object_set_packed_rgba_from_float_channels(target, x, y, z,
+                                                       1.0f);
 }
 
 // FUNCTION: LEGORR 0x0044c790
@@ -663,14 +758,11 @@ void scene_transform_enable_set(int enabled)
 {
     if (enabled != 0) {
         s_scene_transform_state.flags |= 0x100u;
-        if (s_scene_transform_apply_hook != NULL) {
-            s_scene_transform_apply_hook(
-                s_scene_transform_apply_context,
-                s_scene_transform_state.target,
-                s_scene_transform_state.base[0],
-                s_scene_transform_state.base[1],
-                s_scene_transform_state.base[2], 1.0f);
-        }
+        render_object_set_packed_rgba_from_float_channels(
+            s_scene_transform_state.target,
+            s_scene_transform_state.base[0],
+            s_scene_transform_state.base[1],
+            s_scene_transform_state.base[2], 1.0f);
     }
     else {
         s_scene_transform_state.flags &= ~0x100u;
@@ -691,15 +783,13 @@ void scene_transform_rgb_clamp_apply(void)
 {
     float color[3];
     unsigned int i;
-    if (s_scene_transform_apply_hook == NULL) return;
     for (i = 0; i < 3; ++i) {
         color[i] = s_scene_transform_state.current[i];
         if (color[i] < 0.0f) color[i] = 0.0f;
         if (color[i] > 1.0f) color[i] = 1.0f;
     }
-    s_scene_transform_apply_hook(s_scene_transform_apply_context,
-                                 s_scene_transform_state.target,
-                                 color[0], color[1], color[2], 1.0f);
+    render_object_set_packed_rgba_from_float_channels(
+        s_scene_transform_state.target, color[0], color[1], color[2], 1.0f);
 }
 
 const SceneTransformState* scene_transform_state_peek(void)
@@ -898,7 +988,8 @@ void mesh_build_eight_sided_segment(void* mesh, float radius,
     dx = end[0] - start[0];
     dy = end[1] - start[1];
     dz = end[2] - start[2];
-    inverse_length = 1.0f / (float)sqrt(dx * dx + dy * dy + dz * dz);
+    /* Keep the decompile's component evaluation order (z, y, x). */
+    inverse_length = 1.0f / (float)sqrt(dz * dz + dy * dy + dx * dx);
     axis_y = inverse_length * dy;
     axis_z = inverse_length * dz;
     if (axis_y == 0.0f && axis_z == 0.0f) {
@@ -949,7 +1040,7 @@ void mesh_build_eight_sided_segment(void* mesh, float radius,
         nx = off_x[i];
         ny = off_y[i];
         nz = off_z[i];
-        normal_length = (float)sqrt(nx * nx + ny * ny + nz * nz);
+        normal_length = (float)sqrt(nx * nx + nz * nz + ny * ny);
         normals[vertex] = nx / normal_length;
         normals[vertex + 1] = ny / normal_length;
         normals[vertex + 2] = nz / normal_length;

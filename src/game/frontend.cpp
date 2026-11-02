@@ -29,6 +29,7 @@
 
 #include "frontend.hpp"
 #include "objective.hpp"
+#include "entity.hpp"
 #include "terrain_feedback.hpp"
 #include "port_loop_ports.hpp"
 #include "effects.hpp"
@@ -38,7 +39,16 @@
 #include "gods98/simtick.hpp"
 #include "gods98/message.hpp"
 #include "gods98/flic.hpp"
+#include "gods98/media.hpp"
 #include "crt/crt.hpp"
+
+namespace frontend_config {
+void panels_config_entry_apply(BlockFile* config, int display_width,
+                               int display_height);
+void panel_button_layout_config_load(BlockFile* config, int display_width,
+                                     int display_height);
+void text_messages_config_load(BlockFile* config);
+}
 #include "gods98/heap.hpp"
 #include "gods98/record.hpp"
 #include "gods98/texture.hpp"
@@ -230,6 +240,7 @@ static TextureSurface* s_interface_message_tab_info_text;
 // GLOBAL: LEGORR 0x004dcec4
 static int s_back_button_width;
 static int fe_sav_menu_list_from_config(FrontEnd* fe, int list_id,
+                                        int tree_index,
                                         const char* start_level);
 // GLOBAL: LEGORR 0x004dcec8
 static int s_back_button_height;
@@ -649,6 +660,7 @@ static int fe_build_chain(BlockFile* cfg, const char* start_key,
     if (cfg == NULL) {
         return 0;
     }
+
     const char* root = util_root_name(cfg);
     char path[FE_PATH_MAX * 2];
     snprintf(path, sizeof(path), "%s Main %s", root, start_key);
@@ -1207,7 +1219,6 @@ static void fe_overlay_close_all(FrontEnd* fe)
                     flic_close(sub->overlays[i].flic);
                     sub->overlays[i].flic = NULL;
                 }
-                sub->overlays[i].tried = 0;
             }
         }
     }
@@ -1215,24 +1226,7 @@ static void fe_overlay_close_all(FrontEnd* fe)
     fe->overlay_active = -1;
 }
 
-/* Keep the existing all-overlay handling for submenus without PlayRandom. */
 const FeSubmenu* frontend_active_submenu(const FrontEnd* fe);
-
-static void fe_overlay_open_all(FrontEnd* fe, const FeSubmenu* sub)
-{
-    if (fe == NULL || sub == NULL) {
-        return;
-    }
-    for (int i = 0; i < sub->overlay_count; ++i) {
-        FeOverlay* o = (FeOverlay*)&sub->overlays[i];
-        if (o->tried) {
-            continue;
-        }
-        o->tried = 1;
-        o->flic = flic_open(o->path);
-    }
-    fe->overlays_for = sub;
-}
 
 /* VC5 rand.obj owns the shared target stream in the classic x86 build. Other
  * builds keep the frontend's isolated LCG model. */
@@ -1285,10 +1279,9 @@ static void fe_overlay_start_random(FrontEnd* fe, const FeSubmenu* sub)
     fe_overlay_play_sfx(fe, o);
 }
 
-/* MenuOverlayFlicPlaybackController (FUN_004121b0): ensure the current
- * submenu's overlays are open (re-opening on menu switches), start random
- * playback when configured, and advance each active flic one frame. The
- * port's FrontEnd owns the former global menu/Flic state. */
+/* MenuOverlayFlicPlaybackController (FUN_004121b0): the retail path has one
+ * active FLIC player. PlayRandom starts one configured entry on the rand()%400
+ * gate; non-random hover FLIC selection needs the renderer's type-6 menu rows. */
 // FUNCTION: LEGORR 0x004121b0
 static void fe_overlay_step(FrontEnd* fe)
 {
@@ -1305,29 +1298,23 @@ static void fe_overlay_step(FrontEnd* fe)
     if (fe->overlays_for != sub) {
         fe_overlay_close_all(fe);
         fe->overlays_for = sub;
-        if (!sub->play_random) {
-            fe_overlay_open_all(fe, sub);
-        }
     }
-    if (sub->play_random) {
-        if (fe->overlay_active >= 0
-            && fe->overlay_active < sub->overlay_count) {
-            FeOverlay* o = (FeOverlay*)&sub->overlays[fe->overlay_active];
-            flic_tick_loop(o->flic, 0);
-            if (flic_eof(o->flic)) {
-                flic_close(o->flic);
-                o->flic = NULL;
-                o->tried = 0;
-                fe->overlay_active = -1;
-            }
-        } else {
-            fe_overlay_start_random(fe, sub);
-        }
+    if (sub->play_random && fe->overlay_active < 0) {
+        fe_overlay_start_random(fe, sub);
         return;
     }
-    for (int i = 0; i < sub->overlay_count; ++i) {
-        if (sub->overlays[i].flic != NULL) {
-            flic_tick_loop(sub->overlays[i].flic, 1);
+    if (fe->overlay_active >= 0 &&
+        fe->overlay_active < sub->overlay_count) {
+        FeOverlay* o = (FeOverlay*)&sub->overlays[fe->overlay_active];
+        if (o->flic == NULL) {
+            fe->overlay_active = -1;
+            return;
+        }
+        flic_tick_loop(o->flic, 0);
+        if (flic_eof(o->flic)) {
+            flic_close(o->flic);
+            o->flic = NULL;
+            fe->overlay_active = -1;
         }
     }
 }
@@ -1968,7 +1955,8 @@ const FeSurroundImage* interface_surround_image_peek(int index)
 /* SaveMenuLayoutLoad (FUN_00415d00): resolve the seven named resource paths
  * plus the Window rectangle and Panel resource tuple. The corpus writes these
  * into fixed offsets in its resource record; FeSaveMenuLayout keeps the same
- * data in bounded, typed fields. */
+ * data in bounded, typed fields. LoadMenuBuild zeroes the record before these
+ * calls; this helper only overwrites fields whose config entries are present. */
 // FUNCTION: LEGORR 0x00415d00
 int save_menu_layout_load(FrontEnd* fe, const char* group,
                           FeSaveMenuLayout* layout)
@@ -1976,7 +1964,6 @@ int save_menu_layout_load(FrontEnd* fe, const char* group,
     if (fe == NULL || fe->cfg == NULL || group == NULL || layout == NULL) {
         return 0;
     }
-    memset(layout, 0, sizeof(*layout));
     static const char* const keys[7] = {
         "Load", "Save", "Slot", "SaveSel", "LoadSel", "Level", "Tutorial"
     };
@@ -1991,7 +1978,7 @@ int save_menu_layout_load(FrontEnd* fe, const char* group,
                  group, keys[i]);
         const char* value = block_get_strptr(fe->cfg, path);
         if (value != NULL) {
-            snprintf(fields[i], FE_PATH_MAX, "%s", value);
+            snprintf(fields[i], FE_SAVE_LAYOUT_TEXT_MAX, "%s", value);
             found = 1;
         }
     }
@@ -2033,8 +2020,11 @@ int save_menu_layout_load(FrontEnd* fe, const char* group,
                     /* The reference loads the configured bitmap directly,
                      * then applies a black source color key before storing
                      * its four panel coordinates. */
-                    layout->panel_surface = image_surface_load(
-                        layout->panel_path, 0u, 0u);
+                    /* The frame renderer's SaveLoad panel path uses the
+                     * shared texture cache; retain that same cached surface
+                     * here so layout loading and drawing share one resource. */
+                    layout->panel_surface = texture_get_or_load(
+                        NULL, layout->panel_path);
                     if (layout->panel_surface != NULL) {
                         texture_source_color_key_set(layout->panel_surface,
                                                      0u, 0u);
@@ -2057,15 +2047,34 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
     if (fe == NULL) {
         return 0;
     }
+    /* SaveMenuBuild owns the two campaign/tutorial graphs for as long as
+     * save reads and refreshes can consult their node counts. */
+    sav_tree_roots_clear();
     frontend_init(fe);
     fe->cfg = cfg;
     if (cfg == NULL) {
         return 0;
     }
 
+    /* GameConfigInit applies message and display-sized panel data after the
+     * panel-name tables have been initialized. The portable startup reaches
+     * the same work through FrontEndBuild. */
+    frontend_config::text_messages_config_load(cfg);
+    frontend_config::panels_config_entry_apply(
+        cfg, display_width_get(), display_height_get());
+    frontend_config::panel_button_layout_config_load(
+        cfg, display_width_get(), display_height_get());
+    {
+        BlockRec* pointer_section = block_subgroup(cfg, "Pointers");
+        pointer_cursor_config_load_target(
+            pointer_section != NULL ? block_first_child(pointer_section)
+                                    : NULL);
+    }
+
     /* GameConfigInit loads the action and surround image tables alongside
      * the menu definitions; keep those menu-facing resources on the same
      * Lego.cfg startup path in the port. */
+    frontend_panel_rotation_control_config_load(cfg, util_root_name(cfg));
     (void)interface_images_config_load(cfg);
     (void)interface_surround_images_config_load(cfg);
 
@@ -2096,9 +2105,9 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
      * snapshots used by the level-preview lists. */
     if (fe->built) {
         (void)fe_sav_menu_list_from_config(
-            fe, 4, fe->campaign_n > 0 ? fe->campaign[0] : NULL);
+            fe, 4, 0, fe->campaign_n > 0 ? fe->campaign[0] : NULL);
         (void)fe_sav_menu_list_from_config(
-            fe, 5, fe->tutorial_n > 0 ? fe->tutorial[0] : NULL);
+            fe, 5, 1, fe->tutorial_n > 0 ? fe->tutorial[0] : NULL);
     }
     /* Options widgets seed from the store when one is already attached. */
     frontend_options_sync(fe);
@@ -2375,6 +2384,7 @@ const FeLevelMenuList* frontend_level_menu_list_peek(const FrontEnd* fe,
 }
 
 static int fe_sav_menu_list_from_config(FrontEnd* fe, int list_id,
+                                        int tree_index,
                                         const char* start_level)
 {
     enum { LEVEL_REGISTRY_MAX = 256 };
@@ -2414,31 +2424,30 @@ static int fe_sav_menu_list_from_config(FrontEnd* fe, int list_id,
         &registry, fe->cfg, fe_level_group_name(start_level));
     int rows = frontend_sav_menu_list(fe, list_id, root, &registry);
 
-    /* The native globals keep these trees for the process lifetime. The
-     * frontend stores a flattened snapshot, so release the temporary graph. */
-    for (int i = 0; i < count; ++i) {
-        SavTreeNode* node = (SavTreeNode*)values_a[i];
-        if (node != NULL) {
-            engine_heap_free(node->children);
-            engine_heap_free(node);
+    /* Retail SaveMenuBuild retains both roots for SavReadSlot's campaign
+     * record-count validation and SavRefreshSlots. Transfer graph ownership
+     * to savegame; the row snapshot above no longer depends on the registry. */
+    if (!sav_tree_root_install_owned(tree_index, root,
+                                     (void* const*)values_a,
+                                     (uint32_t)count)) {
+        for (int i = 0; i < count; ++i) {
+            SavTreeNode* node = (SavTreeNode*)values_a[i];
+            if (node != NULL && (uintptr_t)node > 1u) {
+                engine_heap_free(node->children);
+                engine_heap_free(node);
+            }
         }
     }
     return rows;
 }
 
-/* MenuShow (FUN_00413e20): enter a menu at submenu zero. The legacy routine
- * runs its menu loop synchronously; FrontEnd leaves the same state open for
- * the application's frame loop to advance. */
-// FUNCTION: LEGORR 0x00413e20
-int frontend_open(FrontEnd* fe, int menu)
+/* Prepare the portable modal state after MenuShow has reset run flags. */
+static int frontend_open_prepare(FrontEnd* fe, int menu, int submenu_index)
 {
-    if (fe == NULL || !fe->built || menu < 0 || menu >= FE_MENU_COUNT) {
-        return 0;
-    }
     fe_overlay_close_all(fe);
     fe->menu = menu;
     fe->save_action = 0;
-    fe->sub = 0;
+    fe->sub = submenu_index;
     fe->sel = 0;
     fe->open = 1;
     fe->quit = 0;
@@ -2483,13 +2492,35 @@ int frontend_open(FrontEnd* fe, int menu)
     for (int i = 0; i < fe->menus[menu].submenu_count; i++) {
         fe->menus[menu].submenus[i].scroll = 0;
     }
-    fe_overlay_step(fe); /* open the active submenu's flic overlays */
     return 1;
 }
 
+/* MenuShow (FUN_00413e20): clear every submenu's run flag, then enter the
+ * requested submenu. The native call blocks in MenuRunLoop; the portable
+ * frontend leaves that selected state open for the frame loop to advance. */
+// FUNCTION: LEGORR 0x00413e20
+int frontend_open_submenu(FrontEnd* fe, int menu, int submenu_index)
+{
+    if (fe == NULL || !fe->built || menu < 0 || menu >= FE_MENU_COUNT ||
+        submenu_index < 0 ||
+        submenu_index >= fe->menus[menu].submenu_count) {
+        return 0;
+    }
+    for (int i = 0; i < fe->menus[menu].submenu_count; ++i) {
+        fe->menus[menu].submenus[i].run_flags = 0u;
+    }
+    return frontend_open_prepare(fe, menu, submenu_index);
+}
+
+/* Port convenience entry for callers that open submenu zero. */
+int frontend_open(FrontEnd* fe, int menu)
+{
+    return frontend_open_submenu(fe, menu, 0);
+}
+
 /* FrontEndStateChange (FUN_004169c0): prepare state before MenuEnter chooses
- * a menu. The model records the selector and refreshes option widgets;
- * native save-tree/current-context mutations remain in the savegame APIs. */
+ * a menu. The live option and save-event words are applied here; the
+ * corpus's tree walks still need the EngineContext passed to its callbacks. */
 // FUNCTION: LEGORR 0x004169c0
 int frontend_state_change(FrontEnd* fe, int state)
 {
@@ -2499,6 +2530,19 @@ int frontend_state_change(FrontEnd* fe, int state)
     if (state < FE_STATE_MAIN || state > FE_STATE_SAVE_REWARD) {
         return 0;
     }
+    /* FrontEndStateChange calls OptionsLoadOrDefault for every valid flow.
+     * Main/new-game/load retain the active save context's option triple;
+     * options/quit only clear the frontend selection words. */
+    options_load_or_default(save_current_context_get(),
+        state <= FE_STATE_TRAINING ? 1 : 0, 1);
+    /* Save flow case 4 raises DAT_00557500 only when there is no active
+     * save-slot context and the save-state event flag is already set. */
+    if (state == FE_STATE_SAVE_REWARD && sav_build_ctx_target() == NULL &&
+        save_state_event_context_peek() != 0u) {
+        current_selection_context_set((void*)(uintptr_t)1u);
+    }
+    /* Every switch arm ends by raising the save-state event context. */
+    save_state_event_context_set(1u);
     fe->flow_state = state;
     frontend_options_sync(fe);
     return 1;
@@ -2521,14 +2565,9 @@ int menu_enter(FrontEnd* fe, int mode)
 
     const int menu = mode == FE_STATE_SAVE_REWARD ? FE_MENU_SAVE : FE_MENU_MAIN;
     const int submenu = mode == FE_STATE_SAVE_REWARD ? 0 : mode;
-    if (submenu >= fe->menus[menu].submenu_count
-        || !frontend_open(fe, menu)) {
+    if (submenu >= fe->menus[menu].submenu_count ||
+        !frontend_open_submenu(fe, menu, submenu)) {
         return 0;
-    }
-    if (submenu != 0) {
-        fe->sub = submenu;
-        fe->sel = 0;
-        fe_overlay_step(fe);
     }
     if (mode == FE_STATE_SAVE_REWARD) {
         fe->save_action = 1;
@@ -2764,10 +2803,8 @@ static const char* fe_selected_level_action(const FrontEnd* fe)
     return it->level_start ? it->target : NULL;
 }
 
-/* FrontEndStartLevel (FUN_00415220): the original routine performs the
- * engine-global level transition. In this port the frame loop owns that
- * transition, so this helper records the selected level and emits the
- * existing start-level event after closing the menu. */
+/* FrontEndStartLevel (FUN_00415220): prepare transition state and record the
+ * selected level; the frame loop owns the pending-level teardown and load. */
 // FUNCTION: LEGORR 0x00415220
 static FeEvent frontend_start_level(FrontEnd* fe, const char* level)
 {
@@ -2775,6 +2812,10 @@ static FeEvent frontend_start_level(FrontEnd* fe, const char* level)
         return FE_EVT_NONE;
     }
     snprintf(fe->pending_level, FE_LEVEL_NAME_MAX, "%s", level);
+    /* The reference clears transition state before it tears down the active
+     * level and begins LevelLoad. The frame loop owns that load/teardown. */
+    unported_ledger_stubs::ledger_stub_00425c30_TransitionControl(0, 0u);
+    frontend_flow_word_set(4, 0);
     frontend_close(fe);
     return FE_EVT_START_LEVEL;
 }
@@ -2900,9 +2941,6 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     if (fe->sel < 0) {
         fe->sel = 0;
     }
-    /* .flh overlay lane (finding 23): advance the active clip, or let
-     * PlayRandom's per-tick gate start one configured overlay. */
-    fe_overlay_step(fe);
 
     if (in->up) {
         if (fe->sel > 0) {
@@ -3018,10 +3056,9 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         fe_slider_pointer_handle(fe, sub, in, measure);
 
         if (in->click) {
-            if (hit) {
-                return fe_activate(fe);
-            }
-            return FE_EVT_NONE;
+            FeEvent event = hit ? fe_activate(fe) : FE_EVT_NONE;
+            fe_overlay_step(fe);
+            return event;
         }
     }
 
@@ -3029,6 +3066,7 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         if (fe->sub != 0) {
             fe->sub = 0;
             fe->sel = 0;
+            fe_overlay_step(fe);
         } else if (fe->menu == FE_MENU_PAUSED) {
             frontend_close(fe);       /* pause Esc = resume */
             return FE_EVT_RESUME;
@@ -3040,9 +3078,13 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         return FE_EVT_NONE;
     }
     if (!in->enter) {
+        /* MenuTick updates input and selection before its overlay controller. */
+        fe_overlay_step(fe);
         return FE_EVT_NONE;
     }
-    return fe_activate(fe);
+    FeEvent event = fe_activate(fe);
+    fe_overlay_step(fe);
+    return event;
 }
 
 const FeMenu* frontend_menu(const FrontEnd* fe, int menu)
@@ -3185,29 +3227,37 @@ static void fe_draw_text(void* px, int pitch, int w, int h, int x, int y,
     }
 }
 
-/* RenderUiFrameCell @ 0x412450 selects either a text row or an image frame.
- * The port's software menu framebuffer uses the same 3x5 text fallback as
- * other menu overlays and the shared clipped texture blitter for images. */
+/* RenderUiFrameCell @ 0x412450 selects either the supplied direct surface
+ * or one of eight animation frames in the renderer-owned frame table. */
 // FUNCTION: LEGORR 0x00412450
 void menu_render_ui_frame_cell(void* px, int pitch, int w, int h,
-                               int x, int y, int text_row,
-                               const char* text,
-                               const TextureSurface* image)
+                               int x, int y,
+                               const TextureSurface* direct_surface,
+                               const FeUiFrameCellTable* table,
+                               int item_index, int frame_index)
 {
-    if (px == NULL || w <= 0 || h <= 0) {
+    if (px == NULL || w <= 0 || h <= 0 || table == NULL ||
+        table->entries == NULL || item_index < 0 || frame_index < 0 ||
+        (size_t)item_index >= table->entry_count) {
         return;
     }
-    if (text_row != 0) {
-        if (text != NULL) {
-            fe_draw_text(px, pitch, w, h, x, y, text, 220, 220, 220);
+    if ((table->entries[item_index].flags & 1u) != 0u) {
+        if (direct_surface != NULL && direct_surface->pixels != NULL &&
+            direct_surface->width > 0 && direct_surface->height > 0) {
+            surface_blit_texture(px, pitch, w, h, direct_surface, x, y);
         }
         return;
     }
-    if (image == NULL || image->width <= 0 || image->height <= 0 ||
-        x >= 640 || x <= -image->width ||
-        y <= -image->height || y >= 480) {
+    if (frame_index >= 8 || table->frame_surfaces == NULL) {
         return;
     }
+    size_t surface_index = (size_t)item_index * 8u +
+                           (size_t)frame_index;
+    if (surface_index >= table->frame_surface_count) return;
+    const TextureSurface* image = table->frame_surfaces[surface_index];
+    if (image == NULL || image->width <= 0 || image->height <= 0 ||
+        x >= 640 || -image->width >= x ||
+        -image->height >= y || y >= 480) return;
     surface_blit_texture(px, pitch, w, h, image, x, y);
 }
 
@@ -4969,10 +5019,10 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
     return 0;
 }
 
-/* MenuHoverStatusTextDraw (FUN_00412750): refresh the menu's hover status
- * from the currently selected runtime save row. The corpus rotates resource
- * records and rewrites localized labels; the frontend keeps the derived slot
- * summary alongside its FeItem and draws it in the status band. */
+/* MenuHoverStatusTextDraw (FUN_00412750) runs once per MenuTick after input
+ * selection has been updated. In this single-window software frontend the
+ * active FeItem is the focused row; its status is the port-side text payload
+ * where the native menu's type-6 child records are not available. */
 // FUNCTION: LEGORR 0x00412750
 void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
                                  int w, int h, void* px, int pitch)
@@ -4984,10 +5034,9 @@ void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
     const FeSubmenu* sub = frontend_active_submenu(fe);
     const char* image = frontend_active_image(fe);
     const FeItem* item = frontend_active_item(fe);
-    if (sub == NULL || image == NULL || item == NULL
-        || !s_stristr(image, "SaveLoad")) {
-        return;
-    }
+    if (sub == NULL || item == NULL) return;
+    const int save_load_menu = image != NULL &&
+                               s_stristr(image, "SaveLoad") != NULL;
 
     /* SaveMenuLayoutLoad reads these strings and the Window rect from the
      * shipped Menu::SaveText config. The reference draws an instruction and
@@ -4995,15 +5044,14 @@ void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
      * row's optional save summary. */
     const FeSaveMenuLayout* layout = &fe->save_text_layout;
     const char* prompt = fe->save_action ? layout->save : layout->load;
-    if (prompt[0] != '\0' && layout->slot[0] != '\0') {
+    char instruction[FE_NAME_MAX];
+    char progress[FE_NAME_MAX];
+    char normalized_progress[FE_NAME_MAX];
+    const char* lines[3];
+    int line_count = 0;
+    if (save_load_menu && prompt[0] != '\0' && layout->slot[0] != '\0') {
         /* SaveText uses the small green briefing font, not the large cyan
          * FrontEnd button font passed to this renderer. */
-        TextureSurface* save_text_font = texture_get_or_load(
-            NULL, "Interface\\Fonts\\MBriefFONT2.bmp");
-        const TextureSurface* text_font = save_text_font != NULL
-                                              ? save_text_font : font;
-        char instruction[FE_NAME_MAX];
-        char progress[FE_NAME_MAX];
         snprintf(instruction, sizeof(instruction), "%s",
                  ui_text_underscores_to_spaces(prompt));
         /* The config's Slot format is e.g. "%d%%_of_game_completed.". */
@@ -5025,19 +5073,31 @@ void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
             percent = 100;
         }
         snprintf(progress, sizeof(progress), layout->slot, percent);
-        char normalized_progress[FE_NAME_MAX];
         snprintf(normalized_progress, sizeof(normalized_progress), "%s",
                  ui_text_underscores_to_spaces(progress));
-        int wx = layout->has_window ? layout->window_x : 0;
-        int wy = layout->has_window ? layout->window_y : h - 45;
-        int ww = layout->has_window ? layout->window_w : w;
+        lines[line_count++] = instruction;
+        lines[line_count++] = normalized_progress;
+    }
+    if (item->status[0] != '\0' && line_count < 3) {
+        lines[line_count++] = ui_text_underscores_to_spaces(item->status);
+    }
+    if (line_count != 0) {
+        TextureSurface* save_text_font = texture_get_or_load(
+            NULL, "Interface\\Fonts\\MBriefFONT2.bmp");
+        const TextureSurface* text_font = save_text_font != NULL
+                                              ? save_text_font : font;
+        int wx = save_load_menu && layout->has_window
+                     ? layout->window_x : 0;
+        int wy = save_load_menu && layout->has_window
+                     ? layout->window_y : h - 45;
+        int ww = save_load_menu && layout->has_window
+                     ? layout->window_w : w;
         int line_h = 12;
         if (text_font != NULL) {
             int cell_w = 0;
             (void)fe_font_cell(text_font, &cell_w, &line_h);
         }
-        const char* lines[2] = { instruction, normalized_progress };
-        for (int line = 0; line < 2; ++line) {
+        for (int line = 0; line < line_count; ++line) {
             int text_w = text_font != NULL
                              ? fe_font_text_width(lines[line], text_font)
                              : fe_text_width(lines[line]);
@@ -5051,9 +5111,7 @@ void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
                              150, 255, 80);
             }
         }
-        if (save_text_font != NULL) {
-            texture_release(save_text_font);
-        }
+        if (save_text_font != NULL) texture_release(save_text_font);
     }
 }
 
@@ -7262,11 +7320,13 @@ void help_window_resources_init(BlockFile* cfg,
 
     const char* text_area = block_get_strptr(cfg,
         "HelpWindow::TextWindowArea");
+    const uintptr_t help_font_handle = (uintptr_t)
+        resource_name_cache_get_or_load("Interface\\Fonts\\FONT5_HI.bmp");
     int area[4];
     if (fe_parse_int_tuple(text_area, area, 4)) {
         if (ops != NULL && ops->text_area_create != NULL) {
             s_help_text_area_handle = (uintptr_t)ops->text_area_create(
-                ops->context, selection_mode_state_peek(), area, 0x400u);
+                ops->context, help_font_handle, area, 0x400u);
             s_help_text_area_native_record = NULL;
         } else {
             float area_f[4];
@@ -7277,7 +7337,7 @@ void help_window_resources_init(BlockFile* cfg,
                 memcpy(&area_words[i], &area_f[i], sizeof(area_words[i]));
             }
             s_help_text_area_native_record = text_buffer_create(
-                selection_mode_state_peek(), area_words, 0x400);
+                help_font_handle, area_words, 0x400);
             s_help_text_area_handle =
                 (uintptr_t)s_help_text_area_native_record;
         }
@@ -7919,27 +7979,30 @@ uint32_t interaction_flags_peek(void)
     return s_inter_flags;
 }
 
-/* AdvisorCallbackScheduleGate (FUN_0041c440) reads DAT_0076abbc as a global
- * enable byte; its writer is outside the port, so preserve the zero-init
- * default and provide an installation hook. FUN_0041b680's list traversal
- * and LAB_0041c470 callback are represented by the supplied scheduler seam. */
-static int s_advisor_callback_schedule_enabled;
+/* AdvisorCallbackScheduleGate reads the held scan-code byte at DAT_0076abbc
+ * (keyboard offset 0x3c) before walking the current catalog. The anonymous
+ * row callback remains an explicit binding because its body is unresolved. */
+static FeAdvisorCatalogCallback s_advisor_callback_callback;
 
-void advisor_callback_schedule_enabled_set(int enabled)
+void advisor_callback_schedule_callback_set(
+    FeAdvisorCatalogCallback callback)
 {
-    s_advisor_callback_schedule_enabled = enabled != 0;
+    s_advisor_callback_callback = callback;
 }
 
+/* AdvisorCallbackScheduleGate @ 0x0041c440 is a no-argument global-state
+ * entry. The catalog walk is available; LAB_0041c470 remains an explicit
+ * callback binding because its body is unresolved. */
 // FUNCTION: LEGORR 0x0041C440
-void advisor_callback_schedule_gate(FeAdvisorCallbackSchedule schedule,
-                                    void* context)
+void advisor_callback_schedule_gate(void)
 {
-    if ((s_inter_flags & 0x84u) != 0x84u
-        || s_advisor_callback_schedule_enabled == 0
-        || schedule == NULL) {
+    if ((s_inter_flags & 0x04u) == 0u || (s_inter_flags & 0x80u) == 0u ||
+        !input_keyboard_key_held(0x3c) ||
+        s_advisor_callback_callback == NULL) {
         return;
     }
-    schedule(s_obj_sel_word, context);
+    (void)catalog_callback_by_id_dispatch(save_current_context_get(),
+        (int)s_obj_sel_word, s_advisor_callback_callback, NULL);
 }
 
 /* AdvisorAnimationSlotIdResolve (FUN_0045c6b0): only kinds 0, 6, 9, and 10
@@ -7984,7 +8047,9 @@ int cell_action_permission_get(int column, int row)
     if (index < 0 || index >= CELL_PERMISSION_ENTRIES) {
         return 0; /* deviation: the corpus strides blindly */
     }
-    return s_cell_perm[index] != 0u;
+    /* The retail helper returns the table dword itself, not a normalized
+     * boolean. Keep callers that use its value semantics intact. */
+    return (int)s_cell_perm[index];
 }
 
 void cell_action_permission_table_set(int index, uint32_t value)
@@ -8292,6 +8357,25 @@ static void panel_blit_seam_call(void* res, float x, float y)
     s_panel_seam_last_y = y;
 }
 
+/* FUN_0047dcb0's native device path is renderer-owned. The portable HUD
+ * loader supplies TextureSurface records, so use the active software render
+ * target when one is bound and retain the seam state for callers without a
+ * framebuffer. */
+static void panel_texture_draw_at_active_target(void* resource, float x,
+                                               float y)
+{
+    DisplaySurface* target = surface_active_render_target_get();
+    void* pixels = NULL;
+    int pitch = 0;
+    if (resource == NULL || target == NULL || target->w <= 0 ||
+        target->h <= 0) return;
+    if (surface_lock(target, &pixels, &pitch) != 0) return;
+    surface_blit_texture(pixels, pitch, target->w, target->h,
+        (const TextureSurface*)resource, (int)crt_float_to_long(x),
+        (int)crt_float_to_long(y));
+    surface_unlock(target, pixels);
+}
+
 static void* panel_load_seam_call(void* res)
 {
     panel_blit_seam_call(res, 0.0f, 0.0f);
@@ -8302,13 +8386,16 @@ static void* panel_load_seam_call(void* res)
 void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
 {
     /* The corpus tests the enable byte, then FILD/FADD-stores x before y
-     * into its local coordinate pair. FUN_0047dcb0 is an unported hook
-     * boundary here, so preserve the observable test seam. */
+     * into its local coordinate pair. Its native SurfaceBlitRect path uses
+     * the renderer-owned DirectDraw device; portable HUD images are
+     * TextureSurface records and draw through the active software target. */
     if (((unsigned char)s_panel_enable_word & 0x10u) != 0u) {
         float position[2];
         position[0] = (float)x + s_bubble_offset_x;
         position[1] = (float)y + s_bubble_offset_y;
         panel_blit_seam_call(resource, position[0], position[1]);
+        panel_texture_draw_at_active_target(resource, position[0],
+                                             position[1]);
     }
 }
 
@@ -8799,6 +8886,12 @@ static int s_active_object_outgame; /* DAT_00556fe4 role */
 int* active_object_list_word(void)
 {
     return is_in_game() != 0 ? &s_active_object_ingame : &s_active_object_outgame;
+}
+
+void active_object_list_count_set(int which, int count)
+{
+    if (which == 0) s_active_object_outgame = count;
+    else if (which == 1) s_active_object_ingame = count;
 }
 
 /* --- the screen-effect release (see frontend.hpp) --------------------------
@@ -9339,86 +9432,31 @@ UiRenderRecord* ui_render_record_create(void* source,
     return rec;
 }
 
-/* --- the sav visited-table band (2026-10-25) ------------------------------
- * The corpus's two "visited" tables sit parallel to the modeled
- * active-object count words (out: DAT_00556fe4 count, DAT_00556ff0/ff4
- * item/word arrays; in: DAT_00556fd0 count, DAT_00556fdc/e0 arrays).
- * Their installers sit in the unported sav-tree loaders (the level-node /
- * tree-load / menu-list paths), so the tables land as zero-init own
- * storage behind install/peek hooks (the unowned-global convention). */
-#define SAV_VISITED_ENTRIES 16
-// GLOBAL: LEGORR 0x00556ff0
-static void*    s_sav_visited_items_out[SAV_VISITED_ENTRIES];
-// GLOBAL: LEGORR 0x00556ff4
-static uint32_t s_sav_visited_words_out[SAV_VISITED_ENTRIES];
-// GLOBAL: LEGORR 0x00556fdc
-static void*    s_sav_visited_items_in[SAV_VISITED_ENTRIES];
-// GLOBAL: LEGORR 0x00556fe0
-static uint32_t s_sav_visited_words_in[SAV_VISITED_ENTRIES];
-
-/* SavClearVisited (FUN_00416e70): the corpus walks the out-of-game band
- * first (DAT_00556fe4 / DAT_00556ff0 / DAT_00556ff4), then the in-game
- * band (DAT_00556fd0 / DAT_00556fdc / DAT_00556fe0). A non-null record
- * has its +0x10 dword and paired table word cleared. Keep pointer-array
- * indexing typed: it emits corpus dword strides on x86 and scales pointer
- * slots for the LP64 host. The port-only upper-bound checks stay because
- * the oversized-count test pins the whole band unchanged. */
+/* SavClearVisited (FUN_00416e70): the root-owned dynamic bands mirror the
+ * two LevelChainBuild allocations; each count is the runtime chain length. */
 // FUNCTION: LEGORR 0x00416e70
 void sav_clear_visited(void)
 {
-    int i;
-    if (s_active_object_outgame > 0 &&
-        s_active_object_outgame <= SAV_VISITED_ENTRIES) {
-        for (i = 0; i < s_active_object_outgame; ++i) {
-            void* rec = s_sav_visited_items_out[i];
-            if (rec != NULL) {
-                ((uint32_t*)rec)[4] = 0u; /* corpus record + 0x10 */
-                s_sav_visited_words_out[i] = 0u;
-            }
-        }
-    }
-    if (s_active_object_ingame > 0 &&
-        s_active_object_ingame <= SAV_VISITED_ENTRIES) {
-        for (i = 0; i < s_active_object_ingame; ++i) {
-            void* rec = s_sav_visited_items_in[i];
-            if (rec != NULL) {
-                ((uint32_t*)rec)[4] = 0u; /* corpus record + 0x10 */
-                s_sav_visited_words_in[i] = 0u;
-            }
-        }
-    }
+    if (s_active_object_outgame > 0)
+        sav_tree_visited_band_clear(0, (uint32_t)s_active_object_outgame);
+    if (s_active_object_ingame > 0)
+        sav_tree_visited_band_clear(1, (uint32_t)s_active_object_ingame);
 }
 
 void sav_visited_entry_set(int which, int index, void* record,
                            uint32_t word)
 {
-    void** items = which != 0 ? s_sav_visited_items_in
-                              : s_sav_visited_items_out;
-    uint32_t* words = which != 0 ? s_sav_visited_words_in
-                                 : s_sav_visited_words_out;
-    if (index < 0 || index >= SAV_VISITED_ENTRIES) {
-        return; /* deviation: the corpus strides blindly */
-    }
-    items[index] = record;
-    words[index] = word;
+    if (index < 0) return;
+    sav_tree_visited_entry_set(which != 0 ? 1 : 0, (uint32_t)index,
+                               record, word);
 }
 
 void sav_visited_entry_peek(int which, int index, void** out_record,
                             uint32_t* out_word)
 {
-    const void* const* items = which != 0 ? s_sav_visited_items_in
-                                          : s_sav_visited_items_out;
-    const uint32_t* words = which != 0 ? s_sav_visited_words_in
-                                       : s_sav_visited_words_out;
-    if (index < 0 || index >= SAV_VISITED_ENTRIES) {
-        return; /* deviation: the corpus strides blindly */
-    }
-    if (out_record != NULL) {
-        *out_record = (void*)items[index];
-    }
-    if (out_word != NULL) {
-        *out_word = words[index];
-    }
+    if (index < 0) return;
+    sav_tree_visited_entry_peek(which != 0 ? 1 : 0, (uint32_t)index,
+                                out_record, out_word);
 }
 
 /* --- the menu-list find (2026-10-25) ---------------------------------------
@@ -9925,8 +9963,8 @@ int ui_action_dispatch(int action)
     case 4: ui_action_dispatch_mode_request(state, 0x15, 0); return 1;
     case 5:
     case 7:
-        if (ops != NULL && ops->selected_map_coordinate_validate != NULL)
-            ops->selected_map_coordinate_validate(
+        if (ops != NULL && ops->tutorial_path_descriptor_create != NULL)
+            ops->tutorial_path_descriptor_create(
                 ops->context, state->selected_cell_x, state->selected_cell_y);
         ui_action_dispatch_selection_clear(state);
         return 1;
@@ -10003,8 +10041,12 @@ cell_action_finalize:
                 ops->terrain_descriptor_tiles_reset_and_free(ops->context,
                     state->selected_cell_x, state->selected_cell_y);
         }
-        else if (ops != NULL && ops->selection_group_clear != NULL)
-            ops->selection_group_clear(ops->context);
+        else {
+            /* ClearSelectionGroup keys the operation by the selected cell. */
+            if (ops != NULL && ops->selection_group_clear != NULL)
+                ops->selection_group_clear(ops->context,
+                    state->selected_cell_x, state->selected_cell_y);
+        }
         ui_action_dispatch_selection_clear(state);
         return 1;
     case 0x11:
@@ -10359,7 +10401,7 @@ void ledger_stub_00426250_UpdateRenderViewportState(
 
 } // namespace unported_ledger_stubs
 
-namespace unported_ledger_stubs {
+namespace frontend_config {
 
 static int ledger_config_split_limited(char* text, char** fields,
                                        unsigned int field_limit,
@@ -10386,9 +10428,8 @@ static int ledger_config_split_limited(char* text, char** fields,
 }
 
 // FUNCTION: LEGORR 0x004345f0
-void ledger_stub_004345f0_PanelsConfigEntryApply(BlockFile* config,
-                                                  int display_width,
-                                                  int display_height)
+void panels_config_entry_apply(BlockFile* config, int display_width,
+                               int display_height)
 {
     char path[256];
     BlockRec* section;
@@ -10417,8 +10458,8 @@ void ledger_stub_004345f0_PanelsConfigEntryApply(BlockFile* config,
 }
 
 // FUNCTION: LEGORR 0x00434710
-void ledger_stub_00434710_PanelButtonLayoutConfigLoad(
-    BlockFile* config, int display_width, int display_height)
+void panel_button_layout_config_load(BlockFile* config, int display_width,
+                                     int display_height)
 {
     enum { PANEL_COUNT = 12, BUTTONS_PER_PANEL = 24, LAYOUT_FIELDS = 9 };
     int counts[PANEL_COUNT];
@@ -10500,13 +10541,13 @@ void ledger_stub_00434710_PanelButtonLayoutConfigLoad(
 }
 
 
-} // namespace unported_ledger_stubs
+} // namespace frontend_config
 
-namespace unported_ledger_stubs {
+namespace frontend_config {
 
 // TextMessagesConfigLoad
 // FUNCTION: LEGORR 0x00434af0
-void ledger_stub_00434af0_TextMessagesConfigLoad(BlockFile* config)
+void text_messages_config_load(BlockFile* config)
 {
     BlockRec* group;
     BlockRec* entry;
@@ -10528,8 +10569,7 @@ void ledger_stub_00434af0_TextMessagesConfigLoad(BlockFile* config)
         const char* value = block_value(entry);
         char copy[512];
         char* fields[3];
-        unsigned int count = 1u;
-        unsigned int i;
+        int count;
         if (!ui_message_label_index_find(label, &slot) || value == NULL)
             continue;
         strncpy(copy, value, sizeof(copy) - 1u);
@@ -10537,16 +10577,18 @@ void ledger_stub_00434af0_TextMessagesConfigLoad(BlockFile* config)
         fields[0] = copy;
         fields[1] = NULL;
         fields[2] = NULL;
-        for (i = 0; copy[i] != '\0' && count < 3u; ++i) {
-            if (copy[i] == ',') {
-                copy[i] = '\0';
-                fields[count++] = copy + i + 1;
-            }
-        }
+        /* TextMessagesWithImages uses the colon delimiter at DAT_004a1cd4;
+         * Panels_* and Buttons* use the separate comma delimiter. */
+        count = ledger_config_split_limited(copy, fields, 3u, ":");
+        (void)count;
         ui_message_text_slot_assign_with_image(slot, fields[0], fields[1],
                                                 fields[2]);
     }
 }
+
+} // namespace frontend_config
+
+namespace unported_ledger_stubs {
 
 void ledger_stub_00434da0_AdvisorTooltipAndTooltipSoundConfigLoad(
     BlockFile* config)
@@ -10614,7 +10656,30 @@ void frontend_render_three_pass_update(BlockFile* values, BlockFile* names)
 {
     legacy_health_bar_config_load(values, names);
     legacy_hunger_images_position_config_load(values, names);
-    legacy_bubble_images_position_config_load(values, names);
+    (void)frontend_bubble_images_position_config_load(values, names);
+}
+
+// FUNCTION: LEGORR 0x00459a50
+int frontend_bubble_images_position_config_load(BlockFile* values,
+                                                BlockFile* names)
+{
+    const char* const config_root = util_root_name(
+        names != NULL ? names : values);
+    const char* const path = string_path_join(config_root, "ObjInfo",
+        "BubbleImagesPosition", (char*)NULL);
+    const char* value;
+    char storage[128];
+    char* fields[2];
+    if (values == NULL) return 0;
+    value = block_get_strptr(values, path);
+    if (value == NULL ||
+        !frontend_config_fields(value, storage, sizeof(storage), fields, 2,
+                                ':')) {
+        return 0;
+    }
+    bubble_offsets_set((float)atoi(fields[0]), (float)atoi(fields[1]));
+    panel_enable_word_set(panel_enable_word_peek() | 0x10u);
+    return 1;
 }
 
 namespace unported_ledger_stubs {
@@ -10647,12 +10712,10 @@ void ledger_stub_004599c0_LoadObjectHungerMeterImages(BlockFile* values,
     legacy_hunger_images_load(values, names);
 }
 
-// BubbleImagesPositionConfigLoad
-// FUNCTION: LEGORR 0x00459a50
 int ledger_stub_00459a50_BubbleImagesPositionConfigLoad(
     BlockFile* values, BlockFile* names)
 {
-    return legacy_bubble_images_position_config_load(values, names);
+    return frontend_bubble_images_position_config_load(values, names);
 }
 
 // RenderEntityScreenRing
@@ -10784,9 +10847,12 @@ int ui_text_output_panel_coordinates_set(int panel, float y_offset,
     return 1;
 }
 
-/* Portable 16-byte UI text-output adapter; 0x0045a500 is the separate
- * panel-image entry allocator. */
-void* ui_text_output_record_allocate(int panel, uint32_t mode,
+/* PanelImageSlotEntryAllocate (FUN_0045a500): allocate the four-word wrapper
+ * first, then create its text buffer with the supplied font handle, header
+ * rectangle, and capacity. The target record order is text buffer, base Y,
+ * base X, and category-coordinate pointer. */
+// FUNCTION: LEGORR 0x0045a500
+void* ui_text_output_record_allocate(int panel, uintptr_t font_handle,
                                      const float rect[4],
                                      uint32_t buffer_size)
 {
@@ -10805,7 +10871,7 @@ void* ui_text_output_record_allocate(int panel, uint32_t mode,
         (long)sizeof(UiTextOutputRecord32));
     if (record == NULL) return NULL;
     memset(record, 0, sizeof(*record));
-    text_buffer = text_buffer_create(mode, header, (long)buffer_size);
+    text_buffer = text_buffer_create(font_handle, header, (long)buffer_size);
     record->base_x = crt_float_to_long(rect[0]);
     record->base_y = crt_float_to_long(rect[1]);
 
@@ -10842,7 +10908,7 @@ void* ui_text_output_element_create(void* context, int panel, int kind,
     const float rect[4] = { x, y, width, height };
     (void)kind;
     return ui_text_output_record_allocate(
-        panel, create_context != NULL ? create_context->mode : 0u, rect,
+        panel, create_context != NULL ? create_context->font_handle : 0u, rect,
         (uint32_t)buffer_size);
 }
 
@@ -10854,6 +10920,8 @@ void ui_text_output_record_destroy(void* opaque)
     void* text_buffer = NULL;
     int owns_text_buffer = 0;
     if (opaque == NULL) return;
+    if (panel_ui_record_peek() == opaque)
+        panel_ui_record_set(NULL);
     for (i = 0; i < 64; ++i) {
         if (s_ui_text_output_bindings[i].record == opaque) {
             text_buffer = s_ui_text_output_bindings[i].text_buffer;
@@ -10877,12 +10945,14 @@ void ui_text_output_record_destroy(void* opaque)
 }
 
 int ui_text_output_record_slot_allocate(void** holder, int panel,
-                                        uint32_t mode, const float rect[4],
+                                        uintptr_t font_handle,
+                                        const float rect[4],
                                         uint32_t buffer_size)
 {
     void* record;
     if (holder == NULL) return 0;
-    record = ui_text_output_record_allocate(panel, mode, rect, buffer_size);
+    record = ui_text_output_record_allocate(panel, font_handle, rect,
+                                            buffer_size);
     if (record == NULL) return 0;
     if (*holder != NULL) ui_text_output_record_destroy(*holder);
     *holder = record;
@@ -10987,26 +11057,84 @@ int ledger_stub_0045b310_SimCategoryCellHitTest(
                                       category_out, item_out);
 }
 
+} // namespace unported_ledger_stubs
 
 
-// PanelRotationControlConfigLoad
+static FrontendPanelRotationControlState s_panel_rotation_control;
+
+static void frontend_panel_rotation_image_load(BlockFile* values,
+                                                const char* config_root,
+                                                const char* key, int index)
+{
+    const char* const path = string_path_join(config_root,
+        "PanelRotationControl", key, (char*)NULL);
+    const char* value = values != NULL ? block_get_strptr(values, path) : NULL;
+    TextureSurface* old_surface = s_panel_rotation_control.images[index];
+    if (value == NULL) {
+        s_panel_rotation_control.images[index] = NULL;
+        if (old_surface != NULL) texture_release(old_surface);
+        return;
+    }
+
+    char storage[FE_PATH_MAX * 2];
+    char* fields[3];
+    TextureSurface* surface = NULL;
+    if (frontend_config_fields(value, storage, sizeof(storage), fields, 3,
+                               ',')) {
+        surface = image_surface_load(fields[0], 0u, 0u);
+        if (surface != NULL) {
+            s_panel_rotation_control.image_sizes[index][0] =
+                (float)atof(fields[1]);
+            s_panel_rotation_control.image_sizes[index][1] =
+                (float)atof(fields[2]);
+        }
+    }
+    s_panel_rotation_control.images[index] = surface;
+    if (old_surface != NULL) texture_release(old_surface);
+}
+
 // FUNCTION: LEGORR 0x0045b9d0
+void frontend_panel_rotation_control_config_load(BlockFile* values,
+                                                   const char* config_root)
+{
+    static const char* const image_keys[4] = {
+        "LeftImage", "RightImage", "UpImage", "DownImage"
+    };
+    static const char* const numeric_keys[3] = {
+        "CenterPositionX", "CenterPositionY", "Radius"
+    };
+    int* numeric_values[3];
+    int i;
+    numeric_values[0] = &s_panel_rotation_control.center_x;
+    numeric_values[1] = &s_panel_rotation_control.center_y;
+    numeric_values[2] = &s_panel_rotation_control.radius;
+    for (i = 0; i < 3; ++i) {
+        const char* const path = string_path_join(config_root,
+            "PanelRotationControl", numeric_keys[i], (char*)NULL);
+        const char* const value = values != NULL
+            ? block_get_strptr(values, path) : NULL;
+        *numeric_values[i] = value != NULL ? atoi(value) : 1;
+    }
+    for (i = 0; i < 4; ++i)
+        frontend_panel_rotation_image_load(values, config_root,
+                                            image_keys[i], i);
+}
+
+void frontend_panel_rotation_control_state_get(
+    FrontendPanelRotationControlState* state)
+{
+    if (state != NULL) *state = s_panel_rotation_control;
+}
+
+namespace unported_ledger_stubs {
+
+/* Retained adapter entry for callers that provide test/config hooks. The
+ * target mapping above is the BlockFile-backed production implementation. */
 void ledger_stub_0045b9d0_PanelRotationControlConfigLoad(
     PanelRotationControlState* state,
     const PanelRotationControlHooks* hooks)
 {
-    int i;
-    if (state == NULL) return;
-    /* The target initializes the numeric defaults before any config lookup.
-     * Keep that state deterministic even when this portable caller has no
-     * config/resource adapter installed. */
-    if (hooks == NULL) {
-        state->center_x = 1;
-        state->center_y = 1;
-        state->radius = 1;
-        for (i = 0; i < 4; ++i) state->images[i] = NULL;
-        return;
-    }
+    if (state == NULL || hooks == NULL) return;
     (void)panel_rotation_control_config_load(state, hooks);
 }
 
@@ -11044,30 +11172,180 @@ void ledger_stub_0045c5f0_UiOverlayAnimationApply(
 
 namespace unported_ledger_stubs {
 
-// PointerCursorConfigLoad
-// FUNCTION: LEGORR 0x0045ca70
-void ledger_stub_0045ca70_PointerCursorConfigLoad(
-    PointerCursorState* state, void* section, const PointerCursorHooks* hooks)
+} // namespace unported_ledger_stubs
+
+static PointerCursorState s_pointer_cursor_runtime;
+
+static void pointer_cursor_slot_release(PointerCursorSlot* slot)
 {
-    (void)pointer_cursor_config_load(state, section, hooks);
+    if (slot == NULL || slot->resource == NULL) return;
+    if (slot->animated)
+        (void)flic_close((Flic*)slot->resource);
+    else
+        texture_release((TextureSurface*)slot->resource);
+    slot->resource = NULL;
+    slot->animated = 0;
+    slot->hot_x = 0;
+    slot->hot_y = 0;
 }
 
-// PointerCursorConfigParse
+static int pointer_cursor_value_split(char* value, char** fields,
+                                      unsigned int capacity)
+{
+    unsigned int count = 0u;
+    char* p;
+    if (value == NULL || fields == NULL || capacity == 0u || value[0] == '\0')
+        return 0;
+    fields[count++] = value;
+    for (p = value; *p != '\0' && count < capacity; ++p) {
+        if (*p == ',') {
+            *p = '\0';
+            fields[count++] = p + 1;
+        }
+    }
+    return (int)count;
+}
+
 // FUNCTION: LEGORR 0x0045cbd0
-int ledger_stub_0045cbd0_PointerCursorConfigParse(
-    const PointerCursorState* state, const char* name, int* index_out)
+int pointer_cursor_config_parse_target(const char* name, int* index_out)
 {
-    return pointer_cursor_name_resolve(state, name, index_out);
+    if (s_pointer_cursor_runtime.names[0] == NULL)
+        pointer_cursor_registry_init(&s_pointer_cursor_runtime);
+    return pointer_cursor_name_resolve(&s_pointer_cursor_runtime, name,
+                                       index_out);
 }
 
-// PointerCursorDraw
-// FUNCTION: LEGORR 0x0045cc70
-void ledger_stub_0045cc70_PointerCursorDraw(
-    PointerCursorState* state, const PointerCursorHooks* hooks,
-    uint32_t x, uint32_t y)
+// FUNCTION: LEGORR 0x0045ca70
+void pointer_cursor_config_load_target(BlockRec* first_entry)
 {
-    pointer_cursor_draw(state, hooks, x, y);
+    BlockRec* entry;
+    uint32_t* feature_flags;
+    if (s_pointer_cursor_runtime.names[0] == NULL)
+        pointer_cursor_registry_init(&s_pointer_cursor_runtime);
+    feature_flags = engine_current_feature_word();
+    for (entry = first_entry; entry != NULL; entry = block_next_sibling(entry)) {
+        const char* entry_name = block_name(entry);
+        const char* entry_value = block_value(entry);
+        char value_copy[512];
+        char* fields[3];
+        int field_count;
+        int slot_index;
+        int animated;
+        PointerCursorSlot* slot;
+        if (entry_name == NULL || entry_value == NULL) continue;
+        if (entry_name[0] == '!') {
+            if (feature_flags != NULL &&
+                (*feature_flags & 0x02000000u) != 0u) continue;
+            ++entry_name;
+        }
+        if (!pointer_cursor_config_parse_target(entry_name, &slot_index) ||
+            slot_index < 0 || slot_index >= POINTER_CURSOR_COUNT)
+            continue;
+        strncpy(value_copy, entry_value, sizeof(value_copy) - 1u);
+        value_copy[sizeof(value_copy) - 1u] = '\0';
+        field_count = pointer_cursor_value_split(value_copy, fields, 3u);
+        if (field_count < 1) continue;
+        slot = &s_pointer_cursor_runtime.slots[slot_index];
+        animated = field_count != 1;
+        if (animated) {
+            Flic* animation = flic_open(fields[0]);
+            if (animation == NULL) continue;
+            pointer_cursor_slot_release(slot);
+            slot->resource = animation;
+            slot->animated = 1;
+            slot->hot_x = field_count > 1 ? atoi(fields[1]) : 0;
+            slot->hot_y = field_count > 2 ? atoi(fields[2]) : 0;
+        }
+        else {
+            TextureSurface* bitmap = image_surface_load(fields[0], 0u, 0u);
+            if (bitmap == NULL) continue;
+            image_surface_blit_transformed(bitmap, 0.0f, 0.0f, 0.0f,
+                                           0.0f, 0.0f, 0.0f);
+            pointer_cursor_slot_release(slot);
+            slot->resource = bitmap;
+            slot->animated = 0;
+            slot->hot_x = 0;
+            slot->hot_y = 0;
+        }
+    }
 }
+
+static void pointer_cursor_flic_blit(void* pixels, int pitch, int width,
+                                     int height, const Flic* animation,
+                                     int x, int y, int source_key_enabled)
+{
+    const uint16_t* frame = flic_frame555(animation);
+    const int frame_width = flic_width(animation);
+    const int frame_height = flic_height(animation);
+    int row;
+    if (pixels == NULL || frame == NULL || pitch <= 0 || width <= 0 ||
+        height <= 0 || frame_width <= 0 || frame_height <= 0) return;
+    for (row = 0; row < frame_height; ++row) {
+        const int destination_y = y + row;
+        int column;
+        if (destination_y < 0 || destination_y >= height) continue;
+        for (column = 0; column < frame_width; ++column) {
+            const int destination_x = x + column;
+            const uint16_t source = frame[(size_t)row * frame_width + column];
+            uint8_t* destination;
+            uint32_t rgba;
+            if (destination_x < 0 || destination_x >= width ||
+                (source_key_enabled && source == 0u))
+                continue;
+            destination = (uint8_t*)pixels +
+                (size_t)destination_y * (size_t)pitch +
+                (size_t)destination_x * 4u;
+            rgba = flic_rgb555_to_rgba(source);
+            destination[0] = (uint8_t)(rgba >> 16);
+            destination[1] = (uint8_t)(rgba >> 8);
+            destination[2] = (uint8_t)rgba;
+            destination[3] = 0xffu;
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x0045cc70
+void pointer_cursor_draw_target(uint32_t x, uint32_t y)
+{
+    DisplaySurface* target = surface_active_render_target_get();
+    const int selected = media_pointer_cursor_slot();
+    PointerCursorSlot* slot;
+    void* pixels = NULL;
+    int pitch = 0;
+    if (target == NULL || selected < 0 || selected >= POINTER_CURSOR_COUNT)
+        return;
+    if (surface_lock(target, &pixels, &pitch) < 0) return;
+    if (pixels == NULL) {
+        surface_unlock(target, pixels);
+        return;
+    }
+    slot = &s_pointer_cursor_runtime.slots[selected];
+    if (!slot->animated) {
+        TextureSurface* bitmap = (TextureSurface*)slot->resource;
+        if (bitmap == NULL)
+            bitmap = (TextureSurface*)s_pointer_cursor_runtime.slots[0].resource;
+        if (bitmap != NULL)
+            surface_blit_texture(pixels, pitch, target->w, target->h, bitmap,
+                                 (int)x, (int)y);
+    }
+    else if (slot->resource != NULL) {
+        Flic* animation = (Flic*)slot->resource;
+        const uint32_t* flags = engine_current_state_word();
+        const int source_key_enabled = flags != NULL
+            ? (int)((~*flags >> 20) & 1u) : 0;
+        if (s_pointer_cursor_runtime.slots[1].resource != NULL)
+            surface_blit_texture(pixels, pitch, target->w, target->h,
+                (TextureSurface*)s_pointer_cursor_runtime.slots[1].resource,
+                (int)x, (int)y);
+        (void)flic_tick_loop(animation, 1);
+        pointer_cursor_flic_blit(pixels, pitch, target->w, target->h,
+            animation, (int)x + slot->hot_x, (int)y + slot->hot_y,
+            source_key_enabled);
+    }
+    surface_unlock(target, pixels);
+}
+
+namespace unported_ledger_stubs {
 
 
 } // namespace unported_ledger_stubs

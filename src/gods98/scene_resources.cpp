@@ -393,6 +393,10 @@ void scene_float_track_apply_hook_set(SceneFloatTrackApplyHook hook,
     s_float_track_apply_hook = hook;
     s_float_track_apply_context = context;
 }
+// FUNCTION: LEGORR 0x00488070
+/* SharedObjectFloatTrackInterpolateApply masks the key index to 16 bits,
+ * uses the final value directly, or interpolates to the following key before
+ * forwarding the result to the renderer's value-apply seam. */
 void shared_object_float_track_interpolate_apply(
     void* owner, const void* track, uint32_t segment, float fraction)
 {
@@ -407,7 +411,6 @@ void shared_object_float_track_interpolate_apply(
     memcpy(&values, bytes + 0x1c, sizeof(values));
     if (values == 0) return;
     segment &= 0xffffu;
-    if (segment >= count) segment = (uint32_t)count - 1u;
     value = values[segment];
     if (segment + 1u < count)
         value = (values[segment + 1u] - value) * fraction + value;

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <limits.h>
+#include <stdint.h>
 
 #include "terrain_grid.hpp"
 #include "../gods98/block.hpp"
@@ -1291,6 +1292,12 @@ static int terrain_texture_set_config_load_grid(TerrainTileMeshGrid* grid,
     grid->textures = terrain_cell_resource_grid_load(texture_name,
         (uint32_t)width, (uint32_t)height);
     if (grid->textures == NULL) return 0;
+    if (grid->owner_level != NULL) {
+        /* TextureSetConfigLoad stores this descriptor at level +0x7c; keep
+         * that corpus slot and the native-width owner in sync. */
+        level_store_ptr(grid->owner_level, LEVEL_OFF_CELL_RESOURCES,
+                        grid->textures);
+    }
     {
         SceneCellVisualLookupTable* lookup;
         size_t count = (size_t)width * (size_t)height;
@@ -1370,13 +1377,20 @@ void terrain_texture_set_release(TerrainTileMeshGrid* grid)
      * field, so release them before disposing that table. */
     terrain_tile_mesh_grid_release(grid);
     if (grid->textures != NULL) {
+        if (grid->owner_level != NULL &&
+            grid->owner_level->ptr_cell_resources == grid->textures) {
+            level_store_ptr(grid->owner_level, LEVEL_OFF_CELL_RESOURCES,
+                            NULL);
+        }
         terrain_cell_resource_grid_dispose(grid->textures);
         grid->textures = NULL;
     }
     terrain_tile_mesh_visual_lookup_release(grid);
 }
 
-/* Explicit resource-grid helper retained for portable callers. */
+/* LoadTileVariants stores TextureSurfaceCreate records. Their reference
+ * release is the paired TextureRelease operation, not TextureSurface's CPU
+ * pixel-cache release. */
 void terrain_grid_entry_resources_release_all(TerrainCellResourceGrid* grid)
 {
     size_t i;
@@ -1387,7 +1401,7 @@ void terrain_grid_entry_resources_release_all(TerrainCellResourceGrid* grid)
     count = (size_t)grid->width * (size_t)grid->height;
     for (i = 0; i < count; ++i) {
         if (grid->handles[i] != NULL) {
-            texture_release((TextureSurface*)grid->handles[i]);
+            texture_release_record((TextureReleaseRecord*)grid->handles[i]);
             grid->handles[i] = NULL;
         }
     }
@@ -1429,9 +1443,9 @@ void terrain_grid_entry_resources_release_all_current(void)
 }
 
 /* LoadTileVariants (FUN_0040b310): allocate a 12-byte width/height/handle
- * owner, then load `%s%0.1x%0.1x.bmp` for every row-major cell. The original
- * renderer returns a COM-backed texture wrapper; the portable resource path
- * retains its decoded TextureSurface until the matching release call. */
+ * owner, then call TextureSurfaceCreate(mode 1, null output, mode data 0)
+ * with `%s%0.1x%0.1x.bmp` for every row-major cell. The result is the
+ * two-interface TextureRelease record (or its portable host-record form). */
 // FUNCTION: LEGORR 0x0040B310
 TerrainCellResourceGrid* terrain_cell_resource_grid_load(
     const char* bitmap_prefix, uint32_t width, uint32_t height)
@@ -1475,7 +1489,8 @@ TerrainCellResourceGrid* terrain_cell_resource_grid_load(
                              (unsigned int)x, (unsigned int)y);
             if (length < 0) continue;
             memcpy(path, bitmap_prefix, prefix_length);
-            grid->handles[(size_t)y * width + x] = texture_load(path);
+            grid->handles[(size_t)y * width + x] =
+                texture_surface_create(path, 1u, NULL, 0u);
         }
     }
     return grid;
@@ -1498,7 +1513,8 @@ void terrain_cell_resource_grid_dispose(TerrainCellResourceGrid* grid)
     if (grid->handles != NULL) {
         for (i = 0; i < count; ++i) {
             if (grid->handles[i] != NULL) {
-                texture_release((TextureSurface*)grid->handles[i]);
+                texture_release_record(
+                    (TextureReleaseRecord*)grid->handles[i]);
             }
         }
     }
@@ -1519,6 +1535,21 @@ static GridCellObjectNode* grid_cell_object_node_acquire(void)
         s_grid_cell_object_free = node->next;
         memset(node, 0, sizeof(*node));
         return node;
+    }
+}
+
+/* The retail cell table allocates five dwords per cell but indexes each
+ * record with a three-dword (0x0c) stride. Keep that head word synchronized
+ * with the native-pointer sidecar used by object_heads. */
+static void grid_cell_object_head_image_set(uint32_t index,
+                                            const GridCellObjectNode* node)
+{
+    uint32_t* records = (uint32_t*)s_map_cell_record_grid;
+    if (records != NULL) {
+        uint32_t image = (uint32_t)(uintptr_t)node;
+        if (node != NULL && image == 0u) image = 1u;
+        records[(size_t)index * 3u] = image;
+        records[(size_t)index * 3u + 2u] = 0u;
     }
 }
 
@@ -1552,6 +1583,7 @@ void* grid_cell_object_link_insert(void* object, int x, int y)
     node->y = y;
     node->next = node;
     s_grid_cell_object_heads[index] = node;
+    grid_cell_object_head_image_set(index, node);
     s_active_cell_kind_grid->auxiliary[index] = NULL;
     if (s_grid_object_flag_hook != NULL) {
         s_grid_object_flag_hook(object, s_grid_cell_object_context);
@@ -1606,6 +1638,7 @@ void terrain_cell_entity_record_unlink(void* record, int x, int y)
     node->next = s_grid_cell_object_free;
     s_grid_cell_object_free = node;
     s_grid_cell_object_heads[index] = NULL;
+    grid_cell_object_head_image_set(index, NULL);
     s_active_cell_kind_grid->auxiliary[index] = NULL;
     terrain_cell_and_neighbors_update(x, y);
 }
@@ -2135,6 +2168,11 @@ void terrain_cell_neighbor_flood_walk(int x, int y, int force, float strength)
         if (!candidate_has_record || candidate_flood_gate <= 0.0f) {
             const uint32_t direction_flag = 1u << direction;
             if ((*next_flags & direction_flag) == 0u) {
+                /* The source-cell back-edge is committed before the random
+                 * effect gate in the retail walk. Keep it visible to the
+                 * edge-effect callback even when the strength rounds to a
+                 * zero divisor and no effect is emitted. */
+                *flags |= 1u << ((direction - 2) & 3);
                 int emit_effect = force != 0;
                 if (!emit_effect && strength != 0.0f) {
                     const float capped = strength > 200.0f ? 200.0f : strength;
@@ -2143,7 +2181,6 @@ void terrain_cell_neighbor_flood_walk(int x, int y, int force, float strength)
                     emit_effect = divisor != 0 &&
                         random_value % divisor == 0;
                 }
-                *flags |= 1u << ((direction - 2) & 3);
                 if (emit_effect) {
                     if (s_terrain_flood_effect_hook != NULL) {
                         s_terrain_flood_effect_hook(x, y, nx, ny,
@@ -2572,36 +2609,56 @@ void terrain_cell_palette_resource_at_grid_position(
 void* terrain_cell_palette_resource_at_grid_position_current(
     const int cell_xy[2])
 {
-    GameContext* game = entity_pool_callback_context_get();
-    LevelState* level = game != NULL ? game->level : NULL;
-    TerrainCellResourceGrid* resources;
-    const uint8_t* cell;
-    uint32_t x, y, width, height, index, packed, row, column, resource_index;
-    if (level == NULL)
-        level = (LevelState*)map_cell_record_grid_level_get();
-    if (level == NULL || cell_xy == NULL || level->ptr_tile_mesh_grid == NULL)
-        return NULL;
-    width = (uint32_t)level_width(level);
-    height = (uint32_t)level_height(level);
-    if (cell_xy[0] < 0 || cell_xy[1] < 0 ||
-        (uint32_t)cell_xy[0] >= width || (uint32_t)cell_xy[1] >= height)
-        return NULL;
-    x = (uint32_t)cell_xy[0];
-    y = (uint32_t)cell_xy[1];
-    cell = level_voxel(level, (int)x, (int)y);
-    resources = level->ptr_tile_mesh_grid->textures;
-    if (cell == NULL || resources == NULL || resources->handles == NULL)
-        return NULL;
-    index = y * width + x;
-    packed = (index * 9u & 0xffffff00u) | cell[1];
-    row = packed & 0x0fu;
-    column = (packed & 0xffu) >> 4;
-    if (row >= resources->height || column >= resources->width)
-        return NULL;
-    resource_index = row * resources->width + column;
-    if (resource_index >= resources->width * resources->height)
-        return NULL;
-    return resources->handles[resource_index];
+    LevelState* level = level_current_owner_get();
+    if (level == NULL || cell_xy == NULL) return NULL;
+#if defined(_WIN32) && !defined(_WIN64)
+    /* The retail target reads the active level's +0x14 width, +0xb8 cell
+     * table, and +0x7c LoadTileVariants descriptor directly. Its callers
+     * supply in-bounds coordinates; preserve the same row-major selector and
+     * let PackedGridCellValueGet decode the table coordinates. */
+    {
+        uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
+        uint32_t index = width * (uint32_t)cell_xy[1] +
+                         (uint32_t)cell_xy[0];
+        uint32_t packed = index * 9u;
+        const uint8_t* voxels = (const uint8_t*)
+            level->word[LEVEL_OFF_VOXELS / 4];
+        const void* resources = (const void*)
+            level->word[LEVEL_OFF_CELL_RESOURCES / 4];
+        packed = (packed & 0xffffff00u) |
+            voxels[index * LEVEL_VOXEL_STRIDE + 1u];
+        return (void*)packed_grid_cell_value_get(resources, packed);
+    }
+#else
+    {
+        TerrainCellResourceGrid* resources;
+        const uint8_t* cell;
+        uint32_t x, y, width, height, index, packed, row, column;
+        uint32_t resource_index;
+        width = (uint32_t)level_width(level);
+        height = (uint32_t)level_height(level);
+        if (cell_xy[0] < 0 || cell_xy[1] < 0 ||
+            (uint32_t)cell_xy[0] >= width ||
+            (uint32_t)cell_xy[1] >= height) return NULL;
+        x = (uint32_t)cell_xy[0];
+        y = (uint32_t)cell_xy[1];
+        cell = level_voxel(level, (int)x, (int)y);
+        resources = level->ptr_cell_resources;
+        if (cell == NULL || resources == NULL || resources->handles == NULL)
+            return NULL;
+        index = y * width + x;
+        packed = (index * 9u & 0xffffff00u) | cell[1];
+        /* FUN_0040b850 indexes low-nibble * width + high-nibble. */
+        row = packed & 0x0fu;
+        column = (packed & 0xffu) >> 4;
+        if (row >= resources->height || column >= resources->width)
+            return NULL;
+        resource_index = row * resources->width + column;
+        if (resource_index >= resources->width * resources->height)
+            return NULL;
+        return resources->handles[resource_index];
+    }
+#endif
 }
 
 // FUNCTION: LEGORR 0x0044e4d0
@@ -2710,6 +2767,12 @@ static uint32_t terrain_tile_palette_index(uint32_t material, int walkable,
         if (wave) {
             if (material >= 1u && material <= 5u)
                 return 18u - material;
+            /* The wave branch shares the same palette records for terrain
+             * types 8, 10, and 11.  The reference switches on these cases
+             * after the five wave-specific type colors. */
+            if (material == 8u) return TERRAIN_TILE_PALETTE_TYPE8_SHARED;
+            if (material == 10u) return TERRAIN_TILE_PALETTE_TYPE10;
+            if (material == 11u) return TERRAIN_TILE_PALETTE_TYPE11;
             return 0xffffffffu;
         }
         switch (material) {

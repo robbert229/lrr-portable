@@ -36,6 +36,8 @@ static void mesh_record_default_release(void*, void* memory)
 static MeshRecordAppendOps s_mesh_record_append_ops;
 static ModelTextureBindOps s_model_texture_bind_ops;
 static MaterialPassOps s_material_pass_ops;
+static TextureSurfaceCreateHook s_texture_surface_create_hook;
+static void* s_texture_surface_create_context;
 static DisplaySurface* s_active_render_target;
 static void* s_screen_bounded_surface_renderer;
 static void* s_screen_bounded_surface_device;
@@ -634,15 +636,15 @@ static void* model_texture_lookup(const char* path_prefix, const char* name,
 }
 
 // FUNCTION: LEGORR 0x00481820
-int bind_model_textures_for_model(const char* path_prefix,
-                                  const Model* model,
-                                  ModelTextureBinding* bindings,
-                                  int force_source_color)
+void bind_model_textures_for_model(const char* path_prefix,
+                                   const Model* model,
+                                   ModelTextureBinding* bindings,
+                                   int force_source_color)
 {
     size_t index;
-        if (model == NULL || model->n_surfaces > 0xffffffffu ||
+    if (model == NULL || model->n_surfaces > 0xffffffffu ||
         (model->n_surfaces != 0u && model->surfaces == NULL) ||
-        (model->n_surfaces != 0u && bindings == NULL)) return 0;
+        (model->n_surfaces != 0u && bindings == NULL)) return;
     for (index = 0u; index < model->n_surfaces; ++index) {
         const ModelSurface* source = &model->surfaces[index];
         ModelTextureBinding* binding = &bindings[index];
@@ -654,13 +656,43 @@ int bind_model_textures_for_model(const char* path_prefix,
         if (source->has_tsiz != 0) {
             binding->texture_scale[0] = source->tsiz[0];
             binding->texture_scale[1] = source->tsiz[1];
+            binding->texture_scale[2] = source->tsiz[2];
             binding->has_texture_scale = 1u;
         }
-        if (source->timg != NULL && source->timg[0] != '\0' &&
-            force_source_color == 0) {
+        if (source->has_tctr != 0) {
+            binding->texture_center[0] = source->tctr[0];
+            binding->texture_center[1] = source->tctr[1];
+            binding->texture_center[2] = source->tctr[2];
+        }
+        if (source->timg != NULL && force_source_color == 0) {
             char lookup_name[260];
             if (!model_texture_name_build(path_prefix, source->timg,
-                                          lookup_name)) return 0;
+                                          lookup_name)) {
+                /* The retail path continues building later material slots
+                 * when a path cannot be represented; only this lookup is
+                 * skipped. */
+                if ((texture_flags & 0x0080u) != 0u) {
+                    binding->color[0] =
+                        (float)source->colr_bytes[0] / 256.0f;
+                    binding->color[1] =
+                        (float)source->colr_bytes[1] / 256.0f;
+                    binding->color[2] =
+                        (float)source->colr_bytes[2] / 256.0f;
+                } else {
+                    binding->color[0] = 1.0f;
+                    binding->color[1] = 1.0f;
+                    binding->color[2] = 1.0f;
+                }
+                binding->surface_luminosity = source->luminosity;
+                binding->surface_diffuse = source->diffuse;
+                binding->surface_specular = source->specular;
+                binding->surface_reflection = source->reflection;
+                binding->surface_glossiness = source->glossiness;
+                binding->surface_transparency = source->transparency;
+                binding->surface_texture_flags = texture_flags;
+                binding->surface_material_flags = material_flags;
+                continue;
+            }
             /* BindModelTextures tests the byte at SURF + 0x14 for the
              * numbered-image path. That is FLAG/material_flags; TFLG is at
              * +0x18 and controls the later render-state flags. */
@@ -724,7 +756,6 @@ int bind_model_textures_for_model(const char* path_prefix,
         binding->surface_texture_flags = texture_flags;
         binding->surface_material_flags = material_flags;
     }
-    return 1;
 }
 
 void model_texture_bindings_release(ModelTextureBinding* bindings,
@@ -780,7 +811,9 @@ static int material_pass_size_multiply(size_t a, size_t b, size_t* result)
 static void material_pass_uv_project(const ModelSurface* material,
                                      const float* position, float* uv)
 {
-    uint16_t flags = material->has_texture_flags ? material->texture_flags : 0u;
+    /* MaterialPass passes the source SURF word at +0x14 to
+     * MeshVertexCoordinateRemap; +0x18 (TFLG) drives render state instead. */
+    uint16_t flags = material->has_material_flags ? material->material_flags : 0u;
     const float* scale = material->tsiz;
     const float* center = material->tctr;
     uv[0] = (flags & 1u) == 0u ?
@@ -996,12 +1029,31 @@ fail:
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00480ac0
-int material_pass_execute(const char* path_prefix, void* render_object,
-                          const Model* model, uint32_t flags)
+void material_pass_prepared_release(MaterialPassPreparedModel* prepared)
 {
-    ModelTextureBinding* owned_bindings = NULL;
-    const ModelTextureBinding* bindings = NULL;
+    size_t surface_index;
+    if (prepared == NULL) return;
+    if (prepared->surfaces != NULL) {
+        for (surface_index = 0u; surface_index < prepared->surface_count;
+             ++surface_index) {
+            free((void*)prepared->surfaces[surface_index].vertices);
+            free((void*)prepared->surfaces[surface_index].indices);
+        }
+    }
+    free(prepared->surfaces);
+    if (prepared->owned_bindings != NULL) {
+        model_texture_bindings_release(prepared->owned_bindings,
+                                       (uint32_t)prepared->surface_count);
+        free(prepared->owned_bindings);
+    }
+    memset(prepared, 0, sizeof(*prepared));
+}
+
+int material_pass_prepare(const char* path_prefix, const Model* model,
+                          uint32_t flags,
+                          MaterialPassPreparedModel* prepared)
+{
+    MaterialPassPreparedModel result;
     MaterialPassMeshData mesh_data;
     size_t binding_bytes;
     size_t remap_bytes;
@@ -1009,9 +1061,11 @@ int material_pass_execute(const char* path_prefix, void* render_object,
     size_t index_capacity;
     size_t index_bytes;
     size_t surface_index;
-    int result = 0;
+    memset(&result, 0, sizeof(result));
     memset(&mesh_data, 0, sizeof(mesh_data));
-    if (model == NULL || render_object == NULL ||
+    if (prepared == NULL) return 0;
+    memset(prepared, 0, sizeof(*prepared));
+    if (model == NULL ||
         (model->n_verts != 0u && model->verts == NULL) ||
         (model->n_polys != 0u && model->polys == NULL) ||
         (model->n_surfaces != 0u && model->surfaces == NULL) ||
@@ -1019,27 +1073,24 @@ int material_pass_execute(const char* path_prefix, void* render_object,
         !material_pass_size_multiply(model->n_surfaces,
                                      sizeof(ModelTextureBinding),
                                      &binding_bytes)) return 0;
-    if (model->n_surfaces != 0u) {
+    result.surface_count = model->n_surfaces;
+    if (result.surface_count != 0u) {
         if (flags == 0u && model->material_bindings != NULL &&
-            model->material_binding_count == model->n_surfaces) {
-            /* LwoModelEntryLoad already acquired and retained these texture
-             * references. Borrow them for synchronous packet submission so
-             * a cache hit does not acquire a second reference per pass. */
-            bindings = model->material_bindings;
+            model->material_binding_count == result.surface_count) {
+            result.bindings = model->material_bindings;
         }
         else {
-            owned_bindings = (ModelTextureBinding*)calloc(1u, binding_bytes);
-            if (owned_bindings == NULL) return 0;
-            if (!bind_model_textures_for_model(path_prefix, model,
-                                               owned_bindings,
-                                               flags != 0u)) {
-                model_texture_bindings_release(owned_bindings,
-                                           (uint32_t)model->n_surfaces);
-                free(owned_bindings);
-                return 0;
-            }
-            bindings = owned_bindings;
+            result.owned_bindings = (ModelTextureBinding*)calloc(
+                1u, binding_bytes);
+            if (result.owned_bindings == NULL) goto fail;
+            bind_model_textures_for_model(path_prefix, model,
+                                          result.owned_bindings,
+                                          flags != 0u);
+            result.bindings = result.owned_bindings;
         }
+        result.surfaces = (MaterialPassSurface*)calloc(
+            result.surface_count, sizeof(MaterialPassSurface));
+        if (result.surfaces == NULL) goto fail;
     }
     if (!material_pass_mesh_data_build(model, &mesh_data) ||
         !material_pass_size_multiply(mesh_data.vertex_count, sizeof(int32_t),
@@ -1047,12 +1098,12 @@ int material_pass_execute(const char* path_prefix, void* render_object,
         !material_pass_size_multiply(model->n_polys, 6u,
                                      &index_capacity) ||
         !material_pass_size_multiply(index_capacity, sizeof(uint16_t),
-                                     &index_bytes)) goto cleanup_bindings;
-    if (!material_pass_size_multiply(mesh_data.vertex_count,
+                                     &index_bytes) ||
+        !material_pass_size_multiply(mesh_data.vertex_count,
                                      sizeof(MaterialPassVertex),
-                                     &vertex_bytes)) goto cleanup_bindings;
-    result = 1;
-    for (surface_index = 0u; surface_index < model->n_surfaces;
+                                     &vertex_bytes)) goto fail;
+
+    for (surface_index = 0u; surface_index < result.surface_count;
          ++surface_index) {
         MaterialPassVertex* vertices;
         uint16_t* indices;
@@ -1060,22 +1111,24 @@ int material_pass_execute(const char* path_prefix, void* render_object,
         size_t vertex_count = 0u;
         size_t index_count = 0u;
         size_t poly_index;
-        MaterialPassSurface packet;
+        MaterialPassSurface* packet = &result.surfaces[surface_index];
         const ModelSurface* material = &model->surfaces[surface_index];
         if (vertex_bytes != 0u) {
             vertices = (MaterialPassVertex*)calloc(1u, vertex_bytes);
-            if (vertices == NULL) { result = 0; break; }
+            if (vertices == NULL) goto fail;
         }
         else vertices = NULL;
         if (index_bytes != 0u) {
             indices = (uint16_t*)malloc(index_bytes);
-            if (indices == NULL) { free(vertices); result = 0; break; }
+            if (indices == NULL) { free(vertices); goto fail; }
         }
         else indices = NULL;
         if (remap_bytes != 0u) {
             remap = (int32_t*)malloc(remap_bytes);
             if (remap == NULL) {
-                free(indices); free(vertices); result = 0; break;
+                free(indices);
+                free(vertices);
+                goto fail;
             }
             for (poly_index = 0u; poly_index < mesh_data.vertex_count;
                  ++poly_index)
@@ -1096,15 +1149,20 @@ int material_pass_execute(const char* path_prefix, void* render_object,
                 uint16_t source_index;
                 int32_t destination;
                 size_t component;
-                if (source_corner >= poly->count) { result = 0; break; }
+                if (source_corner >= poly->count) {
+                    free(remap); free(indices); free(vertices); goto fail;
+                }
                 source_index = poly->ring[source_corner];
                 if ((size_t)source_index >= model->n_verts) {
-                    result = 0; break;
+                    free(remap); free(indices); free(vertices); goto fail;
                 }
                 {
                     size_t corner_offset =
                         mesh_data.polygon_offsets[poly_index] + source_corner;
                     uint16_t mapped = mesh_data.corner_vertices[corner_offset];
+                    if ((size_t)mapped >= mesh_data.vertex_count) {
+                        free(remap); free(indices); free(vertices); goto fail;
+                    }
                     destination = remap[mapped];
                 }
                 if (destination < 0) {
@@ -1112,7 +1170,10 @@ int material_pass_execute(const char* path_prefix, void* render_object,
                         mesh_data.polygon_offsets[poly_index] + source_corner];
                     uint16_t position_source = mesh_data.vertex_sources[mapped];
                     if (vertex_count >= mesh_data.vertex_count ||
-                        vertex_count > 65535u) { result = 0; break; }
+                        vertex_count > 65535u ||
+                        index_count >= index_capacity) {
+                        free(remap); free(indices); free(vertices); goto fail;
+                    }
                     destination = (int32_t)vertex_count++;
                     remap[mapped] = destination;
                     for (component = 0u; component < 3u; ++component)
@@ -1121,7 +1182,7 @@ int material_pass_execute(const char* path_prefix, void* render_object,
                     for (component = 0u; component < 3u; ++component)
                         vertices[destination].normal[component] =
                             mesh_data.vertex_normals[(size_t)mapped * 3u +
-                                           component];
+                                                     component];
                     if (model->uv_applied != 0 &&
                         mesh_data.vertex_uv_assigned[mapped] != 0u) {
                         vertices[destination].uv[0] =
@@ -1135,68 +1196,94 @@ int material_pass_execute(const char* path_prefix, void* render_object,
                             vertices[destination].uv);
                     }
                 }
+                if (index_count >= index_capacity) {
+                    free(remap); free(indices); free(vertices); goto fail;
+                }
                 indices[index_count++] = (uint16_t)destination;
             }
-            if (!result) break;
-        }
-        if (result) {
-            packet.surface_index = (uint32_t)surface_index;
-            packet.vertex_count = (uint32_t)vertex_count;
-            packet.index_count = (uint32_t)index_count;
-            packet.render_flags = material_pass_render_flags(material);
-            packet.diffuse_color[0] = bindings[surface_index].color[0] *
-                bindings[surface_index].surface_diffuse;
-            packet.diffuse_color[1] = bindings[surface_index].color[1] *
-                bindings[surface_index].surface_diffuse;
-            packet.diffuse_color[2] = bindings[surface_index].color[2] *
-                bindings[surface_index].surface_diffuse;
-            packet.emissive_color[0] = bindings[surface_index].color[0] *
-                bindings[surface_index].surface_luminosity;
-            packet.emissive_color[1] = bindings[surface_index].color[1] *
-                bindings[surface_index].surface_luminosity;
-            packet.emissive_color[2] = bindings[surface_index].color[2] *
-                bindings[surface_index].surface_luminosity;
-            if ((bindings[surface_index].surface_texture_flags & 8u) != 0u) {
-                packet.specular_color[0] = bindings[surface_index].color[0] *
-                    bindings[surface_index].surface_specular;
-                packet.specular_color[1] = bindings[surface_index].color[1] *
-                    bindings[surface_index].surface_specular;
-                packet.specular_color[2] = bindings[surface_index].color[2] *
-                    bindings[surface_index].surface_specular;
-            }
-            else {
-                packet.specular_color[0] =
-                    bindings[surface_index].surface_specular;
-                packet.specular_color[1] =
-                    bindings[surface_index].surface_specular;
-                packet.specular_color[2] =
-                    bindings[surface_index].surface_specular;
-            }
-            packet.gloss_power =
-                bindings[surface_index].surface_glossiness * 10.0f;
-            packet.opacity = 1.0f -
-                bindings[surface_index].surface_transparency;
-            packet.vertices = vertices;
-            packet.indices = indices;
-            packet.material = material;
-            packet.texture = &bindings[surface_index];
-            if (s_material_pass_ops.surface_submit == NULL ||
-                !s_material_pass_ops.surface_submit(
-                    s_material_pass_ops.context, path_prefix, render_object,
-                    &packet)) result = 0;
         }
         free(remap);
-        free(indices);
-        free(vertices);
-        if (!result) break;
+        packet->surface_index = (uint32_t)surface_index;
+        packet->vertex_count = (uint32_t)vertex_count;
+        packet->index_count = (uint32_t)index_count;
+        packet->render_flags = material_pass_render_flags(material);
+        packet->diffuse_color[0] = result.bindings[surface_index].color[0] *
+            result.bindings[surface_index].surface_diffuse;
+        packet->diffuse_color[1] = result.bindings[surface_index].color[1] *
+            result.bindings[surface_index].surface_diffuse;
+        packet->diffuse_color[2] = result.bindings[surface_index].color[2] *
+            result.bindings[surface_index].surface_diffuse;
+        packet->emissive_color[0] = result.bindings[surface_index].color[0] *
+            result.bindings[surface_index].surface_luminosity;
+        packet->emissive_color[1] = result.bindings[surface_index].color[1] *
+            result.bindings[surface_index].surface_luminosity;
+        packet->emissive_color[2] = result.bindings[surface_index].color[2] *
+            result.bindings[surface_index].surface_luminosity;
+        if ((result.bindings[surface_index].surface_texture_flags & 8u) != 0u) {
+            packet->specular_color[0] =
+                result.bindings[surface_index].color[0] *
+                result.bindings[surface_index].surface_specular;
+            packet->specular_color[1] =
+                result.bindings[surface_index].color[1] *
+                result.bindings[surface_index].surface_specular;
+            packet->specular_color[2] =
+                result.bindings[surface_index].color[2] *
+                result.bindings[surface_index].surface_specular;
+        }
+        else {
+            packet->specular_color[0] =
+                result.bindings[surface_index].surface_specular;
+            packet->specular_color[1] =
+                result.bindings[surface_index].surface_specular;
+            packet->specular_color[2] =
+                result.bindings[surface_index].surface_specular;
+        }
+        packet->gloss_power =
+            result.bindings[surface_index].surface_glossiness * 10.0f;
+        packet->opacity = 1.0f -
+            result.bindings[surface_index].surface_transparency;
+        packet->vertices = vertices;
+        packet->indices = indices;
+        packet->material = material;
+        packet->texture = &result.bindings[surface_index];
     }
-cleanup_bindings:
     material_pass_mesh_data_release(&mesh_data);
-    if (owned_bindings != NULL) {
-        model_texture_bindings_release(owned_bindings,
-                                       (uint32_t)model->n_surfaces);
-        free(owned_bindings);
+    *prepared = result;
+    return 1;
+
+fail:
+    material_pass_mesh_data_release(&mesh_data);
+    material_pass_prepared_release(&result);
+    return 0;
+}
+
+int material_pass_submit(const char* path_prefix, void* render_object,
+                         const MaterialPassPreparedModel* prepared)
+{
+    size_t surface_index;
+    if (render_object == NULL || prepared == NULL ||
+        (prepared->surface_count != 0u && prepared->surfaces == NULL)) return 0;
+    if (prepared->surface_count == 0u) return 1;
+    if (s_material_pass_ops.surface_submit == NULL) return 0;
+    for (surface_index = 0u; surface_index < prepared->surface_count;
+         ++surface_index) {
+        if (!s_material_pass_ops.surface_submit(
+                s_material_pass_ops.context, path_prefix, render_object,
+                &prepared->surfaces[surface_index])) return 0;
     }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00480ac0
+int material_pass_execute(const char* path_prefix, void* render_object,
+                          const Model* model, uint32_t flags)
+{
+    MaterialPassPreparedModel prepared;
+    int result;
+    if (render_object == NULL ||
+        !material_pass_prepare(path_prefix, model, flags, &prepared)) return 0;
+    result = material_pass_submit(path_prefix, render_object, &prepared);
+    material_pass_prepared_release(&prepared);
     return result;
 }
 
@@ -1297,6 +1384,9 @@ static uint32_t s_texture_memory_last_value;
 static Direct3DRMDeviceInitOps s_direct3drm_device_init_ops;
 static int s_direct3drm_device_mode = 1;
 static DirectDrawDeviceInitializeOps s_directdraw_device_initialize_ops;
+static DirectDrawDeviceSelection s_directdraw_device_selection = {
+    NULL, NULL, 1
+};
 
 void render_state_apply_hooks_set(const RenderStateApplyOps* ops)
 {
@@ -1990,7 +2080,10 @@ static uint32_t portable_model_render_entry_flags(void*, void* opaque_entry)
 static uint32_t portable_model_render_model_flags(void*, void* opaque_model)
 {
     (void)opaque_model;
-    return 0u;
+    /* The retail dispatch reads both tests from model + 0x2c.  The portable
+     * queue keeps that modeled word beside its borrowed Model pointer. */
+    return s_portable_model_render_active != NULL ?
+        s_portable_model_render_active->entry_flags : 0u;
 }
 
 static void portable_model_render_base_pass(void*, void* model, void* device,
@@ -2057,9 +2150,11 @@ void model_render_pass_dispatch(void* device)
             ops->model(ops->context, entry) : NULL;
         const void* parameters = ops->parameters != NULL ?
             ops->parameters(ops->context, entry) : NULL;
-        uint32_t entry_flags = ops->entry_flags != NULL ?
-            ops->entry_flags(ops->context, entry) : 0u;
-        if (model != NULL && (entry_flags & 1u) == 0u) {
+        uint32_t model_flags = model != NULL && ops->model_flags != NULL ?
+            ops->model_flags(ops->context, model) :
+            (model != NULL && ops->entry_flags != NULL ?
+             ops->entry_flags(ops->context, entry) : 0u);
+        if (model != NULL && (model_flags & 1u) == 0u) {
             if (ops->model_base_pass != NULL)
                 ops->model_base_pass(ops->context, model, device, parameters);
             else if (parameters != NULL)
@@ -2477,6 +2572,11 @@ void directdraw_device_initialize_ops_set(
                 sizeof(s_directdraw_device_initialize_ops));
 }
 
+void directdraw_device_selection_get(DirectDrawDeviceSelection* out)
+{
+    if (out != NULL) *out = s_directdraw_device_selection;
+}
+
 /* DirectDrawDeviceInitialize (FUN_0049d030): register standard modes,
  * enumerate adapters, optionally auto-select a supported display mode, then
  * enter the renderer initializer with the selected setup. */
@@ -2486,14 +2586,18 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
                                  const char* error_message)
 {
     int adapter_count;
-    int fullscreen = (windowed == 0) ? 1 : 0;
+    int fullscreen = 1;
     int selected = 0;
     int adapter_index;
     DirectDrawAdapterCandidate adapter;
     DirectDrawDisplayModeCandidate mode;
+    int result;
     /* FUN_0049d030 resets DAT_005754e0 and seeds the canonical resolution
      * filters before opening its dialog or trying automatic selection. */
     display_resolution_filter_tuples_reset();
+    memset(&s_directdraw_device_selection, 0,
+           sizeof(s_directdraw_device_selection));
+    s_directdraw_device_selection.fullscreen = 1;
     display_resolution_filter_tuple_append(640, 480, 16);
     if (register_extra_modes != 0) {
         display_resolution_filter_tuple_append(800, 600, 16);
@@ -2520,6 +2624,8 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
 
     if (auto_select != 0) {
         int mode_index;
+        fullscreen = (windowed == 0) ? 1 : 0;
+        s_directdraw_device_selection.fullscreen = fullscreen;
         for (adapter_index = adapter_count - 1;
              adapter_index >= 0 && !selected; --adapter_index) {
             int mode_count;
@@ -2534,7 +2640,15 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
             mode_count = s_directdraw_device_initialize_ops.mode_count_get(
                 s_directdraw_device_initialize_ops.context, adapter.adapter,
                 windowed);
-            for (mode_index = mode_count - 1; mode_index >= 0; --mode_index) {
+            if (mode_count < 0) {
+                if (s_directdraw_device_initialize_ops.error_show != NULL) {
+                    s_directdraw_device_initialize_ops.error_show(
+                        s_directdraw_device_initialize_ops.context,
+                        "Please install DirectX version 6.");
+                }
+                return 0;
+            }
+            for (mode_index = 0; mode_index < mode_count; ++mode_index) {
                 DirectDrawDisplayModeCandidate candidate;
                 memset(&candidate, 0, sizeof(candidate));
                 if (!s_directdraw_device_initialize_ops.mode_get(
@@ -2544,6 +2658,9 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
                         s_directdraw_device_initialize_ops.context,
                         adapter.adapter, &candidate, windowed)) {
                     mode = candidate;
+                    s_directdraw_device_selection.adapter = adapter.adapter;
+                    s_directdraw_device_selection.mode_descriptor =
+                        candidate.descriptor;
                     selected = 1;
                     break;
                 }
@@ -2562,16 +2679,24 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
         if (!s_directdraw_device_initialize_ops.adapter_get(
                 s_directdraw_device_initialize_ops.context, 0, &adapter)) return 0;
         selected = 1;
-        if (show_dialog != 0 &&
-            s_directdraw_device_initialize_ops.selection_dialog != NULL) {
+        s_directdraw_device_selection.adapter = adapter.adapter;
+        if (show_dialog != 0) {
+            if (s_directdraw_device_initialize_ops.selection_dialog == NULL) {
+                return 0;
+            }
             if (!s_directdraw_device_initialize_ops.selection_dialog(
                     s_directdraw_device_initialize_ops.context, 0,
                     &adapter, &mode, &fullscreen)) return 0;
+            s_directdraw_device_selection.adapter = adapter.adapter;
+            s_directdraw_device_selection.mode_descriptor = mode.descriptor;
+            s_directdraw_device_selection.fullscreen = fullscreen;
         }
     }
-    return s_directdraw_device_initialize_ops.renderer_initialize(
+    s_directdraw_device_selection.fullscreen = fullscreen;
+    result = s_directdraw_device_initialize_ops.renderer_initialize(
         s_directdraw_device_initialize_ops.context, fullscreen,
         adapter.adapter, mode.descriptor != NULL ? &mode : NULL);
+    return result;
 }
 
 /* RendererWindowModeApply (FUN_004780b0): retain the requested dimensions,
@@ -3525,6 +3650,12 @@ TextureSurface* font_atlas_record_surface_get(const void* opaque_record)
     return record != NULL ? record->surface : NULL;
 }
 
+int font_atlas_record_line_height_get(const void* opaque_record)
+{
+    const FontAtlasRecord* record = (const FontAtlasRecord*)opaque_record;
+    return record != NULL ? (int)record->line_height : 0;
+}
+
 int font_atlas_record_glyph_get(const void* opaque_record,
                                 unsigned char glyph, float rect_out[4])
 {
@@ -3560,6 +3691,65 @@ void font_pixel_format_hooks_set(FontPixelFormatQueryFn query,
     s_font_pixel_format_release = release;
 }
 
+/* FontDeviceColorConvert receives the raw DirectDraw surface interface used
+ * by FontRecordCreate. The retail code locks it with a 0x7c-byte descriptor,
+ * reads the RGB masks, and unlocks it. Keep that operation on the raw surface
+ * here; the portable DisplaySurface wrapper is a different object contract. */
+static int font_device_pixel_format_query(void* device,
+                                         uint32_t* bits_per_pixel,
+                                         uint32_t* red_mask,
+                                         uint32_t* green_mask,
+                                         uint32_t* blue_mask)
+{
+    if (device == NULL || bits_per_pixel == NULL || red_mask == NULL ||
+        green_mask == NULL || blue_mask == NULL) return 1;
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    {
+        DDSURFACEDESC descriptor;
+        HRESULT result;
+        memset(&descriptor, 0, sizeof(descriptor));
+        descriptor.dwSize = 0x7cu;
+        result = ((IDirectDrawSurface*)device)->Lock(
+            NULL, &descriptor, (DDLockFlags)1, NULL);
+        if (result != DD_OK) return 1;
+        *bits_per_pixel = descriptor.ddpfPixelFormat.dwRGBBitCount;
+        *red_mask = descriptor.ddpfPixelFormat.dwRBitMask;
+        *green_mask = descriptor.ddpfPixelFormat.dwGBitMask;
+        *blue_mask = descriptor.ddpfPixelFormat.dwBBitMask;
+        (void)((IDirectDrawSurface*)device)->Unlock(NULL);
+        return 0;
+    }
+#elif defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    {
+        typedef HRESULT (SURFACE_COM_CALL *SurfaceLockFn)(
+            void*, void*, void*, DWORD, HANDLE);
+        typedef HRESULT (SURFACE_COM_CALL *SurfaceUnlockFn)(void*, void*);
+        unsigned char descriptor[0x7c];
+        void** vtable = surface_interface_vtable(device);
+        SurfaceLockFn lock_surface;
+        SurfaceUnlockFn unlock_surface;
+        HRESULT result;
+        DWORD descriptor_size = 0x7cu;
+        if (vtable == NULL || vtable[25] == NULL || vtable[32] == NULL)
+            return 1;
+        lock_surface = (SurfaceLockFn)vtable[25];
+        unlock_surface = (SurfaceUnlockFn)vtable[32];
+        memset(descriptor, 0, sizeof(descriptor));
+        memcpy(descriptor, &descriptor_size, sizeof(descriptor_size));
+        result = lock_surface(device, NULL, descriptor, 1u, NULL);
+        if (result != 0) return 1;
+        memcpy(bits_per_pixel, descriptor + 0x54u, sizeof(*bits_per_pixel));
+        memcpy(red_mask, descriptor + 0x58u, sizeof(*red_mask));
+        memcpy(green_mask, descriptor + 0x5cu, sizeof(*green_mask));
+        memcpy(blue_mask, descriptor + 0x60u, sizeof(*blue_mask));
+        (void)unlock_surface(device, NULL);
+        return 0;
+    }
+#else
+    return 1;
+#endif
+}
+
 // FUNCTION: LEGORR 0x0047e190
 uint32_t font_device_color_convert(void* device, uint32_t color)
 {
@@ -3577,9 +3767,12 @@ uint32_t font_device_color_convert(void* device, uint32_t color)
     uint32_t red = color & 0xffu;
     uint32_t green = (color >> 8) & 0xffu;
     uint32_t blue = (color >> 16) & 0xffu;
-    if (s_font_pixel_format_query == NULL ||
-        s_font_pixel_format_query(device, &bits_per_pixel, &red_mask,
-                                  &green_mask, &blue_mask) != 0) {
+    if ((s_font_pixel_format_query != NULL
+             ? s_font_pixel_format_query(device, &bits_per_pixel, &red_mask,
+                                         &green_mask, &blue_mask)
+             : font_device_pixel_format_query(device, &bits_per_pixel,
+                                              &red_mask, &green_mask,
+                                              &blue_mask)) != 0) {
         return 0u;
     }
     red_bits = (uint32_t)pop_count32(red_mask);
@@ -3595,7 +3788,8 @@ uint32_t font_device_color_convert(void* device, uint32_t color)
     if (bits_per_pixel < 32u) {
         result &= (1u << (bits_per_pixel & 31u)) - 1u;
     }
-    if (s_font_pixel_format_release != NULL) {
+    if (s_font_pixel_format_query != NULL &&
+        s_font_pixel_format_release != NULL) {
         s_font_pixel_format_release(device);
     }
     return result;
@@ -5014,12 +5208,49 @@ void surface_blit_texture(void* px, int pitch, int w, int h,
                 continue;
             }
             uint32_t p = t->pixels[yy * t->width + xx];
+            if (t->source_key_set) {
+                uint32_t rgb = p & 0x00ffffffu;
+                uint32_t key_low = t->source_key_low & 0x00ffffffu;
+                uint32_t key_high = t->source_key_high & 0x00ffffffu;
+                uint32_t key_min = key_low < key_high ? key_low : key_high;
+                uint32_t key_max = key_low < key_high ? key_high : key_low;
+                if (rgb >= key_min && rgb <= key_max) continue;
+            }
             row[dx * 4 + 0] = (unsigned char)(p >> 16); /* R */
             row[dx * 4 + 1] = (unsigned char)(p >> 8);  /* G */
             row[dx * 4 + 2] = (unsigned char)(p);       /* B */
             row[dx * 4 + 3] = (unsigned char)(p >> 24); /* A */
         }
     }
+}
+
+static uint32_t surface_image_key_color(float red, float green, float blue)
+{
+    uint8_t r = (uint8_t)crt_float_to_long(red);
+    uint8_t g = (uint8_t)crt_float_to_long(green);
+    uint8_t b = (uint8_t)crt_float_to_long(blue);
+    return ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
+}
+
+/* ImageSurfaceBlitTransformed (FUN_0047dbf0) converts the supplied channel
+ * triples through the resource's pixel representation, installs the source
+ * color-key range, and marks wrapper flag bit 1. The portable resource is a
+ * decoded ARGB TextureSurface, so its equivalent key is stored as RGB24. */
+// FUNCTION: LEGORR 0x0047dbf0
+void image_surface_blit_transformed(TextureSurface* surface,
+                                    float low_red, float low_green,
+                                    float low_blue, float high_red,
+                                    float high_green, float high_blue)
+{
+    uint32_t low;
+    uint32_t high;
+    if (surface == NULL) return;
+    low = surface_image_key_color(low_red, low_green, low_blue);
+    high = surface_image_key_color(high_red, high_green, high_blue);
+    surface->source_key_low = low;
+    surface->source_key_high = high;
+    surface->source_key_set = 1;
+    surface->resource_flags |= 2u;
 }
 
 void surface_draw_sweep(void* px, int pitch, int w, int h, int frame)
@@ -5439,38 +5670,6 @@ void ledger_stub_004830c0_AnimatedTextureFrameSurfaceSet(
 
 // LoadLWSCScene
 
-static TextureSurfaceCreateHook s_texture_surface_create_hook;
-static void* s_texture_surface_create_context;
-
-void texture_surface_create_hook_set(TextureSurfaceCreateHook hook,
-                                     void* context)
-{
-    s_texture_surface_create_hook = hook;
-    s_texture_surface_create_context = context;
-}
-
-// FUNCTION: LEGORR 0x004744f0
-static void* texture_surface_create_impl(
-    const char* name, uint32_t mode, uint32_t* value_out,
-    uint32_t mode_data)
-{
-    if (name == NULL) return NULL;
-    if (s_texture_surface_create_hook != NULL) {
-        return s_texture_surface_create_hook(s_texture_surface_create_context,
-                                             name, mode, value_out,
-                                             mode_data);
-    }
-    return texture_surface_create_host_record(name, mode);
-}
-
-void* ledger_stub_004744f0_TextureSurfaceCreate(
-    const char* name, uint32_t mode, uint32_t* value_out,
-    uint32_t mode_data)
-{
-    return texture_surface_create_impl(name, mode, value_out, mode_data);
-}
-
-
 // MeshRecordAllocateOrAppend compatibility entrypoint.
 int ledger_stub_004748f0_MeshRecordAllocateOrAppend(
     void* object, uint32_t vertex_count, uint32_t index_rows,
@@ -5582,24 +5781,39 @@ int ledger_stub_00481820_BindModelTextures(
     const char* path_prefix, const Model* model,
     ModelTextureBinding* bindings, int force_source_color)
 {
-    return bind_model_textures_for_model(path_prefix, model, bindings,
-                                         force_source_color);
+    bind_model_textures_for_model(path_prefix, model, bindings,
+                                  force_source_color);
+    return model != NULL &&
+        (model->n_surfaces == 0u || bindings != NULL) ? 1 : 0;
 }
 
 
 } // namespace unported_ledger_stubs
 
-void* texture_surface_create(const char* name, uint32_t mode,
-                             uint32_t* value_out, uint32_t mode_data)
-{
-    return unported_ledger_stubs::texture_surface_create_impl(
-        name, mode, value_out, mode_data);
-}
-
 void texture_surface_create_hook_set(TextureSurfaceCreateHook hook,
                                      void* context)
 {
-    unported_ledger_stubs::texture_surface_create_hook_set(hook, context);
+    s_texture_surface_create_hook = hook;
+    s_texture_surface_create_context = context;
+}
+
+/* TextureSurfaceCreate (FUN_004744f0): mode zero resolves the configured
+ * renderer surface database; nonzero mode uses the named bitmap path. The
+ * configured database and its COM object tree are renderer-owned, so the
+ * hook handles that route. Mode one can use the portable BMP decoder and its
+ * release-tracked host record. */
+// FUNCTION: LEGORR 0x004744f0
+void* texture_surface_create(const char* name, uint32_t mode,
+                             uint32_t* value_out, uint32_t mode_data)
+{
+    if (name == NULL) return NULL;
+    if (s_texture_surface_create_hook != NULL) {
+        return s_texture_surface_create_hook(s_texture_surface_create_context,
+                                             name, mode, value_out,
+                                             mode_data);
+    }
+    if (mode != 1u) return NULL;
+    return texture_surface_create_host_record(name, mode);
 }
 
 #undef SURFACE_COM_CALL

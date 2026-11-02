@@ -60,6 +60,7 @@ extern "C" {
 #define LEVEL_OFF_LAYERL_COUNT     0x0C  /* LoadLayerL record count              */
 #define LEVEL_OFF_WIDTH            0x14  /* grid width  (from first map header)  */
 #define LEVEL_OFF_HEIGHT           0x18  /* grid height (from first map header)  */
+#define LEVEL_OFF_CELL_RESOURCES   0x7C  /* LoadTileVariants descriptor          */
 #define LEVEL_OFF_BLOCKSIZE        0x1C  /* float                                  */
 #define LEVEL_OFF_DIGDEPTH         0x20  /* float                                  */
 #define LEVEL_OFF_ROOFHEIGHT       0x24  /* float                                  */
@@ -83,6 +84,7 @@ extern "C" {
 #define LEVEL_OFF_MAXVARIATION     0x20C /* +0x83 float BuildingMaxVariation     */
 #define LEVEL_OFF_CRYSTALS         0x230 /* +0x8c live crystal count (reader)      */
 #define LEVEL_OFF_ORE              0x280 /* +0xa0 live ore count (reader)         */
+#define LEVEL_OFF_DISABLE_START_TELEPORT 0x280 /* +0xa0 load-time inverted config flag */
 #define LEVEL_OFF_STATE84          0x84  /* active-engine dword read (FUN_0042b500) */
 #define LEVEL_OFF_RES_A            0xA0  /* upgrade resource check (selector 0)    */
 #define LEVEL_OFF_ENGINE_B0        0xB0  /* active-engine dword read (FUN_00429850) */
@@ -103,6 +105,8 @@ typedef struct MapFile {
     int32_t  height;  /* +0x0C */
     uint32_t slot;
 } MapFile;
+
+struct TerrainCellResourceGrid;
 
 /* Open a `.map` resource (loose file or wad member) and byteswap-free read
  * dims. Returns NULL when the resource cannot be opened. */
@@ -128,7 +132,9 @@ typedef struct LevelTerrainMaterialTransitionSlot {
     float timer;
     int32_t cell_x;
     int32_t cell_y;
-    float saved_xy[4][2];
+    /* The source transition record saves vertex payload words 6 and 7
+     * (the two UV words), not the XYZ positions. */
+    float saved_uv[4][2];
     uint32_t reserved;
     uint32_t flags;
 } LevelTerrainMaterialTransitionSlot;
@@ -145,6 +151,8 @@ typedef struct LevelState {
     struct TerrainTileMeshGrid* ptr_tile_mesh_grid;
                                 /* per-level port sidecar for the
                                  * TextureSetConfigLoad render resources */
+    struct TerrainCellResourceGrid* ptr_cell_resources;
+                                /* corpus +0x7c LoadTileVariants descriptor */
     void* ptr_terrain_quad_runs;
                                 /* per-level CellQuadRunStage records */
     struct LevelCellKindGrid* ptr_cell_kind_grid;
@@ -260,6 +268,8 @@ static inline void level_store_ptr(LevelState* s, int off, const void* p)
     case LEVEL_OFF_NEXTLEVEL:    s->ptr_next = (void*)u; break;
     case LEVEL_OFF_LEVEL_NAME:   s->ptr_name = (void*)u; break;
     case LEVEL_OFF_FULLNAME:     s->ptr_full_name = (void*)u; break;
+    case LEVEL_OFF_CELL_RESOURCES:
+        s->ptr_cell_resources = (struct TerrainCellResourceGrid*)u; break;
     default: break;
     }
 }
@@ -272,6 +282,7 @@ static inline void* level_load_ptr(const LevelState* s, int off)
     case LEVEL_OFF_NEXTLEVEL:    return s->ptr_next;
     case LEVEL_OFF_LEVEL_NAME:   return s->ptr_name;
     case LEVEL_OFF_FULLNAME:     return s->ptr_full_name;
+    case LEVEL_OFF_CELL_RESOURCES: return s->ptr_cell_resources;
     default: return NULL;
     }
 }
@@ -430,8 +441,8 @@ void* terrain_create_retail(void* engine_context, const char* surface_map,
                             float blocksize, float terrain_value);
 void terrain_destroy(void* terrain);
 /* GridCellReadSurfaceValues (FUN_00450220): copy four indexed geometry
- * vertices as twelve raw float words. The level helper reports whether the
- * CPU terrain geometry could satisfy the request. */
+ * vertices as twelve raw float words through the terrain-owned mode-2 mesh
+ * record and IndexedGeometryDataCopyToOutput reader. */
 void grid_cell_read_surface_values(void* terrain, int x, int y,
                                    float out_values[12]);
 int terrain_cell_surface_values_available(const void* terrain, int x, int y);
@@ -1202,24 +1213,26 @@ void cell_list_apply_state_install(void* scene_object, int scale);
 void* cell_list_object_peek(void);
 uint32_t cell_list_apply_flags_peek(void);
 
-/* --- tile-variant grid-record table (2026-10-24) --------------------------
- * The corpus keeps a fixed 300-block record region (DAT block stride
- * 0x31 dwords; block word 0 is a variant-record pointer and words 1..15
- * are per-field flag words, with two variant-value tables aliasing the
- * region 16 and 32 dwords behind each block). Nothing ported feeds the
- * table contents, so the region lands as a zero-initialized module
- * static (the timestamp-table precedent); the variant-pointer branches
- * therefore answer the default records (zero) in port cases. The corpus
- * indexes these tables blindly; every port leaf bounds-checks first and
- * reports the unaddressable cell as zero / no-op (deviation). */
+/* --- dependency and terrain grid tables ----------------------------------
+ * The retail region is 300 cells addressed as y + x * 15 (20 by 15), with
+ * 0x31 dwords per cell. Each block's dword 0 is the variant-record-present
+ * selector, and dwords 1..16 hold the cell's flag words. The parallel
+ * dependency-count and dependency-pointer tables occupy dwords 0..15 and
+ * 16..31 of the same region, respectively; TerrainCellRecordGet indexes
+ * those pairs by cell * 0x31 + field, falling back to field 0 when the
+ * selector is clear. DependencyGridConfigLoad now populates the active
+ * LevelState sidecar with these pointer/count pairs. The static region
+ * remains the zero-initialized fallback for calls without a loaded level.
+ * The corpus indexes blindly; the port bounds-checks unaddressable cells. */
 
 /* GridRecordFlagMaskClear (FUN_0040ab30): sweep the whole region and
  * clear mask 0x10c from each of the first sixteen block words. */
 void grid_record_flag_mask_clear(void);
 
-/* TerrainCellRecordGet (FUN_0040af90, findings 377/380/451): resolve a
- * 20x15 dependency cell and return its selected record pointer word and
- * count. This retains the retail 32-bit output image; native code must use
+/* TerrainCellRecordGet (FUN_0040af90, findings 377/380/451): resolve the
+ * selector at cell * 0x31, then return pointer/count from the parallel tables
+ * at cell * 0x31 + field (or field 0 when no variant records are present).
+ * This retains the retail 32-bit output image; native code must use
  * dependency_grid_cell_record_get_native() to dereference LevelState-owned
  * records without truncating host pointers. NULL outputs skip stores. */
 void terrain_cell_record_get(int x, int y, int field,
@@ -1413,17 +1426,20 @@ uint32_t level_fielda8_get(const LevelState* s);
 
 /* --- coordinate-callback dispatchers (2026-10-24) ----------------------------
  * TerrainCellRefreshDispatch (FUN_00402ae0, findings 451/362): pass the
- * coordinate pair and mode through EntityPoolCallbackSearch, then clear the
- * cell's surface type. The recovered target calls LAB_00402bb0, whose body
- * is unavailable; the port scans the live CmdRec owner for matching task
- * records and applies their state/occupancy updates. Explicit-context
- * callers use the observed mode-zero behavior. The port guards a missing
- * level/terrain handle; the target dereferences its current-level result.
+ * coordinate pair and mode through EntityPoolCallbackSearch, then reset the
+ * cell's surface type. LAB_00402bb0 is unavailable, so its behavior is an
+ * optional entity callback. Explicit-context callers use mode zero. The
+ * port guards a missing level/terrain handle; the target dereferences its
+ * current-level result.
  * CoordinateCallbackDispatch / CoordinateCallbackDispatchByMode
  * (FUN_00402b30 / FUN_00402b60, finding 362/465): the pair-wrapping
  * dispatchers — their whole observable body is the unported callback
  * machinery above, so the port records the seam and changes no state. */
 struct GameContext;
+typedef int (*TerrainCellRefreshEntityCallback)(struct EntitySlot* entity,
+    const int cell_xy[2], int mode, void* context);
+void terrain_cell_refresh_entity_callback_install(
+    TerrainCellRefreshEntityCallback callback, void* context);
 void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
                                    int y);
 void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode);
@@ -1593,6 +1609,7 @@ uint32_t path_record_entity_count_get(const void* record);
 struct EntitySlot* path_record_entity_get(const void* record,
                                           uint32_t index);
 void path_record_cell_links_release(LevelState* level, const void* record);
+void path_record_remove_and_free(void* record); /* FUN_004099f0 */
 void path_record_release(void* record);
 void* tutorial_path_descriptor_create(const uint32_t* coord_pair);
                                                 /* FUN_00409300 */

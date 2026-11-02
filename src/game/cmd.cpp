@@ -6,6 +6,7 @@
 
 #include "cmd.hpp"
 #include "ai.hpp"
+#include "effects.hpp"
 #include "spawn.hpp"
 #include "select.hpp"
 #include "level.hpp"
@@ -734,6 +735,15 @@ static int cmd_place_entity_task_gate(void*, const EntitySlot* entity,
     return scene_object_has_task_type_4_5_7(entity);
 }
 
+static int cmd_place_kind3_entity_target_relation(
+    void*, const EntitySlot* entity, const EntitySlot* target)
+{
+    /* FUN_00404fc0's kind-3 branch calls FUN_00439b80(entity, target)
+     * after the type/name lookup. This is the mask-2 spatial eligibility
+     * check, distinct from the 4/5/7 activity gate used by kind 0x1a. */
+    return entity_task_target_cell_eligibility_check(entity, target);
+}
+
 static int cmd_place_kind1_activity_gate(void*, const EntitySlot* entity)
 {
     /* FUN_00404fc0's type-1 kind-3 predicate calls FUN_00469bb0, which is
@@ -744,10 +754,10 @@ static int cmd_place_kind1_activity_gate(void*, const EntitySlot* entity)
 static int cmd_place_object_radius_gate(void*, const EntitySlot* entity,
                                        const EntitySlot* target)
 {
-    /* FUN_00472130 first checks FUN_0043c440's activity class (4/5/7),
-     * which differs from the cheat-gate helper FUN_0044c530. */
-    return ai_activity_probe(entity) != 0 &&
-           entity_centers_within_object_radius(entity, target);
+    /* FUN_00472130 compares the object centers using the first entity's
+     * collision radius. The preceding FUN_004493e0 call is the separate
+     * activity-4/5/7 gate; do not add FUN_0043c440's activity probe here. */
+    return entity_centers_within_object_radius(entity, target);
 }
 
 static int cmd_place_entity_can_target_kind(void*, const EntitySlot* entity,
@@ -760,7 +770,7 @@ static int cmd_place_entity_can_target_kind(void*, const EntitySlot* entity,
 
 static int cmd_place_target_activity_gate(void*, const EntitySlot* entity)
 {
-    return s_ctx != NULL && ai_activity_cap(s_ctx, entity) != 0;
+    return s_ctx != NULL && ai_activity_cap_for_context(s_ctx, entity) != 0;
 }
 
 static int cmd_place_target_visibility_check(void*, const EntitySlot* entity,
@@ -831,6 +841,8 @@ static void cmd_place_eligibility_ops_bind(void)
         cmd_place_entity_can_target_kind;
     s_place_eligibility_ops.kind3_target_gate = cmd_place_kind3_target_gate;
     s_place_eligibility_ops.entity_target_gate = cmd_place_entity_task_gate;
+    s_place_eligibility_ops.entity_target_relation =
+        cmd_place_kind3_entity_target_relation;
     s_place_eligibility_ops.entity_radius_gate = cmd_place_object_radius_gate;
     s_place_eligibility_ops.entity_ray_gate = cmd_place_ray_gate;
     s_place_eligibility_ops.entity_eligible = cmd_place_eligibility_gate;
@@ -969,8 +981,9 @@ static int pending_record_matches_entity(const CmdRec* record,
                                           record->count,
                                           (int)(uintptr_t)entity, NULL);
     }
-    /* FUN_00452610(entity, 0): the +0x3e8 entity flag word, bit 0x200000. */
-    return (entity->flags_3e8 & 0x200000u) != 0u;
+    /* The assignment loop accepts entities for which FUN_00452610(entity,0)
+     * is false, i.e. entities not already marked selected in +0x3e8. */
+    return (entity->flags_3e8 & 0x200000u) == 0u;
 }
 
 static int cmd_entity_global_record_special_step(EntitySlot* entity,
@@ -1975,7 +1988,12 @@ void pending_command_entity_assignment_tick(void)
                         NULL, &eligibility_immediate, 1, 1))
                     continue;
                 if (!coordinate_kind) {
-                    if (eligibility_immediate == 0u) continue;
+                    /* Kind 0x11's placement predicate returns its eligibility
+                     * directly after checking target eligibility, minifigure
+                     * type, energy, and task flags; unlike the default arm it
+                     * does not set the optional immediate-result word. */
+                    if (eligibility_immediate == 0u && record->type != 0x11)
+                        continue;
                     selected = entity;
                     selected_index = i;
                     selected_cell_x = 0;
@@ -2449,8 +2467,6 @@ static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
         e->cmd_head = rec;
     }
     rec->next = NULL; /* entity-chain tail: never re-link onto the global list */
-    rec->now = 1500.0f;
-    rec->state &= ~CMD_STATE_PENDING;
     if (as_move && e->etype == 2) {
         idle_register(e); /* IdleQueueRegister for fresh move commands */
     }
@@ -2490,16 +2506,26 @@ void cmd_create_move(EntitySlot* e, float x, float y, int flag)
 // FUNCTION: LEGORR 0x004036c0
 void cmd_create_target(EntitySlot* e, void* target)
 {
+    CmdRec* rec;
+    CmdRec* tail;
     if (e == NULL) {
         return;
     }
-    CmdRec* rec = (CmdRec*)cmd_alloc(2);
+    rec = (CmdRec*)cmd_alloc(2);
     if (rec == NULL) {
         return;
     }
     rec->payload = target;
     rec->now = 0.0f;
-    cmd_chain_append(e, rec, 0);
+    /* CmdCreateTarget writes +0x14 = 0 and links the tail directly; it does
+     * not use the global-list link helper that seeds 1500.0f. */
+    tail = as_rec(cmd_chain_walk(e));
+    if (tail != NULL) {
+        tail->next = rec;
+    }
+    else {
+        e->cmd_head = rec;
+    }
 }
 
 // FUNCTION: LEGORR 0x00403610
@@ -2552,7 +2578,7 @@ static void cmd_minion_companion(EntitySlot* e)
 }
 
 // FUNCTION: LEGORR 0x00402720
-void cmd_create_task(EntitySlot* e)
+void cmd_create_task(EntitySlot* e, int32_t parameter)
 {
     if (e == NULL) {
         return;
@@ -2562,7 +2588,7 @@ void cmd_create_task(EntitySlot* e)
         return;
     }
     rec->payload = e;
-    rec->param2 = 0;
+    rec->param2 = parameter;
     int kind = task_kind_for(e);
     if (e->type == 8) {
         rec->extra = 8; /* type-8 trains set the extra slot */
@@ -2571,26 +2597,38 @@ void cmd_create_task(EntitySlot* e)
     cmd_minion_companion(e);
 }
 
-/* ObjectCommandTaskCreate (FUN_00403320): append a type-0x15 task record
- * carrying the spatial-query result and the caller's parameter. */
-void* cmd_entity_task_record_create_and_append(EntitySlot* e, void* payload,
-                                               int parameter)
+/* ObjectCommandTaskCreate (FUN_00403320): resolve a task target according to
+ * the entity kind, then append a type-0x15 record carrying that target and
+ * the caller's parameter. */
+// FUNCTION: LEGORR 0x00403320
+void object_command_task_create(EntitySlot* entity, int parameter)
 {
+    void* target = NULL;
     CmdRec* rec;
     CmdRec* tail;
-    if (e == NULL || payload == NULL) return NULL;
+    if (entity == NULL) return;
+    if (entity->type == 2 && (entity->flags_3e0 & 0x400u) == 0u) {
+        float position[2];
+        entity_transform_position_get(entity, position);
+        target = entity_lookup_at_world_position(position);
+    }
+    else if (entity->type == 1) {
+        target = unported_ledger_stubs::
+            ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(entity);
+    }
+    if (target == NULL) return;
+
     rec = (CmdRec*)cmd_alloc(0x15);
-    if (rec == NULL) return NULL;
-    rec->payload = payload;
+    if (rec == NULL) return; /* allocation failure is a port-only guard */
+    rec->payload = target;
     rec->cell_count = parameter;
     /* FUN_00403320 allocates and fills the new record before sweeping the
      * existing chain, then appends it through FUN_00404190's tail walk. */
-    command_queue_sweep_relink(e);
-    tail = as_rec(cmd_chain_walk(e));
+    command_queue_sweep_relink(entity);
+    tail = as_rec(cmd_chain_walk(entity));
     if (tail != NULL) tail->next = rec;
-    else e->cmd_head = rec;
+    else entity->cmd_head = rec;
     rec->next = NULL;
-    return rec;
 }
 
 /* ObjectPathSubmitToGridTarget (FUN_00404e00): a target already on the
@@ -3001,6 +3039,27 @@ static void cmd_pool_timer_delta_walk(float* delta)
         for (index = 0u; index < count; ++index) {
             if (s_block_live[block_index][index] != 0u)
                 (void)cmd_pool_timer_delta_apply(&block[index], delta);
+        }
+    }
+}
+
+/* LAB_004021f0, passed to FUN_00406540 by CmdFlushAll: the pool walk visits
+ * each allocated command record, frees it with cancel=1, and returns zero so
+ * enumeration continues. The live bitmap is the port's representation of
+ * the retail record's +0x64 self-pointer test. */
+static void cmd_pool_records_release_all(void)
+{
+    int block_index;
+    for (block_index = 0; block_index < s_pool_level; ++block_index) {
+        CmdRec* block = s_blocks[block_index];
+        uint8_t* live = s_block_live[block_index];
+        uint32_t count = 1u << (block_index & 0x1fu);
+        uint32_t index;
+        if (block == NULL || live == NULL) continue;
+        for (index = 0u; index < count; ++index) {
+            if (live[index] != 0u) {
+                cmd_free(&block[index], 1);
+            }
         }
     }
 }
@@ -4005,8 +4064,9 @@ void cmd_flush_all(int disable_mode)
         s_global_enabled &= ~2;
         return;
     }
-    /* The entity callback sweep (LAB_004021f0) is the unported registry
-     * seam. The corpus clears the full pending-command count matrix here. */
+    /* FUN_00406540(&LAB_004021f0, 0): release each currently allocated
+     * command record before resetting the scheduler roots and count tables. */
+    cmd_pool_records_release_all();
     s_global_enabled |= 2;
     s_global_head = NULL;
     s_global_tail = NULL;
@@ -5714,13 +5774,14 @@ void simulation_mode_counter_add(int mode, int count)
  * CommandSampleStatsAccumulate (FUN_0046b660) operates on one 0x27c-byte
  * record per type. The record's twenty sample pointers begin at +0x20c;
  * its count/head/window-total/cumulative-total/high-water words live at
- * +0x25c..+0x26c. The initialization loop at 0x46b3xx clears 0x1839 dwords,
- * exactly 39 records of 0x9f dwords each. Keep that physical layout here;
- * command_sample_stats_peek() below exposes the compact 0..24 inspection
- * view used by port callers. The reference blindly writes past the twenty
- * pointer log when its count exceeds twenty. Preserve the count but bound
- * those out-of-record writes in the portable implementation. */
-#define CMD_STATS_KINDS 39u
+ * +0x25c..+0x26c. These words overlap the timed-effect table owned by the
+ * frontend module, so update the shared record returned by its storage API.
+ * command_sample_stats_peek() exposes the compact 0..24 inspection view.
+ * The reference does not clamp the pointer-log index at twenty. The port
+ * keeps the log within its known twenty-word allocation because the
+ * reference's later writes can corrupt other timed-effect records and the
+ * decompile provides no bound for writes beyond the 40-record table. */
+#define CMD_STATS_KINDS 40u
 #define CMD_STATS_LOG_DWORD 131u /* +0x20c */
 #define CMD_STATS_LOG_DWORDS 20u
 #define CMD_STATS_COUNT_DWORD 151u /* +0x25c */
@@ -5728,9 +5789,6 @@ void simulation_mode_counter_add(int mode, int count)
 #define CMD_STATS_WINDOW_DWORD 153u /* +0x264 */
 #define CMD_STATS_TOTAL_DWORD 154u /* +0x268 */
 #define CMD_STATS_HIGH_DWORD 155u /* +0x26c */
-#define CMD_STATS_RECORD_DWORDS 159u /* stride +0x27c */
-
-static uint32_t s_cmd_stats[CMD_STATS_KINDS][CMD_STATS_RECORD_DWORDS];
 
 // FUNCTION: LEGORR 0x0046b660
 void command_sample_stats_accumulate(int kind, const void* sample)
@@ -5738,7 +5796,10 @@ void command_sample_stats_accumulate(int kind, const void* sample)
     if (kind < 0 || (unsigned)kind >= CMD_STATS_KINDS) {
         return;
     }
-    uint32_t* slot = s_cmd_stats[kind];
+    TimedEffectRecord* record = timed_effect_record_get((unsigned int)kind);
+    uint32_t* slot;
+    if (record == NULL) return;
+    slot = (uint32_t*)record;
     if (sample == NULL) {
         slot[CMD_STATS_HEAD_DWORD] = 0u;
         slot[CMD_STATS_TOTAL_DWORD] = 0u;
@@ -5775,14 +5836,28 @@ uint32_t command_sample_stats_peek(int kind, int field)
         return 0u;
     }
     if (field < (int)CMD_STATS_LOG_DWORDS) {
-        return s_cmd_stats[kind][CMD_STATS_LOG_DWORD + field];
+        TimedEffectRecord* record = timed_effect_record_get((unsigned int)kind);
+        return record != NULL
+            ? ((const uint32_t*)record)[CMD_STATS_LOG_DWORD + field] : 0u;
     }
     switch (field) {
-    case 20: return s_cmd_stats[kind][CMD_STATS_COUNT_DWORD];
-    case 21: return s_cmd_stats[kind][CMD_STATS_HEAD_DWORD];
-    case 22: return s_cmd_stats[kind][CMD_STATS_WINDOW_DWORD];
-    case 23: return s_cmd_stats[kind][CMD_STATS_TOTAL_DWORD];
-    case 24: return s_cmd_stats[kind][CMD_STATS_HIGH_DWORD];
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+    case 24: {
+        TimedEffectRecord* record = timed_effect_record_get((unsigned int)kind);
+        const uint32_t* slot;
+        if (record == NULL) return 0u;
+        slot = (const uint32_t*)record;
+        switch (field) {
+        case 20: return slot[CMD_STATS_COUNT_DWORD];
+        case 21: return slot[CMD_STATS_HEAD_DWORD];
+        case 22: return slot[CMD_STATS_WINDOW_DWORD];
+        case 23: return slot[CMD_STATS_TOTAL_DWORD];
+        case 24: return slot[CMD_STATS_HIGH_DWORD];
+        }
+    }
     default: return 0u;
     }
 }
@@ -5910,7 +5985,6 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
             (entity->flags_3e0 & 0x800000u) != 0u ||
             (entity->flags_3ec & 0x400u) != 0u ||
             !scene_object_has_task_type_4_5_7(entity) ||
-            ai_activity_probe(entity) == 0 ||
             !entity_centers_within_object_radius(entity, target) ||
             see_through_walls_ray_check(entity, target) != 0 ||
             entity_shared_eligibility_check(target, 1) == 0 ||
@@ -6020,7 +6094,7 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
             (entity->flags_3ec & 0x400u) != 0u ||
             (context != NULL && (context->cheat & 1u) != 0u &&
              ai_can_do(entity) != 0) ||
-            ai_activity_cap(context, entity) == 0 ||
+            ai_activity_cap_for_context(context, entity) == 0 ||
             ai_activity_scan(entity, (int)command->field_e) != 0) return 0;
         entity_transform_position_get(entity, actor_position);
         target = entity_lookup_at_world_position(actor_position);
@@ -6195,7 +6269,11 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
                 ((command->field_17 & 8u) != 0u &&
                  (entity_stats_word_get(entity) & 1u) == 0u)) return 0;
         }
-        if (require_command_gate && kind != 0 &&
+        /* FUN_00404fc0 calls FUN_0044b4c0 only in the 8/0/0xb/0xc
+         * command group and in the separate kind-10 arm. Kind 0x16 has an
+         * unconditional FUN_00432550 coordinate gate instead. */
+        if (require_command_gate &&
+            (kind == 8 || kind == 0xb || kind == 0xc || kind == 10) &&
             !pending_command_activity_gate(entity, kind)) return 0;
         if ((kind == 0x0b && entity->type != 2) ||
             (kind == 0x0c &&
@@ -6219,7 +6297,10 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
                     context->level->ptr_terrain, cell_x, cell_y,
                     screen_xy)) return 0;
         }
-        if (world_xy != NULL) {
+        /* Kind 10 reaches FUN_004424f0 only inside the target-position
+         * output branch: the reference leaves param_4 untouched when
+         * param_3 is null. Other coordinate kinds write param_4 directly. */
+        if (world_xy != NULL && (kind != 10 || screen_xy != NULL)) {
             if (kind == 10) {
                 if (command->target == NULL || context == NULL ||
                     context->level == NULL) return 0;
@@ -6335,7 +6416,8 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
         (void)ledger_stub_00404ed0_CheckObjectCandidate(
             target);
         if (ops->entity_target_relation == NULL ||
-            !ops->entity_target_relation(ops->context, entity, 0)) return 0;
+            !ops->entity_target_relation(ops->context, entity, target))
+            return 0;
         if (screen_xy != NULL &&
             (ops->target_position_get == NULL ||
              !ops->target_position_get(ops->context, target, &x, &y)))
@@ -6377,11 +6459,9 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
                 !ops->target_position_get(ops->context, target, &x, &y))
                 return 0;
         }
-        /* The retail path writes the scene position only when param_3 is
-         * present, but it still falls through to FUN_004424f0 for param_4
-         * when only the cell-pair output is requested. Keep the shared tail
-         * active for either optional output. */
-        if (screen_xy != NULL || world_xy != NULL) {
+        /* Both output writes are nested under the retail param_3 test;
+         * param_4 remains untouched when only that output is requested. */
+        if (screen_xy != NULL) {
             have_xy = 1;
             world_from_entity = 1;
         }
@@ -6541,25 +6621,6 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
     return 1;
 }
 
-
-// FUNCTION: LEGORR 0x00403320
-void ledger_stub_00403320_ObjectCommandTaskCreate(EntitySlot* entity,
-                                                  int parameter)
-{
-    void* target = NULL;
-    if (entity == NULL) return;
-    if (entity->type == 2 && (entity->flags_3e0 & 0x400u) == 0u) {
-        float position[2];
-        entity_transform_position_get(entity, position);
-        target = entity_lookup_at_world_position(position);
-    }
-    else if (entity->type == 1) {
-        target = ledger_stub_00438bf0_SpatialObjectQueryCenterMask80(entity);
-    }
-    if (target != NULL) {
-        cmd_entity_task_record_create_and_append(entity, target, parameter);
-    }
-}
 
 void ledger_stub_00403750_CommandKindRecordIssueAndLink(
     uint32_t a, uint32_t b, uint32_t c, const int cell_xy[2], uint32_t zone,
