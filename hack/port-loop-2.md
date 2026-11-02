@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **47.79% accuracy**, **46.51% progress**
+- Full report: **97.32% implemented**, **47.84% accuracy**, **46.56% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **42.81% accuracy**,
-  **42.33% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **42.86% accuracy**,
+  **42.38% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -849,6 +849,32 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   game-only totals **98.87% / 42.81% / 42.33%**. A repeated
   `distrobox enter developer -- make reccmp-report` reproduced all 2,324
   scores exactly. `git diff --check` passed; tests were not run.
+
+- `CellCoordinateTimestampExists` (`0x40efb0`) now has a direct MSVC x86 body
+  matching the reference scan over the coordinate and active-flag tables,
+  including the retail end-address comparison and zero-return epilogue. Its
+  score rose from **70.97% to 100%**. The safer null check remains in the
+  non-MSVC-x86 implementation. Two consecutive Reccmp runs reproduced the
+  exact match; the latest report is **97.32% / 47.81% / 46.53%** full and
+  **98.87% / 42.82% / 42.34%** game-only. `git diff --check` passed; tests
+  were not run.
+
+- `TerrainCellNormalSample` (`0x4512d0`) now follows the decompile's direct
+  terrain-record offsets, parity-adjusted corner selection, output-write
+  order, and invalid-coordinate zeroing on MSVC x86; the guarded portable
+  implementation remains for other builds. Its match rose from **9.48% to
+  10.31%**. Repeated Reccmp runs produced stable overall totals of
+  **97.32% / 47.81% / 46.53%** full and **98.87% / 42.82% / 42.34%**
+  game-only. The main remaining mismatch is x87/register code generation in
+  the normalized-sum branch. `git diff --check` passed; tests were not run.
+
+- `CellCoordinateTimestampRemember` (`0x40ee00`) now has the retail x86 scan
+  and store sequence for the coordinate, timestamp, and active tables. Its
+  score rose from **21.74% to 100%**; the companion
+  `CellCoordinateTimestampExists` (`0x40efb0`) remains at 100%. Two consecutive
+  Reccmp runs confirmed the match and the latest totals: **97.32% / 47.84% /
+  46.56%** full and **98.87% / 42.86% / 42.38%** game-only. `git diff --check`
+  passed; tests were not run.
 
 ## Port loop
 

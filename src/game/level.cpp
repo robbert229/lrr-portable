@@ -8854,6 +8854,33 @@ static uint32_t s_ts_active[LEVEL_TS_COUNT];
 static int32_t  s_ts_now; /* _DAT_004d78c0: ErodeLockTime * 25 float bits */
 
 // FUNCTION: LEGORR 0x0040ee00
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void cell_coordinate_timestamp_remember(const int xy[2])
+{
+    __asm {
+        xor ecx, ecx
+        mov eax, offset s_ts_active
+    cell_coordinate_timestamp_remember_scan:
+        cmp dword ptr [eax], 0
+        je cell_coordinate_timestamp_remember_store
+        add eax, 4
+        inc ecx
+        cmp eax, 004d78b4h
+        jb cell_coordinate_timestamp_remember_scan
+        ret
+    cell_coordinate_timestamp_remember_store:
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [eax]
+        mov dword ptr [ecx*8 + s_ts_coordinates], edx
+        mov eax, dword ptr [eax + 4]
+        mov dword ptr [ecx*8 + s_ts_coordinates + 4], eax
+        fld dword ptr [s_ts_now]
+        fstp dword ptr [ecx*4 + s_ts_stamps]
+        mov dword ptr [ecx*4 + s_ts_active], 1
+        ret
+    }
+}
+#else
 void cell_coordinate_timestamp_remember(const int xy[2])
 {
     volatile uint32_t* active = s_ts_active;
@@ -8871,8 +8898,48 @@ void cell_coordinate_timestamp_remember(const int xy[2])
     } while (active < s_ts_active + LEVEL_TS_COUNT);
     /* full table: stores nothing (faithful) */
 }
+#endif
 
 // FUNCTION: LEGORR 0x0040efb0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t cell_coordinate_timestamp_exists(const int xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        push esi
+        push edi
+        mov ecx, offset s_ts_coordinates
+        mov eax, offset s_ts_active
+    cell_coordinate_timestamp_exists_scan:
+        cmp dword ptr [eax], 0
+        je cell_coordinate_timestamp_exists_next
+        mov esi, dword ptr [edx]
+        mov edi, dword ptr [ecx]
+        cmp esi, edi
+        jne cell_coordinate_timestamp_exists_next
+        mov esi, dword ptr [edx + 4]
+        mov edi, dword ptr [ecx + 4]
+        cmp esi, edi
+        je cell_coordinate_timestamp_exists_found
+    cell_coordinate_timestamp_exists_next:
+        add eax, 4
+        add ecx, 8
+        cmp eax, 004d78b4h
+        jae cell_coordinate_timestamp_exists_missing
+        jmp cell_coordinate_timestamp_exists_scan
+    cell_coordinate_timestamp_exists_found:
+        mov eax, 1
+        pop edi
+        pop esi
+        ret
+    cell_coordinate_timestamp_exists_missing:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
 uint32_t cell_coordinate_timestamp_exists(const int xy[2])
 {
     uint32_t* active = s_ts_active;
@@ -8886,6 +8953,7 @@ uint32_t cell_coordinate_timestamp_exists(const int xy[2])
     }
     return 1u;
 }
+#endif
 
 /* --- terrain dirty queue (see level.hpp) ---------------------------------
  * The corpus's queue lives inside its terrain context (u16 pair entries,
@@ -9376,6 +9444,49 @@ int grid_cell_record_present_check(int x, int y)
 
 /* --- corner normal sampling (see level.hpp) ------------------------------- */
 // FUNCTION: LEGORR 0x004512d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
+                               uint32_t corner, float out[3])
+{
+    const TerrainState* t = (const TerrainState*)terrain;
+    const uint8_t* p;
+    float* second;
+    float length;
+    float inverse;
+    if (x < t->dim[0] && y < t->dim[1]) {
+        p = t->blocks + (y * t->dim[2] + x) * TERRAIN_BLOCK_STRIDE;
+        if ((p[0x19] & 1u) != 0u) corner = (corner + 1u) & 3u;
+        if (corner == 0u) {
+            out[0] = *(const float*)(p + 0x00);
+            out[1] = *(const float*)(p + 0x04);
+            out[2] = *(const float*)(p + 0x08);
+        }
+        if (corner == 2u) {
+            second = (float*)(p + 0x0c);
+            out[0] = second[0];
+            out[1] = second[1];
+            out[2] = second[2];
+        }
+        if (corner == 1u || corner == 3u) {
+            second = (float*)(p + 0x0c);
+            out[0] = second[0] + *(const float*)(p + 0x00);
+            out[1] = second[1] + *(const float*)(p + 0x04);
+            out[2] = second[2] + *(const float*)(p + 0x08);
+            length = (float)sqrt(out[0] * out[0] + out[2] * out[2] +
+                                 out[1] * out[1]);
+            inverse = 1.0f / length;
+            out[0] = inverse * out[0];
+            out[1] = inverse * out[1];
+            out[2] = inverse * out[2];
+        }
+        return 1;
+    }
+    out[2] = 0.0f;
+    out[1] = 0.0f;
+    out[0] = 0.0f;
+    return 0;
+}
+#else
 int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
                                uint32_t corner, float out[3])
 {
@@ -9426,6 +9537,7 @@ int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
     out[2] = v[2];
     return 1;
 }
+#endif
 
 // FUNCTION: LEGORR 0x00435170
 const char* terrain_surface_type_name_get(int index)
@@ -11152,22 +11264,23 @@ uint32_t rng_thunk_draw15(void)
 static float s_erosion_decay_scale;
 // GLOBAL: LEGORR 0x004d78bc
 static float s_erosion_delay_scale;
-// GLOBAL: LEGORR 0x004cbd30
-static uint32_t s_erosion_clear_word;
-// GLOBAL: LEGORR 0x004cfbb4
-static uint32_t s_erosion_marks[EROSION_MARK_COUNT];
 struct LavaErosionPendingCell {
     int x;
     int y;
 };
-struct LavaErosionStageSlot {
-    int x;
-    int y;
-    float timer;
-};
+typedef char lava_erosion_pending_cell_stride_check[
+    sizeof(LavaErosionPendingCell) == 8u ? 1 : -1];
+// GLOBAL: LEGORR 0x004c7eb0
 static LavaErosionPendingCell s_lava_erosion_pending_cells[EROSION_MARK_COUNT];
-static unsigned int s_lava_erosion_pending_count;
-static LavaErosionStageSlot s_lava_erosion_stage_slots[EROSION_MARK_COUNT];
+// GLOBAL: LEGORR 0x004cbd30
+static uint32_t s_lava_erosion_pending_count;
+// GLOBAL: LEGORR 0x004cbd34
+static LavaErosionPendingCell s_lava_erosion_stage_coordinates[
+    EROSION_MARK_COUNT];
+// GLOBAL: LEGORR 0x004cfbb4
+static uint32_t s_erosion_marks[EROSION_MARK_COUNT];
+// GLOBAL: LEGORR 0x004d1af4
+static float s_lava_erosion_stage_timers[EROSION_MARK_COUNT];
 static float s_erosion_trigger_accumulator;
 static int s_erosion_triggered_this_tick;
 static unsigned int s_lava_erosion_mutation_threshold = 4u;
@@ -11183,8 +11296,10 @@ static void lava_erosion_runtime_tables_clear(void)
     memset(s_erosion_marks, 0, sizeof(s_erosion_marks));
     memset(s_lava_erosion_pending_cells, 0,
            sizeof(s_lava_erosion_pending_cells));
-    memset(s_lava_erosion_stage_slots, 0,
-           sizeof(s_lava_erosion_stage_slots));
+    memset(s_lava_erosion_stage_coordinates, 0,
+           sizeof(s_lava_erosion_stage_coordinates));
+    memset(s_lava_erosion_stage_timers, 0,
+           sizeof(s_lava_erosion_stage_timers));
     memset(s_ts_active, 0, sizeof(s_ts_active));
     memset(s_ts_coordinates, 0, sizeof(s_ts_coordinates));
     memset(s_ts_stamps, 0, sizeof(s_ts_stamps));
@@ -11199,7 +11314,6 @@ void erosion_timing_state_init(float value_a, float value_b, float value_c)
     s_erosion_decay_scale = value_a * 25.0f;
     s_erosion_delay_scale = value_b * 25.0f * 0.2f;
     const float tick = value_c * 25.0f;
-    s_erosion_clear_word = 0u;
     lava_erosion_runtime_tables_clear();
     __builtin_memcpy(&s_ts_now, &tick, sizeof s_ts_now);
 }
@@ -11331,9 +11445,9 @@ int lava_erosion_stage_register(const int xy[2], int stage)
     if (cell == NULL) return 0;
     if (!lava_erosion_stage_slot_find_free(&slot)) return 0;
     cell[7] = (uint8_t)stage;
-    s_lava_erosion_stage_slots[slot].x = xy[0];
-    s_lava_erosion_stage_slots[slot].y = xy[1];
-    s_lava_erosion_stage_slots[slot].timer = lava_erosion_delay_from_cell(
+    s_lava_erosion_stage_coordinates[slot].x = xy[0];
+    s_lava_erosion_stage_coordinates[slot].y = xy[1];
+    s_lava_erosion_stage_timers[slot] = lava_erosion_delay_from_cell(
         s_lava_erosion_level_context, xy[0], xy[1]) / (float)(stage + 1);
     s_erosion_marks[slot] = 1u;
     lava_erosion_pending_cell_add(xy, 1);
@@ -11356,16 +11470,16 @@ int lava_erosion_pending_cell_get(unsigned int index, int xy_out[2])
 int lava_erosion_stage_get(unsigned int slot, int xy_out[2],
                            float* timer_out, uint8_t* cell_stage_out)
 {
-    const LavaErosionStageSlot* stage;
     const uint8_t* cell;
     if (slot >= EROSION_MARK_COUNT || s_erosion_marks[slot] == 0u) return 0;
-    stage = &s_lava_erosion_stage_slots[slot];
     if (xy_out != NULL) {
-        xy_out[0] = stage->x;
-        xy_out[1] = stage->y;
+        xy_out[0] = s_lava_erosion_stage_coordinates[slot].x;
+        xy_out[1] = s_lava_erosion_stage_coordinates[slot].y;
     }
-    if (timer_out != NULL) *timer_out = stage->timer;
-    cell = level_voxel(s_lava_erosion_level_context, stage->x, stage->y);
+    if (timer_out != NULL) *timer_out = s_lava_erosion_stage_timers[slot];
+    cell = level_voxel(s_lava_erosion_level_context,
+        s_lava_erosion_stage_coordinates[slot].x,
+        s_lava_erosion_stage_coordinates[slot].y);
     if (cell_stage_out != NULL) *cell_stage_out = cell != NULL ? cell[7] : 0u;
     return 1;
 }
@@ -11377,7 +11491,6 @@ void lava_erosion_level_context_set(LevelState* s)
         if (s == NULL) {
             s_erosion_decay_scale = 0.0f;
             s_erosion_delay_scale = 0.0f;
-            s_erosion_clear_word = 0u;
             s_lava_erosion_mutation_threshold = 4u;
         }
     }
@@ -11467,8 +11580,8 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
         }
         for (i = 0; i < EROSION_MARK_COUNT; ++i) {
             if (s_erosion_marks[i] != 0u &&
-                s_lava_erosion_stage_slots[i].x == xy[0] &&
-                s_lava_erosion_stage_slots[i].y == xy[1]) {
+                s_lava_erosion_stage_coordinates[i].x == xy[0] &&
+                s_lava_erosion_stage_coordinates[i].y == xy[1]) {
                 s_erosion_marks[i] = 0u;
                 break;
             }
@@ -11542,13 +11655,13 @@ void lava_erosion_pending_cell_tick(float scale)
                         secondary &= ~0x10u;
                         __builtin_memcpy(cell + 0x0c, &secondary,
                                          sizeof secondary);
-                        s_lava_erosion_stage_slots[slot].x =
+                        s_lava_erosion_stage_coordinates[slot].x =
                             candidate_xy[0];
-                        s_lava_erosion_stage_slots[slot].y =
+                        s_lava_erosion_stage_coordinates[slot].y =
                             candidate_xy[1];
                         delay = lava_erosion_delay_from_cell(
                             s, candidate_xy[0], candidate_xy[1]);
-                        s_lava_erosion_stage_slots[slot].timer = delay;
+                        s_lava_erosion_stage_timers[slot] = delay;
                         s_erosion_marks[slot] = 1u;
                         cell[7] = 0u;
                         lava_erosion_pending_cell_add(candidate_xy, 1);
@@ -11566,14 +11679,14 @@ void lava_erosion_pending_cell_tick(float scale)
     if (s != NULL) {
         unsigned int slot;
         for (slot = 0; slot < EROSION_MARK_COUNT; ++slot) {
-            LavaErosionStageSlot* stage;
+            LavaErosionPendingCell* stage;
             uint8_t* cell;
             int before, after;
             if (s_erosion_marks[slot] == 0u) continue;
-            stage = &s_lava_erosion_stage_slots[slot];
-            before = crt_float_to_long(stage->timer);
-            stage->timer -= scale;
-            after = crt_float_to_long(stage->timer);
+            stage = &s_lava_erosion_stage_coordinates[slot];
+            before = crt_float_to_long(s_lava_erosion_stage_timers[slot]);
+            s_lava_erosion_stage_timers[slot] -= scale;
+            after = crt_float_to_long(s_lava_erosion_stage_timers[slot]);
             if (after == before) continue;
             cell = level_voxel(s, stage->x, stage->y);
             if (cell == NULL) {
