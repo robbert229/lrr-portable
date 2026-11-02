@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **46.43% accuracy**, **45.19% progress**
+- Full report: **97.32% implemented**, **46.66% accuracy**, **45.41% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **41.31% accuracy**,
-  **40.84% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **41.56% accuracy**,
+  **41.09% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -431,6 +431,58 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   `legacy_health_bar_config_load` (`0x459560`) moved from **4.10% to 4.24%**.
   Reccmp and `git diff --check` passed; current totals are **97.32% / 46.43% /
   45.19%** full and **98.87% / 41.31% / 40.84%** game-only. Tests were not run.
+
+- The save-slot selector now maps directly to retail global `DAT_005574d0`.
+  This resolved the global operand in `SavSetSlot` (`0x417ea0`), raising its
+  match from **66.67% to 100%**; `SavGetSlot` (`0x417e90`) and
+  `SaveSlotSelectionClear` (`0x415cf0`) also report **100%**. The full report
+  is **97.32% / 46.50% / 45.25%** and game-only is **98.87% / 41.38% /
+  40.91%**. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+
+- `GlobalStateFlagsBits6And9Set` (`0x426360`) now applies the bit-6 update to
+  the shared word before testing and applying the bit-9 argument, with the
+  reference branch direction. Its match rose **66.67% → 100%**. The latest
+  report is **97.32% / 46.51% / 45.27%** full and **98.87% / 41.39% /
+  40.93%** game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+
+- Six level-field arithmetic targets now use the retail ABI and access the
+  active level global directly; explicit-level adapters remain for portable
+  callers. `GlobalObjectField8CIncrement` (`0x41f870`),
+  `GlobalObjectField8CSubtract` (`0x41f880`), `GlobalObjectField98Add`
+  (`0x41f8a0`), `LevelStateField9CAdd` (`0x41f920`),
+  `GlobalObjectField94Increment` (`0x41f980`), and
+  `GlobalObjectFieldA8Increment` (`0x41f990`) now each match at **100%**,
+  from **66.67%**. The latest report is **97.32% / 46.55% / 45.30%** full and
+  **98.87% / 41.44% / 40.97%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `WadReverseLowBits` (`0x49d000`) now branches on each source low bit like the
+  reference and matches at **100%** (previously **70%**). The FLIC triplet
+  transform (`0x484ba0`) now maps to its unchecked 256-entry body and matches
+  at **100%** (previously **69.84%**); the public adapter retains its null
+  guard for existing portable callers. The report is **97.32% / 46.57% /
+  45.33%** full and **98.87% / 41.46% / 41.00%** game-only.
+  `distrobox enter developer -- make reccmp-report` and `git diff --check`
+  passed; tests were not run.
+
+- `SetSystemStateFlags` (`0x456550`) and
+  `GlobalValue_004ff9bcStoreAndReturn` (`0x4567c0`) now map to unchecked
+  decompile-shaped bodies and match at **100%**, up from **71.43%** each.
+  Their public APIs retain the null guards used by existing portable callers.
+  The latest report is **97.32% / 46.60% / 45.35%** full and
+  **98.87% / 41.49% / 41.02%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `UiTextUnderscoresToSpaces` (`0x4102b0`) now uses the retail 256-byte length
+  gate and unchecked target body, while the public adapter retains null
+  handling; its score rose **72.73% → 100%**. `DDiSceneAdvanceByTime`
+  (`0x475120`) now maps the unchecked target path and rose **73.33% → 100%**
+  after expressing the intermediate current and next times as local floats.
+  Current totals are **97.32% / 46.66% / 45.41%** full and
+  **98.87% / 41.56% / 41.09%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
 
 ## Port loop
 

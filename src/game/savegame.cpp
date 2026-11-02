@@ -43,6 +43,7 @@ static void* s_sav_tree_root[2]; /* the two corpus tree-root globals' role */
 static void** s_sav_owned_tree_nodes[2];
 static uint32_t s_sav_owned_tree_node_count[2];
 static GameContext* s_save_current_context;
+// GLOBAL: LEGORR 0x005574d0
 static int s_save_current_slot = -1;
 /* The six 0xb8-byte per-slot contexts from DAT_00557080..DAT_005574d0. */
 // GLOBAL: LEGORR 0x00557080

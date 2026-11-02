@@ -1399,10 +1399,9 @@ void grid_count_table_slot_poke(int row, int column, int slot, int table,
                                 uint32_t value);
 
 /* --- the global-object field band (2026-10-24; findings 295/324/392) --------
- * The corpus's DAT_005560d4 word fields, threaded through the port's
- * LevelState (the corpus reads the DAT global itself; a NULL level answers
- * as the corpus's NULL global does — no effect). The field meanings stay
- * unresolved; these are the faithful arithmetic the corpus runs.
+ * Mapped entries access the active DAT_005560d4 level directly. Explicit-
+ * level adapters remain for callers and tests using a non-active LevelState.
+ * Field meanings remain unresolved.
  * GlobalObjectField8CIncrement @ FUN_0041f870
  * GlobalObjectField8CSubtract @ FUN_0041f880
  * GlobalObjectField98Add @ FUN_0041f8a0
@@ -1410,9 +1409,12 @@ void grid_count_table_slot_poke(int row, int column, int slot, int table,
  * LevelStateField9CAdd @ FUN_0041f920
  * GlobalObjectField94Increment @ FUN_0041f980
  * GlobalObjectFieldA8Increment @ FUN_0041f990 */
-void global_object_field8c_increment(LevelState* s);
-void global_object_field8c_subtract(LevelState* s, int amount);
-void global_object_field98_add(LevelState* s, int amount);
+void global_object_field8c_increment(void);
+void global_object_field8c_increment_for_level(LevelState* s);
+void global_object_field8c_subtract(int amount);
+void global_object_field8c_subtract_for_level(LevelState* s, int amount);
+void global_object_field98_add(int amount);
+void global_object_field98_add_for_level(LevelState* s, int amount);
 void global_object_field98_clear(LevelState* s);
 void global_object_field98_clear_current(void); /* FUN_0041f8c0 */
 
@@ -1426,9 +1428,12 @@ int entity_available_resource_spend(LevelState* level, int amount,
                                     const void* resource_hint);
                                                 /* FUN_00438720 */
 
-void level_state_field9c_add(LevelState* s, int amount);
-void global_object_field94_increment(LevelState* s);
-void global_object_fielda8_increment(LevelState* s);
+void level_state_field9c_add(int amount);
+void level_state_field9c_add_for_level(LevelState* s, int amount);
+void global_object_field94_increment(void);
+void global_object_field94_increment_for_level(LevelState* s);
+void global_object_fielda8_increment(void);
+void global_object_fielda8_increment_for_level(LevelState* s);
 uint32_t level_field8c_get(const LevelState* s);
 uint32_t level_field98_get(const LevelState* s);
 uint32_t level_field9c_get(const LevelState* s);

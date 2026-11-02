@@ -8349,31 +8349,48 @@ void coordinate_callback_dispatch_by_mode(const void* coord_pair, int mode)
     entity_pool_callback_search(coordinate_entity_dispatch_adapter, &payload);
 }
 
-/* --- the global-object field band (see level.hpp) ---------------------------
- * The corpus's `DAT_005560d4 != 0` guard lands as the port's NULL-level
- * guard; every other detail is the corpus's own arithmetic. */
+/* The retail entries below operate on DAT_005560d4 directly. Keep the
+ * explicit-level variants separate for portable callers with owned state. */
 // FUNCTION: LEGORR 0x0041f870
-void global_object_field8c_increment(LevelState* s)
+void global_object_field8c_increment(void)
 {
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0x8C, level_int(s, 0x8C) + 1);
+        s->word[0x8C / 4] = s->word[0x8C / 4] + 1u;
     }
+}
+
+void global_object_field8c_increment_for_level(LevelState* s)
+{
+    if (s != NULL) level_set_int(s, 0x8C, level_int(s, 0x8C) + 1);
 }
 
 // FUNCTION: LEGORR 0x0041f880
-void global_object_field8c_subtract(LevelState* s, int amount)
+void global_object_field8c_subtract(int amount)
 {
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0x8C, level_int(s, 0x8C) - amount);
+        s->word[0x8C / 4] = s->word[0x8C / 4] - (uint32_t)amount;
     }
 }
 
-// FUNCTION: LEGORR 0x0041f8a0
-void global_object_field98_add(LevelState* s, int amount)
+void global_object_field8c_subtract_for_level(LevelState* s, int amount)
 {
+    if (s != NULL) level_set_int(s, 0x8C, level_int(s, 0x8C) - amount);
+}
+
+// FUNCTION: LEGORR 0x0041f8a0
+void global_object_field98_add(int amount)
+{
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0x98, level_int(s, 0x98) + amount);
+        s->word[0x98 / 4] = s->word[0x98 / 4] + (uint32_t)amount;
     }
+}
+
+void global_object_field98_add_for_level(LevelState* s, int amount)
+{
+    if (s != NULL) level_set_int(s, 0x98, level_int(s, 0x98) + amount);
 }
 
 void global_object_field98_clear(LevelState* s)
@@ -8393,27 +8410,45 @@ void global_object_field98_clear_current(void)
 }
 
 // FUNCTION: LEGORR 0x0041f920
-void level_state_field9c_add(LevelState* s, int amount)
+void level_state_field9c_add(int amount)
 {
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0x9C, level_int(s, 0x9C) + amount);
+        s->word[0x9C / 4] = s->word[0x9C / 4] + (uint32_t)amount;
     }
+}
+
+void level_state_field9c_add_for_level(LevelState* s, int amount)
+{
+    if (s != NULL) level_set_int(s, 0x9C, level_int(s, 0x9C) + amount);
 }
 
 // FUNCTION: LEGORR 0x0041f980
-void global_object_field94_increment(LevelState* s)
+void global_object_field94_increment(void)
 {
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0x94, level_int(s, 0x94) + 1);
+        s->word[0x94 / 4] = s->word[0x94 / 4] + 1u;
     }
 }
 
-// FUNCTION: LEGORR 0x0041f990
-void global_object_fielda8_increment(LevelState* s)
+void global_object_field94_increment_for_level(LevelState* s)
 {
+    if (s != NULL) level_set_int(s, 0x94, level_int(s, 0x94) + 1);
+}
+
+// FUNCTION: LEGORR 0x0041f990
+void global_object_fielda8_increment(void)
+{
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0xA8, level_int(s, 0xA8) + 1);
+        s->word[0xA8 / 4] = s->word[0xA8 / 4] + 1u;
     }
+}
+
+void global_object_fielda8_increment_for_level(LevelState* s)
+{
+    if (s != NULL) level_set_int(s, 0xA8, level_int(s, 0xA8) + 1);
 }
 
 uint32_t level_field8c_get(const LevelState* s)
@@ -8647,7 +8682,7 @@ int entity_available_resource_spend(LevelState* level, int amount,
         message_dispatch(0xe, 0, 0, resource_hint);
         return 0;
     }
-    global_object_field98_add(level, amount);
+    global_object_field98_add_for_level(level, amount);
     return 1;
 }
 

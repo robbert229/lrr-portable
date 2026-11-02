@@ -203,6 +203,7 @@ uint32_t message_config_flags(int id);
  * (documented deviation; corpus callers pass live pointers). */
 uint32_t system_state_flags_get(void);
 uint32_t system_state_flags_set(const uint32_t* value);
+uint32_t system_state_flags_set_target(const uint32_t* value);
 uint32_t objective_switch_state_set(uint32_t value);
 uint32_t objective_switch_state_get(void);
 

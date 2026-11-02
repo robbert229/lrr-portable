@@ -1483,16 +1483,20 @@ float global_float_field_00556f00_get(void)
     return s_global_float_00556f00;
 }
 
+/* Mapped target: stores the input dword globally and returns the same value;
+ * the retail body dereferences the pointer without a null check. */
 // FUNCTION: LEGORR 0x004567c0
-/* Corpus 0x4567c4..0x4567ce stores one load and reloads the argument for
- * return. Keep the port's NULL behavior because test_static_globals pins it. */
-uint32_t global_value_004ff9bc_store_and_return(const void* value)
+uint32_t global_value_004ff9bc_store_and_return_target(const void* value)
 {
-    if (value == NULL) {
-        return 0u; /* test-pinned deviation: corpus dereferences blindly */
-    }
     s_global_dword_004ff9bc = *(const uint32_t*)value;
     return *(const uint32_t*)value;
+}
+
+/* Keep the portable API's null behavior pinned by test_static_globals. */
+uint32_t global_value_004ff9bc_store_and_return(const void* value)
+{
+    return value != NULL
+        ? global_value_004ff9bc_store_and_return_target(value) : 0u;
 }
 
 /* --- unowned DAT-global counter/accumulator band (see crt.hpp) -----------

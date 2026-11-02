@@ -742,13 +742,15 @@ uint32_t system_state_flags_get(void)
 }
 
 // FUNCTION: LEGORR 0x00456550
-uint32_t system_state_flags_set(const uint32_t* value)
+uint32_t system_state_flags_set_target(const uint32_t* value)
 {
-    if (value == NULL) {
-        return 0u; /* deviation: the corpus dereferences blindly */
-    }
     s_system_state = *value;
     return *value;
+}
+
+uint32_t system_state_flags_set(const uint32_t* value)
+{
+    return value != NULL ? system_state_flags_set_target(value) : 0u;
 }
 
 uint32_t objective_switch_state_set(uint32_t value)

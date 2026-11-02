@@ -1176,7 +1176,7 @@ int main(int argc, char** argv)
               "the reference dword folds into the level's 9c");
         carrier.carry_ref_348 = NULL;
         entity_detach_carried_object_and_reset_state(&carrier, NULL);
-        level_state_field9c_add(NULL, 9); /* the null guard is a no-op */
+        level_state_field9c_add_for_level(NULL, 9); /* the null guard is a no-op */
         CHECK((int)level_field9c_get(&dlvl) == 7,
               "the absent reference keeps the fold quiet");
     }

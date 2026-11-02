@@ -467,6 +467,7 @@ int frontend_bubble_images_position_config_load(BlockFile* values,
 /* UiTextUnderscoresToSpaces (FUN_004102b0): return a shared display copy
  * with underscores changed to spaces for strings up to 255 bytes. */
 const char* ui_text_underscores_to_spaces(const char* text);
+char* ui_text_underscores_to_spaces_target(char* text);
 /* InterfaceMenuActionLabelsInit / CaseInsensitiveStringTableIndexFind
  * (FUN_0041a300 / FUN_0041a9c0): initialize the 74 action-name keys and
  * selection region, then find a key case-insensitively (zero-based index). */

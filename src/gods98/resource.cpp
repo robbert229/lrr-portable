@@ -2710,7 +2710,11 @@ typedef struct WadCodecTableEntry {
 static unsigned int wad_reverse_low_bits(unsigned int v, uint8_t n)
 {
     unsigned int out = 0;
-    while (n--) { out = (out << 1) | (v & 1u); v >>= 1; }
+    while (n--) {
+        out = out << 1;
+        if ((v & 1u) != 0u) out = out | 1u;
+        v >>= 1;
+    }
     return out;
 }
 

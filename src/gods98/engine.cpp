@@ -702,11 +702,15 @@ void global_state_flags_bit7_set(EngineContext* ctx, int value)
 void engine_global_state_flags_bits6_and_9_set_target(
     int value, int set_bit9)
 {
-    uint32_t flags = value != 0 ? s_panel_highlight_flags | 0x40u
-                                : s_panel_highlight_flags & ~0x40u;
-    if (set_bit9 != 0) flags |= 0x200u;
-    else flags &= ~0x200u;
-    s_panel_highlight_flags = flags;
+    /* FUN_00426360 commits the bit-6 update before testing its second
+     * argument, then performs the bit-9 update against that stored word. */
+    if (value != 0) s_panel_highlight_flags |= 0x40u;
+    else s_panel_highlight_flags &= ~0x40u;
+    if (set_bit9 != 0) {
+        s_panel_highlight_flags |= 0x200u;
+        return;
+    }
+    s_panel_highlight_flags &= ~0x200u;
 }
 
 void global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,

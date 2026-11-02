@@ -415,6 +415,7 @@ float global_float_field_00556f00_get(void);
  * returns it. NULL answers zero and stores nothing (documented
  * deviation; corpus callers always pass a live pointer). */
 uint32_t global_value_004ff9bc_store_and_return(const void* value);
+uint32_t global_value_004ff9bc_store_and_return_target(const void* value);
 
 /* GlobalCounter_004ff990Increment / GlobalCounter_004ff990Reset
  * (FUN_00454880 / FUN_00454890, findings 386/440): bump / zero the global

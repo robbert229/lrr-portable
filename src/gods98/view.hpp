@@ -1042,6 +1042,7 @@ int ddiscene_sample_hook_add(DDiSceneSampleHook sample_hook,
                              void* sample_context);
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
 float ddiscene_advance_by_time(void* scene_object, float delta); /* 0x00475120 */
+float ddiscene_advance_by_time_target(void* scene_object, float delta);
 typedef float (*SceneTimingValueGetHook)(void* frame, void* argument,
                                          void* context);
 typedef int (*SceneTimingCountGetHook)(void* frame, void* context);

@@ -2289,15 +2289,20 @@ float ddiscene_frame_update_and_callbacks(void* scene_object, float time)
     return remainder;
 }
 
+/* DDiSceneAdvanceByTime target: the retail body assumes a valid scene object
+ * and returns the x87 result left by its frame-update call. */
 // FUNCTION: LEGORR 0x00475120
-/* DDiSceneAdvanceByTime (FUN_00475120): add the delta to the current object
- * length and discard the frame update's remainder, as the target does. */
+float ddiscene_advance_by_time_target(void* scene_object, float delta)
+{
+    const float current = ddiscene_object_length_get(scene_object);
+    const float next = current + delta;
+    return ddiscene_frame_update_and_callbacks(scene_object, next);
+}
+
 float ddiscene_advance_by_time(void* scene_object, float delta)
 {
-    float current;
-    if (scene_object == NULL) return 0.0f;
-    current = ddiscene_object_length_get(scene_object);
-    return ddiscene_frame_update_and_callbacks(scene_object, current + delta);
+    return scene_object != NULL
+        ? ddiscene_advance_by_time_target(scene_object, delta) : 0.0f;
 }
 
 /* TypedChildResourceScalarGet (FUN_004757f0): only type-4 scene objects with

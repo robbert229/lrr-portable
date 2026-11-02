@@ -2156,7 +2156,7 @@ void simulation_update_counter_add(GameContext* ctx, int count)
         return; /* deviation: the corpus strides its global level word */
     }
     for (; count != 0; count = count - 1) {
-        global_object_field8c_increment(ctx->level);
+        global_object_field8c_increment_for_level(ctx->level);
     }
     entity_activity_scene_state_update(ctx);
 }

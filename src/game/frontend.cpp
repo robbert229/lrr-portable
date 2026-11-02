@@ -426,30 +426,34 @@ int named_option_index_find_case_insensitive(const char* name,
     return 0;
 }
 
-/* UiTextUnderscoresToSpaces (FUN_004102b0): the corpus returns its input
- * unchanged when it exceeds the 255-byte scratch buffer; shorter strings
- * are copied to shared storage and normalized there. */
+/* The mapped target assumes a valid mutable input pointer, returns it
+ * unchanged at 256 bytes or more, and otherwise copies to shared storage. */
 // FUNCTION: LEGORR 0x004102b0
-const char* ui_text_underscores_to_spaces(const char* text)
+char* ui_text_underscores_to_spaces_target(char* text)
 {
     char* const display = s_ui_text_underscore_buffer;
-    if (text == NULL) {
-        return NULL;
-    }
     const size_t length = strlen(text);
-    if (length > 0xffu) {
+    if (length >= 0x100u) {
         return text;
     }
     strcpy(display, text);
     /* The original scans the full 256-byte scratch region after copying;
      * bytes after the terminator are not visible as part of the returned
      * C string, but retaining the full scan also matches its loop shape. */
-    for (size_t i = 0; i < sizeof(s_ui_text_underscore_buffer); ++i) {
+    for (size_t i = 0; i < 0x100u; ++i) {
         if (display[i] == '_') {
             display[i] = ' ';
         }
     }
     return display;
+}
+
+/* Portable callers keep the null-safe interface; the retail entry point
+ * itself dereferences its argument without checking it. */
+const char* ui_text_underscores_to_spaces(const char* text)
+{
+    return text != NULL
+        ? ui_text_underscores_to_spaces_target((char*)text) : NULL;
 }
 
 /* Menu config identifiers use underscores where the original UI shows

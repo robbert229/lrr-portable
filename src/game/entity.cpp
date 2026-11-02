@@ -4585,7 +4585,7 @@ void entity_spawn_request_queue_process(EntitySlot* requester)
         spawned->etype = request->kind;
         (void)entity_building_index_set(spawned, 0u);
         requester->spawn_child_3cc = spawned;
-        global_object_field8c_subtract(context->level,
+        global_object_field8c_subtract_for_level(context->level,
             (int)stats_table_word_at_b4(type, request->kind, 0));
         entity_activity_scene_state_update(context);
         if ((requester_flags & 0x40u) != 0u) {
@@ -6857,7 +6857,7 @@ EntitySlot* entity_action_kind_entity_create_and_command_issue(
         if (context == NULL) context = entity_pool_callback_context_get();
         if (context != NULL) {
             entity_activity_scene_state_update(context);
-            global_object_field8c_subtract(context->level, 1);
+            global_object_field8c_subtract_for_level(context->level, 1);
         }
     }
     else if (kind == 7) {
@@ -6938,7 +6938,7 @@ void entity_action_record_consume_and_cleanup(
             hooks->event_dispatch(hooks->context, 6, 0);
         }
         else if (context != NULL) {
-            global_object_field8c_increment(context->level);
+            global_object_field8c_increment_for_level(context->level);
         }
     }
     else if (record->type == 7 && entity->type != 3
@@ -8810,7 +8810,7 @@ void entity_detach_carried_object_and_reset_state(EntitySlot* e,
         carried->field_340 = -1.0f;
     }
     if (e->carry_ref_348 != NULL) {
-        level_state_field9c_add(lvl, *(const int*)e->carry_ref_348);
+        level_state_field9c_add_for_level(lvl, *(const int*)e->carry_ref_348);
     }
     e->field_340 = -1.0f;
     e->flags_3e8 |= 0x800000u;
@@ -9919,7 +9919,7 @@ void ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick(
         cell = level_voxel(level, cell_x, cell_y);
         if (entity->attach_304 == NULL && cell != NULL && cell[2] == 6 &&
             (entity->type == 6 || entity->type == 7)) {
-            level_state_field9c_add(level, 1);
+            level_state_field9c_add_for_level(level, 1);
             entity->field_340 = -4.0f;
             entity->flags_3e8 |= 0x00800000u;
         }
