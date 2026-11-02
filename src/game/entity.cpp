@@ -5449,33 +5449,46 @@ static uint32_t stats_rec_word(const EntitySlot* e, int off)
     return w;
 }
 
+/* The retail x86 readers dereference the selected record at +0x334 directly.
+ * Keep the null-template adapter for other hosts, but preserve the unchecked
+ * field load in the MSVC 5.0 target build. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+#define ENTITY_STATS_FLOAT_READ(e, off) \
+    (*(const float*)((const uint8_t*)(e)->stats_record + (off)))
+#define ENTITY_STATS_WORD_READ(e, off) \
+    (*(const uint32_t*)((const uint8_t*)(e)->stats_record + (off)))
+#else
+#define ENTITY_STATS_FLOAT_READ(e, off) stats_rec_float((e), (off))
+#define ENTITY_STATS_WORD_READ(e, off) stats_rec_word((e), (off))
+#endif
+
 // FUNCTION: LEGORR 0x00469cb0
-float entity_stats_float_at20(const EntitySlot* e) { return stats_rec_float(e, 0x20); }
+float entity_stats_float_at20(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x20); }
 // FUNCTION: LEGORR 0x00469cc0
 float entity_stats_float_at24_indexed(const EntitySlot* e, int index)
 {
-    return stats_rec_float(e, 0x24 + index * 4);
+    return ENTITY_STATS_FLOAT_READ(e, 0x24 + index * 4);
 }
 // FUNCTION: LEGORR 0x00469ce0
-float entity_stats_float_atd4(const EntitySlot* e) { return stats_rec_float(e, 0xd4); }
+float entity_stats_float_atd4(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0xd4); }
 // FUNCTION: LEGORR 0x00469d00
-float entity_stats_float_at9c(const EntitySlot* e) { return stats_rec_float(e, 0x9c); }
+float entity_stats_float_at9c(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x9c); }
 // FUNCTION: LEGORR 0x00469d20
-float entity_stats_float_atd8(const EntitySlot* e) { return stats_rec_float(e, 0xd8); }
+float entity_stats_float_atd8(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0xd8); }
 // FUNCTION: LEGORR 0x00469d40
-float entity_stats_float_at6c(const EntitySlot* e) { return stats_rec_float(e, 0x6c); }
+float entity_stats_float_at6c(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x6c); }
 // FUNCTION: LEGORR 0x00469d50
-float entity_stats_float_at74(const EntitySlot* e) { return stats_rec_float(e, 0x74); }
+float entity_stats_float_at74(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x74); }
 // FUNCTION: LEGORR 0x00469d60
-float entity_stats_float_at78(const EntitySlot* e) { return stats_rec_float(e, 0x78); }
+float entity_stats_float_at78(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x78); }
 // FUNCTION: LEGORR 0x00469d70
-float entity_stats_float_ate8(const EntitySlot* e) { return stats_rec_float(e, 0xe8); }
+float entity_stats_float_ate8(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0xe8); }
 void entity_stats_float_ate8_set(EntitySlot* e, float value)
 {
     stats_rec_float_set(e, 0xe8, value);
 }
 // FUNCTION: LEGORR 0x00469d90
-float entity_stats_float_at70(const EntitySlot* e) { return stats_rec_float(e, 0x70); }
+float entity_stats_float_at70(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x70); }
 // FUNCTION: LEGORR 0x00469da0
 static void* entity_stats_field_at_a0_corpus(const EntitySlot* e)
 {
@@ -5493,20 +5506,20 @@ void* entity_stats_field_at_a0(const EntitySlot* e)
     return (void*)(stats_rec(e) + 0xa0);
 }
 // FUNCTION: LEGORR 0x00469db0
-float entity_stats_float_at7c(const EntitySlot* e) { return stats_rec_float(e, 0x7c); }
+float entity_stats_float_at7c(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x7c); }
 // FUNCTION: LEGORR 0x00469dc0
-float entity_stats_float_at80(const EntitySlot* e) { return stats_rec_float(e, 0x80); }
+float entity_stats_float_at80(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x80); }
 // FUNCTION: LEGORR 0x00469de0
-float entity_energy_decay_rate_get(const EntitySlot* e) { return stats_rec_float(e, 0x84); }
+float entity_energy_decay_rate_get(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x84); }
 // FUNCTION: LEGORR 0x00469e20
-float entity_stats_float_atdc(const EntitySlot* e) { return stats_rec_float(e, 0xdc); }
+float entity_stats_float_atdc(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0xdc); }
 // FUNCTION: LEGORR 0x00469e40
-uint32_t entity_stats_word_atac(const EntitySlot* e) { return stats_rec_word(e, 0xac); }
-uint32_t entity_stats_word_at_ec(const EntitySlot* e) { return stats_rec_word(e, 0xec); }
+uint32_t entity_stats_word_atac(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0xac); }
+uint32_t entity_stats_word_at_ec(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0xec); }
 // FUNCTION: LEGORR 0x00469e60
-uint32_t entity_stats_word_get(const EntitySlot* e) { return stats_rec_word(e, 0x144); }
+uint32_t entity_stats_word_get(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0x144); }
 // FUNCTION: LEGORR 0x00469e80
-uint32_t entity_state_flags_get(const EntitySlot* e) { return stats_rec_word(e, 0x148); }
+uint32_t entity_state_flags_get(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0x148); }
 
 void entity_state_override_hooks_set(
     EntityStateOverrideValue330ApplyHook value_330_apply,

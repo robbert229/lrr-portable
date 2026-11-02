@@ -2423,16 +2423,64 @@ void render_interface_pair_hooks_set(const RenderInterfacePairHooks* hooks)
     else s_render_interface_pair_hooks = *hooks;
 }
 
-/* RenderInterfacePairUpdate (FUN_00476220): preserve the two-interface
- * operation as one backend callback so it can issue the recovered query,
- * parent update, and pair-set sequence. */
+/* RenderInterfacePairUpdate (FUN_00476220): the retail x86 path dispatches
+ * the interface methods directly. Other hosts retain the callback override
+ * and the checked vtable helper. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+// FUNCTION: LEGORR 0x00476220
+__declspec(naked) void render_interface_pair_update(void* first, void* second)
+{
+    __asm {
+        sub esp, 40h
+        lea ecx, dword ptr [esp + 48h]
+        push esi
+        mov esi, dword ptr [esp + 4ch]
+        push ecx
+        push esi
+        mov eax, dword ptr [esi]
+        call dword ptr [eax + 5ch]
+        mov ecx, dword ptr [esp + 4ch]
+        mov edx, dword ptr [esi]
+        lea eax, dword ptr [esp + 4]
+        push eax
+        push ecx
+        push esi
+        call dword ptr [edx + 74h]
+        mov eax, dword ptr [esp + 4ch]
+        test eax, eax
+        je render_interface_pair_update_release_done
+        mov edx, dword ptr [eax]
+        push eax
+        call dword ptr [edx + 8]
+    render_interface_pair_update_release_done:
+        mov eax, dword ptr [esp + 48h]
+        push esi
+        push eax
+        mov ecx, dword ptr [eax]
+        call dword ptr [ecx + 2ch]
+        mov edx, dword ptr [esi]
+        lea eax, dword ptr [esp + 4]
+        push eax
+        push 0
+        push esi
+        call dword ptr [edx + 38h]
+        pop esi
+        add esp, 40h
+        ret
+    }
+}
+#else
 void render_interface_pair_update(void* first, void* second)
 {
     if (s_render_interface_pair_hooks.pair_update != NULL) {
         s_render_interface_pair_hooks.pair_update(
             first, second, s_render_interface_pair_hooks.context);
     }
+    else {
+        ddiscene_action_channel_apply(first, second);
+    }
 }
+#endif
 
 /* DDiSceneObjectAttachOrUnlink (FUN_00475710): pairs both stored interfaces
  * against a source pair, or asks the backend to unlink each current one. */
@@ -9107,7 +9155,6 @@ float ledger_stub_004761c0_ScenePropertyFloatAt14Get(void* property)
 }
 
 // RenderInterfacePairUpdate
-// FUNCTION: LEGORR 0x00476220
 void ledger_stub_00476220_RenderInterfacePairUpdate(
     void* first, void* second)
 {

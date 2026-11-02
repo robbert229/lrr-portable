@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **51.01% accuracy**, **49.65% progress**
+- Full report: **97.33% implemented**, **51.50% accuracy**, **50.12% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **46.37% accuracy**,
-  **45.85% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **46.90% accuracy**,
+  **46.38% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1586,6 +1586,41 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   the named function in the rebuilt PDB). Current totals are **97.33% / 51.01% /
   49.65%** full and **98.88% / 46.37% / 45.85%** game-only. The MSVC 5.0
   Reccmp build and `git diff --check` passed; tests were not run.
+- The scene-visibility wrappers now call the actual `SceneRenderLockToggle`
+  operation; adapter observations stay at the adapter seam. Retail x86 bodies for
+  `AnimationObjectVisibilitySet` (`0x406c90`) and `SurfaceVisibilitySet`
+  (`0x464720`) use the reference's exact load/push/call sequence; the paired
+  mode wrapper (`0x408670`) now calls the same operation directly. The adjacent
+  `AnimationObjectVisibilityGet` (`0x4086a0`) now calls the bit-3 getter with
+  the target's exact x86 sequence. All four targets match at **100%** (from
+  29.63%, 28.57%, 89.47%, and 26.09%). The latest
+  `distrobox enter developer -- make reccmp-report` reports **97.33% / 51.11% /
+  49.74%** full and **98.88% / 46.48% / 45.96%** game-only. `git diff --check`
+  passed; tests were not run.
+- `SceneRenderLockToggle` (`0x473b40`) now uses the retail x86 flag gates,
+  field accesses, pair-update call order, and flag writes; its match rose from
+  **18.52% to 94.29%**. `RenderInterfacePairUpdate` (`0x476220`) is now mapped
+  to its live vtable-dispatch helper rather than its forwarding wrapper, and
+  `render_interface_pair_update` uses that helper by default when no backend
+  override is installed. Its match rose from **13.33% to 19.42%**. At that
+  checkpoint, the remaining mismatches were the `0x473b40` call label and the
+  helper's extra guards/staging. The report then was **97.33% / 51.15% / 49.78%** full and
+  **98.88% / 46.52% / 46.00%** game-only. Reccmp and `git diff --check` passed;
+  tests were not run.
+- The x86 `RenderInterfacePairUpdate` (`0x476220`) body now performs the retail
+  vtable calls directly, including the stack-local interface output and release
+  sequence. Both it and `SceneRenderLockToggle` (`0x473b40`) match at **100%**;
+  `0x476220` moved from 19.42% and `0x473b40` from 94.29%. Non-x86 builds keep
+  the override and checked vtable helper. The latest report is **97.33% / 51.18%
+  / 49.81%** full and **98.88% / 46.56% / 46.04%** game-only. Reccmp and
+  `git diff --check` passed; tests were not run.
+- Entity-stat accessor bodies in `src/game/entity.cpp` now use direct record
+  field loads for the MSVC 5.0 x86 build, matching the retail's `entity + 0x334`
+  record dereference and fixed field offsets; non-x86 builds retain the null-safe
+  helper. The changed accessors from `0x469cb0` through `0x469e80` rose from
+  33.33% to 75% (the indexed getter `0x469cc0` rose from 10% to 80%). The latest
+  report is **97.33% / 51.50% / 50.12%** full and **98.88% / 46.90% / 46.38%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

@@ -1244,20 +1244,16 @@ int main(void)
         void* p = obj;
         __builtin_memcpy(rec + 0x00, &p, sizeof p);
         surface_visibility_set(rec, 1u);
-        void* last = NULL;
-        int flag = -1;
-        scene_visibility_last_call(&last, &flag);
-        CHECK(scene_visibility_calls() == 1 && last == (void*)obj && flag == 1,
-              "the surface wrapper lands on the record's object");
+        CHECK((obj[0x14] & 8) != 0,
+              "the surface wrapper enables its record object");
 
         /* AnimationObjectVisibilitySet: animation record +4. */
         char anim[0x20];
         memset(anim, 0, sizeof anim);
         __builtin_memcpy(anim + 0x04, &p, sizeof p);
         animation_object_visibility_set(anim, 0u);
-        scene_visibility_last_call(&last, &flag);
-        CHECK(scene_visibility_calls() == 2 && last == (void*)obj && flag == 0,
-              "the animation wrapper reads its +4 handle");
+        CHECK((obj[0x14] & 8) == 0,
+              "the animation wrapper disables its +4 object");
 
         /* AnimationObjectVisibilityGet: +4 object's flag bit 3. */
         obj[0x14] = (char)0x10; /* bit 3 clear */
@@ -1277,15 +1273,15 @@ int main(void)
         memset(pair, 0, sizeof pair);
         __builtin_memcpy(pair + 0x04, &p, sizeof p);
         scene_object_pair_apply_mode(pair, 1u);
-        CHECK(scene_visibility_calls() == 1, "the partnerless pair calls once");
+        CHECK((obj[0x14] & 8) != 0,
+              "the partnerless pair enables its first object");
         char mate[0x10];
         memset(mate, 0, sizeof mate);
         void* mp = mate;
         __builtin_memcpy(pair + 0x7c, &mp, sizeof mp);
         scene_object_pair_apply_mode(pair, 1u);
-        CHECK(scene_visibility_calls() == 3, "the second object rides the mode");
-        scene_visibility_last_call(&last, &flag);
-        CHECK(last == (void*)mate, "the partner call lands last");
+        CHECK((mate[0x14] & 8) != 0,
+              "the partner receives the mode");
 
         /* SceneObjectPairSetRenderParameters + SetCallbackScalar (2026-10-24):
          * the pose lands on the two handles as (x, y, 0) + facing (0,0,-1). */

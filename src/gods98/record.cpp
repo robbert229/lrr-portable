@@ -1679,17 +1679,24 @@ void object_state_pair_get(const void* record, uint32_t* out_a,
 }
 
 /* --- the scene-visibility wrapper band (see record.hpp) ---------------------
- * The renderer visibility leaf remains an observation seam. FUN_00473b40 is
- * a separate DDiScene render-lock toggle implemented below. */
+ * The wrappers route through the render-lock toggle. Adapter paths record
+ * their calls at the seam; directly mapped target wrappers retain the retail
+ * call sequence. */
 static int s_scene_vis_calls;
 static void* s_scene_vis_last_obj;
 static int s_scene_vis_last_flag;
 
-static void scene_visibility_hook_call(void* object, int flag)
+static void scene_visibility_observation_record(void* object, int flag)
 {
     ++s_scene_vis_calls;
     s_scene_vis_last_obj = object;
     s_scene_vis_last_flag = flag;
+}
+
+static void scene_visibility_hook_call(void* object, int flag)
+{
+    scene_visibility_observation_record(object, flag);
+    scene_render_lock_toggle(object, flag);
 }
 
 void scene_visibility_hook_reset(void)
@@ -1793,17 +1800,51 @@ void indexed_surface_entries_restore(void)
 
 /* SurfaceVisibilitySet (FUN_00464720) — record +0 handle through the leaf. */
 // FUNCTION: LEGORR 0x00464720
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void surface_visibility_set(const void* record,
+                                             uint32_t flag)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [esp + 8]
+        push eax
+        mov edx, dword ptr [ecx]
+        push edx
+        call scene_render_lock_toggle
+        add esp, 8
+        ret
+    }
+}
+#else
 void surface_visibility_set(const void* record, uint32_t flag)
 {
-    scene_visibility_hook_call(rec_ptr(record, 0x00), (int)flag);
+    scene_render_lock_toggle(rec_ptr(record, 0x00), (int)flag);
 }
+#endif
 
 /* AnimationObjectVisibilitySet (FUN_00406c90) — animation record +4. */
 // FUNCTION: LEGORR 0x00406c90
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void animation_object_visibility_set(const void* anim,
+                                                        uint32_t flag)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [esp + 8]
+        push eax
+        mov edx, dword ptr [ecx + 4]
+        push edx
+        call scene_render_lock_toggle
+        add esp, 8
+        ret
+    }
+}
+#else
 void animation_object_visibility_set(const void* anim, uint32_t flag)
 {
-    scene_visibility_hook_call(rec_ptr(anim, 0x04), (int)flag);
+    scene_render_lock_toggle(rec_ptr(anim, 0x04), (int)flag);
 }
+#endif
 
 /* SceneObjectPairApplyMode (FUN_00408670) — the corpus blindly loads the +4
  * object and +0x7c partner. Copy native-width port pointer slots inline to
@@ -1815,11 +1856,11 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
 {
     void* object;
     __builtin_memcpy(&object, (const char*)record + 0x04, sizeof(object));
-    scene_visibility_hook_call(object, (int)flag);
+    scene_render_lock_toggle(object, (int)flag);
     void* partner;
     __builtin_memcpy(&partner, (const char*)record + 0x7c, sizeof(partner));
     if (partner != NULL) {
-        scene_visibility_hook_call(partner, (int)flag);
+        scene_render_lock_toggle(partner, (int)flag);
     }
 }
 
@@ -1828,6 +1869,52 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
  * channel slots use the corpus offsets; rec_ptr preserves this port's
  * native-width pointer-slot convention. */
 // FUNCTION: LEGORR 0x00473B40
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void scene_render_lock_toggle(void* scene_object,
+                                                int enabled)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 8]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        mov eax, dword ptr [esi + 14h]
+        and eax, 8
+        test ecx, ecx
+        je scene_render_lock_toggle_disable_check
+        test eax, eax
+        jne scene_render_lock_toggle_disable_gate
+        mov eax, dword ptr [esi + 4]
+        mov ecx, dword ptr [esi + 8]
+        push eax
+        push ecx
+        call render_interface_pair_update
+        mov eax, dword ptr [esi + 14h]
+        add esp, 8
+        or al, 8
+        mov dword ptr [esi + 14h], eax
+        pop esi
+        ret
+    scene_render_lock_toggle_disable_gate:
+        test ecx, ecx
+        jne scene_render_lock_toggle_done
+    scene_render_lock_toggle_disable_check:
+        test eax, eax
+        je scene_render_lock_toggle_done
+        mov edx, dword ptr [esi + 4]
+        mov eax, dword ptr [esi]
+        push edx
+        push eax
+        call render_interface_pair_update
+        mov eax, dword ptr [esi + 14h]
+        add esp, 8
+        and al, 0f7h
+        mov dword ptr [esi + 14h], eax
+    scene_render_lock_toggle_done:
+        pop esi
+        ret
+    }
+}
+#else
 void scene_render_lock_toggle(void* scene_object, int enabled)
 {
     uint32_t flags;
@@ -1847,15 +1934,16 @@ void scene_render_lock_toggle(void* scene_object, int enabled)
         rec_dword_put(scene_object, 0x14, flags & ~8u);
     }
 }
+#endif
 
 /* SceneResourceVisibilitySet (FUN_0046d2c0): raise (+0x1e8 |= 2) or clear
  * (&= ~2) the record's visibility word, then route the raw flag through the
- * observation seam — unconditionally on the +8 object, on +0xc when it
+ * visibility operation — unconditionally on the +8 object, on +0xc when it
  * is set, and on every live child in the +0x10 window counted at +0x40.
  * Deviations: the corpus's +8/+0xc object fields are adjacent 32-bit
  * dwords, which the port's native-size pointer-slot model cannot carry
  * four bytes apart — the port routes the field values as raw handles,
- * exactly as the corpus does (the helper call remains an observation seam).
+ * exactly as the corpus does (adapter calls are recorded for tests).
  * The children keep the band's native-size stride (the
  * slot-window precedent) walked only to the window's six entries before
  * +0x40 (the corpus strides its dword slots blindly past the count field);
@@ -1935,10 +2023,24 @@ void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
 /* AnimationObjectVisibilityGet (FUN_004086a0) — the +4 object's flag bit 3
  * through the ported getter. */
 // FUNCTION: LEGORR 0x004086a0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t animation_object_visibility_get(const void* anim)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [eax + 4]
+        push ecx
+        call scene_object_flag_bit3_get_target
+        add esp, 4
+        ret
+    }
+}
+#else
 uint32_t animation_object_visibility_get(const void* anim)
 {
     return scene_object_flag_bit3_get(rec_ptr(anim, 0x04));
 }
+#endif
 
 /* SceneAssignEntityOwner (FUN_00408380) — owner store on the +4 object
  * through the ported owner set. */

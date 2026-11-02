@@ -381,11 +381,9 @@ void object_state_pair_get_target(const void* record, uint32_t* out_a,
 
 /* --- scene-visibility wrapper band (2026-10-24; findings 446/370/435/356/
  * 373/476/28) --------------------------------------------------------------
- * The render visibility backend remains a no-op observation seam, so the
- * wrappers below reproduce their own gates and field work and record the
- * requested handles. FUN_00473b40 is separately modeled by
- * scene_render_lock_toggle below; it toggles DDiScene flag bit 3 and updates
- * the paired render interfaces.
+ * The wrappers dispatch through scene_render_lock_toggle, which toggles
+ * DDiScene flag bit 3 and updates the paired render interfaces. Adapter paths
+ * record calls at their seam; direct target wrappers retain the retail call.
  * Handle slots that the corpus fills with record addresses are read as
  * native pointer slots (the module's established widening).
  * GraphicsOverlayVisibilitySet (FUN_004634b0): the overlay word changes
@@ -422,7 +420,7 @@ void scene_render_lock_toggle(void* scene_object, int enabled);
 
 /* SceneResourceVisibilitySet (FUN_0046d2c0): raise or clear bit 1 of the
  * record's +0x1e8 word, then route the raw flag through the visibility
- * observation seam: unconditionally on +8, on +0xc when set, and on every live child
+ * operation: unconditionally on +8, on +0xc when set, and on every live child
  * of the +0x10 window counted at +0x40. Deviations in the module notes
  * (window-guarded native-size slot stride, single count read, NULL guard). */
 void scene_resource_visibility_set(void* record, uint32_t flag);
