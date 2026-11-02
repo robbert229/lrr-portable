@@ -638,7 +638,7 @@ int entity_remove_object_if_class6(GameContext* ctx, EntitySlot* e)
 static char s_bubble_action_names[BUBBLE_ACTION_NAME_COUNT]
                                   [BUBBLE_ACTION_NAME_CAPACITY];
 // GLOBAL: LEGORR 0x00557864
-static uint32_t s_bubble_texture_handles[BUBBLE_ACTION_NAME_COUNT];
+uint32_t s_bubble_texture_handles[BUBBLE_ACTION_NAME_COUNT];
 static BubbleTextureResourceLoadFn s_bubble_texture_load;
 static BubbleTextureInitializeFn s_bubble_texture_initialize;
 static void* s_bubble_texture_context;

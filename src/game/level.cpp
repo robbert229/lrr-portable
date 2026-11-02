@@ -4760,6 +4760,32 @@ void terrain_cell_work_flag_clear(LevelState* s, const int coord[2],
 void terrain_cell_work_flag_clear_current(const int coord[2],
                                           uint32_t selector)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    int cell_index = width * coord[1] + coord[0];
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+    uint8_t* rec = voxels + cell_index * 0x48;
+    volatile uint32_t* flags = (volatile uint32_t*)(rec + 8);
+
+    if ((*flags & 0x400u) != 0u || (rec[0x0c] & 4u) != 0u ||
+        (*flags & 0x8000u) != 0u) return;
+    if (terrain_cell_predicate_check_current(
+            (const uint32_t*)coord) != 0) return;
+
+    *flags = *flags & 0xffdfffffu;
+    *flags = *flags & 0xdfffffffu;
+    *flags = *flags & 0xbfffffffu;
+    entity_activity_scene_state_update_retail();
+    coordinate_pair_callback_dispatch(coord);
+    ((void (*)(const int*))flic_opcode27_fallback_noop)(coord);
+    coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
+    coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
+    coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
+    coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
+    *flags = *flags | 3u;
+#else
     GameContext* game = entity_pool_callback_context_get();
     LevelState* s;
     uint8_t* rec;
@@ -4789,6 +4815,7 @@ void terrain_cell_work_flag_clear_current(const int coord[2],
     coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
     coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
     *flags |= 3u;
+#endif
 }
 
 /* FUN_004502c0: unsigned pair membership (negative coords wrap). */
@@ -6462,6 +6489,37 @@ int terrain_cell_state_update_current(const int cell_xy[2])
 void terrain_neighbor_flag_set(LevelState* s, int manager,
                                uint32_t x, uint32_t y)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    uint32_t width;
+    uint32_t height;
+    uint32_t index;
+    uint8_t* voxels;
+    uint8_t* rec;
+    (void)manager;
+    if (x != 0u && y != 0u) {
+        width = s->word[LEVEL_OFF_WIDTH / 4];
+        if (x < width - 2u) {
+            height = s->word[LEVEL_OFF_HEIGHT / 4];
+            if (y < height - 2u) {
+                index = y * width + x;
+                voxels = (uint8_t*)(uintptr_t)
+                    s->word[LEVEL_OFF_VOXELS / 4];
+                rec = voxels + index * 0x48u;
+                if ((rec[8] & 8u) != 0u &&
+                    terrain_cell_quad_run_slot_state_get(
+                        s, (int)x, (int)y, NULL, NULL) != 0) {
+                    *(uint32_t*)(rec + 8) =
+                        *(uint32_t*)(rec + 8) & 0xfffffff7u;
+                    *(uint32_t*)(rec + 8) =
+                        *(uint32_t*)(rec + 8) | 0x10u;
+                    cell_init_pass(s, (float)x, y, 0);
+                    terrain_cell_surface_quad_reset_current(
+                        (int)x, (int)y);
+                }
+            }
+        }
+    }
+#else
     uint8_t* rec;
     uint32_t* flags;
     (void)manager;
@@ -6496,6 +6554,7 @@ void terrain_neighbor_flag_set(LevelState* s, int manager,
         s_terrain_neighbor_render_hook(x, y,
                                        s_terrain_neighbor_hook_context);
     }
+#endif
 }
 
 /* TerrainNeighborRefresh (FUN_00430df0): inspect the first eligible
@@ -6732,6 +6791,20 @@ void terrain_cell_visited_flag_set_and_track(LevelState* s, int cx, int cy)
 // FUNCTION: LEGORR 0x00432270
 void terrain_cell_visited_flag_set_and_track_current(const int cell_xy[2])
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    LevelState* level = g_active_level_retail;
+    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
+    int index = (int)(width * (uint32_t)cell_xy[1] +
+                      (uint32_t)cell_xy[0]);
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+    uint32_t* word = (uint32_t*)(voxels + 0x0c + index * 0x48);
+    volatile int* visited_count = &s_cell_visited_track_count;
+    *word = *word | 2u;
+    s_cell_visited_track[*visited_count][0] = cell_xy[0];
+    s_cell_visited_track[*visited_count][1] = cell_xy[1];
+    *visited_count = *visited_count + 1;
+#else
     LevelState* s = terrain_current_level_resolve();
     uint8_t* rec;
     uint32_t* word;
@@ -6743,6 +6816,7 @@ void terrain_cell_visited_flag_set_and_track_current(const int cell_xy[2])
     s_cell_visited_track[s_cell_visited_track_count][0] = cell_xy[0];
     s_cell_visited_track[s_cell_visited_track_count][1] = cell_xy[1];
     ++s_cell_visited_track_count;
+#endif
 }
 
 void terrain_cell_visited_flags_clear_all(LevelState* s)
@@ -6766,6 +6840,27 @@ void terrain_cell_visited_flags_clear_all(LevelState* s)
 // FUNCTION: LEGORR 0x00432300
 void terrain_cell_visited_flags_clear_all_current(void)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    LevelState* level = g_active_level_retail;
+    int* pair = &s_cell_visited_track[0][0];
+    volatile int* visited_count = &s_cell_visited_track_count;
+    int i = 0;
+    if (*visited_count != 0) {
+        do {
+            int x = *pair;
+            int y = pair[1];
+            uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
+            int index = width * y + x;
+            uint8_t* voxels = (uint8_t*)(uintptr_t)
+                level->word[LEVEL_OFF_VOXELS / 4];
+            uint32_t* word = (uint32_t*)(voxels + 0x0c + index * 0x48);
+            pair += 2;
+            *word = *word & 0xfffffffdu;
+            ++i;
+        } while (i < *visited_count);
+    }
+    *visited_count = 0;
+#else
     LevelState* s = terrain_current_level_resolve();
     int i;
     if (s == NULL) return;
@@ -6778,6 +6873,7 @@ void terrain_cell_visited_flags_clear_all_current(void)
         }
     }
     s_cell_visited_track_count = 0;
+#endif
 }
 
 void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
@@ -6805,6 +6901,18 @@ void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
 void terrain_cell_primary_flags_mask_clear_and_refresh_current(
     const int cell_xy[2])
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    int index = width * cell_xy[1] + cell_xy[0];
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+    uint32_t* primary = (uint32_t*)(voxels + 8 + index * 0x48);
+    uint32_t* secondary = (uint32_t*)(voxels + 0x0c + index * 0x48);
+    *primary = *primary & 0xdfef7bffu;
+    *secondary = *secondary & 0xfffffffbu;
+    cell_init_pass(level, (float)cell_xy[0], (uint32_t)cell_xy[1], 0);
+#else
     LevelState* s = terrain_current_level_resolve();
     uint8_t* rec;
     uint32_t* primary;
@@ -6824,6 +6932,7 @@ void terrain_cell_primary_flags_mask_clear_and_refresh_current(
     value &= 0xfffffffbu;
     *secondary = value;
     cell_init_pass(s, (float)cell_xy[0], (uint32_t)cell_xy[1]);
+#endif
 }
 
 void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy)
@@ -6848,6 +6957,18 @@ void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy)
 // FUNCTION: LEGORR 0x004323f0
 void terrain_cell_flags_set_and_refresh_current(const int cell_xy[2])
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    int index = width * cell_xy[1] + cell_xy[0];
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+    uint32_t* primary = (uint32_t*)(voxels + 8 + index * 0x48);
+    uint32_t* secondary = (uint32_t*)(voxels + 0x0c + index * 0x48);
+    *primary = *primary | 0x108000u;
+    *secondary = *secondary | 4u;
+    cell_init_pass(level, (float)cell_xy[0], (uint32_t)cell_xy[1], 0);
+#else
     LevelState* s = terrain_current_level_resolve();
     uint8_t* rec;
     uint32_t* primary;
@@ -6867,6 +6988,7 @@ void terrain_cell_flags_set_and_refresh_current(const int cell_xy[2])
     value |= 4u;
     *secondary = value;
     cell_init_pass(s, (float)cell_xy[0], (uint32_t)cell_xy[1]);
+#endif
 }
 
 void terrain_cell_flags_set_mask100400(LevelState* s, int x, int y)

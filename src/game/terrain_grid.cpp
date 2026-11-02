@@ -1345,7 +1345,8 @@ static int terrain_texture_set_config_load_grid(TerrainTileMeshGrid* grid,
         if (!terrain_tile_mesh_grid_load_level(grid->owner_level, mesh_name))
             return 0;
     }
-    else if (!terrain_tile_mesh_grid_load(grid, mesh_name)) return 0;
+    else if (!terrain_tile_mesh_grid_load(grid, mesh_name))
+        return 0;
     if (roof_name == NULL) return 0;
     /* FUN_00462e60 replaces the globally-owned animated indexed texture and
      * propagates it through that resource owner's slots. It is not a

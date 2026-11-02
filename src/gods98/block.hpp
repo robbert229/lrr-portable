@@ -86,6 +86,7 @@ BlockRec*   block_record_at(const BlockFile* bf, size_t index);
 
 int   block_get_str(BlockFile* bf, const char* path, char* buf, size_t sz);
 const char* block_get_strptr(BlockFile* bf, const char* path); /* NULL ok */
+char* block_get_str_copy(BlockFile* bf, const char* path); /* FUN_00479050 */
 int   block_get_int(BlockFile* bf, const char* path, int dflt);
 float block_get_float(BlockFile* bf, const char* path, float dflt);
 
@@ -95,6 +96,9 @@ int   block_get_bool(const char* value);
 /* Path convenience corresponding to ConfigBooleanGetDefault2 (0x4790d0);
  * missing or unparseable values answer 2. */
 int   block_get_bool(BlockFile* bf, const char* path);
+
+/* ConfigRgbVectorRead's retail colon separator at DAT_004a1cd4. */
+extern const char s_config_rgb_separator[];
 
 /* ConfigRgbVectorRead (FUN_00479170): reads the path's value string,
  * splits it on commas the way FUN_00477440 applies the DAT_004a1cd4

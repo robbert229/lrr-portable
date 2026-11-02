@@ -305,7 +305,36 @@ static void* s_motion_gameplay_scene_object;
 static void* s_motion_gameplay_scene_owner;
 static uint32_t s_motion_gameplay_scene_flags;
 static MotionJitterState s_motion_jitter_state;
-static float s_motion_jitter_tolerance[3];
+// GLOBAL: LEGORR 0x004EADD8
+void* s_motion_jitter_retail_scene_object;
+// GLOBAL: LEGORR 0x004EADDC
+void* s_motion_jitter_retail_scene_owner;
+// GLOBAL: LEGORR 0x004EAE74
+float s_motion_jitter_center[3];
+// GLOBAL: LEGORR 0x004EAE80
+float s_motion_jitter_tolerance[3];
+// GLOBAL: LEGORR 0x004EAE8C
+float s_motion_jitter_delay;
+// GLOBAL: LEGORR 0x004EAE90
+float s_motion_jitter_delay_min;
+// GLOBAL: LEGORR 0x004EAE94
+float s_motion_jitter_delay_max;
+// GLOBAL: LEGORR 0x004EAE98
+float s_motion_jitter_duration;
+// GLOBAL: LEGORR 0x004EAE9C
+float s_motion_jitter_duration_min;
+// GLOBAL: LEGORR 0x004EAEA0
+float s_motion_jitter_duration_max;
+// GLOBAL: LEGORR 0x004EAEA4
+float s_motion_jitter_direction[3];
+// GLOBAL: LEGORR 0x004EAEB0
+float s_motion_jitter_remaining;
+// GLOBAL: LEGORR 0x004EAEB4
+float s_motion_jitter_magnitude_min;
+// GLOBAL: LEGORR 0x004EAEB8
+float s_motion_jitter_magnitude_max;
+// GLOBAL: LEGORR 0x004EAEC8
+uint32_t s_motion_jitter_flags;
 static void motion_jitter_center_refresh(void);
 
 static float motion_waypoint_default_random(void* context, float minimum,
@@ -338,12 +367,14 @@ void motion_gameplay_scene_bind(void* target, uint32_t flags)
 {
     s_motion_gameplay_scene_object = target;
     s_motion_gameplay_scene_flags = flags;
+    s_motion_jitter_retail_scene_object = target;
 }
 
 void motion_gameplay_scene_owner_bind(void* target, void* owner)
 {
     if (target == s_motion_gameplay_scene_object) {
         s_motion_gameplay_scene_owner = owner;
+        s_motion_jitter_retail_scene_owner = owner;
         motion_jitter_center_refresh();
     }
 }
@@ -356,6 +387,7 @@ static void motion_jitter_center_refresh(void)
             s_motion_gameplay_scene_owner, position)) {
         memcpy(s_motion_jitter_state.center, position, sizeof(position));
         memcpy(s_motion_jitter_state.position, position, sizeof(position));
+        memcpy(s_motion_jitter_center, position, sizeof(position));
     }
 }
 
@@ -371,12 +403,19 @@ void motion_jitter_parameters_store(float delay_min, float delay_max,
     s_motion_jitter_state.lifetime_max = speed_max;
     s_motion_jitter_state.magnitude_min = magnitude_min;
     s_motion_jitter_state.magnitude_max = magnitude_max;
+    s_motion_jitter_delay_min = delay_min;
+    s_motion_jitter_delay_max = delay_max;
+    s_motion_jitter_duration_min = speed_min;
+    s_motion_jitter_duration_max = speed_max;
+    s_motion_jitter_magnitude_min = magnitude_min;
+    s_motion_jitter_magnitude_max = magnitude_max;
     s_motion_jitter_tolerance[0] = tolerance_x;
     s_motion_jitter_tolerance[1] = tolerance_y;
     s_motion_jitter_tolerance[2] = tolerance_z;
     memcpy(s_motion_jitter_state.tolerance, s_motion_jitter_tolerance,
            sizeof(s_motion_jitter_tolerance));
     s_motion_jitter_state.flags |= 0x40u;
+    s_motion_jitter_flags |= 0x40u;
     motion_jitter_center_refresh();
 }
 
@@ -396,6 +435,21 @@ static int motion_jitter_candidate_valid(void*, const float position[3])
             (double)(position[i] - s_motion_jitter_state.center[i]));
         if (s_motion_jitter_tolerance[i] < difference) return 0;
     }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x0044D9A0
+int motion_jitter_candidate_valid_retail(float position[3])
+{
+    if (fabs((double)(position[0] - s_motion_jitter_center[0])) >
+        (double)s_motion_jitter_tolerance[0])
+        return 0;
+    if (fabs((double)(position[1] - s_motion_jitter_center[1])) >
+        (double)s_motion_jitter_tolerance[1])
+        return 0;
+    if (fabs((double)(position[2] - s_motion_jitter_center[2])) >
+        (double)s_motion_jitter_tolerance[2])
+        return 0;
     return 1;
 }
 
@@ -472,6 +526,59 @@ void motion_jitter_state_step(MotionJitterState* state, float delta,
 // FUNCTION: LEGORR 0x0044D760
 void motion_jitter_step(float delta)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    float position[3];
+    float candidate[3];
+    float inverse_length;
+    int valid;
+    if ((s_motion_jitter_flags & 0x40u) == 0u) return;
+    if ((s_motion_jitter_flags & 0x80u) == 0u) {
+        s_motion_jitter_delay = s_motion_jitter_delay - delta;
+        if (0.0f < s_motion_jitter_delay) return;
+        s_motion_jitter_delay = random_float_range(
+            s_motion_jitter_delay_min, s_motion_jitter_delay_max);
+        s_motion_jitter_duration = random_float_range(
+            s_motion_jitter_duration_min, s_motion_jitter_duration_max);
+        s_motion_jitter_remaining = random_float_range(
+            s_motion_jitter_magnitude_min, s_motion_jitter_magnitude_max);
+        d3drm_vector_random(s_motion_jitter_direction);
+        inverse_length = 1.0f / (float)sqrt((double)(
+            s_motion_jitter_direction[2] * s_motion_jitter_direction[2] +
+            s_motion_jitter_direction[1] * s_motion_jitter_direction[1] +
+            s_motion_jitter_direction[0] * s_motion_jitter_direction[0]));
+        s_motion_jitter_direction[0] = inverse_length *
+            s_motion_jitter_direction[0] * s_motion_jitter_duration;
+        s_motion_jitter_direction[1] = inverse_length *
+            s_motion_jitter_direction[1] * s_motion_jitter_duration;
+        s_motion_jitter_direction[2] = inverse_length *
+            s_motion_jitter_direction[2] * s_motion_jitter_duration;
+        s_motion_jitter_flags |= 0x80u;
+        return;
+    }
+    if (!ddiscene_object_position_get(s_motion_jitter_retail_scene_object,
+            s_motion_jitter_retail_scene_owner, position)) return;
+    candidate[0] = position[0] + s_motion_jitter_direction[0];
+    candidate[1] = position[1] + s_motion_jitter_direction[1];
+    candidate[2] = position[2] + s_motion_jitter_direction[2];
+    valid = motion_jitter_candidate_valid_retail(candidate);
+    if (valid == 0) {
+        candidate[0] = position[0] - s_motion_jitter_direction[0];
+        candidate[1] = position[1] - s_motion_jitter_direction[1];
+        candidate[2] = position[2] - s_motion_jitter_direction[2];
+        valid = motion_jitter_candidate_valid_retail(candidate);
+        if (valid == 0) {
+            s_motion_jitter_flags &= 0xffffff7fu;
+            return;
+        }
+    }
+    (void)ddiscene_object_position_set(s_motion_jitter_retail_scene_object,
+        s_motion_jitter_retail_scene_owner, candidate[0], candidate[1],
+        candidate[2]);
+    s_motion_jitter_remaining = s_motion_jitter_remaining -
+        s_motion_jitter_duration;
+    if (0.0f < s_motion_jitter_remaining) return;
+    s_motion_jitter_flags &= 0xffffff7fu;
+#else
     MotionJitterHooks hooks;
     float position[3];
     if (s_motion_gameplay_scene_object == NULL ||
@@ -486,6 +593,7 @@ void motion_jitter_step(float delta)
     hooks.context = s_motion_waypoint_user;
     motion_jitter_state_step(&s_motion_jitter_state, delta,
         s_motion_waypoint_random_range, &hooks);
+#endif
 }
 
 void motion_waypoint_position_bind(float x, float y, float z)

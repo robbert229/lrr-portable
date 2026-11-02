@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **46.02% accuracy**, **44.78% progress**
+- Full report: **97.32% implemented**, **46.16% accuracy**, **44.92% progress**
   (2,326 compared entries out of 2,390).
-- Game-only report: **98.87% implemented**, **40.84% accuracy**,
-  **40.38% progress** (2,107/2,131).
+- Game-only report: **98.87% implemented**, **41.00% accuracy**,
+  **40.54% progress** (2,107/2,131).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -320,6 +320,70 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   Reccmp completed in the developer distrobox; `git diff --check` passed and
   tests were not run. Latest report: **97.32% / 46.02% / 44.78%** full and
   **98.87% / 40.84% / 40.38%** game-only.
+- `TerrainCellWorkFlagClear` (`0x430320`) now has a Win32 target path that
+  reads the active-level voxel record directly, applies the descriptor and
+  flag gates, clears the three decompiled bits, then performs the activity,
+  coordinate callback, FLIC fallback, four queued events, and final flag set
+  in reference order. This avoids routing the mapped entry through the
+  entity-pool context and explicit-level adapter. The score rose from **9.30%
+  to 12.61%**. A volatile pointer-slot experiment on the adjacent
+  `0x4332f0` work-flag setter had no score effect and was reverted. Latest
+  report: **97.32% / 46.02% / 44.79%** full and **98.87% / 40.85% / 40.39%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+- `TerrainCellPrimaryFlagsMaskClearAndRefresh` (`0x432360`) and
+  `TerrainCellFlagsSetAndRefresh` (`0x4323f0`) now have Win32 target paths
+  that use the active-level voxel pointer, update the decompiled primary and
+  secondary flag masks, and call `CellInitPass` with the target coordinates.
+  Each rose from **6.45% to 47.06%**. The combined report also moved
+  `0x4324d0` from 50.00% to 43.90% and `0x4512d0` from 8.53% to 7.58%; their
+  bodies were not edited in this batch. A repeat build produced identical
+  scores, so these code-generation/report shifts are stable but not yet
+  explained. Latest report: **97.32% / 46.05% / 44.82%** full and
+  **98.87% / 40.88% / 40.42%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+- `TerrainNeighborFlagSet` (`0x430470`) now has a Win32 path with the retail
+  nonzero-coordinate gate, unsigned `dimension - 2` bounds checks, direct
+  voxel-record flag transition, and `CellInitPass`/staged-slot-reset order.
+  Its score rose from **14.72% to 17.54%**. The path still uses the live
+  per-level staged-record query in place of the reference's global
+  `WorldSpatialRecordFindAtGridCoordinate` registry; the view-side registry
+  has no production installer in this checkout. The same rebuild changed the
+  unedited `TerrainCellNormalSample` (`0x4512d0`) from **7.58% to 9.48%**;
+  a repeat report was identical. Overall totals remain **97.32% / 46.05% /
+  44.82%** full and **98.87% / 40.88% / 40.42%** game-only. Reccmp and
+  `git diff --check` passed; tests were not run.
+- `TerrainCellVisitedFlagSetAndTrack` (`0x432270`) and
+  `TerrainCellVisitedFlagsClearAll` (`0x432300`) now use direct active-level
+  voxel access on Win32 and the existing retail-addressed coordinate/count
+  globals. The set path preserves the unchecked 100-pair append; the clear
+  path reads the list count on each loop check and resets it after clearing
+  each visited bit. Scores rose from **8.16% to 69.57%** and **17.65% to
+  88.89%**. The rebuild also moved the unedited `0x4512d0` from 9.48% to
+  8.53%; a repeat produced identical target and aggregate results. Latest
+  report: **97.32% / 46.11% / 44.88%** full and **98.87% / 40.95% / 40.49%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
+- `PendingTypeValueSlotSelect` (`0x407a10`) now reads the retail entity and
+  command-record offsets directly on Win32 x86 and selects from the same
+  contiguous 39-word bubble-handle table used by the live bubble config path.
+  This replaced the target body's reconstructed field/sidecar lookups while
+  preserving the portable fallback. Its score rose from **1.33% to 50.97%**.
+  A follow-up correction restored the decompile's type-19 activity 6/7 slot
+  mapping and removed a type-3 payload null gate absent in the retail body;
+  this moved the interim score from 51.12% to 50.97%. No other target score
+  changed in that rebuild. That checkpoint report was **97.32% / 46.14% /
+  44.91%** full and **98.87% / 40.98% / 40.52%** game-only. Reccmp completed in the
+  developer distrobox; `git diff --check` passed; tests were not run.
+- `motion_jitter_step` (`0x44d760`) now runs the decompiled delay, randomized
+  direction, bounded candidate, scene-position update, and remaining-time
+  state machine against mapped retail globals. The bounds helper is now mapped
+  at `0x44d9a0` and checks the three global center/tolerance pairs. Existing
+  parameter storage and scene binding populate those globals; the editor path
+  and jitter path share the retail flag word at `0x004eaec8`. Scores rose from
+  **4.44% to 35.83%** and **16.39% to 24.00%**, respectively. The only changed
+  report rows were those two targets. Latest report: **97.32% / 46.16% / 44.92%**
+  full and **98.87% / 41.00% / 40.54%** game-only. The developer distrobox
+  Reccmp build and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

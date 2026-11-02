@@ -460,9 +460,10 @@ int  frontend_enabled(BlockFile* cfg);
  * colors, hunger images and position, then the bubble position from the
  * value/key config pair. Called during game config setup before rendering. */
 void frontend_hud_runtime_install(void);
-void frontend_render_three_pass_update(BlockFile* values, BlockFile* names);
+void frontend_render_three_pass_update(BlockFile* values,
+                                       const char* config_root);
 int frontend_bubble_images_position_config_load(BlockFile* values,
-                                                BlockFile* names);
+                                                const char* config_root);
 /* UiTextUnderscoresToSpaces (FUN_004102b0): return a shared display copy
  * with underscores changed to spaces for strings up to 255 bytes. */
 const char* ui_text_underscores_to_spaces(const char* text);

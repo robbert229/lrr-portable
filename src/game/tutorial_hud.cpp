@@ -24,6 +24,7 @@
 #include "../gods98/engine.hpp"
 #include "../gods98/texture.hpp"
 #include "../gods98/view.hpp"
+#include "../gods98/string.hpp"
 #include "terrain_grid.hpp"
 #include "../gods98/message.hpp"
 #include "../gods98/media.hpp"
@@ -2179,44 +2180,50 @@ static int legacy_config_rgb(BlockFile* cfg, const char* path, float rgb[3])
  * then fetch and parse the corresponding value from the value file. Most
  * production callers pass the same Lego.cfg for both, but keep the two
  * inputs distinct for callers which supply a separate key table. */
-static int legacy_config_pair_from_files(BlockFile* values, BlockFile* names,
-                                         const char* path, int* x, int* y)
+static const char* legacy_hud_config_path(const char* config_root,
+                                          const char* key)
 {
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    if (name_cfg == NULL || value_cfg == NULL ||
-        block_find(name_cfg, path) == NULL) return 0;
-    return legacy_config_pair(value_cfg, path, x, y);
+    return string_path_join(config_root, "ObjInfo", key, (char*)NULL);
 }
 
-static int legacy_config_rgb_from_files(BlockFile* values, BlockFile* names,
-                                        const char* path, float rgb[3])
+static int legacy_config_pair_from_root(BlockFile* values,
+                                        const char* config_root,
+                                        const char* key, int* x, int* y)
 {
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    if (name_cfg == NULL || value_cfg == NULL ||
-        block_find(name_cfg, path) == NULL) return 0;
-    return legacy_config_rgb(value_cfg, path, rgb);
+    const char* path;
+    if (values == NULL || config_root == NULL || key == NULL) return 0;
+    path = legacy_hud_config_path(config_root, key);
+    return legacy_config_pair(values, path, x, y);
 }
 
-static int legacy_config_int_from_files(BlockFile* values, BlockFile* names,
-                                        const char* path, int fallback)
+static int legacy_config_rgb_from_root(BlockFile* values,
+                                       const char* config_root,
+                                       const char* key, float rgb[3])
 {
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    if (name_cfg == NULL || value_cfg == NULL ||
-        block_find(name_cfg, path) == NULL) return fallback;
-    return block_get_int(value_cfg, path, fallback);
+    const char* path;
+    if (values == NULL || config_root == NULL || key == NULL) return 0;
+    path = legacy_hud_config_path(config_root, key);
+    return legacy_config_rgb(values, path, rgb);
 }
 
-static int legacy_config_bool_from_files(BlockFile* values, BlockFile* names,
-                                         const char* path)
+static int legacy_config_int_from_root(BlockFile* values,
+                                       const char* config_root,
+                                       const char* key, int fallback)
 {
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    if (name_cfg == NULL || value_cfg == NULL ||
-        block_find(name_cfg, path) == NULL) return 0;
-    return block_get_bool(value_cfg, path);
+    const char* path;
+    if (values == NULL || config_root == NULL || key == NULL) return fallback;
+    path = legacy_hud_config_path(config_root, key);
+    return block_get_int(values, path, fallback);
+}
+
+static int legacy_config_bool_from_root(BlockFile* values,
+                                        const char* config_root,
+                                        const char* key)
+{
+    const char* path;
+    if (values == NULL || config_root == NULL || key == NULL) return 0;
+    path = legacy_hud_config_path(config_root, key);
+    return block_get_bool(values, path);
 }
 
 static void legacy_hud_state_flags_publish(void)
@@ -2248,42 +2255,42 @@ static void legacy_color_pair(float source[3], float high[3], float low[3])
 }
 
 // FUNCTION: LEGORR 0x00459560
-int legacy_health_bar_config_load(BlockFile* values, BlockFile* names)
+int legacy_health_bar_config_load(BlockFile* values, const char* config_root)
 {
     int x, y;
     int width, height;
-    BlockFile* cfg = values != NULL ? values : names;
+    BlockFile* cfg = values;
     int border;
     int vertical;
     float rgb[3];
     if (cfg == NULL) return 0;
-    if (!legacy_config_pair_from_files(values, names,
-            "ObjInfo::HealthBarPosition", &x, &y)) return 0;
+    if (!legacy_config_pair_from_root(values, config_root,
+            "HealthBarPosition", &x, &y)) return 0;
     s_legacy_health_bar.x = (float)x;
     s_legacy_health_bar.y = (float)y;
-    if (!legacy_config_pair_from_files(values, names,
-            "ObjInfo::HealthBarWidthHeight", &width, &height)) return 0;
+    if (!legacy_config_pair_from_root(values, config_root,
+            "HealthBarWidthHeight", &width, &height)) return 0;
     s_legacy_health_bar.width = (float)width;
     s_legacy_health_bar.height = (float)height;
     // The original derives this through an integer conversion of the raw
     // value string, so a missing or empty key yields 0 rather than 1.
-    border = legacy_config_int_from_files(values, names,
-            "ObjInfo::HealthBarBorderSize", 0);
+    border = legacy_config_int_from_root(values, config_root,
+            "HealthBarBorderSize", 0);
     s_legacy_health_bar.border = (float)border;
-    if (!legacy_config_rgb_from_files(values, names,
-            "ObjInfo::HealthBarBorderRGB", rgb)) return 0;
+    if (!legacy_config_rgb_from_root(values, config_root,
+            "HealthBarBorderRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.border_rgb, rgb, sizeof(rgb));
     legacy_color_pair(s_legacy_health_bar.border_rgb,
                       s_legacy_health_bar.border_high,
                       s_legacy_health_bar.border_low);
-    if (!legacy_config_rgb_from_files(values, names,
-            "ObjInfo::HealthBarBackgroundRGB", rgb)) return 0;
+    if (!legacy_config_rgb_from_root(values, config_root,
+            "HealthBarBackgroundRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.background_rgb, rgb, sizeof(rgb));
-    if (!legacy_config_rgb_from_files(values, names,
-            "ObjInfo::HealthBarRGB", rgb)) return 0;
+    if (!legacy_config_rgb_from_root(values, config_root,
+            "HealthBarRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.health_rgb, rgb, sizeof(rgb));
-    vertical = legacy_config_bool_from_files(values, names,
-            "ObjInfo::HealthBarVertical");
+    vertical = legacy_config_bool_from_root(values, config_root,
+            "HealthBarVertical");
     /* DAT_004ffe68 is shared by the other HUD loaders. The original only
        ORs these bits: a later horizontal reload does not clear vertical. */
     if (vertical == 1) s_legacy_hud_state_flags |= 8u;
@@ -2297,11 +2304,15 @@ int legacy_health_bar_config_load(BlockFile* values, BlockFile* names)
     return 1;
 }
 
-static void legacy_hud_resource_name(BlockFile* cfg, const char* path,
+static void legacy_hud_resource_name(BlockFile* cfg, const char* config_root,
+                                     const char* key,
                                      char* out, uint32_t out_size)
 {
+    const char* path;
     out[0] = '\0';
-    if (cfg == NULL || path == NULL || out_size == 0) return;
+    if (cfg == NULL || config_root == NULL || key == NULL || out_size == 0)
+        return;
+    path = legacy_hud_config_path(config_root, key);
     if (s_legacy_hud_ops.config_resource != NULL) {
         s_legacy_hud_ops.config_resource(cfg, path, out, out_size,
                                         s_legacy_hud_ops.context);
@@ -2311,19 +2322,19 @@ static void legacy_hud_resource_name(BlockFile* cfg, const char* path,
 }
 
 // FUNCTION: LEGORR 0x004599c0
-void legacy_hunger_images_load(BlockFile* values, BlockFile* names)
+void legacy_hunger_images_load(BlockFile* values, const char* config_root)
 {
     int i;
     char path[96];
     char resource_name[256];
-    BlockFile* cfg = values != NULL ? values : names;
+    BlockFile* cfg = values;
     // The original re-reads the five ObjInfo::HungerImages::HungerImage%i
     // keys and overwrites each slot without releasing the previous surface
     // (the resource layer owns surface lifetime).
     for (i = 0; i < 5; ++i) {
         void* image = NULL;
-        sprintf(path, "ObjInfo::HungerImages::HungerImage%i", i);
-        legacy_hud_resource_name(cfg, path, resource_name,
+        sprintf(path, "HungerImages::HungerImage%i", i);
+        legacy_hud_resource_name(cfg, config_root, path, resource_name,
                                  (uint32_t)sizeof(resource_name));
         if (resource_name[0] != '\0' &&
             s_legacy_hud_ops.surface_load != NULL) {
@@ -2343,13 +2354,13 @@ void legacy_hunger_images_load(BlockFile* values, BlockFile* names)
 
 // FUNCTION: LEGORR 0x00459900
 int legacy_hunger_images_position_config_load(BlockFile* values,
-                                               BlockFile* names)
+                                               const char* config_root)
 {
     int x, y;
-    BlockFile* cfg = values != NULL ? values : names;
-    legacy_hunger_images_load(values, names);
-    if (cfg == NULL || !legacy_config_pair_from_files(values, names,
-            "ObjInfo::HungerImagesPosition", &x, &y)) return 0;
+    BlockFile* cfg = values;
+    legacy_hunger_images_load(values, config_root);
+    if (cfg == NULL || !legacy_config_pair_from_root(values, config_root,
+            "HungerImagesPosition", &x, &y)) return 0;
     s_legacy_hunger_position[0] = (float)x;
     s_legacy_hunger_position[1] = (float)y;
     panel_position_offsets_set((float)x, (float)y);

@@ -2488,7 +2488,7 @@ static int frameloop_game_init_callback(const char* root, void* user)
             help_window_resources_init(cfg, NULL);
         }
         frontend_hud_runtime_install();
-        frontend_render_three_pass_update(cfg, cfg);
+        frontend_render_three_pass_update(cfg, util_root_name(cfg));
         (void)light_effect_waypoint_config_load(cfg, "Lego*");
         light_effect_configuration_load(cfg, "Lego*");
         bubble_config_texture_load(cfg);

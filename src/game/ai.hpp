@@ -247,6 +247,8 @@ void ai_activity_grant(GameContext* ctx, EntitySlot* e, int value);
 
 #ifdef __cplusplus
 }
+/* Retail's contiguous DAT_00557864..DAT_00557900 bubble-handle table. */
+extern uint32_t s_bubble_texture_handles[39];
 #endif
 
 /* EntityQueueForRockfallProcessingIfEligible (FUN_0043a9e0): the corpus's

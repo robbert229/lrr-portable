@@ -136,10 +136,10 @@ typedef struct LegacyHealthBarState {
 } LegacyHealthBarState;
 
 void legacy_hud_ops_set(const LegacyHudOps* ops);
-int legacy_health_bar_config_load(BlockFile* values, BlockFile* names);
+int legacy_health_bar_config_load(BlockFile* values, const char* config_root);
 int legacy_hunger_images_position_config_load(BlockFile* values,
-                                              BlockFile* names);
-void legacy_hunger_images_load(BlockFile* values, BlockFile* names);
+                                              const char* config_root);
+void legacy_hunger_images_load(BlockFile* values, const char* config_root);
 int legacy_bubble_images_position_config_load(BlockFile* values,
                                                BlockFile* names);
 void legacy_health_bar_config_peek(LegacyHealthBarState* state);

@@ -10652,19 +10652,18 @@ void frontend_hud_runtime_install(void)
 }
 
 // FUNCTION: LEGORR 0x00459530
-void frontend_render_three_pass_update(BlockFile* values, BlockFile* names)
+void frontend_render_three_pass_update(BlockFile* values,
+                                        const char* config_root)
 {
-    legacy_health_bar_config_load(values, names);
-    legacy_hunger_images_position_config_load(values, names);
-    (void)frontend_bubble_images_position_config_load(values, names);
+    legacy_health_bar_config_load(values, config_root);
+    legacy_hunger_images_position_config_load(values, config_root);
+    (void)frontend_bubble_images_position_config_load(values, config_root);
 }
 
 // FUNCTION: LEGORR 0x00459a50
 int frontend_bubble_images_position_config_load(BlockFile* values,
-                                                BlockFile* names)
+                                                const char* config_root)
 {
-    const char* const config_root = util_root_name(
-        names != NULL ? names : values);
     const char* const path = string_path_join(config_root, "ObjInfo",
         "BubbleImagesPosition", (char*)NULL);
     const char* value;
@@ -10688,34 +10687,39 @@ namespace unported_ledger_stubs {
 void ledger_stub_00459530_RenderThreePassUpdate(BlockFile* values,
                                                  BlockFile* names)
 {
-    frontend_render_three_pass_update(values, names);
+    frontend_render_three_pass_update(values,
+        util_root_name(names != NULL ? names : values));
 }
 
 // HealthBarConfigLoadAndShadeDerive
 int ledger_stub_00459560_HealthBarConfigLoadAndShadeDerive(
     BlockFile* values, BlockFile* names)
 {
-    return legacy_health_bar_config_load(values, names);
+    return legacy_health_bar_config_load(values,
+        util_root_name(names != NULL ? names : values));
 }
 
 // HungerImagesPositionConfigLoad
 int ledger_stub_00459900_HungerImagesPositionConfigLoad(
     BlockFile* values, BlockFile* names)
 {
-    return legacy_hunger_images_position_config_load(values, names);
+    return legacy_hunger_images_position_config_load(values,
+        util_root_name(names != NULL ? names : values));
 }
 
 // LoadObjectHungerMeterImages
 void ledger_stub_004599c0_LoadObjectHungerMeterImages(BlockFile* values,
                                                        BlockFile* names)
 {
-    legacy_hunger_images_load(values, names);
+    legacy_hunger_images_load(values,
+        util_root_name(names != NULL ? names : values));
 }
 
 int ledger_stub_00459a50_BubbleImagesPositionConfigLoad(
     BlockFile* values, BlockFile* names)
 {
-    return frontend_bubble_images_position_config_load(values, names);
+    return frontend_bubble_images_position_config_load(values,
+        util_root_name(names != NULL ? names : values));
 }
 
 // RenderEntityScreenRing

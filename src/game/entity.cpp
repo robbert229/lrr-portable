@@ -7787,6 +7787,89 @@ int entity_cursor_target_screen_position_get(const EntitySlot* entity,
 // FUNCTION: LEGORR 0x00407a10
 void pending_type_value_slot_select(const EntitySlot* e, uint32_t* out)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    int* record = *(int**)((uint8_t*)e + 0x2f0);
+    int type;
+    if ((*(uint8_t*)((uint8_t*)e + 0x3ec) & 0x20u) != 0u) {
+        *out = s_bubble_texture_handles[30];
+        return;
+    }
+    if ((*(uint32_t*)((uint8_t*)e + 0x3e0) & 0x800000u) != 0u) {
+        *out = s_bubble_texture_handles[28];
+        return;
+    }
+    if ((*(uint32_t*)((uint8_t*)e + 0x3e0) & 0x80000000u) != 0u) {
+        *out = s_bubble_texture_handles[0];
+        return;
+    }
+    if (record == NULL) return;
+    type = record[0];
+    while (type == 0xe &&
+           (record = *(int**)((uint8_t*)record + 0x60)) != NULL) {
+        type = record[0];
+    }
+    switch (type) {
+    case 0:
+        *out = s_bubble_texture_handles[22];
+        return;
+    case 3: {
+        int* payload = *(int**)((uint8_t*)record + 0x10);
+        if (payload[0] == 6) *out = s_bubble_texture_handles[2];
+        else if (payload[0] == 7) {
+            if (payload[1] != 0) *out = s_bubble_texture_handles[4];
+            else *out = s_bubble_texture_handles[3];
+            return;
+        }
+        else if (payload[0] == 8) *out = s_bubble_texture_handles[5];
+        else if (payload[0] == 9) *out = s_bubble_texture_handles[6];
+        else if (payload[0] == 0xb) *out = s_bubble_texture_handles[7];
+        else break;
+        return;
+    }
+    case 5: {
+        int* linked = *(int**)((uint8_t*)e + 0x308);
+        if (linked == NULL) break;
+        type = linked[0];
+        if (type == 6) *out = s_bubble_texture_handles[16];
+        else if (type == 7) {
+            if (linked[1] != 0) *out = s_bubble_texture_handles[18];
+            else *out = s_bubble_texture_handles[17];
+            return;
+        }
+        else if (type == 8) *out = s_bubble_texture_handles[19];
+        else if (type == 9) *out = s_bubble_texture_handles[20];
+        else if (type == 0xb) *out = s_bubble_texture_handles[21];
+        else break;
+        return;
+    }
+    case 7: *out = s_bubble_texture_handles[38]; return;
+    case 8: *out = s_bubble_texture_handles[25]; return;
+    case 9: *out = s_bubble_texture_handles[23]; return;
+    case 10: *out = s_bubble_texture_handles[26]; return;
+    case 0xb: *out = s_bubble_texture_handles[24]; return;
+    case 0xc: *out = s_bubble_texture_handles[27]; return;
+    case 0xf: *out = s_bubble_texture_handles[31]; return;
+    case 0x10:
+    case 0x11: *out = s_bubble_texture_handles[32]; return;
+    case 0x12: *out = s_bubble_texture_handles[33]; return;
+    case 0x13:
+        type = record[0xe];
+        if (type == 0) *out = s_bubble_texture_handles[8];
+        else if (type == 1) *out = s_bubble_texture_handles[9];
+        else if (type == 2) *out = s_bubble_texture_handles[10];
+        else if (type == 3) *out = s_bubble_texture_handles[11];
+        else if (type == 4) *out = s_bubble_texture_handles[12];
+        else if (type == 5) *out = s_bubble_texture_handles[13];
+        else if (type == 7) *out = s_bubble_texture_handles[14];
+        else if (type == 6) *out = s_bubble_texture_handles[15];
+        else break;
+        return;
+    case 0x15: *out = s_bubble_texture_handles[34]; return;
+    case 0x16: *out = s_bubble_texture_handles[35]; return;
+    case 0x17: *out = s_bubble_texture_handles[36]; return;
+    case 0x1b: *out = s_bubble_texture_handles[37]; return;
+    }
+#else
     if (e == NULL || out == NULL) {
         return;
     }
@@ -7867,6 +7950,7 @@ void pending_type_value_slot_select(const EntitySlot* e, uint32_t* out)
     if (address != 0u) {
         *out = pending_type_value_get(address);
     }
+#endif
 }
 
 /* ResetObjectAuxiliaryState (FUN_00407370): the global refresh gate clears
