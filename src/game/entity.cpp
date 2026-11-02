@@ -6713,12 +6713,23 @@ int entity_build_placement_command_setup(const int cell_xy[2], int entity_id,
     return 1;
 }
 
+namespace unported_ledger_stubs {
+void ledger_stub_00439370_EntityBuildPlacementCommandSetup(
+    const int cell_xy[2], int entity_id, const float world_xy[2],
+    int update_state);
+void ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
+    const int cell_xy[2], int entity_id, const float world_xy[2],
+    int update_state);
+}
+
 // FUNCTION: LEGORR 0x00439340
 void entity_build_placement_command_pair_create(const int cell_xy[2],
                                                 int entity_id)
 {
-    (void)entity_build_placement_command_setup(cell_xy, entity_id, NULL, 1, 0);
-    (void)entity_build_placement_command_setup(cell_xy, entity_id, NULL, 1, 1);
+    unported_ledger_stubs::ledger_stub_00439370_EntityBuildPlacementCommandSetup(
+        cell_xy, entity_id, NULL, 1);
+    unported_ledger_stubs::ledger_stub_004394b0_EntityBuildPlacementAlternateCommandSetup(
+        cell_xy, entity_id, NULL, 1);
 }
 
 /* EntityBuildPlacementCommandBatchExpand (FUN_00439280): parse four counts,

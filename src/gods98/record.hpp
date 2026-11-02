@@ -376,6 +376,8 @@ void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
                                           uint32_t y);
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b);
+void object_state_pair_get_target(const void* record, uint32_t* out_a,
+                                  uint32_t* out_b);
 
 /* --- scene-visibility wrapper band (2026-10-24; findings 446/370/435/356/
  * 373/476/28) --------------------------------------------------------------

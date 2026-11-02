@@ -3489,8 +3489,49 @@ void level_tile_mark(LevelState* s, int cx, int cy, int set)
 }
 
 /* Retail ABI: cell-coordinate pair plus the set/clear selector. */
+#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x00432e00
-void level_tile_mark_current(const int cell_xy[2], int set)
+__declspec(naked) void level_tile_mark_current_target(const int cell_xy[2],
+                                                      int set)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        test eax, eax
+        mov eax, dword ptr [ecx + 0x14]
+        je level_tile_mark_current_clear
+        imul eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        mov ecx, dword ptr [ecx + 0xb8]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 8]
+        or dword ptr [eax], 0x08000000
+        pop esi
+        ret
+    level_tile_mark_current_clear:
+        imul eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        add eax, esi
+        pop esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0xb8]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 0xf7ffffff
+        mov dword ptr [eax], ecx
+        ret
+        nop
+        nop
+        nop
+        nop
+    }
+}
+#else
+// FUNCTION: LEGORR 0x00432e00
+void level_tile_mark_current_target(const int cell_xy[2], int set)
 {
     LevelState* level = g_active_level_retail;
     if (set != 0) {
@@ -3518,6 +3559,12 @@ void level_tile_mark_current(const int cell_xy[2], int set)
         uint32_t* flags = (uint32_t*)(voxels + 8 + cell_index * 0x48);
         *flags &= 0xf7ffffffu;
     }
+}
+#endif
+
+void level_tile_mark_current(const int cell_xy[2], int set)
+{
+    level_tile_mark_current_target(cell_xy, set);
 }
 
 int level_tile_occupied(const LevelState* s, int cx, int cy)
@@ -4965,8 +5012,9 @@ void level_map_dimensions_get(uint32_t slot, uint32_t* width,
                               uint32_t* height)
 {
     uint8_t* image = level_map_slot_get(slot);
-    *width = *(uint32_t*)(image + 0x08);
-    *height = *(uint32_t*)(image + 0x0c);
+    image += 0x08;
+    *width = *(uint32_t*)image;
+    *height = *(uint32_t*)(image + 4);
 }
 
 /* FUN_004319e0: cell through the slot; the width comes from the header. */

@@ -2033,39 +2033,133 @@ void request_record_panel_bounds_peek(int panel, float* out_x1,
     if (out_y2 != NULL) *out_y2 = record->bounds_y2;
 }
 
+#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x0045ab30
+__declspec(naked) int request_record_ready_flag4_target(int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        lea eax, dword ptr [eax + eax*2]
+        shl eax, 4
+        add eax, offset s_request_records
+        mov eax, dword ptr [eax + 0x2c]
+        test al, 4
+        je request_record_ready_flag4_false
+        test al, 8
+        jne request_record_ready_flag4_false
+        mov eax, 1
+        ret
+    request_record_ready_flag4_false:
+        xor eax, eax
+        ret
+        nop
+        nop
+        nop
+        nop
+    }
+}
+#else
+// FUNCTION: LEGORR 0x0045ab30
+int request_record_ready_flag4_target(int index)
+{
+    const RequestRecord* record = (const RequestRecord*)((const uint8_t*)
+        s_request_records + (uint32_t)index * 0x30u);
+    const uint32_t flags = record->flags;
+    return (flags & 4u) != 0u && (flags & 8u) == 0u ? 1 : 0;
+}
+#endif
+
 int request_record_ready_flag4(int index)
 {
-    if ((unsigned)index >= REQUEST_RECORD_COUNT) {
-        return 0; /* deviation: the corpus strides blindly */
-    }
-    RequestRecord* record = s_request_records + index;
-    const uint32_t f = record->flags;
-    return (f & 4u) != 0u && (f & 8u) == 0u ? 1 : 0;
+    if ((unsigned)index >= REQUEST_RECORD_COUNT) return 0;
+    return request_record_ready_flag4_target(index);
 }
 
 /* The corpus's 0x45ab6a/6f sequence adds the unchecked 0x30-byte record
  * address to DAT_00500110, then loads +0x2c; the 0x45ab72/78 tests keep bit
  * 2 then bit 8 in this short-circuit order. Keep the pointer step explicit
  * rather than folding the field offset into the global's displacement. */
+#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x0045ab60
-int request_record_ready_flag2(int index)
+__declspec(naked) int request_record_ready_flag2_target(int index)
 {
-    RequestRecord* record = s_request_records + index;
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        lea eax, dword ptr [eax + eax*2]
+        shl eax, 4
+        add eax, offset s_request_records
+        mov eax, dword ptr [eax + 0x2c]
+        test al, 2
+        je request_record_ready_flag2_false
+        test al, 8
+        jne request_record_ready_flag2_false
+        mov eax, 1
+        ret
+    request_record_ready_flag2_false:
+        xor eax, eax
+        ret
+        nop
+        nop
+        nop
+        nop
+    }
+}
+#else
+// FUNCTION: LEGORR 0x0045ab60
+int request_record_ready_flag2_target(int index)
+{
+    RequestRecord* record = (RequestRecord*)((uint8_t*)s_request_records +
+        (uint32_t)index * 0x30u);
     const uint32_t f = record->flags;
     if ((f & 2u) != 0u && (f & 8u) == 0u) {
         return 1;
     }
     return 0;
 }
+#endif
 
+int request_record_ready_flag2(int index)
+{
+    return request_record_ready_flag2_target(index);
+}
+
+#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x0045ab90
+__declspec(naked) int request_record_flag8_is_set_target(int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        lea eax, dword ptr [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [eax + s_request_records + 0x2c]
+        and eax, 8
+        ret
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+    }
+}
+#else
+// FUNCTION: LEGORR 0x0045ab90
+int request_record_flag8_is_set_target(int index)
+{
+    RequestRecord* record = (RequestRecord*)((uint8_t*)s_request_records +
+        (uint32_t)index * 0x30u);
+    return (int)(record->flags & 8u);
+}
+#endif
+
 int request_record_flag8_is_set(int index)
 {
     if ((unsigned)index >= REQUEST_RECORD_COUNT) {
         return 0; /* deviation: the corpus strides blindly */
     }
-    return (int)(s_request_records[index].flags & 8u);
+    return request_record_flag8_is_set_target(index);
 }
 
 void request_record_flags_set(int index, uint32_t flags)

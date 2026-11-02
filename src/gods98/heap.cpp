@@ -114,17 +114,20 @@ void text_output_field82c_bit2_set_clear(void* record, int set_bit)
     }
 }
 
-/* ObjectField38Release (FUN_00489d70) — see heap.hpp. */
+/* The mapped ObjectField38Release body follows the target's unchecked record
+ * access; the portable entry below retains the null-record guard. */
 // FUNCTION: LEGORR 0x00489d70
-void object_field_38_release(void* record)
+void object_field_38_release_target(void* record)
 {
-    if (record == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
     void* field = *(void**)((char*)record + 0x38);
     if (field != NULL) {
         engine_heap_free(field);
     }
+}
+
+void object_field_38_release(void* record)
+{
+    if (record != NULL) object_field_38_release_target(record);
 }
 
 /* ThreeWordRecordAllocateAndInitialize (FUN_00410b60) — see heap.hpp. */
@@ -169,24 +172,19 @@ void** dword_list_allocate_and_zero(uint32_t count)
     return hdr;
 }
 
-/* TextBufferReset (FUN_004859b0) — see heap.hpp. On x86, retain the
- * reference's dword/byte buffer sweep, 0x100-dword record sweep and flag
- * update. The record and buffer checks preserve the port's null-safe API. */
-// FUNCTION: LEGORR 0x004859b0
+/* TextBufferReset target (FUN_004859b0) — see heap.hpp. The mapped body
+ * follows the retail unchecked record and buffer accesses. */
 #if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void text_buffer_reset(void* record)
+// FUNCTION: LEGORR 0x004859b0
+__declspec(naked) void text_buffer_reset_target(void* record)
 {
     __asm {
         mov edx, dword ptr [esp + 4]
-        test edx, edx
-        je text_buffer_reset_return
         push esi
         push edi
         xor eax, eax
         mov ecx, dword ptr [edx + 0x418]
         mov edi, dword ptr [edx + 0x14]
-        test edi, edi
-        je text_buffer_reset_record_window
         mov esi, ecx
         shr ecx, 2
         rep stosd
@@ -201,21 +199,17 @@ __declspec(naked) void text_buffer_reset(void* record)
         mov dword ptr [edx + 0x820], eax
         mov dword ptr [edx + 0x41c], eax
         mov eax, dword ptr [edx + 0x82c]
-        and al, 0xfe
-        mov dword ptr [edx + 0x82c], eax
         pop edi
+        and al, 0xfe
         pop esi
-    text_buffer_reset_return:
+        mov dword ptr [edx + 0x82c], eax
         ret
     }
 }
 #else
-void text_buffer_reset(void* record)
+/* Host-width fallback for callers outside the retail x86 ABI. */
+void text_buffer_reset_target(void* record)
 {
-    if (record == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
-    }
-
     uint32_t count = *(uint32_t const*)((char*)record + 0x418);
     char* buffer = *(char* const*)((char*)record + 0x14);
     if (buffer != NULL) {
@@ -239,32 +233,52 @@ void text_buffer_reset(void* record)
 }
 #endif
 
-/* UITextOutputObjectRelease (FUN_0045a620) — see heap.hpp. */
-// FUNCTION: LEGORR 0x0045a620
+/* Keep the portable API null-safe; the mapped entry above follows the
+ * retail function's unchecked pointer contract. */
+void text_buffer_reset(void* record)
+{
+    if (record == NULL) return;
 #if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void ui_text_output_object_release(void* const* holder)
+    if (*(void**)((char*)record + 0x14) == NULL) {
+        memset((char*)record + 0x18, 0, 0x100 * sizeof(uint32_t));
+        *(uint32_t*)((char*)record + 0x820) = 0u;
+        *(uint32_t*)((char*)record + 0x41c) = 0u;
+        *(uint32_t*)((char*)record + 0x82c) &= ~1u;
+        return;
+    }
+#endif
+    text_buffer_reset_target(record);
+}
+
+/* The mapped release body blindly dereferences the holder and calls the
+ * unchecked TextBufferReset target. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+// FUNCTION: LEGORR 0x0045a620
+__declspec(naked) void ui_text_output_object_release_target(
+    void* const* holder)
 {
     __asm {
         mov eax, dword ptr [esp + 4]
-        test eax, eax
-        je ui_text_output_release_return
         mov ecx, dword ptr [eax]
         push ecx
-        call text_buffer_reset
+        call text_buffer_reset_target
         add esp, 4
-    ui_text_output_release_return:
         ret
     }
 }
 #else
-void ui_text_output_object_release(void* const* holder)
+// FUNCTION: LEGORR 0x0045a620
+void ui_text_output_object_release_target(void* const* holder)
 {
-    if (holder == NULL) {
-        return; /* pinned deviation: the corpus dereferences blindly */
-    }
-    text_buffer_reset(*holder);
+    text_buffer_reset_target(*holder);
 }
 #endif
+
+void ui_text_output_object_release(void* const* holder)
+{
+    if (holder == NULL || *holder == NULL) return;
+    ui_text_output_object_release_target(holder);
+}
 
 /* TextBufferCreate (FUN_004850f0) — see heap.hpp. */
 // FUNCTION: LEGORR 0x004850f0

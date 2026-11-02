@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **46.66% accuracy**, **45.41% progress**
+- Full report: **97.32% implemented**, **46.78% accuracy**, **45.53% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **41.56% accuracy**,
-  **41.09% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **41.69% accuracy**,
+  **41.22% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -483,6 +483,84 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   Current totals are **97.32% / 46.66% / 45.41%** full and
   **98.87% / 41.56% / 41.09%** game-only. Reccmp and `git diff --check`
   passed; tests were not run.
+
+- `EntityBuildPlacementCommandPairCreate` (`0x439340`) now calls the normal
+  and alternate four-argument setup entry points, matching the retail call
+  sequence instead of invoking the shared five-argument adapter twice. Its
+  match rose **68.18% → 100%**. The normal and alternate setup targets remain
+  low at **17.65%** and **14.68%** because their portable implementations
+  include substantial runtime fallback logic. At that checkpoint, totals were
+  **97.32% / 46.67% / 45.42%** full and **98.87% / 41.57% / 41.10%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+
+- A direct-expression codegen experiment on the adjacent bounded terrain flag
+  accessors (`0x432b00`, `0x432b50`, `0x432d90`, `0x432f90`, and `0x432bd0`)
+  produced no target-score changes; it was reverted. Their current matches are
+  **69.23%** for the four mask getters and **73.33%** for the walkability
+  getter. The remaining differences are register allocation and address
+  formation, so further work should use a different evidence-backed approach.
+
+- `TextBufferReset` (`0x4859b0`) now maps to an unchecked retail-body entry
+  while the public API retains null-record and null-buffer handling. The x86
+  body follows the observed reset instruction order, including the final flag
+  store after restoring `esi`; its score rose **73.33% → 100%**. Latest
+  totals at that checkpoint were **97.32% / 46.66% / 45.42%** full and
+  **98.87% / 41.56% / 41.09%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `MapFileDimensionsGet` (`0x4334c0`) now advances the resolved image pointer
+  to its `+0x08` header before reading width and height, matching the target's
+  `add eax, 8` then `[eax+4]` sequence. Its match rose **76.19% → 100%**.
+  Latest totals are **97.32% / 46.67% / 45.43%** full and
+  **98.87% / 41.57% / 41.11%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `RequestRecordReadyFlag4` (`0x45ab30`) now has an unchecked target body with
+  the retail 0x30-byte stride, immediate request-record base, and flag gates;
+  the public API retains its 18-entry bounds check. Its match rose
+  **73.33% → 100%**. Latest totals are **97.32% / 46.69% / 45.45%** full and
+  **98.87% / 41.60% / 41.13%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `ObjectStatePairGet` (`0x485a00`) now maps to its unchecked two-load/two-store
+  body, while the public helper retains its null-record guard. Its match rose
+  **76.19% → 100%**. Latest totals are **97.32% / 46.71% / 45.46%** full and
+  **98.87% / 41.61% / 41.14%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `ObjectField38Release` (`0x489d70`) now maps to an unchecked target body,
+  retaining the portable API's null-record guard in its wrapper. Its match
+  rose **72.73% → 100%**. Latest totals are **97.32% / 46.71% / 45.46%** full
+  and **98.87% / 41.62% / 41.15%** game-only. `distrobox enter developer --
+  make reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `RequestRecordReadyFlag2` (`0x45ab60`) now uses a retail-shaped target body
+  with the unchecked 0x30-byte record stride and bit-2/bit-3 gates; its match
+  rose **78.26% → 100%**. Latest totals are **97.32% / 46.72% / 45.47%** full
+  and **98.87% / 41.62% / 41.15%** game-only. `distrobox enter developer --
+  make reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `RequestRecordFlag8IsSet` (`0x45ab90`) now maps to the unchecked retail
+  address calculation and bit-8 mask; the public API retains its 18-entry
+  bounds check. Its match rose **50.00% → 100%**. Rounded totals remain
+  **97.32% / 46.72% / 45.47%** full and **98.87% / 41.62% / 41.15%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+
+- `TerrainCellPredugEdgeWallFlagSet` (`0x432e00`) now maps to a target body
+  with the retail set/clear paths, including the direct memory OR in the set
+  branch. Its match rose **70.00% → 100%**. Latest totals are
+  **97.32% / 46.75% / 45.50%** full and **98.87% / 41.66% / 41.19%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+
+- `UITextOutputObjectRelease` (`0x45a620`) now maps to the unchecked target
+  body and calls `TextBufferReset`'s mapped target entry. The public API still
+  guards a null holder or record. Its match rose **71.43% → 100%**. Latest
+  totals are **97.32% / 46.78% / 45.53%** full and
+  **98.87% / 41.69% / 41.22%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

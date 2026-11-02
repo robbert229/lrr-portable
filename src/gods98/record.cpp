@@ -1109,17 +1109,21 @@ void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
     __builtin_memcpy((char*)record + 0x10, &fy, sizeof(fy));
 }
 
-/* The corpus loads +0x820/+0x824 in order and writes both outputs blindly;
- * only the record-NULL guard remains as a test-pinned deviation. */
+/* The mapped body follows the corpus's blind record and output-pointer
+ * accesses. */
 // FUNCTION: LEGORR 0x00485a00
+void object_state_pair_get_target(const void* record, uint32_t* out_a,
+                                  uint32_t* out_b)
+{
+    *out_a = *(const uint32_t*)((const char*)record + 0x820);
+    *out_b = *(const uint32_t*)((const char*)record + 0x824);
+}
+
+/* Preserve the test-pinned null-record behavior of the portable API. */
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b)
 {
-    if (record == NULL) {
-        return; /* deviation: the corpus dereferences blindly; test pins this */
-    }
-    *out_a = *(const uint32_t*)((const char*)record + 0x820);
-    *out_b = *(const uint32_t*)((const char*)record + 0x824);
+    if (record != NULL) object_state_pair_get_target(record, out_a, out_b);
 }
 
 /* --- the scene-visibility wrapper band (see record.hpp) ---------------------

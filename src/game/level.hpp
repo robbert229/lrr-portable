@@ -505,6 +505,7 @@ const void* terrain_cell_variant_window_get(const void* terrain);
  * clears. Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_tile_mark(LevelState* s, int cx, int cy, int set);
 void level_tile_mark_current(const int cell_xy[2], int set);
+void level_tile_mark_current_target(const int cell_xy[2], int set);
 
 /* FUN_00432e00 read side: does the cell currently carry the OCCUPIED
  * reservation flag? The wave-flood pathfinder consults it for its blocked
