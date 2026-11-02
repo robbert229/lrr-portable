@@ -4037,12 +4037,19 @@ void resource_stream_close(ResourceStream* stream)
 /* MapOpen2 (FUN_00480170): open the named file in binary mode, seek to its
  * end to get the payload size, notify the registered progress hook, allocate
  * a map-image slot, rewind, and read the payload into that slot. The slot
- * owner supplies the table operations because its pointer/flag table is
- * owned by the game level layer (MapFileResourceSlot @ 0x4893f0..). */
-// FUNCTION: LEGORR 0x00480170
-int map_open2(const char* path, const MapOpenOps* ops,
-              int32_t* size_out)
+ * owner supplies its callbacks through the global registration seam; the
+ * retail entry itself takes only (path, size_out). */
+static const MapOpenOps* s_map_open_ops;
+
+void map_open2_ops_set(const MapOpenOps* ops)
 {
+    s_map_open_ops = ops;
+}
+
+// FUNCTION: LEGORR 0x00480170
+int map_open2(const char* path, int32_t* size_out)
+{
+    const MapOpenOps* ops = s_map_open_ops;
     GameFileHandle* handle;
     void* map_data;
     int32_t size;
@@ -4076,6 +4083,17 @@ int map_open2(const char* path, const MapOpenOps* ops,
     if (size > 0) (void)wad_file_read(map_data, 1, size, handle);
     if (size_out != NULL) *size_out = size;
     game_file_close(handle);
+    return slot;
+}
+
+int map_open2_with_ops(const char* path, const MapOpenOps* ops,
+                       int32_t* size_out)
+{
+    const MapOpenOps* previous = s_map_open_ops;
+    int slot;
+    map_open2_ops_set(ops);
+    slot = map_open2(path, size_out);
+    map_open2_ops_set(previous);
     return slot;
 }
 

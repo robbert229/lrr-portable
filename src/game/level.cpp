@@ -496,25 +496,29 @@ static void level_map_open_slot_release(void* context, uint32_t slot)
     level_map_slot_release(slot);
 }
 
+static const MapOpenOps s_level_map_open_ops = {
+    NULL,
+    level_map_open_slot_allocate,
+    level_map_open_slot_get,
+    level_map_open_slot_release,
+    NULL
+};
+
 MapFile* level_map_open(const char* name)
 {
-    static const MapOpenOps map_ops = {
-        NULL,
-        /* The game owns the 2000-entry slot table; the resource module owns
-         * the file route and complete-element read sequence. */
-        level_map_open_slot_allocate,
-        level_map_open_slot_get,
-        level_map_open_slot_release,
-        NULL
-    };
     int slot;
     int32_t size = 0;
     uint8_t* data;
     MapFile* m;
+    /* Install before checking the path so a later target-shaped MapOpen2
+     * call also has the level slot owner when an earlier map key is empty. */
+    map_open2_ops_set(&s_level_map_open_ops);
     if (name == NULL || name[0] == '\0') {
         return NULL;
     }
-    slot = map_open2(name, &map_ops, &size);
+    /* The target MapOpen2 ABI reads its slot callbacks from the registered
+     * map owner, so unrelated resource users need no slot-table knowledge. */
+    slot = map_open2(name, &size);
     if (slot < 0) {
         return NULL;
     }
@@ -1702,34 +1706,46 @@ void terrain_activity_build_records_release_all(LevelState* level)
 // FUNCTION: LEGORR 0x0042c480
 static int load_erode_cryore(LevelState* s, const char* name, int bias)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            int v = (int)level_map_cell(m, x, y) - bias;
-            if (v == 5) {
-                v = 4;
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            int value = (int)level_map_cell_get((uint32_t)slot,
+                                                (int)x, (int)y) - bias;
+            uint8_t* record = voxels + index * LEVEL_VOXEL_STRIDE;
+            if (value == 5) {
+                value = 4;
             }
-            uint8_t* rec = voxel_at(s, x, y);
-            rec[0x02] = (uint8_t)v;
-            if (v == 6) {
-                rec[0x07] = 4;
-            } else if (v == 11) {
+            record[0x02] = (uint8_t)value;
+            if ((int8_t)record[0x02] == 6) {
+                record[0x07] = 4;
+            } else if ((int8_t)record[0x02] == 11) {
                 /* rock-monster / cavern spawn point */
-                const int cell_xy[2] = { x, y };
+                int cell_xy[2];
+                cell_xy[0] = (int)x;
+                cell_xy[1] = (int)y;
                 unported_ledger_stubs::type11_cell_coordinate_append(
                     cell_xy);
-                terrain_activity_build_record_update(s, x, y, 1);
+                terrain_activity_build_record_update(s, (int)x, (int)y, 1);
             }
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1738,38 +1754,48 @@ static int load_erode_cryore(LevelState* s, const char* name, int bias)
 // FUNCTION: LEGORR 0x0042bf40
 static int load_emerge(LevelState* s, const char* name)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            uint16_t c = level_map_cell(m, x, y);
-            uint8_t* rec = voxel_at(s, x, y);
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            uint16_t value = level_map_cell_get((uint32_t)slot,
+                                                (int)x, (int)y);
             int seed_stage = 0;
-            rec[0x06] = (uint8_t)(c >> 1);
-            if (c == 0 || (c & 1u) != 0u) {
-                ++c;
-                rec[0x06] = (uint8_t)(c >> 1);
+            if (value == 0u || (value & 1u) != 0u) {
+                ++value;
             } else {
                 seed_stage = 1;
             }
-            if (seed_stage) {
-                const int cell_xy[2] = { x, y };
-                const int16_t random_value = (int16_t)level_rand_u16();
-                const int sign = random_value >> 31;
-                const int magnitude = ((int)random_value ^ sign) - sign;
-                const int phase = ((magnitude & 3) ^ sign) - sign;
-                lava_erosion_stage_register(
-                    cell_xy, phase);
+            voxels[index * LEVEL_VOXEL_STRIDE + 0x06] =
+                (uint8_t)(value >> 1);
+            if (seed_stage != 0) {
+                int cell_xy[2];
+                int16_t random_value = (int16_t)level_rand_u16();
+                int sign = random_value >> 31;
+                int magnitude = ((int)random_value ^ sign) - sign;
+                int phase = ((magnitude & 3) ^ sign) - sign;
+                cell_xy[0] = (int)x;
+                cell_xy[1] = (int)y;
+                lava_erosion_stage_register(cell_xy, phase);
             }
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1778,23 +1804,33 @@ static int load_emerge(LevelState* s, const char* name)
 // FUNCTION: LEGORR 0x0042c6a0
 static int load_path_ai(LevelState* s, const char* name, int bias)
 {
-    const int bias_byte = (int)(int8_t)bias;
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    int8_t bias_byte = (int8_t)bias;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            int value = (int)(int8_t)(uint8_t)level_map_cell(m, x, y);
-            int v = value - bias_byte;
-            voxel_at(s, x, y)[0x05] = (uint8_t)v;
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            int8_t value = (int8_t)(uint8_t)
+                level_map_cell_get((uint32_t)slot, (int)x, (int)y);
+            voxels[index * LEVEL_VOXEL_STRIDE + 0x05] =
+                (uint8_t)(value - bias_byte);
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1841,42 +1877,57 @@ static int load_fallin(LevelState* s, const char* name, int bias)
  * pointer count/flag at voxel +0x38/+0x3C and the hash mod at +0x40.
  * (Key→loader roles are the code's mapping, see level.hpp.) */
 // FUNCTION: LEGORR 0x0042c9d0
-static int load_block_pointers(LevelState* s, const char* name, int fallin_mult)
+static int load_block_pointers(LevelState* s, const char* name)
 {
     /* DAT_00556f18 is also the camera's block-pointer-grid enable word. */
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot;
+    uint8_t* voxels;
     g_camera_grid_enabled = 0;
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    if (name == NULL) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    slot = map_open2(name, &image_size);
+    if (slot == -1) {
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            uint32_t v = level_map_cell(m, x, y);
-            uint8_t* rec = voxel_at(s, x, y);
-            __builtin_memset(rec + 0x3C, 0, 4);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
+        return 0;
+    }
+#if defined(_MSC_VER) && defined(_M_IX86)
+    voxels = (uint8_t*)(uintptr_t)
+        level_cptr(s)[LEVEL_OFF_VOXELS / 4];
+#else
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+#endif
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            uint8_t* record = voxels + index * LEVEL_VOXEL_STRIDE;
+            uint32_t v = level_map_cell_get((uint32_t)slot,
+                                            (int)x, (int)y);
+            *(uint32_t*)(record + 0x3C) = 0u;
             if (v != 0) {
-                __builtin_memcpy(rec + 0x3C, &v, 4);
-                int16_t seed;
-                __builtin_memcpy(&seed, rec + 0x20, 2);
+                int16_t seed = *(int16_t*)(record + 0x20);
                 uint32_t hash = (uint32_t)(int32_t)seed %
-                    (v * (uint32_t)fallin_mult * 0x19u);
-                float hash_float = (float)hash;
-                uint32_t zero = 0, one = 1;
-                __builtin_memcpy(rec + 0x38, &zero, 4);
-                __builtin_memcpy(rec + 0x40, &hash_float, 4);
+                    (v * (uint32_t)g_camera_scale_14 * 0x19u);
+                *(uint32_t*)(record + 0x3C) = v;
+                *(float*)(record + 0x40) = (float)hash;
+                *(uint32_t*)(record + 0x38) = 0u;
                 if (v > 4) {
-                    uint32_t reduced = v - 4;
-                    __builtin_memcpy(rec + 0x3C, &reduced, 4);
-                    __builtin_memcpy(rec + 0x38, &one, 4);
+                    *(uint32_t*)(record + 0x3C) = v - 4u;
+                    *(uint32_t*)(record + 0x38) = 1u;
                 }
             }
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     g_camera_grid_enabled = 1;
     return 1;
 }
@@ -1886,22 +1937,33 @@ static int load_block_pointers(LevelState* s, const char* name, int fallin_mult)
 // FUNCTION: LEGORR 0x0042cc90
 static int load_terrain_map(LevelState* s, const char* name, int bias)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    int8_t bias_byte = (int8_t)bias;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            int value = (int)(int8_t)(uint8_t)level_map_cell(m, x, y);
-            int v = value - (int)(int8_t)bias;
-            voxel_at(s, x, y)[0x04] = (uint8_t)v;
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            int8_t value = (int8_t)(uint8_t)
+                level_map_cell_get((uint32_t)slot, (int)x, (int)y);
+            voxels[index * LEVEL_VOXEL_STRIDE + 0x04] =
+                (uint8_t)(value - bias_byte);
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1910,54 +1972,76 @@ static int load_terrain_map(LevelState* s, const char* name, int bias)
 // FUNCTION: LEGORR 0x0042c120
 static int load_layer_l(LevelState* s, const char* name)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
-        return 0; /* corpus reports no map handle; the caller may ignore it */
-    }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
-        return 0;
-    }
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot;
+    uint8_t* voxels;
     uint8_t* records = (uint8_t*)level_load_ptr(s, LEVEL_OFF_LAYERL_RECORDS);
     int      count   = level_int(s, LEVEL_OFF_LAYERL_COUNT);
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            uint16_t c = level_map_cell(m, x, y);
+
+    /* MapOpen2's retail entry takes only (path, size_out), with the map-slot
+     * owner installed separately. Layer L then uses the same slot helpers as
+     * the decompile instead of allocating a host MapFile wrapper. */
+    slot = map_open2(name, &image_size);
+    if (slot == -1) {
+        return 0;
+    }
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
+        return 0;
+    }
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint16_t c = level_map_cell_get((uint32_t)slot, (int)x, (int)y);
             if (c == 0) {
                 continue;
             }
-            int slot = ((int)c - 1) % 6;
+            int record_slot = ((int)c - 1) % 6;
             int rec  = ((int)c - 1) / 6;
-            while (rec >= count) {
-                uint8_t* grown = (uint8_t*)realloc(records, (size_t)(count + 1) * 0x4C);
+            if (rec >= count) {
+                int next_count = rec + 1;
+                size_t old_size = (size_t)count * 0x4Cu;
+                size_t new_size = (size_t)next_count * 0x4Cu;
+                uint8_t* grown;
+                if (records == NULL)
+                    grown = (uint8_t*)engine_heap_alloc((long)new_size);
+                else
+                    grown = (uint8_t*)realloc(records, new_size);
                 if (grown == NULL) {
                     level_store_ptr(s, LEVEL_OFF_LAYERL_RECORDS, records);
                     level_set_int(s, LEVEL_OFF_LAYERL_COUNT, count);
-                    level_map_close(m);
+                    level_map_slot_release((uint32_t)slot);
                     return 0;
                 }
                 records = grown;
-                __builtin_memset(records + (size_t)count * 0x4C, 0, 0x4C);
-                ++count;
+                __builtin_memset(records + old_size, 0, new_size - old_size);
+                count = next_count;
+                level_store_ptr(s, LEVEL_OFF_LAYERL_RECORDS, records);
+                level_set_int(s, LEVEL_OFF_LAYERL_COUNT, count);
             }
             uint8_t* recp = records + (size_t)rec * 0x4C;
-            uint8_t* vox = voxel_at(s, x, y);
-            if (slot == 0) {
+            uint8_t* vox = voxels + ((size_t)y * width + x) * 0x48u;
+            if (record_slot == 0) {
                 *(uint32_t*)(vox + 0x0C) |= 0x80u;
-                __builtin_memcpy(recp + 4, &x, 4);
-                __builtin_memcpy(recp + 8, &y, 4);
+                *(uint32_t*)(recp + 4) = x;
+                *(uint32_t*)(recp + 8) = y;
             } else {
                 *(uint32_t*)(vox + 0x0C) |= 0x40u;
-                __builtin_memcpy(recp + (size_t)slot * 0xC + 4, &x, 4);
-                __builtin_memcpy(recp + (size_t)slot * 0xC + 8, &y, 4);
-                uint32_t one = 1;
-                __builtin_memcpy(recp + (size_t)(slot + 1) * 0xC, &one, 4);
+                *(uint32_t*)(recp + (size_t)record_slot * 0xC + 4) = x;
+                *(uint32_t*)(recp + (size_t)record_slot * 0xC + 8) = y;
+                *(uint32_t*)(recp +
+                    (size_t)(record_slot + 1) * 0xC) = 1u;
             }
         }
     }
     level_store_ptr(s, LEVEL_OFF_LAYERL_RECORDS, records);
     level_set_int(s, LEVEL_OFF_LAYERL_COUNT, count);
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1965,20 +2049,30 @@ static int load_layer_l(LevelState* s, const char* name)
 // FUNCTION: LEGORR 0x0042c060
 static int load_layer_m(LevelState* s, const char* name)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            voxel_at(s, x, y)[0x34] = (uint8_t)level_map_cell(m, x, y);
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            voxels[index * LEVEL_VOXEL_STRIDE + 0x34] =
+                (uint8_t)level_map_cell_get((uint32_t)slot, (int)x, (int)y);
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -2446,7 +2540,7 @@ static void cell_init_all(LevelState* s)
 
 // FUNCTION: LEGORR 0x0042b510
 static int map_pipeline(LevelState* s, const char** names, const int* biases,
-                        const char* texture_set_name, int fallin_mult)
+                        const char* texture_set_name)
 {
     /* `names` follows the ten config keys in LevelLoad. The corpus then
      * forwards them in a different positional order: Predug, Terrain, Path,
@@ -2569,7 +2663,7 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases,
     load_fallin(s, names[6], biases[6]);
     load_layer_l(s, names[7]);
     load_layer_m(s, names[8]);
-    load_block_pointers(s, names[9], fallin_mult);
+    load_block_pointers(s, names[9]);
     ok = load_terrain_map(s, names[3], biases[3]);
     if (ok) {
         level_set_int(s, LEVEL_OFF_TERRAIN_LOADED, 1);
@@ -2987,6 +3081,9 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
     if (fallin_mult == 0) {
         fallin_mult = 1;
     }
+    /* LevelLoad stores the configured multiplier in DAT_00556f14 before the
+     * map pipeline; LoadBlockPointers and the camera grid timer share it. */
+    g_camera_scale_14 = (int)fallin_mult;
     {
         float emerge_timeout = cfg_float(cfg, level_name,
                                          K_EMERGE_TIMEOUT, 0.0f);
@@ -3068,8 +3165,7 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
              * earlier failure paths and clear it as soon as that load ends. */
             terrain_texture_set_config_context_bind(cfg);
             load_ok = map_pipeline(s, names, biases,
-                                   has_texture_set ? texture_set : NULL,
-                                   (int)fallin_mult);
+                                   has_texture_set ? texture_set : NULL);
             terrain_texture_set_config_context_bind(NULL);
         }
         if (!load_ok) {

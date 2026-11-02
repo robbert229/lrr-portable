@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **48.52% accuracy**, **47.23% progress**
+- Full report: **97.32% implemented**, **48.56% accuracy**, **47.26% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **43.62% accuracy**,
-  **43.13% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **43.65% accuracy**,
+  **43.16% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1070,6 +1070,51 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   helper. Latest report: **97.32% / 48.52% / 47.23%** full and
   **98.87% / 43.62% / 43.13%** game-only. Reccmp and `git diff --check`
   passed; tests were not run.
+- `LoadLayerL` (`0x42c120`) now opens through the retail-shaped two-argument
+  `MapOpen2` entry, validates dimensions through the map-slot helper, reads
+  each cell through `MapFileGetCell`, and grows/zeros the 0x4c-stride record
+  array directly to the required index. Its match rose from **6.81% to
+  25.34%**. `MapOpen2` (`0x480170`) now exposes the reference `(path,
+  size_out)` ABI while retaining an operations-based adapter for custom slot
+  owners; its match remains **28.29%** because its registered callback and
+  file abstraction still differ from the direct global/helper calls in the
+  reference. Latest report: **97.32% / 48.53% / 47.23%** full and
+  **98.87% / 43.62% / 43.13%** game-only. The MSVC 5.0 Reccmp build and
+  `git diff --check` passed; tests were not run.
+- `LoadLayerM` (`0x42c060`), `LoadPathAiLayers` (`0x42c6a0`), and
+  `LoadTerrainMap` (`0x42cc90`) now use the reference's `MapOpen2`, dimensions,
+  per-cell accessor, direct voxel write, and map-slot release sequence. Their
+  matches rose from **19.05% to 34.36%**, **21.21% to 31.33%**, and
+  **20.59% to 31.06%**, respectively. The two biased layers preserve signed
+  byte subtraction. Latest report: **97.32% / 48.54% / 47.24%** full and
+  **98.87% / 43.64% / 43.15%** game-only. The MSVC 5.0 Reccmp build and
+  `git diff --check` passed; tests were not run.
+- `LoadEmergeLayer` (`0x42bf40`) now reads through the retail map-slot helpers,
+  applies the zero/odd increment before its single voxel `+0x06` write, and
+  registers an erosion stage only for even nonzero values. It preserves the
+  decompiled signed-random phase calculation and uses the live erosion-stage
+  registration path. The match rose from **19.39% to 33.66%**. Latest report:
+  **97.32% / 48.56% / 47.26%** full and **98.87% / 43.65% / 43.16%**
+  game-only. The MSVC 5.0 Reccmp build and `git diff --check` passed; tests
+  were not run.
+- `LoadErodeCryoreLayers` (`0x42c480`) now uses the retail map-slot helpers,
+  writes the transformed type byte once, and tests the signed stored byte for
+  type 6/type 11 side effects. It retains the type-11 coordinate pool append
+  and level activity-record update. The match rose from **23.60% to 36.55%**.
+  Latest report: **97.32% / 48.55% / 47.26%** full and
+  **98.87% / 43.65% / 43.16%** game-only. Full accuracy is 0.01 points below
+  the previous checkpoint despite the target gain; a repeated Reccmp run
+  produced identical totals and target score. The MSVC 5.0 Reccmp build and
+  `git diff --check` passed; tests were not run.
+- `LoadBlockPointers` (`0x42c9d0`) now has the reference two-argument ABI,
+  uses `MapOpen2` and slot-based dimension/cell access, then writes the record
+  fields through the voxel grid. `LevelLoad` stores the configured
+  `FallinMultiplier` in the shared `DAT_00556f14` port global before the map
+  pipeline, matching the value read by this loader and camera-grid timing. The
+  target rose from **16.93% to 26.47%**. Latest report:
+  **97.32% / 48.56% / 47.26%** full and **98.87% / 43.65% / 43.16%**
+  game-only. The MSVC 5.0 Reccmp build and `git diff --check` passed; tests
+  were not run.
 
 ## Port loop
 

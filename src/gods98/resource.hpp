@@ -159,8 +159,13 @@ typedef struct MapOpenOps {
     void (*slot_release)(void* context, uint32_t slot);
     void (*progress)(void* context, const char* path, uint32_t size);
 } MapOpenOps;
-int map_open2(const char* path, const MapOpenOps* ops,
-              int32_t* size_out); /* FUN_00480170 */
+/* MapOpen2 uses the engine's installed map-slot callbacks and has the
+ * reference's (path, size_out) ABI. The ops-taking adapter remains available
+ * for callers that own a separate slot table. */
+void map_open2_ops_set(const MapOpenOps* ops);
+int map_open2(const char* path, int32_t* size_out); /* FUN_00480170 */
+int map_open2_with_ops(const char* path, const MapOpenOps* ops,
+                       int32_t* size_out);
 typedef struct ResourceFileTokenList {
     uint32_t count;
     char tokens[512][256];
