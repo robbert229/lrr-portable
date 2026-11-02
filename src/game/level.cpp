@@ -5846,16 +5846,16 @@ void level_map_dimensions_get(uint32_t slot, uint32_t* width,
     *height = *(uint32_t*)(image + 4);
 }
 
-/* FUN_004319e0: cell through the slot; the width comes from the header. */
+/* FUN_004319e0: cell through the slot; dimensions come from its resource. */
 // FUNCTION: LEGORR 0x004319e0
 uint16_t level_map_cell_get(uint32_t slot, int x, int y)
 {
-    const uint8_t* img = level_map_slot_get(slot);
+    const uint8_t* img = level_map_slot_get(slot) + 0x10u;
     uint32_t width, height;
     uint32_t index;
     level_map_dimensions_get(slot, &width, &height);
     index = (uint32_t)y * width + (uint32_t)x;
-    return *(const uint16_t*)(img + 0x10u + index * 2u);
+    return *(const uint16_t*)(img + index * 2u);
 }
 
 /* FUN_00433330: gated state-byte read through an out param. */
@@ -12511,23 +12511,22 @@ void lava_erosion_eight_neighbor_propagate(const int xy[2],
  * TerrainCellRouteAndOccupancyCheck (FUN_00431da0) answers whether an
  * entity may move from cell (from_x, from_y) to (to_x, to_y). The corpus
  * indexes a cardinal delta table with a dword walker, so a neighbour hit
- * in slot 0 reads the same as "no cardinal neighbour" (pinned quirk),
- * and the entity's own tile position rides the port's cell-round seam
- * (level_cell_of on the entity's float pair — same precedent as the
- * idle-registration tile probe). Deviations: every cell read routes
- * through level_voxel (the corpus strides the base + y*w+x * 0x48 window
- * without a bounds check; out-of-range reads answer zero), a NULL level
- * answers through the same guards, and the entity cell check lands after
- * the corpus's own stats gates.
+ * in slot 0 reads the same as "no cardinal neighbour" (pinned quirk).
+ * The mapped x86 entry uses the retail six-argument ABI and reads cell
+ * records directly from the active level's +0xb8 voxel pointer. Its world
+ * position check uses the port's entity-position adapter, whose explicit
+ * level argument and return contract do not reproduce the renderer-owned
+ * scene-position call exactly. The separate explicit-level helper retains
+ * bounds and NULL guards for callers that operate on arbitrary levels.
  *
  * FirstFreeNeighborCellPick (FUN_00431c70) walks the four cardinal
  * neighbours in a rotation that advances by the corpus's DAT_004de588
  * pick counter (own storage here; peek hook), calling the route check
  * with source and destination pinned to the neighbour cell. In mode 1 a
  * neighbour that is in bounds, open (flag 0x10) and unblocked (flag 8
- * clear) is skipped; otherwise it is tried. Deviation: the corpus
- * reloads the level global between probes — the port reuses one pointer.
- * Both rows guard NULL entity/level where the corpus strides blindly. */
+ * clear) is skipped; otherwise it is tried. The mapped x86 entry uses the
+ * retail stack delta table and reloads the active-level global after each
+ * route check. The portable fallback uses the guarded sidecar APIs. */
 static const int s_cardinal_deltas[4][2] = {{0, -1}, {1, 0}, {0, 1},
                                             {-1, 0}};
 // GLOBAL: LEGORR 0x004de588
@@ -12551,7 +12550,6 @@ static uint32_t route_cell_flags(const LevelState* s, int x, int y)
     return flags;
 }
 
-// FUNCTION: LEGORR 0x00431DA0
 int terrain_cell_route_and_occupancy_check(const struct EntitySlot* entity,
                                            const LevelState* s,
                                            int from_x, int from_y,
@@ -12666,13 +12664,150 @@ int terrain_cell_route_and_occupancy_check(const struct EntitySlot* entity,
     return answer;
 }
 
+// FUNCTION: LEGORR 0x00431da0
 int terrain_cell_route_and_occupancy_check_current(
     const struct EntitySlot* entity, int from_x, int from_y,
     int to_x, int to_y, int strict)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    int local_20[8];
+    int delta_index;
+    int delta_slot;
+    int entity_cell_x;
+    int entity_cell_y;
+    uint32_t width;
+    uint32_t source_index;
+    uint32_t dest_index;
+    uint32_t flags;
+    uint32_t block_relief;
+    uint32_t special;
+    uint32_t idle_gate;
+    uint32_t walk_gate;
+    uint32_t state_mask;
+    uint32_t answer;
+    uint8_t* voxels;
+    uint8_t* source;
+    uint8_t* dest;
+    LevelState* level;
+
+    level = g_active_level_retail;
+    width = level->word[LEVEL_OFF_WIDTH / 4u];
+    voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4u];
+    source_index = (uint32_t)from_y * width + (uint32_t)from_x;
+    source = voxels + source_index * 0x48u;
+    dest_index = (uint32_t)to_y * width + (uint32_t)to_x;
+    dest = voxels + dest_index * 0x48u;
+    special = 0u;
+    walk_gate = 1u;
+    idle_gate = 0u;
+    state_mask = 0u;
+    answer = 1u;
+    local_20[0] = 0;
+    local_20[3] = 0;
+    local_20[1] = -1;
+    local_20[2] = 1;
+    local_20[4] = 0;
+    local_20[5] = 1;
+    local_20[6] = -1;
+    local_20[7] = 0;
+    if (entity != NULL &&
+        (entity_stats_word_get(entity) & 0x20000u) != 0u &&
+        entity->owner_36c == NULL) {
+        return 0;
+    }
+    delta_slot = 0;
+    delta_index = 0;
+    for (;;) {
+        if (local_20[delta_slot * 2] + to_x == from_x &&
+            to_y + local_20[delta_slot * 2 + 1] == from_y) {
+            break;
+        }
+        ++delta_slot;
+        ++delta_index;
+        if (delta_slot >= 4)
+            break;
+    }
+    if (entity != NULL) {
+        if (entity->type == 0x0b)
+            return 0;
+        block_relief = entity_capability_flags_get(entity) & 0x200u;
+        special = entity_stats_word_get(entity) & 1u;
+        idle_gate = entity_stats_word_get(entity) & 0x1000000u;
+        walk_gate = entity_stats_word_get(entity) & 0x2000000u;
+        state_mask = entity_state_flags_get(entity) & 0x200000u;
+        if (strict == 0) {
+            entity_cell_x = 0;
+            entity_cell_y = 0;
+            entity_position_to_terrain_cell(entity, level, &entity_cell_x,
+                                            &entity_cell_y);
+            if (from_x == entity_cell_x && from_y == entity_cell_y)
+                return 1;
+        }
+    }
+    else {
+        block_relief = 0u;
+    }
+
+    if (source[2] == 9) {
+        if (idle_gate == 0u)
+            return 0;
+    }
+    else if (walk_gate == 0u) {
+        return 0;
+    }
+    if (source[2] == 6 && state_mask == 0u &&
+        (*(uint32_t*)(source + 8) & 0x200u) == 0u) {
+        return 0;
+    }
+    flags = *(uint32_t*)(source + 8);
+    if ((flags & 0x400u) != 0u)
+        return 0;
+    if (strict != 0 && (flags & 0x40u) != 0u)
+        return 0;
+    if (block_relief == 0u && (source[0x0c] & 4u) != 0u)
+        return 0;
+    if (special == 0u) {
+        if ((flags & 8u) == 0u)
+            return 0;
+    }
+    else {
+        if ((flags & 0x10u) != 0u)
+            answer = 3u;
+        if (source[0] == 0u)
+            return 0;
+        if ((flags & 0x10u) != 0u) {
+            uint32_t above_index = ((uint32_t)from_y - 1u) * width +
+                                   (uint32_t)from_x;
+            uint8_t* above = voxels + above_index * 0x48u;
+            if (source[2] == 6 || above[2] == 6)
+                return 0;
+            if (source[2] == 7 || above[2] == 7)
+                return 0;
+        }
+        if (delta_index == 0) {
+            if ((flags & 0x2000u) != 0u ||
+                (*(uint32_t*)(dest + 8) & 0x2000u) != 0u) {
+                answer = 2u;
+            }
+        }
+    }
+    if (to_x != from_x && to_y != from_y) {
+        uint32_t cross_a = (uint32_t)to_y * width + (uint32_t)from_x;
+        uint32_t cross_b = (uint32_t)from_y * width + (uint32_t)to_x;
+        uint8_t* cell_a = voxels + cross_a * 0x48u;
+        uint8_t* cell_b = voxels + cross_b * 0x48u;
+        if ((*(uint32_t*)(cell_a + 8) & 8u) != 0u &&
+            (*(uint32_t*)(cell_b + 8) & 8u) != 0u) {
+            return 2;
+        }
+    }
+    return (int)answer;
+#else
     return terrain_cell_route_and_occupancy_check(
         entity, level_current_owner_get(), from_x, from_y, to_x, to_y,
         strict);
+#endif
 }
 
 int first_free_neighbor_cell_pick(const struct EntitySlot* entity,
@@ -12709,6 +12844,65 @@ int first_free_neighbor_cell_pick_current(const struct EntitySlot* entity,
                                           const int* cell_in,
                                           int* cell_out, int mode)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    int local_20[8];
+    uint32_t local_24;
+    uint32_t direction;
+    uint32_t width;
+    uint32_t height;
+    uint32_t index;
+    uint32_t flags;
+    int x;
+    int y;
+    int result;
+    LevelState* level;
+    uint8_t* voxels;
+
+    local_20[1] = -1;
+    local_20[6] = -1;
+    ++s_neighbor_pick_rotation;
+    local_20[0] = 0;
+    local_20[2] = 1;
+    local_20[3] = 0;
+    local_20[4] = 0;
+    local_20[5] = 1;
+    local_20[7] = 0;
+    local_24 = 0u;
+    level = g_active_level_retail;
+    do {
+        direction = (s_neighbor_pick_rotation + local_24) & 3u;
+        x = local_20[direction * 2u] + cell_in[0];
+        y = local_20[direction * 2u + 1u] + cell_in[1];
+        if (mode != 0) {
+            width = level->word[LEVEL_OFF_WIDTH / 4u];
+            height = level->word[LEVEL_OFF_HEIGHT / 4u];
+            if ((uint32_t)x < width - 1u &&
+                (uint32_t)y < height - 1u) {
+                voxels = (uint8_t*)(uintptr_t)
+                    level->word[LEVEL_OFF_VOXELS / 4u];
+                index = (uint32_t)y * width + (uint32_t)x;
+                flags = *(uint32_t*)(voxels + 8u + index * 0x48u);
+                if ((flags & 0x10u) != 0u && (flags & 8u) == 0u) {
+                    ++local_24;
+                    if (local_24 > 3u)
+                        return 0;
+                    continue;
+                }
+            }
+        }
+        result = terrain_cell_route_and_occupancy_check_current(
+            entity, x, y, x, y, 0);
+        level = g_active_level_retail;
+        if (result != 0) {
+            cell_out[0] = x;
+            cell_out[1] = y;
+            return 1;
+        }
+        ++local_24;
+        if (local_24 > 3u)
+            return 0;
+    } while (1);
+#else
     LevelState* level;
     int probe;
 
@@ -12742,6 +12936,7 @@ int first_free_neighbor_cell_pick_current(const struct EntitySlot* entity,
         }
     }
     return 0;
+#endif
 }
 
 /* The six-dword render snapshot is a separate zero-filled global block in

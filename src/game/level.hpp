@@ -1657,10 +1657,10 @@ void entity_cell_path_effects_apply_current(struct EntitySlot* entity);
  * from (from_x, from_y) to (to_x, to_y)? Answers 1 (move allowed / on
  * site), 2 (blocked-but-cornered), 3 (open-cell promotion) or 0. The
  * cardinal delta walk pins the corpus's slot-0 quirk; the entity's own
- * tile rides the level_cell_of round seam. strict != 0 skips the
- * on-site answer and rejects the +0x40 flag. Cell reads route through
- * level_voxel (the corpus strides the 0x48 window blind; deviations
- * documented in the .cpp).
+ * tile check uses the entity-position adapter. strict != 0 skips the
+ * on-site answer and rejects the +0x40 flag. The mapped current-level entry
+ * uses the retail six-argument ABI and direct voxel reads on x86; the
+ * explicit-level helper retains guarded sidecar reads for port callers.
  * FirstFreeNeighborCellPick (FUN_00431c70): the four cardinal neighbours
  * in counter-rotated order; mode 1 skips neighbours that are already
  * in-bounds, open and unblocked. The counter is own storage (the corpus
@@ -1672,8 +1672,7 @@ int terrain_cell_route_and_occupancy_check(const struct EntitySlot* entity,
                                            int to_x, int to_y, int strict);
 int terrain_cell_route_and_occupancy_check_current(
     const struct EntitySlot* entity, int from_x, int from_y,
-    int to_x, int to_y, int strict);
-                                                /* FUN_00431da0 */
+    int to_x, int to_y, int strict); /* FUN_00431da0 */
 int first_free_neighbor_cell_pick(const struct EntitySlot* entity,
                                   const LevelState* s, const int* cell_in,
                                   int* cell_out, int mode);

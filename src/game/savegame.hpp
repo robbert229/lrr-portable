@@ -399,7 +399,6 @@ void sav_tree_roots_clear(void);
 /* The visited bands are owned by the corresponding tree root and grow to
  * the runtime entry count. Their records are widened host pointers; the
  * retail globals contain 32-bit pointer slots. */
-void sav_tree_visited_band_clear(int which, uint32_t count);
 void sav_tree_visited_entry_set(int which, uint32_t index, void* record,
                                 uint32_t word);
 void sav_tree_visited_entry_peek(int which, uint32_t index, void** record,

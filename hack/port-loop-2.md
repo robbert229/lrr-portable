@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **48.46% accuracy**, **47.17% progress**
+- Full report: **97.32% implemented**, **48.52% accuracy**, **47.23% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **43.55% accuracy**,
-  **43.06% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **43.62% accuracy**,
+  **43.13% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1001,8 +1001,10 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   widened voxel pointer. Its score rose from **25.00% to 45.61%**. Remaining
   differences are the portable `LevelState` pointer sidecar offset and the
   compiler's branch/register layout; the target still calls the same cell-init
-  worker. The latest report is **97.32% / 48.36% / 47.07%** full and
-  **98.87% / 43.44% / 42.95%** game-only. Reccmp and `git diff --check`
+  worker. A later duplicate-branch/raw-pointer attempt scored 38.60% and was
+  reverted. The latest report at this target's original refinement was
+  **97.32% / 48.36% / 47.07%** full and **98.87% / 43.44% / 42.95%**
+  game-only. Reccmp and `git diff --check`
   passed; tests were not run.
 
 - `TerrainCellByteStateClassify` (`0x42c5b0`) now reads the byte from the
@@ -1031,6 +1033,43 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   Other platforms retain the guarded portable fallback. The latest report is
   **97.32% / 48.45% / 47.15%** full and **98.87% / 43.53% / 43.04%**
   game-only. Reccmp and `git diff --check` passed; tests were not run.
+
+- `LevelMapCellGet` (`0x4319e0`) now follows the reference helper sequence: it
+  gets the map image, gets dimensions through the slot-based dimensions helper,
+  advances the image pointer to the cell payload, then reads the 16-bit cell
+  value. Explicitly advancing the pointer improved its match from **31.75% to
+  93.88%**. Latest report: **97.32% / 48.47% / 47.18%** full and
+  **98.87% / 43.56% / 43.07%** game-only.
+  `distrobox enter developer -- make reccmp-report` and `git diff --check`
+  passed; tests were not run.
+- `SavClearVisited` (`0x416e70`) now performs both ordered clear loops in its
+  mapped body, over the root-owned visit arrays and paired per-index words.
+  The active counts and four table pointers are represented by the corresponding
+  annotated globals and kept synchronized with sidecar allocation/release. The
+  target rose from **7.14% through 87.50% to 100%**. Latest report:
+  **97.32% / 48.51% / 47.22%** full and **98.87% / 43.61% / 43.12%**
+  game-only. The MSVC 5.0 Reccmp build and `git diff --check` passed; tests
+  were not run.
+- `FirstFreeNeighborCellPick` (`0x431c70`) now has an x86 path that initializes
+  the four cardinal deltas on the stack, reads bounds and voxel flags directly
+  from the active-level record, and sends route candidates through the
+  six-argument current-level entry. Its score rose from **6.67% to 17.07%**.
+  The remaining diff includes the extra route-check adapter call; the mapped
+  `TerrainCellRouteAndOccupancyCheck` still has its separate explicit-level
+  port signature. Latest report: **97.32% / 48.52% / 47.22%** full and
+  **98.87% / 43.61% / 43.12%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+- `TerrainCellRouteAndOccupancyCheck` (`0x431da0`) now maps to the retail
+  six-argument current-level entry. Its x86 path reads source/destination voxel
+  records through the active level's `+0xb8` pointer and keeps the separate
+  explicit-level helper for other callers. The match rose from **30.74% to
+  43.87%**; `FirstFreeNeighborCellPick` also rose from **17.07% to 18.29%**
+  now that its route call has the matching six-argument target ABI. The
+  remaining diff includes the entity-position adapter's extra explicit-level
+  parameter, while the decompile calls its three-argument scene-position
+  helper. Latest report: **97.32% / 48.52% / 47.23%** full and
+  **98.87% / 43.62% / 43.13%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
 
 ## Port loop
 
@@ -1068,12 +1107,3 @@ frontend display/config functions, and LWO/FLIC loading. Their scores are a
 triage aid, not proof that behavior is absent: inspect the implementation and
 call graph first. The report's `ledger_stub_*` names also do not by themselves
 mean the implementation body is empty.
-
-- `LevelMapCellGet` (`0x4319e0`) now follows the reference helper sequence: it
-  gets the map image, gets dimensions through the slot-based dimensions helper,
-  then reads the 16-bit cell value directly from the image payload. This avoids
-  the extra header and bounds-checked cell helpers in the mapped body. Its
-  score rose from **31.75% to 65.22%**. Latest report: **97.32% / 48.46% /
-  47.17%** full and **98.87% / 43.55% / 43.06%** game-only.
-  `distrobox enter developer -- make reccmp-report` and `git diff --check`
-  passed; tests were not run.

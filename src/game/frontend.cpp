@@ -8888,11 +8888,9 @@ void panel_seam_last(void** out_res, float* out_x, float* out_y)
 
 /* --- the active-object word selector (see frontend.hpp) --------------------
  * DAT_00556fd0 (in-game) / DAT_00556fe4 (out) are unowned: zero-init
- * statics here, addressed through the ported in-game test. */
-// GLOBAL: LEGORR 0x00556fd0
-static int s_active_object_ingame;  /* DAT_00556fd0 role */
-// GLOBAL: LEGORR 0x00556fe4
-static int s_active_object_outgame; /* DAT_00556fe4 role */
+ * state words in savegame.cpp, addressed through the in-game test. */
+extern int s_active_object_ingame;
+extern int s_active_object_outgame;
 
 // FUNCTION: LEGORR 0x00416e00
 int* active_object_list_word(void)
@@ -9442,17 +9440,6 @@ UiRenderRecord* ui_render_record_create(void* source,
     __builtin_memcpy(&rec->float_at_10,
                      (const unsigned char*)source + 0x10, sizeof rec->float_at_10);
     return rec;
-}
-
-/* SavClearVisited (FUN_00416e70): the root-owned dynamic bands mirror the
- * two LevelChainBuild allocations; each count is the runtime chain length. */
-// FUNCTION: LEGORR 0x00416e70
-void sav_clear_visited(void)
-{
-    if (s_active_object_outgame > 0)
-        sav_tree_visited_band_clear(0, (uint32_t)s_active_object_outgame);
-    if (s_active_object_ingame > 0)
-        sav_tree_visited_band_clear(1, (uint32_t)s_active_object_ingame);
 }
 
 void sav_visited_entry_set(int which, int index, void* record,
