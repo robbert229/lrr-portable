@@ -534,6 +534,7 @@ uint8_t terrain_cell_material_get_current(int x, int y);
  * bit (0x10) set and the blocked gate (flag bit 3) clear. Bounds-checked
  * the corpus way (as unsigned, against dim-1). */
 int level_cell_walkable_flag(const LevelState* s, int cx, int cy);
+int terrain_cell_walkable_flag_current(uint32_t cx, uint32_t cy);
 
 /* FUN_00432c20: the wave-spawn flag bit. Returns the masked word. */
 uint32_t level_cell_flag_wave(const LevelState* s, int cx, int cy);
@@ -619,21 +620,26 @@ uint32_t level_cell_secondary_flag_100(const LevelState* s, int cx, int cy);
 /* FUN_004322d0: the pathfinder "visited" mark — secondary bit 1. */
 uint32_t level_cell_visited_flag(const LevelState* s, int cx, int cy);
 
-/* FUN_004323c0 / FUN_004325d0: clear / raise secondary bit 0 (the
- * pair the "SetAndTrack" corpus variants wrap; the tracking queue is
- * a separate unported seam). Bounds-guarded (corpus writes OOB). */
+/* Explicit-level secondary bit 0 helpers. The mapped retail clear routine
+ * takes a coordinate pair and uses the active level global. */
 void level_cell_secondary_bit0_clear(LevelState* s, int cx, int cy);
+void terrain_cell_secondary_bit0_clear_current(const int cell_xy[2]);
+/* Explicit-level set helper. */
 void level_cell_secondary_bit0_set(LevelState* s, int cx, int cy);
+void terrain_cell_secondary_bit0_set_current(const int cell_xy[2]);
 
 /* FUN_004324d0 / FUN_00432520: secondary bit 3 (the flag-8 pair). */
 void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set);
 uint32_t level_cell_secondary_flag_8(const LevelState* s, int cx, int cy);
+void terrain_cell_secondary_flag_8_set_current(int cx, int cy, int set);
+uint32_t terrain_cell_secondary_flag_8_current(int cx, int cy);
 
 /* FUN_00432aa0: mode 0 reads the flag word's 0x400 mask; mode nonzero
  * answers whether EITHER the 0x400 flag or the secondary byte's bit 4
  * marks the cell. */
 uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
                                      int mode);
+uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy, int mode);
 
 /* CellFourNeighborWalkCheck (FUN_0041f740): when the center lacks the
  * 0xc0 marker, all four cardinal neighbors must lack occupied/secondary

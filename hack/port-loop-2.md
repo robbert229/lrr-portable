@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **45.17% accuracy**, **43.96% progress**
+- Full report: **97.32% implemented**, **45.44% accuracy**, **44.22% progress**
   (2,326 compared entries out of 2,390).
-- Game-only report: **98.87% implemented**, **39.91% accuracy**,
-  **39.46% progress** (2,107/2,131).
+- Game-only report: **98.87% implemented**, **40.21% accuracy**,
+  **39.75% progress** (2,107/2,131).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -203,9 +203,58 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   coordinate, and FLIC callbacks in reference order. Its score rose from
   **3.85% to 40.00%**. The newly mapped no-argument
   `EntityActivitySceneStateUpdate` (`0x439990`) and
-  `GlobalObjectField98Clear` (`0x41f8c0`) each score **100%**. Latest report:
-  **97.32% / 45.17% / 43.96%** full and **98.87% / 39.91% / 39.46%** game-only.
-  The related `0x4322d0` score is down to **18.60%** and needs follow-up.
+  `GlobalObjectField98Clear` (`0x41f8c0`) each score **100%**. At that
+  checkpoint the report was **97.32% / 45.17% / 43.96%** full and
+  **98.87% / 39.91% / 39.46%** game-only.
+  Reccmp completed in the developer distrobox and `git diff --check` passed;
+  tests were not run.
+- `DisplayResolutionFilterTupleAppend` (`0x49d870`) now performs volatile
+  reloads of the reference's global tuple count before each field write and
+  again for the final increment. This preserves the unchecked append behavior
+  while matching the decompile's repeated global reads; its score rose from
+  **14.29% to 84.00%**. In the adjacent
+  `DisplayModeMatchesFilterTuple` (`0x49d8d0`), I removed a port-only mode-index
+  bounds check that its sole caller already guarantees, and expressed the
+  reference's 0x110-byte mode and 0x110-byte tuple walks directly; its score
+  rose from **29.09% to 29.27%**. I also aligned
+  `TerrainCellVisitedFlagTest` (`0x4322d0`) with the current-level global and
+  direct retail voxel pointer/stride calculation, removing port-only
+  null/bounds checks absent from the decompile. Its score rose from
+  **18.60% to 76.92%**. Applying the same target-shaped current-level access
+  to `TerrainCellFlag100Test` (`0x432170`) brought that getter from **19.51% to
+  100%** in the earlier report; the latest combined build measures it at
+  **76.92%**, with only width/Y load order differing in the disassembly. Its
+  neighboring `TerrainCellSecondaryBit0Clear` (`0x4323c0`) had a
+  signature mismatch: the annotation was on a three-argument explicit-level
+  helper, while the decompile takes a coordinate-pair pointer and uses the
+  active-level global. The target annotation now sits on a matching direct
+  body; the explicit-level helper remains for its current caller. Its score
+  rose from **9.09% to 76.92%**. The analogous
+  `TerrainCellSecondaryBit0Set` (`0x4325d0`) had the same ABI mismatch and now
+  has a current-level coordinate-pair body; its score rose from **9.09% to
+  100%**. `TerrainCellFlag8SetOrClear` (`0x4324d0`) and
+  `TerrainCellFlag8Test` (`0x432520`) had explicit-level mapping signatures in
+  place of the retail current-level interfaces. Their new mapped bodies use
+  `(x, y, set)` and `(x, y)` arguments respectively; scores rose from **17.65%
+  to 77.55%** and **12.50% to 100%**. The setter now branches before loading
+  level state, matching the decompile's set/clear paths. `TerrainCellOccupancyOrFlagCheck`
+  (`0x432aa0`) now uses the target's `(x, y, mode)` signature and current-level
+  state; matching its mode branch order and early global load raised it from
+  **16.39% to 100%**. Latest scores are 100% (`0x432520`, `0x432aa0`) and
+  76.92% (`0x432170`, `0x4322d0`, `0x4323c0`, `0x4325d0`); `0x4325d0` was
+  previously 100% before this combined source rebuild and now differs only in
+  width/Y load order. Volatile width/Y ordering experiments regressed
+  individual getters to 41.03% and were reverted. Latest report at that point:
+  **97.32% / 45.41% / 44.19%** full and **98.87% / 40.17% / 39.72%** game-only.
+  Reccmp completed in the developer
+  distrobox and `git diff --check` passed; tests were not run.
+- `TerrainCellWalkableFlagCheck` (`0x432bd0`) had an explicit-level
+  three-argument mapping while the decompile takes two unsigned coordinates
+  and reads the active level. Its new target-shaped body preserves the unsigned
+  `dimension - 1` bounds gates, traversable bit `0x10`, and blocked bit `0x8`.
+  The score rose from **12.24% to 73.33%**. Splitting the width and height
+  checks restored the decompile's short-circuit order. Latest report:
+  **97.32% / 45.44% / 44.22%** full and **98.87% / 40.21% / 39.75%** game-only.
   Reccmp completed in the developer distrobox and `git diff --check` passed;
   tests were not run.
 

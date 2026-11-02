@@ -3623,7 +3623,6 @@ static uint32_t cell_secondary_word_unchecked(const LevelState* s,
 /* FUN_00432bd0: traversable bit set, blocked gate (bit 3) clear, inside
  * the unsigned dim-1 gate. The cast keeps the corpus's unsigned wrap: a
  * zero dimension lets every coordinate through. */
-// FUNCTION: LEGORR 0x00432bd0
 int level_cell_walkable_flag(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
@@ -3632,6 +3631,32 @@ int level_cell_walkable_flag(const LevelState* s, int cx, int cy)
         (unsigned)cy < ((unsigned)h - 1u)) {
         const uint32_t flags = cell_flag_word(s, cx, cy);
         return (flags & 0x10u) != 0 && (flags & 0x8u) == 0;
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00432bd0
+int terrain_cell_walkable_flag_current(uint32_t cx, uint32_t cy)
+{
+    LevelState* level = g_active_level_retail;
+    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
+    if (cx >= width - 1u) {
+        return 0;
+    }
+    uint32_t height = level->word[LEVEL_OFF_HEIGHT / 4];
+    if (cy >= height - 1u) {
+        return 0;
+    }
+    uint32_t index = cy * width + cx;
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    uint32_t flags = *(uint32_t*)(voxels + 8u + index * 0x48u);
+    if ((flags & 0x10u) != 0u && (flags & 8u) == 0u) {
+        return 1;
     }
     return 0;
 }
@@ -3979,19 +4004,16 @@ uint32_t level_cell_secondary_flag_100(const LevelState* s, int cx, int cy)
 // FUNCTION: LEGORR 0x00432170
 uint32_t terrain_cell_secondary_flag_100_current(const int cell_xy[2])
 {
-    LevelState* level = terrain_current_level_resolve();
-    const uint8_t* voxels;
-    uint32_t index;
-    uint32_t flags;
-    if (level == NULL) return 0u;
-    voxels = (const uint8_t*)level_load_ptr(level, LEVEL_OFF_VOXELS);
-    if (voxels == NULL) return 0u;
-    index = (uint32_t)cell_xy[1] *
-            (uint32_t)level_int(level, LEVEL_OFF_WIDTH) +
-            (uint32_t)cell_xy[0];
-    __builtin_memcpy(&flags,
-        voxels + index * (uint32_t)LEVEL_VOXEL_STRIDE + 0x0cu,
-        sizeof(flags));
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    uint32_t flags = *(uint32_t*)(voxels + 0x0c + cell_index * 0x48);
     return flags & 0x100u;
 }
 
@@ -4004,24 +4026,20 @@ uint32_t level_cell_visited_flag(const LevelState* s, int cx, int cy)
 // FUNCTION: LEGORR 0x004322d0
 uint32_t terrain_cell_visited_flag_current(const int cell_xy[2])
 {
-    LevelState* level = terrain_current_level_resolve();
-    const uint8_t* voxels;
-    uint32_t index;
-    uint32_t flags;
-    if (level == NULL) return 0u;
-    voxels = (const uint8_t*)level_load_ptr(level, LEVEL_OFF_VOXELS);
-    if (voxels == NULL) return 0u;
-    index = (uint32_t)cell_xy[1] *
-            (uint32_t)level_int(level, LEVEL_OFF_WIDTH) +
-            (uint32_t)cell_xy[0];
-    __builtin_memcpy(&flags,
-        voxels + index * (uint32_t)LEVEL_VOXEL_STRIDE + 0x0cu,
-        sizeof(flags));
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = width * cell_xy[1] + cell_xy[0];
+    uint32_t flags = *(uint32_t*)(voxels + 0x0c + cell_index * 0x48);
     return flags & 2u;
 }
 
-/* FUN_004323c0 / FUN_004325d0: clear/raise secondary bit 0. */
-// FUNCTION: LEGORR 0x004323c0
+/* Explicit-level secondary bit 0 clear helper. */
 void level_cell_secondary_bit0_clear(LevelState* s, int cx, int cy)
 {
     uint8_t* rec = level_voxel(s, cx, cy);
@@ -4032,7 +4050,23 @@ void level_cell_secondary_bit0_clear(LevelState* s, int cx, int cy)
     *word &= ~1u;
 }
 
-// FUNCTION: LEGORR 0x004325d0
+// FUNCTION: LEGORR 0x004323c0
+void terrain_cell_secondary_bit0_clear_current(const int cell_xy[2])
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    uint32_t* flags = (uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+    *flags = *flags & 0xfffffffeu;
+}
+
+/* Explicit-level secondary bit 0 set helper. */
 void level_cell_secondary_bit0_set(LevelState* s, int cx, int cy)
 {
     uint8_t* rec = level_voxel(s, cx, cy);
@@ -4043,8 +4077,23 @@ void level_cell_secondary_bit0_set(LevelState* s, int cx, int cy)
     *word |= 1u;
 }
 
+// FUNCTION: LEGORR 0x004325d0
+void terrain_cell_secondary_bit0_set_current(const int cell_xy[2])
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    uint32_t* flags = (uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+    *flags = *flags | 1u;
+}
+
 /* FUN_004324d0 / FUN_00432520: secondary bit 3 pair. */
-// FUNCTION: LEGORR 0x004324d0
 void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set)
 {
     uint8_t* rec = level_voxel(s, cx, cy);
@@ -4059,16 +4108,62 @@ void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set)
     }
 }
 
-// FUNCTION: LEGORR 0x00432520
 uint32_t level_cell_secondary_flag_8(const LevelState* s, int cx, int cy)
 {
     return cell_secondary_word(s, cx, cy) & 8u;
 }
 
+// FUNCTION: LEGORR 0x004324d0
+void terrain_cell_secondary_flag_8_set_current(int cx, int cy, int set)
+{
+    if (set != 0) {
+        LevelState* level = g_active_level_retail;
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cy + cx;
+        uint32_t* flags = (uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+        *flags |= 8u;
+        return;
+    }
+    {
+        LevelState* level = g_active_level_retail;
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cy + cx;
+        uint32_t* flags = (uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+        *flags &= ~8u;
+    }
+}
+
+// FUNCTION: LEGORR 0x00432520
+uint32_t terrain_cell_secondary_flag_8_current(int cx, int cy)
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = width * cy + cx;
+    uint32_t flags = *(uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+    return flags & 8u;
+}
+
 /* FUN_00432aa0: mode 0 = masked 0x400 read; mode nonzero = OR test of
  * the 0x400 flag and the secondary BYTE's bit 4 (the byte read is the
  * low byte of the secondary word, so the word mask is equivalent). */
-// FUNCTION: LEGORR 0x00432aa0
 uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
                                      int mode)
 {
@@ -4080,6 +4175,41 @@ uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
         return 0;
     }
     return 1;
+}
+
+// FUNCTION: LEGORR 0x00432aa0
+uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy, int mode)
+{
+    LevelState* level = g_active_level_retail;
+    if (mode != 0) {
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cy + cx;
+        uint8_t* record = voxels + cell_index * 0x48;
+        uint32_t flags = *(uint32_t*)(record + 8);
+        if ((flags & 0x400u) == 0u && (record[0x0c] & 4u) == 0u) {
+            return 0u;
+        }
+        return 1u;
+    }
+    {
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cy + cx;
+        uint8_t* record = voxels + cell_index * 0x48;
+        uint32_t flags = *(uint32_t*)(record + 8);
+        return flags & 0x400u;
+    }
 }
 
 /* CellFourNeighborWalkCheck (FUN_0041f740): the tutorial path gate uses

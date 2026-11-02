@@ -1807,10 +1807,11 @@ void display_resolution_filter_tuples_reset(void)
 // FUNCTION: LEGORR 0x0049d870
 void display_resolution_filter_tuple_append(int width, int height, int bpp)
 {
-    s_filter_tuples[s_filter_tuple_count].w = width;
-    s_filter_tuples[s_filter_tuple_count].h = height;
-    s_filter_tuples[s_filter_tuple_count].bpp = bpp;
-    ++s_filter_tuple_count;
+    volatile int* count = (volatile int*)&s_filter_tuple_count;
+    s_filter_tuples[*count].w = width;
+    s_filter_tuples[*count].h = height;
+    s_filter_tuples[*count].bpp = bpp;
+    *count = *count + 1;
 }
 
 int display_resolution_filter_tuple_count(void)
@@ -1837,23 +1838,24 @@ void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp)
 // FUNCTION: LEGORR 0x0049D8D0
 int display_mode_matches_filter_tuple(int mode_index)
 {
-    if (s_filter_tuple_count <= 0) {
+    if (s_filter_tuple_count == 0) {
         return 1;
     }
-    if (mode_index < 0 ||
-        mode_index >= s_display_mode_counts[s_active_display_mode]) {
-        return 0;
-    }
-    const CrtDisplayModeEntry* mode =
-        &s_display_modes[s_active_display_mode][mode_index];
-    for (int i = 0; i < s_filter_tuple_count; ++i) {
-        const FilterTuple* tuple = &s_filter_tuples[i];
-        if ((tuple->w == 0 || tuple->w == mode->width) &&
-            (tuple->h == 0 || tuple->h == mode->height) &&
-            (tuple->bpp == 0 || tuple->bpp == mode->bpp)) {
-            return 1;
+    const int32_t* mode = (const int32_t*)((const uint8_t*)
+        s_display_modes[s_active_display_mode] + mode_index * 0x110);
+    const int32_t* tuple = (const int32_t*)((const uint8_t*)s_filter_tuples +
+        sizeof(int32_t));
+    uint32_t index = 0u;
+    do {
+        if ((tuple[-1] == 0 || tuple[-1] == mode[0]) &&
+            (tuple[0] == 0 || tuple[0] == mode[1])) {
+            if (tuple[1] == 0 || tuple[1] == mode[2]) {
+                return 1;
+            }
         }
-    }
+        ++index;
+        tuple += 0x44;
+    } while (index < (uint32_t)s_filter_tuple_count);
     return 0;
 }
 
