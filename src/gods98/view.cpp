@@ -7096,8 +7096,9 @@ static SceneLightInterface* scene_light_interface(void* record)
 // FUNCTION: LEGORR 0x004761a0
 float ddiscene_animation_duration_get(void* scene_interface)
 {
-    void* record = ((DDiScenePropertyInterface*)scene_interface)
-        ->current_property_get();
+    void** vtable = *(void***)scene_interface;
+    typedef void* (VIEW_COM_CALL *DDiSceneCurrentPropertyGetFn)(void*);
+    void* record = ((DDiSceneCurrentPropertyGetFn)vtable[7])(scene_interface);
     return record != NULL ? *(float*)((char*)record + 0x10) : 0.0f;
 }
 
@@ -7105,8 +7106,9 @@ float ddiscene_animation_duration_get(void* scene_interface)
 // FUNCTION: LEGORR 0x004761e0
 uint32_t ddiscene_animation_state_get(void* scene_interface)
 {
-    void* record = ((DDiScenePropertyInterface*)scene_interface)
-        ->current_property_get();
+    void** vtable = *(void***)scene_interface;
+    typedef void* (VIEW_COM_CALL *DDiSceneCurrentPropertyGetFn)(void*);
+    void* record = ((DDiSceneCurrentPropertyGetFn)vtable[7])(scene_interface);
     return record != NULL ? *(uint32_t*)((char*)record + 0x18) : 0u;
 }
 
@@ -7123,8 +7125,9 @@ const char* ddiscene_animation_sample_name_get(void* scene_interface)
 // FUNCTION: LEGORR 0x00476200
 uint32_t ddiscene_animation_last_frame_get(void* scene_interface)
 {
-    void* record = ((DDiScenePropertyInterface*)scene_interface)
-        ->current_property_get();
+    void** vtable = *(void***)scene_interface;
+    typedef void* (VIEW_COM_CALL *DDiSceneCurrentPropertyGetFn)(void*);
+    void* record = ((DDiSceneCurrentPropertyGetFn)vtable[7])(scene_interface);
     return record != NULL ? *(uint32_t*)((char*)record + 0x20) : 0u;
 }
 
@@ -7132,8 +7135,9 @@ uint32_t ddiscene_animation_last_frame_get(void* scene_interface)
 // FUNCTION: LEGORR 0x00476160
 uint32_t ddiscene_action_record_field_1c_get(void* scene_interface)
 {
-    void* record = ((DDiScenePropertyInterface*)scene_interface)
-        ->current_property_get();
+    void** vtable = *(void***)scene_interface;
+    typedef void* (VIEW_COM_CALL *DDiSceneCurrentPropertyGetFn)(void*);
+    void* record = ((DDiSceneCurrentPropertyGetFn)vtable[7])(scene_interface);
     return record != NULL ? *(uint32_t*)((char*)record + 0x1c) : 0u;
 }
 
@@ -7153,8 +7157,9 @@ void* ddiscene_action_record_field_1c_pointer_get(void* scene_interface)
 // FUNCTION: LEGORR 0x00476180
 uint32_t ddiscene_action_record_field_0c_get(void* scene_interface)
 {
-    void* record = ((DDiScenePropertyInterface*)scene_interface)
-        ->current_property_get();
+    void** vtable = *(void***)scene_interface;
+    typedef void* (VIEW_COM_CALL *DDiSceneCurrentPropertyGetFn)(void*);
+    void* record = ((DDiSceneCurrentPropertyGetFn)vtable[7])(scene_interface);
     return record != NULL ? *(uint32_t*)((char*)record + 0x0c) : 0u;
 }
 
@@ -7162,8 +7167,9 @@ uint32_t ddiscene_action_record_field_0c_get(void* scene_interface)
 // FUNCTION: LEGORR 0x00476310
 uint32_t scene_property_value_at08_get(void* scene_interface)
 {
-    void* record = ((DDiScenePropertyInterface*)scene_interface)
-        ->current_property_get();
+    void** vtable = *(void***)scene_interface;
+    typedef void* (VIEW_COM_CALL *DDiSceneCurrentPropertyGetFn)(void*);
+    void* record = ((DDiSceneCurrentPropertyGetFn)vtable[7])(scene_interface);
     return record != NULL ? *(uint32_t*)((char*)record + 0x08) : 0u;
 }
 
@@ -7174,18 +7180,47 @@ uint32_t scene_property_value_at08_get(void* scene_interface)
 void scene_object_transform_matrix_set(void* object, uint32_t mode,
                                        const float* matrix)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    void* scene_object = *(void**)object;
+    void** vtable = *(void***)scene_object;
+    typedef void (VIEW_COM_CALL *MatrixSetFn)(void*, uint32_t,
+                                               const float*);
+    ((MatrixSetFn)vtable[0x38 / 4])(scene_object, mode, matrix);
+#else
     SceneObjectTransformInterface* const scene =
         (SceneObjectTransformInterface*)*(void**)object;
     scene->transform_matrix_set(mode, matrix);
+#endif
 }
 
 /* RenderObjectSetIdentityTransform (FUN_00475610). */
 // FUNCTION: LEGORR 0x00475610
 void render_object_set_identity_transform(void* object)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    volatile float matrix[16];
+    matrix[0] = 1.0f;
+    matrix[4] = 0.0f;
+    matrix[8] = 0.0f;
+    matrix[12] = 0.0f;
+    matrix[1] = 0.0f;
+    matrix[5] = 1.0f;
+    matrix[9] = 0.0f;
+    matrix[13] = 0.0f;
+    matrix[2] = 0.0f;
+    matrix[6] = 0.0f;
+    matrix[10] = 1.0f;
+    matrix[14] = 0.0f;
+    matrix[3] = 0.0f;
+    matrix[7] = 0.0f;
+    matrix[11] = 0.0f;
+    matrix[15] = 1.0f;
+    scene_object_transform_matrix_set(object, 0u, (const float*)matrix);
+#else
     float matrix[16];
     matrix4_set_identity(matrix);
     scene_object_transform_matrix_set(object, 0u, matrix);
+#endif
 }
 
 /* RenderObjectRotateAxis (FUN_00475580), vtable slot +0x44. */
@@ -7193,9 +7228,17 @@ void render_object_set_identity_transform(void* object)
 void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,
                                float z, float angle)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    void* scene_object = *(void**)object;
+    void** vtable = *(void***)scene_object;
+    typedef void (VIEW_COM_CALL *RotateAxisFn)(void*, uint32_t, float, float,
+                                                float, float);
+    ((RotateAxisFn)vtable[0x44 / 4])(scene_object, mode, x, y, z, angle);
+#else
     SceneObjectTransformInterface* const scene =
         (SceneObjectTransformInterface*)*(void**)object;
     scene->rotate_axis(mode, x, y, z, angle);
+#endif
 }
 
 /* SceneFrameScaleSet (FUN_004755b0), vtable slot +0x40. */
@@ -7203,9 +7246,17 @@ void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,
 void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
                            float z)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    void* scene_object = *(void**)object;
+    void** vtable = *(void***)scene_object;
+    typedef void (VIEW_COM_CALL *FrameScaleSetFn)(void*, uint32_t, float,
+                                                   float, float);
+    ((FrameScaleSetFn)vtable[0x40 / 4])(scene_object, mode, x, y, z);
+#else
     SceneObjectTransformInterface* const scene =
         (SceneObjectTransformInterface*)*(void**)object;
     scene->frame_scale_set(mode, x, y, z);
+#endif
 }
 
 /* SceneObjectCoordinateTransformToOutput (FUN_00475090), interface slot
@@ -7214,9 +7265,16 @@ void scene_frame_scale_set(void* object, uint32_t mode, float x, float y,
 void scene_object_coordinate_transform_to_output(void* object,
                                                   void* input, void* output)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    void* scene_object = *(void**)object;
+    void** vtable = *(void***)scene_object;
+    typedef void (VIEW_COM_CALL *CoordinateTransformFn)(void*, void*, void*);
+    ((CoordinateTransformFn)vtable[0x84 / 4])(scene_object, input, output);
+#else
     SceneObjectCoordinateInterface* const scene =
         (SceneObjectCoordinateInterface*)*(void**)object;
     scene->coordinate_transform_to_output(input, output);
+#endif
 }
 
 /* SceneObjectCoordinateTransformInPlace (FUN_00475070), interface slot
@@ -7226,9 +7284,17 @@ void scene_object_coordinate_transform_in_place(void* object,
                                                 void* coordinates,
                                                 void* transform)
 {
+#if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
+    void* scene_object = *(void**)object;
+    void** vtable = *(void***)scene_object;
+    typedef void (VIEW_COM_CALL *CoordinateTransformFn)(void*, void*, void*);
+    ((CoordinateTransformFn)vtable[0x108 / 4])(scene_object, coordinates,
+                                                transform);
+#else
     SceneObjectCoordinateInterface* const scene =
         (SceneObjectCoordinateInterface*)*(void**)object;
     scene->coordinate_transform_in_place(coordinates, transform);
+#endif
 }
 
 static DDiSceneObjectPoseInterface* ddiscene_pose_interface_resolve(
@@ -8332,10 +8398,29 @@ void callback_record_set_flag10_and_refresh(void* property)
 
 /* ScenePropertyFloatAt14Get (FUN_004761c0): read the float at +0x14 in the
  * property record returned by the interface's slot +0x1c. */
+// FUNCTION: LEGORR 0x004761c0
 float scene_property_float_at14_get(void* property)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    void** vtable = *(void***)property;
+    typedef void* (VIEW_COM_CALL *ScenePropertyValueRecordGetFn)(void*);
+    void* record = ((ScenePropertyValueRecordGetFn)vtable[7])(property);
+    if (record != NULL) {
+        return *(float*)((char*)record + 0x14);
+    }
+    return 0.0f;
+#elif defined(__i386__)
+    void** vtable = *(void***)property;
+    typedef void* (VIEW_COM_CALL *ScenePropertyValueRecordGetFn)(void*);
+    void* record = ((ScenePropertyValueRecordGetFn)vtable[7])(property);
+    if (record != NULL) {
+        return *(float*)((char*)record + 0x14);
+    }
+    return 0.0f;
+#else
     void* record = scene_property_value_record_get(property);
     return record != NULL ? *(float*)((char*)record + 0x14) : 0.0f;
+#endif
 }
 
 /* ScenePropertyPrimaryValueGet (FUN_00476120): first dword in the value
@@ -8455,10 +8540,14 @@ const void* map_row_span_record_get(uint32_t index)
 // FUNCTION: LEGORR 0x00463e40
 int float_round_to_nearest_int(float value)
 {
-    const double lower = floor((double)value);
-    const double rounded = ((double)value - lower < 0.5)
-        ? lower : ceil((double)value);
-    return crt_float_to_long((float)rounded);
+    const double value_double = (double)value;
+    if (value_double - crt_round_to_integral_with_math_error_handling(
+            value_double) < 0.5) {
+        return crt_float_to_long(
+            crt_round_to_integral_with_math_error_handling(value_double));
+    }
+    return crt_float_to_long(
+        crt_round_to_integral_with_math_error_handling_variant(value_double));
 }
 
 static RendererSubobjectResolveFn s_renderer_subobject_resolver;
@@ -9146,13 +9235,6 @@ void ledger_stub_004760e0_AttachedObjectDataReleaseAndClear(void* property)
 }
 
 
-
-// ScenePropertyFloatAt14Get
-// FUNCTION: LEGORR 0x004761c0
-float ledger_stub_004761c0_ScenePropertyFloatAt14Get(void* property)
-{
-    return scene_property_float_at14_get(property);
-}
 
 // RenderInterfacePairUpdate
 void ledger_stub_00476220_RenderInterfacePairUpdate(

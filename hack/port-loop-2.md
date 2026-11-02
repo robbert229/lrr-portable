@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **52.22% accuracy**, **50.83% progress**
+- Full report: **97.33% implemented**, **52.61% accuracy**, **51.21% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **47.71% accuracy**,
-  **47.17% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **48.14% accuracy**,
+  **47.60% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1684,6 +1684,62 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   44.44% to 100%. The latest report is **97.33% / 52.22% / 50.83%** full and
   **98.88% / 47.71% / 47.17%** game-only. Reccmp and `git diff --check`
   passed; tests were not run.
+
+- `ScenePropertyFloatAt14Get` (`0x4761c0`) now owns its target annotation and
+  performs the reference's direct vtable `+0x1c` call followed by the nullable
+  `record + 0x14` float read. The prior annotated body forwarded to a helper,
+  leaving only 36.36% of its target instructions matched; the direct body now
+  matches **90.00%**. The non-x86 path retains its guarded helper behavior.
+  `distrobox enter developer -- make reccmp-report` completed twice with
+  identical per-target scores; the latest totals are **97.33% / 52.25% / 50.85%**
+  full and **98.88% / 47.73% / 47.20%** game-only. `git diff --check` passed;
+  tests were not run.
+- The adjacent DDiScene property getters now use the same direct vtable `+0x1c`
+  dispatch: `DDiSceneActionRecordField1CGet` (`0x476160`),
+  `DDiSceneActionRecordField0CGet` (`0x476180`),
+  `DDiSceneAnimationDurationGet` (`0x4761a0`),
+  `DDiSceneAnimationStateGet` (`0x4761e0`),
+  `DDiSceneAnimationLastFrameGet` (`0x476200`), and
+  `ScenePropertyValueAt08Get` (`0x476310`). Four targets rose from 55.56% to
+  100%; the duration getter rose from 44.44% to 90%. The previously aligned
+  `ScenePropertyFloatAt14Get` stayed at 90%. The combined report is now
+  **97.33% / 52.36% / 50.96%** full and **98.88% / 47.86% / 47.32%** game-only.
+  `distrobox enter developer -- make reccmp-report` and `git diff --check`
+  passed; tests were not run.
+- `ScenePropertyOwnedBufferRelease` (`0x4762f0`) now calls the mapped
+  `ScenePropertyValueAt08Get` body and frees its returned buffer on x86, matching
+  the reference call and null gate. The non-x86 path retains its native-width
+  record-pointer handling. Its score rose from 31.25% to **100%**. The latest
+  Reccmp report is **97.33% / 52.39% / 50.99%** full and
+  **98.88% / 47.89% / 47.35%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+- `FloatRoundToNearestInt` (`0x463e40`) now repeats the floor operation for the
+  lower branch and calls the ceil helper for the upper branch before converting
+  to integer, matching the checked-in decompile's control flow and CRT calls.
+  Its match rose from 34.38% to **96.88%**. The latest report is
+  **97.33% / 52.42% / 51.02%** full and **98.88% / 47.92% / 47.38%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+- `SceneObjectCoordinateTransformInPlace` (`0x475070`) and
+  `SceneObjectCoordinateTransformToOutput` (`0x475090`) now use explicit x86
+  vtable calls with the interface and both vector arguments stack-passed as in
+  the reference. Both rose from 22.22% to **100%**; non-x86 builds retain their
+  typed virtual calls. The latest report is **97.33% / 52.48% / 51.08%** full
+  and **98.88% / 48.00% / 47.46%** game-only. `distrobox enter developer --
+  make reccmp-report` and `git diff --check` passed; tests were not run.
+- `RenderObjectRotateAxis` (`0x475580`), `SceneFrameScaleSet` (`0x4755b0`),
+  and `SceneObjectTransformMatrixSet` (`0x4756b0`) now make direct x86 vtable
+  calls with the target interface and stack arguments. All three rose to
+  **100%** from 20.00%, 23.08%, and 22.22%; non-x86 builds retain their typed
+  virtual calls. The latest report is **97.33% / 52.58% / 51.18%** full and
+  **98.88% / 48.11% / 47.57%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+- `RenderObjectSetIdentityTransform` (`0x475610`) now writes its sixteen
+  identity-matrix words in the reference order and dispatches through the
+  mapped matrix setter. Its score rose from 34.78% to **100%**. The latest
+  report is **97.33% / 52.61% / 51.21%** full and
+  **98.88% / 48.14% / 47.60%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

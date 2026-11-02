@@ -2669,6 +2669,17 @@ void render_resource_pair_release_and_clear(void** pair)
 // FUNCTION: LEGORR 0x004762f0
 void scene_property_owned_buffer_release(void* property)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    void* owned_buffer = (void*)scene_property_value_at08_get(property);
+    if (owned_buffer != NULL) {
+        engine_heap_free(owned_buffer);
+    }
+#elif defined(__i386__)
+    void* owned_buffer = (void*)scene_property_value_at08_get(property);
+    if (owned_buffer != NULL) {
+        engine_heap_free(owned_buffer);
+    }
+#else
     void* record;
     void* owned_buffer;
     if (property == NULL) {
@@ -2677,6 +2688,7 @@ void scene_property_owned_buffer_release(void* property)
     record = ((ResourcePropertyInterface*)property)->property_get();
     owned_buffer = record != NULL ? *(void**)((char*)record + 0x08) : NULL;
     engine_heap_free(owned_buffer);
+#endif
 }
 
 // FUNCTION: LEGORR 0x00477250
