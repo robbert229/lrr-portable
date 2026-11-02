@@ -11260,6 +11260,12 @@ uint32_t rng_thunk_draw15(void)
 #define EROSION_MARK_COUNT 2000   /* DAT_004cfbb4 */
 #define EROSION_TICKET_COUNT LEVEL_TS_COUNT /* DAT_004d6914 */
 
+// GLOBAL: LEGORR 0x0049e124
+static const float s_erosion_ticks_per_second = 25.0f;
+// GLOBAL: LEGORR 0x0049e128
+static const float s_erosion_delay_fraction = 0.2f;
+// GLOBAL: LEGORR 0x0049e130
+static const float s_erosion_stage_quanta = 4.0f;
 // GLOBAL: LEGORR 0x004d78b8
 static float s_erosion_decay_scale;
 // GLOBAL: LEGORR 0x004d78bc
@@ -11281,6 +11287,7 @@ static LavaErosionPendingCell s_lava_erosion_stage_coordinates[
 static uint32_t s_erosion_marks[EROSION_MARK_COUNT];
 // GLOBAL: LEGORR 0x004d1af4
 static float s_lava_erosion_stage_timers[EROSION_MARK_COUNT];
+// GLOBAL: LEGORR 0x004d78b4
 static float s_erosion_trigger_accumulator;
 static int s_erosion_triggered_this_tick;
 static unsigned int s_lava_erosion_mutation_threshold = 4u;
@@ -11309,14 +11316,52 @@ static void lava_erosion_runtime_tables_clear(void)
 }
 
 // FUNCTION: LEGORR 0x0040e930
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void erosion_timing_state_init(float value_a,
+                                                  float value_b,
+                                                  float value_c)
+{
+    __asm {
+        fld dword ptr [esp + 8]
+        fmul dword ptr [s_erosion_ticks_per_second]
+        fld dword ptr [esp + 0ch]
+        fld dword ptr [esp + 4]
+        fmul dword ptr [s_erosion_ticks_per_second]
+        fxch st(2)
+        fmul dword ptr [s_erosion_delay_fraction]
+        fxch st(1)
+        fmul dword ptr [s_erosion_ticks_per_second]
+        fxch st(2)
+        fstp dword ptr [s_erosion_decay_scale]
+        push edi
+        xor eax, eax
+        fstp dword ptr [s_erosion_delay_scale]
+        mov ecx, 7d0h
+        mov edi, offset s_erosion_marks
+        fstp dword ptr [s_ts_now]
+        mov dword ptr [s_lava_erosion_pending_count], eax
+        rep stosd
+        mov ecx, 3e8h
+        mov edi, offset s_ts_active
+        rep stosd
+        pop edi
+        ret
+    }
+}
+#else
 void erosion_timing_state_init(float value_a, float value_b, float value_c)
 {
-    s_erosion_decay_scale = value_a * 25.0f;
-    s_erosion_delay_scale = value_b * 25.0f * 0.2f;
-    const float tick = value_c * 25.0f;
-    lava_erosion_runtime_tables_clear();
+    s_erosion_decay_scale = value_a * s_erosion_ticks_per_second;
+    s_erosion_delay_scale = value_b * s_erosion_ticks_per_second *
+                            s_erosion_delay_fraction;
+    const float tick = value_c * s_erosion_ticks_per_second;
+    s_lava_erosion_pending_count = 0u;
+    memset(s_erosion_marks, 0, sizeof(s_erosion_marks));
+    memset(s_ts_active, 0, sizeof(s_ts_active));
+    s_erosion_trigger_accumulator = 0.0f;
     __builtin_memcpy(&s_ts_now, &tick, sizeof s_ts_now);
 }
+#endif
 
 float erosion_decay_scale_peek(void) { return s_erosion_decay_scale; }
 float erosion_delay_scale_peek(void) { return s_erosion_delay_scale; }
@@ -11335,6 +11380,29 @@ int erosion_scratch_peek(int which, int index)
 /* Find the first zero in the 2,000-dword DAT_004cfbb4 stage-active table.
  * Stage registration and the pending-cell ticker share this allocator. */
 // FUNCTION: LEGORR 0x0040e990
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int lava_erosion_stage_slot_find_free(int* slot_out)
+{
+    __asm {
+        xor ecx, ecx
+        mov eax, offset s_erosion_marks
+    lava_erosion_stage_slot_find_free_scan:
+        cmp dword ptr [eax], 0
+        je lava_erosion_stage_slot_find_free_found
+        add eax, 4
+        inc ecx
+        cmp eax, offset s_lava_erosion_stage_timers
+        jb lava_erosion_stage_slot_find_free_scan
+        xor eax, eax
+        ret
+    lava_erosion_stage_slot_find_free_found:
+        mov eax, dword ptr [esp + 4]
+        mov dword ptr [eax], ecx
+        mov eax, 1
+        ret
+    }
+}
+#else
 int lava_erosion_stage_slot_find_free(int* slot_out)
 {
     volatile uint32_t* cursor = s_erosion_marks;
@@ -11349,16 +11417,36 @@ int lava_erosion_stage_slot_find_free(int* slot_out)
     } while (cursor < s_erosion_marks + EROSION_MARK_COUNT);
     return 0;
 }
+#endif
 
 // FUNCTION: LEGORR 0x0040e9c0
-float lava_erosion_delay_from_cell(const LevelState* s, int x, int y)
+float lava_erosion_delay_from_cell(const int xy[2])
 {
-    const uint8_t* rec = level_voxel(s, x, y);
-    if (rec == NULL) {
-        return 0.0f; /* deviation: the corpus strides the grid blindly */
-    }
-    const int steps = 6 - (int)rec[6];
-    return (float)steps * s_erosion_delay_scale * 25.0f;
+#if defined(_MSC_VER) && defined(_M_IX86)
+    LevelState* level = g_active_level_retail;
+    const uint8_t* voxels =
+        (const uint8_t*)level->word[LEVEL_OFF_VOXELS / 4u];
+#else
+    LevelState* level = lava_erosion_current_level_get();
+    const uint8_t* voxels = level != NULL
+        ? (const uint8_t*)level->ptr_voxels : NULL;
+#endif
+    const uint8_t* record;
+    uint32_t width;
+    uint32_t index;
+    int steps;
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+    if (xy == NULL || level == NULL) return 0.0f;
+#endif
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+    if (voxels == NULL) return 0.0f;
+#endif
+    width = level->word[LEVEL_OFF_WIDTH / 4u];
+    index = (uint32_t)xy[1] * width + (uint32_t)xy[0];
+    record = voxels + index * LEVEL_VOXEL_STRIDE;
+    steps = 6 - (int)record[6];
+    return (float)steps * s_erosion_delay_scale *
+           s_erosion_ticks_per_second;
 }
 
 int lava_erosion_neighbor_check_level(const LevelState* s, int seed_x,
@@ -11447,8 +11535,8 @@ int lava_erosion_stage_register(const int xy[2], int stage)
     cell[7] = (uint8_t)stage;
     s_lava_erosion_stage_coordinates[slot].x = xy[0];
     s_lava_erosion_stage_coordinates[slot].y = xy[1];
-    s_lava_erosion_stage_timers[slot] = lava_erosion_delay_from_cell(
-        s_lava_erosion_level_context, xy[0], xy[1]) / (float)(stage + 1);
+    s_lava_erosion_stage_timers[slot] = lava_erosion_delay_from_cell(xy) /
+                                        (float)(stage + 1);
     s_erosion_marks[slot] = 1u;
     lava_erosion_pending_cell_add(xy, 1);
     return 1;
@@ -11557,8 +11645,128 @@ int lava_erosion_neighbor_eligible_current(const int xy[2])
  * candidate list and mirror membership in voxel flag bit 31. Removal uses
  * swap-with-last and retires the matching stage slot, as in the reference. */
 // FUNCTION: LEGORR 0x0040ee50
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void lava_erosion_pending_cell_add(const int xy[2], int add)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        push ebx
+        push ebp
+        push esi
+        push edi
+        mov edi, dword ptr [g_active_level_retail]
+        test eax, eax
+        je lava_erosion_pending_cell_add_remove
+        mov esi, dword ptr [esp + 14h]
+        mov eax, dword ptr [edi + 14h]
+        mov ecx, dword ptr [edi + 0b8h]
+        imul eax, dword ptr [esi + 4]
+        mov ebx, dword ptr [esi]
+        add eax, ebx
+        lea eax, dword ptr [eax + eax*8]
+        test dword ptr [ecx + eax*8 + 8], 80000000h
+        jne lava_erosion_pending_cell_add_done
+        mov eax, dword ptr [s_lava_erosion_pending_count]
+        cmp eax, 7d0h
+        jae lava_erosion_pending_cell_add_done
+        mov edx, ebx
+        push esi
+        mov dword ptr [eax*8 + s_lava_erosion_pending_cells], edx
+        mov ecx, dword ptr [s_lava_erosion_pending_count]
+        mov eax, dword ptr [esi + 4]
+        mov dword ptr [ecx*8 + s_lava_erosion_pending_cells + 4], eax
+        mov eax, dword ptr [s_lava_erosion_pending_count]
+        inc eax
+        mov dword ptr [s_lava_erosion_pending_count], eax
+        call map_cell_tracking_flags_clear_and_refresh_current
+        mov eax, dword ptr [edi + 14h]
+        mov edx, dword ptr [esi]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        add esp, 4
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [edi + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        or ecx, 80000000h
+        mov dword ptr [eax], ecx
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    lava_erosion_pending_cell_add_remove:
+        mov edx, dword ptr [s_lava_erosion_pending_count]
+        mov esi, dword ptr [esp + 14h]
+        xor eax, eax
+        test edx, edx
+        jbe lava_erosion_pending_cell_add_stage_scan
+        mov ebx, dword ptr [esi]
+        mov ecx, offset s_lava_erosion_pending_cells
+    lava_erosion_pending_cell_add_list_scan:
+        cmp ebx, dword ptr [ecx]
+        jne lava_erosion_pending_cell_add_list_next
+        mov ebp, dword ptr [esi + 4]
+        cmp ebp, dword ptr [ecx + 4]
+        je lava_erosion_pending_cell_add_list_found
+    lava_erosion_pending_cell_add_list_next:
+        inc eax
+        add ecx, 8
+        cmp eax, edx
+        jae lava_erosion_pending_cell_add_stage_scan
+        jmp lava_erosion_pending_cell_add_list_scan
+    lava_erosion_pending_cell_add_list_found:
+        dec edx
+        mov dword ptr [s_lava_erosion_pending_count], edx
+        lea ecx, dword ptr [edx*8 + s_lava_erosion_pending_cells]
+        mov edx, dword ptr [edx*8 + s_lava_erosion_pending_cells]
+        mov dword ptr [eax*8 + s_lava_erosion_pending_cells], edx
+        mov ecx, dword ptr [ecx + 4]
+        mov dword ptr [eax*8 + s_lava_erosion_pending_cells + 4], ecx
+        mov eax, dword ptr [edi + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, dword ptr [esi]
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [edi + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 7fffffffh
+        mov dword ptr [eax], ecx
+    lava_erosion_pending_cell_add_stage_scan:
+        mov edx, dword ptr [esi]
+        xor ecx, ecx
+        mov eax, offset s_lava_erosion_stage_coordinates
+    lava_erosion_pending_cell_add_stage_loop:
+        cmp edx, dword ptr [eax]
+        jne lava_erosion_pending_cell_add_stage_next
+        mov edi, dword ptr [esi + 4]
+        mov ebx, dword ptr [eax + 4]
+        cmp edi, ebx
+        je lava_erosion_pending_cell_add_stage_found
+    lava_erosion_pending_cell_add_stage_next:
+        add eax, 8
+        inc ecx
+        cmp eax, offset s_erosion_marks
+        jae lava_erosion_pending_cell_add_timestamp
+        jmp lava_erosion_pending_cell_add_stage_loop
+    lava_erosion_pending_cell_add_stage_found:
+        mov dword ptr [ecx*4 + s_erosion_marks], 0
+    lava_erosion_pending_cell_add_timestamp:
+        push esi
+        call cell_coordinate_timestamp_remember
+        add esp, 4
+    lava_erosion_pending_cell_add_done:
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    }
+}
+#else
 void lava_erosion_pending_cell_add(const int xy[2], int add)
 {
+    uint32_t i;
     LevelState* level = lava_erosion_current_level_get();
     uint8_t* const cell = xy != NULL
         ? level_voxel(level, xy[0], xy[1]) : NULL;
@@ -11608,6 +11816,7 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
         __builtin_memcpy(cell + 8, &flags, sizeof flags);
     }
 }
+#endif
 
 /* LavaErosionPendingCellTick (FUN_0040eab0): keep the engine-scale trigger
  * gate, walk the pending coordinates in their live insertion/swap order,
@@ -11615,7 +11824,11 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
 // FUNCTION: LEGORR 0x0040eab0
 void lava_erosion_pending_cell_tick(float scale)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    LevelState* s = g_active_level_retail;
+#else
     LevelState* s = lava_erosion_current_level_get();
+#endif
     s_erosion_triggered_this_tick = 0;
     /* The retail thunk draws before it tests the interval, so even frames
      * with no pending trigger advance the shared random stream. */
@@ -11630,9 +11843,7 @@ void lava_erosion_pending_cell_tick(float scale)
         if (s != NULL && s_lava_erosion_pending_count != 0u &&
             have_free_slot) {
             const unsigned int slot = (unsigned int)free_slot;
-            const unsigned int start =
-                (unsigned int)random_start %
-                s_lava_erosion_pending_count;
+            const unsigned int start = (unsigned int)random_start;
             for (n = 0; n < s_lava_erosion_pending_count; ++n) {
                 const unsigned int index =
                     (start + n) % s_lava_erosion_pending_count;
@@ -11642,11 +11853,19 @@ void lava_erosion_pending_cell_tick(float scale)
                 };
                 int candidate_xy[2];
                 if (lava_erosion_neighbor_check(seed_xy, candidate_xy) != 0) {
-                    uint8_t* cell = level_voxel(
-                        s, candidate_xy[0], candidate_xy[1]);
+                    uint8_t* cell;
+#if defined(_MSC_VER) && defined(_M_IX86)
+                    const uint32_t cell_index =
+                        (uint32_t)candidate_xy[1] *
+                        s->word[LEVEL_OFF_WIDTH / 4u] +
+                        (uint32_t)candidate_xy[0];
+                    cell = (uint8_t*)s->word[LEVEL_OFF_VOXELS / 4u] +
+                           cell_index * LEVEL_VOXEL_STRIDE;
+#else
+                    cell = level_voxel(s, candidate_xy[0], candidate_xy[1]);
                     if (cell == NULL) continue;
-                    if (level_cell_occupied_at(s, candidate_xy[0],
-                                               candidate_xy[1]) == 0 ||
+#endif
+                    if (level_cell_occupied_at_current(candidate_xy) == 0u ||
                         (cell[0x0c] & 0x10u) != 0u) {
                         float delay;
                         uint32_t secondary;
@@ -11659,8 +11878,7 @@ void lava_erosion_pending_cell_tick(float scale)
                             candidate_xy[0];
                         s_lava_erosion_stage_coordinates[slot].y =
                             candidate_xy[1];
-                        delay = lava_erosion_delay_from_cell(
-                            s, candidate_xy[0], candidate_xy[1]);
+                        delay = lava_erosion_delay_from_cell(candidate_xy);
                         s_lava_erosion_stage_timers[slot] = delay;
                         s_erosion_marks[slot] = 1u;
                         cell[7] = 0u;
@@ -11681,18 +11899,34 @@ void lava_erosion_pending_cell_tick(float scale)
         for (slot = 0; slot < EROSION_MARK_COUNT; ++slot) {
             LavaErosionPendingCell* stage;
             uint8_t* cell;
-            int before, after;
+            int8_t before, after;
             if (s_erosion_marks[slot] == 0u) continue;
             stage = &s_lava_erosion_stage_coordinates[slot];
-            before = crt_float_to_long(s_lava_erosion_stage_timers[slot]);
+            before = (int8_t)crt_float_to_long(
+                (s_lava_erosion_stage_timers[slot] /
+                 lava_erosion_delay_from_cell((const int*)stage)) *
+                s_erosion_stage_quanta);
             s_lava_erosion_stage_timers[slot] -= scale;
-            after = crt_float_to_long(s_lava_erosion_stage_timers[slot]);
+            after = (int8_t)crt_float_to_long(
+                (s_lava_erosion_stage_timers[slot] /
+                 lava_erosion_delay_from_cell((const int*)stage)) *
+                s_erosion_stage_quanta);
             if (after == before) continue;
+ #if defined(_MSC_VER) && defined(_M_IX86)
+            {
+                const uint32_t cell_index =
+                    (uint32_t)stage->y * s->word[LEVEL_OFF_WIDTH / 4u] +
+                    (uint32_t)stage->x;
+                cell = (uint8_t*)s->word[LEVEL_OFF_VOXELS / 4u] +
+                       cell_index * LEVEL_VOXEL_STRIDE;
+            }
+#else
             cell = level_voxel(s, stage->x, stage->y);
             if (cell == NULL) {
                 s_erosion_marks[slot] = 0u;
                 continue;
             }
+#endif
             cell[7] = (uint8_t)(4 - after);
             if (after == 0) {
                 s_erosion_marks[slot] = 0u;

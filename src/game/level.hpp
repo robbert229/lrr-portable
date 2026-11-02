@@ -1151,7 +1151,7 @@ int lava_erosion_stage_slot_find_free(int* slot_out); /* 0x0040e990 */
  * counts down from 6 and rides the timing scale times 25; the corpus
  * strides the grid and timing word blindly — the port guards the cell
  * (deviation: no grid/no level answers zero). */
-float lava_erosion_delay_from_cell(const LevelState* s, int x, int y);
+float lava_erosion_delay_from_cell(const int xy[2]);
 
 /* LavaErosionNeighborCheck (FUN_0040f000): when the seed cell's +2 type
  * byte reads 6, sweep the four cardinal neighbours; a neighbour that is

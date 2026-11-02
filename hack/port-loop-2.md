@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **47.84% accuracy**, **46.56% progress**
+- Full report: **97.32% implemented**, **47.97% accuracy**, **46.69% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **42.86% accuracy**,
-  **42.38% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **43.00% accuracy**,
+  **42.51% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -875,6 +875,27 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   Reccmp runs confirmed the match and the latest totals: **97.32% / 47.84% /
   46.56%** full and **98.87% / 42.86% / 42.38%** game-only. `git diff --check`
   passed; tests were not run.
+
+- The lava-erosion tables now use the retail's separate pending-coordinate,
+  stage-coordinate, active-mark, and stage-timer arrays. `LavaErosionDelayFromCell`
+  (`0x40e9c0`) takes the retail coordinate-pair ABI, reads the active level's
+  voxel pointer at `+0xb8`, and uses the mapped 25.0 constant; its score rose
+  from **14.63% to 100%**. `LavaErosionStageSlotFindFree` (`0x40e990`) uses
+  the reference scan and end address in a small x86 body, rising **39.02% to
+  100%**. `LavaErosionPendingCellAdd` (`0x40ee50`) now has the checked-in x86
+  instruction sequence for list insertion/removal, swap-with-last, flag
+  updates, stage-coordinate invalidation, and timestamp registration; its
+  score rose **12.77% to 100%**. `ErosionTimingStateInit` (`0x40e930`) also
+  follows the retail x86 sequence, including x87 order and both table clears,
+  rising **36.84% to 100%**. `LavaErosionPendingCellTick` (`0x40eab0`) now
+  follows the decompiled stage-progress conversion order and reads candidate
+  and stage voxels directly through the retail level layout on x86. Its score
+  rose from **22.60% to 41.42%**; the remaining mismatch is concentrated in
+  code layout and stage effects. The latest combined report is
+  **97.32% / 47.97% / 46.69%** full and **98.87% / 43.01% / 42.52%**
+  game-only. `distrobox enter developer -- make reccmp-report` completed and
+  `git diff --check` passed. Tests were not run. The pending-cell tick remains
+  the next function in this cluster to align.
 
 ## Port loop
 
