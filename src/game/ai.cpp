@@ -42,46 +42,328 @@
 
 static const void* rec_payload(const void* rec) { return cmd_rec_payload(rec); }
 
+// GLOBAL: LEGORR 0x004a46f8
+static const char s_activity_name_activity_stand[] = "Activity_Stand";
+
+// GLOBAL: LEGORR 0x004a5038
+static const char s_activity_name_activity_route[] = "Activity_Route";
+
+// GLOBAL: LEGORR 0x004a5020
+static const char s_activity_name_activity_routerubble[] = "Activity_RouteRubble";
+
+// GLOBAL: LEGORR 0x004a500c
+static const char s_activity_name_activity_runpanic[] = "Activity_RunPanic";
+
+// GLOBAL: LEGORR 0x004a4ffc
+static const char s_activity_name_activity_drill[] = "Activity_Drill";
+
+// GLOBAL: LEGORR 0x004a4fe8
+static const char s_activity_name_activity_teleport[] = "Activity_Teleport";
+
+// GLOBAL: LEGORR 0x004a4fd8
+static const char s_activity_name_activity_walk[] = "Activity_Walk";
+
+// GLOBAL: LEGORR 0x004a4fc4
+static const char s_activity_name_activity_reinforce[] = "Activity_Reinforce";
+
+// GLOBAL: LEGORR 0x004a4fb0
+static const char s_activity_name_activity_reverse[] = "Activity_Reverse";
+
+// GLOBAL: LEGORR 0x004a4f9c
+static const char s_activity_name_activity_turnleft[] = "Activity_TurnLeft";
+
+// GLOBAL: LEGORR 0x004a4f88
+static const char s_activity_name_activity_turnright[] = "Activity_TurnRight";
+
+// GLOBAL: LEGORR 0x004a4f78
+static const char s_activity_name_activity_cantdo[] = "Activity_CantDo";
+
+// GLOBAL: LEGORR 0x004a4f68
+static const char s_activity_name_activity_emerge[] = "Activity_Emerge";
+
+// GLOBAL: LEGORR 0x004a4f58
+static const char s_activity_name_activity_enter[] = "Activity_Enter";
+
+// GLOBAL: LEGORR 0x004a4f44
+static const char s_activity_name_activity_enterrein[] = "Activity_EnterRein";
+
+// GLOBAL: LEGORR 0x004a4f30
+static const char s_activity_name_activity_collect[] = "Activity_Collect";
+
+// GLOBAL: LEGORR 0x004a4f20
+static const char s_activity_name_activity_gather[] = "Activity_Gather";
+
+// GLOBAL: LEGORR 0x004a4f10
+static const char s_activity_name_activity_carry[] = "Activity_Carry";
+
+// GLOBAL: LEGORR 0x004a4ef8
+static const char s_activity_name_activity_carryrubble[] = "Activity_CarryRubble";
+
+// GLOBAL: LEGORR 0x004a4ee8
+static const char s_activity_name_activity_throw[] = "Activity_Throw";
+
+// GLOBAL: LEGORR 0x004a4ed0
+static const char s_activity_name_activity_carryturnleft[] = "Activity_CarryTurnLeft";
+
+// GLOBAL: LEGORR 0x004a4eb8
+static const char s_activity_name_activity_carryturnright[] = "Activity_CarryTurnRight";
+
+// GLOBAL: LEGORR 0x004a4ea4
+static const char s_activity_name_activity_carrystand[] = "Activity_CarryStand";
+
+// GLOBAL: LEGORR 0x004a4e90
+static const char s_activity_name_activity_hitleft[] = "Activity_HitLeft";
+
+// GLOBAL: LEGORR 0x004a4e7c
+static const char s_activity_name_activity_hitright[] = "Activity_HitRight";
+
+// GLOBAL: LEGORR 0x004a4e68
+static const char s_activity_name_activity_hitfront[] = "Activity_HitFront";
+
+// GLOBAL: LEGORR 0x004a4e54
+static const char s_activity_name_activity_hitback[] = "Activity_HitBack";
+
+// GLOBAL: LEGORR 0x004a4e40
+static const char s_activity_name_activity_hithard[] = "Activity_HitHard";
+
+// GLOBAL: LEGORR 0x004a4e2c
+static const char s_activity_name_activity_dynamite[] = "Activity_Dynamite";
+
+// GLOBAL: LEGORR 0x004a4e18
+static const char s_activity_name_activity_deposit[] = "Activity_Deposit";
+
+// GLOBAL: LEGORR 0x004a4e08
+static const char s_activity_name_activity_clear[] = "Activity_Clear";
+
+// GLOBAL: LEGORR 0x004a4df8
+static const char s_activity_name_activity_place[] = "Activity_Place";
+
+// GLOBAL: LEGORR 0x004a4de8
+static const char s_activity_name_activity_repair[] = "Activity_Repair";
+
+// GLOBAL: LEGORR 0x004a4dd8
+static const char s_activity_name_activity_slip[] = "Activity_Slip";
+
+// GLOBAL: LEGORR 0x004a4dc8
+static const char s_activity_name_activity_rest[] = "Activity_Rest";
+
+// GLOBAL: LEGORR 0x004a4db8
+static const char s_activity_name_activity_eat[] = "Activity_Eat";
+
+// GLOBAL: LEGORR 0x004a4da8
+static const char s_activity_name_activity_stamp[] = "Activity_Stamp";
+
+// GLOBAL: LEGORR 0x004a4d94
+static const char s_activity_name_activity_throwman[] = "Activity_ThrowMan";
+
+// GLOBAL: LEGORR 0x004a4d74
+static const char s_activity_name_activity_thrownbyrockmonster[] = "Activity_ThrownByRockMonster";
+
+// GLOBAL: LEGORR 0x004a4d64
+static const char s_activity_name_activity_getup[] = "Activity_GetUp";
+
+// GLOBAL: LEGORR 0x004a4d50
+static const char s_activity_name_activity_buildpath[] = "Activity_BuildPath";
+
+// GLOBAL: LEGORR 0x004a4d3c
+static const char s_activity_name_activity_upgrade[] = "Activity_Upgrade";
+
+// GLOBAL: LEGORR 0x004a4d28
+static const char s_activity_name_activity_explode[] = "Activity_Explode";
+
+// GLOBAL: LEGORR 0x004a4d14
+static const char s_activity_name_activity_unpowered[] = "Activity_Unpowered";
+
+// GLOBAL: LEGORR 0x004a4d00
+static const char s_activity_name_activity_firelaser[] = "Activity_FireLaser";
+
+// GLOBAL: LEGORR 0x004a4cec
+static const char s_activity_name_activity_freezed[] = "Activity_Freezed";
+
+// GLOBAL: LEGORR 0x004a4cd4
+static const char s_activity_name_activity_freezestart[] = "Activity_FreezeStart";
+
+// GLOBAL: LEGORR 0x004a4cc0
+static const char s_activity_name_activity_freezemelt[] = "Activity_FreezeMelt";
+
+// GLOBAL: LEGORR 0x004a4cac
+static const char s_activity_name_activity_recharge[] = "Activity_Recharge";
+
+// GLOBAL: LEGORR 0x004a4c9c
+static const char s_activity_name_activity_wakeup[] = "Activity_WakeUp";
+
+// GLOBAL: LEGORR 0x004a4c8c
+static const char s_activity_name_activity_train[] = "Activity_Train";
+
+// GLOBAL: LEGORR 0x004a4c78
+static const char s_activity_name_activity_floaton[] = "Activity_FloatOn";
+
+// GLOBAL: LEGORR 0x004a4c64
+static const char s_activity_name_activity_floatoff[] = "Activity_FloatOff";
+
+// GLOBAL: LEGORR 0x004a4c50
+static const char s_activity_name_activity_opening[] = "Activity_Opening";
+
+// GLOBAL: LEGORR 0x004a4c3c
+static const char s_activity_name_activity_closing[] = "Activity_Closing";
+
+// GLOBAL: LEGORR 0x004a4c2c
+static const char s_activity_name_activity_open[] = "Activity_Open";
+
+// GLOBAL: LEGORR 0x004a4c18
+static const char s_activity_name_activity_waiting1[] = "Activity_Waiting1";
+
+// GLOBAL: LEGORR 0x004a4c04
+static const char s_activity_name_activity_waiting2[] = "Activity_Waiting2";
+
+// GLOBAL: LEGORR 0x004a4bf0
+static const char s_activity_name_activity_waiting3[] = "Activity_Waiting3";
+
+// GLOBAL: LEGORR 0x004a4bdc
+static const char s_activity_name_activity_waiting4[] = "Activity_Waiting4";
+
+// GLOBAL: LEGORR 0x004a4bc8
+static const char s_activity_name_activity_waiting5[] = "Activity_Waiting5";
+
+// GLOBAL: LEGORR 0x004a4bb4
+static const char s_activity_name_activity_waiting6[] = "Activity_Waiting6";
+
+// GLOBAL: LEGORR 0x004a4ba0
+static const char s_activity_name_activity_waiting7[] = "Activity_Waiting7";
+
+// GLOBAL: LEGORR 0x004a4b8c
+static const char s_activity_name_activity_waiting8[] = "Activity_Waiting8";
+
+// GLOBAL: LEGORR 0x004a4b78
+static const char s_activity_name_activity_waiting9[] = "Activity_Waiting9";
+
+// GLOBAL: LEGORR 0x004a4b64
+static const char s_activity_name_activity_waiting10[] = "Activity_Waiting10";
+
+// GLOBAL: LEGORR 0x004a4b50
+static const char s_activity_name_activity_waiting11[] = "Activity_Waiting11";
+
+// GLOBAL: LEGORR 0x004a4b3c
+static const char s_activity_name_activity_waiting12[] = "Activity_Waiting12";
+
+// GLOBAL: LEGORR 0x004a4b28
+static const char s_activity_name_activity_waiting13[] = "Activity_Waiting13";
+
+// GLOBAL: LEGORR 0x004a4b14
+static const char s_activity_name_activity_waiting14[] = "Activity_Waiting14";
+
+// GLOBAL: LEGORR 0x004a4b00
+static const char s_activity_name_activity_waiting15[] = "Activity_Waiting15";
+
+// GLOBAL: LEGORR 0x004a4aec
+static const char s_activity_name_activity_waiting16[] = "Activity_Waiting16";
+
+// GLOBAL: LEGORR 0x004a4ad8
+static const char s_activity_name_activity_waiting17[] = "Activity_Waiting17";
+
+// GLOBAL: LEGORR 0x004a4ac4
+static const char s_activity_name_activity_waiting18[] = "Activity_Waiting18";
+
+// GLOBAL: LEGORR 0x004a4ab0
+static const char s_activity_name_activity_waiting19[] = "Activity_Waiting19";
+
+// GLOBAL: LEGORR 0x004a4a9c
+static const char s_activity_name_activity_waiting20[] = "Activity_Waiting20";
+
+// GLOBAL: LEGORR 0x004a4a88
+static const char s_activity_name_activity_waiting21[] = "Activity_Waiting21";
+
+// GLOBAL: LEGORR 0x004a4a74
+static const char s_activity_name_activity_crumble[] = "Activity_Crumble";
+
+// GLOBAL: LEGORR 0x004a4a60
+static const char s_activity_name_activity_teleportin[] = "Activity_TeleportIn";
+
+// GLOBAL: LEGORR 0x004a4a40
+static const char s_ability_name_pilot[] = "LegoObject_AbilityType_Pilot";
+
+// GLOBAL: LEGORR 0x004a4a20
+static const char s_ability_name_sailor[] = "LegoObject_AbilityType_Sailor";
+
+// GLOBAL: LEGORR 0x004a4a00
+static const char s_ability_name_driver[] = "LegoObject_AbilityType_Driver";
+
+// GLOBAL: LEGORR 0x004a49e0
+static const char s_ability_name_dynamite[] = "LegoObject_AbilityType_Dynamite";
+
+// GLOBAL: LEGORR 0x004a49c0
+static const char s_ability_name_repair[] = "LegoObject_AbilityType_Repair";
+
+// GLOBAL: LEGORR 0x004a49a0
+static const char s_ability_name_scanner[] = "LegoObject_AbilityType_Scanner";
+
+// GLOBAL: LEGORR 0x004a4984
+static const char s_tool_name_drill[] = "LegoObject_ToolType_Drill";
+
+// GLOBAL: LEGORR 0x004a4968
+static const char s_tool_name_spade[] = "LegoObject_ToolType_Spade";
+
+// GLOBAL: LEGORR 0x004a494c
+static const char s_tool_name_hammer[] = "LegoObject_ToolType_Hammer";
+
+// GLOBAL: LEGORR 0x004a4930
+static const char s_tool_name_spanner[] = "LegoObject_ToolType_Spanner";
+
+// GLOBAL: LEGORR 0x004a4914
+static const char s_tool_name_laser[] = "LegoObject_ToolType_Laser";
+
+// GLOBAL: LEGORR 0x004a48f4
+static const char s_tool_name_pushergun[] = "LegoObject_ToolType_PusherGun";
+
+// GLOBAL: LEGORR 0x004a48d4
+static const char s_tool_name_birdscarer[] = "LegoObject_ToolType_BirdScarer";
+
+// GLOBAL: LEGORR 0x004a48b3
+static const char s_tool_name_freezergun[] = "_LegoObject_ToolType_FreezerGun";
+
 // GLOBAL: LEGORR 0x004decc4
 static const char* s_activity[AI_ACTIVITY_COUNT] = {
-    "Activity_Stand", "Activity_Route", "Activity_RouteRubble",
-    "Activity_RunPanic", "Activity_Drill", "Activity_Teleport",
-    "Activity_Walk", "Activity_Reinforce", "Activity_Reverse",
-    "Activity_TurnLeft", "Activity_TurnRight", "Activity_CantDo",
-    "Activity_Emerge", "Activity_Enter", "Activity_EnterRein",
-    "Activity_Collect", "Activity_Gather", "Activity_Carry",
-    "Activity_CarryRubble", "Activity_Throw", "Activity_CarryTurnLeft",
-    "Activity_CarryTurnRight", "Activity_CarryStand", "Activity_HitLeft",
-    "Activity_HitRight", "Activity_HitFront", "Activity_HitBack",
-    "Activity_HitHard", "Activity_Dynamite", "Activity_Deposit",
-    "Activity_Clear", "Activity_Place", "Activity_Repair", "Activity_Slip",
-    "Activity_Rest", "Activity_Eat", "Activity_Stamp", "Activity_ThrowMan",
-    "Activity_ThrownByRockMonster", "Activity_GetUp", "Activity_BuildPath",
-    "Activity_Upgrade", "Activity_Explode", "Activity_Unpowered",
-    "Activity_FireLaser", "Activity_Freezed", "Activity_FreezeStart",
-    "Activity_FreezeMelt", "Activity_Recharge", "Activity_WakeUp",
-    "Activity_Train", "Activity_FloatOn", "Activity_FloatOff",
-    "Activity_Opening", "Activity_Closing", "Activity_Open",
-    "Activity_Waiting1", "Activity_Waiting2", "Activity_Waiting3",
-    "Activity_Waiting4", "Activity_Waiting5", "Activity_Waiting6",
-    "Activity_Waiting7", "Activity_Waiting8", "Activity_Waiting9",
-    "Activity_Waiting10", "Activity_Waiting11", "Activity_Waiting12",
-    "Activity_Waiting13", "Activity_Waiting14", "Activity_Waiting15",
-    "Activity_Waiting16", "Activity_Waiting17", "Activity_Waiting18",
-    "Activity_Waiting19", "Activity_Waiting20", "Activity_Waiting21",
-    "Activity_Crumble", "Activity_TeleportIn"
+    s_activity_name_activity_stand, s_activity_name_activity_route, s_activity_name_activity_routerubble,
+    s_activity_name_activity_runpanic, s_activity_name_activity_drill, s_activity_name_activity_teleport,
+    s_activity_name_activity_walk, s_activity_name_activity_reinforce, s_activity_name_activity_reverse,
+    s_activity_name_activity_turnleft, s_activity_name_activity_turnright, s_activity_name_activity_cantdo,
+    s_activity_name_activity_emerge, s_activity_name_activity_enter, s_activity_name_activity_enterrein,
+    s_activity_name_activity_collect, s_activity_name_activity_gather, s_activity_name_activity_carry,
+    s_activity_name_activity_carryrubble, s_activity_name_activity_throw, s_activity_name_activity_carryturnleft,
+    s_activity_name_activity_carryturnright, s_activity_name_activity_carrystand, s_activity_name_activity_hitleft,
+    s_activity_name_activity_hitright, s_activity_name_activity_hitfront, s_activity_name_activity_hitback,
+    s_activity_name_activity_hithard, s_activity_name_activity_dynamite, s_activity_name_activity_deposit,
+    s_activity_name_activity_clear, s_activity_name_activity_place, s_activity_name_activity_repair, s_activity_name_activity_slip,
+    s_activity_name_activity_rest, s_activity_name_activity_eat, s_activity_name_activity_stamp, s_activity_name_activity_throwman,
+    s_activity_name_activity_thrownbyrockmonster, s_activity_name_activity_getup, s_activity_name_activity_buildpath,
+    s_activity_name_activity_upgrade, s_activity_name_activity_explode, s_activity_name_activity_unpowered,
+    s_activity_name_activity_firelaser, s_activity_name_activity_freezed, s_activity_name_activity_freezestart,
+    s_activity_name_activity_freezemelt, s_activity_name_activity_recharge, s_activity_name_activity_wakeup,
+    s_activity_name_activity_train, s_activity_name_activity_floaton, s_activity_name_activity_floatoff,
+    s_activity_name_activity_opening, s_activity_name_activity_closing, s_activity_name_activity_open,
+    s_activity_name_activity_waiting1, s_activity_name_activity_waiting2, s_activity_name_activity_waiting3,
+    s_activity_name_activity_waiting4, s_activity_name_activity_waiting5, s_activity_name_activity_waiting6,
+    s_activity_name_activity_waiting7, s_activity_name_activity_waiting8, s_activity_name_activity_waiting9,
+    s_activity_name_activity_waiting10, s_activity_name_activity_waiting11, s_activity_name_activity_waiting12,
+    s_activity_name_activity_waiting13, s_activity_name_activity_waiting14, s_activity_name_activity_waiting15,
+    s_activity_name_activity_waiting16, s_activity_name_activity_waiting17, s_activity_name_activity_waiting18,
+    s_activity_name_activity_waiting19, s_activity_name_activity_waiting20, s_activity_name_activity_waiting21,
+    s_activity_name_activity_crumble, s_activity_name_activity_teleportin
 };
+// GLOBAL: LEGORR 0x004ead60
 static const char* s_ability_type_names[AI_ABILITY_TYPE_COUNT] = {
-    "LegoObject_AbilityType_Pilot", "LegoObject_AbilityType_Sailor",
-    "LegoObject_AbilityType_Driver", "LegoObject_AbilityType_Dynamite",
-    "LegoObject_AbilityType_Repair", "LegoObject_AbilityType_Scanner"
+    s_ability_name_pilot, s_ability_name_sailor,
+    s_ability_name_driver, s_ability_name_dynamite,
+    s_ability_name_repair, s_ability_name_scanner
 };
+// GLOBAL: LEGORR 0x005561fc
 static const char* s_tool_type_names[AI_TOOL_TYPE_COUNT] = {
-    "LegoObject_ToolType_Drill", "LegoObject_ToolType_Spade",
-    "LegoObject_ToolType_Hammer", "LegoObject_ToolType_Spanner",
-    "LegoObject_ToolType_Laser", "LegoObject_ToolType_PusherGun",
-    "LegoObject_ToolType_BirdScarer", "LegoObject_ToolType_FreezerGun"
+    s_tool_name_drill, s_tool_name_spade,
+    s_tool_name_hammer, s_tool_name_spanner,
+    s_tool_name_laser, s_tool_name_pushergun,
+    s_tool_name_birdscarer, s_tool_name_freezergun + 1
 };
+// GLOBAL: LEGORR 0x004dee18
 static uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT] = {
     0u, 0u, 1u, 1u, 4u, 4u, 4u, 4u, 3u, 2u, 4u
 };
@@ -91,6 +373,17 @@ static uint32_t s_activity_resource_slots[AI_ACTIVITY_RESOURCE_SLOT_COUNT] = {
 // FUNCTION: LEGORR 0x00436C20
 void ai_activity_name_table_initialize(void)
 {
+    /* The retail initializer writes these same table values on every call.
+     * Volatile lvalues preserve those observable stores without making the
+     * lookup paths volatile or changing their runtime values. */
+    const char* volatile* const activity_names =
+        (const char* volatile*)s_activity;
+    const char* volatile* const ability_names =
+        (const char* volatile*)s_ability_type_names;
+    const char* volatile* const tool_names =
+        (const char* volatile*)s_tool_type_names;
+    volatile uint32_t* const activity_slots =
+        (volatile uint32_t*)s_activity_resource_slots;
     /* The reference clears 0x318f dwords beginning at DAT_004de790, through
      * 0x004eadc8. The port mirrors of every owned slice in that range must be
      * reset along with the retail words. */
@@ -109,113 +402,113 @@ void ai_activity_name_table_initialize(void)
     /* DAT_004eabcc and its count word at DAT_004ead5c are also in the clear
      * span; clear the widened idle-registration sidecar through its owner. */
     ai_idle_table_reset();
-    s_activity[0] = "Activity_Stand";
-    s_activity[1] = "Activity_Route";
-    s_activity[2] = "Activity_RouteRubble";
-    s_activity[3] = "Activity_RunPanic";
-    s_activity[4] = "Activity_Drill";
-    s_activity[5] = "Activity_Teleport";
-    s_activity[6] = "Activity_Walk";
-    s_activity[7] = "Activity_Reinforce";
-    s_activity[8] = "Activity_Reverse";
-    s_activity[9] = "Activity_TurnLeft";
-    s_activity[10] = "Activity_TurnRight";
-    s_activity[11] = "Activity_CantDo";
-    s_activity[12] = "Activity_Emerge";
-    s_activity[13] = "Activity_Enter";
-    s_activity[14] = "Activity_EnterRein";
-    s_activity[15] = "Activity_Collect";
-    s_activity[16] = "Activity_Gather";
-    s_activity[17] = "Activity_Carry";
-    s_activity[18] = "Activity_CarryRubble";
-    s_activity[19] = "Activity_Throw";
-    s_activity[20] = "Activity_CarryTurnLeft";
-    s_activity[21] = "Activity_CarryTurnRight";
-    s_activity[22] = "Activity_CarryStand";
-    s_activity[23] = "Activity_HitLeft";
-    s_activity[24] = "Activity_HitRight";
-    s_activity[25] = "Activity_HitFront";
-    s_activity[26] = "Activity_HitBack";
-    s_activity[27] = "Activity_HitHard";
-    s_activity[28] = "Activity_Dynamite";
-    s_activity[29] = "Activity_Deposit";
-    s_activity[30] = "Activity_Clear";
-    s_activity[31] = "Activity_Place";
-    s_activity[32] = "Activity_Repair";
-    s_activity[33] = "Activity_Slip";
-    s_activity[34] = "Activity_Rest";
-    s_activity[35] = "Activity_Eat";
-    s_activity[36] = "Activity_Stamp";
-    s_activity[37] = "Activity_ThrowMan";
-    s_activity[38] = "Activity_ThrownByRockMonster";
-    s_activity[39] = "Activity_GetUp";
-    s_activity[40] = "Activity_BuildPath";
-    s_activity[41] = "Activity_Upgrade";
-    s_activity[42] = "Activity_Explode";
-    s_activity[43] = "Activity_Unpowered";
-    s_activity[44] = "Activity_FireLaser";
-    s_activity[45] = "Activity_Freezed";
-    s_activity[46] = "Activity_FreezeStart";
-    s_activity[47] = "Activity_FreezeMelt";
-    s_activity[48] = "Activity_Recharge";
-    s_activity[49] = "Activity_WakeUp";
-    s_activity[50] = "Activity_Train";
-    s_activity[51] = "Activity_FloatOn";
-    s_activity[52] = "Activity_FloatOff";
-    s_activity[53] = "Activity_Opening";
-    s_activity[54] = "Activity_Closing";
-    s_activity[55] = "Activity_Open";
-    s_activity[56] = "Activity_Waiting1";
-    s_activity[57] = "Activity_Waiting2";
-    s_activity[58] = "Activity_Waiting3";
-    s_activity[59] = "Activity_Waiting4";
-    s_activity[60] = "Activity_Waiting5";
-    s_activity[61] = "Activity_Waiting6";
-    s_activity[62] = "Activity_Waiting7";
-    s_activity[63] = "Activity_Waiting8";
-    s_activity[64] = "Activity_Waiting9";
-    s_activity[65] = "Activity_Waiting10";
-    s_activity[66] = "Activity_Waiting11";
-    s_activity[67] = "Activity_Waiting12";
-    s_activity[68] = "Activity_Waiting13";
-    s_activity[69] = "Activity_Waiting14";
-    s_activity[70] = "Activity_Waiting15";
-    s_activity[71] = "Activity_Waiting16";
-    s_activity[72] = "Activity_Waiting17";
-    s_activity[73] = "Activity_Waiting18";
-    s_activity[74] = "Activity_Waiting19";
-    s_activity[75] = "Activity_Waiting20";
-    s_activity[76] = "Activity_Waiting21";
-    s_activity[77] = "Activity_Crumble";
-    s_activity[78] = "Activity_TeleportIn";
+    activity_names[0] = s_activity_name_activity_stand;
+    activity_names[1] = s_activity_name_activity_route;
+    activity_names[2] = s_activity_name_activity_routerubble;
+    activity_names[3] = s_activity_name_activity_runpanic;
+    activity_names[4] = s_activity_name_activity_drill;
+    activity_names[5] = s_activity_name_activity_teleport;
+    activity_names[6] = s_activity_name_activity_walk;
+    activity_names[7] = s_activity_name_activity_reinforce;
+    activity_names[8] = s_activity_name_activity_reverse;
+    activity_names[9] = s_activity_name_activity_turnleft;
+    activity_names[10] = s_activity_name_activity_turnright;
+    activity_names[11] = s_activity_name_activity_cantdo;
+    activity_names[12] = s_activity_name_activity_emerge;
+    activity_names[13] = s_activity_name_activity_enter;
+    activity_names[14] = s_activity_name_activity_enterrein;
+    activity_names[15] = s_activity_name_activity_collect;
+    activity_names[16] = s_activity_name_activity_gather;
+    activity_names[17] = s_activity_name_activity_carry;
+    activity_names[18] = s_activity_name_activity_carryrubble;
+    activity_names[19] = s_activity_name_activity_throw;
+    activity_names[20] = s_activity_name_activity_carryturnleft;
+    activity_names[21] = s_activity_name_activity_carryturnright;
+    activity_names[22] = s_activity_name_activity_carrystand;
+    activity_names[23] = s_activity_name_activity_hitleft;
+    activity_names[24] = s_activity_name_activity_hitright;
+    activity_names[25] = s_activity_name_activity_hitfront;
+    activity_names[26] = s_activity_name_activity_hitback;
+    activity_names[27] = s_activity_name_activity_hithard;
+    activity_names[28] = s_activity_name_activity_dynamite;
+    activity_names[29] = s_activity_name_activity_deposit;
+    activity_names[30] = s_activity_name_activity_clear;
+    activity_names[31] = s_activity_name_activity_place;
+    activity_names[32] = s_activity_name_activity_repair;
+    activity_names[33] = s_activity_name_activity_slip;
+    activity_names[34] = s_activity_name_activity_rest;
+    activity_names[35] = s_activity_name_activity_eat;
+    activity_names[36] = s_activity_name_activity_stamp;
+    activity_names[37] = s_activity_name_activity_throwman;
+    activity_names[38] = s_activity_name_activity_thrownbyrockmonster;
+    activity_names[39] = s_activity_name_activity_getup;
+    activity_names[40] = s_activity_name_activity_buildpath;
+    activity_names[41] = s_activity_name_activity_upgrade;
+    activity_names[42] = s_activity_name_activity_explode;
+    activity_names[43] = s_activity_name_activity_unpowered;
+    activity_names[44] = s_activity_name_activity_firelaser;
+    activity_names[45] = s_activity_name_activity_freezed;
+    activity_names[46] = s_activity_name_activity_freezestart;
+    activity_names[47] = s_activity_name_activity_freezemelt;
+    activity_names[48] = s_activity_name_activity_recharge;
+    activity_names[49] = s_activity_name_activity_wakeup;
+    activity_names[50] = s_activity_name_activity_train;
+    activity_names[51] = s_activity_name_activity_floaton;
+    activity_names[52] = s_activity_name_activity_floatoff;
+    activity_names[53] = s_activity_name_activity_opening;
+    activity_names[54] = s_activity_name_activity_closing;
+    activity_names[55] = s_activity_name_activity_open;
+    activity_names[56] = s_activity_name_activity_waiting1;
+    activity_names[57] = s_activity_name_activity_waiting2;
+    activity_names[58] = s_activity_name_activity_waiting3;
+    activity_names[59] = s_activity_name_activity_waiting4;
+    activity_names[60] = s_activity_name_activity_waiting5;
+    activity_names[61] = s_activity_name_activity_waiting6;
+    activity_names[62] = s_activity_name_activity_waiting7;
+    activity_names[63] = s_activity_name_activity_waiting8;
+    activity_names[64] = s_activity_name_activity_waiting9;
+    activity_names[65] = s_activity_name_activity_waiting10;
+    activity_names[66] = s_activity_name_activity_waiting11;
+    activity_names[67] = s_activity_name_activity_waiting12;
+    activity_names[68] = s_activity_name_activity_waiting13;
+    activity_names[69] = s_activity_name_activity_waiting14;
+    activity_names[70] = s_activity_name_activity_waiting15;
+    activity_names[71] = s_activity_name_activity_waiting16;
+    activity_names[72] = s_activity_name_activity_waiting17;
+    activity_names[73] = s_activity_name_activity_waiting18;
+    activity_names[74] = s_activity_name_activity_waiting19;
+    activity_names[75] = s_activity_name_activity_waiting20;
+    activity_names[76] = s_activity_name_activity_waiting21;
+    activity_names[77] = s_activity_name_activity_crumble;
+    activity_names[78] = s_activity_name_activity_teleportin;
 
-    s_ability_type_names[0] = "LegoObject_AbilityType_Pilot";
-    s_ability_type_names[1] = "LegoObject_AbilityType_Sailor";
-    s_ability_type_names[2] = "LegoObject_AbilityType_Driver";
-    s_ability_type_names[3] = "LegoObject_AbilityType_Dynamite";
-    s_ability_type_names[4] = "LegoObject_AbilityType_Repair";
-    s_ability_type_names[5] = "LegoObject_AbilityType_Scanner";
+    ability_names[0] = s_ability_name_pilot;
+    ability_names[1] = s_ability_name_sailor;
+    ability_names[2] = s_ability_name_driver;
+    ability_names[3] = s_ability_name_dynamite;
+    ability_names[4] = s_ability_name_repair;
+    ability_names[5] = s_ability_name_scanner;
 
-    s_tool_type_names[0] = "LegoObject_ToolType_Drill";
-    s_tool_type_names[1] = "LegoObject_ToolType_Spade";
-    s_tool_type_names[2] = "LegoObject_ToolType_Hammer";
-    s_tool_type_names[3] = "LegoObject_ToolType_Spanner";
-    s_tool_type_names[4] = "LegoObject_ToolType_Laser";
-    s_tool_type_names[5] = "LegoObject_ToolType_PusherGun";
-    s_tool_type_names[6] = "LegoObject_ToolType_BirdScarer";
-    s_tool_type_names[7] = "LegoObject_ToolType_FreezerGun";
+    tool_names[0] = s_tool_name_drill;
+    tool_names[1] = s_tool_name_spade;
+    tool_names[2] = s_tool_name_hammer;
+    tool_names[3] = s_tool_name_spanner;
+    tool_names[4] = s_tool_name_laser;
+    tool_names[5] = s_tool_name_pushergun;
+    tool_names[6] = s_tool_name_birdscarer;
+    tool_names[7] = s_tool_name_freezergun + 1;
 
-    s_activity_resource_slots[0] = 0;
-    s_activity_resource_slots[1] = 0;
-    s_activity_resource_slots[2] = 1;
-    s_activity_resource_slots[3] = 1;
-    s_activity_resource_slots[4] = 4;
-    s_activity_resource_slots[5] = 4;
-    s_activity_resource_slots[6] = 4;
-    s_activity_resource_slots[7] = 4;
-    s_activity_resource_slots[8] = 3;
-    s_activity_resource_slots[9] = 2;
-    s_activity_resource_slots[10] = 4;
+    activity_slots[0] = 0;
+    activity_slots[1] = 0;
+    activity_slots[2] = 1;
+    activity_slots[3] = 1;
+    activity_slots[8] = 3;
+    activity_slots[9] = 2;
+    activity_slots[10] = 4;
+    activity_slots[7] = 4;
+    activity_slots[4] = 4;
+    activity_slots[5] = 4;
+    activity_slots[6] = 4;
 
     pooled_record_pool_initialize();
     entity_iteration_guard_flags_set(1u);
@@ -1732,9 +2025,9 @@ int entity_set_activity_place(EntitySlot* e)
 /* --- the entity activity scene-state leaf (see ai.hpp) ---------------------
  * DAT_004dee14's observed halves ride here as a zero-init static; the
  * corpus reads its global level word through the threaded GameContext. */
+// GLOBAL: LEGORR 0x004dee14
 static uint32_t s_entity_state_flags;
 
-// FUNCTION: LEGORR 0x00439990
 void entity_activity_scene_state_update(GameContext* ctx)
 {
     if ((s_entity_state_flags & 0x10u) != 0u) {
@@ -1743,6 +2036,17 @@ void entity_activity_scene_state_update(GameContext* ctx)
     }
     s_entity_state_flags |= 4u;
     global_object_field98_clear(ctx != NULL ? ctx->level : NULL);
+}
+
+// FUNCTION: LEGORR 0x00439990
+void entity_activity_scene_state_update_retail(void)
+{
+    if ((s_entity_state_flags & 0x10u) != 0u) {
+        s_entity_state_flags |= 8u;
+        return;
+    }
+    s_entity_state_flags |= 4u;
+    global_object_field98_clear_current();
 }
 
 uint32_t entity_state_flags_peek(void) { return s_entity_state_flags; }

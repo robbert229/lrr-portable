@@ -5865,20 +5865,31 @@ void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
 void map_cell_tracking_flags_clear_and_refresh_current(
     const int cell_xy[2])
 {
-    LevelState* s = terrain_current_level_resolve();
-    GameContext* game;
-    uint8_t* rec;
-    uint32_t* flags;
-    if (s == NULL || cell_xy == NULL) return;
-    rec = cell_record_unchecked(s, cell_xy[0], cell_xy[1]);
-    if (rec == NULL) return;
-    flags = (uint32_t*)(rec + 0x08);
-    *flags &= 0xdfffffffu;
-    *flags &= 0xbfffffffu;
-    game = entity_pool_callback_context_get();
-    map_cell_tracking_activity_state_update(game, s);
+    LevelState* level = g_active_level_retail;
+    const int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = width * cell_xy[1] + cell_xy[0];
+    uint8_t* record = voxels + cell_index * 0x48;
+    volatile uint32_t* flags = (volatile uint32_t*)(record + 8);
+    uint32_t value = *flags;
+    value &= 0xdfffffffu;
+    *flags = value;
+
+    cell_index = width * cell_xy[1] + cell_xy[0];
+    record = voxels + cell_index * 0x48;
+    flags = (volatile uint32_t*)(record + 8);
+    value = *flags;
+    value &= 0xbfffffffu;
+    *flags = value;
+
+    entity_activity_scene_state_update_retail();
     coordinate_pair_callback_dispatch(cell_xy);
-    flic_opcode27_fallback_noop();
+    ((void (*)(const int*))flic_opcode27_fallback_noop)(cell_xy);
 }
 
 /* TerrainCellStateUpdate (FUN_00432c90): the retail entry takes only the
@@ -7780,11 +7791,19 @@ void global_object_field98_add(LevelState* s, int amount)
     }
 }
 
-// FUNCTION: LEGORR 0x0041f8c0
 void global_object_field98_clear(LevelState* s)
 {
     if (s != NULL) {
         level_set_int(s, 0x98, 0);
+    }
+}
+
+// FUNCTION: LEGORR 0x0041f8c0
+void global_object_field98_clear_current(void)
+{
+    LevelState* level = g_active_level_retail;
+    if (level != NULL) {
+        level->word[0x98 / 4] = 0u;
     }
 }
 

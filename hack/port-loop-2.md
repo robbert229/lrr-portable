@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **45.07% accuracy**, **43.87% progress**
+- Full report: **97.32% implemented**, **45.17% accuracy**, **43.96% progress**
   (2,326 compared entries out of 2,390).
-- Game-only report: **98.87% implemented**, **39.80% accuracy**,
-  **39.35% progress** (2,107/2,131).
+- Game-only report: **98.87% implemented**, **39.91% accuracy**,
+  **39.46% progress** (2,107/2,131).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -190,6 +190,24 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   edited in this pass; the `0x48c690` regression and the earlier
   `0x432e90` drop to 15% remain to be investigated. The developer-distrobox
   Reccmp build and `git diff --check` passed; tests were not run.
+- `ActivityNameTableInit` (`0x436c20`) now retains the reference's writes to
+  its activity, ability, tool-name, and activity-slot tables. I mapped the 93
+  referenced name strings to their decompile addresses and used volatile
+  lvalues for the initializer writes, leaving ordinary lookup reads unchanged.
+  Its score rose from **1.63% to 82.45%**. The remaining difference is the
+  reference's two broad contiguous clears versus the port's owner-specific
+  sidecar and pool cleanup calls. Reccmp completed in the developer distrobox
+  and `git diff --check` passed; tests were not run.
+- `MapCellTrackingFlagsClearAndRefresh` (`0x4302b0`) now uses the current-level
+  global and retail voxel-record addressing, then dispatches the activity,
+  coordinate, and FLIC callbacks in reference order. Its score rose from
+  **3.85% to 40.00%**. The newly mapped no-argument
+  `EntityActivitySceneStateUpdate` (`0x439990`) and
+  `GlobalObjectField98Clear` (`0x41f8c0`) each score **100%**. Latest report:
+  **97.32% / 45.17% / 43.96%** full and **98.87% / 39.91% / 39.46%** game-only.
+  The related `0x4322d0` score is down to **18.60%** and needs follow-up.
+  Reccmp completed in the developer distrobox and `git diff --check` passed;
+  tests were not run.
 
 ## Port loop
 

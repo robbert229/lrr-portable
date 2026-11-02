@@ -64,6 +64,8 @@ static LevelCellKindGrid* s_active_cell_kind_grid =
     &s_empty_cell_kind_grid;
 #define s_map_cell_record_grid (s_active_cell_kind_grid->retail_records)
 #define s_map_cell_record_level (s_active_cell_kind_grid->owner)
+// GLOBAL: LEGORR 0x005560d4
+struct LevelState* g_active_level_retail;
 #define s_grid_cell_object_heads (s_active_cell_kind_grid->object_heads)
 #define s_grid_cell_object_chunks (s_active_cell_kind_grid->chunks)
 #define s_grid_cell_object_free (s_active_cell_kind_grid->free_nodes)
@@ -198,10 +200,16 @@ void map_cell_record_grid_release(void* level)
     if (level == NULL) return;
     grid = (LevelCellKindGrid*)
         ((struct LevelState*)level)->ptr_cell_kind_grid;
-    if (grid == NULL || grid->owner != level) return;
+    if (grid == NULL || grid->owner != level) {
+        if (g_active_level_retail == level)
+            g_active_level_retail = NULL;
+        return;
+    }
     level_cell_kind_grid_storage_release(grid);
-    if (s_active_cell_kind_grid == grid)
+    if (s_active_cell_kind_grid == grid) {
         s_active_cell_kind_grid = &s_empty_cell_kind_grid;
+        g_active_level_retail = NULL;
+    }
     ((struct LevelState*)level)->ptr_cell_kind_grid = NULL;
     free(grid);
 }
@@ -212,13 +220,17 @@ void map_cell_record_grid_release(void* level)
 void map_cell_record_grid_release_current(void)
 {
     LevelCellKindGrid* grid = s_active_cell_kind_grid;
-    if (grid == NULL || grid == &s_empty_cell_kind_grid) return;
+    if (grid == NULL || grid == &s_empty_cell_kind_grid) {
+        g_active_level_retail = NULL;
+        return;
+    }
     if (grid->owner != NULL &&
         grid->owner->ptr_cell_kind_grid == grid)
         grid->owner->ptr_cell_kind_grid = NULL;
     level_cell_kind_grid_storage_release(grid);
     free(grid);
     s_active_cell_kind_grid = &s_empty_cell_kind_grid;
+    g_active_level_retail = NULL;
 }
 
 void map_cell_record_grid_activate(void* level)
@@ -228,6 +240,7 @@ void map_cell_record_grid_activate(void* level)
         : NULL;
     s_active_cell_kind_grid = grid != NULL && grid->owner == level
         ? grid : &s_empty_cell_kind_grid;
+    g_active_level_retail = (struct LevelState*)level;
 }
 
 /* MapCellRecordGridInitialize (FUN_0040cdc0): allocate the target's
@@ -240,9 +253,11 @@ void map_cell_record_grid_initialize(void* level)
     size_t bytes;
     if (level == NULL) {
         s_active_cell_kind_grid = &s_empty_cell_kind_grid;
+        g_active_level_retail = NULL;
         return;
     }
     map_cell_record_grid_release(level);
+    g_active_level_retail = (struct LevelState*)level;
     width = *(const uint32_t*)((const unsigned char*)level + 0x14);
     height = *(const uint32_t*)((const unsigned char*)level + 0x18);
     if (height != 0u && width > 0x7fffffffu / height) return;
@@ -293,7 +308,7 @@ void* map_cell_record_grid_get(void)
 
 void* map_cell_record_grid_level_get(void)
 {
-    return s_map_cell_record_level;
+    return g_active_level_retail;
 }
 
 void terrain_cell_neighbor_update_hooks_install(

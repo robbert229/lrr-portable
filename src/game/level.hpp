@@ -1400,6 +1400,7 @@ void global_object_field8c_increment(LevelState* s);
 void global_object_field8c_subtract(LevelState* s, int amount);
 void global_object_field98_add(LevelState* s, int amount);
 void global_object_field98_clear(LevelState* s);
+void global_object_field98_clear_current(void); /* FUN_0041f8c0 */
 
 /* EntityAvailableResourceSpend (FUN_00438720, findings 251/372): the +0x1f8
  * gate zeroes the amount when raised; then, when the no-op callback probe
