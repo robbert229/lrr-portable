@@ -384,6 +384,26 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   report rows were those two targets. Latest report: **97.32% / 46.16% / 44.92%**
   full and **98.87% / 41.00% / 40.54%** game-only. The developer distrobox
   Reccmp build and `git diff --check` passed; tests were not run.
+- `D3DRMVectorRandom` (`0x479500`) and `D3DRMVectorRotate` (`0x479510`) are
+  thin wrappers around the bundled D3DRM imports in the reference, but the
+  Reccmp build had been using local math implementations in those mapped
+  bodies. The WinAPI target now calls the imported D3DRM functions directly;
+  the local implementations remain the portable-backend fallback. Their
+  scores rose from **2.38% to 66.67%** and **2.92% to 85.71%**. The build now
+  links `d3drm.lib` for the WinAPI target. Latest report: **97.32% / 46.24% /
+  45.00%** full and **98.87% / 41.09% / 40.63%** game-only. The developer
+  distrobox Reccmp build and `git diff --check` passed; tests were not run.
+- `RandomWaypointTimerStepApply` (`0x44d280`) now reads and updates the
+  decompiled waypoint globals directly on Win32, including the shared phase
+  flags at `0x004eaec8`; the portable path continues to use its state record.
+  The live motion ticker copies the bound position into the retail global
+  before the step and syncs the updated vectors and phase fields back after it.
+  `WaypointVectorRandomScaleApply` (`0x44d710`) now has its annotation on the
+  real helper body and uses the same retail target, scale, and velocity words.
+  The timer rose from **5.65% to 15.28%**; the helper is **100%**. The report
+  now includes one additional function. Latest report: **97.32% / 46.26% /
+  45.03%** full and **98.87% / 41.12% / 40.66%** game-only. The developer
+  distrobox Reccmp build and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

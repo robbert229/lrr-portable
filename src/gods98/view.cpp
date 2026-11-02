@@ -4155,6 +4155,15 @@ void matrix_rotation_compose_xyz(float* record)
     matrix4_multiply(record + 0x58 / 4, intermediate, rotation_z);
 }
 
+#if defined(LEGORRR_BACKEND_WINAPI)
+/* These target wrappers call the functions exported by the bundled D3DRM DLL. */
+extern "C" {
+__declspec(dllimport) float* __stdcall D3DRMVectorRandom(float* vector);
+__declspec(dllimport) float* __stdcall D3DRMVectorRotate(
+    float* out, float* vector, float* axis, float angle);
+}
+#endif
+
 static float d3drm_vector_modulus(const float* vector)
 {
     float maximum;
@@ -4214,6 +4223,9 @@ static uint32_t s_d3drm_random_state = 1u;
 // FUNCTION: LEGORR 0x00479500
 void d3drm_vector_random(float out[3])
 {
+#if defined(LEGORRR_BACKEND_WINAPI)
+    (void)D3DRMVectorRandom(out);
+#else
     float modulus;
 
     /* D3DRM.DLL's TLS state starts at one. Each call applies its 0x343fd /
@@ -4236,12 +4248,16 @@ void d3drm_vector_random(float out[3])
         modulus = d3drm_vector_modulus(out);
     } while (modulus == 0.0f);
     d3drm_vector_normalize(out);
+#endif
 }
 
 // FUNCTION: LEGORR 0x00479510
 void d3drm_vector_rotate(float out[3], float vector[3], float axis[3],
                          float angle)
 {
+#if defined(LEGORRR_BACKEND_WINAPI)
+    (void)D3DRMVectorRotate(out, vector, axis, angle);
+#else
     float input[3];
     float normalized_axis[3];
     float cross[3];
@@ -4281,6 +4297,7 @@ void d3drm_vector_rotate(float out[3], float vector[3], float axis[3],
     out[2] = input[2] * cosine + cross[2] * sine +
              normalized_axis[2] * projection * one_minus_cosine;
     d3drm_vector_normalize(out);
+#endif
 }
 
 // FUNCTION: LEGORR 0x0040fcc0
