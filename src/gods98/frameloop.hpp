@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "platform/platform.h"
 
 typedef struct MainLoopFramePumpHooks {
     void* context;
@@ -99,6 +100,12 @@ ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
 
 /* Run the engine frame loop on a window. Returns 0 on clean exit. */
 int LegorrrRun(void);
+/* One-time application setup, split from recurring frame work. */
+int frameloop_application_init(void);
+int frameloop_application_tick(float dt);
+void frameloop_application_events_set(const PlatformEvent* events, int count);
+PlatformWindow* frameloop_application_window_get(void);
+void frameloop_application_shutdown(void);
 void window_title_set(const char* title);
 
 #endif /* LEGORRR_FRAMELOOP_HPP */

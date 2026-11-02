@@ -256,6 +256,11 @@ void engine_game_config_callback_registry_hooks_set(
     EngineGameConfigInitHook init_hook,
     void* user);
 void engine_game_config_callback_registry_init(const char* root);
+/* Dispatch the registered application callbacks using their retail-shaped
+ * signatures. The window/message loop owns when these are called. */
+int engine_callback_triplet_init_dispatch(void);
+int engine_callback_triplet_tick_dispatch(float dt);
+void engine_callback_triplet_shutdown_dispatch(void);
 
 /* Main simulation step / quit gate (corpus MainSimStep @ 0x4250c0).
  * Consumes input+app state for the frame; the three outs are the step's

@@ -170,6 +170,33 @@ void engine_game_config_callback_registry_init(const char* root)
     (void)window_runtime_callback_triplet_set(callbacks);
 }
 
+int engine_callback_triplet_init_dispatch(void)
+{
+    size_t callbacks[3];
+    typedef int (*InitCallback)(void);
+    if (!window_runtime_callback_triplet_get(callbacks) || callbacks[0] == 0u)
+        return 0;
+    return reinterpret_cast<InitCallback>(callbacks[0])();
+}
+
+int engine_callback_triplet_tick_dispatch(float dt)
+{
+    size_t callbacks[3];
+    typedef int (*TickCallback)(float);
+    if (!window_runtime_callback_triplet_get(callbacks) || callbacks[1] == 0u)
+        return 0;
+    return reinterpret_cast<TickCallback>(callbacks[1])(dt);
+}
+
+void engine_callback_triplet_shutdown_dispatch(void)
+{
+    size_t callbacks[3];
+    typedef void (*ShutdownCallback)(void);
+    if (!window_runtime_callback_triplet_get(callbacks) || callbacks[2] == 0u)
+        return;
+    reinterpret_cast<ShutdownCallback>(callbacks[2])();
+}
+
 // WindowModeFlagSet records the mode selected by renderer startup.
 // GLOBAL: LEGORR 0x005764f4
 static uint32_t s_window_mode_flag;

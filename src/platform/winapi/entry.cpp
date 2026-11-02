@@ -7,12 +7,10 @@
  */
 #include "platform/platform.h"
 #include "gods98/resource.hpp"
+#include "gods98/frameloop.hpp"
 #include "game/port_loop_ports.hpp"
 #include <stdio.h>
 #include <string.h>
-
-/* Shared game-shell driver — lives in src/main.cpp, backend-neutral. */
-int LegorrrMain(void);
 
 /* The original WinMain keeps the executable basename in a process global and
  * uses it as the WAD prefix. Keep this value visible to the Win32 startup
@@ -71,6 +69,32 @@ static void winmain_parse_basic_options(const char* parameters)
 {
     s_startup_no_sound = strstr(parameters, "_nosound") != NULL;
     s_startup_insist_on_cd = strstr(parameters, "_insistOnCD") != NULL;
+}
+
+static int winmain_application_run(void)
+{
+    PlatformEvent events[32];
+    DWORD previous_time;
+    int result = frameloop_application_init();
+    if (result != 1) return result;
+    previous_time = GetTickCount();
+    for (;;) {
+        DWORD frame_start = GetTickCount();
+        DWORD elapsed = frame_start - previous_time;
+        float dt = (float)elapsed / 1000.0f;
+        int event_count;
+        DWORD frame_elapsed;
+        if (dt > 3.0f) dt = 3.0f;
+        previous_time = frame_start;
+        event_count = platform_pump_events(
+            frameloop_application_window_get(), events, 32);
+        frameloop_application_events_set(events, event_count);
+        if (!frameloop_application_tick(dt)) break;
+        frame_elapsed = GetTickCount() - frame_start;
+        if (frame_elapsed < 33u) Sleep(33u - frame_elapsed);
+    }
+    frameloop_application_shutdown();
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x4777a0
@@ -166,5 +190,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     (void)startup_state[3];
     (void)no_hal_message;
     (void)hInstance;
-    return LegorrrMain();
+    return winmain_application_run();
 }

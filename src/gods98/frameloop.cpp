@@ -100,6 +100,78 @@ typedef struct RewardFramePumpContext {
     int zone_action_consumed;
 } RewardFramePumpContext;
 
+/* Storage for state that belongs to the application lifetime, rather than to
+ * the C stack frame of LegorrrRun. The reference WinMain keeps this state in
+ * globals while repeatedly dispatching its callback triplet. Keeping the
+ * reconstruction's corresponding records here is the first step toward the
+ * same init/tick/shutdown boundary. */
+typedef struct FrameloopApplicationState {
+    int initialized;
+    int phase;
+    int gameplay_prepared;
+    float frame_dt;
+    PlatformEvent frame_events[32];
+    int frame_event_count;
+    const char* wad_dir;
+    long frame_cap;
+    long autopause;
+    FILE* log;
+    int log_owned;
+    GameContext* game_storage;
+    FrontEnd* frontend_storage;
+    EngineState engine_state;
+    InputState input;
+    ViewContext views[3];
+    EngineContext engine_context;
+    PlatformWindow* window;
+    DisplaySurface surface;
+    TextureSurface* rock_texture;
+    TextureSurface* ui_texture;
+    AudioPlayer audio;
+    int audio_status;
+    long frames;
+    int thumbnail_slot;
+    int quit;
+    const char* stop_reason;
+    RewardFramePumpContext reward_frame;
+    RewardScreenOps reward_ops;
+    MenuSoundTickClock menu_sound_clock;
+    int play_movies;
+    char level_name[FE_LEVEL_NAME_MAX];
+    int boot_menu;
+    int frontend_built;
+    int pending_load_slot;
+    int pending_load_record;
+    char mission_brief[1024];
+    int mission_brief_active;
+    TextureSurface* briefing_panel;
+    TextureSurface* briefing_title_font;
+    TextureSurface* briefing_body_font;
+    LevelState* pointer_dispatch_level;
+    int pointer_dispatch_previous_down;
+    LevelState* reward_tick_level;
+    int reward_tick_started;
+    int rock_x;
+    int rock_y;
+} FrameloopApplicationState;
+
+#define FRAMELOOP_PHASE_MENU 1
+#define FRAMELOOP_PHASE_GAMEPLAY_START 2
+#define FRAMELOOP_PHASE_GAMEPLAY 3
+#define FRAMELOOP_PHASE_DONE 4
+
+static FrameloopApplicationState s_frameloop_application;
+
+static void* frameloop_indexed_texture_load(const char* name, void*)
+{
+    return texture_get_or_load(NULL, name);
+}
+
+static void frameloop_indexed_texture_release(void* texture, void*)
+{
+    texture_release((TextureSurface*)texture);
+}
+
 static uint32_t reward_frame_time_get(void* context)
 {
     (void)context;
@@ -2202,25 +2274,209 @@ static void menu_save_image_config_rect_blit(FrontEnd* fe,
                                   (int)x, (int)y, draw_w, draw_h);
 }
 
-int LegorrrRun(void)
+static int frameloop_game_init_callback(const char* root, void* user)
 {
+    GameContext* game = (GameContext*)user;
+    BlockFile* cfg;
+    if (root == NULL || root[0] == '\0' || game == NULL) return 0;
+    cfg = game->cfg;
+    if (cfg != NULL) {
+        engine_render_poly_ranges_set(
+            block_get_float(cfg, "Lego* Main MedPolyRange", 0.0f),
+            block_get_float(cfg, "Lego* Main HighPolyRange", 0.0f));
+        /* GameConfigInit loads HUD config before the later bubble and font
+         * resource passes. This is now part of the registered init callback. */
+        bubble_config_global_flags_set(engine_feature_word_peek());
+        (void)lego::upgrade_types_load(cfg);
+        entity_names_config_load(cfg);
+        if (block_get_bool(cfg, "HelpWindow::HelpWindowOn") == 1) {
+            help_window_resources_init(cfg, NULL);
+        }
+        frontend_hud_runtime_install();
+        frontend_render_three_pass_update(cfg, cfg);
+        (void)light_effect_waypoint_config_load(cfg, "Lego*");
+        light_effect_configuration_load(cfg, "Lego*");
+        bubble_config_texture_load(cfg);
+        preload_numbered_bitmaps("Interface\\FONTS\\HealthFont", "a000_");
+        tooltip_icons_config_load(cfg);
+        lego::level_upgrade_name_strings_load(cfg);
+    }
+    /* The configured incident-message names are resolved against this table,
+     * so seed it before loading the InfoMessages records. */
+    message_init_defaults();
+    if (cfg != NULL) message_load_infomessages(cfg);
+    return 1;
+}
+
+/* One front-end frame. This is deliberately a step function: the caller owns
+ * frame pacing and the next invocation, so this body can be dispatched from
+ * the application callback loop instead of requiring a menu-owned while(). */
+static FeEvent frameloop_main_menu_frame(FrameloopApplicationState* app,
+                                         float dt)
+{
+    GameContext* game;
+    FrontEnd* fe;
+    PlatformEvent* events;
+    int event_count;
+    const FeSubmenu* submenu;
+    TextureSurface* hi_font = NULL;
+    TextureSurface* lo_font = NULL;
+    FeInput input_frame;
+    FeEvent event;
+    int i;
+    if (app == NULL || app->game_storage == NULL
+        || app->frontend_storage == NULL || app->quit) {
+        return FE_EVT_NONE;
+    }
+    game = app->game_storage;
+    fe = app->frontend_storage;
+    events = app->frame_events;
+    event_count = app->frame_event_count;
+    input_capture_events(&app->input, events, event_count);
+    input_cursor_position_update();
+    input_cursor_position_sync(&app->input);
+    for (i = 0; i < event_count; ++i) {
+        if (events[i].kind == PLATFORM_EVENT_QUIT) {
+            app->quit = 1;
+            app->stop_reason = "closed";
+            return FE_EVT_NONE;
+        }
+    }
+    if (app->frame_cap > 0 && app->frames >= app->frame_cap) {
+        app->stop_reason = "autostop";
+        return FE_EVT_NONE;
+    }
+    submenu = frontend_active_submenu(fe);
+    if (submenu != NULL) {
+        if (submenu->hifont[0] != '\0')
+            hi_font = texture_get_or_load(NULL, submenu->hifont);
+        if (submenu->lofont[0] != '\0')
+            lo_font = texture_get_or_load(NULL, submenu->lofont);
+    }
+    input_frame.up = input_key_edge(&app->input, PLATFORM_KEY_UP);
+    input_frame.down = input_key_edge(&app->input, PLATFORM_KEY_DOWN);
+    input_frame.enter = input_key_edge(&app->input, ' ')
+                        || input_key_edge(&app->input, PLATFORM_KEY_ENTER);
+    input_frame.esc = input_key_edge(&app->input, PLATFORM_KEY_ESC);
+    input_frame.mouse_x = app->input.mouse_x;
+    input_frame.mouse_y = app->input.mouse_y;
+    input_frame.click = input_mouse_pressed(&app->input);
+    input_frame.mdown = app->input.mouse_down;
+    event = frontend_tick(fe, &input_frame, hi_font);
+    if (fe->option_changed) {
+        const FeItem* item = frontend_active_item(fe);
+        if (item != NULL) {
+            const int is_sfx = s_icontains(item->label, "sfx")
+                               || s_icontains(item->label, "sound");
+            const int is_music = s_icontains(item->label, "music");
+            const int live = item->kind == FE_ITEM_SLIDER
+                             && (is_sfx || is_music) && item->max > 0;
+            if (live && app->audio.dev != NULL) {
+                if (is_sfx) audio_menu_sfx_volume_set(item->value);
+                else audio_menu_volume_set(item->value);
+            }
+            fprintf(app->log, "frameloop: option %s -> %d/%d (%s)\n",
+                    item->label, item->value, item->max,
+                    live ? "audio" : "store — applied live");
+            fe->option_changed = 0;
+        }
+    }
+    if (engine_callback_triplet_tick_dispatch(dt) == 0) {
+        app->quit = 1;
+        app->stop_reason = "tick callback";
+        return FE_EVT_NONE;
+    }
+    if (event == FE_EVT_QUIT) {
+        app->quit = 1;
+        app->stop_reason = "menu quit";
+        return event;
+    }
+    if (event == FE_EVT_START_LEVEL) {
+        snprintf(app->level_name, sizeof(app->level_name), "%s",
+                 fe->pending_level);
+        game->current_record = fe_record_for_level(fe, app->level_name);
+        if (game->current_record < 0) game->current_record = 0;
+        fprintf(app->log, "frameloop: front end picked level %s\n",
+                app->level_name);
+        return event;
+    }
+    if (event == FE_EVT_LOAD_GAME) {
+        int filled = 0;
+        int completed = 0;
+        int resume = -1;
+        if (save_slot_state(game, fe->load_slot, &filled, &completed,
+                            &resume)) {
+            app->pending_load_slot = fe->load_slot;
+            app->pending_load_record = resume >= 0 ? resume : 0;
+            if (resume >= 0
+                && fe_level_for_record(fe, resume, app->level_name,
+                                       sizeof(app->level_name))) {
+                /* The checkpoint record maps to a campaign level. */
+            } else if (fe->campaign_n > 0) {
+                snprintf(app->level_name, sizeof(app->level_name), "%s",
+                         fe->campaign[0]);
+            } else {
+                snprintf(app->level_name, sizeof(app->level_name), "%s",
+                         "Level01");
+            }
+            game->save_slot = fe->load_slot;
+            game->current_record = app->pending_load_record;
+            fprintf(app->log, "frameloop: loading slot %d record %d -> "
+                    "level %s (%d/%d completed)\n", app->pending_load_slot,
+                    app->pending_load_record, app->level_name,
+                    completed, filled);
+        } else {
+            snprintf(app->level_name, sizeof(app->level_name), "%s",
+                     env_get("LEGORRR_LEVEL", "Level01"));
+            fprintf(app->log, "frameloop: slot %d absent — starting fresh "
+                    "at %s\n", fe->load_slot, app->level_name);
+        }
+        return event;
+    }
+    if (event == FE_EVT_CREDITS) {
+        frameloop_credits(app->window, &app->surface, game->cfg,
+                          app->wad_dir, &app->audio, app->audio_status,
+                          &app->quit, app->log, &app->frames);
+    }
+    sound_subsystem_frame_tick(app->menu_sound_clock.dt);
+    frameloop_menu_render(app->window, &app->surface, fe, hi_font, lo_font,
+                          game, (int)app->frames);
+    if (app->audio_status == 0) audio_update(&app->audio);
+    ++app->frames;
+    menu_sound_tick_clock_advance(&app->menu_sound_clock);
+    return event;
+}
+
+int frameloop_application_init(void)
+{
+    FrameloopApplicationState& app = s_frameloop_application;
+    if (app.initialized) return 1;
+    memset(&app, 0, sizeof(app));
+    indexed_surface_resource_hooks_set(NULL,
+        frameloop_indexed_texture_load,
+        frameloop_indexed_texture_release, NULL, NULL);
     const char* wad_dir_environment = getenv("LEGORRR_WAD_DIR");
     const int explicit_wad_dir = wad_dir_environment != NULL &&
                                  wad_dir_environment[0] != '\0';
-    const char* wad_dir = explicit_wad_dir ? wad_dir_environment : ".";
+    const char*& wad_dir = app.wad_dir;
+    wad_dir = explicit_wad_dir ? wad_dir_environment : ".";
     const char* autostop = env_get("LEGORRR_AUTOSTOP_FRAMES", "0");
-    long frame_cap = strtol(autostop, NULL, 10);
+    long& frame_cap = app.frame_cap;
+    frame_cap = strtol(autostop, NULL, 10);
     if (frame_cap < 0) {
         frame_cap = 0;
     }
     /* CI/headless hook: open the pause overlay at this in-game frame (as if
      * Esc was pressed) so the PausedMenu can be screenshotted. */
-    long autopause = strtol(env_get("LEGORRR_AUTOPAUSE_FRAMES", "0"), NULL, 10);
+    long& autopause = app.autopause;
+    autopause = strtol(env_get("LEGORRR_AUTOPAUSE_FRAMES", "0"), NULL, 10);
 
-    FILE* log = fopen("legoRR-stub.log", "a");
+    FILE*& log = app.log;
+    log = fopen("legoRR-stub.log", "a");
     if (log == NULL) {
         log = stderr;
     }
+    app.log_owned = log != stderr;
 
     int mounted;
     if (explicit_wad_dir) {
@@ -2251,8 +2507,10 @@ int LegorrrRun(void)
      * reference keeps its corresponding state outside LegorrrRun's stack;
      * placing both port structs here creates a >1 MiB frame and overflows
      * the executable's 1 MiB PE stack before startup reaches this function. */
-    GameContext* game_storage = (GameContext*)calloc(1, sizeof(GameContext));
-    FrontEnd* fe_storage = (FrontEnd*)calloc(1, sizeof(FrontEnd));
+    GameContext*& game_storage = app.game_storage;
+    FrontEnd*& fe_storage = app.frontend_storage;
+    game_storage = (GameContext*)calloc(1, sizeof(GameContext));
+    fe_storage = (FrontEnd*)calloc(1, sizeof(FrontEnd));
     if (game_storage == NULL || fe_storage == NULL) {
         fprintf(log, "frameloop: could not allocate game/frontend contexts\n");
         free(game_storage);
@@ -2270,71 +2528,46 @@ int LegorrrRun(void)
     cmd_init();
     cmd_context_set(&game);
     game.cfg = block_open("Lego.cfg");
-    if (game.cfg != NULL) {
-        engine_render_poly_ranges_set(
-            block_get_float(game.cfg, "Lego* Main MedPolyRange", 0.0f),
-            block_get_float(game.cfg, "Lego* Main HighPolyRange", 0.0f));
-        /* GameConfigInit loads HUD config before the later bubble and font
-         * resource passes. */
-        bubble_config_global_flags_set(engine_feature_word_peek());
-        (void)lego::upgrade_types_load(game.cfg);
-        entity_names_config_load(game.cfg);
-        if (block_get_bool(game.cfg, "HelpWindow::HelpWindowOn") == 1) {
-            help_window_resources_init(game.cfg, NULL);
-        }
-        frontend_hud_runtime_install();
-        frontend_render_three_pass_update(game.cfg, game.cfg);
-        (void)light_effect_waypoint_config_load(game.cfg, "Lego*");
-        light_effect_configuration_load(game.cfg, "Lego*");
-        bubble_config_texture_load(game.cfg);
-        preload_numbered_bitmaps("Interface\\FONTS\\HealthFont", "a000_");
-        tooltip_icons_config_load(game.cfg);
-        lego::level_upgrade_name_strings_load(game.cfg);
-    }
-    int save_loaded = save_read_slot(&game, SAVE_DEFAULT_SLOT, 0);
-    fprintf(log, "frameloop: save slot %d %s\n", SAVE_DEFAULT_SLOT,
-            save_loaded ? "loaded" : "bootstrap");
 
-    EngineState state = { 0 };
-    InputState  input = { 0 };
+    EngineState& state = app.engine_state;
+    InputState& input = app.input;
+    memset(&state, 0, sizeof(state));
+    memset(&input, 0, sizeof(input));
     input_reset(&input);
     input_direct_state_bind(&input);
     /* The three view contexts (DAT_005560e4/e8/ec): free/cruise cameras with
      * a glide step; the demo has no world yet, so they tick quietly. */
-    ViewContext views[3] = { 0 };
+    ViewContext (&views)[3] = app.views;
+    memset(views, 0, sizeof(app.views));
     for (int i = 0; i < 3; ++i) {
         views[i].mode = 3;
         views[i].step = 8.0f;
     }
-    EngineContext ctx = {
-        ENGINE_APP_NORMAL, 0, 0, 0, 1,
-        &state, &input,
-        { &views[0], &views[1], &views[2] },
-        NULL, /* level_block — bound to game.level below */
-        NULL, /* level_voxels — resolved at bind (64-bit safe) */
-        NULL, /* level_terrain */
-        0.0f, 1.0f, 0,
-    };
+    EngineContext& ctx = app.engine_context;
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.app_mode = ENGINE_APP_NORMAL;
+    ctx.context_mode = 1;
+    ctx.state_block = &state;
+    ctx.input = &input;
+    ctx.views[0] = &views[0];
+    ctx.views[1] = &views[1];
+    ctx.views[2] = &views[2];
+    ctx.time_scale = 1.0f;
+    const float dt = 1.0f / 30.0f;
+    app.frame_dt = dt;
     tutorial_runtime_context_set(&game, &ctx, &input);
     engine_tutorial_dispatch_hook_set(frame_tutorial_script_dispatch, NULL);
     /* Engine <-> level binding happens after the front end below — the level
      * loads only once the player picks one — so ctx.level_block/voxels/
      * terrain are bound there, not here. */
-    /* The finding-22 InfoMessages catalog + bus enabled. */
-    message_init_defaults();
-    /* Load config entries only after seeding the message-name catalog used by
-     * message_load_infomessages to resolve each configured Info_* record. */
-    if (game.cfg != NULL) {
-        message_load_infomessages(game.cfg);
-    }
-
     /* Selection/command wiring (finding 06): the executor's held-key probe
      * reads this frame's input tables; a keybind demo for a global op. */
     game.input_keyheld = demo_keyheld;
     cmd_bind_key('z', 0x40, 0, 0, 0, 0);
 
-    PlatformWindow* win = platform_create_window("lrr-portable (frame loop)",
-                                                 WINDOW_W, WINDOW_H);
+    PlatformWindow*& win = app.window;
+    win = platform_create_window("lrr-portable (frame loop)",
+                                 WINDOW_W, WINDOW_H);
     if (win == NULL) {
         fprintf(log, "frameloop: no platform window (headless?)\n");
         frameloop_game_context_dispose(&game);
@@ -2364,7 +2597,8 @@ int LegorrrRun(void)
     fflush(log);
 #endif
 
-    DisplaySurface surf = { 0, 0, 0, 0, 0 };
+    DisplaySurface& surf = app.surface;
+    memset(&surf, 0, sizeof(surf));
     int rc = surface_create(&surf, platform_window_hwnd(win),
                             WINDOW_W, WINDOW_H);
     if (rc != 0) {
@@ -2382,22 +2616,43 @@ int LegorrrRun(void)
             WINDOW_W, WINDOW_H);
     fflush(log);
     surface_active_render_target_set(&surf);
+    /* Register the same init/tick/shutdown boundary consumed by retail
+     * WinMain. Startup config loading above remains owned by this adapter;
+     * the registered init callback validates that the app root is ready. */
+    engine_game_config_callback_registry_hooks_set(
+        &ctx, NULL, frameloop_game_init_callback, &game);
+    engine_game_config_callback_registry_init("LegoRR");
+    if (!engine_callback_triplet_init_dispatch()) {
+        fprintf(log, "frameloop: application init callback failed\n");
+        platform_destroy_window(win);
+        frameloop_game_context_dispose(&game);
+        free(game_storage);
+        free(fe_storage);
+        if (log != stderr) fclose(log);
+        return 1;
+    }
+    int save_loaded = save_read_slot(&game, SAVE_DEFAULT_SLOT, 0);
+    fprintf(log, "frameloop: save slot %d %s\n", SAVE_DEFAULT_SLOT,
+            save_loaded ? "loaded" : "bootstrap");
     catalog_slot_flag_hooks_set(frame_catalog_slot_eligible,
                                 frame_catalog_slot_available,
                                 frame_catalog_slot_rank, &game);
 
     /* Real corpus textures through the merged texture loader. */
-    TextureSurface* rock = texture_get_or_load(NULL,
-                                               "World\\WorldTextures\\ROCKROOF.BMP");
-    TextureSurface* ui = texture_get_or_load(NULL,
-                                             "Interface\\Buttons\\info_path.bmp");
+    TextureSurface*& rock = app.rock_texture;
+    TextureSurface*& ui = app.ui_texture;
+    rock = texture_get_or_load(NULL,
+                               "World\\WorldTextures\\ROCKROOF.BMP");
+    ui = texture_get_or_load(NULL,
+                             "Interface\\Buttons\\info_path.bmp");
     if (rock == NULL || ui == NULL) {
         fprintf(log, "frameloop: texture load failed (rock=%p ui=%p)\n",
                 (void*)rock, (void*)ui);
     }
 
     /* Audio: open the DirectSound-analog surface + play a real corpus wav. */
-    AudioPlayer ap = { 0 };
+    AudioPlayer& ap = app.audio;
+    memset(&ap, 0, sizeof(ap));
     audio_system_player_set(&ap);
 #if defined(LEGORRR_BACKEND_WINAPI)
     /* CDAudioDeviceStateUpdate is the retail startup bridge: it records the
@@ -2414,7 +2669,8 @@ int LegorrrRun(void)
         sound_samples_config_load(game.cfg, 1);
         advisor_tooltip_and_sound_config_load(game.cfg);
     }
-    int audio_status = sound_bank_sound_on() ? 0 : -1;
+    int& audio_status = app.audio_status;
+    audio_status = sound_bank_sound_on() ? 0 : -1;
     int sfx_frames = 0;
     if (audio_status == 0) {
         /* Master gain from the store, not a fixed 0.6: the active save
@@ -2443,12 +2699,16 @@ int LegorrrRun(void)
     airbeat_set_loop(audio_status == 0 ? &ap : NULL,
                      "Sounds\\Vehicles\\Heliloop1.wav");
 
-    long frames = 0;
-    int thumb_slot = -1;   /* pending `.dat` thumbnail dump (see below) */
-    int quit = 0;
-    const char* stop = "closed";
-    RewardFramePumpContext reward_frame;
-    RewardScreenOps reward_ops;
+    long& frames = app.frames;
+    frames = 0;
+    int& thumb_slot = app.thumbnail_slot;
+    thumb_slot = -1;   /* pending `.dat` thumbnail dump (see below) */
+    int& quit = app.quit;
+    quit = 0;
+    const char*& stop = app.stop_reason;
+    stop = "closed";
+    RewardFramePumpContext& reward_frame = app.reward_frame;
+    RewardScreenOps& reward_ops = app.reward_ops;
     memset(&reward_frame, 0, sizeof(reward_frame));
     memset(&reward_ops, 0, sizeof(reward_ops));
     reward_frame.window = win;
@@ -2485,7 +2745,8 @@ int LegorrrRun(void)
      * (LEGORRR_AUTOSTOP_FRAMES) and LEGORRR_NO_MOVIES skip them. */
     int avis_enabled = movie_avis_enabled(game.cfg);
     const char* no_movies = env_get("LEGORRR_NO_MOVIES", "");
-    int play_movies = frame_cap == 0
+    int& play_movies = app.play_movies;
+    play_movies = frame_cap == 0
                       && avis_enabled
                       && no_movies[0] == '\0'
                       && movie_available();
@@ -2517,8 +2778,11 @@ int LegorrrRun(void)
     /* --- Front-end boot (finding 23): main menu before level load -----------
      * Ordinary launches enter the reconstructed front end when enabled.
      * LEGORRR_LEVEL remains a direct-launch override for development. */
-    char level_name[FE_LEVEL_NAME_MAX];
-    int boot_menu = 0, frontend_built = 0;
+    char (&level_name)[FE_LEVEL_NAME_MAX] = app.level_name;
+    int& boot_menu = app.boot_menu;
+    int& frontend_built = app.frontend_built;
+    boot_menu = 0;
+    frontend_built = 0;
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
         int built = frontend_build(&fe, game.cfg);
@@ -2559,7 +2823,10 @@ int LegorrrRun(void)
     /* Runtime save/load slots (SaveMenuBuild @ 0x415a10 rows): state from
      * the on-disk slots, grafted onto the SaveLoad screens by the front
      * end. Slot slots run 1..SAVE_SLOTS-1 (5 is the default/autosave). */
-    int pending_load_slot = -1, pending_load_record = -1;
+    int& pending_load_slot = app.pending_load_slot;
+    int& pending_load_record = app.pending_load_record;
+    pending_load_slot = -1;
+    pending_load_record = -1;
     {
         FeSlot slots[FE_SLOT_COUNT];
         int sn = 0;
@@ -2590,11 +2857,7 @@ int LegorrrRun(void)
             const char* music = menu_music_resource(game.cfg);
             int music_rc = (music != NULL && music[0] != '\0')
                          ? audio_loop_named(&ap, music, 0.0f) : -1;
-            if (music_rc == 0) {
-                /* Unlike one-shot FLIC sounds, the continuous track only
-                 * reaches the platform queue from audio_update(). */
-                audio_update(&ap);
-            }
+            if (music_rc == 0) audio_update(&ap);
             fprintf(log, "frameloop: main-menu music %s -> %s (%d)\n",
                     music != NULL ? music : "(missing SFX_AmbientMusicLoop)",
                     music_rc == 0 ? "queued" : "unavailable", music_rc);
@@ -2602,145 +2865,33 @@ int LegorrrRun(void)
         menu_enter(&fe, 0);
         fprintf(log, "frameloop: front end up — main menu (arrows select, "
                      "Enter/Space act, Esc quits)\n");
-        MenuSoundTickClock menu_sound_clock;
-        menu_sound_tick_clock_init(&menu_sound_clock);
-        while (!quit) {
-            PlatformEvent evbuf[32];
-            int nev = platform_pump_events(win, evbuf, 32);
-            input_capture_events(&input, evbuf, nev);
-            input_cursor_position_update();
-            input_cursor_position_sync(&input);
-            for (int i = 0; i < nev; ++i) {
-                if (evbuf[i].kind == PLATFORM_EVENT_QUIT) {
-                    quit = 1;
-                    stop = "closed";
-                    break;
-                }
-            }
-            if (quit || (frame_cap > 0 && frames >= frame_cap)) {
-                if (!quit) {
-                    stop = "autostop";
-                }
-                break;
-            }
-            /* Bitmap fonts (finding-23 grid): HiFont = selected items,
-             * LoFont = unselected; NULL falls back to the 3x5 face. The
-             * Hi font also measures pointer hit-testing. */
-            TextureSurface* hi_font = NULL, *lo_font = NULL;
-            const FeSubmenu* fs = frontend_active_submenu(&fe);
-            if (fs != NULL) {
-                if (fs->hifont[0] != '\0') {
-                    hi_font = texture_get_or_load(NULL, fs->hifont);
-                }
-                if (fs->lofont[0] != '\0') {
-                    lo_font = texture_get_or_load(NULL, fs->lofont);
-                }
-            }
-            FeInput fi;
-            fi.up = input_key_edge(&input, PLATFORM_KEY_UP);
-            fi.down = input_key_edge(&input, PLATFORM_KEY_DOWN);
-            fi.enter = input_key_edge(&input, ' ')
-                       || input_key_edge(&input, PLATFORM_KEY_ENTER);
-            fi.esc = input_key_edge(&input, PLATFORM_KEY_ESC);
-            fi.mouse_x = input.mouse_x;
-            fi.mouse_y = input.mouse_y;
-            fi.click = input_mouse_pressed(&input);
-            fi.mdown = input.mouse_down;
-            FeEvent ev = frontend_tick(&fe, &fi, hi_font);
-            if (fe.option_changed) {
-                const FeItem* oit = frontend_active_item(&fe);
-                if (oit != NULL) {
-                    int is_sfx = s_icontains(oit->label, "sfx")
-                                 || s_icontains(oit->label, "sound");
-                    int is_music = s_icontains(oit->label, "music");
-                    int live = oit->kind == FE_ITEM_SLIDER
-                               && (is_sfx || is_music) && oit->max > 0;
-                    if (live && ap.dev != NULL) {
-                        if (is_sfx) {
-                            audio_menu_sfx_volume_set(oit->value);
-                        } else {
-                            audio_menu_volume_set(oit->value);
-                        }
-                    }
-                    fprintf(log, "frameloop: option %s -> %d/%d (%s)\n",
-                            oit->label, oit->value, oit->max,
-                            live ? "audio" : "store — applied live");
-                    fe.option_changed = 0;
-                }
-            }
-            if (ev == FE_EVT_QUIT) {
-                quit = 1;
-                stop = "menu quit";
-                break;
-            }
-            if (ev == FE_EVT_START_LEVEL) {
-                snprintf(level_name, sizeof(level_name), "%s", fe.pending_level);
-                /* record<->level mapping (port of CheckpointStep's
-                 * list-index assignment): checkpoints during this level
-                 * land in the level's own record, so mid-campaign saves
-                 * neither collide nor resume short. */
-                game.current_record = fe_record_for_level(&fe, level_name);
-                if (game.current_record < 0) {
-                    game.current_record = 0;
-                }
-                fprintf(log, "frameloop: front end picked level %s\n", level_name);
-                break;
-            }
-            if (ev == FE_EVT_LOAD_GAME) {
-                int filled = 0, completed = 0, resume = -1;
-                if (save_slot_state(&game, fe.load_slot, &filled, &completed,
-                                    &resume)) {
-                    /* record index -> level (the inverse mapping — the
-                     * port's level-tree stand-in for SavTreeLoad): resume
-                     * the furthest completed record's level, else start
-                     * the campaign fresh. */
-                    pending_load_slot = fe.load_slot;
-                    pending_load_record = resume >= 0 ? resume : 0;
-                    if (resume >= 0
-                        && fe_level_for_record(&fe, resume, level_name,
-                                               sizeof(level_name))) {
-                        /* mapped */
-                    } else if (fe.campaign_n > 0) {
-                        snprintf(level_name, sizeof(level_name), "%s",
-                                 fe.campaign[0]);
-                    } else {
-                        snprintf(level_name, sizeof(level_name), "%s",
-                                 "Level01");
-                    }
-                    game.save_slot = fe.load_slot;
-                    game.current_record = pending_load_record;
-                    fprintf(log, "frameloop: loading slot %d record %d -> "
-                                 "level %s (%d/%d completed)\n",
-                            pending_load_slot, pending_load_record,
-                            level_name, completed, filled);
-                } else {
-                    snprintf(level_name, sizeof(level_name), "%s",
-                             env_get("LEGORRR_LEVEL", "Level01"));
-                    fprintf(log, "frameloop: slot %d absent — starting fresh "
-                                 "at %s\n", fe.load_slot, level_name);
-                }
-                break;
-            }
-            if (ev == FE_EVT_CREDITS) {
-                frameloop_credits(win, &surf, game.cfg, wad_dir, &ap,
-                                  audio_status, &quit, log, &frames);
-            }
-
-            /* MenuRunLoop drains/rotates deferred aliases after menu logic
-             * and before its frame pump. This preserves the one-frame queue
-             * boundary for FLIC and menu sound requests. */
-            sound_subsystem_frame_tick(menu_sound_clock.dt);
-            frameloop_menu_render(win, &surf, &fe, hi_font, lo_font, &game,
-                                  (int)frames);
-            if (audio_status == 0) {
-                audio_update(&ap);
-            }
-            Sleep((DWORD)FRAME_MS);
-            ++frames;
-            menu_sound_tick_clock_advance(&menu_sound_clock);
-            input_begin_frame(&input);
-        }
+        menu_sound_tick_clock_init(&app.menu_sound_clock);
     }
+    app.phase = boot_menu ? FRAMELOOP_PHASE_MENU
+                          : FRAMELOOP_PHASE_GAMEPLAY_START;
+    app.initialized = 1;
+    return 1;
+}
+
+static void frameloop_application_prepare_gameplay(void)
+{
+    FrameloopApplicationState& app = s_frameloop_application;
+    const char* wad_dir = app.wad_dir;
+    FILE* log = app.log;
+    GameContext& game = *app.game_storage;
+    ViewContext (&views)[3] = app.views;
+    EngineContext& ctx = app.engine_context;
+    PlatformWindow* win = app.window;
+    DisplaySurface& surf = app.surface;
+    AudioPlayer& ap = app.audio;
+    const int audio_status = app.audio_status;
+    long& frames = app.frames;
+    int& quit = app.quit;
+    const int play_movies = app.play_movies;
+    char (&level_name)[FE_LEVEL_NAME_MAX] = app.level_name;
+    const int boot_menu = app.boot_menu;
+    int& pending_load_slot = app.pending_load_slot;
+    int& pending_load_record = app.pending_load_record;
 
     /* Restore the game's ambient loop after leaving the main menu. */
     if (boot_menu && audio_status == 0 && !quit) {
@@ -2780,15 +2931,20 @@ int LegorrrRun(void)
         }
     }
 
-    char mission_brief[1024] = { 0 };
-    int mission_brief_active = game.level != NULL
+    char (&mission_brief)[1024] = app.mission_brief;
+    memset(mission_brief, 0, sizeof(app.mission_brief));
+    int& mission_brief_active = app.mission_brief_active;
+    mission_brief_active = game.level != NULL
         && pending_load_slot < 0
         && env_get("LEGORRR_SKIP_BRIEFING", "")[0] == '\0'
         && (s_icontains(level_name, "MoveTuto_01")
             || s_icontains(level_name, "Tutorial01"));
-    TextureSurface* briefing_panel = NULL;
-    TextureSurface* briefing_title_font = NULL;
-    TextureSurface* briefing_body_font = NULL;
+    TextureSurface*& briefing_panel = app.briefing_panel;
+    TextureSurface*& briefing_title_font = app.briefing_title_font;
+    TextureSurface*& briefing_body_font = app.briefing_body_font;
+    briefing_panel = NULL;
+    briefing_title_font = NULL;
+    briefing_body_font = NULL;
     if (mission_brief_active) {
         (void)frameloop_tutorial_brief_load(mission_brief,
                                             sizeof(mission_brief));
@@ -2808,26 +2964,78 @@ int LegorrrRun(void)
                 voice_frames >= 0 ? "played" : "unavailable", voice_frames);
     }
 
-    const float dt = 1.0f / 30.0f;
-    LevelState* pointer_dispatch_level = NULL;
-    int pointer_dispatch_previous_down = 0;
-    LevelState* reward_tick_level = NULL;
-    int reward_tick_started = 0;
+    LevelState*& pointer_dispatch_level = app.pointer_dispatch_level;
+    int& pointer_dispatch_previous_down = app.pointer_dispatch_previous_down;
+    LevelState*& reward_tick_level = app.reward_tick_level;
+    int& reward_tick_started = app.reward_tick_started;
+    pointer_dispatch_level = NULL;
+    pointer_dispatch_previous_down = 0;
+    reward_tick_level = NULL;
+    reward_tick_started = 0;
     /* Game Speed (issue #85): options_scale_frame stamps the store's factor
      * into ctx.time_scale (EngineTick's subsystem tickers) and returns the
      * scaled dt for the game-layer tickers (ai/objective). */
     /* Interactive proof: the arrow keys pan the blitted texture. */
-    int rock_x = 24, rock_y = 24;
+    int& rock_x = app.rock_x;
+    int& rock_y = app.rock_y;
+    rock_x = 24;
+    rock_y = 24;
 
-    while (!quit) {
+}
+
+static int frameloop_application_gameplay_frame(float dt)
+{
+    FrameloopApplicationState& app = s_frameloop_application;
+    const char* wad_dir = app.wad_dir;
+    const long frame_cap = app.frame_cap;
+    const long autopause = app.autopause;
+    FILE* log = app.log;
+    GameContext* game_storage = app.game_storage;
+    FrontEnd* fe_storage = app.frontend_storage;
+    GameContext& game = *app.game_storage;
+    FrontEnd& fe = *app.frontend_storage;
+    EngineState& state = app.engine_state;
+    InputState& input = app.input;
+    ViewContext (&views)[3] = app.views;
+    EngineContext& ctx = app.engine_context;
+    PlatformWindow* win = app.window;
+    DisplaySurface& surf = app.surface;
+    TextureSurface* rock = app.rock_texture;
+    TextureSurface* ui = app.ui_texture;
+    AudioPlayer& ap = app.audio;
+    const int audio_status = app.audio_status;
+    long& frames = app.frames;
+    int& thumb_slot = app.thumbnail_slot;
+    int& quit = app.quit;
+    const char*& stop = app.stop_reason;
+    RewardFramePumpContext& reward_frame = app.reward_frame;
+    RewardScreenOps& reward_ops = app.reward_ops;
+    const int play_movies = app.play_movies;
+    char (&level_name)[FE_LEVEL_NAME_MAX] = app.level_name;
+    const int boot_menu = app.boot_menu;
+    const int frontend_built = app.frontend_built;
+    int& pending_load_slot = app.pending_load_slot;
+    int& pending_load_record = app.pending_load_record;
+    char (&mission_brief)[1024] = app.mission_brief;
+    int& mission_brief_active = app.mission_brief_active;
+    TextureSurface* briefing_panel = app.briefing_panel;
+    TextureSurface* briefing_title_font = app.briefing_title_font;
+    TextureSurface* briefing_body_font = app.briefing_body_font;
+    LevelState*& pointer_dispatch_level = app.pointer_dispatch_level;
+    int& pointer_dispatch_previous_down = app.pointer_dispatch_previous_down;
+    LevelState*& reward_tick_level = app.reward_tick_level;
+    int& reward_tick_started = app.reward_tick_started;
+    int& rock_x = app.rock_x;
+    int& rock_y = app.rock_y;
+
         /* Begin-frame adapter state is per iteration. The retail bit is
          * cleared by FUN_0047c8d0 after RendererBeginFrameOnce; no renderer
          * device is bound in this portable loop yet. */
         renderer_begin_frame_once_reset();
         /* 1. Device capture for this frame (the finding-05 "writer" half):
          *    platform events -> canonical codes -> input tables. */
-        PlatformEvent evbuf[32];
-        int nev = platform_pump_events(win, evbuf, 32);
+        PlatformEvent* evbuf = app.frame_events;
+        int nev = app.frame_event_count;
         input_capture_events(&input, evbuf, nev);
         input_cursor_position_update();
         input_cursor_position_sync(&input);
@@ -2838,12 +3046,11 @@ int LegorrrRun(void)
                 break;
             }
         }
-        if (quit) {
-            break;
-        }
+        if (quit) return 0;
         if (frame_cap > 0 && frames >= frame_cap) {
             stop = "autostop";
-            break;
+            quit = 1;
+            return 0;
         }
 
         /* The mission introduction holds simulation and accepts the same
@@ -2862,15 +3069,13 @@ int LegorrrRun(void)
                                           briefing_body_font, mission_brief,
                                           game.level, &game, (int)frames);
                 if (audio_status == 0) audio_update(&ap);
-                Sleep((DWORD)FRAME_MS);
                 ++frames;
                 input_begin_frame(&input);
-                continue;
+                return !quit;
             }
-            Sleep((DWORD)FRAME_MS);
             ++frames;
             input_begin_frame(&input);
-            continue;
+            return !quit;
         }
 
         /* SaveMenuOpenFromReward is frame-driven in this port: once mode 4
@@ -2943,11 +3148,10 @@ int LegorrrRun(void)
             if (audio_status == 0) {
                 audio_update(&ap);
             }
-            Sleep((DWORD)FRAME_MS);
             ++frames;
             menu_sound_tick_clock_advance(&save_sound_clock);
             input_begin_frame(&input);
-            continue;
+            return !quit;
         }
 
         /* Esc (or the LEGORRR_AUTOPAUSE_FRAMES CI hook) opens the in-game
@@ -3093,9 +3297,8 @@ int LegorrrRun(void)
              * Continue to the next in-game frame without running the game
              * sim or the level renderer over the menu. */
             if (!quit || game.level != NULL) {
-                Sleep((DWORD)FRAME_MS);
                 input_begin_frame(&input);
-                continue;
+                return !quit;
             }
         }
 
@@ -3451,7 +3654,10 @@ int LegorrrRun(void)
         }
 
         frame_camera_target_registry_update(&ctx, &game);
-        EngineTick(&ctx, dt);
+        if (engine_callback_triplet_tick_dispatch(dt) == 0) {
+            quit = 1;
+            stop = "tick callback";
+        }
         screen_effects_tick(dt);
 
         /* Retail MainLoop calls RendererBeginFrameOnce after the registered
@@ -3522,38 +3728,124 @@ int LegorrrRun(void)
             }
             surface_unlock(&surf, pixels);
         }
-        Sleep((DWORD)FRAME_MS);
         ++frames;
 
         /* 3. Frame boundary: this frame's keys become prev; cur clears for
          *    the next capture (edge semantics, findings 04/05). */
         input_begin_frame(&input);
+        return !quit;
+}
+
+int frameloop_application_tick(float dt)
+{
+    FrameloopApplicationState& app = s_frameloop_application;
+    if (!app.initialized || app.phase == FRAMELOOP_PHASE_DONE || app.quit)
+        return 0;
+    app.frame_dt = dt;
+    if (app.phase == FRAMELOOP_PHASE_MENU) {
+        FeEvent event = frameloop_main_menu_frame(&app, dt);
+        if (app.quit) {
+            app.phase = FRAMELOOP_PHASE_DONE;
+            return 0;
+        }
+        if (event == FE_EVT_START_LEVEL || event == FE_EVT_LOAD_GAME) {
+            app.phase = FRAMELOOP_PHASE_GAMEPLAY_START;
+        } else if (app.frame_cap > 0 && app.frames >= app.frame_cap) {
+            app.stop_reason = "autostop";
+            app.quit = 1;
+            app.phase = FRAMELOOP_PHASE_DONE;
+            return 0;
+        }
+        input_begin_frame(&app.input);
+        return 1;
     }
+    if (app.phase == FRAMELOOP_PHASE_GAMEPLAY_START) {
+        if (!app.gameplay_prepared) {
+            frameloop_application_prepare_gameplay();
+            app.gameplay_prepared = 1;
+        }
+        if (app.quit) {
+            app.phase = FRAMELOOP_PHASE_DONE;
+            return 0;
+        }
+        app.phase = FRAMELOOP_PHASE_GAMEPLAY;
+    }
+    if (app.phase == FRAMELOOP_PHASE_GAMEPLAY
+        && frameloop_application_gameplay_frame(dt)) return 1;
+    app.phase = FRAMELOOP_PHASE_DONE;
+    return 0;
+}
 
+void frameloop_application_events_set(const PlatformEvent* events, int count)
+{
+    FrameloopApplicationState& app = s_frameloop_application;
+    int copy_count = count;
+    if (copy_count < 0) copy_count = 0;
+    if (copy_count > 32) copy_count = 32;
+    if (events == NULL) copy_count = 0;
+    if (copy_count > 0) {
+        memcpy(app.frame_events, events,
+               sizeof(PlatformEvent) * (size_t)copy_count);
+    }
+    app.frame_event_count = copy_count;
+}
+
+PlatformWindow* frameloop_application_window_get(void)
+{
+    return s_frameloop_application.window;
+}
+
+void frameloop_application_shutdown(void)
+{
+    FrameloopApplicationState& app = s_frameloop_application;
+    if (!app.initialized) return;
+    GameContext& game = *app.game_storage;
+    FrontEnd& fe = *app.frontend_storage;
+    EngineContext& ctx = app.engine_context;
+    FILE* log = app.log;
+    DisplaySurface& surf = app.surface;
+    PlatformWindow* win = app.window;
+    GameContext* game_storage = app.game_storage;
+    FrontEnd* fe_storage = app.frontend_storage;
+    app.phase = FRAMELOOP_PHASE_DONE;
     fprintf(log, "frameloop: %ld frames, gauged state=0x%08x, tickers=%d, "
-            "exit=%s\n", frames, ctx.state, ctx.tickers_ran, stop);
-
-    EngineShutdown(&ctx);
+            "exit=%s\n", app.frames, ctx.state, ctx.tickers_ran,
+            app.stop_reason);
+    engine_callback_triplet_shutdown_dispatch();
     reward_screen_runtime_bind(NULL, NULL);
     sound_subsystem_stop_all();
     audio_active_shutdown();
     audio_system_player_set(NULL);
+    graphics_overlay_resources_release();
+    indexed_surface_resource_hooks_set(NULL, NULL, NULL, NULL, NULL);
     texture_cache_clear();
     surface_active_render_target_set(NULL);
     input_direct_state_bind(NULL);
     surface_destroy(&surf);
     platform_destroy_window(win);
-
     frontend_close(&fe);
     sav_tree_roots_clear();
     catalog_slot_flag_hooks_set(NULL, NULL, NULL, NULL);
     frameloop_game_context_dispose(&game);
     free(fe_storage);
     free(game_storage);
+    if (log != stderr) fclose(log);
+    memset(&app, 0, sizeof(app));
+}
 
-    if (log != stderr) {
-        fclose(log);
+int LegorrrRun(void)
+{
+    FrameloopApplicationState& app = s_frameloop_application;
+    PlatformEvent events[32];
+    const int init_result = frameloop_application_init();
+    if (!app.initialized) return init_result;
+    while (1) {
+        int event_count = platform_pump_events(app.window, events, 32);
+        frameloop_application_events_set(events, event_count);
+        if (!frameloop_application_tick(app.frame_dt)) break;
+        Sleep((DWORD)FRAME_MS);
     }
+    frameloop_application_shutdown();
     return 0;
 }
 
