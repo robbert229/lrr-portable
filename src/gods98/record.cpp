@@ -512,8 +512,8 @@ int model_child_render_eligibility_check(const void* object)
 
 /* The mapped EntityTypeFlagBit1Get body follows the corpus's unchecked
  * +0x1e8 load; the public helper retains its null guard. */
-#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x0046d330
+#if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t entity_type_flag_bit1_get_target(const void* record)
 {
     __asm {
@@ -526,7 +526,6 @@ __declspec(naked) uint32_t entity_type_flag_bit1_get_target(const void* record)
     }
 }
 #else
-// FUNCTION: LEGORR 0x0046d330
 uint32_t entity_type_flag_bit1_get_target(const void* record)
 {
     return (*(const uint32_t*)((const char*)record + 0x1e8) & 0xffu) >> 1 & 1u;
@@ -616,8 +615,8 @@ uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
 
 /* The mapped SceneObjectFlagBit3Get body follows the corpus's unchecked
  * +0x14 load; animation_object_visibility_get retains its null-safe path. */
-#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x00473ba0
+#if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t scene_object_flag_bit3_get_target(
     const void* scene_object)
 {
@@ -631,7 +630,6 @@ __declspec(naked) uint32_t scene_object_flag_bit3_get_target(
     }
 }
 #else
-// FUNCTION: LEGORR 0x00473ba0
 uint32_t scene_object_flag_bit3_get_target(const void* scene_object)
 {
     return (*(const uint32_t*)((const char*)scene_object + 0x14) & 0xffu)
@@ -764,20 +762,41 @@ void record_flag2c_bit0_set(void* record, int set)
     }
 }
 
+/* IndexedRecordDataAddressGet (FUN_00483400) is the retail unchecked
+ * address calculation. Keep null handling in the portable accessor below. */
 // FUNCTION: LEGORR 0x00483400
+#if defined(_MSC_VER) && defined(_M_IX86)
+static __declspec(naked) void* indexed_record_data_address_get_target(
+    const void* record, int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, eax
+        shl ecx, 3
+        sub ecx, eax
+        mov eax, dword ptr [edx + 8]
+        shl ecx, 4
+        lea eax, dword ptr [eax + ecx + 10h]
+        ret
+    }
+}
+#else
+static void* indexed_record_data_address_get_target(const void* record,
+                                                     int index)
+{
+    char* base = (char*)*(void* const*)((const char*)record + 0x08);
+    return base + index * 0x70 + 0x10;
+}
+#endif
+
 void* indexed_record_data_address_get(const void* record, int index)
 {
-    if (record == NULL) {
-        return NULL; /* pinned deviation: the corpus loads blindly */
-    }
-    char* base = (char*)*(void* const*)((const char*)record + 0x08);
-    if (base == NULL) {
-        return NULL;
-    }
-    /* Corpus arithmetic: `(index << 3) - index`, then `<< 4` makes
-     * index*0x70 (`shl ecx,3; sub ecx,eax; shl ecx,4`); add +0x10. */
-    const size_t scaled = (((size_t)index << 3) - (size_t)index) << 4;
-    return (void*)(base + scaled + 0x10u);
+    void* base;
+    if (record == NULL) return NULL;
+    base = *(void* const*)((const char*)record + 0x08);
+    if (base == NULL) return NULL;
+    return indexed_record_data_address_get_target(record, index);
 }
 
 // FUNCTION: LEGORR 0x00408e10
@@ -1088,18 +1107,41 @@ void scene_object_owner_set(void* scene_object, uint32_t owner)
 
 /* --- the record primitive band (see record.hpp) ----------------------------- */
 // FUNCTION: LEGORR 0x00482350
+#if defined(_MSC_VER) && defined(_M_IX86)
+static __declspec(naked) void indexed_record_field64_set_target(
+    void* record, int index, uint32_t value)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, eax
+        shl ecx, 3
+        sub ecx, eax
+        mov eax, dword ptr [edx + 8]
+        mov edx, dword ptr [esp + 0ch]
+        shl ecx, 4
+        mov dword ptr [eax + ecx + 64h], edx
+        ret
+    }
+}
+#else
+static void indexed_record_field64_set_target(void* record, int index,
+                                               uint32_t value)
+{
+    char* base = *(char**)((char*)record + 8);
+    *(uint32_t*)(base + index * 0x70 + 100) = value;
+}
+#endif
+
 void indexed_record_field64_set(void* record, int index, uint32_t value)
 {
-    void* base = NULL;
-    if (record == NULL) {
-        return; /* deviation: the corpus reads blindly */
-    }
+    void* base;
+    if (record == NULL) return;
     __builtin_memcpy(&base, (char*)record + 8, sizeof(base));
     if (base == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
+        return;
     }
-    __builtin_memcpy((char*)base + 100 + (size_t)index * 0x70,
-                     &value, sizeof(value));
+    indexed_record_field64_set_target(record, index, value);
 }
 
 /* The corpus reloads the base slot for each store and dereferences it
@@ -2738,48 +2780,61 @@ uint32_t render_object_color_vector_set(void* record, int block, float red,
 }
 
 // FUNCTION: LEGORR 0x00483420
+static uint32_t screen_effect_item_opacity_set_target(void* record, int block,
+                                                      float opacity, int mode)
+{
+    char* const base = *(char**)((char*)record + 0x08);
+    char* const blk = base + (size_t)block * 0x70u;
+    char* const data = (char*)indexed_record_data_address_get_target(record,
+                                                                     block);
+    float v = opacity;
+    uint32_t flags;
+    uint32_t field64;
+    uint32_t field18;
+    if (v < 0.0f) v = 0.0f;
+    if (1.0f < v) v = 1.0f;
+    if (mode != 4) {
+        if (mode == 5) *(float*)(data + 0x44) = v;
+        return 1u;
+    }
+    field64 = *(uint32_t*)(blk + 0x64);
+    field18 = *(uint32_t*)((char*)record + 0x18);
+    flags = *(uint32_t*)(blk + 0x6c) & 0xeff7ffffu;
+    *(uint32_t*)(blk + 0x6c) = flags;
+    if (v == 0.0f) {
+        if (field64 == 0u && (field18 & 0x1c00u) == 0u) goto screen_opacity_flags_done;
+        flags |= 0x10000000u;
+    } else {
+        if (v == 1.0f ||
+            (field64 == 0u && (field18 & 0x1c00u) == 0u)) {
+            goto screen_opacity_flags_done;
+        }
+        flags |= 0x80000u;
+    }
+    *(uint32_t*)(blk + 0x6c) = flags;
+screen_opacity_flags_done:
+    if (field64 != 0u) {
+        if ((field64 & 0xc00u) != 0u) {
+            *(uint32_t*)(blk + 0x6c) |= 0x80000u;
+        }
+        *(float*)(data + 0x10) = v;
+        return 1u;
+    }
+    if ((field18 & 0xc00u) != 0u) {
+        *(uint32_t*)(blk + 0x6c) |= 0x80000u;
+    }
+    *(float*)(data + 0x10) = v;
+    return 1u;
+}
+
 uint32_t screen_effect_item_opacity_set(void* record, int block,
                                         float opacity, int mode)
 {
-    const float v = channel_clamp(opacity);
-    if (mode != 4) {
-        char* data = (char*)indexed_record_data_address_get(record, block);
-        if (mode == 5 && data != NULL) {
-            rec_float_put(data, 0x44, v);
-        }
-        return 1u; /* deviation: the corpus strides a missing window blindly */
-    }
-    char* blk = mesh_block(record, block);
-    char* data = (char*)indexed_record_data_address_get(record, block);
-    if (blk == NULL) {
-        return 1u; /* deviation: the corpus strides the flag word blindly */
-    }
-    const uint32_t w64 = rec_dword(blk, 0x64);
-    const uint32_t w18 = rec_dword(record, 0x18);
-    rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) & 0xeff7ffffu);
-    if (v == 0.0f) {
-        if (w64 != 0u || (w18 & 0x1c00u) != 0u) {
-            rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x10000000u);
-        }
-    } else if (!(v == 1.0f || (w64 == 0u && (w18 & 0x1c00u) == 0u))) {
-        rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x80000u);
-    }
-    if (w64 != 0u) {
-        if ((w64 & 0xc00u) != 0u) {
-            rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x80000u);
-        }
-        if (data != NULL) {
-            rec_float_put(data, 0x10, v);
-        }
-        return 1u;
-    }
-    if ((w18 & 0xc00u) != 0u) {
-        rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x80000u);
-    }
-    if (data != NULL) {
-        rec_float_put(data, 0x10, v);
-    }
-    return 1u;
+    void* base;
+    if (record == NULL) return 1u;
+    base = *(void**)((char*)record + 0x08);
+    if (base == NULL) return 1u;
+    return screen_effect_item_opacity_set_target(record, block, opacity, mode);
 }
 
 /* SceneObjectScalarAdjustByDirection (FUN_004082e0) — see record.hpp. The

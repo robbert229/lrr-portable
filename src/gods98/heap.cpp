@@ -259,8 +259,8 @@ void text_buffer_reset(void* record)
 
 /* The mapped release body blindly dereferences the holder and calls the
  * unchecked TextBufferReset target. */
-#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x0045a620
+#if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void ui_text_output_object_release_target(
     void* const* holder)
 {
@@ -274,7 +274,6 @@ __declspec(naked) void ui_text_output_object_release_target(
     }
 }
 #else
-// FUNCTION: LEGORR 0x0045a620
 void ui_text_output_object_release_target(void* const* holder)
 {
     text_buffer_reset_target(*holder);

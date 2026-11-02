@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **46.84% accuracy**, **45.58% progress**
+- Full report: **97.32% implemented**, **47.14% accuracy**, **45.88% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **41.76% accuracy**,
-  **41.29% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **42.09% accuracy**,
+  **41.61% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -606,6 +606,79 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **97.32% / 46.84% / 45.58%** full and **98.87% / 41.76% / 41.29%**
   game-only. Reccmp changed only this target; `git diff --check` passed.
   Tests were not run.
+
+- A current-level terrain flag cluster now maps the retail coordinate-pair
+  readers and mutations to direct Win32 x86 bodies. Reccmp scores are 100% for
+  `TerrainCellFlagsMask18ClearInBounds` (`0x432f40`, from 72.41%),
+  `TerrainCellSecondaryBit0Clear` (`0x4323c0`, from 76.92%),
+  `TerrainCellSecondaryBit0Test` (`0x433060`, from 76.92%), and
+  `TerrainCellFlag10000000Set` (`0x433120`, from 61.76%). The adjacent
+  `TerrainCellFlag8000Test` (`0x433030`) and
+  `TerrainCellSecondaryBit0Set` (`0x4325d0`) remain at 100%. A direct naked
+  target path brought `TerrainCellFlagsMask180000Test` (`0x4330e0`) from
+  66.67% to 92.86%; only its conditional-branch encoding differs. The report
+  also showed an unedited `TerrainCellFlag08000000Test` (`0x432dd0`) shift from
+  100% to 76.92% during the level rebuild; a target-shaped body restored it to
+  100%. The unedited `TerrainCellNormalSample` (`0x4512d0`) moved 7.58% → 8.53%
+  in the same rebuild and remained stable on repeat. The terrain pass moved
+  totals from **97.32% / 46.84% / 45.58%** to **97.32% / 46.88% / 45.62%**.
+  Target annotations for the conditional Win32/portable bodies were moved
+  outside their preprocessor branches, preventing Reccmp from dropping
+  duplicate address annotations.
+
+- `IndexedRecordDataAddressGet` (`0x483400`) and
+  `IndexedRecordField64Set` (`0x482350`) now have unchecked target bodies with
+  the reference's exact x86 index scaling and field offsets; the public getter
+  and setter retain null guards for portable callers. Their matches rose
+  **6.67% → 100%** and **7.69% → 100%**, respectively. Final totals are
+  **97.32% / 46.98% / 45.72%** full and **98.87% / 41.91% / 41.44%**
+  game-only. Relative to the prior terrain-cluster report, other rows also
+  moved: `TerrainCellWorkFlagClear` (`0x430320`) 12.61% → 12.39%,
+  `TerrainCellNormalSample` (`0x4512d0`) 7.58% → 8.53%, and the still-partial
+  `ScreenEffectItemOpacitySet` (`0x483420`) 13.13% → 12.36%. These rows were
+  not directly edited in this pass; investigate whether dependency or
+  code-generation changes caused the shifts. A repeat report reproduced the
+  same scores. `distrobox
+  enter developer -- make reccmp-report` and `git diff --check` passed; tests
+  were not run.
+
+- `TerrainCellRecordGet` (`0x40af90`) now maps to the decompile's direct
+  selector/count/pointer-table walk. The public accessor retains coordinate
+  and field bounds checks and routes active native records through the
+  sidecar; when those records are unavailable it dispatches to the target
+  body. Its match rose **5.44% → 100%**. No other function score changed in
+  the focused comparison. Totals are **97.32% / 47.02% / 45.76%** full and
+  **98.87% / 41.95% / 41.48%** game-only; a repeat report produced the same
+  results. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
+
+- `ScreenEffectItemOpacitySet` (`0x483420`) now has a direct target body with
+  the retail record offsets, indexed-data lookup, clamp order, flag transitions,
+  and mode-specific opacity stores. The public wrapper keeps its null-record
+  and null-table behavior. Its match rose **12.36% → 28.25%**. Two unrelated
+  rows changed during the record-module rebuild: `TransientEffectSegmentAdvance`
+  (`0x465e00`) 29.07% → 27.91% and `SceneMeshColorAndAlphaSet` (`0x475020`)
+  75.68% → 72.97%; a repeated build reproduced both shifts. Full totals stayed
+  **97.32% / 47.02% / 45.76%**; game-only became **98.87% / 41.96% / 41.49%**.
+
+- `CellFlag4IsSet` (`0x40b250`) now maps to the decompile's direct selector
+  and flag-table lookup; the public helper retains its dependency override and
+  bounds checks. Its match rose **6.67% → 100%**. The adjacent report shifts
+  were `DependencyGridCategoryCandidatesBuild` (`0x418920`) 17.09% → 15.38%
+  and `TerrainCellNormalSample` (`0x4512d0`) 8.53% → 9.48%; a repeat report
+  reproduced them. Latest totals are **97.32% / 47.06% / 45.80%** full and
+  **98.87% / 42.00% / 41.53%** game-only. `distrobox enter developer -- make
+  reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `CellFlag100Set` (`0x40b2a0`) and `CellFlag100IsSet` (`0x40b2e0`) now map
+  to direct flag-table write/read bodies. Their public functions retain the
+  dependency overrides and table bounds checks. Both matches rose to **100%**,
+  from **6.78%** and **7.69%**. One unedited row,
+  `BuildingUpgradeStateChangedDispatch` (`0x418830`), shifted 35.51% → 28.04%
+  during the level rebuild and remained there on repeat. Latest totals are
+  **97.32% / 47.14% / 45.88%** full and **98.87% / 42.09% / 41.61%**
+  game-only. `distrobox enter developer -- make reccmp-report` and
+  `git diff --check` passed; tests were not run.
 
 ## Port loop
 
