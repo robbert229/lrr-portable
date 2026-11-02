@@ -2630,12 +2630,26 @@ void render_resource_track_and_retain(void* resource)
 }
 
 // FUNCTION: LEGORR 0x00477270
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void resource_interface_call_slot88(void* wrapper)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 10h]
+        push eax
+        mov ecx, dword ptr [eax]
+        call dword ptr [ecx + 88h]
+        ret
+    }
+}
+#else
 void resource_interface_call_slot88(void* wrapper)
 {
     ResourceSlot88Interface* interface_object =
         *(ResourceSlot88Interface**)((unsigned char*)wrapper + 0x10);
     interface_object->slot_88();
 }
+#endif
 
 // FUNCTION: LEGORR 0x00476d10
 void render_resource_pair_release_and_clear(void** pair)

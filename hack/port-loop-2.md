@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **51.50% accuracy**, **50.12% progress**
+- Full report: **97.33% implemented**, **52.22% accuracy**, **50.83% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **46.90% accuracy**,
-  **46.38% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **47.71% accuracy**,
+  **47.17% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1621,6 +1621,69 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   33.33% to 75% (the indexed getter `0x469cc0` rose from 10% to 80%). The latest
   report is **97.33% / 51.50% / 50.12%** full and **98.88% / 46.90% / 46.38%**
   game-only. Reccmp and `git diff --check` passed; tests were not run.
+- The adjacent entity-stat getter group now uses the same x86 direct-read path:
+  23 fixed-offset accessors from `0x469ea0` through `0x46a310` rose from 33.33%
+  to 75%; the selector getter `0x469f90` now branches like the reference and
+  rose from 21.05% to 81.82%. The direct field reads retain the port's
+  `EntitySlot::stats_record` layout at `+0x114`; the reference entity record
+  stores that pointer at `+0x334`, so changing those remaining instructions to
+  the retail offset would break this port's representation. The latest report
+  is **97.33% / 51.96% / 50.57%** full and **98.88% / 47.41% / 46.88%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
+- `ai_activity_cap` (`0x46a060`) now uses the same direct x86 field read for
+  the Stats `+0xcc` dword while retaining its null-safe non-x86 path. Its match
+  rose from 16% to 75%. The latest report is **97.33% / 51.99% / 50.60%** full
+  and **98.88% / 47.45% / 46.92%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+- `EntityRecordFlag400ToggleAndRefresh` (`0x46a330`) now follows the retail
+  x86 bit-test, bit-clear/set, store, and callback order in a direct body. Its
+  match rose from 20.69% to 94.12%; the only remaining instruction mismatch is
+  the port's Stats pointer at entity `+0x114` versus the retail `+0x334` field.
+  The latest report is **97.33% / 51.99% / 50.60%** full and
+  **98.88% / 47.45% / 46.92%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+- `ReadIndexedPairSlotDword` (`0x471a20`) now has the retail x86 address
+  calculation and load sequence for `base + i*8 + j*4`; it rose from 33.33% to
+  100%. The non-x86 path retains the bounds-neutral `memcpy` load. The latest
+  report is **97.33% / 52.02% / 50.63%** full and **98.88% / 47.48% / 46.95%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
+- The global list-push targets `0x46a470` and `0x4792c0` now directly link the
+  supplied record at `+0x1c` and replace their respective global head in the
+  retail x86 instruction order. Both rose from 36.36% to 100%; non-x86 builds
+  retain the shared guarded helper. The latest report is **97.33% / 52.06% /
+  50.67%** full and **98.88% / 47.53% / 47.00%** game-only. Reccmp and
+  `git diff --check` passed; tests were not run.
+- `CursorScreenRayContextReset` (`0x435f16`) now matches the reference's x86
+  stack frame and unchecked store of zero to `view + 0x9c`; its score rose from
+  36.36% to 100%. The non-x86 path retains its null guard. The latest report is
+  **97.33% / 52.09% / 50.70%** full and **98.88% / 47.56% / 47.03%** game-only.
+  Reccmp and `git diff --check` passed; tests were not run.
+- `objective_switch_state_get` (`0x4567d0`) now uses the reference x86
+  consume-and-return sequence and shares the annotated `0x004ff9bc` storage
+  with the mapped setter `global_value_004ff9bc_store_and_return_target`
+  (`0x4567c0`), removing the prior duplicate state variables. The getter rose
+  from 37.5% to 100%; the setter remains at 100%. The latest report is
+  **97.33% / 52.12% / 50.72%** full and **98.88% / 47.59% / 47.06%** game-only.
+  Reccmp and `git diff --check` passed; tests were not run.
+- `ResourceInterfaceCallSlot88` (`0x477270`) now dispatches through the wrapped
+  object's vtable slot `+0x88` using the target's stack-passed interface
+  pointer on x86. Its match rose from 25% to 100%; non-x86 builds retain the
+  typed virtual call. The latest report is **97.33% / 52.15% / 50.76%** full
+  and **98.88% / 47.63% / 47.09%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+- Scene-resource interface wrappers `resource_interface_call_slot8c`
+  (`0x476fd0`) and `resource_interface_call_slot90` (`0x476ff0`) now use their
+  retail x86 dispatch sequences for vtable offsets `+0x8c` and `+0x90`; both
+  rose from 42.86% to 100%. Portable builds keep the guarded helper. The latest
+  report is **97.33% / 52.20% / 50.80%** full and
+  **98.88% / 47.68% / 47.14%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
+- `window_title_set` (`0x4783d0`) now directly calls `SetWindowTextA` with the
+  shared window handle in the WinAPI reference build, matching the retail call;
+  native builds continue through their platform adapter. Its match rose from
+  44.44% to 100%. The latest report is **97.33% / 52.22% / 50.83%** full and
+  **98.88% / 47.71% / 47.17%** game-only. Reccmp and `git diff --check`
+  passed; tests were not run.
 
 ## Port loop
 

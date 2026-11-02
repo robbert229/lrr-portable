@@ -599,6 +599,7 @@ void resource_interface_call_slot48(void* wrapper, void* value)
         method(interface_object, value);
     }
 }
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 static void resource_interface_call_noargs(void* wrapper, unsigned int byte_offset)
 {
     void* interface_object;
@@ -613,10 +614,45 @@ static void resource_interface_call_noargs(void* wrapper, unsigned int byte_offs
         method(interface_object);
     }
 }
+#endif
 // FUNCTION: LEGORR 0x00476fd0
-void resource_interface_call_slot8c(void* wrapper) { resource_interface_call_noargs(wrapper, 0x8c); }
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void resource_interface_call_slot8c(void* wrapper)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 10h]
+        push eax
+        mov ecx, dword ptr [eax]
+        call dword ptr [ecx + 8ch]
+        ret
+    }
+}
+#else
+void resource_interface_call_slot8c(void* wrapper)
+{
+    resource_interface_call_noargs(wrapper, 0x8c);
+}
+#endif
 // FUNCTION: LEGORR 0x00476ff0
-void resource_interface_call_slot90(void* wrapper) { resource_interface_call_noargs(wrapper, 0x90); }
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void resource_interface_call_slot90(void* wrapper)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 10h]
+        push eax
+        mov ecx, dword ptr [eax]
+        call dword ptr [ecx + 90h]
+        ret
+    }
+}
+#else
+void resource_interface_call_slot90(void* wrapper)
+{
+    resource_interface_call_noargs(wrapper, 0x90);
+}
+#endif
 
 void cached_render_resource_renderer_hook_set(
     CachedRenderResourceRendererHook hook, void* context)

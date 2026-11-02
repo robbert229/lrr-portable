@@ -5594,6 +5594,31 @@ int entity_state_override_pop(EntitySlot* entity)
 /* EntityRecordFlag400ToggleAndRefresh (FUN_0046a330): toggle stats-record
  * flag 0x400 and run the kind-four post-create resolver. */
 // FUNCTION: LEGORR 0x0046A330
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void entity_record_flag400_toggle_and_refresh(EntitySlot* e)
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [edx + 114h]
+        mov eax, dword ptr [ecx + 148h]
+        test ah, 4
+        je entity_record_flag400_toggle_raise
+        and ah, 0fbh
+        push edx
+        mov dword ptr [ecx + 148h], eax
+        call entity_kind_four_post_create_resolve
+        add esp, 4
+        ret
+    entity_record_flag400_toggle_raise:
+        or ah, 4
+        push edx
+        mov dword ptr [ecx + 148h], eax
+        call entity_kind_four_post_create_resolve
+        add esp, 4
+        ret
+    }
+}
+#else
 void entity_record_flag400_toggle_and_refresh(EntitySlot* e)
 {
     uint32_t* flags;
@@ -5602,58 +5627,62 @@ void entity_record_flag400_toggle_and_refresh(EntitySlot* e)
     *flags ^= 0x400u;
     entity_kind_four_post_create_resolve(e);
 }
+#endif
 // FUNCTION: LEGORR 0x00469ea0
-uint32_t entity_capability_flags_get(const EntitySlot* e) { return stats_rec_word(e, 0x14c); }
+uint32_t entity_capability_flags_get(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0x14c); }
 // FUNCTION: LEGORR 0x00469f20
-float entity_stats_float_at88(const EntitySlot* e) { return stats_rec_float(e, 0x88); }
+float entity_stats_float_at88(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x88); }
 // FUNCTION: LEGORR 0x00469f90
 uint32_t entity_stats_word_at_c0_or_c4(const EntitySlot* e, int selector)
 {
-    return stats_rec_word(e, selector != 0 ? 0xc4 : 0xc0);
+    if (selector != 0) return ENTITY_STATS_WORD_READ(e, 0xc4);
+    return ENTITY_STATS_WORD_READ(e, 0xc0);
 }
 // FUNCTION: LEGORR 0x00469fc0
-uint32_t entity_stats_word_atc8(const EntitySlot* e) { return stats_rec_word(e, 0xc8); }
+uint32_t entity_stats_word_atc8(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0xc8); }
 // FUNCTION: LEGORR 0x00469fe0
-float entity_stats_float_at8c(const EntitySlot* e) { return stats_rec_float(e, 0x8c); }
+float entity_stats_float_at8c(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x8c); }
 // FUNCTION: LEGORR 0x0046a000
-float entity_stats_float_at90(const EntitySlot* e) { return stats_rec_float(e, 0x90); }
+float entity_stats_float_at90(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x90); }
 // FUNCTION: LEGORR 0x0046a020
-float entity_stats_float_at98(const EntitySlot* e) { return stats_rec_float(e, 0x98); }
+float entity_stats_float_at98(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x98); }
 // FUNCTION: LEGORR 0x0046a040
-float entity_stats_float_at94(const EntitySlot* e) { return stats_rec_float(e, 0x94); }
+float entity_stats_float_at94(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x94); }
 // FUNCTION: LEGORR 0x0046a080
-float entity_stats_float_atf4(const EntitySlot* e) { return stats_rec_float(e, 0xf4); }
+float entity_stats_float_atf4(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0xf4); }
 // FUNCTION: LEGORR 0x0046a0a0
-float entity_speed_component_get(const EntitySlot* e) { return stats_rec_float(e, 0xf8); }
+float entity_speed_component_get(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0xf8); }
 // FUNCTION: LEGORR 0x0046a170
-float entity_stats_float_at130(const EntitySlot* e) { return stats_rec_float(e, 0x130); }
+float entity_stats_float_at130(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x130); }
 // FUNCTION: LEGORR 0x0046a190
-float entity_stats_float_at134(const EntitySlot* e) { return stats_rec_float(e, 0x134); }
+float entity_stats_float_at134(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x134); }
 // FUNCTION: LEGORR 0x0046a1b0
-float entity_stats_float_at120(const EntitySlot* e) { return stats_rec_float(e, 0x120); }
+float entity_stats_float_at120(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x120); }
 // FUNCTION: LEGORR 0x0046a1d0
-float entity_stats_float_at128(const EntitySlot* e) { return stats_rec_float(e, 0x128); }
+float entity_stats_float_at128(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x128); }
 // FUNCTION: LEGORR 0x0046a1f0
-float entity_stats_float_at124(const EntitySlot* e) { return stats_rec_float(e, 0x124); }
+float entity_stats_float_at124(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x124); }
 // FUNCTION: LEGORR 0x0046a210
-uint32_t entity_stats_word_at13c(const EntitySlot* e) { return stats_rec_word(e, 0x13c); }
+uint32_t entity_stats_word_at13c(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0x13c); }
 // FUNCTION: LEGORR 0x0046a230
-float entity_stats_float_at12c(const EntitySlot* e) { return stats_rec_float(e, 0x12c); }
+float entity_stats_float_at12c(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x12c); }
 // FUNCTION: LEGORR 0x0046a250
-float entity_stats_float_at138(const EntitySlot* e) { return stats_rec_float(e, 0x138); }
+float entity_stats_float_at138(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x138); }
 // FUNCTION: LEGORR 0x0046a270
-float entity_collision_radius_get(const EntitySlot* e) { return stats_rec_float(e, 0xe4); }
+float entity_collision_radius_get(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0xe4); }
 // FUNCTION: LEGORR 0x0046a290
-float entity_stats_float_at114(const EntitySlot* e) { return stats_rec_float(e, 0x114); }
+float entity_stats_float_at114(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x114); }
 // FUNCTION: LEGORR 0x0046a2b0
-float entity_stats_float_at118(const EntitySlot* e) { return stats_rec_float(e, 0x118); }
+float entity_stats_float_at118(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x118); }
 // FUNCTION: LEGORR 0x0046a2d0
-float entity_stats_float_at11c(const EntitySlot* e) { return stats_rec_float(e, 0x11c); }
+float entity_stats_float_at11c(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x11c); }
 // FUNCTION: LEGORR 0x0046a2f0
-float entity_stats_float_at110(const EntitySlot* e) { return stats_rec_float(e, 0x110); }
+float entity_stats_float_at110(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x110); }
 // FUNCTION: LEGORR 0x0046a310
-float entity_stats_float_at10c(const EntitySlot* e) { return stats_rec_float(e, 0x10c); }
+float entity_stats_float_at10c(const EntitySlot* e) { return ENTITY_STATS_FLOAT_READ(e, 0x10c); }
 
+#undef ENTITY_STATS_FLOAT_READ
+#undef ENTITY_STATS_WORD_READ
 
 /* `.ol` `type` name -> entity table code — DECOMPILE-VERIFIED (finding 07/10).
  *

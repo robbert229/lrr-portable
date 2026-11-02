@@ -1343,10 +1343,9 @@ void camera_distance_bounds_set(void* camera, float lo, float hi);
 void camera_distance_set(void* camera, float value); /* FUN_00436a4a */
 void camera_zoom_update(void* camera, float delta);  /* FUN_00436aa5 */
 
-/* CursorScreenRayContextReset (FUN_00435f16): the corpus's cursor ray
- * handler drops the pan accumulator when the cursor sits inside the
- * screen-edge dead zone — the reset half, ported against the modeled
- * ViewContext slot. NULL skips (deviation: blind store). */
+/* CursorScreenRayContextReset (FUN_00435f16): clear the modeled ViewContext
+ * pan accumulator at +0x9c. The target x86 body is the corpus's blind store;
+ * the portable path retains a NULL guard. */
 void cursor_screen_ray_context_reset(ViewContext* v);
 
 /* CurrentLevelTerrainGridPick (FUN_00433be0): the corpus's per-level pick

@@ -268,6 +268,20 @@ int record_field_d8_equals_one(const void* record)
 /* ReadIndexedPairSlotDword (FUN_00471a20): base + i*8 + j*4, exactly as
  * the corpus computes it. */
 // FUNCTION: LEGORR 0x00471a20
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t read_indexed_pair_slot_dword(
+    const void* base, uint32_t i, uint32_t j)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov ecx, dword ptr [esp + 4]
+        lea edx, dword ptr [ecx + eax*8]
+        mov eax, dword ptr [esp + 0ch]
+        mov eax, dword ptr [edx + eax*4]
+        ret
+    }
+}
+#else
 uint32_t read_indexed_pair_slot_dword(const void* base, uint32_t i,
                                       uint32_t j)
 {
@@ -276,6 +290,7 @@ uint32_t read_indexed_pair_slot_dword(const void* base, uint32_t i,
     __builtin_memcpy(&value, (const char*)base + offset, sizeof(value));
     return value;
 }
+#endif
 
 /* VelocitySlotPrimaryObjectGet / SecondaryObjectGet (FUN_00471a40 /
  * FUN_00471a50): indexed slot at +0x18 / +0x24. */

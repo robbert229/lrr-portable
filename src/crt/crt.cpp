@@ -1474,8 +1474,7 @@ uint32_t flh_magic_uu_noop(void)
  * float width is the corpus's own: 0x4230b0 flds a DWORD. */
 // GLOBAL: LEGORR 0x00556f00
 static float    s_global_float_00556f00;
-// GLOBAL: LEGORR 0x004ff9bc
-static uint32_t s_global_dword_004ff9bc;
+extern uint32_t s_objective_switch;
 
 // FUNCTION: LEGORR 0x004230b0
 float global_float_field_00556f00_get(void)
@@ -1488,7 +1487,7 @@ float global_float_field_00556f00_get(void)
 // FUNCTION: LEGORR 0x004567c0
 uint32_t global_value_004ff9bc_store_and_return_target(const void* value)
 {
-    s_global_dword_004ff9bc = *(const uint32_t*)value;
+    s_objective_switch = *(const uint32_t*)value;
     return *(const uint32_t*)value;
 }
 
@@ -2856,6 +2855,7 @@ int  global_value_word_peek(void) { return s_global_value_word; }
  * (uninitialized) — both sides are genuinely zero (image-verified). */
 // GLOBAL: LEGORR 0x004aa458
 static void* s_linked_list_head = NULL;  /* DAT_004aa458 role */
+// GLOBAL: LEGORR 0x00506518
 static void* s_record_list_head;  /* DAT_00506518 role */
 
 static void record_list_push(void** head, void* record)
@@ -2868,10 +2868,23 @@ static void record_list_push(void** head, void* record)
 }
 
 // FUNCTION: LEGORR 0x0046a470
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void linked_list_push_at_global_head(void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [s_linked_list_head]
+        mov dword ptr [eax + 1ch], ecx
+        mov dword ptr [s_linked_list_head], eax
+        ret
+    }
+}
+#else
 void linked_list_push_at_global_head(void* record)
 {
     record_list_push(&s_linked_list_head, record);
 }
+#endif
 
 void* linked_list_global_head_peek(void) { return s_linked_list_head; }
 
@@ -2921,10 +2934,23 @@ uint32_t first_set_flag_ordinal(uint32_t mask)
 }
 
 // FUNCTION: LEGORR 0x004792c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void global_record_list_push_head(void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [s_record_list_head]
+        mov dword ptr [eax + 1ch], ecx
+        mov dword ptr [s_record_list_head], eax
+        ret
+    }
+}
+#else
 void global_record_list_push_head(void* record)
 {
     record_list_push(&s_record_list_head, record);
 }
+#endif
 
 void* global_record_list_head_peek(void) { return s_record_list_head; }
 

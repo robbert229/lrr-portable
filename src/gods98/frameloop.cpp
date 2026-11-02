@@ -1500,7 +1500,11 @@ ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
 // FUNCTION: LEGORR 0x004783d0
 void window_title_set(const char* title)
 {
+#if defined(LEGORRR_BACKEND_WINAPI)
+    SetWindowTextA((HWND)g_platform_cursor_window_handle, title);
+#else
     platform_set_window_title(title);
+#endif
 }
 static void* frame_camera_target_indexed_scene_resolve(
     void* source, uint32_t target_id, uint32_t* component_present)

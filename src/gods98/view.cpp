@@ -6347,11 +6347,11 @@ void camera_zoom_update(void* camera, float delta)
 __declspec(naked) void cursor_screen_ray_context_reset(ViewContext* v)
 {
     __asm {
-        mov eax, dword ptr [esp + 4]
-        test eax, eax
-        je cursor_screen_ray_reset_null
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
         mov dword ptr [eax + 0x9c], 0
-    cursor_screen_ray_reset_null:
+        pop ebp
         ret
     }
 }

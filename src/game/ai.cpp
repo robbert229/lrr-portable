@@ -879,11 +879,15 @@ int ai_minion_state_for(int type)
 // FUNCTION: LEGORR 0x0046a060
 int ai_activity_cap(const EntitySlot* e)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return *(const int*)((const uint8_t*)e->stats_record + 0xccu);
+#else
     uint32_t record_cap = 0u;
     if (e == NULL || e->stats_record == NULL) return 0;
     memcpy(&record_cap, (const uint8_t*)e->stats_record + 0xccu,
            sizeof(record_cap));
     return (int)record_cap;
+#endif
 }
 
 /* Portable capacity selection used by activity-grant and command gates.

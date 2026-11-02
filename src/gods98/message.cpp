@@ -186,7 +186,8 @@ static int           s_queue_count = 0;
 static uint32_t      s_flags = 0u;          /* DAT_004dcd48 */
 // GLOBAL: LEGORR 0x004ff980
 static uint32_t      s_system_state = 0u;   /* DAT_004ff980 */
-static uint32_t      s_objective_switch = 0u; /* DAT_004ff9bc */
+// GLOBAL: LEGORR 0x004ff9bc
+uint32_t             s_objective_switch = 0u; /* DAT_004ff9bc */
 static float         s_now = 0.0f;          /* _DAT_0049e264 analog */
 static MessageCallback  s_callback = NULL;
 static MessageSoundHook s_sound = NULL;
@@ -760,6 +761,22 @@ uint32_t objective_switch_state_set(uint32_t value)
 }
 
 // FUNCTION: LEGORR 0x004567d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t objective_switch_state_get(void)
+{
+    __asm {
+        mov eax, dword ptr [s_objective_switch]
+        test eax, eax
+        je objective_switch_state_get_false
+        mov dword ptr [s_objective_switch], 0
+        mov eax, 1
+        ret
+    objective_switch_state_get_false:
+        xor eax, eax
+        ret
+    }
+}
+#else
 uint32_t objective_switch_state_get(void)
 {
     /* FUN_004567d0 consumes the pending state and returns a boolean. */
@@ -767,6 +784,7 @@ uint32_t objective_switch_state_get(void)
     s_objective_switch = 0u;
     return 1u;
 }
+#endif
 
 void message_set_callback(MessageCallback cb) { s_callback = cb; }
 void message_set_sound_hook(MessageSoundHook h) { s_sound = h; }
