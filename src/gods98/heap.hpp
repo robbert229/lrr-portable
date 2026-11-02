@@ -106,11 +106,10 @@ void* engine_calloc(long size);                  /* FUN_0048ead0 */
 void optional_resource_destroy(void* record);
 
 /* TextBufferDestroy (FUN_00485190): frees the buffer held in the text
- * buffer record's +0x14 slot, then the record itself. The corpus's slot
- * is a 32-bit dword; the port carries a host-width pointer there
- * (documented deviation). The corpus dereferences the record blindly and
- * so does the port — callers own non-null. */
+ * buffer record's +0x14 slot, then the record itself. The mapped body is
+ * unchecked; the portable API also releases the host-width font sidecar. */
 void text_buffer_destroy(void* record);
+void text_buffer_destroy_target(void* record); /* unchecked retail body */
 
 /* TextOutputField82CBit2SetClear (FUN_00485160): the text-output record's
  * +0x82c flag-word bit 2 set or clear. The corpus strides the record's

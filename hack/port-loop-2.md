@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **46.78% accuracy**, **45.53% progress**
+- Full report: **97.32% implemented**, **46.84% accuracy**, **45.58% progress**
   (2,328 compared entries out of 2,392).
-- Game-only report: **98.87% implemented**, **41.69% accuracy**,
-  **41.22% progress** (2,109/2,133).
+- Game-only report: **98.87% implemented**, **41.76% accuracy**,
+  **41.29% progress** (2,109/2,133).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -561,6 +561,51 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   totals are **97.32% / 46.78% / 45.53%** full and
   **98.87% / 41.69% / 41.22%** game-only. `distrobox enter developer -- make
   reccmp-report` and `git diff --check` passed; tests were not run.
+
+- `TextBufferDestroy` (`0x485190`) now maps to a target body that only frees
+  the `+0x14` buffer and then the record, matching the retail sequence. The
+  public wrapper removes the widened-pointer font sidecar first and retains
+  its null guard. Its match rose **75.86% → 100%**. The adjacent
+  `EntityTypeFlagBit1Get` (`0x46d330`) and `SceneObjectFlagBit3Get`
+  (`0x473ba0`) also now use unchecked target bodies that preserve the retail
+  low-byte mask as a distinct x86 instruction; their public accessors remain
+  null-safe, and both matches rose **71.43% → 100%**. Latest totals are
+  **97.32% / 46.79% / 45.54%** full and **98.87% / 41.70% / 41.23%**
+  game-only. The first full rebuild refreshed several unrelated match rows;
+  a follow-up report was stable outside these two getter changes. Reccmp and
+  `git diff --check` passed; tests were not run.
+
+- `TimedEffectTimestampReset` (`0x46b7a0`) now stores the global duration as a
+  float so its mapped body performs the reference x87 float load/store; the
+  public tick accessors preserve their bit-oriented contract with `memcpy`.
+  Its match rose **71.43% → 100%**. Latest totals are
+  **97.32% / 46.80% / 45.55%** full and **98.87% / 41.72% / 41.25%**
+  game-only. `distrobox enter developer -- make reccmp-report` changed only
+  this target; `git diff --check` passed. Tests were not run.
+
+- `Vector2SetLength` (`0x406760`) now maps to the unchecked retail x87 sequence,
+  including its repeated stack-slot operands and six trailing alignment NOPs.
+  The public helper retains its null-vector and zero-length guards. Its match
+  rose **75.00% → 100%**. Latest totals are **97.32% / 46.81% / 45.56%**
+  full and **98.87% / 41.73% / 41.26%** game-only. Reccmp changed only this
+  target; `git diff --check` passed. Tests were not run.
+
+- `FixedRecordSlotResourceGet` (`0x48bff0`) now maps to an unchecked target
+  table walk while the public accessor retains its 16-slot bounds check.
+  `WadMemoryStreamBufferGet` calls the unchecked body, matching the retail
+  delegation and avoiding a caller-score regression. The getter rose
+  **72.00% → 100%**; the caller remains **100%**. Latest totals are
+  **97.32% / 46.83% / 45.57%** full and **98.87% / 41.74% / 41.27%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
+
+- `ListFindName` (`0x416e20`) now maps to the unchecked retail scan, with its
+  exact `__strcmpi` call and separate found/not-found return paths. The public
+  helper retains its null-window and null-name guards; `level_node_get` calls
+  the target after validating those inputs. Its match rose **71.11% → 100%**,
+  and the caller's score stayed unchanged. Latest totals are
+  **97.32% / 46.84% / 45.58%** full and **98.87% / 41.76% / 41.29%**
+  game-only. Reccmp changed only this target; `git diff --check` passed.
+  Tests were not run.
 
 ## Port loop
 

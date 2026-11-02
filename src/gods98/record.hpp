@@ -140,6 +140,7 @@ int model_child_render_eligibility_check(const void* object);
  * flag dword at +0x1e8; the flag's meaning stays with the callers per
  * finding 357. NULL answers 0. */
 uint32_t entity_type_flag_bit1_get(const void* record);
+uint32_t entity_type_flag_bit1_get_target(const void* record);
 
 /* ------------------------------------------------------------------ *
  *  Field-reader sweep (2026-10-24; findings 305/337/356/361/372/373/
@@ -185,6 +186,7 @@ uint32_t scene_object_wrapped_pointer_get(const void* wrapped);
 /* SceneObjectFlagBit3Get (FUN_00473ba0, findings 305/430): bit 3 of the
  * flag byte at +0x14. */
 uint32_t scene_object_flag_bit3_get(const void* scene_object);
+uint32_t scene_object_flag_bit3_get_target(const void* scene_object);
 
 /* SceneObjectModeIsOne (FUN_00406980, findings 373/435): the +0x28 mode
  * word equals 1. */

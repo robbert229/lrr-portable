@@ -4663,14 +4663,19 @@ void fixed_record_slot_resource_release(int slot)
     }
 }
 
+/* The mapped slot getter follows the retail unchecked 16-byte table walk;
+ * the public helper keeps the portable bounds check. */
 // FUNCTION: LEGORR 0x0048bff0
-void* fixed_record_slot_resource_get(int slot)
+static void* fixed_record_slot_resource_get_target(int slot)
 {
-    if ((unsigned int)slot >= FIXED_RECORD_SLOTS) {
-        return NULL; /* deviation: the corpus strides blindly */
-    }
     return s_fixed_slots[slot].in_use != 0
         ? fixed_record_slot_pointer_get(slot) : NULL;
+}
+
+void* fixed_record_slot_resource_get(int slot)
+{
+    if ((unsigned int)slot >= FIXED_RECORD_SLOTS) return NULL;
+    return fixed_record_slot_resource_get_target(slot);
 }
 
 /* Port-side payload length used by the file seek implementation. */
@@ -5030,7 +5035,7 @@ void resource_debug_output_format(const char* format, ...)
 // FUNCTION: LEGORR 0x0048c030
 void wad_memory_stream_buffer_get(int slot)
 {
-    (void)fixed_record_slot_resource_get(slot);
+    (void)fixed_record_slot_resource_get_target(slot);
 }
 
 /* --- wad payload band (2026-10-25; finding 01 codec story) ---------------

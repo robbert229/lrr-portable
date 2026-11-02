@@ -5656,7 +5656,7 @@ static TimedEffectRecord s_timed_effect_records[TIMED_EFFECT_RECORD_COUNT];
 /* DAT_0054bf3c is the tooltip duration threshold (scale * 25). Timed-effect
  * timestamp reset uses these same float bits as its fallback time value. */
 // GLOBAL: LEGORR 0x0054bf3c
-static uint32_t s_timed_effect_tick;
+static float s_timed_effect_tick;
 typedef union HelpWindowLayoutWord {
     uint32_t u;
     int32_t i;
@@ -7213,7 +7213,7 @@ void tooltip_overlay_state_initialize(
                                color_r, color_g, color_b,
                                object_field_be4_dword_get(font));
     for (i = 0; i < 38; ++i) s_tooltip_name_table[i] = s_tooltip_names[i];
-    memcpy(&s_timed_effect_tick, &threshold, sizeof(s_timed_effect_tick));
+    s_timed_effect_tick = threshold;
     memset(s_timed_effect_records, 0,
            (size_t)0x1839u * sizeof(uint32_t));
 }
@@ -8255,8 +8255,7 @@ void panel_texture_slots_blit(int panel)
 // FUNCTION: LEGORR 0x0046b7a0
 static void timed_effect_timestamp_reset_corpus(int index)
 {
-    memcpy(&s_timed_effect_records[index].timestamp,
-           &s_timed_effect_tick, sizeof(s_timed_effect_records[index].timestamp));
+    s_timed_effect_records[index].timestamp = s_timed_effect_tick;
 }
 
 void timed_effect_timestamp_reset(int index)
@@ -8273,8 +8272,16 @@ void* timed_effect_record_storage_get(unsigned int index)
     return &s_timed_effect_records[index];
 }
 
-void timed_effect_tick_word_set(uint32_t tick) { s_timed_effect_tick = tick; }
-uint32_t timed_effect_tick_word_peek(void) { return s_timed_effect_tick; }
+void timed_effect_tick_word_set(uint32_t tick)
+{
+    memcpy(&s_timed_effect_tick, &tick, sizeof(tick));
+}
+uint32_t timed_effect_tick_word_peek(void)
+{
+    uint32_t bits;
+    memcpy(&bits, &s_timed_effect_tick, sizeof(bits));
+    return bits;
+}
 
 uint32_t timed_effect_time_peek(int index)
 {

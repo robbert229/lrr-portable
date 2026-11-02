@@ -6450,24 +6450,14 @@ void float_negate_absolute_value(float* value)
 #endif
 
 /* Vector2SetLength (FUN_00406760) — see view.hpp. */
-// FUNCTION: LEGORR 0x00406760
 #if defined(_MSC_VER) && defined(_M_IX86)
-/* Preserve the port's NULL and zero-length guards, then mirror the corpus's
- * x87 body and its repeated stack-slot operands. */
-__declspec(naked) void vector2_set_length(float v[2], float length)
+/* The mapped target is unchecked and retains the corpus's x87 operand and
+ * stack-slot sequence. The portable API below keeps its safety guards. */
+// FUNCTION: LEGORR 0x00406760
+static __declspec(naked) void vector2_set_length_target(float v[2],
+                                                        float length)
 {
     __asm {
-        mov eax, dword ptr [esp + 4]
-        test eax, eax
-        je vector2_length_return
-        fld dword ptr [esp + 8]
-        fldz
-        fcompp
-        fstsw ax
-        and ah, 0x45
-        cmp ah, 0x40
-        je vector2_length_return
-
         mov eax, dword ptr [esp + 4]
         mov ecx, dword ptr [eax]
         fld dword ptr [eax + 4]
@@ -6495,10 +6485,19 @@ __declspec(naked) void vector2_set_length(float v[2], float length)
         fstp dword ptr [eax + 4]
         fstp st(0)
         ret
-
-    vector2_length_return:
-        ret
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
     }
+}
+
+void vector2_set_length(float v[2], float length)
+{
+    if (v == NULL || length == 0.0f) return;
+    vector2_set_length_target(v, length);
 }
 #else
 void vector2_set_length(float v[2], float length)

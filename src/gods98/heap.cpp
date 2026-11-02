@@ -87,15 +87,22 @@ static void text_buffer_font_binding_remove(const void* record)
     }
 }
 
-/* TextBufferDestroy (FUN_00485190) — see heap.hpp. */
+/* The mapped TextBufferDestroy body follows the retail unchecked record
+ * access. Keep the portable font-binding sidecar out of this target body. */
 // FUNCTION: LEGORR 0x00485190
-void text_buffer_destroy(void* record)
+void text_buffer_destroy_target(void* record)
 {
-    void* buffer = NULL;
-    text_buffer_font_binding_remove(record);
-    __builtin_memcpy(&buffer, (char*)record + 0x14, sizeof(buffer));
+    void* buffer = *(void**)((char*)record + 0x14);
     engine_heap_free(buffer);
     engine_heap_free(record);
+}
+
+/* Keep the host-width font association in sync with the portable API. */
+void text_buffer_destroy(void* record)
+{
+    if (record == NULL) return;
+    text_buffer_font_binding_remove(record);
+    text_buffer_destroy_target(record);
 }
 
 /* TextOutputField82CBit2SetClear (FUN_00485160) — see heap.hpp. */

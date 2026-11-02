@@ -1224,25 +1224,83 @@ void selected_level_start_object_update(GameContext* ctx)
  * and value arrays blindly. Its two-byte compare exits when either byte of
  * the matching unit is zero (including the high-byte-zero ASCII case). */
 
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* The mapped ListFindName body follows the unchecked retail list walk. */
 // FUNCTION: LEGORR 0x00416e20
-int list_find_name(const SavListWindow* win, const char* name)
+static __declspec(naked) int list_find_name_target(
+    const SavListWindow* win, const char* name)
 {
-    if (win == NULL || name == NULL) {
-        return -1; /* deviation: the corpus strides the window and the key
-                    * blindly; these guards are pinned by test_savegame
-                    * ("the window and key guards hold") */
+    __asm {
+        push ebx
+        push esi
+        push edi
+        mov edi, dword ptr [esp + 10h]
+        xor esi, esi
+        cmp dword ptr [edi], 0
+        jle list_find_name_not_found
+        mov ebx, dword ptr [esp + 14h]
+    list_find_name_loop:
+        mov eax, dword ptr [edi + 4]
+        mov ecx, dword ptr [eax + esi*4]
+        push ecx
+        push ebx
+        call _strcmpi
+        add esp, 8
+        test eax, eax
+        je list_find_name_found
+        mov eax, dword ptr [edi]
+        inc esi
+        cmp esi, eax
+        jl list_find_name_loop
+        or eax, 0ffffffffh
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    list_find_name_found:
+        mov eax, esi
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    list_find_name_not_found:
+        pop edi
+        pop esi
+        or eax, 0ffffffffh
+        pop ebx
+        ret
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
     }
-    if (win->count <= 0) { /* the corpus's single cmp [count],0 / jle */
-        return -1;
-    }
-    for (int i = 0; i < win->count; ++i) {
-        /* corpus reloads entries and count each pass; name is arg 1 and
-         * the untested entry is arg 2 to strcasecmp_lite. */
-        if (strcasecmp_lite(name, (const char*)win->entries[i]) == 0) {
+}
+#else
+static int list_find_name_target(const SavListWindow* win, const char* name)
+{
+    int i;
+    if (win->count <= 0) return -1;
+    for (i = 0; i < win->count; ++i) {
+        if (strcasecmp_lite(name, (const char*)win->entries[i]) == 0)
             return i;
-        }
     }
     return -1;
+}
+#endif
+
+int list_find_name(const SavListWindow* win, const char* name)
+{
+    if (win == NULL || name == NULL) return -1;
+    return list_find_name_target(win, name);
 }
 
 // FUNCTION: LEGORR 0x00416ed0
@@ -1463,7 +1521,7 @@ SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
     }
     memset(node, 0, sizeof(*node));
     {
-        const int index = list_find_name(win, level_name);
+        const int index = list_find_name_target(win, level_name);
         if (index < 0) {
             engine_heap_free(node);
             return NULL;

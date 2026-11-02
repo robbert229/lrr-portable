@@ -510,15 +510,33 @@ int model_child_render_eligibility_check(const void* object)
     return 0;
 }
 
-/* EntityTypeFlagBit1Get (FUN_0046d330, findings 357/432): the corpus
- * reads +0x1e8 with one mov, no helper call, so the load is direct. */
+/* The mapped EntityTypeFlagBit1Get body follows the corpus's unchecked
+ * +0x1e8 load; the public helper retains its null guard. */
+#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x0046d330
+__declspec(naked) uint32_t entity_type_flag_bit1_get_target(const void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 01e8h]
+        and eax, 0ffh
+        shr eax, 1
+        and eax, 1
+        ret
+    }
+}
+#else
+// FUNCTION: LEGORR 0x0046d330
+uint32_t entity_type_flag_bit1_get_target(const void* record)
+{
+    return (*(const uint32_t*)((const char*)record + 0x1e8) & 0xffu) >> 1 & 1u;
+}
+#endif
+
 uint32_t entity_type_flag_bit1_get(const void* record)
 {
-    if (record == NULL) {
-        return 0u; /* pinned deviation: the corpus loads blindly */
-    }
-    return (*(const uint32_t*)((const char*)record + 0x1e8) & 0xffu) >> 1 & 1u;
+    if (record == NULL) return 0u;
+    return entity_type_flag_bit1_get_target(record);
 }
 
 /* ------------------------------------------------------------------ *
@@ -596,18 +614,35 @@ uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
     return value;
 }
 
-/* SceneObjectFlagBit3Get (FUN_00473ba0): one corpus mov on +0x14, so the
- * load is direct. animation_object_visibility_get can hand us a NULL +4
- * handle through the guarded rec_ptr; NULL answers zero (the corpus
- * would crash on it). */
+/* The mapped SceneObjectFlagBit3Get body follows the corpus's unchecked
+ * +0x14 load; animation_object_visibility_get retains its null-safe path. */
+#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x00473ba0
-uint32_t scene_object_flag_bit3_get(const void* scene_object)
+__declspec(naked) uint32_t scene_object_flag_bit3_get_target(
+    const void* scene_object)
 {
-    if (scene_object == NULL) {
-        return 0u; /* pinned deviation: the corpus loads blindly */
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 14h]
+        and eax, 0ffh
+        shr eax, 3
+        and eax, 1
+        ret
     }
+}
+#else
+// FUNCTION: LEGORR 0x00473ba0
+uint32_t scene_object_flag_bit3_get_target(const void* scene_object)
+{
     return (*(const uint32_t*)((const char*)scene_object + 0x14) & 0xffu)
            >> 3 & 1u;
+}
+#endif
+
+uint32_t scene_object_flag_bit3_get(const void* scene_object)
+{
+    if (scene_object == NULL) return 0u;
+    return scene_object_flag_bit3_get_target(scene_object);
 }
 
 // FUNCTION: LEGORR 0x00406980
