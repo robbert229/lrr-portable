@@ -1334,6 +1334,7 @@ static RendererWindowModeOps s_renderer_window_mode_ops;
 static int s_renderer_window_width;
 static int s_renderer_window_height;
 static uint32_t s_renderer_window_mode_flags;
+// GLOBAL: LEGORR 0x0076ac80
 static void* s_renderer_window_handle;
 static DirectDrawEnumerationHook s_directdraw_enumeration_hook;
 static void* s_directdraw_enumeration_context;
@@ -2896,20 +2897,22 @@ void renderer_begin_frame_once_reset(void)
     if (feature != NULL) *feature &= ~1u;
 }
 
+/* Retail RendererBeginFrameOnce uses the initialized Direct3DRM device at
+ * DAT_00505918 directly. The target calls vtable slot +0x38 after the device
+ * setup path has installed the corresponding sidecar pointer. */
 // FUNCTION: LEGORR 0x00477fa0
 void renderer_begin_frame_once_retail(void)
 {
-    uint32_t* feature = engine_current_feature_word();
-    if (feature == NULL || (*feature & 1u) != 0u) return;
-    if (s_renderer_begin_frame_hook != NULL) {
-        s_renderer_begin_frame_hook(s_renderer_begin_frame_device);
-    }
+    if ((s_engine_feature_word & 1u) != 0u) return;
 #if defined(LEGORRR_BACKEND_MINIWIN)
-    else if (s_screen_bounded_surface_device != NULL) {
-        (void)((IDirect3DRMDevice2*)s_screen_bounded_surface_device)->Update();
-    }
+    (void)((IDirect3DRMDevice2*)s_screen_bounded_surface_device)->Update();
+#else
+    typedef HRESULT (SURFACE_COM_CALL *SurfaceRendererUpdateFn)(void*);
+    void** vtable = *(void***)s_screen_bounded_surface_device;
+    SurfaceRendererUpdateFn update = (SurfaceRendererUpdateFn)vtable[14];
+    (void)update(s_screen_bounded_surface_device);
 #endif
-    *feature |= 1u;
+    s_engine_feature_word |= 1u;
 }
 
 /* DirectDrawSurfaceDescriptorInitialize (FUN_0047e710): clear the
@@ -4398,6 +4401,17 @@ typedef struct WinapiRendererState {
 } WinapiRendererState;
 
 static WinapiRendererState s_winapi_renderer_state;
+// GLOBAL: LEGORR 0x0076ac88
+static void* s_renderer_primary_surface;
+// GLOBAL: LEGORR 0x0076acbc
+static uint32_t s_renderer_fullscreen;
+// GLOBAL: LEGORR 0x0076acc0
+static uint32_t s_renderer_surface_width;
+// GLOBAL: LEGORR 0x0076acc4
+static uint32_t s_renderer_surface_height;
+
+static void windowed_surface_blit_impl(DisplaySurface* primary,
+                                       DisplaySurface* back_surface);
 
 static void winapi_renderer_state_release(WinapiRendererState* state)
 {
@@ -4408,6 +4422,58 @@ static void winapi_renderer_state_release(WinapiRendererState* state)
     if (state->primary != NULL) surface_com_release(state->primary);
     if (state->device != NULL) surface_com_release(state->device);
     memset(state, 0, sizeof(*state));
+    s_renderer_window_handle = NULL;
+    s_renderer_primary_surface = NULL;
+    render_surface_secondary_set(0u);
+    s_renderer_fullscreen = 0u;
+    s_renderer_surface_width = 0u;
+    s_renderer_surface_height = 0u;
+}
+
+/* WindowedRenderSurfaceBlit (FUN_0047cc50): derive the screen-space target
+ * rectangle, then blit the global back surface into the primary surface. */
+// FUNCTION: LEGORR 0x0047cc50
+static void windowed_render_surface_blit_retail(void)
+{
+    struct WindowedRenderSurfaceLocal {
+        POINT origin;
+        RECT destination;
+        RECT source;
+    } local;
+    void** vtable;
+    SurfaceBltFn blt;
+    local.destination.right = (LONG)s_renderer_surface_width;
+    local.origin.y = 0;
+    local.origin.x = 0;
+    local.destination.left = 0;
+    local.destination.top = 0;
+    local.destination.bottom = (LONG)s_renderer_surface_height;
+    ClientToScreen(s_renderer_window_handle, &local.origin);
+    OffsetRect(&local.destination, local.origin.x, local.origin.y);
+    local.source.bottom = (LONG)s_renderer_surface_height;
+    local.source.top = 0;
+    local.source.left = 0;
+    local.source.right = (LONG)s_renderer_surface_width;
+    vtable = *(void***)s_renderer_primary_surface;
+    blt = (SurfaceBltFn)vtable[5];
+    (void)blt(s_renderer_primary_surface, &local.destination,
+              (void*)s_render_surface_secondary, &local.source,
+              0x01000000u, NULL);
+}
+
+/* RenderSurfacePresent (FUN_0047c8d0) chooses fullscreen flip or windowed
+ * global-surface blit from the renderer mode word. */
+// FUNCTION: LEGORR 0x0047c8d0
+void render_surface_present(void)
+{
+    if (s_renderer_fullscreen != 0u) {
+        typedef HRESULT (SURFACE_COM_CALL *SurfaceFlipFn)(void*, void*, DWORD);
+        void** vtable = *(void***)s_renderer_primary_surface;
+        SurfaceFlipFn flip = (SurfaceFlipFn)vtable[11];
+        (void)flip(s_renderer_primary_surface, NULL, 1u);
+        return;
+    }
+    windowed_render_surface_blit_retail();
 }
 
 static int winapi_renderer_clipper_attach(void* device, void* surface,
@@ -4581,6 +4647,12 @@ static int directdraw_renderer_init_winapi(
     s_winapi_renderer_state.fullscreen = params->fullscreen != 0;
     s_winapi_renderer_state.width = width;
     s_winapi_renderer_state.height = height;
+    s_renderer_window_handle = window;
+    s_renderer_primary_surface = primary;
+    render_surface_secondary_set((uint32_t)back_surface);
+    s_renderer_fullscreen = params->fullscreen != 0 ? 1u : 0u;
+    s_renderer_surface_width = (uint32_t)width;
+    s_renderer_surface_height = (uint32_t)height;
     device = NULL;
     primary = NULL;
     back_surface = NULL;

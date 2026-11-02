@@ -900,7 +900,7 @@ int pop_count32(uint32_t value)
     int count = 0;
     uint32_t position = 0u;
     do {
-        if ((value & (1u << ((uint8_t)position & 0x1fu))) != 0u) {
+        if ((value & (1u << position)) != 0u) {
             ++count;
         }
         ++position;
@@ -926,18 +926,26 @@ uint32_t find_first_set_bit32(uint32_t value)
 
 /* FUN_0047e7e0: the corpus's second identical position-loop body. */
 // FUNCTION: LEGORR 0x0047e7e0
-int bit_count32_by_position(uint32_t value)
+#if defined(_MSC_VER)
+#define LEGORRR_CRT_STDCALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define LEGORRR_CRT_STDCALL __attribute__((stdcall))
+#else
+#define LEGORRR_CRT_STDCALL
+#endif
+int LEGORRR_CRT_STDCALL bit_count32_by_position(uint32_t value)
 {
     int count = 0;
     uint32_t position = 0u;
     do {
-        if ((value & (1u << ((uint8_t)position & 0x1fu))) != 0u) {
+        if ((value & (1u << position)) != 0u) {
             ++count;
         }
         ++position;
     } while (position < 0x20u);
     return count;
 }
+#undef LEGORRR_CRT_STDCALL
 
 /* VC5 LIBC.LIB intrncvt.obj supplies this three-dword zero test. */
 // LIBRARY: LEGORR 0x00497ab0 SYMBOL
@@ -3887,9 +3895,9 @@ uint32_t g_renderer_word_c;             /* DAT_0076ab3c */
 // GLOBAL: LEGORR 0x0076ac84
 uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
 // GLOBAL: LEGORR 0x0076ac8c
-static uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
+uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
 // GLOBAL: LEGORR 0x0050608c
-static uint32_t s_render_feature_flags; /* DAT_0050608c */
+uint32_t s_render_feature_flags; /* DAT_0050608c */
 
 // FUNCTION: LEGORR 0x00410b30
 uint32_t renderer_word_a_get(void) { return s_renderer_word_a; } /* FUN_00410b30 */
@@ -3923,7 +3931,7 @@ void render_feature_flags_set(uint32_t value) { s_render_feature_flags = value; 
  * install/peek hooks — the two half-models do not interoperate
  * (unowned-global deviation). */
 // GLOBAL: LEGORR 0x00505f84
-static uint32_t s_engine_feature_word; /* DAT_00505f84 */
+uint32_t s_engine_feature_word; /* DAT_00505f84 */
 
 uint32_t engine_feature_word_peek(void)
 {

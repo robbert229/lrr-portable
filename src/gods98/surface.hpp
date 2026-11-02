@@ -729,7 +729,11 @@ void renderer_record_table_word_set(int index, uint32_t value);
 typedef void (*RendererBeginFrameHook)(void* device);
 void renderer_begin_frame_hook_set(RendererBeginFrameHook hook, void* device);
 int renderer_begin_frame_once(void);
+void renderer_begin_frame_once_retail(void); /* FUN_00477fa0 */
 void renderer_begin_frame_once_reset(void);
+#if defined(LEGORRR_BACKEND_WINAPI)
+void render_surface_present(void); /* FUN_0047c8d0 */
+#endif
 void surface_descriptor_initialize(void* record); /* FUN_0047e710 */
 typedef void (*SurfacePixelWriteFn)(void* context, int x, int y,
                                     uint32_t pixel);

@@ -106,6 +106,8 @@ int frameloop_application_tick(float dt);
 void frameloop_application_events_set(const PlatformEvent* events, int count);
 PlatformWindow* frameloop_application_window_get(void);
 void frameloop_application_shutdown(void);
+void frameloop_application_start_level_override_set(const char* level_name);
+void frameloop_application_sound_disabled_set(int disabled);
 void window_title_set(const char* title);
 
 #endif /* LEGORRR_FRAMELOOP_HPP */

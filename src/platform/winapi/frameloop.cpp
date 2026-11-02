@@ -240,7 +240,6 @@ int platform_poll_events(PlatformWindow* win)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00478040
 int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
 {
     MSG message;
@@ -301,7 +300,6 @@ int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
     return count;
 }
 
-// FUNCTION: LEGORR 0x0047c8d0
 void platform_present_pixels(PlatformWindow* win, const void* pixels, int pitch,
                              int width, int height)
 {

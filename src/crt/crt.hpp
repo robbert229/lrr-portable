@@ -164,7 +164,15 @@ uint32_t find_first_set_bit32(uint32_t value);
 
 /* FUN_0047e7e0: the position-loop bit count again (the corpus's second
  * identical body; kept distinct to mirror the address map). */
-int bit_count32_by_position(uint32_t value);
+#if defined(_MSC_VER)
+#define LEGORRR_CRT_STDCALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define LEGORRR_CRT_STDCALL __attribute__((stdcall))
+#else
+#define LEGORRR_CRT_STDCALL
+#endif
+int LEGORRR_CRT_STDCALL bit_count32_by_position(uint32_t value);
+#undef LEGORRR_CRT_STDCALL
 
 /* VC5 LIBC.LIB supplies its exact three-dword zero test on MSVC. */
 #if !defined(_MSC_VER)
@@ -981,12 +989,14 @@ uint32_t renderer_global_dword_get(void);
 void     renderer_global_dword_set(uint32_t value); /* install */
 
 /* RenderSurfaceSecondaryGet (FUN_004065e0): the DAT_0076ac8c surface word. */
+extern uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
 uint32_t render_surface_secondary_get(void);
 void     render_surface_secondary_set(uint32_t value); /* install */
 
 /* RenderFeatureFlagsGet (FUN_00477f70): the DAT_0050608c feature word. */
 uint32_t render_feature_flags_get(void);
 void     render_feature_flags_set(uint32_t value); /* install */
+extern uint32_t s_render_feature_flags; /* DAT_0050608c */
 
 /* Engine feature word band (2026-10-25): the DAT_00505f84 half-model lives
  * here with install/peek hooks (see crt.cpp; the EngineContext::feature
@@ -994,6 +1004,7 @@ void     render_feature_flags_set(uint32_t value); /* install */
  * low-texture flag setter turns on bit 5 while bit 0x40000 is clear. */
 uint32_t engine_feature_word_peek(void);
 void     engine_feature_word_install(uint32_t value); /* port hook */
+extern uint32_t s_engine_feature_word; /* DAT_00505f84 */
 void     low_texture_flag_set(void);                  /* FUN_00477bd0 */
 
 /* --- integer/string helper band (2026-10-25) -------------------------------

@@ -78,8 +78,12 @@ static void menu_sound_tick_clock_advance(MenuSoundTickClock* clock)
 static MainLoopFramePumpHooks s_main_loop_frame_pump_hooks;
 static WindowRuntimeOps s_window_runtime_ops;
 static WindowRuntimeState s_window_runtime_state;
+// GLOBAL: LEGORR 0x00505f80
+static int32_t s_window_runtime_style;
 static WindowDefaultProc s_window_default_proc;
 static void* s_window_default_proc_context;
+static char s_command_line_level_override[FE_LEVEL_NAME_MAX];
+static int s_command_line_sound_disabled;
 
 typedef struct RewardFramePumpContext {
     PlatformWindow* window;
@@ -161,6 +165,26 @@ typedef struct FrameloopApplicationState {
 #define FRAMELOOP_PHASE_DONE 4
 
 static FrameloopApplicationState s_frameloop_application;
+
+void frameloop_application_start_level_override_set(const char* level_name)
+{
+    size_t length = 0;
+    if (level_name == NULL) {
+        s_command_line_level_override[0] = '\0';
+        return;
+    }
+    while (level_name[length] != '\0' &&
+           length + 1u < sizeof(s_command_line_level_override)) {
+        s_command_line_level_override[length] = level_name[length];
+        ++length;
+    }
+    s_command_line_level_override[length] = '\0';
+}
+
+void frameloop_application_sound_disabled_set(int disabled)
+{
+    s_command_line_sound_disabled = disabled != 0;
+}
 
 static void* frameloop_indexed_texture_load(const char* name, void*)
 {
@@ -955,29 +979,50 @@ void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks)
     }
 }
 
-/* MainLoopFramePump (FUN_00477f30): drain messages, poll input, sample the
- * cursor, begin/present one renderer frame, optionally submit the projection
- * overlay, then clear the once-per-frame feature bit. The outer portable
- * frame loop owns its own event/tick/draw sequence and does not call this
- * helper recursively. */
+/* Win32MessagePumpDispatch (FUN_00478040): remove and dispatch every pending
+ * message accepted by the fullscreen/windowed filter. */
+// FUNCTION: LEGORR 0x00478040
+static void window_message_dispatch_pump(void)
+{
+    MSG message;
+    while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
+        if (window_runtime_message_dispatch_filter(&message)) {
+            TranslateMessage(&message);
+            DispatchMessageA(&message);
+        }
+    }
+}
+
+/* InputStatePoll (FUN_0047eef0): use the live keyboard snapshot and the
+ * application-active gate owned by the window procedure. */
+// FUNCTION: LEGORR 0x0047eef0
+static void window_input_state_poll(void)
+{
+    int poll_active = (s_engine_feature_word & 2u) != 0u ||
+                      s_window_runtime_state.app_active != 0u;
+    input_state_poll(input_direct_state_get(), poll_active);
+}
+
+/* MainLoopFramePump (FUN_00477f30): drain Win32 messages, poll the active
+ * input state, update the cursor, begin/present one renderer frame, submit
+ * the optional projection overlay, then clear the once-per-frame feature bit. */
 // FUNCTION: LEGORR 0x00477f30
 void main_loop_frame_pump(int draw_projection_overlay)
 {
     MainLoopFramePumpHooks* const hooks = &s_main_loop_frame_pump_hooks;
-    if (hooks->window_messages != NULL)
-        hooks->window_messages(hooks->context);
-    if (hooks->input_poll != NULL)
-        hooks->input_poll(hooks->context);
+    window_message_dispatch_pump();
+    window_input_state_poll();
     input_cursor_position_update();
-    if (hooks->renderer_begin != NULL)
-        hooks->renderer_begin(hooks->context);
-    else
-        (void)renderer_begin_frame_once();
+    renderer_begin_frame_once_retail();
+#if defined(LEGORRR_BACKEND_WINAPI)
+    render_surface_present();
+#else
     if (hooks->renderer_present != NULL)
         hooks->renderer_present(hooks->context);
+#endif
     if (draw_projection_overlay != 0 && hooks->projection_overlay != NULL)
         hooks->projection_overlay(hooks->context, 0, 0);
-    renderer_begin_frame_once_reset();
+    s_engine_feature_word &= ~1u;
 }
 
 void window_runtime_ops_set(const WindowRuntimeOps* ops)
@@ -1015,7 +1060,10 @@ void window_runtime_mode_set(int fullscreen, int32_t style)
 {
     if (fullscreen != 0) s_window_runtime_state.flags |= 2u;
     else s_window_runtime_state.flags &= ~2u;
+    if (fullscreen != 0) s_engine_feature_word |= 2u;
+    else s_engine_feature_word &= ~2u;
     s_window_runtime_state.window_style = style;
+    s_window_runtime_style = style;
 }
 
 void window_runtime_flags_set(uint32_t flags)
@@ -1044,10 +1092,8 @@ void window_runtime_state_initialize(void* window)
 // FUNCTION: LEGORR 0x00477f80
 void window_runtime_display_caps_query(void)
 {
-    if (s_window_runtime_ops.device_caps_query != NULL) {
-        (void)s_window_runtime_ops.device_caps_query(
-            s_window_runtime_ops.context, s_window_runtime_state.window, 12);
-    }
+    HDC dc = GetDC((HWND)g_platform_cursor_window_handle);
+    (void)GetDeviceCaps(dc, 12);
 }
 
 // FUNCTION: LEGORR 0x00477fd0
@@ -1088,14 +1134,8 @@ int window_runtime_message_dispatch_filter(const void* message)
 // FUNCTION: LEGORR 0x00478310
 void window_runtime_adjust_rect(WindowPortRect* rect)
 {
-    if (rect == NULL) return;
-    /* Retail adjusts a windowed rectangle using the saved style and a false
-     * menu flag. Fullscreen leaves all four coordinates untouched. */
-    if ((s_window_runtime_state.flags & 2u) == 0u &&
-        s_window_runtime_ops.adjust_window_rect != NULL) {
-        (void)s_window_runtime_ops.adjust_window_rect(
-            s_window_runtime_ops.context, rect,
-            s_window_runtime_state.window_style, 0);
+    if ((s_engine_feature_word & 2u) == 0u) {
+        (void)AdjustWindowRect((LPRECT)rect, (DWORD)s_window_runtime_style, 0);
     }
 }
 
@@ -2654,14 +2694,15 @@ int frameloop_application_init(void)
     AudioPlayer& ap = app.audio;
     memset(&ap, 0, sizeof(ap));
     audio_system_player_set(&ap);
+    if (!s_command_line_sound_disabled) {
 #if defined(LEGORRR_BACKEND_WINAPI)
-    /* CDAudioDeviceStateUpdate is the retail startup bridge: it records the
-     * DirectSound availability gate before invoking DirectSoundSystemInit.
-     * That gate enables the later MCI CD-audio calls on WinAPI. */
-    (void)media_cd_audio_device_state_update(0);
+        /* CDAudioDeviceStateUpdate is the retail startup bridge: it records
+         * the DirectSound availability gate before DirectSoundSystemInit. */
+        (void)media_cd_audio_device_state_update(0);
 #else
-    audio_system_init(platform_window_hwnd(win));
+        audio_system_init(platform_window_hwnd(win));
 #endif
+    }
     if (game.cfg != NULL) {
         /* GameConfigInit loads the Samples aliases after enabling the sound
          * bank. This portable startup has the Lego.cfg tree ready earlier,
@@ -2670,7 +2711,8 @@ int frameloop_application_init(void)
         advisor_tooltip_and_sound_config_load(game.cfg);
     }
     int& audio_status = app.audio_status;
-    audio_status = sound_bank_sound_on() ? 0 : -1;
+    audio_status = !s_command_line_sound_disabled && sound_bank_sound_on()
+                 ? 0 : -1;
     int sfx_frames = 0;
     if (audio_status == 0) {
         /* Master gain from the store, not a fixed 0.6: the active save
@@ -2805,7 +2847,8 @@ int frameloop_application_init(void)
         frontend_options_sync(&fe);
         frontend_built = built;
         boot_menu = frontend_built && frontend_enabled(game.cfg)
-                 && env_get("LEGORRR_LEVEL", "")[0] == '\0';
+                 && env_get("LEGORRR_LEVEL", "")[0] == '\0'
+                 && s_command_line_level_override[0] == '\0';
         fprintf(log, "frameloop: frontend built=%d enabled=%d override=%d\n",
                 frontend_built, frontend_enabled(game.cfg),
                 env_get("LEGORRR_LEVEL", "")[0] != '\0');
@@ -2817,8 +2860,13 @@ int frameloop_application_init(void)
     if (frontend_built && audio_status == 0) {
         frontend_set_audio(&fe, &ap);
     }
-    snprintf(level_name, sizeof(level_name), "%s",
-             env_get("LEGORRR_LEVEL", "Level01"));
+    {
+        const char* environment_level = env_get("LEGORRR_LEVEL", "");
+        const char* selected_level = environment_level[0] != '\0'
+            ? environment_level : s_command_line_level_override;
+        if (selected_level[0] == '\0') selected_level = "Level01";
+        snprintf(level_name, sizeof(level_name), "%s", selected_level);
+    }
 
     /* Runtime save/load slots (SaveMenuBuild @ 0x415a10 rows): state from
      * the on-disk slots, grafted onto the SaveLoad screens by the front
