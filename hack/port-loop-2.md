@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.32% implemented**, **44.91% accuracy**, **43.70% progress**
+- Full report: **97.32% implemented**, **44.97% accuracy**, **43.77% progress**
   (2,326 compared entries out of 2,390).
-- Game-only report: **98.87% implemented**, **39.62% accuracy**,
-  **39.17% progress** (2,107/2,131).
+- Game-only report: **98.87% implemented**, **39.69% accuracy**,
+  **39.25% progress** (2,107/2,131).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -107,6 +107,52 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **97.32% / 44.91% / 43.70%** full and **98.87% / 39.62% / 39.17%**
   game-only. `distrobox enter developer -- make reccmp-report` and
   `git diff --check` passed; tests were not run.
+- A follow-up moved `InputStatePoll` (`0x47eef0`) from a two-argument
+  frameloop adapter to a no-argument body in `input.cpp`. It now reads the
+  fullscreen and application-active gates, clears current/previous snapshots
+  when inactive, copies and clears snapshots before polling, and preserves the
+  acquire retry path. The target improved from 10.81% to 31.45%; frame-pump
+  dispatch remains aligned at 100% for `0x478040`, and `main_loop_frame_pump`
+  remains 60.47%. The DirectInput device calls still use the existing callback
+  seam because this runtime has no installed DirectInput device object.
+  Compared with the preceding report, scores also shifted at `0x411360`
+  (21.03% → 21.12%), `0x432e90` (15.00% → 39.02%), `0x4388b0`
+  (14.49% → 18.12%), `0x444680` (6.39% → 6.74%), `0x444fb0`
+  (26.04% → 25.56%), `0x4512d0` (9.48% → 7.58%), `0x47d520`
+  (33.82% → 32.65%), `0x47d800` (28.74% → 29.17%), `0x47e190`
+  (18.33% → 19.12%), and `0x4882e0` (12.50% → 12.48%). Those bodies were
+  not edited in the input polling pass. A repeated build produced identical
+  per-function scores, so the deltas are repeatable; their source-level cause
+  has not been isolated. Latest totals at that checkpoint were
+  **97.32% / 44.93% / 43.72%** full and **98.87% / 39.64% / 39.19%**
+  game-only. Reccmp and `git diff --check` passed; tests were not run.
+- `WindowStateInitialize` (`0x47c170`) now has a direct mapped body that resets
+  the reference's renderer/window globals in the decompiled order. The
+  portable `WindowRuntimeState` sidecar is reset by the separate wrapper. The
+  target rose from 10.53% to 100%. Compared with the preceding report, the
+  other changed rows were `0x432170` (39.02% → 19.51%), `0x4322d0`
+  (18.60% → 37.21%), `0x4388b0` (18.12% → 14.49%), `0x459470`
+  (21.20% → 12.62%), `0x479630` (17.37% → 17.31%), `0x47e190`
+  (19.12% → 19.92%), `0x4882e0` (12.48% → 11.01%), and `0x48c690`
+  (10.57% → 7.11%). Those bodies were not directly edited in this pass.
+  A repeat `make reccmp-report` produced identical scores for all 2,326
+  compared functions. Latest totals are **97.32% / 44.96% / 43.75%** full
+  and **98.87% / 39.67% / 39.23%** game-only. Build and
+  `git diff --check` passed; tests were not run.
+- The Win32 window-procedure ports now have separate retail-shaped
+  `__stdcall` bodies that operate on the reference mouse/application globals;
+  the cdecl runtime adapters mirror those values into `WindowRuntimeState`.
+  The WinAPI bodies call `DefWindowProcA`, `SetCapture`, and `ReleaseCapture`
+  directly. `GameWindowProcedure` (`0x4784c0`) rose 17.25% → 23.71%, and
+  `MainWindowActivationAndCloseHandler` (`0x4786c0`) rose 20.00% → 24.31%.
+  Other changed rows from the prior checkpoint were `0x432ec0` (12.00% →
+  33.96%), `0x444680` (6.74% → 6.39%), `0x444fb0` (25.56% → 26.04%),
+  `0x44fb90` (22.89% → 22.40%), `0x4512d0` (7.58% → 9.48%), `0x4882e0`
+  (11.01% → 14.63%), `0x489c30` (32.40% → 32.30%), and `0x48c690`
+  (7.11% → 10.57%). Their bodies were not edited in this window-procedure
+  pass. The latest report is **97.32% / 44.97% / 43.77%** full and
+  **98.87% / 39.69% / 39.25%** game-only; `make reccmp-report` and
+  `git diff --check` passed. Tests were not run.
 
 ## Port loop
 

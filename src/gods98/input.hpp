@@ -127,6 +127,7 @@ void input_direct_state_bind(InputState* state);
  * DirectInput plus two global polling gates; this helper receives those
  * state inputs explicitly. */
 void input_state_poll(InputState* state, int poll_active);
+void input_state_poll_retail(void); /* FUN_0047eef0 */
 
 void input_reset(InputState* s);
 

@@ -4,6 +4,8 @@
 #include "engine.hpp"
 #include "input.hpp"
 #include "message.hpp"
+#include "crt/crt.hpp"
+#include "frameloop.hpp"
 
 static DirectInputHooks s_direct_input_hooks;
 static InputState s_direct_input_state;
@@ -249,6 +251,58 @@ void input_state_poll(InputState* s, int poll_active)
             s_direct_input_hooks.keyboard_acquire(
                 s_direct_input_hooks.context) == 0)
             s_direct_input_keyboard_acquired = 1;
+    }
+    input_global_current_keys_copy(s);
+}
+
+/* InputStatePoll (FUN_0047eef0): update the live keyboard snapshot using the
+ * engine's fullscreen and application-active gates. DirectInput ownership is
+ * represented by the existing callbacks because this backend has no native
+ * DirectInput device object. */
+// FUNCTION: LEGORR 0x0047eef0
+void input_state_poll_retail(void)
+{
+    int poll_active = 1;
+
+    if ((s_engine_feature_word & 2u) == 0u)
+        poll_active = s_window_application_active != 0u;
+
+    if (!poll_active) {
+        InputState* s = s_active_input_state != NULL
+            ? s_active_input_state : &s_direct_input_state;
+        memset(s->cur, 0, sizeof(s->cur));
+        memset(s->prev, 0, sizeof(s->prev));
+        if (s_direct_input_initialized &&
+            s_direct_input_hooks.keyboard_unacquire != NULL) {
+            s_direct_input_hooks.keyboard_unacquire(
+                s_direct_input_hooks.context);
+        }
+        s_direct_input_keyboard_acquired = 0;
+        input_global_current_keys_copy(s);
+        return;
+    }
+    if (!s_direct_input_initialized) return;
+
+    InputState* s = s_active_input_state != NULL
+        ? s_active_input_state : &s_direct_input_state;
+    int result;
+    if (s_direct_input_keyboard_acquired) {
+        result = -0x7ff8ffe2;
+        if (s_direct_input_hooks.keyboard_state_read != NULL) {
+            memcpy(s->prev, s->cur, sizeof(s->cur));
+            memset(s->cur, 0, sizeof(s->cur));
+            result = s_direct_input_hooks.keyboard_state_read(
+                s_direct_input_hooks.context, INPUT_KEY_COUNT, s->cur);
+        }
+    }
+    else result = -0x7ff8ffe2;
+    if (result != 0) {
+        s_direct_input_keyboard_acquired = 0;
+        if (s_direct_input_hooks.keyboard_acquire != NULL &&
+            s_direct_input_hooks.keyboard_acquire(
+                s_direct_input_hooks.context) == 0) {
+            s_direct_input_keyboard_acquired = 1;
+        }
     }
     input_global_current_keys_copy(s);
 }

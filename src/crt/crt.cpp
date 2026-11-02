@@ -3892,10 +3892,38 @@ static uint32_t s_renderer_word_a;      /* DAT_0076ab24 */
 static uint32_t s_renderer_word_b;      /* DAT_0076ab28 */
 // GLOBAL: LEGORR 0x0076ab3c
 uint32_t g_renderer_word_c;             /* DAT_0076ab3c */
+// GLOBAL: LEGORR 0x0076ab40
+uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
+// GLOBAL: LEGORR 0x0076ab4c
+uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */
+// GLOBAL: LEGORR 0x0076ab50
+uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
+// GLOBAL: LEGORR 0x0076ab54
+uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
+// GLOBAL: LEGORR 0x0076ab58
+uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */
 // GLOBAL: LEGORR 0x0076ac84
 uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
+// GLOBAL: LEGORR 0x0076ac88
+void* s_renderer_primary_surface; /* DAT_0076ac88 */
 // GLOBAL: LEGORR 0x0076ac8c
 uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
+// GLOBAL: LEGORR 0x0076ac90
+uint32_t s_renderer_window_state_90; /* DAT_0076ac90 */
+// GLOBAL: LEGORR 0x0076ac94
+uint32_t s_renderer_window_state_94; /* DAT_0076ac94 */
+// GLOBAL: LEGORR 0x0076ac9c
+uint32_t s_renderer_window_state_9c; /* DAT_0076ac9c */
+// GLOBAL: LEGORR 0x0076aca4
+uint32_t s_renderer_window_state_a4; /* DAT_0076aca4 */
+// GLOBAL: LEGORR 0x0076acac
+uint32_t s_renderer_window_state_ac; /* DAT_0076acac */
+// GLOBAL: LEGORR 0x0076acb0
+uint32_t s_renderer_window_state_b0; /* DAT_0076acb0 */
+// GLOBAL: LEGORR 0x0076acb4
+uint32_t s_renderer_window_state_b4; /* DAT_0076acb4 */
+// GLOBAL: LEGORR 0x0076acb8
+uint32_t s_renderer_window_state_b8; /* DAT_0076acb8 */
 // GLOBAL: LEGORR 0x0050608c
 uint32_t s_render_feature_flags; /* DAT_0050608c */
 

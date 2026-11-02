@@ -981,10 +981,24 @@ uint32_t renderer_word_b_get(void);
 uint32_t renderer_word_c_get(void);
 void     renderer_word_c_set(uint32_t value);
 extern uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
+extern uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
+extern uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */
+extern uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
+extern uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
+extern uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */
 void     renderer_words_set(uint32_t a, uint32_t b, uint32_t c); /* install */
 
 /* GlobalDwordGet (FUN_004065d0): the DAT_0076ac84 global dword. */
 extern uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
+extern void* s_renderer_primary_surface; /* DAT_0076ac88 */
+extern uint32_t s_renderer_window_state_90; /* DAT_0076ac90 */
+extern uint32_t s_renderer_window_state_94; /* DAT_0076ac94 */
+extern uint32_t s_renderer_window_state_9c; /* DAT_0076ac9c */
+extern uint32_t s_renderer_window_state_a4; /* DAT_0076aca4 */
+extern uint32_t s_renderer_window_state_ac; /* DAT_0076acac */
+extern uint32_t s_renderer_window_state_b0; /* DAT_0076acb0 */
+extern uint32_t s_renderer_window_state_b4; /* DAT_0076acb4 */
+extern uint32_t s_renderer_window_state_b8; /* DAT_0076acb8 */
 uint32_t renderer_global_dword_get(void);
 void     renderer_global_dword_set(uint32_t value); /* install */
 

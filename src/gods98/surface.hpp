@@ -38,6 +38,7 @@ typedef struct DisplaySurface {
     void*  palette; /* optional DirectDraw palette owned by WinAPI surface */
     uint32_t format_flags; /* bit 0: validated 1/5/5/1 channel widths */
 } DisplaySurface;
+extern void* s_renderer_window_handle; /* DAT_0076ac80 */
 
 typedef struct SurfacePaletteEntry {
     uint8_t red;

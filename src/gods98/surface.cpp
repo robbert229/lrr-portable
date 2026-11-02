@@ -1335,7 +1335,7 @@ static int s_renderer_window_width;
 static int s_renderer_window_height;
 static uint32_t s_renderer_window_mode_flags;
 // GLOBAL: LEGORR 0x0076ac80
-static void* s_renderer_window_handle;
+void* s_renderer_window_handle;
 static DirectDrawEnumerationHook s_directdraw_enumeration_hook;
 static void* s_directdraw_enumeration_context;
 static Direct3DRenderPreferenceApplyHook s_render_preference_apply_hook;
@@ -4401,8 +4401,6 @@ typedef struct WinapiRendererState {
 } WinapiRendererState;
 
 static WinapiRendererState s_winapi_renderer_state;
-// GLOBAL: LEGORR 0x0076ac88
-static void* s_renderer_primary_surface;
 // GLOBAL: LEGORR 0x0076acbc
 static uint32_t s_renderer_fullscreen;
 // GLOBAL: LEGORR 0x0076acc0

@@ -77,7 +77,11 @@ static void menu_sound_tick_clock_advance(MenuSoundTickClock* clock)
 
 static MainLoopFramePumpHooks s_main_loop_frame_pump_hooks;
 static WindowRuntimeOps s_window_runtime_ops;
-static WindowRuntimeState s_window_runtime_state;
+WindowRuntimeState s_window_runtime_state;
+// GLOBAL: LEGORR 0x00505808
+uint32_t s_window_application_active;
+// GLOBAL: LEGORR 0x0050580c
+uint32_t s_window_close_requested;
 // GLOBAL: LEGORR 0x00505f80
 static int32_t s_window_runtime_style;
 static WindowDefaultProc s_window_default_proc;
@@ -993,16 +997,6 @@ static void window_message_dispatch_pump(void)
     }
 }
 
-/* InputStatePoll (FUN_0047eef0): use the live keyboard snapshot and the
- * application-active gate owned by the window procedure. */
-// FUNCTION: LEGORR 0x0047eef0
-static void window_input_state_poll(void)
-{
-    int poll_active = (s_engine_feature_word & 2u) != 0u ||
-                      s_window_runtime_state.app_active != 0u;
-    input_state_poll(input_direct_state_get(), poll_active);
-}
-
 /* MainLoopFramePump (FUN_00477f30): drain Win32 messages, poll the active
  * input state, update the cursor, begin/present one renderer frame, submit
  * the optional projection overlay, then clear the once-per-frame feature bit. */
@@ -1011,7 +1005,7 @@ void main_loop_frame_pump(int draw_projection_overlay)
 {
     MainLoopFramePumpHooks* const hooks = &s_main_loop_frame_pump_hooks;
     window_message_dispatch_pump();
-    window_input_state_poll();
+    input_state_poll_retail();
     input_cursor_position_update();
     renderer_begin_frame_once_retail();
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -1082,11 +1076,35 @@ const WindowRuntimeState* window_runtime_state_get(void)
 }
 
 // FUNCTION: LEGORR 0x0047c170
+void window_state_initialize_retail(void* window)
+{
+    s_renderer_window_state_b0 = 0u;
+    s_renderer_window_state_9c = 0u;
+    s_renderer_window_state_b4 = 0u;
+    s_renderer_window_state_a4 = 0u;
+    s_renderer_window_state_b8 = 0u;
+    s_renderer_window_state_ac = 0u;
+    s_renderer_window_handle = window;
+    s_renderer_global_dword = 0u;
+    s_renderer_window_state_90 = 0u;
+    s_render_surface_secondary = 0u;
+    s_renderer_primary_surface = NULL;
+    s_renderer_window_state_94 = 0u;
+}
+
 void window_runtime_state_initialize(void* window)
 {
     memset(&s_window_runtime_state, 0, sizeof(s_window_runtime_state));
-    renderer_word_c_set(0u);
+    s_window_application_active = 0u;
+    s_window_close_requested = 0u;
+    g_renderer_word_c = 0u;
+    s_window_mouse_word_40 = 0u;
+    s_window_mouse_word_4c = 0u;
+    s_window_mouse_word_50 = 0u;
+    s_window_mouse_word_54 = 0u;
+    s_window_mouse_word_58 = 0u;
     s_window_runtime_state.window = window;
+    window_state_initialize_retail(window);
 }
 
 // FUNCTION: LEGORR 0x00477f80
@@ -1166,178 +1184,296 @@ static void window_runtime_release_capture(void)
     s_window_runtime_state.mouse_capture = 0;
 }
 
+/* GameWindowProcedure (FUN_004784c0): fullscreen message filtering and
+ * mouse-event globals follow the decompiled WNDPROC path. */
 // FUNCTION: LEGORR 0x004784c0
+static ptrdiff_t LEGORRR_WINDOW_PROC_CALL window_game_window_procedure_retail(
+    void* window, uint32_t message, size_t wparam, ptrdiff_t lparam)
+{
+    if (message <= 0x10u) {
+        if (message != 0x10u) {
+            switch (message) {
+            default:
+                goto default_proc;
+            case 2u:
+                break;
+            case 3u:
+            case 5u:
+            case 6u:
+                return 0;
+            }
+        }
+    }
+    else {
+        if (message > 0x1cu) {
+            if (message < 0x87u) {
+                if (message == 0x86u) return 0;
+                if (message == 0x46u) {
+                    uint32_t* flags = (uint32_t*)((char*)lparam + 24);
+                    *flags &= ~0x200u;
+                    return 0;
+                }
+            }
+            else if (message < 0x105u) {
+                if (message == 0x104u) return 0;
+                if (message > 0xffu && message < 0x102u) return 0;
+            }
+            else {
+                switch (message) {
+                case 0x200u:
+                case 0x211u:
+                case 0x212u:
+                    return 0;
+                case 0x201u:
+                case 0x202u:
+                case 0x204u:
+                case 0x205u:
+                    if ((s_engine_feature_word & 0x4000u) == 0u) {
+                        switch (message) {
+                        case 0x201u:
+                        case 0x204u:
+                            if (g_renderer_word_c == 0u) {
+                                s_window_mouse_word_4c = 1u;
+                                s_window_mouse_word_50 = 1u;
+                            }
+                            s_window_mouse_word_40 = 1u;
+                            g_renderer_word_c = 1u;
+                            s_window_mouse_word_54 = 1u;
+                            return 0;
+                        case 0x202u:
+                        case 0x205u:
+                            s_window_mouse_word_4c = 0u;
+                            s_window_mouse_word_50 = 0u;
+                            s_window_mouse_word_40 = 0u;
+                            g_renderer_word_c = 0u;
+                            s_window_mouse_word_54 = 1u;
+                            return 0;
+                        }
+                    }
+                    else {
+                        switch (message) {
+                        case 0x201u:
+                            s_window_mouse_word_4c = 1u;
+                            g_renderer_word_c = 1u;
+                            s_window_mouse_word_54 = 1u;
+                            return 0;
+                        case 0x202u:
+                            s_window_mouse_word_4c = 0u;
+                            g_renderer_word_c = 0u;
+                            return 0;
+                        case 0x204u:
+                            s_window_mouse_word_50 = 1u;
+                            s_window_mouse_word_40 = 1u;
+                            return 0;
+                        case 0x205u:
+                            s_window_mouse_word_50 = 0u;
+                            s_window_mouse_word_40 = 0u;
+                            return 0;
+                        }
+                    }
+                    break;
+                case 0x203u:
+                    s_window_mouse_word_54 = 1u;
+                    return 0;
+                case 0x206u:
+                    s_window_mouse_word_58 = 1u;
+                    return 0;
+                }
+            }
+            goto default_proc;
+        }
+        if (message == 0x1cu) {
+            s_window_application_active = (uint32_t)wparam;
+            return 0;
+        }
+        if (message != 0x12u) goto default_proc;
+    }
+    s_window_close_requested = 1u;
+default_proc:
+#if defined(LEGORRR_BACKEND_WINAPI)
+    return (ptrdiff_t)DefWindowProcA((HWND)window, (UINT)message,
+                                     (WPARAM)wparam, (LPARAM)lparam);
+#else
+    return window_runtime_default(window, message, wparam, lparam);
+#endif
+}
+
+/* MainWindowActivationAndCloseHandler (FUN_004786c0): windowed message
+ * handling adds capture on the primary-button press and release. */
+// FUNCTION: LEGORR 0x004786c0
+static ptrdiff_t LEGORRR_WINDOW_PROC_CALL window_activation_close_retail(
+    void* window, uint32_t message, size_t wparam, ptrdiff_t lparam)
+{
+    uint32_t button;
+    uint32_t key;
+
+    if (message < 7u) {
+        key = message;
+        if (message == 6u) return 0;
+    }
+    else {
+        if (message > 0x1cu) {
+            button = message - 0x201u;
+            switch (button) {
+            case 0u:
+            case 1u:
+            case 3u:
+            case 4u:
+                if ((s_engine_feature_word & 0x4000u) == 0u) {
+                    switch (button) {
+                    case 0u:
+                    case 3u:
+#if defined(LEGORRR_BACKEND_WINAPI)
+                        SetCapture((HWND)window);
+#else
+                        window_runtime_capture(window);
+#endif
+                        if (g_renderer_word_c == 0u) {
+                            s_window_mouse_word_4c = 1u;
+                            s_window_mouse_word_50 = 1u;
+                        }
+                        s_window_mouse_word_40 = 1u;
+                        g_renderer_word_c = 1u;
+                        s_window_mouse_word_54 = 1u;
+                        return 0;
+                    case 1u:
+                    case 4u:
+#if defined(LEGORRR_BACKEND_WINAPI)
+                        ReleaseCapture();
+#else
+                        window_runtime_release_capture();
+#endif
+                        s_window_mouse_word_4c = 0u;
+                        s_window_mouse_word_50 = 0u;
+                        s_window_mouse_word_40 = 0u;
+                        g_renderer_word_c = 0u;
+                        break;
+                    }
+                }
+                else {
+                    switch (button) {
+                    case 0u:
+#if defined(LEGORRR_BACKEND_WINAPI)
+                        SetCapture((HWND)window);
+#else
+                        window_runtime_capture(window);
+#endif
+                        s_window_mouse_word_4c = 1u;
+                        g_renderer_word_c = 1u;
+                        s_window_mouse_word_54 = 1u;
+                        return 0;
+                    case 1u:
+#if defined(LEGORRR_BACKEND_WINAPI)
+                        ReleaseCapture();
+#else
+                        window_runtime_release_capture();
+#endif
+                        s_window_mouse_word_54 = 1u;
+                        s_window_mouse_word_4c = 0u;
+                        g_renderer_word_c = 0u;
+                        return 0;
+                    case 3u:
+                        s_window_mouse_word_50 = 1u;
+                        s_window_mouse_word_40 = 1u;
+                        s_window_mouse_word_54 = 1u;
+                        return 0;
+                    case 4u:
+                        s_window_mouse_word_54 = 1u;
+                        s_window_mouse_word_50 = 0u;
+                        s_window_mouse_word_40 = 0u;
+                        return 0;
+                    }
+                }
+                /* Retail falls through to the shared click-state cases. */
+            case 2u:
+                s_window_mouse_word_54 = 1u;
+                return 0;
+            case 5u:
+                s_window_mouse_word_58 = 1u;
+                return 0;
+            }
+            goto default_proc;
+        }
+        if (message == 0x1cu) {
+            s_window_application_active = (uint32_t)wparam;
+            return 0;
+        }
+        key = message - 0x10u;
+        if (key == 0u) {
+            s_window_close_requested = 1u;
+            return 0;
+        }
+    }
+    if (key == 2u) {
+        s_window_close_requested = 1u;
+        return 0;
+    }
+default_proc:
+#if defined(LEGORRR_BACKEND_WINAPI)
+    return (ptrdiff_t)DefWindowProcA((HWND)window, (UINT)message,
+                                     (WPARAM)wparam, (LPARAM)lparam);
+#else
+    return window_runtime_default(window, message, wparam, lparam);
+#endif
+}
+
+static void window_runtime_state_sync_from_globals(uint32_t message,
+                                                   int capture_enabled)
+{
+    WindowRuntimeState* state = &s_window_runtime_state;
+    int dual_mouse = (s_engine_feature_word & 0x4000u) != 0u;
+    state->close_requested = s_window_close_requested;
+    state->app_active = s_window_application_active;
+    state->mouse_word_3c = g_renderer_word_c;
+    state->mouse_word_40 = s_window_mouse_word_40;
+    state->mouse_word_4c = s_window_mouse_word_4c;
+    state->mouse_word_50 = s_window_mouse_word_50;
+    state->mouse_word_54 = s_window_mouse_word_54;
+    state->mouse_word_58 = s_window_mouse_word_58;
+    if (message >= 0x201u && message <= 0x202u) {
+        int down = message == 0x201u;
+        state->left_button_down = down;
+        if (!dual_mouse) state->right_button_down = down;
+        state->mouse_activity = 1u;
+        if (capture_enabled) state->mouse_capture = down != 0;
+    }
+    else if (message >= 0x204u && message <= 0x205u) {
+        int down = message == 0x204u;
+        if (dual_mouse) state->right_button_down = down;
+        else {
+            state->left_button_down = down;
+            state->right_button_down = down;
+        }
+        state->mouse_activity = 1u;
+        if (capture_enabled) state->mouse_capture = down != 0;
+    }
+    else if (message == 0x203u) {
+        state->left_double_click = 1u;
+        state->mouse_activity = 1u;
+    }
+    else if (message == 0x206u) {
+        state->right_double_click = 1u;
+        state->mouse_activity = 1u;
+    }
+}
+
 ptrdiff_t window_runtime_game_window_proc(void* window, uint32_t message,
                                           size_t wparam, ptrdiff_t lparam)
 {
-    WindowRuntimeState* state = &s_window_runtime_state;
-    if (message == 2u || message == 0x10u) {
-        state->close_requested = 1;
-    }
-    if (message == 0x1cu) {
-        state->app_active = (uint32_t)wparam;
-        return 0;
-    }
-    if (message == 0x46u) {
-        if (lparam != 0) {
-            uint32_t* flags = (uint32_t*)((char*)lparam + 24);
-            *flags &= ~0x200u;
-        }
-        return 0;
-    }
-    if (message == 3u || message == 5u || message == 6u ||
-        message == 0x86u || message == 0x100u || message == 0x101u ||
-        message == 0x104u || message == 0x200u || message == 0x211u ||
-        message == 0x212u) {
-        return 0;
-    }
-    if (message == 0x201u || message == 0x202u || message == 0x204u ||
-        message == 0x205u) {
-        int down = message == 0x201u || message == 0x204u;
-        int right = message == 0x204u || message == 0x205u;
-        if ((state->flags & 0x4000u) == 0u) {
-            if (down) {
-                if (state->mouse_word_3c == 0u) {
-                    state->mouse_word_4c = 1u;
-                    state->mouse_word_50 = 1u;
-                }
-                state->mouse_word_40 = 1u;
-                state->mouse_word_3c = 1u;
-                state->mouse_word_54 = 1u;
-                state->left_button_down = 1u;
-                state->right_button_down = 1u;
-                state->mouse_activity = 1u;
-                return 0;
-            }
-            state->mouse_word_4c = 0u;
-            state->mouse_word_50 = 0u;
-            state->mouse_word_40 = 0u;
-            state->mouse_word_3c = 0u;
-            state->mouse_word_54 = 1u;
-            state->left_button_down = 0;
-            state->right_button_down = 0;
-            state->mouse_activity = 1u;
-            return 0;
-        }
-        else {
-            if (right) {
-                state->mouse_word_50 = down != 0 ? 1u : 0u;
-                state->mouse_word_40 = down != 0 ? 1u : 0u;
-                state->right_button_down = down != 0 ? 1u : 0u;
-            }
-            else {
-                state->mouse_word_4c = down != 0 ? 1u : 0u;
-                state->mouse_word_3c = down != 0 ? 1u : 0u;
-                state->left_button_down = down != 0 ? 1u : 0u;
-            }
-            return 0;
-        }
-    }
-    if (message == 0x203u) {
-        state->left_double_click = 1;
-        state->mouse_activity = 1u;
-        state->mouse_word_54 = 1u;
-        return 0;
-    }
-    if (message == 0x206u) {
-        state->right_double_click = 1;
-        state->mouse_activity = 1u;
-        state->mouse_word_58 = 1u;
-        return 0;
-    }
-    return window_runtime_default(window, message, wparam, lparam);
+    ptrdiff_t result = window_game_window_procedure_retail(
+        window, message, wparam, lparam);
+    window_runtime_state_sync_from_globals(message, 0);
+    return result;
 }
 
-// FUNCTION: LEGORR 0x004786c0
 ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
                                                size_t wparam,
                                                ptrdiff_t lparam)
 {
-    WindowRuntimeState* state = &s_window_runtime_state;
-    int button;
-    if (message == 6u) return 0;
-    if (message == 0x1cu) {
-        state->app_active = (uint32_t)wparam;
-        return 0;
-    }
-    if (message == 0x10u || message == 2u) {
-        state->close_requested = 1;
-        return 0;
-    }
-    if (message == 0x203u) {
-        state->mouse_activity = 1;
-        state->left_double_click = 1;
-        state->mouse_word_54 = 1u;
-        return 0;
-    }
-    if (message == 0x206u) {
-        state->mouse_activity = 1;
-        state->right_double_click = 1;
-        state->mouse_word_58 = 1u;
-        return 0;
-    }
-    if (message >= 0x201u && message <= 0x205u) {
-        button = (int)(message - 0x201u);
-        if (button == 0 || button == 1 || button == 3 || button == 4) {
-            int down = button == 0 || button == 3;
-            int right = button == 3 || button == 4;
-            if ((state->flags & 0x4000u) == 0u) {
-                if (down) {
-                    window_runtime_capture(window);
-                    if (state->mouse_word_3c == 0u) {
-                        state->mouse_word_4c = 1u;
-                        state->mouse_word_50 = 1u;
-                    }
-                    state->mouse_word_40 = 1u;
-                    state->mouse_word_3c = 1u;
-                    state->mouse_word_54 = 1u;
-                    state->left_button_down = 1;
-                    state->right_button_down = 1;
-                    state->mouse_activity = 1;
-                    return 0;
-                }
-                window_runtime_release_capture();
-                state->mouse_word_4c = 0u;
-                state->mouse_word_50 = 0u;
-                state->mouse_word_40 = 0u;
-                state->mouse_word_3c = 0u;
-                state->mouse_word_54 = 1u;
-                state->left_button_down = 0;
-                state->right_button_down = 0;
-                state->mouse_activity = 1u;
-                return 0;
-            }
-            else {
-                if (button == 0) {
-                    window_runtime_capture(window);
-                    state->mouse_word_4c = 1u;
-                    state->mouse_word_3c = 1u;
-                    state->mouse_word_54 = 1u;
-                    state->left_button_down = 1;
-                    state->mouse_activity = 1;
-                    return 0;
-                }
-                if (button == 1) {
-                    window_runtime_release_capture();
-                    state->mouse_word_54 = 1u;
-                    state->mouse_word_4c = 0u;
-                    state->mouse_word_3c = 0u;
-                    state->mouse_activity = 1;
-                    state->left_button_down = 0;
-                    return 0;
-                }
-                if (right) {
-                    state->mouse_word_50 = down != 0 ? 1u : 0u;
-                    state->mouse_word_40 = down != 0 ? 1u : 0u;
-                    state->right_button_down = down != 0 ? 1u : 0u;
-                }
-                state->mouse_word_54 = 1u;
-                state->mouse_activity = 1;
-                return 0;
-            }
-        }
-    }
-    return window_runtime_default(window, message, wparam, lparam);
+    ptrdiff_t result = window_activation_close_retail(
+        window, message, wparam, lparam);
+    window_runtime_state_sync_from_globals(message, 1);
+    return result;
 }
 
 /* WindowTitleSet (FUN_004783d0): forwards the title to the active platform
