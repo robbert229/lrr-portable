@@ -1053,12 +1053,14 @@ void window_runtime_display_caps_query(void)
 // FUNCTION: LEGORR 0x00477fd0
 int window_runtime_callback_triplet_set(const size_t* triplet)
 {
-    if (triplet == NULL) return 0;
-    s_window_runtime_state.callback_triplet[0] = triplet[0];
-    s_window_runtime_state.callback_triplet[1] = triplet[1];
-    s_window_runtime_state.callback_triplet[2] = triplet[2];
-    s_window_runtime_state.callback_triplet_valid = 1;
-    return 1;
+    if (triplet != NULL) {
+        s_window_runtime_state.callback_triplet[0] = triplet[0];
+        s_window_runtime_state.callback_triplet[1] = triplet[1];
+        s_window_runtime_state.callback_triplet[2] = triplet[2];
+        s_window_runtime_state.callback_triplet_valid = 1;
+        return 1;
+    }
+    return 0;
 }
 
 int window_runtime_callback_triplet_get(size_t triplet[3])
@@ -1074,12 +1076,10 @@ int window_runtime_callback_triplet_get(size_t triplet[3])
 // FUNCTION: LEGORR 0x00478010
 int window_runtime_message_dispatch_filter(const void* message)
 {
-    uint32_t message_id;
-    if (message == NULL) return 1;
-    memcpy(&message_id, (const char*)message + 4, sizeof(message_id));
+    const uint32_t* message_words = (const uint32_t*)message;
     if ((s_window_runtime_state.flags & 2u) != 0u &&
-        (message_id == 0x1cu || message_id == 0x104u ||
-         message_id == 0x105u)) {
+        (message_words[1] == 0x1cu || message_words[1] == 0x104u ||
+         message_words[1] == 0x105u)) {
         return 0;
     }
     return 1;
