@@ -549,6 +549,27 @@ uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell)
 /* ObjectPoolListHeadGet (FUN_00456c30, finding 374): the corpus's exact
  * in-range bounds (-1 < index < 0x37) over the +0x114 slot table. */
 // FUNCTION: LEGORR 0x00456c30
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int object_pool_list_head_get(const void* pools, int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        test eax, eax
+        jl short object_pool_list_head_get_zero
+        cmp eax, 37h
+        jge short object_pool_list_head_get_zero
+        mov ecx, dword ptr [esp + 4]
+        mov edx, dword ptr [ecx + eax*4 + 114h]
+        test edx, edx
+        je short object_pool_list_head_get_zero
+        mov eax, edx
+        ret
+    object_pool_list_head_get_zero:
+        xor eax, eax
+        ret
+    }
+}
+#else
 int object_pool_list_head_get(const void* pools, int index)
 {
     if (-1 < index && index < 0x37) {
@@ -560,6 +581,7 @@ int object_pool_list_head_get(const void* pools, int index)
     }
     return 0;
 }
+#endif
 
 /* ModelChildRenderEligibilityCheck (FUN_00483a70): the two-bit render
  * gate (finding 431). NULL answers "not eligible" — the corpus would
@@ -617,6 +639,16 @@ uint32_t object_record_field11c_get(const void* record)
 }
 
 // FUNCTION: LEGORR 0x0047a540
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t object_field_be4_dword_get(const void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 0be4h]
+        ret
+    }
+}
+#else
 uint32_t object_field_be4_dword_get(const void* record)
 {
     uint32_t value;
@@ -626,8 +658,19 @@ uint32_t object_field_be4_dword_get(const void* record)
     __builtin_memcpy(&value, (const char*)record + 0xbe4, sizeof(value));
     return value;
 }
+#endif
 
 // FUNCTION: LEGORR 0x0046cf80
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t entity_type_mask_get(const void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 12ch]
+        ret
+    }
+}
+#else
 uint32_t entity_type_mask_get(const void* record)
 {
     if (record == NULL) {
@@ -635,8 +678,19 @@ uint32_t entity_type_mask_get(const void* record)
     }
     return *(const uint32_t*)((const char*)record + 300);
 }
+#endif
 
 // FUNCTION: LEGORR 0x00482210
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t pointer_value_get(const void* pointed)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax]
+        ret
+    }
+}
+#else
 uint32_t pointer_value_get(const void* pointed)
 {
     if (pointed == NULL) {
@@ -644,6 +698,7 @@ uint32_t pointer_value_get(const void* pointed)
     }
     return *(const uint32_t*)pointed;
 }
+#endif
 
 // FUNCTION: LEGORR 0x00408850
 uint32_t scene_object_flags_get(const void* scene_object)
@@ -748,27 +803,108 @@ static void renderer_object_update_from_record(void* record,
 }
 
 // FUNCTION: LEGORR 0x00406c00
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void renderer_object_update_from_record_field64(
+    void* record, int enabled)
+{
+    __asm {
+        mov edx, dword ptr [esp + 8]
+        xor eax, eax
+        test edx, edx
+        sete al
+        push 0
+        push eax
+        mov eax, dword ptr [esp + 0ch]
+        mov ecx, dword ptr [eax + 4]
+        mov edx, dword ptr [eax + 64h]
+        push ecx
+        push edx
+        call resource_list_update_matching_key
+        add esp, 10h
+        ret
+    }
+}
+#else
 void renderer_object_update_from_record_field64(void* record, int enabled)
 {
     renderer_object_update_from_record(record, 0x64u, enabled,
                                        (void*)(uintptr_t)(enabled == 0));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00406c30
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void renderer_object_update_from_record_field68(
+    void* record, int enabled)
+{
+    __asm {
+        mov edx, dword ptr [esp + 8]
+        xor eax, eax
+        test edx, edx
+        sete al
+        push 0
+        push eax
+        mov eax, dword ptr [esp + 0ch]
+        mov ecx, dword ptr [eax + 4]
+        mov edx, dword ptr [eax + 68h]
+        push ecx
+        push edx
+        call resource_list_update_matching_key
+        add esp, 10h
+        ret
+    }
+}
+#else
 void renderer_object_update_from_record_field68(void* record, int enabled)
 {
     renderer_object_update_from_record(record, 0x68u, enabled,
                                        (void*)(uintptr_t)(enabled == 0));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00406c60
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void renderer_object_update_from_record_field6c(
+    void* record, int enabled, void* update_value)
+{
+    __asm {
+        mov eax, dword ptr [esp + 0ch]
+        xor ecx, ecx
+        push eax
+        mov eax, dword ptr [esp + 0ch]
+        test eax, eax
+        mov eax, dword ptr [esp + 8]
+        sete cl
+        mov edx, dword ptr [eax + 4]
+        mov eax, dword ptr [eax + 6ch]
+        push ecx
+        push edx
+        push eax
+        call resource_list_update_matching_key
+        add esp, 10h
+        ret
+    }
+}
+#else
 void renderer_object_update_from_record_field6c(void* record, int enabled,
                                                 void* update_value)
 {
     renderer_object_update_from_record(record, 0x6cu, enabled, update_value);
 }
+#endif
 
 // FUNCTION: LEGORR 0x004877d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t resource_entry_id_get(const void* entry)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        xor eax, eax
+        mov ax, word ptr [ecx + 2]
+        ret
+    }
+}
+#else
 uint32_t resource_entry_id_get(const void* entry)
 {
     if (entry != NULL) {
@@ -778,6 +914,7 @@ uint32_t resource_entry_id_get(const void* entry)
     }
     return 0u;
 }
+#endif
 
 // FUNCTION: LEGORR 0x004850c0
 uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
@@ -792,6 +929,24 @@ uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
 }
 
 // FUNCTION: LEGORR 0x00482780
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t indexed_record_flag6c_bit0_get(
+    const void* record, int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, eax
+        shl ecx, 3
+        sub ecx, eax
+        mov eax, dword ptr [edx + 8]
+        shl ecx, 4
+        mov eax, dword ptr [ecx + eax + 6ch]
+        and eax, 1
+        ret
+    }
+}
+#else
 uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
 {
     const char* base = (const char*)rec_ptr(record, 0x08);
@@ -801,8 +956,36 @@ uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
     const size_t off = (size_t)index * 0x70u + 0x6cu;
     return rec_dword(base + off, 0) & 1u;
 }
+#endif
 
 // FUNCTION: LEGORR 0x004827a0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void indexed_record_flag6c_bit0_set(
+    void* record, int index, int set)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 8]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 4]
+        shl eax, 4
+        mov edx, dword ptr [ecx + 8]
+        mov ecx, dword ptr [esp + 0ch]
+        add eax, edx
+        test ecx, ecx
+        mov ecx, dword ptr [eax + 6ch]
+        je short indexed_record_flag6c_bit0_clear
+        or ecx, 1
+        mov dword ptr [eax + 6ch], ecx
+        ret
+    indexed_record_flag6c_bit0_clear:
+        and ecx, 0fffffffeh
+        mov dword ptr [eax + 6ch], ecx
+        ret
+    }
+}
+#else
 void indexed_record_flag6c_bit0_set(void* record, int index, int set)
 {
     char* base = (char*)rec_ptr(record, 0x08);
@@ -814,8 +997,28 @@ void indexed_record_flag6c_bit0_set(void* record, int index, int set)
     flags = set != 0 ? flags | 1u : flags & ~1u;
     rec_dword_put(base, off, flags);
 }
+#endif
 
 // FUNCTION: LEGORR 0x004827d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void record_flag2c_bit0_set(void* record, int set)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        test eax, eax
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [eax + 2ch]
+        je short record_flag2c_bit0_clear
+        or ecx, 1
+        mov dword ptr [eax + 2ch], ecx
+        ret
+    record_flag2c_bit0_clear:
+        and ecx, 0fffffffeh
+        mov dword ptr [eax + 2ch], ecx
+        ret
+    }
+}
+#else
 void record_flag2c_bit0_set(void* record, int set)
 {
     if (record == NULL) {
@@ -828,6 +1031,7 @@ void record_flag2c_bit0_set(void* record, int set)
         rec_dword_put(record, 0x2c, rec_dword(record, 0x2c) & ~1u);
     }
 }
+#endif
 
 /* IndexedRecordDataAddressGet (FUN_00483400) is the retail unchecked
  * address calculation. Keep null handling in the portable accessor below. */
@@ -889,6 +1093,17 @@ int count_matching_coordinates_in_list(const void* manager,
 /* AviPlayerReadyGet (FUN_0047ed80, findings 185/414): the readiness
  * byte at +0x99 (byte-safe — the corpus reads it as a raw byte). */
 // FUNCTION: LEGORR 0x0047ed80
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t avi_player_ready_get(const void* movie)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        xor eax, eax
+        mov al, byte ptr [ecx + 99h]
+        ret
+    }
+}
+#else
 uint32_t avi_player_ready_get(const void* movie)
 {
     if (movie != NULL) {
@@ -898,10 +1113,21 @@ uint32_t avi_player_ready_get(const void* movie)
     }
     return 0u;
 }
+#endif
 
 /* GameFileSystemTypeGet (FUN_0047fe20, findings 234/404): the handle's
  * leading type dword. */
 // FUNCTION: LEGORR 0x0047fe20
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t game_file_system_type_get(const void* handle)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax]
+        ret
+    }
+}
+#else
 uint32_t game_file_system_type_get(const void* handle)
 {
     if (handle == NULL) {
@@ -909,6 +1135,7 @@ uint32_t game_file_system_type_get(const void* handle)
     }
     return *(const uint32_t*)handle;
 }
+#endif
 
 /* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
  * inline-block copy into the indexed record's data slot. Deviation: the
@@ -1095,6 +1322,18 @@ void indexed_flag_value_set_one(void* record, uint32_t index)
 }
 
 // FUNCTION: LEGORR 0x0044f220
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void scene_object_resource_handle_set(void* object,
+                                                        uint32_t handle)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [esp + 8]
+        mov dword ptr [ecx + 2ch], eax
+        ret
+    }
+}
+#else
 void scene_object_resource_handle_set(void* object, uint32_t handle)
 {
     if (object == NULL) {
@@ -1102,6 +1341,7 @@ void scene_object_resource_handle_set(void* object, uint32_t handle)
     }
     __builtin_memcpy((char*)object + 0x2cu, &handle, sizeof(handle));
 }
+#endif
 
 /* --- entity record-field leaves (see record.hpp) --------------------------- */
 // FUNCTION: LEGORR 0x00435ef4
@@ -1215,12 +1455,9 @@ void entity_b8_bit3_set_or_clear(void* record, int set)
 __declspec(naked) void record_field18_set(void* record, uint32_t value)
 {
     __asm {
-        mov eax, dword ptr [esp + 4]
-        test eax, eax
-        je record_field18_done
         fld dword ptr [esp + 8]
+        mov eax, dword ptr [esp + 4]
         fstp dword ptr [eax + 18h]
-    record_field18_done:
         ret
     }
 }
@@ -1235,6 +1472,17 @@ void record_field18_set(void* record, uint32_t value)
 #endif
 
 // FUNCTION: LEGORR 0x00462ac0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void record_flags_24_or(void* record, uint32_t flags)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 8]
+        or dword ptr [eax + 24h], ecx
+        ret
+    }
+}
+#else
 void record_flags_24_or(void* record, uint32_t flags)
 {
     if (record == NULL) {
@@ -1242,8 +1490,20 @@ void record_flags_24_or(void* record, uint32_t flags)
     }
     *(uint32_t*)((char*)record + 0x24) |= flags;
 }
+#endif
 
 // FUNCTION: LEGORR 0x0045d8a0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void object_field14_set(void* record, uint32_t value)
+{
+    __asm {
+        fld dword ptr [esp + 8]
+        mov eax, dword ptr [esp + 4]
+        fstp dword ptr [eax + 14h]
+        ret
+    }
+}
+#else
 void object_field14_set(void* record, uint32_t value)
 {
     if (record == NULL) {
@@ -1251,6 +1511,7 @@ void object_field14_set(void* record, uint32_t value)
     }
     __builtin_memcpy((char*)record + 0x14, &value, sizeof(value));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00451c30
 void linked_record_field4_clear(void* record)
@@ -1298,6 +1559,18 @@ void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
 #endif
 
 // FUNCTION: LEGORR 0x00473da0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void scene_object_owner_set(void* scene_object,
+                                              uint32_t owner)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [esp + 8]
+        mov dword ptr [ecx + 20h], eax
+        ret
+    }
+}
+#else
 void scene_object_owner_set(void* scene_object, uint32_t owner)
 {
     if (scene_object == NULL) {
@@ -1305,6 +1578,7 @@ void scene_object_owner_set(void* scene_object, uint32_t owner)
     }
     __builtin_memcpy((char*)scene_object + 0x20, &owner, sizeof(owner));
 }
+#endif
 
 /* --- the record primitive band (see record.hpp) ----------------------------- */
 // FUNCTION: LEGORR 0x00482350
@@ -2743,10 +3017,68 @@ void indexed_geometry_data_copy_to_output(void* record, int block,
 
 /* IndexedRecordEntryRead (FUN_004821a0) — see record.hpp. */
 // FUNCTION: LEGORR 0x004821a0
-void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
-                               uint32_t* kind_out, uint32_t* count_out,
-                               uint32_t* indices_out)
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void indexed_record_entry_read(
+    void* record, int block, uint32_t* field_out, uint32_t reserved,
+    uint32_t* kind_out, uint32_t* count_out, uint32_t* indices_out)
 {
+    __asm {
+        mov ecx, dword ptr [esp + 8]
+        push esi
+        mov eax, ecx
+        push edi
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 0ch]
+        shl eax, 4
+        mov esi, dword ptr [ecx + 8]
+        mov ecx, dword ptr [esp + 14h]
+        add eax, esi
+        test ecx, ecx
+        je short indexed_record_entry_read_kind
+        mov edx, dword ptr [eax + 4]
+        mov dword ptr [ecx], edx
+    indexed_record_entry_read_kind:
+        mov ecx, dword ptr [esp + 1ch]
+        test ecx, ecx
+        je short indexed_record_entry_read_count
+        mov dword ptr [ecx], 3
+    indexed_record_entry_read_count:
+        mov ecx, dword ptr [esp + 20h]
+        test ecx, ecx
+        je short indexed_record_entry_read_indices
+        mov edx, dword ptr [eax]
+        mov dword ptr [ecx], edx
+    indexed_record_entry_read_indices:
+        mov edx, dword ptr [esp + 24h]
+        test edx, edx
+        je short indexed_record_entry_read_done
+        mov esi, dword ptr [eax]
+        xor ecx, ecx
+        test esi, esi
+        jbe short indexed_record_entry_read_done
+    indexed_record_entry_read_loop:
+        mov esi, dword ptr [eax + 8]
+        xor edi, edi
+        add edx, 4
+        mov di, word ptr [esi + ecx*2]
+        inc ecx
+        mov dword ptr [edx - 4], edi
+        mov esi, dword ptr [eax]
+        cmp ecx, esi
+        jb short indexed_record_entry_read_loop
+    indexed_record_entry_read_done:
+        pop edi
+        pop esi
+        ret
+    }
+}
+#else
+void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
+                               uint32_t reserved, uint32_t* kind_out,
+                               uint32_t* count_out, uint32_t* indices_out)
+{
+    (void)reserved;
     const char* blk = (const char*)mesh_block(record, block);
     if (blk == NULL) {
         return; /* deviation: the corpus strides a missing table blindly */
@@ -2773,6 +3105,7 @@ void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
         }
     }
 }
+#endif
 
 /* TerrainCellQuadVerticesWrite (FUN_004823e0) — see record.hpp. */
 // FUNCTION: LEGORR 0x004823e0

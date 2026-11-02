@@ -6191,6 +6191,29 @@ void camera_rotation_set(void* camera, float value)
 }
 
 // FUNCTION: LEGORR 0x00436a18
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void camera_distance_bounds_set(void* camera,
+                                                 float lo, float hi)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        mov cl, byte ptr [eax + 0b8h]
+        or cl, 4
+        mov edx, dword ptr [ebp + 8]
+        mov byte ptr [edx + 0b8h], cl
+        mov eax, dword ptr [ebp + 8]
+        mov ecx, dword ptr [ebp + 0ch]
+        mov dword ptr [eax + 94h], ecx
+        mov edx, dword ptr [ebp + 8]
+        mov eax, dword ptr [ebp + 10h]
+        mov dword ptr [edx + 98h], eax
+        pop ebp
+        ret
+    }
+}
+#else
 void camera_distance_bounds_set(void* camera, float lo, float hi)
 {
     if (camera == NULL) {
@@ -6201,8 +6224,49 @@ void camera_distance_bounds_set(void* camera, float lo, float hi)
     __builtin_memcpy((char*)camera + 0x94, &lo, sizeof(lo));
     __builtin_memcpy((char*)camera + 0x98, &hi, sizeof(hi));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00436a4a
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void camera_distance_set(void* camera, float value)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        xor ecx, ecx
+        mov cl, byte ptr [eax + 0b8h]
+        and ecx, 4
+        test ecx, ecx
+        je short camera_distance_set_write
+        mov edx, dword ptr [ebp + 8]
+        xor eax, eax
+        mov al, byte ptr [edx + 0b8h]
+        and eax, 8
+        test eax, eax
+        jne short camera_distance_set_write
+        mov ecx, dword ptr [ebp + 8]
+        fld dword ptr [ebp + 0ch]
+        fcomp dword ptr [ecx + 94h]
+        fnstsw ax
+        test ah, 1
+        jne short camera_distance_set_done
+        mov edx, dword ptr [ebp + 8]
+        fld dword ptr [ebp + 0ch]
+        fcomp dword ptr [edx + 98h]
+        fnstsw ax
+        test ah, 41h
+        je short camera_distance_set_done
+    camera_distance_set_write:
+        mov eax, dword ptr [ebp + 8]
+        mov ecx, dword ptr [ebp + 0ch]
+        mov dword ptr [eax + 90h], ecx
+    camera_distance_set_done:
+        pop ebp
+        ret
+    }
+}
+#else
 void camera_distance_set(void* camera, float value)
 {
     if (camera == NULL) {
@@ -6216,6 +6280,7 @@ void camera_distance_set(void* camera, float value)
         __builtin_memcpy((char*)camera + 0x90, &value, sizeof(value));
     }
 }
+#endif
 
 // FUNCTION: LEGORR 0x00436aa5
 void camera_zoom_update(void* camera, float delta)

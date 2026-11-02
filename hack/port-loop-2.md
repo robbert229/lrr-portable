@@ -20,10 +20,10 @@ with MSVC 5.0. The configured toolchain is available with
 The latest combined report is `build-reccmp/reccmp-report/index.html` and
 `results.json`:
 
-- Full report: **97.33% implemented**, **50.34% accuracy**, **48.99% progress**
+- Full report: **97.33% implemented**, **51.01% accuracy**, **49.65% progress**
   (2,332 compared entries out of 2,396).
-- Game-only report: **98.88% implemented**, **45.63% accuracy**,
-  **45.12% progress** (2,113/2,137).
+- Game-only report: **98.88% implemented**, **46.37% accuracy**,
+  **45.85% progress** (2,113/2,137).
 - The coverage ledger has 2,564 rows: 2,285 `ported`, 254
   `runtime-library`, 17 `runtime-import`, and 8 across `anchored`, `anonymous`,
   and `named`. These ledger states do not guarantee high match scores or live
@@ -1466,6 +1466,126 @@ The latest combined report is `build-reccmp/reccmp-report/index.html` and
   **97.33% / 50.34% / 48.99%** full and **98.88% / 45.63% / 45.12%**
   game-only. `distrobox enter developer -- make reccmp-report` and
   `git diff --check` passed; tests were not run.
+- `ResourceEntryIdGet` (`0x4877d0`) now uses the reference's unchecked x86
+  16-bit load and zero extension, matching the decompile's `mov ecx`, `xor eax`,
+  `mov ax`, `ret` sequence. Its match rose from **22.22% to 100%**; non-x86
+  builds retain the null-safe C implementation. That
+  `distrobox enter developer -- make reccmp-report` reported **97.33% / 50.37% /
+  49.03%** full and **98.88% / 45.66% / 45.15%** game-only. `git diff --check`
+  passed; tests were not run.
+- `CameraSetDistance` (`0x436a4a`) now follows the reference's exact x86 frame,
+  flag gates, x87 lower/upper-bound comparisons, and store sequence. Its match
+  rose from **10.91% to 100%**; the portable C path remains for non-x86 builds.
+  `distrobox enter developer -- make reccmp-report` reported **97.33% / 50.41% /
+  49.06%** full and **98.88% / 45.71% / 45.19%** game-only. `git diff --check`
+  passed; tests were not run.
+- `CameraSetDistanceBounds` (`0x436a18`) now reproduces the reference's x86
+  frame and direct flag-byte and bound-field stores. Its match rose from
+  **26.09% to 100%**; the non-x86 path keeps its null guard. The latest
+  `distrobox enter developer -- make reccmp-report` reported **97.33% / 50.44% /
+  49.09%** full and **98.88% / 45.74% / 45.23%** game-only. `git diff --check`
+  passed; tests were not run.
+- `ObjectField14Set` (`0x45d8a0`) now matches the retail x86 `fld`/`fstp`
+  store through offset `+0x14`, rather than compiling to an integer move. Its
+  match rose from **28.57% to 100%**; the non-x86 path retains the portable
+  null guard. The latest `distrobox enter developer -- make reccmp-report`
+  reports **97.33% / 50.47% / 49.12%** full and
+  **98.88% / 45.78% / 45.26%** game-only. `git diff --check` passed; tests
+  were not run.
+- `RecordFlags24Or` (`0x462ac0`) now uses the reference's direct x86 memory
+  OR at offset `+0x24`, matching its three instructions exactly. Its match rose
+  from **37.50% to 100%**; the non-x86 implementation keeps its null guard.
+  The latest `distrobox enter developer -- make reccmp-report` reports
+  **97.33% / 50.50% / 49.15%** full and **98.88% / 45.81% / 45.29%**
+  game-only. `git diff --check` passed; tests were not run.
+- `ObjectFieldBE4DwordGet` (`0x47a540`) now uses the retail unchecked x86
+  dword load at offset `+0xbe4`; its match rose from **42.86% to 100%**.
+  Non-x86 builds retain the null-safe load. The latest
+  `distrobox enter developer -- make reccmp-report` reports **97.33% / 50.53% /
+  49.18%** full and **98.88% / 45.83% / 45.32%** game-only.
+  `git diff --check` passed; tests were not run.
+- `SceneObjectOwnerSet` (`0x473da0`) now uses the retail unchecked x86 store
+  at offset `+0x20`, improving its match from **14.29% to 100%**. The
+  non-x86 implementation retains the null guard. The latest
+  `distrobox enter developer -- make reccmp-report` reports **97.33% / 50.56% /
+  49.21%** full and **98.88% / 45.88% / 45.36%** game-only.
+  `git diff --check` passed; tests were not run.
+
+- `RecordField18Set` (`0x462ab0`) now follows the retail `fld`/`fstp` x86
+  store sequence at offset `+0x18` with no added null check, improving its
+  match from **42.86% to 100%**. The non-x86 implementation retains its guard.
+  That `distrobox enter developer -- make reccmp-report` reported
+  **97.33% / 50.59% / 49.24%** full and **98.88% / 45.90% / 45.39%**
+  game-only. `git diff --check` passed; tests were not run.
+- The indexed-record flag helpers now reproduce their retail x86 operations:
+  `IndexedRecordFlag6CBit0Get` (`0x482780`) improved **12.12% → 100%**,
+  `IndexedRecordFlag6CBit0Set` (`0x4827a0`) **10.17% → 100%**, and
+  `RecordFlag2CBit0Set` (`0x4827d0`) **11.11% → 100%**. The getter uses the
+  decompiled `index * 0x70 + base + 0x6c` addressing and bit mask; setters
+  preserve other bits while changing bit zero. The latest
+  `distrobox enter developer -- make reccmp-report` reports **97.33% / 50.70% /
+  49.35%** full and **98.88% / 46.03% / 45.51%** game-only.
+  `git diff --check` passed; tests were not run.
+
+- `IndexedRecordEntryRead` (`0x4821a0`) now retains the target's unused fourth
+  argument in its public ABI and matches the retail x86 output gates, 0x70-byte
+  entry addressing, and repeated ushort-index copy loop. Its match rose from
+  **12.84% to 100%**. The portable implementation keeps its null-table and
+  index-pointer guards. `distrobox enter developer -- make reccmp-report`
+  reports **97.33% / 50.74% / 49.39%** full and
+  **98.88% / 46.07% / 45.55%** game-only. `git diff --check` passed; tests
+  were not run.
+
+- `PointerValueGet` (`0x482210`) now matches the reference's unchecked dword
+  dereference on MSVC x86; its match rose from **42.86% to 100%**. The
+  non-x86 path retains the null guard. The latest
+  `distrobox enter developer -- make reccmp-report` reports **97.33% / 50.77% /
+  49.41%** full and **98.88% / 46.10% / 45.58%** game-only.
+  `git diff --check` passed; tests were not run.
+
+- `EntityTypeMaskGet` (`0x46cf80`) now matches the retail unchecked x86 load
+  from `record + 0x12c` (the decompile expresses this as decimal `+300`). Its
+  match rose from **42.86% to 100%**; non-x86 builds retain the null-safe path.
+  The latest `distrobox enter developer -- make reccmp-report` reports
+  **97.33% / 50.79% / 49.43%** full and **98.88% / 46.13% / 45.61%**
+  game-only. `git diff --check` passed; tests were not run.
+- `SceneObjectResourceHandleSet` (`0x44f220`) now matches the target's
+  unchecked x86 store of the handle at `object + 0x2c`; its score improved
+  from **14.29% to 100%**. The non-x86 implementation retains its NULL guard.
+  The latest `distrobox enter developer -- make reccmp-report` reports
+  **97.33% / 50.83% / 49.47%** full and **98.88% / 46.17% / 45.65%**
+  game-only. `git diff --check` passed; tests were not run.
+
+- `GameFileSystemTypeGet` (`0x47fe20`) now matches the target's unchecked x86
+  dword dereference; its score rose from **42.86% to 100%**. The non-x86
+  implementation retains its null guard. The latest
+  `distrobox enter developer -- make reccmp-report` reports **97.33% / 50.85% /
+  49.49%** full and **98.88% / 46.19% / 45.68%** game-only.
+  `git diff --check` passed; tests were not run.
+
+- `AviPlayerReadyGet` (`0x47ed80`) now matches the reference's unchecked x86
+  byte load from `movie + 0x99`, zero-extended into the return register. Its
+  score rose from **25% to 100%**; the portable path retains its null guard.
+  The latest `distrobox enter developer -- make reccmp-report` reports
+  **97.33% / 50.88% / 49.52%** full and **98.88% / 46.23% / 45.71%**
+  game-only. `git diff --check` passed; tests were not run.
+
+- `ObjectPoolListHeadGet` (`0x456c30`) now follows the retail unchecked x86
+  table lookup, including the signed `0 <= index < 0x37` bounds, `+0x114`
+  dword stride, and zero-head fold. Its match rose from **22.22% to 100%**;
+  non-x86 retains the guarded C implementation. The latest
+  `distrobox enter developer -- make reccmp-report` reports **97.33% / 50.92% /
+  49.56%** full and **98.88% / 46.27% / 45.75%** game-only.
+  `git diff --check` passed; tests were not run.
+
+- `RendererObjectUpdateFromRecordField64/68/6c` (`0x406c00`, `0x406c30`,
+  `0x406c60`) now follow the retail x86 field loads, zero/one flag formation,
+  argument pushes, and call to `ResourceListUpdateMatchingKey`. Matches rose
+  from **17.39% / 17.39% / 21.05%** to **92.86% / 92.86% / 93.33%**. The only
+  remaining report diff is the callee label (`<OFFSET1>` in the reference vs.
+  the named function in the rebuilt PDB). Current totals are **97.33% / 51.01% /
+  49.65%** full and **98.88% / 46.37% / 45.85%** game-only. The MSVC 5.0
+  Reccmp build and `git diff --check` passed; tests were not run.
 
 ## Port loop
 

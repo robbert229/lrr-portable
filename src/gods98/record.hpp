@@ -157,7 +157,8 @@ uint32_t object_record_field11c_get(const void* record);
 /* ObjectFieldBE4DwordGet (FUN_0047a540, findings 361/411): +0xbe4. */
 uint32_t object_field_be4_dword_get(const void* record);
 
-/* EntityTypeMaskGet (FUN_0046cf80, findings 357/432): dword at +300. */
+/* EntityTypeMaskGet (FUN_0046cf80, findings 357/432): dword at +0x12c
+ * (Ghidra prints this offset as decimal 300). */
 uint32_t entity_type_mask_get(const void* record);
 
 /* PointerValueGet (FUN_00482210, findings 381/411): the dword it points
@@ -353,8 +354,8 @@ void linked_record_field4_clear(void* record);
 void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
                                     uint32_t* out_b);
 
-/* SceneObjectOwnerSet (FUN_00473da0): dword store at +0x20 — the port's
- * fixed-offset style, entry-guarded (documented deviation). */
+/* SceneObjectOwnerSet (FUN_00473da0): dword store at +0x20; the MSVC x86
+ * body matches the unchecked retail store, while other targets guard NULL. */
 void scene_object_owner_set(void* scene_object, uint32_t owner);
 
 /* --- the record primitive band (2026-10-24; findings 393/386) ---------------
@@ -595,12 +596,13 @@ void indexed_geometry_data_copy_to_output(void* record, int block,
  * the indexed record table through record +0x08 — the +0x04 field word,
  * the shape-kind answer (3), the +0x00 vertex count, and the count
  * ushort indices striding through the entry's +0x08 pointer (widened to
- * uint32 answers as the corpus folds them). Deviations: guarded table
- * and index pointer (the corpus strides both blindly); each requested
- * output honors the corpus's own null checks. */
+ * uint32 answers as the corpus folds them). The ABI retains the unused
+ * fourth argument present in the target; x86 matches the unchecked table
+ * and index-pointer accesses, while the portable path guards them. Each
+ * requested output honors the corpus's own null checks. */
 void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
-                               uint32_t* kind_out, uint32_t* count_out,
-                               uint32_t* indices_out);
+                               uint32_t reserved, uint32_t* kind_out,
+                               uint32_t* count_out, uint32_t* indices_out);
 
 /* TerrainCellQuadVerticesWrite (FUN_004823e0): the exact mirror of the
  * indexed geometry copy — write quads into the block's vertex buffer

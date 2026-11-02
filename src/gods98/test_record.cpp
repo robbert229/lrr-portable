@@ -747,7 +747,8 @@ static void test_mesh_window(void)
         erec.table = etable;
         uint32_t field = 0u, kind = 0u, count = 0u;
         uint32_t got_idx[4] = { 0x1111u, 0x1111u, 0x1111u, 0x1111u };
-        indexed_record_entry_read(&erec, 0, &field, &kind, &count, got_idx);
+        indexed_record_entry_read(&erec, 0, &field, 0u, &kind, &count,
+                                  got_idx);
         CHECK(field == 0x5au && kind == 3u && count == 3u,
               "the entry band reads out");
         CHECK(got_idx[0] == 7u && got_idx[1] == 8u && got_idx[2] == 9u,
@@ -757,7 +758,7 @@ static void test_mesh_window(void)
         memset(etable, 0, sizeof(etable));
         uint32_t zero_cnt = 0xDEADu;
         uint32_t keep[1] = { 0x2222u };
-        indexed_record_entry_read(&erec, 0, NULL, NULL, &zero_cnt, keep);
+        indexed_record_entry_read(&erec, 0, NULL, 0u, NULL, &zero_cnt, keep);
         CHECK(zero_cnt == 0u && keep[0] == 0x2222u,
               "the zero-count gate skips the walk");
         /* Missing table: the guard answers early (deviation: the corpus
@@ -765,7 +766,7 @@ static void test_mesh_window(void)
         PokeTableRecord empty;
         memset(&empty, 0, sizeof(empty));
         uint32_t sentinel = 1u;
-        indexed_record_entry_read(&empty, 0, &sentinel, NULL, NULL, NULL);
+        indexed_record_entry_read(&empty, 0, &sentinel, 0u, NULL, NULL, NULL);
         CHECK(sentinel == 1u, "the missing table answers early");
     }
 
