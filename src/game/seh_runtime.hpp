@@ -56,6 +56,10 @@ uint32_t crt_exception_frame_install_and_dispatch(
     const void* type_info, uintptr_t argument_2, uintptr_t argument_3,
     uintptr_t argument_4, uintptr_t argument_5, uintptr_t argument_6,
     uintptr_t argument_7); /* FUN_0048ed30 */
+void* seh_scope_table_lookup(const void* registration_frame,
+                             int nesting_depth, uint32_t control_pc,
+                             uint32_t* scope_index_out,
+                             uint32_t* parent_index_out); /* FUN_0048ee90 */
 
 } // namespace unported_ledger_stubs
 

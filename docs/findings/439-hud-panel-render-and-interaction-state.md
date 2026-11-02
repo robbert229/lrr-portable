@@ -24,7 +24,7 @@ The panel state uses twelve `0x30`-byte category records beginning at `DAT_00500
 
 `FUN_0045a460 @ 0x0045a460` is an unnamed formatted-text helper. When its centering flag is nonzero, it measures the formatted string and subtracts half its width; it then adds the selected category's stored position pair, rounds the coordinates, and calls the formatted text draw routine. `ScrollingAdvisorTextAppend @ 0x0045a590` appends formatted text to the supplied text-output object. `UITextOutputPositionAndDraw @ 0x0045a5b0` combines the record's base coordinates with offsets in its associated record, updates the output object's position, and draws it. `UITextOutputObjectRelease @ 0x0045a620` releases that object, while `UIRecordCallbackForward @ 0x0045a630` forwards its dereferenced handle and two arguments to a UI-record helper. Findings 351 and 382 trace the output object and formatted draw helper.
 
-`PanelImageSlotEntryAllocate @ 0x0045a500` allocates a 16-byte slot record, creates the image resource from supplied geometry/config, stores the converted coordinates, and points the record at the indexed category. The allocation's coordinate units and flag meanings are not established by this helper alone (see Finding 278).
+`PanelImageSlotEntryAllocate @ 0x0045a500` allocates a 16-byte text-output wrapper, then creates a text buffer using its supplied font handle, a zero-origin rectangle whose width/height come from the supplied rectangle, and the supplied buffer capacity. The wrapper stores the text-buffer handle, converted Y and X coordinates, and a pointer to the indexed category record. `UITextOutputPositionAndDraw @ 0x0045a5b0` confirms the wrapper order: Y at `+4`, X at `+8`, and category pointer at `+0xc`; it adds category `+0x18` to Y and `+0x1c` to X before setting the text-buffer position and drawing. The exact external font/resource ownership and the coordinate units remain caller-dependent.
 
 ## Assigned-function map
 
@@ -46,7 +46,7 @@ The panel state uses twelve `0x30`-byte category records beginning at `DAT_00500
 | `0x0045a3b0` | `PanelSlotCoordinateHitTest` | For kind-0 records, tests adjusted coordinates and returns `categoryIndex == 0` on a hit; its caller uses false to set an output flag. |
 | `0x0045a410` | `CaseInsensitiveIndexedStringLookup` | Finds a button name in the selected panel's fixed 24-entry table. |
 | `0x0045a460` | `FUN_0045a460` | Measures/optionally centers formatted text, applies category offsets, and draws it. |
-| `0x0045a500` | `PanelImageSlotEntryAllocate` | Allocates an image-slot record with resource, converted coordinates, and category pointer. |
+| `0x0045a500` | `PanelImageSlotEntryAllocate` | Allocates the 16-byte text-output wrapper and its text buffer, storing font-backed buffer, converted coordinates, and category pointer. |
 | `0x0045a590` | `ScrollingAdvisorTextAppend` | Appends formatted text to a scrolling-advisor output object. |
 | `0x0045a5b0` | `UITextOutputPositionAndDraw` | Applies record-relative position offsets, sets output position, and draws. |
 | `0x0045a620` | `UITextOutputObjectRelease` | Releases the stored output-object handle. |

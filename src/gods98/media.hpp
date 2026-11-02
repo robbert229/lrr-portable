@@ -12,14 +12,14 @@
  *    fresh draw, exactly like the shipped re-arm path. Disable drops the
  *    bit, cancels the scheduled callback, and runs one watchdog tick
  *    with argument 0 — which touches nothing, as shipped. Track start,
- *    stop, status, error text, and watchdog polling use installable device
- *    hooks, so native builds can supply an MCI-like CD backend without
- *    coupling this state machine to WinMM.
+ *    stop, status, error text, and watchdog polling use the platform CD-DA
+ *    backend by default. Winapi uses MCI; native SDL builds report CD-DA
+ *    unavailable. Optional hooks remain for external integrations.
  *
  *  - SoundMinimumDistanceUpdateMode @ 0x4295f0: the minimum-distance
  *    mode. Mode 0 stores the supplied entity/context and applies the
  *    distance scalars for the caller-selected value (0.9 / 0.6 listener
- *    scale, clip = min-distance base * cell distance scale, 5.0 tracked
+ *    scale, clip = min-distance base * cell distance scale, 50.0 tracked
  *    reference distance); mode 1 clears the stored context and restores
  *    the config-derived previous values (listener scale 0.5, the config
  *    clip distance, the config reference distance). Other mode values
@@ -28,8 +28,8 @@
  *    the observable state machine.
  *
  *  The corpus routes these through platform/render helpers. The CD path
- *  now exposes command/status hooks; the renderer clip/listener setters
- *  remain injectable seams, with the values they would carry tracked.
+ *  reaches MCI on winapi and reports its native limitation; renderer
+ *  clip/listener setters remain injectable seams, with values tracked.
  */
 #ifndef LEGORRR_MEDIA_HPP
 #define LEGORRR_MEDIA_HPP
@@ -117,6 +117,7 @@ void media_audio_playback_toggle(int enable);
 void media_pointer_cursor_select(int slot);
 /* PointerCursorOverrideSet @ 0x45cc40. */
 void media_pointer_cursor_override_set(int slot, float value);
+void media_pointer_cursor_override_tick(float delta);
 int   media_pointer_cursor_slot(void);
 float media_pointer_cursor_override(void);
 
@@ -164,14 +165,11 @@ void media_min_distance_config_set(float cell_scale, float clip_base,
 /* --- the CD-audio availability seam (2026-10-24; finding 14) ---------------
  * CDAudioPlaybackAvailable (FUN_00488b90): the corpus answers yes only
  * while the CD-audio device word (DAT_0054486c, raised by the MCI device
- * opener — unported) and the sound-system word (DAT_00533878, the port's
- * sound-on seam) are both set. The device word has no ported owner, so it
- * lands zero-initialized with a set hook standing in (documented
- * deviation). */
+ * opener) and the sound-system word (DAT_00533878, the port's sound-on
+ * seam) are both set. Native has no CD-DA device, while winapi owns it in
+ * the platform MCI backend. */
 int  media_cd_audio_playback_available(void); /* FUN_00488b90 */
 void media_cd_audio_open_set(int open);       /* port hook */
-typedef int (*MediaCdAudioInitHook)(void* context);
-void media_cd_audio_init_hook_set(MediaCdAudioInitHook hook, void* context);
 int media_cd_audio_device_state_update(int request);
 typedef int (*MediaCdAudioErrorTextHook)(void* context, int error_code,
                                          char* output, int capacity);
@@ -180,7 +178,7 @@ typedef int (*MediaCdAudioStatusHook)(void* context, char* mode, int capacity,
 void media_cd_audio_error_hook_set(MediaCdAudioErrorTextHook hook,
                                    void* context);
 void media_cd_audio_error_code_set(int error_code);
-const char* media_cd_audio_error_text_get(void); /* 0x00489260 */
+void media_cd_audio_error_text_get(void); /* 0x00489260 */
 void media_cd_audio_status_hook_set(MediaCdAudioStatusHook hook,
                                     void* context);
 int media_cd_audio_track_completion_poll(int track); /* 0x00489280 */

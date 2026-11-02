@@ -26,9 +26,9 @@
  *   +0x40 owned buffer, +0x4C kind index, +0x5C state flags, +0x60 next,
  *   +0x64 free-list link
  *
- * The AI *execution* receivers (which read +0x4c/+0x1c and run the task
- * switch — finding 10 §"Still open") are stubs here; this tranche covers
- * allocation, the registry, creation, linking, and queue dispatch.
+ * The AI execution receiver and command/task executor are implemented in
+ * ai.cpp. This module owns record allocation, registry, creation, linking,
+ * pending assignment, and opcode queue dispatch.
  */
 #ifndef LEGORRR_GAME_CMD_HPP
 #define LEGORRR_GAME_CMD_HPP
@@ -40,6 +40,11 @@ extern "C" {
 #endif
 
 #define CMD_RECORD_SIZE 0x68
+#define CMD_PENDING_COMMAND_COUNT_TABLE_SIZE 0x12c0
+
+/* Entity-type/action pending-command count table (DAT_004b34f4). */
+extern uint32_t cmd_pending_command_counts[
+    CMD_PENDING_COMMAND_COUNT_TABLE_SIZE];
 
 /* Record state flags (+0x5c, finding 10). */
 #define CMD_STATE_PENDING   0x10u
@@ -66,12 +71,18 @@ const char* cmd_task_name(int slot);     /* 31 AI task types */
 const char* cmd_priority_name(int slot); /* 27 AI priorities  */
 
 /* --- entity-bound creators (findings 10) -------------------------------- */
-void cmd_create_move(EntitySlot* e, float x, float y, int flag);
+void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag);
 void cmd_create_target(EntitySlot* e, void* target);
 void cmd_create_gated(EntitySlot* e, void* target);
-void cmd_create_task(EntitySlot* e);   /* kind derived from the entity type */
-void* cmd_entity_task_record_create_and_append(EntitySlot* e, void* payload,
-                                               int parameter);
+/* EntityActivityRecordRemoveByType (FUN_00403c00) passes 0x43160000 (150.0f
+ * bits) for action-record removals; the port wires that through its +0x2f0
+ * command-chain representation. */
+void cmd_create_task(EntitySlot* e, int32_t parameter = 0); /* +0x18 argument */
+void object_command_task_create(EntitySlot* entity, int parameter);
+int object_path_submit_to_grid_target(EntitySlot* entity,
+                                      struct LevelState* level,
+                                      const int target_xy[2],
+                                      const float* final_marker_position); /* 0x404e00 */
 typedef struct CommandKindRecordHooks {
     void* context;
     float (*random_range)(float minimum, float maximum, void* context);
@@ -82,24 +93,30 @@ void cmd_kind_record_hooks_set(const CommandKindRecordHooks* hooks);
 void cmd_command_kind_record_issue(uint32_t a, uint32_t b, uint32_t c,
                                    const int cell_xy[2], uint32_t zone,
                                    const float* random_pair, int set_flag);
+void cmd_validated_record_queue(void* record); /* FUN_004030e0 */
 
 /* --- chain ops ---------------------------------------------------------- */
 /* CmdChainWalk: return the tail record of the entity's chain (or NULL). */
 void* cmd_chain_walk(const EntitySlot* e);
+int cmd_chain_contains_kind(const EntitySlot* e, int kind);
 typedef int (*CmdPurgeCellPredicate)(int x, int y, void* context);
 typedef int (*CmdPurgeCompare)(const void* left, const void* right,
                               void* context);
 void cmd_chain_purge_hooks_install(CmdPurgeCellPredicate cell_usable,
                                    CmdPurgeCellPredicate neighbor_eligible,
                                    CmdPurgeCompare compare, void* context);
-void cmd_chain_purge(EntitySlot* e); /* CmdChainPurge */
+/* Host helper for an entity-owned chain; retail CmdChainPurge operates on
+ * a global command-list head and is implemented in cmd.cpp. */
+void cmd_chain_purge(EntitySlot* e);
 
-/* FUN_00403d10 (generic drop): unlink and free every command record of the
- * given type from the entity's chain (the corpus walks the +0xbc record
- * list and matches record +0x00 == type; type-0x13 grant records have no
- * per-type side effects, so the drop is a plain unlink+free). Returns the
- * number of records dropped. */
+/* Convenience for callers that use the common unlink-and-count form of
+ * FUN_00403d10. Returns the number of matching records removed. */
 int cmd_chain_drop(EntitySlot* e, int type);
+/* Full EntityCommandUnlinkByKind entry (FUN_00403d10). `extra` is the
+ * type-specific payload (an EntitySlot for types 3 and 7).
+ * `unlink` controls detachment from the entity chain and pool release. */
+void entity_command_unlink_by_kind(EntitySlot* e, int type,
+                                   const void* extra, int unlink);
 
 /* ObjectAttachedRecordAllocate (FUN_004033c0, findings 251/270): allocates a
  * kind-0x1C attached-object record through the ported allocator and hangs it
@@ -130,14 +147,16 @@ void* cmd_global_next(const void* rec);
 /* Unlink `rec` from the global command list (a record is also chained on
  * its entity; completion unlinks here before cmd_free). */
 void cmd_global_unlink(const void* rec);
-typedef struct PendingCommandScanHooks {
-    void* context;
-    int (*timer_fire)(void* record, void* context);
-    int (*entity_assign)(void* record, void* context);
-} PendingCommandScanHooks;
-void pending_command_scan_hooks_set(const PendingCommandScanHooks* hooks);
 void pending_command_timer_fire_scan(void); /* 0x405950 */
 void pending_command_entity_assignment_tick(void); /* 0x405c10 */
+/* PlaceCommandEligibilityCheck (0x404fc0), evaluated against the live
+ * command/entity and the operations bound from cmd_context_set. Position
+ * outputs are world coordinates; cell outputs are grid coordinates. */
+int cmd_place_command_eligibility_check(void* record, EntitySlot* entity,
+                                        float position_xy[2],
+                                        float cell_xy[2], uint32_t* out_flag,
+                                        int require_command_gate,
+                                        int relaxed_entity_gate);
 
 /* PendingRecordEntityReferenceClear (FUN_004063e0): walks the global
  * command list and zeroes every record whose +0x48 pending-entity
@@ -162,21 +181,30 @@ void entity_record_attach_and_relink(void* record, void* previous,
                                      EntitySlot* entity);
 
 /* --- global tick list ---------------------------------------------------- */
-void cmd_tick_global(void);     /* CmdTickGlobal @ 0x402220 (scoped) */
+void cmd_tick_global(void);     /* CmdTickGlobal @ 0x402220 */
+/* Runtime ticker entry supplies the caller-stack delta consumed by 0x404250. */
+void cmd_tick_global_delta(float delta);
+int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload); /* 0x404280 */
+typedef struct CmdEntityChainExternalOps {
+    void* context;
+    int (*object_position_step)(EntitySlot* entity, const void* task_record,
+                                void* context); /* kind 0x13, 0x44b500 */
+    int (*waypoint_task_step)(EntitySlot* entity, const void* target_record,
+                              uint32_t task_count, void* context); /* 0x444690 */
+} CmdEntityChainExternalOps;
+/* If an operation is not installed, its command remains queued untouched. */
+void cmd_entity_chain_external_ops_set(const CmdEntityChainExternalOps* ops);
 
 /* --- record accessors ---------------------------------------------------- */
 int         cmd_rec_type(const void* rec);
 const void* cmd_rec_payload(const void* rec);
 int         cmd_rec_kind(const void* rec);
 int         cmd_rec_behaviour(const void* rec);
-/* The +0x38 command-granted activity id: the callback's deferred install
- * branch (0x43da62) appends it onto the entity's permitted-activity list
- * when the +0x3e4 bit-0x40 grant flag is up, then drops type-0x13 grant
- * records (cmd_chain_drop). The corpus writer of +0x38 is the task-state
- * granter — config/runtime-driven, not a shipped immediate (finding 10
- * §"Spawn-dispatch task-state switch"); port-side grants stage through
- * cmd_rec_set_activity. */
+/* Port-side granted-activity value used by the deferred install path; this
+ * staged value is outside the retail +0x38 record word. */
 int         cmd_rec_activity(const void* rec);
+/* Raw +0x38 dword read by PendingTypeValueSlotSelect for kind 0x13. */
+uint32_t    cmd_rec_value_38(const void* rec);
 void        cmd_rec_set_activity(void* rec, int act);
 uint32_t    cmd_rec_state(const void* rec);
 void*       cmd_rec_next(const void* rec);
@@ -186,6 +214,7 @@ void        cmd_rec_set_next(void* rec, void* next);
  * the corpus stores these at +0x08/+0x0C and +0x14). */
 float cmd_rec_move_x(const void* rec);
 float cmd_rec_move_y(const void* rec);
+void cmd_rec_move_xy_set(void* rec, float x, float y);
 float cmd_rec_now(const void* rec);
 void  cmd_rec_set_now(void* rec, float v);
 
@@ -269,11 +298,10 @@ int selection_command_dispatch(int param);
 void entity_random_valid_cell_command_create(void* entity);
 int selection_entity_remove(void* entity);
 /* SelectionObjectDetach (FUN_004524b0): cancel matching queued commands,
- * remove the entity from selection, clear a matching UI context, and post
- * the HUD reset when it was the first selection entry. */
+ * remove the entity from selection, and restore the media/min-distance
+ * context when it points at the entity. The separate DAT_005560e8 owner
+ * comparison/render-position side effect remains unavailable here. */
 void selection_object_detach(void* entity);
-typedef void (*SelectedEntityDetachPoseHook)(EntitySlot* entity);
-void selected_entity_detach_pose_hook_set(SelectedEntityDetachPoseHook hook);
 int selected_entity_detach_callback(EntitySlot* entity); /* FUN_0041f6c0 */
 
 /* --- selection filter / state monitor (2026-10-24) ---------------------------
@@ -304,11 +332,9 @@ int selected_entity_state_monitor(void);
  * clearing bit 4. The corpus's first statement calls CurrentLevelGet for
  * its touch only; the port's link lands the record on the task list.
  * EntityDeferredWorkSchedule (FUN_004026c0, finding 465): with the +0x304
- * attach mirror clear and the +0x3ec bit-0x100 flag clear, searches the
- * object-record pool through EntityPoolCallbackSearch — the registry and
- * callback are the unported entity seam, so the search always misses and
- * the fallback task is created (the corpus's observable half). NULL entity
- * answers inert (deviation). */
+ * attach mirror clear and the +0x3ec bit-0x100 flag clear, searches live
+ * command records for a type-3 entry whose payload is this entity before
+ * creating a fallback task. NULL entity answers inert (deviation). */
 void entity_command15_validated_record_queue(EntitySlot* e);
 void entity_deferred_work_schedule(EntitySlot* e);
 
@@ -345,8 +371,8 @@ int cmd_rec_param2_get(const void* rec);
  * 1 of the registry word (the port's s_global_enabled view); zero runs the
  * entity callback sweep (the unported LAB seam — inert), sets the bit,
  * drops both list heads, and zeroes the 27-entry priority-state table.
- * (The corpus's 0x12c0-entry cell-record counter block is registry data
- * the port does not model — documented seam.)
+ * The 0x12c0-entry cell-record counter block is the live
+ * cmd_pending_command_counts table, shared with the terrain-cell task sweep.
  * EngineMemoryAllocate / EngineMemoryFree (FUN_004021e0 / FUN_00402210):
  * the engine-heap wrapper pair — allocate-and-lose (the corpus discards
  * the return) and free.
@@ -476,9 +502,8 @@ int cmd_rec_extra_get(const void* rec);
  * int view, deviation noted), followed by the action word, the -1 target
  * marker and the zero entry count. Each links at a cell-command kind and
  * runs the record-array half. The counter update that follows the link
- * belongs to the unported spatial-query/action-issue family and the
- * cell-record counter block, so the port documents it as a seam (see
- * docs/coverage/blocked.md) and changes no entity state there.
+ * belongs to the spatial-query/action-issue path; where that path has no
+ * eligible entity it increments cmd_pending_command_counts.
  * TerrainCellCommandCreate (FUN_00402510): all three state guards must come
  * out clear — the state-equals-1 and state-equals-6 tests and the in-bounds
  * flag-bit-4 test. Then the type-8 record, the flag word's bit 3 with the
@@ -537,9 +562,9 @@ int task_kind_filtered_search(int selector);
  * The kind-tagged queue family: each allocates its record kind, stages the
  * corpus's words, assigns the command kind and lands the record. Coordinate
  * pairs ride the coordinate slots as integers (the port reads them back
- * through cmd_rec_cell_xy_get). The DAT_004b3358 tail list is the port's
- * single global chain, so the removal walkers sweep that chain with the
- * same semantics. The timed pair (kind 5/0x11) stores its arguments in the
+ * through cmd_rec_cell_xy_get). DAT_004b3354 and DAT_004b3358 are independent
+ * global-list roots sharing each record's +0x60 link. The timed pair
+ * (kind 5/0x11) stores its arguments in the
  * cell-command slots and zeroes the timestamp slot before linking.
  *  CoordinatePairEventQueue (FUN_004030b0): kind 0xc, pair plus the +0x54
  *      event payload, head-linked as command 8.
@@ -570,6 +595,7 @@ void scalar_task_record_queue(void* scalar);
 void task_pair_record_enqueue(const int pair[2]);
 void task_record_kind10_queue(void* payload);
 void task_registry_remove_type0_entry_by_pair(const int pair[2]);
+void cmd_tutorial_congregation_set(int x, int y, int enable);
 void task_registry_remove_type10_entries_for_entity(const EntitySlot* e);
 void* timed_task_record_initialize_and_link(void* payload, int arg1,
                                             int arg2, int arg3);
@@ -578,6 +604,10 @@ void task_record_kind11_timed_queue(void* payload);
 /* Diagnostic: the record's +0x54 event-payload slot. */
 void* cmd_rec_event_payload_get(const void* rec);
 int cmd_rec_cell_count_get(const void* rec); /* +0x28 word (timed arg 3) */
+/* EntityPoolCallbackSearch's CmdRec-pool half of TerrainCellRefreshDispatch
+ * (LAB_00402bb0): compare live type-8/9/11 task coordinates, set state bit
+ * 0x20, and clear that cell's occupancy bit for each match. */
+void cmd_pool_cell_refresh_dispatch(const int cell_xy[2], int mode);
 
 /* --- the entity command-chain housekeeping (2026-10-24; findings 369/465) ----
  * EntityCommandChainHeadRemove (FUN_004041e0): pops the entity chain head.
@@ -601,9 +631,7 @@ int cmd_rec_cell_count_get(const void* rec); /* +0x28 word (timed arg 3) */
  * records free, pending-undone ones go raw onto the head list, bit-16
  * undone ones raw onto the tail list, everything else stays. The corpus
  * relinks every keeper through the HEAD keeper's link slot only, so an
- * intermediate keeper is orphaned (the corpus quirk, pinned). The corpus's
- * two global lists overlay the same link word, so both raw inserts land
- * on the port's single global chain (documented).
+ * intermediate keeper is orphaned (the corpus quirk, pinned).
  * EntityTaskChainContainsKind (FUN_004041b0): any chain record of the type. */
 void* entity_command_chain_head_remove(EntitySlot* e);
 void entity_drain_command_chain(EntitySlot* e);
@@ -616,6 +644,10 @@ int  entity_task_chain_contains_kind(const EntitySlot* e, int type);
 #ifdef __cplusplus
 }
 #endif
+
+/* C++ convenience overload for portable callers with scalar coordinates.
+ * Keep it outside the C-linkage block; the mapped retail ABI takes a pointer. */
+void cmd_create_move(EntitySlot* e, float x, float y, int flag);
 
 /* --- the kind-7 zone-command word + cancel (2026-10-24; finding 252) ---------
  * CmdCancelByCoords (FUN_00403700): walks the global command list and
@@ -639,6 +671,9 @@ void cmd_rec_target_set(void* rec, int target);
 /* port hook: drop an entity from the idle-queue table (the window B model
  * of the object-registry band; EntityPointerRegistriesRemove calls it). */
 void idle_queue_clear(EntitySlot* e);
+/* Retail IdleQueueRegister @ 0x407450; refreshes an existing type-2 slot or
+ * claims the first empty slot with its 12.5 second timer. */
+void idle_queue_register(EntitySlot* e);
 
 /* SelectedEntitiesAnyPredicateMatch / AnyObjectCanOccupyTerrainCell
  * (FUN_00431a30 / FUN_00431ab0): the any-hit sweeps over the active
@@ -740,8 +775,8 @@ const void* upgrade_name_entry_find(const char* name);
 /* KindSixRandomMessageDispatchSweep (FUN_0040f0e0): subtract the frame
  * delta from the sweep timer (DAT_004d78c4 own storage); once it reaches
  * zero, draw up to one hundred random grid pairs modulo the current
- * level's dimensions — the grid-spawn route is the quote-only seam
- * precedent (never lands, so the message-6 dispatch cannot fire) — and
+ * level's dimensions, testing each through the erosion eligibility and
+ * mutation path and dispatching message 6 for the first accepted pair — and
  * re-arm the timer at (draw % 50) + 750.0 from one final draw, answering
  * draw / 50. A positive timer answers zero through the corpus's flag fold
  * (pinned); a missing level skips the cell loop but the re-arm draw runs

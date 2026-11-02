@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "weapon.hpp"
+#include "gods98/heap.hpp"
 
 #include <string.h>
 
@@ -11,7 +12,10 @@ WeaponDefinition s_weapon_definitions[WEAPON_TYPE_CAPACITY];
 uint32_t s_weapon_type_count = 0;
 void* s_weapon_config = 0;
 WeaponDefinitionsParseHook s_weapon_parse_hook = 0;
-WeaponIndexedFloatTable s_weapon_indexed_table = { 0, 0 };
+WeaponIndexedTypeRecord* s_weapon_owned_records = 0;
+// GLOBAL: LEGORR 0x00503878
+static WeaponIndexedTypeRecord* s_weapon_indexed_records;
+static uint32_t s_weapon_indexed_record_count;
 
 void weapon_definition_reset(WeaponDefinition* definition)
 {
@@ -97,6 +101,7 @@ int weapon_type_config_load(void* config, void* context)
 {
     uint32_t i;
     uint32_t count = 0;
+    WeaponIndexedTypeRecord* records;
     s_weapon_config = config;
     s_weapon_type_count = 0;
     for (i = 0; i < WEAPON_TYPE_CAPACITY; ++i)
@@ -105,6 +110,36 @@ int weapon_type_config_load(void* config, void* context)
     if (!s_weapon_parse_hook(config, context, s_weapon_definitions,
                              WEAPON_TYPE_CAPACITY, &count)) return 0;
     if (count > WEAPON_TYPE_CAPACITY) return 0;
+
+    /* Construct the reference's indexed table from the fields available to
+     * this parser. Its omitted per-cell config values start at the reference
+     * sentinel (-1.0); parsed default damage and scalar footer values remain
+     * live and are therefore available to 0x46f1d0 and the scalar getters. */
+    records = count != 0 ? (WeaponIndexedTypeRecord*)engine_heap_alloc(
+        (long)((size_t)count * sizeof(WeaponIndexedTypeRecord))) : 0;
+    if (count != 0 && records == 0) return 0;
+    for (i = 0; i < count; ++i) {
+        uint32_t cell;
+        WeaponIndexedTypeRecord* record = &records[i];
+        for (cell = 0; cell < WEAPON_INDEXED_GRID_FLOAT_COUNT; ++cell)
+            record->indexed_values[cell] = -1.0f;
+        record->dispatch_mode = 0;
+        record->dispatch_scale = 0.0f;
+        record->dispatch_index = 0;
+        record->recharge_time = s_weapon_definitions[i].recharge_time;
+        record->default_damage = s_weapon_definitions[i].default_damage;
+        record->discharge_rate = s_weapon_definitions[i].discharge_rate;
+        record->unknown_scalar = 0.0f;
+        record->range = s_weapon_definitions[i].range;
+        for (cell = 0; cell < WEAPON_WALL_TYPE_COUNT; ++cell)
+            record->wall_destroy_time[cell] =
+                s_weapon_definitions[i].wall_destroy_time[cell];
+    }
+    if (s_weapon_owned_records != 0)
+        engine_heap_free(s_weapon_owned_records);
+    s_weapon_owned_records = records;
+    s_weapon_indexed_records = records;
+    s_weapon_indexed_record_count = count;
     s_weapon_type_count = count;
     return 1;
 }
@@ -158,21 +193,44 @@ uint32_t weapon_type_count_get(void)
 void weapon_indexed_float_table_install(
     const WeaponIndexedTypeRecord* records, uint32_t record_count)
 {
-    s_weapon_indexed_table.records = records;
-    s_weapon_indexed_table.record_count = records != 0 ? record_count : 0u;
+    if (records != s_weapon_owned_records && s_weapon_owned_records != 0) {
+        engine_heap_free(s_weapon_owned_records);
+        s_weapon_owned_records = 0;
+    }
+    s_weapon_indexed_records = (WeaponIndexedTypeRecord*)records;
+    s_weapon_indexed_record_count = records != 0 ? record_count : 0u;
 }
 
 float weapon_indexed_float_lookup(
     int weapon_type, const WeaponIndexedEntityState* entity_state)
 {
     const WeaponIndexedTypeRecord* record;
-    uint32_t cell_index;
+    int32_t entity_type;
+    int32_t selected_index;
+    int32_t level_index;
+    int32_t cell_index;
     float value;
-    if (s_weapon_indexed_table.records == 0 || weapon_type < 0 ||
-        (uint32_t)weapon_type >= s_weapon_indexed_table.record_count ||
-        !weapon_indexed_cell_index(entity_state, &cell_index))
+    if (entity_state == 0 || weapon_type < 0 ||
+        (uint32_t)weapon_type >= WEAPON_TYPE_CAPACITY)
         return -1.0f;
-    record = &s_weapon_indexed_table.records[weapon_type];
+    entity_type = entity_state->entity_type;
+    selected_index = entity_state->selected_index;
+    level_index = entity_state->level_index;
+    if (entity_type < 0 || selected_index < 0 || level_index < 0)
+        return -1.0f;
+    /* The reference's full type loader owns the 0x4b68-stride table. Until
+     * that renderer/config path installs its indexed grid, the parsed port
+     * definition still provides the exact +0x4b10 fallback field. */
+    if (s_weapon_indexed_records == 0 ||
+        (uint32_t)weapon_type >= s_weapon_indexed_record_count) {
+        return (uint32_t)weapon_type < s_weapon_type_count
+            ? s_weapon_definitions[weapon_type].default_damage : -1.0f;
+    }
+    cell_index = level_index +
+        (entity_type * 3 + selected_index + entity_type * 0xc) * 0x10;
+    if ((uint32_t)cell_index >= WEAPON_INDEXED_GRID_FLOAT_COUNT)
+        return -1.0f;
+    record = &s_weapon_indexed_records[weapon_type];
     value = record->indexed_values[cell_index];
     if (value == -1.0f) return record->default_damage;
     return value;
@@ -182,9 +240,32 @@ float weapon_indexed_float_lookup(
 float entity_indexed_float_lookup_with_minus_one_fallback(
     int weapon_type, const void* entity_record)
 {
-    WeaponIndexedEntityState state;
-    if (!weapon_indexed_entity_state_read(entity_record, &state)) return -1.0f;
-    return weapon_indexed_float_lookup(weapon_type, &state);
+    const int32_t* fields = (const int32_t*)entity_record;
+    const WeaponIndexedTypeRecord* record;
+    int32_t entity_type;
+    int32_t selected_index;
+    int32_t level_index;
+    int32_t cell_index;
+    float value;
+    if (fields == 0 || weapon_type < 0 ||
+        (uint32_t)weapon_type >= s_weapon_indexed_record_count ||
+        s_weapon_indexed_records == 0)
+        return weapon_type >= 0 &&
+               (uint32_t)weapon_type < s_weapon_type_count
+            ? s_weapon_definitions[weapon_type].default_damage : -1.0f;
+    entity_type = fields[0];
+    selected_index = fields[1];
+    level_index = fields[0xcc];
+    if (entity_type < 0 || selected_index < 0 || level_index < 0)
+        return -1.0f;
+    cell_index = level_index +
+        (entity_type * 3 + selected_index + entity_type * 0xc) * 0x10;
+    if ((uint32_t)cell_index >= WEAPON_INDEXED_GRID_FLOAT_COUNT)
+        return -1.0f;
+    record = &s_weapon_indexed_records[weapon_type];
+    value = record->indexed_values[cell_index];
+    if (value == -1.0f) return record->default_damage;
+    return value;
 }
 
 } // namespace lego

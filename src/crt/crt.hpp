@@ -125,8 +125,9 @@ void* crt_calloc_aligned(int count, int size);  /* FUN_004997c0 */
 int crt_float_to_long(float value);
 #endif
 
-/* FUN_00417430: forwards a float to 32-bit integer conversion through
- * the CRT's __ftol routine. */
+/* FUN_00417430: convert the indexed float in the record's +0x34 table.
+ * Its x86 body tail-jumps to the CRT __ftol helper with the value in ST(0). */
+int float_to_long_x87(unsigned int index, const void* record);
 int float_to_long(float value);
 
 /* FUN_0041f8e0: the callable no-op installed by several engine paths. */
@@ -184,7 +185,10 @@ void integer_pair_divide_to_float_pair(int x, int y, int divisor,
                                        float* out_x, float* out_y);
 
 /* FUN_0045b930: __ftol applied twice — the float pair truncated toward
- * zero into the integer pair (same deviation as float_to_long). */
+ * zero into the integer pair. The mapped retail ABI receives the destination
+ * pointers while its two source values are already on the x87 stack. The
+ * four-argument overload is the portable typed adapter. */
+void float_pair_to_integer_pair_x87(int* out_x, int* out_y); /* FUN_0045b930 */
 void float_pair_to_integer_pair(float x, float y, int* out_x, int* out_y);
 
 /* VC5 LIBC.LIB supplies this add-with-carry primitive on MSVC. */
@@ -505,8 +509,10 @@ int  display_resolution_entry_get(int index,
                                   CrtDisplayResolutionEntry* out);
 void display_resolution_combo_populate(CrtDisplayResolutionList* out);
 
-/* The filter table mirrors DAT_00568060/64/68. Its 16-entry guard is a
- * documented safety deviation from the corpus's blind write. */
+/* The filter table mirrors DAT_00568060/64/68. The port retains the
+ * 0x110-byte tuple stride and grows its backing store so every appended
+ * wildcard tuple remains available to the mode matcher. */
+void display_resolution_filter_tuples_reset(void);
 void display_resolution_filter_tuple_append(int width, int height, int bpp);
 int  display_resolution_filter_tuple_count(void);
 void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp);
@@ -562,6 +568,9 @@ int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
 int  request_record_flag8_is_set(int index);  /* FUN_0045ab90 */
 void request_record_flags_set(int index, uint32_t flags); /* port hook */
 uint32_t request_record_flags_peek(int index); /* port hook */
+void request_record_panel_bounds_peek(int index, float* out_x1,
+                                      float* out_y1, float* out_x2,
+                                      float* out_y2);
 
 /* --- the remaining DAT one-liner stores/reads (2026-10-24; finding 392) -----
  * GlobalValueSet_0050080c (FUN_0045c4a0): the unresolved store's word.
@@ -652,6 +661,12 @@ void panel_texture_slots_allocate(int panel, int count, const int* slot_index,
                                   const float* stream, const int* tex1,
                                   const int* tex2, const int* tex3,
                                   const int* ids); /* FUN_0045ac30 */
+/* Config adapter: retain the resource names from Buttons%ix%i and load them
+ * through the shared bitmap-surface cache before filling the same records. */
+void panel_texture_slots_allocate_named(
+    int panel, int count, const int* slot_index, const float* stream,
+    const char* const* tex1, const char* const* tex2,
+    const char* const* tex3, const int* ids);
 void view_blit_window_set(int view, uint32_t handle, void* rect_a,
                           void* rect_b, int region_index); /* port hook */
 void view_blit_window_peek(int view, uint32_t* handle, void** rect_a,
@@ -956,10 +971,12 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit);
 uint32_t renderer_word_a_get(void);
 uint32_t renderer_word_b_get(void);
 uint32_t renderer_word_c_get(void);
+void     renderer_word_c_set(uint32_t value);
 extern uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
 void     renderer_words_set(uint32_t a, uint32_t b, uint32_t c); /* install */
 
 /* GlobalDwordGet (FUN_004065d0): the DAT_0076ac84 global dword. */
+extern uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
 uint32_t renderer_global_dword_get(void);
 void     renderer_global_dword_set(uint32_t value); /* install */
 

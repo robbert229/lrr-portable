@@ -2,6 +2,7 @@
 #include "scene_pool.hpp"
 
 #include "heap.hpp"
+#include "view.hpp"
 
 #include <string.h>
 
@@ -15,6 +16,7 @@ struct DDiSceneObjectRecord {
     uint32_t kind;
     uint32_t flags;
     void* owned_name;
+    uint32_t reserved[3];
     DDiSceneObjectRecord* next;
 };
 
@@ -54,6 +56,18 @@ void scene_object_partial_release(DDiSceneObjectRecord* record)
     scene_object_return_to_pool(record);
 }
 
+void scene_object_allocation_failed(DDiSceneObjectRecord* record)
+{
+    /* FUN_00472950 sends a partially initialized record through the normal
+     * mode-zero destructor.  The registered adapter owns the full renderer
+     * cleanup and pool transition when present; the local fallback can only
+     * release channels whose ownership was established here. */
+    if (s_object_destroy != 0)
+        s_object_destroy(record, 0);
+    else
+        scene_object_partial_release(record);
+}
+
 } // namespace
 
 void ddiscene_object_pool_hooks_set(
@@ -76,9 +90,10 @@ void ddiscene_object_pool_auxiliary_set(void** allocations, uint32_t count,
     s_shared_directory = shared_directory;
 }
 
-/* The reference's DDiSceneObjectArrayGrow allocates 1<<level records and
- * links them into DAT_0076add0. Keep the pool in native pointer-sized records
- * so the +0x28 free-list word remains valid on 64-bit builds. */
+/* The reference's DDiSceneObjectArrayGrow allocates 1<<level records at
+ * stride 0x2c and links them through the word at +0x28. The reserved words
+ * keep that x86 record layout while pointers widen in the portable build. */
+// FUNCTION: LEGORR 0x004759f0
 void ddiscene_object_array_grow(void)
 {
     uint32_t count;
@@ -126,12 +141,22 @@ void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor)
             ? descriptor->channel_names[i] : 0;
         if (s_channel_create(channel_name, record, i,
                              &record->channels[i]) != 0) {
-            scene_object_partial_release(record);
+            scene_object_allocation_failed(record);
             return 0;
         }
         if (record->channels[i] == 0) {
-            scene_object_partial_release(record);
+            scene_object_allocation_failed(record);
             return 0;
+        }
+    }
+    /* The retail call stores the owning scene record in the hook property's
+     * 32-bit callback word.  Keep that pointer-to-word conversion on the
+     * original 32-bit ABI; a wider host cannot represent it in that field. */
+    if (sizeof(void*) == 4u) {
+        const int owner_record = (int)(long)record;
+        for (i = 0; i < 3; ++i) {
+            ddiscene_animation_hook_create(
+                record->channels[i], owner_record, 0, 0, 0, 0, 0, 0, 0, 0);
         }
     }
     return record;

@@ -10,14 +10,17 @@
  *
  * The sound bank mirrors finding 14 §1: a fixed 600-slot table
  * (corpus DAT_00506698, stride 0x134) whose slots carry loop/stream flags
- * (bit 2 lensed = looping, bit 3 = streamed). Actual playback (DirectSound;
- * streamed voices) is a later milestone — this is the loader half.
+ * (bit 2 lensed = looping, bit 3 = streamed). The portable streamed voice
+ * path submits aligned chunks through the active audio player; DirectSound
+ * ring-buffer cursor semantics remain a backend seam.
  */
 #ifndef LEGORRR_SOUND_HPP
 #define LEGORRR_SOUND_HPP
 
 #include <cstdint>
 #include <cstddef>
+
+typedef struct BlockFile BlockFile;
 
 #define SOUND_LOOPING  0x4u
 #define SOUND_STREAMED 0x8u
@@ -42,11 +45,20 @@ typedef struct SoundWaveDataReader {
     uint32_t cursor;
     uint32_t remaining;
 } SoundWaveDataReader;
+typedef struct SoundWaveMemoryStream SoundWaveMemoryStream;
+typedef struct SoundWaveFileHandle SoundWaveFileHandle;
+typedef struct SoundWaveChunk {
+    uint32_t chunk_id;
+    uint32_t chunk_size;
+    uint32_t form_type;
+    uint32_t data_offset;
+    uint32_t flags;
+} SoundWaveChunk;
 void sound_wave_data_reader_init(SoundWaveDataReader* reader,
                                  const uint8_t* data, uint32_t size);
-uint32_t sound_wave_data_read(SoundWaveDataReader* reader,
-                              uint32_t requested, void* destination,
-                              uint32_t capacity, uint32_t* bytes_read);
+uint32_t sound_wave_data_reader_read(SoundWaveDataReader* reader,
+                                     uint32_t requested, void* destination,
+                                     uint32_t capacity, uint32_t* bytes_read);
 
 /* A loaded sound. `data` is the raw PCM payload of the data chunk. */
 typedef struct Sound {
@@ -59,6 +71,40 @@ typedef struct Sound {
                             * corpus's stored stream size role) */
 } Sound;
 
+/* Portable counterparts for the reference WinMM/mmio WAVE helpers. The
+ * in-memory parser returns an opaque stream context; the file opener below
+ * keeps a loose-file GameFileHandle open while the caller visits the data
+ * chunk. Both return an owned WAVEFORMATEX byte block (including any non-PCM
+ * extension) and the RIFF parent chunk. The in-memory caller must keep its
+ * input data alive until the stream is released. */
+uint32_t sound_wave_memory_format_read(const uint8_t* data, int32_t size,
+                                      SoundWaveMemoryStream** stream_out,
+                                      uint8_t** format_out,
+                                      SoundWaveChunk* parent_chunk_out);
+uint32_t sound_wave_memory_stream_read(SoundWaveMemoryStream* stream,
+                                      void* destination, uint32_t requested,
+                                      uint32_t* bytes_read);
+void sound_wave_memory_format_close(SoundWaveMemoryStream** stream,
+                                    uint8_t** format);
+uint32_t sound_wave_file_average_bytes_per_second_read(const char* path);
+uint32_t sound_wave_file_open_read_chunks(const char* path,
+                                          SoundWaveFileHandle** handle_out,
+                                          uint8_t** format_out,
+                                          SoundWaveChunk* parent_chunk_out);
+void sound_wave_data_chunk_open(SoundWaveFileHandle** handle,
+                                SoundWaveChunk* data_chunk_out,
+                                SoundWaveChunk* parent_chunk);
+/* WaveDataRead @ 0x489100: `data_chunk` is the MMCKINFO-compatible record
+ * returned by sound_wave_data_chunk_open; its chunk_size is remaining bytes. */
+uint32_t sound_wave_data_read(SoundWaveFileHandle* handle,
+                              uint32_t requested, void* destination,
+                              SoundWaveChunk* data_chunk,
+                              uint32_t* bytes_read);
+void sound_wave_file_handle_close(SoundWaveFileHandle** handle,
+                                 uint8_t** format);
+uint32_t sound_wave_handle_and_buffer_release(SoundWaveFileHandle** handle,
+                                              uint8_t** format);
+
 /* Parse a RIFF/WAVE buffer. Chunk order-independent; PCM (tag 1) only; NULL
  * for anything else (missing fmt/data, non-WAVE, truncated, RLE'd etc.). */
 Sound* sound_parse(const uint8_t* data, uint32_t size);
@@ -67,6 +113,7 @@ void sound_free(Sound* s);
 
 /* Load by resource name (disk or WAD) through the resource layer. */
 Sound* sound_load(const char* name);
+int sound_sample_file_open_by_name(const char* name); /* 0x0047fb60 */
 int sound_sample_load_into(Sound* output, const char* name, int mode_flags);
 void sound_sample_clear(Sound* sound);
 
@@ -122,10 +169,8 @@ int sound_bank_entry_load(const char* name, int streamed, int looping,
                           int volume);
 
 /* SoundBankEntryRelease @ 0x47ab00: clear the busy bit and free the
- * record's sample memory. Returns 1 when the sound system is enabled and
- * the slot is valid, otherwise 0. Deviation: the corpus additionally releases
- * three DirectSound buffer interfaces through their vtables — the
- * instance layer is TODO(corpus), so that part of the seam is a no-op. */
+ * record's sample memory and its portable PCM duplicate buffers. Returns 1
+ * when the sound system is enabled and the slot is valid, otherwise 0. */
 int sound_bank_entry_release(int slot);
 
 /* SoundVolumeValueValid @ 0x47a850: the millibel sanity gate — valid
@@ -138,20 +183,16 @@ int sound_volume_value_valid(int millibels);
 uint32_t sound_bank_entry_flags(int slot);
 int sound_bank_entry_volume(int slot);
 Sound* sound_bank_entry_sample_get(int slot);
-typedef int (*SoundRecordBufferCreateHook)(void* context, int slot,
-                                           int buffer_index,
-                                           const Sound* sample);
-void sound_record_buffer_create_hook_set(SoundRecordBufferCreateHook hook,
-                                         void* context);
+/* Create up to three portable duplicate-buffer records for the loaded slot. */
 int sound_record_create_buffers(int slot);
 int sound_wave_sample_duplicate_buffer_create(int slot, int buffer_index);
+int sound_bank_entry_play(int slot, int loop);
+int sound_bank_entry_play_mode(int slot, int loop, int mode);
 
 /* SoundBankEntryVolumeSet @ 0x47b050: validate `millibels` (storing 0
- * when invalid) into the record's volume word. Deviations: the corpus
- * pushes the value through the record's buffer interfaces — all three
- * when the loop bit is set — which land with the instance layer
- * (TODO(corpus), the seam is a no-op), and it writes past any slot
- * bound, which the port guards. */
+ * when invalid) into the record's volume word and apply the equivalent
+ * gain to buffer 0 or all three duplicate buffers when the loop bit is set.
+ * The port guards the corpus's unbounded slot write. */
 void sound_bank_entry_volume_set(int slot, int millibels);
 
 /* ------------------------------------------------------------------ *
@@ -187,36 +228,27 @@ uint32_t sound_pcm_hash(Sound* s);
  *
  *  The corpus builds the index-to-alias-name table at startup in
  *  SoundAliasRegistryInit @ 0x00464740: allocate a 0x7bc-byte (495-slot)
- *  word table, write the uppercase string hash (GameStringHashCompute,
- *  unported here — its only observable effect is the uppercase fold) of
- *  each of 45 hard-coded "SFX_*"
- *  names to slots 0..44, and register the scene sample hook
- *  (DDiSceneSampleHookRegister, engine-side, TODO(corpus) here).
- *  SoundAliasLookup @ 0x464c70 resolves a name through
- *  that table (case-insensitive: both sides pass the KeyToAscii uppercase
- *  fold, which the port
- *  applies directly with s_strcasecmp), and — only while
+ *  word table, write the GameStringHashCompute value for each of 45
+ *  hard-coded "SFX_*" names to slots 0..44, and register the scene sample
+ *  callback that resolves frame sample names and submits positional sound.
+ *  SoundAliasLookup @ 0x464c70 hashes each query and returns the first
+ *  matching slot, including hash collisions, and — only while
  *  SoundDynamicAliasRegistrationSet @ 0x00464c50 has raised DAT_00502a2c
  *  bit 2 — appends unknown names at the end of the table (dynamic
  *  aliases, DAT_00502a24 count) so `Sounds.*`-style names resolve to
  *  fresh indices without a config re-read.
  *
- *  Port modelling: the corpus slots hold only the 32-bit hash key; the
- *  port keeps the alias *names* (built-ins as static literals, dynamic
- *  copies allocated), so equality is decided with the same fold the
- *  corpus's hash keys collapse to. Hash-collision resolution is the one
- *  corpus behaviour not reproduced (collisions are unobservable for
- *  distinct shipped names).
+ *  The port keeps hashes in slot order and retains names separately for
+ *  sound_alias_name(). This preserves the corpus's first-match behavior
+ *  when distinct names produce the same hash.
  * ------------------------------------------------------------------ */
 
 #define SOUND_ALIAS_BUILTINS 45  /* DAT_00502a24 base 0x2d in the lookup */
 #define SOUND_ALIAS_MAX 495      /* 0x7bc-byte table, one alias per word */
 
-/* SoundAliasRegistryInit @ 0x00464740: (re)build the registry. Deviations:
- * the corpus's second call leaks the old allocation while keeping the
- * stale dynamic count (uninitialised reads); the port frees the dynamic
- * copies and zeroes the count, keeping the registration flag (the corpus
- * leaves DAT_00502a2c untouched here). */
+/* SoundAliasRegistryInit @ 0x00464740: rebuild the built-in and retained
+ * dynamic hashes in reference order and idempotently register the scene
+ * sample callback. Reinitialization preserves dynamic names and indices. */
 void sound_alias_registry_init(void);
 
 /* SoundDynamicAliasRegistrationSet @ 0x00464c50: enable (nonzero) or
@@ -265,34 +297,23 @@ void sound_subsystem_enable_set(int enable, int stop_active);
  * seam armed. */
 void sound_subsystem_enable_set_and_stop(int enable);
 
-/* SoundBufferStopHandle @ 0x47b130: DirectSound buffers are external to the
- * portable PCM bank, so the validated bank-slot/buffer index is forwarded to
- * an installable stop operation. The handle is one of three buffers per bank
- * slot, matching the reference's three-buffer record layout. */
-typedef void (*SoundBufferStopHook)(void* context, int buffer_handle);
-void sound_buffer_stop_hook_set(SoundBufferStopHook hook, void* context);
+/* SoundBufferStopHandle @ 0x47b130: stop the selected duplicate buffer's
+ * active voice when the backend supports per-submission cancellation. */
 void sound_buffer_stop_handle(int buffer_handle);
+void sound_handle_stop_forward(int buffer_handle); /* 0x465190 */
+struct AudioBuffer;
+struct AudioBuffer* sound_handle_buffer_get(int buffer_handle); /* 0x47b0f0 */
 typedef void (*SoundBufferObjectStopHook)(void* context, void* buffer_object);
-typedef void (*SoundStreamStopHook)(void* context, int stream_index);
-typedef int (*SoundStreamStartHook)(void* context, int stream_index,
-                                    const Sound* sample);
-typedef int (*SoundStreamFormatHook)(void* context, int stream_index,
-                                     const WavSample* format,
-                                     uint32_t buffer_bytes);
-typedef int (*SoundStreamDrainHook)(void* context, int stream_index);
-void sound_stream_playback_hooks_set(SoundStreamStartHook start,
-                                     SoundStreamFormatHook format_setup,
-                                     SoundStreamDrainHook drain_check,
-                                     void* context);
+/* Stream operations submit whole in-memory samples to the active player and
+ * track the two logical reference stream slots. */
 int sound_stream_playback_start(int stream_index, const Sound* sample);
 int sound_stream_format_setup(int stream_index, const WavSample* format,
                               uint32_t buffer_bytes);
 int sound_stream_drain_check(int stream_index);
 void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
                                       void* context);
-void sound_stream_stop_hook_set(SoundStreamStopHook hook, void* context);
 void sound_buffer_association_stop_all(void);
-void sound_stream_stop_and_release(int stream_index);
+int sound_stream_stop_and_release(int stream_index);
 void sound_subsystem_stop_all(void);
 typedef void (*SoundPositionApplyHook)(void* context, void* buffer_object,
                                        const float position[3],
@@ -303,17 +324,21 @@ void sound_position_set_from_vector(void* buffer_object,
                                     const float position[3]);
 int sound_attached_stop_by_entity(uint32_t entity);
 typedef void* (*SoundInstanceRegisterHook)(void* context, void* instance);
-typedef void (*SoundInstanceStopHook)(void* context, void* instance);
+typedef void (*SoundInstanceStopHook)(void* context, void* provider,
+                                      void* instance);
 void sound_instance_hooks_set(SoundInstanceRegisterHook register_hook,
                               SoundInstanceStopHook stop_hook,
                               void* context);
-int sound_instance_track_register(void* instance);
-void sound_instance_track_stop_and_remove(void* instance);
+void sound_instance_track_register(void* instance);
+void sound_instance_track_stop_and_remove(void* provider, void* instance);
+void sound_buffer_association_remove_instance(void* instance);
 typedef int (*SoundSpatialRefreshHook)(void* context, void* sound_object);
-typedef void (*SoundStreamTickHook)(void* context, int stream_index);
+/* SoundSourceSpatialRefresh uses the retail Direct3DRM/DirectSound vtables
+ * in the 32-bit reference backend. This hook is only the fallback adapter
+ * for non-COM providers; the SDL queue cannot reposition a submitted voice. */
 void sound_spatial_refresh_hooks_set(SoundSpatialRefreshHook refresh,
-                                     SoundStreamTickHook stream_tick,
                                      void* context);
+/* SoundSourceSpatialRefresh @ 0x47b410; called by the production sound tick. */
 void sound_source_spatial_refresh(void* sound_object);
 void sound_source_spatial_refresh_all(void);
 void sound_stream_ring_buffer_tick(int stream_index);
@@ -429,6 +454,9 @@ int sound_deferred_handle(void);
  * alias's variant chain. 1 if every path loaded, 0 if any failed (the
  * chain still keeps the successes, like the corpus). */
 int sound_sample_marker_parse(const char* spec, int alias_index);
+/* Load the Samples section after the audio bank has been enabled.
+ * allow_marked controls the reference's leading-`!` reduce-samples gate. */
+void sound_samples_config_load(BlockFile* config, int allow_marked);
 
 /* SoundSampleVariantSelect @ 0x464e20: rotate the chain with the
  * corpus's 15-bit draw and return the head's bank slot (-1 for the
@@ -471,13 +499,15 @@ int sound_variant_chain(int alias_index, int* out_slots, int max);
 
 /* SoundAliasPlay @ 0x464fa0: play `alias` (looping when `loop`) —
  * immediately when not batching (variant draw + play seam when the
- * chain's head holds a record), or deferred to the batch table. */
-void sound_alias_play(int alias, int loop);
+ * chain's head holds a record), or deferred to the batch table. Returns
+ * the encoded bank/buffer handle on successful immediate playback, else -1. */
+int sound_alias_play(int alias, int loop);
 
 /* PositionalSoundSubmit @ 0x465090: like sound_alias_play but carries a
  * position: `positional` selects the position-word form (`position`) or
  * the coordinate-vector form (`xyz`, three floats); the deferred form
- * keeps both. Returns 0 as shipped. */
+ * keeps both. Immediate playback returns its encoded bank/buffer handle;
+ * deferred or unsuccessful playback returns 0. */
 int sound_positional_sound_submit(int position, int alias, int loop,
                                   int positional, const float* xyz);
 /* SoundSubmissionRouteWrapper @ 0x465050: unwraps the optional position
@@ -558,5 +588,9 @@ void sound_buffer_association_add(uint32_t a, uint32_t b, uint32_t c);
                                                 /* FUN_0047b020 */
 void  sound_buffer_association_head_set(void* node); /* port hook */
 void* sound_buffer_association_head_peek(void);      /* port hook */
+
+/* SoundMinimumDistanceUpdateMode (FUN_004295f0) applies this raw float
+ * bit pattern to every tracked buffer through its min-distance method. */
+void sound_tracked_buffers_set_min_distance(uint32_t value);
 
 #endif /* LEGORRR_SOUND_HPP */

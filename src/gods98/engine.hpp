@@ -81,6 +81,18 @@ typedef struct EngineState {
 
 /* Mutable engine context — stands in for the corpus's global window
  * (DAT_00505f88 / 00505f84 / 00556ecc / 00556ed0 / 00556ec8 / 005560d4…). */
+typedef struct EngineCameraTargetRecord {
+    void* (*indexed_scene_resolve)(void* source, uint32_t target_id,
+                                   uint32_t* component_present);
+    uint32_t type;       /* retail target-record kind */
+    void* source[3];     /* one populated union arm, selected by type */
+    void* scene_cache;   /* full host pointer replacing retail +0x2dc dword */
+    int32_t cache_id;    /* target id replacing retail +0x2e0 dword */
+    float position[3];
+    float facing[3];
+    uint32_t component_present;
+} EngineCameraTargetRecord;
+
 typedef struct EngineContext {
     int32_t      app_mode;     /* DAT_00505f88 — 0 normal, 10 loader */
     uint32_t     feature;      /* DAT_00505f84 — engine feature word */
@@ -107,7 +119,24 @@ typedef struct EngineContext {
                                 * every frame; zero-initialized scaffolds and
                                 * tests keep the pre-#85 1.0 behaviour. */
     int          tickers_ran;  /* scaffolding: count of dispatched tickers */
+    /* Minimum record span needed by the fixed-offset camera-controller
+     * helpers (through the gate byte at +0xb8). This is separate from the
+     * three ViewContext/CameraHandle records above; it is not the full
+     * retail object, and its renderer pointers at +0x28/+0x30 are unbound. */
+    uint8_t      camera_controller[0xb9];
+    /* Host records backing retail ViewContext target pointers. The raw
+     * target records cache pointers and therefore use full host pointers. */
+    EngineCameraTargetRecord camera_targets[10];
+    uint32_t camera_target_count;
 } EngineContext;
+
+/* Current frame owner for engine services that mirror global retail state
+ * while the port keeps the state inside EngineContext. EngineTick updates
+ * this before running any frame work. */
+uint32_t* engine_current_feature_word(void);
+/* Current engine state word (DAT_00556ecc), while an EngineContext owns the
+ * active frame. NULL outside an active engine context. */
+uint32_t* engine_current_state_word(void);
 
 /* --- engine-level binding ------------------------------------------------
  * The corpus uses ONE 0x284-byte block (DAT_005560d4) for both engine state
@@ -192,16 +221,24 @@ static inline uint8_t engine_voxel_byte(const EngineContext* ctx,
 /* Frame tick — the triplet slot DAT_00505930 (corpus EngineTick @ 0x4232e0).
  * Returns 0 when the frame loop must quit, 1 otherwise. dt is seconds. */
 int EngineTick(EngineContext* ctx, float dt);
+typedef void (*EngineTutorialDispatchHook)(float delta, void* context);
+void engine_tutorial_dispatch_hook_set(EngineTutorialDispatchHook hook,
+                                       void* context);
 
-/* Per-frame housekeeping (corpus EnginePreTick @ 0x4231f0). */
-void EnginePreTick(EngineContext* ctx);
+/* Retail-shaped EnginePreTick uses the context temporarily bound by
+ * EngineTick. Local callers can use the explicit adapter. */
+void EnginePreTick(void); /* FUN_004231f0 */
+void engine_pre_tick_adapter(EngineContext* ctx);
 
-/* Quit-poll probe (corpus KeepRunning @ 0x435940). 0 => quit requested. */
+/* Portable quit/liveness adapter; retail KeepRunning @ 0x435940 is a
+ * no-argument global state machine. */
 typedef int (*EngineKeepRunningHook)(EngineContext* context, void* user);
 void engine_keep_running_hook_set(EngineKeepRunningHook hook, void* user);
 int EngineKeepRunning(EngineContext* ctx);
 
-/* Time-scale factor (corpus FUN_0041fb40 call site). */
+/* Retail TimeScaleGet @ 0x0041fb40 reads the shared DAT_0055615c global. */
+float EngineTimeScale(void);
+/* Portable context adapter used by EngineTick and local callers. */
 float EngineTimeScale(EngineContext* ctx);
 
 /* GameConfigCallbackRegistryInit (FUN_0041fa20) ports the callback triplet
@@ -225,10 +262,11 @@ void engine_game_config_callback_registry_init(const char* root);
  * results passed to the later subsystem tickers. Returns 0 => quit frame.
  * (Ported into mainsim.* — see main_sim_step.) */
 
-/* Port-side shutdown dispatcher (not a direct match for either callback).
- * The reference selects LAB_00424cf0 for normal play or LAB_00424d00 for
- * loader mode in GameConfigCallbackRegistryInit @ 0x0041fa20 (finding 20).
- * The callback-specific cleanup paths remain unported. */
+/* Shutdown dispatcher for the callback selected by
+ * GameConfigCallbackRegistryInit @ 0x0041fa20. Normal play follows
+ * ResetLevelAndExit @ 0x4250a0; loader mode runs the available subset of
+ * EngineShutdown @ 0x424d00. Renderer globals and unbound entity arrays are
+ * not represented by EngineContext. */
 void EngineShutdown(EngineContext* ctx);
 
 /* RuntimeFlag40000000Get (FUN_0041f970, finding 03): the DAT_00556ecc
@@ -269,6 +307,7 @@ void   window_mode_flag_set(uint32_t mode);
 void objective_score_text_origin_set(const float* pair);
 void objective_score_text_origin_peek(float out[2]);
 uint32_t engine_debug_word_peek(void);
+void engine_debug_word_bit_set(uint32_t mask, int enabled);
 
 /* EngineModeSet (FUN_004565f0): stores the mode word into the global flag
  * DAT_004ff978 (the port's crt.* own storage, through the install hook),
@@ -277,6 +316,10 @@ uint32_t engine_debug_word_peek(void);
  * answers the mode. Deviation: the corpus strides the caller's mode
  * pointer blindly — the port guards it and answers zero. */
 int engine_mode_set(EngineContext* ctx, const int* mode);
+int engine_mode_set_target(const int* mode); /* target ABI: 0x004565f0 */
+void engine_global_state_flags_bit7_set_target(int value);
+void engine_global_state_flags_bits6_and_9_set_target(int value,
+                                                       int set_bit9);
 uint32_t engine_overlay_word_peek(int which); /* 0: DAT_00503610,
                                                * 1: DAT_00503614 (hook) */
 void engine_overlay_words_set(uint32_t flags, uint32_t request);
@@ -360,6 +403,8 @@ void        entity_field_grid_buffer_release(void);               /* FUN_0046621
 void        grid_cell_record_buffer_replace(EngineState* block);  /* FUN_00466230 */
 void*       entity_field_grid_buffer_peek(void);
 EngineState* entity_field_grid_descriptor_peek(void);
+int         entity_field_grid_cell_get(int x, int y, void** entity_out,
+                                       uint32_t* flags_out);
 
 /* --- the field-grid cell window band (2026-10-25; see the band above) -----
  * The corpus reads the grid as two unowned globals (the buffer word and

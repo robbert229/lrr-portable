@@ -20,12 +20,13 @@
  *                                       flag byte has bit 2, walk the grid
  *                                       (+0x8 x +0xc, +0x28 buffer, cell
  *                                       stride 0x28) and clear the per-cell
- *                                       "marker" bit (cell+0x19 bit 4) via a
- *                                       callback, then two render passes.
+ *                                       "marker" bit (cell+0x19 bit 4),
+ *                                       rebuilds its terrain surface vectors,
+ *                                       then advances material transitions.
  *
- * Helpers (FUN_0040aa40 / 0040d490 / 00464ef0 / 00409270…/00450f30 /
- * 00450b60 / 0044f090) stay hook boundaries with corpus addresses; engines
- * of the game layer land them later.
+ * The terrain-vector callback uses the game layer's FUN_00450f30 port, and
+ * the transition pass calls terrain_material_transition_tick (FUN_0044f090).
+ * FUN_00450b60 still needs the renderer-owned cell-list vertex records.
  */
 #ifndef LEGORRR_SIMTICK_HPP
 #define LEGORRR_SIMTICK_HPP
@@ -101,16 +102,16 @@ void simtick_manager_set_timer_word(uint32_t w);  /* DAT_00500860 seed */
 
 /* --- tranche 8 tickers ---------------------------------------------------- */
 void simtick_sound_keepalive(EngineContext* c);  /* FUN_0047aba0 */
-void simtick_editor_steps(EngineContext* c);     /* FUN_0044cfa0 */
+void simtick_editor_steps(EngineContext* c);     /* legacy editor-step seam */
 void simtick_cooldown_tick(EngineContext* c, float dt); /* FUN_0041a2c0 -> bus */
-void simtick_bitfield_tree(int* base, int code); /* FUN_0049cf90 */
+void simtick_bitfield_tree(int* base, int code);
 
 void simtick_set_sound_guards(int sound_on, int active);       /* 0x533878/0x506688 */
 void simtick_set_keepalive_hook(int (*h)(int entry, int a, int b)); /* 0x47abc0 */
 void simtick_set_editor_state(uint32_t word, int active);      /* 0x4eaec8/0x4eadd8 */
 void simtick_set_step_hook(void (*h)(int step));
 int  simtick_editor_steps_run(void);
-void simtick_set_tree_hook(int (*h)(int idx, int bits));       /* 0x49d000 */
+void simtick_set_tree_hook(int (*h)(int idx, int bits));
 int  simtick_tree_fired(void);
 
 /* --- tranche 9 tickers --------------------------------------------------- */
@@ -118,7 +119,10 @@ typedef void (*SimtickPostStepHook)(EngineContext* context, void* user);
 void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user);
 void simtick_post_step(EngineContext* c);              /* FUN_004665c0 */
 void simtick_minion_states(EngineContext* c, float dt, float scale); /* 0x4313b0 */
-void simtick_grid_cell_pass(EngineContext* c);         /* FUN_00424600 */
+/* Portable context/scale adapter for the scene resource sweep. */
+void simtick_grid_cell_pass(EngineContext* c, float scale);
+/* Deterministic seeded-cell adapter retained for existing local callers. */
+void simtick_grid_cell_pass(EngineContext* c);
 void simtick_scene_pass(EngineContext* c, float dt);   /* FUN_0043b270 */
 void simtick_sfx_bank(EngineContext* c, float dt);     /* FUN_0046f550 */
 
@@ -135,17 +139,71 @@ uint32_t simtick_scene_word(void);
 void simtick_set_scene_word(uint32_t w);
 void simtick_set_scene_broadcast(void (*h)(int));
 int  simtick_scene_broadcasts(void);
-void simtick_sfx_seed(int n, const void** entries);     /* stride 0xac */
+/* Terrain-cell snapshot/flush performed by FUN_00432200 / FUN_004321a0
+ * around the scene entity walk. Coordinates use the active EngineState grid. */
+void simtick_scene_cell_track(int x, int y);
+void simtick_scene_cell_init_hook(void (*hook)(EngineState* state, int x,
+                                                int y));
+int  simtick_scene_cells_pending(void);
+typedef void (*SimtickSceneEntityHook)(void* entity, float dt, void* user);
+void simtick_scene_entity_hook_set(SimtickSceneEntityHook hook, void* user);
+typedef void (*SimtickPostClusterRecordHook)(void* record, int argument,
+                                             void* user);
+void simtick_post_cluster_records_set(void** tables, uint32_t table_count,
+    SimtickPostClusterRecordHook active_record_hook,
+    SimtickPostClusterRecordHook entity_first_hook,
+    SimtickPostClusterRecordHook entity_second_hook, void* user);
+/* The combat-effect bank contains ten 0x2b0 projectile records and ten
+ * 0x10 timed-visual records. effects.cpp installs typed views over its live
+ * sidecars from the production ticker; `tracked_entity` models the +0x2a4
+ * gate and `owner_record` retains its full mutable record. */
+#define SIMTICK_SFX_BANK_SLOTS 10
+typedef struct SimtickSfxProjectileRecord {
+    void* tracked_entity;
+    void* owner_record;
+} SimtickSfxProjectileRecord;
+typedef struct SimtickSfxTimedVisualRecord {
+    void* first_handle;
+    void* second_handle;
+    void* resource_owner;
+    float remaining;
+} SimtickSfxTimedVisualRecord;
+typedef struct SimtickSfxBankHooks {
+    void* context;
+    SimtickSfxProjectileRecord* (*projectile_record_get)(int slot,
+                                                          void* context);
+    void (*projectile_update)(void* owner_record, float dt, void* context);
+    void (*entity_segment_scan)(void* entity, float dt, void* context);
+    void (*ray_hit_scan)(void* owner_record, void* context);
+    SimtickSfxTimedVisualRecord* (*timed_visual_record_get)(int slot,
+                                                            void* context);
+    void (*resource_release)(void* handle, void* resource_owner,
+                             void* context);
+} SimtickSfxBankHooks;
+void simtick_sfx_bank_hooks_set(const SimtickSfxBankHooks* hooks);
+/* Test adapter retained for the former 16-byte timer-entry fixture. */
+void simtick_sfx_seed(int n, const void** entries);
 int  simtick_sfx_releases(void);
 
 /* --- tranche 10: the remaining table tickers ----------------------------- */
 void simtick_mouse_world(EngineContext* c, float dt);      /* FUN_00425d90 */
-void simtick_frame_counter(EngineContext* c);              /* FUN_00402220 */
-void simtick_ambient_spawn(EngineContext* c, float dt);    /* FUN_0040eab0 */
+void simtick_frame_counter(EngineContext* c); /* legacy/test helper */
+/* Target ABI: one subsystem-scale float (FUN_0040eab0). */
+void simtick_ambient_spawn_tick(float scale);
+/* Test adapter retained for existing local simtick tests. */
+void simtick_ambient_spawn(EngineContext* c, float dt);
 void simtick_sound_bank_tick(EngineContext* c, float dt);  /* FUN_00465b00 */
 void simtick_render_pass(EngineContext* c, float dt, float scale,
                          uint32_t o1);                     /* FUN_004291a0 */
 void simtick_render_step(EngineContext* c);                /* FUN_00449c00 */
+typedef void (*SimtickRenderPassHook)(EngineContext* context, float dt,
+                                      float scale, void* user);
+void simtick_render_pass_hook_set(SimtickRenderPassHook hook, void* user);
+typedef void (*SimtickRenderEntityHook)(void* entity, void* user);
+void simtick_render_entity_hook_set(SimtickRenderEntityHook hook, void* user);
+/* Exact implemented prefix of MainSimInteractionAndCellUpdate: clears
+ * EngineContext.debug bit 0x400. The pointer-ray, cursor-mode, and UI-state
+ * inputs required by its remaining dispatch are not yet modeled. */
 void simtick_vu_meter(EngineContext* c, float dt);         /* FUN_00426520 */
 void simtick_fx_bank_tick(EngineContext* c, float dt);     /* FUN_0046e390 */
 typedef struct SimtickFxSubEntry {
@@ -225,6 +283,7 @@ void simtick_directsound_listener_view_set(int view); /* FUN_0047ab80 */
 void simtick_route_position_blocked_state_set(int blocked);
                                         /* FUN_0044da20 */
 void simtick_global_ui_flags_clear_bits12(void); /* FUN_0045b610 */
+void simtick_global_ui_flags_set_bit2(void);
 uint32_t simtick_route_position_state_peek(void);
 uint32_t simtick_global_ui_flags_word(void);
 

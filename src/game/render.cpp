@@ -409,3 +409,109 @@ void level_render_map(const LevelState* lvl, const GameContext* ctx,
         }
     }
 }
+
+#include "port_loop_ports.hpp"
+#include <math.h>
+
+static int port_loop_vector_normalize(float vector[3])
+{
+    float length = (float)sqrt((double)(vector[0] * vector[0]
+                              + vector[1] * vector[1]
+                              + vector[2] * vector[2]));
+    if (length < 0.000001f) return 0;
+    vector[0] /= length; vector[1] /= length; vector[2] /= length;
+    return 1;
+}
+
+/* AttachedModelOrientationUpdate (FUN_0046d380): derive an averaged surface
+ * normal from the attached points, smooth it against the previous normal,
+ * then orthogonalize the stored up vector and publish the resulting basis. */
+int attached_model_orientation_update(AttachedModelOrientationState* state,
+                                      void* context,
+                                      AttachedModelOrientationApplyHook apply)
+{
+    float a[3], b[3], normal[3], up[3], right[3];
+    uint32_t i;
+    if (state == NULL || apply == NULL || state->count < 3u || state->count > 8u)
+        return 0;
+    a[0] = state->points[1][0] - state->points[0][0];
+    a[1] = state->points[1][1] - state->points[0][1];
+    a[2] = state->points[1][2] - state->points[0][2];
+    b[0] = state->points[2][0] - state->points[0][0];
+    b[1] = state->points[2][1] - state->points[0][1];
+    b[2] = state->points[2][2] - state->points[0][2];
+    normal[0] = a[1] * b[2] - a[2] * b[1];
+    normal[1] = a[2] * b[0] - a[0] * b[2];
+    normal[2] = a[0] * b[1] - a[1] * b[0];
+    if (!port_loop_vector_normalize(normal)) return 0;
+    for (i = 3; i < state->count; ++i) {
+        float c[3], d[3], n[3];
+        c[0] = state->points[i - 1][0] - state->points[0][0];
+        c[1] = state->points[i - 1][1] - state->points[0][1];
+        c[2] = state->points[i - 1][2] - state->points[0][2];
+        d[0] = state->points[i][0] - state->points[0][0];
+        d[1] = state->points[i][1] - state->points[0][1];
+        d[2] = state->points[i][2] - state->points[0][2];
+        n[0] = c[1] * d[2] - c[2] * d[1];
+        n[1] = c[2] * d[0] - c[0] * d[2];
+        n[2] = c[0] * d[1] - c[1] * d[0];
+        if (port_loop_vector_normalize(n)) {
+            normal[0] += n[0]; normal[1] += n[1]; normal[2] += n[2];
+        }
+    }
+    if (!port_loop_vector_normalize(normal)) return 0;
+    if (port_loop_vector_normalize(state->normal)) {
+        normal[0] = normal[0] * 0.6f + state->normal[0] * 0.4f;
+        normal[1] = normal[1] * 0.6f + state->normal[1] * 0.4f;
+        normal[2] = normal[2] * 0.6f + state->normal[2] * 0.4f;
+        if (!port_loop_vector_normalize(normal)) return 0;
+    }
+    up[0] = state->up[0]; up[1] = state->up[1]; up[2] = state->up[2];
+    {
+        float projection = up[0] * normal[0] + up[1] * normal[1]
+                         + up[2] * normal[2];
+        up[0] -= projection * normal[0];
+        up[1] -= projection * normal[1];
+        up[2] -= projection * normal[2];
+    }
+    if (!port_loop_vector_normalize(up)) {
+        up[0] = 0.0f; up[1] = 1.0f; up[2] = 0.0f;
+        if (fabs((double)(up[0] * normal[0] + up[1] * normal[1]
+                          + up[2] * normal[2])) > 0.95) {
+            up[0] = 1.0f; up[1] = 0.0f; up[2] = 0.0f;
+        }
+        {
+            float projection = up[0] * normal[0] + up[1] * normal[1]
+                             + up[2] * normal[2];
+            up[0] -= projection * normal[0];
+            up[1] -= projection * normal[1];
+            up[2] -= projection * normal[2];
+        }
+        if (!port_loop_vector_normalize(up)) return 0;
+    }
+    right[0] = up[1] * normal[2] - up[2] * normal[1];
+    right[1] = up[2] * normal[0] - up[0] * normal[2];
+    right[2] = up[0] * normal[1] - up[1] * normal[0];
+    if (!port_loop_vector_normalize(right)) return 0;
+    state->normal[0] = normal[0]; state->normal[1] = normal[1];
+    state->normal[2] = normal[2];
+    state->up[0] = up[0]; state->up[1] = up[1]; state->up[2] = up[2];
+    apply(context, right, up, normal);
+    return 1;
+}
+
+namespace unported_ledger_stubs {
+
+/* Adapter only: AttachedModelOrientationUpdate (FUN_0046d380) takes a
+ * render record, four callback arguments, and directly mutates attached scene
+ * nodes. This compact state/apply-hook model is not its ABI. */
+int ledger_stub_0046d380_AttachedModelOrientationUpdate(
+    AttachedModelOrientationState* state, void* context,
+    AttachedModelOrientationApplyHook apply)
+{
+    return attached_model_orientation_update(state, context, apply);
+}
+
+// CellQuadRunStage
+
+} // namespace unported_ledger_stubs

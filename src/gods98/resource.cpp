@@ -4,10 +4,219 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32)
+#include <windows.h>
+#ifndef INVALID_FILE_ATTRIBUTES
+#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
+#endif
+#else
+#include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
 #include "resource.hpp"
 #include "heap.hpp"
 #include "record.hpp"
+#include "sound.hpp"
 #include "string.hpp"
+#include "texture.hpp"
+#include "view.hpp"
+
+/* Direct3DRM object and object-array ABI used by the recursive resource-tree
+ * helper. The reference calls the object's GetChildren slot at +0x4c, then
+ * ObjectArray::GetSize/GetElement at +0x0c/+0x10, and queries each child for
+ * the interface identified by the GUID at 0x0049f988 before recursing. */
+#if defined(_MSC_VER)
+#define RESOURCE_TREE_STDCALL __stdcall
+#elif defined(__i386__)
+#define RESOURCE_TREE_STDCALL __attribute__((stdcall))
+#else
+#define RESOURCE_TREE_STDCALL
+#endif
+
+typedef uint32_t (RESOURCE_TREE_STDCALL *ResourceTreeGetChildrenFn)(
+    void*, void**);
+typedef uint32_t (RESOURCE_TREE_STDCALL *ResourceTreeArraySizeFn)(void*);
+typedef uint32_t (RESOURCE_TREE_STDCALL *ResourceTreeArrayElementFn)(
+    void*, uint32_t, void**);
+typedef uint32_t (RESOURCE_TREE_STDCALL *ResourceTreeQueryInterfaceFn)(
+    void*, const void*, void**);
+typedef uint32_t (RESOURCE_TREE_STDCALL *ResourceTreeReferenceFn)(void*);
+
+// GLOBAL: LEGORR 0x0049f988
+static const unsigned char s_resource_tree_child_iid[16] = {
+    0x70, 0x7f, 0x6b, 0xff, 0x0e, 0xa4, 0xd1, 0x11,
+    0x91, 0xf9, 0x00, 0x00, 0xf8, 0x75, 0x8e, 0x66
+};
+
+// FUNCTION: LEGORR 0x004898e0
+static int resource_tree_callback_count_increment(void* object, void* context)
+{
+    uint32_t* count = (uint32_t*)context;
+    (void)object;
+    ++*count;
+    return 0;
+}
+
+typedef struct ResourceTreeArrayWriter {
+    unsigned char reserved[0x14];
+    void** entries;
+    uint32_t count;
+    uint32_t reserved_tail;
+} ResourceTreeArrayWriter;
+
+// FUNCTION: LEGORR 0x004898f0
+static int resource_tree_callback_array_append(void* object, void* context)
+{
+    ResourceTreeArrayWriter* writer = (ResourceTreeArrayWriter*)context;
+    writer->entries[writer->count] = object;
+    ++writer->count;
+    return 0;
+}
+
+/* ResourceTreeCallbackCount (FUN_00489910): offer the current interface to
+ * the callback first. If it declines, enumerate its child array, query each
+ * returned object for the resource-tree interface, and recurse. The child
+ * object, queried interface, and array each have distinct COM references and
+ * are released at the same points as in the retail routine. */
+// FUNCTION: LEGORR 0x00489910
+uint32_t resource_tree_callback_count(void* object, int depth,
+                                      ResourceTreeCallback callback,
+                                      void* context)
+{
+    void* callback_context = context;
+    ResourceTreeCallback callback_function = callback;
+    void* current_object = object;
+    void** object_vtable;
+    void** array_vtable;
+    ResourceTreeGetChildrenFn get_children;
+    void* child_array;
+    uint32_t child_count;
+    uint32_t index;
+    int found = 0;
+    if (callback_function(current_object, callback_context) != 0) return 1u;
+    object_vtable = *(void***)current_object;
+    get_children = (ResourceTreeGetChildrenFn)object_vtable[0x4c / 4];
+    if (get_children(current_object, &child_array) == 0) {
+        array_vtable = *(void***)child_array;
+        ResourceTreeArraySizeFn get_size;
+        get_size = (ResourceTreeArraySizeFn)array_vtable[0x0c / 4];
+        child_count = get_size(child_array);
+        for (index = 0u; index < child_count; ++index) {
+            void* child;
+            void* child_interface;
+            void** child_vtable;
+            void** current_array_vtable = *(void***)child_array;
+            ResourceTreeArrayElementFn get_element =
+                (ResourceTreeArrayElementFn)current_array_vtable[0x10 / 4];
+            ResourceTreeQueryInterfaceFn query_interface;
+            ResourceTreeReferenceFn release_child;
+            (void)get_element(child_array, index, &child);
+            child_vtable = *(void***)child;
+            query_interface = (ResourceTreeQueryInterfaceFn)child_vtable[0];
+            (void)query_interface(child, s_resource_tree_child_iid,
+                                  &child_interface);
+            release_child = (ResourceTreeReferenceFn)child_vtable[2];
+            (void)release_child(child);
+            if (resource_tree_callback_count(child_interface, depth + 1,
+                                             callback_function,
+                                             callback_context) != 0u) {
+                void** child_interface_vtable = *(void***)child_interface;
+                ResourceTreeReferenceFn release_interface =
+                    (ResourceTreeReferenceFn)child_interface_vtable[2];
+                found = 1;
+                (void)release_interface(child_interface);
+                break;
+            }
+            {
+                void** child_interface_vtable = *(void***)child_interface;
+                ResourceTreeReferenceFn release_interface =
+                    (ResourceTreeReferenceFn)child_interface_vtable[2];
+                (void)release_interface(child_interface);
+            }
+        }
+        array_vtable = *(void***)child_array;
+        ResourceTreeReferenceFn release_array =
+            (ResourceTreeReferenceFn)array_vtable[2];
+        (void)release_array(child_array);
+    }
+    return (uint32_t)found;
+}
+
+/* ResourceTreeCallbackContextCreateForEnumerator (FUN_00489520). The
+ * first argument is present at retail call sites but unused; the second is
+ * retained in the context's first interface field and the third is the
+ * enumerated object whose hierarchy is indexed. */
+// FUNCTION: LEGORR 0x00489520
+ResourceTreeCallbackContext* resource_tree_callback_context_create_for_enumerator(
+    void* unused, void* owner, void* enumerator)
+{
+    ResourceTreeCallbackContext* context_record;
+    ResourceTreeReferenceFn add_ref;
+    ResourceTreeArrayWriter writer;
+    void** vtable;
+    (void)unused;
+    context_record = (ResourceTreeCallbackContext*)engine_heap_alloc(
+        (long)sizeof(ResourceTreeCallbackContext));
+    context_record->kind = 0;
+    context_record->first_handle = owner;
+    context_record->child_chain = NULL;
+    context_record->shared_mode = 0;
+    context_record->second_handle = enumerator;
+    vtable = *(void***)enumerator;
+    add_ref = (ResourceTreeReferenceFn)vtable[1];
+    (void)add_ref(enumerator);
+    context_record->handle_count = 0u;
+    context_record->owner = enumerator;
+    (void)resource_tree_callback_count(enumerator, 0u,
+                                      resource_tree_callback_count_increment,
+                                      &context_record->handle_count);
+    context_record->handles = (void**)engine_heap_alloc(
+        (long)(context_record->handle_count * sizeof(void*)));
+    writer.entries = context_record->handles;
+    writer.count = 0u;
+    (void)resource_tree_callback_count(enumerator, 0u,
+                                      resource_tree_callback_array_append,
+                                      &writer);
+    return context_record;
+}
+
+/* ResourceTreeCallbackContextCreateForResource (FUN_004895c0): the alternate
+ * mode stores its owner as a child-chain pointer and marks shared mode. */
+// FUNCTION: LEGORR 0x004895c0
+ResourceTreeCallbackContext* resource_tree_callback_context_create_for_resource(
+    void* unused, void* owner, void* resource)
+{
+    ResourceTreeCallbackContext* context_record;
+    ResourceTreeReferenceFn add_ref;
+    ResourceTreeArrayWriter writer;
+    void** vtable;
+    (void)unused;
+    context_record = (ResourceTreeCallbackContext*)engine_heap_alloc(
+        (long)sizeof(ResourceTreeCallbackContext));
+    context_record->kind = 0;
+    context_record->first_handle = NULL;
+    context_record->child_chain = owner;
+    context_record->shared_mode = 1;
+    context_record->second_handle = resource;
+    vtable = *(void***)resource;
+    add_ref = (ResourceTreeReferenceFn)vtable[1];
+    (void)add_ref(resource);
+    context_record->handle_count = 0u;
+    context_record->owner = resource;
+    (void)resource_tree_callback_count(resource, 0u,
+                                      resource_tree_callback_count_increment,
+                                      &context_record->handle_count);
+    context_record->handles = (void**)engine_heap_alloc(
+        (long)(context_record->handle_count * sizeof(void*)));
+    writer.entries = context_record->handles;
+    writer.count = 0u;
+    (void)resource_tree_callback_count(resource, 0u,
+                                      resource_tree_callback_array_append,
+                                      &writer);
+    return context_record;
+}
 
 /* Shared file-layer diagnostics used by the reference dispatchers. */
 // GLOBAL: LEGORR 0x004ab028
@@ -22,6 +231,11 @@ static const char s_game_file_seek_name[] = "File_Seek";
 static const char s_game_file_seek_mode_format[] = "Uknown seek mode (%i)";
 // GLOBAL: LEGORR 0x004ab0a0
 static const char s_game_file_tell_name[] = "File_Tell";
+static const char s_game_file_open_name[] = "File_Open";
+static const char s_game_file_close_name[] = "File_Close";
+static const char s_game_file_write_name[] = "File_Write";
+static const char s_game_file_write_wad_error[] =
+    "Cannot write to a file stored in a WAD";
 // GLOBAL: LEGORR 0x004ab0b8
 static const char s_game_file_gets_name[] = "File_GetS";
 // GLOBAL: LEGORR 0x004ab0ac
@@ -116,11 +330,6 @@ public:
     virtual void slot_00(void) = 0;
     virtual void retain(void) = 0;
 };
-
-/* RenderResourceTrackAndRetain maintains a process-wide singly linked list.
- * Its original head is DAT_0076ad60. */
-// GLOBAL: LEGORR 0x0076ad60
-static void* render_resource_tracked_head;
 
 #define ROCK_FALL_STYLE_NAME_CAPACITY 64
 #define ROCK_FALL_STYLE_NAME_LENGTH 128
@@ -417,7 +626,6 @@ void scene_timeout_set_callback_set(SceneTimeoutSetCallback callback)
     s_scene_timeout_set_callback = callback;
 }
 
-/* FUNCTION: LEGORR 0x0040bdc0 */
 void scene_timeout_set_10000(void)
 {
     unsigned char output_a[4] = { 0, 0, 0, 0 };
@@ -1135,16 +1343,16 @@ void numbered_bitmap_load_hook_install(NumberedBitmapLoadHook hook,
     s_numbered_bitmap_context = context;
 }
 
-/* PreloadNumberedBitmaps (FUN_0040a400): format and load indexes 0..10,
- * retaining the first ten in the indexed table and the final one separately. */
+/* PreloadNumberedBitmaps (FUN_0040a400): format <directory>\\ followed by
+ * either <index>.bmp or <prefix><index>.bmp, then get-or-create each of the
+ * eleven textures. The retail function overwrites its slots without a
+ * release; the texture cache owns the loaded surfaces. */
 // FUNCTION: LEGORR 0x0040A400
 void preload_numbered_bitmaps(const char* directory, const char* prefix)
 {
     unsigned int index;
     char path[512];
-    if (directory == NULL || s_numbered_bitmap_load_hook == NULL) {
-        return;
-    }
+    if (directory == NULL) return;
     for (index = 0u; index < 11u; ++index) {
         char suffix[24];
         size_t length;
@@ -1159,15 +1367,16 @@ void preload_numbered_bitmaps(const char* directory, const char* prefix)
             size_t available = 480u - length;
             strncat(path, prefix, available);
             length = strlen(path);
-            if (length < sizeof(path) - 1u) {
-                path[length++] = '_';
-                path[length] = '\0';
-            }
         }
         sprintf(suffix, "%u.bmp", index);
         strncat(path, suffix, sizeof(path) - strlen(path) - 1u);
-        s_numbered_bitmap_slots[index] = s_numbered_bitmap_load_hook(
-            path, s_numbered_bitmap_context);
+        if (s_numbered_bitmap_load_hook != NULL) {
+            s_numbered_bitmap_slots[index] = s_numbered_bitmap_load_hook(
+                path, s_numbered_bitmap_context);
+        }
+        else {
+            s_numbered_bitmap_slots[index] = texture_get_or_load(NULL, path);
+        }
     }
 }
 
@@ -1313,17 +1522,12 @@ void* attached_entity_slot_object_get(SceneResourceAnimationRecord* record,
     return result;
 }
 
-/* SceneObjectResourceRelease (FUN_0046db70): release the primary owned
- * scene resource through the installed owner callback. */
+/* FUN_0046db70 passes the pointer stored at +8 to the typed-child scalar
+ * accessor and discards its result. */
 // FUNCTION: LEGORR 0x0046DB70
-void scene_object_resource_release(SceneResourceAnimationRecord* record)
+void scene_object_resource_release(void* record)
 {
-    if (record != NULL && record->primary_resource != NULL
-        && s_scene_object_resource_release_hook != NULL) {
-        s_scene_object_resource_release_hook(record->primary_resource,
-                                             s_scene_resource_record_context);
-        record->primary_resource = NULL;
-    }
+    (void)typed_child_resource_scalar_get(*(void**)((char*)record + 8));
 }
 
 void scene_animation_track_hook_install(SceneAnimationTrackApplyHook hook,
@@ -1390,13 +1594,14 @@ void scene_assign_owner_from_model(ScenePairedAnimationState* state,
 }
 
 // FUNCTION: LEGORR 0x0046D1A0
-void scene_object_attached_resource_release(ScenePairedAnimationState* state)
+void scene_object_attached_resource_release(void* record)
 {
-    if (state != NULL && state->primary_resource != NULL
-        && s_scene_attached_resource_release_hook != NULL) {
-        s_scene_attached_resource_release_hook(state->primary_resource,
-                                               s_scene_resource_owner_context);
-        state->primary_resource = NULL;
+    /* FUN_0046d1a0 reads its scene object from argument +8 and queries the
+     * object's duration. The length query has no result use at this callsite;
+     * this entry point does not release or clear an attached resource. */
+    if (record != NULL) {
+        void* scene_object = *(void**)((char*)record + 8);
+        (void)ddiscene_object_length_get(scene_object);
     }
 }
 
@@ -1726,14 +1931,16 @@ int lava_effect_select_and_place(int index, const float* position,
 {
     SceneResourceSlotModel* slot = resource_slot_address_by_index(index);
     void* instance;
+    int pose_applied;
     float rx = 0.0f;
     float ry = 1.0f;
     float rz = 0.0f;
     if (slot == NULL || position == NULL || slot->handle == NULL
-        || slot->count >= 10u || s_resource_child_create_hook == NULL
-        || s_scene_effect_pose_hook == NULL) {
+        || slot->count >= 10u || s_resource_child_create_hook == NULL) {
         return 0;
     }
+    /* FUN_0040cce0 clears the slot word at +0x2c before cloning. */
+    slot->selected = 0u;
     if (rotation != NULL) {
         rx = rotation[0];
         ry = rotation[1];
@@ -1744,8 +1951,25 @@ int lava_effect_select_and_place(int index, const float* position,
     if (instance == NULL) {
         return 0;
     }
-    if (s_scene_effect_pose_hook(instance, position[0], position[1],
-            position[2], rx, ry, rz, s_scene_effect_pose_context) == 0) {
+    if (s_scene_effect_pose_hook != NULL) {
+        pose_applied = s_scene_effect_pose_hook(instance, position[0],
+            position[1], position[2], rx, ry, rz,
+            s_scene_effect_pose_context);
+    }
+    else {
+        /* The retail path advances the clone at time zero, sets its position,
+         * then dispatches its pose vtable method with the supplied rotation
+         * and terminal -1. These DDiScene leaves are available even when a
+         * host-specific pose adapter is not installed. */
+        (void)ddiscene_frame_update_and_callbacks(instance, 0.0f);
+        pose_applied = ddiscene_object_position_set(instance, NULL,
+            position[0], position[1], position[2]);
+        if (pose_applied != 0) {
+            pose_applied = ddiscene_object_pose_method_dispatch(instance,
+                NULL, rx, ry, rz, 0.0f, 0.0f, -1.0f);
+        }
+    }
+    if (pose_applied == 0) {
         if (s_scene_release_hook != NULL) {
             s_scene_release_hook(instance, s_scene_lifecycle_context);
         }
@@ -2297,7 +2521,7 @@ int transient_effect_render_slot_configure(int group, float x, float y,
                                            float dx, float dy)
 {
     int slot;
-    if (group < 0 || group >= 2 || s_transient_effect_configure_hook == NULL) {
+    if (group < 0 || group >= 2) {
         return 0;
     }
     for (slot = 0; slot < 30; ++slot) {
@@ -2307,10 +2531,25 @@ int transient_effect_render_slot_configure(int group, float x, float y,
             || entry->handle == NULL) {
             continue;
         }
-        if (s_transient_effect_configure_hook(entry->handle, group, x, y,
-                size, heading, dx, dy,
-                s_transient_effect_configure_context) == 0) {
-            return 0;
+        if (s_transient_effect_configure_hook != NULL) {
+            if (s_transient_effect_configure_hook(entry->handle, group, x, y,
+                    size, heading, dx, dy,
+                    s_transient_effect_configure_context) == 0) {
+                return 0;
+            }
+        }
+        else {
+            /* The retail slot configurator's four calls are already exposed
+             * by the portable DDiScene wrappers. Keep a concrete path for
+             * slots populated by an installed scene-resource backend. The
+             * wrapper return values are intentionally ignored: the retail
+             * body marks this resource pending once it has selected a slot. */
+            scene_render_lock_toggle(entry->handle, 0);
+            (void)ddiscene_frame_update_and_callbacks(entry->handle, 0.0f);
+            (void)ddiscene_object_position_set(entry->handle, NULL,
+                                               x, y, size);
+            (void)ddiscene_object_pose_method_dispatch(entry->handle, NULL,
+                heading, dx, dy, 0.0f, 0.0f, -1.0f);
         }
         entry->pending = 1;
         entry->enabled = 0;
@@ -2384,8 +2623,8 @@ void render_resource_track_and_retain(void* resource)
         return;
     }
     next = (void**)((unsigned char*)resource + 0x1c);
-    *next = render_resource_tracked_head;
-    render_resource_tracked_head = resource;
+    *next = s_render_surface_pool_free_head;
+    s_render_surface_pool_free_head = resource;
     interface_object = *(ResourceRetainInterface**)((unsigned char*)resource + 0x10);
     interface_object->retain();
 }
@@ -2445,7 +2684,7 @@ void resource_interface_call_slot40_and_clear_field14(
 #define ENTRY_FLAG_EXPANDED 0x2u
 #define EXPAND_HEADER_SZ  0x12u
 
-static void wad_huffman_canonical_codes_build(void* table, int count);
+static void wad_huffman_canonical_codes_build(void* table, uint8_t count);
 
 /* The corpus's 16-byte Huffman decode entry. The roles come from the corpus
  * bytes, not from the port's earlier guess: WadHuffmanTableRead (0x0049cd90)
@@ -2467,17 +2706,20 @@ typedef struct WadCodecTableEntry {
     uint16_t pad2;     /* +14 padding */
 } WadCodecTableEntry;
 
-static unsigned int wad_reverse_low_bits(unsigned int v, unsigned int n)
+// FUNCTION: LEGORR 0x0049d000
+static unsigned int wad_reverse_low_bits(unsigned int v, uint8_t n)
 {
     unsigned int out = 0;
     while (n--) { out = (out << 1) | (v & 1u); v >>= 1; }
     return out;
 }
-static void wad_huffman_canonical_codes_build(void* table, int count)
+
+// FUNCTION: LEGORR 0x0049cf90
+static void wad_huffman_canonical_codes_build(void* table, uint8_t count)
 {
     WadCodecTableEntry* e;
     unsigned int next, unit, len;
-    int i;
+    unsigned int i;
     e = (WadCodecTableEntry*)table;
     next = 0;
     unit = 0x80000000u;
@@ -2490,25 +2732,35 @@ static void wad_huffman_canonical_codes_build(void* table, int count)
 }
 
 /* WAD codec state mirrors the executable's shared, non-reentrant decoder. */
+// GLOBAL: LEGORR 0x00558080
 static const unsigned char* wad_codec_in;
+// GLOBAL: LEGORR 0x00558084
 static unsigned char* wad_codec_out;
+// GLOBAL: LEGORR 0x00558090
 static unsigned char* wad_codec_end;
-static unsigned int wad_codec_bits, wad_codec_lsb, wad_codec_msb;
+// GLOBAL: LEGORR 0x00557d68
+static unsigned char wad_codec_bits;
+// GLOBAL: LEGORR 0x0055808c
+static unsigned int wad_codec_lsb;
+// GLOBAL: LEGORR 0x00558088
+static unsigned char wad_codec_msb;
 
 // FUNCTION: LEGORR 0x0049cc70
 static void wad_bitstream_output_initialize(const void* src, void* dst)
 {
     const unsigned char* p;
-    uint32_t n;
+    uint32_t n, raw;
     p = (const unsigned char*)src;
     wad_codec_in = p ? p + 0x12 : NULL;
     wad_codec_out = (unsigned char*)dst;
-    n = p ? ((uint32_t)p[4]<<24)|((uint32_t)p[5]<<16)|((uint32_t)p[6]<<8)|p[7] : 0;
+    raw = p ? *(const uint32_t*)(p + 4) : 0;
+    n = ((raw << 24) & 0xff000000u) | ((raw << 8) & 0x00ff0000u)
+      | ((raw >> 8) & 0x0000ff00u) | (raw >> 24);
     wad_codec_end = dst ? (unsigned char*)dst + n : NULL;
     wad_codec_bits = wad_codec_lsb = wad_codec_msb = 0;
 }
 // FUNCTION: LEGORR 0x0049ccc0
-static unsigned int wad_read_bits_lsb_first(unsigned int n)
+static unsigned int wad_read_bits_lsb_first(unsigned char n)
 {
     unsigned int v, mask;
     v = 0;
@@ -2527,7 +2779,7 @@ static unsigned int wad_read_bits_lsb_first(unsigned int n)
     return v;
 }
 // FUNCTION: LEGORR 0x0049cd30
-static unsigned int wad_read_bits_msb_first(unsigned int n)
+static unsigned int wad_read_bits_msb_first(unsigned char n)
 {
     unsigned int v;
     v=0;
@@ -2621,9 +2873,18 @@ typedef struct ResourceWad {
     WadEntry* entries;
 } ResourceWad;
 
+struct ResourceStream {
+    FILE* file;
+    uint32_t data_offset;
+    uint32_t size;
+    uint8_t* expanded_data;
+};
+
 static ResourceWad s_wads[RESOURCE_MAX_WADS];
 static int       s_wad_count = 0;
 static char      s_wad_prefix[RESOURCE_PATH_MAX] = "LegoRR";
+static ResourceFileTokenList s_resource_file_tokens;
+static char s_resource_directory_root[RESOURCE_PATH_MAX];
 // GLOBAL: LEGORR 0x005339a0
 static char      s_wad_mount_path_cache[0x400];
 // GLOBAL: LEGORR 0x005343b8
@@ -2643,6 +2904,39 @@ static char  s_cd_root[RESOURCE_PATH_MAX] = ""; /* "" = "%c:\" default */
 static ResourceDriveTypeQueryFn s_cd_drive_type_query;
 static ResourcePathExistsFn s_cd_path_exists;
 static void* s_cd_probe_context;
+static ResourceStartupOps s_resource_startup_ops;
+static int s_resource_startup_result = RESOURCE_STARTUP_OK;
+static int s_resource_startup_require_cd;
+
+void resource_startup_require_cd_set(int require_cd)
+{
+    s_resource_startup_require_cd = require_cd != 0;
+}
+
+int resource_startup_require_cd_get(void)
+{
+    return s_resource_startup_require_cd;
+}
+
+void resource_directory_scan_root_set(const char* root)
+{
+    size_t length;
+    if (root == NULL) {
+        s_resource_directory_root[0] = '\0';
+        return;
+    }
+    length = strlen(root);
+    if (length >= sizeof(s_resource_directory_root)) {
+        s_resource_directory_root[0] = '\0';
+        return;
+    }
+    memcpy(s_resource_directory_root, root, length + 1u);
+}
+
+const char* resource_directory_scan_root_get(void)
+{
+    return s_resource_directory_root;
+}
 
 static const char* ares_cd_path(const char* name, char* out, size_t out_sz)
 {
@@ -2779,8 +3073,25 @@ int resource_find_cd_key_drive(void)
         return resource_cd_key_path_exists(path);
     }
     for (drive = 'C'; drive <= 'Z'; ++drive) {
-        if (s_cd_drive_type_query != NULL &&
-            s_cd_drive_type_query(drive, s_cd_probe_context) != 5) {
+        int drive_type;
+        if (s_cd_drive_type_query != NULL) {
+            drive_type = s_cd_drive_type_query(drive, s_cd_probe_context);
+        }
+#if defined(_WIN32)
+        else {
+            char drive_root[4];
+            drive_root[0] = drive;
+            drive_root[1] = ':';
+            drive_root[2] = '\\';
+            drive_root[3] = '\0';
+            drive_type = (int)GetDriveTypeA(drive_root);
+        }
+#else
+        else {
+            drive_type = 0;
+        }
+#endif
+        if (drive_type != 5) {
             continue;
         }
         snprintf(path, sizeof(path), "%c:%c%s%ccd.key", drive,
@@ -2882,7 +3193,7 @@ static int ares_parse(FILE* fp, ResourceWad* out)
         return 0;
     }
     long size = ftell(fp);
-    if (size < 0) {
+    if (size < 0 || (unsigned long)size > 0xfffffffful) {
         return 0;
     }
     out->file_size = (uint32_t)size;
@@ -3009,6 +3320,25 @@ void mount_wad_from_path(const char* path)
 {
     resource_unmount_all();
     if (path != NULL) {
+        char root[RESOURCE_PATH_MAX];
+        char* slash;
+        snprintf(root, sizeof(root), "%s", path);
+        slash = strrchr(root, '/');
+        {
+            char* backslash = strrchr(root, '\\');
+            if (backslash != NULL && (slash == NULL || backslash > slash))
+                slash = backslash;
+        }
+        if (slash == NULL) {
+            snprintf(root, sizeof(root), ".");
+        }
+        else if (slash == root) {
+            root[1] = '\0';
+        }
+        else {
+            *slash = '\0';
+        }
+        resource_directory_scan_root_set(root);
         (void)wwad_archive_index_load(path);
     }
 }
@@ -3017,14 +3347,18 @@ void mount_wad_from_path(const char* path)
  *  Public API
  * ------------------------------------------------------------------ */
 
-/* Partial WadMountStartup (FUN_0047f130): try the numbered WAD archive
- * paths and mount every archive that exists. The original startup routine
- * also handles CD detection, retry dialogs, and missing-data exits. */
-// FUNCTION: LEGORR 0x0047f130
+/* Explicit-root mount API used by tests and portable hosts. Retail startup
+ * behavior is kept in resource_mount_startup_target below. */
 int resource_mount(const char* dir, const char* prefix)
 {
+    char mount_root[RESOURCE_PATH_MAX];
+    if (dir == NULL || prefix == NULL) return s_wad_count;
+    if (dir != NULL) resource_directory_scan_root_set(dir);
+    ares_cd_path("", mount_root, sizeof(mount_root));
+    wad_mount_path_cache_store(mount_root);
     for (int i = 0; i < RESOURCE_MAX_WADS; ++i) {
         char path[RESOURCE_PATH_MAX];
+        if (s_wad_count >= RESOURCE_MAX_WADS) break;
         snprintf(path, sizeof(path), "%s/%s%u.wad", dir, prefix,
                  (unsigned)i);
         FILE* fp = fopen(path, "rb");
@@ -3032,10 +3366,14 @@ int resource_mount(const char* dir, const char* prefix)
             continue;
         }
         ResourceWad* w = &s_wads[s_wad_count];
+        memset(w, 0, sizeof(*w));
         w->fp = fp;
         if (!ares_parse(fp, w)) {
             fprintf(stderr, "resource_mount: bad or truncated wad: %s\n",
                     path);
+            free(w->names);
+            free(w->entries);
+            memset(w, 0, sizeof(*w));
             fclose(fp);
             continue;
         }
@@ -3043,6 +3381,221 @@ int resource_mount(const char* dir, const char* prefix)
         ++s_wad_count;
     }
     return s_wad_count;
+}
+
+void resource_startup_ops_set(const ResourceStartupOps* ops)
+{
+    if (ops == NULL) {
+        memset(&s_resource_startup_ops, 0, sizeof(s_resource_startup_ops));
+    } else {
+        s_resource_startup_ops = *ops;
+    }
+}
+
+int resource_startup_result_get(void)
+{
+    return s_resource_startup_result;
+}
+
+static int resource_startup_current_directory(char* path, size_t capacity)
+{
+    if (path == NULL || capacity == 0u) return 0;
+#if defined(_WIN32)
+    {
+        DWORD length = GetCurrentDirectoryA((DWORD)capacity, path);
+        return length != 0u && length < capacity;
+    }
+#else
+    return getcwd(path, capacity) != NULL;
+#endif
+}
+
+static int resource_startup_directory_exists(const char* path)
+{
+#if defined(_WIN32)
+    DWORD attributes = GetFileAttributesA(path);
+    return attributes != INVALID_FILE_ATTRIBUTES
+        && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0u;
+#else
+    struct stat status;
+    return stat(path, &status) == 0 && S_ISDIR(status.st_mode);
+#endif
+}
+
+static void resource_startup_directory_create(const char* path)
+{
+#if defined(_WIN32)
+    (void)CreateDirectoryA(path, NULL);
+#else
+    (void)mkdir(path, 0755);
+#endif
+}
+
+static int resource_startup_localized_text(const char* registry_key,
+                                           const char* text_key,
+                                           char* output, size_t capacity)
+{
+    int loaded;
+    if (output == NULL || capacity == 0u) return 0;
+    output[0] = '\0';
+    if (s_resource_startup_ops.text_lookup == NULL) return 0;
+    loaded = s_resource_startup_ops.text_lookup(
+        s_resource_startup_ops.context, registry_key, text_key,
+        output, capacity);
+    output[capacity - 1u] = '\0';
+    return loaded != 0 && output[0] != '\0';
+}
+
+static void resource_startup_exit(int result)
+{
+    s_resource_startup_result = result;
+    if (s_resource_startup_ops.exit_process != NULL) {
+        s_resource_startup_ops.exit_process(s_resource_startup_ops.context, 0);
+    }
+}
+
+static int resource_startup_missing_data_dialog(const char* registry_key)
+{
+    char message[1024];
+    char caption[128];
+    if (s_resource_startup_ops.message_box == NULL ||
+        !resource_startup_localized_text(registry_key, "DataMissing",
+                                         message, sizeof(message)) ||
+        !resource_startup_localized_text(registry_key, "SetupError",
+                                         caption, sizeof(caption))) {
+        s_resource_startup_result = RESOURCE_STARTUP_DEPENDENCY_MISSING;
+        return 0;
+    }
+    (void)s_resource_startup_ops.message_box(s_resource_startup_ops.context,
+                                             message, caption, 0u);
+    resource_startup_exit(RESOURCE_STARTUP_MISSING_DATA);
+    return 1;
+}
+
+static int resource_startup_cd_retry(const char* registry_key)
+{
+    char message[1024];
+    char caption[128];
+    if (s_resource_startup_ops.message_box == NULL ||
+        !resource_startup_localized_text(registry_key, "CDMissing",
+                                         message, sizeof(message)) ||
+        !resource_startup_localized_text(registry_key, "SetupError",
+                                         caption, sizeof(caption))) {
+        s_resource_startup_result = RESOURCE_STARTUP_DEPENDENCY_MISSING;
+        return 0;
+    }
+    if (s_resource_startup_ops.message_box(s_resource_startup_ops.context,
+                                           message, caption, 1u) == 2) {
+        resource_startup_exit(RESOURCE_STARTUP_CD_CANCELLED);
+        return 0;
+    }
+    return 1;
+}
+
+static void resource_startup_delme_marker_remove(const char* path)
+{
+#if defined(_WIN32)
+    DWORD attributes = GetFileAttributesA(path);
+    if (attributes != INVALID_FILE_ATTRIBUTES) {
+        (void)SetFileAttributesA(path, attributes & ~FILE_ATTRIBUTE_READONLY);
+        (void)DeleteFileA(path);
+    }
+#else
+    struct stat status;
+    if (stat(path, &status) == 0) {
+        (void)chmod(path, status.st_mode | S_IWUSR);
+        (void)remove(path);
+    }
+#endif
+}
+
+/* WadMountStartup @ 0x0047f130. The startup owner supplies the executable
+ * prefix and registry key; the resource module owns numbered archive
+ * mounting, Data-root derivation, CD-marker probing, and mount-path caching.
+ * Localized prompts and modal UI are host operations; process exit remains
+ * optional so portable callers can inspect the startup result. */
+// FUNCTION: LEGORR 0x0047f130
+void resource_mount_startup_target(const char* prefix, int require_cd,
+                                   const char* registry_key)
+{
+    char working_directory[260];
+    char data_directory[RESOURCE_PATH_MAX];
+    char marker_path[RESOURCE_PATH_MAX];
+    size_t length;
+    int mounted;
+    int cd_found;
+    int data_directory_found;
+    int data_missing;
+
+    s_resource_startup_result = RESOURCE_STARTUP_OK;
+    if (prefix == NULL || prefix[0] == '\0') prefix = s_wad_prefix;
+    if (!resource_startup_current_directory(working_directory,
+                                            sizeof(working_directory))) {
+        s_resource_startup_result = RESOURCE_STARTUP_PATH_ERROR;
+        return;
+    }
+    length = strlen(working_directory);
+    if (length > 1u &&
+        (working_directory[length - 1u] == '/' ||
+         working_directory[length - 1u] == '\\')) {
+        working_directory[length - 1u] = '\0';
+    }
+    if (snprintf(data_directory, sizeof(data_directory), "%s%cData",
+                 working_directory, RES_PATH_SEP) < 0 ||
+        strlen(data_directory) >= sizeof(data_directory)) {
+        s_resource_startup_result = RESOURCE_STARTUP_PATH_ERROR;
+        return;
+    }
+
+    resource_unmount_all();
+    s_cd_root[0] = '\0';
+    s_cd_drive = 'A';
+    snprintf(s_cd_data_dir, sizeof(s_cd_data_dir), "%s", "Data");
+    resource_set_wad_prefix(prefix);
+    mounted = resource_mount(working_directory, prefix);
+    /* resource_mount is also the explicit-root test API; restore the retail
+     * startup Data directory after its modern-root cache setup. */
+    resource_directory_scan_root_set(data_directory);
+    wad_mount_path_cache_store(data_directory);
+
+    cd_found = resource_find_cd_key_drive();
+    while (!cd_found && require_cd != 0) {
+        if (!resource_startup_cd_retry(registry_key)) return;
+        cd_found = resource_find_cd_key_drive();
+    }
+
+    data_directory_found = resource_startup_directory_exists(data_directory);
+    if (!cd_found && data_directory_found) {
+        /* A loose Data tree is the retail fallback when neither a WAD nor a
+         * CD key drive is available. Mounted CD paths remain drive-rooted. */
+        snprintf(s_cd_root, sizeof(s_cd_root), "%s", working_directory);
+    }
+    data_missing = (!cd_found && mounted == 0 && !data_directory_found);
+    if (require_cd != 0 &&
+        snprintf(marker_path, sizeof(marker_path), "%s%cData%ccd.key",
+                 working_directory, RES_PATH_SEP, RES_PATH_SEP) >= 0 &&
+        resource_cd_key_path_exists(marker_path)) {
+        data_missing = 1;
+    }
+    if (data_missing) {
+        (void)resource_startup_missing_data_dialog(registry_key);
+        return;
+    }
+
+    resource_startup_directory_create(data_directory);
+
+    if (snprintf(marker_path, sizeof(marker_path), "%s%cData%cdelme.dat",
+                 working_directory, RES_PATH_SEP, RES_PATH_SEP) >= 0 &&
+        resource_cd_key_path_exists(marker_path)) {
+        resource_startup_delme_marker_remove(marker_path);
+    }
+}
+
+int resource_mount_startup(const char* prefix, int require_cd,
+                           const char* registry_key)
+{
+    resource_mount_startup_target(prefix, require_cd, registry_key);
+    return resource_startup_result_get();
 }
 
 void resource_set_wad_prefix(const char* prefix)
@@ -3084,7 +3637,7 @@ void resource_unmount_all(void)
 // FUNCTION: LEGORR 0x0048bda0
 int resource_wad_lookup(int wad_idx, const char* name)
 {
-    if (wad_idx < 0 || wad_idx >= s_wad_count) {
+    if (wad_idx < 0 || wad_idx >= s_wad_count || name == NULL) {
         return -1;
     }
     ResourceWad* w = &s_wads[wad_idx];
@@ -3135,7 +3688,7 @@ void* wad_archive_record_at_index(int index)
     return &s_wads[index];
 }
 
-/* FUNCTION: LEGORR 0x0048bcf0 */
+// FUNCTION: LEGORR 0x0048bcf0
 uint32_t wad_entry_length_get(int wad_idx, int entry_idx)
 {
     if (wad_idx < 0 || wad_idx >= s_wad_count || entry_idx < 0
@@ -3201,7 +3754,8 @@ char* game_file_mounted_path_prefix_rewrite(const char* path)
 int game_file_open_route_select(const char* path, const char* mode)
 {
     char* rewritten;
-    if (path == NULL || mode == NULL) return 2;
+    if (path == NULL || path[0] == '\0' || mode == NULL || mode[0] == '\0')
+        return 2;
     if (mode[0] == 'w' || mode[0] == 'W') return 1;
     rewritten = game_file_mounted_path_prefix_rewrite(path);
     return wad_entry_find_across_mounted_archives(rewritten, -1) == -1;
@@ -3239,8 +3793,11 @@ static Resource* ares_open_wad_path(const char* name, int mode)
             Resource* r = ares_open_wad(w, e, name);
             if (r != NULL) {
                 r->mode = mode;
+                return r;
             }
-            return r;
+            /* WadPathOpen continues to the next older mounted archive when
+             * opening a matching entry fails (for example, slot allocation
+             * failure). Keep that fallback if this handle allocation fails. */
         }
     }
     return NULL;
@@ -3275,9 +3832,8 @@ static Resource* ares_open_std(const char* name, int mode)
     return r;
 }
 
-/* GameFileOpenDispatch (FUN_0047f6e0): choose the WAD or loose-file path
- * for the requested mode. Payload reading is deferred to resource_read. */
-// FUNCTION: LEGORR 0x0047f6e0
+/* Open a resource by name. This portable API returns a Resource handle;
+ * GameFileOpenDispatch has the separate GameFileHandle contract below. */
 Resource* resource_open(const char* name, int mode)
 {
     if (name == NULL || name[0] == '\0') {
@@ -3315,85 +3871,213 @@ Resource* resource_open(const char* name, int mode)
     return NULL;
 }
 
-/* MapOpen2 (FUN_00480170): open a map resource, expose its progress and
- * payload to the map-index callbacks, dispatch the resolved record, and
- * optionally transfer an engine-heap copy of the payload to the caller. */
-// FUNCTION: LEGORR 0x00480170
-int map_open2(const char* path, const MapOpenOps* ops,
-              void** map_data_out, int32_t* size_out)
+/* A ResourceStream owns an independent FILE cursor. WAD streams reopen the
+ * archive instead of sharing ResourceWad::fp, so read_at calls do not disturb
+ * concurrent Resource::resource_read operations. */
+ResourceStream* resource_stream_open(const char* name, int mode,
+                                     uint32_t* size_out)
 {
     Resource* resource;
-    Resource callback_resource;
-    void* map_data = NULL;
-    void* map_record;
-    int32_t size;
-    int map_index;
-    int result = -1;
-    if (map_data_out != NULL) *map_data_out = NULL;
-    if (size_out != NULL) *size_out = 0;
-    if (path == NULL || ops == NULL || ops->map_index_find == NULL ||
-        ops->map_record_get == NULL || ops->map_record_open == NULL) return -1;
-    resource = resource_open(path, RESOURCE_AUTO);
-    if (resource == NULL) return -1;
-    size = resource_read(resource);
-    if (size < 0 || resource->data == NULL) {
+    ResourceStream* stream = NULL;
+    if (size_out != NULL) *size_out = 0u;
+    resource = resource_open(name, mode);
+    if (resource == NULL) return NULL;
+    stream = (ResourceStream*)calloc(1, sizeof(*stream));
+    if (stream == NULL) {
         resource_free(resource);
+        return NULL;
+    }
+    if (resource->branch == RESOURCE_STD_BRANCH) {
+        long file_size;
+        stream->file = fopen(resource->name, "rb");
+        if (stream->file == NULL || fseek(stream->file, 0, SEEK_END) != 0 ||
+            (file_size = ftell(stream->file)) < 0 ||
+            (unsigned long)file_size > 0x7ffffffful ||
+            fseek(stream->file, 0, SEEK_SET) != 0) {
+            resource_stream_close(stream);
+            resource_free(resource);
+            return NULL;
+        }
+        stream->size = (uint32_t)file_size;
+    }
+    else if (resource->branch == RESOURCE_WAD_BRANCH &&
+             resource->wad_idx >= 0 && resource->wad_idx < s_wad_count &&
+             resource->entry_idx >= 0 &&
+             (uint32_t)resource->entry_idx <
+                 s_wads[resource->wad_idx].entry_count) {
+        ResourceWad* wad = &s_wads[resource->wad_idx];
+        WadEntry* entry = &wad->entries[resource->entry_idx];
+        uint32_t stored_end = entry->off + entry->stored;
+        if (stored_end < entry->off || stored_end > wad->file_size ||
+            stored_end > 0x7fffffffu ||
+            entry->off > 0x7fffffffu) {
+            resource_stream_close(stream);
+            resource_free(resource);
+            return NULL;
+        }
+        stream->file = fopen(wad->path, "rb");
+        if (stream->file == NULL) {
+            resource_stream_close(stream);
+            resource_free(resource);
+            return NULL;
+        }
+        if ((entry->flags & ENTRY_FLAG_EXPANDED) == 0u) {
+            stream->data_offset = entry->off;
+            stream->size = entry->stored;
+        }
+        else {
+            uint8_t expand_header[EXPAND_HEADER_SZ];
+            uint32_t expanded_size;
+            uint8_t type;
+            if (entry->stored < EXPAND_HEADER_SZ ||
+                fseek(stream->file, (long)entry->off, SEEK_SET) != 0 ||
+                fread(expand_header, 1, sizeof(expand_header), stream->file) !=
+                    sizeof(expand_header) ||
+                memcmp(expand_header, "RNC", 3) != 0) {
+                resource_stream_close(stream);
+                resource_free(resource);
+                return NULL;
+            }
+            type = expand_header[3];
+            expanded_size = ((uint32_t)expand_header[4] << 24) |
+                            ((uint32_t)expand_header[5] << 16) |
+                            ((uint32_t)expand_header[6] << 8) |
+                            (uint32_t)expand_header[7];
+            if (expanded_size > 0x7fffffffu) {
+                resource_stream_close(stream);
+                resource_free(resource);
+                return NULL;
+            }
+            stream->size = expanded_size;
+            if (type == 0u) {
+                if (expanded_size > entry->stored - EXPAND_HEADER_SZ ||
+                    entry->off + EXPAND_HEADER_SZ > 0x7fffffffu) {
+                    resource_stream_close(stream);
+                    resource_free(resource);
+                    return NULL;
+                }
+                stream->data_offset = entry->off + EXPAND_HEADER_SZ;
+            }
+            else if (type == 1u || type == 2u) {
+                uint8_t* stored;
+                stored = (uint8_t*)malloc(entry->stored);
+                stream->expanded_data = (uint8_t*)malloc(
+                    expanded_size != 0u ? expanded_size : 1u);
+                if (stored == NULL || stream->expanded_data == NULL ||
+                    fseek(stream->file, (long)entry->off, SEEK_SET) != 0 ||
+                    fread(stored, 1, entry->stored, stream->file) !=
+                        entry->stored ||
+                    (((uint32_t)wad_payload_decode_dispatch(
+                        stored, stream->expanded_data) & 0xffffu) != 0u)) {
+                    free(stored);
+                    resource_stream_close(stream);
+                    resource_free(resource);
+                    return NULL;
+                }
+                free(stored);
+            }
+            else {
+                resource_stream_close(stream);
+                resource_free(resource);
+                return NULL;
+            }
+        }
+    }
+    else {
+        resource_stream_close(stream);
+        resource_free(resource);
+        return NULL;
+    }
+    resource_free(resource);
+    if (size_out != NULL) *size_out = stream->size;
+    return stream;
+}
+
+int resource_stream_read_at(ResourceStream* stream, uint32_t offset,
+                            void* bytes, uint32_t length)
+{
+    uint32_t file_offset;
+    if (stream == NULL || stream->file == NULL ||
+        (length != 0u && bytes == NULL) || offset > stream->size ||
+        length > stream->size - offset ||
+        (stream->expanded_data == NULL &&
+         stream->data_offset > 0x7fffffffu - offset)) return 0;
+    if (stream->expanded_data != NULL) {
+        if (length != 0u)
+            memcpy(bytes, stream->expanded_data + offset, length);
+        return 1;
+    }
+    file_offset = stream->data_offset + offset;
+    if (fseek(stream->file, (long)file_offset, SEEK_SET) != 0) return 0;
+    if (length == 0u) return 1;
+    return fread(bytes, 1, length, stream->file) == length;
+}
+
+void resource_stream_close(ResourceStream* stream)
+{
+    if (stream == NULL) return;
+    if (stream->file != NULL) fclose(stream->file);
+    free(stream->expanded_data);
+    free(stream);
+}
+
+/* MapOpen2 (FUN_00480170): open the named file in binary mode, seek to its
+ * end to get the payload size, notify the registered progress hook, allocate
+ * a map-image slot, rewind, and read the payload into that slot. The slot
+ * owner supplies the table operations because its pointer/flag table is
+ * owned by the game level layer (MapFileResourceSlot @ 0x4893f0..). */
+// FUNCTION: LEGORR 0x00480170
+int map_open2(const char* path, const MapOpenOps* ops,
+              int32_t* size_out)
+{
+    GameFileHandle* handle;
+    void* map_data;
+    int32_t size;
+    int slot;
+    if (size_out != NULL) *size_out = 0;
+    if (path == NULL || ops == NULL || ops->slot_allocate == NULL ||
+        ops->slot_get == NULL || ops->slot_release == NULL) return -1;
+    handle = game_file_open_dispatch(path, "rb");
+    if (handle == NULL) return -1;
+    (void)wad_file_seek(handle, 0, 2);
+    size = wad_file_cursor_get(handle);
+    if (size < 0) {
+        game_file_close(handle);
         return -1;
     }
     if (ops->progress != NULL) {
         ops->progress(ops->context, path, (uint32_t)size);
     }
-    map_index = ops->map_index_find(ops->context, resource);
-    if (map_index < 0) {
-        resource_free(resource);
+    slot = ops->slot_allocate(ops->context, (uint32_t)size);
+    if (slot < 0) {
+        game_file_close(handle);
         return -1;
     }
-    map_record = ops->map_record_get(ops->context, map_index);
-    if (map_record == NULL) {
-        resource_free(resource);
-        return -1;
-    }
-    map_data = engine_heap_alloc(size > 0 ? (long)size : 1L);
+    map_data = ops->slot_get(ops->context, (uint32_t)slot);
     if (map_data == NULL) {
-        resource_free(resource);
+        ops->slot_release(ops->context, (uint32_t)slot);
+        game_file_close(handle);
         return -1;
     }
-    if (size > 0) memcpy(map_data, resource->data, (size_t)size);
-    callback_resource = *resource;
-    callback_resource.data = (uint8_t*)map_data;
-    if (ops->map_record_open(ops->context, map_record,
-                             &callback_resource) != 0) {
-        if (map_data != NULL) engine_heap_free(map_data);
-        resource_free(resource);
-        return -1;
-    }
-    if (map_data_out != NULL) {
-        *map_data_out = map_data;
-        if (size_out != NULL) *size_out = size;
-    }
-    else {
-        engine_heap_free(map_data);
-    }
-    result = map_index;
-    resource_free(resource);
-    return result;
+    (void)wad_file_seek(handle, 0, 0);
+    if (size > 0) (void)wad_file_read(map_data, 1, size, handle);
+    if (size_out != NULL) *size_out = size;
+    game_file_close(handle);
+    return slot;
 }
 
-/* FileTokenListLoadAndTreeScan (FUN_004802d0): tokenize the configured file
- * into fixed 256-byte entries, then hand the list and root to the directory
- * walker. Whitespace-delimited parsing matches the token-reader boundary. */
-// FUNCTION: LEGORR 0x004802d0
-int resource_file_token_list_load_and_tree_scan(
-    const char* token_file, const char* root, ResourceFileTokenList* list,
-    const ResourceFileTokenListOps* ops)
+static int resource_file_token_list_parse(const char* token_file,
+                                          ResourceFileTokenList* list,
+                                          int clear_before_open)
 {
     Resource* resource;
     int32_t size;
     int32_t position = 0;
     if (list == NULL || token_file == NULL) return -1;
-    list->count = 0u;
+    if (clear_before_open) list->count = 0u;
     resource = resource_open(token_file, RESOURCE_AUTO);
     if (resource == NULL) return -1;
+    list->count = 0u;
     size = resource_read(resource);
     if (size < 0 || resource->data == NULL) {
         resource_free(resource);
@@ -3420,10 +4104,36 @@ int resource_file_token_list_load_and_tree_scan(
         if (length != 0u) list->count++;
     }
     resource_free(resource);
+    return (int)list->count;
+}
+
+/* Portable adapter: tokenize a named file into an explicit list and invoke
+ * the optional caller-owned directory callback. */
+int resource_file_token_list_load_and_tree_scan(
+    const char* token_file, const char* root, ResourceFileTokenList* list,
+    const ResourceFileTokenListOps* ops)
+{
+    int count = resource_file_token_list_parse(token_file, list, 1);
+    if (count < 0) return count;
     if (ops != NULL && ops->directory_tree_scan != NULL) {
         ops->directory_tree_scan(ops->context, root, list);
     }
-    return (int)list->count;
+    return count;
+}
+
+/* FileTokenListLoadAndTreeScan (FUN_004802d0): retail ABI takes only the
+ * token filename; root and token table are module-owned loader state. */
+// FUNCTION: LEGORR 0x004802d0
+void resource_file_token_list_load_and_tree_scan_target(
+    const char* token_file)
+{
+    int result;
+    if (token_file == NULL) return;
+    result = resource_file_token_list_parse(token_file,
+                                            &s_resource_file_tokens, 0);
+    if (result < 0) return;
+    if (s_resource_directory_root[0] != '\0')
+        resource_directory_tree_scan_target(s_resource_directory_root);
 }
 
 /* DirectoryTokenListCompare (FUN_00480570): find a token with the same
@@ -3441,6 +4151,130 @@ int resource_directory_token_list_contains(
     return 0;
 }
 
+typedef struct ResourceDirectoryScanHandle {
+#if defined(_WIN32)
+    HANDLE search;
+    WIN32_FIND_DATAA data;
+    int first;
+#else
+    DIR* directory;
+    char root[1024];
+#endif
+} ResourceDirectoryScanHandle;
+
+static int resource_directory_scan_default_open(void*, const char* pattern,
+                                               void** scan_out)
+{
+    ResourceDirectoryScanHandle* scan;
+    if (pattern == NULL || scan_out == NULL) return 0;
+    *scan_out = NULL;
+    scan = (ResourceDirectoryScanHandle*)calloc(1, sizeof(*scan));
+    if (scan == NULL) return 0;
+#if defined(_WIN32)
+    scan->search = FindFirstFileA(pattern, &scan->data);
+    if (scan->search == INVALID_HANDLE_VALUE) {
+        free(scan);
+        return 0;
+    }
+    scan->first = 1;
+#else
+    {
+        size_t length = strlen(pattern);
+        size_t root_length;
+        char root[1024];
+        if (length < 3u || strcmp(pattern + length - 3u, "*.*") != 0) {
+            free(scan);
+            return 0;
+        }
+        root_length = length - 3u;
+        if (root_length != 0u &&
+            (pattern[root_length - 1u] == '/' ||
+             pattern[root_length - 1u] == '\\')) --root_length;
+        if (root_length >= sizeof(root)) {
+            free(scan);
+            return 0;
+        }
+        memcpy(root, pattern, root_length);
+        root[root_length] = '\0';
+        {
+            size_t i;
+            for (i = 0u; i < root_length; ++i)
+                if (root[i] == '\\') root[i] = '/';
+        }
+        scan->directory = opendir(root_length != 0u ? root : ".");
+        if (scan->directory == NULL) {
+            free(scan);
+            return 0;
+        }
+        memcpy(scan->root, root, root_length + 1u);
+    }
+#endif
+    *scan_out = scan;
+    return 1;
+}
+
+static int resource_directory_scan_default_next(void*, void* handle,
+                                                char name_out[260],
+                                                int* is_directory_out)
+{
+    ResourceDirectoryScanHandle* scan =
+        (ResourceDirectoryScanHandle*)handle;
+    if (scan == NULL || name_out == NULL || is_directory_out == NULL)
+        return 0;
+#if defined(_WIN32)
+    if (scan->first) {
+        scan->first = 0;
+    }
+    else if (!FindNextFileA(scan->search, &scan->data)) {
+        return 0;
+    }
+    if (strlen(scan->data.cFileName) >= 260u) return 1;
+    strcpy(name_out, scan->data.cFileName);
+    *is_directory_out =
+        (scan->data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+#else
+    for (;;) {
+        struct dirent* entry = readdir(scan->directory);
+        struct stat info;
+        char path[1280];
+        size_t root_length;
+        size_t name_length;
+        if (entry == NULL) return 0;
+        name_length = strlen(entry->d_name);
+        if (name_length >= 260u) continue;
+        root_length = strlen(scan->root);
+        if (root_length + name_length + 2u > sizeof(path)) continue;
+        if (root_length != 0u) {
+            memcpy(path, scan->root, root_length);
+            path[root_length] = '/';
+            memcpy(path + root_length + 1u, entry->d_name,
+                   name_length + 1u);
+        }
+        else {
+            memcpy(path, entry->d_name, name_length + 1u);
+        }
+        if (stat(path, &info) != 0) continue;
+        strcpy(name_out, entry->d_name);
+        *is_directory_out = S_ISDIR(info.st_mode) != 0;
+        return 1;
+    }
+#endif
+    return 1;
+}
+
+static void resource_directory_scan_default_close(void*, void* handle)
+{
+    ResourceDirectoryScanHandle* scan =
+        (ResourceDirectoryScanHandle*)handle;
+    if (scan == NULL) return;
+#if defined(_WIN32)
+    if (scan->search != INVALID_HANDLE_VALUE) FindClose(scan->search);
+#else
+    if (scan->directory != NULL) closedir(scan->directory);
+#endif
+    free(scan);
+}
+
 static void resource_directory_tree_scan_walk(
     const char* root, const ResourceFileTokenList* tokens,
     const ResourceDirectoryScanOps* ops)
@@ -3450,8 +4284,16 @@ static void resource_directory_tree_scan_walk(
     char pattern[1024];
     unsigned int root_length;
     unsigned int offset;
-    if (root == NULL || ops == NULL || ops->scan_open == NULL ||
-        ops->scan_next == NULL) return;
+    ResourceDirectoryScanOps default_ops;
+    if (root == NULL) return;
+    if (ops == NULL) {
+        default_ops.context = NULL;
+        default_ops.scan_open = resource_directory_scan_default_open;
+        default_ops.scan_next = resource_directory_scan_default_next;
+        default_ops.scan_close = resource_directory_scan_default_close;
+        ops = &default_ops;
+    }
+    if (ops->scan_open == NULL || ops->scan_next == NULL) return;
     root_length = (unsigned int)strlen(root);
     if (root_length + 5u >= sizeof(pattern)) return;
     memcpy(pattern, root, root_length);
@@ -3480,7 +4322,11 @@ static void resource_directory_tree_scan_walk(
         offset = root_length;
         if (offset != 0u && child_path[offset - 1u] != '/' &&
             child_path[offset - 1u] != '\\') {
+#if defined(_WIN32)
             child_path[offset++] = '\\';
+#else
+            child_path[offset++] = '/';
+#endif
         }
         memcpy(child_path + offset, name, name_length + 1u);
         if (is_directory != 0) {
@@ -3495,14 +4341,79 @@ static void resource_directory_tree_scan_walk(
     if (ops->scan_close != NULL) ops->scan_close(ops->context, scan);
 }
 
-/* DirectoryTreeScan (FUN_00480390): search root\\*.*, skip the dot entries,
- * recurse into directories, and compare each file path against the token list. */
-// FUNCTION: LEGORR 0x00480390
+/* Portable adapter: search an explicit root with an explicit token list and
+ * optional host scan operations. */
 void resource_directory_tree_scan(const char* root,
                                   const ResourceFileTokenList* tokens,
                                   const ResourceDirectoryScanOps* ops)
 {
     resource_directory_tree_scan_walk(root, tokens, ops);
+}
+
+/* DirectoryTreeScan (FUN_00480390): retail ABI takes one root and reads the
+ * process-wide token state populated by FileTokenListLoadAndTreeScan. */
+// FUNCTION: LEGORR 0x00480390
+void resource_directory_tree_scan_target(const char* root)
+{
+    ResourceDirectoryScanHandle* scan = NULL;
+    char pattern[1024];
+    char name[260];
+    char child_path[1024];
+    unsigned int root_length;
+    unsigned int offset;
+    if (root == NULL) return;
+
+    /* Keep the target's local root\*.* pattern construction here instead
+     * of forwarding through the portable explicit-state walker. */
+    root_length = (unsigned int)strlen(root);
+    if (root_length + 5u >= sizeof(pattern)) return;
+    memcpy(pattern, root, root_length);
+    offset = root_length;
+    if (offset != 0u && pattern[offset - 1u] != '/' &&
+        pattern[offset - 1u] != '\\') {
+        pattern[offset++] = '\\';
+    }
+    memcpy(pattern + offset, "*.*", 4u);
+    if (!resource_directory_scan_default_open(NULL, pattern,
+                                               (void**)&scan) ||
+        scan == NULL) return;
+
+    for (;;) {
+        int is_directory = 0;
+        unsigned int name_length;
+        int next;
+        name[0] = '\0';
+        next = resource_directory_scan_default_next(NULL, scan, name,
+                                                     &is_directory);
+        if (next <= 0) break;
+        name[259] = '\0';
+        if (name[0] == '\0' || strcmp(name, ".") == 0 ||
+            strcmp(name, "..") == 0) continue;
+        root_length = (unsigned int)strlen(root);
+        name_length = (unsigned int)strlen(name);
+        if (root_length + name_length + 2u >= sizeof(child_path)) continue;
+        memcpy(child_path, root, root_length);
+        offset = root_length;
+        if (offset != 0u && child_path[offset - 1u] != '/' &&
+            child_path[offset - 1u] != '\\') {
+#if defined(_WIN32)
+            child_path[offset++] = '\\';
+#else
+            child_path[offset++] = '/';
+#endif
+        }
+        memcpy(child_path + offset, name, name_length + 1u);
+        if (is_directory != 0) {
+            resource_directory_tree_scan_target(child_path);
+        }
+        else {
+            /* Retail calls the comparator for its side effect and ignores
+             * the membership result. */
+            (void)resource_directory_token_list_contains(
+                &s_resource_file_tokens, child_path);
+        }
+    }
+    resource_directory_scan_default_close(NULL, scan);
 }
 
 int32_t resource_read(Resource* r)
@@ -3559,11 +4470,9 @@ int32_t resource_read(Resource* r)
     uint32_t type = stored[3];
     uint32_t len  = ((uint32_t)stored[4] << 24) | ((uint32_t)stored[5] << 16)
                   | ((uint32_t)stored[6] << 8) | (uint32_t)stored[7];
-    if (type != 0) {
-        /* FUN_0049c8e0 (1) / FUN_0049ca60 (2): the codecs are ported in the
-         * wad payload band below and wired through the dispatch; no shipped
-         * entry sets the expanded flag, so this reader still answers -1 for
-         * the compressed types (finding 01 §"dormant" is now history). */
+    if (len > 0x7fffffffu ||
+        (type == 0u && len > e->stored - EXPAND_HEADER_SZ) ||
+        (type > 2u) || memcmp(stored, "RNC", 3) != 0) {
         free(stored);
         return -1;
     }
@@ -3572,12 +4481,11 @@ int32_t resource_read(Resource* r)
         free(stored);
         return -1;
     }
-    if (e->stored < EXPAND_HEADER_SZ + len) {
+    if (((uint32_t)wad_payload_decode_dispatch(stored, buf) & 0xffffu) != 0u) {
         free(stored);
         free(buf);
         return -1;
     }
-    memcpy(buf, stored + EXPAND_HEADER_SZ, len);
     free(stored);
     r->data = buf;
     r->size = (int32_t)len;
@@ -3601,23 +4509,25 @@ static void* s_whole_file_progress_user;
 void* read_whole_file_with_progress(const char* path, int32_t* size_out,
                                     int binary_mode)
 {
-    Resource* resource;
+    GameFileHandle* handle;
     int32_t length;
     void* buffer;
-    (void)binary_mode; /* resource payloads are byte streams in this port */
+    int read_count;
+    const char* mode = binary_mode != 0 ? "rb" : "r";
     if (size_out != NULL) {
         *size_out = 0;
     }
     if (path == NULL) {
         return NULL;
     }
-    resource = resource_open(path, RESOURCE_AUTO);
-    if (resource == NULL) {
+    handle = game_file_open_dispatch(path, mode);
+    if (handle == NULL) {
         return NULL;
     }
-    length = resource_read(resource);
+    (void)wad_file_seek(handle, 0, 2);
+    length = wad_file_cursor_get(handle);
     if (length < 0) {
-        resource_free(resource);
+        game_file_close(handle);
         return NULL;
     }
     if (s_whole_file_progress_hook != NULL) {
@@ -3626,16 +4536,19 @@ void* read_whole_file_with_progress(const char* path, int32_t* size_out,
     }
     buffer = engine_heap_alloc(length > 0 ? (long)length : 1L);
     if (buffer == NULL) {
-        resource_free(resource);
+        game_file_close(handle);
         return NULL;
     }
-    if (length > 0 && resource->data != NULL) {
-        memcpy(buffer, resource->data, (size_t)length);
+    (void)wad_file_seek(handle, 0, 0);
+    read_count = wad_file_read(buffer, 1, length, handle);
+    game_file_close(handle);
+    if (read_count != length) {
+        engine_heap_free(buffer);
+        return NULL;
     }
     if (size_out != NULL) {
         *size_out = length;
     }
-    resource_free(resource);
     return buffer;
 }
 
@@ -3686,7 +4599,7 @@ int file_resource_record_slot_allocate(void)
  * scales the index shl 4 and strides blindly). The +0x08/+0x0c words
  * belong to the unported reader (FUN_0048c010) — pad only. */
 typedef struct FixedRecordSlot {
-    void*    resource;  /* +0x00 */
+    uint32_t resource;  /* +0x00: reference pointer word */
     uint32_t in_use;    /* +0x04 */
     uint8_t  pad[8];    /* +0x08..0x0f */
 } FixedRecordSlot;
@@ -3695,6 +4608,18 @@ typedef char fixed_record_slot_stride_check[sizeof(FixedRecordSlot) == 16u ? 1 :
 
 // GLOBAL: LEGORR 0x005756a0
 static FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
+#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
+/* The retail record stores a 32-bit pointer. Keep its 16-byte layout and
+ * retain native pointers separately on wider hosts. */
+static void* s_fixed_slot_resources[FIXED_RECORD_SLOTS];
+#endif
+
+#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
+#define fixed_record_slot_pointer_get(slot) s_fixed_slot_resources[(slot)]
+#else
+#define fixed_record_slot_pointer_get(slot) \
+    ((void*)(uintptr_t)s_fixed_slots[(slot)].resource)
+#endif
 
 typedef struct WadFileStreamState {
     int slot;
@@ -3720,7 +4645,7 @@ void fixed_record_slot_resource_release(int slot)
      * release in-range slots) and clears ONLY the flag — the stale pointer
      * is unobservable because the get path checks the flag first. */
     if (s_fixed_slots[slot].in_use != 0) {
-        engine_heap_free(s_fixed_slots[slot].resource);
+        engine_heap_free(fixed_record_slot_pointer_get(slot));
         s_fixed_slots[slot].in_use = 0;
     }
 }
@@ -3728,16 +4653,15 @@ void fixed_record_slot_resource_release(int slot)
 // FUNCTION: LEGORR 0x0048bff0
 void* fixed_record_slot_resource_get(int slot)
 {
-    if (slot < 0 || slot >= FIXED_RECORD_SLOTS) {
+    if ((unsigned int)slot >= FIXED_RECORD_SLOTS) {
         return NULL; /* deviation: the corpus strides blindly */
     }
-    return s_fixed_slots[slot].in_use != 0 ? s_fixed_slots[slot].resource : NULL;
+    return s_fixed_slots[slot].in_use != 0
+        ? fixed_record_slot_pointer_get(slot) : NULL;
 }
 
-/* WadStreamLengthGet (FUN_0048c010): resolve the stream slot's resource and
- * report its materialized payload length. */
-// FUNCTION: LEGORR 0x0048c010
-int wad_stream_length_get(int slot)
+/* Port-side payload length used by the file seek implementation. */
+static int resource_slot_length_get(int slot)
 {
     Resource* resource;
     int32_t length;
@@ -3747,6 +4671,16 @@ int wad_stream_length_get(int slot)
     }
     length = resource_read(resource);
     return length > 0 ? (int)length : 0;
+}
+
+/* WadStreamLengthGet (FUN_0048c010) resolves the two WAD indices held by the
+ * stream slot and performs the reference's indexed length lookup. */
+// FUNCTION: LEGORR 0x0048c010
+void wad_stream_length_get(int slot)
+{
+    Resource* resource =
+        (Resource*)fixed_record_slot_resource_get(slot);
+    (void)wad_entry_length_get(resource->wad_idx, resource->entry_idx);
 }
 
 /* WadFileSeek (FUN_0047f850): update the WAD stream cursor for SET/CUR/END.
@@ -3772,18 +4706,18 @@ int wad_file_seek(GameFileHandle* handle, int offset, int origin)
     state = (WadFileStreamState*)handle->stream;
     if (origin == 0) {
         state->cursor = offset;
-        length = wad_stream_length_get(state->slot);
+        length = resource_slot_length_get(state->slot);
         if (length < state->cursor) state->cursor = length;
         if (state->cursor < 0) state->cursor = 0;
     }
     else if (origin == 1) {
         state->cursor += offset;
-        length = wad_stream_length_get(state->slot);
+        length = resource_slot_length_get(state->slot);
         if (length < state->cursor) state->cursor = length;
         if (state->cursor < 0) state->cursor = 0;
     }
     else if (origin == 2) {
-        state->cursor = wad_stream_length_get(state->slot) + offset;
+        state->cursor = resource_slot_length_get(state->slot) + offset;
     }
     else {
         resource_debug_output_format(s_game_file_seek_mode_format, origin);
@@ -3945,7 +4879,12 @@ char* game_file_read_crlf_line(char* buffer, int capacity,
 void fixed_record_slot_install(int slot, void* resource)
 {
     if (slot >= 0 && slot < FIXED_RECORD_SLOTS) {
-        s_fixed_slots[slot].resource = resource;
+#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
+        s_fixed_slot_resources[slot] = resource;
+        s_fixed_slots[slot].resource = 0u;
+#else
+        s_fixed_slots[slot].resource = (uint32_t)(uintptr_t)resource;
+#endif
         s_fixed_slots[slot].in_use = 1;
     }
 }
@@ -3958,12 +4897,16 @@ int fixed_record_slot_flag_peek(int slot)
 static void fixed_record_slot_release(int slot)
 {
     if (slot < 0 || slot >= FIXED_RECORD_SLOTS) return;
-    if (s_fixed_slots[slot].resource != NULL) {
-        resource_free((Resource*)s_fixed_slots[slot].resource);
+    if (fixed_record_slot_pointer_get(slot) != NULL) {
+        resource_free((Resource*)fixed_record_slot_pointer_get(slot));
     }
-    s_fixed_slots[slot].resource = NULL;
+#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
+    s_fixed_slot_resources[slot] = NULL;
+#endif
+    s_fixed_slots[slot].resource = 0u;
     s_fixed_slots[slot].in_use = 0;
 }
+#undef fixed_record_slot_pointer_get
 
 // FUNCTION: LEGORR 0x0047ff50
 void game_file_handle_release(GameFileHandle* handle)
@@ -3990,9 +4933,13 @@ void game_file_handle_release(GameFileHandle* handle)
 // FUNCTION: LEGORR 0x0047fac0
 int game_file_close(GameFileHandle* handle)
 {
-    if (handle != NULL && (handle->flag == 0 || handle->flag == 1)) {
+    if (handle == NULL) return 0;
+    if (handle->flag == 0 || handle->flag == 1) {
         game_file_handle_release(handle);
+        return 0;
     }
+    resource_debug_output_format(s_game_file_unknown_type_format,
+        s_game_file_source_path, 0x1af, s_game_file_close_name);
     return 0;
 }
 
@@ -4002,10 +4949,22 @@ int game_file_close(GameFileHandle* handle)
 uint32_t game_file_write(const void* data, uint32_t size,
                          uint32_t count, GameFileHandle* handle)
 {
-    if (handle == NULL || handle->flag != 1 || handle->stream == NULL ||
-        data == NULL || size == 0u || count == 0u) {
+    uint32_t type;
+    if (handle == NULL) {
         return 0u;
     }
+    type = game_file_system_type_get(handle);
+    if (type == 0u) {
+        resource_debug_output_format(s_game_file_write_wad_error);
+        return 0u;
+    }
+    if (type != 1u) {
+        resource_debug_output_format(s_game_file_unknown_type_format,
+            s_game_file_source_path, 0x19e, s_game_file_write_name);
+        return 0u;
+    }
+    if (handle->stream == NULL || data == NULL || size == 0u || count == 0u)
+        return 0u;
     return (uint32_t)fwrite(data, (size_t)size, (size_t)count,
                             (FILE*)handle->stream);
 }
@@ -4072,17 +5031,24 @@ void wad_memory_stream_buffer_get(int slot)
 #define WAD_DECODE_MAGIC_FAIL 0xffff
 #define WAD_DECODE_TYPE_FAIL  0xfffe
 
-/* DAT_00557d80 / DAT_00557e80 / DAT_00557f80 roles, module-local: the type-1
- * codec's three 16-symbol Huffman tables (literal counts, back-reference
- * offsets, match lengths). The corpus bands are 256 bytes each (sixteen
- * 16-byte entries, count 16 at 0x0049c914/0x0049c923/0x0049c932) in
- * zero-init .data, and only those sixteen entries are ever written; these
- * buffers ride wider so the corpus's blind scan in WadHuffmanSymbolDecode
- * (0x0049ce0e..0x0049ce2d, `while (len == 0 || mask&&lsb != code) ++i;`)
- * stays inside one object when no entry matches. */
-static WadCodecTableEntry s_wad_huff_literal[128];
-static WadCodecTableEntry s_wad_huff_offset[128];
-static WadCodecTableEntry s_wad_huff_length[128];
+/* DAT_00557d80 / DAT_00557e80 / DAT_00557f80: the type-1 codec's three
+ * 16-symbol Huffman tables (literal counts, back-reference offsets, match
+ * lengths). They occupy 0x100-byte bands: sixteen 16-byte entries, cleared
+ * and filled by WadHuffmanTableRead with count 16. The symbol decoder keeps
+ * the retail unbounded scan when no entry matches. */
+// GLOBAL: LEGORR 0x00557d80
+static WadCodecTableEntry s_wad_huff_literal[16];
+// GLOBAL: LEGORR 0x00557e80
+static WadCodecTableEntry s_wad_huff_offset[16];
+// GLOBAL: LEGORR 0x00557f80
+static WadCodecTableEntry s_wad_huff_length[16];
+
+/* Both RNC codec entries return the output-end pointer with its low word
+ * cleared. ExpandWadPayload tests AX, so that nonzero upper word is success. */
+static uint32_t wad_codec_result_word(const void* pointer)
+{
+    return (uint32_t)(uintptr_t)pointer & 0xffff0000u;
+}
 
 /* DecodeWadPayloadType1 (FUN_0049c8e0): the RNC type-1 stream. One or more
  * outer passes reload the three tables, read the 16-bit block total
@@ -4090,8 +5056,9 @@ static WadCodecTableEntry s_wad_huff_length[128];
  * bytes copied straight from the input cursor) and back-reference matches
  * (out - u16(offset) - 1, length u16(sym + 2)); after every literal the
  * three bytes at the input cursor inject themselves into the LSB accumulator
- * at the live bit position without advancing it. Always answers 0 (corpus
- * xor ax,ax); the output cursor stores are blind, as in the corpus. */
+ * at the live bit position without advancing it. It returns the output-end
+ * pointer masked with 0xffff0000; its caller tests only AX. The output cursor
+ * stores are blind, as in the corpus. */
 // FUNCTION: LEGORR 0x0049c8e0
 static int wad_payload_decode_type1(const void* src, void* dst)
 {
@@ -4106,7 +5073,7 @@ static int wad_payload_decode_type1(const void* src, void* dst)
     wad_bitstream_output_initialize(src, dst);
     (void)wad_read_bits_lsb_first(2u);            /* 0x49c8f2: value dropped */
     if (wad_codec_out >= wad_codec_end) {         /* 0x49c907: unsigned jae */
-        return 0;
+        return wad_codec_result_word(wad_codec_end);
     }
     for (;;) {                                    /* outer_loop 0x49c912 */
         wad_huffman_table_read(s_wad_huff_literal, 16u);
@@ -4144,7 +5111,7 @@ static int wad_payload_decode_type1(const void* src, void* dst)
             break;
         }
     }
-    return 0;                                     /* 0x49ca5a: xor ax,ax */
+    return wad_codec_result_word(wad_codec_end);   /* end & 0xffff0000 */
 }
 
 /* DecodeWadPayloadType2 (FUN_0049ca60): the RNC type-2 stream, MSB-first.
@@ -4153,8 +5120,9 @@ static int wad_payload_decode_type1(const void* src, void* dst)
  * gate: 0-run-length block, 10+10 short match (offset byte + 1, two bytes),
  * 110 match (offset from the back-reference decoder, three bytes) or 111
  * match (length byte + 9, offset from the decoder; a zero length byte is
- * the end marker). Always answers 0 (corpus xor ax,ax); the output cursor
- * stores are blind, as in the corpus. */
+ * the end marker). The target returns its local copy-source pointer masked
+ * with 0xffff0000, or the output cursor at the end marker; callers test only
+ * AX. The output cursor stores are blind, as in the corpus. */
 // FUNCTION: LEGORR 0x0049ca60
 static int wad_payload_decode_type2(const void* src, void* dst)
 {
@@ -4163,11 +5131,13 @@ static int wad_payload_decode_type2(const void* src, void* dst)
     unsigned int count;
     unsigned int i;
     const unsigned char* back;
+    const unsigned char* result_pointer;
 
     wad_bitstream_output_initialize(src, dst);
+    result_pointer = wad_codec_end;
     (void)wad_read_bits_msb_first(2u);            /* 0x49ca72: value dropped */
     if (wad_codec_out >= wad_codec_end) {         /* 0x49ca87: unsigned jae */
-        return 0;
+        return wad_codec_result_word(result_pointer);
     }
     for (;;) {                                    /* loop_top 0x49ca90 */
         if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49ca9a */
@@ -4186,10 +5156,12 @@ static int wad_payload_decode_type2(const void* src, void* dst)
                 for (i = 0; i < count; ++i) {     /* copyD 0x49cbbf */
                     *wad_codec_out++ = *wad_codec_in++;
                 }
+                if (wad_codec_out >= wad_codec_end) break;
                 continue;
             }
             off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cbf1 */
             back = wad_codec_out - (unsigned short)off; /* 0x49cbf9/0x49cc07 */
+            result_pointer = back;
             if ((unsigned short)run == 0u) {      /* 0x49cc0f/0x49cc12 */
                 continue;
             }
@@ -4197,27 +5169,32 @@ static int wad_payload_decode_type2(const void* src, void* dst)
             for (i = 0; i < count; ++i) {         /* copyE 0x49cc1f */
                 *wad_codec_out++ = *back++;
             }
+            if (wad_codec_out >= wad_codec_end) break;
             continue;
         }
         if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49caf2: short match */
             off = (unsigned int)*wad_codec_in + 1u;        /* 0x49cb02 */
             ++wad_codec_in;
             back = wad_codec_out - (unsigned short)off;
+            result_pointer = back;
             count = 2u;                           /* esi = 2 at 0x49caf9 */
             for (i = 0; i < count; ++i) {         /* copyC 0x49cb6d */
                 *wad_codec_out++ = *back++;
             }
+            if (wad_codec_out >= wad_codec_end) break;
             continue;
         }
         if (wad_read_bits_msb_first(1u) == 0u) {  /* 0x49cb10/0x49cb1d */
             off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cb42 */
             back = wad_codec_out - (unsigned short)off;
+            result_pointer = back;
             count = 3u;                           /* esi = 3 at 0x49cb1f */
         } else {
             count = ((unsigned int)*wad_codec_in + 8u) & 0xffffu; /* 0x49cb2b */
             ++wad_codec_in;
             if (count == 8u) {                    /* 0x49cb3c: end marker */
                 (void)wad_read_bits_msb_first(1u);/* 0x49cc3f: value dropped */
+                result_pointer = wad_codec_out;
                 if (wad_codec_out < wad_codec_end) { /* 0x49cc56: jb loop_top */
                     continue;
                 }
@@ -4225,6 +5202,7 @@ static int wad_payload_decode_type2(const void* src, void* dst)
             }
             off = (unsigned int)wad_backreference_offset_decode(); /* 0x49cb42 */
             back = wad_codec_out - (unsigned short)off;
+            result_pointer = back;
         }
         if (count == 0u) {                        /* 0x49cb5d: test ax,ax */
             continue;
@@ -4232,16 +5210,16 @@ static int wad_payload_decode_type2(const void* src, void* dst)
         for (i = 0; i < count; ++i) {             /* copyC 0x49cb6d */
             *wad_codec_out++ = *back++;
         }
+        if (wad_codec_out >= wad_codec_end) break;
     }
-    return 0;                                     /* 0x49cc5d: xor ax,ax */
+    return wad_codec_result_word(result_pointer);  /* pbVar4 & 0xffff0000 */
 }
 
 /* WadPayloadDecodeDispatch (FUN_0049c840): verify the "RNC" magic, then
  * branch on the type byte at [3]. Type 0 is a raw pass-through: the size
  * dword at +4 read big-endian, payload from +0x12, copied in DWORD chunks
- * plus the trailing (size & 3) bytes. Types 1/2 hand over to the ported
- * codecs, which answer the corpus's xor ax,ax verdict; any other byte
- * answers the unknown-type verdict. */
+ * plus the trailing (size & 3) bytes. Types 1/2 hand over to the RNC codecs;
+ * any other byte answers the unknown-type verdict. */
 // FUNCTION: LEGORR 0x0049c840
 int wad_payload_decode_dispatch(const void* header, void* dest)
 {
@@ -4298,7 +5276,8 @@ long wad_expand_payload(const void* header, void** out_payload)
     if (buf == NULL) {
         return 0;
     }
-    if (wad_payload_decode_dispatch(h, buf) != 0) { /* corpus tests ax,ax */
+    if (((uint32_t)wad_payload_decode_dispatch(h, buf) & 0xffffu) != 0u) {
+        /* The retail caller tests AX, not the full EAX masked-pointer return. */
         engine_heap_free(buf); /* FUN_0048db80 */
         return 0;
     }
@@ -4306,24 +5285,21 @@ long wad_expand_payload(const void* header, void** out_payload)
     return size;
 }
 
-/* WadHuffmanTableClear (FUN_0049cf50): zero the decode table's `count`
- * 16-byte entries: DWORD 0 at +0, the WORD 0xffff at +4, DWORD 0 at +8,
- * and the WORD 0 at +12. A zero count clears nothing. Deviations: the
- * corpus's count is char-truncated (multiples of 256 alias to nothing),
- * documented rather than replayed, and the blind table stride is guarded. */
+/* WadHuffmanTableClear (FUN_0049cf50): the count is an unsigned byte. Clear
+ * each 16-byte entry as DWORD 0, WORD 0xffff, DWORD 0, WORD 0. */
 // FUNCTION: LEGORR 0x0049cf50
-void wad_huffman_table_clear(void* table, int count)
+void wad_huffman_table_clear(void* table, uint8_t count)
 {
-    if (table == NULL || count <= 0) {
-        return;
-    }
-    for (int i = 0; i != count; ++i) {
-        unsigned char* e = (unsigned char*)table + (size_t)i * 16u;
-        *(uint32_t*)(e + 0)  = 0u;        /* corpus: mov DWORD [x],0    */
-        *(uint16_t*)(e + 4)  = 0xffffu;   /* corpus: mov WORD [x+4],0xffff */
-        *(uint32_t*)(e + 8)  = 0u;        /* corpus: mov DWORD [x+8],0  */
-        *(uint16_t*)(e + 12) = 0u;        /* corpus: mov WORD [x+12],0  */
-    }
+    uint32_t* entry = (uint32_t*)table;
+    if (table == NULL || count == 0u) return;
+    do {
+        entry[0] = 0u;
+        *(uint16_t*)(entry + 1) = 0xffffu;
+        entry[2] = 0u;
+        *(uint16_t*)(entry + 3) = 0u;
+        entry += 4;
+        --count;
+    } while (count != 0u);
 }
 
 /* GameFileHandleAllocate (FUN_0047fed0): the file-layer handle pair. Kind 1
@@ -4363,6 +5339,92 @@ void* game_file_handle_allocate(int kind)
     }
     engine_heap_free_wrapper(h);
     return NULL;
+}
+
+/* GameFileOpenDispatch (FUN_0047f6e0): resolve the path, select WAD versus
+ * loose-file storage, then return the corresponding GameFileHandle. The WAD
+ * stream owns a fixed resource slot plus a cursor record; loose streams keep
+ * their CRT FILE handle directly. */
+// FUNCTION: LEGORR 0x0047f6e0
+GameFileHandle* game_file_open_dispatch(const char* path, const char* mode)
+{
+    const char* resolved;
+    GameFileHandle* handle;
+    int route;
+    if (path == NULL || mode == NULL) return NULL;
+    resolved = resource_path_resolve_against_base(path);
+    if (resolved == NULL) return NULL;
+    route = game_file_open_route_select(resolved, mode);
+    if (route == 0) {
+        char* wad_name = game_file_mounted_path_prefix_rewrite(resolved);
+        Resource* resource = resource_open(wad_name, RESOURCE_WAD_ONLY);
+        WadFileStreamState* state;
+        int slot;
+        if (resource == NULL) return NULL;
+        slot = wad_entry_slot_allocate();
+        if (slot < 0) {
+            resource_free(resource);
+            return NULL;
+        }
+        handle = (GameFileHandle*)game_file_handle_allocate(0);
+        if (handle == NULL) {
+            resource_free(resource);
+            return NULL;
+        }
+        state = (WadFileStreamState*)handle->stream;
+        state->slot = slot;
+        state->cursor = 0;
+        fixed_record_slot_install(slot, resource);
+        return handle;
+    }
+    if (route != 1) {
+        resource_debug_output_format(s_game_file_unknown_type_format,
+            s_game_file_source_path, 0x14a, s_game_file_open_name);
+        return NULL;
+    }
+
+    handle = (GameFileHandle*)game_file_handle_allocate(1);
+    if (handle == NULL) return NULL;
+    handle->stream = fopen(resolved, mode);
+    /* The corpus gates its CD fallback on CaseInsensitiveSubstringFind(mode,
+     * "w"), rather than checking the first byte. That distinction matters
+     * for update modes such as "r+w": fopen may accept the path, but the
+     * fallback must not redirect that writable stream to the data directory. */
+    if (handle->stream == NULL &&
+        case_insensitive_substring_find(mode, "w") == NULL) {
+        char fallback[RESOURCE_PATH_MAX];
+        if (ares_cd_fallback_path(path, fallback, sizeof(fallback)))
+            handle->stream = fopen(fallback, mode);
+    }
+    if (handle->stream == NULL) {
+        game_file_close(handle);
+        return NULL;
+    }
+    return handle;
+}
+
+/* Narrow startup adapter retained for callers that explicitly require a
+ * loose file (including output paths); the retail dispatch handles both
+ * storage branches. */
+GameFileHandle* game_file_open_loose_path(const char* path,
+                                          const char* mode)
+{
+    const char* resolved;
+    GameFileHandle* handle;
+    FILE* stream;
+    if (path == NULL || mode == NULL) return NULL;
+    resolved = resource_path_resolve_against_base(path);
+    if (resolved == NULL || game_file_open_route_select(resolved, mode) != 1)
+        return NULL;
+    handle = (GameFileHandle*)game_file_handle_allocate(1);
+    if (handle == NULL) return NULL;
+    stream = fopen(resolved, mode);
+    if (stream == NULL) {
+        game_file_close(handle);
+        return NULL;
+    }
+    handle->stream = stream;
+    return handle;
 }
 
 /* WadEntryReadIntoStreamSlot (FUN_0047fea0): zero the slot pair behind the
@@ -4558,4 +5620,713 @@ void resource_handle_list_append(ResourceHandleList* list, const char* value)
     strncpy(copy, value, length + 1);
     list->handles[list->count] = copy;
     ++list->count;
+}
+
+namespace unported_ledger_stubs {
+
+static MiscObjectResourceHooks s_misc_resource_hooks;
+static void* s_misc_resource_handles[22];
+
+void misc_object_resource_hooks_set(const MiscObjectResourceHooks* hooks)
+{
+    if (hooks == NULL) memset(&s_misc_resource_hooks, 0,
+                              sizeof(s_misc_resource_hooks));
+    else s_misc_resource_hooks = *hooks;
+}
+
+void* misc_object_resource_peek(unsigned int slot)
+{
+    return slot < 22u ? s_misc_resource_handles[slot] : NULL;
+}
+
+typedef struct MiscResourceSpec {
+    const char* name;
+    int kind;
+    int fallback_kind;
+    int load_flag;
+} MiscResourceSpec;
+
+// FUNCTION: LEGORR 0x00422850
+void misc_object_resources_load(void* config)
+{
+    static const MiscResourceSpec specs[22] = {
+        { "Boulder", 1, 2, 1 },
+        { "BoulderExplodeIce", 3, -1, 1 },
+        { "BoulderExplode", 3, -1, 1 },
+        { "SmashPath", 3, -1, 1 },
+        { "Explosion", 5, -1, 1 },
+        { "Crystal", 1, 2, 1 },
+        { "Dynamite", 4, -1, 1 },
+        { "OohScary", 4, -1, 1 },
+        { "Barrier", 4, -1, 1 },
+        { "Ore", 1, 2, 1 },
+        { "ProcessedOre", 1, 2, 1 },
+        { "ElectricFence", 1, -1, 1 },
+        { "ElectricFenceStud", 3, -1, 1 },
+        { "ShortElectricFenceBeam", 6, -1, 0 },
+        { "LongElectricFenceBeam", 7, -1, 1 },
+        { "SpiderWeb", 4, -1, 1 },
+        { "RechargeSparkle", 3, -1, 1 },
+        { "MiniTeleportUp", 3, -1, 0 },
+        { "IceCube", 4, -1, 1 },
+        { "Pusher", 3, -1, 1 },
+        { "Freezer", 3, -1, 1 },
+        { "LaserShot", 3, -1, 1 }
+    };
+    unsigned int i;
+    memset(s_misc_resource_handles, 0, sizeof(s_misc_resource_handles));
+    if (s_misc_resource_hooks.load != NULL) {
+        for (i = 0u; i < 22u; ++i) {
+            void* handle = s_misc_resource_hooks.load(config, "MiscObjects",
+                specs[i].name, specs[i].kind, specs[i].load_flag,
+                s_misc_resource_hooks.user);
+            if (handle == NULL && specs[i].fallback_kind >= 0) {
+                handle = s_misc_resource_hooks.load(config, "MiscObjects",
+                    specs[i].name, specs[i].fallback_kind,
+                    specs[i].load_flag, s_misc_resource_hooks.user);
+            }
+            s_misc_resource_handles[i] = handle;
+            if (handle != NULL && s_misc_resource_hooks.enable != NULL)
+                s_misc_resource_hooks.enable(handle,
+                                             s_misc_resource_hooks.user);
+        }
+    }
+    if (s_misc_resource_hooks.post_load != NULL)
+        s_misc_resource_hooks.post_load(config, s_misc_resource_hooks.user);
+}
+
+
+static char s_directx_error_message[1024];
+static int s_directx_error_code;
+static int s_directx_error_line;
+static int s_directx_error_category;
+static unsigned int s_directx_error_count;
+static const char* s_directx_error_source;
+static const char* s_directx_error_module;
+
+// DirectXErrorMessageFormat
+// FUNCTION: LEGORR 0x00489d90
+void directx_error_message_format(const char* name,
+                                                    const char* description)
+{
+    const char* module;
+    const char* source;
+    if (name == NULL) name = "Unknown";
+    if (description == NULL) description = "Unknown error";
+    module = s_directx_error_module != NULL
+        ? s_directx_error_module : "Unknown module";
+    source = s_directx_error_source != NULL ? s_directx_error_source : "?";
+#if defined(_MSC_VER)
+    _snprintf(s_directx_error_message, sizeof(s_directx_error_message) - 1,
+              "A DirectX error was set in module %s at line no %i.\n"
+              "Error : %s (code %i)\nDX Module : %s\n"
+              "Error Description : %s",
+              source, s_directx_error_line, name, s_directx_error_code,
+              module, description);
+#else
+    snprintf(s_directx_error_message, sizeof(s_directx_error_message) - 1,
+             "A DirectX error was set in module %s at line no %i.\n"
+             "Error : %s (code %i)\nDX Module : %s\n"
+             "Error Description : %s",
+             source, s_directx_error_line, name, s_directx_error_code,
+             module, description);
+#endif
+    s_directx_error_message[sizeof(s_directx_error_message) - 1] = '\0';
+}
+
+typedef struct DirectXErrorMapping {
+    uint32_t category;
+    uint32_t result;
+    const char* name;
+    const char* description;
+} DirectXErrorMapping;
+
+// DirectXResultDiagnosticDispatch
+// FUNCTION: LEGORR 0x00489dd0
+int directx_result_diagnostic_dispatch(
+    int result, int diagnostic_kind, const char* source_file, int source_line)
+{
+    const char* name = "UNKNOWN_ERROR";
+    const char* description = "Invalid error code specified.";
+    static const char* module_names[8] = {
+        "Unknown module", "Direct3D Retained Mode", "Direct Input",
+        "Direct Draw", "Direct3D Immediate mode", "Direct Play",
+        "Direct Sound", "Unknown module"
+    };
+    static const DirectXErrorMapping mappings[] = {
+        {2u, 0x80004001u, "DIERR_UNSUPPORTED", "The function called is not supported at this time.\nThis value is equal to the E_NOTIMPL\nstandard COM return value."},
+        {2u, 0x8000000au, "E_PENDING", "Data is not yet availabe."},
+        {2u, 0x80004005u, "DIERR_GENERIC", "An undetermined error occurred inside the DirectInput subsystem.\nThis value is equal to the E_FAIL standard\nCOM return value."},
+        {2u, 0x80004002u, "DIERR_NOINTERFACE", "The specified interface is not supported by\nthe object. This value is equal to the E_NOINTERFACE\nstandard COM return value."},
+        {2u, 0x80040154u, "DIERR_DEVICENOTREG", "The device or device instance is not registered with\nDirectInput. This value is equal to the\nREGDB_E_CLASSNOTREG standard COM return value."},
+        {2u, 0x80040110u, "DIERR_NOAGGREGATION", "This object does not support aggregation."},
+        {2u, 0x80070002u, "DIERR_NOTFOUND", "The requested object does not exist."},
+        {2u, 0x80040201u, "DIERR_DEVICEFULL", "The device is full."},
+        {2u, 0x80040202u, "DIERR_MOREDATA", "Not all the requested information fitted into the buffer"},
+        {2u, 0x80040203u, "DIERR_NOTDOWNLOADED", "The effect is not downloaded"},
+        {2u, 0x80040204u, "DIERR_HASEFFECTS", "The device cannot be reinitialized because there\nare still effects attached to it"},
+        {2u, 0x80040205u, "DIERR_NOTEXCLUSIVEACQUIRED", "The operation cannot be performed unless the device\nis acquired in DISCL_EXCLUSIVE mode."},
+        {2u, 0x80040206u, "DIERR_INCOMPLETEEFFECT", "The effect could not be downloaded because essential\ninformation is missing. For example, no axes have\nbeen associated with the effect, or no type-specific\ninformation has been supplied"},
+        {2u, 0x80040207u, "DIERR_NOTBUFFERED", "The device is not buffered.\nSet the DIPROP_BUFFERSIZE property to enable buffering"},
+        {2u, 0x80040208u, "DIERR_EFFECTPLAYING", "The parameters were updated in memory but were not\ndownloaded to the device because the device does not\nsupport updating an effect while it is still playing."},
+        {2u, 0x8007000cu, "DIERR_NOTACQUIRED", "The operation cannot be performed unless\nthe device is acquired."},
+        {2u, 0x80070005u, "DIERR_HANDLEEXISTS", "The device already has an event notification associated\nwith it. This value is equal to the E_ACCESSDENIED\nstandard COM return value."},
+        {2u, 0x80070015u, "DIERR_NOTINITIALIZED", "This object has not been initialized."},
+        {2u, 0x8007000eu, "DIERR_OUTOFMEMORY", "The DirectInput subsystem couldn't allocate\nsufficient memory to complete the call.\nThis value is equal to the E_OUTOFMEMORY\nstandard COM return value."},
+        {2u, 0x80070057u, "DIERR_INVALIDPARAM", "An invalid parameter was passed to the returning function, or the object was not in a state that permitted the function to be called. This value is equal to the E_INVALIDARG standard COM return value."},
+        {2u, 0x8007001eu, "DIERR_INPUTLOST", "Access to the input device has been lost. It must be reacquired."},
+        {2u, 0x800700aau, "DIERR_ACQUIRED", "The operation cannot be performed while\nthe device is acquired."},
+        {2u, 0x80070077u, "DIERR_BADDRIVERVER", "The object could not be created due to an\nincompatible driver version or mismatched or\nincomplete driver components."},
+        {2u, 0x80070481u, "DIERR_BETADIRECTINPUTVERSION", "The application was written for an unsupported\nprerelease version of DirectInput."},
+        {2u, 0x8007047eu, "DIERR_OLDDIRECTINPUTVERSION", "The application requires a newer version of DirectInput."},
+        {2u, 0x00000000u, "DI_OK", "The operation completed successfully.\nThis value is equal to the S_OK standard\nCOM return value."},
+        {2u, 0x800704dfu, "DIERR_ALREADYINITIALIZED", "This object is already initialized"},
+        {2u, 0x00000001u, "DI_BUFFEROVERFLOW", "The device buffer overflowed and some input was lost.\nThis value is equal to the S_FALSE\nstandard COM return value."},
+        {2u, 0x00000002u, "DI_POLLEDDEVICE", "The device is a polled device.\nAs a result, device buffering will not collect\nany data and event notifications will not be signaled\nuntil the IDirectInputDevice2::Poll method is called."},
+        {2u, 0x00000003u, "DI_DOWNLOADSKIPPED", "The parameters of the effect were successfully updated,\nbut the effect could not be downloaded because the associated\ndevice was not acquired in exclusive mode."},
+        {2u, 0x00000004u, "DI_EFFECTRESTARTED", "The effect was stopped,\nthe parameters were updated,\nand the effect was restarted."},
+        {2u, 0x00000008u, "DI_TRUNCATED", "The parameters of the effect were successfully updated,\nbut some of them were beyond the capabilities of the\ndevice and were truncated to the nearest supported value."},
+        {2u, 0x0000000cu, "DI_TRUNCATEDANDRESTARTED", "Equal to DI_EFFECTRESTARTED | DI_TRUNCATED"},
+        {3u, 0x80004005u, "DDERR_GENERIC", "There is an undefined error condition."},
+        {3u, 0x80004001u, "DDERR_UNSUPPORTED", "The operation is not supported."},
+        {3u, 0x8007000eu, "DDERR_OUTOFMEMORY", "DirectDraw does not have enough\nmemory to perform the operation."},
+        {3u, 0x800401f0u, "DDERR_NOTINITIALIZED", "An attempt was made to call an interface method\nof a DirectDraw object created by CoCreateInstance before\nthe object was initialized."},
+        {3u, 0x88760005u, "DDERR_ALREADYINITIALIZED", "The object has already been initialized."},
+        {3u, 0x80070057u, "DDERR_INVALIDPARAMS", "One or more of the parameters passed to the\nmethod are incorrect."},
+        {3u, 0x88760014u, "DDERR_CANNOTDETACHSURFACE", "A surface cannot be detached from another\nrequested surface."},
+        {3u, 0x8876000au, "DDERR_CANNOTATTACHSURFACE", "A surface cannot be attached to\nanother requested surface."},
+        {3u, 0x88760037u, "DDERR_EXCEPTION", "An exception was encountered while performing the requested operation."},
+        {3u, 0x88760028u, "DDERR_CURRENTLYNOTAVAIL", "No support is currently available."},
+        {3u, 0x8876005fu, "DDERR_INCOMPATIBLEPRIMARY", "The primary surface creation request does\nnot match with the existing primary surface."},
+        {3u, 0x8876005au, "DDERR_HEIGHTALIGN", "The height of the provided rectangle is not\na multiple of the required alignment."},
+        {3u, 0x8876006eu, "DDERR_INVALIDCLIPLIST", "DirectDraw does not support the provided clip list."},
+        {3u, 0x88760064u, "DDERR_INVALIDCAPS", "One or more of the capability bits passed to\nthe callback function are incorrect."},
+        {3u, 0x88760082u, "DDERR_INVALIDOBJECT", "DirectDraw received a pointer that was an\ninvalid DirectDraw object."},
+        {3u, 0x88760078u, "DDERR_INVALIDMODE", "DirectDraw does not support the requested mode."},
+        {3u, 0x88760096u, "DDERR_INVALIDRECT", "The provided rectangle was invalid."},
+        {3u, 0x88760091u, "DDERR_INVALIDPIXELFORMAT", "The pixel format was invalid as specified."},
+        {3u, 0x887600aau, "DDERR_NO3D", "No 3-D hardware or emulation is present."},
+        {3u, 0x887600a0u, "DDERR_LOCKEDSURFACES", "One or more surfaces are locked, causing the failure of\nthe requested operation."},
+        {3u, 0x887600cdu, "DDERR_NOCLIPLIST", "No clip list is available."},
+        {3u, 0x887600b4u, "DDERR_NOALPHAHW", "No alpha acceleration hardware is present or\navailable, causing the failure of\nthe requested operation."},
+        {3u, 0x887600dcu, "DDERR_NOCOLORKEYHW", "The operation cannot be carried out because there is\nno hardware support for the destination color key."},
+        {3u, 0x887600d2u, "DDERR_NOCOLORCONVHW", "The operation cannot be carried out because no\ncolor-conversion hardware is present or available."},
+        {3u, 0x887600d4u, "DDERR_NOCOOPERATIVELEVELSET", "A create function is called without the\nIDirectDraw2::SetCooperativeLevel method being called."},
+        {3u, 0x887600d7u, "DDERR_NOCOLORKEY", "The surface does not currently have a color key."},
+        {3u, 0x887600e1u, "DDERR_NOEXCLUSIVEMODE", "The operation requires the application to have exclusive mode,\nbut the application does not have exclusive mode."},
+        {3u, 0x887600deu, "DDERR_NODIRECTDRAWSUPPORT", "DirectDraw support is not possible\nwith the current display driver."},
+        {3u, 0x887600f0u, "DDERR_NOGDI", "No GDI is present."},
+        {3u, 0x887600e6u, "DDERR_NOFLIPHW", "Flipping visible surfaces is not supported."},
+        {3u, 0x887600ffu, "DDERR_NOTFOUND", "The requested item was not found."},
+        {3u, 0x887600fau, "DDERR_NOMIRRORHW", "The operation cannot be carried out because no mirroring\nhardware is present or available."},
+        {3u, 0x88760118u, "DDERR_NORASTEROPHW", "The operation cannot be carried out because no appropriate\nraster operation hardware is present or available."},
+        {3u, 0x88760104u, "DDERR_NOOVERLAYHW", "The operation cannot be carried out because no\noverlay hardware is present or available."},
+        {3u, 0x88760136u, "DDERR_NOSTRETCHHW", "The operation cannot be carried out because\nthere is no hardware support for stretching."},
+        {3u, 0x88760122u, "DDERR_NOROTATIONHW", "The operation cannot be carried out because\nno rotation hardware is present or available."},
+        {3u, 0x8876014au, "DDERR_NOTEXTUREHW", "The operation cannot be carried out because no\ntexture-mapping hardware is present or available."},
+        {3u, 0x8876013cu, "DDERR_NOT4BITCOLOR", "The DirectDrawSurface object is not using a 4-bit color palette\nand the requested operation requires a 4-bit color palette."},
+        {3u, 0x8876013du, "DDERR_NOT4BITCOLORINDEX", "The DirectDrawSurface object is not using a 4-bit color index\npalette and the requested operation requires a\n4-bit color index palette."},
+        {3u, 0x88760140u, "DDERR_NOT8BITCOLOR", "The DirectDrawSurface object is not using an 8-bit color\npalette and the requested operation requires\nan 8-bit color palette."},
+        {3u, 0x88760154u, "DDERR_NOZBUFFERHW", "The operation to create a z-buffer in display memory\nor to perform a blit using a z-buffer cannot be\ncarried out because there is no hardware support\nfor z-buffers."},
+        {3u, 0x8876014fu, "DDERR_NOVSYNCHW", "The operation cannot be carried out because\nthere is no hardware support for vertical\nblank synchronized operations."},
+        {3u, 0x88760168u, "DDERR_OUTOFCAPS", "The hardware needed for the requested\noperation has already been allocated."},
+        {3u, 0x8876015eu, "DDERR_NOZOVERLAYHW", "The overlay surfaces cannot be z-layered based on the\nz-order because the hardware does not support\nz-ordering of overlays."},
+        {3u, 0x88760190u, "DDERR_COLORKEYNOTSET", "No source color key is specified for this operation."},
+        {3u, 0x8876017cu, "DDERR_OUTOFVIDEOMEMORY", "DirectDraw does not have enough display\nmemory to perform the operation."},
+        {3u, 0x8876017eu, "DDERR_OVERLAYCANTCLIP", "The hardware does not support clipped overlays."},
+        {3u, 0x88760180u, "DDERR_OVERLAYCOLORKEYONLYONEACTIVE", "An attempt was made to have more than one\ncolor key active on an overlay."},
+        {3u, 0x88760183u, "DDERR_PALETTEBUSY", "Access to this palette is refused because\nthe palette is locked by another thread."},
+        {3u, 0x887601a4u, "DDERR_SURFACEALREADYDEPENDENT", "An attempt was made to make a surface a dependency\nof another surface to which it is\nalready dependent."},
+        {3u, 0x8876019au, "DDERR_SURFACEALREADYATTACHED", "An attempt was made to attach a surface to another\nsurface to which it is already attached."},
+        {3u, 0x887601b3u, "DDERR_CANTLOCKSURFACE", "Access to this surface is refused because an\nattempt was made to lock the primary\nsurface without DCI support."},
+        {3u, 0x887601aeu, "DDERR_SURFACEBUSY", "Access to the surface is refused because\nthe surface is locked by another thread."},
+        {3u, 0x887601c2u, "DDERR_SURFACELOST", "Access to the surface is refused because the surface\nmemory is gone. The DirectDrawSurface object representing this\nsurface should have the IDirectDrawSurface3::Restore\nmethod called on it."},
+        {3u, 0x887601b8u, "DDERR_SURFACEISOBSCURED", "Access to the surface is refused\nbecause the surface is obscured."},
+        {3u, 0x887601d6u, "DDERR_TOOBIGHEIGHT", "The height requested by DirectDraw is too large."},
+        {3u, 0x887601ccu, "DDERR_SURFACENOTATTACHED", "The requested surface is not attached."},
+        {3u, 0x887601eau, "DDERR_TOOBIGWIDTH", "The width requested by DirectDraw\nis too large."},
+        {3u, 0x887601e0u, "DDERR_TOOBIGSIZE", "The size requested by DirectDraw is too large.\nHowever, the individual height and\nwidth are OK."},
+        {3u, 0x88760208u, "DDERR_UNSUPPORTEDMASK", "The bitmask in the pixel format requested\nis not supported by DirectDraw."},
+        {3u, 0x887601feu, "DDERR_UNSUPPORTEDFORMAT", "The FourCC format requested is\nnot supported by DirectDraw."},
+        {3u, 0x8876021cu, "DDERR_WASSTILLDRAWING", "The previous blit operation that is transferring\ninformation to or from this\nsurface is incomplete."},
+        {3u, 0x88760219u, "DDERR_VERTICALBLANKINPROGRESS", "A vertical blank is in progress."},
+        {3u, 0x88760276u, "DDERR_NONONLOCALVIDME", "An attempt was made to allocate non-local video\nmemory from a device that does not support non-local\nvideo memory"},
+        {3u, 0x88760230u, "DDERR_XALIGN", "The provided rectangle was not horizontally\naligned on a required boundary."},
+        {3u, 0x88760231u, "DDERR_INVALIDDIRECTDRAWGUID", "The globally unique identifier (GUID) passed to the\nDirectDrawCreate function is not a valid DirectDraw\ndriver identifier."},
+        {3u, 0x88760232u, "DDERR_DIRECTDRAWALREADYCREATED", "A DirectDraw object representing this driver\nhas already been created for this process."},
+        {3u, 0x88760233u, "DDERR_NODIRECTDRAWHW", "Hardware-only DirectDraw object creation is not possible;\nthe driver does not support any hardware."},
+        {3u, 0x88760234u, "DDERR_PRIMARYSURFACEALREADYEXISTS", "This process has already created a primary surface."},
+        {3u, 0x88760235u, "DDERR_NOEMULATION", "Software emulation is not available."},
+        {3u, 0x88760236u, "DDERR_REGIONTOOSMALL", "The region passed to the\nIDirectDrawClipper::GetClipList\nmethod is too small."},
+        {3u, 0x88760237u, "DDERR_CLIPPERISUSINGHWND", "An attempt was made to set a clip list for a\nDirectDrawClipper object that is already monitoring\na window handle."},
+        {3u, 0x88760238u, "DDERR_NOCLIPPERATTACHED", "No DirectDrawClipper object is attached\nto the surface object."},
+        {3u, 0x88760239u, "DDERR_NOHWND", "Clipper notification requires a window handle,\nor no window handle has been previously set as\nthe cooperative level window handle."},
+        {3u, 0x8876023au, "DDERR_HWNDSUBCLASSED", "DirectDraw is prevented from restoring state\nbecause the DirectDraw cooperative level window\nhandle has been subclassed."},
+        {3u, 0x8876023bu, "DDERR_HWNDALREADYSET", "The DirectDraw cooperative level window handle\nhas already been set. It cannot be reset while the process\nhas surfaces or palettes created."},
+        {3u, 0x8876023cu, "DDERR_NOPALETTEATTACHED", "No palette object is attached to this surface."},
+        {3u, 0x8876023du, "DDERR_NOPALETTEHW", "There is no hardware support for 16- or 256-color palettes."},
+        {3u, 0x8876023eu, "DDERR_BLTFASTCANTCLIP", "A DirectDrawClipper object is attached to a source\nsurface that has passed into a call to the\nIDirectDrawSurface3::BltFast method."},
+        {3u, 0x8876023fu, "DDERR_NOBLTHW", "No blitter hardware is present."},
+        {3u, 0x88760240u, "DDERR_NODDROPSHW", "No DirectDraw raster operation (ROP) hardware is available."},
+        {3u, 0x88760241u, "DDERR_OVERLAYNOTVISIBLE", "The IDirectDrawSurface3::GetOverlayPosition method\nis called on a hidden overlay."},
+        {3u, 0x88760242u, "DDERR_NOOVERLAYDEST", "The IDirectDrawSurface3::GetOverlayPosition method is called\non an overlay that the IDirectDrawSurface3::UpdateOverlay method\nhas not been called on to establish a destination."},
+        {3u, 0x88760243u, "DDERR_INVALIDPOSITION", "The position of the overlay on the destination is no longer legal."},
+        {3u, 0x88760244u, "DDERR_NOTAOVERLAYSURFACE", "An overlay component is called for a non-overlay surface."},
+        {3u, 0x88760245u, "DDERR_EXCLUSIVEMODEALREADYSET", "An attempt was made to set the cooperative level\nwhen it was already set to exclusive."},
+        {3u, 0x88760246u, "DDERR_NOTFLIPPABLE", "An attempt has been made to flip\na surface that cannot be flipped."},
+        {3u, 0x88760247u, "DDERR_CANTDUPLICATE", "Primary and 3-D surfaces, or surfaces that\nare implicitly created, cannot be duplicated."},
+        {3u, 0x88760248u, "DDERR_NOTLOCKED", "An attempt is made to unlock a\nsurface that was not locked."},
+        {3u, 0x88760249u, "DDERR_CANTCREATEDC", "Windows cannot create any more device\ncontexts (DCs)."},
+        {3u, 0x8876024au, "DDERR_NODC", "No DC has ever been created for this surface."},
+        {3u, 0x8876024bu, "DDERR_WRONGMODE", "This surface cannot be restored because it\nwas created in a different mode."},
+        {3u, 0x8876024cu, "DDERR_IMPLICITLYCREATED", "The surface cannot be restored because\nit is an implicitly created surface."},
+        {3u, 0x8876024du, "DDERR_NOTPALETTIZED", "The surface being used is not a\npalette-based surface."},
+        {3u, 0x8876024eu, "DDERR_UNSUPPORTEDMODE", "The display is currently in\nan unsupported mode."},
+        {3u, 0x8876024fu, "DDERR_NOMIPMAPHW", "The operation cannot be carried out because no mipmap\ntexture mapping hardware is present or available."},
+        {3u, 0x88760250u, "DDERR_INVALIDSURFACETYPE", "The requested operation could not be performed\nbecause the surface was of the wrong type."},
+        {3u, 0x88760258u, "DDERR_NOOPTIMIZEH", "The device does not support optimized surfaces"},
+        {3u, 0x88760259u, "DDERR_NOTLOADE", "The surface is an optimized surface,\nbut it has not yet been allocated any memory"},
+        {3u, 0x8876026cu, "DDERR_DCALREADYCREATED", "A device context (DC) has already been returned\nfor this surface. Only one DC can be retrieved for each surface."},
+        {3u, 0x88760294u, "DDERR_CANTPAGEUNLOCK", "An attempt to page unlock a surface failed.\nPage unlock will not work on a display-memory\nsurface or an emulated primary surface."},
+        {3u, 0x88760280u, "DDERR_CANTPAGELOCK", "An attempt to page lock a surface failed.\nPage lock will not work on a display-memory surface or\nan emulated primary surface."},
+        {3u, 0x887602b2u, "DDERR_MOREDAT", "There is more data available than the\nspecified buffer size can hold"},
+        {3u, 0x887602a8u, "DDERR_NOTPAGELOCKED", "An attempt is made to page unlock a\nsurface with no outstanding page locks."},
+        {3u, 0x887602b7u, "DDERR_VIDEONOTACTIV", "The video port is not active"},
+        {3u, 0x887602bbu, "DDERR_DEVICEDOESNTOWNSURFAC", "Surfaces created by one direct draw device cannot\nbe used directly by another direct draw device"},
+        {3u, 0x00000000u, "DD_OK", "The request completed successfully."},
+        {1u, 0x00000000u, "D3DRM_OK", "No error."},
+        {1u, 0x8876030du, "D3DRMERR_BADOBJECT", "Object expected in argument."},
+        {1u, 0x8876030eu, "D3DRMERR_BADTYPE", "Bad argument type passed."},
+        {1u, 0x8876030fu, "D3DRMERR_BADALLOC", "Out of memory."},
+        {1u, 0x88760310u, "D3DRMERR_FACEUSED", "Face already used in a mesh."},
+        {1u, 0x88760311u, "D3DRMERR_NOTFOUND", "Object not found in specified place."},
+        {1u, 0x88760312u, "D3DRMERR_NOTDONEYET", "Unimplemented."},
+        {1u, 0x88760313u, "D3DRMERR_FILENOTFOUND", "File cannot be opened."},
+        {1u, 0x88760314u, "D3DRMERR_BADFILE", "Data file is corrupt."},
+        {1u, 0x88760315u, "D3DRMERR_BADDEVICE", "Device is not compatible with renderer."},
+        {1u, 0x88760316u, "D3DRMERR_BADVALUE", "Bad argument value passed."},
+        {1u, 0x88760317u, "D3DRMERR_BADMAJORVERSION", "Bad DLL major version."},
+        {1u, 0x88760318u, "D3DRMERR_BADMINORVERSION", "Bad DLL minor version."},
+        {1u, 0x88760319u, "D3DRMERR_UNABLETOEXECUTE", "Unable to carry out procedure."},
+        {1u, 0x8876031cu, "D3DRMERR_PENDING", "The data required to supply the requested\ninformation has not finished loading."},
+        {1u, 0x8876031du, "D3DRMERR_NOTENOUGHDATA", "Not enough data has been loaded to\nperform the requested operation."},
+        {1u, 0x8876031eu, "D3DRMERR_REQUESTTOOLARGE", "An attempt was made to set a level\nof detail in a progressive mesh greater than the maximum available."},
+        {1u, 0x8876031fu, "D3DRMERR_REQUESTTOOSMALL", "An attempt was made to set the minimum\nrendering detail of a progressive mesh smaller than\nthe detail in the base mesh\n(the minimum for rendering)."},
+        {1u, 0x88760320u, "D3DRMERR_CONNECTIONLOST", "Data connection was lost during a load,\nclone, or duplicate."},
+        {1u, 0x88760324u, "D3DRMERR_BOXNOTSET", "An attempt was made to access a bounding box\n(for example, with IDirect3DRMFrame2::GetBox)\nwhen no bounding box was set on the frame."},
+        {1u, 0x88760325u, "D3DRMERR_BADPMDATA", "The data in the X File is corrupted.\nThe conversion to a progressive mesh succeeded but\nproduced an invalid progressive mesh in\nthe X File."},
+    };
+    int category = diagnostic_kind;
+
+    s_directx_error_code = result;
+    s_directx_error_line = source_line;
+    s_directx_error_source = source_file;
+    s_directx_error_count = s_directx_error_count + 1u;
+    if (category < 1 || category > 7) category = 0;
+    s_directx_error_category = category;
+    s_directx_error_module = module_names[category];
+
+    if (category == 0) {
+        name = "Unknown";
+        description = "An error in an unknown DirectX module/object was raised";
+    }
+    else if (category >= 4 && category <= 6) {
+        /* Retail reports the unsupported category, then falls through to
+         * category 1's D3DRM result switch. Keep the original category for
+         * the module label while selecting that result table. */
+        directx_error_message_format(
+            "Unknown", "Error handling is unsupported in this DirectX module.");
+        category = 1;
+    }
+
+    for (size_t mapping_index = 0u;
+         mapping_index < sizeof(mappings) / sizeof(mappings[0]);
+         ++mapping_index) {
+        const DirectXErrorMapping* mapping = &mappings[mapping_index];
+        if (mapping->category == (uint32_t)category &&
+            mapping->result == (uint32_t)result) {
+            directx_error_message_format(mapping->name,
+                                         mapping->description);
+            return result;
+        }
+    }
+
+    if (category == 7) {
+        name = "QUERY_INTERFACE";
+        description = "The requested interface could not be obtained.";
+    }
+    directx_error_message_format(name, description);
+    return result;
+}
+
+// SetTimeoutTo10000
+// FUNCTION: LEGORR 0x0040bdc0
+void ledger_stub_0040bdc0_SetTimeoutTo10000(void)
+{
+    uint32_t* ignored_output;
+    (void)scene_resource_availability_sweep(10000.0f, &ignored_output,
+                                             &ignored_output);
+}
+
+
+typedef struct PortableResourceNameQuery {
+    const char* name;
+    void* resource;
+    uint32_t match_count;
+    uint32_t selected_index;
+    int search_mode;
+    int case_sensitive;
+} PortableResourceNameQuery;
+
+int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
+                                ResourceTreeNodeCallback callback,
+                                void* context)
+{
+    uint32_t i;
+    int result;
+    if (root == NULL || callback == NULL) return 0;
+    if (callback(root, context) != 0) return 1;
+    for (i = 0u; i < root->child_count; ++i) {
+        result = resource_tree_callback_walk(root->children[i], depth + 1,
+                                             callback, context);
+        if (result != 0) return 1;
+    }
+    return 0;
+}
+
+} // namespace unported_ledger_stubs
+
+/* Retail ResourceTreeCallbackWalk (FUN_00476330) operates on Direct3DRM
+ * interfaces, not ResourceTreeNode. Keep this target entry separate from the
+ * portable test/runtime tree API above. Its traversal mirrors the COM slots
+ * and reference ownership visible in the retail body. */
+// FUNCTION: LEGORR 0x00476330
+int resource_tree_callback_walk_target(void* object, int depth,
+                                       ResourceTreeCallback callback,
+                                       void* context)
+{
+    void** object_vtable;
+    ResourceTreeGetChildrenFn get_children;
+    void* child_array;
+    void** array_vtable;
+    ResourceTreeArraySizeFn get_size;
+    uint32_t child_count;
+    uint32_t index;
+    int found = 0;
+    if (callback(object, context) != 0) return 1;
+
+    object_vtable = *(void***)object;
+    get_children = (ResourceTreeGetChildrenFn)object_vtable[0x4c / 4];
+    child_array = NULL;
+    if (get_children(object, &child_array) != 0) return 0;
+
+    array_vtable = *(void***)child_array;
+    get_size = (ResourceTreeArraySizeFn)array_vtable[0x0c / 4];
+    child_count = get_size(child_array);
+    for (index = 0u; index < child_count; ++index) {
+        void* child;
+        void* child_interface;
+        void** child_vtable;
+        void** current_array_vtable;
+        ResourceTreeArrayElementFn get_element;
+        ResourceTreeQueryInterfaceFn query_interface;
+        ResourceTreeReferenceFn release_child;
+        ResourceTreeReferenceFn release_interface;
+
+        child = NULL;
+        child_interface = NULL;
+        current_array_vtable = *(void***)child_array;
+        get_element = (ResourceTreeArrayElementFn)
+            current_array_vtable[0x10 / 4];
+        (void)get_element(child_array, index, &child);
+
+        child_vtable = *(void***)child;
+        query_interface = (ResourceTreeQueryInterfaceFn)child_vtable[0];
+        (void)query_interface(child, s_resource_tree_child_iid,
+                              &child_interface);
+        release_child = (ResourceTreeReferenceFn)child_vtable[2];
+        (void)release_child(child);
+
+        if (resource_tree_callback_walk_target(child_interface, depth + 1,
+                                               callback, context) != 0) {
+            void** child_interface_vtable = *(void***)child_interface;
+            release_interface = (ResourceTreeReferenceFn)
+                child_interface_vtable[2];
+            (void)release_interface(child_interface);
+            found = 1;
+            break;
+        }
+        {
+            void** child_interface_vtable = *(void***)child_interface;
+            release_interface = (ResourceTreeReferenceFn)
+                child_interface_vtable[2];
+            (void)release_interface(child_interface);
+        }
+    }
+    {
+        void** current_array_vtable = *(void***)child_array;
+        ResourceTreeReferenceFn release_array =
+            (ResourceTreeReferenceFn)current_array_vtable[2];
+        (void)release_array(child_array);
+    }
+    return found;
+}
+
+static int resource_name_match_callback(ResourceTreeNode* node,
+                                        void* context)
+{
+    unported_ledger_stubs::PortableResourceNameQuery* query =
+        (unported_ledger_stubs::PortableResourceNameQuery*)context;
+    const char* a;
+    const char* b;
+    int matched = 1;
+    if (node == NULL || query == NULL || node->resource == NULL ||
+        node->name == NULL ||
+        query->name == NULL) return 0;
+    if (strlen(node->name) != strlen(query->name)) return 0;
+    a = node->name;
+    b = query->name;
+    while (*a != '\0' && *b != '\0') {
+        int ca = (unsigned char)*a;
+        int cb = (unsigned char)*b;
+        if (!query->case_sensitive) {
+            if (ca >= 'A' && ca <= 'Z') ca += 'a' - 'A';
+            if (cb >= 'A' && cb <= 'Z') cb += 'a' - 'A';
+        }
+        if (ca != cb) {
+            matched = 0;
+            break;
+        }
+        ++a;
+        ++b;
+    }
+    if (*a != '\0' || *b != '\0') matched = 0;
+    if (!matched) return 0;
+    if (query->search_mode == 1) {
+        ++query->match_count;
+        return 0;
+    }
+    if (query->search_mode == 2) {
+        ++query->match_count;
+        if (query->match_count != query->selected_index + 1u) return 0;
+    }
+    else if (query->search_mode != 0) return 0;
+    query->resource = node->resource;
+    return 1;
+}
+
+typedef uint32_t (RESOURCE_TREE_STDCALL *ResourceTreeGetNameFn)(
+    void*, uint32_t*, char*);
+
+static int resource_name_compare_bytes(const char* left, const char* right,
+                                       int case_sensitive)
+{
+    while (*left != '\0' && *right != '\0') {
+        unsigned char a = (unsigned char)*left;
+        unsigned char b = (unsigned char)*right;
+        if (case_sensitive == 0) {
+            if (a >= 'A' && a <= 'Z') a = (unsigned char)(a + ('a' - 'A'));
+            if (b >= 'A' && b <= 'Z') b = (unsigned char)(b + ('a' - 'A'));
+        }
+        if (a != b) return 0;
+        ++left;
+        ++right;
+    }
+    return *left == *right;
+}
+
+/* ResourceNameMatchCallback @ 0x00476410. The retail callback receives a
+ * Direct3DRM object and the seven-word query record built by
+ * ResourceNameRegisterOrQuery. Name retrieval uses the object's +0x24 slot;
+ * the portable ResourceTreeNode predicate above remains for portable callers. */
+// FUNCTION: LEGORR 0x00476410
+int resource_name_match_callback_target(void* object, void* context)
+{
+    ResourceNameMatchCallbackContext* query =
+        (ResourceNameMatchCallbackContext*)context;
+    void** object_vtable;
+    ResourceTreeGetNameFn get_name;
+    uint32_t object_name_bytes = 0u;
+    char* object_name;
+    uint32_t mode;
+    int equal;
+
+    object_vtable = *(void***)object;
+    get_name = (ResourceTreeGetNameFn)object_vtable[0x24 / 4];
+    if (get_name(object, &object_name_bytes, NULL) != 0u ||
+        object_name_bytes == 0u ||
+        object_name_bytes - 1u != query->name_length) {
+        return 0;
+    }
+    object_name = (char*)engine_heap_alloc((long)object_name_bytes);
+    if (object_name == NULL) return 0;
+    object_name[0] = '\0';
+    if (get_name(object, &object_name_bytes, object_name) != 0u) {
+        engine_heap_free(object_name);
+        return 0;
+    }
+
+    mode = (uint32_t)query->mode;
+    if (mode == 0u || mode == 2u) query->matched_object = NULL;
+    equal = resource_name_compare_bytes(object_name, query->name,
+                                        query->case_sensitive != 0u);
+    if (equal != 0) {
+        if (mode == 0u) {
+            query->matched_object = object;
+        } else if (mode == 1u) {
+            ++query->match_count;
+        } else if (mode == 2u) {
+            ++query->match_count;
+            if (query->match_count == query->selected_index + 1u) {
+                query->matched_object = object;
+            }
+        }
+    }
+    engine_heap_free(object_name);
+    return query->matched_object != NULL;
+}
+
+/* ResourceNameRegisterOrQuery (FUN_00473bc0) builds the seven-word callback
+ * record, walks the interface root, and resolves the selected object through
+ * SceneObjectOwnerLinkEnsure. The portable ResourceTreeNode helper below is
+ * kept for host-side callers; this is the retail pointer-to-root ABI. */
+// FUNCTION: LEGORR 0x00473bc0
+void* resource_name_register_or_query_target(
+    void** root, const char* name, int mode,
+    uint32_t* match_count_or_index)
+{
+    const char* cursor = name;
+    uint32_t remaining = 0xffffffffu;
+    ResourceNameMatchCallbackContext query;
+
+    do {
+        char value;
+        if (remaining == 0u) break;
+        --remaining;
+        value = *cursor;
+        ++cursor;
+        if (value == '\0') break;
+    } while (1);
+
+    query.name = name;
+    query.name_length = ~remaining - 1u;
+    query.case_sensitive = 0u;
+    query.matched_object = NULL;
+    query.match_count = 0u;
+    query.mode = mode;
+    query.selected_index = match_count_or_index != NULL
+        ? *match_count_or_index : 0u;
+
+    if (root != NULL && *root != NULL) {
+        (void)resource_tree_callback_walk_target(*root, 0,
+            resource_name_match_callback_target, &query);
+    }
+
+    if (mode == 0 || mode == 2) {
+        return query.matched_object != NULL
+            ? scene_object_owner_link_ensure(query.matched_object) : NULL;
+    }
+    if (mode == 1) {
+        if (match_count_or_index != NULL)
+            *match_count_or_index = query.match_count;
+    }
+    return NULL;
+}
+
+namespace unported_ledger_stubs {
+
+void* resource_name_register_or_query(ResourceTreeNode* root,
+                                      const char* name, int mode,
+                                      uint32_t* match_count_or_index)
+{
+    PortableResourceNameQuery query;
+    if (mode == 1 && match_count_or_index != NULL)
+        *match_count_or_index = 0u;
+    if (root == NULL || name == NULL ||
+        (mode != 0 && mode != 1 && mode != 2)) return NULL;
+    query.name = name;
+    query.resource = NULL;
+    query.match_count = 0u;
+    query.selected_index = mode == 2 && match_count_or_index != NULL
+        ? *match_count_or_index : 0u;
+    query.search_mode = mode;
+    query.case_sensitive = 0;
+    (void)resource_tree_callback_walk(root, 0,
+        (ResourceTreeNodeCallback)resource_name_match_callback, &query);
+    if (mode == 1) {
+        if (match_count_or_index != NULL)
+            *match_count_or_index = query.match_count;
+        return NULL;
+    }
+    return query.resource != NULL
+        ? scene_object_owner_link_ensure(query.resource) : NULL;
+}
+
+
+// ResourceNameRegisterOrQuery
+void* ledger_stub_00473bc0_ResourceNameRegisterOrQuery(
+    ResourceTreeNode* root, const char* name, int mode,
+    uint32_t* match_count_or_index)
+{
+    return resource_name_register_or_query(root, name, mode,
+                                           match_count_or_index);
+}
+
+// ResourceTreeCallbackWalk
+int ledger_stub_00476330_ResourceTreeCallbackWalk(
+    ResourceTreeNode* root, int depth,
+    ResourceTreeNodeCallback callback, void* context)
+{
+    return resource_tree_callback_walk(root, depth, callback, context);
+}
+
+// NestedRecordListRemoveMatchingKey
+typedef struct NestedResourceRecord {
+    void* key;
+    void* reserved[3];
+    struct NestedResourceRecord* child_or_next;
+} NestedResourceRecord;
+// FUNCTION: LEGORR 0x0047b330
+static int nested_record_list_remove_matching_key_impl(
+    void* owner, void* key, void* opaque_record)
+{
+    NestedResourceRecord* record = (NestedResourceRecord*)opaque_record;
+    NestedResourceRecord* child;
+    if (record == NULL) return 0;
+    child = record->child_or_next;
+    if (nested_record_list_remove_matching_key_impl(owner, key, child)) {
+        /* The retail call removes the matching key from DAT_00506684;
+         * its owner argument is forwarded but ignored by that helper. */
+        (void)owner;
+        sound_buffer_association_remove_instance(key);
+        record->child_or_next = child->child_or_next;
+        engine_heap_free(child);
+    }
+    return record->key == key ? 1 : 0;
+}
+
+
+} // namespace unported_ledger_stubs
+
+int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
+                                ResourceTreeNodeCallback callback,
+                                void* context)
+{
+    return unported_ledger_stubs::resource_tree_callback_walk(
+        root, depth, callback, context);
+}
+
+void* resource_name_register_or_query(ResourceTreeNode* root,
+                                      const char* name, int mode,
+                                      uint32_t* match_count_or_index)
+{
+    return unported_ledger_stubs::resource_name_register_or_query(
+        root, name, mode, match_count_or_index);
+}
+
+int nested_record_list_remove_matching_key(void* owner, void* key,
+                                           void* record)
+{
+    return unported_ledger_stubs::nested_record_list_remove_matching_key_impl(
+        owner, key, record);
 }

@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "camera.hpp"
+#include "../game/entity.hpp"
 #include "message.hpp"
 #include "crt/crt.hpp"
 #include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
+extern uint32_t rng_thunk_draw15(void);
+extern float random_float_range(float minimum, float maximum);
 
 /* Reconstruction symbols for corpus globals. */
 int   g_camera_scale_14   = 1;      /* DAT_00556f14, integer multiplier */
@@ -12,6 +18,7 @@ float g_camera_countdown  = 0.0f;    /* DAT_00556ed8 */
 static int s_predug_spawn_cells[256][2];
 static uint32_t s_predug_spawn_count;
 static int s_predug_spawn_enabled;
+static const uint8_t* s_spawn_level_block;
 static CameraSpawnRandomIndexHook s_spawn_random_index_hook;
 static CameraSpawnRandomAngleHook s_spawn_random_angle_hook;
 static CameraSpawnObjectCellHook s_spawn_object_cell_hook;
@@ -19,10 +26,15 @@ static CameraSpawnCoordinateHook s_spawn_coordinate_hook;
 static CameraSpawnCreateHook s_spawn_create_hook;
 static CameraSpawnInitializeHook s_spawn_initialize_hook;
 static void* s_spawn_hook_context;
+static void* s_spawn_coordinate_context;
 static CameraGridSpawnHook s_grid_spawn_hook;
 static void* s_grid_spawn_context;
 static CameraSpawnRegistryProbeHook s_spawn_registry_probe_hook;
 static void* s_spawn_registry_probe_context;
+static CameraMovePostCallback s_move_post_callback;
+static void* s_move_post_user;
+static CameraControlRegistryPredicate s_control_registry_predicate;
+static void* s_control_registry_user;
 
 /* --- helper stubs (fill from the corpus one at a time) ------------------- */
 
@@ -33,21 +45,42 @@ static void move_pipeline_hook(float delta)
     linked_list_conditional_float_advance(delta);
 }
 
-/* The corpus post-step callback is LAB_0046a5c0, dispatched through
- * EntityPoolFindByCallbackFiltered (FUN_004377b0). The generic entity walk
- * is ported; the callback's behavior remains a camera-specific seam. */
-static void move_post_hook(int /*mode*/)
+/* LAB_0046a5c0 is dispatched through EntityPoolFindByCallbackFiltered.
+ * Keep the observed filtered traversal even when its unknown callback has
+ * not been supplied. */
+static int move_post_callback_dispatch(EntitySlot* entity, void* user)
 {
-    /* TODO(camera): port LAB_0046a5c0 and dispatch it through the walker. */
+    if (s_move_post_callback != NULL) {
+        return s_move_post_callback(entity, s_move_post_user);
+    }
+    (void)entity;
+    (void)user;
+    return 0;
 }
 
-/* Caller-specific control-registry predicate is exposed through
- * entity_flag_mask_callbacks_all_pass; this camera-only shim has no game
- * entity context to supply yet. */
-static int control_probe(uint32_t /*id*/)
+/* FUN_0046a4c0's bit ordering and all-pass aggregation are implemented by
+ * the game entity layer. Only LAB_0046a490's entity predicate is unknown. */
+static int control_registry_predicate_dispatch(EntitySlot* entity,
+                                               uint32_t bit, void* user)
 {
-    /* TODO(camera): FUN_0046a4c0(0x40b) control-registry exist check. */
-    return 0;
+    (void)user;
+    if (s_control_registry_predicate == NULL) {
+        return 0;
+    }
+    return s_control_registry_predicate(entity, bit,
+                                        s_control_registry_user);
+}
+
+void camera_entity_callback_hooks_set(CameraMovePostCallback move_callback,
+                                      void* move_user,
+                                      CameraControlRegistryPredicate
+                                          control_predicate,
+                                      void* control_user)
+{
+    s_move_post_callback = move_callback;
+    s_move_post_user = move_user;
+    s_control_registry_predicate = control_predicate;
+    s_control_registry_user = control_user;
 }
 
 /* Spawn one pending grid cell through the installed game entity factory. */
@@ -66,9 +99,13 @@ void camera_grid_spawn_hook_set(CameraGridSpawnHook hook, void* context)
 /* Query the game-owned registry before issuing a delayed spawn. */
 static int spawn_probe(int first, int second)
 {
-    return s_spawn_registry_probe_hook != NULL
-        ? s_spawn_registry_probe_hook(first, second,
-                                      s_spawn_registry_probe_context) : 0;
+    if (s_spawn_registry_probe_hook != NULL) {
+        return s_spawn_registry_probe_hook(first, second,
+                                           s_spawn_registry_probe_context);
+    }
+    /* The level-backed pool is the supported eligibility signal until the
+     * entity registry callback is connected by the game layer. */
+    return s_predug_spawn_enabled != 0 && s_predug_spawn_count != 0u;
 }
 
 void camera_spawn_registry_probe_hook_set(CameraSpawnRegistryProbeHook hook,
@@ -80,6 +117,25 @@ void camera_spawn_registry_probe_hook_set(CameraSpawnRegistryProbeHook hook,
 static void spawn_issue(int source_object, uint32_t type)
 {
     predug_spawn_coordinate_select_and_create(source_object, (int)type);
+}
+
+static void move_post_hook(void)
+{
+    GameContext* game = entity_pool_callback_context_get();
+    if (game != NULL) {
+        entity_pool_find_by_callback_filtered(
+            game, move_post_callback_dispatch, NULL);
+    }
+}
+
+static int control_probe(uint32_t mask)
+{
+    GameContext* game = entity_pool_callback_context_get();
+    if (s_control_registry_predicate == NULL) {
+        return 0;
+    }
+    return entity_flag_mask_callbacks_predicate_all_pass(
+        game, mask, control_registry_predicate_dispatch, NULL);
 }
 
 void camera_predug_spawn_state_install(const int* cell_xy, uint32_t count,
@@ -101,10 +157,7 @@ void camera_predug_spawn_state_install(const int* cell_xy, uint32_t count,
     s_predug_spawn_count = count;
 }
 
-/* SpawnCoordinatePoolClear (FUN_004372a0) resets the predug coordinate
- * array as part of its broader level-side cleanup. This module owns the
- * coordinate slice and keeps the reset available to that lifecycle seam. */
-// FUNCTION: LEGORR 0x004372A0
+/* Clear the camera module's reconstruction-side copy of predug coordinates. */
 void camera_predug_spawn_state_clear(void)
 {
     uint32_t i;
@@ -114,6 +167,19 @@ void camera_predug_spawn_state_clear(void)
     }
     s_predug_spawn_count = 0u;
     s_predug_spawn_enabled = 0;
+    s_spawn_level_block = NULL;
+}
+
+void camera_spawn_level_block_bind(const void* level_block)
+{
+    s_spawn_level_block = (const uint8_t*)level_block;
+}
+
+void camera_spawn_coordinate_hook_set(CameraSpawnCoordinateHook coordinate,
+                                      void* context)
+{
+    s_spawn_coordinate_hook = coordinate;
+    s_spawn_coordinate_context = context;
 }
 
 void camera_spawn_hooks_install(CameraSpawnRandomIndexHook random_index,
@@ -131,6 +197,7 @@ void camera_spawn_hooks_install(CameraSpawnRandomIndexHook random_index,
     s_spawn_create_hook = create;
     s_spawn_initialize_hook = initialize;
     s_spawn_hook_context = context;
+    s_spawn_coordinate_context = context;
 }
 
 /* PredugSpawnCoordinateSelectAndCreate (FUN_0043ad50): choose a configured
@@ -147,14 +214,14 @@ void* predug_spawn_coordinate_select_and_create(int source_object, int type)
     float world_y;
     void* entity;
     if (s_predug_spawn_enabled == 0 || s_predug_spawn_count == 0u
-        || s_spawn_coordinate_hook == NULL || s_spawn_create_hook == NULL) {
+        || s_spawn_coordinate_hook == NULL) {
         return NULL;
     }
     if (source_object == 0) {
         selected = s_spawn_random_index_hook != NULL
             ? s_spawn_random_index_hook((int)s_predug_spawn_count,
                                         s_spawn_hook_context)
-            : 0;
+            : (int)(rng_thunk_draw15() % s_predug_spawn_count);
         if (selected < 0 || (uint32_t)selected >= s_predug_spawn_count) {
             selected = 0;
         }
@@ -167,13 +234,18 @@ void* predug_spawn_coordinate_select_and_create(int source_object, int type)
     }
     if (s_spawn_random_angle_hook != NULL) {
         angle = s_spawn_random_angle_hook(s_spawn_hook_context);
+    } else {
+        angle = random_float_range(0.0f, 6.2831855f);
     }
     if (s_spawn_coordinate_hook(cell_x, cell_y, &world_x, &world_y,
-                                s_spawn_hook_context) == 0) {
+                                s_spawn_coordinate_context) == 0) {
         return NULL;
     }
     world_x += (float)sin((double)angle) * 12.75f;
     world_y += (float)cos((double)angle) * 12.75f;
+    if (s_spawn_create_hook == NULL) {
+        return NULL;
+    }
     entity = s_spawn_create_hook(source_object, type, world_x, world_y, angle,
                                  s_spawn_hook_context);
     if (entity != NULL && s_spawn_initialize_hook != NULL) {
@@ -185,17 +257,18 @@ void* predug_spawn_coordinate_select_and_create(int source_object, int type)
 /* --- the six corpus functions -------------------------------------------- */
 
 /* CameraMoveCommandRoute preserves the corpus's move-list call followed by
- * the conditional post-step walk; the list advance is implemented, while
- * the LAB_0046a5c0 entity callback remains unresolved. */
+ * the conditional filtered entity walk. The callback body remains an
+ * injectable, unresolved runtime input. */
 // FUNCTION: LEGORR 0x0046a730
 void camera_move_pipeline(EngineContext* ctx, float delta)
 {
-    if (ctx == NULL) {
-        return;
-    }
+    /* The reference routine operates on global state and does not consume an
+     * EngineContext. Keep the context parameter only for the port's caller
+     * interface; a missing context must not suppress the global list step. */
+    (void)ctx;
     move_pipeline_hook(delta);
     if (g_move_hook_enabled()) {
-        move_post_hook(0);
+        move_post_hook();
     }
 }
 
@@ -209,7 +282,7 @@ void camera_registry_probe(EngineContext* ctx)
         return;
     }
     if ((ctx->state & 0x8000000u) != 0) {
-        if (control_probe(0x40b)) {
+        if (control_probe(0x40bu)) {
             ctx->debug |= 2u;
         }
     }
@@ -286,21 +359,25 @@ void camera_grid_expiry(EngineContext* ctx, float dt)
 }
 
 // FUNCTION: LEGORR 0x004261c0
-void camera_spawn_countdown(EngineContext* ctx, float dt)
+void camera_spawn_countdown(float dt)
 {
-    EngineState* st = ctx != NULL ? ctx->state_block : NULL;
-    if (st == NULL) {
-        return;
-    }
-    if (st->spawn_type == 0x14) {
+    const uint8_t* level = s_spawn_level_block;
+    float spawn_interval;
+    uint32_t spawn_type;
+    if (level == NULL) return;
+    /* The reference reads the re-arm interval and type from the current
+     * level block at +0x268/+0x26c. */
+    memcpy(&spawn_interval, level + 0x268, sizeof(spawn_interval));
+    memcpy(&spawn_type, level + 0x26c, sizeof(spawn_type));
+    if (spawn_type == 0x14) {
         return;
     }
     g_camera_countdown -= dt;
     if (g_camera_countdown < 0.0f) {
         if (spawn_probe(0, 0)) {
-            spawn_issue(0, st->spawn_type);
+            spawn_issue(0, (uint32_t)spawn_type);
         }
-        g_camera_countdown = st->spawn_interval;
+        g_camera_countdown = spawn_interval;
     }
 }
 
@@ -314,7 +391,7 @@ void camera_cluster(EngineContext* ctx, float dt, float scale)
     if (st != NULL) {
         camera_grid_timers(ctx, dt);
         camera_grid_expiry(ctx, dt);
-        camera_spawn_countdown(ctx, dt);
+        camera_spawn_countdown(dt);
     }
 }
 

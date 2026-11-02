@@ -323,7 +323,7 @@ address,symbol,status,corpus_name,src_citations,pseudocode_bytes
 0040efb0,FUN_0040efb0,ported,CellCoordinateTimestampExists,2,337
 0040f000,FUN_0040f000,ported,LavaErosionNeighborCheck,3,1093
 0040f0e0,FUN_0040f0e0,ported,KindSixRandomMessageDispatchSweep,4,1023
-0040f190,FUN_0040f190,ported,,6,1320
+0040f190,FUN_0040f190,ported,LavaErosionCellEligibleAndMutate,6,1320
 0040f2b0,FUN_0040f2b0,ported,LavaErosionNeighborEligible,3,571
 0040f330,FUN_0040f330,ported,LavaErosionNeighborMutate,2,2854
 0040f5e0,FUN_0040f5e0,ported,GlobalConfigValueSet,2,81

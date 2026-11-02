@@ -1,14 +1,26 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "message.hpp"
 #include "simtick.hpp"
 #include "sound.hpp"
 #include "heap.hpp"
+#include "crt/crt.hpp"
+#include "resource.hpp"
 #include "game/level.hpp"
+#include "game/ai.hpp"
 #include "game/cmd.hpp"
 #include "game/select.hpp"
+#include "game/entity.hpp"
+#include "game/effects.hpp"
+#include "game/render.hpp"
+#include "game/terrain_grid.hpp"
+
+namespace unported_ledger_stubs {
+int ledger_stub_00466490_CellSightRayCheckAndFlag(const EntitySlot* observer);
+}
 
 #define SIMTICK_MUTE_RESET 25.0f
 
@@ -142,6 +154,14 @@ void simtick_table_dispatch(EngineContext* c, float dt, float scale)
 
 /* ---- post-step cluster (FUN_0040d450) ----------------------------------- */
 static int s_post_steps = 0;
+static void** s_post_record_tables = NULL;
+static uint32_t s_post_record_table_count = 0;
+static SimtickPostClusterRecordHook s_post_active_hook = NULL;
+static SimtickPostClusterRecordHook s_post_entity_first_hook = NULL;
+static SimtickPostClusterRecordHook s_post_entity_second_hook = NULL;
+static void* s_post_cluster_user = NULL;
+static SimtickSceneEntityHook s_scene_entity_hook = NULL;
+static void* s_scene_entity_user = NULL;
 
 int simtick_post_steps_run(void);
 
@@ -150,19 +170,85 @@ int simtick_post_steps_run(void)
     return s_post_steps;
 }
 
-static void post_step(int /*id*/)
+void simtick_post_cluster_records_set(void** tables, uint32_t table_count,
+    SimtickPostClusterRecordHook active_record_hook,
+    SimtickPostClusterRecordHook entity_first_hook,
+    SimtickPostClusterRecordHook entity_second_hook, void* user)
 {
-    /* TODO(simtick): FUN_0040d490 / FUN_004377b0 post-step bodies. */
-    ++s_post_steps;
+    s_post_record_tables = tables;
+    s_post_record_table_count = table_count;
+    s_post_active_hook = active_record_hook;
+    s_post_entity_first_hook = entity_first_hook;
+    s_post_entity_second_hook = entity_second_hook;
+    s_post_cluster_user = user;
+}
+
+static void post_cluster_active_records(void)
+{
+    uint32_t table_index;
+    const size_t record_stride = 0x10u + sizeof(void*);
+    for (table_index = 0; table_index < s_post_record_table_count;
+         ++table_index) {
+        void* table = s_post_record_tables != NULL
+            ? s_post_record_tables[table_index] : NULL;
+        uint32_t count;
+        uint32_t i;
+        if (table == NULL) continue;
+        count = (uint32_t)1u << (table_index & 31u);
+        for (i = 0; i < count; ++i) {
+            uint8_t* record = (uint8_t*)table + i * record_stride;
+            void* self;
+            memcpy(&self, record + 0x10, sizeof(self));
+            if (self == (void*)record && s_post_active_hook != NULL)
+                s_post_active_hook(record, 1, s_post_cluster_user);
+        }
+    }
+}
+
+static int post_cluster_entity_first(EntitySlot* entity, void* payload)
+{
+    (void)payload;
+    if (s_post_entity_first_hook != NULL)
+        s_post_entity_first_hook(entity, 0, s_post_cluster_user);
+    return 0;
+}
+
+static int post_cluster_entity_second(EntitySlot* entity, void* payload)
+{
+    (void)payload;
+    if (s_post_entity_second_hook != NULL)
+        s_post_entity_second_hook(entity, 1, s_post_cluster_user);
+    return 0;
+}
+
+static int scene_entity_callback(EntitySlot* entity, void* payload)
+{
+    float dt = *(float*)payload;
+    /* LAB_0043c810 updates live EntitySlot/runner state. Always continue the
+     * pool walk here: its nonzero return is reserved for early branch exits
+     * inside one entity, not for stopping FUN_004377d0. */
+    ai_entity_frame_update(entity, dt);
+    if (s_scene_entity_hook != NULL)
+        s_scene_entity_hook(entity, dt, s_scene_entity_user);
+    return 0;
+}
+
+void simtick_scene_entity_hook_set(SimtickSceneEntityHook hook, void* user)
+{
+    s_scene_entity_hook = hook;
+    s_scene_entity_user = user;
 }
 
 // FUNCTION: LEGORR 0x0040d450
 void simtick_post_cluster(EngineContext* c)
 {
     (void)c;
-    post_step(1);
-    post_step(2);
-    post_step(3);
+    post_cluster_active_records();
+    entity_pool_find_by_callback_filtered_current(
+        post_cluster_entity_first, NULL);
+    entity_pool_find_by_callback_filtered_current(
+        post_cluster_entity_second, NULL);
+    s_post_steps += 3;
 }
 
 /* ---- bobbins list machine (FUN_004091e0) -------------------------------- */
@@ -257,47 +343,127 @@ static SimtickBobbin* bobbin_find_key(const uint32_t key_pair[2])
     return NULL;
 }
 
+/* The two UI group operations resolve the shared DAT_004b8a24 path-record
+ * list. Their entity arrays live at +0x2c/+0xcc in the 32-bit record; native
+ * builds use level.cpp's widened-pointer sidecar accessors for that window. */
 // FUNCTION: LEGORR 0x00409110
 void simtick_selection_group_release(const uint32_t key_pair[2])
 {
-    SimtickBobbin* node = bobbin_find_key(key_pair);
-    if (node == NULL) return;
-    cancel_action_for_matching_coordinates(node->key_pair);
-    bobbin_delayed(node);
-    bobbin_record_remove_and_free(node);
+    void* record;
+    record = terrain_descriptor_find_exact_current(key_pair, NULL);
+    if (record != NULL) {
+        cancel_action_for_matching_coordinates(key_pair);
+#if defined(_WIN32)
+        bobbin_delayed((SimtickBobbin*)record);
+#else
+        {
+            uint32_t count = path_record_entity_count_get(record);
+            uint32_t i;
+            for (i = 0u; i < count; ++i) {
+                EntitySlot* entity = path_record_entity_get(record, i);
+                if (entity != NULL) {
+                    const float no_timeout = -1.0f;
+                    entity->field_340 = no_timeout;
+                    entity->flags_3e8 |= 0x800000u;
+                }
+            }
+        }
+#endif
+        path_record_remove_and_free(record);
+    }
 }
 
 // FUNCTION: LEGORR 0x00409150
 void simtick_selection_group_clear(const uint32_t key_pair[2])
 {
-    SimtickBobbin* node = bobbin_find_key(key_pair);
+    void* record;
+    uint32_t count;
     uint32_t i;
-    if (node == NULL) return;
-    for (i = 0; i < node->member_count && i < 20u; ++i) {
-        unsigned char* entity = (unsigned char*)node->members[i];
-        uint32_t flags;
+    uint32_t group_key;
+    int cell_xy[2];
+    record = terrain_descriptor_find_exact_current(key_pair, NULL);
+    if (record == NULL) return;
+    cell_xy[0] = (int)key_pair[0];
+    cell_xy[1] = (int)key_pair[1];
+    terrain_cell_flag40000000_clear_or_set_current(cell_xy, 0);
+#if defined(_WIN32)
+    count = *(uint32_t*)((char*)record + 0xcc);
+    for (i = 0u; i < count; ++i) {
+        EntitySlot* entity = (EntitySlot*)
+            *(uint32_t*)((char*)record + 0x2c + i * 4u);
         if (entity == NULL) continue;
-        memcpy(&flags, entity + 0x3ecu, sizeof(flags));
-        flags &= ~0x100u;
-        memcpy(entity + 0x3ecu, &flags, sizeof(flags));
-        cmd_create_task((EntitySlot*)entity); /* FUN_00402720(entity, 0) */
+        entity->flags_3ec &= ~0x100u;
+        cmd_create_task(entity, 0); /* FUN_00402720(entity, 0) */
     }
-    cancel_action_for_matching_coordinates(node->key_pair);
-    bobbin_delayed(node);
-    bobbin_record_remove_and_free(node);
+#else
+    count = path_record_entity_count_get(record);
+    for (i = 0u; i < count; ++i) {
+        EntitySlot* entity = path_record_entity_get(record, i);
+        if (entity == NULL) continue;
+        entity->flags_3ec &= ~0x100u;
+        cmd_create_task(entity, 0); /* FUN_00402720(entity, 0) */
+    }
+#endif
+    cancel_action_for_matching_coordinates(key_pair);
+    memcpy(&group_key, (const char*)record + 0x08, sizeof(group_key));
+    cmd_cancel_by_coords((int)group_key, 0, 0, 0);
+    path_record_remove_and_free(record);
 }
 // FUNCTION: LEGORR 0x004027a0
 static void bobbin_clear_delay(SimtickBobbin* node)
 {
-    if (node != NULL && s_bobbin_clear_delay_hook != NULL)
+    if (node == NULL) return;
+    if (s_bobbin_clear_delay_hook != NULL) {
         s_bobbin_clear_delay_hook(node, s_bobbin_action_context);
+        return;
+    }
+
+    /* BobbinClearDelay (FUN_004027a0) only queues the coordinate command
+     * when the keyed cell is clear, has a nonzero speed class, and its
+     * entry resources are ready. The retail body then allocates type 0x16,
+     * stores the pair in +8/+c, and links it globally with kind 0xe. */
+    GameContext* game = entity_pool_callback_context_get();
+    int cell_xy[2];
+    void* command;
+    cell_xy[0] = (int)node->key_pair[0];
+    cell_xy[1] = (int)node->key_pair[1];
+    if (game == NULL || game->level == NULL ||
+        level_cell_occupied_at_current(cell_xy) != 0u ||
+        level_cell_speed_class(game->level, (int)node->key_pair[0],
+                               (int)node->key_pair[1]) == 0 ||
+        ensure_cell_entries_loaded(0xfu, 0, 0) == 0) {
+        return;
+    }
+    command = cmd_alloc(0x16);
+    if (command == NULL) return;
+    cmd_rec_move_xy_set(command, (float)node->key_pair[0],
+                        (float)node->key_pair[1]);
+    cmd_link_global_head(command, 0xe);
 } /* FUN_004027a0 */
 // FUNCTION: LEGORR 0x00409550
-static void bobbin_die(SimtickBobbin* node)
+static void descriptor_transition_apply(SimtickBobbin* node)
 {
-    if (node != NULL && s_bobbin_die_hook != NULL)
-        s_bobbin_die_hook(node, s_bobbin_action_context);
-    if (node != NULL) node->flags &= ~4u;
+    int* cell_xy;
+    void* matching_entity;
+    uint32_t kind6_count;
+    uint32_t kind7_default_count;
+    uint32_t kind7_variant_count;
+    int kind7_variant;
+    if (node == NULL || !always_accept_place_command_cell()) return;
+    cell_xy = (int*)node->key_pair;
+    matching_entity = unported_ledger_stubs::
+        ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
+        NULL, cell_xy, 7u, 0u);
+    kind6_count = entity_indexed_record_word_at_b4_get(15, 0, 0);
+    kind7_default_count = entity_indexed_record_word_at_b0_get(15, 0, 0);
+    kind7_variant_count = entity_indexed_record_word_at_b8_get(15, 0, 0);
+
+    entity_repeated_resource_instances_create(cell_xy, 6, 0, 0u,
+                                               (int)kind6_count);
+    kind7_variant = matching_entity != NULL && kind7_variant_count != 0u;
+    entity_repeated_resource_instances_create(cell_xy, 7, kind7_variant,
+        0u, (int)(kind7_variant ? kind7_variant_count : kind7_default_count));
+    node->flags |= 4u;
 } /* FUN_00409550 */
 
 // FUNCTION: LEGORR 0x004091e0
@@ -323,7 +489,7 @@ void simtick_bobbins(EngineContext* c)
                 }
             }
         } else {
-            bobbin_die(node);
+            descriptor_transition_apply(node);
         }
         node = next;
     }
@@ -335,42 +501,53 @@ static int s_marker_fired = 0;int simtick_marker_count(void)
     return s_marker_fired;
 }
 
-static void marker_cell(EngineState* /*st*/, uint32_t x, uint32_t y)
+static void marker_cell(EngineState* st, uint32_t x, uint32_t y)
 {
-    (void)x; (void)y;
-    /* TODO(simtick): the corpus's per-cell terrain-init marker
-     * callback — its body is a cell-geometry builder that lands with
-     * the terrain-data wave (address deliberately unquoted: quoting an
-     * unported function flips its ledger row). */
+    TerrainSurfaceGrid* grid = path_record_surface_grid_get();
+    if (st != NULL && grid != NULL && grid->width == st->sim_w &&
+        grid->height == st->sim_h) {
+        terrain_cell_surface_vectors_initialize(grid, x, y);
+    }
     ++s_marker_fired;
 }
 
 // FUNCTION: LEGORR 0x0044eff0
 void simtick_marker_sweep(EngineContext* c, float dt, float scale)
 {
-    (void)dt; (void)scale;
+    (void)scale;
     EngineState* st = c != NULL ? c->state_block : NULL;
-    if (st == NULL || !st->sim_marker_flags) {
-        return;
+    LevelState* level = level_current_owner_get();
+    if (level != NULL) {
+        /* The retail +0x73d0 dirty word and +0x28 cell records belong to the
+         * active LevelState's TerrainState. EngineState::sim_grid is only a
+         * test/legacy adapter and is not populated by the production level
+         * loader. */
+        s_marker_fired = 0;
+        terrain_dirty_cell_vectors_refresh(level);
     }
-    s_marker_fired = 0;
-    for (uint32_t y = 0; y < st->sim_h; ++y) {
-        for (uint32_t x = 0; x < st->sim_w; ++x) {
-            uint8_t* cell = (uint8_t*)st->sim_grid + (y * st->sim_w + x) * 0x28;
-            if ((cell[0x19] & 4u) != 0) {
-                marker_cell(st, x, y);
-                cell[0x19] = cell[0x19] & ~4u;
+    else if (st != NULL && (st->sim_marker_flags & 2u) != 0u) {
+        s_marker_fired = 0;
+        for (uint32_t y = 0; y < st->sim_h; ++y) {
+            for (uint32_t x = 0; x < st->sim_w; ++x) {
+                uint8_t* cell = (uint8_t*)st->sim_grid +
+                    (y * st->sim_w + x) * 0x28;
+                if ((cell[0x19] & 4u) != 0u) {
+                    marker_cell(st, x, y);
+                    cell[0x19] = cell[0x19] & ~4u;
+                }
             }
         }
+        st->sim_marker_flags = (uint8_t)(st->sim_marker_flags & ~2u);
     }
-    st->sim_marker_flags = 0;
-    /* TODO(simtick): render passes FUN_00450b60 / FUN_0044f090. */
+    terrain_material_transition_tick(path_record_surface_grid_get(), dt);
+    /* FUN_00450b60's terrain-vertex interpolation pass still needs its
+     * cell-list and renderer-owned vertex records. */
 }
 
 /* ---- ManagerTick (corpus FUN_0045a730, finding 04) ---------------------- */
 
-float g_manager_smooth_a = 1.0f;   /* _DAT_0049e5e8 (unpinned; stable EMA) */
-float g_manager_smooth_b = -1.0f;  /* _DAT_0049e5ec (corpus constants unknown) */
+float g_manager_smooth_a = 4.0f;   /* FUN_0045a730's 4.0 / dt */
+float g_manager_smooth_b = -1.0f;  /* denominator subtracts -1.0 */
 float g_manager_snap     = 1.0f;   /* _DAT_0049e5e0 */
 float g_manager_dt_const = 0.0f;  /* _DAT_0049e5d8 (skip when dt == ) */
 
@@ -464,12 +641,6 @@ void simtick_manager_tick(int index, float dt, int ingame)
     /* exponential smoothing (skip when dt equals the stored constant). */
     if (dt != g_manager_dt_const) {
         float denom = g_manager_smooth_a / dt - g_manager_smooth_b;
-        if ((g_manager_smooth_a / dt) == 0.0f) {
-            denom = 1.0f;
-        }
-        if (denom == 0.0f) {
-            denom = 1.0f;
-        }
         if (fabsf(slot->smoothed[0] - tx) <= g_manager_snap) {
             slot->smoothed[0] = tx;
         } else {
@@ -493,8 +664,6 @@ void simtick_manager_tick(int index, float dt, int ingame)
         if (s_repos != NULL) {
             s_repos(slot->handle, ix, iy);
         }
-        // signal-rep: whatever the corpus does after repositions
-        slot->flags &= ~1u;
     } else if (slot->mode == 1) {
         ++s_attach_n;
         if (s_attach != NULL) {
@@ -573,7 +742,6 @@ int simtick_editor_steps_run(void)
     return s_edit_steps;
 }
 
-// FUNCTION: LEGORR 0x0044cfa0
 void simtick_editor_steps(EngineContext* c)
 {
     (void)c;
@@ -596,7 +764,7 @@ void simtick_cooldown_tick(EngineContext* c, float dt)
     message_cooldown_tick(dt);
 }
 
-/* ---- tranche 8: bit-field tree (FUN_0049cf90) --------------------------- */
+/* ---- tranche 8: bit-field tree utility ---------------------------------- */
 static int (*s_tree_hook)(int, int) = NULL;
 static int s_tree_fired = 0;
 
@@ -610,31 +778,36 @@ int simtick_tree_fired(void)
     return s_tree_fired;
 }
 
-// FUNCTION: LEGORR 0x0049cf90
 void simtick_bitfield_tree(int* base, int code)
 {
     s_tree_fired = 0;
     if (base == NULL) {
         return;
     }
-    /* corpus 0x49cf90: 16-bit code ladder, 0x80000000.. scale, scanning the
-     * entry stream (stride 4) for a low-short code match. */
+    /* This independent test utility builds a canonical code table using
+     * 16-byte records; the retail decoder target lives in resource.cpp. */
     int      bits = 1;
-    int      acc = 0;
+    uint32_t next_code = 0u;
     uint32_t scale = 0x80000000u;
-    int      target = 0;
     do {
         uint32_t n = (uint32_t)code;
         if (code != 0) {
             int* entry = base + 8;
             do {
                 if ((int16_t)(unsigned)(uint32_t)entry[1] == (int16_t)bits) {
+                    uint32_t canonical = next_code / scale;
+                    uint32_t reversed = 0u;
+                    int bit;
+                    for (bit = 0; bit < bits; ++bit) {
+                        reversed = (reversed << 1) | (canonical & 1u);
+                        canonical >>= 1;
+                    }
                     if (s_tree_hook != NULL) {
-                        s_tree_hook(acc / (int)scale, bits);
+                        s_tree_hook((int)(next_code / scale), bits);
                     }
                     ++s_tree_fired;
-                    entry[0] = target;
-                    acc += (int)scale;
+                    entry[0] = (int)reversed;
+                    next_code += scale;
                 }
                 entry += 4;
                 --n;
@@ -653,6 +826,15 @@ static SimtickPostStepHook s_post_step_hook = NULL;
 static void* s_post_step_user = NULL;
 int simtick_post_steps_count(void) { return s_post_n; }
 
+static int post_step_cell_sight_callback(EntitySlot* entity, void* payload)
+{
+    (void)payload;
+    (void)unported_ledger_stubs::
+        ledger_stub_00466490_CellSightRayCheckAndFlag(entity);
+    /* LAB_004665e0's result does not terminate the entity-pool walk. */
+    return 0;
+}
+
 void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user)
 {
     s_post_step_hook = hook;
@@ -662,6 +844,11 @@ void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user)
 // FUNCTION: LEGORR 0x004665c0
 void simtick_post_step(EngineContext* c)
 {
+    (void)c;
+    /* FUN_004665c0 calls FUN_004377b0 with this relay. That walker excludes
+     * the same 0x80000-filtered records as the existing filtered pool API. */
+    entity_pool_find_by_callback_filtered_current(
+        post_step_cell_sight_callback, NULL);
     if (s_post_step_hook != NULL)
         s_post_step_hook(c, s_post_step_user);
     ++s_post_n;
@@ -730,13 +917,7 @@ void simtick_minion_states(EngineContext* c, float dt, float scale)
     }
 }
 
-/* FUN_00424600: the tested port keeps a seeded-cell flag-clear model. The
- * corpus is a larger terrain cleanup: 0x424614 calls FUN_0040c3a0 for a work
- * count, 0x42463c/0x424645 load coordinate pairs, and 0x424649 calls
- * FUN_0040c570 before addressing state+0xb8. Those two callees are ledger
- * stubs here, and the later 0x4246b6 dispatch consumes another coordinate.
- * Replacing the tested one-cell contract with that helper-driven walk needs
- * the missing callee signatures/state, not a loop-only respelling. */
+/* Deterministic seeded-cell adapter retained for existing local callers. */
 static int s_cells_n = 0;
 static int s_cells_x[64], s_cells_y[64];
 static int s_cell_disp = 0;
@@ -755,7 +936,48 @@ void simtick_cell_seed(int n, const int* xs, const int* ys)
 
 int simtick_cell_dispatches(void) { return s_cell_disp; }
 
-// FUNCTION: LEGORR 0x00424600
+/* Portable completed-resource grid adapter. Retail TerrainCellFlagCleanup
+ * @ 0x00424600 takes an opaque receiver plus an integer resource selector,
+ * then obtains completed coordinate pairs through FUN_0040c3a0/FUN_0040c570.
+ * This context-and-scale API consumes the port's scene sweep instead and is
+ * not the retail entrypoint; the owning resource table/selector are absent. */
+void simtick_grid_cell_pass(EngineContext* c, float scale)
+{
+    EngineState* st = c != NULL ? c->state_block : NULL;
+    uint32_t* groups = NULL;
+    uint32_t* slots = NULL;
+    int count;
+    int i;
+    s_cell_disp = 0;
+    count = scene_resource_availability_sweep(scale, &groups, &slots);
+    if (count <= 0 || groups == NULL || slots == NULL || st == NULL ||
+        st->grid_cells == NULL || st->grid_w == 0u || st->grid_h == 0u) {
+        return;
+    }
+    for (i = 0; i < count; ++i) {
+        uint32_t x = 0u;
+        uint32_t y = 0u;
+        uint32_t index;
+        int coordinate_pair[2];
+        uint8_t* cell;
+        uint32_t* flags;
+        scene_cell_table_pair_read((int)groups[i], (int)slots[i], &x, &y);
+        if (x >= st->grid_w || y >= st->grid_h) continue;
+        index = st->grid_w * y + x;
+        cell = (uint8_t*)st->grid_cells + index * 0x48u;
+        flags = (uint32_t*)(cell + 8);
+        *flags &= ~0x800u;
+        if ((*flags & 0x1000u) == 0u) {
+            coordinate_pair[0] = (int)x;
+            coordinate_pair[1] = (int)y;
+            cmd_produce(0x14, NULL, 0, coordinate_pair);
+            ++s_cell_disp;
+        }
+        *flags &= ~0x1000u;
+        *flags &= ~0x08000000u;
+    }
+}
+
 void simtick_grid_cell_pass(EngineContext* c)
 {
     EngineState* st = c != NULL ? c->state_block : NULL;
@@ -764,8 +986,12 @@ void simtick_grid_cell_pass(EngineContext* c)
         return;
     }
     for (int i = 0; i < s_cells_n; ++i) {
-        uint32_t idx = st->grid_w * (uint32_t)s_cells_y[i] + (uint32_t)s_cells_x[i];
-        uint8_t* cell = (uint8_t*)st->grid_cells + idx * 0x48;
+        if (s_cells_x[i] < 0 || s_cells_y[i] < 0 ||
+            (uint32_t)s_cells_x[i] >= st->grid_w ||
+            (uint32_t)s_cells_y[i] >= st->grid_h) continue;
+        uint32_t idx = st->grid_w * (uint32_t)s_cells_y[i] +
+                       (uint32_t)s_cells_x[i];
+        uint8_t* cell = (uint8_t*)st->grid_cells + idx * 0x48u;
         uint32_t* flags = (uint32_t*)(cell + 8);
         *flags &= ~0x800u;
         if ((*flags & 0x1000u) == 0) {
@@ -776,60 +1002,175 @@ void simtick_grid_cell_pass(EngineContext* c)
     }
 }
 
-/* FUN_0043b270: scene pass with a flag word + a 125 s broadcast timer. */
-static uint32_t s_scene_word = 0;
+/* FUN_0043b270: scene pass uses the shared DAT_004dee14 manager word. */
 static void (*s_scene_broadcast)(int) = NULL;
 static int s_scene_bcasts = 0;
 static float s_scene_timer = 0.0f;
+typedef struct SimtickCellCoord { int x, y; } SimtickCellCoord;
+static SimtickCellCoord* s_scene_tracked = NULL;
+static uint32_t s_scene_tracked_count = 0;
+static uint32_t s_scene_tracked_capacity = 0;
+static SimtickCellCoord* s_scene_pending = NULL;
+static uint32_t s_scene_pending_count = 0;
+static uint32_t s_scene_pending_capacity = 0;
+static void (*s_scene_cell_init)(EngineState*, int, int) = NULL;
 
-uint32_t simtick_scene_word(void)      { return s_scene_word; }
-void simtick_set_scene_word(uint32_t w) { s_scene_word = w; }
+uint32_t simtick_scene_word(void)      { return entity_state_flags_peek(); }
+void simtick_set_scene_word(uint32_t w) { entity_state_flags_set(w); }
 void simtick_set_scene_broadcast(void (*h)(int)) { s_scene_broadcast = h; }
 int  simtick_scene_broadcasts(void)    { return s_scene_bcasts; }
+
+static int scene_cell_list_append(SimtickCellCoord** list, uint32_t* count,
+                                 uint32_t* capacity, int x, int y)
+{
+    if (*count == *capacity) {
+        uint32_t next_capacity = *capacity == 0 ? 16u : *capacity * 2u;
+        SimtickCellCoord* next = (SimtickCellCoord*)realloc(
+            *list, (size_t)next_capacity * sizeof(SimtickCellCoord));
+        if (next == NULL) return 0;
+        *list = next;
+        *capacity = next_capacity;
+    }
+    (*list)[*count].x = x;
+    (*list)[*count].y = y;
+    ++*count;
+    return 1;
+}
+
+void simtick_scene_cell_track(int x, int y)
+{
+    scene_cell_list_append(&s_scene_tracked, &s_scene_tracked_count,
+                           &s_scene_tracked_capacity, x, y);
+}
+
+void simtick_scene_cell_init_hook(void (*hook)(EngineState*, int, int))
+{
+    s_scene_cell_init = hook;
+}
+
+int simtick_scene_cells_pending(void)
+{
+    return (int)s_scene_pending_count;
+}
+
+/* FUN_00432200 snapshots the tracked coordinates before the entity walk,
+ * mirrors each coordinate into its previous-state slots, and clears cell
+ * flag 0x100. The host grid is the same +0xb8 / 0x48-byte cell array used by
+ * EngineState. */
+static void scene_cell_previous_state_track(EngineState* st)
+{
+    uint32_t i;
+    if (s_scene_tracked_count == 0) return;
+    for (i = 0; i < s_scene_tracked_count; ++i) {
+        SimtickCellCoord coord = s_scene_tracked[i];
+        if (st != NULL && st->grid_cells != NULL && coord.x >= 0 && coord.y >= 0
+            && (uint32_t)coord.x < st->grid_w
+            && (uint32_t)coord.y < st->grid_h) {
+            uint8_t* cell = (uint8_t*)st->grid_cells
+                + ((uint32_t)coord.y * st->grid_w + (uint32_t)coord.x) * 0x48u;
+            uint32_t flags;
+            memcpy(&flags, cell + 0x0c, sizeof(flags));
+            flags &= ~0x100u;
+            memcpy(cell + 0x0c, &flags, sizeof(flags));
+        }
+        scene_cell_list_append(&s_scene_pending, &s_scene_pending_count,
+                              &s_scene_pending_capacity, coord.x, coord.y);
+    }
+    s_scene_tracked_count = 0;
+}
+
+/* FUN_004321a0 drains the snapshot after the entity callback walk. A cell
+ * whose +0x0d byte bit 0 is clear is sent to CellInitPass (FUN_0042f6f0). */
+static void scene_cell_update_queue_flush(EngineState* st)
+{
+    uint32_t i;
+    for (i = 0; i < s_scene_pending_count; ++i) {
+        SimtickCellCoord coord = s_scene_pending[i];
+        if (st == NULL || st->grid_cells == NULL || coord.x < 0 || coord.y < 0
+            || (uint32_t)coord.x >= st->grid_w
+            || (uint32_t)coord.y >= st->grid_h) continue;
+        uint8_t* cell = (uint8_t*)st->grid_cells
+            + ((uint32_t)coord.y * st->grid_w + (uint32_t)coord.x) * 0x48u;
+        if ((cell[0x0d] & 1u) == 0 && s_scene_cell_init != NULL)
+            s_scene_cell_init(st, coord.x, coord.y);
+    }
+    s_scene_pending_count = 0;
+}
 
 // FUNCTION: LEGORR 0x0043b270
 void simtick_scene_pass(EngineContext* c, float dt)
 {
-    (void)c;
-    if ((s_scene_word & 4u) != 0) {
-        /* TODO(simtick): FUN_00432200 entry pass. */
+    EngineState* st = c != NULL ? c->state_block : NULL;
+    uint32_t scene_word = entity_state_flags_peek();
+    if ((scene_word & 4u) != 0) {
+        if (s_scene_tracked_count != 0u)
+            scene_cell_previous_state_track(st); /* explicit test adapter */
+        else
+            terrain_cell_previous_state_track_current();
     }
-    s_scene_word |= 0x10u;
-    ++s_post_n; /* FUN_004377d0 scene hook step */
-    s_scene_word &= ~0x10u;
-    if ((s_scene_word & 4u) != 0) {
-        /* TODO(simtick): FUN_004321a0 exit pass. */
+    entity_state_flags_set(scene_word | 0x10u);
+    /* FUN_004377d0(callback, &dt, 0): visit every live, unflagged entity and
+     * run the recovered per-entity behavior callback. */
+    entity_pool_find_by_callback_current(scene_entity_callback,
+                                         (void*)&dt, 0);
+    ++s_post_n;
+    scene_word = entity_state_flags_peek() & ~0x10u;
+    entity_state_flags_set(scene_word);
+    if ((scene_word & 4u) != 0) {
+        if (s_scene_pending_count != 0u)
+            scene_cell_update_queue_flush(st); /* explicit test adapter */
+        else
+            terrain_cell_update_queue_flush_current();
     }
-    if ((s_scene_word & 8u) == 0) {
-        s_scene_word &= ~4u;
+    if ((scene_word & 8u) == 0) {
+        entity_state_flags_set(scene_word & ~4u);
     } else {
+        entity_activity_scene_state_update(entity_pool_callback_context_get());
         if (s_scene_broadcast != NULL) {
             s_scene_broadcast(0);
         }
         ++s_scene_bcasts;
-        s_scene_word &= ~8u;
+        entity_state_flags_set(entity_state_flags_peek() & ~8u);
     }
     s_scene_timer -= dt;
     if (s_scene_timer <= 0.0f) {
         s_scene_timer = 125.0f;
+        periodic_entity_callback_dispatch((void*)(uintptr_t)1u);
         if (s_scene_broadcast != NULL) {
             s_scene_broadcast(1);
         }
         ++s_scene_bcasts;
     }
+    /* FUN_0044bf00's global deferred callback list still needs its renderer
+     * record/callback owner; no portable producer is installed for that list. */
 }
 
-/* FUN_0046f550: the tested port models only the timed-entry release pass.
- * The corpus first walks records 0x50391c..0x5053fc by 0x2b0 (0x46f56e,
- * 0x46f574), calls FUN_0046f920 for occupied +0x2a4 slots, then calls the
- * segment callback and FUN_0046f3b0. Its timer walk is a separate table
- * 0x50387c..0x50391c by 0x10 (0x46f5f8, 0x46f5fb); a negative timer calls
- * FUN_004820d0 twice before clearing the slot and subtracting dt. The first
- * record pass and FUN_0046f3b0's behavior are not represented by this seed
- * API, so synthesizing their calls here would not preserve its tested model. */
+/* FUN_0046f550: ten 0x2b0 projectile records, an unfiltered entity walk,
+ * another pass over all ten records, then ten 0x10 timed-visual records.
+ * The owners provide typed sidecar views because their portable records are
+ * not binary-compatible with the retail global arrays. */
 static const void** s_sfx_entries = NULL;
 static int s_sfx_n = 0;
 static int s_sfx_rels = 0;
+static SimtickSfxBankHooks s_sfx_bank_hooks;
+
+static int sfx_entity_scan_callback(EntitySlot* entity, void* payload)
+{
+    const float dt = *(const float*)payload;
+    if (s_sfx_bank_hooks.entity_segment_scan != NULL)
+        s_sfx_bank_hooks.entity_segment_scan(
+            entity, dt, s_sfx_bank_hooks.context);
+    return 0;
+}
+
+void simtick_sfx_bank_hooks_set(const SimtickSfxBankHooks* hooks)
+{
+    if (hooks == NULL) {
+        memset(&s_sfx_bank_hooks, 0, sizeof(s_sfx_bank_hooks));
+    } else {
+        s_sfx_bank_hooks = *hooks;
+    }
+}
 
 void simtick_sfx_seed(int n, const void** entries)
 {
@@ -842,23 +1183,77 @@ int simtick_sfx_releases(void) { return s_sfx_rels; }
 // FUNCTION: LEGORR 0x0046f550
 void simtick_sfx_bank(EngineContext* c, float dt)
 {
-    (void)c;
-    s_sfx_rels = 0;
-    /* pass 1: active stride-0xac entries -> effect hook. */
     int i;
-    for (i = 0; i < s_sfx_n; ++i) {
-        ++s_post_n; /* FUN_0046f920 effect hook */
-    }
-    /* post-step. */
-    ++s_post_n;
-    /* pass 3: stride-4 timer slots: negative timer -> release + reset. */
-    for (i =  0; i < s_sfx_n; ++i) {
-        float* f = (float*)((uint8_t*)s_sfx_entries[i] + 12);
-        if (*f < 0.0f) {
-            ++s_sfx_rels; /* FUN_004820d0 release hook x2 */
-            *(uint32_t*)((uint8_t*)s_sfx_entries[i] + 0) = 0;
+    s_sfx_rels = 0;
+
+    /* Ten projectile records: update only records with a spawned entity at
+     * +0x2a4. The update owner performs the scene-resource movement from
+     * FUN_0046f920 using its retained full record. */
+    if (s_sfx_bank_hooks.projectile_record_get != NULL) {
+        for (i = 0; i < SIMTICK_SFX_BANK_SLOTS; ++i) {
+            SimtickSfxProjectileRecord* record =
+                s_sfx_bank_hooks.projectile_record_get(
+                    i, s_sfx_bank_hooks.context);
+            if (record != NULL && record->tracked_entity != NULL &&
+                s_sfx_bank_hooks.projectile_update != NULL) {
+                s_sfx_bank_hooks.projectile_update(record->owner_record, dt,
+                                                   s_sfx_bank_hooks.context);
+            }
         }
-        *f -= dt;
+    }
+
+    /* LAB_0046f610 is called through the unfiltered entity-pool walk between
+     * projectile movement and per-record hit scans. The checked-in full
+     * decompile contains no body for that label, so its narrow callback stays
+     * optional while the live pool walk and surrounding order are retained. */
+    (void)c;
+    entity_pool_find_by_callback_current(sfx_entity_scan_callback, &dt, 0);
+
+    /* The hit scanner runs for all ten records, including empty records; the
+     * retail helper itself gates on the record's +0x2a4 entity pointer. */
+    if (s_sfx_bank_hooks.projectile_record_get != NULL) {
+        for (i = 0; i < SIMTICK_SFX_BANK_SLOTS; ++i) {
+            SimtickSfxProjectileRecord* record =
+                s_sfx_bank_hooks.projectile_record_get(
+                    i, s_sfx_bank_hooks.context);
+            if (record != NULL && s_sfx_bank_hooks.ray_hit_scan != NULL)
+                s_sfx_bank_hooks.ray_hit_scan(record->owner_record,
+                                              s_sfx_bank_hooks.context);
+        }
+    }
+
+    /* Ten 0x10 timed-visual records: negative timers release both handles,
+     * clear the first handle as the occupancy sentinel, then every active
+     * timer is decremented (including one just released). */
+    if (s_sfx_bank_hooks.timed_visual_record_get != NULL) {
+        for (i = 0; i < SIMTICK_SFX_BANK_SLOTS; ++i) {
+            SimtickSfxTimedVisualRecord* record =
+                s_sfx_bank_hooks.timed_visual_record_get(
+                    i, s_sfx_bank_hooks.context);
+            if (record == NULL || record->first_handle == NULL) continue;
+            if (record->remaining < 0.0f) {
+                if (s_sfx_bank_hooks.resource_release != NULL) {
+                    s_sfx_bank_hooks.resource_release(record->first_handle,
+                        record->resource_owner, s_sfx_bank_hooks.context);
+                    s_sfx_bank_hooks.resource_release(record->second_handle,
+                        record->resource_owner, s_sfx_bank_hooks.context);
+                }
+                record->first_handle = NULL;
+                ++s_sfx_rels;
+            }
+            record->remaining -= dt;
+        }
+    } else {
+        /* Keep the small raw timer fixture available to existing simtick
+         * tests; production records use the typed bank hooks above. */
+        for (i = 0; i < s_sfx_n; ++i) {
+            float* remaining = (float*)((uint8_t*)s_sfx_entries[i] + 12);
+            if (*remaining < 0.0f) {
+                ++s_sfx_rels;
+                *(uint32_t*)((uint8_t*)s_sfx_entries[i]) = 0;
+            }
+            *remaining -= dt;
+        }
     }
 }
 
@@ -866,7 +1261,10 @@ void simtick_sfx_bank(EngineContext* c, float dt)
 
 /* shared tranche-10 module state */
 static int   s_mouse_anchor_x = 0, s_mouse_anchor_y = 0;
-static float s_vu_accum = 0.0f;
+static SimtickRenderPassHook s_render_pass_hook = NULL;
+static void* s_render_pass_user = NULL;
+static SimtickRenderEntityHook s_render_entity_hook = NULL;
+static void* s_render_entity_user = NULL;
 
 /* FUN_00425d90: world picker via mouse motion. */
 static int (*s_pick)(int, int) = NULL;
@@ -899,13 +1297,13 @@ void simtick_mouse_world(EngineContext* c, float dt)
     }
 }
 
-/* FUN_00402220: task/frame counter with clamps + a whitelisted-list walk. */
+/* Legacy frame-counter helper retained for callers/tests; 0x402220 is the
+ * command subsystem's CmdTickGlobal entry (see game/cmd.cpp). */
 static uint32_t s_frame = 0, s_frame_a = 0, s_frame_b = 0, s_frame_c = 0;
 
 uint32_t simtick_frame(void) { return s_frame; }
 int simtick_frame_bump(void) { return (int)s_frame; }
 
-// FUNCTION: LEGORR 0x00402220
 void simtick_frame_counter(EngineContext* c)
 {
     (void)c;
@@ -920,80 +1318,148 @@ void simtick_frame_counter(EngineContext* c)
     ++s_frame;
 }
 
-/* FUN_0040eab0: the tested port models a one-second spawn accumulator.
- * The corpus is LavaErosionPendingCellTick: 0x40eac2..0x40ead5 adds dt to
- * DAT_004d78b4 and compares it with DAT_004d78b8, then 0x40eaef calls
- * FUN_0040e990 and 0x40eb2b calls FUN_0040f000 while scanning pending cells;
- * later paths update stage timers/effects and reset the accumulator at
- * 0x40ec3d. That state and helper-driven behavior are outside the tested
- * hook contract, so keep the threshold behavior rather than fake the walk. */
-static float s_spawn_acc = 0.0f;
-static int   s_spawns = 0;
-static int   (*s_spawn_hook)(int) = NULL;
+/* The level module owns the ordered pending coordinates and stage slots.
+ * Its tick returns when the ErodeTriggerTime gate elapsed, whether or not a
+ * candidate was found. */
+static int s_ambient_spawn_triggers;
+
+void simtick_ambient_spawn_tick(float scale)
+{
+    if (lava_erosion_pending_cell_tick_result(scale))
+        ++s_ambient_spawn_triggers;
+}
+
+/* Retained only for the existing simtick unit-test seam. Production EngineTick
+ * dispatches simtick_ambient_spawn_tick with the reference's scale argument. */
+static float s_test_spawn_acc;
+static int s_test_spawns;
+static int (*s_spawn_hook)(int);
 
 void simtick_set_spawn_hook(int (*h)(int)) { s_spawn_hook = h; }
-int  simtick_spawn_calls(void) { return s_spawns; }
+int simtick_spawn_calls(void)
+{
+    return s_ambient_spawn_triggers + s_test_spawns;
+}
 
-// FUNCTION: LEGORR 0x0040eab0
 void simtick_ambient_spawn(EngineContext* c, float dt)
 {
     (void)c;
-    s_spawn_acc += dt;
-    if (s_spawn_acc >= 1.0f) {
-        s_spawn_acc = 0.0f;
-        if (s_spawn_hook != NULL) {
-            s_spawn_hook(0); /* slot pick = FUN_0040e990 distance-modulo */
-        }
-        ++s_spawns;
+    s_test_spawn_acc += dt;
+    if (s_test_spawn_acc >= 1.0f) {
+        s_test_spawn_acc = 0.0f;
+        if (s_spawn_hook != NULL) s_spawn_hook(0);
+        ++s_test_spawns;
     }
 }
 
 /* FUN_004520d0 is the per-player command-queue executor — owned by the
  * game layer (src/game/cmd.cpp); kept out of the simtick module. */
 
-/* FUN_00465b00: sound-bank ticker — linked entries with init/lifetime. */
-// FUNCTION: LEGORR 0x00465b00
+/* Legacy tick-list slot advances the transient-effect instance registry. */
 void simtick_sound_bank_tick(EngineContext* c, float dt)
 {
-    (void)c; (void)dt;
-    /* corpus: walk DAT_00552128 linked entries; init missing voices, tick
-     * lifetime, update slots. Structural pass: one ordered step per node. */
-    ++s_post_n;
+    (void)c;
+    transient_effect_instances_tick(dt);
 }
 
 /* FUN_004291a0: render-pass entry (in-game camera probe / world collect). */
 // FUNCTION: LEGORR 0x004291a0
 void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
 {
-    (void)dt; (void)o1;
+    (void)o1;
     if (c == NULL) return;
-    if (scale != 0.0f) return; /* corpus: param_2 == 0 gates the in-game pass */
-    if (c->context_mode != 1) return;
-    /* corpus: camera pos (FUN_004754c0 on the view cam), grid pick, height,
-     * scale by FUN_00450890 x3, world-collect via FUN_00450600 hook. */
-    ++s_post_n;
+    if (scale == 0.0f) {
+        if (c->context_mode == 1 || c->context_mode == 0) {
+            if (s_render_pass_hook != NULL)
+                s_render_pass_hook(c, dt, scale, s_render_pass_user);
+            ++s_post_n;
+        }
+    } else if ((c->state & 2u) != 0 && (c->state & 0x2000u) != 0) {
+        if (s_render_pass_hook != NULL)
+            s_render_pass_hook(c, dt, scale, s_render_pass_user);
+        ++s_post_n;
+    }
 }
 
 int simtick_render_steps(void) { return s_post_n; }
+
+void simtick_render_pass_hook_set(SimtickRenderPassHook hook, void* user)
+{
+    s_render_pass_hook = hook;
+    s_render_pass_user = user;
+}
+
+void simtick_render_entity_hook_set(SimtickRenderEntityHook hook, void* user)
+{
+    s_render_entity_hook = hook;
+    s_render_entity_user = user;
+}
+
+static int render_entity_callback(EntitySlot* entity, void* payload)
+{
+    (void)payload;
+    if (s_render_entity_hook != NULL)
+        s_render_entity_hook(entity, s_render_entity_user);
+    return 0;
+}
+
 /* FUN_00449c00: a single ordered render step. */
 // FUNCTION: LEGORR 0x00449c00
 void simtick_render_step(EngineContext* c)
 {
     (void)c;
+    entity_pool_find_by_callback_current(render_entity_callback, NULL, 0);
     ++s_post_n;
 }
 
-/* FUN_00426520: vu/timer accumulators gated on input buttons. */
+/* MainSimInteractionAndCellUpdate (FUN_00426520; Findings 474/455) clears
+ * the debug bit, resolves the live pointer against the loaded level, then
+ * routes a click to entity selection or a move command. The original has
+ * several additional cursor modes and HUD/terrain feedback branches; those
+ * rely on UI mode globals which have no EngineContext owner yet. The
+ * reachable selection path uses the same perspective camera and viewport
+ * dimensions as the software scene renderer, rather than guessing a cell
+ * from raw screen coordinates. */
 // FUNCTION: LEGORR 0x00426520
 void simtick_vu_meter(EngineContext* c, float dt)
 {
+    GameContext* game;
+    LevelState* level;
+    float cell_x, cell_y;
+    EntitySlot* picked;
+    int width, height;
+    (void)dt;
     if (c == NULL) return;
-    c->debug &= ~0x400u; /* corpus: DAT_00556ed0 &= ~0x400 each frame */
-    if (c->input != NULL && (c->input->cur[0x2d] != 0
-                             || c->input->cur[0x2e] != 0)) {
-        s_vu_accum = 0.0f; /* buttons held -> zero the accumulator */
-    } else {
-        s_vu_accum += dt;
+    c->debug &= ~0x400u; /* corpus's first statement after loading state */
+
+    if ((c->state & 2u) == 0u || (c->state & 0x100u) != 0u ||
+        c->context_mode != 1 || c->input == NULL ||
+        c->input->mouse_press == 0) return;
+
+    game = entity_pool_callback_context_get();
+    level = (LevelState*)c->level_block;
+    if (game == NULL || level == NULL || game->level != level) return;
+    width = display_width_get();
+    height = display_height_get();
+    if (width <= 0 || height <= 0 ||
+        !level_scene_mouse_cell(game, level, width, height,
+                               c->input->mouse_x, c->input->mouse_y,
+                               &cell_x, &cell_y)) return;
+
+    picked = level_scene_pick_entity(game, level, width, height,
+                                     c->input->mouse_x, c->input->mouse_y,
+                                     18.0f);
+    if (picked == NULL) {
+        /* The renderer's precise screen picker currently covers minifigures.
+         * Keep other selectable entity kinds reachable through the shared
+         * cell-space selection owner. */
+        picked = selection_pick(game, cell_x, cell_y, 0.75f);
+    }
+    if (picked != NULL) {
+        (void)selection_add(game, picked);
+    }
+    else if (selection_count(game) != 0) {
+        (void)selection_cmd_move(game, cell_x, cell_y);
     }
 }
 
@@ -1067,7 +1533,7 @@ void simtick_fx_bank_tick(EngineContext* c, float dt)
         }
     }
     if (c != NULL) {
-        terrain_edge_flag_midpoint_update((LevelState*)c->level_block, dt);
+        terrain_edge_flag_midpoint_update((LevelState*)c->level_block);
     }
 }
 /* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the
@@ -1106,6 +1572,11 @@ uint32_t simtick_route_position_state_peek(void) { return s_edit_word; }
 void simtick_global_ui_flags_clear_bits12(void)
 {
     s_timer_word &= 0xfffffff9u;
+}
+
+void simtick_global_ui_flags_set_bit2(void)
+{
+    s_timer_word |= 2u;
 }
 
 uint32_t simtick_global_ui_flags_word(void) { return s_timer_word; }

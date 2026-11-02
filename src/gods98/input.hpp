@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* gods98 engine — input core scaffold (findings 04/05).
+/* gods98 engine — input state and translation tables (findings 04/05).
  *
- * The corpus's input model is three 256-byte key tables, mouse x/y, and a
- * per-key "context filter" (findings 04/05):
+ * The corpus's input model is three 256-byte key tables and mouse x/y. The
+ * separate DAT_004a1f60 table maps DirectInput scan-code indices to text
+ * bytes; its exact retail initializer is in input.cpp.
  *
  *   cur    DAT_0076ab80  current frame snapshot (1 byte per key)
  *   prev   DAT_0076aa00  previous frame snapshot
@@ -12,7 +13,7 @@
  * Edge detection everywhere in the corpus is (cur != 0 && prev != cur), i.e.
  * a key that became non-zero this frame — nothing fancier. EnginePreTick
  * (findings 04/05) turns edges into text via KeyContextCheck (context filter)
- * and a port-local ASCII helper, then clears the tables with the mirror trick.
+ * and CRT character conversion, then clears the tables with the mirror trick.
  *
  * QuitPoll's dwell machine (FUN_004589c0): corner-dwell quit gesture with
  * per-slot enter/leave counters. The original indexes those counters off a
@@ -27,9 +28,9 @@
  *  - input_key_to_ascii is a port-local ASCII helper. The reference entry at
  *    0x48e380 is CRT `_toupper`; DAT_00549180 is a CRT locale handle, not a
  *    keyboard-layout handle.
- *  - The KeyContextCheck filter table is reconstruction-owned (the shipped
- *    256x4 table in .rdata is not embedded); default = all entries zero
- *    ("no restriction").
+ *  - InputState::context_filter is port-local text-pump state. It is not the
+ *    retail KeyContextCheck table, which is process-global and initialized
+ *    from the shipped 256-entry scan-code-to-character data.
  */
 #ifndef LEGORRR_INPUT_HPP
 #define LEGORRR_INPUT_HPP
@@ -40,11 +41,14 @@
 #include "platform/platform.h"  /* PlatformEvent + canonical key codes */
 
 #define INPUT_KEY_COUNT 256
+#define INPUT_KEY_MAPPING_KEY_COUNT 128
 #define INPUT_KEY_MAPPING_CAPACITY 128
 
 typedef struct InputKeyMappingTable {
-    uint8_t count[INPUT_KEY_COUNT];
-    uint8_t values[INPUT_KEY_COUNT][INPUT_KEY_MAPPING_CAPACITY];
+    /* The retail record reserves 0x34 bytes before the mapping matrix. */
+    uint8_t reserved[0x34];
+    uint8_t values[INPUT_KEY_MAPPING_KEY_COUNT][INPUT_KEY_MAPPING_CAPACITY];
+    uint8_t count[INPUT_KEY_MAPPING_KEY_COUNT];
 } InputKeyMappingTable;
 
 void input_key_mapping_reset(InputKeyMappingTable* table);
@@ -72,7 +76,7 @@ typedef struct InputState {
     uint32_t dwell_leave[5];          /* leave counts per slot */
 
     uint8_t  hkl_present;             /* DAT_00549180 analog */
-    uint32_t context_filter[INPUT_KEY_COUNT]; /* DAT_004a1f60 analog */
+    uint32_t context_filter[INPUT_KEY_COUNT]; /* port-local text filter */
 
     char*    text_target;             /* active text-entry buffer, else NULL */
     int32_t  text_len;
@@ -100,6 +104,8 @@ int input_action_state_toggle(InputActionToggleState* state,
                               unsigned int action, const void* data);
 typedef struct DirectInputHooks {
     void* context;
+    /* Initialize requires interface/device creation, configuration, acquire,
+     * and release callbacks. The mouse callback is an optional port extension. */
     int (*interface_create)(void* context);
     int (*keyboard_create)(void* context);
     int (*mouse_create)(void* context);
@@ -116,7 +122,11 @@ void input_direct_hooks_set(const DirectInputHooks* hooks);
 int input_direct_initialize(void); /* FUN_0047ed90 */
 void input_direct_shutdown(void);
 InputState* input_direct_state_get(void);
-void input_state_poll(InputState* state, int poll_active); /* FUN_0047eef0 */
+void input_direct_state_bind(InputState* state);
+/* Port adapter for InputStatePoll. Retail takes no arguments and reads
+ * DirectInput plus two global polling gates; this helper receives those
+ * state inputs explicitly. */
+void input_state_poll(InputState* state, int poll_active);
 
 void input_reset(InputState* s);
 
@@ -125,9 +135,9 @@ void input_reset(InputState* s);
 void input_begin_frame(InputState* s);
 
 /* Device capture — the "writer" half (finding 05's device layer, deferred
- * from PR #8 to the frame loop). Consumes a batch of platform events into
- * the current-frame tables: KEYDOWN sets cur[code], KEYUP clears,
- * MOUSE updates mouse_x/y. Canonical codes come from platform.h. */
+ * from PR #8 to the frame loop). Consumes platform events into the current
+ * frame edge table and the held-key snapshot used by KeyboardDownKeyCount:
+ * KEYDOWN sets, KEYUP clears, MOUSE updates mouse_x/y. */
 void input_capture_events(InputState* s, const PlatformEvent* evs, int count);
 
 /* EnginePreTick tail: snapshot cur into the text mirror (cur kept for the
@@ -139,12 +149,15 @@ void input_mirror(InputState* s);
 void input_mirror_and_clear(InputState* s);
 
 int  input_key_down(const InputState* s, int key);
+int  input_keyboard_key_held(int key); /* current 256-byte backend snapshot */
 int  input_keyboard_down_key_count(void); /* FUN_0047efb0 */
 typedef int (*InputClientToScreenHook)(int* x, int* y, void* context);
 typedef void (*InputSetCursorPositionHook)(int x, int y, void* context);
 void input_cursor_position_hooks_install(InputClientToScreenHook convert,
                                         InputSetCursorPositionHook set_cursor,
                                         void* context);
+void input_cursor_position_update(void); /* FUN_0047f010 */
+void input_cursor_position_sync(InputState* state);
 void input_cursor_client_position_set(int x, int y); /* FUN_0047f0d0 */
 void input_cursor_client_position_get(int* x, int* y);
 void input_cursor_delta_get(int* x, int* y);
@@ -160,8 +173,10 @@ int  input_mouse_pressed(const InputState* s);
  * `_toupper`, represented separately in src/crt. */
 uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode);
 
-/* KeyContextCheck (FUN_00411f00): filter[key]; 0 = unrestricted. */
+/* Port-local text filter stored per InputState. The retail KeyContextCheck
+ * table is a separate process-global scan-code-to-character map. */
 uint32_t input_key_context(const InputState* s, uint32_t key);
+uint32_t input_key_context_check(int key); /* FUN_00411f00 */
 
 /* EnginePreTick text pump: for each key edge allowed by the context filter,
  * append its ASCII character to buf (capacity cap); when `clear` is set the
@@ -170,13 +185,10 @@ uint32_t input_key_context(const InputState* s, uint32_t key);
 void input_text_pump(InputState* s, char* buf, int cap, int* len_out,
                      int clear);
 
-/* QuitPoll machine (FUN_004589c0): corner-dwell quit gesture. Feeds the
- * mouse position against the corner rectangle; enter/leave counters on the
- * caller-supplied dwell `slot` (0..4; in the original the slot indexes off
- * the objective/advisor flag word `_DAT_004ffbc0` — finding 22, NOT input
- * devices); returns 1 when the gesture completes (dwelled in the corner,
- * then left past the quit rectangle) AND keep_running is 0 — mirroring
- * quitFlag = (KeepRunning() == 0). Returns 0 otherwise. */
+/* Port-local dwell utility. This is not the retail QuitPoll ABI: the target
+ * takes two mode gates and an output pointer, reads global cursor/window and
+ * objective state, and may dispatch input/audio/UI operations. That owner
+ * state is not represented by InputState. */
 int input_quit_dwell(InputState* s, int slot, int mx, int my,
                      int rect_x, int rect_y, int rect_w, int rect_h,
                      int quit_w, int quit_h, int keep_running);
@@ -186,22 +198,31 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
  * findings 376/444): raise/clear/read bit 0x8 of the corpus's indexed
  * input-entry flag word. PlayerInputFlag8SetClear / PlayerInputFlag8Get
  * (FUN_0041ca20 / FUN_0041ca70): the same bit over the two player-input
- * tables selected by kind 1 / kind 4. None of the corpus's table owners
- * (the pointer-table allocator and the action-state leaves, still
- * unported) lands, so all three tables land zero-initialized with a
- * documented 256-entry window (the corpus's own sizes come from heap
- * allocations; the port bounds-checks, answering zero outside the window
- * and skipping writes — deviation). */
+ * tables selected by kind 1 / kind 4. The entry table is the zero-initialized
+ * 74-word DAT_004dd60c array; its indexed leaves follow the corpus's unchecked
+ * access. The player tables remain portable zero-initialized stand-ins. */
 void input_entry_flag8_set_clear(int entry, int set);
 uint32_t input_entry_flag8_get(int entry);
+/* Full action/binding words used by InputActionStateUpdate and the catalog
+ * slot helpers. Categories 1 and 4 share these same live input tables. */
+uint32_t input_action_state_word_get(int action);
+void input_action_state_word_set(int action, uint32_t flags);
+uint32_t input_binding_state_word_get(int kind, int entry);
+void input_binding_state_word_set(int kind, int entry, uint32_t flags);
+typedef int (*InputActionStateQueryFn)(void* context, int action);
+void input_action_state_query_set(InputActionStateQueryFn query,
+                                  void* context);
+void input_action_state_update(int action); /* FUN_0041c7b0 */
 void player_input_flag8_set_clear(int kind, int action, int set);
 uint32_t player_input_flag8_get(int kind, int action);
 
 struct EngineContext;  /* engine.hpp: the DAT_00556ecc state word lives here */
 
-/* InputActionPressedGet / InputBindingPressedGet (FUN_0041c8f0 /
- * FUN_0041c950): "is this action/binding pressed right now?" Both read the
- * engine-state word (DAT_00556ecc) bit 0x10000000 as a "pressed-yes-every-
+/* Port adapters for InputActionPressedGet / InputBindingPressedGet
+ * (FUN_0041c8f0 / FUN_0041c950): "is this action/binding pressed right
+ * now?" Retail signatures omit the EngineContext argument and read its
+ * global state word. Both read the engine-state word (DAT_00556ecc) bit
+ * 0x10000000 as a "pressed-yes-every-
  * thing" gate — NOT the 0x40000000 RuntimeFlag40000000Get mask — and both
  * consult the system-state word (DAT_004ff980) bit 0 for the inverted
  * alternate reading. Action 0x49 is hard-wired not-pressed. The corpus

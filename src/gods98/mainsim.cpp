@@ -11,14 +11,6 @@
  *  gesture model; MainSimStep is driven by the named quit key here.
  */
 
-void main_view_key_step(EngineContext* ctx, int view_idx, uint32_t mode,
-                        float amount)
-{
-    (void)ctx; (void)view_idx; (void)mode; (void)amount;
-    /* TODO(mainsim): corpus FUN_00436900/004369f4/00436aa5 per-view camera
-     * keys, routed through view.cam_* once the view input is exercised. */
-}
-
 void main_hud_text(EngineContext* ctx, const char* s)
 {
     (void)ctx;
@@ -46,10 +38,10 @@ static void m_toggle_hud(EngineContext* ctx, uint32_t* flag, uint32_t bit,
 }
 
 // FUNCTION: LEGORR 0x004250c0
-int main_sim_step(EngineContext* ctx, float scale, float dt,
+int main_sim_step(EngineContext* ctx, float scale,
                   uint32_t* o1, uint32_t* o2, uint32_t* o3)
 {
-    (void)scale; (void)dt;
+    (void)scale;
     if (ctx == NULL) {
         return 0;
     }
@@ -87,27 +79,32 @@ int main_sim_step(EngineContext* ctx, float scale, float dt,
         }
     }
 
-    /* Air cheat key (held): drains the air-supply counter (corpus
-     * DAT_0076ab98 -> state+0x1fc -= _DAT_0049e2b0). */
-    if (ctx->state_block != NULL && m_held(ctx, MNSIM_K_AIRCHEAT)) {
-        float v = (float)ctx->state_block->air_beat;
-        v -= 0.1f;
-        if (v < 0.0f) {
-            v = 0.0f;
-        }
-        ctx->state_block->air_beat = (uint32_t)v;
+    /* The retail air cheat is enabled by feature bit 0x8000 and decrements
+     * the live LevelState float at +0x1fc by 1.0 while its key is held.
+     * EngineState::air_beat is only a reconstruction-side ticker counter;
+     * the level block is the source used by the game logic. */
+    if ((ctx->feature & 0x8000u) != 0u && ctx->level_block != NULL &&
+        m_held(ctx, MNSIM_K_AIRCHEAT)) {
+        float air;
+        memcpy(&air, (const char*)ctx->level_block + 0x1fc, sizeof(air));
+        air -= 1.0f;
+        memcpy((char*)ctx->level_block + 0x1fc, &air, sizeof(air));
+    }
+    else if (ctx->level_block == NULL && ctx->state_block != NULL &&
+             m_held(ctx, MNSIM_K_AIRCHEAT) &&
+             ctx->state_block->air_beat != 0u) {
+        /* Isolated engine tests and preview contexts may have only the
+         * ticker sidecar bound. Keep that adapter useful without changing
+         * the live level-block path above. */
+        ctx->state_block->air_beat--;
     }
 
-    /* Camera keys (corpus FUN_00436900..) — routed per-view. */
-    if (m_edge(ctx, 'z')) {
-        main_view_key_step(ctx, 0, 1, 0.25f); /* pan */
-    }
-    if (m_edge(ctx, 'x')) {
-        main_view_key_step(ctx, 0, 2, 0.25f); /* rotate */
-    }
-    if (m_edge(ctx, 'c')) {
-        main_view_key_step(ctx, 0, 3, 0.25f); /* zoom */
-    }
+    /* The source camera keys and deltas are identified (see mainsim.hpp and
+     * Finding 101), but the called helpers expect the original camera-control
+     * record. ViewContext's reconstructed fields do not match that record's
+     * +0x78/+0x84/+0x90 values or scene-node offsets, so applying the deltas
+     * here would mutate unrelated state. Keep this path deferred until that
+     * record has a faithful adapter. */
 
     /* The three edge outputs EngineTick's later tickers consume. */
     if (m_edge(ctx, '1')) {
@@ -129,4 +126,11 @@ int main_sim_step(EngineContext* ctx, float scale, float dt,
         return 0;
     }
     return 1;
+}
+
+int main_sim_step(EngineContext* ctx, float scale, float dt,
+                  uint32_t* o1, uint32_t* o2, uint32_t* o3)
+{
+    (void)dt;
+    return main_sim_step(ctx, scale, o1, o2, o3);
 }

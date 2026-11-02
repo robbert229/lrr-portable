@@ -474,7 +474,7 @@ int main(int argc, char** argv)
 
             /* The neighbor refresh leaf: the build-record word is
              * unowned in the port, so the leaf changes nothing. */
-            terrain_neighbor_flag_refresh(s, 3, 4, 0);
+            terrain_neighbor_flag_refresh_xy(s, 3, 4, 0);
             __builtin_memcpy(&f, rec + 0x08, 4);
             __builtin_memcpy(&g, rec + 0x18, 4);
             CHECK(f == 0xffffffdfu && g == 0u,
@@ -1900,24 +1900,24 @@ int main(int argc, char** argv)
         const uint32_t busyfree = 8u; /* bit 3, sign clear */
         memcpy(north + 8, &busyfree, 4);
         north[6] = 1;
-        CHECK(lava_erosion_neighbor_check(&ev, 1, 2, out) == 0,
+        CHECK(lava_erosion_neighbor_check_level(&ev, 1, 2, out) == 0,
               "the timestamped north neighbour rides past the answer");
         seed2[2] = 5;
-        CHECK(lava_erosion_neighbor_check(&ev, 1, 2, out) == 0,
+        CHECK(lava_erosion_neighbor_check_level(&ev, 1, 2, out) == 0,
               "the type gate skips the whole sweep");
         seed2[2] = 6;
         memcpy(east + 8, &busyfree, 4);
         east[6] = 1;
-        CHECK(lava_erosion_neighbor_check(&ev, 1, 2, out) == 1
+        CHECK(lava_erosion_neighbor_check_level(&ev, 1, 2, out) == 1
                   && out[0] == 2 && out[1] == 2,
               "the busy-free untimestamped east neighbour answers");
         const uint32_t signedflag = 0x80000008u;
         memcpy(east + 8, &signedflag, 4);
-        CHECK(lava_erosion_neighbor_check(&ev, 1, 2, out) == 0,
+        CHECK(lava_erosion_neighbor_check_level(&ev, 1, 2, out) == 0,
               "the sign-bit neighbour stays out");
         /* No-grid guard + no-pair out slot still walk the neighbours. */
-        CHECK(lava_erosion_neighbor_check(NULL, 1, 1, out) == 0
-                  && lava_erosion_neighbor_check(&ev, 0, 0, NULL) == 0,
+        CHECK(lava_erosion_neighbor_check_level(NULL, 1, 1, out) == 0
+                  && lava_erosion_neighbor_check_level(&ev, 0, 0, NULL) == 0,
               "the guarded seed answers zero");
     }
 

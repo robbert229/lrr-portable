@@ -30,15 +30,51 @@ extern "C" {
 
 typedef struct Flic Flic;
 
-/* Open a `.flh` by resource name (wad entry like `Interface\Pointers\
- * HAMMER.FLH`, or a loose `Data/AVI/...` path like `avi\PB1.flh`, resolved
- * case-insensitively through the movie path helper). Returns NULL on open/
- * validation failure (magic not in the accepted set, depth != 16, or the
- * chunk stream does not parse). The keyframe is decoded at open, so
- * flic_tick starts at frame 1. */
+/* Container walking primitives corresponding to the original loader's
+ * header validator and chunk/frame walkers. The byte-buffer entry point is
+ * useful to callers that already own the complete file image. */
+typedef struct FlicHeaderInfo {
+    uint16_t magic;
+    uint16_t frames;
+    uint16_t width;
+    uint16_t height;
+    uint16_t depth;
+} FlicHeaderInfo;
+int flic_file_header_validate(const void* bytes, size_t length,
+                              FlicHeaderInfo* header);
+int flic_file_header_validate_path(const char* path, void* context);
+/* Seek/read adapter for stream-mode FLIC input. read_at must seek and fill
+ * the complete requested byte count, returning nonzero on success. The
+ * caller retains ownership of context for the lifetime of the Flic. */
+typedef struct FlicStreamOps {
+    void* context;
+    int (*read_at)(void* context, uint32_t offset, void* bytes,
+                   uint32_t length);
+} FlicStreamOps;
+/* Open from a seekable owner without preloading the file. The stream owner
+ * must remain valid until flic_close. The keyframe is decoded during open. */
+Flic* flic_open_stream(const FlicStreamOps* ops, uint32_t file_size);
+/* Open a named Resource through ResourceStream and retain its independent
+ * seekable handle until flic_close. Falls back to the in-memory loader from
+ * flic_open when the selected WAD encoding cannot provide random reads. */
+Flic* flic_open_resource_stream(const char* name);
+/* Advances through ancillary chunks and one frame chunk. In stream mode,
+ * LK and type-0B chunks are copied into a resizable scratch buffer. */
+int flic_chunk_walk(Flic* flic);
+int flic_frame_record_walk(Flic* flic);
+int flic_chunk_buffer_and_continue_lk(Flic* flic);
+int flic_chunk_buffer_and_continue_type0b(Flic* flic);
+/* Advances one streamed frame and returns nonzero when the stream has passed
+ * its declared last frame. `loop` is set by flic_tick_loop before dispatch. */
+int flic_stream_frame_advance(Flic* flic);
+
+/* Open a `.flh` by resource name (WAD or loose path). Seekable loose and
+ * directly stored WAD entries use ResourceStream; unsupported compressed
+ * entries fall back to the in-memory loader. Returns NULL on open/validation
+ * failure. The keyframe is decoded at open, so flic_tick starts at frame 1. */
 Flic* flic_open(const char* name);
 
-void flic_close(Flic* f);
+int flic_close(Flic* f);
 
 /* --- geometry / inventory ------------------------------------------------- */
 
@@ -54,9 +90,10 @@ int flic_eof(const Flic* f);
 /* --- stepping -------------------------------------------------------------- */
 
 /* Advance one frame: applies the next delta record, or repeats the current
- * frame on a hold chunk. If `loop` is set, wrapping past the last frame
- * restarts at index 1 (the keyframe is already decoded — the corpus's RAM
- * mode rule). Returns the new frame index. */
+ * frame on a hold chunk. On wrap, RAM mode keeps the decoded keyframe and
+ * restarts at frame 1; stream mode resets its cursor/index at the boundary
+ * and decodes the keyframe on the following tick, matching the two corpus
+ * frame steppers. Returns the new index. */
 int flic_tick_loop(Flic* f, int loop);
 
 /* --- pixels ----------------------------------------------------------------- */

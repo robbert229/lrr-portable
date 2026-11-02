@@ -2,12 +2,54 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <ctype.h>
 
 #include "resource.hpp"
 #include "heap.hpp"
 #include "sound.hpp"
+#include "audio.hpp"
 #include "string.hpp"
 #include "record.hpp"
+#include "view.hpp"
+#include "block.hpp"
+
+/* Sample variant selection shares the game's VC5 rand stream. */
+extern uint32_t rng_thunk_draw15(void);
+
+/* The reference scene interfaces are 32-bit COM-style objects. This getter
+ * reads the record that DDiSceneAnimationHookCreate owns at vtable +0x1c. */
+static void* sound_instance_property_get(void* object)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    void* result;
+    __asm {
+        mov ecx, object
+        mov eax, [ecx]
+        call dword ptr [eax + 1Ch]
+        mov result, eax
+    }
+    return result;
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+    typedef void* (__attribute__((thiscall)) *GetProperty)(void*);
+    void** vtable;
+    GetProperty get_property;
+    if (object == NULL) return NULL;
+    vtable = *(void***)object;
+    if (vtable == NULL || vtable[0x1c / sizeof(void*)] == NULL) return NULL;
+    get_property = (GetProperty)vtable[0x1c / sizeof(void*)];
+    return get_property(object);
+#else
+    typedef void* (*GetProperty)(void*);
+    void** vtable;
+    GetProperty get_property;
+    if (object == NULL) return NULL;
+    vtable = *(void***)object;
+    if (vtable == NULL || vtable[0x1c / sizeof(void*)] == NULL) return NULL;
+    get_property = (GetProperty)vtable[0x1c / sizeof(void*)];
+    return get_property(object);
+#endif
+}
 
 void sound_wave_data_reader_init(SoundWaveDataReader* reader,
                                  const uint8_t* data, uint32_t size)
@@ -19,42 +61,19 @@ void sound_wave_data_reader_init(SoundWaveDataReader* reader,
     reader->remaining = size;
 }
 
-/* WaveDataRead (FUN_00489100): consume at most the remaining data-chunk
- * bytes and report the exact count. 0xe103 is the reference's end-of-stream
- * error; the memory-backed reader has no MMIO status errors. */
-uint32_t sound_wave_data_read(SoundWaveDataReader* reader,
-                              uint32_t requested, void* destination,
-                              uint32_t capacity, uint32_t* bytes_read)
-{
-    uint32_t amount;
-    if (bytes_read != NULL) *bytes_read = 0;
-    if (reader == NULL || (destination == NULL && requested != 0u))
-        return 0xe103u;
-    amount = requested;
-    if (amount > reader->remaining) amount = reader->remaining;
-    if (amount > capacity) amount = capacity;
-    if (reader->data == NULL || reader->cursor > reader->data_size
-        || amount > reader->data_size - reader->cursor) {
-        return 0xe103u;
-    }
-    if (amount != 0u) {
-        memcpy(destination, reader->data + reader->cursor, amount);
-        reader->cursor += amount;
-        reader->remaining -= amount;
-    }
-    if (bytes_read != NULL) *bytes_read = amount;
-    return 0u;
-}
-
-/* Bank record (corpus record of stride 0x134; port keeps the fields the
- * shipped record carries where observable: name at record +0, volume at
- * +0x110, the flag word at +0x130). `sound` is the port-side payload
- * handle standing in for the record's data/buffer fields. */
+/* Bank record mirrors the corpus stride and the offsets used by its sound
+ * routines: name at +0, volume at +0x110, three buffers at +0x120, the
+ * rotating buffer index at +0x12c, and flags at +0x130. The reserved words
+ * retain the original spacing around the port-side sample and buffer data. */
 typedef struct BankSlot {
     char     name[260];      /* stored "<base>.wav" resource name */
     Sound*   sound;          /* loaded payload, NULL until loaded */
-    uint32_t flags;          /* SOUND_SLOT_* + SOUND_LOOPING/STREAMED */
+    uint8_t  reserved_108[8];
     int      volume;         /* +0x110: validated millibels */
+    uint8_t  reserved_114[12];
+    AudioBuffer* buffers[3]; /* portable duplicate-buffer state */
+    int      next_buffer;    /* +0x12c */
+    uint32_t flags;          /* SOUND_SLOT_* + SOUND_LOOPING/STREAMED */
 } BankSlot;
 
 static BankSlot s_bank[SOUND_BANK_SLOTS];
@@ -85,6 +104,474 @@ static uint32_t s_le32(const uint8_t* p)
 static uint16_t s_le16(const uint8_t* p)
 {
     return (uint16_t)((uint16_t)p[0] | ((uint16_t)p[1] << 8));
+}
+
+/* Read the fixed WAVEFORMATEX prefix without copying the data chunk. The
+ * shipped routines only consume the first 16 bytes of `fmt `; extra format
+ * bytes are skipped by mmio, while a short fmt chunk is rejected. */
+static uint32_t sound_wave_format_find(const uint8_t* data, uint32_t size,
+                                      WavSample* format_out)
+{
+    uint32_t pos, riff_end;
+    if (format_out == NULL) return 0xe101u;
+    memset(format_out, 0, sizeof(*format_out));
+    if (data == NULL || size < 12u) return 0xe101u;
+    if (data[0] != 'R' || data[1] != 'I' || data[2] != 'F' ||
+        data[3] != 'F' || data[8] != 'W' || data[9] != 'A' ||
+        data[10] != 'V' || data[11] != 'E') return 0xe101u;
+
+    riff_end = s_le32(data + 4u) + 8u;
+    if (riff_end < 12u || riff_end > size) return 0xe102u;
+    pos = 12u;
+    while (pos <= riff_end && riff_end - pos >= 8u) {
+        uint32_t chunk_size = s_le32(data + pos + 4u);
+        uint32_t body = pos + 8u;
+        uint32_t padded_size;
+        if (chunk_size > riff_end - body) return 0xe102u;
+        padded_size = chunk_size + (chunk_size & 1u);
+        if (padded_size < chunk_size || padded_size > riff_end - body)
+            return 0xe102u;
+        if (data[pos] == 'f' && data[pos + 1] == 'm' &&
+            data[pos + 2] == 't' && data[pos + 3] == ' ') {
+            if (chunk_size < 16u) return 0xe101u;
+            format_out->format_tag = s_le16(data + body);
+            format_out->channels = s_le16(data + body + 2u);
+            format_out->sample_rate = s_le32(data + body + 4u);
+            format_out->byte_rate = s_le32(data + body + 8u);
+            format_out->block_align = s_le16(data + body + 12u);
+            format_out->bits_per_sample = s_le16(data + body + 14u);
+            return 0u;
+        }
+        pos = body + padded_size;
+    }
+    return 0xe101u;
+}
+
+struct SoundWaveMemoryStream {
+    const uint8_t* memory;
+    uint32_t length;
+    uint32_t cursor;
+};
+
+struct SoundWaveFileHandle {
+    GameFileHandle* file;
+    uint32_t file_length;
+    uint32_t riff_end;
+    uint32_t data_offset;
+    uint32_t data_size;
+};
+
+// FUNCTION: LEGORR 0x00488c70
+uint32_t sound_wave_memory_format_read(const uint8_t* data, int32_t length,
+                                       SoundWaveMemoryStream** stream_out,
+                                       uint8_t** format_out,
+                                       SoundWaveChunk* parent_chunk_out)
+{
+    uint32_t size, riff_end, pos;
+    SoundWaveMemoryStream* stream;
+    uint8_t* format;
+    if (stream_out == NULL || format_out == NULL || parent_chunk_out == NULL)
+        return 0xe101u;
+    *stream_out = NULL;
+    *format_out = NULL;
+    memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+    if (data == NULL || length < 0) return 0xe100u;
+    size = (uint32_t)length;
+    if (size < 12u) return 0xe101u;
+    if (data[0] != 'R' || data[1] != 'I' || data[2] != 'F' ||
+        data[3] != 'F' || data[8] != 'W' || data[9] != 'A' ||
+        data[10] != 'V' || data[11] != 'E') return 0xe101u;
+    riff_end = s_le32(data + 4u) + 8u;
+    if (riff_end < 12u || riff_end > size) return 0xe102u;
+
+    pos = 12u;
+    while (pos <= riff_end && riff_end - pos >= 8u) {
+        uint32_t chunk_size = s_le32(data + pos + 4u);
+        uint32_t body = pos + 8u;
+        uint32_t padded_size;
+        if (chunk_size > riff_end - body) return 0xe102u;
+        padded_size = chunk_size + (chunk_size & 1u);
+        if (padded_size < chunk_size || padded_size > riff_end - body)
+            return 0xe102u;
+        if (data[pos] == 'f' && data[pos + 1] == 'm' &&
+            data[pos + 2] == 't' && data[pos + 3] == ' ') {
+            uint16_t extra_size = 0;
+            uint32_t format_size;
+            if (chunk_size < 16u) return 0xe101u;
+            if (s_le16(data + body) != 1u) {
+                /* The retail MMIO reader consumes cbSize and its payload
+                 * before ascending out of fmt. Those reads are not bounded
+                 * by fmt.cksize; they can consume following chunk bytes, but
+                 * still fail if the underlying memory stream ends. */
+                if (body > size || size - body < 18u) return 0xe102u;
+                extra_size = s_le16(data + body + 16u);
+                if ((uint32_t)extra_size > size - (body + 18u))
+                    return 0xe102u;
+            }
+            format_size = 18u + (uint32_t)extra_size;
+            format = (uint8_t*)calloc(format_size, 1u);
+            if (format == NULL) return 0xe000u;
+            memcpy(format, data + body, 16u);
+            format[16] = (uint8_t)(extra_size & 0xffu);
+            format[17] = (uint8_t)(extra_size >> 8);
+            if (extra_size != 0u)
+                memcpy(format + 18u, data + body + 18u, extra_size);
+            stream = (SoundWaveMemoryStream*)malloc(sizeof(*stream));
+            if (stream == NULL) {
+                free(format);
+                return 0xe000u;
+            }
+            stream->memory = data;
+            stream->length = size;
+            stream->cursor = body + padded_size;
+            parent_chunk_out->chunk_id = 0x46464952u;
+            parent_chunk_out->chunk_size = riff_end - 8u;
+            parent_chunk_out->form_type = 0x45564157u;
+            parent_chunk_out->data_offset = 8u;
+            parent_chunk_out->flags = 0u;
+            *format_out = format;
+            *stream_out = stream;
+            return 0u;
+        }
+        pos = body + padded_size;
+    }
+    return 0xe101u;
+}
+
+uint32_t sound_wave_memory_stream_read(SoundWaveMemoryStream* stream,
+                                      void* destination, uint32_t requested,
+                                      uint32_t* bytes_read)
+{
+    uint32_t amount;
+    if (bytes_read != NULL) *bytes_read = 0u;
+    if (stream == NULL || (destination == NULL && requested != 0u))
+        return 0xe103u;
+    if (stream->cursor > stream->length || stream->memory == NULL)
+        return 0xe103u;
+    amount = requested;
+    if (amount > stream->length - stream->cursor)
+        amount = stream->length - stream->cursor;
+    if (amount == 0u && requested != 0u) return 0xe103u;
+    if (amount != 0u) {
+        memcpy(destination, stream->memory + stream->cursor, amount);
+        stream->cursor += amount;
+    }
+    if (bytes_read != NULL) *bytes_read = amount;
+    return 0u;
+}
+
+void sound_wave_memory_format_close(SoundWaveMemoryStream** stream,
+                                    uint8_t** format)
+{
+    if (format != NULL && *format != NULL) {
+        free(*format);
+        *format = NULL;
+    }
+    if (stream != NULL && *stream != NULL) {
+        free(*stream);
+        *stream = NULL;
+    }
+}
+
+// FUNCTION: LEGORR 0x00488e70
+uint32_t sound_wave_file_average_bytes_per_second_read(const char* path)
+{
+    Resource* resource;
+    WavSample format;
+    uint32_t result = 0u;
+    if (path == NULL) return 0u;
+    resource = resource_open(path, RESOURCE_STD_ONLY);
+    if (resource == NULL) return 0u;
+    if (resource_read(resource) >= 0 &&
+        sound_wave_format_find((const uint8_t*)resource->data,
+                               (uint32_t)resource->size, &format) == 0u) {
+        result = format.byte_rate;
+    }
+    resource_free(resource);
+    return result;
+}
+
+// FUNCTION: LEGORR 0x00488f10
+uint32_t sound_wave_file_open_read_chunks(const char* path,
+                                          SoundWaveFileHandle** handle_out,
+                                          uint8_t** format_out,
+                                          SoundWaveChunk* parent_chunk_out)
+{
+    GameFileHandle* file = NULL;
+    SoundWaveFileHandle* handle = NULL;
+    uint8_t* format = NULL;
+    uint8_t riff_header[12];
+    uint8_t chunk_header[8];
+    uint8_t base_format[16];
+    uint32_t file_length, riff_size, riff_end, pos;
+    uint32_t chunk_size, body, padded_size, chunk_end;
+    uint32_t format_size;
+    uint16_t extra_size;
+    uint32_t result = 0xe101u;
+    if (handle_out == NULL || format_out == NULL || parent_chunk_out == NULL)
+        return 0xe101u;
+    *handle_out = NULL;
+    *format_out = NULL;
+    memset(parent_chunk_out, 0, sizeof(*parent_chunk_out));
+    if (path == NULL) return 0xe100u;
+    file = game_file_open_loose_path(path, "rb");
+    if (file == NULL) return 0xe100u;
+    if (wad_file_seek(file, 0, SEEK_END) != 0) {
+        result = 0xe102u;
+        goto cleanup;
+    }
+    {
+        int length = wad_file_cursor_get(file);
+        if (length < 0 || wad_file_seek(file, 0, SEEK_SET) != 0) {
+            result = 0xe102u;
+            goto cleanup;
+        }
+        file_length = (uint32_t)length;
+    }
+    if (file_length < sizeof(riff_header) ||
+        wad_file_read(riff_header, 1, (int)sizeof(riff_header), file) !=
+            (int)sizeof(riff_header)) {
+        result = 0xe101u;
+        goto cleanup;
+    }
+    if (memcmp(riff_header, "RIFF", 4u) != 0 ||
+        memcmp(riff_header + 8u, "WAVE", 4u) != 0) {
+        result = 0xe101u;
+        goto cleanup;
+    }
+    riff_size = s_le32(riff_header + 4u);
+    if (riff_size > 0xfffffff7u) {
+        result = 0xe102u;
+        goto cleanup;
+    }
+    riff_end = riff_size + 8u;
+    if (riff_end < 12u || riff_end > file_length) {
+        result = 0xe102u;
+        goto cleanup;
+    }
+    parent_chunk_out->chunk_id = 0x46464952u;
+    parent_chunk_out->chunk_size = riff_size;
+    parent_chunk_out->form_type = 0x45564157u;
+    parent_chunk_out->data_offset = 8u;
+    parent_chunk_out->flags = 0u;
+
+    pos = 12u;
+    while (riff_end - pos >= 8u) {
+        if (wad_file_seek(file, (int)pos, SEEK_SET) != 0 ||
+            wad_file_read(chunk_header, 1, (int)sizeof(chunk_header), file) !=
+                (int)sizeof(chunk_header)) {
+            result = 0xe102u;
+            goto cleanup;
+        }
+        chunk_size = s_le32(chunk_header + 4u);
+        body = pos + 8u;
+        if (chunk_size > riff_end - body) {
+            result = 0xe102u;
+            goto cleanup;
+        }
+        padded_size = chunk_size + (chunk_size & 1u);
+        if (padded_size < chunk_size || padded_size > riff_end - body) {
+            result = 0xe102u;
+            goto cleanup;
+        }
+        chunk_end = body + padded_size;
+        if (memcmp(chunk_header, "fmt ", 4u) == 0) {
+            uint32_t bytes_read;
+            if (chunk_size <= 15u) {
+                result = 0xe101u;
+                goto cleanup;
+            }
+            if (wad_file_read(base_format, 1, 16, file) != 16) {
+                result = 0xe102u;
+                goto cleanup;
+            }
+            extra_size = 0u;
+            if (s_le16(base_format) != 1u) {
+                uint8_t extra_header[2];
+                if (wad_file_read(extra_header, 1, 2, file) != 2) {
+                    result = 0xe102u;
+                    goto cleanup;
+                }
+                extra_size = s_le16(extra_header);
+            }
+            format_size = (uint32_t)extra_size + 18u;
+            format = (uint8_t*)calloc(format_size, 1u);
+            if (format == NULL) {
+                result = 0xe000u;
+                goto cleanup;
+            }
+            memcpy(format, base_format, 16u);
+            format[16] = (uint8_t)(extra_size & 0xffu);
+            format[17] = (uint8_t)(extra_size >> 8);
+            if (extra_size != 0u) {
+                bytes_read = (uint32_t)wad_file_read(
+                    format + 18u, 1, (int)extra_size, file);
+                if (bytes_read != (uint32_t)extra_size) {
+                    result = 0xe102u;
+                    goto cleanup;
+                }
+            }
+            /* mmioAscend positions the handle at the padded end of fmt. */
+            if (wad_file_seek(file, (int)chunk_end, SEEK_SET) != 0) {
+                result = 0xe102u;
+                goto cleanup;
+            }
+            handle = (SoundWaveFileHandle*)calloc(1, sizeof(*handle));
+            if (handle == NULL) {
+                result = 0xe000u;
+                goto cleanup;
+            }
+            handle->file = file;
+            handle->file_length = file_length;
+            handle->riff_end = riff_end;
+            *handle_out = handle;
+            *format_out = format;
+            return 0u;
+        }
+        pos = chunk_end;
+    }
+    result = 0xe101u;
+
+cleanup:
+    free(format);
+    if (file != NULL) game_file_close(file);
+    return result;
+}
+
+// FUNCTION: LEGORR 0x004890c0
+void sound_wave_data_chunk_open(SoundWaveFileHandle** handle_inout,
+                                SoundWaveChunk* data_chunk_out,
+                                SoundWaveChunk* parent_chunk)
+{
+    SoundWaveFileHandle* handle;
+    uint8_t chunk_header[8];
+    uint32_t pos;
+    if (data_chunk_out == NULL) return;
+    memset(data_chunk_out, 0, sizeof(*data_chunk_out));
+    if (handle_inout == NULL || *handle_inout == NULL || parent_chunk == NULL)
+        return;
+    handle = *handle_inout;
+    if (handle->file == NULL || handle->riff_end < 12u ||
+        handle->riff_end > handle->file_length) return;
+    if (parent_chunk->chunk_id != 0x46464952u ||
+        parent_chunk->form_type != 0x45564157u ||
+        parent_chunk->data_offset > 0xfffffffbu) return;
+    pos = parent_chunk->data_offset + 4u;
+    if (pos < 12u || pos > handle->riff_end) return;
+    while (handle->riff_end - pos >= 8u) {
+        uint32_t chunk_size;
+        uint32_t body = pos + 8u;
+        uint32_t padded_size;
+        uint32_t chunk_end;
+        if (wad_file_seek(handle->file, (int)pos, SEEK_SET) != 0 ||
+            wad_file_read(chunk_header, 1, (int)sizeof(chunk_header),
+                          handle->file) != (int)sizeof(chunk_header)) return;
+        chunk_size = s_le32(chunk_header + 4u);
+        if (chunk_size > handle->riff_end - body) return;
+        padded_size = chunk_size + (chunk_size & 1u);
+        if (padded_size < chunk_size ||
+            padded_size > handle->riff_end - body)
+            return;
+        chunk_end = body + padded_size;
+        if (memcmp(chunk_header, "data", 4u) == 0) {
+            data_chunk_out->chunk_id = 0x61746164u;
+            data_chunk_out->chunk_size = chunk_size;
+            data_chunk_out->form_type = 0u;
+            data_chunk_out->data_offset = body;
+            data_chunk_out->flags = 0u;
+            handle->data_offset = body;
+            handle->data_size = chunk_size;
+            if (wad_file_seek(handle->file, (int)body, SEEK_SET) != 0)
+                memset(data_chunk_out, 0, sizeof(*data_chunk_out));
+            return;
+        }
+        pos = chunk_end;
+    }
+}
+
+void sound_wave_file_handle_close(SoundWaveFileHandle** handle_inout,
+                                  uint8_t** format_inout)
+{
+    SoundWaveFileHandle* handle;
+    if (format_inout != NULL && *format_inout != NULL) {
+        free(*format_inout);
+        *format_inout = NULL;
+    }
+    if (handle_inout == NULL || *handle_inout == NULL) return;
+    handle = *handle_inout;
+    if (handle->file != NULL) {
+        game_file_close(handle->file);
+        handle->file = NULL;
+    }
+    free(handle);
+    *handle_inout = NULL;
+}
+
+uint32_t sound_wave_data_reader_read(SoundWaveDataReader* reader,
+                                     uint32_t requested, void* destination,
+                                     uint32_t capacity, uint32_t* bytes_read)
+{
+    uint32_t amount;
+    if (bytes_read != NULL) *bytes_read = 0;
+    if (reader == NULL || (destination == NULL && requested != 0u))
+        return 0xe103u;
+    amount = requested;
+    if (amount > reader->remaining) amount = reader->remaining;
+    if (amount > capacity) amount = capacity;
+    if (reader->cursor > reader->data_size ||
+        amount > reader->data_size - reader->cursor) return 0xe103u;
+    if (reader->data == NULL && amount != 0u) return 0xe103u;
+    if (amount != 0u) {
+        memcpy(destination, reader->data + reader->cursor, amount);
+        reader->cursor += amount;
+        reader->remaining -= amount;
+    }
+    if (bytes_read != NULL) *bytes_read = amount;
+    return 0u;
+}
+
+// FUNCTION: LEGORR 0x00489100
+uint32_t sound_wave_data_read(SoundWaveFileHandle* handle,
+                              uint32_t requested, void* destination,
+                              SoundWaveChunk* data_chunk,
+                              uint32_t* bytes_read)
+{
+    uint32_t amount;
+    uint32_t remaining;
+    if (bytes_read != NULL) *bytes_read = 0u;
+    if (handle == NULL || handle->file == NULL || data_chunk == NULL ||
+        (destination == NULL && requested != 0u)) return 0xe103u;
+
+    remaining = data_chunk->chunk_size;
+    amount = requested;
+    if (remaining < amount) amount = remaining;
+    data_chunk->chunk_size = remaining - amount;
+
+    if (amount != 0u) {
+        int read_count;
+        int position;
+        if (handle->data_offset > 0x7fffffffu ||
+            amount > 0x7fffffffu ||
+            handle->data_offset > handle->file_length ||
+            amount > handle->file_length - handle->data_offset)
+            return 0xe103u;
+        position = wad_file_cursor_get(handle->file);
+        if (position < 0 || (uint32_t)position != handle->data_offset)
+            return 0xe103u;
+        read_count = wad_file_read(destination, 1, (int)amount, handle->file);
+        if (read_count != (int)amount) return 0xe103u;
+        handle->data_offset += amount;
+    }
+    if (bytes_read != NULL) *bytes_read = amount;
+    return 0u;
+}
+
+// FUNCTION: LEGORR 0x004891d0
+uint32_t sound_wave_handle_and_buffer_release(SoundWaveFileHandle** handle,
+                                              uint8_t** format)
+{
+    sound_wave_file_handle_close(handle, format);
+    return 0u;
 }
 
 Sound* sound_parse(const uint8_t* data, uint32_t size)
@@ -166,18 +653,77 @@ void sound_free(Sound* s)
     free(s);
 }
 
-Sound* sound_load(const char* name)
+/* The retail streamed-sample path keeps the MMIO handle and format block
+ * together until the data chunk has been consumed. Reuse the same portable
+ * lifecycle for loose files before falling back to RESOURCE_AUTO (which is
+ * still needed for archive-backed samples). */
+static Sound* sound_sample_file_load_chunks(const char* name)
 {
-    Resource* r = resource_open(name, RESOURCE_AUTO);
-    if (r == NULL) {
-        return NULL;
+    SoundWaveFileHandle* handle = NULL;
+    SoundWaveChunk parent_chunk;
+    SoundWaveChunk data_chunk;
+    uint8_t* format = NULL;
+    Sound* sound = NULL;
+    uint32_t status;
+    uint32_t bytes_read = 0u;
+
+    status = sound_wave_file_open_read_chunks(name, &handle, &format,
+                                              &parent_chunk);
+    if (status != 0u || handle == NULL || format == NULL) goto cleanup;
+
+    sound_wave_data_chunk_open(&handle, &data_chunk, &parent_chunk);
+    if (data_chunk.chunk_id != 0x61746164u) goto cleanup;
+
+    /* Finding 108: the helper preserves non-PCM cbSize bytes in `format`,
+     * but the playback path rejects non-PCM before creating a buffer. */
+    if (s_le16(format) != 1u) goto cleanup;
+
+    sound = (Sound*)calloc(1, sizeof(*sound));
+    if (sound == NULL) goto cleanup;
+    sound->format.format_tag = s_le16(format);
+    sound->format.channels = s_le16(format + 2u);
+    sound->format.sample_rate = s_le32(format + 4u);
+    sound->format.byte_rate = s_le32(format + 8u);
+    sound->format.block_align = s_le16(format + 12u);
+    sound->format.bits_per_sample = s_le16(format + 14u);
+    sound->data_len = data_chunk.chunk_size;
+    sound->file_len = handle->file_length;
+    sound->data = (uint8_t*)malloc(sound->data_len != 0u
+        ? sound->data_len : 1u);
+    if (sound->data == NULL) {
+        free(sound);
+        sound = NULL;
+        goto cleanup;
     }
-    if (resource_read(r) < 0) {
+    status = sound_wave_data_read(handle, sound->data_len, sound->data,
+                                  &data_chunk, &bytes_read);
+    if (status != 0u || bytes_read != sound->data_len) {
+        sound_free(sound);
+        sound = NULL;
+        goto cleanup;
+    }
+
+cleanup:
+    (void)sound_wave_handle_and_buffer_release(&handle, &format);
+    return sound;
+}
+
+static Sound* sound_sample_file_load_by_name(const char* name)
+{
+    Resource* r;
+    Sound* s;
+    if (name == NULL) return NULL;
+    s = sound_sample_file_load_chunks(name);
+    if (s == NULL) {
+        r = resource_open(name, RESOURCE_AUTO);
+        if (r == NULL) return NULL;
+        if (resource_read(r) < 0) {
+            resource_free(r);
+            return NULL;
+        }
+        s = sound_parse((const uint8_t*)r->data, (uint32_t)r->size);
         resource_free(r);
-        return NULL;
     }
-    Sound* s = sound_parse((const uint8_t*)r->data, (uint32_t)r->size);
-    resource_free(r);
     if (s != NULL) {
 #if defined(_MSC_VER)
         s->name = _strdup(name);
@@ -198,6 +744,42 @@ Sound* sound_load(const char* name)
     return s;
 }
 
+/* SoundSampleFileOpenByName (FUN_0047fb60) is a presence query: the retail
+ * code opens and closes loose files, but returns the matching WAD entry
+ * index for an archive-backed sample. Keep the decoded Sound loader below
+ * this probe so the portable audio API can still consume sample data. */
+// FUNCTION: LEGORR 0x0047fb60
+int sound_sample_file_open_by_name(const char* name)
+{
+    const char* resolved;
+    char* wad_name;
+    int route;
+    if (name == NULL || name[0] == '\0') return 0;
+    resolved = resource_path_resolve_against_base(name);
+    if (resolved == NULL) return 0;
+    route = game_file_open_route_select(resolved, "r");
+    if (route == 1) {
+        GameFileHandle* handle = game_file_open_dispatch(name, "r");
+        if (handle == NULL) return 0;
+        game_file_close(handle);
+        return 1;
+    }
+    if (route == 0) {
+        wad_name = game_file_mounted_path_prefix_rewrite(resolved);
+        return wad_entry_find_across_mounted_archives(wad_name, -1);
+    }
+    return 0;
+}
+
+/* Public resource-layer adapter used by the bank loader and other callers. */
+Sound* sound_load(const char* name)
+{
+    return sound_sample_file_load_by_name(name);
+}
+
+/* Portable WAVE sample-load adapter. Retail 0x0047b580 writes the parsed
+ * format/data fields into a 0x134-byte bank slot record; this API fills the
+ * separate Sound value used by the portable bank sidecar. */
 int sound_sample_load_into(Sound* output, const char* name, int mode_flags)
 {
     Sound* loaded;
@@ -278,6 +860,22 @@ int sound_bank_count(void)
 void sound_bank_clear(void)
 {
     for (int i = 0; i < SOUND_BANK_SLOTS; ++i) {
+        AudioPlayer* player = audio_system_player_get();
+        int stream_index;
+        if (player != NULL && s_bank[i].sound != NULL) {
+            if (player->loop_sound == s_bank[i].sound)
+                audio_stop(player);
+            for (stream_index = 0; stream_index < 2; ++stream_index) {
+                if (player->stream_sample[stream_index] == s_bank[i].sound)
+                    audio_stream_stop(player, stream_index);
+            }
+        }
+        audio_buffer_destroy(s_bank[i].buffers[0]);
+        audio_buffer_destroy(s_bank[i].buffers[1]);
+        audio_buffer_destroy(s_bank[i].buffers[2]);
+        s_bank[i].buffers[0] = NULL;
+        s_bank[i].buffers[1] = NULL;
+        s_bank[i].buffers[2] = NULL;
         if (s_bank[i].sound != NULL) {
             sound_free(s_bank[i].sound);
         }
@@ -358,6 +956,10 @@ int sound_bank_entry_load(const char* name, int streamed, int looping,
     BankSlot* rec = &s_bank[slot];
     rec->flags = 0;      /* claimed record starts with cleared flags */
     rec->sound = NULL;
+    rec->buffers[0] = NULL;
+    rec->buffers[1] = NULL;
+    rec->buffers[2] = NULL;
+    rec->next_buffer = 0;
     rec->volume = 0;
     rec->name[0] = '\0';
 
@@ -399,23 +1001,51 @@ int sound_bank_entry_load(const char* name, int streamed, int looping,
     rec->sound = s;
     rec->volume = sound_volume_value_valid(volume) ? volume : 0;
     rec->flags |= SOUND_SLOT_BUSY | SOUND_SLOT_LOADED;
+    if ((rec->flags & SOUND_STREAMED) == 0u
+        && sound_record_create_buffers(slot) == 0) {
+        audio_buffer_destroy(rec->buffers[0]);
+        audio_buffer_destroy(rec->buffers[1]);
+        audio_buffer_destroy(rec->buffers[2]);
+        rec->buffers[0] = NULL;
+        rec->buffers[1] = NULL;
+        rec->buffers[2] = NULL;
+        sound_free(rec->sound);
+        rec->sound = NULL;
+        rec->flags = 0;
+        return -1;
+    }
     return slot;
 }
 
 // FUNCTION: LEGORR 0x0047ab00
 int sound_bank_entry_release(int slot)
 {
+    AudioPlayer* player;
+    int stream_index;
     /* SoundBankEntryRelease @ 0x47ab00. */
     if (!s_bank_sound_on || slot < 0 || slot >= SOUND_BANK_SLOTS) {
         return 0;
     }
     s_bank[slot].flags &= ~(uint32_t)SOUND_SLOT_BUSY;
+    player = audio_system_player_get();
+    if (player != NULL && s_bank[slot].sound != NULL) {
+        if (player->loop_sound == s_bank[slot].sound)
+            audio_stop(player);
+        for (stream_index = 0; stream_index < 2; ++stream_index) {
+            if (player->stream_sample[stream_index] == s_bank[slot].sound)
+                audio_stream_stop(player, stream_index);
+        }
+    }
+    audio_buffer_destroy(s_bank[slot].buffers[0]);
+    audio_buffer_destroy(s_bank[slot].buffers[1]);
+    audio_buffer_destroy(s_bank[slot].buffers[2]);
+    s_bank[slot].buffers[0] = NULL;
+    s_bank[slot].buffers[1] = NULL;
+    s_bank[slot].buffers[2] = NULL;
     if (s_bank[slot].sound != NULL) {
         sound_free(s_bank[slot].sound);
         s_bank[slot].sound = NULL;
     }
-    /* Corpus: releases the three buffer interfaces through their
-     * vtables — TODO(corpus), no instance layer to hand them back to. */
     return 1;
 }
 
@@ -431,9 +1061,6 @@ uint32_t sound_bank_entry_flags(int slot)
 int sound_bank_entry_volume(int slot)
 {
     /* IndexedRecordStride134WordGet @ 0x47b0d0 (record +0x110 word). */
-    if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
-        return 0;
-    }
     return s_bank[slot].volume;
 }
 
@@ -514,6 +1141,12 @@ static const char* const s_alias_builtins[SOUND_ALIAS_BUILTINS] = {
     "SFX_AmbientMusicLoop",      /* 44 (0x2c) */
 };
 
+/* SoundAliasLookup compares the GameStringHashCompute result, not the
+ * original text. Retain the hashes in slot order so collisions resolve to
+ * the first registered alias as they do in the reference. */
+static uint32_t* s_alias_hashes;
+static int s_alias_hashes_initialized;
+
 /* Dynamic (config-registered) aliases appended by the lookup, mirroring
  * the corpus DAT_00502a24 slots behind the 45 built-ins. */
 static char* s_alias_dynamic[SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS];
@@ -526,77 +1159,136 @@ static int   s_alias_dynamic_count;
 // GLOBAL: LEGORR 0x00502a2c
 static uint32_t s_sound_flags;
 
-static SoundBufferStopHook s_buffer_stop_hook;
-static void* s_buffer_stop_context;
 static SoundBufferObjectStopHook s_buffer_object_stop_hook;
 static void* s_buffer_object_stop_context;
-static SoundStreamStopHook s_stream_stop_hook;
-static void* s_stream_stop_context;
-static SoundStreamStartHook s_stream_start_hook;
-static SoundStreamFormatHook s_stream_format_hook;
-static SoundStreamDrainHook s_stream_drain_hook;
-static void* s_stream_playback_context;
-static SoundRecordBufferCreateHook s_record_buffer_create_hook;
-static void* s_record_buffer_create_context;
 static SoundPositionApplyHook s_sound_position_hook;
 static void* s_sound_position_context;
 static SoundInstanceRegisterHook s_instance_register_hook;
 static SoundInstanceStopHook s_instance_stop_hook;
 static void* s_instance_hook_context;
 static void* s_sound_instances[20];
-static void* s_sound_instance_records[20];
+typedef struct SoundInstanceHostRecord {
+    void* provider;
+    void* instance;
+    AudioBuffer* buffer;
+    struct SoundInstanceHostRecord* next;
+} SoundInstanceHostRecord;
+static SoundInstanceHostRecord* s_sound_instance_host_records;
+static SoundInstanceHostRecord* sound_instance_host_record_get(
+    void* provider, void* instance, int create);
+static void sound_instance_host_records_remove(void* provider,
+                                               void* instance);
+void sound_buffer_association_remove_instance(void* instance);
 static SoundSpatialRefreshHook s_spatial_refresh_hook;
-static SoundStreamTickHook s_stream_tick_hook;
 static void* s_spatial_refresh_context;
 
-void sound_record_buffer_create_hook_set(SoundRecordBufferCreateHook hook,
-                                         void* context)
-{
-    s_record_buffer_create_hook = hook;
-    s_record_buffer_create_context = context;
-}
-
+// FUNCTION: LEGORR 0x0047b790
 int sound_wave_sample_duplicate_buffer_create(int slot, int buffer_index)
 {
     Sound* sample = sound_bank_entry_sample_get(slot);
-    if (sample == NULL || buffer_index < 0 || buffer_index >= 3
-        || s_record_buffer_create_hook == NULL) return 0;
-    return s_record_buffer_create_hook(s_record_buffer_create_context, slot,
-                                       buffer_index, sample) != 0;
+    AudioBuffer* buffer;
+    if (sample == NULL || buffer_index < 0 || buffer_index >= 3) return 0;
+    buffer = audio_buffer_create(sample);
+    if (buffer == NULL) return 0;
+    audio_buffer_destroy(s_bank[slot].buffers[buffer_index]);
+    s_bank[slot].buffers[buffer_index] = buffer;
+    audio_buffer_volume_set(buffer, s_bank[slot].volume);
+    return 1;
 }
 
+// FUNCTION: LEGORR 0x0047b6c0
 int sound_record_create_buffers(int slot)
 {
     int i;
     int created = 0;
+    int count;
     if (sound_bank_entry_sample_get(slot) == NULL) return 0;
-    for (i = 0; i < 3; ++i) {
+    /* The reference's streamed-file branch initializes a stream state and
+     * skips SoundRecordCreateBuffers; duplicate buffers belong to the
+     * in-memory sample path only. */
+    if ((s_bank[slot].flags & SOUND_STREAMED) != 0u) return 0;
+    count = (s_bank[slot].flags & SOUND_LOOPING) != 0u ? 3 : 1;
+    for (i = 0; i < count; ++i) {
         if (!sound_wave_sample_duplicate_buffer_create(slot, i)) break;
         ++created;
     }
-    return created;
+    return created == count ? created : 0;
 }
 
-void sound_buffer_stop_hook_set(SoundBufferStopHook hook, void* context)
+int sound_bank_entry_play(int slot, int loop)
 {
-    s_buffer_stop_hook = hook;
-    s_buffer_stop_context = context;
+    return sound_bank_entry_play_mode(slot, loop, 0);
 }
 
+int sound_bank_entry_play_mode(int slot, int loop, int mode)
+{
+    AudioPlayer* player;
+    int index = 0;
+    int count;
+    int frames;
+    if (slot < 0 || slot >= SOUND_BANK_SLOTS
+        || (s_bank[slot].flags & SOUND_SLOT_BUSY) == 0u) return -1;
+    if ((s_bank[slot].flags & SOUND_STREAMED) != 0u) {
+        Sound* sample = s_bank[slot].sound;
+        if (loop < 0 || loop > 1 || sample == NULL) return -1;
+        player = audio_system_player_get();
+        if (player == NULL) return -1;
+        /* Streamed aliases use the selector as one of the two stream slots.
+         * The original stops/releases that slot before starting its
+         * replacement; the portable backend retains the same slot lifecycle
+         * while submitting the in-memory sample through its shared queue. */
+        audio_stream_stop(player, loop);
+        if (!audio_stream_start(player, loop, sample)
+            || sample->format.block_align == 0) return -1;
+        return (int)(sample->data_len / sample->format.block_align);
+    }
+    count = (s_bank[slot].flags & SOUND_LOOPING) != 0u ? 3 : 1;
+    if (count == 3) {
+        index = s_bank[slot].next_buffer;
+        s_bank[slot].next_buffer = (index + 1) % count;
+    }
+    /* Global dispatcher mode 2 subtracts 0x320 millibels from the
+     * stored buffer volume before playback; the streamed branch bypasses
+     * that buffer-volume adjustment. */
+    if (loop != 0) {
+        Sound* sample = s_bank[slot].sound;
+        frames = audio_buffer_loop_attenuated(s_bank[slot].buffers[index],
+                sample, mode == 2 ? -800 : 0) == 0
+            && sample->format.block_align != 0
+            ? (int)(sample->data_len / sample->format.block_align) : -1;
+    } else {
+        frames = audio_buffer_play_attenuated(s_bank[slot].buffers[index],
+                                               mode == 2 ? -800 : 0);
+    }
+    return frames;
+}
+
+// FUNCTION: LEGORR 0x0047b0f0
+AudioBuffer* sound_handle_buffer_get(int buffer_handle)
+{
+    uint32_t slot;
+    int buffer_index;
+    if (buffer_handle < 0 ||
+        buffer_handle >= SOUND_BANK_SLOTS * 3) return NULL;
+    buffer_index = buffer_handle % 3;
+    slot = (uint32_t)(buffer_handle - buffer_index) / 3u;
+    return s_bank[slot].buffers[buffer_index];
+}
+
+// FUNCTION: LEGORR 0x0047b130
 void sound_buffer_stop_handle(int buffer_handle)
 {
-    int slot;
-    if (!sound_bank_sound_on() || buffer_handle < 0
-        || buffer_handle >= SOUND_BANK_SLOTS * 3) {
-        return;
-    }
-    slot = buffer_handle / 3;
-    if ((sound_bank_entry_flags(slot) & SOUND_SLOT_BUSY) == 0u) {
-        return;
-    }
-    if (s_buffer_stop_hook != NULL) {
-        s_buffer_stop_hook(s_buffer_stop_context, buffer_handle);
-    }
+    AudioBuffer* buffer = sound_handle_buffer_get(buffer_handle);
+    /* The retail body resolves the handle first, then checks the bank gate,
+     * the -1 sentinel, and the returned interface before calling Stop. */
+    if (s_bank_sound_on != 0 && buffer_handle != -1 && buffer != NULL)
+        audio_buffer_stop(buffer);
+}
+
+// FUNCTION: LEGORR 0x00465190
+void sound_handle_stop_forward(int buffer_handle)
+{
+    sound_buffer_stop_handle(buffer_handle);
 }
 
 void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
@@ -606,52 +1298,22 @@ void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
     s_buffer_object_stop_context = context;
 }
 
-void sound_stream_stop_hook_set(SoundStreamStopHook hook, void* context)
-{
-    s_stream_stop_hook = hook;
-    s_stream_stop_context = context;
-}
-
-void sound_stream_stop_and_release(int stream_index)
-{
-    if (stream_index < 0 || stream_index > 1) return;
-    if (s_stream_stop_hook != NULL)
-        s_stream_stop_hook(s_stream_stop_context, stream_index);
-}
-
-void sound_stream_playback_hooks_set(SoundStreamStartHook start,
-                                     SoundStreamFormatHook format_setup,
-                                     SoundStreamDrainHook drain_check,
-                                     void* context)
-{
-    s_stream_start_hook = start;
-    s_stream_format_hook = format_setup;
-    s_stream_drain_hook = drain_check;
-    s_stream_playback_context = context;
-}
-
+/* Portable playback adapter. Retail 0x0047b970 receives a wave/MMIO owner,
+ * stream index, and mode; this helper receives a decoded Sound and index. */
 int sound_stream_playback_start(int stream_index, const Sound* sample)
 {
-    if (stream_index < 0 || stream_index > 1 || sample == NULL
-        || s_stream_start_hook == NULL) return 0;
-    return s_stream_start_hook(s_stream_playback_context, stream_index,
-                               sample) != 0;
+    if (stream_index < 0 || stream_index > 1 || sample == NULL) return 0;
+    return audio_stream_start(audio_system_player_get(), stream_index, sample);
 }
 
+/* Portable stream setup adapter. Retail 0x0047baa0 parses the WAVE format
+ * directly from a stream handle and owns the ring-buffer setup. */
 int sound_stream_format_setup(int stream_index, const WavSample* format,
                               uint32_t buffer_bytes)
 {
-    if (stream_index < 0 || stream_index > 1 || format == NULL
-        || s_stream_format_hook == NULL) return 0;
-    return s_stream_format_hook(s_stream_playback_context, stream_index,
-                                format, buffer_bytes) != 0;
-}
-
-int sound_stream_drain_check(int stream_index)
-{
-    if (stream_index < 0 || stream_index > 1
-        || s_stream_drain_hook == NULL) return 0;
-    return s_stream_drain_hook(s_stream_playback_context, stream_index) != 0;
+    if (stream_index < 0 || stream_index > 1 || format == NULL) return 0;
+    return audio_stream_setup(audio_system_player_get(), stream_index, format,
+                              buffer_bytes);
 }
 
 void sound_position_apply_hook_set(SoundPositionApplyHook hook,
@@ -661,6 +1323,7 @@ void sound_position_apply_hook_set(SoundPositionApplyHook hook,
     s_sound_position_context = context;
 }
 
+// FUNCTION: LEGORR 0x0047ad10
 void sound_position_set_from_vector(void* buffer_object,
                                     const float position[3])
 {
@@ -679,57 +1342,299 @@ void sound_instance_hooks_set(SoundInstanceRegisterHook register_hook,
     s_instance_hook_context = context;
 }
 
-int sound_instance_track_register(void* instance)
+static void sound_frame_release(void* frame);
+
+static int sound_instance_callback_record_attach(void* instance)
+{
+    uint32_t* payload;
+    void* frame_interface;
+    if (sizeof(void*) != 4u || instance == NULL) return 0;
+
+    frame_interface = sound_instance_property_get(instance);
+    payload = (uint32_t*)engine_heap_alloc(0x14L);
+    if (payload == NULL) return 0;
+    memset(payload, 0, 0x14u);
+    payload[0] = (uint32_t)(uintptr_t)instance;
+    if (frame_interface != NULL)
+        payload[4] = *(uint32_t*)((char*)frame_interface + 0x24);
+    ddiscene_animation_hook_create(instance, 0, NULL, NULL, 0, NULL, NULL,
+                                   0, 0, payload);
+    /* The retail caller does not release its 0x14-byte payload after the
+     * 0x475f70 call. That helper copies word 0, but no owner for this block is
+     * visible in the checked-in path. Preserve the observed lifetime. */
+    return sound_instance_property_get(instance) != NULL;
+}
+
+/* FUN_0047b1a0's 0x14-byte payload contains target pointers and a provider
+ * list link. On 64-bit hosts keep the same ownership relationships in a
+ * native-width sidecar instead of truncating those pointers into the retail
+ * record layout. */
+static SoundInstanceHostRecord* sound_instance_host_record_get(
+    void* provider, void* instance, int create)
+{
+    SoundInstanceHostRecord* record = s_sound_instance_host_records;
+    while (record != NULL) {
+        if (record->provider == provider && record->instance == instance)
+            return record;
+        record = record->next;
+    }
+    if (!create || provider == NULL || instance == NULL) return NULL;
+    record = (SoundInstanceHostRecord*)engine_heap_alloc(
+        (long)sizeof(SoundInstanceHostRecord));
+    if (record == NULL) return NULL;
+    memset(record, 0, sizeof(*record));
+    record->provider = provider;
+    record->instance = instance;
+    record->next = s_sound_instance_host_records;
+    s_sound_instance_host_records = record;
+    return record;
+}
+
+static void sound_instance_host_records_remove(void* provider,
+                                               void* instance)
+{
+    SoundInstanceHostRecord** link = &s_sound_instance_host_records;
+    while (*link != NULL) {
+        SoundInstanceHostRecord* record = *link;
+        if ((provider == NULL || record->provider == provider) &&
+            (instance == NULL || record->instance == instance)) {
+            if (record->buffer != NULL) audio_buffer_stop(record->buffer);
+            *link = record->next;
+            engine_heap_free(record);
+        }
+        else {
+            link = &record->next;
+        }
+    }
+}
+
+static void sound_instance_host_buffer_set(void* provider, AudioBuffer* buffer)
+{
+    SoundInstanceHostRecord* record =
+        sound_instance_host_record_get(provider, provider, 1);
+    if (record != NULL) record->buffer = buffer;
+}
+
+// FUNCTION: LEGORR 0x0047b1a0
+void sound_instance_track_register(void* instance)
 {
     int index;
-    void* record = NULL;
-    if (instance == NULL) return 0;
-    if (s_instance_register_hook != NULL)
-        record = s_instance_register_hook(s_instance_hook_context, instance);
+    if (instance == NULL) return;
+    if (!sound_instance_callback_record_attach(instance) &&
+        s_instance_register_hook != NULL)
+        (void)s_instance_register_hook(s_instance_hook_context, instance);
+    if (sizeof(void*) != 4u)
+        (void)sound_instance_host_record_get(instance, instance, 1);
     for (index = 0; index < 20; index++) {
         if (s_sound_instances[index] == NULL) {
             s_sound_instances[index] = instance;
-            s_sound_instance_records[index] = record;
-            return 1;
-        }
-    }
-    return 0;
-}
-
-void sound_instance_track_stop_and_remove(void* instance)
-{
-    int index;
-    if (s_instance_stop_hook != NULL)
-        s_instance_stop_hook(s_instance_hook_context, instance);
-    for (index = 0; index < 20; index++) {
-        if (s_sound_instances[index] == instance) {
-            s_sound_instances[index] = NULL;
-            s_sound_instance_records[index] = NULL;
             return;
         }
     }
 }
 
+// FUNCTION: LEGORR 0x0047b220
+void sound_instance_track_stop_and_remove(void* provider, void* instance)
+{
+    int index;
+    int adapter = 0;
+
+    /* The first argument is the provider frame (the reference obtains it
+     * from the caller's this register). The second is the sound instance.
+     * Release the instance before unlinking its source record, as the retail
+     * vtable call does. */
+#if (defined(_MSC_VER) && defined(_M_IX86)) || \
+    (defined(__i386__) && (defined(__GNUC__) || defined(__clang__)))
+    if (s_instance_stop_hook != NULL) {
+        s_instance_stop_hook(s_instance_hook_context, provider, instance);
+        adapter = 1;
+    }
+    else if (instance != NULL) {
+        sound_frame_release(instance);
+    }
+#else
+    if (s_instance_stop_hook != NULL)
+        s_instance_stop_hook(s_instance_hook_context, provider, instance);
+    adapter = 1;
+#endif
+
+    if (sizeof(void*) != 4u)
+        sound_instance_host_records_remove(provider, instance);
+
+    if (provider == NULL) {
+        sound_buffer_association_remove_instance(instance);
+        return;
+    }
+
+    if (!adapter) {
+        void* property = sound_instance_property_get(provider);
+        if (property != NULL) {
+            void* record = *(void**)((char*)property + 0x24);
+            if (nested_record_list_remove_matching_key(provider, instance,
+                                                       record)) {
+                void* next = NULL;
+                sound_buffer_association_remove_instance(instance);
+                memcpy(&next, (char*)record + 4 * sizeof(void*),
+                       sizeof(next));
+                memcpy((char*)property + 0x24, &next, sizeof(next));
+                engine_heap_free(record);
+            }
+        }
+    }
+    else {
+        sound_buffer_association_remove_instance(instance);
+    }
+    for (index = 0; index < 20; index++) {
+        if (s_sound_instances[index] == provider) {
+            s_sound_instances[index] = NULL;
+        }
+    }
+}
+
 void sound_spatial_refresh_hooks_set(SoundSpatialRefreshHook refresh,
-                                     SoundStreamTickHook stream_tick,
                                      void* context)
 {
     s_spatial_refresh_hook = refresh;
-    s_stream_tick_hook = stream_tick;
     s_spatial_refresh_context = context;
 }
 
-void sound_source_spatial_refresh(void* sound_object)
+/* The retail provider is an IDirect3DRMFrame3. Its GetScene and GetPosition
+ * slots are +0x68 and +0x60, while linked source records live in the private
+ * scene-animation record returned by the provider's +0x1c accessor. Each
+ * linked source record is five dwords: DirectSound buffer, cached xyz, next.
+ * These COM layouts are only valid in the 32-bit reference backend; the SDL
+ * backend's AudioBuffer is a port object and cannot be called as DirectSound. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+static void sound_frame_scene_get(void* frame, void** scene_out)
 {
-    if (sound_object != NULL && s_spatial_refresh_hook != NULL)
-        (void)s_spatial_refresh_hook(s_spatial_refresh_context, sound_object);
+    __asm {
+        mov ecx, frame
+        mov eax, [ecx]
+        mov edx, scene_out
+        push edx
+        call dword ptr [eax + 68h]
+    }
 }
 
-void sound_stream_ring_buffer_tick(int stream_index)
+static void sound_frame_position_get(void* frame, void* scene,
+                                     float position[3])
 {
-    if (stream_index < 0 || stream_index > 1) return;
-    if (s_stream_tick_hook != NULL)
-        s_stream_tick_hook(s_spatial_refresh_context, stream_index);
+    __asm {
+        mov ecx, frame
+        mov eax, [ecx]
+        mov edx, position
+        push edx
+        push scene
+        call dword ptr [eax + 60h]
+    }
+}
+
+static void sound_frame_release(void* frame)
+{
+    __asm {
+        mov ecx, frame
+        mov eax, [ecx]
+        call dword ptr [eax + 8]
+    }
+}
+
+static void sound_buffer_position_set(void* buffer,
+                                      const float position[3])
+{
+    __asm {
+        mov ecx, buffer
+        mov eax, [ecx]
+        push 0
+        mov edx, position
+        push dword ptr [edx + 8]
+        push dword ptr [edx + 4]
+        push dword ptr [edx]
+        call dword ptr [eax + 4Ch]
+    }
+}
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+typedef long (__attribute__((thiscall)) *SoundFrameGetSceneFn)(
+    void*, void**);
+typedef long (__attribute__((thiscall)) *SoundFrameGetPositionFn)(
+    void*, void*, float*);
+typedef unsigned long (__attribute__((thiscall)) *SoundFrameReleaseFn)(void*);
+typedef long (__attribute__((thiscall)) *SoundBufferSetPositionFn)(
+    void*, float, float, float, unsigned long);
+
+static void sound_frame_scene_get(void* frame, void** scene_out)
+{
+    void** vtable = *(void***)frame;
+    ((SoundFrameGetSceneFn)vtable[0x68 / sizeof(void*)])(frame, scene_out);
+}
+
+static void sound_frame_position_get(void* frame, void* scene,
+                                     float position[3])
+{
+    void** vtable = *(void***)frame;
+    ((SoundFrameGetPositionFn)vtable[0x60 / sizeof(void*)])(
+        frame, scene, position);
+}
+
+static void sound_frame_release(void* frame)
+{
+    void** vtable = *(void***)frame;
+    ((SoundFrameReleaseFn)vtable[8])(frame);
+}
+
+static void sound_buffer_position_set(void* buffer,
+                                      const float position[3])
+{
+    void** vtable = *(void***)buffer;
+    ((SoundBufferSetPositionFn)vtable[0x4c / sizeof(void*)])(
+        buffer, position[0], position[1], position[2], 0ul);
+}
+#endif
+
+// FUNCTION: LEGORR 0x0047B410
+void sound_source_spatial_refresh(void* sound_object)
+{
+#if (defined(_MSC_VER) && defined(_M_IX86)) || \
+    (defined(__i386__) && (defined(__GNUC__) || defined(__clang__)))
+    void* property;
+    void* scene = NULL;
+    void* record;
+    float position[3] = { 0.0f, 0.0f, 0.0f };
+    if (sound_object == NULL) return;
+    property = sound_instance_property_get(sound_object);
+    if (property == NULL) {
+        if (s_spatial_refresh_hook != NULL)
+            (void)s_spatial_refresh_hook(s_spatial_refresh_context,
+                                         sound_object);
+        return;
+    }
+
+    /* GetScene and GetPosition HRESULTs are deliberately ignored, matching
+     * the retail routine. Its source cache advances even if SetPosition
+     * reports failure. */
+    sound_frame_scene_get(sound_object, &scene);
+    record = *(void**)((char*)property + 0x24);
+    while (record != NULL) {
+        char* words = (char*)record;
+        void* buffer = NULL;
+        void* next = NULL;
+        float cached[3];
+        memcpy(&buffer, words, sizeof(buffer));
+        memcpy(cached, words + sizeof(void*), sizeof(cached));
+        memcpy(&next, words + 4 * sizeof(void*), sizeof(next));
+
+        sound_frame_position_get(sound_object, scene, position);
+        if (position[0] != cached[0] || position[1] != cached[1] ||
+            position[2] != cached[2]) {
+            if (buffer != NULL) sound_buffer_position_set(buffer, position);
+            memcpy(words + sizeof(void*), position, sizeof(position));
+        }
+        record = next;
+    }
+    if (scene != NULL) sound_frame_release(scene);
+#else
+    if (sound_object != NULL && s_spatial_refresh_hook != NULL)
+        (void)s_spatial_refresh_hook(s_spatial_refresh_context, sound_object);
+#endif
 }
 
 /* _DAT_00502b2c — the global-cooldown word (the corpus types it as a
@@ -755,19 +1660,75 @@ static char* s_dupstr(const char* s)
 #endif
 }
 
+static uint32_t sound_alias_hash_compute(const char* name)
+{
+    const unsigned char* cursor = (const unsigned char*)name;
+    uint32_t hash = 0u;
+    uint32_t factor = 0x00600937u;
+    uint32_t position = 1u;
+    while (*cursor != 0u) {
+        uint32_t value = (uint32_t)(unsigned char)toupper((int)*cursor);
+        hash += position * factor * value;
+        factor *= 0x00600937u;
+        ++position;
+        ++cursor;
+    }
+    return hash;
+}
+
+static int sound_alias_builtin_hashes_init(void)
+{
+    int index;
+    if (s_alias_hashes_initialized != 0) return 1;
+    if (s_alias_hashes == NULL) {
+        s_alias_hashes = (uint32_t*)engine_heap_alloc(0x7bcL);
+        if (s_alias_hashes == NULL) return 0;
+    }
+    for (index = 0; index < SOUND_ALIAS_BUILTINS; ++index)
+        s_alias_hashes[index] = sound_alias_hash_compute(s_alias_builtins[index]);
+    s_alias_hashes_initialized = 1;
+    return 1;
+}
+
+static void sound_alias_scene_sample_callback(const char* sample_name,
+                                              void* scene_object,
+                                              void* context)
+{
+    int alias;
+    (void)context;
+    if (sound_alias_lookup(sample_name, &alias))
+        sound_submission_route_wrapper(scene_object, alias, 0, 1, NULL);
+}
+
 // FUNCTION: LEGORR 0x00464740
 void sound_alias_registry_init(void)
 {
-    /* Corpus: the built-in hashes are written into a fresh allocation;
-     * the port's built-ins are static. Deviation (documented): the
-     * corpus's repeated call leaks the table yet keeps the stale dynamic
-     * count; the port frees and zeroes the dynamic side and leaves the
-     * registration flag as-is, exactly the DAT_00502a2c behaviour. */
-    for (int i = 0; i < s_alias_dynamic_count; ++i) {
-        free(s_alias_dynamic[i]);
-        s_alias_dynamic[i] = NULL;
+    /* Keep the dynamic count and names, as the reference does, but rebuild
+     * their hash slots along with the 45 built-ins. Reinitialization must
+     * not leave the retained aliases represented by zeroed/uninitialized
+     * words in the replacement 0x7bc-byte table. */
+    uint32_t* replacement = (uint32_t*)engine_heap_alloc(0x7bcL);
+    int index;
+    if (replacement != NULL) {
+        uint32_t* previous = s_alias_hashes;
+        s_alias_hashes = replacement;
+        s_alias_hashes_initialized = 0;
+        if (sound_alias_builtin_hashes_init()) {
+            for (index = 0; index < s_alias_dynamic_count; ++index) {
+                s_alias_hashes[SOUND_ALIAS_BUILTINS + index] =
+                    sound_alias_hash_compute(s_alias_dynamic[index]);
+            }
+            if (previous != NULL) engine_heap_free(previous);
+        } else {
+            s_alias_hashes = previous;
+            engine_heap_free(replacement);
+        }
     }
-    s_alias_dynamic_count = 0;
+
+    /* SoundAliasRegistryInit registers LAB_00464c20 through the scene sample
+     * callback globals. Keep the existing owner callback and add the sound
+     * resolver as an independent, idempotent subscriber. */
+    (void)ddiscene_sample_hook_add(sound_alias_scene_sample_callback, NULL);
 }
 
 // FUNCTION: LEGORR 0x00464c50
@@ -785,22 +1746,17 @@ void sound_alias_registration_set(int enable)
 // FUNCTION: LEGORR 0x00464c70
 int sound_alias_lookup(const char* name, int* out_index)
 {
-    /* SoundAliasLookup @ 0x00464c70. The corpus compares hash keys under
-     * the KeyToAscii uppercase fold; strcasecmp_lite applies the same fold
-     * to the names. */
+    /* SoundAliasLookup @ 0x00464c70 compares GameStringHashCompute values
+     * and returns the first matching slot. */
     if (name == NULL || out_index == NULL) {
         return 0; /* corpus's param_1 != 0 guard */
     }
+    if (!sound_alias_builtin_hashes_init()) return 0;
     int i;
-    for (i = 0; i < SOUND_ALIAS_BUILTINS; ++i) {
-        if (strcasecmp_lite(name, s_alias_builtins[i]) == 0) {
+    uint32_t hash = sound_alias_hash_compute(name);
+    for (i = 0; i < SOUND_ALIAS_BUILTINS + s_alias_dynamic_count; ++i) {
+        if (s_alias_hashes[i] == hash) {
             *out_index = i;
-            return 1;
-        }
-    }
-    for (i = 0; i < s_alias_dynamic_count; ++i) {
-        if (strcasecmp_lite(name, s_alias_dynamic[i]) == 0) {
-            *out_index = SOUND_ALIAS_BUILTINS + i;
             return 1;
         }
     }
@@ -814,6 +1770,7 @@ int sound_alias_lookup(const char* name, int* out_index)
         if (copy == NULL) {
             return 0;
         }
+        s_alias_hashes[index] = hash;
         s_alias_dynamic[s_alias_dynamic_count] = copy;
         ++s_alias_dynamic_count;
         *out_index = index;
@@ -983,9 +1940,9 @@ void sound_deferred_play_expire(void)
     /* DeferredSoundPlayExpire @ 0x464e80. */
     if (s_cooldown_handle != -1 && s_cooldown_timer > 0.0f) {
         /* SoundHandleStopForward -> SoundBufferStopHandle. The portable
-         * bank validates the slot and forwards the buffer index to its
-         * installed DirectSound-instance seam. */
-        sound_buffer_stop_handle(s_cooldown_handle);
+         * bank validates the handle and stops that duplicate buffer's
+         * active voice. */
+        sound_handle_stop_forward(s_cooldown_handle);
         s_cooldown_handle = -1;
         s_cooldown_timer = 0.0f;
     }
@@ -1024,20 +1981,11 @@ typedef struct VariantNode {
 static VariantNode s_variant_pool[SOUND_VARIANT_POOL_NODES];
 static int         s_variant_pool_next;   /* DAT_00502a28 */
 
-/* Variant draws use the shared VC5 rand.obj stream in the classic x86 build;
- * other builds keep a module-local LCG model. */
-#if !defined(_MSC_VER) || (_MSC_VER >= 1200) || !defined(_M_IX86)
-static uint32_t s_variant_rand_state = 1;
-#endif
-
 static int s_variant_rand(void)
 {
-#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
-    return rand();
-#else
-    s_variant_rand_state = s_variant_rand_state * 214013u + 2531011u;
-    return (int)((s_variant_rand_state >> 16) & 0x7fffu);
-#endif
+    /* FUN_00464e20 calls the same 0x48e170 generator used throughout level
+     * and simulation code; keep sample selection on that shared stream. */
+    return (int)rng_thunk_draw15();
 }
 
 static int s_variant_pool_alloc(void)
@@ -1084,9 +2032,23 @@ int sound_sample_marker_parse(const char* spec, int alias_index)
      * slot itself keeps its value until the first write. */
     s_variant_next[alias_index] = 0;
 
-    char buf[1024]; /* corpus splits destructively in the config string;
-                     * the port splits a copy (documented deviation) */
-    snprintf(buf, sizeof(buf), "%s", spec);
+    char* buf;
+    size_t spec_length = strlen(spec);
+    size_t token_capacity = 1u;
+    const char* scan;
+    /* Keep the config value immutable, but size the copy from the complete
+     * sample list so long lists are not truncated at the adapter's old
+     * 1023-byte limit. */
+    buf = (char*)malloc(spec_length + 1u);
+    if (buf == NULL) return 0;
+    memcpy(buf, spec, spec_length + 1u);
+    for (scan = spec; *scan != '\0' && scan[1] != '\0'; ++scan) {
+        if (*scan == ',') ++token_capacity;
+    }
+    if (token_capacity > SOUND_VARIANT_TOKENS) {
+        free(buf);
+        return 0;
+    }
     char* tokens[SOUND_VARIANT_TOKENS];
     int ntok = sound_variant_split(buf, tokens, ",");
 
@@ -1164,6 +2126,7 @@ int sound_sample_marker_parse(const char* spec, int alias_index)
         c_head  = w_head;
         c_id    = w_id;
     }
+    free(buf);
     return ok;
 }
 
@@ -1223,17 +2186,17 @@ int sound_variant_chain(int alias_index, int* out_slots, int max)
 // FUNCTION: LEGORR 0x0047b050
 void sound_bank_entry_volume_set(int slot, int millibels)
 {
+    int last;
+    int i;
     /* SoundBankEntryVolumeSet @ 0x47b050. */
     if (slot < 0 || slot >= SOUND_BANK_SLOTS) {
         return; /* corpus writes without bounds */
     }
     /* Validate-and-store: invalid millibel values land as 0. */
     s_bank[slot].volume = sound_volume_value_valid(millibels) ? millibels : 0;
-
-    /* Corpus: when the loop bit is set the value goes to all three of
-     * the record's buffer interfaces through their vtables (SetVolume
-     * role), otherwise to buffer 0 only. Instance layer TODO(corpus):
-     * the seam is a no-op. */
+    last = (s_bank[slot].flags & SOUND_LOOPING) != 0u ? 3 : 1;
+    for (i = 0; i < last; ++i)
+        audio_buffer_volume_set(s_bank[slot].buffers[i], s_bank[slot].volume);
 }
 
 // FUNCTION: LEGORR 0x00465010
@@ -1286,22 +2249,63 @@ static int s_active_loop[SOUND_REQUEST_QUEUE_CAPACITY];
 // GLOBAL: LEGORR 0x00502bd4
 static int s_active_count;
 
-/* Instance-layer play seam: the corpus hands (mode, position, bank
- * slot, loop flag, coordinate vector) to the buffer-handle chain for
- * actual playback. TODO(corpus) — the seam is inert here; every state
- * change the route makes is already done by the time it is called. */
-static void s_play_seam(int mode, int position, int slot, int loop,
-                        const float* xyz)
+/* Instance-layer play seam. The portable audio API can represent an
+ * explicit source position as stereo pan for one-shot samples, while
+ * object-attached sources are tracked through the existing spatial hooks.
+ * Stream selection and loop-buffer ownership remain with the bank path. */
+// FUNCTION: LEGORR 0x0047ad70
+static int s_play_seam(int mode, int position, int slot, int loop,
+                       const float* xyz)
 {
-    (void)mode;
-    (void)position;
-    (void)slot;
-    (void)loop;
-    (void)xyz;
+    Sound* sample;
+    void* attached_provider = NULL;
+    if (!s_bank_sound_on || slot < 0 || slot >= SOUND_BANK_SLOTS) return -1;
+
+    if (mode == 0 && position != 0 &&
+        (s_bank[slot].flags & SOUND_STREAMED) == 0u) {
+        attached_provider = (void*)(uintptr_t)(uint32_t)position;
+        sound_instance_track_register(attached_provider);
+        sound_source_spatial_refresh(attached_provider);
+    }
+
+    /* The current portable 3D API is a one-shot pan operation. Keep
+     * streamed/loop-selected and looping bank playback on its established
+     * path; do not turn a DirectSound selector into a portable loop mode. */
+    if (mode == 1 && xyz != NULL && loop == 0
+        && (sound_bank_entry_flags(slot) & SOUND_STREAMED) == 0u) {
+        int frames;
+        int previous_buffer_index = s_bank[slot].next_buffer;
+        float distance = (float)sqrt(xyz[0] * xyz[0]
+                                   + xyz[1] * xyz[1]
+                                   + xyz[2] * xyz[2]);
+        float pan = 0.0f;
+        if (distance > 0.0f) pan = xyz[0] / distance;
+        sample = sound_bank_entry_sample_get(slot);
+        if (sample != NULL) {
+            if ((s_bank[slot].flags & SOUND_LOOPING) != 0u) {
+                s_bank[slot].next_buffer =
+                    (s_bank[slot].next_buffer + 1) % 3;
+            }
+            frames = audio_active_play_sound_3d(sample, pan);
+            if (frames >= 0)
+                return slot * 3 + s_bank[slot].next_buffer;
+            s_bank[slot].next_buffer = previous_buffer_index;
+        }
+    }
+
+    if (sound_bank_entry_play_mode(slot, loop, mode) < 0) return -1;
+    if ((s_bank[slot].flags & SOUND_STREAMED) != 0u) return slot * 3;
+    {
+        int handle = slot * 3 + s_bank[slot].next_buffer;
+        if (attached_provider != NULL)
+            sound_instance_host_buffer_set(attached_provider,
+                sound_handle_buffer_get(handle));
+        return handle;
+    }
 }
 
 // FUNCTION: LEGORR 0x00464fa0
-void sound_alias_play(int alias, int loop)
+int sound_alias_play(int alias, int loop)
 {
     /* SoundAliasPlay @ 0x464fa0. */
     if ((s_sound_flags & SOUND_FLAG_BATCH) == 0) {
@@ -1310,7 +2314,7 @@ void sound_alias_play(int alias, int loop)
             /* Corpus quirk kept: a chain head reading 0 — a real bank
              * slot, or the unwritten head — counts as "no sound". */
             if (slot != 0) {
-                s_play_seam(2, 0, slot, loop, NULL);
+                return s_play_seam(2, 0, slot, loop, NULL);
             }
         }
     } else if (s_batch_count < SOUND_BATCH_QUEUE_CAPACITY) {
@@ -1322,7 +2326,9 @@ void sound_alias_play(int alias, int loop)
         s_batch_entry[s_batch_count].alias = alias;
         s_batch_entry[s_batch_count].mode &= ~1u;
         ++s_batch_count;
+        return -1;
     }
+    return -1;
 }
 
 // FUNCTION: LEGORR 0x00465090
@@ -1335,9 +2341,9 @@ int sound_positional_sound_submit(int position, int alias, int loop,
             int slot = sound_variant_select(alias);
             if (slot != 0) {
                 if (positional != 0) {
-                    s_play_seam(0, position, slot, loop, NULL);
+                    return s_play_seam(0, position, slot, loop, NULL);
                 } else {
-                    s_play_seam(1, 0, slot, loop, xyz);
+                    return s_play_seam(1, 0, slot, loop, xyz);
                 }
             }
         }
@@ -1465,7 +2471,9 @@ void sound_subsystem_frame_tick(float dt)
     }
     s_active_count = s_queue_count;
     s_queue_count = 0;
-    /* Instance-chain pump seam: TODO(corpus), inert. */
+    /* SoundSourceSpatialRefreshAll @ 0x47b390: refresh attached sources,
+     * remove stale associations, and advance both streamed-wave slots. */
+    sound_source_spatial_refresh_all();
 }
 
 int sound_active_request_count(void)
@@ -1540,21 +2548,9 @@ int sound_submit_with_global_cooldown(int alias, int* out_handle)
 {
     /* SoundSubmitWithGlobalCooldown @ 0x464ef0. */
     if (s_cooldown_timer <= 0.0f) {
-        const int batched = (s_sound_flags & SOUND_FLAG_BATCH) != 0;
-        const int enabled = (s_sound_flags & SOUND_FLAG_ENABLED) != 0;
-        sound_alias_play(alias, 0);       /* the submit's play (0x464fa0) */
-
-        /* Corpus DAT_00502b28 = the play's instance-layer handle.
-         * Deviation: the instance layer is TODO(corpus), so the port
-         * records the routed bank slot — and -1 when nothing routed:
-         * alias 0, a disabled subsystem, a chain head that reads 0 (the
-         * "no sound" quirk), or a batch-mode deferral (no instance
-         * handle until the replay). */
-        int handle = -1;
-        if (!batched && alias != 0 && enabled && alias > 0
-            && alias < SOUND_ALIAS_MAX && s_variant_slot[alias] != 0) {
-            handle = s_variant_slot[alias];
-        }
+        /* The target stores the encoded handle returned by
+         * SoundBufferPlayWithPosition through the SoundAliasPlay call. */
+        int handle = sound_alias_play(alias, 0);
 
         if (handle != -1) {
             s_cooldown_alias = (double)alias;   /* _DAT_00502b2c */
@@ -1598,11 +2594,38 @@ int sound_stream_play_tutorial(int level)
 }
 
 /* SoundBufferAssociationAdd (FUN_0047b020) — see sound.hpp. */
+// GLOBAL: LEGORR 0x00506684
 static void* s_buffer_assoc_head; /* DAT_00506684 role: unowned */
 // GLOBAL: LEGORR 0x0050668c
 static uint32_t s_tracked_buffer_min_distance;
 // GLOBAL: LEGORR 0x00506690
 static uint32_t s_tracked_buffer_max_distance;
+
+/* KeyedResourceEntryRemove (FUN_0047b2a0) removes the first global
+ * association whose third word is the stopped instance. The provider is
+ * passed through the original recursion but does not participate in its key
+ * comparison. */
+void sound_buffer_association_remove_instance(void* instance)
+{
+    void* previous = NULL;
+    void* node = s_buffer_assoc_head;
+    while (node != NULL) {
+        char* words = (char*)node;
+        void* key = NULL;
+        void* next = NULL;
+        memcpy(&key, words + 2 * sizeof(void*), sizeof(key));
+        memcpy(&next, words + 3 * sizeof(void*), sizeof(next));
+        if (key == instance) {
+            if (previous == NULL) s_buffer_assoc_head = next;
+            else memcpy((char*)previous + 3 * sizeof(void*), &next,
+                        sizeof(next));
+            engine_heap_free(node);
+            return;
+        }
+        previous = node;
+        node = next;
+    }
+}
 
 // FUNCTION: LEGORR 0x0047b020
 void sound_buffer_association_add(uint32_t a, uint32_t b, uint32_t c)
@@ -1639,6 +2662,7 @@ void sound_buffer_association_stop_all(void)
     }
 }
 
+// FUNCTION: LEGORR 0x0047b390
 void sound_source_spatial_refresh_all(void)
 {
     int index;
@@ -1650,60 +2674,74 @@ void sound_source_spatial_refresh_all(void)
     node = s_buffer_assoc_head;
     while (node != NULL) {
         char* words = (char*)node;
+        void* provider = NULL;
         void* buffer_object = NULL;
         void* attached_entity = NULL;
         void* next = NULL;
         int active = 1;
+        memcpy(&provider, words, sizeof(provider));
         memcpy(&buffer_object, words + sizeof(void*), sizeof(buffer_object));
         memcpy(&attached_entity, words + 2 * sizeof(void*),
                sizeof(attached_entity));
         memcpy(&next, words + 3 * sizeof(void*), sizeof(next));
+        /* The retail path calls the stored buffer's GetStatus (+0x24) and
+         * removes the owner record when playback is no longer active. The
+         * portable AudioBuffer has no voice-status query, so its owner must
+         * provide this test through the refresh hook. */
         if (buffer_object != NULL && s_spatial_refresh_hook != NULL)
             active = s_spatial_refresh_hook(s_spatial_refresh_context,
                                             buffer_object);
         if (!active)
-            (void)sound_attached_stop_by_entity(
-                (uint32_t)(uintptr_t)attached_entity);
+            sound_instance_track_stop_and_remove(provider, attached_entity);
         node = next;
     }
     sound_stream_ring_buffer_tick(0);
     sound_stream_ring_buffer_tick(1);
 }
 
+// FUNCTION: LEGORR 0x0047ad30
 int sound_attached_stop_by_entity(uint32_t entity)
 {
-    void* previous = NULL;
     void* node = s_buffer_assoc_head;
     while (node != NULL) {
         char* words = (char*)node;
-        void* buffer_object = NULL;
+        void* provider = NULL;
         void* attached_entity = NULL;
         void* next = NULL;
-        memcpy(&buffer_object, words + sizeof(void*), sizeof(buffer_object));
+        memcpy(&provider, words, sizeof(provider));
         memcpy(&attached_entity, words + 2 * sizeof(void*),
                sizeof(attached_entity));
         memcpy(&next, words + 3 * sizeof(void*), sizeof(next));
         if ((uint32_t)(uintptr_t)attached_entity == entity) {
-            if (buffer_object != NULL && s_buffer_object_stop_hook != NULL)
-                s_buffer_object_stop_hook(s_buffer_object_stop_context,
-                                          buffer_object);
-            if (previous == NULL) s_buffer_assoc_head = next;
-            else memcpy((char*)previous + 3 * sizeof(void*), &next,
-                        sizeof(next));
-            engine_heap_free(node);
+            sound_instance_track_stop_and_remove(provider,
+                                                 attached_entity);
             return 1;
         }
-        previous = node;
         node = next;
+    }
+    if (sizeof(void*) != 4u) {
+        SoundInstanceHostRecord* record = s_sound_instance_host_records;
+        while (record != NULL) {
+            if ((uint32_t)(uintptr_t)record->instance == entity) {
+                void* provider = record->provider;
+                void* instance = record->instance;
+                sound_instance_track_stop_and_remove(provider, instance);
+                return 1;
+            }
+            record = record->next;
+        }
     }
     return 0;
 }
 
+// FUNCTION: LEGORR 0x0047b160
 void sound_subsystem_stop_all(void)
 {
     sound_buffer_association_stop_all();
+    sound_instance_host_records_remove(NULL, NULL);
     sound_stream_stop_and_release(0);
     sound_stream_stop_and_release(1);
+    audio_stop(audio_system_player_get());
 }
 
 void  sound_buffer_association_head_set(void* node)
@@ -1741,10 +2779,11 @@ public:
 // FUNCTION: LEGORR 0x0047b4a0
 void sound_tracked_buffers_set_min_distance(uint32_t value)
 {
-    s_tracked_buffer_min_distance = value;
+    const uint32_t distance = value;
     void** record = (void**)s_buffer_assoc_head;
+    s_tracked_buffer_min_distance = distance;
     while (record != NULL) {
-        ((SoundTrackedBufferInterface*)record[2])->min_distance_set(value, 0);
+        ((SoundTrackedBufferInterface*)record[2])->min_distance_set(distance, 0);
         record = (void**)record[3];
     }
 }
@@ -1752,10 +2791,58 @@ void sound_tracked_buffers_set_min_distance(uint32_t value)
 // FUNCTION: LEGORR 0x0047b4d0
 void sound_tracked_buffers_set_max_distance(uint32_t value)
 {
-    s_tracked_buffer_max_distance = value;
+    const uint32_t distance = value;
     void** record = (void**)s_buffer_assoc_head;
+    s_tracked_buffer_max_distance = distance;
     while (record != NULL) {
-        ((SoundTrackedBufferInterface*)record[2])->max_distance_set(value, 0);
+        ((SoundTrackedBufferInterface*)record[2])->max_distance_set(distance, 0);
         record = (void**)record[3];
     }
 }
+
+// FUNCTION: LEGORR 0x00434a50
+void sound_samples_config_load(BlockFile* config, int allow_marked)
+{
+    BlockRec* group;
+    BlockRec* entry;
+    if (config == NULL) return;
+    group = block_subgroup(config, "Samples");
+    if (group == NULL) return;
+    sound_alias_registration_set(1);
+    for (entry = block_first_child(group); entry != NULL;
+         entry = block_next_sibling(entry)) {
+        const char* value = block_value(entry);
+        const char* alias_name = value;
+        int alias;
+        if (alias_name == NULL) continue;
+        if (alias_name[0] == '!' && allow_marked) ++alias_name;
+        else if (alias_name[0] == '!' && !allow_marked) continue;
+        if (sound_alias_lookup(alias_name, &alias))
+            (void)sound_sample_marker_parse(block_name(entry), alias);
+    }
+    sound_alias_registration_set(0);
+}
+
+namespace unported_ledger_stubs {
+
+void ledger_stub_00434a50_SoundSamplesConfigLoad(BlockFile* config,
+                                                  int allow_marked)
+{
+    sound_samples_config_load(config, allow_marked);
+}
+
+} // namespace unported_ledger_stubs
+
+namespace unported_ledger_stubs {
+
+// FUNCTION: LEGORR 0x0047c100
+float ledger_stub_0047c100_DirectSoundListenerRolloffSet(float rolloff)
+{
+    if (s_bank_sound_on == 0) return rolloff;
+    if (rolloff < 0.0f) rolloff = 0.0f;
+    if (rolloff > 10.0f) rolloff = 10.0f;
+    return audio_listener_rolloff_set(rolloff);
+}
+
+
+} // namespace unported_ledger_stubs

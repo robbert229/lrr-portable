@@ -22,7 +22,7 @@ The script buffer is stored at `DAT_00555d6c` and its byte length at `DAT_00555d
 
 `FrameTimerArrayAdvanceAndAdvisorClear @ 0x00453bb0` advances four floats at `DAT_004ff9a0`–`DAT_004ff9ac` by `delta * 40`. It also advances or reduces the advisor-duration value at `DAT_004ff98c`, with its decrement/re-arm path gated by the deferred-callback and bookkeeping globals. When `DAT_00555df0` is set and the duration falls below `1000`, it calls `AdvisorClearActiveState @ 0x00401b20`. Finding 256 describes the timer path and its `EngineTick` call in the legacy snapshot.
 
-The separate callback relay is small but stateful. `DeferredCallbackSet @ 0x00453900` stores its argument in `DAT_004a673c`; `GameConfigInit` supplies whether the corresponding message resource was found. `DeferredCallbackInvokeIfSet @ 0x00453910` checks only whether that stored value is nonzero, then calls `SoundAliasPlayGlobal @ 0x00456810`. That helper plays the alias currently stored in `DAT_004a6768` when it is not `-1`. The UI interaction caller is in `MainSimInteractionAndCellUpdate @ 0x00426520`; it reaches the relay for the configured message region. Finding 354 records the setter/invoker pair.
+The separate callback relay is small but stateful. `DeferredCallbackSet @ 0x00453900` stores its argument in `DAT_004a673c`; `GameConfigInit` supplies whether the corresponding message resource was found. `DeferredCallbackInvokeIfSet @ 0x00453910` checks only whether that stored value is nonzero, then calls `SoundAliasPlayGlobal @ 0x00456810`. That helper passes the bank slot stored in `DAT_004a6768` directly to `SoundBufferPlayWithPosition` in global mode with loop disabled, provided the value is not `-1`. The inline-token caller sets this value from the configured advisor sound table; it is not an alias index for another lookup. The UI interaction caller is in `MainSimInteractionAndCellUpdate @ 0x00426520`; it reaches the relay for the configured message region. Finding 354 records the setter/invoker pair.
 
 `AdvisorTutorialIconImageLoad @ 0x00434a00` loads the configured `TutorialIcon` bitmap and retains its resource handle in `DAT_0055645c`. `RandomVariantCellScatter @ 0x00435300` blits that image above marked cells with a sinusoidal vertical offset. `FUN_00454600 @ 0x00454600` uses the same image for an indexed-object overlay after resolving the last object in `DAT_00555dec`, setting its `+0x3f8` field, and deriving screen coordinates; the exact trigger and final arguments remain uncertain.
 
@@ -66,7 +66,7 @@ The remaining accessors affect nearby engine state but do not establish a tutori
 | `0x004565f0` | `EngineModeSet` | Stores `DAT_004ff978` and runs reset helpers for mode `1`. |
 | `0x00456640` | `GlobalFlagGet_004ff978` | Returns the separate global at `DAT_004ff978`. |
 | `0x004567c0` | `GlobalValue_004ff9bcStoreAndReturn` | Stores and returns a value in `DAT_004ff9bc`. |
-| `0x00456810` | `SoundAliasPlayGlobal` | Plays `DAT_004a6768` when it is not the `-1` sentinel. |
+| `0x00456810` | `SoundAliasPlayGlobal` | Plays the configured bank slot in `DAT_004a6768` on the global channel when it is not `-1`; playback is one-shot. |
 | `0x00456830` | `AdvisorInlineTokenRender` | Copies plain text and resolves inline image/sound tokens when configured. |
 | `0x00456b80` | `TutorialPathCoordinateIndex` | Converts nonzero tutorial-grid bytes into 55 coordinate-linked lists. |
 | `0x00456c30` | `ObjectPoolListHeadGet` | Returns a nonempty list head for an index in `[0,54]`. |

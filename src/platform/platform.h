@@ -41,6 +41,11 @@
 
 typedef struct PlatformWindow PlatformWindow;
 
+/* Active window and configured client limits mirrored for the input sampler. */
+extern void* g_platform_cursor_window_handle;
+extern int g_platform_cursor_width;
+extern int g_platform_cursor_height;
+
 /* --- Canonical key codes (platform-neutral event vocabulary) --------------
  * The engine's input tables (findings 04/05) are indexed by 1-byte codes.
  * Printable ASCII (0x20..0x7e) passes through; non-printable controls get
@@ -78,6 +83,11 @@ void* platform_window_hwnd(PlatformWindow* win);
 int  platform_window_width(PlatformWindow* win);
 int  platform_window_height(PlatformWindow* win);
 
+/* Read the active window's cursor in client-relative coordinates. Returns
+ * nonzero when the backend can produce a sample. */
+int  platform_cursor_position_get(int* x, int* y);
+void platform_cursor_position_set(int x, int y);
+
 /* Pump platform events into `out` (up to cap); returns the number written.
  * A PLATFORM_EVENT_QUIT entry counts toward that total. */
 int  platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap);
@@ -101,6 +111,11 @@ void           platform_audio_close(PlatformAudio* a);
  * Hz. Returns 0 on success, -1 on failure (device/stream unavailable). */
 int  platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
                          int sample_rate);
+/* Submit a one-shot owned by a host-width voice token. Backends with
+ * independently stoppable submissions retain the token for selective stop. */
+int  platform_audio_play_voice(PlatformAudio* a, const int16_t* pcm,
+                               int frames, int sample_rate, uintptr_t voice);
+void platform_audio_stop_voice(PlatformAudio* a, uintptr_t voice);
 
 /* Play one shot: interleaved L,R 16-bit signed PCM (stereo). */
 int  platform_audio_play_stereo(PlatformAudio* a, const int16_t* lr,
@@ -120,9 +135,26 @@ float platform_audio_get_gain(PlatformAudio* a);
 
 /* Bytes currently buffered in the stream (diagnostics/tests). */
 int  platform_audio_queued(PlatformAudio* a);
+/* Duration of queued output, in milliseconds; unlike queued bytes this is
+ * comparable across backend sample-rate conversions. */
+int  platform_audio_queued_milliseconds(PlatformAudio* a);
 
 /* Stop / clear pending output + the loop track. */
 void platform_audio_stop(PlatformAudio* a);
+
+/* CD-DA is a separate Windows media device in the reference build. The
+ * native backend reports it unavailable; it does not pretend an audio
+ * stream or an uninstalled callback is a CD device. */
+int  platform_cd_audio_open(int* error_code);
+int  platform_cd_audio_set_tmsf(int* error_code);
+int  platform_cd_audio_play(int one_based_track, int* error_code);
+int  platform_cd_audio_stop(int* error_code);
+int  platform_cd_audio_close(int* error_code);
+int  platform_cd_audio_status(char* mode, int mode_capacity,
+                              int* current_track, int* error_code);
+int  platform_cd_audio_error_text(int error_code, char* output,
+                                  int output_capacity);
+uint32_t platform_time_milliseconds(void);
 
 /* Commit a framebuffer (RGBA32 byte order R,G,B,A on little-endian) to the
  * window. `pixels`/`pitch` are what the DDraw surface Lock handed back. */

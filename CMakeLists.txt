@@ -118,13 +118,18 @@ target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 add_library(game STATIC
   ${GAME_DIR}/game.cpp ${GAME_DIR}/level.cpp ${GAME_DIR}/objective.cpp
   ${GAME_DIR}/savegame.cpp ${GAME_DIR}/mission.cpp ${GAME_DIR}/entity.cpp
+  ${GAME_DIR}/entity_config.cpp
   ${GAME_DIR}/cmd.cpp ${GAME_DIR}/select.cpp ${GAME_DIR}/ai.cpp
+  ${GAME_DIR}/screen_pick.cpp
   ${GAME_DIR}/render.cpp ${GAME_DIR}/scene_render.cpp
   ${GAME_DIR}/frontend.cpp ${GAME_DIR}/options.cpp
   ${GAME_DIR}/util.cpp ${GAME_DIR}/effects.cpp ${GAME_DIR}/terrain_grid.cpp
+  ${GAME_DIR}/dependency_grid.cpp
   ${GAME_DIR}/weapon.cpp ${GAME_DIR}/upgrades.cpp
   ${GAME_DIR}/video_graph.cpp ${GAME_DIR}/spawn.cpp
-  ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp)
+  ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp
+  ${GAME_DIR}/tutorial_hud.cpp ${GAME_DIR}/seh_runtime.cpp
+  ${GAME_DIR}/startup_config.cpp)
 target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
 target_link_libraries(game PUBLIC gods98)
 
@@ -188,7 +193,8 @@ if(PLATFORM STREQUAL "native")
 endif()
 
 set(LRR_SOURCES ${SRC_ROOT}/main.cpp ${PLATFORM_ENTRY}
-  ${GAME_DIR}/ledger_stubs.cpp)
+  ${GAME_DIR}/seh_runtime.cpp
+  ${GAME_DIR}/dependency_grid.cpp ${GAME_DIR}/screen_pick.cpp)
 if(PLATFORM STREQUAL "winapi")
   list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
 endif()

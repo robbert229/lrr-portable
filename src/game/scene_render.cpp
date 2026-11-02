@@ -13,8 +13,18 @@
 #include <string.h>
 
 #include "entity.hpp"
+#include "ai.hpp"
+#include "crt/crt.hpp"
 #include "level.hpp"
 #include "render.hpp"
+#include "scene_render.hpp"
+#include "tutorial_hud_ports.hpp"
+#include "engine.hpp"
+#include "gods98/heap.hpp"
+#include "gods98/record.hpp"
+#include "gods98/surface.hpp"
+#include "terrain_grid.hpp"
+#include "port_loop_ports.hpp"
 #include "select.hpp"
 #include "texture.hpp"
 
@@ -35,6 +45,356 @@ static size_t s_scene_depth_capacity;
 static TextureSurface* s_scene_floor_texture;
 static const LevelState* s_scene_focus_level;
 static SceneVec3 s_scene_focus;
+static const LevelState* s_scene_vertex_level;
+static uint32_t s_scene_vertex_width;
+static uint32_t s_scene_vertex_height;
+static float* s_scene_vertex_heights;
+static float* s_scene_vertex_x_offsets;
+static uint8_t* s_scene_vertex_valid;
+static uint8_t* s_scene_vertex_flipped;
+static float* s_scene_surface_colors;
+static uint8_t* s_scene_surface_color_valid;
+static float* s_scene_overlay_heights;
+static uint8_t* s_scene_overlay_valid;
+static float* s_scene_overlay_slot_heights;
+static uint8_t* s_scene_overlay_slot_active;
+
+static int scene_render_vertex_cache_ensure(const LevelState* level)
+{
+    uint32_t width, height;
+    size_t count;
+    float* heights;
+    uint8_t* valid;
+    uint8_t* flipped;
+    float* surface_colors;
+    uint8_t* surface_color_valid;
+    float* x_offsets;
+    float* overlay_heights;
+    uint8_t* overlay_valid;
+    float* overlay_slot_heights;
+    uint8_t* overlay_slot_active;
+    if (level == NULL) return 0;
+    width = (uint32_t)level_width(level);
+    height = (uint32_t)level_height(level);
+    if (s_scene_vertex_level == level && s_scene_vertex_heights != NULL &&
+        s_scene_vertex_width == width && s_scene_vertex_height == height)
+        return 1;
+    free(s_scene_vertex_heights);
+    free(s_scene_vertex_x_offsets);
+    free(s_scene_vertex_valid);
+    free(s_scene_vertex_flipped);
+    free(s_scene_surface_colors);
+    free(s_scene_surface_color_valid);
+    free(s_scene_overlay_heights);
+    free(s_scene_overlay_valid);
+    free(s_scene_overlay_slot_heights);
+    free(s_scene_overlay_slot_active);
+    s_scene_vertex_heights = NULL;
+    s_scene_vertex_x_offsets = NULL;
+    s_scene_vertex_valid = NULL;
+    s_scene_vertex_flipped = NULL;
+    s_scene_surface_colors = NULL;
+    s_scene_surface_color_valid = NULL;
+    s_scene_overlay_heights = NULL;
+    s_scene_overlay_valid = NULL;
+    s_scene_overlay_slot_heights = NULL;
+    s_scene_overlay_slot_active = NULL;
+    s_scene_vertex_level = NULL;
+    s_scene_vertex_width = 0u;
+    s_scene_vertex_height = 0u;
+    if (width == 0u || height == 0u ||
+        (size_t)width > ((size_t)-1) / (size_t)height) return 0;
+    count = (size_t)width * (size_t)height;
+    if (count > ((size_t)-1) / (4u * sizeof(float))) return 0;
+    heights = (float*)malloc(count * 4u * sizeof(float));
+    valid = (uint8_t*)calloc(count, sizeof(uint8_t));
+    flipped = (uint8_t*)calloc(count, sizeof(uint8_t));
+    surface_colors = (float*)malloc(count * 3u * sizeof(float));
+    surface_color_valid = (uint8_t*)calloc(count, sizeof(uint8_t));
+    x_offsets = (float*)calloc(count, sizeof(float));
+    overlay_heights = (float*)calloc(count * 4u, sizeof(float));
+    overlay_valid = (uint8_t*)calloc(count, sizeof(uint8_t));
+    overlay_slot_heights = (float*)calloc(count, sizeof(float));
+    overlay_slot_active = (uint8_t*)calloc(count, sizeof(uint8_t));
+    if (heights == NULL || valid == NULL || flipped == NULL ||
+        surface_colors == NULL || surface_color_valid == NULL ||
+        x_offsets == NULL || overlay_heights == NULL ||
+        overlay_valid == NULL || overlay_slot_heights == NULL ||
+        overlay_slot_active == NULL) {
+        free(heights);
+        free(valid);
+        free(flipped);
+        free(surface_colors);
+        free(surface_color_valid);
+        free(x_offsets);
+        free(overlay_heights);
+        free(overlay_valid);
+        free(overlay_slot_heights);
+        free(overlay_slot_active);
+        return 0;
+    }
+    s_scene_vertex_level = level;
+    s_scene_vertex_width = width;
+    s_scene_vertex_height = height;
+    s_scene_vertex_heights = heights;
+    s_scene_vertex_x_offsets = x_offsets;
+    s_scene_vertex_valid = valid;
+    s_scene_vertex_flipped = flipped;
+    s_scene_surface_colors = surface_colors;
+    s_scene_surface_color_valid = surface_color_valid;
+    s_scene_overlay_heights = overlay_heights;
+    s_scene_overlay_valid = overlay_valid;
+    s_scene_overlay_slot_heights = overlay_slot_heights;
+    s_scene_overlay_slot_active = overlay_slot_active;
+    return 1;
+}
+
+static float scene_render_terrain_vertex_x_offset_get(
+    const LevelState* level, int x, int y)
+{
+    if (x < 0 || y < 0 || !scene_render_vertex_cache_ensure(level) ||
+        (uint32_t)x >= s_scene_vertex_width ||
+        (uint32_t)y >= s_scene_vertex_height) return 0.0f;
+    return s_scene_vertex_x_offsets[(size_t)(uint32_t)y *
+                                    s_scene_vertex_width + (uint32_t)x];
+}
+
+void scene_render_terrain_cell_orientation_apply(const LevelState* level,
+                                                uint32_t x, uint32_t y,
+                                                int flipped)
+{
+    static const uint8_t forward[4] = { 3u, 0u, 1u, 2u };
+    static const uint8_t reverse[4] = { 1u, 2u, 3u, 0u };
+    size_t index;
+    float rotated[4];
+    uint32_t corner;
+    uint8_t target = flipped != 0 ? 1u : 0u;
+    const uint8_t* order;
+    if (!scene_render_vertex_cache_ensure(level) ||
+        x >= s_scene_vertex_width || y >= s_scene_vertex_height) return;
+    /* FUN_00475020 indexes the terrain appearance mesh with the quad width
+     * (map width minus one), even though the CPU cache has map dimensions. */
+    index = (size_t)y * (size_t)(s_scene_vertex_width - 1u) + x;
+    if (index >= (size_t)s_scene_vertex_width * s_scene_vertex_height) return;
+    if (s_scene_vertex_flipped[index] == target) return;
+    if (s_scene_vertex_valid[index] != 0u) {
+        order = s_scene_vertex_flipped[index] == 0u ? forward : reverse;
+        for (corner = 0u; corner < 4u; ++corner)
+            rotated[corner] =
+                s_scene_vertex_heights[index * 4u + order[corner]];
+        memcpy(s_scene_vertex_heights + index * 4u, rotated,
+               sizeof(rotated));
+    }
+    s_scene_vertex_flipped[index] = target;
+}
+
+void scene_render_terrain_cell_vertices_update(const LevelState* level,
+                                              uint32_t x, uint32_t y,
+                                              const float vertices[12])
+{
+    size_t index;
+    uint32_t corner;
+    if (vertices == NULL || !scene_render_vertex_cache_ensure(level) ||
+        x >= s_scene_vertex_width || y >= s_scene_vertex_height) return;
+    index = (size_t)y * s_scene_vertex_width + x;
+    for (corner = 0u; corner < 4u; ++corner)
+        s_scene_vertex_heights[index * 4u + corner] =
+            vertices[corner * 3u + 1u];
+    s_scene_vertex_valid[index] = 1u;
+}
+
+void scene_render_terrain_cell_surface_color_set(const LevelState* level,
+                                                uint32_t x, uint32_t y,
+                                                float r, float g, float b)
+{
+    size_t index;
+    if (!scene_render_vertex_cache_ensure(level) ||
+        x >= s_scene_vertex_width || y >= s_scene_vertex_height) return;
+    /* The target's renderer list uses the quad-width stride (map width - 1)
+     * while the surrounding LevelState records use map width. */
+    index = (size_t)y * (size_t)(s_scene_vertex_width - 1u) + x;
+    if (index >= (size_t)s_scene_vertex_width * s_scene_vertex_height) return;
+    s_scene_surface_colors[index * 3u] = r;
+    s_scene_surface_colors[index * 3u + 1u] = g;
+    s_scene_surface_colors[index * 3u + 2u] = b;
+    s_scene_surface_color_valid[index] = 1u;
+}
+
+void scene_render_terrain_vertex_offset(const LevelState* level,
+                                        int vertex_x, int vertex_y,
+                                        float world_delta)
+{
+    if (!scene_render_vertex_cache_ensure(level)) return;
+    if (s_scene_vertex_width < 2u || s_scene_vertex_height < 2u) return;
+    if ((uint32_t)vertex_x >= s_scene_vertex_width ||
+        (uint32_t)vertex_y >= s_scene_vertex_height) return;
+    s_scene_vertex_x_offsets[(size_t)(uint32_t)vertex_y *
+                             s_scene_vertex_width +
+                             (uint32_t)vertex_x] += world_delta;
+}
+
+void scene_render_terrain_level_release(const LevelState* level)
+{
+    if (level != NULL && level != s_scene_vertex_level) return;
+    free(s_scene_vertex_heights);
+    free(s_scene_vertex_x_offsets);
+    free(s_scene_vertex_valid);
+    free(s_scene_vertex_flipped);
+    free(s_scene_surface_colors);
+    free(s_scene_surface_color_valid);
+    free(s_scene_overlay_heights);
+    free(s_scene_overlay_valid);
+    free(s_scene_overlay_slot_heights);
+    free(s_scene_overlay_slot_active);
+    s_scene_vertex_heights = NULL;
+    s_scene_vertex_x_offsets = NULL;
+    s_scene_vertex_valid = NULL;
+    s_scene_vertex_flipped = NULL;
+    s_scene_surface_colors = NULL;
+    s_scene_surface_color_valid = NULL;
+    s_scene_overlay_heights = NULL;
+    s_scene_overlay_valid = NULL;
+    s_scene_overlay_slot_heights = NULL;
+    s_scene_overlay_slot_active = NULL;
+    s_scene_vertex_level = NULL;
+    s_scene_vertex_width = 0u;
+    s_scene_vertex_height = 0u;
+}
+
+static int scene_render_terrain_cell_vertex_heights(
+    const LevelState* level, uint32_t x, uint32_t y, float heights[4])
+{
+    size_t index;
+    if (heights == NULL || !scene_render_vertex_cache_ensure(level) ||
+        x >= s_scene_vertex_width || y >= s_scene_vertex_height) return 0;
+    index = (size_t)y * s_scene_vertex_width + x;
+    if (s_scene_vertex_valid[index] == 0u) return 0;
+    memcpy(heights, s_scene_vertex_heights + index * 4u,
+           4u * sizeof(float));
+    return 1;
+}
+
+/* At the quad center, the renderer's two fixed triangles meet on their
+ * 0-to-2 diagonal, so the live sample is the midpoint of those corners. */
+int scene_render_terrain_cell_height_center_get(const LevelState* level,
+                                               uint32_t x, uint32_t y,
+                                               float* height_out)
+{
+    float heights[4];
+    if (height_out == NULL ||
+        !scene_render_terrain_cell_vertex_heights(level, x, y, heights))
+        return 0;
+    *height_out = (heights[0] + heights[2]) * 0.5f;
+    return 1;
+}
+
+int scene_render_terrain_cell_vertices_get(const LevelState* level,
+                                           uint32_t x, uint32_t y,
+                                           float vertices[4][3])
+{
+    static const int corner_x[4] = { 0, 1, 1, 0 };
+    static const int corner_y[4] = { 0, 0, 1, 1 };
+    float heights[4];
+    int width, height;
+    float block;
+    float height_scale;
+    uint32_t corner;
+    if (vertices == NULL || level == NULL || level->ptr_terrain == NULL ||
+        x >= (uint32_t)level_width(level) ||
+        y >= (uint32_t)level_height(level)) return 0;
+    width = level_width(level);
+    height = level_height(level);
+    block = terrain_blocksize_get(level->ptr_terrain);
+    if (block <= 0.0f) block = 40.0f;
+    height_scale = block * 0.10f;
+    if (!scene_render_terrain_cell_vertex_heights(level, x, y, heights)) {
+        for (corner = 0u; corner < 4u; ++corner) {
+            heights[corner] = (float)terrain_surface_height_get(
+                level->ptr_terrain, (int)x + corner_x[corner],
+                (int)y + corner_y[corner]);
+        }
+    }
+    for (corner = 0u; corner < 4u; ++corner) {
+        const float gx = (float)((int)x + corner_x[corner]);
+        const float gy = (float)((int)y + corner_y[corner]);
+        vertices[corner][0] = (gx - (float)width * 0.5f) * block +
+            scene_render_terrain_vertex_x_offset_get(level,
+                x + corner_x[corner], y + corner_y[corner]);
+        vertices[corner][1] = -heights[corner] * height_scale;
+        vertices[corner][2] = (gy - (float)height * 0.5f) * block;
+    }
+    return 1;
+}
+
+void scene_render_terrain_cell_overlay_height_fill(void* context,
+                                                   LevelState* level,
+                                                   uint32_t x, uint32_t y)
+{
+    float vertices[4][3];
+    size_t index;
+    uint32_t corner;
+    (void)context;
+    if (!scene_render_vertex_cache_ensure(level) ||
+        x >= s_scene_vertex_width || y >= s_scene_vertex_height ||
+        !scene_render_terrain_cell_vertices_get(level, x, y, vertices))
+        return;
+    index = (size_t)y * s_scene_vertex_width + x;
+    /* Keep the four live geometry-space heights with their row-major quad.
+     * The staged DDi record selects an edge pair and owns its own +8 scalar;
+     * this cache retains source values without guessing that selector. */
+    for (corner = 0u; corner < 4u; ++corner)
+        s_scene_overlay_heights[index * 4u + corner] = vertices[corner][1];
+    s_scene_overlay_valid[index] = 1u;
+    {
+        float height;
+        uint32_t active = 0u;
+        if (terrain_cell_quad_run_slot_state_get(
+                level, (int)x, (int)y, &height, &active)) {
+            s_scene_overlay_slot_heights[index] = height;
+            s_scene_overlay_slot_active[index] = (uint8_t)active;
+        }
+        else {
+            s_scene_overlay_slot_active[index] = 0u;
+        }
+    }
+}
+
+int scene_render_terrain_cell_overlay_height_get(
+    const LevelState* level, uint32_t x, uint32_t y, float heights[4])
+{
+    size_t index;
+    if (heights == NULL || !scene_render_vertex_cache_ensure(level) ||
+        x >= s_scene_vertex_width || y >= s_scene_vertex_height)
+        return 0;
+    index = (size_t)y * s_scene_vertex_width + x;
+    if (s_scene_overlay_valid[index] == 0u) return 0;
+    memcpy(heights, s_scene_overlay_heights + index * 4u,
+           4u * sizeof(float));
+    return 1;
+}
+
+int scene_render_terrain_cell_overlay_slot_get(
+    const LevelState* level, uint32_t x, uint32_t y, float* height_out)
+{
+    size_t index;
+    if (!scene_render_vertex_cache_ensure(level) ||
+        x >= s_scene_vertex_width || y >= s_scene_vertex_height)
+        return 0;
+    index = (size_t)y * s_scene_vertex_width + x;
+    if (s_scene_overlay_slot_active[index] == 0u) return 0;
+    if (height_out != NULL) *height_out = s_scene_overlay_slot_heights[index];
+    return 1;
+}
+
+void scene_render_terrain_cell_overlay_slot_reset(const LevelState* level,
+                                                  uint32_t x, uint32_t y)
+{
+    size_t index;
+    if (!scene_render_vertex_cache_ensure(level) ||
+        x >= s_scene_vertex_width || y >= s_scene_vertex_height) return;
+    index = (size_t)y * s_scene_vertex_width + x;
+    s_scene_overlay_slot_active[index] = 0u;
+}
 
 /* MSVC 5.0 accepts aggregate initialization for declarations, but not the
  * C++11 braced expressions used as return values and function arguments. */
@@ -50,6 +410,105 @@ static SceneColor scene_color(uint8_t r, uint8_t g, uint8_t b)
     SceneColor c;
     c.r = r; c.g = g; c.b = b;
     return c;
+}
+
+typedef struct SceneRingTarget {
+    void* pixels;
+    int pitch;
+    int width;
+    int height;
+} SceneRingTarget;
+
+static void scene_ring_pixel(SceneRingTarget* target, int x, int y,
+                             const float rgb[3])
+{
+    uint8_t* pixel;
+    int channel;
+    if (target == NULL || target->pixels == NULL || rgb == NULL ||
+        x < 0 || y < 0 || x >= target->width || y >= target->height) return;
+    pixel = (uint8_t*)target->pixels + (size_t)y * (size_t)target->pitch +
+        (size_t)x * 4u;
+    for (channel = 0; channel < 3; ++channel) {
+        float value = rgb[channel] * 255.0f;
+        if (value < 0.0f) value = 0.0f;
+        if (value > 255.0f) value = 255.0f;
+        pixel[channel] = (uint8_t)value;
+    }
+    pixel[3] = 255u;
+}
+
+static void scene_ring_line(SceneRingTarget* target, int x0, int y0,
+                            int x1, int y1, const float rgb[3])
+{
+    int dx = x1 >= x0 ? x1 - x0 : x0 - x1;
+    int dy = y1 >= y0 ? y1 - y0 : y0 - y1;
+    int sx = x0 < x1 ? 1 : -1;
+    int sy = y0 < y1 ? 1 : -1;
+    int error = dx - dy;
+    for (;;) {
+        scene_ring_pixel(target, x0, y0, rgb);
+        if (x0 == x1 && y0 == y1) break;
+        {
+            int twice = error * 2;
+            if (twice > -dy) { error -= dy; x0 += sx; }
+            if (twice < dx) { error += dx; y0 += sy; }
+        }
+    }
+}
+
+static void scene_ring_rect_draw(const float rect[4], uint32_t color,
+                                 void* context)
+{
+    SceneRingTarget* target = (SceneRingTarget*)context;
+    int left, top, right, bottom, x, y;
+    uint8_t red = (uint8_t)(color >> 16);
+    uint8_t green = (uint8_t)(color >> 8);
+    uint8_t blue = (uint8_t)color;
+    if (target == NULL || rect == NULL) return;
+    left = (int)rect[0]; top = (int)rect[1];
+    right = (int)(rect[0] + rect[2]);
+    bottom = (int)(rect[1] + rect[3]);
+    for (y = top; y < bottom; ++y) {
+        for (x = left; x < right; ++x) {
+            float rgb[3];
+            uint8_t* pixel;
+            if (x < 0 || y < 0 || x >= target->width || y >= target->height)
+                continue;
+            pixel = (uint8_t*)target->pixels +
+                (size_t)y * (size_t)target->pitch + (size_t)x * 4u;
+            rgb[0] = (float)red / 255.0f;
+            rgb[1] = (float)green / 255.0f;
+            rgb[2] = (float)blue / 255.0f;
+            scene_ring_pixel(target, x, y, rgb);
+            pixel[3] = 255u;
+        }
+    }
+}
+
+static void scene_ring_strip_draw(const float first_xy[20],
+                                  const float second_xy[20],
+                                  uint32_t point_count,
+                                  const float rgb[3], int mode,
+                                  void* context)
+{
+    SceneRingTarget* target = (SceneRingTarget*)context;
+    uint32_t i;
+    (void)mode;
+    if (first_xy == NULL || second_xy == NULL || rgb == NULL ||
+        point_count > 10u) return;
+    for (i = 0u; i < point_count; ++i) {
+        int ax = (int)first_xy[i * 2u];
+        int ay = (int)first_xy[i * 2u + 1u];
+        int bx = (int)second_xy[i * 2u];
+        int by = (int)second_xy[i * 2u + 1u];
+        scene_ring_line(target, ax, ay, bx, by, rgb);
+        if (i != 0u) {
+            scene_ring_line(target, (int)first_xy[(i - 1u) * 2u],
+                (int)first_xy[(i - 1u) * 2u + 1u], ax, ay, rgb);
+            scene_ring_line(target, (int)second_xy[(i - 1u) * 2u],
+                (int)second_xy[(i - 1u) * 2u + 1u], bx, by, rgb);
+        }
+    }
 }
 
 static float scene_min(float a, float b) { return a < b ? a : b; }
@@ -99,6 +558,31 @@ static SceneColor terrain_color(const uint8_t* voxel)
     }
     unsigned surface = voxel != NULL ? voxel[0x04] : 0;
     return color_scale(c, 0.82f + (float)(surface & 7u) * 0.035f);
+}
+
+static SceneColor terrain_surface_color_override_get(
+    const LevelState* level, uint32_t x, uint32_t y, SceneColor fallback)
+{
+    size_t index;
+    float r, g, b;
+    if (!scene_render_vertex_cache_ensure(level) ||
+        x >= s_scene_vertex_width || y >= s_scene_vertex_height) return fallback;
+    index = (size_t)y * (size_t)(s_scene_vertex_width - 1u) + x;
+    if (index >= (size_t)s_scene_vertex_width * s_scene_vertex_height)
+        return fallback;
+    if (s_scene_surface_color_valid[index] == 0u) return fallback;
+    r = s_scene_surface_colors[index * 3u];
+    g = s_scene_surface_colors[index * 3u + 1u];
+    b = s_scene_surface_colors[index * 3u + 2u];
+    if (r < 0.0f) r = 0.0f;
+    if (g < 0.0f) g = 0.0f;
+    if (b < 0.0f) b = 0.0f;
+    if (r > 1.0f) r = 1.0f;
+    if (g > 1.0f) g = 1.0f;
+    if (b > 1.0f) b = 1.0f;
+    return scene_color((uint8_t)(r * 255.0f),
+                       (uint8_t)(g * 255.0f),
+                       (uint8_t)(b * 255.0f));
 }
 
 static int scene_project(const SceneCamera* c, SceneVec3 p, ScenePoint* out)
@@ -185,12 +669,11 @@ static void scene_quad(SceneCamera* c, SceneVec3 a, SceneVec3 b,
 static void scene_quad_textured(SceneCamera* c, SceneVec3 a, SceneVec3 b,
                                SceneVec3 d, SceneVec3 e,
                                const TextureSurface* texture,
-                               float u, float v)
+                               float u, float v, SceneColor tint)
 {
-    SceneColor white = {255, 255, 255};
-    scene_triangle_sampled(c, a, b, d, white, texture,
+    scene_triangle_sampled(c, a, b, d, tint, texture,
                            u, v, u + 0.35f, v, u + 0.35f, v + 0.35f);
-    scene_triangle_sampled(c, a, d, e, white, texture,
+    scene_triangle_sampled(c, a, d, e, tint, texture,
                            u, v, u + 0.35f, v + 0.35f, u, v + 0.35f);
 }
 
@@ -268,12 +751,31 @@ static void render_terrain(SceneCamera* c, const LevelState* lvl,
             SceneVec3 b = terrain_point(x + 1, y, z, w, h, block, hs);
             SceneVec3 d = terrain_point(x + 1, y + 1, z, w, h, block, hs);
             SceneVec3 e = terrain_point(x, y + 1, z, w, h, block, hs);
+            float vertex_heights[4];
+            if (scene_render_terrain_cell_vertex_heights(
+                    lvl, (uint32_t)x, (uint32_t)y, vertex_heights)) {
+                a.y = -vertex_heights[0] * hs;
+                b.y = -vertex_heights[1] * hs;
+                d.y = -vertex_heights[2] * hs;
+                e.y = -vertex_heights[3] * hs;
+            }
+            a.x += scene_render_terrain_vertex_x_offset_get(
+                lvl, x, y);
+            b.x += scene_render_terrain_vertex_x_offset_get(
+                lvl, x + 1, y);
+            d.x += scene_render_terrain_vertex_x_offset_get(
+                lvl, x + 1, y + 1);
+            e.x += scene_render_terrain_vertex_x_offset_get(
+                lvl, x, y + 1);
             SceneColor top = terrain_color(vox != NULL
                 ? vox + ((size_t)y * (size_t)w + (size_t)x) * LEVEL_VOXEL_STRIDE
                 : NULL);
+            top = terrain_surface_color_override_get(lvl, (uint32_t)x,
+                                                      (uint32_t)y, top);
             if (texture != NULL) {
                 scene_quad_textured(c, a, b, d, e, texture,
-                                    (float)x * 0.35f, (float)y * 0.35f);
+                                    (float)x * 0.35f, (float)y * 0.35f,
+                                    top);
             } else {
                 scene_quad(c, a, b, d, e, color_scale(top, 1.0f));
             }
@@ -299,7 +801,8 @@ static void render_terrain(SceneCamera* c, const LevelState* lvl,
                     float u = (float)(side % 2 == 0 ? x : y) * 0.35f;
                     float v = (float)(side % 2 == 0 ? y : x) * 0.35f;
                     scene_quad_textured(c, edge_a[side], edge_b[side],
-                                        lo_b, lo_a, texture, u, v);
+                                        lo_b, lo_a, texture, u, v,
+                                        color_scale(top, light));
                 } else {
                     scene_quad(c, edge_a[side], edge_b[side], lo_b, lo_a,
                                color_scale(top, light));
@@ -449,7 +952,7 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
                                 (e->y-gh*0.5f)*block};
             if (type == ENTITY_TYPE_MINIFIG) {
                 render_raider(&camera, e, block, origin,
-                              selection_contains_entity(ctx, e));
+                              selection_contains_entity_target(ctx, e, NULL));
             } else if (type == ENTITY_TYPE_BUILDING) {
                 /* A blocky Tool Store silhouette until the .ae scene loader
                  * supplies its authored object assembly. */
@@ -464,6 +967,56 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
                            0,block*0.48f,block*0.45f,block*0.38f,
                            scene_color(140,138,129));
             }
+        }
+    }
+
+    /* TickEntityScreenEffects walks the 20-slot flagged-entity registry and
+     * sends each eligible entity through RenderEntityScreenRing. The native
+     * renderer owns projection/framebuffer access here, so submit that same
+     * registry from the active scene pass instead of trying to draw while
+     * EngineTick holds no locked pixels. */
+    {
+        LegacyHudOps ring_ops;
+        SceneRingTarget ring_target;
+        int slot_index;
+        memset(&ring_ops, 0, sizeof(ring_ops));
+        ring_target.pixels = pixels;
+        ring_target.pitch = pitch;
+        ring_target.width = w;
+        ring_target.height = h;
+        ring_ops.context = &ring_target;
+        ring_ops.rect_draw = scene_ring_rect_draw;
+        ring_ops.ring_strip_draw = scene_ring_strip_draw;
+        for (slot_index = 0; slot_index < 20; ++slot_index) {
+            void* registered_entity = NULL;
+            EntitySlot* entity;
+            float gx, gy;
+            int cell_x, cell_y;
+            float ground;
+            SceneVec3 marker;
+            ScenePoint projected;
+            ai_object_registry_slot_peek(0, slot_index, &registered_entity,
+                                         NULL);
+            entity = (EntitySlot*)registered_entity;
+            if (entity == NULL) continue;
+            if (current_engine_mode_is_zero() ||
+                (entity->type == ENTITY_TYPE_MINIFIG &&
+                 global_task_refresh_flag_get() != 0u) ||
+                (entity->flags_3e0 & 0x00600000u) != 0u) continue;
+            gx = entity->x;
+            gy = entity->y;
+            cell_x = (int)gx;
+            cell_y = (int)gy;
+            if (cell_x < 0 || cell_y < 0 || cell_x >= gw || cell_y >= gh)
+                continue;
+            ground = -terrain_surface_height_get(lvl->ptr_terrain,
+                                                  cell_x, cell_y) * hs;
+            marker.x = (gx - (float)gw * 0.5f) * block;
+            marker.y = ground + block * 0.8f;
+            marker.z = (gy - (float)gh * 0.5f) * block;
+            if (!scene_project(&camera, marker, &projected)) continue;
+            legacy_entity_screen_ring_render_with_ops(
+                entity, projected.x, projected.y, &ring_ops);
         }
     }
 }
@@ -526,3 +1079,231 @@ EntitySlot* level_scene_pick_entity(GameContext* ctx, const LevelState* lvl,
     }
     return picked;
 }
+
+// FUNCTION: LEGORR 0x00433770
+int scene_lights_build_from_config(const SceneLightBuildOps* ops)
+{
+    SceneLightDefinition definition;
+    void* top_spot;
+    void* track_spot;
+    void* ambient;
+    void* first_person;
+    void* rotated_first_person = NULL;
+    void* red_auxiliary;
+    void* root;
+    void* default_owner;
+    void* default_light;
+    float pose[6];
+    float position[3];
+    float rgb[3];
+    float scale[3];
+
+    if (ops == NULL || ops->rgb_read == NULL || ops->owner_get == NULL ||
+        ops->light_create == NULL || ops->light_parameter_set == NULL ||
+        ops->light_position_set == NULL || ops->light_pose_set == NULL ||
+        ops->light_enable == NULL || ops->scene_root_get == NULL ||
+        ops->scene_object_allocate == NULL ||
+        ops->scene_object_transform_init == NULL) {
+        return 0;
+    }
+
+    /* TopSpotRGB: config lookup and light creation are required. */
+    definition.config_name = "topspotrgb";
+    definition.owner_slot = SCENE_LIGHT_OWNER_TOP_SPOT;
+    definition.owner = ops->owner_get(definition.owner_slot, ops->user);
+    definition.light_kind = 2;
+    if (!ops->rgb_read(definition.config_name, definition.rgb, ops->user))
+        return 0;
+    top_spot = ops->light_create(&definition, ops->user);
+    if (top_spot == NULL) return 0;
+    (void)ops->light_parameter_set(top_spot, 0x40u, 0.85f, ops->user);
+    (void)ops->light_parameter_set(top_spot, 0x3cu, 0.4f, ops->user);
+    position[0] = 200.0f; position[1] = 140.0f; position[2] = -130.0f;
+    (void)ops->light_position_set(top_spot, definition.owner, position,
+                                  ops->user);
+    pose[0] = -1.0f; pose[1] = -0.8f; pose[2] = 0.75f;
+    pose[3] = 0.0f; pose[4] = 1.0f; pose[5] = 0.0f;
+    (void)ops->light_pose_set(top_spot, definition.owner, pose, ops->user);
+
+    /* TrackSpotRGB: required config/light, then position and pose. */
+    definition.config_name = "trackspotrgb";
+    definition.owner_slot = SCENE_LIGHT_OWNER_TRACK_SPOT;
+    definition.owner = ops->owner_get(definition.owner_slot, ops->user);
+    definition.light_kind = 2;
+    if (!ops->rgb_read(definition.config_name, definition.rgb, ops->user))
+        return 0;
+    track_spot = ops->light_create(&definition, ops->user);
+    if (track_spot == NULL) return 0;
+    position[0] = 0.0f; position[1] = 0.0f; position[2] = -150.0f;
+    (void)ops->light_position_set(track_spot, NULL, position, ops->user);
+    pose[0] = 0.0f; pose[1] = 0.0f; pose[2] = 1.0f;
+    pose[3] = 0.0f; pose[4] = 1.0f; pose[5] = 0.0f;
+    (void)ops->light_pose_set(track_spot, NULL, pose, ops->user);
+
+    /* AmbientRGB and FPLightRGB are required, with no post-create setters. */
+    definition.config_name = "ambientrgb";
+    definition.owner_slot = SCENE_LIGHT_OWNER_AMBIENT;
+    definition.owner = ops->owner_get(definition.owner_slot, ops->user);
+    definition.light_kind = 0;
+    if (!ops->rgb_read(definition.config_name, definition.rgb, ops->user))
+        return 0;
+    ambient = ops->light_create(&definition, ops->user);
+    if (ambient == NULL) return 0;
+
+    definition.config_name = "fplightrgb";
+    definition.owner_slot = SCENE_LIGHT_OWNER_FIRST_PERSON;
+    definition.owner = ops->owner_get(definition.owner_slot, ops->user);
+    definition.light_kind = 1;
+    if (!ops->rgb_read(definition.config_name, definition.rgb, ops->user))
+        return 0;
+    first_person = ops->light_create(&definition, ops->user);
+    if (first_person == NULL) return 0;
+
+    /* FPRotLightRGB is the only optional config light. */
+    definition.config_name = "fprotlightrgb";
+    definition.light_kind = 3;
+    if (ops->rgb_read(definition.config_name, definition.rgb, ops->user))
+        rotated_first_person = ops->light_create(&definition, ops->user);
+
+    /* The auxiliary red type-3 light is attempted regardless of the
+     * optional rotated light and is not a required-success gate in retail. */
+    definition.config_name = NULL;
+    definition.rgb[0] = 1.0f;
+    definition.rgb[1] = 0.0f;
+    definition.rgb[2] = 0.0f;
+    red_auxiliary = ops->light_create(&definition, ops->user);
+
+    /* Retail creates a scene object under the current root, then places a
+     * default white type-2 light on that new object. */
+    root = ops->scene_root_get(ops->user);
+    default_owner = ops->scene_object_allocate(root, ops->user);
+    definition.config_name = NULL;
+    definition.owner_slot = SCENE_LIGHT_OWNER_DEFAULT_ROOT;
+    definition.owner = default_owner;
+    definition.light_kind = 2;
+    definition.rgb[0] = 1.0f;
+    definition.rgb[1] = 1.0f;
+    definition.rgb[2] = 1.0f;
+    default_light = ops->light_create(&definition, ops->user);
+    if (default_light == NULL) return 0;
+    scale[0] = 0.8f; scale[1] = 0.8f; scale[2] = 0.8f;
+    (void)ops->scene_object_transform_init(default_light, root, scale,
+                                           ops->user);
+    pose[0] = 0.0f; pose[1] = 0.0f; pose[2] = 1.0f;
+    pose[3] = 0.0f; pose[4] = 1.0f; pose[5] = 0.0f;
+    (void)ops->light_pose_set(default_light, NULL, pose, ops->user);
+    (void)ops->light_parameter_set(default_light, 0x40u, 0.85f, ops->user);
+    (void)ops->light_parameter_set(default_light, 0x3cu, 0.0f, ops->user);
+
+    /* Retail enables in this order, then assigns the three far ranges. */
+    (void)ops->light_enable(first_person, 1, ops->user);
+    if (rotated_first_person != NULL)
+        (void)ops->light_enable(rotated_first_person, 1, ops->user);
+    (void)ops->light_enable(top_spot, 1, ops->user);
+    (void)ops->light_enable(track_spot, 1, ops->user);
+    (void)ops->light_enable(ambient, 1, ops->user);
+    (void)ops->light_enable(default_light, 1, ops->user);
+    (void)ops->light_enable(red_auxiliary, 1, ops->user);
+    (void)ops->light_parameter_set(top_spot, 0x38u, 2000.0f, ops->user);
+    (void)ops->light_parameter_set(track_spot, 0x38u, 2000.0f, ops->user);
+    (void)ops->light_parameter_set(default_light, 0x38u, 2000.0f, ops->user);
+    return 1;
+}
+
+namespace unported_ledger_stubs {
+
+static void scene_quad_grid_vertices_build(uint32_t quad,
+                                           float vertices[4][9])
+{
+    static const float position_components[4][2] = {
+        { 0.0f, 0.0f }, { 1.0f, 0.0f },
+        { 1.0f, 1.0f }, { 0.0f, 1.0f }
+    };
+    static const float face_normals[5][3] = {
+        { 0.0f, 0.0f, -1.0f },
+        { 0.0f, 1.0f, 0.0f },
+        { 1.0f, 0.0f, 0.0f },
+        { 0.0f, -1.0f, 0.0f },
+        { -1.0f, 0.0f, 0.0f }
+    };
+    uint32_t vertex;
+    uint32_t color_word = 0xffffffffu;
+
+    /* The output record is three indeterminate words, normal xyz, the two
+     * unit-square components in y,x order, then the opaque word. Clear only
+     * the three untouched words on the portable path. */
+    memset(vertices, 0, 4u * 9u * sizeof(float));
+    for (vertex = 0u; vertex < 4u; ++vertex) {
+        vertices[vertex][3] = face_normals[quad][0];
+        vertices[vertex][4] = face_normals[quad][1];
+        vertices[vertex][5] = face_normals[quad][2];
+        vertices[vertex][6] = position_components[vertex][0];
+        vertices[vertex][7] = position_components[vertex][1];
+        memcpy(&vertices[vertex][8], &color_word, sizeof(color_word));
+    }
+}
+
+// SceneQuadGridEmit
+// FUNCTION: LEGORR 0x00463f00
+SceneQuadGridRecord* scene_quad_grid_emit(
+    void* scene, uint32_t parameter, const SceneQuadGridEmitHooks* hooks)
+{
+    static const uint32_t base_indices[6] = { 0u, 1u, 3u, 1u, 2u, 3u };
+    uint32_t indices[30];
+    uint16_t index_words[60];
+    SceneQuadGridRecord* record;
+    uint32_t face;
+    if (hooks == NULL || hooks->mesh_create == NULL ||
+        hooks->face_vertices_emit == NULL ||
+        hooks->face_texture_bind_by_mode == NULL)
+        return NULL;
+    record = (SceneQuadGridRecord*)engine_heap_alloc(
+        (long)sizeof(*record));
+    if (record == NULL) return NULL;
+    record->mesh = NULL;
+    record->parameter = parameter;
+    record->mesh = hooks->mesh_create(hooks->context, scene, 3);
+    if (record->mesh == NULL) {
+        engine_heap_free(record);
+        return NULL;
+    }
+    for (face = 0; face < 5u; ++face) {
+        uint32_t i;
+        for (i = 0; i < 6u; ++i)
+            indices[face * 6u + i] = base_indices[i] + face * 4u;
+    }
+    for (face = 0; face < 10u; ++face) {
+        uint32_t quad;
+        uint32_t index;
+        /* FUN_00463f00 appends a 20-vertex record for each face group before
+         * filling that group's five quads. The retail index pointer is a
+         * dword table; the in-memory pool adapter consumes the low word of
+         * each dword through its two-word source stride. */
+        for (index = 0u; index < 30u; ++index) {
+            index_words[index * 2u] = (uint16_t)indices[index];
+            index_words[index * 2u + 1u] = 0u;
+        }
+        (void)mesh_record_allocate_or_append(record->mesh, 20u, 10u, 3u,
+                                             index_words);
+        for (quad = 0; quad < 5u; ++quad) {
+            float vertices[4][9];
+            scene_quad_grid_vertices_build(quad, vertices);
+            (void)hooks->face_vertices_emit(hooks->context, record->mesh,
+                                            face, quad, vertices);
+        }
+        hooks->face_texture_bind_by_mode(hooks->context, record->mesh,
+                                         face, 3u);
+    }
+    scene_render_lock_toggle(record->mesh, 1);
+    return record;
+}
+
+SceneQuadGridRecord* ledger_stub_00463f00_SceneQuadGridEmit(
+    void* scene, unsigned int parameter, const SceneQuadGridEmitHooks* hooks)
+{
+    return unported_ledger_stubs::scene_quad_grid_emit(scene, parameter,
+                                                        hooks);
+}
+
+
+} // namespace unported_ledger_stubs

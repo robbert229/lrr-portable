@@ -7,6 +7,7 @@
 
 static DirectInputHooks s_direct_input_hooks;
 static InputState s_direct_input_state;
+static InputState* s_active_input_state;
 static int s_direct_input_initialized;
 static int s_direct_input_keyboard_acquired;
 
@@ -17,25 +18,35 @@ void input_direct_hooks_set(const DirectInputHooks* hooks)
     else s_direct_input_hooks = *hooks;
 }
 
+// FUNCTION: LEGORR 0x0047ed90
 int input_direct_initialize(void)
 {
     input_reset(&s_direct_input_state);
     s_direct_input_initialized = 0;
     s_direct_input_keyboard_acquired = 0;
-    if (s_direct_input_hooks.interface_create != NULL &&
-        !s_direct_input_hooks.interface_create(s_direct_input_hooks.context))
+    /* Retail only reports success after DirectInputCreate, keyboard-device
+     * creation, data-format/cooperative configuration, and Acquire succeed.
+     * Missing adapters cannot stand in for those operations. */
+    if (s_direct_input_hooks.interface_create == NULL ||
+        s_direct_input_hooks.keyboard_create == NULL ||
+        s_direct_input_hooks.devices_configure == NULL ||
+        s_direct_input_hooks.devices_acquire == NULL ||
+        s_direct_input_hooks.devices_release == NULL) {
+        input_reset(&s_direct_input_state);
         return 0;
-    if (s_direct_input_hooks.keyboard_create != NULL &&
-        !s_direct_input_hooks.keyboard_create(s_direct_input_hooks.context))
+    }
+    if (!s_direct_input_hooks.interface_create(s_direct_input_hooks.context)) {
+        input_reset(&s_direct_input_state);
+        return 0;
+    }
+    if (!s_direct_input_hooks.keyboard_create(s_direct_input_hooks.context))
         goto failed;
     if (s_direct_input_hooks.mouse_create != NULL &&
         !s_direct_input_hooks.mouse_create(s_direct_input_hooks.context))
         goto failed;
-    if (s_direct_input_hooks.devices_configure != NULL &&
-        !s_direct_input_hooks.devices_configure(s_direct_input_hooks.context))
+    if (!s_direct_input_hooks.devices_configure(s_direct_input_hooks.context))
         goto failed;
-    if (s_direct_input_hooks.devices_acquire != NULL &&
-        !s_direct_input_hooks.devices_acquire(s_direct_input_hooks.context))
+    if (!s_direct_input_hooks.devices_acquire(s_direct_input_hooks.context))
         goto failed;
     s_direct_input_initialized = 1;
     s_direct_input_keyboard_acquired = 1;
@@ -48,6 +59,7 @@ failed:
     return 0;
 }
 
+// FUNCTION: LEGORR 0x0047efd0
 void input_direct_shutdown(void)
 {
     if (s_direct_input_initialized &&
@@ -55,26 +67,77 @@ void input_direct_shutdown(void)
         s_direct_input_hooks.devices_release(s_direct_input_hooks.context);
     s_direct_input_initialized = 0;
     s_direct_input_keyboard_acquired = 0;
-    input_reset(&s_direct_input_state);
 }
 
 InputState* input_direct_state_get(void)
 {
-    return &s_direct_input_state;
+    return s_active_input_state != NULL ? s_active_input_state
+                                       : &s_direct_input_state;
+}
+
+void input_direct_state_bind(InputState* state)
+{
+    s_active_input_state = state;
 }
 #include <ctype.h>
 
 static uint8_t s_global_current_keys[INPUT_KEY_COUNT];
+// GLOBAL: LEGORR 0x0076AB24
 static int s_cursor_client_x;
+// GLOBAL: LEGORR 0x0076AB28
 static int s_cursor_client_y;
+// GLOBAL: LEGORR 0x0076AB34
 static int s_cursor_delta_x;
+// GLOBAL: LEGORR 0x0076AB38
 static int s_cursor_delta_y;
 static InputClientToScreenHook s_input_client_to_screen_hook;
 static InputSetCursorPositionHook s_input_set_cursor_position_hook;
 static void* s_input_cursor_hook_context;
 
+/* DAT_004a1f60 is a file-backed 256-entry scan-code-to-character table.
+ * These bytes were read from reference/LegoRR.exe at file offset 0xa0d60;
+ * the table has no runtime writer in the observed input paths. */
+// GLOBAL: LEGORR 0x004A1F60
+static const uint32_t s_key_context_table[INPUT_KEY_COUNT] = {
+    0x00u, 0x00u, 0x31u, 0x32u, 0x33u, 0x34u, 0x35u, 0x36u,
+    0x37u, 0x38u, 0x39u, 0x30u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x71u, 0x77u, 0x65u, 0x72u, 0x74u, 0x79u, 0x75u, 0x69u,
+    0x6fu, 0x70u, 0x00u, 0x00u, 0x00u, 0x00u, 0x61u, 0x73u,
+    0x64u, 0x66u, 0x67u, 0x68u, 0x6au, 0x6bu, 0x6cu, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x7au, 0x78u, 0x63u, 0x76u,
+    0x62u, 0x6eu, 0x6du, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x20u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x37u,
+    0x38u, 0x39u, 0x00u, 0x34u, 0x35u, 0x36u, 0x00u, 0x31u,
+    0x32u, 0x33u, 0x30u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u
+};
+
 static void input_global_current_keys_copy(const InputState* state)
 {
+    /* DirectInput polling supplies a full snapshot. Platform event capture
+     * updates this table per key instead, so frame-edge clearing does not
+     * make a still-held key appear released. */
     if (state != NULL) {
         memcpy(s_global_current_keys, state->cur, sizeof(s_global_current_keys));
     }
@@ -90,27 +153,16 @@ void input_key_mapping_add_bidirectional(InputKeyMappingTable* table,
                                          uint8_t key_a, uint8_t key_b)
 {
     uint32_t i;
-    int found = 0;
     if (table == NULL) return;
     for (i = 0; i < table->count[key_a]; ++i) {
         if (table->values[key_a][i] == key_b) {
-            found = 1;
-            break;
+            return;
         }
     }
-    if (!found && table->count[key_a] < INPUT_KEY_MAPPING_CAPACITY) {
-        table->values[key_a][table->count[key_a]++] = key_b;
-    }
-    found = 0;
-    for (i = 0; i < table->count[key_b]; ++i) {
-        if (table->values[key_b][i] == key_a) {
-            found = 1;
-            break;
-        }
-    }
-    if (!found && table->count[key_b] < INPUT_KEY_MAPPING_CAPACITY) {
-        table->values[key_b][table->count[key_b]++] = key_a;
-    }
+    table->values[key_a][table->count[key_a]] = key_b;
+    ++table->count[key_a];
+    table->values[key_b][table->count[key_b]] = key_a;
+    ++table->count[key_b];
 }
 
 void input_reset(InputState* s)
@@ -163,9 +215,8 @@ int input_action_state_toggle(InputActionToggleState* state,
     return 1;
 }
 
-/* InputStatePoll (FUN_0047eef0). `poll_active` supplies the original mode
- * gate; DirectInput operations remain platform hooks. */
-// FUNCTION: LEGORR 0x0047eef0
+/* Port adapter for InputStatePoll (FUN_0047eef0). The portable caller supplies
+ * its active state and snapshot; retail reads those through global owners. */
 void input_state_poll(InputState* s, int poll_active)
 {
     int i;
@@ -213,7 +264,6 @@ void input_begin_frame(InputState* s)
         s->cur[i] = 0;
     }
     s->mouse_press = 0;
-    input_global_current_keys_copy(s);
 }
 
 void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
@@ -227,11 +277,13 @@ void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
         case PLATFORM_EVENT_KEYDOWN:
             if (e->code >= 0 && e->code < INPUT_KEY_COUNT) {
                 s->cur[e->code] = 1;
+                s_global_current_keys[e->code] = 1;
             }
             break;
         case PLATFORM_EVENT_KEYUP:
             if (e->code >= 0 && e->code < INPUT_KEY_COUNT) {
                 s->cur[e->code] = 0;
+                s_global_current_keys[e->code] = 0;
             }
             break;
         case PLATFORM_EVENT_MOUSE:
@@ -246,7 +298,6 @@ void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
             break;
         }
     }
-    input_global_current_keys_copy(s);
 }
 
 void input_mirror(InputState* s)
@@ -268,7 +319,6 @@ void input_mirror_and_clear(InputState* s)
         s->mirror[i] = s->cur[i];
         s->cur[i] = 0;
     }
-    input_global_current_keys_copy(s);
 }
 
 int input_key_down(const InputState* s, int key)
@@ -276,9 +326,15 @@ int input_key_down(const InputState* s, int key)
     return (key >= 0 && key < INPUT_KEY_COUNT) ? s->cur[key] != 0 : 0;
 }
 
+int input_keyboard_key_held(int key)
+{
+    return key >= 0 && key < INPUT_KEY_COUNT
+        ? s_global_current_keys[key] != 0u : 0;
+}
+
 /* KeyboardDownKeyCount (FUN_0047efb0): count nonzero entries in the
- * module's current 256-byte key snapshot. The engine has one active input
- * table; capture/frame/reset keep this portable snapshot in sync with it. */
+ * module's current 256-byte key snapshot. DirectInput writes a full sample;
+ * the event backend maintains held state until it receives key-up. */
 // FUNCTION: LEGORR 0x0047EFB0
 int input_keyboard_down_key_count(void)
 {
@@ -299,6 +355,53 @@ void input_cursor_position_hooks_install(InputClientToScreenHook convert,
     s_input_client_to_screen_hook = convert;
     s_input_set_cursor_position_hook = set_cursor;
     s_input_cursor_hook_context = context;
+}
+
+/* CursorPositionUpdate (FUN_0047f010): sample the active cursor, clamp it to
+ * the configured client dimensions, then publish the client pair and
+ * per-sample movement delta. The Win32 build keeps the retail API call order;
+ * the native build reads SDL's client-relative mouse coordinates. */
+// FUNCTION: LEGORR 0x0047F010
+void input_cursor_position_update(void)
+{
+    int x;
+    int y;
+    int width;
+    int height;
+#if defined(LEGORRR_BACKEND_WINAPI)
+    HWND hwnd = (HWND)g_platform_cursor_window_handle;
+    RECT client_rect;
+    POINT client_origin;
+    POINT cursor;
+    if (!GetClientRect(hwnd, &client_rect)) return;
+    client_origin.x = 0;
+    client_origin.y = 0;
+    cursor.x = 0;
+    cursor.y = 0;
+    ClientToScreen(hwnd, &client_origin);
+    GetCursorPos(&cursor);
+    x = cursor.x - client_origin.x;
+    y = cursor.y - client_origin.y;
+#else
+    if (!platform_cursor_position_get(&x, &y)) return;
+#endif
+    width = g_platform_cursor_width;
+    height = g_platform_cursor_height;
+    if (x >= width) x = width - 1;
+    if (y >= height) y = height - 1;
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    s_cursor_delta_x = x - s_cursor_client_x;
+    s_cursor_delta_y = y - s_cursor_client_y;
+    s_cursor_client_x = x;
+    s_cursor_client_y = y;
+}
+
+void input_cursor_position_sync(InputState* state)
+{
+    if (state == NULL) return;
+    state->mouse_x = s_cursor_client_x;
+    state->mouse_y = s_cursor_client_y;
 }
 
 /* CursorSetClientPosition (FUN_0047f0d0): update the client-relative mouse
@@ -323,6 +426,9 @@ void input_cursor_client_position_set(int x, int y)
     if (s_input_set_cursor_position_hook != NULL) {
         s_input_set_cursor_position_hook(screen_x, screen_y,
                                          s_input_cursor_hook_context);
+    }
+    else {
+        platform_cursor_position_set(x, y);
     }
 }
 
@@ -378,13 +484,21 @@ uint32_t input_key_to_ascii(const InputState* s, uint32_t scancode)
     return scancode;
 }
 
-// FUNCTION: LEGORR 0x00411f00
 uint32_t input_key_context(const InputState* s, uint32_t key)
 {
     if (s == NULL || key >= INPUT_KEY_COUNT) {
         return 0;
     }
     return s->context_filter[key];
+}
+
+/* KeyContextCheck (FUN_00411f00) returns the character mapped to a DirectInput
+ * scan-code index. The retail caller supplies an index in the 256-byte
+ * keyboard state domain, and the original performs no range check. */
+// FUNCTION: LEGORR 0x00411F00
+uint32_t input_key_context_check(int key)
+{
+    return s_key_context_table[key];
 }
 
 void input_text_pump(InputState* s, char* buf, int cap, int* len_out, int clear)
@@ -413,16 +527,15 @@ void input_text_pump(InputState* s, char* buf, int cap, int* len_out, int clear)
     }
 }
 
-/* QuitPoll machine — corpus FUN_004589c0. Modeled on finding 05 (dwell
- * counters) corrected by finding 22 (the word the original indexes off,
- * _DAT_004ffbc0, is the objective/advisor flag word, not an input device):
+/* Port-local dwell utility. It is not the retail FUN_004589c0 routine, which
+ * consumes global UI/cursor state and dispatches several unrelated paths.
+ * This helper uses the finding 05 dwell-counter approximation:
  *   dwelled in the corner rectangle -> enter[slot]++
  *   left                               -> leave[slot]++
  *   gesture completes when the mouse is past the quit rectangle after a
  *   dwell; the corpus's quit path then probes KeepRunning and only quits
  *   when that probe agrees (quitFlag = KeepRunning()==0).
  */
-// FUNCTION: LEGORR 0x004589c0
 int input_quit_dwell(InputState* s, int slot, int mx, int my,
                      int rect_x, int rect_y, int rect_w, int rect_h,
                      int quit_w, int quit_h, int keep_running)
@@ -452,18 +565,77 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
 /* --- input-entry / player-input flag-8 leaves (see input.hpp) --------------
  * Zero-initialized module statics with the documented window; the corpus
  * indexes through (possibly heap) pointers blindly. */
-#define INPUT_FLAG_TABLE_SLOTS 256
+#define INPUT_FLAG_TABLE_SLOTS 74
 
+// GLOBAL: LEGORR 0x004dd60c
 static uint32_t s_input_entry_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind1_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind4_flags[INPUT_FLAG_TABLE_SLOTS];
+static uint32_t* player_flags_table(int kind);
+static InputActionStateQueryFn s_input_action_state_query;
+static void* s_input_action_state_query_context;
+
+uint32_t input_action_state_word_get(int action)
+{
+    if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) return 0u;
+    return s_input_entry_flags[action];
+}
+
+void input_action_state_word_set(int action, uint32_t flags)
+{
+    if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) return;
+    s_input_entry_flags[action] = flags;
+}
+
+uint32_t input_binding_state_word_get(int kind, int entry)
+{
+    uint32_t* table = player_flags_table(kind);
+    if (table == NULL || entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS)
+        return 0u;
+    return table[entry];
+}
+
+void input_binding_state_word_set(int kind, int entry, uint32_t flags)
+{
+    uint32_t* table = player_flags_table(kind);
+    if (table == NULL || entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS)
+        return;
+    table[entry] = flags;
+}
+
+void input_action_state_query_set(InputActionStateQueryFn query,
+                                  void* context)
+{
+    s_input_action_state_query = query;
+    s_input_action_state_query_context = context;
+}
+
+// FUNCTION: LEGORR 0x0041c7b0
+/* InputActionStateUpdate: while mode bit 7 is set and the action entry lacks
+ * bit 1, ask the action helper. The helper may mutate the same word, so the
+ * word is deliberately re-read before clearing bit 0. */
+void input_action_state_update(int action)
+{
+    uint32_t flags = input_action_state_word_get(action);
+    if ((flags & 2u) == 0u &&
+        (global_state_low_word_get() & 0x80u) != 0u) {
+        int handled = 0;
+        if (s_input_action_state_query != NULL) {
+            handled = s_input_action_state_query(
+                s_input_action_state_query_context, action);
+        }
+        flags = input_action_state_word_get(action);
+        if (handled != 0) {
+            input_action_state_word_set(action, flags & ~1u);
+            return;
+        }
+    }
+    input_action_state_word_set(action, flags | 1u);
+}
 
 // FUNCTION: LEGORR 0x0041c9f0
 void input_entry_flag8_set_clear(int entry, int set)
 {
-    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
-        return; /* deviation: the corpus indexes blindly */
-    }
     if (set != 0) {
         s_input_entry_flags[entry] = s_input_entry_flags[entry] | 8u;
     } else {
@@ -474,9 +646,6 @@ void input_entry_flag8_set_clear(int entry, int set)
 // FUNCTION: LEGORR 0x0041ca60
 uint32_t input_entry_flag8_get(int entry)
 {
-    if (entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS) {
-        return 0u;
-    }
     return s_input_entry_flags[entry] & 8u;
 }
 
@@ -524,7 +693,6 @@ uint32_t player_input_flag8_get(int kind, int action)
  * RuntimeFlag40000000Get port masks); alt == the corpus's param_2, and the
  * inverted reading is taken only when the system-state word agrees. The
  * table behind s_input_entry_flags is the corpus's DAT_004dd60c dwords. */
-// FUNCTION: LEGORR 0x0041c8f0
 int input_action_pressed_get(const EngineContext* ctx, int action, int alt)
 {
     if (action == 0x49) {
@@ -548,7 +716,6 @@ int input_action_pressed_get(const EngineContext* ctx, int action, int alt)
  * inverted-reading shape, with the kind 1 / kind 4 flag tables (the
  * corpus's DAT_004dd9a4 / DAT_004dd9a8 dwords) selected through
  * player_flags_table; any other kind falls through to not-pressed. */
-// FUNCTION: LEGORR 0x0041c950
 int input_binding_pressed_get(const EngineContext* ctx, int kind, int entry,
                               int alt)
 {
@@ -636,3 +803,21 @@ uint32_t input_indexed_window_peek(int which, int index)
     }
     return 0u;
 }
+
+namespace unported_ledger_stubs {
+
+static InputActionToggleState s_input_action_toggle_state;
+
+// FUNCTION: LEGORR 0x00483810
+int ledger_stub_00483810_InputActionStateToggle(unsigned int action,
+                                                 const void* data)
+{
+    return input_action_state_toggle(&s_input_action_toggle_state, NULL,
+                                     action, data);
+}
+
+
+
+
+
+} // namespace unported_ledger_stubs

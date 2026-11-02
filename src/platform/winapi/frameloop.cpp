@@ -5,8 +5,11 @@
 #include "platform/platform.h"
 #include "gods98/frameloop.hpp"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <mmsystem.h>
 
 struct PlatformWindow {
     HWND hwnd;
@@ -16,12 +19,10 @@ struct PlatformWindow {
 
 static const char s_platform_window_class[] = "LegoRRPortableWindow";
 static PlatformWindow* s_active_window;
-
-namespace unported_ledger_stubs {
-ptrdiff_t ledger_stub_004784c0_GameWindowProcedure(
-    void* window, uint32_t message, size_t wparam, ptrdiff_t lparam);
-int ledger_stub_00478010_WindowMessageDispatchFilter(uint32_t message);
-}
+// GLOBAL: LEGORR 0x00505800
+void* g_platform_cursor_window_handle;
+int g_platform_cursor_width;
+int g_platform_cursor_height;
 
 static ptrdiff_t platform_default_window_proc(void* context, void* window,
     uint32_t message, size_t wparam, ptrdiff_t lparam)
@@ -76,14 +77,28 @@ static void platform_mouse_release(void* context)
 static LRESULT CALLBACK platform_window_proc(HWND hwnd, UINT message,
                                               WPARAM wparam, LPARAM lparam)
 {
+    ptrdiff_t result;
     if (s_active_window != NULL && s_active_window->hwnd == hwnd &&
         message == WM_SIZE) {
         s_active_window->width = (int)(lparam & 0xffff);
         s_active_window->height = (int)((lparam >> 16) & 0xffff);
+        g_platform_cursor_width = s_active_window->width;
+        g_platform_cursor_height = s_active_window->height;
     }
-    return (LRESULT)unported_ledger_stubs::ledger_stub_004784c0_GameWindowProcedure(
-        (void*)hwnd, (uint32_t)message, (size_t)wparam,
-        (ptrdiff_t)lparam);
+    /* Retail's registered LAB_00478880 trampoline selects the handler from
+     * DAT_00505f84 bit 1: fullscreen uses GameWindowProcedure; windowed mode
+     * uses MainWindowActivationAndCloseHandler (which captures the mouse). */
+    if ((window_runtime_flags_get() & 2u) != 0u) {
+        result = window_runtime_game_window_proc(
+            (void*)hwnd, (uint32_t)message, (size_t)wparam,
+            (ptrdiff_t)lparam);
+    }
+    else {
+        result = window_runtime_activation_close_proc(
+            (void*)hwnd, (uint32_t)message, (size_t)wparam,
+            (ptrdiff_t)lparam);
+    }
+    return (LRESULT)result;
 }
 
 static PlatformRenderSurfaceOps s_platform_render_surface_ops;
@@ -135,7 +150,10 @@ PlatformWindow* platform_create_window(const char* title, int width, int height)
     win->width = width > 0 ? width : 640;
     win->height = height > 0 ? height : 480;
     s_active_window = win;
-    window_runtime_window_handle_set((void*)hwnd);
+    g_platform_cursor_window_handle = (void*)hwnd;
+    g_platform_cursor_width = win->width;
+    g_platform_cursor_height = win->height;
+    window_runtime_state_initialize((void*)hwnd);
     SetFocus(hwnd);
     return win;
 }
@@ -146,7 +164,10 @@ void platform_destroy_window(PlatformWindow* win)
     if (win->hwnd != NULL) DestroyWindow(win->hwnd);
     if (s_active_window == win) {
         s_active_window = NULL;
-        window_runtime_window_handle_set(NULL);
+        g_platform_cursor_window_handle = NULL;
+        g_platform_cursor_width = 0;
+        g_platform_cursor_height = 0;
+        window_runtime_state_initialize(NULL);
     }
     free(win);
 }
@@ -172,6 +193,38 @@ int platform_window_height(PlatformWindow* win)
     return win != NULL ? win->height : 0;
 }
 
+int platform_cursor_position_get(int* x, int* y)
+{
+    RECT client_rect;
+    POINT client_origin;
+    POINT cursor;
+    HWND hwnd = (HWND)g_platform_cursor_window_handle;
+    if (hwnd == NULL || x == NULL || y == NULL ||
+        !GetClientRect(hwnd, &client_rect)) {
+        return 0;
+    }
+    client_origin.x = 0;
+    client_origin.y = 0;
+    cursor.x = 0;
+    cursor.y = 0;
+    ClientToScreen(hwnd, &client_origin);
+    GetCursorPos(&cursor);
+    *x = cursor.x - client_origin.x;
+    *y = cursor.y - client_origin.y;
+    return 1;
+}
+
+void platform_cursor_position_set(int x, int y)
+{
+    HWND hwnd = (HWND)g_platform_cursor_window_handle;
+    POINT point;
+    if (hwnd == NULL) return;
+    point.x = 0;
+    point.y = 0;
+    if (!ClientToScreen(hwnd, &point)) return;
+    SetCursorPos(point.x + x, point.y + y);
+}
+
 int platform_poll_events(PlatformWindow* win)
 {
     PlatformEvent events[32];
@@ -193,8 +246,7 @@ int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
     if (win == NULL || out == NULL || cap <= 0) return 0;
     while (count < cap && PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
         PlatformEvent* event = &out[count];
-        int accepted = unported_ledger_stubs::ledger_stub_00478010_WindowMessageDispatchFilter(
-            (uint32_t)message.message);
+        int accepted = window_runtime_message_dispatch_filter(&message);
         if (message.message == WM_QUIT) {
             event->kind = PLATFORM_EVENT_QUIT;
             event->code = event->mx = event->my = 0;
@@ -276,61 +328,577 @@ void platform_screenshot(PlatformWindow* win, const void* pixels, int pitch,
     (void)frame;
 }
 
+typedef struct PlatformAudioSubmission {
+    HWAVEOUT output;
+    WAVEHDR header;
+    DWORD bytes;
+    DWORD sample_rate;
+    WORD channels;
+    int is_loop;
+    uintptr_t voice;
+    struct PlatformAudioSubmission* next;
+} PlatformAudioSubmission;
+
+struct PlatformAudio {
+    PlatformAudioSubmission* submissions;
+    PlatformAudioSubmission* loop;
+    float gain;
+};
+
+static DWORD platform_audio_volume(float gain)
+{
+    DWORD channel = (DWORD)(gain * 65535.0f);
+    return channel | (channel << 16);
+}
+
+static void platform_audio_submission_destroy(PlatformAudioSubmission* item,
+                                              int reset)
+{
+    if (item == NULL) return;
+    if (item->output != NULL) {
+        if (reset) waveOutReset(item->output);
+        waveOutUnprepareHeader(item->output, &item->header,
+                               sizeof(item->header));
+        waveOutClose(item->output);
+    }
+    free(item->header.lpData);
+    free(item);
+}
+
+static void platform_audio_reap(PlatformAudio* a)
+{
+    PlatformAudioSubmission** link;
+    if (a == NULL) return;
+    link = &a->submissions;
+    while (*link != NULL) {
+        PlatformAudioSubmission* item = *link;
+        if (!item->is_loop && (item->header.dwFlags & WHDR_DONE) != 0) {
+            *link = item->next;
+            platform_audio_submission_destroy(item, 0);
+        }
+        else {
+            link = &item->next;
+        }
+    }
+}
+
+static int platform_audio_submit(PlatformAudio* a, const int16_t* pcm,
+                                 int frames, int sample_rate, int channels,
+                                 int loop, uintptr_t voice)
+{
+    PlatformAudioSubmission* item;
+    WAVEFORMATEX format;
+    DWORD bytes;
+    MMRESULT result;
+
+    platform_audio_reap(a);
+    if (a == NULL || pcm == NULL || frames <= 0 || sample_rate <= 0 ||
+        (channels != 1 && channels != 2) ||
+        sample_rate > 0x3fffffff / (channels * 2) ||
+        frames > 0x3fffffff / (channels * 2)) return -1;
+    bytes = (DWORD)(frames * channels * 2);
+    item = (PlatformAudioSubmission*)calloc(1, sizeof(*item));
+    if (item == NULL) return -1;
+    item->header.lpData = (LPSTR)malloc(bytes);
+    if (item->header.lpData == NULL) {
+        free(item);
+        return -1;
+    }
+    memcpy(item->header.lpData, pcm, bytes);
+    item->bytes = bytes;
+    item->sample_rate = (DWORD)sample_rate;
+    item->channels = (WORD)channels;
+    item->is_loop = loop;
+    item->voice = voice;
+
+    memset(&format, 0, sizeof(format));
+    format.wFormatTag = WAVE_FORMAT_PCM;
+    format.nChannels = (WORD)channels;
+    format.nSamplesPerSec = (DWORD)sample_rate;
+    format.wBitsPerSample = 16;
+    format.nBlockAlign = (WORD)(channels * 2);
+    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+    result = waveOutOpen(&item->output, WAVE_MAPPER, &format, 0, 0,
+                         CALLBACK_NULL);
+    if (result != MMSYSERR_NOERROR) {
+        platform_audio_submission_destroy(item, 0);
+        return -1;
+    }
+    waveOutSetVolume(item->output, platform_audio_volume(a->gain));
+    item->header.dwBufferLength = bytes;
+    if (loop) {
+        item->header.dwFlags = WHDR_BEGINLOOP | WHDR_ENDLOOP;
+        item->header.dwLoops = 0xffffffffUL;
+    }
+    result = waveOutPrepareHeader(item->output, &item->header,
+                                  sizeof(item->header));
+    if (result != MMSYSERR_NOERROR) {
+        platform_audio_submission_destroy(item, 0);
+        return -1;
+    }
+    result = waveOutWrite(item->output, &item->header, sizeof(item->header));
+    if (result != MMSYSERR_NOERROR) {
+        platform_audio_submission_destroy(item, 1);
+        return -1;
+    }
+    item->next = a->submissions;
+    a->submissions = item;
+    if (loop) a->loop = item;
+    return 0;
+}
+
 PlatformAudio* platform_audio_open(void)
 {
-    return NULL;
+    PlatformAudio* a;
+    if (waveOutGetNumDevs() == 0) return NULL;
+    a = (PlatformAudio*)calloc(1, sizeof(*a));
+    if (a != NULL) a->gain = 1.0f;
+    return a;
 }
 
 void platform_audio_close(PlatformAudio* a)
 {
-    (void)a;
+    if (a == NULL) return;
+    platform_audio_stop(a);
+    free(a);
 }
 
 int platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
                         int sample_rate)
 {
-    (void)a; (void)pcm; (void)frames; (void)sample_rate;
-    return -1;
+    return platform_audio_submit(a, pcm, frames, sample_rate, 1, 0, 0u);
+}
+
+int platform_audio_play_voice(PlatformAudio* a, const int16_t* pcm,
+                              int frames, int sample_rate, uintptr_t voice)
+{
+    return platform_audio_submit(a, pcm, frames, sample_rate, 1, 0, voice);
+}
+
+void platform_audio_stop_voice(PlatformAudio* a, uintptr_t voice)
+{
+    PlatformAudioSubmission** link;
+    if (a == NULL || voice == 0u) return;
+    link = &a->submissions;
+    while (*link != NULL) {
+        PlatformAudioSubmission* item = *link;
+        if (!item->is_loop && item->voice == voice) {
+            *link = item->next;
+            if (a->loop == item) a->loop = NULL;
+            platform_audio_submission_destroy(item, 1);
+        }
+        else {
+            link = &item->next;
+        }
+    }
 }
 
 int platform_audio_play_stereo(PlatformAudio* a, const int16_t* lr,
                                int frames, int sample_rate)
 {
-    (void)a; (void)lr; (void)frames; (void)sample_rate;
-    return -1;
+    return platform_audio_submit(a, lr, frames, sample_rate, 2, 0, 0u);
 }
 
 int platform_audio_loop(PlatformAudio* a, const int16_t* lr,
                         int frames, int sample_rate)
 {
-    (void)a; (void)lr; (void)frames; (void)sample_rate;
-    return -1;
+    if (a == NULL) return -1;
+    if (a->loop != NULL) {
+        PlatformAudioSubmission** link = &a->submissions;
+        while (*link != NULL && *link != a->loop) link = &(*link)->next;
+        if (*link != NULL) {
+            PlatformAudioSubmission* old = *link;
+            *link = old->next;
+            a->loop = NULL;
+            platform_audio_submission_destroy(old, 1);
+        }
+    }
+    if (lr == NULL || frames <= 0 || sample_rate <= 0) return 0;
+    return platform_audio_submit(a, lr, frames, sample_rate, 2, 1, 0u);
 }
 
 void platform_audio_refill(PlatformAudio* a)
 {
-    (void)a;
+    platform_audio_reap(a);
 }
 
 int platform_audio_set_gain(PlatformAudio* a, float gain)
 {
-    (void)a; (void)gain;
-    return -1;
+    PlatformAudioSubmission* item;
+    int result = 0;
+    if (a == NULL) return -1;
+    if (gain < 0.0f) gain = 0.0f;
+    if (gain > 1.0f) gain = 1.0f;
+    a->gain = gain;
+    for (item = a->submissions; item != NULL; item = item->next) {
+        if (waveOutSetVolume(item->output, platform_audio_volume(gain)) !=
+            MMSYSERR_NOERROR) result = -1;
+    }
+    return result;
 }
 
 float platform_audio_get_gain(PlatformAudio* a)
 {
-    (void)a;
-    return 0.0f;
+    return a != NULL ? a->gain : 0.0f;
 }
 
 int platform_audio_queued(PlatformAudio* a)
 {
-    (void)a;
-    return 0;
+    PlatformAudioSubmission* item;
+    unsigned long total = 0;
+    if (a == NULL) return 0;
+    platform_audio_reap(a);
+    for (item = a->submissions; item != NULL; item = item->next) {
+        DWORD played = 0;
+        DWORD queued;
+        MMTIME position;
+        if (item->is_loop) {
+            queued = item->bytes;
+        }
+        else {
+            memset(&position, 0, sizeof(position));
+            position.wType = TIME_BYTES;
+            if (waveOutGetPosition(item->output, &position,
+                                   sizeof(position)) == MMSYSERR_NOERROR) {
+                if (position.wType == TIME_BYTES) played = position.u.cb;
+                else if (position.wType == TIME_MS) {
+                    played = (DWORD)((double)position.u.ms *
+                        (double)item->sample_rate * item->channels * 2.0 /
+                        1000.0);
+                }
+            }
+            if (played > item->bytes) played = item->bytes;
+            queued = item->bytes - played;
+        }
+        total += queued;
+        if (total > 0x7fffffffUL) return 0x7fffffff;
+    }
+    return (int)total;
+}
+
+int platform_audio_queued_milliseconds(PlatformAudio* a)
+{
+    PlatformAudioSubmission* item;
+    double total = 0.0;
+    if (a == NULL) return 0;
+    platform_audio_reap(a);
+    for (item = a->submissions; item != NULL; item = item->next) {
+        DWORD played = 0;
+        DWORD queued;
+        MMTIME position;
+        if (item->is_loop) {
+            queued = item->bytes;
+        }
+        else {
+            memset(&position, 0, sizeof(position));
+            position.wType = TIME_BYTES;
+            if (waveOutGetPosition(item->output, &position,
+                                   sizeof(position)) == MMSYSERR_NOERROR) {
+                if (position.wType == TIME_BYTES) played = position.u.cb;
+                else if (position.wType == TIME_MS) {
+                    played = (DWORD)((double)position.u.ms *
+                        (double)item->sample_rate * item->channels * 2.0 /
+                        1000.0);
+                }
+            }
+            if (played > item->bytes) played = item->bytes;
+            queued = item->bytes - played;
+        }
+        total += ((double)queued * 1000.0) /
+                 ((double)item->sample_rate * item->channels * 2.0);
+    }
+    if (total > 0x7fffffff) return 0x7fffffff;
+    return (int)total;
 }
 
 void platform_audio_stop(PlatformAudio* a)
 {
-    (void)a;
+    PlatformAudioSubmission* item;
+    if (a == NULL) return;
+    item = a->submissions;
+    a->submissions = NULL;
+    a->loop = NULL;
+    while (item != NULL) {
+        PlatformAudioSubmission* next = item->next;
+        platform_audio_submission_destroy(item, 1);
+        item = next;
+    }
+}
+
+static LONG platform_mixer_ftol(double value)
+{
+    double integral = floor((double)value);
+    double fraction = (double)value - integral;
+    LONG whole = (LONG)integral;
+    /* VC5's __ftol follows the x87 round-to-nearest-even control mode. */
+    if (fraction > 0.5 || (fraction == 0.5 && (whole & 1) != 0)) ++whole;
+    return whole;
+}
+
+/* WindowsMixerControlInit (FUN_004789c0): walk every mixer device,
+ * destination, and connected source. On CD source lines, inspect the full
+ * control array using the target's two dwControlType masks; query or update
+ * every matching control and keep the final successful value/result. */
+static int platform_cd_mixer_volume_access(float* music, float* sfx,
+                                           int apply)
+{
+    UINT device_count;
+    UINT device_index;
+    int succeeded = 0;
+    float requested_music = 0.0f;
+    float requested_sfx = 0.0f;
+
+    if (music == NULL || sfx == NULL) return 0;
+    if (apply != 0) {
+        requested_music = *music;
+        requested_sfx = *sfx;
+        if (requested_music > 1.0f) requested_music = 1.0f;
+        if (requested_music < 0.0f) requested_music = 0.0f;
+        if (requested_sfx > 1.0f) requested_sfx = 1.0f;
+        if (requested_sfx < 0.0f) requested_sfx = 0.0f;
+    } else {
+        *music = 0.0f;
+        *sfx = 0.0f;
+    }
+
+    device_count = mixerGetNumDevs();
+    for (device_index = 0; device_index < device_count; ++device_index) {
+        HMIXER mixer = NULL;
+        MIXERCAPSA caps;
+        UINT destination_index;
+
+        if (mixerOpen(&mixer, device_index, 0, 0, CALLBACK_NULL) !=
+            MMSYSERR_NOERROR) continue;
+        memset(&caps, 0, sizeof(caps));
+        if (mixerGetDevCapsA((UINT)device_index, &caps,
+                             sizeof(caps)) == MMSYSERR_NOERROR) {
+            for (destination_index = 0;
+                 destination_index < caps.cDestinations;
+                 ++destination_index) {
+                MIXERLINEA destination_line;
+                DWORD source_index;
+
+                memset(&destination_line, 0, sizeof(destination_line));
+                destination_line.cbStruct = sizeof(destination_line);
+                destination_line.dwDestination = destination_index;
+                if (mixerGetLineInfoA((HMIXEROBJ)mixer, &destination_line,
+                                      MIXER_GETLINEINFOF_DESTINATION) !=
+                    MMSYSERR_NOERROR) continue;
+                for (source_index = 0;
+                     source_index < destination_line.cConnections;
+                     ++source_index) {
+                    MIXERLINEA source_line;
+                    MIXERLINECONTROLSA line_controls;
+                    MIXERCONTROL* controls;
+                    DWORD control_index;
+
+                    memset(&source_line, 0, sizeof(source_line));
+                    source_line.cbStruct = sizeof(source_line);
+                    source_line.dwDestination = destination_index;
+                    source_line.dwSource = source_index;
+                    if (mixerGetLineInfoA((HMIXEROBJ)mixer, &source_line,
+                                          MIXER_GETLINEINFOF_SOURCE) !=
+                        MMSYSERR_NOERROR ||
+                        source_line.dwComponentType !=
+                            MIXERLINE_COMPONENTTYPE_SRC_COMPACTDISC ||
+                        source_line.cControls == 0u ||
+                        source_line.cControls > 0x7fffffffu /
+                            sizeof(MIXERCONTROL)) continue;
+
+                    controls = (MIXERCONTROL*)calloc(
+                        source_line.cControls, sizeof(*controls));
+                    if (controls == NULL) continue;
+                    for (control_index = 0u;
+                         control_index < source_line.cControls;
+                         ++control_index)
+                        controls[control_index].cbStruct = sizeof(MIXERCONTROL);
+                    memset(&line_controls, 0, sizeof(line_controls));
+                    line_controls.cbStruct = sizeof(line_controls);
+                    line_controls.dwLineID = source_line.dwLineID;
+                    line_controls.cControls = source_line.cControls;
+                    line_controls.cbmxctrl = sizeof(MIXERCONTROL);
+                    line_controls.pamxctrl = controls;
+                    if (mixerGetLineControlsA((HMIXEROBJ)mixer,
+                                              &line_controls,
+                                              MIXER_GETLINECONTROLSF_ALL) ==
+                        MMSYSERR_NOERROR) {
+                        for (control_index = 0u;
+                             control_index < source_line.cControls;
+                             ++control_index) {
+                            MIXERCONTROL* control = &controls[control_index];
+                            MIXERCONTROLDETAILS details;
+                            MIXERCONTROLDETAILS_UNSIGNED* values;
+                            DWORD channel_count = source_line.cChannels;
+                            LONG minimum = control->Bounds.lMinimum;
+                            LONG maximum = control->Bounds.lMaximum;
+                            LONG range = maximum - minimum;
+                            DWORD channel;
+
+                            if ((control->dwControlType & 0x50000000u) == 0u ||
+                                (control->dwControlType & 0x50030001u) == 0u ||
+                                channel_count == 0u || range <= 0 ||
+                                channel_count > 0x7fffffffu /
+                                    sizeof(*values)) continue;
+                            values = (MIXERCONTROLDETAILS_UNSIGNED*)calloc(
+                                channel_count, sizeof(*values));
+                            if (values == NULL) continue;
+                            memset(&details, 0, sizeof(details));
+                            details.cbStruct = sizeof(details);
+                            details.dwControlID = control->dwControlID;
+                            details.cChannels = channel_count;
+                            details.cbDetails = sizeof(*values);
+                            details.paDetails = values;
+                            if (apply == 0) {
+                                if (mixerGetControlDetailsA(
+                                        (HMIXEROBJ)mixer, &details,
+                                        MIXER_GETCONTROLDETAILSF_VALUE) ==
+                                    MMSYSERR_NOERROR) {
+                                    float first =
+                                        (float)((LONG)values[0].dwValue -
+                                                minimum) / (float)range;
+                                    float second = first;
+                                    if (channel_count == 2u) {
+                                        second = (float)((LONG)values[1].dwValue -
+                                                         minimum) /
+                                                 (float)range;
+                                    }
+                                    *music = first;
+                                    *sfx = second;
+                                    succeeded = 1;
+                                }
+                            } else {
+                                LONG first = platform_mixer_ftol(
+                                    (double)requested_music * (double)range) +
+                                    minimum;
+                                LONG second = platform_mixer_ftol(
+                                    (double)requested_sfx * (double)range) +
+                                    minimum;
+                                if (channel_count == 2u) {
+                                    values[0].dwValue = (DWORD)first;
+                                    values[1].dwValue = (DWORD)second;
+                                } else {
+                                    DWORD average = (DWORD)
+                                        ((first + second) >> 1);
+                                    for (channel = 0u; channel < channel_count;
+                                         ++channel)
+                                        values[channel].dwValue = average;
+                                }
+                                if (mixerSetControlDetails(
+                                        (HMIXEROBJ)mixer, &details,
+                                        MIXER_SETCONTROLDETAILSF_VALUE) ==
+                                    MMSYSERR_NOERROR) succeeded = 1;
+                            }
+                            free(values);
+                        }
+                    }
+                    free(controls);
+                }
+            }
+        }
+        mixerClose((HMIXER)mixer);
+    }
+    return succeeded;
+}
+
+int platform_cd_mixer_volume_get(float* music, float* sfx)
+{
+    return platform_cd_mixer_volume_access(music, sfx, 0);
+}
+
+int platform_cd_mixer_volume_set(float music, float sfx)
+{
+    return platform_cd_mixer_volume_access(&music, &sfx, 1);
+}
+
+static int s_platform_cd_audio_open;
+static char s_platform_cd_audio_result[200];
+
+static int platform_cd_audio_command(const char* command, int* error_code)
+{
+    MCIERROR result = mciSendStringA(command, s_platform_cd_audio_result,
+                                     sizeof(s_platform_cd_audio_result), NULL);
+    if (error_code != NULL) *error_code = (int)result;
+    return result == 0 ? 1 : 0;
+}
+
+int platform_cd_audio_open(int* error_code)
+{
+    int opened = platform_cd_audio_command("open cdaudio", error_code);
+    if (opened) s_platform_cd_audio_open = 1;
+    return opened;
+}
+
+int platform_cd_audio_set_tmsf(int* error_code)
+{
+    return platform_cd_audio_command("set cdaudio time format tmsf",
+                                     error_code);
+}
+
+int platform_cd_audio_play(int one_based_track, int* error_code)
+{
+    char command[64];
+    sprintf(command, "play cdaudio from %d", one_based_track);
+    return platform_cd_audio_command(command, error_code);
+}
+
+int platform_cd_audio_stop(int* error_code)
+{
+    return platform_cd_audio_command("stop cdaudio", error_code);
+}
+
+int platform_cd_audio_close(int* error_code)
+{
+    int closed = platform_cd_audio_command("close cdaudio", error_code);
+    if (closed) s_platform_cd_audio_open = 0;
+    return closed;
+}
+
+int platform_cd_audio_status(char* mode, int mode_capacity,
+                             int* current_track, int* error_code)
+{
+    MCIERROR result;
+    if (mode == NULL || mode_capacity <= 0 || current_track == NULL) {
+        if (error_code != NULL) *error_code = MCIERR_PARAM_OVERFLOW;
+        return 0;
+    }
+    result = mciSendStringA("status cdaudio mode", s_platform_cd_audio_result,
+                            sizeof(s_platform_cd_audio_result), NULL);
+    if (mode_capacity > 1) {
+        strncpy(mode, s_platform_cd_audio_result,
+                (size_t)mode_capacity - 1u);
+        mode[mode_capacity - 1] = '\0';
+    }
+    else mode[0] = '\0';
+    *current_track = 0;
+    if (lstrcmpiA(mode, "stopped") != 0) {
+        result = mciSendStringA("status cdaudio current track",
+                                s_platform_cd_audio_result,
+                                sizeof(s_platform_cd_audio_result), NULL);
+        *current_track = atoi(s_platform_cd_audio_result);
+    }
+    if (error_code != NULL) *error_code = (int)result;
+    /* Retail consumes the status text even when mciSendStringA reports an
+     * error; the shared result buffer may therefore preserve earlier text. */
+    return 1;
+}
+
+int platform_cd_audio_error_text(int error_code, char* output,
+                                 int output_capacity)
+{
+    int result;
+    if (output == NULL || output_capacity <= 0) return 0;
+    result = mciGetErrorStringA((MCIERROR)error_code, output,
+                                (UINT)output_capacity) ? 1 : 0;
+    if (result) {
+        strncpy(s_platform_cd_audio_result, output,
+                sizeof(s_platform_cd_audio_result) - 1u);
+        s_platform_cd_audio_result[
+            sizeof(s_platform_cd_audio_result) - 1u] = '\0';
+    }
+    return result;
+}
+
+uint32_t platform_time_milliseconds(void)
+{
+    return (uint32_t)timeGetTime();
 }

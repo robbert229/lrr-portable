@@ -13,9 +13,11 @@
  * verbatim, with the Importance/Quota refreshers re-run over them every
  * capture (finding 09 §"Per-level reward config").
  *
- * Image/font/sound *handles* are the render lane — the port keeps the
- * config strings and coords in the task payload exactly where the corpus
- * writes them, with the flag bits that gate the reward display.
+ * Image/font/sound handles are the render lane. Image and font handles are
+ * mirrored in a host-width resource sidecar for safe release; their low
+ * 32-bit words occupy the corpus task payload slots, with the flag bits that
+ * gate the reward display. The sound token remains a config string because
+ * this path has no portable sound-resource handle owner yet.
  *
  * `mission_update` is the live-progress bridge: it feeds the live counters
  * into the level block's objective-read slots (+0x8c crystals, +0xa0 ore),
@@ -50,11 +52,14 @@ extern "C" {
 #define TASK_OFF_TEXT_XY    0x154 /* 2 int text-draw x/y (FUN_0045f530     */
                                   /* fields 1/2 -> record dwords 0x55/0x56)*/
 #define TASK_OFF_FLICPATH2  0x16C /* flic path (FUN_0045f5f0 -> +0x5b)     */
+#define TASK_OFF_FLIC_HANDLE 0x1FC /* opened FLIC player (FUN_00461790)     */
 #define TASK_OFF_IMG_XY     0x15C /* 2 ints (FUN_0045f3e0 -> +0x57/0x58)   */
+#define TASK_OFF_IMAGE      0x200 /* loaded image surface (FUN_0045f3e0)    */
 #define TASK_OFF_BOXIMG_XY  0x164 /* 2 ints (FUN_0045f290 -> +0x59/0x5a)   */
 #define TASK_OFF_FLIC_RECT  0x1EC /* 4 ints (FUN_0045f5f0 -> +0x7b..0x7e)  */
-#define TASK_OFF_FONT       0x204 /* font config token (FUN_0045f230)      */
+#define TASK_OFF_FONT       0x204 /* font-atlas handle (FUN_0045f230)      */
 #define TASK_OFF_SOUND      0x208 /* sound config token (FUN_0045f1f0)     */
+#define TASK_OFF_BOX_IMAGE  0x20C /* loaded BoxImages surface handle        */
 
 /* Task flag bits (dword +0x00). The display tick tests `flags & bit`
  * paired with the blob-side display gates (finding 09 §Display). */
@@ -67,24 +72,43 @@ extern "C" {
 #define TASK_FLAG_MASK       0x31u /* FUN_0045f530 ORs 1|0x10|0x20 when a   */
                                    /* `Reward Text.<name>` entry exists     */
 
-/* Seed the ten named task slots + run the six field loaders + refreshers
- * (TaskBlockInit). Corpus lifetime is per game *session* (run-start callback
- * FUN_0041fb50 @ 0x422651, freed by TaskBlockFinish in the run-finish
- * callback — finding 08 §Ownership); the port re-seeds per level load as a
- * layout-faithful stand-in for the session block. */
+/* Target-shaped, no-argument TaskBlockInit entry. The current runtime owner
+ * is supplied by the explicit adapter below. */
+int mission_task_init_target(void);
+/* Seed ten named task slots and run the six corpus-order field-loader passes
+ * for the supplied live GameContext. */
 void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name);
 
 /* Re-run Importance/Quota refreshers + crystal quota over every slot
  * (TaskImportanceRefresh/TaskQuotaRefresh/CrystalQuotaSetup). */
 void mission_task_refresh(GameContext* ctx);
+/* Refresh Importance/Quota in a checkpoint task-record copy using the
+ * current level config, without changing the live task records. */
+void mission_task_snapshot_refresh(GameContext* ctx, GameTask* tasks);
 
 /* Reward display config + Save/Advance button zones (RewardInit). */
-void mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_name);
+int mission_reward_init(GameContext* ctx, BlockFile* cfg, const char* level_name);
+void mission_reward_resources_release(GameContext* ctx);
+void mission_reward_buttons_draw(GameContext* ctx, void* pixels, int pitch,
+                                 int width, int height, int mouse_x,
+                                 int mouse_y, int mouse_down);
 
 /* Per-frame live-progress bridge (finding 09/22): write the live counters
  * into the level objective slots, advance task values, mark completions.
  * Returns a bitmask of tasks that completed this frame. */
 int mission_update(GameContext* ctx);
+
+/* Per-level checkpoint/reward snapshot refresh (corpus 0x460360): derive
+ * map-backed task totals, clamp task progress, recalculate aggregate
+ * percentages, and refresh the reward statistics display. The caller must
+ * have built the temporary checkpoint blob first. */
+int mission_checkpoint_task_progress_refresh(GameContext* ctx);
+/* No-argument adapter for the original global-context call site at
+ * 0x435940; it resolves the currently bound mission GameContext. */
+int mission_checkpoint_task_progress_refresh_bound(void);
+/* Capture the eight renderer-owned success words when ObjectiveVoiceAliasPrepare
+ * enters its achieved branch. The active mission/config supplies dimensions. */
+int mission_reward_success_snapshot_prepare(LevelState* level);
 
 /* The ten task names in slot order (s_Crystals … s_Score). */
 const char* mission_task_name_at(GameContext* ctx, int slot);
@@ -119,13 +143,21 @@ typedef struct RewardScreenState {
 
 /* The reward loop owns its state transitions, task timing, FLIC lifetime,
  * and callback order. These operations bridge state owned by the engine or
- * renderer that is not represented by GameContext. */
+ * renderer that is not represented by GameContext. When image/text draw
+ * callbacks are absent, mission.cpp uses the active display target and the
+ * task's loaded surfaces/font atlas for a portable fallback. FLIC frame
+ * presentation remains renderer-owned. */
 typedef struct RewardScreenOps {
     void* context;
     uint32_t (*time_get_ms)(void* context);
+    /* RewardSaveButtonZoneCheck input/readiness gate. Returns nonzero when
+     * the reward display may run; mission code queues the accepted sound. */
     int (*save_button_check)(void* context, GameContext* game);
     int (*loop_should_continue)(void* context,
                                 const RewardScreenState* state);
+    /* Hard cancellation is separate from loop_should_continue, whose retail
+     * counterpart only extends the reveal loop. It still runs normal cleanup. */
+    int (*loop_should_abort)(void* context);
     int (*fast_forward_pressed)(void* context);
     int (*transition_events)(void* context, int* return_to_game,
                              int* reset_reward);
@@ -141,6 +173,13 @@ typedef struct RewardScreenOps {
                            int displayed_count, float elapsed);
     int (*score_text_draw)(void* context, GameContext* game,
                            int displayed_count, float elapsed);
+    /* RewardTaskTextDrawAndScoreGate's final level/result labels use the
+     * reward title font and text context, which are renderer-owned. */
+    void (*task_result_text_draw)(void* context, GameContext* game,
+                                 float elapsed);
+    /* Renderer receives formatted blob strings and
+     * game->reward_screen.stats_result_text (config label decoded like the
+     * retail escape/underscore helper). */
     void (*reward_stats_draw)(void* context, GameContext* game);
     void (*render_finish)(void* context);
     void (*input_restore)(void* context, int mode);
@@ -158,11 +197,29 @@ void reward_screen_state_init(RewardScreenState* state, GameContext* game,
                               PointerCursorState* pointer_cursor,
                               const PointerCursorHooks* pointer_hooks);
 /* Bind before entering the no-argument reference ABI adapters below. The
- * current game/runtime owner has not yet been wired to this binding point. */
+ * frame loop installs its operations before level setup; mission_reward_init
+ * then binds the active GameContext state while retaining those operations. */
 void reward_screen_runtime_bind(RewardScreenState* state,
                                const RewardScreenOps* ops);
-int reward_screen_tick(RewardScreenState* state, const RewardScreenOps* ops);
+int reward_screen_tick(void); /* FUN_00461410: active global reward screen */
+int reward_screen_tick_with_ops(RewardScreenState* state,
+                                const RewardScreenOps* ops);
 int reward_screen_tick_bound(void);
+/* Reward display cluster ABI adapters. These use the bound screen state and
+ * use renderer callbacks where installed, with the portable framebuffer
+ * fallbacks described above for task images and text. */
+int reward_stats_panel_draw_bound(void);
+int reward_stats_text_format_bound(void);
+void reward_display_task_abi(GameTask* task, uint32_t draw_mask,
+                             uint32_t displayed_count);
+void reward_task_text_draw_and_score_gate_abi(int* displayed_task_count,
+                                             int* score_text_gate,
+                                             float elapsed);
+/* RewardFlhContextReload: close and reopen one flagged task's FLIC context. */
+void reward_flic_context_reload_abi(void* task_context);
+int reward_score_task_text_draw(int displayed_task_count, float elapsed);
+void reward_flic_context_tick_abi(int* displayed_task_count,
+                                  int* transition_stage, float* elapsed);
 void reward_screen_transition_tick(RewardScreenState* state,
                                    const RewardScreenOps* ops);
 void reward_screen_transition_tick_abi(int* displayed_task_count,
@@ -185,8 +242,9 @@ void mission_reward_set_active(GameContext* ctx, int on);
 int mission_reward_zone(GameContext* ctx, int mx, int my,
                         int* hit_save, int* hit_advance);
 
-/* Reward-screen button handler (FUN_00462780): on a saved/advanced zone
- * hit, commit the checkpoint (CheckpointStep). Returns the step result. */
+/* Reward button adapter: Save opens the frame-driven save picker (which may
+ * be cancelled without changing the reward state); Advance commits the
+ * checkpoint and follows nextlevel. Returns 1 when either route is handled. */
 int mission_reward_click(GameContext* ctx, int hit_save);
 
 /* Advance to the parsed `nextlevel` (finding 07): checkpoints the current

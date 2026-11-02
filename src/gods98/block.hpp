@@ -89,8 +89,11 @@ const char* block_get_strptr(BlockFile* bf, const char* path); /* NULL ok */
 int   block_get_int(BlockFile* bf, const char* path, int dflt);
 float block_get_float(BlockFile* bf, const char* path, float dflt);
 
-/* Corpus bool (FUN_004790d0/77710): TRUE|YES|ON → 1, FALSE|NO|OFF → 0,
- * missing or unparseable → 2. */
+/* ConfigBooleanParse (FUN_00477710): TRUE|YES|ON → 1, FALSE|NO|OFF → 0,
+ * unparseable → 2. */
+int   block_get_bool(const char* value);
+/* Path convenience corresponding to ConfigBooleanGetDefault2 (0x4790d0);
+ * missing or unparseable values answer 2. */
 int   block_get_bool(BlockFile* bf, const char* path);
 
 /* ConfigRgbVectorRead (FUN_00479170): reads the path's value string,

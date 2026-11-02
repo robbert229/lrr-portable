@@ -20,15 +20,18 @@
  *     0x1 pending result, 0x2 achieved, 0x4 failed, 0x104 failed-with-
  *     crystals, 0x8 result announced (shown once, then cleared).
  *
- * The corpus couples the checker/announcer to the HUD/message/transition
- * lanes; those calls are stubbed here (each marked `(stub)`), while the word
- * bit-flow — the part other game systems and the save blob depend on — is
- * ported faithfully.
+ * The corpus couples the checker/announcer to HUD, message, checkpoint, and
+ * scene-transition lanes. Objective/result state and the available
+ * checkpoint-selection effects are modeled here; renderer-owned advisor
+ * callbacks and several global transition inputs remain explicit gaps.
  */
 #ifndef LEGORRR_GAME_OBJECTIVE_HPP
 #define LEGORRR_GAME_OBJECTIVE_HPP
 
 #include "level.hpp"
+#include "gods98/block.hpp"
+
+struct EntitySlot;
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,9 +40,15 @@ typedef struct RewardTaskResourceRecord {
     uint32_t flags;
     void* image_surface;
     void* font_record;
+    void* box_image_surface;
 } RewardTaskResourceRecord;
 void reward_task_resource_slot_set(unsigned int slot, uint32_t flags,
                                    void* image_surface, void* font_record);
+void reward_task_font_record_set(unsigned int slot, void* font_record);
+void* reward_task_font_record_get(unsigned int slot);
+void* reward_task_image_surface_get(unsigned int slot);
+void reward_task_box_image_surface_set(unsigned int slot, void* surface);
+void* reward_task_box_image_surface_get(unsigned int slot);
 void reward_task_flush_images(RewardTaskResourceRecord* task);
 void reward_task_flush_font(RewardTaskResourceRecord* task);
 void reward_task_block_finish(void);
@@ -99,11 +108,16 @@ int objective_check(LevelState* s, int* mark, float dt);
 
 /* Objective-result announcer (corpus FUN_00458670). `who`:
  *   0 pending / 1 achieved / 2 failed / 3 failed-with-crystals.
- * Sets the runtime word bits + result index in the block, and fills the
- * advisor stream text (DAT_004ffe38 analog: "Stream Objective_…"). */
+ * The mapped entry uses the active level, like the reference current-level
+ * getter. Local port callers can use the explicit-level adapter below. */
+void objective_announce_current(int who); /* FUN_00458670, one argument */
 void objective_announce(LevelState* s, int who);
+void objective_active_level_bind(LevelState* s);
+void objective_active_level_clear(LevelState* s);
+const char* objective_voice_alias_get(void);
+int objective_voice_alias_pending_take(void);
 
-/* The advisor stream text built by the announcer ("" when none). */
+/* Port-side string used by the objective/help overlay ("" when none). */
 const char* objective_stream(const LevelState* s);
 
 /* Advisor decision (finding 22): should the hint display for the current
@@ -111,10 +125,20 @@ const char* objective_stream(const LevelState* s);
  * achieved / 0x80 failed) is set or no stream was produced. */
 int objective_advisor_shown(const LevelState* s);
 
-/* Per-frame objective state machine (corpus FUN_00458be0). Consumes the
- * pending-result word and drives checker + announcer when idle. `dt` is the
- * frame delta. Returns 0 when a goal resolves this frame, else 1. */
+/* Target-shaped ObjectiveTick (FUN_00458be0): the opaque first argument is
+ * DAT_00556140, `s` is DAT_005560d4, checker_dt is passed to ObjectiveCheck,
+ * and frame_dt advances result-stream timing. The renderer/UI lanes whose
+ * owner is the engine are represented only where this module has a real API. */
+void objective_tick_target(void* engine, LevelState* s,
+                           float checker_dt, float frame_dt);
+
+/* Explicit-level adapter used by the portable frame loop. Returns 0 once a
+ * result is active or resolves this tick, else 1. */
 int objective_tick(LevelState* s, float dt);
+
+/* ObjectiveSidecarAppendGate (FUN_0043bc40), applied to the live entity
+ * record. Returns 1 when a represented state transition was applied. */
+int objective_sidecar_append_gate(struct EntitySlot* entity);
 
 #ifdef __cplusplus
 }
@@ -164,7 +188,8 @@ typedef struct AdvisorAnimationHooks {
 typedef void (*AdvisorTransformApplyHook)(int row, uint32_t animation,
                                           float x, float y, float scale,
                                           void* user);
-void advisor_sound_alias_set(int alias);
+/* Stores DAT_004a6768, a configured sound-bank slot (not an alias index). */
+void advisor_sound_alias_set(int slot);
 void advisor_sound_alias_play_global(void); /* FUN_00456810 */
 typedef int (*CoordinateListVisitCallback)(void* record, int x, int y,
                                            void* user);
@@ -175,6 +200,7 @@ void coordinate_list_callback_visit(void* list_key,
                                    CoordinateListVisitCallback callback,
                                    void* user); /* FUN_00456cb0 */
 typedef struct AdvisorPositionConfigEntry {
+    /* Parsed position rows retained for callers that already decoded config. */
     const char* position_name;
     const char* animation_name;
     int position_type;
@@ -183,11 +209,21 @@ typedef struct AdvisorPositionConfigEntry {
     float x;
     float y;
 } AdvisorPositionConfigEntry;
+/* Renderer-owned animation lookup supplies the scene handle and configured
+ * start/end times; the loader converts times to 25 Hz frame counts. */
 typedef int (*AdvisorAnimationConfigLookupHook)(const char* name,
                                                 uint32_t* handle,
                                                 float* start_time,
                                                 float* end_time,
                                                 void* user);
+/* Target loader adapter for the config lookup and renderer resource path.
+ * The target calls it first with the animation name and, when that fails and
+ * feature bit 0x400000 is clear, again with the `!<name>` fallback key. The
+ * hook owns the Advisor config lookup and LWS creation/initialization. Return
+ * true when the config value exists, even if `handle` is zero. */
+typedef int (*AdvisorAnimationTargetConfigLookupHook)(
+    void* scene_context, void* config_context, const char* animation_name,
+    uint32_t* handle, float* start_time, float* end_time, void* user);
 void advisor_scene_ready_set(int ready);
 void advisor_scene_action_hook_set(AdvisorSceneActionHook hook, void* user);
 void advisor_companion_scene_create_hook_set(
@@ -201,10 +237,17 @@ float advisor_scene_scale_get(void);
 void advisor_transform_apply_hook_set(AdvisorTransformApplyHook hook,
                                       void* user);
 void advisor_apply_slot_transform(int row); /* FUN_00401b30 */
-int advisor_position_config_load(const AdvisorPositionConfigEntry* entries,
-                                 uint32_t count); /* FUN_00401530 */
+void advisor_position_config_load(BlockFile* config,
+                                  int resolution_width,
+                                  int resolution_height); /* FUN_00401530 */
+int advisor_position_config_entries_load(
+    const AdvisorPositionConfigEntry* entries, uint32_t count);
 int advisor_config_slots_load(AdvisorAnimationConfigLookupHook lookup,
-                              void* user); /* FUN_00401270 */
+                              void* user); /* portable adapter */
+void advisor_animation_target_config_lookup_set(
+    AdvisorAnimationTargetConfigLookupHook lookup, void* user);
+void advisor_config_slots_load_target(void* scene_context,
+                                      void* config_context); /* 0x00401270 */
 int advisor_request_admit(int row, int immediate); /* FUN_004018c0 */
 void advisor_request_reset_and_submit_sound(int row); /* FUN_00401930 */
 void advisor_animation_end_cleanup(void); /* FUN_004011c0 */
@@ -217,7 +260,7 @@ int advisor_scene_advance_completion_check(int animation_slot,
 /* AdvisorPositionRecordInitialize (FUN_004017b0) initializes the action
  * record and flags. */
 void advisor_position_record_initialize(int row, uint32_t animation_index,
-                                        int position_index,
+                                        int position_type,
                                         uint32_t position_mode,
                                         int action_mode, uint32_t x,
                                         uint32_t y);
@@ -228,11 +271,38 @@ void advisor_action_position_and_mode_set(int row, int mode,
                                           uint32_t dword_a,
                                           uint32_t dword_b); /* FUN_00401840 */
 
-/* AdvisorActionPositionGet (FUN_00401890): reads the record's +0x1c and
- * +0x20 dwords (the corpus's separate read-out window — this band's set
- * never writes them, a faithful quirk). NULL outputs skipped. */
+/* AdvisorActionPositionGet (FUN_00401890): reads the record's +0x18 and
+ * +0x1c dwords. The setter writes its second coordinate to +0x18; +0x1c
+ * remains the initialized current-position value. NULL outputs are skipped. */
 void advisor_action_position_get(int row, uint32_t* dword_c,
                                  uint32_t* dword_d);          /* FUN_00401890 */
+
+/* AdvisorAnimationPositionAndRequestUpdate (FUN_0041c4f0). The controller
+ * uses live frontend mode/interaction state, while the target's indicator
+ * row, trigger tuple, point table and vertical origin have no source owner.
+ * Keep those unowned inputs explicit and bounded instead of inventing them. */
+#define ADVISOR_POSITION_UPDATE_MAX_POINTS 32
+typedef struct AdvisorPositionUpdatePoint {
+    float x;
+    float y;
+} AdvisorPositionUpdatePoint;
+typedef struct AdvisorAnimationPositionUpdateState {
+    int action_row;
+    int trigger_selector;
+    int cached_input_a;
+    int cached_input_b;
+    float vertical_origin;
+    uint32_t point_count;
+    AdvisorPositionUpdatePoint points[ADVISOR_POSITION_UPDATE_MAX_POINTS];
+} AdvisorAnimationPositionUpdateState;
+typedef int (*AdvisorPositionUpdateValueResolveFn)(
+    int selector, int input_a, int input_b, int* value, void* user);
+void advisor_animation_position_update_state_set(
+    const AdvisorAnimationPositionUpdateState* state);
+void advisor_animation_position_update_value_resolver_set(
+    AdvisorPositionUpdateValueResolveFn resolver, void* user);
+void advisor_animation_position_and_request_update(
+    int position_mode, int input_a, int input_b, const float* position);
 
 /* Observer hook for the flag word (test pin; not corpus API). */
 uint32_t advisor_action_flags_peek(int row);
@@ -244,7 +314,34 @@ uint32_t advisor_action_flags_peek(int row);
  * empty (documented deviation). */
 int objective_advisor_token_lookup(uint32_t index);
 
-/* Test hook installing the token table (corpus writer unported). */
+/* ObjectiveAdvisorTokenLoad (FUN_00452e70) owns a mutable script copy and
+ * builds the ordinary text table plus separate image/sound name tables.
+ * The resolver receives kind 1 for images and 2 for sounds; a returned zero
+ * omits that resource token, matching the reference's failed-load gate. */
+typedef uintptr_t (*ObjectiveAdvisorTokenResolveFn)(int kind,
+                                                     const char* value,
+                                                     void* user);
+typedef void (*ObjectiveAdvisorTokenReleaseFn)(int kind, uintptr_t handle,
+                                               void* user);
+int objective_advisor_tokens_parse(const char* source, uint32_t source_length,
+                                   ObjectiveAdvisorTokenResolveFn resolve,
+                                   ObjectiveAdvisorTokenReleaseFn release,
+                                   void* user);
+/* Objective/advisor stream loader: RESOURCE_AUTO path lookup plus the
+ * native bitmap and sound-bank loaders used by the retail token tables. */
+int objective_advisor_token_file_load(const char* path);
+void objective_advisor_tokens_release(void);
+const char* objective_advisor_token_text_get(uint32_t index);
+uint32_t objective_advisor_image_token_count(void);
+const char* objective_advisor_image_token_name_get(uint32_t index);
+uintptr_t objective_advisor_image_token_handle_get(uint32_t index);
+void* objective_advisor_image_token_resource_get(uint32_t index);
+uint32_t objective_advisor_sound_token_count(void);
+const char* objective_advisor_sound_token_name_get(uint32_t index);
+uintptr_t objective_advisor_sound_token_handle_get(uint32_t index);
+uint32_t objective_advisor_token_generation_get(void);
+
+/* Optional raw-table installer for callers that already own a legacy table. */
 void objective_advisor_tokens_install(const uint32_t* table, uint32_t count);
 
 /* Advisor name tables (FUN_004013e0/FUN_004014c0). */

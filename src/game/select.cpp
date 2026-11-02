@@ -17,33 +17,29 @@ int selection_add(GameContext* ctx, EntitySlot* e)
     if (ctx == NULL || e == NULL) {
         return 0;
     }
-    /* Dedupe (FUN_00452610 analog). */
-    for (int i = 0; i < ctx->selection_count; ++i) {
-        if (ctx->selection[i] == e) {
-            return 0;
-        }
-    }
+    /* Retail SelectionCandidateFilter uses FUN_00452610(entity, NULL),
+     * which tests the +0x3e8 selected bit rather than scanning the array. */
+    if ((e->flags_3e8 & ENTITY_SELECTED) != 0u) return 0;
     if (ctx->selection_count >= SELECTION_MAX) {
         return 0;
     }
     ctx->selection[ctx->selection_count++] = e;
     e->flags |= ENTITY_SELECTED;
+    e->flags_3e8 |= ENTITY_SELECTED;
     return 1;
 }
 
 void selection_remove(GameContext* ctx, const EntitySlot* e)
 {
+    uint32_t index;
     if (ctx == NULL || e == NULL) {
         return;
     }
-    for (int i = 0; i < ctx->selection_count; ++i) {
-        if (ctx->selection[i] == e) {
-            ctx->selection[i]->flags &= ~ENTITY_SELECTED;
-            ctx->selection[i] = ctx->selection[ctx->selection_count - 1];
-            --ctx->selection_count;
-            return;
-        }
-    }
+    if (!selection_contains_entity_target(ctx, e, &index)) return;
+    ((EntitySlot*)e)->flags &= ~ENTITY_SELECTED;
+    ((EntitySlot*)e)->flags_3e8 &= ~ENTITY_SELECTED;
+    ctx->selection[index] = ctx->selection[ctx->selection_count - 1];
+    --ctx->selection_count;
 }
 
 // FUNCTION: LEGORR 0x00452be0
@@ -53,7 +49,13 @@ void selection_clear(GameContext* ctx)
         return;
     }
     for (int i = 0; i < ctx->selection_count; ++i) {
-        ctx->selection[i]->flags &= ~ENTITY_SELECTED;
+        EntitySlot* entity = ctx->selection[i];
+        entity->flags &= ~ENTITY_SELECTED;
+        if ((entity->flags_3e8 & ENTITY_SELECTED) != 0u) {
+            entity->flags_3ec |= 2u;
+        }
+        entity->flags_3e8 &= ~ENTITY_SELECTED;
+        entity->flags_3ec &= ~1u;
     }
     ctx->selection_count = 0;
 }
@@ -240,6 +242,83 @@ static int selected_action_14_15_nonroute_matches(EntitySlot* entity)
         limit = deposit_count;
     }
     return (uint32_t)entity->carry_state_324 < limit;
+}
+
+/* These menu predicates have direct ports in the entity module. The
+ * callback parameters remain overrides for hosts with additional runtime
+ * state, while the normal game path can use the live EntitySlot/config APIs. */
+static int selection_target_cell_valid_default(GameContext* ctx,
+                                                EntitySlot* entity)
+{
+    EntitySlot* target;
+    void* resource;
+    float position[3];
+    int cell_x, cell_y;
+    if (ctx == NULL || ctx->level == NULL || entity == NULL ||
+        (entity_capability_flags_get(entity) & 1u) == 0u ||
+        (entity->flags_3e0 & 0x400u) == 0u || entity->carry_link_308 == NULL)
+        return 0;
+    target = (EntitySlot*)entity->carry_link_308;
+    if (target->type != 1) return 0;
+
+    /* EntityActionTargetCellIsValid @ 0x43fdc0 resolves the source's visual
+     * scene, asks DDiScene for its position, converts that position to a map
+     * cell, and tests that same cell through the linked type-1 target. */
+    resource = entity->visual_resource_handles[0];
+    if (resource == NULL && entity_type1_scene_resource_bind(entity))
+        resource = entity->scene_resource_type1.scene_resource;
+    if (resource == NULL) {
+        entity_visual_resource_get_or_create(entity);
+        resource = entity->visual_resource_handles[0];
+        if (resource == NULL && entity_type1_scene_resource_bind(entity))
+            resource = entity->scene_resource_type1.scene_resource;
+    }
+    if (resource == NULL ||
+        !ddiscene_object_position_get(resource, NULL, position) ||
+        !terrain_world_xy_to_cell(ctx->level->ptr_terrain, position[0],
+                                  position[1], &cell_x, &cell_y)) return 0;
+    return terrain_cell_route_and_occupancy_check(
+        target, ctx->level, cell_x, cell_y, cell_x, cell_y, 1);
+}
+
+static int selection_route_marker_candidate_default(EntitySlot* entity,
+                                                       int include_secondary)
+{
+    return entity_route_marker_candidate_find(entity, include_secondary)
+        != NULL;
+}
+
+static int selection_vehicle_unload_eligible_default(EntitySlot* entity,
+                                                       int unused)
+{
+    (void)unused;
+    return entity_vehicle_unload_cell_find_if_eligible(entity, NULL);
+}
+
+static int selection_unload_cell_available_default(EntitySlot* entity,
+                                                     int unused)
+{
+    (void)unused;
+    return entity_record_flag20_query(entity, NULL);
+}
+
+static int selection_building_upgrade_allowed_default(EntitySlot* entity)
+{
+    return building_upgrade_resource_admission_check(entity, NULL);
+}
+
+static int selection_entity_action_prerequisite_default(EntitySlot* entity,
+                                                         int action)
+{
+    return entity_action_kind_prerequisite_check(entity, action);
+}
+
+static int selection_building_upgrade_limit_default(EntitySlot* entity)
+{
+    uint32_t maximum;
+    if (entity == NULL) return 0;
+    maximum = building_upgrade_admission_check(entity->type, entity->etype);
+    return maximum > (uint32_t)entity->indexed_record_slot_330 + 1u;
 }
 
 /* QueueActionRequestType2 (FUN_0041f230): the callback tests state +0x148
@@ -478,28 +557,33 @@ static int tutorial_path_menu_action_precheck_raw(
             return 0;
         }
         if (action == 0x41) {
-            return building_upgrade_allowed != NULL
-                && building_upgrade_allowed(entity) != 0;
+            return (building_upgrade_allowed != NULL
+                ? building_upgrade_allowed(entity)
+                : selection_building_upgrade_allowed_default(entity)) != 0;
         }
-        if (queue_action_request_type2(ctx) == 0
-            || entity_action_kind_prerequisite == NULL) {
+        if (queue_action_request_type2(ctx) == 0) {
             return 0;
         }
+        int (*action_ready)(EntitySlot*, int) =
+            entity_action_kind_prerequisite != NULL
+                ? entity_action_kind_prerequisite
+                : selection_entity_action_prerequisite_default;
         if (action == 0x42) {
-            return entity_action_kind_prerequisite(entity, 1) != 0
-                || entity_action_kind_prerequisite(entity, 0) != 0
-                || entity_action_kind_prerequisite(entity, 2) != 0
-                || entity_action_kind_prerequisite(entity, 3) != 0;
+            return action_ready(entity, 1) != 0
+                || action_ready(entity, 0) != 0
+                || action_ready(entity, 2) != 0
+                || action_ready(entity, 3) != 0;
         }
-        return entity_action_kind_prerequisite(
+        return action_ready(
             entity, action == 0x43 ? 1 : action == 0x44 ? 0
                 : action == 0x45 ? 2 : 3) != 0;
     }
     if (action == 0x40) {
         EntitySlot* const entity = selection_first(ctx);
         return entity != NULL && (entity->flags_3e0 & 0x400u) == 0u
-            && building_upgrade_limit_allows != NULL
-            && building_upgrade_limit_allows(entity) != 0
+            && (building_upgrade_limit_allows != NULL
+                ? building_upgrade_limit_allows(entity)
+                : selection_building_upgrade_limit_default(entity)) != 0
             && queue_action_request_flag100000(ctx) != 0;
     }
     if (ctx == NULL) {
@@ -548,8 +632,9 @@ static int tutorial_path_menu_action_precheck_raw(
             && (entity->flags_3e0 & 2u) == 0u
             && (entity_stats_word_get(entity) & 0x20000u) != 0u
             && (entity->flags_3ec & 0x40u) == 0u
-            && route_marker_candidate != NULL
-            && route_marker_candidate(entity, 1) != 0;
+            && (route_marker_candidate != NULL
+                ? route_marker_candidate(entity, 1)
+                : selection_route_marker_candidate_default(entity, 1)) != 0;
     }
     if (action == 0x19) {
         EntitySlot* const entity = selection_first(ctx);
@@ -560,7 +645,8 @@ static int tutorial_path_menu_action_precheck_raw(
         const uint32_t stats_flags = entity_stats_word_get(entity);
         return (stats_flags & 0x2000000u) != 0u
             || (vehicle_unload_eligible != NULL
-                && vehicle_unload_eligible(entity, 0) != 0)
+                ? vehicle_unload_eligible(entity, 0)
+                : selection_vehicle_unload_eligible_default(entity, 0)) != 0
             || (entity->flags_3ec & 0x40u) != 0u;
     }
     if (action == 0x18) {
@@ -597,8 +683,9 @@ static int tutorial_path_menu_action_precheck_raw(
             return 0;
         }
         if (has_unload_capability && !has_unload_override
-            && (entity_unload_cell_available == NULL
-                || entity_unload_cell_available(entity, 0) == 0)) {
+            && (entity_unload_cell_available != NULL
+                ? entity_unload_cell_available(entity, 0)
+                : selection_unload_cell_available_default(entity, 0)) == 0) {
             return 0;
         }
         if ((entity->flags_3e4 & 0x10u) != 0u) {
@@ -645,8 +732,9 @@ static int tutorial_path_menu_action_precheck_raw(
             return 0;
         }
         if ((entity_capability_flags_get(entity) & 1u) != 0u
-            && (target_cell_valid == NULL
-                || target_cell_valid(entity) == 0)) {
+            && (target_cell_valid != NULL
+                ? target_cell_valid(entity)
+                : selection_target_cell_valid_default(ctx, entity)) == 0) {
             return 0;
         }
         return selected_entities_any_match(
@@ -1047,17 +1135,30 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e)
 }
 
 // FUNCTION: LEGORR 0x00452610
-int selection_contains_entity(const GameContext* ctx, const EntitySlot* e)
+int selection_contains_entity_target(const GameContext* ctx,
+                                     const EntitySlot* e,
+                                     uint32_t* index_out)
 {
-    if (ctx == NULL || e == NULL) {
-        return 0;
+    if (index_out == NULL) {
+        return e != NULL && (e->flags_3e8 & 0x200000u) != 0u;
     }
-    for (int i = 0; i < ctx->selection_count; ++i) {
+    if (ctx == NULL || e == NULL) return 0;
+    int count = ctx->selection_count;
+    if (count < 0) count = 0;
+    if (count > SELECTION_MAX) count = SELECTION_MAX;
+    for (int i = 0; i < count; ++i) {
         if (ctx->selection[i] == e) {
+            *index_out = (uint32_t)i;
             return 1;
         }
     }
     return 0;
+}
+
+int selection_contains_entity(const GameContext* ctx, const EntitySlot* e)
+{
+    uint32_t index;
+    return selection_contains_entity_target(ctx, e, &index);
 }
 
 static int selected_map_coordinate_matches(const uint32_t coordinate[2])
@@ -1149,7 +1250,7 @@ void selection_object_command_update(GameContext* ctx, EntitySlot* entity)
 // FUNCTION: LEGORR 0x0041CF20
 void selection_target_command_update(GameContext* ctx, EntitySlot* entity)
 {
-    const uint32_t mode = objective_selection_word_peek();
+    const uint32_t mode = s_obj_sel_word;
     if (mode == 10u || mode == 18u || mode == 11u) {
         const int count = selection_count(ctx);
         EntitySlot* const* records = selection_record_array(ctx);
@@ -1184,8 +1285,7 @@ void selection_cancel_if_cursor_hits_object(EngineContext* engine,
     if (engine == NULL || engine->context_mode == 0 || entity == NULL) {
         return;
     }
-    if (selection_contains_entity(ctx, entity) != 0
-        || (entity->flags_3e8 & 0x200000u) != 0u) {
+    if (selection_contains_entity_target(ctx, entity, NULL) != 0) {
         selection_clear_request_and_hud_reset();
     }
 }
@@ -1197,7 +1297,7 @@ int selection_candidate_already_selected_or_marked(const GameContext* ctx,
     if (e == NULL) {
         return 0; /* deviation: the corpus dereferences blindly */
     }
-    if (selection_contains_entity(ctx, e) != 0) {
+    if (selection_contains_entity_target(ctx, e, NULL) != 0) {
         return 1;
     }
     return (e->flags_3ec & 2u) != 0u ? 1 : 0;
@@ -1215,24 +1315,41 @@ int current_level_state_flags_contain_mask(const GameContext* ctx,
     return (e->flags_3f0 & mask) != 0u;
 }
 
-/* SelectionClearMarkerAndResetHud (FUN_0044c4a0) — see select.hpp. The
- * marker raise lands on the DAT_00556ecc engine state word, which the
- * port threads through the engine handle (deviation: the corpus strides
- * the global word). The clear request always runs. */
+/* SelectionClearMarkerAndResetHud (FUN_0044c4a0) uses the active engine
+ * state word, corresponding to DAT_00556ecc. */
 // FUNCTION: LEGORR 0x0044c4a0
-void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
-                                          EntitySlot* e)
+void selection_clear_marker_and_reset_hud(EntitySlot* e)
 {
-    if (e != NULL && (e->flags_3ec & 2u) != 0u) {
-        if ((entity_stats_word_get(e) & 0x20000u) != 0u) {
-            if ((entity_state_flags_get(e) & 0x20000u) == 0u
+    if ((e->flags_3ec & 2u) != 0u) {
+        if ((entity_state_flags_get(e) & 0x20000u) != 0u) {
+            if ((entity_stats_word_get(e) & 0x20000u) == 0u
                 || e->owner_36c != NULL) {
-                if (engine != NULL) {
-                    engine->state |= 0x10000000u;
-                }
+                uint32_t* state = engine_current_state_word();
+                if (state != NULL) *state |= 0x10000000u;
                 e->flags_3ec |= 1u;
             }
         }
     }
     selection_clear_request_and_hud_reset(); /* FUN_0041e750 */
+}
+
+/* Compatibility entry retained for callers and tests that own an explicit
+ * engine context; the mapped retail entry above takes only the entity. */
+void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
+                                          EntitySlot* e)
+{
+    if (e != NULL && (e->flags_3ec & 2u) != 0u) {
+        if ((entity_state_flags_get(e) & 0x20000u) != 0u) {
+            if ((entity_stats_word_get(e) & 0x20000u) == 0u
+                || e->owner_36c != NULL) {
+                if (engine != NULL) engine->state |= 0x10000000u;
+                else {
+                    uint32_t* state = engine_current_state_word();
+                    if (state != NULL) *state |= 0x10000000u;
+                }
+                e->flags_3ec |= 1u;
+            }
+        }
+    }
+    selection_clear_request_and_hud_reset();
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* Game layer — AI execution receivers (finding 10, closed 2026-10-21).
+ * The entity-manager frame dispatcher is owned by gods98/simtick.cpp.
  *
  * The corpus entity-manager tick is FUN_0043b270: flag word DAT_004dee14
  * with pre/post passes, the entity walker FUN_004377d0(callback, &dt, 0),
@@ -21,15 +22,15 @@
  *     +0x2e8 name pointer / +0x2d8 param / +0x2d4 timer, set by
  *     FUN_004409e0(ent, idx, p) = ent+0x2e8 = DAT_004decc4[idx];
  *     ent+0x2d8 = p; ent+0x2d4 = 0.
- *   - DAT_004decc4[0..76] is the activity-name table the initializer at
- *     0x436c2f fills: Activity_Stand, Activity_Route, ..., Activity_Waiting21
- *     (the full 77-entry dump lives in finding 10).
+ *   - DAT_004decc4[0..78] is the activity-name table the initializer at
+ *     0x436c2f fills: Activity_Stand, Activity_Route, ..., Activity_TeleportIn
+ *     (the 79-entry dump is documented in findings 10 and 464).
  *
  * This module ports the verified subset of the callback against the port's
  * entity mirror fields (flags_3e4/flags_3ec/activity/...), in corpus branch
  * order, with each branch naming its corpus address. Branches whose
  * subjects the port does not model yet (projectile arcs, screen-shake,
- * screen-space effects, the riding-attach writer) are listed as TODOs in
+ * screen-space effects) are listed as TODOs in
  * finding 10 rather than guessed. Move commands now flow through the
  * ported path-list mirror (EntitySlot.wp, corpus +0x24/+0x28/+0x2c), the
  * +0x3e0 bit-0x8 mover flag, and the tile walkability/occupancy queries
@@ -37,8 +38,9 @@
  * (FUN_00430ee0 seed + FUN_00430530 traceback on the port's level-grid
  * handle) per command, with the one-hop fallback kept for the no-path
  * and no-grid cases.
- * Wake-timer expiry mirrors FUN_0044c110's writes onto the +0x364 target,
- * and the cheat-word branch runs the real FUN_0044c530 can-do probe.
+ * Wake-timer expiry mirrors FUN_0044c110's writes onto the +0x364 target;
+ * FUN_0044c030 creates and links its paired child through entity.cpp. The
+ * cheat-word branch runs the real FUN_0044c530 can-do probe.
  */
 #ifndef LEGORRR_GAME_AI_HPP
 #define LEGORRR_GAME_AI_HPP
@@ -52,8 +54,9 @@ extern "C" {
 /* Movement speed (cells/second) and task timings (port-side application
  * constants). AI_MOVE_SPEED_CPS is the *default* rate: with a grid bound
  * the mover steps at the speed of the terrain under foot instead, read
- * from the stats speed table behind FUN_00469cc0 (see below); without a
- * grid — or with unset table entries — this constant stands in. Corpus
+ * from the entity Stats record behind FUN_00469cc0, with the context speed
+ * table as a fallback when no record is installed; without a grid this
+ * constant stands in. Corpus
  * movement is path-list driven, see the header note. */
 #define AI_MOVE_SPEED_CPS  2.0f
 #define AI_TASK_DURATION   2.0f
@@ -64,7 +67,10 @@ extern "C" {
 #define ENT_FLAG3E0_MOVING 0x00000008u
 
 /* --- activity state (FUN_004409e0 + DAT_004decc4) ---------------------- */
-#define AI_ACTIVITY_COUNT 77
+#define AI_ACTIVITY_COUNT 79
+#define AI_ABILITY_TYPE_COUNT 6
+#define AI_TOOL_TYPE_COUNT 8
+#define AI_ACTIVITY_RESOURCE_SLOT_COUNT 11
 #define AI_ACTIVITY_NONE  (-1)
 
 /* Corpus indices into the DAT_004decc4 table (initializer @ 0x436c2f). */
@@ -88,13 +94,21 @@ enum AiActivity {
     AI_ACT_FREEZE_START, AI_ACT_FREEZE_MELT, AI_ACT_RECHARGE,
     AI_ACT_WAKE_UP,     AI_ACT_TRAIN,        AI_ACT_FLOAT_ON,
     AI_ACT_FLOAT_OFF,   AI_ACT_OPENING,      AI_ACT_CLOSING,
-    AI_ACT_OPEN,        AI_ACT_WAITING1
-    /* ... + AI_ACT_WAITING2..21 fill up to AI_ACTIVITY_COUNT. */
+    AI_ACT_OPEN,        AI_ACT_WAITING1,
+    /* ... + AI_ACT_WAITING2..21 fill through index 76. */
+    AI_ACT_CRUMBLE = 77, AI_ACT_TELEPORT_IN = 78
 };
 
 /* DAT_004decc4 lookup: activity name for `id` (NULL when out of range). */
 const char* ai_activity_name(int id);
-void ai_activity_name_table_initialize(void); /* FUN_00436c20 */
+const char* ai_ability_type_name_get(int id);
+const char* ai_tool_type_name_get(int id);
+uint32_t ai_activity_resource_slot_get(int id);
+/* FUN_00436c20: clear the entity-pool/grid-count state and install the
+ * activity/ability/tool names and selectors. The separate idle-registration
+ * table and global animation word are outside its cleared range. */
+void ai_activity_name_table_initialize(void);
+void ai_idle_chain_record_attach(EntitySlot* entity); /* FUN_00403f30 */
 
 /* FUN_004409e0 semantics: set the entity's activity (name-table index),
  * store the param, reset the activity timer. Out-of-range ids ignored. */
@@ -115,9 +129,10 @@ int entity_kind6_tick_down_marker_spawn(GameContext* ctx, EntitySlot* e);
 int entity_remove_object_if_class6(GameContext* ctx, EntitySlot* e);
 
 /* BubbleActionNameToIndex (FUN_00407300): the 39-entry case-insensitive
- * name table and its registration hook. BubbleConfigTextureLoad reads the
- * Bubbles child list, honors the global !-entry gate, and routes resource
- * load/initialize operations through the host renderer. */
+ * name table and its registration hook; on a miss it returns the final
+ * case-insensitive comparison result, not a -1 sentinel. BubbleConfigTextureLoad
+ * reads the Bubbles child list, honors the global !-entry gate, and routes
+ * resource load/initialize operations through the host renderer. */
 typedef struct BlockFile BlockFile;
 int bubble_action_name_register(int index, const char* name);
 int bubble_action_name_to_index(const char* name);
@@ -130,13 +145,14 @@ void bubble_texture_load_hooks_set(BubbleTextureResourceLoadFn load,
 void bubble_config_global_flags_set(uint32_t flags);
 void bubble_config_texture_load(BlockFile* cfg);
 uint32_t bubble_texture_handle_peek(int index);
+void bubble_texture_handle_set(int index, uint32_t handle);
 
 /* Append a waypoint to the entity's path list (corpus +0x24 buffer, entry
- * stride 5 dwords — the port stores {x, y, pending} per entry; see
- * AiWaypoint). Returns the entry index or -1 when the port bound
- * (AI_WAYPOINTS_MAX) is reached. Move commands seed one entry via
- * cmd_create_move; a fully popped list restarts, as the corpus rebuilds
- * the buffer per path command. */
+ * stride 5 dwords — each entry stores x/y, two 0.5 interpolation weights,
+ * and its pending/kind bytes; see AiWaypoint). Storage grows beyond the
+ * inline span as needed. Returns the entry index or -1 on allocation failure.
+ * Move commands seed one entry via cmd_create_move; a fully popped list
+ * restarts, as the corpus rebuilds the buffer per path command. */
 int ai_path_append(EntitySlot* e, float x, float y);
 
 /* Build a move command's path into the entity buffer through the ported
@@ -146,8 +162,8 @@ int ai_path_append(EntitySlot* e, float x, float y);
  * and appended one entry per walked cell (builder appends, 0x44693b); the
  * flood work state is created and released inside the build, never shared
  * across commands. Returns the entry count, or 0 when no path exists (no
- * grid, blocked target, unreachable, longer than AI_WAYPOINTS_MAX) and
- * the caller seeds a one-hop fallback. */
+ * grid, blocked target, unreachable) or waypoint allocation fails; the
+ * caller can then seed a one-hop fallback. */
 int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty);
 
 /* Wave-flood diagnostic: how many cells carried the wave flag 0x40000
@@ -156,9 +172,12 @@ int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty);
  * earlier command; 0 before any build, or when that build had no grid. */
 int ai_wave_flood_count(void);
 
-/* Run the entity-manager tick for `dt` seconds: walk live entities and
- * apply the verified callback branches in corpus order, then step the
- * command chains. Returns the number of commands completed this tick. */
+/* Run the game-layer command/task executor for `dt` seconds. The separate
+ * 0x43b270 pool walk applies entity behavior and activity-timer updates. */
+/* Per-entity LAB_0043c810 receiver, called by the 0x43b270 pool walk. */
+int ai_entity_frame_update(EntitySlot* entity, float dt);
+/* Game-layer command/task executor; EntityFrameUpdateDispatch owns the
+ * separate entity behavior callback and activity timer updates. */
 int ai_tick(GameContext* ctx, float dt);
 
 /* Number of live command records across all entity chains (for logs/tests). */
@@ -168,13 +187,10 @@ int ai_commands_active(const GameContext* ctx);
 int ai_idle_count(void);
 
 /* --- per-terrain movement speed (FUN_00469cc0) -------------------------- */
-/* Port of the `FUN_00469cc0(ent, tile_type)` speed probe: reads the stats
- * speed table (`GameContext.stats_speed_sec` — the port model of the
- * `+0x334` stats block's `+0x24 + terrain_type * 4` table) by terrain
- * index. Returns the corpus value: seconds to cross one cell of that
- * terrain. Zero entries and out-of-range types fall back to the
- * AI_MOVE_SPEED_CPS-equivalent default (the corpus indexes blindly and
- * gates movement on entry != 0 behind the unported +0x3e8 walker bit). */
+/* Port-side context fallback for the terrain speed probe. Gameplay movement
+ * first reads the selected entity Stats record at +0x24 + terrain*4; this
+ * adapter remains useful when an entity has no loaded record. Values are
+ * seconds per cell, with zero and out-of-range entries using the default. */
 float ai_stats_speed(const GameContext* ctx, int tile_type);
 
 /* --- permitted-activity list (+0x370 ids / +0x384 count) ----------------- *
@@ -195,30 +211,29 @@ int ai_activity_probe(const EntitySlot* e);
  * permits drill/teleport/reinforce, else 0. */
 int ai_can_do(const EntitySlot* e);
 
-/* --- minion task-state (spawn-dispatch switch 0x438150) ------------------ *
- * The corpus's entity spawn dispatcher (FUN_00437d00) routes minion types
- * through a selector at 0x438150: type − 8 indexes the byte table at
- * 0x4382ac and jumps through (0x438298) to a per-state arm that points the
- * entity's +0x334 stats block at a static template — the minion "task state".
- * The same stats block is what the permitted-activity appender reads for
- * its per-entity capacity (FUN_0046a060 = state +0xcc; see ai_activity_cap
- * and EntitySlot.activity_cap). Ids mirror the three template addresses. */
-#define AI_TASK_STATE_NONE      (-1) /* no minion task state (instance stats) */
+/* --- static task-state selector (spawn-dispatch switch 0x438150) --------- *
+ * EntityCreateByType routes types 8, 9, 0xc..0xe, and 0x10..0x13 to one of
+ * three static +0x334 templates. The port uses a matching named Stats row as
+ * a +0xcc capacity adapter when available; retail's static template word is
+ * zero, and no decompiled copy into the template is known. */
+#define AI_TASK_STATE_NONE      (-1) /* no static task state (instance stats) */
 #define AI_TASK_STATE_MINION_1   0  /* type 8   -> DAT_004a98f0 template */
 #define AI_TASK_STATE_MINION_2   1  /* type 9   -> DAT_004a9a40 template */
 #define AI_TASK_STATE_MINION_3   2  /* types 0xc..0xe, 0x10..0x13 -> 0x4a9b90 */
 
-/* The 0x438150 selector: entity type -> minion task-state id, or
+/* The 0x438150 selector: entity type -> static task-state id, or
  * AI_TASK_STATE_NONE for types the switch sends to the instance-stats arm
  * (the corpus falls back to FUN_00469c10 for everything else). */
 int ai_minion_state_for(int type);
 
 /* FUN_0046a060: the permitted-activity capacity the appender sizes and
  * recycles each entity's list from — corpus `*(ent+0x334 stats block) +
- * 0xcc`. The port models the per-entity value as `EntitySlot.activity_cap`
- * (0 = not set -> GameContext.stats_activity_cap, the game-wide default
- * from game_context_init), clamped to the inline span. */
-int ai_activity_cap(const GameContext* ctx, const EntitySlot* e);
+ * 0xcc`. Instance Stats records supply this directly. Static task-state
+ * entities use the port's same-name Stats-row adapter, or zero when that row
+ * is unavailable. Only entities with neither source use the context
+ * fallback. The result is clamped to the inline span. */
+int ai_activity_cap(const EntitySlot* e); /* 0x0046a060 raw Stats +0xcc read */
+int ai_activity_cap_for_context(const GameContext* ctx, const EntitySlot* e);
 
 /* FUN_0044b370: install one activity grant onto the entity's list — the
  * command/dispatch install appender. Semantics (corpus-pinned): capacity
@@ -237,9 +252,13 @@ void ai_activity_grant(GameContext* ctx, EntitySlot* e, int value);
 /* EntityQueueForRockfallProcessingIfEligible (FUN_0043a9e0): the corpus's
  * pure forwarder to FUN_0043a960, which owns every gate; the port mirrors
  * that — the type-1 test runs inside the carrier and the entity lands in
- * the idle table through the dedupe/capacity rule (the stats-flag word and
- * the rockfall-tile probe stay unmodeled deviations — findings 41/457). */
+ * the idle table only when its stats gate passes and its current level tile
+ * is type 9. Duplicate registrations consume slots, as in the reference;
+ * the 100-entry extent is a high-water bound (findings 41, 457, 480). */
 void entity_queue_for_rockfall_processing_if_eligible(EntitySlot* e);
+/* Ported activity-change tail (FUN_00447c40): attach the idle-chain record
+ * when the activity changes, then refresh the activity timer. */
+int activity_register_bookkeeping(EntitySlot* e);
 
 /* --- activity-request wrappers (2026-10-24; findings 448/223/377) -----------
  * EntityDispatchEvent5AndSetFlag (FUN_00447b00): requests corpus activity
@@ -285,12 +304,12 @@ void entity_activity23_state_transition(EntitySlot* e); /* FUN_00449a70 */
 
 /* TryRandomEntityActionFromCodeRange (FUN_00443670): while the +0x3e0 bit
  *   0x400 is clear and the mask-word test (FUN_0043baf0) answers 0, draw
- *   the shared random word and map it into the activity-code band
- *   0x38..0x4c (% 0x15 + 0x38), install it through the activity set with
- *   the dispatch bookkeeping folded in, and answer 1 (raising +0x3e0 bit
- *   0x8000) on the first attempt the dispatch takes; five same-name
- *   attempts answer 0. The dispatch's per-type runner return is the
- *   scene seam (deviation above). */
+ *   the shared random word and map it into 0x38..0x4c (% 0x15 + 0x38),
+ *   set the activity, then use ActivityRegisterBookkeeping's return as the
+ *   success test. Success raises +0x3e0 bit 0x8000; after five failed
+ *   dispatches the helper answers 0. Type-2/type-3 scene runner callbacks
+ *   are not installed by the current backend, so this path can remain
+ *   unsuccessful at runtime. */
 int entity_random_activity_attempt(EntitySlot* e); /* FUN_00443670 */
 
 /* --- entity counter + link band (2026-10-24; findings 251/469/435) --------
@@ -326,9 +345,8 @@ void linked_entity_flag_and_command_update(EntitySlot* e);
  * The 0x407xxx band registers entity records into four pointer/timer pair
  * windows (corpus DAT_005579e4 / 7a84 / 7b24 / 7bc4). The windows have no
  * other corpus owner, so they ride module storage; the type-1/2 idle queue
- * (window B) stays modeled by the cmd module's idle table. Deviation: the
- * corpus strides the record's type word (dword +0) blindly; the port reads
- * the mirrored etype through a guard. */
+ * (window B) stays modeled by the cmd module's idle table. The record type
+ * gates read EntitySlot::type; the port guards null records. */
 
 /* EntityPointerRegistriesRemove (FUN_004073a0): drop the record pointer from
  * every window whose slot matches (the timer words ride on). */
@@ -338,10 +356,9 @@ void entity_pointer_registries_remove(EntitySlot* record); /* FUN_004073a0 */
  * type-4 window when absent — first empty slot, timer word untouched. */
 void type4_object_registry_insert(EntitySlot* record);     /* FUN_00407410 */
 
-/* Type2TimedRegistryInsert (FUN_004074b0): the type-2 timed window.
- * Corpus quirk pinned: the insert path gates on a 50-walk that an 18-slot
- * window can never reach, so a miss seeds the last slot's timer without
- * storing the pointer; a hit just re-seeds its timer. */
+/* Type2TimedRegistryInsert (FUN_004074b0): the type-2 timed window has 50
+ * two-word slots. A hit re-seeds its timer; a miss stores into the first
+ * empty slot and seeds it, while a full table drops the record. */
 void type2_timed_registry_insert(EntitySlot* record);      /* FUN_004074b0 */
 
 /* SetType2ObjectRecordValue (FUN_00407510): a type-2 record broadcasts its
@@ -374,7 +391,7 @@ void ai_object_registries_reset(void);  /* port hook: clear (unowned) */
  * table where the corpus strides the global blindly. */
 void entity_update_and_unregister_at_tile(int x, int y, void* link);
                                                 /* FUN_00440130 */
-void ai_idle_table_reset(void);  /* port hook: clear the idle table (unowned) */
+void ai_idle_table_reset(void);  /* ActivityNameTableInit's idle-table slice */
 
 /* TrackedEntityPointerArrayRemove (FUN_0043a930): walks the idle table's
  * used window zeroing every slot holding the given pointer (the walk
@@ -384,7 +401,7 @@ void ai_idle_table_pointer_remove(void* pointer);
 
 /* EntityActivityTerrainEligibilityTransition (FUN_00449980): with the +0x3e0
  * bit 0x40 raised, probe whether the entity may still be placed at the
- * (truncated) float cell (see crt precedent for the __ftol coordinates).
+ * float cell after the CRT __ftol conversion.
  * On an ineligible cell: fold activity 11 in with argument 1, clear the
  * gate bit raising the eligibility-fail bit, and clear the cell's occupied
  * mark. On an eligible one with the activity timer spent: answer 1 without
@@ -411,9 +428,9 @@ int entity_activity_terrain_eligibility_transition(GameContext* ctx,
  * ActiveEntityListContainsCode (FUN_004031e0): the permitted-activity
  *   scan (FUN_0044b480) over the selection when it is non-empty (first-hit
  *   answer, branch isolation pinned), else over the corpus's global active
- *   entity list — DAT_004b335c/DAT_004b3424 have no ported owner, so the
- *   list rides zero-init own storage behind install/count hooks (window
- *   guard 50, deviations in the module notes). */
+ *   entity list — DAT_004b335c/DAT_004b3424 are maintained from live pool
+ *   create/teardown events and can be replaced through the install adapter
+ *   (window guard 50). */
 int entity_state_pair_predicate(GameContext* ctx, int type1, int row1,
                                 int type2, int row2);
                                                 /* FUN_0043c200 */
@@ -421,5 +438,9 @@ int active_entity_list_contains_code(GameContext* ctx, int code);
                                                 /* FUN_004031e0 */
 void active_entity_list_install(const EntitySlot* const* entries, int count);
 int  active_entity_list_count(void);            /* port hooks */
+const EntitySlot* active_entity_list_entry_get(int index);
+void active_entity_list_entity_add(const EntitySlot* entity);
+void active_entity_list_entity_remove(const EntitySlot* entity);
+void active_entity_list_clear(void);
 
 #endif /* LEGORRR_GAME_AI_HPP */

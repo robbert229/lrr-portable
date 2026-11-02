@@ -33,11 +33,14 @@
 
 #include <cstdint>
 #include <cstddef>
+
+struct EventTimerState;
 #include <stdarg.h>
 
 #include "gods98/block.hpp"
 #include "gods98/texture.hpp"
 #include "options.hpp"
+#include "priority_config_ports.hpp"
 
 struct EngineContext;
 
@@ -112,6 +115,11 @@ typedef struct FeItem {
     /* Slider / Cycle interaction state (Options menus). `value` lives in
      * [min, max]; cycles min=0, max=count-1 and carry their option texts. */
     int   min, max, value;
+    int   slider_x, slider_y; /* slider bar offset from the item anchor */
+    /* Slider config owns the colon-separated bar/cap/arrow image tuple.
+     * Keep its stable BlockFile string and per-open cache references. */
+    const char* slider_config;
+    TextureSurface* slider_images[8];
     int   cycle_count;
     char  cycle_opts[4][24];
 } FeItem;
@@ -123,7 +131,6 @@ typedef struct FeOverlay {
     char  sfx[FE_NAME_MAX];
     int   x, y;
     Flic* flic;   /* opened player, or NULL (missing file / not started) */
-    int   tried;  /* non-random overlays are only opened once per menu visit */
 } FeOverlay;
 
 typedef struct FeSubmenu {
@@ -145,6 +152,7 @@ typedef struct FeSubmenu {
     int   overlay_count;
     int   can_scroll;             /* CanScroll TRUE — item plane pans (0x413970) */
     int   scroll;                 /* plane offset in px (<= 0; reset on entry) */
+    uint32_t run_flags;           /* MenuShow clears submenu record +0x28 */
     int   scroll_extent;          /* content height = tallest item + row height */
 } FeSubmenu;
 
@@ -156,6 +164,7 @@ typedef struct FeMenu {
 
 #define FE_SLOT_COUNT 6    /* SAVE_SLOTS */
 #define FE_SAVE_THUMBNAIL_COUNT 5 /* InterfaceResourceHandlesRelease slots */
+#define FE_SAVE_LAYOUT_TEXT_MAX 256 /* 0x100-byte fields in the 0x728 record */
 
 /* A runtime save slot row (SaveMenuBuild @ 0x415a10 builds these from the
  * `Save_Game_%i` keys): the slot's label + whether it has any records. */
@@ -164,24 +173,26 @@ typedef struct FeSlot {
     char  label[FE_NAME_MAX];
     char  status[FE_NAME_MAX];
     int   present;
+    int   completed;             /* completed configured levels in this slot */
 } FeSlot;
 
 /* SaveMenuLayoutLoad (FUN_00415d00): the corpus stores these paths and
  * rectangles in a 0x728-byte resource record; this is its typed frontend
  * view. */
 typedef struct FeSaveMenuLayout {
-    char load[FE_PATH_MAX];
-    char save[FE_PATH_MAX];
-    char slot[FE_PATH_MAX];
-    char save_sel[FE_PATH_MAX];
-    char load_sel[FE_PATH_MAX];
-    char level[FE_PATH_MAX];
-    char tutorial[FE_PATH_MAX];
+    char load[FE_SAVE_LAYOUT_TEXT_MAX];
+    char save[FE_SAVE_LAYOUT_TEXT_MAX];
+    char slot[FE_SAVE_LAYOUT_TEXT_MAX];
+    char save_sel[FE_SAVE_LAYOUT_TEXT_MAX];
+    char load_sel[FE_SAVE_LAYOUT_TEXT_MAX];
+    char level[FE_SAVE_LAYOUT_TEXT_MAX];
+    char tutorial[FE_SAVE_LAYOUT_TEXT_MAX];
     int window_x, window_y, window_w, window_h;
     int has_window;
-    char panel_path[FE_PATH_MAX];
+    char panel_path[FE_SAVE_LAYOUT_TEXT_MAX];
     int panel_x, panel_y, panel_w, panel_h;
     int has_panel;
+    TextureSurface* panel_surface;
 } FeSaveMenuLayout;
 
 #define FE_LEVEL_MENU_LISTS 2
@@ -327,6 +338,20 @@ const FeSurroundImage* interface_surround_image_peek(int index);
 int interface_images_config_load(BlockFile* cfg); /* FUN_0041ada0 */
 const FeInterfaceImage* interface_image_peek(int action_index);
 int interface_build_images_config_load(BlockFile* cfg); /* FUN_0041ab00 */
+/* PanelRotationControlConfigLoad @ 0x0045b9d0. The renderer-owned retail
+ * globals are represented here as queryable config state; image dimensions
+ * are the configured comma-separated pair, in left/right/up/down order. */
+typedef struct FrontendPanelRotationControlState {
+    int center_x;
+    int center_y;
+    int radius;
+    TextureSurface* images[4];
+    float image_sizes[4][2];
+} FrontendPanelRotationControlState;
+void frontend_panel_rotation_control_config_load(BlockFile* values,
+                                                   const char* config_root);
+void frontend_panel_rotation_control_state_get(
+    FrontendPanelRotationControlState* state);
 uint32_t interface_build_image_count(int group);
 const FeInterfaceBuildImage* interface_build_image_peek(int group, int index);
 TextureSurface* interface_build_image_binding_value_get(
@@ -340,7 +365,7 @@ void main_menu_text_item(void); /* FUN_004103d0; requests scrolling credits */
 /* FormattedTextPrintfWidth / MenuTextRecordMake: menu text measurement and
  * the 15-word text-record constructor used by legacy menu builders. */
 uint32_t formatted_text_printf_width(const TextureSurface* font,
-                                     const char* text); /* FUN_00401c50 */
+                                     const char* text, ...); /* FUN_00401c50 */
 void formatted_text_draw(const TextureSurface* font, void* px, int pitch,
                          int w, int h, int x, int y, const char* text);
 uint32_t formatted_text_draw_and_measure(const TextureSurface* font,
@@ -389,6 +414,9 @@ void tooltip_icon_config_hooks_set(const ToolTipIconConfigHooks* hooks,
                                    const char* const secondary_names[6]);
 void tooltip_icons_config_load(void* config); /* 0x437150 */
 void* tooltip_icon_handle_get(unsigned int bank, unsigned int index);
+void advisor_tooltip_and_sound_config_load(BlockFile* config); /* 0x434da0 */
+const char* advisor_tooltip_text_get(int index);
+int advisor_tooltip_sound_get(int index);
 void* menu_button_record_make(const char* text,
                               const TextureSurface* normal_font,
                               const TextureSurface* selected_font,
@@ -412,6 +440,11 @@ int option_music_default(void); /* FUN_00414e10 */
  * names the level-picker art. Returns 1 when MainMenuFull parsed. The
  * level chain is populated from StartLevel/TutorialStartLevel + NextLevel. */
 int  frontend_build(FrontEnd* fe, BlockFile* cfg);
+/* Pointer cursor config/draw target entry points. Config rows are the child
+ * records of Lego.cfg's Pointers group. */
+void pointer_cursor_config_load_target(BlockRec* first_entry);
+int pointer_cursor_config_parse_target(const char* name, int* index_out);
+void pointer_cursor_draw_target(uint32_t x, uint32_t y);
 
 /* Sync the option widgets with `fe->opts` (issue #85): seed every option
  * Slider/Cycle value from the store, clamped to the item's cfg range. Called
@@ -423,6 +456,13 @@ void frontend_options_sync(FrontEnd* fe);
  * (The corpus ANDs the loader-mode check DAT_00505f88 < 3; the port only
  * tracks the flag — the loader-mode notion is Win32-side.) */
 int  frontend_enabled(BlockFile* cfg);
+/* RenderThreePassUpdate (FUN_00459530): initialize health-bar geometry and
+ * colors, hunger images and position, then the bubble position from the
+ * value/key config pair. Called during game config setup before rendering. */
+void frontend_hud_runtime_install(void);
+void frontend_render_three_pass_update(BlockFile* values, BlockFile* names);
+int frontend_bubble_images_position_config_load(BlockFile* values,
+                                                BlockFile* names);
 /* UiTextUnderscoresToSpaces (FUN_004102b0): return a shared display copy
  * with underscores changed to spaces for strings up to 255 bytes. */
 const char* ui_text_underscores_to_spaces(const char* text);
@@ -446,10 +486,13 @@ int  fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz);
 
 /* Enter the modal menu at `menu`/submenu 0, selection 0. */
 int  frontend_open(FrontEnd* fe, int menu);
+/* MenuShow's typed entry: reset submenu run flags and enter `submenu`. */
+int  frontend_open_submenu(FrontEnd* fe, int menu, int submenu);
 /* Prepare one native front-end flow (save-tree/global setup is port state). */
 int  frontend_state_change(FrontEnd* fe, int state); /* FUN_004169c0 */
 int  menu_enter(FrontEnd* fe, int mode); /* FUN_00416c80 */
 int  save_menu_open_from_reward(FrontEnd* fe); /* FUN_00462030 */
+int  save_menu_open_from_reward_bound(void);
 void frontend_close(FrontEnd* fe);
 void interface_resource_handles_release(FrontEnd* fe); /* FUN_00413b50 */
 void frontend_save_thumbnail_invalidate(FrontEnd* fe, int slot);
@@ -507,10 +550,24 @@ const char* frontend_active_image(const FrontEnd* fe);
 void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);
+/* Software view of the renderer-owned frame-cell table consumed by
+ * RenderUiFrameCell. Each entry's low flag bit selects the direct surface;
+ * otherwise the function picks frame_surfaces[index * 8 + frame]. Native
+ * resource handles still need to be resolved by the renderer adapter. */
+typedef struct FeUiFrameCellEntry {
+    uint32_t flags;
+} FeUiFrameCellEntry;
+typedef struct FeUiFrameCellTable {
+    const FeUiFrameCellEntry* entries;
+    size_t entry_count;
+    const TextureSurface* const* frame_surfaces;
+    size_t frame_surface_count;
+} FeUiFrameCellTable;
 void menu_render_ui_frame_cell(void* px, int pitch, int w, int h,
-                               int x, int y, int text_row,
-                               const char* text,
-                               const TextureSurface* image);
+                               int x, int y,
+                               const TextureSurface* direct_surface,
+                               const FeUiFrameCellTable* table,
+                               int item_index, int frame_index);
 typedef struct FePercentSplitSurface {
     const TextureSurface* right_fill;      /* packed record +0x18 */
     const TextureSurface* left_fill;       /* packed record +0x1c */
@@ -569,11 +626,25 @@ void interface_message_tab_info_text_load(const char* path); /* FUN_00419430 */
 TextureSurface* interface_message_tab_info_text(void); /* port accessor */
 
 /* Draw one frame of the scrolling credits lane over the caller's backdrop.
- * scroll_px advances one pixel per frame; the text cycles from below the
- * screen back to the bottom after the final line leaves the top. */
+ * scroll_px is the accumulated one-pixel offset from the 33 ms clock step;
+ * the text cycles from below the screen after the final line leaves the top. */
 void frontend_render_credits(const TextureSurface* font,
                              const char* const* lines, int line_count,
                              int scroll_px, int w, int h, void* px, int pitch);
+
+/* ScrollingTextDisplay's CreditsTextFile loader: try `<path>.cconv` first,
+ * then the configured path, and split on CRLF while retaining the terminal
+ * empty row. The returned rows are released with
+ * frontend_credits_lines_free(). */
+int frontend_credits_lines_load(const char* path, char*** lines_out,
+                                int* count_out);
+void frontend_credits_lines_free(char** lines, int count);
+
+/* Advance the credits lane by at most one pixel for a >33 ms elapsed step.
+ * `clock_ms` is the prior timeGetTime-style stamp and `scroll_px` is the
+ * accumulated lane offset. */
+void frontend_credits_scroll_step(uint32_t now_ms, uint32_t* clock_ms,
+                                  int* scroll_px);
 
 /* The in-game Help Window (issue #85): the panel the Help_Window option
  * toggles. The option is checked here — the display gate — so every caller
@@ -632,10 +703,11 @@ void selection_state_handle_slot_set(int table, int index, uint32_t value);
 
 /* --- band-mode / timed-effect / positions (2026-10-24) ----------------------
  * TimedEffectUpdateRequestSet (FUN_0046b770, findings 228/05): raises the
- * update flag (bit 2) of a timed-effect entry. The band storage lives
- * with the unported timed-effect update family — the port models each
- * entry's flag word inside a guarded 16-entry window (documented bounds
- * deviation), with a peek view for tests.
+ * update flag (bit 2) of one of the shared 40-entry timed-effect records at
+ * DAT_0054c000. Each entry's cue, flags, timestamp, and payload now use the
+ * decompiled 0x27c-byte record stride. Setters retain a bounds guard for the
+ * portable API, while the target-address leaves are annotated on the direct
+ * implementations.
  * UiModeTransitionRequest (FUN_00418fc0, finding 250): the band mode word
  * (DAT_004dc64c, modeled with the selection-state band) transition —
  * the zero-second argument arms mode 4, mode 4 hands over to the requested
@@ -654,8 +726,7 @@ void timed_effect_update_request_set(int index);
 uint32_t timed_effect_flags_peek(int index);           /* diagnostics */
 
 /* TimedEffectCueRequestSet (FUN_0046b700): stores the cue request word in
- * the entry's band slot (+0 in the corpus's 0x27c stride, modeled as the
- * port's guarded cue window) and raises the entry's flag bits 0 and 1.
+ * the entry's +0x274 word and raises flag bits 0 and 1 at +0x278.
  * Deviation: the corpus strides any index and the stride band blindly. */
 void timed_effect_cue_request_set(int index, uint32_t value);
 uint32_t timed_effect_cue_peek(int index);             /* port hook */
@@ -669,14 +740,15 @@ int      band_mode_peek(void);                        /* diagnostics */
 void     band_mode_set(int mode);                     /* diagnostics */
 void     selection_mode_set_by_index(int index);
 void     ui_mode_resource_positions_apply(void);
+typedef int (*UiModeResourceBlitRectHook)(uint32_t handle,
+                                          const float* source_rect,
+                                          const float* destination_position,
+                                          const float* destination_rect);
 void     ui_mode_resource_reposition_hook_set(
-             int (*hook)(uint32_t handle, int x, int y));
+             UiModeResourceBlitRectHook hook);
 void     help_window_button_feedback_update(int action, float amount);
 void     help_window_feedback_state_set(float position, float limit);
 float    help_window_feedback_position_get(void);
-void     help_window_feedback_hooks_set(void (*reset)(int, int),
-                                        void (*cleanup)(void),
-                                        void (*finish)(int));
 void     help_render_transition_clear_hook_set(void (*hook)(int, int));
 void     help_render_transition_cleanup_if_active(void);
 void     help_window_button_rect_set(int index, float x, float y,
@@ -691,7 +763,7 @@ typedef struct FeHelpWindowResourceOps {
                               const char* text);
     uint32_t (*resource_load)(void* context, const char* name, int x, int y);
     void (*background_apply)(void* context, uint32_t handle);
-    uint32_t (*text_area_create)(void* context, uint32_t mode,
+    uint32_t (*text_area_create)(void* context, uintptr_t font_handle,
                                  const int rect[4], uint32_t flags);
     void (*text_load)(void* context, int slot, const char* name);
     void (*label_set)(void* context, int index, const char* text);
@@ -707,6 +779,9 @@ void     help_window_info_config_strings_load(
              void (*store)(void* context, int group, size_t catalog_index,
                            int line_index, const char* text),
              void* context);
+const char* help_window_info_string_get(int group, size_t catalog_index,
+                                        int line_index);
+uintptr_t help_window_text_area_handle_peek(void);
 /* ToolTipInfoStringsLoad (FUN_00427e00): load nine fixed labels from the
  * ToolTipInfo config group into module-owned strings. */
 void tooltip_info_strings_load(BlockFile* cfg);
@@ -717,8 +792,8 @@ typedef struct UiTextEntryState {
     uint32_t flags;
     int32_t counters[5];
 } UiTextEntryState;
-void ui_text_entry_load(UiTextEntryState* entry, const char* source,
-                        UiTextImageLoadFn image_load, void* context);
+void ui_text_entry_state_load(UiTextEntryState* entry, const char* source,
+                              UiTextImageLoadFn image_load, void* context);
 typedef void* (*AdvisorTutorialIconLoadFn)(const char* path, void* context);
 typedef void (*AdvisorTutorialIconInitializeFn)(void* icon, void* context);
 void advisor_tutorial_icon_hooks_set(AdvisorTutorialIconLoadFn load,
@@ -731,16 +806,29 @@ typedef void (*AdvisorTextRequestActionFn)(uint32_t request, int p1, int p2,
 void advisor_text_request_action_hook_set(AdvisorTextRequestActionFn hook,
                                           void* context);
 void advisor_text_request_setup(uint32_t request, uint32_t flags);
+void advisor_text_request_setup_text(const char* source, uint32_t flags);
 uint32_t advisor_text_request_flags_get(void);
 typedef struct AdvisorTextDisplayState {
     int current_slot;
     int hidden_slot;
     int message_id;
     uint32_t message_flags;
-    uint32_t interface_flags;
+    uint32_t interface_flags; /* DAT_00556ecc: bit 0x100000 gates overlay close */
     float message_timer;
     float x;
     float y;
+    /* Optional engine text-output records. The slot path uses the primary or
+     * alternate record when slot_text_draw is not supplied. */
+    void* primary_text_output;
+    void* alternate_text_output;
+    /* Optional source for the queued advisor request. The reference stores a
+     * source pointer at DAT_00503614; token_index is a portable alternative
+     * for owners that retain the parsed ordinary-token table. */
+    const char* message_text;
+    uint32_t message_token_index;
+    uint32_t message_token_index_valid;
+    int advisor_mode;
+    int advisor_mode_valid;
 } AdvisorTextDisplayState;
 typedef struct AdvisorTextDisplayOps {
     void* context;
@@ -759,7 +847,29 @@ typedef struct AdvisorTextDisplayOps {
                              float delta);
 } AdvisorTextDisplayOps;
 void advisor_text_display_ops_set(const AdvisorTextDisplayOps* ops);
-int advisor_text_display_worker(float delta); /* FUN_0046ad00 */
+void advisor_text_display_worker(float delta); /* FUN_0046ad00 */
+typedef void (*AdvisorInlineImageDrawFn)(void* context, void* image_handle,
+                                         uint32_t image_index, float x,
+                                         float y);
+typedef float (*AdvisorInlineSoundDurationFn)(void* context,
+                                              uint32_t sound_handle);
+typedef void (*AdvisorInlineSoundTransitionFn)(void* context,
+                                               uint32_t sound_handle,
+                                               float duration);
+typedef struct AdvisorInlineTokenOps {
+    void* context;
+    AdvisorInlineImageDrawFn image_draw;
+    AdvisorInlineSoundDurationFn sound_duration;
+    AdvisorInlineSoundTransitionFn sound_transition;
+    float image_x;
+    float image_y;
+    float image_step_x;
+    float image_step_y;
+    float duration_origin;
+} AdvisorInlineTokenOps;
+void advisor_inline_token_ops_set(const AdvisorInlineTokenOps* ops);
+void advisor_inline_token_render(char* source, char* output, int draw);
+float advisor_inline_token_duration_get(void);
 typedef struct SelectedGroundMarkerOps {
     void* context;
     int (*entity_renderable)(void* context, void* entity);
@@ -780,6 +890,15 @@ typedef struct SelectedGroundMarkerOps {
 void selected_ground_marker_ops_set(const SelectedGroundMarkerOps* ops);
 int selected_entity_ground_marker_render(void* entity, void* camera,
                                          float red, float green, float blue);
+typedef struct PositionTrackerBoxDrawOps {
+    void* context;
+    uint32_t (*interface_flags_get)(void* context);
+    void (*outline_draw)(void* context, const float* points0,
+                         const float* points1, int point_count, int mode,
+                         float scale, int parameter1, int parameter2);
+} PositionTrackerBoxDrawOps;
+void position_tracker_box_draw_ops_set(const PositionTrackerBoxDrawOps* ops);
+void position_tracker_box_draw(const float bounds[4]); /* FUN_0041cd30 */
 typedef struct OverlayTextLine {
     void* entry;
     int kind;
@@ -875,6 +994,38 @@ typedef struct AdvisorOverlayRect {
 typedef int (*AdvisorOverlayFallbackHitFn)(
     void* context, float x, float y, float offset_x, float offset_y,
     uint32_t* result0, uint32_t* result1, uint32_t* result2);
+struct TerrainSurfaceGrid;
+struct CameraPointerRayHooks;
+typedef struct SimulationPointerDispatchOps {
+    void* context;
+    float cell_region_x;
+    float cell_region_y;
+    AdvisorOverlayRect focused_rect;
+    float overlay_offset_x;
+    float overlay_offset_y;
+    uint32_t feature_word;
+    AdvisorOverlayFallbackHitFn overlay_fallback;
+    struct TerrainSurfaceGrid* terrain_grid;
+    const struct CameraPointerRayHooks* ray_hooks;
+    int (*global_word_resolve)(void* context, int action, int cell_x,
+                               int cell_y, uint32_t* value_out);
+    const char* (*action_label_get)(void* context, int action,
+                                    int cell_x, int cell_y);
+    void (*feedback)(void* context, int feedback_kind, int action,
+                     int cell_x, int cell_y, const char* text,
+                     uint32_t repeat_count);
+    void (*world_hit_apply)(void* context, int cell_x, int cell_y,
+                            const float hit_xyz[3], int count_action);
+    void (*action_count)(void* context, int action, int cell_y);
+    void (*action_complete)(void* context, int action, int cell_x,
+                            int cell_y);
+} SimulationPointerDispatchOps;
+void simulation_pointer_dispatch_ops_set(
+    const SimulationPointerDispatchOps* ops);
+int simulation_pointer_action_dispatch(int x, int y, int active,
+                                       int suppress_initial,
+                                       int count_action,
+                                       void* main_sim_context); /* 0x41baa0 */
 int advisor_overlay_hit_resolve(
     float x, float y, const AdvisorOverlayRect* focused_rect,
     float offset_x, float offset_y, AdvisorOverlayFallbackHitFn fallback,
@@ -902,11 +1053,14 @@ typedef struct AdvisorTextBoxLayoutState {
 typedef void (*AdvisorTextBoxExtentFn)(void* context, int width, int height);
 void advisor_text_box_extent_hook_set(AdvisorTextBoxExtentFn hook,
                                       void* context);
-void advisor_text_box_record_commit(AdvisorTextBoxLayoutState* state); /* FUN_0046a9e0 */
-void text_layout_geometry_store_and_apply(
+/* Portable state adapters for the text-box geometry path. The mapped target
+ * functions are renderer-global/no-argument APIs and are left unmapped until
+ * their native text-widget owner is available. */
+void advisor_text_box_record_commit_state(AdvisorTextBoxLayoutState* state);
+void text_layout_geometry_store_and_apply_state(
     AdvisorTextBoxLayoutState* state, uint32_t object_id,
     uint32_t request_id, float value, const float geometry[4],
-    uint32_t mode); /* FUN_0046a950 */
+    uint32_t mode);
 const char* tooltip_info_string_peek(int index);
 typedef struct TooltipOverlayState {
     const char* names[38];
@@ -919,20 +1073,25 @@ typedef struct TooltipOverlayState {
     float color_low[3];
 } TooltipOverlayState;
 typedef uint32_t (*TooltipFontMetricQueryFn)(void* font, void* context);
+/* Target ABI is ten stack words: font, two geometry words, duration
+ * multiplier, display width/height, inset word, and tooltip RGB. The retail
+ * GameConfigInit call leaves five words from its color helper calls beneath
+ * the five explicit arguments; keep this entry's full target signature. */
 void tooltip_overlay_state_initialize(
+    void* font, uint32_t geometry_a, uint32_t geometry_b, float duration_scale,
+    uint32_t display_width, uint32_t display_height, uint32_t inset_word,
+    float color_r, float color_g, float color_b); /* FUN_0046b1d0 */
+void tooltip_overlay_state_initialize_state(
     TooltipOverlayState* state, void* font,
     uint32_t value2, uint32_t value3, float scale,
     uint32_t value5, uint32_t value6, uint32_t value7,
     float color_r, float color_g, float color_b,
-    TooltipFontMetricQueryFn metric_query, void* context); /* FUN_0046b1d0 */
+    TooltipFontMetricQueryFn metric_query, void* context);
+void tooltip_overlay_state_current(TooltipOverlayState* state);
 void     help_window_resources_init(BlockFile* cfg,
                                     const FeHelpWindowResourceOps* ops);
 void     help_window_button_layout_load(
-             BlockFile* cfg, float offset_x, float offset_y,
-             uint32_t (*resource_load)(void* context, const char* name,
-                                       int x, int y),
-             void (*text_load)(void* context, int slot, const char* name),
-             void* context);
+             BlockFile* cfg, BlockFile* config_root);
 void     help_window_sound_clear_hook_set(void (*hook)(int));
 int      help_window_button_hit_test(uint32_t x, uint32_t y, int mode,
                                      int transition_flags, int active,
@@ -1003,17 +1162,68 @@ void mode_flag_pair_apply_if_bit2(int value);
  * both. */
 float    selection_coordinates_peek(int which); /* 0..3 */
 void     selection_region_parameters_peek(float out[5]);
+extern uint32_t s_obj_sel_word; /* DAT_004ddccc: objective selection mode */
 uint32_t objective_selection_word_peek(void);   /* port hook */
+/* UITextOutputPositionAndDraw @ 0x45a5b0 receives this exact 16-byte x86
+ * record: text buffer pointer, base Y, base X, and panel-coordinate pointer.
+ * The final pointer addresses a panel record whose +0x18/+0x1c floats are
+ * added to Y/X respectively. On wider hosts the pointer tokens are resolved
+ * through the sidecar below. */
+typedef struct UiTextOutputRecord32 {
+    uint32_t text_buffer_pointer;
+    int32_t  base_y;
+    int32_t  base_x;
+    uint32_t panel_coordinates_pointer;
+} UiTextOutputRecord32;
+typedef char UiTextOutputRecord32SizeCheck[
+    (sizeof(UiTextOutputRecord32) == 16) ? 1 : -1];
+
+/* PanelImageSlotEntryAllocate (FUN_0045a500) builds the 16-byte text-output
+ * wrapper around TextBufferCreate. rect is the x/y/w/h float tuple; the
+ * font handle and buffer size are passed to TextBufferCreate. */
+void* ui_text_output_record_allocate(int panel, uintptr_t font_handle,
+                                     const float rect[4],
+                                     uint32_t buffer_size);
+typedef struct UiTextOutputElementCreateContext {
+    uintptr_t font_handle;
+} UiTextOutputElementCreateContext;
+void* ui_text_output_element_create(void* context, int panel, int kind,
+                                    float x, float y, float width,
+                                    float height, int buffer_size);
+int ui_text_output_record_slot_allocate(void** holder, int panel,
+                                        uintptr_t font_handle,
+                                        const float rect[4],
+                                        uint32_t buffer_size);
+/* The native-width panel record needs an adapter on hosts wider than x86. */
+int ui_text_output_panel_coordinates_set(int panel, float y_offset,
+                                         float x_offset);
+/* Port ownership cleanup; the retail release target resets rather than frees
+ * this record. */
+void ui_text_output_record_destroy(void* record);
+void ui_text_output_record_slot_destroy(void** holder);
+int ui_text_output_pointer_binding_set(void* record, void* text_buffer,
+                                       const float* offsets);
+void ui_text_output_pointer_binding_clear(void* record);
+void ui_text_output_position_and_draw(void* record, uint32_t start_line,
+                                      float line_scale);
+void ui_text_output_record_slot_draw(void* const* holder,
+                                     uint32_t start_line, float line_scale);
+void frontend_event_timer_state_get(EventTimerState* state);
+void frontend_event_timer_state_set(const EventTimerState* state);
+void timed_status_and_event_tick(float delta); /* FUN_0041b930 */
 float    interaction_timer_peek(void);          /* port hook */
 uint32_t interaction_flags_peek(void);          /* port hook */
 /* PointerActionStateDispatch (FUN_0041c6e0): drive the pointer action
  * latch and matching input-entry/player flags. */
 int pointer_action_state_dispatch(int action, int kind, int entry,
                                   int active, int suppress_initial);
-typedef void (*FeAdvisorCallbackSchedule)(uint32_t selector, void* context);
-void advisor_callback_schedule_enabled_set(int enabled); /* port hook */
-void advisor_callback_schedule_gate(FeAdvisorCallbackSchedule schedule,
-                                    void* context); /* FUN_0041c440 */
+/* Callback supplied for the unresolved LAB_0041c470 body. The gate passes it
+ * through CatalogCallbackByIdDispatch with the target's null payload. */
+typedef int (*FeAdvisorCatalogCallback)(int action, int lane, int row,
+                                        void* payload);
+void advisor_callback_schedule_callback_set(
+    FeAdvisorCatalogCallback callback); /* port binding */
+void advisor_callback_schedule_gate(void); /* FUN_0041c440 */
 int advisor_animation_slot_id_resolve(uint32_t animation_kind,
                                       uint32_t position_index,
                                       uint32_t* slot_id); /* FUN_0045c6b0 */
@@ -1079,8 +1289,8 @@ void     sim_status_banner_word_set(uint32_t value); /* port hook */
  * PanelCategoryBoundsSet (FUN_0045a650): stores the rectangle (ints cast
  * to floats), clears the record's word, and routes the pair behind — the
  * first corner while the modeled flag word's bit 2 rides, else the second.
- * The record's float fields have no ported owner — own storage; the pair/
- * flag windows ride the crt.* windows already modeled for them.
+ * The complete 0x30-byte record is owned by the crt.* request-record table,
+ * including its rectangle, pair, category word, and flags.
  * UiEntryBoundsGet (FUN_0045bf70): position plus derived size from the
  * panel's installed draw-record block (stride 0x2c, far minus near). */
 void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2);
@@ -1097,6 +1307,14 @@ int priority_image_selection_state_update(int candidate, int gate, int skip);
                                         /* FUN_0045d300 */
 void priority_image_state_set(int32_t state, uint32_t flags); /* port hook */
 void priority_image_state_peek(int32_t* state, uint32_t* flags);
+void frontend_priority_images_config_load(BlockFile* values,
+                                          BlockFile* names);
+int frontend_priorities_config_load(BlockFile* values, BlockFile* names,
+                                    const char* section_name);
+void frontend_priorities_image_positions_config_load(BlockFile* values,
+                                                      BlockFile* names);
+void frontend_priority_config_state_get(PriorityConfigState* state);
+int frontend_priority_sound_alias_get(int kind);
 
 /* UiRenderRecordCreate (FUN_0045da90): the 0x3c UI render record — the
  * source, its payload words copied from the caller's array, the extra
@@ -1143,16 +1361,16 @@ void menu_clock_millis_set(uint32_t millis); /* port tick hook */
  * word (`sim_status_banner_word_get`) exactly where the corpus does. */
 void panel_texture_slots_blit(int panel); /* FUN_0045a9c0 */
 
-/* TimedEffectTimestampReset (FUN_0046b7a0): stamps the corpus's global tick
- * word into the band entry's time field (stride-0x27c table — the port keeps
- * the fields the setters touch side by side). The corpus tick word
- * (DAT_0054bf3c) belongs to the unported update family, so it lands as a
- * zero-init module static with a set hook. Out-of-range indices are guarded
- * (documented deviation: the corpus strides blindly). */
+/* TimedEffectTimestampReset (FUN_0046b7a0): stamps DAT_0054bf3c's float bits
+ * into the shared record timestamp. TooltipOverlayStateInitialize sets that
+ * word to the configured duration threshold (scale * 25); a setter remains
+ * available for the port's external clock adapter. Out-of-range indices are
+ * guarded (documented deviation: the corpus strides blindly). */
 void    timed_effect_timestamp_reset(int index);  /* FUN_0046b7a0 */
 void    timed_effect_tick_word_set(uint32_t tick); /* port hook */
 uint32_t timed_effect_tick_word_peek(void);
 uint32_t timed_effect_time_peek(int index);        /* diagnostics */
+void* timed_effect_record_storage_get(unsigned int index); /* 0x27c stride */
 /* ScreenRightEdgeCacheRefresh (FUN_0041a290): re-reads the index-0 text
  * metrics pair through the ported getter and caches x - y into the right-edge
  * word. The corpus's reader is the unported layout band, so the cache lands
@@ -1164,6 +1382,7 @@ uint32_t screen_right_edge_cache_peek(void);    /* port hook */
  * the advance returned by FUN_0047a470; this port derives the same value from
  * the bitmap ink bounds used by its renderer. */
 int bitmap_font_glyph_measure_width(void* font, unsigned char glyph);
+TextureSurface* bitmap_font_resource_load(const char* name); /* FUN_00479ee0 */
                                                 /* FUN_0047a520 */
 
 /* --- panel resource + scroll leaf band (2026-10-24; findings 386/439/436/
@@ -1291,21 +1510,18 @@ void     panel_seam_last(void** out_res, float* out_x, float* out_y);
 
 /* ActiveObjectList (FUN_00416e00, findings 371/378): the active-object word
  * selector — in-game answers the DAT_00556fd0 word, otherwise the
- * DAT_00556fe4 word. Neither corpus word has a ported owner, so both land
- * here as zero-init statics; the selector returns the live address. */
+ * DAT_00556fe4 word. Counts are refreshed when their SaveTree root and
+ * dynamic visited band are installed. */
 int* active_object_list_word(void); /* FUN_00416e00 */
+void active_object_list_count_set(int which, int count);
 
-/* --- the sav visited-table band (2026-10-25) -------------------------------
- * The corpus's two "visited" tables run parallel to the modeled
- * active-object count words (out-of-game: DAT_00556fe4 count behind
- * DAT_00556ff0/ff4 item/word arrays; in-game: DAT_00556fd0 count behind
- * DAT_00556fdc/e0). Their installers live in the unported sav-tree
- * loaders, so the tables ride zero-init own storage behind the install/
- * peek hooks below (the unowned-global convention).
- * SavClearVisited (FUN_00416e70): walk both bands, out-of-game first,
- * clearing every non-null entry record's +0x10 flag word and the word
- * word alongside. Deviations: entry windows and count bounds guarded,
- * records touched through the modeled +0x10 word. */
+/* --- the sav visited-table band --------------------------------------------
+ * The corpus's two visited tables are per-entry arrays allocated by
+ * LevelChainBuild and sized to each root's runtime count. The port owns
+ * widened-pointer sidecars alongside each installed SaveTree root.
+ * SavClearVisited (FUN_00416e70): walk both root-owned dynamic bands,
+ * out-of-game first, clearing every non-null entry record's +0x10 flag
+ * word and paired word. The port stores widened host pointers in sidecars. */
 void sav_clear_visited(void); /* FUN_00416e70 */
 void sav_visited_entry_set(int which, int index, void* record,
                            uint32_t word);             /* port hook */

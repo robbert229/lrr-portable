@@ -12,8 +12,8 @@
  * The corpus players are FUN_00483c80 (open) / FUN_00484070 (tick) /
  * FUN_004841d0+260 (frame steppers); MoviePlayWait @ 0x415700 drives them
  * modal. This module keeps the same RAM-mode semantics: the whole chunk
- * stream is preloaded at open and frames are decoded on tick, with loop
- * restarting at index 1 (the keyframe is already in the buffer).
+ * stream is preloaded at open and frames are decoded on tick. RAM loops keep
+ * the decoded keyframe and restart at frame 1; streamed loops replay it.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,16 +23,20 @@
 #include "record.hpp"
 #include "movie.hpp"
 #include "resource.hpp"
+#include "crt/crt.hpp"
 
 #define FLIC_MAGIC_AF43 0xaf43
 #define FLIC_HEADER 136      /* the engine's read size (context +0x640) */
 #define FLIC_CHUNK_START 0x80 /* frame data starts at file offset 0x80 (§2) */
 #define FLIC_CHUNK_HDR 16
+#define FLIC_STREAM_INITIAL_BUFFER 20000u
 
 struct FlicChunk {
-    const uint8_t* data; /* chunk start (16-byte header included) */
+    const uint8_t* data; /* full RAM chunk, or stream body when body_only */
     uint32_t       size; /* chunk size, incl. header */
     uint16_t       count; /* subrecord count; 0 = hold chunk */
+    uint16_t       type;
+    int            body_only; /* streamed frame body omits its 16-byte header */
 };
 
 struct Flic {
@@ -42,10 +46,29 @@ struct Flic {
     int eof;
     FlicChunk* chunks; /* chunks[0] = keyframe, [1..] = deltas/holds */
     int chunk_n;
+    int chunk_cap;
+    int frame_n;
+    int last_walk_frame_valid;
+    int first_frame_chunk;
+    int next_chunk;
+    size_t cursor;   /* byte offset of the next chunk in the RAM image */
     uint8_t* raw;     /* owned copy of the whole file */
     size_t   raw_len;
     uint16_t* pix;    /* RGB555 frame buffer */
     uint8_t* rgba;    /* lazy RGBA32 conversion */
+    int current_chunk;
+    int stream_mode;
+    FlicStreamOps stream_ops;
+    uint32_t stream_length;
+    uint8_t* stream_buffer;
+    uint32_t stream_buffer_allocated;
+    uint32_t stream_buffer_capacity;
+    uint32_t stream_frame_count;
+    int stream_loop_enabled;
+    FlicChunk stream_chunk;
+    uint8_t stream_header[FLIC_CHUNK_HDR];
+    size_t stream_loop_cursor;
+    void (*stream_context_close)(void* context);
 };
 
 static uint16_t le16(const uint8_t* p)
@@ -57,6 +80,77 @@ static uint32_t le32(const uint8_t* p)
 {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16)
            | ((uint32_t)p[3] << 24);
+}
+
+static int flic_resource_route_resolve(const char* name,
+                                       const char** open_path,
+                                       int* resource_mode,
+                                       int* route);
+
+/* FlicFileHeaderValidate (FUN_00483f60): the original reads 0x88 bytes,
+ * compares the declared file length with the stream length, and accepts the
+ * five FLIC-family markers. Format-specific surface constraints are checked
+ * by flic_open after this shared container validation. */
+int flic_file_header_validate(const void* bytes, size_t length,
+                              FlicHeaderInfo* header)
+{
+    const uint8_t* data = (const uint8_t*)bytes;
+    uint16_t magic;
+    if (data == NULL || header == NULL || length < FLIC_HEADER
+        || length > 0xffffffffu || le32(data) != (uint32_t)length) {
+        return 0;
+    }
+    magic = le16(data + 4);
+    if (magic != 0x1234u && magic != 0x9119u
+        && magic != 0xaf11u && magic != 0xaf12u && magic != 0xaf43u) {
+        return 0;
+    }
+    header->magic = magic;
+    header->frames = le16(data + 6);
+    header->width = le16(data + 8);
+    header->height = le16(data + 10);
+    header->depth = le16(data + 12);
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00483f60
+int flic_file_header_validate_path(const char* path, void* context)
+{
+    uint8_t header_bytes[FLIC_HEADER];
+    uint32_t file_size = 0u;
+    ResourceStream* stream;
+    FlicHeaderInfo header;
+    const char* open_path;
+    int resource_mode;
+    int route;
+    int valid;
+    if (path == NULL || context == NULL ||
+        !flic_resource_route_resolve(path, &open_path, &resource_mode,
+                                     &route)) return 0;
+    (void)route;
+    stream = resource_stream_open(open_path, resource_mode, &file_size);
+    if (stream != NULL) {
+        valid = file_size >= FLIC_HEADER &&
+            resource_stream_read_at(stream, 0u, header_bytes, FLIC_HEADER);
+        resource_stream_close(stream);
+        if (!valid) return 0;
+    }
+    else {
+        Resource* resource = resource_open(open_path, resource_mode);
+        int32_t loaded;
+        if (resource == NULL) return 0;
+        loaded = resource_read(resource);
+        if (loaded < (int32_t)FLIC_HEADER) {
+            resource_free(resource);
+            return 0;
+        }
+        file_size = (uint32_t)loaded;
+        memcpy(header_bytes, resource->data, FLIC_HEADER);
+        resource_free(resource);
+    }
+    memcpy((uint8_t*)context + 0x640, header_bytes, FLIC_HEADER);
+    valid = flic_file_header_validate(header_bytes, file_size, &header);
+    return valid;
 }
 
 int flic_width(const Flic* f)  { return f != NULL ? f->width : 0; }
@@ -189,24 +283,34 @@ static void fli_delta(uint16_t* pix, int w, int h, const uint8_t* body,
 
 /* Decode every subrecord of one chunk into the frame buffer (a keyframe in
  * chunk 0, deltas otherwise; holds have none). */
-static void fli_decode_chunk(Flic* f, const FlicChunk* ch)
+static int fli_decode_chunk(Flic* f, const FlicChunk* ch)
 {
-    if (ch->count == 0) {
-        return; /* hold: pixels unchanged */
+    size_t header_size = ch->body_only ? 0u : FLIC_CHUNK_HDR;
+    size_t data_size = ch->size - FLIC_CHUNK_HDR;
+    int records = ch->body_only ? (int)(int8_t)ch->count :
+        (int)(int8_t)ch->data[6];
+    if (records <= 0) {
+        return 1; /* hold: pixels unchanged */
     }
-    size_t pos = FLIC_CHUNK_HDR; /* subrecords start at chunk + 0x10 */
-    for (uint16_t r = 0; r < ch->count; ++r) {
-        if (pos + 10 > ch->size) {
-            break; /* truncated record header */
+    size_t pos = 0u;
+    for (int r = 0; r < records; ++r) {
+        if (pos > data_size || data_size - pos < 6u) {
+            return 0; /* truncated size/opcode header */
         }
-        const uint8_t* rec = ch->data + pos;
+        const uint8_t* rec = ch->data + header_size + pos;
         uint32_t rec_size = le32(rec);
         uint16_t opcode = le16(rec + 4);
-        if (rec_size < 8 || pos + rec_size > ch->size) {
-            break; /* record overruns its chunk — bounded */
+        /* The generic record header is six bytes. Only the two implemented
+         * pixel opcodes consume the format-specific trailing header bytes;
+         * the retail opcode dispatcher returns immediately for every other
+         * opcode and the frame walker still advances by its declared size. */
+        uint32_t record_header_size = opcode == 25 ? 7u :
+                                      opcode == 27 ? 8u : 6u;
+        if (rec_size < record_header_size || rec_size > data_size - pos) {
+            return 0; /* record overruns its chunk — bounded */
         }
-        const uint8_t* body = rec + ((opcode == 25) ? 7 : 8);
-        size_t blen = rec_size - ((opcode == 25) ? 7u : 8u);
+        const uint8_t* body = rec + record_header_size;
+        size_t blen = rec_size - record_header_size;
         if (opcode == 25) {
             fli_keyframe(f->pix, f->width, f->height, body, blen);
         } else if (opcode == 27) {
@@ -215,8 +319,270 @@ static void fli_decode_chunk(Flic* f, const FlicChunk* ch)
         pos += rec_size;
     }
     if (f->rgba != NULL) {
+        free(f->rgba);
         f->rgba = NULL; /* invalidate the conversion */
     }
+    return 1;
+}
+
+static int flic_stream_buffer_reserve(Flic* f, uint32_t capacity)
+{
+    uint8_t* buffer;
+    if (f == NULL) return 0;
+    if (f->stream_buffer != NULL &&
+        capacity <= f->stream_buffer_capacity) return 1;
+    /* The reference frees the old chunk buffer and allocates exactly the
+     * newly observed chunk size. Avoid realloc here: its failure semantics
+     * retain the old allocation, unlike the stream player's pool calls. */
+    free(f->stream_buffer);
+    f->stream_buffer = NULL;
+    f->stream_buffer_allocated = 0u;
+    buffer = (uint8_t*)malloc((size_t)capacity);
+    if (buffer == NULL) return 0;
+    f->stream_buffer = buffer;
+    f->stream_buffer_allocated = capacity;
+    f->stream_buffer_capacity = capacity;
+    return 1;
+}
+
+static int flic_stream_chunk_header_read(Flic* f)
+{
+    uint32_t size;
+    if (f == NULL || f->stream_mode == 0 ||
+        f->cursor > f->stream_length ||
+        f->stream_length - f->cursor < FLIC_CHUNK_HDR) return 0;
+    if (f->stream_buffer == NULL ||
+        f->stream_buffer_allocated < FLIC_CHUNK_HDR) {
+        if (!flic_stream_buffer_reserve(f, FLIC_CHUNK_HDR)) return 0;
+    }
+    if (!f->stream_ops.read_at(f->stream_ops.context, (uint32_t)f->cursor,
+                               f->stream_buffer, FLIC_CHUNK_HDR)) return 0;
+    size = le32(f->stream_buffer);
+    if (size < FLIC_CHUNK_HDR || size > f->stream_length - f->cursor)
+        return 0;
+    memcpy(f->stream_header, f->stream_buffer, FLIC_CHUNK_HDR);
+    f->stream_chunk.data = f->stream_header;
+    f->stream_chunk.size = size;
+    f->stream_chunk.type = le16(f->stream_header + 4);
+    f->stream_chunk.count = le16(f->stream_header + 6);
+    f->stream_chunk.body_only = 0;
+    return 1;
+}
+
+static int flic_stream_chunk_load(Flic* f)
+{
+    uint32_t body_size;
+    if (f == NULL || f->stream_mode == 0) return 0;
+    if (f->stream_chunk.size < FLIC_CHUNK_HDR) return 0;
+    body_size = f->stream_chunk.size - FLIC_CHUNK_HDR;
+    if (body_size == 0u) {
+        f->stream_chunk.data = f->stream_header;
+        f->stream_chunk.body_only = 1;
+        return 1;
+    }
+    f->stream_chunk.data = NULL;
+    if (!flic_stream_buffer_reserve(f, body_size)) return 0;
+    if (body_size != 0u && !f->stream_ops.read_at(
+            f->stream_ops.context, (uint32_t)(f->cursor + FLIC_CHUNK_HDR),
+            f->stream_buffer, body_size))
+        return 0;
+    f->stream_chunk.data = f->stream_buffer;
+    f->stream_chunk.body_only = 1;
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x004844b0
+/* FlicFrameRecordWalk: walk the signed byte count of subrecords after the
+ * 16-byte chunk header. Stream mode buffers only the body, as the retail
+ * reader does; RAM mode uses the retained file image. */
+int flic_frame_record_walk(Flic* f)
+{
+    const FlicChunk* ch;
+    if (f == NULL) {
+        return 0;
+    }
+    if (f->stream_mode != 0) {
+        if (!flic_stream_chunk_load(f)) return 0;
+        ch = &f->stream_chunk;
+    }
+    else {
+        if (f->chunks == NULL || f->current_chunk < 0 ||
+            f->current_chunk >= f->chunk_n) return 0;
+        ch = &f->chunks[f->current_chunk];
+    }
+    if (ch->type != 0xf1fau) {
+        return 0;
+    }
+    if (f->stream_mode == 0)
+        f->cursor = (size_t)(ch->data - f->raw) + FLIC_CHUNK_HDR;
+    if (!fli_decode_chunk(f, ch)) return 0;
+    {
+        const size_t header_size = ch->body_only ? 0u : FLIC_CHUNK_HDR;
+        const size_t data_size = (size_t)ch->size - FLIC_CHUNK_HDR;
+        size_t pos = 0u;
+        int remaining = ch->body_only ? (int)(int8_t)ch->count :
+            (int)(int8_t)ch->data[6];
+        while (remaining > 0 && pos < data_size) {
+            uint32_t rec_size;
+            if (pos > data_size || data_size - pos < 6u) return 0;
+            rec_size = le32(ch->data + header_size + pos);
+            if (rec_size < 6u || rec_size > data_size - pos) return 0;
+            pos += rec_size;
+            --remaining;
+        }
+        if (f->stream_mode == 0)
+            f->cursor = (size_t)(ch->data - f->raw) + header_size + pos;
+    }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x00484720
+/* FlicChunkBufferAndContinueLK (FUN_00484720): in stream mode, the 16-byte
+ * header has already been read into the initial scratch area. Replace that
+ * allocation only when the declared chunk size exceeds its recorded
+ * capacity, then seek/read the full chunk. read_at combines the retail seek
+ * and read operations; this target always returns zero. */
+int flic_chunk_buffer_and_continue_lk(Flic* f)
+{
+    uint32_t size;
+    if (f == NULL || f->stream_mode == 0) return 0;
+    size = f->stream_chunk.size;
+    f->stream_chunk.data = NULL;
+    if (f->stream_buffer_capacity < size || f->stream_buffer == NULL) {
+        if (f->stream_buffer != NULL) free(f->stream_buffer);
+        f->stream_buffer = NULL;
+        f->stream_buffer_allocated = 0u;
+        f->stream_buffer_capacity = size;
+        f->stream_buffer = (uint8_t*)malloc((size_t)size);
+        if (f->stream_buffer == NULL) {
+            fprintf(stderr, "Flic Not Enough Memory\n");
+            return 0;
+        }
+        f->stream_buffer_allocated = size;
+    }
+    if (f->stream_ops.read_at == NULL ||
+        !f->stream_ops.read_at(f->stream_ops.context, (uint32_t)f->cursor,
+                               f->stream_buffer, size)) return 0;
+    f->stream_chunk.data = f->stream_buffer;
+    f->stream_chunk.body_only = 0;
+    f->stream_chunk.type = le16(f->stream_buffer + 4);
+    f->stream_chunk.count = le16(f->stream_buffer + 6);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x004847d0
+/* FlicChunkBufferAndContinueType0B has the same stream read path; retail's
+ * allocation failure uniquely returns one. */
+int flic_chunk_buffer_and_continue_type0b(Flic* f)
+{
+    uint32_t size;
+    if (f == NULL || f->stream_mode == 0) return 0;
+    size = f->stream_chunk.size;
+    f->stream_chunk.data = NULL;
+    if (f->stream_buffer_capacity < size || f->stream_buffer == NULL) {
+        if (f->stream_buffer != NULL) free(f->stream_buffer);
+        f->stream_buffer = NULL;
+        f->stream_buffer_allocated = 0u;
+        f->stream_buffer_capacity = size;
+        f->stream_buffer = (uint8_t*)malloc((size_t)size);
+        if (f->stream_buffer == NULL) {
+            fprintf(stderr, "Flic Not Enough Memory\n");
+            return 1;
+        }
+        f->stream_buffer_allocated = size;
+    }
+    if (f->stream_ops.read_at == NULL ||
+        !f->stream_ops.read_at(f->stream_ops.context, (uint32_t)f->cursor,
+                               f->stream_buffer, size)) return 0;
+    f->stream_chunk.data = f->stream_buffer;
+    f->stream_chunk.body_only = 0;
+    f->stream_chunk.type = le16(f->stream_buffer + 4);
+    f->stream_chunk.count = le16(f->stream_buffer + 6);
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00484320
+/* FlicChunkWalk: advance through non-frame chunks until the next F1FA frame
+ * is found. The RAM branch uses the indexed image; stream mode reads a header
+ * then dispatches LK/type-0B through their seek-and-buffer handlers. */
+int flic_chunk_walk(Flic* f)
+{
+    if (f == NULL) {
+        return 0;
+    }
+    f->last_walk_frame_valid = 0;
+    if (f->stream_mode != 0) {
+        while (f->cursor < f->stream_length) {
+            uint32_t chunk_size;
+            uint16_t chunk_type;
+            if (!flic_stream_chunk_header_read(f)) return 0;
+            chunk_size = f->stream_chunk.size;
+            chunk_type = f->stream_chunk.type;
+            if (chunk_type == 0x000bu) {
+                flic_chunk_buffer_and_continue_type0b(f);
+            }
+            else if (chunk_type == 0x4b4cu) {
+                flic_chunk_buffer_and_continue_lk(f);
+            }
+            else if (chunk_type == 0xf1fau) {
+                f->last_walk_frame_valid = flic_frame_record_walk(f);
+                f->cursor += chunk_size;
+                return 0;
+            }
+            f->cursor += chunk_size;
+        }
+        return 0;
+    }
+    if (f->chunks == NULL || f->chunk_n == 0) {
+        return 0;
+    }
+    while (f->next_chunk < f->chunk_n) {
+        int chunk_index = f->next_chunk++;
+        const FlicChunk* ch = &f->chunks[chunk_index];
+        f->current_chunk = chunk_index;
+        f->cursor = (size_t)(ch->data - f->raw);
+        if (ch->type == 0x000bu) {
+            flic_chunk_buffer_and_continue_type0b(f);
+        } else if (ch->type == 0x4b4cu) {
+            flic_chunk_buffer_and_continue_lk(f);
+        } else if (ch->type == 0xf1fau) {
+            f->last_walk_frame_valid = flic_frame_record_walk(f);
+            f->cursor = (size_t)(ch->data - f->raw) + ch->size;
+            return 0;
+        }
+        f->cursor = (size_t)(ch->data - f->raw) + ch->size;
+        /* All other chunks are skipped using the checked size recorded by
+         * the open-time chunk scan. */
+    }
+    return 0;
+}
+
+// FUNCTION: LEGORR 0x00484260
+/* FlicStreamFrameAdvance: stream mode reads one chunk at the current file
+ * cursor, lets FlicChunkWalk buffer ancillary chunks and decode the next
+ * frame, then advances the two frame counters. The loop cursor is captured
+ * before the first frame walk; after the declared last frame, stream mode
+ * seeks back to that mark and resets the primary frame index. */
+int flic_stream_frame_advance(Flic* f)
+{
+    if (f == NULL || f->stream_mode == 0) return 0;
+    if (f->idx == 0 && f->stream_frame_count != 0u)
+        f->stream_loop_cursor = f->cursor;
+    flic_chunk_walk(f);
+    ++f->idx;
+    ++f->stream_frame_count;
+    if (f->idx >= f->frames) {
+        if (f->stream_loop_enabled != 0) {
+            f->cursor = f->stream_loop_cursor;
+            f->idx = 0;
+            f->eof = 0;
+            return 0;
+        }
+        f->eof = 1;
+        return 1;
+    }
+    f->eof = 0;
+    return 0;
 }
 
 /* --- open / close --------------------------------------------------------- */
@@ -224,11 +590,19 @@ static void fli_decode_chunk(Flic* f, const FlicChunk* ch)
 // FUNCTION: LEGORR 0x00483c80
 Flic* flic_open(const char* name)
 {
+    Flic* stream_flic;
+    const char* open_path;
+    int resource_mode;
+    int route;
     if (name == NULL || name[0] == '\0') {
         return NULL;
     }
-    Resource* r = resource_open(name, RESOURCE_AUTO);
-    if (r == NULL) {
+    stream_flic = flic_open_resource_stream(name);
+    if (stream_flic != NULL) return stream_flic;
+    if (!flic_resource_route_resolve(name, &open_path, &resource_mode,
+                                     &route)) return NULL;
+    Resource* r = resource_open(open_path, resource_mode);
+    if (r == NULL && route == 1) {
         /* Loose `Data/AVI/...` overlay copies (avi\PB1.flh etc.) resolve
          * through the movie path helper (case-insensitive, base = game dir). */
         char norm[256];
@@ -255,23 +629,15 @@ Flic* flic_open(const char* name)
     const uint8_t* d = r->data;
     int n = r->size;
 
-    /* Header (finding 21 §2). */
-    uint32_t filesize = le32(d + 0x00);
-    uint16_t magic = le16(d + 0x04);
-    uint16_t nframes = le16(d + 0x06);
-    uint16_t width = le16(d + 0x08);
-    uint16_t height = le16(d + 0x0a);
-    uint16_t depth = le16(d + 0x0c);
-    if ((uint32_t)n != filesize || depth != 16 || width == 0 || height == 0
-        || width > 4096 || height > 4096) {
+    /* Header validator mirrors FUN_00483f60; retain the port's explicit
+     * 16-bit surface and allocation bounds after container validation. */
+    FlicHeaderInfo header;
+    header.depth = 0;
+    if (!flic_file_header_validate(d, (size_t)n, &header)
+        || header.depth != 16 || header.width == 0 || header.height == 0
+        || header.width > 4096 || header.height > 4096) {
         fprintf(stderr, "flic: %s: bad header (size %d vs %d, depth %d)\n",
-                name, (int)filesize, n, depth);
-        resource_free(r);
-        return NULL;
-    }
-    if (magic != FLIC_MAGIC_AF43 && magic != 0x1234 && magic != 0x9119
-        && magic != 0x911a && magic != 0xaf11 && magic != 0xaf12) {
-        fprintf(stderr, "flic: %s: unrecognized magic 0x%04x\n", name, magic);
+                name, (int)le32(d), n, header.depth);
         resource_free(r);
         return NULL;
     }
@@ -281,12 +647,15 @@ Flic* flic_open(const char* name)
         resource_free(r);
         return NULL;
     }
-    f->width = width;
-    f->height = height;
-    f->frames = nframes + 1; /* chunk count = nFrames + 1, finding 21 §2 */
+    f->width = header.width;
+    f->height = header.height;
+    f->frames = (int)header.frames + 1;
+    f->first_frame_chunk = -1;
+    f->current_chunk = -1;
     f->raw = (uint8_t*)malloc((size_t)n);
-    f->pix = (uint16_t*)malloc((size_t)width * height * 2);
-    f->chunks = (FlicChunk*)calloc((size_t)f->frames, sizeof(FlicChunk));
+    f->pix = (uint16_t*)malloc((size_t)header.width * header.height * 2);
+    f->chunk_cap = (int)(((size_t)n - FLIC_CHUNK_START) / FLIC_CHUNK_HDR) + 1;
+    f->chunks = (FlicChunk*)calloc((size_t)f->chunk_cap, sizeof(FlicChunk));
     if (f->raw == NULL || f->pix == NULL || f->chunks == NULL) {
         flic_close(f);
         resource_free(r);
@@ -296,10 +665,11 @@ Flic* flic_open(const char* name)
     f->raw_len = (size_t)n;
     resource_free(r);
 
-    /* Chunk walk from 0x80 (finding 21 §3). */
+    /* Bounded chunk inventory from 0x80. Keep all chunks because the
+     * original walker skips ancillary and unknown types between frames. */
     size_t pos = FLIC_CHUNK_START;
     int cn = 0;
-    while (pos + FLIC_CHUNK_HDR <= f->raw_len && cn < f->frames) {
+    while (pos + FLIC_CHUNK_HDR <= f->raw_len && cn < f->chunk_cap) {
         const uint8_t* ch = f->raw + pos;
         uint32_t csize = le32(ch);
         if (csize < FLIC_CHUNK_HDR || pos + csize > f->raw_len) {
@@ -308,46 +678,231 @@ Flic* flic_open(const char* name)
         f->chunks[cn].data = ch;
         f->chunks[cn].size = csize;
         f->chunks[cn].count = le16(ch + 6);
+        f->chunks[cn].type = le16(ch + 4);
+        if (f->chunks[cn].type == 0xf1fau) {
+            if (f->first_frame_chunk < 0) {
+                f->first_frame_chunk = cn;
+            }
+            ++f->frame_n;
+        }
         ++cn;
         pos += csize;
     }
     f->chunk_n = cn;
 
-    /* Frame 0 = keyframe, decoded at open. */
-    fli_decode_chunk(f, &f->chunks[0]);
+    /* Frame 0 is the first F1FA chunk; prefix metadata chunks are skipped. */
+    if (f->first_frame_chunk < 0) {
+        flic_close(f);
+        return NULL;
+    }
+    f->current_chunk = f->first_frame_chunk;
+    f->cursor = (size_t)(f->chunks[f->first_frame_chunk].data - f->raw);
+    if (!flic_frame_record_walk(f)) {
+        flic_close(f);
+        return NULL;
+    }
+    f->cursor = (size_t)(f->chunks[f->first_frame_chunk].data - f->raw)
+                + f->chunks[f->first_frame_chunk].size;
+    f->next_chunk = f->first_frame_chunk + 1;
     f->idx = 0;
     return f;
 }
 
-void flic_close(Flic* f)
+Flic* flic_open_stream(const FlicStreamOps* ops, uint32_t file_size)
+{
+    uint8_t header_bytes[FLIC_HEADER];
+    FlicHeaderInfo header;
+    Flic* f;
+    if (ops == NULL || ops->read_at == NULL || file_size < FLIC_HEADER ||
+        !ops->read_at(ops->context, 0u, header_bytes, FLIC_HEADER) ||
+        !flic_file_header_validate(header_bytes, file_size, &header) ||
+        header.magic != FLIC_MAGIC_AF43 || header.depth != 16 ||
+        header.width == 0 || header.height == 0 || header.width > 4096 ||
+        header.height > 4096) return NULL;
+    f = (Flic*)calloc(1, sizeof(*f));
+    if (f == NULL) return NULL;
+    f->width = header.width;
+    f->height = header.height;
+    f->frames = (int)header.frames + 1;
+    f->first_frame_chunk = -1;
+    f->current_chunk = -1;
+    f->stream_mode = 1;
+    f->stream_ops = *ops;
+    f->stream_length = file_size;
+    f->cursor = FLIC_CHUNK_START;
+    f->pix = (uint16_t*)malloc((size_t)header.width * header.height * 2u);
+    if (f->pix == NULL) {
+        flic_close(f);
+        return NULL;
+    }
+    /* Retail opens the stream with a 20,000-byte scratch allocation; its
+     * logical chunk capacity remains zero until a chunk handler grows it. */
+    f->stream_buffer = (uint8_t*)malloc(FLIC_STREAM_INITIAL_BUFFER);
+    if (f->stream_buffer == NULL) {
+        flic_close(f);
+        return NULL;
+    }
+    f->stream_buffer_allocated = FLIC_STREAM_INITIAL_BUFFER;
+    flic_chunk_walk(f); /* target-compatible walker return is always zero */
+    if (!f->last_walk_frame_valid) {
+        flic_close(f);
+        return NULL;
+    }
+    f->idx = 0;
+    f->eof = 0;
+    /* FUN_00484260 captures its loop mark before reading the first streamed
+     * frame chunk. Stream loops therefore replay the keyframe at 0x80; only
+     * RAM mode retains its decoded keyframe and restarts at frame 1. */
+    f->stream_loop_cursor = FLIC_CHUNK_START;
+    return f;
+}
+
+static int flic_resource_stream_read_at(void* context, uint32_t offset,
+                                        void* bytes, uint32_t length)
+{
+    return resource_stream_read_at((ResourceStream*)context, offset, bytes,
+                                   length);
+}
+
+static void flic_resource_stream_close(void* context)
+{
+    resource_stream_close((ResourceStream*)context);
+}
+
+/* FlicFileOpenAndStateCreate uses GameFileOpenDispatch, which selects a WAD
+ * member before a same-named loose file. ResourceStream's AUTO mode prefers
+ * loose files, so reproduce the dispatch decision before choosing its stream
+ * mode and WAD-relative path. */
+static int flic_resource_route_resolve(const char* name,
+                                       const char** open_path,
+                                       int* resource_mode,
+                                       int* route)
+{
+    const char* resolved;
+    int selected;
+    if (name == NULL || open_path == NULL || resource_mode == NULL ||
+        route == NULL) return 0;
+    resolved = resource_path_resolve_against_base(name);
+    if (resolved == NULL) return 0;
+    selected = game_file_open_route_select(resolved, "rb");
+    if (selected == 0) {
+        *open_path = game_file_mounted_path_prefix_rewrite(resolved);
+        *resource_mode = RESOURCE_WAD_ONLY;
+    }
+    else if (selected == 1) {
+        *open_path = resolved;
+        /* AUTO preserves the loose-file/CD fallback after the WAD query has
+         * already established that no mounted entry shadows this path. */
+        *resource_mode = RESOURCE_AUTO;
+    }
+    else {
+        return 0;
+    }
+    *route = selected;
+    return *open_path != NULL;
+}
+
+Flic* flic_open_resource_stream(const char* name)
+{
+    ResourceStream* stream;
+    FlicStreamOps ops;
+    Flic* f;
+    const char* open_path;
+    int resource_mode;
+    int route;
+    uint32_t file_size = 0u;
+    if (name == NULL || name[0] == '\0' ||
+        !flic_resource_route_resolve(name, &open_path, &resource_mode,
+                                     &route)) return NULL;
+    stream = resource_stream_open(open_path, resource_mode, &file_size);
+    if (stream == NULL && route == 1) {
+        char normalized[256];
+        const char* wad_dir = getenv("LEGORRR_WAD_DIR");
+        char os_path[512];
+        const char* slash;
+        strncpy(normalized, name, sizeof(normalized) - 1u);
+        normalized[sizeof(normalized) - 1u] = '\0';
+        slash = strchr(normalized, '\\');
+        while (slash != NULL) {
+            normalized[slash - normalized] = '/';
+            slash = strchr(slash + 1, '\\');
+        }
+        if (!movie_path_resolve(wad_dir != NULL && wad_dir[0] != '\0'
+                                    ? wad_dir : ".",
+                                normalized, os_path, sizeof(os_path)))
+            return NULL;
+        stream = resource_stream_open(os_path, RESOURCE_STD_ONLY,
+                                      &file_size);
+        if (stream == NULL) return NULL;
+    }
+    ops.context = stream;
+    ops.read_at = flic_resource_stream_read_at;
+    f = flic_open_stream(&ops, file_size);
+    if (f == NULL) {
+        resource_stream_close(stream);
+        return NULL;
+    }
+    f->stream_context_close = flic_resource_stream_close;
+    return f;
+}
+
+// FUNCTION: LEGORR 0x00483f00
+int flic_close(Flic* f)
 {
     if (f == NULL) {
-        return;
+        return 0;
     }
     free(f->chunks);
     free(f->raw);
     free(f->pix);
     free(f->rgba);
+    free(f->stream_buffer);
+    if (f->stream_context_close != NULL)
+        f->stream_context_close(f->stream_ops.context);
     free(f);
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x004841d0
 int flic_tick_loop(Flic* f, int loop)
 {
+    int reached_end;
     if (f == NULL) {
         return 0;
     }
-    int next = f->idx + 1;
-    if (next >= f->chunk_n) {
+    if (f->stream_mode != 0) {
+        f->stream_loop_enabled = loop != 0;
+        reached_end = flic_stream_frame_advance(f);
+        if (reached_end != 0) {
+            f->idx = f->frames - 1;
+            f->eof = 1;
+            return f->idx;
+        }
+        /* The retail stream stepper wraps its cursor and index at the end,
+         * then reads the keyframe on the following tick. */
+        if (!f->last_walk_frame_valid && f->idx != 0) {
+            f->eof = 1;
+            --f->idx;
+            return f->idx;
+        }
+        return f->idx;
+    }
+    if (f->idx + 1 >= f->frames) {
         if (!loop) {
             f->eof = 1;
             return f->idx; /* stay on the last frame */
         }
-        next = 1; /* corpus RAM loop: keyframe already decoded */
+        /* RAM mode keeps the decoded keyframe and restarts at frame 1. */
+        f->idx = 0;
+        f->next_chunk = f->first_frame_chunk + 1;
     }
-    f->idx = next;
+    flic_chunk_walk(f);
+    if (!f->last_walk_frame_valid) {
+        f->eof = 1;
+        return f->idx;
+    }
+    ++f->idx;
     f->eof = 0;
-    fli_decode_chunk(f, &f->chunks[next]);
     return f->idx;
 }
 
@@ -451,15 +1006,6 @@ void flic_packed_triplet_table_to_word_build(void* record)
  * +0x6e4. The stream chunks carry their count at stream+6 and bytes at
  * stream+8. The corpus strides all of it blindly; the port guards only the
  * record pointer (deviation, the dispatch precedent). */
-
-/* The corpus palette store: rec + 0x41c + index*2, folded as the ported
- * indexed-word-table lookup (the byte window stands in for the table). */
-static uint16_t rec_palette_word(const char* rec, unsigned index)
-{
-    uint16_t w = 0u;
-    __builtin_memcpy(&w, rec + 0x41c + (size_t)(index & 0xffu) * 2u, sizeof w);
-    return w;
-}
 
 /* The corpus record is 32-bit: the stream link +0x6d0 and the pixel buffer
  * +0x6cc sit four bytes apart, so no LP64 pointer fits in the byte window
@@ -582,7 +1128,7 @@ int flic_decode8_bit_opcode25_mode4(void* record)
                     src = next + 1;
                     if (b0 != 0u) {
                         for (uint32_t k = b0; k != 0u; k = k - 1u) {
-                            const uint16_t w = rec_palette_word(rec, v);
+                            const uint16_t w = (uint16_t)indexed_word_table_lookup(v, rec);
                             __builtin_memcpy(pixel, &w, sizeof w);
                             pixel += 2;
                         }
@@ -592,7 +1138,8 @@ int flic_decode8_bit_opcode25_mode4(void* record)
                     left = (short)(left - (short)(uint16_t)run);
                     src = next;
                     for (uint32_t k = run; k != 0u; k = k - 1u) {
-                        const uint16_t w = rec_palette_word(rec, (uint8_t)*src);
+                        const uint16_t w = (uint16_t)indexed_word_table_lookup(
+                            (uint8_t)*src, rec);
                         src = src + 1;
                         __builtin_memcpy(pixel, &w, sizeof w);
                         pixel += 2;
@@ -605,17 +1152,6 @@ int flic_decode8_bit_opcode25_mode4(void* record)
         } while (rows != 0u);
     }
     return 1;
-}
-
-/* The corpus 16-bit pixel expansion: the green field shifts one lane up
- * (flag +0x6e4 keeps the field where it is), and the low five ride along. */
-static uint16_t expand16_word(const char* rec, uint16_t w)
-{
-    int flag = 0;
-    __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
-    const uint16_t g = (flag != 0) ? (uint16_t)(w & 0x7fe0u)
-                                   : (uint16_t)(((unsigned)(w & 0xffe0u)) << 1);
-    return (uint16_t)(g | (w & 0x1fu));
 }
 
 /* FlicDecode16BitKeyframe (FUN_004849d0) — see flic.hpp. The word stream
@@ -662,7 +1198,13 @@ int flic_decode16_bit_keyframe(void* record)
                     cursor += 3;
                     if ((uint8_t)w != 0u) {
                         for (uint32_t k = count; k != 0u; k = k - 1u) {
-                            const uint16_t px = expand16_word(rec, v);
+                            int flag = 0;
+                            __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+                            uint16_t px = (uint16_t)(((unsigned)(v & 0xffe0u)) << 1);
+                            if (flag != 0) {
+                                px = (uint16_t)(v & 0x7fe0u);
+                            }
+                            px = (uint16_t)(px | (v & 0x1fu));
                             __builtin_memcpy(pixel, &px, sizeof px);
                             pixel += 2;
                         }
@@ -676,7 +1218,13 @@ int flic_decode16_bit_keyframe(void* record)
                         uint16_t v = 0u;
                         __builtin_memcpy(&v, read, sizeof v);
                         read += 2;
-                        const uint16_t px = expand16_word(rec, v);
+                        int flag = 0;
+                        __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+                        uint16_t px = (uint16_t)(((unsigned)(v & 0xffe0u)) << 1);
+                        if (flag != 0) {
+                            px = (uint16_t)(v & 0x7fe0u);
+                        }
+                        px = (uint16_t)(px | (v & 0x1fu));
                         __builtin_memcpy(pixel, &px, sizeof px);
                         pixel += 2;
                     }
@@ -770,7 +1318,13 @@ int flic_decode16_bit_delta(void* record)
                             uint16_t v = 0u;
                             __builtin_memcpy(&v, next, sizeof v);
                             next += 2;
-                            const uint16_t px = expand16_word(rec, v);
+                            int flag = 0;
+                            __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+                            uint16_t px = (uint16_t)(((unsigned)(v & 0xffe0u)) << 1);
+                            if (flag != 0) {
+                                px = (uint16_t)(v & 0x7fe0u);
+                            }
+                            px = (uint16_t)(px | (v & 0x1fu));
                             __builtin_memcpy(pixel, &px, sizeof px);
                             pixel += 2;
                         }
@@ -782,7 +1336,13 @@ int flic_decode16_bit_delta(void* record)
                     const uint32_t run = 0x100u - (uint32_t)b1;
                     if ((short)run != 0) {
                         for (uint32_t k = run; k != 0u; k = k - 1u) {
-                            const uint16_t px = expand16_word(rec, v);
+                            int flag = 0;
+                            __builtin_memcpy(&flag, rec + 0x6e4, sizeof flag);
+                            uint16_t px = (uint16_t)(((unsigned)(v & 0xffe0u)) << 1);
+                            if (flag != 0) {
+                                px = (uint16_t)(v & 0x7fe0u);
+                            }
+                            px = (uint16_t)(px | (v & 0x1fu));
                             __builtin_memcpy(pixel, &px, sizeof px);
                             pixel += 2;
                         }
@@ -1030,3 +1590,56 @@ int flic_opcode27_decode_dispatch(void* record)
     }
     return 1;
 }
+
+namespace unported_ledger_stubs {
+
+int ledger_stub_00483f00_FlicPlayerClose(Flic* player)
+{
+    if (player == NULL) return 0;
+    flic_close(player);
+    return 1;
+}
+
+int ledger_stub_00483f60_FlicFileHeaderValidate(const char* path,
+                                                int* context)
+{
+    return flic_file_header_validate_path(path, context);
+}
+
+// FUNCTION: LEGORR 0x00484610
+int ledger_stub_00484610_FlicSubrecordOpcodeDispatch(void* record)
+{
+    uint8_t* rec = (uint8_t*)record;
+    void* stream = NULL;
+    int16_t opcode;
+    if (rec == NULL) return 0;
+    /* The retail dispatch reads the subrecord type at stream + 4, where
+     * stream is the pointer stored at record + 0x6d0. The record's own
+     * dword at +0x6d4 is a separate mode/op field consumed by selected
+     * handlers; treating it as the subrecord type misroutes records. On
+     * LP64 the portable window registry owns the full stream pointer. */
+#if defined(_M_IX86) || defined(__i386__)
+    stream = *(void**)(rec + 0x6d0);
+#else
+    if (flic_window_find(rec, &stream, NULL) == 0) return 0;
+#endif
+    if (stream == NULL) return 0;
+    memcpy(&opcode, (const char*)stream + 4, sizeof(opcode));
+    if (opcode == 4u) return flic_decode16_bit_row_records(rec);
+    if (opcode == 0x0bu || opcode == 0x0cu || opcode == 0x0du
+        || opcode == 0x5344u) return 1;
+    if (opcode == 0x5555u) {
+        flh_magic_uu_noop();
+        return 1;
+    }
+    if (opcode == 0x0fu || opcode == 0x19u)
+        return flic_opcode25_decode_dispatch(rec);
+    if (opcode == 0x10u) return flic_opcode16_mode_dispatch(rec);
+    /* FUN_00484610 routes both 0x07 and 0x1b through FUN_00485030. */
+    if (opcode == 0x07u || opcode == 0x1bu)
+        return flic_opcode27_decode_dispatch(rec);
+    return 0;
+}
+
+
+} // namespace unported_ledger_stubs

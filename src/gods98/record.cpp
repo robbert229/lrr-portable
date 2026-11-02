@@ -15,10 +15,19 @@
 #include <string.h>
 #include <stdlib.h>
 
+#if defined(_MSC_VER)
+#define RECORD_COM_CALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define RECORD_COM_CALL __attribute__((stdcall))
+#else
+#define RECORD_COM_CALL
+#endif
+
 static void* s_large_record_free;
 static void* s_large_record_blocks[32];
 static unsigned int s_large_record_block_count;
-static void* s_small_record_free;
+// GLOBAL: LEGORR 0x00533988
+void* s_small_record_free;
 static void* s_small_record_blocks[32];
 static unsigned int s_small_record_block_count;
 
@@ -140,16 +149,16 @@ static uint32_t cells_dword(const void* cells, size_t off)
     return v;
 }
 
-/* Render-resource instance records are 0x34 bytes in the 32-bit corpus.
- * Their free-list link occupies +0x30, so this port widens the stride to
- * 0x38 and stores a native pointer in that slot on 64-bit hosts. The
- * allocation/table/head lifecycle follows the corpus in findings 371/373/387. */
-#define RENDER_RESOURCE_INSTANCE_POOL_SLOTS 32
-#define RENDER_RESOURCE_INSTANCE_RECORD_SIZE 0x38
+/* Render-resource instance records have their free-list link at +0x30.
+ * Include the native pointer width in the stride so x86 keeps the corpus's
+ * 0x34-byte records. */
+#define RENDER_RESOURCE_INSTANCE_RECORD_SIZE (0x30u + sizeof(void*))
 #define RENDER_RESOURCE_INSTANCE_LINK_OFFSET 0x30
+// GLOBAL: LEGORR 0x005405d8
 static uint32_t s_render_resource_instance_pool_count;
-static void* s_render_resource_instance_pool_blocks[
-    RENDER_RESOURCE_INSTANCE_POOL_SLOTS];
+// GLOBAL: LEGORR 0x00540584
+static void* s_render_resource_instance_pool_blocks[20];
+// GLOBAL: LEGORR 0x005405d4
 static void* s_render_resource_instance_pool_head;
 
 // FUNCTION: LEGORR 0x004807a0
@@ -158,10 +167,8 @@ void* render_resource_instance_record_acquire(void)
     if (s_render_resource_instance_pool_head == NULL) {
         render_resource_instance_pool_grow();
     }
+    if (s_render_resource_instance_pool_head == NULL) return NULL;
     char* record = (char*)s_render_resource_instance_pool_head;
-    if (record == NULL) {
-        return NULL; /* deviation: the corpus dereferences a null head */
-    }
     void* next = NULL;
     __builtin_memcpy(&next,
                      record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
@@ -176,9 +183,6 @@ void* render_resource_instance_record_acquire(void)
 // FUNCTION: LEGORR 0x004807d0
 void render_resource_instance_record_release(void* record)
 {
-    if (record == NULL) {
-        return; /* deviation: the corpus writes through the supplied pointer */
-    }
     __builtin_memcpy((char*)record + RENDER_RESOURCE_INSTANCE_LINK_OFFSET,
                      &s_render_resource_instance_pool_head,
                      sizeof(s_render_resource_instance_pool_head));
@@ -192,14 +196,9 @@ void render_resource_instance_pool_grow(void)
         ((uint32_t)(unsigned char)s_render_resource_instance_pool_count & 0x1fu);
     void* base = engine_heap_alloc((long)count *
                                    RENDER_RESOURCE_INSTANCE_RECORD_SIZE);
-    if (base == NULL) {
-        return; /* deviation: the corpus links the allocator result blindly */
-    }
-    if (s_render_resource_instance_pool_count <
-        RENDER_RESOURCE_INSTANCE_POOL_SLOTS) {
-        s_render_resource_instance_pool_blocks[
-            s_render_resource_instance_pool_count] = base;
-    }
+    s_render_resource_instance_pool_blocks[
+        s_render_resource_instance_pool_count] = base;
+    if (base == NULL) return;
     s_render_resource_instance_pool_count++;
 
     char* record = (char*)base;
@@ -213,6 +212,18 @@ void render_resource_instance_pool_grow(void)
                      &s_render_resource_instance_pool_head,
                      sizeof(s_render_resource_instance_pool_head));
     s_render_resource_instance_pool_head = base;
+}
+
+/* SharedTextureRootRegister clears DAT_00540584/D4/D8 after dropping the
+ * model-render list. Keep that owner state in this pool module instead of
+ * mirroring it as a synthetic twenty-resource texture table. The retail
+ * reset drops the block references without freeing them. */
+void render_resource_instance_pool_reset(void)
+{
+    memset(s_render_resource_instance_pool_blocks, 0,
+           sizeof(s_render_resource_instance_pool_blocks));
+    s_render_resource_instance_pool_head = NULL;
+    s_render_resource_instance_pool_count = 0;
 }
 
 /* RecordField14Get (FUN_00435f0b). */
@@ -339,23 +350,23 @@ void entity_velocity_slot_value_set(void* record, uint32_t value, int slot)
 
 /* EntityFlag80Set (FUN_00473b20) — see record.hpp. */
 // FUNCTION: LEGORR 0x00473b20
+void entity_flag_80_set_corpus(void* record, int set)
+{
+    uint32_t* word = (uint32_t*)((char*)record + 0x14);
+    if (set != 0) {
+        *word |= 0x80u;
+    }
+    else {
+        *word &= ~0x80u;
+    }
+}
+
 void entity_flag_80_set(void* record, int set)
 {
     if (record == NULL) {
         return; /* deviation: the corpus strides the record blindly */
     }
-    if (set != 0) {
-        uint32_t word = 0;
-        __builtin_memcpy(&word, (char*)record + 0x14, sizeof word);
-        word |= 0x80u;
-        __builtin_memcpy((char*)record + 0x14, &word, sizeof word);
-    }
-    else {
-        uint32_t word = 0;
-        __builtin_memcpy(&word, (char*)record + 0x14, sizeof word);
-        word &= ~0x80u;
-        __builtin_memcpy((char*)record + 0x14, &word, sizeof word);
-    }
+    entity_flag_80_set_corpus(record, set);
 }
 
 /* CategoryValueIsNeitherZeroNorFifteen (FUN_0041b470). */
@@ -1112,14 +1123,12 @@ void object_state_pair_get(const void* record, uint32_t* out_a,
 }
 
 /* --- the scene-visibility wrapper band (see record.hpp) ---------------------
- * FUN_00473b40 (the corpus surface lock/unlock leaf) is the port's hook
- * boundary: the wrappers reproduce their own gates and stores and route the
- * leaf through the recorded no-op below. */
+ * The renderer visibility leaf remains an observation seam. FUN_00473b40 is
+ * a separate DDiScene render-lock toggle implemented below. */
 static int s_scene_vis_calls;
 static void* s_scene_vis_last_obj;
 static int s_scene_vis_last_flag;
 
-// FUNCTION: LEGORR 0x00473b40
 static void scene_visibility_hook_call(void* object, int flag)
 {
     ++s_scene_vis_calls;
@@ -1258,18 +1267,43 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
     }
 }
 
+/* SceneRenderLockToggle (FUN_00473b40): update the paired render interfaces
+ * on the transition into or out of lock mode, then toggle flag bit 3. The
+ * channel slots use the corpus offsets; rec_ptr preserves this port's
+ * native-width pointer-slot convention. */
+// FUNCTION: LEGORR 0x00473B40
+void scene_render_lock_toggle(void* scene_object, int enabled)
+{
+    uint32_t flags;
+    if (scene_object == NULL) return;
+    flags = rec_dword(scene_object, 0x14);
+    if (enabled != 0) {
+        if ((flags & 8u) == 0u) {
+            render_interface_pair_update(rec_ptr(scene_object, 0x08u),
+                                         rec_ptr(scene_object, 0x04u));
+            rec_dword_put(scene_object, 0x14, flags | 8u);
+        }
+        return;
+    }
+    if ((flags & 8u) != 0u) {
+        render_interface_pair_update(rec_ptr(scene_object, 0x00u),
+                                     rec_ptr(scene_object, 0x04u));
+        rec_dword_put(scene_object, 0x14, flags & ~8u);
+    }
+}
+
 /* SceneResourceVisibilitySet (FUN_0046d2c0): raise (+0x1e8 |= 2) or clear
  * (&= ~2) the record's visibility word, then route the raw flag through the
- * leaf (FUN_00473b40) — unconditionally on the +8 object, on +0xc when it
+ * observation seam — unconditionally on the +8 object, on +0xc when it
  * is set, and on every live child in the +0x10 window counted at +0x40.
  * Deviations: the corpus's +8/+0xc object fields are adjacent 32-bit
  * dwords, which the port's native-size pointer-slot model cannot carry
  * four bytes apart — the port routes the field values as raw handles,
- * exactly as the corpus does (what routes through the corpus's leaf is the
- * dword itself). The children keep the band's native-size stride (the
+ * exactly as the corpus does (the helper call remains an observation seam).
+ * The children keep the band's native-size stride (the
  * slot-window precedent) walked only to the window's six entries before
  * +0x40 (the corpus strides its dword slots blindly past the count field);
- * the count is read once (the leaf never touches the record) and NULL
+ * the count is read once (the visibility helper never touches the record) and NULL
  * records are guarded. The flag rides the leaf raw, unlike the overlay's
  * folded call. */
 // FUNCTION: LEGORR 0x0046d2c0
@@ -1484,8 +1518,7 @@ typedef struct MenuResourceEntry {
 } MenuResourceEntry;
 #endif
 
-// FUNCTION: LEGORR 0x0047d470
-void image_surface_release(TextureSurface* surface)
+static void menu_texture_surface_release(TextureSurface* surface)
 {
     texture_release(surface);
 }
@@ -1496,7 +1529,7 @@ static void menu_resource_entry_release(MenuResourceEntry* entry)
         engine_heap_free(entry->owned_string);
     } else if ((entry->flags & 2u) != 0) {
         for (int i = 0; i < 3; ++i) {
-            image_surface_release(entry->textures[i]);
+            menu_texture_surface_release(entry->textures[i]);
         }
     }
 }
@@ -2737,3 +2770,33 @@ void scene_object_scalar_adjust_by_direction(void* record, int direction)
     flags |= 2u;
     __builtin_memcpy((char*)record + 0x148, &flags, sizeof flags);
 }
+
+namespace unported_ledger_stubs {
+
+// IndexedRecordInterfaceRelease
+// FUNCTION: LEGORR 0x00483140
+void ledger_stub_00483140_IndexedRecordInterfaceRelease(void* owner, int index)
+{
+    unsigned char* bytes = (unsigned char*)owner;
+    void* records;
+    void* interface_object;
+    void** vtable;
+    typedef uint32_t (RECORD_COM_CALL *ReleaseMethod)(void*);
+    if (bytes == 0 || index < 0) return;
+    memcpy(&records, bytes + 8, sizeof(records));
+    if (records == 0) return;
+    bytes = (unsigned char*)records + (size_t)index * 0x70u;
+    memcpy(&interface_object, bytes + 0x60, sizeof(interface_object));
+    if (interface_object == 0) return;
+    vtable = *(void***)interface_object;
+    if (vtable != 0 && vtable[2] != 0) {
+        ReleaseMethod release = (ReleaseMethod)vtable[2];
+        release(interface_object);
+    }
+    memset(bytes + 0x60, 0, sizeof(void*));
+}
+
+
+} // namespace unported_ledger_stubs
+
+#undef RECORD_COM_CALL

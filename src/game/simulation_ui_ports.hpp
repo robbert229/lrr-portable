@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#include "gods98/engine.hpp"
+
 typedef struct SimCategoryHitEntry {
     int left;
     int top;
@@ -18,6 +20,8 @@ static inline int sim_category_cell_hit_test(
     int x, int y, int* category_out, int* item_out)
 {
     uint32_t i;
+    if (category_out != 0) *category_out = 0x0c;
+    if (item_out != 0) *item_out = 0x18;
     if (entries == 0) return 0;
     for (i = 0; i < count; ++i) {
         if (x >= entries[i].left && x < entries[i].right &&
@@ -51,6 +55,12 @@ static inline int sim_cursor_interaction_tick(
     if (hooks == 0) return 0;
     if (hooks->category_hit != 0 &&
         hooks->category_hit(hooks->context, x, y, &category, &item)) {
+        uint32_t* state_word = engine_current_state_word();
+        if (state_word != 0) *state_word |= 0x200u;
+        /* FUN_0045adb0 returns the picked category directly for the
+         * category-0xc and item-0x18 sentinel rows, before normal hover or
+         * click dispatch. */
+        if (category == 0x0c || item == 0x18) return category;
         if (hooks->hover_update != 0)
             hooks->hover_update(hooks->context, category, item);
         if (action != 0 && hooks->action_dispatch != 0)
@@ -85,14 +95,21 @@ static inline int panel_rotation_control_config_load(
     PanelRotationControlState* state, const PanelRotationControlHooks* hooks)
 {
     static const char* image_names[4] = {
-        "RotateLeft", "RotateRight", "RotateUp", "RotateDown"
+        "LeftImage", "RightImage", "UpImage", "DownImage"
     };
     int ok = 1;
     int i;
     if (state == 0 || hooks == 0) return 0;
+    /* The reference defaults each missing PanelRotationControl numeric
+     * setting to one before attempting its config lookup. */
+    state->center_x = 1;
+    state->center_y = 1;
+    state->radius = 1;
     if (hooks->config_get != 0) {
-        ok &= hooks->config_get(hooks->context, "CenterX", &state->center_x);
-        ok &= hooks->config_get(hooks->context, "CenterY", &state->center_y);
+        ok &= hooks->config_get(hooks->context, "CenterPositionX",
+                                &state->center_x);
+        ok &= hooks->config_get(hooks->context, "CenterPositionY",
+                                &state->center_y);
         ok &= hooks->config_get(hooks->context, "Radius", &state->radius);
     }
     for (i = 0; i < 4; ++i)
@@ -123,13 +140,17 @@ static inline void ui_overlay_animation_apply(
     position[0] = (float)state->x;
     position[1] = (float)state->y;
     size[0] = state->width * state->progress;
-    size[1] = state->height;
+    /* UiOverlayAnimationApply computes the second extent as
+     * DAT_00500818 - (DAT_0050081c * progress), not as the unscaled
+     * configured height. */
+    size[1] = state->height - size[0];
     draw(context, state->animation, 0, position, size);
 }
 
 typedef struct AdvisorAnimationRequestHooks {
-    void (*request)(void* context, int slot, int animation);
+    void (*request)(void* context, int slot, int request_mode);
     void* context;
+    int request_mode;
 } AdvisorAnimationRequestHooks;
 
 static inline int advisor_animation_scene_lookup_and_request(
@@ -146,7 +167,7 @@ static inline int advisor_animation_scene_lookup_and_request(
         slot = 11 + animation;
     if (slot == 21) return 0;
     if (hooks != 0 && hooks->request != 0)
-        hooks->request(hooks->context, slot, animation);
+        hooks->request(hooks->context, slot, hooks->request_mode);
     return 1;
 }
 
@@ -202,8 +223,11 @@ static inline int region_containment_scan_update(
     int matches = 0;
     if (entries == 0) return 0;
     for (i = 0; i < count; ++i) {
-        const int contained = x >= entries[i].left && x < entries[i].right &&
-            y >= entries[i].top && y < entries[i].bottom;
+        /* RegionContainmentScanUpdate uses inclusive far edges: the entry
+         * supplies origin+offset and the resource width/height is added. */
+        const int contained = x >= entries[i].left &&
+            x <= entries[i].right && y >= entries[i].top &&
+            y <= entries[i].bottom;
         if (contained) ++matches;
         if (contained != entries[i].matched) {
             entries[i].matched = contained;
@@ -211,7 +235,7 @@ static inline int region_containment_scan_update(
                 changed(context, entries[i].region, contained);
         }
     }
-    return matches;
+    return matches != 0;
 }
 
 #endif

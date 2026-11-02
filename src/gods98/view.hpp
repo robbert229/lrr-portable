@@ -49,6 +49,7 @@ typedef struct ViewContext {
     int    timer_acc;  /* [0x2a] */
     float  velocity[3];/* [0x2b..2d] */
     uint8_t flags;     /* [0x2e] bit 0x10 = dirty */
+    void*  target_record; /* host-owned retail target-record sidecar */
 } ViewContext;
 
 /* Per-frame view update: ViewContextTick(view, state, dt, scale). */
@@ -60,16 +61,8 @@ typedef int (*ViewportDimensionsQueryFn)(void* context, float* width,
 void viewport_dimensions_query_hook_set(ViewportDimensionsQueryFn query,
                                         void* context);
 void viewport_subrectangle_set(const float rectangle[4]); /* FUN_00485ea0 */
-typedef int (*ModelTransformReadHook)(void* context, void* model,
-                                      float position[3],
-                                      float orientation[4]);
-typedef void (*SceneTransformWriteHook)(void* context, void* scene_node,
-                                        const float position[3],
-                                        const float orientation[4]);
-void model_transform_copy_hooks_set(ModelTransformReadHook read_transform,
-                                    SceneTransformWriteHook write_transform,
-                                    void* context);
-void model_transform_copy_to_scene_node(void* view, void* model_record);
+void model_transform_copy_to_scene_node(void* model_record,
+                                        void* source_scene_node);
 typedef void (*CameraViewContextReleaseHook)(void* context, void* view,
                                              unsigned int field_index);
 typedef void (*CameraViewContextFreeHook)(void* context, void* view);
@@ -95,6 +88,15 @@ void render_node_position_from_callback(void* record, float x, float y,
 typedef void (*SceneMatrixApplyHook)(void* context, void* target,
                                      const float matrix[16]);
 void scene_matrix_apply_hook_set(SceneMatrixApplyHook hook, void* context);
+float animation_track_find_keyframe_and_fraction(const void* track,
+                                                 float time,
+                                                 uint16_t* keyframe_out); /* 0x00487cb0 */
+void animation_track_keys_interpolate(void* owner, const void* track,
+                                      uint32_t keyframe, float fraction); /* 0x00488170 */
+void scene_node_transform_matrix_apply(void* owner, const void* track,
+                                       const float position[3],
+                                       const float rotation[3],
+                                       const float scale[3]); /* 0x004882e0 */
 void matrix_apply_rotation_about_z_with_offset(void* target,
                                                float matrix[16],
                                                float offset); /* 0x0044b7a0 */
@@ -104,13 +106,34 @@ typedef struct SceneFrameApplyHooks {
                             const float normal[3], const float forward[3]);
     void (*position_set)(void* context, void* object, unsigned int frame,
                          const float position[3]);
-    void (*frame_refresh)(void* context, void* object,
-                          const float point[3]);
+    void (*point_transform)(void* context, void* object, float out[3],
+                            const float point[3]);
+    void (*projection_set)(void* context, void* object, unsigned int frame,
+                           const float matrix[16]);
 } SceneFrameApplyHooks;
 void scene_frame_apply_hooks_set(const SceneFrameApplyHooks* hooks);
-int scene_frame_from_triplet_apply(void* object, const float first[3],
+void scene_frame_from_triplet_apply(void* object, float projection_scale,
+                                   const float first[3],
                                    const float second[3],
                                    const float third[3]); /* 0x0040bb90 */
+typedef struct SceneCellVisualLookupTable {
+    uint32_t stride;
+    uint32_t reserved;
+    uint32_t* entries;
+} SceneCellVisualLookupTable;
+typedef struct SceneCellVisualRelayRecord {
+    void* resource_roots[2];
+    void* channel_resources[2][100];
+    float projection_scale;
+    uint32_t channel_cursor;
+    uint32_t reserved[3];
+    SceneCellVisualLookupTable* lookup_table;
+} SceneCellVisualRelayRecord;
+void scene_cell_visual_channels_apply(SceneCellVisualRelayRecord* record,
+                                      const float corner_points[12],
+                                      uint32_t lookup_selector,
+                                      uint32_t corner_index, float scale,
+                                      float uniform_scale); /* 0x0040b880 */
 typedef struct ViewportTargetClampState {
     int map_width;
     int map_height;
@@ -190,40 +213,60 @@ typedef struct GlobalRenderRecordHooks {
 void global_render_record_set_from_input(void* record, void* view,
                                          const GlobalRenderRecordHooks* hooks); /* 0x00425d50 */
 typedef struct EngineTaskCallbackRecord {
-    void* resource_interface;
-    void* callback;
-    void* handler;
-    void* self;
-    void* owner;
-    uint32_t value;
-    uint32_t flags;
+    /* Retail record is 0x34 bytes. Pointer-bearing words retain their
+     * x86 offsets here; portable code must keep full-width interface values
+     * in its adapter hooks rather than widening this target record.
+     * Initialization writes the resource at +0x0c, fixed callback at +0x10,
+     * a pointer to +0x0c at +0x14, self at +0x18, one at +0x20, owner at
+     * +0x28, and mode flags at +0x2c. */
+    uint32_t words[13];
 } EngineTaskCallbackRecord;
+typedef char EngineTaskCallbackRecordSizeCheck[
+    sizeof(EngineTaskCallbackRecord) == 0x34u ? 1 : -1];
 typedef struct EngineTaskCallbackHooks {
     void* context;
-    EngineTaskCallbackRecord* (*record_allocate)(void* context);
-    void (*record_release)(void* context, EngineTaskCallbackRecord* record);
-    void (*global_initialize)(void* context);
-    void (*manager_event)(void* context, void* manager);
-    void* (*resource_interface_get)(void* context,
-                                    EngineTaskCallbackRecord* record);
+    /* D3DRM3::CreateUserVisual is IDirect3DRM3 slot +0x58. The callback
+     * manager object is renderer-owned; `resource_out` represents record
+     * +0x0c on x86. */
+    void (*user_visual_create)(void* context, uint32_t callback_address,
+                               EngineTaskCallbackRecord* record,
+                               void** resource_out);
+    /* Remaining calls are represented by their observed call shapes; their
+     * concrete owner/resource interface contracts have no production
+     * adapters in this checkout. */
     void (*owner_bind)(void* context, void* owner, void* resource_interface);
     void (*callback_attach)(void* context, void* resource_interface,
                             EngineTaskCallbackRecord* record);
 } EngineTaskCallbackHooks;
+void engine_task_callback_hooks_set(const EngineTaskCallbackHooks* hooks);
+/* Five retail stack arguments, in callsite order. */
 EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
-    void* manager, void* owner, void* callback, int mode,
-    const EngineTaskCallbackHooks* hooks); /* 0x00480870 */
+    void* owner, void* callback, uint32_t mode, void* context,
+    uint32_t flag_value); /* 0x00480870 */
+void engine_task_callback_record_release(
+    EngineTaskCallbackRecord* record);
 typedef struct SceneRotationApplyHooks {
     void* context;
     unsigned int (*child_count)(void* context, void* object);
     void (*apply)(void* context, void* object, unsigned int operation,
                   unsigned int index, float a, float b, float c, float d);
+    void (*frame_transform_apply)(void* context, void* object,
+                                  float projection_scale,
+                                  const float first[3],
+                                  const float second[3],
+                                  const float third[3]);
 } SceneRotationApplyHooks;
 void scene_rotation_apply_hooks_set(const SceneRotationApplyHooks* hooks);
-void scene_rotation_flags_apply(void* object, const float first[3],
+void scene_rotation_flags_apply(void* object, float projection_scale,
+                                const float first[3],
                                 const float second[3], const float third[3],
                                 float scale, float uniform_scale,
                                 float child_value, uint8_t flags); /* 0x0040ba00 */
+/* Preserve the earlier port-facing overload. */
+void scene_rotation_flags_apply(void* object, const float first[3],
+                                const float second[3], const float third[3],
+                                float scale, float uniform_scale,
+                                float child_value, uint8_t flags);
 typedef struct RendererRecord {
     uint32_t first_word;
     void* visual_resource;
@@ -295,7 +338,7 @@ void sine_phase_blend_hooks_set(const SinePhaseBlendHooks* hooks);
 void sine_phase_midpoint_blend_dispatch(void* object, float delta);
 typedef struct RenderResourceBinding {
     void* key;
-    void* resource;
+    void* resource; /* +4 scene object for 0x46c130's target ABI */
     uint32_t state;
     uint32_t flags;
 } RenderResourceBinding;
@@ -398,9 +441,13 @@ float point_to_polyline_minimum_segment_distance(const float* point,
                                                  const float* points,
                                                  unsigned int segment_count);
 void matrix_rotation_compose_xyz(float* record); /* FUN_0040fb00 */
-void d3drm_vector_random(float* out); /* FUN_00479500, approximate import */
-void d3drm_vector_rotate(float* out, const float* vector, const float* axis,
-                         float angle); /* FUN_00479510 */
+/* D3DRMVectorRandom takes one D3DVECTOR* (three adjacent floats). */
+void d3drm_vector_random(float out[3]); /* FUN_00479500 */
+/* FUN_00479510: rotates vector by angle around axis; the import normalizes
+ * axis in place. The DLL ABI is (return-vector, source-vector, axis, angle);
+ * out may alias either vector input or axis. */
+void d3drm_vector_rotate(float out[3], float vector[3], float axis[3],
+                         float angle);
 void vector_scale_components_in_place(float* vector, float sx, float sy,
                                       float sz); /* FUN_0040fcc0 */
 int   vec_exact_equal(const float* a, const float* b);
@@ -468,7 +515,7 @@ void camera_project_point_to_screen(const ViewProjectionAdapter* adapter,
                                    float* output_xy, const float* input_xyz);
 float projected_quad_screen_area_calculate(
     const ViewProjectionAdapter* adapter, const float* quad_xyz,
-    const float bounds_xy[2], int apply_visibility_clip); /* FUN_0040b470 */
+    const float bounds_xy[2], int disable_visibility_clip); /* FUN_0040b470 */
 
 /* 2D orthogonal projections; zero-length directions remain unguarded. */
 void point_project_onto_line2d(const float* line_start, const float* line_end,
@@ -487,23 +534,30 @@ int rect_contains_point_half_open(const float* rect_record, int x, int y);
 /* --- offset-point rect family (corpus FUN_0045b590 / FUN_00463c00 /
  * FUN_00463c90; findings 241/363/446) --------------------------------------
  * All three are the same half-open containment test over a bounds-quad
- * rect {x_min, y_min, x_max, y_max}: the two float offsets truncate to int
- * (the corpus's two __ftol calls) and subtract from the integer point
+ * rect {x_min, y_min, x_max, y_max}: two float offsets are converted by
+ * __ftol (round to nearest) and subtracted from the integer point
  * before the compare — `x_min <= float(x - ox) < x_max` and the same for
- * y. The port's cast matches the documented __ftol ≡ C++ truncation. */
+ * y. Retail 0x45b590/0x463c00 take `(unused, bounds, x, y)` on the stack;
+ * the offsets are already in x87 ST(0)/ST(1). The helpers below are
+ * port-local adapters and do not model that hidden floating-point ABI. */
 
 /* Direct bounds quad (FUN_0045b590 / FUN_00463c00; the corpus's two call
  * shapes carry identical arithmetic). */
+/* Port-local helpers; neither declaration models the retail x87 ABI. */
+int rect_contains_offset_point(const float rect_bounds[4],
+                               const float offset[2], int x, int y);
 int rect_contains_offset_point(const float rect_bounds[4], float off_x,
                                float off_y, int x, int y);
+int rect_contains_point_by_converted_coords(const float rect_bounds[4],
+                                            const float offset[2],
+                                            int x, int y);
 int rect_contains_point_by_converted_coords(const float rect_bounds[4],
                                             float off_x, float off_y,
                                             int x, int y);
 
-/* Bounds read through the pointer stored in the corpus record's +0x14 slot
- * (FUN_00463c90): the port passes that slot resolved as a pointer to the
- * rect pointer. NULL slot or NULL rect answers 0 — the corpus dereferences
- * unguarded (documented deviation). */
+/* Port-local explicit-bounds helper. Retail FUN_00463c90 takes
+ * (record, x, y), resolves bounds at +0x14, and uses two conversion values
+ * from state not exposed by this helper's API. */
 int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
                                            float off_x, float off_y,
                                            int x, int y);
@@ -521,13 +575,15 @@ int menu_pointer_rectangle_hit_test(int x, int y, int rect_x, int rect_y,
  * 32-bit pointer slots are read native-size (the port's model of
  * corpus pointer fields); NULL head answers 0. */
 int menu_overlay_list_count(const void* menu);
-/* t = dot(q-p, n) / dot(n, d) into t_out for ray (p,d) × plane (q,n);
- * answers 1 when not parallel, 0 otherwise (FUN_00479a30). */
+/* t = dot(q-p, n) / dot(d, n) into t_out for ray (p,d) × plane (q,n);
+ * answers 0 for zero/unordered denominator and leaves t_out unchanged.
+ * Negative t is accepted (FUN_00479a30). */
 int ray_plane_intersection_parameter(float* t_out, const float* p,
                                      const float* d, const float* q,
                                      const float* n);
 /* Line1 (p1,d1) × line2 (p2,d2): writes the hit into out, returns it;
- * NULL when parallel (FUN_00479af0). */
+ * NULL for zero/unordered determinant, leaving out untouched
+ * (FUN_00479af0). */
 float* line_intersection_2d_compute(float* out, const float* p1,
                                     const float* d1, const float* p2,
                                     const float* d2);
@@ -543,9 +599,12 @@ int sphere_ray_intersection_discriminant_positive(const float* center,
  * A missing record returns zero, matching the reference branch. */
 float ddiscene_animation_duration_get(void* scene_interface);
 uint32_t ddiscene_animation_state_get(void* scene_interface);
+const char* ddiscene_animation_sample_name_get(void* scene_interface);
 uint32_t ddiscene_animation_last_frame_get(void* scene_interface);
 uint32_t ddiscene_action_record_field_1c_get(void* scene_interface);
+void* ddiscene_action_record_field_1c_pointer_get(void* scene_interface);
 uint32_t ddiscene_action_record_field_0c_get(void* scene_interface);
+const char* scene_property_secondary_name_get(void* property);
 uint32_t scene_property_value_at08_get(void* scene_interface);
 float scene_property_float_at14_get(void* property); /* 0x004761c0 */
 float typed_child_resource_scalar_get(void* scene_object); /* 0x004757f0 */
@@ -555,7 +614,7 @@ typedef struct SceneChildSearchHooks {
     void* context;
     void* (*property_get)(void* child_interface, void* context);
     void* (*next_get)(void* child_interface, void* context);
-    void (*retain)(void* child_interface, void* context);
+    void (*release)(void* child_interface, void* context);
 } SceneChildSearchHooks;
 void scene_child_search_hooks_set(const SceneChildSearchHooks* hooks);
 void* scene_object_first_non_kind6_child_get(
@@ -605,13 +664,13 @@ void scene_object_bounds_hooks_set(const SceneObjectBoundsHooks* hooks);
 uint32_t scene_object_bounds_union(void* scene_object, float bounds_min_max[6]);
 typedef struct RenderPackedRgbaHooks {
     void* context;
-    void (*channels_get)(void* scene_object, float rgba[4], void* context);
     void (*packed_set)(void* render_object, uint32_t packed_rgba,
                        void* context);
 } RenderPackedRgbaHooks;
 void render_packed_rgba_hooks_set(const RenderPackedRgbaHooks* hooks);
 void render_object_set_packed_rgba_from_float_channels(
-    void* scene_object); /* 0x004750b0 */
+    void* scene_object, float red, float green, float blue,
+    float alpha); /* 0x004750b0 */
 typedef struct RenderHierarchyFloat3Hooks {
     void* context;
     void (*mesh_record_set)(void* render_record, const float xyz[3],
@@ -633,11 +692,14 @@ typedef int (*SceneActionNameLookupHook)(void* scene_object, void* action_name,
 void scene_action_name_lookup_hook_set(SceneActionNameLookupHook hook,
                                        void* context);
 uint32_t scene_action_name_present(void* scene_object, void* action_name);
+uint32_t scene_action_name_set(void* scene_object, const char* action_name);
 typedef struct SceneActFrameScanHooks {
     void* context;
     void* (*animation_interface_get)(void* scene_object, unsigned int slot,
                                      void* context);
     unsigned int (*action_count_get)(void* animation_interface, void* context);
+    void* (*action_record_get)(void* animation_interface,
+                               unsigned int index, void* context);
     const char* (*action_name_get)(void* animation_interface,
                                    unsigned int index, void* context);
     int (*action_value_get)(void* animation_interface, unsigned int index,
@@ -645,9 +707,51 @@ typedef struct SceneActFrameScanHooks {
 } SceneActFrameScanHooks;
 void scene_act_frame_scan_hooks_set(const SceneActFrameScanHooks* hooks);
 unsigned int scene_action_record_act_frame_scan(void* scene_object,
-                                                const char** names,
-                                                int* values,
-                                                unsigned int capacity);
+                                                void** records,
+                                                int* frame_indices,
+                                                char** names);
+/* SceneActFrameRecordCloneOrCreate @ 0x489660. The reference's 32-byte
+ * record owns COM interface pointers; the port keeps eight pointer-sized
+ * words and requires explicit lifetime hooks where the reference AddRefs
+ * an interface. */
+typedef struct SceneActFrameRecord {
+    uintptr_t words[8];
+} SceneActFrameRecord;
+typedef struct SceneActFrameRecordCloneHooks {
+    void* context;
+    void* (*interface_retain)(void* interface_object, void* context);
+    int (*full_record_clone)(const SceneActFrameRecord* source,
+                             uint32_t clone_argument,
+                             SceneActFrameRecord* destination,
+                             void* context);
+} SceneActFrameRecordCloneHooks;
+void scene_act_frame_record_clone_hooks_set(
+    const SceneActFrameRecordCloneHooks* hooks);
+SceneActFrameRecord* scene_act_frame_record_clone_or_create(
+    const SceneActFrameRecord* source, uint32_t clone_argument,
+    uintptr_t* output_value);
+
+/* The retail hierarchy exposes its child count/borrowed item-array through
+ * vtable +0x80. QueryInterface and child-array traversal use those raw slots;
+ * template lookup and creation of the paired source/clone child interfaces
+ * need renderer-owned state that has no portable owner here. The child clone
+ * adapter returns retained interfaces, which the recursive walker releases. */
+namespace lego { struct CachedRenderResourceTemplateRecord; }
+typedef struct ObjectHierarchyResourceHooks {
+    void* context;
+    lego::CachedRenderResourceTemplateRecord* (*template_resolve)(
+        void* resource, uint32_t mode, void* context);
+    int (*child_clone_register)(void* source_parent, void* clone_parent,
+                                void* child_interface,
+                                void** source_child_out,
+                                void** clone_child_out, void* context);
+} ObjectHierarchyResourceHooks;
+void object_hierarchy_resource_hooks_set(
+    const ObjectHierarchyResourceHooks* hooks);
+void com_child_items_visit(void* parent); /* 0x00489bc0 */
+void object_interface_array_resource_create(void* object, uint32_t mode);
+void object_hierarchy_recursive_clone(void* source, void* clone,
+                                      uint32_t mode); /* 0x004899f0 */
 typedef struct EntityVisualResourceLoadHooks {
     void* context;
     int (*kind_get)(void* scene_object, void* context);
@@ -716,17 +820,10 @@ void ddiscene_animation_hook_create(void* scene_object, int callback,
                                     const uint32_t* value_14,
                                     int value_18, int value_24,
                                     const uint32_t* value_20); /* 0x475f70 */
-typedef void (*DDiSceneTimedHookDispatchHook)(void* hook_record, float time,
-                                             void* output, void* context);
-void ddiscene_timed_hook_dispatch_hook_set(
-    DDiSceneTimedHookDispatchHook hook, void* context);
+/* The third argument is the interface-value slot used by the nested +0x5c /
+ * +0x74 dispatch; it is not a float output buffer. */
 void ddiscene_timed_hook_dispatch(void* hook_record, float time,
-                                  void* output); /* 0x4897e0 */
-typedef int (*DDiSceneActFrameTimingGetHook)(void* scene_object,
-                                             void** hook_record, float* time,
-                                             void* context);
-void ddiscene_act_frame_timing_get_hook_set(
-    DDiSceneActFrameTimingGetHook hook, void* context);
+                                  void* interface_value); /* 0x4897e0 */
 void ddiscene_apply_act_frame_timing(void* scene_object); /* 0x475300 */
 typedef struct DDiSceneFrameRecordFindHooks {
     void* context;
@@ -776,6 +873,10 @@ typedef void (*DDiSceneDrawBeginHook)(void* render_object, int begin,
 void ddiscene_draw_begin_hook_set(DDiSceneDrawBeginHook hook,
                                   void* context);
 void ddiscene_draw_begin(void* render_object, int begin); /* 0x477010 */
+void ddiscene_draw_end(void* render_object, const void* commit_source,
+                       float frame_delta); /* 0x477150 */
+void* com_property_result_get(void* resource_owner); /* 0x477310 */
+void* com_resource_enumeration_result_get(void* resource_owner);
 typedef struct SceneHierarchyNodeInfo {
     void* scene_interface;
     void* first_child;
@@ -799,6 +900,85 @@ void scene_hierarchy_register_hooks_set(
     const SceneHierarchyRegisterHooks* hooks);
 void scene_hierarchy_interface_register_recursive(unsigned short* next_index,
                                                   void* root, void* node); /* 0x4887c0 */
+
+/* Shared-object scene resource loader. 0x4876c0 stores a path and callbacks
+ * used later by the LWS entry expander; it does not enumerate directories. */
+typedef int (*SharedObjectEntryResolveFn)(const char* entry_name,
+                                          void* entry_record);
+typedef int (*SharedObjectSoundEnabledFn)(void);
+typedef int (*SharedObjectSoundSubmitFn)(void* sound_object, int alias,
+                                         uint32_t loop, uint32_t positional,
+                                         const float* xyz);
+void shared_object_directory_scan_configure(
+    const char* directory, SharedObjectEntryResolveFn resolve,
+    SharedObjectSoundEnabledFn sound_enabled,
+    SharedObjectSoundSubmitFn sound_submit); /* 0x4876c0 */
+const char* shared_object_directory_root_get(void);
+void shared_object_sound_callbacks_get(
+    SharedObjectSoundEnabledFn* enabled_out,
+    SharedObjectSoundSubmitFn* submit_out);
+void shared_object_timed_sound_event_update(void* owner, void* track); /* 0x487de0 */
+void scene_material_manager_set(void* manager);
+void* scene_material_create(float color0, float color1, float color2,
+                            float color3, float color4, float color5,
+                            float power); /* 0x4894c0 */
+
+typedef struct SceneEntryExpandInfo {
+    const char* name;
+    uint32_t flags;
+    uint8_t slot_index;
+} SceneEntryExpandInfo;
+typedef struct SceneEntryExpandedRecord {
+    unsigned char bytes[0xd0];
+} SceneEntryExpandedRecord;
+typedef struct SceneEntryExpandOps {
+    void* context;
+    int (*counts_get)(void* scene, uint16_t* source_count,
+                      uint16_t* expanded_capacity, void* context);
+    int (*entry_get)(void* scene, uint16_t index,
+                     SceneEntryExpandInfo* info, void* context);
+    void (*entry_slot_set)(void* scene, uint16_t index, uint8_t slot,
+                           void* context);
+    void (*expanded_table_set)(void* scene,
+                               SceneEntryExpandedRecord* table,
+                               void* context);
+    void (*expanded_capacity_set)(void* scene, uint16_t capacity,
+                                  void* context);
+    uint32_t (*debug_flags_get)(void* context);
+} SceneEntryExpandOps;
+void scene_entry_expand_ops_set(const SceneEntryExpandOps* ops);
+void shared_object_scene_entry_slot_table_expand(void* scene); /* 0x4877e0 */
+
+/* The reference clone copies the fixed header but rebuilds child registration
+ * and each interface-backed component through its owning scene/runtime. */
+typedef struct SharedObjectCloneOps {
+    void* context;
+    void* (*source_base_get)(void* source, void* context);
+    void* (*child_first_get)(void* source, void* context);
+    void* (*child_next_get)(void* child, void* context);
+    uint16_t (*entry_count_get)(void* source, void* context);
+    uint32_t (*entry_flags_get)(void* source, uint16_t index,
+                                void* context);
+    void* (*component_get)(void* source, uint16_t index, void* context);
+    void (*component_table_set)(void* clone, void** table,
+                                void* context);
+    void (*source_link_set)(void* clone, void* source, void* context);
+    void (*clone_reference_set)(void* clone, uint32_t count,
+                                void* context);
+    void (*source_reference_increment)(void* source, void* context);
+    void (*child_register)(void* clone, void* child, void* caller_context,
+                           void* context);
+    void (*component_clone)(void* source_interface, void* clone_interface,
+                            void* clone, uint16_t index, void* context);
+    void (*component_resource_create)(void* source_interface,
+                                      void* clone_interface,
+                                      void* clone, uint16_t index,
+                                      void* context);
+    void (*time_update)(void* clone, float time, void* context);
+} SharedObjectCloneOps;
+void shared_object_clone_ops_set(const SharedObjectCloneOps* ops);
+void* shared_object_clone(void* source, void* caller_context); /* 0x487a00 */
+
 typedef void (*DDiSceneObjectDestroyHook)(void* scene_object, int mode,
                                           void* context);
 void ddiscene_object_destroy_hook_set(DDiSceneObjectDestroyHook hook,
@@ -820,13 +1000,48 @@ typedef struct DDiScenePayloadReleaseHooks {
 void ddiscene_payload_release_hooks_set(
     const DDiScenePayloadReleaseHooks* hooks);
 void ddiscene_payload_release(void* scene_object); /* 0x00475c80 */
-char* ddiscene_resource_name_resolve(const char* name); /* 0x00476770 */
-typedef void (*DDiSceneFrameUpdateHook)(void* scene_object, float time,
-                                        void* context);
-void ddiscene_frame_update_hook_set(DDiSceneFrameUpdateHook hook,
-                                    void* context);
-int ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
-void ddiscene_advance_by_time(void* scene_object, float delta); /* 0x00475120 */
+int ddiscene_resource_name_resolve(const char* name); /* 0x00476770 */
+typedef int (*DdiSceneResourceExistsHook)(const void* file_data,
+                                          uint32_t file_size,
+                                          const char* path,
+                                          void* scene_interface,
+                                          void* context);
+/* The existence adapter receives bytes owned by the query and must not keep
+ * the pointer after it returns. */
+/* FUN_00476850's 32-bit callback record is {path, normalized flag, resource
+ * handle, data}. This host adapter keeps that field order with native-width
+ * pointers; it is consumed synchronously while the caller owns the resource. */
+typedef struct DdiSceneMeshLoadContext {
+    const char* path;
+    uint32_t optional_flag;
+    void* resource_handle;
+    const void* file_data;
+} DdiSceneMeshLoadContext;
+typedef void* (*DdiSceneResourceOpenHook)(
+    const DdiSceneMeshLoadContext* load_context, void* scene_interface,
+    void* context);
+void ddiscene_resource_hooks_set(DdiSceneResourceExistsHook exists_hook,
+                                 DdiSceneResourceOpenHook open_hook,
+                                 void* context);
+/* Retail args: resource handle, data, path, scene interface, optional flag.
+ * It creates a mesh builder through DAT_00505914, loads via LAB_00476900,
+ * gets/releases the builder mesh, and attaches through scene +0x48. */
+void* ddiscene_resource_open(void* resource_handle, const void* file_data,
+                             const char* path, void* scene_interface,
+                             uint32_t optional_flag); /* 0x00476850 */
+typedef void (*DDiSceneSampleHook)(const char* sample_name,
+                                   void* scene_object, void* context);
+typedef void (*DDiSceneEndHook)(void* scene_object, void* context);
+void ddiscene_frame_callbacks_set(DDiSceneSampleHook sample_hook,
+                                  void* sample_context, int sample_enabled,
+                                  DDiSceneEndHook end_hook,
+                                  void* end_context);
+/* Add a sample callback without replacing the scene owner's callback.
+ * Re-adding the same callback/context pair is harmless. */
+int ddiscene_sample_hook_add(DDiSceneSampleHook sample_hook,
+                             void* sample_context);
+float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
+float ddiscene_advance_by_time(void* scene_object, float delta); /* 0x00475120 */
 typedef float (*SceneTimingValueGetHook)(void* frame, void* argument,
                                          void* context);
 typedef int (*SceneTimingCountGetHook)(void* frame, void* context);
@@ -855,8 +1070,9 @@ void renderer_subobject_hooks_install(RendererSubobjectFindHook find,
                                       RendererSubobjectApplyHook apply,
                                       void* context);
 void* renderer_object_subobject_find_apply(void* record, void* key);
+/* Port-only adapter. Retail FUN_00406f50 performs resource-tree lookup and
+ * registration; this requires a renderer/resource owner to install hooks. */
 void renderer_object_subobject_dispatch(void* record, void* key);
-                                                     /* FUN_00406f50 */
 void* renderer_cached_handle_48_get_or_create(void* record);
                                                 /* FUN_00406fe0 */
 void* renderer_cached_handle_50_get_or_create(void* record);
@@ -879,6 +1095,25 @@ void scene_object_coordinate_transform_to_output(void* object,
 void scene_object_coordinate_transform_in_place(void* object,
                                                 void* coordinates,
                                                 void* transform);
+/* DDiSceneObject position/pose dispatch (FUN_004754c0/430/470). These
+ * typed wrappers normalize the object and optional alternate frame, then
+ * call the scene object's +0x60/+0xf0/+0xec interface methods. */
+int ddiscene_object_position_get(void* object, void* alternate_frame,
+                                 float position[3]);
+int ddiscene_object_facing_get(void* object, void* alternate_frame,
+                               float facing[3]); /* FUN_00475500 */
+int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
+                                    float first[3], float second[3]);
+int ddiscene_object_position_set(void* object, void* alternate_frame,
+                                 float x, float y, float z);
+int ddiscene_object_pose_method_dispatch(void* object,
+                                         void* alternate_frame,
+                                         float parameter_3,
+                                         float parameter_4,
+                                         float parameter_5,
+                                         float parameter_6,
+                                         float parameter_7,
+                                         float parameter_8);
 int light_interface_call_slot_38(void* record, uint32_t value);
 int light_interface_call_slot_3c(void* record, uint32_t value);
 int light_interface_call_slot_40(void* record, uint32_t value);
@@ -890,12 +1125,22 @@ int light_interface_call_slot_40(void* record, uint32_t value);
 void ddiscene_render_surface_pool_grow(void);
 void* ddiscene_render_surface_pool_acquire(void);
 void ddiscene_render_surface_pool_release(void* record);
+extern void* s_render_surface_pool_blocks[32];
+extern unsigned int s_render_surface_pool_level_count;
+extern void* s_render_surface_pool_free_head;
+void ddiscene_render_surface_pool_head_push(void* record);
+void ddiscene_render_surface_pool_initialize(void);
+unsigned int ddiscene_render_surface_pool_block_count(void);
+void* ddiscene_render_surface_pool_block_get(unsigned int index);
+void ddiscene_render_surface_pool_release_all(void);
 
 /* SceneObjectRegistryReleaseAll/Teardown (FUN_0047e130/FUN_0047d430).
- * The small-record pool owner registers each newly allocated block here;
- * live records are released through the installed surface callback before
- * the blocks and free-list state are cleared. */
-typedef void (*SceneRegistrySurfaceReleaseFn)(void* surface);
+ * The small-record pool owner registers each allocated block here. Live
+ * records carry a 32-bit interface token at +0 and a self marker at +0x1c;
+ * an optional callback resolves/releases that token on hosts where the
+ * reference's 32-bit interface pointer cannot be called directly. */
+typedef void (*SceneRegistrySurfaceReleaseFn)(uint32_t interface_token);
+void image_surface_release(void* record); /* 0x0047d470 */
 void scene_object_registry_surface_release_set(
     SceneRegistrySurfaceReleaseFn release);
 void scene_object_registry_pool_block_register(void* block);
@@ -1080,6 +1325,9 @@ typedef void (*CameraPoseDispatchHook)(void* scene_object, void* pose_context,
 void camera_pose_dispatch_hook_install(CameraPoseDispatchHook hook,
                                        void* context);
 void camera_tilt_set(void* camera, float value); /* FUN_00436860 */
+/* Signature also fits CameraDragHooks' camera_vertical_apply callback when
+ * its context is the controller record. */
+void camera_pan_axis_update(void* camera, float delta); /* FUN_00436900 */
 void screen_effect_record_set(void* camera_record,
                               uint32_t field4, uint32_t field8,
                               uint32_t fieldc, float tilt,
@@ -1288,9 +1536,10 @@ uint32_t map_row_span_record_count(void);
 const void* map_row_span_record_get(uint32_t index);
 int float_round_to_nearest_int(float value); /* FUN_00463e40 */
 
-/* Lazy renderer-subobject cache adapters (FUN_00406f80 / 0x004085f0).
- * The owning scene-object layout is still partial; a resolver hook gives
- * the renderer/model modules a callable seam while retaining cache state. */
+/* ActivityRunnerStateRead is mapped at 0x00406f80. Scene activity handle
+ * getters use the renderer subobject resolver below and cache the returned
+ * value in the original activity-record slots (0x004085f0, 0x00408770,
+ * 0x004087b0, 0x004087e0, 0x00408810). */
 typedef void* (*RendererSubobjectResolveFn)(void* owner, void* source,
                                             int index);
 void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver);

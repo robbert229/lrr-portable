@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "platform/platform.h"
+#include "gods98/frameloop.hpp"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_timer.h>
@@ -25,6 +26,9 @@ struct PlatformWindow {
 
 static PlatformWindow* s_active_window;
 static PlatformRenderSurfaceOps s_platform_render_surface_ops;
+void* g_platform_cursor_window_handle;
+int g_platform_cursor_width;
+int g_platform_cursor_height;
 
 void platform_render_surface_ops_set(const PlatformRenderSurfaceOps* ops)
 {
@@ -62,6 +66,10 @@ PlatformWindow* platform_create_window(const char* title, int width, int height)
     pw->h = height;
     pw->window_surface = SDL_GetWindowSurface(win);
     s_active_window = pw;
+    g_platform_cursor_window_handle = (void*)win;
+    g_platform_cursor_width = width;
+    g_platform_cursor_height = height;
+    window_runtime_state_initialize((void*)win);
     /* The game draws its own bitmap pointer into the framebuffer. */
     SDL_HideCursor();
     return pw;
@@ -78,6 +86,10 @@ void platform_destroy_window(PlatformWindow* pw)
     SDL_ShowCursor();
     if (s_active_window == pw) {
         s_active_window = NULL;
+        g_platform_cursor_window_handle = NULL;
+        g_platform_cursor_width = 0;
+        g_platform_cursor_height = 0;
+        window_runtime_state_initialize(NULL);
     }
     pw->sdl = NULL;
     free(pw);
@@ -106,6 +118,26 @@ int platform_window_height(PlatformWindow* pw)
     return pw != NULL ? pw->h : 0;
 }
 
+int platform_cursor_position_get(int* x, int* y)
+{
+    float mouse_x = 0.0f;
+    float mouse_y = 0.0f;
+    if (s_active_window == NULL || s_active_window->sdl == NULL ||
+        x == NULL || y == NULL) {
+        return 0;
+    }
+    SDL_GetMouseState(&mouse_x, &mouse_y);
+    *x = (int)mouse_x;
+    *y = (int)mouse_y;
+    return 1;
+}
+
+void platform_cursor_position_set(int x, int y)
+{
+    if (s_active_window != NULL && s_active_window->sdl != NULL)
+        SDL_WarpMouseInWindow(s_active_window->sdl, (float)x, (float)y);
+}
+
 int platform_pump_events(PlatformWindow* pw, PlatformEvent* out, int cap)
 {
     if (pw == NULL || out == NULL || cap <= 0) {
@@ -113,10 +145,10 @@ int platform_pump_events(PlatformWindow* pw, PlatformEvent* out, int cap)
     }
     SDL_Event e;
     int n = 0;
-    while (SDL_PollEvent(&e)) {
-        if (n >= cap) {
-            break;
-        }
+    /* Do not remove an event that cannot fit in this call's output buffer.
+     * The next frame will drain it, matching PeekMessage's bounded adapter
+     * behavior without silently discarding the cap+1 event. */
+    while (n < cap && SDL_PollEvent(&e)) {
         PlatformEvent* ev = &out[n];
         ev->kind = PLATFORM_EVENT_NONE;
         ev->code = 0;
@@ -353,6 +385,20 @@ int platform_audio_play(PlatformAudio* a, const int16_t* pcm, int frames,
     return SDL_PutAudioStreamData(a->stream, pcm, frames * 2) ? 0 : -1;
 }
 
+int platform_audio_play_voice(PlatformAudio* a, const int16_t* pcm,
+                              int frames, int sample_rate, uintptr_t voice)
+{
+    (void)voice;
+    return platform_audio_play(a, pcm, frames, sample_rate);
+}
+
+void platform_audio_stop_voice(PlatformAudio* a, uintptr_t voice)
+{
+    /* SDL's shared one-shot stream has no per-submission queue handles. */
+    (void)a;
+    (void)voice;
+}
+
 int platform_audio_play_stereo(PlatformAudio* a, const int16_t* lr,
                                 int frames, int sample_rate)
 {
@@ -435,6 +481,13 @@ int platform_audio_queued(PlatformAudio* a)
     return SDL_GetAudioStreamQueued(a->stream);
 }
 
+int platform_audio_queued_milliseconds(PlatformAudio* a)
+{
+    int queued = platform_audio_queued(a);
+    if (queued <= 0) return 0;
+    return (int)(((double)queued * 1000.0) / (44100.0 * 4.0));
+}
+
 void platform_audio_stop(PlatformAudio* a)
 {
     if (a == NULL || a->stream == NULL) {
@@ -442,4 +495,62 @@ void platform_audio_stop(PlatformAudio* a)
     }
     platform_audio_loop(a, NULL, 0, 0);
     SDL_ClearAudioStream(a->stream);
+}
+
+static int platform_cd_audio_unavailable(int* error_code)
+{
+    if (error_code != NULL) *error_code = 1;
+    return 0;
+}
+
+int platform_cd_audio_open(int* error_code)
+{
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_set_tmsf(int* error_code)
+{
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_play(int one_based_track, int* error_code)
+{
+    (void)one_based_track;
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_stop(int* error_code)
+{
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_close(int* error_code)
+{
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_status(char* mode, int mode_capacity,
+                             int* current_track, int* error_code)
+{
+    if (mode != NULL && mode_capacity > 0) mode[0] = '\0';
+    if (current_track != NULL) *current_track = 0;
+    return platform_cd_audio_unavailable(error_code);
+}
+
+int platform_cd_audio_error_text(int error_code, char* output,
+                                 int output_capacity)
+{
+    static const char message[] = "CD audio is unavailable on this backend";
+    int i;
+    (void)error_code;
+    if (output == NULL || output_capacity <= 0) return 0;
+    for (i = 0; i + 1 < output_capacity && message[i] != '\0'; ++i)
+        output[i] = message[i];
+    output[i] = '\0';
+    return 1;
+}
+
+uint32_t platform_time_milliseconds(void)
+{
+    return (uint32_t)SDL_GetTicks();
 }

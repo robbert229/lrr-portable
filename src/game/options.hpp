@@ -88,7 +88,9 @@ void options_defaults(GameOptions* o);
  * modeled front-end selection words. */
 struct GameContext;
 void options_load_or_default(struct GameContext* ctx, int load_options,
-                             int reset_frontend); /* FUN_00416940 */
+                             int reset_frontend);
+void options_load_or_default_target(int load_options,
+                                    int reset_frontend); /* FUN_00416940 */
 
 /* Get/set by id. `options_set` clamps to the shipped range and silently
  * ignores unknown ids; `options_get` yields 0 for unknown ids. */
@@ -122,12 +124,10 @@ float options_scale_frame(const GameOptions* o, struct EngineContext* ctx,
  * effect immediately (issue #85). */
 float options_audio_gain(const GameOptions* o);
 
-/* --- save-context serialisation -----------------------------------------
- * 48-byte option block stamped into the `.sav` slot header: magic 'GOPS', u32
- * version (1), u32 count (GAME_OPT_COUNT), then the values by id.
- * options_save_header writes the block; options_load_header restores it and
- * returns 1 when the magic matches (absent/garbage: 0, the caller keeps the
- * defaults). */
+/* Legacy portable-only GOPS block helpers. Retail `.sav` files instead keep
+ * the three tracked option words in the raw slot-context header at +0x08,
+ * +0x0c, and +0x10. The loader retains these helpers only to read saves made
+ * by earlier portable builds. */
 void options_save_header(const GameOptions* o, uint8_t* blk);
 int  options_load_header(GameOptions* o, const uint8_t* blk);
 
@@ -135,31 +135,27 @@ int  options_load_header(GameOptions* o, const uint8_t* blk);
 }
 #endif
 
-/* OptionsWriteToSlot (FUN_00416910, finding 408): with a save slot open,
- * stores the live options words into the slot context's +8/+12/+16 window
- * (the corpus writes +8 sfx / +12 speed / +16 music). Deviation: the port's
- * slot context is the active context block (sav_slot_ctx), so the writes
- * land as dwords in that block's byte window (port-side composition). */
-void options_write_to_slot(struct GameContext* ctx); /* FUN_00416910 */
+/* Typed owner adapter plus the corpus's no-argument target entry. */
+void options_write_to_slot(struct GameContext* ctx);
+void options_write_to_slot_target(void); /* FUN_00416910 */
 
-/* OptionsContextSixFieldSet (FUN_00417f20, findings 438/372): with a save
- * slot open, copies six dwords from `src` into the slot context's +0x1c
- * window. Deviation: the corpus probes the global active-slot context; the
- * port threads a GameContext argument (the module's established shape). */
+/* OptionsContextSixFieldSet (FUN_00417f20, findings 438/372): the target
+ * entry takes only `src` and probes the active save context. The typed
+ * adapter binds a GameContext before calling that exact-ABI entry. */
 void options_context_six_field_set(struct GameContext* ctx,
                                    const uint32_t* src);
+void options_context_six_field_set_target(const uint32_t* src);
 
 /* OptionsContextCopyAndReplaceResource (FUN_004180c0): with a save slot
  * open, frees the slot context's owned resource word (the corpus's
  * DAT_00557080+slot*0xb8 dword 0xd through EngineHeapFree), copies the
  * full 46-dword source block over the window, and re-lands the source's
- * dword 0xd. Deviations: the corpus strides its active-slot context
- * blindly (the port gates on sav_build_ctx); the corpus block has no
- * ported owner, so the window and the widened resource ride zero-init
- * own storage behind the install/peek hooks (the unowned-DAT
- * convention). */
+ * dword 0xd. The target takes only the source pointer; the typed adapter
+ * binds GameContext first. The corpus's per-slot block has no ported owner,
+ * so the window and widened resource ride module-owned sidecar storage. */
 void options_context_copy_and_replace_resource(struct GameContext* ctx,
                                                const uint32_t* source);
+void options_context_copy_and_replace_resource_target(const uint32_t* source);
 void     options_slot_window_install(const uint32_t* block, void* resource);
 uint32_t options_slot_window_dword_peek(int index);
 void*    options_slot_resource_peek(void); /* FUN_00417f20 */

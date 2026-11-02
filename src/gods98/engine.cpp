@@ -9,7 +9,19 @@
 #include "record.hpp"
 #include "crt/crt.hpp"
 #include "sound.hpp"
+#include "audio.hpp"
+#include "media.hpp"
+#include "resource.hpp"
 #include "heap.hpp"
+#include "scene_resources.hpp"
+#include "view.hpp"
+#include "game/frontend.hpp"
+#include "game/entity.hpp"
+#include "game/objective.hpp"
+#include "game/port_loop_ports.hpp"
+#include "heap.hpp"
+#include <ctype.h>
+#include <stdlib.h>
 
 /* PanelSelectionHighlightToggle/EngineTick DAT globals (see the function
  * comments at their use sites): bit-0 flag word and the 250-ms cooldown in
@@ -19,6 +31,7 @@
 static uint32_t s_panel_highlight_flags; /* DAT_00556ed0 bit 0 */
 // GLOBAL: LEGORR 0x00556efc
 static float s_panel_highlight_timer;    /* DAT_00556efc 250-ms cooldown */
+static EngineContext* s_engine_pre_tick_context;
 // GLOBAL: LEGORR 0x00556ec8
 static int32_t s_context_mode;
 
@@ -32,8 +45,54 @@ static const volatile float s_panel_highlight_zero = 0.0f;
 /* GlobalField505f88Get and CommandLineOptionParse share this app-mode word. */
 // GLOBAL: LEGORR 0x00505f88
 static int32_t s_application_mode;
+static EngineContext* s_engine_current_context;
 static EngineKeepRunningHook s_keep_running_hook;
 static void* s_keep_running_user;
+static EngineTutorialDispatchHook s_tutorial_dispatch_hook;
+static void* s_tutorial_dispatch_context;
+
+void engine_tutorial_dispatch_hook_set(EngineTutorialDispatchHook hook,
+                                       void* context)
+{
+    s_tutorial_dispatch_hook = hook;
+    s_tutorial_dispatch_context = context;
+}
+static unported_ledger_stubs::GlobalSubsystemResetState*
+    s_global_subsystem_reset_state;
+
+void unported_ledger_stubs::global_subsystem_reset_state_bind(
+    unported_ledger_stubs::GlobalSubsystemResetState* state)
+{
+    s_global_subsystem_reset_state = state;
+}
+
+// FUNCTION: LEGORR 0x004263c0
+void unported_ledger_stubs::ledger_stub_004263c0_GlobalSubsystemStateReset(
+    void)
+{
+    static const int mode = 1;
+    unported_ledger_stubs::GlobalSubsystemResetState* state =
+        s_global_subsystem_reset_state;
+    (void)engine_mode_set_target(&mode);
+    if (state != NULL) {
+        if (state->word_00503618 != NULL) *state->word_00503618 = 0u;
+        text_buffer_reset(state->text_buffer);
+    }
+    engine_global_state_flags_bits6_and_9_set_target(0, 0);
+    engine_global_state_flags_bit7_set_target(0);
+}
+
+uint32_t* engine_current_feature_word(void)
+{
+    return s_engine_current_context != NULL
+        ? &s_engine_current_context->feature : NULL;
+}
+
+uint32_t* engine_current_state_word(void)
+{
+    return s_engine_current_context != NULL
+        ? &s_engine_current_context->state : NULL;
+}
 
 /* The reference's initialization callback clears this state before storing
  * the executable basename at DAT_005560c4. The portable modules do not share
@@ -129,6 +188,7 @@ void window_mode_flag_set(uint32_t mode)
 // FUNCTION: LEGORR 0x004232e0
 int EngineTick(EngineContext* ctx, float dt)
 {
+    s_engine_current_context = ctx;
     /* 1. Gate — loader/benchmark mode idles out of the frame. */
     if (ctx->app_mode == ENGINE_APP_LOADER && EngineKeepRunning(ctx) == 0) {
         return 0;
@@ -138,11 +198,13 @@ int EngineTick(EngineContext* ctx, float dt)
         dt = 0.0f;
     }
 
-    /* 2. Per-frame housekeeping (EnginePreTick @ 0x4231f0). The text pump
-     *    consumes the current frame's captured keys; the frame-loop drives
-     *    the table lifecycle (capture before this, input_begin_frame at the
-     *    frame end) — see frameloop.cpp. */
-    EnginePreTick(ctx);
+    /* 2. Per-frame housekeeping (EnginePreTick @ 0x4231f0). When text entry is
+     *    active it consumes this frame's key table; the frame-loop drives the
+     *    normal capture/input_begin_frame lifecycle — see frameloop.cpp. */
+    EngineContext* previous_pre_tick_context = s_engine_pre_tick_context;
+    s_engine_pre_tick_context = ctx;
+    EnginePreTick();
+    s_engine_pre_tick_context = previous_pre_tick_context;
 
     /* 3. Scaled delta: subsystem tickers run scaled time, raw dt drives
      *    timers. Editor/preview (context_mode==0) runs raw dt. */
@@ -169,7 +231,7 @@ int EngineTick(EngineContext* ctx, float dt)
     /* 5. Main simulation step — 0 => quit frame (MainSimStep @ 0x4250c0,
      *    ported in mainsim.*). */
     uint32_t sim_out1 = 0, sim_out2 = 0, sim_out3 = 0;
-    if (main_sim_step(ctx, scale, dt, &sim_out1, &sim_out2, &sim_out3) == 0) {
+    if (main_sim_step(ctx, scale, &sim_out1, &sim_out2, &sim_out3) == 0) {
         return 0;
     }
 
@@ -193,33 +255,134 @@ int EngineTick(EngineContext* ctx, float dt)
      *    notifications and loops SND_AirBeat; writes air_prev back. */
     EngineAirBeat(ctx, scale);
 
+    /* TutorialScriptCommandDispatch follows the manager/render tick cluster
+     * in the corpus and is disabled by DAT_00556ecc bit 0x01000000. Keep its
+     * game-owned interpreter behind a narrow callback so EngineTick does not
+     * depend on the game layer. */
+    if ((ctx->state & 0x01000000u) == 0u &&
+        s_tutorial_dispatch_hook != NULL)
+        s_tutorial_dispatch_hook(dt, s_tutorial_dispatch_context);
+
     /* Exit timer counts down in scaled time (corpus: DAT_00556efc -= scale). */
     s_panel_highlight_timer = s_panel_highlight_timer - scale;
 
     return 1;
 }
 
-/* Per-frame housekeeping — corpus EnginePreTick @ 0x4231f0. The real body is
- * text/entity-name input handling (keyboard echo through DAT_00556fa0); the
- * input core (findings 04/05) supplies the text pump. cur is NOT cleared here
- * (the frame-loop clears it at the frame boundary; the corpus's in-place
- * clear is incompatible with per-frame device capture).
- */
-// FUNCTION: LEGORR 0x004231f0
-void EnginePreTick(EngineContext* ctx)
+static void engine_pre_tick_context_run(EngineContext* ctx)
 {
-    if (ctx->input == NULL) {
-        return;
+    InputState* input;
+    char* target;
+    int length = 0;
+    int scan_limit;
+    int key;
+    int cancel;
+    if (ctx == NULL || ctx->input == NULL) return;
+    input = ctx->input;
+    target = input->text_target;
+    if (target == NULL) return;
+
+    /* The retail routine only edits strings shorter than eleven characters;
+     * the explicit cap also protects this portable owner buffer. */
+    scan_limit = input->text_cap > 0 ? input->text_cap : 12;
+    if (scan_limit > 12) scan_limit = 12;
+    while (length < scan_limit && target[length] != '\0') ++length;
+
+    if (input->cur[0x8e] == 0u ||
+        input->mirror[0x8e] == input->cur[0x8e]) {
+        cancel = (input->cur[0x9c] == 0u &&
+                  input->mirror[0x9c] != 0u) ||
+                 (input->cur[0x01] == 0u &&
+                  input->mirror[0x01] != 0u);
+        if (cancel) {
+            input->text_target = NULL;
+        }
+        else {
+            int text_limit = input->text_cap > 0
+                ? input->text_cap - 1 : 11;
+            if (text_limit > 11) text_limit = 11;
+            for (key = 0; key < INPUT_KEY_COUNT && length < text_limit;
+                 ++key) {
+                uint32_t mapped;
+                if (input->cur[key] == 0u ||
+                    input->mirror[key] == input->cur[key]) continue;
+                mapped = input_key_context(input, (uint32_t)key);
+                if (mapped == 0u) continue;
+                target[length++] = (char)toupper((unsigned char)mapped);
+                target[length] = '\0';
+            }
+        }
     }
-    char*  target = ctx->input->text_target;
-    int    cap    = ctx->input->text_cap;
-    int    len    = ctx->input->text_len;
-    if (target != NULL) {
-        input_text_pump(ctx->input, target, cap, &len, 0);
-        ctx->input->text_len = len;
-    } else {
-        input_mirror(ctx->input);
+    else if (length != 0) {
+        target[length - 1] = '\0';
+        --length;
     }
+    input->text_len = length;
+    /* Retail snapshots the current table into the text mirror and clears it
+     * only while a text target is active. This prevents edited keys from
+     * leaking into the following MainSimStep key-edge handling. */
+    input_mirror_and_clear(input);
+}
+
+void engine_pre_tick_adapter(EngineContext* ctx)
+{
+    engine_pre_tick_context_run(ctx);
+}
+
+/* Retail-shaped EnginePreTick @ 0x4231f0 uses global input/text state. */
+// FUNCTION: LEGORR 0x004231f0
+void EnginePreTick(void)
+{
+    EngineContext* ctx = s_engine_pre_tick_context;
+    InputState* input;
+    char* target;
+    int length = 0;
+    int scan_limit;
+    int key;
+    int cancel;
+
+    if (ctx == NULL || ctx->input == NULL) return;
+    input = ctx->input;
+    target = input->text_target;
+    if (target == NULL) return;
+
+    scan_limit = input->text_cap > 0 ? input->text_cap : 12;
+    if (scan_limit > 12) scan_limit = 12;
+    while (length < scan_limit && target[length] != '\0') ++length;
+
+    if (input->cur[0x8e] == 0u ||
+        input->mirror[0x8e] == input->cur[0x8e]) {
+        cancel = (input->cur[0x9c] == 0u &&
+                  input->mirror[0x9c] != 0u) ||
+                 (input->cur[0x01] == 0u &&
+                  input->mirror[0x01] != 0u);
+        if (cancel) {
+            input->text_target = NULL;
+        }
+        else {
+            int text_limit = input->text_cap > 0
+                ? input->text_cap - 1 : 11;
+            if (text_limit > 11) text_limit = 11;
+            for (key = 0; key < INPUT_KEY_COUNT && length < text_limit;
+                 ++key) {
+                uint32_t mapped;
+                if (input->cur[key] == 0u ||
+                    input->mirror[key] == input->cur[key]) continue;
+                mapped = input_key_context(input, (uint32_t)key);
+                if (mapped == 0u) continue;
+                target[length++] = (char)toupper((unsigned char)mapped);
+                target[length] = '\0';
+            }
+        }
+    }
+    else if (length != 0) {
+        target[length - 1] = '\0';
+        --length;
+    }
+    input->text_len = length;
+    /* TransitionControl(0,0), called by the original cancel branch, is an
+     * intentional no-op in the checked-in decompile. */
+    input_mirror_and_clear(input);
 }
 
 /* KeepRunning's global app-state and resource predicates are owned by the
@@ -232,7 +395,9 @@ void engine_keep_running_hook_set(EngineKeepRunningHook hook, void* user)
     s_keep_running_user = user;
 }
 
-// FUNCTION: LEGORR 0x00435940
+/* Portable quit/liveness adapter. Retail KeepRunning @ 0x435940 is a global
+ * no-argument state machine that also polls loader/resource interfaces; the
+ * current EngineContext/hook API does not expose those owners. */
 int EngineKeepRunning(EngineContext* ctx)
 {
     if (ctx == NULL) return 0;
@@ -242,10 +407,8 @@ int EngineKeepRunning(EngineContext* ctx)
     return 1;
 }
 
-/* Time-scale factor — corpus FUN_0041fb40, read once per frame in the tick.
- * Multiplies dt into the *scaled* delta passed to subsystem tickers.
- */
-// FUNCTION: LEGORR 0x0041fb40
+/* Portable context adapter used by EngineTick and local tests. Retail
+ * FUN_0041fb40 has no arguments and reads DAT_0055615c directly. */
 float EngineTimeScale(EngineContext* ctx)
 {
     /* Corpus FUN_0041fb40: the config-derived speed factor. Issue #85 wires
@@ -258,20 +421,62 @@ float EngineTimeScale(EngineContext* ctx)
     return ctx->time_scale;
 }
 
-/* Port-side shutdown dispatcher used by the current frame loop. The corpus
- * selects LAB_00424cf0 (normal play) or LAB_00424d00 (loader mode) when it
- * initializes its callback registry at 0x0041fa20; those branch bodies are
- * not represented by this context-taking adapter. Keep the established
- * no-op scaffold behavior until their cleanup dependencies are ported.
- */
+/* ResetLevelAndExit @ 0x4250a0. The original normal-play callback does not
+ * run the loader teardown: it disables the CD watchdog and exits through the
+ * CRT. Keep that path distinct from EngineShutdown's loader-mode cleanup. */
+static void engine_reset_level_and_exit(void)
+{
+    media_cd_watchdog_update(0);
+    exit(0);
+}
+
+/* EngineShutdown @ 0x424d00. Several corpus owners (renderer globals and
+ * five global entity arrays) have no corresponding EngineContext binding in
+ * this port. Run the teardown operations whose owners/APIs are represented;
+ * do not pass unrelated context fields to renderer cleanup routines. */
 void EngineShutdown(EngineContext* ctx)
 {
-    if (ctx->app_mode == ENGINE_APP_LOADER) {
-        /* corpus EngineShutdown @ 0x424d00 — subsystem closes, entity-array
-         * destructors, LoaderProfile load. TODO(engine). */
+    if (ctx == NULL) {
         return;
     }
-    /* corpus LAB_00424cf0 — stub forwarding to FUN_004250a0. TODO(engine). */
+
+    if (ctx->app_mode != ENGINE_APP_LOADER) {
+        engine_reset_level_and_exit();
+        return;
+    }
+
+    /* Ordered leading subsystem teardown from the checked-in shutdown
+     * decompile. FUN_0042f0c0's global pending-level owner is not bound here. */
+    global_resource_handle_release();
+    reward_task_block_finish();
+    media_cd_watchdog_update(0);
+    media_audio_playback_toggle(0);
+    resource_handle_set_release();
+    /* EntityTableMapsAllocate registers its six exact-width allocations in
+     * the resource release band; clear the native owner after that band has
+     * released them so a later config re-init cannot retain dangling maps. */
+    entity_table_maps_current_release();
+
+    /* The three view globals are represented by the context's view slots. */
+    if (ctx->views[0] != NULL) ctx->views[0]->target_record = NULL;
+    if (ctx->views[1] != NULL) ctx->views[1]->target_record = NULL;
+    if (ctx->views[2] != NULL) ctx->views[2]->target_record = NULL;
+    camera_view_context_close(ctx->views[0]);
+    camera_view_context_close(ctx->views[1]);
+    camera_view_context_close(ctx->views[2]);
+    ctx->views[0] = NULL;
+    ctx->views[1] = NULL;
+    ctx->views[2] = NULL;
+    memset(ctx->camera_targets, 0, sizeof(ctx->camera_targets));
+    ctx->camera_target_count = 0u;
+
+    /* Existing resource and entity-pool owners corresponding to later
+     * teardown calls. Renderer-only release calls and the five unbound
+     * entity-array destructor loops remain unavailable. */
+    rock_fall_style_scene_resources_release();
+    pooled_record_pool_resources_release();
+    lego::scene_resource_slots_release_all();
+    lego::scene_resource_string_tables_free();
 }
 /* RuntimeFlag40000000Get (FUN_0041f970): the faithful masked read of the
  * port's engine-state word. */
@@ -357,20 +562,37 @@ static uint32_t s_overlay_word_03610; /* DAT_00503610 role */
 // GLOBAL: LEGORR 0x00503614
 static uint32_t s_overlay_word_03614; /* DAT_00503614 role */
 
+void engine_global_state_flags_bit7_set_target(int value);
+void engine_global_state_flags_bits6_and_9_set_target(
+    int value, int set_bit9);
+
+/* The mapped body takes only the mode pointer; keep the portable context
+ * adapter separate to preserve that x86 argument layout. */
 // FUNCTION: LEGORR 0x004565f0
-int engine_mode_set(EngineContext* ctx, const int* mode)
+int engine_mode_set_target(const int* mode)
 {
-    if (mode == NULL) {
-        return 0; /* deviation: the corpus strides the pointer blindly */
-    }
     global_flag_004ff978_install((uint32_t)*mode);
     if (*mode == 1) {
-        global_state_flags_bits6_and_9_set(ctx, 0, 1);
-        global_state_flags_bit7_set(ctx, 0);
+        engine_global_state_flags_bits6_and_9_set_target(0, 1);
+        engine_global_state_flags_bit7_set_target(0);
     }
     s_overlay_word_03610 = 0u;
     s_overlay_word_03614 = 0u;
     return *mode;
+}
+
+int engine_mode_set(EngineContext* ctx, const int* mode)
+{
+    int result;
+    if (mode == NULL) {
+        return 0; /* portable adapter guard; mapped body dereferences */
+    }
+    result = engine_mode_set_target(mode);
+    if (ctx != NULL && *mode == 1) {
+        ctx->debug &= ~(0x40u | 0x80u);
+        ctx->debug |= 0x200u;
+    }
+    return result;
 }
 
 uint32_t engine_overlay_word_peek(int which)
@@ -413,6 +635,12 @@ uint32_t engine_debug_word_peek(void)
     return s_panel_highlight_flags;
 }
 
+void engine_debug_word_bit_set(uint32_t mask, int enabled)
+{
+    if (enabled != 0) s_panel_highlight_flags |= mask;
+    else s_panel_highlight_flags &= ~mask;
+}
+
 void objective_score_text_origin_peek(float out[2])
 {
     if (out != NULL) {
@@ -422,6 +650,15 @@ void objective_score_text_origin_peek(float out[2])
 }
 
 // FUNCTION: LEGORR 0x004263a0
+void engine_global_state_flags_bit7_set_target(int value)
+{
+    if (value != 0) {
+        s_panel_highlight_flags |= 0x80u;
+        return;
+    }
+    s_panel_highlight_flags &= ~0x80u;
+}
+
 void global_state_flags_bit7_set(EngineContext* ctx, int value)
 {
     if (ctx == NULL) {
@@ -435,6 +672,16 @@ void global_state_flags_bit7_set(EngineContext* ctx, int value)
 }
 
 // FUNCTION: LEGORR 0x00426360
+void engine_global_state_flags_bits6_and_9_set_target(
+    int value, int set_bit9)
+{
+    uint32_t flags = value != 0 ? s_panel_highlight_flags | 0x40u
+                                : s_panel_highlight_flags & ~0x40u;
+    if (set_bit9 != 0) flags |= 0x200u;
+    else flags &= ~0x200u;
+    s_panel_highlight_flags = flags;
+}
+
 void global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,
                                         int set_bit9)
 {
@@ -633,6 +880,13 @@ void global_position_seam_last(void** out_handle, int* out_x, int* out_y)
 // GLOBAL: LEGORR 0x0055615c
 static float s_scroll_scale = 1.0f; /* DAT_0055615c; port default (ref is zero-filled) */
 
+/* TimeScaleGet @ 0x0041fb40 returns the shared scroll/time scale global. */
+// FUNCTION: LEGORR 0x0041fb40
+float EngineTimeScale(void)
+{
+    return s_scroll_scale;
+}
+
 float scroll_scale_peek(void) { return s_scroll_scale; }
 void  scroll_scale_set(float value) { s_scroll_scale = value; }
 
@@ -754,26 +1008,44 @@ static char* field_grid_cell(int x, int y)
                    ((size_t)sizeof(void*) + 8u));
 }
 
+int entity_field_grid_cell_get(int x, int y, void** entity_out,
+                               uint32_t* flags_out)
+{
+    const EngineState* desc = s_field_grid_desc;
+    char* cell;
+    void* entity = NULL;
+    uint32_t flags = 0u;
+    if (desc == NULL || x < 0 || y < 0 ||
+        (uint32_t)x >= desc->grid_w || (uint32_t)y >= desc->grid_h)
+        return 0;
+    cell = field_grid_cell(x, y);
+    if (cell == NULL) return 0;
+    __builtin_memcpy(&entity, cell, sizeof(entity));
+    __builtin_memcpy(&flags, cell + sizeof(void*) + 4, sizeof(flags));
+    if (entity_out != NULL) *entity_out = entity;
+    if (flags_out != NULL) *flags_out = flags;
+    return 1;
+}
+
 // FUNCTION: LEGORR 0x00466380
 void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
 {
-    if (s_field_grid_buf == NULL || s_field_grid_desc == NULL) {
-        return; /* deviation: the corpus strides the missing grid blindly */
+    if (s_field_grid_buf != NULL && s_field_grid_desc != NULL) {
+        /* Preserve the corpus's repeated index calculation and write order.
+         * On x86 these expressions use stride 0x0c, flags at +8, and timer
+         * at +4: imul width*y; add x; lea index*3; then scale by four. */
+        *(void**)((char*)s_field_grid_buf +
+                  ((int)s_field_grid_desc->grid_w * y + x) *
+                      ((int)sizeof(void*) + 8)) = entity;
+        uint32_t* flags = (uint32_t*)((char*)s_field_grid_buf +
+                  ((int)s_field_grid_desc->grid_w * y + x) *
+                      ((int)sizeof(void*) + 8) + (int)sizeof(void*) + 4);
+        *flags = *flags | 0x100u;
+        *(uint32_t*)((char*)s_field_grid_buf +
+                  ((int)s_field_grid_desc->grid_w * y + x) *
+                      ((int)sizeof(void*) + 8) + (int)sizeof(void*)) =
+            0x42c80000u;
     }
-    /* Preserve the corpus's repeated index calculation and write order. On
-     * x86 these expressions use stride 0x0c, flags at +8, and timer at +4:
-     * imul width*y; add x; lea index*3; then scale by four. */
-    *(void**)((char*)s_field_grid_buf +
-              ((int)s_field_grid_desc->grid_w * y + x) *
-                  ((int)sizeof(void*) + 8)) = entity;
-    uint32_t* flags = (uint32_t*)((char*)s_field_grid_buf +
-              ((int)s_field_grid_desc->grid_w * y + x) *
-                  ((int)sizeof(void*) + 8) + (int)sizeof(void*) + 4);
-    *flags = *flags | 0x100u;
-    *(uint32_t*)((char*)s_field_grid_buf +
-              ((int)s_field_grid_desc->grid_w * y + x) *
-                  ((int)sizeof(void*) + 8) + (int)sizeof(void*)) =
-        0x42c80000u;
 }
 
 // FUNCTION: LEGORR 0x00466750
@@ -839,3 +1111,15 @@ int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out)
     }
     return 1;
 }
+
+namespace unported_ledger_stubs {
+EngineTaskCallbackRecord* ledger_stub_00480870_TaskCallbackRecordAllocateAndInitialize(
+    void* owner, void* callback, uint32_t mode, void* context,
+    uint32_t flag_value)
+{
+    return engine_task_callback_record_allocate_and_initialize(
+        owner, callback, mode, context, flag_value);
+}
+
+
+} // namespace unported_ledger_stubs

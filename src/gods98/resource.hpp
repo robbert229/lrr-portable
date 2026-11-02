@@ -16,9 +16,9 @@
  *
  * Entry payload expansion (finding 01): recorded for entries whose flag word
  * has bit 1 set — a small header (4-byte magic, type byte at [3], byte-swapped
- * length at [4], payload from +0x12). Shipped wads never set the bit
- * (flags == 1 everywhere, stored == original), so types 1/2 (FUN_0049c8e0 /
- * FUN_0049ca60) remain dormant and are reported as not implemented.
+ * length at [4], payload from +0x12). Type-1 and type-2 payload codecs are
+ * implemented, though the shipped WAD set does not exercise them (its flags
+ * are 1 and stored length equals original length).
  *
  * Discipline (ADR 0003/0004): plain C, stdio only (portable across the
  * native/winapi backends), no DirectX/WinAPI headers below the seam.
@@ -63,6 +63,30 @@ const char* resource_path_resolve_against_base(const char* path); /* FUN_0048022
 int resource_cd_present(void);
 int resource_data_present(void);
 
+/* Startup WAD mount services supplied by the host. The retail routine gets
+ * localized strings through its registry-backed loader and shows modal
+ * MessageBoxes. Process termination is optional: without an exit callback,
+ * the startup entry records the status and returns to its caller. */
+typedef int (*ResourceStartupTextLookupFn)(
+    void* context, const char* registry_key, const char* text_key,
+    char* text_out, size_t text_capacity);
+typedef int (*ResourceStartupMessageBoxFn)(
+    void* context, const char* text, const char* caption, unsigned style);
+typedef void (*ResourceStartupExitFn)(void* context, int exit_code);
+typedef struct ResourceStartupOps {
+    void* context;
+    ResourceStartupTextLookupFn text_lookup;
+    ResourceStartupMessageBoxFn message_box;
+    ResourceStartupExitFn exit_process;
+} ResourceStartupOps;
+void resource_startup_ops_set(const ResourceStartupOps* ops);
+#define RESOURCE_STARTUP_OK 0
+#define RESOURCE_STARTUP_PATH_ERROR 1
+#define RESOURCE_STARTUP_MISSING_DATA 2
+#define RESOURCE_STARTUP_CD_CANCELLED 3
+#define RESOURCE_STARTUP_DEPENDENCY_MISSING 4
+int resource_startup_result_get(void);
+
 /* An opened resource. `data` is populated by resource_read() and is owned by
  * the handle (freed by resource_free). `mode` is the open() mode requested. */
 typedef struct Resource {
@@ -79,6 +103,17 @@ typedef struct Resource {
  * Returns the number of wads mounted (0 => none; error message -> stderr).
  * Only the first successful parse is required to be a valid WWAD. */
 int resource_mount(const char* dir, const char* prefix);
+/* WadMountStartup's retail ABI: exe-derived prefix, insist-on-CD flag, and
+ * registry key used by the localized CDMissing/DataMissing strings. The
+ * explicit-root `resource_mount` remains the modern test/host entry. */
+void resource_mount_startup_target(const char* prefix, int require_cd,
+                                   const char* registry_key);
+/* Calls the retail-shaped entry and returns RESOURCE_STARTUP_*. */
+int resource_mount_startup(const char* prefix, int require_cd,
+                           const char* registry_key);
+/* Startup command-line policy supplied by the platform entry point. */
+void resource_startup_require_cd_set(int require_cd);
+int resource_startup_require_cd_get(void);
 /* Entry-derived default prefix used by the main frame loop (LegoRR by default). */
 void resource_set_wad_prefix(const char* prefix);
 const char* resource_get_wad_prefix(void);
@@ -94,6 +129,10 @@ void resource_unmount_all(void);
  * index or -1. */
 int resource_wad_lookup(int wad_idx, const char* name);
 
+/* Search the mounted archives from newest to oldest, or one selected archive
+ * when `wad_idx` is nonnegative. */
+int wad_entry_find_across_mounted_archives(const char* name, int wad_idx);
+
 /* TOC introspection used by tests/validators. */
 uint32_t resource_wad_entry_count(int wad_idx);
 uint32_t resource_wad_entry_stored(int wad_idx, int entry_idx);
@@ -104,20 +143,98 @@ const char* resource_wad_entry_name(int wad_idx, int entry_idx);
 /* Open a resource by name. mode selects the branch policy (see defines).
  * Returns a handle or NULL on failure. */
 Resource* resource_open(const char* name, int mode);
+/* Independent seekable view over a loose file or WAD payload. Expanded
+ * raw-copy entries are read directly; implemented WAD codecs 1/2 are
+ * expanded into owned memory so the resulting logical resource is seekable. */
+typedef struct ResourceStream ResourceStream;
+ResourceStream* resource_stream_open(const char* name, int mode,
+                                     uint32_t* size_out);
+int resource_stream_read_at(ResourceStream* stream, uint32_t offset,
+                            void* bytes, uint32_t length);
+void resource_stream_close(ResourceStream* stream);
 typedef struct MapOpenOps {
     void* context;
-    int (*map_index_find)(void* context, const Resource* resource);
-    void* (*map_record_get)(void* context, int map_index);
-    int (*map_record_open)(void* context, void* map_record,
-                           const Resource* resource);
+    int (*slot_allocate)(void* context, uint32_t size);
+    void* (*slot_get)(void* context, uint32_t slot);
+    void (*slot_release)(void* context, uint32_t slot);
     void (*progress)(void* context, const char* path, uint32_t size);
 } MapOpenOps;
 int map_open2(const char* path, const MapOpenOps* ops,
-              void** map_data_out, int32_t* size_out); /* FUN_00480170 */
+              int32_t* size_out); /* FUN_00480170 */
 typedef struct ResourceFileTokenList {
     uint32_t count;
     char tokens[512][256];
 } ResourceFileTokenList;
+/* Root used by the retail-shaped one-argument token/tree entrypoints. The
+ * loader initializes it from resource_mount; hosts may set the same owner
+ * root explicitly when they don't mount numbered archives. */
+void resource_directory_scan_root_set(const char* root);
+const char* resource_directory_scan_root_get(void);
+void resource_file_token_list_load_and_tree_scan_target(
+    const char* token_file); /* FUN_004802d0, one-argument retail shape */
+
+/* Direct3DRM resource-tree callback helpers (FUN_00489520, FUN_004895c0,
+ * FUN_00489910). These keep the retail COM slot contract behind the resource
+ * module boundary. `unused` is the first stack argument present at the two
+ * retail constructor call sites; it is not read by either constructor.
+ * The context's handle array contains the enumerated interface pointers.
+ * Cleanup follows the scene-owner link path, which expects the caller to
+ * install the matching interface-release hook. */
+/* Portable resource-tree node used by direct name lookups. The resource
+ * pointer is the object interface passed to ResourceNameMatchCallback. */
+typedef struct ResourceTreeNode {
+    const char* name;
+    void* resource;
+    struct ResourceTreeNode** children;
+    uint32_t child_count;
+} ResourceTreeNode;
+typedef int (*ResourceTreeCallback)(void* object, void* context);
+typedef int (*ResourceTreeNodeCallback)(ResourceTreeNode* node,
+                                        void* context);
+int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
+                                ResourceTreeNodeCallback callback,
+                                void* context); /* portable tree helper */
+int resource_tree_callback_walk_target(void* object, int depth,
+                                       ResourceTreeCallback callback,
+                                       void* context); /* 0x00476330 */
+typedef struct ResourceNameMatchCallbackContext {
+    const char* name;
+    uint32_t name_length;
+    uint32_t case_sensitive;
+    void* matched_object;
+    uint32_t match_count;
+    int mode;
+    uint32_t selected_index;
+} ResourceNameMatchCallbackContext;
+int resource_name_match_callback_target(
+    void* object, void* context); /* 0x00476410 */
+void* resource_name_register_or_query(ResourceTreeNode* root,
+                                      const char* name, int mode,
+                                      uint32_t* match_count_or_index);
+                                                /* 0x00473bc0 */
+void* resource_name_register_or_query_target(
+    void** root, const char* name, int mode,
+    uint32_t* match_count_or_index); /* retail 0x00473bc0 ABI */
+int nested_record_list_remove_matching_key(void* owner, void* key,
+                                           void* record); /* 0x0047b330 */
+typedef struct ResourceTreeCallbackContext {
+    int kind;
+    void* child_chain;
+    void* first_handle;
+    int shared_mode;
+    void* second_handle;
+    void** handles;
+    uint32_t handle_count;
+    void* owner;
+} ResourceTreeCallbackContext;
+uint32_t resource_tree_callback_count(void* object, int depth,
+                                      ResourceTreeCallback callback,
+                                      void* context); /* FUN_00489910 */
+ResourceTreeCallbackContext* resource_tree_callback_context_create_for_enumerator(
+    void* unused, void* owner, void* enumerator); /* FUN_00489520 */
+ResourceTreeCallbackContext* resource_tree_callback_context_create_for_resource(
+    void* unused, void* owner, void* resource); /* FUN_004895c0 */
+
 typedef struct ResourceFileTokenListOps {
     void* context;
     void (*directory_tree_scan)(void* context, const char* root,
@@ -125,7 +242,7 @@ typedef struct ResourceFileTokenListOps {
 } ResourceFileTokenListOps;
 int resource_file_token_list_load_and_tree_scan(
     const char* token_file, const char* root, ResourceFileTokenList* list,
-    const ResourceFileTokenListOps* ops); /* FUN_004802d0 */
+    const ResourceFileTokenListOps* ops);
 int resource_directory_token_list_contains(
     const ResourceFileTokenList* list, const char* token); /* FUN_00480570 */
 typedef struct ResourceDirectoryScanOps {
@@ -138,7 +255,9 @@ typedef struct ResourceDirectoryScanOps {
 } ResourceDirectoryScanOps;
 void resource_directory_tree_scan(const char* root,
                                   const ResourceFileTokenList* tokens,
-                                  const ResourceDirectoryScanOps* ops); /* FUN_00480390 */
+                                  const ResourceDirectoryScanOps* ops);
+void resource_directory_tree_scan_target(
+    const char* root); /* FUN_00480390, one-argument retail shape */
 
 /* Read the payload into handle->data (lazy; no-op if already read or NULL).
  * Returns the payload size, or -1 on failure (dormant codec / read error). */
@@ -205,16 +324,16 @@ void render_resource_track_and_retain(void* resource);
 void resource_interface_call_slot88(void* wrapper);
 
 /* --- wad payload band (2026-10-25; finding 01 codec story) ----------------
- * RNC-header decode dispatch, its expand wrapper, the type-1 Huffman table
- * clear, the file-layer handle pair, and the wad-entry stream-slot opener.
- * The codecs themselves stay dormant (no shipped wad sets the expanded
- * flag), documented in resource.cpp. */
+ * RNC-header decode dispatch, both compressed codecs, its expand wrapper,
+ * the type-1 Huffman table clear, the file-layer handle pair, and the
+ * wad-entry stream-slot opener. */
 #define WAD_DECODE_MAGIC_FAIL 0xffff /* corpus's not-RNC verdict */
 #define WAD_DECODE_TYPE_FAIL  0xfffe /* corpus's unknown-type verdict */
 
-/* Verify the "RNC" magic + type gate and copy/delegate the payload.
- * 0 raw copy, 1/2 the ported codecs (xor ax,ax verdict 0), verdicts
- * otherwise. */
+/* Verify the "RNC" magic + type gate and copy/delegate the payload. The raw
+ * type-0 path returns zero; type-1/2 return the output pointer's high word,
+ * whose low 16 bits are zero (the retail caller tests AX). Invalid magic and
+ * unknown types return the two 0xffxx failure values above. */
 int wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840 */
 
 /* Probe (out_payload NULL) or materialize an expanded payload; answers the
@@ -222,7 +341,7 @@ int wad_payload_decode_dispatch(const void* header, void* dest); /* FUN_0049c840
 long wad_expand_payload(const void* header, void** out_payload); /* FUN_0049c7c0 */
 
 /* Zero 16-byte table entries: 0, word 0xffff, 0, word 0. */
-void wad_huffman_table_clear(void* table, int count);            /* FUN_0049cf50 */
+void wad_huffman_table_clear(void* table, uint8_t count);         /* FUN_0049cf50 */
 
 /* Kind 1: flagged handle record, no stream buffer. Kind 0: carries the
  * 12-byte stream buffer behind; releases the record if it fails. */
@@ -234,8 +353,17 @@ void* game_file_handle_allocate(int kind);                       /* FUN_0047fed0
 int game_file_read_byte(GameFileHandle* handle);                  /* FUN_0047fc20 */
 int wad_file_read(void* destination, int element_size, int element_count,
                   GameFileHandle* handle);                         /* FUN_0047f980 */
+int wad_file_seek(GameFileHandle* handle, int offset, int origin); /* FUN_0047f850 */
+int wad_file_cursor_get(GameFileHandle* handle);                   /* FUN_0047fb10 */
 void game_file_handle_release(GameFileHandle* handle);            /* FUN_0047ff50 */
 int game_file_close(GameFileHandle* handle);                      /* FUN_0047fac0 */
+/* Resolve and open through the reference WAD/loose-file route selector. */
+GameFileHandle* game_file_open_dispatch(const char* path,
+                                        const char* mode);          /* FUN_0047f6e0 */
+/* Open a loose-file GameFileHandle after resolving the game's data root.
+ * WAD-only read routes are not representable by this FILE-backed adapter. */
+GameFileHandle* game_file_open_loose_path(const char* path,
+                                          const char* mode);
 uint32_t game_file_write(const void* data, uint32_t size,
                          uint32_t count, GameFileHandle* handle); /* FUN_0047fa50 */
 int game_file_print_format(GameFileHandle* handle, const char* format, ...);
@@ -483,7 +611,7 @@ void* scene_resource_cached_slot_c0_get(
     SceneResourceAnimationRecord* record); /* FUN_0046daf0 */
 void* attached_entity_slot_object_get(SceneResourceAnimationRecord* record,
                                       int index); /* FUN_0046db20 */
-void scene_object_resource_release(SceneResourceAnimationRecord* record);
+void scene_object_resource_release(void* record);
                                                 /* FUN_0046db70 */
 typedef struct ScenePairedAnimationState {
     void* primary_resource;
@@ -521,8 +649,7 @@ void scene_entity_animation_tracks_set_enabled(
     ScenePairedAnimationState* state, int enabled); /* FUN_0046cf20 */
 void scene_assign_owner_from_model(ScenePairedAnimationState* state,
                                    void* owner); /* FUN_0046d140 */
-void scene_object_attached_resource_release(
-    ScenePairedAnimationState* state); /* FUN_0046d1a0 */
+void scene_object_attached_resource_release(void* record); /* FUN_0046d1a0 */
 typedef void (*SceneOwnedMemoryReleaseHook)(void* memory, void* context);
 void scene_payload_memory_release_hook_install(
     SceneOwnedMemoryReleaseHook release, void* context);
@@ -702,24 +829,46 @@ typedef struct MiscObjectResourceHooks {
 void misc_object_resource_hooks_set(const MiscObjectResourceHooks* hooks);
 void misc_object_resources_load(void* config); /* FUN_00422850 */
 void* misc_object_resource_peek(unsigned int slot);
+void directx_error_message_format(const char* name, const char* description);
+int directx_result_diagnostic_dispatch(int result, int diagnostic_kind,
+                                      const char* source_file,
+                                      int source_line);
+}
+
+/* Host operations for the retail SceneLightsBuildFromConfig sequence.
+ * Owner slots identify the scene objects supplied by the renderer; they are
+ * not retail pointer values. The callbacks preserve the order of the light
+ * creation, interface setter, root-object, and enable calls. */
+enum SceneLightOwnerSlot {
+    SCENE_LIGHT_OWNER_TOP_SPOT = 0,
+    SCENE_LIGHT_OWNER_TRACK_SPOT = 1,
+    SCENE_LIGHT_OWNER_AMBIENT = 2,
+    SCENE_LIGHT_OWNER_FIRST_PERSON = 3,
+    SCENE_LIGHT_OWNER_DEFAULT_ROOT = 4
+};
 typedef struct SceneLightDefinition {
     const char* config_name;
-    int scene_slot;
+    int owner_slot;
+    void* owner;
     int light_kind;
     float rgb[3];
-    float position[3];
-    float direction[3];
-    float intensity;
-    float falloff;
-    float radius;
 } SceneLightDefinition;
-typedef struct SceneLightBuildHooks {
+typedef struct SceneLightBuildOps {
     void* user;
     int (*rgb_read)(const char* config_name, float out_rgb[3], void* user);
-    uint32_t (*create)(const SceneLightDefinition* definition, void* user);
-    void (*enable)(uint32_t handle, void* user);
-} SceneLightBuildHooks;
-int scene_lights_build_from_config(const SceneLightBuildHooks* hooks);
-}
+    void* (*owner_get)(int owner_slot, void* user);
+    void* (*light_create)(const SceneLightDefinition* definition, void* user);
+    int (*light_parameter_set)(void* light, uint32_t vtable_offset,
+                               float value, void* user);
+    int (*light_position_set)(void* light, void* owner,
+                              const float position[3], void* user);
+    int (*light_pose_set)(void* light, void* owner, const float pose[6],
+                          void* user);
+    int (*light_enable)(void* light, int enabled, void* user);
+    void* (*scene_root_get)(void* user);
+    void* (*scene_object_allocate)(void* root, void* user);
+    int (*scene_object_transform_init)(void* light, void* root,
+                                       const float scale[3], void* user);
+} SceneLightBuildOps;
 
 #endif /* LEGORRR_RESOURCE_HPP */

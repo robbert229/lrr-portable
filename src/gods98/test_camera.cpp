@@ -26,7 +26,9 @@ int main(void)
 {
     EngineState st = {};
     EngineContext ctx = {};
+    uint8_t spawn_level[0x284];
     ctx.state_block = &st;
+    memset(spawn_level, 0, sizeof(spawn_level));
 
     /* state root = state block. */
     CHECK(camera_state_root(&ctx) == &st, "state_root");
@@ -70,19 +72,21 @@ int main(void)
     CHECK(*t == 0.0f, "grid_expiry: reset cell stays quiet (busy still set)");
 
     /* spawn countdown: skips type 0x14, otherwise counts down and re-arms. */
-    st.spawn_type = 0x14;
+    camera_spawn_level_block_bind(spawn_level);
+    *(uint32_t*)(spawn_level + 0x26c) = 0x14;
     g_camera_countdown = -1.0f;
-    st.spawn_interval = 3.0f;
-    camera_spawn_countdown(&ctx, 0.1f);
+    *(float*)(spawn_level + 0x268) = 3.0f;
+    camera_spawn_countdown(0.1f);
     CHECK(g_camera_countdown < 0.0f, "spawn: type 0x14 skipped");
-    st.spawn_type = 0x8;
+    *(uint32_t*)(spawn_level + 0x26c) = 0x8;
     g_camera_countdown = 0.5f;
-    camera_spawn_countdown(&ctx, 0.1f);
+    camera_spawn_countdown(0.1f);
     CHECK(g_camera_countdown > 0.39f && g_camera_countdown < 0.41f,
           "spawn: decrement");
-    camera_spawn_countdown(&ctx, 0.6f);
+    camera_spawn_countdown(0.6f);
     CHECK(g_camera_countdown > 2.99f && g_camera_countdown < 3.01f,
           "spawn: re-arms to interval");
+    camera_spawn_level_block_bind(NULL);
 
     if (s_failures == 0) {
         printf("camera_test: PASS\n");

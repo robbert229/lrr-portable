@@ -366,7 +366,8 @@ typedef struct EntityMovementTickScaleState {
 typedef struct EntityMovementTickScaleHooks {
     float (*base_speed_get)(void* context, void* entity, int kind);
     int (*terrain_data_get)(void* context, void* entity, int* cell_cost,
-                            int* terrain_type, int* occupiable);
+                            int* terrain_type, int* occupiable,
+                            int* entity_scale_gate);
     float (*surface_scale_get)(void* context, void* entity);
     float (*entity_scale_get)(void* context, void* entity);
     float (*animation_scale_get)(void* context, void* entity);
@@ -384,13 +385,14 @@ static inline void entity_movement_tick_scale_and_delta_get(
     int cell_cost = 0;
     int terrain_type = state != 0 ? state->terrain_type : 0;
     int occupiable = 0;
+    int entity_scale_gate = 0;
     if (state == 0 || entity == 0 || movement_delta == 0 ||
         movement_scale == 0 || hooks == 0) return;
     if (hooks->base_speed_get != 0)
         base_speed = hooks->base_speed_get(hooks->context, entity,
                                            state->kind);
     if ((state->flags_fa & 0x20000u) != 0u || state->kind == 10) {
-        *movement_delta = delta;
+        *movement_scale = delta;
         return;
     }
     speed = base_speed;
@@ -401,21 +403,21 @@ static inline void entity_movement_tick_scale_and_delta_get(
     if ((state->flags_f8 & 0x2000000u) != 0u) speed *= 0.05f;
     if (hooks->terrain_data_get != 0 &&
         hooks->terrain_data_get(hooks->context, entity, &cell_cost,
-                                &terrain_type, &occupiable)) {
+                                &terrain_type, &occupiable,
+                                &entity_scale_gate)) {
         float surface = hooks->surface_scale_get != 0
             ? hooks->surface_scale_get(hooks->context, entity) : 1.0f;
-        float entity_scale = hooks->entity_scale_get != 0
-            ? hooks->entity_scale_get(hooks->context, entity) : 1.0f;
-        if (occupiable) {
-            scale_factor *= 1.0f - (1.0f - surface) *
-                                      ((float)cell_cost * 0.25f);
-            if (hooks->animation_scale_get != 0)
-                scale_factor *= hooks->animation_scale_get(hooks->context,
-                                                            entity);
-            if (state->kind == 2 && terrain_type == 9)
-                scale_factor *= 1.0f - state->surface_scale * 0.8f;
-            speed *= scale_factor * entity_scale;
-        }
+        scale_factor *= 1.0f - (1.0f - surface) *
+                                  ((float)cell_cost * 0.25f);
+        if (entity_scale_gate && hooks->entity_scale_get != 0)
+            scale_factor *= hooks->entity_scale_get(hooks->context, entity);
+        /* FUN_00446610 resets its local multiplier to 1.0 before the
+         * terrain-kind-9 branch, so this branch is a fixed 0.2 factor;
+         * it does not use the entity's surface-scale stat. */
+        if (state->kind == 2 && terrain_type == 9)
+            scale_factor *= 0.2f;
+        if (occupiable)
+            speed *= scale_factor;
     }
     *movement_delta = speed * delta;
     if (base_speed == 0.0f) *movement_scale = 1.0f;
