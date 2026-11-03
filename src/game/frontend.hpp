@@ -803,6 +803,9 @@ void advisor_tutorial_icon_hooks_set(AdvisorTutorialIconLoadFn load,
                                      void* context);
 void advisor_tutorial_icon_image_load(BlockFile* cfg); /* FUN_00434a00 */
 void* advisor_tutorial_icon_get(void);
+/* Production startup/reload and shutdown; legacy hooks above lend images. */
+void advisor_tutorial_icon_runtime_initialize(BlockFile* cfg);
+void advisor_tutorial_icon_image_release(void);
 typedef void (*AdvisorTextRequestActionFn)(uint32_t request, int p1, int p2,
                                            void* context);
 /* Production tutorial message assets/widgets, owned from FrontEndBuild to

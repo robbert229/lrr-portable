@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "entity.hpp"
+#include "building_scene.hpp"
+#include "crt/crt.hpp"
 #include "frontend.hpp"
 #include "cmd.hpp"
 #include "type_config_ports.hpp"
@@ -565,6 +567,22 @@ static int entity_type_config_row_parse_path(void* context,
             return 0;
         }
     }
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (row_kind == 2u) {
+        TypeConfigTable* table = (TypeConfigTable*)context;
+        size_t offset;
+        if (table == NULL || table->rows == NULL || table->row_stride == 0u) {
+            block_close(ae); return 0;
+        }
+        offset = (size_t)((char*)destination - (char*)table->rows);
+        if (offset % table->row_stride != 0u ||
+            offset / table->row_stride >= table->capacity ||
+            !building_scene_config_path_set((uint32_t)(offset / table->row_stride),
+                                             asset_path, engine_feature_word_peek())) {
+            block_close(ae); return 0;
+        }
+    }
+#endif
     block_close(ae);
     return 1;
 }
@@ -659,6 +677,17 @@ void entity_type_config_row_finalize(void* context, void* row,
     }
 }
 
+static void entity_type_config_family_release(TypeConfigTable* table, uint32_t kind)
+{
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (kind == 2u && !building_scene_types_clear())
+        building_scene_require_stopped();
+#else
+    (void)kind;
+#endif
+    type_config_table_release(table);
+}
+
 #define ENTITY_TYPE_CONFIG_TABLE_LOAD(table_, section_name_, kind_, stride_) \
     TypeConfigTable* table = (table_); \
     BlockRec* section; \
@@ -670,7 +699,7 @@ void entity_type_config_row_finalize(void* context, void* row,
     void** row_owned; \
     if (table == NULL || s_entity_type_config_file == NULL) return 0; \
     section = entity_config_section_find(s_entity_type_config_file, (section_name_)); \
-    type_config_table_release(table); \
+    entity_type_config_family_release(table, (kind_)); \
     count = entity_type_config_entry_count(NULL, section); \
     table->row_stride = (stride_); \
     if (count == 0u || count > 0xffffffffu / (stride_) || \
@@ -695,18 +724,18 @@ void entity_type_config_row_finalize(void* context, void* row,
         table->count = i + 1u; \
         if (child == NULL || \
             !entity_type_config_row_parse(table, child, row, (kind_))) { \
-            type_config_table_release(table); return 0; \
+            entity_type_config_family_release(table, (kind_)); return 0; \
         } \
         memcpy(row, &i, sizeof(i)); \
         entity_type_config_row_finalize(table, row, (kind_)); \
         source_name = block_name(child); \
         if (source_name == NULL) { \
-            type_config_table_release(table); return 0; \
+            entity_type_config_family_release(table, (kind_)); return 0; \
         } \
         name_length = strlen(source_name); \
         names[i] = (char*)engine_heap_alloc((long)(name_length + 1u)); \
         if (names[i] == NULL) { \
-            type_config_table_release(table); return 0; \
+            entity_type_config_family_release(table, (kind_)); return 0; \
         } \
         memcpy(names[i], source_name, name_length + 1u); \
         child = block_next_equal_key(child); \

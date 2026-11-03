@@ -54,13 +54,14 @@ extern int s_global_enabled;
 #define CMD_STATE_BUFOUT    0x200u  /* +0x40 is external (do not free) */
 #define CMD_STATE_MINION    0x2000u
 #define CMD_STATE_CANCEL    0x10000u
-/* Kind-0 only: its cell route has been admitted by cmd_move_route_prepare. */
-#define CMD_STATE_MOVE_ROUTED 0x1u
+/* Bit1 latches issuance, never final arrival. Kind0 uses the same bit. */
+#define CMD_STATE_ISSUED     0x1u
+#define CMD_STATE_MOVE_ROUTED CMD_STATE_ISSUED
 
 /* --- pool + registry --------------------------------------------------- */
 void cmd_init(void);            /* CmdRegistryInit */
 
-void* cmd_alloc(int type);      /* CmdAlloc — a zeroed 0x68 record */
+void* cmd_alloc(int type);      /* zeroed retail window + private tail */
 void  cmd_free(void* rec, int cancel); /* CmdFree */
 void cmd_minion_companion(EntitySlot* entity);
 
@@ -85,6 +86,13 @@ void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag);
  * (or explicit DONE cancellation); malformed/failed routes retain the head. */
 int cmd_move_route_prepare(EntitySlot* entity, struct LevelState* level);
 int cmd_move_route_finish(EntitySlot* entity);
+/* GetTool alone shares the ordinary mover. Scheduler issues; AI advances;
+ * terminal verification raises bit40; the existing callback grants/removes. */
+int cmd_gettool_route_moving(EntitySlot* entity);
+int cmd_gettool_route_finish(EntitySlot* entity);
+int cmd_gettool_route_arrived(EntitySlot* entity);
+void cmd_gettool_route_reset(EntitySlot* entity);
+void cmd_gettool_entity_removing(EntitySlot* entity);
 void cmd_create_target(EntitySlot* e, void* target);
 void cmd_create_gated(EntitySlot* e, void* target);
 /* EntityActivityRecordRemoveByType (FUN_00403c00) passes 0x43160000 (150.0f
@@ -200,12 +208,14 @@ void cmd_tick_global_delta(float delta);
 int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload); /* 0x404280 */
 typedef struct CmdEntityChainExternalOps {
     void* context;
-    int (*object_position_step)(EntitySlot* entity, const void* task_record,
+    int (*object_position_step)(EntitySlot* entity, uint32_t selector,
                                 void* context); /* kind 0x13, 0x44b500 */
     int (*waypoint_task_step)(EntitySlot* entity, const void* target_record,
                               uint32_t task_count, void* context); /* 0x444690 */
 } CmdEntityChainExternalOps;
-/* If an operation is not installed, its command remains queued untouched. */
+/* Kind19 defaults to the real 0x44b500 leaf; it pends without its scene
+ * producer. Overrides must install a genuine terminal-d route. Kind21 pends
+ * without its external owner. Negative=pending, zero=failure, positive=issued. */
 void cmd_entity_chain_external_ops_set(const CmdEntityChainExternalOps* ops);
 
 /* --- record accessors ---------------------------------------------------- */
@@ -424,10 +434,10 @@ int task_table_contents_release(void* record);      /* FUN_00462960 */
 
 /* --- cancellation-ref and conditional issuers (2026-10-24) --------------------
  * CmdCancelRef (FUN_00402cd0, findings 10/466): run by CmdFree unless the
- * second argument suppresses it. A type-0x13 record with a referenced record
- * dispatches the cancel callback through the entity-pool registry — the
- * unported seam, so the port's observable half is that it stops there. Any
- * other type with a referenced record walks the task list and raises bit 5
+ * second argument suppresses it. Kind0x13 with a reference searches the
+ * live COMMAND pool with a pure predicate (native402d30); its discarded
+ * result has no cancellation writes. Any
+ * other type with a referenced record walks the global list and raises bit 5
  * (the completion/cancel flag) on each type-0x13 record that *is* that
  * referenced record. NULL is guarded (deviation: the corpus reads blindly).
  * EntityConditionalTaskSchedule (FUN_00402ec0, finding 466): with the
@@ -721,8 +731,8 @@ void entity_task_batch_append(EntitySlot* const* entities, int count,
 /* DeferredOListEntityQueueAdd (FUN_00437c20): appends one entry into the
  * corpus's deferred ordered-list entity queue band — a 200-slot array of
  * 11-dword entries whose counter rides the band's own end word. Entry
- * words: 0/1 the grid-pick cell pair (ftol of the record's float pair,
- * FUN_0044f6d0 boundary), 2/3 the record pair, then params 5/1/2/3/6 and
+ * words: 0/1 the terrain-derived cell pair (FUN_0044f6d0), 2/3 the world
+ * pair, then params 5/1/2/3/6 and
  * two duplicated names (FUN_00477550). The hooks peek the band. */
 void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
                                      int p1, int p2, int p3, int p5, int p6,
@@ -731,6 +741,9 @@ uint32_t deferred_olist_entry_word(int slot, int word);
 char*    deferred_olist_entry_string(int slot, int which);
 uint32_t deferred_olist_counter_peek(void);
 void     deferred_olist_reset(void);
+struct DeferredOListEntityRecord;
+unsigned int deferred_olist_entity_queue_take_cell(const int cell_xy[2],
+    DeferredOListEntityRecord* records, unsigned int capacity);
 
 /* --- HUD post / menu-selection chain (2026-10-25) --------------------------
  * CommandContextPostToHud (FUN_0041b2d0) refreshes the global state, updates

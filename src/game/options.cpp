@@ -145,6 +145,7 @@ void options_load_or_default_target(int load_options, int reset_frontend)
         if (sav_build_ctx_target() == NULL) {
             options_load_corpus_defaults(&ctx->options);
         }
+        scroll_scale_set_and_clamp(options_time_scale(&ctx->options));
     }
 }
 
@@ -183,6 +184,11 @@ void options_set(GameOptions* o, int id, int v)
         v = hi;
     }
     *f = v;
+    /* Publish an actual option adjustment once, through the same owner as
+     * SetGameSpeed. The slider index zero still means half speed. */
+    if (id == OPT_GAME_SPEED) {
+        scroll_scale_set_and_clamp(options_time_scale(o));
+    }
 }
 
 int options_set_label(GameOptions* o, const char* label, int v)
@@ -220,9 +226,12 @@ float options_time_scale(const GameOptions* o)
 
 float options_scale_frame(const GameOptions* o, EngineContext* ctx, float dt)
 {
-    float scale = options_time_scale(o);
+    /* This is a reader, not another speed producer. Reapplying the positive
+     * slider every frame bypasses authored SetGameSpeed 0 race holds. */
+    (void)o;
+    float scale = EngineTimeScale();
     if (ctx != NULL) {
-        /* EngineTick's subsystem tickers read this back via EngineTimeScale. */
+        /* Keep the portable context mirror useful to local observers. */
         ctx->time_scale = scale;
     }
     return dt * scale;

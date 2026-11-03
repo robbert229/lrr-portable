@@ -27,6 +27,10 @@ void engine_render_poly_ranges_set(float medium_range, float high_range);
 
 /* Run the ordered EngineTick subsystem sequence (finding 03 §4). */
 void EngineSubsystemTickers(EngineContext* ctx, float dt, float scale);
+/* Production view dispatch at its native place before4091e0/4291a0.
+ * Camera frame units are supplied by EngineTick, independently of AI time. */
+int EngineSubsystemTickersWithViews(EngineContext* ctx, float dt, float scale,
+                                     float camera_dt, float camera_scale);
 
 /* Air-beat sound hook (finding 03 §7): point the loop at an AudioPlayer +
  * SND_AirBeat resource name; NULL player disables audio (messages still

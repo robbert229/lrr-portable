@@ -13,6 +13,8 @@
 #include "game/frontend.hpp"
 #include "game/util.hpp"
 #include "media.hpp"
+#include "view.hpp"
+#include "game/level.hpp"
 
 /* ------------------------------------------------------------------ *
  * Per-ticker stubs. Each `ticker_<hex>` corresponds to the corpus's
@@ -64,8 +66,9 @@ static void ticker_0040aa10(EngineContext* c, float dt, float scale)
 
 static void ticker_0043b270(EngineContext* c, float dt, float scale)
 {
-    (void)scale;
-    simtick_scene_pass(c, dt);
+    /* EngineTick 0x42358d passes its scaled ESI carrier to this owner. */
+    (void)dt;
+    simtick_scene_pass(c, scale);
 }
 
 static void ticker_0046f550(EngineContext* c, float dt, float scale)
@@ -205,15 +208,37 @@ static const TickerEntry TICKERS[] = {
 };
 
 /* The ordered EngineTick subsystem sequence (finding 03 §4; corpus 93-119). */
-void EngineSubsystemTickers(EngineContext* ctx, float dt, float scale)
+static int engine_subsystem_tickers_dispatch(EngineContext* ctx, float dt,
+    float scale, int update_views, float camera_dt, float camera_scale)
 {
     for (int i = 0; i < (int)(sizeof(TICKERS) / sizeof(TICKERS[0])); ++i) {
+        if (update_views && TICKERS[i].fn == ticker_004091e0) {
+            /*4235cc/e3/fa precede423603, then42361b collection. */
+            view_views_tick(ctx, camera_dt, camera_scale);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+            if (scene_root_object_get() != NULL &&
+                !scene_runtime_cameras_sync()) return 0;
+#endif
+        }
         if ((TICKERS[i].skip_when != 0) && (ctx->state & TICKERS[i].skip_when)) {
             continue;
         }
         TICKERS[i].fn(ctx, dt, scale);
         ++ctx->tickers_ran;
     }
+    return simtick_camera_detail_collection_ready();
+}
+
+void EngineSubsystemTickers(EngineContext* ctx, float dt, float scale)
+{
+    (void)engine_subsystem_tickers_dispatch(ctx, dt, scale, 0, 0.0f, 0.0f);
+}
+
+int EngineSubsystemTickersWithViews(EngineContext* ctx, float dt, float scale,
+                                     float camera_dt, float camera_scale)
+{
+    return engine_subsystem_tickers_dispatch(ctx, dt, scale, 1,
+                                             camera_dt, camera_scale);
 }
 
 /* Camera / move cluster at the top of EngineTick — ported into camera.*
@@ -327,6 +352,9 @@ void EngineRenderFrame(EngineContext* ctx, float dt, float scale, uint32_t* sim_
         /* The intervening target lock, scene begin/draw/end, and target
          * unlock need DAT_005560e0, DAT_005560d8 and DAT_005560f4, none of
          * which has a corresponding EngineContext/API handle. */
+        /* Native423a1e restores the shared terrain queue after the extra
+         * pass, before the primary world-arrow capture at423a64. */
+        terrain_camera_detail_restore((LevelState*)ctx->level_block);
     }
 
     /* World renderers (FUN_00435300/FUN_00454600), viewport update, primary

@@ -9,9 +9,9 @@
  *
  * Portable CameraHandle records hold view-tick position/facing state. They
  * are separate from the DDiScene interface targets at 0x475430–0x4755e0,
- * which normalize a scene object and dispatch through its vtable. The native
- * view still lacks full 3D-world projection; grid pick FUN_0044f6d0 and terrain
- * height FUN_0044f940 remain world-query boundaries. Entity target pose
+ * which normalize a scene object and dispatch through its vtable. The Win32
+ * primary owns the composed RM eye and the last displayed projection.
+ * World queries use the level-owned terrain. Entity target pose
  * resolution is owned by the game entity module and mapped at FUN_0044a070.
  */
 #ifndef LEGORRR_VIEW_HPP
@@ -25,6 +25,21 @@ typedef struct CameraHandle {
     float pos[3];
     float rot[3];
 } CameraHandle;
+
+/* World-space camera frame and the projection of the last displayed scene.
+ * These are host sidecars, never a retail camera/controller record. */
+typedef struct ViewCameraPose {
+    float eye[3];
+    float forward[3];
+    float up[3];
+} ViewCameraPose;
+typedef struct ViewCameraProjection {
+    ViewCameraPose pose;
+    const void* level;
+    int width, height;
+    float focal_x, focal_y, center_x, center_y;
+    unsigned int generation;
+} ViewCameraProjection;
 
 /* View object — the corpus's flat view array read as named fields. */
 typedef struct ViewContext {
@@ -50,9 +65,37 @@ typedef struct ViewContext {
     float  velocity[3];/* [0x2b..2d] */
     uint8_t flags;     /* [0x2e] bit 0x10 = dirty */
     void*  target_record; /* host-owned retail target-record sidecar */
+    /* Primary kind-1 ownership: the existing bounded-controller buffer,
+     * requested world X/Y (0x556150/154), and its 0x556158 tween latch. */
+    void* controller;
+    float target_xy[2];
+    int target_pending;
+    int target_tween;
+    void* scene_follow;
+    void* scene_tilt;
+    void* scene_eye;
+    ViewCameraPose pose;
+    int pose_valid;
+    ViewCameraProjection displayed;
 } ViewContext;
 
-/* Per-frame view update: ViewContextTick(view, state, dt, scale). */
+void view_primary_target_request(EngineContext* ctx, float x, float y,
+                                 int tween);
+float view_camera_delta_from_seconds(float seconds);
+void view_primary_target_tick(EngineContext* ctx, float reference_delta);
+/* Called once after each real level load, following the NERP reset. */
+void view_primary_level_release(EngineContext* ctx);
+int view_primary_level_initialize(EngineContext* ctx, float x, float y,
+                                   float heading);
+/* A replacement image invalidates picking without cancelling camera motion. */
+void view_primary_projection_invalidate(ViewContext* view);
+int view_primary_projection_publish(ViewContext* view, const void* level,
+                                     int width, int height);
+int view_primary_projection_get(const ViewContext* view, const void* level,
+                                 int width, int height,
+                                 ViewCameraProjection* projection);
+
+/* Per-frame camera update: delta/scale are reference 25-Hz frame units. */
 void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale);
 void viewport_rectangle_set(float left, float top, float right, float bottom);
 void viewport_rectangle_get(float rectangle[4]); /* FUN_00485fb0 */
@@ -917,6 +960,8 @@ void shared_object_directory_scan_configure(
     const char* directory, SharedObjectEntryResolveFn resolve,
     SharedObjectSoundEnabledFn sound_enabled,
     SharedObjectSoundSubmitFn sound_submit); /* 0x4876c0 */
+/* Owns a copied prefix; NULL clears the borrowed model fallback before free. */
+int shared_object_directory_root_set(const char* directory);
 const char* shared_object_directory_root_get(void);
 void shared_object_sound_callbacks_get(
     SharedObjectSoundEnabledFn* enabled_out,
@@ -1411,8 +1456,13 @@ void renderer_node_relative_position_set(const void* node, float x, float y);
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 int scene_runtime_initialize(void);
 void scene_runtime_shutdown(void);
+int scene_runtime_primary_camera_bind(ViewContext* view, void* controller);
 void* scene_runtime_camera_bind(CameraHandle* camera);
 int scene_runtime_cameras_sync(void);
+/*4291a0 samples the follow position and primary eye forward through real
+ * retained-mode frames. No CameraHandle is cast to a DDi record. */
+int scene_runtime_collection_pose_get(const ViewContext* view, int primary,
+                                       float position[3], float forward[3]);
 void* scene_runtime_light_create(void* owner, unsigned int kind,
                                   const float rgb[3]);
 int scene_runtime_light_parameter_set(void* light, unsigned int offset,

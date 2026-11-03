@@ -195,6 +195,7 @@ void simtick_ambient_spawn(EngineContext* c, float dt);
 void simtick_sound_bank_tick(EngineContext* c, float dt);  /* FUN_00465b00 */
 void simtick_render_pass(EngineContext* c, float dt, float scale,
                          uint32_t o1);                     /* FUN_004291a0 */
+int simtick_camera_detail_collection_ready(void);
 void simtick_render_step(EngineContext* c);                /* FUN_00449c00 */
 typedef void (*SimtickRenderPassHook)(EngineContext* context, float dt,
                                       float scale, void* user);

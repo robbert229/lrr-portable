@@ -520,6 +520,10 @@ void indexed_surface_resource_hooks_set(IndexedSurfaceCreateFn create,
 int indexed_surface_resource_allocate(void* owner, int width, int height);
 int animated_texture_replace(const char* name); /* 0x00462e60 */
 void graphics_overlay_resources_release(void); /* 0x00462ed0 */
+/* Native frame owner is distinct from the software quad indices. */
+void* indexed_surface_scene_owner_get(void);
+uint8_t* indexed_surface_geometry_records_get(void);
+int indexed_surface_resources_can_shutdown(void);
 typedef void* (*VisualModelResolveFn)(const char* path, int variant,
                                       void* user);
 void visual_model_resolver_set(VisualModelResolveFn resolver, void* user);

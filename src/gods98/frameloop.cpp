@@ -13,6 +13,7 @@ int pe32_nerp_owner_probe(struct BlockFile*, int, int, FILE*); /* DEBUG-next-own
 #include "game/ai.hpp"
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
+#include "game/building_scene.hpp"
 #include "game/effects.hpp"
 #include "game/frontend.hpp"
 #include "game/level.hpp"
@@ -24,6 +25,8 @@ int pe32_nerp_owner_probe(struct BlockFile*, int, int, FILE*); /* DEBUG-next-own
 #include "game/savegame.hpp"
 #include "game/select.hpp"
 #include "game/tutorial_hud_ports.hpp"
+#include "game/tutorial_world_arrows.hpp"
+#include "game/scene_render.hpp"
 #include "game/ui_action_dispatch.hpp"
 #include "game/upgrades.hpp"
 #include "game/util.hpp"
@@ -1001,6 +1004,104 @@ static void frame_ui_action_complete(void* context, int action, int cell_x,
     media_action_feedback_sound_dispatch(result == 0 ? 1 : 0);
 }
 
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+static TutorialWorldArrows s_frame_world_arrows;
+static LevelState* s_frame_world_arrow_level;
+static uint32_t s_frame_world_arrow_level_generation;
+static uint32_t s_frame_world_arrow_frame;
+static int s_frame_world_arrow_lists_active;
+static int s_frame_world_arrow_pending;
+static int s_frame_world_arrow_display_ready = 1;
+
+static void frame_world_arrows_level_releasing(void)
+{
+    terrain_camera_detail_restore(s_frame_world_arrow_level);
+    scene_render_terrain_surface_display_discard();
+    s_frame_world_arrow_display_ready = 1;
+    s_frame_world_arrow_pending = 0;
+    s_frame_world_arrow_lists_active = 0;
+    s_frame_world_arrow_level = NULL;
+    tutorial_world_arrows_discard(&s_frame_world_arrows);
+}
+
+static void frame_world_arrows_level_activated(LevelState* level)
+{
+    frame_world_arrows_level_releasing();
+    ++s_frame_world_arrow_level_generation;
+    if (s_frame_world_arrow_level_generation == 0u)
+        ++s_frame_world_arrow_level_generation;
+    s_frame_world_arrow_level = level;
+    /* Prerequisite: level_load now calls tutorial_path_coordinate_index
+     * after OList/counters and clears every raw group byte before returning.
+     * Never set this flag against the uncorrected base level loader. */
+    s_frame_world_arrow_lists_active = level != NULL;
+}
+
+static void frame_world_arrows_begin_frame(void)
+{
+    scene_render_terrain_surface_display_discard();
+    s_frame_world_arrow_display_ready = 1;
+    s_frame_world_arrow_pending = 0;
+    ++s_frame_world_arrow_frame;
+}
+
+static void frame_world_arrows_capture(EngineContext* engine,
+                                       float raw_seconds, void* context)
+{
+    GameContext* game = (GameContext*)context;
+    if (game == NULL || engine == NULL || game->level == NULL ||
+        game->level != s_frame_world_arrow_level) return;
+    if (engine->context_mode == 1 &&
+        (engine->state & ENGINE_STATE_TIME_FROZEN) == 0u &&
+        s_frame_world_arrow_lists_active &&
+        !scene_render_terrain_surface_display_begin(game->level))
+        s_frame_world_arrow_display_ready = 0;
+    s_frame_world_arrow_pending = tutorial_world_arrows_capture(
+        &s_frame_world_arrows, game->level, s_frame_world_arrow_level_generation,
+        s_frame_world_arrow_frame, engine->context_mode,
+        (engine->state & ENGINE_STATE_TIME_FROZEN) != 0u,
+        s_frame_world_arrow_lists_active,
+        tutorial_world_arrows_delta_from_seconds(raw_seconds));
+}
+
+typedef struct FrameWorldArrowDisplay {
+    const GameContext* game;
+    const LevelState* level;
+    int width, height;
+    unsigned int generation;
+} FrameWorldArrowDisplay;
+
+static int frame_world_arrows_project(void* context, const float world[3],
+                                       float screen[2])
+{
+    FrameWorldArrowDisplay* display = (FrameWorldArrowDisplay*)context;
+    return scene_render_displayed_world_point_project(display->level,
+        display->game, display->width, display->height, display->generation,
+        world, screen);
+}
+
+static void frame_world_arrows_draw(GameContext* game, void* pixels,
+                                     int pitch, int width, int height)
+{
+    FrameWorldArrowDisplay display;
+    ViewCameraProjection projection;
+    /* Terrain has finished; later draws may use its current logical colors. */
+    scene_render_terrain_surface_display_discard();
+    if (!s_frame_world_arrow_pending || game == NULL || game->level == NULL ||
+        game->reward_active || game->level != s_frame_world_arrow_level ||
+        !view_primary_projection_get(engine_current_primary_view_get(),
+            game->level, width, height, &projection)) return;
+    display.game = game;
+    display.level = game->level;
+    display.width = width;
+    display.height = height;
+    display.generation = projection.generation;
+    tutorial_world_arrows_draw(&s_frame_world_arrows, game->level,
+        s_frame_world_arrow_level_generation, frame_world_arrows_project,
+        &display, pixels, pitch, width, height);
+}
+#endif
+
 static void frame_tutorial_script_dispatch(float delta, void* context)
 {
     (void)context;
@@ -1908,6 +2009,12 @@ static void frameloop_game_context_dispose(GameContext* game)
     free(game->records);
     tutorial_runtime_context_set(NULL, NULL, NULL);
     engine_tutorial_dispatch_hook_set(NULL, NULL);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    engine_world_arrow_capture_hook_set(NULL, NULL);
+    frame_world_arrows_level_releasing();
+    tutorial_world_arrows_release(&s_frame_world_arrows);
+    advisor_tutorial_icon_image_release();
+#endif
     (void)tutorial_display_resources_release();
     advisor_message_ui_release();
     level_destroy(game->level);
@@ -2331,7 +2438,15 @@ static void frameloop_load_level(FILE* log, const char* wad_dir,
                                  GameContext* game, EngineContext* ctx,
                                  ViewContext* views, const char* level_name)
 {
+    view_primary_level_release(ctx);
+    game->ol_camera_set = 0;
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    frame_world_arrows_level_releasing();
+#endif
     game->level = level_load(game->cfg, level_name);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (game->level != NULL) frame_world_arrows_level_activated(game->level);
+#endif
     if (game->level != NULL) {
         fprintf(log, "frameloop: level %s loaded: %dx%d grid, voxel stride "
                      "0x48, objective word 0x%08x\n",
@@ -2393,13 +2508,15 @@ static void frameloop_load_level(FILE* log, const char* wad_dir,
         /* Let the engine's camera grid sweep walk the real voxel grid. */
         g_camera_grid_enabled = 1;
     }
-    /* Seed the follow camera at the grid centre so mode-1 starts over the
-     * loaded level instead of the origin. */
-    if (game->level != NULL) {
-        cam_set_pos(&views[0].cam_follow,
-                    (float)engine_level_width(ctx) * 0.5f,
-                    (float)engine_level_height(ctx) * 0.5f, 0.0f);
+    /* Apply the already parsed OList world pose once, after script reset.
+     * Subsequent target/zoom requests remain owned by the primary view. */
+    if (game->level != NULL && game->ol_camera_set &&
+        !view_primary_level_initialize(ctx, game->ol_camera_x,
+            game->ol_camera_y, game->ol_camera_heading)) {
+        fprintf(log, "frameloop: authored primary camera initialization failed\n");
+        *quit = 1;
     }
+    (void)views;
 }
 
 static void menu_save_image_config_rect_blit(FrontEnd* fe,
@@ -2790,12 +2907,40 @@ static int frameloop_game_init_callback(const char* root, void* user)
                 "frameloop: scene initialization failed\n");
         return 0;
     }
+    if (!building_scene_initialize()) {
+        fprintf(s_frameloop_application.log, "frameloop: building scene owner initialization failed\n");
+        return 0;
+    }
     fprintf(s_frameloop_application.log,
             "frameloop: scene root/cameras/lights initialized root=%p\n",
             scene_root_object_get());
     fflush(s_frameloop_application.log);
 #endif
     if (cfg != NULL) {
+        EngineContext* engine = &s_frameloop_application.engine_context;
+        char key[256];
+        float speed, drop_off, acceleration, minimum, maximum;
+        int indent;
+        const char* config_root = util_root_name(cfg);
+        snprintf(key, sizeof(key), "%s Main CameraSpeed", config_root);
+        speed = block_get_float(cfg, key, 0.0f);
+        snprintf(key, sizeof(key), "%s Main CameraDropOff", config_root);
+        drop_off = block_get_float(cfg, key, 0.0f);
+        snprintf(key, sizeof(key), "%s Main CameraAcceleration", config_root);
+        acceleration = block_get_float(cfg, key, 0.0f);
+        snprintf(key, sizeof(key), "%s Main MouseScrollIndent", config_root);
+        indent = (int)block_get_float(cfg, key, 0.0f);
+        camera_view_context_set(speed, drop_off, acceleration, indent);
+        snprintf(key, sizeof(key), "%s Main MinDist", config_root);
+        minimum = block_get_float(cfg, key, 0.0f);
+        snprintf(key, sizeof(key), "%s Main MaxDist", config_root);
+        maximum = block_get_float(cfg, key, 0.0f);
+        camera_distance_bounds_set(engine->camera_controller, minimum, maximum);
+        snprintf(key, sizeof(key), "%s Main MinTilt", config_root);
+        minimum = block_get_float(cfg, key, 0.0f) * 0.017453292f;
+        snprintf(key, sizeof(key), "%s Main MaxTilt", config_root);
+        maximum = block_get_float(cfg, key, 0.0f) * 0.017453292f;
+        camera_tilt_bounds_set(engine->camera_controller, minimum, maximum);
         engine_render_poly_ranges_set(
             block_get_float(cfg, "Lego* Main MedPolyRange", 0.0f),
             block_get_float(cfg, "Lego* Main HighPolyRange", 0.0f));
@@ -3054,13 +3199,15 @@ int frameloop_application_init(void)
     memset(&input, 0, sizeof(input));
     input_reset(&input);
     input_direct_state_bind(&input);
-    /* The three view contexts (DAT_005560e4/e8/ec): free/cruise cameras with
-     * a glide step; the demo has no world yet, so they tick quietly. */
+    /* Constructor 0x435b20: primary kind 1, secondary kind 2, free kind 3.
+     * Keep the retail local eye distance separate from world follow X/Y. */
     ViewContext (&views)[3] = app.views;
     memset(views, 0, sizeof(app.views));
     for (int i = 0; i < 3; ++i) {
-        views[i].mode = 3;
-        views[i].step = 8.0f;
+        views[i].mode = i + 1;
+        views[i].follow_span = 200.0f;
+        cam_set_pos(&views[i].cam_world, 0.0f, 0.0f, -200.0f);
+        views[i].cam_world.rot[2] = 1.0f;
     }
     EngineContext& ctx = app.engine_context;
     memset(&ctx, 0, sizeof(ctx));
@@ -3071,11 +3218,16 @@ int frameloop_application_init(void)
     ctx.views[0] = &views[0];
     ctx.views[1] = &views[1];
     ctx.views[2] = &views[2];
+    views[0].controller = ctx.camera_controller;
+    camera_distance_set(ctx.camera_controller, 200.0f);
     ctx.time_scale = 1.0f;
     const float dt = 1.0f / 30.0f;
     app.frame_dt = dt;
     tutorial_runtime_context_set(&game, &ctx, &input);
     engine_tutorial_dispatch_hook_set(frame_tutorial_script_dispatch, NULL);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    engine_world_arrow_capture_hook_set(frame_world_arrows_capture, &game);
+#endif
     /* Engine <-> level binding happens after the front end below — the level
      * loads only once the player picks one — so ctx.level_block/voxels/
      * terrain are bound there, not here. */
@@ -3312,6 +3464,9 @@ int frameloop_application_init(void)
     if (game.cfg != NULL) {
         fprintf(log, "frameloop: config Lego.cfg loaded\n");
         int built = frontend_build(&fe, game.cfg);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+        advisor_tutorial_icon_runtime_initialize(game.cfg);
+#endif
         /* GameConfigInit loads AdvisorPositions after panel-name setup, and
          * only when DisplayAdvisor is enabled. frontend_build initializes
          * the panel table used by the loader's optional action token. */
@@ -3823,6 +3978,9 @@ static int frameloop_application_gameplay_frame(float dt)
             if (want_reload && !quit) {
                 /* Pause -> Restart_Mission: reload the level in place. */
                 fprintf(log, "frameloop: restarting level %s\n", level_name);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+                frame_world_arrows_level_releasing();
+#endif
                 level_destroy(game.level);
                 game.level = NULL;
                 pointer_dispatch_level = NULL;
@@ -4150,6 +4308,10 @@ static int frameloop_application_gameplay_frame(float dt)
                 reward_tick_started = 0;
             }
             float sdt = options_scale_frame(&game.options, &ctx, dt);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+            if ((ctx.state & ENGINE_STATE_TIME_FROZEN) == 0u)
+                building_scene_tick(&game, sdt);
+#endif
             int ai_done = ai_tick(&game, sdt);
             if (ai_done != 0) {
                 fprintf(log, "frameloop: ai commands completed: %d\n", ai_done);
@@ -4223,6 +4385,9 @@ static int frameloop_application_gameplay_frame(float dt)
             }
         }
 
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+        frame_world_arrows_begin_frame();
+#endif
         frame_camera_target_registry_update(&ctx, &game);
         if (engine_callback_triplet_tick_dispatch(dt) == 0) {
             quit = 1;
@@ -4234,6 +4399,15 @@ static int frameloop_application_gameplay_frame(float dt)
          * per-frame tick callback returns and before its next frame-time
          * calculation. EngineTick is that callback in this portable loop. */
         (void)renderer_begin_frame_once();
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+        /* Allocation failure keeps the last displayed scene/projection.
+         * Logical phases and terrain bookkeeping still advanced once. */
+        if (!s_frame_world_arrow_display_ready) {
+            terrain_camera_detail_restore(game.level);
+            input_begin_frame(&input);
+            return !quit;
+        }
+#endif
 
         void* pixels = NULL;
         int   pitch = 0;
@@ -4241,6 +4415,10 @@ static int frameloop_application_gameplay_frame(float dt)
             if (game.level != NULL) {
                 level_render_scene(game.level, &game, WINDOW_W, WINDOW_H,
                                    pixels, pitch);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+                frame_world_arrows_draw(&game, pixels, pitch,
+                                         WINDOW_W, WINDOW_H);
+#endif
             } else {
                 surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 16, 48);
                 surface_draw_sweep(pixels, pitch, WINDOW_W, WINDOW_H,
@@ -4266,6 +4444,9 @@ static int frameloop_application_gameplay_frame(float dt)
             /* The atlas renderer locks the active target for each glyph;
              * finish the scene lock before entering the real message worker. */
             surface_unlock(&surf, pixels);
+            /* The primary clear queue remains live through actual ground
+             * and arrow draw. Restore before any later UI lock can fail. */
+            terrain_camera_detail_restore(game.level);
             frame_tutorial_message_owner_update(&game, &input);
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_M_IX86)
             /* DEBUG-message-ui-probe: disposable production-owner fixture,
@@ -4319,6 +4500,8 @@ static int frameloop_application_gameplay_frame(float dt)
             }
             surface_unlock(&surf, pixels);
         }
+        /* Also restore when the first surface lock failed/no draw occurred. */
+        terrain_camera_detail_restore(game.level);
         ++frames;
 
         /* 3. Frame boundary: this frame's keys become prev; cur clears for
@@ -4419,6 +4602,9 @@ void frameloop_application_shutdown(void)
     fprintf(log, "frameloop: %ld frames, gauged state=0x%08x, tickers=%d, "
             "exit=%s\n", app.frames, ctx.state, ctx.tickers_ran,
             app.stop_reason);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    building_scene_require_stopped();
+#endif
     engine_callback_triplet_shutdown_dispatch();
     reward_screen_runtime_bind(NULL, NULL);
     sound_subsystem_stop_all();

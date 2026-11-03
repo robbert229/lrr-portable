@@ -455,6 +455,12 @@ void grid_cell_read_surface_values(void* terrain, int x, int y,
 int terrain_cell_surface_values_available(const void* terrain, int x, int y);
 /* Mirror LwoLayerEnabledSet on TerrainCreate's primary indexed mesh. */
 void terrain_detail_enable_set(void* terrain, uint32_t index, int enabled);
+/* Camera collection owns a physical-quad surface grid and a finite
+ * clear/restore queue. Returned grid is borrowed until terrain destruction. */
+struct TerrainSurfaceGrid* terrain_camera_detail_grid_get(LevelState* level);
+int terrain_camera_detail_collect(LevelState* level, const float position[3],
+                                  const float forward[3], int primary);
+void terrain_camera_detail_restore(LevelState* level);
 /* Read the retained heightfield used to build the terrain mesh. Heights are
  * the unsigned cell values from SurfaceMap; invalid cells answer zero. */
 int terrain_surface_height_get(const void* terrain, int x, int y);
@@ -473,6 +479,11 @@ int terrain_state_surface_point_project_offset(
     float offset, float* out_x, float* out_z); /* FUN_0044fb90 */
 float terrain_surface_height_interpolate(const void* terrain, float world_x,
                                          float world_z); /* 0x0044f940 */
+/* Authored SurfaceMap plane for camera distance, not the dug/live quad.
+ * Returns signed/scaled world height; fixed canonical 00-to-11 diagonal. */
+float terrain_authored_surface_height_interpolate(const void* terrain,
+                                                  float world_x,
+                                                  float world_y); /* 0x44fe70 */
 
 /* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell
  * surface-type byte (block-table +0x24) of the terrain handle. The
@@ -1354,6 +1365,16 @@ typedef struct TerrainCellQuadEmitGrid {
 void terrain_cell_quad_geometry_emit(TerrainCellQuadEmitGrid* grid,
                                      uint32_t x, uint32_t y,
                                      const float vertices[4][3]);
+/* Mutable base mesh, canonical (X,height,Z), distinct from derived quads. */
+int terrain_cell_base_vertices_get(const void* terrain, uint32_t x,
+                                   uint32_t y, float vertices[12]);
+int terrain_roof_owner_initialize(LevelState* level);
+/* 1=actual visual parent is primary,0=alternate,-1=owner/parent unavailable. */
+int terrain_roof_visibility_get(const LevelState* level);
+/* Canonical X,height,Z from distinct roof output;0=absent,1/2=clear/set
+ * native diagonal bit. The software consumer composes the reversed winding. */
+int terrain_cell_roof_vertices_get(const LevelState* level, uint32_t x,
+                                    uint32_t y, float vertices[12]);
 
 /* TerrainSurfaceTypeNameGet (FUN_00435170): configured display name for a
  * surface type, falling back to the missing-config literal when the entry

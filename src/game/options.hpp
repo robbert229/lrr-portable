@@ -110,11 +110,11 @@ float options_time_scale(const GameOptions* o);
 
 struct EngineContext;
 
-/* The frame loop's per-frame speed connection: stamps the store's factor
- * into the engine context's time scale (EngineTick's subsystem tickers
- * read it back through EngineTimeScale) and returns the dt the frame loop
- * hands to the game-layer tickers (ai_tick / objective_tick). `ctx` may be
- * NULL when no engine context exists (menu-only frames). */
+/* Read the shared authored/Options speed, mirror it in the engine context,
+ * and return the simulation delta for ai_tick / objective_tick. Exact zero
+ * is valid; this does not change the raw interactive clock. Option writes
+ * publish through options_set/load, rather than republishing each frame.
+ * `ctx` may be NULL when no engine context exists (menu-only frames). */
 float options_scale_frame(const GameOptions* o, struct EngineContext* ctx,
                           float dt);
 

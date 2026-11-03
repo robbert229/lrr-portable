@@ -20,6 +20,7 @@
 #include "model.hpp"
 #include "../game/ai.hpp"
 #include "../game/entity.hpp"
+#include "../game/level.hpp"
 
 #if defined(_MSC_VER)
 #define VIEW_COM_CALL __stdcall
@@ -863,14 +864,22 @@ static int ddiscene_animation_hook_record_set(
     void* scene_interface, DDiSceneAnimationHookRecord* record)
 {
     void** vtable;
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    typedef long (VIEW_COM_CALL *SetProperty)(void*, void*);
+#else
     typedef void (VIEW_COM_CALL *SetProperty)(void*, void*);
+#endif
     SetProperty set_property;
     if (scene_interface == NULL) return 0;
     vtable = *static_cast<void***>(scene_interface);
     if (vtable == NULL || vtable[0x18 / 4] == NULL) return 0;
     set_property = reinterpret_cast<SetProperty>(vtable[0x18 / 4]);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    return set_property(scene_interface, record) == 0;
+#else
     set_property(scene_interface, record);
     return 1;
+#endif
 }
 
 // FUNCTION: LEGORR 0x00475f70
@@ -1460,6 +1469,30 @@ void scene_hierarchy_interface_register_recursive(unsigned short* next_index,
     scene_hierarchy_register_node(next_index, root, node, 0u);
 }
 
+int shared_object_directory_root_set(const char* directory)
+{
+    char* path = NULL;
+    if (directory != NULL) {
+        size_t length = strlen(directory);
+        int has_separator = length != 0u && directory[length - 1u] == '\\';
+        size_t output_length = length + (has_separator ? 0u : 1u);
+        path = (char*)engine_heap_alloc((long)(output_length + 1u));
+        if (path != NULL) {
+            memcpy(path, directory, length);
+            if (!has_separator) path[length] = '\\';
+            path[output_length] = '\0';
+        }
+    }
+    /* The model resolver borrows this owned prefix. Revoke that borrow
+     * before freeing/replacing it, including failed reconfiguration. */
+    model_resource_fallback_prefix_set(NULL);
+    if (s_shared_object_directory_root != NULL)
+        engine_heap_free(s_shared_object_directory_root);
+    s_shared_object_directory_root = path;
+    model_resource_fallback_prefix_set(path);
+    return directory == NULL || path != NULL;
+}
+
 /* SharedObjectDirectoryScan (FUN_004876c0) installs the directory prefix and
  * three callbacks consumed by the scene-entry and timed-sound paths. */
 // FUNCTION: LEGORR 0x004876c0
@@ -1468,29 +1501,7 @@ void shared_object_directory_scan_configure(
     SharedObjectSoundEnabledFn sound_enabled,
     SharedObjectSoundSubmitFn sound_submit)
 {
-    if (directory != NULL) {
-        size_t length = strlen(directory);
-        int has_separator = length != 0u && directory[length - 1u] == '\\';
-        size_t output_length = length + (has_separator ? 0u : 1u);
-        char* path = (char*)engine_heap_alloc((long)(output_length + 1u));
-        if (path != NULL) {
-            memcpy(path, directory, length);
-            if (!has_separator) path[length] = '\\';
-            path[output_length] = '\0';
-            if (s_shared_object_directory_root != NULL)
-                engine_heap_free(s_shared_object_directory_root);
-            s_shared_object_directory_root = path;
-        }
-        else {
-            if (s_shared_object_directory_root != NULL)
-                engine_heap_free(s_shared_object_directory_root);
-            s_shared_object_directory_root = NULL;
-        }
-        /* SharedObjectDirectoryScan owns DAT_005446b8, the same fallback
-         * model root consulted by ModelResourceResolveOrLoad. The model
-         * cache borrows this path until the next configuration update. */
-        model_resource_fallback_prefix_set(s_shared_object_directory_root);
-    }
+    if (directory != NULL) (void)shared_object_directory_root_set(directory);
     s_shared_object_entry_resolve = resolve;
     s_shared_object_sound_enabled = sound_enabled;
     s_shared_object_sound_submit = sound_submit;
@@ -5412,49 +5423,26 @@ void cam_set_facing(CameraHandle* c, const float* r)
     c->rot[2] = r[2];
 }
 
-/* ---- world/stub boundaries ---------------------------------------------- */
-/* EngineContext grid lookup -> bounded voxel-grid coordinates. This adapter
- * is used where only the widened LevelState block is available; the actual
- * descriptor-based TerrainGridPick lives in record.cpp.
- *  FUN_0044f940 / FUN_0044fe70 terrain heights -> sampled voxel byte, not
- *  the original selected-triangle corner-height interpolation.
- *  FUN_00431570 returns the current level's +4 terrain handle despite its
- *  Ghidra label CurrentLevelHeightGet.
- *  FUN_0044a200 object lookup -> 0 (no object layer yet; mode 2 idles).
- *  FUN_0044a070 velocity blend-> returns 0 (targeted EMA deferred).
- *  FUN_004369f4 is the camera tilt-axis setter; main_view_key_step groups it
- *  with separate pan/zoom operations and has no one-to-one source boundary.
- *  FUN_004798b0 is RandomFloatRange, not a camera helper; the port models the
- *  shared RNG draw but has no float-range wrapper.
- *  FUN_0041f940 is the engine-state bit-0x20000 setter, now modeled through
- *  EngineContext::state in the scripted-follow branch below. */
+/* Camera world queries cross through the bound terrain owner. In
+ * particular, world X/Y are never voxel indices and +4 is not a height. */
 
 static int engine_context_grid_pick(EngineContext* ctx, const float* pos,
                                     int* gx, int* gy)
 {
-    /* with a bound level, cells come from the real voxel grid; terrain uses
-     * the voxel surface byte (+0x04). */
-    if (ctx->level_block != NULL) {
-        int w = engine_level_width(ctx);
-        int h = engine_level_height(ctx);
-        int x = (int)pos[0];
-        int y = (int)pos[1];
-        if (w > 0 && h > 0 && x >= 0 && y >= 0 && x < w && y < h) {
-            *gx = x;
-            *gy = y;
-            return 1;
-        }
-        return 0;
-    }
+    if (ctx == NULL || pos == NULL || gx == NULL || gy == NULL) return 0;
+    if (ctx->level_block != NULL)
+        return terrain_world_xy_to_cell(ctx->level_terrain,
+            pos[0], pos[1], gx, gy) &&
+            *gx < engine_level_width(ctx) - 1 &&
+            *gy < engine_level_height(ctx) - 1;
     *gx = (int)pos[0];
     *gy = (int)pos[1];
     return 1;
 }
 static float terrain_height(EngineContext* ctx, float x, float y)
 {
-    if (ctx->level_block != NULL) {
-        return (float)engine_voxel_byte(ctx, (int)x, (int)y, 0x04);
-    }
+    if (ctx != NULL && ctx->level_terrain != NULL)
+        return terrain_surface_height_interpolate(ctx->level_terrain, x, y);
     return 0.0f;
 }
 
@@ -5515,6 +5503,129 @@ static int target_blend(EngineCameraTargetRecord* record, int target_id,
 
 /* ---- the ported tick ---------------------------------------------------- */
 
+float view_camera_delta_from_seconds(float seconds)
+{
+    float ticks;
+    if (seconds <= 0.0f) return 0.0f;
+    ticks = seconds * 25.0f;
+    return ticks > 3.0f ? 3.0f : ticks;
+}
+
+void view_primary_target_request(EngineContext* ctx, float x, float y,
+                                 int tween)
+{
+    ViewContext* view = ctx != NULL ? ctx->views[0] : NULL;
+    if (view == NULL || view->mode != 1) return;
+    view->target_xy[0] = x;
+    view->target_xy[1] = y;
+    view->target_pending = 1;
+    view->target_tween = tween != 0;
+    ctx->state |= 0x200000u;
+}
+
+/* EngineTick @ 0x4232e0, before MainSimStep. This is the one consumer of
+ * the script's world target, distinct from the mode-3 eye-pose follower. */
+void view_primary_target_tick(EngineContext* ctx, float reference_delta)
+{
+    ViewContext* view = ctx != NULL ? ctx->views[0] : NULL;
+    float x, y;
+    if (view == NULL || view->mode != 1 || !view->target_pending ||
+        reference_delta <= 0.0f) return;
+    x = view->target_xy[0];
+    y = view->target_xy[1];
+    if (view->target_tween) {
+        float factor = 5.0f / reference_delta;
+        float dx, dy;
+        x = (factor * view->cam_facing.pos[0] + x) / (factor + 1.0f);
+        y = (factor * view->cam_facing.pos[1] + y) / (factor + 1.0f);
+        dx = x - view->cam_facing.pos[0];
+        dy = y - view->cam_facing.pos[1];
+        if (sqrtf(dx * dx + dy * dy) < 2.0f) view->target_tween = 0;
+    }
+    selection_record_point_set(view, x, y);
+    view->target_pending = view->target_tween;
+    ctx->state &= ~0x200000u;
+}
+
+void view_primary_level_release(EngineContext* ctx)
+{
+    ViewContext* view = ctx != NULL ? ctx->views[0] : NULL;
+    if (view == NULL) return;
+    view->target_pending = view->target_tween = 0;
+    view->pose_valid = 0;
+    memset(&view->displayed, 0, sizeof(view->displayed));
+    ctx->state &= ~0x200000u;
+}
+
+int view_primary_level_initialize(EngineContext* ctx, float x, float y,
+                                   float heading)
+{
+    ViewContext* view = ctx != NULL ? ctx->views[0] : NULL;
+    if (view == NULL || view->mode != 1 || view->controller == NULL ||
+        ctx->level_terrain == NULL) return 0;
+    view_primary_level_release(ctx);
+    memset(view->offset, 0, sizeof(view->offset));
+    memset(view->velocity, 0, sizeof(view->velocity));
+    selection_record_point_set(view, x, y);
+    camera_rotation_set(view->controller, heading);
+    camera_tilt_set(view->controller, 0.8f);
+    /* Establish the initial ground/eye frames without advancing a tween. */
+    view_tick(view, ctx, 1.0f, 0.0f);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (!scene_runtime_cameras_sync()) return 0;
+    return view->pose_valid;
+#else
+    return 1;
+#endif
+}
+
+void view_primary_projection_invalidate(ViewContext* view)
+{
+    if (view == NULL) return;
+    /* Retain the draw ordinal; get requires the displayed level identity. */
+    view->displayed.level = NULL;
+    view->displayed.width = view->displayed.height = 0;
+}
+
+int view_primary_projection_publish(ViewContext* view, const void* level,
+                                     int width, int height)
+{
+    ViewCameraProjection* projection;
+    if (view == NULL || !view->pose_valid || level == NULL ||
+        width <= 0 || height <= 0) {
+        view_primary_projection_invalidate(view);
+        return 0;
+    }
+    projection = &view->displayed;
+    projection->pose = view->pose;
+    projection->level = level;
+    projection->width = width;
+    projection->height = height;
+    /* Shipped D3DRM viewport defaults: front=1, plane +/-0.5, uniform
+     * scaling. The square-pixel viewport scale is max(width,height)/2;
+     * the perspective plane contributes 2. No screenshot FOV constant. */
+    projection->focal_x = (float)(width > height ? width : height);
+    projection->focal_y = projection->focal_x;
+    projection->center_x = (float)width * 0.5f;
+    projection->center_y = (float)height * 0.5f;
+    ++projection->generation;
+    if (projection->generation == 0u) ++projection->generation;
+    return 1;
+}
+
+int view_primary_projection_get(const ViewContext* view, const void* level,
+                                 int width, int height,
+                                 ViewCameraProjection* projection)
+{
+    if (view == NULL || projection == NULL ||
+        view->displayed.generation == 0u || view->displayed.level == NULL ||
+        view->displayed.level != level ||
+        view->displayed.width != width || view->displayed.height != height)
+        return 0;
+    *projection = view->displayed;
+    return 1;
+}
+
 static void view_tail(ViewContext* v, float scale)
 {
     /* Corpus tail: when the motion timer has expired, velocity snaps to 0;
@@ -5535,7 +5646,7 @@ static void view_tail(ViewContext* v, float scale)
 // FUNCTION: LEGORR 0x00435f5c
 void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
 {
-    if (v == NULL) {
+    if (v == NULL || dt <= 0.0f) {
         return;
     }
     EngineState* st = ctx != NULL ? ctx->state_block : NULL;
@@ -5558,18 +5669,22 @@ void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
                        -v->offset[2]);
         } else {
             const int edge = g_view_grid_edge;
-            if (gx < edge || engine_level_width(ctx) - edge <= gx) {
+            if (gx < edge || engine_level_width(ctx) - 1 - edge <= gx) {
                 cam_offset(&v->cam_follow, -v->offset[0], 0, 0);
             }
-            if (gy < edge || engine_level_height(ctx) - edge <= gy) {
+            if (gy < edge || engine_level_height(ctx) - 1 - edge <= gy) {
                 cam_offset(&v->cam_follow, 0, -v->offset[1], 0);
             }
             float h = terrain_height(ctx, pos[0], pos[1]);
             cam_set_pos(&v->cam_facing, pos[0], pos[1], h);
             cam_set_facing(&v->cam_facing, fac);
-            /* The corpus subtracts the sampled terrain surface from the
-             * follow span before positioning the world camera. */
-            float z = v->follow_span - h;
+            float distance = v->follow_span;
+            if (v->controller != NULL)
+                memcpy(&distance, (char*)v->controller + 0x90,
+                       sizeof(distance));
+            float base_height = terrain_authored_surface_height_interpolate(
+                ctx->level_terrain, pos[0], pos[1]);
+            float z = distance - base_height;
             cam_set_pos(&v->cam_world, 0.0f, 0.0f, -z);
         }
         view_tail(v, scale);
@@ -5754,15 +5869,12 @@ int view_grid_edge_get(void)
 }
 #endif
 
-/* --- camera-selection cluster (see view.hpp) -------------------------------
- * DAT_005560a0 / DAT_005560a8: zero-initialized until camera_view_context_set
- * configures them (the corpus loads them from the camera config records at
- * startup — that loader seam is unported, so the pan stays inert out of the
- * box, like g_view_grid_edge). */
+/* Startup CameraViewContextSet binds CameraSpeed, CameraDropOff,
+ * CameraAcceleration and MouseScrollIndent in the reference caller order. */
 // GLOBAL: LEGORR 0x005560a0
-float g_view_pan_cap   = 0.0f;  /* DAT_005560a0 (CameraAcceleration) */
+float g_view_pan_cap   = 0.0f;  /* DAT_005560a0 (CameraSpeed) */
 // GLOBAL: LEGORR 0x005560a8
-float g_view_pan_scale = 0.0f;  /* DAT_005560a8 (CameraSpeed) */
+float g_view_pan_scale = 0.0f;  /* DAT_005560a8 (CameraAcceleration) */
 
 // FUNCTION: LEGORR 0x00435e0e
 void camera_view_context_set(float cap, float follow_scale,
@@ -6712,11 +6824,22 @@ void renderer_node_relative_position_set(const void* node, float x, float y)
 static void* s_scene_root;
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+#include "lwsc_winapi.hpp"
+
 static struct SceneCameraBinding {
     CameraHandle* camera;
     void* scene;
 } s_scene_camera_bindings[9];
 static unsigned int s_scene_camera_count;
+static ViewContext* s_scene_primary_view;
+
+static void scene_runtime_camera_pose_set(void* scene, void* relative,
+    float x, float y, float z, float up_x, float up_y, float up_z, void* user)
+{
+    (void)user;
+    (void)ddiscene_object_pose_method_dispatch(scene, relative,
+        x, y, z, up_x, up_y, up_z);
+}
 
 static void scene_runtime_property_release(void* object)
 {
@@ -6768,12 +6891,77 @@ int scene_runtime_initialize(void)
 
 void scene_runtime_shutdown(void)
 {
+#if defined(LWSC_WINAPI_POSE_BACKEND)
+    if (!lwsc_winapi_can_shutdown()) {
+        fprintf(stderr, "scene: LWSC pose contexts still own root/frame references; shutdown deferred\n");
+        return;
+    }
+#endif
+    if (!indexed_surface_resources_can_shutdown()) {
+        fprintf(stderr, "scene: refusing shutdown with live roof resource\n");
+        return;
+    }
+    if (s_scene_primary_view != NULL) {
+        ViewContext* view = s_scene_primary_view;
+        void* empty = NULL;
+        view->scene_eye = view->scene_tilt = view->scene_follow = NULL;
+        view->pose_valid = 0;
+        memset(&view->displayed, 0, sizeof(view->displayed));
+        if (view->controller != NULL) {
+            memcpy((char*)view->controller + 0x24, &empty, sizeof(void*));
+            memcpy((char*)view->controller + 0x28, &empty, sizeof(empty));
+            memcpy((char*)view->controller + 0x30, &empty, sizeof(empty));
+        }
+    }
+    s_scene_primary_view = NULL;
+    camera_pose_dispatch_hook_install(NULL, NULL);
     s_scene_camera_count = 0u;
     memset(s_scene_camera_bindings, 0, sizeof(s_scene_camera_bindings));
     scene_root_install(NULL);
     lego::ddiscene_object_pool_shutdown();
     lego::ddiscene_object_pool_hooks_set(NULL, NULL, NULL, NULL);
     scene_winapi_shutdown();
+}
+
+int scene_runtime_primary_camera_bind(ViewContext* view, void* controller)
+{
+    if (view == NULL || controller == NULL || s_scene_root == NULL ||
+        s_scene_primary_view != NULL) return 0;
+    /* Constructor 0x435b20: root -> follow/yaw -> tilt -> eye. The
+     * terrain-projected cam_facing remains a separate light-frame owner. */
+    s_scene_primary_view = view;
+    view->controller = controller;
+    view->scene_follow = lego::ddiscene_object_allocate(
+        (const lego::DDiSceneObjectDescriptor*)s_scene_root);
+    if (view->scene_follow == NULL) return 0;
+    view->scene_tilt = lego::ddiscene_object_allocate(
+        (const lego::DDiSceneObjectDescriptor*)view->scene_follow);
+    if (view->scene_tilt == NULL) return 0;
+    view->scene_eye = lego::ddiscene_object_allocate(
+        (const lego::DDiSceneObjectDescriptor*)view->scene_tilt);
+    if (view->scene_eye == NULL) return 0;
+    memcpy((char*)controller + 0x24, &view->scene_eye, sizeof(void*));
+    memcpy((char*)controller + 0x28, &view->scene_follow, sizeof(void*));
+    memcpy((char*)controller + 0x30, &view->scene_tilt, sizeof(void*));
+    camera_pose_dispatch_hook_install(scene_runtime_camera_pose_set, NULL);
+    if (!ddiscene_object_position_set(view->scene_eye, view->scene_tilt,
+                                      0.0f, 0.0f, -200.0f) ||
+        !ddiscene_object_pose_method_dispatch(view->scene_eye, view->scene_tilt,
+            0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f)) return 0;
+    return 1;
+}
+
+int scene_runtime_collection_pose_get(const ViewContext* view, int primary,
+                                       float position[3], float forward[3])
+{
+    if (view == NULL || position == NULL || s_scene_root == NULL ||
+        !lego::ddiscene_object_pool_owns(view->scene_follow) ||
+        !ddiscene_object_position_get(view->scene_follow, NULL, position))
+        return 0;
+    if (!primary) return 1;
+    return forward != NULL &&
+        lego::ddiscene_object_pool_owns(view->scene_eye) &&
+        ddiscene_object_facing_get(view->scene_eye, NULL, forward);
 }
 
 void* scene_runtime_camera_bind(CameraHandle* camera)
@@ -6792,6 +6980,21 @@ void* scene_runtime_camera_bind(CameraHandle* camera)
 int scene_runtime_cameras_sync(void)
 {
     unsigned int i;
+    if (s_scene_primary_view != NULL) {
+        ViewContext* view = s_scene_primary_view;
+        view->pose_valid = 0;
+        if (!ddiscene_object_position_set(view->scene_follow, NULL,
+                view->cam_follow.pos[0], view->cam_follow.pos[1],
+                view->cam_follow.pos[2]) ||
+            !ddiscene_object_position_set(view->scene_eye, view->scene_tilt,
+                view->cam_world.pos[0], view->cam_world.pos[1],
+                view->cam_world.pos[2]) ||
+            !ddiscene_object_position_get(view->scene_eye, NULL,
+                view->pose.eye) ||
+            !ddiscene_object_facing_pair_get(view->scene_eye, NULL,
+                view->pose.forward, view->pose.up)) return 0;
+        view->pose_valid = 1;
+    }
     for (i = 0u; i < s_scene_camera_count; ++i) {
         const CameraHandle* camera = s_scene_camera_bindings[i].camera;
         if (!ddiscene_object_position_set(s_scene_camera_bindings[i].scene,

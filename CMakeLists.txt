@@ -111,6 +111,7 @@ add_library(gods98 STATIC
   ${ENGINE_DIR}/audio.cpp ${ENGINE_DIR}/camera.cpp ${ENGINE_DIR}/view.cpp
   ${ENGINE_DIR}/message.cpp ${ENGINE_DIR}/mainsim.cpp ${ENGINE_DIR}/simtick.cpp
   ${ENGINE_DIR}/block.cpp ${ENGINE_DIR}/model.cpp ${ENGINE_DIR}/entity.cpp
+  ${ENGINE_DIR}/lwsc_scene.cpp
   ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp ${ENGINE_DIR}/media.cpp
   ${ENGINE_DIR}/scene_pool.cpp ${ENGINE_DIR}/scene_resources.cpp)
 target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
@@ -128,7 +129,8 @@ add_library(game STATIC
   ${GAME_DIR}/weapon.cpp ${GAME_DIR}/upgrades.cpp
   ${GAME_DIR}/video_graph.cpp ${GAME_DIR}/spawn.cpp
   ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp
-  ${GAME_DIR}/tutorial_hud.cpp ${GAME_DIR}/seh_runtime.cpp
+  ${GAME_DIR}/tutorial_hud.cpp ${GAME_DIR}/tutorial_world_arrows.cpp
+  ${GAME_DIR}/seh_runtime.cpp
   ${GAME_DIR}/startup_config.cpp)
 target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
 target_link_libraries(game PUBLIC gods98)
@@ -159,6 +161,8 @@ if(PLATFORM STREQUAL "native")
   target_link_libraries(platform_glue PUBLIC miniwin)
   set(PLATFORM_ENTRY ${PLATFORM_DIR}/native/entry.cpp)
 else()
+  target_sources(gods98 PRIVATE ${ENGINE_DIR}/lwsc_winapi.cpp)
+  target_sources(game PRIVATE ${GAME_DIR}/building_scene.cpp)
   add_library(platform_glue STATIC ${PLATFORM_DIR}/winapi/frameloop.cpp)
   target_include_directories(platform_glue PUBLIC ${SRC_ROOT})
   set(PLATFORM_ENTRY ${PLATFORM_DIR}/winapi/entry.cpp)
