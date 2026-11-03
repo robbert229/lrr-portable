@@ -536,35 +536,36 @@ static int surfrec_addblock(Parse* P, SurfRec* r, const char* tag,
      * earlier values, but some retail paths accumulate repeated TFLG bits or
      * remember a sequence marker from any TIMG occurrence. block_find() can
      * still select the last occurrence for ordinary replacement fields. */
-    if (r->nblocks == r->blocks_cap &&
-        r->blocks_cap > ((size_t)-1) / 2 / sizeof *r->tags)
-        return 0;
-    size_t ncap = r->blocks_cap ? r->blocks_cap * 2 : 8;
-    char (*nt)[5] = (char (*)[5])malloc(ncap * sizeof *r->tags);
-    size_t* no = (size_t*)malloc(ncap * sizeof *r->off);
-    size_t* ns = (size_t*)malloc(ncap * sizeof *r->size);
-    if (!nt || !no || !ns) {
-        free(nt);
-        free(no);
-        free(ns);
-        return 0;
+    if (r->nblocks == r->blocks_cap) {
+        if (r->blocks_cap > ((size_t)-1) / 2 / sizeof *r->tags)
+            return 0;
+        size_t ncap = r->blocks_cap ? r->blocks_cap * 2 : 8;
+        char (*nt)[5] = (char (*)[5])malloc(ncap * sizeof *r->tags);
+        size_t* no = (size_t*)malloc(ncap * sizeof *r->off);
+        size_t* ns = (size_t*)malloc(ncap * sizeof *r->size);
+        if (!nt || !no || !ns) {
+            free(nt);
+            free(no);
+            free(ns);
+            return 0;
+        }
+        if (r->nblocks != 0) {
+            memcpy(nt, r->tags, r->nblocks * sizeof *r->tags);
+            memcpy(no, r->off, r->nblocks * sizeof *r->off);
+            memcpy(ns, r->size, r->nblocks * sizeof *r->size);
+        }
+        free(r->tags);
+        free(r->off);
+        free(r->size);
+        r->tags = nt;
+        r->off = no;
+        r->size = ns;
+        r->blocks_cap = ncap;
     }
-    if (r->nblocks != 0) {
-        memcpy(nt, r->tags, r->nblocks * sizeof *r->tags);
-        memcpy(no, r->off, r->nblocks * sizeof *r->off);
-        memcpy(ns, r->size, r->nblocks * sizeof *r->size);
-    }
-    free(r->tags);
-    free(r->off);
-    free(r->size);
-    r->tags = nt;
-    r->off = no;
-    r->size = ns;
     memcpy(r->tags[r->nblocks], tag, 5);
     r->off[r->nblocks] = off;
     r->size[r->nblocks] = size;
     r->nblocks++;
-    r->blocks_cap = ncap;
     return 1;
 }
 

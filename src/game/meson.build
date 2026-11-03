@@ -7,7 +7,13 @@
 
 gods98_incs = [include_directories('..', '../gods98'), miniwin_inc]  # repo-root + gods98
 
+building_scene_sources = []
+if get_option('platform') == 'winapi'
+  building_scene_sources += ['building_scene.cpp']
+endif
+
 game_lib = static_library('game',
+  building_scene_sources,
   'game.cpp',
   'level.cpp',
   'objective.cpp',
@@ -33,6 +39,7 @@ game_lib = static_library('game',
   'opgroup.cpp',
   'ui_list.cpp',
   'tutorial_hud.cpp',
+  'tutorial_world_arrows.cpp',
   'seh_runtime.cpp',
   'startup_config.cpp',
   include_directories : gods98_incs + [miniwin_inc],

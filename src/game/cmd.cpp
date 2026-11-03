@@ -25,6 +25,8 @@
 #include "port_loop_ports.hpp"
 
 namespace unported_ledger_stubs {
+int ledger_stub_00443710_AdjacentPositionCandidateFind(
+    EntitySlot* entity, const int candidate[2], int output[2]);
 int entity_capacity_or_state_predicate(const EntitySlot* entity);
 int ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
     EntitySlot* entity);
@@ -60,8 +62,6 @@ int ledger_stub_00446e40_EntityNearestCellRouteCommit(
     EntitySlot* entity, unsigned int goal_x, unsigned int goal_y, int mode);
 int ledger_stub_00449ac0_ProximityStepCommandIssueClearingGate(
     EntitySlot* entity, EntitySlot* target);
-int ledger_stub_0044b500_ObjectPositionStepCommandIssueAndLink(
-    EntitySlot* entity, const float target_position[2], uint32_t flags);
 int ledger_stub_004403d0_LevelDebugCellRetargetDispatch(
     EntitySlot* entity, EntitySlot* target,
     const EntityDebugCellRetargetHooks* hooks);
@@ -84,8 +84,20 @@ extern float random_float_range(float minimum, float maximum);
  *  word; private staging values follow the corpus +0x60 chain link.
  *  CMD_STRIDE is sizeof(CmdRec), so the
  *  pool allocation includes the private tail rather than overlapping the
- *  corpus-visible fields (the x86 port record is 0x6c bytes).
+ *  corpus-visible fields (the x86 port record is 0x88 bytes including the
+ *  private GetTool movement identity).
  * ------------------------------------------------------------------ */
+
+/* Port-only identity for the demonstrated GetTool route. No retail offsets
+ * are assigned to this tail; copies must start without a movement owner. */
+typedef struct CmdGetToolRoute {
+    EntitySlot* actor;
+    EntitySlot* store;
+    const AiWaypoint* waypoints;
+    int count;
+    int phase;                 /* 0 unissued, 1 moving, 2 terminal pending */
+    float endpoint[2];
+} CmdGetToolRoute;
 
 typedef struct CmdRec {
     int32_t  type;       /* +0x00 record type (0 move/2 target/3 task/5 gated) */
@@ -117,6 +129,7 @@ typedef struct CmdRec {
     void*    next;       /* +0x60 entity-chain link; port reuses it when free  */
     int32_t  grant_act;  /* port-only staged activity (deferred install 0x43da62) */
     int32_t  extra;      /* port-only task selector (type-8 tasks set 8)        */
+    CmdGetToolRoute gettool; /* cleared before reset, requeue, free or copy */
 } CmdRec;
 
 static CmdEntityChainExternalOps s_cmd_entity_chain_external_ops;
@@ -208,12 +221,16 @@ static int cmd_entity_chain_kind_dispatch(EntitySlot* entity, CmdRec* record)
                     entity, target);
         break;
     case 19:
-        /* 0x44b500 consumes record +0x38 as a task record, resolves the
-         * entity's scene position through 0x438df0, then builds a route. */
+        /* Numeric selector, not a task pointer. The real leaf keeps the
+         * ToolNull-derived world marker; an absent scene producer pends. */
         result = s_cmd_entity_chain_external_ops.object_position_step != NULL
             ? s_cmd_entity_chain_external_ops.object_position_step(
-                entity, record->arg38,
-                s_cmd_entity_chain_external_ops.context) : -1;
+                entity, (uint32_t)(uintptr_t)record->arg38,
+                s_cmd_entity_chain_external_ops.context)
+            : unported_ledger_stubs::
+                ledger_stub_0044b500_ObjectPositionStepCommandIssueAndLink(
+                    entity, (uint32_t)(uintptr_t)record->arg38);
+        if (result >= 0) entity_reset_auxiliary_state(entity); /* 0x407370 */
         break;
     case 21:
         /* 0x444690 consumes the current waypoint and task-record payload;
@@ -1335,17 +1352,212 @@ void* cmd_alloc(int type)
     return rec;
 }
 
+static int cmd_gettool_store_live(const CmdGetToolRoute* route)
+{
+    return route->actor != NULL && route->store != NULL &&
+        route->store->pool_link_408 == (uintptr_t)route->store &&
+        route->store->type == 4 &&
+        route->store->owner_ctx == route->actor->owner_ctx;
+}
+
+/* No reset here: the caller may already be releasing the waypoint buffer. */
+static void cmd_gettool_owner_forget(CmdRec* record)
+{
+    EntitySlot* actor = record->gettool.actor;
+    EntitySlot* store = record->gettool.store;
+    if (actor == NULL) return;
+    memset(&record->gettool, 0, sizeof(record->gettool));
+    record->state &= ~CMD_STATE_ISSUED;
+    if (actor->cmd_head == record) {
+        actor->flags_3e4 &= ~0x40u;
+        if (actor->link_2fc == (uintptr_t)store) actor->link_2fc = 0u;
+    }
+}
+
+void cmd_gettool_route_reset(EntitySlot* entity)
+{
+    CmdRec* head;
+    if (entity == NULL) return;
+    head = as_rec(entity->cmd_head);
+    if (head != NULL && head->type == 19 && head->gettool.actor == entity)
+        cmd_gettool_owner_forget(head);
+}
+
+static void cmd_gettool_record_release(CmdRec* record)
+{
+    CmdGetToolRoute route;
+    EntitySlot* actor;
+    int owns_path;
+    int saved_enabled;
+    if (record->type != 19) return;
+    route = record->gettool;
+    actor = route.actor;
+    owns_path = actor != NULL && actor->cmd_head == record &&
+        route.phase == 1 && route.count == actor->wp_count &&
+        route.waypoints == ENTITY_WAYPOINTS(actor);
+    cmd_gettool_owner_forget(record); /* clear before reset can reenter */
+    if (!owns_path) return;
+    saved_enabled = s_global_enabled;
+    s_global_enabled |= 4; /* preserve the chain during this path release */
+    entity_action_sequence_reset(actor, 0);
+    s_global_enabled = saved_enabled;
+}
+
+void cmd_gettool_entity_removing(EntitySlot* entity)
+{
+    int block_index;
+    if (entity == NULL) return;
+    for (block_index = 0; block_index < s_pool_level; ++block_index) {
+        CmdRec* block = s_blocks[block_index];
+        uint32_t index;
+        const uint32_t count = 1u << (block_index & 0x1fu);
+        if (block == NULL || s_block_live[block_index] == NULL) continue;
+        for (index = 0u; index < count; ++index) {
+            CmdRec* record = &block[index];
+            if (s_block_live[block_index][index] != 0u &&
+                record->type == 19 &&
+                (record->gettool.actor == entity ||
+                 record->gettool.store == entity))
+                cmd_gettool_record_release(record);
+        }
+    }
+}
+
+static void cmd_gettool_all_owners_release(void)
+{
+    int block_index;
+    /* Revoke GetTool movement identities while all command blocks exist. */
+    for (block_index = 0; block_index < s_pool_level; ++block_index) {
+        unsigned int index;
+        const unsigned int count = 1u << (block_index & 0x1fu);
+        if (s_blocks[block_index] == NULL ||
+            s_block_live[block_index] == NULL) continue;
+        for (index = 0u; index < count; ++index) {
+            if (s_block_live[block_index][index] != 0u)
+                cmd_gettool_record_release(&s_blocks[block_index][index]);
+        }
+    }
+}
+
+static int cmd_gettool_route_adopt(EntitySlot* entity, CmdRec* head)
+{
+    CmdGetToolRoute* route = &head->gettool;
+    if (entity->wp_count <= 0 || entity->wp_count > 4096 ||
+        (entity->wp_dynamic == NULL ? entity->wp_count > AI_WAYPOINTS_MAX :
+            (unsigned int)entity->wp_count > entity->wp_capacity) ||
+        ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].step_kind != 0x0du ||
+        !entity_route_waypoint_world_get(entity,
+            (unsigned int)(entity->wp_count - 1), route->endpoint)) return 0;
+    route->actor = entity;
+    route->store = (EntitySlot*)entity->link_2fc;
+    route->waypoints = ENTITY_WAYPOINTS(entity);
+    route->count = entity->wp_count;
+    route->phase = 1;
+    if (!cmd_gettool_store_live(route)) {
+        cmd_gettool_record_release(head);
+        return 0;
+    }
+    return 1;
+}
+
+int cmd_gettool_route_moving(EntitySlot* entity)
+{
+    CmdRec* head;
+    float endpoint[2];
+    if (entity == NULL) return 0;
+    head = as_rec(entity->cmd_head);
+    if (head == NULL || head->type != 19 || head->gettool.phase != 1)
+        return 0;
+    if (head->gettool.actor == entity &&
+        (head->state & (CMD_STATE_ISSUED | CMD_STATE_DONE)) ==
+            CMD_STATE_ISSUED && cmd_gettool_store_live(&head->gettool) &&
+        entity->link_2fc == (uintptr_t)head->gettool.store &&
+        (entity->flags_3e0 & 1u) != 0u &&
+        entity->wp_count == head->gettool.count &&
+        ENTITY_WAYPOINTS(entity) == head->gettool.waypoints &&
+        entity->wp_index >= 0 && entity->wp_index <= entity->wp_count &&
+        ENTITY_WAYPOINTS(entity)[entity->wp_count - 1].step_kind == 0x0du &&
+        entity_route_waypoint_world_get(entity,
+            (unsigned int)(entity->wp_count - 1), endpoint) &&
+        endpoint[0] == head->gettool.endpoint[0] &&
+        endpoint[1] == head->gettool.endpoint[1]) return 1;
+    cmd_gettool_record_release(head);
+    return 0;
+}
+
+int cmd_gettool_route_arrived(EntitySlot* entity)
+{
+    CmdRec* head;
+    if (entity == NULL) return 0;
+    head = as_rec(entity->cmd_head);
+    if (head == NULL || head->type != 19 || head->gettool.phase != 2)
+        return 0;
+    if (head->gettool.actor == entity &&
+        (head->state & CMD_STATE_DONE) == 0u &&
+        cmd_gettool_store_live(&head->gettool)) return 1;
+    cmd_gettool_record_release(head);
+    return 0;
+}
+
+int cmd_gettool_route_finish(EntitySlot* entity)
+{
+    CmdRec* head;
+    CmdGetToolRoute route;
+    float position[2];
+    if (!cmd_gettool_route_moving(entity) ||
+        entity->wp_index != entity->wp_count) return 0;
+    head = as_rec(entity->cmd_head);
+    route = head->gettool;
+    entity_transform_position_get(entity, position);
+    if (!(fabs((double)(position[0] - route.endpoint[0])) <= 0.001 &&
+          fabs((double)(position[1] - route.endpoint[1])) <= 0.001)) return 0;
+    /* Same ordinary mover, actual LAST weighted point, no second time budget.
+     * Mode1 frees the path without requeuing19. Restore only terminal identity
+     * after reset invalidates the old moving identity. The callback owns grant. */
+    entity_action_sequence_reset(entity, 1);
+    route.phase = 2;
+    route.waypoints = NULL;
+    route.count = 0;
+    head->gettool = route;
+    head->state |= CMD_STATE_ISSUED;
+    entity->flags_3e4 |= 0x40u;
+    return 1;
+}
+
+/* The reciprocal +0x58 pair may outlive either pool record. Only clear a
+ * still-live matching partner; never dereference an arbitrary raw reference. */
+static void cmd_gettool_reference_release(CmdRec* record)
+{
+    int block_index;
+    if (record->ref == NULL) return;
+    for (block_index = 0; block_index < s_pool_level; ++block_index) {
+        CmdRec* block = s_blocks[block_index];
+        uint32_t index;
+        const uint32_t count = 1u << (block_index & 0x1fu);
+        if (block == NULL || s_block_live[block_index] == NULL) continue;
+        for (index = 0u; index < count; ++index) {
+            CmdRec* peer = &block[index];
+            if (s_block_live[block_index][index] != 0u &&
+                peer == record->ref && peer->ref == record &&
+                (record->type == 19 || peer->type == 19)) peer->ref = NULL;
+        }
+    }
+    if (record->type == 19) record->ref = NULL;
+}
+
 // FUNCTION: LEGORR 0x00406480
 void cmd_free(void* rec, int cancel)
 {
     /* corpus: no NULL-record path — the gate is the second argument
      * (test [esp+8] / jne) and the record is dereferenced blindly. */
+    cmd_gettool_record_release((CmdRec*)rec);
     if (cancel == 0) {
         cmd_cancel_ref(rec); /* corpus: unless the argument suppresses it */
     }
     /* Keep the corpus's direct record dereference here; routing through
      * as_rec adds a call in this hot pool leaf. */
     CmdRec* r = (CmdRec*)rec;
+    cmd_gettool_reference_release(r);
     if (r->buffer != NULL && (r->state & CMD_STATE_BUFOUT) == 0) {
         engine_heap_free(r->buffer); /* corpus: push eax / call 0x48db80 */
         /* corpus: the pointer is never cleared — cmd_alloc zeroes the
@@ -1433,6 +1645,8 @@ static int32_t s_behaviour[27]; /* DAT_004b32e8 by kind, DWORD stride */
 static void cmd_port_state_reset(void)
 {
     int i;
+    cmd_gettool_all_owners_release();
+
     for (i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
         if (s_blocks[i] != NULL) free(s_blocks[i]);
         if (s_block_live[i] != NULL) free(s_block_live[i]);
@@ -1869,6 +2083,7 @@ void entity_command_unlink_by_kind(EntitySlot* e, int type,
                 advisor_text_animation_update(0x18, 1, 0);
             }
             if (unlink) {
+                cmd_gettool_record_release(cur);
                 cmd_global_unlink(cur);
                 if (prev != NULL) prev->next = next;
                 else e->cmd_head = next;
@@ -2678,6 +2893,8 @@ void entity_record_attach_and_relink(void* record, void* previous,
     if (rec == NULL) {
         return; /* deviation: the corpus dereferences blindly */
     }
+    if (entity != NULL && entity->cmd_head != NULL)
+        cmd_gettool_record_release(as_rec(entity->cmd_head));
     if ((rec->state & 0x40u) == 0u) {
         if (previous == NULL) {
             s_global_head = as_rec(rec->global_next);
@@ -2713,7 +2930,7 @@ static void cmd_chain_append(EntitySlot* e, CmdRec* rec, int as_move)
         e->cmd_head = rec;
     }
     rec->next = NULL; /* entity-chain tail: never re-link onto the global list */
-    if (as_move && e->etype == 2) {
+    if (as_move && e->type == 2) {
         idle_register(e); /* IdleQueueRegister for fresh move commands */
     }
 }
@@ -2913,7 +3130,11 @@ int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
     if (!terrain_neighbor_path_check(entity,
             (uint32_t)start_xy[0], (uint32_t)start_xy[1],
             (uint32_t)target_xy[0], (uint32_t)target_xy[1],
-            &route_x, &route_y, &route_count, NULL, NULL)) return 0;
+            &route_x, &route_y, &route_count, NULL, NULL)) {
+        free(route_x);
+        free(route_y);
+        return 0;
+    }
     /* Distinct-cell routes must contain BOTH endpoints. Reject malformed
      * authority output before it can become an admitted/finishable command. */
     if (route_x == NULL || route_y == NULL ||
@@ -3440,7 +3661,50 @@ int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload)
     head = as_rec(entity->cmd_head);
     if (head == NULL) {
         entity->command_chain_idle_elapsed_338 += delta;
-        if (entity->command_chain_idle_elapsed_338 >= 250.0f) {
+        /* Native0x40490b-0x404995 obtains the current cell before testing
+         * accumulated idle time. Equal or unordered operands skip0x443710;
+         * ordinary subsequent idle ticks use the real terrain-selected cell.
+         * This is the general no-head continuation, not a tutorial route. */
+        {
+            int current_cell[2] = { 0, 0 };
+            int candidate_cell[2] = { 0, 0 };
+            GameContext* context = pending_scan_context_get();
+            LevelState* current_level = entity->owner_ctx != NULL
+                ? entity->owner_ctx->level
+                : (context != NULL ? context->level : NULL);
+            entity_position_to_terrain_cell(entity, current_level,
+                &current_cell[0], &current_cell[1]);
+            /* VC5's ordered-less comparison uses x87 C0 alone, which also
+             * admits unordered operands. Reject IEEE NaN words explicitly
+             * before the native C3 inequality, retaining infinities. */
+            uint32_t idle_word;
+            uint32_t delta_word;
+            memcpy(&idle_word, &entity->command_chain_idle_elapsed_338,
+                   sizeof(idle_word));
+            memcpy(&delta_word, &delta, sizeof(delta_word));
+            if ((idle_word & 0x7fffffffu) <= 0x7f800000u &&
+                (delta_word & 0x7fffffffu) <= 0x7f800000u &&
+                entity->command_chain_idle_elapsed_338 != delta &&
+                (entity->flags_3ec & 0xc0u) == 0u &&
+                unported_ledger_stubs::
+                    ledger_stub_00443710_AdjacentPositionCandidateFind(
+                        entity, current_cell, candidate_cell) != 0) {
+                if (candidate_cell[0] != 0 && candidate_cell[1] != 0) {
+                    CmdRec* move = (CmdRec*)cmd_alloc(0);
+                    if (move != NULL) {
+                        entity->cmd_head = move;
+                        memcpy(&move->x, &candidate_cell[0], sizeof(int));
+                        memcpy(&move->y, &candidate_cell[1], sizeof(int));
+                    }
+                }
+                /* A successful search also exits when either output is0.
+                 * Do not use cmd_create_move: native attaches an unissued
+                 * allocation directly without its sweep/registry effects. */
+                s_global_enabled &= ~4;
+                return 0;
+            }
+        }
+        if (entity->command_chain_idle_elapsed_338 > 250.0f) {
             if (entity->type == 2 &&
                 entity_matches_current_selection_or_owner(entity) == 0) {
                 (void)entity_random_activity_attempt(entity);
@@ -3554,6 +3818,19 @@ int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload)
             s_global_enabled &= ~4;
             return 0;
         }
+        else if (head->type == 19) {
+            /* Native40450f/404518: issued and actor-busy gates. Bit1 is an
+             * issuance latch, not arrival. AI alone advances this route. */
+            if (cmd_gettool_route_arrived(entity) ||
+                cmd_gettool_route_moving(entity) ||
+                (head->state & CMD_STATE_ISSUED) != 0u ||
+                (entity->flags_3e8 & 0x200000u) != 0u) {
+                s_global_enabled &= ~4;
+                return 0;
+            }
+            result = cmd_entity_chain_kind_dispatch(entity, head);
+            if (result > 0 && !cmd_gettool_route_adopt(entity, head)) result = 0;
+        }
         else if (head->type > 30) result = 1;
         else result = cmd_entity_chain_kind_dispatch(entity, head);
 
@@ -3639,7 +3916,7 @@ static IdleQueueRecord s_idle[IDLE_TABLE_MAX];
 // FUNCTION: LEGORR 0x00407450
 static void idle_register(EntitySlot* e)
 {
-    if (e == NULL || e->etype != 2) {
+    if (e == NULL || e->type != 2) {
         return;
     }
     int i = 0;
@@ -4417,6 +4694,7 @@ void handle_array_release_and_reset(void)
 {
     CmdRec** walk = s_blocks;
     CmdRec** const end = s_blocks + CMD_POOL_MAX_BLOCKS;
+    cmd_gettool_all_owners_release();
     do {
         if (*walk != NULL) {
             engine_heap_free(*walk);
@@ -4481,8 +4759,8 @@ void level_no_gather_object_setup(int mode)
 /* --- cancellation-ref and conditional issuers (see cmd.hpp) ------------------
  * The referenced-record slot (+0x58) is the type-0x13 "ref" pair the
  * shipped binary's spawn-dispatch switch allocates through CmdAlloc(0x13);
- * port-side producers leave it NULL, so both halves answer inert unless a
- * test stages the reference. */
+ * the validated auxiliary-work producer installs a reciprocal pair. Direct
+ * numeric-selector jobs leave this slot NULL. */
 // FUNCTION: LEGORR 0x00402cd0
 void cmd_cancel_ref(void* rec)
 {
@@ -4492,11 +4770,12 @@ void cmd_cancel_ref(void* rec)
     CmdRec* r = as_rec(rec);
     if (r->type == 0x13) {
         if (r->ref != NULL) {
-            /* Corpus: dispatch the cancel callback over the entity pool
-             * (LAB_00402d30) through EntityPoolCallbackSearch — the
-             * pool-registry seam, which always misses in the port. */
+            /* Native402ce2 passes &record to the LIVE COMMAND pool search.
+             * LAB402d30 only compares candidate+58 with that argument and
+             * returns a predicate; it writes nothing. The result is discarded.
+             * There is no entity/route cancellation side effect to synthesize. */
         }
-        return; /* a ref record's cancel is the seam; no marking walk */
+        return; /* pure native search has no observable writes */
     }
     if (r->ref == NULL) {
         return;
@@ -5355,6 +5634,7 @@ void* entity_command_chain_head_remove(EntitySlot* e)
     if (head == NULL) {
         return NULL;
     }
+    cmd_gettool_record_release(head);
     e->cmd_head = head->next;
     head->next = NULL;
     if ((head->state & 0x10u) != 0u && (head->state & 0x20u) == 0u) {
@@ -5377,6 +5657,7 @@ void entity_drain_command_chain(EntitySlot* e)
         return; /* the corpus gate: DAT_004b8060 bit 1 blocks the drain */
     }
     CmdRec* cur = as_rec(e->cmd_head);
+    if (cur != NULL) cmd_gettool_record_release(cur);
     while (cur != NULL) {
         CmdRec* next = as_rec(cur->next);
         if ((cur->state & 0x10u) != 0u && (cur->state & 0x20u) == 0u) {
@@ -5438,6 +5719,7 @@ void command_queue_sweep_relink(EntitySlot* e)
     }
     CmdRec* keep = NULL;
     CmdRec* cur = as_rec(e->cmd_head);
+    if (cur != NULL) cmd_gettool_record_release(cur);
     while (cur != NULL) {
         CmdRec* next = as_rec(cur->next);
         if ((cur->state & 4u) != 0u) {
@@ -5604,6 +5886,8 @@ void* cmd_pending_record_copy(const void* rec)
         return NULL; /* deviation: the corpus strides the allocation blindly */
     }
     *dst = *src;
+    memset(&dst->gettool, 0, sizeof(dst->gettool));
+    if (dst->type == 19) dst->state &= ~CMD_STATE_ISSUED;
     dst->next = NULL;        /* corpus +0x60 = 0 */
     dst->global_next = NULL; /* port-only bookkeeping: unattached */
     dst->state |= 0x200u;    /* corpus +0x17 |= 0x200 */
@@ -5766,15 +6050,9 @@ void entity_task_batch_append(EntitySlot* const* entities, int count,
     }
 }
 
-/* DeferredOListEntityQueueAdd (FUN_00437c20) — see cmd.hpp. The corpus band
- * is a 200-slot array of 11-dword entries ending at its own counter word;
- * the pick tail (FUN_00431570 feeding the FUN_0044f6d0 grid-pick boundary)
- * only lands its ftol of the record's float pair in entry words 0/1, so
- * the port pins that shape and models the boundary's word read through
- * the level mirror (deviations: the corpus's register-passed tail extras
- * are not modeled, the band's past-capacity writes into the counter word
- * are dropped, NULL records crash the corpus, and NULL name parameters
- * leave stale corpus words where the port keeps zero). */
+/* DeferredOListEntityQueueAdd (FUN_00437c20) — see cmd.hpp. The bounded
+ * portable band retains the eleven-word record and owns duplicated names.
+ * Its consumer transfers those names before removing a matching entry. */
 #define DEFERRED_OLIST_SLOTS 200
 
 struct DeferredOListEntry {
@@ -5790,19 +6068,19 @@ void deferred_olist_entity_queue_add(GameContext* ctx, const uint32_t record[2],
                                      int p1, int p2, int p3, int p5, int p6,
                                      const char* name1, const char* name2)
 {
+    if (s_deferred_olist_next >= DEFERRED_OLIST_SLOTS) return;
     const uint32_t slot = s_deferred_olist_next++;
-    if (ctx != NULL && ctx->level != NULL) {
-        (void)level_height((const LevelState*)ctx->level); /* boundary read */
-    }
-    if (record == NULL || slot >= DEFERRED_OLIST_SLOTS) {
-        return; /* deviations: pinned above */
-    }
+    if (record == NULL) return;
     DeferredOListEntry* e = &s_deferred_olist[slot];
     float x, y;
     __builtin_memcpy(&x, &record[0], sizeof(x));
     __builtin_memcpy(&y, &record[1], sizeof(y));
-    e->w[0] = (uint32_t)float_to_long(x); /* the pick's cell word pair    */
-    e->w[1] = (uint32_t)float_to_long(y);
+    int cell_x = float_to_long(x), cell_y = float_to_long(y);
+    if (ctx != NULL && ctx->level != NULL)
+        (void)terrain_world_xy_to_cell(ctx->level->ptr_terrain, x, y,
+                                      &cell_x, &cell_y);
+    e->w[0] = (uint32_t)cell_x;
+    e->w[1] = (uint32_t)cell_y;
     e->w[2] = record[0];
     e->w[3] = record[1];
     e->w[4] = (uint32_t)p5; /* entry +0x10 */
@@ -5841,8 +6119,42 @@ uint32_t deferred_olist_counter_peek(void)
 
 void deferred_olist_reset(void)
 {
+    for (unsigned int i = 0u;
+         i < s_deferred_olist_next && i < DEFERRED_OLIST_SLOTS; ++i) {
+        engine_heap_free(s_deferred_olist[i].names[0]);
+        engine_heap_free(s_deferred_olist[i].names[1]);
+    }
     __builtin_memset(s_deferred_olist, 0, sizeof(s_deferred_olist));
     s_deferred_olist_next = 0u;
+}
+
+unsigned int deferred_olist_entity_queue_take_cell(const int cell_xy[2],
+    DeferredOListEntityRecord* records, unsigned int capacity)
+{
+    unsigned int count = 0u, i = 0u;
+    if (cell_xy == NULL || records == NULL) return 0u;
+    while (i < s_deferred_olist_next && i < DEFERRED_OLIST_SLOTS &&
+           count < capacity) {
+        DeferredOListEntry* entry = &s_deferred_olist[i];
+        if ((int)entry->w[0] != cell_xy[0] ||
+            (int)entry->w[1] != cell_xy[1]) { ++i; continue; }
+        DeferredOListEntityRecord* out = &records[count++];
+        out->cell_x = (int)entry->w[0];
+        out->cell_y = (int)entry->w[1];
+        memcpy(&out->x, &entry->w[2], 4);
+        memcpy(&out->y, &entry->w[3], 4);
+        memcpy(&out->heading, &entry->w[4], 4);
+        out->source_kind = (int)entry->w[5];
+        out->entity_type = (int)entry->w[6];
+        out->variant = (int)entry->w[7];
+        out->record_flags = (int)entry->w[8];
+        out->name = entry->names[0];
+        out->link_name = entry->names[1];
+        --s_deferred_olist_next;
+        *entry = s_deferred_olist[s_deferred_olist_next];
+        memset(&s_deferred_olist[s_deferred_olist_next], 0, sizeof(*entry));
+    }
+    return count;
 }
 
 /* --- HUD post / menu-selection chain (2026-10-25) --------------------------

@@ -194,11 +194,11 @@ static void tutorial_camera_runtime_state_reset(void)
 {
     tutorial_camera_focus_state_reset();
     if (s_tutorial_engine_context != NULL) {
-        memset(s_tutorial_engine_context->camera_controller, 0,
-               sizeof(s_tutorial_engine_context->camera_controller));
+        /* NERP owns requests, not the primary camera's constructor,
+         * configured bounds or scene-frame pointers. */
         if (s_tutorial_engine_context->views[0] != NULL) {
-            s_tutorial_engine_context->views[0]->target_record = NULL;
-            s_tutorial_engine_context->views[0]->follow_id = 0;
+            s_tutorial_engine_context->views[0]->target_pending = 0;
+            s_tutorial_engine_context->views[0]->target_tween = 0;
         }
     }
 }
@@ -955,14 +955,70 @@ static int tutorial_coordinate_field_set(LevelState* level,
     return changed;
 }
 
-static void tutorial_coordinate_marker_set(LevelState* level,
-                                           uint32_t list_index,
-                                           uint8_t marker)
+typedef struct TutorialPointerEntityMark {
+    LevelState* level;
+    int32_t x;
+    int32_t y;
+} TutorialPointerEntityMark;
+
+static int tutorial_pointer_entity_cell_get(const EntitySlot* entity,
+                                             LevelState* level,
+                                             int* x, int* y)
+{
+    float xy[2];
+    if (entity == NULL || level == NULL || level->ptr_terrain == NULL ||
+        terrain_blocksize_get(level->ptr_terrain) == 0.0f) return 0;
+    entity_transform_position_get(entity, xy);
+    /* 0x4424f0 consumes the converted outputs even outside physical bounds.
+     * Keep that contract separate from height/picker admission. */
+    (void)terrain_world_xy_to_cell(level->ptr_terrain, xy[0], xy[1], x, y);
+    return 1;
+}
+
+/* 0x4570d0: assignment for each visited cell, never a union of permissions. */
+static int tutorial_pointer_entity_mark(EntitySlot* entity, void* payload)
+{
+    TutorialPointerEntityMark* mark = (TutorialPointerEntityMark*)payload;
+    int x = -1;
+    int y = -1;
+    if (entity != NULL && mark != NULL) {
+        entity->tutorial_unit_at_block_3f8 =
+            tutorial_pointer_entity_cell_get(entity, mark->level, &x, &y) &&
+            x == mark->x && y == mark->y ? 1u : 0u;
+    }
+    return 0;
+}
+
+/* 0x456cb0/context11 -> 0x456f2e -> filtered retail pool visitor. */
+static void tutorial_pointer_context11(GameContext* game, uint32_t list_index)
 {
     void* node;
     uint32_t visited = 0u;
-    if (level == NULL || list_index >= 0x37u) return;
-    node = level->pool_heads[list_index];
+    if (game == NULL || game->level == NULL || list_index >= 0x37u) return;
+    node = game->level->pool_heads[list_index];
+    while (node != NULL && visited < NERP_TUTORIAL_CELL_CAPACITY) {
+        TutorialPointerEntityMark mark;
+        mark.level = game->level;
+        memcpy(&mark.x, node, sizeof(mark.x));
+        memcpy(&mark.y, (char*)node + 4, sizeof(mark.y));
+        (void)entity_pool_find_by_callback_filtered(game,
+            tutorial_pointer_entity_mark, &mark);
+        node = *(void**)((char*)node + 8);
+        ++visited;
+    }
+}
+
+static void tutorial_coordinate_marker_set(GameContext* game,
+                                           uint32_t list_index,
+                                           uint32_t enabled)
+{
+    LevelState* level = game != NULL ? game->level : NULL;
+    void* node;
+    uint32_t visited = 0u;
+    uint32_t slot;
+    EntitySlot* actor;
+    if (level == NULL) return;
+    node = list_index < 0x37u ? level->pool_heads[list_index] : NULL;
     while (node != NULL && visited < NERP_TUTORIAL_CELL_CAPACITY) {
         int32_t x;
         int32_t y;
@@ -970,9 +1026,29 @@ static void tutorial_coordinate_marker_set(LevelState* level,
         memcpy(&x, node, sizeof(x));
         memcpy(&y, (char*)node + 4, sizeof(y));
         voxel = level_voxel(level, x, y);
-        if (voxel != NULL) voxel[4] = marker;
+        if (enabled == 1u) {
+            if (voxel != NULL) voxel[4] = (uint8_t)list_index;
+            /* 0x4571b4..0x4571cf repeats the full context11 list visit
+             * after EACH marker write, in the authored chain order. */
+            tutorial_pointer_context11(game, list_index);
+        }
+        else if (enabled == 0u && voxel != NULL) voxel[4] = 0u;
         node = *(void**)((char*)node + 8);
         ++visited;
+    }
+    /* 0x4571fd..0x45724a runs even on disable/other arguments or an empty
+     * list. Reconcile only the actual current OList actor at its own cell. */
+    slot = tutorial_record_object_pointer_get();
+    actor = slot != 0u ? object_pointer_registry_entity_get(slot - 1u) : NULL;
+    if (actor != NULL) {
+        TutorialPointerEntityMark mark;
+        int x, y;
+        mark.level = level;
+        if (tutorial_pointer_entity_cell_get(actor, level, &x, &y)) {
+            mark.x = x;
+            mark.y = y;
+            (void)tutorial_pointer_entity_mark(actor, &mark);
+        }
     }
 }
 
@@ -994,10 +1070,18 @@ static void tutorial_coordinate_variant_flag_propagate(
         memcpy(&y, (char*)node + 4, sizeof(y));
         cell_xy[0] = x;
         cell_xy[1] = y;
-        /* SetTutorialBlockIsPath (0x457420) visits the indexed list using
-         * context 4; its callback calls TerrainCellVariantFlagPropagate
-         * (0x432600) for each stored coordinate. The callback's second NERP
-         * argument is not read by the wrapper. */
+        /* Context 4 clears the low state before the state/path owners run;
+         * the wrapper's second NERP argument is not the mutation mode. */
+        {
+            uint8_t* voxel = level_voxel(level, x, y);
+            if (voxel != NULL) {
+                uint32_t flags;
+                memcpy(&flags, voxel + 8, sizeof(flags));
+                flags &= ~3u;
+                memcpy(voxel + 8, &flags, sizeof(flags));
+            }
+        }
+        (void)terrain_cell_state_update(level, cell_xy);
         (void)terrain_cell_variant_flag_propagate(level, cell_xy);
         node = *(void**)((char*)node + 8);
         ++visited;
@@ -1205,8 +1289,8 @@ static void tutorial_camera_goto_coordinate_list(GameContext* game,
     if (game == NULL || engine == NULL || game->level == NULL ||
         list_index >= 0x37u) return;
     memset(&clamp_state, 0, sizeof(clamp_state));
-    clamp_state.map_width = level_width(game->level);
-    clamp_state.map_height = level_height(game->level);
+    clamp_state.map_width = level_width(game->level) - 1;
+    clamp_state.map_height = level_height(game->level) - 1;
     clamp_state.edge_extent = view_grid_edge_get();
     clamp_state.global_flags = engine->state;
     node = game->level->pool_heads[list_index];
@@ -1234,12 +1318,7 @@ static void tutorial_camera_goto_coordinate_list(GameContext* game,
         if (terrain_cell_world_position_get(
                 s_nerp_runtime.camera_target_cells[1][0],
                 s_nerp_runtime.camera_target_cells[1][1], world) != 0) {
-            ViewContext* view = engine->views[0];
-            selection_record_point_set(view, world[0], world[1]);
-            if (view->mode != 1) {
-                cam_set_pos(&view->cam_world, world[0], world[1],
-                            view->cam_world.pos[2]);
-            }
+            view_primary_target_request(engine, world[0], world[1], 1);
         }
     }
 }
@@ -1262,17 +1341,18 @@ static int tutorial_camera_focus_target_apply(GameContext* game,
     cell_xy[0] = cell_x;
     cell_xy[1] = cell_y;
     memset(&clamp_state, 0, sizeof(clamp_state));
-    clamp_state.map_width = level_width(game->level);
-    clamp_state.map_height = level_height(game->level);
+    clamp_state.map_width = level_width(game->level) - 1;
+    clamp_state.map_height = level_height(game->level) - 1;
     clamp_state.edge_extent = view_grid_edge_get();
     clamp_state.global_flags = engine->state;
-    (void)viewport_target_position_clamp(&clamp_state, cell_xy);
+    /* 0x42de40 preserves an object's exact world point unless the map
+     * inset actually changes its cell. Do not quantize scripted follow. */
+    entity_transform_position_get(entity, world);
+    if (viewport_target_position_clamp(&clamp_state, cell_xy) &&
+        !terrain_cell_world_center_xy_get(game->level->ptr_terrain,
+            clamp_state.target[0], clamp_state.target[1], world)) return 0;
     engine->state = clamp_state.global_flags;
-    if (engine->views[0] != NULL &&
-        terrain_cell_world_position_get(cell_xy[0], cell_xy[1], world) != 0) {
-        ViewContext* view = engine->views[0];
-        selection_record_point_set(view, world[0], world[1]);
-    }
+    view_primary_target_request(engine, world[0], world[1], 1);
     return 1;
 }
 
@@ -1425,7 +1505,7 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
                 memcpy(&x, node, sizeof(x));
                 memcpy(&y, (char*)node + 4, sizeof(y));
                 (void)terrain_cell_mutate(level, (uint32_t)x,
-                                          (uint32_t)y, 1);
+                                          (uint32_t)y, 0);
                 node = *(void**)((char*)node + 8);
                 ++visited;
             }
@@ -1455,16 +1535,8 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         if (args[0] != 0u) {
             s_tutorial_focus_id = args[0] - 1u;
             s_tutorial_focus_valid = 1u;
-            if (s_tutorial_engine_context != NULL &&
-                args[0] <= s_tutorial_engine_context->camera_target_count &&
-                s_tutorial_engine_context->views[0] != NULL) {
-                ViewContext* view = s_tutorial_engine_context->views[0];
-                view->target_record =
-                    &s_tutorial_engine_context->camera_targets[args[0] - 1u];
-                view->follow_id = (int)args[0];
-                view->a5 = 0;
-                view->mode = 3;
-            }
+            /* Reference 0x454050 records a target only. The primary
+             * remains kind 1; kind 3 is the separate free camera. */
         }
         *result_out = 0u;
         return 1;
@@ -1472,11 +1544,6 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
     if (command == 139u) {
         s_tutorial_focus_id = 0xffffffffu;
         s_tutorial_focus_valid = 0u;
-        if (s_tutorial_engine_context != NULL &&
-            s_tutorial_engine_context->views[0] != NULL) {
-            s_tutorial_engine_context->views[0]->target_record = NULL;
-            s_tutorial_engine_context->views[0]->follow_id = 0;
-        }
         *result_out = 0u;
         return 1;
     }
@@ -1570,10 +1637,8 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 92u && argc == 2u && args != NULL) {
-        tutorial_coordinate_marker_set(
-            s_tutorial_game_context != NULL
-                ? s_tutorial_game_context->level : NULL,
-            args[0], args[1] == 1u ? (uint8_t)args[0] : 0u);
+        tutorial_coordinate_marker_set(s_tutorial_game_context,
+                                       args[0], args[1]);
         *result_out = 1u;
         return 1;
     }
@@ -1961,7 +2026,9 @@ void tutorial_script_command_dispatch(float delta)
         }
         pc += step;
     }
-    tutorial_camera_focus_tween_update(delta);
+    /* This dispatcher receives simulation seconds. Only the camera's
+     * reference-shaped tween consumes the original 25-Hz frame units. */
+    tutorial_camera_focus_tween_update(view_camera_delta_from_seconds(delta));
 }
 
 // FUNCTION: LEGORR 0x00453920
@@ -2019,6 +2086,7 @@ void tutorial_camera_focus_tween_update(float delta)
 {
     float scale = 1.0f;
     float step;
+    if (delta <= 0.0f) return;
     if (s_tutorial_script_ops.delta_scale != NULL)
         scale = s_tutorial_script_ops.delta_scale(
             s_tutorial_script_ops.context);
@@ -2027,11 +2095,6 @@ void tutorial_camera_focus_tween_update(float delta)
                                                 s_tutorial_engine_context,
                                                 s_tutorial_focus_id)) {
             s_tutorial_focus_valid = 0u;
-            if (s_tutorial_engine_context != NULL &&
-                s_tutorial_engine_context->views[0] != NULL) {
-                s_tutorial_engine_context->views[0]->target_record = NULL;
-                s_tutorial_engine_context->views[0]->follow_id = 0;
-            }
         }
         if (s_tutorial_script_ops.camera_focus != NULL)
             s_tutorial_script_ops.camera_focus(

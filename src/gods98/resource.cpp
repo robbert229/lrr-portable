@@ -22,6 +22,7 @@
 #include "string.hpp"
 #include "texture.hpp"
 #include "view.hpp"
+#include "scene_pool.hpp"
 
 /* Direct3DRM object and object-array ABI used by the recursive resource-tree
  * helper. The reference calls the object's GetChildren slot at +0x4c, then
@@ -391,6 +392,29 @@ static IndexedTextureLoadFn s_indexed_texture_load;
 static IndexedSurfaceReleaseFn s_indexed_surface_release;
 static IndexedSurfaceTextureSetFn s_indexed_surface_texture_set;
 static void* s_indexed_surface_user;
+static IndexedSurfaceReleaseFn s_indexed_surface_owner_release;
+static void* s_indexed_surface_owner_user;
+static int s_indexed_surface_native_frame;
+
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+static void indexed_surface_native_release(void* object, void* user)
+{
+    (void)user;
+    ddiscene_object_destroy_with_mode(object, 0);
+}
+
+static void* indexed_surface_native_create(void* owner)
+{
+    lego::DDiSceneObjectDescriptor parents;
+    if (owner == NULL || owner != scene_root_object_get() ||
+        !lego::ddiscene_object_pool_owns(owner)) return NULL;
+    memcpy(parents.channels, owner, sizeof(parents.channels));
+    /* The software mesh has its own CPU geometry. This pooled object owns
+     * the three genuine native frames and their visibility/parent path;
+     * neither a software quad index nor a fake mesh interface is used. */
+    return lego::ddiscene_object_allocate(&parents);
+}
+#endif
 static VisualModelResolveFn s_visual_model_resolver;
 static void* s_visual_model_resolver_user;
 static void* s_scene_lifecycle_context;
@@ -1017,30 +1041,48 @@ void indexed_surface_resource_hooks_set(IndexedSurfaceCreateFn create,
 /* FUNCTION: LEGORR 0x00462da0 */
 int indexed_surface_resource_allocate(void* owner, int width, int height)
 {
-    if (s_indexed_surface_create == NULL || width <= 0 || height <= 0
-        || width > 4096 || height > 4096) return 0;
-    void* surface = s_indexed_surface_create(owner, 2, s_indexed_surface_user);
+    if (width <= 0 || height <= 0 || width > 4096 || height > 4096)
+        return 0;
+    void* surface = NULL;
+    IndexedSurfaceReleaseFn release = s_indexed_surface_release;
+    void* release_user = s_indexed_surface_user;
+    int native_frame = 0;
+    if (s_indexed_surface_create != NULL)
+        surface = s_indexed_surface_create(owner, 2, s_indexed_surface_user);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    else {
+        surface = indexed_surface_native_create(owner);
+        release = indexed_surface_native_release;
+        release_user = NULL;
+        native_frame = surface != NULL;
+    }
+#endif
     if (surface == NULL) return 0;
     size_t count = (size_t)width * (size_t)height;
     if (count > 16777216u) {
-        if (s_indexed_surface_release != NULL) {
-            s_indexed_surface_release(surface, s_indexed_surface_user);
+        if (release != NULL) {
+            release(surface, release_user);
         }
         return 0;
     }
     uint32_t* entries = (uint32_t*)calloc(count * 2u, sizeof(uint32_t));
     if (entries == NULL) {
-        if (s_indexed_surface_release != NULL) {
-            s_indexed_surface_release(surface, s_indexed_surface_user);
+        if (release != NULL) {
+            release(surface, release_user);
         }
         return 0;
     }
     for (size_t i = 0; i < count; ++i) entries[i * 2u + 1u] = 1u;
     free(s_indexed_surface_entries);
-    if (s_indexed_surface != NULL && s_indexed_surface_release != NULL) {
-        s_indexed_surface_release(s_indexed_surface, s_indexed_surface_user);
+    if (s_indexed_surface != NULL && s_indexed_surface_owner_release != NULL) {
+        if (s_indexed_surface_native_frame) graphics_overlay_word_set(0u);
+        s_indexed_surface_owner_release(s_indexed_surface, s_indexed_surface_owner_user);
     }
     s_indexed_surface = surface;
+    s_indexed_surface_owner_release = release;
+    s_indexed_surface_owner_user = release_user;
+    s_indexed_surface_native_frame = native_frame;
+    if (native_frame) graphics_overlay_word_set((uint32_t)(uintptr_t)surface);
     s_indexed_surface_entries = entries;
     s_indexed_surface_width = width;
     s_indexed_surface_height = height;
@@ -1080,10 +1122,14 @@ void graphics_overlay_resources_release(void)
 {
     free(s_indexed_surface_entries);
     s_indexed_surface_entries = NULL;
-    if (s_indexed_surface != NULL && s_indexed_surface_release != NULL) {
-        s_indexed_surface_release(s_indexed_surface, s_indexed_surface_user);
+    if (s_indexed_surface_native_frame) graphics_overlay_word_set(0u);
+    if (s_indexed_surface != NULL && s_indexed_surface_owner_release != NULL) {
+        s_indexed_surface_owner_release(s_indexed_surface, s_indexed_surface_owner_user);
     }
     s_indexed_surface = NULL;
+    s_indexed_surface_owner_release = NULL;
+    s_indexed_surface_owner_user = NULL;
+    s_indexed_surface_native_frame = 0;
     if (s_indexed_surface_texture != NULL && s_indexed_surface_release != NULL) {
         s_indexed_surface_release(s_indexed_surface_texture,
                                   s_indexed_surface_user);
@@ -1091,6 +1137,21 @@ void graphics_overlay_resources_release(void)
     s_indexed_surface_texture = NULL;
     s_indexed_surface_width = 0;
     s_indexed_surface_height = 0;
+}
+
+void* indexed_surface_scene_owner_get(void)
+{
+    return s_indexed_surface_native_frame ? s_indexed_surface : NULL;
+}
+
+uint8_t* indexed_surface_geometry_records_get(void)
+{
+    return (uint8_t*)s_indexed_surface_entries;
+}
+
+int indexed_surface_resources_can_shutdown(void)
+{
+    return s_indexed_surface == NULL;
 }
 
 void visual_model_resolver_set(VisualModelResolveFn resolver, void* user)

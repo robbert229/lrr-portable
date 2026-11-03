@@ -77,6 +77,8 @@ void tutorial_camera_focus_state_set(uint32_t focus_id, uint32_t valid,
                                      float offset_target, float angle_target,
                                      uint32_t offset_active,
                                      uint32_t angle_active);
+/* Camera-only delta is in reference 25-Hz ticks, not AI seconds.
+ * A nonpositive delta leaves requests/tween accumulators unchanged. */
 void tutorial_camera_focus_tween_update(float delta);
 void tutorial_inline_token_render(char* source, char* output, int draw);
 uint32_t tutorial_script_word_count(void);

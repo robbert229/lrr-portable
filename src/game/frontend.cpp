@@ -83,6 +83,7 @@ __declspec(allocate(".data$zzzzzz")) static unsigned char
 #endif
 
 static void advisor_text_display_production_install(void);
+static void frontend_status_flash_tick(float delta);
 // The corpus keeps this 74-pointer label table in the runtime-filled band at
 // 0x4dced0 (zero-init at image load), so it takes no // GLOBAL annotation:
 // static initializers against a zero-filled corpus tail break reccmp-datacmp.
@@ -5693,6 +5694,7 @@ static char s_help_info_string_storage[3][15 * 16][1024];
 static TooltipOverlayState s_tooltip_overlay_state;
 static AdvisorTutorialIconLoadFn s_tutorial_icon_load;
 static AdvisorTutorialIconInitializeFn s_tutorial_icon_initialize;
+static void (*s_tutorial_icon_release)(void* icon, void* context);
 static void* s_tutorial_icon_context;
 static void* s_tutorial_icon;
 static AdvisorTextRequestActionFn s_advisor_text_request_action;
@@ -6093,22 +6095,58 @@ void advisor_tutorial_icon_hooks_set(AdvisorTutorialIconLoadFn load,
                                      AdvisorTutorialIconInitializeFn initialize,
                                      void* context)
 {
+    advisor_tutorial_icon_image_release();
     s_tutorial_icon_load = load;
     s_tutorial_icon_initialize = initialize;
+    s_tutorial_icon_release = NULL; /* Legacy hooks lend their images. */
     s_tutorial_icon_context = context;
 }
 
-/* AdvisorTutorialIconImageLoad (FUN_00434a00): read the root-level
- * TutorialIcon resource name, load it, and initialize a successful image. */
+void advisor_tutorial_icon_image_release(void)
+{
+    if (s_tutorial_icon != NULL && s_tutorial_icon_release != NULL)
+        s_tutorial_icon_release(s_tutorial_icon, s_tutorial_icon_context);
+    s_tutorial_icon = NULL;
+}
+
+static void* tutorial_icon_surface_load(const char* path, void* context)
+{
+    (void)context;
+    return image_surface_load(path, 0u, 0u);
+}
+
+static void tutorial_icon_surface_initialize(void* icon, void* context)
+{
+    (void)context;
+    image_surface_blit_transformed((TextureSurface*)icon,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+static void tutorial_icon_surface_release(void* icon, void* context)
+{
+    (void)context;
+    texture_release((TextureSurface*)icon);
+}
+
+void advisor_tutorial_icon_runtime_initialize(BlockFile* cfg)
+{
+    advisor_tutorial_icon_hooks_set(tutorial_icon_surface_load,
+                                    tutorial_icon_surface_initialize, NULL);
+    s_tutorial_icon_release = tutorial_icon_surface_release;
+    advisor_tutorial_icon_image_load(cfg);
+}
+
+/* AdvisorTutorialIconImageLoad (FUN_00434a00): root/Main/TutorialIcon
+ * selects the authored bitmap. Production owns one texture reference. */
 // FUNCTION: LEGORR 0x00434a00
 void advisor_tutorial_icon_image_load(BlockFile* cfg)
 {
-    char path[128];
     const char* icon_path;
     void* icon;
+    advisor_tutorial_icon_image_release();
     if (cfg == NULL || s_tutorial_icon_load == NULL) return;
-    snprintf(path, sizeof(path), "%s TutorialIcon", util_root_name(cfg));
-    icon_path = block_get_strptr(cfg, path);
+    icon_path = block_get_strptr(cfg, string_path_join(util_root_name(cfg),
+        "Main", "TutorialIcon", (char*)NULL));
     if (icon_path == NULL) return;
     icon = s_tutorial_icon_load(icon_path, s_tutorial_icon_context);
     if (icon == NULL) return;
@@ -6381,12 +6419,23 @@ int advisor_message_pointer_sample(int x, int y, int down)
 void advisor_message_ui_draw(float delta)
 {
     DisplaySurface* target = surface_active_render_target_get();
+    const uint32_t* engine_state = engine_current_state_word();
     void* pixels = NULL;
     int pitch = 0;
     tutorial_message_generation_sync();
     if (!s_message_gameplay_active || target == NULL ||
         s_advisor_text_request_source == NULL ||
         engine_overlay_word_peek(0) == 0u) return;
+    /* The portable frame draws messages without the indexed manager block
+     * that normally calls 0x41b930. Advance only its shared flash clock here
+     * when that owner is absent; otherwise NEXT stays in the off phase.
+     * delta is already in the reference's 25-Hz units at this draw seam. */
+    if (engine_state == NULL ||
+        (*engine_state & ENGINE_STATE_INDEXED_SUBSYS) == 0u) {
+        if (engine_state == NULL ||
+            (*engine_state & ENGINE_STATE_TIME_FROZEN) == 0u)
+            frontend_status_flash_tick(delta);
+    }
     if (surface_lock(target, &pixels, &pitch) == 0) {
         /* Reference panel 3 and its pixel hit share the expanded placement. */
         if (s_message_panel_image != NULL)
@@ -8221,14 +8270,19 @@ void frontend_event_timer_state_set(const EventTimerState* state)
     s_map_store_pair_y = state->current_y;
 }
 
-// FUNCTION: LEGORR 0x0041B930
-void timed_status_and_event_tick(float delta)
+static void frontend_status_flash_tick(float delta)
 {
     s_status_blink_timer -= delta;
     if (s_status_blink_timer < 0.0f) {
         s_status_banner_word = (uint32_t)(s_status_banner_word == 0u);
         s_status_blink_timer = 15.0f;
     }
+}
+
+// FUNCTION: LEGORR 0x0041B930
+void timed_status_and_event_tick(float delta)
+{
+    frontend_status_flash_tick(delta);
     event_timer_countdown_advance(delta);
     if (s_inter_timer > 0.0f) {
         s_inter_timer -= delta;

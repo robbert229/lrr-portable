@@ -123,7 +123,8 @@ typedef struct EngineContext {
     /* Minimum record span needed by the fixed-offset camera-controller
      * helpers (through the gate byte at +0xb8). This is separate from the
      * three ViewContext/CameraHandle records above; it is not the full
-     * retail object, and its renderer pointers at +0x28/+0x30 are unbound. */
+     * retail object. The Win32 scene owner binds its actual follow/tilt
+     * frames at +0x28/+0x30; ViewContext holds the corresponding sidecars. */
     uint8_t      camera_controller[0xb9];
     /* Host records backing retail ViewContext target pointers. The raw
      * target records cache pointers and therefore use full host pointers. */
@@ -231,6 +232,11 @@ static inline uint8_t engine_voxel_byte(const EngineContext* ctx,
 /* Frame tick — the triplet slot DAT_00505930 (corpus EngineTick @ 0x4232e0).
  * Returns 0 when the frame loop must quit, 1 otherwise. dt is seconds. */
 int EngineTick(EngineContext* ctx, float dt);
+/* Logical render-point handoff: numeric world-arrow intent, before NERP. */
+typedef void (*EngineWorldArrowCaptureHook)(EngineContext* engine,
+    float raw_seconds, void* context);
+void engine_world_arrow_capture_hook_set(EngineWorldArrowCaptureHook hook,
+                                         void* context);
 typedef void (*EngineTutorialDispatchHook)(float delta, void* context);
 void engine_tutorial_dispatch_hook_set(EngineTutorialDispatchHook hook,
                                        void* context);

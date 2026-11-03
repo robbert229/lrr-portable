@@ -11,6 +11,7 @@
 #include "ai.hpp"
 #include "cmd.hpp"
 #include "entity.hpp"
+#include "building_scene.hpp"
 #include "level.hpp"
 #include "terrain_grid.hpp"
 #include "mission.hpp"
@@ -1620,7 +1621,7 @@ static int step_toward(GameContext* ctx, EntitySlot* e, float tx, float ty,
     return 0;
 }
 
-/* AI owns kind-0 world motion. Admission installs numeric cell waypoints;
+/* AI owns admitted kind-0 and kind19 world motion. Numeric cell waypoints;
  * zero flags are valid (0x441700), and wp_index alone owns progression.
  * entity_route_speed reuses 0x446610's WORLD units/reference tick. AI takes
  * seconds: multiply the rate by 25, with NO blocksize factor. The legacy
@@ -1782,14 +1783,20 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
      * (FUN_00403d10(ent, 0x13, 0, 1) unlinks every chain record of type
      * 0x13 with no per-type side effects — cmd_chain_drop), and RETURNS:
      * both corpus paths end at 0x43ed80. The corpus writer of the +0x3e4
-     * grant bit is NOT the 0x438150 switch (it writes only +0x334) — the
-     * raiser is a computed-value store among the +0x3e4 write census
-     * (finding 10 §"Spawn-dispatch task-state switch"), still TODO. The
-     * ported list is where all these grants land. */
+     * grant bit is terminal kind0xd in the path owner, not the 0x438150
+     * Stats switch. cmd_gettool_route_finish raises it only after the ordinary
+     * mover reaches the full weighted endpoint. The ported list receives
+     * the numeric selector from the actual kind19 head. */
     if ((e->flags_3e4 & ENT_FLAG3E4_ACTIVITY_GRANT) != 0) {
         e->flags_3e4 &= ~ENT_FLAG3E4_ACTIVITY_GRANT;
         if (e->cmd_head != NULL) {
-            ai_activity_grant(ctx, e, cmd_rec_activity(e->cmd_head));
+            if (cmd_rec_type(e->cmd_head) == 19) {
+                if (!cmd_gettool_route_arrived(e)) return 1;
+                /* Retail43da7e reads the NUMERIC head+38, not the port's
+                 * staged grant_act (which is zero in actual19 producers). */
+                ai_activity_grant(ctx, e, (int)cmd_rec_value_38(e->cmd_head));
+            }
+            else ai_activity_grant(ctx, e, cmd_rec_activity(e->cmd_head));
         }
         cmd_chain_drop(e, 0x13); /* corpus 0x43da92: FUN_00403d10(ent, 0x13, 0, 1) */
         return 1;
@@ -1814,7 +1821,7 @@ int ai_entity_frame_update(EntitySlot* entity, float dt)
 
 int ai_tick(GameContext* ctx, float dt)
 {
-    if (ctx == NULL || dt <= 0.0f) {
+    if (ctx == NULL || !(dt > 0.0f)) {
         return 0;
     }
     int done = 0;
@@ -1840,6 +1847,12 @@ int ai_tick(GameContext* ctx, float dt)
                          step_path(ctx, e, dt))) {
                         done += cmd_move_route_finish(e);
                     }
+                    break;
+                } else if (type == 19) {
+                    /* Retain the scheduler's actual GetTool head. Only its
+                     * admitted terminal-d route uses this ordinary mover. */
+                    if (cmd_gettool_route_moving(e) && step_path(ctx, e, dt))
+                        (void)cmd_gettool_route_finish(e);
                     break;
                 } else if (type == 2) {
                     /* Target: step toward the payload entity. */
@@ -1959,6 +1972,10 @@ int activity_register_bookkeeping(EntitySlot* e)
             e, e->type, (void*)ai_activity_name(e->activity),
             (void*)(uintptr_t)(uint32_t)e->activity_param);
     }
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (e->type == 4)
+        result = building_scene_activity_set(e, ai_activity_name(e->activity));
+#endif
     e->activity_last = e->activity;
     e->activity_timer = 0.0f;
     return result;

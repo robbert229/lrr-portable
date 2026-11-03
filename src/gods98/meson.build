@@ -2,6 +2,11 @@
 gods98_incs = [include_directories('.'), include_directories('..'),
                miniwin_inc]
 
+gods98_backend_sources = []
+if get_option('platform') == 'winapi'
+  gods98_backend_sources += files('lwsc_winapi.cpp')
+endif
+
 gods98_lib = static_library('gods98',
   'gods98.cpp',
   'string.cpp',
@@ -29,11 +34,13 @@ gods98_lib = static_library('gods98',
   'block.cpp',
   'model.cpp',
   'entity.cpp',
+  'lwsc_scene.cpp',
   'movie.cpp',
   'flic.cpp',
   'media.cpp',
   'scene_pool.cpp',
   'scene_resources.cpp',
+  gods98_backend_sources,
   include_directories : gods98_incs,
   dependencies : [platsub_deps, platform_glue_dep],
   install : false)

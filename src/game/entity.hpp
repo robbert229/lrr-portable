@@ -523,7 +523,7 @@ typedef struct DeferredOListEntityRecord {
     int cell_y;
     float x;
     float y;
-    float z;
+    float heading;
     int source_kind;
     int entity_type;
     int variant;
@@ -550,6 +550,8 @@ void deferred_olist_entity_hooks_set(const DeferredOListEntityHooks* hooks);
 void deferred_olist_entity_queue_install(
     const DeferredOListEntityRecord* records, unsigned int count);
 void deferred_olist_entity_create_and_link(const int cell_xy[2]); /* 0x437940 */
+void deferred_olist_entity_level_begin(GameContext* context);
+void deferred_olist_entity_level_end(struct LevelState* level);
 typedef int (*EntitySpatialQueryHook)(void* context, EntitySlot* subject,
                                       EntitySlot* candidate,
                                       const float position[2],
@@ -1167,10 +1169,12 @@ typedef struct EntityHeadingStepHooks {
 void entity_heading_step_move(EntityHeadingStepState* state, void* entity,
                               float delta,
                               const EntityHeadingStepHooks* hooks); /* 0x0044c1b0 */
+/* The action maps the NUMERIC selector exactly once. The resolver consumes
+ * that ordinal in the genuine per-building/current-activity ToolNull cache.
+ * Return a real DDi-compatible scene wrapper, borrowed through the pose read;
+ * never cast a host record or LwscFrameRef into that wrapper. NULL fails. */
 typedef void* (*EntityObjectPositionSceneResolveHook)(
-    void* context, EntitySlot* spatial_candidate, uint32_t selector);
-void entity_object_position_scene_resolve_hook_set(
-    EntityObjectPositionSceneResolveHook hook, void* context);
+    void* context, EntitySlot* spatial_candidate, uint32_t ordinal);
 typedef struct EntityAuxiliaryReleaseRecord {
     void* scene_object;
     struct EntityAuxiliaryReleaseRecord* next;
@@ -1501,6 +1505,14 @@ typedef EntitySlot* (*EntityDDiSceneOwnerResolveHook)(uint32_t owner_token,
 /* Bind the in-project SFX sample and entity completion callbacks. The host
  * supplies owner-token resolution because renderer owner links are opaque. */
 namespace unported_ledger_stubs {
+/* Matches the existing implementation namespace; the old global C declaration
+ * had no definition or production installer. */
+void entity_object_position_scene_resolve_hook_set(
+    EntityObjectPositionSceneResolveHook hook, void* context);
+/* Numeric selector ABI. -1 means no production scene owner installed;
+ * 0 is a real resolve/path/install failure; 1 is route issuance, not arrival. */
+int ledger_stub_0044b500_ObjectPositionStepCommandIssueAndLink(
+    EntitySlot* entity, uint32_t selector);
 void entity_ddiscene_callbacks_install(
     EntityDDiSceneOwnerResolveHook owner_resolve, void* context);
 }

@@ -17,6 +17,7 @@
 #include "game/effects.hpp"
 #include "game/render.hpp"
 #include "game/terrain_grid.hpp"
+#include "view.hpp"
 
 extern uint32_t s_motion_jitter_flags;
 
@@ -1363,11 +1364,31 @@ void simtick_sound_bank_tick(EngineContext* c, float dt)
 }
 
 /* FUN_004291a0: render-pass entry (in-game camera probe / world collect). */
+static int s_camera_detail_collection_ready = 1;
+int simtick_camera_detail_collection_ready(void)
+{
+    return s_camera_detail_collection_ready;
+}
 // FUNCTION: LEGORR 0x004291a0
 void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
 {
     (void)o1;
     if (c == NULL) return;
+    if (scale == 0.0f) s_camera_detail_collection_ready = 1;
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (c->level_block != NULL &&
+        ((scale == 0.0f && c->context_mode == 1) ||
+         (scale != 0.0f && (c->state & 2u) != 0u &&
+          (c->state & 0x2000u) != 0u))) {
+        const int primary = scale == 0.0f;
+        float position[3], forward[3];
+        if (!scene_runtime_collection_pose_get(c->views[primary ? 0 : 1],
+                primary, position, forward) ||
+            !terrain_camera_detail_collect((LevelState*)c->level_block,
+                position, primary ? forward : NULL, primary))
+            s_camera_detail_collection_ready = 0;
+    }
+#endif
     if (scale == 0.0f) {
         if (c->context_mode == 1 || c->context_mode == 0) {
             if (s_render_pass_hook != NULL)

@@ -4587,7 +4587,7 @@ void terrain_cell_surface_voxel_neighbors_mutate(TerrainSurfaceGrid* grid,
 {
     float corners[8] = { 0.0f, 0.0f, -1.0f, 0.0f,
                          -1.0f, -1.0f, 0.0f, -1.0f };
-    float offset[3] = { height_delta, 0.0f, 0.0f };
+    float offset[3] = { 0.0f, 0.0f, height_delta };
     uint32_t corner;
     uint32_t cell_y;
     for (corner = 0; corner < 4; ++corner) {

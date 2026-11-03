@@ -1758,6 +1758,7 @@ void graphics_overlay_visibility_set(uint32_t flag)
 
 void graphics_overlay_word_set(uint32_t handle_word)
 {
+    if (s_overlay_word != handle_word) s_overlay_cache = 0u;
     s_overlay_word = handle_word;
 }
 

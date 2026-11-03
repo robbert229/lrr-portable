@@ -8,6 +8,7 @@
 
 #include "ai.hpp"
 #include "entity.hpp"
+#include "building_scene.hpp"
 #include "type_config_ports.hpp"
 #include "entity_pose_delta.hpp"
 #include "entity_motion_ports.hpp"
@@ -23,6 +24,7 @@
 #include "level.hpp"
 #include "terrain_grid.hpp"
 #include "cmd.hpp"
+#include "select.hpp"
 #include "gods98/model.hpp"
 #include "gods98/view.hpp"
 #include "gods98/engine.hpp"
@@ -1856,6 +1858,9 @@ void entity_action_sequence_reset(EntitySlot* entity, int preserve_mode)
 {
     int had_waypoints;
     if (entity == NULL) return;
+    /* Invalidate the demonstrated GetTool owner BEFORE releasing its path.
+     * This also revokes an unconsumed terminal grant on external reset. */
+    cmd_gettool_route_reset(entity);
     had_waypoints = entity->wp_count > 0 || entity->wp_dynamic != NULL;
     if (had_waypoints && preserve_mode == 0) {
         unsigned int index = (unsigned int)entity->wp_index;
@@ -2385,6 +2390,7 @@ static BuildingUpgradeCommitHooks s_building_upgrade_commit_hooks;
 static DeferredOListEntityRecord s_deferred_olist_records[200];
 static unsigned int s_deferred_olist_record_count;
 static DeferredOListEntityHooks s_deferred_olist_hooks;
+static LevelState* s_deferred_olist_level;
 static PeriodicEntityCallback s_periodic_entity_callback;
 static void* s_periodic_entity_callback_context;
 
@@ -2520,6 +2526,12 @@ int entity_teardown(EntitySlot* entity)
     uint32_t state_flags;
     int type;
     if (entity == NULL) return 0;
+    /* Cancel every live GetTool consumer before any actor/building scene or
+     * pool slot can disappear, including actors skipped by filtered walks. */
+    cmd_gettool_entity_removing(entity);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (entity->type == 4) building_scene_entity_release(entity);
+#endif
     type = entity->type;
     flags = (uint32_t)entity->flags_3ec;
     state_flags = s_entity_teardown_hooks.state_flags_get != NULL ?
@@ -4943,12 +4955,6 @@ int entity_create(GameContext* ctx, int type, const char* name,
     slot->y = y;
     slot->z = z;
     slot->rot = rot;
-    /* Corpus spawn dispatch (FUN_00437d00): the type-2 minifigure arm
-     * (at 0x437eb6) seeds its permitted-activity list with Activity_Stand
-     * through the FUN_0044b370 appender — the first grant is value 0. */
-    if (type == 2) {
-        ai_activity_grant(ctx, slot, AI_ACT_STAND);
-    }
     /* Corpus spawn dispatch default arm: the 0x438150 switch assigns the
      * static task-state (+0x334 stats block) to the template-backed types —
      * type 8 -> DAT_004a98f0, 9 -> DAT_004a9a40, 0xc..0xe and 0x10..0x13
@@ -4980,8 +4986,22 @@ int entity_create(GameContext* ctx, int type, const char* name,
                 type_name_length = sizeof(slot->type_name) - 1u;
             memcpy(slot->type_name, name, type_name_length);
             slot->type_name[type_name_length] = '\0';
+            slot->etype = configured_row;
             (void)entity_stats_record_bind(slot);
         }
+    }
+    if (type == 2) {
+        const TypeConfigTable* table =
+            entity_type_config_table_for_entity_type(type);
+        uint32_t component_gate = 0u;
+        if (table != NULL && table->rows != NULL && slot->etype >= 0 &&
+            (uint32_t)slot->etype < table->count && table->row_stride >= 0x30u)
+            memcpy(&component_gate, (const char*)table->rows +
+                (size_t)slot->etype * table->row_stride + 0x2cu, 4);
+        /* EntityCreateByType's Pilot arm installs the scheduler mask,
+         * binds Stats, then enables tools and grants the first tool group. */
+        slot->flags_3e8 |= component_gate != 0u ? 0x004481f7u : 0x004481f5u;
+        ai_activity_grant(ctx, slot, AI_ACT_STAND);
     }
     {
         int created_index = (*cnt)++;
@@ -5059,6 +5079,12 @@ EntitySlot* entity_create_with_position(GameContext* context, int type,
      * table. Static task states only bind their separate +0xcc capacity. */
     (void)entity_stats_record_bind(created);
     entity_world_position_set(created, x, y, heading, 1);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (type == 4 && !building_scene_entity_bind(created)) {
+        (void)entity_teardown(created);
+        return NULL;
+    }
+#endif
     entity_scene_slot_table_rebuild(created, 0);
     if (type == 6 || type == 7) {
         if (s_entity_spawn_special_finalize_hook != NULL) {
@@ -5295,6 +5321,9 @@ void deferred_olist_entity_create_and_link(const int cell_xy[2])
     unsigned int i;
     DeferredOListEntityHooks* const hooks = &s_deferred_olist_hooks;
     if (cell_xy == NULL) return;
+    s_deferred_olist_record_count += deferred_olist_entity_queue_take_cell(
+        cell_xy, s_deferred_olist_records + s_deferred_olist_record_count,
+        200u - s_deferred_olist_record_count);
     for (i = 0; i < s_deferred_olist_record_count; ++i)
         pending[i] = s_deferred_olist_records[i];
     for (i = 0; i < s_deferred_olist_record_count; ++i) {
@@ -5311,10 +5340,10 @@ void deferred_olist_entity_create_and_link(const int cell_xy[2])
             }
             if (entity != NULL) {
                 if (record->entity_type != 4) {
-                    entity->x = record->x;
-                    entity->y = record->y;
-                    entity->z = record->z;
+                    entity_world_position_set(entity, record->x, record->y,
+                                               record->heading, 1);
                 }
+                memcpy(&entity->field_340, &record->record_flags, 4);
                 if ((record->entity_type == 6 || record->entity_type == 7 ||
                      record->entity_type == 8 || record->entity_type == 9) &&
                     hooks->control_initialize != NULL) {
@@ -5371,6 +5400,197 @@ void deferred_olist_entity_create_and_link(const int cell_xy[2])
         for (i = 0; i < consumed_count; ++i)
             hooks->record_release(&consumed[i], hooks->context);
     }
+}
+
+/* The level owns this production binding. The mapped queue and the reveal
+ * consumer share records; no initial OList registry entry is added here. */
+static const char* deferred_olist_type_name(
+    const DeferredOListEntityRecord* record)
+{
+    const TypeConfigTable* table =
+        entity_type_config_table_for_entity_type(record->entity_type);
+    if (table == NULL || table->names == NULL || record->variant < 0 ||
+        (uint32_t)record->variant >= table->count) return NULL;
+    return table->names[record->variant];
+}
+
+static EntitySlot* deferred_olist_live_create(
+    const DeferredOListEntityRecord* record, void* context)
+{
+    const char* name = deferred_olist_type_name(record);
+    EntitySlot* entity = entity_create_with_position((GameContext*)context,
+        record->entity_type, name, record->variant,
+        record->x, record->y, record->heading);
+    if (entity != NULL && record->name != NULL) {
+        strncpy(entity->name, record->name, sizeof(entity->name) - 1u);
+        entity->name[sizeof(entity->name) - 1u] = '\0';
+    }
+    return entity;
+}
+
+struct OListBuildingCreateContext {
+    GameContext* game;
+    const DeferredOListEntityRecord* record;
+    EntitySlot* created;
+};
+
+static EntitySlot* olist_building_entity_create(void* context,
+    const WorldObjectSpawnRequest* request, float orientation)
+{
+    OListBuildingCreateContext* binding = (OListBuildingCreateContext*)context;
+    float center[2];
+    if (!terrain_cell_world_center_xy_transform(
+            binding->game->level->ptr_terrain,
+            request->origin_x, request->origin_y, center)) return NULL;
+    binding->created = entity_create_with_position(binding->game, 4,
+        deferred_olist_type_name(binding->record),
+        (int)request->object_kind, center[0], center[1], orientation);
+    return binding->created;
+}
+
+static void olist_building_terrain_prepare(void* context,
+    const int32_t* pairs, uint32_t count, float extent)
+{
+    OListBuildingCreateContext* binding = (OListBuildingCreateContext*)context;
+    TerrainTileMeshGrid* mesh = binding->game->level->ptr_tile_mesh_grid;
+    if (mesh != NULL)
+        terrain_cell_surface_height_clamp(mesh->surface_grid,
+                                          (const int*)pairs, count, extent);
+}
+
+static void olist_building_matching_prepare(void* context, int32_t x, int32_t y)
+{
+    OListBuildingCreateContext* binding = (OListBuildingCreateContext*)context;
+    terrain_cell_flags_set_mask20108000(binding->game->level, x, y);
+}
+
+static void olist_building_matching_attach(void*, EntitySlot* entity,
+                                          const int32_t pair[2])
+{
+    entity_update_and_unregister_at_tile(pair[0], pair[1], entity);
+}
+
+static void olist_building_boundary_unlink(void*, const int32_t pair[2])
+{
+    cancel_action_for_matching_coordinates((const uint32_t*)pair);
+}
+
+static void olist_building_boundary_apply(void* context, int32_t x, int32_t y)
+{
+    OListBuildingCreateContext* binding = (OListBuildingCreateContext*)context;
+    terrain_cell_flags_set_mask100400(binding->game->level, x, y);
+}
+
+static void olist_building_boundary_secondary(void* context, const int32_t pair[2])
+{
+    OListBuildingCreateContext* binding = (OListBuildingCreateContext*)context;
+    level_cell_secondary_bit0_set(binding->game->level, pair[0], pair[1]);
+}
+
+static void olist_building_pair_refresh(void*, int32_t x, int32_t y)
+{
+    terrain_cell_and_neighbors_update(x, y);
+}
+
+static EntitySlot* deferred_olist_live_building_create(
+    const DeferredOListEntityRecord* record, unsigned int, void* context)
+{
+    const TypeConfigTable* table = entity_type_config_table_for_entity_type(4);
+    const uint32_t* shape;
+    uint32_t token, count, i;
+    int source[20], origin[2], rotation;
+    const int32_t* pairs;
+    const char* row;
+    OListBuildingCreateContext binding;
+    WorldObjectCreateHooks hooks;
+    if (table == NULL || table->rows == NULL || record->variant < 0 ||
+        (uint32_t)record->variant >= table->count) return NULL;
+    row = (const char*)table->rows + record->variant * table->row_stride;
+    memcpy(&token, row + 0x84, 4);
+    memcpy(&count, row + 0x88, 4);
+    shape = type_config_shape_table_resolve(table, token);
+    if (shape == NULL || count > 10u) return NULL;
+    for (i = 0u; i < count * 2u; ++i) {
+        const char* text = type_config_shape_string_resolve(table, token, shape[i]);
+        source[i] = text != NULL ? atoi(text) : 0;
+    }
+    origin[0] = record->cell_x;
+    origin[1] = record->cell_y;
+    /* OList rounds heading to the nearest quadrant via ftol, then halves
+     * the rounded half-quadrant index, as in 0x437940/0x42e020. */
+    rotation = crt_float_to_long(record->heading / 0.7853982f);
+    rotation = ((rotation & 1) + rotation) >> 1;
+    pairs = (const int32_t*)rotated_pairs_scratch_fill(origin, source,
+                                                     (int)count, rotation);
+    memset(&binding, 0, sizeof(binding));
+    binding.game = (GameContext*)context;
+    binding.record = record;
+    memset(&hooks, 0, sizeof(hooks));
+    hooks.context = &binding;
+    hooks.entity_create_type4 = olist_building_entity_create;
+    hooks.terrain_pairs_prepare = olist_building_terrain_prepare;
+    hooks.matching_pair_prepare = olist_building_matching_prepare;
+    hooks.matching_pair_attach = olist_building_matching_attach;
+    hooks.boundary_pair_unlink = olist_building_boundary_unlink;
+    hooks.boundary_pair_apply = olist_building_boundary_apply;
+    hooks.boundary_pair_secondary = olist_building_boundary_secondary;
+    hooks.pair_refresh = olist_building_pair_refresh;
+    world_object_create_with_transform(&hooks, (uint32_t)record->variant,
+        (const int32_t*)origin, (uint32_t)rotation, pairs, count, 0);
+    if (binding.created != NULL && record->name != NULL) {
+        strncpy(binding.created->name, record->name,
+                sizeof(binding.created->name) - 1u);
+        binding.created->name[sizeof(binding.created->name) - 1u] = '\0';
+    }
+    return binding.created;
+}
+
+static void deferred_olist_live_control_initialize(EntitySlot* entity, void*)
+{
+    cmd_create_task(entity);
+}
+
+static void deferred_olist_live_link_finalize(EntitySlot* entity,
+    EntitySlot*, unsigned int mode, void* context)
+{
+    entity_linked_activity_event_dispatch(entity, mode);
+    entity_linked_route_flag_clear((GameContext*)context, entity);
+}
+
+static void deferred_olist_live_record_release(DeferredOListEntityRecord* record,
+                                              void*)
+{
+    engine_heap_free(record->name);
+    engine_heap_free(record->link_name);
+}
+
+void deferred_olist_entity_level_end(LevelState* level)
+{
+    if (s_deferred_olist_level != level) return;
+    deferred_olist_reset();
+    if (s_deferred_olist_hooks.record_release != NULL)
+        for (unsigned int i = 0u; i < s_deferred_olist_record_count; ++i)
+            s_deferred_olist_hooks.record_release(&s_deferred_olist_records[i],
+                                                  s_deferred_olist_hooks.context);
+    deferred_olist_entity_queue_install(NULL, 0u);
+    deferred_olist_entity_hooks_set(NULL);
+    s_deferred_olist_level = NULL;
+}
+
+void deferred_olist_entity_level_begin(GameContext* context)
+{
+    DeferredOListEntityHooks hooks;
+    deferred_olist_entity_level_end(s_deferred_olist_level);
+    memset(&hooks, 0, sizeof(hooks));
+    if (context == NULL || context->level == NULL) return;
+    s_deferred_olist_level = context->level;
+    hooks.context = context;
+    hooks.entity_create = deferred_olist_live_create;
+    hooks.special_building_create = deferred_olist_live_building_create;
+    hooks.control_initialize = deferred_olist_live_control_initialize;
+    hooks.link_finalize = deferred_olist_live_link_finalize;
+    hooks.record_release = deferred_olist_live_record_release;
+    deferred_olist_entity_hooks_set(&hooks);
 }
 
 /* Parse an optional child value under "<root> <obj> <key>". */
@@ -5961,6 +6181,7 @@ int object_list_load_file(GameContext* ctx, const char* olist)
     /* OListEntityRecordParse clears DAT_005563b8 only after the resource
      * opened successfully, then appends created entities in file order. */
     object_pointer_registry_reset();
+    deferred_olist_entity_level_begin(ctx);
 
     int placed = 0;
     int parse_ok = 1;
@@ -6057,11 +6278,43 @@ int object_list_load_file(GameContext* ctx, const char* olist)
             continue;
         }
         {
+            const uint8_t* voxel = level_voxel(ctx->level, cell_x, cell_y);
+            uint32_t flags = 0u;
+            if (voxel != NULL) memcpy(&flags, voxel + 8, 4);
+            if ((flags & 8u) == 0u) {
+                uint32_t world[2];
+                int heading_bits, health_bits;
+                memcpy(world, &op.x, 4);
+                memcpy(world + 1, &op.y, 4);
+                memcpy(&heading_bits, &op.heading, 4);
+                memcpy(&health_bits, &op.health, 4);
+                /* Resolve the configured archetype by kind/row when the
+                 * reveal consumer runs; keep instance/link names owned. */
+                deferred_olist_entity_queue_add(ctx, world, 0, op.type,
+                    type_row, heading_bits, health_bits, op.name,
+                    op.driving[0] != '\0' ? op.driving : NULL);
+                continue;
+            }
+        }
+        {
             /* The creator resolves its name argument as a configured type
              * and binds Stats before kind-four post-create callbacks. The
              * OList instance label is separate from that type identity. */
-            EntitySlot* slot = entity_create_with_position(ctx, op.type,
-                op.type_name, 0, op.x, op.y, op.heading);
+            EntitySlot* slot;
+            if (op.type == 4) {
+                DeferredOListEntityRecord record;
+                memset(&record, 0, sizeof(record));
+                record.cell_x = cell_x;
+                record.cell_y = cell_y;
+                record.entity_type = op.type;
+                record.variant = type_row;
+                record.heading = op.heading;
+                record.name = op.name;
+                slot = deferred_olist_live_building_create(&record,
+                                                            0u, ctx);
+            }
+            else slot = entity_create_with_position(ctx, op.type,
+                op.type_name, type_row, op.x, op.y, op.heading);
             if (slot != NULL) {
                 ol_strncpy(slot->name, sizeof(slot->name), op.name);
                 ol_strncpy(slot->type_name, sizeof(slot->type_name),
@@ -7980,6 +8233,9 @@ void entity_world_position_set(EntitySlot* entity, float x, float y,
         entity->attached_direction[2] = direction[2];
         entity->rot = heading;
     }
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (entity->type == 4) (void)building_scene_pose_set(entity);
+#endif
     /* Corpus writes 0.01 to the +0xae tick scale after every update. */
     entity->movement_tick_scale = 0.01f;
 }
@@ -13949,23 +14205,27 @@ int ledger_stub_0044b500_ObjectPositionStepCommandIssueAndLink(
     void* scene_object;
     LevelState* level;
     AiWaypoint* step;
-    if (entity == NULL || entity->type != 2 || entity->owner_ctx == NULL)
-        return 0;
+    if (entity == NULL || entity->type != 2 || entity->owner_ctx == NULL ||
+        selector >= AI_ACTIVITY_RESOURCE_SLOT_COUNT) return 0;
     level = entity->owner_ctx->level;
-    if (level == NULL || level->ptr_terrain == NULL ||
-        s_entity_object_position_scene_resolve_hook == NULL) return 0;
+    if (level == NULL || level->ptr_terrain == NULL) return 0;
+    if (s_entity_object_position_scene_resolve_hook == NULL) return -1;
     entity_transform_position_get(entity, entity_position);
     spatial_candidate = entity_lookup_at_world_position(entity_position);
-    if (spatial_candidate == NULL) return 0;
+    if (spatial_candidate == NULL || spatial_candidate->type != 4 ||
+        spatial_candidate->owner_ctx != entity->owner_ctx ||
+        spatial_candidate->pool_link_408 != (uintptr_t)spatial_candidate)
+        return 0;
     scene_object = s_entity_object_position_scene_resolve_hook(
         s_entity_object_position_scene_resolve_context,
-        spatial_candidate, selector);
+        spatial_candidate, ai_activity_resource_slot_get((int)selector));
     if (scene_object == NULL ||
         !ddiscene_object_position_get(scene_object, NULL, target_position) ||
         !terrain_world_xy_to_cell(level->ptr_terrain, target_position[0],
             target_position[1], &target_xy[0], &target_xy[1]) ||
-        !entity_route_path_install(entity, level, target_xy[0], target_xy[1],
-                                   target_position) || entity->wp_count <= 0 ||
+        !object_path_submit_to_grid_target(entity, level, target_xy,
+                                           target_position) ||
+        entity->wp_count <= 0 ||
         (entity->wp_dynamic == NULL
             ? entity->wp_count > AI_WAYPOINTS_MAX
             : (unsigned int)entity->wp_count > entity->wp_capacity)) return 0;

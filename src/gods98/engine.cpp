@@ -5,6 +5,7 @@
 #include "mainsim.hpp"
 #include "message.hpp"
 #include "tickers.hpp"
+#include "simtick.hpp"
 #include "view.hpp"
 #include "record.hpp"
 #include "crt/crt.hpp"
@@ -17,6 +18,7 @@
 #include "view.hpp"
 #include "game/frontend.hpp"
 #include "game/entity.hpp"
+#include "game/building_scene.hpp"
 #include "game/objective.hpp"
 #include "game/effects.hpp"
 #include "game/scene_render.hpp"
@@ -151,10 +153,15 @@ static int engine_scene_transform_init(void* light, void* root,
 
 void engine_scene_shutdown(void)
 {
+    building_scene_require_stopped();
+    /* Concrete roof child/resource teardown must precede root-pool teardown
+     * on normal, loader and rollback paths; the busy guard alone is not it. */
+    graphics_overlay_resources_release();
     if (!s_engine_scene_live) return;
     motion_gameplay_scene_bind(NULL, 0u);
     motion_gameplay_scene_owner_bind(NULL, NULL);
     scene_runtime_shutdown();
+    (void)shared_object_directory_root_set(NULL);
     s_engine_scene_live = 0;
 }
 
@@ -167,6 +174,23 @@ int engine_scene_initialize(EngineContext* context, BlockFile* config)
         context->views[2] == NULL) return 0;
     if (!scene_runtime_initialize()) return 0;
     s_engine_scene_live = 1;
+    if (!scene_runtime_primary_camera_bind(context->views[0],
+                                           context->camera_controller)) {
+        engine_scene_shutdown();
+        return 0;
+    }
+    /* GameConfigInit0x41fb50 supplies Main SharedObjects to0x4876c0.
+     * The real LWSC/LWO owner retries this configured prefix after the
+     * scene directory. Sound callbacks remain with their existing owner. */
+    {
+        const char* path = string_path_join(util_root_name(config),
+                                            "Main", "SharedObjects", NULL);
+        const char* directory = block_get_strptr(config, path);
+        if (!shared_object_directory_root_set(directory)) {
+            engine_scene_shutdown();
+            return 0;
+        }
+    }
     memset(&build, 0, sizeof(build));
     memset(&ops, 0, sizeof(ops));
     build.config = config;
@@ -204,6 +228,14 @@ int engine_scene_initialize(EngineContext* context, BlockFile* config)
 #endif
 static EngineKeepRunningHook s_keep_running_hook;
 static void* s_keep_running_user;
+static EngineWorldArrowCaptureHook s_world_arrow_capture_hook;
+static void* s_world_arrow_capture_context;
+void engine_world_arrow_capture_hook_set(EngineWorldArrowCaptureHook hook,
+                                         void* context)
+{
+    s_world_arrow_capture_hook = hook;
+    s_world_arrow_capture_context = context;
+}
 static EngineTutorialDispatchHook s_tutorial_dispatch_hook;
 static void* s_tutorial_dispatch_context;
 
@@ -404,21 +436,21 @@ int EngineTick(EngineContext* ctx, float dt)
         scale = EngineTimeScale(ctx) * dt;
     }
     /* One-shot "force scale 1.0 this frame" (corpus: DAT_00556ecc & 4). */
-    if ((ctx->state & ENGINE_STATE_FORCE_SCALE_1) != 0) {
+    const int camera_force_scale_one =
+        (ctx->state & ENGINE_STATE_FORCE_SCALE_1) != 0;
+    if (camera_force_scale_one) {
         ctx->state &= ~ENGINE_STATE_FORCE_SCALE_1;
         scale = 1.0f;
     }
 
-    /* 4. Camera / move cluster (corpus lines 52-88): the camera
-     *    interpolation block, screen-space → world projection, and the
-     *    force-scale-1.0 one-shot are ported in camera.* (camera_cluster). */
+    /* 4. Movement/grid cluster; the primary camera's world-target consumer
+     * follows below, independently of these entity/grid operations. */
     camera_cluster(ctx, dt, scale);
 
-    /* 4b. The three view contexts (DAT_005560e4/e8/ec — ViewContextTick). */
-    view_views_tick(ctx, dt, scale);
-#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-    if (s_engine_scene_live && !scene_runtime_cameras_sync()) return 0;
-#endif
+    /* EngineTick's primary world-target consumer uses reference frame
+     * units. AI and the remaining simulation continue to receive seconds. */
+    float camera_delta = view_camera_delta_from_seconds(dt);
+    view_primary_target_tick(ctx, camera_delta);
 
     /* 5. Main simulation step — 0 => quit frame (MainSimStep @ 0x4250c0,
      *    ported in mainsim.*). */
@@ -430,7 +462,13 @@ int EngineTick(EngineContext* ctx, float dt)
     /* 6. The ordered subsystem-ticker sequence (finding 03; corpus lines
      *    93-119). Only the first entry is gated on !TIME_FROZEN at the call
      *    site; that gate lives in the table (see TICKERS[0].skip_when). */
-    EngineSubsystemTickers(ctx, dt, scale);
+    if (!EngineSubsystemTickersWithViews(ctx, dt, scale, camera_delta,
+            dt > 0.0f ? (camera_force_scale_one ? 1.0f :
+                (scale / dt) * camera_delta) : 0.0f)) {
+        fprintf(stderr, "engine: camera terrain collection owner unavailable\n");
+        terrain_camera_detail_restore((LevelState*)ctx->level_block);
+        return 0;
+    }
 
     /* 7. Indexed manager dispatch (corpus ManagerTick FUN_0045a730) — enabled
      *    under ENGINE_STATE_INDEXED_SUBSYS; index list observed: 1,2,4,9,6,8,
@@ -442,6 +480,13 @@ int EngineTick(EngineContext* ctx, float dt)
     /* 8. Render begin/end pairs, world-draw vs editor pass, and the
      *    &2/&0x2000-gated in-game render pass (corpus lines 130-215). Stub. */
     EngineRenderFrame(ctx, dt, scale, &sim_out1);
+    if (!simtick_camera_detail_collection_ready()) {
+        fprintf(stderr, "engine: secondary terrain collection owner unavailable\n");
+        terrain_camera_detail_restore((LevelState*)ctx->level_block);
+        return 0;
+    }
+    if (s_world_arrow_capture_hook != NULL)
+        s_world_arrow_capture_hook(ctx, dt, s_world_arrow_capture_context);
 
     /* 9. Air-supply beat mechanic (corpus tail): fires the air-low/empty
      *    notifications and loops SND_AirBeat; writes air_prev back. */
@@ -599,18 +644,12 @@ int EngineKeepRunning(EngineContext* ctx)
     return 1;
 }
 
-/* Portable context adapter used by EngineTick and local tests. Retail
- * FUN_0041fb40 has no arguments and reads DAT_0055615c directly. */
+/* Preserve the shared owner in the portable context-shaped adapter too.
+ * Retail FUN_0041fb40 has no arguments; authored zero is a valid scale. */
 float EngineTimeScale(EngineContext* ctx)
 {
-    /* Corpus FUN_0041fb40: the config-derived speed factor. Issue #85 wires
-     * the Options Game_Speed slider through it — the frame loop writes
-     * options_time_scale(&game.options) into ctx->time_scale every frame
-     * (1.0 while no option has been raised). 0 keeps the scaffold default. */
-    if (ctx == NULL || ctx->time_scale == 0.0f) {
-        return 1.0f;
-    }
-    return ctx->time_scale;
+    (void)ctx;
+    return EngineTimeScale();
 }
 
 /* ResetLevelAndExit @ 0x4250a0. The original normal-play callback does not
@@ -628,6 +667,9 @@ static void engine_reset_level_and_exit(void)
  * do not pass unrelated context fields to renderer cleanup routines. */
 void EngineShutdown(EngineContext* ctx)
 {
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    building_scene_require_stopped();
+#endif
     if (ctx == NULL) {
         return;
     }

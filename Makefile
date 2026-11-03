@@ -9,6 +9,7 @@ CMAKE_TOOLCHAIN_FILE ?=
 TEST_WADS_DIR ?=
 MOVIES ?= auto
 RECCMP_BUILD_DIR ?= $(CURDIR)/build-reccmp
+RECCMP_REFERENCE_DIR ?= $(CURDIR)/reference
 RECCMP_LEDGER ?= docs/coverage/ledger.csv
 RECCMP_WINE_BIN ?=
 RECCMP_PROTON_BIN ?= $(RR_A2_PROTON)
@@ -42,7 +43,7 @@ reccmp-report:
 
 # Both executables use the same Proton runner, compatdata, and reference
 # working directory so the candidate sees the same game assets and settings.
-reference-run: _RUN_EXE := $(CURDIR)/reference/LegoRR.exe
+reference-run: _RUN_EXE := $(abspath $(RECCMP_REFERENCE_DIR)/LegoRR.exe)
 reference-run: _RUN_ARGUMENT := ./LegoRR.exe
 reference-run: _RUN_MISSING_HINT :=
 reccmp-run: _RUN_EXE := $(abspath $(RECCMP_BUILD_DIR)/LegoRR.exe)
@@ -62,7 +63,7 @@ reference-run reccmp-run:
 	  echo "Proton was not found; set RECCMP_PROTON_BIN (or RR_A2_PROTON) to its executable path" >&2; \
 	  exit 2; \
 	fi; \
-	cd "$(CURDIR)/reference" && \
+	cd "$(RECCMP_REFERENCE_DIR)" && \
 	  STEAM_COMPAT_DATA_PATH="$(RECCMP_COMPATDATA)" \
 	  STEAM_COMPAT_CLIENT_INSTALL_PATH="$(HOME)" \
 	    "$$proton_bin" runinprefix "$(_RUN_ARGUMENT)"

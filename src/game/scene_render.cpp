@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* Initial perspective scene renderer for the native game path.
+/* Software perspective scene renderer.
  *
  * The terrain SurfaceMap is the authored heightfield; the erosion/surface
  * voxel layers select the visible material. This renderer turns those data
  * into depth-tested terrain faces and renders the placed Pilot entities as
  * simple faceted figures. It is deliberately isolated from the simulation:
  * callers provide the current level/entities and a locked RGBA framebuffer.
+ * The Win32 camera is the engine/view owner's last displayed projection.
  */
 #include <math.h>
 #include <stdint.h>
@@ -23,6 +24,7 @@
 #include "gods98/heap.hpp"
 #include "gods98/record.hpp"
 #include "gods98/surface.hpp"
+#include "gods98/view.hpp"
 #include "terrain_grid.hpp"
 #include "port_loop_ports.hpp"
 #include "select.hpp"
@@ -33,7 +35,7 @@ typedef struct ScenePoint { float x, y, z; } ScenePoint;
 typedef struct SceneColor { uint8_t r, g, b; } SceneColor;
 typedef struct SceneCamera {
     SceneVec3 eye, right, up, forward;
-    float focal, cx, cy;
+    float focal_x, focal_y, cx, cy;
     int width, height;
     void* pixels;
     int pitch;
@@ -51,11 +53,16 @@ static uint32_t s_scene_vertex_height;
 /* Canonical map corners (00,10,11,01), signed/scaled geometry Y.
  * Orientation selects a diagonal; it never moves heights between X/Z slots. */
 static float* s_scene_vertex_heights;
-static float* s_scene_vertex_x_offsets;
 static uint8_t* s_scene_vertex_valid;
 static uint8_t* s_scene_vertex_flipped;
 static float* s_scene_surface_colors;
 static uint8_t* s_scene_surface_color_valid;
+static const LevelState* s_scene_surface_display_level;
+static float* s_scene_surface_display_colors;
+static uint8_t* s_scene_surface_display_valid;
+static uint8_t* s_scene_surface_display_markers;
+static size_t s_scene_surface_display_capacity;
+static uint32_t s_scene_surface_display_width, s_scene_surface_display_height;
 static float* s_scene_overlay_heights;
 static uint8_t* s_scene_overlay_valid;
 static float* s_scene_overlay_slot_heights;
@@ -70,7 +77,6 @@ static int scene_render_vertex_cache_ensure(const LevelState* level)
     uint8_t* flipped;
     float* surface_colors;
     uint8_t* surface_color_valid;
-    float* x_offsets;
     float* overlay_heights;
     uint8_t* overlay_valid;
     float* overlay_slot_heights;
@@ -82,7 +88,6 @@ static int scene_render_vertex_cache_ensure(const LevelState* level)
         s_scene_vertex_width == width && s_scene_vertex_height == height)
         return 1;
     free(s_scene_vertex_heights);
-    free(s_scene_vertex_x_offsets);
     free(s_scene_vertex_valid);
     free(s_scene_vertex_flipped);
     free(s_scene_surface_colors);
@@ -92,7 +97,6 @@ static int scene_render_vertex_cache_ensure(const LevelState* level)
     free(s_scene_overlay_slot_heights);
     free(s_scene_overlay_slot_active);
     s_scene_vertex_heights = NULL;
-    s_scene_vertex_x_offsets = NULL;
     s_scene_vertex_valid = NULL;
     s_scene_vertex_flipped = NULL;
     s_scene_surface_colors = NULL;
@@ -113,14 +117,13 @@ static int scene_render_vertex_cache_ensure(const LevelState* level)
     flipped = (uint8_t*)calloc(count, sizeof(uint8_t));
     surface_colors = (float*)malloc(count * 3u * sizeof(float));
     surface_color_valid = (uint8_t*)calloc(count, sizeof(uint8_t));
-    x_offsets = (float*)calloc(count, sizeof(float));
     overlay_heights = (float*)calloc(count * 4u, sizeof(float));
     overlay_valid = (uint8_t*)calloc(count, sizeof(uint8_t));
     overlay_slot_heights = (float*)calloc(count, sizeof(float));
     overlay_slot_active = (uint8_t*)calloc(count, sizeof(uint8_t));
     if (heights == NULL || valid == NULL || flipped == NULL ||
         surface_colors == NULL || surface_color_valid == NULL ||
-        x_offsets == NULL || overlay_heights == NULL ||
+        overlay_heights == NULL ||
         overlay_valid == NULL || overlay_slot_heights == NULL ||
         overlay_slot_active == NULL) {
         free(heights);
@@ -128,7 +131,6 @@ static int scene_render_vertex_cache_ensure(const LevelState* level)
         free(flipped);
         free(surface_colors);
         free(surface_color_valid);
-        free(x_offsets);
         free(overlay_heights);
         free(overlay_valid);
         free(overlay_slot_heights);
@@ -139,7 +141,6 @@ static int scene_render_vertex_cache_ensure(const LevelState* level)
     s_scene_vertex_width = width;
     s_scene_vertex_height = height;
     s_scene_vertex_heights = heights;
-    s_scene_vertex_x_offsets = x_offsets;
     s_scene_vertex_valid = valid;
     s_scene_vertex_flipped = flipped;
     s_scene_surface_colors = surface_colors;
@@ -151,14 +152,14 @@ static int scene_render_vertex_cache_ensure(const LevelState* level)
     return 1;
 }
 
-static float scene_render_terrain_vertex_x_offset_get(
-    const LevelState* level, int x, int y)
+int scene_render_terrain_quad_allocate(const LevelState* level,
+                                       uint32_t index, uint32_t quad_width)
 {
-    if (x < 0 || y < 0 || !scene_render_vertex_cache_ensure(level) ||
-        (uint32_t)x >= s_scene_vertex_width ||
-        (uint32_t)y >= s_scene_vertex_height) return 0.0f;
-    return s_scene_vertex_x_offsets[(size_t)(uint32_t)y *
-                                    s_scene_vertex_width + (uint32_t)x];
+    if (!scene_render_vertex_cache_ensure(level) || quad_width == 0u ||
+        quad_width + 1u != s_scene_vertex_width ||
+        index / quad_width + 1u >= s_scene_vertex_height ||
+        index > 0x7fffffffu) return -1;
+    return (int)index;
 }
 
 void scene_render_terrain_cell_orientation_apply(const LevelState* level,
@@ -188,6 +189,57 @@ void scene_render_terrain_cell_vertices_update(const LevelState* level,
     s_scene_vertex_valid[index] = 1u;
 }
 
+void scene_render_terrain_surface_display_discard(void)
+{
+    s_scene_surface_display_level = NULL;
+}
+
+int scene_render_terrain_surface_display_begin(const LevelState* level)
+{
+    size_t count;
+    float* colors;
+    uint8_t* valid;
+    uint8_t* markers;
+    size_t i;
+    scene_render_terrain_surface_display_discard();
+    if (!scene_render_vertex_cache_ensure(level)) return 0;
+    count = (size_t)s_scene_vertex_width * s_scene_vertex_height;
+    if (count > ((size_t)-1) / (3u * sizeof(float))) return 0;
+    if (count > s_scene_surface_display_capacity) {
+        colors = (float*)malloc(count * 3u * sizeof(float));
+        valid = (uint8_t*)malloc(count);
+        markers = (uint8_t*)malloc(count);
+        if (colors == NULL || valid == NULL || markers == NULL) {
+            free(colors);
+            free(valid);
+            free(markers);
+            return 0;
+        }
+        free(s_scene_surface_display_colors);
+        free(s_scene_surface_display_valid);
+        free(s_scene_surface_display_markers);
+        s_scene_surface_display_markers = markers;
+        s_scene_surface_display_colors = colors;
+        s_scene_surface_display_valid = valid;
+        s_scene_surface_display_capacity = count;
+    }
+    memcpy(s_scene_surface_display_colors, s_scene_surface_colors,
+           count * 3u * sizeof(float));
+    memcpy(s_scene_surface_display_valid, s_scene_surface_color_valid, count);
+    /* The fallback shader also reads callback92's marker. Capture that
+     * input without freezing unrelated material or geometry updates. */
+    for (i = 0u; i < count; ++i) {
+        const uint8_t* voxel = level_voxel(level,
+            (int)(i % s_scene_vertex_width),
+            (int)(i / s_scene_vertex_width));
+        s_scene_surface_display_markers[i] = voxel != NULL ? voxel[4] : 0u;
+    }
+    s_scene_surface_display_width = s_scene_vertex_width;
+    s_scene_surface_display_height = s_scene_vertex_height;
+    s_scene_surface_display_level = level;
+    return 1;
+}
+
 void scene_render_terrain_cell_surface_color_set(const LevelState* level,
                                                 uint32_t x, uint32_t y,
                                                 float r, float g, float b)
@@ -209,13 +261,20 @@ void scene_render_terrain_vertex_offset(const LevelState* level,
                                         int vertex_x, int vertex_y,
                                         float world_delta)
 {
+    static const int dx[4] = { 0, -1, -1, 0 };
+    static const int dy[4] = { 0, 0, -1, -1 };
+    unsigned int corner;
     if (!scene_render_vertex_cache_ensure(level)) return;
-    if (s_scene_vertex_width < 2u || s_scene_vertex_height < 2u) return;
-    if ((uint32_t)vertex_x >= s_scene_vertex_width ||
-        (uint32_t)vertex_y >= s_scene_vertex_height) return;
-    s_scene_vertex_x_offsets[(size_t)(uint32_t)vertex_y *
-                             s_scene_vertex_width +
-                             (uint32_t)vertex_x] += world_delta;
+    for (corner = 0u; corner < 4u; ++corner) {
+        int x = vertex_x + dx[corner];
+        int y = vertex_y + dy[corner];
+        size_t index;
+        if (x < 0 || y < 0 || (uint32_t)x + 1u >= s_scene_vertex_width ||
+            (uint32_t)y + 1u >= s_scene_vertex_height) continue;
+        index = (size_t)y * s_scene_vertex_width + (uint32_t)x;
+        if (s_scene_vertex_valid[index] != 0u)
+            s_scene_vertex_heights[index * 4u + corner] += world_delta;
+    }
 }
 
 void scene_render_terrain_level_release(const LevelState* level)
@@ -225,8 +284,15 @@ void scene_render_terrain_level_release(const LevelState* level)
         memset(&s_scene_focus, 0, sizeof(s_scene_focus));
     }
     if (level != NULL && level != s_scene_vertex_level) return;
+    scene_render_terrain_surface_display_discard();
+    free(s_scene_surface_display_colors);
+    free(s_scene_surface_display_valid);
+    free(s_scene_surface_display_markers);
+    s_scene_surface_display_markers = NULL;
+    s_scene_surface_display_colors = NULL;
+    s_scene_surface_display_valid = NULL;
+    s_scene_surface_display_capacity = 0u;
     free(s_scene_vertex_heights);
-    free(s_scene_vertex_x_offsets);
     free(s_scene_vertex_valid);
     free(s_scene_vertex_flipped);
     free(s_scene_surface_colors);
@@ -236,7 +302,6 @@ void scene_render_terrain_level_release(const LevelState* level)
     free(s_scene_overlay_slot_heights);
     free(s_scene_overlay_slot_active);
     s_scene_vertex_heights = NULL;
-    s_scene_vertex_x_offsets = NULL;
     s_scene_vertex_valid = NULL;
     s_scene_vertex_flipped = NULL;
     s_scene_surface_colors = NULL;
@@ -291,7 +356,7 @@ int scene_render_terrain_cell_vertices_get(const LevelState* level,
         s_scene_vertex_level == level &&
         s_scene_vertex_flipped[(size_t)y * s_scene_vertex_width + x] != 0u;
     for (corner = 0u; corner < 4u; ++corner)
-        memcpy(vertices[corner], canonical[flipped ? forward[corner] : corner],
+        memcpy(vertices[corner], canonical[!flipped ? forward[corner] : corner],
                3u * sizeof(float));
     return 1;
 }
@@ -305,6 +370,7 @@ int scene_render_terrain_cell_vertices_canonical_get(
     int width, height;
     float block;
     float height_scale;
+    float base[12];
     uint32_t corner;
     if (vertices == NULL || level == NULL || level->ptr_terrain == NULL ||
         x >= (uint32_t)level_width(level) ||
@@ -314,7 +380,11 @@ int scene_render_terrain_cell_vertices_canonical_get(
     block = terrain_blocksize_get(level->ptr_terrain);
     if (block <= 0.0f) block = 40.0f;
     height_scale = terrain_height_scale_get(level->ptr_terrain);
-    if (!scene_render_terrain_cell_vertex_heights(level, x, y, heights)) {
+    if (terrain_cell_base_vertices_get(level->ptr_terrain, x, y, base)) {
+        for (corner = 0u; corner < 4u; ++corner)
+            heights[corner] = base[corner * 3u + 1u];
+    }
+    else if (!scene_render_terrain_cell_vertex_heights(level, x, y, heights)) {
         for (corner = 0u; corner < 4u; ++corner) {
             int sample_x = (int)x + corner_x[corner];
             int sample_y = (int)y + corner_y[corner];
@@ -329,9 +399,7 @@ int scene_render_terrain_cell_vertices_canonical_get(
     for (corner = 0u; corner < 4u; ++corner) {
         const float gx = (float)((int)x + corner_x[corner]);
         const float gy = (float)((int)y + corner_y[corner]);
-        vertices[corner][0] = (gx - (float)width * 0.5f) * block +
-            scene_render_terrain_vertex_x_offset_get(level,
-                x + corner_x[corner], y + corner_y[corner]);
+        vertices[corner][0] = (gx - (float)width * 0.5f) * block;
         vertices[corner][1] = heights[corner];
         vertices[corner][2] = (gy - (float)height * 0.5f) * block;
     }
@@ -559,7 +627,8 @@ static SceneColor color_scale(SceneColor c, float scale)
                        (uint8_t)(b > 255 ? 255 : b));
 }
 
-static SceneColor terrain_color(const uint8_t* voxel)
+static SceneColor terrain_color(const uint8_t* voxel,
+    const LevelState* level, uint32_t x, uint32_t y)
 {
     SceneColor c;
     switch (voxel != NULL ? voxel[0x02] : 0) {
@@ -569,6 +638,12 @@ static SceneColor terrain_color(const uint8_t* voxel)
     default: c = scene_color(79, 67, 59); break;
     }
     unsigned surface = voxel != NULL ? voxel[0x04] : 0;
+    if (s_scene_surface_display_level == level &&
+        s_scene_surface_display_width == s_scene_vertex_width &&
+        s_scene_surface_display_height == s_scene_vertex_height &&
+        x < s_scene_surface_display_width && y < s_scene_surface_display_height)
+        surface = s_scene_surface_display_markers[
+            (size_t)y * s_scene_surface_display_width + x];
     return color_scale(c, 0.82f + (float)(surface & 7u) * 0.035f);
 }
 
@@ -577,15 +652,25 @@ static SceneColor terrain_surface_color_override_get(
 {
     size_t index;
     float r, g, b;
+    const float* colors;
+    const uint8_t* valid;
     if (!scene_render_vertex_cache_ensure(level) ||
         x >= s_scene_vertex_width || y >= s_scene_vertex_height) return fallback;
     index = (size_t)y * (size_t)(s_scene_vertex_width - 1u) + x;
     if (index >= (size_t)s_scene_vertex_width * s_scene_vertex_height)
         return fallback;
-    if (s_scene_surface_color_valid[index] == 0u) return fallback;
-    r = s_scene_surface_colors[index * 3u];
-    g = s_scene_surface_colors[index * 3u + 1u];
-    b = s_scene_surface_colors[index * 3u + 2u];
+    colors = s_scene_surface_colors;
+    valid = s_scene_surface_color_valid;
+    if (s_scene_surface_display_level == level &&
+        s_scene_surface_display_width == s_scene_vertex_width &&
+        s_scene_surface_display_height == s_scene_vertex_height) {
+        colors = s_scene_surface_display_colors;
+        valid = s_scene_surface_display_valid;
+    }
+    if (valid[index] == 0u) return fallback;
+    r = colors[index * 3u];
+    g = colors[index * 3u + 1u];
+    b = colors[index * 3u + 2u];
     if (r < 0.0f) r = 0.0f;
     if (g < 0.0f) g = 0.0f;
     if (b < 0.0f) b = 0.0f;
@@ -602,8 +687,8 @@ static int scene_project(const SceneCamera* c, SceneVec3 p, ScenePoint* out)
     SceneVec3 rel = scene_sub(p, c->eye);
     float z = scene_dot(rel, c->forward);
     if (z < 8.0f) return 0;
-    out->x = c->cx + scene_dot(rel, c->right) * c->focal / z;
-    out->y = c->cy - scene_dot(rel, c->up) * c->focal / z;
+    out->x = c->cx + scene_dot(rel, c->right) * c->focal_x / z;
+    out->y = c->cy - scene_dot(rel, c->up) * c->focal_y / z;
     out->z = z;
     return 1;
 }
@@ -762,8 +847,43 @@ static int scene_entity_origin_get(const EntitySlot* entity,
 
 static int scene_camera_configure(SceneCamera* c, const GameContext* ctx,
                                  const LevelState* lvl,
-                                 int w, int h)
+                                 int w, int h, int publish)
 {
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    ViewContext* view = engine_current_primary_view_get();
+    ViewCameraProjection projection;
+    float center[2];
+    float block = terrain_blocksize_get(lvl->ptr_terrain);
+    (void)ctx;
+    if (publish && !view_primary_projection_publish(view, lvl, w, h)) return 0;
+    if (!view_primary_projection_get(view, lvl, w, h, &projection) ||
+        block <= 0.0f || !terrain_cell_world_center_xy_get(
+            lvl->ptr_terrain, 0, 0, center)) return 0;
+    memset(c, 0, sizeof(*c));
+    /* Same world->grid->presentation map as scene_entity_origin_get.
+     * Directions receive the axis permutation only; geometry Y keeps its
+     * signed/scaled value. The eye/basis come from the actual RM frames. */
+    c->eye = scene_vec3(projection.pose.eye[0] - center[0] + block * 0.5f -
+        (float)level_width(lvl) * block * 0.5f, projection.pose.eye[2],
+        center[1] - projection.pose.eye[1] + block * 0.5f -
+        (float)level_height(lvl) * block * 0.5f);
+    c->forward = scene_normalize(scene_vec3(projection.pose.forward[0],
+        projection.pose.forward[2], -projection.pose.forward[1]));
+    c->up = scene_normalize(scene_vec3(projection.pose.up[0],
+        projection.pose.up[2], -projection.pose.up[1]));
+    /* RM's left-handed frame has right = up cross forward. */
+    c->right = scene_normalize(scene_cross(c->up, c->forward));
+    c->up = scene_normalize(scene_cross(c->forward, c->right));
+    c->focal_x = projection.focal_x;
+    c->focal_y = projection.focal_y;
+    c->cx = projection.center_x;
+    c->cy = projection.center_y;
+    c->width = w;
+    c->height = h;
+    return 1;
+#else
+    /* The unrelated native renderer retains its existing camera path. */
+    (void)publish;
     int gw = level_width(lvl), gh = level_height(lvl);
     float block = terrain_blocksize_get(lvl->ptr_terrain);
     if (block <= 0.0f) block = 40.0f;
@@ -798,12 +918,50 @@ static int scene_camera_configure(SceneCamera* c, const GameContext* ctx,
     c->forward = scene_normalize(scene_sub(target, eye));
     c->right = scene_normalize(scene_cross(c->forward, scene_vec3(0,1,0)));
     c->up = scene_normalize(scene_cross(c->right, c->forward));
-    c->focal = (float)h * 1.02f;
+    c->focal_x = c->focal_y = (float)h * 1.02f;
     c->cx = (float)w * 0.5f;
     c->cy = (float)h * 0.53f;
     c->width = w;
     c->height = h;
     return block > 0.0f && gw > 0 && gh > 0;
+#endif
+}
+
+int scene_render_displayed_world_point_project(const LevelState* level,
+    const GameContext* game, int width, int height,
+    unsigned int displayed_generation, const float world[3], float screen[2])
+{
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    ViewCameraProjection displayed;
+    SceneCamera camera;
+    ScenePoint projected;
+    SceneVec3 point;
+    float center[2];
+    float block;
+    if (level == NULL || level->ptr_terrain == NULL || game == NULL ||
+        world == NULL || screen == NULL || displayed_generation == 0u ||
+        !view_primary_projection_get(engine_current_primary_view_get(),
+            level, width, height, &displayed) ||
+        displayed.generation != displayed_generation ||
+        !scene_camera_configure(&camera, game, level, width, height, 0)) return 0;
+    block = terrain_blocksize_get(level->ptr_terrain);
+    if (block <= 0.0f || !terrain_cell_world_center_xy_get(
+            level->ptr_terrain, 0, 0, center)) return 0;
+    /* Identical world->presentation mapping to camera v2's eye conversion.
+     * Vertical value already is signed/scaled live terrain height. */
+    point = scene_vec3(world[0] - center[0] + block * 0.5f -
+        (float)level_width(level) * block * 0.5f, world[2],
+        center[1] - world[1] + block * 0.5f -
+        (float)level_height(level) * block * 0.5f);
+    if (!scene_project(&camera, point, &projected)) return 0;
+    screen[0] = projected.x;
+    screen[1] = projected.y;
+    return 1;
+#else
+    (void)level; (void)game; (void)width; (void)height;
+    (void)displayed_generation; (void)world; (void)screen;
+    return 0;
+#endif
 }
 
 static void render_terrain(SceneCamera* c, const LevelState* lvl,
@@ -829,7 +987,7 @@ static void render_terrain(SceneCamera* c, const LevelState* lvl,
             e = scene_vec3(vertices[3][0], vertices[3][1], vertices[3][2]);
             SceneColor top = terrain_color(vox != NULL
                 ? vox + ((size_t)y * (size_t)w + (size_t)x) * LEVEL_VOXEL_STRIDE
-                : NULL);
+                : NULL, lvl, (uint32_t)x, (uint32_t)y);
             top = terrain_surface_color_override_get(lvl, (uint32_t)x,
                                                       (uint32_t)y, top);
             /* Rotate complete XYZ corners to select the other diagonal.
@@ -837,6 +995,7 @@ static void render_terrain(SceneCamera* c, const LevelState* lvl,
             int flipped = s_scene_vertex_flipped != NULL &&
                 s_scene_vertex_level == lvl &&
                 s_scene_vertex_flipped[(size_t)y * s_scene_vertex_width + x];
+            flipped = !flipped; /* native base 0,1,3 / 1,2,3 */
             if (texture != NULL) {
                 float u = (float)x * 0.35f, v = (float)y * 0.35f;
                 if (flipped) {
@@ -883,11 +1042,62 @@ static void render_terrain(SceneCamera* c, const LevelState* lvl,
     }
 }
 
+/* Roof output has its own native parent/visibility path. It never replaces
+ * ground heights. Admission follows the actual visual-frame parent, whose
+ * alternate-root state was observed in retail; no wall/depth override. */
+static void scene_roof(SceneCamera* c, const LevelState* level)
+{
+    static const uint8_t clear_order[4] = { 3u, 2u, 1u, 0u };
+    static const uint8_t set_order[4] = { 0u, 3u, 2u, 1u };
+    float center[2];
+    float block;
+    int x, y;
+    if (terrain_roof_visibility_get(level) != 1 ||
+        !terrain_cell_world_center_xy_get(level->ptr_terrain, 0, 0, center))
+        return;
+    block = terrain_blocksize_get(level->ptr_terrain);
+    for (y = 0; y + 1 < level_height(level); ++y) {
+        for (x = 0; x + 1 < level_width(level); ++x) {
+            float canonical[12];
+            SceneVec3 vertices[4];
+            int code = terrain_cell_roof_vertices_get(level,
+                (uint32_t)x, (uint32_t)y, canonical);
+            const uint8_t* order = code == 2 ? set_order : clear_order;
+            uint32_t corner;
+            if (code == 0) continue;
+            for (corner = 0u; corner < 4u; ++corner) {
+                const float* source = canonical + order[corner] * 3u;
+                vertices[corner] = scene_vec3(
+                    source[0] - center[0] + block * 0.5f -
+                        (float)level_width(level) * block * 0.5f,
+                    source[1], center[1] - source[2] + block * 0.5f -
+                        (float)level_height(level) * block * 0.5f);
+            }
+            scene_triangle(c, vertices[0], vertices[1], vertices[3],
+                            scene_color(78, 65, 48));
+            scene_triangle(c, vertices[1], vertices[2], vertices[3],
+                            scene_color(78, 65, 48));
+        }
+    }
+}
+
+/* The RM camera/terrain boundary retains native world height: up is -Z,
+ * represented by software Y. Local primitive heights stay positive-up; apply
+ * the same basis to drawing, picking and projected feedback. */
+static float scene_figure_height_offset(float local_up)
+{
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    return -local_up;
+#else
+    return local_up;
+#endif
+}
+
 static SceneVec3 figure_point(SceneVec3 origin, float x, float y, float z,
                               float yaw)
 {
     float cs = scene_cos(yaw), sn = scene_sin(yaw);
-    return scene_vec3(origin.x + x * cs + z * sn, origin.y + y,
+    return scene_vec3(origin.x + x * cs + z * sn, origin.y + scene_figure_height_offset(y),
                       origin.z - x * sn + z * cs);
 }
 
@@ -962,30 +1172,49 @@ static void render_raider(SceneCamera* c, const EntitySlot* e,
     }
 }
 
+static void scene_displayed_projection_invalidate(void)
+{
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    view_primary_projection_invalidate(engine_current_primary_view_get());
+#endif
+}
+
+static void scene_render_map_replacement(const LevelState* lvl,
+    const GameContext* ctx, int w, int h, void* pixels, int pitch)
+{
+    if (lvl != NULL && ctx != NULL && pixels != NULL && w > 0 && h > 0 &&
+        level_width(lvl) > 0 && level_height(lvl) > 0)
+        scene_displayed_projection_invalidate();
+    level_render_map(lvl, ctx, -1, -1, w, h, pixels, pitch);
+}
+
 void level_render_scene(const LevelState* lvl, const GameContext* ctx,
                         int w, int h, void* pixels, int pitch)
 {
     if (lvl == NULL || ctx == NULL || pixels == NULL || w <= 0 || h <= 0
         || lvl->ptr_terrain == NULL) {
         if (lvl != NULL && ctx != NULL) {
-            level_render_map(lvl, ctx, -1, -1, w, h, pixels, pitch);
+            scene_render_map_replacement(lvl, ctx, w, h, pixels, pitch);
         }
         return;
     }
     if (ctx->reward_active) {
-        level_render_map(lvl, ctx, -1, -1, w, h, pixels, pitch);
+        scene_render_map_replacement(lvl, ctx, w, h, pixels, pitch);
         return;
     }
     size_t count = (size_t)w * (size_t)h;
     if (count > s_scene_depth_capacity) {
         float* next = (float*)realloc(s_scene_depth, count * sizeof(float));
         if (next == NULL) {
-            level_render_map(lvl, ctx, -1, -1, w, h, pixels, pitch);
+            scene_render_map_replacement(lvl, ctx, w, h, pixels, pitch);
             return;
         }
         s_scene_depth = next;
         s_scene_depth_capacity = count;
     }
+    /* This call replaces the framebuffer. Simulation-only updates and a
+     * failed surface lock never enter here and keep the displayed snapshot. */
+    scene_displayed_projection_invalidate();
     uint8_t* out = (uint8_t*)pixels;
     for (int y = 0; y < h; ++y) {
         uint8_t* row = out + (size_t)y * (size_t)pitch;
@@ -1003,7 +1232,10 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
     if (block <= 0.0f) block = 40.0f;
     float hs = terrain_height_scale_get(lvl->ptr_terrain);
     SceneCamera camera;
-    scene_camera_configure(&camera, ctx, lvl, w, h);
+    if (!scene_camera_configure(&camera, ctx, lvl, w, h, 1)) {
+        scene_displayed_projection_invalidate();
+        return;
+    }
     camera.pixels = pixels;
     camera.pitch = pitch; camera.depth = s_scene_depth;
 
@@ -1012,6 +1244,7 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
             NULL, "World\\WorldTextures\\LavaSplit\\LAVA00.BMP");
     }
     render_terrain(&camera, lvl, block, hs, s_scene_floor_texture);
+    scene_roof(&camera, lvl);
     for (int type = ENTITY_TYPE_VEHICLE; type <= ENTITY_TYPE_BUILDING; ++type) {
         for (int i = 0; i < entity_count((GameContext*)ctx, type); ++i) {
             const EntitySlot* e = entity_at((GameContext*)ctx, type, i);
@@ -1070,7 +1303,7 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
                 (entity->flags_3e0 & 0x00600000u) != 0u) continue;
             if (!scene_entity_origin_get(entity, lvl, block, &marker))
                 continue;
-            marker.y += block * 0.8f;
+            marker.y += scene_figure_height_offset(block * 0.8f);
             if (!scene_project(&camera, marker, &projected)) continue;
             legacy_entity_screen_ring_render_with_ops(
                 entity, projected.x, projected.y, &ring_ops);
@@ -1086,11 +1319,11 @@ int level_scene_mouse_cell(const GameContext* ctx, const LevelState* lvl,
     if (lvl == NULL || lvl->ptr_terrain == NULL || w <= 0 || h <= 0
         || cell_x == NULL || cell_y == NULL) return 0;
     SceneCamera c;
-    if (!scene_camera_configure(&c, ctx, lvl, w, h)) return 0;
+    if (!scene_camera_configure(&c, ctx, lvl, w, h, 0)) return 0;
     SceneVec3 ray = scene_normalize(scene_add(
         c.forward,
-        scene_add(scene_scale(c.right, ((float)mouse_x - c.cx) / c.focal),
-                  scene_scale(c.up, (c.cy - (float)mouse_y) / c.focal))));
+        scene_add(scene_scale(c.right, ((float)mouse_x - c.cx) / c.focal_x),
+                  scene_scale(c.up, (c.cy - (float)mouse_y) / c.focal_y))));
     int gw = level_width(lvl), gh = level_height(lvl);
     float block = terrain_blocksize_get(lvl->ptr_terrain);
     float nearest = 1.0e30f;
@@ -1139,7 +1372,7 @@ EntitySlot* level_scene_pick_entity(GameContext* ctx, const LevelState* lvl,
 {
     if (ctx == NULL || lvl == NULL || lvl->ptr_terrain == NULL) return NULL;
     SceneCamera c;
-    if (!scene_camera_configure(&c, ctx, lvl, w, h)) return NULL;
+    if (!scene_camera_configure(&c, ctx, lvl, w, h, 0)) return NULL;
     float block = terrain_blocksize_get(lvl->ptr_terrain);
     float best = radius_pixels * radius_pixels;
     EntitySlot* picked = NULL;
@@ -1148,7 +1381,7 @@ EntitySlot* level_scene_pick_entity(GameContext* ctx, const LevelState* lvl,
             if (e == NULL) continue;
             SceneVec3 p;
             if (!scene_entity_origin_get(e, lvl, block, &p)) continue;
-            p.y += block * 0.48f;
+            p.y += scene_figure_height_offset(block * 0.48f);
             ScenePoint screen;
             if (!scene_project(&c, p, &screen)) continue;
             float dx = screen.x - (float)mouse_x;
