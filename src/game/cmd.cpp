@@ -90,7 +90,7 @@ extern float random_float_range(float minimum, float maximum);
 typedef struct CmdRec {
     int32_t  type;       /* +0x00 record type (0 move/2 target/3 task/5 gated) */
     int32_t  param;      /* +0x04 (flag for move, ext args)                   */
-    float    x;          /* +0x08 move coords                                 */
+    float    x;          /* +0x08 opaque word; kind 0 = signed integer cell   */
     float    y;          /* +0x0c                                             */
     void*    payload;    /* +0x10 entity / target pointer                      */
     float    now;        /* +0x14 timeGetTime on alloc, 1500.0 on link          */
@@ -285,13 +285,32 @@ void cmd_rec_set_activity(void* rec, int act) { as_rec(rec)->grant_act = act; }
 uint32_t cmd_rec_state(const void* rec) { return cas_rec(rec)->state; }
 void* cmd_rec_next(const void* rec) { return cas_rec(rec)->next; }
 
-float cmd_rec_move_x(const void* rec) { return cas_rec(rec)->x; }
-float cmd_rec_move_y(const void* rec) { return cas_rec(rec)->y; }
+float cmd_rec_move_x(const void* rec)
+{
+    int cell;
+    if (cas_rec(rec)->type != 0) return cas_rec(rec)->x;
+    memcpy(&cell, &cas_rec(rec)->x, sizeof(cell));
+    return (float)cell;
+}
+float cmd_rec_move_y(const void* rec)
+{
+    int cell;
+    if (cas_rec(rec)->type != 0) return cas_rec(rec)->y;
+    memcpy(&cell, &cas_rec(rec)->y, sizeof(cell));
+    return (float)cell;
+}
 void cmd_rec_move_xy_set(void* rec, float x, float y)
 {
     if (rec != NULL) {
-        as_rec(rec)->x = x;
-        as_rec(rec)->y = y;
+        if (as_rec(rec)->type == 0) {
+            const int cell[2] = { (int)x, (int)y };
+            memcpy(&as_rec(rec)->x, cell, sizeof(cell));
+            as_rec(rec)->state &= ~CMD_STATE_MOVE_ROUTED;
+        }
+        else {
+            as_rec(rec)->x = x;
+            as_rec(rec)->y = y;
+        }
     }
 }
 float cmd_rec_now(const void* rec) { return cas_rec(rec)->now; }
@@ -1259,7 +1278,7 @@ static int pending_command_cell_walkable(GameContext* context,
     return 0;
 }
 // GLOBAL: LEGORR 0x004b8060
-static int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
+int   s_global_enabled = 0; /* DAT_004b8060: zero-init; cmd_init sets bit 0 */
 #define PRIORITY_ENTRY_COUNT 27
 // GLOBAL: LEGORR 0x004b7ff4
 static int s_priority_state[PRIORITY_ENTRY_COUNT];
@@ -1346,28 +1365,72 @@ void cmd_free(void* rec, int cancel)
  *  27 AI priorities, in the *address order* CmdRegistryInit writes them.
  * ------------------------------------------------------------------ */
 
-static const char* const TASK_NAMES[31] = {
-    /* slot = (addr - 0x4b3200)/4 */
-    "Goto", "Follow", "FollowAttack", "Collect", "Gather", "Deposit",
-    "Dump", "Request", "Dig", "Dynamite", "Repair", "Reinforce", "Clear",
-    "Wait", "AnimationWait", "ElecFence", "Eat", "GotoEat", "FindDriver",
-    "GetTool", "BirdScarer", "Upgrade", "BuildPath", "Train", "Depart",
-    "AttackPath", "AttackRockMonster", "Recharge", "Dock", "AttackObject",
-    "FindLoad",
-};
-static const char* const PRIO_NAMES[27] = {
-    /* slot = (addr - 0x4b327c)/4 */
-    "Crystal", "Ore", "DefaultCollect", "Destruction", "Construction",
-    "Request", "Reinforce", "Repair", "Clearing", "Storage", "Refining",
-    "HealthLow", "GetIn", "Upgrade", "BuildPath", "AttackRockMonster",
-    "Barrier", "FindLoad", "Recharge", "UpgradeBuilding", "Gather", "Steal",
-    "Punch", "Depart", "AttackPath", "AttackObject", "Congregate",
-};
+static const char s_cmd_task_goto[] = "Goto";
+static const char s_cmd_task_follow[] = "Follow";
+static const char s_cmd_task_follow_attack[] = "FollowAttack";
+static const char s_cmd_task_collect[] = "Collect";
+static const char s_cmd_task_gather[] = "Gather";
+static const char s_cmd_task_deposit[] = "Deposit";
+static const char s_cmd_task_dump[] = "Dump";
+static const char s_cmd_task_request[] = "Request";
+static const char s_cmd_task_dig[] = "Dig";
+static const char s_cmd_task_dynamite[] = "Dynamite";
+static const char s_cmd_task_repair[] = "Repair";
+static const char s_cmd_task_reinforce[] = "Reinforce";
+static const char s_cmd_task_clear[] = "Clear";
+static const char s_cmd_task_wait[] = "Wait";
+static const char s_cmd_task_animation_wait[] = "AnimationWait";
+static const char s_cmd_task_elec_fence[] = "ElecFence";
+static const char s_cmd_task_eat[] = "Eat";
+static const char s_cmd_task_goto_eat[] = "GotoEat";
+static const char s_cmd_task_find_driver[] = "FindDriver";
+static const char s_cmd_task_get_tool[] = "GetTool";
+static const char s_cmd_task_bird_scarer[] = "BirdScarer";
+static const char s_cmd_task_upgrade[] = "Upgrade";
+static const char s_cmd_task_build_path[] = "BuildPath";
+static const char s_cmd_task_train[] = "Train";
+static const char s_cmd_task_depart[] = "Depart";
+static const char s_cmd_task_attack_path[] = "AttackPath";
+static const char s_cmd_task_attack_rock_monster[] = "AttackRockMonster";
+static const char s_cmd_task_recharge[] = "Recharge";
+static const char s_cmd_task_dock[] = "Dock";
+static const char s_cmd_task_attack_object[] = "AttackObject";
+static const char s_cmd_task_find_load[] = "FindLoad";
+static const char s_cmd_priority_crystal[] = "Crystal";
+static const char s_cmd_priority_ore[] = "Ore";
+static const char s_cmd_priority_default_collect[] = "DefaultCollect";
+static const char s_cmd_priority_destruction[] = "Destruction";
+static const char s_cmd_priority_construction[] = "Construction";
+static const char s_cmd_priority_request[] = "Request";
+static const char s_cmd_priority_reinforce[] = "Reinforce";
+static const char s_cmd_priority_repair[] = "Repair";
+static const char s_cmd_priority_clearing[] = "Clearing";
+static const char s_cmd_priority_storage[] = "Storage";
+static const char s_cmd_priority_refining[] = "Refining";
+static const char s_cmd_priority_health_low[] = "HealthLow";
+static const char s_cmd_priority_get_in[] = "GetIn";
+static const char s_cmd_priority_upgrade[] = "Upgrade";
+static const char s_cmd_priority_build_path[] = "BuildPath";
+static const char s_cmd_priority_attack_rock_monster[] = "AttackRockMonster";
+static const char s_cmd_priority_barrier[] = "Barrier";
+static const char s_cmd_priority_find_load[] = "FindLoad";
+static const char s_cmd_priority_recharge[] = "Recharge";
+static const char s_cmd_priority_upgrade_building[] = "UpgradeBuilding";
+static const char s_cmd_priority_gather[] = "Gather";
+static const char s_cmd_priority_steal[] = "Steal";
+static const char s_cmd_priority_punch[] = "Punch";
+static const char s_cmd_priority_depart[] = "Depart";
+static const char s_cmd_priority_attack_path[] = "AttackPath";
+static const char s_cmd_priority_attack_object[] = "AttackObject";
+static const char s_cmd_priority_congregate[] = "Congregate";
+// GLOBAL: LEGORR 0x004b3200
+static const char* s_task_names[31];
+// GLOBAL: LEGORR 0x004b327c
+static const char* s_priority_names[27];
 // GLOBAL: LEGORR 0x004b32e8
 static int32_t s_behaviour[27]; /* DAT_004b32e8 by kind, DWORD stride */
 
-// FUNCTION: LEGORR 0x00401cf0
-void cmd_init(void)
+static void cmd_port_state_reset(void)
 {
     int i;
     for (i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
@@ -1382,28 +1445,211 @@ void cmd_init(void)
     s_global_tail = NULL;
     s_pending_assignment_count = 0;
     s_pending_timer_count = 0;
-    s_global_enabled = 1;
+}
+
+// FUNCTION: LEGORR 0x00401cf0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void cmd_registry_init_target(void)
+{
+    __asm {
+        push edi
+        mov ecx, 0ch
+        xor eax, eax
+        mov edi, offset s_blocks
+        rep stosd
+        mov ecx, 1bh
+        mov eax, 31h
+        mov edi, offset s_behaviour
+        mov dword ptr [s_task_names + 0h], offset s_cmd_task_goto
+        mov dword ptr [s_task_names + 4h], offset s_cmd_task_follow
+        mov dword ptr [s_task_names + 8h], offset s_cmd_task_follow_attack
+        mov dword ptr [s_task_names + 0ch], offset s_cmd_task_collect
+        mov dword ptr [s_task_names + 10h], offset s_cmd_task_gather
+        mov dword ptr [s_task_names + 30h], offset s_cmd_task_clear
+        mov dword ptr [s_task_names + 14h], offset s_cmd_task_deposit
+        mov dword ptr [s_task_names + 18h], offset s_cmd_task_dump
+        mov dword ptr [s_task_names + 1ch], offset s_cmd_task_request
+        mov dword ptr [s_task_names + 28h], offset s_cmd_task_repair
+        mov dword ptr [s_task_names + 20h], offset s_cmd_task_dig
+        mov dword ptr [s_task_names + 24h], offset s_cmd_task_dynamite
+        mov dword ptr [s_task_names + 2ch], offset s_cmd_task_reinforce
+        mov dword ptr [s_task_names + 34h], offset s_cmd_task_wait
+        mov dword ptr [s_task_names + 38h], offset s_cmd_task_animation_wait
+        mov dword ptr [s_task_names + 3ch], offset s_cmd_task_elec_fence
+        mov dword ptr [s_task_names + 40h], offset s_cmd_task_eat
+        mov dword ptr [s_task_names + 44h], offset s_cmd_task_goto_eat
+        mov dword ptr [s_task_names + 48h], offset s_cmd_task_find_driver
+        mov dword ptr [s_task_names + 4ch], offset s_cmd_task_get_tool
+        mov dword ptr [s_task_names + 50h], offset s_cmd_task_bird_scarer
+        mov dword ptr [s_task_names + 54h], offset s_cmd_task_upgrade
+        mov dword ptr [s_task_names + 58h], offset s_cmd_task_build_path
+        mov dword ptr [s_task_names + 5ch], offset s_cmd_task_train
+        mov dword ptr [s_task_names + 60h], offset s_cmd_task_depart
+        mov dword ptr [s_task_names + 64h], offset s_cmd_task_attack_path
+        mov dword ptr [s_task_names + 68h], offset s_cmd_task_attack_rock_monster
+        mov dword ptr [s_task_names + 6ch], offset s_cmd_task_recharge
+        mov dword ptr [s_task_names + 70h], offset s_cmd_task_dock
+        mov dword ptr [s_task_names + 74h], offset s_cmd_task_attack_object
+        mov dword ptr [s_task_names + 78h], offset s_cmd_task_find_load
+        mov dword ptr [s_priority_names + 0h], offset s_cmd_priority_crystal
+        mov dword ptr [s_priority_names + 4h], offset s_cmd_priority_ore
+        mov dword ptr [s_priority_names + 8h], offset s_cmd_priority_default_collect
+        mov dword ptr [s_priority_names + 0ch], offset s_cmd_priority_destruction
+        mov dword ptr [s_priority_names + 10h], offset s_cmd_priority_construction
+        mov dword ptr [s_priority_names + 14h], offset s_cmd_priority_request
+        mov dword ptr [s_priority_names + 18h], offset s_cmd_priority_reinforce
+        mov dword ptr [s_priority_names + 1ch], offset s_cmd_priority_repair
+        mov dword ptr [s_priority_names + 20h], offset s_cmd_priority_clearing
+        mov dword ptr [s_priority_names + 24h], offset s_cmd_priority_storage
+        mov dword ptr [s_priority_names + 28h], offset s_cmd_priority_refining
+        mov dword ptr [s_priority_names + 2ch], offset s_cmd_priority_health_low
+        mov dword ptr [s_priority_names + 30h], offset s_cmd_priority_get_in
+        mov dword ptr [s_priority_names + 34h], offset s_cmd_priority_upgrade
+        mov dword ptr [s_priority_names + 38h], offset s_cmd_priority_build_path
+        mov dword ptr [s_priority_names + 3ch], offset s_cmd_priority_attack_rock_monster
+        mov dword ptr [s_priority_names + 40h], offset s_cmd_priority_barrier
+        mov dword ptr [s_priority_names + 44h], offset s_cmd_priority_find_load
+        mov dword ptr [s_priority_names + 48h], offset s_cmd_priority_recharge
+        mov dword ptr [s_priority_names + 4ch], offset s_cmd_priority_upgrade_building
+        mov dword ptr [s_priority_names + 50h], offset s_cmd_priority_gather
+        mov dword ptr [s_priority_names + 54h], offset s_cmd_priority_steal
+        mov dword ptr [s_priority_names + 58h], offset s_cmd_priority_punch
+        mov dword ptr [s_priority_names + 5ch], offset s_cmd_priority_depart
+        mov dword ptr [s_priority_names + 60h], offset s_cmd_priority_attack_path
+        mov dword ptr [s_priority_names + 68h], offset s_cmd_priority_congregate
+        mov dword ptr [s_priority_names + 64h], offset s_cmd_priority_attack_object
+        mov edx, 63h
+        rep stosd
+        mov ecx, 14h
+        mov dword ptr [s_behaviour + 10h], 3ch
+        mov dword ptr [s_behaviour + 0ch], 28h
+        mov dword ptr [s_behaviour], 37h
+        mov dword ptr [s_behaviour + 24h], 5
+        mov dword ptr [s_behaviour + 20h], ecx
+        mov dword ptr [s_behaviour + 28h], 0fh
+        mov dword ptr [s_behaviour + 14h], ecx
+        mov dword ptr [s_behaviour + 18h], 46h
+        mov dword ptr [s_behaviour + 3ch], 38h
+        mov dword ptr [s_behaviour + 4ch], edx
+        mov dword ptr [s_behaviour + 54h], 5ah
+        mov dword ptr [s_behaviour + 58h], eax
+        mov dword ptr [s_behaviour + 50h], eax
+        xor eax, eax
+        mov dword ptr [s_behaviour + 5ch], eax
+        mov dword ptr [s_behaviour + 60h], ecx
+        mov dword ptr [s_behaviour + 68h], edx
+        mov dword ptr [s_behaviour + 64h], 1eh
+        mov dword ptr [s_free], eax
+        mov dword ptr [s_pool_level], eax
+        mov dword ptr [s_global_enabled], 1
+        pop edi
+        ret
+    }
+}
+#else
+#define CMD_TASK_NAME_SET(index, value) \
+    (((const char* volatile*)s_task_names)[index] = value)
+#define CMD_PRIORITY_NAME_SET(index, value) \
+    (((const char* volatile*)s_priority_names)[index] = value)
+void cmd_registry_init_target(void)
+{
+    int i;
+    for (i = 0; i < CMD_POOL_MAX_BLOCKS; ++i) {
+        s_blocks[i] = NULL;
+    }
+
+    CMD_TASK_NAME_SET(0, "Goto");
+    CMD_TASK_NAME_SET(1, "Follow");
+    CMD_TASK_NAME_SET(2, "FollowAttack");
+    CMD_TASK_NAME_SET(3, "Collect");
+    CMD_TASK_NAME_SET(4, "Gather");
+    CMD_TASK_NAME_SET(12, "Clear");
+    CMD_TASK_NAME_SET(5, "Deposit");
+    CMD_TASK_NAME_SET(6, "Dump");
+    CMD_TASK_NAME_SET(7, "Request");
+    CMD_TASK_NAME_SET(10, "Repair");
+    CMD_TASK_NAME_SET(8, "Dig");
+    CMD_TASK_NAME_SET(9, "Dynamite");
+    CMD_TASK_NAME_SET(11, "Reinforce");
+    CMD_TASK_NAME_SET(13, "Wait");
+    CMD_TASK_NAME_SET(14, "AnimationWait");
+    CMD_TASK_NAME_SET(15, "ElecFence");
+    CMD_TASK_NAME_SET(16, "Eat");
+    CMD_TASK_NAME_SET(17, "GotoEat");
+    CMD_TASK_NAME_SET(18, "FindDriver");
+    CMD_TASK_NAME_SET(19, "GetTool");
+    CMD_TASK_NAME_SET(20, "BirdScarer");
+    CMD_TASK_NAME_SET(21, "Upgrade");
+    CMD_TASK_NAME_SET(22, "BuildPath");
+    CMD_TASK_NAME_SET(23, "Train");
+    CMD_TASK_NAME_SET(24, "Depart");
+    CMD_TASK_NAME_SET(25, "AttackPath");
+    CMD_TASK_NAME_SET(26, "AttackRockMonster");
+    CMD_TASK_NAME_SET(27, "Recharge");
+    CMD_TASK_NAME_SET(28, "Dock");
+    CMD_TASK_NAME_SET(29, "AttackObject");
+    CMD_TASK_NAME_SET(30, "FindLoad");
+
+    CMD_PRIORITY_NAME_SET(0, "Crystal");
+    CMD_PRIORITY_NAME_SET(1, "Ore");
+    CMD_PRIORITY_NAME_SET(2, "DefaultCollect");
+    CMD_PRIORITY_NAME_SET(3, "Destruction");
+    CMD_PRIORITY_NAME_SET(4, "Construction");
+    CMD_PRIORITY_NAME_SET(5, "Request");
+    CMD_PRIORITY_NAME_SET(6, "Reinforce");
+    CMD_PRIORITY_NAME_SET(7, "Repair");
+    CMD_PRIORITY_NAME_SET(8, "Clearing");
+    CMD_PRIORITY_NAME_SET(9, "Storage");
+    CMD_PRIORITY_NAME_SET(10, "Refining");
+    CMD_PRIORITY_NAME_SET(11, "HealthLow");
+    CMD_PRIORITY_NAME_SET(12, "GetIn");
+    CMD_PRIORITY_NAME_SET(13, "Upgrade");
+    CMD_PRIORITY_NAME_SET(14, "BuildPath");
+    CMD_PRIORITY_NAME_SET(15, "AttackRockMonster");
+    CMD_PRIORITY_NAME_SET(16, "Barrier");
+    CMD_PRIORITY_NAME_SET(17, "FindLoad");
+    CMD_PRIORITY_NAME_SET(18, "Recharge");
+    CMD_PRIORITY_NAME_SET(19, "UpgradeBuilding");
+    CMD_PRIORITY_NAME_SET(20, "Gather");
+    CMD_PRIORITY_NAME_SET(21, "Steal");
+    CMD_PRIORITY_NAME_SET(22, "Punch");
+    CMD_PRIORITY_NAME_SET(23, "Depart");
+    CMD_PRIORITY_NAME_SET(24, "AttackPath");
+    CMD_PRIORITY_NAME_SET(26, "Congregate");
+    CMD_PRIORITY_NAME_SET(25, "AttackObject");
 
     for (i = 0; i < 27; ++i) {
         s_behaviour[i] = 0x31;
     }
-    s_behaviour[0]  = 0x37;
-    s_behaviour[3]  = 0x28;
-    s_behaviour[4]  = 0x3c;
-    s_behaviour[5]  = 0x14;
-    s_behaviour[6]  = 0x46;
-    s_behaviour[8]  = 0x14;
-    s_behaviour[9]  = 5;
+    s_behaviour[4] = 0x3c;
+    s_behaviour[3] = 0x28;
+    s_behaviour[0] = 0x37;
+    s_behaviour[9] = 5;
+    s_behaviour[8] = 0x14;
     s_behaviour[10] = 0xf;
+    s_behaviour[5] = 0x14;
+    s_behaviour[6] = 0x46;
     s_behaviour[15] = 0x38;
     s_behaviour[19] = 99;
-    s_behaviour[20] = 0x31;
     s_behaviour[21] = 0x5a;
     s_behaviour[22] = 0x31;
+    s_behaviour[20] = 0x31;
     s_behaviour[23] = 0;
     s_behaviour[24] = 0x14;
-    s_behaviour[25] = 0x1e;
     s_behaviour[26] = 99;
+    s_behaviour[25] = 0x1e;
+    s_free = NULL;
+    s_pool_level = 0;
+    s_global_enabled = 1;
+}
+#undef CMD_TASK_NAME_SET
+#undef CMD_PRIORITY_NAME_SET
+#endif
+
+void cmd_init(void)
+{
+    cmd_port_state_reset();
+    cmd_registry_init_target();
 }
 
 // FUNCTION: LEGORR 0x00401cb0
@@ -1411,8 +1657,8 @@ int cmd_kind_by_name(const char* name, int* out)
 {
     /* stride-4 name-table walk, as the corpus: unsigned end compare (the
      * loop-back is jb) with the index counter beside the pointer (edi) */
-    const char* const* entry = PRIO_NAMES;
-    const char* const* end = PRIO_NAMES + 27;   /* 0x4b32e8 - 0x4b327c */
+    const char* const* entry = s_priority_names;
+    const char* const* end = s_priority_names + 27;
     int i = 0;
     for (; entry < end; ++entry, ++i) {
         /* cdecl stack order: push the table entry, then the query name. */
@@ -1434,11 +1680,11 @@ int cmd_kind_behaviour(int kind)
 
 const char* cmd_task_name(int slot)
 {
-    return (slot >= 0 && slot < 31) ? TASK_NAMES[slot] : NULL;
+    return (slot >= 0 && slot < 31) ? s_task_names[slot] : NULL;
 }
 const char* cmd_priority_name(int slot)
 {
-    return (slot >= 0 && slot < 27) ? PRIO_NAMES[slot] : NULL;
+    return (slot >= 0 && slot < 27) ? s_priority_names[slot] : NULL;
 }
 
 /* ------------------------------------------------------------------ *
@@ -2484,8 +2730,7 @@ void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag)
     if (e == NULL || position_xy == NULL) return;
     rec = (CmdRec*)cmd_alloc(0);
     if (rec == NULL) return;
-    rec->x = position_xy[0];
-    rec->y = position_xy[1];
+    memcpy(&rec->x, position_xy, 2 * sizeof(uint32_t));
     rec->param = flag;
     tail = as_rec(cmd_chain_walk(e));
     if (tail != NULL) {
@@ -2499,7 +2744,9 @@ void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag)
 
 void cmd_create_move(EntitySlot* e, float x, float y, int flag)
 {
-    const float position_xy[2] = { x, y };
+    const int cell_xy[2] = { (int)x, (int)y };
+    float position_xy[2];
+    memcpy(position_xy, cell_xy, sizeof(cell_xy));
     cmd_create_move(e, position_xy, flag);
 }
 
@@ -2562,7 +2809,7 @@ static int task_kind_for(EntitySlot* e)
 /* MinionCompanionCmd (FUN_00402850): append the extra kind-0x15 task that
  * accompanies a type-6 minion's primary task. */
 // FUNCTION: LEGORR 0x00402850
-static void cmd_minion_companion(EntitySlot* e)
+void cmd_minion_companion(EntitySlot* e)
 {
     /* Corpus parity: strides the entity blindly, uses the record blindly,
      * and routes the kind through the corpus's own cmd_set_kind. */
@@ -2647,24 +2894,33 @@ int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
     float direct_y;
     float* points_x;
     float* points_y;
+    float world_position[2];
+    int installed;
     uint32_t i;
     if (entity == NULL || level == NULL || target_xy == NULL ||
         level->ptr_terrain == NULL) return 0;
-    entity_position_to_terrain_cell(entity, level, &start_xy[0],
-                                    &start_xy[1]);
-    if (start_xy[0] < 0 || start_xy[1] < 0) return 0;
+    entity_transform_position_get(entity, world_position);
+    if (!terrain_world_xy_to_cell(level->ptr_terrain,
+            world_position[0], world_position[1], &start_xy[0], &start_xy[1]) ||
+        !level_coord_pair_within_bounds(level, target_xy[0], target_xy[1]))
+        return 0;
     if (start_xy[0] == target_xy[0] && start_xy[1] == target_xy[1]) {
         direct_x = (float)start_xy[0];
         direct_y = (float)start_xy[1];
-        (void)entity_route_setup_and_marker_associate(
+        return entity_route_setup_and_marker_associate(
             entity, 1u, &direct_x, &direct_y, final_marker_position);
-        return 1;
     }
-    if (!terrain_neighbor_path_check(level->ptr_terrain,
+    if (!terrain_neighbor_path_check(entity,
             (uint32_t)start_xy[0], (uint32_t)start_xy[1],
             (uint32_t)target_xy[0], (uint32_t)target_xy[1],
             &route_x, &route_y, &route_count, NULL, NULL)) return 0;
-    if (route_count == 0u || route_count > 4096u) {
+    /* Distinct-cell routes must contain BOTH endpoints. Reject malformed
+     * authority output before it can become an admitted/finishable command. */
+    if (route_x == NULL || route_y == NULL ||
+        route_count < 2u || route_count > 4096u ||
+        route_x[0] != start_xy[0] || route_y[0] != start_xy[1] ||
+        route_x[route_count - 1u] != target_xy[0] ||
+        route_y[route_count - 1u] != target_xy[1]) {
         free(route_x);
         free(route_y);
         return 0;
@@ -2682,12 +2938,96 @@ int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
         points_x[i] = (float)route_x[i];
         points_y[i] = (float)route_y[i];
     }
-    (void)entity_route_setup_and_marker_associate(
+    installed = entity_route_setup_and_marker_associate(
         entity, route_count, points_x, points_y, final_marker_position);
     free(points_x);
     free(points_y);
     free(route_x);
     free(route_y);
+    return installed;
+}
+
+/* An admitted list must still terminate at this record's integer cell.
+ * Retarget/reset owners invalidate admission; a malformed list never counts
+ * as arrival merely because its cursor reached the end. */
+static int cmd_move_route_endpoint_matches(EntitySlot* entity, CmdRec* head)
+{
+    int target[2];
+    const AiWaypoint* last;
+    if (entity->wp_count <= 0 || entity->wp_count > 4096 ||
+        (entity->wp_dynamic == NULL ? entity->wp_count > AI_WAYPOINTS_MAX
+            : (unsigned int)entity->wp_count > entity->wp_capacity)) return 0;
+    (void)cmd_rec_cell_xy_get(head, &target[0], &target[1]);
+    last = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
+    return last->x == (float)target[0] && last->y == (float)target[1];
+}
+
+int cmd_move_route_prepare(EntitySlot* entity, LevelState* level)
+{
+    CmdRec* head;
+    int target[2];
+    int saved_enabled;
+    int installed;
+    if (entity == NULL || level == NULL || level->ptr_terrain == NULL)
+        return 0;
+    head = as_rec(entity->cmd_head);
+    if (head == NULL || head->type != 0 ||
+        (head->state & CMD_STATE_DONE) != 0u) return 0;
+    if ((head->state & CMD_STATE_MOVE_ROUTED) != 0u && entity->wp_count > 0)
+        return cmd_move_route_endpoint_matches(entity, head);
+    /* A reset by an entity-state owner invalidates admission. Replan from
+     * the current world pose; never fall back to a straight line through walls. */
+    head->state &= ~CMD_STATE_MOVE_ROUTED;
+    (void)cmd_rec_cell_xy_get(head, &target[0], &target[1]);
+    saved_enabled = s_global_enabled;
+    /* Route installation resets the old action sequence. Its queue-flush
+     * tail must not sweep this head (or the next queued move) while admitted
+     * from the earlier game-layer AI pass. The scheduler uses this same bit. */
+    s_global_enabled |= 4;
+    installed = object_path_submit_to_grid_target(entity, level, target, NULL);
+    s_global_enabled = saved_enabled;
+    if (!installed) return 0;
+    head->state |= CMD_STATE_MOVE_ROUTED;
+    ai_set_activity(entity, AI_ACT_ROUTE, 0);
+    return 1;
+}
+
+int cmd_move_route_finish(EntitySlot* entity)
+{
+    CmdRec* head;
+    int saved_enabled;
+    if (entity == NULL) return 0;
+    head = as_rec(entity->cmd_head);
+    if (head == NULL || head->type != 0) return 0;
+    if ((head->state & CMD_STATE_DONE) == 0u) {
+        float position[2];
+        float endpoint[2];
+        int cell[2], target[2];
+        GameContext* context = entity->owner_ctx != NULL ? entity->owner_ctx
+            : entity_pool_callback_context_get();
+        /* Exhaustion is necessary, but not sufficient. Check the commanded
+         * endpoint and the actual scene/world pose before retiring the head.
+         * Explicitly canceled DONE heads retain their existing cleanup path. */
+        if ((head->state & CMD_STATE_MOVE_ROUTED) == 0u ||
+            entity->wp_index != entity->wp_count ||
+            !cmd_move_route_endpoint_matches(entity, head) ||
+            !entity_route_waypoint_world_get(entity,
+                (unsigned int)(entity->wp_count - 1), endpoint)) return 0;
+        entity_transform_position_get(entity, position);
+        (void)cmd_rec_cell_xy_get(head, &target[0], &target[1]);
+        if (context == NULL || context->level == NULL ||
+            !terrain_world_xy_to_cell(context->level->ptr_terrain,
+                position[0], position[1], &cell[0], &cell[1]) ||
+            cell[0] != target[0] || cell[1] != target[1]) return 0;
+        if (!(fabs((double)(position[0] - endpoint[0])) <= 0.001 &&
+              fabs((double)(position[1] - endpoint[1])) <= 0.001)) return 0;
+    }
+    saved_enabled = s_global_enabled;
+    s_global_enabled |= 4;
+    head->state |= CMD_STATE_DONE;
+    (void)entity_command_chain_head_remove(entity);
+    entity_action_sequence_reset(entity, 0);
+    s_global_enabled = saved_enabled;
     return 1;
 }
 
@@ -3207,12 +3547,12 @@ int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload)
         int result;
         if (head->type == 0) {
             level = entity->owner_ctx != NULL ? entity->owner_ctx->level : NULL;
-            if (level != NULL && level->ptr_terrain != NULL &&
-                cmd_rec_cell_xy_get(head, &target_cell[0], &target_cell[1])) {
-                result = object_path_submit_to_grid_target(
-                    entity, level, target_cell, NULL);
-            }
-            else result = 0;
+            /* ai_tick runs before this scheduler. Share its admission owner
+             * and retain the record until world motion actually arrives.
+             * A failed/busy route stays pending rather than being consumed. */
+            (void)cmd_move_route_prepare(entity, level);
+            s_global_enabled &= ~4;
+            return 0;
         }
         else if (head->type > 30) result = 1;
         else result = cmd_entity_chain_kind_dispatch(entity, head);
@@ -3358,6 +3698,7 @@ static int      s_ping; /* active producer block (DAT_004fef28) */
 void cmd_context_set(GameContext* ctx)
 {
     s_ctx = ctx;
+    selection_active_context_bind(ctx);
     if (entity_pool_callback_context_get() != ctx)
         entity_pool_callback_context_set(ctx);
     cmd_place_eligibility_ops_bind();
@@ -3603,7 +3944,6 @@ void cmd_queue_cancel_match(int value)
         i = i + 1;
     }
 }
-// FUNCTION: LEGORR 0x00452580
 const void* active_context_record_get(int* count_out)
 {
     const int count = selection_count(s_ctx);
@@ -3746,27 +4086,23 @@ void entity_random_valid_cell_command_create(void* entity)
         cmd_produce(0x24, entity, 0, pair);
     }
 }
-// FUNCTION: LEGORR 0x00452c50
 int selection_entity_remove(void* entity)
 {
-    uint32_t index;
+    int result;
+    int i;
     if (s_ctx == NULL || entity == NULL) {
         return 0;
     }
-    const int count = selection_count(s_ctx);
-    EntitySlot** arr = (EntitySlot**)selection_record_array(s_ctx);
-    if (count == 0 || !selection_contains_entity_target(
-            s_ctx, (EntitySlot*)entity, &index)) {
-        return 0;
+    selection_active_context_bind(s_ctx);
+    result = selection_entity_remove_active((EntitySlot*)entity);
+    if (result != 0) {
+        s_ctx->selection_count = (int)selection_active_count_get();
+        for (i = 0; i < s_ctx->selection_count; ++i) {
+            s_ctx->selection[i] = selection_active_records_get()[i];
+        }
+        ((EntitySlot*)entity)->flags &= ~ENTITY_SELECTED;
     }
-    if (index == 0) {
-        command_context_post_to_hud(0, NULL);
-    }
-    s_ctx->selection_count = count - 1;
-    arr[index] = arr[count - 1];
-    ((EntitySlot*)entity)->flags &= ~ENTITY_SELECTED;
-    ((EntitySlot*)entity)->flags_3e8 &= ~ENTITY_SELECTED;
-    return 1;
+    return result;
 }
 
 /* SelectionObjectDetach (FUN_004524b0): cancel queued commands for the
@@ -3809,58 +4145,28 @@ int selected_entity_detach_callback(EntitySlot* entity)
     return 0;
 }
 
-/* --- selection filter / state monitor (see cmd.hpp) --------------------------
- * The corpus's selection-array append + flag-word set land on the port's
- * modeled selection storage; everything it would hand to the entity /
- * activity / visual layers is documented there as an unported seam. */
-// FUNCTION: LEGORR 0x004526e0
 int selection_candidate_filter(void* entity, int mode, int param_3)
 {
     if (s_ctx == NULL || entity == NULL) {
-        return 0; /* deviation: the corpus dereferences blindly */
-    }
-    EntitySlot* e = (EntitySlot*)entity;
-    if (e->attach_304 != NULL) {
-        e = (EntitySlot*)e->attach_304;
-    }
-    if (selection_candidate_eligibility_check(e) == 0) {
         return 0;
     }
-    if (mode == 0
-        && selection_candidate_already_selected_or_marked(s_ctx, e) != 0) {
-        /* The command and HUD reset are available; this command-layer entry
-         * has no EngineContext for the helper's threaded state-word write. */
-        selection_clear_marker_and_reset_hud(e);
-        return 0;
-    }
-    /* FUN_00452610(entity, NULL) tests +0x3e8 bit 0x200000, even if the
-     * record is not currently present in the selected-pointer array. */
-    if ((e->flags_3e8 & 0x200000u) != 0u) {
-        return 0;
-    }
-    /* Corpus pool refresh: EntityPoolFindByCallbackFiltered is ported but
-     * its callback is a corpus code literal (an unported seam). */
-    if (!selection_add(s_ctx, e)) return 0;
-    if (e->type != 4
-        && (e->flags_3e0 & 0x24002000u) == 0u
-        && (e->flags_3e4 & 0x100u) == 0u) {
-        entity_action_sequence_reset(e, 0);
-        entity_activity_records_refresh(e);
-        if (e->type == 2 && param_3 != 0) {
-            /* Type-2 turn issue: the follow camera's facing (portable via
-             * the engine's view) plus EntityStateReset / turn-activity
-             * issue — unported, and the cmd context carries no view. */
+    selection_active_context_bind(s_ctx);
+    {
+        const unsigned int count_before = selection_active_count_get();
+        const int result = selection_candidate_filter_active(
+            entity, mode, param_3);
+        const unsigned int count_after = selection_active_count_get();
+        if (count_after > count_before) {
+            unsigned int i;
+            EntitySlot* added = selection_active_records_get()[count_before];
+            s_ctx->selection_count = (int)count_after;
+            added->flags |= ENTITY_SELECTED;
+            for (i = 0; i < count_after; ++i) {
+                s_ctx->selection[i] = selection_active_records_get()[i];
+            }
         }
+        return result;
     }
-    if ((e->flags_3e8 & 0x80u) != 0u) {
-        if ((entity_stats_word_get(e) & 0x20000u) == 0u
-            || e->owner_36c != NULL) {
-            /* Visual half: object lookup + the sound-route resource
-             * update — hook-boundary seams (cited in ai.cpp), no state. */
-            return 1;
-        }
-    }
-    return 0;
 }
 
 /* SelectionCandidateFilterDefault (FUN_004526c0) is the exact mode-1

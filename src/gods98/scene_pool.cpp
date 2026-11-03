@@ -19,6 +19,8 @@ struct DDiSceneObjectRecord {
     uint32_t reserved[3];
     DDiSceneObjectRecord* next;
 };
+typedef char DDiSceneObjectRecordSizeCheck[
+    sizeof(void*) != 4u || sizeof(DDiSceneObjectRecord) == 0x2cu ? 1 : -1];
 
 enum { DDI_SCENE_POOL_BANKS = 20 };
 
@@ -69,6 +71,24 @@ void scene_object_allocation_failed(DDiSceneObjectRecord* record)
 }
 
 } // namespace
+
+void ddiscene_object_record_release(void* record)
+{
+    scene_object_partial_release((DDiSceneObjectRecord*)record);
+}
+
+int ddiscene_object_pool_owns(const void* record)
+{
+    uint32_t i;
+    uintptr_t address = (uintptr_t)record;
+    for (i = 0; i < s_scene_object_level_count; ++i) {
+        uintptr_t start = (uintptr_t)s_scene_object_blocks[i];
+        size_t bytes = (size_t)(1u << i) * sizeof(DDiSceneObjectRecord);
+        if (start != 0 && address >= start && address - start < bytes &&
+            (address - start) % sizeof(DDiSceneObjectRecord) == 0) return 1;
+    }
+    return 0;
+}
 
 void ddiscene_object_pool_hooks_set(
     DDiSceneChannelCreateFn channel_create,
@@ -128,19 +148,17 @@ void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor)
     s_scene_object_free_head = record->next;
     memset(record, 0, sizeof(*record));
     record->next = record;
-    if (descriptor != 0) {
-        record->kind = descriptor->kind;
-        record->flags = descriptor->flags;
-    }
     if (s_channel_create == 0) {
         scene_object_return_to_pool(record);
         return 0;
     }
     for (i = 0; i < 3; ++i) {
-        const char* channel_name = descriptor != 0
-            ? descriptor->channel_names[i] : 0;
-        if (s_channel_create(channel_name, record, i,
-                             &record->channels[i]) != 0) {
+        /* CreateFrame(parent[0]), CreateFrame(new[0]),
+         * CreateFrame(parent[2]): FUN_00472950 does not copy the parent's
+         * kind/flags and does not use parent[1] for its middle frame. */
+        void* parent = i == 1u ? record->channels[0] :
+            (descriptor != 0 ? descriptor->channels[i] : 0);
+        if (s_channel_create(parent, &record->channels[i]) != 0) {
             scene_object_allocation_failed(record);
             return 0;
         }
@@ -157,6 +175,10 @@ void* ddiscene_object_allocate(const DDiSceneObjectDescriptor* descriptor)
         for (i = 0; i < 3; ++i) {
             ddiscene_animation_hook_create(
                 record->channels[i], owner_record, 0, 0, 0, 0, 0, 0, 0, 0);
+            if (ddiscene_animation_hook_record_get(record->channels[i]) == 0) {
+                scene_object_allocation_failed(record);
+                return 0;
+            }
         }
     }
     return record;
@@ -168,9 +190,8 @@ void ddiscene_object_pool_shutdown(void)
     unsigned char bank = 0;
     uint32_t i;
     DDiSceneObjectRecord** block_slot = s_scene_object_blocks;
-    /* The reference scans all twenty bank slots, even when its level count
-     * is stale, and frees blocks without clearing their slots or the count.
-     * The next scene initialization owns resetting that state. */
+    /* Scan all twenty banks as retail does. Clear the reconstruction's
+     * owner slots too, so failed application init can unwind exactly once. */
     do {
         DDiSceneObjectRecord* block = *block_slot;
         if (block != 0) {
@@ -185,11 +206,13 @@ void ddiscene_object_pool_shutdown(void)
                 }
             }
             engine_heap_free(block);
+            *block_slot = 0;
         }
         ++block_slot;
         ++bank;
     } while (block_slot < &s_scene_object_blocks[DDI_SCENE_POOL_BANKS]);
     s_scene_object_free_head = 0;
+    s_scene_object_level_count = 0;
     for (i = 0; i < s_auxiliary_count; ++i) {
         if (s_auxiliary_allocations != 0 && s_auxiliary_allocations[i] != 0) {
             if (s_auxiliary_release != 0)
@@ -204,6 +227,9 @@ void ddiscene_object_pool_shutdown(void)
         else
             engine_heap_free(s_shared_directory);
     }
+    s_auxiliary_allocations = 0;
+    s_auxiliary_count = 0;
+    s_shared_directory = 0;
 }
 
 } // namespace lego

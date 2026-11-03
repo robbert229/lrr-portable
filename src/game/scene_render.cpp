@@ -48,6 +48,8 @@ static SceneVec3 s_scene_focus;
 static const LevelState* s_scene_vertex_level;
 static uint32_t s_scene_vertex_width;
 static uint32_t s_scene_vertex_height;
+/* Canonical map corners (00,10,11,01), signed/scaled geometry Y.
+ * Orientation selects a diagonal; it never moves heights between X/Z slots. */
 static float* s_scene_vertex_heights;
 static float* s_scene_vertex_x_offsets;
 static uint8_t* s_scene_vertex_valid;
@@ -163,29 +165,12 @@ void scene_render_terrain_cell_orientation_apply(const LevelState* level,
                                                 uint32_t x, uint32_t y,
                                                 int flipped)
 {
-    static const uint8_t forward[4] = { 3u, 0u, 1u, 2u };
-    static const uint8_t reverse[4] = { 1u, 2u, 3u, 0u };
     size_t index;
-    float rotated[4];
-    uint32_t corner;
-    uint8_t target = flipped != 0 ? 1u : 0u;
-    const uint8_t* order;
     if (!scene_render_vertex_cache_ensure(level) ||
         x >= s_scene_vertex_width || y >= s_scene_vertex_height) return;
-    /* FUN_00475020 indexes the terrain appearance mesh with the quad width
-     * (map width minus one), even though the CPU cache has map dimensions. */
-    index = (size_t)y * (size_t)(s_scene_vertex_width - 1u) + x;
-    if (index >= (size_t)s_scene_vertex_width * s_scene_vertex_height) return;
-    if (s_scene_vertex_flipped[index] == target) return;
-    if (s_scene_vertex_valid[index] != 0u) {
-        order = s_scene_vertex_flipped[index] == 0u ? forward : reverse;
-        for (corner = 0u; corner < 4u; ++corner)
-            rotated[corner] =
-                s_scene_vertex_heights[index * 4u + order[corner]];
-        memcpy(s_scene_vertex_heights + index * 4u, rotated,
-               sizeof(rotated));
-    }
-    s_scene_vertex_flipped[index] = target;
+    /* This is the scene's map-width cache, not the DDi quad-width list. */
+    index = (size_t)y * s_scene_vertex_width + x;
+    s_scene_vertex_flipped[index] = flipped != 0 ? 1u : 0u;
 }
 
 void scene_render_terrain_cell_vertices_update(const LevelState* level,
@@ -235,6 +220,10 @@ void scene_render_terrain_vertex_offset(const LevelState* level,
 
 void scene_render_terrain_level_release(const LevelState* level)
 {
+    if (level == NULL || level == s_scene_focus_level) {
+        s_scene_focus_level = NULL;
+        memset(&s_scene_focus, 0, sizeof(s_scene_focus));
+    }
     if (level != NULL && level != s_scene_vertex_level) return;
     free(s_scene_vertex_heights);
     free(s_scene_vertex_x_offsets);
@@ -274,23 +263,41 @@ static int scene_render_terrain_cell_vertex_heights(
     return 1;
 }
 
-/* At the quad center, the renderer's two fixed triangles meet on their
- * 0-to-2 diagonal, so the live sample is the midpoint of those corners. */
+/* Public quad order matches the renderer's two 0-to-2 triangles. */
 int scene_render_terrain_cell_height_center_get(const LevelState* level,
                                                uint32_t x, uint32_t y,
                                                float* height_out)
 {
-    float heights[4];
+    float vertices[4][3];
     if (height_out == NULL ||
-        !scene_render_terrain_cell_vertex_heights(level, x, y, heights))
+        !scene_render_terrain_cell_vertices_get(level, x, y, vertices))
         return 0;
-    *height_out = (heights[0] + heights[2]) * 0.5f;
+    *height_out = (vertices[0][1] + vertices[2][1]) * 0.5f;
     return 1;
 }
 
 int scene_render_terrain_cell_vertices_get(const LevelState* level,
                                            uint32_t x, uint32_t y,
                                            float vertices[4][3])
+{
+    static const uint8_t forward[4] = { 3u, 0u, 1u, 2u };
+    float canonical[4][3];
+    uint32_t corner;
+    int flipped;
+    if (vertices == NULL ||
+        !scene_render_terrain_cell_vertices_canonical_get(
+            level, x, y, canonical)) return 0;
+    flipped = s_scene_vertex_flipped != NULL &&
+        s_scene_vertex_level == level &&
+        s_scene_vertex_flipped[(size_t)y * s_scene_vertex_width + x] != 0u;
+    for (corner = 0u; corner < 4u; ++corner)
+        memcpy(vertices[corner], canonical[flipped ? forward[corner] : corner],
+               3u * sizeof(float));
+    return 1;
+}
+
+int scene_render_terrain_cell_vertices_canonical_get(
+    const LevelState* level, uint32_t x, uint32_t y, float vertices[4][3])
 {
     static const int corner_x[4] = { 0, 1, 1, 0 };
     static const int corner_y[4] = { 0, 0, 1, 1 };
@@ -306,12 +313,17 @@ int scene_render_terrain_cell_vertices_get(const LevelState* level,
     height = level_height(level);
     block = terrain_blocksize_get(level->ptr_terrain);
     if (block <= 0.0f) block = 40.0f;
-    height_scale = block * 0.10f;
+    height_scale = terrain_height_scale_get(level->ptr_terrain);
     if (!scene_render_terrain_cell_vertex_heights(level, x, y, heights)) {
         for (corner = 0u; corner < 4u; ++corner) {
-            heights[corner] = (float)terrain_surface_height_get(
-                level->ptr_terrain, (int)x + corner_x[corner],
-                (int)y + corner_y[corner]);
+            int sample_x = (int)x + corner_x[corner];
+            int sample_y = (int)y + corner_y[corner];
+            /* The presentation shell extends the last physical row/column;
+             * it has no extra authored height byte beyond that boundary. */
+            if (sample_x >= width) sample_x = width - 1;
+            if (sample_y >= height) sample_y = height - 1;
+            heights[corner] = -(float)terrain_surface_height_get(
+                level->ptr_terrain, sample_x, sample_y) * height_scale;
         }
     }
     for (corner = 0u; corner < 4u; ++corner) {
@@ -320,7 +332,7 @@ int scene_render_terrain_cell_vertices_get(const LevelState* level,
         vertices[corner][0] = (gx - (float)width * 0.5f) * block +
             scene_render_terrain_vertex_x_offset_get(level,
                 x + corner_x[corner], y + corner_y[corner]);
-        vertices[corner][1] = -heights[corner] * height_scale;
+        vertices[corner][1] = heights[corner];
         vertices[corner][2] = (gy - (float)height * 0.5f) * block;
     }
     return 1;
@@ -596,6 +608,14 @@ static int scene_project(const SceneCamera* c, SceneVec3 p, ScenePoint* out)
     return 1;
 }
 
+/* Drawing and picking reject the same whole triangle at the near plane. */
+static int scene_triangle_project(const SceneCamera* c, SceneVec3 a,
+                                  SceneVec3 b, SceneVec3 d, ScenePoint p[3])
+{
+    return scene_project(c, a, &p[0]) && scene_project(c, b, &p[1])
+        && scene_project(c, d, &p[2]);
+}
+
 static void scene_triangle_sampled(SceneCamera* c, SceneVec3 a, SceneVec3 b,
                                   SceneVec3 d, SceneColor color,
                                   const TextureSurface* texture,
@@ -603,8 +623,7 @@ static void scene_triangle_sampled(SceneCamera* c, SceneVec3 a, SceneVec3 b,
                                   float u2, float v2)
 {
     ScenePoint p[3];
-    if (!scene_project(c, a, &p[0]) || !scene_project(c, b, &p[1])
-        || !scene_project(c, d, &p[2])) return;
+    if (!scene_triangle_project(c, a, b, d, p)) return;
     float area = (p[1].x - p[0].x) * (p[2].y - p[0].y)
                - (p[1].y - p[0].y) * (p[2].x - p[0].x);
     if (scene_abs(area) < 0.001f) return;
@@ -677,12 +696,68 @@ static void scene_quad_textured(SceneCamera* c, SceneVec3 a, SceneVec3 b,
                            u, v, u + 0.35f, v + 0.35f, u, v + 0.35f);
 }
 
-static SceneVec3 terrain_point(int x, int y, float height, int width, int rows,
-                               float block, float height_scale)
+/* Barycentric interpolation in the exact top triangles submitted below.
+ * Geometry Y is already signed/scaled; no byte-height conversion occurs here. */
+static int scene_triangle_height(const float a[3], const float b[3],
+                                 const float d[3], float x, float z,
+                                 float* height)
 {
-    return scene_vec3((x - width * 0.5f) * block,
-                      -height * height_scale,
-                      (y - rows * 0.5f) * block);
+    float denominator = (b[2] - d[2]) * (a[0] - d[0]) +
+                        (d[0] - b[0]) * (a[2] - d[2]);
+    float wa, wb, wd;
+    if (denominator == 0.0f) return 0;
+    wa = ((b[2] - d[2]) * (x - d[0]) +
+          (d[0] - b[0]) * (z - d[2])) / denominator;
+    wb = ((d[2] - a[2]) * (x - d[0]) +
+          (a[0] - d[0]) * (z - d[2])) / denominator;
+    wd = 1.0f - wa - wb;
+    if (wa < -0.0001f || wb < -0.0001f || wd < -0.0001f) return 0;
+    *height = wa * a[1] + wb * b[1] + wd * d[1];
+    return 1;
+}
+
+static int scene_terrain_height_get(const LevelState* level, float grid_x,
+                                   float grid_y, float* height)
+{
+    float block = terrain_blocksize_get(level->ptr_terrain);
+    int x = (int)scene_floor(grid_x), y = (int)scene_floor(grid_y);
+    float px, pz;
+    static const int offsets[9][2] = {
+        { 0, 0 }, { -1, -1 }, { 0, -1 }, { 1, -1 },
+        { -1, 0 }, { 1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 1 }
+    };
+    int candidate;
+    if (block <= 0.0f) block = 40.0f;
+    px = (grid_x - (float)level_width(level) * 0.5f) * block;
+    pz = (grid_y - (float)level_height(level) * 0.5f) * block;
+    /* Try the expected cell first, then adjoining displaced quads. */
+    for (candidate = 0; candidate < 9; ++candidate) {
+        float vertices[4][3];
+        int cx = x + offsets[candidate][0];
+        int cy = y + offsets[candidate][1];
+        if (cx < 0 || cy < 0 ||
+            !scene_render_terrain_cell_vertices_get(
+                level, (uint32_t)cx, (uint32_t)cy, vertices)) continue;
+        if (scene_triangle_height(vertices[0], vertices[1], vertices[2],
+                                   px, pz, height) ||
+            scene_triangle_height(vertices[0], vertices[2], vertices[3],
+                                   px, pz, height)) return 1;
+    }
+    return 0;
+}
+
+/* Entity/scene poses are world coordinates. The software scene uses a
+ * centered, positive-down grid plane; drawing, focus, rings and picking all
+ * cross that boundary here rather than treating world values as cell indices. */
+static int scene_entity_origin_get(const EntitySlot* entity,
+                                    const LevelState* level,
+                                    float block, SceneVec3* origin)
+{
+    float grid[2];
+    if (!entity_position_grid_coordinates_get(entity, level, grid)) return 0;
+    origin->x = (grid[0] - (float)level_width(level) * 0.5f) * block;
+    origin->z = (grid[1] - (float)level_height(level) * 0.5f) * block;
+    return scene_terrain_height_get(level, grid[0], grid[1], &origin->y);
 }
 
 static int scene_camera_configure(SceneCamera* c, const GameContext* ctx,
@@ -692,29 +767,26 @@ static int scene_camera_configure(SceneCamera* c, const GameContext* ctx,
     int gw = level_width(lvl), gh = level_height(lvl);
     float block = terrain_blocksize_get(lvl->ptr_terrain);
     if (block <= 0.0f) block = 40.0f;
-    float hs = block * 0.10f;
+    float hs = terrain_height_scale_get(lvl->ptr_terrain);
     float world_w = (float)gw * block, world_d = (float)gh * block;
     if (s_scene_focus_level != lvl) {
         s_scene_focus_level = lvl;
         s_scene_focus = scene_vec3(0.0f, -8.0f * hs, 0.0f);
-        float fx = 0.0f, fz = 0.0f;
+        SceneVec3 sum = scene_vec3(0.0f, 0.0f, 0.0f);
+        int visible = 0;
         int figures = ctx != NULL
             ? entity_count((GameContext*)ctx, ENTITY_TYPE_MINIFIG) : 0;
-        if (figures > 0) {
-            for (int i = 0; i < figures; ++i) {
-                const EntitySlot* e = entity_at((GameContext*)ctx,
-                                                ENTITY_TYPE_MINIFIG, i);
-                if (e == NULL) continue;
-                fx += e->x;
-                fz += e->y;
-            }
-            fx /= (float)figures;
-            fz /= (float)figures;
-            int gx = (int)fx, gy = (int)fz;
-            s_scene_focus.x = (fx - (float)gw * 0.5f) * block;
-            s_scene_focus.z = (fz - (float)gh * 0.5f) * block;
-            s_scene_focus.y = -(float)terrain_surface_height_get(
-                lvl->ptr_terrain, gx, gy) * hs - block * 0.15f;
+        for (int i = 0; i < figures; ++i) {
+            const EntitySlot* e = entity_at((GameContext*)ctx,
+                                            ENTITY_TYPE_MINIFIG, i);
+            SceneVec3 origin;
+            if (!scene_entity_origin_get(e, lvl, block, &origin)) continue;
+            sum = scene_add(sum, origin);
+            ++visible;
+        }
+        if (visible > 0) {
+            s_scene_focus = scene_scale(sum, 1.0f / (float)visible);
+            s_scene_focus.y -= block * 0.15f;
         }
     }
     SceneVec3 target = s_scene_focus;
@@ -747,38 +819,37 @@ static void render_terrain(SceneCamera* c, const LevelState* lvl,
     for (int y = 0; y < h; ++y) {
         for (int x = 0; x < w; ++x) {
             float z = (float)terrain_surface_height_get(lvl->ptr_terrain, x, y);
-            SceneVec3 a = terrain_point(x, y, z, w, h, block, hs);
-            SceneVec3 b = terrain_point(x + 1, y, z, w, h, block, hs);
-            SceneVec3 d = terrain_point(x + 1, y + 1, z, w, h, block, hs);
-            SceneVec3 e = terrain_point(x, y + 1, z, w, h, block, hs);
-            float vertex_heights[4];
-            if (scene_render_terrain_cell_vertex_heights(
-                    lvl, (uint32_t)x, (uint32_t)y, vertex_heights)) {
-                a.y = -vertex_heights[0] * hs;
-                b.y = -vertex_heights[1] * hs;
-                d.y = -vertex_heights[2] * hs;
-                e.y = -vertex_heights[3] * hs;
-            }
-            a.x += scene_render_terrain_vertex_x_offset_get(
-                lvl, x, y);
-            b.x += scene_render_terrain_vertex_x_offset_get(
-                lvl, x + 1, y);
-            d.x += scene_render_terrain_vertex_x_offset_get(
-                lvl, x + 1, y + 1);
-            e.x += scene_render_terrain_vertex_x_offset_get(
-                lvl, x, y + 1);
+            float vertices[4][3];
+            SceneVec3 a, b, d, e;
+            if (!scene_render_terrain_cell_vertices_canonical_get(
+                    lvl, (uint32_t)x, (uint32_t)y, vertices)) continue;
+            a = scene_vec3(vertices[0][0], vertices[0][1], vertices[0][2]);
+            b = scene_vec3(vertices[1][0], vertices[1][1], vertices[1][2]);
+            d = scene_vec3(vertices[2][0], vertices[2][1], vertices[2][2]);
+            e = scene_vec3(vertices[3][0], vertices[3][1], vertices[3][2]);
             SceneColor top = terrain_color(vox != NULL
                 ? vox + ((size_t)y * (size_t)w + (size_t)x) * LEVEL_VOXEL_STRIDE
                 : NULL);
             top = terrain_surface_color_override_get(lvl, (uint32_t)x,
                                                       (uint32_t)y, top);
+            /* Rotate complete XYZ corners to select the other diagonal.
+             * Wall edges below retain canonical map adjacency. */
+            int flipped = s_scene_vertex_flipped != NULL &&
+                s_scene_vertex_level == lvl &&
+                s_scene_vertex_flipped[(size_t)y * s_scene_vertex_width + x];
             if (texture != NULL) {
-                scene_quad_textured(c, a, b, d, e, texture,
-                                    (float)x * 0.35f, (float)y * 0.35f,
-                                    top);
-            } else {
-                scene_quad(c, a, b, d, e, color_scale(top, 1.0f));
+                float u = (float)x * 0.35f, v = (float)y * 0.35f;
+                if (flipped) {
+                    scene_triangle_sampled(c, e, a, b, top, texture,
+                        u, v + 0.35f, u, v, u + 0.35f, v);
+                    scene_triangle_sampled(c, e, b, d, top, texture,
+                        u, v + 0.35f, u + 0.35f, v,
+                        u + 0.35f, v + 0.35f);
+                }
+                else scene_quad_textured(c, a, b, d, e, texture, u, v, top);
             }
+            else if (flipped) scene_quad(c, e, a, b, d, top);
+            else scene_quad(c, a, b, d, e, top);
 
             const int dx[4] = {0, 1, 0, -1};
             const int dy[4] = {-1, 0, 1, 0};
@@ -850,7 +921,7 @@ static void render_raider(SceneCamera* c, const EntitySlot* e,
                           float block, SceneVec3 origin, int selected)
 {
     if (e == NULL) return;
-    float yaw = e->rot * 0.01745329252f;
+    float yaw = e->rot; /* OList and entity pose headings are radians. */
     float u = block * 0.22f;
     /* Boots and legs. */
     figure_box(c,origin,yaw,-u,block*0.18f,0,u*0.82f,block*0.32f,u,
@@ -928,10 +999,9 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
     }
     for (size_t i = 0; i < count; ++i) s_scene_depth[i] = 1.0e30f;
 
-    int gw = level_width(lvl), gh = level_height(lvl);
     float block = terrain_blocksize_get(lvl->ptr_terrain);
     if (block <= 0.0f) block = 40.0f;
-    float hs = block * 0.10f;
+    float hs = terrain_height_scale_get(lvl->ptr_terrain);
     SceneCamera camera;
     scene_camera_configure(&camera, ctx, lvl, w, h);
     camera.pixels = pixels;
@@ -946,24 +1016,22 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
         for (int i = 0; i < entity_count((GameContext*)ctx, type); ++i) {
             const EntitySlot* e = entity_at((GameContext*)ctx, type, i);
             if (e == NULL) continue;
-            int gx = (int)e->x, gy = (int)e->y;
-            float ground = -terrain_surface_height_get(lvl->ptr_terrain,gx,gy)*hs;
-            SceneVec3 origin = {(e->x-gw*0.5f)*block, ground,
-                                (e->y-gh*0.5f)*block};
+            SceneVec3 origin;
+            if (!scene_entity_origin_get(e, lvl, block, &origin)) continue;
             if (type == ENTITY_TYPE_MINIFIG) {
                 render_raider(&camera, e, block, origin,
                               selection_contains_entity_target(ctx, e, NULL));
             } else if (type == ENTITY_TYPE_BUILDING) {
                 /* A blocky Tool Store silhouette until the .ae scene loader
                  * supplies its authored object assembly. */
-                figure_box(&camera,origin,e->rot*0.01745329252f,0,block*0.42f,
+                figure_box(&camera,origin,e->rot,0,block*0.42f,
                            0,block*0.80f,block*0.84f,block*0.72f,
                            scene_color(91,83,72));
-                figure_box(&camera,origin,e->rot*0.01745329252f,0,block*0.90f,
+                figure_box(&camera,origin,e->rot,0,block*0.90f,
                            0,block*0.58f,block*0.14f,block*0.52f,
                            scene_color(181,145,75));
             } else {
-                figure_box(&camera,origin,e->rot*0.01745329252f,0,block*0.25f,
+                figure_box(&camera,origin,e->rot,0,block*0.25f,
                            0,block*0.48f,block*0.45f,block*0.38f,
                            scene_color(140,138,129));
             }
@@ -990,9 +1058,6 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
         for (slot_index = 0; slot_index < 20; ++slot_index) {
             void* registered_entity = NULL;
             EntitySlot* entity;
-            float gx, gy;
-            int cell_x, cell_y;
-            float ground;
             SceneVec3 marker;
             ScenePoint projected;
             ai_object_registry_slot_peek(0, slot_index, &registered_entity,
@@ -1003,17 +1068,9 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
                 (entity->type == ENTITY_TYPE_MINIFIG &&
                  global_task_refresh_flag_get() != 0u) ||
                 (entity->flags_3e0 & 0x00600000u) != 0u) continue;
-            gx = entity->x;
-            gy = entity->y;
-            cell_x = (int)gx;
-            cell_y = (int)gy;
-            if (cell_x < 0 || cell_y < 0 || cell_x >= gw || cell_y >= gh)
+            if (!scene_entity_origin_get(entity, lvl, block, &marker))
                 continue;
-            ground = -terrain_surface_height_get(lvl->ptr_terrain,
-                                                  cell_x, cell_y) * hs;
-            marker.x = (gx - (float)gw * 0.5f) * block;
-            marker.y = ground + block * 0.8f;
-            marker.z = (gy - (float)gh * 0.5f) * block;
+            marker.y += block * 0.8f;
             if (!scene_project(&camera, marker, &projected)) continue;
             legacy_entity_screen_ring_render_with_ops(
                 entity, projected.x, projected.y, &ring_ops);
@@ -1036,13 +1093,42 @@ int level_scene_mouse_cell(const GameContext* ctx, const LevelState* lvl,
                   scene_scale(c.up, (c.cy - (float)mouse_y) / c.focal))));
     int gw = level_width(lvl), gh = level_height(lvl);
     float block = terrain_blocksize_get(lvl->ptr_terrain);
-    float ground = s_scene_focus.y + block * 0.15f;
-    if (scene_abs(ray.y) < 0.0001f) return 0;
-    float t = (ground - c.eye.y) / ray.y;
-    if (t <= 0.0f) return 0;
-    SceneVec3 hit = scene_add(c.eye, scene_scale(ray, t));
-    *cell_x = hit.x / block + (float)gw * 0.5f;
-    *cell_y = hit.z / block + (float)gh * 0.5f;
+    float nearest = 1.0e30f;
+    SceneVec3 closest = scene_vec3(0.0f, 0.0f, 0.0f);
+    int x, y, triangle;
+    if (block <= 0.0f) block = 40.0f;
+    for (y = 0; y < gh; ++y) {
+        for (x = 0; x < gw; ++x) {
+            float vertices[4][3];
+            if (!scene_render_terrain_cell_vertices_get(
+                    lvl, (uint32_t)x, (uint32_t)y, vertices)) continue;
+            for (triangle = 0; triangle < 2; ++triangle) {
+                const float* va = vertices[0];
+                const float* vb = vertices[triangle == 0 ? 1 : 2];
+                const float* vd = vertices[triangle == 0 ? 2 : 3];
+                SceneVec3 a = scene_vec3(va[0], va[1], va[2]);
+                SceneVec3 b = scene_vec3(vb[0], vb[1], vb[2]);
+                SceneVec3 d = scene_vec3(vd[0], vd[1], vd[2]);
+                SceneVec3 normal = scene_cross(scene_sub(b, a), scene_sub(d, a));
+                float denominator = scene_dot(normal, ray);
+                float t, height;
+                SceneVec3 hit;
+                ScenePoint projected[3];
+                if (!scene_triangle_project(&c, a, b, d, projected)) continue;
+                if (scene_abs(denominator) < 0.0001f) continue;
+                t = scene_dot(normal, scene_sub(a, c.eye)) / denominator;
+                if (t <= 0.0f || t >= nearest) continue;
+                hit = scene_add(c.eye, scene_scale(ray, t));
+                if (!scene_triangle_height(va, vb, vd, hit.x, hit.z, &height))
+                    continue;
+                nearest = t;
+                closest = hit;
+            }
+        }
+    }
+    if (nearest == 1.0e30f) return 0;
+    *cell_x = closest.x / block + (float)gw * 0.5f;
+    *cell_y = closest.z / block + (float)gh * 0.5f;
     return *cell_x >= 0.0f && *cell_y >= 0.0f
         && *cell_x < (float)gw && *cell_y < (float)gh;
 }
@@ -1054,19 +1140,15 @@ EntitySlot* level_scene_pick_entity(GameContext* ctx, const LevelState* lvl,
     if (ctx == NULL || lvl == NULL || lvl->ptr_terrain == NULL) return NULL;
     SceneCamera c;
     if (!scene_camera_configure(&c, ctx, lvl, w, h)) return NULL;
-    int gw = level_width(lvl), gh = level_height(lvl);
     float block = terrain_blocksize_get(lvl->ptr_terrain);
-    float hs = block * 0.10f;
     float best = radius_pixels * radius_pixels;
     EntitySlot* picked = NULL;
     for (int i = 0; i < entity_count(ctx, ENTITY_TYPE_MINIFIG); ++i) {
             const EntitySlot* e = entity_at(ctx, ENTITY_TYPE_MINIFIG, i);
             if (e == NULL) continue;
-            int gx = (int)e->x, gy = (int)e->y;
-            SceneVec3 p = {(e->x - (float)gw * 0.5f) * block,
-                -terrain_surface_height_get(lvl->ptr_terrain, gx, gy) * hs
-                    + block * 0.48f,
-                (e->y - (float)gh * 0.5f) * block};
+            SceneVec3 p;
+            if (!scene_entity_origin_get(e, lvl, block, &p)) continue;
+            p.y += block * 0.48f;
             ScenePoint screen;
             if (!scene_project(&c, p, &screen)) continue;
             float dx = screen.x - (float)mouse_x;

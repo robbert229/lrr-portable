@@ -63,9 +63,21 @@ extern int g_platform_cursor_height;
 #define PLATFORM_EVENT_MOUSE   3
 #define PLATFORM_EVENT_QUIT    4
 
+/* Optional physical mouse vocabulary in PlatformEvent.code. Zero retains
+ * the old aggregate event contract; consumers must not infer a button from
+ * an untagged event. No PlatformEvent layout or native producer change. */
+#define PLATFORM_MOUSE_TAG       0x1000
+#define PLATFORM_MOUSE_LEFT      1
+#define PLATFORM_MOUSE_RIGHT     2
+#define PLATFORM_MOUSE_BUTTONS   3
+#define PLATFORM_MOUSE_DOWN      0x10
+#define PLATFORM_MOUSE_UP        0x20
+#define PLATFORM_MOUSE_CANCEL    0x40
+#define PLATFORM_MOUSE_HELD_SHIFT 8
+
 typedef struct PlatformEvent {
     int kind;   /* PLATFORM_EVENT_* */
-    int code;   /* canonical key code (KEYDOWN/KEYUP) */
+    int code;   /* canonical key code, or tagged PLATFORM_MOUSE_* */
     int mx;     /* absolute mouse x (MOUSE) */
     int my;     /* absolute mouse y (MOUSE) */
     int button; /* 1 = button-press edge (MOUSE); 0 = motion/release */

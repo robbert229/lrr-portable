@@ -7,12 +7,13 @@
  */
 #include "platform/platform.h"
 #include "gods98/resource.hpp"
+#include "gods98/frameloop.hpp"
+#include "gods98/string.hpp"
 #include "game/port_loop_ports.hpp"
+#include "crt/crt.hpp"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-
-/* Shared game-shell driver — lives in src/main.cpp, backend-neutral. */
-int LegorrrMain(void);
 
 /* The original WinMain keeps the executable basename in a process global and
  * uses it as the WAD prefix. Keep this value visible to the Win32 startup
@@ -20,6 +21,12 @@ int LegorrrMain(void);
 static char s_application_prefix[1024];
 static DWORD s_startup_no_sound;
 static DWORD s_startup_insist_on_cd;
+// GLOBAL: LEGORR 0x00505f88
+static DWORD s_programmer_mode;
+// GLOBAL: LEGORR 0x00505f8c
+static char s_start_level_name[256];
+// GLOBAL: LEGORR 0x0050593c
+static float s_frame_interval_override;
 
 /* WinAPI registry operations used by RegistryPathAccessor (finding 402). */
 static void* winmain_registry_create_key(void* parent, const char* component,
@@ -65,12 +72,111 @@ static int winmain_registry_read(const char* value_name, char* value,
     return 1;
 }
 
-/* Partial implementation of WinMain's CommandLineOptionParse (finding 398). */
+/* CommandLineOptionParse (finding 398). */
 // FUNCTION: LEGORR 0x00477bf0
-static void winmain_parse_basic_options(const char* parameters)
+static void winmain_parse_options(const char* parameters,
+                                  DWORD* no_sound_out,
+                                  DWORD* insist_on_cd_out)
 {
-    s_startup_no_sound = strstr(parameters, "_nosound") != NULL;
-    s_startup_insist_on_cd = strstr(parameters, "_insistOnCD") != NULL;
+    const char* option;
+
+    option = case_insensitive_substring_find(parameters, "_insistOnCD");
+    if (option != NULL) *insist_on_cd_out = 1;
+    option = case_insensitive_substring_find(parameters, "_nosound");
+    if (option != NULL) *no_sound_out = 1;
+    option = case_insensitive_substring_find(parameters, "_debug");
+    if (option != NULL) s_engine_feature_word |= 0x2000u;
+    option = case_insensitive_substring_find(parameters, "-nm");
+    if (option != NULL) s_engine_feature_word |= 0x20u;
+    option = case_insensitive_substring_find(parameters, "-ftm");
+    if (option != NULL) s_engine_feature_word |= 0x40000u;
+    option = case_insensitive_substring_find(parameters, "-fvf");
+    if (option != NULL) s_engine_feature_word |= 0x80000u;
+    option = case_insensitive_substring_find(parameters, "_best");
+    if (option != NULL) s_engine_feature_word |= 0x40u;
+    option = case_insensitive_substring_find(parameters, "_window");
+    if (option != NULL) s_engine_feature_word |= 0x100u;
+    option = case_insensitive_substring_find(parameters, "_dualmouse");
+    if (option != NULL) s_engine_feature_word |= 0x4000u;
+    option = case_insensitive_substring_find(parameters, "_debugcomplete");
+    if (option != NULL) s_engine_feature_word |= 0x8000u;
+    option = case_insensitive_substring_find(parameters, "_testercall");
+    if (option != NULL) {
+        s_programmer_mode = 2u;
+        s_engine_feature_word |= 0x10000u;
+    }
+    option = case_insensitive_substring_find(parameters, "_testlevels");
+    if (option != NULL) s_engine_feature_word |= 0x20000u;
+    option = case_insensitive_substring_find(parameters, "_reducesamples");
+    if (option != NULL) s_engine_feature_word |= 0x100000u;
+    option = case_insensitive_substring_find(parameters, "_showversion");
+    if (option != NULL) s_engine_feature_word |= 0x200000u;
+    option = case_insensitive_substring_find(parameters, "_reduceanimation");
+    if (option != NULL) s_engine_feature_word |= 0x400000u;
+    option = case_insensitive_substring_find(parameters, "_reducepromeshes");
+    if (option != NULL) s_engine_feature_word |= 0x800000u;
+    option = case_insensitive_substring_find(parameters, "_reduceflics");
+    if (option != NULL) s_engine_feature_word |= 0x1000000u;
+    option = case_insensitive_substring_find(parameters, "_reduceimages");
+    if (option != NULL) s_engine_feature_word |= 0x2000000u;
+    option = case_insensitive_substring_find(parameters, "_startlevel");
+    if (option != NULL) {
+        const char* level = option + 11;
+        char* output = s_start_level_name;
+        char* const output_end = s_start_level_name + sizeof(s_start_level_name) - 1;
+        while (*level == ' ') ++level;
+        while (*level != '\0' && *level != ' ' && output < output_end) {
+            *output++ = *level++;
+        }
+        *output = '\0';
+        s_engine_feature_word |= 0x200u;
+    }
+    option = case_insensitive_substring_find(parameters, "_flags");
+    if (option != NULL) s_render_feature_flags = (uint32_t)atoi(option + 6);
+    option = case_insensitive_substring_find(parameters, "_fpslock");
+    if (option != NULL) {
+        unsigned int fps = (unsigned int)atoi(option + 8);
+        if (fps != 0u) s_frame_interval_override = 25.0f / (float)fps;
+    }
+    option = case_insensitive_substring_find(parameters, "_programmer");
+    if (option == NULL) {
+        s_programmer_mode = 0u;
+    } else {
+        s_programmer_mode = (DWORD)atoi(option + 11);
+        if (s_programmer_mode == 0u) s_programmer_mode = 1u;
+    }
+    option = case_insensitive_substring_find(parameters, "_cleansaves");
+    if (option != NULL) s_engine_feature_word |= 0x400u;
+}
+
+static int winmain_application_run(void)
+{
+    PlatformEvent events[32];
+    DWORD previous_time;
+    int result = frameloop_application_init();
+    if (result != 1) return result;
+    previous_time = GetTickCount();
+    for (;;) {
+        DWORD frame_start = GetTickCount();
+        DWORD elapsed = frame_start - previous_time;
+        float dt = (float)elapsed / 1000.0f;
+        int event_count;
+        DWORD frame_elapsed;
+        if ((s_engine_feature_word & 0x10u) != 0u) dt = 0.0f;
+        else if ((s_engine_feature_word & 0x80u) != 0u) dt = 1.0f / 30.0f;
+        if (s_frame_interval_override != 0.0f)
+            dt = s_frame_interval_override * 0.04f;
+        if (dt > 3.0f) dt = 3.0f;
+        previous_time = frame_start;
+        event_count = platform_pump_events(
+            frameloop_application_window_get(), events, 32);
+        frameloop_application_events_set(events, event_count);
+        if (!frameloop_application_tick(dt)) break;
+        frame_elapsed = GetTickCount() - frame_start;
+        if (frame_elapsed < 33u) Sleep(33u - frame_elapsed);
+    }
+    frameloop_application_shutdown();
+    return 0;
 }
 
 // FUNCTION: LEGORR 0x4777a0
@@ -151,7 +257,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     } else {
         sprintf(startup_parameters, "%s", lpCmdLine);
     }
-    winmain_parse_basic_options(startup_parameters);
+    winmain_parse_options(startup_parameters, &s_startup_no_sound,
+                          &s_startup_insist_on_cd);
+    frameloop_application_start_level_override_set(s_start_level_name);
+    frameloop_application_sound_disabled_set((int)s_startup_no_sound);
     startup_state[0] = s_startup_no_sound;
     startup_state[1] = s_startup_insist_on_cd;
     resource_startup_require_cd_set((int)s_startup_insist_on_cd);
@@ -166,5 +275,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     (void)startup_state[3];
     (void)no_hal_message;
     (void)hInstance;
-    return LegorrrMain();
+    return winmain_application_run();
 }

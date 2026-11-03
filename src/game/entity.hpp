@@ -232,6 +232,10 @@ int entity_route_setup_and_marker_associate(EntitySlot* entity,
                                             const float* final_marker_position); /* FUN_00441700 */
 int entity_waypoint_storage_reserve(EntitySlot* entity,
                                     unsigned int count);
+/* Cell route -> world point, including the route's subcell weights and the
+ * terrain origin/blocksize/Y inversion. The cursor, not pending, owns progress. */
+int entity_route_waypoint_world_get(const EntitySlot* entity,
+                                    unsigned int index, float position[2]);
 int entity_route_adjacent_step_append(EntitySlot* entity, int cell_x,
                                       int cell_y); /* FUN_004468c0 */
 typedef float (*EntitySurfaceScaleReadHook)(void* context);
@@ -578,24 +582,13 @@ typedef int (*PeriodicEntityCallback)(EntitySlot* entity, void* payload,
 void periodic_entity_callback_install(PeriodicEntityCallback callback,
                                       void* context);
 void periodic_entity_callback_dispatch(void* payload); /* FUN_00425b40 */
-typedef void (*EntityDefaultTransformApplyHook)(EntitySlot* entity,
-                                                void* argument,
-                                                float scale, int mode_a,
-                                                int mode_b, void* context);
-void entity_default_transform_apply_hook_set(
-    EntityDefaultTransformApplyHook hook, void* context);
 int entity_default_transform_apply_if_flagged(EntitySlot* entity,
                                               void* argument);
 void entity_default_transform_apply_all(void* argument);
 EntitySlot* entity_at_grid_position_find(const int cell_xy[2]); /* 0x00438670 */
-typedef void (*EntityActivityRecordRemoveFn)(void* record, void* action,
-                                             void* user);
-void entity_activity_record_remove_hook_set(EntityActivityRecordRemoveFn hook,
-                                            void* user);
-void entity_activity_record_remove_by_type(void* entity, uint32_t type,
+void entity_activity_record_remove_by_type(void* entity, int type,
                                            void* action_context);
 void entity_activity_records_refresh(void* entity);
-void entity_activity_record_removal_suppression_set(uint32_t flags);
 typedef void (*ActivityRecordClearFn)(void* head, void* user);
 typedef int (*ActivityRunnerChangeFn)(void* scene_owner, void* state,
                                       void* value, void* user);
@@ -768,9 +761,13 @@ const void* entity_model(const EntitySlot* e);
 
 #define ENTITY_STATS_RECORD_SIZE 0x150 /* the corpus record stride */
 
-float entity_stats_float_at20(const EntitySlot* e);   /* FUN_00469cb0 */
+/* RouteSpeed is raw WORLD units per reference tick (25 ticks/second).
+ * This query applies the existing 0x446610 terrain/state scale, with no motion.
+ * Missing Stats returns zero; callers must explicitly convert their time unit. */
+float entity_route_speed(EntitySlot* entity);
+float entity_stats_float_at20(const EntitySlot* e);   /* 0x469cb0: RouteSpeed */
 float entity_stats_float_at24_indexed(const EntitySlot* e, int index);
-                                      /* FUN_00469cc0 (terrain-speed array) */
+                                      /* 0x469cc0: drill times at +24..34, in reference ticks */
 float entity_stats_float_atd4(const EntitySlot* e);   /* FUN_00469ce0 */
 float entity_stats_float_at9c(const EntitySlot* e);   /* FUN_00469d00 */
 float entity_stats_float_atd8(const EntitySlot* e);   /* FUN_00469d20 */
@@ -827,6 +824,9 @@ float entity_speed_component_get(const EntitySlot* e); /* FUN_0046a0a0 (+f8) */
  * layout and return the type-specific renderer component handle. */
 void* entity_type_component_get(const void* entity_record);
 void entity_slot_type_component_set(EntitySlot* entity, void* component);
+void entity_follow_target_pose_get(EntitySlot* entity, int index,
+                                   float position[3], float facing[3]);
+                                  /* FUN_0044a070 */
 uint32_t entity_type_operation_release(const EntitySlot* entity); /* FUN_00449ff0 */
 void entity_type_operation_fallback_handle_set(EntitySlot* entity,
                                                void* handle_1c);
@@ -1025,11 +1025,22 @@ int entity_cell_type_speed_multiplier_resolve(const EntitySlot* entity,
                                               const struct LevelState* level,
                                               int x, int y, float scale,
                                               float* out_scale); /* FUN_00433180 */
+int entity_cell_type_speed_multiplier_resolve_current(
+    const EntitySlot* entity, int x, int y, float scale,
+    float* out_scale); /* FUN_00433180 retail ABI */
 int entity_route_cell_candidate_accept(const EntitySlot* entity,
                                        const struct LevelState* level,
                                        int x, int y, int mode); /* FUN_00443840 */
+void entity_transform_position_get_outputs(const EntitySlot* entity,
+                                           float* out_x,
+                                           float* out_y); /* FUN_00442260 */
 void entity_transform_position_get(const EntitySlot* entity,
-                                   float out_xy[2]); /* FUN_00442260 */
+                                   float out_xy[2]);
+/* World pose -> corner-based fractional grid coordinates (cell centers are
+ * n+0.5). Used by software drawing/picking; false without a valid terrain. */
+int entity_position_grid_coordinates_get(const EntitySlot* entity,
+                                          const struct LevelState* level,
+                                          float out_xy[2]);
 int entity_work_object_position_get(const EntitySlot* entity,
                                     float out_xy[2]); /* FUN_0044a2a0 */
 int entity_world_center_position_read(const EntitySlot* entity,
@@ -1408,7 +1419,7 @@ int resolved_entity_operation_dispatch(const char* name, int slot,
 /* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) -------------------
  * The corpus family FUN_00469b20 … FUN_00469be0 / FUN_00469e00 /
  * FUN_00469ec0 … FUN_00469f00 resolves a template record through
- * DAT_00502bd8's two-level table (`*(*DAT_00502bd8 + type * 4) + row * 4`)
+ * DAT_00502bd8's two-level type/row pointer table
  * and reads fixed fields or stride-0x150 instance blocks from the template.
  * The Stats config loader installs guarded own storage for each type/row;
  * each registered window carries its record count, while reads from an
@@ -1522,6 +1533,8 @@ int entity_pair_scalar_fields_set(EntitySlot* entity, const int32_t pair[2],
                                   int32_t scalar); /* 0x0044c150 */
 
 namespace unported_ledger_stubs {
+void ledger_stub_00444fb0_EntityTurnToVectorActivityIssue(
+    EntitySlot* entity, const float target[2]);
 typedef int (*CellStepPathResolveHook)(int start_x, int start_y,
                                        int target_x, int target_y,
                                        int out_xy[2], void* user);

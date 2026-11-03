@@ -6,6 +6,9 @@
 
 namespace lego {
 
+// GLOBAL: LEGORR 0x00503878
+WeaponIndexedTypeRecord* s_weapon_indexed_records;
+
 namespace {
 
 WeaponDefinition s_weapon_definitions[WEAPON_TYPE_CAPACITY];
@@ -13,8 +16,6 @@ uint32_t s_weapon_type_count = 0;
 void* s_weapon_config = 0;
 WeaponDefinitionsParseHook s_weapon_parse_hook = 0;
 WeaponIndexedTypeRecord* s_weapon_owned_records = 0;
-// GLOBAL: LEGORR 0x00503878
-static WeaponIndexedTypeRecord* s_weapon_indexed_records;
 static uint32_t s_weapon_indexed_record_count;
 
 void weapon_definition_reset(WeaponDefinition* definition)
@@ -156,30 +157,72 @@ uint32_t object_type_name_index_find(const char* name)
 }
 
 // FUNCTION: LEGORR 0x0046F110
+float weapon_type_recharge_time_get_target(int type)
+{
+    return s_weapon_indexed_records[type].recharge_time;
+}
+
 float weapon_type_recharge_time_get(int type)
 {
+    const WeaponIndexedTypeRecord* record;
     const WeaponDefinition* definition = weapon_definition_at(type);
+    record = s_weapon_indexed_records != 0 && type >= 0 &&
+        (uint32_t)type < s_weapon_indexed_record_count
+        ? &s_weapon_indexed_records[type] : 0;
+    if (record != 0) return weapon_type_recharge_time_get_target(type);
     return definition != 0 ? definition->recharge_time : 0.0f;
 }
 
 // FUNCTION: LEGORR 0x0046F140
+float weapon_type_discharge_rate_get_target(int type)
+{
+    return s_weapon_indexed_records[type].discharge_rate;
+}
+
 float weapon_type_discharge_rate_get(int type)
 {
+    const WeaponIndexedTypeRecord* record;
     const WeaponDefinition* definition = weapon_definition_at(type);
+    record = s_weapon_indexed_records != 0 && type >= 0 &&
+        (uint32_t)type < s_weapon_indexed_record_count
+        ? &s_weapon_indexed_records[type] : 0;
+    if (record != 0) return weapon_type_discharge_rate_get_target(type);
     return definition != 0 ? definition->discharge_rate : 0.0f;
 }
 
 // FUNCTION: LEGORR 0x0046F170
+float weapon_type_range_get_target(int type)
+{
+    return s_weapon_indexed_records[type].range;
+}
+
 float weapon_type_range_get(int type)
 {
+    const WeaponIndexedTypeRecord* record;
     const WeaponDefinition* definition = weapon_definition_at(type);
+    record = s_weapon_indexed_records != 0 && type >= 0 &&
+        (uint32_t)type < s_weapon_indexed_record_count
+        ? &s_weapon_indexed_records[type] : 0;
+    if (record != 0) return weapon_type_range_get_target(type);
     return definition != 0 ? definition->range : 0.0f;
 }
 
 // FUNCTION: LEGORR 0x0046F1A0
+float weapon_type_wall_destroy_time_get_target(int type, int wall_type)
+{
+    return s_weapon_indexed_records[type].wall_destroy_time[wall_type];
+}
+
 float weapon_type_wall_destroy_time_get(int type, int wall_type)
 {
+    const WeaponIndexedTypeRecord* record;
     const WeaponDefinition* definition = weapon_definition_at(type);
+    record = s_weapon_indexed_records != 0 && type >= 0 &&
+        (uint32_t)type < s_weapon_indexed_record_count
+        ? &s_weapon_indexed_records[type] : 0;
+    if (record != 0 && wall_type >= 0 &&
+        wall_type < WEAPON_WALL_TYPE_COUNT)
+        return weapon_type_wall_destroy_time_get_target(type, wall_type);
     if (definition == 0 || wall_type < 0 ||
         wall_type >= WEAPON_WALL_TYPE_COUNT) return 0.0f;
     return definition->wall_destroy_time[wall_type];

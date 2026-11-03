@@ -172,9 +172,9 @@ typedef struct RewardScreen {
 /* Selected flag word on EntitySlot.flags (corpus entity +0xfa & 0x200000). */
 #define ENTITY_SELECTED 0x200000u
 /* Path-list entry (corpus entity +0x24 buffer, stride 5 dwords/entry):
- * x/y are entry[0]/entry[1] read at callback 0x43cba5. The corpus "pending"
- * byte flag sits at entry+8 (callback 0x43cd83 reads list+idx*20-12 relative
- * to +0x28); arrival clears that byte — the pop is flag-clear, not removal. */
+ * x/y are numeric CELL coordinates. +8/+c are subcell interpolation weights;
+ * the flags at +0x10 may be zero on a valid route (0x441700). wp_index owns
+ * progression; zero flags do not mean an entry was consumed. */
 #define AI_WAYPOINTS_MAX 16 /* inline waypoint span; longer lists realloc-grow */
 /* Permitted-activity list bound (corpus entity +0x370 id slots / +0x384 count):
  * the inline span +0x370..+0x384 is five dwords, so an entity holds at most
@@ -182,12 +182,11 @@ typedef struct RewardScreen {
  * entries — the port models the stats-block capacity as
  * GameContext.stats_activity_cap (see below). */
 #define AI_ACTIVITY_SLOTS 5
-/* Terrain count of the stats speed table (port bound — the corpus table
- * sits inside the +0x334 stats block with an unpinned size, indexed by the
- * signed tile-type byte; the port guards out-of-range reads). */
+/* Bound of the legacy target/work rate adapter. Stats +0x24..34 are drill
+ * times in reference ticks; ordinary walking reads RouteSpeed at +0x20. */
 #define AI_STATS_TERRAIN_TYPES 16
 typedef struct AiWaypoint {
-    float   x, y;            /* route point, record offsets 0x00/0x04 */
+    float   x, y;            /* cell route point, offsets 0x00/0x04 */
     float   weight_y;         /* interpolation weight, record offset 0x08 */
     float   weight_x;         /* interpolation weight, record offset 0x0c */
     uint8_t pending;          /* record flags at +0x10; arrival clears bit 0 */
@@ -245,7 +244,7 @@ typedef struct EntitySlot {
     int32_t type;       /* corpus entity-type code (1..9)         */
     int32_t etype;      /* same, stored for the cmd task mapping  */
     char    name[32];
-    float   x, y, z;
+    float   x, y, z;         /* world pose; horizontal Y is inverted vs grid */
     float   rot;
     float   movement_tick_scale; /* corpus entity +0xae, reset to 0.01 */
     float   velocity_x;
@@ -449,19 +448,10 @@ typedef struct GameContext {
     LevelState* level;        /* DAT_005560d4 — current level block */
     uint32_t    cheat;        /* DAT_00556ed0 — level cheat/feature bits */
 
-    /* --- stats speed table (FUN_00469cc0, the `+0x334+0x24` terrain-speed
-     * table behind the entity stats block) --------------------------------
-     * Corpus: `*(state + 0x24 + terrain_type * 4)` — seconds to cross one
-     * cell of that terrain type; the walker accumulates progress as
-     * dt/entry and arrives past 1.0 (FUN_00434570 on the move branch,
-     * 0x43cc35 reads the cell's type through FUN_004319b0). The stats
-     * block itself (type table DAT_00502bd8, stride 336 — instance stats
-     * from config, templates zero) is not ported, so the port models the
-     * table as this one game-wide array indexed by the tile-type byte
-     * (TODO(corpus): per-type instance stats fill). A zero entry steps at
-     * AI_MOVE_SPEED_CPS: the corpus gates movement on entry != 0 behind
-     * the unported +0x3e8 walker bit, so unset entries need a port-side
-     * default either way. */
+    /* Legacy target/work-path fallback, in seconds/cell. Kept for that
+     * adapter's existing behavior; ordinary kind-0 walking never uses it.
+     * Loaded Stats are per-entity: RouteSpeed +0x20 is raw world units per
+     * reference tick, while drill-time +0x24..34 is seconds multiplied by 25. */
     float stats_speed_sec[AI_STATS_TERRAIN_TYPES];
 
     /* --- permitted-activity list capacity (FUN_0046a060) ----------------- *

@@ -42,6 +42,7 @@ static char s_objective_voice_alias[256];
 static int s_objective_voice_alias_pending;
 /* DAT_004ffbc0 is the runtime result word. It is separate from the level's
  * configured objective mask in LevelState::objective. */
+// GLOBAL: LEGORR 0x004ffbc0
 static uint32_t s_objective_result_word;
 static int s_objective_voice_stream_handle = -1;
 static float s_objective_voice_stream_timeout;
@@ -55,6 +56,7 @@ static int s_advisor_sound_slot = -1;
 static CoordinateListHeadGetHook s_coordinate_list_head_get;
 static void* s_coordinate_list_head_context;
 static RewardTaskResourceRecord s_reward_task_resources[10];
+static void objective_advisor_clear_active_state(void);
 
 void advisor_sound_alias_set(int slot)
 {
@@ -463,53 +465,79 @@ static void obj_split_two(const char* s, int32_t* a, int32_t* b)
     }
 }
 
-/* Corpus FUN_00458580 — crystal/ore objectives. */
+/* Corpus FUN_00458580 — crystal/ore objective record words. */
 // FUNCTION: LEGORR 0x00458580
-static void obj_set_resources(LevelState* s, int32_t crystal, int32_t ore)
+static void obj_set_resources_target(uint32_t* level_record, int32_t crystal,
+                                     int32_t ore)
 {
     if (crystal != 0) {
-        s->objective |= LVL_OBJECTIVE_CRYSTALS;
         s_objective_result_word |= LVL_OBJECTIVE_CRYSTALS;
-        level_set_int(s, OBJ_OFF_CRYSTAL_TARGET, crystal);
+        level_record[OBJ_OFF_CRYSTAL_TARGET / 4] = (uint32_t)crystal;
     }
     if (ore != 0) {
-        s->objective |= LVL_OBJECTIVE_ORE;
         s_objective_result_word |= LVL_OBJECTIVE_ORE;
-        level_set_int(s, OBJ_OFF_ORE_TARGET, ore);
+        level_record[OBJ_OFF_ORE_TARGET / 4] = (uint32_t)ore;
     }
 }
 
-/* Corpus FUN_004585c0 — block objective (two targets). */
+/* Keep the configured objective mask in the portable level sidecar while
+ * the mapped target above preserves the retail global and record writes. */
+static void obj_set_resources(LevelState* s, int32_t crystal, int32_t ore)
+{
+    if (crystal != 0) s->objective |= LVL_OBJECTIVE_CRYSTALS;
+    if (ore != 0) s->objective |= LVL_OBJECTIVE_ORE;
+    obj_set_resources_target(s->word, crystal, ore);
+}
+
+/* Corpus FUN_004585c0 — block objective record words. */
 // FUNCTION: LEGORR 0x004585c0
+static void obj_set_block_target(uint32_t* level_record,
+                                 const int32_t targets[2])
+{
+    s_objective_result_word |= LVL_OBJECTIVE_BLOCK;
+    level_record[OBJ_OFF_BLOCK_A / 4] = (uint32_t)targets[0];
+    level_record[OBJ_OFF_BLOCK_B / 4] = (uint32_t)targets[1];
+}
+
 static void obj_set_block(LevelState* s, const int32_t targets[2])
 {
     s->objective |= LVL_OBJECTIVE_BLOCK;
-    s_objective_result_word |= LVL_OBJECTIVE_BLOCK;
-    level_set_int(s, OBJ_OFF_BLOCK_A, targets[0]);
-    level_set_int(s, OBJ_OFF_BLOCK_B, targets[1]);
+    obj_set_block_target(s->word, targets);
 }
 
-/* Corpus FUN_004585f0 — timer objective (ticks = seconds*25). */
+/* Corpus FUN_004585f0 — timer objective record word. */
 // FUNCTION: LEGORR 0x004585f0
-static void obj_set_timer(LevelState* s, float ticks, int hit_time_fail)
+static void obj_set_timer_target(uint32_t* level_record, float ticks,
+                                 int hit_time_fail)
 {
-    s->objective |= LVL_OBJECTIVE_TIMER;
     s_objective_result_word |= LVL_OBJECTIVE_TIMER;
-    level_set_float(s, OBJ_OFF_TIMER_TARGET, ticks);
+    ((float*)level_record)[OBJ_OFF_TIMER_TARGET / 4] = ticks;
     if (hit_time_fail) {
-        s->objective |= LVL_OBJECTIVE_NO_ACH_ADV;
         s_objective_result_word |= LVL_OBJECTIVE_NO_ACH_ADV;
     }
 }
 
-/* Corpus FUN_00458620 — construction objective. */
+static void obj_set_timer(LevelState* s, float ticks, int hit_time_fail)
+{
+    s->objective |= LVL_OBJECTIVE_TIMER;
+    if (hit_time_fail) s->objective |= LVL_OBJECTIVE_NO_ACH_ADV;
+    obj_set_timer_target(s->word, ticks, hit_time_fail);
+}
+
+/* Corpus FUN_00458620 — construction objective record words. */
 // FUNCTION: LEGORR 0x00458620
+static void obj_set_construction_target(uint32_t* level_record,
+                                        uint32_t a, uint32_t b)
+{
+    s_objective_result_word |= LVL_OBJECTIVE_CONSTRUCTION;
+    level_record[OBJ_OFF_CONSTRUCT_A / 4] = a;
+    level_record[OBJ_OFF_CONSTRUCT_B / 4] = b;
+}
+
 static void obj_set_construction(LevelState* s, long a, long b)
 {
     s->objective |= LVL_OBJECTIVE_CONSTRUCTION;
-    s_objective_result_word |= LVL_OBJECTIVE_CONSTRUCTION;
-    level_set_int(s, OBJ_OFF_CONSTRUCT_A, (int32_t)a);
-    level_set_int(s, OBJ_OFF_CONSTRUCT_B, (int32_t)b);
+    obj_set_construction_target(s->word, (uint32_t)a, (uint32_t)b);
 }
 
 // FUNCTION: LEGORR 0x00457d40
@@ -808,6 +836,45 @@ void objective_active_level_clear(LevelState* s)
     if (s_objective_active_level == s) s_objective_active_level = NULL;
 }
 
+int objective_briefing_active(const LevelState* s)
+{
+    return s != NULL && s == s_objective_active_level &&
+        (s_objective_result_word & 7u) == 1u;
+}
+
+int objective_briefing_acknowledge(LevelState* s)
+{
+    if (!objective_briefing_active(s)) return 0;
+    /* FUN_004589c0 calls FUN_004588e0 only after the last page. The
+     * frontend's mapped release adapter has independent, unbound storage;
+     * perform this branch against the actual objective owner instead. */
+    (void)global_value_004ff9bc_store_and_return(&s->objective_pending);
+    s_objective_result_word &= ~1u;
+    s->objective &= ~LVL_OBJECTIVE_STILL_PENDING;
+    s->objective_pending = 0;
+    if ((engine_debug_word_peek() & 0x800u) != 0u) {
+        media_cd_watchdog_update(1);
+        engine_debug_word_bit_set(0x800u, 0);
+    }
+    objective_advisor_clear_active_state();
+    if (s_objective_voice_stream_handle != -1) {
+        (void)sound_stream_stop_and_release(0);
+        s_objective_voice_stream_handle = -1;
+    }
+    unported_ledger_stubs::ledger_stub_00425c30_TransitionControl(0, 0u);
+    sound_deferred_queue_drain(0);
+    if (system_state_flags_get() == 0u)
+        engine_debug_word_bit_set(0x1000u, 0);
+    /* The frame-driven UI may accept before another ObjectiveTick. Retire
+     * its unsubmitted intro alias too, so it cannot play during gameplay. */
+    s_objective_voice_alias_pending = 0;
+    s_objective_voice_alias[0] = '\0';
+    s_objective_voice_result_active = 0;
+    s_objective_tick_resolved = 1;
+    s->obj_stream[0] = '\0';
+    return 1;
+}
+
 const char* objective_voice_alias_get(void)
 {
     return s_objective_voice_alias;
@@ -848,7 +915,7 @@ int objective_advisor_shown(const LevelState* s)
 void objective_tick_target(void* engine, LevelState* s,
                            float checker_dt, float frame_dt)
 {
-    int resolved_now = 0;
+    int result_active_next = 0;
     (void)engine; /* the renderer/global owner is not represented here */
     /* Retail releases input-device/advisor/audio state before the objective
      * transition logic in loader and benchmark modes (app mode > 3). */
@@ -864,6 +931,7 @@ void objective_tick_target(void* engine, LevelState* s,
      * three result branches.  The retail path requests advisor row zero
      * when that outcome allows an advisor message. */
     if ((s_objective_result_word & 1u) != 0u) {
+        result_active_next = 1;
         if ((s_objective_result_word & 8u) != 0u) {
             if ((s_objective_result_word & LVL_OBJECTIVE_NO_ADVISOR) != 0u)
                 (void)advisor_request_admit(0, 1);
@@ -872,7 +940,8 @@ void objective_tick_target(void* engine, LevelState* s,
         }
     }
     else if ((s_objective_result_word & 2u) != 0u) {
-        if ((s_objective_result_word & 8u) != 0u) {
+        result_active_next = entity_flag_mask_callbacks_all_pass(0x40bu);
+        if (result_active_next && (s_objective_result_word & 8u) != 0u) {
             if ((s_objective_result_word & LVL_OBJECTIVE_NO_ACH_ADV) != 0u)
                 (void)advisor_request_admit(0, 1);
             s_objective_result_word &= ~8u;
@@ -880,7 +949,8 @@ void objective_tick_target(void* engine, LevelState* s,
         }
     }
     else if ((s_objective_result_word & 4u) != 0u) {
-        if ((s_objective_result_word & 8u) != 0u) {
+        result_active_next = entity_flag_mask_callbacks_all_pass(0x40bu);
+        if (result_active_next && (s_objective_result_word & 8u) != 0u) {
             if ((s_objective_result_word & LVL_OBJECTIVE_NO_FAIL_ADV) != 0u)
                 (void)advisor_request_admit(0, 1);
             s_objective_result_word &= ~8u;
@@ -891,9 +961,6 @@ void objective_tick_target(void* engine, LevelState* s,
         int mark = 0;
         if (objective_check(s, &mark, checker_dt)) {
             objective_announce_current(mark != 0 ? 1 : 2);
-            resolved_now =
-                (s->objective & (LVL_OBJECTIVE_ACHIEVED |
-                                 LVL_OBJECTIVE_FAILED)) != 0;
         }
         else {
             /* ObjectiveTick adds the check interval to the reward score on
@@ -903,22 +970,16 @@ void objective_tick_target(void* engine, LevelState* s,
         }
     }
 
-    /* DAT_004ffe44 is the result-screen stream gate. Terminal branches wait
-     * on FlagMaskCallbacksAllPass(0x40b), which is represented by the entity
-     * pool walker and does not require a renderer-owned result callback. */
-    int result_active_next =
-        (s_objective_result_word & 1u) != 0 ? 1 : 0;
-    if ((s_objective_result_word & 6u) != 0u &&
-        entity_flag_mask_callbacks_all_pass(0x40bu)) {
-        result_active_next = 1;
-        resolved_now = 1;
-    }
+    /* DAT_004ffe44 also enables pending briefing audio. It is not a
+     * terminal-result predicate. Like the reference, a newly announced
+     * outcome enters its gated presentation branch on the following tick. */
 
     /* The target decrements an active stream timer before it considers a
      * newly prepared alias, and invalidates the stream sentinel on expiry. */
     if (s_objective_voice_stream_handle != -1) {
         s_objective_voice_stream_timeout -= frame_dt;
         if (s_objective_voice_stream_timeout <= 0.0f) {
+            objective_advisor_clear_active_state();
             s_objective_voice_stream_handle = -1;
         }
     }
@@ -946,8 +1007,8 @@ void objective_tick_target(void* engine, LevelState* s,
     /* FFE44 is updated after consuming FFE38 in the retail routine. */
     s_objective_voice_result_active = result_active_next;
     s_objective_tick_resolved =
-        (resolved_now ||
-         (s_objective_result_word & 7u) != 0) ? 0 : 1;
+        (result_active_next && (s_objective_result_word & 6u) != 0u)
+            ? 0 : 1;
 }
 
 /* Explicit-level adapter used by the portable frame loop. */
@@ -995,9 +1056,18 @@ static uint32_t s_adv_scene_transform_context;
 static float s_adv_scene_scale;
 // GLOBAL: LEGORR 0x004b31b8
 static void* s_adv_scene_companion_handle;
-/* DAT_004b31bc is the controller's active/transition word. It is distinct
- * from the advisor display word owned by the CRT adapter. */
+/* Controller representation of DAT_004b31bc. The CRT adapter also keeps
+ * a copy; objective presentation release synchronizes their active bit. */
 static uint32_t s_adv_scene_state_word;
+/* Both represented words model DAT_004b31bc. A presentation release must
+ * clear bit 1 in the live animation controller as well as the CRT leaf;
+ * bit 0 remains owned by the normal animation-end cleanup. */
+static void objective_advisor_clear_active_state(void)
+{
+    advisor_clear_active_state();
+    s_adv_scene_state_word &= ~2u;
+}
+
 static AdvisorSceneActionHook s_adv_scene_action_hook;
 static void* s_adv_scene_action_user;
 static AdvisorCompanionSceneCreateHook s_adv_companion_scene_create_hook;

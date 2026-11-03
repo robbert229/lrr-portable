@@ -4,6 +4,8 @@
  */
 #include "platform/platform.h"
 #include "gods98/frameloop.hpp"
+#include "gods98/view.hpp"
+#include "crt/crt.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,10 +13,119 @@
 #include <math.h>
 #include <mmsystem.h>
 
+#if !defined(_WIN64)
+/* Use the bundled DLL, as the retail Direct3DRMDeviceInit does. The old
+ * SDK used by the MSVC5 build need not supply the newer RM3 declarations;
+ * these are the stdcall slots from IDirect3DRM3/IDirect3DRMFrame3. */
+static HMODULE s_scene_rm_module;
+static void* s_scene_rm_factory;
+static const GUID s_scene_rm3_iid = {
+    0x4516ec83, 0x8f20, 0x11d0,
+    { 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3 }
+};
+
+void scene_winapi_interface_release(void* object)
+{
+    typedef ULONG (WINAPI *ReleaseFn)(void*);
+    if (object != NULL) {
+        void** vtable = *(void***)object;
+        ((ReleaseFn)vtable[2])(object);
+    }
+}
+
+void scene_winapi_shutdown(void)
+{
+    scene_winapi_interface_release(s_scene_rm_factory);
+    s_scene_rm_factory = NULL;
+    if (s_scene_rm_module != NULL) FreeLibrary(s_scene_rm_module);
+    s_scene_rm_module = NULL;
+}
+
+int scene_winapi_initialize(void)
+{
+    typedef HRESULT (WINAPI *CreateFn)(void**);
+    typedef HRESULT (WINAPI *QueryFn)(void*, const GUID*, void**);
+    void* rm = NULL;
+    CreateFn create;
+    HRESULT result;
+    char dll_path[MAX_PATH];
+    DWORD path_length;
+    if (s_scene_rm_factory != NULL) return 0;
+    /* The launch working directory owns the shipped runtime assets. Bare
+     * LoadLibrary searches the candidate EXE/system directories before it,
+     * unlike the retail EXE's adjacent imported DLL. Resolve that asset
+     * explicitly so both executables use the same native RM implementation. */
+    path_length = GetFullPathNameA("D3DRM.DLL", sizeof(dll_path),
+                                   dll_path, NULL);
+    if (path_length == 0 || path_length >= sizeof(dll_path)) {
+        fprintf(stderr, "scene: D3DRM asset path failed length=%lu error=%lu\n",
+                path_length, GetLastError());
+        return 0;
+    }
+    s_scene_rm_module = LoadLibraryA(dll_path);
+    if (s_scene_rm_module == NULL) {
+        fprintf(stderr, "scene: D3DRM asset load failed path=%s error=%lu\n",
+                dll_path, GetLastError());
+        return 0;
+    }
+    create = (CreateFn)GetProcAddress(s_scene_rm_module, "Direct3DRMCreate");
+    if (create == NULL || create(&rm) != 0 || rm == NULL) {
+        scene_winapi_interface_release(rm);
+        scene_winapi_shutdown();
+        return 0;
+    }
+    result = ((QueryFn)(*(void***)rm)[0])(
+        rm, &s_scene_rm3_iid, &s_scene_rm_factory);
+    scene_winapi_interface_release(rm);
+    if (result != 0 || s_scene_rm_factory == NULL) {
+        scene_winapi_shutdown();
+        return 0;
+    }
+    return 1;
+}
+
+int scene_winapi_frame_create(void* parent, void** frame)
+{
+    typedef HRESULT (WINAPI *CreateFrameFn)(void*, void*, void**);
+    return (int)((CreateFrameFn)(*(void***)s_scene_rm_factory)[0x10 / 4])(
+        s_scene_rm_factory, parent, frame);
+}
+
+void scene_winapi_frame_release(void* frame)
+{
+    typedef HRESULT (WINAPI *ParentGetFn)(void*, void**);
+    typedef HRESULT (WINAPI *DeleteChildFn)(void*, void*);
+    void* parent = NULL;
+    void** vtable = *(void***)frame;
+    if (((ParentGetFn)vtable[0x5c / 4])(frame, &parent) == 0 &&
+        parent != NULL) {
+        ((DeleteChildFn)(*(void***)parent)[0x94 / 4])(parent, frame);
+    }
+    scene_winapi_interface_release(parent);
+    scene_winapi_interface_release(frame);
+}
+
+int scene_winapi_light_create(unsigned int kind, const float rgb[3],
+                               void** light)
+{
+    typedef HRESULT (WINAPI *CreateLightFn)(void*, unsigned int, float,
+                                           float, float, void**);
+    return (int)((CreateLightFn)(*(void***)s_scene_rm_factory)[0x30 / 4])(
+        s_scene_rm_factory, kind, rgb[0], rgb[1], rgb[2], light);
+}
+#endif
+
 struct PlatformWindow {
     HWND hwnd;
+    /* Client pixels are presentation geometry, never input/UI limits. */
     int width;
     int height;
+    int frame_width;
+    int frame_height;
+    int pointer_x;
+    int pointer_y;
+    int pointer_cancel_pending;
+    int pointer_release_expected;
 };
 
 static const char s_platform_window_class[] = "LegoRRPortableWindow";
@@ -23,6 +134,60 @@ static PlatformWindow* s_active_window;
 void* g_platform_cursor_window_handle;
 int g_platform_cursor_width;
 int g_platform_cursor_height;
+
+static void platform_frame_dimensions_set(PlatformWindow* win,
+                                           int width, int height)
+{
+    win->frame_width = width;
+    win->frame_height = height;
+    if (win == s_active_window) {
+        g_platform_cursor_width = width;
+        g_platform_cursor_height = height;
+        display_dimensions_set(width, height);
+    }
+}
+
+static int platform_client_dimensions_update(PlatformWindow* win)
+{
+    RECT client;
+    if (win == NULL || win->hwnd == NULL ||
+        !GetClientRect(win->hwnd, &client)) return 0;
+    win->width = client.right - client.left;
+    win->height = client.bottom - client.top;
+    return !IsIconic(win->hwnd) && win->width > 0 && win->height > 0;
+}
+
+static int platform_coordinate_clamp(int value, int extent)
+{
+    if (value < 0) return 0;
+    if (value >= extent) return extent - 1;
+    return value;
+}
+
+/* StretchDIBits fills the entire client. Use the same per-axis ratio for
+ * messages and GetCursorPos, clamping captured/outside positions first.
+ * int64_t is __int64 in the VC5 compatibility header. */
+static int platform_client_to_frame(PlatformWindow* win, int x, int y)
+{
+    if (!platform_client_dimensions_update(win) ||
+        win->frame_width <= 0 || win->frame_height <= 0) return 0;
+    x = platform_coordinate_clamp(x, win->width);
+    y = platform_coordinate_clamp(y, win->height);
+    win->pointer_x = (int)((int64_t)x * win->frame_width / win->width);
+    win->pointer_y = (int)((int64_t)y * win->frame_height / win->height);
+    return 1;
+}
+
+/* Select the first client pixel in a logical pixel's bucket. Rounding up
+ * makes get(set(x)) == x when the client is at least as large as the frame.
+ * A smaller client necessarily quantizes some logical positions. */
+static int platform_frame_to_client(int value, int frame, int client)
+{
+    int result;
+    value = platform_coordinate_clamp(value, frame);
+    result = (int)(((int64_t)value * client + frame - 1) / frame);
+    return platform_coordinate_clamp(result, client);
+}
 
 static ptrdiff_t platform_default_window_proc(void* context, void* window,
     uint32_t message, size_t wparam, ptrdiff_t lparam)
@@ -82,9 +247,15 @@ static LRESULT CALLBACK platform_window_proc(HWND hwnd, UINT message,
         message == WM_SIZE) {
         s_active_window->width = (int)(lparam & 0xffff);
         s_active_window->height = (int)((lparam >> 16) & 0xffff);
-        g_platform_cursor_width = s_active_window->width;
-        g_platform_cursor_height = s_active_window->height;
     }
+    /* Focus/capture messages can be sent synchronously, bypassing PeekMessage.
+     * Deliver their cancellation through the same ordered event ingress. */
+    if (s_active_window != NULL && s_active_window->hwnd == hwnd &&
+        (message == WM_KILLFOCUS || message == WM_CANCELMODE ||
+         (message == WM_ACTIVATEAPP && wparam == 0) ||
+         (message == WM_CAPTURECHANGED &&
+          !s_active_window->pointer_release_expected)))
+        s_active_window->pointer_cancel_pending = 1;
     /* Retail's registered LAB_00478880 trampoline selects the handler from
      * DAT_00505f84 bit 1: fullscreen uses GameWindowProcedure; windowed mode
      * uses MainWindowActivationAndCloseHandler (which captures the mouse). */
@@ -102,6 +273,8 @@ static LRESULT CALLBACK platform_window_proc(HWND hwnd, UINT message,
 }
 
 static PlatformRenderSurfaceOps s_platform_render_surface_ops;
+static unsigned char* s_platform_present_bgra;
+static size_t s_platform_present_capacity;
 
 void platform_render_surface_ops_set(const PlatformRenderSurfaceOps* ops)
 {
@@ -147,12 +320,12 @@ PlatformWindow* platform_create_window(const char* title, int width, int height)
         return NULL;
     }
     win->hwnd = hwnd;
-    win->width = width > 0 ? width : 640;
-    win->height = height > 0 ? height : 480;
     s_active_window = win;
     g_platform_cursor_window_handle = (void*)hwnd;
-    g_platform_cursor_width = win->width;
-    g_platform_cursor_height = win->height;
+    platform_frame_dimensions_set(win, width > 0 ? width : 640,
+                                   height > 0 ? height : 480);
+    /* CreateWindow's synchronous WM_SIZE preceded s_active_window. */
+    (void)platform_client_dimensions_update(win);
     window_runtime_state_initialize((void*)hwnd);
     SetFocus(hwnd);
     return win;
@@ -195,34 +368,29 @@ int platform_window_height(PlatformWindow* win)
 
 int platform_cursor_position_get(int* x, int* y)
 {
-    RECT client_rect;
-    POINT client_origin;
+    /* Client-relative input is measured in retained framebuffer pixels. */
     POINT cursor;
-    HWND hwnd = (HWND)g_platform_cursor_window_handle;
-    if (hwnd == NULL || x == NULL || y == NULL ||
-        !GetClientRect(hwnd, &client_rect)) {
+    PlatformWindow* win = s_active_window;
+    if (win == NULL || x == NULL || y == NULL ||
+        !GetCursorPos(&cursor) || !ScreenToClient(win->hwnd, &cursor) ||
+        !platform_client_to_frame(win, cursor.x, cursor.y)) {
         return 0;
     }
-    client_origin.x = 0;
-    client_origin.y = 0;
-    cursor.x = 0;
-    cursor.y = 0;
-    ClientToScreen(hwnd, &client_origin);
-    GetCursorPos(&cursor);
-    *x = cursor.x - client_origin.x;
-    *y = cursor.y - client_origin.y;
+    *x = win->pointer_x;
+    *y = win->pointer_y;
     return 1;
 }
 
 void platform_cursor_position_set(int x, int y)
 {
-    HWND hwnd = (HWND)g_platform_cursor_window_handle;
+    PlatformWindow* win = s_active_window;
     POINT point;
-    if (hwnd == NULL) return;
-    point.x = 0;
-    point.y = 0;
-    if (!ClientToScreen(hwnd, &point)) return;
-    SetCursorPos(point.x + x, point.y + y);
+    if (!platform_client_dimensions_update(win) ||
+        win->frame_width <= 0 || win->frame_height <= 0) return;
+    point.x = platform_frame_to_client(x, win->frame_width, win->width);
+    point.y = platform_frame_to_client(y, win->frame_height, win->height);
+    if (!ClientToScreen(win->hwnd, &point)) return;
+    SetCursorPos(point.x, point.y);
 }
 
 int platform_poll_events(PlatformWindow* win)
@@ -238,15 +406,29 @@ int platform_poll_events(PlatformWindow* win)
     return 0;
 }
 
-// FUNCTION: LEGORR 0x00478040
 int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
 {
     MSG message;
     int count = 0;
+    int pointer_cancelled = 0;
     if (win == NULL || out == NULL || cap <= 0) return 0;
-    while (count < cap && PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
+    while (count < cap) {
         PlatformEvent* event = &out[count];
-        int accepted = window_runtime_message_dispatch_filter(&message);
+        int accepted;
+        int have_message;
+        if (win->pointer_cancel_pending) {
+            pointer_cancelled = 1;
+            win->pointer_cancel_pending = 0;
+        }
+        /* PeekMessage can dispatch a sent cancellation even when it returns
+         * no queued message. Preserve that cancellation in this batch. */
+        have_message = PeekMessageA(&message, NULL, 0, 0, PM_REMOVE);
+        if (win->pointer_cancel_pending) {
+            pointer_cancelled = 1;
+            win->pointer_cancel_pending = 0;
+        }
+        if (!have_message) break;
+        accepted = window_runtime_message_dispatch_filter(&message);
         if (message.message == WM_QUIT) {
             event->kind = PLATFORM_EVENT_QUIT;
             event->code = event->mx = event->my = 0;
@@ -255,8 +437,18 @@ int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
             continue;
         }
         if (accepted) {
+            /* The retail handler releases capture on either button's up.
+             * That expected notification is not a cancellation of the other
+             * physical button; retain capture while it remains held. */
+            win->pointer_release_expected =
+                message.message == WM_LBUTTONUP ||
+                message.message == WM_RBUTTONUP;
             TranslateMessage(&message);
             DispatchMessageA(&message);
+            if (win->pointer_release_expected &&
+                (message.wParam & (MK_LBUTTON | MK_RBUTTON)) != 0)
+                SetCapture(win->hwnd);
+            win->pointer_release_expected = 0;
         }
         event->kind = PLATFORM_EVENT_NONE;
         event->code = event->mx = event->my = 0;
@@ -264,14 +456,18 @@ int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
         if (message.message == WM_KEYDOWN || message.message == WM_SYSKEYDOWN ||
             message.message == WM_KEYUP || message.message == WM_SYSKEYUP) {
             int code = 0;
-            if (message.wParam >= 0x20 && message.wParam <= 0x7e)
-                code = (int)message.wParam;
-            else if (message.wParam == VK_UP) code = PLATFORM_KEY_UP;
+            /* Navigation VKs overlap printable ASCII. Translate them before
+             * the legacy printable fallback, on both press and release. */
+            if (message.wParam == VK_UP) code = PLATFORM_KEY_UP;
             else if (message.wParam == VK_DOWN) code = PLATFORM_KEY_DOWN;
             else if (message.wParam == VK_LEFT) code = PLATFORM_KEY_LEFT;
             else if (message.wParam == VK_RIGHT) code = PLATFORM_KEY_RIGHT;
             else if (message.wParam == VK_ESCAPE) code = PLATFORM_KEY_ESC;
             else if (message.wParam == VK_RETURN) code = PLATFORM_KEY_ENTER;
+            else if (message.wParam >= 'A' && message.wParam <= 'Z')
+                code = (int)message.wParam - 'A' + 'a';
+            else if (message.wParam >= 0x20 && message.wParam <= 0x7e)
+                code = (int)message.wParam;
             if (accepted && code != 0) {
                 event->kind = (message.message == WM_KEYDOWN ||
                                message.message == WM_SYSKEYDOWN)
@@ -285,25 +481,106 @@ int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
                  message.message == WM_RBUTTONDOWN ||
                  message.message == WM_RBUTTONUP) {
             event->kind = PLATFORM_EVENT_MOUSE;
-            event->mx = (short)(message.lParam & 0xffff);
-            event->my = (short)((message.lParam >> 16) & 0xffff);
+            if (!platform_client_to_frame(win,
+                (short)(message.lParam & 0xffff),
+                (short)((message.lParam >> 16) & 0xffff))) {
+                if (message.message != WM_LBUTTONUP &&
+                    message.message != WM_RBUTTONUP) continue;
+            }
+            /* Preserve received releases with the last logical pair when
+             * minimized; no new press may activate a stale hit target. */
+            event->mx = win->pointer_x;
+            event->my = win->pointer_y;
             event->button = (message.message == WM_LBUTTONDOWN ||
                             message.message == WM_RBUTTONDOWN) ? 1 : 0;
             event->held = (message.wParam & (MK_LBUTTON | MK_RBUTTON)) != 0;
+            /* Preserve physical identity and each removed message's order.
+             * button/held remain the aggregate menu compatibility view. */
+            int buttons = 0;
+            if ((message.wParam & MK_LBUTTON) != 0)
+                buttons |= PLATFORM_MOUSE_LEFT;
+            if ((message.wParam & MK_RBUTTON) != 0)
+                buttons |= PLATFORM_MOUSE_RIGHT;
+            event->code = PLATFORM_MOUSE_TAG |
+                (buttons << PLATFORM_MOUSE_HELD_SHIFT);
+            if (message.message == WM_LBUTTONDOWN ||
+                message.message == WM_LBUTTONUP)
+                event->code |= PLATFORM_MOUSE_LEFT;
+            if (message.message == WM_RBUTTONDOWN ||
+                message.message == WM_RBUTTONUP)
+                event->code |= PLATFORM_MOUSE_RIGHT;
+            if (event->button) event->code |= PLATFORM_MOUSE_DOWN;
+            if (message.message == WM_LBUTTONUP ||
+                message.message == WM_RBUTTONUP)
+                event->code |= PLATFORM_MOUSE_UP;
+        }
+        else if (message.message == WM_KILLFOCUS ||
+                 message.message == WM_CANCELMODE ||
+                 (message.message == WM_ACTIVATEAPP && message.wParam == 0)) {
+            event->kind = PLATFORM_EVENT_MOUSE;
+            event->mx = win->pointer_x;
+            event->my = win->pointer_y;
+            event->code = PLATFORM_MOUSE_TAG | PLATFORM_MOUSE_CANCEL;
         }
         else if (message.message == WM_CLOSE) {
             event->kind = PLATFORM_EVENT_QUIT;
         }
+        if (win->pointer_cancel_pending ||
+            (event->kind == PLATFORM_EVENT_MOUSE &&
+             (event->code & PLATFORM_MOUSE_CANCEL) != 0)) {
+            pointer_cancelled = 1;
+            win->pointer_cancel_pending = 0;
+        }
         if (event->kind != PLATFORM_EVENT_NONE) ++count;
+    }
+    if (win->pointer_cancel_pending) pointer_cancelled = 1;
+    if (pointer_cancelled) {
+        int kept = 0;
+        int i;
+        /* Cancel the whole pointer batch, including a DOWN collected before
+         * a synchronous focus loss. Keep keyboard and quit events in order.
+         * Removing pointer records makes room even at the capacity boundary. */
+        for (i = 0; i < count; ++i) {
+            if (out[i].kind != PLATFORM_EVENT_MOUSE) {
+                if (kept != i) out[kept] = out[i];
+                ++kept;
+            }
+        }
+        count = kept;
+        win->pointer_cancel_pending = 1;
+        if (count < cap) {
+            PlatformEvent* event = &out[count++];
+            memset(event, 0, sizeof(*event));
+            event->kind = PLATFORM_EVENT_MOUSE;
+            event->mx = win->pointer_x;
+            event->my = win->pointer_y;
+            event->code = PLATFORM_MOUSE_TAG | PLATFORM_MOUSE_CANCEL;
+            win->pointer_cancel_pending = 0;
+        }
+        /* A batch full of keyboard/quit events contains no pointer edge that
+         * can act. Retain cancellation for the next pump without losing keys. */
     }
     return count;
 }
 
-// FUNCTION: LEGORR 0x0047c8d0
 void platform_present_pixels(PlatformWindow* win, const void* pixels, int pitch,
                              int width, int height)
 {
+    BITMAPINFO bitmap_info;
+    RECT client;
+    HDC dc;
+    size_t required;
+    int y;
     int fullscreen = 0;
+    if (win == NULL || win->hwnd == NULL || pixels == NULL ||
+        pitch <= 0 || width <= 0 || height <= 0) return;
+    /* Retain submitted framebuffer dimensions across client/mode resizes.
+     * Creation supplies the logical extent before the first presentation. */
+    if (win->frame_width != width || win->frame_height != height) {
+        platform_frame_dimensions_set(win, width, height);
+        win->pointer_x = platform_coordinate_clamp(win->pointer_x, width);
+        win->pointer_y = platform_coordinate_clamp(win->pointer_y, height);
+    }
     if (s_platform_render_surface_ops.fullscreen_get != NULL) {
         fullscreen = s_platform_render_surface_ops.fullscreen_get(
             s_platform_render_surface_ops.context);
@@ -312,13 +589,54 @@ void platform_present_pixels(PlatformWindow* win, const void* pixels, int pitch,
         if (s_platform_render_surface_ops.surface_flip != NULL) {
             s_platform_render_surface_ops.surface_flip(
                 s_platform_render_surface_ops.context, win, 0, 1);
+            return;
         }
     }
     else if (s_platform_render_surface_ops.windowed_blit != NULL) {
         s_platform_render_surface_ops.windowed_blit(
             s_platform_render_surface_ops.context, win, pixels, pitch,
             width, height);
+        return;
     }
+
+    /* The WinAPI build has no DirectDraw primary/back-buffer renderer wired
+     * yet. Present its locked RGBA framebuffer through GDI so the reconstructed
+     * front end remains visible while surface creation still uses DirectDraw. */
+    required = (size_t)width * (size_t)height * 4u;
+    if (required > s_platform_present_capacity) {
+        unsigned char* resized = (unsigned char*)realloc(
+            s_platform_present_bgra, required);
+        if (resized == NULL) return;
+        s_platform_present_bgra = resized;
+        s_platform_present_capacity = required;
+    }
+    for (y = 0; y < height; ++y) {
+        const unsigned char* source = (const unsigned char*)pixels +
+            (size_t)y * (size_t)pitch;
+        unsigned char* destination = s_platform_present_bgra +
+            (size_t)y * (size_t)width * 4u;
+        int x;
+        for (x = 0; x < width; ++x) {
+            destination[(size_t)x * 4u + 0u] = source[(size_t)x * 4u + 2u];
+            destination[(size_t)x * 4u + 1u] = source[(size_t)x * 4u + 1u];
+            destination[(size_t)x * 4u + 2u] = source[(size_t)x * 4u + 0u];
+            destination[(size_t)x * 4u + 3u] = 0u;
+        }
+    }
+    memset(&bitmap_info, 0, sizeof(bitmap_info));
+    bitmap_info.bmiHeader.biSize = sizeof(bitmap_info.bmiHeader);
+    bitmap_info.bmiHeader.biWidth = width;
+    bitmap_info.bmiHeader.biHeight = -height;
+    bitmap_info.bmiHeader.biPlanes = 1;
+    bitmap_info.bmiHeader.biBitCount = 32;
+    bitmap_info.bmiHeader.biCompression = BI_RGB;
+    if (!GetClientRect(win->hwnd, &client)) return;
+    dc = GetDC(win->hwnd);
+    if (dc == NULL) return;
+    StretchDIBits(dc, 0, 0, client.right - client.left,
+        client.bottom - client.top, 0, 0, width, height,
+        s_platform_present_bgra, &bitmap_info, DIB_RGB_COLORS, SRCCOPY);
+    ReleaseDC(win->hwnd, dc);
 }
 
 void platform_screenshot(PlatformWindow* win, const void* pixels, int pitch,

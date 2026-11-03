@@ -10,6 +10,7 @@
 #include "ai.hpp"
 #include "gods98/engine.hpp"
 #include "gods98/view.hpp"
+#include "gods98/record.hpp"
 #include "gods98/scene_resources.hpp"
 #include "../crt/crt.hpp"
 #include "../gods98/message.hpp"
@@ -229,13 +230,33 @@ void pairing_activity_prepare(EntitySlot* target)
         selection_clear_request_and_hud_reset();
 }
 // FUNCTION: LEGORR 0x0044adc0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void scatter_spawn_gate_set(int enabled)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        test eax, eax
+        mov eax, dword ptr [s_entity_state_flags]
+        je scatter_spawn_gate_clear
+        or al, 20h
+        mov dword ptr [s_entity_state_flags], eax
+        ret
+    scatter_spawn_gate_clear:
+        and al, 0dfh
+        mov dword ptr [s_entity_state_flags], eax
+        ret
+        nop
+        nop
+        nop
+    }
+}
+#else
 void scatter_spawn_gate_set(int enabled)
 {
-    uint32_t flags = entity_state_flags_peek();
-    if (enabled != 0) flags |= 0x20u;
-    else flags &= ~0x20u;
-    entity_state_flags_set(flags);
+    if (enabled != 0) s_entity_state_flags |= 0x20u;
+    else s_entity_state_flags &= ~0x20u;
 }
+#endif
 int scatter_spawn_gate_get()
 { return (entity_state_flags_peek() & 0x20u) != 0u; }
 // FUNCTION: LEGORR 0x0044ade0
@@ -637,6 +658,27 @@ static unsigned int s_type11_cell_coordinate_count;
 
 // Type11CellCoordinateAppend
 // FUNCTION: LEGORR 0x0044a390
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void type11_cell_coordinate_append(const int* coordinate)
+{
+    __asm {
+        mov ecx, dword ptr [s_type11_cell_coordinate_count]
+        cmp ecx, 0ah
+        jae type11_append_return
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [eax]
+        mov dword ptr [ecx*8 + s_type11_cell_coordinates], edx
+        mov ecx, dword ptr [s_type11_cell_coordinate_count]
+        mov eax, dword ptr [eax + 4]
+        mov dword ptr [ecx*8 + s_type11_cell_coordinates + 4], eax
+        mov eax, dword ptr [s_type11_cell_coordinate_count]
+        inc eax
+        mov dword ptr [s_type11_cell_coordinate_count], eax
+    type11_append_return:
+        ret
+    }
+}
+#else
 void type11_cell_coordinate_append(const int* coordinate)
 {
     volatile unsigned int* count = &s_type11_cell_coordinate_count;
@@ -650,6 +692,7 @@ void type11_cell_coordinate_append(const int* coordinate)
     coordinates[second * 2u + 1u] = input[1];
     ++*count;
 }
+#endif
 
 // PlaceCellNearestResolve
 // FUNCTION: LEGORR 0x0044a3d0
@@ -661,7 +704,8 @@ int type11_cell_coordinate_nearest_resolve(const EntitySlot* target,
     unsigned int i;
     unsigned int best_index = 0xffffffffu;
     if (target == NULL) return 0;
-    entity_transform_position_get(target, target_xy);
+    entity_transform_position_get_outputs(target, &target_xy[0],
+                                          &target_xy[1]);
     for (i = 0; i < s_type11_cell_coordinate_count; ++i) {
         float world[3];
         float dx;

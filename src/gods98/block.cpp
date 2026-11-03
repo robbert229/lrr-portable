@@ -55,7 +55,7 @@ static const char s_config_bool_false[] = "FALSE";
 // GLOBAL: LEGORR 0x004a4120
 static const char s_config_bool_off[] = "OFF";
 // GLOBAL: LEGORR 0x004a1cd4
-static const char s_config_rgb_separator[] = ":";
+const char s_config_rgb_separator[] = ":";
 
 /* strnicmp (ASCII-folded): compares exactly n bytes of `a` against the
  * first n bytes of `b`, stopping early only on a NUL in `a`. */
@@ -372,6 +372,22 @@ const char* block_get_strptr(BlockFile* bf, const char* path)
 {
     BlockRec* r = block_find(bf, path);
     return r == NULL ? NULL : r->value;
+}
+
+/* ConfigStringCopy (FUN_00479050): return an engine-heap-owned copy of the
+ * resolved value. The caller releases it with FUN_0048db80. */
+// FUNCTION: LEGORR 0x00479050
+char* block_get_str_copy(BlockFile* bf, const char* path)
+{
+    BlockRec* record = block_find(bf, path);
+    char* copy;
+    size_t length;
+    if (record == NULL || record->value == NULL) return NULL;
+    length = strlen(record->value) + 1u;
+    copy = (char*)engine_heap_alloc((long)length);
+    if (copy == NULL) return NULL;
+    strcpy(copy, record->value);
+    return copy;
 }
 
 int block_get_int(BlockFile* bf, const char* path, int dflt)

@@ -8,6 +8,7 @@
 #include "game.hpp"
 #include "gods98/block.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/media.hpp"
 #include "effects.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/message.hpp"
@@ -478,35 +479,42 @@ int level_random_draw15(void)
  *  `.map` file container (finding 07): raw image, direct-mapped.
  * ------------------------------------------------------------------ */
 
-static int level_map_open_slot_allocate(void* context, uint32_t size)
+/* MapOpen2 (FUN_00480170): preserve the retail open, seek/tell, progress,
+ * allocate, rewind/read, and close order against the level-owned map slots. */
+// GLOBAL: LEGORR 0x004a2770
+static const char s_map_open_binary_mode[] = "rb";
+// FUNCTION: LEGORR 0x00480170
+int map_open2(const char* path, int32_t* size_out)
 {
-    (void)context;
-    return level_map_slot_allocate((size_t)size);
-}
-
-static void* level_map_open_slot_get(void* context, uint32_t slot)
-{
-    (void)context;
-    return level_map_slot_get(slot);
-}
-
-static void level_map_open_slot_release(void* context, uint32_t slot)
-{
-    (void)context;
-    level_map_slot_release(slot);
+    GameFileHandle* handle = game_file_open_dispatch(
+        path, s_map_open_binary_mode);
+    if (handle != NULL) {
+        int size;
+        int slot;
+        void* map_data;
+        (void)wad_file_seek(handle, 0, 2);
+        size = wad_file_cursor_get(handle);
+        if (s_loader_progress_callback != NULL) {
+            typedef void (*ProgressProc)(const char*, uint32_t, void*);
+            ((ProgressProc)s_loader_progress_callback)(
+                path, (uint32_t)size, s_loader_progress_context);
+        }
+        slot = level_map_slot_allocate((size_t)size);
+        if (slot != -1) {
+            map_data = level_map_slot_get((uint32_t)slot);
+            (void)wad_file_seek(handle, 0, 0);
+            (void)wad_file_read(map_data, 1, size, handle);
+            if (size_out != NULL) *size_out = size;
+            (void)game_file_close(handle);
+            return slot;
+        }
+        (void)game_file_close(handle);
+    }
+    return -1;
 }
 
 MapFile* level_map_open(const char* name)
 {
-    static const MapOpenOps map_ops = {
-        NULL,
-        /* The game owns the 2000-entry slot table; the resource module owns
-         * the file route and complete-element read sequence. */
-        level_map_open_slot_allocate,
-        level_map_open_slot_get,
-        level_map_open_slot_release,
-        NULL
-    };
     int slot;
     int32_t size = 0;
     uint8_t* data;
@@ -514,7 +522,7 @@ MapFile* level_map_open(const char* name)
     if (name == NULL || name[0] == '\0') {
         return NULL;
     }
-    slot = map_open2(name, &map_ops, &size);
+    slot = map_open2(name, &size);
     if (slot < 0) {
         return NULL;
     }
@@ -619,6 +627,26 @@ typedef struct TerrainVertexReadRequest {
     int count;
     void* output;
 } TerrainVertexReadRequest;
+
+typedef struct TerrainIndexedMeshLayerOwner {
+    void* reserved[3];
+    void* mesh;
+} TerrainIndexedMeshLayerOwner;
+
+typedef struct TerrainIndexedMeshLayerObject {
+    void* reserved[3];
+    TerrainIndexedMeshLayerOwner* owner;
+} TerrainIndexedMeshLayerObject;
+
+static void terrain_indexed_mesh_layer_object_init(
+    TerrainState* terrain, TerrainIndexedMeshLayerObject* object,
+    TerrainIndexedMeshLayerOwner* owner)
+{
+    memset(object, 0, sizeof(*object));
+    memset(owner, 0, sizeof(*owner));
+    owner->mesh = &terrain->indexed_mesh;
+    object->owner = owner;
+}
 
 static void terrain_indexed_mesh_cell_sync(TerrainState* terrain,
                                            size_t quad_index)
@@ -1060,7 +1088,8 @@ void grid_cell_read_surface_values(void* terrain, int x, int y,
 {
     TerrainState* state = (TerrainState*)terrain;
     float indexed_output[4][9];
-    TerrainVertexReadRequest request;
+    TerrainIndexedMeshLayerObject object;
+    TerrainIndexedMeshLayerOwner owner;
     size_t quad_index;
     uint32_t corner;
     uint32_t component;
@@ -1072,13 +1101,9 @@ void grid_cell_read_surface_values(void* terrain, int x, int y,
         state->indexed_mesh_vertices == NULL) return;
     terrain_indexed_mesh_cell_sync(state, quad_index);
     memset(indexed_output, 0, sizeof(indexed_output));
-    request.block_index = (int)quad_index;
-    request.first_vertex = 0;
-    request.count = 4;
-    request.output = indexed_output;
-    (void)lwo_layer_polygon_vertex_data_read(&state->detail_mesh_object, 0u,
-        &request,
-        &s_terrain_indexed_mesh_dispatch_ops);
+    terrain_indexed_mesh_layer_object_init(state, &object, &owner);
+    (void)lwo_layer_polygon_vertex_data_read(&object, (int)quad_index, 0,
+                                            4, indexed_output);
     for (corner = 0u; corner < 4u; ++corner)
         for (component = 0u; component < 3u; ++component)
             out_values[corner * 3u + component] =
@@ -1093,12 +1118,13 @@ void grid_cell_read_surface_values(void* terrain, int x, int y,
 void grid_cell_set_payload_index(void* terrain_handle, int x, int y)
 {
     TerrainState* terrain = (TerrainState*)terrain_handle;
+    TerrainIndexedMeshLayerObject object;
+    TerrainIndexedMeshLayerOwner owner;
     unsigned int entry_index;
     if (terrain == NULL) return;
     entry_index = (unsigned int)((int64_t)terrain->dim[2] * y + x);
-    (void)terrain_detail_entry_get_at_index(
-        &terrain->detail_mesh_object, entry_index,
-        &s_terrain_detail_lookup_ops);
+    terrain_indexed_mesh_layer_object_init(terrain, &object, &owner);
+    (void)terrain_detail_entry_get_at_index(&object, entry_index);
 }
 
 /* TerrainCreate initializes each indexed record's +0x6c bit, and
@@ -1157,6 +1183,14 @@ int terrain_surface_height_get(const void* handle, int x, int y)
     }
     return t->blocks[((size_t)y * (size_t)t->width + (size_t)x)
                       * TERRAIN_BLOCK_STRIDE + 0x1a];
+}
+
+/* Presentation fallback uses TerrainCreate's actual fourth argument, including
+ * zero and negative scales; block spacing is an independent quantity. */
+float terrain_height_scale_get(const void* handle)
+{
+    const TerrainState* t = (const TerrainState*)handle;
+    return t != NULL ? t->terrain_value : 0.0f;
 }
 
 float terrain_blocksize_get(const void* handle)
@@ -1537,9 +1571,9 @@ static void predug_wall_cell(LevelState* s, int x, int y)
 /* The corpus keeps a bounded twenty-entry pool of the predug coordinates
  * encountered while loading the layer. */
 // GLOBAL: LEGORR 0x004e844c
-static int s_predug_coordinates[20][2];
+int s_predug_coordinates[20][2];
 // GLOBAL: LEGORR 0x004e853c
-static unsigned int s_predug_coordinate_count;
+unsigned int s_predug_coordinate_count;
 unsigned int level_predug_coordinate_count_get(void)
 {
     return s_predug_coordinate_count;
@@ -1557,6 +1591,27 @@ void level_predug_coordinate_pool_clear(void)
     s_predug_coordinate_count = 0u;
 }
 // FUNCTION: LEGORR 0x0044A4B0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void predug_coordinate_pool_append(const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [s_predug_coordinate_count]
+        cmp ecx, 14h
+        jae predug_append_return
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [eax]
+        mov dword ptr [ecx*8 + s_predug_coordinates], edx
+        mov ecx, dword ptr [s_predug_coordinate_count]
+        mov eax, dword ptr [eax + 4]
+        mov dword ptr [ecx*8 + s_predug_coordinates + 4], eax
+        mov eax, dword ptr [s_predug_coordinate_count]
+        inc eax
+        mov dword ptr [s_predug_coordinate_count], eax
+    predug_append_return:
+        ret
+    }
+}
+#else
 void predug_coordinate_pool_append(const int cell_xy[2])
 {
     volatile unsigned int* count = &s_predug_coordinate_count;
@@ -1568,6 +1623,7 @@ void predug_coordinate_pool_append(const int cell_xy[2])
         *count = slot + 1u;
     }
 }
+#endif
 
 /* LoadPredugLayer @ 0x42bd20 */
 // FUNCTION: LEGORR 0x0042bd20
@@ -1702,34 +1758,46 @@ void terrain_activity_build_records_release_all(LevelState* level)
 // FUNCTION: LEGORR 0x0042c480
 static int load_erode_cryore(LevelState* s, const char* name, int bias)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            int v = (int)level_map_cell(m, x, y) - bias;
-            if (v == 5) {
-                v = 4;
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            int value = (int)level_map_cell_get((uint32_t)slot,
+                                                (int)x, (int)y) - bias;
+            uint8_t* record = voxels + index * LEVEL_VOXEL_STRIDE;
+            if (value == 5) {
+                value = 4;
             }
-            uint8_t* rec = voxel_at(s, x, y);
-            rec[0x02] = (uint8_t)v;
-            if (v == 6) {
-                rec[0x07] = 4;
-            } else if (v == 11) {
+            record[0x02] = (uint8_t)value;
+            if ((int8_t)record[0x02] == 6) {
+                record[0x07] = 4;
+            } else if ((int8_t)record[0x02] == 11) {
                 /* rock-monster / cavern spawn point */
-                const int cell_xy[2] = { x, y };
+                int cell_xy[2];
+                cell_xy[0] = (int)x;
+                cell_xy[1] = (int)y;
                 unported_ledger_stubs::type11_cell_coordinate_append(
                     cell_xy);
-                terrain_activity_build_record_update(s, x, y, 1);
+                terrain_activity_build_record_update(s, (int)x, (int)y, 1);
             }
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1738,38 +1806,48 @@ static int load_erode_cryore(LevelState* s, const char* name, int bias)
 // FUNCTION: LEGORR 0x0042bf40
 static int load_emerge(LevelState* s, const char* name)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            uint16_t c = level_map_cell(m, x, y);
-            uint8_t* rec = voxel_at(s, x, y);
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            uint16_t value = level_map_cell_get((uint32_t)slot,
+                                                (int)x, (int)y);
             int seed_stage = 0;
-            rec[0x06] = (uint8_t)(c >> 1);
-            if (c == 0 || (c & 1u) != 0u) {
-                ++c;
-                rec[0x06] = (uint8_t)(c >> 1);
+            if (value == 0u || (value & 1u) != 0u) {
+                ++value;
             } else {
                 seed_stage = 1;
             }
-            if (seed_stage) {
-                const int cell_xy[2] = { x, y };
-                const int16_t random_value = (int16_t)level_rand_u16();
-                const int sign = random_value >> 31;
-                const int magnitude = ((int)random_value ^ sign) - sign;
-                const int phase = ((magnitude & 3) ^ sign) - sign;
-                lava_erosion_stage_register(
-                    cell_xy, phase);
+            voxels[index * LEVEL_VOXEL_STRIDE + 0x06] =
+                (uint8_t)(value >> 1);
+            if (seed_stage != 0) {
+                int cell_xy[2];
+                int16_t random_value = (int16_t)level_rand_u16();
+                int sign = random_value >> 31;
+                int magnitude = ((int)random_value ^ sign) - sign;
+                int phase = ((magnitude & 3) ^ sign) - sign;
+                cell_xy[0] = (int)x;
+                cell_xy[1] = (int)y;
+                lava_erosion_stage_register(cell_xy, phase);
             }
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1778,23 +1856,33 @@ static int load_emerge(LevelState* s, const char* name)
 // FUNCTION: LEGORR 0x0042c6a0
 static int load_path_ai(LevelState* s, const char* name, int bias)
 {
-    const int bias_byte = (int)(int8_t)bias;
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    int8_t bias_byte = (int8_t)bias;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            int value = (int)(int8_t)(uint8_t)level_map_cell(m, x, y);
-            int v = value - bias_byte;
-            voxel_at(s, x, y)[0x05] = (uint8_t)v;
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            int8_t value = (int8_t)(uint8_t)
+                level_map_cell_get((uint32_t)slot, (int)x, (int)y);
+            voxels[index * LEVEL_VOXEL_STRIDE + 0x05] =
+                (uint8_t)(value - bias_byte);
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1841,42 +1929,57 @@ static int load_fallin(LevelState* s, const char* name, int bias)
  * pointer count/flag at voxel +0x38/+0x3C and the hash mod at +0x40.
  * (Key→loader roles are the code's mapping, see level.hpp.) */
 // FUNCTION: LEGORR 0x0042c9d0
-static int load_block_pointers(LevelState* s, const char* name, int fallin_mult)
+static int load_block_pointers(LevelState* s, const char* name)
 {
     /* DAT_00556f18 is also the camera's block-pointer-grid enable word. */
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot;
+    uint8_t* voxels;
     g_camera_grid_enabled = 0;
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    if (name == NULL) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    slot = map_open2(name, &image_size);
+    if (slot == -1) {
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            uint32_t v = level_map_cell(m, x, y);
-            uint8_t* rec = voxel_at(s, x, y);
-            __builtin_memset(rec + 0x3C, 0, 4);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
+        return 0;
+    }
+#if defined(_MSC_VER) && defined(_M_IX86)
+    voxels = (uint8_t*)(uintptr_t)
+        level_cptr(s)[LEVEL_OFF_VOXELS / 4];
+#else
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+#endif
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            uint8_t* record = voxels + index * LEVEL_VOXEL_STRIDE;
+            uint32_t v = level_map_cell_get((uint32_t)slot,
+                                            (int)x, (int)y);
+            *(uint32_t*)(record + 0x3C) = 0u;
             if (v != 0) {
-                __builtin_memcpy(rec + 0x3C, &v, 4);
-                int16_t seed;
-                __builtin_memcpy(&seed, rec + 0x20, 2);
+                int16_t seed = *(int16_t*)(record + 0x20);
                 uint32_t hash = (uint32_t)(int32_t)seed %
-                    (v * (uint32_t)fallin_mult * 0x19u);
-                float hash_float = (float)hash;
-                uint32_t zero = 0, one = 1;
-                __builtin_memcpy(rec + 0x38, &zero, 4);
-                __builtin_memcpy(rec + 0x40, &hash_float, 4);
+                    (v * (uint32_t)g_camera_scale_14 * 0x19u);
+                *(uint32_t*)(record + 0x3C) = v;
+                *(float*)(record + 0x40) = (float)hash;
+                *(uint32_t*)(record + 0x38) = 0u;
                 if (v > 4) {
-                    uint32_t reduced = v - 4;
-                    __builtin_memcpy(rec + 0x3C, &reduced, 4);
-                    __builtin_memcpy(rec + 0x38, &one, 4);
+                    *(uint32_t*)(record + 0x3C) = v - 4u;
+                    *(uint32_t*)(record + 0x38) = 1u;
                 }
             }
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     g_camera_grid_enabled = 1;
     return 1;
 }
@@ -1886,22 +1989,33 @@ static int load_block_pointers(LevelState* s, const char* name, int fallin_mult)
 // FUNCTION: LEGORR 0x0042cc90
 static int load_terrain_map(LevelState* s, const char* name, int bias)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    int8_t bias_byte = (int8_t)bias;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            int value = (int)(int8_t)(uint8_t)level_map_cell(m, x, y);
-            int v = value - (int)(int8_t)bias;
-            voxel_at(s, x, y)[0x04] = (uint8_t)v;
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            int8_t value = (int8_t)(uint8_t)
+                level_map_cell_get((uint32_t)slot, (int)x, (int)y);
+            voxels[index * LEVEL_VOXEL_STRIDE + 0x04] =
+                (uint8_t)(value - bias_byte);
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1910,54 +2024,76 @@ static int load_terrain_map(LevelState* s, const char* name, int bias)
 // FUNCTION: LEGORR 0x0042c120
 static int load_layer_l(LevelState* s, const char* name)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
-        return 0; /* corpus reports no map handle; the caller may ignore it */
-    }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
-        return 0;
-    }
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot;
+    uint8_t* voxels;
     uint8_t* records = (uint8_t*)level_load_ptr(s, LEVEL_OFF_LAYERL_RECORDS);
     int      count   = level_int(s, LEVEL_OFF_LAYERL_COUNT);
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            uint16_t c = level_map_cell(m, x, y);
+
+    /* MapOpen2's retail entry takes only (path, size_out), with the map-slot
+     * owner installed separately. Layer L then uses the same slot helpers as
+     * the decompile instead of allocating a host MapFile wrapper. */
+    slot = map_open2(name, &image_size);
+    if (slot == -1) {
+        return 0;
+    }
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
+        return 0;
+    }
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint16_t c = level_map_cell_get((uint32_t)slot, (int)x, (int)y);
             if (c == 0) {
                 continue;
             }
-            int slot = ((int)c - 1) % 6;
+            int record_slot = ((int)c - 1) % 6;
             int rec  = ((int)c - 1) / 6;
-            while (rec >= count) {
-                uint8_t* grown = (uint8_t*)realloc(records, (size_t)(count + 1) * 0x4C);
+            if (rec >= count) {
+                int next_count = rec + 1;
+                size_t old_size = (size_t)count * 0x4Cu;
+                size_t new_size = (size_t)next_count * 0x4Cu;
+                uint8_t* grown;
+                if (records == NULL)
+                    grown = (uint8_t*)engine_heap_alloc((long)new_size);
+                else
+                    grown = (uint8_t*)realloc(records, new_size);
                 if (grown == NULL) {
                     level_store_ptr(s, LEVEL_OFF_LAYERL_RECORDS, records);
                     level_set_int(s, LEVEL_OFF_LAYERL_COUNT, count);
-                    level_map_close(m);
+                    level_map_slot_release((uint32_t)slot);
                     return 0;
                 }
                 records = grown;
-                __builtin_memset(records + (size_t)count * 0x4C, 0, 0x4C);
-                ++count;
+                __builtin_memset(records + old_size, 0, new_size - old_size);
+                count = next_count;
+                level_store_ptr(s, LEVEL_OFF_LAYERL_RECORDS, records);
+                level_set_int(s, LEVEL_OFF_LAYERL_COUNT, count);
             }
             uint8_t* recp = records + (size_t)rec * 0x4C;
-            uint8_t* vox = voxel_at(s, x, y);
-            if (slot == 0) {
+            uint8_t* vox = voxels + ((size_t)y * width + x) * 0x48u;
+            if (record_slot == 0) {
                 *(uint32_t*)(vox + 0x0C) |= 0x80u;
-                __builtin_memcpy(recp + 4, &x, 4);
-                __builtin_memcpy(recp + 8, &y, 4);
+                *(uint32_t*)(recp + 4) = x;
+                *(uint32_t*)(recp + 8) = y;
             } else {
                 *(uint32_t*)(vox + 0x0C) |= 0x40u;
-                __builtin_memcpy(recp + (size_t)slot * 0xC + 4, &x, 4);
-                __builtin_memcpy(recp + (size_t)slot * 0xC + 8, &y, 4);
-                uint32_t one = 1;
-                __builtin_memcpy(recp + (size_t)(slot + 1) * 0xC, &one, 4);
+                *(uint32_t*)(recp + (size_t)record_slot * 0xC + 4) = x;
+                *(uint32_t*)(recp + (size_t)record_slot * 0xC + 8) = y;
+                *(uint32_t*)(recp +
+                    (size_t)(record_slot + 1) * 0xC) = 1u;
             }
         }
     }
     level_store_ptr(s, LEVEL_OFF_LAYERL_RECORDS, records);
     level_set_int(s, LEVEL_OFF_LAYERL_COUNT, count);
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -1965,20 +2101,30 @@ static int load_layer_l(LevelState* s, const char* name)
 // FUNCTION: LEGORR 0x0042c060
 static int load_layer_m(LevelState* s, const char* name)
 {
-    MapFile* m = level_map_open(name);
-    if (m == NULL) {
+    uint32_t width;
+    uint32_t height;
+    int32_t image_size;
+    int slot = map_open2(name, &image_size);
+    uint8_t* voxels;
+    if (slot == -1) {
         return 0;
     }
-    if (!dims_ok(m, s)) {
-        level_map_close(m);
+    level_map_dimensions_get((uint32_t)slot, &width, &height);
+    if (width != level_cptr(s)[LEVEL_OFF_WIDTH / 4] ||
+        height != level_cptr(s)[LEVEL_OFF_HEIGHT / 4]) {
+        level_map_slot_release((uint32_t)slot);
         return 0;
     }
-    for (int y = 0; y < m->height; ++y) {
-        for (int x = 0; x < m->width; ++x) {
-            voxel_at(s, x, y)[0x34] = (uint8_t)level_map_cell(m, x, y);
+    voxels = (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS);
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
+            uint32_t index = y * width + x;
+            voxels[index * LEVEL_VOXEL_STRIDE + 0x34] =
+                (uint8_t)level_map_cell_get((uint32_t)slot, (int)x, (int)y);
         }
     }
-    level_map_close(m);
+    (void)image_size;
+    level_map_slot_release((uint32_t)slot);
     return 1;
 }
 
@@ -2446,7 +2592,7 @@ static void cell_init_all(LevelState* s)
 
 // FUNCTION: LEGORR 0x0042b510
 static int map_pipeline(LevelState* s, const char** names, const int* biases,
-                        const char* texture_set_name, int fallin_mult)
+                        const char* texture_set_name)
 {
     /* `names` follows the ten config keys in LevelLoad. The corpus then
      * forwards them in a different positional order: Predug, Terrain, Path,
@@ -2474,8 +2620,6 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases,
      * quad records. Seed the native scene cache from those records before
      * CellInitPass can mutate orientations or heights. */
     if (terrain->cell_vertices != NULL) {
-        static const uint8_t corner_x[4] = { 0u, 1u, 1u, 0u };
-        static const uint8_t corner_y[4] = { 0u, 0u, 1u, 1u };
         int cell_x, cell_y;
         for (cell_y = 0; cell_y + 1 < terrain->height; ++cell_y) {
             for (cell_x = 0; cell_x + 1 < terrain->width; ++cell_x) {
@@ -2486,20 +2630,10 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases,
                 uint8_t* cell_record = terrain->blocks +
                     ((size_t)cell_y * (size_t)terrain->width +
                      (size_t)cell_x) * TERRAIN_BLOCK_STRIDE;
-                uint32_t corner;
-                for (corner = 0u; corner < 4u; ++corner) {
-                    uint8_t* record = terrain->blocks +
-                        ((size_t)(cell_y + corner_y[corner]) *
-                         (size_t)terrain->width +
-                         (size_t)(cell_x + corner_x[corner])) *
-                            TERRAIN_BLOCK_STRIDE;
-                    memcpy(cached + corner * 3u,
-                           terrain->cell_vertices + index + corner * 3u,
-                           3u * sizeof(float));
-                    /* SceneRender stores source height bytes and applies its
-                     * visual scale during projection. */
-                    cached[corner * 3u + 1u] = (float)record[0x1A];
-                }
+                /* Retain geometry Y = -height byte * RoughLevel, exactly as
+                 * the later CPU-quad mutation producer does. */
+                memcpy(cached, terrain->cell_vertices + index,
+                       sizeof(cached));
                 scene_render_terrain_cell_vertices_update(
                     s, (uint32_t)cell_x, (uint32_t)cell_y, cached);
                 if ((cell_record[0x19] & 1u) != 0u)
@@ -2569,7 +2703,7 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases,
     load_fallin(s, names[6], biases[6]);
     load_layer_l(s, names[7]);
     load_layer_m(s, names[8]);
-    load_block_pointers(s, names[9], fallin_mult);
+    load_block_pointers(s, names[9]);
     ok = load_terrain_map(s, names[3], biases[3]);
     if (ok) {
         level_set_int(s, LEVEL_OFF_TERRAIN_LOADED, 1);
@@ -2987,6 +3121,9 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
     if (fallin_mult == 0) {
         fallin_mult = 1;
     }
+    /* LevelLoad stores the configured multiplier in DAT_00556f14 before the
+     * map pipeline; LoadBlockPointers and the camera grid timer share it. */
+    g_camera_scale_14 = (int)fallin_mult;
     {
         float emerge_timeout = cfg_float(cfg, level_name,
                                          K_EMERGE_TIMEOUT, 0.0f);
@@ -3068,8 +3205,7 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
              * earlier failure paths and clear it as soon as that load ends. */
             terrain_texture_set_config_context_bind(cfg);
             load_ok = map_pipeline(s, names, biases,
-                                   has_texture_set ? texture_set : NULL,
-                                   (int)fallin_mult);
+                                   has_texture_set ? texture_set : NULL);
             terrain_texture_set_config_context_bind(NULL);
         }
         if (!load_ok) {
@@ -3490,17 +3626,80 @@ void level_tile_mark(LevelState* s, int cx, int cy, int set)
 
 /* Retail ABI: cell-coordinate pair plus the set/clear selector. */
 // FUNCTION: LEGORR 0x00432e00
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void level_tile_mark_current_target(const int cell_xy[2],
+                                                      int set)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        test eax, eax
+        mov eax, dword ptr [ecx + 0x14]
+        je level_tile_mark_current_clear
+        imul eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        mov ecx, dword ptr [ecx + 0xb8]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 8]
+        or dword ptr [eax], 0x08000000
+        pop esi
+        ret
+    level_tile_mark_current_clear:
+        imul eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        add eax, esi
+        pop esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0xb8]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 0xf7ffffff
+        mov dword ptr [eax], ecx
+        ret
+        nop
+        nop
+        nop
+        nop
+    }
+}
+#else
+void level_tile_mark_current_target(const int cell_xy[2], int set)
+{
+    LevelState* level = g_active_level_retail;
+    if (set != 0) {
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cell_xy[1] + cell_xy[0];
+        uint32_t* flags = (uint32_t*)(voxels + 8 + cell_index * 0x48);
+        *flags |= 0x8000000u;
+        return;
+    }
+    {
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cell_xy[1] + cell_xy[0];
+        uint32_t* flags = (uint32_t*)(voxels + 8 + cell_index * 0x48);
+        *flags &= 0xf7ffffffu;
+    }
+}
+#endif
+
 void level_tile_mark_current(const int cell_xy[2], int set)
 {
-    LevelState* level = level_current_owner_get();
-    uint8_t* rec;
-    uint32_t* flags;
-    if (level == NULL || cell_xy == NULL) return;
-    rec = level_voxel(level, cell_xy[0], cell_xy[1]);
-    if (rec == NULL) return;
-    flags = (uint32_t*)(rec + 0x08);
-    if (set != 0) *flags |= TILE_FLAG_OCCUPIED;
-    else *flags &= ~TILE_FLAG_OCCUPIED;
+    level_tile_mark_current_target(cell_xy, set);
 }
 
 int level_tile_occupied(const LevelState* s, int cx, int cy)
@@ -3525,16 +3724,34 @@ int level_tile_type(const LevelState* s, int cx, int cy)
  * or active-level validation; callers must have an active level and in-range
  * cell coordinates. */
 // FUNCTION: LEGORR 0x004319b0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint8_t terrain_cell_material_get_current(int x, int y)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        mov eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        imul eax, dword ptr [esp + 8]
+        add eax, edx
+        xor edx, edx
+        lea eax, dword ptr [eax + eax*8]
+        mov dl, byte ptr [ecx + eax*8 + 2]
+        mov eax, edx
+        ret
+    }
+}
+#else
 uint8_t terrain_cell_material_get_current(int x, int y)
 {
-    LevelState* level = level_current_owner_get();
-    if (level == NULL) return 0u;
+    LevelState* level = g_active_level_retail;
     const uint32_t width = level->word[LEVEL_OFF_WIDTH / 4u];
     const uint8_t* voxels = (const uint8_t*)level->ptr_voxels;
     const uint32_t index = (uint32_t)y * width + (uint32_t)x;
     const uint8_t* record = voxels + index * LEVEL_VOXEL_STRIDE;
     return record[2];
 }
+#endif
 
 /* --- terrain-cell flag primitives ----------------------------------------
  * Core readers over the voxel record. The corpus family computes the record
@@ -3585,6 +3802,16 @@ static const uint8_t* cell_record_unchecked_const(const LevelState* s,
     return cell_record_unchecked((LevelState*)s, cx, cy);
 }
 
+#if defined(_MSC_VER) && defined(_M_IX86)
+// FUNCTION: LEGORR 0x00431560
+__declspec(naked) LevelState* level_current_owner_get(void)
+{
+    __asm {
+        mov eax, dword ptr [g_active_level_retail]
+        ret
+    }
+}
+#else
 LevelState* level_current_owner_get(void)
 {
     GameContext* game = entity_pool_callback_context_get();
@@ -3592,6 +3819,20 @@ LevelState* level_current_owner_get(void)
     if (level == NULL)
         level = (LevelState*)map_cell_record_grid_level_get();
     return level;
+}
+#endif
+
+// FUNCTION: LEGORR 0x00431570
+void* level_current_terrain_get(int cell_x, int cell_y)
+{
+    (void)cell_x;
+    (void)cell_y;
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+    LevelState* level = level_current_owner_get();
+    return level != NULL ? level->ptr_terrain : NULL;
+#else
+    return *(void**)((char*)level_current_owner_get() + 4);
+#endif
 }
 
 /* Retail erosion entry points read DAT_005560d4 on every call. Keep the
@@ -3623,7 +3864,6 @@ static uint32_t cell_secondary_word_unchecked(const LevelState* s,
 /* FUN_00432bd0: traversable bit set, blocked gate (bit 3) clear, inside
  * the unsigned dim-1 gate. The cast keeps the corpus's unsigned wrap: a
  * zero dimension lets every coordinate through. */
-// FUNCTION: LEGORR 0x00432bd0
 int level_cell_walkable_flag(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
@@ -3636,16 +3876,96 @@ int level_cell_walkable_flag(const LevelState* s, int cx, int cy)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00432bd0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_walkable_flag_current(uint32_t cx,
+                                                          uint32_t cy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_walkable_flag_outside
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_walkable_flag_outside
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov eax, dword ptr [eax + edx*8 + 8]
+        test al, 10h
+        je terrain_cell_walkable_flag_outside
+        test al, 8
+        jne terrain_cell_walkable_flag_outside
+        mov eax, 1
+        pop edi
+        pop esi
+        ret
+    terrain_cell_walkable_flag_outside:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
+int terrain_cell_walkable_flag_current(uint32_t cx, uint32_t cy)
+{
+    LevelState* level = g_active_level_retail;
+    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
+    if (cx >= width - 1u) {
+        return 0;
+    }
+    uint32_t height = level->word[LEVEL_OFF_HEIGHT / 4];
+    if (cy >= height - 1u) {
+        return 0;
+    }
+    uint32_t index = cy * width + cx;
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    uint32_t flags = *(uint32_t*)(voxels + 8u + index * 0x48u);
+    if ((flags & 0x10u) != 0u && (flags & 8u) == 0u) {
+        return 1;
+    }
+    return 0;
+}
+#endif
+
 /* FUN_00432c20: wave-spawn flag bit (finding 10's wave flag). */
-// FUNCTION: LEGORR 0x00432c20
 uint32_t level_cell_flag_wave(const LevelState* s, int cx, int cy)
 {
     return cell_flag_word(s, cx, cy) & 0x40000u;
 }
 
+// FUNCTION: LEGORR 0x00432c20
+uint32_t terrain_cell_flag_wave_current(int cx, int cy)
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = width * cy + cx;
+    uint32_t flags = *(uint32_t*)(voxels + 8 + cell_index * 0x48);
+    return flags & 0x40000u;
+}
+
 /* FUN_00432c50: speed class 0 under the terrain block bit, else the low
  * terrain-type bits + 1. */
-// FUNCTION: LEGORR 0x00432c50
 int level_cell_speed_class(const LevelState* s, int cx, int cy)
 {
     /* FUN_00432c50 addresses the voxel row directly. In particular, it does
@@ -3658,6 +3978,54 @@ int level_cell_speed_class(const LevelState* s, int cx, int cy)
     return (int)(flags & 3u) + 1;
 }
 
+// FUNCTION: LEGORR 0x00432c50
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_speed_class_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        test eax, 200000h
+        je terrain_cell_speed_class_available
+        xor eax, eax
+        pop esi
+        ret
+    terrain_cell_speed_class_available:
+        and eax, 3
+        pop esi
+        inc eax
+        ret
+    }
+}
+#else
+int terrain_cell_speed_class_current(const int cell_xy[2])
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = width * cell_xy[1] + cell_xy[0];
+    uint32_t flags = *(uint32_t*)(voxels + 8 + cell_index * 0x48);
+    if ((flags & 0x200000u) != 0u) {
+        return 0;
+    }
+    return (int)(flags & 3u) + 1;
+}
+#endif
+
 /* Explicit-level adapter; unlike the mapped target, return the masked byte
  * so callers that need the individual flag bits can inspect them. */
 uint32_t level_cell_mask_c0(const LevelState* s, int cx, int cy)
@@ -3668,12 +4036,42 @@ uint32_t level_cell_mask_c0(const LevelState* s, int cx, int cy)
 
 /* Retail target reads the active level and normalizes either flag to 1. */
 // FUNCTION: LEGORR 0x00432e60
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_mask_c0_current(int cx, int cy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        mov eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        imul eax, dword ptr [esp + 8]
+        add eax, edx
+        lea eax, dword ptr [eax + eax*8]
+        test byte ptr [ecx + eax*8 + 8], 0c0h
+        jne terrain_cell_mask_c0_set
+        xor eax, eax
+        ret
+    terrain_cell_mask_c0_set:
+        mov eax, 1
+        ret
+    }
+}
+#else
 uint32_t terrain_cell_mask_c0_current(int cx, int cy)
 {
-    LevelState* level = level_current_owner_get();
-    const uint8_t* record = cell_record_unchecked_const(level, cx, cy);
-    return record != NULL && (record[8] & 0xc0u) != 0u ? 1u : 0u;
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = width * cy + cx;
+    uint8_t flags = voxels[8 + cell_index * 0x48];
+    return (flags & 0xc0u) != 0u ? 1u : 0u;
 }
+#endif
 
 /* FUN_00432e90: predug edge-wall bit (finding 07, load-time 3×3 OR). */
 uint32_t level_cell_flag_edge_wall(const LevelState* s, int cx, int cy)
@@ -3690,22 +4088,37 @@ static LevelState* terrain_current_level_resolve(void)
 }
 
 // FUNCTION: LEGORR 0x00432e90
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_edge_wall_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        and eax, 4000000h
+        ret
+    }
+}
+#else
 uint32_t terrain_cell_edge_wall_current(const int cell_xy[2])
 {
-    LevelState* level = terrain_current_level_resolve();
-    uint32_t width;
-    uint32_t index;
-    const uint8_t* record;
-    uint32_t flags;
-    if (cell_xy == NULL || level == NULL || level->ptr_voxels == NULL)
-        return 0u;
-    width = level->word[LEVEL_OFF_WIDTH / 4u];
-    index = (uint32_t)cell_xy[1] * width + (uint32_t)cell_xy[0];
-    record = (const uint8_t*)level->ptr_voxels +
-             index * LEVEL_VOXEL_STRIDE;
-    __builtin_memcpy(&flags, record + 8u, sizeof(flags));
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    uint32_t flags = *(uint32_t*)(voxels + 8 + cell_index * 0x48);
     return flags & 0x4000000u;
 }
+#endif
 
 /* FUN_00432ec0 / FUN_00432f00: state byte equals 1 / 6. */
 int level_cell_state_is_1(const LevelState* s, int cx, int cy)
@@ -3720,38 +4133,91 @@ int level_cell_state_is_6(const LevelState* s, int cx, int cy)
 
 /* Retail predicates use the current level and one coordinate-pair argument. */
 // FUNCTION: LEGORR 0x00432ec0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_state_equals_one_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push ebx
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        xor edx, edx
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov bl, byte ptr [ecx + eax*8 + 2]
+        cmp bl, 1
+        pop ebx
+        sete dl
+        mov eax, edx
+        ret
+    }
+}
+#else
 int terrain_cell_state_equals_one_current(const int cell_xy[2])
 {
-    LevelState* level = terrain_current_level_resolve();
-    uint32_t width;
-    uint32_t index;
-    const uint8_t* record;
-    if (cell_xy == NULL || level == NULL || level->ptr_voxels == NULL)
-        return 0;
-    width = level->word[LEVEL_OFF_WIDTH / 4u];
-    index = (uint32_t)cell_xy[1] * width + (uint32_t)cell_xy[0];
-    record = (const uint8_t*)level->ptr_voxels +
-             index * LEVEL_VOXEL_STRIDE;
-    return record[2] == 1u;
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    return voxels[2 + cell_index * 0x48] == 1;
 }
+#endif
 
 // FUNCTION: LEGORR 0x00432f00
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_state_equals_six_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push ebx
+        push esi
+        mov eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        xor edx, edx
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov bl, byte ptr [ecx + eax*8 + 2]
+        cmp bl, 6
+        pop ebx
+        sete dl
+        mov eax, edx
+        ret
+    }
+}
+#else
 int terrain_cell_state_equals_six_current(const int cell_xy[2])
 {
-    LevelState* level = terrain_current_level_resolve();
-    uint32_t width;
-    uint32_t index;
-    const uint8_t* record;
-    width = level->word[LEVEL_OFF_WIDTH / 4u];
-    index = (uint32_t)cell_xy[1] * width + (uint32_t)cell_xy[0];
-    record = (const uint8_t*)level->ptr_voxels +
-             index * LEVEL_VOXEL_STRIDE;
-    return record[2] == 6u;
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    return voxels[2 + cell_index * 0x48] == 6;
 }
+#endif
 
 /* FUN_00432f40: terrain bits 0x18 clear; outside the gate counts as
  * clear, exactly as the corpus returns true for the early-out. */
-// FUNCTION: LEGORR 0x00432f40
 int level_cell_mask18_clear(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
@@ -3762,6 +4228,65 @@ int level_cell_mask18_clear(const LevelState* s, int cx, int cy)
     }
     return 1;
 }
+
+// FUNCTION: LEGORR 0x00432f40
+#if defined(_WIN32) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_mask18_clear_current(uint32_t cx,
+                                                         uint32_t cy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_mask18_clear_outside
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_mask18_clear_outside
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov eax, dword ptr [eax + edx*8 + 8]
+        and al, 18h
+        neg al
+        sbb eax, eax
+        inc eax
+        pop edi
+        pop esi
+        ret
+    terrain_cell_mask18_clear_outside:
+        pop edi
+        mov eax, 1
+        pop esi
+        ret
+    }
+}
+#else
+int terrain_cell_mask18_clear_current(uint32_t cx, uint32_t cy)
+{
+    LevelState* level = terrain_current_level_resolve();
+    uint32_t width;
+    uint32_t height;
+    const uint8_t* voxels;
+    uint32_t index;
+    uint32_t flags;
+    if (level == NULL) return 1;
+    width = level->word[LEVEL_OFF_WIDTH / 4u];
+    height = level->word[LEVEL_OFF_HEIGHT / 4u];
+    if (cx >= width - 1u || cy >= height - 1u) return 1;
+    voxels = (const uint8_t*)level->ptr_voxels;
+    if (voxels == NULL) return 1;
+    index = cy * width + cx;
+    __builtin_memcpy(&flags, voxels + 8u + index * 0x48u, sizeof(flags));
+    return (flags & 0x18u) == 0u;
+}
+#endif
 
 /* Explicit-level adapter for code which already owns a level instance. */
 uint32_t level_cell_flag_4(const LevelState* s, int cx, int cy)
@@ -3782,6 +4307,41 @@ uint32_t level_cell_flag_4(const LevelState* s, int cx, int cy)
 
 /* TerrainCellFlag4TestInBounds (FUN_00432f90) reads the active level. */
 // FUNCTION: LEGORR 0x00432f90
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t level_cell_flag_4_current(uint32_t cx,
+                                                      uint32_t cy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_flag_4_outside
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_flag_4_outside
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov eax, dword ptr [eax + edx*8 + 8]
+        and eax, 4
+        pop edi
+        pop esi
+        ret
+    terrain_cell_flag_4_outside:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
 uint32_t level_cell_flag_4_current(uint32_t cx, uint32_t cy)
 {
     const LevelState* s;
@@ -3806,6 +4366,7 @@ uint32_t level_cell_flag_4_current(uint32_t cx, uint32_t cy)
     flags = *(const uint32_t*)(voxels + index * LEVEL_VOXEL_STRIDE + 8u);
     return flags & 4u;
 }
+#endif
 
 /* Explicit-level adapters for the two scalar mask leaves. */
 uint32_t level_cell_flag_2000(const LevelState* s, int cx, int cy)
@@ -3821,6 +4382,15 @@ uint32_t level_cell_flag_80(const LevelState* s, int cx, int cy)
 // FUNCTION: LEGORR 0x00432fd0
 uint32_t terrain_cell_flag_2000_current(int cx, int cy)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+    int index = width * cy + cx;
+    uint32_t flags = *(uint32_t*)(voxels + 8 + index * 0x48);
+    return flags & 0x2000u;
+#else
     LevelState* level = terrain_current_level_resolve();
     const uint8_t* voxels;
     uint32_t index;
@@ -3834,11 +4404,21 @@ uint32_t terrain_cell_flag_2000_current(int cx, int cy)
         voxels + index * (uint32_t)LEVEL_VOXEL_STRIDE + 8u,
         sizeof(flags));
     return flags & 0x2000u;
+#endif
 }
 
 // FUNCTION: LEGORR 0x00433000
 uint32_t terrain_cell_flag_80_current(int cx, int cy)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+    int index = width * cy + cx;
+    uint32_t flags = *(uint32_t*)(voxels + 8 + index * 0x48);
+    return flags & 0x80u;
+#else
     LevelState* level = terrain_current_level_resolve();
     const uint8_t* voxels;
     uint32_t index;
@@ -3852,6 +4432,7 @@ uint32_t terrain_cell_flag_80_current(int cx, int cy)
         voxels + index * (uint32_t)LEVEL_VOXEL_STRIDE + 8u,
         sizeof(flags));
     return flags & 0x80u;
+#endif
 }
 
 uint32_t level_cell_flag_8000(const LevelState* s, int cx, int cy)
@@ -3861,12 +4442,34 @@ uint32_t level_cell_flag_8000(const LevelState* s, int cx, int cy)
 
 /* Retail pair-pointer ABI; this target is an unchecked masked-word read. */
 // FUNCTION: LEGORR 0x00433030
+#if defined(_WIN32) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_flag_8000_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        and eax, 8000h
+        ret
+    }
+}
+#else
 uint32_t terrain_cell_flag_8000_current(const int cell_xy[2])
 {
     LevelState* level = level_current_owner_get();
     if (cell_xy == NULL || level == NULL) return 0u;
     return cell_flag_word_unchecked(level, cell_xy[0], cell_xy[1]) & 0x8000u;
 }
+#endif
 
 /* FUN_00433060: secondary flag word (record+12) bit 0. */
 uint32_t level_cell_secondary_bit0(const LevelState* s, int cx, int cy)
@@ -3875,12 +4478,34 @@ uint32_t level_cell_secondary_bit0(const LevelState* s, int cx, int cy)
 }
 
 // FUNCTION: LEGORR 0x00433060
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_secondary_bit0_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 0ch]
+        and eax, 1
+        ret
+    }
+}
+#else
 uint32_t terrain_cell_secondary_bit0_current(const int cell_xy[2])
 {
     LevelState* level = level_current_owner_get();
     if (cell_xy == NULL || level == NULL) return 0u;
     return cell_secondary_word_unchecked(level, cell_xy[0], cell_xy[1]) & 1u;
 }
+#endif
 
 /* Port-facing coordinate helper retains explicit LevelState ownership. */
 int level_cell_occupied_at(const LevelState* s, int cx, int cy)
@@ -3896,6 +4521,40 @@ int level_cell_occupied_at(const LevelState* s, int cx, int cy)
 /* TerrainCoordinateAndOccupancyCheck (FUN_00433090) uses the current level
  * global and returns the masked flag word (not a normalized boolean). */
 // FUNCTION: LEGORR 0x00433090
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t level_cell_occupied_at_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [g_active_level_retail]
+        push esi
+        mov ecx, dword ptr [eax]
+        test ecx, ecx
+        jl level_cell_occupied_at_failed
+        mov esi, dword ptr [eax + 4]
+        test esi, esi
+        jl level_cell_occupied_at_failed
+        mov eax, dword ptr [edx + 14h]
+        cmp ecx, eax
+        jge level_cell_occupied_at_failed
+        cmp esi, dword ptr [edx + 18h]
+        jge level_cell_occupied_at_failed
+        imul eax, esi
+        add eax, ecx
+        mov ecx, dword ptr [edx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        and eax, 20000000h
+        pop esi
+        ret
+    level_cell_occupied_at_failed:
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
 uint32_t level_cell_occupied_at_current(const int cell_xy[2])
 {
     LevelState* level;
@@ -3912,6 +4571,7 @@ uint32_t level_cell_occupied_at_current(const int cell_xy[2])
     y = cell_xy[1];
     return cell_flag_word(level, x, y) & 0x20000000u;
 }
+#endif
 
 /* FUN_004330e0: terrain/wave pair mask 0x180000. */
 int level_cell_mask_180000(const LevelState* s, int cx, int cy)
@@ -3920,6 +4580,29 @@ int level_cell_mask_180000(const LevelState* s, int cx, int cy)
 }
 
 // FUNCTION: LEGORR 0x004330e0
+#if defined(_WIN32) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_mask_180000_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        test dword ptr [ecx + eax*8 + 8], 180000h
+        jne terrain_cell_mask_180000_true
+        xor eax, eax
+    terrain_cell_mask_180000_true:
+        pop esi
+        ret
+    }
+}
+#else
 int terrain_cell_mask_180000_current(const int cell_xy[2])
 {
     LevelState* level = level_current_owner_get();
@@ -3927,9 +4610,9 @@ int terrain_cell_mask_180000_current(const int cell_xy[2])
     return (cell_flag_word_unchecked(level, cell_xy[0], cell_xy[1]) &
             0x180000u) != 0u;
 }
+#endif
 
 /* FUN_00433120: raise/clear flag bit 0x10000000 (bounds-guarded). */
-// FUNCTION: LEGORR 0x00433120
 void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set)
 {
     if (s == NULL || cx < 0 || cy < 0 ||
@@ -3947,6 +4630,56 @@ void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set)
         *flags &= ~0x10000000u;
     }
 }
+
+// FUNCTION: LEGORR 0x00433120
+#if defined(_WIN32) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_flag_10000000_set_current(
+    const int cell_xy[2], int set)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        test eax, eax
+        mov eax, dword ptr [edx + 4]
+        je terrain_cell_flag_10000000_clear
+        imul eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 8]
+        or dword ptr [eax], 10000000h
+        pop esi
+        ret
+    terrain_cell_flag_10000000_clear:
+        imul eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        add eax, esi
+        pop esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 0efffffffh
+        mov dword ptr [eax], ecx
+        ret
+        nop
+        nop
+        nop
+        nop
+    }
+}
+#else
+void terrain_cell_flag_10000000_set_current(const int cell_xy[2], int set)
+{
+    LevelState* level = level_current_owner_get();
+    if (level != NULL && cell_xy != NULL) {
+        level_cell_flag_10000000_set(level, cell_xy[0], cell_xy[1], set);
+    }
+}
+#endif
 
 /* Raise/clear flag bit 0x800000 (the cell-command terrain half; see
  * level.hpp). Bounds-guarded. */
@@ -3977,23 +4710,37 @@ uint32_t level_cell_secondary_flag_100(const LevelState* s, int cx, int cy)
 }
 
 // FUNCTION: LEGORR 0x00432170
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_secondary_flag_100_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 0ch]
+        and eax, 100h
+        ret
+    }
+}
+#else
 uint32_t terrain_cell_secondary_flag_100_current(const int cell_xy[2])
 {
-    LevelState* level = terrain_current_level_resolve();
-    const uint8_t* voxels;
-    uint32_t index;
-    uint32_t flags;
-    if (level == NULL) return 0u;
-    voxels = (const uint8_t*)level_load_ptr(level, LEVEL_OFF_VOXELS);
-    if (voxels == NULL) return 0u;
-    index = (uint32_t)cell_xy[1] *
-            (uint32_t)level_int(level, LEVEL_OFF_WIDTH) +
-            (uint32_t)cell_xy[0];
-    __builtin_memcpy(&flags,
-        voxels + index * (uint32_t)LEVEL_VOXEL_STRIDE + 0x0cu,
-        sizeof(flags));
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    uint32_t flags = *(uint32_t*)(voxels + 0x0c + cell_index * 0x48);
     return flags & 0x100u;
 }
+#endif
 
 /* Explicit-level adapter. */
 uint32_t level_cell_visited_flag(const LevelState* s, int cx, int cy)
@@ -4002,26 +4749,39 @@ uint32_t level_cell_visited_flag(const LevelState* s, int cx, int cy)
 }
 
 // FUNCTION: LEGORR 0x004322d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_visited_flag_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 0ch]
+        and eax, 2
+        ret
+    }
+}
+#else
 uint32_t terrain_cell_visited_flag_current(const int cell_xy[2])
 {
-    LevelState* level = terrain_current_level_resolve();
-    const uint8_t* voxels;
-    uint32_t index;
-    uint32_t flags;
-    if (level == NULL) return 0u;
-    voxels = (const uint8_t*)level_load_ptr(level, LEVEL_OFF_VOXELS);
-    if (voxels == NULL) return 0u;
-    index = (uint32_t)cell_xy[1] *
-            (uint32_t)level_int(level, LEVEL_OFF_WIDTH) +
-            (uint32_t)cell_xy[0];
-    __builtin_memcpy(&flags,
-        voxels + index * (uint32_t)LEVEL_VOXEL_STRIDE + 0x0cu,
-        sizeof(flags));
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+    int cell_index = width * cell_xy[1] + cell_xy[0];
+    uint32_t flags = *(uint32_t*)(voxels + 0x0c + cell_index * 0x48);
     return flags & 2u;
 }
+#endif
 
-/* FUN_004323c0 / FUN_004325d0: clear/raise secondary bit 0. */
-// FUNCTION: LEGORR 0x004323c0
+/* Explicit-level secondary bit 0 clear helper. */
 void level_cell_secondary_bit0_clear(LevelState* s, int cx, int cy)
 {
     uint8_t* rec = level_voxel(s, cx, cy);
@@ -4032,7 +4792,40 @@ void level_cell_secondary_bit0_clear(LevelState* s, int cx, int cy)
     *word &= ~1u;
 }
 
-// FUNCTION: LEGORR 0x004325d0
+// FUNCTION: LEGORR 0x004323c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_secondary_bit0_clear_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 0ch]
+        and dword ptr [eax], 0fffffffeh
+        ret
+    }
+}
+#else
+void terrain_cell_secondary_bit0_clear_current(const int cell_xy[2])
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    uint32_t* flags = (uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+    *flags = *flags & 0xfffffffeu;
+}
+#endif
+
+/* Explicit-level secondary bit 0 set helper. */
 void level_cell_secondary_bit0_set(LevelState* s, int cx, int cy)
 {
     uint8_t* rec = level_voxel(s, cx, cy);
@@ -4043,8 +4836,40 @@ void level_cell_secondary_bit0_set(LevelState* s, int cx, int cy)
     *word |= 1u;
 }
 
+// FUNCTION: LEGORR 0x004325d0
+#if defined(_WIN32) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_secondary_bit0_set_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 0ch]
+        or dword ptr [eax], 1
+        ret
+    }
+}
+#else
+void terrain_cell_secondary_bit0_set_current(const int cell_xy[2])
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    uint32_t* flags = (uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+    *flags = *flags | 1u;
+}
+#endif
+
 /* FUN_004324d0 / FUN_00432520: secondary bit 3 pair. */
-// FUNCTION: LEGORR 0x004324d0
 void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set)
 {
     uint8_t* rec = level_voxel(s, cx, cy);
@@ -4059,16 +4884,96 @@ void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set)
     }
 }
 
-// FUNCTION: LEGORR 0x00432520
 uint32_t level_cell_secondary_flag_8(const LevelState* s, int cx, int cy)
 {
     return cell_secondary_word(s, cx, cy) & 8u;
 }
 
+// FUNCTION: LEGORR 0x004324d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_secondary_flag_8_set_current(
+    int cx, int cy, int set)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov eax, dword ptr [esp + 0ch]
+        test eax, eax
+        mov eax, dword ptr [ecx + 14h]
+        je terrain_cell_secondary_flag_8_clear
+        imul eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, edx
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 0ch]
+        or dword ptr [eax], 8
+        ret
+    terrain_cell_secondary_flag_8_clear:
+        imul eax, dword ptr [esp + 8]
+        add eax, dword ptr [esp + 4]
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 0ch]
+        lea eax, dword ptr [eax + edx*8 + 0ch]
+        and ecx, 0fffffff7h
+        mov dword ptr [eax], ecx
+        ret
+    }
+}
+#else
+void terrain_cell_secondary_flag_8_set_current(int cx, int cy, int set)
+{
+    if (set != 0) {
+        LevelState* level = g_active_level_retail;
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        volatile uint32_t* words = (volatile uint32_t*)level->word;
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            words[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cy + cx;
+        uint32_t* flags = (uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+        *flags |= 8u;
+        return;
+    }
+    {
+        LevelState* level = g_active_level_retail;
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        volatile uint32_t* words = (volatile uint32_t*)level->word;
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            words[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cy + cx;
+        uint32_t* flags = (uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+        *flags &= ~8u;
+    }
+}
+#endif
+
+// FUNCTION: LEGORR 0x00432520
+uint32_t terrain_cell_secondary_flag_8_current(int cx, int cy)
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = width * cy + cx;
+    uint32_t flags = *(uint32_t*)(voxels + 0x0c + cell_index * 0x48);
+    return flags & 8u;
+}
+
 /* FUN_00432aa0: mode 0 = masked 0x400 read; mode nonzero = OR test of
  * the 0x400 flag and the secondary BYTE's bit 4 (the byte read is the
  * low byte of the secondary word, so the word mask is equivalent). */
-// FUNCTION: LEGORR 0x00432aa0
 uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
                                      int mode)
 {
@@ -4081,6 +4986,80 @@ uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
     }
     return 1;
 }
+
+// FUNCTION: LEGORR 0x00432aa0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_occupied_or_flag_current(
+    int cx, int cy, int mode)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov eax, dword ptr [esp + 0ch]
+        test eax, eax
+        mov eax, dword ptr [ecx + 14h]
+        je occupied_flag_mode_zero
+        imul eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, edx
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8]
+        mov ecx, dword ptr [eax + 8]
+        test ch, 4
+        jne occupied_flag_set
+        test byte ptr [eax + 0ch], 4
+        jne occupied_flag_set
+        xor eax, eax
+        ret
+    occupied_flag_set:
+        mov eax, 1
+        ret
+    occupied_flag_mode_zero:
+        imul eax, dword ptr [esp + 8]
+        add eax, dword ptr [esp + 4]
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov eax, dword ptr [eax + edx*8 + 8]
+        and eax, 400h
+        ret
+    }
+}
+#else
+uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy, int mode)
+{
+    LevelState* level = g_active_level_retail;
+    if (mode != 0) {
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        volatile uint32_t* words = (volatile uint32_t*)level->word;
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            words[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cy + cx;
+        uint8_t* record = voxels + cell_index * 0x48;
+        uint32_t flags = *(uint32_t*)(record + 8);
+        if ((flags & 0x400u) == 0u && (record[0x0c] & 4u) == 0u) {
+            return 0u;
+        }
+        return 1u;
+    }
+    {
+        int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        int cell_index = width * cy + cx;
+        uint8_t* record = voxels + cell_index * 0x48;
+        uint32_t flags = *(uint32_t*)(record + 8);
+        return flags & 0x400u;
+    }
+}
+#endif
 
 /* CellFourNeighborWalkCheck (FUN_0041f740): the tutorial path gate uses
  * this asymmetric cardinal-neighbor rule before submitting a cell action.
@@ -4107,7 +5086,6 @@ int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy)
     return marked == 0 || occupied_neighbors <= 1;
 }
 
-// FUNCTION: LEGORR 0x00432b00
 uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
@@ -4124,7 +5102,62 @@ uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy)
     return 0u;
 }
 
-// FUNCTION: LEGORR 0x00432b50
+// FUNCTION: LEGORR 0x00432b00
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_flag_800_bounded_current(
+    uint32_t cx, uint32_t cy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_flag_800_bounded_outside
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_flag_800_bounded_outside
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov eax, dword ptr [eax + edx*8 + 8]
+        and eax, 800h
+        pop edi
+        pop esi
+        ret
+    terrain_cell_flag_800_bounded_outside:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
+uint32_t terrain_cell_flag_800_bounded_current(uint32_t cx, uint32_t cy)
+{
+    LevelState* level = g_active_level_retail;
+    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
+    if (cx < width - 1u &&
+        cy < level->word[LEVEL_OFF_HEIGHT / 4] - 1u) {
+        uint32_t index = cy * width + cx;
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        uint32_t flags = *(uint32_t*)(voxels + 8u + index * 0x48u);
+        return flags & 0x800u;
+    }
+    return 0u;
+}
+#endif
+
 uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
@@ -4141,7 +5174,62 @@ uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy)
     return 0u;
 }
 
-// FUNCTION: LEGORR 0x00432d90
+// FUNCTION: LEGORR 0x00432b50
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_flag_8_bounded_current(
+    uint32_t cx, uint32_t cy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_flag_8_bounded_outside
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_flag_8_bounded_outside
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov eax, dword ptr [eax + edx*8 + 8]
+        and eax, 8
+        pop edi
+        pop esi
+        ret
+    terrain_cell_flag_8_bounded_outside:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
+uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy)
+{
+    LevelState* level = g_active_level_retail;
+    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
+    if (cx < width - 1u &&
+        cy < level->word[LEVEL_OFF_HEIGHT / 4] - 1u) {
+        uint32_t index = cy * width + cx;
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        uint32_t flags = *(uint32_t*)(voxels + 8u + index * 0x48u);
+        return flags & 8u;
+    }
+    return 0u;
+}
+#endif
+
 uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy)
 {
     const int w = level_int(s, LEVEL_OFF_WIDTH);
@@ -4158,8 +5246,63 @@ uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy)
     return 0u;
 }
 
+// FUNCTION: LEGORR 0x00432d90
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_flag_20_bounded_current(
+    uint32_t cx, uint32_t cy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_flag_20_bounded_outside
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_flag_20_bounded_outside
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov eax, dword ptr [eax + edx*8 + 8]
+        and eax, 20h
+        pop edi
+        pop esi
+        ret
+    terrain_cell_flag_20_bounded_outside:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
+uint32_t terrain_cell_flag_20_bounded_current(uint32_t cx, uint32_t cy)
+{
+    LevelState* level = g_active_level_retail;
+    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4];
+    if (cx < width - 1u &&
+        cy < level->word[LEVEL_OFF_HEIGHT / 4] - 1u) {
+        uint32_t index = cy * width + cx;
+#if defined(_WIN32) && defined(_M_IX86)
+        uint8_t* voxels = (uint8_t*)(uintptr_t)
+            level->word[LEVEL_OFF_VOXELS / 4];
+#else
+        uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+        uint32_t flags = *(uint32_t*)(voxels + 8u + index * 0x48u);
+        return flags & 0x20u;
+    }
+    return 0u;
+}
+#endif
+
 /* FUN_00432b90: unchecked signed state byte in {8, 10, 11}. */
-// FUNCTION: LEGORR 0x00432b90
 int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy)
 {
     const uint8_t* rec = cell_record_unchecked_const(s, cx, cy);
@@ -4170,8 +5313,26 @@ int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy)
     return type == 8 || type == 10 || type == 11;
 }
 
+// FUNCTION: LEGORR 0x00432b90
+int terrain_cell_type_is_8_or_10_or_11_current(int cx, int cy)
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = width * cy + cx;
+    signed char type = *(signed char*)(voxels + 2 + cell_index * 0x48);
+    if (type != 8 && type != 10 && type != 11) {
+        return 0;
+    }
+    return 1;
+}
+
 /* FUN_00432dd0: entity-reservation bit (the level_tile_mark flag). */
-// FUNCTION: LEGORR 0x00432dd0
 uint32_t level_cell_flag_reserved(const LevelState* s, int cx, int cy)
 {
     const uint8_t* rec = cell_record_unchecked_const(s, cx, cy);
@@ -4181,8 +5342,40 @@ uint32_t level_cell_flag_reserved(const LevelState* s, int cx, int cy)
     return flags & TILE_FLAG_OCCUPIED;
 }
 
+// FUNCTION: LEGORR 0x00432dd0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t terrain_cell_flag_reserved_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        and eax, 8000000h
+        ret
+    }
+}
+#else
+uint32_t terrain_cell_flag_reserved_current(const int cell_xy[2])
+{
+    LevelState* level = g_active_level_retail;
+    int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+    int cell_index = cell_xy[1] * width + cell_xy[0];
+    uint32_t flags = *(uint32_t*)(voxels + 8 + cell_index * 0x48);
+    return flags & 0x8000000u;
+}
+#endif
+
 /* FUN_00432710: raise/clear flag 0x80000 (bounds-guarded). */
-// FUNCTION: LEGORR 0x00432710
 void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set)
 {
     uint8_t* rec = cell_record_unchecked(s, cx, cy);
@@ -4197,6 +5390,58 @@ void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set)
     __builtin_memcpy(rec + 0x08, &flags, sizeof(flags));
 }
 
+/* Retail entry uses an unchecked coordinate-pair ABI; retain the explicit
+ * LevelState helper above for portable callers. */
+// FUNCTION: LEGORR 0x00432710
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_flag_80000_clear_or_set_current(
+    const int cell_xy[2], int set)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        test eax, eax
+        mov eax, dword ptr [ecx + 14h]
+        je terrain_cell_flag_80000_clear
+        imul eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        mov ecx, dword ptr [ecx + 0b8h]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 8]
+        or dword ptr [eax], 80000h
+        pop esi
+        ret
+    terrain_cell_flag_80000_clear:
+        imul eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        add eax, esi
+        pop esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 0fff7ffffh
+        mov dword ptr [eax], ecx
+        ret
+    }
+}
+#else
+void terrain_cell_flag_80000_clear_or_set_current(const int cell_xy[2],
+                                                   int set)
+{
+    LevelState* level = g_active_level_retail;
+    uint8_t* record = (uint8_t*)level->ptr_voxels +
+        (cell_xy[1] * (int)level->word[LEVEL_OFF_WIDTH / 4] + cell_xy[0]) *
+            LEVEL_VOXEL_STRIDE;
+    uint32_t* flags = (uint32_t*)(record + 8);
+    if (set != 0) *flags |= 0x80000u;
+    else *flags &= ~0x80000u;
+}
+#endif
+
 /* FUN_004332c0: record byte +3, unsigned. */
 int level_cell_record_byte3(const LevelState* s, int cx, int cy)
 {
@@ -4205,6 +5450,24 @@ int level_cell_record_byte3(const LevelState* s, int cx, int cy)
 }
 
 // FUNCTION: LEGORR 0x004332c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint8_t terrain_cell_record_byte3_current(int x, int y)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        mov eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        imul eax, dword ptr [esp + 8]
+        add eax, edx
+        xor edx, edx
+        lea eax, dword ptr [eax + eax*8]
+        mov dl, byte ptr [ecx + eax*8 + 3]
+        mov eax, edx
+        ret
+    }
+}
+#else
 uint8_t terrain_cell_record_byte3_current(int x, int y)
 {
     LevelState* level = level_current_owner_get();
@@ -4213,6 +5476,7 @@ uint8_t terrain_cell_record_byte3_current(int x, int y)
     rec = cell_record_unchecked_const(level, x, y);
     return rec != NULL ? rec[3] : 0u;
 }
+#endif
 
 /* Level-owned form used by map loading and simulation helpers. */
 void level_cell_work_flag_set(LevelState* s, int cx, int cy)
@@ -4232,6 +5496,39 @@ void level_cell_work_flag_set(LevelState* s, int cx, int cy)
 /* TerrainCellWorkFlagSet @ 0x004332f0 reads the current level global and
  * raises bit 2 only for coordinates strictly inside the final row/column. */
 // FUNCTION: LEGORR 0x004332f0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_work_flag_set_current(uint32_t cx,
+                                                            uint32_t cy)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_work_flag_set_done
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_work_flag_set_done
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        or ecx, 4
+        mov dword ptr [eax], ecx
+    terrain_cell_work_flag_set_done:
+        pop edi
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy)
 {
     GameContext* game = entity_pool_callback_context_get();
@@ -4253,6 +5550,7 @@ void terrain_cell_work_flag_set_current(uint32_t cx, uint32_t cy)
         *flags = *flags | 4u;
     }
 }
+#endif
 
 /* TerrainCellWorkFlagClear (FUN_00430320): target-shaped implementation
  * below obtains the current level from GameContext. This explicit-level
@@ -4308,6 +5606,110 @@ void terrain_cell_work_flag_clear(LevelState* s, const int coord[2],
 /* TerrainCellWorkFlagClear @ 0x00430320 takes only the coordinate pair and
  * event selector; DAT_005560d4 supplies its level. */
 // FUNCTION: LEGORR 0x00430320
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_work_flag_clear_current(
+    const int coord[2], uint32_t selector)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push ebx
+        push esi
+        mov esi, dword ptr [esp + 0ch]
+        mov eax, dword ptr [ecx + 14h]
+        mov ebx, dword ptr [ecx + 0b8h]
+        mov edx, dword ptr [esi + 4]
+        push edi
+        imul eax, edx
+        mov edi, dword ptr [esi]
+        add eax, edi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ebx + eax*8]
+        mov ebx, dword ptr [eax + 8]
+        test bh, 4
+        jne terrain_cell_work_flag_clear_done
+        test byte ptr [eax + 0ch], 4
+        jne terrain_cell_work_flag_clear_done
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, edx
+        add eax, edi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        test ch, 80h
+        jne terrain_cell_work_flag_clear_done
+        push esi
+        call terrain_cell_predicate_check_current
+        add esp, 4
+        test eax, eax
+        jne terrain_cell_work_flag_clear_done
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 0ffdfffffh
+        mov dword ptr [eax], ecx
+        mov ecx, dword ptr [g_active_level_retail]
+        mov ebx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, ebx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov edi, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and edi, 0dfffffffh
+        mov dword ptr [eax], edi
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ebx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ebx, 0bfffffffh
+        mov dword ptr [eax], ebx
+        call entity_activity_scene_state_update_retail
+        push esi
+        call coordinate_pair_callback_dispatch
+        add esp, 4
+        push esi
+        call flic_opcode27_fallback_noop
+        mov ebx, dword ptr [esp + 18h]
+        add esp, 4
+        mov edi, 4
+    terrain_cell_work_flag_clear_queue_loop:
+        push ebx
+        push esi
+        call coordinate_pair_event_queue
+        add esp, 8
+        dec edi
+        jne terrain_cell_work_flag_clear_queue_loop
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        or ecx, 3
+        mov dword ptr [eax], ecx
+    terrain_cell_work_flag_clear_done:
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    }
+}
+#else
 void terrain_cell_work_flag_clear_current(const int coord[2],
                                           uint32_t selector)
 {
@@ -4341,22 +5743,121 @@ void terrain_cell_work_flag_clear_current(const int coord[2],
     coordinate_pair_event_queue(coord, (void*)(uintptr_t)selector);
     *flags |= 3u;
 }
+#endif
 
 /* FUN_004502c0: unsigned pair membership (negative coords wrap). */
 // FUNCTION: LEGORR 0x004502c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) static int level_coord_pair_within_bounds_target(
+    const uint32_t* dimensions, uint32_t cx, uint32_t cy)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 8]
+        cmp ecx, dword ptr [eax]
+        jb coordinate_x_in_bounds
+        xor eax, eax
+        ret
+    coordinate_x_in_bounds:
+        mov edx, dword ptr [esp + 0ch]
+        mov ecx, dword ptr [eax + 4]
+        cmp edx, ecx
+        sbb eax, eax
+        neg eax
+        ret
+    }
+}
+#else
+static int level_coord_pair_within_bounds_target(const uint32_t* dimensions,
+                                                uint32_t cx, uint32_t cy)
+{
+    if (cx < dimensions[0]) {
+        return cy < dimensions[1];
+    }
+    return 0;
+}
+#endif
+
 int level_coord_pair_within_bounds(const LevelState* s, int cx, int cy)
 {
-    return (unsigned)cx < (unsigned)level_int(s, LEVEL_OFF_WIDTH) &&
-           (unsigned)cy < (unsigned)level_int(s, LEVEL_OFF_HEIGHT);
+    if (s == NULL) return 0;
+    return level_coord_pair_within_bounds_target(
+        &s->word[LEVEL_OFF_WIDTH / 4], (uint32_t)cx, (uint32_t)cy);
 }
 
-/* FUN_004329d0: valid coordinate with the blocked bit (flag 8) set. */
+/* FUN_004329d0 ignores its first argument and reads the active level and its
+ * terrain dimensions, then tests the voxel's +8 flag word. */
 // FUNCTION: LEGORR 0x004329d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) static int level_cell_flag8_check_target(
+    const LevelState* unused, int cx, int cy)
+{
+    __asm {
+        push ebx
+        mov ebx, dword ptr [esp + 0ch]
+        push esi
+        mov esi, dword ptr [g_active_level_retail]
+        push edi
+        mov edi, dword ptr [esp + 18h]
+        mov eax, dword ptr [esi + 4]
+        push edi
+        push ebx
+        push eax
+        call level_coord_pair_within_bounds_target
+        add esp, 0ch
+        test eax, eax
+        je flag8_not_set
+        mov eax, dword ptr [esi + 14h]
+        mov edx, dword ptr [esi + 0b8h]
+        imul eax, edi
+        add eax, ebx
+        lea ecx, dword ptr [eax + eax*8]
+        test byte ptr [edx + ecx*8 + 8], 8
+        je flag8_not_set
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    flag8_not_set:
+        pop edi
+        pop esi
+        xor eax, eax
+        pop ebx
+        ret
+    }
+}
+#else
+static int level_cell_flag8_check_target(const LevelState* unused,
+                                         int cx, int cy)
+{
+    LevelState* level = g_active_level_retail;
+    TerrainState* terrain;
+    uint8_t* voxels;
+    uint32_t index;
+    (void)unused;
+    if (level == NULL) return 0;
+    terrain = (TerrainState*)level->ptr_terrain;
+    if (terrain == NULL ||
+        !level_coord_pair_within_bounds_target(terrain->dim,
+            (uint32_t)cx, (uint32_t)cy)) return 0;
+    voxels = (uint8_t*)level->ptr_voxels;
+    if (voxels == NULL) return 0;
+    index = (uint32_t)cy * level->word[LEVEL_OFF_WIDTH / 4u] +
+            (uint32_t)cx;
+    return (voxels[index * LEVEL_VOXEL_STRIDE + 8u] & 8u) != 0u;
+}
+#endif
+
+/* Explicit-level adapter for staged callers. The retail target above is
+ * selected when the requested level is the active one. */
 int level_cell_flag8_check(const LevelState* s, int cx, int cy)
 {
-    if (level_coord_pair_within_bounds(s, cx, cy)) {
+    if (s == NULL) return 0;
+    if (s == g_active_level_retail)
+        return level_cell_flag8_check_target(s, cx, cy);
+    if (level_coord_pair_within_bounds(s, cx, cy))
         return (cell_flag_word(s, cx, cy) & 8u) != 0;
-    }
     return 0;
 }
 
@@ -4458,18 +5959,26 @@ uint8_t* level_map_slot_get(uint32_t slot)
 void level_map_image_header(const uint8_t* image, uint32_t* width,
                             uint32_t* height)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    *width = *(const uint32_t*)(image + 0x08);
+    *height = *(const uint32_t*)(image + 0x0c);
+#else
     *width = 0;
     *height = 0;
     if (image != NULL) {
         __builtin_memcpy(width, image + 0x08, sizeof(*width));
         __builtin_memcpy(height, image + 0x0C, sizeof(*height));
     }
+#endif
 }
 
 /* FUN_004515c0: zero-extended u16 cell at +0x10 + (y*width+x)*2. */
 // FUNCTION: LEGORR 0x004515c0
 uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return *(const uint16_t*)(image + 0x10 + (y * width + x) * 2);
+#else
     if (image == NULL) {
         return 0;
     }
@@ -4481,6 +5990,7 @@ uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
     uint16_t cell;
     __builtin_memcpy(&cell, image + 0x10 + byte_offset, sizeof(cell));
     return cell;
+#endif
 }
 
 /* FUN_004334c0: resolve the resource slot, then read its two header dwords. */
@@ -4489,18 +5999,21 @@ void level_map_dimensions_get(uint32_t slot, uint32_t* width,
                               uint32_t* height)
 {
     uint8_t* image = level_map_slot_get(slot);
-    *width = *(uint32_t*)(image + 0x08);
-    *height = *(uint32_t*)(image + 0x0c);
+    image += 0x08;
+    *width = *(uint32_t*)image;
+    *height = *(uint32_t*)(image + 4);
 }
 
-/* FUN_004319e0: cell through the slot; the width comes from the header. */
+/* FUN_004319e0: cell through the slot; dimensions come from its resource. */
 // FUNCTION: LEGORR 0x004319e0
 uint16_t level_map_cell_get(uint32_t slot, int x, int y)
 {
-    const uint8_t* img = level_map_slot_get(slot);
-    uint32_t w = 0, h = 0;
-    level_map_image_header(img, &w, &h);
-    return level_map_image_cell(img, x, (int)w, y);
+    const uint8_t* img = level_map_slot_get(slot) + 0x10u;
+    uint32_t width, height;
+    uint32_t index;
+    level_map_dimensions_get(slot, &width, &height);
+    index = (uint32_t)y * width + (uint32_t)x;
+    return *(const uint16_t*)(img + index * 2u);
 }
 
 /* FUN_00433330: gated state-byte read through an out param. */
@@ -4520,6 +6033,44 @@ int level_cell_type_get_at(const LevelState* s, uint32_t cx, uint32_t cy,
 }
 
 // FUNCTION: LEGORR 0x00433330
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_type_get_at_current(
+    uint32_t cx, uint32_t cy, uint32_t* out_type)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        push edi
+        mov edx, dword ptr [ecx + 14h]
+        lea eax, dword ptr [edx - 1]
+        cmp esi, eax
+        jae terrain_cell_type_get_at_failed
+        mov edi, dword ptr [ecx + 18h]
+        mov eax, dword ptr [esp + 10h]
+        dec edi
+        cmp eax, edi
+        jae terrain_cell_type_get_at_failed
+        imul eax, edx
+        add eax, esi
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        xor ecx, ecx
+        mov cl, byte ptr [eax + edx*8 + 2]
+        mov edx, dword ptr [esp + 14h]
+        mov eax, 1
+        mov dword ptr [edx], ecx
+        pop edi
+        pop esi
+        ret
+    terrain_cell_type_get_at_failed:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
 int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
                                      uint32_t* out_type)
 {
@@ -4533,6 +6084,7 @@ int terrain_cell_type_get_at_current(uint32_t cx, uint32_t cy,
     }
     return 0;
 }
+#endif
 
 /* FUN_0042c5b0: byte classification over the five-entry table. */
 int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
@@ -4570,29 +6122,38 @@ int level_cell_byte_state_classify(const LevelState* s, int cx, int cy,
 int terrain_cell_byte_state_classify_current(const int xy[2],
     uint32_t* out_a, uint32_t* out_b, uint32_t* out_c, uint32_t* out_d)
 {
-    static const uint32_t kTable[5] = { 1, 3, 5, 10, 25 };
-    LevelState* level = level_current_owner_get();
-    const int x = xy != NULL ? xy[0] : -1;
-    const int y = xy != NULL ? xy[1] : -1;
-    const uint8_t* record;
+    uint32_t values[5];
     uint32_t value;
     uint32_t index;
-    *out_a = 0;
-    *out_b = 0;
-    *out_c = 0;
-    *out_d = 0;
-    record = level_voxel(level, x, y);
-    value = record != NULL ? (uint32_t)record[0x05] : 0u;
-    if (value == 0u) return 0;
+    LevelState* level = g_active_level_retail;
+    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4u];
+    uint32_t cell_index = (uint32_t)xy[1] * width + (uint32_t)xy[0];
+    const uint8_t* voxels;
+#if defined(_WIN32) && defined(_M_IX86)
+    voxels = (const uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4u];
+#else
+    voxels = (const uint8_t*)level->ptr_voxels;
+#endif
+    value = (uint32_t)voxels[(size_t)cell_index * 0x48u + 5u];
+    values[0] = 1u;
+    values[1] = 3u;
+    values[2] = 5u;
+    values[3] = 10u;
+    values[4] = 25u;
     index = value - 1u;
-    value = (index >> 2) < 5u ? kTable[index >> 2] : 0u;
+    *out_d = 0u;
+    *out_c = 0u;
+    *out_b = 0u;
+    *out_a = 0u;
+    if (value == 0u) return 0;
+    value = *(uint32_t*)((uint8_t*)values + (index & 0xfffffffcu));
     switch (index & 3u) {
-        case 0u: *out_a = value; break;
-        case 1u: *out_c = value; break;
-        case 2u: *out_b = value; break;
-        default: *out_d = value; break;
+        case 0u: *out_a = value; return 1;
+        case 1u: *out_c = value; return 1;
+        case 2u: *out_b = value; return 1;
+        default: *out_d = value; return 1;
     }
-    return 1;
 }
 
 /* ActiveEngineFieldB0Get (FUN_00429850, findings 295/392): the active
@@ -4605,7 +6166,8 @@ uint32_t active_engine_field_b0_get(const LevelState* s)
 // FUNCTION: LEGORR 0x00429850
 uint32_t active_engine_field_b0_get_current(void)
 {
-    return active_engine_field_b0_get(level_current_owner_get());
+    return *(const uint32_t*)((const uint8_t*)g_active_level_retail +
+                              LEVEL_OFF_ENGINE_B0);
 }
 
 /* EngineFloatField210GetByIndex (FUN_00429860, findings 295/392): the
@@ -4619,17 +6181,37 @@ float engine_float_field210_get_by_index(const LevelState* s, int index)
 }
 
 // FUNCTION: LEGORR 0x00429860
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) float engine_float_field210_get_by_index_current(int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [g_active_level_retail]
+        fld dword ptr [ecx + eax*4 + 210h]
+        ret
+    }
+}
+#else
 float engine_float_field210_get_by_index_current(int index)
 {
-    return engine_float_field210_get_by_index(level_current_owner_get(),
-                                              index);
+    const uint8_t* active = (const uint8_t*)g_active_level_retail;
+    return *(const float*)(active + LEVEL_OFF_ENGINE_FLOATS + index * 4);
 }
+#endif
 
 /* EngineFloatField260Get (FUN_00429880, findings 295/392): the float at
  * active engine-state +0x260. */
 // FUNCTION: LEGORR 0x00429880
+static float engine_float_field260_get_current_target(void)
+{
+    return *(const float*)((const uint8_t*)g_active_level_retail +
+                           LEVEL_OFF_ENGINE_F260);
+}
+
 float engine_float_field260_get(const LevelState* s)
 {
+    if (s != NULL && s == g_active_level_retail)
+        return engine_float_field260_get_current_target();
     return s != NULL ? level_float(s, LEVEL_OFF_ENGINE_F260) : 0.0f;
 }
 
@@ -4669,12 +6251,19 @@ void air_supply_amount_update_current(const struct EntitySlot* e, float delta)
     air_supply_amount_update(level_current_owner_get(), e, delta);
 }
 
-/* GlobalStateField84Get (FUN_0042b500, findings 324/392): the dword at
- * +0x84; the field's meaning stays unresolved (finding 324 says so),
- * this is the faithful read. */
+/* GlobalStateField84Get (FUN_0042b500, findings 324/392): the retail getter
+ * reads +0x84 from the active level global and takes no arguments. */
 // FUNCTION: LEGORR 0x0042b500
+static uint32_t global_state_field84_get_current_target(void)
+{
+    return *(const uint32_t*)((const uint8_t*)g_active_level_retail +
+                              LEVEL_OFF_STATE84);
+}
+
 uint32_t global_state_field84_get(const LevelState* s)
 {
+    if (s != NULL && s == g_active_level_retail)
+        return global_state_field84_get_current_target();
     return s != NULL ? (uint32_t)level_int(s, LEVEL_OFF_STATE84) : 0u;
 }
 
@@ -4969,6 +6558,9 @@ static int terrain_cell_mutation_progress_level(LevelState* level,
     size_t index = 0u;
     float corners[12];
     float render_corners[12];
+    float presentation_corners[4][3];
+    float previous_heights[4];
+    int have_presentation_corners = 0;
     float impact;
     int flipped = 0;
     int have_terrain_vertices = 0;
@@ -5028,6 +6620,16 @@ static int terrain_cell_mutation_progress_level(LevelState* level,
             corners[i * 3 + 2] = (float)(y + corner_y[i]);
         }
     }
+    /* The optional surface-vector/raw-byte fallback is not a geometry-Y
+     * producer. Preserve its existing update, but publish only its world-Y
+     * delta onto the current presentation quad, never its raw payload. */
+    if (!have_terrain_vertices) {
+        have_presentation_corners =
+            scene_render_terrain_cell_vertices_canonical_get(
+                level, (uint32_t)x, (uint32_t)y, presentation_corners);
+        for (i = 0; i < 4; ++i)
+            previous_heights[i] = corners[i * 3 + 1];
+    }
     corner_cell[0] = cell;
     corner_cell[1] = level_voxel(level, x + 1, y);
     corner_cell[2] = level_voxel(level, x + 1, y + 1);
@@ -5077,6 +6679,16 @@ static int terrain_cell_mutation_progress_level(LevelState* level,
     }
     else if (!have_terrain_vertices) {
         memcpy(render_corners, corners, sizeof(render_corners));
+    }
+    if (!have_terrain_vertices) {
+        if (!have_presentation_corners) return 1;
+        for (i = 0; i < 4; ++i) {
+            unsigned int destination = flipped
+                ? (unsigned int)((i + 1) & 3) : (unsigned int)i;
+            presentation_corners[destination][1] +=
+                corners[i * 3 + 1] - previous_heights[i];
+        }
+        memcpy(render_corners, presentation_corners, sizeof(render_corners));
     }
     scene_render_terrain_cell_vertices_update(level, (uint32_t)x,
                                               (uint32_t)y, render_corners);
@@ -5862,24 +7474,76 @@ void map_cell_tracking_flags_clear_and_refresh(LevelState* s,
 /* MapCellTrackingFlagsClearAndRefresh (FUN_004302b0) reads the active level
  * global and receives only the coordinate pair in the retail ABI. */
 // FUNCTION: LEGORR 0x004302B0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void map_cell_tracking_flags_clear_and_refresh_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        mov eax, dword ptr [ecx + 14h]
+        mov ecx, dword ptr [ecx + 0b8h]
+        imul eax, dword ptr [esi + 4]
+        add eax, dword ptr [esi]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [ecx + eax*8 + 8]
+        mov ecx, dword ptr [eax]
+        and ecx, 0dfffffffh
+        mov dword ptr [eax], ecx
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esi]
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 0bfffffffh
+        mov dword ptr [eax], ecx
+        call entity_activity_scene_state_update_retail
+        push esi
+        call coordinate_pair_callback_dispatch
+        add esp, 4
+        push esi
+        call flic_opcode27_fallback_noop
+        add esp, 4
+        pop esi
+        ret
+    }
+}
+#else
 void map_cell_tracking_flags_clear_and_refresh_current(
     const int cell_xy[2])
 {
-    LevelState* s = terrain_current_level_resolve();
-    GameContext* game;
-    uint8_t* rec;
-    uint32_t* flags;
-    if (s == NULL || cell_xy == NULL) return;
-    rec = cell_record_unchecked(s, cell_xy[0], cell_xy[1]);
-    if (rec == NULL) return;
-    flags = (uint32_t*)(rec + 0x08);
-    *flags &= 0xdfffffffu;
-    *flags &= 0xbfffffffu;
-    game = entity_pool_callback_context_get();
-    map_cell_tracking_activity_state_update(game, s);
+    LevelState* level = g_active_level_retail;
+    const int width = (int)level->word[LEVEL_OFF_WIDTH / 4];
+#if defined(_WIN32) && defined(_M_IX86)
+    uint8_t* voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4];
+#else
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#endif
+    int cell_index = width * cell_xy[1] + cell_xy[0];
+    uint8_t* record = voxels + cell_index * 0x48;
+    volatile uint32_t* flags = (volatile uint32_t*)(record + 8);
+    uint32_t value = *flags;
+    value &= 0xdfffffffu;
+    *flags = value;
+
+    cell_index = width * cell_xy[1] + cell_xy[0];
+    record = voxels + cell_index * 0x48;
+    flags = (volatile uint32_t*)(record + 8);
+    value = *flags;
+    value &= 0xbfffffffu;
+    *flags = value;
+
+    entity_activity_scene_state_update_retail();
     coordinate_pair_callback_dispatch(cell_xy);
-    flic_opcode27_fallback_noop();
+    ((void (*)(const int*))flic_opcode27_fallback_noop)(cell_xy);
 }
+#endif
 
 /* TerrainCellStateUpdate (FUN_00432c90): the retail entry takes only the
  * coordinate pair and reads the active level global. Keep the explicit-level
@@ -5988,6 +7652,37 @@ int terrain_cell_state_update_current(const int cell_xy[2])
 void terrain_neighbor_flag_set(LevelState* s, int manager,
                                uint32_t x, uint32_t y)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    uint32_t width;
+    uint32_t height;
+    uint32_t index;
+    uint8_t* voxels;
+    uint8_t* rec;
+    (void)manager;
+    if (x != 0u && y != 0u) {
+        width = s->word[LEVEL_OFF_WIDTH / 4];
+        if (x < width - 2u) {
+            height = s->word[LEVEL_OFF_HEIGHT / 4];
+            if (y < height - 2u) {
+                index = y * width + x;
+                voxels = (uint8_t*)(uintptr_t)
+                    s->word[LEVEL_OFF_VOXELS / 4];
+                rec = voxels + index * 0x48u;
+                if ((rec[8] & 8u) != 0u &&
+                    terrain_cell_quad_run_slot_state_get(
+                        s, (int)x, (int)y, NULL, NULL) != 0) {
+                    *(uint32_t*)(rec + 8) =
+                        *(uint32_t*)(rec + 8) & 0xfffffff7u;
+                    *(uint32_t*)(rec + 8) =
+                        *(uint32_t*)(rec + 8) | 0x10u;
+                    cell_init_pass(s, (float)x, y, 0);
+                    terrain_cell_surface_quad_reset_current(
+                        (int)x, (int)y);
+                }
+            }
+        }
+    }
+#else
     uint8_t* rec;
     uint32_t* flags;
     (void)manager;
@@ -6022,6 +7717,7 @@ void terrain_neighbor_flag_set(LevelState* s, int manager,
         s_terrain_neighbor_render_hook(x, y,
                                        s_terrain_neighbor_hook_context);
     }
+#endif
 }
 
 /* TerrainNeighborRefresh (FUN_00430df0): inspect the first eligible
@@ -6123,6 +7819,106 @@ int terrain_cell_variant_flag_propagate(LevelState* s, const int cell_xy[2])
 }
 
 // FUNCTION: LEGORR 0x00432600
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int terrain_cell_variant_flag_propagate_current(
+    const int cell_xy[2])
+{
+    __asm {
+        sub esp, 28h
+        push ebx
+        push ebp
+        mov ebp, dword ptr [g_active_level_retail]
+        push esi
+        mov esi, dword ptr [esp + 38h]
+        push edi
+        mov eax, dword ptr [ebp + 14h]
+        mov ecx, dword ptr [ebp + 0b8h]
+        imul eax, dword ptr [esi + 4]
+        add eax, dword ptr [esi]
+        lea eax, dword ptr [eax + eax*8]
+        lea edx, dword ptr [ecx + eax*8]
+        mov eax, dword ptr [ecx + eax*8 + 8]
+        test eax, 200000h
+        je terrain_cell_variant_flag_propagate_failed
+        cmp byte ptr [edx + 2], 6
+        je terrain_cell_variant_flag_propagate_failed
+        xor ecx, ecx
+        or ebx, -1
+        mov edi, 1
+        mov dword ptr [esp + 10h], ecx
+        test eax, 80000000h
+        mov dword ptr [esp + 14h], ecx
+        mov dword ptr [esp + 18h], ecx
+        mov dword ptr [esp + 1ch], ebx
+        mov dword ptr [esp + 20h], edi
+        mov dword ptr [esp + 24h], ecx
+        mov dword ptr [esp + 28h], ecx
+        mov dword ptr [esp + 2ch], edi
+        mov dword ptr [esp + 30h], ebx
+        mov dword ptr [esp + 34h], ecx
+        je terrain_cell_variant_flag_propagate_mark_refresh
+        push ecx
+        push esi
+        call lava_erosion_pending_cell_add
+        mov eax, dword ptr [ebp + 14h]
+        mov ecx, dword ptr [esi]
+        imul eax, dword ptr [esi + 4]
+        add esp, 8
+        add eax, ecx
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [ebp + 0b8h]
+        mov byte ptr [eax + edx*8 + 7], 0
+        jmp terrain_cell_variant_flag_propagate_refresh
+    terrain_cell_variant_flag_propagate_mark_refresh:
+        or eax, 20000000h
+        mov dword ptr [edx + 8], eax
+    terrain_cell_variant_flag_propagate_refresh:
+        mov eax, dword ptr [ebp + 14h]
+        mov edx, dword ptr [esi]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        mov edx, dword ptr [ebp + 0b8h]
+        lea edi, dword ptr [esp + 10h]
+        mov ebx, 5
+        lea ecx, dword ptr [eax + eax*8]
+        lea eax, dword ptr [edx + ecx*8 + 8]
+        mov ecx, dword ptr [edx + ecx*8 + 8]
+        and ecx, 0bfffffffh
+        mov dword ptr [eax], ecx
+    terrain_cell_variant_flag_propagate_cell_init_loop:
+        mov eax, dword ptr [edi + 4]
+        mov edx, dword ptr [esi + 4]
+        mov ecx, dword ptr [esi]
+        add eax, edx
+        push 0
+        push eax
+        add ecx, dword ptr [edi]
+        push ecx
+        push ebp
+        call cell_init_pass
+        add esp, 10h
+        add edi, 8
+        dec ebx
+        jne terrain_cell_variant_flag_propagate_cell_init_loop
+        call entity_activity_scene_state_update_retail
+        mov eax, 1
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        add esp, 28h
+        ret
+    terrain_cell_variant_flag_propagate_failed:
+        pop edi
+        pop esi
+        pop ebp
+        xor eax, eax
+        pop ebx
+        add esp, 28h
+        ret
+    }
+}
+#else
 int terrain_cell_variant_flag_propagate_current(const int cell_xy[2])
 {
     static const int offsets[5][2] = {
@@ -6158,6 +7954,7 @@ int terrain_cell_variant_flag_propagate_current(const int cell_xy[2])
         entity_pool_callback_context_get(), s);
     return 1;
 }
+#endif
 
 void terrain_cell_flag100_set_and_track(LevelState* s, int cx, int cy)
 {
@@ -6174,6 +7971,46 @@ void terrain_cell_flag100_set_and_track(LevelState* s, int cx, int cy)
 /* The target sets the secondary +0x0c flag, appends the coordinate to the
  * refresh queue, and invokes the one-cell initializer. */
 // FUNCTION: LEGORR 0x00432100
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_flag100_set_and_track_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [g_active_level_retail]
+        mov ecx, dword ptr [esp + 4]
+        push esi
+        push 0
+        mov eax, dword ptr [edx + 14h]
+        mov esi, dword ptr [ecx]
+        imul eax, dword ptr [ecx + 4]
+        add eax, esi
+        mov esi, dword ptr [edx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [esi + eax*8 + 0ch]
+        mov esi, dword ptr [eax]
+        or esi, 100h
+        mov dword ptr [eax], esi
+        mov esi, dword ptr [s_cell_refresh_track_count]
+        mov eax, dword ptr [ecx]
+        mov dword ptr [esi*8 + s_cell_refresh_track], eax
+        mov esi, dword ptr [s_cell_refresh_track_count]
+        mov eax, dword ptr [ecx + 4]
+        mov dword ptr [esi*8 + s_cell_refresh_track + 4], eax
+        mov esi, dword ptr [s_cell_refresh_track_count]
+        inc esi
+        mov dword ptr [s_cell_refresh_track_count], esi
+        mov eax, dword ptr [ecx + 4]
+        mov ecx, dword ptr [ecx]
+        push eax
+        push ecx
+        push edx
+        call cell_init_pass
+        add esp, 10h
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_flag100_set_and_track_current(const int cell_xy[2])
 {
     LevelState* level = terrain_current_level_resolve();
@@ -6193,6 +8030,7 @@ void terrain_cell_flag100_set_and_track_current(const int cell_xy[2])
     ++s_cell_refresh_track_count;
     cell_init_pass(level, (float)cell_xy[0], (uint32_t)cell_xy[1]);
 }
+#endif
 
 /* TerrainCellPreviousStateTrack (FUN_00432200): copy the just-collected
  * coordinates into the second 100-pair buffer, clear each cell's secondary
@@ -6200,6 +8038,47 @@ void terrain_cell_flag100_set_and_track_current(const int cell_xy[2])
  * order is significant: the entity walk runs after these marks are cleared
  * and may set them again to suppress the later CellInitPass. */
 // FUNCTION: LEGORR 0x00432200
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_previous_state_track_current(void)
+{
+    __asm {
+        mov eax, dword ptr [s_cell_refresh_track_count]
+        xor edx, edx
+        push esi
+        mov esi, dword ptr [g_active_level_retail]
+        test eax, eax
+        jbe terrain_cell_previous_state_track_done
+        push edi
+        mov ecx, offset s_cell_refresh_track
+    terrain_cell_previous_state_track_loop:
+        mov eax, dword ptr [ecx]
+        mov dword ptr [ecx + 320h], eax
+        mov eax, dword ptr [ecx + 4]
+        mov dword ptr [ecx + 324h], eax
+        mov eax, dword ptr [ecx + 4]
+        imul eax, dword ptr [esi + 14h]
+        mov edi, dword ptr [ecx]
+        add ecx, 8
+        add eax, edi
+        mov edi, dword ptr [esi + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [edi + eax*8 + 0ch]
+        mov edi, dword ptr [eax]
+        and edi, 0fffffeffh
+        inc edx
+        mov dword ptr [eax], edi
+        mov eax, dword ptr [s_cell_refresh_track_count]
+        cmp edx, eax
+        jb terrain_cell_previous_state_track_loop
+        pop edi
+    terrain_cell_previous_state_track_done:
+        mov dword ptr [s_cell_previous_track_count], eax
+        mov dword ptr [s_cell_refresh_track_count], 0
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_previous_state_track_current(void)
 {
     LevelState* level = terrain_current_level_resolve();
@@ -6220,11 +8099,58 @@ void terrain_cell_previous_state_track_current(void)
     s_cell_previous_track_count = s_cell_refresh_track_count;
     s_cell_refresh_track_count = 0;
 }
+#endif
 
 /* TerrainCellUpdateQueueFlush (FUN_004321a0): after the entity walk, run
  * CellInitPass for each snapshotted cell whose 0x100 secondary mark remains
  * clear, then discard the snapshot count. */
 // FUNCTION: LEGORR 0x004321A0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_update_queue_flush_current(void)
+{
+    __asm {
+        mov eax, dword ptr [s_cell_previous_track_count]
+        push ebx
+        xor ebx, ebx
+        push esi
+        mov esi, dword ptr [g_active_level_retail]
+        test eax, eax
+        jbe terrain_cell_update_queue_flush_done
+        push edi
+        push ebp
+        mov edi, offset s_cell_previous_track
+    terrain_cell_update_queue_flush_loop:
+        mov ecx, dword ptr [edi + 4]
+        mov eax, dword ptr [esi + 14h]
+        imul eax, ecx
+        mov edx, dword ptr [edi]
+        mov ebp, dword ptr [esi + 0b8h]
+        add eax, edx
+        lea eax, dword ptr [eax + eax*8]
+        test byte ptr [ebp + eax*8 + 0dh], 1
+        jne terrain_cell_update_queue_flush_next
+        push 0
+        push ecx
+        push edx
+        push esi
+        call cell_init_pass
+        add esp, 10h
+    terrain_cell_update_queue_flush_next:
+        mov eax, dword ptr [s_cell_previous_track_count]
+        inc ebx
+        add edi, 8
+        cmp ebx, eax
+        jb terrain_cell_update_queue_flush_loop
+        pop ebp
+        pop edi
+    terrain_cell_update_queue_flush_done:
+        pop esi
+        mov dword ptr [s_cell_previous_track_count], 0
+        pop ebx
+        ret
+    }
+}
+#else
 void terrain_cell_update_queue_flush_current(void)
 {
     LevelState* level = terrain_current_level_resolve();
@@ -6241,6 +8167,7 @@ void terrain_cell_update_queue_flush_current(void)
     }
     s_cell_previous_track_count = 0;
 }
+#endif
 
 void terrain_cell_visited_flag_set_and_track(LevelState* s, int cx, int cy)
 {
@@ -6256,6 +8183,38 @@ void terrain_cell_visited_flag_set_and_track(LevelState* s, int cx, int cy)
 /* The retail entry point reads DAT_005560d4 and appends without checking the
  * 100-pair table's capacity. Keep the explicit-level adapter bounded. */
 // FUNCTION: LEGORR 0x00432270
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_visited_flag_set_and_track_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov edx, dword ptr [g_active_level_retail]
+        mov ecx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [edx + 14h]
+        mov esi, dword ptr [ecx]
+        imul eax, dword ptr [ecx + 4]
+        mov edx, dword ptr [edx + 0b8h]
+        add eax, esi
+        pop esi
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [edx + eax*8 + 0ch]
+        mov edx, dword ptr [eax]
+        or edx, 2
+        mov dword ptr [eax], edx
+        mov edx, dword ptr [s_cell_visited_track_count]
+        mov eax, dword ptr [ecx]
+        mov dword ptr [edx*8 + s_cell_visited_track], eax
+        mov eax, dword ptr [ecx + 4]
+        mov ecx, dword ptr [s_cell_visited_track_count]
+        mov dword ptr [ecx*8 + s_cell_visited_track + 4], eax
+        mov eax, dword ptr [s_cell_visited_track_count]
+        inc eax
+        mov dword ptr [s_cell_visited_track_count], eax
+        ret
+    }
+}
+#else
 void terrain_cell_visited_flag_set_and_track_current(const int cell_xy[2])
 {
     LevelState* s = terrain_current_level_resolve();
@@ -6270,6 +8229,7 @@ void terrain_cell_visited_flag_set_and_track_current(const int cell_xy[2])
     s_cell_visited_track[s_cell_visited_track_count][1] = cell_xy[1];
     ++s_cell_visited_track_count;
 }
+#endif
 
 void terrain_cell_visited_flags_clear_all(LevelState* s)
 {
@@ -6290,6 +8250,42 @@ void terrain_cell_visited_flags_clear_all(LevelState* s)
  * DAT_005560d4. Keep the LevelState-taking form above as a portable adapter
  * for callers that already own an explicit level. */
 // FUNCTION: LEGORR 0x00432300
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_visited_flags_clear_all_current(void)
+{
+    __asm {
+        mov eax, dword ptr [s_cell_visited_track_count]
+        xor edx, edx
+        push esi
+        mov esi, dword ptr [g_active_level_retail]
+        test eax, eax
+        jbe terrain_cell_visited_flags_clear_all_done
+        push edi
+        mov ecx, offset s_cell_visited_track
+    terrain_cell_visited_flags_clear_all_loop:
+        mov eax, dword ptr [ecx + 4]
+        mov edi, dword ptr [ecx]
+        imul eax, dword ptr [esi + 14h]
+        add eax, edi
+        mov edi, dword ptr [esi + 0b8h]
+        add ecx, 8
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [edi + eax*8 + 0ch]
+        mov edi, dword ptr [eax]
+        and edi, 0fffffffdh
+        inc edx
+        mov dword ptr [eax], edi
+        mov eax, dword ptr [s_cell_visited_track_count]
+        cmp edx, eax
+        jb terrain_cell_visited_flags_clear_all_loop
+        pop edi
+    terrain_cell_visited_flags_clear_all_done:
+        mov dword ptr [s_cell_visited_track_count], 0
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_visited_flags_clear_all_current(void)
 {
     LevelState* s = terrain_current_level_resolve();
@@ -6305,6 +8301,7 @@ void terrain_cell_visited_flags_clear_all_current(void)
     }
     s_cell_visited_track_count = 0;
 }
+#endif
 
 void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
                                                        int cx, int cy)
@@ -6328,6 +8325,47 @@ void terrain_cell_primary_flags_mask_clear_and_refresh(LevelState* s,
 }
 
 // FUNCTION: LEGORR 0x00432360
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_primary_flags_mask_clear_and_refresh_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        push 0
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        add eax, esi
+        mov esi, dword ptr [ecx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [esi + eax*8 + 8]
+        mov esi, dword ptr [eax]
+        and esi, 0dfef7bffh
+        mov dword ptr [eax], esi
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        add eax, esi
+        mov esi, dword ptr [ecx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [esi + eax*8 + 0ch]
+        mov esi, dword ptr [eax]
+        and esi, 0fffffffbh
+        mov dword ptr [eax], esi
+        mov eax, dword ptr [edx + 4]
+        mov edx, dword ptr [edx]
+        push eax
+        push edx
+        push ecx
+        call cell_init_pass
+        add esp, 10h
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_primary_flags_mask_clear_and_refresh_current(
     const int cell_xy[2])
 {
@@ -6351,6 +8389,7 @@ void terrain_cell_primary_flags_mask_clear_and_refresh_current(
     *secondary = value;
     cell_init_pass(s, (float)cell_xy[0], (uint32_t)cell_xy[1]);
 }
+#endif
 
 void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy)
 {
@@ -6372,6 +8411,47 @@ void terrain_cell_flags_set_and_refresh(LevelState* s, int cx, int cy)
 }
 
 // FUNCTION: LEGORR 0x004323f0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_flags_set_and_refresh_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        push 0
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        add eax, esi
+        mov esi, dword ptr [ecx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [esi + eax*8 + 8]
+        mov esi, dword ptr [eax]
+        or esi, 108000h
+        mov dword ptr [eax], esi
+        mov eax, dword ptr [ecx + 14h]
+        imul eax, dword ptr [edx + 4]
+        mov esi, dword ptr [edx]
+        add eax, esi
+        mov esi, dword ptr [ecx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [esi + eax*8 + 0ch]
+        mov esi, dword ptr [eax]
+        or esi, 4
+        mov dword ptr [eax], esi
+        mov eax, dword ptr [edx + 4]
+        mov edx, dword ptr [edx]
+        push eax
+        push edx
+        push ecx
+        call cell_init_pass
+        add esp, 10h
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_flags_set_and_refresh_current(const int cell_xy[2])
 {
     LevelState* s = terrain_current_level_resolve();
@@ -6394,6 +8474,7 @@ void terrain_cell_flags_set_and_refresh_current(const int cell_xy[2])
     *secondary = value;
     cell_init_pass(s, (float)cell_xy[0], (uint32_t)cell_xy[1]);
 }
+#endif
 
 void terrain_cell_flags_set_mask100400(LevelState* s, int x, int y)
 {
@@ -6418,6 +8499,35 @@ void terrain_cell_flags_set_mask20108000(LevelState* s, int x, int y)
 }
 
 // FUNCTION: LEGORR 0x00432450
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_flags_set_mask100400_current(int x,
+                                                                  int y)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 8]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        mov eax, dword ptr [ecx + 14h]
+        push edi
+        imul eax, edx
+        mov edi, dword ptr [ecx + 0b8h]
+        add eax, esi
+        push 0
+        push edx
+        lea eax, dword ptr [eax + eax*8]
+        push esi
+        push ecx
+        lea eax, dword ptr [edi + eax*8 + 8]
+        or dword ptr [eax], 100400h
+        call cell_init_pass
+        add esp, 10h
+        pop edi
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_flags_set_mask100400_current(int x, int y)
 {
     LevelState* s = level_current_owner_get();
@@ -6428,8 +8538,38 @@ void terrain_cell_flags_set_mask100400_current(int x, int y)
     *(uint32_t*)(rec + 0x08) |= 0x100400u;
     cell_init_pass(s, (float)x, (uint32_t)y);
 }
+#endif
 
 // FUNCTION: LEGORR 0x00432490
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_flags_set_mask20108000_current(int x,
+                                                                     int y)
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 8]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        mov eax, dword ptr [ecx + 14h]
+        push edi
+        imul eax, edx
+        mov edi, dword ptr [ecx + 0b8h]
+        add eax, esi
+        push 0
+        push edx
+        lea eax, dword ptr [eax + eax*8]
+        push esi
+        push ecx
+        lea eax, dword ptr [edi + eax*8 + 8]
+        or dword ptr [eax], 20108000h
+        call cell_init_pass
+        add esp, 10h
+        pop edi
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_flags_set_mask20108000_current(int x, int y)
 {
     LevelState* s = level_current_owner_get();
@@ -6440,6 +8580,7 @@ void terrain_cell_flags_set_mask20108000_current(int x, int y)
     *(uint32_t*)(rec + 0x08) |= 0x20108000u;
     cell_init_pass(s, (float)x, (uint32_t)y);
 }
+#endif
 
 void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
                                             int set)
@@ -6458,6 +8599,52 @@ void terrain_cell_flag40000000_clear_or_set(LevelState* s, int cx, int cy,
 }
 
 // FUNCTION: LEGORR 0x00432560
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_flag40000000_clear_or_set_current(
+    const int cell_xy[2], int set)
+{
+    __asm {
+        mov edx, dword ptr [g_active_level_retail]
+        mov eax, dword ptr [esp + 8]
+        mov ecx, dword ptr [esp + 4]
+        push esi
+        test eax, eax
+        mov eax, dword ptr [edx + 14h]
+        je terrain_cell_flag40000000_clear
+        imul eax, dword ptr [ecx + 4]
+        mov esi, dword ptr [ecx]
+        add eax, esi
+        mov esi, dword ptr [edx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [esi + eax*8 + 8]
+        mov esi, dword ptr [eax]
+        or esi, 40000000h
+        jmp terrain_cell_flag40000000_store
+    terrain_cell_flag40000000_clear:
+        imul eax, dword ptr [ecx + 4]
+        mov esi, dword ptr [ecx]
+        add eax, esi
+        mov esi, dword ptr [edx + 0b8h]
+        lea eax, dword ptr [eax + eax*8]
+        lea eax, dword ptr [esi + eax*8 + 8]
+        mov esi, dword ptr [eax]
+        and esi, 0bfffffffh
+    terrain_cell_flag40000000_store:
+        mov dword ptr [eax], esi
+    terrain_cell_flag40000000_refresh:
+        mov eax, dword ptr [ecx + 4]
+        mov ecx, dword ptr [ecx]
+        push 0
+        push eax
+        push ecx
+        push edx
+        call cell_init_pass
+        add esp, 10h
+        pop esi
+        ret
+    }
+}
+#else
 void terrain_cell_flag40000000_clear_or_set_current(const int cell_xy[2],
                                                      int set)
 {
@@ -6481,6 +8668,7 @@ void terrain_cell_flag40000000_clear_or_set_current(const int cell_xy[2],
     *primary = value;
     cell_init_pass(s, (float)cell_xy[0], (uint32_t)cell_xy[1], 0u);
 }
+#endif
 
 /* LevelDebugInputCellMutatorDispatch (FUN_004288e0), wired stateful branches.
  * The engine calls this dispatcher only while DAT_00556ed0 bit 0x10 is set.
@@ -6715,16 +8903,15 @@ void terrain_cell_flag20_clear_and_refresh(LevelState* s, int cx, int cy)
 void terrain_cell_edge_flag_set_and_update(LevelState* s, int cx, int cy,
                                            int set)
 {
-    uint8_t* rec = cell_record_unchecked(s, cx, cy);
-    if (rec != NULL) {
-        uint32_t* word = (uint32_t*)(rec + 0x08);
-        if (set != 0) {
-            *word |= 0x200u;
-        } else {
-            *word &= 0xfffffdffu;
-        }
-    }
-    cell_init_pass(s, (float)cx, (uint32_t)cy);
+    uint32_t index = s->word[LEVEL_OFF_WIDTH / 4u] * (uint32_t)cy +
+                     (uint32_t)cx;
+    uint32_t* flags = (uint32_t*)((uint8_t*)s->ptr_voxels +
+                                  (size_t)index * 0x48u + 8u);
+    if (set != 0)
+        *flags |= 0x200u;
+    else
+        *flags &= 0xfffffdffu;
+    cell_init_pass(s, (float)cx, (uint32_t)cy, 0);
 }
 
 static TerrainEdgeMidpointUpdateFn s_terrain_edge_midpoint_update_hook;
@@ -6774,6 +8961,80 @@ void terrain_cell_work_flag_circle_set(LevelState* s, int center_x,
 /* Retail ABI: pointer to center pair, then radius; level comes from the
  * process-global current level. */
 // FUNCTION: LEGORR 0x00435010
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void terrain_cell_work_flag_circle_set_current(
+    const int center_xy[2], int radius)
+{
+    __asm {
+        sub esp, 0ch
+        mov eax, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 14h]
+        mov dword ptr [esp], eax
+        mov eax, edx
+        imul eax, edx
+        push esi
+        mov esi, edx
+        neg esi
+        push edi
+        mov edi, esi
+        cmp edi, edx
+        mov dword ptr [esp + 0ch], eax
+        mov dword ptr [esp + 10h], esi
+        jg terrain_cell_work_flag_circle_set_early_done
+        push ebp
+        mov ebp, dword ptr [esp + 1ch]
+        push ebx
+    terrain_cell_work_flag_circle_set_outer_loop:
+        mov ebx, edi
+        imul ebx, edi
+        cmp esi, edx
+        jg terrain_cell_work_flag_circle_set_outer_next
+    terrain_cell_work_flag_circle_set_inner_loop:
+        mov ecx, esi
+        mov eax, dword ptr [esp + 14h]
+        imul ecx, esi
+        add ecx, ebx
+        cmp ecx, eax
+        jg terrain_cell_work_flag_circle_set_next_column
+        mov eax, dword ptr [ebp]
+        lea ecx, dword ptr [esi + eax]
+        test ecx, ecx
+        jl terrain_cell_work_flag_circle_set_next_column
+        mov eax, dword ptr [esp + 10h]
+        cmp ecx, dword ptr [eax + 14h]
+        jge terrain_cell_work_flag_circle_set_next_column
+        mov eax, dword ptr [ebp + 4]
+        add eax, edi
+        test eax, eax
+        jl terrain_cell_work_flag_circle_set_next_column
+        mov edx, dword ptr [esp + 10h]
+        cmp eax, dword ptr [edx + 18h]
+        jge terrain_cell_work_flag_circle_set_after_mark
+        push eax
+        push ecx
+        call terrain_cell_work_flag_set_current
+        add esp, 8
+    terrain_cell_work_flag_circle_set_after_mark:
+        mov edx, dword ptr [esp + 24h]
+    terrain_cell_work_flag_circle_set_next_column:
+        inc esi
+        cmp esi, edx
+        jle terrain_cell_work_flag_circle_set_inner_loop
+        mov esi, dword ptr [esp + 18h]
+    terrain_cell_work_flag_circle_set_outer_next:
+        inc edi
+        cmp edi, edx
+        jle terrain_cell_work_flag_circle_set_outer_loop
+        pop ebx
+        pop ebp
+    terrain_cell_work_flag_circle_set_early_done:
+        pop edi
+        pop esi
+        add esp, 0ch
+        ret
+    }
+}
+#else
 void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
                                                int radius)
 {
@@ -6801,6 +9062,7 @@ void terrain_cell_work_flag_circle_set_current(const int center_xy[2],
         }
     }
 }
+#endif
 
 /* TerrainNeighborWorkFlagScan (FUN_00431580): the work-flag breadth-first
  * sweep. A double-buffered float-pair queue (two pages of (w+h)*2 entries
@@ -6976,6 +9238,33 @@ static uint32_t s_ts_active[LEVEL_TS_COUNT];
 static int32_t  s_ts_now; /* _DAT_004d78c0: ErodeLockTime * 25 float bits */
 
 // FUNCTION: LEGORR 0x0040ee00
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void cell_coordinate_timestamp_remember(const int xy[2])
+{
+    __asm {
+        xor ecx, ecx
+        mov eax, offset s_ts_active
+    cell_coordinate_timestamp_remember_scan:
+        cmp dword ptr [eax], 0
+        je cell_coordinate_timestamp_remember_store
+        add eax, 4
+        inc ecx
+        cmp eax, 004d78b4h
+        jb cell_coordinate_timestamp_remember_scan
+        ret
+    cell_coordinate_timestamp_remember_store:
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [eax]
+        mov dword ptr [ecx*8 + s_ts_coordinates], edx
+        mov eax, dword ptr [eax + 4]
+        mov dword ptr [ecx*8 + s_ts_coordinates + 4], eax
+        fld dword ptr [s_ts_now]
+        fstp dword ptr [ecx*4 + s_ts_stamps]
+        mov dword ptr [ecx*4 + s_ts_active], 1
+        ret
+    }
+}
+#else
 void cell_coordinate_timestamp_remember(const int xy[2])
 {
     volatile uint32_t* active = s_ts_active;
@@ -6993,8 +9282,48 @@ void cell_coordinate_timestamp_remember(const int xy[2])
     } while (active < s_ts_active + LEVEL_TS_COUNT);
     /* full table: stores nothing (faithful) */
 }
+#endif
 
 // FUNCTION: LEGORR 0x0040efb0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t cell_coordinate_timestamp_exists(const int xy[2])
+{
+    __asm {
+        mov edx, dword ptr [esp + 4]
+        push esi
+        push edi
+        mov ecx, offset s_ts_coordinates
+        mov eax, offset s_ts_active
+    cell_coordinate_timestamp_exists_scan:
+        cmp dword ptr [eax], 0
+        je cell_coordinate_timestamp_exists_next
+        mov esi, dword ptr [edx]
+        mov edi, dword ptr [ecx]
+        cmp esi, edi
+        jne cell_coordinate_timestamp_exists_next
+        mov esi, dword ptr [edx + 4]
+        mov edi, dword ptr [ecx + 4]
+        cmp esi, edi
+        je cell_coordinate_timestamp_exists_found
+    cell_coordinate_timestamp_exists_next:
+        add eax, 4
+        add ecx, 8
+        cmp eax, 004d78b4h
+        jae cell_coordinate_timestamp_exists_missing
+        jmp cell_coordinate_timestamp_exists_scan
+    cell_coordinate_timestamp_exists_found:
+        mov eax, 1
+        pop edi
+        pop esi
+        ret
+    cell_coordinate_timestamp_exists_missing:
+        pop edi
+        xor eax, eax
+        pop esi
+        ret
+    }
+}
+#else
 uint32_t cell_coordinate_timestamp_exists(const int xy[2])
 {
     uint32_t* active = s_ts_active;
@@ -7008,6 +9337,7 @@ uint32_t cell_coordinate_timestamp_exists(const int xy[2])
     }
     return 1u;
 }
+#endif
 
 /* --- terrain dirty queue (see level.hpp) ---------------------------------
  * The corpus's queue lives inside its terrain context (u16 pair entries,
@@ -7192,7 +9522,62 @@ void grid_record_flag_mask_clear(void)
     } while (k + 33 < GRID_REC_REGION_DWORDS);
 }
 
+/* The mapped target walks the retail count/pointer tables directly. */
 // FUNCTION: LEGORR 0x0040af90
+#if defined(_MSC_VER) && defined(_M_IX86)
+static __declspec(naked) void terrain_cell_record_get_target(
+    int x, int y, int field, uint32_t* value_a, uint32_t* value_b)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 8]
+        lea eax, dword ptr [eax + eax*2]
+        lea edx, dword ptr [ecx + eax*4]
+        add eax, edx
+        lea ecx, dword ptr [eax + eax*2]
+        shl ecx, 4
+        add ecx, eax
+        shl ecx, 2
+        mov edx, dword ptr [s_grid_rec + ecx + 80h]
+        test edx, edx
+        je terrain_cell_record_get_default
+        mov edx, dword ptr [esp + 0ch]
+        lea ecx, dword ptr [eax + eax*2]
+        shl ecx, 4
+        add edx, ecx
+        add eax, edx
+        mov edx, dword ptr [esp + 10h]
+        shl eax, 2
+        mov ecx, dword ptr [s_grid_rec + eax + 40h]
+        mov dword ptr [edx], ecx
+        mov ecx, dword ptr [esp + 14h]
+        mov eax, dword ptr [s_grid_rec + eax]
+        mov dword ptr [ecx], eax
+        ret
+    terrain_cell_record_get_default:
+        mov eax, dword ptr [esp + 10h]
+        mov edx, dword ptr [s_grid_rec + ecx + 40h]
+        mov dword ptr [eax], edx
+        mov edx, dword ptr [esp + 14h]
+        mov ecx, dword ptr [s_grid_rec + ecx]
+        mov dword ptr [edx], ecx
+        ret
+    }
+}
+#else
+static void terrain_cell_record_get_target(int x, int y, int field,
+                                           uint32_t* value_a,
+                                           uint32_t* value_b)
+{
+    const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
+    const uint32_t offset = cell * GRID_REC_STRIDE;
+    const uint32_t base = offset +
+        (s_grid_rec[offset + 32u] != 0u ? (uint32_t)field : 0u);
+    *value_a = s_grid_rec[base + 16u];
+    *value_b = s_grid_rec[base];
+}
+#endif
+
 void terrain_cell_record_get(int x, int y, int field,
                              uint32_t* value_a, uint32_t* value_b)
 {
@@ -7200,6 +9585,9 @@ void terrain_cell_record_get(int x, int y, int field,
     LevelState* level = game != NULL ? game->level : NULL;
     const unported_ledger_stubs::DependencyGridTuple* native_records = NULL;
     uint32_t native_count = 0u;
+    int64_t block;
+    int64_t table_index;
+    int64_t pointer_index;
     if (level == NULL)
         level = (LevelState*)map_cell_record_grid_level_get();
     if (x < 0 || x >= (int)DEPENDENCY_GRID_ROWS || y < 0 ||
@@ -7207,40 +9595,26 @@ void terrain_cell_record_get(int x, int y, int field,
     if (unported_ledger_stubs::dependency_grid_cell_record_get_native(
             level, x, y, field,
             &native_records, &native_count)) {
-        /* The target's first output is a 32-bit pointer word.  Keep that
-         * image for the retail ABI; native code that needs to dereference
-         * records uses dependency_grid_cell_record_get_native so the host
-         * pointer is never truncated. */
-        if (value_a != NULL) {
+        /* Preserve the retail 32-bit image word for callers that inspect
+         * the output; native dereferences use the sidecar API directly. */
+        if (value_a != NULL)
             *value_a = (uint32_t)(uintptr_t)native_records;
-        }
         if (value_b != NULL) *value_b = native_count;
         return;
     }
-    const int64_t block = grid_rec_block_index(x, y);
-    int64_t table_index;
-    int64_t pointer_index;
-    if (block < 0) {
-        return;
-    }
-    const uint32_t variant = s_grid_rec[(size_t)block];
-    /* DAT_004b8bc8 is the count table; the parallel entry-pointer table
-     * starts 16 dwords later at DAT_004b8c08. Both use cell * 0x31 + field;
-     * absent variant records select field zero in each table. */
-    table_index = (block - 32) + (variant != 0u ? field : 0);
+    block = grid_rec_block_index(x, y);
+    if (block < 0) return;
+    table_index = (block - 32) +
+        (s_grid_rec[(size_t)block] != 0u ? field : 0);
     pointer_index = table_index + 16;
     if (table_index < 0 || pointer_index >= GRID_REC_REGION_DWORDS ||
-        (variant != 0u && field < 0)) {
+        (s_grid_rec[(size_t)block] != 0u && field < 0)) return;
+    if (value_a != NULL && value_b != NULL) {
+        terrain_cell_record_get_target(x, y, field, value_a, value_b);
         return;
     }
-    const uint32_t a = s_grid_rec[(size_t)pointer_index];
-    const uint32_t b = s_grid_rec[(size_t)table_index];
-    if (value_a != NULL) {
-        *value_a = a;
-    }
-    if (value_b != NULL) {
-        *value_b = b;
-    }
+    if (value_a != NULL) *value_a = s_grid_rec[(size_t)pointer_index];
+    if (value_b != NULL) *value_b = s_grid_rec[(size_t)table_index];
 }
 
 /* Cell-entry readiness bits occupy bytes at DAT_004b8c4c. DependencyGridConfigLoad
@@ -7285,7 +9659,50 @@ int ensure_cell_entries_loaded(uint32_t kind, int row, int slot)
     return 1;
 }
 
+// CellFlag4IsSet uses the global selector and flag tables directly.
 // FUNCTION: LEGORR 0x0040b250
+#if defined(_MSC_VER) && defined(_M_IX86)
+static __declspec(naked) uint32_t cell_flag4_is_set_target(int x, int y,
+                                                            int field)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 8]
+        lea eax, dword ptr [eax + eax*2]
+        lea edx, dword ptr [ecx + eax*4]
+        lea ecx, dword ptr [eax + edx]
+        lea eax, dword ptr [ecx + ecx*2]
+        shl eax, 4
+        add eax, ecx
+        shl eax, 2
+        mov edx, dword ptr [s_grid_rec + eax + 80h]
+        test edx, edx
+        je cell_flag4_is_set_default
+        mov edx, dword ptr [esp + 0ch]
+        lea eax, dword ptr [ecx + ecx*2]
+        shl eax, 4
+        add edx, eax
+        add ecx, edx
+        mov eax, dword ptr [s_grid_rec + ecx*4 + 84h]
+        and eax, 4
+        ret
+    cell_flag4_is_set_default:
+        mov eax, dword ptr [s_grid_rec + eax + 84h]
+        and eax, 4
+        ret
+    }
+}
+#else
+static uint32_t cell_flag4_is_set_target(int x, int y, int field)
+{
+    const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
+    const uint32_t offset = cell * GRID_REC_STRIDE;
+    if (s_grid_rec[offset + 32u] != 0u)
+        return s_grid_rec[offset + 33u + (uint32_t)field] & 4u;
+    return s_grid_rec[offset + 33u] & 4u;
+}
+#endif
+
 uint32_t cell_flag4_is_set(int x, int y, int field)
 {
     const int64_t block = grid_rec_block_index(x, y);
@@ -7301,21 +9718,80 @@ uint32_t cell_flag4_is_set(int x, int y, int field)
     if (word < 0) {
         return 0;
     }
-    return s_grid_rec[(size_t)word] & 4u;
+    return cell_flag4_is_set_target(x, y, field);
 }
 
+// The mapped bodies address the retail flag table directly; public helpers
+// retain the dependency override and portable bounds checks.
 // FUNCTION: LEGORR 0x0040b2a0
+#if defined(_MSC_VER) && defined(_M_IX86)
+static __declspec(naked) void cell_flag100_set_target(int x, int y, int field)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 8]
+        lea eax, dword ptr [eax + eax*2]
+        lea edx, dword ptr [ecx + eax*4]
+        add eax, edx
+        mov edx, dword ptr [esp + 0ch]
+        lea ecx, dword ptr [eax + eax*2]
+        shl ecx, 4
+        add edx, ecx
+        add eax, edx
+        mov ecx, dword ptr [s_grid_rec + eax*4 + 84h]
+        lea eax, dword ptr [s_grid_rec + eax*4 + 84h]
+        or ch, 1
+        mov dword ptr [eax], ecx
+        ret
+    }
+}
+#else
+static void cell_flag100_set_target(int x, int y, int field)
+{
+    const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
+    const uint32_t word = cell * GRID_REC_STRIDE + (uint32_t)field + 33u;
+    s_grid_rec[word] |= 0x100u;
+}
+#endif
+
 void cell_flag100_set(int x, int y, int field)
 {
     if (unported_ledger_stubs::dependency_grid_flag100_set(x, y, field))
         return;
     const int64_t word = grid_rec_field_index(x, y, field);
-    if (word >= 0) {
-        s_grid_rec[(size_t)word] |= 0x100u;
-    }
+    if (word >= 0) cell_flag100_set_target(x, y, field);
 }
 
 // FUNCTION: LEGORR 0x0040b2e0
+#if defined(_MSC_VER) && defined(_M_IX86)
+static __declspec(naked) uint32_t cell_flag100_is_set_target(int x, int y,
+                                                             int field)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 8]
+        lea eax, dword ptr [eax + eax*2]
+        lea edx, dword ptr [ecx + eax*4]
+        add eax, edx
+        mov edx, dword ptr [esp + 0ch]
+        lea ecx, dword ptr [eax + eax*2]
+        shl ecx, 4
+        add edx, ecx
+        add eax, edx
+        mov eax, dword ptr [s_grid_rec + eax*4 + 84h]
+        and eax, 100h
+        ret
+    }
+}
+#else
+static uint32_t cell_flag100_is_set_target(int x, int y, int field)
+{
+    const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
+    const uint32_t word = cell * GRID_REC_STRIDE + (uint32_t)field + 33u;
+    return s_grid_rec[word] & 0x100u;
+}
+#endif
+
 uint32_t cell_flag100_is_set(int x, int y, int field)
 {
     const uint32_t dependency_flag =
@@ -7325,7 +9801,7 @@ uint32_t cell_flag100_is_set(int x, int y, int field)
     if (word < 0) {
         return 0;
     }
-    return s_grid_rec[(size_t)word] & 0x100u;
+    return cell_flag100_is_set_target(x, y, field);
 }
 
 /* The active table and its dimension owner are mirrored from the cell-kind
@@ -7352,6 +9828,49 @@ int grid_cell_record_present_check(int x, int y)
 
 /* --- corner normal sampling (see level.hpp) ------------------------------- */
 // FUNCTION: LEGORR 0x004512d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
+                               uint32_t corner, float out[3])
+{
+    const TerrainState* t = (const TerrainState*)terrain;
+    const uint8_t* p;
+    float* second;
+    float length;
+    float inverse;
+    if (x < t->dim[0] && y < t->dim[1]) {
+        p = t->blocks + (y * t->dim[2] + x) * TERRAIN_BLOCK_STRIDE;
+        if ((p[0x19] & 1u) != 0u) corner = (corner + 1u) & 3u;
+        if (corner == 0u) {
+            out[0] = *(const float*)(p + 0x00);
+            out[1] = *(const float*)(p + 0x04);
+            out[2] = *(const float*)(p + 0x08);
+        }
+        if (corner == 2u) {
+            second = (float*)(p + 0x0c);
+            out[0] = second[0];
+            out[1] = second[1];
+            out[2] = second[2];
+        }
+        if (corner == 1u || corner == 3u) {
+            second = (float*)(p + 0x0c);
+            out[0] = second[0] + *(const float*)(p + 0x00);
+            out[1] = second[1] + *(const float*)(p + 0x04);
+            out[2] = second[2] + *(const float*)(p + 0x08);
+            length = (float)sqrt(out[0] * out[0] + out[2] * out[2] +
+                                 out[1] * out[1]);
+            inverse = 1.0f / length;
+            out[0] = inverse * out[0];
+            out[1] = inverse * out[1];
+            out[2] = inverse * out[2];
+        }
+        return 1;
+    }
+    out[2] = 0.0f;
+    out[1] = 0.0f;
+    out[0] = 0.0f;
+    return 0;
+}
+#else
 int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
                                uint32_t corner, float out[3])
 {
@@ -7402,6 +9921,7 @@ int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
     out[2] = v[2];
     return 1;
 }
+#endif
 
 // FUNCTION: LEGORR 0x00435170
 const char* terrain_surface_type_name_get(int index)
@@ -7424,9 +9944,8 @@ uint32_t surface_type_configured_value_at_index(int index)
 }
 
 /* --- neighbor coordinate classification (see level.hpp) ------------------- */
-// FUNCTION: LEGORR 0x0042f350
-uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
-                                           uint8_t* kind, int mode)
+static uint32_t terrain_neighbor_coordinate_check_explicit(
+    const LevelState* s, int x, int y, uint8_t* kind, int mode)
 {
     /* Corpus neighbor deltas: (0,-1), (+1,0), (0,+1), (-1,0). */
     static const int dx[4] = { 0, 1, 0, -1 };
@@ -7456,6 +9975,110 @@ uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
         *kind = k;
     }
     return (mode != 0) ? alt_code_tbl[mask] : code_tbl[mask];
+}
+
+/* The retail entry uses the active level and returns the classification via
+ * a four-argument ABI. Keep the explicit-level table helper above for tools
+ * and callers operating on an inactive level. */
+// FUNCTION: LEGORR 0x0042f350
+static uint8_t terrain_neighbor_coordinate_check_current_target(
+    int x, int y, uint8_t* kind, int mode)
+{
+    int offsets[8];
+    LevelState* level = g_active_level_retail;
+    uint32_t width = level->word[LEVEL_OFF_WIDTH / 4u];
+    uint32_t height = level->word[LEVEL_OFF_HEIGHT / 4u];
+    uint8_t* voxels = (uint8_t*)level->ptr_voxels;
+#if defined(_WIN32) && defined(_M_IX86)
+    voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4u];
+#endif
+    offsets[0] = 0;
+    offsets[1] = -1;
+    offsets[2] = 1;
+    offsets[3] = 0;
+    offsets[4] = 0;
+    offsets[5] = 1;
+    offsets[6] = -1;
+    offsets[7] = 0;
+    uint32_t mask = 0u;
+    uint32_t i;
+    for (i = 0u; i < 4u; ++i) {
+        const int nx = x + offsets[i * 2u];
+        const int ny = y + offsets[i * 2u + 1u];
+        int in_bounds = 0;
+        int occupied = 0;
+        size_t cell_index = 0u;
+        if (nx >= 0 && ny >= 0 && (uint32_t)nx < width &&
+            (uint32_t)ny < height) {
+            in_bounds = 1;
+            cell_index = (size_t)(uint32_t)ny * width + (uint32_t)nx;
+            uint32_t flags;
+            __builtin_memcpy(&flags,
+                voxels + cell_index * LEVEL_VOXEL_STRIDE + 8u,
+                sizeof(flags));
+            occupied = (flags & 0x20000000u) != 0u;
+        }
+        /* Retail performs this second flag probe even after the first probe
+         * rejects an out-of-map neighbor. Keep the port's edge guard. */
+        if (!occupied && in_bounds) {
+            uint32_t flags;
+            __builtin_memcpy(&flags,
+                voxels + cell_index * LEVEL_VOXEL_STRIDE + 8u,
+                sizeof(flags));
+            if ((flags & 0x400u) != 0u) occupied = 1;
+        }
+        if (occupied) mask |= 1u << i;
+    }
+
+    if (mode == 0) {
+        switch (mask) {
+        case 0: *kind = 0; return 0x65;
+        case 1: *kind = 2; return 0x65;
+        case 2: *kind = 3; return 0x65;
+        case 3: *kind = 3; return 99;
+        case 4: *kind = 0; return 0x65;
+        case 5: *kind = 0; return 0x62;
+        case 6: *kind = 0; return 99;
+        case 7: *kind = 0; return 100;
+        case 8: *kind = 1; return 0x65;
+        case 9: *kind = 2; return 99;
+        case 10: *kind = 1; return 0x62;
+        case 11: *kind = 3; return 100;
+        case 12: *kind = 1; return 99;
+        case 13: *kind = 2; return 100;
+        case 14: *kind = 1; return 100;
+        default: *kind = 0; return 0x60;
+        }
+    }
+    switch (mask) {
+    case 0: *kind = 0; return 0x75;
+    case 1: *kind = 2; return 0x75;
+    case 2: *kind = 3; return 0x75;
+    case 3: *kind = 3; return 0x73;
+    case 4: *kind = 0; return 0x75;
+    case 5: *kind = 0; return 0x72;
+    case 6: *kind = 0; return 0x73;
+    case 7: *kind = 0; return 0x74;
+    case 8: *kind = 1; return 0x75;
+    case 9: *kind = 2; return 0x73;
+    case 10: *kind = 1; return 0x72;
+    case 11: *kind = 3; return 0x74;
+    case 12: *kind = 1; return 0x73;
+    case 13: *kind = 2; return 0x74;
+    case 14: *kind = 1; return 0x74;
+    default: *kind = 0; return 0x71;
+    }
+}
+
+uint32_t terrain_neighbor_coordinate_check(const LevelState* s, int x, int y,
+                                           uint8_t* kind, int mode)
+{
+    if (s != NULL && s == g_active_level_retail && kind != NULL) {
+        return (uint32_t)terrain_neighbor_coordinate_check_current_target(
+            x, y, kind, mode);
+    }
+    return terrain_neighbor_coordinate_check_explicit(s, x, y, kind, mode);
 }
 
 /* --- grid-record count tables (see level.hpp) ------------------------------
@@ -7679,14 +10302,24 @@ void terrain_cell_refresh_dispatch(const struct GameContext* ctx, int x,
 // FUNCTION: LEGORR 0x00402ae0
 void terrain_cell_refresh_dispatch_current(const int cell_xy[2], int mode)
 {
-    GameContext* ctx = entity_pool_callback_context_get();
-    LevelState* lvl = ctx != NULL ? ctx->level : NULL;
-    /* FUN_00431560 returns the active LevelState directly; the native
-     * registry is its retained current-level binding when no entity-pool
-     * callback context exists. */
-    if (lvl == NULL)
-        lvl = (LevelState*)map_cell_record_grid_level_get();
-    terrain_cell_refresh_dispatch_level(lvl, cell_xy, mode);
+    LevelState* lvl = level_current_owner_get();
+    TerrainCellRefreshCallbackPayload payload;
+    void* terrain;
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+    if (lvl == NULL || cell_xy == NULL) return;
+#endif
+    payload.cell_xy = cell_xy;
+    payload.mode = mode;
+    (void)entity_pool_callback_search(
+        terrain_cell_refresh_callback_adapter, &payload);
+#if defined(_MSC_VER) && defined(_M_IX86)
+    terrain = (void*)lvl->word[1];
+    terrain_cell_surface_type_reset(terrain, cell_xy[0], cell_xy[1]);
+#else
+    terrain = lvl->ptr_terrain;
+    if (terrain != NULL)
+        terrain_cell_surface_type_reset(terrain, cell_xy[0], cell_xy[1]);
+#endif
 }
 
 static CoordinateEntityDispatchHook s_coordinate_direct_callback;
@@ -7753,34 +10386,50 @@ void coordinate_callback_dispatch_by_mode(const void* coord_pair, int mode)
     entity_pool_callback_search(coordinate_entity_dispatch_adapter, &payload);
 }
 
-/* --- the global-object field band (see level.hpp) ---------------------------
- * The corpus's `DAT_005560d4 != 0` guard lands as the port's NULL-level
- * guard; every other detail is the corpus's own arithmetic. */
+/* The retail entries below operate on DAT_005560d4 directly. Keep the
+ * explicit-level variants separate for portable callers with owned state. */
 // FUNCTION: LEGORR 0x0041f870
-void global_object_field8c_increment(LevelState* s)
+void global_object_field8c_increment(void)
 {
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0x8C, level_int(s, 0x8C) + 1);
+        s->word[0x8C / 4] = s->word[0x8C / 4] + 1u;
     }
+}
+
+void global_object_field8c_increment_for_level(LevelState* s)
+{
+    if (s != NULL) level_set_int(s, 0x8C, level_int(s, 0x8C) + 1);
 }
 
 // FUNCTION: LEGORR 0x0041f880
-void global_object_field8c_subtract(LevelState* s, int amount)
+void global_object_field8c_subtract(int amount)
 {
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0x8C, level_int(s, 0x8C) - amount);
+        s->word[0x8C / 4] = s->word[0x8C / 4] - (uint32_t)amount;
     }
+}
+
+void global_object_field8c_subtract_for_level(LevelState* s, int amount)
+{
+    if (s != NULL) level_set_int(s, 0x8C, level_int(s, 0x8C) - amount);
 }
 
 // FUNCTION: LEGORR 0x0041f8a0
-void global_object_field98_add(LevelState* s, int amount)
+void global_object_field98_add(int amount)
 {
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0x98, level_int(s, 0x98) + amount);
+        s->word[0x98 / 4] = s->word[0x98 / 4] + (uint32_t)amount;
     }
 }
 
-// FUNCTION: LEGORR 0x0041f8c0
+void global_object_field98_add_for_level(LevelState* s, int amount)
+{
+    if (s != NULL) level_set_int(s, 0x98, level_int(s, 0x98) + amount);
+}
+
 void global_object_field98_clear(LevelState* s)
 {
     if (s != NULL) {
@@ -7788,28 +10437,55 @@ void global_object_field98_clear(LevelState* s)
     }
 }
 
-// FUNCTION: LEGORR 0x0041f920
-void level_state_field9c_add(LevelState* s, int amount)
+// FUNCTION: LEGORR 0x0041f8c0
+void global_object_field98_clear_current(void)
 {
-    if (s != NULL) {
-        level_set_int(s, 0x9C, level_int(s, 0x9C) + amount);
+    LevelState* level = g_active_level_retail;
+    if (level != NULL) {
+        level->word[0x98 / 4] = 0u;
     }
+}
+
+// FUNCTION: LEGORR 0x0041f920
+void level_state_field9c_add(int amount)
+{
+    LevelState* s = g_active_level_retail;
+    if (s != NULL) {
+        s->word[0x9C / 4] = s->word[0x9C / 4] + (uint32_t)amount;
+    }
+}
+
+void level_state_field9c_add_for_level(LevelState* s, int amount)
+{
+    if (s != NULL) level_set_int(s, 0x9C, level_int(s, 0x9C) + amount);
 }
 
 // FUNCTION: LEGORR 0x0041f980
-void global_object_field94_increment(LevelState* s)
+void global_object_field94_increment(void)
 {
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0x94, level_int(s, 0x94) + 1);
+        s->word[0x94 / 4] = s->word[0x94 / 4] + 1u;
     }
 }
 
-// FUNCTION: LEGORR 0x0041f990
-void global_object_fielda8_increment(LevelState* s)
+void global_object_field94_increment_for_level(LevelState* s)
 {
+    if (s != NULL) level_set_int(s, 0x94, level_int(s, 0x94) + 1);
+}
+
+// FUNCTION: LEGORR 0x0041f990
+void global_object_fielda8_increment(void)
+{
+    LevelState* s = g_active_level_retail;
     if (s != NULL) {
-        level_set_int(s, 0xA8, level_int(s, 0xA8) + 1);
+        s->word[0xA8 / 4] = s->word[0xA8 / 4] + 1u;
     }
+}
+
+void global_object_fielda8_increment_for_level(LevelState* s)
+{
+    if (s != NULL) level_set_int(s, 0xA8, level_int(s, 0xA8) + 1);
 }
 
 uint32_t level_field8c_get(const LevelState* s)
@@ -7858,6 +10534,31 @@ int level_objective_result_get(const LevelState* s)
 static int s_terrain_sfx_grid[TERRAIN_SFX_GRID_CELLS]; /* DAT_004de814 role */
 
 // FUNCTION: LEGORR 0x0044ad80
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int terrain_object_type_sfx_at_cell_get(
+    const void* position_record)
+{
+    __asm {
+        push ecx
+        mov edx, dword ptr [esp + 8]
+        lea eax, dword ptr [esp]
+        lea ecx, dword ptr [esp + 8]
+        push eax
+        push ecx
+        push edx
+        call copy_two_dword_pair_to_outputs
+        mov eax, dword ptr [esp + 14h]
+        mov ecx, dword ptr [esp + 0ch]
+        add esp, 0ch
+        lea eax, dword ptr [eax + eax*2]
+        lea edx, dword ptr [ecx*4]
+        lea eax, dword ptr [eax + eax*4]
+        mov eax, dword ptr [edx + eax*4 + s_terrain_sfx_grid]
+        pop ecx
+        ret
+    }
+}
+#else
 int terrain_object_type_sfx_at_cell_get(const void* position_record)
 {
     uint32_t x = 0, y = 0;
@@ -7872,6 +10573,7 @@ int terrain_object_type_sfx_at_cell_get(const void* position_record)
     }
     return s_terrain_sfx_grid[cell];
 }
+#endif
 
 void terrain_sfx_grid_cell_set(int cell, int handle)
 {
@@ -8043,7 +10745,7 @@ int entity_available_resource_spend(LevelState* level, int amount,
         message_dispatch(0xe, 0, 0, resource_hint);
         return 0;
     }
-    global_object_field98_add(level, amount);
+    global_object_field98_add_for_level(level, amount);
     return 1;
 }
 
@@ -8479,7 +11181,8 @@ static int terrain_material_transition_vertices_get(
 static int terrain_material_transition_vertex_payload_get(
     TerrainState* terrain, uint32_t x, uint32_t y, float out[4][9])
 {
-    TerrainVertexReadRequest request;
+    TerrainIndexedMeshLayerObject object;
+    TerrainIndexedMeshLayerOwner owner;
     size_t quad_index;
     if (terrain == NULL || out == NULL ||
         x >= terrain->dim[0] || y >= terrain->dim[1] ||
@@ -8488,13 +11191,9 @@ static int terrain_material_transition_vertex_payload_get(
     quad_index = (size_t)y * terrain->dim[0] + x;
     terrain_indexed_mesh_cell_sync(terrain, quad_index);
     memset(out, 0, sizeof(float) * 4u * 9u);
-    request.block_index = (int)quad_index;
-    request.first_vertex = 0;
-    request.count = 4;
-    request.output = out;
-    (void)lwo_layer_polygon_vertex_data_read(
-        &terrain->detail_mesh_object, 0u, &request,
-        &s_terrain_indexed_mesh_dispatch_ops);
+    terrain_indexed_mesh_layer_object_init(terrain, &object, &owner);
+    (void)lwo_layer_polygon_vertex_data_read(&object, (int)quad_index, 0,
+                                            4, out);
     return 1;
 }
 
@@ -9081,26 +11780,34 @@ uint32_t rng_thunk_draw15(void)
 #define EROSION_MARK_COUNT 2000   /* DAT_004cfbb4 */
 #define EROSION_TICKET_COUNT LEVEL_TS_COUNT /* DAT_004d6914 */
 
+// GLOBAL: LEGORR 0x0049e124
+static const float s_erosion_ticks_per_second = 25.0f;
+// GLOBAL: LEGORR 0x0049e128
+static const float s_erosion_delay_fraction = 0.2f;
+// GLOBAL: LEGORR 0x0049e130
+static const float s_erosion_stage_quanta = 4.0f;
 // GLOBAL: LEGORR 0x004d78b8
 static float s_erosion_decay_scale;
 // GLOBAL: LEGORR 0x004d78bc
 static float s_erosion_delay_scale;
-// GLOBAL: LEGORR 0x004cbd30
-static uint32_t s_erosion_clear_word;
-// GLOBAL: LEGORR 0x004cfbb4
-static uint32_t s_erosion_marks[EROSION_MARK_COUNT];
 struct LavaErosionPendingCell {
     int x;
     int y;
 };
-struct LavaErosionStageSlot {
-    int x;
-    int y;
-    float timer;
-};
+typedef char lava_erosion_pending_cell_stride_check[
+    sizeof(LavaErosionPendingCell) == 8u ? 1 : -1];
+// GLOBAL: LEGORR 0x004c7eb0
 static LavaErosionPendingCell s_lava_erosion_pending_cells[EROSION_MARK_COUNT];
-static unsigned int s_lava_erosion_pending_count;
-static LavaErosionStageSlot s_lava_erosion_stage_slots[EROSION_MARK_COUNT];
+// GLOBAL: LEGORR 0x004cbd30
+static uint32_t s_lava_erosion_pending_count;
+// GLOBAL: LEGORR 0x004cbd34
+static LavaErosionPendingCell s_lava_erosion_stage_coordinates[
+    EROSION_MARK_COUNT];
+// GLOBAL: LEGORR 0x004cfbb4
+static uint32_t s_erosion_marks[EROSION_MARK_COUNT];
+// GLOBAL: LEGORR 0x004d1af4
+static float s_lava_erosion_stage_timers[EROSION_MARK_COUNT];
+// GLOBAL: LEGORR 0x004d78b4
 static float s_erosion_trigger_accumulator;
 static int s_erosion_triggered_this_tick;
 static unsigned int s_lava_erosion_mutation_threshold = 4u;
@@ -9116,8 +11823,10 @@ static void lava_erosion_runtime_tables_clear(void)
     memset(s_erosion_marks, 0, sizeof(s_erosion_marks));
     memset(s_lava_erosion_pending_cells, 0,
            sizeof(s_lava_erosion_pending_cells));
-    memset(s_lava_erosion_stage_slots, 0,
-           sizeof(s_lava_erosion_stage_slots));
+    memset(s_lava_erosion_stage_coordinates, 0,
+           sizeof(s_lava_erosion_stage_coordinates));
+    memset(s_lava_erosion_stage_timers, 0,
+           sizeof(s_lava_erosion_stage_timers));
     memset(s_ts_active, 0, sizeof(s_ts_active));
     memset(s_ts_coordinates, 0, sizeof(s_ts_coordinates));
     memset(s_ts_stamps, 0, sizeof(s_ts_stamps));
@@ -9127,15 +11836,52 @@ static void lava_erosion_runtime_tables_clear(void)
 }
 
 // FUNCTION: LEGORR 0x0040e930
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void erosion_timing_state_init(float value_a,
+                                                  float value_b,
+                                                  float value_c)
+{
+    __asm {
+        fld dword ptr [esp + 8]
+        fmul dword ptr [s_erosion_ticks_per_second]
+        fld dword ptr [esp + 0ch]
+        fld dword ptr [esp + 4]
+        fmul dword ptr [s_erosion_ticks_per_second]
+        fxch st(2)
+        fmul dword ptr [s_erosion_delay_fraction]
+        fxch st(1)
+        fmul dword ptr [s_erosion_ticks_per_second]
+        fxch st(2)
+        fstp dword ptr [s_erosion_decay_scale]
+        push edi
+        xor eax, eax
+        fstp dword ptr [s_erosion_delay_scale]
+        mov ecx, 7d0h
+        mov edi, offset s_erosion_marks
+        fstp dword ptr [s_ts_now]
+        mov dword ptr [s_lava_erosion_pending_count], eax
+        rep stosd
+        mov ecx, 3e8h
+        mov edi, offset s_ts_active
+        rep stosd
+        pop edi
+        ret
+    }
+}
+#else
 void erosion_timing_state_init(float value_a, float value_b, float value_c)
 {
-    s_erosion_decay_scale = value_a * 25.0f;
-    s_erosion_delay_scale = value_b * 25.0f * 0.2f;
-    const float tick = value_c * 25.0f;
-    s_erosion_clear_word = 0u;
-    lava_erosion_runtime_tables_clear();
+    s_erosion_decay_scale = value_a * s_erosion_ticks_per_second;
+    s_erosion_delay_scale = value_b * s_erosion_ticks_per_second *
+                            s_erosion_delay_fraction;
+    const float tick = value_c * s_erosion_ticks_per_second;
+    s_lava_erosion_pending_count = 0u;
+    memset(s_erosion_marks, 0, sizeof(s_erosion_marks));
+    memset(s_ts_active, 0, sizeof(s_ts_active));
+    s_erosion_trigger_accumulator = 0.0f;
     __builtin_memcpy(&s_ts_now, &tick, sizeof s_ts_now);
 }
+#endif
 
 float erosion_decay_scale_peek(void) { return s_erosion_decay_scale; }
 float erosion_delay_scale_peek(void) { return s_erosion_delay_scale; }
@@ -9154,6 +11900,29 @@ int erosion_scratch_peek(int which, int index)
 /* Find the first zero in the 2,000-dword DAT_004cfbb4 stage-active table.
  * Stage registration and the pending-cell ticker share this allocator. */
 // FUNCTION: LEGORR 0x0040e990
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int lava_erosion_stage_slot_find_free(int* slot_out)
+{
+    __asm {
+        xor ecx, ecx
+        mov eax, offset s_erosion_marks
+    lava_erosion_stage_slot_find_free_scan:
+        cmp dword ptr [eax], 0
+        je lava_erosion_stage_slot_find_free_found
+        add eax, 4
+        inc ecx
+        cmp eax, offset s_lava_erosion_stage_timers
+        jb lava_erosion_stage_slot_find_free_scan
+        xor eax, eax
+        ret
+    lava_erosion_stage_slot_find_free_found:
+        mov eax, dword ptr [esp + 4]
+        mov dword ptr [eax], ecx
+        mov eax, 1
+        ret
+    }
+}
+#else
 int lava_erosion_stage_slot_find_free(int* slot_out)
 {
     volatile uint32_t* cursor = s_erosion_marks;
@@ -9168,16 +11937,36 @@ int lava_erosion_stage_slot_find_free(int* slot_out)
     } while (cursor < s_erosion_marks + EROSION_MARK_COUNT);
     return 0;
 }
+#endif
 
 // FUNCTION: LEGORR 0x0040e9c0
-float lava_erosion_delay_from_cell(const LevelState* s, int x, int y)
+float lava_erosion_delay_from_cell(const int xy[2])
 {
-    const uint8_t* rec = level_voxel(s, x, y);
-    if (rec == NULL) {
-        return 0.0f; /* deviation: the corpus strides the grid blindly */
-    }
-    const int steps = 6 - (int)rec[6];
-    return (float)steps * s_erosion_delay_scale * 25.0f;
+#if defined(_MSC_VER) && defined(_M_IX86)
+    LevelState* level = g_active_level_retail;
+    const uint8_t* voxels =
+        (const uint8_t*)level->word[LEVEL_OFF_VOXELS / 4u];
+#else
+    LevelState* level = lava_erosion_current_level_get();
+    const uint8_t* voxels = level != NULL
+        ? (const uint8_t*)level->ptr_voxels : NULL;
+#endif
+    const uint8_t* record;
+    uint32_t width;
+    uint32_t index;
+    int steps;
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+    if (xy == NULL || level == NULL) return 0.0f;
+#endif
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+    if (voxels == NULL) return 0.0f;
+#endif
+    width = level->word[LEVEL_OFF_WIDTH / 4u];
+    index = (uint32_t)xy[1] * width + (uint32_t)xy[0];
+    record = voxels + index * LEVEL_VOXEL_STRIDE;
+    steps = 6 - (int)record[6];
+    return (float)steps * s_erosion_delay_scale *
+           s_erosion_ticks_per_second;
 }
 
 int lava_erosion_neighbor_check_level(const LevelState* s, int seed_x,
@@ -9264,10 +12053,10 @@ int lava_erosion_stage_register(const int xy[2], int stage)
     if (cell == NULL) return 0;
     if (!lava_erosion_stage_slot_find_free(&slot)) return 0;
     cell[7] = (uint8_t)stage;
-    s_lava_erosion_stage_slots[slot].x = xy[0];
-    s_lava_erosion_stage_slots[slot].y = xy[1];
-    s_lava_erosion_stage_slots[slot].timer = lava_erosion_delay_from_cell(
-        s_lava_erosion_level_context, xy[0], xy[1]) / (float)(stage + 1);
+    s_lava_erosion_stage_coordinates[slot].x = xy[0];
+    s_lava_erosion_stage_coordinates[slot].y = xy[1];
+    s_lava_erosion_stage_timers[slot] = lava_erosion_delay_from_cell(xy) /
+                                        (float)(stage + 1);
     s_erosion_marks[slot] = 1u;
     lava_erosion_pending_cell_add(xy, 1);
     return 1;
@@ -9289,16 +12078,16 @@ int lava_erosion_pending_cell_get(unsigned int index, int xy_out[2])
 int lava_erosion_stage_get(unsigned int slot, int xy_out[2],
                            float* timer_out, uint8_t* cell_stage_out)
 {
-    const LavaErosionStageSlot* stage;
     const uint8_t* cell;
     if (slot >= EROSION_MARK_COUNT || s_erosion_marks[slot] == 0u) return 0;
-    stage = &s_lava_erosion_stage_slots[slot];
     if (xy_out != NULL) {
-        xy_out[0] = stage->x;
-        xy_out[1] = stage->y;
+        xy_out[0] = s_lava_erosion_stage_coordinates[slot].x;
+        xy_out[1] = s_lava_erosion_stage_coordinates[slot].y;
     }
-    if (timer_out != NULL) *timer_out = stage->timer;
-    cell = level_voxel(s_lava_erosion_level_context, stage->x, stage->y);
+    if (timer_out != NULL) *timer_out = s_lava_erosion_stage_timers[slot];
+    cell = level_voxel(s_lava_erosion_level_context,
+        s_lava_erosion_stage_coordinates[slot].x,
+        s_lava_erosion_stage_coordinates[slot].y);
     if (cell_stage_out != NULL) *cell_stage_out = cell != NULL ? cell[7] : 0u;
     return 1;
 }
@@ -9310,7 +12099,6 @@ void lava_erosion_level_context_set(LevelState* s)
         if (s == NULL) {
             s_erosion_decay_scale = 0.0f;
             s_erosion_delay_scale = 0.0f;
-            s_erosion_clear_word = 0u;
             s_lava_erosion_mutation_threshold = 4u;
         }
     }
@@ -9377,8 +12165,128 @@ int lava_erosion_neighbor_eligible_current(const int xy[2])
  * candidate list and mirror membership in voxel flag bit 31. Removal uses
  * swap-with-last and retires the matching stage slot, as in the reference. */
 // FUNCTION: LEGORR 0x0040ee50
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void lava_erosion_pending_cell_add(const int xy[2], int add)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        push ebx
+        push ebp
+        push esi
+        push edi
+        mov edi, dword ptr [g_active_level_retail]
+        test eax, eax
+        je lava_erosion_pending_cell_add_remove
+        mov esi, dword ptr [esp + 14h]
+        mov eax, dword ptr [edi + 14h]
+        mov ecx, dword ptr [edi + 0b8h]
+        imul eax, dword ptr [esi + 4]
+        mov ebx, dword ptr [esi]
+        add eax, ebx
+        lea eax, dword ptr [eax + eax*8]
+        test dword ptr [ecx + eax*8 + 8], 80000000h
+        jne lava_erosion_pending_cell_add_done
+        mov eax, dword ptr [s_lava_erosion_pending_count]
+        cmp eax, 7d0h
+        jae lava_erosion_pending_cell_add_done
+        mov edx, ebx
+        push esi
+        mov dword ptr [eax*8 + s_lava_erosion_pending_cells], edx
+        mov ecx, dword ptr [s_lava_erosion_pending_count]
+        mov eax, dword ptr [esi + 4]
+        mov dword ptr [ecx*8 + s_lava_erosion_pending_cells + 4], eax
+        mov eax, dword ptr [s_lava_erosion_pending_count]
+        inc eax
+        mov dword ptr [s_lava_erosion_pending_count], eax
+        call map_cell_tracking_flags_clear_and_refresh_current
+        mov eax, dword ptr [edi + 14h]
+        mov edx, dword ptr [esi]
+        imul eax, dword ptr [esi + 4]
+        add eax, edx
+        add esp, 4
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [edi + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        or ecx, 80000000h
+        mov dword ptr [eax], ecx
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    lava_erosion_pending_cell_add_remove:
+        mov edx, dword ptr [s_lava_erosion_pending_count]
+        mov esi, dword ptr [esp + 14h]
+        xor eax, eax
+        test edx, edx
+        jbe lava_erosion_pending_cell_add_stage_scan
+        mov ebx, dword ptr [esi]
+        mov ecx, offset s_lava_erosion_pending_cells
+    lava_erosion_pending_cell_add_list_scan:
+        cmp ebx, dword ptr [ecx]
+        jne lava_erosion_pending_cell_add_list_next
+        mov ebp, dword ptr [esi + 4]
+        cmp ebp, dword ptr [ecx + 4]
+        je lava_erosion_pending_cell_add_list_found
+    lava_erosion_pending_cell_add_list_next:
+        inc eax
+        add ecx, 8
+        cmp eax, edx
+        jae lava_erosion_pending_cell_add_stage_scan
+        jmp lava_erosion_pending_cell_add_list_scan
+    lava_erosion_pending_cell_add_list_found:
+        dec edx
+        mov dword ptr [s_lava_erosion_pending_count], edx
+        lea ecx, dword ptr [edx*8 + s_lava_erosion_pending_cells]
+        mov edx, dword ptr [edx*8 + s_lava_erosion_pending_cells]
+        mov dword ptr [eax*8 + s_lava_erosion_pending_cells], edx
+        mov ecx, dword ptr [ecx + 4]
+        mov dword ptr [eax*8 + s_lava_erosion_pending_cells + 4], ecx
+        mov eax, dword ptr [edi + 14h]
+        imul eax, dword ptr [esi + 4]
+        add eax, dword ptr [esi]
+        lea edx, dword ptr [eax + eax*8]
+        mov eax, dword ptr [edi + 0b8h]
+        mov ecx, dword ptr [eax + edx*8 + 8]
+        lea eax, dword ptr [eax + edx*8 + 8]
+        and ecx, 7fffffffh
+        mov dword ptr [eax], ecx
+    lava_erosion_pending_cell_add_stage_scan:
+        mov edx, dword ptr [esi]
+        xor ecx, ecx
+        mov eax, offset s_lava_erosion_stage_coordinates
+    lava_erosion_pending_cell_add_stage_loop:
+        cmp edx, dword ptr [eax]
+        jne lava_erosion_pending_cell_add_stage_next
+        mov edi, dword ptr [esi + 4]
+        mov ebx, dword ptr [eax + 4]
+        cmp edi, ebx
+        je lava_erosion_pending_cell_add_stage_found
+    lava_erosion_pending_cell_add_stage_next:
+        add eax, 8
+        inc ecx
+        cmp eax, offset s_erosion_marks
+        jae lava_erosion_pending_cell_add_timestamp
+        jmp lava_erosion_pending_cell_add_stage_loop
+    lava_erosion_pending_cell_add_stage_found:
+        mov dword ptr [ecx*4 + s_erosion_marks], 0
+    lava_erosion_pending_cell_add_timestamp:
+        push esi
+        call cell_coordinate_timestamp_remember
+        add esp, 4
+    lava_erosion_pending_cell_add_done:
+        pop edi
+        pop esi
+        pop ebp
+        pop ebx
+        ret
+    }
+}
+#else
 void lava_erosion_pending_cell_add(const int xy[2], int add)
 {
+    uint32_t i;
     LevelState* level = lava_erosion_current_level_get();
     uint8_t* const cell = xy != NULL
         ? level_voxel(level, xy[0], xy[1]) : NULL;
@@ -9400,8 +12308,8 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
         }
         for (i = 0; i < EROSION_MARK_COUNT; ++i) {
             if (s_erosion_marks[i] != 0u &&
-                s_lava_erosion_stage_slots[i].x == xy[0] &&
-                s_lava_erosion_stage_slots[i].y == xy[1]) {
+                s_lava_erosion_stage_coordinates[i].x == xy[0] &&
+                s_lava_erosion_stage_coordinates[i].y == xy[1]) {
                 s_erosion_marks[i] = 0u;
                 break;
             }
@@ -9428,6 +12336,7 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
         __builtin_memcpy(cell + 8, &flags, sizeof flags);
     }
 }
+#endif
 
 /* LavaErosionPendingCellTick (FUN_0040eab0): keep the engine-scale trigger
  * gate, walk the pending coordinates in their live insertion/swap order,
@@ -9435,7 +12344,11 @@ void lava_erosion_pending_cell_add(const int xy[2], int add)
 // FUNCTION: LEGORR 0x0040eab0
 void lava_erosion_pending_cell_tick(float scale)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    LevelState* s = g_active_level_retail;
+#else
     LevelState* s = lava_erosion_current_level_get();
+#endif
     s_erosion_triggered_this_tick = 0;
     /* The retail thunk draws before it tests the interval, so even frames
      * with no pending trigger advance the shared random stream. */
@@ -9450,9 +12363,7 @@ void lava_erosion_pending_cell_tick(float scale)
         if (s != NULL && s_lava_erosion_pending_count != 0u &&
             have_free_slot) {
             const unsigned int slot = (unsigned int)free_slot;
-            const unsigned int start =
-                (unsigned int)random_start %
-                s_lava_erosion_pending_count;
+            const unsigned int start = (unsigned int)random_start;
             for (n = 0; n < s_lava_erosion_pending_count; ++n) {
                 const unsigned int index =
                     (start + n) % s_lava_erosion_pending_count;
@@ -9462,11 +12373,19 @@ void lava_erosion_pending_cell_tick(float scale)
                 };
                 int candidate_xy[2];
                 if (lava_erosion_neighbor_check(seed_xy, candidate_xy) != 0) {
-                    uint8_t* cell = level_voxel(
-                        s, candidate_xy[0], candidate_xy[1]);
+                    uint8_t* cell;
+#if defined(_MSC_VER) && defined(_M_IX86)
+                    const uint32_t cell_index =
+                        (uint32_t)candidate_xy[1] *
+                        s->word[LEVEL_OFF_WIDTH / 4u] +
+                        (uint32_t)candidate_xy[0];
+                    cell = (uint8_t*)s->word[LEVEL_OFF_VOXELS / 4u] +
+                           cell_index * LEVEL_VOXEL_STRIDE;
+#else
+                    cell = level_voxel(s, candidate_xy[0], candidate_xy[1]);
                     if (cell == NULL) continue;
-                    if (level_cell_occupied_at(s, candidate_xy[0],
-                                               candidate_xy[1]) == 0 ||
+#endif
+                    if (level_cell_occupied_at_current(candidate_xy) == 0u ||
                         (cell[0x0c] & 0x10u) != 0u) {
                         float delay;
                         uint32_t secondary;
@@ -9475,13 +12394,12 @@ void lava_erosion_pending_cell_tick(float scale)
                         secondary &= ~0x10u;
                         __builtin_memcpy(cell + 0x0c, &secondary,
                                          sizeof secondary);
-                        s_lava_erosion_stage_slots[slot].x =
+                        s_lava_erosion_stage_coordinates[slot].x =
                             candidate_xy[0];
-                        s_lava_erosion_stage_slots[slot].y =
+                        s_lava_erosion_stage_coordinates[slot].y =
                             candidate_xy[1];
-                        delay = lava_erosion_delay_from_cell(
-                            s, candidate_xy[0], candidate_xy[1]);
-                        s_lava_erosion_stage_slots[slot].timer = delay;
+                        delay = lava_erosion_delay_from_cell(candidate_xy);
+                        s_lava_erosion_stage_timers[slot] = delay;
                         s_erosion_marks[slot] = 1u;
                         cell[7] = 0u;
                         lava_erosion_pending_cell_add(candidate_xy, 1);
@@ -9499,20 +12417,36 @@ void lava_erosion_pending_cell_tick(float scale)
     if (s != NULL) {
         unsigned int slot;
         for (slot = 0; slot < EROSION_MARK_COUNT; ++slot) {
-            LavaErosionStageSlot* stage;
+            LavaErosionPendingCell* stage;
             uint8_t* cell;
-            int before, after;
+            int8_t before, after;
             if (s_erosion_marks[slot] == 0u) continue;
-            stage = &s_lava_erosion_stage_slots[slot];
-            before = crt_float_to_long(stage->timer);
-            stage->timer -= scale;
-            after = crt_float_to_long(stage->timer);
+            stage = &s_lava_erosion_stage_coordinates[slot];
+            before = (int8_t)crt_float_to_long(
+                (s_lava_erosion_stage_timers[slot] /
+                 lava_erosion_delay_from_cell((const int*)stage)) *
+                s_erosion_stage_quanta);
+            s_lava_erosion_stage_timers[slot] -= scale;
+            after = (int8_t)crt_float_to_long(
+                (s_lava_erosion_stage_timers[slot] /
+                 lava_erosion_delay_from_cell((const int*)stage)) *
+                s_erosion_stage_quanta);
             if (after == before) continue;
+ #if defined(_MSC_VER) && defined(_M_IX86)
+            {
+                const uint32_t cell_index =
+                    (uint32_t)stage->y * s->word[LEVEL_OFF_WIDTH / 4u] +
+                    (uint32_t)stage->x;
+                cell = (uint8_t*)s->word[LEVEL_OFF_VOXELS / 4u] +
+                       cell_index * LEVEL_VOXEL_STRIDE;
+            }
+#else
             cell = level_voxel(s, stage->x, stage->y);
             if (cell == NULL) {
                 s_erosion_marks[slot] = 0u;
                 continue;
             }
+#endif
             cell[7] = (uint8_t)(4 - after);
             if (after == 0) {
                 s_erosion_marks[slot] = 0u;
@@ -9755,23 +12689,22 @@ void lava_erosion_eight_neighbor_propagate(const int xy[2],
  * TerrainCellRouteAndOccupancyCheck (FUN_00431da0) answers whether an
  * entity may move from cell (from_x, from_y) to (to_x, to_y). The corpus
  * indexes a cardinal delta table with a dword walker, so a neighbour hit
- * in slot 0 reads the same as "no cardinal neighbour" (pinned quirk),
- * and the entity's own tile position rides the port's cell-round seam
- * (level_cell_of on the entity's float pair — same precedent as the
- * idle-registration tile probe). Deviations: every cell read routes
- * through level_voxel (the corpus strides the base + y*w+x * 0x48 window
- * without a bounds check; out-of-range reads answer zero), a NULL level
- * answers through the same guards, and the entity cell check lands after
- * the corpus's own stats gates.
+ * in slot 0 reads the same as "no cardinal neighbour" (pinned quirk).
+ * The mapped x86 entry uses the retail six-argument ABI and reads cell
+ * records directly from the active level's +0xb8 voxel pointer. Its world
+ * position check uses the port's entity-position adapter, whose explicit
+ * level argument and return contract do not reproduce the renderer-owned
+ * scene-position call exactly. The separate explicit-level helper retains
+ * bounds and NULL guards for callers that operate on arbitrary levels.
  *
  * FirstFreeNeighborCellPick (FUN_00431c70) walks the four cardinal
  * neighbours in a rotation that advances by the corpus's DAT_004de588
  * pick counter (own storage here; peek hook), calling the route check
  * with source and destination pinned to the neighbour cell. In mode 1 a
  * neighbour that is in bounds, open (flag 0x10) and unblocked (flag 8
- * clear) is skipped; otherwise it is tried. Deviation: the corpus
- * reloads the level global between probes — the port reuses one pointer.
- * Both rows guard NULL entity/level where the corpus strides blindly. */
+ * clear) is skipped; otherwise it is tried. The mapped x86 entry uses the
+ * retail stack delta table and reloads the active-level global after each
+ * route check. The portable fallback uses the guarded sidecar APIs. */
 static const int s_cardinal_deltas[4][2] = {{0, -1}, {1, 0}, {0, 1},
                                             {-1, 0}};
 // GLOBAL: LEGORR 0x004de588
@@ -9795,7 +12728,6 @@ static uint32_t route_cell_flags(const LevelState* s, int x, int y)
     return flags;
 }
 
-// FUNCTION: LEGORR 0x00431DA0
 int terrain_cell_route_and_occupancy_check(const struct EntitySlot* entity,
                                            const LevelState* s,
                                            int from_x, int from_y,
@@ -9910,13 +12842,150 @@ int terrain_cell_route_and_occupancy_check(const struct EntitySlot* entity,
     return answer;
 }
 
+// FUNCTION: LEGORR 0x00431da0
 int terrain_cell_route_and_occupancy_check_current(
     const struct EntitySlot* entity, int from_x, int from_y,
     int to_x, int to_y, int strict)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    int local_20[8];
+    int delta_index;
+    int delta_slot;
+    int entity_cell_x;
+    int entity_cell_y;
+    uint32_t width;
+    uint32_t source_index;
+    uint32_t dest_index;
+    uint32_t flags;
+    uint32_t block_relief;
+    uint32_t special;
+    uint32_t idle_gate;
+    uint32_t walk_gate;
+    uint32_t state_mask;
+    uint32_t answer;
+    uint8_t* voxels;
+    uint8_t* source;
+    uint8_t* dest;
+    LevelState* level;
+
+    level = g_active_level_retail;
+    width = level->word[LEVEL_OFF_WIDTH / 4u];
+    voxels = (uint8_t*)(uintptr_t)
+        level->word[LEVEL_OFF_VOXELS / 4u];
+    source_index = (uint32_t)from_y * width + (uint32_t)from_x;
+    source = voxels + source_index * 0x48u;
+    dest_index = (uint32_t)to_y * width + (uint32_t)to_x;
+    dest = voxels + dest_index * 0x48u;
+    special = 0u;
+    walk_gate = 1u;
+    idle_gate = 0u;
+    state_mask = 0u;
+    answer = 1u;
+    local_20[0] = 0;
+    local_20[3] = 0;
+    local_20[1] = -1;
+    local_20[2] = 1;
+    local_20[4] = 0;
+    local_20[5] = 1;
+    local_20[6] = -1;
+    local_20[7] = 0;
+    if (entity != NULL &&
+        (entity_stats_word_get(entity) & 0x20000u) != 0u &&
+        entity->owner_36c == NULL) {
+        return 0;
+    }
+    delta_slot = 0;
+    delta_index = 0;
+    for (;;) {
+        if (local_20[delta_slot * 2] + to_x == from_x &&
+            to_y + local_20[delta_slot * 2 + 1] == from_y) {
+            break;
+        }
+        ++delta_slot;
+        ++delta_index;
+        if (delta_slot >= 4)
+            break;
+    }
+    if (entity != NULL) {
+        if (entity->type == 0x0b)
+            return 0;
+        block_relief = entity_capability_flags_get(entity) & 0x200u;
+        special = entity_stats_word_get(entity) & 1u;
+        idle_gate = entity_stats_word_get(entity) & 0x1000000u;
+        walk_gate = entity_stats_word_get(entity) & 0x2000000u;
+        state_mask = entity_state_flags_get(entity) & 0x200000u;
+        if (strict == 0) {
+            entity_cell_x = 0;
+            entity_cell_y = 0;
+            entity_position_to_terrain_cell(entity, level, &entity_cell_x,
+                                            &entity_cell_y);
+            if (from_x == entity_cell_x && from_y == entity_cell_y)
+                return 1;
+        }
+    }
+    else {
+        block_relief = 0u;
+    }
+
+    if (source[2] == 9) {
+        if (idle_gate == 0u)
+            return 0;
+    }
+    else if (walk_gate == 0u) {
+        return 0;
+    }
+    if (source[2] == 6 && state_mask == 0u &&
+        (*(uint32_t*)(source + 8) & 0x200u) == 0u) {
+        return 0;
+    }
+    flags = *(uint32_t*)(source + 8);
+    if ((flags & 0x400u) != 0u)
+        return 0;
+    if (strict != 0 && (flags & 0x40u) != 0u)
+        return 0;
+    if (block_relief == 0u && (source[0x0c] & 4u) != 0u)
+        return 0;
+    if (special == 0u) {
+        if ((flags & 8u) == 0u)
+            return 0;
+    }
+    else {
+        if ((flags & 0x10u) != 0u)
+            answer = 3u;
+        if (source[0] == 0u)
+            return 0;
+        if ((flags & 0x10u) != 0u) {
+            uint32_t above_index = ((uint32_t)from_y - 1u) * width +
+                                   (uint32_t)from_x;
+            uint8_t* above = voxels + above_index * 0x48u;
+            if (source[2] == 6 || above[2] == 6)
+                return 0;
+            if (source[2] == 7 || above[2] == 7)
+                return 0;
+        }
+        if (delta_index == 0) {
+            if ((flags & 0x2000u) != 0u ||
+                (*(uint32_t*)(dest + 8) & 0x2000u) != 0u) {
+                answer = 2u;
+            }
+        }
+    }
+    if (to_x != from_x && to_y != from_y) {
+        uint32_t cross_a = (uint32_t)to_y * width + (uint32_t)from_x;
+        uint32_t cross_b = (uint32_t)from_y * width + (uint32_t)to_x;
+        uint8_t* cell_a = voxels + cross_a * 0x48u;
+        uint8_t* cell_b = voxels + cross_b * 0x48u;
+        if ((*(uint32_t*)(cell_a + 8) & 8u) != 0u &&
+            (*(uint32_t*)(cell_b + 8) & 8u) != 0u) {
+            return 2;
+        }
+    }
+    return (int)answer;
+#else
     return terrain_cell_route_and_occupancy_check(
         entity, level_current_owner_get(), from_x, from_y, to_x, to_y,
         strict);
+#endif
 }
 
 int first_free_neighbor_cell_pick(const struct EntitySlot* entity,
@@ -9953,6 +13022,65 @@ int first_free_neighbor_cell_pick_current(const struct EntitySlot* entity,
                                           const int* cell_in,
                                           int* cell_out, int mode)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    int local_20[8];
+    uint32_t local_24;
+    uint32_t direction;
+    uint32_t width;
+    uint32_t height;
+    uint32_t index;
+    uint32_t flags;
+    int x;
+    int y;
+    int result;
+    LevelState* level;
+    uint8_t* voxels;
+
+    local_20[1] = -1;
+    local_20[6] = -1;
+    ++s_neighbor_pick_rotation;
+    local_20[0] = 0;
+    local_20[2] = 1;
+    local_20[3] = 0;
+    local_20[4] = 0;
+    local_20[5] = 1;
+    local_20[7] = 0;
+    local_24 = 0u;
+    level = g_active_level_retail;
+    do {
+        direction = (s_neighbor_pick_rotation + local_24) & 3u;
+        x = local_20[direction * 2u] + cell_in[0];
+        y = local_20[direction * 2u + 1u] + cell_in[1];
+        if (mode != 0) {
+            width = level->word[LEVEL_OFF_WIDTH / 4u];
+            height = level->word[LEVEL_OFF_HEIGHT / 4u];
+            if ((uint32_t)x < width - 1u &&
+                (uint32_t)y < height - 1u) {
+                voxels = (uint8_t*)(uintptr_t)
+                    level->word[LEVEL_OFF_VOXELS / 4u];
+                index = (uint32_t)y * width + (uint32_t)x;
+                flags = *(uint32_t*)(voxels + 8u + index * 0x48u);
+                if ((flags & 0x10u) != 0u && (flags & 8u) == 0u) {
+                    ++local_24;
+                    if (local_24 > 3u)
+                        return 0;
+                    continue;
+                }
+            }
+        }
+        result = terrain_cell_route_and_occupancy_check_current(
+            entity, x, y, x, y, 0);
+        level = g_active_level_retail;
+        if (result != 0) {
+            cell_out[0] = x;
+            cell_out[1] = y;
+            return 1;
+        }
+        ++local_24;
+        if (local_24 > 3u)
+            return 0;
+    } while (1);
+#else
     LevelState* level;
     int probe;
 
@@ -9986,6 +13114,7 @@ int first_free_neighbor_cell_pick_current(const struct EntitySlot* entity,
         }
     }
     return 0;
+#endif
 }
 
 /* The six-dword render snapshot is a separate zero-filled global block in

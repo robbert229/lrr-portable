@@ -317,6 +317,10 @@ void        level_destroy(LevelState* s);
 
 /* Grid size left in the block after a successful load. */
 LevelState* level_current_owner_get(void);
+void* level_current_terrain_get(int cell_x, int cell_y); /* FUN_00431570 */
+/* Shared predug pool used by nearest-coordinate and spawn paths. */
+extern int s_predug_coordinates[20][2];
+extern unsigned int s_predug_coordinate_count;
 int level_width(const LevelState* s);
 int level_height(const LevelState* s);
 
@@ -340,6 +344,9 @@ uint8_t* level_voxel(const LevelState* s, int x, int y);
  * clears without freeing, exactly as the corpus leak loop does. */
 
 #define LEVEL_MAP_SLOT_COUNT 2000 /* the corpus table length */
+
+/* FUN_00480170: load a file through the level map-slot table. */
+int map_open2(const char* path, int32_t* size_out);
 
 /* FUN_004893f0: zero every slot pair. */
 void level_map_slots_reset(void);
@@ -452,6 +459,9 @@ void terrain_detail_enable_set(void* terrain, uint32_t index, int enabled);
  * the unsigned cell values from SurfaceMap; invalid cells answer zero. */
 int terrain_surface_height_get(const void* terrain, int x, int y);
 float terrain_blocksize_get(const void* terrain);
+/* TerrainCreate's retained height multiplier (RoughLevel), independent of
+ * block spacing. Zero and negative values are valid and returned unchanged. */
+float terrain_height_scale_get(const void* terrain);
 int terrain_cell_world_center_xy_get(const void* terrain, int x, int y,
                                      float position_xy[2]); /* FUN_0044f640 */
 int terrain_cell_world_center_xy_transform(const void* terrain, int x, int y,
@@ -505,6 +515,7 @@ const void* terrain_cell_variant_window_get(const void* terrain);
  * clears. Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_tile_mark(LevelState* s, int cx, int cy, int set);
 void level_tile_mark_current(const int cell_xy[2], int set);
+void level_tile_mark_current_target(const int cell_xy[2], int set);
 
 /* FUN_00432e00 read side: does the cell currently carry the OCCUPIED
  * reservation flag? The wave-flood pathfinder consults it for its blocked
@@ -534,13 +545,16 @@ uint8_t terrain_cell_material_get_current(int x, int y);
  * bit (0x10) set and the blocked gate (flag bit 3) clear. Bounds-checked
  * the corpus way (as unsigned, against dim-1). */
 int level_cell_walkable_flag(const LevelState* s, int cx, int cy);
+int terrain_cell_walkable_flag_current(uint32_t cx, uint32_t cy);
 
 /* FUN_00432c20: the wave-spawn flag bit. Returns the masked word. */
 uint32_t level_cell_flag_wave(const LevelState* s, int cx, int cy);
+uint32_t terrain_cell_flag_wave_current(int cx, int cy);
 
 /* FUN_00432c50: terrain speed class — 0 when flag bit 0x200000 is set,
  * otherwise the low two terrain-type bits + 1. */
 int level_cell_speed_class(const LevelState* s, int cx, int cy);
+int terrain_cell_speed_class_current(const int cell_xy[2]);
 
 /* Explicit-level flag-byte view; returns the masked 0xc0 bits. The target
  * returns a normalized boolean through the active-level pair below. */
@@ -562,6 +576,7 @@ int terrain_cell_state_equals_six_current(const int cell_xy[2]);
 /* FUN_00432f40: the two low terrain bits (0x18) clear — cells OUTSIDE
  * the grid-minus-one gate count as clear (as in the corpus). */
 int level_cell_mask18_clear(const LevelState* s, int cx, int cy);
+int terrain_cell_mask18_clear_current(uint32_t cx, uint32_t cy);
 
 /* FUN_00432f90: flag bit 4 inside the grid-minus-one gate (0 outside).
  * The mapped entry uses the live level; the explicit-level form is an
@@ -601,6 +616,7 @@ int level_cell_mask_180000(const LevelState* s, int cx, int cy);
 /* FUN_00433120: raise (set nonzero) or clear flag bit 0x10000000.
  * Bounds-guarded (the corpus writes OOB for bad coords). */
 void level_cell_flag_10000000_set(LevelState* s, int cx, int cy, int set);
+void terrain_cell_flag_10000000_set_current(const int cell_xy[2], int set);
 
 /* Raise (set nonzero) or clear flag bit 0x800000 — the cell-command
  * issuer's terrain half marks the cell through this leaf (finding 451);
@@ -619,21 +635,26 @@ uint32_t level_cell_secondary_flag_100(const LevelState* s, int cx, int cy);
 /* FUN_004322d0: the pathfinder "visited" mark — secondary bit 1. */
 uint32_t level_cell_visited_flag(const LevelState* s, int cx, int cy);
 
-/* FUN_004323c0 / FUN_004325d0: clear / raise secondary bit 0 (the
- * pair the "SetAndTrack" corpus variants wrap; the tracking queue is
- * a separate unported seam). Bounds-guarded (corpus writes OOB). */
+/* Explicit-level secondary bit 0 helpers. The mapped retail clear routine
+ * takes a coordinate pair and uses the active level global. */
 void level_cell_secondary_bit0_clear(LevelState* s, int cx, int cy);
+void terrain_cell_secondary_bit0_clear_current(const int cell_xy[2]);
+/* Explicit-level set helper. */
 void level_cell_secondary_bit0_set(LevelState* s, int cx, int cy);
+void terrain_cell_secondary_bit0_set_current(const int cell_xy[2]);
 
 /* FUN_004324d0 / FUN_00432520: secondary bit 3 (the flag-8 pair). */
 void level_cell_secondary_bit8_set(LevelState* s, int cx, int cy, int set);
 uint32_t level_cell_secondary_flag_8(const LevelState* s, int cx, int cy);
+void terrain_cell_secondary_flag_8_set_current(int cx, int cy, int set);
+uint32_t terrain_cell_secondary_flag_8_current(int cx, int cy);
 
 /* FUN_00432aa0: mode 0 reads the flag word's 0x400 mask; mode nonzero
  * answers whether EITHER the 0x400 flag or the secondary byte's bit 4
  * marks the cell. */
 uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
                                      int mode);
+uint32_t terrain_cell_occupied_or_flag_current(int cx, int cy, int mode);
 
 /* CellFourNeighborWalkCheck (FUN_0041f740): when the center lacks the
  * 0xc0 marker, all four cardinal neighbors must lack occupied/secondary
@@ -642,24 +663,31 @@ uint32_t level_cell_occupied_or_flag(const LevelState* s, int cx, int cy,
  * accessors (the corpus uses global state and unchecked cell addresses). */
 int cell_four_neighbor_walk_check(const LevelState* s, int cx, int cy);
 
-/* FUN_00432b00 / FUN_00432b50 / FUN_00432d90: bounded single-bit reads
- * (flags 0x800, 0x8, 0x20) — 0 outside the dim-1 gate. */
+/* Explicit-level bounded single-bit reads retained for portable callers. */
 uint32_t level_cell_flag_800_bounded(const LevelState* s, int cx, int cy);
 uint32_t level_cell_flag_8_bounded(const LevelState* s, int cx, int cy);
 uint32_t level_cell_flag_20_bounded(const LevelState* s, int cx, int cy);
+/* Retail target forms read the active level and apply unsigned dim-1 gates. */
+uint32_t terrain_cell_flag_800_bounded_current(uint32_t cx, uint32_t cy);
+uint32_t terrain_cell_flag_8_bounded_current(uint32_t cx, uint32_t cy);
+uint32_t terrain_cell_flag_20_bounded_current(uint32_t cx, uint32_t cy);
 
-/* FUN_00432b90: the unchecked state byte (record+2, signed char) is 8,
- * 10 or 11. */
+/* Explicit-level version of the unchecked state-byte classifier. */
 int level_cell_type_is_8_or_10_or_11(const LevelState* s, int cx, int cy);
+int terrain_cell_type_is_8_or_10_or_11_current(int cx, int cy);
 
-/* FUN_00432dd0: the unchecked entity-reservation bit (flag 0x8000000) —
- * the read side of the level_tile_mark flag. Returns the masked word. */
+/* Explicit-level entity-reservation bit reader. */
 uint32_t level_cell_flag_reserved(const LevelState* s, int cx, int cy);
+/* Retail target form reads the active level from a coordinate-pair pointer. */
+uint32_t terrain_cell_flag_reserved_current(const int cell_xy[2]);
 
 /* FUN_00432710: raise (set nonzero) or clear flag bit 0x80000. The
  * corpus twin that raises 0x40000000 additionally refreshes the cell
  * queues; this one is an unchecked pure leaf. */
 void level_cell_flag_80000_set(LevelState* s, int cx, int cy, int set);
+/* Retail target form takes a coordinate pair and an unchecked set selector. */
+void terrain_cell_flag_80000_clear_or_set_current(const int cell_xy[2],
+                                                   int set);
 
 /* FUN_004332c0: current-level unchecked pair-pointer byte return. */
 uint8_t terrain_cell_record_byte3_current(int x, int y);
@@ -1133,7 +1161,7 @@ int lava_erosion_stage_slot_find_free(int* slot_out); /* 0x0040e990 */
  * counts down from 6 and rides the timing scale times 25; the corpus
  * strides the grid and timing word blindly — the port guards the cell
  * (deviation: no grid/no level answers zero). */
-float lava_erosion_delay_from_cell(const LevelState* s, int x, int y);
+float lava_erosion_delay_from_cell(const int xy[2]);
 
 /* LavaErosionNeighborCheck (FUN_0040f000): when the seed cell's +2 type
  * byte reads 6, sweep the four cardinal neighbours; a neighbour that is
@@ -1385,10 +1413,9 @@ void grid_count_table_slot_poke(int row, int column, int slot, int table,
                                 uint32_t value);
 
 /* --- the global-object field band (2026-10-24; findings 295/324/392) --------
- * The corpus's DAT_005560d4 word fields, threaded through the port's
- * LevelState (the corpus reads the DAT global itself; a NULL level answers
- * as the corpus's NULL global does — no effect). The field meanings stay
- * unresolved; these are the faithful arithmetic the corpus runs.
+ * Mapped entries access the active DAT_005560d4 level directly. Explicit-
+ * level adapters remain for callers and tests using a non-active LevelState.
+ * Field meanings remain unresolved.
  * GlobalObjectField8CIncrement @ FUN_0041f870
  * GlobalObjectField8CSubtract @ FUN_0041f880
  * GlobalObjectField98Add @ FUN_0041f8a0
@@ -1396,10 +1423,14 @@ void grid_count_table_slot_poke(int row, int column, int slot, int table,
  * LevelStateField9CAdd @ FUN_0041f920
  * GlobalObjectField94Increment @ FUN_0041f980
  * GlobalObjectFieldA8Increment @ FUN_0041f990 */
-void global_object_field8c_increment(LevelState* s);
-void global_object_field8c_subtract(LevelState* s, int amount);
-void global_object_field98_add(LevelState* s, int amount);
+void global_object_field8c_increment(void);
+void global_object_field8c_increment_for_level(LevelState* s);
+void global_object_field8c_subtract(int amount);
+void global_object_field8c_subtract_for_level(LevelState* s, int amount);
+void global_object_field98_add(int amount);
+void global_object_field98_add_for_level(LevelState* s, int amount);
 void global_object_field98_clear(LevelState* s);
+void global_object_field98_clear_current(void); /* FUN_0041f8c0 */
 
 /* EntityAvailableResourceSpend (FUN_00438720, findings 251/372): the +0x1f8
  * gate zeroes the amount when raised; then, when the no-op callback probe
@@ -1411,9 +1442,12 @@ int entity_available_resource_spend(LevelState* level, int amount,
                                     const void* resource_hint);
                                                 /* FUN_00438720 */
 
-void level_state_field9c_add(LevelState* s, int amount);
-void global_object_field94_increment(LevelState* s);
-void global_object_fielda8_increment(LevelState* s);
+void level_state_field9c_add(int amount);
+void level_state_field9c_add_for_level(LevelState* s, int amount);
+void global_object_field94_increment(void);
+void global_object_field94_increment_for_level(LevelState* s);
+void global_object_fielda8_increment(void);
+void global_object_fielda8_increment_for_level(LevelState* s);
 uint32_t level_field8c_get(const LevelState* s);
 uint32_t level_field98_get(const LevelState* s);
 uint32_t level_field9c_get(const LevelState* s);
@@ -1633,10 +1667,10 @@ void entity_cell_path_effects_apply_current(struct EntitySlot* entity);
  * from (from_x, from_y) to (to_x, to_y)? Answers 1 (move allowed / on
  * site), 2 (blocked-but-cornered), 3 (open-cell promotion) or 0. The
  * cardinal delta walk pins the corpus's slot-0 quirk; the entity's own
- * tile rides the level_cell_of round seam. strict != 0 skips the
- * on-site answer and rejects the +0x40 flag. Cell reads route through
- * level_voxel (the corpus strides the 0x48 window blind; deviations
- * documented in the .cpp).
+ * tile check uses the entity-position adapter. strict != 0 skips the
+ * on-site answer and rejects the +0x40 flag. The mapped current-level entry
+ * uses the retail six-argument ABI and direct voxel reads on x86; the
+ * explicit-level helper retains guarded sidecar reads for port callers.
  * FirstFreeNeighborCellPick (FUN_00431c70): the four cardinal neighbours
  * in counter-rotated order; mode 1 skips neighbours that are already
  * in-bounds, open and unblocked. The counter is own storage (the corpus
@@ -1648,8 +1682,7 @@ int terrain_cell_route_and_occupancy_check(const struct EntitySlot* entity,
                                            int to_x, int to_y, int strict);
 int terrain_cell_route_and_occupancy_check_current(
     const struct EntitySlot* entity, int from_x, int from_y,
-    int to_x, int to_y, int strict);
-                                                /* FUN_00431da0 */
+    int to_x, int to_y, int strict); /* FUN_00431da0 */
 int first_free_neighbor_cell_pick(const struct EntitySlot* entity,
                                   const LevelState* s, const int* cell_in,
                                   int* cell_out, int mode);

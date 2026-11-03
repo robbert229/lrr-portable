@@ -288,9 +288,7 @@ void camera_registry_probe(EngineContext* ctx)
     }
 }
 
-/* CurrentLevelGet (FUN_00431560): return the active level-state root.
- * The port carries the original global through EngineContext. */
-// FUNCTION: LEGORR 0x00431560
+/* Camera-context state root used by the reconstructed camera helpers. */
 EngineState* camera_state_root(EngineContext* ctx)
 {
     return ctx != NULL ? ctx->state_block : NULL;

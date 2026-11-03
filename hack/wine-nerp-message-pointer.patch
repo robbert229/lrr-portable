@@ -1,0 +1,11 @@
+--- a/src/game/tutorial_hud.cpp
++++ b/src/game/tutorial_hud.cpp
+@@ -1280,7 +1280,7 @@
+             ++s_nerp_runtime.message_count;
+         /* The queue owns copied text and numeric token ids. The overlay API
+          * accepts the numeric token request; it never receives a PE pointer. */
+-        advisor_text_request_setup(token_index, args[1]);
++        advisor_text_request_setup_text(token_text, args[1]);
+         s_nerp_runtime.message_timer =
+             s_nerp_runtime.message_timer_values[0];
+         *result_out = 1u;

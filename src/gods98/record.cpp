@@ -228,10 +228,24 @@ void render_resource_instance_pool_reset(void)
 
 /* RecordField14Get (FUN_00435f0b). */
 // FUNCTION: LEGORR 0x00435f0b
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t record_field14_get(const void* record)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        mov eax, dword ptr [eax + 14h]
+        pop ebp
+        ret
+    }
+}
+#else
 uint32_t record_field14_get(const void* record)
 {
     return rec_dword(record, 0x14);
 }
+#endif
 
 /* ObjectField10Get (FUN_004850e0). */
 // FUNCTION: LEGORR 0x004850e0
@@ -254,6 +268,20 @@ int record_field_d8_equals_one(const void* record)
 /* ReadIndexedPairSlotDword (FUN_00471a20): base + i*8 + j*4, exactly as
  * the corpus computes it. */
 // FUNCTION: LEGORR 0x00471a20
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t read_indexed_pair_slot_dword(
+    const void* base, uint32_t i, uint32_t j)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov ecx, dword ptr [esp + 4]
+        lea edx, dword ptr [ecx + eax*8]
+        mov eax, dword ptr [esp + 0ch]
+        mov eax, dword ptr [edx + eax*4]
+        ret
+    }
+}
+#else
 uint32_t read_indexed_pair_slot_dword(const void* base, uint32_t i,
                                       uint32_t j)
 {
@@ -262,6 +290,7 @@ uint32_t read_indexed_pair_slot_dword(const void* base, uint32_t i,
     __builtin_memcpy(&value, (const char*)base + offset, sizeof(value));
     return value;
 }
+#endif
 
 /* VelocitySlotPrimaryObjectGet / SecondaryObjectGet (FUN_00471a40 /
  * FUN_00471a50): indexed slot at +0x18 / +0x24. */
@@ -295,14 +324,35 @@ void velocity_slot_vector_read(const void* record, float out[3],
     __builtin_memcpy(out, (const char*)record + off, 3u * sizeof(uint32_t));
 }
 
-/* EntityVelocityStateRecordGet (FUN_004712c0): the corpus loads the type,
- * decrements it, then subtracts three for the type-4 arm (`dec eax; je`,
- * `sub eax,3; je`). Keep the NULL record/link guards pinned by test_record;
- * direct field loads and the same subtract/compare sequence remove helper
- * calls and track the corpus's non-NULL path. */
+/* EntityVelocityStateRecordGet (FUN_004712c0): the x86 body mirrors the
+ * unchecked type decrement/subtract and embedded-base returns. The portable
+ * path retains the NULL record/link guards pinned by test_record. */
 // FUNCTION: LEGORR 0x004712c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked)
+#endif
 void* entity_velocity_state_record_get(const void* record)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [ecx]
+        dec eax
+        je velocity_type_one
+        sub eax, 3
+        je velocity_type_four
+        xor eax, eax
+        ret
+    velocity_type_four:
+        mov eax, dword ptr [ecx + 18h]
+        add eax, 0a0h
+        ret
+    velocity_type_one:
+        mov eax, dword ptr [ecx + 0ch]
+        add eax, 138h
+        ret
+    }
+#else
     if (record == NULL) {
         return NULL; /* deviation: the corpus strides the record blindly */
     }
@@ -320,32 +370,41 @@ void* entity_velocity_state_record_get(const void* record)
                              : NULL; /* deviation: corpus strides blindly */
     }
     return NULL; /* deviation: the corpus walks a null base */
+#endif
 }
 
-/* EntityVelocitySlotValueGet (FUN_004712f0): the float word at
- * +0x98 + slot*4 of the state record. The corpus widens through x87;
- * the bit pattern rides unchanged. Deviation: the corpus strides a null
- * base. */
+/* EntityVelocitySlotValueGet (FUN_004712f0): the x86 body reads the float
+ * at +0x98 + slot*4 without a null or slot guard. The portable path keeps
+ * its guarded fallback. */
 // FUNCTION: LEGORR 0x004712f0
 float entity_velocity_slot_value_get(const void* record, int slot)
 {
     void* base = entity_velocity_state_record_get(record);
+#if defined(_MSC_VER) && defined(_M_IX86)
+    return *(const float*)((const char*)base + 0x98u + slot * 4);
+#else
     if (base == NULL || slot < 0) {
         return 0.0f; /* deviation */
     }
     return rec_float(base, 0x98u + (size_t)slot * 4u);
+#endif
 }
 
-/* EntityVelocitySlotValueSet (FUN_00471310): the store counterpart. */
+/* EntityVelocitySlotValueSet (FUN_00471310): the x86 body stores the raw
+ * value word at +0x98 + slot*4 without guards. */
 // FUNCTION: LEGORR 0x00471310
-void entity_velocity_slot_value_set(void* record, uint32_t value, int slot)
+void entity_velocity_slot_value_set(void* record, float value, int slot)
 {
     void* base = entity_velocity_state_record_get(record);
+#if defined(_MSC_VER) && defined(_M_IX86)
+    *(float*)((char*)base + 0x98u + slot * 4) = value;
+#else
     if (base == NULL || slot < 0) {
         return; /* deviation */
     }
-    __builtin_memcpy((char*)base + 0x98u + (size_t)slot * 4u, &value,
-                     sizeof value);
+    __builtin_memcpy((char*)base + 0x98u + (size_t)slot * 4u,
+                     &value, sizeof value);
+#endif
 }
 
 /* EntityFlag80Set (FUN_00473b20) — see record.hpp. */
@@ -397,12 +456,24 @@ int interpolated_z_within_bounds(const void* record_a, const void* record_b,
 /* CameraRotationGet (FUN_00436b79): the float at +0x84 (opaque-record
  * reader; see header). */
 // FUNCTION: LEGORR 0x00436b79
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) float camera_rotation_get(const void* camera)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        fld dword ptr [eax + 84h]
+        pop ebp
+        ret
+    }
+}
+#else
 float camera_rotation_get(const void* camera)
 {
-    float rotation;
-    __builtin_memcpy(&rotation, (const char*)camera + 0x84, sizeof(rotation));
-    return rotation;
+    return *(const float*)((const char*)camera + 0x84);
 }
+#endif
 
 /* MapCellToWorldCenter (FUN_0044f640, finding 225): the descriptor's
  * int fields convert to float at the use site — reproduced exactly,
@@ -411,14 +482,24 @@ float camera_rotation_get(const void* camera)
 int map_cell_to_world_center(const void* map, uint32_t cell_x,
                              uint32_t cell_y, float* world_x, float* world_y)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    const uint32_t* fields = (const uint32_t*)map;
+    if (cell_x < fields[0] && cell_y < fields[1]) {
+        *world_x = *(const float*)((const char*)map + 0x10) * 0.5f +
+            (float)cell_x * *(const float*)((const char*)map + 0x10) +
+            *(const float*)((const char*)map + 0x18);
+        *world_y = *(const float*)((const char*)map + 0x1c) -
+            (*(const float*)((const char*)map + 0x10) * 0.5f +
+             (float)cell_y * *(const float*)((const char*)map + 0x10));
+        return 1;
+    }
+    return 0;
+#else
     const uint32_t width = rec_dword(map, 0x00);
     const uint32_t height = rec_dword(map, 0x04);
-    const int32_t scale_i = (int32_t)rec_dword(map, 0x10);
-    const int32_t origin_x_i = (int32_t)rec_dword(map, 0x18);
-    const int32_t origin_y_i = (int32_t)rec_dword(map, 0x1C);
-    const float scale = (float)scale_i;
-    const float origin_x = (float)origin_x_i;
-    const float origin_y = (float)origin_y_i;
+    const float scale = rec_float(map, 0x10);
+    const float origin_x = rec_float(map, 0x18);
+    const float origin_y = rec_float(map, 0x1C);
 
     if (cell_x < width && cell_y < height) {
         if (world_x != NULL) {
@@ -430,6 +511,7 @@ int map_cell_to_world_center(const void* map, uint32_t cell_x,
         return 1;
     }
     return 0;
+#endif
 }
 
 /* TaskFlagBitQuery (FUN_00408970, findings 366/465). */
@@ -482,6 +564,27 @@ uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell)
 /* ObjectPoolListHeadGet (FUN_00456c30, finding 374): the corpus's exact
  * in-range bounds (-1 < index < 0x37) over the +0x114 slot table. */
 // FUNCTION: LEGORR 0x00456c30
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) int object_pool_list_head_get(const void* pools, int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        test eax, eax
+        jl short object_pool_list_head_get_zero
+        cmp eax, 37h
+        jge short object_pool_list_head_get_zero
+        mov ecx, dword ptr [esp + 4]
+        mov edx, dword ptr [ecx + eax*4 + 114h]
+        test edx, edx
+        je short object_pool_list_head_get_zero
+        mov eax, edx
+        ret
+    object_pool_list_head_get_zero:
+        xor eax, eax
+        ret
+    }
+}
+#else
 int object_pool_list_head_get(const void* pools, int index)
 {
     if (-1 < index && index < 0x37) {
@@ -493,6 +596,7 @@ int object_pool_list_head_get(const void* pools, int index)
     }
     return 0;
 }
+#endif
 
 /* ModelChildRenderEligibilityCheck (FUN_00483a70): the two-bit render
  * gate (finding 431). NULL answers "not eligible" — the corpus would
@@ -510,15 +614,32 @@ int model_child_render_eligibility_check(const void* object)
     return 0;
 }
 
-/* EntityTypeFlagBit1Get (FUN_0046d330, findings 357/432): the corpus
- * reads +0x1e8 with one mov, no helper call, so the load is direct. */
+/* The mapped EntityTypeFlagBit1Get body follows the corpus's unchecked
+ * +0x1e8 load; the public helper retains its null guard. */
 // FUNCTION: LEGORR 0x0046d330
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t entity_type_flag_bit1_get_target(const void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 01e8h]
+        and eax, 0ffh
+        shr eax, 1
+        and eax, 1
+        ret
+    }
+}
+#else
+uint32_t entity_type_flag_bit1_get_target(const void* record)
+{
+    return (*(const uint32_t*)((const char*)record + 0x1e8) & 0xffu) >> 1 & 1u;
+}
+#endif
+
 uint32_t entity_type_flag_bit1_get(const void* record)
 {
-    if (record == NULL) {
-        return 0u; /* pinned deviation: the corpus loads blindly */
-    }
-    return (*(const uint32_t*)((const char*)record + 0x1e8) & 0xffu) >> 1 & 1u;
+    if (record == NULL) return 0u;
+    return entity_type_flag_bit1_get_target(record);
 }
 
 /* ------------------------------------------------------------------ *
@@ -533,6 +654,16 @@ uint32_t object_record_field11c_get(const void* record)
 }
 
 // FUNCTION: LEGORR 0x0047a540
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t object_field_be4_dword_get(const void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 0be4h]
+        ret
+    }
+}
+#else
 uint32_t object_field_be4_dword_get(const void* record)
 {
     uint32_t value;
@@ -542,8 +673,19 @@ uint32_t object_field_be4_dword_get(const void* record)
     __builtin_memcpy(&value, (const char*)record + 0xbe4, sizeof(value));
     return value;
 }
+#endif
 
 // FUNCTION: LEGORR 0x0046cf80
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t entity_type_mask_get(const void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 12ch]
+        ret
+    }
+}
+#else
 uint32_t entity_type_mask_get(const void* record)
 {
     if (record == NULL) {
@@ -551,8 +693,19 @@ uint32_t entity_type_mask_get(const void* record)
     }
     return *(const uint32_t*)((const char*)record + 300);
 }
+#endif
 
 // FUNCTION: LEGORR 0x00482210
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t pointer_value_get(const void* pointed)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax]
+        ret
+    }
+}
+#else
 uint32_t pointer_value_get(const void* pointed)
 {
     if (pointed == NULL) {
@@ -560,6 +713,7 @@ uint32_t pointer_value_get(const void* pointed)
     }
     return *(const uint32_t*)pointed;
 }
+#endif
 
 // FUNCTION: LEGORR 0x00408850
 uint32_t scene_object_flags_get(const void* scene_object)
@@ -596,18 +750,34 @@ uint32_t scene_object_wrapped_pointer_get(const void* wrapped)
     return value;
 }
 
-/* SceneObjectFlagBit3Get (FUN_00473ba0): one corpus mov on +0x14, so the
- * load is direct. animation_object_visibility_get can hand us a NULL +4
- * handle through the guarded rec_ptr; NULL answers zero (the corpus
- * would crash on it). */
+/* The mapped SceneObjectFlagBit3Get body follows the corpus's unchecked
+ * +0x14 load; animation_object_visibility_get retains its null-safe path. */
 // FUNCTION: LEGORR 0x00473ba0
-uint32_t scene_object_flag_bit3_get(const void* scene_object)
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t scene_object_flag_bit3_get_target(
+    const void* scene_object)
 {
-    if (scene_object == NULL) {
-        return 0u; /* pinned deviation: the corpus loads blindly */
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 14h]
+        and eax, 0ffh
+        shr eax, 3
+        and eax, 1
+        ret
     }
+}
+#else
+uint32_t scene_object_flag_bit3_get_target(const void* scene_object)
+{
     return (*(const uint32_t*)((const char*)scene_object + 0x14) & 0xffu)
            >> 3 & 1u;
+}
+#endif
+
+uint32_t scene_object_flag_bit3_get(const void* scene_object)
+{
+    if (scene_object == NULL) return 0u;
+    return scene_object_flag_bit3_get_target(scene_object);
 }
 
 // FUNCTION: LEGORR 0x00406980
@@ -648,27 +818,108 @@ static void renderer_object_update_from_record(void* record,
 }
 
 // FUNCTION: LEGORR 0x00406c00
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void renderer_object_update_from_record_field64(
+    void* record, int enabled)
+{
+    __asm {
+        mov edx, dword ptr [esp + 8]
+        xor eax, eax
+        test edx, edx
+        sete al
+        push 0
+        push eax
+        mov eax, dword ptr [esp + 0ch]
+        mov ecx, dword ptr [eax + 4]
+        mov edx, dword ptr [eax + 64h]
+        push ecx
+        push edx
+        call resource_list_update_matching_key
+        add esp, 10h
+        ret
+    }
+}
+#else
 void renderer_object_update_from_record_field64(void* record, int enabled)
 {
     renderer_object_update_from_record(record, 0x64u, enabled,
                                        (void*)(uintptr_t)(enabled == 0));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00406c30
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void renderer_object_update_from_record_field68(
+    void* record, int enabled)
+{
+    __asm {
+        mov edx, dword ptr [esp + 8]
+        xor eax, eax
+        test edx, edx
+        sete al
+        push 0
+        push eax
+        mov eax, dword ptr [esp + 0ch]
+        mov ecx, dword ptr [eax + 4]
+        mov edx, dword ptr [eax + 68h]
+        push ecx
+        push edx
+        call resource_list_update_matching_key
+        add esp, 10h
+        ret
+    }
+}
+#else
 void renderer_object_update_from_record_field68(void* record, int enabled)
 {
     renderer_object_update_from_record(record, 0x68u, enabled,
                                        (void*)(uintptr_t)(enabled == 0));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00406c60
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void renderer_object_update_from_record_field6c(
+    void* record, int enabled, void* update_value)
+{
+    __asm {
+        mov eax, dword ptr [esp + 0ch]
+        xor ecx, ecx
+        push eax
+        mov eax, dword ptr [esp + 0ch]
+        test eax, eax
+        mov eax, dword ptr [esp + 8]
+        sete cl
+        mov edx, dword ptr [eax + 4]
+        mov eax, dword ptr [eax + 6ch]
+        push ecx
+        push edx
+        push eax
+        call resource_list_update_matching_key
+        add esp, 10h
+        ret
+    }
+}
+#else
 void renderer_object_update_from_record_field6c(void* record, int enabled,
                                                 void* update_value)
 {
     renderer_object_update_from_record(record, 0x6cu, enabled, update_value);
 }
+#endif
 
 // FUNCTION: LEGORR 0x004877d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t resource_entry_id_get(const void* entry)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        xor eax, eax
+        mov ax, word ptr [ecx + 2]
+        ret
+    }
+}
+#else
 uint32_t resource_entry_id_get(const void* entry)
 {
     if (entry != NULL) {
@@ -678,6 +929,7 @@ uint32_t resource_entry_id_get(const void* entry)
     }
     return 0u;
 }
+#endif
 
 // FUNCTION: LEGORR 0x004850c0
 uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
@@ -692,6 +944,24 @@ uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
 }
 
 // FUNCTION: LEGORR 0x00482780
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t indexed_record_flag6c_bit0_get(
+    const void* record, int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, eax
+        shl ecx, 3
+        sub ecx, eax
+        mov eax, dword ptr [edx + 8]
+        shl ecx, 4
+        mov eax, dword ptr [ecx + eax + 6ch]
+        and eax, 1
+        ret
+    }
+}
+#else
 uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
 {
     const char* base = (const char*)rec_ptr(record, 0x08);
@@ -701,8 +971,36 @@ uint32_t indexed_record_flag6c_bit0_get(const void* record, int index)
     const size_t off = (size_t)index * 0x70u + 0x6cu;
     return rec_dword(base + off, 0) & 1u;
 }
+#endif
 
 // FUNCTION: LEGORR 0x004827a0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void indexed_record_flag6c_bit0_set(
+    void* record, int index, int set)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 8]
+        mov eax, ecx
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 4]
+        shl eax, 4
+        mov edx, dword ptr [ecx + 8]
+        mov ecx, dword ptr [esp + 0ch]
+        add eax, edx
+        test ecx, ecx
+        mov ecx, dword ptr [eax + 6ch]
+        je short indexed_record_flag6c_bit0_clear
+        or ecx, 1
+        mov dword ptr [eax + 6ch], ecx
+        ret
+    indexed_record_flag6c_bit0_clear:
+        and ecx, 0fffffffeh
+        mov dword ptr [eax + 6ch], ecx
+        ret
+    }
+}
+#else
 void indexed_record_flag6c_bit0_set(void* record, int index, int set)
 {
     char* base = (char*)rec_ptr(record, 0x08);
@@ -714,8 +1012,28 @@ void indexed_record_flag6c_bit0_set(void* record, int index, int set)
     flags = set != 0 ? flags | 1u : flags & ~1u;
     rec_dword_put(base, off, flags);
 }
+#endif
 
 // FUNCTION: LEGORR 0x004827d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void record_flag2c_bit0_set(void* record, int set)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        test eax, eax
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [eax + 2ch]
+        je short record_flag2c_bit0_clear
+        or ecx, 1
+        mov dword ptr [eax + 2ch], ecx
+        ret
+    record_flag2c_bit0_clear:
+        and ecx, 0fffffffeh
+        mov dword ptr [eax + 2ch], ecx
+        ret
+    }
+}
+#else
 void record_flag2c_bit0_set(void* record, int set)
 {
     if (record == NULL) {
@@ -728,21 +1046,43 @@ void record_flag2c_bit0_set(void* record, int set)
         rec_dword_put(record, 0x2c, rec_dword(record, 0x2c) & ~1u);
     }
 }
+#endif
 
+/* IndexedRecordDataAddressGet (FUN_00483400) is the retail unchecked
+ * address calculation. Keep null handling in the portable accessor below. */
 // FUNCTION: LEGORR 0x00483400
+#if defined(_MSC_VER) && defined(_M_IX86)
+static __declspec(naked) void* indexed_record_data_address_get_target(
+    const void* record, int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, eax
+        shl ecx, 3
+        sub ecx, eax
+        mov eax, dword ptr [edx + 8]
+        shl ecx, 4
+        lea eax, dword ptr [eax + ecx + 10h]
+        ret
+    }
+}
+#else
+static void* indexed_record_data_address_get_target(const void* record,
+                                                     int index)
+{
+    char* base = (char*)*(void* const*)((const char*)record + 0x08);
+    return base + index * 0x70 + 0x10;
+}
+#endif
+
 void* indexed_record_data_address_get(const void* record, int index)
 {
-    if (record == NULL) {
-        return NULL; /* pinned deviation: the corpus loads blindly */
-    }
-    char* base = (char*)*(void* const*)((const char*)record + 0x08);
-    if (base == NULL) {
-        return NULL;
-    }
-    /* Corpus arithmetic: `(index << 3) - index`, then `<< 4` makes
-     * index*0x70 (`shl ecx,3; sub ecx,eax; shl ecx,4`); add +0x10. */
-    const size_t scaled = (((size_t)index << 3) - (size_t)index) << 4;
-    return (void*)(base + scaled + 0x10u);
+    void* base;
+    if (record == NULL) return NULL;
+    base = *(void* const*)((const char*)record + 0x08);
+    if (base == NULL) return NULL;
+    return indexed_record_data_address_get_target(record, index);
 }
 
 // FUNCTION: LEGORR 0x00408e10
@@ -768,6 +1108,17 @@ int count_matching_coordinates_in_list(const void* manager,
 /* AviPlayerReadyGet (FUN_0047ed80, findings 185/414): the readiness
  * byte at +0x99 (byte-safe — the corpus reads it as a raw byte). */
 // FUNCTION: LEGORR 0x0047ed80
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t avi_player_ready_get(const void* movie)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        xor eax, eax
+        mov al, byte ptr [ecx + 99h]
+        ret
+    }
+}
+#else
 uint32_t avi_player_ready_get(const void* movie)
 {
     if (movie != NULL) {
@@ -777,10 +1128,21 @@ uint32_t avi_player_ready_get(const void* movie)
     }
     return 0u;
 }
+#endif
 
 /* GameFileSystemTypeGet (FUN_0047fe20, findings 234/404): the handle's
  * leading type dword. */
 // FUNCTION: LEGORR 0x0047fe20
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t game_file_system_type_get(const void* handle)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax]
+        ret
+    }
+}
+#else
 uint32_t game_file_system_type_get(const void* handle)
 {
     if (handle == NULL) {
@@ -788,6 +1150,7 @@ uint32_t game_file_system_type_get(const void* handle)
     }
     return *(const uint32_t*)handle;
 }
+#endif
 
 /* IndexedRecordTransformCopyIn (FUN_00483240, findings 372/431): the
  * inline-block copy into the indexed record's data slot. Deviation: the
@@ -811,23 +1174,45 @@ int world_to_terrain_cell_bounds_check(const void* map, float world_x,
                                        float world_y, int* cell_x,
                                        int* cell_y, float* subcell)
 {
-    const int cx = (int)world_x; /* __ftol: truncate toward zero */
-    const int cy = (int)world_y;
+    int cx;
+    int cy;
+#if defined(_MSC_VER) && defined(_M_IX86)
+    cx = (int)((world_x - *(const float*)((const char*)map + 0x18)) /
+               *(const float*)((const char*)map + 0x10));
+    cy = (int)((*(const float*)((const char*)map + 0x1c) - world_y) /
+               *(const float*)((const char*)map + 0x10));
+#else
+    if (map == NULL) {
+        if (cell_x != NULL) {
+            *cell_x = (int)world_x;
+        }
+        if (cell_y != NULL) {
+            *cell_y = (int)world_y;
+        }
+        return 0;
+    }
+    cx = (int)((world_x - rec_float(map, 0x18)) / rec_float(map, 0x10));
+    cy = (int)((rec_float(map, 0x1c) - world_y) / rec_float(map, 0x10));
+#endif
     if (cell_x != NULL) {
         *cell_x = cx;
     }
     if (cell_y != NULL) {
         *cell_y = cy;
     }
-    const int w = (int)rec_dword(map, 0x00);
-    const int h = (int)rec_dword(map, 0x04);
-    if (map == NULL || !(-1 < cx && cx < w && -1 < cy && cy < h)) {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    if (!(-1 < cx && cx < *(const int*)map && -1 < cy &&
+          cy < ((const int*)map)[1])) {
+#else
+    if (!(-1 < cx && cx < (int)rec_dword(map, 0x00) && -1 < cy &&
+          cy < (int)rec_dword(map, 0x04))) {
+#endif
         return 0;
     }
     if (subcell != NULL) {
-        const float bs = (float)(int)rec_dword(map, 0x10);
-        const float ox = (float)(int)rec_dword(map, 0x18);
-        const float oy = (float)(int)rec_dword(map, 0x1C);
+        const float bs = *(const float*)((const char*)map + 0x10);
+        const float ox = *(const float*)((const char*)map + 0x18);
+        const float oy = *(const float*)((const char*)map + 0x1C);
         float px = (world_x - ((float)cx * bs + ox)) / (bs * 0.5f);
         float py = -((world_y - (oy - (float)cy * bs)) / (bs * 0.5f));
         if (1.0f < px) {
@@ -850,9 +1235,8 @@ int world_to_terrain_cell_bounds_check(const void* map, float world_x,
 int terrain_grid_pick(const void* map, float world_x, float world_y,
                       int* cell_x, int* cell_y)
 {
-    float unused_subcell = 0.0f;
     return world_to_terrain_cell_bounds_check(
-        map, world_x, world_y, cell_x, cell_y, &unused_subcell);
+        map, world_x, world_y, cell_x, cell_y, (float*)&cell_y);
 }
 
 // FUNCTION: LEGORR 0x0044f810
@@ -887,6 +1271,34 @@ void grid_coordinate_clamp_and_store(const void* map, float world_x,
 uint32_t terrain_world_point_to_cell(const void* map, const float* point,
                                      float* cell_out, float* offset_out)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    const void* map_source = map;
+    const float* point_source = point;
+    int picked;
+    picked = terrain_grid_pick(map, point[0], point[1],
+                               (int*)&map, (int*)&point);
+    if (picked != 0) {
+        const int cell_x = (int)(uint32_t)map;
+        const int cell_y = (int)(uint32_t)point;
+        if (cell_out != NULL) {
+            cell_out[0] = (float)cell_x;
+            cell_out[1] = (float)cell_y;
+        }
+        if (offset_out != NULL) {
+            float center_x;
+            float center_y;
+            float inverse_scale;
+            map_cell_to_world_center(map_source, (uint32_t)cell_x,
+                                     (uint32_t)cell_y, &center_x, &center_y);
+            offset_out[0] = point_source[0] - center_x;
+            offset_out[1] = point_source[1] - center_y;
+            inverse_scale = 1.0f /
+                *(const float*)((const char*)map_source + 0x10);
+            offset_out[0] = inverse_scale * offset_out[0] - -0.5f;
+            offset_out[1] = inverse_scale * offset_out[1] - -0.5f;
+        }
+    }
+#else
     int cx = 0, cy = 0;
     if (point != NULL
         && world_to_terrain_cell_bounds_check(map, point[0], point[1],
@@ -897,16 +1309,17 @@ uint32_t terrain_world_point_to_cell(const void* map, const float* point,
         }
         if (offset_out != NULL) {
             float wx = 0.0f, wy = 0.0f;
+            float inverse_scale;
             map_cell_to_world_center(map, (uint32_t)cx, (uint32_t)cy,
                                      &wx, &wy);
-            float scale_f = 0.0f;
-            __builtin_memcpy(&scale_f, (const char*)map + 0x10,
-                             sizeof(scale_f));
-            const float inv = 1.0f / scale_f;
-            offset_out[0] = inv * (point[0] - wx) + 0.5f;
-            offset_out[1] = inv * (point[1] - wy) + 0.5f;
+            offset_out[0] = point[0] - wx;
+            offset_out[1] = point[1] - wy;
+            inverse_scale = 1.0f / rec_float(map, 0x10);
+            offset_out[0] = inverse_scale * offset_out[0] - -0.5f;
+            offset_out[1] = inverse_scale * offset_out[1] - -0.5f;
         }
     }
+#endif
     return 0u;
 }
 
@@ -924,6 +1337,18 @@ void indexed_flag_value_set_one(void* record, uint32_t index)
 }
 
 // FUNCTION: LEGORR 0x0044f220
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void scene_object_resource_handle_set(void* object,
+                                                        uint32_t handle)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [esp + 8]
+        mov dword ptr [ecx + 2ch], eax
+        ret
+    }
+}
+#else
 void scene_object_resource_handle_set(void* object, uint32_t handle)
 {
     if (object == NULL) {
@@ -931,9 +1356,28 @@ void scene_object_resource_handle_set(void* object, uint32_t handle)
     }
     __builtin_memcpy((char*)object + 0x2cu, &handle, sizeof(handle));
 }
+#endif
 
 /* --- entity record-field leaves (see record.hpp) --------------------------- */
 // FUNCTION: LEGORR 0x00435ef4
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void record_fields_4_and_14_set(
+    void* record, uint32_t value_a, uint32_t value_b)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        mov ecx, dword ptr [ebp + 0ch]
+        mov dword ptr [eax + 4], ecx
+        mov edx, dword ptr [ebp + 8]
+        mov eax, dword ptr [ebp + 10h]
+        mov dword ptr [edx + 14h], eax
+        pop ebp
+        ret
+    }
+}
+#else
 void record_fields_4_and_14_set(void* record, uint32_t value_a,
                                 uint32_t value_b)
 {
@@ -943,8 +1387,29 @@ void record_fields_4_and_14_set(void* record, uint32_t value_a,
     __builtin_memcpy((char*)record + 0x04, &value_a, sizeof(value_a));
     __builtin_memcpy((char*)record + 0x14, &value_b, sizeof(value_b));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00435f32
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void entity_fields_a0_a4_store_a8_clear(
+    void* record, uint32_t value_a, uint32_t value_b)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        mov eax, dword ptr [ebp + 8]
+        mov ecx, dword ptr [ebp + 0ch]
+        mov dword ptr [eax + 0a0h], ecx
+        mov edx, dword ptr [ebp + 8]
+        mov eax, dword ptr [ebp + 10h]
+        mov dword ptr [edx + 0a4h], eax
+        mov ecx, dword ptr [ebp + 8]
+        mov dword ptr [ecx + 0a8h], 0
+        pop ebp
+        ret
+    }
+}
+#else
 void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
                                         uint32_t value_b)
 {
@@ -956,8 +1421,35 @@ void entity_fields_a0_a4_store_a8_clear(void* record, uint32_t value_a,
     __builtin_memcpy((char*)record + 0xa4, &value_b, sizeof(value_b));
     __builtin_memcpy((char*)record + 0xa8, &zero, sizeof(zero));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00435d91
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void entity_b8_bit3_set_or_clear(void* record, int set)
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+        cmp dword ptr [ebp + 0ch], 0
+        je entity_b8_bit3_clear
+        mov eax, dword ptr [ebp + 8]
+        mov cl, byte ptr [eax + 0b8h]
+        or cl, 8
+        mov edx, dword ptr [ebp + 8]
+        mov byte ptr [edx + 0b8h], cl
+        jmp entity_b8_bit3_done
+    entity_b8_bit3_clear:
+        mov eax, dword ptr [ebp + 8]
+        mov cl, byte ptr [eax + 0b8h]
+        and cl, 0f7h
+        mov edx, dword ptr [ebp + 8]
+        mov byte ptr [edx + 0b8h], cl
+    entity_b8_bit3_done:
+        pop ebp
+        ret
+    }
+}
+#else
 void entity_b8_bit3_set_or_clear(void* record, int set)
 {
     if (record == NULL) {
@@ -970,6 +1462,7 @@ void entity_b8_bit3_set_or_clear(void* record, int set)
         *byte = (unsigned char)(*byte & ~8u);
     }
 }
+#endif
 
 /* --- the record-field write band (see record.hpp) --------------------------- */
 // FUNCTION: LEGORR 0x00462ab0
@@ -977,12 +1470,9 @@ void entity_b8_bit3_set_or_clear(void* record, int set)
 __declspec(naked) void record_field18_set(void* record, uint32_t value)
 {
     __asm {
-        mov eax, dword ptr [esp + 4]
-        test eax, eax
-        je record_field18_done
         fld dword ptr [esp + 8]
+        mov eax, dword ptr [esp + 4]
         fstp dword ptr [eax + 18h]
-    record_field18_done:
         ret
     }
 }
@@ -997,6 +1487,17 @@ void record_field18_set(void* record, uint32_t value)
 #endif
 
 // FUNCTION: LEGORR 0x00462ac0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void record_flags_24_or(void* record, uint32_t flags)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [esp + 8]
+        or dword ptr [eax + 24h], ecx
+        ret
+    }
+}
+#else
 void record_flags_24_or(void* record, uint32_t flags)
 {
     if (record == NULL) {
@@ -1004,8 +1505,20 @@ void record_flags_24_or(void* record, uint32_t flags)
     }
     *(uint32_t*)((char*)record + 0x24) |= flags;
 }
+#endif
 
 // FUNCTION: LEGORR 0x0045d8a0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void object_field14_set(void* record, uint32_t value)
+{
+    __asm {
+        fld dword ptr [esp + 8]
+        mov eax, dword ptr [esp + 4]
+        fstp dword ptr [eax + 14h]
+        ret
+    }
+}
+#else
 void object_field14_set(void* record, uint32_t value)
 {
     if (record == NULL) {
@@ -1013,6 +1526,7 @@ void object_field14_set(void* record, uint32_t value)
     }
     __builtin_memcpy((char*)record + 0x14, &value, sizeof(value));
 }
+#endif
 
 // FUNCTION: LEGORR 0x00451c30
 void linked_record_field4_clear(void* record)
@@ -1032,6 +1546,22 @@ void linked_record_field4_clear(void* record)
 
 /* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
 // FUNCTION: LEGORR 0x00439930
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void copy_two_dword_pair_to_outputs(
+    const void* record, uint32_t* out_a, uint32_t* out_b)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov edx, dword ptr [esp + 8]
+        mov ecx, dword ptr [eax]
+        mov dword ptr [edx], ecx
+        mov ecx, dword ptr [esp + 0ch]
+        mov eax, dword ptr [eax + 4]
+        mov dword ptr [ecx], eax
+        ret
+    }
+}
+#else
 void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
                                     uint32_t* out_b)
 {
@@ -1041,8 +1571,21 @@ void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
     __builtin_memcpy(out_a, (const char*)record, 4);
     __builtin_memcpy(out_b, (const char*)record + 4, 4);
 }
+#endif
 
 // FUNCTION: LEGORR 0x00473da0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void scene_object_owner_set(void* scene_object,
+                                              uint32_t owner)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [esp + 8]
+        mov dword ptr [ecx + 20h], eax
+        ret
+    }
+}
+#else
 void scene_object_owner_set(void* scene_object, uint32_t owner)
 {
     if (scene_object == NULL) {
@@ -1050,21 +1593,45 @@ void scene_object_owner_set(void* scene_object, uint32_t owner)
     }
     __builtin_memcpy((char*)scene_object + 0x20, &owner, sizeof(owner));
 }
+#endif
 
 /* --- the record primitive band (see record.hpp) ----------------------------- */
 // FUNCTION: LEGORR 0x00482350
+#if defined(_MSC_VER) && defined(_M_IX86)
+static __declspec(naked) void indexed_record_field64_set_target(
+    void* record, int index, uint32_t value)
+{
+    __asm {
+        mov eax, dword ptr [esp + 8]
+        mov edx, dword ptr [esp + 4]
+        mov ecx, eax
+        shl ecx, 3
+        sub ecx, eax
+        mov eax, dword ptr [edx + 8]
+        mov edx, dword ptr [esp + 0ch]
+        shl ecx, 4
+        mov dword ptr [eax + ecx + 64h], edx
+        ret
+    }
+}
+#else
+static void indexed_record_field64_set_target(void* record, int index,
+                                               uint32_t value)
+{
+    char* base = *(char**)((char*)record + 8);
+    *(uint32_t*)(base + index * 0x70 + 100) = value;
+}
+#endif
+
 void indexed_record_field64_set(void* record, int index, uint32_t value)
 {
-    void* base = NULL;
-    if (record == NULL) {
-        return; /* deviation: the corpus reads blindly */
-    }
+    void* base;
+    if (record == NULL) return;
     __builtin_memcpy(&base, (char*)record + 8, sizeof(base));
     if (base == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
+        return;
     }
-    __builtin_memcpy((char*)base + 100 + (size_t)index * 0x70,
-                     &value, sizeof(value));
+    indexed_record_field64_set_target(record, index, value);
 }
 
 /* The corpus reloads the base slot for each store and dereferences it
@@ -1109,31 +1676,42 @@ void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
     __builtin_memcpy((char*)record + 0x10, &fy, sizeof(fy));
 }
 
-/* The corpus loads +0x820/+0x824 in order and writes both outputs blindly;
- * only the record-NULL guard remains as a test-pinned deviation. */
+/* The mapped body follows the corpus's blind record and output-pointer
+ * accesses. */
 // FUNCTION: LEGORR 0x00485a00
-void object_state_pair_get(const void* record, uint32_t* out_a,
-                           uint32_t* out_b)
+void object_state_pair_get_target(const void* record, uint32_t* out_a,
+                                  uint32_t* out_b)
 {
-    if (record == NULL) {
-        return; /* deviation: the corpus dereferences blindly; test pins this */
-    }
     *out_a = *(const uint32_t*)((const char*)record + 0x820);
     *out_b = *(const uint32_t*)((const char*)record + 0x824);
 }
 
+/* Preserve the test-pinned null-record behavior of the portable API. */
+void object_state_pair_get(const void* record, uint32_t* out_a,
+                           uint32_t* out_b)
+{
+    if (record != NULL) object_state_pair_get_target(record, out_a, out_b);
+}
+
 /* --- the scene-visibility wrapper band (see record.hpp) ---------------------
- * The renderer visibility leaf remains an observation seam. FUN_00473b40 is
- * a separate DDiScene render-lock toggle implemented below. */
+ * The wrappers route through the render-lock toggle. Adapter paths record
+ * their calls at the seam; directly mapped target wrappers retain the retail
+ * call sequence. */
 static int s_scene_vis_calls;
 static void* s_scene_vis_last_obj;
 static int s_scene_vis_last_flag;
 
-static void scene_visibility_hook_call(void* object, int flag)
+static void scene_visibility_observation_record(void* object, int flag)
 {
     ++s_scene_vis_calls;
     s_scene_vis_last_obj = object;
     s_scene_vis_last_flag = flag;
+}
+
+static void scene_visibility_hook_call(void* object, int flag)
+{
+    scene_visibility_observation_record(object, flag);
+    scene_render_lock_toggle(object, flag);
 }
 
 void scene_visibility_hook_reset(void)
@@ -1237,17 +1815,51 @@ void indexed_surface_entries_restore(void)
 
 /* SurfaceVisibilitySet (FUN_00464720) — record +0 handle through the leaf. */
 // FUNCTION: LEGORR 0x00464720
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void surface_visibility_set(const void* record,
+                                             uint32_t flag)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [esp + 8]
+        push eax
+        mov edx, dword ptr [ecx]
+        push edx
+        call scene_render_lock_toggle
+        add esp, 8
+        ret
+    }
+}
+#else
 void surface_visibility_set(const void* record, uint32_t flag)
 {
-    scene_visibility_hook_call(rec_ptr(record, 0x00), (int)flag);
+    scene_render_lock_toggle(rec_ptr(record, 0x00), (int)flag);
 }
+#endif
 
 /* AnimationObjectVisibilitySet (FUN_00406c90) — animation record +4. */
 // FUNCTION: LEGORR 0x00406c90
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void animation_object_visibility_set(const void* anim,
+                                                        uint32_t flag)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 4]
+        mov eax, dword ptr [esp + 8]
+        push eax
+        mov edx, dword ptr [ecx + 4]
+        push edx
+        call scene_render_lock_toggle
+        add esp, 8
+        ret
+    }
+}
+#else
 void animation_object_visibility_set(const void* anim, uint32_t flag)
 {
-    scene_visibility_hook_call(rec_ptr(anim, 0x04), (int)flag);
+    scene_render_lock_toggle(rec_ptr(anim, 0x04), (int)flag);
 }
+#endif
 
 /* SceneObjectPairApplyMode (FUN_00408670) — the corpus blindly loads the +4
  * object and +0x7c partner. Copy native-width port pointer slots inline to
@@ -1259,11 +1871,11 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
 {
     void* object;
     __builtin_memcpy(&object, (const char*)record + 0x04, sizeof(object));
-    scene_visibility_hook_call(object, (int)flag);
+    scene_render_lock_toggle(object, (int)flag);
     void* partner;
     __builtin_memcpy(&partner, (const char*)record + 0x7c, sizeof(partner));
     if (partner != NULL) {
-        scene_visibility_hook_call(partner, (int)flag);
+        scene_render_lock_toggle(partner, (int)flag);
     }
 }
 
@@ -1272,6 +1884,52 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag)
  * channel slots use the corpus offsets; rec_ptr preserves this port's
  * native-width pointer-slot convention. */
 // FUNCTION: LEGORR 0x00473B40
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void scene_render_lock_toggle(void* scene_object,
+                                                int enabled)
+{
+    __asm {
+        mov ecx, dword ptr [esp + 8]
+        push esi
+        mov esi, dword ptr [esp + 8]
+        mov eax, dword ptr [esi + 14h]
+        and eax, 8
+        test ecx, ecx
+        je scene_render_lock_toggle_disable_check
+        test eax, eax
+        jne scene_render_lock_toggle_disable_gate
+        mov eax, dword ptr [esi + 4]
+        mov ecx, dword ptr [esi + 8]
+        push eax
+        push ecx
+        call render_interface_pair_update
+        mov eax, dword ptr [esi + 14h]
+        add esp, 8
+        or al, 8
+        mov dword ptr [esi + 14h], eax
+        pop esi
+        ret
+    scene_render_lock_toggle_disable_gate:
+        test ecx, ecx
+        jne scene_render_lock_toggle_done
+    scene_render_lock_toggle_disable_check:
+        test eax, eax
+        je scene_render_lock_toggle_done
+        mov edx, dword ptr [esi + 4]
+        mov eax, dword ptr [esi]
+        push edx
+        push eax
+        call render_interface_pair_update
+        mov eax, dword ptr [esi + 14h]
+        add esp, 8
+        and al, 0f7h
+        mov dword ptr [esi + 14h], eax
+    scene_render_lock_toggle_done:
+        pop esi
+        ret
+    }
+}
+#else
 void scene_render_lock_toggle(void* scene_object, int enabled)
 {
     uint32_t flags;
@@ -1291,15 +1949,16 @@ void scene_render_lock_toggle(void* scene_object, int enabled)
         rec_dword_put(scene_object, 0x14, flags & ~8u);
     }
 }
+#endif
 
 /* SceneResourceVisibilitySet (FUN_0046d2c0): raise (+0x1e8 |= 2) or clear
  * (&= ~2) the record's visibility word, then route the raw flag through the
- * observation seam — unconditionally on the +8 object, on +0xc when it
+ * visibility operation — unconditionally on the +8 object, on +0xc when it
  * is set, and on every live child in the +0x10 window counted at +0x40.
  * Deviations: the corpus's +8/+0xc object fields are adjacent 32-bit
  * dwords, which the port's native-size pointer-slot model cannot carry
  * four bytes apart — the port routes the field values as raw handles,
- * exactly as the corpus does (the helper call remains an observation seam).
+ * exactly as the corpus does (adapter calls are recorded for tests).
  * The children keep the band's native-size stride (the
  * slot-window precedent) walked only to the window's six entries before
  * +0x40 (the corpus strides its dword slots blindly past the count field);
@@ -1379,10 +2038,24 @@ void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
 /* AnimationObjectVisibilityGet (FUN_004086a0) — the +4 object's flag bit 3
  * through the ported getter. */
 // FUNCTION: LEGORR 0x004086a0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t animation_object_visibility_get(const void* anim)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [eax + 4]
+        push ecx
+        call scene_object_flag_bit3_get_target
+        add esp, 4
+        ret
+    }
+}
+#else
 uint32_t animation_object_visibility_get(const void* anim)
 {
     return scene_object_flag_bit3_get(rec_ptr(anim, 0x04));
 }
+#endif
 
 /* SceneAssignEntityOwner (FUN_00408380) — owner store on the +4 object
  * through the ported owner set. */
@@ -2461,10 +3134,68 @@ void indexed_geometry_data_copy_to_output(void* record, int block,
 
 /* IndexedRecordEntryRead (FUN_004821a0) — see record.hpp. */
 // FUNCTION: LEGORR 0x004821a0
-void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
-                               uint32_t* kind_out, uint32_t* count_out,
-                               uint32_t* indices_out)
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void indexed_record_entry_read(
+    void* record, int block, uint32_t* field_out, uint32_t reserved,
+    uint32_t* kind_out, uint32_t* count_out, uint32_t* indices_out)
 {
+    __asm {
+        mov ecx, dword ptr [esp + 8]
+        push esi
+        mov eax, ecx
+        push edi
+        shl eax, 3
+        sub eax, ecx
+        mov ecx, dword ptr [esp + 0ch]
+        shl eax, 4
+        mov esi, dword ptr [ecx + 8]
+        mov ecx, dword ptr [esp + 14h]
+        add eax, esi
+        test ecx, ecx
+        je short indexed_record_entry_read_kind
+        mov edx, dword ptr [eax + 4]
+        mov dword ptr [ecx], edx
+    indexed_record_entry_read_kind:
+        mov ecx, dword ptr [esp + 1ch]
+        test ecx, ecx
+        je short indexed_record_entry_read_count
+        mov dword ptr [ecx], 3
+    indexed_record_entry_read_count:
+        mov ecx, dword ptr [esp + 20h]
+        test ecx, ecx
+        je short indexed_record_entry_read_indices
+        mov edx, dword ptr [eax]
+        mov dword ptr [ecx], edx
+    indexed_record_entry_read_indices:
+        mov edx, dword ptr [esp + 24h]
+        test edx, edx
+        je short indexed_record_entry_read_done
+        mov esi, dword ptr [eax]
+        xor ecx, ecx
+        test esi, esi
+        jbe short indexed_record_entry_read_done
+    indexed_record_entry_read_loop:
+        mov esi, dword ptr [eax + 8]
+        xor edi, edi
+        add edx, 4
+        mov di, word ptr [esi + ecx*2]
+        inc ecx
+        mov dword ptr [edx - 4], edi
+        mov esi, dword ptr [eax]
+        cmp ecx, esi
+        jb short indexed_record_entry_read_loop
+    indexed_record_entry_read_done:
+        pop edi
+        pop esi
+        ret
+    }
+}
+#else
+void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
+                               uint32_t reserved, uint32_t* kind_out,
+                               uint32_t* count_out, uint32_t* indices_out)
+{
+    (void)reserved;
     const char* blk = (const char*)mesh_block(record, block);
     if (blk == NULL) {
         return; /* deviation: the corpus strides a missing table blindly */
@@ -2491,6 +3222,7 @@ void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
         }
     }
 }
+#endif
 
 /* TerrainCellQuadVerticesWrite (FUN_004823e0) — see record.hpp. */
 // FUNCTION: LEGORR 0x004823e0
@@ -2699,48 +3431,61 @@ uint32_t render_object_color_vector_set(void* record, int block, float red,
 }
 
 // FUNCTION: LEGORR 0x00483420
+static uint32_t screen_effect_item_opacity_set_target(void* record, int block,
+                                                      float opacity, int mode)
+{
+    char* const base = *(char**)((char*)record + 0x08);
+    char* const blk = base + (size_t)block * 0x70u;
+    char* const data = (char*)indexed_record_data_address_get_target(record,
+                                                                     block);
+    float v = opacity;
+    uint32_t flags;
+    uint32_t field64;
+    uint32_t field18;
+    if (v < 0.0f) v = 0.0f;
+    if (1.0f < v) v = 1.0f;
+    if (mode != 4) {
+        if (mode == 5) *(float*)(data + 0x44) = v;
+        return 1u;
+    }
+    field64 = *(uint32_t*)(blk + 0x64);
+    field18 = *(uint32_t*)((char*)record + 0x18);
+    flags = *(uint32_t*)(blk + 0x6c) & 0xeff7ffffu;
+    *(uint32_t*)(blk + 0x6c) = flags;
+    if (v == 0.0f) {
+        if (field64 == 0u && (field18 & 0x1c00u) == 0u) goto screen_opacity_flags_done;
+        flags |= 0x10000000u;
+    } else {
+        if (v == 1.0f ||
+            (field64 == 0u && (field18 & 0x1c00u) == 0u)) {
+            goto screen_opacity_flags_done;
+        }
+        flags |= 0x80000u;
+    }
+    *(uint32_t*)(blk + 0x6c) = flags;
+screen_opacity_flags_done:
+    if (field64 != 0u) {
+        if ((field64 & 0xc00u) != 0u) {
+            *(uint32_t*)(blk + 0x6c) |= 0x80000u;
+        }
+        *(float*)(data + 0x10) = v;
+        return 1u;
+    }
+    if ((field18 & 0xc00u) != 0u) {
+        *(uint32_t*)(blk + 0x6c) |= 0x80000u;
+    }
+    *(float*)(data + 0x10) = v;
+    return 1u;
+}
+
 uint32_t screen_effect_item_opacity_set(void* record, int block,
                                         float opacity, int mode)
 {
-    const float v = channel_clamp(opacity);
-    if (mode != 4) {
-        char* data = (char*)indexed_record_data_address_get(record, block);
-        if (mode == 5 && data != NULL) {
-            rec_float_put(data, 0x44, v);
-        }
-        return 1u; /* deviation: the corpus strides a missing window blindly */
-    }
-    char* blk = mesh_block(record, block);
-    char* data = (char*)indexed_record_data_address_get(record, block);
-    if (blk == NULL) {
-        return 1u; /* deviation: the corpus strides the flag word blindly */
-    }
-    const uint32_t w64 = rec_dword(blk, 0x64);
-    const uint32_t w18 = rec_dword(record, 0x18);
-    rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) & 0xeff7ffffu);
-    if (v == 0.0f) {
-        if (w64 != 0u || (w18 & 0x1c00u) != 0u) {
-            rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x10000000u);
-        }
-    } else if (!(v == 1.0f || (w64 == 0u && (w18 & 0x1c00u) == 0u))) {
-        rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x80000u);
-    }
-    if (w64 != 0u) {
-        if ((w64 & 0xc00u) != 0u) {
-            rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x80000u);
-        }
-        if (data != NULL) {
-            rec_float_put(data, 0x10, v);
-        }
-        return 1u;
-    }
-    if ((w18 & 0xc00u) != 0u) {
-        rec_dword_put(blk, 0x6c, rec_dword(blk, 0x6c) | 0x80000u);
-    }
-    if (data != NULL) {
-        rec_float_put(data, 0x10, v);
-    }
-    return 1u;
+    void* base;
+    if (record == NULL) return 1u;
+    base = *(void**)((char*)record + 0x08);
+    if (base == NULL) return 1u;
+    return screen_effect_item_opacity_set_target(record, block, opacity, mode);
 }
 
 /* SceneObjectScalarAdjustByDirection (FUN_004082e0) — see record.hpp. The

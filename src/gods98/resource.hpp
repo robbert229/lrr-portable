@@ -152,15 +152,6 @@ ResourceStream* resource_stream_open(const char* name, int mode,
 int resource_stream_read_at(ResourceStream* stream, uint32_t offset,
                             void* bytes, uint32_t length);
 void resource_stream_close(ResourceStream* stream);
-typedef struct MapOpenOps {
-    void* context;
-    int (*slot_allocate)(void* context, uint32_t size);
-    void* (*slot_get)(void* context, uint32_t slot);
-    void (*slot_release)(void* context, uint32_t slot);
-    void (*progress)(void* context, const char* path, uint32_t size);
-} MapOpenOps;
-int map_open2(const char* path, const MapOpenOps* ops,
-              int32_t* size_out); /* FUN_00480170 */
 typedef struct ResourceFileTokenList {
     uint32_t count;
     char tokens[512][256];

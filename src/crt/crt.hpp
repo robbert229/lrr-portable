@@ -164,7 +164,15 @@ uint32_t find_first_set_bit32(uint32_t value);
 
 /* FUN_0047e7e0: the position-loop bit count again (the corpus's second
  * identical body; kept distinct to mirror the address map). */
-int bit_count32_by_position(uint32_t value);
+#if defined(_MSC_VER)
+#define LEGORRR_CRT_STDCALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define LEGORRR_CRT_STDCALL __attribute__((stdcall))
+#else
+#define LEGORRR_CRT_STDCALL
+#endif
+int LEGORRR_CRT_STDCALL bit_count32_by_position(uint32_t value);
+#undef LEGORRR_CRT_STDCALL
 
 /* VC5 LIBC.LIB supplies its exact three-dword zero test on MSVC. */
 #if !defined(_MSC_VER)
@@ -407,6 +415,7 @@ float global_float_field_00556f00_get(void);
  * returns it. NULL answers zero and stores nothing (documented
  * deviation; corpus callers always pass a live pointer). */
 uint32_t global_value_004ff9bc_store_and_return(const void* value);
+uint32_t global_value_004ff9bc_store_and_return_target(const void* value);
 
 /* GlobalCounter_004ff990Increment / GlobalCounter_004ff990Reset
  * (FUN_00454880 / FUN_00454890, findings 386/440): bump / zero the global
@@ -563,9 +572,14 @@ uint32_t global_config_word_peek(void);            /* port hook */
 int  display_width_get(void);
 int  display_height_get(void);
 void display_dimensions_set(int w, int h); /* port hook */
+extern int s_display_w; /* DAT_00505924 */
+extern int s_display_h; /* DAT_00505928 */
 int  request_record_ready_flag4(int index);   /* FUN_0045ab30 */
+int  request_record_ready_flag4_target(int index); /* unchecked target body */
 int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
+int  request_record_ready_flag2_target(int index); /* retail body */
 int  request_record_flag8_is_set(int index);  /* FUN_0045ab90 */
+int  request_record_flag8_is_set_target(int index); /* unchecked target body */
 void request_record_flags_set(int index, uint32_t flags); /* port hook */
 uint32_t request_record_flags_peek(int index); /* port hook */
 void request_record_panel_bounds_peek(int index, float* out_x1,
@@ -972,21 +986,39 @@ uint32_t renderer_word_a_get(void);
 uint32_t renderer_word_b_get(void);
 uint32_t renderer_word_c_get(void);
 void     renderer_word_c_set(uint32_t value);
+extern uint32_t s_renderer_word_a; /* DAT_0076ab24 */
+extern uint32_t s_renderer_word_b; /* DAT_0076ab28 */
 extern uint32_t g_renderer_word_c;      /* DAT_0076ab3c (renderer word C) */
+extern uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
+extern uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */
+extern uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
+extern uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
+extern uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */
 void     renderer_words_set(uint32_t a, uint32_t b, uint32_t c); /* install */
 
 /* GlobalDwordGet (FUN_004065d0): the DAT_0076ac84 global dword. */
 extern uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
+extern void* s_renderer_primary_surface; /* DAT_0076ac88 */
+extern uint32_t s_renderer_window_state_90; /* DAT_0076ac90 */
+extern uint32_t s_renderer_window_state_94; /* DAT_0076ac94 */
+extern uint32_t s_renderer_window_state_9c; /* DAT_0076ac9c */
+extern uint32_t s_renderer_window_state_a4; /* DAT_0076aca4 */
+extern uint32_t s_renderer_window_state_ac; /* DAT_0076acac */
+extern uint32_t s_renderer_window_state_b0; /* DAT_0076acb0 */
+extern uint32_t s_renderer_window_state_b4; /* DAT_0076acb4 */
+extern uint32_t s_renderer_window_state_b8; /* DAT_0076acb8 */
 uint32_t renderer_global_dword_get(void);
 void     renderer_global_dword_set(uint32_t value); /* install */
 
 /* RenderSurfaceSecondaryGet (FUN_004065e0): the DAT_0076ac8c surface word. */
+extern uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
 uint32_t render_surface_secondary_get(void);
 void     render_surface_secondary_set(uint32_t value); /* install */
 
 /* RenderFeatureFlagsGet (FUN_00477f70): the DAT_0050608c feature word. */
 uint32_t render_feature_flags_get(void);
 void     render_feature_flags_set(uint32_t value); /* install */
+extern uint32_t s_render_feature_flags; /* DAT_0050608c */
 
 /* Engine feature word band (2026-10-25): the DAT_00505f84 half-model lives
  * here with install/peek hooks (see crt.cpp; the EngineContext::feature
@@ -994,6 +1026,7 @@ void     render_feature_flags_set(uint32_t value); /* install */
  * low-texture flag setter turns on bit 5 while bit 0x40000 is clear. */
 uint32_t engine_feature_word_peek(void);
 void     engine_feature_word_install(uint32_t value); /* port hook */
+extern uint32_t s_engine_feature_word; /* DAT_00505f84 */
 void     low_texture_flag_set(void);                  /* FUN_00477bd0 */
 
 /* --- integer/string helper band (2026-10-25) -------------------------------

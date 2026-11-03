@@ -18,6 +18,8 @@
 #include "game/render.hpp"
 #include "game/terrain_grid.hpp"
 
+extern uint32_t s_motion_jitter_flags;
+
 namespace unported_ledger_stubs {
 int ledger_stub_00466490_CellSightRayCheckAndFlag(const EntitySlot* observer);
 }
@@ -720,15 +722,13 @@ void simtick_sound_keepalive(EngineContext* c)
 }
 
 /* ---- tranche 8: editor steps (FUN_0044cfa0) ------------------------------ */
-// GLOBAL: LEGORR 0x004eaec8
-static uint32_t s_edit_word = 0;
 static int      s_edit_active = 0;
 static int      s_edit_steps = 0;
 static void     (*s_step_hook)(int) = NULL;
 
 void simtick_set_editor_state(uint32_t word, int active)
 {
-    s_edit_word = word;
+    s_motion_jitter_flags = word;
     s_edit_active = active;
 }
 
@@ -747,7 +747,7 @@ void simtick_editor_steps(EngineContext* c)
     (void)c;
     s_edit_steps = 0;
     /* corpus: if (!(DAT_004eaec8 & 0x100) && DAT_004eadd8) -> five passes. */
-    if (((s_edit_word & 0x100u) == 0) && s_edit_active != 0) {
+    if (((s_motion_jitter_flags & 0x100u) == 0) && s_edit_active != 0) {
         for (int i = 1; i <= 5; ++i) {
             ++s_edit_steps;
             if (s_step_hook != NULL) {
@@ -1412,17 +1412,31 @@ void simtick_render_step(EngineContext* c)
     ++s_post_n;
 }
 
-/* MainSimInteractionAndCellUpdate (FUN_00426520; Findings 474/455) clears
- * the debug bit, resolves the live pointer against the loaded level, then
- * routes a click to entity selection or a move command. The original has
- * several additional cursor modes and HUD/terrain feedback branches; those
- * rely on UI mode globals which have no EngineContext owner yet. The
- * reachable selection path uses the same perspective camera and viewport
- * dimensions as the software scene renderer, rather than guessing a cell
- * from raw screen coordinates. */
+/* MainSimInteractionAndCellUpdate: retain this subsystem and its real
+ * admission gates. Ordinary pointer actions share the frame UI arbiter's
+ * ordered samples and central world owner; raw aggregate presses cannot
+ * bypass UI or emit a second command after the operation queue has drained. */
 // FUNCTION: LEGORR 0x00426520
 void simtick_vu_meter(EngineContext* c, float dt)
 {
+#if defined(LEGORRR_BACKEND_WINAPI)
+    GameContext* game;
+    LevelState* level;
+    int width, height, i;
+    (void)dt;
+    if (c == NULL) return;
+    c->debug &= ~0x400u;
+    if ((c->state & 2u) == 0u || (c->state & 0x100u) != 0u ||
+        c->context_mode != 1 || c->input == NULL) return;
+    game = entity_pool_callback_context_get();
+    level = (LevelState*)c->level_block;
+    if (game == NULL || level == NULL || game->level != level) return;
+    width = display_width_get();
+    height = display_height_get();
+    for (i = 0; i < c->input->pointer_count; ++i)
+        (void)selection_pointer_world_dispatch(game,
+            &c->input->pointer_samples[i], width, height);
+#else
     GameContext* game;
     LevelState* level;
     float cell_x, cell_y;
@@ -1461,6 +1475,7 @@ void simtick_vu_meter(EngineContext* c, float dt)
     else if (selection_count(game) != 0) {
         (void)selection_cmd_move(game, cell_x, cell_y);
     }
+#endif
 }
 
 /* FUN_0046e390: fx-bank ticker — per-entry sub-fx scan with fade/clamp. */
@@ -1559,13 +1574,16 @@ void simtick_directsound_listener_view_set(int view)
 void simtick_route_position_blocked_state_set(int blocked)
 {
     if (blocked != 0) {
-        s_edit_word = (s_edit_word & ~0x400u) | 0x200u;
+        s_motion_jitter_flags = (s_motion_jitter_flags & ~0x400u) | 0x200u;
         return;
     }
-    s_edit_word &= ~0x1200u; /* bits 9 and 12; bit 10 survives */
+    s_motion_jitter_flags &= ~0x1200u; /* bits 9 and 12; bit 10 survives */
 }
 
-uint32_t simtick_route_position_state_peek(void) { return s_edit_word; }
+uint32_t simtick_route_position_state_peek(void)
+{
+    return s_motion_jitter_flags;
+}
 
 /* GlobalUIFlagsClearBits12 (FUN_0045b610) — see simtick.hpp. */
 // FUNCTION: LEGORR 0x0045b610
@@ -1589,7 +1607,7 @@ static float s_xform_config[3];    /* DAT_004eae74 role */
 void simtick_scene_position_reset_and_effect_motion_cancel(void)
 {
     __builtin_memcpy(s_xform_config, s_xform_current, sizeof s_xform_config);
-    s_edit_word &= 0xffffff7fu;
+    s_motion_jitter_flags &= 0xffffff7fu;
 }
 
 void simtick_scene_transform_current_set(const float xyz[3])
@@ -1617,7 +1635,6 @@ void simtick_vector_tolerance_install(const float xyz[3])
     }
 }
 
-// FUNCTION: LEGORR 0x0044d9a0
 int simtick_vector_within_axis_tolerance(const float xyz[3])
 {
     if (xyz == NULL) {

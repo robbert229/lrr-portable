@@ -64,6 +64,8 @@ static LevelCellKindGrid* s_active_cell_kind_grid =
     &s_empty_cell_kind_grid;
 #define s_map_cell_record_grid (s_active_cell_kind_grid->retail_records)
 #define s_map_cell_record_level (s_active_cell_kind_grid->owner)
+// GLOBAL: LEGORR 0x005560d4
+struct LevelState* g_active_level_retail;
 #define s_grid_cell_object_heads (s_active_cell_kind_grid->object_heads)
 #define s_grid_cell_object_chunks (s_active_cell_kind_grid->chunks)
 #define s_grid_cell_object_free (s_active_cell_kind_grid->free_nodes)
@@ -198,10 +200,16 @@ void map_cell_record_grid_release(void* level)
     if (level == NULL) return;
     grid = (LevelCellKindGrid*)
         ((struct LevelState*)level)->ptr_cell_kind_grid;
-    if (grid == NULL || grid->owner != level) return;
+    if (grid == NULL || grid->owner != level) {
+        if (g_active_level_retail == level)
+            g_active_level_retail = NULL;
+        return;
+    }
     level_cell_kind_grid_storage_release(grid);
-    if (s_active_cell_kind_grid == grid)
+    if (s_active_cell_kind_grid == grid) {
         s_active_cell_kind_grid = &s_empty_cell_kind_grid;
+        g_active_level_retail = NULL;
+    }
     ((struct LevelState*)level)->ptr_cell_kind_grid = NULL;
     free(grid);
 }
@@ -212,13 +220,17 @@ void map_cell_record_grid_release(void* level)
 void map_cell_record_grid_release_current(void)
 {
     LevelCellKindGrid* grid = s_active_cell_kind_grid;
-    if (grid == NULL || grid == &s_empty_cell_kind_grid) return;
+    if (grid == NULL || grid == &s_empty_cell_kind_grid) {
+        g_active_level_retail = NULL;
+        return;
+    }
     if (grid->owner != NULL &&
         grid->owner->ptr_cell_kind_grid == grid)
         grid->owner->ptr_cell_kind_grid = NULL;
     level_cell_kind_grid_storage_release(grid);
     free(grid);
     s_active_cell_kind_grid = &s_empty_cell_kind_grid;
+    g_active_level_retail = NULL;
 }
 
 void map_cell_record_grid_activate(void* level)
@@ -228,6 +240,7 @@ void map_cell_record_grid_activate(void* level)
         : NULL;
     s_active_cell_kind_grid = grid != NULL && grid->owner == level
         ? grid : &s_empty_cell_kind_grid;
+    g_active_level_retail = (struct LevelState*)level;
 }
 
 /* MapCellRecordGridInitialize (FUN_0040cdc0): allocate the target's
@@ -240,9 +253,11 @@ void map_cell_record_grid_initialize(void* level)
     size_t bytes;
     if (level == NULL) {
         s_active_cell_kind_grid = &s_empty_cell_kind_grid;
+        g_active_level_retail = NULL;
         return;
     }
     map_cell_record_grid_release(level);
+    g_active_level_retail = (struct LevelState*)level;
     width = *(const uint32_t*)((const unsigned char*)level + 0x14);
     height = *(const uint32_t*)((const unsigned char*)level + 0x18);
     if (height != 0u && width > 0x7fffffffu / height) return;
@@ -293,7 +308,7 @@ void* map_cell_record_grid_get(void)
 
 void* map_cell_record_grid_level_get(void)
 {
-    return s_map_cell_record_level;
+    return g_active_level_retail;
 }
 
 void terrain_cell_neighbor_update_hooks_install(
@@ -782,14 +797,18 @@ int terrain_neighbor_path_check_current(void* actor, uint32_t start_x,
     uint32_t result_goal_y = goal_y;
     int status = 0;
     int target_found = 0;
-    /* Retail starts with the smallest positive float, then truncates to int
-     * and adds one before processing the first frontier. */
-    float iteration_count = 0.0f;
+    /* Count route ENTRIES, including the start, not just frontier edges.
+     * 0x4410f0 writes start at [0] and goal at [count-1]; its 0x440c70
+     * fallback likewise seeds depth 1 and returns 2 for adjacent cells.
+     * The decompile's bit-pattern-1 float seed is ambiguous, but zero here
+     * made an adjacent goal overwrite itself with the start. */
+    float iteration_count = 1.0f;
     float result_count = 0.0f;
     int* route_x;
     int* route_y;
     uint32_t route_length;
     uint32_t current_x, current_y;
+    int route_valid = 1;
     if (out_x == NULL || out_y == NULL || out_count == NULL ||
         !terrain_path_grid_size_get(actor, &width, &height) || width == 0u ||
         height == 0u || width > 65535u || height > 65535u ||
@@ -927,6 +946,9 @@ int terrain_neighbor_path_check_current(void* actor, uint32_t start_x,
                                  (uint32_t)previous_x;
                 previous_xy[0] = previous_x;
                 previous_xy[1] = previous_y;
+                /* Unvisited zero-cost cells are not predecessors. */
+                if (s_terrain_neighbor_path_cost[previous_index] == 0.0f)
+                    continue;
                 difference = current_cost -
                     s_terrain_neighbor_path_cost[previous_index];
                 if ((difference > 0.0f && difference < best_difference) ||
@@ -942,7 +964,10 @@ int terrain_neighbor_path_check_current(void* actor, uint32_t start_x,
                     found_previous = 1;
                 }
             }
-            if (!found_previous) break;
+            if (!found_previous) {
+                route_valid = 0;
+                break;
+            }
             current_x = (uint32_t)best_x;
             current_y = (uint32_t)best_y;
             route_x[index] = best_x;
@@ -952,11 +977,28 @@ int terrain_neighbor_path_check_current(void* actor, uint32_t start_x,
         }
     }
 
-    if (route_length > 1u &&
-        !((route_x[0] == route_x[1] &&
-           abs(route_y[0] - route_y[1]) == 1) ||
-          (route_y[0] == route_y[1] &&
-           abs(route_x[0] - route_x[1]) == 1))) {
+    /* Weighted relaxation can change the number of edges in the best
+     * cost trace. Never return holes, a missing endpoint, or a broken edge.
+     * Retain the reference's existing 0x440c70 fallback for such traces. */
+    if (route_valid) {
+        uint32_t index;
+        for (index = 1u; index < route_length; ++index) {
+            int direction;
+            int edge_x = route_x[index] - route_x[index - 1u];
+            int edge_y = route_y[index] - route_y[index - 1u];
+            if (edge_x == 0 && edge_y == -1) direction = 0;
+            else if (edge_x == 1 && edge_y == 0) direction = 1;
+            else if (edge_x == 0 && edge_y == 1) direction = 2;
+            else if (edge_x == -1 && edge_y == 0) direction = 3;
+            else { route_valid = 0; break; }
+            if (!terrain_path_route_accept(actor, (uint32_t)route_x[index],
+                    (uint32_t)route_y[index], direction)) {
+                route_valid = 0;
+                break;
+            }
+        }
+    }
+    if (!route_valid) {
         uint32_t fallback_count = 0u;
         free(route_x);
         free(route_y);
@@ -1330,7 +1372,8 @@ static int terrain_texture_set_config_load_grid(TerrainTileMeshGrid* grid,
         if (!terrain_tile_mesh_grid_load_level(grid->owner_level, mesh_name))
             return 0;
     }
-    else if (!terrain_tile_mesh_grid_load(grid, mesh_name)) return 0;
+    else if (!terrain_tile_mesh_grid_load(grid, mesh_name))
+        return 0;
     if (roof_name == NULL) return 0;
     /* FUN_00462e60 replaces the globally-owned animated indexed texture and
      * propagates it through that resource owner's slots. It is not a
@@ -2606,6 +2649,31 @@ void terrain_cell_palette_resource_at_grid_position(
 /* TerrainCellPaletteResourceAtGridPosition returns the cell's palette
  * texture handle from the current level's +0x7c resource grid. */
 // FUNCTION: LEGORR 0x00429160
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void* terrain_cell_palette_resource_at_grid_position_current(
+    const int cell_xy[2])
+{
+    __asm {
+        mov ecx, dword ptr [g_active_level_retail]
+        mov edx, dword ptr [esp + 4]
+        push esi
+        mov eax, dword ptr [ecx + 14h]
+        mov esi, dword ptr [edx]
+        imul eax, dword ptr [edx + 4]
+        mov edx, dword ptr [ecx + 0b8h]
+        mov ecx, dword ptr [ecx + 7ch]
+        add eax, esi
+        lea eax, dword ptr [eax + eax*8]
+        mov al, byte ptr [edx + eax*8 + 1]
+        push eax
+        push ecx
+        call packed_grid_cell_value_get
+        add esp, 8
+        pop esi
+        ret
+    }
+}
+#else
 void* terrain_cell_palette_resource_at_grid_position_current(
     const int cell_xy[2])
 {
@@ -2660,6 +2728,7 @@ void* terrain_cell_palette_resource_at_grid_position_current(
     }
 #endif
 }
+#endif
 
 // FUNCTION: LEGORR 0x0044e4d0
 void terrain_grid_vertex_build(TerrainVertexBuildGrid* grid)
@@ -3435,7 +3504,9 @@ void terrain_world_spatial_edge_midpoints_update(LevelState* level)
                 float offset = run->slot_offsets[item * 2u + endpoint];
                 float world_x, world_z;
                 int cell_x, cell_y;
-                if (!scene_render_terrain_cell_vertices_get(
+                /* Cardinal edge indices use physical 00/10/11/01 order,
+                 * independent of the tile triangulation. */
+                if (!scene_render_terrain_cell_vertices_canonical_get(
                         level, (uint32_t)x, (uint32_t)y, vertices)) continue;
                 world_x = (vertices[corner_a][0] +
                            vertices[corner_b][0]) * 0.5f +

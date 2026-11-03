@@ -7,12 +7,12 @@
  * (k = |d|/(|d|+A) interpolation), 3 = free/cruise (velocity-EMA, dirty flag
  * bit 0x10). Requested by the sim-fills tranche 2.
  *
- * The view's *camera handles* (corpus FUN_004754c0/00475500/00475430/
- * 00475470/004755e0) are modeled as position/facing records (the native port
- * has no 3D-world projection yet); the corpus functions are implemented
- * against the record. World-query boundaries (grid pick FUN_0044f6d0,
- * terrain height FUN_0044f940, target blend FUN_0044a070) stay stubs with
- * corpus addresses until level/world data lands.
+ * Portable CameraHandle records hold view-tick position/facing state. They
+ * are separate from the DDiScene interface targets at 0x475430–0x4755e0,
+ * which normalize a scene object and dispatch through its vtable. The native
+ * view still lacks full 3D-world projection; grid pick FUN_0044f6d0 and terrain
+ * height FUN_0044f940 remain world-query boundaries. Entity target pose
+ * resolution is owned by the game entity module and mapped at FUN_0044a070.
  */
 #ifndef LEGORRR_VIEW_HPP
 #define LEGORRR_VIEW_HPP
@@ -438,7 +438,8 @@ float vec2_dist_alt(const float* a, const float* b); /* 2D corpus variant */
 float segment_2d_point_distance(const float* point, const float* start,
                                 const float* end); /* FUN_004089d0 */
 float point_to_polyline_minimum_segment_distance(const float* point,
-                                                 const float* points,
+                                                 const float* first_point,
+                                                 const float* last_point,
                                                  unsigned int segment_count);
 void matrix_rotation_compose_xyz(float* record); /* FUN_0040fb00 */
 /* D3DRMVectorRandom takes one D3DVECTOR* (three adjacent floats). */
@@ -640,6 +641,8 @@ void ddiscene_scene_object_attach_or_unlink(void* pair_record,
                                             void* source_pair_record);
 void scene_object_transform_matrix_set(void* object, uint32_t mode,
                                        const float* matrix);
+void scene_object_camera_teleport_or_offset(void* object, uint32_t mode,
+                                            float x, float y, float z);
 void render_object_set_identity_transform(void* object);
 void render_object_rotate_axis(void* object, uint32_t mode, float x, float y,
                                float z, float angle); /* 0x00475580 */
@@ -803,6 +806,7 @@ typedef struct DDiSceneAnimationHookRecord {
     uint32_t value_20;
     int value_24;
 } DDiSceneAnimationHookRecord;
+DDiSceneAnimationHookRecord* ddiscene_animation_hook_record_get(void* object);
 typedef struct DDiSceneAnimationHookRecordHooks {
     void* context;
     DDiSceneAnimationHookRecord* (*record_get)(void* scene_object,
@@ -1042,6 +1046,7 @@ int ddiscene_sample_hook_add(DDiSceneSampleHook sample_hook,
                              void* sample_context);
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
 float ddiscene_advance_by_time(void* scene_object, float delta); /* 0x00475120 */
+float ddiscene_advance_by_time_target(void* scene_object, float delta);
 typedef float (*SceneTimingValueGetHook)(void* frame, void* argument,
                                          void* context);
 typedef int (*SceneTimingCountGetHook)(void* frame, void* context);
@@ -1274,7 +1279,7 @@ void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
                                         int* gx, int* gy, int rounds);
 
 /* --- camera-handle primitives (record-backed) ----------------------------- */
-void cam_offset(CameraHandle* c, float x, float y, float z); /* FUN_004755e0 */
+void cam_offset(CameraHandle* c, float x, float y, float z);
 void cam_get_pos(CameraHandle* c, float out[3]);            /* FUN_004754c0 */
 void cam_set_pos(CameraHandle* c, float x, float y, float z);/* FUN_00475430 */
 void cam_get_facing(CameraHandle* c, float out[3]);         /* FUN_00475500 */
@@ -1340,10 +1345,9 @@ void camera_distance_bounds_set(void* camera, float lo, float hi);
 void camera_distance_set(void* camera, float value); /* FUN_00436a4a */
 void camera_zoom_update(void* camera, float delta);  /* FUN_00436aa5 */
 
-/* CursorScreenRayContextReset (FUN_00435f16): the corpus's cursor ray
- * handler drops the pan accumulator when the cursor sits inside the
- * screen-edge dead zone — the reset half, ported against the modeled
- * ViewContext slot. NULL skips (deviation: blind store). */
+/* CursorScreenRayContextReset (FUN_00435f16): clear the modeled ViewContext
+ * pan accumulator at +0x9c. The target x86 body is the corpus's blind store;
+ * the portable path retains a NULL guard. */
 void cursor_screen_ray_context_reset(ViewContext* v);
 
 /* CurrentLevelTerrainGridPick (FUN_00433be0): the corpus's per-level pick
@@ -1401,12 +1405,28 @@ float selected_global_point_transform_and_return_x(EngineContext* ctx);
 void renderer_node_relative_position_set(const void* node, float x, float y);
                                                 /* FUN_00436ac9 */
 
-/* --- scene-root hook band (2026-10-24) -------------------------------------
- * The corpus's scene object argument normalization (the front-end of the
- * ported camera-handle primitives) answers the root slot from its global
- * root object. The corpus's only writer is the renderer-side scene
- * initializer (unported), so the root rides a module hook like the other
- * DAT one-liners; install/peek drive the fallback under test. */
+/* Application-owned scene arena. The Win32 bootstrap installs a real
+ * retained-mode factory before creating the root and camera/light frames.
+ * CameraHandle is a different layout; it is never passed to a retail leaf. */
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+int scene_runtime_initialize(void);
+void scene_runtime_shutdown(void);
+void* scene_runtime_camera_bind(CameraHandle* camera);
+int scene_runtime_cameras_sync(void);
+void* scene_runtime_light_create(void* owner, unsigned int kind,
+                                  const float rgb[3]);
+int scene_runtime_light_parameter_set(void* light, unsigned int offset,
+                                       float value);
+
+/* WinAPI backend owns the DLL and its IDirect3DRM3 factory reference. */
+int scene_winapi_initialize(void);
+void scene_winapi_shutdown(void);
+int scene_winapi_frame_create(void* parent, void** frame);
+void scene_winapi_frame_release(void* frame);
+void scene_winapi_interface_release(void* object);
+int scene_winapi_light_create(unsigned int kind, const float rgb[3],
+                               void** light);
+#endif
 void scene_root_install(void* root);            /* port hook */
 void* scene_root_peek(void);                    /* port hook */
 
@@ -1435,8 +1455,9 @@ void scene_node_position_set(void* node, const float pos[3]);
  * pair — the first slot rides out of the first argument's slot, and the
  * second resolves to its own slot when the argument is non-NULL, else to
  * the root object's first slot (the corpus's null-handle fallback).
- * Deviation: the corpus dereferences the first slot and the root blindly;
- * the port answers NULL on the missing-root path. */
+ * Arguments point to wrapper records, not local variables containing wrapper
+ * pointers. The x86 target retains the retail blind dereferences; other hosts
+ * retain their guarded missing-root path. */
 void scene_object_arguments_normalize(const void** obj, const void** alt,
                                       void** out_obj, const void** out_alt);
                                                 /* FUN_00475900 */

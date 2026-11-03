@@ -1186,12 +1186,12 @@ int main(int argc, char** argv)
         LevelState lv;
         memset(&lv, 0, sizeof lv);
         ctx.level = &lv;
-        global_object_field98_add(&lv, 7);
+        global_object_field98_add_for_level(&lv, 7);
         entity_activity_scene_state_update(&ctx);
         CHECK(entity_state_flags_peek() == 4u && level_field98_get(&lv) == 0u,
               "the gate-off pass raises bit 4 and clears +0x98");
         entity_state_flags_set(0x10u);
-        global_object_field98_add(&lv, 3);
+        global_object_field98_add_for_level(&lv, 3);
         entity_activity_scene_state_update(&ctx);
         CHECK(entity_state_flags_peek() == 0x18u && level_field98_get(&lv) == 3u,
               "the gate-on pass raises bit 8 and leaves the state alone");
@@ -1276,7 +1276,7 @@ int main(int argc, char** argv)
         ctx.level = &lv;
         /* SimulationUpdateCounterAdd: the loop + scene-state pass. */
         entity_state_flags_set(0u);
-        global_object_field98_add(&lv, 9);
+        global_object_field98_add_for_level(&lv, 9);
         simulation_update_counter_add(&ctx, 3);
         CHECK((int)level_field8c_get(&lv) == 3 && entity_state_flags_peek() == 4u
                   && level_field98_get(&lv) == 0u,
@@ -1289,7 +1289,7 @@ int main(int argc, char** argv)
         /* EntityFlag80000000SetOrClear: set/clear + the state pass. */
         EntitySlot e;
         memset(&e, 0, sizeof e);
-        global_object_field98_add(&lv, 5);
+        global_object_field98_add_for_level(&lv, 5);
         entity_flag80000000_set_or_clear(&ctx, &e, 0);
         CHECK(e.flags_3e8 == 0x80000000u && entity_state_flags_peek() == 4u
                   && level_field98_get(&lv) == 0u,

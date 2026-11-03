@@ -114,6 +114,12 @@ void objective_announce_current(int who); /* FUN_00458670, one argument */
 void objective_announce(LevelState* s, int who);
 void objective_active_level_bind(LevelState* s);
 void objective_active_level_clear(LevelState* s);
+/* Presentation ownership, distinct from an achieved/failed result. The UI
+ * acknowledges only after the user's final authored briefing page. This
+ * performs the pending branch of 0x4588e0 and publishes FFE34 to the NERP
+ * consume-on-read switch, as in 0x4589c0. Returns 1 on acknowledgment. */
+int objective_briefing_active(const LevelState* s);
+int objective_briefing_acknowledge(LevelState* s);
 const char* objective_voice_alias_get(void);
 int objective_voice_alias_pending_take(void);
 
@@ -132,8 +138,10 @@ int objective_advisor_shown(const LevelState* s);
 void objective_tick_target(void* engine, LevelState* s,
                            float checker_dt, float frame_dt);
 
-/* Explicit-level adapter used by the portable frame loop. Returns 0 once a
- * result is active or resolves this tick, else 1. */
+/* Explicit-level adapter used by the portable frame loop. Returns 0 only
+ * for an achieved/failed result whose 0x40b entity gate has passed. Pending
+ * briefing presentation and unresolved gameplay return 1. The mapped target
+ * above retains its void ABI. */
 int objective_tick(LevelState* s, float dt);
 
 /* ObjectiveSidecarAppendGate (FUN_0043bc40), applied to the live entity

@@ -24,6 +24,7 @@
 #include "../gods98/engine.hpp"
 #include "../gods98/texture.hpp"
 #include "../gods98/view.hpp"
+#include "../gods98/string.hpp"
 #include "terrain_grid.hpp"
 #include "../gods98/message.hpp"
 #include "../gods98/media.hpp"
@@ -37,8 +38,6 @@ typedef struct TutorialTokenEntry {
     int kind;
 } TutorialTokenEntry;
 
-#define NERP_MESSAGE_RING_CAPACITY 10
-#define NERP_MESSAGE_TEXT_CAPACITY 256
 #define NERP_ICON_STATE_COUNT 29
 #define NERP_TUTORIAL_CELL_CAPACITY 2048
 
@@ -52,13 +51,18 @@ typedef struct NerpTutorialCellState {
 } NerpTutorialCellState;
 
 typedef struct NerpRuntimeState {
-    uint32_t message_ids[NERP_MESSAGE_RING_CAPACITY];
-    uint32_t message_flags[NERP_MESSAGE_RING_CAPACITY];
-    char message_text[NERP_MESSAGE_RING_CAPACITY][NERP_MESSAGE_TEXT_CAPACITY];
-    uint32_t message_count;
-    uint32_t message_next;
+    /* Reference history[0] aliases the frontend's last inline sound index.
+     * Only entries 1..8 live here; always use tutorial_message_history_get. */
+    uint32_t message_history[8];
+    uint32_t message_maximum;
+    uint32_t message_offset;
+    uint32_t message_ack_count;
+    uint32_t message_pending_ack;
+    uint32_t message_previous_ack;
+    uint32_t message_flags;
     uint32_t message_wait;
-    float message_timer_values[3];
+    uint32_t message_suppress_arrow;
+    uint32_t message_sound_active;
     float message_timer;
     uint32_t icon_clicked[NERP_ICON_STATE_COUNT];
     uint32_t icon_flashing[NERP_ICON_STATE_COUNT];
@@ -104,11 +108,9 @@ static TutorialTokenEntry s_tutorial_tokens[512];
 static uint32_t s_tutorial_token_count;
 static uint32_t s_tutorial_literal_token_count;
 static TutorialScriptOps s_advisor_token_ops;
-static uint32_t s_tutorial_scroll_pending;
-static uint32_t s_tutorial_scroll_max;
-static uint32_t s_tutorial_scroll_step;
-static uint32_t s_tutorial_scroll_action;
-static uint32_t s_tutorial_scroll_flags;
+static uint32_t s_tutorial_message_generation = 0xffffffffu;
+/* Initialized .data words at 0x4a6748/4c/50, outside the script reset bands. */
+static float s_tutorial_message_timer_values[3] = {1000.0f, 500.0f, 4000.0f};
 static uint32_t s_tutorial_focus_id;
 static uint32_t s_tutorial_focus_valid;
 static float s_tutorial_focus_offset_target;
@@ -128,11 +130,51 @@ static uint32_t tutorial_builtin_command_adapter(uint32_t command,
 
 static void tutorial_scroll_runtime_state_reset(void)
 {
-    s_tutorial_scroll_pending = 0u;
-    s_tutorial_scroll_max = 0u;
-    s_tutorial_scroll_step = 0u;
-    s_tutorial_scroll_action = 0u;
-    s_tutorial_scroll_flags = 0u;
+    memset(s_nerp_runtime.message_history, 0,
+           sizeof(s_nerp_runtime.message_history));
+    s_nerp_runtime.message_maximum = 0u;
+    s_nerp_runtime.message_offset = 0u;
+    s_nerp_runtime.message_ack_count = 0u;
+    s_nerp_runtime.message_pending_ack = 0u;
+    s_nerp_runtime.message_previous_ack = 0u;
+    s_nerp_runtime.message_flags = 0u;
+    s_nerp_runtime.message_timer = 0.0f;
+    s_nerp_runtime.message_sound_active = 0u;
+    s_tutorial_message_generation = objective_advisor_token_generation_get();
+    advisor_message_source_clear();
+}
+
+/* LevelLoad also loads tokens directly through objective.cpp. Observe that
+ * table's generation before any retained text/history access, not only when
+ * the optional tutorial token loader was used. */
+void tutorial_message_generation_sync(void)
+{
+    if (s_tutorial_message_generation != objective_advisor_token_generation_get())
+        tutorial_scroll_runtime_state_reset();
+}
+
+uint32_t tutorial_message_history_get(uint32_t index)
+{
+    tutorial_message_generation_sync();
+    if (index == 0u) return advisor_inline_last_sound_get();
+    return index <= 8u ? s_nerp_runtime.message_history[index - 1u] : 0u;
+}
+
+void tutorial_message_timer_values_get(float values[3])
+{
+    if (values != NULL)
+        memcpy(values, s_tutorial_message_timer_values,
+               sizeof(s_tutorial_message_timer_values));
+}
+
+void tutorial_message_duration_set(float duration)
+{
+    s_nerp_runtime.message_timer = duration;
+}
+
+void tutorial_message_sound_active_set(void)
+{
+    s_nerp_runtime.message_sound_active = 1u;
 }
 
 static void tutorial_camera_focus_state_reset(void)
@@ -567,14 +609,33 @@ void tutorial_frame_timer_array_advance(float delta)
 {
     const float timer_delta = delta * 1000.0f * 0.04f;
     uint32_t i;
+    tutorial_message_generation_sync();
     for (i = 0u; i < 4u; ++i)
         s_tutorial_nerp_timers[i] += timer_delta;
     if (s_nerp_runtime.message_timer == 0.0f) return;
     if (s_nerp_runtime.message_timer >= 0.0f) {
-        s_nerp_runtime.message_timer -= timer_delta;
-        if (s_nerp_runtime.message_timer > 0.0f) return;
+        if (deferred_callback_peek() == 0u ||
+            s_nerp_runtime.message_flags != 0u) {
+            s_nerp_runtime.message_timer -= timer_delta;
+            if (s_nerp_runtime.message_timer > 0.0f) goto message_tail;
+        } else {
+            if (s_nerp_runtime.message_previous_ack != 0u &&
+                (((int32_t)s_nerp_runtime.message_offset > 0 &&
+                  s_nerp_runtime.message_suppress_arrow != 0u) ||
+                 s_nerp_runtime.message_suppress_arrow == 0u)) {
+                engine_global_state_flags_bits6_and_9_set_target(
+                    s_nerp_runtime.message_pending_ack != 0u, 1);
+            }
+            s_nerp_runtime.message_previous_ack =
+                s_nerp_runtime.message_pending_ack;
+            if (s_nerp_runtime.message_pending_ack != 0u) goto message_tail;
+        }
     }
     s_nerp_runtime.message_timer = 0.0f;
+message_tail:
+    if (s_nerp_runtime.message_sound_active != 0u &&
+        s_nerp_runtime.message_timer < 1000.0f)
+        advisor_clear_active_state();
 }
 
 static int tutorial_grid_count_command_type(uint32_t command,
@@ -1069,6 +1130,26 @@ static uint32_t tutorial_record_object_at_list(LevelState* level,
     return 0u;
 }
 
+/* GetSelectedRecordObject @ 0x454220 queries OList slots, not positions in
+ * the selection array. FUN_00452610(entity, NULL) tests the selected bit. */
+static uint32_t tutorial_selected_record_object_get(void)
+{
+    uint32_t index;
+    for (index = 0u; index < 10u; ++index) {
+        EntitySlot* entity = object_pointer_registry_entity_get(index);
+        if (entity != NULL &&
+            selection_contains_entity_active_target(entity, NULL) != 0u)
+            return index + 1u;
+    }
+    return 0u;
+}
+
+uint32_t tutorial_record_object_pointer_get(void)
+{
+    /* This is a one-based OList slot, not a retained entity pointer. */
+    return s_nerp_runtime.tutorial_record_pointer;
+}
+
 static uint32_t tutorial_record_object_amount_at_list(LevelState* level,
                                                       uint32_t list_index)
 {
@@ -1262,27 +1343,25 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
             return 1;
         }
         token_text = tutorial_objective_token_lookup(token_index);
-        slot = s_nerp_runtime.message_next;
-        s_nerp_runtime.message_ids[slot] = token_index;
-        s_nerp_runtime.message_flags[slot] = args[1];
-        if (token_text != NULL) {
-            strncpy(s_nerp_runtime.message_text[slot], token_text,
-                    NERP_MESSAGE_TEXT_CAPACITY - 1u);
-            s_nerp_runtime.message_text[slot][
-                NERP_MESSAGE_TEXT_CAPACITY - 1u] = '\0';
-        } else {
-            s_nerp_runtime.message_text[slot][0] = '\0';
+        tutorial_message_generation_sync();
+        slot = s_nerp_runtime.message_maximum;
+        if (tutorial_message_history_get(slot) != token_index) {
+            if (slot == 8u) {
+                memmove(s_nerp_runtime.message_history,
+                        s_nerp_runtime.message_history + 4,
+                        4u * sizeof(uint32_t));
+                slot = 4u;
+            }
+            s_nerp_runtime.message_history[slot] = token_index;
+            s_nerp_runtime.message_maximum = slot + 1u;
+            engine_global_state_flags_bit7_set_target(1);
+            if (s_nerp_runtime.message_offset != 0u)
+                ++s_nerp_runtime.message_offset;
         }
-        s_nerp_runtime.message_next =
-            (slot + 1u) % NERP_MESSAGE_RING_CAPACITY;
-        if (s_nerp_runtime.message_count < NERP_MESSAGE_RING_CAPACITY)
-            ++s_nerp_runtime.message_count;
-        /* The queue owns copied text and numeric token ids. The overlay API
-         * accepts the numeric token request; it never receives a PE pointer. */
-        advisor_text_request_setup(token_index, args[1]);
-        s_nerp_runtime.message_timer =
-            s_nerp_runtime.message_timer_values[0];
-        *result_out = 1u;
+        advisor_text_request_setup_text(token_text, args[1]);
+        s_nerp_runtime.message_flags = args[1];
+        s_nerp_runtime.message_pending_ack = 1u;
+        *result_out = args[0];
         return 1;
     }
     if (command == 88u && argc == 1u && args != NULL) {
@@ -1473,6 +1552,17 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
             s_tutorial_game_context, s_tutorial_engine_context, args[0]);
         return 1;
     }
+    if (command == 144u && argc == 0u) {
+        *result_out = tutorial_selected_record_object_get();
+        return 1;
+    }
+    if (command == 254u && argc == 1u && args != NULL) {
+        s_nerp_runtime.tutorial_record_pointer = args[0];
+        /* The shipped setter leaves the loaded argument in EAX; kind 4
+         * consumes one argument and discards the callback result. */
+        *result_out = args[0];
+        return 1;
+    }
     if (command == 115u && argc == 1u && args != NULL) {
         tutorial_camera_goto_coordinate_list(
             s_tutorial_game_context, s_tutorial_engine_context, args[0]);
@@ -1504,9 +1594,9 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 108u && argc == 3u && args != NULL) {
-        s_nerp_runtime.message_timer_values[0] = (float)(int32_t)args[0];
-        s_nerp_runtime.message_timer_values[1] = (float)(int32_t)args[1];
-        s_nerp_runtime.message_timer_values[2] = (float)(int32_t)args[2];
+        s_tutorial_message_timer_values[0] = (float)args[0];
+        s_tutorial_message_timer_values[1] = (float)args[1];
+        s_tutorial_message_timer_values[2] = (float)args[2];
         *result_out = 1u;
         return 1;
     }
@@ -1542,6 +1632,8 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 200u) {
+        if ((int32_t)s_nerp_runtime.message_offset > 1)
+            s_nerp_runtime.message_offset = 1u;
         tutorial_advisor_scroll_step_advance();
         *result_out = 0u;
         return 1;
@@ -1558,20 +1650,22 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 204u || command == 205u) {
-        uint32_t flags = command == 204u ? 0x1ffeu : 0x1f7fu;
+        uint32_t flags = command == 204u ? 0x1ffeu : 0x1fffu;
         flags -= s_nerp_runtime.camera_control_flags;
         *result_out = system_state_flags_set(&flags);
         return 1;
     }
     if (command == 206u && argc == 1u && args != NULL) {
-        if (args[0] != 0u) {
-            uint32_t slot;
-            if (advisor_animation_slot_id_resolve(6u, 2u, &slot))
-                (void)advisor_request_admit((int)slot, 1);
-        } else {
-            advisor_clear_active_state();
-        }
+        s_nerp_runtime.message_suppress_arrow = args[0];
+        engine_global_state_flags_bits6_and_9_set_target(
+            s_nerp_runtime.message_offset != 0u || args[0] == 0u, 1);
         *result_out = 0u;
+        return 1;
+    }
+    if (command == 209u) {
+        uint32_t count = 0u;
+        while (tutorial_objective_token_lookup(count) != NULL) ++count;
+        *result_out = s_nerp_runtime.message_ack_count >= count;
         return 1;
     }
     if (command == 166u && argc == 1u && args != NULL) {
@@ -1870,42 +1964,37 @@ void tutorial_script_command_dispatch(float delta)
     tutorial_camera_focus_tween_update(delta);
 }
 
-void tutorial_advisor_scroll_state_set(uint32_t pending, uint32_t maximum,
-                                       uint32_t step, uint32_t action,
-                                       uint32_t state_flags)
-{
-    s_tutorial_scroll_pending = pending;
-    s_tutorial_scroll_max = maximum;
-    s_tutorial_scroll_step = step;
-    s_tutorial_scroll_action = action;
-    s_tutorial_scroll_flags = state_flags;
-}
-
 // FUNCTION: LEGORR 0x00453920
 void tutorial_advisor_scroll_step_advance(void)
 {
     static const uint32_t scroll_scale_record[2] = { 100u, 0u };
-
+    tutorial_message_generation_sync();
     media_action_feedback_sound_dispatch(0);
-    if (s_tutorial_scroll_pending != 0) {
-        if (s_tutorial_scroll_step != 0) --s_tutorial_scroll_step;
-        if (s_tutorial_scroll_step > 3) s_tutorial_scroll_step = 3;
-        if (s_tutorial_scroll_step > s_tutorial_scroll_max)
-            s_tutorial_scroll_step = s_tutorial_scroll_max;
+    if (s_nerp_runtime.message_offset != 0u) {
+        --s_nerp_runtime.message_offset;
+        if ((int32_t)s_nerp_runtime.message_offset > 3)
+            s_nerp_runtime.message_offset = 3u;
+        if ((int32_t)s_nerp_runtime.message_offset >
+            (int32_t)s_nerp_runtime.message_maximum)
+            s_nerp_runtime.message_offset = s_nerp_runtime.message_maximum;
         {
-            uint32_t token_index =
-                s_tutorial_scroll_max - s_tutorial_scroll_step;
-            const char* token = tutorial_objective_token_lookup(token_index);
+            uint32_t index = s_nerp_runtime.message_maximum -
+                             s_nerp_runtime.message_offset;
+            const char* token = tutorial_objective_token_lookup(
+                tutorial_message_history_get(index));
             advisor_text_request_setup_text(token, 0u);
         }
-        if (s_tutorial_scroll_step == 0) {
+        if (s_nerp_runtime.message_offset == 0u) {
             engine_global_state_flags_bits6_and_9_set_target(0, 1);
-            if (system_state_flags_get() != 0u) {
+            if (system_state_flags_get() != 0u)
                 (void)camera_focus_scroll_scale_commit(
                     s_tutorial_engine_context, scroll_scale_record);
-            }
         }
         engine_global_state_flags_bit7_set_target(1);
+    } else {
+        if (s_nerp_runtime.message_pending_ack != 0u)
+            ++s_nerp_runtime.message_ack_count;
+        s_nerp_runtime.message_pending_ack = 0u;
     }
 }
 
@@ -2137,7 +2226,6 @@ static LegacyPanelPortRecord s_legacy_panels[18];
 static void* s_legacy_hunger_images[5];
 static float s_legacy_hunger_position[2];
 static float s_legacy_bubble_position[2];
-static uint32_t s_legacy_hud_state_flags;
 static float s_legacy_entity_ring_radius;
 static float s_legacy_entity_ring_height;
 
@@ -2179,53 +2267,50 @@ static int legacy_config_rgb(BlockFile* cfg, const char* path, float rgb[3])
  * then fetch and parse the corresponding value from the value file. Most
  * production callers pass the same Lego.cfg for both, but keep the two
  * inputs distinct for callers which supply a separate key table. */
-static int legacy_config_pair_from_files(BlockFile* values, BlockFile* names,
-                                         const char* path, int* x, int* y)
+static const char* legacy_hud_config_path(const char* config_root,
+                                          const char* key)
 {
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    if (name_cfg == NULL || value_cfg == NULL ||
-        block_find(name_cfg, path) == NULL) return 0;
-    return legacy_config_pair(value_cfg, path, x, y);
+    return string_path_join(config_root, "ObjInfo", key, (char*)NULL);
 }
 
-static int legacy_config_rgb_from_files(BlockFile* values, BlockFile* names,
-                                        const char* path, float rgb[3])
+static int legacy_config_pair_from_root(BlockFile* values,
+                                        const char* config_root,
+                                        const char* key, int* x, int* y)
 {
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    if (name_cfg == NULL || value_cfg == NULL ||
-        block_find(name_cfg, path) == NULL) return 0;
-    return legacy_config_rgb(value_cfg, path, rgb);
+    const char* path;
+    if (values == NULL || config_root == NULL || key == NULL) return 0;
+    path = legacy_hud_config_path(config_root, key);
+    return legacy_config_pair(values, path, x, y);
 }
 
-static int legacy_config_int_from_files(BlockFile* values, BlockFile* names,
-                                        const char* path, int fallback)
+static int legacy_config_rgb_from_root(BlockFile* values,
+                                       const char* config_root,
+                                       const char* key, float rgb[3])
 {
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    if (name_cfg == NULL || value_cfg == NULL ||
-        block_find(name_cfg, path) == NULL) return fallback;
-    return block_get_int(value_cfg, path, fallback);
+    const char* path;
+    if (values == NULL || config_root == NULL || key == NULL) return 0;
+    path = legacy_hud_config_path(config_root, key);
+    return legacy_config_rgb(values, path, rgb);
 }
 
-static int legacy_config_bool_from_files(BlockFile* values, BlockFile* names,
-                                         const char* path)
+static int legacy_config_int_from_root(BlockFile* values,
+                                       const char* config_root,
+                                       const char* key, int fallback)
 {
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    if (name_cfg == NULL || value_cfg == NULL ||
-        block_find(name_cfg, path) == NULL) return 0;
-    return block_get_bool(value_cfg, path);
+    const char* path;
+    if (values == NULL || config_root == NULL || key == NULL) return fallback;
+    path = legacy_hud_config_path(config_root, key);
+    return block_get_int(values, path, fallback);
 }
 
-static void legacy_hud_state_flags_publish(void)
+static int legacy_config_bool_from_root(BlockFile* values,
+                                        const char* config_root,
+                                        const char* key)
 {
-    /* DAT_004ffe68 is shared by the health, hunger, and bubble loaders and
-     * the panel-position worker. Preserve any bits installed by its other
-     * owners while publishing this module's OR-only config bits. */
-    s_legacy_hud_state_flags |= panel_enable_word_peek();
-    panel_enable_word_set(s_legacy_hud_state_flags);
+    const char* path;
+    if (values == NULL || config_root == NULL || key == NULL) return 0;
+    path = legacy_hud_config_path(config_root, key);
+    return block_get_bool(values, path);
 }
 
 static float legacy_clamp_01(float value)
@@ -2248,60 +2333,63 @@ static void legacy_color_pair(float source[3], float high[3], float low[3])
 }
 
 // FUNCTION: LEGORR 0x00459560
-int legacy_health_bar_config_load(BlockFile* values, BlockFile* names)
+int legacy_health_bar_config_load(BlockFile* values, const char* config_root)
 {
     int x, y;
     int width, height;
-    BlockFile* cfg = values != NULL ? values : names;
+    BlockFile* cfg = values;
     int border;
     int vertical;
     float rgb[3];
     if (cfg == NULL) return 0;
-    if (!legacy_config_pair_from_files(values, names,
-            "ObjInfo::HealthBarPosition", &x, &y)) return 0;
+    if (!legacy_config_pair_from_root(values, config_root,
+            "HealthBarPosition", &x, &y)) return 0;
     s_legacy_health_bar.x = (float)x;
     s_legacy_health_bar.y = (float)y;
-    if (!legacy_config_pair_from_files(values, names,
-            "ObjInfo::HealthBarWidthHeight", &width, &height)) return 0;
+    if (!legacy_config_pair_from_root(values, config_root,
+            "HealthBarWidthHeight", &width, &height)) return 0;
     s_legacy_health_bar.width = (float)width;
     s_legacy_health_bar.height = (float)height;
     // The original derives this through an integer conversion of the raw
     // value string, so a missing or empty key yields 0 rather than 1.
-    border = legacy_config_int_from_files(values, names,
-            "ObjInfo::HealthBarBorderSize", 0);
+    border = legacy_config_int_from_root(values, config_root,
+            "HealthBarBorderSize", 0);
     s_legacy_health_bar.border = (float)border;
-    if (!legacy_config_rgb_from_files(values, names,
-            "ObjInfo::HealthBarBorderRGB", rgb)) return 0;
+    if (!legacy_config_rgb_from_root(values, config_root,
+            "HealthBarBorderRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.border_rgb, rgb, sizeof(rgb));
     legacy_color_pair(s_legacy_health_bar.border_rgb,
                       s_legacy_health_bar.border_high,
                       s_legacy_health_bar.border_low);
-    if (!legacy_config_rgb_from_files(values, names,
-            "ObjInfo::HealthBarBackgroundRGB", rgb)) return 0;
+    if (!legacy_config_rgb_from_root(values, config_root,
+            "HealthBarBackgroundRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.background_rgb, rgb, sizeof(rgb));
-    if (!legacy_config_rgb_from_files(values, names,
-            "ObjInfo::HealthBarRGB", rgb)) return 0;
+    if (!legacy_config_rgb_from_root(values, config_root,
+            "HealthBarRGB", rgb)) return 0;
     memcpy(s_legacy_health_bar.health_rgb, rgb, sizeof(rgb));
-    vertical = legacy_config_bool_from_files(values, names,
-            "ObjInfo::HealthBarVertical");
+    vertical = legacy_config_bool_from_root(values, config_root,
+            "HealthBarVertical");
     /* DAT_004ffe68 is shared by the other HUD loaders. The original only
        ORs these bits: a later horizontal reload does not clear vertical. */
-    if (vertical == 1) s_legacy_hud_state_flags |= 8u;
-    s_legacy_hud_state_flags |= 2u;
-    legacy_hud_state_flags_publish();
+    if (vertical == 1) s_panel_enable_word |= 8u;
+    s_panel_enable_word |= 2u;
     s_legacy_health_bar.vertical =
-        (s_legacy_hud_state_flags & 8u) != 0 ? 1u : 0u;
+        (s_panel_enable_word & 8u) != 0 ? 1u : 0u;
     s_legacy_health_bar.flags |= 2u;
-    if ((s_legacy_hud_state_flags & 8u) != 0)
+    if ((s_panel_enable_word & 8u) != 0)
         s_legacy_health_bar.flags |= 8u;
     return 1;
 }
 
-static void legacy_hud_resource_name(BlockFile* cfg, const char* path,
+static void legacy_hud_resource_name(BlockFile* cfg, const char* config_root,
+                                     const char* key,
                                      char* out, uint32_t out_size)
 {
+    const char* path;
     out[0] = '\0';
-    if (cfg == NULL || path == NULL || out_size == 0) return;
+    if (cfg == NULL || config_root == NULL || key == NULL || out_size == 0)
+        return;
+    path = legacy_hud_config_path(config_root, key);
     if (s_legacy_hud_ops.config_resource != NULL) {
         s_legacy_hud_ops.config_resource(cfg, path, out, out_size,
                                         s_legacy_hud_ops.context);
@@ -2311,19 +2399,19 @@ static void legacy_hud_resource_name(BlockFile* cfg, const char* path,
 }
 
 // FUNCTION: LEGORR 0x004599c0
-void legacy_hunger_images_load(BlockFile* values, BlockFile* names)
+void legacy_hunger_images_load(BlockFile* values, const char* config_root)
 {
     int i;
     char path[96];
     char resource_name[256];
-    BlockFile* cfg = values != NULL ? values : names;
+    BlockFile* cfg = values;
     // The original re-reads the five ObjInfo::HungerImages::HungerImage%i
     // keys and overwrites each slot without releasing the previous surface
     // (the resource layer owns surface lifetime).
     for (i = 0; i < 5; ++i) {
         void* image = NULL;
-        sprintf(path, "ObjInfo::HungerImages::HungerImage%i", i);
-        legacy_hud_resource_name(cfg, path, resource_name,
+        sprintf(path, "HungerImages::HungerImage%i", i);
+        legacy_hud_resource_name(cfg, config_root, path, resource_name,
                                  (uint32_t)sizeof(resource_name));
         if (resource_name[0] != '\0' &&
             s_legacy_hud_ops.surface_load != NULL) {
@@ -2343,18 +2431,17 @@ void legacy_hunger_images_load(BlockFile* values, BlockFile* names)
 
 // FUNCTION: LEGORR 0x00459900
 int legacy_hunger_images_position_config_load(BlockFile* values,
-                                               BlockFile* names)
+                                               const char* config_root)
 {
     int x, y;
-    BlockFile* cfg = values != NULL ? values : names;
-    legacy_hunger_images_load(values, names);
-    if (cfg == NULL || !legacy_config_pair_from_files(values, names,
-            "ObjInfo::HungerImagesPosition", &x, &y)) return 0;
+    BlockFile* cfg = values;
+    legacy_hunger_images_load(values, config_root);
+    if (cfg == NULL || !legacy_config_pair_from_root(values, config_root,
+            "HungerImagesPosition", &x, &y)) return 0;
     s_legacy_hunger_position[0] = (float)x;
     s_legacy_hunger_position[1] = (float)y;
     panel_position_offsets_set((float)x, (float)y);
-    s_legacy_hud_state_flags |= 1u;
-    legacy_hud_state_flags_publish();
+    s_panel_enable_word |= 1u;
     return 1;
 }
 
@@ -2373,10 +2460,9 @@ int legacy_bubble_images_position_config_load(BlockFile* values,
         !legacy_config_pair(value_cfg, path, &x, &y)) return 0;
     s_legacy_bubble_position[0] = (float)x;
     s_legacy_bubble_position[1] = (float)y;
-    s_legacy_hud_state_flags |= 0x10u;
+    s_panel_enable_word |= 0x10u;
     bubble_offsets_set(s_legacy_bubble_position[0],
                        s_legacy_bubble_position[1]);
-    legacy_hud_state_flags_publish();
     return 1;
 }
 
@@ -2406,7 +2492,7 @@ void legacy_entity_screen_ring_render(void* entity, int x, int y)
     float x0, y0;
     int i;
     int point_count;
-    if (slot == NULL || (s_legacy_hud_state_flags & 2u) == 0u) return;
+    if (slot == NULL || (s_panel_enable_word & 2u) == 0u) return;
     if (entity_quad_mesh_render_record_allowed(slot) == 0) return;
     health = slot->field_340;
     if (health < 0.0f) health = 0.0f;
@@ -2715,3 +2801,7 @@ void legacy_panel_image_slot_entry_release(void* opaque)
                                          s_legacy_hud_ops.context);
     engine_heap_free(entry);
 }
+
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_M_IX86)
+#include "../../tools/diagnostics/wine-nerp-owner-probe.inc" /* DEBUG-next-owner */
+#endif

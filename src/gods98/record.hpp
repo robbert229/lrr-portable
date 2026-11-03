@@ -53,12 +53,12 @@ void velocity_slot_vector_read(const void* record, float out[3],
  * state record: type 1 answers the +0x0c sub-record plus 0x138, type 4 the
  * +0x18 sub-record plus 0xa0, anything else NULL. The value pair
  * (FUN_004712f0 / FUN_00471310) reads/writes the float word at +0x98 of
- * that base (the corpus's x87 widening rides the bits unchanged).
- * Deviation: the corpus strides the type walk, the sub-record link, and
- * a null base blindly. */
+ * that base (the corpus's x87 widening rides the bits unchanged). The x86
+ * bodies follow the retail unchecked loads and slot indexing; the portable
+ * fallback guards NULL records, links, and negative slot indices. */
 void* entity_velocity_state_record_get(const void* record);
 float entity_velocity_slot_value_get(const void* record, int slot);
-void entity_velocity_slot_value_set(void* record, uint32_t value, int slot);
+void entity_velocity_slot_value_set(void* record, float value, int slot);
 
 /* EntityFlag80Set (FUN_00473b20): raises the record's +0x14 flag word's
  * bit 7 when set is nonzero, drops it otherwise. The port guards the
@@ -83,10 +83,10 @@ float camera_rotation_get(const void* camera);
 
 /* MapCellToWorldCenter (FUN_0044f640, finding 225): bounds-check a cell
  * against the map descriptor and answer the cell's world X/Z center.
- * The descriptor's five fields are int dwords the corpus converts to
- * float on the fly: width +0, height +4, scale +16, origin X +24,
- * origin Y +28. The bounds test is the corpus's UNSIGNED compare
- * (negative indices fail as huge ones); NULL answers 0. */
+ * Width/height are dwords at +0/+4; scale and X/Y origins are floats at
+ * +0x10/+0x18/+0x1c, as confirmed by the retail fld/fadd instructions.
+ * The bounds test is unsigned (negative indices fail as huge ones); NULL
+ * answers 0 on the portable path. */
 int map_cell_to_world_center(const void* map, uint32_t cell_x,
                              uint32_t cell_y, float* world_x, float* world_y);
 
@@ -140,6 +140,7 @@ int model_child_render_eligibility_check(const void* object);
  * flag dword at +0x1e8; the flag's meaning stays with the callers per
  * finding 357. NULL answers 0. */
 uint32_t entity_type_flag_bit1_get(const void* record);
+uint32_t entity_type_flag_bit1_get_target(const void* record);
 
 /* ------------------------------------------------------------------ *
  *  Field-reader sweep (2026-10-24; findings 305/337/356/361/372/373/
@@ -156,7 +157,8 @@ uint32_t object_record_field11c_get(const void* record);
 /* ObjectFieldBE4DwordGet (FUN_0047a540, findings 361/411): +0xbe4. */
 uint32_t object_field_be4_dword_get(const void* record);
 
-/* EntityTypeMaskGet (FUN_0046cf80, findings 357/432): dword at +300. */
+/* EntityTypeMaskGet (FUN_0046cf80, findings 357/432): dword at +0x12c
+ * (Ghidra prints this offset as decimal 300). */
 uint32_t entity_type_mask_get(const void* record);
 
 /* PointerValueGet (FUN_00482210, findings 381/411): the dword it points
@@ -185,6 +187,7 @@ uint32_t scene_object_wrapped_pointer_get(const void* wrapped);
 /* SceneObjectFlagBit3Get (FUN_00473ba0, findings 305/430): bit 3 of the
  * flag byte at +0x14. */
 uint32_t scene_object_flag_bit3_get(const void* scene_object);
+uint32_t scene_object_flag_bit3_get_target(const void* scene_object);
 
 /* SceneObjectModeIsOne (FUN_00406980, findings 373/435): the +0x28 mode
  * word equals 1. */
@@ -263,18 +266,17 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
                                           const void* source);
 
 /* --- grid-descriptor coordinate leaves (2026-10-24) ---------------------
- * The map descriptor map_cell_to_world_center reads — width +0x00, height
- * +0x04, scale +0x10, origins +0x18 / +0x1C (int fields converted at the
- * use site) — gains its inverse pair. Truncations are toward zero (the
- * corpus's __ftol under the ported control word, the crt precedent);
- * NULL descriptors skip the answer (documented deviation; corpus callers
- * pass live pointers). */
+ * The descriptor stores width/height at +0/+4 and float scale/origins at
+ * +0x10/+0x18/+0x1c. World-to-cell conversion subtracts the X origin or
+ * subtracts world Y from the Y origin, divides by scale, then truncates
+ * toward zero (the corpus's __ftol under the ported control word). */
 
 /* WorldToTerrainCellBoundsCheck (FUN_0044f700): truncate the world point
- * to cell coordinates — ALWAYS stored, NULL-safe — then check -1 < c < d.
- * In range, answers 1 and (when given) writes the subcell coordinate: the
+ * to cell coordinates — ALWAYS stored — then check -1 < c < d. In range,
+ * answers 1 and (when given) writes the subcell coordinate: the
  * center-relative position in half-cell units, folded past 1 by
- * 2-x-with-lowest. Out of range answers 0. */
+ * 2-x-with-lowest. Out of range answers 0. The retail x86 body expects a
+ * live descriptor; the portable fallback keeps its NULL behavior. */
 int world_to_terrain_cell_bounds_check(const void* map, float world_x,
                                        float world_y, int* cell_x,
                                        int* cell_y, float* subcell);
@@ -293,11 +295,9 @@ void grid_coordinate_clamp_and_store(const void* map, float world_x,
  * drops the scale answer), and while in range write the cell coordinates
  * as floats, and — when an offset is asked for — the point's fractional
  * place in the cell (point minus the center, halved-cell-scaled plus a
- * half-step, the corpus's - -0.5). The scale divisor reads +0x10 as a
- * FLOAT here (that leaf's own pseudocode), while the center formula
- * converts the same field as an int — both reproduced faithfully; a
- * zero scale divides like the corpus does (infinity answers). Always
- * answers 0. */
+ * half-step, the corpus's - -0.5). The scale and origin fields are floats
+ * at +0x10/+0x18/+0x1c, shared with MapCellToWorldCenter; a zero scale
+ * divides like the corpus does (infinity answers). Always answers 0. */
 uint32_t terrain_world_point_to_cell(const void* map, const float* point,
                                      float* cell_out, float* offset_out);
 
@@ -354,8 +354,8 @@ void linked_record_field4_clear(void* record);
 void copy_two_dword_pair_to_outputs(const void* record, uint32_t* out_a,
                                     uint32_t* out_b);
 
-/* SceneObjectOwnerSet (FUN_00473da0): dword store at +0x20 — the port's
- * fixed-offset style, entry-guarded (documented deviation). */
+/* SceneObjectOwnerSet (FUN_00473da0): dword store at +0x20; the MSVC x86
+ * body matches the unchecked retail store, while other targets guard NULL. */
 void scene_object_owner_set(void* scene_object, uint32_t owner);
 
 /* --- the record primitive band (2026-10-24; findings 393/386) ---------------
@@ -376,14 +376,14 @@ void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
                                           uint32_t y);
 void object_state_pair_get(const void* record, uint32_t* out_a,
                            uint32_t* out_b);
+void object_state_pair_get_target(const void* record, uint32_t* out_a,
+                                  uint32_t* out_b);
 
 /* --- scene-visibility wrapper band (2026-10-24; findings 446/370/435/356/
  * 373/476/28) --------------------------------------------------------------
- * The render visibility backend remains a no-op observation seam, so the
- * wrappers below reproduce their own gates and field work and record the
- * requested handles. FUN_00473b40 is separately modeled by
- * scene_render_lock_toggle below; it toggles DDiScene flag bit 3 and updates
- * the paired render interfaces.
+ * The wrappers dispatch through scene_render_lock_toggle, which toggles
+ * DDiScene flag bit 3 and updates the paired render interfaces. Adapter paths
+ * record calls at their seam; direct target wrappers retain the retail call.
  * Handle slots that the corpus fills with record addresses are read as
  * native pointer slots (the module's established widening).
  * GraphicsOverlayVisibilitySet (FUN_004634b0): the overlay word changes
@@ -420,7 +420,7 @@ void scene_render_lock_toggle(void* scene_object, int enabled);
 
 /* SceneResourceVisibilitySet (FUN_0046d2c0): raise or clear bit 1 of the
  * record's +0x1e8 word, then route the raw flag through the visibility
- * observation seam: unconditionally on +8, on +0xc when set, and on every live child
+ * operation: unconditionally on +8, on +0xc when set, and on every live child
  * of the +0x10 window counted at +0x40. Deviations in the module notes
  * (window-guarded native-size slot stride, single count read, NULL guard). */
 void scene_resource_visibility_set(void* record, uint32_t flag);
@@ -594,12 +594,13 @@ void indexed_geometry_data_copy_to_output(void* record, int block,
  * the indexed record table through record +0x08 — the +0x04 field word,
  * the shape-kind answer (3), the +0x00 vertex count, and the count
  * ushort indices striding through the entry's +0x08 pointer (widened to
- * uint32 answers as the corpus folds them). Deviations: guarded table
- * and index pointer (the corpus strides both blindly); each requested
- * output honors the corpus's own null checks. */
+ * uint32 answers as the corpus folds them). The ABI retains the unused
+ * fourth argument present in the target; x86 matches the unchecked table
+ * and index-pointer accesses, while the portable path guards them. Each
+ * requested output honors the corpus's own null checks. */
 void indexed_record_entry_read(void* record, int block, uint32_t* field_out,
-                               uint32_t* kind_out, uint32_t* count_out,
-                               uint32_t* indices_out);
+                               uint32_t reserved, uint32_t* kind_out,
+                               uint32_t* count_out, uint32_t* indices_out);
 
 /* TerrainCellQuadVerticesWrite (FUN_004823e0): the exact mirror of the
  * indexed geometry copy — write quads into the block's vertex buffer

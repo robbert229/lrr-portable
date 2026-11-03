@@ -18,6 +18,11 @@
 #include "game/frontend.hpp"
 #include "game/entity.hpp"
 #include "game/objective.hpp"
+#include "game/effects.hpp"
+#include "game/scene_render.hpp"
+#include "game/util.hpp"
+#include "scene_pool.hpp"
+#include "string.hpp"
 #include "game/port_loop_ports.hpp"
 #include "heap.hpp"
 #include <ctype.h>
@@ -46,6 +51,157 @@ static const volatile float s_panel_highlight_zero = 0.0f;
 // GLOBAL: LEGORR 0x00505f88
 static int32_t s_application_mode;
 static EngineContext* s_engine_current_context;
+
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+static int s_engine_scene_live;
+
+struct EngineSceneBuild {
+    BlockFile* config;
+    void* owners[4];
+    void* default_owner;
+    int failed;
+};
+
+static int engine_scene_rgb_read(const char* name, float rgb[3], void* user)
+{
+    EngineSceneBuild* build = (EngineSceneBuild*)user;
+    const char* path = string_path_join(util_root_name(build->config),
+        "Main", name, (char*)NULL);
+    return config_rgb_vector_read(build->config, path, rgb, rgb + 1, rgb + 2);
+}
+
+static void* engine_scene_owner_get(int slot, void* user)
+{
+    return ((EngineSceneBuild*)user)->owners[slot];
+}
+
+static void* engine_scene_light_create(const SceneLightDefinition* def,
+                                        void* user)
+{
+    void* light = scene_runtime_light_create(def->owner,
+        (unsigned int)def->light_kind, def->rgb);
+    if (light == NULL) ((EngineSceneBuild*)user)->failed = 1;
+    return light;
+}
+
+static int engine_scene_parameter_set(void* light, uint32_t offset,
+                                       float value, void* user)
+{
+    if (light == NULL) {
+        ((EngineSceneBuild*)user)->failed = 1;
+        return 0;
+    }
+    int result = scene_runtime_light_parameter_set(light, offset, value);
+    if (!result) ((EngineSceneBuild*)user)->failed = 1;
+    return result;
+}
+
+static int engine_scene_position_set(void* light, void* owner,
+                                      const float position[3], void* user)
+{
+    int result = ddiscene_object_position_set(light, owner,
+        position[0], position[1], position[2]);
+    if (!result) ((EngineSceneBuild*)user)->failed = 1;
+    return result;
+}
+
+static int engine_scene_pose_set(void* light, void* owner,
+                                  const float pose[6], void* user)
+{
+    int result = ddiscene_object_pose_method_dispatch(light, owner,
+        pose[0], pose[1], pose[2], pose[3], pose[4], pose[5]);
+    if (!result) ((EngineSceneBuild*)user)->failed = 1;
+    return result;
+}
+
+static int engine_scene_light_enable(void* light, int enabled, void*)
+{
+    if (light == NULL) return 0;
+    scene_render_lock_toggle(light, enabled);
+    return (int)((*(uint32_t*)((char*)light + 0x14) & 8u) != 0u) ==
+        (enabled != 0);
+}
+
+static void* engine_scene_root_get(void*)
+{
+    return scene_root_object_get();
+}
+
+static void* engine_scene_object_allocate(void* root, void* user)
+{
+    EngineSceneBuild* build = (EngineSceneBuild*)user;
+    build->default_owner = lego::ddiscene_object_allocate(
+        (const lego::DDiSceneObjectDescriptor*)root);
+    if (build->default_owner == NULL) build->failed = 1;
+    return build->default_owner;
+}
+
+static int engine_scene_transform_init(void* light, void* root,
+                                       const float rgb[3], void* user)
+{
+    EngineSceneBuild* build = (EngineSceneBuild*)user;
+    (void)root;
+    /* The reconstructed builder passes the root here. Retail 0x433770
+     * passes DAT_00556108: the child just allocated under that root. */
+    if (build->default_owner == NULL) return 0;
+    scene_transform_state_initialize(light, build->default_owner,
+        rgb[0], rgb[1], rgb[2]);
+    return scene_transform_state_peek()->owner == build->default_owner;
+}
+
+void engine_scene_shutdown(void)
+{
+    if (!s_engine_scene_live) return;
+    motion_gameplay_scene_bind(NULL, 0u);
+    motion_gameplay_scene_owner_bind(NULL, NULL);
+    scene_runtime_shutdown();
+    s_engine_scene_live = 0;
+}
+
+int engine_scene_initialize(EngineContext* context, BlockFile* config)
+{
+    EngineSceneBuild build;
+    SceneLightBuildOps ops;
+    if (s_engine_scene_live || context == NULL || config == NULL ||
+        context->views[0] == NULL || context->views[1] == NULL ||
+        context->views[2] == NULL) return 0;
+    if (!scene_runtime_initialize()) return 0;
+    s_engine_scene_live = 1;
+    memset(&build, 0, sizeof(build));
+    memset(&ops, 0, sizeof(ops));
+    build.config = config;
+    /* Explicit layout bridge: the retail view stores frame pointers at
+     * +0x24/28/2c, while ViewContext embeds three CameraHandle values. */
+    build.owners[SCENE_LIGHT_OWNER_TOP_SPOT] =
+        scene_runtime_camera_bind(&context->views[0]->cam_facing);
+    build.owners[SCENE_LIGHT_OWNER_TRACK_SPOT] =
+        scene_runtime_camera_bind(&context->views[1]->cam_follow);
+    build.owners[SCENE_LIGHT_OWNER_AMBIENT] = scene_root_object_get();
+    build.owners[SCENE_LIGHT_OWNER_FIRST_PERSON] =
+        scene_runtime_camera_bind(&context->views[2]->cam_world);
+    if (build.owners[0] == NULL || build.owners[1] == NULL ||
+        build.owners[3] == NULL || !scene_runtime_cameras_sync()) {
+        engine_scene_shutdown();
+        return 0;
+    }
+    ops.user = &build;
+    ops.rgb_read = engine_scene_rgb_read;
+    ops.owner_get = engine_scene_owner_get;
+    ops.light_create = engine_scene_light_create;
+    ops.light_parameter_set = engine_scene_parameter_set;
+    ops.light_position_set = engine_scene_position_set;
+    ops.light_pose_set = engine_scene_pose_set;
+    ops.light_enable = engine_scene_light_enable;
+    ops.scene_root_get = engine_scene_root_get;
+    ops.scene_object_allocate = engine_scene_object_allocate;
+    ops.scene_object_transform_init = engine_scene_transform_init;
+    if (!scene_lights_build_from_config(&ops) || build.failed) {
+        engine_scene_shutdown();
+        return 0;
+    }
+    return 1;
+}
+#endif
 static EngineKeepRunningHook s_keep_running_hook;
 static void* s_keep_running_user;
 static EngineTutorialDispatchHook s_tutorial_dispatch_hook;
@@ -92,6 +248,12 @@ uint32_t* engine_current_state_word(void)
 {
     return s_engine_current_context != NULL
         ? &s_engine_current_context->state : NULL;
+}
+
+ViewContext* engine_current_primary_view_get(void)
+{
+    return s_engine_current_context != NULL
+        ? s_engine_current_context->views[0] : NULL;
 }
 
 /* The reference's initialization callback clears this state before storing
@@ -170,6 +332,33 @@ void engine_game_config_callback_registry_init(const char* root)
     (void)window_runtime_callback_triplet_set(callbacks);
 }
 
+int engine_callback_triplet_init_dispatch(void)
+{
+    size_t callbacks[3];
+    typedef int (*InitCallback)(void);
+    if (!window_runtime_callback_triplet_get(callbacks) || callbacks[0] == 0u)
+        return 0;
+    return reinterpret_cast<InitCallback>(callbacks[0])();
+}
+
+int engine_callback_triplet_tick_dispatch(float dt)
+{
+    size_t callbacks[3];
+    typedef int (*TickCallback)(float);
+    if (!window_runtime_callback_triplet_get(callbacks) || callbacks[1] == 0u)
+        return 0;
+    return reinterpret_cast<TickCallback>(callbacks[1])(dt);
+}
+
+void engine_callback_triplet_shutdown_dispatch(void)
+{
+    size_t callbacks[3];
+    typedef void (*ShutdownCallback)(void);
+    if (!window_runtime_callback_triplet_get(callbacks) || callbacks[2] == 0u)
+        return;
+    reinterpret_cast<ShutdownCallback>(callbacks[2])();
+}
+
 // WindowModeFlagSet records the mode selected by renderer startup.
 // GLOBAL: LEGORR 0x005764f4
 static uint32_t s_window_mode_flag;
@@ -227,6 +416,9 @@ int EngineTick(EngineContext* ctx, float dt)
 
     /* 4b. The three view contexts (DAT_005560e4/e8/ec — ViewContextTick). */
     view_views_tick(ctx, dt, scale);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (s_engine_scene_live && !scene_runtime_cameras_sync()) return 0;
+#endif
 
     /* 5. Main simulation step — 0 => quit frame (MainSimStep @ 0x4250c0,
      *    ported in mainsim.*). */
@@ -441,6 +633,9 @@ void EngineShutdown(EngineContext* ctx)
     }
 
     if (ctx->app_mode != ENGINE_APP_LOADER) {
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+        engine_scene_shutdown();
+#endif
         engine_reset_level_and_exit();
         return;
     }
@@ -475,6 +670,9 @@ void EngineShutdown(EngineContext* ctx)
      * entity-array destructor loops remain unavailable. */
     rock_fall_style_scene_resources_release();
     pooled_record_pool_resources_release();
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    engine_scene_shutdown();
+#endif
     lego::scene_resource_slots_release_all();
     lego::scene_resource_string_tables_free();
 }
@@ -675,11 +873,15 @@ void global_state_flags_bit7_set(EngineContext* ctx, int value)
 void engine_global_state_flags_bits6_and_9_set_target(
     int value, int set_bit9)
 {
-    uint32_t flags = value != 0 ? s_panel_highlight_flags | 0x40u
-                                : s_panel_highlight_flags & ~0x40u;
-    if (set_bit9 != 0) flags |= 0x200u;
-    else flags &= ~0x200u;
-    s_panel_highlight_flags = flags;
+    /* FUN_00426360 commits the bit-6 update before testing its second
+     * argument, then performs the bit-9 update against that stored word. */
+    if (value != 0) s_panel_highlight_flags |= 0x40u;
+    else s_panel_highlight_flags &= ~0x40u;
+    if (set_bit9 != 0) {
+        s_panel_highlight_flags |= 0x200u;
+        return;
+    }
+    s_panel_highlight_flags &= ~0x200u;
 }
 
 void global_state_flags_bits6_and_9_set(EngineContext* ctx, int value,

@@ -186,7 +186,8 @@ static int           s_queue_count = 0;
 static uint32_t      s_flags = 0u;          /* DAT_004dcd48 */
 // GLOBAL: LEGORR 0x004ff980
 static uint32_t      s_system_state = 0u;   /* DAT_004ff980 */
-static uint32_t      s_objective_switch = 0u; /* DAT_004ff9bc */
+// GLOBAL: LEGORR 0x004ff9bc
+uint32_t             s_objective_switch = 0u; /* DAT_004ff9bc */
 static float         s_now = 0.0f;          /* _DAT_0049e264 analog */
 static MessageCallback  s_callback = NULL;
 static MessageSoundHook s_sound = NULL;
@@ -742,13 +743,15 @@ uint32_t system_state_flags_get(void)
 }
 
 // FUNCTION: LEGORR 0x00456550
-uint32_t system_state_flags_set(const uint32_t* value)
+uint32_t system_state_flags_set_target(const uint32_t* value)
 {
-    if (value == NULL) {
-        return 0u; /* deviation: the corpus dereferences blindly */
-    }
     s_system_state = *value;
     return *value;
+}
+
+uint32_t system_state_flags_set(const uint32_t* value)
+{
+    return value != NULL ? system_state_flags_set_target(value) : 0u;
 }
 
 uint32_t objective_switch_state_set(uint32_t value)
@@ -758,6 +761,22 @@ uint32_t objective_switch_state_set(uint32_t value)
 }
 
 // FUNCTION: LEGORR 0x004567d0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) uint32_t objective_switch_state_get(void)
+{
+    __asm {
+        mov eax, dword ptr [s_objective_switch]
+        test eax, eax
+        je objective_switch_state_get_false
+        mov dword ptr [s_objective_switch], 0
+        mov eax, 1
+        ret
+    objective_switch_state_get_false:
+        xor eax, eax
+        ret
+    }
+}
+#else
 uint32_t objective_switch_state_get(void)
 {
     /* FUN_004567d0 consumes the pending state and returns a boolean. */
@@ -765,6 +784,7 @@ uint32_t objective_switch_state_get(void)
     s_objective_switch = 0u;
     return 1u;
 }
+#endif
 
 void message_set_callback(MessageCallback cb) { s_callback = cb; }
 void message_set_sound_hook(MessageSoundHook h) { s_sound = h; }
@@ -871,18 +891,39 @@ void message_load_infomessages(BlockFile* cfg)
     }
 }
 
-/* Dedupe-with-live-callback (corpus MessagePreCheck FUN_004199f0). */
-// FUNCTION: LEGORR 0x004199f0
-static int message_pre_check(int id)
+typedef struct MessagePreCheckContext {
+    uint32_t value;
+    const uint32_t* pair;
+} MessagePreCheckContext;
+
+/* LAB_004199a0 compares the queued node against the dispatch payload. */
+static int message_pre_check_node_match(void* entry, void* context)
 {
+    const uint32_t* node = (const uint32_t*)entry;
+    const MessagePreCheckContext* request =
+        (const MessagePreCheckContext*)context;
+    if (request->value == 0u && request->pair == NULL) return 1;
+    if (request->value != 0u && node[2] == request->value) return 1;
+    if (request->pair != NULL && node[0] == request->pair[0] &&
+        node[1] == request->pair[1]) return 1;
+    return 0;
+}
+
+/* Dedupe-with-subscriber-scan (corpus MessagePreCheck FUN_004199f0). */
+// FUNCTION: LEGORR 0x004199f0
+static int message_pre_check(int id, uint32_t value, const void* pair)
+{
+    MessagePreCheckContext request;
+    uint32_t index;
     if (id == 10 || id == 11 || id == 12 || id == 38) {
         return 0; /* exception list skips dedupe */
     }
-    if (message_queue_find_id(id) >= 0) {
-        /* The queued entry's stored callback runs immediately; when a
-         * callback hook exists and handles it, the re-dispatch is
-         * suppressed. */
-        if (s_callback == NULL || s_callback(id) != 0) {
+    request.pair = (const uint32_t*)pair;
+    request.value = value;
+    for (index = 0; index < s_queue_count; ++index) {
+        if (id == s_queue_records[index].id &&
+            message_subscriber_dispatch(index, message_pre_check_node_match,
+                                        &request) != 0) {
             return 1;
         }
     }
@@ -952,7 +993,7 @@ void message_dispatch(int id, const char* p2, uint32_t p3, const void* p4)
         return;
     }
 
-    if (message_pre_check(id)) {
+    if (message_pre_check(id, p3, p4)) {
         return; /* duplicate handled live */
     }
 

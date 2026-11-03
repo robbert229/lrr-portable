@@ -971,31 +971,29 @@ int flic_opcode16_mode_dispatch(const uint8_t* rec)
     return 1;
 }
 
-/* PackedTripletTableToWordBuild (FUN_00484ba0) — see flic.hpp. The record
- * shape rides the frame-record byte window (the opcode-16 dispatch
- * precedent): 256 packed RGB triplets at +0x11c become 16-bit words at
- * +0x41c, and the first word is then cleared. Deviation: the corpus strides
- * the record blindly. */
+/* PackedTripletTableToWordBuild (FUN_00484ba0) — the retail body strides
+ * its frame-record pointer blindly, folding 256 packed triplets. */
 // FUNCTION: LEGORR 0x00484ba0
+void flic_packed_triplet_table_to_word_build_target(void* record)
+{
+    uint8_t* src = (uint8_t*)record + 0x11c;
+    uint16_t* dst = (uint16_t*)((uint8_t*)record + 0x41c);
+    int count = 0x100;
+    do {
+        count = count - 1;
+        *dst = (uint16_t)(((uint16_t)src[1]
+                 | (uint16_t)(src[0] & 0x3e) << 5) << 5
+                 | (uint16_t)(src[2] >> 1));
+        src = src + 3;
+        dst = dst + 1;
+    } while (count != 0);
+    *(uint16_t*)((uint8_t*)record + 0x41c) = 0;
+}
+
+/* Public adapter retains the null guard used by existing portable callers. */
 void flic_packed_triplet_table_to_word_build(void* record)
 {
-    if (record == NULL) {
-        return; /* deviation: pinned by test_flic.cpp:418 — the corpus strides blindly */
-    }
-    uint8_t* words = (uint8_t*)record + 0x41c;
-    const uint8_t* src = (const uint8_t*)record + 0x11c;
-    uint8_t* dst = words;
-    for (int count = 0x100; count != 0; --count) {
-        const uint16_t w = (uint16_t)(
-            (uint16_t)((uint16_t)(src[1] | (uint16_t)((src[0] & 0x3e) << 5))
-                       << 5)
-            | (uint16_t)(src[2] >> 1));
-        __builtin_memcpy(dst, &w, sizeof w);
-        dst += 2;
-        src += 3;
-    }
-    const uint16_t zero = 0u;
-    __builtin_memcpy(words, &zero, sizeof zero);
+    if (record != NULL) flic_packed_triplet_table_to_word_build_target(record);
 }
 
 /* --- the corpus frame-record window band (2026-10-25) ----------------------

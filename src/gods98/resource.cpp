@@ -2630,12 +2630,26 @@ void render_resource_track_and_retain(void* resource)
 }
 
 // FUNCTION: LEGORR 0x00477270
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void resource_interface_call_slot88(void* wrapper)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov eax, dword ptr [eax + 10h]
+        push eax
+        mov ecx, dword ptr [eax]
+        call dword ptr [ecx + 88h]
+        ret
+    }
+}
+#else
 void resource_interface_call_slot88(void* wrapper)
 {
     ResourceSlot88Interface* interface_object =
         *(ResourceSlot88Interface**)((unsigned char*)wrapper + 0x10);
     interface_object->slot_88();
 }
+#endif
 
 // FUNCTION: LEGORR 0x00476d10
 void render_resource_pair_release_and_clear(void** pair)
@@ -2655,6 +2669,17 @@ void render_resource_pair_release_and_clear(void** pair)
 // FUNCTION: LEGORR 0x004762f0
 void scene_property_owned_buffer_release(void* property)
 {
+#if defined(_MSC_VER) && defined(_M_IX86)
+    void* owned_buffer = (void*)scene_property_value_at08_get(property);
+    if (owned_buffer != NULL) {
+        engine_heap_free(owned_buffer);
+    }
+#elif defined(__i386__)
+    void* owned_buffer = (void*)scene_property_value_at08_get(property);
+    if (owned_buffer != NULL) {
+        engine_heap_free(owned_buffer);
+    }
+#else
     void* record;
     void* owned_buffer;
     if (property == NULL) {
@@ -2663,6 +2688,7 @@ void scene_property_owned_buffer_release(void* property)
     record = ((ResourcePropertyInterface*)property)->property_get();
     owned_buffer = record != NULL ? *(void**)((char*)record + 0x08) : NULL;
     engine_heap_free(owned_buffer);
+#endif
 }
 
 // FUNCTION: LEGORR 0x00477250
@@ -2710,7 +2736,11 @@ typedef struct WadCodecTableEntry {
 static unsigned int wad_reverse_low_bits(unsigned int v, uint8_t n)
 {
     unsigned int out = 0;
-    while (n--) { out = (out << 1) | (v & 1u); v >>= 1; }
+    while (n--) {
+        out = out << 1;
+        if ((v & 1u) != 0u) out = out | 1u;
+        v >>= 1;
+    }
     return out;
 }
 
@@ -3732,6 +3762,7 @@ char* game_file_mounted_path_prefix_rewrite(const char* path)
 {
     size_t path_length;
     size_t prefix_length;
+    const char* relative_path;
     char prefix[0x400];
     if (!s_wad_mount_path_cache_valid || path == NULL) return (char*)path;
     path_length = strlen(path);
@@ -3742,8 +3773,16 @@ char* game_file_mounted_path_prefix_rewrite(const char* path)
     prefix[prefix_length] = '\0';
     if (strcasecmp_lite(prefix, s_wad_mount_path_cache) != 0)
         return (char*)path;
+    relative_path = path + prefix_length;
+    /* PathResolveAgainstBase forms `<Data root><separator><name>`, while the
+     * WAD directory stores names without a leading separator. Strip that
+     * join separator at the root boundary before looking up the archive
+     * entry; otherwise a valid `Lego.cfg` is treated as a loose file. */
+    while (*relative_path == '/' || *relative_path == '\\') {
+        ++relative_path;
+    }
     snprintf(s_wad_mount_path_rewrite, sizeof(s_wad_mount_path_rewrite),
-             "%s", path + prefix_length);
+             "%s", relative_path);
     return s_wad_mount_path_rewrite;
 }
 
@@ -4019,51 +4058,6 @@ void resource_stream_close(ResourceStream* stream)
     if (stream->file != NULL) fclose(stream->file);
     free(stream->expanded_data);
     free(stream);
-}
-
-/* MapOpen2 (FUN_00480170): open the named file in binary mode, seek to its
- * end to get the payload size, notify the registered progress hook, allocate
- * a map-image slot, rewind, and read the payload into that slot. The slot
- * owner supplies the table operations because its pointer/flag table is
- * owned by the game level layer (MapFileResourceSlot @ 0x4893f0..). */
-// FUNCTION: LEGORR 0x00480170
-int map_open2(const char* path, const MapOpenOps* ops,
-              int32_t* size_out)
-{
-    GameFileHandle* handle;
-    void* map_data;
-    int32_t size;
-    int slot;
-    if (size_out != NULL) *size_out = 0;
-    if (path == NULL || ops == NULL || ops->slot_allocate == NULL ||
-        ops->slot_get == NULL || ops->slot_release == NULL) return -1;
-    handle = game_file_open_dispatch(path, "rb");
-    if (handle == NULL) return -1;
-    (void)wad_file_seek(handle, 0, 2);
-    size = wad_file_cursor_get(handle);
-    if (size < 0) {
-        game_file_close(handle);
-        return -1;
-    }
-    if (ops->progress != NULL) {
-        ops->progress(ops->context, path, (uint32_t)size);
-    }
-    slot = ops->slot_allocate(ops->context, (uint32_t)size);
-    if (slot < 0) {
-        game_file_close(handle);
-        return -1;
-    }
-    map_data = ops->slot_get(ops->context, (uint32_t)slot);
-    if (map_data == NULL) {
-        ops->slot_release(ops->context, (uint32_t)slot);
-        game_file_close(handle);
-        return -1;
-    }
-    (void)wad_file_seek(handle, 0, 0);
-    if (size > 0) (void)wad_file_read(map_data, 1, size, handle);
-    if (size_out != NULL) *size_out = size;
-    game_file_close(handle);
-    return slot;
 }
 
 static int resource_file_token_list_parse(const char* token_file,
@@ -4650,14 +4644,19 @@ void fixed_record_slot_resource_release(int slot)
     }
 }
 
+/* The mapped slot getter follows the retail unchecked 16-byte table walk;
+ * the public helper keeps the portable bounds check. */
 // FUNCTION: LEGORR 0x0048bff0
-void* fixed_record_slot_resource_get(int slot)
+static void* fixed_record_slot_resource_get_target(int slot)
 {
-    if ((unsigned int)slot >= FIXED_RECORD_SLOTS) {
-        return NULL; /* deviation: the corpus strides blindly */
-    }
     return s_fixed_slots[slot].in_use != 0
         ? fixed_record_slot_pointer_get(slot) : NULL;
+}
+
+void* fixed_record_slot_resource_get(int slot)
+{
+    if ((unsigned int)slot >= FIXED_RECORD_SLOTS) return NULL;
+    return fixed_record_slot_resource_get_target(slot);
 }
 
 /* Port-side payload length used by the file seek implementation. */
@@ -5017,7 +5016,7 @@ void resource_debug_output_format(const char* format, ...)
 // FUNCTION: LEGORR 0x0048c030
 void wad_memory_stream_buffer_get(int slot)
 {
-    (void)fixed_record_slot_resource_get(slot);
+    (void)fixed_record_slot_resource_get_target(slot);
 }
 
 /* --- wad payload band (2026-10-25; finding 01 codec story) ---------------

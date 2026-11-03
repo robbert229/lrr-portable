@@ -38,6 +38,7 @@ typedef struct DisplaySurface {
     void*  palette; /* optional DirectDraw palette owned by WinAPI surface */
     uint32_t format_flags; /* bit 0: validated 1/5/5/1 channel widths */
 } DisplaySurface;
+extern void* s_renderer_window_handle; /* DAT_0076ac80 */
 
 typedef struct SurfacePaletteEntry {
     uint8_t red;
@@ -387,11 +388,19 @@ typedef struct LwoLayerDispatchOps {
                                    const void* request);
 } LwoLayerDispatchOps;
 uint32_t lwo_layer_polygon_vertex_count(
+    void* object, int block, uint32_t* field_out, uint32_t reserved,
+    uint32_t* kind_out, uint32_t* count_out, uint32_t* indices_out);
+uint32_t lwo_layer_polygon_vertex_count_dispatch(
     void* object, unsigned int layer_index, const void* request,
-    const LwoLayerDispatchOps* ops); /* FUN_00474c40 */
+    const LwoLayerDispatchOps* ops);
 uint32_t lwo_layer_polygon_vertex_data_read(
+    void* object, int block, int first_vertex, int count,
+    void* output); /* FUN_00474cc0 */
+/* Portable host adapter for terrain and model owners that store the layer
+ * and mesh callbacks outside the retail object record. */
+uint32_t lwo_layer_polygon_vertex_data_read_dispatch(
     void* object, unsigned int layer_index, const void* request,
-    const LwoLayerDispatchOps* ops); /* FUN_00474cc0 */
+    const LwoLayerDispatchOps* ops);
 uint32_t terrain_cell_quad_vertex_emit(
     void* object, unsigned int layer_index, const void* request,
     const LwoLayerDispatchOps* ops); /* FUN_00474d30 */
@@ -407,8 +416,10 @@ typedef struct TerrainDetailLookupOps {
     uint32_t (*base_enabled_get)(void* context, void* children);
     uint32_t (*child_flags_get)(void* context, void* child);
 } TerrainDetailLookupOps;
-uint32_t terrain_detail_entry_get_at_index(
-    void* object, unsigned int index, const TerrainDetailLookupOps* ops); /* FUN_00474ae0 */
+uint32_t terrain_detail_entry_get_at_index(void* object,
+                                           unsigned int index);
+uint32_t terrain_detail_entry_get_at_index_dispatch(
+    void* object, unsigned int index, const TerrainDetailLookupOps* ops);
 typedef struct DirectDrawObjectSet {
     void* primary_surface;
     void* primary_clipper;
@@ -695,6 +706,9 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
                                  int auto_select, int windowed,
                                  const char* error_message); /* FUN_0049d030 */
 void directdraw_device_selection_get(DirectDrawDeviceSelection* out);
+/* Installs the WinAPI DirectDraw adapter and the retail mode-selection
+ * dialog resource before DirectDrawDeviceInitialize is called. */
+void surface_winapi_startup_ops_install(void* owner_window);
 typedef int (*Direct3DTextureMemoryCapsQueryFn)(void* context,
                                                 uint32_t capability,
                                                 uint32_t* memory_out);
@@ -726,7 +740,11 @@ void renderer_record_table_word_set(int index, uint32_t value);
 typedef void (*RendererBeginFrameHook)(void* device);
 void renderer_begin_frame_hook_set(RendererBeginFrameHook hook, void* device);
 int renderer_begin_frame_once(void);
+void renderer_begin_frame_once_retail(void); /* FUN_00477fa0 */
 void renderer_begin_frame_once_reset(void);
+#if defined(LEGORRR_BACKEND_WINAPI)
+void render_surface_present(void); /* FUN_0047c8d0 */
+#endif
 void surface_descriptor_initialize(void* record); /* FUN_0047e710 */
 typedef void (*SurfacePixelWriteFn)(void* context, int x, int y,
                                     uint32_t pixel);

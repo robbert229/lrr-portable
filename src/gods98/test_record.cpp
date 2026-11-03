@@ -148,17 +148,17 @@ static void test_camera_rotation(void)
     CHECK(camera_rotation_get(NULL) == 0.0f, "NULL camera answers zero");
 }
 
-/* MapCellToWorldCenter (FUN_0044f640): int descriptor fields convert to
- * float at the use site; unsigned bounds compare. */
+/* MapCellToWorldCenter (FUN_0044f640): unsigned dimension bounds and
+ * floating-point scale/origin fields. */
 static void test_map_cell_center(void)
 {
     uint8_t map[0x20];
     memset(map, 0, sizeof(map));
     poke_dword(map, 0x00, 4u);          /* width  */
     poke_dword(map, 0x04, 4u);          /* height */
-    poke_dword(map, 0x10, 2u);          /* scale  */
-    poke_dword(map, 0x18, -10);         /* origin X */
-    poke_dword(map, 0x1C, 100);         /* origin Y */
+    poke_float(map, 0x10, 2.0f);        /* scale  */
+    poke_float(map, 0x18, -10.0f);      /* origin X */
+    poke_float(map, 0x1C, 100.0f);      /* origin Y */
 
     float wx = 0.0f, wz = 0.0f;
     CHECK(map_cell_to_world_center(map, 1, 2, &wx, &wz) == 1,
@@ -522,38 +522,39 @@ static void test_transform_copy_in(void)
 }
 
 /* Grid-descriptor coordinate leaves (findings wave 2026-10-24). The
- * descriptor: w/h at +0/+4, int scale +0x10, int origins +0x18/+0x1C. */
+ * descriptor has dimensions at +0/+4 and float scale/origins at
+ * +0x10/+0x18/+0x1c. */
 static void test_descriptor_coordinates(void)
 {
     uint8_t desc[0x20];
     memset(desc, 0, sizeof(desc));
     poke_dword(desc, 0x00, 4u);
     poke_dword(desc, 0x04, 4u);
-    poke_dword(desc, 0x10, 2u);   /* scale as an int (bounds check's view) */
-    poke_dword(desc, 0x18, 10u);
-    poke_dword(desc, 0x1C, 10u);
+    poke_float(desc, 0x10, 2.0f);
+    poke_float(desc, 0x18, 10.0f);
+    poke_float(desc, 0x1C, 10.0f);
 
     int cx = 0, cy = 0;
-    /* In range: cell coordinates store and the leaf answers 1. */
-    CHECK(world_to_terrain_cell_bounds_check(desc, 1.5f, 2.5f, &cx, &cy, NULL)
+    /* World coordinates first subtract the origin, then divide by scale. */
+    CHECK(world_to_terrain_cell_bounds_check(desc, 12.5f, 5.5f, &cx, &cy, NULL)
               == 1,
           "an in-range world point checks in");
-    CHECK(cx == 1 && cy == 2, "cells truncate toward zero");
-    /* Truncation on negatives: -2.5 truncates to -2 (toward zero). */
-    CHECK(world_to_terrain_cell_bounds_check(desc, -2.5f, 0.0f, &cx, &cy, NULL)
+    CHECK(cx == 1 && cy == 2, "origin-relative cells truncate toward zero");
+    /* Truncation on negatives: (5-10)/2 = -2.5 truncates to -2. */
+    CHECK(world_to_terrain_cell_bounds_check(desc, 5.0f, 10.0f, &cx, &cy, NULL)
               == 0,
           "cell -2 fails the -1 bound");
     CHECK(cx == -2 && cy == 0, "out-of-range coordinates still store");
 
     /* Subcell: px = (wx - (cx*bs + ox)) / (bs/2); the y partner folds
      * past 1 and the pair answers by lowest. Hand-computed:
-     * wx=1.5 -> px = (1.5 - 12)/1 = -10.5; wy=2.5 -> py = -(2.5-6)/1
-     * = 3.5 -> fold 2-3.5 = -1.5 -> lowest -10.5. */
+     * wx=12.5 -> px = (12.5 - 12)/1 = 0.5; wy=5.5 -> py =
+     * -(5.5-6)/1 = 0.5; the lowest value is 0.5. */
     float sub = 0.0f;
-    CHECK(world_to_terrain_cell_bounds_check(desc, 1.5f, 2.5f, &cx, &cy, &sub)
+    CHECK(world_to_terrain_cell_bounds_check(desc, 12.5f, 5.5f, &cx, &cy, &sub)
               == 1,
           "the subcell path answers in range");
-    CHECK(sub == -10.5f, "the subcell is the lowest folded pair value");
+    CHECK(sub == 0.5f, "the subcell is the lowest folded pair value");
 
     /* Clamp-and-store. */
     grid_coordinate_clamp_and_store(desc, 1.9f, -0.5f, &cx, &cy);
@@ -565,30 +566,24 @@ static void test_descriptor_coordinates(void)
     grid_coordinate_clamp_and_store(desc, 1.0f, 1.0f, NULL, NULL);
     CHECK(cx == 0 && cy == 3, "NULL stores change nothing");
 
-    /* The forwarder-shaped leaf: scale +0x10 read as FLOAT here, so the
-     * fixture stores float 1.0 while the center converts the same bits
-     * as an int (the corpus's own mismatch, reproduced faithfully). */
+    /* The forwarder-shaped leaf uses the same float transform fields. */
     uint8_t desc2[0x20];
     memset(desc2, 0, sizeof(desc2));
     poke_dword(desc2, 0x00, 4u);
     poke_dword(desc2, 0x04, 4u);
-    float one = 1.0f;
-    uint32_t one_bits;
-    __builtin_memcpy(&one_bits, &one, sizeof(one_bits));
-    poke_dword(desc2, 0x10, one_bits);
-    poke_dword(desc2, 0x18, 0u);
-    poke_dword(desc2, 0x1C, 0u);
+    poke_float(desc2, 0x10, 1.0f);
+    poke_float(desc2, 0x18, 0.0f);
+    poke_float(desc2, 0x1C, 0.0f);
 
-    float point[2] = { 1.5f, 1.5f };
+    float point[2] = { 1.5f, -1.5f };
     float cell[2] = { 9, 9 };
     float offset[2] = { 9, 9 };
     CHECK(terrain_world_point_to_cell(desc2, point, cell, offset) == 0u,
           "the leaf answers 0 (the corpus never answers otherwise)");
     CHECK(cell[0] == 1.0f && cell[1] == 1.0f, "the cell coordinates stream");
     /* Mirror the center computation for the offset check. */
-    float si = (float)(int)one_bits; /* = 1.0f: bits-as-int casts once */
-    float center_x = si * 0.5f + (float)1 * si + 0.0f;
-    float center_y = 0.0f - (si * 0.5f + (float)1 * si);
+    float center_x = 1.0f * 0.5f + 1.0f * 1.0f;
+    float center_y = 0.0f - (1.0f * 0.5f + 1.0f * 1.0f);
     CHECK(offset[0] == 1.5f - center_x + 0.5f, "x offsets by +1/2 step");
     CHECK(offset[1] == 1.5f - center_y + 0.5f, "y offsets by +1/2 step");
 
@@ -752,7 +747,8 @@ static void test_mesh_window(void)
         erec.table = etable;
         uint32_t field = 0u, kind = 0u, count = 0u;
         uint32_t got_idx[4] = { 0x1111u, 0x1111u, 0x1111u, 0x1111u };
-        indexed_record_entry_read(&erec, 0, &field, &kind, &count, got_idx);
+        indexed_record_entry_read(&erec, 0, &field, 0u, &kind, &count,
+                                  got_idx);
         CHECK(field == 0x5au && kind == 3u && count == 3u,
               "the entry band reads out");
         CHECK(got_idx[0] == 7u && got_idx[1] == 8u && got_idx[2] == 9u,
@@ -762,7 +758,7 @@ static void test_mesh_window(void)
         memset(etable, 0, sizeof(etable));
         uint32_t zero_cnt = 0xDEADu;
         uint32_t keep[1] = { 0x2222u };
-        indexed_record_entry_read(&erec, 0, NULL, NULL, &zero_cnt, keep);
+        indexed_record_entry_read(&erec, 0, NULL, 0u, NULL, &zero_cnt, keep);
         CHECK(zero_cnt == 0u && keep[0] == 0x2222u,
               "the zero-count gate skips the walk");
         /* Missing table: the guard answers early (deviation: the corpus
@@ -770,7 +766,7 @@ static void test_mesh_window(void)
         PokeTableRecord empty;
         memset(&empty, 0, sizeof(empty));
         uint32_t sentinel = 1u;
-        indexed_record_entry_read(&empty, 0, &sentinel, NULL, NULL, NULL);
+        indexed_record_entry_read(&empty, 0, &sentinel, 0u, NULL, NULL, NULL);
         CHECK(sentinel == 1u, "the missing table answers early");
     }
 
@@ -1248,20 +1244,16 @@ int main(void)
         void* p = obj;
         __builtin_memcpy(rec + 0x00, &p, sizeof p);
         surface_visibility_set(rec, 1u);
-        void* last = NULL;
-        int flag = -1;
-        scene_visibility_last_call(&last, &flag);
-        CHECK(scene_visibility_calls() == 1 && last == (void*)obj && flag == 1,
-              "the surface wrapper lands on the record's object");
+        CHECK((obj[0x14] & 8) != 0,
+              "the surface wrapper enables its record object");
 
         /* AnimationObjectVisibilitySet: animation record +4. */
         char anim[0x20];
         memset(anim, 0, sizeof anim);
         __builtin_memcpy(anim + 0x04, &p, sizeof p);
         animation_object_visibility_set(anim, 0u);
-        scene_visibility_last_call(&last, &flag);
-        CHECK(scene_visibility_calls() == 2 && last == (void*)obj && flag == 0,
-              "the animation wrapper reads its +4 handle");
+        CHECK((obj[0x14] & 8) == 0,
+              "the animation wrapper disables its +4 object");
 
         /* AnimationObjectVisibilityGet: +4 object's flag bit 3. */
         obj[0x14] = (char)0x10; /* bit 3 clear */
@@ -1281,15 +1273,15 @@ int main(void)
         memset(pair, 0, sizeof pair);
         __builtin_memcpy(pair + 0x04, &p, sizeof p);
         scene_object_pair_apply_mode(pair, 1u);
-        CHECK(scene_visibility_calls() == 1, "the partnerless pair calls once");
+        CHECK((obj[0x14] & 8) != 0,
+              "the partnerless pair enables its first object");
         char mate[0x10];
         memset(mate, 0, sizeof mate);
         void* mp = mate;
         __builtin_memcpy(pair + 0x7c, &mp, sizeof mp);
         scene_object_pair_apply_mode(pair, 1u);
-        CHECK(scene_visibility_calls() == 3, "the second object rides the mode");
-        scene_visibility_last_call(&last, &flag);
-        CHECK(last == (void*)mate, "the partner call lands last");
+        CHECK((mate[0x14] & 8) != 0,
+              "the partner receives the mode");
 
         /* SceneObjectPairSetRenderParameters + SetCallbackScalar (2026-10-24):
          * the pose lands on the two handles as (x, y, 0) + facing (0,0,-1). */
@@ -1713,7 +1705,7 @@ int main(void)
         uint32_t bits = 0u;
         memcpy(&bits, &v, sizeof bits);
         const uint32_t keep35 = bits;
-        entity_velocity_slot_value_set(rec1, bits, 0);
+        entity_velocity_slot_value_set(rec1, v, 0);
         CHECK(entity_velocity_slot_value_get(rec1, 0) == 3.5f,
               "the slot value roundtrips through the window");
         uint32_t landed = 0u;
@@ -1722,7 +1714,7 @@ int main(void)
         float g = entity_velocity_slot_value_get(rec1, 7);
         memcpy(&bits, &g, sizeof bits);
         CHECK(bits == 0u, "the fresh slot reads zero");
-        entity_velocity_slot_value_set(rec1, 0x1234u, 9);
+        entity_velocity_slot_value_set(rec1, 1.0f, 9);
         CHECK(entity_velocity_slot_value_get(rec1, 9) != 0.0f,
               "the high slot rides the stride");
 
@@ -1739,7 +1731,7 @@ int main(void)
         v = -2.0f;
         memcpy(&bits, &v, sizeof bits);
         const uint32_t keepm2 = bits;
-        entity_velocity_slot_value_set(rec4, keepm2, 3);
+        entity_velocity_slot_value_set(rec4, v, 3);
         g = entity_velocity_slot_value_get(rec4, 3);
         memcpy(&bits, &g, sizeof bits);
         CHECK(bits == keepm2, "the type-4 slot value roundtrips (bits ride)");
@@ -1758,7 +1750,7 @@ int main(void)
               "the foreign type answers NULL");
         CHECK(entity_velocity_slot_value_get(recX, 0) == 0.0f,
               "the null base answers zero");
-        entity_velocity_slot_value_set(recX, 1u, 0);
+        entity_velocity_slot_value_set(recX, 1.0f, 0);
         CHECK(1, "the null base store no-ops (deviation)");
 
         static unsigned char recN[0x20];
@@ -1768,7 +1760,7 @@ int main(void)
         CHECK(entity_velocity_state_record_get(recN) == NULL,
               "the null sub-record link guards (deviation)");
         entity_velocity_state_record_get(NULL);
-        entity_velocity_slot_value_set(NULL, 1u, 0);
+        entity_velocity_slot_value_set(NULL, 1.0f, 0);
         CHECK(1, "the null record is guarded (deviation)");
     }
 

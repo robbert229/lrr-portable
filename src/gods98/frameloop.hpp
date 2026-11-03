@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "platform/platform.h"
 
 typedef struct MainLoopFramePumpHooks {
     void* context;
@@ -34,6 +35,7 @@ typedef struct MainLoopFramePumpHooks {
 } MainLoopFramePumpHooks;
 void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks);
 void main_loop_frame_pump(int draw_projection_overlay); /* FUN_00477f30 */
+void pointer_override_expiry_tick(float delta); /* FUN_00462700 */
 
 typedef struct WindowPortRect {
     int32_t left;
@@ -65,6 +67,9 @@ typedef struct WindowRuntimeState {
     size_t callback_triplet[3];
     uint32_t callback_triplet_valid;
 } WindowRuntimeState;
+extern WindowRuntimeState s_window_runtime_state;
+extern uint32_t s_window_application_active; /* DAT_00505808 */
+extern uint32_t s_window_close_requested; /* DAT_0050580c */
 
 typedef struct WindowRuntimeOps {
     void* context;
@@ -78,6 +83,14 @@ typedef struct WindowRuntimeOps {
 typedef ptrdiff_t (*WindowDefaultProc)(void* context, void* window,
     uint32_t message, size_t wparam, ptrdiff_t lparam);
 
+#if defined(_MSC_VER)
+#define LEGORRR_WINDOW_PROC_CALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define LEGORRR_WINDOW_PROC_CALL __attribute__((stdcall))
+#else
+#define LEGORRR_WINDOW_PROC_CALL
+#endif
+
 void window_runtime_ops_set(const WindowRuntimeOps* ops);
 void window_runtime_ops_install_defaults(const WindowRuntimeOps* ops);
 void window_runtime_default_proc_set(WindowDefaultProc proc, void* context);
@@ -86,7 +99,8 @@ void window_runtime_mode_set(int fullscreen, int32_t style);
 void window_runtime_flags_set(uint32_t flags);
 uint32_t window_runtime_flags_get(void);
 const WindowRuntimeState* window_runtime_state_get(void);
-void window_runtime_state_initialize(void* window); /* 0x0047c170 */
+void window_runtime_state_initialize(void* window);
+void window_state_initialize_retail(void* window); /* FUN_0047c170 */
 void window_runtime_display_caps_query(void); /* 0x00477f80 */
 int window_runtime_callback_triplet_set(const size_t* triplet);
 int window_runtime_callback_triplet_get(size_t triplet[3]);
@@ -94,11 +108,20 @@ int window_runtime_message_dispatch_filter(const void* message); /* 0x00478010 *
 void window_runtime_adjust_rect(WindowPortRect* rect);
 ptrdiff_t window_runtime_game_window_proc(void* window, uint32_t message,
     size_t wparam, ptrdiff_t lparam);
-ptrdiff_t window_runtime_activation_close_proc(void* window, uint32_t message,
+ptrdiff_t window_runtime_activation_close_proc(void* window,
+    uint32_t message,
     size_t wparam, ptrdiff_t lparam);
 
 /* Run the engine frame loop on a window. Returns 0 on clean exit. */
 int LegorrrRun(void);
+/* One-time application setup, split from recurring frame work. */
+int frameloop_application_init(void);
+int frameloop_application_tick(float dt);
+void frameloop_application_events_set(const PlatformEvent* events, int count);
+PlatformWindow* frameloop_application_window_get(void);
+void frameloop_application_shutdown(void);
+void frameloop_application_start_level_override_set(const char* level_name);
+void frameloop_application_sound_disabled_set(int disabled);
 void window_title_set(const char* title);
 
 #endif /* LEGORRR_FRAMELOOP_HPP */

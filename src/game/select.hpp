@@ -42,8 +42,7 @@ void selected_object_outlines_draw(
     const GameContext* ctx, SelectedObjectOutlineDrawFn draw,
     void* context); /* FUN_00424830 */
 
-/* SelectionRecordArrayGet (FUN_004525e0): the DAT_004fef2c selection
- * array itself. NULL GameContext yields NULL (the port has no static). */
+/* Context-explicit selection array helper. */
 EntitySlot* const* selection_record_array(const GameContext* ctx);
 
 /* SelectionRecordCountReset (FUN_00452600): zeroes only the count — the
@@ -51,7 +50,28 @@ EntitySlot* const* selection_record_array(const GameContext* ctx);
  * overwrite the array); `selection_clear` is the flag-clean variant. */
 void selection_count_reset(GameContext* ctx);
 
-/* SelectedEntity (0x4525c0): first selection entry when nonzero, else NULL. */
+/* Bind the active application context used by the retail global-selection
+ * entry point. */
+void selection_active_context_bind(GameContext* ctx);
+void selection_active_context_sync(GameContext* ctx);
+void selection_clear_active(void);
+int selection_entity_remove_active(EntitySlot* entity);
+int selection_candidate_filter_active(void* entity, int mode, int param_3);
+
+/* Retail active-selection global accessors. */
+EntitySlot* const* selection_active_context_record_get(int* count_out);
+EntitySlot* const* selection_active_records_get(void);
+uint32_t selection_active_count_get(void);
+int selection_active_has_any_get(void);
+void selection_active_count_reset(void);
+
+/* SelectedEntity (0x4525c0): zero-argument retail getter over the active
+ * selection globals. */
+EntitySlot* selection_active_entity_get(void);
+uint32_t selection_contains_entity_active_target(
+    EntitySlot* entity, uint32_t* index_out);
+
+/* Context-explicit helper for portable callers. */
 EntitySlot* selection_first(const GameContext* ctx);
 
 /* SelectedEntitiesAnyMatch (FUN_0041f420): call `predicate` in selection
@@ -119,6 +139,7 @@ int tutorial_path_menu_action(
  * (an entry removed twice loses the selected bit twice — inert).
  * Deviations: the widened owner mirror (pointer convention), the +0x3ec
  * low-byte read, the NULL-slot guard. */
+void selection_state_tick_active(void);
 void selection_state_tick(GameContext* ctx);
 
 /* Pick the placed entity nearest grid cell (cx,cy) within `tol` cells.
@@ -126,9 +147,9 @@ void selection_state_tick(GameContext* ctx);
 EntitySlot* selection_pick(GameContext* ctx, float cx, float cy,
                            float tol);
 
-/* Enqueue an opcode-5 (position) command for every selected entity toward
- * grid cell (tx,ty) — the pointer-driven "move" action (finding 06, op 5/6
- * → CmdCreateMove). Returns the number enqueued. */
+/* Enqueue opcode 5 with signed integer CELL words, truncating the renderer's
+ * corner-based fractional grid hit to its containing cell. Entity/scene
+ * positions stay in world space. Returns the number enqueued. */
 int selection_cmd_move(GameContext* ctx, float tx, float ty);
 
 /* Enqueue the opcode-8 selection-add for `e` (flags op path). */
@@ -137,6 +158,14 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e);
 #ifdef __cplusplus
 }
 #endif
+
+/* One port-side world action owner. The frame UI arbiter must first tag
+ * the ordered sample WORLD. Its admission token is shared with the later
+ * simtick caller. Uses the existing reconstruction's either-button DOWN
+ * policy, not established reference gesture/configuration parity. */
+struct InputPointerSample;
+int selection_pointer_world_dispatch(GameContext* ctx,
+    struct InputPointerSample* sample, int width, int height);
 
 /* Host convenience: pointer membership in the selection array. */
 int selection_contains_entity(const GameContext* ctx, const EntitySlot* e);
@@ -173,6 +202,8 @@ void selection_cancel_if_cursor_hits_object(struct EngineContext* engine,
  * the type-1 +0x3e0 bit-0x40000 rejection. NULL entities reject both. */
 int selection_candidate_already_selected_or_marked(const GameContext* ctx,
                                                    const EntitySlot* e);
+int selection_active_candidate_already_selected_or_marked(
+    EntitySlot* entity);
 /* The eligibility leaf is declared in entity.hpp (implemented there). */
 
 /* CurrentLevelStateFlagsContainMask (FUN_0041f720): ANDs the selected

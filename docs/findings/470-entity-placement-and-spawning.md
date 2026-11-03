@@ -10,7 +10,7 @@ EntityTypeOperationDispatch @ 0x449f50 and EntityTypeOperationRelease @ 0x449ff0
 
 EntityWorkObjectPositionGet @ 0x44a2a0 supports kinds 1–3: it obtains the kind-specific work-object handle, returns 0 if absent, otherwise reads the handle position into two outputs and returns 1. ObjectMovementInputAccumulate @ 0x44a310 redirects kind-2 records through a linked record at +0x36c when present; if entity flag bit 0 at +0x3e0 is set it resets the action sequence, then adds its two integer inputs and float input into accumulators at +0x2bc, +0x2c0, and +0x2c4. Its second integer input is suppressed unless FUN_00469ea0 reports bit 4.
 
-FUN_0044a070 is still unresolved. It selects or refreshes a cached handle in the entity fields at +0x2dc/+0x2e0 based on entity kind and an index argument, reads a position and orientation through that handle, normalizes a returned vector, and negates the vector when a type-specific component lookup succeeds. The exact handle and vector semantics need a more focused analysis.
+EntityFollowTargetPoseGet @ 0x44a070 selects the indexed scene handle for entity kinds 1–3, reads its position and orientation, normalizes the returned facing vector, and negates that vector when the type-specific component lookup succeeds. The port is in `src/game/entity.cpp`; the reconstructed view passes its target `EntitySlot` through a small adapter. It uses the existing type-1 scene-resource and type-2/3 activity-runner sidecars rather than reproducing the retail entity cache words at +0x2dc/+0x2e0. Live handle resolution still depends on the scene-resource resolver operations.
 
 ## Coordinate pools, candidate search, and placement preview
 
@@ -48,7 +48,7 @@ EntitySceneObjectTreeAttach @ 0x44b680 obtains the entity component's scene hand
 
 ## Unresolved questions and follow-up slices
 
-- Identify FUN_0044a070's cached handle and orientation/vector contract, and the consumers of its +0x2dc/+0x2e0 cache.
+- Reconcile the retail +0x2dc/+0x2e0 one-entry cache lifetime with the port's per-type indexed-resource caches.
 - Resolve the two optional terrain filters and distance threshold used by NearestOpenCellCoordSearch.
 - Trace the consumers of the 20-by-15 ObjTtSFXs lookup table.
 - Establish the exact lifecycle contract of FUN_00437540 in the tiny-monster path.

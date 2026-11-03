@@ -698,9 +698,9 @@ void media_cd_audio_watchdog_tick(int enabled)
 
 /* LoaderProgressCallbackSet (FUN_004802b0) — see media.hpp. */
 // GLOBAL: LEGORR 0x005343ac
-static void* s_loader_progress_callback; /* DAT_005343ac role: unowned */
+void* s_loader_progress_callback; /* DAT_005343ac role: unowned */
 // GLOBAL: LEGORR 0x005343b0
-static void* s_loader_progress_context;  /* DAT_005343b0 role: unowned */
+void* s_loader_progress_context;  /* DAT_005343b0 role: unowned */
 
 // FUNCTION: LEGORR 0x004802b0
 void loader_progress_callback_set(void* callback, void* context)

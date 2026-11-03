@@ -900,7 +900,7 @@ int pop_count32(uint32_t value)
     int count = 0;
     uint32_t position = 0u;
     do {
-        if ((value & (1u << ((uint8_t)position & 0x1fu))) != 0u) {
+        if ((value & (1u << position)) != 0u) {
             ++count;
         }
         ++position;
@@ -926,18 +926,26 @@ uint32_t find_first_set_bit32(uint32_t value)
 
 /* FUN_0047e7e0: the corpus's second identical position-loop body. */
 // FUNCTION: LEGORR 0x0047e7e0
-int bit_count32_by_position(uint32_t value)
+#if defined(_MSC_VER)
+#define LEGORRR_CRT_STDCALL __stdcall
+#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
+#define LEGORRR_CRT_STDCALL __attribute__((stdcall))
+#else
+#define LEGORRR_CRT_STDCALL
+#endif
+int LEGORRR_CRT_STDCALL bit_count32_by_position(uint32_t value)
 {
     int count = 0;
     uint32_t position = 0u;
     do {
-        if ((value & (1u << ((uint8_t)position & 0x1fu))) != 0u) {
+        if ((value & (1u << position)) != 0u) {
             ++count;
         }
         ++position;
     } while (position < 0x20u);
     return count;
 }
+#undef LEGORRR_CRT_STDCALL
 
 /* VC5 LIBC.LIB intrncvt.obj supplies this three-dword zero test. */
 // LIBRARY: LEGORR 0x00497ab0 SYMBOL
@@ -1466,8 +1474,7 @@ uint32_t flh_magic_uu_noop(void)
  * float width is the corpus's own: 0x4230b0 flds a DWORD. */
 // GLOBAL: LEGORR 0x00556f00
 static float    s_global_float_00556f00;
-// GLOBAL: LEGORR 0x004ff9bc
-static uint32_t s_global_dword_004ff9bc;
+extern uint32_t s_objective_switch;
 
 // FUNCTION: LEGORR 0x004230b0
 float global_float_field_00556f00_get(void)
@@ -1475,16 +1482,20 @@ float global_float_field_00556f00_get(void)
     return s_global_float_00556f00;
 }
 
+/* Mapped target: stores the input dword globally and returns the same value;
+ * the retail body dereferences the pointer without a null check. */
 // FUNCTION: LEGORR 0x004567c0
-/* Corpus 0x4567c4..0x4567ce stores one load and reloads the argument for
- * return. Keep the port's NULL behavior because test_static_globals pins it. */
+uint32_t global_value_004ff9bc_store_and_return_target(const void* value)
+{
+    s_objective_switch = *(const uint32_t*)value;
+    return *(const uint32_t*)value;
+}
+
+/* Keep the portable API's null behavior pinned by test_static_globals. */
 uint32_t global_value_004ff9bc_store_and_return(const void* value)
 {
-    if (value == NULL) {
-        return 0u; /* test-pinned deviation: corpus dereferences blindly */
-    }
-    s_global_dword_004ff9bc = *(const uint32_t*)value;
-    return *(const uint32_t*)value;
+    return value != NULL
+        ? global_value_004ff9bc_store_and_return_target(value) : 0u;
 }
 
 /* --- unowned DAT-global counter/accumulator band (see crt.hpp) -----------
@@ -1799,10 +1810,11 @@ void display_resolution_filter_tuples_reset(void)
 // FUNCTION: LEGORR 0x0049d870
 void display_resolution_filter_tuple_append(int width, int height, int bpp)
 {
-    s_filter_tuples[s_filter_tuple_count].w = width;
-    s_filter_tuples[s_filter_tuple_count].h = height;
-    s_filter_tuples[s_filter_tuple_count].bpp = bpp;
-    ++s_filter_tuple_count;
+    volatile int* count = (volatile int*)&s_filter_tuple_count;
+    s_filter_tuples[*count].w = width;
+    s_filter_tuples[*count].h = height;
+    s_filter_tuples[*count].bpp = bpp;
+    *count = *count + 1;
 }
 
 int display_resolution_filter_tuple_count(void)
@@ -1829,23 +1841,24 @@ void display_resolution_filter_tuple_get(int index, int* w, int* h, int* bpp)
 // FUNCTION: LEGORR 0x0049D8D0
 int display_mode_matches_filter_tuple(int mode_index)
 {
-    if (s_filter_tuple_count <= 0) {
+    if (s_filter_tuple_count == 0) {
         return 1;
     }
-    if (mode_index < 0 ||
-        mode_index >= s_display_mode_counts[s_active_display_mode]) {
-        return 0;
-    }
-    const CrtDisplayModeEntry* mode =
-        &s_display_modes[s_active_display_mode][mode_index];
-    for (int i = 0; i < s_filter_tuple_count; ++i) {
-        const FilterTuple* tuple = &s_filter_tuples[i];
-        if ((tuple->w == 0 || tuple->w == mode->width) &&
-            (tuple->h == 0 || tuple->h == mode->height) &&
-            (tuple->bpp == 0 || tuple->bpp == mode->bpp)) {
-            return 1;
+    const int32_t* mode = (const int32_t*)((const uint8_t*)
+        s_display_modes[s_active_display_mode] + mode_index * 0x110);
+    const int32_t* tuple = (const int32_t*)((const uint8_t*)s_filter_tuples +
+        sizeof(int32_t));
+    uint32_t index = 0u;
+    do {
+        if ((tuple[-1] == 0 || tuple[-1] == mode[0]) &&
+            (tuple[0] == 0 || tuple[0] == mode[1])) {
+            if (tuple[1] == 0 || tuple[1] == mode[2]) {
+                return 1;
+            }
         }
-    }
+        ++index;
+        tuple += 0x44;
+    } while (index < (uint32_t)s_filter_tuple_count);
     return 0;
 }
 
@@ -1953,9 +1966,9 @@ uint32_t global_config_word_peek(void)  { return s_config_word; }
 
 /* --- display dimensions + request-record predicates (see crt.hpp) ---------- */
 // GLOBAL: LEGORR 0x00505924
-static int s_display_w;   /* DAT_00505924 */
+int s_display_w;           /* DAT_00505924 */
 // GLOBAL: LEGORR 0x00505928
-static int s_display_h;   /* DAT_00505928 */
+int s_display_h;           /* DAT_00505928 */
 
 // FUNCTION: LEGORR 0x00401c30
 int display_width_get(void)  { return s_display_w; }
@@ -2019,39 +2032,133 @@ void request_record_panel_bounds_peek(int panel, float* out_x1,
     if (out_y2 != NULL) *out_y2 = record->bounds_y2;
 }
 
+#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x0045ab30
+__declspec(naked) int request_record_ready_flag4_target(int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        lea eax, dword ptr [eax + eax*2]
+        shl eax, 4
+        add eax, offset s_request_records
+        mov eax, dword ptr [eax + 0x2c]
+        test al, 4
+        je request_record_ready_flag4_false
+        test al, 8
+        jne request_record_ready_flag4_false
+        mov eax, 1
+        ret
+    request_record_ready_flag4_false:
+        xor eax, eax
+        ret
+        nop
+        nop
+        nop
+        nop
+    }
+}
+#else
+// FUNCTION: LEGORR 0x0045ab30
+int request_record_ready_flag4_target(int index)
+{
+    const RequestRecord* record = (const RequestRecord*)((const uint8_t*)
+        s_request_records + (uint32_t)index * 0x30u);
+    const uint32_t flags = record->flags;
+    return (flags & 4u) != 0u && (flags & 8u) == 0u ? 1 : 0;
+}
+#endif
+
 int request_record_ready_flag4(int index)
 {
-    if ((unsigned)index >= REQUEST_RECORD_COUNT) {
-        return 0; /* deviation: the corpus strides blindly */
-    }
-    RequestRecord* record = s_request_records + index;
-    const uint32_t f = record->flags;
-    return (f & 4u) != 0u && (f & 8u) == 0u ? 1 : 0;
+    if ((unsigned)index >= REQUEST_RECORD_COUNT) return 0;
+    return request_record_ready_flag4_target(index);
 }
 
 /* The corpus's 0x45ab6a/6f sequence adds the unchecked 0x30-byte record
  * address to DAT_00500110, then loads +0x2c; the 0x45ab72/78 tests keep bit
  * 2 then bit 8 in this short-circuit order. Keep the pointer step explicit
  * rather than folding the field offset into the global's displacement. */
+#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x0045ab60
-int request_record_ready_flag2(int index)
+__declspec(naked) int request_record_ready_flag2_target(int index)
 {
-    RequestRecord* record = s_request_records + index;
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        lea eax, dword ptr [eax + eax*2]
+        shl eax, 4
+        add eax, offset s_request_records
+        mov eax, dword ptr [eax + 0x2c]
+        test al, 2
+        je request_record_ready_flag2_false
+        test al, 8
+        jne request_record_ready_flag2_false
+        mov eax, 1
+        ret
+    request_record_ready_flag2_false:
+        xor eax, eax
+        ret
+        nop
+        nop
+        nop
+        nop
+    }
+}
+#else
+// FUNCTION: LEGORR 0x0045ab60
+int request_record_ready_flag2_target(int index)
+{
+    RequestRecord* record = (RequestRecord*)((uint8_t*)s_request_records +
+        (uint32_t)index * 0x30u);
     const uint32_t f = record->flags;
     if ((f & 2u) != 0u && (f & 8u) == 0u) {
         return 1;
     }
     return 0;
 }
+#endif
 
+int request_record_ready_flag2(int index)
+{
+    return request_record_ready_flag2_target(index);
+}
+
+#if defined(_MSC_VER) && defined(_M_IX86)
 // FUNCTION: LEGORR 0x0045ab90
+__declspec(naked) int request_record_flag8_is_set_target(int index)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        lea eax, dword ptr [eax + eax*2]
+        shl eax, 4
+        mov eax, dword ptr [eax + s_request_records + 0x2c]
+        and eax, 8
+        ret
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+    }
+}
+#else
+// FUNCTION: LEGORR 0x0045ab90
+int request_record_flag8_is_set_target(int index)
+{
+    RequestRecord* record = (RequestRecord*)((uint8_t*)s_request_records +
+        (uint32_t)index * 0x30u);
+    return (int)(record->flags & 8u);
+}
+#endif
+
 int request_record_flag8_is_set(int index)
 {
     if ((unsigned)index >= REQUEST_RECORD_COUNT) {
         return 0; /* deviation: the corpus strides blindly */
     }
-    return (int)(s_request_records[index].flags & 8u);
+    return request_record_flag8_is_set_target(index);
 }
 
 void request_record_flags_set(int index, uint32_t flags)
@@ -2748,6 +2855,7 @@ int  global_value_word_peek(void) { return s_global_value_word; }
  * (uninitialized) — both sides are genuinely zero (image-verified). */
 // GLOBAL: LEGORR 0x004aa458
 static void* s_linked_list_head = NULL;  /* DAT_004aa458 role */
+// GLOBAL: LEGORR 0x00506518
 static void* s_record_list_head;  /* DAT_00506518 role */
 
 static void record_list_push(void** head, void* record)
@@ -2760,10 +2868,23 @@ static void record_list_push(void** head, void* record)
 }
 
 // FUNCTION: LEGORR 0x0046a470
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void linked_list_push_at_global_head(void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [s_linked_list_head]
+        mov dword ptr [eax + 1ch], ecx
+        mov dword ptr [s_linked_list_head], eax
+        ret
+    }
+}
+#else
 void linked_list_push_at_global_head(void* record)
 {
     record_list_push(&s_linked_list_head, record);
 }
+#endif
 
 void* linked_list_global_head_peek(void) { return s_linked_list_head; }
 
@@ -2813,10 +2934,23 @@ uint32_t first_set_flag_ordinal(uint32_t mask)
 }
 
 // FUNCTION: LEGORR 0x004792c0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void global_record_list_push_head(void* record)
+{
+    __asm {
+        mov eax, dword ptr [esp + 4]
+        mov ecx, dword ptr [s_record_list_head]
+        mov dword ptr [eax + 1ch], ecx
+        mov dword ptr [s_record_list_head], eax
+        ret
+    }
+}
+#else
 void global_record_list_push_head(void* record)
 {
     record_list_push(&s_record_list_head, record);
 }
+#endif
 
 void* global_record_list_head_peek(void) { return s_record_list_head; }
 
@@ -3880,16 +4014,46 @@ void pair_table_append(void* table, int* count, const char* key,
  * has no ported writer; each word lands as a zero-init static and the six
  * getters answer their installed half (the unowned-global deviation, per the
  * DAT-window convention). The install hooks are port-side. */
-static uint32_t s_renderer_word_a;      /* DAT_0076ab24 */
-static uint32_t s_renderer_word_b;      /* DAT_0076ab28 */
+// GLOBAL: LEGORR 0x0076ab24
+uint32_t s_renderer_word_a;              /* DAT_0076ab24 */
+// GLOBAL: LEGORR 0x0076ab28
+uint32_t s_renderer_word_b;              /* DAT_0076ab28 */
 // GLOBAL: LEGORR 0x0076ab3c
 uint32_t g_renderer_word_c;             /* DAT_0076ab3c */
+// GLOBAL: LEGORR 0x0076ab40
+uint32_t s_window_mouse_word_40; /* DAT_0076ab40 */
+// GLOBAL: LEGORR 0x0076ab4c
+uint32_t s_window_mouse_word_4c; /* DAT_0076ab4c */
+// GLOBAL: LEGORR 0x0076ab50
+uint32_t s_window_mouse_word_50; /* DAT_0076ab50 */
+// GLOBAL: LEGORR 0x0076ab54
+uint32_t s_window_mouse_word_54; /* DAT_0076ab54 */
+// GLOBAL: LEGORR 0x0076ab58
+uint32_t s_window_mouse_word_58; /* DAT_0076ab58 */
 // GLOBAL: LEGORR 0x0076ac84
 uint32_t s_renderer_global_dword; /* DAT_0076ac84 */
+// GLOBAL: LEGORR 0x0076ac88
+void* s_renderer_primary_surface; /* DAT_0076ac88 */
 // GLOBAL: LEGORR 0x0076ac8c
-static uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
+uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
+// GLOBAL: LEGORR 0x0076ac90
+uint32_t s_renderer_window_state_90; /* DAT_0076ac90 */
+// GLOBAL: LEGORR 0x0076ac94
+uint32_t s_renderer_window_state_94; /* DAT_0076ac94 */
+// GLOBAL: LEGORR 0x0076ac9c
+uint32_t s_renderer_window_state_9c; /* DAT_0076ac9c */
+// GLOBAL: LEGORR 0x0076aca4
+uint32_t s_renderer_window_state_a4; /* DAT_0076aca4 */
+// GLOBAL: LEGORR 0x0076acac
+uint32_t s_renderer_window_state_ac; /* DAT_0076acac */
+// GLOBAL: LEGORR 0x0076acb0
+uint32_t s_renderer_window_state_b0; /* DAT_0076acb0 */
+// GLOBAL: LEGORR 0x0076acb4
+uint32_t s_renderer_window_state_b4; /* DAT_0076acb4 */
+// GLOBAL: LEGORR 0x0076acb8
+uint32_t s_renderer_window_state_b8; /* DAT_0076acb8 */
 // GLOBAL: LEGORR 0x0050608c
-static uint32_t s_render_feature_flags; /* DAT_0050608c */
+uint32_t s_render_feature_flags; /* DAT_0050608c */
 
 // FUNCTION: LEGORR 0x00410b30
 uint32_t renderer_word_a_get(void) { return s_renderer_word_a; } /* FUN_00410b30 */
@@ -3923,7 +4087,7 @@ void render_feature_flags_set(uint32_t value) { s_render_feature_flags = value; 
  * install/peek hooks — the two half-models do not interoperate
  * (unowned-global deviation). */
 // GLOBAL: LEGORR 0x00505f84
-static uint32_t s_engine_feature_word; /* DAT_00505f84 */
+uint32_t s_engine_feature_word; /* DAT_00505f84 */
 
 uint32_t engine_feature_word_peek(void)
 {

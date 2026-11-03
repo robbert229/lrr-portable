@@ -305,7 +305,58 @@ static void* s_motion_gameplay_scene_object;
 static void* s_motion_gameplay_scene_owner;
 static uint32_t s_motion_gameplay_scene_flags;
 static MotionJitterState s_motion_jitter_state;
-static float s_motion_jitter_tolerance[3];
+// GLOBAL: LEGORR 0x004EAE18
+static float s_motion_waypoint_target[3];
+// GLOBAL: LEGORR 0x004EAE24
+static float s_motion_waypoint_bounds_min[3];
+// GLOBAL: LEGORR 0x004EAE30
+static float s_motion_waypoint_bounds_max[3];
+// GLOBAL: LEGORR 0x004EAE3C
+static float s_motion_waypoint_delay;
+// GLOBAL: LEGORR 0x004EAE40
+static float s_motion_waypoint_delay_range[2];
+// GLOBAL: LEGORR 0x004EAE48
+static float s_motion_waypoint_velocity[3];
+// GLOBAL: LEGORR 0x004EAE54
+static float s_motion_waypoint_scale_range[2];
+// GLOBAL: LEGORR 0x004EAE5C
+static float s_motion_waypoint_duration;
+// GLOBAL: LEGORR 0x004EAE60
+static float s_motion_waypoint_duration_range[2];
+// GLOBAL: LEGORR 0x004EAE68
+static float s_motion_waypoint_progress[3];
+// GLOBAL: LEGORR 0x004EADEC
+static float s_motion_waypoint_position[3];
+// GLOBAL: LEGORR 0x004EADD8
+void* s_motion_jitter_retail_scene_object;
+// GLOBAL: LEGORR 0x004EADDC
+void* s_motion_jitter_retail_scene_owner;
+// GLOBAL: LEGORR 0x004EAE74
+float s_motion_jitter_center[3];
+// GLOBAL: LEGORR 0x004EAE80
+float s_motion_jitter_tolerance[3];
+// GLOBAL: LEGORR 0x004EAE8C
+float s_motion_jitter_delay;
+// GLOBAL: LEGORR 0x004EAE90
+float s_motion_jitter_delay_min;
+// GLOBAL: LEGORR 0x004EAE94
+float s_motion_jitter_delay_max;
+// GLOBAL: LEGORR 0x004EAE98
+float s_motion_jitter_duration;
+// GLOBAL: LEGORR 0x004EAE9C
+float s_motion_jitter_duration_min;
+// GLOBAL: LEGORR 0x004EAEA0
+float s_motion_jitter_duration_max;
+// GLOBAL: LEGORR 0x004EAEA4
+float s_motion_jitter_direction[3];
+// GLOBAL: LEGORR 0x004EAEB0
+float s_motion_jitter_remaining;
+// GLOBAL: LEGORR 0x004EAEB4
+float s_motion_jitter_magnitude_min;
+// GLOBAL: LEGORR 0x004EAEB8
+float s_motion_jitter_magnitude_max;
+// GLOBAL: LEGORR 0x004EAEC8
+uint32_t s_motion_jitter_flags;
 static void motion_jitter_center_refresh(void);
 
 static float motion_waypoint_default_random(void* context, float minimum,
@@ -332,18 +383,24 @@ void motion_waypoint_timer_state_install(MotionWaypointTimerState* state,
         &s_motion_waypoint_storage;
     s_motion_waypoint_random_range = random_range;
     s_motion_waypoint_user = context;
+#if defined(_WIN32) && defined(_M_IX86)
+    s_motion_jitter_flags = (s_motion_jitter_flags & ~0x3cu) |
+        (s_motion_waypoint_state->flags & 0x3cu);
+#endif
 }
 
 void motion_gameplay_scene_bind(void* target, uint32_t flags)
 {
     s_motion_gameplay_scene_object = target;
     s_motion_gameplay_scene_flags = flags;
+    s_motion_jitter_retail_scene_object = target;
 }
 
 void motion_gameplay_scene_owner_bind(void* target, void* owner)
 {
     if (target == s_motion_gameplay_scene_object) {
         s_motion_gameplay_scene_owner = owner;
+        s_motion_jitter_retail_scene_owner = owner;
         motion_jitter_center_refresh();
     }
 }
@@ -356,28 +413,52 @@ static void motion_jitter_center_refresh(void)
             s_motion_gameplay_scene_owner, position)) {
         memcpy(s_motion_jitter_state.center, position, sizeof(position));
         memcpy(s_motion_jitter_state.position, position, sizeof(position));
+        memcpy(s_motion_jitter_center, position, sizeof(position));
     }
 }
 
+// FUNCTION: LEGORR 0x0044cef0
 void motion_jitter_parameters_store(float delay_min, float delay_max,
                                     float speed_min, float speed_max,
                                     float magnitude_min, float magnitude_max,
                                     float tolerance_x, float tolerance_y,
                                     float tolerance_z)
 {
+#if defined(_WIN32)
+    s_motion_jitter_delay_min = delay_min;
+    s_motion_jitter_delay_max = delay_max;
+    s_motion_jitter_duration_max = speed_max;
+    s_motion_jitter_magnitude_min = magnitude_min;
+    s_motion_jitter_duration_min = speed_min;
+    s_motion_jitter_magnitude_max = magnitude_max;
+    (void)ddiscene_object_position_get(s_motion_jitter_retail_scene_object,
+        s_motion_jitter_retail_scene_owner, s_motion_jitter_center);
+    s_motion_jitter_tolerance[1] = tolerance_y;
+    s_motion_jitter_tolerance[0] = tolerance_x;
+    s_motion_jitter_tolerance[2] = tolerance_z;
+    s_motion_jitter_flags |= 0x40u;
+#else
     s_motion_jitter_state.delay_min = delay_min;
     s_motion_jitter_state.delay_max = delay_max;
     s_motion_jitter_state.lifetime_min = speed_min;
     s_motion_jitter_state.lifetime_max = speed_max;
     s_motion_jitter_state.magnitude_min = magnitude_min;
     s_motion_jitter_state.magnitude_max = magnitude_max;
+    s_motion_jitter_delay_min = delay_min;
+    s_motion_jitter_delay_max = delay_max;
+    s_motion_jitter_duration_min = speed_min;
+    s_motion_jitter_duration_max = speed_max;
+    s_motion_jitter_magnitude_min = magnitude_min;
+    s_motion_jitter_magnitude_max = magnitude_max;
     s_motion_jitter_tolerance[0] = tolerance_x;
     s_motion_jitter_tolerance[1] = tolerance_y;
     s_motion_jitter_tolerance[2] = tolerance_z;
     memcpy(s_motion_jitter_state.tolerance, s_motion_jitter_tolerance,
            sizeof(s_motion_jitter_tolerance));
     s_motion_jitter_state.flags |= 0x40u;
+    s_motion_jitter_flags |= 0x40u;
     motion_jitter_center_refresh();
+#endif
 }
 
 static int motion_jitter_vector_random(void*, float out[3])
@@ -396,6 +477,21 @@ static int motion_jitter_candidate_valid(void*, const float position[3])
             (double)(position[i] - s_motion_jitter_state.center[i]));
         if (s_motion_jitter_tolerance[i] < difference) return 0;
     }
+    return 1;
+}
+
+// FUNCTION: LEGORR 0x0044D9A0
+int motion_jitter_candidate_valid_retail(float position[3])
+{
+    if (fabs((double)(position[0] - s_motion_jitter_center[0])) >
+        (double)s_motion_jitter_tolerance[0])
+        return 0;
+    if (fabs((double)(position[1] - s_motion_jitter_center[1])) >
+        (double)s_motion_jitter_tolerance[1])
+        return 0;
+    if (fabs((double)(position[2] - s_motion_jitter_center[2])) >
+        (double)s_motion_jitter_tolerance[2])
+        return 0;
     return 1;
 }
 
@@ -472,6 +568,59 @@ void motion_jitter_state_step(MotionJitterState* state, float delta,
 // FUNCTION: LEGORR 0x0044D760
 void motion_jitter_step(float delta)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    float position[3];
+    float candidate[3];
+    float inverse_length;
+    int valid;
+    if ((s_motion_jitter_flags & 0x40u) == 0u) return;
+    if ((s_motion_jitter_flags & 0x80u) == 0u) {
+        s_motion_jitter_delay = s_motion_jitter_delay - delta;
+        if (0.0f < s_motion_jitter_delay) return;
+        s_motion_jitter_delay = random_float_range(
+            s_motion_jitter_delay_min, s_motion_jitter_delay_max);
+        s_motion_jitter_duration = random_float_range(
+            s_motion_jitter_duration_min, s_motion_jitter_duration_max);
+        s_motion_jitter_remaining = random_float_range(
+            s_motion_jitter_magnitude_min, s_motion_jitter_magnitude_max);
+        d3drm_vector_random(s_motion_jitter_direction);
+        inverse_length = 1.0f / (float)sqrt((double)(
+            s_motion_jitter_direction[2] * s_motion_jitter_direction[2] +
+            s_motion_jitter_direction[1] * s_motion_jitter_direction[1] +
+            s_motion_jitter_direction[0] * s_motion_jitter_direction[0]));
+        s_motion_jitter_direction[0] = inverse_length *
+            s_motion_jitter_direction[0] * s_motion_jitter_duration;
+        s_motion_jitter_direction[1] = inverse_length *
+            s_motion_jitter_direction[1] * s_motion_jitter_duration;
+        s_motion_jitter_direction[2] = inverse_length *
+            s_motion_jitter_direction[2] * s_motion_jitter_duration;
+        s_motion_jitter_flags |= 0x80u;
+        return;
+    }
+    if (!ddiscene_object_position_get(s_motion_jitter_retail_scene_object,
+            s_motion_jitter_retail_scene_owner, position)) return;
+    candidate[0] = position[0] + s_motion_jitter_direction[0];
+    candidate[1] = position[1] + s_motion_jitter_direction[1];
+    candidate[2] = position[2] + s_motion_jitter_direction[2];
+    valid = motion_jitter_candidate_valid_retail(candidate);
+    if (valid == 0) {
+        candidate[0] = position[0] - s_motion_jitter_direction[0];
+        candidate[1] = position[1] - s_motion_jitter_direction[1];
+        candidate[2] = position[2] - s_motion_jitter_direction[2];
+        valid = motion_jitter_candidate_valid_retail(candidate);
+        if (valid == 0) {
+            s_motion_jitter_flags &= 0xffffff7fu;
+            return;
+        }
+    }
+    (void)ddiscene_object_position_set(s_motion_jitter_retail_scene_object,
+        s_motion_jitter_retail_scene_owner, candidate[0], candidate[1],
+        candidate[2]);
+    s_motion_jitter_remaining = s_motion_jitter_remaining -
+        s_motion_jitter_duration;
+    if (0.0f < s_motion_jitter_remaining) return;
+    s_motion_jitter_flags &= 0xffffff7fu;
+#else
     MotionJitterHooks hooks;
     float position[3];
     if (s_motion_gameplay_scene_object == NULL ||
@@ -486,6 +635,7 @@ void motion_jitter_step(float delta)
     hooks.context = s_motion_waypoint_user;
     motion_jitter_state_step(&s_motion_jitter_state, delta,
         s_motion_waypoint_random_range, &hooks);
+#endif
 }
 
 void motion_waypoint_position_bind(float x, float y, float z)
@@ -497,6 +647,11 @@ void motion_waypoint_position_bind(float x, float y, float z)
     state->position[0] = x;
     state->position[1] = y;
     state->position[2] = z;
+#if defined(_WIN32) && defined(_M_IX86)
+    s_motion_waypoint_position[0] = x;
+    s_motion_waypoint_position[1] = y;
+    s_motion_waypoint_position[2] = z;
+#endif
 }
 
 void motion_waypoint_parameters_store(float min_x, float min_y, float min_z,
@@ -519,6 +674,21 @@ void motion_waypoint_parameters_store(float min_x, float min_y, float min_z,
     state->duration_min = duration_min;
     state->duration_max = duration_max;
     state->flags |= 4u;
+#if defined(_WIN32) && defined(_M_IX86)
+    s_motion_waypoint_bounds_min[0] = min_x;
+    s_motion_waypoint_bounds_min[1] = min_y;
+    s_motion_waypoint_bounds_min[2] = min_z;
+    s_motion_waypoint_bounds_max[0] = max_x;
+    s_motion_waypoint_bounds_max[1] = max_y;
+    s_motion_waypoint_bounds_max[2] = max_z;
+    s_motion_waypoint_delay_range[0] = hold_min;
+    s_motion_waypoint_delay_range[1] = hold_max;
+    s_motion_waypoint_scale_range[0] = scale_min;
+    s_motion_waypoint_scale_range[1] = scale_max;
+    s_motion_waypoint_duration_range[0] = duration_min;
+    s_motion_waypoint_duration_range[1] = duration_max;
+    s_motion_jitter_flags |= 4u;
+#endif
 }
 
 /* DriftOffsetStepApply (FUN_0044d0d0): periodically choose a three-axis
@@ -592,9 +762,16 @@ void motion_three_channel_tween_step(float delta)
     }
 }
 
-/* FUNCTION: LEGORR 0x0044d710 */
+// FUNCTION: LEGORR 0x0044d710
 void motion_waypoint_vector_random_scale_apply(void)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    float scale = random_float_range(s_motion_waypoint_scale_range[0],
+                                     s_motion_waypoint_scale_range[1]);
+    s_motion_waypoint_velocity[0] = s_motion_waypoint_target[0] / scale;
+    s_motion_waypoint_velocity[1] = s_motion_waypoint_target[1] / scale;
+    s_motion_waypoint_velocity[2] = s_motion_waypoint_target[2] / scale;
+#else
     MotionWaypointTimerState* state = s_motion_waypoint_state;
     float scale;
     PortLoopRandomRangeHook random_range = s_motion_waypoint_random_range;
@@ -608,11 +785,128 @@ void motion_waypoint_vector_random_scale_apply(void)
     state->velocity[0] = state->target[0] / scale;
     state->velocity[1] = state->target[1] / scale;
     state->velocity[2] = state->target[2] / scale;
+#endif
 }
 
 // FUNCTION: LEGORR 0x0044d280
 void motion_waypoint_timer_tick(float delta)
 {
+#if defined(_WIN32) && defined(_M_IX86)
+    float random_fraction;
+    float first_step;
+    if ((s_motion_jitter_flags & 4u) == 0u) return;
+    if ((s_motion_jitter_flags & 8u) == 0u) {
+        s_motion_waypoint_delay = s_motion_waypoint_delay - delta;
+        if (s_motion_waypoint_delay > 0.0f) return;
+        s_motion_waypoint_delay = random_float_range(
+            s_motion_waypoint_delay_range[0],
+            s_motion_waypoint_delay_range[1]);
+        s_motion_waypoint_duration = random_float_range(
+            s_motion_waypoint_duration_range[0],
+            s_motion_waypoint_duration_range[1]);
+        s_motion_waypoint_progress[0] = 0.0f;
+        s_motion_waypoint_progress[1] = 0.0f;
+        s_motion_waypoint_progress[2] = 0.0f;
+        random_fraction = (float)((int16_t)rng_thunk_draw15() % 1000) *
+                          0.001f;
+        s_motion_waypoint_target[0] =
+            (float)fabs((double)(s_motion_waypoint_bounds_max[0] -
+                                 s_motion_waypoint_bounds_min[0])) *
+            random_fraction + s_motion_waypoint_bounds_min[0];
+        s_motion_waypoint_target[1] =
+            (float)fabs((double)(s_motion_waypoint_bounds_max[1] -
+                                 s_motion_waypoint_bounds_min[1])) *
+            random_fraction + s_motion_waypoint_bounds_min[1];
+        s_motion_waypoint_target[2] =
+            (float)fabs((double)(s_motion_waypoint_bounds_max[2] -
+                                 s_motion_waypoint_bounds_min[2])) *
+            random_fraction + s_motion_waypoint_bounds_min[2];
+        motion_waypoint_vector_random_scale_apply();
+        s_motion_jitter_flags |= 0x18u;
+    }
+    else if ((s_motion_jitter_flags & 0x10u) == 0u) {
+        if ((s_motion_jitter_flags & 0x20u) == 0u) {
+            s_motion_waypoint_duration = s_motion_waypoint_duration - delta;
+            if (s_motion_waypoint_duration > 0.0f) return;
+            motion_waypoint_vector_random_scale_apply();
+            s_motion_waypoint_progress[0] = s_motion_waypoint_target[0];
+            s_motion_waypoint_progress[1] = s_motion_waypoint_target[1];
+            s_motion_waypoint_progress[2] = s_motion_waypoint_target[2];
+            s_motion_jitter_flags |= 0x20u;
+            return;
+        }
+        else {
+            first_step = delta * s_motion_waypoint_velocity[0];
+            s_motion_waypoint_position[0] -= first_step;
+            s_motion_waypoint_progress[0] -= first_step;
+            s_motion_waypoint_position[1] -=
+                delta * s_motion_waypoint_velocity[1];
+            s_motion_waypoint_progress[1] -=
+                delta * s_motion_waypoint_velocity[1];
+            s_motion_waypoint_position[2] -=
+                delta * s_motion_waypoint_velocity[2];
+            s_motion_waypoint_progress[2] -=
+                delta * s_motion_waypoint_velocity[2];
+            if (first_step < 0.0f) {
+                if (s_motion_waypoint_progress[0] >= 0.0f) {
+                    s_motion_waypoint_position[0] -=
+                        s_motion_waypoint_progress[0];
+                    s_motion_waypoint_position[1] -=
+                        s_motion_waypoint_progress[1];
+                    s_motion_waypoint_position[2] -=
+                        s_motion_waypoint_progress[2];
+                    s_motion_jitter_flags &= 0xffffffd7u;
+                    return;
+                }
+            }
+            else if (s_motion_waypoint_progress[0] <= 0.0f) {
+                s_motion_waypoint_position[0] -=
+                    s_motion_waypoint_progress[0];
+                s_motion_waypoint_position[1] -=
+                    s_motion_waypoint_progress[1];
+                s_motion_waypoint_position[2] -=
+                    s_motion_waypoint_progress[2];
+                s_motion_jitter_flags &= 0xffffffd7u;
+                return;
+            }
+        }
+    }
+    else {
+        first_step = delta * s_motion_waypoint_velocity[0];
+        s_motion_waypoint_position[0] += first_step;
+        s_motion_waypoint_position[1] +=
+            delta * s_motion_waypoint_velocity[1];
+        s_motion_waypoint_position[2] +=
+            delta * s_motion_waypoint_velocity[2];
+        s_motion_waypoint_progress[0] += first_step;
+        s_motion_waypoint_progress[1] +=
+            delta * s_motion_waypoint_velocity[1];
+        s_motion_waypoint_progress[2] +=
+            delta * s_motion_waypoint_velocity[2];
+        if (first_step < 0.0f) {
+            if (s_motion_waypoint_progress[0] <= s_motion_waypoint_target[0]) {
+                s_motion_waypoint_position[0] += s_motion_waypoint_target[0] -
+                                                  s_motion_waypoint_progress[0];
+                s_motion_waypoint_position[1] += s_motion_waypoint_target[1] -
+                                                  s_motion_waypoint_progress[1];
+                s_motion_jitter_flags &= 0xffffffefu;
+                s_motion_waypoint_position[2] += s_motion_waypoint_target[2] -
+                                                  s_motion_waypoint_progress[2];
+                return;
+            }
+        }
+        else if (s_motion_waypoint_target[0] <= s_motion_waypoint_progress[0]) {
+            s_motion_waypoint_position[0] -= s_motion_waypoint_progress[0] -
+                                              s_motion_waypoint_target[0];
+            s_motion_waypoint_position[1] -= s_motion_waypoint_progress[1] -
+                                              s_motion_waypoint_target[1];
+            s_motion_jitter_flags &= 0xffffffefu;
+            s_motion_waypoint_position[2] -= s_motion_waypoint_progress[2] -
+                                              s_motion_waypoint_target[2];
+            return;
+        }
+    }
+#else
     MotionWaypointTimerState* state = s_motion_waypoint_state;
     int i;
     float first_step;
@@ -683,6 +977,7 @@ void motion_waypoint_timer_tick(float delta)
             state->position[i] += state->target[i] - state->progress[i];
         state->flags &= ~0x10u;
     }
+#endif
 }
 
 /* FUNCTION: LEGORR 0x0044CFA0 */
@@ -709,7 +1004,30 @@ void motion_gameplay_tick(float delta)
             s_motion_waypoint_state->position[i] +=
                 s_motion_drift_state->offset[i] - drift_before[i];
     }
+#if defined(_WIN32) && defined(_M_IX86)
+    s_motion_waypoint_position[0] = s_motion_waypoint_state->position[0];
+    s_motion_waypoint_position[1] = s_motion_waypoint_state->position[1];
+    s_motion_waypoint_position[2] = s_motion_waypoint_state->position[2];
+#endif
     motion_waypoint_timer_tick(delta);
+#if defined(_WIN32) && defined(_M_IX86)
+    s_motion_waypoint_state->position[0] = s_motion_waypoint_position[0];
+    s_motion_waypoint_state->position[1] = s_motion_waypoint_position[1];
+    s_motion_waypoint_state->position[2] = s_motion_waypoint_position[2];
+    s_motion_waypoint_state->target[0] = s_motion_waypoint_target[0];
+    s_motion_waypoint_state->target[1] = s_motion_waypoint_target[1];
+    s_motion_waypoint_state->target[2] = s_motion_waypoint_target[2];
+    s_motion_waypoint_state->velocity[0] = s_motion_waypoint_velocity[0];
+    s_motion_waypoint_state->velocity[1] = s_motion_waypoint_velocity[1];
+    s_motion_waypoint_state->velocity[2] = s_motion_waypoint_velocity[2];
+    s_motion_waypoint_state->progress[0] = s_motion_waypoint_progress[0];
+    s_motion_waypoint_state->progress[1] = s_motion_waypoint_progress[1];
+    s_motion_waypoint_state->progress[2] = s_motion_waypoint_progress[2];
+    s_motion_waypoint_state->delay = s_motion_waypoint_delay;
+    s_motion_waypoint_state->duration = s_motion_waypoint_duration;
+    s_motion_waypoint_state->flags = (s_motion_waypoint_state->flags & ~0x3cu) |
+        (s_motion_jitter_flags & 0x3cu);
+#endif
     motion_jitter_step(delta);
     motion_three_channel_tween_step(delta);
     scene_transform_current_set(s_motion_waypoint_state->position[0],

@@ -397,6 +397,8 @@ void map_cell_record_grid_release(void* level);
 void map_cell_record_grid_release_current(void);
 void* map_cell_record_grid_get(void);
 void* map_cell_record_grid_level_get(void);
+/* Retail current-level global DAT_005560d4, mirrored by level activation. */
+extern struct LevelState* g_active_level_retail;
 int terrain_cell_object_record_present(int x, int y);
 int terrain_cell_object_record_present_for_level(const struct LevelState* level,
                                                  int x, int y);
@@ -540,6 +542,8 @@ int terrain_grid_path_search(void* actor, uint32_t start_x, uint32_t start_y,
                              uint32_t goal_x, uint32_t goal_y,
                              int** out_x, int** out_y, uint32_t* out_count,
                              TerrainPathStopHook stop, void* user);
+/* Both route searches return allocated cell arrays INCLUDING start and goal.
+ * A distinct adjacent destination therefore requires two entries. */
 int terrain_neighbor_path_check(void* actor, uint32_t start_x,
                                 uint32_t start_y, uint32_t goal_x,
                                 uint32_t goal_y, int** out_x, int** out_y,

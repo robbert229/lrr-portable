@@ -11,6 +11,7 @@
 #include "entity.hpp"
 #include "level.hpp"
 #include "mission.hpp"
+#include "select.hpp"
 #include "frontend.hpp"
 #include "objective.hpp"
 #include "savegame.hpp"
@@ -21,6 +22,7 @@
 #include "../gods98/surface.hpp"
 #include "util.hpp"
 #include "../gods98/input.hpp"
+#include "../gods98/frameloop.hpp"
 #include "../platform/platform.h"
 
 /* TaskBlockInit's stack name list and format operand are fixed image data. */
@@ -1313,6 +1315,7 @@ const char* mission_reward_advance(GameContext* ctx)
     level_destroy(ctx->level);
     ctx->level = NULL;
     ctx->selection_count = 0;
+    selection_active_context_sync(ctx);
     ctx->reward_active = 0;
     __builtin_memset(&ctx->mission, 0, sizeof(ctx->mission));
     __builtin_memset(&ctx->tasks, 0, sizeof(ctx->tasks));
@@ -1814,7 +1817,6 @@ void reward_screen_transition_tick_abi(int* displayed_task_count,
     *elapsed = state->elapsed;
 }
 
-// FUNCTION: LEGORR 0x00462700
 void reward_pointer_override_expiry_tick(RewardScreenState* state,
                                          float delta,
                                          const RewardScreenOps* ops)
@@ -2402,7 +2404,7 @@ namespace unported_ledger_stubs {
 void ledger_stub_00462700_PointerOverrideExpiryTick(
     float delta)
 {
-    reward_pointer_override_expiry_tick_bound(delta);
+    pointer_override_expiry_tick(delta);
 }
 
 // RewardScrollTickerAdvanceAndDraw

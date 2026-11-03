@@ -43,6 +43,19 @@ static void* s_sav_tree_root[2]; /* the two corpus tree-root globals' role */
 static void** s_sav_owned_tree_nodes[2];
 static uint32_t s_sav_owned_tree_node_count[2];
 static GameContext* s_save_current_context;
+// GLOBAL: LEGORR 0x00556fd0
+int s_active_object_ingame;
+// GLOBAL: LEGORR 0x00556fe4
+int s_active_object_outgame;
+// GLOBAL: LEGORR 0x00556ff0
+static void** s_sav_visited_outgame_items;
+// GLOBAL: LEGORR 0x00556ff4
+static uint32_t* s_sav_visited_outgame_words;
+// GLOBAL: LEGORR 0x00556fdc
+static void** s_sav_visited_ingame_items;
+// GLOBAL: LEGORR 0x00556fe0
+static uint32_t* s_sav_visited_ingame_words;
+// GLOBAL: LEGORR 0x005574d0
 static int s_save_current_slot = -1;
 /* The six 0xb8-byte per-slot contexts from DAT_00557080..DAT_005574d0. */
 // GLOBAL: LEGORR 0x00557080
@@ -59,6 +72,18 @@ typedef struct SavVisitedBand {
     int root_bound;
 } SavVisitedBand;
 static SavVisitedBand s_sav_visited_bands[2];
+
+static void sav_visited_band_alias_sync(int which)
+{
+    if (which == 0) {
+        s_sav_visited_outgame_items = s_sav_visited_bands[0].items;
+        s_sav_visited_outgame_words = s_sav_visited_bands[0].words;
+    }
+    else if (which == 1) {
+        s_sav_visited_ingame_items = s_sav_visited_bands[1].items;
+        s_sav_visited_ingame_words = s_sav_visited_bands[1].words;
+    }
+}
 
 static void sav_visited_band_release(int which);
 static int sav_visited_band_install(int which, void* const* items,
@@ -1223,25 +1248,83 @@ void selected_level_start_object_update(GameContext* ctx)
  * and value arrays blindly. Its two-byte compare exits when either byte of
  * the matching unit is zero (including the high-byte-zero ASCII case). */
 
+#if defined(_MSC_VER) && defined(_M_IX86)
+/* The mapped ListFindName body follows the unchecked retail list walk. */
 // FUNCTION: LEGORR 0x00416e20
-int list_find_name(const SavListWindow* win, const char* name)
+static __declspec(naked) int list_find_name_target(
+    const SavListWindow* win, const char* name)
 {
-    if (win == NULL || name == NULL) {
-        return -1; /* deviation: the corpus strides the window and the key
-                    * blindly; these guards are pinned by test_savegame
-                    * ("the window and key guards hold") */
+    __asm {
+        push ebx
+        push esi
+        push edi
+        mov edi, dword ptr [esp + 10h]
+        xor esi, esi
+        cmp dword ptr [edi], 0
+        jle list_find_name_not_found
+        mov ebx, dword ptr [esp + 14h]
+    list_find_name_loop:
+        mov eax, dword ptr [edi + 4]
+        mov ecx, dword ptr [eax + esi*4]
+        push ecx
+        push ebx
+        call _strcmpi
+        add esp, 8
+        test eax, eax
+        je list_find_name_found
+        mov eax, dword ptr [edi]
+        inc esi
+        cmp esi, eax
+        jl list_find_name_loop
+        or eax, 0ffffffffh
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    list_find_name_found:
+        mov eax, esi
+        pop edi
+        pop esi
+        pop ebx
+        ret
+    list_find_name_not_found:
+        pop edi
+        pop esi
+        or eax, 0ffffffffh
+        pop ebx
+        ret
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
     }
-    if (win->count <= 0) { /* the corpus's single cmp [count],0 / jle */
-        return -1;
-    }
-    for (int i = 0; i < win->count; ++i) {
-        /* corpus reloads entries and count each pass; name is arg 1 and
-         * the untested entry is arg 2 to strcasecmp_lite. */
-        if (strcasecmp_lite(name, (const char*)win->entries[i]) == 0) {
+}
+#else
+static int list_find_name_target(const SavListWindow* win, const char* name)
+{
+    int i;
+    if (win->count <= 0) return -1;
+    for (i = 0; i < win->count; ++i) {
+        if (strcasecmp_lite(name, (const char*)win->entries[i]) == 0)
             return i;
-        }
     }
     return -1;
+}
+#endif
+
+int list_find_name(const SavListWindow* win, const char* name)
+{
+    if (win == NULL || name == NULL) return -1;
+    return list_find_name_target(win, name);
 }
 
 // FUNCTION: LEGORR 0x00416ed0
@@ -1462,7 +1545,7 @@ SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
     }
     memset(node, 0, sizeof(*node));
     {
-        const int index = list_find_name(win, level_name);
+        const int index = list_find_name_target(win, level_name);
         if (index < 0) {
             engine_heap_free(node);
             return NULL;
@@ -1870,6 +1953,7 @@ static int sav_visited_band_install(int which, void* const* items,
     }
     sav_visited_band_release(which);
     s_sav_visited_bands[which] = next;
+    sav_visited_band_alias_sync(which);
     return 1;
 }
 
@@ -1882,6 +1966,40 @@ static void sav_visited_band_release(int which)
     s_sav_visited_bands[which].words = NULL;
     s_sav_visited_bands[which].count = 0u;
     s_sav_visited_bands[which].root_bound = 0;
+    sav_visited_band_alias_sync(which);
+}
+
+/* SavClearVisited (FUN_00416e70): clear each installed record marker and its
+ * paired per-index word, out-of-game band first and in-game band second. The
+ * two active counts are set from the same root sizes used to allocate these
+ * sidecar arrays. */
+// FUNCTION: LEGORR 0x00416e70
+void sav_clear_visited(void)
+{
+    int iVar2;
+
+    iVar2 = 0;
+    if (0 < s_active_object_outgame) {
+        do {
+            void* record = s_sav_visited_outgame_items[iVar2];
+            if (record != NULL) {
+                ((uint32_t*)record)[4] = 0u;
+                s_sav_visited_outgame_words[iVar2] = 0u;
+            }
+            iVar2 = iVar2 + 1;
+        } while (iVar2 < s_active_object_outgame);
+    }
+    iVar2 = 0;
+    if (0 < s_active_object_ingame) {
+        do {
+            void* record = s_sav_visited_ingame_items[iVar2];
+            if (record != NULL) {
+                ((uint32_t*)record)[4] = 0u;
+                s_sav_visited_ingame_words[iVar2] = 0u;
+            }
+            iVar2 = iVar2 + 1;
+        } while (iVar2 < s_active_object_ingame);
+    }
 }
 
 void sav_tree_root_install(int which, void* node)
@@ -1947,25 +2065,8 @@ static int sav_visited_band_reserve(int which, uint32_t count)
     band->items = items;
     band->words = words;
     band->count = count;
+    sav_visited_band_alias_sync(which);
     return 1;
-}
-
-void sav_tree_visited_band_clear(int which, uint32_t count)
-{
-    SavVisitedBand* band;
-    uint32_t i;
-    if (which < 0 || which > 1) return;
-    band = &s_sav_visited_bands[which];
-    /* The installed root owns the actual capacity. A stale or unrelated
-     * active-count word must not extend the table past that root. */
-    if (count > band->count) count = band->count;
-    for (i = 0u; i < count; ++i) {
-        void* record = band->items[i];
-        if (record != NULL) {
-            ((uint32_t*)record)[4] = 0u;
-            band->words[i] = 0u;
-        }
-    }
 }
 
 void sav_tree_visited_entry_set(int which, uint32_t index, void* record,

@@ -106,11 +106,10 @@ void* engine_calloc(long size);                  /* FUN_0048ead0 */
 void optional_resource_destroy(void* record);
 
 /* TextBufferDestroy (FUN_00485190): frees the buffer held in the text
- * buffer record's +0x14 slot, then the record itself. The corpus's slot
- * is a 32-bit dword; the port carries a host-width pointer there
- * (documented deviation). The corpus dereferences the record blindly and
- * so does the port — callers own non-null. */
+ * buffer record's +0x14 slot, then the record itself. The mapped body is
+ * unchecked; the portable API also releases the host-width font sidecar. */
 void text_buffer_destroy(void* record);
+void text_buffer_destroy_target(void* record); /* unchecked retail body */
 
 /* TextOutputField82CBit2SetClear (FUN_00485160): the text-output record's
  * +0x82c flag-word bit 2 set or clear. The corpus strides the record's
@@ -123,6 +122,7 @@ void text_output_field82c_bit2_set_clear(void* record, int set_bit);
  * record's +0x38 slot while one is there. The corpus's slot is a 32-bit
  * dword; the port carries a host-width pointer (documented deviation). */
 void object_field_38_release(void* record);
+void object_field_38_release_target(void* record); /* unchecked target body */
 
 /* TextBufferReset (FUN_004859b0): clears the text-output record in place.
  * The record's +0x418 count of buffer bytes and +0x14 buffer pointer
@@ -136,6 +136,7 @@ void object_field_38_release(void* record);
  * keeping the record usable (the corpus-visible padding bytes stay
  * zeroed for any pointer below 4 GiB). */
 void text_buffer_reset(void* record);           /* FUN_004859b0 */
+void text_buffer_reset_target(void* record);    /* unchecked retail body */
 
 /* TextBufferCreate (FUN_004850f0): allocates the 0x830-byte text-output
  * record, zero-clears it, installs the caller's font-resource handle and four header
@@ -172,10 +173,11 @@ int text_buffer_draw_wrapped(void* record, uint32_t start_line,
 int text_wrap_measure_and_draw_lines(void* record, float elapsed,
                                      int* height_out);
 
-/* UITextOutputObjectRelease (FUN_0045a620): resets the text-output record
- * held in the caller's pointer slot. The corpus dereferences blindly;
- * the port guards the holder (deviation). */
+/* UITextOutputObjectRelease (FUN_0045a620): target resets the text-output
+ * record held in the caller's pointer slot with blind accesses. The public
+ * adapter guards both the holder and its record pointer. */
 void ui_text_output_object_release(void* const* holder);
+void ui_text_output_object_release_target(void* const* holder);
                                                 /* FUN_0045a620 */
 
 /* --- dword-list allocator (2026-10-25) -----------------------------------

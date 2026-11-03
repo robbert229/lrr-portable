@@ -24,6 +24,7 @@
 
 /* Forward: the view/camera objects (view.hpp behind a cycle-breaking decl). */
 typedef struct ViewContext ViewContext;
+typedef struct BlockFile BlockFile;
 
 /* --- App mode (corpus DAT_00505f88) ------------------------------------ */
 #define ENGINE_APP_NORMAL 0
@@ -130,6 +131,12 @@ typedef struct EngineContext {
     uint32_t camera_target_count;
 } EngineContext;
 
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+/* App bootstrap/teardown, outside the mapped callback registrar. */
+int engine_scene_initialize(EngineContext* context, BlockFile* config);
+void engine_scene_shutdown(void);
+#endif
+
 /* Current frame owner for engine services that mirror global retail state
  * while the port keeps the state inside EngineContext. EngineTick updates
  * this before running any frame work. */
@@ -137,6 +144,9 @@ uint32_t* engine_current_feature_word(void);
 /* Current engine state word (DAT_00556ecc), while an EngineContext owns the
  * active frame. NULL outside an active engine context. */
 uint32_t* engine_current_state_word(void);
+/* Current primary follow view (DAT_005560e4), while an EngineContext owns
+ * the active frame. NULL outside an active engine context or without a view. */
+ViewContext* engine_current_primary_view_get(void);
 
 /* --- engine-level binding ------------------------------------------------
  * The corpus uses ONE 0x284-byte block (DAT_005560d4) for both engine state
@@ -256,6 +266,11 @@ void engine_game_config_callback_registry_hooks_set(
     EngineGameConfigInitHook init_hook,
     void* user);
 void engine_game_config_callback_registry_init(const char* root);
+/* Dispatch the registered application callbacks using their retail-shaped
+ * signatures. The window/message loop owns when these are called. */
+int engine_callback_triplet_init_dispatch(void);
+int engine_callback_triplet_tick_dispatch(float dt);
+void engine_callback_triplet_shutdown_dispatch(void);
 
 /* Main simulation step / quit gate (corpus MainSimStep @ 0x4250c0).
  * Consumes input+app state for the frame; the three outs are the step's

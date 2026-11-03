@@ -19,6 +19,26 @@ static TypeConfigTable s_vehicle_type_config;
 static TypeConfigTable s_rockmonster_type_config;
 static BlockFile* s_entity_type_config_file;
 
+/* These loaders receive the complete game config. Retail builds each key
+ * beneath its actual root; BlockFile retains that root in its hierarchy. */
+static BlockRec* entity_config_section_find(BlockFile* config,
+                                             const char* section_name)
+{
+    char path[512];
+    const char* root;
+    size_t root_length;
+    size_t section_length;
+    if (config == NULL || section_name == NULL) return NULL;
+    root = util_root_name(config);
+    root_length = strlen(root);
+    section_length = strlen(section_name);
+    if (root_length + section_length + 2u > sizeof(path)) return NULL;
+    memcpy(path, root, root_length);
+    path[root_length] = ' ';
+    memcpy(path + root_length + 1u, section_name, section_length + 1u);
+    return block_subgroup(config, path);
+}
+
 const TypeConfigTable* entity_type_config_table_get(uint32_t row_kind)
 {
     if (row_kind == 1u) return &s_minifigure_type_config;
@@ -268,7 +288,7 @@ static int entity_type_config_building_upgrades_parse(
         path[17] = (char)('0' + (level & 1u));
         path[18] = 0;
         section = s_entity_type_config_file != NULL
-            ? block_subgroup(s_entity_type_config_file, path) : NULL;
+            ? entity_config_section_find(s_entity_type_config_file, path) : NULL;
         if (section == NULL) continue;
         owner->upgrade_level_mask |= level;
         for (entry = block_first_child(section); entry != NULL;
@@ -649,7 +669,7 @@ void entity_type_config_row_finalize(void* context, void* row,
     char** names; \
     void** row_owned; \
     if (table == NULL || s_entity_type_config_file == NULL) return 0; \
-    section = block_subgroup(s_entity_type_config_file, (section_name_)); \
+    section = entity_config_section_find(s_entity_type_config_file, (section_name_)); \
     type_config_table_release(table); \
     count = entity_type_config_entry_count(NULL, section); \
     table->row_stride = (stride_); \
@@ -820,7 +840,7 @@ static const char** entity_config_name_table_build(BlockFile* cfg,
                                                     const char* section_name,
                                                     uint32_t* count)
 {
-    BlockRec* section = block_subgroup(cfg, section_name);
+    BlockRec* section = entity_config_section_find(cfg, section_name);
     BlockRec* child;
     const char** names;
     uint32_t i;
@@ -880,7 +900,7 @@ static EntityObjectNameLoadState* s_entity_object_name_load_state;
     uint32_t i; \
     if (state == NULL || state->tables == NULL || state->hooks == NULL || \
         config == NULL) return; \
-    section = block_subgroup(config, (section_name_)); \
+    section = entity_config_section_find(config, (section_name_)); \
     tables = state->tables; \
     hooks = state->hooks; \
     for (i = 0u; i < 5u; ++i) { \
@@ -984,7 +1004,7 @@ void entity_names_config_load(BlockFile* cfg)
     /* GameConfigInit loads ToolNames from the same Lego.cfg tree before its
      * ObjectNames/ObjectTheNames work. Keep the indexed tool-name handles
      * ready at the boot-time config boundary, using the established root. */
-    entity_tool_name_strings_load(cfg, "Lego*");
+    entity_tool_name_strings_load(cfg, (void*)util_root_name(cfg));
     (void)entity_vehicle_type_table_load();
     (void)entity_minifigure_type_table_load();
     (void)entity_rockmonster_type_table_load();
@@ -1642,7 +1662,7 @@ unsigned int entity_stats_config_load_from_block(BlockFile* config)
     GameContext* game;
     if (config == NULL) return 0u;
     state.config = config;
-    state.section = block_subgroup(config, "Stats");
+    state.section = entity_config_section_find(config, "Stats");
     state.current_entry = NULL;
     if (state.section == NULL) return 0u;
     for (type = 0; type < STATS_TYPE_TABLE_TYPES; ++type) {
@@ -1759,7 +1779,7 @@ void ledger_stub_0042da20_ObjectTheNamesLoad(
     if (tables == NULL || config == NULL || hooks == NULL) return;
     /* Unlike ObjectNamesLoad, this loader first opens the named config
      * subgroup and uses its own parallel table and handle globals. */
-    section = block_subgroup(config, "ObjectTheNames");
+    section = entity_config_section_find(config, "ObjectTheNames");
     if (section == NULL) return;
     object_names_load(tables, section, hooks);
 }
