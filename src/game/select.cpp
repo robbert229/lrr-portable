@@ -10,6 +10,8 @@
 #include "ai.hpp"
 #include "frontend.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/input.hpp"
+#include "render.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/view.hpp"
 
@@ -1296,11 +1298,16 @@ void selection_state_tick(GameContext* ctx)
 }
 
 /* Squared distance between a placed entity and grid cell (cx,cy). */
-static float pick_dist2(const EntitySlot* e, float cx, float cy)
+static int pick_dist2(const EntitySlot* e, const LevelState* level,
+                       float cx, float cy, float* distance)
 {
-    float dx = e->x - cx;
-    float dy = e->y - cy;
-    return dx * dx + dy * dy;
+    float grid[2];
+    float dx, dy;
+    if (!entity_position_grid_coordinates_get(e, level, grid)) return 0;
+    dx = grid[0] - cx;
+    dy = grid[1] - cy;
+    *distance = dx * dx + dy * dy;
+    return 1;
 }
 
 EntitySlot* selection_pick(GameContext* ctx, float cx, float cy, float tol)
@@ -1313,8 +1320,9 @@ EntitySlot* selection_pick(GameContext* ctx, float cx, float cy, float tol)
     for (int t = 0; t < ENTITY_TYPES; ++t) {
         for (int i = 0; i < ctx->entity_count[t]; ++i) {
             EntitySlot* e = &ctx->entity[t][i];
-            float d = pick_dist2(e, cx, cy);
-            if (d <= best_d) {
+            float d;
+            if (e->type != 0 && pick_dist2(e, ctx->level, cx, cy, &d) &&
+                d <= best_d) {
                 best_d = d;
                 best = e;
             }
@@ -1325,7 +1333,10 @@ EntitySlot* selection_pick(GameContext* ctx, float cx, float cy, float tol)
 
 int selection_cmd_move(GameContext* ctx, float tx, float ty)
 {
-    if (ctx == NULL) {
+    if (ctx == NULL || ctx->level == NULL ||
+        !(tx >= 0.0f && ty >= 0.0f &&
+          tx < (float)level_width(ctx->level) &&
+          ty < (float)level_height(ctx->level))) {
         return 0;
     }
     int n = 0;
@@ -1598,4 +1609,42 @@ void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
         }
     }
     selection_clear_request_and_hud_reset();
+}
+
+/* Neutral physical-button ingress adapter. Gesture policy remains the
+ * reconstruction's press-to-select/press-ground-to-move for either button;
+ * the reference's configured gesture and drag rules are still unresolved.
+ * No catalog tuple, synthetic ray, cell picker fallback, or route is used. */
+int selection_pointer_world_dispatch(GameContext* ctx,
+    InputPointerSample* sample, int width, int height)
+{
+    EntitySlot* hit;
+    float cell_x, cell_y;
+    int signed_cell_x, signed_cell_y;
+    if (sample == NULL || sample->domain != INPUT_POINTER_WORLD ||
+        sample->transition != PLATFORM_MOUSE_DOWN || sample->admitted ||
+        (sample->button != PLATFORM_MOUSE_LEFT &&
+         sample->button != PLATFORM_MOUSE_RIGHT)) return 0;
+    /* Consume even a miss before any picker/queue side effect. A second
+     * producer cannot reinterpret this physical edge later in the tick. */
+    sample->admitted = 1;
+    if (ctx == NULL || ctx->level == NULL || width <= 0 || height <= 0)
+        return 0;
+    hit = level_scene_pick_entity(ctx, ctx->level, width, height,
+                                  sample->x, sample->y, 30.0f);
+    if (hit != NULL) {
+        selection_clear(ctx);
+        return selection_add(ctx, hit);
+    }
+    if (!level_scene_mouse_cell(ctx, ctx->level, width, height,
+                                sample->x, sample->y, &cell_x, &cell_y) ||
+        !(cell_x >= 0.0f && cell_y >= 0.0f &&
+          cell_x < (float)level_width(ctx->level) &&
+          cell_y < (float)level_height(ctx->level))) return 0;
+    /* Projection returns fractional corner-based grid coordinates. Convert
+     * only validated hits to containing signed cells, never world XYZ or a
+     * catalog type/id. Existing queue/route owners keep all later authority. */
+    signed_cell_x = (int)cell_x;
+    signed_cell_y = (int)cell_y;
+    return selection_cmd_move(ctx, (float)signed_cell_x, (float)signed_cell_y);
 }

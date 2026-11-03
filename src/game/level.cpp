@@ -1185,6 +1185,14 @@ int terrain_surface_height_get(const void* handle, int x, int y)
                       * TERRAIN_BLOCK_STRIDE + 0x1a];
 }
 
+/* Presentation fallback uses TerrainCreate's actual fourth argument, including
+ * zero and negative scales; block spacing is an independent quantity. */
+float terrain_height_scale_get(const void* handle)
+{
+    const TerrainState* t = (const TerrainState*)handle;
+    return t != NULL ? t->terrain_value : 0.0f;
+}
+
 float terrain_blocksize_get(const void* handle)
 {
     const TerrainState* t = (const TerrainState*)handle;
@@ -2612,8 +2620,6 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases,
      * quad records. Seed the native scene cache from those records before
      * CellInitPass can mutate orientations or heights. */
     if (terrain->cell_vertices != NULL) {
-        static const uint8_t corner_x[4] = { 0u, 1u, 1u, 0u };
-        static const uint8_t corner_y[4] = { 0u, 0u, 1u, 1u };
         int cell_x, cell_y;
         for (cell_y = 0; cell_y + 1 < terrain->height; ++cell_y) {
             for (cell_x = 0; cell_x + 1 < terrain->width; ++cell_x) {
@@ -2624,20 +2630,10 @@ static int map_pipeline(LevelState* s, const char** names, const int* biases,
                 uint8_t* cell_record = terrain->blocks +
                     ((size_t)cell_y * (size_t)terrain->width +
                      (size_t)cell_x) * TERRAIN_BLOCK_STRIDE;
-                uint32_t corner;
-                for (corner = 0u; corner < 4u; ++corner) {
-                    uint8_t* record = terrain->blocks +
-                        ((size_t)(cell_y + corner_y[corner]) *
-                         (size_t)terrain->width +
-                         (size_t)(cell_x + corner_x[corner])) *
-                            TERRAIN_BLOCK_STRIDE;
-                    memcpy(cached + corner * 3u,
-                           terrain->cell_vertices + index + corner * 3u,
-                           3u * sizeof(float));
-                    /* SceneRender stores source height bytes and applies its
-                     * visual scale during projection. */
-                    cached[corner * 3u + 1u] = (float)record[0x1A];
-                }
+                /* Retain geometry Y = -height byte * RoughLevel, exactly as
+                 * the later CPU-quad mutation producer does. */
+                memcpy(cached, terrain->cell_vertices + index,
+                       sizeof(cached));
                 scene_render_terrain_cell_vertices_update(
                     s, (uint32_t)cell_x, (uint32_t)cell_y, cached);
                 if ((cell_record[0x19] & 1u) != 0u)
@@ -6562,6 +6558,9 @@ static int terrain_cell_mutation_progress_level(LevelState* level,
     size_t index = 0u;
     float corners[12];
     float render_corners[12];
+    float presentation_corners[4][3];
+    float previous_heights[4];
+    int have_presentation_corners = 0;
     float impact;
     int flipped = 0;
     int have_terrain_vertices = 0;
@@ -6621,6 +6620,16 @@ static int terrain_cell_mutation_progress_level(LevelState* level,
             corners[i * 3 + 2] = (float)(y + corner_y[i]);
         }
     }
+    /* The optional surface-vector/raw-byte fallback is not a geometry-Y
+     * producer. Preserve its existing update, but publish only its world-Y
+     * delta onto the current presentation quad, never its raw payload. */
+    if (!have_terrain_vertices) {
+        have_presentation_corners =
+            scene_render_terrain_cell_vertices_canonical_get(
+                level, (uint32_t)x, (uint32_t)y, presentation_corners);
+        for (i = 0; i < 4; ++i)
+            previous_heights[i] = corners[i * 3 + 1];
+    }
     corner_cell[0] = cell;
     corner_cell[1] = level_voxel(level, x + 1, y);
     corner_cell[2] = level_voxel(level, x + 1, y + 1);
@@ -6670,6 +6679,16 @@ static int terrain_cell_mutation_progress_level(LevelState* level,
     }
     else if (!have_terrain_vertices) {
         memcpy(render_corners, corners, sizeof(render_corners));
+    }
+    if (!have_terrain_vertices) {
+        if (!have_presentation_corners) return 1;
+        for (i = 0; i < 4; ++i) {
+            unsigned int destination = flipped
+                ? (unsigned int)((i + 1) & 3) : (unsigned int)i;
+            presentation_corners[destination][1] +=
+                corners[i * 3 + 1] - previous_heights[i];
+        }
+        memcpy(render_corners, presentation_corners, sizeof(render_corners));
     }
     scene_render_terrain_cell_vertices_update(level, (uint32_t)x,
                                               (uint32_t)y, render_corners);

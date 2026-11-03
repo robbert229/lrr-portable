@@ -3714,7 +3714,9 @@ void* font_atlas_record_create(const char* name)
             glyph->x = (float)x0;
             glyph->y = (float)y0;
             glyph->height = (float)cell_height;
-            for (x = cell_width - 1; x >= 0; --x) {
+            /* The reference stops at column one, retaining a one-pixel
+             * advance even for an all-key glyph such as space. */
+            for (x = cell_width - 1; x > 0; --x) {
                 int y;
                 int ink = 0;
                 for (y = 0; y < cell_height; ++y) {

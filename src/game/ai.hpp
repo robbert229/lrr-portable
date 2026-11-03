@@ -32,12 +32,13 @@
  * subjects the port does not model yet (projectile arcs, screen-shake,
  * screen-space effects) are listed as TODOs in
  * finding 10 rather than guessed. Move commands now flow through the
- * ported path-list mirror (EntitySlot.wp, corpus +0x24/+0x28/+0x2c), the
- * +0x3e0 bit-0x8 mover flag, and the tile walkability/occupancy queries
- * (#60); ai_path_build now runs the ported corpus wave-flood pathfinder
- * (FUN_00430ee0 seed + FUN_00430530 traceback on the port's level-grid
- * handle) per command, with the one-hop fallback kept for the no-path
- * and no-grid cases.
+ * ported path-list mirror (EntitySlot.wp, corpus +0x24/+0x28/+0x2c) and its
+ * +0x3e0 bit-0x1 route flag. Kind-0 admission belongs to
+ * cmd_move_route_prepare and the existing 0x404e00/0x441700 cell route APIs.
+ * AI alone interpolates these routes in world space, converting its seconds
+ * to the RouteSpeed helper's 25-Hz reference ticks. Failed admission waits
+ * without a straight-line fallback.
+ * ai_path_build remains a separate wave-flood diagnostic/convenience API.
  * Wake-timer expiry mirrors FUN_0044c110's writes onto the +0x364 target;
  * FUN_0044c030 creates and links its paired child through entity.cpp. The
  * cheat-word branch runs the real FUN_0044c530 can-do probe.
@@ -51,19 +52,15 @@
 extern "C" {
 #endif
 
-/* Movement speed (cells/second) and task timings (port-side application
- * constants). AI_MOVE_SPEED_CPS is the *default* rate: with a grid bound
- * the mover steps at the speed of the terrain under foot instead, read
- * from the entity Stats record behind FUN_00469cc0, with the context speed
- * table as a fallback when no record is installed; without a grid this
- * constant stands in. Corpus
- * movement is path-list driven, see the header note. */
+/* Legacy target/work-path fallback (cells/second) and task timings.
+ * Ordinary kind-0 motion requires terrain and loaded RouteSpeed; it does
+ * not use this default or reinterpret drill times as walking speed. */
 #define AI_MOVE_SPEED_CPS  2.0f
 #define AI_TASK_DURATION   2.0f
 #define AI_TASK_YIELD      2    /* deposit per completed gather task */
 
-/* +0x3e0 bit 0x8 — mover state: raised when a move command is applied
- * (creator side), cleared on path-list arrival (callback 0x43cd66). */
+/* +0x3e0 bit 0x8 is the separate work-cell mover state (0x43cd66).
+ * Ordinary kind-0 routes use the installer's bit 0x1, not this flag. */
 #define ENT_FLAG3E0_MOVING 0x00000008u
 
 /* --- activity state (FUN_004409e0 + DAT_004decc4) ---------------------- */
@@ -151,8 +148,8 @@ void bubble_texture_handle_set(int index, uint32_t handle);
  * stride 5 dwords — each entry stores x/y, two 0.5 interpolation weights,
  * and its pending/kind bytes; see AiWaypoint). Storage grows beyond the
  * inline span as needed. Returns the entry index or -1 on allocation failure.
- * Move commands seed one entry via cmd_create_move; a fully popped list
- * restarts, as the corpus rebuilds the buffer per path command. */
+ * Coordinates are numeric cells. A fully walked list restarts. This helper
+ * does not admit a command or transfer movement ownership. */
 int ai_path_append(EntitySlot* e, float x, float y);
 
 /* Build a move command's path into the entity buffer through the ported
@@ -161,9 +158,9 @@ int ai_path_append(EntitySlot* e, float x, float y);
  * The list is install-reset per command (corpus dispatch start, 0x4418d0)
  * and appended one entry per walked cell (builder appends, 0x44693b); the
  * flood work state is created and released inside the build, never shared
- * across commands. Returns the entry count, or 0 when no path exists (no
- * grid, blocked target, unreachable) or waypoint allocation fails; the
- * caller can then seed a one-hop fallback. */
+ * across commands. Targets are numeric cells; the actor start is world space.
+ * Returns 0 when no path exists or waypoint allocation fails. Production
+ * kind-0 commands use the shared command admission owner instead. */
 int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty);
 
 /* Wave-flood diagnostic: how many cells carried the wave flag 0x40000
@@ -186,11 +183,10 @@ int ai_commands_active(const GameContext* ctx);
 /* The DAT_004eabcc idle table FUN_0043a960 registers into (100 max). */
 int ai_idle_count(void);
 
-/* --- per-terrain movement speed (FUN_00469cc0) -------------------------- */
-/* Port-side context fallback for the terrain speed probe. Gameplay movement
- * first reads the selected entity Stats record at +0x24 + terrain*4; this
- * adapter remains useful when an entity has no loaded record. Values are
- * seconds per cell, with zero and out-of-range entries using the default. */
+/* --- legacy target/work-path rate fallback ---------------------------- */
+/* Values are seconds/cell for the historical target/work adapter only.
+ * Stats +0x24..34 are drill times in reference ticks, not walking rates.
+ * Ordinary kind-0 walking uses entity_route_speed (Stats RouteSpeed +0x20). */
 float ai_stats_speed(const GameContext* ctx, int tile_type);
 
 /* --- permitted-activity list (+0x370 ids / +0x384 count) ----------------- *

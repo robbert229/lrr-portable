@@ -459,6 +459,9 @@ void terrain_detail_enable_set(void* terrain, uint32_t index, int enabled);
  * the unsigned cell values from SurfaceMap; invalid cells answer zero. */
 int terrain_surface_height_get(const void* terrain, int x, int y);
 float terrain_blocksize_get(const void* terrain);
+/* TerrainCreate's retained height multiplier (RoughLevel), independent of
+ * block spacing. Zero and negative values are valid and returned unchanged. */
+float terrain_height_scale_get(const void* terrain);
 int terrain_cell_world_center_xy_get(const void* terrain, int x, int y,
                                      float position_xy[2]); /* FUN_0044f640 */
 int terrain_cell_world_center_xy_transform(const void* terrain, int x, int y,

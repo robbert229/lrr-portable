@@ -1412,17 +1412,31 @@ void simtick_render_step(EngineContext* c)
     ++s_post_n;
 }
 
-/* MainSimInteractionAndCellUpdate (FUN_00426520; Findings 474/455) clears
- * the debug bit, resolves the live pointer against the loaded level, then
- * routes a click to entity selection or a move command. The original has
- * several additional cursor modes and HUD/terrain feedback branches; those
- * rely on UI mode globals which have no EngineContext owner yet. The
- * reachable selection path uses the same perspective camera and viewport
- * dimensions as the software scene renderer, rather than guessing a cell
- * from raw screen coordinates. */
+/* MainSimInteractionAndCellUpdate: retain this subsystem and its real
+ * admission gates. Ordinary pointer actions share the frame UI arbiter's
+ * ordered samples and central world owner; raw aggregate presses cannot
+ * bypass UI or emit a second command after the operation queue has drained. */
 // FUNCTION: LEGORR 0x00426520
 void simtick_vu_meter(EngineContext* c, float dt)
 {
+#if defined(LEGORRR_BACKEND_WINAPI)
+    GameContext* game;
+    LevelState* level;
+    int width, height, i;
+    (void)dt;
+    if (c == NULL) return;
+    c->debug &= ~0x400u;
+    if ((c->state & 2u) == 0u || (c->state & 0x100u) != 0u ||
+        c->context_mode != 1 || c->input == NULL) return;
+    game = entity_pool_callback_context_get();
+    level = (LevelState*)c->level_block;
+    if (game == NULL || level == NULL || game->level != level) return;
+    width = display_width_get();
+    height = display_height_get();
+    for (i = 0; i < c->input->pointer_count; ++i)
+        (void)selection_pointer_world_dispatch(game,
+            &c->input->pointer_samples[i], width, height);
+#else
     GameContext* game;
     LevelState* level;
     float cell_x, cell_y;
@@ -1461,6 +1475,7 @@ void simtick_vu_meter(EngineContext* c, float dt)
     else if (selection_count(game) != 0) {
         (void)selection_cmd_move(game, cell_x, cell_y);
     }
+#endif
 }
 
 /* FUN_0046e390: fx-bank ticker — per-entry sub-fx scan with fade/clamp. */

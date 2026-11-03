@@ -54,6 +54,8 @@ extern int s_global_enabled;
 #define CMD_STATE_BUFOUT    0x200u  /* +0x40 is external (do not free) */
 #define CMD_STATE_MINION    0x2000u
 #define CMD_STATE_CANCEL    0x10000u
+/* Kind-0 only: its cell route has been admitted by cmd_move_route_prepare. */
+#define CMD_STATE_MOVE_ROUTED 0x1u
 
 /* --- pool + registry --------------------------------------------------- */
 void cmd_init(void);            /* CmdRegistryInit */
@@ -74,7 +76,15 @@ const char* cmd_task_name(int slot);     /* 31 AI task types */
 const char* cmd_priority_name(int slot); /* 27 AI priorities  */
 
 /* --- entity-bound creators (findings 10) -------------------------------- */
+/* Mapped ABI: the pair is two OPAQUE dwords, copied to +8/+c. For kind 0
+ * those words encode signed integer cells, including queue opcodes 5/6. */
 void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag);
+/* Shared kind-0 admission/lifecycle for the command scheduler and ai_tick.
+ * Prepare installs at most one cell route; failure leaves the head pending.
+ * AI alone advances that route. Finish returns 1 only for endpoint arrival
+ * (or explicit DONE cancellation); malformed/failed routes retain the head. */
+int cmd_move_route_prepare(EntitySlot* entity, struct LevelState* level);
+int cmd_move_route_finish(EntitySlot* entity);
 void cmd_create_target(EntitySlot* e, void* target);
 void cmd_create_gated(EntitySlot* e, void* target);
 /* EntityActivityRecordRemoveByType (FUN_00403c00) passes 0x43160000 (150.0f
@@ -213,8 +223,8 @@ uint32_t    cmd_rec_state(const void* rec);
 void*       cmd_rec_next(const void* rec);
 void        cmd_rec_set_next(void* rec, void* next);
 
-/* Move-target coords and the "now" timer on a record (semantic accessors;
- * the corpus stores these at +0x08/+0x0C and +0x14). */
+/* Numeric cell adapters for kind 0 (never reinterpret its words as floats).
+ * Other kinds retain their existing float-field semantics. */
 float cmd_rec_move_x(const void* rec);
 float cmd_rec_move_y(const void* rec);
 void cmd_rec_move_xy_set(void* rec, float x, float y);
@@ -648,8 +658,9 @@ int  entity_task_chain_contains_kind(const EntitySlot* e, int type);
 }
 #endif
 
-/* C++ convenience overload for portable callers with scalar coordinates.
- * Keep it outside the C-linkage block; the mapped retail ABI takes a pointer. */
+/* C++ convenience: numeric cell coordinates, truncated to integers before
+ * entering the opaque mapped constructor. These are not world values.
+ * Keep this overload outside the C-linkage block. */
 void cmd_create_move(EntitySlot* e, float x, float y, int flag);
 
 /* --- the kind-7 zone-command word + cancel (2026-10-24; finding 252) ---------

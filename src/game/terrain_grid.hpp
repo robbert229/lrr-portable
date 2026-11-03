@@ -542,6 +542,8 @@ int terrain_grid_path_search(void* actor, uint32_t start_x, uint32_t start_y,
                              uint32_t goal_x, uint32_t goal_y,
                              int** out_x, int** out_y, uint32_t* out_count,
                              TerrainPathStopHook stop, void* user);
+/* Both route searches return allocated cell arrays INCLUDING start and goal.
+ * A distinct adjacent destination therefore requires two entries. */
 int terrain_neighbor_path_check(void* actor, uint32_t start_x,
                                 uint32_t start_y, uint32_t goal_x,
                                 uint32_t goal_y, int** out_x, int** out_y,

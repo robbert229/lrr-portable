@@ -49,6 +49,10 @@ void tutorial_runtime_context_set(struct GameContext* game,
                                   struct EngineContext* engine,
                                   const struct InputState* input);
 void tutorial_nerp_pointer_release_record(int action, int cell_x, int cell_y);
+/* SetRecordObjectPointer retains a one-based OList slot (zero disables it).
+ * Resolve the slot through the live registry at use time. Indexed actor-arrow
+ * rendering is not yet bound to this owner. */
+uint32_t tutorial_record_object_pointer_get(void);
 int tutorial_script_file_load(const char* path);
 void tutorial_script_program_install(const uint32_t* words, uint32_t word_count);
 /* FUN_00452e70 receives the configured NERPMessageFile path. Parsed rows and
@@ -62,9 +66,13 @@ void tutorial_indirect_handle_resolve(uint32_t* value);
 void tutorial_frame_timer_array_advance(float delta);
 void tutorial_script_command_dispatch(float delta);
 void tutorial_advisor_scroll_step_advance(void);
-void tutorial_advisor_scroll_state_set(uint32_t pending, uint32_t maximum,
-                                      uint32_t step, uint32_t action,
-                                      uint32_t state_flags);
+/* Single production message owner; history index zero deliberately reads
+ * the frontend inline sound slot. Delta remains the reference float ABI. */
+void tutorial_message_generation_sync(void);
+uint32_t tutorial_message_history_get(uint32_t index);
+void tutorial_message_timer_values_get(float values[3]);
+void tutorial_message_duration_set(float duration);
+void tutorial_message_sound_active_set(void);
 void tutorial_camera_focus_state_set(uint32_t focus_id, uint32_t valid,
                                      float offset_target, float angle_target,
                                      uint32_t offset_active,

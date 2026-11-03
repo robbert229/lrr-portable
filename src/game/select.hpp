@@ -147,9 +147,9 @@ void selection_state_tick(GameContext* ctx);
 EntitySlot* selection_pick(GameContext* ctx, float cx, float cy,
                            float tol);
 
-/* Enqueue an opcode-5 (position) command for every selected entity toward
- * grid cell (tx,ty) — the pointer-driven "move" action (finding 06, op 5/6
- * → CmdCreateMove). Returns the number enqueued. */
+/* Enqueue opcode 5 with signed integer CELL words, truncating the renderer's
+ * corner-based fractional grid hit to its containing cell. Entity/scene
+ * positions stay in world space. Returns the number enqueued. */
 int selection_cmd_move(GameContext* ctx, float tx, float ty);
 
 /* Enqueue the opcode-8 selection-add for `e` (flags op path). */
@@ -158,6 +158,14 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e);
 #ifdef __cplusplus
 }
 #endif
+
+/* One port-side world action owner. The frame UI arbiter must first tag
+ * the ordered sample WORLD. Its admission token is shared with the later
+ * simtick caller. Uses the existing reconstruction's either-button DOWN
+ * policy, not established reference gesture/configuration parity. */
+struct InputPointerSample;
+int selection_pointer_world_dispatch(GameContext* ctx,
+    struct InputPointerSample* sample, int width, int height);
 
 /* Host convenience: pointer membership in the selection array. */
 int selection_contains_entity(const GameContext* ctx, const EntitySlot* e);

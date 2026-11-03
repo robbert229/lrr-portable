@@ -1491,10 +1491,10 @@ int entity_route_setup_and_marker_associate(EntitySlot* entity,
             if (blocksize != 0.0f &&
                 terrain_cell_world_center_xy_get(terrain,
                     (int)x_values[i], (int)y_values[i], cell_center)) {
-                route[i].weight_x =
+                route[i].weight_y =
                     (final_marker_position[0] - cell_center[0]) / blocksize
                     + 0.5f;
-                route[i].weight_y =
+                route[i].weight_x =
                     (cell_center[1] - final_marker_position[1]) / blocksize
                     + 0.5f;
             }
@@ -6057,9 +6057,13 @@ int object_list_load_file(GameContext* ctx, const char* olist)
             continue;
         }
         {
+            /* The creator resolves its name argument as a configured type
+             * and binds Stats before kind-four post-create callbacks. The
+             * OList instance label is separate from that type identity. */
             EntitySlot* slot = entity_create_with_position(ctx, op.type,
-                op.name, 0, op.x, op.y, op.heading);
+                op.type_name, 0, op.x, op.y, op.heading);
             if (slot != NULL) {
+                ol_strncpy(slot->name, sizeof(slot->name), op.name);
                 ol_strncpy(slot->type_name, sizeof(slot->type_name),
                            op.type_name);
                 slot->etype = type_row;
@@ -7864,6 +7868,28 @@ void entity_transform_position_get(const EntitySlot* entity,
     entity_transform_position_get_outputs(entity, &out_xy[0], &out_xy[1]);
 }
 
+int entity_position_grid_coordinates_get(const EntitySlot* entity,
+                                          const LevelState* level,
+                                          float out_xy[2])
+{
+    float world[2];
+    float center[2];
+    float blocksize;
+    int cell_x, cell_y;
+    if (entity == NULL || level == NULL || level->ptr_terrain == NULL ||
+        out_xy == NULL) return 0;
+    blocksize = terrain_blocksize_get(level->ptr_terrain);
+    if (blocksize <= 0.0f) return 0;
+    entity_transform_position_get(entity, world);
+    if (!terrain_world_xy_to_cell(level->ptr_terrain, world[0], world[1],
+                                  &cell_x, &cell_y) ||
+        !terrain_cell_world_center_xy_get(level->ptr_terrain,
+                                           cell_x, cell_y, center)) return 0;
+    out_xy[0] = (float)cell_x + 0.5f + (world[0] - center[0]) / blocksize;
+    out_xy[1] = (float)cell_y + 0.5f + (center[1] - world[1]) / blocksize;
+    return 1;
+}
+
 // FUNCTION: LEGORR 0x00471CA0
 int entity_world_center_position_read(const EntitySlot* entity,
                                       float out_xyz[3])
@@ -7934,6 +7960,15 @@ void entity_world_position_set(EntitySlot* entity, float x, float y,
      * The host EntitySlot keeps the same horizontal pair directly. */
     entity->x = x;
     entity->y = y;
+    if (entity->attached_scene_object != NULL) {
+        float position[3];
+        float z = entity->z;
+        if (ddiscene_object_position_get(entity->attached_scene_object, NULL,
+                                         position)) z = position[2];
+        entity->z = z;
+        (void)ddiscene_object_position_set(entity->attached_scene_object,
+                                           NULL, x, y, z);
+    }
     if (update_heading) {
         float direction[3] = { 0.0f, 1.0f, 0.0f };
         float axis[3] = { 0.0f, 0.0f, -1.0f };
@@ -11129,9 +11164,10 @@ void entity_path_motion_runtime_clear_impl(EntitySlot* entity)
     }
 }
 
-static int entity_path_waypoint_world_get(EntitySlot* entity,
+int entity_path_waypoint_world_get(const EntitySlot* entity,
                                           unsigned int index,
-                                          float position[2])
+                                          float position[2],
+                                          int project_surface)
 {
     LevelState* level;
     const AiWaypoint* step;
@@ -11148,7 +11184,9 @@ static int entity_path_waypoint_world_get(EntitySlot* entity,
     blocksize = terrain_blocksize_get(level->ptr_terrain);
     position[0] += (step->weight_y - 0.5f) * blocksize;
     position[1] += (0.5f - step->weight_x) * blocksize;
-    if (step->step_kind != 1u) {
+    /* Surface-edge steering belongs to the legacy specialized mover. A
+     * plain cell/subcell destination must remain at its requested point. */
+    if (project_surface && step->step_kind != 1u) {
         float projected_x;
         float projected_y;
         if (terrain_state_surface_point_project_offset(level->ptr_terrain,
@@ -11182,7 +11220,7 @@ int entity_step_movement_vector_resolve(EntitySlot* entity, int advance,
     index = (unsigned int)entity->wp_index;
     waypoint = &ENTITY_WAYPOINTS(entity)[index];
     entity_transform_position_get(entity, current);
-    if (!entity_path_waypoint_world_get(entity, index, target)) return 0;
+    if (!entity_path_waypoint_world_get(entity, index, target, 1)) return 0;
     if (use_saved_vector && (waypoint->pending & 8u) != 0u) {
         const void* terrain = entity->owner_ctx != NULL &&
             entity->owner_ctx->level != NULL
@@ -11543,6 +11581,25 @@ int ledger_stub_00444680_StepMovementVectorResolve(
 
 } // namespace unported_ledger_stubs
 
+/* Pure rate query: reuse the ordinary 0x446610 terrain/state adjustments,
+ * with delta 1 reference tick. No cursor, pose, or animation is advanced. */
+float entity_route_speed(EntitySlot* entity)
+{
+    float distance = 0.0f;
+    float animation_delta = 0.0f;
+    if (entity == NULL || entity->stats_record == NULL) return 0.0f;
+    unported_ledger_stubs::ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
+        entity, 1.0f, &distance, &animation_delta);
+    return distance;
+}
+
+int entity_route_waypoint_world_get(const EntitySlot* entity,
+                                    unsigned int index, float position[2])
+{
+    return unported_ledger_stubs::entity_path_waypoint_world_get(
+        entity, index, position, 0);
+}
+
 static void entity_path_motion_runtime_clear(EntitySlot* entity)
 {
     unported_ledger_stubs::entity_path_motion_runtime_clear_impl(entity);
@@ -11658,8 +11715,10 @@ static float entity_movement_default_base_speed_get(void* context,
     const EntitySlot* slot = (const EntitySlot*)entity;
     (void)context;
     (void)kind;
-    return entity_movement_component_float_get(
-        slot, 0x20, entity_stats_float_at20(slot));
+    /* 0x446610's displacement numerator is 0x469cb0: selected Stats
+     * +0x20 (RouteSpeed). The type component is an animation-rate owner,
+     * not a replacement source for physical route velocity. */
+    return entity_stats_float_at20(slot);
 }
 
 static int entity_movement_default_terrain_data_get(
@@ -11698,18 +11757,16 @@ static float entity_movement_default_surface_scale_get(void* context,
                                                         void* entity)
 {
     (void)context;
-    return entity_movement_component_float_get(
-        (const EntitySlot*)entity, 0xd4,
-        entity_stats_float_atd4((const EntitySlot*)entity));
+    /* 0x469ce0 also reads selected Stats, not the animation component. */
+    return entity_stats_float_atd4((const EntitySlot*)entity);
 }
 
 static float entity_movement_default_entity_scale_get(void* context,
                                                        void* entity)
 {
     (void)context;
-    return entity_movement_component_float_get(
-        (const EntitySlot*)entity, 0xd8,
-        entity_stats_float_atd8((const EntitySlot*)entity));
+    /* 0x469d20: selected Stats surface/path modifier. */
+    return entity_stats_float_atd8((const EntitySlot*)entity);
 }
 
 static float entity_movement_default_animation_scale_get(void* context,

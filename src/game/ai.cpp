@@ -783,10 +783,8 @@ static const LevelState* grid_of(const GameContext* ctx);
 #define AI_RUNNER_SECONDS_SCALE 0.5f
 #define AI_RUNNER_FLAG           0x02000000u
 
-/* Port-side view of the terrain speed table. The source binary's indexed
- * component getter (FUN_00469cc0) is mirrored by
- * entity_stats_float_at24_indexed; this higher-level context adapter adds
- * the port's bounds and fallback policy. */
+/* Legacy target/work-path seconds-per-cell fallback. Ordinary kind-0
+ * routes use the selected Stats RouteSpeed through entity_route_speed. */
 float ai_stats_speed(const GameContext* ctx, int tile_type)
 {
     const float def = 1.0f / AI_MOVE_SPEED_CPS;
@@ -1466,14 +1464,15 @@ int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty)
     s_wave_marks = 0; /* the build owns the whole flood state: start blank */
     const LevelState* grid = grid_of(ctx);
     if (e == NULL || grid == NULL) {
-        return 0; /* no grid handle: the one-hop fallback owns this move */
+        return 0; /* no terrain transform or route without a bound grid */
     }
     int w = level_width(grid);
     int h = level_height(grid);
     float start_xy[2];
+    int sx, sy;
     entity_transform_position_get(e, start_xy);
-    int sx = level_cell_of(start_xy[0]);
-    int sy = level_cell_of(start_xy[1]);
+    if (!terrain_world_xy_to_cell(grid->ptr_terrain, start_xy[0], start_xy[1],
+                                  &sx, &sy)) return 0;
     int gx = level_cell_of(tx);
     int gy = level_cell_of(ty);
     if (sx < 0 || sy < 0 || gx < 0 || gy < 0 || sx >= w || sy >= h ||
@@ -1538,9 +1537,8 @@ int ai_path_build(GameContext* ctx, EntitySlot* e, float tx, float ty)
     return rc;
 }
 
-/* The bound level's voxel grid, or NULL when no map is loaded (the corpus
- * tick cannot walk an empty grid, so a sub-margin grid counts as absent and
- * the port-side fallback paths run instead). */
+/* The bound level's voxel grid, or NULL for an absent/sub-margin map.
+ * Ordinary kind-0 admission waits while its terrain is unavailable. */
 static const LevelState* grid_of(const GameContext* ctx)
 {
     if (ctx == NULL || ctx->level == NULL || level_width(ctx->level) < 3 ||
@@ -1550,10 +1548,10 @@ static const LevelState* grid_of(const GameContext* ctx)
     return ctx->level;
 }
 
-/* Seconds per cell from the mover's selected +0x334 record, indexed by the
- * current terrain byte. FUN_00469cc0 reads +0x24 + type*4 directly. The
- * context table remains a fallback for entities that have no installed
- * Stats record (including mapless test contexts). */
+/* Legacy target/work-path rate adapter, retained for non-kind-0 behavior.
+ * +0x24..34 actually contain drill times in reference ticks; this historical
+ * reciprocal is NOT ordinary walking speed. Kind 0 uses entity_route_speed.
+ * Correcting the other work-path semantics needs its own evidence/scope. */
 static float underfoot_seconds(const GameContext* ctx, const EntitySlot* e,
                                int type)
 {
@@ -1566,16 +1564,18 @@ static float underfoot_seconds(const GameContext* ctx, const EntitySlot* e,
     return ai_stats_speed(ctx, type);
 }
 
-/* Cells/second the entity moves at now. The corpus resolves the current
- * tile and its +0x334 speed entry; runner-flagged entities multiply that
- * seconds-per-cell entry by the 0.5f constant at 0x49e3b4. */
+/* Historical target/work adapter, preserved for non-kind-0 commands.
+ * Its +0x24 reciprocal is not the ordinary route speed authority. */
 static float underfoot_cps(const GameContext* ctx, const LevelState* grid,
                            const EntitySlot* e, float x, float y)
 {
     if (grid == NULL) {
         return AI_MOVE_SPEED_CPS;
     }
-    int type = level_tile_type(grid, level_cell_of(x), level_cell_of(y));
+    int cell_x, cell_y;
+    if (!terrain_world_xy_to_cell(grid->ptr_terrain, x, y, &cell_x, &cell_y))
+        return AI_MOVE_SPEED_CPS;
+    int type = level_tile_type(grid, cell_x, cell_y);
     float seconds = underfoot_seconds(ctx, e, type);
     if (e != NULL && (e->flags_3e8 & AI_RUNNER_FLAG) != 0u)
         seconds *= AI_RUNNER_SECONDS_SCALE;
@@ -1588,22 +1588,8 @@ static float underfoot_cps(const GameContext* ctx, const LevelState* grid,
  * scene pose when one is installed. */
 static void ai_entity_position_set(EntitySlot* entity, float x, float y)
 {
-    float scene_position[3];
-    float z;
     if (entity == NULL) return;
-    z = entity->z;
-    if (entity->attached_scene_object != NULL &&
-        ddiscene_object_position_get(entity->attached_scene_object, NULL,
-                                     scene_position)) {
-        z = scene_position[2];
-    }
-    entity->x = x;
-    entity->y = y;
-    entity->z = z;
-    if (entity->attached_scene_object != NULL) {
-        (void)ddiscene_object_position_set(entity->attached_scene_object,
-                                           NULL, x, y, z);
-    }
+    entity_world_position_set(entity, x, y, entity->rot, 0);
 }
 
 /* Move/target step: move `e` toward (tx,ty) by speed*dt, where speed is
@@ -1620,8 +1606,11 @@ static int step_toward(GameContext* ctx, EntitySlot* e, float tx, float ty,
         ai_entity_position_set(e, tx, ty);
         return 1;
     }
-    float step = underfoot_cps(ctx, grid_of(ctx), e, position[0],
-                               position[1]) * dt;
+    const LevelState* grid = grid_of(ctx);
+    float blocksize = grid != NULL
+        ? terrain_blocksize_get(grid->ptr_terrain) : 1.0f;
+    float step = underfoot_cps(ctx, grid, e, position[0], position[1])
+        * blocksize * dt;
     if (step >= len) {
         ai_entity_position_set(e, tx, ty);
         return 1;
@@ -1631,97 +1620,59 @@ static int step_toward(GameContext* ctx, EntitySlot* e, float tx, float ty,
     return 0;
 }
 
-/* Move step over the entity path list — the corpus move branch's shape
- * (callback 0x43cb98: walk +0x24 buffer at the +0x2c index; a null list
- * falls back to the command's coordinates at 0x43cbb1). With a grid bound,
- * the mover-state sync marks the entity's own cell occupied every tick
- * (callback 0x43deed) and the walker only steps while its *current* cell
- * passes the entity-aware FUN_00432770 gate at 0x43cbe8; a failed gate
- * leaves the command live. The step rate is the terrain-under-foot speed
- * (FUN_00469cc0, see underfoot_cps — 0x43cc35's probe on the same branch).
- * Arrival runs the corpus pop: the entry's pending
- * byte is cleared (0x43cd90), no entry removal. When the list runs out the
- * corpus calls FUN_00403d10(ent,8,0,1) to unlink kind 8 from the entity's
- * +0x2f0 chain (+0xbc dwords in the raw entity pointer), then clears +0x3e0
- * bit 0x8 and the arrival cell occupancy. The portable path command itself
- * is kind 0; its kind-8 chain cleanup is applied by the existing chain API.
- * Returns 1 only when the whole path is walked. */
-static int step_path(GameContext* ctx, EntitySlot* e, float fallback_x,
-                     float fallback_y, float dt)
+/* AI owns kind-0 world motion. Admission installs numeric cell waypoints;
+ * zero flags are valid (0x441700), and wp_index alone owns progression.
+ * entity_route_speed reuses 0x446610's WORLD units/reference tick. AI takes
+ * seconds: multiply the rate by 25, with NO blocksize factor. The legacy
+ * underfoot_cps work/target path above is not the ordinary route contract. */
+static int step_path(GameContext* ctx, EntitySlot* e, float dt)
 {
     const LevelState* grid = grid_of(ctx);
     float position[2];
+    float remaining = dt;
+    float blocksize;
+    if (grid == NULL || grid->ptr_terrain == NULL || e->wp_count <= 0 ||
+        (e->flags_3e8 & 0x4000u) != 0u) return 0;
+    blocksize = terrain_blocksize_get(grid->ptr_terrain);
+    if (blocksize <= 0.0f) return 0;
     entity_transform_position_get(e, position);
-    if (grid != NULL && (e->flags_3e0 & ENT_FLAG3E0_MOVING) != 0) {
-        int cx = level_cell_of(position[0]), cy = level_cell_of(position[1]);
-        level_tile_mark((LevelState*)grid, cx, cy, 1);
-        if (!terrain_cell_walkability_query_current(
-                e, (uint32_t)cx, (uint32_t)cy,
-                (entity_stats_word_get(e) & 0x02000000u) != 0u, 1)) {
-            return 0; /* off-grid or blocked tile: no step this frame */
+    while (e->wp_index >= 0 && e->wp_index < e->wp_count) {
+        int cx, cy;
+        float target[2];
+        float dx, dy, length, speed, step;
+        AiWaypoint* waypoint;
+        if (!terrain_world_xy_to_cell(grid->ptr_terrain,
+                position[0], position[1], &cx, &cy)) return 0;
+        waypoint = &ENTITY_WAYPOINTS(e)[e->wp_index];
+        /* Use the same actor-aware cell/edge authority as route admission.
+         * The separate work-cell predicate 0x432770 requires flags not set
+         * by the OList creator and does not own ordinary route motion. */
+        if (!terrain_cell_route_and_occupancy_check(e, grid,
+                (int)waypoint->x, (int)waypoint->y, cx, cy, 0)) return 0;
+        if (!entity_route_waypoint_world_get(e, (unsigned int)e->wp_index,
+                                              target)) return 0;
+        dx = target[0] - position[0];
+        dy = target[1] - position[1];
+        length = (float)sqrt((double)(dx * dx + dy * dy));
+        speed = entity_route_speed(e) * 25.0f; /* seconds -> reference ticks */
+        if (!(speed > 0.0f)) return 0; /* absent/invalid rate retains the head */
+        step = speed * remaining;
+        if (length > step && length > blocksize * 0.00001f) {
+            ai_entity_position_set(e, position[0] + dx / length * step,
+                                    position[1] + dy / length * step);
+            return 0;
         }
+        ai_entity_position_set(e, target[0], target[1]);
+        position[0] = target[0];
+        position[1] = target[1];
+        if (speed > 0.0f) remaining -= length / speed;
+        if (remaining < 0.0f) remaining = 0.0f;
+        waypoint->pending &= (uint8_t)~1u;
+        ++e->wp_index;
     }
-    int done;
-    if (e->wp_count == 0) {
-        done = step_toward(ctx, e, fallback_x, fallback_y, dt);
-    } else {
-        /* Path list: each entry is one cell crossed at the speed of the
-         * terrain under foot (corpus 0x43cc35's read + 0x434570's per-cell
-         * progress: a cell completes every speed seconds, so `dt` can
-         * complete several cells on fast terrain and the overflow carries
-         * into the next entries). Every completion pops in place. */
-        float rem = dt;
-        for (;;) {
-            while (e->wp_index < e->wp_count &&
-                   ENTITY_WAYPOINTS(e)[e->wp_index].pending == 0) {
-                ++e->wp_index; /* skip popped entries */
-            }
-            if (e->wp_index >= e->wp_count) {
-                done = 1; /* path exhausted: arrived */
-                break;
-            }
-            float wx = ENTITY_WAYPOINTS(e)[e->wp_index].x, wy = ENTITY_WAYPOINTS(e)[e->wp_index].y;
-            float dx = wx - position[0], dy = wy - position[1];
-            float len = (float)__builtin_sqrtf(dx * dx + dy * dy);
-            if (len <= 0.001f) {
-                ENTITY_WAYPOINTS(e)[e->wp_index].pending = 0; /* already there: pop */
-                ++e->wp_index;
-                continue;
-            }
-            float cps = underfoot_cps(ctx, grid, e, position[0], position[1]);
-            float step = cps * rem;
-            if (step >= len) {
-                ai_entity_position_set(e, wx, wy);
-                position[0] = wx;
-                position[1] = wy;
-                rem -= len / cps; /* time actually consumed */
-                ENTITY_WAYPOINTS(e)[e->wp_index].pending = 0; /* pop = flag clear (0x43cd90) */
-                ++e->wp_index;
-                if (e->wp_index >= e->wp_count) {
-                    done = 1;
-                    break;
-                }
-            } else {
-                position[0] += (dx / len) * step;
-                position[1] += (dy / len) * step;
-                ai_entity_position_set(e, position[0], position[1]);
-                done = 0;
-                break; /* still walking the current entry */
-            }
-        }
-    }
-    if (done) {
-        /* FUN_00403d10(ent, 8, NULL, 1). The raw +0xbc dword is the
-         * +0x2f0 chain head and kind 8 has no special unlink side effects. */
-        (void)cmd_chain_drop(e, 8);
-        e->flags_3e0 &= ~ENT_FLAG3E0_MOVING;
-    }
-    if (done && grid != NULL) {
-        entity_transform_position_get(e, position);
-        level_tile_mark((LevelState*)grid, level_cell_of(position[0]),
-                        level_cell_of(position[1]), 0); /* arrival clear (0x43cd72) */
-    }
-    return done;
+    /* Do not finish at the penultimate waypoint or spend this frame's time
+     * again on the next command. Command ownership releases the route/head. */
+    return e->wp_index == e->wp_count;
 }
 
 /* Yield a task's deposit into the mission counters by priority kind, and
@@ -1868,8 +1819,8 @@ int ai_tick(GameContext* ctx, float dt)
     }
     int done = 0;
     /* EntityFrameUpdateDispatch owns the flag callback walk. This game-layer
-     * pass handles the reconstruction's command chains after that receiver
-     * has run through the EngineTick ticker. */
+     * pass runs BEFORE EngineTick's command scheduler, entity callback and
+     * operation-queue drain in the application frame. */
     for (int t = 0; t < ENTITY_TYPES; ++t) {
         for (int i = 0; i < ctx->entity_count[t]; ++i) {
             EntitySlot* e = &ctx->entity[t][i];
@@ -1880,16 +1831,16 @@ int ai_tick(GameContext* ctx, float dt)
                 void* head = e->cmd_head;
                 int type = cmd_rec_type(head);
                 if (type == 0) {
-                    /* Move: walk the entity path list seeded by the creator.
-                     * +0x3e0 bit 0x8 is the corpus mover-state marker — the
-                     * arrival path clears it (callback 0x43cd66). The
-                     * current-cell gate uses the Stats +0x144 mode bit and
-                     * the entity-aware walkability helper. */
-                    if (!step_path(ctx, e, cmd_rec_move_x(head),
-                                   cmd_rec_move_y(head), dt)) {
-                        break; /* still moving */
+                    /* Queue drain is later in EngineTick. On the next frame
+                     * this shares admission with the installed scheduler, which
+                     * may have different entity gates. One route, one world
+                     * mover, one retirement owner in either call order. */
+                    if ((cmd_rec_state(head) & CMD_STATE_DONE) != 0u ||
+                        (cmd_move_route_prepare(e, ctx->level) &&
+                         step_path(ctx, e, dt))) {
+                        done += cmd_move_route_finish(e);
                     }
-                    done += finish_head(ctx, e);
+                    break;
                 } else if (type == 2) {
                     /* Target: step toward the payload entity. */
                     const EntitySlot* tgt = (const EntitySlot*)rec_payload(head);

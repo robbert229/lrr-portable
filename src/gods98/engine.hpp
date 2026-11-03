@@ -24,6 +24,7 @@
 
 /* Forward: the view/camera objects (view.hpp behind a cycle-breaking decl). */
 typedef struct ViewContext ViewContext;
+typedef struct BlockFile BlockFile;
 
 /* --- App mode (corpus DAT_00505f88) ------------------------------------ */
 #define ENGINE_APP_NORMAL 0
@@ -129,6 +130,12 @@ typedef struct EngineContext {
     EngineCameraTargetRecord camera_targets[10];
     uint32_t camera_target_count;
 } EngineContext;
+
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+/* App bootstrap/teardown, outside the mapped callback registrar. */
+int engine_scene_initialize(EngineContext* context, BlockFile* config);
+void engine_scene_shutdown(void);
+#endif
 
 /* Current frame owner for engine services that mirror global retail state
  * while the port keeps the state inside EngineContext. EngineTick updates

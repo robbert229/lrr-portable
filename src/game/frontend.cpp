@@ -2060,6 +2060,8 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
         return 0;
     }
 
+    advisor_message_ui_initialize(cfg, display_width_get(), display_height_get());
+
     /* GameConfigInit applies message and display-sized panel data after the
      * panel-name tables have been initialized. The portable startup reaches
      * the same work through FrontEndBuild. */
@@ -6121,6 +6123,294 @@ void* advisor_tutorial_icon_get(void)
     return s_tutorial_icon;
 }
 
+/* GameConfigInit (0x4209e0..0x420cc2) owns these configured surfaces;
+ * the reference message widget geometry is installed at 0x4201f5. */
+static TextureSurface* s_message_next_image;
+static TextureSurface* s_message_back_image;
+static TextureSurface* s_message_panel_image;
+static float s_message_next_position[2];
+static float s_message_back_position[2];
+static void* s_message_font;
+static void* s_message_text_buffers[2];
+static AdvisorMessagePointerCapture s_message_pointer_capture;
+static int s_message_gameplay_active;
+static float s_message_panel_y = 409.0f;
+static float s_message_text_y = 435.0f;
+static float s_message_text_height = 42.0f;
+
+/* 0x46ad00 grows/shrinks by the actual font line after wrapped output. */
+static void advisor_message_layout_commit(void)
+{
+    if (s_message_text_buffers[0] == NULL) return;
+    float_pair_at_offset4_set_from_ints(s_message_text_buffers[0],
+                                       55, (int)s_message_text_y);
+    float_pair_at_offsetc_set_from_uints(s_message_text_buffers[0],
+                                        325u, (uint32_t)s_message_text_height);
+}
+
+static void advisor_message_layout_reset(void)
+{
+    s_message_panel_y = 409.0f;
+    s_message_text_y = 435.0f;
+    s_message_text_height = 42.0f;
+    advisor_message_layout_commit();
+}
+
+static void advisor_message_layout_result(void* output, int overflow,
+                                          int bottom)
+{
+    int line;
+    if (output == NULL || output != s_message_text_buffers[0] ||
+        s_message_font == NULL) return;
+    line = font_atlas_record_line_height_get(s_message_font);
+    if (line <= 0) return;
+    if (overflow) {
+        s_message_panel_y -= (float)line;
+        s_message_text_y -= (float)line;
+        s_message_text_height += (float)line;
+        s_advisor_text_state_flags &= ~1u;
+        advisor_message_layout_commit();
+    } else if ((s_advisor_text_state_flags & 1u) != 0u) {
+        /* The reference compares the last drawn baseline with the original
+         * text bottom minus one font line before contracting a new message. */
+        if (435.0f + 42.0f - (float)line <= (float)bottom) {
+            s_advisor_text_state_flags &= ~1u;
+        } else {
+            s_message_panel_y += (float)line;
+            s_message_text_y += (float)line;
+            s_message_text_height -= (float)line;
+            if (s_message_panel_y >= 409.0f) {
+                advisor_message_layout_reset();
+                s_advisor_text_state_flags &= ~1u;
+            } else advisor_message_layout_commit();
+        }
+    }
+}
+
+/* Return a transition so the real input owner can discard inherited holds
+ * once; reward controls retain their subsequent fresh input. */
+int advisor_message_ui_gameplay_set(int active)
+{
+    int changed;
+    active = active != 0;
+    changed = active != s_message_gameplay_active;
+    if (changed) advisor_message_pointer_cancel(0);
+    s_message_gameplay_active = active;
+    return changed;
+}
+
+
+void advisor_message_source_clear(void)
+{
+    s_advisor_text_request_source = NULL;
+    s_advisor_text_state_flags = 0u;
+    advisor_message_layout_reset();
+    engine_overlay_words_set(0u, 0u);
+    engine_global_state_flags_bits6_and_9_set_target(0, 0);
+    engine_global_state_flags_bit7_set_target(0);
+    advisor_message_pointer_cancel(0);
+}
+
+void advisor_message_pointer_cancel(int held)
+{
+    /* A modal/lifetime transition cannot turn an inherited hold into NEXT. */
+    memset(&s_message_pointer_capture, 0, sizeof(s_message_pointer_capture));
+    s_message_pointer_capture.down = held != 0;
+}
+
+void advisor_message_ui_release(void)
+{
+    int i;
+    advisor_message_source_clear();
+    s_message_gameplay_active = 0;
+    ui_message_strings_initialize(NULL, NULL, NULL, NULL, 0.0f);
+    for (i = 0; i < 2; ++i) {
+        if (s_message_text_buffers[i] != NULL)
+            text_buffer_destroy(s_message_text_buffers[i]);
+        s_message_text_buffers[i] = NULL;
+    }
+    if (s_message_font != NULL) font_atlas_record_release(s_message_font);
+    s_message_font = NULL;
+    texture_release(s_message_next_image);
+    texture_release(s_message_back_image);
+    texture_release(s_message_panel_image);
+    s_message_next_image = NULL;
+    s_message_back_image = NULL;
+    s_message_panel_image = NULL;
+    deferred_callback_set(0u);
+}
+
+void advisor_message_ui_initialize(BlockFile* cfg, int width, int height)
+{
+    char key[256];
+    const char* path;
+    const char* position;
+    int i;
+    /* GameConfigInit uses (55,435,325,42) and (55,435,260,42),
+     * FONT5_HI, capacity 0x400. These are shared UI geometry, not level text. */
+    float rect[4] = {55.0f, 435.0f, 325.0f, 42.0f};
+    uint32_t header[4];
+    advisor_message_ui_release();
+    if (cfg == NULL) return;
+    s_message_font = font_atlas_record_create("Interface\\Fonts\\font5_HI.bmp");
+    for (i = 0; i < 2; ++i) {
+        rect[2] = i == 0 ? 325.0f : 260.0f;
+        memcpy(header, rect, sizeof(header));
+        if (s_message_font != NULL)
+            s_message_text_buffers[i] = text_buffer_create(
+                (uintptr_t)s_message_font, header, 0x400);
+    }
+    ui_message_strings_initialize(s_message_text_buffers[0],
+        s_message_text_buffers[1], NULL, NULL, 0.0f);
+    text_buffer_draw_software_install();
+    s_message_panel_image = image_surface_load(
+        "Interface\\MessagePanel\\MsgPanel.bmp", 0u, 0u);
+    image_surface_blit_transformed(s_message_panel_image,
+                                  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    snprintf(key, sizeof(key), "%s Main NextButton%ix%i",
+             util_root_name(cfg), width, height);
+    path = block_get_strptr(cfg, key);
+    snprintf(key, sizeof(key), "%s Main NextButtonPos%ix%i",
+             util_root_name(cfg), width, height);
+    position = block_get_strptr(cfg, key);
+    if (path != NULL && position != NULL &&
+        sscanf(position, "%f,%f", &s_message_next_position[0],
+               &s_message_next_position[1]) == 2) {
+        s_message_next_image = image_surface_load(path, 0u, 0u);
+        texture_source_color_key_set(s_message_next_image, 0u, 0u);
+    }
+    snprintf(key, sizeof(key), "%s Main BackButton%ix%i",
+             util_root_name(cfg), width, height);
+    path = block_get_strptr(cfg, key);
+    snprintf(key, sizeof(key), "%s Main BackButtonPos%ix%i",
+             util_root_name(cfg), width, height);
+    position = block_get_strptr(cfg, key);
+    if (path != NULL && position != NULL &&
+        sscanf(position, "%f,%f", &s_message_back_position[0],
+               &s_message_back_position[1]) == 2) {
+        s_message_back_image = image_surface_load(path, 0u, 0u);
+        texture_source_color_key_set(s_message_back_image, 0u, 0u);
+    }
+    deferred_callback_set(s_message_next_image != NULL);
+}
+
+/* MainSim's local_2c comes from 0x45b310 -> 0x45a3b0 -> 0x47dfa0:
+ * an enabled bitmap panel must contain a nonzero pixel at the current pose.
+ * Test the SAME decoded resource and placement used by this message draw,
+ * including its black source key, rather than claiming an empty rectangle. */
+static int advisor_message_panel_hit(int x, int y)
+{
+    int image_x = x - 42;
+    int image_y = y - (int)s_message_panel_y;
+    tutorial_message_generation_sync();
+    if (!s_message_gameplay_active || s_advisor_text_request_source == NULL ||
+        engine_overlay_word_peek(0) == 0u || s_message_panel_image == NULL ||
+        s_message_panel_image->pixels == NULL || image_x < 0 || image_y < 0 ||
+        image_x >= s_message_panel_image->width ||
+        image_y >= s_message_panel_image->height) return 0;
+    return (s_message_panel_image->pixels[
+        image_y * s_message_panel_image->width + image_x] & 0x00ffffffu) != 0u;
+}
+
+static int advisor_message_button_visible(int button)
+{
+    uint32_t flags;
+    tutorial_message_generation_sync();
+    flags = engine_debug_word_peek();
+    return button == 1 ? s_message_next_image != NULL && (flags & 0x40u) != 0u
+                       : s_message_back_image != NULL && (flags & 0x80u) != 0u;
+}
+
+static int advisor_message_button_hit(int button, int x, int y)
+{
+    TextureSurface* image = button == 1 ? s_message_next_image : s_message_back_image;
+    const float* position = button == 1 ? s_message_next_position : s_message_back_position;
+    if (!advisor_message_panel_hit(x, y) ||
+        !advisor_message_button_visible(button)) return 0;
+    /* 0x427c2a..0x427c8e uses strict bounds and loaded image dimensions. */
+    return position[0] < (float)x && position[1] < (float)y &&
+        (float)x < position[0] + (float)image->width &&
+        (float)y < position[1] + (float)image->height;
+}
+
+/* Port adapter for the reference release-edge caller at 0x427ca2.
+ * A real control claims DOWN through UP; motion onto UI during a world
+ * hold cannot acquire it. No rectangle exists without the configured image. */
+int advisor_message_pointer_capture_dispatch(AdvisorMessagePointerCapture* capture,
+    int x, int y, int down)
+{
+    int consumed;
+    int hit;
+    int panel_hit = advisor_message_panel_hit(x, y);
+    uint32_t generation = objective_advisor_token_generation_get();
+    if (capture == NULL) return 0;
+    if (!s_message_gameplay_active) {
+        memset(capture, 0, sizeof(*capture));
+        capture->down = down != 0;
+        return 0;
+    }
+    consumed = capture->owner != 0;
+    hit = advisor_message_button_hit(1, x, y) ? 1 :
+              (advisor_message_button_hit(2, x, y) ? 2 : 0);
+    if (!capture->down && down) {
+        capture->owner = hit != 0 ? hit : (panel_hit ? 3 : 0);
+        capture->generation = generation;
+        consumed = capture->owner != 0;
+    } else if (capture->down && !down) {
+        int owner = capture->owner;
+        capture->owner = 0;
+        if (capture->generation == generation) {
+            if (owner == 1 && hit == 1) tutorial_advisor_scroll_step_advance();
+            else if (owner == 2 && hit == 2 && deferred_callback_peek() != 0u)
+                advisor_sound_alias_play_global(); /* 0x453910 -> 0x456810 */
+            else if (owner != 0 && panel_hit)
+                media_action_feedback_sound_dispatch(1);
+        }
+    }
+    if (hit != 0) timed_effect_update_request_set(hit == 1 ? 0x20 : 0x1f);
+    capture->down = down != 0;
+    return consumed;
+}
+
+int advisor_message_pointer_sample(int x, int y, int down)
+{
+    return advisor_message_pointer_capture_dispatch(&s_message_pointer_capture,
+                                                     x, y, down);
+}
+
+void advisor_message_ui_draw(float delta)
+{
+    DisplaySurface* target = surface_active_render_target_get();
+    void* pixels = NULL;
+    int pitch = 0;
+    tutorial_message_generation_sync();
+    if (!s_message_gameplay_active || target == NULL ||
+        s_advisor_text_request_source == NULL ||
+        engine_overlay_word_peek(0) == 0u) return;
+    if (surface_lock(target, &pixels, &pitch) == 0) {
+        /* Reference panel 3 and its pixel hit share the expanded placement. */
+        if (s_message_panel_image != NULL)
+            surface_blit_texture(pixels, pitch, target->w, target->h,
+                                 s_message_panel_image, 42,
+                                 (int)s_message_panel_y);
+        surface_unlock(target, pixels);
+    }
+    advisor_text_display_worker(delta);
+    if (surface_lock(target, &pixels, &pitch) == 0) {
+        if (advisor_message_button_visible(1) &&
+            ((engine_debug_word_peek() & 0x200u) == 0u ||
+             sim_status_banner_word_get() != 0u))
+            surface_blit_texture(pixels, pitch, target->w, target->h,
+                s_message_next_image, (int)s_message_next_position[0],
+                (int)s_message_next_position[1]);
+        if (advisor_message_button_visible(2))
+            surface_blit_texture(pixels, pitch, target->w, target->h,
+                s_message_back_image, (int)s_message_back_position[0],
+                (int)s_message_back_position[1]);
+        surface_unlock(target, pixels);
+    }
+}
+
 void advisor_text_request_action_hook_set(AdvisorTextRequestActionFn hook,
                                           void* context)
 {
@@ -6467,6 +6757,7 @@ static int advisor_text_display_state_get(void* context,
     uint32_t request;
     (void)context;
     if (state == NULL) return 0;
+    tutorial_message_generation_sync();
     request = engine_overlay_word_peek(1);
     state->current_slot = s_advisor_text_current_slot;
     state->hidden_slot = 0;
@@ -6546,6 +6837,16 @@ void advisor_inline_token_ops_set(const AdvisorInlineTokenOps* ops)
     s_advisor_inline_duration = 0.0f;
 }
 
+uint32_t advisor_inline_last_sound_get(void)
+{
+    uint32_t generation = objective_advisor_token_generation_get();
+    if (generation != s_advisor_inline_token_generation) {
+        s_advisor_inline_token_generation = generation;
+        s_advisor_inline_last_sound = objective_advisor_sound_token_count();
+    }
+    return s_advisor_inline_last_sound;
+}
+
 static void advisor_inline_output_char(char* output, uint32_t output_size,
                                        uint32_t* used, char value)
 {
@@ -6566,8 +6867,10 @@ void advisor_inline_token_render(char* source, char* output, int draw)
     uint32_t image_table_count = objective_advisor_image_token_count();
     uint32_t sound_table_count = objective_advisor_sound_token_count();
     uint32_t token_generation = objective_advisor_token_generation_get();
-    float final_duration = s_advisor_inline_token_ops.duration_origin != 0.0f
-        ? s_advisor_inline_token_ops.duration_origin : 4000.0f;
+    float timer_values[3];
+    float final_duration;
+    tutorial_message_timer_values_get(timer_values);
+    final_duration = timer_values[2];
     memset(image_handles, 0, sizeof(image_handles));
     if (output != NULL && output_size != 0u) output[0] = '\0';
     if (source == NULL) return;
@@ -6582,7 +6885,10 @@ void advisor_inline_token_render(char* source, char* output, int draw)
         while (source[i] != '\0')
             advisor_inline_output_char(output, output_size, &used,
                                        source[i++]);
-        if (draw != 0) s_advisor_inline_duration = final_duration;
+        if (draw != 0) {
+            s_advisor_inline_duration = final_duration;
+            tutorial_message_duration_set(final_duration);
+        }
         return;
     }
 
@@ -6638,7 +6944,7 @@ void advisor_inline_token_render(char* source, char* output, int draw)
                                     duration = (float)
                                         sound_streamed_wave_buffer_step_rate(
                                             sound_slot);
-                                final_duration = duration * 1000.0f + 500.0f;
+                                final_duration = duration * timer_values[0] + timer_values[1];
                                 if (sound_slot >= 0 && sound_bank_sound_on()) {
                                     sound_deferred_play_expire();
                                     (void)sound_deferred_timer_set_if_idle(
@@ -6647,6 +6953,7 @@ void advisor_inline_token_render(char* source, char* output, int draw)
                                     advisor_sound_alias_play_global();
                                     if (system_state_flags_get() == 0u)
                                         (void)advisor_request_admit(0x14, 1);
+                                    tutorial_message_sound_active_set();
                                     if (s_advisor_inline_token_ops.sound_transition != NULL)
                                         s_advisor_inline_token_ops.sound_transition(
                                             s_advisor_inline_token_ops.context,
@@ -6692,7 +6999,10 @@ void advisor_inline_token_render(char* source, char* output, int draw)
                     y);
         }
     }
-    if (draw != 0) s_advisor_inline_duration = final_duration;
+    if (draw != 0) {
+        s_advisor_inline_duration = final_duration;
+        tutorial_message_duration_set(final_duration);
+    }
 }
 
 float advisor_inline_token_duration_get(void)
@@ -6712,8 +7022,12 @@ static void advisor_text_output_copy(void* output, const char* text, int mode)
 
 static int advisor_text_output_draw(void* output, float delta)
 {
+    int bottom = 0;
+    int overflow;
     if (output == NULL) return 0;
-    return text_buffer_draw_wrapped(output, 0u, delta, NULL);
+    overflow = text_buffer_draw_wrapped(output, 0u, delta, &bottom);
+    advisor_message_layout_result(output, overflow, bottom);
+    return overflow;
 }
 
 /* AdvisorTextDisplayWorker (FUN_0046ad00): update the active advisor slot
@@ -11593,6 +11907,42 @@ int simulation_pointer_action_dispatch(int x, int y, int active,
 {
     return unported_ledger_stubs::ledger_stub_0041baa0_SimulationPointerActionDispatch(
         x, y, active, suppress_initial, count_action, main_sim_context);
+}
+
+void simulation_pointer_capture_reset(SimulationPointerCapture* capture)
+{
+    if (capture == NULL) return;
+    capture->action = 0x4au;
+    capture->kind = capture->entry = 0u;
+    capture->begun = 0;
+}
+
+int simulation_pointer_capture_dispatch(SimulationPointerCapture* capture,
+    int x, int y, int active, int count_action, void* main_sim_context)
+{
+    uint32_t saved_action = s_pointer_action_type;
+    uint32_t saved_kind = s_pointer_action_kind;
+    uint32_t saved_entry = s_pointer_action_entry;
+    int hit;
+    if (capture == NULL) return 0;
+    s_pointer_action_type = capture->action;
+    s_pointer_action_kind = capture->kind;
+    s_pointer_action_entry = capture->entry;
+    /* A dependency hit can own the gesture without setting an action latch.
+     * Do not let a later hold over another UI target begin a new capture. */
+    hit = simulation_pointer_action_dispatch(x, y, active, capture->begun,
+                                             count_action, main_sim_context);
+    if (active && hit) capture->begun = 1;
+    capture->action = s_pointer_action_type;
+    capture->kind = s_pointer_action_kind;
+    capture->entry = s_pointer_action_entry;
+    /* The mapped miss path does not touch its latch. Physical release must
+     * still retire our capture, including release off every UI target. */
+    if (!active) simulation_pointer_capture_reset(capture);
+    s_pointer_action_type = saved_action;
+    s_pointer_action_kind = saved_kind;
+    s_pointer_action_entry = saved_entry;
+    return hit;
 }
 
 namespace unported_ledger_stubs {

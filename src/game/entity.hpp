@@ -232,6 +232,10 @@ int entity_route_setup_and_marker_associate(EntitySlot* entity,
                                             const float* final_marker_position); /* FUN_00441700 */
 int entity_waypoint_storage_reserve(EntitySlot* entity,
                                     unsigned int count);
+/* Cell route -> world point, including the route's subcell weights and the
+ * terrain origin/blocksize/Y inversion. The cursor, not pending, owns progress. */
+int entity_route_waypoint_world_get(const EntitySlot* entity,
+                                    unsigned int index, float position[2]);
 int entity_route_adjacent_step_append(EntitySlot* entity, int cell_x,
                                       int cell_y); /* FUN_004468c0 */
 typedef float (*EntitySurfaceScaleReadHook)(void* context);
@@ -757,9 +761,13 @@ const void* entity_model(const EntitySlot* e);
 
 #define ENTITY_STATS_RECORD_SIZE 0x150 /* the corpus record stride */
 
-float entity_stats_float_at20(const EntitySlot* e);   /* FUN_00469cb0 */
+/* RouteSpeed is raw WORLD units per reference tick (25 ticks/second).
+ * This query applies the existing 0x446610 terrain/state scale, with no motion.
+ * Missing Stats returns zero; callers must explicitly convert their time unit. */
+float entity_route_speed(EntitySlot* entity);
+float entity_stats_float_at20(const EntitySlot* e);   /* 0x469cb0: RouteSpeed */
 float entity_stats_float_at24_indexed(const EntitySlot* e, int index);
-                                      /* FUN_00469cc0 (terrain-speed array) */
+                                      /* 0x469cc0: drill times at +24..34, in reference ticks */
 float entity_stats_float_atd4(const EntitySlot* e);   /* FUN_00469ce0 */
 float entity_stats_float_at9c(const EntitySlot* e);   /* FUN_00469d00 */
 float entity_stats_float_atd8(const EntitySlot* e);   /* FUN_00469d20 */
@@ -1028,6 +1036,11 @@ void entity_transform_position_get_outputs(const EntitySlot* entity,
                                            float* out_y); /* FUN_00442260 */
 void entity_transform_position_get(const EntitySlot* entity,
                                    float out_xy[2]);
+/* World pose -> corner-based fractional grid coordinates (cell centers are
+ * n+0.5). Used by software drawing/picking; false without a valid terrain. */
+int entity_position_grid_coordinates_get(const EntitySlot* entity,
+                                          const struct LevelState* level,
+                                          float out_xy[2]);
 int entity_work_object_position_get(const EntitySlot* entity,
                                     float out_xy[2]); /* FUN_0044a2a0 */
 int entity_world_center_position_read(const EntitySlot* entity,

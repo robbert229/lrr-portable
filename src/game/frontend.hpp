@@ -805,6 +805,25 @@ void advisor_tutorial_icon_image_load(BlockFile* cfg); /* FUN_00434a00 */
 void* advisor_tutorial_icon_get(void);
 typedef void (*AdvisorTextRequestActionFn)(uint32_t request, int p1, int p2,
                                            void* context);
+/* Production tutorial message assets/widgets, owned from FrontEndBuild to
+ * gameplay shutdown. Pointer adapter consumes a captured physical gesture. */
+typedef struct AdvisorMessagePointerCapture {
+    int owner;
+    int down;
+    uint32_t generation;
+} AdvisorMessagePointerCapture;
+/* Explicit per-button state for InputPointerSample composition. */
+int advisor_message_pointer_capture_dispatch(AdvisorMessagePointerCapture* capture,
+    int x, int y, int down);
+void advisor_message_ui_initialize(BlockFile* cfg, int width, int height);
+void advisor_message_ui_release(void);
+void advisor_message_ui_draw(float delta);
+/* Suspend message draw/input at actual gameplay/reward ownership changes. */
+int advisor_message_ui_gameplay_set(int active);
+int advisor_message_pointer_sample(int x, int y, int down);
+void advisor_message_pointer_cancel(int held);
+void advisor_message_source_clear(void);
+uint32_t advisor_inline_last_sound_get(void);
 void advisor_text_request_action_hook_set(AdvisorTextRequestActionFn hook,
                                           void* context);
 void advisor_text_request_setup(uint32_t request, uint32_t flags);
@@ -1022,6 +1041,15 @@ typedef struct SimulationPointerDispatchOps {
     void (*action_complete)(void* context, int action, int cell_x,
                             int cell_y);
 } SimulationPointerDispatchOps;
+/* Each physical gesture owns its UI latch independently. This is a port
+ * adapter around the original dispatcher, not a replacement action domain. */
+typedef struct SimulationPointerCapture {
+    uint32_t action, kind, entry;
+    int begun;
+} SimulationPointerCapture;
+void simulation_pointer_capture_reset(SimulationPointerCapture* capture);
+int simulation_pointer_capture_dispatch(SimulationPointerCapture* capture,
+    int x, int y, int active, int count_action, void* main_sim_context);
 void simulation_pointer_dispatch_ops_set(
     const SimulationPointerDispatchOps* ops);
 int simulation_pointer_action_dispatch(int x, int y, int active,

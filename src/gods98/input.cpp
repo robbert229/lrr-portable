@@ -175,6 +175,14 @@ void input_reset(InputState* s)
     memset(s->dwell_leave, 0, sizeof(s->dwell_leave));
     s->mouse_x = 0;
     s->mouse_y = 0;
+    s->mouse_press = 0;
+    s->mouse_down = 0;
+    s->pointer_count = 0;
+    s->pointer_buttons = 0;
+    s->pointer_suppressed = 0;
+    s->pointer_overflow = 0;
+    s->pointer_domain[0] = s->pointer_domain[1] = INPUT_POINTER_NONE;
+    s->pointer_reset_serial = 0u;
     s->hkl_present = 0;
     memset(s->context_filter, 0, sizeof(s->context_filter));
     s->text_target = NULL;
@@ -314,6 +322,63 @@ void input_begin_frame(InputState* s)
         s->cur[i] = 0;
     }
     s->mouse_press = 0;
+    s->pointer_count = 0;
+    s->pointer_overflow = 0;
+}
+
+void input_pointer_rearm(InputState* s)
+{
+    if (s == NULL) return;
+    s->pointer_count = 0;
+    s->pointer_suppressed |= s->pointer_buttons;
+    s->pointer_domain[0] = INPUT_POINTER_NONE;
+    s->pointer_domain[1] = INPUT_POINTER_NONE;
+    s->mouse_press = 0;
+    ++s->pointer_reset_serial;
+}
+
+static void input_pointer_capture(InputState* s, const PlatformEvent* e)
+{
+    int button, held, transition, previous;
+    InputPointerSample* sample;
+    if ((e->code & PLATFORM_MOUSE_TAG) == 0) return;
+    button = e->code & PLATFORM_MOUSE_BUTTONS;
+    held = (e->code >> PLATFORM_MOUSE_HELD_SHIFT) & PLATFORM_MOUSE_BUTTONS;
+    transition = e->code & (PLATFORM_MOUSE_DOWN | PLATFORM_MOUSE_UP |
+                            PLATFORM_MOUSE_CANCEL);
+    previous = s->pointer_buttons;
+    if (transition == PLATFORM_MOUSE_CANCEL) {
+        /* A focus/capture cancellation invalidates this whole removed batch.
+         * No action may be reconstructed from partial history. */
+        input_pointer_rearm(s);
+        /* Rearm suppresses only buttons actually held before cancellation.
+         * An empty held mask must not invent a release for the next click. */
+        s->pointer_buttons = 0;
+    }
+    else {
+        /* A button first observed already held has no admitted down edge. */
+        s->pointer_suppressed |= held & ~previous &
+            ~(transition == PLATFORM_MOUSE_DOWN ? button : 0);
+        s->pointer_buttons = held;
+        s->pointer_suppressed &= held;
+        if (transition == PLATFORM_MOUSE_DOWN && (previous & button) != 0)
+            transition = 0; /* duplicate down is not another gesture */
+    }
+    if (s->pointer_overflow) return;
+    if (s->pointer_count >= INPUT_POINTER_CAPACITY) {
+        input_pointer_rearm(s);
+        s->pointer_overflow = 1;
+        return;
+    }
+    sample = &s->pointer_samples[s->pointer_count++];
+    memset(sample, 0, sizeof(*sample));
+    sample->x = e->mx;
+    sample->y = e->my;
+    sample->button = button;
+    sample->transition = transition;
+    sample->held = held;
+    if ((s->pointer_suppressed & button) != 0)
+        sample->domain = INPUT_POINTER_BLOCKED;
 }
 
 void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
@@ -343,6 +408,7 @@ void input_capture_events(InputState* s, const PlatformEvent* evs, int count)
                 s->mouse_press = 1;
             }
             s->mouse_down = e->held ? 1 : 0;
+            input_pointer_capture(s, e);
             break;
         default:
             break;
@@ -408,26 +474,16 @@ void input_cursor_position_hooks_install(InputClientToScreenHook convert,
 }
 
 /* CursorPositionUpdate (FUN_0047f010): sample the active cursor, clamp it to
- * the configured client dimensions, then publish the client pair and
- * per-sample movement delta. The Win32 build keeps the retail API call order;
- * the native build reads SDL's client-relative mouse coordinates. */
+ * the configured dimensions, then publish the pair and per-sample delta.
+ * WinAPI's platform getter converts the stretched client to framebuffer
+ * coordinates; reading GetCursorPos here would overwrite normalized events. */
 // FUNCTION: LEGORR 0x0047F010
 void input_cursor_position_update(void)
 {
     int x;
     int y;
 #if defined(LEGORRR_BACKEND_WINAPI)
-    RECT client_rect;
-    POINT client_origin;
-    POINT cursor;
-    if (!GetClientRect((HWND)g_platform_cursor_window_handle,
-                       &client_rect)) return;
-    client_origin.x = 0;
-    client_origin.y = 0;
-    ClientToScreen((HWND)g_platform_cursor_window_handle, &client_origin);
-    GetCursorPos(&cursor);
-    x = cursor.x - client_origin.x;
-    y = cursor.y - client_origin.y;
+    if (!platform_cursor_position_get(&x, &y)) return;
     if (x >= s_display_w) x = s_display_w - 1;
     if (y >= s_display_h) y = s_display_h - 1;
 #else
@@ -460,6 +516,14 @@ void input_cursor_position_sync(InputState* state)
 // FUNCTION: LEGORR 0x0047F0D0
 void input_cursor_client_position_set(int x, int y)
 {
+#if defined(LEGORRR_BACKEND_WINAPI)
+    /* These limits belong to the retained framebuffer, not WM_SIZE. */
+    if (g_platform_cursor_width <= 0 || g_platform_cursor_height <= 0) return;
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (x >= g_platform_cursor_width) x = g_platform_cursor_width - 1;
+    if (y >= g_platform_cursor_height) y = g_platform_cursor_height - 1;
+#endif
     int screen_x = x;
     int screen_y = y;
     s_renderer_word_a = (uint32_t)x;
@@ -479,6 +543,14 @@ void input_cursor_client_position_set(int x, int y)
     }
     else {
         platform_cursor_position_set(x, y);
+#if defined(LEGORRR_BACKEND_WINAPI)
+        /* Publish the actual logical sample after the inverse warp, including
+         * quantization in a smaller client or an OS cursor restriction. */
+        if (platform_cursor_position_get(&screen_x, &screen_y)) {
+            s_renderer_word_a = (uint32_t)screen_x;
+            s_renderer_word_b = (uint32_t)screen_y;
+        }
+#endif
     }
 }
 

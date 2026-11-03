@@ -90,7 +90,7 @@ extern float random_float_range(float minimum, float maximum);
 typedef struct CmdRec {
     int32_t  type;       /* +0x00 record type (0 move/2 target/3 task/5 gated) */
     int32_t  param;      /* +0x04 (flag for move, ext args)                   */
-    float    x;          /* +0x08 move coords                                 */
+    float    x;          /* +0x08 opaque word; kind 0 = signed integer cell   */
     float    y;          /* +0x0c                                             */
     void*    payload;    /* +0x10 entity / target pointer                      */
     float    now;        /* +0x14 timeGetTime on alloc, 1500.0 on link          */
@@ -285,13 +285,32 @@ void cmd_rec_set_activity(void* rec, int act) { as_rec(rec)->grant_act = act; }
 uint32_t cmd_rec_state(const void* rec) { return cas_rec(rec)->state; }
 void* cmd_rec_next(const void* rec) { return cas_rec(rec)->next; }
 
-float cmd_rec_move_x(const void* rec) { return cas_rec(rec)->x; }
-float cmd_rec_move_y(const void* rec) { return cas_rec(rec)->y; }
+float cmd_rec_move_x(const void* rec)
+{
+    int cell;
+    if (cas_rec(rec)->type != 0) return cas_rec(rec)->x;
+    memcpy(&cell, &cas_rec(rec)->x, sizeof(cell));
+    return (float)cell;
+}
+float cmd_rec_move_y(const void* rec)
+{
+    int cell;
+    if (cas_rec(rec)->type != 0) return cas_rec(rec)->y;
+    memcpy(&cell, &cas_rec(rec)->y, sizeof(cell));
+    return (float)cell;
+}
 void cmd_rec_move_xy_set(void* rec, float x, float y)
 {
     if (rec != NULL) {
-        as_rec(rec)->x = x;
-        as_rec(rec)->y = y;
+        if (as_rec(rec)->type == 0) {
+            const int cell[2] = { (int)x, (int)y };
+            memcpy(&as_rec(rec)->x, cell, sizeof(cell));
+            as_rec(rec)->state &= ~CMD_STATE_MOVE_ROUTED;
+        }
+        else {
+            as_rec(rec)->x = x;
+            as_rec(rec)->y = y;
+        }
     }
 }
 float cmd_rec_now(const void* rec) { return cas_rec(rec)->now; }
@@ -2711,8 +2730,7 @@ void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag)
     if (e == NULL || position_xy == NULL) return;
     rec = (CmdRec*)cmd_alloc(0);
     if (rec == NULL) return;
-    rec->x = position_xy[0];
-    rec->y = position_xy[1];
+    memcpy(&rec->x, position_xy, 2 * sizeof(uint32_t));
     rec->param = flag;
     tail = as_rec(cmd_chain_walk(e));
     if (tail != NULL) {
@@ -2726,7 +2744,9 @@ void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag)
 
 void cmd_create_move(EntitySlot* e, float x, float y, int flag)
 {
-    const float position_xy[2] = { x, y };
+    const int cell_xy[2] = { (int)x, (int)y };
+    float position_xy[2];
+    memcpy(position_xy, cell_xy, sizeof(cell_xy));
     cmd_create_move(e, position_xy, flag);
 }
 
@@ -2874,24 +2894,33 @@ int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
     float direct_y;
     float* points_x;
     float* points_y;
+    float world_position[2];
+    int installed;
     uint32_t i;
     if (entity == NULL || level == NULL || target_xy == NULL ||
         level->ptr_terrain == NULL) return 0;
-    entity_position_to_terrain_cell(entity, level, &start_xy[0],
-                                    &start_xy[1]);
-    if (start_xy[0] < 0 || start_xy[1] < 0) return 0;
+    entity_transform_position_get(entity, world_position);
+    if (!terrain_world_xy_to_cell(level->ptr_terrain,
+            world_position[0], world_position[1], &start_xy[0], &start_xy[1]) ||
+        !level_coord_pair_within_bounds(level, target_xy[0], target_xy[1]))
+        return 0;
     if (start_xy[0] == target_xy[0] && start_xy[1] == target_xy[1]) {
         direct_x = (float)start_xy[0];
         direct_y = (float)start_xy[1];
-        (void)entity_route_setup_and_marker_associate(
+        return entity_route_setup_and_marker_associate(
             entity, 1u, &direct_x, &direct_y, final_marker_position);
-        return 1;
     }
-    if (!terrain_neighbor_path_check(level->ptr_terrain,
+    if (!terrain_neighbor_path_check(entity,
             (uint32_t)start_xy[0], (uint32_t)start_xy[1],
             (uint32_t)target_xy[0], (uint32_t)target_xy[1],
             &route_x, &route_y, &route_count, NULL, NULL)) return 0;
-    if (route_count == 0u || route_count > 4096u) {
+    /* Distinct-cell routes must contain BOTH endpoints. Reject malformed
+     * authority output before it can become an admitted/finishable command. */
+    if (route_x == NULL || route_y == NULL ||
+        route_count < 2u || route_count > 4096u ||
+        route_x[0] != start_xy[0] || route_y[0] != start_xy[1] ||
+        route_x[route_count - 1u] != target_xy[0] ||
+        route_y[route_count - 1u] != target_xy[1]) {
         free(route_x);
         free(route_y);
         return 0;
@@ -2909,12 +2938,96 @@ int object_path_submit_to_grid_target(EntitySlot* entity, LevelState* level,
         points_x[i] = (float)route_x[i];
         points_y[i] = (float)route_y[i];
     }
-    (void)entity_route_setup_and_marker_associate(
+    installed = entity_route_setup_and_marker_associate(
         entity, route_count, points_x, points_y, final_marker_position);
     free(points_x);
     free(points_y);
     free(route_x);
     free(route_y);
+    return installed;
+}
+
+/* An admitted list must still terminate at this record's integer cell.
+ * Retarget/reset owners invalidate admission; a malformed list never counts
+ * as arrival merely because its cursor reached the end. */
+static int cmd_move_route_endpoint_matches(EntitySlot* entity, CmdRec* head)
+{
+    int target[2];
+    const AiWaypoint* last;
+    if (entity->wp_count <= 0 || entity->wp_count > 4096 ||
+        (entity->wp_dynamic == NULL ? entity->wp_count > AI_WAYPOINTS_MAX
+            : (unsigned int)entity->wp_count > entity->wp_capacity)) return 0;
+    (void)cmd_rec_cell_xy_get(head, &target[0], &target[1]);
+    last = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
+    return last->x == (float)target[0] && last->y == (float)target[1];
+}
+
+int cmd_move_route_prepare(EntitySlot* entity, LevelState* level)
+{
+    CmdRec* head;
+    int target[2];
+    int saved_enabled;
+    int installed;
+    if (entity == NULL || level == NULL || level->ptr_terrain == NULL)
+        return 0;
+    head = as_rec(entity->cmd_head);
+    if (head == NULL || head->type != 0 ||
+        (head->state & CMD_STATE_DONE) != 0u) return 0;
+    if ((head->state & CMD_STATE_MOVE_ROUTED) != 0u && entity->wp_count > 0)
+        return cmd_move_route_endpoint_matches(entity, head);
+    /* A reset by an entity-state owner invalidates admission. Replan from
+     * the current world pose; never fall back to a straight line through walls. */
+    head->state &= ~CMD_STATE_MOVE_ROUTED;
+    (void)cmd_rec_cell_xy_get(head, &target[0], &target[1]);
+    saved_enabled = s_global_enabled;
+    /* Route installation resets the old action sequence. Its queue-flush
+     * tail must not sweep this head (or the next queued move) while admitted
+     * from the earlier game-layer AI pass. The scheduler uses this same bit. */
+    s_global_enabled |= 4;
+    installed = object_path_submit_to_grid_target(entity, level, target, NULL);
+    s_global_enabled = saved_enabled;
+    if (!installed) return 0;
+    head->state |= CMD_STATE_MOVE_ROUTED;
+    ai_set_activity(entity, AI_ACT_ROUTE, 0);
+    return 1;
+}
+
+int cmd_move_route_finish(EntitySlot* entity)
+{
+    CmdRec* head;
+    int saved_enabled;
+    if (entity == NULL) return 0;
+    head = as_rec(entity->cmd_head);
+    if (head == NULL || head->type != 0) return 0;
+    if ((head->state & CMD_STATE_DONE) == 0u) {
+        float position[2];
+        float endpoint[2];
+        int cell[2], target[2];
+        GameContext* context = entity->owner_ctx != NULL ? entity->owner_ctx
+            : entity_pool_callback_context_get();
+        /* Exhaustion is necessary, but not sufficient. Check the commanded
+         * endpoint and the actual scene/world pose before retiring the head.
+         * Explicitly canceled DONE heads retain their existing cleanup path. */
+        if ((head->state & CMD_STATE_MOVE_ROUTED) == 0u ||
+            entity->wp_index != entity->wp_count ||
+            !cmd_move_route_endpoint_matches(entity, head) ||
+            !entity_route_waypoint_world_get(entity,
+                (unsigned int)(entity->wp_count - 1), endpoint)) return 0;
+        entity_transform_position_get(entity, position);
+        (void)cmd_rec_cell_xy_get(head, &target[0], &target[1]);
+        if (context == NULL || context->level == NULL ||
+            !terrain_world_xy_to_cell(context->level->ptr_terrain,
+                position[0], position[1], &cell[0], &cell[1]) ||
+            cell[0] != target[0] || cell[1] != target[1]) return 0;
+        if (!(fabs((double)(position[0] - endpoint[0])) <= 0.001 &&
+              fabs((double)(position[1] - endpoint[1])) <= 0.001)) return 0;
+    }
+    saved_enabled = s_global_enabled;
+    s_global_enabled |= 4;
+    head->state |= CMD_STATE_DONE;
+    (void)entity_command_chain_head_remove(entity);
+    entity_action_sequence_reset(entity, 0);
+    s_global_enabled = saved_enabled;
     return 1;
 }
 
@@ -3434,12 +3547,12 @@ int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload)
         int result;
         if (head->type == 0) {
             level = entity->owner_ctx != NULL ? entity->owner_ctx->level : NULL;
-            if (level != NULL && level->ptr_terrain != NULL &&
-                cmd_rec_cell_xy_get(head, &target_cell[0], &target_cell[1])) {
-                result = object_path_submit_to_grid_target(
-                    entity, level, target_cell, NULL);
-            }
-            else result = 0;
+            /* ai_tick runs before this scheduler. Share its admission owner
+             * and retain the record until world motion actually arrives.
+             * A failed/busy route stays pending rather than being consumed. */
+            (void)cmd_move_route_prepare(entity, level);
+            s_global_enabled &= ~4;
+            return 0;
         }
         else if (head->type > 30) result = 1;
         else result = cmd_entity_chain_kind_dispatch(entity, head);

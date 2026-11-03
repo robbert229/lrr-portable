@@ -56,6 +56,23 @@ void input_key_mapping_add_bidirectional(InputKeyMappingTable* table,
                                          uint8_t key_a, uint8_t key_b);
 
 
+/* Port-side pointer ingress, separate from all mapped key/mouse globals.
+ * Samples are replayed in capture order, including down/up in one batch. */
+#define INPUT_POINTER_CAPACITY 64
+#define INPUT_POINTER_NONE    0
+#define INPUT_POINTER_UI      1
+#define INPUT_POINTER_WORLD   2
+#define INPUT_POINTER_BLOCKED 3
+
+typedef struct InputPointerSample {
+    int x, y;
+    int button;               /* physical PLATFORM_MOUSE_LEFT/RIGHT, or 0 */
+    int transition;           /* DOWN, UP, CANCEL, or 0 for motion */
+    int held;                 /* physical button mask at this sample */
+    int domain;               /* classified by the UI-before-world owner */
+    int admitted;             /* world admission token; never a held latch */
+} InputPointerSample;
+
 typedef struct InputState {
     uint8_t  cur[INPUT_KEY_COUNT];    /* DAT_0076ab80 */
     uint8_t  prev[INPUT_KEY_COUNT];   /* DAT_0076aa00 */
@@ -63,7 +80,7 @@ typedef struct InputState {
 
     int32_t  mouse_x;                 /* DAT_0076ab24 */
     int32_t  mouse_y;                 /* DAT_0076ab28 */
-    int      mouse_press;             /* latched left-press edge (cleared by
+    int      mouse_press;             /* latched aggregate press (cleared by
                                        * input_begin_frame) */
     int      mouse_down;              /* level state: 1 while a button is held
                                        * (corpus mouse-button-held semantics;
@@ -81,7 +98,20 @@ typedef struct InputState {
     char*    text_target;             /* active text-entry buffer, else NULL */
     int32_t  text_len;
     int32_t  text_cap;
+
+    /* Append only: legacy InputState member offsets remain unchanged. */
+    InputPointerSample pointer_samples[INPUT_POINTER_CAPACITY];
+    int pointer_count;
+    int pointer_buttons;
+    int pointer_suppressed;
+    int pointer_overflow;
+    int pointer_domain[2];
+    uint32_t pointer_reset_serial;
 } InputState;
+
+/* Cancel capture/history and suppress currently held buttons until release.
+ * Call at modal/level ownership changes, including pause composition. */
+void input_pointer_rearm(InputState* state);
 
 typedef struct InputActionToggleSlot {
     const void* data;
@@ -165,8 +195,8 @@ void input_cursor_delta_get(int* x, int* y);
 int  input_key_edge(const InputState* s, int key);
 int  input_key_released(const InputState* s, int key);
 
-/* Left-button press edge latched this frame (consumed by input_begin_frame).
- * Returns 1 for one frame after the platform reports MOUSE + button=1. */
+/* Aggregate press edge for legacy menus (cleared by input_begin_frame).
+ * World input must use the ordered, physically tagged samples instead. */
 int  input_mouse_pressed(const InputState* s);
 
 /* Port-local key-to-ASCII helper: uppercase ASCII lowercase letters and

@@ -845,7 +845,7 @@ void ddiscene_animation_hook_record_hooks_set(
 /* The checked-in FUN_00475f70 body obtains the record through interface
  * slot +0x1c and installs a new record through +0x18. These are renderer-owned
  * stores; keep their calls on the supplied interface instead of a local map. */
-static DDiSceneAnimationHookRecord* ddiscene_animation_hook_record_get(
+DDiSceneAnimationHookRecord* ddiscene_animation_hook_record_get(
     void* scene_interface)
 {
     void** vtable;
@@ -1977,6 +1977,10 @@ void ddiscene_object_destroy_with_mode(void* scene_object, int mode)
      * helper owns the kind-specific payload release and clears the +0x0c
      * field even when the external scene manager is absent. */
     ddiscene_payload_release(scene_object);
+    if (lego::ddiscene_object_pool_owns(scene_object)) {
+        lego::ddiscene_object_record_release(scene_object);
+        return;
+    }
     memcpy((char*)scene_object + 0x28, &s_ddiscene_destroyed_list,
            sizeof(s_ddiscene_destroyed_list));
     s_ddiscene_destroyed_list = scene_object;
@@ -6703,10 +6707,148 @@ void renderer_node_relative_position_set(const void* node, float x, float y)
 
 /* ---- scene-root hook band (2026-10-24) ----------------------------------- *
  * SceneRootObjectGet / DDiSceneObjectArgumentsNormalize — see view.hpp. The
- * corpus's root global (DAT_0076add4) is written only by the unported
- * renderer-side initializer, so the port carries it as a hooked static. */
+ * corpus's root global (DAT_0076add4) belongs to the application scene arena. */
 // GLOBAL: LEGORR 0x0076add4
 static void* s_scene_root;
+
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+static struct SceneCameraBinding {
+    CameraHandle* camera;
+    void* scene;
+} s_scene_camera_bindings[9];
+static unsigned int s_scene_camera_count;
+
+static void scene_runtime_property_release(void* object)
+{
+    DDiSceneAnimationHookRecord* property =
+        ddiscene_animation_hook_record_get(object);
+    if (property != NULL) {
+        ddiscene_animation_hook_record_set(object, NULL);
+        if (property->name != NULL) engine_heap_free(property->name);
+        engine_heap_free(property);
+    }
+}
+
+static void scene_runtime_frame_release(void* frame)
+{
+    scene_runtime_property_release(frame);
+    scene_winapi_frame_release(frame);
+}
+
+static void scene_runtime_record_destroy(void* record, int mode)
+{
+    ddiscene_object_destroy_with_mode(record, mode);
+}
+
+int scene_runtime_initialize(void)
+{
+    typedef long (VIEW_COM_CALL *SortModeSetFn)(void*, uint32_t);
+    void* root;
+    void* frame;
+    void** vtable;
+    if (s_scene_root != NULL) return 0;
+    if (!scene_winapi_initialize()) return 0;
+    lego::ddiscene_object_pool_hooks_set(scene_winapi_frame_create,
+        scene_runtime_frame_release, scene_runtime_record_destroy, NULL);
+    root = lego::ddiscene_object_allocate(NULL);
+    if (root == NULL) {
+        scene_runtime_shutdown();
+        return 0;
+    }
+    frame = *(void**)root;
+    vtable = *(void***)frame;
+    /* EntityVisualTypeTablesInit @ 0x472710: SetSortMode(D3DRMSORT_NONE). */
+    if (((SortModeSetFn)vtable[0xf8 / 4])(frame, 1u) != 0) {
+        scene_runtime_shutdown();
+        return 0;
+    }
+    scene_root_install(root);
+    return 1;
+}
+
+void scene_runtime_shutdown(void)
+{
+    s_scene_camera_count = 0u;
+    memset(s_scene_camera_bindings, 0, sizeof(s_scene_camera_bindings));
+    scene_root_install(NULL);
+    lego::ddiscene_object_pool_shutdown();
+    lego::ddiscene_object_pool_hooks_set(NULL, NULL, NULL, NULL);
+    scene_winapi_shutdown();
+}
+
+void* scene_runtime_camera_bind(CameraHandle* camera)
+{
+    void* scene;
+    if (camera == NULL || s_scene_root == NULL ||
+        s_scene_camera_count >= 9u) return NULL;
+    scene = lego::ddiscene_object_allocate(
+        (const lego::DDiSceneObjectDescriptor*)s_scene_root);
+    if (scene == NULL) return NULL;
+    s_scene_camera_bindings[s_scene_camera_count].camera = camera;
+    s_scene_camera_bindings[s_scene_camera_count++].scene = scene;
+    return scene;
+}
+
+int scene_runtime_cameras_sync(void)
+{
+    unsigned int i;
+    for (i = 0u; i < s_scene_camera_count; ++i) {
+        const CameraHandle* camera = s_scene_camera_bindings[i].camera;
+        if (!ddiscene_object_position_set(s_scene_camera_bindings[i].scene,
+                NULL, camera->pos[0], camera->pos[1], camera->pos[2])) return 0;
+        /* cam_facing stores a forward vector. A zero vector is the
+         * uninitialized portable camera's identity orientation. */
+        if (camera->rot[0] != 0.0f || camera->rot[1] != 0.0f ||
+            camera->rot[2] != 0.0f) {
+            if (!ddiscene_object_pose_method_dispatch(
+                    s_scene_camera_bindings[i].scene, NULL,
+                    camera->rot[0], camera->rot[1], camera->rot[2],
+                    0.0f, 1.0f, 0.0f)) return 0;
+        }
+    }
+    return 1;
+}
+
+void* scene_runtime_light_create(void* owner, unsigned int kind,
+                                  const float rgb[3])
+{
+    void* record = lego::ddiscene_object_allocate(
+        (const lego::DDiSceneObjectDescriptor*)owner);
+    void** payload;
+    void* frame;
+    void** vtable;
+    typedef long (VIEW_COM_CALL *AddLightFn)(void*, void*);
+    if (record == NULL) return NULL;
+    *(uint32_t*)((char*)record + 0x10) = 5u;
+    payload = (void**)engine_heap_alloc(2 * sizeof(void*));
+    if (payload == NULL) {
+        scene_runtime_record_destroy(record, 0);
+        return NULL;
+    }
+    memset(payload, 0, 2 * sizeof(void*));
+    *(void**)((char*)record + 0x0c) = payload;
+    if (scene_winapi_light_create(kind, rgb, &payload[1]) != 0) {
+        scene_runtime_record_destroy(record, 0);
+        return NULL;
+    }
+    frame = ((void**)record)[1];
+    vtable = *(void***)frame;
+    if (((AddLightFn)vtable[0x30 / 4])(frame, payload[1]) != 0) {
+        scene_runtime_record_destroy(record, 0);
+        return NULL;
+    }
+    return record;
+}
+
+int scene_runtime_light_parameter_set(void* light, unsigned int offset,
+                                       float value)
+{
+    void* object = ((void**)*(void**)((char*)light + 0x0c))[1];
+    void** vtable = *(void***)object;
+    typedef long (VIEW_COM_CALL *LightParameterFn)(void*, float);
+    return ((LightParameterFn)vtable[offset / 4])(object, value) == 0;
+}
+#endif
 // GLOBAL: LEGORR 0x0076cd8c
 static uint32_t s_scene_fog_color;
 // GLOBAL: LEGORR 0x00505920
@@ -7347,16 +7489,12 @@ void scene_object_coordinate_transform_in_place(void* object,
 static DDiSceneObjectPoseInterface* ddiscene_pose_interface_resolve(
     void* object, void* alternate_frame, void** normalized_frame)
 {
-    const void* object_argument;
-    const void* alternate_argument;
     const void* normalized_object = NULL;
     const void* resolved_frame = NULL;
     void* normalized_object_mutable = NULL;
     if (object == NULL || normalized_frame == NULL) return NULL;
-    object_argument = object;
-    alternate_argument = alternate_frame;
-    scene_object_arguments_normalize(&object_argument,
-        alternate_frame != NULL ? &alternate_argument : NULL,
+    scene_object_arguments_normalize((const void**)object,
+        (const void**)alternate_frame,
         &normalized_object_mutable, &resolved_frame);
     normalized_object = normalized_object_mutable;
     if (normalized_object == NULL) return NULL;
@@ -7369,19 +7507,16 @@ int ddiscene_object_position_get(void* object, void* alternate_frame,
                                  float position[3])
 {
 #if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
-    const void* object_argument = object;
-    const void* alternate_argument = alternate_frame;
     void* normalized_object = NULL;
     const void* normalized_frame = NULL;
     void** vtable;
-    typedef void (VIEW_COM_CALL *PositionGetFn)(void*, void*, float*);
-    scene_object_arguments_normalize(&object_argument,
-        alternate_frame != NULL ? &alternate_argument : NULL,
+    typedef long (VIEW_COM_CALL *PositionGetFn)(void*, void*, float*);
+    scene_object_arguments_normalize((const void**)object,
+        (const void**)alternate_frame,
         &normalized_object, &normalized_frame);
     vtable = *(void***)normalized_object;
-    ((PositionGetFn)vtable[0x60 / 4])(normalized_object,
-        (void*)normalized_frame, position);
-    return 1;
+    return ((PositionGetFn)vtable[0x60 / 4])(normalized_object,
+        (void*)normalized_frame, position) == 0;
 #else
     void* normalized_frame = NULL;
     DDiSceneObjectPoseInterface* scene;
@@ -7401,16 +7536,15 @@ int ddiscene_object_facing_pair_get(void* object, void* alternate_frame,
     void* normalized_frame = NULL;
     DDiSceneObjectPoseInterface* scene;
     void** vtable;
-    typedef void (VIEW_COM_CALL *DdiSceneOrientationGetFn)(
+    typedef long (VIEW_COM_CALL *DdiSceneOrientationGetFn)(
         void* object, void* frame, float first[3], float second[3]);
     if (first == NULL || second == NULL) return 0;
     scene = ddiscene_pose_interface_resolve(object, alternate_frame,
                                             &normalized_frame);
     if (scene == NULL) return 0;
     vtable = *(void***)scene;
-    ((DdiSceneOrientationGetFn)vtable[0x7c / 4u])(
-        scene, normalized_frame, first, second);
-    return 1;
+    return ((DdiSceneOrientationGetFn)vtable[0x7c / 4u])(
+        scene, normalized_frame, first, second) == 0;
 }
 
 int ddiscene_object_facing_get(void* object, void* alternate_frame,
@@ -7426,20 +7560,17 @@ int ddiscene_object_position_set(void* object, void* alternate_frame,
                                  float x, float y, float z)
 {
 #if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
-    const void* object_argument = object;
-    const void* alternate_argument = alternate_frame;
     void* normalized_object = NULL;
     const void* normalized_frame = NULL;
     void** vtable;
-    typedef void (VIEW_COM_CALL *PositionSetFn)(void*, void*, float, float,
+    typedef long (VIEW_COM_CALL *PositionSetFn)(void*, void*, float, float,
                                                 float);
-    scene_object_arguments_normalize(&object_argument,
-        alternate_frame != NULL ? &alternate_argument : NULL,
+    scene_object_arguments_normalize((const void**)object,
+        (const void**)alternate_frame,
         &normalized_object, &normalized_frame);
     vtable = *(void***)normalized_object;
-    ((PositionSetFn)vtable[0xf0 / 4])(normalized_object,
-        (void*)normalized_frame, x, y, z);
-    return 1;
+    return ((PositionSetFn)vtable[0xf0 / 4])(normalized_object,
+        (void*)normalized_frame, x, y, z) == 0;
 #else
     void* normalized_frame = NULL;
     DDiSceneObjectPoseInterface* scene =
@@ -7462,21 +7593,18 @@ int ddiscene_object_pose_method_dispatch(void* object,
                                          float parameter_8)
 {
 #if (defined(_MSC_VER) && defined(_M_IX86)) || defined(__i386__)
-    const void* object_argument = object;
-    const void* alternate_argument = alternate_frame;
     void* normalized_object = NULL;
     const void* normalized_frame = NULL;
     void** vtable;
-    typedef void (VIEW_COM_CALL *PoseMethodDispatchFn)(
+    typedef long (VIEW_COM_CALL *PoseMethodDispatchFn)(
         void*, void*, float, float, float, float, float, float);
-    scene_object_arguments_normalize(&object_argument,
-        alternate_frame != NULL ? &alternate_argument : NULL,
+    scene_object_arguments_normalize((const void**)object,
+        (const void**)alternate_frame,
         &normalized_object, &normalized_frame);
     vtable = *(void***)normalized_object;
-    ((PoseMethodDispatchFn)vtable[0xec / 4])(normalized_object,
+    return ((PoseMethodDispatchFn)vtable[0xec / 4])(normalized_object,
         (void*)normalized_frame, parameter_3, parameter_4, parameter_5,
-        parameter_6, parameter_7, parameter_8);
-    return 1;
+        parameter_6, parameter_7, parameter_8) == 0;
 #else
     void* normalized_frame = NULL;
     DDiSceneObjectPoseInterface* scene =

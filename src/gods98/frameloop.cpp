@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <stdio.h>
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_M_IX86)
+#include "../../tools/diagnostics/wine-message-ui-probe.inc" /* DEBUG-message-ui-probe */
+int pe32_nerp_owner_probe(struct BlockFile*, int, int, FILE*); /* DEBUG-next-owner */
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -22,6 +26,7 @@
 #include "game/tutorial_hud_ports.hpp"
 #include "game/ui_action_dispatch.hpp"
 #include "game/upgrades.hpp"
+#include "game/util.hpp"
 #include "platform/platform.h"
 #include "audio.hpp"
 #include "engine.hpp"
@@ -130,6 +135,11 @@ typedef struct FrameloopApplicationState {
     FrontEnd* frontend_storage;
     EngineState engine_state;
     InputState input;
+    int pause_escape_down;
+    int pause_mouse_down;
+    int gameplay_mouse_suppressed;
+    int gameplay_clock_rebase;
+    uint32_t gameplay_resume_ms;
     ViewContext views[3];
     EngineContext engine_context;
     PlatformWindow* window;
@@ -153,11 +163,15 @@ typedef struct FrameloopApplicationState {
     int pending_load_record;
     char mission_brief[1024];
     int mission_brief_active;
+    int mission_brief_page;
+    unsigned int mission_brief_keys_held;
     TextureSurface* briefing_panel;
     TextureSurface* briefing_title_font;
     TextureSurface* briefing_body_font;
     LevelState* pointer_dispatch_level;
-    int pointer_dispatch_previous_down;
+    int pointer_dispatch_previous_down; /* retained for pause patch composition */
+    SimulationPointerCapture pointer_captures[2];
+    uint32_t pointer_capture_serial;
     LevelState* reward_tick_level;
     int reward_tick_started;
     int rock_x;
@@ -170,6 +184,66 @@ typedef struct FrameloopApplicationState {
 #define FRAMELOOP_PHASE_DONE 4
 
 static FrameloopApplicationState s_frameloop_application;
+
+/* A close can be delivered directly to WndProc, without a converted event.
+ * Keep both routes sticky; only the outer callback owner performs shutdown. */
+static int frameloop_application_quit_ingest(FrameloopApplicationState* app,
+    const PlatformEvent* events, int count)
+{
+    for (int i = 0; i < count; ++i) {
+        if (events[i].kind == PLATFORM_EVENT_QUIT)
+            s_window_close_requested = 1u;
+    }
+    if (s_window_close_requested != 0u) {
+        s_window_runtime_state.close_requested = 1u;
+        app->quit = 1;
+        app->stop_reason = "closed";
+    }
+    return app->quit;
+}
+
+/* The event backend clears cur each frame, so a repeated key-down can look
+ * like a fresh edge. Every modal capture tracks the full removed batch before
+ * any skip/leave decision, retaining both quit and Escape release state. */
+static int frameloop_application_events_track(FrameloopApplicationState* app,
+    const PlatformEvent* events, int count)
+{
+    int pressed = 0;
+    (void)frameloop_application_quit_ingest(app, events, count);
+    for (int i = 0; i < count; ++i) {
+        if (events[i].kind == PLATFORM_EVENT_MOUSE)
+            app->pause_mouse_down = events[i].held != 0;
+        if (events[i].code != PLATFORM_KEY_ESC) continue;
+        if (events[i].kind == PLATFORM_EVENT_KEYDOWN) {
+            if (!app->pause_escape_down) pressed = 1;
+            app->pause_escape_down = 1;
+        } else if (events[i].kind == PLATFORM_EVENT_KEYUP) {
+            app->pause_escape_down = 0;
+        }
+    }
+    return pressed;
+}
+
+/* The menu owns its closing mouse gesture through its physical release.
+ * Filter that gesture before any gameplay consumer sees the input state. */
+static void frameloop_gameplay_input_capture(FrameloopApplicationState* app,
+    const PlatformEvent* events, int count)
+{
+    for (int i = 0; i < count; ++i) {
+        const PlatformEvent* event = &events[i];
+        if (app->gameplay_mouse_suppressed &&
+            event->kind == PLATFORM_EVENT_MOUSE) {
+            /* Track the suppressed physical release, but admit no samples
+             * or aggregate press to any gameplay consumer. */
+            input_capture_events(&app->input, event, 1);
+            input_pointer_rearm(&app->input);
+            app->input.mouse_down = 0;
+            if (!event->held) app->gameplay_mouse_suppressed = 0;
+            continue;
+        }
+        input_capture_events(&app->input, event, 1);
+    }
+}
 
 void frameloop_application_start_level_override_set(const char* level_name)
 {
@@ -210,6 +284,7 @@ static uint32_t reward_frame_time_get(void* context)
 static int reward_frame_loop_abort(void* opaque)
 {
     RewardFramePumpContext* context = (RewardFramePumpContext*)opaque;
+    (void)frameloop_application_quit_ingest(&s_frameloop_application, NULL, 0);
     return context != NULL && context->quit != NULL && *context->quit != 0;
 }
 
@@ -381,6 +456,12 @@ static void reward_frame_pump(void* opaque, int mode)
      * `prev` before capturing the following events. */
     input_begin_frame(context->input);
     event_count = platform_pump_events(context->window, events, 32);
+    (void)frameloop_application_events_track(&s_frameloop_application,
+                                            events, event_count);
+    if (context->quit != NULL && *context->quit != 0) {
+        renderer_word_c_set(0u);
+        return;
+    }
     input_capture_events(context->input, events, event_count);
     input_cursor_position_update();
     input_cursor_position_sync(context->input);
@@ -923,54 +1004,203 @@ static void frame_ui_action_complete(void* context, int action, int cell_x,
 static void frame_tutorial_script_dispatch(float delta, void* context)
 {
     (void)context;
-    tutorial_frame_timer_array_advance(delta);
+    /* Frame seconds -> reference 25-Hz units -> milliseconds in 0x453bb0. */
+    tutorial_frame_timer_array_advance(delta * 25.0f);
     tutorial_script_command_dispatch(delta);
 }
 
-static int frame_pointer_overlay_hit(void* context, float x, float y,
-                                     float offset_x, float offset_y,
-                                     uint32_t* action_out,
-                                     uint32_t* cell_x_out,
-                                     uint32_t* cell_y_out)
+/* 0x454600's first side effect belongs to the authored record pointer:
+ * resolve the current OList slot each frame and mark the actual actor. The
+ * indexed world-arrow draw still needs the renderer owner's projection API. */
+static void frame_tutorial_message_owner_update(GameContext* game,
+                                                 InputState* input)
 {
-    FramePointerDispatchContext* state =
-        (FramePointerDispatchContext*)context;
-    GameContext* game;
-    LevelState* level;
-    EntitySlot* entity;
-    float cell_x;
-    float cell_y;
-    int mouse_x;
-    int mouse_y;
-    int on_terrain;
-    (void)offset_x;
-    (void)offset_y;
-    if (state == NULL || state->game == NULL || state->level == NULL ||
-        action_out == NULL || cell_x_out == NULL || cell_y_out == NULL)
-        return 0;
-    game = state->game;
-    level = state->level;
-    mouse_x = (int)x;
-    mouse_y = (int)y;
-    cell_x = 0.0f;
-    cell_y = 0.0f;
-    entity = level_scene_pick_entity(game, level, state->screen_width,
-                                     state->screen_height, mouse_x, mouse_y,
-                                     30.0f);
-    on_terrain = level_scene_mouse_cell(
-        game, level, state->screen_width, state->screen_height,
-        mouse_x, mouse_y, &cell_x, &cell_y);
-    if (entity == NULL && !on_terrain) return 0;
-    *action_out = 0x49u;
-    if (entity != NULL) {
-        *cell_x_out = (uint32_t)entity->x;
-        *cell_y_out = (uint32_t)entity->y;
+    int active = game != NULL && game->level != NULL &&
+                 !mission_reward_active(game);
+    int changed = advisor_message_ui_gameplay_set(active);
+    if (changed) input_pointer_rearm(input);
+}
+
+static void frame_tutorial_record_pointer_mark(void)
+{
+    uint32_t slot = tutorial_record_object_pointer_get();
+    EntitySlot* entity = slot != 0u
+        ? object_pointer_registry_entity_get(slot - 1u) : NULL;
+    if (entity != NULL) entity->tutorial_unit_at_block_3f8 = 1u;
+}
+
+/* MainSim 0x426c1e..0x426ca0 rejects entity clicks for system bit 8 or
+ * unmarked actors in a scripted mode, then checks the real type/id table.
+ * Ground commands use 0x428780, including the authored voxel +4 marker.
+ * This runs BEFORE both early input and EngineTick's late press consumer. */
+static int frame_tutorial_world_pointer_admit(GameContext* game,
+    EngineContext* engine, int x, int y, int width, int height)
+{
+    uint32_t flags = system_state_flags_get();
+    EntitySlot* hit;
+    float cell_x, cell_y;
+    uint8_t* voxel;
+    uint32_t clicks;
+    if (game == NULL || game->level == NULL || engine == NULL ||
+        mission_reward_active(game)) return 0;
+    if ((engine->state & 0x100u) != 0u ||
+        (engine->debug & 0x1000u) != 0u) return 0;
+    hit = level_scene_pick_entity(game, game->level, width, height, x, y, 30.0f);
+    if (hit != NULL) {
+        if ((flags & 8u) != 0u ||
+            (flags != 0u && hit->tutorial_unit_at_block_3f8 == 0u)) return 0;
+        return cell_action_permission_get(hit->type, hit->etype) != 0 &&
+            (hit->flags_3e4 & 2u) == 0u &&
+            (hit->type != 1 || (hit->flags_3e0 & 0x40000u) == 0u) &&
+            ((engine->state & 0x10000000u) == 0u ||
+             (hit->flags_3ec & 1u) != 0u);
     }
-    else {
-        *cell_x_out = (uint32_t)cell_x;
-        *cell_y_out = (uint32_t)cell_y;
+    /* The real terrain-hit counter precedes action permission in 0x426520
+     * (0x426f79..0x426f85). UI gestures never reach this producer. */
+    if (level_scene_mouse_cell(game, game->level, width, height,
+                              x, y, &cell_x, &cell_y)) {
+        voxel = level_voxel(game->level, (int)cell_x, (int)cell_y);
+        if (voxel != NULL) {
+            memcpy(&clicks, voxel + 0x28, sizeof(clicks));
+            ++clicks;
+            memcpy(voxel + 0x28, &clicks, sizeof(clicks));
+        }
     }
-    return 1;
+    if (!level_scene_mouse_cell(game, game->level, width, height,
+                               x, y, &cell_x, &cell_y)) return 0;
+    return terrain_cell_command_predicate(engine, (int)cell_x, (int)cell_y) == 0;
+}
+
+/* UI arbitration owns a physical gesture through its release, even on a
+ * miss or when the other button overlaps. World actions are admitted only
+ * by selection_pointer_world_dispatch, once per classified down sample. */
+static void frame_pointer_ingress(GameContext* game, EngineContext* engine,
+    InputState* input, SimulationPointerCapture captures[2],
+    uint32_t* capture_serial, int width, int height)
+{
+    static AdvisorMessagePointerCapture message_captures[2];
+    int i, b;
+    frame_tutorial_record_pointer_mark();
+    if (mission_reward_active(game)) {
+        /* Reward input uses the aggregate press. Retire only gameplay
+         * samples/captures here; preserve fresh reward button gestures. */
+        memset(message_captures, 0, sizeof(message_captures));
+        for (b = 0; b < 2; ++b) {
+            simulation_pointer_capture_reset(&captures[b]);
+            input->pointer_domain[b] = INPUT_POINTER_NONE;
+        }
+        input->pointer_count = 0;
+        *capture_serial = input->pointer_reset_serial;
+        return;
+    }
+    int enabled = (engine->state & 0x100u) == 0u &&
+                  (engine->debug & 0x1000u) == 0u;
+    if (*capture_serial != input->pointer_reset_serial) {
+        for (b = 0; b < 2; ++b)
+            simulation_pointer_capture_reset(&captures[b]);
+        memset(message_captures, 0, sizeof(message_captures));
+        *capture_serial = input->pointer_reset_serial;
+    }
+    if (!enabled) {
+        memset(message_captures, 0, sizeof(message_captures));
+        input_pointer_rearm(input);
+        for (b = 0; b < 2; ++b)
+            simulation_pointer_capture_reset(&captures[b]);
+        *capture_serial = input->pointer_reset_serial;
+        return;
+    }
+    for (i = 0; i < input->pointer_count; ++i) {
+        InputPointerSample* sample = &input->pointer_samples[i];
+        if (sample->transition == PLATFORM_MOUSE_CANCEL) {
+            memset(message_captures, 0, sizeof(message_captures));
+            for (b = 0; b < 2; ++b) {
+                input->pointer_domain[b] = INPUT_POINTER_NONE;
+                simulation_pointer_capture_reset(&captures[b]);
+            }
+            continue;
+        }
+        for (b = 0; b < 2; ++b) {
+            int button = b == 0 ? PLATFORM_MOUSE_LEFT : PLATFORM_MOUSE_RIGHT;
+            int* domain = &input->pointer_domain[b];
+            if (sample->button == button &&
+                sample->transition == PLATFORM_MOUSE_DOWN) {
+                simulation_pointer_capture_reset(&captures[b]);
+                memset(&message_captures[b], 0, sizeof(message_captures[b]));
+                if (sample->domain == INPUT_POINTER_BLOCKED) {
+                    *domain = INPUT_POINTER_BLOCKED;
+                }
+                else {
+                    int consumed = simulation_pointer_capture_dispatch(
+                        &captures[b], sample->x, sample->y, 1, 0,
+                        engine->views[0]);
+                    if (!consumed)
+                        consumed = advisor_message_pointer_capture_dispatch(
+                            &message_captures[b], sample->x, sample->y, 1);
+                    else message_captures[b].down = 1;
+                    *domain = consumed ? INPUT_POINTER_UI : INPUT_POINTER_WORLD;
+                }
+                sample->domain = *domain;
+                if (*domain == INPUT_POINTER_WORLD && !sample->admitted &&
+                    !frame_tutorial_world_pointer_admit(game, engine,
+                        sample->x, sample->y, width, height)) {
+                    *domain = INPUT_POINTER_BLOCKED;
+                    sample->domain = INPUT_POINTER_BLOCKED;
+                    sample->admitted = 1;
+                }
+                (void)selection_pointer_world_dispatch(game, sample,
+                                                        width, height);
+            }
+            else if (sample->button == button &&
+                     sample->transition == PLATFORM_MOUSE_UP) {
+                sample->domain = *domain;
+                if (*domain == INPUT_POINTER_UI) {
+                    if (message_captures[b].owner != 0)
+                        (void)advisor_message_pointer_capture_dispatch(
+                            &message_captures[b], sample->x, sample->y, 0);
+                    else
+                        (void)simulation_pointer_capture_dispatch(&captures[b],
+                            sample->x, sample->y, 0, 1, engine->views[0]);
+                }
+                memset(&message_captures[b], 0, sizeof(message_captures[b]));
+                simulation_pointer_capture_reset(&captures[b]);
+                *domain = INPUT_POINTER_NONE;
+            }
+            else if ((sample->held & button) != 0 &&
+                     *domain == INPUT_POINTER_UI) {
+                if (message_captures[b].owner != 0)
+                    (void)advisor_message_pointer_capture_dispatch(
+                        &message_captures[b], sample->x, sample->y, 1);
+                else
+                    (void)simulation_pointer_capture_dispatch(&captures[b],
+                        sample->x, sample->y, 1, 0, engine->views[0]);
+            }
+        }
+    }
+    /* No message is needed to maintain capture/hover feedback. A held world
+     * gesture never starts a UI latch when the cursor crosses a control. */
+    for (b = 0; b < 2; ++b) {
+        int button = b == 0 ? PLATFORM_MOUSE_LEFT : PLATFORM_MOUSE_RIGHT;
+        if ((input->pointer_buttons & button) != 0 &&
+            input->pointer_domain[b] == INPUT_POINTER_UI) {
+            if (message_captures[b].owner != 0)
+                (void)advisor_message_pointer_capture_dispatch(
+                    &message_captures[b], input->mouse_x, input->mouse_y, 1);
+            else
+                (void)simulation_pointer_capture_dispatch(&captures[b],
+                    input->mouse_x, input->mouse_y, 1, 0, engine->views[0]);
+        }
+    }
+    if (input->pointer_buttons == 0) {
+        SimulationPointerCapture hover;
+        simulation_pointer_capture_reset(&hover);
+        if (!simulation_pointer_capture_dispatch(&hover,
+                input->mouse_x, input->mouse_y, 0, 0, engine->views[0])) {
+            AdvisorMessagePointerCapture message_hover;
+            memset(&message_hover, 0, sizeof(message_hover));
+            (void)advisor_message_pointer_capture_dispatch(&message_hover,
+                input->mouse_x, input->mouse_y, 0);
+        }
+    }
 }
 
 void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks)
@@ -991,11 +1221,17 @@ static void window_message_dispatch_pump(void)
 {
     MSG message;
     while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
+        /* WM_QUIT is a thread message: DispatchMessage cannot latch it. */
+        if (message.message == 0x12u) {
+            s_window_close_requested = 1u;
+            continue;
+        }
         if (window_runtime_message_dispatch_filter(&message)) {
             TranslateMessage(&message);
             DispatchMessageA(&message);
         }
     }
+    (void)frameloop_application_quit_ingest(&s_frameloop_application, NULL, 0);
 }
 
 /* PointerOverrideExpiryTick (FUN_00462700): expire overrides, draw the
@@ -1673,6 +1909,7 @@ static void frameloop_game_context_dispose(GameContext* game)
     tutorial_runtime_context_set(NULL, NULL, NULL);
     engine_tutorial_dispatch_hook_set(NULL, NULL);
     (void)tutorial_display_resources_release();
+    advisor_message_ui_release();
     level_destroy(game->level);
     block_close(game->cfg);
 }
@@ -1839,6 +2076,12 @@ static int s_movie_frame_quit(void* user)
     MoviePumpState* st = (MoviePumpState*)user;
     PlatformEvent evb[16];
     int nev = platform_pump_events(st->win, evb, 16);
+    (void)frameloop_application_events_track(&s_frameloop_application, evb, nev);
+    /* Quit wins even when a skip precedes it in this removed batch. */
+    if (s_frameloop_application.quit) {
+        *st->quit = 1;
+        return 1;
+    }
     for (int i = 0; i < nev; ++i) {
         if (evb[i].kind == PLATFORM_EVENT_QUIT) {
             *st->quit = 1;
@@ -1988,6 +2231,8 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
     while (!*quit && !leave) {
         PlatformEvent evbuf[32];
         int nev = platform_pump_events(win, evbuf, 32);
+        (void)frameloop_application_events_track(&s_frameloop_application,
+                                                evbuf, nev);
         input_capture_events(&input, evbuf, nev);
         renderer_word_c_set(input.mouse_down != 0 ? 1u : 0u);
         input_cursor_position_update();
@@ -2194,21 +2439,30 @@ static void frameloop_blit_texture_scaled(const TextureSurface* texture,
     }
 }
 
-/* The first tutorial's Mission Brief is shipped as the Objective entry in
- * ObjectiveText.txt. Keep this read at the resource boundary so the briefing
- * follows the installed language data instead of duplicating its prose. */
-static int frameloop_tutorial_brief_load(char* out, size_t out_size)
+/* FUN_004574e0 reads the active level's ObjectiveText resource/section and
+ * treats every \\a as a page boundary, not as the end of its briefing. */
+static int frameloop_brief_load(BlockFile* cfg, const char* level_name,
+                                char* out, size_t out_size)
 {
+    char path[512];
+    const char* group;
+    const char* text_path;
     if (out == NULL || out_size == 0) return 0;
     out[0] = '\0';
-    Resource* r = resource_open("Languages\\ObjectiveText.txt", RESOURCE_AUTO);
+    if (util_level_cfg_path(cfg, level_name, "ObjectiveText", path,
+                             sizeof(path)) == NULL) return 0;
+    text_path = block_get_strptr(cfg, path);
+    if (text_path == NULL || text_path[0] == '\0') return 0;
+    group = strstr(level_name, "::");
+    group = group != NULL ? group + 2 : level_name;
+    Resource* r = resource_open(text_path, RESOURCE_AUTO);
     if (r == NULL || resource_read(r) < 0 || r->data == NULL) {
         resource_free(r);
         return 0;
     }
     const char* data = (const char*)r->data;
     const size_t size = (size_t)r->size;
-    const char* section = NULL;
+    int section = 0;
     const char* end = data + size;
     for (const char* p = data; p < end;) {
         const char* line_end = (const char*)memchr(p, '\n', (size_t)(end - p));
@@ -2216,23 +2470,32 @@ static int frameloop_tutorial_brief_load(char* out, size_t out_size)
         const char* line = p;
         while (line < line_end && (*line == ' ' || *line == '\t' || *line == '\r')) ++line;
         if (line < line_end && *line == '[') {
-            section = ((size_t)(line_end - line) >= 13
-                       && memcmp(line, "[MoveTuto_01]", 13) == 0)
-                          ? line_end : NULL;
-        } else if (section != NULL && line_end - line >= 10
-                   && memcmp(line, "Objective:", 10) == 0) {
+            const char* close = (const char*)memchr(
+                line, ']', (size_t)(line_end - line));
+            section = close != NULL &&
+                (size_t)(close - line - 1) == strlen(group) &&
+                strnicmp_lite(line + 1, group, (int)strlen(group)) == 0;
+        } else if (section && line_end - line >= 10
+                   && strnicmp_lite(line, "Objective:", 10) == 0) {
             line += 10;
             while (line < line_end && (*line == ' ' || *line == '\t')) ++line;
             size_t n = (size_t)(line_end - line);
             while (n > 0 && (line[n - 1] == '\r' || line[n - 1] == ' ')) --n;
-            /* The \a marker separates the mission briefing from the later
-             * objective update; the opening panel shows the first paragraph. */
-            for (size_t i = 0; i + 1 < n; ++i) {
-                if (line[i] == '\\' && line[i + 1] == 'a') { n = i; break; }
+            /* Do not silently discard an authored page on overflow. */
+            if (n >= out_size) {
+                resource_free(r);
+                return 0;
             }
-            if (n >= out_size) n = out_size - 1;
-            memcpy(out, line, n);
-            out[n] = '\0';
+            size_t at = 0;
+            for (size_t i = 0; i < n; ++i) {
+                char c = line[i];
+                if (c == '\\' && i + 1 < n &&
+                    (line[i + 1] == 'a' || line[i + 1] == 'n')) {
+                    c = line[++i] == 'a' ? '\a' : '\n';
+                }
+                out[at++] = c;
+            }
+            out[at] = '\0';
             resource_free(r);
             return n > 0;
         }
@@ -2250,8 +2513,13 @@ static void frameloop_wrap_brief(const char* src, char* out, size_t out_size,
     for (const char* p = src; p != NULL && *p != '\0' && at + 1 < out_size;) {
         p += strspn(p, " \t");
         if (*p == '\0') break;
+        if (*p == '\n') {
+            out[at++] = *p++;
+            col = 0;
+            continue;
+        }
         const char* word = p;
-        int len = (int)strcspn(p, " \t");
+        int len = (int)strcspn(p, " \t\n");
         if (col > 0 && col + 1 + len > max_chars) {
             out[at++] = '\n';
             col = 0;
@@ -2322,6 +2590,38 @@ static void frameloop_briefing_render(PlatformWindow* win,
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
+}
+
+static int frameloop_briefing_prepare(FrameloopApplicationState* app)
+{
+    GameContext* game = app->game_storage;
+    const char* level_name = game->level != NULL &&
+        game->level->ptr_name != NULL ? (const char*)game->level->ptr_name
+                                     : app->level_name;
+    app->mission_brief[0] = '\0';
+    app->mission_brief_page = 0;
+    app->mission_brief_keys_held =
+        (input_keyboard_key_held(' ') ? 1u : 0u) |
+        (input_keyboard_key_held(PLATFORM_KEY_ENTER) ? 2u : 0u);
+    app->mission_brief_active = objective_briefing_active(game->level);
+    app->briefing_panel = NULL;
+    app->briefing_title_font = NULL;
+    app->briefing_body_font = NULL;
+    if (!app->mission_brief_active) return 1;
+    if (!frameloop_brief_load(game->cfg, level_name,
+                              app->mission_brief, sizeof(app->mission_brief))) {
+        fprintf(app->log, "frameloop: active objective briefing unavailable "
+                          "for %s\n", level_name);
+        return 0;
+    }
+    app->briefing_panel = texture_get_or_load(
+        NULL, "Interface\\BriefingPanel\\BriefingPanel.bmp");
+    app->briefing_title_font = texture_get_or_load(
+        NULL, "Interface\\Fonts\\MbriefFont2.bmp");
+    app->briefing_body_font = texture_get_or_load(
+        NULL, "Interface\\Fonts\\MbriefFont.bmp");
+    fprintf(app->log, "frameloop: Mission Brief ready (ObjectiveText loaded)\n");
+    return 1;
 }
 
 /* MenuOverlaySurfaceAndTextSetup (FUN_004129d0): the corpus resets the
@@ -2480,6 +2780,21 @@ static int frameloop_game_init_callback(const char* root, void* user)
     BlockFile* cfg;
     if (root == NULL || root[0] == '\0' || game == NULL) return 0;
     cfg = game->cfg;
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    /* Retail GameConfigInit creates the root (0x472710), camera frames and
+     * configured lights (0x433770) before LightEffectsConfigurationLoad.
+     * The application owns these objects across the menu/level transition. */
+    if (!engine_scene_initialize(&s_frameloop_application.engine_context,
+                                  cfg)) {
+        fprintf(s_frameloop_application.log,
+                "frameloop: scene initialization failed\n");
+        return 0;
+    }
+    fprintf(s_frameloop_application.log,
+            "frameloop: scene root/cameras/lights initialized root=%p\n",
+            scene_root_object_get());
+    fflush(s_frameloop_application.log);
+#endif
     if (cfg != NULL) {
         engine_render_poly_ranges_set(
             block_get_float(cfg, "Lego* Main MedPolyRange", 0.0f),
@@ -2532,6 +2847,8 @@ static FeEvent frameloop_main_menu_frame(FrameloopApplicationState* app,
     fe = app->frontend_storage;
     events = app->frame_events;
     event_count = app->frame_event_count;
+    (void)frameloop_application_events_track(app, events, event_count);
+    if (app->quit) return FE_EVT_NONE;
     input_capture_events(&app->input, events, event_count);
     input_cursor_position_update();
     input_cursor_position_sync(&app->input);
@@ -2555,6 +2872,8 @@ static FeEvent frameloop_main_menu_frame(FrameloopApplicationState* app,
     }
     input_frame.up = input_key_edge(&app->input, PLATFORM_KEY_UP);
     input_frame.down = input_key_edge(&app->input, PLATFORM_KEY_DOWN);
+    input_frame.left = input_key_edge(&app->input, PLATFORM_KEY_LEFT);
+    input_frame.right = input_key_edge(&app->input, PLATFORM_KEY_RIGHT);
     input_frame.enter = input_key_edge(&app->input, ' ')
                         || input_key_edge(&app->input, PLATFORM_KEY_ENTER);
     input_frame.esc = input_key_edge(&app->input, PLATFORM_KEY_ESC);
@@ -2824,6 +3143,11 @@ int frameloop_application_init(void)
     engine_game_config_callback_registry_init("LegoRR");
     if (!engine_callback_triplet_init_dispatch()) {
         fprintf(log, "frameloop: application init callback failed\n");
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+        engine_scene_shutdown();
+#endif
+        surface_active_render_target_set(NULL);
+        surface_destroy(&surf);
         platform_destroy_window(win);
         frameloop_game_context_dispose(&game);
         free(game_storage);
@@ -3139,37 +3463,9 @@ static void frameloop_application_prepare_gameplay(void)
         }
     }
 
-    char (&mission_brief)[1024] = app.mission_brief;
-    memset(mission_brief, 0, sizeof(app.mission_brief));
-    int& mission_brief_active = app.mission_brief_active;
-    mission_brief_active = game.level != NULL
-        && pending_load_slot < 0
-        && env_get("LEGORRR_SKIP_BRIEFING", "")[0] == '\0'
-        && (s_icontains(level_name, "MoveTuto_01")
-            || s_icontains(level_name, "Tutorial01"));
-    TextureSurface*& briefing_panel = app.briefing_panel;
-    TextureSurface*& briefing_title_font = app.briefing_title_font;
-    TextureSurface*& briefing_body_font = app.briefing_body_font;
-    briefing_panel = NULL;
-    briefing_title_font = NULL;
-    briefing_body_font = NULL;
-    if (mission_brief_active) {
-        (void)frameloop_tutorial_brief_load(mission_brief,
-                                            sizeof(mission_brief));
-        briefing_panel = texture_get_or_load(
-            NULL, "Interface\\BriefingPanel\\BriefingPanel.bmp");
-        briefing_title_font = texture_get_or_load(
-            NULL, "Interface\\Fonts\\MbriefFont2.bmp");
-        briefing_body_font = texture_get_or_load(
-            NULL, "Interface\\Fonts\\MbriefFont.bmp");
-        int voice_frames = audio_status == 0
-            ? audio_play_named(&ap,
-                "Sounds\\Streamed\\Training\\Moving1\\mov1br.wav")
-            : -1;
-        fprintf(log, "frameloop: Mission Brief ready (%s, voice %s, %d frames)\n",
-                mission_brief[0] != '\0' ? "ObjectiveText loaded"
-                                          : "ObjectiveText unavailable",
-                voice_frames >= 0 ? "played" : "unavailable", voice_frames);
+    if (!frameloop_briefing_prepare(&app)) {
+        quit = 1;
+        app.stop_reason = "objective briefing load failed";
     }
 
     LevelState*& pointer_dispatch_level = app.pointer_dispatch_level;
@@ -3226,6 +3522,13 @@ static int frameloop_application_gameplay_frame(float dt)
     int& pending_load_record = app.pending_load_record;
     char (&mission_brief)[1024] = app.mission_brief;
     int& mission_brief_active = app.mission_brief_active;
+    if (!mission_brief_active && objective_briefing_active(game.level)) {
+        if (!frameloop_briefing_prepare(&app)) {
+            quit = 1;
+            stop = "objective briefing load failed";
+            return 0;
+        }
+    }
     TextureSurface* briefing_panel = app.briefing_panel;
     TextureSurface* briefing_title_font = app.briefing_title_font;
     TextureSurface* briefing_body_font = app.briefing_body_font;
@@ -3244,7 +3547,9 @@ static int frameloop_application_gameplay_frame(float dt)
          *    platform events -> canonical codes -> input tables. */
         PlatformEvent* evbuf = app.frame_events;
         int nev = app.frame_event_count;
-        input_capture_events(&input, evbuf, nev);
+        const int pause_escape =
+            frameloop_application_events_track(&app, evbuf, nev);
+        frameloop_gameplay_input_capture(&app, evbuf, nev);
         input_cursor_position_update();
         input_cursor_position_sync(&input);
         for (int i = 0; i < nev; ++i) {
@@ -3255,26 +3560,58 @@ static int frameloop_application_gameplay_frame(float dt)
             }
         }
         if (quit) return 0;
+        frame_tutorial_message_owner_update(&game, &input);
         if (frame_cap > 0 && frames >= frame_cap) {
             stop = "autostop";
             quit = 1;
             return 0;
         }
 
-        /* The mission introduction holds simulation and accepts the same
-         * simple continue input as the reference. On dismissal the next
-         * frame enters normal gameplay without consuming that input twice. */
+        /* FUN_004589c0 advances all authored pages before acknowledging
+         * the pending presentation through FUN_004588e0. Simulation and
+         * world input remain held for every page and the acceptance frame. */
         if (mission_brief_active) {
-            const int dismissed = input_key_edge(&input, ' ')
-                || input_key_edge(&input, PLATFORM_KEY_ENTER)
-                || input_mouse_pressed(&input);
+            advisor_message_pointer_cancel(input.mouse_down);
+            int key_continue = 0;
+            for (int k = 0; k < nev; ++k) {
+                unsigned int mask = evbuf[k].code == ' ' ? 1u :
+                    (evbuf[k].code == PLATFORM_KEY_ENTER ? 2u : 0u);
+                if (evbuf[k].kind == PLATFORM_EVENT_KEYDOWN && mask != 0u) {
+                    if ((app.mission_brief_keys_held & mask) == 0u)
+                        key_continue = 1;
+                    app.mission_brief_keys_held |= mask;
+                } else if (evbuf[k].kind == PLATFORM_EVENT_KEYUP) {
+                    app.mission_brief_keys_held &= ~mask;
+                }
+            }
+            objective_tick_target(NULL, game.level, 0.0f, dt);
+            const char* page = mission_brief + app.mission_brief_page;
+            const char* next = strchr(page, '\a');
+            const int dismissed = key_continue || input_mouse_pressed(&input);
             if (dismissed) {
-                mission_brief_active = 0;
-                fprintf(log, "frameloop: Mission Brief dismissed; controls live\n");
+                if (next != NULL) {
+                    app.mission_brief_page = (int)(next + 1 - mission_brief);
+                    fprintf(log, "frameloop: Mission Brief next page\n");
+                } else if (objective_briefing_acknowledge(game.level)) {
+                    mission_brief_active = 0;
+                    objective_score_text_origin_set(NULL);
+                    objective_task_text_origin_set(&ctx, NULL);
+                    unported_ledger_stubs::ledger_stub_00425c30_TransitionControl(0, 0u);
+                    input_cursor_client_position_set(WINDOW_W / 2, WINDOW_H / 2);
+                    if (global_task_refresh_flag_get() != 0u)
+                        state_flag_toggle_when_zero();
+                    fprintf(log, "frameloop: Mission Brief acknowledged; "
+                                 "controls live\n");
+                }
             } else {
+                char page_text[1024];
+                size_t length = next != NULL ? (size_t)(next - page)
+                                             : strlen(page);
+                memcpy(page_text, page, length);
+                page_text[length] = '\0';
                 frameloop_briefing_render(win, &surf, briefing_panel,
                                           briefing_title_font,
-                                          briefing_body_font, mission_brief,
+                                          briefing_body_font, page_text,
                                           game.level, &game, (int)frames);
                 if (audio_status == 0) audio_update(&ap);
                 ++frames;
@@ -3282,6 +3619,7 @@ static int frameloop_application_gameplay_frame(float dt)
                 return !quit;
             }
             ++frames;
+            input_pointer_rearm(&input);
             input_begin_frame(&input);
             return !quit;
         }
@@ -3364,11 +3702,12 @@ static int frameloop_application_gameplay_frame(float dt)
 
         /* Esc (or the LEGORRR_AUTOPAUSE_FRAMES CI hook) opens the in-game
          * pause overlay — the shipped PausedMenu — instead of quitting. */
-        if (input_key_edge(&input, PLATFORM_KEY_ESC)
-            || (autopause > 0 && frames == autopause)) {
+        if ((pause_escape || (autopause > 0 && frames == autopause))
+            && frontend_open(&fe, FE_MENU_PAUSED)) {
             snprintf(fe.resume_level, sizeof(fe.resume_level), "%s",
                      level_name);
-            menu_enter(&fe, 2);
+            /* Consume gameplay's opening Escape/click before menu capture. */
+            input_begin_frame(&input);
             FeOverlayMenuGateState overlay_gate;
             memset(&overlay_gate, 0, sizeof(overlay_gate));
             overlay_gate.cached_menu = -1;
@@ -3383,6 +3722,8 @@ static int frameloop_application_gameplay_frame(float dt)
                 PlatformEvent pev[32];
                 int pn = platform_pump_events(win, pev, 32);
                 input_capture_events(&input, pev, pn);
+                const int pause_escape =
+                    frameloop_application_events_track(&app, pev, pn);
                 input_cursor_position_update();
                 input_cursor_position_sync(&input);
                 for (int i = 0; i < pn; ++i) {
@@ -3413,9 +3754,11 @@ static int frameloop_application_gameplay_frame(float dt)
                 FeInput fi;
                 fi.up = input_key_edge(&input, PLATFORM_KEY_UP);
                 fi.down = input_key_edge(&input, PLATFORM_KEY_DOWN);
+                fi.left = input_key_edge(&input, PLATFORM_KEY_LEFT);
+                fi.right = input_key_edge(&input, PLATFORM_KEY_RIGHT);
                 fi.enter = input_key_edge(&input, ' ')
                            || input_key_edge(&input, PLATFORM_KEY_ENTER);
-                fi.esc = input_key_edge(&input, PLATFORM_KEY_ESC);
+                fi.esc = pause_escape;
                 fi.mouse_x = input.mouse_x;
                 fi.mouse_y = input.mouse_y;
                 fi.click = input_mouse_pressed(&input);
@@ -3501,11 +3844,20 @@ static int frameloop_application_gameplay_frame(float dt)
                 /* not restarting; Esc from the pause root resumes */
                 fprintf(log, "frameloop: resumed\n");
             }
-            /* The pause consumed this whole frame (its own loop rendered).
-             * Continue to the next in-game frame without running the game
-             * sim or the level renderer over the menu. */
+            /* The pause consumed this whole frame. Bound the next supplied
+             * delta by time since this return, because the outer clock was
+             * sampled before entering the modal loop (and may have clamped
+             * away the original elapsed interval). */
             if (!quit || game.level != NULL) {
+                app.gameplay_mouse_suppressed = app.pause_mouse_down;
+                advisor_message_pointer_cancel(app.pause_mouse_down);
+                pointer_dispatch_previous_down = 0;
+                (void)pointer_action_state_dispatch(0, 0, 0, 0, 0);
+                input_pointer_rearm(&input);
                 input_begin_frame(&input);
+                if (app.gameplay_mouse_suppressed) input.mouse_down = 0;
+                app.gameplay_resume_ms = platform_time_milliseconds();
+                app.gameplay_clock_rebase = 1;
                 return !quit;
             }
         }
@@ -3594,6 +3946,10 @@ static int frameloop_application_gameplay_frame(float dt)
                 memset(&ui_action_state, 0, sizeof(ui_action_state));
                 pointer_dispatch_level = game.level;
                 pointer_dispatch_previous_down = 0;
+                input_pointer_rearm(&input);
+                simulation_pointer_capture_reset(&app.pointer_captures[0]);
+                simulation_pointer_capture_reset(&app.pointer_captures[1]);
+                app.pointer_capture_serial = input.pointer_reset_serial;
             }
             pointer_context.game = &game;
             pointer_context.level = game.level;
@@ -3605,7 +3961,9 @@ static int frameloop_application_gameplay_frame(float dt)
             memset(&ui_action_ops, 0, sizeof(ui_action_ops));
             pointer_ops.context = &pointer_context;
             pointer_ops.feature_word = ctx.debug;
-            pointer_ops.overlay_fallback = frame_pointer_overlay_hit;
+            /* No world-to-catalog fallback. The existing dependency-grid
+             * hit path remains live. The real control-catalog walker is a
+             * separate missing renderer/UI owner, not a guessed rectangle. */
             pointer_ops.action_complete = frame_ui_action_complete;
             ui_action_ops.context = &pointer_context;
             ui_action_ops.current_selection_get =
@@ -3679,23 +4037,25 @@ static int frameloop_application_gameplay_frame(float dt)
             ui_action_ops.building_upgrade_commit =
                 frame_ui_action_building_upgrade_commit;
             ui_action_state.ops = &ui_action_ops;
-            /* MainSimInteractionAndCellUpdate calls 0x41baa0 only after its
-             * 0x100 engine-state and 0x1000 debug-state gates. Its fourth
-             * argument is the previous held state; the fifth is the release
-             * edge used for action counting. Keep this adapter alive only
-             * across the synchronous call because its fallback retains the
-             * stack context. */
-            if ((ctx.state & 0x100u) == 0u &&
-                (ctx.debug & 0x1000u) == 0u) {
-                simulation_pointer_dispatch_ops_set(&pointer_ops);
-                (void)simulation_pointer_action_dispatch(
+            /* This synchronous installation supplies real UI callbacks for
+             * every ordered edge. The dispatcher return chooses UI or world
+             * ownership; no second raw mouse_press path may bypass it. */
+            simulation_pointer_dispatch_ops_set(&pointer_ops);
+#if defined(LEGORRR_BACKEND_WINAPI)
+            frame_pointer_ingress(&game, &ctx, &input, app.pointer_captures,
+                &app.pointer_capture_serial, WINDOW_W, WINDOW_H);
+#else
+            /* Native still supplies untagged aggregate events. Preserve its
+             * existing adapter without inventing physical button identity. */
+            int native_ui_consumed = 0;
+            if ((ctx.state & 0x100u) == 0u && (ctx.debug & 0x1000u) == 0u)
+                native_ui_consumed = simulation_pointer_action_dispatch(
                     input.mouse_x, input.mouse_y, input.mouse_down,
                     pointer_dispatch_previous_down,
-                    pointer_dispatch_previous_down != 0 &&
-                        input.mouse_down == 0,
+                    pointer_dispatch_previous_down && !input.mouse_down,
                     ctx.views[0]);
-                simulation_pointer_dispatch_ops_set(NULL);
-            }
+#endif
+            simulation_pointer_dispatch_ops_set(NULL);
             pointer_dispatch_previous_down = input.mouse_down;
             int lw = level_width(game.level);
             int lh = level_height(game.level);
@@ -3713,10 +4073,10 @@ static int frameloop_application_gameplay_frame(float dt)
             level_debug_input_cell_mutator_dispatch(
                 &ctx, &game, &input, (int)cx, (int)cy);
 
-            /* Left-click a Raider to select it; click open ground to send
-             * the selected group there. Both operations use the rendered
-             * camera projection, so the pointer agrees with what is shown. */
-            if (input_mouse_pressed(&input)) {
+#if !defined(LEGORRR_BACKEND_WINAPI)
+            /* Existing native aggregate world adapter; native ingress is
+             * outside this Win32 repair. */
+            if (!native_ui_consumed && input_mouse_pressed(&input)) {
                 EntitySlot* hit = level_scene_pick_entity(
                     &game, game.level, WINDOW_W, WINDOW_H,
                     input.mouse_x, input.mouse_y, 30.0f);
@@ -3730,6 +4090,8 @@ static int frameloop_application_gameplay_frame(float dt)
                                  "cell (%.1f,%.1f)\n", n, cx, cy);
                 }
             }
+
+#endif
 
             if (input_key_edge(&input, 'n')) {
                 selection_clear(&game);
@@ -3900,23 +4262,44 @@ static int frameloop_application_gameplay_frame(float dt)
                 frontend_help_overlay(pixels, pitch, WINDOW_W, WINDOW_H,
                                       objective_stream(game.level),
                                       &game.options);
-                if ((s_icontains(level_name, "MoveTuto_01")
-                     || s_icontains(level_name, "Tutorial01"))
-                    && briefing_body_font != NULL) {
-                    uint8_t* frame = (uint8_t*)pixels;
-                    for (int y = WINDOW_H - 22; y < WINDOW_H - 2; ++y) {
-                        uint8_t* row = frame + (size_t)y * pitch;
-                        for (int x = 0; x < WINDOW_W; ++x) {
-                            row[(size_t)x * 4 + 0] = 8;
-                            row[(size_t)x * 4 + 1] = 18;
-                            row[(size_t)x * 4 + 2] = 10;
-                            row[(size_t)x * 4 + 3] = 255;
-                        }
+            }
+            /* The atlas renderer locks the active target for each glyph;
+             * finish the scene lock before entering the real message worker. */
+            surface_unlock(&surf, pixels);
+            frame_tutorial_message_owner_update(&game, &input);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_M_IX86)
+            /* DEBUG-message-ui-probe: disposable production-owner fixture,
+             * never ordinary gameplay acceptance. No authored stage is forced. */
+            {
+                static int message_probe_ran = 0;
+                const char* probe_path = getenv("LRR_MESSAGE_UI_PROBE");
+                if (!message_probe_ran && probe_path != NULL &&
+                    game.level != NULL && !mission_reward_active(&game) &&
+                    engine_overlay_word_peek(0) != 0u &&
+                    (engine_debug_word_peek() & 0x40u) != 0u) {
+                    FILE* probe_log = fopen(probe_path, "w");
+                    if (probe_log != NULL) {
+                        int probe_result;
+                        message_probe_ran = 1;
+                        fprintf(probe_log, "DEBUG-message-ui actual-level=%s\n",
+                            game.level->ptr_name != NULL ?
+                                (const char*)game.level->ptr_name : "<null>");
+                        probe_result = pe32_message_ui_review_probe(game.cfg,
+                            WINDOW_W, WINDOW_H, probe_log);
+                        fprintf(probe_log, "DEBUG-next-owner verdict=%d\n",
+                            pe32_nerp_owner_probe(game.cfg, WINDOW_W, WINDOW_H, probe_log));
+                        fprintf(probe_log, "DEBUG-message-ui verdict=%d\n",
+                                probe_result);
+                        fclose(probe_log);
                     }
-                    formatted_text_draw(briefing_body_font, pixels, pitch,
-                        WINDOW_W, WINDOW_H, 12, WINDOW_H - 19,
-                        "Click Raider then cave to move. Keys 1-4 select, M move. Esc pauses.");
                 }
+            }
+#endif
+            if (game.level != NULL && !mission_reward_active(&game))
+                advisor_message_ui_draw(dt * 25.0f);
+            if (surface_lock(&surf, &pixels, &pitch) != 0) {
+                input_begin_frame(&input);
+                return !quit;
             }
             /* Brightness (issue #85): BrightnessSet's scalar on the frame. */
             render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
@@ -3947,11 +4330,24 @@ static int frameloop_application_gameplay_frame(float dt)
 int frameloop_application_tick(float dt)
 {
     FrameloopApplicationState& app = s_frameloop_application;
-    if (!app.initialized || app.phase == FRAMELOOP_PHASE_DONE || app.quit)
+    if (!app.initialized) return 0;
+    (void)frameloop_application_quit_ingest(&app, app.frame_events,
+                                           app.frame_event_count);
+    if (app.phase == FRAMELOOP_PHASE_DONE || app.quit)
         return 0;
     app.frame_dt = dt;
+    if (app.gameplay_clock_rebase) {
+        const uint32_t elapsed = platform_time_milliseconds()
+                                 - app.gameplay_resume_ms;
+        const float resumed_dt = (float)elapsed * 0.001f;
+        /* Preserve a smaller supplied delta, including pause/fixed-step
+         * values. This changes only the first tick after the modal return. */
+        if (dt > resumed_dt) dt = resumed_dt;
+        app.gameplay_clock_rebase = 0;
+    }
     if (app.phase == FRAMELOOP_PHASE_MENU) {
         FeEvent event = frameloop_main_menu_frame(&app, dt);
+        (void)frameloop_application_quit_ingest(&app, NULL, 0);
         if (app.quit) {
             app.phase = FRAMELOOP_PHASE_DONE;
             return 0;
@@ -3972,14 +4368,18 @@ int frameloop_application_tick(float dt)
             frameloop_application_prepare_gameplay();
             app.gameplay_prepared = 1;
         }
+        (void)frameloop_application_quit_ingest(&app, NULL, 0);
         if (app.quit) {
             app.phase = FRAMELOOP_PHASE_DONE;
             return 0;
         }
         app.phase = FRAMELOOP_PHASE_GAMEPLAY;
     }
-    if (app.phase == FRAMELOOP_PHASE_GAMEPLAY
-        && frameloop_application_gameplay_frame(dt)) return 1;
+    if (app.phase == FRAMELOOP_PHASE_GAMEPLAY) {
+        const int running = frameloop_application_gameplay_frame(dt);
+        (void)frameloop_application_quit_ingest(&app, NULL, 0);
+        if (running && !app.quit) return 1;
+    }
     app.phase = FRAMELOOP_PHASE_DONE;
     return 0;
 }
