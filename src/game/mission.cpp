@@ -1301,16 +1301,15 @@ const char* mission_reward_advance(GameContext* ctx)
         return NULL;
     }
     const char* next = level_next_name(ctx->level);
-    if (next == NULL || next[0] == '\0') {
-        ctx->reward_active = 0; /* final level: just close the overlay */
-        return NULL;
-    }
     char name[128];
-    snprintf(name, sizeof(name), "%s", next);
-
     if (ctx->checkpoint_blob == NULL) checkpoint_blob_build(ctx);
     (void)mission_checkpoint_task_progress_refresh(ctx);
-    checkpoint_step(ctx); /* save before moving on */
+    checkpoint_step(ctx);
+    if (next == NULL || next[0] == '\0') {
+        ctx->reward_active = 0;
+        return NULL;
+    }
+    snprintf(name, sizeof(name), "%s", next);
     objective_active_level_clear(ctx->level);
     level_destroy(ctx->level);
     ctx->level = NULL;

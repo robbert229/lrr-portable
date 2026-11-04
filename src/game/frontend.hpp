@@ -53,13 +53,13 @@ struct AudioPlayer; /* gods98/audio.hpp — optional front-end SFX output */
 struct SavTreeNode;
 struct SavListWindow;
 
-#define FE_ITEMS_MAX      32   /* ItemCount cap — ≥ the 24-level campaign picker */
+#define FE_ITEMS_MAX      64   /* authored items plus the shipped 33-node picker */
 #define FE_SUBMENUS_MAX   8    /* MenuCount cap */
 #define FE_OVERLAYS_MAX   5    /* per-submenu `!Overlay%i` cap */
 #define FE_NAME_MAX       48
 #define FE_PATH_MAX       128
 #define FE_LEVEL_NAME_MAX 48
-#define FE_CHAIN_MAX      24   /* StartLevel/TutorialStartLevel + NextLevel */
+#define FE_CHAIN_MAX      64   /* StartLevel/TutorialStartLevel + NextLevel */
 
 /* Bitmap-font layout (FUN_0047a470): a 10-column x 19-row ASCII grid
  * starting at 0x20 (" ") — glyph g = ch-0x20 at (col = g%10, row = g/10),
@@ -107,10 +107,13 @@ typedef struct FeItem {
     char  label[FE_NAME_MAX];  /* display text (underscores shown as spaces) */
     char  image_normal[FE_PATH_MAX];  /* image-backed Next/Trigger item */
     char  image_selected[FE_PATH_MAX];
+    char  image_disabled[FE_PATH_MAX]; /* picker tuple's disabled image */
     char  status[FE_NAME_MAX]; /* hover/status text for save-list rows */
     char  target[FE_NAME_MAX]; /* "Menu%i" target, or the level group name    */
     int   flag;                /* Trigger flag / Cycle count / slider lo      */
+    int   state_gated;         /* six-field text Next: inactive while state flags set */
     int   level_start;         /* 1 = grafted picker row: Enter starts a level */
+    int   level_enabled;       /* save-tree bit 4: accepts picker input */
     int   load_slot;           /* 1 = grafted save-slot row: Enter loads it    */
     /* Slider / Cycle interaction state (Options menus). `value` lives in
      * [min, max]; cycles min=0, max=count-1 and carry their option texts. */
@@ -120,6 +123,7 @@ typedef struct FeItem {
      * Keep its stable BlockFile string and per-open cache references. */
     const char* slider_config;
     TextureSurface* slider_images[8];
+    int   cycle_x, cycle_y; /* value offset from the item anchor */
     int   cycle_count;
     char  cycle_opts[4][24];
 } FeItem;
@@ -196,11 +200,11 @@ typedef struct FeSaveMenuLayout {
 } FeSaveMenuLayout;
 
 #define FE_LEVEL_MENU_LISTS 2
-#define FE_LEVEL_MENU_ROWS  32
+#define FE_LEVEL_MENU_ROWS  64
 typedef struct FeLevelMenuRow {
     char level[FE_LEVEL_NAME_MAX];
     char full_name[FE_NAME_MAX];
-    char menu_bmp[FE_PATH_MAX];
+    char menu_bmp[FE_PATH_MAX * 3]; /* three resource paths, comma separated */
     int x, y;
     int open;
 } FeLevelMenuRow;
@@ -265,6 +269,8 @@ typedef struct FrontEnd {
     TextureSurface* save_thumbnails[FE_SAVE_THUMBNAIL_COUNT];
     FeSaveMenuLayout save_text_layout;
     FeSaveMenuLayout level_text_layout;
+    char level_panel_name[FE_NAME_MAX];
+    int level_panel_menu, level_panel_sub;
     FeLevelMenuList level_menu_lists[FE_LEVEL_MENU_LISTS];
 
     /* --- runtime (modal menu) state ------------------------------------ */
@@ -276,6 +282,8 @@ typedef struct FrontEnd {
     int  sel;                       /* selected item index                */
     int  quit;                      /* user chose Quit (Yes on the confirm) */
     int  load_slot;                 /* FE_EVT_LOAD_GAME target slot id     */
+    int  selected_save_slot;        /* loaded campaign context, or -1 */
+    int  origin_picker_sub;         /* picker that started current mission */
     int  option_changed;            /* 1: a Slider/Cycle value changed this tick */
     char pending_level[FE_LEVEL_NAME_MAX]; /* level group to load (no "Levels::") */
     char resume_level[FE_LEVEL_NAME_MAX];  /* current level (pause Restart)   */
@@ -319,8 +327,9 @@ typedef enum {
     FE_EVT_START_LEVEL,   /* frontend.pending_level holds the level group */
     FE_EVT_LOAD_GAME,     /* frontend.load_slot holds the save slot id    */
     FE_EVT_SAVE_GAME,     /* reward save: frontend.load_slot is target slot */
-    FE_EVT_RESUME,        /* close a modal overlay (pause Continue / Esc)   */
+    FE_EVT_RESUME,        /* close a modal overlay (pause Continue)         */
     FE_EVT_CREDITS,       /* show the main-menu scrolling credits view      */
+    FE_EVT_LEAVE_LEVEL,   /* leave the mission and return to its picker */
     FE_EVT_QUIT,          /* user quit the app from the front end */
 } FeEvent;
 
@@ -415,6 +424,9 @@ void tooltip_icon_config_hooks_set(const ToolTipIconConfigHooks* hooks,
 void tooltip_icons_config_load(void* config); /* 0x437150 */
 void* tooltip_icon_handle_get(unsigned int bank, unsigned int index);
 void advisor_tooltip_and_sound_config_load(BlockFile* config); /* 0x434da0 */
+void tooltip_software_initialize(const TextureSurface* font, int width,
+                                 int height, float r, float g, float b);
+void tooltip_software_shutdown(void);
 const char* advisor_tooltip_text_get(int index);
 int advisor_tooltip_sound_get(int index);
 void* menu_button_record_make(const char* text,
@@ -478,11 +490,11 @@ int interface_menu_action_label_find(const char* name, int* out_index);
 void interface_menu_action_layout_peek(float out_xy[2]);
 const void* interface_menu_action_context_peek(void);
 
-/* Checkpoint record <-> level mapping (the port's stand-in for the corpus's
- * sav-tree node record slots, SavTreeWalk2 / CheckpointStep's ListFindName
- * index): tutorials take records 0..tutorial_n-1, campaign levels follow
- * (tutorial_n..tutorial_n+campaign_n-1). Returns -1 / 0 for unknowns so
- * callers keep the record-0 default. */
+/* Reference has separate campaign and tutorial NextLevel registries.
+ * The inverse below addresses the campaign registry used by save slots. */
+struct GameContext;
+int frontend_open_saved_campaign(FrontEnd* fe, struct GameContext* game, int slot);
+int frontend_apply_campaign_progress(FrontEnd* fe, const uint8_t* records, int count);
 int  fe_record_for_level(const FrontEnd* fe, const char* level);
 int  fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz);
 
@@ -504,6 +516,7 @@ void frontend_set_audio(FrontEnd* fe, struct AudioPlayer* audio);
  * them onto the SaveLoad submenus (MenuImage contains "SaveLoad" — the
  * shipped Load_A_Saved_Game screens), after the cfg items. Selecting a row
  * returns FE_EVT_LOAD_GAME with fe.load_slot = the slot id. */
+int  frontend_slot_raw_index(int ordinal);
 int  frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n);
 int  frontend_update_slot(FrontEnd* fe, const FeSlot* slot);
 int  frontend_sav_menu_list(FrontEnd* fe, int list_id,
@@ -517,8 +530,8 @@ const FeLevelMenuList* frontend_level_menu_list_peek(const FrontEnd* fe,
  * HiFont texture (or NULL for the 3x5 fallback width) used for hit-testing
  * the pointer. See frontend_tick in the .cpp for the action table
  * (level picker -> start, Trigger flag -> quit, Next -> navigate submenus,
- * Esc -> back/close). Pointer hover sets the selection; a click activates
- * the hovered row like Enter. */
+ * Esc behavior depends on the menu). MainMenuFull selection follows the
+ * pointer. Main and pause rows activate on clicks; save input remains separate. */
 FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
                       const TextureSurface* measure);
 
@@ -549,6 +562,9 @@ const char* frontend_active_image(const FrontEnd* fe);
  * cell size = font width/10 x font height/19. Advance width is measured
  * from each glyph's ink bounding box (the engine stores per-glyph float
  * advances in the font object; we re-derive them from the image). */
+int frontend_picker_active(const FrontEnd* fe);
+void frontend_picker_panel_text(FrontEnd* fe, const TextureSurface* measure,
+                                void* pixels, int pitch, int width, int height);
 void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);

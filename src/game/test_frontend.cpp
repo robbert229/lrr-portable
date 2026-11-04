@@ -22,6 +22,7 @@
 #include <unistd.h> /* mkdtemp / rmdir */
 
 #include "game/frontend.hpp"
+#include "game/savegame.hpp"
 #include "game/util.hpp"
 #include "game/game.hpp"
 #include "game/select.hpp"
@@ -125,6 +126,7 @@ static const char* FIXCFG =
     "\t\tTran01 {\n"
     "\t\t\tFullName\t1._Moving_Rock_Raiders\n"
     "\t\t\tNextLevel\tLevels::Tran02\n"
+    "\t\t\tLevelLinks\tLevels::Tran02\n"
     "\t\t\tFrontEndX\t96\n"
     "\t\t\tFrontEndY\t90\n"
     "\t\t}\n"
@@ -245,83 +247,48 @@ static void test_nav_and_actions(void)
     CHECK(frontend_open(&fe, FE_MENU_MAIN), "nav: open");
     CHECK(fe.sub == 0 && fe.sel == 0, "nav: starts at Menu1 sel 0");
 
-    /* Overlay players open lazily on the first tick of the active submenu
-     * (PlayRandom picks one; no fixture files, so the flic stays NULL but
-     * the attempted flag is set — no per-frame retries). */
+    /* Missing overlay files leave the player NULL without crashing. */
     FeInput ov = { 0, 0, 0, 0, 0, 0, -1, -1, 0 };
     CHECK(frontend_tick(&fe, &ov, NULL) == FE_EVT_NONE, "nav: overlay tick ok");
-    CHECK(fe.menus[FE_MENU_MAIN].submenus[0].overlays[0].tried == 1,
-          "nav: overlay open attempted");
     CHECK(fe.menus[FE_MENU_MAIN].submenus[0].overlays[0].flic == NULL,
           "nav: missing overlay file -> no flic (no crash)");
-    CHECK(fe.menus[FE_MENU_MAIN].submenus[0].overlays[0].tried == 1,
-          "nav: overlay open not retried every frame");
 
-    FeInput in = { 0, 0, 0, 0, 0, 0, -1, -1, 0 };
-    in.down = 1;
-    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sel == 1, "nav: down -> 1");
-    in.down = 0; in.down = 1; in.enter = 0;
-    /* go to sel 3 = Quit_Game */
-    frontend_tick(&fe, &in, NULL);
-    frontend_tick(&fe, &in, NULL);
-    CHECK(fe.sel == 3, "nav: down x3 -> Quit_Game");
-    in.down = 0; in.enter = 1;
-    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sub == 3,
-        "nav: Quit_Game -> confirm submenu");
-    in.enter = 0;
-    /* No -> back to Menu1 */
-    in.down = 1;
-    frontend_tick(&fe, &in, NULL);
-    CHECK(fe.sel == 1, "nav: confirm sel -> No");
-    in.down = 0; in.enter = 1;
-    frontend_tick(&fe, &in, NULL);
-    CHECK(fe.sub == 0, "nav: No -> Menu1");
-
-    /* start a level: Menu1 Start_Game -> Menu2 picker -> row 1 (Tran01) */
-    in.enter = 0;
-    frontend_open(&fe, FE_MENU_MAIN);          /* reset to root */
-    in.enter = 1;
-    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sub == 1,
-        "nav: Start_Game -> picker");
-    in.enter = 0; in.down = 1;
-    frontend_tick(&fe, &in, NULL);
-    CHECK(fe.sel == 1, "nav: picker sel -> Tran01(row1)");
-    in.down = 0; in.enter = 1;
-    int ev = (int)frontend_tick(&fe, &in, NULL);
-    CHECK(ev == (int)FE_EVT_START_LEVEL, "nav: Enter on row -> START_LEVEL");
-    CHECK(strcmp(fe.pending_level, "Tran01") == 0, "nav: pending_level Tran01");
-    CHECK(!fe.open, "nav: menu closed after start");
-
-    /* quit flow: root -> Quit_Game -> Yes */
+    FeInput neutral = { 0, 0, 0, 0, 0, 0, 10, 10, 0 };
+    FeInput up = { 1, 0, 0, 0, 0, 0, 10, 10, 0 };
+    FeInput down = { 0, 1, 0, 0, 0, 0, 10, 10, 0 };
+    FeInput hover = { 0, 0, 0, 0, 0, 0, 300, 245, 0 };
+    FeInput enter = { 0, 0, 0, 0, 1, 0, 300, 245, 0 };
+    FeInput quit = { 0, 0, 0, 0, 0, 0, 300, 365, 1 };
+    FeInput no = { 0, 0, 0, 0, 0, 0, 320, 305, 1 };
+    FeInput yes = { 0, 0, 0, 0, 0, 0, 320, 265, 1 };
+    CHECK(frontend_tick(&fe, &hover, NULL) == FE_EVT_NONE && fe.sel == 1,
+          "nav: pointer selects Training");
+    CHECK(frontend_tick(&fe, &enter, NULL) == FE_EVT_NONE && fe.sub == 0,
+          "nav: Enter does not activate main row");
+    CHECK(frontend_tick(&fe, &neutral, NULL) == FE_EVT_NONE && fe.sel == -1,
+          "nav: leaving row clears selection");
+    CHECK(frontend_tick(&fe, &up, NULL) == FE_EVT_NONE && fe.sel == -1,
+          "nav: Up does not select a main row");
+    CHECK(frontend_tick(&fe, &down, NULL) == FE_EVT_NONE && fe.sel == -1,
+          "nav: Down does not select a main row");
+    CHECK(frontend_tick(&fe, &quit, NULL) == FE_EVT_NONE && fe.sub == 3,
+          "nav: click Quit opens confirmation");
+    FeInput confirmation_esc = { 0, 0, 0, 0, 0, 1, 320, 305, 0 };
+    CHECK(frontend_tick(&fe, &confirmation_esc, NULL) == FE_EVT_NONE &&
+          fe.open && fe.sub == 3, "nav: Escape leaves confirmation open");
+    enter.mouse_x = 320; enter.mouse_y = 305;
+    CHECK(frontend_tick(&fe, &enter, NULL) == FE_EVT_NONE && fe.sub == 3,
+          "nav: Enter does not activate No");
+    CHECK(frontend_tick(&fe, &no, NULL) == FE_EVT_NONE && fe.sub == 0,
+          "nav: click No returns to main");
+    CHECK(frontend_tick(&fe, &quit, NULL) == FE_EVT_NONE && fe.sub == 3,
+          "nav: click Quit reopens confirmation");
+    CHECK(frontend_tick(&fe, &yes, NULL) == FE_EVT_QUIT && fe.quit,
+          "nav: click Yes quits");
     frontend_open(&fe, FE_MENU_MAIN);
-    in.enter = 0; in.down = 1;
-    FeInput tmp = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
-    frontend_tick(&fe, &tmp, NULL);
-    frontend_tick(&fe, &tmp, NULL);
-    frontend_tick(&fe, &tmp, NULL);
-    in.down = 0; in.enter = 1;
-    frontend_tick(&fe, &in, NULL);                   /* -> confirm */
-    in.enter = 0; in.enter = 1;
-    ev = (int)frontend_tick(&fe, &in, NULL);
-    CHECK(ev == (int)FE_EVT_QUIT, "nav: Yes -> QUIT");
-    CHECK(fe.quit, "nav: quit flag set");
-
-    /* esc: back then quit */
-    frontend_open(&fe, FE_MENU_MAIN);
-    in.enter = 0; in.down = 1;
-    FeInput down_ = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
-    frontend_tick(&fe, &down_, NULL);
-    frontend_tick(&fe, &down_, NULL);
-    frontend_tick(&fe, &down_, NULL);
-    in = s_small; in.enter = 1;
-    frontend_tick(&fe, &in, NULL);      /* -> confirm */
-    in.enter = 0; in.esc = 1;
-    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_NONE && fe.sub == 0,
-        "nav: esc on confirm -> Menu1");
-    in.esc = 0;
     FeInput esc_ = { 0, 0, 0, 0, 0, 1, -1, -1, 0 };
-    CHECK(frontend_tick(&fe, &esc_, NULL) == FE_EVT_QUIT,
-        "nav: esc on root -> QUIT");
+    CHECK(frontend_tick(&fe, &esc_, NULL) == FE_EVT_NONE && fe.open && fe.sub == 0,
+          "nav: Escape leaves root open");
     if (cfg != NULL) {
         block_close(cfg);
     }
@@ -458,6 +425,43 @@ static void test_font(void)
     free(tf.pixels);
 }
 
+/* A blank glyph may use one key for transparent spacing and another for
+ * its background. The measurement key is distinct from the blit keys. */
+static void test_font_blank_advance(void)
+{
+    TextureSurface tf;
+    uint32_t* pixels;
+    int x, y;
+    uint32_t joined, spaced;
+    memset(&tf, 0, sizeof(tf));
+    tf.width = FE_FONT_GRID_COLS * 8;
+    tf.height = FE_FONT_GRID_ROWS * 4;
+    pixels = (uint32_t*)malloc((size_t)tf.width * tf.height * 4);
+    CHECK(pixels != NULL, "font space: buffer");
+    if (pixels == NULL) return;
+    tf.pixels = pixels;
+    tf.key_count = 2;
+    tf.keys[0] = 0xff000000u;
+    tf.keys[1] = 0xffff0000u;
+    for (y = 0; y < tf.height; ++y)
+        for (x = 0; x < tf.width; ++x)
+            pixels[(size_t)y * tf.width + x] = 0xffff0000u;
+    for (y = 0; y < 4; ++y)
+        for (x = 0; x < 2; ++x)
+            pixels[(size_t)y * tf.width + x] = 0xff000000u;
+    for (x = 'A'; x <= 'B'; ++x) {
+        int glyph = x - 0x20;
+        pixels[(size_t)(glyph / 10 * 4 + 1) * tf.width +
+               glyph % 10 * 8 + 1] = 0xffffffffu;
+    }
+    joined = formatted_text_draw_and_measure(&tf, NULL, 0, 0, 0, 0, 0,
+                                              "AB", NULL);
+    spaced = formatted_text_draw_and_measure(&tf, NULL, 0, 0, 0, 0, 0,
+                                              "A B", NULL);
+    CHECK(spaced == joined + 2, "font space: advance preserves blank spacing");
+    free(pixels);
+}
+
 /* --- real-wad probe (--real <dir>) ---------------------------------------- */
 
 static void real_probe(const char* wad_dir)
@@ -535,8 +539,8 @@ static void test_active_image(void)
     CHECK(frontend_active_image(&fe) == NULL,
         "img: Menu1 has no MenuImage key");
 
-    /* Enter on Start_Game (item 0) -> Menu2 (Missions picker) */
-    FeInput in = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
+    /* Click Start_Game -> Menu2 (Missions picker). */
+    FeInput in = { 0, 0, 0, 0, 0, 0, 300, 205, 1 };
     frontend_tick(&fe, &in, NULL);
     CHECK(fe.sub == 1, "img: navigated to Menu2");
     const char* im = frontend_active_image(&fe);
@@ -569,7 +573,7 @@ static void test_pointer(void)
     /* click in empty space keeps the menu up with no change */
     frontend_open(&fe, FE_MENU_MAIN);
     FeInput miss = { 0, 0, 0, 0, 0, 0, 10, 10, 1 };
-    CHECK(frontend_tick(&fe, &miss, NULL) == FE_EVT_NONE && fe.sel == 0
+    CHECK(frontend_tick(&fe, &miss, NULL) == FE_EVT_NONE && fe.sel == -1
         && fe.sub == 0, "ptr: empty-space click is a no-op");
 
     /* click the selected Start_Game (item 0: x=285, y=200) -> Missions */
@@ -620,44 +624,47 @@ static void test_pause(void)
     CHECK(frontend_menu(&fe, FE_MENU_PAUSED)->submenu_count == 4,
         "pause: PausedMenu parses 4 submenus");
 
-    /* Continue_Game (Trigger flag 1) resumes instead of quitting. */
+    /* Pause rows follow pointer selection; Enter does not activate Back. */
     frontend_open(&fe, FE_MENU_PAUSED);
-    FeInput enter = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
-    CHECK(frontend_tick(&fe, &enter, NULL) == FE_EVT_RESUME && !fe.open,
-        "pause: Continue -> RESUME");
+    FeInput enter = { 0, 0, 0, 0, 1, 0, 310, 184, 0 };
+    FeInput cont = { 0, 0, 0, 0, 0, 0, 310, 184, 1 };
+    CHECK(frontend_tick(&fe, &enter, NULL) == FE_EVT_NONE && fe.open,
+        "pause: Enter does not activate Continue");
+    CHECK(frontend_tick(&fe, &cont, NULL) == FE_EVT_RESUME && !fe.open,
+        "pause: click Continue resumes");
 
-    /* Esc on the pause root resumes. */
     frontend_open(&fe, FE_MENU_PAUSED);
     FeInput esc = { 0, 0, 0, 0, 0, 1, -1, -1, 0 };
-    CHECK(frontend_tick(&fe, &esc, NULL) == FE_EVT_RESUME && !fe.open,
-        "pause: Esc on root -> RESUME");
+    for (int i = 0; i < 4; ++i) {
+        fe.sub = i;
+        CHECK(frontend_tick(&fe, &esc, NULL) == FE_EVT_NONE && fe.open && fe.sub == i,
+            "pause: Escape leaves submenu visible");
+    }
 
-    /* Quit = item 4 (sel 3) -> confirm (Menu3) -> Yes -> QUIT. */
     frontend_open(&fe, FE_MENU_PAUSED);
-    FeInput in = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
-    frontend_tick(&fe, &in, NULL);            /* sel 1 */
-    frontend_tick(&fe, &in, NULL);            /* sel 2 */
-    frontend_tick(&fe, &in, NULL);            /* sel 3 (Quit) */
-    in.down = 0; in.enter = 1;
-    frontend_tick(&fe, &in, NULL);            /* navigate -> Menu3 */
-    CHECK(fe.sub == 2 && fe.sel == 0,
-        "pause: Quit -> confirm submenu");
-    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_QUIT,
-        "pause: Yes on quit confirm -> QUIT");
+    FeInput quit = { 0, 0, 0, 0, 0, 0, 310, 304, 1 };
+    FeInput no = { 0, 0, 0, 0, 0, 0, 1, 101, 1 };
+    FeInput yes = { 0, 0, 0, 0, 0, 0, 1, 61, 1 };
+    CHECK(frontend_tick(&fe, &quit, NULL) == FE_EVT_NONE && fe.sub == 2,
+        "pause: click Quit opens confirmation");
+    enter.mouse_x = 1; enter.mouse_y = 101;
+    CHECK(frontend_tick(&fe, &enter, NULL) == FE_EVT_NONE && fe.sub == 2,
+        "pause: Enter does not activate No");
+    CHECK(frontend_tick(&fe, &no, NULL) == FE_EVT_NONE && fe.sub == 0,
+        "pause: click No returns to root");
+    CHECK(frontend_tick(&fe, &quit, NULL) == FE_EVT_NONE && fe.sub == 2,
+        "pause: click Quit reopens confirmation");
+    CHECK(frontend_tick(&fe, &yes, NULL) == FE_EVT_LEAVE_LEVEL && !fe.open,
+        "pause: click Yes leaves level");
 
-    /* Restart = item 3 (sel 2) -> confirm (Menu4) -> Yes -> START_LEVEL. */
     frontend_open(&fe, FE_MENU_PAUSED);
     snprintf(fe.resume_level, FE_LEVEL_NAME_MAX, "%s", "Tran01");
-    in.down = 1; in.enter = 0;
-    frontend_tick(&fe, &in, NULL);            /* sel 1 */
-    frontend_tick(&fe, &in, NULL);            /* sel 2 (Restart_Mission) */
-    in.down = 0; in.enter = 1;
-    frontend_tick(&fe, &in, NULL);            /* navigate -> Menu4 */
-    CHECK(fe.sub == 3 && fe.sel == 0,
-        "pause: Restart_Mission -> confirm submenu");
-    CHECK(frontend_tick(&fe, &in, NULL) == FE_EVT_START_LEVEL
+    FeInput restart = { 0, 0, 0, 0, 0, 0, 310, 274, 1 };
+    CHECK(frontend_tick(&fe, &restart, NULL) == FE_EVT_NONE && fe.sub == 3,
+        "pause: click Restart opens confirmation");
+    CHECK(frontend_tick(&fe, &yes, NULL) == FE_EVT_START_LEVEL
         && strcmp(fe.pending_level, "Tran01") == 0,
-        "pause: Yes on restart -> START_LEVEL(resume level)");
+        "pause: click Yes restarts the level");
 
     block_close(cfg);
 }
@@ -693,25 +700,33 @@ static void test_slots(void)
     snprintf(slots[2].label, FE_NAME_MAX, "%s", "Slot 3");
     slots[2].id = 3; slots[2].present = 1;
 
+    CHECK(frontend_slot_raw_index(1) == 0 && frontend_slot_raw_index(5) == 4 &&
+          frontend_slot_raw_index(0) == -1 && frontend_slot_raw_index(6) == -1,
+          "slots: visible ordinals map to raw contexts");
     CHECK(frontend_build_slots(&fe, slots, 3) == 1, "slots: grafted");
     CHECK(fe.slot_count == 3, "slots: registered count");
     const FeMenu* m = frontend_menu(&fe, FE_MENU_MAIN);
     CHECK(m->submenus[1].item_count == 1 + 3,
         "slots: 3 rows appended on the SaveLoad screen");
+    CHECK(m->submenus[1].items[1].x == 120 &&
+          m->submenus[1].items[1].y == 100 &&
+          m->submenus[1].items[3].y == 220,
+          "slots: list offsets follow submenu position and 60-pixel stride");
     CHECK(m->submenus[1].items[1].load_slot == 1,
         "slots: row 1 binds slot 1");
     CHECK(strcmp(m->submenus[1].items[2].label, "Slot 2") == 0,
         "slots: row 2 label");
 
     frontend_open(&fe, FE_MENU_MAIN);
-    FeInput ent = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
-    frontend_tick(&fe, &ent, NULL);           /* Menu1 item (Load) -> Menu2 */
-    CHECK(fe.sub == 1, "slots: navigated to SaveLoad screen");
-    FeInput down = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
-    frontend_tick(&fe, &down, NULL);          /* sel 1 = first slot row */
-    ent.down = 0; ent.enter = 1;
-    CHECK(frontend_tick(&fe, &ent, NULL) == FE_EVT_LOAD_GAME
-        && fe.load_slot == 1, "slots: picking slot 1 -> LOAD_GAME");
+    FeInput load = { 0, 0, 0, 0, 0, 0, 300, 205, 1 };
+    frontend_tick(&fe, &load, NULL);
+    CHECK(fe.sub == 1, "slots: clicked Load to enter SaveLoad screen");
+    FeInput back_enter = { 0, 0, 0, 0, 1, 0, 8, 438, 0 };
+    CHECK(frontend_tick(&fe, &back_enter, NULL) == FE_EVT_NONE && fe.sub == 1,
+          "slots: Enter on Back does not activate");
+    FeInput slot = { 0, 0, 0, 0, 0, 0, 121, 101, 1 };
+    CHECK(frontend_tick(&fe, &slot, NULL) == FE_EVT_LOAD_GAME
+        && fe.load_slot == 1, "slots: clicking slot 1 -> LOAD_GAME");
 
     block_close(cfg);
 }
@@ -744,7 +759,7 @@ static void test_options(void)
 
     /* Paused Menu1 -> Options (Menu2) */
     frontend_open(&fe, FE_MENU_PAUSED);
-    FeInput ein = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
+    FeInput ein = { 0, 0, 0, 0, 0, 0, 310, 214, 1 };
     frontend_tick(&fe, &ein, NULL);
     CHECK(fe.sub == 1, "opt: on the Options submenu");
 
@@ -752,26 +767,25 @@ static void test_options(void)
     CHECK(sl->kind == FE_ITEM_SLIDER && sl->min == 0 && sl->max == 10
         && sl->value == 8, "opt: slider parsed with default 8");
 
-    FeInput r = { 0, 0, 0, 1, 0, 0, -1, -1, 0 };   /* right */
+    FeInput r = { 0, 0, 0, 1, 0, 0, 251, 135, 0 };   /* right over slider */
     fe.option_changed = 0;
     frontend_tick(&fe, &r, NULL);
     CHECK(sl->value == 9 && fe.option_changed == 1, "opt: right increments");
-    FeInput l = { 0, 0, 1, 0, 0, 0, -1, -1, 0 };   /* left */
+    FeInput l = { 0, 0, 1, 0, 0, 0, 251, 135, 0 };   /* left over slider */
     frontend_tick(&fe, &l, NULL);
     frontend_tick(&fe, &l, NULL);
     CHECK(sl->value == 7, "opt: left decrements (9 -> 7)");
 
     /* Cycle item */
-    FeInput down = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
-    frontend_tick(&fe, &down, NULL);
     FeItem* cy = &fe.menus[FE_MENU_PAUSED].submenus[1].items[1];
     CHECK(cy->kind == FE_ITEM_CYCLE && cy->cycle_count == 2
         && cy->value == 0 && strcmp(cy->cycle_opts[1], "On") == 0,
         "opt: cycle parsed with options");
+    r.mouse_x = 251; r.mouse_y = 175;
     frontend_tick(&fe, &r, NULL);
     CHECK(cy->value == 1, "opt: cycle right -> option 1");
     frontend_tick(&fe, &r, NULL);
-    CHECK(cy->value == 1, "opt: cycle clamps at max");
+    CHECK(cy->value == 0, "opt: cycle wraps to first option");
 
     /* Render the slider widget (3x5 fallback): item0 at Position 250:134,
      * label "SFX_Volume" tw 70 -> bar x=250+80=330, y=134+6-2=138, width 72;
@@ -822,6 +836,37 @@ static void test_options(void)
     block_close(cfg);
 }
 
+static void test_cycle_pointer_and_layout(void)
+{
+    BlockFile* cfg = s_parse("Lego* { Menu { PausedMenu { MenuCount 1 "
+        "Menu1 { Title Advanced_Options Position 290:134 ItemCount 2 "
+        "Item1 Cycle:-150:45:310:0:Wall_Detail:2:High:Low "
+        "Item2 Cycle:-150:120:310:0:Automatic_Game_Speed:2:On:Off "
+        "} } } }");
+    FrontEnd fe;
+    CHECK(frontend_build(&fe, cfg), "cycle layout: build");
+    frontend_open(&fe, FE_MENU_PAUSED);
+    FeSubmenu* sub = &fe.menus[FE_MENU_PAUSED].submenus[0];
+    CHECK(sub->display_title && sub->items[0].cycle_x == 310 &&
+          sub->items[0].cycle_y == 0, "cycle layout: title and value offset");
+    FeInput hover = { 0, 0, 0, 0, 0, 0, 150, 254, 0, 0 };
+    FeInput right = { 0, 0, 0, 1, 0, 0, 150, 179, 0, 0 };
+    frontend_tick(&fe, &hover, NULL);
+    CHECK(fe.sel == 1, "cycle input: previous hover");
+    frontend_tick(&fe, &right, NULL);
+    CHECK(sub->items[0].value == 1 && sub->items[1].value == 0,
+          "cycle input: same-frame pointer and Right target current row");
+    uint8_t* pixels = (uint8_t*)calloc(640 * 480, 4);
+    CHECK(pixels != NULL, "cycle layout: buffer");
+    if (pixels != NULL) {
+        frontend_render(&fe, NULL, NULL, 640, 480, pixels, 640 * 4);
+        CHECK(pixels[(179 * 640 + 450) * 4] != 0,
+              "cycle layout: value drawn at authored column");
+        free(pixels);
+    }
+    block_close(cfg);
+}
+
 static void test_scroll(void)
 {
     BlockFile* cfg = s_parse(
@@ -854,7 +899,7 @@ static void test_scroll(void)
     fe.view_h = 480;                 /* bands 200/280, like the corpus */
     frontend_open(&fe, FE_MENU_MAIN);
 
-    FeInput enter = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
+    FeInput enter = { 0, 0, 0, 0, 0, 0, 300, 205, 1 };
     frontend_tick(&fe, &enter, NULL);
     CHECK(fe.sub == 1, "scr: into the picker sub");
 
@@ -898,19 +943,19 @@ static void test_records(void)
     CHECK(frontend_build(&fe, cfg) == 1, "rec: builds");
     CHECK(fe.campaign_n == 2 && fe.tutorial_n == 1, "rec: fixture chains");
 
-    /* tutorials occupy records 0..tutorial_n-1, campaign follows */
+    /* Each reference picker owns its own registry index space. */
     CHECK(fe_record_for_level(&fe, "MoveTuto01") == 0, "rec: tutorial = record 0");
-    CHECK(fe_record_for_level(&fe, "Tran01") == 1, "rec: campaign starts after tutorials");
-    CHECK(fe_record_for_level(&fe, "Tran02") == 2, "rec: chain position = record");
+    CHECK(fe_record_for_level(&fe, "Tran01") == 0, "rec: campaign starts at zero");
+    CHECK(fe_record_for_level(&fe, "Tran02") == 1, "rec: chain position = record");
     CHECK(fe_record_for_level(&fe, "Nowhere") == -1, "rec: unknown -> -1");
     CHECK(fe_record_for_level(&fe, "") == -1, "rec: empty -> -1");
 
     char name[FE_LEVEL_NAME_MAX];
     name[0] = '\0';
     CHECK(fe_level_for_record(&fe, 0, name, sizeof name)
-              && strcmp(name, "MoveTuto01") == 0,
-        "rec: inverse maps the tutorial");
-    CHECK(fe_level_for_record(&fe, 2, name, sizeof name)
+              && strcmp(name, "Tran01") == 0,
+        "rec: inverse maps the campaign root");
+    CHECK(fe_level_for_record(&fe, 1, name, sizeof name)
               && strcmp(name, "Tran02") == 0,
         "rec: inverse maps the campaign tail");
     CHECK(fe_level_for_record(&fe, 77, name, sizeof name) == 0,
@@ -918,8 +963,76 @@ static void test_records(void)
     block_close(cfg);
 }
 
+static void test_campaign_progress_bridge(void)
+{
+    const char* cfg_text =
+        "Lego* {\n"
+        " Main {\n  StartLevel Levels::A\n  TutorialStartLevel Levels::T\n }\n"
+        " Menu {\n  MainMenuFull {\n   MenuCount 3\n"
+        "   Menu1 {\n    ItemCount 1\n    Item1 Next:0:0:Start:Menu2\n   }\n"
+        "   Menu2 {\n    MenuImage Interface\\\\LevelPicker\\\\LevelPick.bmp:0:0:1\n    ItemCount 0\n   }\n"
+        "   Menu3 {\n    MenuImage Interface\\\\LevelPicker\\\\LevelPickT.bmp:0:0:1\n    ItemCount 0\n   }\n  }\n }\n"
+        " Levels {\n"
+        "  A {\n   NextLevel Levels::B\n   LevelLinks Levels::B,Levels::C\n   FrontEndX 10\n   FrontEndY 10\n  }\n"
+        "  B {\n   NextLevel Levels::C\n   LevelLinks Levels::D\n   FrontEndX 100\n   FrontEndY 10\n  }\n"
+        "  C {\n   NextLevel Levels::D\n   LevelLinks Levels::D\n   FrontEndX 200\n   FrontEndY 10\n  }\n"
+        "  D {\n   FrontEndX 300\n   FrontEndY 10\n  }\n"
+        "  T {\n  }\n }\n}\n";
+    BlockFile* cfg = s_parse(cfg_text);
+    FrontEnd fe;
+    uint8_t records[4 * SAVE_RECORD_SIZE];
+    FeInput input = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
+    FeSubmenu* sub;
+    memset(records, 0, sizeof(records));
+    frontend_init(&fe);
+    CHECK(frontend_build(&fe, cfg), "progress: build graph");
+    CHECK(fe_record_for_level(&fe, "A") == 0 &&
+          fe_record_for_level(&fe, "B") == 1 &&
+          fe_record_for_level(&fe, "D") == 3 &&
+          fe_record_for_level(&fe, "T") == 0, "progress: separate registries");
+    CHECK(frontend_apply_campaign_progress(&fe, records, 4), "progress: apply zero slot");
+    CHECK(frontend_open_submenu(&fe, FE_MENU_MAIN, 1), "progress: picker open");
+    sub = &fe.menus[FE_MENU_MAIN].submenus[1];
+    {
+        FeInput esc = { 0, 0, 0, 0, 0, 1, -1, -1, 0 };
+        CHECK(frontend_tick(&fe, &esc, NULL) == FE_EVT_NONE && fe.open && fe.sub == 1,
+              "progress: Escape leaves campaign picker open");
+    }
+    CHECK(sub->item_count == 4 && sub->items[0].level_enabled &&
+          !sub->items[1].level_enabled && !sub->items[2].level_enabled &&
+          !sub->items[3].level_enabled, "progress: zero records unlock only root");
+    fe.sel = 1;
+    CHECK(frontend_tick(&fe, &input, NULL) == FE_EVT_NONE && fe.open,
+          "progress: disabled keyboard cannot launch");
+    input.enter = 0; input.mouse_x = 100; input.mouse_y = 10; input.click = 1;
+    CHECK(frontend_tick(&fe, &input, NULL) == FE_EVT_NONE && fe.open,
+          "progress: disabled pointer cannot launch");
+    records[SAVE_RECORD_SIZE] = 1;
+    CHECK(frontend_apply_campaign_progress(&fe, records, 4), "progress: apply B completion");
+    CHECK(sub->items[0].level_enabled && sub->items[1].level_enabled &&
+          sub->items[2].level_enabled && !sub->items[3].level_enabled &&
+          strcmp(sub->items[2].target, "D") == 0,
+          "progress: first DFS parent unlocks D, not C");
+    input.click = 1; input.mouse_x = 300; input.mouse_y = 10; input.enter = 0;
+    CHECK(frontend_tick(&fe, &input, NULL) == FE_EVT_START_LEVEL &&
+          strcmp(fe.pending_level, "D") == 0 && fe.origin_picker_sub == 1,
+          "progress: enabled D starts D from campaign picker");
+    CHECK(frontend_open_submenu(&fe, FE_MENU_MAIN, 2), "progress: training picker open");
+    {
+        FeInput esc = { 0, 0, 0, 0, 0, 1, -1, -1, 0 };
+        CHECK(frontend_tick(&fe, &esc, NULL) == FE_EVT_NONE && fe.open && fe.sub == 2,
+              "progress: Escape leaves training picker open");
+    }
+    input.mouse_x = 0; input.mouse_y = 0;
+    CHECK(frontend_tick(&fe, &input, NULL) == FE_EVT_START_LEVEL &&
+          strcmp(fe.pending_level, "T") == 0 && fe.origin_picker_sub == 2,
+          "progress: training mission retains training picker origin");
+    block_close(cfg);
+}
+
 int main(int argc, char** argv)
 {
+    test_campaign_progress_bridge();
     for (int a = 1; a < argc; ++a) {
         if (strcmp(argv[a], "--real") == 0 && a + 1 < argc) {
             real_probe(argv[a + 1]);
@@ -933,10 +1046,12 @@ int main(int argc, char** argv)
     test_render();
     test_active_image();
     test_font();
+    test_font_blank_advance();
     test_pointer();
     test_pause();
     test_slots();
     test_options();
+    test_cycle_pointer_and_layout();
     test_scroll();
     test_records();
 

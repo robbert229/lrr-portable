@@ -4,6 +4,7 @@
  */
 #include "platform/platform.h"
 #include "gods98/frameloop.hpp"
+#include "gods98/surface.hpp"
 #include "gods98/view.hpp"
 #include "crt/crt.hpp"
 
@@ -581,6 +582,9 @@ void platform_present_pixels(PlatformWindow* win, const void* pixels, int pitch,
         win->pointer_x = platform_coordinate_clamp(win->pointer_x, width);
         win->pointer_y = platform_coordinate_clamp(win->pointer_y, height);
     }
+#if !defined(_WIN64)
+    if (surface_winapi_present_rgba(pixels, pitch, width, height)) return;
+#endif
     if (s_platform_render_surface_ops.fullscreen_get != NULL) {
         fullscreen = s_platform_render_surface_ops.fullscreen_get(
             s_platform_render_surface_ops.context);

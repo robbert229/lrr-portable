@@ -35,6 +35,9 @@
 #include "gods98/block.hpp"
 #include "gods98/engine.hpp"
 #include "gods98/heap.hpp"
+#include "gods98/media.hpp"
+#include "gods98/message.hpp"
+#include "gods98/sound.hpp"
 #include "gods98/resource.hpp"
 
 static int s_failures = 0;
@@ -67,12 +70,16 @@ static const char* FIXCFG =
     "\t\t}\n"
     "\t\tOptionsMenu {\n"
     "\t\t\tMenuCount 1\n"
-    "\t\t\tMenu1 { AutoCenter FALSE Position 216:134 ItemCount 5\n"
+    "\t\t\tMenu1 { AutoCenter FALSE Position 216:134 ItemCount 9\n"
     "\t\t\t\tItem1 Slider:-80:30:255:0:Game_Speed:0:5:bar.bmp\n"
     "\t\t\t\tItem2 Slider:-80:55:255:0:SFX_Volume:0:10:bar.bmp\n"
     "\t\t\t\tItem3 Slider:-80:80:255:0:Music_Volume:0:10:bar.bmp\n"
     "\t\t\t\tItem4 Slider:-80:105:255:0:Brightness:0:10:bar.bmp\n"
     "\t\t\t\tItem5 Cycle:-80:130:255:0:Help_Window:2:Off:On\n"
+    "\t\t\t\tItem6 Cycle:-80:155:255:0:Wall_Detail:2:High:Low\n"
+    "\t\t\t\tItem7 Cycle:-80:180:255:0:Music:2:On:Off\n"
+    "\t\t\t\tItem8 Cycle:-80:205:255:0:Sound_Effects:2:On:Off\n"
+    "\t\t\t\tItem9 Cycle:-80:230:255:0:Automatic_Game_Speed:2:On:Off\n"
     "\t\t\t}\n"
     "\t\t}\n"
     "\t\tPausedMenu {\n"
@@ -165,6 +172,12 @@ static void test_menu_to_runtime(void)
     CHECK(options_time_scale(&store) == 1.25f,
         "store->runtime: EngineTick dt factor follows the slider");
 
+    FeInput speed_left = { 0, 0, 1, 0, 0, 0, -1, -1, 0 };
+    frontend_tick(&fe, &speed_left, NULL);
+    CHECK(store.game_speed == 1 && EngineTimeScale() == 1.0f,
+          "menu->runtime: slider left still publishes");
+    frontend_tick(&fe, &r, NULL);
+
     /* Brightness: walk down to item 3 and crank past the cfg hi -> clamp 10. */
     FeInput d = { 0, 1, 0, 0, 0, 0, -1, -1, 0 };
     for (int i = 0; i < 3; i++) {
@@ -183,9 +196,51 @@ static void test_menu_to_runtime(void)
     frontend_tick(&fe, &r, NULL);
     CHECK(store.help_window == 1 && helpw->value == 1,
         "menu->store: help cycle writes the store");
-    /* Clamps at the cycle's option count too. */
+    /* The cycle wraps after its last value. */
     frontend_tick(&fe, &r, NULL);
-    CHECK(store.help_window == 1, "menu->store: help clamps at On");
+    CHECK(store.help_window == 0, "menu->store: help wraps to Off");
+
+    /* Exercise the production adjustment route and its shared owners. */
+    *engine_shared_state_word() = 0x40000000u | 0x20u | MEDIA_CD_WATCHDOG_BIT | MEDIA_FLAG_SOUND_ON;
+    selection_flag10_set_clear(1);
+    for (int i = 0; i < 4; ++i) {
+        frontend_tick(&fe, &d, NULL);
+        frontend_tick(&fe, &r, NULL);
+    }
+    CHECK((*engine_shared_state_word() & (0x20u | MEDIA_CD_WATCHDOG_BIT | MEDIA_FLAG_SOUND_ON)) == 0,
+          "advanced: right turns off shared flags");
+    CHECK((*engine_shared_state_word() & 0x40000000u) != 0 && (message_flags_peek() & 0x10u) == 0,
+          "advanced: preserves unrelated state and clears automatic speed");
+    FeInput left = { 0, 0, 1, 0, 0, 0, -1, -1, 0 };
+    FeInput up = { 1, 0, 0, 0, 0, 0, -1, -1, 0 };
+    for (int j = 0; j < 4; ++j) {
+        frontend_tick(&fe, &left, NULL);
+        if (j != 3) frontend_tick(&fe, &up, NULL);
+    }
+    CHECK((*engine_shared_state_word() & (0x20u | MEDIA_CD_WATCHDOG_BIT | MEDIA_FLAG_SOUND_ON)) == 0 &&
+          (message_flags_peek() & 0x10u) == 0,
+          "advanced: left changes ordinal without invoking callbacks");
+    CHECK(store.wall_detail == 0 && store.music_onoff == 0 &&
+          store.sfx_onoff == 0 && store.auto_game_speed == 0,
+          "advanced: left wraps all four stored ordinals");
+    for (int k = 0; k < 4; ++k) {
+        frontend_tick(&fe, &r, NULL);
+        frontend_tick(&fe, &r, NULL);
+        if (k != 3) frontend_tick(&fe, &d, NULL);
+    }
+    CHECK((*engine_shared_state_word() & (0x20u | MEDIA_CD_WATCHDOG_BIT | MEDIA_FLAG_SOUND_ON)) ==
+          (0x20u | MEDIA_CD_WATCHDOG_BIT | MEDIA_FLAG_SOUND_ON) && (message_flags_peek() & 0x10u) != 0,
+          "advanced: right invokes callbacks after wrapping");
+    CHECK(sound_subsystem_enabled() != 0, "advanced: sound owner enabled");
+    FeInput advanced_click = { 0, 0, 0, 0, 0, 0, 137, 365, 1, 0 };
+    frontend_tick(&fe, &advanced_click, NULL);
+    CHECK(store.auto_game_speed == 1 && (message_flags_peek() & 0x10u) == 0,
+          "advanced: mouse click invokes automatic speed callback");
+    frontend_tick(&fe, &advanced_click, NULL);
+    CHECK(store.auto_game_speed == 0 && (message_flags_peek() & 0x10u) != 0,
+          "advanced: mouse click wraps and invokes callback");
+    frontend_options_sync(&fe);
+    CHECK((*engine_shared_state_word() & 0x40000000u) != 0, "advanced: sync preserves owner");
 
     /* Brightness's runtime effect on the rendered frame: the store value is
      * what the frame loop applies, so apply it here. A full-bright frame at
@@ -243,8 +298,8 @@ static void test_menu_to_runtime(void)
 
     /* The other Options instance (PausedMenu's submenu) is seeded too. */
     frontend_open(&fe, FE_MENU_PAUSED);
-    FeInput ent = { 0, 0, 0, 0, 1, 0, -1, -1, 0 };
-    frontend_tick(&fe, &ent, NULL);             /* Options:Menu2 */
+    FeInput ent = { 0, 0, 0, 0, 0, 0, 310, 214, 1 };
+    frontend_tick(&fe, &ent, NULL);             /* click Options:Menu2 */
     CHECK(fe.sub == 1, "sync: pause navigated into Options");
     CHECK(fe.menus[FE_MENU_PAUSED].submenus[1].items[0].value == 2
         && fe.menus[FE_MENU_PAUSED].submenus[1].items[1].value == 10,

@@ -177,6 +177,9 @@ typedef struct FrameloopApplicationState {
     uint32_t pointer_capture_serial;
     LevelState* reward_tick_level;
     int reward_tick_started;
+    LevelState* picker_return_level;
+    int picker_return_pending;
+    int picker_return_origin;
     int rock_x;
     int rock_y;
 } FrameloopApplicationState;
@@ -356,14 +359,16 @@ static int reward_zone_dispatch(void* opaque, RewardScreenState* state)
         if (context->frontend != NULL)
             (void)save_menu_open_from_reward(context->frontend);
         state->transition_state = 1;
+        state->transition_stage = 3; /* hand the save menu to its frame owner */
         sound_request_queue_submit(0x29, 1);
         context->zone_action_consumed = 1;
         return 1;
     }
     if (hit_advance) {
-        checkpoint_step(state->game);
+        if (!s_frameloop_application.picker_return_pending)
+            checkpoint_step(state->game);
         state->transition_stage = 3;
-        context->zone_action_consumed = 1;
+        context->zone_action_consumed = 2;
         return 1;
     }
     return 0;
@@ -1101,6 +1106,64 @@ static void frame_world_arrows_draw(GameContext* game, void* pixels,
         &display, pixels, pitch, width, height);
 }
 #endif
+
+typedef struct FrameTooltipDrawContext {
+    void* pixels;
+    int pitch;
+    int width;
+    int height;
+} FrameTooltipDrawContext;
+
+static void frame_tooltip_pixel(FrameTooltipDrawContext* ctx, int x, int y,
+                                const uint32_t color[3])
+{
+    unsigned char* pixel;
+    if (x < 0 || y < 0 || x >= ctx->width || y >= ctx->height) return;
+    pixel = (unsigned char*)ctx->pixels + y * ctx->pitch + x * 4;
+    pixel[0] = (unsigned char)color[0];
+    pixel[1] = (unsigned char)color[1];
+    pixel[2] = (unsigned char)color[2];
+    pixel[3] = 255;
+}
+
+static void frame_tooltip_fill(void* context,
+                               const RectangularGridOverlayState* state, int mode)
+{
+    FrameTooltipDrawContext* ctx = (FrameTooltipDrawContext*)context;
+    int x, y;
+    (void)mode;
+    for (y = (int)state->y; y < (int)(state->y + state->height); ++y)
+        for (x = (int)state->x; x < (int)(state->x + state->width); ++x)
+            frame_tooltip_pixel(ctx, x, y, state->fill_color);
+}
+
+static void frame_tooltip_lines(void* context, const float points[10],
+                                unsigned int count, const uint32_t color[3],
+                                int mode)
+{
+    FrameTooltipDrawContext* ctx = (FrameTooltipDrawContext*)context;
+    unsigned int i;
+    (void)mode;
+    for (i = 1; i < count; ++i) {
+        int x = (int)points[(i - 1) * 2], y = (int)points[(i - 1) * 2 + 1];
+        int end_x = (int)points[i * 2], end_y = (int)points[i * 2 + 1];
+        int dx = end_x > x ? 1 : (end_x < x ? -1 : 0);
+        int dy = end_y > y ? 1 : (end_y < y ? -1 : 0);
+        for (;;) {
+            frame_tooltip_pixel(ctx, x, y, color);
+            if (x == end_x && y == end_y) break;
+            x += dx; y += dy;
+        }
+    }
+}
+
+static void frame_tooltip_text(void* context, void* font, const char* text,
+                               float x, float y)
+{
+    FrameTooltipDrawContext* ctx = (FrameTooltipDrawContext*)context;
+    formatted_text_draw((const TextureSurface*)font, ctx->pixels, ctx->pitch,
+                        ctx->width, ctx->height, (int)x, (int)y, text);
+}
 
 static void frame_tutorial_script_dispatch(float delta, void* context)
 {
@@ -2548,6 +2611,11 @@ static void frameloop_blit_texture_scaled(const TextureSurface* texture,
             }
             int sx = (int)((int64_t)dx * texture->width / draw_w);
             uint32_t color = texture->pixels[(size_t)sy * texture->width + sx];
+            if (texture->source_key_set) {
+                uint32_t rgb = color & 0x00ffffffu;
+                if (rgb >= (texture->source_key_low & 0x00ffffffu) &&
+                    rgb <= (texture->source_key_high & 0x00ffffffu)) continue;
+            }
             dst[(size_t)px * 4 + 0] = (uint8_t)(color >> 16);
             dst[(size_t)px * 4 + 1] = (uint8_t)(color >> 8);
             dst[(size_t)px * 4 + 2] = (uint8_t)color;
@@ -2756,12 +2824,12 @@ static void menu_overlay_surface_and_text_setup(
     const char* image = frontend_active_image(fe);
     const FeSubmenu* active = frontend_active_submenu(fe);
     if (active != NULL
-        && (fe->menu == FE_MENU_SAVE
+        && (frontend_picker_active(fe) || fe->menu == FE_MENU_SAVE
             || (fe->menu == FE_MENU_MAIN && image != NULL
                 && s_icontains(image, "SaveLoad")))) {
-        const FeSaveMenuLayout* layout = fe->save_action
-                                             ? &fe->save_text_layout
-                                             : &fe->level_text_layout;
+        const FeSaveMenuLayout* layout = frontend_picker_active(fe)
+                                             ? &fe->level_text_layout
+                                             : &fe->save_text_layout;
         if (layout->has_panel && layout->panel_path[0] != '\0') {
             TextureSurface* panel = texture_get_or_load(NULL,
                                                         layout->panel_path);
@@ -2774,6 +2842,7 @@ static void menu_overlay_surface_and_text_setup(
             }
         }
     }
+    frontend_picker_panel_text(fe, hi_font, pixels, pitch, width, height);
     frontend_render(fe, hi_font, lo_font, width, height, pixels, pitch);
 }
 
@@ -2872,7 +2941,7 @@ static void menu_save_image_config_rect_blit(FrontEnd* fe,
     }
 
     char thumb_path[320];
-    save_slot_path(game, thumb_path, sizeof(thumb_path), item->load_slot,
+    save_slot_path(game, thumb_path, sizeof(thumb_path), frontend_slot_raw_index(item->load_slot),
                    "dat");
     const int cache_index = item->load_slot - 1;
     if (cache_index < 0 || cache_index >= FE_SAVE_THUMBNAIL_COUNT) {
@@ -3059,42 +3128,30 @@ static FeEvent frameloop_main_menu_frame(FrameloopApplicationState* app,
         snprintf(app->level_name, sizeof(app->level_name), "%s",
                  fe->pending_level);
         game->current_record = fe_record_for_level(fe, app->level_name);
-        if (game->current_record < 0) game->current_record = 0;
+        if (game->current_record < 0) return FE_EVT_NONE;
+        if (fe->selected_save_slot >= 0) {
+            if (!save_read_slot(game, fe->selected_save_slot, 1)) {
+                (void)frontend_open_submenu(fe, FE_MENU_MAIN, 1);
+                return FE_EVT_NONE;
+            }
+            app->pending_load_slot = fe->selected_save_slot;
+            app->pending_load_record = game->current_record;
+        } else {
+            save_slot_set(game, -1);
+        }
         fprintf(app->log, "frameloop: front end picked level %s\n",
                 app->level_name);
         return event;
     }
     if (event == FE_EVT_LOAD_GAME) {
-        int filled = 0;
-        int completed = 0;
-        int resume = -1;
-        if (save_slot_state(game, fe->load_slot, &filled, &completed,
-                            &resume)) {
-            app->pending_load_slot = fe->load_slot;
-            app->pending_load_record = resume >= 0 ? resume : 0;
-            if (resume >= 0
-                && fe_level_for_record(fe, resume, app->level_name,
-                                       sizeof(app->level_name))) {
-                /* The checkpoint record maps to a campaign level. */
-            } else if (fe->campaign_n > 0) {
-                snprintf(app->level_name, sizeof(app->level_name), "%s",
-                         fe->campaign[0]);
-            } else {
-                snprintf(app->level_name, sizeof(app->level_name), "%s",
-                         "Level01");
-            }
-            game->save_slot = fe->load_slot;
-            game->current_record = app->pending_load_record;
-            fprintf(app->log, "frameloop: loading slot %d record %d -> "
-                    "level %s (%d/%d completed)\n", app->pending_load_slot,
-                    app->pending_load_record, app->level_name,
-                    completed, filled);
-        } else {
-            snprintf(app->level_name, sizeof(app->level_name), "%s",
-                     env_get("LEGORRR_LEVEL", "Level01"));
-            fprintf(app->log, "frameloop: slot %d absent — starting fresh "
-                    "at %s\n", fe->load_slot, app->level_name);
+        if (frontend_open_saved_campaign(fe, game, frontend_slot_raw_index(fe->load_slot))) {
+            fprintf(app->log, "frameloop: selected slot %d; campaign picker open\n",
+                    fe->selected_save_slot);
+            return FE_EVT_NONE;
         }
+        /* Empty/invalid slot semantics remain as before. */
+        snprintf(app->level_name, sizeof(app->level_name), "%s",
+                 env_get("LEGORRR_LEVEL", "Level01"));
         return event;
     }
     if (event == FE_EVT_CREDITS) {
@@ -3189,6 +3246,14 @@ int frameloop_application_init(void)
 
     /* --- Game layer: config DB + level load (findings 07/12/22) ---------- */
     game_context_init(&game);
+    if (!save_bind_resource_directory(&game)) {
+        fprintf(log, "frameloop: could not resolve save directory\n");
+        frameloop_game_context_dispose(&game);
+        free(game_storage);
+        free(fe_storage);
+        if (log != stderr) fclose(log);
+        return 1;
+    }
     cmd_init();
     cmd_context_set(&game);
     game.cfg = block_open("Lego.cfg");
@@ -3256,13 +3321,15 @@ int frameloop_application_init(void)
     surface_winapi_startup_ops_install(platform_window_hwnd(win));
     if (!directdraw_device_initialize(1, 0, 0, 0,
             "No DirectX 3D accelerator could be found.")) {
-        fprintf(log, "frameloop: DirectDraw mode selection failed\n");
+        int cancelled = directdraw_device_selection_cancelled();
+        fprintf(log, cancelled ? "frameloop: DirectDraw mode selection cancelled\n"
+                               : "frameloop: DirectDraw mode selection failed\n");
         platform_destroy_window(win);
         frameloop_game_context_dispose(&game);
         free(game_storage);
         free(fe_storage);
         if (log != stderr) fclose(log);
-        return 3;
+        return cancelled ? 0 : 3;
     }
     fprintf(log, "frameloop: DirectDraw mode selection accepted\n");
     fflush(log);
@@ -3340,6 +3407,23 @@ int frameloop_application_init(void)
 #endif
     }
     if (game.cfg != NULL) {
+        const char* cd_start = block_get_strptr(game.cfg, "Lego* Main CDStartTrack");
+        const char* cd_count = block_get_strptr(game.cfg, "Lego* Main CDTracks");
+        int count = cd_count != NULL ? atoi(cd_count) : 0;
+        engine_debug_word_bit_set(0x800u,
+            count != 0 && block_get_bool(game.cfg, "Lego* Main MusicOn") == 1);
+        media_cd_config_set(cd_start != NULL ? atoi(cd_start) : 0, count);
+    }
+    if (game.cfg != NULL) {
+        const char* tooltip_rgb = block_get_strptr(game.cfg, "Lego* Main ToolTipRGB");
+        int tooltip_r = 0, tooltip_g = 0, tooltip_b = 0;
+        TextureSurface* tooltip_font = bitmap_font_resource_load(
+            "Interface\\Fonts\\ToolTipFont.bmp");
+        if (tooltip_rgb != NULL)
+            (void)sscanf(tooltip_rgb, "%d:%d:%d", &tooltip_r, &tooltip_g, &tooltip_b);
+        tooltip_software_initialize(tooltip_font, WINDOW_W, WINDOW_H,
+            (float)tooltip_r / 255.0f, (float)tooltip_g / 255.0f,
+            (float)tooltip_b / 255.0f);
         /* GameConfigInit loads the Samples aliases after enabling the sound
          * bank. This portable startup has the Lego.cfg tree ready earlier,
          * so load the same section once the audio backend opens. */
@@ -3509,7 +3593,7 @@ int frameloop_application_init(void)
 
     /* Runtime save/load slots (SaveMenuBuild @ 0x415a10 rows): state from
      * the on-disk slots, grafted onto the SaveLoad screens by the front
-     * end. Slot slots run 1..SAVE_SLOTS-1 (5 is the default/autosave). */
+     * end. Visible labels 1..5 map to raw save slots 0..4. */
     int& pending_load_slot = app.pending_load_slot;
     int& pending_load_record = app.pending_load_record;
     pending_load_slot = -1;
@@ -3519,7 +3603,7 @@ int frameloop_application_init(void)
         int sn = 0;
         for (int s = 1; s < SAVE_SLOTS; s++) {
             int filled = 0, completed = 0, resume = -1;
-            save_slot_state(&game, s, &filled, &completed, &resume);
+            save_slot_state(&game, frontend_slot_raw_index(s), &filled, &completed, &resume);
             memset(&slots[sn], 0, sizeof(slots[sn]));
             snprintf(slots[sn].label, FE_NAME_MAX, "Save Game %d", s);
             if (resume >= 0) {
@@ -3556,6 +3640,7 @@ int frameloop_application_init(void)
     }
     app.phase = boot_menu ? FRAMELOOP_PHASE_MENU
                           : FRAMELOOP_PHASE_GAMEPLAY_START;
+    engine_current_context_bind(&ctx);
     app.initialized = 1;
     return 1;
 }
@@ -3805,14 +3890,14 @@ static int frameloop_application_gameplay_frame(float dt)
             fi.mdown = input.mouse_down;
             FeEvent save_ev = frontend_tick(&fe, &fi, hi_font);
             if (save_ev == FE_EVT_SAVE_GAME) {
-                save_slot_set(&game, fe.load_slot);
+                save_slot_set(&game, frontend_slot_raw_index(fe.load_slot));
                 checkpoint_blob_build(&game);
                 save_write_record(&game, game.current_record,
                                   game.checkpoint_blob);
                 save_mark_record(&game, game.current_record);
                 show_level_overlay_for_current_selection(&game);
                 int filled = 0, completed = 0, resume = -1;
-                if (save_slot_state(&game, fe.load_slot, &filled, &completed,
+                if (save_slot_state(&game, frontend_slot_raw_index(fe.load_slot), &filled, &completed,
                                     &resume)) {
                     FeSlot saved_slot;
                     memset(&saved_slot, 0, sizeof(saved_slot));
@@ -3837,7 +3922,7 @@ static int frameloop_application_gameplay_frame(float dt)
                     frontend_update_slot(&fe, &saved_slot);
                 }
                 mission_reward_set_active(&game, 0);
-                thumb_slot = fe.load_slot;
+                thumb_slot = frontend_slot_raw_index(fe.load_slot);
                 fprintf(log, "frameloop: reward checkpoint saved to slot %d\n",
                         fe.load_slot);
             }
@@ -3855,10 +3940,76 @@ static int frameloop_application_gameplay_frame(float dt)
             return !quit;
         }
 
+        /* Keep the departing level alive while its reward or save menu owns
+         * it. Advance may replace that level; its new owner must not be
+         * released by the pending picker return. */
+        if (app.picker_return_pending && game.level != app.picker_return_level) {
+            app.picker_return_pending = 0;
+            app.picker_return_level = NULL;
+        }
+        if (app.picker_return_pending && !mission_reward_active(&game)) {
+            int origin = app.picker_return_origin;
+                checkpoint_blob_free(&game);
+                app.picker_return_pending = 0;
+                app.picker_return_level = NULL;
+                view_primary_level_release(&ctx);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+                frame_world_arrows_level_releasing();
+#endif
+                mission_reward_resources_release(&game);
+                level_destroy(game.level);
+                game.level = NULL;
+                ctx.level_block = NULL;
+                ctx.level_voxels = NULL;
+                ctx.level_terrain = NULL;
+                g_camera_grid_enabled = 0;
+                pointer_dispatch_level = NULL;
+                reward_tick_level = NULL;
+                reward_tick_started = 0;
+                app.gameplay_prepared = 0;
+                app.mission_brief_active = 0;
+                app.pending_load_slot = -1;
+                if (origin < 0 || !frontend_open_submenu(&fe, FE_MENU_MAIN, origin))
+                    (void)frontend_open(&fe, FE_MENU_MAIN);
+                if (audio_status == 0) {
+                    const char* music = menu_music_resource(game.cfg);
+                    if (music != NULL && music[0] != '\0')
+                        (void)audio_loop_named(&ap, music, 0.0f);
+                }
+                menu_sound_tick_clock_init(&app.menu_sound_clock);
+                input_begin_frame(&input);
+                app.phase = FRAMELOOP_PHASE_MENU;
+                return 1;
+        }
+
+        if (app.picker_return_pending && mission_reward_active(&game)) {
+            int hit_save = 0;
+            int hit_advance = 0;
+            if (input_mouse_pressed(&input) &&
+                mission_reward_zone(&game, input.mouse_x, input.mouse_y,
+                                    &hit_save, &hit_advance)) {
+                if (hit_save) {
+                    (void)save_menu_open_from_reward(&fe);
+                } else if (hit_advance) {
+                    const char* next;
+                    next = mission_reward_advance(&game);
+                    if (next != NULL) {
+                        app.picker_return_pending = 0;
+                        app.picker_return_level = NULL;
+                    } else if (game.level == NULL) {
+                        app.picker_return_level = NULL;
+                    }
+                }
+            }
+            reward_frame_pump(&reward_frame, 1);
+            return !quit;
+        }
+
         /* Esc (or the LEGORRR_AUTOPAUSE_FRAMES CI hook) opens the in-game
          * pause overlay — the shipped PausedMenu — instead of quitting. */
         if ((pause_escape || (autopause > 0 && frames == autopause))
             && frontend_open(&fe, FE_MENU_PAUSED)) {
+            timed_effect_hover_reset();
             snprintf(fe.resume_level, sizeof(fe.resume_level), "%s",
                      level_name);
             /* Consume gameplay's opening Escape/click before menu capture. */
@@ -3871,6 +4022,7 @@ static int frameloop_application_gameplay_frame(float dt)
             fprintf(log, "frameloop: paused (Continue / Options / Restart / "
                          "Quit)\n");
             int want_reload = 0;
+            int want_picker = 0;
             MenuSoundTickClock pause_sound_clock;
             menu_sound_tick_clock_init(&pause_sound_clock);
             while (fe.open && !quit) {
@@ -3955,9 +4107,8 @@ static int frameloop_application_gameplay_frame(float dt)
                         fe.option_changed = 0;
                     }
                 }
-                if (ev == FE_EVT_QUIT) {
-                    quit = 1;
-                    stop = "menu quit";
+                if (ev == FE_EVT_LEAVE_LEVEL) {
+                    want_picker = 1;
                     break;
                 }
                 if (ev == FE_EVT_RESUME) {
@@ -3974,6 +4125,54 @@ static int frameloop_application_gameplay_frame(float dt)
                 ++frames;
                 menu_sound_tick_clock_advance(&pause_sound_clock);
                 input_begin_frame(&input);
+            }
+            if (want_picker && !quit) {
+                app.picker_return_pending = 1;
+                app.picker_return_origin = fe.origin_picker_sub;
+                app.picker_return_level = game.level;
+                fprintf(log, "return-diag: entry level=%d config=%d slot=%d active=%d record=%d count=%d display=%d\n",
+                        game.level != NULL, game.cfg != NULL, game.save_slot, game.active_slot,
+                        game.current_record, game.record_count,
+                        game.reward_screen.display);
+                fflush(log);
+                if (game.level != NULL)
+                    mission_reward_set_active(&game, 1);
+                else
+                    mission_reward_set_active(&game, 0);
+                {
+                    uint32_t enabled = 0;
+                    if (game.checkpoint_blob != NULL)
+                        memcpy(&enabled, game.checkpoint_blob, sizeof(enabled));
+                    fprintf(log, "return-diag: prepared active=%d blob=%d size=%u enable=%u display=%d slot=%d\n",
+                            mission_reward_active(&game), game.checkpoint_blob != NULL,
+                            (unsigned int)SAVE_BLOB_SIZE, (unsigned int)enabled,
+                            game.reward_screen.display, game.save_slot);
+                    fflush(log);
+                }
+                save_return_diagnostic_log_set(log);
+                reward_tick_level = game.level;
+                reward_tick_started = 1;
+                reward_frame.zone_action_consumed = 0;
+                input_begin_frame(&input);
+                (void)reward_screen_tick_bound();
+                save_return_diagnostic_log_set(NULL);
+                fprintf(log, "return-diag: tick active=%d blob=%d slot=%d record=%d count=%d action=%d\n",
+                        mission_reward_active(&game), game.checkpoint_blob != NULL,
+                        game.save_slot, game.current_record, game.record_count,
+                        reward_frame.zone_action_consumed);
+                fflush(log);
+                if (reward_frame.zone_action_consumed == 2 && !quit) {
+                    const char* next = mission_reward_advance(&game);
+                    if (next != NULL) {
+                        app.picker_return_pending = 0;
+                        app.picker_return_level = NULL;
+                    } else if (game.level == NULL) {
+                        app.picker_return_level = NULL;
+                    }
+                }
+                reward_frame.zone_action_consumed = 0;
+                input_begin_frame(&input);
+                return !quit;
             }
             if (want_reload && !quit) {
                 /* Pause -> Restart_Mission: reload the level in place. */
@@ -4376,6 +4575,10 @@ static int frameloop_application_gameplay_frame(float dt)
                             }
                         } else {
                             const char* nm = mission_reward_advance(&game);
+                            if (nm != NULL && app.picker_return_pending) {
+                                app.picker_return_pending = 0;
+                                app.picker_return_level = NULL;
+                            }
                             fprintf(log, "frameloop: reward Advance clicked -> "
                                          "%s\n",
                                     nm != NULL ? nm : "campaign end");
@@ -4482,6 +4685,24 @@ static int frameloop_application_gameplay_frame(float dt)
                 input_begin_frame(&input);
                 return !quit;
             }
+            if (game.level != NULL && !mission_reward_active(&game)) {
+                FrameTooltipDrawContext tooltip_context;
+                TimedEffectSlotRenderHooks tooltip_hooks;
+                memset(&tooltip_hooks, 0, sizeof(tooltip_hooks));
+                tooltip_context.pixels = pixels;
+                tooltip_context.pitch = pitch;
+                tooltip_context.width = WINDOW_W;
+                tooltip_context.height = WINDOW_H;
+                tooltip_hooks.context = &tooltip_context;
+                tooltip_hooks.overlay_hooks.context = &tooltip_context;
+                tooltip_hooks.overlay_hooks.region_fill = frame_tooltip_fill;
+                tooltip_hooks.overlay_hooks.polyline_draw = frame_tooltip_lines;
+                tooltip_hooks.render_text = frame_tooltip_text;
+                timed_effect_slot_render_hooks_set(&tooltip_hooks);
+                timed_effect_runtime_update((uint32_t)input.mouse_x,
+                                            (uint32_t)input.mouse_y, dt * 25.0f);
+                timed_effect_slot_render_hooks_set(NULL);
+            }
             /* Brightness (issue #85): BrightnessSet's scalar on the frame. */
             render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
                                     game.options.brightness);
@@ -4493,7 +4714,7 @@ static int frameloop_application_gameplay_frame(float dt)
                  * just presented to Saves\<slot>.dat as a 24bpp BMP. */
                 save_write_thumbnail(&game, thumb_slot, pixels, pitch,
                                      WINDOW_W, WINDOW_H);
-                frontend_save_thumbnail_invalidate(&fe, thumb_slot);
+                frontend_save_thumbnail_invalidate(&fe, thumb_slot + 1);
                 fprintf(log, "frameloop: .dat thumbnail written (slot %d)\n",
                         thumb_slot);
                 thumb_slot = -1;
@@ -4610,6 +4831,7 @@ void frameloop_application_shutdown(void)
     sound_subsystem_stop_all();
     audio_active_shutdown();
     audio_system_player_set(NULL);
+    tooltip_software_shutdown();
     graphics_overlay_resources_release();
     indexed_surface_resource_hooks_set(NULL, NULL, NULL, NULL, NULL);
     texture_cache_clear();
@@ -4622,6 +4844,7 @@ void frameloop_application_shutdown(void)
     catalog_slot_flag_hooks_set(NULL, NULL, NULL, NULL);
     frameloop_game_context_dispose(&game);
     free(fe_storage);
+    engine_current_context_bind(NULL);
     free(game_storage);
     if (log != stderr) fclose(log);
     memset(&app, 0, sizeof(app));

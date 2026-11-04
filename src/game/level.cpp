@@ -1325,13 +1325,21 @@ TerrainSurfaceGrid* terrain_camera_detail_grid_get(LevelState* level)
     if (terrain == NULL || terrain->owner_level != level ||
         terrain->indexed_mesh_blocks == NULL ||
         terrain->cell_detail_flags == NULL || terrain->dim[0] == 0u ||
-        terrain->dim[1] == 0u) return NULL;
+        terrain->dim[1] == 0u) {
+        fprintf(stderr, "camera-diag: grid prerequisites level=%p terrain=%p owner=%p mesh=%p flags=%p dims=%u,%u\n",
+            level, terrain, terrain ? terrain->owner_level : NULL,
+            terrain ? terrain->indexed_mesh_blocks : NULL,
+            terrain ? terrain->cell_detail_flags : NULL,
+            terrain ? terrain->dim[0] : 0u, terrain ? terrain->dim[1] : 0u);
+        fflush(stderr);
+        return NULL;
+    }
     if (terrain->detail_surface != NULL) return terrain->detail_surface;
     count = (size_t)terrain->dim[0] * terrain->dim[1];
     grid = (TerrainSurfaceGrid*)calloc(1u, sizeof(TerrainSurfaceGrid));
-    if (grid == NULL) return NULL;
+    if (grid == NULL) { fprintf(stderr, "camera-diag: grid allocation failed\n"); fflush(stderr); return NULL; }
     grid->surface_values = (uint8_t*)malloc(count);
-    if (grid->surface_values == NULL) { free(grid); return NULL; }
+    if (grid->surface_values == NULL) { fprintf(stderr, "camera-diag: grid values allocation failed count=%lu\n", (unsigned long)count); fflush(stderr); free(grid); return NULL; }
     memset(grid->surface_values, 1, count);
     grid->width = terrain->dim[0];
     grid->height = terrain->dim[1];
@@ -1356,7 +1364,7 @@ static void terrain_camera_detail_cell_callback(int x, int y)
     memcpy(&flags, cell + 8, sizeof(flags));
     if ((flags & 0x4000u) == 0u) return;
     effect = cell_transient_effect_get(s_camera_detail_callback_level, cell);
-    if (effect == NULL) { s_camera_detail_callback_ready = 0; return; }
+    if (effect == NULL) { fprintf(stderr, "camera-diag: effect missing cell=%d,%d flags=%08lx\n", x, y, (unsigned long)flags); fflush(stderr); s_camera_detail_callback_ready = 0; return; }
     transient_effect_enable_set(effect, 0);
 }
 
@@ -1373,7 +1381,7 @@ int terrain_camera_detail_collect(LevelState* level, const float position[3],
     LevelState* prior_callback_level;
     int ready;
     if (grid == NULL || position == NULL ||
-        (primary && forward == NULL)) return 0;
+        (primary && forward == NULL)) { fprintf(stderr, "camera-diag: collect arguments grid=%p position=%p forward=%p primary=%d\n", grid, position, forward, primary); fflush(stderr); return 0; }
     /* Native42921d reads TerrainCreate+10 spacing, then exact49e2d4=3.
      * It uses the follow position plus the actual eye's world forward. */
     world_x = position[0]; world_y = position[1];
@@ -1387,8 +1395,10 @@ int terrain_camera_detail_collect(LevelState* level, const float position[3],
     (void)terrain_world_xy_to_cell(terrain, world_x, world_y,
                                     &center_x, &center_y);
     if (center_x < INT_MIN + radius || center_x > INT_MAX - radius ||
-        center_y < INT_MIN + radius || center_y > INT_MAX - radius)
+        center_y < INT_MIN + radius || center_y > INT_MAX - radius) {
+        fprintf(stderr, "camera-diag: center bounds x=%d y=%d radius=%d\n", center_x, center_y, radius); fflush(stderr);
         return 0;
+    }
     for (dy = -radius; dy <= radius; ++dy)
         for (dx = -radius; dx <= radius; ++dx)
             if (dx * dx + dy * dy <= radius * radius &&
@@ -1398,8 +1408,10 @@ int terrain_camera_detail_collect(LevelState* level, const float position[3],
     /* Never clear a cell whose restoration cannot be retained. The real
      * radius8 plus radius2 passes fit the native queue's512 entries. */
     if (grid->changed_count > TERRAIN_GRID_CHANGE_CAPACITY ||
-        required > TERRAIN_GRID_CHANGE_CAPACITY - grid->changed_count)
+        required > TERRAIN_GRID_CHANGE_CAPACITY - grid->changed_count) {
+        fprintf(stderr, "camera-diag: queue capacity changed=%lu required=%lu\n", (unsigned long)grid->changed_count, (unsigned long)required); fflush(stderr);
         return 0;
+    }
     prior_callback_level = s_camera_detail_callback_level;
     s_camera_detail_callback_level = level;
     s_camera_detail_callback_ready = 1;
