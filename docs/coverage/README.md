@@ -11,39 +11,38 @@ Revalidate the map after a corpus change with `python3 tools/function_areas.py`.
 
 | Status | Count | Share |
 | --- | ---: | ---: |
-| ported | 2285 | 89.1% |
+| ported | 2288 | 89.2% |
 | stubbed | 0 | 0.0% |
-| anchored | 4 | 0.2% |
-| named | 2 | 0.1% |
+| anchored | 0 | 0.0% |
+| named | 4 | 0.2% |
 | runtime-import | 17 | 0.7% |
 | runtime-library | 254 | 9.9% |
-| anonymous | 2 | 0.1% |
+| anonymous | 1 | 0.0% |
 
 - **ported** — entry address or `FUN_*` name cited directly in `src/`
-  (2285 functions)
+  (2288 functions)
 - **stubbed** — entry address has a Reccmp `STUB` annotation, but the
   function remains a placeholder (0 functions)
 - **anchored** — only an *interior* address (a call site / offset inside
   the body) is cited in `src/`; the function is touched but its entry is
-  not named (4 functions)
+  not named (0 functions)
 - **named** — human name in the full-corpus heading / manifest but no `src/`
-  citation yet (2 functions)
+  citation yet (4 functions)
 - **runtime-import** — CRT/runtime support or import thunks; not game
   logic, never ported (17 functions)
 - **runtime-library** — original CRT/compiler-runtime implementation
   supplied by the selected link library; tracked by Reccmp `LIBRARY`
   markers, not ported as game code (254 functions)
 - **anonymous** — `FUN_*` only, unreferenced in `src/`
-  (2 functions)
+  (1 functions)
 
-**Game logic remaining to port: 8 (0.3%).**
+**Game logic remaining to port: 5 (0.2%).**
 
 ## Largest anonymous regions (by 64 KB page)
 
 | Region | Anonymous functions |
 | --- | ---: |
-| `0x00040xxxx` | 1 |
-| `0x00045xxxx` | 1 |
+| `0x00041xxxx` | 1 |
 
 ## Named-but-unported corpus functions
 
@@ -51,6 +50,8 @@ Human-named in the corpus that have no source citation or only a `STUB`.
 
 | Address | Name |
 | --- | --- |
+| `0x00434570` | TerrainCellProgressUpdate |
+| `0x004369f4` | CameraTiltAxisUpdate |
 | `0x0049221e` | CrtFloatingPointExceptionResultDispatch |
 | `0x00492225` | CrtFloatingPointExceptionResultDispatchVariant |
 
