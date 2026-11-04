@@ -3898,4 +3898,3 @@ Win32 binaries run through `a2.py` only via the (not yet wired)
 
 As discoveries are made, they should be documented here in the repo (e.g. `docs/` per
 format) with byte-level field tables where possible.
-

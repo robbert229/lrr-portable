@@ -579,4 +579,3 @@ The latest three-range helper audits are preserved in the
 [low](../../docs/evidence/legorr-engine-helper-audit-low.bundle),
 [simulation/terrain](../../docs/evidence/legorr-engine-helper-audit-mid.bundle), and
 [resource/rendering](../../docs/evidence/legorr-engine-helper-audit-high.bundle) evidence bundles.
-

@@ -155,4 +155,3 @@ Open threads, in order of value:
   batch runs use `support/analyzeHeadless` with `-postScript`.
 - **Interactive analysis**: REA (Ghidra provider). Findings cite addresses, not guesses:
   every claim traces to a pseudocode block or an evidence record.
-

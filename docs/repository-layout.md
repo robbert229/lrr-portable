@@ -38,4 +38,3 @@ legally obtained copy of the game.
 | `CLGen.exe`, `CLGen.dat` | Install-time generator component |
 | `Data/` | Loose runtime data — streamed sounds (`Data/Sounds/Streamed/`), video (`Data/AVI/`) |
 | `Readme.txt` | Original publisher readme |
-
