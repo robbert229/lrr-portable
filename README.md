@@ -3,31 +3,38 @@
 A portable reconstruction of **Lego Rock Raiders**, the 1999 Windows strategy
 game about mining underground caverns with LEGO crews, vehicles, and buildings.
 
-The goal is to recover the game's behavior from its original executable and
-build a **native Linux version without Wine**, using an SDL3-based compatibility
-layer called miniwin. A Windows reference build lets us compare the same
-reconstructed source against the original game.
+## Decompilation status
 
-## How far along is it?
+**2,285 of 2,564 original functions (89.1%) have source entry-point citations
+in the reconstruction.** The checked-in [coverage ledger](docs/coverage/README.md)
+classifies these as “ported”; this is source coverage, not binary-match accuracy.
 
-**The reconstruction is extensive, but work remains on faithful behavior and
-end-to-end gameplay.** Recovering a function, matching its compiled code, and
-showing that it behaves correctly in a mission are separate milestones.
-
-As of **2026-11-04**, the checked-in [coverage ledger](docs/coverage/README.md)
-tracks **2,564 functions** from the original executable:
-
-- **2,285 (89.1%) have source entry-point citations**, classified as “ported.”
-- **271 are runtime library code or import support**, tracked separately from
-  game logic.
-- **8 remain in the ledger's other categories**, and no entries are classified
-  as stubs.
+As of **2026-11-04**, the ledger also records **271 runtime library or import
+support functions** separately from game logic, **8 functions in other
+categories**, and **no entries classified as stubs**.
 
 These are function counts, not a “percent of the game finished.” A citation
 connects reconstructed source to an original function; it does not establish
 that every branch is implemented or that the result matches the original.
 The ledger's [definitions and caveats](docs/coverage/README.md#caveats) explain
 the measurement and how to regenerate it.
+
+Binary matching is also underway using **Microsoft Visual C++ 5.0**, the original
+compiler generation, and Reccmp. A recorded
+[compiler-flag experiment](docs/findings/486-msvc5-optimization-flag-reccmp-sweep.md)
+reported **32.21% game-only Reccmp progress** for its baseline. That is a
+historical measurement of compiled-code matching, not today's score or a
+playability rating; it uses a different function set from the source ledger.
+
+The decompilation is still in progress: recovering a function, matching its
+compiled code, and verifying its behavior in a mission are separate milestones.
+
+## What can it do?
+
+The goal is to recover the game's behavior from its original executable and
+build a **native Linux version without Wine**, using an SDL3-based compatibility
+layer called miniwin. A Windows reference build lets us compare the same
+reconstructed source against the original game.
 
 There is already more to explore than a collection of function names:
 
@@ -37,21 +44,15 @@ There is already more to explore than a collection of function names:
   game data is available.
 - **A working reconstruction of major game systems:** menus and level loading,
   terrain, entities, selection and commands, objectives, savegames, audio, and
-  movies all have reconstructed implementations and tests. The documented native tutorial
-  path includes a textured cave, Raiders, a mission brief, and selection/movement.
+  movies all have reconstructed implementations and tests. The documented
+  native tutorial path includes a textured cave, Raiders, a mission brief,
+  and selection/movement.
   See the [implementation notes](docs/implementation.md) for the evidence and
   limitations of individual systems.
 - **Recent gameplay work:** [PR #374](https://github.com/robbert229/lrr-portable/pull/374)
   added building scenes and GetTool routes to the Wine gameplay runtime.
   This is progress toward connecting recovered systems in the running game;
   full campaign parity still needs validation.
-
-Binary matching is also underway using **Microsoft Visual C++ 5.0**, the original
-compiler generation, and Reccmp. A recorded
-[compiler-flag experiment](docs/findings/486-msvc5-optimization-flag-reccmp-sweep.md)
-reported **32.21% game-only Reccmp progress** for its baseline. That is a
-historical measurement of compiled-code matching, not today's score or a
-playability rating; it uses a different function set from the source ledger.
 
 The remaining work includes improving binary matches, replacing or validating
 portable platform seams, and checking menus, rendering, saves, and mission
