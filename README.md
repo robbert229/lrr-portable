@@ -2,7 +2,9 @@
 
 A decompilation and portable reconstruction of **Lego Rock Raiders** (1999).
 The goal is a native Linux port using SDL3/miniwin, with a Windows reference
-build for comparison against the original.
+build for comparison against the original. I would currently classify it as a
+vibe-coded slop fest, however things are developing rapidly. I hope to have it
+in a playable state before the end of November 2026.
 
 ## Decompilation status
 
@@ -19,22 +21,36 @@ neither guarantees correct gameplay.
 
 ## What works, what remains
 
-Reconstructed systems include menus, level loading, terrain, entities,
-commands, objectives, saves, audio, and movies. Asset tools unpack WAD archives
-and convert LightWave models. See [implementation notes](docs/implementation.md)
-for subsystem evidence and limitations.
+The focus so far has been on roughly implementing every single function. As a
+result the game is currently unplayable. Most systems are roughly implemented,
+but not in a functional state.
 
-Work continues on binary matching, platform integration, and verifying ordinary
-mission behavior against the original. Full campaign parity remains unverified.
+The menus partially work, however defects exist in scrolling, and animations.
+
+<img width="2242" height="1440" alt="image" src="https://github.com/user-attachments/assets/9dae6667-cb3c-4ea5-a882-a837f23f350a" />
+<img width="2242" height="1440" alt="image" src="https://github.com/user-attachments/assets/714ff741-c2b2-4093-8257-8386c593f194" />
+
+GamePlay has a lot of work that needs to be done. 
+
+<img width="2242" height="1440" alt="image" src="https://github.com/user-attachments/assets/9eded253-8540-4b51-ae4b-cb2f1440bccb" />
 
 ## Build and run
 
 Requires a legally owned game copy, CMake, a C++ compiler, and SDL3 development
-headers. Game assets are not included.
+headers. Game assets are not included. Place the game assets into the 
+`reference` folder.
 
 ```sh
-make build
-make run WAD_DIR=/path/to/game
+$ ls reference/
+CLGen.dat  D3DRM.DLL  LegoRR0.wad  LegoRR.exe  legoRR-stub.log  Saves
+CLGen.exe  Data       LegoRR1.wad  LegoRR.icd  Readme.txt
+```
+
+You can then generate the report, and run:
+
+```sh
+make reccmp-report
+make reccmp-run
 ```
 
 [Build guide](docs/building.md) · [Findings](docs/findings/README.md) ·
