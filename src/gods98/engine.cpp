@@ -29,6 +29,7 @@
 #include "heap.hpp"
 #include <ctype.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 /* PanelSelectionHighlightToggle/EngineTick DAT globals (see the function
  * comments at their use sites): bit-0 flag word and the 250-ms cooldown in
@@ -53,6 +54,7 @@ static const volatile float s_panel_highlight_zero = 0.0f;
 // GLOBAL: LEGORR 0x00505f88
 static int32_t s_application_mode;
 static EngineContext* s_engine_current_context;
+static uint32_t s_engine_bootstrap_state;
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static int s_engine_scene_live;
@@ -276,6 +278,22 @@ uint32_t* engine_current_feature_word(void)
         ? &s_engine_current_context->feature : NULL;
 }
 
+uint32_t* engine_shared_state_word(void)
+{
+    return s_engine_current_context != NULL
+        ? &s_engine_current_context->state : &s_engine_bootstrap_state;
+}
+
+void engine_current_context_bind(EngineContext* ctx)
+{
+    if (ctx == s_engine_current_context) return;
+    if (ctx != NULL && s_engine_current_context == NULL) {
+        ctx->state |= s_engine_bootstrap_state;
+    }
+    s_engine_bootstrap_state = 0;
+    s_engine_current_context = ctx;
+}
+
 uint32_t* engine_current_state_word(void)
 {
     return s_engine_current_context != NULL
@@ -409,7 +427,7 @@ void window_mode_flag_set(uint32_t mode)
 // FUNCTION: LEGORR 0x004232e0
 int EngineTick(EngineContext* ctx, float dt)
 {
-    s_engine_current_context = ctx;
+    engine_current_context_bind(ctx);
     /* 1. Gate — loader/benchmark mode idles out of the frame. */
     if (ctx->app_mode == ENGINE_APP_LOADER && EngineKeepRunning(ctx) == 0) {
         return 0;
@@ -491,6 +509,8 @@ int EngineTick(EngineContext* ctx, float dt)
     /* 9. Air-supply beat mechanic (corpus tail): fires the air-low/empty
      *    notifications and loops SND_AirBeat; writes air_prev back. */
     EngineAirBeat(ctx, scale);
+
+    media_cd_audio_watchdog_tick((int)(ctx->state & MEDIA_CD_WATCHDOG_BIT));
 
     /* TutorialScriptCommandDispatch follows the manager/render tick cluster
      * in the corpus and is disabled by DAT_00556ecc bit 0x01000000. Keep its

@@ -48,6 +48,8 @@ extern "C" {
 
 /* --- slot context --------------------------------------------------- */
 void save_init(GameContext* ctx);
+/* Bind runtime saves to the configured game data root after resource startup. */
+int save_bind_resource_directory(GameContext* ctx);
 /* Bind/query the one active GameContext that stands in for the corpus's
  * process-global save-slot context. */
 void save_context_bind(GameContext* ctx);
@@ -90,6 +92,7 @@ void sav_refresh_slots_target(void);
 
 /* SavCommit: write the current active slot to disk. */
 void save_commit(GameContext* ctx);
+void save_return_diagnostic_log_set(void* log);
 
 /* Write the `.dat` slot thumbnail: the framebuffer as an uncompressed
  * 24-bit BMP at `Saves\<slot>.dat`. The corpus dumps it on save confirm
@@ -176,6 +179,8 @@ void save_set_current_record(GameContext* ctx, int index);
  *   *out_resume    — the highest such record index (the level to resume),
  *                    or -1 when the slot is empty.
  * The port maps record index -> campaign level (StartLevel + NextLevel). */
+int save_slot_preview(GameContext* ctx, int slot, const uint8_t** records, int* count);
+int save_slot_records_view(int slot, const uint8_t** records, int* count);
 int save_slot_state(GameContext* ctx, int slot, int* out_filled,
                     int* out_completed, int* out_resume);
 

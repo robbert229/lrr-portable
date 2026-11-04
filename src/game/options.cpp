@@ -46,22 +46,17 @@ static const struct {
  * "Game Speed", "Game_Speed" or "game speed"). */
 static int s_optname_eq(const char* a, const char* b)
 {
-    if (a == NULL || b == NULL) {
-        return 0;
-    }
+    if (a == NULL || b == NULL) return 0;
     for (;;) {
-        a += strspn(a, " _");
-        b += strspn(b, " _");
-        if (*a == '\0' || *b == '\0') return *a == *b;
-
-        const size_t a_length = strcspn(a, " _");
-        const size_t b_length = strcspn(b, " _");
-        if (a_length != b_length
-            || strnicmp_lite(a, b, (int)a_length) != 0) {
-            return 0;
-        }
-        a += a_length;
-        b += b_length;
+        unsigned char ca, cb;
+        while (*a == ' ' || *a == '_') ++a;
+        while (*b == ' ' || *b == '_') ++b;
+        ca = (unsigned char)*a++;
+        cb = (unsigned char)*b++;
+        if (ca >= 'A' && ca <= 'Z') ca = (unsigned char)(ca + ('a' - 'A'));
+        if (cb >= 'A' && cb <= 'Z') cb = (unsigned char)(cb + ('a' - 'A'));
+        if (ca != cb) return 0;
+        if (ca == 0) return 1;
     }
 }
 

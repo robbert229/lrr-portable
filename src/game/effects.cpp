@@ -2395,8 +2395,8 @@ void timed_effect_slot_render_record(const TimedEffectRecord* record,
     words = (const uint32_t*)record;
     flags = words[0x278 / 4];
     tooltip_overlay_state_current(config);
-    padding = config->values[0];
-    bands = config->values[1];
+    bands = config->values[0];
+    padding = config->values[1];
     inset = (float)((padding + bands) * 2u);
     if ((flags & 8u) != 0u) {
         uint32_t handle = words[0x270 / 4];
@@ -2440,9 +2440,9 @@ void timed_effect_slot_render_record(const TimedEffectRecord* record,
     if ((float)config->values[3] < y + height)
         y = (float)(render_y - (uint32_t)height) - 1.0f;
     memset(&overlay, 0, sizeof(overlay));
-    overlay.x = top;
+    overlay.x = width;
     overlay.y = y;
-    overlay.width = width;
+    overlay.width = top;
     overlay.height = height;
     overlay.bands = bands;
     for (i = 0; i < 3u; ++i) {
@@ -2461,20 +2461,25 @@ void timed_effect_slot_render_record(const TimedEffectRecord* record,
         &s_timed_effect_slot_render_hooks.overlay_hooks);
     if (s_timed_effect_slot_render_hooks.overlay_background != NULL)
         s_timed_effect_slot_render_hooks.overlay_background(
-            s_timed_effect_slot_render_hooks.context, top, y, width, height,
+            s_timed_effect_slot_render_hooks.context, width, y, top, height,
             colors, overlay.overlay_mode ? 2 : 0);
     if ((flags & 8u) != 0u) {
         if (resource != NULL &&
             s_timed_effect_slot_render_hooks.render_item != NULL)
             s_timed_effect_slot_render_hooks.render_item(
                 s_timed_effect_slot_render_hooks.context, resource,
-                top + (float)(padding + bands),
+                width + (float)(padding + bands),
                 y + (float)(padding + bands), top - inset, left - inset);
         return;
     }
+    if (s_timed_effect_slot_render_hooks.render_text != NULL)
+        s_timed_effect_slot_render_hooks.render_text(
+            s_timed_effect_slot_render_hooks.context, config->font,
+            (const char*)record + 4, width + (float)(padding + bands),
+            y + (float)(padding + bands));
     count = words[0x25c / 4];
     if (count > 20u) count = 20u;
-    row_x = top + (float)(padding + bands);
+    row_x = width + (float)(padding + bands);
     row_y = y + (float)(padding + bands) +
         (float)words[0x208 / 4] * (float)config->font_metric;
     row_height = 0.0f;
@@ -2491,7 +2496,7 @@ void timed_effect_slot_render_record(const TimedEffectRecord* record,
         if (resource == NULL) {
             row_y += row_height;
             row_height = 0.0f;
-            row_x = top + (float)(padding + bands);
+            row_x = width + (float)(padding + bands);
             continue;
         }
         if (s_timed_effect_runtime_hooks.resource_extent_get != NULL)
@@ -2508,6 +2513,18 @@ void timed_effect_slot_render_record(const TimedEffectRecord* record,
                 row_y, item_width, item_height);
         row_x += item_width;
         if (row_height < item_height) row_height = item_height;
+    }
+}
+
+void timed_effect_hover_reset(void)
+{
+    unsigned int slot;
+    for (slot = 1u; slot < 39u; ++slot) {
+        TimedEffectRecord* record = timed_effect_record_get(slot);
+        if (record != NULL) {
+            record->timestamp = 0.0f;
+            record->flags &= ~4u;
+        }
     }
 }
 

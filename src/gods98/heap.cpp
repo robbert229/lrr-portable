@@ -394,6 +394,17 @@ void text_buffer_draw_ops_set(const TextBufferDrawOps* ops)
     else s_text_buffer_draw_ops = *ops;
 }
 
+void text_buffer_draw_ops_get(TextBufferDrawOps* ops)
+{
+    if (ops != NULL) *ops = s_text_buffer_draw_ops;
+}
+
+typedef struct TextBufferFramebuffer {
+    void* pixels;
+    int pitch, width, height;
+} TextBufferFramebuffer;
+static TextBufferFramebuffer s_text_buffer_framebuffer;
+
 static int text_buffer_software_font_line_height(void* context, void* font)
 {
     (void)context;
@@ -422,7 +433,7 @@ static int text_buffer_software_glyph_draw(void* context, void* font,
     int src_x, src_y, width, height, row;
     int advance;
     uint32_t key0, key1;
-    (void)context;
+    TextBufferFramebuffer* framebuffer = (TextBufferFramebuffer*)context;
     if (!font_atlas_record_glyph_get(font, glyph, rect)) return 0;
     src_x = crt_float_to_long(rect[0]);
     src_y = crt_float_to_long(rect[1]);
@@ -431,12 +442,17 @@ static int text_buffer_software_glyph_draw(void* context, void* font,
     advance = width;
     if (draw_mode == 0 || width <= 0 || height <= 0) return advance;
     atlas = font_atlas_record_surface_get(font);
-    target = surface_active_render_target_get();
-    if (atlas == NULL || atlas->pixels == NULL || target == NULL)
-        return advance;
-    if (surface_lock(target, &pixels, &pitch) != 0) return advance;
-    if (pixels == NULL || pitch < target->w * 4) {
-        surface_unlock(target, pixels);
+    target = framebuffer != NULL ? NULL : surface_active_render_target_get();
+    if (atlas == NULL || atlas->pixels == NULL ||
+        (framebuffer == NULL && target == NULL)) return advance;
+    if (framebuffer != NULL) {
+        pixels = framebuffer->pixels;
+        pitch = framebuffer->pitch;
+    } else if (surface_lock(target, &pixels, &pitch) != 0) return advance;
+    int target_width = framebuffer != NULL ? framebuffer->width : target->w;
+    int target_height = framebuffer != NULL ? framebuffer->height : target->h;
+    if (pixels == NULL || pitch < target_width * 4) {
+        if (target != NULL) surface_unlock(target, pixels);
         return advance;
     }
     key0 = atlas->key_count >= 2 ? atlas->keys[0] : atlas->pixels[0];
@@ -444,14 +460,14 @@ static int text_buffer_software_glyph_draw(void* context, void* font,
     for (row = 0; row < height; ++row) {
         const int dest_y = y + row;
         int column;
-        if (dest_y < 0 || dest_y >= target->h || src_y + row >= atlas->height)
+        if (dest_y < 0 || dest_y >= target_height || src_y + row >= atlas->height)
             continue;
         for (column = 0; column < width; ++column) {
             const int dest_x = x + column;
             const int source_x = src_x + column;
             uint32_t source;
             uint8_t* destination;
-            if (dest_x < 0 || dest_x >= target->w || source_x < 0 ||
+            if (dest_x < 0 || dest_x >= target_width || source_x < 0 ||
                 source_x >= atlas->width)
                 continue;
             source = atlas->pixels[(size_t)(src_y + row) *
@@ -467,7 +483,7 @@ static int text_buffer_software_glyph_draw(void* context, void* font,
             destination[3] = (uint8_t)(source >> 24);
         }
     }
-    surface_unlock(target, pixels);
+    if (target != NULL) surface_unlock(target, pixels);
     return advance;
 }
 
@@ -487,6 +503,17 @@ void text_buffer_draw_software_install(void)
     ops.glyph_draw = text_buffer_software_glyph_draw;
     ops.is_word_break = text_buffer_software_word_break;
     text_buffer_draw_ops_set(&ops);
+}
+
+void text_buffer_draw_framebuffer_install(void* pixels, int pitch,
+                                          int width, int height)
+{
+    text_buffer_draw_software_install();
+    s_text_buffer_framebuffer.pixels = pixels;
+    s_text_buffer_framebuffer.pitch = pitch;
+    s_text_buffer_framebuffer.width = width;
+    s_text_buffer_framebuffer.height = height;
+    s_text_buffer_draw_ops.context = &s_text_buffer_framebuffer;
 }
 
 static uint32_t text_buffer_read_u32(const void* record, size_t offset)
@@ -689,7 +716,7 @@ int text_buffer_draw_wrapped(void* record, uint32_t start_line,
     float wrapped_width;
     if (height_out != NULL) *height_out = 0;
     if (record == NULL) return 0;
-    font = *(void**)record;
+    font = text_buffer_font_get(record);
     line_height = text_buffer_line_height(font);
     top_height = *(float*)((char*)record + 0x10);
     words[0x209] = crt_float_to_long(top_height) / line_height;

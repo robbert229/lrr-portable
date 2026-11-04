@@ -1376,6 +1376,7 @@ static DirectDrawRendererInitOps s_directdraw_renderer_init_ops;
 static int directdraw_renderer_init_winapi(
     const DirectDrawRendererInitParams* params, const void* guid,
     int width, int height, int bits_per_pixel);
+static int winapi_renderer_active(void);
 #endif
 #if !defined(_WIN32)
 static void* s_surface_description_interface;
@@ -1386,6 +1387,7 @@ static uint32_t s_texture_memory_last_value;
 static Direct3DRMDeviceInitOps s_direct3drm_device_init_ops;
 static int s_direct3drm_device_mode = 1;
 static DirectDrawDeviceInitializeOps s_directdraw_device_initialize_ops;
+static int s_directdraw_device_selection_cancelled;
 static DirectDrawDeviceSelection s_directdraw_device_selection = {
     NULL, NULL, 1
 };
@@ -2384,29 +2386,34 @@ int directdraw_renderer_init(const DirectDrawRendererInitParams* params)
     height = params->height;
     bits_per_pixel = params->mode_bits_per_pixel > 0
         ? params->mode_bits_per_pixel : 16;
-    if ((params->adapter_flags & 1u) != 0u &&
-        (params->adapter_flags & 0x10u) != 0u) {
+    if ((params->adapter_flags & 1u) != 0u) {
         guid = params->adapter_guid;
     }
     if (params->mode_width > 0) width = params->mode_width;
     if (params->mode_height > 0) height = params->mode_height;
     if (width <= 0 || height <= 0) return 0;
 
-    s_renderer_window_handle = params->window;
-    renderer_window_mode_apply(params->fullscreen, params->window_x,
-                               params->window_y, width, height);
     if (s_directdraw_renderer_init_ops.device_create == NULL ||
         s_directdraw_renderer_init_ops.cooperative_level_set == NULL ||
         s_directdraw_renderer_init_ops.surfaces_create == NULL ||
         s_directdraw_renderer_init_ops.clipper_setup == NULL ||
         s_directdraw_renderer_init_ops.direct3d_initialize == NULL) {
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-        return directdraw_renderer_init_winapi(params, guid, width, height,
-                                               bits_per_pixel);
+        /* Do not disturb an already committed display while attempting a
+         * replacement: DirectDraw changes the display mode process-wide. */
+        if (winapi_renderer_active()) return 0;
+        if (!directdraw_renderer_init_winapi(params, guid, width, height,
+                                            bits_per_pixel)) return 0;
+        renderer_window_mode_apply(params->fullscreen, params->window_x,
+                                   params->window_y, width, height);
+        return 1;
 #else
         return 0;
 #endif
     }
+    s_renderer_window_handle = params->window;
+    renderer_window_mode_apply(params->fullscreen, params->window_x,
+                               params->window_y, width, height);
     if (!s_directdraw_renderer_init_ops.device_create(
             s_directdraw_renderer_init_ops.context, guid, &device) ||
         device == NULL) goto cleanup;
@@ -2583,6 +2590,11 @@ void directdraw_device_selection_get(DirectDrawDeviceSelection* out)
  * enumerate adapters, optionally auto-select a supported display mode, then
  * enter the renderer initializer with the selected setup. */
 // FUNCTION: LEGORR 0x0049d030
+int directdraw_device_selection_cancelled(void)
+{
+    return s_directdraw_device_selection_cancelled;
+}
+
 int directdraw_device_initialize(int show_dialog, int register_extra_modes,
                                  int auto_select, int windowed,
                                  const char* error_message)
@@ -2591,15 +2603,17 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
     int fullscreen = 1;
     int selected = 0;
     int adapter_index;
+    DirectDrawDeviceSelection selection;
     DirectDrawAdapterCandidate adapter;
     DirectDrawDisplayModeCandidate mode;
     int result;
+    s_directdraw_device_selection_cancelled = 0;
     /* FUN_0049d030 resets DAT_005754e0 and seeds the canonical resolution
      * filters before opening its dialog or trying automatic selection. */
     display_resolution_filter_tuples_reset();
-    memset(&s_directdraw_device_selection, 0,
-           sizeof(s_directdraw_device_selection));
-    s_directdraw_device_selection.fullscreen = 1;
+    memset(&selection, 0,
+           sizeof(selection));
+    selection.fullscreen = 1;
     display_resolution_filter_tuple_append(640, 480, 16);
     if (register_extra_modes != 0) {
         display_resolution_filter_tuple_append(800, 600, 16);
@@ -2627,7 +2641,7 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
     if (auto_select != 0) {
         int mode_index;
         fullscreen = (windowed == 0) ? 1 : 0;
-        s_directdraw_device_selection.fullscreen = fullscreen;
+        selection.fullscreen = fullscreen;
         for (adapter_index = adapter_count - 1;
              adapter_index >= 0 && !selected; --adapter_index) {
             int mode_count;
@@ -2660,8 +2674,8 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
                         s_directdraw_device_initialize_ops.context,
                         adapter.adapter, &candidate, windowed)) {
                     mode = candidate;
-                    s_directdraw_device_selection.adapter = adapter.adapter;
-                    s_directdraw_device_selection.mode_descriptor =
+                    selection.adapter = adapter.adapter;
+                    selection.mode_descriptor =
                         candidate.descriptor;
                     selected = 1;
                     break;
@@ -2681,23 +2695,28 @@ int directdraw_device_initialize(int show_dialog, int register_extra_modes,
         if (!s_directdraw_device_initialize_ops.adapter_get(
                 s_directdraw_device_initialize_ops.context, 0, &adapter)) return 0;
         selected = 1;
-        s_directdraw_device_selection.adapter = adapter.adapter;
+        selection.adapter = adapter.adapter;
         if (show_dialog != 0) {
             if (s_directdraw_device_initialize_ops.selection_dialog == NULL) {
                 return 0;
             }
-            if (!s_directdraw_device_initialize_ops.selection_dialog(
+            result = s_directdraw_device_initialize_ops.selection_dialog(
                     s_directdraw_device_initialize_ops.context, 0,
-                    &adapter, &mode, &fullscreen)) return 0;
-            s_directdraw_device_selection.adapter = adapter.adapter;
-            s_directdraw_device_selection.mode_descriptor = mode.descriptor;
-            s_directdraw_device_selection.fullscreen = fullscreen;
+                    &adapter, &mode, &fullscreen);
+            if (result <= 0) {
+                s_directdraw_device_selection_cancelled = (result < 0);
+                return 0;
+            }
+            selection.adapter = adapter.adapter;
+            selection.mode_descriptor = mode.descriptor;
+            selection.fullscreen = fullscreen;
         }
     }
-    s_directdraw_device_selection.fullscreen = fullscreen;
+    selection.fullscreen = fullscreen;
     result = s_directdraw_device_initialize_ops.renderer_initialize(
         s_directdraw_device_initialize_ops.context, fullscreen,
         adapter.adapter, mode.descriptor != NULL ? &mode : NULL);
+    if (result != 0) s_directdraw_device_selection = selection;
     return result;
 }
 
@@ -3654,12 +3673,6 @@ void surface_text_character_map_initialize(
     }
 }
 
-static int font_atlas_pixel_is_key(uint32_t pixel, uint32_t key0,
-                                  uint32_t key1)
-{
-    return pixel == key0 || pixel == key1 || (pixel >> 24) == 0u;
-}
-
 // FUNCTION: LEGORR 0x00479ee0
 void* font_atlas_record_create(const char* name)
 {
@@ -3669,7 +3682,6 @@ void* font_atlas_record_create(const char* name)
     int cell_height;
     int row;
     int column;
-    uint32_t key0;
     uint32_t key1;
 
     if (name == NULL || name[0] == '\0') return NULL;
@@ -3685,8 +3697,7 @@ void* font_atlas_record_create(const char* name)
         texture_release(surface);
         return NULL;
     }
-    key0 = surface->key_count >= 2 ? surface->keys[0] : surface->pixels[0];
-    key1 = surface->key_count >= 2 ? surface->keys[1] : key0;
+    key1 = surface->key_count >= 2 ? surface->keys[1] : surface->pixels[0];
 
     record = s_font_atlas_record_free_list;
     if (record != NULL) {
@@ -3714,21 +3725,13 @@ void* font_atlas_record_create(const char* name)
             glyph->x = (float)x0;
             glyph->y = (float)y0;
             glyph->height = (float)cell_height;
-            /* The reference stops at column one, retaining a one-pixel
-             * advance even for an all-key glyph such as space. */
+            /* FontResourceLoad scans the first row against the second
+             * palette key, retaining at least one pixel of advance. The
+             * first key may encode spacing without visible glyph ink. */
             for (x = cell_width - 1; x > 0; --x) {
-                int y;
-                int ink = 0;
-                for (y = 0; y < cell_height; ++y) {
-                    uint32_t pixel = surface->pixels[
-                        (size_t)(y0 + y) * (size_t)surface->width +
-                        (size_t)(x0 + x)];
-                    if (!font_atlas_pixel_is_key(pixel, key0, key1)) {
-                        ink = 1;
-                        break;
-                    }
-                }
-                if (ink) break;
+                uint32_t pixel = surface->pixels[(size_t)y0 *
+                    (size_t)surface->width + (size_t)(x0 + x)];
+                if (pixel != key1) break;
                 --width;
             }
             glyph->width = (float)width;
@@ -4099,6 +4102,61 @@ void surface_pixel_rows_flip_in_place(void* surface)
             engine_heap_free(scratch);
         }
     }
+}
+
+/* Convert the frontend's RGBA bytes using the destination surface's masks. */
+static int surface_rgba_mask_info(uint32_t mask, unsigned int* shift,
+                                  unsigned int* bits)
+{
+    unsigned int s = 0, n = 0;
+    if (mask == 0u) return 0;
+    while ((mask & 1u) == 0u) { mask >>= 1; ++s; }
+    while ((mask & 1u) != 0u) { mask >>= 1; ++n; }
+    if (mask != 0u || n > 8u) return 0;
+    *shift = s; *bits = n;
+    return 1;
+}
+
+int surface_rgba_copy_to_rgb(void* target, int target_pitch, int target_width,
+    int target_height, const void* source, int source_pitch, int width,
+    int height, int x, int y, unsigned int bpp, uint32_t red_mask,
+    uint32_t green_mask, uint32_t blue_mask)
+{
+    unsigned int rs, gs, bs, rb, gb, bb, bytes;
+    int sx, sy, dx, dy, copy_width, copy_height, row, column;
+    if (target == NULL || source == NULL || width <= 0 || height <= 0 ||
+        target_width <= 0 || target_height <= 0 || source_pitch <= 0 ||
+        target_pitch <= 0 || (bpp != 16u && bpp != 32u)) return 0;
+    bytes = bpp / 8u;
+    if (width > source_pitch / 4 || target_width > target_pitch / (int)bytes ||
+        (red_mask & green_mask) != 0u || (red_mask & blue_mask) != 0u ||
+        (green_mask & blue_mask) != 0u ||
+        (bpp == 16u && ((red_mask | green_mask | blue_mask) & 0xffff0000u)) ||
+        !surface_rgba_mask_info(red_mask, &rs, &rb) ||
+        !surface_rgba_mask_info(green_mask, &gs, &gb) ||
+        !surface_rgba_mask_info(blue_mask, &bs, &bb)) return 0;
+    if (x <= -width || y <= -height || x >= target_width || y >= target_height)
+        return 1;
+    sx = x < 0 ? -x : 0; sy = y < 0 ? -y : 0;
+    dx = x < 0 ? 0 : x; dy = y < 0 ? 0 : y;
+    copy_width = width - sx; copy_height = height - sy;
+    if (copy_width > target_width - dx) copy_width = target_width - dx;
+    if (copy_height > target_height - dy) copy_height = target_height - dy;
+    for (row = 0; row < copy_height; ++row) {
+        const unsigned char* src = (const unsigned char*)source +
+            (sy + row) * source_pitch + sx * 4;
+        unsigned char* dst = (unsigned char*)target +
+            (dy + row) * target_pitch + dx * bytes;
+        for (column = 0; column < copy_width; ++column) {
+            uint32_t value = (((uint32_t)src[0] >> (8u - rb)) << rs) |
+                (((uint32_t)src[1] >> (8u - gb)) << gs) |
+                (((uint32_t)src[2] >> (8u - bb)) << bs);
+            unsigned int i;
+            for (i = 0; i < bytes; ++i) dst[i] = (unsigned char)(value >> (8u * i));
+            src += 4; dst += bytes;
+        }
+    }
+    return 1;
 }
 
 /* ---- DirectDraw-backed implementation (miniwin) ---------------------- */
@@ -4484,6 +4542,10 @@ typedef struct WinapiRendererState {
     void* primary;
     void* back_surface;
     void* clipper;
+    void* rm;
+    void* rm_device;
+    void* staging_surface;
+    HMODULE rm_module;
     HWND window;
     int fullscreen;
     int width;
@@ -4491,6 +4553,10 @@ typedef struct WinapiRendererState {
 } WinapiRendererState;
 
 static WinapiRendererState s_winapi_renderer_state;
+static int winapi_renderer_active(void)
+{
+    return s_winapi_renderer_state.device != NULL;
+}
 // GLOBAL: LEGORR 0x0076acbc
 static uint32_t s_renderer_fullscreen;
 // GLOBAL: LEGORR 0x0076acc0
@@ -4504,10 +4570,21 @@ static void windowed_surface_blit_impl(DisplaySurface* primary,
 static void winapi_renderer_state_release(WinapiRendererState* state)
 {
     if (state == NULL) return;
+    if (s_screen_bounded_surface_device == state->rm_device &&
+        state->rm_device != NULL)
+        screen_bounded_surface_device_set(NULL, NULL);
+    if (state->rm_device != NULL) surface_com_release(state->rm_device);
+    if (state->rm != NULL) surface_com_release(state->rm);
+    if (state->rm_module != NULL) FreeLibrary(state->rm_module);
     if (state->clipper != NULL) surface_com_release(state->clipper);
     if (state->back_surface != NULL)
         surface_com_release(state->back_surface);
     if (state->primary != NULL) surface_com_release(state->primary);
+    if (state->device != NULL && state->fullscreen) {
+        typedef HRESULT (WINAPI *RestoreFn)(void*);
+        void** vt = surface_com_vtable(state->device);
+        if (vt != NULL && vt[19] != NULL) ((RestoreFn)vt[19])(state->device);
+    }
     if (state->device != NULL) surface_com_release(state->device);
     memset(state, 0, sizeof(*state));
     s_renderer_window_handle = NULL;
@@ -4565,21 +4642,19 @@ void render_surface_present(void)
 }
 
 static int winapi_renderer_clipper_attach(void* device, void* surface,
-    int width, int height, void** clipper_out)
+    HWND window, void** clipper_out)
 {
     SurfaceCreateClipperFn create_clipper;
-    ClipperSetClipListFn set_clip_list;
+    typedef HRESULT (WINAPI *ClipperSetHwndFn)(void*, DWORD, HWND);
+    ClipperSetHwndFn set_hwnd;
     SurfaceSetClipperFn set_clipper;
     void** vtable;
     void* clipper = NULL;
-    HRGN region = NULL;
-    RGNDATA* region_data = NULL;
-    DWORD region_bytes;
     int success = 0;
 
     if (clipper_out != NULL) *clipper_out = NULL;
     if (device == NULL || surface == NULL || clipper_out == NULL ||
-        width <= 0 || height <= 0) return 0;
+        window == NULL) return 0;
     vtable = surface_com_vtable(device);
     create_clipper = vtable != NULL && vtable[4] != NULL
         ? (SurfaceCreateClipperFn)vtable[4] : NULL;
@@ -4587,19 +4662,10 @@ static int winapi_renderer_clipper_attach(void* device, void* surface,
         create_clipper(device, 0u, &clipper, NULL) != 0 || clipper == NULL)
         goto cleanup;
 
-    region = CreateRectRgn(0, 0, width, height);
-    if (region == NULL) goto cleanup;
-    region_bytes = GetRegionData(region, 0u, NULL);
-    if (region_bytes == 0u) goto cleanup;
-    region_data = (RGNDATA*)malloc((size_t)region_bytes);
-    if (region_data == NULL ||
-        GetRegionData(region, region_bytes, region_data) != region_bytes)
-        goto cleanup;
     vtable = surface_com_vtable(clipper);
-    set_clip_list = vtable != NULL && vtable[7] != NULL
-        ? (ClipperSetClipListFn)vtable[7] : NULL;
-    if (set_clip_list == NULL ||
-        set_clip_list(clipper, region_data, 0u) != 0) goto cleanup;
+    set_hwnd = vtable != NULL && vtable[8] != NULL
+        ? (ClipperSetHwndFn)vtable[8] : NULL;
+    if (set_hwnd == NULL || set_hwnd(clipper, 0u, window) != 0) goto cleanup;
     vtable = surface_com_vtable(surface);
     set_clipper = vtable != NULL && vtable[28] != NULL
         ? (SurfaceSetClipperFn)vtable[28] : NULL;
@@ -4610,10 +4676,39 @@ static int winapi_renderer_clipper_attach(void* device, void* surface,
     success = 1;
 
 cleanup:
-    if (region_data != NULL) free(region_data);
-    if (region != NULL) DeleteObject(region);
     if (clipper != NULL) surface_com_release(clipper);
     return success;
+}
+
+static int winapi_rm_device_create(void* rm1, void* device, void* back_surface,
+    const GUID* device_guid, void** rm_out, void** device_out)
+{
+    typedef HRESULT (WINAPI *CreateDeviceFn)(void*, const GUID*, void*,
+                                              void*, DWORD, void**);
+    static const GUID iid_rm3 = { 0x4516ec83, 0x8f20, 0x11d0,
+        { 0x9b, 0x6d, 0x00, 0x00, 0xc0, 0x78, 0x1b, 0xc3 } };
+    static const GUID iid_dd1 = { 0x6c14db80, 0xa733, 0x11ce,
+        { 0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60 } };
+    static const GUID iid_surface1 = { 0x6c14db81, 0xa733, 0x11ce,
+        { 0xa5, 0x21, 0x00, 0x20, 0xaf, 0x0b, 0xe5, 0x60 } };
+    void* dd1 = NULL;
+    void* surface1 = NULL;
+    int ok = 0;
+    *rm_out = NULL;
+    *device_out = NULL;
+    if (device_guid != NULL &&
+        ((SurfaceQueryInterfaceFn)surface_com_vtable(rm1)[0])(
+            rm1, iid_rm3, rm_out) == 0 && *rm_out != NULL &&
+        ((SurfaceQueryInterfaceFn)surface_com_vtable(device)[0])(
+            device, iid_dd1, &dd1) == 0 && dd1 != NULL &&
+        ((SurfaceQueryInterfaceFn)surface_com_vtable(back_surface)[0])(
+            back_surface, iid_surface1, &surface1) == 0 && surface1 != NULL &&
+        ((CreateDeviceFn)surface_com_vtable(*rm_out)[15])(
+            *rm_out, device_guid, dd1, surface1, 0u, device_out) == 0 &&
+        *device_out != NULL) ok = 1;
+    if (surface1 != NULL) surface_com_release(surface1);
+    if (dd1 != NULL) surface_com_release(dd1);
+    return ok;
 }
 
 static int directdraw_renderer_init_winapi(
@@ -4631,6 +4726,10 @@ static int directdraw_renderer_init_winapi(
     void* primary = NULL;
     void* back_surface = NULL;
     void* clipper = NULL;
+    void* rm = NULL;
+    void* rm_device = NULL;
+    HMODULE rm_module = NULL;
+    int mode_set = 0;
     void** vtable;
     SurfaceDdrawDesc2 desc;
     SurfaceDdrawCaps2 back_caps;
@@ -4663,6 +4762,7 @@ static int directdraw_renderer_init_winapi(
         if (set_display_mode == NULL || set_display_mode(device,
                 (DWORD)width, (DWORD)height, (DWORD)bits_per_pixel,
                 0u, 0u) != 0) goto cleanup;
+        mode_set = 1;
     }
 
     memset(&desc, 0, sizeof(desc));
@@ -4708,17 +4808,28 @@ static int directdraw_renderer_init_winapi(
     }
 
     if (params->fullscreen == 0 &&
-        !winapi_renderer_clipper_attach(device, back_surface, width, height,
+        !winapi_renderer_clipper_attach(device, primary, window,
                                         &clipper)) goto cleanup;
 
-    if (s_directdraw_renderer_init_ops.direct3d_initialize != NULL) {
-        if (!s_directdraw_renderer_init_ops.direct3d_initialize(
-                s_directdraw_renderer_init_ops.context, device, primary,
-                back_surface, params->fullscreen)) goto cleanup;
-    }
-    else if (!direct3drm_device_initialize((void*)params->adapter_guid,
-            params->adapter_flags, back_surface, params->fullscreen)) {
-        goto cleanup;
+    /* RM3 consumes the selected Direct3D device GUID, independently of the
+     * DirectDraw adapter GUID used to create the owning display. */
+    {
+        typedef HRESULT (WINAPI *CreateRMFn)(void**);
+        char path[MAX_PATH];
+        DWORD length = GetFullPathNameA("D3DRM.DLL", sizeof(path), path, NULL);
+        void* rm1 = NULL;
+        CreateRMFn create_rm;
+        int ok = 0;
+        if (params->device_guid != NULL && length != 0 && length < sizeof(path)) {
+            rm_module = LoadLibraryA(path);
+            create_rm = rm_module != NULL ? (CreateRMFn)GetProcAddress(
+                rm_module, "Direct3DRMCreate") : NULL;
+            if (create_rm != NULL && create_rm(&rm1) == 0 && rm1 != NULL &&
+                winapi_rm_device_create(rm1, device, back_surface,
+                    (const GUID*)params->device_guid, &rm, &rm_device)) ok = 1;
+        }
+        if (rm1 != NULL) surface_com_release(rm1);
+        if (!ok) goto cleanup;
     }
 
     if (s_directdraw_renderer_init_ops.renderer_state_commit != NULL) {
@@ -4731,6 +4842,9 @@ static int directdraw_renderer_init_winapi(
     s_winapi_renderer_state.primary = primary;
     s_winapi_renderer_state.back_surface = back_surface;
     s_winapi_renderer_state.clipper = clipper;
+    s_winapi_renderer_state.rm = rm;
+    s_winapi_renderer_state.rm_device = rm_device;
+    s_winapi_renderer_state.rm_module = rm_module;
     s_winapi_renderer_state.window = window;
     s_winapi_renderer_state.fullscreen = params->fullscreen != 0;
     s_winapi_renderer_state.width = width;
@@ -4741,20 +4855,58 @@ static int directdraw_renderer_init_winapi(
     s_renderer_fullscreen = params->fullscreen != 0 ? 1u : 0u;
     s_renderer_surface_width = (uint32_t)width;
     s_renderer_surface_height = (uint32_t)height;
+    screen_bounded_surface_device_set(rm, rm_device);
+    if ((params->device_flags & 0x4000u) != 0u)
+        s_renderer_window_mode_flags |= 4u;
+    s_direct3drm_device_mode =
+        (s_renderer_window_mode_flags & 0x80000u) == 0u &&
+        (params->device_flags & 0x2000u) != 0u ? 2 : 1;
     device = NULL;
     primary = NULL;
     back_surface = NULL;
     clipper = NULL;
+    rm = NULL; rm_device = NULL; rm_module = NULL; mode_set = 0;
     if (params->fullscreen != 0) (void)ShowCursor(FALSE);
     success = 1;
 
 cleanup:
+    if (rm_device != NULL) surface_com_release(rm_device);
+    if (rm != NULL) surface_com_release(rm);
+    if (rm_module != NULL) FreeLibrary(rm_module);
     if (clipper != NULL) surface_com_release(clipper);
     if (back_surface != NULL) surface_com_release(back_surface);
     if (primary != NULL) surface_com_release(primary);
+    if (device != NULL && mode_set) {
+        typedef HRESULT (WINAPI *RestoreFn)(void*);
+        void** vt = surface_com_vtable(device);
+        if (vt != NULL && vt[19] != NULL) ((RestoreFn)vt[19])(device);
+    }
     if (device != NULL) surface_com_release(device);
     if (direct_draw != NULL) surface_com_release(direct_draw);
     return success;
+}
+
+int surface_winapi_present_rgba(const void* pixels, int pitch, int width, int height)
+{
+    WinapiRendererState* state = &s_winapi_renderer_state;
+    SurfaceDdrawDesc2 desc;
+    SurfaceLockFn lock;
+    SurfaceUnlockFn unlock;
+    void** vt;
+    int copied;
+    if (state->back_surface == NULL || state->primary == NULL) return 0;
+    vt = surface_com_vtable(state->back_surface);
+    if (vt == NULL || vt[25] == NULL || vt[32] == NULL) return 1;
+    lock = (SurfaceLockFn)vt[25]; unlock = (SurfaceUnlockFn)vt[32];
+    memset(&desc, 0, sizeof(desc)); desc.size = sizeof(desc);
+    if (lock(state->back_surface, NULL, &desc, 0x801u, NULL) != 0) return 1;
+    copied = surface_rgba_copy_to_rgb(desc.surface, (int)desc.pitch,
+        (int)desc.width, (int)desc.height, pixels, pitch, width, height, 0, 0,
+        desc.pixel_format.rgb_bits, desc.pixel_format.red_mask,
+        desc.pixel_format.green_mask, desc.pixel_format.blue_mask);
+    (void)unlock(state->back_surface, NULL);
+    if (copied) render_surface_present();
+    return 1;
 }
 
 static int surface_create_winapi_display_mode(DisplaySurface* out,
@@ -4782,26 +4934,31 @@ static int surface_create_winapi_display_mode(DisplaySurface* out,
     memset(out, 0, sizeof(*out));
     if (width < 0 || height < 0 || bits_per_pixel < 0)
         return -1;
-    if (!surface_ddraw_api_get(&create)) return -2;
-    result = create(NULL, &direct_draw, NULL);
-    if (result != 0 || direct_draw == NULL) goto cleanup;
-    vtable = surface_com_vtable(direct_draw);
-    query = vtable != NULL ? (SurfaceQueryInterfaceFn)vtable[0] : NULL;
-    if (query == NULL || query(direct_draw, s_iid_direct_draw4,
-                               &direct_draw4) != 0 || direct_draw4 == NULL)
-        goto cleanup;
-    surface_com_release(direct_draw);
-    direct_draw = NULL;
-
-    /* DirectDraw requires a cooperative level before it will create surfaces.
-     * The reconstruction creates an offscreen system-memory surface in the
-     * normal windowed mode, so bind that mode to the host window first. */
-    vtable = surface_com_vtable(direct_draw4);
-    set_cooperative_level = vtable != NULL && vtable[20] != NULL
-        ? (SurfaceSetCooperativeLevelFn)vtable[20] : NULL;
-    if (set_cooperative_level == NULL ||
-        set_cooperative_level(direct_draw4, (HWND)hwnd, 0x00000008u) != 0)
-        goto cleanup;
+    if (s_winapi_renderer_state.device != NULL) {
+        typedef ULONG (WINAPI *AddRefFn)(void*);
+        direct_draw4 = s_winapi_renderer_state.device;
+        vtable = surface_com_vtable(direct_draw4);
+        if (vtable == NULL || vtable[1] == NULL) return -2;
+        ((AddRefFn)vtable[1])(direct_draw4);
+    }
+    else {
+        if (!surface_ddraw_api_get(&create)) return -2;
+        result = create(NULL, &direct_draw, NULL);
+        if (result != 0 || direct_draw == NULL) goto cleanup;
+        vtable = surface_com_vtable(direct_draw);
+        query = vtable != NULL ? (SurfaceQueryInterfaceFn)vtable[0] : NULL;
+        if (query == NULL || query(direct_draw, s_iid_direct_draw4,
+                                   &direct_draw4) != 0 || direct_draw4 == NULL)
+            goto cleanup;
+        surface_com_release(direct_draw);
+        direct_draw = NULL;
+        vtable = surface_com_vtable(direct_draw4);
+        set_cooperative_level = vtable != NULL && vtable[20] != NULL
+            ? (SurfaceSetCooperativeLevelFn)vtable[20] : NULL;
+        if (set_cooperative_level == NULL ||
+            set_cooperative_level(direct_draw4, (HWND)hwnd, 8u) != 0)
+            goto cleanup;
+    }
 
     memset(&desc, 0, sizeof(desc));
     desc.size = sizeof(desc);
@@ -4904,14 +5061,41 @@ cleanup:
     return -4;
 }
 
+typedef struct WinApiStartupAdapter {
+    GUID guid;
+    int has_guid;
+    char label[256];
+} WinApiStartupAdapter;
+
+static WinApiStartupAdapter s_winapi_startup_adapters[32];
+static unsigned int s_winapi_startup_adapter_count;
+static GUID s_winapi_startup_selected_guids[2];
+typedef struct WinApiStartupDevice {
+    GUID guid;
+    DWORD flags;
+    char label[256];
+} WinApiStartupDevice;
+static WinApiStartupDevice s_winapi_startup_selected_devices[2];
+
 typedef struct WinApiStartupDialogState {
     DEVMODEA modes[128];
+    WinApiStartupDevice devices[32];
+    unsigned int device_count;
+    unsigned int selected_device;
+    unsigned int selected_adapter;
+    int saved_fullscreen;
     unsigned int mode_count;
     unsigned int selected_mode;
+    unsigned int raw_mode_count;
+    int desktop_bits;
     int fullscreen;
 } WinApiStartupDialogState;
 
-static DEVMODEA s_winapi_startup_selected_mode;
+/* A dialog edits the inactive slot.  The committed selection may still point
+ * into the other slot if this attempt is cancelled or renderer setup fails. */
+static DEVMODEA s_winapi_startup_selected_modes[2];
+static unsigned int s_winapi_startup_committed_slot;
+static unsigned int s_winapi_startup_pending_slot;
 static void* s_winapi_startup_owner_window;
 
 typedef HRESULT (WINAPI *SurfaceEnumDisplayModesCallback)(
@@ -4928,6 +5112,12 @@ static HRESULT WINAPI surface_winapi_startup_mode_collect(
     int accepted = display_resolution_filter_tuple_count() == 0;
     if (descriptor == NULL || state == NULL || state->mode_count >= 128u)
         return 1;
+    /* Retail keeps the first enumerated mode in either policy. In windowed
+     * mode subsequent records must match the desktop depth, before the
+     * dialog's resolution tuple filter is applied. */
+    if (state->raw_mode_count++ != 0u && !state->fullscreen &&
+        descriptor->pixel_format.rgb_bits != (DWORD)state->desktop_bits)
+        return 1;
     for (i = 0u; i < (unsigned int)display_resolution_filter_tuple_count();
          ++i) {
         int width;
@@ -4943,12 +5133,6 @@ static HRESULT WINAPI surface_winapi_startup_mode_collect(
     }
     if (!accepted || descriptor->width == 0 || descriptor->height == 0 ||
         descriptor->pixel_format.rgb_bits < 16u) return 1;
-    for (i = 0u; i < state->mode_count; ++i) {
-        if (state->modes[i].dmPelsWidth == descriptor->width &&
-            state->modes[i].dmPelsHeight == descriptor->height &&
-            state->modes[i].dmBitsPerPel ==
-                descriptor->pixel_format.rgb_bits) return 1;
-    }
     mode = &state->modes[state->mode_count];
     memset(mode, 0, sizeof(*mode));
     mode->dmSize = sizeof(*mode);
@@ -4956,8 +5140,6 @@ static HRESULT WINAPI surface_winapi_startup_mode_collect(
     mode->dmPelsHeight = descriptor->height;
     mode->dmBitsPerPel = descriptor->pixel_format.rgb_bits;
     mode->dmDisplayFrequency = descriptor->refresh_rate;
-    if (mode->dmPelsWidth == 640u && mode->dmPelsHeight == 480u &&
-        mode->dmBitsPerPel == 16u) state->selected_mode = state->mode_count;
     ++state->mode_count;
     return 1;
 }
@@ -4974,7 +5156,9 @@ static int surface_winapi_startup_modes_enumerate(
     HRESULT result;
     int success = 0;
     if (state == NULL || !surface_ddraw_api_get(&create)) return 0;
-    result = create(NULL, &direct_draw, NULL);
+    result = create(s_winapi_startup_adapters[state->selected_adapter].has_guid
+        ? &s_winapi_startup_adapters[state->selected_adapter].guid : NULL,
+        &direct_draw, NULL);
     if (result != 0 || direct_draw == NULL) goto cleanup;
     vtable = surface_com_vtable(direct_draw);
     query = vtable != NULL ? (SurfaceQueryInterfaceFn)vtable[0] : NULL;
@@ -4994,6 +5178,140 @@ cleanup:
     return success;
 }
 
+static const GUID s_iid_direct3d_startup = {
+    0x3bba0080, 0x2421, 0x11cf,
+    { 0xa3, 0x1a, 0x00, 0xaa, 0x00, 0xb9, 0x33, 0x56 }
+};
+typedef HRESULT (WINAPI *SurfaceEnumDeviceCallback)(GUID*, LPSTR, LPSTR,
+                                                     void*, void*, void*);
+typedef HRESULT (WINAPI *SurfaceEnumDevicesFn)(void*,
+    SurfaceEnumDeviceCallback, void*);
+
+static HRESULT WINAPI surface_winapi_startup_device_collect(GUID* guid,
+    LPSTR description, LPSTR name, void* hardware, void* software, void* context)
+{
+    WinApiStartupDialogState* state = (WinApiStartupDialogState*)context;
+    WinApiStartupDevice* device;
+    DWORD* descriptor = (DWORD*)hardware;
+    DWORD flags = 1u;
+    DWORD caps;
+    if (guid == NULL || descriptor == NULL || state->device_count >= 32u)
+        return 1;
+    if (descriptor[2] != 0u) flags |= 0x2000u;
+    else descriptor = (DWORD*)software;
+    if (descriptor == NULL) return 1;
+    if ((descriptor[1] & 1u) != 0u && descriptor[2] == 2u) flags |= 0x1000u;
+    if ((descriptor[1] & 0x80u) != 0u) {
+        caps = descriptor[0x9c / 4];
+        if ((caps & 0x800u) != 0u) flags |= 0x10u;
+        if ((caps & 0x400u) != 0u) flags |= 0x20u;
+        if ((caps & 0x200u) != 0u) flags |= 0x40u;
+        if ((caps & 0x100u) != 0u) flags |= 0x80u;
+    }
+    if ((descriptor[1] & 2u) != 0u) {
+        if ((descriptor[3] & 0x200u) != 0u) flags |= 0x4000u;
+        else if ((descriptor[3] & 0x100u) != 0u) flags |= 0x8000u;
+    }
+    device = &state->devices[state->device_count];
+    memset(device, 0, sizeof(*device));
+    device->guid = *guid;
+    device->flags = flags;
+    snprintf(device->label, sizeof(device->label), "%s (%s)",
+             name != NULL ? name : "", description != NULL ? description : "");
+    device->label[sizeof(device->label) - 1u] = 0;
+    if ((flags & 0x2000u) != 0u) state->selected_device = state->device_count;
+    ++state->device_count;
+    return 1;
+}
+
+static void surface_winapi_startup_devices_refresh(HWND dialog,
+    WinApiStartupDialogState* state)
+{
+    SurfaceDdrawCreateFn create;
+    SurfaceQueryInterfaceFn query;
+    SurfaceEnumDevicesFn enumerate;
+    void* direct_draw = NULL;
+    void* direct3d = NULL;
+    void** vtable;
+    unsigned int i;
+    HWND combo = GetDlgItem(dialog, 1002);
+    WinApiStartupAdapter* adapter =
+        &s_winapi_startup_adapters[state->selected_adapter];
+    SendMessageA(combo, LB_RESETCONTENT, 0, 0);
+    state->device_count = 0;
+    state->selected_device = 0;
+    if (!surface_ddraw_api_get(&create) ||
+        create(adapter->has_guid ? &adapter->guid : NULL,
+               &direct_draw, NULL) != 0 || direct_draw == NULL) goto cleanup;
+    vtable = surface_com_vtable(direct_draw);
+    query = vtable != NULL ? (SurfaceQueryInterfaceFn)vtable[0] : NULL;
+    if (query == NULL || query(direct_draw, s_iid_direct3d_startup,
+                              &direct3d) != 0 || direct3d == NULL) goto cleanup;
+    vtable = surface_com_vtable(direct3d);
+    /* IDirect3D has Initialize at slot 3 and EnumDevices at slot 4. */
+    enumerate = vtable != NULL ? (SurfaceEnumDevicesFn)vtable[4] : NULL;
+    if (enumerate == NULL || enumerate(direct3d,
+            surface_winapi_startup_device_collect, state) != 0) {
+        state->device_count = 0;
+        goto cleanup;
+    }
+    for (i = 0; i < state->device_count; ++i)
+        SendMessageA(combo, LB_ADDSTRING, 0, (LPARAM)state->devices[i].label);
+    if (state->device_count != 0u)
+        SendMessageA(combo, LB_SETCURSEL, state->selected_device, 0);
+cleanup:
+    if (direct3d != NULL) surface_com_release(direct3d);
+    if (direct_draw != NULL) surface_com_release(direct_draw);
+}
+
+static void surface_winapi_startup_modes_refresh(HWND dialog,
+    WinApiStartupDialogState* state)
+{
+    unsigned int i;
+    char label[80];
+    HDC dc;
+    HWND combo = GetDlgItem(dialog, 1003);
+    SendMessageA(combo, LB_RESETCONTENT, 0, 0);
+    state->mode_count = 0;
+    state->selected_mode = 0;
+    state->raw_mode_count = 0;
+    dc = GetDC((HWND)s_winapi_startup_owner_window);
+    state->desktop_bits = dc != NULL ? GetDeviceCaps(dc, BITSPIXEL) : 0;
+    if (dc != NULL) ReleaseDC((HWND)s_winapi_startup_owner_window, dc);
+    surface_winapi_startup_modes_enumerate(state);
+    SetDlgItemTextA(dialog, 1006, state->fullscreen ? "Screen Mode" : "Window Size");
+    EnableWindow(GetDlgItem(dialog, 1), state->mode_count != 0u);
+    if (state->mode_count == 0u) {
+        sprintf(label, "No supported %d bit modes found", state->desktop_bits);
+        SendMessageA(combo, LB_ADDSTRING, 0, (LPARAM)label);
+        SendMessageA(combo, LB_SETCURSEL, 0, 0);
+        return;
+    }
+    for (i = 0; i < state->mode_count; ++i) {
+        sprintf(label, "%ix%i (%i bit)",
+            (int)state->modes[i].dmPelsWidth,
+            (int)state->modes[i].dmPelsHeight,
+            (int)state->modes[i].dmBitsPerPel);
+        SendMessageA(combo, LB_ADDSTRING, 0, (LPARAM)label);
+    }
+    SendMessageA(combo, LB_SETCURSEL, state->selected_mode, 0);
+}
+
+static void surface_winapi_startup_radio_sync(HWND dialog,
+    WinApiStartupDialogState* state)
+{
+    if (s_winapi_startup_adapters[state->selected_adapter].has_guid) {
+        state->saved_fullscreen = state->fullscreen;
+        state->fullscreen = 1;
+        EnableWindow(GetDlgItem(dialog, 1005), FALSE);
+    }
+    else {
+        EnableWindow(GetDlgItem(dialog, 1005), TRUE);
+        if (state->saved_fullscreen == 0) state->fullscreen = 0;
+    }
+    CheckRadioButton(dialog, 1004, 1005, state->fullscreen ? 1004 : 1005);
+}
+
 static BOOL CALLBACK surface_winapi_mode_dialog_proc(HWND dialog,
     UINT message, WPARAM wparam, LPARAM lparam)
 {
@@ -5001,74 +5319,111 @@ static BOOL CALLBACK surface_winapi_mode_dialog_proc(HWND dialog,
         GetWindowLongA(dialog, GWL_USERDATA);
     if (message == WM_INITDIALOG) {
         unsigned int i;
-        char label[80];
         state = (WinApiStartupDialogState*)lparam;
         state->fullscreen = 1;
+        state->saved_fullscreen = 1;
         SetWindowLongA(dialog, GWL_USERDATA, (LONG)state);
-        SendMessageA(GetDlgItem(dialog, 1000), 0x0143, 0,
-                     (LPARAM)"Primary Display Adapter");
-        SendMessageA(GetDlgItem(dialog, 1000), 0x014e, 0, 0);
-        SendMessageA(GetDlgItem(dialog, 1002), 0x0143, 0,
-                     (LPARAM)"DirectDraw HAL");
-        SendMessageA(GetDlgItem(dialog, 1002), 0x014e, 0, 0);
-        for (i = 0; i < state->mode_count; ++i) {
-            sprintf(label, "%u x %u x %u",
-                (unsigned int)state->modes[i].dmPelsWidth,
-                (unsigned int)state->modes[i].dmPelsHeight,
-                (unsigned int)state->modes[i].dmBitsPerPel);
-            SendMessageA(GetDlgItem(dialog, 1003), 0x0143, 0,
-                         (LPARAM)label);
-            if (state->modes[i].dmPelsWidth == 640u &&
-                state->modes[i].dmPelsHeight == 480u) {
-                state->selected_mode = i;
-            }
-        }
-        SendMessageA(GetDlgItem(dialog, 1003), 0x014e, 0,
-                     state->selected_mode);
-        CheckRadioButton(dialog, 1004, 1005, 1004);
+        for (i = 0; i < s_winapi_startup_adapter_count; ++i)
+            SendMessageA(GetDlgItem(dialog, 1000), LB_ADDSTRING, 0,
+                (LPARAM)s_winapi_startup_adapters[i].label);
+        SendMessageA(GetDlgItem(dialog, 1000), LB_SETCURSEL, 0, 0);
+        surface_winapi_startup_radio_sync(dialog, state);
+        surface_winapi_startup_modes_refresh(dialog, state);
+        surface_winapi_startup_devices_refresh(dialog, state);
         return TRUE;
     }
     if (message == WM_COMMAND && state != NULL) {
         unsigned int command = (unsigned int)(wparam & 0xffffu);
+        if (command == 1000u && HIWORD(wparam) == LBN_SELCHANGE) {
+            LRESULT selected = SendMessageA(GetDlgItem(dialog, 1000),
+                                            LB_GETCURSEL, 0, 0);
+            if (selected >= 0 && (unsigned int)selected <
+                    s_winapi_startup_adapter_count) {
+                state->selected_adapter = (unsigned int)selected;
+                surface_winapi_startup_radio_sync(dialog, state);
+                surface_winapi_startup_modes_refresh(dialog, state);
+                surface_winapi_startup_devices_refresh(dialog, state);
+            }
+            return TRUE;
+        }
+        if (command == 1002u && HIWORD(wparam) == LBN_SELCHANGE) {
+            LRESULT selected = SendMessageA(GetDlgItem(dialog, 1002),
+                                            LB_GETCURSEL, 0, 0);
+            if (selected >= 0 && (unsigned int)selected < state->device_count)
+                state->selected_device = (unsigned int)selected;
+            return TRUE;
+        }
+        if (command == 1004u || command == 1005u) {
+            state->fullscreen = command == 1004u;
+            surface_winapi_startup_modes_refresh(dialog, state);
+            return TRUE;
+        }
         if (command == 1u) {
             LRESULT selected = SendMessageA(GetDlgItem(dialog, 1003),
-                                            0x0147, 0, 0);
-            if (selected < 0 || (unsigned int)selected >= state->mode_count)
-                return TRUE;
+                                            LB_GETCURSEL, 0, 0);
+            if (selected < 0 || (unsigned int)selected >= state->mode_count ||
+                state->device_count == 0u) return TRUE;
             state->selected_mode = (unsigned int)selected;
             state->fullscreen = IsDlgButtonChecked(dialog, 1004) != 0;
-            s_winapi_startup_selected_mode =
+            s_winapi_startup_selected_modes[s_winapi_startup_pending_slot] =
                 state->modes[state->selected_mode];
             EndDialog(dialog, 1);
             return TRUE;
         }
         if (command == 2u) {
-            EndDialog(dialog, 0);
+            EndDialog(dialog, 2);
             return TRUE;
         }
     }
     return FALSE;
 }
 
-static int surface_winapi_startup_adapter_count(void* context)
+typedef BOOL (WINAPI *SurfaceEnumAdapterCallback)(GUID*, LPSTR, LPSTR, void*);
+typedef HRESULT (WINAPI *SurfaceEnumAdaptersFn)(SurfaceEnumAdapterCallback,
+                                               void*);
+
+static BOOL WINAPI surface_winapi_startup_adapter_collect(GUID* guid,
+    LPSTR description, LPSTR name, void* context)
+{
+    WinApiStartupAdapter* adapter;
+    (void)context;
+    if (s_winapi_startup_adapter_count >= 32u) return TRUE;
+    adapter = &s_winapi_startup_adapters[s_winapi_startup_adapter_count++];
+    memset(adapter, 0, sizeof(*adapter));
+    if (guid != NULL) {
+        adapter->guid = *guid;
+        adapter->has_guid = 1;
+    }
+    sprintf(adapter->label, "%.120s (%.120s)",
+        description != NULL ? description : "", name != NULL ? name : "");
+    return TRUE;
+}
+
+static int surface_winapi_startup_adapter_count_get(void* context)
 {
     SurfaceDdrawCreateFn create;
-    void* object = NULL;
-    int available;
+    SurfaceEnumAdaptersFn enumerate;
     (void)context;
+    s_winapi_startup_adapter_count = 0;
     if (!surface_ddraw_api_get(&create)) return 0;
-    available = create(NULL, &object, NULL) == 0 && object != NULL;
-    if (object != NULL) surface_com_release(object);
-    return available ? 1 : 0;
+    enumerate = (SurfaceEnumAdaptersFn)GetProcAddress(s_surface_ddraw_module,
+                                                       "DirectDrawEnumerateA");
+    if (enumerate == NULL || enumerate(surface_winapi_startup_adapter_collect,
+                                       NULL) != 0) return 0;
+    return (int)s_winapi_startup_adapter_count;
 }
 
 static int surface_winapi_startup_adapter_get(void* context, int index,
     DirectDrawAdapterCandidate* adapter_out)
 {
-    if (context == NULL || index != 0 || adapter_out == NULL) return 0;
-    adapter_out->adapter = NULL;
-    adapter_out->flags = 0;
-    return surface_winapi_startup_adapter_count(context);
+    WinApiStartupAdapter* adapter;
+    (void)context;
+    if (index < 0 || (unsigned int)index >= s_winapi_startup_adapter_count ||
+        adapter_out == NULL) return 0;
+    adapter = &s_winapi_startup_adapters[index];
+    adapter_out->adapter = adapter->has_guid ? &adapter->guid : NULL;
+    adapter_out->flags = adapter->has_guid ? 1u : 0x31u;
+    return 1;
 }
 
 static int surface_winapi_startup_selection_dialog(void* context,
@@ -5081,19 +5436,35 @@ static int surface_winapi_startup_selection_dialog(void* context,
     if (adapter_out == NULL || mode_out == NULL || fullscreen_out == NULL)
         return 0;
     memset(&state, 0, sizeof(state));
-    if (!surface_winapi_startup_modes_enumerate(&state)) return 0;
+    s_winapi_startup_pending_slot = 1u - s_winapi_startup_committed_slot;
     result = (int)DialogBoxParamA(GetModuleHandleA(NULL),
         MAKEINTRESOURCEA(101), (HWND)context,
         (DLGPROC)surface_winapi_mode_dialog_proc, (LPARAM)&state);
+    if (result == 2) return -1;
     if (result != 1) return 0;
-    adapter_out->adapter = NULL;
-    adapter_out->flags = 0;
-    mode_out->descriptor = &s_winapi_startup_selected_mode;
-    mode_out->width = (int)s_winapi_startup_selected_mode.dmPelsWidth;
-    mode_out->height = (int)s_winapi_startup_selected_mode.dmPelsHeight;
-    mode_out->bits_per_pixel =
-        (int)s_winapi_startup_selected_mode.dmBitsPerPel;
-    mode_out->flags = s_winapi_startup_selected_mode.dmDisplayFlags;
+    s_winapi_startup_selected_devices[s_winapi_startup_pending_slot] =
+        state.devices[state.selected_device];
+    if (s_winapi_startup_adapters[state.selected_adapter].has_guid) {
+        s_winapi_startup_selected_guids[s_winapi_startup_pending_slot] =
+            s_winapi_startup_adapters[state.selected_adapter].guid;
+        adapter_out->adapter = &s_winapi_startup_selected_guids[
+            s_winapi_startup_pending_slot];
+        adapter_out->flags = 1u;
+    }
+    else {
+        adapter_out->adapter = NULL;
+        adapter_out->flags = 0x31u;
+    }
+    mode_out->descriptor = &s_winapi_startup_selected_modes[
+        s_winapi_startup_pending_slot];
+    mode_out->width = (int)s_winapi_startup_selected_modes[
+        s_winapi_startup_pending_slot].dmPelsWidth;
+    mode_out->height = (int)s_winapi_startup_selected_modes[
+        s_winapi_startup_pending_slot].dmPelsHeight;
+    mode_out->bits_per_pixel = (int)s_winapi_startup_selected_modes[
+        s_winapi_startup_pending_slot].dmBitsPerPel;
+    mode_out->flags = s_winapi_startup_selected_modes[
+        s_winapi_startup_pending_slot].dmDisplayFlags;
     *fullscreen_out = state.fullscreen;
     return 1;
 }
@@ -5102,21 +5473,28 @@ static int surface_winapi_startup_renderer_initialize(void* context,
     int fullscreen, void* adapter,
     const DirectDrawDisplayModeCandidate* mode)
 {
-    DisplaySurface probe;
+    DirectDrawRendererInitParams params;
     HWND window = (HWND)context;
-    (void)context;
-    (void)adapter;
     if (mode == NULL || mode->width <= 0 || mode->height <= 0) return 0;
-    if (window != NULL) {
-        renderer_window_mode_apply(fullscreen, 100, 100, mode->width,
-                                   mode->height);
-        ShowWindow(window, 5);
-    }
-    memset(&probe, 0, sizeof(probe));
-    if (surface_create_winapi_display_mode(&probe, (void*)window,
-            mode->width, mode->height, mode->bits_per_pixel,
-            0) != 0) return 0;
-    surface_destroy(&probe);
+    memset(&params, 0, sizeof(params));
+    params.window = window;
+    params.fullscreen = fullscreen;
+    params.adapter_guid = adapter;
+    params.adapter_flags = adapter != NULL ? 1u : 0x31u;
+    params.device_guid = &s_winapi_startup_selected_devices[
+        s_winapi_startup_pending_slot].guid;
+    params.device_flags = s_winapi_startup_selected_devices[
+        s_winapi_startup_pending_slot].flags;
+    params.mode_width = mode->width;
+    params.mode_height = mode->height;
+    params.mode_bits_per_pixel = mode->bits_per_pixel;
+    params.width = mode->width;
+    params.height = mode->height;
+    params.window_x = 100;
+    params.window_y = 100;
+    if (!directdraw_renderer_init(&params)) return 0;
+    ShowWindow(window, 5);
+    s_winapi_startup_committed_slot = s_winapi_startup_pending_slot;
     return 1;
 }
 #endif
@@ -5126,7 +5504,7 @@ void surface_winapi_startup_ops_install(void* owner_window)
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     DirectDrawDeviceInitializeOps ops;
     memset(&ops, 0, sizeof(ops));
-    ops.adapter_count_get = surface_winapi_startup_adapter_count;
+    ops.adapter_count_get = surface_winapi_startup_adapter_count_get;
     ops.adapter_get = surface_winapi_startup_adapter_get;
     ops.selection_dialog = surface_winapi_startup_selection_dialog;
     ops.renderer_initialize = surface_winapi_startup_renderer_initialize;
@@ -5141,11 +5519,17 @@ void surface_winapi_startup_ops_install(void* owner_window)
 int surface_create(DisplaySurface* out, void* hwnd, int w, int h)
 {
 #if defined(_WIN32) && !defined(_WIN64)
+    int result;
     if (w <= 0 || h <= 0) {
         if (out != NULL) memset(out, 0, sizeof(*out));
         return -1;
     }
-    return surface_create_winapi_display_mode(out, hwnd, w, h, 0, 0);
+    result = surface_create_winapi_display_mode(out, hwnd, w, h, 32, 0);
+    if (result == 0 && s_winapi_renderer_state.device != NULL)
+        s_winapi_renderer_state.staging_surface = out->surf;
+    else if (result != 0 && s_winapi_renderer_state.device != NULL)
+        winapi_renderer_state_release(&s_winapi_renderer_state);
+    return result;
 #else
     if (out == NULL) return -1;
     memset(out, 0, sizeof(*out));
@@ -5158,9 +5542,13 @@ void surface_destroy(DisplaySurface* s)
 {
     if (s == NULL) return;
 #if defined(_WIN32) && !defined(_WIN64)
+    int release_renderer = s->surf != NULL &&
+        s->surf == s_winapi_renderer_state.staging_surface;
     if (s->surf != NULL) surface_com_release(s->surf);
     if (s->palette != NULL) surface_com_release(s->palette);
     if (s->dd != NULL) surface_com_release(s->dd);
+    if (release_renderer && s_winapi_renderer_state.device != NULL)
+        winapi_renderer_state_release(&s_winapi_renderer_state);
 #endif
     s->dd = NULL;
     s->surf = NULL;

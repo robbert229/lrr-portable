@@ -296,6 +296,10 @@ int  surface_create(DisplaySurface* out, void* hwnd, int w, int h);
 int  surface_create_display_mode(DisplaySurface* out, void* hwnd, int w,
                                  int h, int bits_per_pixel, int fullscreen);
 void surface_destroy(DisplaySurface* s);
+int surface_rgba_copy_to_rgb(void* target, int target_pitch, int target_width,
+    int target_height, const void* source, int source_pitch, int width,
+    int height, int x, int y, unsigned int bpp, uint32_t red_mask,
+    uint32_t green_mask, uint32_t blue_mask);
 int  surface_width(DisplaySurface* s);
 int  surface_height(DisplaySurface* s);
 /* Update the owned 256-entry palette attached to an indexed DirectDraw
@@ -627,6 +631,8 @@ typedef struct DirectDrawRendererInitParams {
     int fullscreen;
     const void* adapter_guid;
     uint32_t adapter_flags;
+    const void* device_guid;
+    uint32_t device_flags;
     int mode_width;
     int mode_height;
     int mode_bits_per_pixel;
@@ -687,6 +693,7 @@ typedef struct DirectDrawDeviceInitializeOps {
     int (*mode_supported)(void* context, void* adapter,
                           const DirectDrawDisplayModeCandidate* mode,
                           int windowed);
+    /* Return 1 on acceptance, -1 on user cancellation, 0 on failure. */
     int (*selection_dialog)(void* context, int error_mode,
                             DirectDrawAdapterCandidate* adapter_out,
                             DirectDrawDisplayModeCandidate* mode_out,
@@ -705,10 +712,12 @@ void directdraw_device_initialize_ops_set(
 int directdraw_device_initialize(int show_dialog, int register_extra_modes,
                                  int auto_select, int windowed,
                                  const char* error_message); /* FUN_0049d030 */
+int directdraw_device_selection_cancelled(void);
 void directdraw_device_selection_get(DirectDrawDeviceSelection* out);
 /* Installs the WinAPI DirectDraw adapter and the retail mode-selection
  * dialog resource before DirectDrawDeviceInitialize is called. */
 void surface_winapi_startup_ops_install(void* owner_window);
+int surface_winapi_present_rgba(const void* pixels, int pitch, int width, int height);
 typedef int (*Direct3DTextureMemoryCapsQueryFn)(void* context,
                                                 uint32_t capability,
                                                 uint32_t* memory_out);
