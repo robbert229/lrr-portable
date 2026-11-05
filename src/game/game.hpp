@@ -473,6 +473,10 @@ typedef struct GameContext {
                                    * Advanced values (speed/sfx/music/bright/
                                    * help; issue #85), seeded by the active
                                    * save slot, persisted on commit          */
+    int   saved_music_volume;     /* active slot +0x04, applied at level load */
+    int   saved_sfx_volume;       /* active slot +0x08 */
+    int   saved_scroll_index;     /* active slot +0x0c */
+    int   saved_brightness;       /* active slot +0x10 */
     int   current_record;         /* checkpoint_step: level -> record index */
     int   active_slot;            /* slot of `records` (ctx +0x18 side) */
     int   record_count;           /* ctx +0x18 */

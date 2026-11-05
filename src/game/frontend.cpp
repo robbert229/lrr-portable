@@ -2604,9 +2604,10 @@ int frontend_open_saved_campaign(FrontEnd* fe, GameContext* game, int slot)
     int count = 0;
     const uint8_t* records = NULL;
     if (!save_slot_preview(game, slot, &records, &count) ||
-        !frontend_apply_campaign_progress(fe, records, count) ||
+        !frontend_apply_campaign_progress(fe, records, count)) return 0;
+    /* A selected slot needs its context, not just the immutable preview. */
+    if (!save_read_slot_target((uint32_t)slot, NULL, 1) ||
         !frontend_open_submenu(fe, FE_MENU_MAIN, 1)) return 0;
-    save_slot_set(game, slot);
     fe->selected_save_slot = slot;
     return 1;
 }
@@ -2703,6 +2704,8 @@ int frontend_state_change(FrontEnd* fe, int state)
     /* FrontEndStateChange calls OptionsLoadOrDefault for every valid flow.
      * Main/new-game/load retain the active save context's option triple;
      * options/quit only clear the frontend selection words. */
+    options_frontend_selection_set(state == FE_STATE_MAIN
+                                       ? -1 : fe->selected_save_slot);
     options_load_or_default(save_current_context_get(),
         state <= FE_STATE_TRAINING ? 1 : 0, 1);
     /* Save flow case 4 raises DAT_00557500 only when there is no active
@@ -2754,7 +2757,10 @@ namespace reference_target {
 void save_menu_open_from_reward(void)
 {
     FrontEnd* fe = s_reward_save_frontend;
-    if (fe == NULL || !frontend_state_change(fe, FE_STATE_SAVE_REWARD))
+    if (fe == NULL)
+        return;
+    options_write_to_slot_target();
+    if (!frontend_state_change(fe, FE_STATE_SAVE_REWARD))
         return;
     /* SaveMenuOpenFromReward selects submenu zero in the separate save-menu
      * set. The legacy routine then runs a blocking input loop; the portable
@@ -3097,21 +3103,6 @@ static FeEvent fe_activate(FrontEnd* fe)
     return FE_EVT_NONE;
 }
 
-/* Confirmation menus pair an affirmative trigger with a submenu link.
- * Escape does not choose either action. */
-static int fe_confirmation_submenu(const FeSubmenu* sub)
-{
-    int has_trigger = 0, has_link = 0;
-    if (sub == NULL || sub->item_count != 2) return 0;
-    for (int i = 0; i < sub->item_count; ++i) {
-        const FeItem* item = &sub->items[i];
-        if (item->kind == FE_ITEM_TRIGGER && item->flag != 0) has_trigger = 1;
-        if (item->kind == FE_ITEM_NEXT && s_stristr(item->target, "menu"))
-            has_link = 1;
-    }
-    return has_trigger && has_link;
-}
-
 FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
                       const TextureSurface* measure)
 {
@@ -3282,10 +3273,8 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     }
 
     if (in->esc) {
-        if (fe->menu == FE_MENU_PAUSED ||
-            (fe->menu == FE_MENU_MAIN &&
-             (fe->sub == 0 || frontend_picker_active(fe) ||
-              fe_confirmation_submenu(sub)))) {
+        /* Main and pause menus leave navigation to their configured items. */
+        if (fe->menu == FE_MENU_PAUSED || fe->menu == FE_MENU_MAIN) {
             fe_overlay_step(fe);
         } else if (fe->sub != 0) {
             fe->sub = 0;
@@ -6648,7 +6637,8 @@ void advisor_message_ui_initialize(BlockFile* cfg, int width, int height)
                 (uintptr_t)s_message_font, header, 0x400);
     }
     ui_message_strings_initialize(s_message_text_buffers[0],
-        s_message_text_buffers[1], NULL, NULL, 0.0f);
+        s_message_text_buffers[1], (void*)(uintptr_t)316,
+        (void*)(uintptr_t)425, 0.0f);
     text_buffer_draw_software_install();
     s_message_panel_image = image_surface_load(
         "Interface\\MessagePanel\\MsgPanel.bmp", 0u, 0u);
@@ -7158,7 +7148,10 @@ static int advisor_text_display_state_get(void* context,
     tutorial_message_generation_sync();
     request = engine_overlay_word_peek(1);
     state->current_slot = s_advisor_text_current_slot;
-    state->hidden_slot = 0;
+    state->slot_image = state->current_slot >= 0 ?
+        ui_message_image_slot_get((unsigned int)state->current_slot) : NULL;
+    state->hidden_slot = state->slot_image != NULL;
+    ui_message_image_position_get(&state->x, &state->y);
     state->message_id = (int)request;
     state->message_flags = engine_overlay_word_peek(0);
     state->message_timer = s_advisor_text_animation_timer;
@@ -7529,6 +7522,17 @@ void advisor_text_display_worker(float delta)
                 void* output = alternate != 0 ? state.alternate_text_output :
                                                 state.primary_text_output;
                 (void)advisor_text_output_draw(output, delta);
+            }
+            if (state.slot_image != NULL) {
+                DisplaySurface* target = surface_active_render_target_get();
+                void* pixels = NULL;
+                int pitch = 0;
+                if (target != NULL && surface_lock(target, &pixels, &pitch) == 0) {
+                    surface_blit_texture(pixels, pitch, target->w, target->h,
+                        (TextureSurface*)state.slot_image,
+                        (int)state.x, (int)state.y);
+                    surface_unlock(target, pixels);
+                }
             }
         }
         else {
@@ -11287,8 +11291,11 @@ void text_messages_config_load(BlockFile* config)
 {
     BlockRec* group;
     BlockRec* entry;
+    char path[256];
     if (config == NULL) return;
-    group = block_subgroup(config, "TextMessages");
+    snprintf(path, sizeof(path), "%s TextMessages", util_root_name(config));
+    group = block_subgroup(config, path);
+    if (group == NULL) group = block_subgroup(config, "TextMessages");
     for (entry = block_first_child(group); entry != NULL;
          entry = block_next_sibling(entry)) {
         int slot;
@@ -11297,7 +11304,9 @@ void text_messages_config_load(BlockFile* config)
         if (ui_message_label_index_find(label, &slot))
             ui_message_text_slot_assign(slot, text != NULL ? text : "");
     }
-    group = block_subgroup(config, "TextMessagesWithImages");
+    snprintf(path, sizeof(path), "%s TextMessagesWithImages", util_root_name(config));
+    group = block_subgroup(config, path);
+    if (group == NULL) group = block_subgroup(config, "TextMessagesWithImages");
     for (entry = block_first_child(group); entry != NULL;
          entry = block_next_sibling(entry)) {
         int slot;
