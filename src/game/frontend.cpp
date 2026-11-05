@@ -9,15 +9,9 @@
  * row carries the level's FrontEndX/Y scatter position (the config's
  * per-level cavern coords) so the picker looks like a map.
  *
- * Actions (frontend_tick) — keyboard-first for this milestone:
- *   Enter on a picker row        -> FE_EVT_START_LEVEL (pending_level set)
- *   Enter on a Trigger, flag!=0  -> contextual action (quit/back/confirm)
- *   Enter on a Next to "Menu%i"  -> navigate submenus
- *   Esc on a submenu             -> back to the root submenu
- *   Esc on the root submenu      -> quit
- *   Slider/Cycle                 -> adjust the option (writes into fe->opts
- *                                  when attached; issue #85)
- *   TextInput                    -> display-only (parsed, not editable)
+ * Main menu selection follows the pointer. Main and pause rows activate on
+ * clicks, not Enter/Space. Save menu keyboard behavior remains separate.
+ * Slider and cycle controls write attached options.
  */
 #include <stdio.h>
 #include <stdarg.h>
@@ -240,6 +234,7 @@ static FrontEnd* s_reward_save_frontend;
 static TextureSurface* s_interface_message_tab_info_text;
 // GLOBAL: LEGORR 0x004dcec4
 static int s_back_button_width;
+static void fe_picker_order(FrontEnd* fe, int tree_index);
 static int fe_sav_menu_list_from_config(FrontEnd* fe, int list_id,
                                         int tree_index,
                                         const char* start_level);
@@ -747,12 +742,13 @@ static void fe_parse_item(const char* value, FeItem* it)
     it->kind = FE_ITEM_NEXT;
     it->x = 0; it->y = 0; it->flag = 0; it->level_start = 0;
     it->load_slot = 0;
+    it->state_gated = 0;
     it->min = 0; it->max = 0; it->value = 0; it->cycle_count = 0;
     it->slider_x = 0; it->slider_y = 0;
     it->slider_config = NULL;
     memset(it->slider_images, 0, sizeof(it->slider_images));
     it->label[0] = '\0'; it->target[0] = '\0';
-    it->image_normal[0] = it->image_selected[0] = '\0';
+    it->image_normal[0] = it->image_selected[0] = it->image_disabled[0] = '\0';
     if (value == NULL) {
         return;
     }
@@ -796,6 +792,7 @@ static void fe_parse_item(const char* value, FeItem* it)
             snprintf(it->label, FE_NAME_MAX, "%s", fields[6]);
             snprintf(it->target, FE_NAME_MAX, "%s", fields[7]);
         } else if (n > 3) {
+            it->state_gated = (n == 6);
             snprintf(it->label, FE_NAME_MAX, "%s", fields[3]);
             if (n > 4) {
                 snprintf(it->target, FE_NAME_MAX, "%s", fields[4]);
@@ -862,6 +859,8 @@ static void fe_parse_item(const char* value, FeItem* it)
             it->value = fe_option_default(it->label, it->min, it->max);
         } else if (it->kind == FE_ITEM_CYCLE) {
             /* Cycle:x1:y1:x2:y2:banner:count:opt1:opt2:… */
+            it->cycle_x = (n > 3) ? atoi(fields[3]) : 0;
+            it->cycle_y = (n > 4) ? atoi(fields[4]) : 0;
             int count = (n > 6) ? atoi(fields[6]) : 0;
             if (count > 4) {
                 count = 4;
@@ -945,7 +944,21 @@ void frontend_options_sync(FrontEnd* fe)
 static void fe_options_write(FrontEnd* fe, FeItem* it)
 {
     if (fe->opts != NULL && fe_options_widget(it->kind)) {
+        int id = options_id_for_label(it->label);
         options_set_label(fe->opts, it->label, it->value);
+        /* These callbacks belong to actual user adjustments, not widget sync
+         * or save loading. Ordinal zero is High/On in the shipped menu. */
+        if (id == OPT_WALL_DETAIL) {
+            uint32_t* state = engine_shared_state_word();
+            if (it->value == 0) *state |= 0x20u;
+            else if (it->value == 1) *state &= ~0x20u;
+        } else if (id == OPT_MUSIC_ONOFF) {
+            media_cd_watchdog_update(it->value == 0);
+        } else if (id == OPT_SFX_ONOFF) {
+            media_audio_playback_toggle(it->value == 0);
+        } else if (id == OPT_AUTO_SPEED) {
+            selection_flag10_set_clear(it->value == 0);
+        }
     }
 }
 
@@ -1006,7 +1019,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     snprintf(buf, sizeof(buf), "%s AutoCenter", pre);
     sub->auto_center = block_get_bool(fe->cfg, buf) == 1;
     snprintf(buf, sizeof(buf), "%s DisplayTitle", pre);
-    sub->display_title = block_get_bool(fe->cfg, buf) == 1;
+    sub->display_title = block_get_bool(fe->cfg, buf) != 0;
     /* Anchored is stored as x:y; title placement currently uses its y value. */
     snprintf(buf, sizeof(buf), "%s Anchored", pre);
     v = block_get_strptr(fe->cfg, buf);
@@ -1192,6 +1205,7 @@ static void fe_graft_picker(FrontEnd* fe, FeMenu* m, int tutorial)
             FeItem* it = &sub->items[base + k];
             it->kind = FE_ITEM_NEXT;
             it->level_start = 1;
+            it->level_enabled = 1;
             const char* lvl = tutorial ? fe->tutorial[k] : fe->campaign[k];
             snprintf(it->target, FE_NAME_MAX, "%s", lvl);
             snprintf(it->label, FE_NAME_MAX, "%s",
@@ -1333,6 +1347,8 @@ void frontend_init(FrontEnd* fe)
     ui_panel_name_tables_init();
     s_main_menu_text_item_pending = 0;
     memset(fe, 0, sizeof(*fe));
+    fe->selected_save_slot = -1;
+    fe->origin_picker_sub = -1;
     fe->pointer_x = fe->pointer_y = -1;
     fe->overlay_active = -1;
     advisor_text_display_production_install();
@@ -2116,46 +2132,35 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
         (void)fe_sav_menu_list_from_config(
             fe, 5, 1, fe->tutorial_n > 0 ? fe->tutorial[0] : NULL);
     }
+    if (fe->built) {
+        fe_picker_order(fe, 0);
+        fe_picker_order(fe, 1);
+        (void)frontend_apply_campaign_progress(fe, NULL, 0);
+    }
     /* Options widgets seed from the store when one is already attached. */
     frontend_options_sync(fe);
     return main_ok;
 }
 
+/* Separate registries: campaign records use the campaign NextLevel order.
+ * Training has its own index space in the reference (0x416641/0x41665a). */
 int fe_record_for_level(const FrontEnd* fe, const char* level)
 {
-    if (fe == NULL || !fe->built || level == NULL || level[0] == '\0') {
-        return -1;
-    }
-    for (int tutorial_index = 0; tutorial_index < fe->tutorial_n;
-         tutorial_index++) {
-        if (s_strcaseeq(level, fe->tutorial[tutorial_index])) {
-            return tutorial_index;
-        }
-    }
-    for (int campaign_index =  0; campaign_index < fe->campaign_n;
-         campaign_index++) {
-        if (s_strcaseeq(level, fe->campaign[campaign_index])) {
-            return fe->tutorial_n + campaign_index;
-        }
-    }
+    int i;
+    if (fe == NULL || !fe->built || level == NULL) return -1;
+    for (i = 0; i < fe->campaign_n; ++i)
+        if (s_strcaseeq(level, fe->campaign[i])) return i;
+    for (i = 0; i < fe->tutorial_n; ++i)
+        if (s_strcaseeq(level, fe->tutorial[i])) return i;
     return -1;
 }
 
 int fe_level_for_record(const FrontEnd* fe, int rec, char* out, size_t sz)
 {
-    if (fe == NULL || !fe->built || out == NULL || rec < 0) {
-        return 0;
-    }
-    if (rec < fe->tutorial_n) {
-        snprintf(out, sz, "%s", fe->tutorial[rec]);
-        return 1;
-    }
-    rec -= fe->tutorial_n;
-    if (rec < fe->campaign_n) {
-        snprintf(out, sz, "%s", fe->campaign[rec]);
-        return 1;
-    }
-    return 0;
+    if (fe == NULL || !fe->built || out == NULL || rec < 0 ||
+        rec >= fe->campaign_n) return 0;
+    snprintf(out, sz, "%s", fe->campaign[rec]);
+    return 1;
 }
 
 // FUNCTION: LEGORR 0x00416d00
@@ -2183,8 +2188,9 @@ static int fe_save_menu_list_entry_append(FeSubmenu* submenu,
     item->load_slot = slot->id;
     snprintf(item->label, FE_NAME_MAX, "%s", slot->label);
     snprintf(item->status, FE_NAME_MAX, "%s", slot->status);
-    item->x = 48;
-    item->y = 96 + row * 60;
+    /* SaveMenuBuild supplies list offsets relative to the submenu anchor. */
+    item->x = submenu->base_x - 200;
+    item->y = submenu->base_y - 100 + row * 60;
     ++submenu->item_count;
     return 1;
 }
@@ -2192,6 +2198,11 @@ static int fe_save_menu_list_entry_append(FeSubmenu* submenu,
 /* Partial SaveMenuBuild (FUN_00415a10): populate save/load menus with
  * runtime slot rows; the corpus also resolves config keys and slot summaries. */
 // FUNCTION: LEGORR 0x00415a10
+int frontend_slot_raw_index(int ordinal)
+{
+    return ordinal >= 1 && ordinal < SAVE_SLOTS ? ordinal - 1 : -1;
+}
+
 int frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n)
 {
     if (fe == NULL || slots == NULL || n <= 0) {
@@ -2337,11 +2348,11 @@ static void fe_sav_menu_list_walk(FeSavMenuListBuild* build,
     (void)fe_cfg_str(build->fe->cfg, group, "MenuBMP", row->menu_bmp,
                      sizeof(row->menu_bmp));
     char path[FE_PATH_MAX * 2];
-    snprintf(path, sizeof(path), "%s Levels %s Open",
+    snprintf(path, sizeof(path), "%s Levels %s FrontEndOpen",
              util_root_name(build->fe->cfg), group);
     int open = block_get_bool(build->fe->cfg, path);
     if (open == 2) {
-        snprintf(path, sizeof(path), "%s %s Open",
+        snprintf(path, sizeof(path), "%s %s FrontEndOpen",
                  util_root_name(build->fe->cfg), group);
         open = block_get_bool(build->fe->cfg, path);
     }
@@ -2399,36 +2410,28 @@ static int fe_sav_menu_list_from_config(FrontEnd* fe, int list_id,
         || start_level[0] == '\0') {
         return 0;
     }
-    char path[FE_PATH_MAX * 2];
-    snprintf(path, sizeof(path), "%s Levels", util_root_name(fe->cfg));
-    BlockRec* levels = block_subgroup(fe->cfg, path);
-    if (levels == NULL) {
-        return 0;
-    }
-
-    void* entries[LEVEL_REGISTRY_MAX];
-    void* values_a[LEVEL_REGISTRY_MAX];
-    void* values_b[LEVEL_REGISTRY_MAX];
+    char names[FE_CHAIN_MAX][FE_LEVEL_NAME_MAX + 16];
+    void* entries[FE_CHAIN_MAX];
+    void* values_a[FE_CHAIN_MAX];
+    void* values_b[FE_CHAIN_MAX];
+    int count = tree_index == 0 ? fe->campaign_n : fe->tutorial_n;
+    int i;
     memset(entries, 0, sizeof(entries));
     memset(values_a, 0, sizeof(values_a));
     memset(values_b, 0, sizeof(values_b));
-    int count = 0;
-    for (BlockRec* rec = block_first_child(levels);
-         rec != NULL && count < LEVEL_REGISTRY_MAX;
-         rec = block_next_sibling(rec)) {
-        entries[count++] = (void*)block_name(rec);
+    for (i = 0; i < count; ++i) {
+        snprintf(names[i], sizeof(names[i]), "Levels::%s",
+                 tree_index == 0 ? fe->campaign[i] : fe->tutorial[i]);
+        entries[i] = names[i];
     }
-    if (count == 0) {
-        return 0;
-    }
+    if (count == 0) return 0;
 
     SavListWindow registry;
     registry.count = count;
     registry.entries = entries;
     registry.values_a = values_a;
     registry.values_b = values_b;
-    SavTreeNode* root = level_node_get(
-        &registry, fe->cfg, fe_level_group_name(start_level));
+    SavTreeNode* root = level_node_get(&registry, fe->cfg, names[0]);
     int rows = frontend_sav_menu_list(fe, list_id, root, &registry);
 
     /* Retail SaveMenuBuild retains both roots for SavReadSlot's campaign
@@ -2446,6 +2449,167 @@ static int fe_sav_menu_list_from_config(FrontEnd* fe, int list_id,
         }
     }
     return rows;
+}
+
+typedef struct FePickerOrder {
+    const SavTreeNode* nodes[FE_CHAIN_MAX];
+    int count;
+} FePickerOrder;
+
+static void fe_picker_order_walk(FePickerOrder* order, const SavTreeNode* node)
+{
+    int i;
+    if (node == NULL) return;
+    for (i = 0; i < order->count; ++i) if (order->nodes[i] == node) return;
+    if (order->count >= FE_CHAIN_MAX) return;
+    order->nodes[order->count++] = node;
+    for (i = 0; i < (int)node->count; ++i)
+        fe_picker_order_walk(order, ((SavTreeNode**)node->children)[i]);
+}
+
+/* SaveMenuList rows and FrontEndSelectedAction use first-visit DFS order. */
+static void fe_picker_order(FrontEnd* fe, int tree_index)
+{
+    FePickerOrder order;
+    FeItem ordered[FE_CHAIN_MAX];
+    FeMenu* menu = &fe->menus[FE_MENU_MAIN];
+    int i;
+    memset(&order, 0, sizeof(order));
+    fe_picker_order_walk(&order, (SavTreeNode*)sav_tree_root_peek(tree_index));
+    for (i = 0; i < menu->submenu_count; ++i) {
+        FeSubmenu* sub = &menu->submenus[i];
+        int first = -1, n = 0, j, k;
+        if (!s_stristr(sub->image, "LevelPick") ||
+            (!!s_stristr(sub->image, "LevelPickT") != (tree_index != 0))) continue;
+        for (j = 0; j < sub->item_count; ++j)
+            if (sub->items[j].level_start) { first = j; break; }
+        if (first < 0) continue;
+        for (j = 0; j < order.count; ++j) {
+            uint32_t index = order.nodes[j]->window;
+            int max = tree_index ? fe->tutorial_n : fe->campaign_n;
+            const char* name;
+            if (index >= (uint32_t)max) continue;
+            name = tree_index ? fe->tutorial[index] : fe->campaign[index];
+            for (k = first; k < sub->item_count; ++k) {
+                if (sub->items[k].level_start && s_strcaseeq(name, sub->items[k].target)) {
+                    ordered[n++] = sub->items[k];
+                    break;
+                }
+            }
+        }
+        for (j = 0; j < n; ++j) {
+            const FeLevelMenuList* list = &fe->level_menu_lists[tree_index];
+            FeItem* item = &ordered[j];
+            int r;
+            for (r = 0; r < list->row_count; ++r) {
+                const FeLevelMenuRow* row = &list->rows[r];
+                if (s_strcaseeq(row->level, item->target)) {
+                    char tuple[sizeof(row->menu_bmp)];
+                    char* part;
+                    char* next;
+                    char* dest[3] = { item->image_selected, item->image_normal,
+                                      item->image_disabled };
+                    int variant;
+                    item->x = row->x; item->y = row->y;
+                    snprintf(item->label, sizeof(item->label), "%s", row->full_name);
+                    snprintf(tuple, sizeof(tuple), "%s", row->menu_bmp);
+                    part = tuple;
+                    for (variant = 0; variant < 3 && part != NULL; ++variant) {
+                        next = strchr(part, ',');
+                        if (next != NULL) *next++ = '\0';
+                        snprintf(dest[variant], FE_PATH_MAX, "%s", part);
+                        part = next;
+                    }
+                    break;
+                }
+            }
+            sub->items[first + j] = *item;
+        }
+        sub->item_count = first + n;
+    }
+}
+
+typedef struct FeProgressWalk {
+    FrontEnd* fe;
+    const uint8_t* records;
+    int count;
+    const SavTreeNode* seen[FE_CHAIN_MAX];
+    int seen_count;
+} FeProgressWalk;
+
+/* Reference SavTreeWalk2 (0x4172f0): the first DFS visit owns the row;
+ * children inherit this node's record bit, not accumulated ancestry. */
+static void fe_progress_walk(FeProgressWalk* walk, const SavTreeNode* node,
+                             int parent_complete)
+{
+    int i, complete = 0, authored_open = 0;
+    char path[FE_PATH_MAX * 2];
+    const char* level;
+    FeMenu* menu;
+    if (node == NULL || node->window >= (uint32_t)walk->fe->campaign_n) return;
+    for (i = 0; i < walk->seen_count; ++i)
+        if (walk->seen[i] == node) return;
+    if (walk->seen_count >= FE_CHAIN_MAX) return;
+    walk->seen[walk->seen_count++] = node;
+    level = walk->fe->campaign[node->window];
+    if (walk->records != NULL && node->window < (uint32_t)walk->count) {
+        uint32_t flags;
+        memcpy(&flags, walk->records + (size_t)node->window * SAVE_RECORD_SIZE,
+               sizeof(flags));
+        complete = (flags & 1u) != 0;
+    }
+    snprintf(path, sizeof(path), "%s Levels %s FrontEndOpen",
+             util_root_name(walk->fe->cfg), level);
+    authored_open = block_get_bool(walk->fe->cfg, path) == 1;
+    menu = &walk->fe->menus[FE_MENU_MAIN];
+    for (i = 0; i < menu->submenu_count; ++i) {
+        int j;
+        FeSubmenu* sub = &menu->submenus[i];
+        if (!s_stristr(sub->image, "LevelPick") ||
+            s_stristr(sub->image, "LevelPickT")) continue;
+        for (j = 0; j < sub->item_count; ++j) {
+            FeItem* item = &sub->items[j];
+            if (item->level_start && s_strcaseeq(item->target, level))
+                item->level_enabled = complete || parent_complete || authored_open;
+        }
+    }
+    for (i = 0; i < (int)node->count; ++i)
+        fe_progress_walk(walk, ((SavTreeNode**)node->children)[i], complete);
+}
+
+int frontend_apply_campaign_progress(FrontEnd* fe, const uint8_t* records,
+                                     int count)
+{
+    FeProgressWalk walk;
+    int i, j;
+    SavTreeNode* root = (SavTreeNode*)sav_tree_root_peek(0);
+    if (fe == NULL || !fe->built || root == NULL || count < 0) return 0;
+    for (i = 0; i < fe->menus[FE_MENU_MAIN].submenu_count; ++i) {
+        FeSubmenu* sub = &fe->menus[FE_MENU_MAIN].submenus[i];
+        if (!s_stristr(sub->image, "LevelPick") ||
+            s_stristr(sub->image, "LevelPickT")) continue;
+        for (j = 0; j < sub->item_count; ++j)
+            if (sub->items[j].level_start) sub->items[j].level_enabled = 0;
+    }
+    memset(&walk, 0, sizeof(walk));
+    walk.fe = fe; walk.records = records; walk.count = count;
+    fe_progress_walk(&walk, root, 1);
+    return walk.seen_count != 0;
+}
+
+/* The slot chooses a campaign context; gameplay starts only on a later
+ * enabled level selection. Slot inspection owns its immutable record view. */
+int frontend_open_saved_campaign(FrontEnd* fe, GameContext* game, int slot)
+{
+    int count = 0;
+    const uint8_t* records = NULL;
+    if (!save_slot_preview(game, slot, &records, &count) ||
+        !frontend_apply_campaign_progress(fe, records, count)) return 0;
+    /* A selected slot needs its context, not just the immutable preview. */
+    if (!save_read_slot_target((uint32_t)slot, NULL, 1) ||
+        !frontend_open_submenu(fe, FE_MENU_MAIN, 1)) return 0;
+    fe->selected_save_slot = slot;
+    return 1;
 }
 
 /* Prepare the portable modal state after MenuShow has reset run flags. */
@@ -2540,6 +2704,8 @@ int frontend_state_change(FrontEnd* fe, int state)
     /* FrontEndStateChange calls OptionsLoadOrDefault for every valid flow.
      * Main/new-game/load retain the active save context's option triple;
      * options/quit only clear the frontend selection words. */
+    options_frontend_selection_set(state == FE_STATE_MAIN
+                                       ? -1 : fe->selected_save_slot);
     options_load_or_default(save_current_context_get(),
         state <= FE_STATE_TRAINING ? 1 : 0, 1);
     /* Save flow case 4 raises DAT_00557500 only when there is no active
@@ -2591,7 +2757,10 @@ namespace reference_target {
 void save_menu_open_from_reward(void)
 {
     FrontEnd* fe = s_reward_save_frontend;
-    if (fe == NULL || !frontend_state_change(fe, FE_STATE_SAVE_REWARD))
+    if (fe == NULL)
+        return;
+    options_write_to_slot_target();
+    if (!frontend_state_change(fe, FE_STATE_SAVE_REWARD))
         return;
     /* SaveMenuOpenFromReward selects submenu zero in the separate save-menu
      * set. The legacy routine then runs a blocking input loop; the portable
@@ -2735,7 +2904,7 @@ static void fe_slider_pointer_handle(FrontEnd* fe, FeSubmenu* sub,
                                      const FeInput* in,
                                      const TextureSurface* measure)
 {
-    if (!in->mdown || fe->sel >= sub->item_count) {
+    if (!in->mdown || fe->sel < 0 || fe->sel >= sub->item_count) {
         return;
     }
     FeItem* dit = &sub->items[fe->sel];
@@ -2798,7 +2967,7 @@ static void fe_slider_pointer_handle(FrontEnd* fe, FeSubmenu* sub,
     }
 }
 
-/* --- activation (Enter or a pointer click resolves to this) -------------- */
+/* --- activation -------------------------------------------------------- */
 
 /* Partial FrontEndSelectedAction (FUN_00416d70): resolve the selected
  * campaign/tutorial picker row to its level key. Save-slot list resolution
@@ -2833,6 +3002,8 @@ static FeEvent fe_activate(FrontEnd* fe)
     FeSubmenu* sub = &m->submenus[fe->sub];
     FeItem* it = &sub->items[fe->sel];
 
+    if (it->state_gated && system_state_flags_get() != 0u) return FE_EVT_NONE;
+
     /* save-slot row: load the slot (FE_EVT_LOAD_GAME, fe.load_slot set) */
     if (it->load_slot) {
         fe->load_slot = it->load_slot;
@@ -2841,16 +3012,20 @@ static FeEvent fe_activate(FrontEnd* fe)
         return save_action ? FE_EVT_SAVE_GAME : FE_EVT_LOAD_GAME;
     }
 
+    /* SaveTreeLoad bit 4 gates both pointer and keyboard activation. */
+    if (it->level_start && !it->level_enabled) return FE_EVT_NONE;
+
     /* picker row: start the selected level */
     const char* level_action = fe_selected_level_action(fe);
     if (level_action != NULL) {
+        if (fe->menu == FE_MENU_MAIN) fe->origin_picker_sub = fe->sub;
         return frontend_start_level(fe, level_action);
     }
 
     /* MenuInputTick's cycle case advances the selected option on the
      * activation edge and wraps from the last choice to the first. The
      * portable keyboard path already handles left/right; activation must do
-     * the same for mouse clicks and Enter. */
+     * the same for mouse clicks and supported keyboard activation. */
     if (it->kind == FE_ITEM_CYCLE && it->cycle_count > 0) {
         ++it->value;
         if (it->value >= it->cycle_count) {
@@ -2879,9 +3054,8 @@ static FeEvent fe_activate(FrontEnd* fe)
                 }
                 return FE_EVT_NONE;   /* Replay_Objective: stub */
             case 2:   /* pause Menu3 = quit confirm ("Yes") */
-                fe->quit = 1;
                 frontend_close(fe);
-                return FE_EVT_QUIT;
+                return FE_EVT_LEAVE_LEVEL;
             case 3:   /* pause Menu4 = restart confirm ("Yes") */
                 return frontend_start_level(
                     fe, fe->resume_level[0] != '\0' ? fe->resume_level
@@ -2909,6 +3083,12 @@ static FeEvent fe_activate(FrontEnd* fe)
         && s_stristr(it->target, "menu") != 0) {
         int idx = atoi(it->target + 4) - 1; /* "MenuN" */
         if (idx >= 0 && idx < m->submenu_count) {
+            if (fe->menu == FE_MENU_MAIN && fe->sub == 0 &&
+                s_stristr(m->submenus[idx].image, "LevelPick")) {
+                fe->selected_save_slot = -1;
+                if (!s_stristr(m->submenus[idx].image, "LevelPickT"))
+                    (void)frontend_apply_campaign_progress(fe, NULL, 0);
+            }
             fe->sub = idx;
             fe->sel = 0;
             /* corpus resets DAT_005574e0 (the plane offset) when a menu
@@ -2921,6 +3101,37 @@ static FeEvent fe_activate(FrontEnd* fe)
     /* Slider / Cycle / TextInput / plain Trigger (flag 0): no-op this
      * milestone (parsed + rendered, not editable). */
     return FE_EVT_NONE;
+}
+
+/* MenuScrollStateUpdate runs after the current menu tick and render. */
+void frontend_scroll_update(FrontEnd* fe, const FeInput* in)
+{
+    union { uint32_t bits; float value; } scale, curve;
+    FeSubmenu* sub;
+    double q, amount;
+    float y;
+    if (fe == NULL || in == NULL || !fe->open) return;
+    if (fe->menu < 0 || fe->menu >= FE_MENU_COUNT) return;
+    if (fe->sub < 0 || fe->sub >= fe->menus[fe->menu].submenu_count) return;
+    sub = &fe->menus[fe->menu].submenus[fe->sub];
+    if (!sub->can_scroll) {
+        sub->scroll = 0;
+        return;
+    }
+    if (sub->scroll_extent <= 0) sub->scroll_extent = fe_scroll_measure(sub);
+    y = (float)in->mouse_y;
+    if (in->mouse_y >= 200 && in->mouse_y <= 280) return;
+    if (y < 480.0f && !in->mdown) {
+        scale.bits = 0x3e555555u;
+        curve.bits = 0x3ca3d70au;
+        q = (double)y * scale.value - 50.0;
+        amount = q * q * curve.value;
+        if (y < 240.0f) amount = -amount;
+        sub->scroll += (int)(amount * -0.25);
+    }
+    if (sub->scroll > 0) sub->scroll = 0;
+    if (sub->scroll - 480 < -sub->scroll_extent)
+        sub->scroll = 480 - sub->scroll_extent;
 }
 
 FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
@@ -2945,25 +3156,42 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     if (fe->sel >= sub->item_count) {
         fe->sel = sub->item_count - 1;
     }
-    if (fe->sel < 0) {
+    if (fe->sel < 0 && fe->menu != FE_MENU_MAIN) {
         fe->sel = 0;
     }
 
-    if (in->up) {
+    if (fe->menu == FE_MENU_MAIN) {
+        int idx = -1;
+        if (in->mouse_x >= 0 && in->mouse_y >= 0) {
+            fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &idx);
+        }
+        fe->sel = idx;
+    }
+
+    if (fe->menu != FE_MENU_MAIN && in->up) {
         if (fe->sel > 0) {
             --fe->sel;
         }
     }
-    if (in->down) {
+    if (fe->menu != FE_MENU_MAIN && in->down) {
         if (fe->sel < sub->item_count - 1) {
             ++fe->sel;
+        }
+    }
+
+    /* Resolve the current pointer target before applying horizontal input.
+     * Motion and a key edge can arrive in the same frame. */
+    if ((in->left || in->right) && in->mouse_x >= 0 && in->mouse_y >= 0) {
+        int hovered = 0;
+        if (fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &hovered)) {
+            fe->sel = hovered;
         }
     }
 
     /* Slider adjustment clamps to [min,max]. Cycle input wraps because the
      * reference's kind-0 path applies (value + 1) % option_count and wraps
      * decrements from zero to the last option. */
-    {
+    if (fe->sel >= 0) {
         FeItem* dit = &sub->items[fe->sel];
         if (dit->kind == FE_ITEM_CYCLE && dit->cycle_count > 0) {
             if (in->right) {
@@ -2976,7 +3204,10 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
                 if (dit->value < 0) {
                     dit->value = dit->cycle_count - 1;
                 }
-                fe_options_write(fe, dit);
+                /* Retail's left-cycle branch stores the wrapped ordinal but
+                 * does not invoke the cycle callback. Slider left still does. */
+                if (fe->opts != NULL)
+                    options_set_label(fe->opts, dit->label, dit->value);
                 fe->option_changed = 1;
             }
         } else if (dit->kind == FE_ITEM_SLIDER
@@ -2994,53 +3225,7 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         }
     }
 
-    /* CanScroll edge pan (corpus FUN_00413970 @ 0x413970 + DAT_005574e0
-     * in FUN_00412c00's item placement): while the cursor is in the outer
-     * bands past the deadzone the item plane scrolls, velocity proportional
-     * to distance from the band edge, clamped to [view_h - content, 0].
-     * The corpus gates y against absolute bands for a 480-high screen
-     * (< 200 scrolls, 200..280 deadzone) and velocity ~(50 - y/4)^2; this
-     * port keeps the 5/12-h + h/12 band shape and linear distance velocity
-     * capped at the corpus's ~50 px/frame. */
-    if (sub->can_scroll) {
-        if (sub->scroll_extent <= 0) {
-            sub->scroll_extent = fe_scroll_measure(sub);
-        }
-        int vh = (fe->view_h > 0) ? fe->view_h : 480;
-        int band = vh / 12;
-        int cy = vh / 2;
-        int lo = vh - sub->scroll_extent;
-        if (lo > 0) {
-            lo = 0;
-        }
-        if (sub->scroll < lo) {
-            sub->scroll = lo;
-        }
-        if (sub->scroll > 0) {
-            sub->scroll = 0;
-        }
-        if (in->mouse_y >= 0) {
-            int d = 0, dir = 0;
-            if (in->mouse_y < cy - band) {
-                d = (cy - band) - in->mouse_y;
-                dir = 1;                       /* show earlier rows */
-            } else if (in->mouse_y > cy + band) {
-                d = in->mouse_y - (cy + band);
-                dir = -1;                      /* show later rows */
-            }
-            if (d > 0) {
-                sub->scroll += dir * (d > 50 ? 50 : d);
-                if (sub->scroll > 0) {
-                    sub->scroll = 0;
-                }
-                if (sub->scroll < lo) {
-                    sub->scroll = lo;
-                }
-            }
-        }
-    }
-
-    /* pointer: hover selects; a click activates the hovered row (Enter).
+    /* pointer: hover selects; a click activates the hovered row.
      * When the pointer is in use but outside every item, a click is a
      * no-op (the menu stays up). */
     if (in->mouse_x >= 0 && in->mouse_y >= 0) {
@@ -3050,6 +3235,9 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         int hit = fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &idx);
         if (hit) {
             fe->sel = idx;
+        } else if (fe->menu == FE_MENU_MAIN) {
+            /* Main menu selection follows the pointer each frame. */
+            fe->sel = -1;
         }
 
         /* Slider pointer drag (corpus FUN_00411a00 case 3 routes a held
@@ -3070,13 +3258,13 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     }
 
     if (in->esc) {
-        if (fe->sub != 0) {
+        /* Main and pause menus leave navigation to their configured items. */
+        if (fe->menu == FE_MENU_PAUSED || fe->menu == FE_MENU_MAIN) {
+            fe_overlay_step(fe);
+        } else if (fe->sub != 0) {
             fe->sub = 0;
             fe->sel = 0;
             fe_overlay_step(fe);
-        } else if (fe->menu == FE_MENU_PAUSED) {
-            frontend_close(fe);       /* pause Esc = resume */
-            return FE_EVT_RESUME;
         } else {
             fe->quit = 1;
             frontend_close(fe);
@@ -3084,7 +3272,8 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         }
         return FE_EVT_NONE;
     }
-    if (!in->enter) {
+    /* Main and pause menu rows activate on pointer clicks, not Enter/Space. */
+    if (!in->enter || fe->menu == FE_MENU_MAIN || fe->menu == FE_MENU_PAUSED) {
         /* MenuTick updates input and selection before its overlay controller. */
         fe_overlay_step(fe);
         return FE_EVT_NONE;
@@ -3542,16 +3731,19 @@ TextureSurface* bitmap_font_resource_load(const char* name)
     return surface;
 }
 
-/* Advance width of glyph g = its ink width from the cell's left edge
- * (the engine's right-edge scan), 0 when blank. */
+/* FontResourceLoad measures the top row against the second palette key. */
 static int fe_font_advance(const TextureSurface* f, int cw, int ch, int g,
                            const uint32_t keys[2])
 {
-    int mx, my, ax, ay;
-    if (!fe_font_ink_box(f, cw, ch, g, keys, &mx, &my, &ax, &ay)) {
-        return 0;
+    int col = g % FE_FONT_GRID_COLS;
+    int row = g / FE_FONT_GRID_COLS;
+    int x;
+    for (x = cw - 1; x > 0; --x) {
+        uint32_t pixel = f->pixels[(size_t)(row * ch) *
+                                    (size_t)f->width + col * cw + x];
+        if (pixel != keys[1]) return x + 1;
     }
-    return ax + 1;
+    return 1;
 }
 
 static void fe_blit_glyph(void* px, int pitch, int w, int h,
@@ -4515,18 +4707,21 @@ void* tooltip_icon_handle_get(unsigned int bank, unsigned int index)
     return NULL;
 }
 
-static char s_advisor_tooltip_texts[38][256];
-static int s_advisor_tooltip_sounds[38];
+static const TextureSurface* s_advisor_tooltip_font;
 
 const char* advisor_tooltip_text_get(int index)
 {
-    return index >= 0 && index < 38 && s_advisor_tooltip_texts[index][0] != '\0'
-        ? s_advisor_tooltip_texts[index] : NULL;
+    TimedEffectRecord* record = index >= 0 && index < 38
+        ? timed_effect_record_get((unsigned int)index + 1u) : NULL;
+    return record != NULL && record->payload[0] != 0
+        ? (const char*)record->payload : NULL;
 }
 
 int advisor_tooltip_sound_get(int index)
 {
-    return index >= 0 && index < 38 ? s_advisor_tooltip_sounds[index] : 0;
+    TimedEffectRecord* record = index >= 0 && index < 38
+        ? timed_effect_record_get((unsigned int)index + 1u) : NULL;
+    return record != NULL ? (int)record->cue : 0;
 }
 
 /* AdvisorTooltipAndTooltipSoundConfigLoad (FUN_00434da0): the two config
@@ -4536,21 +4731,39 @@ int advisor_tooltip_sound_get(int index)
 void advisor_tooltip_and_sound_config_load(BlockFile* config)
 {
     BlockRec* entry;
-    BlockRec* section = block_subgroup(config, "ToolTips");
+    BlockRec* section = block_subgroup(config, "Lego* ToolTips");
     for (entry = block_first_child(section); entry != NULL;
          entry = block_next_sibling(entry)) {
         int index;
         const char* value = block_value(entry);
         if (value != NULL && case_insensitive_name_table_lookup(
                 block_name(entry), &index)) {
-            size_t length = strlen(value);
-            if (length >= sizeof(s_advisor_tooltip_texts[index - 1]))
-                length = sizeof(s_advisor_tooltip_texts[index - 1]) - 1u;
-            memcpy(s_advisor_tooltip_texts[index - 1], value, length);
-            s_advisor_tooltip_texts[index - 1][length] = '\0';
+            TimedEffectRecord* record = timed_effect_record_get((unsigned int)index);
+            char* out = (char*)record->payload;
+            size_t used = 0;
+            int lines = 0;
+            uint32_t width;
+            /* Image entries require the indexed resource owner; do not
+             * turn their file names into visible tooltip text. */
+            if (*value == '@') continue;
+            while (*value != '\0' && used < 511u) {
+                if (*value == '\\' && value[1] == 'n') {
+                    out[used++] = '\n'; value += 2;
+                } else {
+                    out[used++] = *value == '_' ? ' ' : *value;
+                    ++value;
+                }
+            }
+            out[used] = '\0';
+            width = formatted_text_draw_and_measure(s_advisor_tooltip_font,
+                NULL, 0, 0, 0, 0, 0, out, &lines);
+            memcpy((char*)record + 0x204, &width, sizeof(width));
+            memcpy((char*)record + 0x208, &lines, sizeof(lines));
+            memset((char*)record + 0x20c, 0, 0x64);
+            record->flags = (record->flags & ~8u) | 3u;
         }
     }
-    section = block_subgroup(config, "ToolTipsSFXs");
+    section = block_subgroup(config, "Lego* ToolTipsSFXs");
     for (entry = block_first_child(section); entry != NULL;
          entry = block_next_sibling(entry)) {
         int index;
@@ -4559,7 +4772,7 @@ void advisor_tooltip_and_sound_config_load(BlockFile* config)
         if (value != NULL && case_insensitive_name_table_lookup(
                 block_name(entry), &index) &&
             sound_alias_lookup(value, &alias)) {
-            s_advisor_tooltip_sounds[index - 1] = alias;
+            timed_effect_cue_request_set(index, (uint32_t)alias);
         }
     }
 }
@@ -4932,6 +5145,34 @@ int frontend_progress_value_changed(void)
  * Back buttons are e.g. x=-314 on Position 320:200 -> left edge). Picker
  * rows carry absolute FrontEndX/Y scatter coords (their submenu Position is
  * 0:0). */
+static int fe_picker_submenu(const FeSubmenu* sub)
+{
+    int i;
+    if (sub == NULL) return 0;
+    for (i = 0; i < sub->item_count; ++i)
+        if (sub->items[i].level_start) return 1;
+    return 0;
+}
+
+/* MenuBMP records have an exact source key enabled by the retail list
+ * constructor. A local view avoids changing the shared cached texture. */
+static void fe_blit_menu_bitmap(void* px, int pitch, int w, int h,
+                                const TextureSurface* image, int x, int y)
+{
+    TextureSurface keyed = *image;
+    uint32_t key = image->key_count == 2 ? image->keys[0] : 0;
+    texture_source_color_key_set(&keyed, key, key);
+    surface_blit_texture(px, pitch, w, h, &keyed, x, y);
+}
+
+static const char* fe_item_image(const FeItem* item, int selected)
+{
+    if (item->level_start && !item->level_enabled && item->image_disabled[0])
+        return item->image_disabled;
+    if (selected && item->image_selected[0]) return item->image_selected;
+    return item->image_normal;
+}
+
 // FUNCTION: LEGORR 0x00412c00
 static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
                         int w, const TextureSurface* measure, int* x, int* y)
@@ -4961,7 +5202,8 @@ static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
     }
     /* CanScroll plane pan (FUN_00412c00 adds DAT_005574e0 to the item y
      * in BOTH draw and hit-test paths). */
-    if (sub != NULL && sub->can_scroll) {
+    if (sub != NULL && sub->can_scroll &&
+        (it->level_start || !fe_picker_submenu(sub))) {
         *y += sub->scroll;
     }
 }
@@ -4971,10 +5213,19 @@ static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
 static int fe_scroll_measure(const FeSubmenu* sub)
 {
     int maxy = 0;
+    int picker = fe_picker_submenu(sub);
+    if (picker && sub->image[0]) {
+        TextureSurface* background = texture_get_or_load(NULL, sub->image);
+        if (background != NULL) {
+            int height = background->height;
+            texture_release(background);
+            if (height > 0) return height;
+        }
+    }
     for (int i = 0; i < sub->item_count; i++) {
-        int top = sub->items[i].level_start
-                      ? sub->items[i].y
-                      : sub->base_y + sub->items[i].y;
+        if (picker && !sub->items[i].level_start) continue;
+        int top = sub->items[i].level_start ? sub->items[i].y
+                                            : sub->base_y + sub->items[i].y;
         if (top > maxy) {
             maxy = top;
         }
@@ -5000,6 +5251,7 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
     for (int i = 0; i < sub->item_count; i++) {
         const FeItem* it = &sub->items[i];
         int x, y;
+        if (it->level_start && !it->level_enabled) continue;
         fe_item_pos(fe, it, i, 0, measure, &x, &y);
         char label[FE_NAME_MAX];
         fe_display_label(it->label, label, sizeof(label));
@@ -5008,15 +5260,18 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
         int hit_h = rh;
         if (it->image_normal[0] != '\0') {
             TextureSurface* image = texture_get_or_load(NULL,
-                                                        it->image_normal);
+                it->level_start && it->image_selected[0] != '\0'
+                    ? it->image_selected : it->image_normal);
             if (image != NULL) {
                 tw = image->width;
                 hit_h = image->height;
                 texture_release(image);
             }
         }
-        if (mx >= x - 4 && mx <= x + tw + 4
-            && my >= y - 2 && my <= y + hit_h) {
+        if ((it->level_start && mx >= x && mx <= x + tw &&
+             my >= y && my <= y + hit_h) ||
+            (!it->level_start && mx >= x - 4 && mx <= x + tw + 4 &&
+             my >= y - 2 && my <= y + hit_h)) {
             if (out_idx != NULL) {
                 *out_idx = i;
             }
@@ -5024,6 +5279,75 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
         }
     }
     return 0;
+}
+
+int frontend_picker_active(const FrontEnd* fe)
+{
+    return fe != NULL && fe_picker_submenu(frontend_active_submenu(fe));
+}
+
+void frontend_picker_panel_text(FrontEnd* fe, const TextureSurface* measure,
+                                void* pixels, int pitch, int width, int height)
+{
+    const FeSubmenu* sub;
+    const FeSaveMenuLayout* layout;
+    const char* prompt;
+    void* font;
+    void* buffer;
+    float rect[4];
+    uint32_t header[4];
+    TextBufferDrawOps saved_ops;
+    int hover = -1;
+    int tutorial;
+    int i;
+    if (!frontend_picker_active(fe) || pixels == NULL) {
+        if (fe != NULL) fe->level_panel_name[0] = 0;
+        return;
+    }
+    sub = frontend_active_submenu(fe);
+    layout = &fe->level_text_layout;
+    tutorial = s_stristr(sub->image, "LevelPickT") != NULL;
+    prompt = tutorial ? layout->tutorial : layout->level;
+    if (fe->level_panel_menu != fe->menu || fe->level_panel_sub != fe->sub)
+        fe->level_panel_name[0] = 0;
+    fe->level_panel_menu = fe->menu;
+    fe->level_panel_sub = fe->sub;
+    if (layout->has_window) {
+        rect[0] = (float)layout->window_x;
+        rect[1] = (float)layout->window_y;
+        rect[2] = (float)layout->window_w;
+        rect[3] = (float)layout->window_h;
+        memcpy(header, rect, sizeof(header));
+        font = font_atlas_record_create("Interface\\Fonts\\FONT5_HI.bmp");
+        buffer = font != NULL ? text_buffer_create((uintptr_t)font, header, 1024) : NULL;
+        if (buffer != NULL) {
+            text_buffer_append_format(buffer, "\n%s\n%s",
+                                      ui_text_underscores_to_spaces(prompt),
+                                      fe->level_panel_name);
+            text_buffer_draw_ops_get(&saved_ops);
+            text_buffer_draw_framebuffer_install(pixels, pitch, width, height);
+            text_buffer_draw_wrapped(buffer, 0u, 0.0f, NULL);
+            text_buffer_draw_ops_set(&saved_ops);
+            text_buffer_destroy(buffer);
+        }
+        if (font != NULL) font_atlas_record_release(font);
+    }
+    fe->level_panel_name[0] = 0;
+    if (fe_item_pick(fe, fe->pointer_x, fe->pointer_y, measure, &hover) &&
+        hover >= 0 && sub->items[hover].level_start && sub->items[hover].level_enabled) {
+        const char* target = sub->items[hover].target;
+        int count = tutorial ? fe->tutorial_n : fe->campaign_n;
+        for (i = 0; i < count; ++i) {
+            const char* registry = tutorial ? fe->tutorial[i] : fe->campaign[i];
+            const char* label = tutorial ? fe->tutorial_label[i] : fe->campaign_label[i];
+            if (s_strcaseeq(registry, target)) {
+                snprintf(fe->level_panel_name, sizeof(fe->level_panel_name), "%s",
+                         label[0] != 0 ? ui_text_underscores_to_spaces(label)
+                                       : registry);
+                break;
+            }
+        }
+    }
 }
 
 /* MenuHoverStatusTextDraw (FUN_00412750) runs once per MenuTick after input
@@ -5045,81 +5369,73 @@ void menu_hover_status_text_draw(FrontEnd* fe, const TextureSurface* font,
     const int save_load_menu = image != NULL &&
                                s_stristr(image, "SaveLoad") != NULL;
 
-    /* SaveMenuLayoutLoad reads these strings and the Window rect from the
-     * shipped Menu::SaveText config. The reference draws an instruction and
-     * a completion line in this lower panel, independently of the selected
-     * row's optional save summary. */
-    const FeSaveMenuLayout* layout = &fe->save_text_layout;
-    const char* prompt = fe->save_action ? layout->save : layout->load;
-    char instruction[FE_NAME_MAX];
-    char progress[FE_NAME_MAX];
-    char normalized_progress[FE_NAME_MAX];
-    const char* lines[3];
-    int line_count = 0;
-    if (save_load_menu && prompt[0] != '\0' && layout->slot[0] != '\0') {
-        /* SaveText uses the small green briefing font, not the large cyan
-         * FrontEnd button font passed to this renderer. */
-        snprintf(instruction, sizeof(instruction), "%s",
-                 ui_text_underscores_to_spaces(prompt));
-        /* The config's Slot format is e.g. "%d%%_of_game_completed.". */
+    if (save_load_menu && fe->save_text_layout.has_window) {
+        const FeSaveMenuLayout* layout = &fe->save_text_layout;
+        const char* prompt = fe->save_action ? layout->save : layout->load;
+        char instruction[FE_SAVE_LAYOUT_TEXT_MAX];
+        char progress[FE_SAVE_LAYOUT_TEXT_MAX];
+        char normalized_progress[FE_SAVE_LAYOUT_TEXT_MAX];
+        float rect[4];
+        uint32_t header[4];
+        TextBufferDrawOps saved_ops;
+        void* text_font;
+        void* buffer;
         int completed = 0;
-        if (item->load_slot > 0) {
-            for (int slot_index = 0; slot_index < fe->slot_count; ++slot_index) {
-                if (fe->slots[slot_index].id == item->load_slot) {
-                    completed = fe->slots[slot_index].completed;
-                    break;
-                }
+        int total_levels = fe->campaign_n + fe->tutorial_n;
+        int percent;
+        int slot_index;
+        for (slot_index = 0; slot_index < fe->slot_count; ++slot_index) {
+            if (fe->slots[slot_index].id == item->load_slot) {
+                completed = fe->slots[slot_index].completed;
+                break;
             }
         }
-        int total_levels = fe->campaign_n + fe->tutorial_n;
-        int percent = total_levels > 0
-                          ? (completed * 100) / total_levels : 0;
-        if (percent < 0) {
-            percent = 0;
-        } else if (percent > 100) {
-            percent = 100;
-        }
+        percent = total_levels > 0 ? (completed * 100) / total_levels : 0;
+        if (percent < 0) percent = 0;
+        if (percent > 100) percent = 100;
+        snprintf(instruction, sizeof(instruction), "%s",
+                 ui_text_underscores_to_spaces(prompt));
         snprintf(progress, sizeof(progress), layout->slot, percent);
         snprintf(normalized_progress, sizeof(normalized_progress), "%s",
                  ui_text_underscores_to_spaces(progress));
-        lines[line_count++] = instruction;
-        lines[line_count++] = normalized_progress;
+        rect[0] = (float)layout->window_x;
+        rect[1] = (float)layout->window_y;
+        rect[2] = (float)layout->window_w;
+        rect[3] = (float)layout->window_h;
+        memcpy(header, rect, sizeof(header));
+        /* SaveMenuLayoutLoad creates this window with FONT5_HI. */
+        text_font = font_atlas_record_create("Interface\\Fonts\\FONT5_HI.bmp");
+        buffer = text_font != NULL
+                     ? text_buffer_create((uintptr_t)text_font, header, 512)
+                     : NULL;
+        if (buffer != NULL) {
+            text_buffer_append_format(buffer, "\n%s\n%s", instruction,
+                                      normalized_progress);
+            text_buffer_draw_ops_get(&saved_ops);
+            text_buffer_draw_framebuffer_install(px, pitch, w, h);
+            text_buffer_draw_wrapped(buffer, 0u, 1.0f, NULL);
+            text_buffer_draw_ops_set(&saved_ops);
+            text_buffer_destroy(buffer);
+        }
+        if (text_font != NULL) font_atlas_record_release(text_font);
+        return;
     }
-    if (item->status[0] != '\0' && line_count < 3) {
-        lines[line_count++] = ui_text_underscores_to_spaces(item->status);
-    }
-    if (line_count != 0) {
-        TextureSurface* save_text_font = texture_get_or_load(
+    if (item->status[0] != '\0') {
+        const char* status = ui_text_underscores_to_spaces(item->status);
+        TextureSurface* status_font = texture_get_or_load(
             NULL, "Interface\\Fonts\\MBriefFONT2.bmp");
-        const TextureSurface* text_font = save_text_font != NULL
-                                              ? save_text_font : font;
-        int wx = save_load_menu && layout->has_window
-                     ? layout->window_x : 0;
-        int wy = save_load_menu && layout->has_window
-                     ? layout->window_y : h - 45;
-        int ww = save_load_menu && layout->has_window
-                     ? layout->window_w : w;
-        int line_h = 12;
-        if (text_font != NULL) {
-            int cell_w = 0;
-            (void)fe_font_cell(text_font, &cell_w, &line_h);
-        }
-        for (int line = 0; line < line_count; ++line) {
-            int text_w = text_font != NULL
-                             ? fe_font_text_width(lines[line], text_font)
-                             : fe_text_width(lines[line]);
-            int x = wx + (ww - text_w) / 2;
-            int y = wy + 4 + line * line_h;
-            if (text_font != NULL) {
-                formatted_text_draw(text_font, px, pitch, w, h, x, y,
-                                    lines[line]);
-            } else {
-                fe_draw_text(px, pitch, w, h, x, y, lines[line],
-                             150, 255, 80);
-            }
-        }
-        if (save_text_font != NULL) texture_release(save_text_font);
+        const TextureSurface* text_font = status_font != NULL ? status_font : font;
+        int text_w = text_font != NULL ? fe_font_text_width(status, text_font)
+                                       : fe_text_width(status);
+        if (text_font != NULL)
+            formatted_text_draw(text_font, px, pitch, w, h, (w - text_w) / 2,
+                                h - 41, status);
+        else
+            fe_draw_text(px, pitch, w, h, (w - text_w) / 2, h - 41,
+                         status, 150, 255, 80);
+        if (status_font != NULL) texture_release(status_font);
     }
+
 }
 
 /* InterfaceMessageTabInfoTextLoad (FUN_00419430): load the scrolling
@@ -5204,9 +5520,12 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         }
     }
 
-    if (sub->display_title && sub->title[0] != '\0') {
+    if (sub->display_title &&
+        (sub->full_name[0] != '\0' || sub->title[0] != '\0')) {
         char title[FE_NAME_MAX];
-        fe_display_label(sub->title, title, sizeof(title));
+        fe_display_label(sub->full_name[0] != '\0' ? sub->full_name
+                                                    : sub->title,
+                         title, sizeof(title));
         int title_w = hi_font != NULL ? fe_font_text_width(title, hi_font)
                                       : fe_text_width(title);
         int title_x = (w - title_w) / 2;
@@ -5230,23 +5549,26 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         if (y < 0 && !(sub->can_scroll)) {
             y = 8;
         }
-        if (sub->can_scroll && (y + 16 < 0 || y >= h)) {
+        if (sub->can_scroll && !fe_picker_submenu(sub) &&
+            (y + 16 < 0 || y >= h)) {
             continue;   /* scrolled row: outside the plane window */
         }
 
-        int selected = (item_index == fe->sel);
+        int selected = (item_index == fe->sel) &&
+                       !(it->state_gated && system_state_flags_get() != 0u) &&
+                       (!it->level_start || it->level_enabled);
         const TextureSurface* font = selected ? hi_font : lo_font;
         char label[FE_NAME_MAX];
         fe_display_label(it->label, label, sizeof(label));
-        int lw = font != NULL ? fe_font_text_width(label, font)
-                              : fe_text_width(label);
         if (it->image_normal[0] != '\0') {
-            const char* image_path = selected && it->image_selected[0] != '\0'
-                                         ? it->image_selected
-                                         : it->image_normal;
+            const char* image_path = fe_item_image(it, selected);
             TextureSurface* image = texture_get_or_load(NULL, image_path);
             if (image != NULL) {
-                surface_blit_texture(px, pitch, w, h, image, x, y);
+                if (it->level_start && fe_picker_submenu(sub)) {
+                    fe_blit_menu_bitmap(px, pitch, w, h, image, x, y);
+                } else {
+                    surface_blit_texture(px, pitch, w, h, image, x, y);
+                }
                 texture_release(image);
             } else if (font != NULL) {
                 formatted_text_draw(font, px, pitch, w, h, x, y, label);
@@ -5347,10 +5669,11 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
             int oi = it->value < it->cycle_count ? it->value : 0;
             const char* opt = it->cycle_opts[oi];
             if (font != NULL) {
-                formatted_text_draw(font, px, pitch, w, h, x + lw + 10, y,
-                                    opt);
+                formatted_text_draw(font, px, pitch, w, h, x + it->cycle_x,
+                                    y + it->cycle_y, opt);
             } else {
-                fe_draw_text(px, pitch, w, h, x + lw + 10, y, opt,
+                fe_draw_text(px, pitch, w, h, x + it->cycle_x,
+                             y + it->cycle_y, opt,
                              selected ? 255 : 200, selected ? 255 : 200,
                              selected ? 255 : 160);
             }
@@ -6299,7 +6622,8 @@ void advisor_message_ui_initialize(BlockFile* cfg, int width, int height)
                 (uintptr_t)s_message_font, header, 0x400);
     }
     ui_message_strings_initialize(s_message_text_buffers[0],
-        s_message_text_buffers[1], NULL, NULL, 0.0f);
+        s_message_text_buffers[1], (void*)(uintptr_t)316,
+        (void*)(uintptr_t)425, 0.0f);
     text_buffer_draw_software_install();
     s_message_panel_image = image_surface_load(
         "Interface\\MessagePanel\\MsgPanel.bmp", 0u, 0u);
@@ -6809,7 +7133,10 @@ static int advisor_text_display_state_get(void* context,
     tutorial_message_generation_sync();
     request = engine_overlay_word_peek(1);
     state->current_slot = s_advisor_text_current_slot;
-    state->hidden_slot = 0;
+    state->slot_image = state->current_slot >= 0 ?
+        ui_message_image_slot_get((unsigned int)state->current_slot) : NULL;
+    state->hidden_slot = state->slot_image != NULL;
+    ui_message_image_position_get(&state->x, &state->y);
     state->message_id = (int)request;
     state->message_flags = engine_overlay_word_peek(0);
     state->message_timer = s_advisor_text_animation_timer;
@@ -7180,6 +7507,17 @@ void advisor_text_display_worker(float delta)
                 void* output = alternate != 0 ? state.alternate_text_output :
                                                 state.primary_text_output;
                 (void)advisor_text_output_draw(output, delta);
+            }
+            if (state.slot_image != NULL) {
+                DisplaySurface* target = surface_active_render_target_get();
+                void* pixels = NULL;
+                int pitch = 0;
+                if (target != NULL && surface_lock(target, &pixels, &pitch) == 0) {
+                    surface_blit_texture(pixels, pitch, target->w, target->h,
+                        (TextureSurface*)state.slot_image,
+                        (int)state.x, (int)state.y);
+                    surface_unlock(target, pixels);
+                }
             }
         }
         else {
@@ -7584,6 +7922,26 @@ void tooltip_overlay_state_initialize(
 void tooltip_overlay_state_current(TooltipOverlayState* state)
 {
     if (state != NULL) *state = s_tooltip_overlay_state;
+}
+
+void tooltip_software_initialize(const TextureSurface* font, int width,
+                                 int height, float r, float g, float b)
+{
+    s_advisor_tooltip_font = font;
+    tooltip_overlay_state_fill(&s_tooltip_overlay_state, (void*)font,
+        2u, 1u, 1.0f, (uint32_t)width, (uint32_t)height, 32u,
+        r, g, b, font != NULL ? (uint32_t)(font->height / FE_FONT_GRID_ROWS) : 0u);
+    s_timed_effect_tick = 25.0f;
+    memset(s_timed_effect_records, 0, sizeof(s_timed_effect_records));
+}
+
+void tooltip_software_shutdown(void)
+{
+    if (s_advisor_tooltip_font != NULL)
+        texture_free((TextureSurface*)s_advisor_tooltip_font);
+    s_advisor_tooltip_font = NULL;
+    memset(&s_tooltip_overlay_state, 0, sizeof(s_tooltip_overlay_state));
+    memset(s_timed_effect_records, 0, sizeof(s_timed_effect_records));
 }
 
 // FUNCTION: LEGORR 0x00418450
@@ -10918,8 +11276,11 @@ void text_messages_config_load(BlockFile* config)
 {
     BlockRec* group;
     BlockRec* entry;
+    char path[256];
     if (config == NULL) return;
-    group = block_subgroup(config, "TextMessages");
+    snprintf(path, sizeof(path), "%s TextMessages", util_root_name(config));
+    group = block_subgroup(config, path);
+    if (group == NULL) group = block_subgroup(config, "TextMessages");
     for (entry = block_first_child(group); entry != NULL;
          entry = block_next_sibling(entry)) {
         int slot;
@@ -10928,7 +11289,9 @@ void text_messages_config_load(BlockFile* config)
         if (ui_message_label_index_find(label, &slot))
             ui_message_text_slot_assign(slot, text != NULL ? text : "");
     }
-    group = block_subgroup(config, "TextMessagesWithImages");
+    snprintf(path, sizeof(path), "%s TextMessagesWithImages", util_root_name(config));
+    group = block_subgroup(config, path);
+    if (group == NULL) group = block_subgroup(config, "TextMessagesWithImages");
     for (entry = block_first_child(group); entry != NULL;
          entry = block_next_sibling(entry)) {
         int slot;

@@ -10,6 +10,7 @@
 #include "audio.hpp"
 #include "frameloop.hpp"
 #include "sound.hpp"
+#include "engine.hpp"
 
 /* ------------------------------------------------------------------ *
  *  One-shot timer. The corpus schedules exactly one pending callback
@@ -81,15 +82,9 @@ float media_timer_remaining(void)
  *  CDAudioWatchdogModeUpdate @ 0x4297b0 (issue #301).
  * ------------------------------------------------------------------ */
 
-// GLOBAL: LEGORR 0x00556ecc
-static uint32_t s_cd_flags;        /* DAT_00556ecc role, module-local */
 static int      s_cd_base  = 2;    /* DAT_00556f0c: CDStartTrack (2 default) */
 static int      s_cd_window = 1;   /* DAT_00556f10: CDTracks (1 default) */
-static int      s_cd_loop;         /* DAT_00544a04 role (stale: set only by
-                                    * the "loop start" schedule argument the
-                                    * watchdog never passes) */
-static unsigned s_cd_slot;         /* last derived slot */
-static int      s_cd_track_dead;   /* port analog of the track-dead check */
+static unsigned s_cd_slot;         /* last selected track */
 
 /* VC5 rand.obj supplies the shared stream in the classic x86 build; other
  * builds keep this subsystem's local LCG model. */
@@ -107,20 +102,17 @@ static int s_cd_rand15(void)
 #endif
 }
 
-/* Time-derived slot: (uint)draw % window - 1 + base. The corpus's
- * unsigned wrap is kept: when draw % window == 0 the slot lands huge
- * and the timer effectively never fires. */
+/* Retail track selection uses unsigned remainder + base - 1. */
 static unsigned s_cd_draw_slot(void)
 {
     unsigned draw = (unsigned)s_cd_rand15();
     return draw % (unsigned)s_cd_window - 1u + (unsigned)s_cd_base;
 }
 
-static void s_cd_rearm(void* user)
+static void s_cd_rearm(void)
 {
-    (void)user;
-    s_cd_slot = s_cd_draw_slot();
-    media_timer_schedule((float)s_cd_slot, s_cd_rearm, NULL);
+    media_cd_audio_stop_and_close_if_active();
+    media_cd_watchdog_update(1);
 }
 
 void media_cd_config_set(int start_track_base, int track_count)
@@ -134,61 +126,27 @@ void media_cd_config_set(int start_track_base, int track_count)
 // FUNCTION: LEGORR 0x004297b0
 void media_cd_watchdog_update(int enable)
 {
+    uint32_t* flags = engine_shared_state_word();
     if (enable != 0) {
-        s_cd_flags |= MEDIA_CD_WATCHDOG_BIT;
         s_cd_slot = s_cd_draw_slot();
-        media_timer_schedule((float)s_cd_slot, s_cd_rearm, NULL);
-        return;
+        *flags |= MEDIA_CD_WATCHDOG_BIT;
+        media_cd_audio_track_start((int)s_cd_slot, 0, s_cd_rearm);
+    } else {
+        *flags &= ~MEDIA_CD_WATCHDOG_BIT;
+        media_cd_audio_stop_and_close_if_active();
+        media_cd_audio_watchdog_tick(0);
     }
-    s_cd_flags &= ~MEDIA_CD_WATCHDOG_BIT;
-    media_timer_cancel();   /* the corpus's cancel-everything role */
-    media_cd_watchdog_tick(0); /* disable runs one tick with 0 — which
-                                * touches nothing, as shipped */
 }
 
 uint32_t media_cd_flags_get(void)
 {
-    return s_cd_flags;
+    return *engine_shared_state_word();
 }
 
 int media_cd_slot(void)
 {
-    /* Signed view of the unsigned slot: the wrapped draws (draw % window
-     * == 0) read negative here, exactly as the corpus's word does. */
+    /* Signed view of the 32-bit track word. */
     return (int)s_cd_slot;
-}
-
-void media_cd_loop_set(int loop)
-{
-    /* DAT_00544a04 is raised by schedules that pass the loop argument
-     * and never cleared anywhere in the corpus — stale across calls. */
-    if (loop != 0) {
-        s_cd_loop = 1;
-    }
-}
-
-int media_cd_loop_get(void)
-{
-    return s_cd_loop;
-}
-
-void media_cd_track_set_dead(int dead)
-{
-    s_cd_track_dead = dead;
-}
-
-void media_cd_watchdog_tick(int arg)
-{
-    if (arg == 0) {
-        return; /* shipped tick with 0: only the timestamp touch */
-    }
-    if (media_timer_pending() == 0 || s_cd_track_dead == 0) {
-        return; /* corpus: nothing to restart while the track lives */
-    }
-    /* Stalled track: the corpus restarts it (loop flag — a CD-device
-     * seam here) and runs the re-arm callback. */
-    s_cd_track_dead = 0;
-    s_cd_rearm(NULL);
 }
 
 /* ------------------------------------------------------------------ *
@@ -199,11 +157,11 @@ void media_cd_watchdog_tick(int arg)
 void media_audio_playback_toggle(int enable)
 {
     if (enable != 0) {
-        s_cd_flags |= MEDIA_FLAG_SOUND_ON;
+        *engine_shared_state_word() |= MEDIA_FLAG_SOUND_ON;
         sound_subsystem_enable_set_and_stop(enable);
         return;
     }
-    s_cd_flags &= ~MEDIA_FLAG_SOUND_ON;
+    *engine_shared_state_word() &= ~MEDIA_FLAG_SOUND_ON;
     sound_subsystem_enable_set_and_stop(0);
 }
 
@@ -681,13 +639,13 @@ void media_cd_audio_time_hook_set(MediaCdAudioTimeHook hook, void* context)
 void media_cd_audio_watchdog_tick(int enabled)
 {
     uint32_t now;
-    if (enabled == 0 || s_cd_audio_open == 0)
+    if (s_cd_audio_open == 0)
         return;
     now = s_cd_audio_time_hook != NULL
         ? s_cd_audio_time_hook(s_cd_audio_time_context)
         : platform_time_milliseconds();
     if (now <= s_cd_audio_watchdog_time + 4000u) return;
-    if (media_cd_audio_track_completion_poll(s_cd_audio_target_track) == 0) {
+    if (enabled != 0 && media_cd_audio_track_completion_poll(s_cd_audio_target_track) == 0) {
         if (s_cd_audio_restart_when_done != 0)
             (void)media_cd_audio_track_play_from(s_cd_audio_target_track);
         if (s_cd_audio_completion_hook != NULL)

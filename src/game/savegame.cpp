@@ -43,6 +43,12 @@ static void* s_sav_tree_root[2]; /* the two corpus tree-root globals' role */
 static void** s_sav_owned_tree_nodes[2];
 static uint32_t s_sav_owned_tree_node_count[2];
 static GameContext* s_save_current_context;
+static FILE* s_return_diag_log;
+
+void save_return_diagnostic_log_set(void* log)
+{
+    s_return_diag_log = (FILE*)log;
+}
 // GLOBAL: LEGORR 0x00556fd0
 int s_active_object_ingame;
 // GLOBAL: LEGORR 0x00556fe4
@@ -210,6 +216,21 @@ void save_init(GameContext* ctx)
     s_save_current_slot = ctx->save_slot;
 }
 
+/* SavReadSlot passes "Saves" through GameFileOpenDispatch; bind the same
+ * configured data root for the typed FILE-backed save/OSF/thumbnail paths. */
+int save_bind_resource_directory(GameContext* ctx)
+{
+    const char* path;
+    size_t length;
+    if (ctx == NULL) return 0;
+    path = resource_path_resolve_against_base("Saves");
+    if (path == NULL || path[0] == '\0') return 0;
+    length = strlen(path);
+    if (length >= sizeof(ctx->saves_dir)) return 0;
+    memcpy(ctx->saves_dir, path, length + 1u);
+    return 1;
+}
+
 int save_slot_get(const GameContext* ctx)
 {
     if (ctx == NULL) return -1;
@@ -270,9 +291,13 @@ static int save_slot_write_fresh_file(GameContext* ctx, int slot,
     save_slot_path(ctx, path, sizeof(path), slot, "sav");
     memset(header, 0, sizeof(header));
     options_defaults(&defaults);
+    /* SavWriteSlot's fresh-context defaults, distinct from menu fallback. */
+    defaults.sfx_volume = OPT_RETAIL_FRESH_SFX;
+    defaults.brightness = OPT_RETAIL_FRESH_BRIGHTNESS;
+    __builtin_memcpy(header + 0x04, &defaults.music_volume, 4);
     __builtin_memcpy(header + 0x08, &defaults.sfx_volume, 4);
     __builtin_memcpy(header + 0x0c, &defaults.game_speed, 4);
-    __builtin_memcpy(header + 0x10, &defaults.music_volume, 4);
+    __builtin_memcpy(header + 0x10, &defaults.brightness, 4);
     __builtin_memcpy(header + 0x18, &record_count, 4);
     if (record_count != 0u) {
         if ((size_t)record_count > ((size_t)-1) / SAVE_RECORD_SIZE)
@@ -315,6 +340,10 @@ static int save_bootstrap_records(GameContext* ctx, int count)
     save_release_records(ctx);
     ctx->record_count = count;
     ctx->records = rec;
+    ctx->saved_music_volume = ctx->options.music_volume;
+    ctx->saved_sfx_volume = ctx->options.sfx_volume;
+    ctx->saved_scroll_index = ctx->options.game_speed;
+    ctx->saved_brightness = ctx->options.brightness;
     return 1;
 }
 
@@ -334,11 +363,12 @@ static int sav_write_slot_file(GameContext* ctx)
     int32_t count = (int32_t)ctx->record_count;
     __builtin_memcpy(header + 0x18, &count, 4);
     /* The retail 0xb0-byte header is the slot context's raw prefix. The
-     * tracked option words occupy +0x08/+0x0c/+0x10; +0x20 is ordinary
+     * tracked option words occupy +0x04/+0x08/+0x0c/+0x10; +0x20 is ordinary
      * context data, not a port-specific options extension. */
-    __builtin_memcpy(header + 0x08, &ctx->options.sfx_volume, 4);
-    __builtin_memcpy(header + 0x0c, &ctx->options.game_speed, 4);
-    __builtin_memcpy(header + 0x10, &ctx->options.music_volume, 4);
+    __builtin_memcpy(header + 0x04, &ctx->saved_music_volume, 4);
+    __builtin_memcpy(header + 0x08, &ctx->saved_sfx_volume, 4);
+    __builtin_memcpy(header + 0x0c, &ctx->saved_scroll_index, 4);
+    __builtin_memcpy(header + 0x10, &ctx->saved_brightness, 4);
     size_t wrote = fwrite(header, 1, SAVE_HEADER_SIZE, fp);
     if (wrote == SAVE_HEADER_SIZE && count > 0) {
         wrote = fwrite(ctx->records, 1, (size_t)count * SAVE_RECORD_SIZE, fp);
@@ -383,8 +413,15 @@ int save_read_slot_target(uint32_t slot, void* slot_context, int mode)
                  * used by checkpoint and direct-launch callers. */
                 save_slot_set_target((int)slot);
                 ctx->save_slot = (int)slot;
-                if (save_bootstrap_records(ctx, SAVE_DEFAULT_RECORDS))
-                    (void)sav_write_slot_file(ctx);
+                if (save_bootstrap_records(ctx, SAVE_DEFAULT_RECORDS)) {
+                    ctx->active_slot = (int)slot;
+                    ctx->saved_music_volume = OPT_DFLT_MUSIC_VOLUME;
+                    ctx->saved_sfx_volume = OPT_RETAIL_FRESH_SFX;
+                    ctx->saved_scroll_index = OPT_DFLT_GAME_SPEED;
+                    ctx->saved_brightness = OPT_RETAIL_FRESH_BRIGHTNESS;
+                    (void)save_slot_write_fresh_file(ctx, (int)slot,
+                                                     SAVE_DEFAULT_RECORDS);
+                }
             }
         }
         return 0;
@@ -454,10 +491,15 @@ int save_read_slot_target(uint32_t slot, void* slot_context, int mode)
      * header. Accept the former GOPS extension only for saves written by
      * earlier portable builds. */
     options_defaults(&ctx->options);
+    __builtin_memcpy(&ctx->saved_music_volume, header + 0x04, 4);
+    __builtin_memcpy(&ctx->saved_sfx_volume, header + 0x08, 4);
+    __builtin_memcpy(&ctx->saved_scroll_index, header + 0x0c, 4);
+    __builtin_memcpy(&ctx->saved_brightness, header + 0x10, 4);
     if (!options_load_header(&ctx->options, header + 0x20)) {
-        __builtin_memcpy(&ctx->options.sfx_volume, header + 0x08, 4);
-        __builtin_memcpy(&ctx->options.game_speed, header + 0x0c, 4);
-        __builtin_memcpy(&ctx->options.music_volume, header + 0x10, 4);
+        ctx->options.music_volume = ctx->saved_music_volume;
+        ctx->options.sfx_volume = ctx->saved_sfx_volume;
+        ctx->options.game_speed = ctx->saved_scroll_index;
+        ctx->options.brightness = ctx->saved_brightness;
     }
     save_release_records(ctx);
     ctx->active_slot = slot;
@@ -505,7 +547,12 @@ void save_commit(GameContext* ctx)
     if (ctx->records == NULL) {
         save_bootstrap_records(ctx, SAVE_DEFAULT_RECORDS);
     }
-    sav_write_slot_file(ctx);
+    int written = sav_write_slot_file(ctx);
+    if (s_return_diag_log != NULL) {
+        fprintf(s_return_diag_log, "return-diag: commit write=%d slot=%d records=%d\n",
+                written, ctx->save_slot, ctx->record_count);
+        fflush(s_return_diag_log);
+    }
 }
 
 /* Saves\<slot>.dat — the `.dat` slot thumbnail (FUN_00413b80's save-confirm
@@ -782,6 +829,32 @@ void checkpoint_blob_apply(GameContext* ctx, const uint8_t* blob)
                      (size_t)GAME_TASK_COUNT * (size_t)GAME_TASK_STRIDE);
 }
 
+int save_slot_records_view(int slot, const uint8_t** records, int* count)
+{
+    if (slot < 0 || slot >= SAVE_SLOTS || records == NULL || count == NULL ||
+        s_sav_slot_records[slot] == NULL) return 0;
+    *records = s_sav_slot_records[slot];
+    *count = s_sav_slot_record_counts[slot];
+    return 1;
+}
+
+/* Read a menu preview without the retail mode-0 missing/mismatch rewrite. */
+int save_slot_preview(GameContext* ctx, int slot, const uint8_t** records,
+                      int* count)
+{
+    uint32_t campaign_count = 0u, tutorial_count = 0u;
+    uint8_t* slot_context;
+    if (ctx == NULL || slot < 0 || slot >= SAVE_SLOTS ||
+        records == NULL || count == NULL) return 0;
+    save_context_bind(ctx);
+    slot_context = s_sav_slot_context_blocks + (size_t)slot * 0xb8u;
+    if (!save_read_slot_target((uint32_t)slot, slot_context, 1)) return 0;
+    if (!save_slot_records_view(slot, records, count)) return 0;
+    if (save_current_level_counts(&campaign_count, &tutorial_count) &&
+        (uint32_t)*count != campaign_count) return 0;
+    return 1;
+}
+
 int save_slot_state(GameContext* ctx, int slot, int* out_filled,
                     int* out_completed, int* out_resume)
 {
@@ -856,9 +929,20 @@ void checkpoint_step_target(void)
     }
     int orig = ctx->save_slot;
     int slot = orig == -1 ? SAVE_DEFAULT_SLOT : orig;
+    if (s_return_diag_log != NULL) {
+        fprintf(s_return_diag_log, "return-diag: checkpoint slot=%d active=%d record=%d count=%d fallback=%d blob=%d\n",
+                orig, ctx->active_slot, ctx->current_record, ctx->record_count,
+                orig == -1, ctx->checkpoint_blob != NULL);
+        fflush(s_return_diag_log);
+    }
     if (ctx->records == NULL || ctx->active_slot != slot) {
         /* Bootstrap the slot context (`SavSetSlot(5)` path in the corpus). */
         (void)save_read_slot_target((uint32_t)slot, NULL, 0);
+    }
+    if (orig == -1) {
+        /* SavSetSlot selects the fallback even when its records are already
+         * active; the commit uses the selected slot, not active_slot. */
+        save_slot_set(ctx, slot);
     }
     int rec = ctx->current_record;
     /* The corpus marks the record dirty when the level's objective-result
@@ -894,7 +978,12 @@ void checkpoint_step_target(void)
         /* The corpus commits the cleared/reapplied default slot, then
          * reloads slot-5 metadata. */
         save_commit(ctx);
-        (void)save_read_slot_target(SAVE_DEFAULT_SLOT, NULL, 0);
+        int reloaded = save_read_slot_target(SAVE_DEFAULT_SLOT, NULL, 0);
+        if (s_return_diag_log != NULL) {
+            fprintf(s_return_diag_log, "return-diag: reload=%d slot=%d active=%d count=%d\n",
+                    reloaded, ctx->save_slot, ctx->active_slot, ctx->record_count);
+            fflush(s_return_diag_log);
+        }
     }
 }
 

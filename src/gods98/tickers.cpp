@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <cstddef>
+#include <stdio.h>
 
 #include "engine.hpp"
 #include "message.hpp"
@@ -217,7 +218,11 @@ static int engine_subsystem_tickers_dispatch(EngineContext* ctx, float dt,
             view_views_tick(ctx, camera_dt, camera_scale);
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
             if (scene_root_object_get() != NULL &&
-                !scene_runtime_cameras_sync()) return 0;
+                !scene_runtime_cameras_sync()) {
+                fprintf(stderr, "camera-diag: ticker camera sync failed\n");
+                fflush(stderr);
+                return 0;
+            }
 #endif
         }
         if ((TICKERS[i].skip_when != 0) && (ctx->state & TICKERS[i].skip_when)) {
