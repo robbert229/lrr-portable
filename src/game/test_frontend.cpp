@@ -914,25 +914,30 @@ static void test_scroll(void)
 
     FeInput mid = { 0, 0, 0, 0, 0, 0, 320, 240, 0 };
     frontend_tick(&fe, &mid, NULL);
+    frontend_scroll_update(&fe, &mid);
     CHECK(pk->scroll == 0, "scr: deadzone stays put");
 
-    /* bottom band: 50 px/tick down to the content clamp 480-1816 = -1336 */
+    /* At y=460 the reference moves ten pixels after the current tick. */
     FeInput bot = { 0, 0, 0, 0, 0, 0, 320, 460, 0 };
     frontend_tick(&fe, &bot, NULL);
-    CHECK(pk->scroll == -50, "scr: bottom band pans");
-    for (int i = 0; i < 40 && pk->scroll > -1336; i++) {
+    CHECK(pk->scroll == 0, "scr: tick uses the previous frame's scroll");
+    frontend_scroll_update(&fe, &bot);
+    CHECK(pk->scroll == -10, "scr: bottom band pans after tick");
+    for (int i = 0; i < 200 && pk->scroll > -1336; i++) {
         frontend_tick(&fe, &bot, NULL);
+        frontend_scroll_update(&fe, &bot);
     }
     CHECK(pk->scroll == -1336, "scr: clamps at the plane's bottom");
 
     /* top band pans back up */
     FeInput top = { 0, 0, 0, 0, 0, 0, 320, 20, 0 };
     frontend_tick(&fe, &top, NULL);
-    CHECK(pk->scroll == -1286, "scr: top band pans back");
+    CHECK(pk->scroll == -1336, "scr: tick retains bottom scroll");
+    frontend_scroll_update(&fe, &top);
+    CHECK(pk->scroll == -1326, "scr: top band pans back");
 
-    /* rows off the plane are gone; the visible bottom row starts on click
-     * (Lv2 sits at 1800-1336=464; that y also clamps the scroll back) */
-    FeInput cl = { 0, 0, 0, 0, 0, 0, 310, 464, 1 };
+    /* The next tick hits Lv2 at its newly scrolled position, 1800-1326. */
+    FeInput cl = { 0, 0, 0, 0, 0, 0, 310, 474, 1 };
     FeEvent ev = frontend_tick(&fe, &cl, NULL);
     CHECK(ev == FE_EVT_START_LEVEL && strcmp(fe.pending_level, "Lv2") == 0,
         "scr: click follows the scrolled plane");

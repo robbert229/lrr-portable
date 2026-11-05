@@ -2959,7 +2959,9 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
     if (img != NULL) {
         TextureSurface* bg = texture_get_or_load(NULL, img);
         if (bg != NULL) {
-            surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H, bg, 0, 0);
+            const FeSubmenu* background_sub = frontend_active_submenu(fe);
+            surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H, bg, 0,
+                                 background_sub != NULL ? background_sub->scroll : 0);
         }
         texture_release(bg);
     }
@@ -3143,6 +3145,7 @@ static FeEvent frameloop_main_menu_frame(FrameloopApplicationState* app,
     TextureSurface* lo_font = NULL;
     FeInput input_frame;
     FeEvent event;
+    int tick_menu, tick_sub;
     int i;
     if (app == NULL || app->game_storage == NULL
         || app->frontend_storage == NULL || app->quit) {
@@ -3186,6 +3189,8 @@ static FeEvent frameloop_main_menu_frame(FrameloopApplicationState* app,
     input_frame.mouse_y = app->input.mouse_y;
     input_frame.click = input_mouse_pressed(&app->input);
     input_frame.mdown = app->input.mouse_down;
+    tick_menu = fe->menu;
+    tick_sub = fe->sub;
     event = frontend_tick(fe, &input_frame, hi_font);
     if (fe->option_changed) {
         const FeItem* item = frontend_active_item(fe);
@@ -3253,6 +3258,8 @@ static FeEvent frameloop_main_menu_frame(FrameloopApplicationState* app,
     sound_subsystem_frame_tick(app->menu_sound_clock.dt);
     frameloop_menu_render(app->window, &app->surface, fe, hi_font, lo_font,
                           game, (int)app->frames);
+    if (fe->open && fe->menu == tick_menu && fe->sub == tick_sub)
+        frontend_scroll_update(fe, &input_frame);
     if (app->audio_status == 0) audio_update(&app->audio);
     ++app->frames;
     menu_sound_tick_clock_advance(&app->menu_sound_clock);
@@ -3985,6 +3992,7 @@ static int frameloop_application_gameplay_frame(float dt)
             fi.mouse_y = input.mouse_y;
             fi.click = input_mouse_pressed(&input);
             fi.mdown = input.mouse_down;
+            int tick_menu = fe.menu, tick_sub = fe.sub;
             FeEvent save_ev = frontend_tick(&fe, &fi, hi_font);
             if (save_ev == FE_EVT_SAVE_GAME) {
                 save_slot_set(&game, frontend_slot_raw_index(fe.load_slot));
@@ -4027,6 +4035,8 @@ static int frameloop_application_gameplay_frame(float dt)
             if (fe.open) {
                 frameloop_menu_render(win, &surf, &fe, hi_font, lo_font,
                                       &game, (int)frames);
+                if (fe.menu == tick_menu && fe.sub == tick_sub)
+                    frontend_scroll_update(&fe, &fi);
             }
             if (audio_status == 0) {
                 audio_update(&ap);
@@ -4179,6 +4189,7 @@ static int frameloop_application_gameplay_frame(float dt)
                 overlay_gate.options_flag = menu_options_flag();
                 overlay_gate.blocked =
                     global_option_low_bits_enabled(game.level);
+                int tick_menu = fe.menu, tick_sub = fe.sub;
                 (void)overlay_menu_gate(&overlay_gate, 0,
                                         frameloop_overlay_menu_scroll_refresh,
                                         frameloop_overlay_menu_tick, &gate_ctx);
@@ -4218,6 +4229,8 @@ static int frameloop_application_gameplay_frame(float dt)
                 sound_subsystem_frame_tick(pause_sound_clock.dt);
                 frameloop_menu_render(win, &surf, &fe, hi_font, lo_font,
                                       &game, (int)frames);
+                if (fe.open && fe.menu == tick_menu && fe.sub == tick_sub)
+                    frontend_scroll_update(&fe, &fi);
                 Sleep((DWORD)FRAME_MS);
                 ++frames;
                 menu_sound_tick_clock_advance(&pause_sound_clock);

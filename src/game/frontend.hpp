@@ -532,6 +532,7 @@ const FeLevelMenuList* frontend_level_menu_list_peek(const FrontEnd* fe,
  * (level picker -> start, Trigger flag -> quit, Next -> navigate submenus,
  * Esc behavior depends on the menu). MainMenuFull selection follows the
  * pointer. Main and pause rows activate on clicks; save input remains separate. */
+void frontend_scroll_update(FrontEnd* fe, const FeInput* in);
 FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
                       const TextureSurface* measure);
 
