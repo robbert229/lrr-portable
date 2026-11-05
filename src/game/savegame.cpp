@@ -291,9 +291,13 @@ static int save_slot_write_fresh_file(GameContext* ctx, int slot,
     save_slot_path(ctx, path, sizeof(path), slot, "sav");
     memset(header, 0, sizeof(header));
     options_defaults(&defaults);
+    /* SavWriteSlot's fresh-context defaults, distinct from menu fallback. */
+    defaults.sfx_volume = OPT_RETAIL_FRESH_SFX;
+    defaults.brightness = OPT_RETAIL_FRESH_BRIGHTNESS;
+    __builtin_memcpy(header + 0x04, &defaults.music_volume, 4);
     __builtin_memcpy(header + 0x08, &defaults.sfx_volume, 4);
     __builtin_memcpy(header + 0x0c, &defaults.game_speed, 4);
-    __builtin_memcpy(header + 0x10, &defaults.music_volume, 4);
+    __builtin_memcpy(header + 0x10, &defaults.brightness, 4);
     __builtin_memcpy(header + 0x18, &record_count, 4);
     if (record_count != 0u) {
         if ((size_t)record_count > ((size_t)-1) / SAVE_RECORD_SIZE)
@@ -336,6 +340,10 @@ static int save_bootstrap_records(GameContext* ctx, int count)
     save_release_records(ctx);
     ctx->record_count = count;
     ctx->records = rec;
+    ctx->saved_music_volume = ctx->options.music_volume;
+    ctx->saved_sfx_volume = ctx->options.sfx_volume;
+    ctx->saved_scroll_index = ctx->options.game_speed;
+    ctx->saved_brightness = ctx->options.brightness;
     return 1;
 }
 
@@ -355,11 +363,12 @@ static int sav_write_slot_file(GameContext* ctx)
     int32_t count = (int32_t)ctx->record_count;
     __builtin_memcpy(header + 0x18, &count, 4);
     /* The retail 0xb0-byte header is the slot context's raw prefix. The
-     * tracked option words occupy +0x08/+0x0c/+0x10; +0x20 is ordinary
+     * tracked option words occupy +0x04/+0x08/+0x0c/+0x10; +0x20 is ordinary
      * context data, not a port-specific options extension. */
-    __builtin_memcpy(header + 0x08, &ctx->options.sfx_volume, 4);
-    __builtin_memcpy(header + 0x0c, &ctx->options.game_speed, 4);
-    __builtin_memcpy(header + 0x10, &ctx->options.music_volume, 4);
+    __builtin_memcpy(header + 0x04, &ctx->saved_music_volume, 4);
+    __builtin_memcpy(header + 0x08, &ctx->saved_sfx_volume, 4);
+    __builtin_memcpy(header + 0x0c, &ctx->saved_scroll_index, 4);
+    __builtin_memcpy(header + 0x10, &ctx->saved_brightness, 4);
     size_t wrote = fwrite(header, 1, SAVE_HEADER_SIZE, fp);
     if (wrote == SAVE_HEADER_SIZE && count > 0) {
         wrote = fwrite(ctx->records, 1, (size_t)count * SAVE_RECORD_SIZE, fp);
@@ -404,8 +413,15 @@ int save_read_slot_target(uint32_t slot, void* slot_context, int mode)
                  * used by checkpoint and direct-launch callers. */
                 save_slot_set_target((int)slot);
                 ctx->save_slot = (int)slot;
-                if (save_bootstrap_records(ctx, SAVE_DEFAULT_RECORDS))
-                    (void)sav_write_slot_file(ctx);
+                if (save_bootstrap_records(ctx, SAVE_DEFAULT_RECORDS)) {
+                    ctx->active_slot = (int)slot;
+                    ctx->saved_music_volume = OPT_DFLT_MUSIC_VOLUME;
+                    ctx->saved_sfx_volume = OPT_RETAIL_FRESH_SFX;
+                    ctx->saved_scroll_index = OPT_DFLT_GAME_SPEED;
+                    ctx->saved_brightness = OPT_RETAIL_FRESH_BRIGHTNESS;
+                    (void)save_slot_write_fresh_file(ctx, (int)slot,
+                                                     SAVE_DEFAULT_RECORDS);
+                }
             }
         }
         return 0;
@@ -475,10 +491,15 @@ int save_read_slot_target(uint32_t slot, void* slot_context, int mode)
      * header. Accept the former GOPS extension only for saves written by
      * earlier portable builds. */
     options_defaults(&ctx->options);
+    __builtin_memcpy(&ctx->saved_music_volume, header + 0x04, 4);
+    __builtin_memcpy(&ctx->saved_sfx_volume, header + 0x08, 4);
+    __builtin_memcpy(&ctx->saved_scroll_index, header + 0x0c, 4);
+    __builtin_memcpy(&ctx->saved_brightness, header + 0x10, 4);
     if (!options_load_header(&ctx->options, header + 0x20)) {
-        __builtin_memcpy(&ctx->options.sfx_volume, header + 0x08, 4);
-        __builtin_memcpy(&ctx->options.game_speed, header + 0x0c, 4);
-        __builtin_memcpy(&ctx->options.music_volume, header + 0x10, 4);
+        ctx->options.music_volume = ctx->saved_music_volume;
+        ctx->options.sfx_volume = ctx->saved_sfx_volume;
+        ctx->options.game_speed = ctx->saved_scroll_index;
+        ctx->options.brightness = ctx->saved_brightness;
     }
     save_release_records(ctx);
     ctx->active_slot = slot;

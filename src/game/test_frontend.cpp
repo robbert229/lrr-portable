@@ -721,9 +721,18 @@ static void test_slots(void)
     FeInput load = { 0, 0, 0, 0, 0, 0, 300, 205, 1 };
     frontend_tick(&fe, &load, NULL);
     CHECK(fe.sub == 1, "slots: clicked Load to enter SaveLoad screen");
+    FeInput escape = { 0, 0, 0, 0, 0, 1, 320, 240, 0 };
+    CHECK(frontend_tick(&fe, &escape, NULL) == FE_EVT_NONE && fe.open &&
+          fe.sub == 1 && fe.slot_count == 3 && m->submenus[1].item_count == 4,
+          "slots: Escape leaves Load and its slot rows open");
     FeInput back_enter = { 0, 0, 0, 0, 1, 0, 8, 438, 0 };
     CHECK(frontend_tick(&fe, &back_enter, NULL) == FE_EVT_NONE && fe.sub == 1,
           "slots: Enter on Back does not activate");
+    FeInput back = { 0, 0, 0, 0, 0, 0, 8, 438, 1 };
+    CHECK(frontend_tick(&fe, &back, NULL) == FE_EVT_NONE && fe.sub == 0,
+          "slots: Back still returns to Main after Escape");
+    frontend_tick(&fe, &load, NULL);
+    CHECK(fe.sub == 1, "slots: Load reopens after Back");
     FeInput slot = { 0, 0, 0, 0, 0, 0, 121, 101, 1 };
     CHECK(frontend_tick(&fe, &slot, NULL) == FE_EVT_LOAD_GAME
         && fe.load_slot == 1, "slots: clicking slot 1 -> LOAD_GAME");

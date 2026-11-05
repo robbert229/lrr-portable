@@ -171,6 +171,12 @@ typedef struct FrameloopApplicationState {
     TextureSurface* briefing_panel;
     TextureSurface* briefing_title_font;
     TextureSurface* briefing_body_font;
+    TextureSurface* briefing_next;
+    TextureSurface* briefing_back;
+    TextureSurface* briefing_back_arrow;
+    int briefing_x;
+    int briefing_y;
+    char briefing_title[128];
     LevelState* pointer_dispatch_level;
     int pointer_dispatch_previous_down; /* retained for pause patch composition */
     SimulationPointerCapture pointer_captures[2];
@@ -2506,6 +2512,7 @@ static void frameloop_load_level(FILE* log, const char* wad_dir,
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     frame_world_arrows_level_releasing();
 #endif
+    options_apply_from_slot(game);
     game->level = level_load(game->cfg, level_name);
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (game->level != NULL) frame_world_arrows_level_activated(game->level);
@@ -2691,38 +2698,73 @@ static int frameloop_brief_load(BlockFile* cfg, const char* level_name,
 }
 
 static void frameloop_wrap_brief(const char* src, char* out, size_t out_size,
-                                int max_chars)
+                                const TextureSurface* font, int max_width)
 {
     size_t at = 0;
-    int col = 0;
+    int line_width = 0;
+    const int space_width = (int)formatted_text_draw_and_measure(
+        font, NULL, 0, 0, 0, 0, 0, " ", NULL);
     for (const char* p = src; p != NULL && *p != '\0' && at + 1 < out_size;) {
         p += strspn(p, " \t");
         if (*p == '\0') break;
         if (*p == '\n') {
             out[at++] = *p++;
-            col = 0;
+            line_width = 0;
             continue;
         }
         const char* word = p;
-        int len = (int)strcspn(p, " \t\n");
-        if (col > 0 && col + 1 + len > max_chars) {
+        size_t len = strcspn(p, " \t\n");
+        size_t copy_len = len;
+        if (copy_len > out_size - at - 1) copy_len = out_size - at - 1;
+        char word_text[1024];
+        if (copy_len >= sizeof(word_text)) copy_len = sizeof(word_text) - 1;
+        memcpy(word_text, word, copy_len);
+        word_text[copy_len] = '\0';
+        int width = (int)formatted_text_draw_and_measure(
+            font, NULL, 0, 0, 0, 0, 0, word_text, NULL);
+        if (line_width > 0 && line_width + space_width + width > max_width) {
             out[at++] = '\n';
-            col = 0;
-        } else if (col > 0 && at + 1 < out_size) {
+            line_width = 0;
+        } else if (line_width > 0 && at + 1 < out_size) {
             out[at++] = ' ';
-            ++col;
+            line_width += space_width;
         }
-        int copy_len = len;
-        const size_t remaining = out_size - at - 1;
-        if ((size_t)copy_len > remaining) {
-            copy_len = (int)remaining;
-        }
-        strncpy(out + at, word, (size_t)copy_len);
-        at += (size_t)copy_len;
-        col += copy_len;
+        if (copy_len > out_size - at - 1) copy_len = out_size - at - 1;
+        memcpy(out + at, word, copy_len);
+        at += copy_len;
+        line_width += width;
         p += len;
     }
     out[at] = '\0';
+}
+
+/* ObjectivePoll uses the shared Back bitmap at its objective-specific origin. */
+static int frameloop_briefing_page_action(const char* brief, int* page_offset,
+                                          int key_continue, int mouse_pressed,
+                                          int mouse_x, int mouse_y,
+                                          const TextureSurface* back_image,
+                                          const TextureSurface* next_image)
+{
+    const char* page = brief + *page_offset;
+    const char* next = strchr(page, '\a');
+    if (mouse_pressed && *page_offset != 0 && back_image != NULL &&
+        mouse_x >= 130 && mouse_y >= 315 &&
+        mouse_x < 130 + back_image->width && mouse_y < 315 + back_image->height) {
+        int previous = *page_offset - 1;
+        while (previous > 0 && brief[previous - 1] != '\a') --previous;
+        *page_offset = previous;
+        return 1;
+    }
+    if (!key_continue && !mouse_pressed) return 0;
+    if (next != NULL && !key_continue &&
+        (next_image == NULL || mouse_x < 470 || mouse_y < 315 ||
+         mouse_x >= 470 + next_image->width ||
+         mouse_y >= 315 + next_image->height)) return 0;
+    if (next != NULL) {
+        *page_offset = (int)(next + 1 - brief);
+        return 1;
+    }
+    return 2;
 }
 
 static void frameloop_briefing_render(PlatformWindow* win,
@@ -2731,8 +2773,12 @@ static void frameloop_briefing_render(PlatformWindow* win,
                                      const TextureSurface* title_font,
                                      const TextureSurface* body_font,
                                      const char* brief,
+                                     const TextureSurface* next_image,
+                                     const TextureSurface* back_image,
+                                     int has_next, int has_back,
+                                     int panel_x, int panel_y, const char* title,
                                      LevelState* level, GameContext* game,
-                                     int frame)
+                                     float delta, int frame)
 {
     void* pixels = NULL;
     int pitch = 0;
@@ -2740,36 +2786,32 @@ static void frameloop_briefing_render(PlatformWindow* win,
     level_render_scene(level, game, WINDOW_W, WINDOW_H, pixels, pitch);
     if (panel != NULL) {
         frameloop_blit_texture_scaled(panel, pixels, pitch, WINDOW_W, WINDOW_H,
-                                      76, 100, 488, 281);
+                                      panel_x, panel_y, panel->width, panel->height);
     }
     if (title_font != NULL) {
-        const char* title = "Mission Brief";
         int tw = (int)formatted_text_printf_width(title_font, title);
         formatted_text_draw(title_font, pixels, pitch, WINDOW_W, WINDOW_H,
-                            (WINDOW_W - tw) / 2, 130, title);
+                            panel_x + 40 + (422 - tw) / 2, panel_y + 34, title);
     }
     if (body_font != NULL) {
         char wrapped[1200];
         if (brief != NULL && brief[0] != '\0') {
-            frameloop_wrap_brief(brief, wrapped, sizeof(wrapped), 43);
+            frameloop_wrap_brief(brief, wrapped, sizeof(wrapped), body_font, 390);
             formatted_text_draw(body_font, pixels, pitch, WINDOW_W, WINDOW_H,
-                                119, 160, wrapped);
+                                panel_x + 60, panel_y + 60, wrapped);
         }
-        uint8_t* frame = (uint8_t*)pixels;
-        for (int y = 438; y < WINDOW_H; ++y) {
-            uint8_t* row = frame + (size_t)y * pitch;
-            for (int x = 0; x < WINDOW_W; ++x) {
-                row[(size_t)x * 4 + 0] = 5;
-                row[(size_t)x * 4 + 1] = 47;
-                row[(size_t)x * 4 + 2] = 9;
-                row[(size_t)x * 4 + 3] = 255;
-            }
-        }
-        const TextureSurface* prompt_font = title_font != NULL
-            ? title_font : body_font;
-        formatted_text_draw(prompt_font, pixels, pitch, WINDOW_W, WINDOW_H,
-                            122, 452, "Press SPACE to continue.");
     }
+    if (has_next && next_image != NULL)
+        frameloop_blit_texture_scaled(next_image, pixels, pitch, WINDOW_W, WINDOW_H,
+                                      470, 315, next_image->width, next_image->height);
+    if (has_back && back_image != NULL)
+        frameloop_blit_texture_scaled(back_image, pixels, pitch, WINDOW_W, WINDOW_H,
+                                      130, 315, back_image->width, back_image->height);
+    surface_unlock(surf, pixels);
+    advisor_text_animation_update(0x16, 0, 0);
+    advisor_text_display_worker(delta);
+    pixels = NULL;
+    if (surface_lock(surf, &pixels, &pitch) != 0) return;
     render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
                             game->options.brightness);
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
@@ -2789,9 +2831,19 @@ static int frameloop_briefing_prepare(FrameloopApplicationState* app)
         (input_keyboard_key_held(' ') ? 1u : 0u) |
         (input_keyboard_key_held(PLATFORM_KEY_ENTER) ? 2u : 0u);
     app->mission_brief_active = objective_briefing_active(game->level);
+    texture_release(app->briefing_panel);
+    texture_release(app->briefing_next);
+    texture_release(app->briefing_back);
+    texture_release(app->briefing_back_arrow);
     app->briefing_panel = NULL;
     app->briefing_title_font = NULL;
     app->briefing_body_font = NULL;
+    app->briefing_next = NULL;
+    app->briefing_back = NULL;
+    app->briefing_back_arrow = NULL;
+    app->briefing_x = 0;
+    app->briefing_y = 0;
+    app->briefing_title[0] = '\0';
     if (!app->mission_brief_active) return 1;
     if (!frameloop_brief_load(game->cfg, level_name,
                               app->mission_brief, sizeof(app->mission_brief))) {
@@ -2799,8 +2851,47 @@ static int frameloop_briefing_prepare(FrameloopApplicationState* app)
                           "for %s\n", level_name);
         return 0;
     }
-    app->briefing_panel = texture_get_or_load(
-        NULL, "Interface\\BriefingPanel\\BriefingPanel.bmp");
+    {
+        char key[512];
+        char image_path[512];
+        const char* image;
+        const char* title;
+        if (util_level_cfg_path(game->cfg, level_name, "ObjectiveImage640x480",
+                                key, sizeof(key)) != NULL &&
+            (image = block_get_strptr(game->cfg, key)) != NULL &&
+            sscanf(image, "%511[^,],%d,%d", image_path,
+                   &app->briefing_x, &app->briefing_y) == 3) {
+            app->briefing_panel = image_surface_load(image_path, 0u, 0u);
+            texture_source_color_key_set(app->briefing_panel, 0u, 0u);
+        }
+        snprintf(key, sizeof(key), "%s Main MissionBriefingText", util_root_name(game->cfg));
+        title = block_get_strptr(game->cfg, key);
+        if (title != NULL) {
+            size_t i;
+            strncpy(app->briefing_title, title, sizeof(app->briefing_title) - 1);
+            app->briefing_title[sizeof(app->briefing_title) - 1] = '\0';
+            for (i = 0; app->briefing_title[i] != '\0'; ++i)
+                if (app->briefing_title[i] == '_') app->briefing_title[i] = ' ';
+        }
+        snprintf(key, sizeof(key), "%s Main NextButton%ix%i", util_root_name(game->cfg), WINDOW_W, WINDOW_H);
+        image = block_get_strptr(game->cfg, key);
+        if (image != NULL) {
+            app->briefing_next = image_surface_load(image, 0u, 0u);
+            texture_source_color_key_set(app->briefing_next, 0u, 0u);
+        }
+        snprintf(key, sizeof(key), "%s Main BackButton%ix%i", util_root_name(game->cfg), WINDOW_W, WINDOW_H);
+        image = block_get_strptr(game->cfg, key);
+        if (image != NULL) {
+            app->briefing_back = image_surface_load(image, 0u, 0u);
+            texture_source_color_key_set(app->briefing_back, 0u, 0u);
+        }
+        snprintf(key, sizeof(key), "%s Main BackArrow", util_root_name(game->cfg));
+        image = block_get_strptr(game->cfg, key);
+        if (image != NULL) {
+            app->briefing_back_arrow = image_surface_load(image, 0u, 0u);
+            texture_source_color_key_set(app->briefing_back_arrow, 0u, 0u);
+        }
+    }
     app->briefing_title_font = texture_get_or_load(
         NULL, "Interface\\Fonts\\MbriefFont2.bmp");
     app->briefing_body_font = texture_get_or_load(
@@ -3827,11 +3918,13 @@ static int frameloop_application_gameplay_frame(float dt)
             objective_tick_target(NULL, game.level, 0.0f, dt);
             const char* page = mission_brief + app.mission_brief_page;
             const char* next = strchr(page, '\a');
-            const int dismissed = key_continue || input_mouse_pressed(&input);
-            if (dismissed) {
-                if (next != NULL) {
-                    app.mission_brief_page = (int)(next + 1 - mission_brief);
-                    fprintf(log, "frameloop: Mission Brief next page\n");
+            const int page_action = frameloop_briefing_page_action(
+                mission_brief, &app.mission_brief_page, key_continue,
+                input_mouse_pressed(&input), input.mouse_x, input.mouse_y,
+                app.briefing_back, app.briefing_next);
+            if (page_action != 0) {
+                if (page_action == 1) {
+                    fprintf(log, "frameloop: Mission Brief page changed\n");
                 } else if (objective_briefing_acknowledge(game.level)) {
                     mission_brief_active = 0;
                     objective_score_text_origin_set(NULL);
@@ -3852,7 +3945,11 @@ static int frameloop_application_gameplay_frame(float dt)
                 frameloop_briefing_render(win, &surf, briefing_panel,
                                           briefing_title_font,
                                           briefing_body_font, page_text,
-                                          game.level, &game, (int)frames);
+                                          app.briefing_next, app.briefing_back_arrow,
+                                          next != NULL, app.mission_brief_page != 0,
+                                          app.briefing_x, app.briefing_y,
+                                          app.briefing_title, game.level, &game,
+                                          dt * 25.0f, (int)frames);
                 if (audio_status == 0) audio_update(&ap);
                 ++frames;
                 input_begin_frame(&input);
@@ -4834,6 +4931,10 @@ void frameloop_application_shutdown(void)
     tooltip_software_shutdown();
     graphics_overlay_resources_release();
     indexed_surface_resource_hooks_set(NULL, NULL, NULL, NULL, NULL);
+    texture_release(app.briefing_panel);
+    texture_release(app.briefing_next);
+    texture_release(app.briefing_back);
+    texture_release(app.briefing_back_arrow);
     texture_cache_clear();
     surface_active_render_target_set(NULL);
     input_direct_state_bind(NULL);

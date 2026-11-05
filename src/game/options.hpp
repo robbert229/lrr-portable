@@ -9,10 +9,9 @@
  *
  * Defaults and ranges follow the corpus:
  *   OptionsLoadOrDefault @ 0x416940 — sets exactly the triple at
- *     DAT_00557030/34/3c: speed 1, SFX 8, music 5; it assigns no brightness
- *     value (the same attribution previously stood for brightness too —
- *     corrected here). Brightness 8 and Help_Window Off are port-chosen
- *     neutral defaults (cycles default to option 0);
+ *     DAT_00557030/34/3c: scroll index 1, SFX 8, brightness 5; it assigns no
+ *     music value. A newly initialized port context uses brightness 8 and
+ *     music 5; Help_Window Off is also port-chosen (cycles default to 0);
  *   ScrollToSliderIndexStore @ 0x414f90 — the speed *index* 0..5 the slider
  *     sets, derived from the continuous time scale (bands 0.667/1.0/1.333/
  *     1.667/2.0); options_time_scale() is that inverse: index -> dt factor.
@@ -54,6 +53,9 @@ extern "C" {
 #define OPT_DFLT_SFX_VOLUME    8
 #define OPT_DFLT_MUSIC_VOLUME  5
 #define OPT_DFLT_BRIGHTNESS    8   /* port neutral, not OptionsLoadOrDefault */
+#define OPT_RETAIL_BRIGHTNESS_FALLBACK 5 /* OptionsLoadOrDefault, DAT_0055703c */
+#define OPT_RETAIL_FRESH_SFX           7 /* SavWriteSlot fresh context */
+#define OPT_RETAIL_FRESH_BRIGHTNESS    5 /* SavWriteSlot fresh context */
 #define OPT_DFLT_CYCLE         0
 
 typedef struct GameOptions {
@@ -89,6 +91,8 @@ void options_defaults(GameOptions* o);
 struct GameContext;
 void options_load_or_default(struct GameContext* ctx, int load_options,
                              int reset_frontend);
+/* Mirror the frontend's separate DAT_00557028 selection gate. */
+void options_frontend_selection_set(int selected_slot);
 void options_load_or_default_target(int load_options,
                                     int reset_frontend); /* FUN_00416940 */
 
@@ -138,6 +142,8 @@ int  options_load_header(GameOptions* o, const uint8_t* blk);
 /* Typed owner adapter plus the corpus's no-argument target entry. */
 void options_write_to_slot(struct GameContext* ctx);
 void options_write_to_slot_target(void); /* FUN_00416910 */
+/* Apply the selected slot's sound, brightness and music on level load. */
+void options_apply_from_slot(struct GameContext* ctx); /* FUN_00415150 */
 
 /* OptionsContextSixFieldSet (FUN_00417f20, findings 438/372): the target
  * entry takes only `src` and probes the active save context. The typed

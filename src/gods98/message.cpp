@@ -108,6 +108,17 @@ const char* ui_message_text_slot_get(unsigned int index)
     return index < 26u ? s_ui_message_text_slots[index] : NULL;
 }
 
+TextureSurface* ui_message_image_slot_get(unsigned int index)
+{
+    return index < 26u ? s_ui_message_image_slots[index] : NULL;
+}
+
+void ui_message_image_position_get(float* x, float* y)
+{
+    if (x != NULL) *x = (float)(uintptr_t)s_ui_message_resource;
+    if (y != NULL) *y = (float)(uintptr_t)s_ui_message_subtitle_font;
+}
+
 // FUNCTION: LEGORR 0x0046a7f0
 void ui_message_strings_initialize(void* primary_font, void* secondary_font,
                                    void* message_resource, void* subtitle_font,

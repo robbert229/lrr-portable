@@ -66,6 +66,9 @@ void ui_message_text_slot_assign_with_image(int index, const char* text,
                                             const char* image_path,
                                             const char* display_path); /* FUN_0046abb0 */
 const char* ui_message_text_slot_get(unsigned int index);
+struct TextureSurface;
+TextureSurface* ui_message_image_slot_get(unsigned int index);
+void ui_message_image_position_get(float* x, float* y);
 void message_clear(void);           /* reset queue + config for tests */
 
 /* IncidentMessageCatalogInit / IncidentMessageTemplateReplace /

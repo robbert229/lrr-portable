@@ -851,6 +851,7 @@ uint32_t advisor_text_request_flags_get(void);
 typedef struct AdvisorTextDisplayState {
     int current_slot;
     int hidden_slot;
+    void* slot_image;
     int message_id;
     uint32_t message_flags;
     uint32_t interface_flags; /* DAT_00556ecc: bit 0x100000 gates overlay close */

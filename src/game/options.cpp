@@ -112,7 +112,14 @@ static void options_load_corpus_defaults(GameOptions* o)
     }
     o->game_speed = OPT_DFLT_GAME_SPEED;
     o->sfx_volume = OPT_DFLT_SFX_VOLUME;
-    o->music_volume = OPT_DFLT_MUSIC_VOLUME;
+    o->brightness = OPT_RETAIL_BRIGHTNESS_FALLBACK;
+}
+
+static int s_options_frontend_selection = -1;
+
+void options_frontend_selection_set(int selected_slot)
+{
+    s_options_frontend_selection = selected_slot;
 }
 
 /* Typed adapter for the target's two-argument ABI. */
@@ -124,8 +131,7 @@ void options_load_or_default(struct GameContext* ctx, int load_options,
 }
 
 /* OptionsLoadOrDefault @ 0x00416940 takes (load_options, reset_frontend).
- * The active GameContext owns the three runtime option words; the separate
- * DAT_00557028 gate is not represented by the portable frontend state. */
+ * The frontend supplies the separate DAT_00557028 selection gate. */
 // FUNCTION: LEGORR 0x00416940
 void options_load_or_default_target(int load_options, int reset_frontend)
 {
@@ -137,10 +143,15 @@ void options_load_or_default_target(int load_options, int reset_frontend)
         frontend_flow_word_set(3, 0);
     }
     if (load_options != 0 && ctx != NULL) {
-        if (sav_build_ctx_target() == NULL) {
+        if (s_options_frontend_selection == -1 ||
+            sav_build_ctx_target() == NULL ||
+            ctx->active_slot != ctx->save_slot) {
             options_load_corpus_defaults(&ctx->options);
+        } else {
+            ctx->options.sfx_volume = ctx->saved_sfx_volume;
+            ctx->options.game_speed = ctx->saved_scroll_index;
+            ctx->options.brightness = ctx->saved_brightness;
         }
-        scroll_scale_set_and_clamp(options_time_scale(&ctx->options));
     }
 }
 
@@ -150,6 +161,7 @@ void options_defaults(GameOptions* o)
         return;
     }
     options_load_corpus_defaults(o);
+    o->music_volume = OPT_DFLT_MUSIC_VOLUME;
     for (int i = 3; i < GAME_OPT_COUNT; i++) {
         int* f = option_field(o, i);
         if (f != NULL) {
@@ -306,6 +318,15 @@ void options_write_to_slot(GameContext* ctx)
     options_write_to_slot_target();
 }
 
+void options_apply_from_slot(GameContext* ctx)
+{
+    if (ctx == NULL || ctx->save_slot < 0 ||
+        ctx->active_slot != ctx->save_slot) return;
+    audio_menu_sfx_volume_set(ctx->saved_sfx_volume);
+    ctx->options.brightness = ctx->saved_brightness;
+    audio_menu_volume_set(ctx->saved_music_volume);
+}
+
 /* OptionsWriteToSlot @ 0x00416910 reads the current game and save contexts. */
 // FUNCTION: LEGORR 0x00416910
 void options_write_to_slot_target(void)
@@ -316,7 +337,10 @@ void options_write_to_slot_target(void)
      * +0x0c, and +0x10 option words. */
     s_options_slot_window[2] = (uint32_t)ctx->options.sfx_volume;
     s_options_slot_window[3] = (uint32_t)ctx->options.game_speed;
-    s_options_slot_window[4] = (uint32_t)ctx->options.music_volume;
+    s_options_slot_window[4] = (uint32_t)ctx->options.brightness;
+    ctx->saved_sfx_volume = ctx->options.sfx_volume;
+    ctx->saved_scroll_index = ctx->options.game_speed;
+    ctx->saved_brightness = ctx->options.brightness;
 }
 
 /* Typed OptionsContextSixFieldSet adapter. */
