@@ -3103,6 +3103,37 @@ static FeEvent fe_activate(FrontEnd* fe)
     return FE_EVT_NONE;
 }
 
+/* MenuScrollStateUpdate runs after the current menu tick and render. */
+void frontend_scroll_update(FrontEnd* fe, const FeInput* in)
+{
+    union { uint32_t bits; float value; } scale, curve;
+    FeSubmenu* sub;
+    double q, amount;
+    float y;
+    if (fe == NULL || in == NULL || !fe->open) return;
+    if (fe->menu < 0 || fe->menu >= FE_MENU_COUNT) return;
+    if (fe->sub < 0 || fe->sub >= fe->menus[fe->menu].submenu_count) return;
+    sub = &fe->menus[fe->menu].submenus[fe->sub];
+    if (!sub->can_scroll) {
+        sub->scroll = 0;
+        return;
+    }
+    if (sub->scroll_extent <= 0) sub->scroll_extent = fe_scroll_measure(sub);
+    y = (float)in->mouse_y;
+    if (in->mouse_y >= 200 && in->mouse_y <= 280) return;
+    if (y < 480.0f && !in->mdown) {
+        scale.bits = 0x3e555555u;
+        curve.bits = 0x3ca3d70au;
+        q = (double)y * scale.value - 50.0;
+        amount = q * q * curve.value;
+        if (y < 240.0f) amount = -amount;
+        sub->scroll += (int)(amount * -0.25);
+    }
+    if (sub->scroll > 0) sub->scroll = 0;
+    if (sub->scroll - 480 < -sub->scroll_extent)
+        sub->scroll = 480 - sub->scroll_extent;
+}
+
 FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
                       const TextureSurface* measure)
 {
@@ -3190,52 +3221,6 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
                 --dit->value;
                 fe_options_write(fe, dit);
                 fe->option_changed = 1;
-            }
-        }
-    }
-
-    /* CanScroll edge pan (corpus FUN_00413970 @ 0x413970 + DAT_005574e0
-     * in FUN_00412c00's item placement): while the cursor is in the outer
-     * bands past the deadzone the item plane scrolls, velocity proportional
-     * to distance from the band edge, clamped to [view_h - content, 0].
-     * The corpus gates y against absolute bands for a 480-high screen
-     * (< 200 scrolls, 200..280 deadzone) and velocity ~(50 - y/4)^2; this
-     * port keeps the 5/12-h + h/12 band shape and linear distance velocity
-     * capped at the corpus's ~50 px/frame. */
-    if (sub->can_scroll) {
-        if (sub->scroll_extent <= 0) {
-            sub->scroll_extent = fe_scroll_measure(sub);
-        }
-        int vh = (fe->view_h > 0) ? fe->view_h : 480;
-        int band = vh / 12;
-        int cy = vh / 2;
-        int lo = vh - sub->scroll_extent;
-        if (lo > 0) {
-            lo = 0;
-        }
-        if (sub->scroll < lo) {
-            sub->scroll = lo;
-        }
-        if (sub->scroll > 0) {
-            sub->scroll = 0;
-        }
-        if (in->mouse_y >= 0) {
-            int d = 0, dir = 0;
-            if (in->mouse_y < cy - band) {
-                d = (cy - band) - in->mouse_y;
-                dir = 1;                       /* show earlier rows */
-            } else if (in->mouse_y > cy + band) {
-                d = in->mouse_y - (cy + band);
-                dir = -1;                      /* show later rows */
-            }
-            if (d > 0) {
-                sub->scroll += dir * (d > 50 ? 50 : d);
-                if (sub->scroll > 0) {
-                    sub->scroll = 0;
-                }
-                if (sub->scroll < lo) {
-                    sub->scroll = lo;
-                }
             }
         }
     }
