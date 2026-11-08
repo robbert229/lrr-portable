@@ -5452,9 +5452,9 @@ TextureSurface* interface_message_tab_info_text(void)
     return s_interface_message_tab_info_text;
 }
 
-void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
-                     const TextureSurface* lo_font,
-                     int w, int h, void* px, int pitch)
+static void fe_render_pass(FrontEnd* fe, const TextureSurface* hi_font,
+                           const TextureSurface* lo_font,
+                           int w, int h, void* px, int pitch, int pass)
 {
     if (fe == NULL || px == NULL || !fe->open) {
         return;
@@ -5477,7 +5477,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
     /* .flh overlay lane (finding 23): blit each open overlay's current
      * frame at its configured (x,y), native size, over the menu backdrop
      * and under the items. */
-    for (int overlay_index = 0; overlay_index < sub->overlay_count;
+    for (int overlay_index = 0; pass != 2 && overlay_index < sub->overlay_count;
          ++overlay_index) {
         const FeOverlay* o = &sub->overlays[overlay_index];
         if (o == NULL || o->flic == NULL) {
@@ -5520,7 +5520,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         }
     }
 
-    if (sub->display_title &&
+    if (pass != 2 && sub->display_title &&
         (sub->full_name[0] != '\0' || sub->title[0] != '\0')) {
         char title[FE_NAME_MAX];
         fe_display_label(sub->full_name[0] != '\0' ? sub->full_name
@@ -5541,6 +5541,8 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
 
     for (int item_index =  0; item_index < sub->item_count; item_index++) {
         const FeItem* it = &sub->items[item_index];
+        if (pass == 1 && !it->level_start) continue;
+        if (pass == 2 && it->level_start) continue;
         int x, y;
         fe_item_pos(fe, it, item_index, w, hi_font, &x, &y);
         if (x < 0) {
@@ -5680,6 +5682,8 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
         }
     }
 
+    if (pass == 1) return;
+
     /* Pointer_Standard is the shipped Aclosed.bmp cursor from Lego.cfg's
      * Pointers block. Its red tip is the top-left hotspot. */
     if (fe->pointer_x >= 0 && fe->pointer_y >= 0
@@ -5728,6 +5732,21 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
     }
     menu_hover_status_text_draw(fe, hi_font != NULL ? hi_font : lo_font,
                                 w, h, px, pitch);
+}
+
+void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
+                     const TextureSurface* lo_font,
+                     int w, int h, void* px, int pitch)
+{
+    fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch, 0);
+}
+
+void frontend_render_picker_pass(FrontEnd* fe, const TextureSurface* hi_font,
+                                 const TextureSurface* lo_font,
+                                 int w, int h, void* px, int pitch, int foreground)
+{
+    fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch,
+                   foreground ? 2 : 1);
 }
 
 void frontend_render_credits(const TextureSurface* font,

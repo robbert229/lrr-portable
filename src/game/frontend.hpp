@@ -566,6 +566,9 @@ const char* frontend_active_image(const FrontEnd* fe);
 int frontend_picker_active(const FrontEnd* fe);
 void frontend_picker_panel_text(FrontEnd* fe, const TextureSurface* measure,
                                 void* pixels, int pitch, int width, int height);
+void frontend_render_picker_pass(FrontEnd* fe, const TextureSurface* hi_font,
+                                 const TextureSurface* lo_font,
+                                 int w, int h, void* px, int pitch, int foreground);
 void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch);

@@ -2914,6 +2914,11 @@ static void menu_overlay_surface_and_text_setup(
     }
     const char* image = frontend_active_image(fe);
     const FeSubmenu* active = frontend_active_submenu(fe);
+    const int picker = frontend_picker_active(fe);
+    if (picker) {
+        frontend_render_picker_pass(fe, hi_font, lo_font, width, height,
+                                    pixels, pitch, 0);
+    }
     if (active != NULL
         && (frontend_picker_active(fe) || fe->menu == FE_MENU_SAVE
             || (fe->menu == FE_MENU_MAIN && image != NULL
@@ -2934,7 +2939,12 @@ static void menu_overlay_surface_and_text_setup(
         }
     }
     frontend_picker_panel_text(fe, hi_font, pixels, pitch, width, height);
-    frontend_render(fe, hi_font, lo_font, width, height, pixels, pitch);
+    if (picker) {
+        frontend_render_picker_pass(fe, hi_font, lo_font, width, height,
+                                    pixels, pitch, 1);
+    } else {
+        frontend_render(fe, hi_font, lo_font, width, height, pixels, pitch);
+    }
 }
 
 /* Draw one front-end frame: frozen level (in-game pause) or a plain fill
