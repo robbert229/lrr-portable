@@ -48,6 +48,10 @@ extern uint32_t cmd_pending_command_counts[
 /* Shared command-operation word (DAT_004b8060). */
 extern int s_global_enabled;
 
+/* Temporary bounded selection/queue observation; never changes game state. */
+void cmd_selection_trace(const char* phase, const EntitySlot* entity,
+                         int opcode, int parameter, const int* pair);
+
 /* Record state flags (+0x5c, finding 10). */
 #define CMD_STATE_PENDING   0x10u
 #define CMD_STATE_DONE      0x20u

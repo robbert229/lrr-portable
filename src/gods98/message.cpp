@@ -1171,7 +1171,7 @@ static int incident_message_text_append_default(
 // FUNCTION: LEGORR 0x0041a080
 void incident_message_text_consumer(float frame_delta)
 {
-    uint32_t ui_flags = 0u;
+    uint32_t ui_flags = request_record_flags_peek(7);
     uint32_t scroll_offset = 0u;
     void* output = NULL;
     if (s_incident_message_text_ops.ui_state_flags_get != NULL) {

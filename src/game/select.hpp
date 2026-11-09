@@ -4,7 +4,7 @@
  * Reconstructs the corpus's selection cluster up to the pieces the command
  * queue feeds: DAT_004fef2c (selection array), DAT_004ff298 (count /
  * SelectedEntity gate), the add-to-selection path (dedupe, cap, selected
- * flag) and the opcode-8 (-add N to selection) + opcode-5 (position) routes
+ * flag), opcode-8 selected-set movement, and opcode-5 individual movement
  * through FUN_004520d0 (CommandQueueTick, ported in src/game/cmd.cpp).
  *
  * `selection_pick` maps a viewport/cell position to the nearest placed
@@ -152,7 +152,7 @@ EntitySlot* selection_pick(GameContext* ctx, float cx, float cy,
  * positions stay in world space. Returns the number enqueued. */
 int selection_cmd_move(GameContext* ctx, float tx, float ty);
 
-/* Enqueue the opcode-8 selection-add for `e` (flags op path). */
+/* Enqueue opcode 1 through the selection eligibility/filter owner. */
 void selection_cmd_add(GameContext* ctx, EntitySlot* e);
 
 #ifdef __cplusplus
@@ -161,11 +161,13 @@ void selection_cmd_add(GameContext* ctx, EntitySlot* e);
 
 /* One port-side world action owner. The frame UI arbiter must first tag
  * the ordered sample WORLD. Its admission token is shared with the later
- * simtick caller. Uses the existing reconstruction's either-button DOWN
- * policy, not established reference gesture/configuration parity. */
+ * simtick caller. World actions use an owned release. The ordinary floor
+ * branch follows the reference's selected-set movement/clear order; other
+ * world action modes retain their existing reconstruction policy. */
 struct InputPointerSample;
 int selection_pointer_world_dispatch(GameContext* ctx,
-    struct InputPointerSample* sample, int width, int height);
+    struct EngineContext* engine, struct InputPointerSample* sample,
+    int width, int height);
 
 /* Host convenience: pointer membership in the selection array. */
 int selection_contains_entity(const GameContext* ctx, const EntitySlot* e);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <stdio.h>
 #include <math.h>
+#include <float.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -9,6 +10,7 @@
 #include "ai.hpp"
 #include "entity.hpp"
 #include "building_scene.hpp"
+#include "actor_scene.hpp"
 #include "type_config_ports.hpp"
 #include "entity_pose_delta.hpp"
 #include "entity_motion_ports.hpp"
@@ -42,6 +44,36 @@
 extern float random_float_range(float minimum, float maximum);
 
 static uint32_t s_next_ddiscene_owner_token = 1u;
+static EntityActorActivityAdvanceHook s_actor_activity_advance_hook;
+static void* s_actor_activity_advance_context;
+
+static EntitySlot* entity_carried_slot_get(EntitySlot* entity, int index)
+{
+    if (entity == NULL || index < 0 || index >= 7) return NULL;
+    return index == 0 ? (EntitySlot*)entity->carry_link_308
+                      : entity->carry_extra_links[index - 1];
+}
+
+static void entity_carried_slot_set(EntitySlot* entity, int index,
+                                     EntitySlot* carried)
+{
+    if (index == 0) entity->carry_link_308 = carried;
+    else entity->carry_extra_links[index - 1] = carried;
+}
+
+static void entity_carried_links_clear(EntitySlot* entity)
+{
+    int index;
+    for (index = 0; index < 7; ++index) {
+        EntitySlot* carried = entity_carried_slot_get(entity, index);
+        entity_carried_slot_set(entity, index, NULL);
+        if (carried != NULL && carried->attach_304 == entity) {
+            carried->attach_304 = NULL;
+            carried->attached_scene_slot_index = 0;
+        }
+    }
+    entity->carry_state_324 = 0;
+}
 static char* s_entity_kind_names[16];
 static uint32_t s_entity_kind_name_counts[16];
 static char* s_entity_localized_names[16];
@@ -231,6 +263,211 @@ typedef struct EntityPathMotionRuntime {
 
 static EntityPathMotionRuntime s_entity_path_motion_runtime[
     ENTITY_TYPES * ENTITY_CAP];
+/* Each phase/actor emits at most 24 observations and one suppression line.
+ * Four actor slots are never evicted. All value changes and powers of two
+ * are sampled until exhaustion. Four pre-route observations reserve space
+ * for the first genuine carried kind-9 route; no pose query or path allocation
+ * is introduced by observe. The application frame stamp is observational. */
+struct DeliveryProbePhaseState {
+    unsigned long calls, route_calls, emitted;
+    unsigned long prior[40];
+    int valid, suppressed;
+};
+struct DeliveryProbeActorState {
+    const EntitySlot* actor;
+    const GameContext* context;
+    int route_started;
+    DeliveryProbePhaseState phase[DELIVERY_PROBE_COUNT];
+};
+static DeliveryProbeActorState s_delivery_probe_actors[4];
+static unsigned long s_delivery_probe_frame;
+static float s_delivery_probe_dt, s_delivery_probe_scaled, s_delivery_probe_scale;
+static uint32_t s_delivery_probe_state;
+static int s_delivery_probe_frame_valid, s_delivery_probe_full;
+
+static unsigned long delivery_probe_float_word(float value)
+{
+    uint32_t bits;
+    memcpy(&bits, &value, sizeof(bits));
+    return (unsigned long)bits;
+}
+
+void entity_delivery_probe_observe(EntityDeliveryProbePhase phase,
+    const EntitySlot* e, float delta, int detail, const float* values,
+    unsigned int available)
+{
+    static const char* names[DELIVERY_PROBE_COUNT] = {
+        "app", "tick", "drop.before", "drop.after", "frame", "branch",
+        "route", "route.skip", "path.call", "path.return", "frame.return",
+        "path", "path.skip", "resolve", "scale", "pose.request", "readback",
+        "pose.raw", "pose.scene", "transform", "display"
+    };
+    DeliveryProbeActorState* actor = NULL;
+    DeliveryProbeActorState* free_slot = NULL;
+    DeliveryProbePhaseState* sample;
+    const EntityPathMotionRuntime* runtime = NULL;
+    unsigned long now[40];
+    unsigned long call;
+    unsigned int i;
+    int changed, periodic, terminal = -1;
+    char supplied[4][32];
+    char engine_state[32], phase_delta[32];
+    char frame_dt[32], frame_scaled[32], frame_factor[32];
+    char app_state[32], frame_text[32];
+    uint32_t* engine_word;
+    if (e == NULL || e->type != 2 || e->pool_link_408 != (uintptr_t)e ||
+        phase < 0 || phase >= DELIVERY_PROBE_COUNT) return;
+    for (i = 0u; i < 4u; ++i) {
+        if (s_delivery_probe_actors[i].actor == e &&
+            s_delivery_probe_actors[i].context == e->owner_ctx)
+            actor = &s_delivery_probe_actors[i];
+        if (free_slot == NULL && s_delivery_probe_actors[i].actor == NULL)
+            free_slot = &s_delivery_probe_actors[i];
+    }
+    if (actor == NULL) {
+        if (e->carry_state_324 <= 0) return;
+        if (free_slot == NULL) {
+            if (!s_delivery_probe_full) {
+                fprintf(stderr, "[DEBUG-DELIVERY-ROUTE] actor-cap=4 new-actors-suppressed\n");
+                s_delivery_probe_full = 1;
+            }
+            return;
+        }
+        actor = free_slot; actor->actor = e; actor->context = e->owner_ctx;
+    }
+    sample = &actor->phase[(int)phase];
+    if (sample->calls != ~0ul) ++sample->calls;
+    call = sample->calls;
+    /* No later qualifying call is needed to announce exhaustion. */
+    if (sample->emitted >= 24ul) {
+        return;
+    }
+    if (e->wp_count > 0 &&
+        (e->wp_dynamic == NULL ? e->wp_count <= AI_WAYPOINTS_MAX :
+         (unsigned int)e->wp_count <= e->wp_capacity))
+        terminal = (int)ENTITY_WAYPOINTS(e)[e->wp_count - 1].step_kind;
+    if (!actor->route_started && e->carry_state_324 > 0 && terminal == 9) {
+        actor->route_started = 1;
+        for (i = 0u; i < DELIVERY_PROBE_COUNT; ++i) {
+            actor->phase[i].valid = 0;
+            actor->phase[i].route_calls = 0ul;
+        }
+    }
+    /* Pickup animation can precede the scheduler's real delivery route.
+     * Keep twenty observations per phase available for that transition. */
+    if (!actor->route_started && sample->emitted >= 4ul) return;
+    if (actor->route_started && sample->route_calls != ~0ul)
+        ++sample->route_calls;
+    for (i = 0u; i < ENTITY_TYPES * ENTITY_CAP; ++i)
+        if (s_entity_path_motion_runtime[i].owner == e) {
+            runtime = &s_entity_path_motion_runtime[i]; break;
+        }
+    engine_word = engine_current_state_word();
+    memset(now, 0, sizeof(now));
+    now[0] = (unsigned long)e->flags_3e0;
+    now[1] = (unsigned long)e->flags_3e4;
+    now[2] = (unsigned long)e->flags_3e8;
+    now[3] = (unsigned long)(uintptr_t)e->cmd_head;
+    now[4] = (unsigned long)e->wp_count;
+    now[5] = (unsigned long)e->wp_index;
+    now[6] = (unsigned long)e->carry_state_324;
+    now[7] = (unsigned long)detail;
+    now[8] = delivery_probe_float_word(delta);
+    now[9] = values != NULL ? available & 15u : 0u;
+    for (i = 0u; i < 4u; ++i)
+        if ((now[9] & (1u << i)) != 0u)
+            now[10u + i] = delivery_probe_float_word(values[i]);
+    now[14] = delivery_probe_float_word(e->x);
+    now[15] = delivery_probe_float_word(e->y);
+    now[16] = delivery_probe_float_word(e->z);
+    now[17] = runtime != NULL;
+    if (runtime != NULL) {
+        now[18] = (unsigned long)runtime->waypoint_index;
+        now[19] = delivery_probe_float_word(runtime->total_length);
+        now[20] = delivery_probe_float_word(runtime->progress);
+        now[21] = delivery_probe_float_word(runtime->carry_progress);
+        now[22] = delivery_probe_float_word(runtime->target[0]);
+        now[23] = delivery_probe_float_word(runtime->target[1]);
+        now[24] = (unsigned long)runtime->sample_count;
+    }
+    now[25] = delivery_probe_float_word(s_delivery_probe_dt);
+    now[26] = delivery_probe_float_word(s_delivery_probe_scaled);
+    now[27] = delivery_probe_float_word(s_delivery_probe_scale);
+    now[28] = (unsigned long)s_delivery_probe_state;
+    now[29] = engine_word != NULL;
+    if (engine_word != NULL) now[30] = (unsigned long)*engine_word;
+    now[31] = (unsigned long)actor->route_started;
+    changed = !sample->valid || memcmp(sample->prior, now, sizeof(now)) != 0;
+    memcpy(sample->prior, now, sizeof(now)); sample->valid = 1;
+    {
+        unsigned long count = actor->route_started ? sample->route_calls : call;
+        periodic = count <= 2ul ||
+            (count != 0ul && (count & (count - 1ul)) == 0ul);
+    }
+    if (!periodic && !changed) return;
+    ++sample->emitted;
+    for (i = 0u; i < 4u; ++i) {
+        if (values != NULL && (available & (1u << i)) != 0u)
+            sprintf(supplied[i], "%.9g", (double)values[i]);
+        else strcpy(supplied[i], "NA");
+    }
+    if (engine_word != NULL) sprintf(engine_state, "%08lx", (unsigned long)*engine_word);
+    else strcpy(engine_state, "NA");
+    if (phase == DELIVERY_PROBE_TRANSFORM || phase == DELIVERY_PROBE_DISPLAY ||
+        phase == DELIVERY_PROBE_POSE_RAW || phase == DELIVERY_PROBE_POSE_SCENE)
+        strcpy(phase_delta, "NA");
+    else sprintf(phase_delta, "%.9g", (double)delta);
+    if (s_delivery_probe_frame_valid) {
+        sprintf(frame_dt, "%.9g", (double)s_delivery_probe_dt);
+        sprintf(frame_scaled, "%.9g", (double)s_delivery_probe_scaled);
+        sprintf(frame_factor, "%.9g", (double)s_delivery_probe_scale);
+        sprintf(app_state, "%08lx", (unsigned long)s_delivery_probe_state);
+        sprintf(frame_text, "%lu", s_delivery_probe_frame);
+    }
+    else {
+        strcpy(frame_dt, "NA"); strcpy(frame_scaled, "NA");
+        strcpy(frame_factor, "NA"); strcpy(app_state, "NA");
+        strcpy(frame_text, "NA");
+    }
+    fprintf(stderr, "[DEBUG-DELIVERY-ROUTE] phase=%s actor=%p ctx=%p call=%lu route-stage=%d route-call=%lu pre-route-limit=4 frame-valid=%d frame=%s rawdt=%s scaled=%s factor=%s appstate=%s engine=%s delta=%s detail=%d flags=%08lx/%08lx/%08lx head=%p kind=%d wp=%d/%d terminal=%d link=%p carry=%d activity=%d/%d raw=%.9g,%.9g,%.9g scene=%p v=%s,%s,%s,%s cache=%d",
+        names[(int)phase], (const void*)e, (const void*)e->owner_ctx, call,
+        actor->route_started, sample->route_calls, s_delivery_probe_frame_valid, frame_text, frame_dt, frame_scaled,
+        frame_factor, app_state, engine_state, phase_delta, detail,
+        (unsigned long)e->flags_3e0, (unsigned long)e->flags_3e4,
+        (unsigned long)e->flags_3e8, e->cmd_head,
+        e->cmd_head != NULL ? cmd_rec_type(e->cmd_head) : -1,
+        e->wp_index, e->wp_count, terminal, (void*)e->link_2fc,
+        e->carry_state_324, e->activity, e->activity_last,
+        (double)e->x, (double)e->y, (double)e->z, e->attached_scene_object,
+        supplied[0], supplied[1], supplied[2], supplied[3], runtime != NULL);
+    if (runtime != NULL)
+        fprintf(stderr, " cached-index=%d total=%.9g progress=%.9g carry-progress=%.9g target=%.9g,%.9g samples=%lu",
+            runtime->waypoint_index, (double)runtime->total_length,
+            (double)runtime->progress, (double)runtime->carry_progress,
+            (double)runtime->target[0], (double)runtime->target[1],
+            (unsigned long)runtime->sample_count);
+    fprintf(stderr, "\n");
+    if (sample->emitted == 24ul) {
+        fprintf(stderr, "[DEBUG-DELIVERY-ROUTE] phase=%s actor=%p observations=24 exhausted-at-call=%lu frame=%s\n",
+            names[(int)phase], (const void*)e, call, frame_text);
+        sample->suppressed = 1;
+    }
+    fflush(stderr);
+}
+
+void entity_delivery_probe_frame(GameContext* game, unsigned long frame,
+    float dt, float scaled_dt, float time_scale, uint32_t state)
+{
+    int i;
+    s_delivery_probe_frame = frame; s_delivery_probe_dt = dt;
+    s_delivery_probe_scaled = scaled_dt; s_delivery_probe_scale = time_scale;
+    s_delivery_probe_state = state; s_delivery_probe_frame_valid = 1;
+    if (game == NULL) return;
+    for (i = 0; i < entity_count(game, 2); ++i)
+        entity_delivery_probe_observe(DELIVERY_PROBE_APP,
+            entity_at(game, 2, i), dt);
+}
+
 static void entity_path_motion_runtime_clear(EntitySlot* entity);
 namespace unported_ledger_stubs {
 void entity_path_motion_runtime_clear_impl(EntitySlot* entity);
@@ -2531,6 +2768,7 @@ int entity_teardown(EntitySlot* entity)
     cmd_gettool_entity_removing(entity);
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (entity->type == 4) building_scene_entity_release(entity);
+    if (entity->type == 2 || entity->type == 3) actor_scene_entity_release(entity);
 #endif
     type = entity->type;
     flags = (uint32_t)entity->flags_3ec;
@@ -2651,6 +2889,8 @@ int entity_teardown(EntitySlot* entity)
     entity->wp_index = 0;
     entity->stats_record = NULL;
     entity->ddiscene_owner_token = 0u;
+    entity->motion_inputs_initialized = 0u;
+    entity->activity_advance_valid = 0u;
     active_entity_list_entity_remove(entity);
     entity->pool_link_408 = (uintptr_t)s_entity_teardown_free_head;
     s_entity_teardown_free_head = entity;
@@ -3003,7 +3243,7 @@ void entity_kind_record_update_dispatch(EntitySlot* entity)
         if (hooks->type_four_update != NULL)
             hooks->type_four_update(entity, hooks->context);
         entity->flags_3e8 |= 0x20u;
-        if ((entity->flags_3e0 & 8u) != 0u) {
+        if ((entity_stats_word_get(entity) & 8u) != 0u) {
             /* FUN_00438460's flag-8 branch calls TaskRecordCreateAndScanGrid
              * before its shared refresh. That helper creates command kind 9
              * and performs the production 0x403910 count-prune sweep. */
@@ -3011,11 +3251,13 @@ void entity_kind_record_update_dispatch(EntitySlot* entity)
             if (hooks->type_four_global_action != NULL)
                 hooks->type_four_global_action(hooks->context);
         }
-        else if ((entity->flags_3e0 & 2u) != 0u) {
+        else if ((entity_stats_word_get(entity) & 2u) != 0u) {
+            timed_task_record_initialize_and_link(entity, 7, 0, 0);
             if (hooks->action_dispatch != NULL)
                 hooks->action_dispatch(entity, 7, hooks->context);
         }
-        else if ((entity->flags_3e0 & 4u) != 0u) {
+        else if ((entity_stats_word_get(entity) & 4u) != 0u) {
+            timed_task_record_initialize_and_link(entity, 6, 0, 0);
             if (hooks->action_dispatch != NULL)
                 hooks->action_dispatch(entity, 6, hooks->context);
         }
@@ -4941,6 +5183,7 @@ int entity_create(GameContext* ctx, int type, const char* name,
     EntitySlot* slot = &ctx->entity[ti][*cnt];
     entity_path_motion_runtime_clear(slot);
     __builtin_memset(slot, 0, sizeof(*slot));
+    entity_motion_inputs_initialize(slot);
     slot->type = type;
     slot->etype = type;
     slot->pool_link_408 = (uintptr_t)slot;
@@ -5053,6 +5296,15 @@ EntitySlot* entity_create_with_position(GameContext* context, int type,
                                         const char* name, int value,
                                         float x, float y, float heading)
 {
+    return entity_create_with_position_subtype(context, type, 0, name, value,
+                                               x, y, heading);
+}
+
+EntitySlot* entity_create_with_position_subtype(GameContext* context, int type,
+                                                int subtype, const char* name,
+                                                int value, float x, float y,
+                                                float heading)
+{
     int index = entity_create(context, type, name, x, y, 0.0f, heading);
     EntitySlot* created;
     if (index < 0) return NULL;
@@ -5074,13 +5326,20 @@ EntitySlot* entity_create_with_position(GameContext* context, int type,
             (void)entity_type_config_scene_slot_nodes_load(mutable_created);
         }
     }
-    /* The raw create argument is the row selector when no type name is
-     * available; named creation resolves and rebinds through the same Stats
-     * table. Static task states only bind their separate +0xcc capacity. */
+    /* FUN_00439370/004394b0 pass subtype zero, not the entity kind, to
+     * EntityCreateByType. The fourth argument selects the later animation
+     * state and must not substitute for that row (ProcessedOre uses row 1).
+     * Named creation already resolves its row through the config registry. */
+    if (name == NULL && (type == 6 || type == 7))
+        created->etype = subtype;
     (void)entity_stats_record_bind(created);
     entity_world_position_set(created, x, y, heading, 1);
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (type == 4 && !building_scene_entity_bind(created)) {
+        (void)entity_teardown(created);
+        return NULL;
+    }
+    if ((type == 2 || type == 3) && !actor_scene_entity_bind(created)) {
         (void)entity_teardown(created);
         return NULL;
     }
@@ -5737,7 +5996,20 @@ float entity_stats_float_atdc(const EntitySlot* e) { return ENTITY_STATS_FLOAT_R
 uint32_t entity_stats_word_atac(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0xac); }
 uint32_t entity_stats_word_at_ec(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0xec); }
 // FUNCTION: LEGORR 0x00469e60
-uint32_t entity_stats_word_get(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0x144); }
+uint32_t entity_stats_word_get(const EntitySlot* e)
+{
+    /* [DEBUG-MOVING-STATS] Observe the missing owner, then preserve the
+     * original raw read and fault. This is not a fallback Stats record. */
+    if (e != NULL && e->stats_record == NULL) {
+        fprintf(stderr, "[DEBUG-MOVING-STATS] entity=%p type=%d row=%d task_state=%d name=%.31s type_name=%.31s context=%p head=%p activity=%d last=%d flags=%08lx/%08lx/%08lx\n",
+            e, e->type, e->etype, e->task_state, e->name, e->type_name,
+            e->owner_ctx, e->cmd_head, e->activity, e->activity_last,
+            (unsigned long)e->flags_3e0, (unsigned long)e->flags_3e4,
+            (unsigned long)e->flags_3e8);
+        fflush(stderr);
+    }
+    return ENTITY_STATS_WORD_READ(e, 0x144);
+}
 // FUNCTION: LEGORR 0x00469e80
 uint32_t entity_state_flags_get(const EntitySlot* e) { return ENTITY_STATS_WORD_READ(e, 0x148); }
 
@@ -7042,14 +7314,39 @@ void entity_deposit_activity_hooks_set(const EntityDepositActivityHooks* hooks)
     else s_entity_deposit_activity_hooks = *hooks;
 }
 
-/* EntityDepositActivityGate (FUN_0043a300): activated deposits enter activity
- * 0x1d through the live activity setter; otherwise the accepted target and
- * route hooks control the approach/attachment branch. */
+static int entity_deposit_position_get(EntitySlot* entity, float position[3])
+{
+    if (entity->attached_scene_object != NULL) {
+        if (!ddiscene_object_position_get(entity->attached_scene_object,
+                                           NULL, position)) return 0;
+    }
+    else {
+        position[0] = entity->x;
+        position[1] = entity->y;
+        position[2] = entity->z;
+    }
+    return position[0] == position[0] && position[1] == position[1] &&
+        fabs(position[0]) <= FLT_MAX && fabs(position[1]) <= FLT_MAX;
+}
+
+/* EntityDepositActivityGate (FUN_0043a300): accepted targets use the real
+ * locator, terrain search and route installer. An unavailable scene owner
+ * is distinct from an authored missing locator, which uses target origin. */
 // FUNCTION: LEGORR 0x0043A300
 int entity_deposit_activity_gate(EntitySlot* entity, EntitySlot* target)
 {
     uint32_t flags;
-    int direction = 0;
+    GameContext* context;
+    LevelState* level;
+    float actor_position[3], marker[3], facing[3];
+    int start_x, start_y, goal_x, goal_y;
+    int locator_status = -1;
+    int direction, installed;
+    int* path_x = NULL;
+    int* path_y = NULL;
+    float* route_x = NULL;
+    float* route_y = NULL;
+    uint32_t count = 0u, i;
     if (entity == NULL || (entity->flags_3e0 & 0x400u) == 0u) return 0;
     if (s_entity_deposit_activity_hooks.activity_flags != NULL)
         flags = s_entity_deposit_activity_hooks.activity_flags(
@@ -7070,16 +7367,84 @@ int entity_deposit_activity_gate(EntitySlot* entity, EntitySlot* target)
             target, (const EntitySlot*)entity->carry_link_308, 0)
         && (entity_stats_word_get(target) & 8u) == 0u) return 0;
     flags = entity_stats_word_get(target);
-    if (s_entity_deposit_activity_hooks.target_busy != NULL
-        && s_entity_deposit_activity_hooks.target_busy(
-            s_entity_deposit_activity_hooks.context, target, 0)) flags |= 8u;
-    if ((flags & 8u) == 0u && s_entity_deposit_activity_hooks.route_to_target != NULL
-        && !s_entity_deposit_activity_hooks.route_to_target(
-            s_entity_deposit_activity_hooks.context, entity, target, &direction))
-        return 0;
-    if (s_entity_deposit_activity_hooks.deposit_start != NULL)
-        s_entity_deposit_activity_hooks.deposit_start(
-            s_entity_deposit_activity_hooks.context, entity, target, direction);
+    if ((flags & 8u) != 0u || target->type == 4) {
+        if (s_entity_deposit_activity_hooks.approach_pose_get != NULL)
+            locator_status = s_entity_deposit_activity_hooks.approach_pose_get(
+                s_entity_deposit_activity_hooks.context, target,
+                (flags & 8u) != 0u, marker, facing);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+        else locator_status = building_scene_deposit_approach_get(target,
+            (flags & 8u) != 0u, marker, facing);
+#endif
+    }
+    else locator_status = 0;
+    if (locator_status < 0) return 0;
+    if (locator_status == 0) {
+        if (!entity_deposit_position_get(target, marker)) return 0;
+        direction = (int)((uintptr_t)entity & 3u);
+    }
+    else {
+        if (marker[0] != marker[0] || marker[1] != marker[1] ||
+            facing[0] != facing[0] || facing[1] != facing[1] ||
+            fabs(marker[0]) > FLT_MAX || fabs(marker[1]) > FLT_MAX ||
+            fabs(facing[0]) > FLT_MAX || fabs(facing[1]) > FLT_MAX) return 0;
+        if (fabs(facing[0]) > fabs(facing[1]))
+            direction = facing[0] > 0.0f ? 3 : 1;
+        else direction = facing[1] > 0.0f ? 2 : 0;
+    }
+    context = entity->owner_ctx != NULL ? entity->owner_ctx
+                                        : entity_pool_callback_context_get();
+    level = context != NULL ? context->level : NULL;
+    if (level == NULL || level->ptr_terrain == NULL ||
+        !entity_deposit_position_get(entity, actor_position) ||
+        !terrain_world_xy_to_cell(level->ptr_terrain, actor_position[0],
+            actor_position[1], &start_x, &start_y) ||
+        !terrain_world_xy_to_cell(level->ptr_terrain, marker[0], marker[1],
+            &goal_x, &goal_y)) return 0;
+    if (start_x == goal_x && start_y == goal_y) {
+        float x = (float)goal_x;
+        float y = (float)goal_y;
+        installed = entity_route_setup_and_marker_associate(
+            entity, 1u, &x, &y, marker);
+    }
+    else {
+        if (!terrain_neighbor_path_check(entity, (uint32_t)start_x,
+                (uint32_t)start_y, (uint32_t)goal_x, (uint32_t)goal_y,
+                &path_x, &path_y, &count, NULL, NULL)) {
+            free(path_x); free(path_y);
+            return 0;
+        }
+        if (count == 0u || path_x == NULL || path_y == NULL ||
+            (size_t)count > ((size_t)-1) / sizeof(float)) {
+            free(path_x); free(path_y);
+            return 0;
+        }
+        route_x = (float*)malloc((size_t)count * sizeof(float));
+        route_y = (float*)malloc((size_t)count * sizeof(float));
+        if (route_x == NULL || route_y == NULL) {
+            free(path_x); free(path_y); free(route_x); free(route_y);
+            return 0;
+        }
+        for (i = 0u; i < count; ++i) {
+            route_x[i] = (float)path_x[i];
+            route_y[i] = (float)path_y[i];
+        }
+        installed = entity_route_setup_and_marker_associate(
+            entity, count, route_x, route_y, marker);
+        free(path_x); free(path_y); free(route_x); free(route_y);
+    }
+    /* Retail returns success on an installer refusal. The gate writes its
+     * target/terminal only on success; the installer owns any changes to
+     * the preceding route. Path-search failure returns zero. */
+    if (installed && entity->wp_count > 0) {
+        AiWaypoint* last = &ENTITY_WAYPOINTS(entity)[entity->wp_count - 1];
+        entity->link_2fc = (uintptr_t)target;
+        if ((flags & 8u) != 0u) last->step_kind = 9u;
+        else {
+            last->step_kind = 7u;
+            last->pending |= (uint8_t)(4u | (direction & 3));
+        }
+    }
     return 1;
 }
 
@@ -8108,10 +8473,17 @@ void entity_transform_position_get_outputs(const EntitySlot* entity,
                                      position)) {
         *out_x = position[0];
         *out_y = position[1];
+        entity_delivery_probe_observe(DELIVERY_PROBE_TRANSFORM, entity,
+            0.0f, 1, position, 7u);
         return;
     }
     *out_x = entity->x;
     *out_y = entity->y;
+    {
+        float probe_values[2] = { entity->x, entity->y };
+        entity_delivery_probe_observe(DELIVERY_PROBE_TRANSFORM, entity,
+            0.0f, 0, probe_values, 3u);
+    }
 }
 
 void entity_transform_position_get(const EntitySlot* entity,
@@ -8213,6 +8585,11 @@ void entity_world_position_set(EntitySlot* entity, float x, float y,
      * The host EntitySlot keeps the same horizontal pair directly. */
     entity->x = x;
     entity->y = y;
+    {
+        float probe_values[3] = { x, y, heading };
+        entity_delivery_probe_observe(DELIVERY_PROBE_POSE_RAW, entity,
+            0.0f, update_heading, probe_values, 7u);
+    }
     if (entity->attached_scene_object != NULL) {
         float position[3];
         float z = entity->z;
@@ -8235,6 +8612,11 @@ void entity_world_position_set(EntitySlot* entity, float x, float y,
     }
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (entity->type == 4) (void)building_scene_pose_set(entity);
+    if (entity->type == 2 || entity->type == 3) {
+        int probe_pose_result = actor_scene_pose_set(entity);
+        entity_delivery_probe_observe(DELIVERY_PROBE_POSE_SCENE, entity,
+            0.0f, probe_pose_result);
+    }
 #endif
     /* Corpus writes 0.01 to the +0xae tick scale after every update. */
     entity->movement_tick_scale = 0.01f;
@@ -8447,23 +8829,50 @@ void entity_damage_apply(EntitySlot* e, float damage, int emit_effects)
 static int entity_linked_reference_matches(EntitySlot* candidate,
                                            void* target)
 {
+    int matched = 0;
     if (candidate == NULL || target == NULL) {
         return 0;
     }
     if (candidate->link_2fc == (uintptr_t)target) {
         candidate->link_2fc = 0u;
         candidate->flags_3ec &= ~0x40u;
-        return 1;
+        matched = 1;
     }
-    if (candidate->carry_link_308 == target) {
-        candidate->carry_link_308 = NULL;
-        return 1;
+    {
+        int index;
+        for (index = 0; index < 7; ++index) {
+            if (entity_carried_slot_get(candidate, index) == target) {
+                EntitySlot* carried = (EntitySlot*)target;
+                int count = candidate->carry_state_324;
+                if (count > index && count <= 7) {
+                    int next;
+                    for (next = index + 1; next < count; ++next) {
+                        EntitySlot* moved = entity_carried_slot_get(candidate, next);
+                        entity_carried_slot_set(candidate, next - 1, moved);
+                        if (moved != NULL && moved->attach_304 == candidate)
+                            moved->attached_scene_slot_index = next - 1;
+                    }
+                    entity_carried_slot_set(candidate, count - 1, NULL);
+                    candidate->carry_state_324 = count - 1;
+                }
+                else entity_carried_slot_set(candidate, index, NULL);
+                if (carried->attach_304 == candidate) {
+                    carried->attach_304 = NULL;
+                    carried->attached_scene_slot_index = 0;
+                }
+                if (candidate->carry_state_324 == 0 &&
+                    candidate->carry_link_308 == NULL)
+                    candidate->flags_3e0 &= ~0x400u;
+                matched = 1;
+                break;
+            }
+        }
     }
     if (candidate->spawn_child_3cc == target) {
         candidate->spawn_child_3cc = NULL;
-        return 1;
+        matched = 1;
     }
-    return 0;
+    return matched;
 }
 
 /* EntityPoolFindWithLocalPredicate (FUN_0043f560): the original dispatches
@@ -10361,6 +10770,7 @@ static void* s_cell_step_hook_user;
 void ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
     void* entity, float delta, float* movement_delta,
     float* movement_scale);
+float ledger_stub_00447b30_EntityActivityTick(EntitySlot* entity, float delta);
 void ledger_stub_004477d0_PathStepLookaheadEntryWrite(EntitySlot* entity);
 
 void entity_cell_step_hooks_set(CellStepPathResolveHook path_hook,
@@ -10538,6 +10948,12 @@ int entity_cell_step_command_issue_with_jitter(EntitySlot* entity,
 }
 
 } // namespace unported_ledger_stubs
+
+float entity_activity_tick(EntitySlot* entity, float delta)
+{
+    return unported_ledger_stubs::ledger_stub_00447b30_EntityActivityTick(
+        entity, delta);
+}
 
 namespace unported_ledger_stubs {
 
@@ -11572,29 +11988,45 @@ float entity_path_step_advance_and_arrival_check(EntitySlot* entity,
     float position[2];
     float path_position[2];
     uint32_t path_flags;
+    entity_delivery_probe_observe(DELIVERY_PROBE_PATH, entity, delta);
     if (entity == NULL) return 0.0f;
     if (entity->wp_count <= 0) {
+        entity_delivery_probe_observe(DELIVERY_PROBE_PATH_SKIP, entity, delta, 1);
         entity_action_sequence_reset(entity, 0);
         return (float)entity->flags_3e0;
     }
     if (entity->wp_index < 0) entity->wp_index = 0;
     if (entity->wp_index >= entity->wp_count) {
+        entity_delivery_probe_observe(DELIVERY_PROBE_PATH_SKIP, entity, delta, 2);
         entity_action_sequence_reset(entity, 1);
         return (float)entity->flags_3e0;
     }
     state = entity_path_motion_runtime_get(entity, 1);
-    if (state == NULL) return (float)entity->flags_3e0;
+    if (state == NULL) {
+        entity_delivery_probe_observe(DELIVERY_PROBE_PATH_SKIP, entity, delta, 3);
+        return (float)entity->flags_3e0;
+    }
     if (state->waypoint_index != entity->wp_index ||
         state->total_length <= 0.0f) {
         state->carry_progress = 0.0f;
-        (void)entity_step_movement_vector_resolve(entity, 0,
+        int probe_resolve_result = entity_step_movement_vector_resolve(entity, 0,
             (entity->flags_3e8 & 8u) != 0u,
             (entity->flags_3e0 & 0x400u) == 0u);
+        entity_delivery_probe_observe(DELIVERY_PROBE_RESOLVE, entity, delta,
+            probe_resolve_result);
     }
-    if (state->waypoint_index != entity->wp_index) return (float)entity->flags_3e0;
+    if (state->waypoint_index != entity->wp_index) {
+        entity_delivery_probe_observe(DELIVERY_PROBE_PATH_SKIP, entity, delta, 4);
+        return (float)entity->flags_3e0;
+    }
 
     unported_ledger_stubs::ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
         entity, delta, &movement_delta, &movement_scale);
+    {
+        float probe_values[2] = { movement_delta, movement_scale };
+        entity_delivery_probe_observe(DELIVERY_PROBE_SCALE, entity, delta,
+            (entity->flags_3e8 & 0x4000u) != 0u, probe_values, 3u);
+    }
     (void)movement_scale;
     if ((entity->flags_3e8 & 0x4000u) == 0u)
         state->progress += movement_delta;
@@ -11612,11 +12044,15 @@ float entity_path_step_advance_and_arrival_check(EntitySlot* entity,
         path_position[0] += (state->samples[1][0] - state->samples[0][0]) * fraction;
         path_position[1] += (state->samples[1][1] - state->samples[0][1]) * fraction;
     }
+    entity_delivery_probe_observe(DELIVERY_PROBE_POSE_REQUEST, entity, delta,
+        0, path_position, 3u);
     entity_world_position_set(entity, path_position[0], path_position[1],
                               entity->rot, 1);
 
     path_flags = ENTITY_WAYPOINTS(entity)[entity->wp_index].pending;
     entity_transform_position_get(entity, position);
+    entity_delivery_probe_observe(DELIVERY_PROBE_READBACK, entity, delta,
+        (int)path_flags, position, 3u);
     if ((entity->flags_3e0 & 8u) == 0u &&
         ENTITY_WAYPOINTS(entity)[entity->wp_index].step_kind == 3u &&
         entity->link_2fc != 0) {
@@ -11671,7 +12107,9 @@ float entity_path_step_advance_and_arrival_check(EntitySlot* entity,
                 unported_ledger_stubs::ledger_stub_004477d0_PathStepLookaheadEntryWrite(
                     entity);
             state->waypoint_index = -1;
-            if (entity->wp_index >= entity->wp_count - 1)
+            /* Selecting the last waypoint does not mean its segment has
+             * been travelled. Only a skip past the end is terminal here. */
+            if (entity->wp_index >= entity->wp_count)
                 entity->flags_3e8 |= 0x400u;
         }
         else {
@@ -11836,6 +12274,14 @@ int ledger_stub_00444680_StepMovementVectorResolve(
 
 
 } // namespace unported_ledger_stubs
+
+/* Export the existing route owner through the declared production API. */
+float entity_path_step_advance_and_arrival_check(EntitySlot* entity,
+                                                 float delta)
+{
+    return unported_ledger_stubs::entity_path_step_advance_and_arrival_check(
+        entity, delta);
+}
 
 /* Pure rate query: reuse the ordinary 0x446610 terrain/state adjustments,
  * with delta 1 reference tick. No cursor, pose, or animation is advanced. */
@@ -12034,8 +12480,7 @@ static float entity_movement_default_animation_scale_get(void* context,
         entity_speed_component_get((const EntitySlot*)entity));
 }
 
-// FUNCTION: LEGORR 0x00446610
-void ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
+static int entity_movement_scale_impl(
     void* entity, float delta, float* movement_delta,
     float* movement_scale)
 {
@@ -12043,7 +12488,7 @@ void ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
     EntityMovementTickScaleHooks hooks;
     const EntitySlot* slot = (const EntitySlot*)entity;
     if (slot == NULL || movement_delta == NULL || movement_scale == NULL)
-        return;
+        return 0;
     memset(&state, 0, sizeof(state));
     state.kind = slot->type;
     state.flags_f8 = slot->flags_3e0;
@@ -12057,8 +12502,16 @@ void ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
     hooks.entity_scale_get = entity_movement_default_entity_scale_get;
     hooks.animation_scale_get = entity_movement_default_animation_scale_get;
     hooks.context = NULL;
-    entity_movement_tick_scale_and_delta_get(
+    return entity_movement_tick_scale_and_delta_get(
         &state, entity, delta, movement_delta, movement_scale, &hooks);
+}
+
+// FUNCTION: LEGORR 0x00446610
+void ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet(
+    void* entity, float delta, float* movement_delta, float* movement_scale)
+{
+    (void)entity_movement_scale_impl(entity, delta, movement_delta,
+                                     movement_scale);
 }
 
 // EntityNearestConnectedTerrainCellRouteSelect
@@ -12521,6 +12974,7 @@ float ledger_stub_00447b30_EntityActivityTick(
     EntityTypeActivityTickHook tick = NULL;
     float timer_result = 0.0f;
     if (entity == NULL) return delta;
+    entity->activity_advance_valid = 0u;
     if (hooks != NULL && hooks->delta_scale != NULL) {
         scaled_delta = hooks->delta_scale(hooks->context, entity, delta);
     }
@@ -12548,6 +13002,31 @@ float ledger_stub_00447b30_EntityActivityTick(
             /* FUN_00447b30 writes each type-specific worker's returned
              * timer to entity +0x2d4 before testing the finish gate. */
             entity->activity_timer = timer_result;
+        }
+        else if ((entity->type == 2 || entity->type == 3)) {
+            float overflow = 0.0f;
+            int activity = entity->activity;
+            uint32_t generation = entity->activity_generation;
+            int advanced = 0;
+            if (s_actor_activity_advance_hook != NULL)
+                advanced = s_actor_activity_advance_hook(
+                    s_actor_activity_advance_context, entity, scaled_delta,
+                    (uint32_t)entity->activity_param, &overflow);
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+            else advanced = actor_scene_advance(entity, scaled_delta,
+                (uint32_t)entity->activity_param, &overflow);
+#endif
+            if (advanced && generation == entity->activity_generation &&
+                activity == entity->activity && overflow == overflow &&
+                fabs(overflow) <= FLT_MAX) {
+                entity->activity_timer = overflow;
+                entity->activity_advance_overflow = overflow;
+                entity->activity_advance_activity = activity;
+                entity->activity_advance_generation = generation;
+                entity->activity_advance_valid = 1u;
+            }
+            else entity->activity_timer = 0.0f;
+            timer_result = entity->activity_timer;
         }
         else if ((entity->flags_3e8 & 0x20000u) != 0u) {
             if (hooks != NULL && hooks->behavior_update != NULL)
@@ -13832,30 +14311,7 @@ int ledger_stub_0044a2a0_EntityWorkObjectPositionGet(
 void ledger_stub_0044a310_ObjectMovementInputAccumulate(EntitySlot* object,
     int input_y, int input_x, float input_z)
 {
-    unsigned char* bytes = (unsigned char*)object;
-    int type;
-    uint32_t capability;
-    unsigned char flags;
-    int* accumulators;
-    float* accumulator_z;
-    void* linked;
-    memcpy(&type, bytes, sizeof(type));
-    if (type == ENTITY_TYPE_MINIFIG) {
-        memcpy(&linked, bytes + 0x36c, sizeof(linked));
-        if (linked != NULL) {
-            bytes = (unsigned char*)linked;
-        }
-    }
-    flags = bytes[0x3e0];
-    if ((flags & 1u) != 0)
-        entity_action_sequence_reset((EntitySlot*)bytes, 0);
-    capability = entity_capability_flags_get((EntitySlot*)bytes);
-    if ((capability & 4u) == 0) input_x = 0;
-    accumulators = (int*)(bytes + 0x2bc);
-    accumulator_z = (float*)(bytes + 0x2c4);
-    *accumulator_z = input_z + *accumulator_z;
-    accumulators[0] += input_x;
-    accumulators[1] += input_y;
+    entity_motion_input_accumulate(object, input_y, input_x, input_z);
 }
 
 // NearestCellCoordinateWorldResolve
@@ -14965,15 +15421,15 @@ int ledger_stub_00439e10_VehicleUnloadCellFindIfEligible(
     return entity_vehicle_unload_cell_find_if_eligible(entity, out_xy);
 }
 
-/* EntityAttachedObjectListDetach (FUN_00439e70): detach the carried-object
- * slot and clear its owner links. The port has one explicit carried object
- * instead of the corpus's variable-length attachment array. */
+/* EntityAttachedObjectListDetach (FUN_00439e70): detach every represented
+ * carried slot, retaining the legacy slot-zero mirror. */
 // FUNCTION: LEGORR 0x00439e70
 void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
 {
     EntitySlot* carried;
     EntitySlot* linked_entity;
     uint32_t state_flags;
+    int carry_index;
     if (entity == NULL) return;
     state_flags = entity->flags_3e0;
     if ((state_flags & 0x400u) == 0u ||
@@ -14989,6 +15445,7 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
         uint32_t i;
         GameContext* context = linked_entity->owner_ctx;
         if (context == NULL) context = entity_pool_callback_context_get();
+        entity_carried_links_clear(entity);
         for (i = 0u; i < entity->attached_child_count; ++i) {
             EntitySlot* record = entity->attached_children[i];
             entity->attached_children[i] = NULL;
@@ -15008,7 +15465,6 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
         }
         return;
     }
-    carried = (EntitySlot*)entity->carry_link_308;
     if (reset_mode != 0 &&
         (entity_stats_word_get(entity) & 8u) == 0u) {
         (void)cmd_chain_drop(entity, 6);
@@ -15016,9 +15472,14 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
         (void)cmd_chain_drop(entity, 15);
         (void)cmd_chain_drop(entity, 20);
     }
-    if (carried != NULL) {
-        entity->carry_link_308 = NULL;
-        entity->carry_state_324 = 0;
+    for (carry_index = 0; carry_index < 7; ++carry_index) {
+        carried = entity_carried_slot_get(entity, carry_index);
+        entity_carried_slot_set(entity, carry_index, NULL);
+        if (carried == NULL) continue;
+        if (carried->attach_304 == entity) {
+            carried->attach_304 = NULL;
+            carried->attached_scene_slot_index = 0;
+        }
         carried->owner_36c = NULL;
         carried->link_2fc = 0u;
         if (reset_mode == 0) {
@@ -15031,7 +15492,7 @@ void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode)
                 (void)cmd_chain_drop(entity, 4);
                 (void)cmd_chain_drop(entity, 20);
             } else {
-                (void)cmd_chain_drop(entity, 3);
+                entity_command_unlink_by_kind(entity, 3, carried, 1);
             }
         } else {
             (void)cmd_chain_drop(entity, 5);
@@ -15107,23 +15568,11 @@ void ledger_stub_004078c0_EntityCursorTargetStepResolveAndTimerAdvance(
 }
 
 
-/* The original boot path registers an SFX sample hook and an entity scene-end
- * hook. These adapters use the port's alias registry and EntitySlot flags;
- * owner-token resolution remains a renderer integration boundary. */
+/* The sound owner registers the SFX sample callback. This owner registers
+ * only the entity scene-end callback; registering a second sound resolver
+ * here would submit every entry sample twice. */
 static EntityDDiSceneOwnerResolveHook s_ddiscene_owner_resolve;
 static void* s_ddiscene_owner_resolve_context;
-
-static void entity_ddiscene_sample_callback(const char* sample_name,
-                                            void* scene_object,
-                                            void* context)
-{
-    int alias;
-    (void)context;
-    if (sample_name != NULL && scene_object != NULL &&
-        sound_alias_lookup(sample_name, &alias)) {
-        sound_submission_route_wrapper(scene_object, alias, 0, 1, NULL);
-    }
-}
 
 static void entity_ddiscene_end_callback(void* scene_object, void* context)
 {
@@ -15143,7 +15592,7 @@ void entity_ddiscene_callbacks_install(
 {
     s_ddiscene_owner_resolve = owner_resolve;
     s_ddiscene_owner_resolve_context = context;
-    ddiscene_frame_callbacks_set(entity_ddiscene_sample_callback, NULL, 1,
+    ddiscene_frame_callbacks_set(NULL, NULL, 1,
                                  entity_ddiscene_end_callback, NULL);
 }
 
@@ -15490,3 +15939,26 @@ void* ledger_stub_00473690_EntityVisualResourceLoad(void* scene_object)
 
 
 } // namespace unported_ledger_stubs
+
+int entity_motion_scale_checked(EntitySlot* entity, float delta,
+                                 float* movement_delta, float* scale)
+{
+    float actual_delta = 0.0f, actual_scale = 0.0f;
+    if (entity == NULL || entity->stats_record == NULL ||
+        movement_delta == NULL || scale == NULL) return 0;
+    if (!unported_ledger_stubs::entity_movement_scale_impl(
+            entity, delta, &actual_delta, &actual_scale)) return 0;
+    if (actual_scale != actual_scale || fabs(actual_scale) > FLT_MAX ||
+        actual_delta != actual_delta || fabs(actual_delta) > FLT_MAX) return 0;
+    if ((entity->flags_3e8 & 0x20000u) == 0u && entity->type != 10)
+        *movement_delta = actual_delta;
+    *scale = actual_scale;
+    return 1;
+}
+
+void entity_actor_activity_advance_hook_set(EntityActorActivityAdvanceHook hook,
+                                            void* context)
+{
+    s_actor_activity_advance_hook = hook;
+    s_actor_activity_advance_context = context;
+}

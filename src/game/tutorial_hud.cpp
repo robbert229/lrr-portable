@@ -955,6 +955,36 @@ static int tutorial_coordinate_field_set(LevelState* level,
     return changed;
 }
 
+/* 0x454d10 -> 0x454ca0 writes the authored count before creating each
+ * crystal through 0x439370. That owner also increments the cell counter. */
+static void tutorial_crystals_at_coordinate_list_set(GameContext* game,
+                                                     uint32_t list_index,
+                                                     uint32_t count)
+{
+    void* node;
+    uint32_t visited = 0u;
+    if (game == NULL || game->level == NULL || list_index >= 0x37u) return;
+    node = game->level->pool_heads[list_index];
+    while (node != NULL && visited < NERP_TUTORIAL_CELL_CAPACITY) {
+        int cell_xy[2];
+        uint8_t* voxel;
+        int32_t remaining = (int32_t)count;
+        memcpy(&cell_xy[0], node, sizeof(cell_xy[0]));
+        memcpy(&cell_xy[1], (char*)node + 4, sizeof(cell_xy[1]));
+        voxel = level_voxel(game->level, cell_xy[0], cell_xy[1]);
+        if (voxel != NULL) {
+            memcpy(voxel + 0x2c, &count, sizeof(count));
+            while (remaining > 0) {
+                (void)entity_build_placement_command_setup(
+                    cell_xy, 0, NULL, 1, 0);
+                --remaining;
+            }
+        }
+        node = *(void**)((char*)node + 8);
+        ++visited;
+    }
+}
+
 typedef struct TutorialPointerEntityMark {
     LevelState* level;
     int32_t x;
@@ -1003,6 +1033,124 @@ static void tutorial_pointer_context11(GameContext* game, uint32_t list_index)
         memcpy(&mark.y, (char*)node + 4, sizeof(mark.y));
         (void)entity_pool_find_by_callback_filtered(game,
             tutorial_pointer_entity_mark, &mark);
+        node = *(void**)((char*)node + 8);
+        ++visited;
+    }
+}
+
+typedef struct TutorialPickupCellQuery {
+    LevelState* level;
+    int32_t x;
+    int32_t y;
+    uint32_t count;
+    int type;
+    EntitySlot* entity;
+} TutorialPickupCellQuery;
+
+/* 0x457060: a typed match stops the filtered pool walk. Other objects at
+ * the same cell still increment the shared count. */
+static int tutorial_pickup_cell_candidate(EntitySlot* entity, void* payload)
+{
+    TutorialPickupCellQuery* query = (TutorialPickupCellQuery*)payload;
+    int x = -1;
+    int y = -1;
+    if (entity == NULL || query == NULL ||
+        !tutorial_pointer_entity_cell_get(entity, query->level, &x, &y) ||
+        x != query->x || y != query->y) return 0;
+    if (entity->type == query->type) {
+        query->entity = entity;
+        query->count = 1u;
+        return 1;
+    }
+    ++query->count;
+    return 0;
+}
+
+/* 0x457130 -> 0x456d00/context12 -> 0x439a20. The second typed scan
+ * deliberately retains the first scan's count and selected pointer. The
+ * outer callback's result remains zero even when a route is issued. */
+static void tutorial_pickup_at_coordinate_list(GameContext* game,
+                                               uint32_t list_index)
+{
+    void* node;
+    uint32_t visited = 0u;
+    if (game == NULL || game->level == NULL || list_index >= 0x37u) return;
+    node = game->level->pool_heads[list_index];
+    while (node != NULL && visited < NERP_TUTORIAL_CELL_CAPACITY) {
+        TutorialPickupCellQuery query;
+        memset(&query, 0, sizeof(query));
+        query.level = game->level;
+        memcpy(&query.x, node, sizeof(query.x));
+        memcpy(&query.y, (char*)node + 4, sizeof(query.y));
+        query.type = 2;
+        (void)entity_pool_find_by_callback_filtered(
+            game, tutorial_pickup_cell_candidate, &query);
+        if (query.count != 0u) {
+            EntitySlot* actor = query.entity;
+            query.type = 6;
+            (void)entity_pool_find_by_callback_filtered(
+                game, tutorial_pickup_cell_candidate, &query);
+            if (query.count != 0u) {
+                /* Temporary observation of the actual task-owner boundary. */
+                static uintptr_t debug_previous[32];
+                static int debug_valid;
+                uintptr_t state[32];
+                uint32_t used = 0u;
+                int before_count = actor != NULL ? actor->wp_count : -1;
+                uint32_t before_flags0 = actor != NULL ? actor->flags_3e0 : 0u;
+                uint32_t before_flags8 = actor != NULL ? actor->flags_3e8 : 0u;
+                int result = entity_gated_step_command_issue(actor, query.entity);
+                int actor_x = -1, actor_y = -1;
+                int target_x = -1, target_y = -1;
+                int last_kind = -1;
+                (void)tutorial_pointer_entity_cell_get(
+                    actor, game->level, &actor_x, &actor_y);
+                (void)tutorial_pointer_entity_cell_get(
+                    query.entity, game->level, &target_x, &target_y);
+                if (actor != NULL && actor->wp_count > 0 &&
+                    (unsigned int)actor->wp_count <=
+                        (actor->wp_dynamic != NULL ? actor->wp_capacity :
+                                                     AI_WAYPOINTS_MAX))
+                    last_kind = ENTITY_WAYPOINTS(actor)[actor->wp_count - 1].step_kind;
+                state[used++] = (uintptr_t)actor;
+                state[used++] = (uintptr_t)query.entity;
+                state[used++] = list_index;
+                state[used++] = (uintptr_t)query.x;
+                state[used++] = (uintptr_t)query.y;
+                state[used++] = query.count;
+                state[used++] = (uintptr_t)result;
+                state[used++] = (uintptr_t)before_count;
+                state[used++] = before_flags0;
+                state[used++] = before_flags8;
+                state[used++] = (uintptr_t)last_kind;
+                state[used++] = (uintptr_t)actor_x;
+                state[used++] = (uintptr_t)actor_y;
+                state[used++] = (uintptr_t)target_x;
+                state[used++] = (uintptr_t)target_y;
+                state[used++] = actor != NULL ? (uintptr_t)actor->wp_count : 0u;
+                state[used++] = actor != NULL ? (uintptr_t)actor->wp_index : 0u;
+                state[used++] = actor != NULL ? actor->link_2fc : 0u;
+                state[used++] = actor != NULL ? (uintptr_t)actor->carry_link_308 : 0u;
+                state[used++] = actor != NULL ? (uintptr_t)actor->carry_state_324 : 0u;
+                if (!debug_valid || memcmp(debug_previous, state,
+                                           used * sizeof(state[0])) != 0) {
+                    fprintf(stderr, "[DEBUG-MOVING-PICKUP] list=%lu cell=%ld,%ld count=%lu actor=%p target=%p target_type=%d result=%d flags_before=%08lx/%08lx wp_before=%d wp_after=%d index=%d last_kind=%d link=%p carry=%p/%d actor_cell=%d,%d target_cell=%d,%d\n",
+                        (unsigned long)list_index, (long)query.x, (long)query.y,
+                        (unsigned long)query.count, (void*)actor, (void*)query.entity,
+                        query.entity != NULL ? query.entity->type : -1, result,
+                        (unsigned long)before_flags0, (unsigned long)before_flags8,
+                        before_count, actor != NULL ? actor->wp_count : -1,
+                        actor != NULL ? actor->wp_index : -1, last_kind,
+                        actor != NULL ? (void*)actor->link_2fc : NULL,
+                        actor != NULL ? actor->carry_link_308 : NULL,
+                        actor != NULL ? actor->carry_state_324 : -1,
+                        actor_x, actor_y, target_x, target_y);
+                    fflush(stderr);
+                    memcpy(debug_previous, state, used * sizeof(state[0]));
+                    debug_valid = 1;
+                }
+            }
+        }
         node = *(void**)((char*)node + 8);
         ++visited;
     }
@@ -1214,6 +1362,110 @@ static uint32_t tutorial_record_object_at_list(LevelState* level,
     return 0u;
 }
 
+/* Scratch diagnostic: command 178/list 5 only. Counters are callback calls. */
+static void moving_arrival_probe(uint32_t result, LevelState* level)
+{
+    enum { CHANGE_LIMIT = 128, PERIOD_LIMIT = 16, PERIOD_CALLS = 256 };
+    typedef struct ArrivalKey {
+        uint32_t result, r3, r5, message, count, truncated;
+        EntitySlot* entities[10];
+        int cells[10][2];
+        uint32_t coordinates[NERP_TUTORIAL_CELL_CAPACITY * 2];
+        uint32_t coordinate_count;
+    } ArrivalKey;
+    typedef struct ArrivalBucket {
+        ArrivalKey previous;
+        uint32_t changes, periods;
+        int valid, change_exhausted, period_exhausted;
+    } ArrivalBucket;
+    static ArrivalBucket buckets[16];
+    static unsigned long calls;
+    ArrivalKey key;
+    ArrivalBucket* bucket;
+    uint32_t n, j, visited;
+    unsigned int which;
+    int changed, periodic, emit;
+    void* node;
+    memset(&key, 0, sizeof(key));
+    ++calls;
+    key.result = result;
+    key.r3 = s_tutorial_nerp_registers[3];
+    key.r5 = s_tutorial_nerp_registers[5];
+    key.message = tutorial_message_history_get(0);
+    which = 4u * (key.r3 == 5u ? 1u : key.r3 == 7u ? 2u :
+                  key.r3 == 9u ? 3u : 0u) +
+            (key.r5 == 5u ? 1u : key.r5 == 7u ? 2u :
+             key.r5 == 9u ? 3u : 0u);
+    bucket = &buckets[which];
+    n = object_pointer_registry_count_get();
+    if (n > 10u) n = 10u;
+    key.count = n;
+    for (j = 0u; j < n; ++j) {
+        key.entities[j] = object_pointer_registry_entity_get(j);
+        key.cells[j][0] = -1; key.cells[j][1] = -1;
+        if (key.entities[j] && level)
+            entity_position_to_terrain_cell(key.entities[j], level,
+                &key.cells[j][0], &key.cells[j][1]);
+    }
+    node = level ? level->pool_heads[5] : NULL;
+    visited = 0u;
+    while (node && visited < NERP_TUTORIAL_CELL_CAPACITY) {
+        memcpy(&key.coordinates[visited * 2u], node, 4);
+        memcpy(&key.coordinates[visited * 2u + 1u], (char*)node + 4, 4);
+        node = *(void**)((char*)node + 8);
+        ++visited;
+    }
+    key.coordinate_count = visited;
+    key.truncated = node != NULL;
+    changed = !bucket->valid || memcmp(&key, &bucket->previous, sizeof(key)) != 0;
+    periodic = (calls % PERIOD_CALLS) == 0;
+    emit = 0;
+    if (changed) {
+        bucket->previous = key;
+        bucket->valid = 1;
+        if (bucket->changes < CHANGE_LIMIT) {
+            ++bucket->changes; emit = 1;
+            if (bucket->changes == CHANGE_LIMIT && !bucket->change_exhausted) {
+                fprintf(stderr, "[ARRIVAL-178] call=%lu bucket=%u change-budget-exhausted limit=%u\n", calls, which, CHANGE_LIMIT);
+                bucket->change_exhausted = 1;
+            }
+        }
+    }
+    if (periodic && bucket->periods < PERIOD_LIMIT) {
+        ++bucket->periods; emit = 1;
+        if (bucket->periods == PERIOD_LIMIT && !bucket->period_exhausted) {
+            fprintf(stderr, "[ARRIVAL-178] call=%lu bucket=%u periodic-budget-exhausted limit=%u\n", calls, which, PERIOD_LIMIT);
+            bucket->period_exhausted = 1;
+        }
+    }
+    if (!emit) return;
+    fprintf(stderr, "[ARRIVAL-178] call=%lu bucket=%u change=%d periodic=%d result=%lu R3=%lu R5=%lu message=%lu count=%lu level=%p coordinates=%lu truncated=%lu\n",
+        calls, which, changed, periodic, (unsigned long)result,
+        (unsigned long)key.r3, (unsigned long)key.r5,
+        (unsigned long)key.message, (unsigned long)n, (void*)level,
+        (unsigned long)visited, (unsigned long)key.truncated);
+    for (j = 0u; j < n; ++j) {
+        EntitySlot* e = key.entities[j];
+        fprintf(stderr, "[ARRIVAL-178] call=%lu slot=%lu entity=%p type=%d cell=%d,%d match=%d pos=%g,%g,%g velocity=%g,%g,%g wp=%d/%d cmd=%p mode=%d activity=%d flags=%lx,%lx,%lx\n",
+            calls, (unsigned long)(j + 1u), (void*)e, e ? e->type : -1,
+            key.cells[j][0], key.cells[j][1],
+            tutorial_entity_matches_coordinate_list(e, level, 5u),
+            e ? e->x : 0.0, e ? e->y : 0.0, e ? e->z : 0.0,
+            e ? e->velocity_x : 0.0, e ? e->velocity_y : 0.0,
+            e ? e->velocity_z : 0.0, e ? e->wp_index : -1,
+            e ? e->wp_count : -1, e ? e->cmd_head : NULL,
+            e ? e->command_mode_404 : -1, e ? e->activity : -1,
+            (unsigned long)(e ? e->flags_3e0 : 0u),
+            (unsigned long)(e ? e->flags_3e4 : 0u),
+            (unsigned long)(e ? e->flags_3ec : 0u));
+    }
+    for (j = 0u; j < visited; ++j)
+        fprintf(stderr, "[ARRIVAL-178] call=%lu coordinate=%ld,%ld\n", calls,
+            (long)(int32_t)key.coordinates[j * 2u],
+            (long)(int32_t)key.coordinates[j * 2u + 1u]);
+    fflush(stderr);
+}
+
 /* GetSelectedRecordObject @ 0x454220 queries OList slots, not positions in
  * the selection array. FUN_00452610(entity, NULL) tests the selected bit. */
 static uint32_t tutorial_selected_record_object_get(void)
@@ -1226,6 +1478,44 @@ static uint32_t tutorial_selected_record_object_get(void)
             return index + 1u;
     }
     return 0u;
+}
+
+/* Temporary diagnostics: selection uses the same OList predicate as query 144. */
+typedef struct MovingDebugCrystalScan { LevelState* level; unsigned int count; } MovingDebugCrystalScan;
+static int moving_debug_crystal(EntitySlot* e, void* payload)
+{
+    MovingDebugCrystalScan* scan = (MovingDebugCrystalScan*)payload;
+    LevelState* level = scan->level;
+    if (e && e->type == 6) {
+        int x = -1, y = -1;
+        if (level) entity_position_to_terrain_cell(e, level, &x, &y);
+        if (tutorial_entity_matches_coordinate_list(e, level, 9)) {
+            ++scan->count;
+            fprintf(stderr, "[DEBUG-MOVING-CRYSTAL] entity=%p cell=%d,%d pos=%f,%f,%f owner=%p carry_link=%p\n",
+                    (void*)e, x, y, e->x, e->y, e->z, e->owner_36c, e->carry_link_308);
+        }
+    }
+    return 0;
+}
+
+void tutorial_moving_debug_snapshot(const char* where)
+{
+    uint32_t id = tutorial_selected_record_object_get();
+    EntitySlot* e = id ? object_pointer_registry_entity_get(id -  1u) : NULL;
+    LevelState* level = s_tutorial_game_context ? s_tutorial_game_context->level : NULL;
+    int x = -1, y = -1;
+    MovingDebugCrystalScan scan;
+    if (e && level) entity_position_to_terrain_cell(e, level, &x, &y);
+    fprintf(stderr, "[DEBUG-MOVING-SNAPSHOT] %s olist=%lu actor=%p type=%d pos=%f,%f,%f cell=%d,%d owner=%p carry_link=%p carry_state=%d\n",
+            where, (unsigned long)id, (void*)e, e ? e->type : -1,
+            e ? e->x : 0.0, e ? e->y : 0.0, e ? e->z : 0.0, x, y,
+            e ? e->owner_36c : NULL, e ? e->carry_link_308 : NULL,
+            e ? e->carry_state_324 : -1);
+    scan.level = level; scan.count = 0;
+    if (s_tutorial_game_context)
+        (void)entity_pool_find_by_callback_filtered(s_tutorial_game_context, moving_debug_crystal, &scan);
+    fprintf(stderr, "[DEBUG-MOVING-CRYSTAL] filtered_matches=%u context=%p level=%p\n", scan.count, (void*)s_tutorial_game_context, (void*)level);
+    fflush(stderr);
 }
 
 uint32_t tutorial_record_object_pointer_get(void)
@@ -1475,10 +1765,8 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 112u && argc == 2u && args != NULL) {
-        (void)tutorial_coordinate_field_set(
-            s_tutorial_game_context != NULL
-                ? s_tutorial_game_context->level : NULL,
-            args[0], 0x2cu, args[1]);
+        tutorial_crystals_at_coordinate_list_set(
+            s_tutorial_game_context, args[0], args[1]);
         s_nerp_runtime.tutorial_crystals = args[1];
         *result_out = 1u;
         return 1;
@@ -1599,6 +1887,65 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
             s_tutorial_game_context != NULL
                 ? s_tutorial_game_context->level : NULL,
             args[0]);
+        if (args[0] == 5u)
+            moving_arrival_probe(*result_out, s_tutorial_game_context != NULL
+                ? s_tutorial_game_context->level : NULL);
+        if (args[0] == 9u) {
+            static uint32_t debug_snapshot[3 + 10 * 3 + NERP_TUTORIAL_CELL_CAPACITY * 2];
+            static int debug_valid = 0;
+            uint32_t snapshot[2 + 10 * 3 + NERP_TUTORIAL_CELL_CAPACITY * 2];
+            uint32_t used = 0;
+            LevelState* level = s_tutorial_game_context ? s_tutorial_game_context->level : NULL;
+            snapshot[used++] = *result_out;
+            uint32_t n = object_pointer_registry_count_get();
+            uint32_t j;
+            void* node;
+            uint32_t visited;
+            if (n > 10u) n = 10u;
+            snapshot[used++] = n;
+            for (j = 0; j < n; ++j) {
+                EntitySlot* e = object_pointer_registry_entity_get(j);
+                int x = -1, y = -1;
+                if (e && level) entity_position_to_terrain_cell(e, level, &x, &y);
+                snapshot[used++] = (uint32_t)x;
+                snapshot[used++] = (uint32_t)y;
+                snapshot[used++] = (uint32_t)(uintptr_t)e;
+            }
+            node = level ? level->pool_heads[9] : NULL;
+            visited = 0;
+            while (node && visited < NERP_TUTORIAL_CELL_CAPACITY) {
+                int32_t x, y;
+                memcpy(&x, node, sizeof(x)); memcpy(&y, (char*)node + 4, sizeof(y));
+                snapshot[used++] = (uint32_t)x;
+                snapshot[used++] = (uint32_t)y;
+                node = *(void**)((char*)node + 8); ++visited;
+            }
+            if (!debug_valid || debug_snapshot[0] != used || memcmp(debug_snapshot + 1, snapshot, used * sizeof(uint32_t)) != 0) {
+                fprintf(stderr, "[DEBUG-MOVING-178] result=%lu message=%lu registers=%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\n",
+                    (unsigned long)*result_out, (unsigned long)tutorial_message_history_get(0),
+                    (unsigned long)s_tutorial_nerp_registers[0], (unsigned long)s_tutorial_nerp_registers[1],
+                    (unsigned long)s_tutorial_nerp_registers[2], (unsigned long)s_tutorial_nerp_registers[3],
+                    (unsigned long)s_tutorial_nerp_registers[4], (unsigned long)s_tutorial_nerp_registers[5],
+                    (unsigned long)s_tutorial_nerp_registers[6], (unsigned long)s_tutorial_nerp_registers[7]);
+                for (j = 0; j < n; ++j) {
+                    EntitySlot* e = object_pointer_registry_entity_get(j);
+                    int x = -1, y = -1;
+                    if (e && level) entity_position_to_terrain_cell(e, level, &x, &y);
+                    fprintf(stderr, "[DEBUG-MOVING-178] olist=%lu entity=%p type=%d cell=%d,%d match=%d\n", (unsigned long)(j+1), (void*)e, e ? e->type : -1, x, y, tutorial_entity_matches_coordinate_list(e, level, 9));
+                }
+                node = level ? level->pool_heads[9] : NULL; visited = 0;
+                while (node && visited < NERP_TUTORIAL_CELL_CAPACITY) {
+                    int32_t x, y;
+                    memcpy(&x, node, sizeof(x)); memcpy(&y, (char*)node + 4, sizeof(y));
+                    fprintf(stderr, "[DEBUG-MOVING-178] coordinate=%ld,%ld\n", (long)x, (long)y);
+                    node = *(void**)((char*)node + 8); ++visited;
+                }
+                debug_snapshot[0] = used;
+                memcpy(debug_snapshot + 1, snapshot, used * sizeof(uint32_t));
+                debug_valid = 1;
+                fflush(stderr);
+            }
+        }
         return 1;
     }
     if (command == 199u && argc == 1u && args != NULL) {
@@ -1620,7 +1967,22 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 144u && argc == 0u) {
+        static EntitySlot* debug_entity = NULL;
+        static uint32_t debug_previous = 0xffffffffu;
+        static float debug_x, debug_y, debug_z;
+        static int debug_cell_x = -1, debug_cell_y = -1;
+        EntitySlot* e;
+        LevelState* level = s_tutorial_game_context ? s_tutorial_game_context->level : NULL;
+        int x = -1, y = -1;
         *result_out = tutorial_selected_record_object_get();
+        e = *result_out ? object_pointer_registry_entity_get(*result_out - 1u) : NULL;
+        if (e && level) entity_position_to_terrain_cell(e, level, &x, &y);
+        if (*result_out != debug_previous || e != debug_entity || x != debug_cell_x || y != debug_cell_y ||
+            (e && (e->x != debug_x || e->y != debug_y || e->z != debug_z))) {
+            tutorial_moving_debug_snapshot("query144");
+            debug_previous = *result_out; debug_entity = e; debug_cell_x = x; debug_cell_y = y;
+            if (e) { debug_x = e->x; debug_y = e->y; debug_z = e->z; }
+        }
         return 1;
     }
     if (command == 254u && argc == 1u && args != NULL) {
@@ -1731,6 +2093,16 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         uint32_t count = 0u;
         while (tutorial_objective_token_lookup(count) != NULL) ++count;
         *result_out = s_nerp_runtime.message_ack_count >= count;
+        return 1;
+    }
+    if (command == 210u && argc == 1u && args != NULL) {
+        priority_entry_state_set(0, args[0] == 0u);
+        *result_out = 0u;
+        return 1;
+    }
+    if (command == 211u && argc == 1u && args != NULL) {
+        tutorial_pickup_at_coordinate_list(s_tutorial_game_context, args[0]);
+        *result_out = 0u;
         return 1;
     }
     if (command == 166u && argc == 1u && args != NULL) {
@@ -2013,6 +2385,25 @@ void tutorial_script_command_dispatch(float delta)
                     tutorial_indirect_handle_resolve(&args[i]);
             }
             step += argc;
+            if (command == 211u) {
+                static uint32_t cache[128][7];
+                static unsigned char valid[128];
+                uint32_t state[7];
+                uint32_t slot = pc % 128u;
+                state[0] = pc; state[1] = previous; state[2] = s_tutorial_nerp_registers[3];
+                state[3] = s_tutorial_nerp_registers[5];
+                state[4] = argc && pc + 1u < s_tutorial_program_count ? s_tutorial_program_words[pc + 1u] : 0u;
+                state[5] = previous && argc ? args[0] : 0u; state[6] = argc;
+                if (!valid[slot] || memcmp(cache[slot], state, sizeof(state)) != 0) {
+                    fprintf(stderr, "[DEBUG-MOVING-211] pc=%lu previous=%lu R3=%lu R5=%lu argc=%lu raw=%lu status=%s",
+                            (unsigned long)pc, (unsigned long)previous, (unsigned long)state[2], (unsigned long)state[3],
+                            (unsigned long)argc, (unsigned long)state[4], previous ? "invoked" : "skipped-unresolved");
+                    if (previous && argc) fprintf(stderr, " resolved=%lu", (unsigned long)state[5]);
+                    fprintf(stderr, "\n");
+                    fflush(stderr);
+                    memcpy(cache[slot], state, sizeof(state)); valid[slot] = 1;
+                }
+            }
             if (previous != 0u) {
                 (void)tutorial_command_invoke(command,
                     argc == 0u ? NULL : args, argc, &result);
@@ -2709,19 +3100,28 @@ void legacy_overlay_image_record_load(const char* path, int panel,
     }
     record->selection_count = 0;
     record->flags = state;
+    request_record_flags_set(panel, state);
     record->image_mode = 0;
     record->image_flags = 0;
     record->image = NULL;
     record->image_texture_owned = 0;
     if (path != NULL) {
-        if (s_legacy_hud_ops.surface_load != NULL) {
+        if (s_legacy_hud_ops.panel_texture_load != NULL) {
+            record->image = s_legacy_hud_ops.panel_texture_load(
+                path, s_legacy_hud_ops.context);
+            record->image_texture_owned = record->image != NULL;
+        }
+        else if (s_legacy_hud_ops.surface_load != NULL) {
             record->image = s_legacy_hud_ops.surface_load(
                 NULL, path, 0, 0, s_legacy_hud_ops.context);
         }
         else {
-            record->image = texture_get_or_load(NULL, path);
+            record->image = image_surface_load(path, 0u, 0u);
             record->image_texture_owned = record->image != NULL;
         }
+        if (record->image_texture_owned)
+            texture_source_color_key_set((TextureSurface*)record->image,
+                                         0u, 0u);
     }
     if (record->image != NULL) {
         if (s_legacy_hud_ops.surface_initialize != NULL)
@@ -2729,6 +3129,7 @@ void legacy_overlay_image_record_load(const char* path, int panel,
                                                 s_legacy_hud_ops.context);
         record->image_mode = 0;
         record->image_flags |= 1u;
+        request_record_flags_set(panel, state | 1u);
         return;
     }
     if (path != NULL && s_legacy_hud_ops.surface_alternate_load != NULL) {
@@ -2738,6 +3139,7 @@ void legacy_overlay_image_record_load(const char* path, int panel,
             record->image_texture_owned = 0;
             record->image_mode = 1;
             record->image_flags |= 1u;
+            request_record_flags_set(panel, state | 1u);
         }
     }
 }
@@ -2848,6 +3250,14 @@ void legacy_panel_category_record_install(int panel, const float rect[4],
         record->selection_flags[i] = selections != NULL ? selections[i] : 0;
         record->selection_values[i] = 0;
     }
+}
+
+TextureSurface* legacy_panel_texture_get(int panel)
+{
+    if (panel < 0 || panel >= 18) return NULL;
+    const LegacyPanelPortRecord* record = &s_legacy_panels[panel];
+    if (!record->image_texture_owned || record->image_mode != 0) return NULL;
+    return (TextureSurface*)record->image;
 }
 
 void* legacy_panel_image_get(int panel)

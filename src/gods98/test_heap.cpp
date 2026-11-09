@@ -77,6 +77,65 @@ static void test_aligned_and_retry(void)
     engine_heap_free(s);
 }
 
+
+static int s_wrap_first_a;
+static int s_wrap_first_b;
+static int s_wrap_zero_draws;
+static int wrap_test_line_height(void*, void*) { return 10; }
+static int wrap_test_advance(void*, void*, unsigned char glyph)
+{
+    return glyph == ' ' ? 5 : glyph == '\n' ? 0 : 4;
+}
+static int wrap_test_draw(void*, void*, int x, int, unsigned char glyph, int)
+{
+    if (glyph == 0u) ++s_wrap_zero_draws;
+    if (glyph == 'A' && s_wrap_first_a < 0) s_wrap_first_a = x;
+    if (glyph == 'B' && s_wrap_first_b < 0) s_wrap_first_b = x;
+    return wrap_test_advance(NULL, NULL, glyph);
+}
+static int wrap_test_break(void*, unsigned char glyph)
+{
+    return glyph == ' ';
+}
+
+static void test_inline_word_wrap_start(void)
+{
+    TextBufferDrawOps previous;
+    TextBufferDrawOps ops;
+    const char* texts[4] = { "AA BB", "AA BB", "AA\nBB", "AA BB" };
+    const float widths[4] = { 13.0f, 40.0f, 13.0f, 13.0f };
+    const int first_a[4] = { 10, 10, 10, 12 };
+    const int first_b[4] = { 10, 23, 10, 10 };
+    int i;
+    text_buffer_draw_ops_get(&previous);
+    memset(&ops, 0, sizeof(ops));
+    ops.font_line_height = wrap_test_line_height;
+    ops.glyph_advance = wrap_test_advance;
+    ops.glyph_draw = wrap_test_draw;
+    ops.is_word_break = wrap_test_break;
+    text_buffer_draw_ops_set(&ops);
+    for (i = 0; i < 4; ++i) {
+        union { double alignment; unsigned char bytes[0x840]; } record;
+        float x = 10.0f, y = 10.0f, height = 50.0f;
+        uint32_t flags = 2u | (i == 3 ? 4u : 0u);
+        memset(&record, 0, sizeof(record));
+        memcpy(record.bytes + 4, &x, sizeof(x));
+        memcpy(record.bytes + 8, &y, sizeof(y));
+        memcpy(record.bytes + 12, &widths[i], sizeof(widths[i]));
+        memcpy(record.bytes + 16, &height, sizeof(height));
+        memcpy(record.bytes + 0x82c, &flags, sizeof(flags));
+        strcpy((char*)record.bytes + 0x18, texts[i]);
+        s_wrap_first_a = s_wrap_first_b = -1;
+        s_wrap_zero_draws = 0;
+        (void)text_buffer_draw_wrapped(record.bytes, 0u, 0.0f, NULL);
+        CHECK(s_wrap_zero_draws == 0, "wrap excludes the terminating NUL");
+        CHECK(s_wrap_first_a == first_a[i], "wrap preserves first-line origin");
+        CHECK(s_wrap_first_b == first_b[i],
+              "continuation starts after the word-break character");
+    }
+    text_buffer_draw_ops_set(&previous);
+}
+
 int main(void)
 {
     test_alloc_pair();
@@ -265,6 +324,8 @@ int main(void)
             text_buffer_destroy(naked);
         }
     }
+
+    test_inline_word_wrap_start();
 
     if (s_failures != 0) {
         fprintf(stderr, "heap_test: %d failure(s)\n", s_failures);

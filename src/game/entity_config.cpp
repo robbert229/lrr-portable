@@ -4,6 +4,7 @@
 
 #include "entity.hpp"
 #include "building_scene.hpp"
+#include "actor_scene.hpp"
 #include "crt/crt.hpp"
 #include "frontend.hpp"
 #include "cmd.hpp"
@@ -568,7 +569,7 @@ static int entity_type_config_row_parse_path(void* context,
         }
     }
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-    if (row_kind == 2u) {
+    if (row_kind == 1u || row_kind == 2u || row_kind == 3u) {
         TypeConfigTable* table = (TypeConfigTable*)context;
         size_t offset;
         if (table == NULL || table->rows == NULL || table->row_stride == 0u) {
@@ -577,8 +578,12 @@ static int entity_type_config_row_parse_path(void* context,
         offset = (size_t)((char*)destination - (char*)table->rows);
         if (offset % table->row_stride != 0u ||
             offset / table->row_stride >= table->capacity ||
-            !building_scene_config_path_set((uint32_t)(offset / table->row_stride),
-                                             asset_path, engine_feature_word_peek())) {
+            !(row_kind == 2u
+                ? building_scene_config_path_set((uint32_t)(offset / table->row_stride),
+                    asset_path, engine_feature_word_peek())
+                : actor_scene_config_path_set(row_kind == 1u ? 2 : 3,
+                    (uint32_t)(offset / table->row_stride), asset_path,
+                    engine_feature_word_peek()))) {
             block_close(ae); return 0;
         }
     }
@@ -682,6 +687,9 @@ static void entity_type_config_family_release(TypeConfigTable* table, uint32_t k
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (kind == 2u && !building_scene_types_clear())
         building_scene_require_stopped();
+    if ((kind == 1u || kind == 3u) &&
+        !actor_scene_types_clear(kind == 1u ? 2 : 3))
+        actor_scene_require_stopped();
 #else
     (void)kind;
 #endif

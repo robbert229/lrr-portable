@@ -71,7 +71,7 @@ typedef struct SimtickManagerSlot {
     int32_t  handle;     /* +0x110 object/sprite handle */
     int32_t  mode;       /* +0x114 0 = reposition, 1 = screen-attach */
     float    target_a[2];/* +0x118/0x11c source A (floats) */
-    int32_t  target_b[2];/* +0x120/0x124 source B (ints)     */
+    float    target_b[2];/* +0x120/0x124 source B (floats)   */
     float    smoothed[2];/* +0x128/0x12c exponential-smoothed */
     uint32_t flags;      /* +0x13c (bit 4 selects source B)   */
 } SimtickManagerSlot;

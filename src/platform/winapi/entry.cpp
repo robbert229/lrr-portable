@@ -28,6 +28,36 @@ static char s_start_level_name[256];
 // GLOBAL: LEGORR 0x0050593c
 static float s_frame_interval_override;
 
+/* [DEBUG-MOVING-EXIT] Temporary observation only. Continue exception search
+ * so the diagnostic does not recover, skip a frame or change game progress. */
+#if defined(_MSC_VER) && defined(_M_IX86)
+static volatile unsigned long s_moving_diagnostic_phase;
+static LONG moving_diagnostic_exception(EXCEPTION_POINTERS* exception)
+{
+    EXCEPTION_RECORD* record = exception->ExceptionRecord;
+    CONTEXT* context = exception->ContextRecord;
+    DWORD stack_words[16];
+    DWORD stack_bytes = 0u;
+    unsigned int i;
+    fprintf(stderr, "[DEBUG-MOVING-EXIT] exception=%08lx address=%p module=%p phase=%lu eip=%08lx esp=%08lx ebp=%08lx eax=%08lx ebx=%08lx ecx=%08lx edx=%08lx esi=%08lx edi=%08lx parameters=%lu info0=%08lx info1=%08lx\n",
+        record->ExceptionCode, record->ExceptionAddress, GetModuleHandleA(NULL),
+        s_moving_diagnostic_phase, context->Eip, context->Esp, context->Ebp,
+        context->Eax, context->Ebx, context->Ecx, context->Edx,
+        context->Esi, context->Edi, record->NumberParameters,
+        record->NumberParameters > 0 ? record->ExceptionInformation[0] : 0u,
+        record->NumberParameters > 1 ? record->ExceptionInformation[1] : 0u);
+    if (ReadProcessMemory(GetCurrentProcess(), (const void*)context->Esp,
+                           stack_words, sizeof(stack_words), &stack_bytes)) {
+        fprintf(stderr, "[DEBUG-MOVING-EXIT] stack");
+        for (i = 0u; i < stack_bytes / sizeof(stack_words[0]); ++i)
+            fprintf(stderr, " %08lx", stack_words[i]);
+        fprintf(stderr, "\n");
+    }
+    fflush(stderr);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
 /* WinAPI registry operations used by RegistryPathAccessor (finding 402). */
 static void* winmain_registry_create_key(void* parent, const char* component,
                                          void*)
@@ -154,6 +184,8 @@ static int winmain_application_run(void)
     PlatformEvent events[32];
     DWORD previous_time;
     int result = frameloop_application_init();
+    fprintf(stderr, "[DEBUG-MOVING-EXIT] init-result=%d\n", result);
+    fflush(stderr);
     if (result != 1) return result;
     previous_time = GetTickCount();
     for (;;) {
@@ -168,15 +200,43 @@ static int winmain_application_run(void)
             dt = s_frame_interval_override * 0.04f;
         if (dt > 3.0f) dt = 3.0f;
         previous_time = frame_start;
+#if defined(_MSC_VER) && defined(_M_IX86)
+        s_moving_diagnostic_phase = 1u;
+#endif
         event_count = platform_pump_events(
             frameloop_application_window_get(), events, 32);
         frameloop_application_events_set(events, event_count);
+#if defined(_MSC_VER) && defined(_M_IX86)
+        s_moving_diagnostic_phase = 2u;
+#endif
         if (!frameloop_application_tick(dt)) break;
         frame_elapsed = GetTickCount() - frame_start;
         if (frame_elapsed < 33u) Sleep(33u - frame_elapsed);
     }
+    fprintf(stderr, "[DEBUG-MOVING-EXIT] loop-stop; shutdown-enter\n");
+    fflush(stderr);
+#if defined(_MSC_VER) && defined(_M_IX86)
+    s_moving_diagnostic_phase = 3u;
+#endif
     frameloop_application_shutdown();
+    fprintf(stderr, "[DEBUG-MOVING-EXIT] shutdown-return; application-result=0\n");
+    fflush(stderr);
     return 0;
+}
+
+static int winmain_application_observed_run(void)
+{
+#if defined(_MSC_VER) && defined(_M_IX86)
+    __try {
+        return winmain_application_run();
+    }
+    __except(moving_diagnostic_exception(GetExceptionInformation())) {
+        /* EXCEPTION_CONTINUE_SEARCH never enters this handler. */
+        return 0;
+    }
+#else
+    return winmain_application_run();
+#endif
 }
 
 // FUNCTION: LEGORR 0x4777a0
@@ -275,5 +335,5 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     (void)startup_state[3];
     (void)no_hal_message;
     (void)hInstance;
-    return winmain_application_run();
+    return winmain_application_observed_run();
 }

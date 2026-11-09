@@ -4336,6 +4336,29 @@ static int building_footprint_command_predicate_current(const int cell_xy[2])
     return cell != NULL && cell[4] == 0u;
 }
 
+/* 4645c3..464664: preserve vertex metadata and update only the position
+ * triplets, using the terrain's raw (X,Z,height) coordinate convention. */
+int building_footprint_vertices_update(float vertices[20][9],
+                                       const float terrain_corners[4][3],
+                                       float extrusion)
+{
+    static const unsigned char mapping[20] = {
+        0, 1, 2, 3, 0, 4, 5, 1, 1, 5,
+        6, 2, 2, 6, 7, 3, 3, 7, 4, 0
+    };
+    float corners[8][3];
+    int i, j;
+    if (vertices == NULL || terrain_corners == NULL) return 0;
+    for (i = 0; i < 4; ++i)
+        for (j = 0; j < 3; ++j)
+            corners[i][j] = corners[i + 4][j] = terrain_corners[i][j];
+    for (i = 0; i < 4; ++i) corners[i][2] -= extrusion;
+    for (i = 0; i < 20; ++i)
+        for (j = 0; j < 3; ++j)
+            vertices[i][j] = corners[mapping[i]][j];
+    return 1;
+}
+
 const int* building_footprint_render_and_validate(
     TerrainSurfaceGrid* surface, const int offset[2], const int* source_xy,
     uint32_t count, int rotation, float maximum_height_span,
@@ -4352,7 +4375,7 @@ const int* building_footprint_render_and_validate(
     int repeated_adjacent_condition = 0;
     int saw_repeated_cell = 0;
     int route_result = 0;
-    int return_cells = 0;
+    int placement_invalid = 0;
     int surface_valid;
     if (offset == NULL || (count != 0u && source_xy == NULL) ||
         count > 0x1fffffffu)
@@ -4416,10 +4439,16 @@ const int* building_footprint_render_and_validate(
         /* FUN_004641c0 invokes PlacementBlockedAdjacentCellScan for every
          * rotated footprint pair. Its final two arguments are the repeated
          * pair marker and the route-count gate computed above. */
-        placement_cell_valid =
-            unported_ledger_stubs::
-                terrain_placement_blocked_adjacent_cell_scan(
-                x, y, repeated_cell, route_limit_hit) != 0u;
+        if (hooks != NULL && hooks->neighbor_cell_accept != NULL) {
+            placement_cell_valid = hooks->neighbor_cell_accept(
+                hooks->context, x, y, repeated_cell, route_limit_hit) != 0;
+        }
+        else {
+            placement_cell_valid =
+                unported_ledger_stubs::
+                    terrain_placement_blocked_adjacent_cell_scan(
+                    x, y, repeated_cell, route_limit_hit) != 0u;
+        }
         neighbor_valid = placement_cell_valid;
         route_result = neighbor_valid;
         blocked = !placement_cell_valid || route_result == 0 ||
@@ -4428,7 +4457,7 @@ const int* building_footprint_render_and_validate(
                 ? hooks->terrain_command_predicate(hooks->context, offset) != 0
                 : building_footprint_command_predicate_current(offset) != 0);
         if (blocked) {
-            return_cells = 1;
+            placement_invalid = 1;
             red = 0.6f;
             green = 0.0f;
             blue = 0.0f;
@@ -4444,7 +4473,7 @@ const int* building_footprint_render_and_validate(
             blue = 0.0f;
         }
         else if (!surface_valid) {
-            return_cells = 1;
+            placement_invalid = 1;
             red = 0.7f;
             green = 0.0f;
             blue = 0.7f;
@@ -4454,22 +4483,26 @@ const int* building_footprint_render_and_validate(
             green = 0.7f;
             blue = 0.1f;
         }
+        /* 464542 passes binary32 0x3e4ccccd as the preview alpha. */
         if (hooks != NULL && hooks->preview_color_set != NULL)
-            hooks->preview_color_set(hooks->context, index, red, green, blue,
-                                     0.4f);
+            hooks->preview_color_set(hooks->context, render_count,
+                                     red, green, blue, 0.2f);
         if (hooks != NULL && hooks->preview_overlay_color_set != NULL)
-            hooks->preview_overlay_color_set(hooks->context, index,
+            hooks->preview_overlay_color_set(hooks->context, render_count,
                 red * 0.5f, green * 0.5f, blue * 0.5f);
         if (hooks != NULL && hooks->cell_preview_emit != NULL)
-            hooks->cell_preview_emit(hooks->context, index, x, y, in_bounds,
+            hooks->cell_preview_emit(hooks->context, render_count,
+                                     x, y, in_bounds,
                                      surface_valid, neighbor_valid);
         ++render_count;
         if (repeated_cell) {
             ++index;
-            ++render_count;
         }
     }
-    return return_cells ? cells : NULL;
+    /* 464694 advances one group per distinct cell; repeated source pairs
+     * consume a second pair, not another preview group. 4646f7..464706
+     * returns the rotated cells only while the validity flag remains set. */
+    return placement_invalid ? NULL : cells;
 }
 
 /* SurfaceVertexSpanValidate (FUN_0044e8c0): check every distinct cell in a

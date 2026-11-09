@@ -490,12 +490,18 @@ int save_read_slot_target(uint32_t slot, void* slot_context, int mode)
     /* Retail stores the three option words directly in the slot-context
      * header. Accept the former GOPS extension only for saves written by
      * earlier portable builds. */
-    options_defaults(&ctx->options);
     __builtin_memcpy(&ctx->saved_music_volume, header + 0x04, 4);
     __builtin_memcpy(&ctx->saved_sfx_volume, header + 0x08, 4);
     __builtin_memcpy(&ctx->saved_scroll_index, header + 0x0c, 4);
     __builtin_memcpy(&ctx->saved_brightness, header + 0x10, 4);
-    if (!options_load_header(&ctx->options, header + 0x20)) {
+    GameOptions legacy_options;
+    options_defaults(&legacy_options);
+    if (options_load_header(&legacy_options, header + 0x20)) {
+        ctx->options = legacy_options;
+    } else {
+        /* The retail header contains numeric settings, not the live
+         * Advanced cycles. A checkpoint's default-slot reload must retain
+         * those cycles, just as an ordinary slot read does. */
         ctx->options.music_volume = ctx->saved_music_volume;
         ctx->options.sfx_volume = ctx->saved_sfx_volume;
         ctx->options.game_speed = ctx->saved_scroll_index;

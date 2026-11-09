@@ -961,6 +961,146 @@ static GameContext* pending_scan_context_get(void)
     return s_ctx != NULL ? s_ctx : entity_pool_callback_context_get();
 }
 
+/* Temporary bounded observations: actual owners only, no extra gate calls. */
+static void cmd_delivery_trace(const char* phase, EntitySlot* entity,
+                               CmdRec* record, int result)
+{
+    struct Sample {
+        const char* phase;
+        EntitySlot* entity;
+        CmdRec* record;
+        void* head;
+        void* payload;
+        void* control;
+        void* context;
+        void* pool_context;
+        const void* owner;
+        const void* attached;
+        uintptr_t live;
+        uint32_t flags[3];
+        uint32_t record_state;
+        int record_type, type_filter, variant_filter, index_filter;
+        int record_x, record_y;
+        int mode, enabled, carried, waypoints, result;
+        uint32_t selected_count;
+        int listed;
+        float health;
+    } sample;
+    static Sample previous[2][64];
+    static unsigned int used[2], lines[2], limited[2];
+    const unsigned int bucket = !strcmp(phase, "global.record") ? 1u : 0u;
+    const unsigned int slots = bucket != 0u ? 8u : 64u;
+    const unsigned int limit = bucket != 0u ? 16u : 128u;
+    unsigned int i;
+    if (entity == NULL || entity->type != 2 ||
+        entity->carry_state_324 < 1) return;
+    /* Unrelated records cannot consume the admission sampler's capacity. */
+    if (record != NULL && (record->state & 0x400u) == 0u &&
+        (!strcmp(phase, "global.record") ||
+         !strcmp(phase, "assign.record") ||
+         !strcmp(phase, "special.begin"))) return;
+    if (lines[bucket] >= limit) {
+        if (!limited[bucket]) {
+            fprintf(stderr, "[DEBUG-MOVING-DELIVERY-LIMIT] bucket=%u lines=%u samples=%u\n",
+                bucket, lines[bucket], used[bucket]);
+            fflush(stderr); limited[bucket] = 1u;
+        }
+        return;
+    }
+    memset(&sample, 0, sizeof(sample));
+    sample.phase = phase; sample.entity = entity; sample.record = record;
+    sample.head = entity->cmd_head;
+    sample.control = media_min_distance_context();
+    sample.context = pending_scan_context_get();
+    sample.pool_context = entity_pool_callback_context_get();
+    sample.mode = media_min_distance_mode();
+    sample.owner = entity->owner_36c; sample.attached = entity->attach_304;
+    sample.live = entity->pool_link_408;
+    sample.flags[0] = entity->flags_3e0;
+    sample.flags[1] = entity->flags_3e4;
+    sample.flags[2] = entity->flags_3e8;
+    sample.enabled = s_global_enabled;
+    sample.carried = entity->carry_state_324;
+    sample.waypoints = entity->wp_count;
+    sample.health = entity->field_340; sample.result = result;
+    sample.selected_count = selection_active_count_get();
+    {
+        EntitySlot* const* entries = selection_active_records_get();
+        for (unsigned int j = 0u; entries != NULL &&
+             j < sample.selected_count && j < SELECTION_MAX; ++j)
+            if (entries[j] == entity) sample.listed = 1;
+    }
+    sample.record_type = -1;
+    if (record != NULL) {
+        sample.payload = record->payload; sample.record_type = record->type;
+        sample.record_state = record->state;
+        sample.type_filter = record->cell_act;
+        sample.variant_filter = record->cell_target;
+        sample.index_filter = record->cell_count;
+        memcpy(&sample.record_x, &record->x, sizeof(int));
+        memcpy(&sample.record_y, &record->y, sizeof(int));
+    }
+    for (i = 0u; i < used[bucket]; ++i)
+        if (previous[bucket][i].phase == phase &&
+            previous[bucket][i].entity == entity &&
+            previous[bucket][i].record == record) break;
+    if (i < used[bucket] &&
+        memcmp(&previous[bucket][i], &sample, sizeof(sample)) == 0) return;
+    if (i == used[bucket]) {
+        if (used[bucket] == slots) {
+            if (!limited[bucket]) {
+                fprintf(stderr, "[DEBUG-MOVING-DELIVERY-LIMIT] bucket=%u lines=%u samples=%u\n",
+                    bucket, lines[bucket], used[bucket]);
+                fflush(stderr); limited[bucket] = 1u;
+            }
+            return;
+        }
+        ++used[bucket];
+    }
+    previous[bucket][i] = sample; ++lines[bucket];
+    fprintf(stderr, "[DEBUG-MOVING-DELIVERY] phase=%s actor=%p live=%p flags=%08lx/%08lx/%08lx health=%.6f mode=%d control=%p ctx=%p pool=%p selected=%lu listed=%d owner=%p attached=%p head=%p carry=%d wp=%d enabled=%08lx record=%p type=%d state=%08lx payload=%p match=%d,%d,%d cell=%d,%d result=%d\n",
+        phase, entity, (void*)sample.live,
+        (unsigned long)sample.flags[0], (unsigned long)sample.flags[1],
+        (unsigned long)sample.flags[2], sample.health, sample.mode,
+        sample.control, sample.context, sample.pool_context,
+        (unsigned long)sample.selected_count, sample.listed,
+        (void*)sample.owner, (void*)sample.attached, sample.head,
+        sample.carried, sample.waypoints, (unsigned long)sample.enabled,
+        record, sample.record_type, (unsigned long)sample.record_state,
+        sample.payload, sample.type_filter, sample.variant_filter,
+        sample.index_filter, sample.record_x, sample.record_y, result);
+    fflush(stderr);
+}
+
+void cmd_selection_trace(const char* phase, const EntitySlot* entity,
+                         int opcode, int parameter, const int* pair)
+{
+    static unsigned int lines;
+    static int armed;
+    GameContext* context = pending_scan_context_get();
+    uint32_t active_count = selection_active_count_get();
+    EntitySlot* const* entries = selection_active_records_get();
+    int context_count = context != NULL ? context->selection_count : 0;
+    const void* payload = entity;
+    if (lines >= 64u) return;
+    if (opcode == 3) entity = NULL; /* clear does not interpret its payload */
+    if (entity == NULL && active_count != 0u && entries != NULL)
+        entity = entries[0];
+    if (entity == NULL && context_count > 0)
+        entity = context->selection[0];
+    if (entity == NULL || entity->type != 2) return;
+    if (active_count != 0u || context_count > 0 ||
+        (entity->flags_3e8 & ENTITY_SELECTED) != 0u) armed = 1;
+    if (armed == 0) return;
+    fprintf(stderr, "[DEBUG-MOVING-SELECTION] phase=%s actor=%p payload=%p opcode=%d parameter=%d cell=%d,%d flags=%08lx selected=%lu context_count=%d ctx=%p pool=%p head=%p carry=%d\n",
+        phase, entity, (void*)payload, opcode, parameter, pair != NULL ? pair[0] : -1,
+        pair != NULL ? pair[1] : -1, (unsigned long)entity->flags_3e8,
+        (unsigned long)active_count, context_count, context,
+        entity_pool_callback_context_get(), entity->cmd_head,
+        entity->carry_state_324);
+    fflush(stderr); ++lines;
+}
+
 static unsigned pending_candidate_pool_build(GameContext* context,
                                               EntitySlot** output,
                                               int filter_flagged)
@@ -1036,9 +1176,11 @@ static int cmd_entity_global_record_assign(EntitySlot* entity)
     GameContext* context = pending_scan_context_get();
     CmdRec* previous = NULL;
     CmdRec* record = s_global_head;
+    cmd_delivery_trace("assign.begin", entity, NULL, 0);
     while (record != NULL) {
         CmdRec* next = as_rec(record->global_next);
         int eligible = 1;
+        cmd_delivery_trace("assign.record", entity, record, 0);
         if ((record->state & 0x80000u) != 0u) {
             eligible = 0;
         }
@@ -1099,6 +1241,7 @@ static int cmd_entity_global_record_assign(EntitySlot* entity)
             }
         }
         if (eligible) {
+            cmd_delivery_trace("assign.ordinary", entity, record, 1);
             entity_record_attach_and_relink(record, previous, entity);
             return 1;
         }
@@ -1122,11 +1265,19 @@ static int cmd_entity_global_record_special_step(EntitySlot* entity,
     EntitySlot* carried = (EntitySlot*)entity->carry_link_308;
     int route_lane = 0;
     int route_failed = 0;
+    int carry_allowed;
     int goal[2];
 
+    cmd_delivery_trace("special.begin", entity, record, 0);
     if ((record->state & 0x400u) == 0u) return 0;
-    if (entity_flag400_and_health_threshold_check(entity) != 0 &&
-        (entity->flags_3e8 & 0x200000u) == 0u && entity->type != 3) {
+    carry_allowed = entity_flag400_and_health_threshold_check(entity);
+    if (carry_allowed == 0)
+        cmd_delivery_trace("special.carry_rejected", entity, record, 0);
+    else if ((entity->flags_3e8 & 0x200000u) != 0u)
+        cmd_delivery_trace("special.selected", entity, record, 1);
+    else if (entity->type == 3)
+        cmd_delivery_trace("special.type3", entity, record, 3);
+    else {
         if (carried != NULL &&
             (carried->flags_3e8 & 0x80000000u) != 0u) {
             if (record->type == 0x1b) {
@@ -1135,10 +1286,11 @@ static int cmd_entity_global_record_special_step(EntitySlot* entity,
             }
         }
         else if (carried != NULL &&
-                 carried->indexed_record_slot_330 == record->cell_count &&
-                 (record->cell_target == -1 ||
-                  carried->etype == record->cell_target) &&
-                 carried->type == record->type) {
+                 (record->cell_act == 0 ||
+                  (carried->indexed_record_slot_330 == record->cell_count &&
+                   (record->cell_target == -1 ||
+                    carried->etype == record->cell_target) &&
+                   carried->type == record->cell_act))) {
             switch (record->type) {
             case 7:
             case 9:
@@ -1147,16 +1299,27 @@ static int cmd_entity_global_record_special_step(EntitySlot* entity,
                 route_lane = 1;
                 break;
             case 5:
-                if (record->payload != NULL &&
-                    entity_shared_eligibility_check(
-                        (EntitySlot*)record->payload, 0) != 0) {
-                    if (entity_deposit_activity_gate(
-                            entity, (EntitySlot*)record->payload) != 0) {
-                        entity_record_attach_and_relink(record, previous,
-                                                        entity);
-                        return 1;
+                /* 404be3: a null-target kind5 uses the cell route lane. */
+                if (record->payload == NULL) {
+                    route_lane = 1;
+                }
+                else {
+                    int target_allowed = entity_shared_eligibility_check(
+                        (EntitySlot*)record->payload, 0);
+                    cmd_delivery_trace("deposit.target", entity, record,
+                                       target_allowed);
+                    if (target_allowed != 0) {
+                        int accepted = entity_deposit_activity_gate(
+                            entity, (EntitySlot*)record->payload);
+                        cmd_delivery_trace("deposit.route", entity, record,
+                                           accepted);
+                        if (accepted != 0) {
+                            entity_record_attach_and_relink(record, previous,
+                                                            entity);
+                            return 1;
+                        }
+                        route_failed = 1;
                     }
-                    route_failed = 1;
                 }
                 break;
             default:
@@ -1193,7 +1356,14 @@ static int cmd_entity_global_record_special_step(EntitySlot* entity,
                 &path_count, NULL, NULL);
             if (path_x != NULL) engine_heap_free(path_x);
             if (path_y != NULL) engine_heap_free(path_y);
+            cmd_delivery_trace("special.path", entity, record, found);
             if (!found) route_failed = 1;
+            else {
+                /* 404cd3..404cff frees the search buffers, then joins the
+                 * common attach owner; path validation alone is not work. */
+                entity_record_attach_and_relink(record, previous, entity);
+                return 1;
+            }
         }
         else if (!route_failed) {
             route_failed = 1;
@@ -2959,6 +3129,31 @@ void cmd_create_move(EntitySlot* e, const float position_xy[2], int flag)
     }
 }
 
+/* Queue operation 8 addresses the active selection, not its object word.
+ * The coordinate pair remains two raw integer cell words. */
+// FUNCTION: LEGORR 0x00403270
+static void selection_drag_area_command_create(EntitySlot* const* entities,
+    unsigned int count, const int cell_xy[2], int replace)
+{
+    unsigned int i;
+    for (i = 0u; i < count; ++i) {
+        CmdRec* record = as_rec(cmd_alloc(0));
+        EntitySlot* entity = entities[i];
+        CmdRec* tail;
+        if (record == NULL) return;
+        memcpy(&record->x, cell_xy, 2 * sizeof(uint32_t));
+        record->state = 4u;
+        if (((entity_stats_word_get(entity) & 0x20000u) == 0u ||
+             entity->owner_36c != NULL) && entity->attach_304 == NULL &&
+            (entity->flags_3e8 & 0x80u) != 0u) {
+            if (replace != 0) command_queue_sweep_relink(entity);
+            tail = as_rec(cmd_chain_walk(entity));
+            if (tail != NULL) tail->next = record;
+            else entity->cmd_head = record;
+        }
+    }
+}
+
 void cmd_create_move(EntitySlot* e, float x, float y, int flag)
 {
     const int cell_xy[2] = { (int)x, (int)y };
@@ -3640,23 +3835,28 @@ int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload)
     float target_position[2];
     int actor_cell[2];
     int target_cell[2];
+    int gate_reason = 0;
 
     if (entity == NULL) return 0;
     s_global_enabled |= 4;
+    cmd_delivery_trace("callback.begin", entity, as_rec(entity->cmd_head), 0);
 
     /* Retail requires the active-type bit, a positive +0x340 value, and a
      * false 0x4295c0 predicate; attached, owned type-2, and the two flag
      * families below are excluded before touching the command chain. */
-    if ((entity->flags_3e8 & 0x00400000u) == 0u ||
-        entity->field_340 <= 0.0f ||
-        entity_matches_current_selection_or_owner(entity) != 0 ||
-        (entity->owner_36c != NULL && entity->type == 2) ||
-        entity->attach_304 != NULL ||
-        (entity->flags_3e4 & 0x08004000u) != 0u ||
-        (entity->flags_3e0 & 0x00800000u) != 0u) {
+    if ((entity->flags_3e8 & 0x00400000u) == 0u) gate_reason = 1;
+    else if (entity->field_340 <= 0.0f) gate_reason = 2;
+    else if (entity_matches_current_selection_or_owner(entity) != 0) gate_reason = 3;
+    else if (entity->owner_36c != NULL && entity->type == 2) gate_reason = 4;
+    else if (entity->attach_304 != NULL) gate_reason = 5;
+    else if ((entity->flags_3e4 & 0x08004000u) != 0u) gate_reason = 6;
+    else if ((entity->flags_3e0 & 0x00800000u) != 0u) gate_reason = 7;
+    if (gate_reason != 0) {
+        cmd_delivery_trace("callback.rejected", entity, as_rec(entity->cmd_head), gate_reason);
         s_global_enabled &= ~4;
         return 0;
     }
+    cmd_delivery_trace("callback.admitted", entity, as_rec(entity->cmd_head), 1);
 
     head = as_rec(entity->cmd_head);
     if (head == NULL) {
@@ -3818,6 +4018,15 @@ int cmd_entity_command_chain_tick(EntitySlot* entity, void* delta_payload)
             s_global_enabled &= ~4;
             return 0;
         }
+        else if (head->type == 5 &&
+                 ((head->state & CMD_STATE_ISSUED) != 0u ||
+                  (entity->flags_3e8 & 0x200000u) != 0u)) {
+            /* Native40450f/404518 precede the kind-5 dispatch too. Once
+             * issued, its callback advances the existing delivery route;
+             * reissuing here would reset its path on every frame. */
+            s_global_enabled &= ~4;
+            return 0;
+        }
         else if (head->type == 19) {
             /* Native40450f/404518: issued and actor-busy gates. Bit1 is an
              * issuance latch, not arrival. AI alone advances this route. */
@@ -3863,6 +4072,21 @@ void cmd_tick_global_delta(float delta)
 {
     int threshold;
     CmdRec* current;
+    /* Also observe carriers omitted by the filtered walk or global gate. */
+    {
+        GameContext* context = pending_scan_context_get();
+        int count = context != NULL ? entity_count(context, 2) : 0;
+        int index;
+        for (index = 0; index < count; ++index) {
+            EntitySlot* entity = (EntitySlot*)entity_at(context, 2, index);
+            unsigned int records = 0u;
+            if (entity == NULL || entity->carry_state_324 < 1) continue;
+            cmd_delivery_trace("global.tick", entity, NULL, count);
+            for (current = s_global_head; current != NULL && records < 32u;
+                 current = as_rec(current->global_next), ++records)
+                cmd_delivery_trace("global.record", entity, current, 0);
+        }
+    }
     if (((uint32_t)s_global_enabled & 0x80000000u) != 0u) return;
 
     threshold = s_behaviour[0];
@@ -4002,6 +4226,8 @@ void cmd_produce(int op, const void* a1, int a2, const int* pair)
     q->a2 = a2;
     q->a3 = (pair != NULL) ? pair[0] : 0;
     q->a4 = (pair != NULL) ? pair[1] : 0;
+    if (op == 1 || op == 3 || op == 4 || op == 5 || op == 6 || op == 8)
+        cmd_selection_trace("queue.produce", (const EntitySlot*)a1, op, a2, pair);
 }
 
 void cmd_enqueue(int opcode, const EntitySlot* e, int param, int p1, int p2)
@@ -4080,14 +4306,17 @@ void cmd_queue_tick(void)
     for (i = 0; i < count; ++i) {
         QueueRec* q = &s_queue[block][i];
         EntitySlot* ent = (EntitySlot*)q->a1;
+        if (q->opcode == 1 || q->opcode == 3 || q->opcode == 4 ||
+            q->opcode == 5 || q->opcode == 6 || q->opcode == 8)
+            cmd_selection_trace("queue.execute", ent, q->opcode, q->a2, &q->a3);
         switch (q->opcode) {
         case 5:
         case 6:
             cmd_create_move(ent, (const float*)&q->a3, q->a2);
             break;
         case 8:
-            /* add up to N entities to the selection (FUN_00403270 path) */
-            selection_add(s_ctx, ent);
+            selection_drag_area_command_create(selection_active_records_get(),
+                selection_active_count_get(), &q->a3, q->a2);
             break;
         case 0x17:
         case 0x1d:
@@ -4378,6 +4607,8 @@ int selection_entity_remove(void* entity)
             s_ctx->selection[i] = selection_active_records_get()[i];
         }
         ((EntitySlot*)entity)->flags &= ~ENTITY_SELECTED;
+        cmd_selection_trace("select.active_remove.published",
+            (EntitySlot*)entity, -1, 0, NULL);
     }
     return result;
 }
@@ -4441,6 +4672,7 @@ int selection_candidate_filter(void* entity, int mode, int param_3)
             for (i = 0; i < count_after; ++i) {
                 s_ctx->selection[i] = selection_active_records_get()[i];
             }
+            cmd_selection_trace("select.filter.published", added, -1, 0, NULL);
         }
         return result;
     }

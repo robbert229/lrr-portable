@@ -836,26 +836,27 @@ void objective_active_level_clear(LevelState* s)
     if (s_objective_active_level == s) s_objective_active_level = NULL;
 }
 
-int objective_briefing_active(const LevelState* s)
+int objective_presentation_kind(const LevelState* s)
 {
-    return s != NULL && s == s_objective_active_level &&
-        (s_objective_result_word & 7u) == 1u;
+    if (s == NULL || s != s_objective_active_level)
+        return OBJECTIVE_PRESENTATION_NONE;
+    if ((s_objective_result_word & 1u) != 0u)
+        return OBJECTIVE_PRESENTATION_BRIEFING;
+    if ((s_objective_result_word & 6u) == 0u)
+        return OBJECTIVE_PRESENTATION_NONE;
+    if ((s_objective_result_word & 2u) != 0u)
+        return OBJECTIVE_PRESENTATION_ACHIEVED;
+    return (s_objective_result_word & 0x100u) != 0u
+        ? OBJECTIVE_PRESENTATION_CRYSTAL_FAILED : OBJECTIVE_PRESENTATION_FAILED;
 }
 
-int objective_briefing_acknowledge(LevelState* s)
+int objective_briefing_active(const LevelState* s)
 {
-    if (!objective_briefing_active(s)) return 0;
-    /* FUN_004589c0 calls FUN_004588e0 only after the last page. The
-     * frontend's mapped release adapter has independent, unbound storage;
-     * perform this branch against the actual objective owner instead. */
-    (void)global_value_004ff9bc_store_and_return(&s->objective_pending);
-    s_objective_result_word &= ~1u;
-    s->objective &= ~LVL_OBJECTIVE_STILL_PENDING;
-    s->objective_pending = 0;
-    if ((engine_debug_word_peek() & 0x800u) != 0u) {
-        media_cd_watchdog_update(1);
-        engine_debug_word_bit_set(0x800u, 0);
-    }
+    return objective_presentation_kind(s) == OBJECTIVE_PRESENTATION_BRIEFING;
+}
+
+static void objective_presentation_cleanup(LevelState* s)
+{
     objective_advisor_clear_active_state();
     if (s_objective_voice_stream_handle != -1) {
         (void)sound_stream_stop_and_release(0);
@@ -865,13 +866,45 @@ int objective_briefing_acknowledge(LevelState* s)
     sound_deferred_queue_drain(0);
     if (system_state_flags_get() == 0u)
         engine_debug_word_bit_set(0x1000u, 0);
-    /* The frame-driven UI may accept before another ObjectiveTick. Retire
-     * its unsubmitted intro alias too, so it cannot play during gameplay. */
     s_objective_voice_alias_pending = 0;
     s_objective_voice_alias[0] = '\0';
     s_objective_voice_result_active = 0;
     s_objective_tick_resolved = 1;
     s->obj_stream[0] = '\0';
+}
+
+int objective_briefing_acknowledge(LevelState* s)
+{
+    if (!objective_briefing_active(s)) return 0;
+    (void)global_value_004ff9bc_store_and_return(&s->objective_pending);
+    s_objective_result_word &= ~1u;
+    s->objective &= ~LVL_OBJECTIVE_STILL_PENDING;
+    s->objective_pending = 0;
+    if ((engine_debug_word_peek() & 0x800u) != 0u) {
+        media_cd_watchdog_update(1);
+        engine_debug_word_bit_set(0x800u, 0);
+    }
+    objective_presentation_cleanup(s);
+    return 1;
+}
+
+int objective_presentation_acknowledge(LevelState* s)
+{
+    int kind = objective_presentation_kind(s);
+    if (kind == OBJECTIVE_PRESENTATION_NONE) return 0;
+    if (kind == OBJECTIVE_PRESENTATION_BRIEFING)
+        return objective_briefing_acknowledge(s);
+    /* ObjectivePoll selects the terminal page independently, but rechecks
+     * the entity gate immediately before releasing the final page. */
+    if (!entity_flag_mask_callbacks_all_pass(0x40bu)) return 0;
+    if (kind == OBJECTIVE_PRESENTATION_ACHIEVED) {
+        s_objective_result_word &= ~2u;
+        s->objective &= ~LVL_OBJECTIVE_ACHIEVED;
+    } else {
+        s_objective_result_word &= ~0x104u;
+        s->objective &= ~(LVL_OBJECTIVE_FAILED | LVL_OBJECTIVE_CRYSTALS);
+    }
+    objective_presentation_cleanup(s);
     return 1;
 }
 

@@ -134,6 +134,16 @@ static void ddiscene_sample_hook_dispatch(const char* sample_name,
         entry->callback(sample_name, scene_object, entry->context);
     }
 }
+void ddiscene_activity_sample_dispatch(const char* sample, void* scene_object)
+{
+    if (sample != NULL && scene_object != NULL && s_ddiscene_sample_enabled)
+        ddiscene_sample_hook_dispatch(sample, scene_object);
+}
+void ddiscene_activity_trigger_dispatch(void* scene_object)
+{
+    if (scene_object != NULL && s_ddiscene_end_hook != NULL)
+        s_ddiscene_end_hook(scene_object, s_ddiscene_end_context);
+}
 static DDiSceneLightCreateHooks s_ddiscene_light_create_hooks;
 static DDiSceneKindModeSetupHooks s_ddiscene_kind_mode_setup_hooks;
 static DDiSceneDrawBeginHook s_ddiscene_draw_begin_hook;
@@ -2676,6 +2686,148 @@ void global_render_record_set_from_input(
     hooks->record_set(hooks->context, view, record, 2, value);
 }
 
+static SceneUserVisualManagerHooks s_user_visual_manager_hooks;
+
+void scene_user_visual_manager_hooks_set(
+    const SceneUserVisualManagerHooks* hooks)
+{
+    if (hooks == NULL)
+        memset(&s_user_visual_manager_hooks, 0,
+               sizeof(s_user_visual_manager_hooks));
+    else
+        s_user_visual_manager_hooks = *hooks;
+}
+
+static int scene_user_visual_operations_present(
+    const SceneUserVisualManagerHooks* hooks)
+{
+    return hooks->renderer_device != NULL &&
+        hooks->owner_hidden != NULL && hooks->facing_update != NULL &&
+        hooks->render_context_open != NULL &&
+        hooks->interface_release != NULL && hooks->group_get != NULL &&
+        hooks->state_begin != NULL && hooks->group_draw != NULL &&
+        hooks->model_draw != NULL && hooks->state_end != NULL;
+}
+
+int scene_user_visual_manager_operations_present(void)
+{
+    return scene_user_visual_operations_present(&s_user_visual_manager_hooks);
+}
+
+static int scene_user_visual_defer(EngineTaskCallbackRecord* record,
+                                   const float transform[16])
+{
+    void* previous = model_render_list_head_peek();
+    uint32_t payload[16];
+    /* This queue stores a target record word, not a widened host pointer.
+     * Refuse an identity that the real consumer could not reconstruct. */
+    if ((uintptr_t)record != (uintptr_t)(uint32_t)(uintptr_t)record) return 0;
+    /* 482ce0 copies the record word and sixteen transform words into the
+     * real renderer queue. It is distinct from the parsed-Model queue. */
+    memcpy(payload, transform, sizeof(payload));
+    renderer_command_node_prepend((uint32_t)(uintptr_t)record, payload);
+    return model_render_list_head_peek() != previous;
+}
+
+int scene_user_visual_manager_dispatch(EngineTaskCallbackRecord* record,
+                                        uint32_t reason, void* viewport)
+{
+    /* Preserve the original owner throughout this call, including cleanup
+     * if a nested renderer operation replaces the installed table. */
+    const SceneUserVisualManagerHooks hooks = s_user_visual_manager_hooks;
+    float transform[16];
+    void* parameter = NULL;
+    void* acquired = NULL;
+    int succeeded = 1;
+    int state_started = 0;
+    int deferred = 0;
+    int pass;
+    if (reason == SCENE_USER_VISUAL_CAN_SEE) {
+        int hidden;
+        if (hooks.renderer_device == NULL || record == NULL ||
+            (record->words[11] & 1u) != 0u ||
+            hooks.owner_hidden == NULL) return 0;
+        hidden = hooks.owner_hidden(hooks.context, record);
+        if (hidden != 0) return 0;
+        if ((record->words[11] & 0x01000000u) != 0u &&
+            (record->words[11] & 0x02000000u) == 0u) {
+            int updated;
+            if (hooks.facing_update == NULL) return 0;
+            updated = hooks.facing_update(hooks.context, record, viewport);
+            if (updated < 0) return 0;
+            if (updated != 0) record->words[11] |= 0x02000000u;
+        }
+        return 1;
+    }
+    if (reason != SCENE_USER_VISUAL_RENDER) return 0;
+    /* 4828bb..4828c1 returns one without accessing the record or drawing. */
+    if (hooks.renderer_device == NULL) return 1;
+    if (record == NULL || !scene_user_visual_operations_present(&hooks))
+        return 0;
+    record->words[11] &= ~0x02000000u;
+    if (!hooks.render_context_open(hooks.context, hooks.renderer_device,
+            viewport, transform, &parameter, &acquired) || acquired == NULL) {
+        succeeded = 0;
+        goto finish;
+    }
+    if ((record->words[11] & 2u) != 0u) {
+        succeeded = scene_user_visual_defer(record, transform);
+    }
+    else if ((record->words[6] & 0x1c00u) != 0u) {
+        /* The two scans re-read live count, eligibility and material state.
+         * 482ac0 may change them; never pre-classify or cache the groups. */
+        for (pass = 0; pass < 2; ++pass) {
+            uint32_t index;
+            for (index = 0u; index < record->words[0]; ++index) {
+                void* group = hooks.group_get(hooks.context, record, index);
+                uint32_t flags;
+                uint32_t material;
+                if (group == NULL || ((uintptr_t)group & 3u) != 0u) {
+                    succeeded = 0;
+                    goto finish;
+                }
+                if (!model_child_render_eligibility_check(group)) continue;
+                memcpy(&flags, (const char*)group + 0x6c, sizeof(flags));
+                if ((flags & 0x80000u) != 0u) {
+                    deferred = 1;
+                    continue;
+                }
+                memcpy(&material, (const char*)group + 0x64,
+                       sizeof(material));
+                if ((pass == 0 && material != 0u) ||
+                    (pass != 0 && material == 0u)) continue;
+                if (!state_started) {
+                    state_started = 1;
+                    if (!hooks.state_begin(hooks.context, record, parameter,
+                                             transform)) {
+                        succeeded = 0;
+                        goto finish;
+                    }
+                }
+                if (!hooks.group_draw(hooks.context, record, group,
+                                       transform)) {
+                    succeeded = 0;
+                    goto finish;
+                }
+            }
+        }
+        if (deferred) succeeded = scene_user_visual_defer(record, transform);
+    }
+    else {
+        state_started = 1;
+        if (!hooks.state_begin(hooks.context, record, parameter, transform) ||
+            !hooks.model_draw(hooks.context, record, transform))
+            succeeded = 0;
+    }
+finish:
+    /* Pair cleanup with the start attempt, including partially changed
+     * state on adapter failure. Release a failed query's nonnull output too.
+     * Retail assumes successful COM calls; these refusals are port policy. */
+    if (state_started && !hooks.state_end(hooks.context)) succeeded = 0;
+    if (acquired != NULL) hooks.interface_release(hooks.context, acquired);
+    return succeeded;
+}
+
 static EngineTaskCallbackHooks s_engine_task_callback_hooks;
 
 void engine_task_callback_hooks_set(const EngineTaskCallbackHooks* hooks)
@@ -2698,11 +2850,6 @@ EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
     record = (EngineTaskCallbackRecord*)
         render_resource_instance_record_acquire();
     if (record == NULL) return NULL;
-    /* The recovered body does not establish which visible stack values map
-     * to its indirect calls; the portable hook currently exposes callback,
-     * owner, and record explicitly. */
-    (void)mode;
-    (void)context;
     /* The fixed-size pool has already cleared +0..+0x2f and installed its
      * self-link at +0x30; do not erase that link. */
     /* FUN_00472940 is an observed root-global read whose return is discarded. */
@@ -2715,14 +2862,13 @@ EngineTaskCallbackRecord* engine_task_callback_record_allocate_and_initialize(
         hooks->owner_bind(hooks->context, owner, resource_interface);
     if (hooks->callback_attach != NULL)
         hooks->callback_attach(hooks->context, resource_interface, record);
-    /* The user-visual creation receives the callback supplied by the caller.
-     * The allocated record itself uses LAB_004827f0 as its callback, keeps a
-     * pointer to the resource slot at +0x14, and stores its own address at
-     * +0x18. */
+    /* 0x4808aa..0x4808c6 copies stack arguments 2/4/3 into +10/+14/+18.
+     * LAB_004827f0 is the UserVisual manager entry passed to the factory;
+     * its address and the record's self-link are not these metadata words. */
     record->words[3] = (uint32_t)(uintptr_t)resource_interface;
-    record->words[4] = 0x004827f0u;
-    record->words[5] = (uint32_t)(uintptr_t)&record->words[3];
-    record->words[6] = (uint32_t)(uintptr_t)record;
+    record->words[4] = (uint32_t)(uintptr_t)callback;
+    record->words[5] = (uint32_t)(uintptr_t)context;
+    record->words[6] = mode;
     record->words[8] = 1u;
     record->words[10] = (uint32_t)(uintptr_t)owner;
     if (flag_value == 1u) record->words[11] |= 2u;
@@ -6825,6 +6971,17 @@ static void* s_scene_root;
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 #include "lwsc_winapi.hpp"
+
+// FUNCTION: LEGORR 0x004827f0
+int __cdecl scene_runtime_user_visual_manager(
+    IDirect3DRMUserVisual* visual, void* cookie, SceneUserVisualReason reason,
+    IDirect3DRMDevice* device, IDirect3DRMViewport* viewport)
+{
+    (void)visual;
+    (void)device;
+    return scene_user_visual_manager_dispatch(
+        (EngineTaskCallbackRecord*)cookie, (uint32_t)reason, viewport);
+}
 
 static struct SceneCameraBinding {
     CameraHandle* camera;

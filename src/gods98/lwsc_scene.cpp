@@ -43,6 +43,8 @@ typedef struct LwscActivityInstance {
     LwscFrameRef* frames;          /* source order, each owns a real reference */
     LwscMeshRef* meshes;
     float time;
+    float act_time;
+    int sample_pending;
 } LwscActivityInstance;
 
 struct LwscAssemblyInstance {
@@ -1023,6 +1025,7 @@ static LwscAssemblyInstance* lwsc_instance_create_internal(LwscAssemblyTemplate*
             }
         }
         if (!lwsc_activity_time_apply(instance, activity, 0.0f, 1, error)) goto failed;
+        target->sample_pending = 1;
     }
     if (rendering && !ops->activity_enable(&instance->activities[0].root, 1, ops->context)) {
         lwsc_error(error, 0u, "initial activity activation failed"); goto failed;
@@ -1119,6 +1122,8 @@ int lwsc_instance_activity_set(LwscAssemblyInstance* instance,
                 return lwsc_error(error, 0u, "activity mutation failed; recreate instance");
             }
             instance->current = i;
+            instance->activities[i].act_time = 0.0f;
+            instance->activities[i].sample_pending = 1;
             return 1;
         }
     }
@@ -1135,6 +1140,72 @@ int lwsc_instance_time_set(LwscAssemblyInstance* instance, float frame_time,
         instance->valid = 0; return 0;
     }
     return 1;
+}
+
+static int lwsc_instance_clock_update(LwscAssemblyInstance* instance, float value,
+    int relative, uint32_t repeat_count, const LwscClockCallbacks* callbacks,
+    float* overflow, LwscError* error)
+{
+    LwscActivityInstance* activity;
+    const EntityActivity* metadata;
+    uint32_t frames;
+    float previous, requested, result = 0.0f;
+    lwsc_error_clear(error);
+    if (instance == NULL || !instance->valid || overflow == NULL ||
+        !lwsc_finite(value))
+        return lwsc_error(error, 0u, "invalid ACT clock advance");
+    activity = &instance->activities[instance->current];
+    metadata = &instance->assembly->metadata->acts[instance->current];
+    frames = instance->assembly->scenes[instance->current]->last_frame;
+    previous = activity->act_time;
+    requested = relative ? previous + value : value;
+    if (!lwsc_finite(requested))
+        return lwsc_error(error, 0u, "ACT clock overflow");
+    if (activity->sample_pending) {
+        activity->sample_pending = 0;
+        if (metadata->sample[0] != '\0' && callbacks != NULL &&
+            callbacks->sample != NULL)
+            callbacks->sample(callbacks->context, metadata->sample);
+    }
+    /* LWS supplies LastFrame itself as the ACT record's count. The ACT
+     * clock remains unwrapped even when the pose wraps at LastFrame. */
+    if (frames != 0u && requested > (float)(frames - 1u))
+        result = requested - (float)(frames - 1u);
+    activity->act_time = requested;
+    /* 0x475140 skips timed dispatch when the decremented count equals 1. */
+    if (frames != 2u) {
+        if (!lwsc_activity_time_apply(instance, instance->current,
+                                       requested, 0, error)) {
+            instance->valid = 0;
+            return 0;
+        }
+        if (metadata->trigger != 0 && previous < (float)metadata->trigger &&
+            requested >= (float)metadata->trigger && callbacks != NULL &&
+            callbacks->trigger != NULL)
+            callbacks->trigger(callbacks->context);
+    }
+    if (repeat_count > 1u && result != 0.0f) {
+        uint32_t product = frames * (repeat_count - 1u);
+        int32_t signed_product;
+        memcpy(&signed_product, &product, sizeof(signed_product));
+        result -= (float)signed_product;
+    }
+    *overflow = result;
+    return 1;
+}
+
+int lwsc_instance_advance(LwscAssemblyInstance* instance, float delta,
+    uint32_t repeat_count, const LwscClockCallbacks* callbacks,
+    float* overflow, LwscError* error)
+{
+    return lwsc_instance_clock_update(instance, delta, 1, repeat_count,
+                                       callbacks, overflow, error);
+}
+int lwsc_instance_clock_set(LwscAssemblyInstance* instance, float time,
+    const LwscClockCallbacks* callbacks, float* overflow, LwscError* error)
+{
+    return lwsc_instance_clock_update(instance, time, 0, 1u,
+                                       callbacks, overflow, error);
 }
 
 int lwsc_instance_root_set(LwscAssemblyInstance* instance,

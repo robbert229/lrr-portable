@@ -26,6 +26,7 @@ struct BuildingSceneInstance {
     BuildingSceneType* type;
     LwscAssemblyInstance* instance;
     void* tool_cache[5]; /* native numeric-tool map selects ordinals0..4 */
+    void* deposit_cache; /* 0x4087b0: configured DepositNullName ordinal0 */
     float root_matrix[16];
     float clock;
     int failed;
@@ -51,6 +52,7 @@ static void building_scene_fail(BuildingSceneInstance* p, const char* operation,
     if (p != NULL && !p->failed) {
         cmd_gettool_entity_removing(p->entity);
         memset(p->tool_cache, 0, sizeof(p->tool_cache));
+        p->deposit_cache = NULL;
         entity_ddiscene_scene_owner_bind(p->entity, NULL);
         p->failed = 1;
     }
@@ -69,6 +71,52 @@ static int building_scene_valid(BuildingSceneInstance* p)
         building_scene_fail(p, "instance validity", NULL);
         return 0;
     }
+    return 1;
+}
+int building_scene_deposit_approach_get(EntitySlot* entity, int tool_null,
+                                        float position[3], float facing[3])
+{
+    BuildingSceneInstance* p = building_scene_find(entity);
+    const char* name;
+    const LwscFrameRef* node;
+    void** cache;
+    void* root;
+    uint32_t ordinal = tool_null ? 4u : 0u;
+    size_t i, length;
+    if (position == NULL || facing == NULL || !building_scene_valid(p) ||
+        p->type == NULL || p->type->assembly == NULL) return -1;
+    root = lwsc_winapi_scene_object(s_building_scene_backend,
+                                     lwsc_instance_root(p->instance));
+    if (root == NULL || entity->attached_scene_object != root ||
+        scene_root_object_get() == NULL) return -1;
+    cache = tool_null ? &p->tool_cache[4] : &p->deposit_cache;
+    if (*cache == NULL) {
+        name = lwsc_assembly_configured_name(p->type->assembly,
+            tool_null ? "ToolNullName" : "DepositNullName");
+        if (name == NULL || name[0] == '\0') return 0;
+        /* named_node is a pure lookup after instance validity. Distinguish
+         * an invalid name from a valid, absent authored node. */
+        length = strlen(name);
+        if (length + 16u >= LWSC_NAME_CAPACITY) return -1;
+        for (i = 0u; i < length; ++i)
+            if ((unsigned char)name[i] > 127u) return -1;
+        node = lwsc_instance_named_node(p->instance, name, ordinal);
+        if (node == NULL) return 0;
+        *cache = lwsc_winapi_scene_object(s_building_scene_backend, node);
+        if (*cache == NULL) {
+            building_scene_fail(p, "deposit locator wrapper", NULL);
+            return -1;
+        }
+    }
+    /* The instance owns cached old-activity frames until destruction, just
+     * as for the existing ToolNull cache. No borrowed frame escapes here. */
+    if (!ddiscene_object_position_get(*cache, NULL, position) ||
+        !ddiscene_object_facing_get(*cache, NULL, facing)) {
+        building_scene_fail(p, "deposit locator pose", NULL);
+        return -1;
+    }
+    for (i = 0u; i < 3u; ++i)
+        if (!_finite(position[i]) || !_finite(facing[i])) return -1;
     return 1;
 }
 static void* building_scene_tool_resolve(void*, EntitySlot* e, uint32_t ordinal)
@@ -232,6 +280,7 @@ void building_scene_entity_release(EntitySlot* e)
     p = *link; if (p == NULL) return;
     cmd_gettool_entity_removing(e);
     memset(p->tool_cache, 0, sizeof(p->tool_cache));
+    p->deposit_cache = NULL;
     entity_ddiscene_scene_owner_bind(e, NULL);
     lwsc_instance_destroy(p->instance); p->instance = NULL;
     *link = p->next; free(p);

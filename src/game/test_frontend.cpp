@@ -547,6 +547,11 @@ static void test_active_image(void)
     CHECK(im != NULL, "img: Menu2 has a MenuImage");
     CHECK(im != NULL && strcmp(im, "Interface\\LevelPicker\\LevelPick.bmp") == 0,
         "img: Menu2 path trimmed of ':0:0:1'");
+    const FeSubmenu* image_sub = frontend_active_submenu(&fe);
+    CHECK(image_sub != NULL && image_sub->image_has_origin &&
+          image_sub->image_x == 0.0f && image_sub->image_y == 0.0f &&
+          image_sub->image_keyed,
+          "img: explicit origin and transparency survive tuple parsing");
     block_close(cfg);
 }
 
@@ -845,6 +850,57 @@ static void test_options(void)
     block_close(cfg);
 }
 
+static void test_cycle_label_bounds(void)
+{
+    FrontEnd* fe = (FrontEnd*)calloc(1, sizeof(FrontEnd));
+    GameOptions options;
+    options_defaults(&options);
+    CHECK(fe != NULL, "cycle bounds: frontend");
+    if (fe == NULL) return;
+    fe->open = fe->built = 1;
+    fe->menu = FE_MENU_PAUSED;
+    fe->opts = &options;
+    fe->menus[FE_MENU_PAUSED].submenu_count = 1;
+    FeSubmenu* sub = &fe->menus[FE_MENU_PAUSED].submenus[0];
+    sub->item_count = 1;
+    sub->base_x = 140;
+    sub->base_y = 200;
+    FeItem* item = &sub->items[0];
+    item->kind = FE_ITEM_CYCLE;
+    item->cycle_count = 2;
+    strcpy(item->label, "Music");
+
+    /* Five ten-pixel advances: label ends at x=190, value is separate. */
+    TextureSurface font;
+    memset(&font, 0, sizeof(font));
+    font.width = 100;
+    font.height = 190;
+    font.key_count = 2;
+    font.pixels = (uint32_t*)malloc(font.width * font.height * 4);
+    CHECK(font.pixels != NULL, "cycle bounds: font pixels");
+    if (font.pixels != NULL) {
+        for (int i = 0; i < font.width * font.height; ++i)
+            font.pixels[i] = 0xffffffffu;
+        FeInput input = { 0, 0, 0, 0, 0, 0, 192, 201, 1, 0 };
+        frontend_tick(fe, &input, &font);
+        CHECK(item->value == 0 && options.music_onoff == 0,
+              "cycle bounds: beyond label does not activate");
+        input.mouse_x = 141;
+        input.mouse_y = 198;
+        frontend_tick(fe, &input, &font);
+        CHECK(item->value == 0, "cycle bounds: above label does not activate");
+        input.mouse_y = 201;
+        frontend_tick(fe, &input, &font);
+        CHECK(item->value == 1 && options.music_onoff == 1,
+              "cycle bounds: label activates real option owner");
+        input.mouse_x = 450;
+        frontend_tick(fe, &input, &font);
+        CHECK(item->value == 1, "cycle bounds: value column does not activate");
+        free(font.pixels);
+    }
+    free(fe);
+}
+
 static void test_cycle_pointer_and_layout(void)
 {
     BlockFile* cfg = s_parse("Lego* { Menu { PausedMenu { MenuCount 1 "
@@ -1066,6 +1122,7 @@ int main(int argc, char** argv)
     test_slots();
     test_options();
     test_cycle_pointer_and_layout();
+    test_cycle_label_bounds();
     test_scroll();
     test_records();
 
@@ -1411,7 +1468,7 @@ int main(int argc, char** argv)
         __builtin_memcpy(rec2 + 10, &fl2, 4);
         panel_draw_records_set(11, pblock);
         panel_draw_count_set(11, 2);
-        indexed_pair_set(11, 10u, 5u);
+        indexed_pair_set(11, 0x41200000u, 0x40a00000u); /* 10.0f, 5.0f */
         sim_status_banner_word_set(0u);
         crt_surface_calls_clear();
         panel_texture_slots_blit(11);
@@ -1453,6 +1510,70 @@ int main(int argc, char** argv)
         crt_surface_calls_clear();
         panel_texture_slots_blit(11);
         CHECK(crt_surface_calls_count() == 0, "a closed panel answers nothing");
+    }
+
+    /* Idle hover uses the same live records as the image selector. */
+    {
+        uint32_t saved_flags[12];
+        static float items[22];
+        memset(items, 0, sizeof(items));
+        for (int k = 0; k < 12; ++k) {
+            saved_flags[k] = request_record_flags_peek(k);
+            request_record_flags_set(k, k == 11 ? 1u : 0u);
+        }
+        items[2] = items[13] = 36.0f;
+        items[3] = items[14] = 25.0f;
+        panel_draw_records_set(11, items);
+        panel_draw_count_set(11, 2);
+        float ox = 330.75f, oy = -0.75f;
+        uint32_t xb, yb, flags = 0x10u;
+        memcpy(&xb, &ox, sizeof(xb));
+        memcpy(&yb, &oy, sizeof(yb));
+        indexed_pair_set(11, xb, yb);
+        memcpy(items + 10, &flags, sizeof(flags));
+        CHECK(frontend_panels_pointer_hover(330, 0) != 0,
+              "idle hit uses truncated live origin and includes left/top");
+        memcpy(&flags, items + 10, sizeof(flags));
+        CHECK(flags == 0x12u, "hidden item still receives reference hover");
+        memcpy(&flags, items + 21, sizeof(flags));
+        CHECK((flags & 2u) == 0u, "first overlapping item owns hover");
+        CHECK(frontend_panels_pointer_hover(366, 0) == 0,
+              "right edge is excluded");
+        flags = 0xabu;
+        memcpy(items + 10, &flags, sizeof(flags));
+        frontend_panels_pointer_hover(0, 479);
+        memcpy(&flags, items + 10, sizeof(flags));
+        CHECK(flags == 0xadu,
+              "miss clears hover and restores persistent pressed state");
+        request_record_flags_set(11, 0u);
+        frontend_panels_pointer_hover(330, 0);
+        memcpy(&flags, items + 10, sizeof(flags));
+        CHECK(flags == 0xadu, "disabled category skips flag mutation");
+        request_record_flags_set(11, 1u);
+        FrontendPanelPointerCapture capture;
+        FrontendPanelPointerHit hit;
+        memset(&capture, 0, sizeof(capture));
+        flags = 0x20u;
+        memcpy(items + 10, &flags, sizeof(flags));
+        frontend_panels_pointer_update(&capture, 330, 0, 1, 0, &hit);
+        CHECK(capture.active && hit.item == 0 && !hit.released,
+              "fresh press captures the first item");
+        frontend_panels_pointer_update(&capture, 0, 479, 1, 1, &hit);
+        CHECK(capture.active && !hit.released,
+              "drag-out preserves capture without activation");
+        frontend_panels_pointer_update(&capture, 330, 0, 1, 1, &hit);
+        frontend_panels_pointer_update(&capture, 330, 0, 0, 1, &hit);
+        memcpy(&flags, items + 10, sizeof(flags));
+        CHECK(!capture.active && hit.released && flags == 0x2au,
+              "matching release toggles only the configured persistent item");
+        frontend_panels_pointer_update(&capture, 330, 0, 1, 0, &hit);
+        frontend_panels_pointer_capture_cancel(&capture);
+        frontend_panels_pointer_update(&capture, 330, 0, 0, 1, &hit);
+        CHECK(!hit.released, "cancel cannot synthesize an activation");
+        panel_draw_records_set(11, NULL);
+        panel_draw_count_set(11, 0);
+        for (int k = 0; k < 12; ++k)
+            request_record_flags_set(k, saved_flags[k]);
     }
 
     /* The timed-effect timestamp reset (2026-10-24): stamp + guard. */

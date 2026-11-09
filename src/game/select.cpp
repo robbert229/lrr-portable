@@ -11,6 +11,8 @@
 #include "frontend.hpp"
 #include "gods98/engine.hpp"
 #include "gods98/input.hpp"
+#include "gods98/media.hpp"
+#include "crt/crt.hpp"
 #include "render.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/view.hpp"
@@ -59,6 +61,7 @@ int selection_add(GameContext* ctx, EntitySlot* e)
     e->flags |= ENTITY_SELECTED;
     e->flags_3e8 |= ENTITY_SELECTED;
     selection_active_context_sync(ctx);
+    cmd_selection_trace("select.add", e, -1, 0, NULL);
     return 1;
 }
 
@@ -69,11 +72,13 @@ void selection_remove(GameContext* ctx, const EntitySlot* e)
         return;
     }
     if (!selection_contains_entity_target(ctx, e, &index)) return;
+    cmd_selection_trace("select.remove.begin", e, -1, 0, NULL);
     ((EntitySlot*)e)->flags &= ~ENTITY_SELECTED;
     ((EntitySlot*)e)->flags_3e8 &= ~ENTITY_SELECTED;
     ctx->selection[index] = ctx->selection[ctx->selection_count - 1];
     --ctx->selection_count;
     selection_active_context_sync(ctx);
+    cmd_selection_trace("select.remove.end", e, -1, 0, NULL);
 }
 
 /* SelectionCandidateFilter (FUN_004526e0) operates on the active selection
@@ -122,6 +127,7 @@ int selection_candidate_filter_active(void* entity, int mode, int param_3)
     s_selection_active_records[s_selection_active_count] = e;
     ++s_selection_active_count;
     e->flags_3e8 |= ENTITY_SELECTED;
+    cmd_selection_trace("select.filter.add", e, -1, 0, NULL);
     if (e->type != 4
         && (e->flags_3e0 & 0x24002000u) == 0u
         && (e->flags_3e4 & 0x100u) == 0u) {
@@ -156,6 +162,9 @@ int selection_candidate_filter_active(void* entity, int mode, int param_3)
 void selection_clear_active(void)
 {
     uint32_t index = 0;
+    EntitySlot* previous = s_selection_active_count != 0u
+        ? s_selection_active_records[0] : NULL;
+    cmd_selection_trace("select.clear.begin", previous, -1, 0, NULL);
     if (s_selection_active_count != 0u) {
         EntitySlot** record = s_selection_active_records;
         do {
@@ -170,21 +179,25 @@ void selection_clear_active(void)
         } while (index < s_selection_active_count);
     }
     s_selection_active_count = 0u;
+    cmd_selection_trace("select.clear.end", previous, -1, 0, NULL);
 }
 
 void selection_clear(GameContext* ctx)
 {
     int i;
+    EntitySlot* previous;
     if (ctx == NULL) {
         return;
     }
     selection_active_context_bind(ctx);
+    previous = ctx->selection_count > 0 ? ctx->selection[0] : NULL;
     for (i = 0; i < ctx->selection_count; ++i) {
         EntitySlot* entity = ctx->selection[i];
         entity->flags &= ~ENTITY_SELECTED;
     }
     selection_clear_active();
     ctx->selection_count = 0;
+    cmd_selection_trace("select.clear.published", previous, -1, 0, NULL);
 }
 
 // FUNCTION: LEGORR 0x00452c50
@@ -193,6 +206,7 @@ int selection_entity_remove_active(EntitySlot* entity)
     uint32_t index;
     if (s_selection_active_count != 0u) {
         if (selection_contains_entity_active_target(entity, &index) != 0u) {
+            cmd_selection_trace("select.active_remove.begin", entity, -1, 0, NULL);
             if (index == 0u) {
                 command_context_post_to_hud(0, NULL);
             }
@@ -200,6 +214,7 @@ int selection_entity_remove_active(EntitySlot* entity)
             s_selection_active_records[index] =
                 s_selection_active_records[s_selection_active_count];
             entity->flags_3e8 &= ~ENTITY_SELECTED;
+            cmd_selection_trace("select.active_remove.end", entity, -1, 0, NULL);
             return 1;
         }
     }
@@ -1344,6 +1359,7 @@ int selection_cmd_move(GameContext* ctx, float tx, float ty)
         int pair[2];
         pair[0] = (int)tx;
         pair[1] = (int)ty;
+        cmd_selection_trace("move.request", ctx->selection[i], -1, 0, pair);
         cmd_produce(5, ctx->selection[i], 0, pair);
         ++n;
     }
@@ -1353,7 +1369,7 @@ int selection_cmd_move(GameContext* ctx, float tx, float ty)
 void selection_cmd_add(GameContext* ctx, EntitySlot* e)
 {
     if (ctx != NULL && e != NULL) {
-        cmd_produce(8, e, 0, NULL);
+        cmd_produce(1, e, 1, NULL);
     }
 }
 
@@ -1611,24 +1627,80 @@ void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
     selection_clear_request_and_hud_reset();
 }
 
-/* Neutral physical-button ingress adapter. Gesture policy remains the
- * reconstruction's press-to-select/press-ground-to-move for either button;
- * the reference's configured gesture and drag rules are still unresolved.
- * No catalog tuple, synthetic ray, cell picker fallback, or route is used. */
+/* The ordinary floor alternatives at 0x4272b6..0x42744f. A recognized
+ * floor owns a failed route/permission result too: it must not become an
+ * unconditional move in the compatibility adapter below. Other action
+ * modes are outside this slice. */
+static int selection_floor_release(GameContext* ctx, EngineContext* engine,
+                                    const int cell_xy[2])
+{
+    const uint8_t* cell;
+    uint32_t flags;
+    EntitySlot* first;
+    int handled = 0;
+    int mark_matching = 0;
+    if (level_width(ctx->level) < 2 || level_height(ctx->level) < 2 ||
+        (unsigned int)cell_xy[0] >= (unsigned int)level_width(ctx->level) - 1u ||
+        (unsigned int)cell_xy[1] >= (unsigned int)level_height(ctx->level) - 1u)
+        return 0;
+    if ((engine->state & (0x40000u | 0x10000000u)) != 0u ||
+        (global_state_low_word_get() & 0xffu) != 0u) return -1;
+    cell = level_voxel(ctx->level, cell_xy[0], cell_xy[1]);
+    if (cell == NULL) return 0;
+    memcpy(&flags, cell + 8, sizeof(flags));
+    if ((flags & 0x0cu) != 0x0cu || selection_count(ctx) == 0)
+        return -1;
+    if ((flags & 0x400u) != 0u || (cell[0x0c] & 0x24u) != 0u)
+        return 0;
+    first = selection_first(ctx);
+    if ((flags & 0x200000u) == 0u &&
+        (entity_stats_word_get(first) & 0x10000u) != 0u &&
+        terrain_cell_route_and_occupancy_check_current(first,
+            cell_xy[0], cell_xy[1], cell_xy[0], cell_xy[1], 0) != 0) {
+        handled = 1;
+        mark_matching = 1;
+    }
+    if (handled == 0 &&
+        terrain_cell_route_and_occupancy_check_current(first,
+            cell_xy[0], cell_xy[1], cell_xy[0], cell_xy[1], 0) != 0)
+        handled = 1;
+    /* Route success owns the branch before permission is tested. */
+    if (handled == 0 || terrain_cell_command_predicate(engine,
+        cell_xy[0], cell_xy[1]) != 0) return 0;
+    /* HUD reset reaches the x86 visibility owner through this record.
+     * Refuse the whole operation while that scene owner is unavailable;
+     * do not queue a move and pretend the dependent reset succeeded. */
+    if (global_refresh_record_peek() == NULL) {
+        cmd_selection_trace("floor.refresh_unavailable", first, -1, 0, cell_xy);
+        return 0;
+    }
+    cmd_produce(8, NULL, 0, cell_xy);
+    if (mark_matching != 0) cmd_mark_matching(12, 0, cell_xy);
+    media_action_feedback_sound_dispatch(0);
+    selection_clear_request_and_hud_reset();
+    return 1;
+}
+
+/* The frame UI arbiter owns the complete gesture and admits its release.
+ * No catalog tuple, synthetic ray, cell picker fallback or forced route. */
 int selection_pointer_world_dispatch(GameContext* ctx,
-    InputPointerSample* sample, int width, int height)
+    EngineContext* engine, InputPointerSample* sample, int width, int height)
 {
     EntitySlot* hit;
     float cell_x, cell_y;
     int signed_cell_x, signed_cell_y;
     if (sample == NULL || sample->domain != INPUT_POINTER_WORLD ||
-        sample->transition != PLATFORM_MOUSE_DOWN || sample->admitted ||
+        sample->transition != PLATFORM_MOUSE_UP || sample->admitted ||
         (sample->button != PLATFORM_MOUSE_LEFT &&
          sample->button != PLATFORM_MOUSE_RIGHT)) return 0;
     /* Consume even a miss before any picker/queue side effect. A second
      * producer cannot reinterpret this physical edge later in the tick. */
     sample->admitted = 1;
-    if (ctx == NULL || ctx->level == NULL || width <= 0 || height <= 0)
+    if (ctx == NULL || ctx->level == NULL || engine == NULL ||
+        engine->level_block != ctx->level || engine->context_mode != 1 ||
+        (engine->state & (0x100u | 0x100000u | 0x08000000u)) != 0u ||
+        ((engine_feature_word_peek() & 0x4000u) != 0u &&
+         sample->button != PLATFORM_MOUSE_LEFT) || width <= 0 || height <= 0)
         return 0;
     hit = level_scene_pick_entity(ctx, ctx->level, width, height,
                                   sample->x, sample->y, 30.0f);
@@ -1646,5 +1718,16 @@ int selection_pointer_world_dispatch(GameContext* ctx,
      * catalog type/id. Existing queue/route owners keep all later authority. */
     signed_cell_x = (int)cell_x;
     signed_cell_y = (int)cell_y;
+    {
+        int cell_xy[2];
+        int result;
+        cell_xy[0] = signed_cell_x;
+        cell_xy[1] = signed_cell_y;
+        result = selection_floor_release(ctx, engine, cell_xy);
+        if (result >= 0) return result;
+    }
+    /* Other existing world modes are not covered by the floor slice. */
+    if (terrain_cell_command_predicate(engine, signed_cell_x,
+                                       signed_cell_y) != 0) return 0;
     return selection_cmd_move(ctx, (float)signed_cell_x, (float)signed_cell_y);
 }

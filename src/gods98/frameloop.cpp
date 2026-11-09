@@ -14,6 +14,7 @@ int pe32_nerp_owner_probe(struct BlockFile*, int, int, FILE*); /* DEBUG-next-own
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
 #include "game/building_scene.hpp"
+#include "game/actor_scene.hpp"
 #include "game/effects.hpp"
 #include "game/frontend.hpp"
 #include "game/level.hpp"
@@ -166,6 +167,7 @@ typedef struct FrameloopApplicationState {
     int pending_load_record;
     char mission_brief[1024];
     int mission_brief_active;
+    int mission_brief_kind;
     int mission_brief_page;
     unsigned int mission_brief_keys_held;
     TextureSurface* briefing_panel;
@@ -371,8 +373,7 @@ static int reward_zone_dispatch(void* opaque, RewardScreenState* state)
         return 1;
     }
     if (hit_advance) {
-        if (!s_frameloop_application.picker_return_pending)
-            checkpoint_step(state->game);
+        checkpoint_step(state->game);
         state->transition_stage = 3;
         context->zone_action_consumed = 2;
         return 1;
@@ -493,11 +494,15 @@ static void reward_frame_pump(void* opaque, int mode)
         if (context->game->level != NULL) {
             level_render_scene(context->game->level, context->game,
                                WINDOW_W, WINDOW_H, pixels, pitch);
+            render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                                    context->game->options.brightness);
             frontend_help_overlay(pixels, pitch, WINDOW_W, WINDOW_H,
                                   objective_stream(context->game->level),
                                   &context->game->options);
         } else {
             surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 16, 48);
+            render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                                    context->game->options.brightness);
         }
         {
             static const uint32_t reward_draw_passes[] = { 2u, 0x40u, 4u, 1u };
@@ -526,8 +531,6 @@ static void reward_frame_pump(void* opaque, int mode)
                                     context->input->mouse_x,
                                     context->input->mouse_y,
                                     context->input->mouse_down);
-        render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
-                                context->game->options.brightness);
         platform_present_pixels(context->window, pixels, pitch,
                                 WINDOW_W, WINDOW_H);
         surface_unlock(context->surface, pixels);
@@ -1213,7 +1216,7 @@ static int frame_tutorial_world_pointer_admit(GameContext* game,
     uint32_t clicks;
     if (game == NULL || game->level == NULL || engine == NULL ||
         mission_reward_active(game)) return 0;
-    if ((engine->state & 0x100u) != 0u ||
+    if ((engine->state & (0x100u | 0x100000u | 0x08000000u)) != 0u ||
         (engine->debug & 0x1000u) != 0u) return 0;
     hit = level_scene_pick_entity(game, game->level, width, height, x, y, 30.0f);
     if (hit != NULL) {
@@ -1238,137 +1241,195 @@ static int frame_tutorial_world_pointer_admit(GameContext* game,
     }
     if (!level_scene_mouse_cell(game, game->level, width, height,
                                x, y, &cell_x, &cell_y)) return 0;
-    return terrain_cell_command_predicate(engine, (int)cell_x, (int)cell_y) == 0;
+    /* The floor owner tests route before command permission. Admission
+     * records the genuine release hit without pre-empting that ordering. */
+    return 1;
 }
 
 /* UI arbitration owns a physical gesture through its release, even on a
  * miss or when the other button overlaps. World actions are admitted only
- * by selection_pointer_world_dispatch, once per classified down sample. */
+ * by selection_pointer_world_dispatch, once per admitted release sample. */
+static void frame_panel_pointer_release(EngineContext* engine,
+                                         int category, int item)
+{
+    (void)engine; /* TransitionControl uses the bound current EngineContext. */
+    (void)frontend_panels_pointer_activate(category, item);
+}
+
 static void frame_pointer_ingress(GameContext* game, EngineContext* engine,
     InputState* input, SimulationPointerCapture captures[2],
     uint32_t* capture_serial, int width, int height)
 {
-    static AdvisorMessagePointerCapture message_captures[2];
-    int i, b;
+    static AdvisorMessagePointerCapture messages[2];
+    static FrontendPanelPointerCapture panel;
+    static int logical, panel_owned[2];
+    static uint32_t panel_serial;
+    int i, b, enabled, panel_enabled;
     frame_tutorial_record_pointer_mark();
-    if (mission_reward_active(game)) {
-        /* Reward input uses the aggregate press. Retire only gameplay
-         * samples/captures here; preserve fresh reward button gestures. */
-        memset(message_captures, 0, sizeof(message_captures));
+    if (*capture_serial != input->pointer_reset_serial ||
+        panel_serial != input->pointer_reset_serial || mission_reward_active(game)) {
+        frontend_panels_pointer_capture_cancel(&panel);
+        logical = 0;
+        memset(panel_owned, 0, sizeof(panel_owned));
+        memset(messages, 0, sizeof(messages));
         for (b = 0; b < 2; ++b) {
             simulation_pointer_capture_reset(&captures[b]);
             input->pointer_domain[b] = INPUT_POINTER_NONE;
         }
-        input->pointer_count = 0;
         *capture_serial = input->pointer_reset_serial;
-        return;
+        panel_serial = input->pointer_reset_serial;
+        if (mission_reward_active(game)) { input->pointer_count = 0; return; }
     }
-    int enabled = (engine->state & 0x100u) == 0u &&
-                  (engine->debug & 0x1000u) == 0u;
-    if (*capture_serial != input->pointer_reset_serial) {
-        for (b = 0; b < 2; ++b)
-            simulation_pointer_capture_reset(&captures[b]);
-        memset(message_captures, 0, sizeof(message_captures));
-        *capture_serial = input->pointer_reset_serial;
+    enabled = (engine->state & (0x100u | 0x100000u | 0x08000000u)) == 0u &&
+              (engine->debug & 0x1000u) == 0u;
+    panel_enabled = (engine->state & ENGINE_STATE_INDEXED_SUBSYS) != 0u;
+    if (!enabled || !panel_enabled) {
+        frontend_panels_pointer_capture_cancel(&panel);
+        logical = 0;
+        if (!enabled) memset(panel_owned, 0, sizeof(panel_owned));
     }
     if (!enabled) {
-        memset(message_captures, 0, sizeof(message_captures));
+        memset(messages, 0, sizeof(messages));
         input_pointer_rearm(input);
-        for (b = 0; b < 2; ++b)
-            simulation_pointer_capture_reset(&captures[b]);
+        for (b = 0; b < 2; ++b) simulation_pointer_capture_reset(&captures[b]);
         *capture_serial = input->pointer_reset_serial;
         return;
     }
     for (i = 0; i < input->pointer_count; ++i) {
         InputPointerSample* sample = &input->pointer_samples[i];
+        int previous = logical, hit_panel = 0, skip_panel = 0;
+        FrontendPanelPointerHit hit;
         if (sample->transition == PLATFORM_MOUSE_CANCEL) {
-            memset(message_captures, 0, sizeof(message_captures));
+            frontend_panels_pointer_capture_cancel(&panel);
+            logical = 0; memset(panel_owned, 0, sizeof(panel_owned));
+            memset(messages, 0, sizeof(messages));
             for (b = 0; b < 2; ++b) {
                 input->pointer_domain[b] = INPUT_POINTER_NONE;
                 simulation_pointer_capture_reset(&captures[b]);
             }
             continue;
         }
-        for (b = 0; b < 2; ++b) {
-            int button = b == 0 ? PLATFORM_MOUSE_LEFT : PLATFORM_MOUSE_RIGHT;
-            int* domain = &input->pointer_domain[b];
-            if (sample->button == button &&
-                sample->transition == PLATFORM_MOUSE_DOWN) {
-                simulation_pointer_capture_reset(&captures[b]);
-                memset(&message_captures[b], 0, sizeof(message_captures[b]));
-                if (sample->domain == INPUT_POINTER_BLOCKED) {
-                    *domain = INPUT_POINTER_BLOCKED;
+        b = sample->button == PLATFORM_MOUSE_LEFT ? 0 :
+            sample->button == PLATFORM_MOUSE_RIGHT ? 1 : -1;
+        if (b >= 0 && (sample->transition == PLATFORM_MOUSE_DOWN ||
+                       sample->transition == PLATFORM_MOUSE_UP) &&
+            ((s_engine_feature_word & 0x4000u) == 0u || b == 0))
+            logical = sample->transition == PLATFORM_MOUSE_DOWN;
+        if (sample->domain == INPUT_POINTER_BLOCKED ||
+            (b >= 0 && input->pointer_domain[b] == INPUT_POINTER_BLOCKED)) {
+            frontend_panels_pointer_capture_cancel(&panel);
+            logical = 0; skip_panel = 1;
+        }
+        /* Other UI owns its own release; no panel action through that UI. */
+        if (b >= 0 && input->pointer_domain[b] == INPUT_POINTER_UI &&
+            !panel_owned[b]) skip_panel = 1;
+        if (b >= 0 && sample->transition == PLATFORM_MOUSE_DOWN) {
+            int other = 1 - b;
+            if (input->pointer_domain[other] == INPUT_POINTER_UI &&
+                !panel_owned[other]) skip_panel = 1;
+        }
+        if (panel_enabled && !skip_panel) {
+            hit_panel = frontend_panels_pointer_update(&panel, sample->x,
+                sample->y, logical, previous, &hit);
+            if (hit_panel) engine->state |= 0x200u;
+            if (hit.released) {
+                frame_panel_pointer_release(engine, hit.category, hit.item);
+                if ((engine->state & (0x100u | 0x100000u | 0x08000000u)) != 0u ||
+                    (engine->debug & 0x1000u) != 0u) {
+                    frontend_panels_pointer_capture_cancel(&panel);
+                    logical = 0;
+                    memset(panel_owned, 0, sizeof(panel_owned));
+                    memset(messages, 0, sizeof(messages));
+                    input_pointer_rearm(input);
+                    for (b = 0; b < 2; ++b)
+                        simulation_pointer_capture_reset(&captures[b]);
+                    *capture_serial = input->pointer_reset_serial;
+                    panel_serial = input->pointer_reset_serial;
+                    return;
                 }
-                else {
-                    int consumed = simulation_pointer_capture_dispatch(
-                        &captures[b], sample->x, sample->y, 1, 0,
-                        engine->views[0]);
-                    if (!consumed)
-                        consumed = advisor_message_pointer_capture_dispatch(
-                            &message_captures[b], sample->x, sample->y, 1);
-                    else message_captures[b].down = 1;
-                    *domain = consumed ? INPUT_POINTER_UI : INPUT_POINTER_WORLD;
-                }
-                sample->domain = *domain;
-                if (*domain == INPUT_POINTER_WORLD && !sample->admitted &&
-                    !frame_tutorial_world_pointer_admit(game, engine,
-                        sample->x, sample->y, width, height)) {
-                    *domain = INPUT_POINTER_BLOCKED;
-                    sample->domain = INPUT_POINTER_BLOCKED;
-                    sample->admitted = 1;
-                }
-                (void)selection_pointer_world_dispatch(game, sample,
-                                                        width, height);
             }
-            else if (sample->button == button &&
-                     sample->transition == PLATFORM_MOUSE_UP) {
-                sample->domain = *domain;
-                if (*domain == INPUT_POINTER_UI) {
-                    if (message_captures[b].owner != 0)
-                        (void)advisor_message_pointer_capture_dispatch(
-                            &message_captures[b], sample->x, sample->y, 0);
-                    else
-                        (void)simulation_pointer_capture_dispatch(&captures[b],
-                            sample->x, sample->y, 0, 1, engine->views[0]);
-                }
-                memset(&message_captures[b], 0, sizeof(message_captures[b]));
-                simulation_pointer_capture_reset(&captures[b]);
-                *domain = INPUT_POINTER_NONE;
+        }
+        if (b >= 0 && sample->transition == PLATFORM_MOUSE_DOWN) {
+            int consumed = 0;
+            simulation_pointer_capture_reset(&captures[b]);
+            memset(&messages[b], 0, sizeof(messages[b]));
+            panel_owned[b] = 0;
+            if (sample->domain == INPUT_POINTER_BLOCKED) {
+                input->pointer_domain[b] = INPUT_POINTER_BLOCKED;
+            } else {
+                if (hit_panel) { consumed = 1; panel_owned[b] = 1; }
+                if (!consumed) consumed = simulation_pointer_capture_dispatch(
+                    &captures[b], sample->x, sample->y, 1, 0, engine->views[0]);
+                if (!consumed) consumed = advisor_message_pointer_capture_dispatch(
+                    &messages[b], sample->x, sample->y, 1);
+                else if (!panel_owned[b]) messages[b].down = 1;
+                input->pointer_domain[b] = consumed ? INPUT_POINTER_UI : INPUT_POINTER_WORLD;
             }
-            else if ((sample->held & button) != 0 &&
-                     *domain == INPUT_POINTER_UI) {
-                if (message_captures[b].owner != 0)
-                    (void)advisor_message_pointer_capture_dispatch(
-                        &message_captures[b], sample->x, sample->y, 1);
-                else
-                    (void)simulation_pointer_capture_dispatch(&captures[b],
-                        sample->x, sample->y, 1, 0, engine->views[0]);
+            sample->domain = input->pointer_domain[b];
+        } else if (b >= 0 && sample->transition == PLATFORM_MOUSE_UP) {
+            int domain = input->pointer_domain[b];
+            sample->domain = domain;
+            if (domain == INPUT_POINTER_UI && !panel_owned[b]) {
+                if (messages[b].owner != 0)
+                    (void)advisor_message_pointer_capture_dispatch(&messages[b], sample->x, sample->y, 0);
+                else (void)simulation_pointer_capture_dispatch(&captures[b], sample->x, sample->y, 0, 1, engine->views[0]);
+            } else if (domain == INPUT_POINTER_WORLD && hit_panel) {
+                sample->admitted = 1;
+                sample->domain = INPUT_POINTER_UI;
+            } else if (domain == INPUT_POINTER_WORLD && !sample->admitted) {
+                if (((s_engine_feature_word & 0x4000u) == 0u || b == 0) &&
+                    frame_tutorial_world_pointer_admit(game, engine, sample->x, sample->y, width, height))
+                    (void)selection_pointer_world_dispatch(game, engine, sample, width, height);
+                else sample->admitted = 1;
+            }
+            if ((s_engine_feature_word & 0x4000u) == 0u) {
+                int other = 1 - b;
+                if (input->pointer_domain[other] == INPUT_POINTER_WORLD)
+                    input->pointer_domain[other] = INPUT_POINTER_NONE;
+            }
+            panel_owned[b] = 0; memset(&messages[b], 0, sizeof(messages[b]));
+            simulation_pointer_capture_reset(&captures[b]);
+            input->pointer_domain[b] = INPUT_POINTER_NONE;
+        } else {
+            for (b = 0; b < 2; ++b) {
+                int button = b == 0 ? PLATFORM_MOUSE_LEFT : PLATFORM_MOUSE_RIGHT;
+                if ((sample->held & button) && input->pointer_domain[b] == INPUT_POINTER_UI && !panel_owned[b]) {
+                    if (messages[b].owner) (void)advisor_message_pointer_capture_dispatch(&messages[b], sample->x, sample->y, 1);
+                    else (void)simulation_pointer_capture_dispatch(&captures[b], sample->x, sample->y, 1, 0, engine->views[0]);
+                }
             }
         }
     }
-    /* No message is needed to maintain capture/hover feedback. A held world
-     * gesture never starts a UI latch when the cursor crosses a control. */
+    /* Preserve independent non-panel UI hold processing from the real caller. */
     for (b = 0; b < 2; ++b) {
         int button = b == 0 ? PLATFORM_MOUSE_LEFT : PLATFORM_MOUSE_RIGHT;
-        if ((input->pointer_buttons & button) != 0 &&
-            input->pointer_domain[b] == INPUT_POINTER_UI) {
-            if (message_captures[b].owner != 0)
-                (void)advisor_message_pointer_capture_dispatch(
-                    &message_captures[b], input->mouse_x, input->mouse_y, 1);
-            else
-                (void)simulation_pointer_capture_dispatch(&captures[b],
-                    input->mouse_x, input->mouse_y, 1, 0, engine->views[0]);
+        if ((input->pointer_buttons & button) && input->pointer_domain[b] == INPUT_POINTER_UI && !panel_owned[b]) {
+            if (messages[b].owner) (void)advisor_message_pointer_capture_dispatch(&messages[b], input->mouse_x, input->mouse_y, 1);
+            else (void)simulation_pointer_capture_dispatch(&captures[b], input->mouse_x, input->mouse_y, 1, 0, engine->views[0]);
         }
     }
-    if (input->pointer_buttons == 0) {
+    if (!panel_enabled && input->pointer_buttons == 0) {
         SimulationPointerCapture hover;
+        AdvisorMessagePointerCapture message_hover;
         simulation_pointer_capture_reset(&hover);
-        if (!simulation_pointer_capture_dispatch(&hover,
-                input->mouse_x, input->mouse_y, 0, 0, engine->views[0])) {
-            AdvisorMessagePointerCapture message_hover;
+        if (!simulation_pointer_capture_dispatch(&hover, input->mouse_x, input->mouse_y, 0, 0, engine->views[0])) {
             memset(&message_hover, 0, sizeof(message_hover));
-            (void)advisor_message_pointer_capture_dispatch(&message_hover,
-                input->mouse_x, input->mouse_y, 0);
+            (void)advisor_message_pointer_capture_dispatch(&message_hover, input->mouse_x, input->mouse_y, 0);
+        }
+    }
+    if (panel_enabled) {
+        FrontendPanelPointerHit hit;
+        int panel_hit = frontend_panels_pointer_update(&panel, input->mouse_x,
+            input->mouse_y, logical, logical, &hit);
+        if (panel_hit) engine->state |= 0x200u;
+        if (!panel_hit && !logical && input->pointer_buttons == 0) {
+            SimulationPointerCapture hover;
+            AdvisorMessagePointerCapture message_hover;
+            simulation_pointer_capture_reset(&hover);
+            if (!simulation_pointer_capture_dispatch(&hover, input->mouse_x, input->mouse_y, 0, 0, engine->views[0])) {
+                memset(&message_hover, 0, sizeof(message_hover));
+                (void)advisor_message_pointer_capture_dispatch(&message_hover, input->mouse_x, input->mouse_y, 0);
+            }
         }
     }
 }
@@ -2086,6 +2147,7 @@ static void frameloop_game_context_dispose(GameContext* game)
 #endif
     (void)tutorial_display_resources_release();
     advisor_message_ui_release();
+    frontend_panels_release();
     level_destroy(game->level);
     block_close(game->cfg);
 }
@@ -2634,13 +2696,23 @@ static void frameloop_blit_texture_scaled(const TextureSurface* texture,
 /* FUN_004574e0 reads the active level's ObjectiveText resource/section and
  * treats every \\a as a page boundary, not as the end of its briefing. */
 static int frameloop_brief_load(BlockFile* cfg, const char* level_name,
-                                char* out, size_t out_size)
+                                int kind, char* out, size_t out_size)
 {
     char path[512];
     const char* group;
     const char* text_path;
+    const char* label;
+    size_t label_length;
     if (out == NULL || out_size == 0) return 0;
     out[0] = '\0';
+    switch (kind) {
+    case OBJECTIVE_PRESENTATION_BRIEFING: label = "Objective:"; break;
+    case OBJECTIVE_PRESENTATION_ACHIEVED: label = "Completion:"; break;
+    case OBJECTIVE_PRESENTATION_FAILED: label = "Failure:"; break;
+    case OBJECTIVE_PRESENTATION_CRYSTAL_FAILED: label = "CrystalFailure:"; break;
+    default: return 0;
+    }
+    label_length = strlen(label);
     if (util_level_cfg_path(cfg, level_name, "ObjectiveText", path,
                              sizeof(path)) == NULL) return 0;
     text_path = block_get_strptr(cfg, path);
@@ -2667,9 +2739,9 @@ static int frameloop_brief_load(BlockFile* cfg, const char* level_name,
             section = close != NULL &&
                 (size_t)(close - line - 1) == strlen(group) &&
                 strnicmp_lite(line + 1, group, (int)strlen(group)) == 0;
-        } else if (section && line_end - line >= 10
-                   && strnicmp_lite(line, "Objective:", 10) == 0) {
-            line += 10;
+        } else if (section && (size_t)(line_end - line) >= label_length
+                   && strnicmp_lite(line, label, (int)label_length) == 0) {
+            line += label_length;
             while (line < line_end && (*line == ' ' || *line == '\t')) ++line;
             size_t n = (size_t)(line_end - line);
             while (n > 0 && (line[n - 1] == '\r' || line[n - 1] == ' ')) --n;
@@ -2747,15 +2819,19 @@ static int frameloop_briefing_page_action(const char* brief, int* page_offset,
 {
     const char* page = brief + *page_offset;
     const char* next = strchr(page, '\a');
-    if (mouse_pressed && *page_offset != 0 && back_image != NULL &&
+    const int over_back = *page_offset != 0 && back_image != NULL &&
         mouse_x >= 130 && mouse_y >= 315 &&
-        mouse_x < 130 + back_image->width && mouse_y < 315 + back_image->height) {
+        mouse_x < 130 + back_image->width && mouse_y < 315 + back_image->height;
+    if (mouse_pressed && over_back) {
         int previous = *page_offset - 1;
         while (previous > 0 && brief[previous - 1] != '\a') --previous;
         *page_offset = previous;
         return 1;
     }
     if (!key_continue && !mouse_pressed) return 0;
+    /* ObjectivePoll excludes Back before acknowledging the final page,
+     * including when Space supplied the continue edge. */
+    if (next == NULL && over_back) return 0;
     if (next != NULL && !key_continue &&
         (next_image == NULL || mouse_x < 470 || mouse_y < 315 ||
          mouse_x >= 470 + next_image->width ||
@@ -2784,6 +2860,10 @@ static void frameloop_briefing_render(PlatformWindow* win,
     int pitch = 0;
     if (surface_lock(surf, &pixels, &pitch) != 0) return;
     level_render_scene(level, game, WINDOW_W, WINDOW_H, pixels, pitch);
+    render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                            game->options.brightness);
+    frontend_panels_render(*engine_shared_state_word(), pixels, pitch,
+                           WINDOW_W, WINDOW_H);
     if (panel != NULL) {
         frameloop_blit_texture_scaled(panel, pixels, pitch, WINDOW_W, WINDOW_H,
                                       panel_x, panel_y, panel->width, panel->height);
@@ -2812,8 +2892,6 @@ static void frameloop_briefing_render(PlatformWindow* win,
     advisor_text_display_worker(delta);
     pixels = NULL;
     if (surface_lock(surf, &pixels, &pitch) != 0) return;
-    render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
-                            game->options.brightness);
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
@@ -2827,10 +2905,10 @@ static int frameloop_briefing_prepare(FrameloopApplicationState* app)
                                      : app->level_name;
     app->mission_brief[0] = '\0';
     app->mission_brief_page = 0;
-    app->mission_brief_keys_held =
-        (input_keyboard_key_held(' ') ? 1u : 0u) |
-        (input_keyboard_key_held(PLATFORM_KEY_ENTER) ? 2u : 0u);
-    app->mission_brief_active = objective_briefing_active(game->level);
+    app->mission_brief_keys_held = input_keyboard_key_held(' ') ? 1u : 0u;
+    app->mission_brief_kind = objective_presentation_kind(game->level);
+    app->mission_brief_active =
+        app->mission_brief_kind != OBJECTIVE_PRESENTATION_NONE;
     texture_release(app->briefing_panel);
     texture_release(app->briefing_next);
     texture_release(app->briefing_back);
@@ -2845,7 +2923,7 @@ static int frameloop_briefing_prepare(FrameloopApplicationState* app)
     app->briefing_y = 0;
     app->briefing_title[0] = '\0';
     if (!app->mission_brief_active) return 1;
-    if (!frameloop_brief_load(game->cfg, level_name,
+    if (!frameloop_brief_load(game->cfg, level_name, app->mission_brief_kind,
                               app->mission_brief, sizeof(app->mission_brief))) {
         fprintf(app->log, "frameloop: active objective briefing unavailable "
                           "for %s\n", level_name);
@@ -2864,7 +2942,12 @@ static int frameloop_briefing_prepare(FrameloopApplicationState* app)
             app->briefing_panel = image_surface_load(image_path, 0u, 0u);
             texture_source_color_key_set(app->briefing_panel, 0u, 0u);
         }
-        snprintf(key, sizeof(key), "%s Main MissionBriefingText", util_root_name(game->cfg));
+        const char* title_key =
+            app->mission_brief_kind == OBJECTIVE_PRESENTATION_BRIEFING
+                ? "MissionBriefingText" :
+            app->mission_brief_kind == OBJECTIVE_PRESENTATION_ACHIEVED
+                ? "MissionCompletedText" : "MissionFailedText";
+        snprintf(key, sizeof(key), "%s Main %s", util_root_name(game->cfg), title_key);
         title = block_get_strptr(game->cfg, key);
         if (title != NULL) {
             size_t i;
@@ -2898,6 +2981,37 @@ static int frameloop_briefing_prepare(FrameloopApplicationState* app)
         NULL, "Interface\\Fonts\\MbriefFont.bmp");
     fprintf(app->log, "frameloop: Mission Brief ready (ObjectiveText loaded)\n");
     return 1;
+}
+
+/* ObjectivePoll's terminal acknowledgment and pause Quit share KeepRunning's
+ * reward/return lane. Keep the level and blob alive until the reward/save
+ * owner releases them. The frame-driven frontend retains the actual picker
+ * origin instead of blocking here in MenuEnter's retail menu loop. */
+static void frameloop_level_return_begin(FrameloopApplicationState* app)
+{
+    GameContext* game = app->game_storage;
+    FrontEnd* fe = app->frontend_storage;
+    const int show_frontend = frontend_enabled(game->cfg);
+    app->picker_return_pending = 1;
+    app->picker_return_origin = show_frontend ? fe->origin_picker_sub : -1;
+    app->picker_return_level = game->level;
+    app->reward_tick_level = game->level;
+    app->reward_tick_started = 1;
+    app->reward_frame.zone_action_consumed = 0;
+    if (show_frontend && game->level != NULL) {
+        mission_reward_set_active(game, 1);
+        save_return_diagnostic_log_set(app->log);
+        input_begin_frame(&app->input);
+        (void)reward_screen_tick_bound();
+        save_return_diagnostic_log_set(NULL);
+        /* The zone owner already committed Advance. Its continuation is the
+         * pending frontend return, not a second checkpoint and direct load. */
+        if (app->reward_frame.zone_action_consumed == 2)
+            mission_reward_set_active(game, 0);
+    } else {
+        mission_reward_set_active(game, 0);
+    }
+    app->reward_frame.zone_action_consumed = 0;
 }
 
 /* MenuOverlaySurfaceAndTextSetup (FUN_004129d0): the corpus resets the
@@ -2947,6 +3061,40 @@ static void menu_overlay_surface_and_text_setup(
     }
 }
 
+/* The portable frontend owns modal menu admission. TransitionControl still
+ * owns the reference pause bit, sound stop and eventual resume effects. */
+/* Choose the authored group at the real frame caller, not in TransitionControl. */
+static int frameloop_overlay_request_mode(GameContext* game,
+    const EngineContext* engine, int pause_requested)
+{
+    const int active = frontend_enabled(game->cfg);
+    if ((engine->debug & 0x100u) != 0u && active) return 1;
+    if ((pause_requested && (engine->debug & 0x100u) == 0u) ||
+        ((engine->state & 0x2000000u) != 0u && active)) return 0;
+    return -1;
+}
+
+static int frameloop_overlay_open(FrontEnd* fe, int mode)
+{
+    if (!frontend_open(fe, mode == 1 ? FE_MENU_OPTIONS : FE_MENU_PAUSED))
+        return 0;
+    if (mode == 0)
+        unported_ledger_stubs::ledger_stub_00425c30_TransitionControl(0, 1u);
+    return 1;
+}
+
+static void frameloop_pause_finish(GameContext* game, EngineContext* engine,
+                                   int restart, int leave, int quit)
+{
+    /* Restart already calls TransitionControl from FrontEndStartLevel.
+     * An OS close goes straight to teardown, not a synthetic resume. */
+    if (quit || restart) return;
+    if (leave) {
+        if ((engine->state & 0x08000000u) != 0u) return;
+    } else if (global_option_low_bits_enabled(game->level)) return;
+    unported_ledger_stubs::ledger_stub_00425c30_TransitionControl(0, 0u);
+}
+
 /* Draw one front-end frame: frozen level (in-game pause) or a plain fill
  * (boot menu), then the submenu's MenuImage art + the menu layer. */
 static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
@@ -2965,16 +3113,22 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
     } else {
         surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 8, 20);
     }
-    const char* img = frontend_active_image(fe);
-    if (img != NULL) {
-        TextureSurface* bg = texture_get_or_load(NULL, img);
-        if (bg != NULL) {
-            const FeSubmenu* background_sub = frontend_active_submenu(fe);
-            surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H, bg, 0,
-                                 background_sub != NULL ? background_sub->scroll : 0);
-        }
-        texture_release(bg);
+    /* BrightnessSet updates scene lights; it does not dim 2D menu art.
+     * Keep the software world's existing brightness effect before overlays. */
+    render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                            game->options.brightness);
+    if (game->level != NULL && !mission_reward_active(game))
+        frontend_panels_render(*engine_shared_state_word(), pixels, pitch,
+                               WINDOW_W, WINDOW_H);
+    if ((fe->menu == FE_MENU_PAUSED || fe->menu == FE_MENU_OPTIONS) &&
+        game->level != NULL && !mission_reward_active(game)) {
+        /* EngineTick presents the paused message worker before MenuTick.
+         * Its real target must be unlocked for the text/surface owners. */
+        surface_unlock(surf, pixels);
+        advisor_message_ui_draw(0.0f);
+        if (surface_lock(surf, &pixels, &pitch) != 0) return;
     }
+    frontend_background_render(fe, pixels, pitch, WINDOW_W, WINDOW_H);
     menu_overlay_surface_and_text_setup(fe, hi_font,
                                         lo_font, pixels, pitch, WINDOW_W,
                                         WINDOW_H);
@@ -2985,9 +3139,6 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
                                              WINDOW_W, WINDOW_H);
         }
     }
-    /* Brightness (issue #85) is a post-pass over the finished frame. */
-    render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
-                            game->options.brightness);
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
@@ -3081,6 +3232,10 @@ static int frameloop_game_init_callback(const char* root, void* user)
     }
     if (!building_scene_initialize()) {
         fprintf(s_frameloop_application.log, "frameloop: building scene owner initialization failed\n");
+        return 0;
+    }
+    if (!actor_scene_initialize()) {
+        fprintf(s_frameloop_application.log, "frameloop: actor scene owner initialization failed\n");
         return 0;
     }
     fprintf(s_frameloop_application.log,
@@ -3870,7 +4025,8 @@ static int frameloop_application_gameplay_frame(float dt)
     int& pending_load_record = app.pending_load_record;
     char (&mission_brief)[1024] = app.mission_brief;
     int& mission_brief_active = app.mission_brief_active;
-    if (!mission_brief_active && objective_briefing_active(game.level)) {
+    if (!app.picker_return_pending && !mission_brief_active &&
+        objective_briefing_active(game.level)) {
         if (!frameloop_briefing_prepare(&app)) {
             quit = 1;
             stop = "objective briefing load failed";
@@ -3922,8 +4078,7 @@ static int frameloop_application_gameplay_frame(float dt)
             advisor_message_pointer_cancel(input.mouse_down);
             int key_continue = 0;
             for (int k = 0; k < nev; ++k) {
-                unsigned int mask = evbuf[k].code == ' ' ? 1u :
-                    (evbuf[k].code == PLATFORM_KEY_ENTER ? 2u : 0u);
+                unsigned int mask = evbuf[k].code == ' ' ? 1u : 0u;
                 if (evbuf[k].kind == PLATFORM_EVENT_KEYDOWN && mask != 0u) {
                     if ((app.mission_brief_keys_held & mask) == 0u)
                         key_continue = 1;
@@ -3942,8 +4097,13 @@ static int frameloop_application_gameplay_frame(float dt)
             if (page_action != 0) {
                 if (page_action == 1) {
                     fprintf(log, "frameloop: Mission Brief page changed\n");
-                } else if (objective_briefing_acknowledge(game.level)) {
+                } else if (objective_presentation_acknowledge(game.level)) {
                     mission_brief_active = 0;
+                    if (app.mission_brief_kind != OBJECTIVE_PRESENTATION_BRIEFING) {
+                        frameloop_level_return_begin(&app);
+                        input_begin_frame(&input);
+                        return !quit;
+                    }
                     objective_score_text_origin_set(NULL);
                     objective_task_text_origin_set(&ctx, NULL);
                     unported_ledger_stubs::ledger_stub_00425c30_TransitionControl(0, 0u);
@@ -4066,6 +4226,11 @@ static int frameloop_application_gameplay_frame(float dt)
         }
         if (app.picker_return_pending && !mission_reward_active(&game)) {
             int origin = app.picker_return_origin;
+                char pending_level[FE_LEVEL_NAME_MAX];
+                const char* next_level = game.level != NULL
+                    ? level_next_name(game.level) : NULL;
+                snprintf(pending_level, sizeof(pending_level), "%s",
+                         next_level != NULL ? next_level : "");
                 checkpoint_blob_free(&game);
                 app.picker_return_pending = 0;
                 app.picker_return_level = NULL;
@@ -4086,8 +4251,25 @@ static int frameloop_application_gameplay_frame(float dt)
                 app.gameplay_prepared = 0;
                 app.mission_brief_active = 0;
                 app.pending_load_slot = -1;
-                if (origin < 0 || !frontend_open_submenu(&fe, FE_MENU_MAIN, origin))
-                    (void)frontend_open(&fe, FE_MENU_MAIN);
+                if (origin != FE_STATE_MISSIONS && origin != FE_STATE_TRAINING) {
+                    /* No picker owns this launch. PendingLevelName follows
+                     * its retained next name after the old level's teardown. */
+                    if (pending_level[0] == '\0') {
+                        quit = 1;
+                        stop = "level chain ended";
+                        return 0;
+                    }
+                    options_load_or_default(&game, 1, 0);
+                    snprintf(level_name, sizeof(level_name), "%s", pending_level);
+                    app.phase = FRAMELOOP_PHASE_GAMEPLAY_START;
+                    input_begin_frame(&input);
+                    return 1;
+                }
+                if (!menu_enter(&fe, origin)) {
+                    quit = 1;
+                    stop = "return picker unavailable";
+                    return 0;
+                }
                 if (audio_status == 0) {
                     const char* music = menu_music_resource(game.cfg);
                     if (music != NULL && music[0] != '\0')
@@ -4108,14 +4290,8 @@ static int frameloop_application_gameplay_frame(float dt)
                 if (hit_save) {
                     (void)save_menu_open_from_reward(&fe);
                 } else if (hit_advance) {
-                    const char* next;
-                    next = mission_reward_advance(&game);
-                    if (next != NULL) {
-                        app.picker_return_pending = 0;
-                        app.picker_return_level = NULL;
-                    } else if (game.level == NULL) {
-                        app.picker_return_level = NULL;
-                    }
+                    checkpoint_step(&game);
+                    mission_reward_set_active(&game, 0);
                 }
             }
             reward_frame_pump(&reward_frame, 1);
@@ -4124,20 +4300,22 @@ static int frameloop_application_gameplay_frame(float dt)
 
         /* Esc (or the LEGORRR_AUTOPAUSE_FRAMES CI hook) opens the in-game
          * pause overlay — the shipped PausedMenu — instead of quitting. */
-        if ((pause_escape || (autopause > 0 && frames == autopause))
-            && frontend_open(&fe, FE_MENU_PAUSED)) {
+        const int overlay_mode = frameloop_overlay_request_mode(&game, &ctx,
+            pause_escape || (autopause > 0 && frames == autopause));
+        if (overlay_mode >= 0 && frameloop_overlay_open(&fe, overlay_mode)) {
             timed_effect_hover_reset();
             snprintf(fe.resume_level, sizeof(fe.resume_level), "%s",
                      level_name);
-            /* Consume gameplay's opening Escape/click before menu capture. */
+            /* A held gameplay gesture cannot become a menu activation. */
+            input_pointer_rearm(&input);
             input_begin_frame(&input);
             FeOverlayMenuGateState overlay_gate;
             memset(&overlay_gate, 0, sizeof(overlay_gate));
             overlay_gate.cached_menu = -1;
-            overlay_gate.menus[0].entries[0].handle = 1;
-            overlay_gate.menus[0].entries[2].handle = 1;
-            fprintf(log, "frameloop: paused (Continue / Options / Restart / "
-                         "Quit)\n");
+            overlay_gate.menus[overlay_mode].entries[0].handle = 1;
+            overlay_gate.menus[overlay_mode].entries[2].handle = 1;
+            fprintf(log, "frameloop: %s overlay\n",
+                    overlay_mode == 1 ? "options" : "paused");
             int want_reload = 0;
             int want_picker = 0;
             MenuSoundTickClock pause_sound_clock;
@@ -4194,13 +4372,13 @@ static int frameloop_application_gameplay_frame(float dt)
                 gate_ctx.input = &fi;
                 gate_ctx.measure = hi_font;
                 gate_ctx.event = FE_EVT_NONE;
-                gate_ctx.mode = 0;
+                gate_ctx.mode = overlay_mode;
                 overlay_gate.level_start_flag = level_start_flag();
                 overlay_gate.options_flag = menu_options_flag();
                 overlay_gate.blocked =
                     global_option_low_bits_enabled(game.level);
                 int tick_menu = fe.menu, tick_sub = fe.sub;
-                (void)overlay_menu_gate(&overlay_gate, 0,
+                (void)overlay_menu_gate(&overlay_gate, overlay_mode,
                                         frameloop_overlay_menu_scroll_refresh,
                                         frameloop_overlay_menu_tick, &gate_ctx);
                 FeEvent ev = gate_ctx.event;
@@ -4246,51 +4424,17 @@ static int frameloop_application_gameplay_frame(float dt)
                 menu_sound_tick_clock_advance(&pause_sound_clock);
                 input_begin_frame(&input);
             }
+            if (overlay_mode == 1) {
+                engine_debug_word_bit_set(0x100u, 0);
+                if (!quit && global_option_low_bits_enabled(game.level))
+                    ctx.state |= 0x2000000u;
+            } else {
+                ctx.state &= ~0x2000000u;
+            }
+            input_pointer_rearm(&input);
+            frameloop_pause_finish(&game, &ctx, want_reload, want_picker, quit);
             if (want_picker && !quit) {
-                app.picker_return_pending = 1;
-                app.picker_return_origin = fe.origin_picker_sub;
-                app.picker_return_level = game.level;
-                fprintf(log, "return-diag: entry level=%d config=%d slot=%d active=%d record=%d count=%d display=%d\n",
-                        game.level != NULL, game.cfg != NULL, game.save_slot, game.active_slot,
-                        game.current_record, game.record_count,
-                        game.reward_screen.display);
-                fflush(log);
-                if (game.level != NULL)
-                    mission_reward_set_active(&game, 1);
-                else
-                    mission_reward_set_active(&game, 0);
-                {
-                    uint32_t enabled = 0;
-                    if (game.checkpoint_blob != NULL)
-                        memcpy(&enabled, game.checkpoint_blob, sizeof(enabled));
-                    fprintf(log, "return-diag: prepared active=%d blob=%d size=%u enable=%u display=%d slot=%d\n",
-                            mission_reward_active(&game), game.checkpoint_blob != NULL,
-                            (unsigned int)SAVE_BLOB_SIZE, (unsigned int)enabled,
-                            game.reward_screen.display, game.save_slot);
-                    fflush(log);
-                }
-                save_return_diagnostic_log_set(log);
-                reward_tick_level = game.level;
-                reward_tick_started = 1;
-                reward_frame.zone_action_consumed = 0;
-                input_begin_frame(&input);
-                (void)reward_screen_tick_bound();
-                save_return_diagnostic_log_set(NULL);
-                fprintf(log, "return-diag: tick active=%d blob=%d slot=%d record=%d count=%d action=%d\n",
-                        mission_reward_active(&game), game.checkpoint_blob != NULL,
-                        game.save_slot, game.current_record, game.record_count,
-                        reward_frame.zone_action_consumed);
-                fflush(log);
-                if (reward_frame.zone_action_consumed == 2 && !quit) {
-                    const char* next = mission_reward_advance(&game);
-                    if (next != NULL) {
-                        app.picker_return_pending = 0;
-                        app.picker_return_level = NULL;
-                    } else if (game.level == NULL) {
-                        app.picker_return_level = NULL;
-                    }
-                }
-                reward_frame.zone_action_consumed = 0;
+                frameloop_level_return_begin(&app);
                 input_begin_frame(&input);
                 return !quit;
             }
@@ -4627,6 +4771,8 @@ static int frameloop_application_gameplay_frame(float dt)
                 reward_tick_started = 0;
             }
             float sdt = options_scale_frame(&game.options, &ctx, dt);
+            entity_delivery_probe_frame(&game, (unsigned long)frames,
+                dt, sdt, ctx.time_scale, ctx.state);
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
             if ((ctx.state & ENGINE_STATE_TIME_FROZEN) == 0u)
                 building_scene_tick(&game, sdt);
@@ -4654,11 +4800,14 @@ static int frameloop_application_gameplay_frame(float dt)
                 if (objective_advisor_shown(game.level) && ap.dev != NULL) {
                     audio_play_named(&ap, "Sounds\\Buildings\\elec5.wav");
                 }
-                if (!mission_reward_active(&game)) {
-                    mission_reward_set_active(&game, 1);
-                    fprintf(log, "frameloop: reward screen shown (click its "
-                                 "Save/Advance button)\n");
+                /* Readiness owns an authored terminal presentation. Rewards
+                 * and level teardown follow its final-page acknowledgment. */
+                if (!frameloop_briefing_prepare(&app)) {
+                    quit = 1;
+                    stop = "objective result text load failed";
                 }
+                input_begin_frame(&input);
+                return !quit;
             }
             /* Reward-screen buttons (finding 09): a real mouse press inside
              * the Save/Advance zone commits the checkpoint. 'b' is the
@@ -4738,6 +4887,8 @@ static int frameloop_application_gameplay_frame(float dt)
             if (game.level != NULL) {
                 level_render_scene(game.level, &game, WINDOW_W, WINDOW_H,
                                    pixels, pitch);
+                render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                                        game.options.brightness);
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
                 frame_world_arrows_draw(&game, pixels, pitch,
                                          WINDOW_W, WINDOW_H);
@@ -4746,6 +4897,8 @@ static int frameloop_application_gameplay_frame(float dt)
                 surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 8, 16, 48);
                 surface_draw_sweep(pixels, pitch, WINDOW_W, WINDOW_H,
                                    (int)frames);
+                render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
+                                        game.options.brightness);
                 if (rock != NULL) {
                     surface_blit_texture(pixels, pitch, WINDOW_W, WINDOW_H,
                                          rock, rock_x, rock_y);
@@ -4755,6 +4908,9 @@ static int frameloop_application_gameplay_frame(float dt)
                                          ui, rock_x + 64 + 8, rock_y);
                 }
             }
+            if (game.level != NULL && !mission_reward_active(&game))
+                frontend_panels_render(ctx.state, pixels, pitch,
+                                       WINDOW_W, WINDOW_H);
             /* Help Window (issue #85): the option toggles the shipped help
              * panel over the level; the advisor stream text leads when the
              * announcer has one. frontend_help_overlay holds the On/Off
@@ -4823,9 +4979,6 @@ static int frameloop_application_gameplay_frame(float dt)
                                             (uint32_t)input.mouse_y, dt * 25.0f);
                 timed_effect_slot_render_hooks_set(NULL);
             }
-            /* Brightness (issue #85): BrightnessSet's scalar on the frame. */
-            render_apply_brightness(pixels, pitch, WINDOW_W, WINDOW_H,
-                                    game.options.brightness);
             platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
                                 (int)frames);
             platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
@@ -4944,6 +5097,7 @@ void frameloop_application_shutdown(void)
             "exit=%s\n", app.frames, ctx.state, ctx.tickers_ran,
             app.stop_reason);
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    actor_scene_require_stopped();
     building_scene_require_stopped();
 #endif
     engine_callback_triplet_shutdown_dispatch();

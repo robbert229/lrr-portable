@@ -423,6 +423,20 @@ typedef struct EntitySlot {
     void* scene_slot_payloads[12];
     uint32_t scene_slot_owner_keys[3]; /* retail owner +0x1c/+0x20/+0x24 */
     uintptr_t pool_link_408; /* +0x408 self-pointer while live, free-list link after teardown */
+    /* Remaining reference +0x30c..+0x320 carrier slots. Append sidecars
+     * to preserve existing member offsets; slot zero is carry_link_308.
+     * Never index the native EntitySlot by reference byte offsets. */
+    struct EntitySlot* carry_extra_links[6];
+    /* Owned 0x44a310 inputs; native EntitySlot is not a retail byte image. */
+    int32_t motion_input_2bc;
+    int32_t motion_input_2c0;
+    float motion_input_2c4;
+    uint32_t motion_inputs_initialized;
+    uint32_t activity_generation;
+    uint32_t activity_advance_valid;
+    uint32_t activity_advance_generation;
+    int activity_advance_activity;
+    float activity_advance_overflow;
 } EntitySlot;
 
 /* Waypoint consumers use this accessor so routes grown past the inline

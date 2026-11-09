@@ -144,6 +144,9 @@ typedef struct FeSubmenu {
     char  title[FE_NAME_MAX];     /* Title key (underscored display text) */
     char  image[FE_PATH_MAX];     /* MenuImage */
     char  image_dark[FE_PATH_MAX];/* MenuImageDark */
+    float image_x, image_y;       /* shared explicit MenuImage origin */
+    int   image_has_origin;
+    int   image_keyed, image_dark_keyed; /* fourth tuple field equals 1 */
     char  lofont[FE_PATH_MAX];    /* LoFont key — unselected items (Menu_Font_Lo.bmp) */
     char  hifont[FE_PATH_MAX];    /* HiFont key — selected items  (Menu_Font_Hi.bmp) */
     int   base_x, base_y;         /* Position key (x:y) */
@@ -564,6 +567,10 @@ const char* frontend_active_image(const FrontEnd* fe);
  * from each glyph's ink bounding box (the engine stores per-glyph float
  * advances in the font object; we re-derive them from the image). */
 int frontend_picker_active(const FrontEnd* fe);
+/* Draw the authored background at its configured origin with its own key;
+ * cached image state is unchanged. Explicit origins do not scroll. */
+void frontend_background_render(const FrontEnd* fe, void* pixels, int pitch,
+                                 int width, int height);
 void frontend_picker_panel_text(FrontEnd* fe, const TextureSurface* measure,
                                 void* pixels, int pitch, int width, int height);
 void frontend_render_picker_pass(FrontEnd* fe, const TextureSurface* hi_font,
@@ -1414,6 +1421,30 @@ void menu_clock_millis_set(uint32_t millis); /* port tick hook */
  * seam. Bit 0x10 hides the item; the picker otherwise consults the banner
  * word (`sim_status_banner_word_get`) exactly where the corpus does. */
 void panel_texture_slots_blit(int panel); /* FUN_0045a9c0 */
+void panel_texture_slots_render(int panel, void* pixels, int pitch,
+                                int width, int height);
+/* Add these declarations to frontend.hpp; capture must begin zero-initialized.
+ * records is a borrowed identity token, never dereferenced after replacement. */
+typedef struct FrontendPanelPointerCapture {
+    int category, item, active;
+    const void* records;
+} FrontendPanelPointerCapture;
+typedef struct FrontendPanelPointerHit {
+    int category, item, released;
+} FrontendPanelPointerHit;
+
+/* Return geometric ownership separately from a released action. current and
+ * previous are logical primary-button levels, after configured button mapping. */
+int frontend_panels_pointer_update(FrontendPanelPointerCapture* capture,
+    int x, int y, int current, int previous, FrontendPanelPointerHit* hit);
+void frontend_panels_pointer_capture_cancel(FrontendPanelPointerCapture* capture);
+/* Increment the real release count, apply tutorial/result gates, and submit an
+ * implemented action. Zero is also returned for an unported action owner. */
+int frontend_panels_pointer_activate(int category, int item);
+int frontend_panels_pointer_hover(int x, int y);
+void frontend_panels_render(uint32_t engine_state, void* pixels, int pitch,
+                            int width, int height);
+void frontend_panels_release(void);
 
 /* TimedEffectTimestampReset (FUN_0046b7a0): stamps DAT_0054bf3c's float bits
  * into the shared record timestamp. TooltipOverlayStateInitialize sets that

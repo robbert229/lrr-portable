@@ -12,6 +12,7 @@
 #include "cmd.hpp"
 #include "entity.hpp"
 #include "building_scene.hpp"
+#include "actor_scene.hpp"
 #include "level.hpp"
 #include "terrain_grid.hpp"
 #include "mission.hpp"
@@ -20,6 +21,7 @@
 #include "crt/crt.hpp"
 #include "gods98/block.hpp"
 #include "gods98/string.hpp"
+#include "gods98/message.hpp"
 #include "util.hpp"
 
 /* The command record's mutable `now` doubles as the task countdown for
@@ -544,6 +546,8 @@ void ai_set_activity(EntitySlot* e, int id, int param)
         return; /* corpus indexes the table blindly; clamp the mirror */
     }
     e->activity = id;
+    ++e->activity_generation;
+    e->activity_advance_valid = 0u;
     /* FUN_004409e0 leaves the +0x2ec bookkeeping mirror alone. The paired
      * SceneActivityUpdateDispatch (FUN_00447c40) observes this change, runs
      * its transition work, then updates activity_last. */
@@ -1735,7 +1739,7 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
             ai_attached_entity_wake(e);
         }
         e->wake_timer -= dt;
-        return 1;
+        return 2; /* direct early return; no shared activity tail */
     }
 
     /* 0x43c8b2 — target acquisition: +0x3ec bit 0x40000 asks FUN_0044a200
@@ -1775,6 +1779,14 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
         ai_lava_crust_activity_register(ctx, e);
     }
 
+    /* 0x43c9d7..43ca1b precedes action routes and the pickup transition.
+     * A mounted type-2 actor has a separate vehicle clock-sync branch; do
+     * not advance its animation independently of that owner. */
+    entity_building_deposit_state_monitor(e);
+    if (!(e->type == 2 && (e->flags_3e4 & 8u) != 0u &&
+          e->owner_36c != NULL && ((const EntitySlot*)e->owner_36c)->type == 1))
+        (void)entity_activity_tick(e, dt);
+
     /* 0x43da62 — deferred command grant: +0x3e4 bit 0x40 marks "the command
      * at the chain head grants an activity". The branch consumes the flag,
      * installs the record's +0x38 activity onto the entity's permitted-
@@ -1807,15 +1819,139 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
 /* EntityFrameUpdateDispatch's LAB_0043c810 receiver. The pool walker owns
  * liveness and +0x3e8 filtering; this adapter carries the current GameContext
  * into the recovered behavior branches and refreshes the activity timer. */
+static int ai_action_route_frame_update(EntitySlot* entity, float dt)
+{
+    EntitySlot* target;
+    int index;
+    entity_delivery_probe_observe(DELIVERY_PROBE_ROUTE, entity, dt);
+    if ((entity->flags_3e0 & 1u) == 0u) {
+        entity_delivery_probe_observe(DELIVERY_PROBE_ROUTE_SKIP, entity, dt, 1);
+        return 0;
+    }
+    /* The application runs ai_tick before this callback. Its Move/GetTool
+     * owners already advance and retire these command routes in seconds. */
+    if (entity->cmd_head != NULL &&
+        (cmd_rec_type(entity->cmd_head) == 0 ||
+         cmd_rec_type(entity->cmd_head) == 19)) {
+        entity_delivery_probe_observe(DELIVERY_PROBE_ROUTE_SKIP, entity, dt,
+            cmd_rec_type(entity->cmd_head) == 0 ? 2 : 3);
+        return 0;
+    }
+
+    /* 0x43de28..47: this receiver already gets reference frame units from
+     * the EngineTick scaled carrier; do not multiply by 25 again. */
+    entity_delivery_probe_observe(DELIVERY_PROBE_PATH_CALL, entity, dt);
+    {
+        float probe_return = entity_path_step_advance_and_arrival_check(entity, dt);
+        entity_delivery_probe_observe(DELIVERY_PROBE_PATH_RETURN, entity, dt,
+            0, &probe_return, 1u);
+    }
+    if ((entity->flags_3e0 & 0x200u) == 0u) return 0;
+    target = (EntitySlot*)entity->link_2fc;
+    if (target == NULL || target->attach_304 != NULL) {
+        entity->flags_3e0 &= ~0x200u;
+        return 1;
+    }
+    index = entity->carry_state_324;
+    /* The reference slots end immediately before +0x324. Refuse corrupt
+     * counts before mutating a relationship; upstream capacity is separate. */
+    if (index < 0 || index >= 7) return 1;
+    ai_set_activity(entity, 0x0f, 0);
+    if (entity->type == 3) {
+        if (target->type == 5) ai_set_activity(entity, 0x10, 0);
+        else if (target->type == 6) ai_set_activity(entity, 0x23, 0);
+    }
+    if (index == 0) entity->carry_link_308 = target;
+    else entity->carry_extra_links[index - 1] = target;
+    entity->link_2fc = 0u;
+    target->attach_304 = entity;
+    target->attached_scene_slot_index = index;
+    /* 0x43e23c retains arrival 0x200 while starting the pickup activity.
+     * Later activity completion owns its clearing, not this attachment. */
+    entity->flags_3e0 |= 0x400u;
+    entity_command_unlink_by_kind(entity, 3, target, 1);
+    ai_idle_chain_record_attach(entity);
+    ++entity->carry_state_324;
+    return 1;
+}
+
+static int ai_pickup_completion_frame_update(EntitySlot* entity, float dt)
+{
+    EntitySlot* carried;
+    LevelState* level;
+    int neighbor, motion, count;
+    static unsigned int diagnostic_lines;
+    if (entity->type != 2 || (entity->flags_3e0 & 0x600u) != 0x600u)
+        return 0;
+    /* The mounted clock-sync branch has a separate owner. Do not use an
+     * old independent actor result while that branch is unavailable. */
+    if ((entity->flags_3e4 & 8u) != 0u && entity->owner_36c != NULL &&
+        ((EntitySlot*)entity->owner_36c)->type == 1) return 0;
+    /* 43ea00..43ebf1: neither missing nor unimplemented motion ownership
+     * is a zero result. Both actual gates must establish the idle path. */
+    neighbor = entity_neighbor_step_idle_checked(entity, 0);
+    if (neighbor != 0) return 0;
+    motion = entity_motion_idle_gate_checked(entity, dt);
+    if (motion != 0 || !entity->activity_advance_valid ||
+        entity->activity_advance_activity != entity->activity ||
+        entity->activity_advance_generation != entity->activity_generation ||
+        entity->activity_advance_overflow != entity->activity_timer ||
+        !(entity->activity_advance_overflow > 0.0f)) return 0;
+    count = entity->carry_state_324;
+    if (count < 1 || count > 7) return 0;
+    carried = count == 1 ? (EntitySlot*)entity->carry_link_308
+                         : entity->carry_extra_links[count - 2];
+    level = entity->owner_ctx != NULL ? entity->owner_ctx->level : NULL;
+    if (carried == NULL || level == NULL) return 0;
+    entity->activity_advance_valid = 0u;
+    /* 43ec17/43eca0: the last carried kind owns the one-shot pickup count.
+     * Retain carry/backlink and bit400; the scheduler owns later delivery. */
+    entity->flags_3e0 &= ~0x200u;
+    if (carried->type == 6) global_object_field94_increment_for_level(level);
+    else if (carried->type == 7) {
+        global_object_fielda8_increment_for_level(level);
+        message_dispatch(0x1a, NULL, (uint32_t)(uintptr_t)entity, NULL);
+    }
+    if (diagnostic_lines < 16u) {
+        fprintf(stderr, "[DEBUG-MOVING-COMP] entity=%p neighbor=%d motion=%d inputs=%d,%d,%.6f known=%lu overflow=%.6f carried=%p kind=%d count=%d flags=%08lx picked=%lu\n",
+            entity, neighbor, motion, entity->motion_input_2bc,
+            entity->motion_input_2c0, entity->motion_input_2c4,
+            (unsigned long)entity->motion_inputs_initialized,
+            entity->activity_timer, carried, carried->type, count,
+            (unsigned long)entity->flags_3e0,
+            (unsigned long)level->word[0x94 / 4]);
+        fflush(stderr); ++diagnostic_lines;
+    }
+    return 1;
+}
+
 int ai_entity_frame_update(EntitySlot* entity, float dt)
 {
     GameContext* ctx;
+    int handled;
+    entity_delivery_probe_observe(DELIVERY_PROBE_FRAME, entity, dt);
     if (entity == NULL) return 0;
+    entity->activity_advance_valid = 0u;
     ctx = entity->owner_ctx != NULL ? entity->owner_ctx
                                     : entity_pool_callback_context_get();
-    if (ctx == NULL) return 0;
-    if (callback_branches(ctx, entity, dt)) return 1;
-    entity->activity_timer += dt;
+    if (ctx == NULL) {
+        entity_delivery_probe_observe(DELIVERY_PROBE_FRAME_RETURN, entity, dt, -1);
+        return 0;
+    }
+    handled = callback_branches(ctx, entity, dt);
+    entity_delivery_probe_observe(DELIVERY_PROBE_BRANCH, entity, dt, handled);
+    if (handled == 2) {
+        entity_delivery_probe_observe(DELIVERY_PROBE_FRAME_RETURN, entity, dt, 2);
+        return 1;
+    }
+    if (handled || ai_action_route_frame_update(entity, dt)) {
+        (void)activity_register_bookkeeping(entity);
+        entity_delivery_probe_observe(DELIVERY_PROBE_FRAME_RETURN, entity, dt, 1);
+        return 1;
+    }
+    (void)ai_pickup_completion_frame_update(entity, dt);
+    (void)activity_register_bookkeeping(entity);
+    entity_delivery_probe_observe(DELIVERY_PROBE_FRAME_RETURN, entity, dt, 0);
     return 0;
 }
 
@@ -1834,6 +1970,7 @@ int ai_tick(GameContext* ctx, float dt)
             if (e->type == 0) {
                 continue; /* walker liveness *ent+0x408==ent mirror */
             }
+            entity_delivery_probe_observe(DELIVERY_PROBE_TICK, e, dt);
             while (e->cmd_head != NULL) {
                 void* head = e->cmd_head;
                 int type = cmd_rec_type(head);
@@ -1847,6 +1984,11 @@ int ai_tick(GameContext* ctx, float dt)
                          step_path(ctx, e, dt))) {
                         done += cmd_move_route_finish(e);
                     }
+                    break;
+                } else if (type == 5) {
+                    /* The carried-delivery callback owns this route's motion
+                     * and terminal cleanup. Keep its head through this earlier
+                     * pass rather than dropping it as an unknown command. */
                     break;
                 } else if (type == 19) {
                     /* Retain the scheduler's actual GetTool head. Only its
@@ -1872,7 +2014,9 @@ int ai_tick(GameContext* ctx, float dt)
                 } else {
                     /* Unknown record types: drop them (the task type-3 runs
                      * in the global pass below, matching CmdLinkHead). */
+                    entity_delivery_probe_observe(DELIVERY_PROBE_DROP_BEFORE, e, dt, type);
                     done += finish_head(ctx, e);
+                    entity_delivery_probe_observe(DELIVERY_PROBE_DROP_AFTER, e, dt, type);
                 }
             }
         }
@@ -1968,9 +2112,16 @@ int activity_register_bookkeeping(EntitySlot* e)
      * before it commits activity_last. The activity is the table string and
      * +0x2d4's current argument is carried as the callback's raw value word. */
     if (e->type == 2 || e->type == 3) {
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+        result = actor_scene_activity_set(e, ai_activity_name(e->activity),
+                                           e->activity_timer);
+#else
+        uint32_t initial_time;
+        memcpy(&initial_time, &e->activity_timer, sizeof(initial_time));
         result = entity_activity_runner_activity_update(
             e, e->type, (void*)ai_activity_name(e->activity),
-            (void*)(uintptr_t)(uint32_t)e->activity_param);
+            (void*)(uintptr_t)initial_time);
+#endif
     }
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (e->type == 4)

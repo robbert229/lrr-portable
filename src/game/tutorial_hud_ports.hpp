@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+void tutorial_moving_debug_snapshot(const char* where);
+
 struct BlockFile;
 struct GameContext;
 struct EngineContext;
@@ -107,6 +109,7 @@ typedef int (*LegacyHudTextMeasureFn)(const char* text, void* context);
 typedef void (*LegacyHudTextDrawFn)(const char* text, int x, int y,
                                     void* context);
 struct UiOverlayInitSink;
+struct TextureSurface;
 typedef struct LegacyHudOps {
     void* context;
     int (*entity_renderable)(void* entity, void* context);
@@ -132,6 +135,7 @@ typedef struct LegacyHudOps {
     void (*scroll_control_initialize)(void* context, int category,
                                       int slot, int enabled);
     const struct UiOverlayInitSink* overlay_init_sink;
+    TextureSurface* (*panel_texture_load)(const char* path, void* context);
 } LegacyHudOps;
 
 typedef struct LegacyHealthBarState {
@@ -175,6 +179,8 @@ void legacy_panel_category_record_install(int panel, const float rect[4],
                                          uint32_t flags,
                                          const uint32_t* selections,
                                          uint32_t selection_count);
+struct TextureSurface;
+TextureSurface* legacy_panel_texture_get(int panel);
 void* legacy_panel_image_get(int panel);
 void legacy_panel_image_slot_entry_release(void* entry);
 

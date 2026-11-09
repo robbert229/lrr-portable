@@ -3284,6 +3284,9 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
 
     /* --- scalar config keys (finding 07 §"What a level is") ------------- */
     level_store_ptr(s, LEVEL_OFF_LEVEL_NAME, level_name);
+    /* LevelLoad 0x42ad16 initializes the real air and comparison values. */
+    level_set_float(s, LEVEL_OFF_AIR_SUPPLY, 100.0f);
+    level_set_float(s, 0x204, 100.0f);
     /* DependencyGridConfigLoad builds its 20x15 rule table from the global
      * Dependencies records.  Bind those records to this LevelState before
      * the map's later dependency/upgrade queries can run. */

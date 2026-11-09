@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "mainsim.hpp"
+#include "game/entity.hpp"
 
 /* --- boundaries ----------------------------------------------------------
  *  Selecting objects / menus / rename touch: FUN_004525c0 (SelectedEntity),
@@ -54,6 +55,9 @@ int main_sim_step(EngineContext* ctx, float scale,
     if (o3 != NULL) {
         *o3 = 0;
     }
+
+    /* 425637..425708: capture each held movement key before later tickers. */
+    entity_motion_inputs_capture(ctx->input);
 
     /* Debug/cheat toggles — gated by the debug word bit 0x10 (finding 04). */
     if ((ctx->debug & 0x10u) != 0) {

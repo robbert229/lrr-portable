@@ -439,9 +439,16 @@ int main(void)
     level_set_int(ctx.level, LEVEL_OFF_OBJ_RESULT, 0);
     ctx.checkpoint_blob[64] = 0x5a;
     remove("Saves/5.osf");
+    options_set(&ctx.options, OPT_WALL_DETAIL, 1);
+    options_set(&ctx.options, OPT_MUSIC_ONOFF, 1);
+    options_set(&ctx.options, OPT_SFX_ONOFF, 1);
+    options_set(&ctx.options, OPT_AUTO_SPEED, 1);
     checkpoint_step(&ctx);
     CHECK(ctx.save_slot == 5 && save_slot_get_target() == 5,
           "fallback selects the active slot for commit");
+    CHECK(ctx.options.wall_detail == 1 && ctx.options.music_onoff == 1 &&
+          ctx.options.sfx_onoff == 1 && ctx.options.auto_game_speed == 1,
+          "fallback reload retains live Advanced cycles absent from header");
     {
         size_t n = 0;
         uint8_t* raw = read_all("Saves/5.sav", &n);

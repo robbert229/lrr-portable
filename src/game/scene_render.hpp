@@ -10,6 +10,28 @@
 
 struct LevelState;
 struct GameContext;
+struct SceneQuadGridRecord;
+typedef struct ScenePlacementPreviewStyle {
+    float diffuse[4];
+    float emissive[3];
+} ScenePlacementPreviewStyle;
+/* A genuine software scene resource, never a raw DDi/COM record. Creation
+ * consumes the authored quad-grid constructor and owns its geometry until
+ * destruction. The scene must remain live; caller operations are serialized.
+ * Unknown record identities are refused before dereference. */
+struct SceneQuadGridRecord* scene_placement_preview_create(
+    void* scene, float extrusion);
+int scene_placement_preview_destroy(struct SceneQuadGridRecord* record);
+/* Matches SurfaceVisibilitySet: nonzero hides, zero shows. Returns one only
+ * for a live resource owned by this module, zero for legacy/foreign records. */
+int scene_placement_preview_visibility_apply(const void* record,
+                                             uint32_t hidden);
+int scene_placement_preview_group_update(struct SceneQuadGridRecord* record,
+    const struct LevelState* level, uint32_t group,
+    const float raw_corners[4][3], const ScenePlacementPreviewStyle* style);
+int scene_placement_preview_hide_groups(struct SceneQuadGridRecord* record,
+                                         uint32_t first_group);
+void scene_placement_preview_level_release(const struct LevelState* level);
 /* Consume camera v2's displayed snapshot; never publish or select a pose. */
 int scene_render_displayed_world_point_project(const struct LevelState* level,
     const struct GameContext* game, int width, int height,
