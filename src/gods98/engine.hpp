@@ -145,6 +145,9 @@ uint32_t* engine_current_feature_word(void);
 /* Current engine state word (DAT_00556ecc), while an EngineContext owns the
  * active frame. NULL outside an active engine context. */
 uint32_t* engine_current_state_word(void);
+/* Shared DAT_00556ecc owner, including the pre-bind bootstrap lifetime. */
+uint32_t* engine_shared_state_word(void);
+void engine_current_context_bind(EngineContext* ctx);
 /* Current primary follow view (DAT_005560e4), while an EngineContext owns
  * the active frame. NULL outside an active engine context or without a view. */
 ViewContext* engine_current_primary_view_get(void);

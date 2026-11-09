@@ -85,90 +85,64 @@ static void test_timer(void)
  *  CD watchdog state machine (issue #301)
  * ------------------------------------------------------------------ */
 
-/* Mirror of the port's module-local 15-bit draw; advance exactly once
- * per module-side draw. */
-static uint32_t s_cd_mirror = 1;
-
-static unsigned s_cd_mirror_draw(void)
+static int cd_open_calls, cd_play_calls, cd_stop_calls, cd_close_calls;
+static int cd_last_track, cd_fail_stop, cd_fail_open;
+static uint32_t cd_time;
+static int cd_command(void* context, const char* command, int argument, int* error)
 {
-    s_cd_mirror = s_cd_mirror * 214013u + 2531011u;
-    return (s_cd_mirror >> 16) & 0x7fffu;
+    (void)context;
+    if (!strcmp(command, "open")) { ++cd_open_calls; if (cd_fail_open) { *error = 2; return 0; } }
+    if (!strcmp(command, "play")) { ++cd_play_calls; cd_last_track = argument; }
+    if (!strcmp(command, "stop")) { ++cd_stop_calls; if (cd_fail_stop) { *error = 1; return 0; } }
+    if (!strcmp(command, "close")) ++cd_close_calls;
+    return 1;
 }
-
-/* Slot arithmetic exactly as the port/corpus compute it:
- * draw % window - 1 + base, unsigned. */
-static int s_cd_mirror_slot(int base, int window)
+static int cd_status(void* context, char* mode, int capacity, int* track, int* error)
 {
-    unsigned d = s_cd_mirror_draw();
-    return (int)(d % (unsigned)window - 1u + (unsigned)base);
+    (void)context; (void)capacity; (void)error;
+    strcpy(mode, "stopped"); *track = 0; return 1;
 }
+static uint32_t cd_clock(void* context) { (void)context; return cd_time; }
 
 static void test_cd_watchdog(void)
 {
-    s_cd_mirror = 1;
-    media_cd_config_set(5, 4);          /* base 5, window 4 */
-    media_cd_track_set_dead(0);
-
-    /* Enable draws the time-derived slot and schedules the re-arm. */
-    int slot1 = s_cd_mirror_slot(5, 4);
+    media_cd_audio_command_hook_set(cd_command, NULL);
+    media_cd_audio_status_hook_set(cd_status, NULL);
+    media_cd_audio_time_hook_set(cd_clock, NULL);
+    media_cd_config_set(2, 3);
+    media_cd_audio_open_set(0);
     media_cd_watchdog_update(1);
-    CHECK((media_cd_flags_get() & MEDIA_CD_WATCHDOG_BIT) != 0,
-          "enable raises the watchdog bit");
-    CHECK(media_cd_slot() == slot1, "enable draws the time-derived slot");
-    CHECK(media_timer_pending() == 1, "enable schedules the re-arm");
-
-    /* Running the timer to its due fires the re-arm, which draws again
-     * and re-schedules — the watchdog callback keeps the state armed. */
-    media_timer_tick((float)slot1 + 1.0f);
-    int slot2 = s_cd_mirror_slot(5, 4);
-    CHECK(media_cd_slot() == slot2, "the due re-arm refreshes the slot");
-    CHECK(media_timer_pending() == 1, "the re-arm keeps the timer pending");
-    CHECK((media_cd_flags_get() & MEDIA_CD_WATCHDOG_BIT) != 0,
-          "re-arming keeps the watchdog bit set");
-
-    /* Disable clears the bit, cancels, and runs one no-op tick with 0. */
-    media_cd_watchdog_update(0);
-    CHECK((media_cd_flags_get() & MEDIA_CD_WATCHDOG_BIT) == 0,
-          "disable clears the watchdog bit");
-    CHECK(media_timer_pending() == 0, "disable cancels the scheduled tick");
-
-    /* Loop flag is stale as shipped: only set, never cleared. */
-    media_cd_loop_set(1);
-    CHECK(media_cd_loop_get() == 1, "loop flag raised by loop schedules");
-    media_cd_loop_set(0);
-    CHECK(media_cd_loop_get() == 1, "the loop flag is never cleared");
-
-    /* Stalled track: the tick's re-arm runs without waiting for the
-     * timer, and clears the dead flag. */
-    media_cd_config_set(5, 4);
-    int slot3 = s_cd_mirror_slot(5, 4);
+    CHECK(cd_open_calls == 0 && cd_play_calls == 0, "unavailable device does not play");
+    CHECK((media_cd_flags_get() & MEDIA_CD_WATCHDOG_BIT) != 0, "enable sets shared bit");
+    CHECK(media_timer_pending() == 0, "track index is not a timer");
+    media_cd_audio_open_set(1);
     media_cd_watchdog_update(1);
-    media_cd_track_set_dead(1);
-    media_cd_watchdog_tick(1);
-    int slot4 = s_cd_mirror_slot(5, 4);
-    CHECK(media_cd_slot() == slot4, "the stalled tick re-arms with a new draw");
-    CHECK(media_timer_pending() == 1, "the stalled re-arm keeps the timer");
-    media_cd_watchdog_tick(1);          /* alive again: nothing to do */
-    CHECK(media_cd_slot() == slot4, "watching a live track draws nothing");
-
-    /* Tick with 0 (the disable path) touches nothing. */
-    media_cd_watchdog_tick(0);
-    CHECK(media_cd_slot() == slot4, "the 0-argument tick is inert");
+    CHECK(cd_open_calls == 1 && cd_play_calls == 1, "enable opens and plays");
+    CHECK(cd_last_track >= 2 && cd_last_track <= 4, "configured track range reaches device");
+    cd_time = 5000;
+    media_cd_audio_watchdog_tick(0);
+    media_cd_audio_watchdog_tick(1);
+    CHECK(cd_stop_calls == 0 && cd_play_calls == 1,
+          "disabled tick advances the poll timestamp without completion");
+    cd_time = 9001;
+    media_cd_audio_watchdog_tick(1);
+    CHECK(cd_stop_calls == 1 && cd_close_calls == 1 && cd_play_calls == 2,
+          "completion stops and starts a newly selected track");
     media_cd_watchdog_update(0);
-
-    /* Corpus config defaults: zero start lands as 2, zero window as 1 —
-     * slot 1 with window 1. */
-    media_cd_config_set(0, 0);
-    int slot5 = s_cd_mirror_slot(2, 1);
+    CHECK((media_cd_flags_get() & MEDIA_CD_WATCHDOG_BIT) == 0 && cd_stop_calls == 2 && cd_close_calls == 2,
+          "disable clears bit and stops and closes");
+    cd_fail_stop = 1;
+    media_cd_watchdog_update(0);
+    CHECK(cd_stop_calls == 3 && cd_close_calls == 2, "failed stop does not close");
+    cd_fail_stop = 0;
+    cd_fail_open = 1;
     media_cd_watchdog_update(1);
-    CHECK(media_cd_slot() == slot5, "config zero-to-default rules apply");
-    media_cd_watchdog_update(0);
-    CHECK(media_timer_pending() == 0 &&
-              (media_cd_flags_get() & MEDIA_CD_WATCHDOG_BIT) == 0,
-          "disable leaves nothing armed");
-
-    (void)slot1;
-    (void)slot3;
+    CHECK(cd_open_calls == 3 && cd_play_calls == 2, "failed open does not play");
+    cd_fail_open = 0;
+    media_cd_audio_open_set(0);
+    media_cd_audio_command_hook_set(NULL, NULL);
+    media_cd_audio_status_hook_set(NULL, NULL);
+    media_cd_audio_time_hook_set(NULL, NULL);
 }
 
 /* ------------------------------------------------------------------ *

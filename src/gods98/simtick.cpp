@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -1383,10 +1384,18 @@ void simtick_render_pass(EngineContext* c, float dt, float scale, uint32_t o1)
         const int primary = scale == 0.0f;
         float position[3], forward[3];
         if (!scene_runtime_collection_pose_get(c->views[primary ? 0 : 1],
-                primary, position, forward) ||
-            !terrain_camera_detail_collect((LevelState*)c->level_block,
-                position, primary ? forward : NULL, primary))
+                primary, position, forward)) {
+            fprintf(stderr, "camera-diag: pose failed primary=%d view=%p level=%p\n",
+                primary, c->views[primary ? 0 : 1], c->level_block);
+            fflush(stderr);
             s_camera_detail_collection_ready = 0;
+        } else if (!terrain_camera_detail_collect((LevelState*)c->level_block,
+                position, primary ? forward : NULL, primary)) {
+            fprintf(stderr, "camera-diag: collection failed primary=%d level=%p pos=%g,%g,%g\n",
+                primary, c->level_block, position[0], position[1], position[2]);
+            fflush(stderr);
+            s_camera_detail_collection_ready = 0;
+        }
     }
 #endif
     if (scale == 0.0f) {

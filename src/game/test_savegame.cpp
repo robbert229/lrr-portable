@@ -430,6 +430,34 @@ int main(void)
                      "Crystals", strlen("Crystals")) == 0, "record payload task name");
     }
 
+    /* Existing active fallback slot: selection was cleared without releasing
+     * the records, as on the training return path. Exercise the real writer. */
+    (void)save_read_slot(&ctx, 5, 0); /* create the initial slot if absent */
+    CHECK(save_read_slot(&ctx, 5, 0) != 0, "fallback fixture reads existing slot");
+    save_slot_set(&ctx, -1);
+    ctx.current_record = 0;
+    level_set_int(ctx.level, LEVEL_OFF_OBJ_RESULT, 0);
+    ctx.checkpoint_blob[64] = 0x5a;
+    remove("Saves/5.osf");
+    checkpoint_step(&ctx);
+    CHECK(ctx.save_slot == 5 && save_slot_get_target() == 5,
+          "fallback selects the active slot for commit");
+    {
+        size_t n = 0;
+        uint8_t* raw = read_all("Saves/5.sav", &n);
+        CHECK(raw != NULL && n >= 0xb0 + SAVE_RECORD_SIZE && raw[0xb0 + 4 + 64] == 0x5a,
+              "fallback commits checkpoint payload to existing save");
+        free(raw);
+        raw = read_all("Saves/5.osf", &n);
+        CHECK(raw != NULL && n == 8 && memcmp(raw, "RROS\0\0\0\0", 8) == 0,
+              "fallback writes empty objective sidecar");
+        free(raw);
+    }
+    save_slot_set(&ctx, 3);
+    checkpoint_step(&ctx);
+    CHECK(ctx.save_slot == 3 && save_slot_get_target() == 3,
+          "checkpoint preserves an explicitly selected slot");
+
     /* CheckpointStep: current level achieved (result index 1) on slot -1
      * bootstraps slot 5 and commits. */
     ctx.save_slot = -1;
@@ -516,6 +544,41 @@ int main(void)
                            * builder NULL-guards its name lane; leaving the
                            * dangling reference reads freed memory when
                            * MALLOC_PERTURB_ poisons the chunk) */
+    }
+
+    /* Manual labels 1 and 5 select raw files 0 and 4, leaving the
+     * checkpoint fallback file 5 independent. */
+    {
+        GameContext manual;
+        uint8_t pattern[SAVE_BLOB_SIZE];
+        size_t n0 = 0, n4 = 0, n5 = 0, n5_after = 0;
+        uint8_t *r0, *r4, *r5_before, *r5_after;
+        game_context_init(&manual);
+        r5_before = read_all("Saves/5.sav", &n5);
+        memset(pattern, 0x31, sizeof(pattern));
+        (void)save_read_slot(&manual, frontend_slot_raw_index(1), 0);
+        save_slot_set(&manual, frontend_slot_raw_index(1));
+        CHECK(save_write_record(&manual, 0, pattern), "manual first writes record");
+        save_commit(&manual);
+        CHECK(manual.save_slot == 0, "manual first selects raw slot 0");
+        memset(pattern, 0x74, sizeof(pattern));
+        (void)save_read_slot(&manual, frontend_slot_raw_index(5), 0);
+        save_slot_set(&manual, frontend_slot_raw_index(5));
+        CHECK(save_write_record(&manual, 0, pattern), "manual fifth writes record");
+        save_commit(&manual);
+        CHECK(manual.save_slot == 4, "manual fifth selects raw slot 4");
+        r0 = read_all("Saves/0.sav", &n0);
+        r4 = read_all("Saves/4.sav", &n4);
+        r5_after = read_all("Saves/5.sav", &n5_after);
+        CHECK(r0 != NULL && n0 >= 0xb0 + 5 && r0[0xb0 + 4] == 0x31,
+              "manual first wrote raw 0 file");
+        CHECK(r4 != NULL && n4 >= 0xb0 + 5 && r4[0xb0 + 4] == 0x74,
+              "manual fifth wrote raw 4 file");
+        CHECK(r5_before != NULL && r5_after != NULL && n5_after == n5 &&
+              memcmp(r5_before, r5_after, n5) == 0,
+              "manual selection leaves fallback raw 5 unchanged");
+        free(r0); free(r4); free(r5_before); free(r5_after);
+        free(manual.records);
     }
 
     /* --- .dat slot thumbnail (FUN_0047e440 / FUN_0047c8f0 BMP dump) ------

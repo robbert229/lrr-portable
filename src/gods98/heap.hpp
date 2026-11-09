@@ -166,6 +166,8 @@ typedef struct TextBufferDrawOps {
     int (*is_word_break)(void* context, unsigned char glyph);
 } TextBufferDrawOps;
 void text_buffer_draw_ops_set(const TextBufferDrawOps* ops);
+void text_buffer_draw_ops_get(TextBufferDrawOps* ops);
+void text_buffer_draw_framebuffer_install(void* pixels, int pitch, int width, int height);
 /* Install the software bitmap-atlas renderer used by portable gameplay. */
 void text_buffer_draw_software_install(void);
 int text_buffer_draw_wrapped(void* record, uint32_t start_line,

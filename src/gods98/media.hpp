@@ -4,17 +4,9 @@
  * Two small state holders the shipped build drives from simulation call
  * paths, modelled with their observable state:
  *
- *  - CDAudioWatchdogModeUpdate @ 0x4297b0: the CD-audio watchdog state.
- *    Enable raises bit value 8 of the audio/engine state word, draws the
- *    time-derived CD-track slot (random % window + start, per the
- *    CDTracks / CDStartTrack config), and schedules the watchdog re-arm
- *    callback on the port's one-shot timer; the callback re-arms with a
- *    fresh draw, exactly like the shipped re-arm path. Disable drops the
- *    bit, cancels the scheduled callback, and runs one watchdog tick
- *    with argument 0 — which touches nothing, as shipped. Track start,
- *    stop, status, error text, and watchdog polling use the platform CD-DA
- *    backend by default. Winapi uses MCI; native SDL builds report CD-DA
- *    unavailable. Optional hooks remain for external integrations.
+ *  - CDAudioWatchdogModeUpdate @ 0x4297b0 selects a configured random
+ *    track and installs a completion callback. The callback closes the
+ *    device and selects another track. Disable closes the active device.
  *
  *  - SoundMinimumDistanceUpdateMode @ 0x4295f0: the minimum-distance
  *    mode. Mode 0 stores the supplied entity/context and applies the
@@ -63,10 +55,7 @@ float media_timer_remaining(void);
  *  CDAudioWatchdogModeUpdate @ 0x4297b0. See header block.
  * ------------------------------------------------------------------ */
 
-/* DAT_00556ecc bit value 8 — the corpus keeps this in the engine state
- * word; the port models it module-locally (deviation: no engine context
- * is threaded through the call). Bit value 0x10 is AudioPlaybackToggle's
- * sound-on flag, modelled in the same word (#298, below). */
+/* Bits in the shared engine state word DAT_00556ecc. */
 #define MEDIA_CD_WATCHDOG_BIT 0x8u
 #define MEDIA_FLAG_SOUND_ON   0x10u
 
@@ -74,26 +63,10 @@ float media_timer_remaining(void);
  * unset) and CDTracks (DAT_00556f10, default 1 — disables when zero). */
 void     media_cd_config_set(int start_track_base, int track_count);
 
-/* The watchdog state machine. Enable draws the time-derived slot and
- * schedules the re-arm callback for that many seconds out; disable
- * clears the bit, cancels, and runs one watchdog tick with 0. */
+/* Enable selects and starts a track; disable clears the bit and closes. */
 void     media_cd_watchdog_update(int enable);
 uint32_t media_cd_flags_get(void);   /* state word with the 0x8/0x10 bits */
-int      media_cd_slot(void);        /* last derived slot (scheduled delay) */
-void     media_cd_loop_set(int loop);/* DAT_00544a04 analog (never cleared
-                                      * as shipped: stale across calls) */
-int      media_cd_loop_get(void);
-
-/* The "track died" flag — the port's analog of the corpus CD-media
- * status query. 0 = alive (native builds have no CD media), 1 = died. */
-void     media_cd_track_set_dead(int dead);
-
-/* The watchdog tick (corpus scheduled-check role): with `arg` nonzero,
- * a due timer (>= 4 s elapsed), the loop flag, and the track dead, the
- * re-arm callback runs and the slot refreshes with a fresh draw.
- * `arg` 0 — the disable call's — does nothing, as shipped. */
-void     media_cd_watchdog_tick(int arg);
-
+int      media_cd_slot(void);        /* last selected track */
 /* ------------------------------------------------------------------ *
  *  AudioPlaybackToggle @ 0x429810 (issue #298). See header block.
  * ------------------------------------------------------------------ */
