@@ -1883,7 +1883,10 @@ int main(int argc, char** argv)
         __builtin_memcpy(rec + 0x08, &f, 4);
         terrain_cell_queued_work_transition(&qctx, 3, 4);
         __builtin_memcpy(&now, rec + 0x08, 4);
-        CHECK(now == 0x31u, "the gate raises the work bit, rest preserved");
+        /* The transition's CellInitPass refresh (faithful) re-derives the
+         * transient 0x10 bit on this neighbour-less cell, so the raised work
+         * bit 0x20 survives while 0x10 is recomputed away. */
+        CHECK(now == 0x21u, "the gate raises the work bit (init pass drops 0x10)");
         f = 0x50u;
         __builtin_memcpy(rec + 0x08, &f, 4);
         terrain_cell_queued_work_transition(&qctx, 3, 4);
@@ -1956,6 +1959,11 @@ int main(int argc, char** argv)
         seed[2] = 6; /* lava type */
         const int seed_xy[2] = { 2, 2 };
         lava_erosion_level_context_set(&ev);
+        /* The erosion helpers now follow the live current level (the active
+         * GameContext's level, as DAT_005560d4 does) ahead of the explicit
+         * context, so point the active context at the scratch level. */
+        LevelState* const loaded_level = level_ctx.level;
+        level_ctx.level = &ev;
         erosion_timing_state_init(1.0f, 1.0f, 0.0f);
         seed[6] = 3;
         CHECK(lava_erosion_delay_from_cell(seed_xy)
@@ -1973,8 +1981,13 @@ int main(int argc, char** argv)
         erosion_timing_state_init(0.0f, 0.0f, 0.0f);
 
         /* Cell (1,2) seeds the sweep. Its north neighbour (1,1) carries
-         * a coordinate timestamp from the earlier dedup fill — the table
-         * is full, so a fresh remember here would store nothing. */
+         * a coordinate timestamp. ErosionTimingStateInit now (faithfully)
+         * clears the timestamp table, so the earlier dedup fill is gone and
+         * the stamp is registered again here. */
+        {
+            const int north_xy[2] = { 1, 1 };
+            cell_coordinate_timestamp_remember(north_xy);
+        }
         uint8_t* seed2 = evox + ((size_t)2 * 4 + 1) * 0x48; /* (1,2) */
         uint8_t* north = evox + ((size_t)1 * 4 + 1) * 0x48; /* (1,1) */
         uint8_t* east = evox + ((size_t)2 * 4 + 2) * 0x48;  /* (2,2) */
@@ -2002,6 +2015,7 @@ int main(int argc, char** argv)
                   && lava_erosion_neighbor_check_level(&ev, 0, 0, NULL) == 0,
               "the guarded seed answers zero");
         lava_erosion_level_context_release(&ev);
+        level_ctx.level = loaded_level;
     }
 
     /* Cell route + neighbour pick (FUN_00431da0 / FUN_00431c70; 2026-10-25).
@@ -2055,10 +2069,13 @@ int main(int argc, char** argv)
               "the +0x0c gate byte closes the cell (no relief flag)");
         cellput(&rs, 3, 3, 0u, 1, 1, 0);
 
-        /* The diagonal corner pair along the destination row. */
+        /* The diagonal corner pair: the two cells sharing one coordinate
+         * with the source and one with the destination, (from_x, to_y) and
+         * (to_x, from_y) — retail's FUN_00431da0 (the earlier fixture blocked
+         * (to_x, to_y) instead, which is not part of the pair). */
         cellput(&rs, 3, 3, 0x8u, 1, 0, 0);
         cellput(&rs, 3, 4, 8u, 1, 0, 0);
-        cellput(&rs, 4, 4, 8u, 1, 0, 0);
+        cellput(&rs, 4, 3, 8u, 1, 0, 0);
         CHECK(terrain_cell_route_and_occupancy_check(NULL, &rs, 3, 3, 4, 4,
                                                      0) == 2,
               "the blocked corner pair answers 2");
@@ -2066,7 +2083,7 @@ int main(int argc, char** argv)
         CHECK(terrain_cell_route_and_occupancy_check(NULL, &rs, 3, 3, 4, 4,
                                                      0) == 1,
               "one open corner drops back to the plain answer");
-        cellput(&rs, 4, 4, 0u, 1, 0, 0);
+        cellput(&rs, 4, 3, 0u, 1, 0, 0);
         cellput(&rs, 3, 3, 0u, 1, 1, 0);
 
         /* The owner gate: +0x20000 stats without the +0x36c owner. */
@@ -2090,14 +2107,28 @@ int main(int argc, char** argv)
 
         /* The on-site answer (strict skips it). */
         cellput(&rs, 3, 3, 0u, 1, 0, 0);
-        mover.x = 3.0f;
-        mover.y = 5.0f;
+        /* Retail resolves the entity's world position through the level's
+         * terrain and answers in place when that is the source cell, so the
+         * scratch level needs a terrain and the entity stands on cell (3,3). */
+        void* const route_terrain = terrain_create("L01_surface.map", 2.0f);
+        float stand[2] = { 0.0f, 0.0f };
+        CHECK(route_terrain != NULL
+                  && terrain_cell_world_center_xy_transform(route_terrain, 3,
+                                                            3, stand),
+              "the scratch terrain resolves the cell centre");
+        rs.ptr_terrain = route_terrain;
+        /* World->cell rounds to nearest (x87 CRT), so the cell centre maps to
+         * the next cell; step back half a block (2.0 / 2) to land on (3,3). */
+        mover.x = stand[0] - 1.0f;
+        mover.y = stand[1] + 1.0f;
         CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 3, 3, 3, 5,
                                                      0) == 1,
-              "the entity standing on the destination row answers in place");
+              "the entity standing on the source cell answers in place");
         CHECK(terrain_cell_route_and_occupancy_check(&mover, &rs, 3, 3, 3, 5,
                                                      1) == 0,
               "strict skips the in-place answer (the cell reads empty)");
+        rs.ptr_terrain = NULL;
+        terrain_destroy(route_terrain);
         mover.x = 1.0f;
         mover.y = 1.0f;
 
