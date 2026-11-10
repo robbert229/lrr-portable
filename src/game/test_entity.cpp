@@ -69,6 +69,26 @@ static int ci_eq(const char* a, const char* b)
  *    }
  * ------------------------------------------------------------------ */
 
+#define FIX_DIM 64
+
+/* A FIX_DIM x FIX_DIM all-zero surface map for the scratch level terrain. */
+static void write_surface_map(const char* path)
+{
+    FILE* fp = fopen(path, "wb");
+    if (fp == NULL) {
+        return;
+    }
+    const char magic[4] = { 'M', 'A', 'P', ' ' };
+    const uint32_t len = FIX_DIM * FIX_DIM * 2, w = FIX_DIM, h = FIX_DIM;
+    static const uint16_t cells[FIX_DIM * FIX_DIM] = { 0 };
+    fwrite(magic, 1, 4, fp);
+    fwrite(&len, 1, 4, fp);
+    fwrite(&w, 1, 4, fp);
+    fwrite(&h, 1, 4, fp);
+    fwrite(cells, 1, sizeof(cells), fp);
+    fclose(fp);
+}
+
 static int fixture_roundtrip(void)
 {
     BlockFile* cfg = block_open("Lego.cfg");
@@ -80,29 +100,74 @@ static int fixture_roundtrip(void)
     game_context_init(&ctx);
     ctx.cfg = cfg;
 
+    /* The faithful OListEntityRecordParse places every object through the
+     * level's terrain (grid cell -> world centre) and only creates entities
+     * on cells carrying the revealed/walk flag 0x8 (others are deferred), so
+     * the context needs a level with a real terrain and open cells. File
+     * opens resolve under the CD root (the fixture directory). */
+    write_surface_map("L01_surface.map");
+    void* const level_terrain = terrain_create("L01_surface.map", 1.0f);
+    CHECK(level_terrain != NULL, "scratch terrain");
+    static LevelState level;
+    static uint8_t level_grid[FIX_DIM * FIX_DIM * LEVEL_VOXEL_STRIDE];
+    memset(&level, 0, sizeof(level));
+    level_set_int(&level, LEVEL_OFF_WIDTH, FIX_DIM);
+    level_set_int(&level, LEVEL_OFF_HEIGHT, FIX_DIM);
+    level.ptr_voxels = level_grid;
+    level.ptr_terrain = level_terrain;
+    for (int c = 0; c < FIX_DIM * FIX_DIM; ++c) {
+        const uint32_t open = 0x8u;
+        memcpy(level_grid + c * LEVEL_VOXEL_STRIDE + 8, &open, sizeof(open));
+    }
+    ctx.level = &level;
+
+    /* object_list_load answers success (1); the entity count rides
+     * ctx.entity_placed: 3 entities + the camera. */
     int placed = object_list_load(&ctx, cfg, "Level01");
-    CHECK(placed == 4, "four .ol records handled (3 entities + camera; Test1 skipped)");
+    CHECK(placed == 1 && ctx.entity_placed == 3,
+          "the list loads: 2 entities + camera placed (the building needs "
+          "a type-config row)");
+
+    /* World placement of an .ol xPos/yPos: grid = pos - 1, truncated to the
+     * cell, centred through the terrain (blocksize 1: y is inverted). */
+    auto ol_world = [&](float xpos, float ypos, float out[2]) {
+        const float gx = xpos - 1.0f, gy = ypos - 1.0f;
+        const int cx = (int)gx, cy = (int)gy;
+        float center[2] = { 0.0f, 0.0f };
+        terrain_cell_world_center_xy_transform(level_terrain, cx, cy, center);
+        out[0] = center[0] + (gx - ((float)cx + 0.5f));
+        out[1] = center[1] - (gy - ((float)cy + 0.5f));
+    };
+    float want[2];
 
     CHECK(entity_count(&ctx, ENTITY_TYPE_VEHICLE) == 1, "one vehicle");
-    CHECK(entity_count(&ctx, ENTITY_TYPE_BUILDING) == 1, "one building");
+    /* The building record needs a building archetype row (type-config
+     * table with its shape data) to be created; the synthetic fixture has
+     * none, so the faithful creator places no entity for it. The type name
+     * still resolves to the building type. */
+    CHECK(entity_count(&ctx, ENTITY_TYPE_BUILDING) == 0,
+          "no building without a building type-config row");
+    {
+        int btype = 0, brow = 0;
+        CHECK(entity_type_row_for_name("Toolstation", &btype, &brow) != 0 &&
+                  btype == ENTITY_TYPE_BUILDING,
+              "Toolstation resolves to the building type");
+    }
     CHECK(entity_count(&ctx, ENTITY_TYPE_MINIFIG) == 1, "one minifigure");
     CHECK(entity_count(&ctx, ENTITY_TYPE_SPECIAL) == 0, "no special objects");
 
     const EntitySlot* v = entity_at(&ctx, ENTITY_TYPE_VEHICLE, 0);
     CHECK(v != NULL && strcmp(v->name, "Digger1") == 0, "vehicle name");
-    CHECK(v != NULL && v->x == 12.5f && v->y == 19.5f && v->z == 0.0f,
-          "vehicle xPos/yPos placed (z is 0 in the .ol)");
-    CHECK(v != NULL && v->rot == 45.0f, "vehicle heading -> rot");
+    ol_world(12.5f, 19.5f, want);
+    CHECK(v != NULL && v->x == want[0] && v->y == want[1] && v->z == 0.0f,
+          "vehicle xPos/yPos placed through the terrain (z is 0 in the .ol)");
+    /* heading is degrees in the .ol, radians on the slot. */
+    CHECK(v != NULL && v->rot == 45.0f * 0.0055555557f * 3.1415927f,
+          "vehicle heading -> rot (radians)");
     CHECK(v != NULL && v->type == ENTITY_TYPE_VEHICLE, "SmallDigger -> vehicle");
     CHECK(v != NULL && strcmp(v->type_name, "SmallDigger") == 0,
           "type_name from the .ol `type` key");
     CHECK(v != NULL && v->driving[0] == '\0', "no driving ref on a vehicle");
-
-    const EntitySlot* b = entity_at(&ctx, ENTITY_TYPE_BUILDING, 0);
-    CHECK(b != NULL && strcmp(b->name, "WallA") == 0, "building name");
-    CHECK(b != NULL && strcmp(b->type_name, "Toolstation") == 0,
-          "Toolstation -> building + type_name");
-    CHECK(b != NULL && b->x == 12.5f && b->y == 13.5f, "building xPos/yPos");
 
     const EntitySlot* m = entity_at(&ctx, ENTITY_TYPE_MINIFIG, 0);
     CHECK(m != NULL && strcmp(m->name, "MinifigA") == 0, "minifig name");
@@ -110,7 +175,9 @@ static int fixture_roundtrip(void)
           "Pilot -> minifig + type_name");
     CHECK(m != NULL && strcmp(m->driving, "Digger1") == 0,
           "driving ref captured");
-    CHECK(m != NULL && m->health == 150, ".ol `health` captured");
+    /* The faithful creator stores the parsed health in +0x340 (default 100). */
+    CHECK(m != NULL && m->field_340 == 150.0f, ".ol `health` captured");
+    CHECK(v != NULL && v->field_340 == 100.0f, "default .ol health is 100");
     /* Optional Model key parses into the slot (the file does not exist, so
      * the handle stays NULL — lazy load). */
     CHECK(m != NULL && strcmp(m->model_path, "Data\\Tools\\dig.lwo") == 0,
@@ -119,14 +186,28 @@ static int fixture_roundtrip(void)
 
     /* TVCamera — FUN_0042e020's type -1 branch drives the follow camera
      * instead of placing an entity. */
+    CHECK(object_pointer_registry_count_peek() == 2u,
+          "the loader fed the registry with the two created entities");
     CHECK(ctx.ol_camera_set == 1, "camera placed");
-    CHECK(ctx.ol_camera_x == 5.0f && ctx.ol_camera_y == 6.0f,
-          "camera xPos/yPos");
-    CHECK(ctx.ol_camera_heading == 30.0f, "camera heading");
+    ol_world(5.0f, 6.0f, want);
+    CHECK(ctx.ol_camera_x == want[0] && ctx.ol_camera_y == want[1],
+          "camera xPos/yPos placed through the terrain");
+    CHECK(ctx.ol_camera_heading == 30.0f * 0.0055555557f * 3.1415927f,
+          "camera heading (radians)");
 
-    /* Unregistered type name (Test1) — corpus aborts; the port skips. */
-    CHECK(entity_count(&ctx, ENTITY_TYPE_MINIFIG) == 1,
-          "Test1 not placed as a minifig (unregistered)");
+    /* Unregistered type name (Test1) — the corpus aborts the whole parse
+     * (the old port skipped just that record): the load answers 0, keeps the
+     * records placed before it and creates nothing for Test1 or after. */
+    {
+        GameContext bad;
+        game_context_init(&bad);
+        bad.level = &level;
+        CHECK(object_list_load_file(&bad, "M02.ol") == 0 &&
+                  bad.entity_placed == 1 &&
+                  entity_count(&bad, ENTITY_TYPE_VEHICLE) == 1 &&
+                  entity_count(&bad, ENTITY_TYPE_MINIFIG) == 0,
+              "an unregistered type aborts the parse after the earlier records");
+    }
 
     /* Corpus strides. */
     CHECK(entity_stride(ENTITY_TYPE_VEHICLE) == 0x1ec, "vehicle stride");
@@ -878,10 +959,26 @@ int main(int argc, char** argv)
         "    yPos    6\n"
         "    heading 30\n"
         "  }\n"
+        "}\n");
+    write_fixture("M02.ol",
+        "LegoOl {\n"
+        "  Digger1 {\n"
+        "    type    SmallDigger\n"
+        "    xPos    12.5\n"
+        "    yPos    19.5\n"
+        "    heading 45\n"
+        "  }\n"
         "  UnknownX {\n"
         "    type    Test1\n"
         "    xPos    1\n"
         "    yPos    2\n"
+        "    heading 0\n"
+        "  }\n"
+        "  MinifigA {\n"
+        "    type    Pilot\n"
+        "    xPos    11.5\n"
+        "    yPos    14.0\n"
+        "    heading 0\n"
         "  }\n"
         "}\n");
 
@@ -909,9 +1006,12 @@ int main(int argc, char** argv)
         }
     }
 
-    /* The object pointer registry (2026-10-24): no feeder lands, so the
-     * count stays zero and the slot lookup never fires. */
+    /* The object pointer registry (2026-10-24): with no feeder landing, the
+     * count stays zero and the slot lookup never fires. The faithful .ol
+     * loader IS a feeder (it appends every created entity), so the fixture
+     * load above left entries behind: clear them first. */
     {
+        object_pointer_registry_reset();
         int32_t out = 0x5a5a5a5a;
         CHECK(object_pointer_registry_count_peek() == 0u,
               "the registry count starts zero");
