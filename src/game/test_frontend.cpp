@@ -1183,8 +1183,10 @@ int main(int argc, char** argv)
         timed_effect_update_request_set(0);
         CHECK(timed_effect_flags_peek(0) == 4u,
               "the request leaf raises bit 2 directly");
-        timed_effect_update_request_set(16); /* outside the window */
-        CHECK(timed_effect_flags_peek(16) == 0u, "the guarded window reads zero");
+        /* The window is the corpus's 40 entries (TIMED_EFFECT_ENTRIES); 16
+         * is a live entry, so probe the first index past the end. */
+        timed_effect_update_request_set(40); /* outside the window */
+        CHECK(timed_effect_flags_peek(40) == 0u, "the guarded window reads zero");
 
         /* Positions: the zero table applies, the handle gate reaches the
          * seam without touching ported state. */
@@ -1787,9 +1789,9 @@ int main(int argc, char** argv)
         timed_effect_update_request_set(12);
         CHECK(timed_effect_flags_peek(12) == 7u,
               "the update bit joins the cue bits");
-        timed_effect_cue_request_set(16, 1u);
-        CHECK(timed_effect_cue_peek(16) == 0u
-                  && timed_effect_flags_peek(16) == 0u,
+        timed_effect_cue_request_set(40, 1u); /* first index past the 40 */
+        CHECK(timed_effect_cue_peek(40) == 0u
+                  && timed_effect_flags_peek(40) == 0u,
               "the guarded window drops the out-of-range request (dev)");
     }
 
@@ -1805,8 +1807,8 @@ int main(int argc, char** argv)
         timed_effect_persistence_set(3, 0);
         CHECK(timed_effect_flags_peek(3) == 0x4u,
               "the drop leaves the update bit");
-        timed_effect_persistence_set(16, 1);
-        CHECK(timed_effect_flags_peek(16) == 0u,
+        timed_effect_persistence_set(40, 1); /* first index past the 40 */
+        CHECK(timed_effect_flags_peek(40) == 0u,
               "the guarded window drops the out-of-range set (dev)");
     }
 
@@ -2036,25 +2038,29 @@ int main(int argc, char** argv)
         sav_visited_entry_peek(1, 0, &p, &w);
         CHECK(w == 0u, "the in-game table word clears");
 
-        /* A stale active count beyond the two-entry root band clears its
-         * entries; the zero in-game count leaves that band untouched. */
+        /* Faithful FUN_00416e70 trusts the active counts (they are set from
+         * the same root sizes that size the sidecar arrays), so a count
+         * beyond the two-entry band is no longer clamped and would walk off
+         * the allocation. Keep the count in-band: a one-entry out-of-game
+         * count clears that entry; the zero in-game count leaves its band
+         * untouched. */
         ((uint32_t*)rec1)[4] = 0xdeadu;
         ((uint32_t*)rec2)[4] = 0xbeefu;
         sav_visited_entry_set(0, 0, rec1, 1u);
         sav_visited_entry_set(1, 0, rec2, 3u);
         frontend_flow_word_set(2, -1);
         wc = active_object_list_word();
-        *wc = 17; /* stale active count; root band still has two entries */
+        *wc = 1; /* in-band count (the pre-faithful guard test used 17) */
         frontend_flow_word_set(2, 0);
         wc = active_object_list_word();
         *wc = 0;
         sav_clear_visited();
         CHECK(((uint32_t*)rec1)[4] == 0u,
-              "the root-sized band clears despite a larger active count");
+              "the counted entry clears");
         CHECK(((uint32_t*)rec2)[4] == 0xbeefu,
               "the zero count leaves the band");
         sav_visited_entry_peek(0, 0, &p, &w);
-        CHECK(w == 0u, "the root-sized band clears its paired word");
+        CHECK(w == 0u, "the counted entry clears its paired word");
 
         /* Leave the modeled state clean. */
         frontend_flow_word_set(2, -1);
