@@ -1535,11 +1535,16 @@ int main(int argc, char** argv)
         EntitySlot e;
         memset(&e, 0, sizeof e);
         CHECK(entity_random_activity_attempt(NULL) == 0, "NULL is guarded");
+        /* The faithful dispatch's success test is the type-2/type-3 scene
+         * runner's answer (FUN_00447c40 result); a bare slot has no bound
+         * runner (that needs a type-config row and the renderer callbacks),
+         * so all five draws fail: the call answers 0, leaves the last draw
+         * committed in the code band, and never raises the 0x8000 bit. */
         const int took = entity_random_activity_attempt(&e);
-        CHECK(took == 1 && e.activity >= 0x38 && e.activity <= 0x4c
-                  && (e.flags_3e0 & 0x8000u) != 0u
+        CHECK(took == 0 && e.activity >= 0x38 && e.activity <= 0x4c
+                  && (e.flags_3e0 & 0x8000u) == 0u
                   && e.activity_last == e.activity,
-              "a cold slot takes an activity in the code band");
+              "a cold slot without a scene runner exhausts five code-band draws");
 
         /* The gate pair answers zero before any draw. */
         e.flags_3e0 |= 0x400u;
@@ -1549,18 +1554,14 @@ int main(int argc, char** argv)
         CHECK(entity_random_activity_attempt(&e) == 0, "the mask blocks");
         e.flags_3e0 = 0u;
 
-        /* Same-name attempts: the dispatch's early-return clause. Keep
-         * the slot otherwise clean and let the draw walk until it lands
-         * off the registered name (five attempts per call, deterministic
-         * LCG sequence). */
-        int prev = e.activity_last, got = 0, hops = 0;
-        while (got == 0 && hops < 20) {
-            got = entity_random_activity_attempt(&e);
-            ++hops;
+        /* Repeat attempts keep failing the same way (no runner), each call
+         * drawing fresh code-band activities and committing the last. */
+        for (int hops = 0; hops < 3; ++hops) {
+            CHECK(entity_random_activity_attempt(&e) == 0 &&
+                      e.activity >= 0x38 && e.activity <= 0x4c &&
+                      (e.flags_3e0 & 0x8000u) == 0u,
+                  "a repeat attempt without a runner stays failed");
         }
-        CHECK(got == 1 && e.activity != prev
-                  && (e.flags_3e0 & 0x8000u) != 0u,
-              "a registered name re-rolls until the dispatch takes");
     }
 
     /* Object registry windows (2026-10-25). */
@@ -1571,9 +1572,11 @@ int main(int argc, char** argv)
         memset(&e2a, 0, sizeof e2a);
         memset(&e2b, 0, sizeof e2b);
         memset(&ef, 0, sizeof ef);
-        e4.etype = 4;
-        e2a.etype = 2;
-        e2b.etype = 2;
+        /* The registries gate on the corpus type word (`type`); `etype` is
+         * the Stats row index now, not the type code. */
+        e4.type = 4;
+        e2a.type = 2;
+        e2b.type = 2;
         static char caprec[0x150];
         memset(caprec, 0, sizeof caprec);
         const uint32_t capbit = 0x80u;
@@ -1664,6 +1667,12 @@ int main(int argc, char** argv)
      * the activity/terrain eligibility transition. */
     {
         ai_idle_table_reset();
+        /* Earlier blocks' scratch contexts stole (and dropped) the entity
+         * pool owner; the rockfall forwarder reads the level through it, and
+         * the faithful probe needs an idle-type tile under the entity. */
+        entity_pool_callback_context_set(&ctx);
+        uint8_t* const idle_cell = (uint8_t*)fix_flags(3.0f, 5.0f) - 8;
+        idle_cell[2] = (uint8_t)TILE_TYPE_IDLE;
         EntitySlot idle, four;
         memset(&idle, 0, sizeof idle);
         memset(&four, 0, sizeof four);
@@ -1684,6 +1693,7 @@ int main(int argc, char** argv)
         CHECK((four.flags_3ec & 0x40u) != 0u, "the coordinate miss is inert");
         ai_idle_table_reset();
         CHECK(ai_idle_count() == 0, "the hook empties the table");
+        idle_cell[2] = 0;
     }
 
     /* EntityActivityTerrainEligibilityTransition (2026-10-25): the gate,
@@ -1752,18 +1762,29 @@ int main(int argc, char** argv)
         CHECK(e.pos_pair_2f4 == -1.0f && e.pos_pair_2f8 == -1.0f,
               "the coordinate pair blanks to -1");
         __builtin_memcpy(&now, rec + 0x08, sizeof now);
-        CHECK(now == 0x30u, "the queued transition raises the work bit");
+        /* The faithful transition runs the cell init pass after raising the
+         * work bit; that pass re-derives the walkable layer bit (0x10) from
+         * the terrain-less cell, so only the work bit survives. */
+        CHECK(now == 0x20u, "the queued transition raises the work bit");
         ai_idle_table_reset();
     }
 
     /* Idle-table pointer removal (2026-10-25): the match-zeroing walk
-     * with the count word riding (holes), dedup past holes, and the
-     * foreign-pointer walk. */
+     * with the count word riding (holes) and the foreign-pointer walk. The
+     * faithful table append has no dedupe, so a re-raised flag on a kept
+     * entry registers it again. The registrations need relief-free entities
+     * on idle-type tiles of the fixture level. */
     {
-        GameContext ctx;
-        game_context_init(&ctx);
+        ai_idle_table_reset();
+        entity_pool_callback_context_set(&ctx);
         EntitySlot* a = place(&ctx, 1, "rem_a", 0.0f, 0.0f);
         EntitySlot* b = place(&ctx, 1, "rem_b", 4.0f, 0.0f);
+        a->stats_record = NULL;
+        b->stats_record = NULL;
+        uint8_t* const cell_a = (uint8_t*)fix_flags(0.0f, 0.0f) - 8;
+        uint8_t* const cell_b = (uint8_t*)fix_flags(4.0f, 0.0f) - 8;
+        cell_a[2] = (uint8_t)TILE_TYPE_IDLE;
+        cell_b[2] = (uint8_t)TILE_TYPE_IDLE;
         a->flags_3ec |= 0x40u;
         b->flags_3ec |= 0x40u;
         run(&ctx, 1, 0.5f);
@@ -1775,10 +1796,12 @@ int main(int argc, char** argv)
         CHECK(ai_idle_count() == 3, "the removed entry re-lands past the hole");
         b->flags_3ec |= 0x40u;
         run(&ctx, 1, 0.5f);
-        CHECK(ai_idle_count() == 3, "the kept entry dedups through the hole");
+        CHECK(ai_idle_count() == 4, "the kept entry appends again (no dedupe)");
         ai_idle_table_pointer_remove(NULL);
-        CHECK(ai_idle_count() == 3, "the foreign pointer walks past");
+        CHECK(ai_idle_count() == 4, "the foreign pointer walks past");
         ai_idle_table_reset();
+        cell_a[2] = 0;
+        cell_b[2] = 0;
     }
 
     /* Activity toggle (2026-10-25): the off/on fold on the +0x3ec word
