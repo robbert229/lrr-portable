@@ -64,7 +64,7 @@ static size_t flic_tiny(uint8_t* buf, size_t cap)
     }
     const uint32_t kf_rec_size = 7 + FLIC_H * 4; /* header + body */
     const uint32_t kf_chunk = FLIC_CHUNK_HDR + kf_rec_size;
-    /* chunk1: delta record [size][27][nChanged=1]; body count=1, sc=0x0001,
+    /* chunk1: delta record [size][27][nChanged=1]; body count=1, sc=0x0100,
      * color=0x001F */
     const uint32_t d1_rec_size = 8 + 2 + 2 + 2;
     const uint32_t d1_chunk = FLIC_CHUNK_HDR + d1_rec_size;
@@ -110,7 +110,7 @@ static size_t flic_tiny(uint8_t* buf, size_t cap)
     le16w(p + 0x14, 27);
     le16w(p + 0x16, 1);       /* nChangedLines */
     le16w(p + 0x18, 1);       /* command count */
-    le16w(p + 0x1a, 0x0001);  /* skip 0, ctrl 1 */
+    le16w(p + 0x1a, 0x0100);  /* skip 0 (low byte), ctrl 1 (high byte) */
     le16w(p + 0x1c, 0x001f);  /* blue */
     p += d1_chunk;
     /* chunk2 */
@@ -141,7 +141,7 @@ static void test_synthetic(void)
     CHECK(n > 0, "synthetic .flh built");
 
     char path[256];
-    snprintf(path, sizeof(path), "/tmp/opencode/lrr_flic_test_%ld.flh",
+    snprintf(path, sizeof(path), "lrr_flic_test_%ld.flh",
              (long)getpid());
     FILE* f = fopen(path, "wb");
     CHECK(f != NULL, "write synthetic .flh");
@@ -207,15 +207,18 @@ static void test_synthetic(void)
     CHECK(flic_frame(fl) == 3, "eof sticks on the last frame");
     flic_close(fl);
 
-    /* Loop semantics: restart at index 1 (the keyframe stays decoded — the
-     * corpus RAM-mode rule). */
+    /* Loop semantics: flic_open streams the file, and the retail stream
+     * stepper wraps its cursor and index to the keyframe at 0x80 at the end
+     * (only RAM mode keeps the decoded keyframe and restarts at frame 1). */
     fl = flic_open(path);
     CHECK(fl != NULL, "reopen for loop check");
     if (fl != NULL) {
         for (int i = 0; i < FLIC_FRAMES; ++i) {
             flic_tick_loop(fl, 1);
         }
-        CHECK(flic_frame(fl) == 1, "loop wraps: 4 ticks -> frame 1");
+        CHECK(flic_frame(fl) == 0, "stream loop wraps: 4 ticks -> frame 0");
+        flic_tick_loop(fl, 1);
+        CHECK(flic_frame(fl) == 1, "the next tick replays from the keyframe");
         flic_tick_loop(fl, 1);
         CHECK(flic_frame(fl) == 2, "loop wraps again to frame 2");
         flic_close(fl);
@@ -354,6 +357,11 @@ static void probe_real(const char* wad_dir)
 int main(int argc, char** argv)
 {
     printf("== flic ==\n");
+    /* flic_open resolves its name under the CD root (absolute paths are
+     * rejected), so root the CD at the CWD and write the synthetic file
+     * there (run from build/, not the repo tree). */
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
     test_synthetic();
     for (int a = 1; a < argc; ++a) {
         if (strcmp(argv[a], "--real") == 0 && a + 1 < argc) {
