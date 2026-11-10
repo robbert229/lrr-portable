@@ -9,8 +9,10 @@
 
 #include "resource.hpp"
 #include "game/level.hpp"
+#include "game/entity.hpp"
 #include "game/game.hpp"
 #include "game/objective.hpp"
+#include "game/test_level_fixture.hpp"
 #include "game/util.hpp"
 #include "gods98/block.hpp"
 #include "gods98/heap.hpp"
@@ -145,7 +147,7 @@ int main(int argc, char** argv)
         "  Level01 {\n"
         "    blocksize 2\n"
         "    digdepth 2\n"
-        "    useroof 1\n"
+        "    useroof TRUE\n"
         "    roofheight 5\n"
         "    roughlevel 4\n"
         "    selboxheight 8\n"
@@ -160,10 +162,13 @@ int main(int argc, char** argv)
         "    EmergeMap L01_emerge.map\n"
         "    AIMap L01_ai.map\n"
         "    FallinMap L01_fallin.map\n"
-        "    StartFP 1\n"
+        "    StartFP TRUE\n"
         "    nextlevel Level02\n"
+        TLF_LEVEL_KEYS
         "  }\n"
+        TLF_ROOT_GROUPS
         "}\n");
+    tlf_write_aux_files(FIX);
 
     write_map("L01_surface.map",  GRID, GRID, height_cell);
     write_map("L01_predug.map",   GRID, GRID, predug_cell);
@@ -186,6 +191,9 @@ int main(int argc, char** argv)
 
     BlockFile* cfg = block_open("Lego.cfg");
     CHECK(cfg != NULL, "open cfg");
+    /* LevelLoad parses the object list into the active GameContext. */
+    GameContext level_ctx;
+    tlf_bind_context(&level_ctx);
     LevelState* s = level_load(cfg, "Level01");
     if (cfg == NULL || s == NULL) {
         fprintf(stderr, "level_load returned NULL\n");
@@ -202,12 +210,28 @@ int main(int argc, char** argv)
 
     /* Voxel fields: surface byte (+4) comes from BlockPointersMap (all 7),
      * and the block-pointer count from the *FallinMap* (the code's mapping,
-     * level.hpp header note). */
+     * level.hpp header note). The faithful LevelLoad finishes with
+     * TutorialPathCoordinateIndex, which head-pushes each cell with a
+     * nonzero +4 byte onto pool_heads[byte] and clears the byte as consumed:
+     * so +4 reads 0 after load and the value lives in the chain instead. */
     {
         uint8_t* v00 = level_voxel(s, 0, 0);
         uint8_t* v11 = level_voxel(s, 1, 1);
-        CHECK(v00 != NULL && v00[0x04] == 7, "voxel +4 surface at (0,0)");
-        CHECK(v11 != NULL && v11[0x04] == 7, "voxel +4 surface at (1,1)");
+        CHECK(v00 != NULL && v00[0x04] == 0, "voxel +4 consumed at (0,0)");
+        CHECK(v11 != NULL && v11[0x04] == 0, "voxel +4 consumed at (1,1)");
+        {
+            /* All GRID*GRID cells carried 7, so the chain for 7 holds each
+             * of them exactly once (node: u32 x, u32 y, next pointer). */
+            int chained = 0;
+            for (void* node = s->pool_heads[7]; node != NULL;
+                 ++chained) {
+                void* next;
+                memcpy(&next, (char*)node + 8, sizeof(next));
+                node = next;
+            }
+            CHECK(chained == GRID * GRID,
+                  "surface-7 cells chained by TutorialPathCoordinateIndex");
+        }
 
         /* Erosion/cryo (+2) from TerrainMap, with the 6/11 special cases. */
         uint8_t* v22 = level_voxel(s, 2, 2);
