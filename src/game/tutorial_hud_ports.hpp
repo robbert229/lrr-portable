@@ -6,6 +6,12 @@
 #include <stdarg.h>
 
 void tutorial_moving_debug_snapshot(const char* where);
+/* DEBUG-NEXT: bounded observations only; remove after the transition audit. */
+void tutorial_message_diagnostic_frame(uint32_t engine_state, uint32_t debug);
+void tutorial_message_diagnostic_input(int x, int y, int transition, int domain);
+void tutorial_message_diagnostic_event(const char* tag, uint32_t a,
+    uint32_t b, uint32_t c, uint32_t d);
+void tutorial_message_diagnostic_tick(float delta);
 
 struct BlockFile;
 struct GameContext;

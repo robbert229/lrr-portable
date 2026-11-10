@@ -6825,6 +6825,9 @@ int advisor_message_pointer_capture_dispatch(AdvisorMessagePointerCapture* captu
     uint32_t generation = objective_advisor_token_generation_get();
     if (capture == NULL) return 0;
     if (!s_message_gameplay_active) {
+        if (capture->down != (down != 0))
+            tutorial_message_diagnostic_event("advisor-inactive", (uint32_t)x,
+                (uint32_t)y, (uint32_t)down, (uint32_t)capture->owner);
         memset(capture, 0, sizeof(*capture));
         capture->down = down != 0;
         return 0;
@@ -6832,6 +6835,13 @@ int advisor_message_pointer_capture_dispatch(AdvisorMessagePointerCapture* captu
     consumed = capture->owner != 0;
     hit = advisor_message_button_hit(1, x, y) ? 1 :
               (advisor_message_button_hit(2, x, y) ? 2 : 0);
+    if (capture->down != (down != 0)) {
+        tutorial_message_diagnostic_event("advisor-edge", (uint32_t)hit,
+            (uint32_t)panel_hit, (uint32_t)capture->owner,
+            (uint32_t)(capture->generation == generation));
+        tutorial_message_diagnostic_event("advisor-position", (uint32_t)x,
+            (uint32_t)y, (uint32_t)down, (uint32_t)s_message_gameplay_active);
+    }
     if (!capture->down && down) {
         capture->owner = hit != 0 ? hit : (panel_hit ? 3 : 0);
         capture->generation = generation;

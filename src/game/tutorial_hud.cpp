@@ -106,6 +106,145 @@ static uint32_t s_tutorial_token_count;
 static uint32_t s_tutorial_literal_token_count;
 static TutorialScriptOps s_advisor_token_ops;
 static uint32_t s_tutorial_message_generation = 0xffffffffu;
+/* DEBUG-NEXT: observe the genuine owners without calling commands, changing
+ * progress or deriving a new input event. A physical transition starts one
+ * of at most 16 independent 64-line phases, so startup sampling cannot hide
+ * the later gesture. Exhaustion is reported immediately at the boundary. */
+static uint32_t s_next_diag_frame, s_next_diag_hooks, s_next_diag_hook_frame;
+static uint32_t s_next_diag_phase, s_next_diag_remaining = 24u;
+static uint32_t s_next_diag_engine_state, s_next_diag_debug, s_next_diag_pc;
+static uint32_t s_next_diag_stop_pc;
+static float s_next_diag_delta;
+static uint32_t s_next_diag_key[14], s_next_diag_reads[3][2];
+static unsigned char s_next_diag_key_valid, s_next_diag_read_valid[3];
+static uint32_t s_next_diag_message_gate[5];
+static unsigned char s_next_diag_message_gate_valid;
+
+void tutorial_message_diagnostic_event(const char* tag, uint32_t a,
+    uint32_t b, uint32_t c, uint32_t d)
+{
+    if (s_next_diag_remaining == 0u) return;
+    --s_next_diag_remaining;
+    fprintf(stderr, "[DEBUG-NEXT] frame=%lu phase=%lu tag=%s a=%lu b=%lu c=%lu d=%lu hooks=%lu hook_frame=%lu state=%08lx debug=%08lx feature=%08lx R0=%lu R3=%lu R5=%lu timer=%.3f delta=%.6f pending=%lu previous=%lu ack=%lu offset=%lu maximum=%lu message_flags=%lu suppress=%lu deferred=%lu permit=%lu generation=%lu program=%lu stop_pc=%lu\n",
+        (unsigned long)s_next_diag_frame, (unsigned long)s_next_diag_phase,
+        tag, (unsigned long)a, (unsigned long)b, (unsigned long)c,
+        (unsigned long)d, (unsigned long)s_next_diag_hooks,
+        (unsigned long)s_next_diag_hook_frame,
+        (unsigned long)s_next_diag_engine_state, (unsigned long)s_next_diag_debug,
+        (unsigned long)engine_debug_word_peek(),
+        (unsigned long)s_tutorial_nerp_registers[0],
+        (unsigned long)s_tutorial_nerp_registers[3],
+        (unsigned long)s_tutorial_nerp_registers[5],
+        s_nerp_runtime.message_timer, s_next_diag_delta,
+        (unsigned long)s_nerp_runtime.message_pending_ack,
+        (unsigned long)s_nerp_runtime.message_previous_ack,
+        (unsigned long)s_nerp_runtime.message_ack_count,
+        (unsigned long)s_nerp_runtime.message_offset,
+        (unsigned long)s_nerp_runtime.message_maximum,
+        (unsigned long)s_nerp_runtime.message_flags,
+        (unsigned long)s_nerp_runtime.message_suppress_arrow,
+        (unsigned long)deferred_callback_peek(),
+        (unsigned long)global_flag_004ff978_get(),
+        (unsigned long)s_tutorial_message_generation,
+        (unsigned long)s_tutorial_program_count,
+        (unsigned long)s_next_diag_stop_pc);
+    if (s_next_diag_remaining == 0u)
+        fprintf(stderr, "[DEBUG-NEXT] frame=%lu phase=%lu exhausted\n",
+            (unsigned long)s_next_diag_frame, (unsigned long)s_next_diag_phase);
+    fflush(stderr);
+}
+
+static void tutorial_message_diagnostic_state(const char* tag, int periodic)
+{
+    uint32_t key[14];
+    key[0] = s_tutorial_nerp_registers[3];
+    key[1] = s_tutorial_nerp_registers[5];
+    key[2] = s_nerp_runtime.message_pending_ack;
+    key[3] = s_nerp_runtime.message_previous_ack;
+    key[4] = s_nerp_runtime.message_ack_count;
+    key[5] = s_nerp_runtime.message_offset;
+    key[6] = s_nerp_runtime.message_maximum;
+    key[7] = s_nerp_runtime.message_timer > 0.0f ? 1u : 0u;
+    key[8] = s_next_diag_engine_state & 0x19100100u;
+    key[9] = engine_debug_word_peek() & 0x2c0u;
+    key[10] = global_flag_004ff978_get();
+    key[11] = s_next_diag_stop_pc;
+    key[12] = s_tutorial_message_generation;
+    key[13] = s_tutorial_program_count;
+    if (!s_next_diag_key_valid ||
+        memcmp(key, s_next_diag_key, sizeof(key)) != 0 || periodic) {
+        tutorial_message_diagnostic_event(tag, s_next_diag_pc, 0u, 0u, 0u);
+        memcpy(s_next_diag_key, key, sizeof(key));
+        s_next_diag_key_valid = 1;
+    }
+}
+
+void tutorial_message_diagnostic_frame(uint32_t engine_state, uint32_t debug)
+{
+    ++s_next_diag_frame;
+    s_next_diag_engine_state = engine_state;
+    s_next_diag_debug = debug;
+    tutorial_message_diagnostic_state("frame", s_next_diag_frame % 120u == 0u);
+}
+
+void tutorial_message_diagnostic_input(int x, int y, int transition, int domain)
+{
+    if (s_next_diag_phase < 16u) {
+        ++s_next_diag_phase;
+        s_next_diag_remaining = 64u;
+        s_next_diag_key_valid = 0;
+        memset(s_next_diag_read_valid, 0, sizeof(s_next_diag_read_valid));
+        s_next_diag_message_gate_valid = 0;
+    }
+    tutorial_message_diagnostic_event("raw-input", (uint32_t)x, (uint32_t)y,
+        (uint32_t)transition, (uint32_t)domain);
+}
+
+void tutorial_message_diagnostic_tick(float delta)
+{
+    ++s_next_diag_hooks;
+    s_next_diag_hook_frame = s_next_diag_frame;
+    s_next_diag_delta = delta;
+}
+
+static void tutorial_message_diagnostic_read(uint32_t pc, uint32_t command,
+                                             uint32_t result, uint32_t previous)
+{
+    int slot = command == 9u ? 0 : command == 50u ? 1 :
+               command == 107u ? 2 : -1;
+    /* Preserve the raw result in emitted records, but a ticking positive
+     * timer must not spend the gesture's entire budget on successive ms. */
+    uint32_t observed = command == 107u
+        ? (result == 0u ? 0u : (int32_t)result > 0 ? 1u : 2u) : result;
+    if (slot < 0) return;
+    if (!s_next_diag_read_valid[slot] ||
+        s_next_diag_reads[slot][0] != observed ||
+        s_next_diag_reads[slot][1] != pc) {
+        tutorial_message_diagnostic_event("read", pc, command, result, previous);
+        s_next_diag_read_valid[slot] = 1;
+        s_next_diag_reads[slot][0] = observed;
+        s_next_diag_reads[slot][1] = pc;
+    }
+}
+
+static void tutorial_message_diagnostic_message_gate(uint32_t pc,
+    uint32_t previous, uint32_t argc, const uint32_t* args)
+{
+    uint32_t gate[5];
+    gate[0] = pc; gate[1] = previous; gate[2] = argc;
+    gate[3] = argc > 0u ? args[0] : 0u;
+    gate[4] = argc > 1u ? args[1] : 0u;
+    if (!s_next_diag_message_gate_valid ||
+        memcmp(gate, s_next_diag_message_gate, sizeof(gate)) != 0) {
+        /* Arguments remain raw words when previous==0: never resolve an
+         * indirect argument that the actual interpreter skipped. */
+        tutorial_message_diagnostic_event(previous != 0u
+            ? "message-invoke-gate" : "message-skip-gate", pc, previous,
+            gate[3], gate[4]);
+        memcpy(s_next_diag_message_gate, gate, sizeof(gate));
+        s_next_diag_message_gate_valid = 1;
+    }
+}
 /* Initialized .data words at 0x4a6748/4c/50, outside the script reset bands. */
 static float s_tutorial_message_timer_values[3] = {1000.0f, 500.0f, 4000.0f};
 static uint32_t s_tutorial_focus_id;
@@ -1706,10 +1845,14 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         uint32_t slot;
         const char* token_text;
         if (global_flag_004ff978_get() != 0u) {
+            tutorial_message_diagnostic_event("set-message-rejected",
+                s_next_diag_pc, args[0], args[1], token_index);
             *result_out = 0u;
             return 1;
         }
         token_text = tutorial_objective_token_lookup(token_index);
+        tutorial_message_diagnostic_event("set-message-before", s_next_diag_pc,
+            args[0], args[1], token_index);
         tutorial_message_generation_sync();
         slot = s_nerp_runtime.message_maximum;
         if (tutorial_message_history_get(slot) != token_index) {
@@ -1728,6 +1871,8 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         advisor_text_request_setup_text(token_text, args[1]);
         s_nerp_runtime.message_flags = args[1];
         s_nerp_runtime.message_pending_ack = 1u;
+        tutorial_message_diagnostic_event("set-message-after", s_next_diag_pc,
+            args[0], args[1], token_index);
         *result_out = args[0];
         return 1;
     }
@@ -2357,6 +2502,7 @@ void tutorial_script_command_dispatch(float delta)
     if (s_tutorial_script_data == NULL && s_tutorial_program_count == 0u)
         return;
     while (pc < s_tutorial_program_count) {
+        s_next_diag_pc = pc;
         uint32_t word = s_tutorial_program_words[pc];
         uint32_t command = word & 0xffffu;
         uint32_t kind = 0u;
@@ -2419,6 +2565,7 @@ void tutorial_script_command_dispatch(float delta)
             step += argc;
             (void)tutorial_command_invoke(command,
                 argc == 0u ? NULL : args, argc, &result);
+            tutorial_message_diagnostic_read(pc, command, result, previous);
             if (negate_next) result = result == 0u;
             last_result = result;
             previous = compare_op != 0u
@@ -2435,6 +2582,8 @@ void tutorial_script_command_dispatch(float delta)
                     tutorial_indirect_handle_resolve(&args[i]);
             }
             step += argc;
+            if (command == 16u)
+                tutorial_message_diagnostic_message_gate(pc, previous, argc, args);
             if (command == 211u) {
                 static uint32_t cache[128][7];
                 static unsigned char valid[128];
@@ -2467,6 +2616,8 @@ void tutorial_script_command_dispatch(float delta)
         }
         pc += step;
     }
+    s_next_diag_stop_pc = pc;
+    tutorial_message_diagnostic_state("script-end", 0);
     /* This dispatcher receives simulation seconds. Only the camera's
      * reference-shaped tween consumes the original 25-Hz frame units. */
     tutorial_camera_focus_tween_update(view_camera_delta_from_seconds(delta));
@@ -2477,6 +2628,7 @@ void tutorial_advisor_scroll_step_advance(void)
 {
     static const uint32_t scroll_scale_record[2] = { 100u, 0u };
     tutorial_message_generation_sync();
+    tutorial_message_diagnostic_event("advance-before", 0u, 0u, 0u, 0u);
     media_action_feedback_sound_dispatch(0);
     if (s_nerp_runtime.message_offset != 0u) {
         --s_nerp_runtime.message_offset;
@@ -2504,6 +2656,7 @@ void tutorial_advisor_scroll_step_advance(void)
             ++s_nerp_runtime.message_ack_count;
         s_nerp_runtime.message_pending_ack = 0u;
     }
+    tutorial_message_diagnostic_event("advance-after", 0u, 0u, 0u, 0u);
 }
 
 void tutorial_camera_focus_state_set(uint32_t focus_id, uint32_t valid,

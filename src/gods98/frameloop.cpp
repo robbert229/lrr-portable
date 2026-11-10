@@ -1206,6 +1206,7 @@ static void frame_tooltip_text(void* context, void* font, const char* text,
 static void frame_tutorial_script_dispatch(float delta, void* context)
 {
     (void)context;
+    tutorial_message_diagnostic_tick(delta);
     /* Frame seconds -> reference 25-Hz units -> milliseconds in 0x453bb0. */
     tutorial_frame_timer_array_advance(delta * 25.0f);
     tutorial_script_command_dispatch(delta);
@@ -1318,6 +1319,19 @@ static void frame_pointer_ingress(GameContext* game, EngineContext* engine,
         if (!enabled) memset(panel_owned, 0, sizeof(panel_owned));
     }
     if (!enabled) {
+        /* DEBUG-NEXT: retain physical samples even when the real gate
+         * rejects ingress before the ownership loop is reached. */
+        for (i = 0; i < input->pointer_count; ++i) {
+            const InputPointerSample* sample = &input->pointer_samples[i];
+            if (sample->transition == PLATFORM_MOUSE_DOWN ||
+                sample->transition == PLATFORM_MOUSE_UP) {
+                tutorial_message_diagnostic_input(sample->x, sample->y,
+                    sample->transition, sample->domain);
+                tutorial_message_diagnostic_event("pointer-disabled",
+                    engine->state, engine->debug, (uint32_t)sample->button,
+                    (uint32_t)input->pointer_count);
+            }
+        }
         memset(messages, 0, sizeof(messages));
         input_pointer_rearm(input);
         for (b = 0; b < 2; ++b) simulation_pointer_capture_reset(&captures[b]);
@@ -1340,6 +1354,14 @@ static void frame_pointer_ingress(GameContext* game, EngineContext* engine,
         }
         b = sample->button == PLATFORM_MOUSE_LEFT ? 0 :
             sample->button == PLATFORM_MOUSE_RIGHT ? 1 : -1;
+        if (b >= 0 && (sample->transition == PLATFORM_MOUSE_DOWN ||
+                       sample->transition == PLATFORM_MOUSE_UP)) {
+            tutorial_message_diagnostic_input(sample->x, sample->y,
+                sample->transition, sample->domain);
+            tutorial_message_diagnostic_event("pointer-before",
+                (uint32_t)input->pointer_domain[b], (uint32_t)messages[b].owner,
+                (uint32_t)messages[b].down, (uint32_t)panel_owned[b]);
+        }
         if (b >= 0 && (sample->transition == PLATFORM_MOUSE_DOWN ||
                        sample->transition == PLATFORM_MOUSE_UP) &&
             ((s_engine_feature_word & 0x4000u) == 0u || b == 0))
@@ -1395,9 +1417,15 @@ static void frame_pointer_ingress(GameContext* game, EngineContext* engine,
                 input->pointer_domain[b] = consumed ? INPUT_POINTER_UI : INPUT_POINTER_WORLD;
             }
             sample->domain = input->pointer_domain[b];
+            tutorial_message_diagnostic_event("pointer-down-owner",
+                (uint32_t)sample->domain, (uint32_t)hit_panel,
+                (uint32_t)messages[b].owner, (uint32_t)captures[b].action);
         } else if (b >= 0 && sample->transition == PLATFORM_MOUSE_UP) {
             int domain = input->pointer_domain[b];
             sample->domain = domain;
+            tutorial_message_diagnostic_event("pointer-up-owner", (uint32_t)domain,
+                (uint32_t)hit_panel, (uint32_t)messages[b].owner,
+                (uint32_t)captures[b].action);
             if (domain == INPUT_POINTER_UI && !panel_owned[b]) {
                 if (messages[b].owner != 0)
                     (void)advisor_message_pointer_capture_dispatch(&messages[b], sample->x, sample->y, 0);
@@ -4044,6 +4072,7 @@ static int frameloop_application_gameplay_frame(float dt)
     InputState& input = app.input;
     ViewContext (&views)[3] = app.views;
     EngineContext& ctx = app.engine_context;
+    tutorial_message_diagnostic_frame(ctx.state, ctx.debug);
     PlatformWindow* win = app.window;
     DisplaySurface& surf = app.surface;
     TextureSurface* rock = app.rock_texture;

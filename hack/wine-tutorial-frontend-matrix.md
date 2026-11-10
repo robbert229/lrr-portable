@@ -1757,3 +1757,79 @@ No post-edit runtime acceptance is claimed. The active production binding
 still pins9ec and must refuse new source drift until controlled repinning.
 Gray Drill, full action effects, shutdown of the longer route, all tutorial
 routes and every frozen-final-candidate acceptance row remain **U**.
+
+
+### 2026-11-10: aeaa guarded startup/Drilling comparison and complete restoration
+
+The new source/binary binding passed377 current/build/archive input checks,
+PE32i386/configuration identity, writer exclusion and baseline equality. Guard
+`14067bc2…` and identity `4d4b3fea…` pin the retained `aeaa2963…` candidate.
+An initial launch failed platform-window creation before input and was fully
+closed/restored; the unchanged-binary fresh-seat retry reached startup normally.
+Its precise first-launch Win32 failure remains unexplained.
+
+The retry's first two snapshot attempts refused baseline archive directory-atime
+drift. The retained diff proves only222 directory atimes differed, with bytes,
+types, other metadata and link targets unchanged. Under continuous controller
+ownership, a fixture-tested FD-based repair restored those authenticated atimes.
+Baseline authentication, independent live equality and the unchanged controller
+snapshot then passed. No admission gate was removed or weakened. The traversal
+source remains unknown; its complete plan, diff and verification are retained.
+
+[Current guarded run,17 captures, input logs, paired context and restoration](/home/johnrowl/.local/share/lrr-devbox/tutorial-nerp-icon-rgb-candidate-retry-run-20261110/HANDOFF.md)
+show Training -> Drilling, Mission Brief, Space and first instruction. One short
+Next click hid Next without changing the text; two later captures at recorded
+44s/175s relative to the click and the post-Pause/Continue capture have identical
+pixels. No absent-control retry or authored-progress bypass was attempted. This
+is a bounded stall, not a permanent-deadlock or causal verdict. Wall selection,
+Drill/Back, completion and the shared-counter repair were not exercised here.
+
+The comparison authenticates20 retained reference captures and identical runner,
+prefix baseline, settings and Training/Drilling context. Correction: the reference
+capture named `drilling-select-wall-instruction.png` still displays the initial
+instruction and visible Next after its first short click; its later held/released
+Next reaches the wall prompt. The second gestures differ, so this does not prove
+equivalent Next timing or a one-click reference advance. The next diagnostic must
+observe actual input ownership, acknowledgement/timer and executed script state.
+The separate primary audit confirms flashed action11 bit4 is the Dig dispatch
+permission gate and the current source matches it; it does not prove a hit/effect.
+
+Ordinary Pause/Continue, Quit/Yes -> Training, Back -> Main and application
+Quit/Yes exited0 with observed-empty cleanup; no forced stop. One transient
+stop writer-scan refusal passed on unchanged retry. This does not explain the
+older longer Drilling route's Error247. All254 afterstate deltas were reviewed,
+including the automatic5.sav rewrite and new8-byte5.osf; reference-equivalent
+save effects remain unverified. Controller restoration and a separate full live
+comparison found zero differences in both protected roots, including designated
+save bytes/metadata and5.osf absence. All377 source and17 capture identities
+matched; canonical lock release and absent journal/socket were independently
+verified. No C++ changes/build/commit/push occurred during this discovery phase.
+Every frozen-final-candidate acceptance row remains **U**.
+
+### 2026-11-10: bounded Next diagnostic checkpoint
+
+The observational diagnostic build `2d31ffba…` adds bounded input-owner,
+advisor acknowledgement, timer and actual script-dispatch traces. Its isolated
+MSVC5 `make reccmp-report` completed with `/ML /Zi /O2 /Ob1`; all377 source
+inputs matched the retained archive/current checkout. The existing31 compiler
+warnings and54 Reccmp ERROR lines remain. The actual-owner regression passed;
+the extracted logger fixture verified1065 maximum lines and17 immediate
+exhaustion markers. Logging can affect timing, and missing records after
+exhaustion cannot establish an unexecuted path. This is a diagnostic candidate.
+
+[Diagnostic run, source/build identities,17 captures, trace and restoration](/home/johnrowl/.local/share/lrr-devbox/tutorial-next-diagnostic-rgb-candidate-run-20261110/HANDOFF.md)
+record ordinary Training -> Drilling entry. The first short Next reached the
+advisor owner, acknowledged the message and zeroed its timer; the script
+requested the initial instruction again with Next still visible. A subsequent
+separate press/release reached the wall prompt; an ordinary wall click reached
+the Drilling Menu instruction. Drill was not clicked. The earlier disappearing
+Next stall was not reproduced, and no causal or functional-fix claim follows.
+Retained reference context supports the route but has different gesture timing;
+no new paired reference run or final acceptance is claimed.
+
+Ordinary Pause/Quit/Yes -> Training/Back -> Main/Quit/Yes exited0. All256
+afterstate deltas were archived and reviewed, including automatic save/option,
+log and registry writes. Controller restoration and an independent baseline
+comparison found zero differences in both protected roots. All377 source and17
+capture identities matched; independent lock reacquisition and absent
+journal/socket checks passed. Every final-candidate acceptance row remains **U**.
