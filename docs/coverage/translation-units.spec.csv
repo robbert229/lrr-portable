@@ -1,0 +1,228 @@
+start,unit_id,name,kind,name_basis,note
+00401000,GAME-001,Advisor.c,game,string-prefix,Advisor_* identifiers (32) first-used here; unreferenced header inlines (DisplayWidth/Height getters and FormattedText printf wrappers) close the object
+00401cb0,GAME-002,AITask.c,game,string-prefix,AITask_*/AI_Priority_* identifiers (58); .bss block 0x4b31c8-0x4b8060; ends with unreferenced inline accessors 0x4065d0/0x4065e0
+004065f0,GAME-003,,game,none,cubic Bezier evaluation and arc-length helpers; no data of its own except .rdata floats; boundary set by call locality
+00406990,GAME-004,,game,none,model null-name table parsing (DepositNullName/ThrowNullName/CarryNullName) and animation-object wrappers; precedes Bubble strings in .data
+004070b0,GAME-005,Bubbles.c,game,string-prefix,Bubble_* identifiers (39) and the 'Bubbles' config section; Bubble commons 0x557860-0x557d58
+00407d60,GAME-006,,game,none,building-model parsing ('PowerLevelScene'); boundary to the next unit has no data step on the left
+004089d0,GAME-007,,game,none,2D point/segment distance and placement-search helpers; .bss 0x4b8a20-0x4b8a50
+00409d40,GAME-008,,game,none,small unit with .bss 0x4b8a54 only; boundary uncertain
+0040a0c0,GAME-009,,game,none,numbered digit bitmaps ('%i.bmp') and per-entity screen-effect quads; .bss 0x4b8a58-0x4b8be0
+0040ab70,GAME-010,Dependencies.c,game,config-key,'Dependencies' config section; .bss 0x4b8bc8-0x4c71fc
+0040b310,GAME-011,,game,none,tile variant textures ('%s%0.1x%0.1x.bmp' and 'LWO:NOTEXTURE') and projected quad helpers
+0040bdc0,GAME-012,,game,none,rock-fall styles and misc effect objects ('RockFallStyles' 'UpgradeEffect' 'LavaErosionSmoke*'); .bss 0x4c71e0-0x4c7e5c
+0040cdc0,GAME-013,,game,none,terrain cell object records and fence sparks ('FenceSpark'); .bss 0x4c7df8-0x4c7e84
+0040e490,GAME-014,Encyclopedia.c,game,config-key,'Encyclopedia' config section and 'Object has no encyclopedia file.'; .bss 0x4c7e88-
+0040e930,GAME-015,,game,none,lava erosion timers and pending-cell ticks; .bss 0x4cbd30-0x4d78c4
+0040f6c0,GAME-016,,game,none,steering/heading physics and pointer-stack helpers; initialised data 0x4a1ee8-0x4a1ef8; boundary uncertain
+004102b0,GAME-017,FrontEnd.c,game,config-key,front-end menus and save slots; owns 'FrontEnd' config key and menu/save strings 0x4a1f00-0x4a2790
+00418190,GAME-018,HelpWindow.c,game,config-key,'HelpWindow' config keys; .bss step to 0x4db8e8
+00419230,GAME-019,Info.c,game,string-prefix,Info_* identifiers (40); .bss 0x4dc658-0x4dcd48
+0041a300,GAME-020,Interface.c,game,string-prefix,Interface_* identifiers (74); .bss from 0x4dcd58
+0041f870,GAME-021,Lego.c,game,string-prefix,Lego_* identifiers and the main config loader; very large: an interior split near 0x42f350 (terrain block helpers) cannot be excluded
+00435b20,GAME-022,,game,none,camera control; packed (unaligned) functions with int3 fill: compiled with different options; hard boundaries on both sides
+00436c20,GAME-023,LegoObject.c,game,string-prefix,Activity_* (78) and LegoObject_* (14) identifiers; .bss block from 0x4dec00 referenced across the whole run
+0044c710,GAME-024,LightEffects.c,game,config-key,'LightEffects' config section; .bss step to 0x4eadd8
+0044db50,GAME-025,,game,none,loading-progress profile ('%s%s%i' file); own commons 0x555e00-0x556088
+0044e0c0,GAME-026,,game,none,terrain map mesh/grid (heights surfaces cell lookups); tail 0x4519b0-0x451cd0 (model record helpers) has no data and may be a separate object
+00451cd0,GAME-027,Message.c,game,string-prefix,Message_* identifiers (65); .bss 0x4fef2c-0x4ff298
+00452df0,GAME-028,,game,none,tutorial script interpreter and its function table in initialised .data 0x4a5948-0x4a6768
+004574e0,GAME-029,Objective.c,game,config-key,Objective* config keys and objective voice streams; .bss 0x4ffbc0-0x4ffe48
+00459190,GAME-030,,game,none,object state file (.osf) save/restore; .bss 0x4ffe50-0x4ffe64
+00459530,GAME-031,,game,none,per-object overlays (health bar hunger and bubble image positions); .bss 0x4ffe68-0x4ffedc
+0045a030,GAME-032,Panel.c,game,string-prefix,Panel_*/PanelButton_* identifiers (50); .bss from 0x5000e0
+0045c830,GAME-033,Pointer.c,game,string-prefix,Pointer_* identifiers (56)
+0045cdc0,GAME-034,Priorities.c,game,config-key,'Priorities' 'PriorityImages' 'PrioritiesImagePositions' config sections
+0045d7e0,GAME-035,,game,none,level identifier remap table; boundary uncertain (no data step)
+0045d8b0,GAME-036,,game,none,screen-coordinate map view rendering; boundary uncertain
+0045f030,GAME-037,,game,none,reward/score screen ('Score' 'Timer' 'RewardInit' strings); .bss 0x5007e8-
+00462da0,GAME-038,,game,none,terrain overlay quads; own commons 0x552180-0x55219c
+004636b0,GAME-039,,game,none,info/track overlay strings; own commons 0x552140-0x552178 and .bss 0x500110
+00464110,GAME-040,,game,none,placement footprint rendering; .bss 0x5013c8; boundary uncertain
+00464740,GAME-041,SFX.c,game,string-prefix,SFX_* identifiers (45); .bss 0x502a20
+004661c0,GAME-042,,game,none,grid cell record buffers; own commons 0x5520e8-0x5520ec; boundary uncertain
+004667e0,GAME-043,,game,none,object stats configuration (129 keys incl. Flocks_*); .bss 0x502c28-0x503188; includes stats getters
+0046a370,GAME-044,,game,none,linked record chains with initialised data 0x4aa450-0x4aa45c; boundary uncertain
+0046a7f0,GAME-045,Text.c,game,string-prefix,Text_* identifiers (26); .bss 0x503190-0x503668
+0046b1d0,GAME-046,ToolTip.c,game,string-prefix,ToolTip_* identifiers (38); commons 0x54bf20-0x54c000
+0046c160,GAME-047,,game,none,upgrade level table ('Upgrades' 'Level%i%i%i%i')
+0046c6f0,GAME-048,,game,none,vehicle model parsing ('WheelNullName' 'WheelMesh' 'HoldMissing')
+0046db90,GAME-049,,game,none,staged cell flood/run passes; own commons 0x549520-0x54bf08; boundary uncertain
+0046eb80,GAME-050,,game,none,weapon configuration ('WeaponRange' 'DischargeRate' 'SeeThroughWalls'); .bss 0x503870-
+004721e0,G98-001,,gods98,none,C++ object: thiscall methods + extern-C wrappers driving DirectShow amstream (CLSID_AMMultiMediaStream GUID refs); no own data or header rdata table; game objects end before it
+00472710,G98-002,,gods98,none,D3DRM scene-object module (ACT/LWS/MESH load; 'FRAME'..'DDiScene' strings 0x4aaabc-0x4aaba3); header rdata table 0x49e87c read by 473ec0/474e30; bss 0x505400; uncalled 476bf0/476d10 kept by adjacency (boundary uncertain at 476d50)
+00476d50,G98-003,Viewports.c,gods98,attested,__FILE__ at 477150; viewport commons 0x76ace0-; header rdata table 0x49e89c with floats used only by 477150
+00477440,G98-004,,gods98,none,string/token helpers (tokenise; strdup; stristr; hash; bool parse 'FALSE'/'TRUE' 0x4aabd8); boundary uncertain: no data separates it from Viewports.c or Main.c - split by behaviour
+004777a0,G98-005,Main.c,gods98,attested,__FILE__ at 4781d0; strings 0x4aabf0-0x4aae2f; bss 0x505800-0x50608c; header rdata 0x49e8c0 also used by mixer fn 4789c0 so mixer stays in Main.c
+00478df0,G98-006,,gods98,none,config tree load/lookup; bss 0x506098-0x506520; header rdata table 0x49e8e8 used by 479110/479170
+00479500,G98-007,,gods98,none,vector/matrix/ray maths incl. D3DRMVector wrappers; header rdata table 0x49e910 floats used by 479530-479e70
+00479ee0,G98-008,,gods98,none,bitmap font load/draw; own float 0x49e948 after maths floats and before next header table; bss 0x506528-0x5065ac
+0047a640,G98-009,,gods98,none,DirectSound buffers/3D listener/streamed wave; bss 0x5065b8-0x533900; header rdata 0x49e94c; volume table 0x4aae30; 47c160 returns DSBVOLUME_MIN (-10000) so kept here
+0047c170,G98-010,,gods98,none,DirectDraw enum/device/surface code (commons 0x76ac80-); strings '%ix%i' 0x4aae64 first used by 47c4b0; header rdata 0x49e96c; private BitCount32 47d3f0 duplicates an Images.c helper
+0047d410,G98-011,Images.c,gods98,attested,__FILE__ at 47e300; bss 0x533908-0x533990 starts at 47d410; header rdata 0x49e980 floats used by 47dbf0
+0047e460,G98-012,,gods98,none,C++ object: thiscall + vtables 0x49e9a0/0x49e9b0 (first slot 47e460 scalar-deleting dtor) + SEH frames; AVI player; bss 0x533998-0x53399c; extern-C wrappers 47ec80-47ed80
+0047ed90,G98-013,Input.c,gods98,attested,__FILE__ at 47ed90
+0047f130,G98-014,Files.c,gods98,attested,__FILE__ at 47f6e0..47fdb0; starts at 47f130 because Files .data var 0x4aaf00 precedes 47f130's 'DataMissing'; bss 0x5339a0-0x5343b8 shared by 47f130-4802d0
+004805b0,G98-015,,gods98,none,immediate-mode mesh render/texture cache; header rdata 0x49e9d0; bss 0x5343c4-0x5405d8 interleaved across 4805b0-483b70
+00483c80,G98-016,Flic.c,gods98,string-prefix,'Flic File Invalid'/'Flic Not Enough Memory' strings 0x4ab10c-0x4ab17f; ends with 4850e0 (getter used by game on FLIC handles)
+004850f0,G98-017,,gods98,none,text-window ring buffer + wrapped draw (0x830-byte struct; 485a00 reads +0x820); own floats 0x49ea04/0x49ea0c with no header table; boundary uncertain at 4850f0 and 485a20 (behaviour only)
+00485a20,G98-018,Keys.c,gods98,string-prefix,KEY_*/KEYPAD_* key-name table strings 0x4ab180-0x4ab5f7 + case-insensitive key lookup 485e30
+00485e80,G98-019,,gods98,none,2D surface drawing (lines/polyline/circle/pixel writer); header rdata 0x49ea10; bss 0x5407e8-0x540830 (485e80 writes 0x540830)
+004869f0,G98-020,Lws.c,gods98,inferred,LightWave scene parser ('LWSC' 'lws' 'LoadObject' strings); header rdata 0x49ea38; bss 0x540838-0x544860; tail 488730-488a70 joined by calls (minor uncertainty); stem taken from the LWS scene-file strings
+00488b50,G98-021,,gods98,none,sound init facade + CD-track state (calls 47a640 and MCI unit); bss 0x54486c-0x544a10; one of 6 header tables 0x49ea5c-0x49eac4 lies in units 021-030
+00488c70,G98-022,,gods98,none,RIFF/mmio wave readers called only by unit 009; no data; boundary uncertain: may belong with 021 or 023
+00489210,G98-023,,gods98,none,MCI 'cdaudio' command strings 0x4ab6e0-0x4ab783 (preceded by init data 0x4ab6d0); bss 0x544a1c; boundary uncertain vs 021/022
+004893f0,G98-024,,gods98,none,2000-slot handle table (bss 0x544a20-0x5488a4) used by Files.c and game
+004894c0,G98-025,,gods98,none,D3DRM frame clone/walk helpers serving unit 002 (no own data); boundary uncertain at 489c30
+00489c30,G98-026,,gods98,none,BMP palette/pixel-data prep used by 474050 and 47d9d0; no data; boundary uncertain
+00489d90,G98-027,,gods98,none,DirectX HRESULT decoder: DDERR_/DIERR_/D3DRMERR_ string tables 0x4ab834-0x4af9e3 + module-name table 0x4ab788; bss 0x5488a8-0x5488c0; file name not evidenced in the binary
+0048b260,G98-028,,gods98,none,file-list stream state (commons 0x575ce0-0x5760f0) called from WinMain; boundary uncertain: may share an object with 029
+0048b330,G98-029,,gods98,none,registry key path create/query (RegCreateKeyA/RegQueryValueExA); no data; boundary uncertain
+0048b4a0,G98-030,Wad.c,gods98,inferred,'WWAD' archive index loader + wad entry streams (commons 0x575500-0x575cdf); data 0x4af9e4 precedes its strings; 48b4a0 is its private fgetc string reader; stem taken from the WWAD magic
+0048c040,G98-031,,gods98,none,LightWave LWOB object parser ('LWOB' 'POLS' 'SURF' chunk strings 0x4af9f4-); header rdata 0x49eadc; 48c040 is a private stristr duplicating 477610; file name not evidenced in the binary
+0048d920,CRT-001,fpinit.c,crt,library-symbol,symbols __fpmath _cfltcvt_init; bss 0x5490cc
+0048d980,CRT-002,atof.c,crt,library-symbol,symbol _atof
+0048d9e0,CRT-003,sprintf.c,crt,library-symbol,symbol _sprintf: reccmp marker says _vsprintf but the body passes the address of its varargs to _output so it is sprintf
+0048da50,CRT-004,strstr.asm,crt,library-symbol,symbol _strstr; hand-written asm (dl/dh scan) ending exactly on a 16-byte boundary so no int3 fill is visible
+0048dad0,CRT-005,atox.c,crt,library-symbol,symbols _atol _atoi
+0048db80,CRT-006,free.c,crt,library-symbol,symbol _free (ledger EngineHeapFree)
+0048dbd0,CRT-007,malloc.c,crt,library-symbol,symbols _malloc _nh_malloc _heap_alloc (ledger EngineHeapAlloc/EngineHeapAllocateWithRetry/EngineHeapAllocateAligned)
+0048dc80,CRT-008,realloc.c,crt,library-symbol,symbol _realloc (ledger GrowHeapArray)
+0048de20,CRT-009,qsort.c,crt,library-symbol,symbols _qsort and static shortsort swap
+0048e060,CRT-010,ftol.asm,crt,library-symbol,symbol __ftol; int3 fill after
+0048e090,CRT-011,,crt,library-symbol,MASM object (int3 fill; packed entries) with __CIasin + C entry _asin at 0x48e0a4 and the shared acos/asin core; source file name of this VC5 transcendental member unknown
+0048e160,CRT-012,rand.c,crt,library-symbol,symbols _srand _rand; holdrand .data 0x4afcc8
+0048e1aa,CRT-013,,crt,library-symbol,MASM fmod object: real start 0x48e1a0 (C entry _fmod via _ctrandisp2 is not a manifest function) then _CIfmod and the fprem worker; int3 fill; file name unknown
+0048e1e0,CRT-014,vsprintf.c,crt,library-symbol,symbol _vsprintf (string-flag 0x42 count INT_MAX and va_list passed through); ledger FormattedTextBufferBuild / src string.cpp formatted_text_buffer_build is really CRT vsprintf
+0048e250,CRT-015,chkstk.asm,crt,library-symbol,symbol __chkstk (__alloca_probe); int3 fill
+0048e280,CRT-016,floor.c,crt,library-symbol,symbol _floor
+0048e380,CRT-017,toupper.c,crt,library-symbol,symbol _toupper
+0048e480,CRT-018,crt0dat.c,crt,library-symbol,symbols _cinit exit _exit doexit _initterm; bss 0x5490d0.. (errno _osver __argc _environ _exitflag); boundary note: an unlisted __CIsqrt/_sqrt MASM object at 0x48e5c0-0x48e67a (int3 fill) is absorbed here because it has no manifest function
+0048e680,CRT-019,fabs.c,crt,library-symbol,symbol _fabs
+0048e770,CRT-020,strncpy.asm,crt,library-symbol,symbol _strncpy; int3 fill
+0048e870,CRT-021,ieeemisc.c,crt,library-symbol,symbol _finite (only member pulled from the IEEE helper object)
+0048e890,CRT-022,sscanf.c,crt,library-symbol,symbol _sscanf (ledger MarkupIntegerTokenParse)
+0048e8e0,CRT-023,ceil.c,crt,library-symbol,symbol _ceil
+0048e9e0,CRT-024,lldiv.asm,crt,library-symbol,symbol __alldiv; int3 fill
+0048ea90,CRT-025,llmul.asm,crt,library-symbol,symbol __allmul; int3 fill
+0048ead0,CRT-026,new.cpp,crt,library-symbol,operator new (??2@YAPAXI@Z = _nh_malloc(size 1)); ledger EngineCalloc / src engine_calloc is really CRT operator new
+0048eae0,CRT-027,fclose.c,crt,library-symbol,symbol _fclose (ledger FileResourceHandleClose)
+0048eb60,CRT-028,fopen.c,crt,library-symbol,symbols _fsopen _fopen
+0048ebb0,CRT-029,trnsctrl.cpp,crt,library-symbol,symbols _JumpToContinuation _CallMemberFunction0 _UnwindNestedFrames(SehFrameUnwind) __CxxFrameHandler _CallCatchBlock2(CallSettingFrame12) CatchGuardHandler _CallSETranslator TranslatorGuardHandler _GetRangeOfTrysToCheck; int3 fill after its inline-asm functions inside one C++ object
+0048ef10,CRT-030,exsup.asm,crt,library-symbol,symbols __global_unwind2 __local_unwind2 __abnormal_termination __NLG_Notify1 __NLG_Notify; packed MASM; int3 fill
+0048f000,CRT-031,crt0.c,crt,library-symbol,symbols WinMainCRTStartup _amsg_exit
+0048f1d0,CRT-032,isctype.c,crt,library-symbol,symbol _isctype
+0048f270,CRT-033,strncmp.asm,crt,library-symbol,symbol _strncmp; int3 fill; name uncertain between strncmp.asm and an inline-asm strncmp.c
+0048f2b0,CRT-034,ftell.c,crt,library-symbol,symbol _ftell (ledger StreamedAudioFileLengthGet)
+0048f460,CRT-035,fseek.c,crt,library-symbol,symbol _fseek (ledger FileResourceHandleSeek)
+0048f500,CRT-036,fwrite.c,crt,library-symbol,symbol _fwrite (ledger GameFileWrite)
+0048f650,CRT-037,remove.c,crt,library-symbol,symbol remove (ledger GameFileDelete)
+0048f680,CRT-038,chmod.c,crt,library-symbol,symbol _chmod
+0048f6d0,CRT-039,mkdir.c,crt,library-symbol,symbol _mkdir (ledger GameDirectoryCreate)
+0048f700,CRT-040,findfile.c,crt,library-symbol,symbols _findfirst _findnext _findclose __timet_from_ft
+0048fa00,CRT-041,getcwd.c,crt,library-symbol,symbols _getcwd _getdcwd _validdrive
+0048fb90,CRT-042,fread.c,crt,library-symbol,symbol _fread (ledger GameFileReadBuffered)
+0048fd20,CRT-043,fflush.c,crt,library-symbol,symbol _flush; unlisted _flushall/flsall follow at 0x48fd90-0x48fe1f
+0048fe20,CRT-044,fgetc.c,crt,library-symbol,symbol _fgetc
+0048fe50,CRT-045,fgets.c,crt,library-symbol,symbol _fgets
+0048fed0,CRT-046,vfprintf.c,crt,library-symbol,symbol _vfprintf (_stbuf/_output/_ftbuf)
+0048ff10,CRT-047,stricmp.c,crt,library-symbol,symbol _stricmp/_strcmpi; int3 fill taken as inline-asm C-locale path (as in trnsctrl.cpp) - name uncertain vs an .asm member; shares __lc_handle bss 0x549178 with late _strnicmp
+0048ffa0,CRT-048,fullpath.c,crt,library-symbol,symbol _fullpath
+00490070,CRT-049,fscanf.c,crt,library-symbol,symbol _fscanf
+00490090,CRT-050,splitpat.c,crt,library-symbol,symbol _splitpath (ledger AssetPathComponentsParse)
+00490210,CRT-051,fp8.c,crt,library-symbol,symbol _setdefaultprecision
+00490230,CRT-052,testfdiv.c,crt,library-symbol,symbols _ms_p5_test_fdiv (ProcessorFeatureFallbackFalse: constant-folded Pentium FDIV test) _ms_p5_mp_test_fdiv
+004902b0,CRT-053,cvt.c,crt,library-symbol,symbols _forcdecpt (+unlisted _cropzeros _positive _fassign) _cftoe _cftof _cftog _cftoe_g _cftof_g and static _shift (StringPrefixReserve); bss 0x549128-0x549134
+004907f0,CRT-054,cfin.c,crt,library-symbol,symbol _fltin (strgtold12 + ld12tod into static FLT .data 0x4aff98); ledger ParseEntityHealthValue is really CRT _fltin
+004908a0,CRT-055,_flsbuf.c,crt,library-symbol,symbol _flsbuf
+004909d0,CRT-056,output.c,crt,library-symbol,symbols _output write_char write_multi_char write_string get_int_arg get_int64_arg get_short_arg
+004914a0,CRT-057,strchr.asm,crt,library-symbol,symbol _strchr; int3 fill
+00491560,CRT-058,heapinit.c,crt,library-symbol,symbol _heap_init
+004915a0,CRT-059,sbheap.c,crt,library-symbol,symbols __sbh_new_region __sbh_release_region __sbh_decommit_pages __sbh_find_block __sbh_free_block __sbh_alloc_block __sbh_alloc_block_from_page __sbh_resize_block; bss 0x549150
+00491d90,CRT-060,handler.cpp,crt,library-symbol,symbol _callnewh; bss 0x549158 (_pnhHeap)
+00491db0,CRT-061,87disp.asm,crt,library-symbol,symbols _trandisp1 _trandisp2 (+ unlisted helpers to 0x491f6c); int3 fill
+00491f80,CRT-062,,crt,library-symbol,MASM FP error-handling helpers _startTwoArgErrorHandling _startOneArgErrorHandling _twoToTOS _load_CW _convertTOStoQNaN _fload_withFB _checkTOS_withFB _fast_exit _math_exit _check_overflow_exit _check_range_exit; int3 fill; file name unknown
+00492170,CRT-063,87cdisp.asm,crt,library-symbol,symbols _cintrindisp2 _cintrindisp1 _ctrandisp2 _ctrandisp1 _fload; int3 at 0x4923bd ends it; boundary note: unlisted Pentium-FDIV adjust code 0x4923c0-0x492bc5 (next object) is absorbed here
+00492bc6,CRT-064,,crt,library-symbol,MASM Pentium FDIV/FPREM workaround object (_adj_fdiv_* _fprem_common _adj_fprem ...); real start 0x4923c0 after int3 fill (no manifest function there); int3 fill at end; file name unknown
+00493150,CRT-065,frnd.c,crt,library-symbol,symbol _frnd
+00493170,CRT-066,fpexcept.c,crt,library-symbol,symbols _handle_qnan1 _except1 _raise_exc _handle_exc _umatherr _set_errno _get_fname _errcode
+00493a40,CRT-067,util.c,crt,library-symbol,symbols _set_exp _sptype _decomp
+00493be0,CRT-068,fpctrl.c,crt,library-symbol,symbols _statfp _clrfp _ctrlfp _set_statfp
+00493ca0,CRT-069,aw_map.c,crt,library-symbol,symbols __crtLCMapStringA strncnt
+00493ef0,CRT-070,input.c,crt,library-symbol,symbols _input _hextodec _inc _un_inc _whiteout; strings ' \t-\r]' ']'
+00494d10,CRT-071,close.c,crt,library-symbol,symbol _close
+00494df0,CRT-072,_freebuf.c,crt,library-symbol,symbol _freebuf
+00494e30,CRT-073,_open.c,crt,library-symbol,symbol _openfile; boundary uncertain: _getstream (0x495000) is stream.c in VC6 but has no data evidence of its own
+00495000,CRT-074,stream.c,crt,library-symbol,symbol _getstream; boundary uncertain (see CRT-073)
+00495090,CRT-075,frame.cpp,crt,library-symbol,symbols __InternalCxxFrameHandler FindHandler FindHandlerForForeignException __FrameUnwindToState CatchIt CallCatchBlock BuildCatchObject _DestructExceptionObject AdjustPointer; bss 0x549194-0x54919c
+00495a90,CRT-076,lowhelpr.asm,crt,library-symbol,symbol _CallSettingFrame@12; int3 fill
+00495ae0,CRT-077,hooks.cpp,crt,library-symbol,symbols terminate _inconsistency (+ their abort funclets); bss 0x5491a0; boundary note: unlisted winxfltr.c (_XcptFilter at 0x495c00 and xcptlookup at 0x495d40 using bss 0x5491a4 shared with raise) is absorbed here; confirmed by .data: raise() uses _XcptActTab at 0x4b22a8-0x4b232c which lies between hooks.cpp (0x4b22a4) and mbctype.c (0x4b2330)
+00495d90,CRT-078,ismbbyte.c,crt,library-symbol,symbols _ismbblead x_ismbbtype
+00495df0,CRT-079,stdenvp.c,crt,library-symbol,symbol _setenvp
+00495ee0,CRT-080,stdargv.c,crt,library-symbol,symbols _setargv parse_cmdline; bss 0x5491a8 _pgmname
+00496190,CRT-081,a_env.c,crt,library-symbol,symbol __crtGetEnvironmentStringsA; bss 0x5492b0
+004962f0,CRT-082,mbctype.c,crt,library-symbol,symbols _setmbcp getSystemCP CPtoLCID setSBCS __initmbctable; bss 0x5492b8-0x5493d4 (_mbctype etc)
+004965d0,CRT-083,ioinit.c,crt,library-symbol,symbol _ioinit
+00496895,CRT-084,exsup3.asm,crt,library-symbol,symbols _except_handler3 _seh_longjmp_unwind; real start 0x4967d0 ('VC20XC00' signature then _except_handler3 at 0x4967d8 - not manifest functions); packed MASM
+004968b0,CRT-085,crt0msg.c,crt,library-symbol,symbols _FF_MSGBANNER _NMSG_WRITE; bss 0x5493d8
+00496ad0,CRT-086,aw_str.c,crt,library-symbol,symbol __crtGetStringTypeA; bss 0x5493e0
+00496c00,CRT-087,lseek.c,crt,library-symbol,symbol _lseek
+00496cc0,CRT-088,write.c,crt,library-symbol,symbol _write
+00496ee0,CRT-089,dosmap.c,crt,library-symbol,symbol _dosmaperr; errtable .data 0x4b24c0
+00496f50,CRT-090,dtoxtime.c,crt,library-symbol,symbol __loctotime_t
+00497040,CRT-091,_filbuf.c,crt,library-symbol,symbol _filbuf
+00497130,CRT-092,read.c,crt,library-symbol,symbol _read
+004974d0,CRT-093,_sftbuf.c,crt,library-symbol,symbols _stbuf _ftbuf; bss 0x5493e4-0x5493e8
+004975d0,CRT-094,tolower.c,crt,library-symbol,symbol _tolower
+004976d0,CRT-095,mbsnbcpy.c,crt,library-symbol,symbol _mbsnbcpy
+00497770,CRT-096,ieee87.c,crt,library-symbol,symbols _control87 _controlfp _abstract_cw _hw_cw
+00497900,CRT-097,intrncvt.c,crt,library-symbol,symbols _ZeroTail _IncMan _RoundMan _CopyMan _FillZeroMan _IsZeroMan _ShrMan _ld12cvt _ld12tod _ld12tof _atodbl _atoflt
+00497e20,CRT-098,_fptostr.c,crt,library-symbol,symbol _fptostr
+00497ec0,CRT-099,cfout.c,crt,library-symbol,symbols _fltout __dtold; bss 0x5493f0-0x54941c
+00498000,CRT-100,memmove.asm,crt,library-symbol,symbol _memmove; int3 fill
+00498340,CRT-101,crt0fp.c,crt,library-symbol,symbol _fptrap (calls _amsg_exit(_RT_FLOAT))
+00498350,CRT-102,strgtold.c,crt,library-symbol,symbol __strgtold12
+00498ae0,CRT-103,_getbuf.c,crt,library-symbol,symbol _getbuf
+00498b40,CRT-104,isatty.c,crt,library-symbol,symbol _isatty
+00498b70,CRT-105,wctomb.c,crt,library-symbol,symbol _wctomb
+00498bf0,CRT-106,ulldiv.asm,crt,library-symbol,symbol __aulldiv; int3 fill
+00498c60,CRT-107,ullrem.asm,crt,library-symbol,symbol __aullrem; int3 fill
+00498ce0,CRT-108,87except.c,crt,library-symbol,symbol _87except
+00498e00,CRT-109,mbtowc.c,crt,library-symbol,symbol _mbtowc
+00498f00,CRT-110,_ctype.c,crt,library-symbol,symbol _isspace (function form of the ctype macro); file name uncertain (VC function-form ctype object)
+00498f30,CRT-111,llshl.asm,crt,library-symbol,symbol __allshl; int3 fill
+00498f50,CRT-112,ungetc.c,crt,library-symbol,symbol _ungetc
+00498fe0,CRT-113,osfinfo.c,crt,library-symbol,symbols _alloc_osfhnd _set_osfhnd _free_osfhnd _get_osfhandle
+00499240,CRT-114,open.c,crt,library-symbol,symbol _sopen; bss 0x5494f4
+00499690,CRT-115,validate.cpp,crt,library-symbol,symbols _ValidateRead _ValidateWrite _ValidateExecute
+004996f0,CRT-116,abort.c,crt,library-symbol,symbol abort
+00499710,CRT-117,wcslen.c,crt,library-symbol,symbol wcslen
+00499730,CRT-118,crtmbox.c,crt,library-symbol,symbol __crtMessageBoxA; bss 0x549428-0x549430
+004997c0,CRT-119,calloc.c,crt,library-symbol,symbol _calloc
+00499860,CRT-120,tzset.c,crt,library-symbol,symbols __tzset _tzset _isindst cvtdate; bss 0x549438-0x5494f0
+00499fb0,CRT-121,mantold.c,crt,library-symbol,symbols __addl __add_12 __shl_12 __shr_12 __mtold12
+0049a1b0,CRT-122,x10fout.c,crt,library-symbol,symbol $I10_OUTPUT
+0049a540,CRT-123,tenpow.c,crt,library-symbol,symbols __ld12mul __multtenpow12
+0049a890,CRT-124,chsize.c,crt,library-symbol,symbol _chsize
+0049aa10,CRT-125,winsig.c,crt,library-symbol,symbols raise siglookup; bss 0x5494f8-0x549504
+0049abe0,CRT-126,wcstombs.c,crt,library-symbol,symbols wcstombs wcsncnt
+0049ae10,CRT-127,getenv.c,crt,library-symbol,symbol getenv
+0049aea0,CRT-128,setmode.c,crt,library-symbol,symbol _setmode
+0049af20,CRT-129,mbsnbicl.c,crt,library-symbol,symbol _mbsnbicoll
+0049af60,CRT-130,wtombenv.c,crt,library-symbol,symbol __wtomb_environ
+0049afe0,CRT-131,aw_cmp.c,crt,library-symbol,symbol __crtCompareStringA; bss 0x549510
+0049b2b0,CRT-132,setenv.c,crt,library-symbol,symbols __crtsetenv findenv copy_environ
+0049b5b0,CRT-133,mbschr.c,crt,library-symbol,symbol _mbschr
+0049b660,CRT-134,strdup.c,crt,library-symbol,symbol _strdup; last CRT object before the import thunks
+0049b6b0,IMP-001,d3drm.lib,import,library-symbol,thunks Direct3DRMCreate D3DRMVectorRandom D3DRMVectorRotate; each jmp [__imp_X] thunk is really its own import-library member
+0049b6c2,IMP-002,ddraw.lib,import,library-symbol,thunks DirectDrawEnumerateA DirectDrawCreate; each thunk is its own library member
+0049b6ce,IMP-003,avifil32.lib,import,library-symbol,thunks AVIStreamInfoA .. AVIFileInit (int3 fill to 0x49b700); each thunk is its own member; boundary note: the dinput.lib c_dfDIMouse/c_dfDIKeyboard DIDATAFORMAT data blob 0x49b700-0x49c7a7 has no manifest function and is absorbed here
+0049c7a8,IMP-004,dinput.lib,import,library-symbol,thunk DirectInputCreateA; its library also contributes the c_dfDI* data objects at 0x49b700-0x49c7a7 immediately before it; each member is its own object
+0049c7ae,IMP-005,dsound.lib,import,library-symbol,thunk DirectSoundCreate (DSOUND ordinal 1); its own library member
+0049c7b4,IMP-006,kernel32.lib,import,library-symbol,thunk RtlUnwind (used by CRT SEH code); int3 fill to 0x49c7c0; its own library member
+0049c7c0,LATE-001,,late,none,RNC (Rob Northen) ProPack-style WAD payload decompressor (string 'RNC' at 0x4b2d08; commons 0x557d68-0x55808c); C object linked after the import libraries; file name unknown
+0049d030,LATE-002,,late,none,DirectDraw device / display-mode selection dialog (strings 'Please install DirectX versi..' 'Window Size' 'Screen Mode' at 0x4b2d0c-0x4b2d90 follow the RNC string; commons 0x5580a0+); boundary at 0x49d030 from string order and disjoint commons; file name unknown
+0049dab0,LATE-003,strnicmp.c,crt,library-symbol,symbol _strnicmp (pulled late via oldnames.lib strnicmp alias); int3 fill (inline-asm path or .asm member - name uncertain like CRT-047)
+0049db60,LATE-004,xtoa.c,crt,library-symbol,symbols _itoa and static xtoa (pulled late via oldnames.lib itoa alias)
+0049dc10,LATE-005,strlwr.c,crt,library-symbol,symbol _strlwr (pulled late via oldnames.lib strlwr alias)
+0049dcd0,LATE-006,strupr.c,crt,library-symbol,symbol _strupr (via oldnames.lib); boundary note: the .text$x C++ EH unwind funclets 0x49dd90-0x49ddf4 (game objects' __CxxFrameHandler thunks) are absorbed here

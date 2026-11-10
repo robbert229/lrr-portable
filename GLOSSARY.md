@@ -82,3 +82,7 @@ in the log, so a port run can never be mistaken for evidence from the shipped
 binary (ADR 0002). A *port run* exercises the *reference build*, not the
 native *port*.
 _Avoid_: "rebuilt run", "dev run"
+
+**original translation unit**:
+A contiguous range of the shipped `LegoRR.exe` (code, and where known its data) attributed to one source file of the original 1999 build, such as gods98's `Main.c`. Reproducing these units and their link order is a prerequisite for a byte-identical *matching build*.
+_Avoid_: "module", "object file" (ambiguous with our own build outputs)
