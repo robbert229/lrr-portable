@@ -83,6 +83,15 @@ binary (ADR 0002). A *port run* exercises the *reference build*, not the
 native *port*.
 _Avoid_: "rebuilt run", "dev run"
 
+**matching build**:
+The 32-bit build of the *reconstruction* compiled with the MSVC 5.0 RTM toolchain under Wine (`make reccmp-report`), whose purpose is instruction-level comparison with the shipped `LegoRR.exe` through Reccmp. Distinct from the *reference build*, which exists for behavioral A/B testing.
+_Avoid_: "reccmp build", "the MSVC build"
+
+**match baseline**:
+The committed per-function Reccmp similarity scores from the last accepted *matching build*. A function's score may not fall below its baseline without the change explicitly refreshing the baseline.
+_Avoid_: "snapshot", "the report"
+
 **original translation unit**:
 A contiguous range of the shipped `LegoRR.exe` (code, and where known its data) attributed to one source file of the original 1999 build, such as gods98's `Main.c`. Reproducing these units and their link order is a prerequisite for a byte-identical *matching build*.
 _Avoid_: "module", "object file" (ambiguous with our own build outputs)
+
