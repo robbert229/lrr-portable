@@ -1062,11 +1062,11 @@ int double_classify(uint32_t lo, uint32_t hi)
         return 2;                                   /* -infinity */
     }
     /* The corpus reads the exponent+quiet field as a raw dword six bytes
-     * past &lo — esp+0xa, the high half of the hi word plus two bytes
-     * past the parameter, which the 0x7ff8 mask discards — and compares
-     * it as a WORD; mirror the read shape through the parameter bytes. */
-    const uint16_t exp_quiet = (uint16_t)(
-        *(const uint32_t*)((const char*)&lo + 6) & 0x7ff8u);
+     * past &lo (esp+0xa on its cdecl stack): the top half of the hi word,
+     * masked with 0x7ff8. Take that half from the value instead of walking
+     * the parameter's address, which is only valid for stack-passed
+     * arguments (register-passed on 64-bit native). */
+    const uint16_t exp_quiet = (uint16_t)((hi >> 16) & 0x7ff8u);
     if (exp_quiet == 0x7ff8u) {
         return 3;                                   /* quiet-NaN-shaped */
     }
@@ -3228,7 +3228,9 @@ void* string_keyed_cache_entry_find(const char* key)
         if (strcasecmp_lite(*(char**)entry, key) == 0) {
             return entry;
         }
-        entry = *(void**)((char*)entry + 0xc); /* corpus mov esi,[esi+0xc] */
+        /* corpus mov esi,[esi+0xc]: link is field 3 (0xc on the 32-bit
+         * target; native entries are widened, see string_registry_intern) */
+        entry = *(void**)((char*)entry + 3 * sizeof(void*));
         if (entry == NULL) {
             return NULL;
         }
@@ -3250,7 +3252,7 @@ void* string_registry_intern(const char* key)
      * stores blind — a NULL allocator answer writes through it), the
      * length rides the inlined strlen intrinsic into the alloc push, and
      * the copy pointer lands in field 0 before the inlined strcpy runs. */
-    void* record = engine_heap_alloc(0x10);
+    void* record = engine_heap_alloc(4 * sizeof(void*)); /* 0x10 on x86-32 */
     char** slots = (char**)record;
     char* copy = (char*)engine_heap_alloc((long)strlen(key) + 1);
     slots[0] = copy; /* the corpus stores the copy pointer before the copy */
