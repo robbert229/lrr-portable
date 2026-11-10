@@ -484,6 +484,7 @@ have not yet been added to the catalog.
 | 477 | [findings/477-tasks-rewards-and-checkpoints.md](477-tasks-rewards-and-checkpoints.md) | Tasks, Rewards, and Checkpoints |
 | 478 | [findings/478-selection-groups-and-selection-state.md](478-selection-groups-and-selection-state.md) | Selection Groups and Selection State |
 | 479 | [findings/479-renderer-com-interface-vtable-slots.md](479-renderer-com-interface-vtable-slots.md) | Renderer D3D/D3DRM interface vtable slots (issues 253/254) |
+| 505 | [findings/505-original-translation-units-and-link-order.md](505-original-translation-units-and-link-order.md) | Original translation units and link order (issue 383) |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](../../docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](../../docs/decompiles/full/README.md)). The
