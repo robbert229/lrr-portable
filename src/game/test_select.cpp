@@ -166,6 +166,10 @@ int main(void)
         game_context_init(&empty);
         CHECK(selection_contains_entity(&empty, a) == 0, "empty: absent");
         CHECK(selection_contains_entity(NULL, a) == 0, "NULL ctx: absent");
+        /* game_context_init installs `empty` as the process-wide command and
+         * entity-pool owner; take them back before it leaves scope. */
+        cmd_context_set(&ctx);
+        entity_pool_callback_context_set(&ctx);
         selection_clear(&ctx);
         selection_add(&ctx, b);
         CHECK(selection_contains_entity(&ctx, b) == 1, "the added entity");
@@ -318,7 +322,8 @@ int main(void)
         flaggedBad->owner_36c = (void*)&sentinel;
         noOwnerFlag->stats_record = flag_rec;
         miner11->flags_3e4 = 0x2000000u;
-        gen3->flags_3e8 |= ENTITY_SELECTED; /* visible on the class-none drop */
+        /* (selection_add raises +0x3e8 itself; pre-setting it makes the
+         * faithful add refuse the entry.) */
 
         /* Empty selection: nothing classifies, context 0, nothing to remove. */
         selection_state_tick(&ctx);
@@ -387,7 +392,9 @@ int main(void)
         /* Class-none: an entry that classifies nothing posts 0 and every
          * entry drops (the quirk pinned). */
         selection_clear(&ctx);
-        selection_add(&ctx, gen3);
+        CHECK(selection_add(&ctx, gen3) == 1 &&
+                  (gen3->flags_3e8 & ENTITY_SELECTED) != 0,
+              "the class-none entry is selected before the tick");
         selection_state_tick(&ctx);
         CHECK(selection_count(&ctx) == 0
                   && (gen3->flags_3e8 & ENTITY_SELECTED) == 0,
