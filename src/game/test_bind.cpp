@@ -9,6 +9,7 @@
 
 #include "resource.hpp"
 #include "game/level.hpp"
+#include "game/test_level_fixture.hpp"
 #include "gods98/camera.hpp"
 #include "gods98/engine.hpp"
 #include "gods98/input.hpp"
@@ -94,16 +95,33 @@ int main(void)
                 "    PredugMap L1_p.map\n"
                 "    TerrainMap L1_t.map\n"
                 "    BlockPointersMap L1_bp.map\n"
+                /* The faithful LevelLoad opens every layer unconditionally
+                 * (an unset key reaches MapOpen with an empty path). */
+                "    CryOreMap L1_c.map\n"
+                "    ErodeMap L1_e.map\n"
+                "    PathMap L1_pa.map\n"
+                "    EmergeMap L1_em.map\n"
+                "    AIMap L1_ai.map\n"
+                "    FallinMap L1_f.map\n"
+                TLF_LEVEL_KEYS
                 "  }\n"
+                TLF_ROOT_GROUPS
                 "}\n",
                 fp);
             fclose(fp);
         }
     }
+    tlf_write_aux_files(FIX);
     write_map("L1_s.map", 4);  /* heights */
     write_map("L1_p.map", 0);
     write_map("L1_t.map", 1);
     write_map("L1_bp.map", 7); /* surface-type byte at voxel +0x04 == 7 */
+    write_map("L1_c.map", 0);
+    write_map("L1_e.map", 0);
+    write_map("L1_pa.map", 0);
+    write_map("L1_em.map", 0);
+    write_map("L1_ai.map", 0);
+    write_map("L1_f.map", 0);
     if (chdir(FIX) != 0) {
         fprintf(stderr, "chdir failed\n");
         return 1;
@@ -114,6 +132,8 @@ int main(void)
 
     BlockFile* cfg = block_open("Lego.cfg");
     CHECK(cfg != NULL, "open cfg");
+    GameContext level_ctx;
+    tlf_bind_context(&level_ctx);
     LevelState* lvl = level_load(cfg, "L1");
     CHECK(lvl != NULL, "level loads");
     if (lvl == NULL) {
@@ -132,8 +152,11 @@ int main(void)
     CHECK(engine_level_blocksize(&ctx) == 2.0f, "bind: blocksize (level +0x1c)");
     /* The resolved voxel pointer: without it the 64-bit build reads a
      * truncated +0xb8 word and this would dereference garbage. */
-    CHECK(engine_voxel_byte(&ctx, 1, 1, 0x04) == 7,
-          "bind: voxel surface byte through the resolved array");
+    /* level_load now ends with TutorialPathCoordinateIndex, which consumes
+     * (clears) the +0x04 byte it threads onto the coordinate chains, so the
+     * read-through is checked on the TerrainMap byte at +0x02 instead. */
+    CHECK(engine_voxel_byte(&ctx, 1, 1, 0x02) == 1,
+          "bind: voxel terrain byte through the resolved array");
 
     /* --- view mode-1 follow runs against the real grid -------------------- */
     cam_set_pos(&views[0].cam_follow, (float)GRID * 0.5f, (float)GRID * 0.5f, 0);
