@@ -58,9 +58,11 @@ cmake --build build-winapi
 ```
 
 See [ADR 0001](adr/0001-minwg-cross-toolchain.md),
-[ADR 0002](adr/0002-run-port-integrity-bypass.md), and
-[ADR 0004](adr/0004-miniwin-native-port.md) for the toolchain and comparison
-rationale. The [compatibility harness](../tools/compat/README.md) documents
+[ADR 0002](adr/0002-run-port-integrity-bypass.md),
+[ADR 0004](adr/0004-miniwin-native-port.md), and
+[ADR 0005](adr/0005-original-shape-c-units.md) for the toolchain and comparison
+rationale. Units rebuilt in original shape (`LRR_ORIGINAL_SHAPE_SOURCES`) are
+compiled as C by the matching build and as C++ by every other build. The [compatibility harness](../tools/compat/README.md) documents
 running the original executable under Proton.
 
 ## MSVC 5.0 and Reccmp

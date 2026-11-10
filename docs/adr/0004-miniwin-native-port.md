@@ -26,7 +26,10 @@ Decisions that hang off this:
   only root metadata checked out) — the sibling game's decompiled source
   never lands in our working tree. Wired via `cmake.subproject('miniwin')`
   (Q-A, Q-F).
-- **C++17 for the reconstruction, with discipline** (Q-E): plain structs,
+- **C++17 for the reconstruction, with discipline** (Q-E; amended by
+  [ADR 0005](0005-original-shape-c-units.md): code rebuilt as original
+  translation units is a C-compatible subset, compiled as C in the matching
+  build and as C++ here): plain structs,
   no heavy STL — C++ only where miniwin's interface demands it. The corpus's
   C-shaped code ports with negligible friction.
 

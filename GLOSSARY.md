@@ -95,3 +95,15 @@ _Avoid_: "snapshot", "the report"
 A contiguous range of the shipped `LegoRR.exe` (code, and where known its data) attributed to one source file of the original 1999 build, such as gods98's `Main.c`. Reproducing these units and their link order is a prerequisite for a byte-identical *matching build*.
 _Avoid_: "module", "object file" (ambiguous with our own build outputs)
 
+
+**original shape**:
+Source rebuilt as one *original translation unit*: its functions in original order with original signatures, its state in typed globals laid out as the original data, written in the C-compatible subset and compiled as C in the *matching build* (ADR 0005).
+_Avoid_: "C style" (that names the syntax, not the unit and data layout)
+
+**C boundary header**:
+A C-compatible `.h` that declares, with C linkage, the functions and globals of a not-yet-converted C++ module that *original shape* units call. Shared C++ headers do not include it; `test_c_boundaries.cpp` checks it against the C++ declarations.
+_Avoid_: "wrapper header"
+
+**entropy drift**:
+Score changes in functions whose source did not change, caused by MSVC 5.0's register allocation depending on how many symbols the translation unit declares before them (finding 506). Any edit to a shared header can cause it.
+_Avoid_: "regression" (when the source is unchanged), "noise" (it is deterministic)
