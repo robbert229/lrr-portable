@@ -325,6 +325,10 @@ static void test_speed_connection(void)
     GameOptions store;
     options_defaults(&store);
 
+    /* options_scale_frame is a pure reader of the global time scale; the
+     * slider publishes it through options_set (same owner as SetGameSpeed),
+     * so publish the default 1.0x slider position first. */
+    options_set(&store, OPT_GAME_SPEED, 1);
     float sdt = options_scale_frame(&store, &ctx, 1.0f);
     CHECK(sdt == 1.0f && EngineTimeScale(&ctx) == 1.0f,
         "speed: default store scales the frame 1:1");
@@ -343,9 +347,22 @@ static void test_speed_connection(void)
     LevelState* s = (LevelState*)calloc(1, sizeof(LevelState));
     CHECK(s != NULL, "speed: level state");
     if (s != NULL) {
-        s->objective = LVL_OBJECTIVE_TIMER | LVL_OBJECTIVE_CRYSTALS;
+        /* Faithful objective_check reads the module-owned result word that
+         * objective_load arms (not s->objective), and bails on the
+         * "advisor off" bit; load a level with both goals and the advisor
+         * key TRUE, then pin the timer to 10 ticks. */
+        BlockFile* ocfg = s_parse(
+            "Lego {\n"
+            "  Level01 {\n"
+            "    DontShowObjectiveAdvisor TRUE\n"
+            "    CrystalObjective 1\n"
+            "    TimerObjective 10\n"
+            "  }\n"
+            "}\n");
+        CHECK(ocfg != NULL, "speed: objective fixture parses");
+        objective_load(ocfg, "Level01", s);
+        block_close(ocfg);
         level_set_int(s, OBJ_OFF_CRYSTAL_LIVE, 0);
-        level_set_int(s, OBJ_OFF_CRYSTAL_TARGET, 1);
         level_set_float(s, OBJ_OFF_TIMER_TARGET, 10.0f);
 
         options_set(&store, OPT_GAME_SPEED, 1);   /* 1.0x */
@@ -402,6 +419,11 @@ static void test_save_roundtrip(void)
         return;
     }
     mkdir("Saves", 0755);
+    /* The earlier menu tests leave the frontend's level-picker tree
+     * installed. Faithful SavReadSlot(mode 0) validates a slot's record
+     * count against that tree and rewrites a mismatching slot fresh, so
+     * drop the roots: this fixture round-trips a plain default-count slot. */
+    sav_tree_roots_clear();
 
     /* Fresh game: documented defaults, and the bootstrap slot stamps them. */
     GameContext g1;
@@ -425,9 +447,10 @@ static void test_save_roundtrip(void)
     GameContext g2;
     game_context_init(&g2);
     CHECK(save_read_slot(&g2, 3, 0) == 1, "save: slot reads back");
+    /* Faithful: help_window is not one of the retail header's tracked words,
+     * so it no longer rides the slot (previously asserted == 1). */
     CHECK(g2.options.game_speed == 4 && g2.options.brightness == 2
-        && g2.options.help_window == 1 && g2.options.sfx_volume == 3
-        && g2.options.music_volume == 9,
+        && g2.options.sfx_volume == 3 && g2.options.music_volume == 9,
         "save: option values survive the save/reload round trip");
 
     /* An un-stamped legacy save falls back to the defaults (magic absent). */
@@ -449,8 +472,12 @@ static void test_save_roundtrip(void)
     GameContext g4;
     game_context_init(&g4);
     CHECK(save_read_slot(&g4, 1, 0) == 1, "save: legacy header reads back");
-    CHECK(g4.options.brightness == 8 && g4.options.game_speed == 1,
-        "save: un-stamped slot restores the defaults");
+    /* Faithful: the retail 0xb0 header carries only the four tracked option
+     * words (+4/+8/+0xc/+0x10); +0x20 is ordinary context data, not a port
+     * options stamp, so zeroing it changes nothing. The slot's own words
+     * (brightness 6 as written) win over the port defaults. */
+    CHECK(g4.options.brightness == 6 && g4.options.game_speed == 1,
+        "save: header without the legacy stamp reads the stored words");
     if (chdir("..") != 0) {
         ++s_failures;
     }
@@ -523,18 +550,23 @@ int main(int argc, char** argv)
         ctx.options.game_speed = 3;
         ctx.options.sfx_volume = 7;
         ctx.options.music_volume = 4;
+        ctx.options.brightness = 6;
         save_slot_set(&ctx, 1);
         options_write_to_slot(&ctx);
-        uint32_t w8 = 0, w12 = 0, w16 = 0;
-        __builtin_memcpy(&w8, (char*)&ctx + 8, sizeof w8);
-        __builtin_memcpy(&w12, (char*)&ctx + 12, sizeof w12);
-        __builtin_memcpy(&w16, (char*)&ctx + 16, sizeof w16);
-        CHECK(w8 == 7u && w12 == 3u && w16 == 4u,
+        /* The slot window is the module's own host-width storage (the retail
+         * +0x08/+0x0c/+0x10 words are dwords 2/3/4), not bytes of the
+         * GameContext; read it through the window peek. */
+        uint32_t w8 = options_slot_window_dword_peek(2);
+        uint32_t w12 = options_slot_window_dword_peek(3);
+        uint32_t w16 = options_slot_window_dword_peek(4);
+        /* Faithful FUN_00416910 writes sfx/speed/brightness (+8/+12/+16);
+         * the music volume is not part of this window store. */
+        CHECK(w8 == 7u && w12 == 3u && w16 == 6u,
               "the live options words land in the slot window");
         ctx.options.sfx_volume = 9;
         save_slot_set(&ctx, -1); /* closed: nothing writes */
         options_write_to_slot(&ctx);
-        __builtin_memcpy(&w8, (char*)&ctx + 8, sizeof w8);
+        w8 = options_slot_window_dword_peek(2);
         CHECK(w8 == 7u, "the closed slot leaves the window alone");
         options_write_to_slot(NULL); /* guarded */
     }
@@ -548,9 +580,8 @@ int main(int argc, char** argv)
         options_context_six_field_set(&ctx, src);
         int ok = 1;
         for (int i = 0; i < 6; ++i) {
-            uint32_t w = 0;
-            __builtin_memcpy(&w, (char*)&ctx + 0x1c + (size_t)i * sizeof w,
-                             sizeof w);
+            /* retail +0x1c is dword 7 of the module-owned slot window */
+            uint32_t w = options_slot_window_dword_peek(7 + i);
             if (w != src[i]) {
                 ok = 0;
             }
@@ -561,8 +592,7 @@ int main(int argc, char** argv)
         save_slot_set(&ctx, -1); /* closed: nothing writes */
         const uint32_t src2[6] = { 0, 0, 0, 0, 0, 0 };
         options_context_six_field_set(&ctx, src2);
-        uint32_t w0 = 0;
-        __builtin_memcpy(&w0, (char*)&ctx + 0x1c, sizeof w0);
+        uint32_t w0 = options_slot_window_dword_peek(7);
         CHECK(w0 == 11u, "the closed slot leaves the window alone");
         options_context_six_field_set(NULL, src); /* guarded */
         options_context_six_field_set(&ctx, NULL); /* guarded */

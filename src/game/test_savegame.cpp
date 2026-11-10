@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "resource.hpp"
 #include "game/frontend.hpp" /* sav_tree_load's visited-band tail */
 #include "game/game.hpp"
 #include "game/level.hpp"
@@ -68,6 +69,9 @@ int main(void)
         fprintf(stderr, "chdir %s failed\n", FIX);
         return 1;
     }
+    /* File opens resolve under the CD root; the fixture is the CWD. */
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
     /* Saves/ directory must exist (the corpus driver creates it; tests mkdir). */
     mkdir("Saves", 0755);
 
@@ -122,7 +126,10 @@ int main(void)
         CHECK(imp == 60.0f, "blob record importance @+0x24");
         CHECK(quota == 5, "blob record quota @+0x28");
         CHECK(value == 3, "blob record value pass-through @+0x2C");
-        CHECK(self == 0x1CEC, "blob self-ref -> record array at +0x1CEC");
+        /* Faithful (#372): the corpus stores the real task-table address; on
+         * a 64-bit host that is the pointer's low 32 bits, not the offset. */
+        CHECK(self == (uint32_t)(uintptr_t)(ctx.checkpoint_blob + 0x1CEC),
+              "blob self-ref -> record array at +0x1CEC");
         CHECK(memcmp(ctx.checkpoint_blob + 0x1CEC, ctx.tasks,
                      GAME_TASK_COUNT * GAME_TASK_STRIDE) == 0,
               "blob records copied verbatim");
@@ -397,13 +404,16 @@ int main(void)
         CHECK(osf_read_path(&lctx, 1) == 1 && lctx.osf_shadow_count == 1,
             "stale-shadow: slot 1 installs live + shadow");
         (void)osf_read_path(&lctx, 2); /* absent file -> 0 */
-        CHECK(lctx.osf_count == 0 && lctx.osf_shadow_count == 0,
-            "stale-shadow: absent read clears the old shadow");
+        /* Faithful OsfReadStateReset: an absent/invalid file clears only the
+         * live table; the restart snapshot (shadow) is left intact and is
+         * replaced only by a later valid read. */
+        CHECK(lctx.osf_count == 0 && lctx.osf_shadow_count == 1,
+            "stale-shadow: absent read clears live, keeps the shadow");
         CHECK(osf_read_path(&lctx, 1) == 1 && lctx.osf_shadow_count == 1,
             "stale-shadow: slot 1 installs live + shadow (again)");
         CHECK(osf_read_path(&lctx, 5) == 1
-            && lctx.osf_count == 0 && lctx.osf_shadow_count == 0,
-            "stale-shadow: corrupt read clears the old shadow (no resurrection)");
+            && lctx.osf_count == 0 && lctx.osf_shadow_count == 1,
+            "stale-shadow: corrupt read clears live, keeps the shadow");
         free(lctx.records);
         lctx.records = NULL;
         free(wctx.records);
@@ -449,8 +459,12 @@ int main(void)
               "fallback commits checkpoint payload to existing save");
         free(raw);
         raw = read_all("Saves/5.osf", &n);
-        CHECK(raw != NULL && n == 8 && memcmp(raw, "RROS\0\0\0\0", 8) == 0,
-              "fallback writes empty objective sidecar");
+        /* Faithful: the commit writes the context's live objective table
+         * (the two entries added above ride; the slot read no longer clears
+         * it), not an empty sidecar. */
+        CHECK(raw != NULL && n == 8 + 2 * 20 && ctx.osf_count == 2
+                  && memcmp(raw, "RROS\x02\0\0\0", 8) == 0,
+              "fallback writes the live objective sidecar");
         free(raw);
     }
     save_slot_set(&ctx, 3);
@@ -728,8 +742,11 @@ int main(void)
                   "the clear-feature refresh leaves the files");
             free(raw);
         }
-        CHECK(reader.save_slot == SAVE_SLOTS - 1,
-              "the refresh walk ends on the last slot");
+        /* Faithful FUN_00417df0: the walk fills the per-slot context blocks
+         * (SavReadSlot with a slot context) and never selects a slot on the
+         * caller's context, so the selection stays closed. */
+        CHECK(reader.save_slot == -1,
+              "the refresh walk leaves the caller's slot selection alone");
 
         /* Feature set: the live records propagate to every slot. */
         engine_feature_word_install(0x400u);
@@ -738,8 +755,11 @@ int main(void)
         {
             size_t n = 0;
             uint8_t* raw = read_all("Saves/1.sav", &n);
-            CHECK(raw != NULL && raw[0xB0u + 4u] == 0x15u,
-                  "the set-feature refresh rewrites from the live context");
+            /* Faithful: the set-feature walk writes a *fresh* default file
+             * per slot (SaveWriteFresh), not the live context's records. */
+            CHECK(raw != NULL && n >= 0xB0u + 4u + SAVE_BLOB_SIZE
+                      && raw[0xB0u + 4u] == 0x00u,
+                  "the set-feature refresh rewrites each slot fresh");
             free(raw);
         }
     }

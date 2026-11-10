@@ -10,6 +10,7 @@
 #include "ai.hpp"
 #include "frontend.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/record.hpp"
 #include "gods98/input.hpp"
 #include "render.hpp"
 #include "gods98/sound.hpp"
@@ -97,6 +98,41 @@ static int selection_candidate_filter_pool_refresh_callback(
     return 0;
 }
 
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+/* EntityTypeComponentGet (FUN_0044a200) indexes the retail entity record as
+ * 32-bit words. EntitySlot is a port sidecar whose attached-record fields are
+ * native-width on this build, so read them through their named members (the
+ * same +0x0c/+0x10/+0x14/+0x18/+0x1c/+0x20 slots) instead of by word index. */
+static void* selection_entity_type_component(const EntitySlot* e)
+{
+    const void* record = NULL;
+    switch (e->type) {
+    case 1:
+        record = e->attached_direction_record_type1;
+        return record != NULL
+            ? (void*)(uintptr_t)scene_object_resource_get(record) : NULL;
+    case 2:
+        record = e->attached_direction_record_type2;
+        break;
+    case 3:
+        record = e->attached_direction_record_type3;
+        break;
+    case 4:
+        record = e->attached_direction_record_type4;
+        break;
+    case 10:
+        record = e->attached_direction_record_type10;
+        break;
+    default:
+        if ((e->flags_3e8 & 0x00020000u) != 0u)
+            return (void*)e->type_operation_fallback_1c;
+        return (void*)e;
+    }
+    return record != NULL
+        ? (void*)(uintptr_t)animation_object_handle_get(record) : NULL;
+}
+#endif
+
 // FUNCTION: LEGORR 0x004526e0
 int selection_candidate_filter_active(void* entity, int mode, int param_3)
 {
@@ -145,8 +181,13 @@ int selection_candidate_filter_active(void* entity, int mode, int param_3)
     if ((e->flags_3e8 & 0x80u) != 0u
         && ((entity_stats_word_get(e) & 0x20000u) == 0u
             || e->owner_36c != NULL)) {
+#if defined(_MSC_VER) && defined(_M_IX86)
         sound_submission_route_wrapper(entity_type_component_get(e),
                                        0x11, 0, 1, NULL);
+#else
+        sound_submission_route_wrapper(selection_entity_type_component(e),
+                                       0x11, 0, 1, NULL);
+#endif
         return 1;
     }
     return 0;

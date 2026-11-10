@@ -6047,8 +6047,8 @@ int resource_tree_callback_walk(ResourceTreeNode* root, int depth,
     if (root == NULL || callback == NULL) return 0;
     if (callback(root, context) != 0) return 1;
     for (i = 0u; i < root->child_count; ++i) {
-        result = resource_tree_callback_walk(root->children[i], depth + 1,
-                                             callback, context);
+        result = unported_ledger_stubs::resource_tree_callback_walk(
+            root->children[i], depth + 1, callback, context);
         if (result != 0) return 1;
     }
     return 0;
@@ -6311,7 +6311,7 @@ void* resource_name_register_or_query(ResourceTreeNode* root,
         ? *match_count_or_index : 0u;
     query.search_mode = mode;
     query.case_sensitive = 0;
-    (void)resource_tree_callback_walk(root, 0,
+    (void)unported_ledger_stubs::resource_tree_callback_walk(root, 0,
         (ResourceTreeNodeCallback)resource_name_match_callback, &query);
     if (mode == 1) {
         if (match_count_or_index != NULL)
@@ -6328,8 +6328,8 @@ void* ledger_stub_00473bc0_ResourceNameRegisterOrQuery(
     ResourceTreeNode* root, const char* name, int mode,
     uint32_t* match_count_or_index)
 {
-    return resource_name_register_or_query(root, name, mode,
-                                           match_count_or_index);
+    return unported_ledger_stubs::resource_name_register_or_query(
+        root, name, mode, match_count_or_index);
 }
 
 // ResourceTreeCallbackWalk
@@ -6337,7 +6337,8 @@ int ledger_stub_00476330_ResourceTreeCallbackWalk(
     ResourceTreeNode* root, int depth,
     ResourceTreeNodeCallback callback, void* context)
 {
-    return resource_tree_callback_walk(root, depth, callback, context);
+    return unported_ledger_stubs::resource_tree_callback_walk(
+        root, depth, callback, context);
 }
 
 // NestedRecordListRemoveMatchingKey

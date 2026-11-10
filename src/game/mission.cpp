@@ -552,8 +552,16 @@ static void mission_task_config_values_refresh(GameContext* ctx,
         mission_task_quota_refresh(t);
         /* Defaults: absence parses as 0; the corpus reads the same way. */
     }
-    mission_crystal_quota_setup(cfg, util_root_name(cfg),
-        string_path_join("Levels", level, (const char*)0));
+    {
+        /* string_path_join returns its single static scratch buffer, which
+         * the nested join inside the setup would overwrite while reading
+         * this argument; hand it a private copy. */
+        char levels_path[256];
+        strncpy(levels_path, string_path_join("Levels", level, (const char*)0),
+                sizeof(levels_path) - 1u);
+        levels_path[sizeof(levels_path) - 1u] = '\0';
+        mission_crystal_quota_setup(cfg, util_root_name(cfg), levels_path);
+    }
     ctx->crystal_quota = s_crystal_quota;
     s_task_init_binding = previous;
 }

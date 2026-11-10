@@ -62,14 +62,17 @@ int main(void)
     CHECK(engine_voxel_byte(&ctx, 0, 0, 0x04) == 7,
           "bind: surface byte reads through");
 
-    /* view terrain pick uses the bound voxel surface byte. */
+    /* The faithful follow camera takes its height from the bound terrain
+     * state (level_terrain), no longer from the voxel surface byte; with no
+     * terrain bound the height is the terrain-less 0, whatever the voxel
+     * byte holds. */
     ViewContext v = {};
     v.mode = 1;
     v.offset[0] = 0.0f;
     v.offset[1] = 0.0f;
     view_tick(&v, &ctx, 1.0f / 30.0f, 1.0f);
-    CHECK(v.cam_facing.pos[2] == 7.0f,
-          "view: camera height follows the voxel surface byte");
+    CHECK(v.cam_facing.pos[2] == 0.0f,
+          "view: camera height comes from the terrain state, not the voxel byte");
 
     /* The engine-state flag one-liner (2026-10-24). */
     {
@@ -299,10 +302,13 @@ int main(void)
         global_state_low_byte_clear_and_refresh();
         CHECK(global_state_low_word_get() == 0x12345600u,
               "the low byte clears and the high bytes stay");
-        void* last = NULL;
-        int flag = -1;
-        scene_visibility_last_call(&last, &flag);
-        CHECK(scene_visibility_calls() == 1 && last == (void*)obj && flag == 1,
+        /* SurfaceVisibilitySet now calls SceneRenderLockToggle directly (the
+         * faithful retail call sequence) instead of the recording adapter, so
+         * observe the mode-1 effect on the object itself: the lock bit (0x8)
+         * of its flag word at +0x14 is raised. */
+        uint32_t obj_flags = 0u;
+        memcpy(&obj_flags, obj + 0x14, sizeof obj_flags);
+        CHECK((obj_flags & 8u) != 0u,
               "the refresh record rides the visibility leaf with mode 1");
         global_state_low_word_set(0u);
         global_refresh_record_set(NULL);

@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "resource.hpp"
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
 #include "game/frontend.hpp"
@@ -14,6 +15,7 @@
 #include "game/level.hpp"
 #include "game/select.hpp"
 #include "gods98/heap.hpp"
+#include "gods98/resource.hpp"
 #include "gods98/media.hpp"
 
 #define HUD_FIX "hud_fixture"
@@ -50,6 +52,21 @@ static EntitySlot* make_ent(GameContext* ctx, int type, const char* name)
     int idx = entity_create(ctx, type, name, 0, 0, 0, 0);
     CHECK(idx >= 0, "entity_create");
     return (EntitySlot*)entity_at(ctx, type, idx);
+}
+
+/* The faithful CmdTickGlobal only retires records already marked DONE (task
+ * records now stay queued until completed), so each block that expects an
+ * empty global list drains it explicitly: mark every record DONE, then tick. */
+static void drain_global_list(void)
+{
+    for (void* rec = cmd_global_head(); rec != NULL; rec = cmd_global_next(rec)) {
+        cmd_rec_state_set(rec, cmd_rec_state(rec) | CMD_STATE_DONE);
+    }
+    for (void* rec = cmd_global_pending_head(); rec != NULL;
+         rec = cmd_global_next(rec)) {
+        cmd_rec_state_set(rec, cmd_rec_state(rec) | CMD_STATE_DONE);
+    }
+    cmd_tick_global();
 }
 
 int main(void)
@@ -142,7 +159,7 @@ int main(void)
     CHECK(cmd_rec_kind(cmd_global_head()) == 3, "train task kind 3");
 
     /* Global tick drains the list (the AI receivers are stub boundaries). */
-    cmd_tick_global();
+    drain_global_list();
 
     /* Queue executor: 5-dword records, ping-pong, opcode switch. */
     cmd_context_set(&ctx);
@@ -190,7 +207,12 @@ int main(void)
               "the zero reference rides past too");
     }
 
-    /* Chain purge returns records to the pool. */
+    /* Chain purge returns records to the pool. The faithful CmdChainPurge
+     * only retires records already marked DONE (live ones are re-sorted and
+     * kept), so complete the entity's chain first. */
+    for (void* rec = d->cmd_head; rec != NULL; rec = cmd_rec_next(rec)) {
+        cmd_rec_state_set(rec, cmd_rec_state(rec) | CMD_STATE_DONE);
+    }
     cmd_chain_purge(d);
     CHECK(d->cmd_head == NULL, "purge clears the chain head");
     void* reused = cmd_alloc(0);
@@ -275,6 +297,7 @@ int main(void)
         GameContext sctx;
         game_context_init(&sctx);
         cmd_context_set(&sctx);
+        drain_global_list();
 
         void* arr = (void*)1;
         unsigned cnt = 77;
@@ -354,6 +377,7 @@ int main(void)
         GameContext lctx;
         game_context_init(&lctx);
         cmd_context_set(&lctx);
+        drain_global_list();
 
         /* (Re)build the hand-built level block: 8x8, no voxels yet. */
         static LevelState lvl;
@@ -391,6 +415,7 @@ int main(void)
         GameContext rctx;
         game_context_init(&rctx);
         cmd_context_set(&rctx);
+        drain_global_list();
         EntitySlot* x1 = make_ent(&rctx, 1, "rem1");
         EntitySlot* x2 = make_ent(&rctx, 1, "rem2");
         selection_add(&rctx, x1);
@@ -412,6 +437,7 @@ int main(void)
         GameContext fctx;
         game_context_init(&fctx);
         cmd_context_set(&fctx);
+        drain_global_list();
 
         EntitySlot bad;
         memset(&bad, 0, sizeof(bad));
@@ -492,6 +518,7 @@ int main(void)
         GameContext mctx;
         game_context_init(&mctx);
         cmd_context_set(&mctx);
+        drain_global_list();
         selection_add(&mctx, &head);
         CHECK(selected_entity_state_monitor() == 1, "the monitor answers count");
         CHECK((owner.flags_3e4 & 8u) != 0u && owner.owner_36c == &grand,
@@ -506,6 +533,11 @@ int main(void)
               "the stats bit clears the owner's word and bit 3");
 
         selection_add(&mctx, &owner); /* second entry: two corpus-shaped passes */
+        /* The faithful monitor also tears the head entity down after
+         * inspecting it, which drops its stats/owner link, so re-arm the head
+         * before the next pair of passes. */
+        head.stats_record = stats_img;
+        head.owner_36c = &owner;
         owner.owner_36c = &grand;
         owner.flags_3e4 |= 8u;
         CHECK(selected_entity_state_monitor() == 2
@@ -520,6 +552,9 @@ int main(void)
         GameContext qctx;
         game_context_init(&qctx);
         cmd_context_set(&qctx);
+        drain_global_list();
+
+        drain_global_list(); /* earlier blocks leave their task records queued */
 
         /* Deferred schedule: attach mirror clear + flag clear creates the
          * task through the ported fallback. */
@@ -531,7 +566,7 @@ int main(void)
                   && cmd_rec_type(cmd_global_head()) == 3
                   && cmd_rec_payload(cmd_global_head()) == &work,
               "the fallback task is created (pool seam misses)");
-        cmd_tick_global();
+        drain_global_list();
 
         /* The gates: attach set, or the flag bit — nothing scheduled. */
         work.attach_304 = (const void*)1;
@@ -570,7 +605,7 @@ int main(void)
         const uint32_t st = cmd_rec_state(cmd_global_head());
         CHECK((st & 0x40040u) == 0x40040u && (st & 0x10u) == 0u,
               "the state bits raise 6/14/18 and clear bit 4");
-        cmd_tick_global();
+        drain_global_list();
         const uint32_t off = 0u;
         memcpy(vimg + 0x148, &off, 4); /* the state-flag gate closes */
         entity_command15_validated_record_queue(&good);
@@ -584,15 +619,18 @@ int main(void)
         GameContext xctx;
         game_context_init(&xctx);
         cmd_context_set(&xctx);
+        drain_global_list();
 
         /* Priority tables: zero-start round-trip and the guarded edges. */
         CHECK(priority_entry_state_get(10) == 0, "the state table starts zero");
         priority_entry_state_set(10, 7);
         CHECK(priority_entry_state_get(10) == 7, "the state write lands");
-        priority_entry_state_set(60, 1);
-        CHECK(priority_entry_state_get(60) == 0
-                  && priority_entry_state_get(26) == 0,
-              "the guarded edges stay untouched");
+        /* priority_entry_state_set/get are now faithful direct indexed
+         * accesses of DAT_004b7ff4[kind] with no bound guard, so the old
+         * out-of-range "guarded edges" write was removed; the last in-range
+         * entry still starts zero. */
+        CHECK(priority_entry_state_get(26) == 0,
+              "the last in-range entry starts zero");
         priority_entry_state_set(10, 0);
 
         const int save_behaviour = cmd_kind_behaviour(3);
@@ -617,7 +655,8 @@ int main(void)
         cmd_set_kind(head, 1);
         CHECK(cmd_rec_kind(head) == 1 && cmd_rec_behaviour(head) == 99,
               "the marker bits pin behaviour 99");
-        cmd_set_kind(NULL, 1); /* guarded */
+        /* cmd_set_kind(NULL, ...) is no longer guarded (FUN_00402060 reads the
+         * record words directly), so the NULL call was dropped. */
 
         /* Mark matching: type + payload, or type + coordinate pair. */
         cmd_rec_state_set(head, 0u);
@@ -635,7 +674,7 @@ int main(void)
         cmd_mark_matching(3, 0, zero_pair);
         CHECK((cmd_rec_state(head) & 0x10000u) != 0u,
               "the coordinate pair match raises bit 16");
-        cmd_tick_global();
+        drain_global_list();
         cmd_context_set(&ctx);
     }
 
@@ -644,6 +683,7 @@ int main(void)
         GameContext rctx;
         game_context_init(&rctx);
         cmd_context_set(&rctx);
+        drain_global_list();
         cmd_init();
         CHECK(cmd_global_enabled_peek() == 1, "the word starts at bit 0");
         cmd_flush_all(1);
@@ -668,16 +708,18 @@ int main(void)
         engine_memory_free(NULL);
 
         cmd_init();
+        /* The batch issuer links through CmdLinkTail, which the faithful port
+         * lands on the pending (tail) list rather than the head list. */
         entity_command14_batch_issue(1);
-        CHECK(cmd_global_head() != NULL
-                  && cmd_rec_type(cmd_global_head()) == 4
-                  && cmd_rec_kind(cmd_global_head()) == 0x14
-                  && (cmd_rec_state(cmd_global_head()) & 0x40u) == 0u,
+        CHECK(cmd_global_pending_head() != NULL
+                  && cmd_rec_type(cmd_global_pending_head()) == 4
+                  && cmd_rec_kind(cmd_global_pending_head()) == 0x14
+                  && (cmd_rec_state(cmd_global_pending_head()) & 0x40u) == 0u,
               "a nonzero count issues an unflagged record");
         cmd_init();
         entity_command14_batch_issue(0);
-        CHECK(cmd_global_head() != NULL
-                  && (cmd_rec_state(cmd_global_head()) & 0x40u) != 0u,
+        CHECK(cmd_global_pending_head() != NULL
+                  && (cmd_rec_state(cmd_global_pending_head()) & 0x40u) != 0u,
               "the zero count raises bit 6");
 
         cmd_init();
@@ -695,7 +737,9 @@ int main(void)
               "the batched setup still lands the head record");
         {
             int seen_head = cmd_rec_type(cmd_global_head());
-            void* cur = cmd_global_next(cmd_global_head());
+            /* The batch (type 4) and gather (type 0x18) records ride the
+             * pending list behind the head-linked 0x1b setup record. */
+            void* cur = cmd_global_pending_head();
             int seen = 1;
             int batch_seen = 0, gather_seen = 0;
             while (cur != NULL) {
@@ -705,7 +749,10 @@ int main(void)
                 if (cmd_rec_type(cur) == 0x18) {
                     gather_seen = 1;
                 }
-                cur = cmd_global_next(cur);
+                /* The gather record is threaded by its +0x60 timer link
+                 * (`next`), the batch record by the global link. */
+                void* following = cmd_rec_next(cur);
+                cur = following != NULL ? following : cmd_global_next(cur);
                 ++seen;
             }
             CHECK(seen_head == 0x1b && batch_seen && gather_seen,
@@ -723,6 +770,7 @@ int main(void)
         GameContext cctx;
         game_context_init(&cctx);
         cmd_context_set(&cctx);
+        drain_global_list();
 
         /* Cancel-ref: the marking walk raises bit 5 on the referenced
          * type-0x13 record; the 0x13 side takes the callback seam. */
@@ -788,7 +836,7 @@ int main(void)
                   && (cmd_rec_state(cmd_global_head()) & 0x100010u) == 0x100010u
                   && (cmd_rec_state(cmd_global_head()) & 0x40u) == 0u,
               "the conditional task lands (latch, kind, bits)");
-        cmd_tick_global();
+        drain_global_list();
         entity_conditional_task_schedule(&cond);
         CHECK(cmd_global_head() == NULL, "the latch blocks the second pass");
         cond.flags_3ec = 0u;
@@ -811,15 +859,15 @@ int main(void)
                   && cmd_rec_kind(cmd_global_head()) == 7
                   && (cmd_rec_state(cmd_global_head()) & 0x200000u) == 0u,
               "the clear flag links kind 7");
-        cmd_tick_global();
+        drain_global_list();
         entity_threshold_progress_event_queue(&host, 1);
         CHECK(cmd_global_head() != NULL
                   && cmd_rec_kind(cmd_global_head()) == 0x13
                   && (cmd_rec_state(cmd_global_head()) & 0x200000u) != 0u,
               "the set flag links kind 0x13 and raises bit 21");
-        cmd_tick_global();
+        drain_global_list();
         entity_threshold_progress_event_queue(NULL, 0);
-        cmd_tick_global();
+        drain_global_list();
 
         /* Target queue: the record chains onto the entity, never the list. */
         cmd_init();
@@ -855,6 +903,7 @@ int main(void)
         GameContext sctx;
         game_context_init(&sctx);
         cmd_context_set(&sctx);
+        drain_global_list();
         cmd_init();
 
         /* Record array: the empty selection guards everything out. */
@@ -911,11 +960,11 @@ int main(void)
         CHECK((cmd_rec_state(cmd_global_head()) & 0x40u) == 0u,
               "bit 6 stays clear");
         CHECK(kinded.flags_3e4 == 0x10u, "the latch raises bit 4");
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         entity_kind_command_issue(&kinded);
         CHECK(cmd_global_head() == NULL, "the latch blocks the second pass");
-        cmd_tick_global();
+        drain_global_list();
         entity_kind_command_issue(NULL); /* guarded */
 
         /* The +0x3c arms: stats pair shapes. */
@@ -945,7 +994,7 @@ int main(void)
                      arms[a].what);
             int got = head != NULL ? cmd_rec_extra_get(head) : -1;
             CHECK(got == arms[a].want, msg);
-            cmd_tick_global();
+            drain_global_list();
         }
 
         /* Bit 20: the capability bit plus the gate. */
@@ -967,7 +1016,7 @@ int main(void)
         CHECK((cmd_rec_state(cmd_global_head()) & 0x100000u) != 0u
                   && (cmd_rec_state(cmd_global_head()) & 0x140u) == 0x100u,
               "the armed record raises bit 20 and keeps bit 8");
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         armed.flags_3e4 = 0u;   /* unlatch for the gated run */
         armed.flags_3e0 = 0x400u; /* the gate blocks bit 20 */
@@ -975,7 +1024,7 @@ int main(void)
         CHECK((cmd_rec_state(cmd_global_head()) & 0x100000u) == 0u
                   && (cmd_rec_state(cmd_global_head()) & 0x140u) == 0x100u,
               "the gated record skips bit 20 (mode 1 half)");
-        cmd_tick_global();
+        drain_global_list();
         sctx.selection_count = 0;
         sctx.selection[0] = NULL;
 
@@ -993,6 +1042,7 @@ int main(void)
         GameContext lctx;
         game_context_init(&lctx);
         cmd_context_set(&lctx);
+        drain_global_list();
         static LevelState lvl;
         memset(&lvl, 0, sizeof(lvl));
         memset(grid, 0, sizeof(grid));
@@ -1055,7 +1105,7 @@ int main(void)
               "the set flag skips the terrain half");
 
         /* The clear-flag arm: bit 3 drops and the terrain half runs. */
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         terrain_cell_command_create(1, 1, 0, 0);
         CHECK((cmd_rec_state(cmd_global_head()) & 0x8u) == 0u
@@ -1067,7 +1117,7 @@ int main(void)
               "the clear flag raises the cell's bit 0x800000");
 
         /* Kind-nine issue: the guards, then the full shape. */
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         CHECK(kind_nine_cell_command_issue(2, 2, 1) == 0,
               "the state-1 cell is refused");
@@ -1087,7 +1137,7 @@ int main(void)
               "the occupied mark refuses the second issue");
 
         /* Type-0x14 issue: the bounded flag-8 read gates it. */
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         cell_command_type13_issue(4, 4);
         CHECK(cmd_global_head() == NULL, "the plain cell issues nothing");
@@ -1100,7 +1150,7 @@ int main(void)
               "the flagged cell issues the type-0x14 record");
 
         /* Type-0xf issue: no guard, the secondary bit 3 mark. */
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         cell_command_type11_issue(3, 3);
         CHECK(cmd_global_head() != NULL
@@ -1109,7 +1159,7 @@ int main(void)
                   && cmd_rec_kind(cmd_global_head()) == 4
                   && level_cell_secondary_flag_8(&lvl, 3, 3) != 0u,
               "the type-0xf record links at kind 4 and marks the cell");
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         CHECK(cmd_rec_cell_xy_get(NULL, NULL, NULL) == 0,
               "the guarded reads answer zero");
@@ -1119,7 +1169,7 @@ int main(void)
         CHECK(cmd_global_head() != NULL
                   && cmd_rec_type(cmd_global_head()) == 8,
               "the record lands even with the terrain handle absent");
-        cmd_tick_global();
+        drain_global_list();
 #undef CELL
 #undef PUT32
 #undef GET32
@@ -1133,6 +1183,7 @@ int main(void)
         GameContext kctx;
         game_context_init(&kctx);
         cmd_context_set(&kctx);
+        drain_global_list();
         cmd_init();
 
         EntitySlot worker;
@@ -1159,7 +1210,7 @@ int main(void)
                   && cmd_rec_kind(cmd_global_head()) == 0xc
                   && (cmd_rec_state(cmd_global_head()) & 0x40u) == 0u,
               "selector 1 links the task at kind 0xc");
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
 
         /* The selector-to-kind map, staged bit by bit. */
@@ -1178,7 +1229,7 @@ int main(void)
                   "the selector lands its kind and the +0x3c selector");
             task_type23_create_for_category_mask(&worker, 0, 0);
             task_type23_create_for_category_mask(&worker, 0x21, 0);
-            cmd_tick_global();
+            drain_global_list();
         }
         /* Out-of-map selectors never pass the gate. */
         cmd_init();
@@ -1189,7 +1240,7 @@ int main(void)
         task_type23_create_for_category_mask(&worker, 0x100, 1);
         CHECK(cmd_global_head() == NULL,
               "out-of-map selectors issue nothing");
-        cmd_tick_global();
+        drain_global_list();
 
         /* The record-array half rides the caller argument: bit 8 raised,
          * bit 6 still clear after the link. */
@@ -1205,7 +1256,7 @@ int main(void)
                   && cmd_rec_extra_get(cmd_global_head()) == 1
                   && cmd_rec_count_get(cmd_global_head()) == 1u,
               "the set argument runs the record-array half (bit 8 survives)");
-        cmd_tick_global();
+        drain_global_list();
         kctx.selection_count = 0;
         kctx.selection[0] = NULL;
         cmd_init();
@@ -1217,6 +1268,7 @@ int main(void)
         GameContext pctx;
         game_context_init(&pctx);
         cmd_context_set(&pctx);
+        drain_global_list();
         cmd_init();
 
         /* Kind support: the stats gate, the unconditional arms, the misses. */
@@ -1324,6 +1376,7 @@ int main(void)
         GameContext qctx;
         game_context_init(&qctx);
         cmd_context_set(&qctx);
+        drain_global_list();
         cmd_init();
         EntitySlot host;
         memset(&host, 0, sizeof(host));
@@ -1336,7 +1389,7 @@ int main(void)
 #define CHAIN_COUNT(out)                                                     \
     do {                                                                     \
         int n_ = 0;                                                          \
-        for (void* cur_ = cmd_global_head(); cur_ != NULL;                   \
+        for (void* cur_ = cmd_global_pending_head(); cur_ != NULL;           \
              cur_ = cmd_global_next(cur_)) {                                 \
             ++n_;                                                            \
         }                                                                    \
@@ -1358,7 +1411,7 @@ int main(void)
                              == &host,
                   "the pair and the +0x54 payload land");
         }
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
 
         /* Object event type-2 queue: selection half plus the flag shape. */
@@ -1371,54 +1424,55 @@ int main(void)
                           & CMD_STATE_PENDING) != 0u
                   && cmd_rec_count_get(cmd_global_head()) == 1u,
               "bit 8 rides the selection, bit 6 stays clear, bit 4 is up");
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
 
-        /* The tail-landing producers. */
+        /* The tail-landing producers: these link through CmdLinkTail, which the
+         * faithful port lands on the pending (tail) list, not the head list. */
         const int tp[2] = { 5, 6 };
         coordinate_pair_task_record_queue(tp);
-        CHECK(cmd_global_head() != NULL
-                  && cmd_rec_type(cmd_global_head()) == 0
-                  && cmd_rec_kind(cmd_global_head()) == 0x1a
-                  && (cmd_rec_state(cmd_global_head()) & 0x50u) == 0x40u,
+        CHECK(cmd_global_pending_head() != NULL
+                  && cmd_rec_type(cmd_global_pending_head()) == 0
+                  && cmd_rec_kind(cmd_global_pending_head()) == 0x1a
+                  && (cmd_rec_state(cmd_global_pending_head()) & 0x50u) == 0x40u,
               "the pair task record tails at 0x1a (bit 6, no bit 4)");
         {
             int cx = -1, cy = -1;
-            cmd_rec_cell_xy_get(cmd_global_head(), &cx, &cy);
+            cmd_rec_cell_xy_get(cmd_global_pending_head(), &cx, &cy);
             CHECK(cx == 5 && cy == 6, "the pair lands as words");
         }
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         scalar_task_record_queue(&host);
-        CHECK(cmd_global_head() != NULL
-                  && cmd_rec_type(cmd_global_head()) == 0x1d
-                  && cmd_rec_kind(cmd_global_head()) == 0x19
-                  && cmd_rec_payload(cmd_global_head()) == &host
-                  && (cmd_rec_state(cmd_global_head()) & 0x40u) != 0u,
+        CHECK(cmd_global_pending_head() != NULL
+                  && cmd_rec_type(cmd_global_pending_head()) == 0x1d
+                  && cmd_rec_kind(cmd_global_pending_head()) == 0x19
+                  && cmd_rec_payload(cmd_global_pending_head()) == &host
+                  && (cmd_rec_state(cmd_global_pending_head()) & 0x40u) != 0u,
               "the scalar record tails at 0x19 with bit 6");
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         const int pp[2] = { 7, 8 };
         task_pair_record_enqueue(pp);
-        CHECK(cmd_global_head() != NULL
-                  && cmd_rec_type(cmd_global_head()) == 0x19
-                  && cmd_rec_kind(cmd_global_head()) == 0x18,
+        CHECK(cmd_global_pending_head() != NULL
+                  && cmd_rec_type(cmd_global_pending_head()) == 0x19
+                  && cmd_rec_kind(cmd_global_pending_head()) == 0x18,
               "the pair record tails at command 0x18");
         {
             int cx = -1, cy = -1;
-            cmd_rec_cell_xy_get(cmd_global_head(), &cx, &cy);
+            cmd_rec_cell_xy_get(cmd_global_pending_head(), &cx, &cy);
             CHECK(cx == 7 && cy == 8, "the enqueue pair lands");
         }
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         task_record_kind10_queue(&host);
-        CHECK(cmd_global_head() != NULL
-                  && cmd_rec_type(cmd_global_head()) == 10
-                  && cmd_rec_kind(cmd_global_head()) == 0x16
-                  && cmd_rec_payload(cmd_global_head()) == &host
-                  && (cmd_rec_state(cmd_global_head()) & 0x40u) != 0u,
+        CHECK(cmd_global_pending_head() != NULL
+                  && cmd_rec_type(cmd_global_pending_head()) == 10
+                  && cmd_rec_kind(cmd_global_pending_head()) == 0x16
+                  && cmd_rec_payload(cmd_global_pending_head()) == &host
+                  && (cmd_rec_state(cmd_global_pending_head()) & 0x40u) != 0u,
               "the kind-10 record tails at 0x16 with bit 6");
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
 
         /* The pair removal: first match only, interior and head shapes. */
@@ -1435,15 +1489,15 @@ int main(void)
             int cx = -1, cy = -1;
             int cnt2 = 0;
             CHAIN_COUNT(cnt2);
-            cmd_rec_cell_xy_get(cmd_global_head(), &cx, &cy);
+            cmd_rec_cell_xy_get(cmd_global_pending_head(), &cx, &cy);
             CHECK(cnt2 == 1 && cx == 3 && cy == 3,
                   "the head removal exposes the tail");
         }
         task_registry_remove_type0_entry_by_pair(r3);
-        CHECK(cmd_global_head() == NULL, "the last record goes");
+        CHECK(cmd_global_pending_head() == NULL, "the last record goes");
         task_registry_remove_type0_entry_by_pair(r3); /* empty chain */
         task_registry_remove_type0_entry_by_pair(NULL); /* guarded */
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
 
         /* The kind-10 entity removal: every match. */
@@ -1451,13 +1505,13 @@ int main(void)
         task_record_kind10_queue(&picked);
         task_record_kind10_queue(&host);
         task_registry_remove_type10_entries_for_entity(&host);
-        CHECK(cmd_global_head() != NULL
-                  && cmd_rec_payload(cmd_global_head()) == &picked
-                  && cmd_global_next(cmd_global_head()) == NULL,
+        CHECK(cmd_global_pending_head() != NULL
+                  && cmd_rec_payload(cmd_global_pending_head()) == &picked
+                  && cmd_global_next(cmd_global_pending_head()) == NULL,
               "only the other entity's entry survives");
         task_registry_remove_type10_entries_for_entity(&picked);
-        CHECK(cmd_global_head() == NULL, "the last kind-10 entries go");
-        cmd_tick_global();
+        CHECK(cmd_global_pending_head() == NULL, "the last kind-10 entries go");
+        drain_global_list();
         cmd_init();
 
         /* The timed pair. */
@@ -1471,7 +1525,7 @@ int main(void)
                   && cmd_rec_cell_count_get(timed) == 3
                   && (cmd_rec_state(timed) & 0x4d0u) == 0x4c0u,
               "the timed record links command 10 with bits 6/7/10");
-        cmd_tick_global();
+        drain_global_list();
         cmd_init();
         task_record_kind11_timed_queue(&host);
         CHECK(cmd_global_head() != NULL
@@ -1480,7 +1534,7 @@ int main(void)
                   && cmd_rec_payload(cmd_global_head()) == &host
                   && (cmd_rec_state(cmd_global_head()) & 0xd0u) == 0xc0u,
               "the kind-11 timed record links command 0 with bits 6/7");
-        cmd_tick_global();
+        drain_global_list();
         qctx.selection_count = 0;
         qctx.selection[0] = NULL;
         cmd_init();
@@ -1493,6 +1547,7 @@ int main(void)
         GameContext lctx;
         game_context_init(&lctx);
         cmd_context_set(&lctx);
+        drain_global_list();
         cmd_init();
         EntitySlot host;
         memset(&host, 0, sizeof(host));
@@ -1530,7 +1585,8 @@ int main(void)
               "the raw move writes no timestamp and no flags");
         cmd_init();
 
-        /* The bit-13 arm lands on the same port chain: the corpus tail
+        /* The bit-13 arm links through CmdLinkTail onto the pending list (the
+         * faithful port no longer shares the head chain). The corpus: the corpus tail
          * test is `test ch,0x20` (0x40421b) — state bit 13, not the bit
          * 16 that cmd_mark_matching raises. */
         mv = cmd_alloc(9);
@@ -1540,8 +1596,8 @@ int main(void)
         host.cmd_head = mv;
         cmd_rec_set_next(mv, tail);
         CHECK(entity_command_chain_head_remove(&host) == tail
-                  && cmd_global_head() == mv,
-              "the bit-13 head lands on the global chain too");
+                  && cmd_global_pending_head() == mv,
+              "the bit-13 head lands on the pending (tail) chain");
         cmd_init();
 
         /* Corpus quirk kept: a marked (bit-16) head matches no arm — the
@@ -1574,8 +1630,8 @@ int main(void)
         entity_drain_command_chain(&host);
         CHECK(host.cmd_head == NULL
                   && cmd_global_head() == pend
-                  && cmd_global_next(pend) == bit13,
-              "the drained chain lands pend then bit-13 tail");
+                  && cmd_global_pending_head() == bit13,
+              "the drained chain lands pend on the head, bit-13 on the tail");
         CHECK(cmd_rec_state(pend) & CMD_STATE_PENDING ? 1 : 0,
               "the drained pending record stays pending");
         CHECK(cmd_rec_now(pend) == 1500.0f && cmd_rec_now(bit13) == 1500.0f,
@@ -1653,10 +1709,11 @@ int main(void)
                   && cmd_rec_next(k1) == k3
                   && cmd_rec_next(k3) == NULL,
               "the sweep keeps k1->k3 with k2 orphaned (corpus quirk)");
-        CHECK(cmd_global_head() == t13
-                  && cmd_global_next(t13) == ph
-                  && cmd_global_next(ph) == NULL,
-              "the raw moves land t13 then ph on the global chain");
+        CHECK(cmd_global_head() == ph
+                  && cmd_global_next(ph) == NULL
+                  && cmd_global_pending_head() == t13
+                  && cmd_global_next(t13) == NULL,
+              "the raw moves land ph on the head and t13 on the tail chain");
         CHECK(cmd_rec_now(ph) == ph_now
                   && cmd_rec_state(ph) == 0x10u
                   && cmd_rec_state(t13) == 0x2000u,
@@ -1752,6 +1809,7 @@ int main(void)
         memset(&plain, 0, sizeof plain);
         game_context_init(&sctx);
         cmd_context_set(&sctx);
+        drain_global_list();
         slvl.word[0x14 / 4] = 8; /* width */
         slvl.word[0x18 / 4] = 8; /* height */
         slvl.ptr_voxels = sgrid;
@@ -1825,6 +1883,7 @@ int main(void)
         GameContext lctx;
         game_context_init(&lctx);
         cmd_context_set(&lctx);
+        drain_global_list();
         static LevelState lvl;
         memset(&lvl, 0, sizeof lvl);
         lvl.word[0x14 / 4] = 8; /* width  */
@@ -1870,6 +1929,7 @@ int main(void)
         GameContext ectx;
         game_context_init(&ectx);
         cmd_context_set(&ectx);
+        drain_global_list();
         const int ia = entity_create(&ectx, 2, "b1", 0, 0, 0, 0);
         const int ib = entity_create(&ectx, 2, "b2", 0, 0, 0, 0);
         EntitySlot* ent_a = (EntitySlot*)entity_at(&ectx, 2, ia);
@@ -2043,6 +2103,12 @@ int main(void)
         sctx.level = &lvl;
         level_set_int(&lvl, LEVEL_OFF_WIDTH, 5);
         level_set_int(&lvl, LEVEL_OFF_HEIGHT, 7);
+        /* The erosion candidate check reads the current level's voxels
+         * directly (no bounds/NULL guard), so the scratch level needs a
+         * zeroed voxel grid (flag word 0: no cell is eligible). */
+        static uint8_t sweep_voxels[5 * 7 * LEVEL_VOXEL_STRIDE];
+        memset(sweep_voxels, 0, sizeof sweep_voxels);
+        lvl.ptr_voxels = sweep_voxels;
 
         /* A positive timer counts down, draws nothing, folds to zero. */
         level_random_seed_set(12345u);
@@ -2184,6 +2250,9 @@ int main(void)
         if (chdir(HUD_FIX) != 0) {
             fprintf(stderr, "hud band: chdir failed\n");
         }
+        /* File opens resolve under the CD root; the fixture is the CWD. */
+        resource_set_cd_root(".");
+        resource_set_cd_data_dir(".");
         void* terrain = terrain_create("L01_surface.map", 1.0f);
         CHECK(terrain != NULL, "terrain built from the surface map");
         static LevelState lvl;
@@ -2341,6 +2410,7 @@ int main(void)
         GameContext fresh;
         game_context_init(&fresh);
         cmd_context_set(&fresh);
+        drain_global_list();
         EntitySlot* holder = make_ent(&fresh, 1, "attach-holder");
 
         /* Stage three type-3 task records: rec_new (head) -> rec_old ->

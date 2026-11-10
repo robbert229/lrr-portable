@@ -11587,8 +11587,8 @@ float entity_path_step_advance_and_arrival_check(EntitySlot* entity,
     if (state->waypoint_index != entity->wp_index ||
         state->total_length <= 0.0f) {
         state->carry_progress = 0.0f;
-        (void)entity_step_movement_vector_resolve(entity, 0,
-            (entity->flags_3e8 & 8u) != 0u,
+        (void)unported_ledger_stubs::entity_step_movement_vector_resolve(
+            entity, 0, (entity->flags_3e8 & 8u) != 0u,
             (entity->flags_3e0 & 0x400u) == 0u);
     }
     if (state->waypoint_index != entity->wp_index) return (float)entity->flags_3e0;
@@ -11728,7 +11728,8 @@ float entity_path_step_advance_and_arrival_check(EntitySlot* entity,
 float ledger_stub_004438b0_PathStepAdvanceAndArrivalCheck(
     EntitySlot* entity, float delta)
 {
-    return entity_path_step_advance_and_arrival_check(entity, delta);
+    return unported_ledger_stubs::entity_path_step_advance_and_arrival_check(
+        entity, delta);
 }
 
 // ActivityTimeoutAccumulateAndRaise
@@ -11829,9 +11830,8 @@ int ledger_stub_00444680_StepMovementVectorResolve(
     EntitySlot* entity, int advance, int use_saved_vector,
     int steering_mode)
 {
-    return entity_step_movement_vector_resolve(entity, advance,
-                                               use_saved_vector,
-                                               steering_mode);
+    return unported_ledger_stubs::entity_step_movement_vector_resolve(
+        entity, advance, use_saved_vector, steering_mode);
 }
 
 

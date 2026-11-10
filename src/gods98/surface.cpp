@@ -3363,6 +3363,10 @@ int surface_active_pixel_writer_configure(
     SurfaceRawUnlockFn unlock;
 #if defined(LEGORRR_BACKEND_MINIWIN)
     DDSURFACEDESC descriptor;
+    uint32_t bits_per_pixel;
+    uint32_t red_mask;
+    uint32_t green_mask;
+    uint32_t blue_mask;
 #else
     uint32_t descriptor[31];
     uint32_t bits_per_pixel;
@@ -3384,7 +3388,11 @@ int surface_active_pixel_writer_configure(
     memset(descriptor, 0, sizeof(descriptor));
     descriptor[0] = 0x7cu;
 #endif
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (lock(surface, NULL, &descriptor, 1u, NULL) != 0) return 0;
+#else
     if (lock(surface, NULL, descriptor, 1u, NULL) != 0) return 0;
+#endif
 #if defined(LEGORRR_BACKEND_MINIWIN)
     bits_per_pixel = descriptor.ddpfPixelFormat.dwRGBBitCount;
     red_mask = descriptor.ddpfPixelFormat.dwRBitMask;
@@ -4305,7 +4313,11 @@ int surface_palette_entries_set(DisplaySurface* surface, unsigned int start,
         native_entries[index].peRed = entries[index].red;
         native_entries[index].peGreen = entries[index].green;
         native_entries[index].peBlue = entries[index].blue;
+#if defined(LEGORRR_BACKEND_MINIWIN)
+        native_entries[index].peFlags = static_cast<PCFlags>(entries[index].flags);
+#else
         native_entries[index].peFlags = entries[index].flags;
+#endif
     }
     return ((LPDIRECTDRAWPALETTE)surface->palette)->SetEntries(
         0u, start, count, native_entries) == DD_OK;
@@ -6382,7 +6394,11 @@ int surface_pixel_format_query_convert_surface(
     memset(descriptor, 0, sizeof(descriptor));
     descriptor[0] = 0x7cu;
 #endif
+#if defined(LEGORRR_BACKEND_MINIWIN)
+    if (lock(surface, NULL, &descriptor, 1u, NULL) != 0) return 0;
+#else
     if (lock(surface, NULL, descriptor, 1u, NULL) != 0) return 0;
+#endif
 #if defined(LEGORRR_BACKEND_MINIWIN)
     height = descriptor.dwHeight;
     width = descriptor.dwWidth;

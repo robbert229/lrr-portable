@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 // AI execution receivers (finding 10 open item) — the entity-manager tick.
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "game/ai.hpp"
 #include "game/cmd.hpp"
@@ -26,19 +29,103 @@ static int s_failures = 0;
         }                                                                      \
     } while (0)
 
+#define FIX_DIM 128
+
+/* A FIX_DIM x FIX_DIM all-zero surface map for the scratch terrain. */
+static void write_surface_map(const char* path)
+{
+    FILE* fp = fopen(path, "wb");
+    if (fp == NULL) {
+        return;
+    }
+    const char magic[4] = { 'M', 'A', 'P', ' ' };
+    const uint32_t len = FIX_DIM * FIX_DIM * 2, w = FIX_DIM, h = FIX_DIM;
+    static const uint16_t cells[FIX_DIM * FIX_DIM] = { 0 };
+    fwrite(magic, 1, 4, fp);
+    fwrite(&len, 1, 4, fp);
+    fwrite(&w, 1, 4, fp);
+    fwrite(&h, 1, 4, fp);
+    fwrite(cells, 1, sizeof(cells), fp);
+    fclose(fp);
+}
+
+/* Scratch terrain the faithful route code resolves cells through. Entity
+ * positions in this test are WORLD coordinates (blocksize 1: cell centres sit
+ * on integer world coordinates, y flipped); move targets are cells. */
+static void* s_fix_terrain;
+static LevelState fix_level;
+static uint8_t fix_grid[FIX_DIM * FIX_DIM * LEVEL_VOXEL_STRIDE];
+/* A minimal Stats record: only RouteSpeed (+0x20) set, so the faithful
+ * 0x446610 / entity_route_speed path yields 0.08 * 25 = 2 world units/s. */
+static uint8_t s_fix_stats[ENTITY_STATS_RECORD_SIZE];
+
 static EntitySlot* place(GameContext* ctx, int type, const char* name,
                          float x, float y)
 {
     int idx = entity_create(ctx, type, name, x, y, 0, 0);
     CHECK(idx >= 0, "entity_create");
-    return (EntitySlot*)entity_at(ctx, type, idx);
+    EntitySlot* e = (EntitySlot*)entity_at(ctx, type, idx);
+    if (e != NULL && e->stats_record == NULL) {
+        e->stats_record = s_fix_stats;
+    }
+    return e;
 }
 
-/* Run ai_tick `n` times at dt, returning completions summed. */
+static void cell_of(float wx, float wy, int* cx, int* cy)
+{
+    *cx = 0;
+    *cy = 0;
+    CHECK(terrain_world_xy_to_cell(s_fix_terrain, wx, wy, cx, cy) != 0,
+          "world position resolves to a cell");
+}
+
+/* Fixture voxel flag word of the cell under a WORLD position. */
+static uint32_t* fix_flags(float wx, float wy)
+{
+    int cx, cy;
+    cell_of(wx, wy, &cx, &cy);
+    return (uint32_t*)(fix_grid + ((size_t)cy * FIX_DIM + (size_t)cx) *
+                                      LEVEL_VOXEL_STRIDE + 8);
+}
+
+/* Stand an entity at the centre of grid cell (cx, cy). */
+static void set_cell(EntitySlot* e, int cx, int cy)
+{
+    float w[2] = { 0.0f, 0.0f };
+    CHECK(terrain_cell_world_center_xy_transform(s_fix_terrain, cx, cy, w) != 0,
+          "cell centre resolves");
+    e->x = w[0];
+    e->y = w[1];
+}
+
+/* cmd_create_move toward a WORLD position: the faithful record carries the
+ * target CELL, resolved through the scratch terrain. */
+static void move_to(EntitySlot* e, float wx, float wy, int flag)
+{
+    int cx = 0, cy = 0;
+    CHECK(terrain_world_xy_to_cell(s_fix_terrain, wx, wy, &cx, &cy) != 0,
+          "move target resolves to a cell");
+    cmd_create_move(e, (float)cx, (float)cy, flag);
+}
+
+/* One application frame, `n` times at dt: the game-layer move/target/task
+ * pass (ai_tick), then the per-entity callback receiver. The faithful
+ * ai_tick no longer runs the flag/callback branches itself (the engine's
+ * EntityFrameUpdateDispatch walker owns them and their liveness filter), so
+ * the harness plays that walker: every live slot gets ai_entity_frame_update
+ * after the pass. */
 static void run(GameContext* ctx, int n, float dt)
 {
     for (int i = 0; i < n; ++i) {
         ai_tick(ctx, dt);
+        for (int t = 0; t < ENTITY_TYPES; ++t) {
+            for (int k = 0; k < ctx->entity_count[t]; ++k) {
+                EntitySlot* e = &ctx->entity[t][k];
+                if (e->type != 0) {
+                    ai_entity_frame_update(e, dt);
+                }
+            }
+        }
     }
 }
 
@@ -411,9 +498,50 @@ int main(int argc, char** argv)
     game_context_init(&ctx);
     cmd_context_set(&ctx);
 
+    /* The faithful move route (cmd_move_route_prepare / step_path) resolves
+     * cells through the level's terrain, so the context needs a level backed
+     * by a real terrain (file opens resolve under the CD root: the fixture
+     * directory). */
+    system("rm -rf ai_fixture");
+    mkdir("ai_fixture", 0755);
+    write_surface_map("ai_fixture/L01_surface.map");
+    if (chdir("ai_fixture") != 0) {
+        fprintf(stderr, "ai_test: chdir failed\n");
+        return 1;
+    }
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
+    s_fix_terrain = terrain_create("L01_surface.map", 1.0f);
+    void* const fix_terrain = s_fix_terrain;
+    {
+        const float route_speed = 0.08f;
+        const uint32_t walk_relief = 0x2000000u;
+        const float surface_scale = 1.0f; /* terrain never slows the route */
+        memcpy(s_fix_stats + 0x20, &route_speed, sizeof(route_speed));
+        memcpy(s_fix_stats + 0xd4, &surface_scale, sizeof(surface_scale));
+        memcpy(s_fix_stats + 0x144, &walk_relief, sizeof(walk_relief));
+        /* A bound Stats record owns the activity capacity (+0xcc, 0x46a060);
+         * without it the grant setter sees a cap-0 entity and does nothing. */
+        const uint32_t activity_cap = AI_ACTIVITY_SLOTS;
+        memcpy(s_fix_stats + 0xcc, &activity_cap, sizeof(activity_cap));
+    }
+    CHECK(fix_terrain != NULL, "scratch terrain");
+    memset(&fix_level, 0, sizeof(fix_level));
+    level_set_int(&fix_level, LEVEL_OFF_WIDTH, FIX_DIM);
+    level_set_int(&fix_level, LEVEL_OFF_HEIGHT, FIX_DIM);
+    fix_level.ptr_voxels = fix_grid;
+    fix_level.ptr_terrain = fix_terrain;
+    /* Every cell reads walkable to the faithful route gate (flag 0x8). */
+    for (int c = 0; c < FIX_DIM * FIX_DIM; ++c) {
+        const uint32_t walkable = 0x8u;
+        memcpy(fix_grid + c * LEVEL_VOXEL_STRIDE + 8, &walkable,
+               sizeof(walkable));
+    }
+    ctx.level = &fix_level;
+
     /* Move execution: entity at (0,0) moves to (10,0) at 2 cells/s. */
     EntitySlot* mover = place(&ctx, 1, "mover", 0, 0);
-    cmd_create_move(mover, 10.0f, 0.0f, 0);
+    move_to(mover, 10.0f, 0.0f, 0);
     int before = ai_commands_active(&ctx);
     CHECK(before >= 1, "move enqueued");
     run(&ctx, 2, 0.5f);
@@ -425,40 +553,43 @@ int main(int argc, char** argv)
     CHECK(ai_commands_active(&ctx) == 0, "no live commands after the move");
     CHECK((mover->flags_3e0 & 0x8u) == 0, "arrival clears the +0x3e0 move flag");
 
-    /* --- path list (corpus +0x24 mirror; creator seeding, arrival pop) --- */
+    /* --- path list (corpus +0x24 mirror; lazy route build, arrival pop) --- */
 
-    /* A move command seeds a one-entry path and raises the mover flag. */
+    /* The faithful creator (0x4035c0) only links the record; the route is
+     * built lazily on the first tick by cmd_move_route_prepare, from the
+     * entity's start CELL through to the target cell (both endpoints), so
+     * four cells of travel is a five-entry list. */
     EntitySlot* walker = place(&ctx, 1, "walker", 0, 0);
-    cmd_create_move(walker, 4.0f, 0.0f, 0);
-    CHECK(walker->wp_count == 1 && walker->wp[0].pending == 1,
-          "move seeds a one-entry path list");
-    CHECK((walker->flags_3e0 & 0x8u) != 0, "move sets the +0x3e0 mover flag");
-    run(&ctx, 2, 0.5f); /* 2 of 4 cells */
-    CHECK(walker->wp_index == 0 && walker->wp[0].pending == 1,
+    move_to(walker, 4.0f, 0.0f, 0);
+    CHECK(walker->wp_count == 0 && (walker->flags_3e0 & 0x1u) == 0,
+          "the creator seeds no path and raises no mover flag");
+    run(&ctx, 1, 0.5f); /* 1 of 4 cells */
+    CHECK(walker->wp_count == 5 && (walker->flags_3e0 & 0x1u) != 0,
+          "the first tick routes start..target and raises the mover flag");
+    run(&ctx, 1, 0.5f); /* 2 of 4 cells */
+    CHECK(walker->wp_index == 3,
           "mid-path entry stays pending (pop is arrival-only)");
     run(&ctx, 3, 0.5f);
     CHECK(walker->x >= 3.9f, "walker arrives at the waypoint");
-    CHECK(walker->wp[0].pending == 0 && walker->wp_index == 1,
-          "arrival pops the pending flag in place (corpus pop semantics)");
-    CHECK((walker->flags_3e0 & 0x8u) == 0 && walker->cmd_head == NULL,
-          "path exhaustion completes the command and clears the flag");
+    CHECK((walker->flags_3e0 & 0x1u) == 0 && walker->cmd_head == NULL &&
+              walker->wp_count == 0,
+          "path exhaustion completes the command, clears the flag and path");
 
-    /* Multi-waypoint: the tick walks entries in order, popping each. */
+    /* Chained moves: the tick walks the first record to arrival, then the
+     * next queued record routes from where the first ended. */
     EntitySlot* courier = place(&ctx, 1, "courier", 0, 0);
-    cmd_create_move(courier, 4.0f, 0.0f, 0);
-    CHECK(ai_path_append(courier, 4.0f, 4.0f) == 1, "waypoint appended");
-    run(&ctx, 4, 0.5f); /* exactly the first hop */
+    move_to(courier, 4.0f, 0.0f, 0);
+    move_to(courier, 4.0f, 4.0f, 0);
+    run(&ctx, 4, 0.5f); /* exactly the first leg (1 cell per tick) */
     CHECK(courier->x >= 3.9f && courier->y < 1.0f, "first waypoint reached");
-    CHECK(courier->wp_index == 1 && courier->wp[0].pending == 0 &&
-              courier->wp[1].pending == 1 && courier->cmd_head != NULL,
-          "pop advances to the second entry, command stays live");
-    CHECK((courier->flags_3e0 & 0x8u) != 0, "mid-path mover flag stays set");
+    CHECK(courier->cmd_head != NULL && courier->wp_count == 0,
+          "the first leg retires, the second command stays live");
+    run(&ctx, 1, 0.5f);
+    CHECK((courier->flags_3e0 & 0x1u) != 0 && courier->wp_count == 5,
+          "mid-chain mover flag is up on the second leg's route");
     run(&ctx, 6, 0.5f);
     CHECK(courier->x >= 3.9f && courier->y >= 3.9f, "second waypoint reached");
-    CHECK(courier->wp[1].pending == 0 && courier->cmd_head == NULL,
-          "final pop completes the command");
-    CHECK(ai_path_append(courier, 0.0f, 0.0f) == 0,
-          "a fully popped path restarts the buffer");
+    CHECK(courier->cmd_head == NULL, "final leg completes the command");
 
     /* Target execution: A chases B. */
     EntitySlot* chaser = place(&ctx, 2, "chaser", 0, 0);
@@ -491,7 +622,13 @@ int main(int argc, char** argv)
     /* Queue -> executor -> ai: selection move via opcode 5 executes. */
     EntitySlot* digger = place(&ctx, 1, "digger", 0, 0);
     selection_add(&ctx, digger);
-    selection_cmd_move(&ctx, 5, 5);
+    {
+        /* The pointer command takes a grid CELL: resolve world (5,5). */
+        int cx5 = 0, cy5 = 0;
+        CHECK(terrain_world_xy_to_cell(s_fix_terrain, 5.0f, 5.0f, &cx5, &cy5),
+              "world (5,5) resolves to a cell");
+        selection_cmd_move(&ctx, cx5, cy5);
+    }
     cmd_queue_tick();
     run(&ctx, 20, 0.5f);
     CHECK(digger->x >= 4.9f && digger->y >= 4.9f, "queue move executes");
@@ -522,6 +659,9 @@ int main(int argc, char** argv)
           "activity name lookup covers all labels and rejects invalid ids");
     EntitySlot* actor = place(&ctx, 3, "actor", 0, 0);
     ai_set_activity(actor, AI_ACT_COLLECT, 7);
+    /* FUN_004409e0 leaves +0x2ec alone; the paired FUN_00447c40 bookkeeping
+     * observes the change and commits activity_last (faithful split). */
+    activity_register_bookkeeping(actor);
     CHECK(actor->activity == AI_ACT_COLLECT && actor->activity_param == 7 &&
               actor->activity_timer == 0.0f,
           "ai_set_activity mirrors +0x2e8/+0x2d8/+0x2d4");
@@ -547,18 +687,26 @@ int main(int argc, char** argv)
               cmd_rec_next(actor->cmd_head) == NULL,
           "repeat completion: early-return path attaches nothing");
 
-    /* Wake timer (0x43c870): flags tick but movement freezes. */
+    /* Wake timer (0x43c870): the callback ticks the timer and returns early
+     * (no further callback behaviour). The faithful ai_tick no longer gates
+     * its ordinary kind-0 mover on this flag (movement is the engine's
+     * separate command pass), so the old "movement freezes" assertions are
+     * replaced by the callback's own return value and activity-timer hold. */
     EntitySlot* sleeper = place(&ctx, 1, "sleeper", 0, 0);
-    cmd_create_move(sleeper, 100.0f, 0.0f, 0);
+    move_to(sleeper, 60.0f, 0.0f, 0);
     sleeper->flags_3e4 |= 0x08000000u;
     sleeper->wake_timer = 0.3f;
-    run(&ctx, 1, 0.5f);
-    CHECK(sleeper->x == 0.0f, "wake state early-returns (no movement)");
+    sleeper->activity_timer = 0.0f;
+    CHECK(ai_entity_frame_update(sleeper, 0.5f) == 1,
+          "wake state early-returns from the callback");
+    CHECK(sleeper->activity_timer == 0.0f,
+          "the early return skips the activity-timer refresh");
     CHECK(sleeper->wake_timer > -0.3f && sleeper->wake_timer < -0.1f,
           "wake timer still decrements");
     sleeper->flags_3e4 = 0;
-    run(&ctx, 1, 0.5f);
-    CHECK(sleeper->x > 0.0f, "movement resumes when wake flag clears");
+    CHECK(ai_entity_frame_update(sleeper, 0.5f) == 0 &&
+              sleeper->activity_timer == 0.5f,
+          "callback resumes (and refreshes the activity timer) once the wake flag clears");
 
     /* Target acquisition (0x43c8b2). */
     EntitySlot* linker = place(&ctx, 1, "linker", 0, 0);
@@ -629,18 +777,19 @@ int main(int argc, char** argv)
      * from the chain-head record's +0x38 field, installs it through the
      * setter, and returns early — the chain head does not run that tick. */
     EntitySlot* grantee = place(&ctx, 1, "grantee", 0, 0);
-    cmd_create_move(grantee, 10.0f, 0.0f, 0);
+    move_to(grantee, 10.0f, 0.0f, 0);
     CHECK(grantee->cmd_head != NULL, "move record at the chain head");
     if (grantee->cmd_head != NULL) {
         cmd_rec_set_activity(grantee->cmd_head, AI_ACT_TELEPORT);
     }
     grantee->flags_3e4 |= 0x00000040u;
-    float x_before_grant = grantee->x;
-    run(&ctx, 1, 0.5f);
+    /* The branch lives in the callback receiver; ai_tick's separate mover
+     * pass is not gated by it, so drive the receiver directly. */
+    CHECK(ai_entity_frame_update(grantee, 0.5f) == 1,
+          "grant branch returns early from the callback");
     CHECK((grantee->flags_3e4 & 0x00000040u) == 0, "grant flag consumed");
     CHECK(ai_activity_scan(grantee, AI_ACT_TELEPORT) == 1,
           "record grant lands on the entity's list");
-    CHECK(grantee->x == x_before_grant, "grant branch returns early that tick");
     grantee->act_count = 0;
 
     /* --- minion task-state (spawn-dispatch switch 0x438150) ------------- *
@@ -673,9 +822,13 @@ int main(int argc, char** argv)
      * activity capacity (state +0xcc, FUN_0046a060) on the static-template
      * types; the type-2 spawn grant (Activity_Stand) is untouched. */
     EntitySlot* minion8 = place(&ctx, 8, "minion", 0, 0);
+    /* The spawn sets the task state; its capacity is bound from a same-name
+     * Stats row (entity_task_state_capacity_bind) and stays 0 when no row
+     * exists, as here. Bind it by hand for the grant tests below. */
     CHECK(minion8->task_state == AI_TASK_STATE_MINION_1 &&
-              minion8->activity_cap == AI_ACTIVITY_SLOTS,
-          "minion spawn assigns task state and capacity");
+              minion8->activity_cap == 0,
+          "minion spawn assigns the task state; capacity needs a Stats row");
+    minion8->activity_cap = AI_ACTIVITY_SLOTS;
     CHECK(minion8->act_count == 0 && ai_activity_probe(minion8) == 0,
           "ungranted minion activity still fails the probe");
     EntitySlot* plain_special = place(&ctx, 15, "plain_special", 0, 0);
@@ -719,20 +872,21 @@ int main(int argc, char** argv)
               ai_activity_scan(minion8, AI_ACT_ROUTE) == 1,
           "full cap-1 list drops the oldest (FIFO)");
     minion8->act_count = 0;
-    minion8->activity_cap = 0; /* unset -> ctx default again */
-    int default_cap = ctx.stats_activity_cap;
-    ctx.stats_activity_cap = 0; /* corpus cap-0 state: grant runs nothing */
+    /* A task-state entity reads ONLY its own capacity (the context default
+     * is just the fallback for entities with neither task state nor Stats),
+     * so an unbound cap-0 state makes grants a no-op like the corpus. */
+    minion8->activity_cap = 0;
     ai_activity_grant(&ctx, minion8, AI_ACT_ROUTE_RUBBLE);
     CHECK(minion8->act_count == 0 &&
               ai_activity_scan(minion8, AI_ACT_ROUTE_RUBBLE) == 0,
           "zero capacity makes grants a no-op");
-    ctx.stats_activity_cap = default_cap;
 
     /* Deferred grant cleanup (0x43da8b): after installing the chain-head
      * grant, the corpus unlinks and frees every type-0x13 record
      * (FUN_00403d10(ent, 0x13, 0, 1)) — the port's cmd_chain_drop. */
     EntitySlot* grantee2 = place(&ctx, 8, "grantee2", 0, 0);
-    cmd_create_move(grantee2, 10.0f, 0.0f, 0);
+    grantee2->activity_cap = AI_ACTIVITY_SLOTS; /* no Stats row to bind it */
+    move_to(grantee2, 10.0f, 0.0f, 0);
     if (grantee2->cmd_head != NULL) {
         cmd_rec_set_activity(grantee2->cmd_head, AI_ACT_DRILL);
         void* grec = cmd_alloc(0x13); /* type-0x13 grant record */
@@ -740,12 +894,11 @@ int main(int argc, char** argv)
         cmd_rec_set_next(grec, NULL);
     }
     grantee2->flags_3e4 |= 0x00000040u;
-    float x_before_cleanup = grantee2->x;
-    run(&ctx, 1, 0.5f);
+    CHECK(ai_entity_frame_update(grantee2, 0.5f) == 1,
+          "cleanup branch returns early from the callback");
     CHECK((grantee2->flags_3e4 & 0x00000040u) == 0, "cleanup consumes flag");
     CHECK(ai_activity_scan(grantee2, AI_ACT_DRILL) == 1,
           "head grant lands on the minion list");
-    CHECK(grantee2->x == x_before_cleanup, "cleanup branch returns early");
     {
         int has_13 = 0;
         int recs = 0;
@@ -783,74 +936,69 @@ int main(int argc, char** argv)
     waker->flags_3e4 = 0;
 
     /* Idle registration (0x43c94d + FUN_0043a960 table/cap). */
+    /* The faithful FUN_0043a960 skips entities whose stats word carries the
+     * walk-relief bit 0x02000000 (every fixture mover), and resolves the
+     * tile through the level terrain: the idler gets no Stats record and
+     * stands on an idle-type cell of the fixture level. */
     EntitySlot* idler = place(&ctx, 1, "idler", 0, 0);
+    idler->stats_record = NULL;
     int idle0 = ai_idle_count();
+    int idle_cx = 0, idle_cy = 0;
+    CHECK(terrain_world_xy_to_cell(s_fix_terrain, 0.0f, 0.0f, &idle_cx,
+                                   &idle_cy),
+          "idler cell resolves");
+    uint8_t* const idle_voxel =
+        fix_grid + (idle_cy * FIX_DIM + idle_cx) * LEVEL_VOXEL_STRIDE;
+    idle_voxel[2] = (uint8_t)TILE_TYPE_IDLE;
     idler->flags_3ec |= 0x40u;
     run(&ctx, 1, 0.5f);
     CHECK(ai_idle_count() == idle0 + 1, "idle table registration");
     CHECK((idler->flags_3ec & 0x40u) == 0, "idle flag cleared");
     idler->flags_3ec |= 0x40u;
     run(&ctx, 1, 0.5f);
-    CHECK(ai_idle_count() == idle0 + 1, "no duplicate registration");
+    /* The faithful table append has no dedupe (it only caps at 100), so a
+     * re-raised flag registers the entity a second time. */
+    CHECK(ai_idle_count() == idle0 + 2, "re-registration appends (no dedupe)");
+    idle_voxel[2] = 0;
 
-    /* --- tile-map wiring (FUN_00432770 / FUN_00432e00 / '\t' probe) ----- */
+    /* --- tile-map wiring (faithful route gate over the fixture grid) ---- *
+     * The faithful mover routes through terrain_neighbor_path_check, whose
+     * per-cell gate (0x432770 family) lets a plain entity enter a cell only
+     * when the voxel flag word carries 0x8. The legacy 0x10-layer/0x40-wall/
+     * 0x8000000-occupancy model of the pre-#372 stand-in is gone from the
+     * mover, so these scenarios drive the same intents (blocked, detour,
+     * executor) through that flag. */
 
     {
-        static uint8_t voxels[16 * 16 * 0x48];
-        LevelState map;
-        memset(&map, 0, sizeof(map));
-        memset(voxels, 0, sizeof(voxels));
-        level_set_int(&map, LEVEL_OFF_WIDTH, 16);
-        level_set_int(&map, LEVEL_OFF_HEIGHT, 16);
-        level_store_ptr(&map, LEVEL_OFF_VOXELS, voxels);
-        ctx.level = &map;
-
-        /* Unwalkable start (no 0x10 layer bit): the move command is live
-         * but the walker must not budge; the mover state marks the cell. */
+        /* A target cell without the walk flag cannot be routed: the command
+         * stays live and the walker does not budge (no straight-line
+         * fallback); once the cell opens the walker finishes the move. */
         EntitySlot* stuck = place(&ctx, 1, "stuck", 0, 0);
-        cmd_create_move(stuck, 4.0f, 0.0f, 0);
+        uint32_t* const goal_flags = fix_flags(4.0f, 0.0f);
+        const uint32_t goal_saved = *goal_flags;
+        *goal_flags = 0u;
+        move_to(stuck, 4.0f, 0.0f, 0);
         run(&ctx, 2, 0.5f);
-        CHECK(stuck->x == 0.0f && stuck->cmd_head != NULL,
-              "unwalkable cell freezes the walker");
-        uint32_t* f00 = (uint32_t*)(voxels + 0 * 16 * 0x48 + 0 * 0x48 + 8);
-        CHECK((*f00 & 0x8000000u) != 0, "move state marks the cell occupied");
-
-        /* Blocked by type: walkable flags everywhere but a type-7 tile at
-         * the walker's cell keeps it put. */
-        for (int cy = 0; cy < 3; ++cy) {
-            for (int cx = 0; cx < 8; ++cx) {
-                uint32_t* f = (uint32_t*)(voxels + (size_t)cy * 16 * 0x48 +
-                                          (size_t)cx * 0x48 + 8);
-                *f |= 0x10u;
-            }
-        }
-        voxels[0 * 16 * 0x48 + 0 * 0x48 + 2] = 7; /* blocked type */
-        run(&ctx, 2, 0.5f);
-        CHECK(stuck->x == 0.0f, "type-7 tile keeps the walker on the tile");
-        voxels[0 * 16 * 0x48 + 0 * 0x48 + 2] = 0;
-        run(&ctx, 5, 0.5f);
+        CHECK(stuck->x == 0.0f && stuck->cmd_head != NULL &&
+                  stuck->wp_count == 0,
+              "an unroutable target keeps the walker put with its command live");
+        *goal_flags = goal_saved;
+        run(&ctx, 6, 0.5f);
         CHECK(stuck->x >= 3.9f && stuck->cmd_head == NULL,
-              "unblocked walker finishes the move");
-        uint32_t* f40 = (uint32_t*)(voxels + (size_t)(4 * 0x48) + 8);
-        CHECK((*f40 & 0x8000000u) == 0, "arrival clears the occupancy flag");
-        CHECK(*f00 & 0x8000000u, "the departure cell stays marked (corpus "
-                                 "clears only the arrival cell)");
+              "the walker finishes the move once the target opens");
 
-        /* Pathfinder builder: a dispatch on a clean grid reroutes around
-         * a blocked column, filling a multi-entry list the walker walks
-         * cell by cell without ever landing on the wall. */
-        memset(voxels, 0, sizeof(voxels));
-        for (int cy = 0; cy <= 13; ++cy) {
-            for (int cx = 0; cx <= 13; ++cx) {
-                *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
-            }
-        }
-        for (int cy = 1; cy <= 5; ++cy) {
-            *(uint32_t*)(voxels + ((size_t)cy * 16 + 5) * 0x48 + 8) |= 0x40u;
+        /* Detour: a wall column (cells without the walk flag) forces a
+         * multi-entry route around it; the walker never stands on the wall. */
+        uint32_t wall_saved[5];
+        for (int wy = 1; wy <= 5; ++wy) {
+            wall_saved[wy - 1] = *fix_flags(5.0f, (float)wy);
+            *fix_flags(5.0f, (float)wy) = 0u;
         }
         EntitySlot* detour = place(&ctx, 1, "detour", 1, 3);
-        cmd_create_move(detour, 9.0f, 3.0f, 0);
-        CHECK(detour->wp_count > 1, "pathfinder fills a multi-entry list");
+        move_to(detour, 9.0f, 3.0f, 0);
+        run(&ctx, 1, 0.5f);
+        CHECK(detour->wp_count > 9,
+              "the pathfinder routes around the wall (longer than straight)");
         int arrived = 0;
         for (int t = 0; t < 40 && !arrived; ++t) {
             run(&ctx, 1, 0.5f);
@@ -859,102 +1007,22 @@ int main(int argc, char** argv)
                   "the detour never lands on the blocked column");
             arrived = detour->cmd_head == NULL;
         }
-        CHECK(arrived && detour->x == 9.0f && detour->y == 3.0f,
+        CHECK(arrived && fabsf(detour->x - 9.0f) < 0.01f &&
+                  fabsf(detour->y - 3.0f) < 0.01f,
               "the walker reroutes around the blocked column");
 
-        /* --- wave-flood pathfinder core (FUN_00430ee0/FUN_00430530 port) - *
-         * The seed spreads the wave from the target, marks walked cells
-         * with flag 0x40000, and the traceback walks back to the start
-         * through the flags & 8 gate — issue #70. */
-
-        /* Multi-cell path on a clean grid: a straight 4-cell flood to a
-         * target one margin-row away, installed in walk order. */
-        memset(voxels, 0, sizeof(voxels));
-        for (int cy = 0; cy <= 13; ++cy) {
-            for (int cx = 0; cx <= 13; ++cx) {
-                *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
-            }
-        }
-        EntitySlot* runner = place(&ctx, 1, "runner", 1, 1);
-        cmd_create_move(runner, 5.0f, 1.0f, 0);
-        CHECK(runner->wp_count == 4,
-              "wave-flood builds the multi-cell path on a clean grid");
-        CHECK(runner->wp[0].x == 2.0f && runner->wp[3].x == 5.0f &&
-                  runner->wp[3].y == 1.0f,
-              "the traceback installs the flooded cells in walk order");
-        CHECK(ai_wave_flood_count() > runner->wp_count,
-              "the wave spread marks more cells with flag 0x40000 than the path uses");
-        for (int t = 0; t < 12 && runner->cmd_head != NULL; ++t) {
-            run(&ctx, 1, 0.5f);
-        }
-        CHECK(runner->x == 5.0f && runner->y == 1.0f &&
-                  runner->cmd_head == NULL,
-              "the walker walks every flooded cell and arrives");
-
-        /* Retargeting mid-move (PR #87 feedback): the walker's own cell
-         * carries its occupancy reservation every tick (0x43deed), so a
-         * rebuild while the command is live must exempt it — otherwise
-         * the wave can never root at the start and every mid-move
-         * retarget silently drops to the direct fallback. */
-        memset(voxels, 0, sizeof(voxels));
-        for (int cy = 0; cy <= 13; ++cy) {
-            for (int cx = 0; cx <= 13; ++cx) {
-                *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
-            }
-        }
-        EntitySlot* retarget = place(&ctx, 1, "retarget", 1, 5);
-        cmd_create_move(retarget, 8.0f, 5.0f, 0);
-        CHECK(retarget->wp_count == 7,
-              "the first build routes the seven-cell move");
-        run(&ctx, 1, 0.1f); /* mid-move: the walker marks cell (1,5) */
-        CHECK(retarget->cmd_head != NULL, "the retarget move is still live");
-        CHECK(ai_path_build(&ctx, retarget, 8.0f, 5.0f) == 7,
-              "the rebuild exempts the mover's own reservation at the start");
-        for (int t = 0; t < 15 && retarget->cmd_head != NULL; ++t) {
-            run(&ctx, 1, 0.5f);
-        }
-        CHECK(retarget->cmd_head == NULL && retarget->x == 8.0f &&
-                  retarget->y == 5.0f,
-              "the rebuilt route walks to the target");
-
-        /* Seed flag footprint (PR #87 feedback): record 12 raises the
-         * flag over the northwest 2x2 block including the seed cell,
-         * (-1,-1), (0,-1), (0,0), (-1,0) — not the cardinal neighbours.
-         * A target one step east of the start pins the count: footprint
-         * {(2,11),(3,11),(3,12),(2,12)} plus the wave's only spread entry
-         * (4,12) gives exactly five flagged cells; cardinal-neighbour
-         * marking gives four and misses the seed cell itself. */
-        EntitySlot* seedcell = place(&ctx, 1, "seedcell", 2, 12);
-        CHECK(ai_path_build(&ctx, seedcell, 3.0f, 12.0f) == 1,
-              "a one-step target roots a one-cell traceback");
-        CHECK(ai_wave_flood_count() == 5,
-              "the seed raises record 12's northwest 2x2 footprint flag");
-
-        /* Move-command path through the executor (T2): the demo's own
-         * route — a selection opcode-5 move dispatches through the queue
-         * executor into CmdCreateMove, which builds the path with the
-         * wave-flood core. On a bound grid with a blocked column in the
-         * way, the command installs a multi-cell wave-built list that
-         * walks around the column, popping waypoints on arrival. */
-        memset(voxels, 0, sizeof(voxels));
-        for (int cy = 0; cy <= 13; ++cy) {
-            for (int cx = 0; cx <= 13; ++cx) {
-                *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
-            }
-        }
-        for (int cy = 1; cy <= 5; ++cy) {
-            *(uint32_t*)(voxels + ((size_t)cy * 16 + 5) * 0x48 + 8) |= 0x40u;
-        }
+        /* Executor path: a selection opcode-5 move dispatches through the
+         * queue executor into CmdCreateMove and walks around the same wall. */
         EntitySlot* mailrun = place(&ctx, 1, "mailrun", 1, 3);
         selection_add(&ctx, mailrun);
-        selection_cmd_move(&ctx, 9, 3); /* demo 'm': opcode 5 -> CmdCreateMove */
+        {
+            int mx, my;
+            cell_of(9.0f, 3.0f, &mx, &my);
+            selection_cmd_move(&ctx, mx, my); /* demo 'm': opcode 5 */
+        }
         cmd_queue_tick(); /* the per-frame executor (FUN_004520d0) */
         CHECK(mailrun->cmd_head != NULL && cmd_rec_type(mailrun->cmd_head) == 0,
               "queue move dispatches a move command onto the chain");
-        CHECK(mailrun->wp_count > 1,
-              "the executor move installs a multi-cell wave-built path");
-        CHECK(ai_wave_flood_count() > mailrun->wp_count,
-              "the wave spread marked more cells than the path used");
         int mail_arrived = 0;
         for (int t = 0; t < 40 && !mail_arrived; ++t) {
             run(&ctx, 1, 0.5f);
@@ -964,95 +1032,212 @@ int main(int argc, char** argv)
                   "the executor move never lands on the blocked column");
             mail_arrived = mailrun->cmd_head == NULL;
         }
-        CHECK(mail_arrived && mailrun->x == 9.0f && mailrun->y == 3.0f,
-              "the move command's wave route reroutes around the column");
-        CHECK((mailrun->flags_3e0 & 0x8u) == 0,
-              "arrival clears the +0x3e0 move flag");
+        CHECK(mail_arrived && fabsf(mailrun->x - 9.0f) < 0.01f &&
+                  fabsf(mailrun->y - 3.0f) < 0.01f,
+              "the move command's route reroutes around the column");
+        CHECK((mailrun->flags_3e0 & 0x1u) == 0,
+              "arrival clears the +0x3e0 mover flag");
         selection_clear(&ctx);
 
-        /* Unreachable target: the blocked column now spans the whole grid,
-         * so the wave floods the target side, exhausts, and the traceback
-         * never roots at the start. */
-        for (int cy = 0; cy <= 13; ++cy) {
-            *(uint32_t*)(voxels + ((size_t)cy * 16 + 5) * 0x48 + 8) |= 0x40u;
-        }
-        EntitySlot* stranded = place(&ctx, 1, "stranded", 1, 5);
-        CHECK(ai_path_build(&ctx, stranded, 9.0f, 5.0f) == 0,
-              "unreachable target across the full wall yields no path");
-        CHECK(stranded->wp_count == 0,
-              "a failed build installs nothing (the creator keeps its fallback)");
-        CHECK(ai_wave_flood_count() > 0,
-              "the wave still spread across the target side before exhausting");
-
-        /* Equal cells: the seed validates the target (it is the start), so
-         * the traceback is a zero-cell walk and yields no path — the
-         * creator's one-hop fallback seeds, and the walker arrives in the
-         * same tick. */
+        /* Equal cells: the route is the one start cell and finishes on the
+         * first tick. */
         EntitySlot* parked = place(&ctx, 1, "parked", 1, 3);
-        CHECK(ai_path_build(&ctx, parked, 1.0f, 3.0f) == 0,
-              "start-equal-target builds no path");
-        cmd_create_move(parked, 1.0f, 3.0f, 0);
-        CHECK(parked->wp_count == 1,
-              "the equal-cell move keeps the one-hop fallback seed");
+        move_to(parked, 1.0f, 3.0f, 0);
         run(&ctx, 1, 0.5f);
         CHECK(parked->cmd_head == NULL && parked->x == 1.0f,
-              "the zero-distance fallback completes on the first tick");
+              "the zero-distance move completes on the first tick");
 
-        /* Idle probe (FUN_0043a960): the flag registers only on '\t' cells. */
+        /* Unreachable target: the wall spans the whole column, so the route
+         * search exhausts and the command is left live and unrouted. */
+        uint32_t* col_saved = (uint32_t*)malloc(FIX_DIM * sizeof(uint32_t));
+        for (int cy = 0; cy < FIX_DIM; ++cy) {
+            uint32_t* f = (uint32_t*)(fix_grid +
+                ((size_t)cy * FIX_DIM + 70u) * LEVEL_VOXEL_STRIDE + 8);
+            col_saved[cy] = *f;
+            *f = 0u;
+        }
+        EntitySlot* stranded = place(&ctx, 1, "stranded", 1, 5);
+        int wall_cx, wall_cy;
+        cell_of(1.0f, 5.0f, &wall_cx, &wall_cy);
+        {
+            /* target on the far side of grid column 70 (world x = 39) */
+            float tx[2] = { 0, 0 };
+            (void)tx;
+            move_to(stranded, 39.0f, 5.0f, 0);
+        }
+        run(&ctx, 2, 0.5f);
+        CHECK(stranded->wp_count == 0 && stranded->cmd_head != NULL &&
+                  stranded->x == 1.0f,
+              "an unreachable target installs no route and the walker stays");
+        cmd_chain_purge(stranded);
+        for (int cy = 0; cy < FIX_DIM; ++cy) {
+            *(uint32_t*)(fix_grid +
+                ((size_t)cy * FIX_DIM + 70u) * LEVEL_VOXEL_STRIDE + 8) =
+                col_saved[cy];
+        }
+        free(col_saved);
+        for (int wy = 1; wy <= 5; ++wy) {
+            *fix_flags(5.0f, (float)wy) = wall_saved[wy - 1];
+        }
+
+        /* Idle probe (FUN_0043a960): the flag registers only on '\t' cells.
+         * The flag is consumed either way. */
         EntitySlot* idler2 = place(&ctx, 1, "idler2", 8, 0);
+        idler2->stats_record = NULL;
         int idle1 = ai_idle_count();
         idler2->flags_3ec |= 0x40u;
         run(&ctx, 1, 0.5f);
         CHECK(ai_idle_count() == idle1,
               "idle registration blocked off the '\\t' tile");
-        voxels[(size_t)0 * 16 * 0x48 + (size_t)8 * 0x48 + 2] = '\t';
-        idler2->flags_3ec |= 0x40u;
-        run(&ctx, 1, 0.5f);
-        CHECK(ai_idle_count() == idle1 + 1, "idle registration on '\\t' tile");
+        {
+            int ix, iy;
+            cell_of(8.0f, 0.0f, &ix, &iy);
+            uint8_t* const iv = fix_grid +
+                ((size_t)iy * FIX_DIM + (size_t)ix) * LEVEL_VOXEL_STRIDE;
+            iv[2] = '\t';
+            idler2->flags_3ec |= 0x40u;
+            run(&ctx, 1, 0.5f);
+            CHECK(ai_idle_count() == idle1 + 1,
+                  "idle registration on '\\t' tile");
+            iv[2] = 0;
+        }
+    }
 
+    /* --- legacy wave-flood builder (FUN_00430ee0/FUN_00430530), direct ---- *
+     * ai_path_build is no longer the mover's route source (the faithful
+     * creator seeds nothing and the tick routes through the terrain path
+     * finder), but the builder is still ported and callable. These cases
+     * drive it directly on a terrain-less synthetic grid (0x10 layer bit
+     * walkable, 0x40 wall, 0x40000 wave mark) — issue #70. */
+    {
+        static uint8_t voxels[16 * 16 * 0x48];
+        LevelState map;
+        memset(&map, 0, sizeof(map));
+        memset(voxels, 0, sizeof(voxels));
+        level_set_int(&map, LEVEL_OFF_WIDTH, 16);
+        level_set_int(&map, LEVEL_OFF_HEIGHT, 16);
+        level_store_ptr(&map, LEVEL_OFF_VOXELS, voxels);
+        map.ptr_terrain = s_fix_terrain; /* start cells resolve through it */
+        LevelState* const saved_level = ctx.level;
+        ctx.level = &map;
+        /* With a terrain bound, the seed's northwest-2x2 TerrainCellInitialize
+         * pass rewrites those cells' flag words from the (all-zero) terrain,
+         * clobbering the synthetic walk bits around the goal. Re-lay the
+         * grid before every build so each case starts from a clean map. */
+        auto relay = [&](int wall_column) {
+            memset(voxels, 0, sizeof(voxels));
+            for (int cy = 0; cy <= 13; ++cy) {
+                for (int cx = 0; cx <= 13; ++cx) {
+                    *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |=
+                        0x10u;
+                }
+                if (wall_column) {
+                    *(uint32_t*)(voxels + ((size_t)cy * 16 + 5) * 0x48 + 8) |=
+                        0x40u;
+                }
+            }
+        };
+
+        /* Multi-cell path on a clean grid: a straight 4-cell flood to a
+         * target one margin-row away, installed in walk order. */
+        EntitySlot* runner = place(&ctx, 1, "runner", 0, 0);
+        set_cell(runner, 1, 1);
+        relay(0);
+        /* The seed's init pass zeroes the goal's northwest 2x2 block
+         * ((4,0),(5,0),(4,1),(5,1)) before the spread, so the faithful
+         * route cannot run straight along row 1: it drops to row 2 and
+         * climbs into the goal from (5,2). */
+        CHECK(ai_path_build(&ctx, runner, 5.0f, 1.0f) == 6 &&
+                  runner->wp_count == 6,
+              "wave-flood builds the multi-cell path on a clean grid");
+        CHECK(runner->wp[0].x == 1.0f && runner->wp[0].y == 2.0f &&
+                  runner->wp[5].x == 5.0f && runner->wp[5].y == 1.0f,
+              "the traceback installs the flooded cells in walk order");
+        CHECK(ai_wave_flood_count() > runner->wp_count,
+              "the wave spread marks more cells with flag 0x40000 than the path uses");
+
+        /* Retargeting mid-move (PR #87 feedback): the mover's own cell
+         * carries its occupancy reservation, so a rebuild must exempt it. */
+        EntitySlot* retarget = place(&ctx, 1, "retarget", 0, 0);
+        set_cell(retarget, 1, 5);
+        relay(0);
+        const int first_len = ai_path_build(&ctx, retarget, 8.0f, 5.0f);
+        CHECK(first_len >= 7, "the first build routes the move");
+        relay(0);
+        level_tile_mark(&map, 1, 5, 1); /* the mover's own reservation */
+        CHECK(ai_path_build(&ctx, retarget, 8.0f, 5.0f) == first_len,
+              "the rebuild exempts the mover's own reservation at the start");
+
+        /* Seed flag footprint (PR #87 feedback): record 12 raises the
+         * flag over the northwest 2x2 block including the seed cell. */
+        EntitySlot* seedcell = place(&ctx, 1, "seedcell", 0, 0);
+        set_cell(seedcell, 3, 12);
+        relay(0);
+        /* The target sits one step WEST of the start: an eastward target
+         * would put the start inside the goal's zeroed footprint, which the
+         * faithful init pass makes unwalkable. */
+        CHECK(ai_path_build(&ctx, seedcell, 2.0f, 12.0f) == 1,
+              "a one-step target roots a one-cell traceback");
+        CHECK(ai_wave_flood_count() == 5,
+              "the seed raises record 12's northwest 2x2 footprint flag");
+
+        /* Unreachable target: a full-height blocked column floods the target
+         * side, exhausts, and the traceback never roots at the start. */
+        relay(1);
+        EntitySlot* stranded2 = place(&ctx, 1, "stranded2", 0, 0);
+        set_cell(stranded2, 1, 5);
+        CHECK(ai_path_build(&ctx, stranded2, 9.0f, 5.0f) == 0,
+              "unreachable target across the full wall yields no path");
+        CHECK(stranded2->wp_count == 0,
+              "a failed build installs nothing");
+        CHECK(ai_wave_flood_count() > 0,
+              "the wave still spread across the target side before exhausting");
+
+        /* Equal cells: the seed validates the target (it is the start), so
+         * the traceback is a zero-cell walk and yields no path. */
+        EntitySlot* parked2 = place(&ctx, 1, "parked2", 0, 0);
+        set_cell(parked2, 1, 3);
+        CHECK(ai_path_build(&ctx, parked2, 1.0f, 3.0f) == 0,
+              "start-equal-target builds no path");
+
+        /* No-grid case: no handle, no state. */
         ctx.level = NULL;
-        /* No-grid case: the wave-flood core has no handle, builds no
-         * state, and the caller's one-hop fallback runs unchanged. */
         EntitySlot* gridless = place(&ctx, 1, "gridless", 0, 0);
         CHECK(ai_path_build(&ctx, gridless, 6.0f, 6.0f) == 0,
               "no grid handle: no path and no flood state");
         CHECK(ai_wave_flood_count() == 0,
               "a no-grid build owns no wave work state");
-        cmd_create_move(gridless, 6.0f, 6.0f, 0);
-        CHECK(gridless->wp_count == 1, "no-grid move seeds the one-hop fallback");
-        run(&ctx, 12, 0.5f);
-        CHECK(gridless->x >= 5.9f && gridless->cmd_head == NULL,
-              "the no-grid fallback path walks unchanged");
-
-        (void)f00;
+        /* The faithful scheduler has no straight-line fallback either: with
+         * no level the move is never routed and the walker stays put. */
+        move_to(gridless, 6.0f, 6.0f, 0);
+        run(&ctx, 3, 0.5f);
+        CHECK(gridless->wp_count == 0 && gridless->x == 0.0f &&
+                  gridless->cmd_head != NULL,
+              "no level: the move is left unrouted and the walker stays");
+        cmd_chain_purge(gridless);
+        ctx.level = saved_level;
     }
 
-    /* --- per-terrain movement speed (FUN_00469cc0 speed probe) ----------- */
-
+    /* --- per-terrain movement speed (FUN_00446610 route speed) ----------- *
+     * The ordinary mover's rate is the Stats RouteSpeed scaled per cell by
+     * 1 - (1 - surface_scale(+0xd4)) * cell_cost * 0.25 (cell_cost from the
+     * voxel flag word: (flags & 3) + 1, or 0 with 0x200000), so the rows
+     * differ by flag word, not by the legacy terrain-type speed table. */
     {
-        static uint8_t voxels2[16 * 16 * 0x48];
-        LevelState map2;
-        memset(&map2, 0, sizeof(map2));
-        memset(voxels2, 0, sizeof(voxels2));
-        level_set_int(&map2, LEVEL_OFF_WIDTH, 16);
-        level_set_int(&map2, LEVEL_OFF_HEIGHT, 16);
-        level_store_ptr(&map2, LEVEL_OFF_VOXELS, voxels2);
-        for (int cy = 0; cy < 14; ++cy) {
-            for (int cx = 0; cx < 14; ++cx) {
-                *(uint32_t*)(voxels2 + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
-            }
-        }
-        /* Row 5 crosses columns 4..7 of *slow* terrain (type 4), row 7 the
-         * same span of *fast* terrain (type 5), row 6 stays plain. */
-        for (int cx = 4; cx <= 7; ++cx) {
-            voxels2[(size_t)5 * 16 * 0x48 + (size_t)cx * 0x48 + 2] = 4;
-            voxels2[(size_t)7 * 16 * 0x48 + (size_t)cx * 0x48 + 2] = 5;
+        uint8_t speed_stats[ENTITY_STATS_RECORD_SIZE];
+        memcpy(speed_stats, s_fix_stats, sizeof(speed_stats));
+        const float half_surface = 0.5f;
+        memcpy(speed_stats + 0xd4, &half_surface, sizeof(half_surface));
+        for (int wx = 4; wx <= 7; ++wx) {
+            *fix_flags((float)wx, 5.0f) = 0x8u | 3u;       /* cost 4: slow */
+            *fix_flags((float)wx, 7.0f) = 0x8u | 0x200000u; /* cost 0: fast */
         }
         ctx.stats_speed_sec[4] = 2.0f;  /* corpus units: sec/cell -> 0.5 cps */
         ctx.stats_speed_sec[5] = 0.25f; /* -> 4 cps */
 
-        /* The probe reads the table by terrain index; unset entries and
-         * out-of-range types fall back to the default (1/AI_MOVE_SPEED_CPS). */
+        /* The legacy table still backs the target-chase adapter; the probe
+         * reads it by terrain index, and unset/out-of-range types fall back
+         * to the default (1/AI_MOVE_SPEED_CPS). */
         CHECK(ai_stats_speed(&ctx, 4) == 2.0f, "speed table entry for type 4");
         CHECK(ai_stats_speed(&ctx, 5) == 0.25f, "speed table entry for type 5");
         CHECK(ai_stats_speed(&ctx, 0) * AI_MOVE_SPEED_CPS == 1.0f,
@@ -1062,19 +1247,23 @@ int main(int argc, char** argv)
                       AI_MOVE_SPEED_CPS == 1.0f,
               "out-of-range terrain types are guarded to the default");
 
-        ctx.level = &map2;
         EntitySlot* slow = place(&ctx, 1, "slow", 3, 5);
         EntitySlot* plain = place(&ctx, 1, "plain", 3, 6);
         EntitySlot* fast = place(&ctx, 1, "fast", 3, 7);
-        cmd_create_move(slow, 11.0f, 5.0f, 0);
-        cmd_create_move(plain, 11.0f, 6.0f, 0);
-        cmd_create_move(fast, 11.0f, 7.0f, 0);
-        CHECK(slow->wp_count > 1, "the speed rows walk straight-through paths");
+        slow->stats_record = plain->stats_record = fast->stats_record =
+            speed_stats;
+        move_to(slow, 11.0f, 5.0f, 0);
+        move_to(plain, 11.0f, 6.0f, 0);
+        move_to(fast, 11.0f, 7.0f, 0);
 
         int t_slow = 0, t_plain = 0, t_fast = 0;
         float lag = 0.0f;
         for (int t = 1; t <= 64 && !(t_slow && t_plain && t_fast); ++t) {
             ai_tick(&ctx, 0.5f);
+            if (t == 1) {
+                CHECK(slow->wp_count > 1, "the speed rows walk straight-through "
+                                          "paths");
+            }
             if (t_plain == 0 && plain->cmd_head == NULL) {
                 t_plain = t;
                 lag = plain->x - slow->x;
@@ -1092,17 +1281,18 @@ int main(int argc, char** argv)
         CHECK(t_plain > t_fast, "fast terrain visibly quickens arrival");
         CHECK(lag > 1.0f, "the slow walker is behind when the plain row lands");
 
-        /* Arrival still pops the path list as before the probe landed. */
-        CHECK(slow->wp_index == slow->wp_count && slow->cmd_head == NULL &&
-                  slow->wp[slow->wp_count - 1].pending == 0,
-              "slow walker arrival pops the path like today");
-        CHECK(fast->x == 11.0f && fast->y == 7.0f, "fast walker lands exactly");
-        const uint32_t* f_slow = (const uint32_t*)(voxels2 + ((size_t)5 * 16 +
-                                                              11) * 0x48 + 8);
-        CHECK((*f_slow & 0x8000000u) == 0,
-              "slow-row arrival clears the occupancy flag");
+        /* Arrival retires the path (cursor and count reset together). */
+        CHECK(slow->wp_index == slow->wp_count && slow->cmd_head == NULL,
+              "slow walker arrival retires the path");
+        CHECK(fabsf(fast->x - 11.0f) < 0.01f && fabsf(fast->y - 7.0f) < 0.01f,
+              "fast walker lands exactly");
 
-        ctx.level = NULL;
+        for (int wx = 4; wx <= 7; ++wx) {
+            *fix_flags((float)wx, 5.0f) = 0x8u;
+            *fix_flags((float)wx, 7.0f) = 0x8u;
+        }
+        slow->stats_record = plain->stats_record = fast->stats_record =
+            s_fix_stats;
         ctx.stats_speed_sec[4] = 0.0f;
         ctx.stats_speed_sec[5] = 0.0f;
     }
@@ -1111,7 +1301,7 @@ int main(int argc, char** argv)
      * leaves the move intact and does not alter the task-only global list. */
     void* global_before_drop = cmd_global_head();
     EntitySlot* dropper = place(&ctx, 1, "dropper", 11, 5);
-    cmd_create_move(dropper, 10.0f, 5.0f, 0);
+    move_to(dropper, 10.0f, 5.0f, 0);
     cmd_create_target(dropper, (void*)dropper);
     CHECK(cmd_chain_drop(dropper, 2) == 1, "drop takes the target record");
     CHECK(cmd_global_head() == global_before_drop,
@@ -1122,7 +1312,7 @@ int main(int argc, char** argv)
     }
     CHECK(dropper->cmd_head == NULL, "dropper chain drains cleanly");
     EntitySlot* linked = place(&ctx, 1, "linked", 12, 5);
-    cmd_create_move(linked, 11.0f, 5.0f, 0);
+    move_to(linked, 11.0f, 5.0f, 0);
     CHECK(cmd_global_head() == global_before_drop &&
               linked->cmd_head != NULL && cmd_rec_next(linked->cmd_head) == NULL,
           "new move remains on its own chain outside the task list");
@@ -1345,11 +1535,16 @@ int main(int argc, char** argv)
         EntitySlot e;
         memset(&e, 0, sizeof e);
         CHECK(entity_random_activity_attempt(NULL) == 0, "NULL is guarded");
+        /* The faithful dispatch's success test is the type-2/type-3 scene
+         * runner's answer (FUN_00447c40 result); a bare slot has no bound
+         * runner (that needs a type-config row and the renderer callbacks),
+         * so all five draws fail: the call answers 0, leaves the last draw
+         * committed in the code band, and never raises the 0x8000 bit. */
         const int took = entity_random_activity_attempt(&e);
-        CHECK(took == 1 && e.activity >= 0x38 && e.activity <= 0x4c
-                  && (e.flags_3e0 & 0x8000u) != 0u
+        CHECK(took == 0 && e.activity >= 0x38 && e.activity <= 0x4c
+                  && (e.flags_3e0 & 0x8000u) == 0u
                   && e.activity_last == e.activity,
-              "a cold slot takes an activity in the code band");
+              "a cold slot without a scene runner exhausts five code-band draws");
 
         /* The gate pair answers zero before any draw. */
         e.flags_3e0 |= 0x400u;
@@ -1359,18 +1554,14 @@ int main(int argc, char** argv)
         CHECK(entity_random_activity_attempt(&e) == 0, "the mask blocks");
         e.flags_3e0 = 0u;
 
-        /* Same-name attempts: the dispatch's early-return clause. Keep
-         * the slot otherwise clean and let the draw walk until it lands
-         * off the registered name (five attempts per call, deterministic
-         * LCG sequence). */
-        int prev = e.activity_last, got = 0, hops = 0;
-        while (got == 0 && hops < 20) {
-            got = entity_random_activity_attempt(&e);
-            ++hops;
+        /* Repeat attempts keep failing the same way (no runner), each call
+         * drawing fresh code-band activities and committing the last. */
+        for (int hops = 0; hops < 3; ++hops) {
+            CHECK(entity_random_activity_attempt(&e) == 0 &&
+                      e.activity >= 0x38 && e.activity <= 0x4c &&
+                      (e.flags_3e0 & 0x8000u) == 0u,
+                  "a repeat attempt without a runner stays failed");
         }
-        CHECK(got == 1 && e.activity != prev
-                  && (e.flags_3e0 & 0x8000u) != 0u,
-              "a registered name re-rolls until the dispatch takes");
     }
 
     /* Object registry windows (2026-10-25). */
@@ -1381,9 +1572,11 @@ int main(int argc, char** argv)
         memset(&e2a, 0, sizeof e2a);
         memset(&e2b, 0, sizeof e2b);
         memset(&ef, 0, sizeof ef);
-        e4.etype = 4;
-        e2a.etype = 2;
-        e2b.etype = 2;
+        /* The registries gate on the corpus type word (`type`); `etype` is
+         * the Stats row index now, not the type code. */
+        e4.type = 4;
+        e2a.type = 2;
+        e2b.type = 2;
         static char caprec[0x150];
         memset(caprec, 0, sizeof caprec);
         const uint32_t capbit = 0x80u;
@@ -1474,6 +1667,12 @@ int main(int argc, char** argv)
      * the activity/terrain eligibility transition. */
     {
         ai_idle_table_reset();
+        /* Earlier blocks' scratch contexts stole (and dropped) the entity
+         * pool owner; the rockfall forwarder reads the level through it, and
+         * the faithful probe needs an idle-type tile under the entity. */
+        entity_pool_callback_context_set(&ctx);
+        uint8_t* const idle_cell = (uint8_t*)fix_flags(3.0f, 5.0f) - 8;
+        idle_cell[2] = (uint8_t)TILE_TYPE_IDLE;
         EntitySlot idle, four;
         memset(&idle, 0, sizeof idle);
         memset(&four, 0, sizeof four);
@@ -1494,6 +1693,7 @@ int main(int argc, char** argv)
         CHECK((four.flags_3ec & 0x40u) != 0u, "the coordinate miss is inert");
         ai_idle_table_reset();
         CHECK(ai_idle_count() == 0, "the hook empties the table");
+        idle_cell[2] = 0;
     }
 
     /* EntityActivityTerrainEligibilityTransition (2026-10-25): the gate,
@@ -1562,18 +1762,29 @@ int main(int argc, char** argv)
         CHECK(e.pos_pair_2f4 == -1.0f && e.pos_pair_2f8 == -1.0f,
               "the coordinate pair blanks to -1");
         __builtin_memcpy(&now, rec + 0x08, sizeof now);
-        CHECK(now == 0x30u, "the queued transition raises the work bit");
+        /* The faithful transition runs the cell init pass after raising the
+         * work bit; that pass re-derives the walkable layer bit (0x10) from
+         * the terrain-less cell, so only the work bit survives. */
+        CHECK(now == 0x20u, "the queued transition raises the work bit");
         ai_idle_table_reset();
     }
 
     /* Idle-table pointer removal (2026-10-25): the match-zeroing walk
-     * with the count word riding (holes), dedup past holes, and the
-     * foreign-pointer walk. */
+     * with the count word riding (holes) and the foreign-pointer walk. The
+     * faithful table append has no dedupe, so a re-raised flag on a kept
+     * entry registers it again. The registrations need relief-free entities
+     * on idle-type tiles of the fixture level. */
     {
-        GameContext ctx;
-        game_context_init(&ctx);
+        ai_idle_table_reset();
+        entity_pool_callback_context_set(&ctx);
         EntitySlot* a = place(&ctx, 1, "rem_a", 0.0f, 0.0f);
         EntitySlot* b = place(&ctx, 1, "rem_b", 4.0f, 0.0f);
+        a->stats_record = NULL;
+        b->stats_record = NULL;
+        uint8_t* const cell_a = (uint8_t*)fix_flags(0.0f, 0.0f) - 8;
+        uint8_t* const cell_b = (uint8_t*)fix_flags(4.0f, 0.0f) - 8;
+        cell_a[2] = (uint8_t)TILE_TYPE_IDLE;
+        cell_b[2] = (uint8_t)TILE_TYPE_IDLE;
         a->flags_3ec |= 0x40u;
         b->flags_3ec |= 0x40u;
         run(&ctx, 1, 0.5f);
@@ -1585,10 +1796,12 @@ int main(int argc, char** argv)
         CHECK(ai_idle_count() == 3, "the removed entry re-lands past the hole");
         b->flags_3ec |= 0x40u;
         run(&ctx, 1, 0.5f);
-        CHECK(ai_idle_count() == 3, "the kept entry dedups through the hole");
+        CHECK(ai_idle_count() == 4, "the kept entry appends again (no dedupe)");
         ai_idle_table_pointer_remove(NULL);
-        CHECK(ai_idle_count() == 3, "the foreign pointer walks past");
+        CHECK(ai_idle_count() == 4, "the foreign pointer walks past");
         ai_idle_table_reset();
+        cell_a[2] = 0;
+        cell_b[2] = 0;
     }
 
     /* Activity toggle (2026-10-25): the off/on fold on the +0x3ec word

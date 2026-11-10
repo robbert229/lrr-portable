@@ -139,13 +139,16 @@ int main(void)
     mg[0].target_a[0] = 100.0f;
     mg[0].target_a[1] = 50.0f;
     simtick_manager_set_slots(mg, 12);
-    for (int i = 0; i < 60; ++i) {
+    /* The pinned smoothing constants (4.0 / dt, denominator +1) give a
+     * per-tick factor of 40/41 at dt 0.1, so the target (100) is only
+     * reached inside the snap threshold after ~187 ticks. */
+    for (int i = 0; i < 200; ++i) {
         simtick_manager_tick(0, 0.1f, 1);
     }
     CHECK(fabsf(mg[0].smoothed[0] - 100.0f) < 1.0f
           && fabsf(mg[0].smoothed[1] - 50.0f) < 1.0f,
           "manager: smoothing converges");
-    CHECK(simtick_manager_repositions() == 60, "manager: mode-0 repositioned");
+    CHECK(simtick_manager_repositions() == 200, "manager: mode-0 repositioned");
 
     /* within the snap threshold the target is taken verbatim. */
     memset(mg, 0, sizeof(mg));
@@ -166,7 +169,8 @@ int main(void)
     simtick_manager_set_metrics(200, 100);
     simtick_manager_tick(0, 0.1f, 1);
     CHECK(simtick_manager_attaches() == 1, "manager: mode-1 attached");
-    CHECK(mg[0].smoothed[0] > 2.0f && mg[0].smoothed[0] < 4.0f,
+    /* one tick from zero with the pinned constants: (0*40 + 33) / 41 */
+    CHECK(mg[0].smoothed[0] > 0.7f && mg[0].smoothed[0] < 0.9f,
           "manager: source-B int target smoothed");
 
     /* index 9 stops all four timer bits (via the reposition hook). */

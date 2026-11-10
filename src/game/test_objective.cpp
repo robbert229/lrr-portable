@@ -7,9 +7,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "resource.hpp"
 #include "game/level.hpp"
 #include "game/objective.hpp"
 #include "gods98/block.hpp"
+#include "gods98/engine.hpp"
 
 static int s_failures = 0;
 
@@ -43,7 +45,7 @@ int main(void)
         fputs(
             "Lego {\n"
             "  Level01 {\n"
-            "    DontShowObjectiveAdvisor 1\n"
+            "    DontShowObjectiveAdvisor TRUE\n"
             "    CrystalObjective 5\n"
             "    OreObjective 3\n"
             "    TimerObjective 2\n"
@@ -51,7 +53,7 @@ int main(void)
             "    ConstructionObjective 1,2\n"
             "    Reward { Enable TRUE Modifier 2 Timer 30 }\n"
             "  }\n"
-            "  Level02 { DontShowObjectiveAdvisor 1 }\n"
+            "  Level02 { DontShowObjectiveAdvisor TRUE }\n"
             "}\n",
             fp);
         fclose(fp);
@@ -60,6 +62,15 @@ int main(void)
         fprintf(stderr, "chdir %s failed\n", FIX);
         return 1;
     }
+    /* File opens resolve under the CD root; the fixture is the CWD. */
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
+
+    /* Faithful FUN_00458670 only builds the result stream while bit 0x10 of
+     * the engine state word (DAT_00556ecc) is set, so bind a context. */
+    static EngineContext s_engine;
+    s_engine.state = 0x10u;
+    engine_current_context_bind(&s_engine);
 
     BlockFile* cfg = block_open("Lego.cfg");
     CHECK(cfg != NULL, "open cfg");
@@ -96,7 +107,12 @@ int main(void)
     /* Met crystals + ore but no timer expiry -> met. */
     level_set_int(s, OBJ_OFF_CRYSTAL_LIVE, 5);
     level_set_int(s, OBJ_OFF_ORE_LIVE, 3);
-    CHECK(objective_check(s, &mark, 0.0f) == 1, "all counts met");
+    /* Faithful FUN_00458d90 tail: once the counts are met the verdict is the
+     * entity-pool walk for the block-objective cell pair (4,6); the empty
+     * pool has no such entity, so the check answers 0 while still storing
+     * the success marker. */
+    CHECK(objective_check(s, &mark, 0.0f) == 0,
+          "counts met, no block entity at the target cell");
     CHECK(mark == 1, "success marker");
 
     /* Timer expiry flips the outcome: with the achievement-suppression bit
@@ -133,7 +149,6 @@ int main(void)
     CHECK((s2->objective & 0x10u) == 0, "generic advisors shown when key = 1");
     CHECK((s2->objective & 0x20u) != 0, "achievement suppression defaulted on");
     level_destroy(s2);
-    block_close(cfg);
 
     /* The raise-commit wrapper (2026-10-24). */
     {
@@ -152,6 +167,10 @@ int main(void)
      * destroyed above, so the raise rides a fresh zeroed block — the
      * corpus's unset-word reading needs no config.) */
     LevelState* s4 = fresh_level();
+    /* The faithful announcer is a no-op once the shared result word holds a
+     * resolved result, so re-arm it through a config load (Level02 arms no
+     * goal) before the raise. */
+    objective_load(cfg, "Level02", s4);
     level_set_int(s4, OBJ_OFF_TIMER_TARGET, 0);
     int g = objective_voice_alias_raise_gate_bit27(s4);
     CHECK(g == 1, "the raise answers one");
@@ -173,10 +192,11 @@ int main(void)
         CHECK(advisor_action_flags_peek(3) == 0u,
               "any other mode clears the flag bit");
         advisor_action_position_and_mode_set(3, 0xc, 7u, 9u);
-        /* Faithful quirk: the set's pair lands in the write window, not
-         * the read-out window — the get still reads zero. */
+        /* Faithful quirk: the set's pair lands at words 5/6 while the get
+         * reads words 6/7, so the get sees the second stored dword (9) and
+         * the untouched neighbour (0). */
         advisor_action_position_get(3, &x, &y);
-        CHECK(x == 0u && y == 0u, "the read-out window rides the set");
+        CHECK(x == 9u && y == 0u, "the read-out window rides the set");
         advisor_action_position_get(99999, &x, &y); /* bounds guarded */
         /* The token table: empty model answers 0; installed, the read
          * shape is the corpus's bounds-guarded table walk. */
@@ -190,6 +210,7 @@ int main(void)
         objective_advisor_tokens_install(NULL, 0);
     }
 
+    block_close(cfg);
     if (s_failures != 0) {
         fprintf(stderr, "objective_test: %d failure(s)\n", s_failures);
         return 1;

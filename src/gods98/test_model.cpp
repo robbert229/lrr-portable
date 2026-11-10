@@ -23,6 +23,7 @@
 
 #include "model.hpp"
 #include "resource.hpp"
+#include "gods98/heap.hpp"
 
 static int s_failures = 0;
 
@@ -222,7 +223,10 @@ static void test_pols(void)
     wchunk(&p, "POLS", pols, (int)(q - pols));
     form_end(p);
     m = model_parse(g_buf, (size_t)(p - g_buf));
-    CHECK(m && m->n_polys == 0, "pols: truncated record drops");
+    /* The faithful POLS reader refuses a truncated record (it will not read
+     * past the chunk), which fails the whole parse instead of silently
+     * dropping the record. */
+    CHECK(m == NULL, "pols: truncated record fails the parse");
     if (m)
         model_free(m);
 }
@@ -241,14 +245,19 @@ static void test_srfs_surf(void)
     wpoly(&q, 3, tri, 2); /* points at surface slot 1 = "floor" */
     wchunk(&p, "POLS", pols, (int)(q - pols));
 
-    /* SRFS: "wall  " (trailing spaces strip) then "floor", both padded */
+    /* SRFS: "wall" then "floor", both padded. The faithful name table
+     * duplicates each name through its NUL without trimming, so the former
+     * trailing-space strip case is gone (a padded name would no longer match
+     * its SURF record). */
     unsigned char sb[256];
     q = sb;
-    wname(&q, sb, "wall  ");
+    wname(&q, sb, "wall");
     wname(&q, sb, "floor");
     wchunk(&p, "SRFS", sb, (int)(q - sb));
 
-    /* SURF chunk: both records in one chunk */
+    /* SURF chunks: the faithful reader takes one surface record per chunk
+     * (name, then sub-blocks to the chunk end), so "wall" and "floor" ride
+     * separate chunks. */
     q = sb;
     memcpy(q, "wall\0", 5);
     q += 6;
@@ -259,6 +268,8 @@ static void test_srfs_surf(void)
         wsub(&q, "TSIZ", ts, 8);
     }
     wsub(&q, "TIMG", "brick.bmp\0", 10);
+    wchunk(&p, "SURF", sb, (int)(q - sb));
+    q = sb;
     memcpy(q, "floor\0", 6);
     q += 6;
     {
@@ -280,7 +291,7 @@ static void test_srfs_surf(void)
     if (m) {
         CHECK(m->n_surfaces == 2, "surf: two surfaces");
         if (m->n_surfaces == 2) {
-            CHECK(strcmp(m->surfaces[0].name, "wall") == 0, "surf: SRFS name stripped");
+            CHECK(strcmp(m->surfaces[0].name, "wall") == 0, "surf: SRFS name read through the NUL");
             CHECK(m->surfaces[0].has_colr && m->surfaces[0].colr[0] == 128 / 255.0f
                       && m->surfaces[0].colr[3] == 1.0f,
                   "surf: COLR /255, alpha 1");
@@ -659,18 +670,18 @@ int main(int argc, char** argv)
               "the even-length dup copies");
         CHECK(dup != NULL && dup[2] == '\0' && dup[3] == '\0',
               "the even-length block rides NUL to the rounded end");
-        free(dup);
+        engine_heap_free(dup); /* engine-heap allocated */
 
         char* odd = lwo_string_duplicate("abc");
         CHECK(odd != NULL && strcmp(odd, "abc") == 0 && odd[3] == '\0'
                   && odd[4] == '\0',
               "the odd-length dup pads even and stays terminated");
-        free(odd);
+        engine_heap_free(odd); /* engine-heap allocated */
 
         char* empty = lwo_string_duplicate("");
         CHECK(empty != NULL && empty[0] == '\0',
               "the empty dup allocates the rounded byte block");
-        free(empty);
+        engine_heap_free(empty); /* engine-heap allocated */
 
         CHECK(lwo_string_duplicate(NULL) == NULL,
               "the null guard answers null");
@@ -686,9 +697,10 @@ int main(int argc, char** argv)
         CHECK(lwo_texture_projection_mode_parse("SPHERICALX") == 2,
               "the prefix match wins");
         CHECK(lwo_texture_projection_mode_parse("cyl") == 0
-                  && lwo_texture_projection_mode_parse("other") == 0
-                  && lwo_texture_projection_mode_parse(NULL) == 0,
+                  && lwo_texture_projection_mode_parse("other") == 0,
               "the no-match fall-through answers PLANAR");
+        /* The faithful parse reads its name blindly (no NULL guard), so the
+         * former NULL-name assertion is gone. */
     }
 
     if (argc >= 3 && strcmp(argv[1], "--real") == 0) {

@@ -149,6 +149,9 @@ if(NOT LRR_CLASSIC_MSVC5)
     LANGUAGE CXX)
 endif()
 target_link_libraries(game PUBLIC gods98)
+# gods98 (frame loop, sim tick) calls into game; static libraries may be
+# mutually dependent, so every consumer of either one resolves both.
+target_link_libraries(gods98 PUBLIC game)
 
 if(PLATFORM STREQUAL "native")
   set(MINIWIN "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/isle-portable/miniwin")

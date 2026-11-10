@@ -18,6 +18,7 @@
 #include "resource.hpp"
 #include "gods98/heap.hpp"
 #include "sound.hpp"
+#include "audio.hpp"
 
 static int s_failures = 0;
 
@@ -383,24 +384,33 @@ static void test_alias_registry(void)
     CHECK(sound_alias_lookup("SFX_Nope", &idx) == 1 && idx == 45,
           "already-registered alias survives registration being off");
 
-    /* Re-init drops the dynamic side (documented deviation: the corpus
-     * keeps the stale count and reads uninitialised slots) but leaves the
-     * registration flag exactly as it is (the corpus never touches
-     * DAT_00502a2c here — the disabled flag below would keep lookup from
-     * appending until re-enabled). */
+    /* Re-init keeps the dynamic count and names, as the corpus does (the
+     * port rebuilds their hash slots; it no longer drops them), and leaves
+     * the registration flag exactly as it is (the corpus never touches
+     * DAT_00502a2c here). The retained alias therefore stays resolvable. */
     sound_alias_registration_set(1);
     sound_alias_registry_init();
-    CHECK(sound_alias_count() == 45 && sound_alias_name(45) == NULL,
-          "re-init clears the dynamic aliases");
+    CHECK(sound_alias_count() == 46 && sound_alias_name(45) != NULL
+              && strcmp(sound_alias_name(45), "SFX_Nope") == 0,
+          "re-init keeps the dynamic aliases (faithful)");
     CHECK(sound_alias_lookup("SFX_Nope", &idx) == 1 && idx == 45,
-          "registration flag survives re-init (corpus behaviour)");
+          "the retained alias re-finds after re-init");
+}
 
+/* The dynamic table cannot be cleared any more (re-init keeps the count), so
+ * the bound test fills it for good and runs after every test that registers
+ * dynamic aliases. */
+static void test_alias_bound(void)
+{
+    int idx = 0;
+    sound_alias_registration_set(1);
     /* Port bound (deviation: the corpus writes OOB past its 0x7bc-byte
      * table): filling the table makes further appends fail cleanly. */
     char fill[64];
-    for (int i = 1; i < 450; ++i) {
+    for (int i = 1; sound_alias_count() < SOUND_ALIAS_MAX; ++i) {
+        int expect = sound_alias_count();
         sprintf(fill, "SFX_Fill%d", i);
-        CHECK(sound_alias_lookup(fill, &idx) == 1 && idx == 45 + i,
+        CHECK(sound_alias_lookup(fill, &idx) == 1 && idx == expect,
               "dynamic fill reaches the table bound");
     }
     CHECK(sound_alias_count() == SOUND_ALIAS_MAX, "count hits the bound");
@@ -1203,23 +1213,31 @@ static void test_streamed_voices(void)
 
     /* --- global-cooldown submit ----------------------------------- */
 
-    int pick1 = test_variant_draw() % 2;  /* the submit's play draw */
-    int pick2 = test_variant_draw() % 2;  /* its duration draw */
-    (void)pick1;
-    (void)pick2;
+    /* The multi-token parse leaves the second link of chain 12 holding its
+     * pool-zero slot (see the stream-alias note below), and a zero chain head
+     * counts as "no sound" in the faithful port, so a two-link chain would
+     * make the submit depend on the PRNG draw. Use a single-link chain (no
+     * PRNG draw) on alias 13 for the deterministic submit checks. */
+    char spec1[1600];
+    snprintf(spec1, sizeof spec1, "%s", files[0]);
+    CHECK(sound_sample_marker_parse(spec1, 13) == 1,
+          "stream chain 13 parses");
+    int chain13[16];
+    CHECK(sound_variant_chain(13, chain13, 16) == 1, "chain 13 has one link");
     int h = 0;
-    CHECK(sound_submit_with_global_cooldown(12, &h) == 1,
+    CHECK(sound_submit_with_global_cooldown(13, &h) == 1,
           "an idle timer lets the alias submit");
-    CHECK(h == chain[pick1 == 0 ? 0 : 1] || h == chain[0] || h == chain[1],
-          "the handle records the routed chain slot");
-    CHECK(sound_deferred_last_alias() == 12,
+    /* A streamed play answers its handle as slot * 3 (no duplicate-buffer
+     * index), not the bare chain slot. */
+    CHECK(h == chain13[0] * 3, "the handle records the routed chain slot");
+    CHECK(sound_deferred_last_alias() == 13,
           "the last-alias word carries the submitted alias");
     double timer = (double)sound_deferred_cooldown();
     CHECK(timer > rate * 25.0 * 0.99 && timer < rate * 25.0 * 1.01,
           "the timer is the duration times the corpus's 25");
     CHECK(sound_deferred_handle() == h, "the handle word records the route");
 
-    CHECK(sound_submit_with_global_cooldown(12, NULL) == 0,
+    CHECK(sound_submit_with_global_cooldown(13, NULL) == 0,
           "the running timer gates the next submit");
     sound_deferred_play_expire();
     CHECK(sound_deferred_cooldown() == 0.0f && sound_deferred_handle() == -1,
@@ -1305,13 +1323,27 @@ int main(int argc, char** argv)
     test_variant_chains();
     test_variant_properties();
     test_submission_route();
-    test_streamed_voices();
+    {
+        /* Streamed aliases now play through the system audio player (the
+         * faithful play-mode path returns -1 without one), so give the
+         * streamed-voices test a real player on SDL's dummy audio driver. */
+        static AudioPlayer player;
+        setenv("SDL_AUDIODRIVER", "dummy", 0);
+        const int opened = audio_open(&player) == 0;
+        if (opened) audio_system_player_set(&player);
+        test_streamed_voices();
+        if (opened) {
+            audio_system_player_set(NULL);
+            audio_close(&player);
+        }
+    }
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--real") == 0 && i + 1 < argc) {
             test_real(argv[i + 1]);
             break;
         }
     }
+    test_alias_bound();
     /* SoundBufferAssociationAdd (2026-10-24): the association prepend. */
     {
         void* saved = sound_buffer_association_head_peek();

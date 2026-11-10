@@ -9,7 +9,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <unistd.h>
+
 #include "view.hpp"
+#include "game/level.hpp"
+#include "resource.hpp"
 #include "record.hpp"
 
 static int s_failures = 0;
@@ -20,6 +24,15 @@ static void CHECK(int cond, const char* what)
         printf("FAIL: %s\n", what);
         ++s_failures;
     }
+}
+
+static int test_blend_to_origin(int /*object_id*/, int /*mode*/,
+                                float blend[3], float facing[3],
+                                void* /*context*/)
+{
+    blend[0] = blend[1] = blend[2] = 0.0f;
+    facing[0] = facing[1] = facing[2] = 0.0f;
+    return 1;
 }
 
 int main(void)
@@ -229,8 +242,11 @@ int main(void)
     view_tick(&fv, &tctx, 1.0f / 30.0f, 1.0f);
     CHECK(fv.cam_world.inuse == 1, "mode1: camera touched");
 
-    /* mode 3 velocity path via the test blend hook. */
-    g_view_test_blend = 1;
+    /* mode 3 velocity path. The faithful mode-3 tick only runs its blend
+     * when a target record or the follow-target blend hook exists (the old
+     * g_view_test_blend flag alone no longer opens that gate), so install a
+     * hook that injects the (0,0,0) target. */
+    view_follow_target_hooks_set(NULL, test_blend_to_origin, NULL);
     ViewContext mv = {};
     mv.mode = 3;
     mv.follow_id = 1; /* corpus mode-3 gate: needs a target id */
@@ -247,7 +263,7 @@ int main(void)
      * the decayed velocity (decay = 8 -> vel {16,8,4}) => {-16,-8,-4}. */
     CHECK(mv.cam_world.pos[0] == -16.0f && mv.cam_world.pos[1] == -8.0f
           && mv.cam_world.pos[2] == -4.0f, "mode3: camera re-positioned + glide");
-    g_view_test_blend = 0;
+    view_follow_target_hooks_set(NULL, NULL, NULL);
 
     /* mode 2 with no object target idles (object_lookup stub). */
     ViewContext lv = {};
@@ -294,7 +310,8 @@ int main(void)
         CHECK(menu_overlay_list_count(&menu) == 3, "three-node chain");
         chain[1].next = NULL;
         CHECK(menu_overlay_list_count(&menu) == 2, "chain shortened by a tail");
-        CHECK(menu_overlay_list_count(NULL) == 0, "NULL menu counts zero");
+        /* The faithful port reads the menu's list head blindly (no NULL
+         * guard), so the former NULL-menu assertion is gone. */
     }
 
     /* TerrainGridBorderInsetGet (FUN_00435f28): DAT_005560ac getter. */
@@ -629,30 +646,61 @@ int main(void)
         CHECK(gx == 0 && gy == 0, "rounds of zero grid-picks the buffer");
     }
     {
-        /* Bound voxel: the plane descends onto the surface byte. */
+        /* Bound terrain: the plane descends onto the terrain surface. The
+         * faithful grid pick converts world x/y through the bound
+         * TerrainState (world_off / blocksize), and the plane height is the
+         * terrain's interpolated surface height, no longer the voxel byte.
+         * Build a real 3x3 terrain from a synthetic surface map under the
+         * CD root (the CWD; run from build/). */
         static uint8_t lvl[0x284];
-        static uint8_t vox[4 * 0x48];
+        static uint8_t map[0x10 + 9 * 2];
         memset(lvl, 0, sizeof lvl);
-        memset(vox, 0, sizeof vox);
-        const int w = 2, h = 2;
-        memcpy(lvl + 0x14, &w, sizeof w);
-        memcpy(lvl + 0x18, &h, sizeof h);
-        const void* vp = vox;
-        memcpy(lvl + 0xb8, &vp, sizeof vp);
-        vox[3 * 0x48 + 0x04] = 7; /* cell (1,1) surface byte */
-        EngineContext ctx = {};
-        ctx.level_block = lvl;
-        float hit[3];
-        const float down[3] = { 0.0f, 0.0f, 1.0f };
-        const float p[3] = { 1.0f, 1.0f, -10.0f };
-        int gx = -1, gy = -1;
-        random_reachable_grid_point_select(&ctx, p, down, hit, &gx, &gy, 1);
-        CHECK(hit[0] == 1.0f && hit[1] == 1.0f && hit[2] == -50.0f
-                  && gx == 1 && gy == 1,
-              "the descent hits the z=-50 plane off the surface byte");
-        random_reachable_grid_point_select(&ctx, p, down, hit, &gx, &gy, 2);
-        CHECK(hit[2] == 7.0f && gx == 1 && gy == 1,
-              "the plane rides the voxel height for the second round");
+        memset(map, 0, sizeof map);
+        const int w = 3, h = 3;
+        memcpy(map + 0x08, &w, sizeof w);
+        memcpy(map + 0x0c, &h, sizeof h);
+        for (int i = 0; i < 9; ++i) {
+            const uint16_t cell = 1;
+            memcpy(map + 0x10 + i * 2, &cell, sizeof cell);
+        }
+        char mapname[64];
+        snprintf(mapname, sizeof mapname, "lrr_view_test_%ld.map",
+                 (long)getpid());
+        FILE* mf = fopen(mapname, "wb");
+        CHECK(mf != NULL, "write the synthetic surface map");
+        if (mf != NULL) {
+            fwrite(map, 1, sizeof map, mf);
+            fclose(mf);
+            resource_set_cd_root(".");
+            resource_set_cd_data_dir(".");
+            void* terrain = terrain_create_retail(NULL, mapname, 1.0f, 7.0f);
+            CHECK(terrain != NULL, "the synthetic terrain builds");
+            if (terrain != NULL) {
+                memcpy(lvl + 0x14, &w, sizeof w);
+                memcpy(lvl + 0x18, &h, sizeof h);
+                EngineContext ctx = {};
+                ctx.level_block = lvl;
+                ctx.level_terrain = terrain;
+                float hit[3];
+                const float down[3] = { 0.0f, 0.0f, 1.0f };
+                const float p[3] = { 0.5f, 0.5f, -10.0f };
+                int gx = -1, gy = -1;
+                random_reachable_grid_point_select(&ctx, p, down, hit, &gx,
+                                                   &gy, 1);
+                CHECK(hit[0] == 0.5f && hit[1] == 0.5f && hit[2] == -50.0f
+                          && gx == 1 && gy == 0,
+                      "the descent hits the z=-50 plane off the terrain");
+                random_reachable_grid_point_select(&ctx, p, down, hit, &gx,
+                                                   &gy, 2);
+                const float surface = terrain_surface_height_interpolate(
+                    terrain, hit[0], hit[1]);
+                CHECK(surface != 0.0f && hit[2] == surface
+                          && gx == 1 && gy == 0,
+                      "the plane rides the terrain height for the second round");
+                terrain_destroy(terrain);
+            }
+            remove(mapname);
+        }
     }
 
     /* Scene-root hook band (2026-10-24) — FUN_00472940 / FUN_00475900. */

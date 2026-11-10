@@ -7,8 +7,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "resource.hpp"
 #include "game/game.hpp"
 #include "game/level.hpp"
+#include "game/test_level_fixture.hpp"
 #include "game/mission.hpp"
 #include "game/objective.hpp"
 #include "gods98/block.hpp"
@@ -24,6 +26,16 @@ static int s_failures = 0;
     } while (0)
 
 static const char* FIX = "mission_fixture";
+
+/* The faithful LevelLoad opens every map layer unconditionally. */
+#define LEVEL_AUX_KEYS(p)                                                      \
+    "    BlockPointersMap " p "_bp.map\n"                                       \
+    "    CryOreMap " p "_c.map\n"                                               \
+    "    ErodeMap " p "_e.map\n"                                                \
+    "    PathMap " p "_pa.map\n"                                                \
+    "    EmergeMap " p "_em.map\n"                                              \
+    "    AIMap " p "_ai.map\n"                                                  \
+    "    FallinMap " p "_f.map\n"
 
 /* Write a 4x4 all-zero .map so levels can load (finding 07). */
 static void write_map4(const char* name)
@@ -47,6 +59,42 @@ static void write_map4(const char* name)
     fclose(fp);
 }
 
+/* Write a w x h 24bpp BMP. The faithful task/button loaders only flag an
+ * image slot when the picture actually decodes (and size the reward button
+ * zones from it), so the fixture ships real, tiny pictures. */
+static void write_bmp(const char* name, int w, int h)
+{
+    char path[512];
+    snprintf(path, sizeof(path), "%s/%s", FIX, name);
+    FILE* fp = fopen(path, "wb");
+    if (fp == NULL) {
+        return;
+    }
+    const uint32_t row = (uint32_t)((w * 3 + 3) & ~3);
+    const uint32_t pixels = row * (uint32_t)h;
+    uint8_t hdr[54];
+    memset(hdr, 0, sizeof(hdr));
+    hdr[0] = 'B';
+    hdr[1] = 'M';
+    const uint32_t file_size = 54u + pixels;
+    memcpy(hdr + 2, &file_size, 4);
+    const uint32_t offset = 54u, dib = 40u;
+    memcpy(hdr + 10, &offset, 4);
+    memcpy(hdr + 14, &dib, 4);
+    const int32_t bw = w, bh = h;
+    memcpy(hdr + 18, &bw, 4);
+    memcpy(hdr + 22, &bh, 4);
+    const uint16_t planes = 1, bpp = 24;
+    memcpy(hdr + 26, &planes, 2);
+    memcpy(hdr + 28, &bpp, 2);
+    memcpy(hdr + 34, &pixels, 4);
+    fwrite(hdr, 1, sizeof(hdr), fp);
+    for (uint32_t i = 0; i < pixels; ++i) {
+        fputc(0x80, fp);
+    }
+    fclose(fp);
+}
+
 int main(void)
 {
     char rmcmd[64]; snprintf(rmcmd, sizeof(rmcmd), "rm -rf %s", FIX); system(rmcmd);
@@ -58,12 +106,32 @@ int main(void)
     write_map4("L02_p.map");
     write_map4("L02_t.map");
     {
+        static const char* const prefixes[2] = { "L01", "L02" };
+        static const char* const suffixes[7] = { "_bp", "_c", "_e", "_pa",
+                                                  "_em", "_ai", "_f" };
+        for (int pi = 0; pi < 2; ++pi) {
+            for (int si = 0; si < 7; ++si) {
+                char nm[64];
+                snprintf(nm, sizeof(nm), "%s%s.map", prefixes[pi], suffixes[si]);
+                write_map4(nm);
+            }
+        }
+    }
+    tlf_write_aux_files(FIX);
+    write_bmp("img_c.bmp", 32, 32);
+    write_bmp("box_c.bmp", 32, 32);
+    write_bmp("save_a.bmp", 32, 32);
+    write_bmp("adv_b.bmp", 32, 32);
+    {
         char path[512];
         snprintf(path, sizeof(path), "%s/Lego.cfg", FIX);
         FILE* fp = fopen(path, "w");
         if (fp != NULL) {
             fputs(
                 "Lego {\n"
+                /* The faithful mission loaders resolve every key under
+                 * "Lego Levels <name>", so the levels live in a Levels group. */
+                "  Levels {\n"
                 "  Level01 {\n"
                 "    Reward {\n"
                 "      Enable TRUE\n"
@@ -79,8 +147,11 @@ int main(void)
                 "      FailedText FAILED\n"
                 "      QuitText QUIT\n"
                 "      TextPos 100|200\n"
-                "      SaveButton save_a.bmp|10|10\n"
-                "      AdvanceButton adv_b.bmp|300|10\n"
+                /* Faithful grammar: four state pictures (normal / hover /
+                 * pressed / disabled) then x|y; the zone is sized from the
+                 * normal picture. */
+                "      SaveButton save_a.bmp|save_a.bmp|save_a.bmp|save_a.bmp|10|10\n"
+                "      AdvanceButton adv_b.bmp|adv_b.bmp|adv_b.bmp|adv_b.bmp|300|10\n"
                 "      Importance { Crystals 60  Ore 10  Timer 20 }\n"
                 "      Quota { Crystals 5  Ore 3  Timer 900 }\n"
                 "      Images { Crystals img_c.bmp|1|2 }\n"
@@ -94,13 +165,19 @@ int main(void)
                 "    PredugMap L01_p.map\n"
                 "    TerrainMap L01_t.map\n"
                 "    nextlevel Level02\n"
+                LEVEL_AUX_KEYS("L01")
+                TLF_LEVEL_KEYS
                 "  }\n"
                 "  Level02 {\n"
                 "    Reward { Quota { Crystals 100 } }\n"
                 "    SurfaceMap L02_s.map\n"
                 "    PredugMap L02_p.map\n"
                 "    TerrainMap L02_t.map\n"
+                LEVEL_AUX_KEYS("L02")
+                TLF_LEVEL_KEYS
                 "  }\n"
+                "  }\n"
+                TLF_ROOT_GROUPS
                 "}\n",
                 fp);
             fclose(fp);
@@ -110,6 +187,9 @@ int main(void)
         fprintf(stderr, "chdir failed\n");
         return 1;
     }
+    /* File opens resolve under the CD root; the fixture is the CWD. */
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
 
     BlockFile* cfg = block_open("Lego.cfg");
     CHECK(cfg != NULL, "open cfg");
@@ -238,6 +318,11 @@ int main(void)
 
     /* Next-level progression (findings 07/09): advance swaps in Level02. */
     {
+        /* The earlier block-local GameContext took over the entity-pool
+         * owner (game_context_init installs itself); LevelLoad parses into
+         * the active context, so hand it back to `ctx`. */
+        entity_pool_callback_context_set(&ctx);
+        tlf_install_texture_hooks();
         LevelState* real = level_load(cfg, "Level01");
         CHECK(real != NULL, "Level01 loads with its maps");
         free(lvl);

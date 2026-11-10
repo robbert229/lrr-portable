@@ -372,9 +372,12 @@ int main(void)
         display_resolution_filter_tuple_append(1, 1, 1);
         CHECK(display_resolution_filter_tuple_count() == 17,
               "the corpus keeps counting past the window");
+        /* The tuple window is 200 entries (not 16), so the seventeenth slot
+         * is a real stored tuple and reads back as appended. */
         w = 5;
         display_resolution_filter_tuple_get(16, &w, &h, &b);
-        CHECK(w == 0, "the guarded read answers zero (deviation)");
+        CHECK(w == 1 && h == 1 && b == 1,
+              "the seventeenth slot reads back through the wider window");
     }
 
     /* The remaining unowned DAT one-liners (2026-10-24). */
@@ -556,7 +559,7 @@ int main(void)
         CHECK(limbs[0] == 0u && limbs[1] == 0u && limbs[2] == 0u,
               "the limbs clear");
         CHECK(uint96_is_zero(limbs) == 1, "the sibling agrees");
-        uint96_zero(NULL); /* guarded */
+        /* uint96_zero no longer guards NULL (faithful blind store). */
 
         global_value_word_set(5);
         global_value_clear_if_equal(7);
@@ -780,7 +783,7 @@ int main(void)
         crt_owned_stream_buffer_release(rec);
         __builtin_memcpy(&flags, rec + 3 * sizeof(void*), sizeof flags);
         CHECK(flags == 0x82u, "the gate-false record survives intact");
-        crt_owned_stream_buffer_release(NULL); /* guarded */
+        /* NULL argument no longer guarded (faithful blind access): crt_owned_stream_buffer_release */
     }
 
     /* RendererCommandNodePrepend (2026-10-25): the node window, the kind
@@ -896,7 +899,7 @@ int main(void)
         CHECK(strcmp(buf + 2, "abc") == 0, "the string lands after the gap");
         string_prefix_reserve(buf, 0);
         CHECK(strcmp(buf + 2, "abc") == 0, "a zero count leaves it alone");
-        string_prefix_reserve(NULL, 2); /* guarded */
+        /* NULL argument no longer guarded (faithful blind access): string_prefix_reserve */
     }
 
     /* CrtStreamBufferAllocate (2026-10-24): the buffer install. */
@@ -923,7 +926,7 @@ int main(void)
         CHECK(pos == NULL, "the window position starts clear");
         crt_stream_buffer_allocate(rec); /* overwrite leaks (faithful) */
         CHECK(stream_allocation_count_peek() == 2, "the second tick lands");
-        crt_stream_buffer_allocate(NULL); /* guarded */
+        /* NULL argument no longer guarded (faithful blind access): crt_stream_buffer_allocate */
     }
 
     /* UInt96Add (2026-10-24): the three-limb carry chains. */
@@ -953,10 +956,7 @@ int main(void)
         CHECK(same[0] == 2u && same[1] == 4u && same[2] == 6u,
               "the in-place double lands");
 
-        crt_uint96_add(NULL, same); /* guarded */
-        crt_uint96_add(same, NULL);
-        CHECK(same[0] == 2u && same[1] == 4u && same[2] == 6u,
-              "the guards leave the sum alone");
+        /* NULL argument no longer guarded (faithful blind access): crt_uint96_add */
     }
 
     /* UInt96IncrementAtBit (2026-10-24): masks and the downward carry. */
@@ -1237,8 +1237,10 @@ int main(void)
         CHECK(crt_math_exception_code_from_status(8u) == 1, "bit 8 answers one");
         CHECK(crt_math_exception_code_from_status(4u) == 2, "bit 4 answers two");
         CHECK(crt_math_exception_code_from_status(1u) == 3, "bit 1 answers three");
-        CHECK(crt_math_exception_code_from_status(2u) == 4,
-              "the lone bit 2 doubles to four");
+        /* The corpus fall-through returns the low status byte (no longer
+         * the doubled bit 2), so a lone bit 2 answers two. */
+        CHECK(crt_math_exception_code_from_status(2u) == 2,
+              "the lone bit 2 falls through as its low status byte");
         CHECK(crt_math_exception_code_from_status(0u) == 0,
               "the clean status answers zero");
 
@@ -1295,8 +1297,8 @@ int main(void)
         CHECK(crt_integer64_divide(0u, 0x80000000u, 1u, 0u)
                   == 0x8000000000000000ull,
               "INT64_MIN over one rides through unchanged");
-        CHECK(crt_integer64_divide(1u, 1u, 0u, 0u) == 0ull,
-              "the zero divisor answers zero (deviation)");
+        /* A zero divisor is the hardware divide fault (faithful), so the
+         * former "answers zero" deviation case is no longer asserted. */
 
         CHECK(crt_unsigned64_divide(7u, 0u, 2u, 0u) == 3ull,
               "the plain unsigned pair divides");
@@ -1306,8 +1308,8 @@ int main(void)
               "the pair fold answers the scaled quotient");
         CHECK(crt_unsigned64_divide(2u, 1u, 0u, 1u) == 1ull,
               "the pair-scale division answers with the pair quotient");
-        CHECK(crt_unsigned64_divide(5u, 0u, 0u, 0u) == 0ull,
-              "the zero divisor answers zero (deviation)");
+        /* A zero divisor is the hardware divide fault (faithful): the
+         * former "answers zero" deviation case is no longer asserted. */
     }
 
     /* The file-descriptor flag window (2026-10-25): 32 eight-byte entries
@@ -1335,11 +1337,12 @@ int main(void)
               "the block hook guards the first out-of-range slot (dev)");
         CHECK(crt_file_descriptor_flag_block_peek(-1) == NULL,
               "the guarded peek answers null (dev)");
-        CHECK(crt_file_descriptor_flag40_get(7u) == 1u,
+        /* __isatty answers the masked flag byte (0x40), not a boolean. */
+        CHECK(crt_file_descriptor_flag40_get(7u) == 0x40u,
               "the flag byte answers the bit");
         CHECK(crt_file_descriptor_flag40_get(8u) == 0u,
               "the other bit answers clear");
-        CHECK(crt_file_descriptor_flag40_get(33u) == 1u,
+        CHECK(crt_file_descriptor_flag40_get(33u) == 0x40u,
               "the second block answers");
         CHECK(crt_file_descriptor_flag40_get(64u) == 0u,
               "the count bound answers clear");
@@ -1351,9 +1354,9 @@ int main(void)
         crt_file_descriptor_count_set(64);
         CHECK(crt_file_descriptor_flag40_get(5u) == 0u,
               "the flagless entry answers clear");
+        /* The faithful lookup dereferences its block blindly, so the former
+         * null-block "answers clear" deviation case is no longer asserted. */
         crt_file_descriptor_flag_block_set(1, NULL);
-        CHECK(crt_file_descriptor_flag40_get(33u) == 0u,
-              "the null block answers clear (dev)");
 
         /* leave the window clean */
         crt_file_descriptor_flag_block_set(0, NULL);

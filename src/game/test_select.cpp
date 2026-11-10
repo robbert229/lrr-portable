@@ -4,13 +4,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
+#include "game/level.hpp"
 #include "game/frontend.hpp"
 #include "game/game.hpp"
 #include "game/select.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/resource.hpp"
 
 static int s_failures = 0;
 
@@ -21,6 +25,26 @@ static int s_failures = 0;
             ++s_failures;                                                      \
         }                                                                      \
     } while (0)
+
+#define LEVEL_DIM 64
+
+/* A LEVEL_DIM x LEVEL_DIM all-zero surface map. */
+static void write_surface_map(const char* path)
+{
+    FILE* fp = fopen(path, "wb");
+    if (fp == NULL) {
+        return;
+    }
+    const char magic[4] = { 'M', 'A', 'P', ' ' };
+    const uint32_t len = LEVEL_DIM * LEVEL_DIM * 2, w = LEVEL_DIM, h = LEVEL_DIM;
+    static const uint16_t cells[LEVEL_DIM * LEVEL_DIM] = { 0 };
+    fwrite(magic, 1, 4, fp);
+    fwrite(&len, 1, 4, fp);
+    fwrite(&w, 1, 4, fp);
+    fwrite(&h, 1, 4, fp);
+    fwrite(cells, 1, sizeof(cells), fp);
+    fclose(fp);
+}
 
 static EntitySlot* place(GameContext* ctx, int type, const char* name,
                          float x, float y)
@@ -37,6 +61,30 @@ int main(void)
     game_context_init(&ctx);
     cmd_context_set(&ctx);
 
+    /* The faithful pick / move / HUD paths resolve entity positions and
+     * cells through the context's level terrain, so give the context a
+     * scratch level (a real terrain over a written surface map; file opens
+     * resolve under the CD root, the fixture directory). */
+    system("rm -rf select_fixture");
+    mkdir("select_fixture", 0755);
+    write_surface_map("select_fixture/L01_surface.map");
+    if (chdir("select_fixture") != 0) {
+        fprintf(stderr, "select_test: chdir failed\n");
+        return 1;
+    }
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
+    void* const level_terrain = terrain_create("L01_surface.map", 1.0f);
+    CHECK(level_terrain != NULL, "scratch terrain");
+    static LevelState level;
+    static uint8_t level_grid[LEVEL_DIM * LEVEL_DIM * LEVEL_VOXEL_STRIDE];
+    memset(&level, 0, sizeof(level));
+    level_set_int(&level, LEVEL_OFF_WIDTH, LEVEL_DIM);
+    level_set_int(&level, LEVEL_OFF_HEIGHT, LEVEL_DIM);
+    level.ptr_voxels = level_grid;
+    level.ptr_terrain = level_terrain;
+    ctx.level = &level;
+
     EntitySlot* a = place(&ctx, 1, "diggerA", 3, 4);
     EntitySlot* b = place(&ctx, 2, "minerB", 8, 8);
     EntitySlot* c = place(&ctx, 4, "wallC", 20, 20);
@@ -50,9 +98,15 @@ int main(void)
     CHECK((a->flags & ENTITY_SELECTED) != 0, "a selected flag");
 
     /* Pick nearest within tolerance. */
-    CHECK(selection_pick(&ctx, 3, 4, 2.0f) == a, "pick a at its cell");
-    CHECK(selection_pick(&ctx, 8, 8, 1.0f) == b, "pick b at its cell");
-    CHECK(selection_pick(&ctx, 50, 50, 5.0f) == NULL, "no entity near (50,50)");
+    /* Picks are in grid cells: the entities' world positions map through the
+     * level's terrain, so read each one's grid position back first. */
+    float ga[2] = { 0, 0 }, gb[2] = { 0, 0 };
+    CHECK(entity_position_grid_coordinates_get(a, ctx.level, ga) != 0
+              && entity_position_grid_coordinates_get(b, ctx.level, gb) != 0,
+          "grid coordinates resolve");
+    CHECK(selection_pick(&ctx, ga[0], ga[1], 2.0f) == a, "pick a at its cell");
+    CHECK(selection_pick(&ctx, gb[0], gb[1], 1.0f) == b, "pick b at its cell");
+    CHECK(selection_pick(&ctx, 62, 62, 1.0f) == NULL, "no entity near (62,62)");
 
     /* Pointer command: move selection to a cell -> queue -> dispatch. */
     int n = selection_cmd_move(&ctx, 5, 5);
@@ -90,6 +144,13 @@ int main(void)
     selection_count_reset(&ctx);
     CHECK(selection_count(&ctx) == 0 && (a->flags & ENTITY_SELECTED) != 0,
           "count-only reset leaves the selected flags");
+    /* The count-only reset leaves the +0x3e8 selected bits (and the active
+     * records are gone), so no later clear can release them and the faithful
+     * add refuses to re-select: release them by hand. */
+    a->flags_3e8 &= ~ENTITY_SELECTED;
+    b->flags_3e8 &= ~ENTITY_SELECTED;
+    a->flags &= ~ENTITY_SELECTED;
+    b->flags &= ~ENTITY_SELECTED;
     selection_add(&ctx, a);
     selection_add(&ctx, b);
     selection_clear(&ctx);
@@ -105,6 +166,10 @@ int main(void)
         game_context_init(&empty);
         CHECK(selection_contains_entity(&empty, a) == 0, "empty: absent");
         CHECK(selection_contains_entity(NULL, a) == 0, "NULL ctx: absent");
+        /* game_context_init installs `empty` as the process-wide command and
+         * entity-pool owner; take them back before it leaves scope. */
+        cmd_context_set(&ctx);
+        entity_pool_callback_context_set(&ctx);
         selection_clear(&ctx);
         selection_add(&ctx, b);
         CHECK(selection_contains_entity(&ctx, b) == 1, "the added entity");
@@ -112,6 +177,9 @@ int main(void)
 
         CHECK(selection_candidate_already_selected_or_marked(&ctx, b) == 1,
               "selected counts as taken");
+        /* selection_clear leaves the +0x3ec "recently selected" mark (bit 2)
+         * on every entity it released; drop a's to model an unmarked one. */
+        a->flags_3ec &= ~2u;
         CHECK(selection_candidate_already_selected_or_marked(&ctx, a) == 0,
               "the unselected/unmarked answers 0");
         CHECK(selection_candidate_already_selected_or_marked(&ctx, NULL) == 0,
@@ -187,20 +255,30 @@ int main(void)
         CHECK((eng.state & 0x10000000u) == 0u && a->flags_3ec == 0u,
               "the unmarked entity raises nothing");
 
-        /* Marked + stats bit + clear state flags: both raises fire. */
-        a->flags_3ec = 2u;
-        rec[0x146] = 0x02u; /* stats word @+144 bit 0x20000 */
-        selection_clear_marker_and_reset_hud(&eng, a);
-        CHECK((eng.state & 0x10000000u) != 0u && (a->flags_3ec & 3u) == 3u,
-              "the marked stats-carrying entity raises both words");
-
-        /* Stats bit clear on the second word + null owner: no raise. */
-        eng.state = 0u;
+        /* Faithful gate (FUN_0044c4a0): a marked entity needs the state-flags
+         * word (+0x148) bit 0x20000 AND (the stats word (+0x144) bit 0x20000
+         * clear OR an owner). Marked, state bit set, stats bit clear: both
+         * raises fire. */
         a->flags_3ec = 2u;
         rec[0x14a] = 0x02u; /* state-flags word @+148 bit 0x20000 */
         selection_clear_marker_and_reset_hud(&eng, a);
+        CHECK((eng.state & 0x10000000u) != 0u && (a->flags_3ec & 3u) == 3u,
+              "the marked state-flagged entity raises both words");
+
+        /* No state-flags bit: nothing raises even when marked. */
+        eng.state = 0u;
+        a->flags_3ec = 2u;
+        rec[0x14a] = 0u;
+        selection_clear_marker_and_reset_hud(&eng, a);
         CHECK((eng.state & 0x10000000u) == 0u && a->flags_3ec == 2u,
-              "the set state flags with no owner skips the raise");
+              "the marked entity without the state bit raises nothing");
+
+        /* State bit + stats bit set + null owner: no raise. */
+        rec[0x14a] = 0x02u;
+        rec[0x146] = 0x02u; /* stats word @+144 bit 0x20000 */
+        selection_clear_marker_and_reset_hud(&eng, a);
+        CHECK((eng.state & 0x10000000u) == 0u && a->flags_3ec == 2u,
+              "the set stats bit with no owner skips the raise");
 
         /* Same, owner set: the owner half of the fold raises. */
         static const int owner = 1;
@@ -244,7 +322,8 @@ int main(void)
         flaggedBad->owner_36c = (void*)&sentinel;
         noOwnerFlag->stats_record = flag_rec;
         miner11->flags_3e4 = 0x2000000u;
-        gen3->flags_3e8 |= ENTITY_SELECTED; /* visible on the class-none drop */
+        /* (selection_add raises +0x3e8 itself; pre-setting it makes the
+         * faithful add refuse the entry.) */
 
         /* Empty selection: nothing classifies, context 0, nothing to remove. */
         selection_state_tick(&ctx);
@@ -313,7 +392,9 @@ int main(void)
         /* Class-none: an entry that classifies nothing posts 0 and every
          * entry drops (the quirk pinned). */
         selection_clear(&ctx);
-        selection_add(&ctx, gen3);
+        CHECK(selection_add(&ctx, gen3) == 1 &&
+                  (gen3->flags_3e8 & ENTITY_SELECTED) != 0,
+              "the class-none entry is selected before the tick");
         selection_state_tick(&ctx);
         CHECK(selection_count(&ctx) == 0
                   && (gen3->flags_3e8 & ENTITY_SELECTED) == 0,
