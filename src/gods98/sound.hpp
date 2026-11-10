@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <cstddef>
 
-typedef struct BlockFile BlockFile;
+typedef struct BlockRec BlockFile;
 
 #define SOUND_LOOPING  0x4u
 #define SOUND_STREAMED 0x8u

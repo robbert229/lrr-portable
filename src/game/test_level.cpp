@@ -113,11 +113,11 @@ static int real_probe(const char* wad_dir)
             continue;
         }
         char path[512];
-        snprintf(path, sizeof(path), "%s Levels %s SurfaceMap",
+        snprintf(path, sizeof(path), "%s::Levels::%s::SurfaceMap",
                  util_root_name(cfg), block_name(g));
         int found = block_get_strptr(cfg, path) != NULL;
         if (!found) {
-            snprintf(path, sizeof(path), "%s %s SurfaceMap",
+            snprintf(path, sizeof(path), "%s::%s::SurfaceMap",
                      util_root_name(cfg), block_name(g));
             found = block_get_strptr(cfg, path) != NULL;
         }
@@ -1471,13 +1471,14 @@ int main(int argc, char** argv)
     {
         static char text[] =
             "Lego* {\n"
-            "  S_ObjTtSFXs { placeholder }\n"
-            "  smallDigger SFX_Drill\n"
-            "  ore SFX_RockBreak\n"
-            "  powerCrystal SFX_Ambient\n"
-            "  bogus SFX_Drip\n"
-            "  slug SFX_NOTHING\n"
-            "  tvcamera SFX_Drill\n"
+            "  ObjTtSFXs {\n"
+            "    smallDigger SFX_Drill\n"
+            "    ore SFX_RockBreak\n"
+            "    powerCrystal SFX_Ambient\n"
+            "    bogus SFX_Drip\n"
+            "    slug SFX_NOTHING\n"
+            "    tvcamera SFX_Drill\n"
+            "  }\n"
             "}\n";
         BlockFile* bf = block_parse(text, strlen(text));
         CHECK(bf != NULL, "the sfx config parses");

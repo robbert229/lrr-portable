@@ -5121,7 +5121,7 @@ static uint32_t building_upgrade_config_cost_get(GameContext* context,
                                                   int selector)
 {
     const char* key = selector != 0
-        ? "Main BuildingUpgradeCostStuds" : "Main BuildingUpgradeCostOre";
+        ? "Main::BuildingUpgradeCostStuds" : "Main::BuildingUpgradeCostOre";
     const int default_cost = selector != 0 ? 1 : 5;
     if (context == NULL || context->cfg == NULL) return (uint32_t)default_cost;
     return (uint32_t)block_get_int(context->cfg, key, default_cost);
@@ -5593,12 +5593,12 @@ void deferred_olist_entity_level_begin(GameContext* context)
     deferred_olist_entity_hooks_set(&hooks);
 }
 
-/* Parse an optional child value under "<root> <obj> <key>". */
+/* Parse an optional child value under "<root>::<obj>::<key>". */
 static const char* obj_val(BlockFile* bf, const char* root, const char* obj,
                            const char* key)
 {
     char path[512];
-    snprintf(path, sizeof(path), "%s %s %s", root, obj, key);
+    snprintf(path, sizeof(path), "%s::%s::%s", root, obj, key);
     return block_get_strptr(bf, path);
 }
 
@@ -10916,7 +10916,7 @@ void ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick(
         (entity->owner_ctx->cheat & 0x200000u) == 0u &&
         entity->progress_344 < entity->field_340 * 0.01f *
             block_get_float(entity->owner_ctx->cfg,
-                            "Main MinEnergyForEat", 0.0f) &&
+                            "Main::MinEnergyForEat", 0.0f) &&
         entity->activity_counter_3d4 > 125.0f) {
         /* The source clears +0x3d4 as part of the timed gate before testing
          * the carried-object link and pending-command predicate. */
@@ -12416,7 +12416,7 @@ int ledger_stub_004475c0_EntityProgressAndNegativeDeltaHandler(
             GameContext* context = entity->owner_ctx != NULL
                 ? entity->owner_ctx : entity_pool_callback_context_get();
             float drain_time = context != NULL && context->cfg != NULL
-                ? block_get_float(context->cfg, "Main DrainTime", 10.0f)
+                ? block_get_float(context->cfg, "Main::DrainTime", 10.0f)
                 : 10.0f;
             if (drain_time == 0.0f) drain_time = 10.0f;
             if (entity->activity_counter_3d8 >= drain_time * 25.0f) {
@@ -15268,7 +15268,7 @@ void ledger_stub_00444460_FlaggedVectorStepCommandIssue(
     entity_transform_position_get(entity, position);
     scale = context->cfg != NULL
         ? block_get_float(context->cfg,
-                          "Main MiniFigureRunAway", 0.0f)
+                          "Main::MiniFigureRunAway", 0.0f)
         : 0.0f;
     if (scale == 0.0f) scale = 10.0f;
     position[0] += vector[0] * scale;

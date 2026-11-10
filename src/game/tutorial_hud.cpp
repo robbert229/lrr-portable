@@ -2373,7 +2373,7 @@ static int legacy_config_bool_from_root(BlockFile* values,
     const char* path;
     if (values == NULL || config_root == NULL || key == NULL) return 0;
     path = legacy_hud_config_path(config_root, key);
-    return block_get_bool(values, path);
+    return block_get_bool_path(values, path);
 }
 
 static float legacy_clamp_01(float value)

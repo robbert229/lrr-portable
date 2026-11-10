@@ -10,6 +10,7 @@
 #include "terrain_grid.hpp"
 #include "../crt/crt.hpp"
 #include "../gods98/block.hpp"
+#include "util.hpp"
 
 namespace unported_ledger_stubs {
 
@@ -133,14 +134,18 @@ static int dependency_grid_parse(LevelState* level, BlockRec* level_block,
     memset(state->cells, 0, sizeof(state->cells));
     dependency_grid_owned_records_clear(storage);
     memset(&storage->candidates, 0, sizeof(storage->candidates));
-    section = dependency_grid_child_find(level_block, "Dependencies");
+    /* `section` is the first item of the Dependencies container. */
+    section = block_first_child(
+        dependency_grid_child_find(level_block, "Dependencies"));
     if (section == NULL && global_config != NULL)
-        section = block_subgroup(global_config, "Dependencies");
+        section = block_subgroup(global_config,
+            string_path_join(util_root_name(global_config), "Dependencies",
+                             (const char*)NULL));
     if (section == NULL) {
         dependency_grid_occupancy_pass_state(state);
         return 0;
     }
-    for (entry = block_first_child(section); entry != NULL;
+    for (entry = section; entry != NULL;
          entry = block_next_equal_key(entry)) {
         const char* raw_name = block_name(entry);
         const char* raw_value = block_value(entry);

@@ -3064,18 +3064,18 @@ static void camera_predug_spawn_state_seed(LevelState* level)
  *
  *  Config paths are rooted at the file's first record (upstream block
  *  parser keeps the `Lego` root, so a level key reads as
- *  "Lego* <levelname> <key>", matching the corpus's BlockQueryDefault
+ *  "Lego*::<levelname>::<key>", matching the corpus's BlockQueryDefault
  *  path-building "%s%s%s").
  * ------------------------------------------------------------------ */
 
-/* Build the config path "<root> <level> <key>", rooted at the file's first
+/* Build the config path "<root>::<level>::<key>", rooted at the file's first
  * record name (`util_root_name`) — the block parser keeps the top-level
  * `Lego {…}` record as the root, and the corpus's LevelLoad paths are
  * relative to it (finding 12, FUN_004792e0). */
 
 /* The shipped Lego.cfg nests every level group under the root's `Levels`
  * container (`Lego* { … Levels { … Level01 { … } } }`), so the flat
- * `root level key` path misses. Resolve through `Levels` first, then fall
+ * `root::level::key` path misses. Resolve through `Levels` first, then fall
  * back to the direct shape (the test fixtures and any flatter config).
  * Returns the resolving path (into out) or NULL. */
 static const char* cfg_resolve_path(BlockFile* cfg, const char* level,
@@ -3129,7 +3129,7 @@ static int cfg_typed(BlockFile* cfg, const char* level, const char* key, int dfl
     }
     /* FUN_004790d0 delegates to ConfigBooleanGet @ 0x477710: missing or
      * unrecognized values answer 2 instead of parsing a numeric string. */
-    return block_get_bool(cfg, path);
+    return block_get_bool_path(cfg, path);
 }
 
 static int map_bias_name(BlockFile* cfg, const char* level, const char* key,
@@ -3149,11 +3149,13 @@ static BlockRec* level_config_block_find(BlockFile* cfg, const char* level)
     BlockRec* record;
     if (cfg == NULL || level == NULL) return NULL;
     root = util_root_name(cfg);
-    snprintf(path, sizeof(path), "%s Levels %s", root, level);
-    record = block_subgroup(cfg, path);
-    if (record != NULL) return record;
-    snprintf(path, sizeof(path), "%s %s", root, level);
-    return block_subgroup(cfg, path);
+    /* The level's container record (NULL when missing or empty). */
+    snprintf(path, sizeof(path), "%s::Levels::%s", root, level);
+    record = block_find(cfg, path);
+    if (block_has_children(record)) return record;
+    snprintf(path, sizeof(path), "%s::%s", root, level);
+    record = block_find(cfg, path);
+    return block_has_children(record) ? record : NULL;
 }
 
 /* LevelIdentifierRemapTableLoad @ 0x45d7e0 opens PTLFile, selects the
@@ -3186,7 +3188,7 @@ static int level_identifier_remap_table_load(const char* path,
         return 1;
     }
     message_string_table_initialize();
-    for (entry = block_first_child(group); entry != NULL;
+    for (entry = group; entry != NULL;
          entry = block_next_sibling(entry)) {
         const char* name = block_name(entry);
         const char* value = block_value(entry);
@@ -10835,9 +10837,8 @@ int terrain_sfx_grid_cell_peek(int cell)
  * guards NULL) and stores blind past the 300-entry window (the port
  * stores blind as well). The entry chain is the subgroup record followed
  * by its equal-key siblings, entry name = the object name (the corpus
- * reads the name blind at its record +4; the port record keeps the name
- * token in its first word, so the load lands there), entry value = the
- * sound alias reference. */
+ * reads the name blind at its record +4, the BlockRec key), entry value =
+ * the sound alias reference. */
 // FUNCTION: LEGORR 0x0044acc0
 void terrain_object_sfx_grid_config_load(BlockFile* config,
                                          const char* root_path)
@@ -10852,21 +10853,19 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
         --init_count;
         *(volatile int*)&obj_y = 15;
     } while (init_count != 0);
-    const char* path = string_path_join(root_path, "S_ObjTtSFXs", NULL);
+    const char* path = string_path_join(root_path, "ObjTtSFXs", NULL);
     for (BlockRec* entry = block_subgroup(config, path);
          entry != NULL; entry = block_next_equal_key(entry)) {
-        /* The corpus loads the name blind (mov ecx,[esi+4]); the port
-         * record keeps the name token in the first word. The chain
-         * already proved entry non-NULL. */
-        const char* name = *(const char* const*)((const char*)entry);
+        /* The corpus loads the name blind (mov ecx,[esi+4]), the record
+         * key. The chain already proved entry non-NULL. */
+        const char* name = entry->key;
         if (entity_type_row_for_name(name, &obj_x,
                                      &obj_y) == 0) {
             continue;
         }
         int sfx = 0;
-        /* The entry chain proves non-NULL; BlockRec stores value after name. */
-        const char* value = *(const char* const*)((const char*)entry
-                                                   + sizeof(void*));
+        /* The entry chain proves non-NULL; read its value blind. */
+        const char* value = entry->value;
         if (sound_alias_lookup(value, &sfx) == 0) {
             continue;
         }

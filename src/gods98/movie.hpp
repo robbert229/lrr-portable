@@ -10,7 +10,7 @@
  *
  * Corpus surface reconstructed (finding 23):
  *
- *   AvisEnabled           @ 0x414ce0  — `Lego* Main DontPlayAvis` gate
+ *   AvisEnabled           @ 0x414ce0  — `Lego*::Main::DontPlayAvis` gate
  *   MoviePlayNamed        @ 0x415910  — play a config-key movie (boot path)
  *   MoviePlayLoop         @ 0x4157c0  — play to completion / up to ESC
  *   MoviePlayLevelVideo   @ 0x415990  — the level's `Video` config key
@@ -285,17 +285,17 @@ void movie_scale_rgba_rect(const uint8_t* src, int sw, int sh, int spitch,
 
 /* --- config surface (finding 23 callbacks) ------------------------------ */
 
-/* AvisEnabled @ 0x414ce0: play movies when `Lego* Main DontPlayAvis` is not
+/* AvisEnabled @ 0x414ce0: play movies when `Lego*::Main::DontPlayAvis` is not
  * TRUE and engine app mode is below 3. Missing/FALSE defaults to enabled in
  * normal app mode. */
 int  movie_avis_enabled(BlockFile* cfg);
 
-/* MoviePlayNamed: read a `Lego* Main <key>` movie path and normalize its
+/* MoviePlayNamed: read a `Lego*::Main::<key>` movie path and normalize its
  * backslashes to '/'. Returns 1 and fills out (<= sz) when the key has a
  * non-empty value. */
 int  movie_key_path(BlockFile* cfg, const char* key, char* out, size_t sz);
 
-/* MoviePlayLevelVideo: the `<level> Video` config value through the shipped
+/* MoviePlayLevelVideo: the `<level>::Video` config value through the shipped
  * `Levels` container (falling back to the flat shape). */
 int  movie_level_video_path(BlockFile* cfg, const char* level,
                             char* out, size_t sz);

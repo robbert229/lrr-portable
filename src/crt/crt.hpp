@@ -637,14 +637,6 @@ void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
                                    uint32_t* out_y); /* FUN_00463ea0 */
 void indexed_record_pointer_set(int index, void* record); /* port hook */
 void* indexed_record_pointer_peek(int index);
-/* Symbol-count pad (finding 506). MSVC 5.0 numbers every symbol a
- * translation unit declares, and its register and x87-stack choices in later
- * functions depend on that numbering. Issue #384 removed region_bounds_set/peek
- * from this header; this declaration fills their 7 symbol slots so that
- * every other unit including the header compiles to the same code. It is
- * never defined or called. Drop it in a change that accepts entropy drift
- * (ADR 0005). */
-void lrr_symbol_pad_crt(int, int, int, int, int, int);
 void panel_draw_records_set(int index, void* records); /* port hook */
 void* panel_draw_records_peek(int index);
 void panel_item_flag16_set(int panel, int item, int value);
@@ -719,10 +711,9 @@ float    crt_float_bits(uint32_t bits);
  * UInt96Zero (FUN_00497aa0): zero the three limbs (the sibling is already
  * ported). GlobalValueClearIfEqual (FUN_0040e910): the screen-effect
  * handle word clears only when the incoming value equals it (the corpus's
- * stale-handle release rule). LinkedListPushAtGlobalHead /
- * GlobalRecordListPushHead (FUN_0046a470/FUN_004792c0): push a record at
- * the head of the corpus's two global lists — the link lands at +0x1c and
- * the heads land here. SceneEffectRegistryReset (FUN_00465380): clear the
+ * stale-handle release rule). LinkedListPushAtGlobalHead (FUN_0046a470):
+ * push a record at the head of the corpus's global list — the link lands
+ * at +0x1c and the head lands here. SceneEffectRegistryReset (FUN_00465380): clear the
  * transient-effect registry head/tail/texture words and answer 1.
  * CrtFatalMessageExit (FUN_00498340): the corpus's exhausted-memory fatal
  * path (`__amsg_exit` 2). The port aborts like the CRT unless an observer
@@ -739,8 +730,6 @@ void* linked_list_global_head_peek(void);           /* port hook */
 void  linked_list_global_head_set(void* record);      /* port hook */
 void linked_list_conditional_float_advance(float delta); /* FUN_0046a700 */
 uint32_t first_set_flag_ordinal(uint32_t mask); /* FUN_0046a760 */
-void global_record_list_push_head(void* record);    /* FUN_004792c0 */
-void* global_record_list_head_peek(void);           /* port hook */
 int  scene_effect_registry_reset(void);             /* FUN_00465380 */
 void scene_effect_registry_words_peek(uint32_t out_words[3]);
 void crt_fatal_message_exit(void);                  /* FUN_00498340 */
@@ -762,14 +751,6 @@ void linked_record_chain_free(void* record);  /* FUN_0046a370 */
 void global_linked_record_chain_clear(void);  /* FUN_0046a390 */
 void* linked_list_global_aux_peek(void);      /* port hook */
 void  linked_list_global_aux_set(void* word); /* port hook */
-
-/* ReleaseLinkedObjectList (FUN_00479240): frees the list record's field-0
- * owner word through the engine heap, then recycles the chain — linked
- * through record field 5, a corpus slot the port keeps as a documented
- * widened link slot — by pushing every node onto the global record list
- * through the ported push. Deviation: the corpus strides the chain
- * blindly; the port guards the record pointer. */
-void linked_object_list_release(void* list);          /* FUN_00479240 */
 
 /* ModelRenderListClear (FUN_00482d30): walks the corpus's model-render
  * list head (unowned global, zero-init storage with hooks) freeing each

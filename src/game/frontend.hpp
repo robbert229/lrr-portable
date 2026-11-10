@@ -1354,18 +1354,6 @@ void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
 extern "C" void ui_entry_bounds_get(int panel, int item, float* out_bounds);
                                         /* FUN_0045bf70 */
 
-/* Symbol-count pad (finding 506). MSVC 5.0 numbers every symbol a
- * translation unit declares, and its register and x87-stack choices in later
- * functions depend on that numbering. Issue #384 removed the eight
- * priority-panel adapters from this header (src/game/priorities.h replaces
- * them); this declaration fills their 24 symbol slots so that every other
- * unit including the header compiles to the same code. It is
- * never defined or called. Drop it in a change that accepts entropy drift
- * (ADR 0005). */
-void lrr_symbol_pad_frontend(int, int, int, int, int, int, int, int,
-                             int, int, int, int, int, int, int, int,
-                             int, int, int, int, int, int, int);
-
 /* UiRenderRecordCreate (FUN_0045da90): the 0x3c UI render record — the
  * source, its payload words copied from the caller's array, the extra
  * argument, and the source's float at byte offset +0x10 (the corpus's

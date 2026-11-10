@@ -4,7 +4,7 @@
  * Synthetic fixture mirrors the shipped Lego.cfg shape: root `Lego*` with
  * sibling `Main` (StartLevel/../FrontEnd flag) and `Menu` (MainMenuFull)
  * and `Levels` groups. The fixture exercises:
- *   - the `::` group-separator queries ("Lego* Menu::MainMenuFull …"),
+ *   - the `::` path-separator queries ("Lego*::Menu::MainMenuFull::…"),
  *   - MenuBuild parsing (submenus, Item%i grammar),
  *   - StartLevel/TutorialStartLevel + NextLevel chains,
  *   - level-picker grafting (LevelPick / LevelPickT art),
@@ -27,6 +27,9 @@
 #include "game/util.hpp"
 #include "game/game.hpp"
 #include "game/select.hpp"
+#include "game/upgrades.hpp"
+#include "game/port_loop_ports.hpp"
+#include "gods98/sound.hpp"
 #include "gods98/block.hpp"
 #include "crt/crt.hpp"
 #include "gods98/heap.hpp"
@@ -144,19 +147,101 @@ static const char* FIXCFG =
     "\t}\n"
     "}\n";
 
+/* Config sections the original resolves under the root
+ * (Config_BuildStringID(gameName, "<Section>", 0), finding 508). Lego.cfg
+ * keeps them inside `Lego* { … }`; a bare one-segment lookup never matched
+ * there, and under the original lookup a miss would read the file's
+ * trailing empty record. Each loader must now find its section. */
+namespace unported_ledger_stubs {
+int dependency_grid_config_load(void* config, int level); /* startup_config.cpp */
+}
+using unported_ledger_stubs::dependency_config_entry_hook_set;
+
+static int s_dependency_hook_calls;
+static int dependency_hook_count(void*, int, const char*, const char*)
+{
+    ++s_dependency_hook_calls;
+    return 1;
+}
+
+static void test_root_qualified_sections(void)
+{
+    BlockFile* cfg = s_parse(
+        "Lego* {\n"
+        "\tMain { FrontEnd TRUE }\n"
+        "\tUpgradeNames {\n"
+        "\t\tLevel1\tUP1\n"
+        "\t\tLevel2\tUP2\n"
+        "\t}\n"
+        "\tUpgradeTypes {\n"
+        "\t\tWDDrillUpgrade\tVehicles\\WalkerBody\\LPW_D_Up\n"
+        "\t\tLPW_LaserBlock\tVehicles\\WalkerBody\\LPW_LaserBlock\n"
+        "\t}\n"
+        "\tDependencies {\n"
+        "\t\tAlwaysCheck:BuildingTypes::Toolstation\tBuildingTypes::Powerstation,0\n"
+        "\t\tAlwaysCheck:BuildingTypes::Teleports\tBuildingTypes::Toolstation,0\n"
+        "\t}\n"
+        "\tToolTipsSFXs {\n"
+        "\t\tToolTip_RadarBlock\tSFX_Drill\n"
+        "\t}\n"
+        "}\n");
+    CHECK(cfg != NULL, "sections: parse fixture");
+    if (cfg == NULL) return;
+
+    lego::level_upgrade_name_strings_load(cfg);
+    CHECK(lego::level_upgrade_name_string_get(1) != NULL
+              && strcmp(lego::level_upgrade_name_string_get(1), "UP1") == 0
+              && lego::level_upgrade_name_string_get(2) != NULL
+              && strcmp(lego::level_upgrade_name_string_get(2), "UP2") == 0,
+          "sections: UpgradeNames loads under the root");
+
+    CHECK(lego::upgrade_types_load(cfg) == 1
+              && lego::upgrade_type_count_get() == 2u
+              && strcmp(lego::upgrade_type_name_get(0), "WDDrillUpgrade") == 0
+              && strcmp(lego::upgrade_type_name_get(1), "LPW_LaserBlock") == 0,
+          "sections: UpgradeTypes loads under the root");
+
+    dependency_config_entry_hook_set(dependency_hook_count, NULL);
+    s_dependency_hook_calls = 0;
+    CHECK(unported_ledger_stubs::dependency_grid_config_load((void*)cfg, 0) == 2 && s_dependency_hook_calls == 2,
+          "sections: Dependencies loads under the root");
+    dependency_config_entry_hook_set(NULL, NULL);
+
+    {
+        int index = -1;
+        int alias = -1;
+        CHECK(case_insensitive_name_table_lookup("ToolTip_RadarBlock", &index)
+                  && sound_alias_lookup("SFX_Drill", &alias),
+              "sections: tool-tip slot and alias resolve");
+        timed_effect_cue_request_set(index, 0u);
+        advisor_tooltip_and_sound_config_load(cfg);
+        CHECK(index >= 0 && timed_effect_cue_peek(index) == (uint32_t)alias,
+              "sections: ToolTipsSFXs loads under the root");
+    }
+
+    /* A file whose sections are missing loads nothing and does not fault. */
+    {
+        BlockFile* bare = s_parse("Lego* {\n\tMain { FrontEnd TRUE }\n}\n");
+        CHECK(bare != NULL && unported_ledger_stubs::dependency_grid_config_load((void*)bare, 0) == 0,
+              "sections: a missing section answers nothing");
+        if (bare != NULL) block_close(bare);
+    }
+    block_close(cfg);
+}
+
 static void test_block_sep(void)
 {
     BlockFile* cfg = s_parse(FIXCFG);
     CHECK(cfg != NULL, "sep: parse fixture");
-    /* the `::` group separator (finding 23, DAT_004aab18) resolves the
-     * exe-style query, and the space form still works */
-    CHECK(cfg && block_get_strptr(cfg, "Lego* Menu::MainMenuFull MenuCount")
+    /* the `::` path separator (finding 23, DAT_004aab18) resolves the
+     * exe-style query; a space is not a separator */
+    CHECK(cfg && block_get_strptr(cfg, "Lego*::Menu::MainMenuFull::MenuCount")
           != NULL, "sep: :: menu path");
-    CHECK(cfg && strcmp(block_get_strptr(cfg, "Lego* Menu::MainMenuFull MenuCount"),
+    CHECK(cfg && strcmp(block_get_strptr(cfg, "Lego*::Menu::MainMenuFull::MenuCount"),
                         "4") == 0, "sep: :: menu count");
-    CHECK(cfg && strcmp(block_get_strptr(cfg, "Lego* Menu MainMenuFull MenuCount"),
-                        "4") == 0, "sep: space menu count");
-    CHECK(cfg && strcmp(block_get_strptr(cfg, "Lego* Menu::MainMenuFull Menu1 Item1"),
+    CHECK(cfg && block_get_strptr(cfg, "Lego*::Menu MainMenuFull::MenuCount")
+          == NULL, "sep: space form does not resolve");
+    CHECK(cfg && strcmp(block_get_strptr(cfg, "Lego*::Menu::MainMenuFull::Menu1::Item1"),
                         "Next:0:0:Start_Game:Menu2") == 0, "sep: :: item");
     if (cfg != NULL) {
         block_close(cfg);
@@ -1086,6 +1171,7 @@ int main(int argc, char** argv)
     }
 
     test_block_sep();
+    test_root_qualified_sections();
     test_build();
     test_gate();
     test_nav_and_actions();

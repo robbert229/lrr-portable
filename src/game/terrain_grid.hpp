@@ -88,8 +88,8 @@ int entity_neighbor_blocked_cell_step_probe(struct EntitySlot* entity,
 void terrain_tile_mesh_grid_release(TerrainTileMeshGrid* grid);
 struct SceneCellVisualRelayRecord* terrain_tile_mesh_visual_channels_get(
     TerrainTileMeshGrid* grid, uint8_t packed_surface);
-struct BlockFile;
-void terrain_texture_set_config_context_bind(struct BlockFile* config);
+struct BlockRec;
+void terrain_texture_set_config_context_bind(struct BlockRec* config);
 int terrain_texture_set_config_load(TerrainTileMeshGrid* grid,
                                     const char* group_name);
 int terrain_texture_set_config_load_level(struct LevelState* level,

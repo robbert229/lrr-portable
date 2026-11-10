@@ -266,7 +266,7 @@ typedef void (*WholeFileProgressHook)(const char* path, uint32_t size,
 void whole_file_progress_hook_set(WholeFileProgressHook hook, void* user);
 void* read_whole_file_with_progress(const char* path, int32_t* size_out,
                                     int binary_mode);
-void* read_whole_file(const char* path, int32_t* size_out); /* FUN_004800a0 */
+extern "C" void* read_whole_file(const char* path, int32_t* size_out); /* FUN_004800a0 */
 
 /* --- fixed-record slot resources (2026-10-24; findings 375/251) ------------
  * The corpus's fixed-record slot table (DAT_005756a0, stride 0x10: resource

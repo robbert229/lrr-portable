@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-struct BlockFile;
+typedef struct BlockRec BlockFile;
 struct GameContext;
 struct EngineContext;
 struct InputState;

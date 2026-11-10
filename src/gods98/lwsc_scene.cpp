@@ -613,10 +613,10 @@ static int lwsc_assembly_complete(BlockFile* block, const char* root,
     size_t root_length = strlen(root);
     if (root_length > 250u || metadata == NULL || metadata->count == 0u ||
         metadata->count > LWSC_MAX_ACTIVITIES || !lwsc_finite(metadata->scale)) return 0;
-    sprintf(query, "%s Activities", root);
+    sprintf(query, "%s::Activities", root);
     group = block_subgroup(block, query);
     if (group == NULL) return 0;
-    for (record = block_first_child(group); record != NULL;
+    for (record = group; record != NULL;
          record = block_next_sibling(record)) {
         const char* key = block_name(record);
         const char* name = block_value(record);
@@ -629,14 +629,14 @@ static int lwsc_assembly_complete(BlockFile* block, const char* root,
             ++key;
         }
         if (strlen(key) >= 64u || strlen(name) >= 64u) return 0;
-        sprintf(query, "%s %s FILE", root, name);
+        sprintf(query, "%s::%s::FILE", root, name);
         file = block_get_strptr(block, query);
         if (file == NULL) continue;
         if (*file == '\0' || strlen(file) >= 260u || index >= metadata->count) return 0;
         activity = &metadata->acts[index++];
         if (strcmp(key, activity->state) != 0 || strcmp(name, activity->name) != 0 ||
             strcmp(file, activity->file) != 0 || !lwsc_finite(activity->transcoef)) return 0;
-        sprintf(query, "%s %s SAMPLE", root, name);
+        sprintf(query, "%s::%s::SAMPLE", root, name);
         sample = block_get_strptr(block, query);
         if (sample != NULL && (strlen(sample) >= 260u ||
                               strcmp(sample, activity->sample) != 0)) return 0;
@@ -684,12 +684,12 @@ LwscAssemblyTemplate* lwsc_assembly_open(const char* entity_path,
         BlockRec* activities;
         BlockRec* row;
         unsigned int rows = 0u;
-        sprintf(query, "%s Activities", config_root);
+        sprintf(query, "%s::Activities", config_root);
         activities = block_subgroup(block, query);
         if (activities == NULL || block_record_count(block) > LWSC_MAX_NODES) {
             block_close(block); lwsc_error(error, 0u, "assembly block count/group invalid"); return NULL;
         }
-        for (row = block_first_child(activities); row != NULL; row = block_next_sibling(row)) {
+        for (row = activities; row != NULL; row = block_next_sibling(row)) {
             if (++rows > LWSC_MAX_ACTIVITIES) {
                 block_close(block); lwsc_error(error, 0u, "assembly activity row limit exceeded"); return NULL;
             }
@@ -716,7 +716,7 @@ LwscAssemblyTemplate* lwsc_assembly_open(const char* entity_path,
         if (name_keys[i] == NULL || *name_keys[i] == '\0' || strlen(name_keys[i]) > 250u) {
             lwsc_error(error, 0u, "invalid configured-name key"); goto failed;
         }
-        sprintf(query, "%s %s", config_root, name_keys[i]);
+        sprintf(query, "%s::%s", config_root, name_keys[i]);
         value = block_get_strptr(block, query);
         assembly->names[i].key = lwsc_copy(name_keys[i]);
         if (value != NULL) {
@@ -757,7 +757,7 @@ LwscAssemblyTemplate* lwsc_assembly_open(const char* entity_path,
     }
     return assembly;
 failed:
-    block_close(block);
+    if (block) block_close(block);
     lwsc_assembly_release(assembly);
     return NULL;
 }

@@ -446,7 +446,7 @@ static int obj_typed_int(BlockFile* cfg, const char* level, const char* key, int
     if (util_level_cfg_path(cfg, level, key, path, sizeof(path)) == NULL) {
         return dflt;
     }
-    return block_get_bool(cfg, path);
+    return block_get_bool_path(cfg, path);
 }
 
 /* BlockTextTokenSplit uses the corpus's comma delimiter for the two target
@@ -1430,10 +1430,10 @@ void advisor_position_config_load(BlockFile* config, int resolution_width,
     BlockRec* entry;
     if (config == NULL) return;
     advisor_name_tables_initialize();
-    sprintf(section_path, "%s AdvisorPositions%ix%i", util_root_name(config),
+    sprintf(section_path, "%s::AdvisorPositions%ix%i", util_root_name(config),
             resolution_width, resolution_height);
     section = block_subgroup(config, section_path);
-    for (entry = block_first_child(section); entry != NULL;
+    for (entry = section; entry != NULL;
          entry = block_next_sibling(entry)) {
         char value[512];
         char* tokens[8];

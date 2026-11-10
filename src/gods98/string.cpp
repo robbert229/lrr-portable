@@ -134,45 +134,6 @@ int string_length_bounded(const char* text, int limit)
 }
 #endif
 
-/* FUN_00478f50: `root::comp1::comp2…` into the static builder. */
-// FUNCTION: LEGORR 0x00478f50
-const char* string_path_join(const char* root, ...)
-{
-    // GLOBAL: LEGORR 0x00506098
-    static char s_path[STRING_PATH_MAX]; /* the corpus static scratch */
-    if (root == NULL) {
-        root = "";
-    }
-    int room = (int)sizeof s_path;
-    int used = 0;
-    size_t len = strlen(root);
-    if (len >= (size_t)room) {
-        len = (size_t)room - 1u;
-    }
-    memcpy(s_path, root, len);
-    used = (int)len;
-    s_path[used] = '\0';
-
-    va_list ap;
-    va_start(ap, root);
-    for (const char* part = va_arg(ap, const char*);
-         part != NULL; part = va_arg(ap, const char*)) {
-        if (room - used < 3) {
-            break; /* out of room: stop joining (bounded deviation) */
-        }
-        strncat(s_path, "::", 2);
-        used += 2;
-        len = strlen(part);
-        if (len > (size_t)(room - used - 1)) {
-            len = (size_t)(room - used - 1);
-        }
-        strncat(s_path, part, len);
-        used += (int)len;
-    }
-    va_end(ap);
-    return s_path;
-}
-
 /* StringCaseSubstringFind (2026-10-25) — FUN_0048c040. Case-insensitive
  * substring walk over the corpus's __strnicmp (the same bounded CRT
  * compare as CaseInsensitiveSubstringFind): answers the match pointer and

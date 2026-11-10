@@ -131,11 +131,11 @@ const char* util_root_name(BlockFile* bf);
 
 /* Resolve a level-scoped config path against the shipped layout. The shipped
  * `Lego.cfg` nests every level group under the root's `Levels` container, so
- * the path is tried through `root Levels <level> <suffix>` first, falling
- * back to the flat `root <level> <suffix>` (fixture/legacy shape). Returns
+ * the path is tried through `root::Levels::<level>::<suffix>` first, falling
+ * back to the flat `root::<level>::<suffix>` (fixture/legacy shape). Returns
  * the resolving path (written into out) or NULL when neither resolves.
- * `suffix` is everything after the level name ("SurfaceMap", "Reward Enable",
- * "Reward Importance", …). */
+ * `suffix` is everything after the level name ("SurfaceMap", "Reward::Enable",
+ * "Reward::Importance", …), its segments separated by "::". */
 const char* util_level_cfg_path(BlockFile* cfg, const char* level,
                                 const char* suffix, char* out, size_t out_sz);
 

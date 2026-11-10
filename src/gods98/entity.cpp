@@ -69,7 +69,7 @@ EntityAssembly* entity_assembly_parse(BlockFile* bf, const char* root,
     }
 
     char path[512]; /* longest query: root::<name>::KEY */
-    snprintf(path, sizeof path, "%s Activities", root);
+    snprintf(path, sizeof path, "%s::Activities", root);
     BlockRec* acts = block_subgroup(bf, path);
     if (acts == NULL) {
         /* corpus: no Activities subgroup => no assembly record */
@@ -83,11 +83,11 @@ EntityAssembly* entity_assembly_parse(BlockFile* bf, const char* root,
 
     /* Root SCALE float (read <root>::Scale). The corpus applies a nonzero
      * scale through the record vtable; the value is kept for the caller. */
-    snprintf(path, sizeof path, "%s SCALE", root);
+    snprintf(path, sizeof path, "%s::SCALE", root);
     ea->scale = block_get_float(bf, path, 0.0f);
 
     size_t cap = 0;
-    for (BlockRec* r = block_first_child(acts); r != NULL;
+    for (BlockRec* r = acts; r != NULL;
          r = block_next_sibling(r)) {
         const char* key = block_name(r);   /* "Activity_<State>", '!' possible */
         const char* grp = block_value(r);  /* target animation group */
@@ -104,7 +104,7 @@ EntityAssembly* entity_assembly_parse(BlockFile* bf, const char* root,
             ++key; /* strip '!' — processed under the default feature */
         }
 
-        snprintf(path, sizeof path, "%s %s FILE", root, grp);
+        snprintf(path, sizeof path, "%s::%s::FILE", root, grp);
         const char* file = block_get_strptr(bf, path);
         if (file == NULL) {
             /* no FILE => the corpus makes no scene for this activity */
@@ -129,15 +129,15 @@ EntityAssembly* entity_assembly_parse(BlockFile* bf, const char* root,
         snprintf(a->file, sizeof a->file, "%s", file);
         a->reduce_anim = was_flagged;
 
-        snprintf(path, sizeof path, "%s %s TRANSCOEF", root, grp);
+        snprintf(path, sizeof path, "%s::%s::TRANSCOEF", root, grp);
         a->transcoef = block_get_float(bf, path, 0.0f);
-        snprintf(path, sizeof path, "%s %s TRIGGER", root, grp);
+        snprintf(path, sizeof path, "%s::%s::TRIGGER", root, grp);
         a->trigger = block_get_int(bf, path, 0);
-        snprintf(path, sizeof path, "%s %s LWSFILE", root, grp);
-        a->lwsfile = block_get_bool(bf, path);
-        snprintf(path, sizeof path, "%s %s LOOPING", root, grp);
-        a->looping = block_get_bool(bf, path);
-        snprintf(path, sizeof path, "%s %s SAMPLE", root, grp);
+        snprintf(path, sizeof path, "%s::%s::LWSFILE", root, grp);
+        a->lwsfile = block_get_bool_path(bf, path);
+        snprintf(path, sizeof path, "%s::%s::LOOPING", root, grp);
+        a->looping = block_get_bool_path(bf, path);
+        snprintf(path, sizeof path, "%s::%s::SAMPLE", root, grp);
         const char* sample = block_get_strptr(bf, path);
         if (sample != NULL) {
             snprintf(a->sample, sizeof a->sample, "%s", sample);

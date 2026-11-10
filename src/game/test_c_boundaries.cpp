@@ -5,6 +5,9 @@
  * conflicting declaration. Nothing runs: the test passes once it compiles. */
 #include "gods98/block.hpp"
 #include "gods98/block.h"
+#include "gods98/config.h"
+#include "gods98/resource.hpp"
+#include "gods98/resource.h"
 #include "gods98/sound.hpp"
 #include "gods98/sound.h"
 #include "gods98/input.hpp"

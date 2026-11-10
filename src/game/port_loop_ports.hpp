@@ -12,7 +12,7 @@ struct EntitySlot;
 struct EngineContext;
 struct LevelState;
 struct TerrainSurfaceGrid;
-typedef struct BlockFile BlockFile;
+typedef struct BlockRec BlockFile;
 typedef struct BlockRec BlockRec;
 
 typedef struct BuildingPlacementPreviewHooks {

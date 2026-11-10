@@ -710,8 +710,9 @@ void bubble_config_global_flags_set(uint32_t flags)
 // FUNCTION: LEGORR 0x00407240
 void bubble_config_texture_load(BlockFile* cfg)
 {
-    BlockRec* group = block_subgroup(cfg, "Bubbles");
-    BlockRec* entry = block_first_child(group);
+    BlockRec* group = block_subgroup(cfg,
+        string_path_join(util_root_name(cfg), "Bubbles", (const char*)NULL));
+    BlockRec* entry = group;
     while (entry != NULL) {
         const char* name = block_name(entry);
         const char* resource_name = block_value(entry);

@@ -75,19 +75,19 @@ typedef struct MissionTaskInitBinding {
 } MissionTaskInitBinding;
 static MissionTaskInitBinding s_task_init_binding;
 
-/* Path helper: level-scoped `Reward [<sub>] [<name>]` key, resolved via
+/* Path helper: level-scoped `Reward[::<sub>][::<name>]` key, resolved via
  * util_level_cfg_path (Levels container first, flat fallback). */
 static void rw_path(char* out, size_t out_sz, BlockFile* cfg,
                     const char* level, const char* sub, const char* name)
 {
-    char suffix[400]; /* "Reward" + optional " <sub>" + optional " <name>" */
+    char suffix[400]; /* "Reward" + optional "::<sub>" + optional "::<name>" */
     size_t pos = 0;
     pos += snprintf(suffix + pos, sizeof(suffix) - pos, "Reward");
     if (sub != NULL) {
-        pos += snprintf(suffix + pos, sizeof(suffix) - pos, " %s", sub);
+        pos += snprintf(suffix + pos, sizeof(suffix) - pos, "::%s", sub);
     }
     if (name != NULL) {
-        pos += snprintf(suffix + pos, sizeof(suffix) - pos, " %s", name);
+        pos += snprintf(suffix + pos, sizeof(suffix) - pos, "::%s", name);
     }
     (void)pos;
     if (util_level_cfg_path(cfg, level, suffix, out, out_sz) == NULL) {
@@ -129,7 +129,7 @@ static int rw_typed(BlockFile* cfg, const char* root, const char* level,
     (void)root;
     char path[512];
     rw_path(path, sizeof(path), cfg, level, NULL, name);
-    return block_get_bool(cfg, path);
+    return block_get_bool_path(cfg, path);
 }
 
 /* Store a short token string at a task payload offset (bounded write). */
@@ -682,9 +682,9 @@ static int mission_reward_success_words_capture(GameContext* game)
     if (game == NULL || game->cfg == NULL) return 0;
     root = util_root_name(game->cfg);
     if (root == NULL) return 0;
-    snprintf(width_path, sizeof(width_path), "%s Menu::SaveImage BigWidth",
+    snprintf(width_path, sizeof(width_path), "%s::Menu::SaveImage::BigWidth",
              root);
-    snprintf(height_path, sizeof(height_path), "%s Menu::SaveImage BigHeight",
+    snprintf(height_path, sizeof(height_path), "%s::Menu::SaveImage::BigHeight",
              root);
     width = block_get_int(game->cfg, width_path, 0);
     height = block_get_int(game->cfg, height_path, 0);
