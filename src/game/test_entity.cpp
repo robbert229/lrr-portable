@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "resource.hpp"
 #include "game/entity.hpp"
 #include "game/level.hpp"
 #include "gods98/media.hpp"
@@ -888,6 +889,9 @@ int main(int argc, char** argv)
         fprintf(stderr, "chdir failed\n");
         return 1;
     }
+    /* File opens resolve under the CD root; the fixture is the CWD. */
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
     fixture_roundtrip(); /* s_failures drives the exit code below */
     stats_record_test();
     stats_flag_test();

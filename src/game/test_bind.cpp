@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "resource.hpp"
 #include "game/level.hpp"
 #include "gods98/camera.hpp"
 #include "gods98/engine.hpp"
@@ -107,6 +108,9 @@ int main(void)
         fprintf(stderr, "chdir failed\n");
         return 1;
     }
+    /* File opens resolve under the CD root; the fixture is the CWD. */
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
 
     BlockFile* cfg = block_open("Lego.cfg");
     CHECK(cfg != NULL, "open cfg");

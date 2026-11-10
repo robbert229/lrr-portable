@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "resource.hpp"
 #include "game/frontend.hpp" /* sav_tree_load's visited-band tail */
 #include "game/game.hpp"
 #include "game/level.hpp"
@@ -68,6 +69,9 @@ int main(void)
         fprintf(stderr, "chdir %s failed\n", FIX);
         return 1;
     }
+    /* File opens resolve under the CD root; the fixture is the CWD. */
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
     /* Saves/ directory must exist (the corpus driver creates it; tests mkdir). */
     mkdir("Saves", 0755);
 
