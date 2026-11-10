@@ -13,6 +13,11 @@
   intentionally improves matches, refresh the baseline in the same change with
   `make reccmp-baseline-update`. Use `make reccmp-compare` to re-check an
   existing report without rebuilding.
+- To iterate on one function's match, run `make match-function ADDR=0x...`
+  (or `python3 tools/match_function.py ADDR --json`): it compiles only that
+  function's translation unit and returns Reccmp's score, the baseline delta
+  and an instruction diff in about a second. Options and parity notes:
+  `tools/README.md`. It complements, not replaces, `make reccmp-check`.
 
 # Project guide
 

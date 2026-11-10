@@ -1,5 +1,100 @@
 # `tools/` — game-data tooling
 
+## `match_function.py` — single-function match loop
+
+Scores one function of the *matching build* against the shipped
+`LegoRR.exe` in about a second, without a link or a full Reccmp run. It finds
+the `// FUNCTION|LIBRARY: LEGORR 0x...` annotation for the address, compiles
+only that translation unit with the exact matching-build command line (from a
+cached CMake configure), and runs Reccmp's own entity database, matchers and
+`FunctionComparator` over a synthetic image built from the object file. The
+score is Reccmp's `matching` value.
+
+```sh
+make match-function ADDR=0x00478e60                 # score + aligned diff
+python3 tools/match_function.py 0x478e60 --json     # machine-readable
+python3 tools/match_function.py 0x478e60 0x4798b0   # several, compiled in parallel
+python3 tools/match_function.py --source src/gods98/block.cpp   # every annotated function in a file
+python3 tools/match_function.py 0x478e60 --side-by-side         # orig | recomp columns
+python3 tools/match_function.py --warm              # pre-start Wine and cache the flags
+```
+
+`make match-function` accepts `ADDR=` (one or more), `SOURCE=`, `JSON=1` and
+`MATCH_ARGS=` (any other option). Other options: `--no-diff` (scores only),
+`--keep` (keep the object and compiler log), `--timings`, `--orig FILE`.
+
+**Output.** Text mode prints the similarity, the bytes compared, the committed
+score from the *match baseline* with the delta, and a Reccmp-style unified
+diff. Original addresses are real; recomp addresses are offsets from the
+function start (`+0x001f`), with `(file.cpp:line)` source references. `--json`
+prints one document:
+
+```json
+{"timings": {"compile": 0.36, "total": 1.2, ...},
+ "functions": [{"address": "0x478e60", "name": "block_open",
+   "source": "src/gods98/block.cpp", "line": 218, "origin": "compiled",
+   "matching": 0.2162, "percent": "21.62%", "effective": false,
+   "baseline": "21.62", "below_baseline": false,
+   "orig_size": 89, "recomp_size": 89, "diff": [...], "error": "..."}]}
+```
+
+`diff` has the same structure as the `diff` entries in Reccmp's
+`results.json`. `origin` is `compiled`, or `LIBC.LIB(<member>)` for a
+`LIBRARY` function that the link takes from the VC5 runtime rather than from
+the reconstruction. `error` appears instead of a score when the function was
+not found in the object (inlined, excluded by `#if`, renamed) or the file did
+not compile (the compiler output is included). Exit status: 0 when every
+function was scored, 1 when any was not, 2 for setup errors.
+
+**Environment.** Wine runs directly when `wine` is on `PATH`, otherwise
+through `distrobox enter developer` (`MATCH_FN_DISTROBOX=<name>`; empty
+disables). `REPROBIT_MSVC_5_0_RTM_ROOT` selects the toolchain. The flags cache
+lives in `build-match/cmake` (`--build-dir` or `MATCH_FN_BUILD_DIR`). Its
+configure options are read from `tools/reccmp.sh`, and it is re-configured
+when those options, `CMakeLists.txt` or the toolchain file change. Each
+invocation compiles in its own `build-match/runs/run-*` directory, removed on
+exit, and configuring takes a file lock, so concurrent runs in one worktree
+or across worktrees share no build state. They do share Wine: the tool keeps
+one wineserver for the `WINEPREFIX` alive for 15 minutes after its last use
+(`MATCH_FN_WINESERVER_PERSIST=<seconds>`, `0` disables) and starts Wine's
+services with detached stdio. The MSVC wrapper pipes Wine through `sed`, and
+services started during a compile would otherwise hold that pipe open.
+
+**Speed.** About 1.2–1.4 s per call with a warm wineserver, 1.8 s for the
+largest file, 3 s fully cold; several addresses in different files compile
+in parallel. Measurements are in
+[finding 507](../docs/findings/507-single-function-match-loop.md).
+
+**Parity.** On three source trees the score equals full Reccmp's for all but
+one function (`__isindst`); finding 507 has the per-area counts and a
+26-function spot-check table. `make match-function-parity`
+(`match_function_parity.py`) repeats the comparison against a full
+`results.json` from the same tree; run it after changing these tools.
+`synthetic_image.py` builds the stand-in for the linked program:
+
+* Relocations are applied in a synthetic layout at `0x0E401000`; undefined
+  symbols get slots named the way the linker PDB would name them (CodeView
+  names for project code, public symbols for LIBC), Win32 calls without
+  `dllimport` go through `jmp [IAT]` thunks, and functions of the `program`
+  target are reached through incremental-link (ILT) thunks, as in the
+  `/INCREMENTAL` matching-build link.
+* Calls into other translation units are matched to their `FUNCTION`
+  annotation by name; other files' line-referenced annotations are named on
+  the original side, as the full run would have matched them.
+* A constant inside the linked program's address span is treated as an
+  address, because the full run finds some entity there (e.g. the flag
+  `0x800000` lands in a large `.bss` array). The span ends where an existing
+  `build-reccmp/LegoRR.exe` (or `$RECCMP_BUILD_DIR`) ends, else at
+  `0xA00000`; `MATCH_FN_LINK_END` overrides.
+
+Known differences: variables have no CodeView type sizes, so offsets render
+as `var+4` rather than `var[1]` (text only), and a `GLOBAL` annotation that the
+full link matches but this translation unit never references has no size,
+which changes one CRT score (`__isindst`, 98.64% here, 96.36% in full).
+Functions in objects the link never pulls in (`ptrstack.cpp`,
+`video_graph.cpp`) are scored here but absent from the full report. Before
+handing work back, `make reccmp-check` remains the gate.
+
 ## `rrlwo.py` — `.lwo` (LightWave 4) → glTF 2.0 converter
 
 Reads the game's 1,132 embedded models (`\Models\…` inside `LegoRR0.wad`)
