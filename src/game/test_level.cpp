@@ -333,7 +333,10 @@ int main(int argc, char** argv)
 
         /* Bounds deviations: the port reads 0 / class 1 / false off-map. */
         CHECK(level_cell_flag_wave(s, w, 0) == 0, "off-map flag word reads 0");
-        CHECK(level_cell_speed_class(s, -1, -1) == 1, "off-map class falls back to 1");
+        /* level_cell_speed_class (FUN_00432c50) is now faithful: it addresses
+         * the voxel row directly with no bounds gate (callers gate), so the
+         * old "off-map class falls back to 1" assertion no longer applies and
+         * the off-map read itself would be out of bounds. */
         CHECK(level_cell_occupied_at(s, w, h) == 0, "off-map is unoccupied");
 
         /* The corpus's dim-1 gates, kept in-map so the gate itself decides:
@@ -422,19 +425,24 @@ int main(int argc, char** argv)
             __builtin_memcpy(&f, rec + 0x0C, 4);
             CHECK(f == 0x100u, "track setter raises secondary 0x100");
 
+            /* The mask setters below finish with a CellInitPass refresh, which
+             * now faithfully re-derives the transient low flag bits (0x20d8
+             * region) from the cell's neighbours, so only the bits each leaf
+             * owns are asserted rather than the whole flag word. */
             f = zero;
             __builtin_memcpy(rec + 0x08, &f, 4);
             terrain_cell_flags_set_mask100400(s, 3, 4);
             __builtin_memcpy(&f, rec + 0x08, 4);
-            CHECK(f == 0x100400u, "the 0x100400 mask raises exactly its bits");
+            CHECK((f & 0x100400u) == 0x100400u, "the 0x100400 mask raises its bits");
             terrain_cell_flags_set_mask20108000(s, 3, 4);
             __builtin_memcpy(&f, rec + 0x08, 4);
-            CHECK(f == 0x20108400u, "the 0x20108000 mask ORs alongside");
+            CHECK((f & 0x20108400u) == 0x20108400u, "the 0x20108000 mask ORs alongside");
 
             terrain_cell_flags_set_and_refresh(s, 3, 4);
             __builtin_memcpy(&f, rec + 0x08, 4);
             __builtin_memcpy(&g, rec + 0x0C, 4);
-            CHECK(f == 0x20108400u && g == 0x104u, /* masks already in place */
+            CHECK((f & 0x20108400u) == 0x20108400u && (g & 0x104u) == 0x104u,
+                  /* masks already in place */
                   "set-and-refresh raises both words' masks");
 
             f = 0xffffffffu;
@@ -443,17 +451,22 @@ int main(int argc, char** argv)
             terrain_cell_primary_flags_mask_clear_and_refresh(s, 3, 4);
             __builtin_memcpy(&f, rec + 0x08, 4);
             __builtin_memcpy(&g, rec + 0x0C, 4);
-            CHECK(f == 0xdfef7bffu, "the primary mask clears its bits");
-            CHECK(g == 0xfffffffbu, "the secondary bit 4 value clears");
+            CHECK((f & 0x20108400u) == 0u, "the primary mask clears its bits");
+            CHECK((g & 4u) == 0u, "the secondary bit 4 value clears");
 
             f = 0u;
             __builtin_memcpy(rec + 0x08, &f, 4);
             terrain_cell_flag40000000_clear_or_set(s, 3, 4, 1);
             __builtin_memcpy(&f, rec + 0x08, 4);
-            CHECK(f == 0x40000000u, "clear-or-set raises 0x40000000");
+            /* CellInitPass (solid-neighbour branch) consumes bit 0x40000000
+             * again (`&= 0xbfffffff` in cell_init_pass), so it never survives the
+             * refresh the setter runs; both branches read back clear. */
+            CHECK((f & 0x40000000u) == 0u,
+                  "clear-or-set: the refresh consumes 0x40000000");
             terrain_cell_flag40000000_clear_or_set(s, 3, 4, 0);
             __builtin_memcpy(&f, rec + 0x08, 4);
-            CHECK(f == 0u, "the same leaf's clear branch drops it");
+            CHECK((f & 0x40000000u) == 0u,
+                  "the same leaf's clear branch leaves it clear");
 
             /* Out-of-cell: the bounds deviation skips the record and
              * the queue (the corpus indexes blindly). */
@@ -488,24 +501,24 @@ int main(int argc, char** argv)
             __builtin_memcpy(rec + 0x08, &f, 4);
             terrain_cell_edge_flag_set_and_update(s, 3, 4, 1);
             __builtin_memcpy(&f, rec + 0x08, 4);
-            CHECK(f == 0x200u, "the edge setter raises 0x200");
+            CHECK((f & 0x200u) == 0x200u, "the edge setter raises 0x200");
             terrain_cell_edge_flag_set_and_update(s, 3, 4, 0);
             __builtin_memcpy(&f, rec + 0x08, 4);
-            CHECK(f == 0u, "the same leaf's clear branch drops it");
+            CHECK((f & 0x200u) == 0u, "the same leaf's clear branch drops it");
 
             /* Flag 0x20 clear and refresh: only bit 5 drops. */
             f = 0xffffffffu;
             __builtin_memcpy(rec + 0x08, &f, 4);
             terrain_cell_flag20_clear_and_refresh(s, 3, 4);
             __builtin_memcpy(&f, rec + 0x08, 4);
-            CHECK(f == 0xffffffdfu, "only the 0x20 bit clears");
+            CHECK((f & 0x20u) == 0u, "the 0x20 bit clears");
 
             /* The neighbor refresh leaf: the build-record word is
              * unowned in the port, so the leaf changes nothing. */
             terrain_neighbor_flag_refresh_xy(s, 3, 4, 0);
             __builtin_memcpy(&f, rec + 0x08, 4);
             __builtin_memcpy(&g, rec + 0x18, 4);
-            CHECK(f == 0xffffffdfu && g == 0u,
+            CHECK((f & 0x20u) == 0u && g == 0u,
                   "the refresh leaf is inert with no build records");
 
             /* Work-flag circle: radius 1 lights the cross, not the
@@ -730,8 +743,12 @@ int main(int argc, char** argv)
             __builtin_memcpy(&s70, r70 + 0x08, 4);
             f = 8u;
             __builtin_memcpy(r70 + 0x08, &f, 4);
-            CHECK(level_cell_flag8_check(s, w - 1, 0) == 1,
-                  "plain bounds include the last column (not dim-1)");
+            /* `s` is the active level (map_cell_record_grid_activate ran in
+             * level_load), so the check routes to the retail target, which
+             * applies the terrain dim-1 gate to the last column; the plain
+             * in-grid bounds path is only taken for a non-active level. */
+            CHECK(level_cell_flag8_check(s, w - 1, 0) == 0,
+                  "the active level's retail check gates the last column");
             __builtin_memcpy(r70 + 0x08, &s70, 4);
         }
         __builtin_memcpy(rec + 0x08, &saved, 4);
@@ -921,24 +938,23 @@ int main(int argc, char** argv)
             coordinate_callback_dispatch(&dlvl, 0);
             coordinate_callback_dispatch_by_mode(&dlvl, 1);
             CHECK(1, "the dispatch seams change no state");
+            /* game_context_init() installs its context as the process-wide
+             * entity-pool/current-level owner; the block-local context is about
+             * to die, so hand ownership back to the loaded level's context. */
+            entity_pool_callback_context_set(&level_ctx);
         }
-        /* The corner normal sample (2026-10-24): no loader-fed corner
-         * floats, so the axis corners read zero and the diagonal
-         * selectors normalize the zero vector. */
+        /* The corner normal sample (2026-10-24): the level now loads real
+         * corner heights from the fixture's SurfaceMap, so every corner of
+         * the flat patch at (2,3) answers a finite unit normal (0, 0, -1)
+         * instead of the old unfed zero triple / NaN-normalized vector. */
         {
             float v[3] = { 7.f, 7.f, 7.f };
-            CHECK(terrain_cell_normal_sample(terrain, 2, 3, 0, v) == 1
-                      && v[0] == 0.0f && v[1] == 0.0f && v[2] == 0.0f,
-                  "corner 0 reads the zero triple");
-            CHECK(terrain_cell_normal_sample(terrain, 2, 3, 2, v) == 1
-                      && v[0] == 0.0f && v[1] == 0.0f && v[2] == 0.0f,
-                  "corner 2 reads the zero triple");
-            CHECK(terrain_cell_normal_sample(terrain, 2, 3, 1, v) == 1
-                      && v[0] != v[0] && v[1] != v[1] && v[2] != v[2],
-                  "corner 1 normalizes the zero vector (faithful)");
-            CHECK(terrain_cell_normal_sample(terrain, 2, 3, 3, v) == 1
-                      && v[1] != v[1],
-                  "corner 3 answers the same");
+            for (int c = 0; c < 4; ++c) {
+                v[0] = v[1] = v[2] = 7.f;
+                CHECK(terrain_cell_normal_sample(terrain, 2, 3, c, v) == 1
+                          && v[0] == 0.0f && v[1] == 0.0f && v[2] == -1.0f,
+                      "a loaded flat corner reads the unit -Z normal");
+            }
             v[0] = 7.f;
             CHECK(terrain_cell_normal_sample(terrain, (uint32_t)GRID, 0,
                                              0, v) == 0
@@ -981,6 +997,11 @@ int main(int argc, char** argv)
     {
         void* terrain = terrain_create("L01_surface.map", 1.0f);
         terrain_cell_dirty_queue_push_and_clear(terrain, 3, 4, 1);
+        /* The apply now reads the dirty queue of the *current level's*
+         * terrain (FUN_00450a80 follows DAT_005560d4), so bind the scratch
+         * terrain into the loaded level for this block and restore it. */
+        void* level_terrain_saved = level_load_ptr(s, LEVEL_OFF_TERRAIN);
+        level_store_ptr(s, LEVEL_OFF_TERRAIN, terrain);
 
         /* Scene-object chain: obj -> inner -> rec -> table (the mesh
          * color setter's ride, as pinned in view_test). */
@@ -1037,6 +1058,7 @@ int main(int argc, char** argv)
         cell_list_min_distance_scale_apply(0);
 
         terrain_cell_dirty_queue_push_and_clear(terrain, 3, 4, 0);
+        level_store_ptr(s, LEVEL_OFF_TERRAIN, level_terrain_saved);
         terrain_destroy(terrain);
     }
 
@@ -1139,11 +1161,11 @@ int main(int argc, char** argv)
         CHECK(dw == 0 && dh == 0, "the NULL image header reads 0");
         CHECK(level_map_image_cell(NULL, 0, 1, 0) == 0, "the NULL image cell reads 0");
 
-        /* Unresolved slot: the corpus reads address 8/12 here; the port
-         * reports 0 (deviation) and the cell read lands on zero dims. */
-        level_map_dimensions_get(1234, &dw, &dh);
-        CHECK(dw == 0 && dh == 0 && level_map_cell_get(1234, 0, 0) == 0,
-              "the unresolved slot reads zero");
+        /* Unresolved slot: level_map_dimensions_get / level_map_cell_get are
+         * now faithful to FUN_004334c0 / FUN_004319e0 and dereference the
+         * resolved slot's image directly (address 8/12 for an unknown slot),
+         * so the old "reports 0" deviation check was removed: callers must
+         * pass a claimed slot. */
 
         level_map_slots_reset(); /* leak-clears the table as the corpus does */
         (void)s0;
@@ -1599,6 +1621,10 @@ int main(int argc, char** argv)
             cell_cardinal_neighbor_apply(&nctx, 0, 0); /* skipped (deviation) */
             cell_cardinal_neighbor_apply(NULL, 0, 0);
             CHECK(1, "the missing-level and null guards stay inert");
+            /* game_context_init() installs its context as the process-wide
+             * entity-pool/current-level owner; the block-local context is about
+             * to die, so hand ownership back to the loaded level's context. */
+            entity_pool_callback_context_set(&level_ctx);
         }
     }
 
@@ -1857,6 +1883,10 @@ int main(int argc, char** argv)
         terrain_cell_queued_work_transition(&qctx, 1 << 20, 1 << 20);
         __builtin_memcpy(&now, rec + 0x08, 4);
         CHECK(now == 0x10u, "the missing-level and OOB guards stay inert");
+        /* game_context_init() installs its context as the process-wide
+         * entity-pool/current-level owner; the block-local context is about
+         * to die, so hand ownership back to the loaded level's context. */
+        entity_pool_callback_context_set(&level_ctx);
     }
 
     /* RandomVariantCellScatter (2026-10-25): modes, key bounds, radius

@@ -2356,8 +2356,13 @@ static int load_layer_l(LevelState* s, const char* name)
                 size_t old_size = (size_t)count * 0x4Cu;
                 size_t new_size = (size_t)next_count * 0x4Cu;
                 uint8_t* grown;
+                /* The array is released with free() by level_destroy and
+                 * grown with realloc(); on native builds engine_heap_alloc
+                 * is the CRT pool allocator, whose blocks free()/realloc()
+                 * cannot take, so allocate with malloc (the same call on the
+                 * reference build, where engine_heap_alloc is a macro). */
                 if (records == NULL)
-                    grown = (uint8_t*)engine_heap_alloc((long)new_size);
+                    grown = (uint8_t*)malloc(new_size);
                 else
                     grown = (uint8_t*)realloc(records, new_size);
                 if (grown == NULL) {
