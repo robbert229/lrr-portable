@@ -2823,8 +2823,8 @@ void global_value_clear_if_equal(int value)
 void global_value_word_set(int value) { s_global_value_word = value; }
 int  global_value_word_peek(void) { return s_global_value_word; }
 
-/* The two global-list pushes (FUN_0046a470/FUN_004792c0) — the corpus's
- * head words have no ported owner, so the heads land here; the link field
+/* The global-list push (FUN_0046a470) — the corpus's head word has no
+ * ported owner, so the head lands here; the link field
  * at record +0x28 is a port-side pointer-sized slot (the corpus's 32-bit
  * dword, widened with the host — deviation documented). */
 /* Datacmp note: the corpus words at 0x4aa450/0x4aa458 are file-backed
@@ -2833,9 +2833,6 @@ int  global_value_word_peek(void) { return s_global_value_word; }
  * (uninitialized) — both sides are genuinely zero (image-verified). */
 // GLOBAL: LEGORR 0x004aa458
 static void* s_linked_list_head = NULL;  /* DAT_004aa458 role */
-// GLOBAL: LEGORR 0x00506518
-static void* s_record_list_head;  /* DAT_00506518 role */
-
 static void record_list_push(void** head, void* record)
 {
     if (record == NULL) {
@@ -2910,27 +2907,6 @@ uint32_t first_set_flag_ordinal(uint32_t mask)
     }
     return 0u;
 }
-
-// FUNCTION: LEGORR 0x004792c0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void global_record_list_push_head(void* record)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [s_record_list_head]
-        mov dword ptr [eax + 1ch], ecx
-        mov dword ptr [s_record_list_head], eax
-        ret
-    }
-}
-#else
-void global_record_list_push_head(void* record)
-{
-    record_list_push(&s_record_list_head, record);
-}
-#endif
-
-void* global_record_list_head_peek(void) { return s_record_list_head; }
 
 /* SceneEffectRegistryReset (FUN_00465380) — the transient-effect registry
  * words (head/tail/shared-texture, unowned) clear and the reset answers 1
@@ -3030,22 +3006,6 @@ void global_linked_record_chain_clear(void)
 
 void* linked_list_global_aux_peek(void) { return s_linked_list_aux; }
 void  linked_list_global_aux_set(void* word) { s_linked_list_aux = word; }
-
-/* ReleaseLinkedObjectList (FUN_00479240) — see crt.hpp. */
-// FUNCTION: LEGORR 0x00479240
-void linked_object_list_release(void* list)
-{
-    if (list == NULL) {
-        return; /* deviation: the corpus strides the head blindly */
-    }
-    void* owner = *(void* const*)list;
-    engine_heap_free(owner);
-    for (void* node = list; node != NULL;) {
-        void* next = *(void* const*)((char*)node + 0x14);
-        global_record_list_push_head(node);
-        node = next;
-    }
-}
 
 /* ModelRenderListClear (FUN_00482d30) — see crt.hpp. */
 // GLOBAL: LEGORR 0x005343c4

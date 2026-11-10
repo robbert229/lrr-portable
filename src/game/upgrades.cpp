@@ -7,6 +7,7 @@
 #include "gods98/block.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/string.hpp"
+#include "util.hpp"
 
 #include <limits.h>
 #include <stdlib.h>
@@ -172,16 +173,18 @@ void level_upgrade_name_strings_load(void* config)
      * each matching value string into the global 16-entry pointer table. */
     {
         BlockRec* group = config != 0
-            ? block_subgroup((BlockFile*)config, "UpgradeNames") : 0;
+            ? block_subgroup((BlockFile*)config,
+                  string_path_join(util_root_name((BlockFile*)config),
+                                   "UpgradeNames", (const char*)NULL)) : 0;
         BlockRec* entry;
-        for (entry = block_first_child(group); entry != 0;
+        for (entry = group; entry != 0;
              entry = block_next_equal_key(entry)) {
             const char* suffix;
-            const char* entry_name = block_name(entry);
-            const char* entry_value = block_value(entry);
+            const char* entry_name = entry->key;
+            const char* entry_value = entry->value;
             uint32_t index;
             char* copy;
-            if (!prefix_equal(entry_name, "Level")) continue;
+            if (strnicmp_lite("Level", entry_name, 5) != 0) continue;
             suffix = entry_name + 5;
             index = (uint32_t)atoi(suffix);
             if (index >= UPGRADE_NAME_SLOT_COUNT) continue;
@@ -252,9 +255,11 @@ int upgrade_types_load(void* config)
     }
 
     group = config != 0
-        ? block_subgroup((BlockFile*)config, "UpgradeTypes") : 0;
+        ? block_subgroup((BlockFile*)config,
+              string_path_join(util_root_name((BlockFile*)config),
+                               "UpgradeTypes", (const char*)NULL)) : 0;
     count = 0u;
-    for (entry = block_first_child(group); entry != 0;
+    for (entry = group; entry != 0;
          entry = block_next_equal_key(entry)) {
         if (count == 0xffffffffu) return 0;
         ++count;
@@ -277,7 +282,7 @@ int upgrade_types_load(void* config)
     memset(s_upgrade_type_names, 0, count * sizeof(char*));
 
     i = 0u;
-    for (entry = block_first_child(group); entry != 0;
+    for (entry = group; entry != 0;
          entry = block_next_equal_key(entry), ++i) {
         const char* entry_name = block_name(entry);
         char* name_copy;

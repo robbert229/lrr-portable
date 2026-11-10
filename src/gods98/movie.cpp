@@ -2342,14 +2342,14 @@ int movie_avis_enabled(BlockFile* cfg)
 {
     int dont_play_avis = 0;
     if (cfg != NULL) {
-        dont_play_avis = block_get_bool(cfg, "Lego* Main DontPlayAvis");
+        dont_play_avis = block_get_bool_path(cfg, "Lego*::Main::DontPlayAvis");
     }
     /* AvisEnabled @ 0x414ce0 also suppresses playback in app modes >= 3. */
     return dont_play_avis != 1 && engine_app_mode_get() < 3;
 }
 
 /* Partial MoviePlayNamed (FUN_00415910): extracts and normalizes the named
- * Lego* Main path; opening and playback are dispatched by the frame loop. */
+ * Lego*::Main path; opening and playback are dispatched by the frame loop. */
 // FUNCTION: LEGORR 0x00415910
 int movie_key_path(BlockFile* cfg, const char* key, char* out, size_t sz)
 {
@@ -2357,7 +2357,7 @@ int movie_key_path(BlockFile* cfg, const char* key, char* out, size_t sz)
         return 0;
     }
     char path[256];
-    snprintf(path, sizeof(path), "Lego* Main %s", key);
+    snprintf(path, sizeof(path), "Lego*::Main::%s", key);
     const char* v = block_get_strptr(cfg, path);
     if (v == NULL || v[0] == '\0') {
         return 0;
@@ -2382,11 +2382,11 @@ int movie_level_video_path(BlockFile* cfg, const char* level,
     }
     /* shipped layout: root { Levels { <level> { Video … } } } */
     char path[256];
-    snprintf(path, sizeof(path), "Lego* Levels %s Video", level);
+    snprintf(path, sizeof(path), "Lego*::Levels::%s::Video", level);
     const char* v = block_get_strptr(cfg, path);
     if (v == NULL) {
         /* fixture/legacy flat shape */
-        snprintf(path, sizeof(path), "Lego* %s Video", level);
+        snprintf(path, sizeof(path), "Lego*::%s::Video", level);
         v = block_get_strptr(cfg, path);
     }
     if (v == NULL || v[0] == '\0') {

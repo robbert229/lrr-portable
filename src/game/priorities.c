@@ -8,10 +8,9 @@
  * matching build compiles it as C. The native port compiles it as C++.
  *
  * Callee contracts that this reconstruction has not yet converted are used
- * as they are (finding 506 lists the differences from the original):
- * - the config layer returns an array's container record, not its first
- *   item, and its records are read through accessors;
- * - the panel position (indexed_pair_get) is an integer pair, not floats. */
+ * as they are (finding 506 lists the differences from the original): the
+ * panel position (indexed_pair_get) is an integer pair, not floats. The
+ * config layer is the original's since Config.c was converted (#394). */
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -21,6 +20,7 @@
 #include "panel.h"
 #include "crt/vc5names.h"
 #include "gods98/block.h"
+#include "gods98/config.h"
 #include "gods98/images.h"
 #include "gods98/input.h"
 #include "gods98/media.hpp"
@@ -77,12 +77,12 @@ void priorities_load_images(BlockFile* config, const char* game_name)
     char* names[10];
     char line[512];
 
-    for (item = block_first_child(block_subgroup(config,
-             string_path_join(game_name, "PriorityImages", NULL)));
+    for (item = block_subgroup(config,
+             string_path_join(game_name, "PriorityImages", NULL));
          item != NULL; item = block_next_equal_key(item)) {
-        if (cmd_kind_by_name(block_name(item), &type)) {
+        if (cmd_kind_by_name(item->key, &type)) {
             int count;
-            sprintf(line, "%s", block_value(item));
+            sprintf(line, "%s", item->value);
             sound_variant_split(line, parts, ":");
             count = sound_variant_split(parts[0], names, "|");
             priorities.tool_tips[type] = string_duplicate(names[0]);
@@ -116,17 +116,17 @@ int priorities_load(BlockFile* config, const char* game_name,
     int type;
 
     priorities.count = 0;
-    for (item = block_first_child(block_subgroup(config,
-             string_path_join(game_name, level_name, "Priorities", NULL)));
+    for (item = block_subgroup(config,
+             string_path_join(game_name, level_name, "Priorities", NULL));
          item != NULL; item = block_next_equal_key(item)) {
-        if (cmd_kind_by_name(block_name(item), &type)) {
+        if (cmd_kind_by_name(item->key, &type)) {
             priorities.list[priorities.count] = type;
             priorities.initial_list[priorities.count] = type;
             priorities.initial_values[priorities.count] =
                 PRIORITIES_TOP_VALUE - priorities.count * PRIORITIES_VALUE_STEP;
             priority_entry_order_value_set(type,
                 priorities.initial_values[priorities.count]);
-            if (block_get_bool(block_value(item)) == 1) {
+            if (block_get_bool(item->value) == 1) {
                 priority_entry_state_set(type, 0);
                 priorities.initial_states[priorities.count] = 0;
             }

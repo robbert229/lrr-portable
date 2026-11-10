@@ -710,34 +710,34 @@ static void checkpoint_reward_group(GameContext* ctx, const char* level_name)
     char path[512];
     /* Reward/Enable tri-state (2 -> 0). Shipped config nests the level
      * under root -> Levels, so resolve each key through the container. */
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward Enable", path,
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::Enable", path,
                             sizeof(path)) != NULL) {
-        int en = block_get_bool(ctx->cfg, path);
+        int en = block_get_bool_path(ctx->cfg, path);
         if (en == 2) en = 0;
         ctx->reward.enable = en;
     }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward Modifier", path,
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::Modifier", path,
                             sizeof(path)) != NULL) {
         ctx->reward.modifier = block_get_int(ctx->cfg, path, 0);
     }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward Timer", path,
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::Timer", path,
                             sizeof(path)) != NULL) {
         ctx->reward.timer =
             block_get_float(ctx->cfg, path, LVL_REWARD_TIMER_DEFAULT);
     }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward DisplayText", path,
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::DisplayText", path,
                             sizeof(path)) != NULL) {
-        int dt = block_get_bool(ctx->cfg, path);
+        int dt = block_get_bool_path(ctx->cfg, path);
         ctx->reward.display_text = dt == 2 ? 1 : dt;
     }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward DisplayImages", path,
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::DisplayImages", path,
                             sizeof(path)) != NULL) {
-        int di = block_get_bool(ctx->cfg, path);
+        int di = block_get_bool_path(ctx->cfg, path);
         ctx->reward.display_images = di == 2 ? 1 : di;
     }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward DisplayFlics", path,
+    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::DisplayFlics", path,
                             sizeof(path)) != NULL) {
-        int df = block_get_bool(ctx->cfg, path);
+        int df = block_get_bool_path(ctx->cfg, path);
         ctx->reward.display_flics = df == 2 ? 1 : df;
     }
 }
@@ -1646,10 +1646,10 @@ SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
     group = group != NULL ? group + 2 : level_name;
     char path[256];
     const char* root = util_root_name(cfg);
-    snprintf(path, sizeof(path), "%s Levels %s LevelLinks", root, group);
+    snprintf(path, sizeof(path), "%s::Levels::%s::LevelLinks", root, group);
     const char* links = block_get_strptr(cfg, path);
     if (links == NULL) {
-        snprintf(path, sizeof(path), "%s %s LevelLinks", root, group);
+        snprintf(path, sizeof(path), "%s::%s::LevelLinks", root, group);
         links = block_get_strptr(cfg, path);
     }
     if (links == NULL) {

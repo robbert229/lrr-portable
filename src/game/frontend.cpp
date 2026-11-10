@@ -2,8 +2,8 @@
 /* Game layer — front end / main menu (finding 23). See frontend.hpp.
  *
  * Reading the menu groups follows the shipped chip query shape exactly:
- * "<root> Menu::<name> <Menu%i> <key>" with the `::` group separator
- * (DAT_004aab18 — block.cpp tokenizes both ' ' and "::"). The level
+ * "<root>::Menu::<name>::<Menu%i>::<key>" with the `::` path separator
+ * (DAT_004aab18 — Config.c splits paths on "::" only). The level
  * pickers graft the StartLevel / TutorialStartLevel + NextLevel chains
  * (LevelChainBuild @ 0x4154b0 semantics) onto the picker sub-menus; each
  * row carries the level's FrontEndX/Y scatter position (the config's
@@ -625,10 +625,10 @@ static const char* fe_cfg_str(BlockFile* cfg, const char* level,
     }
     const char* root = util_root_name(cfg);
     char path[FE_PATH_MAX * 2];
-    snprintf(path, sizeof(path), "%s Levels %s %s", root, level, key);
+    snprintf(path, sizeof(path), "%s::Levels::%s::%s", root, level, key);
     const char* v = block_get_strptr(cfg, path);
     if (v == NULL) {
-        snprintf(path, sizeof(path), "%s %s %s", root, level, key);
+        snprintf(path, sizeof(path), "%s::%s::%s", root, level, key);
         v = block_get_strptr(cfg, path);
     }
     if (v == NULL) {
@@ -664,7 +664,7 @@ static int fe_build_chain(BlockFile* cfg, const char* start_key,
 
     const char* root = util_root_name(cfg);
     char path[FE_PATH_MAX * 2];
-    snprintf(path, sizeof(path), "%s Main %s", root, start_key);
+    snprintf(path, sizeof(path), "%s::Main::%s", root, start_key);
     const char* v = block_get_strptr(cfg, path);
     if (v == NULL) {
         return 0;
@@ -988,15 +988,15 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     memset(sub->overlays, 0, sizeof(sub->overlays));
     sub->overlay_count = 0;
     char pre[FE_PATH_MAX * 2];
-    snprintf(pre, sizeof(pre), "%s Menu::%s %s", util_root_name(fe->cfg),
+    snprintf(pre, sizeof(pre), "%s::Menu::%s::%s", util_root_name(fe->cfg),
              name, fe_menu_name_idx(idx));
     char buf[FE_PATH_MAX * 2];
 
-    snprintf(buf, sizeof(buf), "%s Title", pre);
+    snprintf(buf, sizeof(buf), "%s::Title", pre);
     if (block_get_strptr(fe->cfg, buf) != NULL) {
         snprintf(sub->title, FE_NAME_MAX, "%s", block_get_strptr(fe->cfg, buf));
     }
-    snprintf(buf, sizeof(buf), "%s FullName", pre);
+    snprintf(buf, sizeof(buf), "%s::FullName", pre);
     const char* v = block_get_strptr(fe->cfg, buf);
     if (v != NULL) {
         snprintf(sub->full_name, sizeof(sub->full_name), "%s", v);
@@ -1007,7 +1007,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     }
 
     /* Position x:y */
-    snprintf(buf, sizeof(buf), "%s Position", pre);
+    snprintf(buf, sizeof(buf), "%s::Position", pre);
     v = block_get_strptr(fe->cfg, buf);
     if (v != NULL) {
         const char* c = strchr(v, ':');
@@ -1017,12 +1017,12 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
         }
     }
 
-    snprintf(buf, sizeof(buf), "%s AutoCenter", pre);
-    sub->auto_center = block_get_bool(fe->cfg, buf) == 1;
-    snprintf(buf, sizeof(buf), "%s DisplayTitle", pre);
-    sub->display_title = block_get_bool(fe->cfg, buf) != 0;
+    snprintf(buf, sizeof(buf), "%s::AutoCenter", pre);
+    sub->auto_center = block_get_bool_path(fe->cfg, buf) == 1;
+    snprintf(buf, sizeof(buf), "%s::DisplayTitle", pre);
+    sub->display_title = block_get_bool_path(fe->cfg, buf) != 0;
     /* Anchored is stored as x:y; title placement currently uses its y value. */
-    snprintf(buf, sizeof(buf), "%s Anchored", pre);
+    snprintf(buf, sizeof(buf), "%s::Anchored", pre);
     v = block_get_strptr(fe->cfg, buf);
     if (v != NULL) {
         const char* c = strchr(v, ':');
@@ -1036,9 +1036,9 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
             sub->title_anchor_y = atoi(c + 1);
         }
     }
-    snprintf(buf, sizeof(buf), "%s CanScroll", pre);
-    sub->can_scroll = block_get_bool(fe->cfg, buf) == 1;
-    snprintf(buf, sizeof(buf), "%s MenuImage", pre);
+    snprintf(buf, sizeof(buf), "%s::CanScroll", pre);
+    sub->can_scroll = block_get_bool_path(fe->cfg, buf) == 1;
+    snprintf(buf, sizeof(buf), "%s::MenuImage", pre);
     v = block_get_strptr(fe->cfg, buf);
     if (v != NULL) {
         /* "img.bmp:0:0:1" -> keep only the path part (temp first:
@@ -1049,7 +1049,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
         snprintf(sub->image, FE_PATH_MAX, "%.*s",
                  c != NULL ? (int)(c - raw) : (int)strlen(raw), raw);
     }
-    snprintf(buf, sizeof(buf), "%s MenuImageDark", pre);
+    snprintf(buf, sizeof(buf), "%s::MenuImageDark", pre);
     v = block_get_strptr(fe->cfg, buf);
     if (v != NULL) {
         char raw[FE_PATH_MAX];
@@ -1062,18 +1062,18 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     /* Bitmap fonts: LoFont = unselected, HiFont = selected (MenuFont is
      * the measurement face — fall back to it for both when the pair is
      * absent). */
-    snprintf(buf, sizeof(buf), "%s LoFont", pre);
+    snprintf(buf, sizeof(buf), "%s::LoFont", pre);
     if (block_get_strptr(fe->cfg, buf) != NULL) {
         snprintf(sub->lofont, FE_PATH_MAX, "%s",
                  block_get_strptr(fe->cfg, buf));
     }
-    snprintf(buf, sizeof(buf), "%s HiFont", pre);
+    snprintf(buf, sizeof(buf), "%s::HiFont", pre);
     if (block_get_strptr(fe->cfg, buf) != NULL) {
         snprintf(sub->hifont, FE_PATH_MAX, "%s",
                  block_get_strptr(fe->cfg, buf));
     }
     if (sub->lofont[0] == '\0' || sub->hifont[0] == '\0') {
-        snprintf(buf, sizeof(buf), "%s MenuFont", pre);
+        snprintf(buf, sizeof(buf), "%s::MenuFont", pre);
         const char* mf = block_get_strptr(fe->cfg, buf);
         if (mf != NULL) {
             if (sub->lofont[0] == '\0') {
@@ -1085,7 +1085,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
         }
     }
 
-    snprintf(buf, sizeof(buf), "%s ItemCount", pre);
+    snprintf(buf, sizeof(buf), "%s::ItemCount", pre);
     const char* item_count_value = block_get_strptr(fe->cfg, buf);
     int ic = atoi(item_count_value != NULL ? item_count_value : "");
     if (ic > FE_ITEMS_MAX) {
@@ -1093,7 +1093,7 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     }
     sub->item_count = ic;
     for (int item_index = 0; item_index < ic; item_index++) {
-        snprintf(buf, sizeof(buf), "%s Item%d", pre, item_index + 1);
+        snprintf(buf, sizeof(buf), "%s::Item%d", pre, item_index + 1);
         const char* item = block_get_strptr(fe->cfg, buf);
         if (item == NULL) {
             continue;
@@ -1104,14 +1104,14 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     /* FLIC overlays (`!Overlay%i <avi\X.flh>:<SFX>:x:y`) + PlayRandom —
      * finding 23's decoration lane; the `.flh` players open lazily at
      * display time (the paths may be loose Data/AVI copies). */
-    snprintf(buf, sizeof(buf), "%s PlayRandom", pre);
-    sub->play_random = block_get_bool(fe->cfg, buf) == 1;
+    snprintf(buf, sizeof(buf), "%s::PlayRandom", pre);
+    sub->play_random = block_get_bool_path(fe->cfg, buf) == 1;
     sub->overlay_count = 0;
     for (int overlay_index =  1;
          overlay_index <= FE_OVERLAYS_MAX &&
              sub->overlay_count < FE_OVERLAYS_MAX;
          ++overlay_index) {
-        snprintf(buf, sizeof(buf), "%s !Overlay%d", pre, overlay_index);
+        snprintf(buf, sizeof(buf), "%s::!Overlay%d", pre, overlay_index);
         const char* ov = block_get_strptr(fe->cfg, buf);
         if (ov == NULL || ov[0] == '\0') {
             continue;
@@ -1166,7 +1166,7 @@ static int fe_parse_menu(FrontEnd* fe, int mi, const char* name)
         return 0;
     }
     char buf[FE_PATH_MAX * 2];
-    snprintf(buf, sizeof(buf), "%s Menu::%s MenuCount", util_root_name(fe->cfg),
+    snprintf(buf, sizeof(buf), "%s::Menu::%s::MenuCount", util_root_name(fe->cfg),
              name);
     const char* menu_count_value = block_get_strptr(fe->cfg, buf);
     int count = atoi(menu_count_value != NULL ? menu_count_value : "");
@@ -1271,7 +1271,7 @@ static void fe_overlay_play_sfx(FrontEnd* fe, const FeOverlay* o)
     /* Overlay values name an SFX alias, while Lego.cfg maps that alias under
      * Samples to a WAVE resource (often prefixed by '@' for streamed sounds). */
     char key[FE_NAME_MAX + 32];
-    snprintf(key, sizeof(key), "%s Samples !%s", util_root_name(fe->cfg),
+    snprintf(key, sizeof(key), "%s::Samples::!%s", util_root_name(fe->cfg),
              o->sfx);
     const char* resource = block_get_strptr(fe->cfg, key);
     if (resource == NULL || resource[0] == '\0') {
@@ -1419,7 +1419,7 @@ int interface_back_button_config_load(BlockFile* cfg)
         return 0;
     }
     char key[FE_PATH_MAX * 2];
-    snprintf(key, sizeof(key), "%s InterfaceBackButton", util_root_name(cfg));
+    snprintf(key, sizeof(key), "%s::InterfaceBackButton", util_root_name(cfg));
     const char* value = block_get_strptr(cfg, key);
     if (value == NULL) {
         return 0;
@@ -1553,10 +1553,10 @@ int interface_images_config_load(BlockFile* cfg)
     }
     keyboard_key_names_init();
     char section_path[FE_PATH_MAX * 2];
-    snprintf(section_path, sizeof(section_path), "%s InterfaceImages",
+    snprintf(section_path, sizeof(section_path), "%s::InterfaceImages",
              util_root_name(cfg));
     section = block_subgroup(cfg, section_path);
-    entry = section != NULL ? block_first_child(section) : NULL;
+    entry = section;
     if (entry == NULL) {
         /* Corpus fallback when the generic action-image section is absent. */
         (void)interface_build_images_config_load(cfg);
@@ -1702,11 +1702,11 @@ int interface_build_images_config_load(BlockFile* cfg)
             engine_heap_free(s_interface_build_images[group]);
         }
         char type_path[FE_PATH_MAX * 2];
-        snprintf(type_path, sizeof(type_path), "%s %s", util_root_name(cfg),
+        snprintf(type_path, sizeof(type_path), "%s::%s", util_root_name(cfg),
                  type_sections[group]);
         BlockRec* type_section = block_subgroup(cfg, type_path);
         uint32_t count = 0;
-        for (BlockRec* row = block_first_child(type_section); row != NULL;
+        for (BlockRec* row = type_section; row != NULL;
              row = block_next_sibling(row)) {
             ++count;
         }
@@ -1724,7 +1724,7 @@ int interface_build_images_config_load(BlockFile* cfg)
         if (type_section == NULL) {
             continue;
         }
-        BlockRec* type_row = block_first_child(type_section);
+        BlockRec* type_row = type_section;
         for (uint32_t i = 0; i < count; ++i) {
             if (type_row == NULL) {
                 break;
@@ -1735,7 +1735,7 @@ int interface_build_images_config_load(BlockFile* cfg)
                 continue;
             }
             char key[FE_PATH_MAX * 2];
-            snprintf(key, sizeof(key), "%s InterfaceBuildImages %s",
+            snprintf(key, sizeof(key), "%s::InterfaceBuildImages::%s",
                      util_root_name(cfg), type_name);
             const char* value = block_get_strptr(cfg, key);
             if (value == NULL) {
@@ -1876,7 +1876,7 @@ int interface_surround_images_config_load(BlockFile* cfg)
     const char* root = util_root_name(cfg);
     for (int i = 0; i < FE_SURROUND_IMAGES_MAX; ++i) {
         char key[FE_PATH_MAX * 2];
-        snprintf(key, sizeof(key), "%s InterfaceSurroundImages %d", root,
+        snprintf(key, sizeof(key), "%s::InterfaceSurroundImages::%d", root,
                  i + 1);
         const char* value = block_get_strptr(cfg, key);
         FeSurroundImage* record = &s_interface_surround_images[i];
@@ -1996,7 +1996,7 @@ int save_menu_layout_load(FrontEnd* fe, const char* group,
     char path[FE_PATH_MAX * 2];
     int found = 0;
     for (int i = 0; i < 7; ++i) {
-        snprintf(path, sizeof(path), "%s %s %s", util_root_name(fe->cfg),
+        snprintf(path, sizeof(path), "%s::%s::%s", util_root_name(fe->cfg),
                  group, keys[i]);
         const char* value = block_get_strptr(fe->cfg, path);
         if (value != NULL) {
@@ -2005,7 +2005,7 @@ int save_menu_layout_load(FrontEnd* fe, const char* group,
         }
     }
 
-    snprintf(path, sizeof(path), "%s %s Window", util_root_name(fe->cfg),
+    snprintf(path, sizeof(path), "%s::%s::Window", util_root_name(fe->cfg),
              group);
     int window[4];
     if (fe_parse_int_tuple_bar(block_get_strptr(fe->cfg, path), window, 4)) {
@@ -2017,7 +2017,7 @@ int save_menu_layout_load(FrontEnd* fe, const char* group,
         found = 1;
     }
 
-    snprintf(path, sizeof(path), "%s %s Panel", util_root_name(fe->cfg),
+    snprintf(path, sizeof(path), "%s::%s::Panel", util_root_name(fe->cfg),
              group);
     const char* panel = block_get_strptr(fe->cfg, path);
     if (panel != NULL) {
@@ -2089,10 +2089,9 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
     frontend_config::panel_button_layout_config_load(
         cfg, display_width_get(), display_height_get());
     {
-        BlockRec* pointer_section = block_subgroup(cfg, "Pointers");
-        pointer_cursor_config_load_target(
-            pointer_section != NULL ? block_first_child(pointer_section)
-                                    : NULL);
+        BlockRec* pointer_section = block_subgroup(cfg,
+            string_path_join(util_root_name(cfg), "Pointers", (const char*)NULL));
+        pointer_cursor_config_load_target(pointer_section);
     }
 
     /* GameConfigInit loads the action and surround image tables alongside
@@ -2170,7 +2169,7 @@ int frontend_enabled(BlockFile* cfg)
         return 0;
     }
     /* FrontEndActive @ 0x416d00: the cfg flag (loader-mode <3 is Win32). */
-    return block_get_bool(cfg, "Lego* Main FrontEnd") == 1;
+    return block_get_bool_path(cfg, "Lego*::Main::FrontEnd") == 1;
 }
 
 /* SaveMenuListEntryAppend (FUN_00410740), adapted to FeItem instead of the
@@ -2223,7 +2222,7 @@ int frontend_build_slots(FrontEnd* fe, const FeSlot* slots, int n)
          * absent. */
         if (fe->cfg != NULL && configured_slots[i].id > 0) {
             char key[FE_PATH_MAX * 2];
-            snprintf(key, sizeof(key), "%s Menu Save_Game_%d",
+            snprintf(key, sizeof(key), "%s::Menu::Save_Game_%d",
                      util_root_name(fe->cfg), configured_slots[i].id);
             const char* stem = block_get_strptr(fe->cfg, key);
             if (stem != NULL && stem[0] != '\0') {
@@ -2349,13 +2348,13 @@ static void fe_sav_menu_list_walk(FeSavMenuListBuild* build,
     (void)fe_cfg_str(build->fe->cfg, group, "MenuBMP", row->menu_bmp,
                      sizeof(row->menu_bmp));
     char path[FE_PATH_MAX * 2];
-    snprintf(path, sizeof(path), "%s Levels %s FrontEndOpen",
+    snprintf(path, sizeof(path), "%s::Levels::%s::FrontEndOpen",
              util_root_name(build->fe->cfg), group);
-    int open = block_get_bool(build->fe->cfg, path);
+    int open = block_get_bool_path(build->fe->cfg, path);
     if (open == 2) {
-        snprintf(path, sizeof(path), "%s %s FrontEndOpen",
+        snprintf(path, sizeof(path), "%s::%s::FrontEndOpen",
                  util_root_name(build->fe->cfg), group);
-        open = block_get_bool(build->fe->cfg, path);
+        open = block_get_bool_path(build->fe->cfg, path);
     }
     row->open = open == 1;
 
@@ -2559,9 +2558,9 @@ static void fe_progress_walk(FeProgressWalk* walk, const SavTreeNode* node,
                sizeof(flags));
         complete = (flags & 1u) != 0;
     }
-    snprintf(path, sizeof(path), "%s Levels %s FrontEndOpen",
+    snprintf(path, sizeof(path), "%s::Levels::%s::FrontEndOpen",
              util_root_name(walk->fe->cfg), level);
-    authored_open = block_get_bool(walk->fe->cfg, path) == 1;
+    authored_open = block_get_bool_path(walk->fe->cfg, path) == 1;
     menu = &walk->fe->menus[FE_MENU_MAIN];
     for (i = 0; i < menu->submenu_count; ++i) {
         int j;
@@ -4725,6 +4724,38 @@ int advisor_tooltip_sound_get(int index)
     return record != NULL ? (int)record->cue : 0;
 }
 
+/* The text half of ToolTip_SetContent (FUN_0046b520) for the advisor
+ * tool tips: copy the value into the slot's record, turning "\n" into a
+ * newline and '_' into a space, measure it and arm the record. Image
+ * entries ('@') require the indexed resource owner; do not turn their file
+ * names into visible tooltip text. */
+static void advisor_tooltip_text_apply(int index, const char* value)
+{
+    TimedEffectRecord* record;
+    char* out;
+    size_t used = 0;
+    int lines = 0;
+    uint32_t width;
+    if (value == NULL || *value == '@') return;
+    record = timed_effect_record_get((unsigned int)index);
+    out = (char*)record->payload;
+    while (*value != '\0' && used < 511u) {
+        if (*value == '\\' && value[1] == 'n') {
+            out[used++] = '\n'; value += 2;
+        } else {
+            out[used++] = *value == '_' ? ' ' : *value;
+            ++value;
+        }
+    }
+    out[used] = '\0';
+    width = formatted_text_draw_and_measure(s_advisor_tooltip_font,
+        NULL, 0, 0, 0, 0, 0, out, &lines);
+    memcpy((char*)record + 0x204, &width, sizeof(width));
+    memcpy((char*)record + 0x208, &lines, sizeof(lines));
+    memset((char*)record + 0x20c, 0, 0x64);
+    record->flags = (record->flags & ~8u) | 3u;
+}
+
 /* AdvisorTooltipAndTooltipSoundConfigLoad (FUN_00434da0): the two config
  * groups are keyed by the 38 named tooltip slots. Keep their text and sound
  * alias in the same slot used by case_insensitive_name_table_lookup. */
@@ -4732,47 +4763,19 @@ int advisor_tooltip_sound_get(int index)
 void advisor_tooltip_and_sound_config_load(BlockFile* config)
 {
     BlockRec* entry;
-    BlockRec* section = block_subgroup(config, "Lego* ToolTips");
-    for (entry = block_first_child(section); entry != NULL;
-         entry = block_next_sibling(entry)) {
-        int index;
-        const char* value = block_value(entry);
-        if (value != NULL && case_insensitive_name_table_lookup(
-                block_name(entry), &index)) {
-            TimedEffectRecord* record = timed_effect_record_get((unsigned int)index);
-            char* out = (char*)record->payload;
-            size_t used = 0;
-            int lines = 0;
-            uint32_t width;
-            /* Image entries require the indexed resource owner; do not
-             * turn their file names into visible tooltip text. */
-            if (*value == '@') continue;
-            while (*value != '\0' && used < 511u) {
-                if (*value == '\\' && value[1] == 'n') {
-                    out[used++] = '\n'; value += 2;
-                } else {
-                    out[used++] = *value == '_' ? ' ' : *value;
-                    ++value;
-                }
-            }
-            out[used] = '\0';
-            width = formatted_text_draw_and_measure(s_advisor_tooltip_font,
-                NULL, 0, 0, 0, 0, 0, out, &lines);
-            memcpy((char*)record + 0x204, &width, sizeof(width));
-            memcpy((char*)record + 0x208, &lines, sizeof(lines));
-            memset((char*)record + 0x20c, 0, 0x64);
-            record->flags = (record->flags & ~8u) | 3u;
-        }
+    int index;
+    int alias;
+    for (entry = block_subgroup(config, string_path_join(
+             util_root_name(config), "ToolTips", (const char*)NULL));
+         entry != NULL; entry = block_next_equal_key(entry)) {
+        if (case_insensitive_name_table_lookup(entry->key, &index))
+            advisor_tooltip_text_apply(index, entry->value);
     }
-    section = block_subgroup(config, "Lego* ToolTipsSFXs");
-    for (entry = block_first_child(section); entry != NULL;
-         entry = block_next_sibling(entry)) {
-        int index;
-        int alias;
-        const char* value = block_value(entry);
-        if (value != NULL && case_insensitive_name_table_lookup(
-                block_name(entry), &index) &&
-            sound_alias_lookup(value, &alias)) {
+    for (entry = block_subgroup(config, string_path_join(
+             util_root_name(config), "ToolTipsSFXs", (const char*)NULL));
+         entry != NULL; entry = block_next_equal_key(entry)) {
+        if (case_insensitive_name_table_lookup(entry->key, &index) &&
+            sound_alias_lookup(entry->value, &alias)) {
             timed_effect_cue_request_set(index, (uint32_t)alias);
         }
     }
@@ -4784,7 +4787,9 @@ void advisor_tooltip_and_sound_config_load(BlockFile* config)
 // FUNCTION: LEGORR 0x00437150
 void tooltip_icons_config_load(void* config)
 {
-    BlockRec* section = block_subgroup((BlockFile*)config, "ToolTipIcons");
+    BlockRec* section = block_subgroup((BlockFile*)config,
+        string_path_join(util_root_name((BlockFile*)config), "ToolTipIcons",
+                         (const char*)NULL));
     BlockRec* entry;
     if (section == NULL) {
         if (s_tooltip_cursor_handle != NULL) {
@@ -4793,7 +4798,7 @@ void tooltip_icons_config_load(void* config)
         s_tooltip_cursor_handle = NULL;
         return;
     }
-    entry = block_first_child(section);
+    entry = section;
     while (entry != NULL) {
         const char* name = block_name(entry);
         const char* value = block_value(entry);
@@ -5690,7 +5695,7 @@ static void fe_render_pass(FrontEnd* fe, const TextureSurface* hi_font,
     if (fe->pointer_x >= 0 && fe->pointer_y >= 0
         && fe->pointer_x < w && fe->pointer_y < h) {
         char key[128];
-        snprintf(key, sizeof(key), "%s Pointers Pointer_Standard",
+        snprintf(key, sizeof(key), "%s::Pointers::Pointer_Standard",
                  util_root_name(fe->cfg));
         const char* pointer = fe->cfg != NULL
                                   ? block_get_strptr(fe->cfg, key) : NULL;
@@ -6452,15 +6457,15 @@ static void help_window_info_config_strings_load_native(BlockFile* cfg)
 void tooltip_info_strings_load(BlockFile* cfg)
 {
     static const char* const paths[9] = {
-        "ToolTipInfo HealthText",
-        "ToolTipInfo EnergyText",
-        "ToolTipInfo CrystalsText",
-        "ToolTipInfo OreText",
-        "ToolTipInfo StudsText",
-        "ToolTipInfo ToolsText",
-        "ToolTipInfo CarryObjectText",
-        "ToolTipInfo DrivenByText",
-        "ToolTipInfo OreRequiredText"
+        "ToolTipInfo::HealthText",
+        "ToolTipInfo::EnergyText",
+        "ToolTipInfo::CrystalsText",
+        "ToolTipInfo::OreText",
+        "ToolTipInfo::StudsText",
+        "ToolTipInfo::ToolsText",
+        "ToolTipInfo::CarryObjectText",
+        "ToolTipInfo::DrivenByText",
+        "ToolTipInfo::OreRequiredText"
     };
     int i;
     for (i = 0; i < 9; ++i) {
@@ -6685,10 +6690,10 @@ void advisor_message_ui_initialize(BlockFile* cfg, int width, int height)
         "Interface\\MessagePanel\\MsgPanel.bmp", 0u, 0u);
     image_surface_blit_transformed(s_message_panel_image,
                                   0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    snprintf(key, sizeof(key), "%s Main NextButton%ix%i",
+    snprintf(key, sizeof(key), "%s::Main::NextButton%ix%i",
              util_root_name(cfg), width, height);
     path = block_get_strptr(cfg, key);
-    snprintf(key, sizeof(key), "%s Main NextButtonPos%ix%i",
+    snprintf(key, sizeof(key), "%s::Main::NextButtonPos%ix%i",
              util_root_name(cfg), width, height);
     position = block_get_strptr(cfg, key);
     if (path != NULL && position != NULL &&
@@ -6697,10 +6702,10 @@ void advisor_message_ui_initialize(BlockFile* cfg, int width, int height)
         s_message_next_image = image_surface_load(path, 0u, 0u);
         texture_source_color_key_set(s_message_next_image, 0u, 0u);
     }
-    snprintf(key, sizeof(key), "%s Main BackButton%ix%i",
+    snprintf(key, sizeof(key), "%s::Main::BackButton%ix%i",
              util_root_name(cfg), width, height);
     path = block_get_strptr(cfg, key);
-    snprintf(key, sizeof(key), "%s Main BackButtonPos%ix%i",
+    snprintf(key, sizeof(key), "%s::Main::BackButtonPos%ix%i",
              util_root_name(cfg), width, height);
     position = block_get_strptr(cfg, key);
     if (path != NULL && position != NULL &&
@@ -11035,10 +11040,11 @@ void panels_config_entry_apply(BlockFile* config, int display_width,
     BlockRec* section;
     BlockRec* entry;
     if (config == NULL) return;
-    sprintf(path, "Panels_%i_%i", display_width, display_height);
-    section = block_subgroup(config, path);
+    sprintf(path, "Panels%ix%i", display_width, display_height);
+    section = block_subgroup(config,
+        string_path_join(util_root_name(config), path, (const char*)NULL));
     if (section == NULL) return;
-    for (entry = block_first_child(section); entry != NULL;
+    for (entry = section; entry != NULL;
          entry = block_next_sibling(entry)) {
         int panel;
         const char* value = block_value(entry);
@@ -11074,13 +11080,14 @@ void panel_button_layout_config_load(BlockFile* config, int display_width,
 
     if (config == NULL) return;
     sprintf(path, "Buttons%ix%i", display_width, display_height);
-    group = block_subgroup(config, path);
+    group = block_subgroup(config,
+        string_path_join(util_root_name(config), path, (const char*)NULL));
     if (group == NULL) return;
     memset(counts, 0, sizeof(counts));
     memset(textures, 0, sizeof(textures));
     memset(ids, 0, sizeof(ids));
 
-    for (entry = block_first_child(group); entry != NULL;
+    for (entry = group; entry != NULL;
          entry = block_next_sibling(entry)) {
         const char* panel_name = block_name(entry);
         const char* value = block_value(entry);
@@ -11153,10 +11160,9 @@ void text_messages_config_load(BlockFile* config)
     BlockRec* entry;
     char path[256];
     if (config == NULL) return;
-    snprintf(path, sizeof(path), "%s TextMessages", util_root_name(config));
-    group = block_subgroup(config, path);
-    if (group == NULL) group = block_subgroup(config, "TextMessages");
-    for (entry = block_first_child(group); entry != NULL;
+    group = block_subgroup(config, string_path_join(util_root_name(config),
+        "TextMessages", (const char*)NULL));
+    for (entry = group; entry != NULL;
          entry = block_next_sibling(entry)) {
         int slot;
         const char* label = block_name(entry);
@@ -11164,10 +11170,9 @@ void text_messages_config_load(BlockFile* config)
         if (ui_message_label_index_find(label, &slot))
             ui_message_text_slot_assign(slot, text != NULL ? text : "");
     }
-    snprintf(path, sizeof(path), "%s TextMessagesWithImages", util_root_name(config));
-    group = block_subgroup(config, path);
-    if (group == NULL) group = block_subgroup(config, "TextMessagesWithImages");
-    for (entry = block_first_child(group); entry != NULL;
+    group = block_subgroup(config, string_path_join(util_root_name(config),
+        "TextMessagesWithImages", (const char*)NULL));
+    for (entry = group; entry != NULL;
          entry = block_next_sibling(entry)) {
         int slot;
         const char* label = block_name(entry);

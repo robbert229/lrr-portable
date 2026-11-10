@@ -78,8 +78,8 @@ static void test_config(void)
     CHECK(movie_level_video_path(bf, "Tran01", buf, sizeof(buf)) == 1
           && strcmp(buf, "Avi/mbats.avi") == 0,
           "level Video key through Levels container");
-    /* The first match in document order wins ("Video" under Nested); the
-     * flat lookup must not shadow the Levels container. */
+    /* Only the Video directly under Tran01 matches (the Nested one is a
+     * level deeper); the flat lookup must not shadow the Levels container. */
     CHECK(movie_level_video_path(bf, "Nope", buf, sizeof(buf)) == 0,
           "missing level -> 0");
 

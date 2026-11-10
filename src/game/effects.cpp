@@ -472,7 +472,7 @@ static int light_effect_config_path_build(char* path, size_t path_capacity,
                                           const char* config_root,
                                           const char* key)
 {
-    static const char middle[] = " LightEffects::";
+    static const char middle[] = "::LightEffects::";
     size_t root_length;
     size_t middle_length = sizeof(middle) - 1u;
     size_t key_length;
@@ -546,14 +546,14 @@ int light_effect_waypoint_config_load(void* config,
     };
     unsigned int i;
     if (file == NULL) return 0;
-    snprintf(path, sizeof(path), "%s LightEffects::%s", root, keys[0]);
+    snprintf(path, sizeof(path), "%s::LightEffects::%s", root, keys[0]);
     if (!config_rgb_vector_read(file, path, &minimum[0], &minimum[1],
                                 &minimum[2])) return 0;
-    snprintf(path, sizeof(path), "%s LightEffects::%s", root, keys[1]);
+    snprintf(path, sizeof(path), "%s::LightEffects::%s", root, keys[1]);
     if (!config_rgb_vector_read(file, path, &maximum[0], &maximum[1],
                                 &maximum[2])) return 0;
     for (i = 0u; i < 3u; ++i) {
-        snprintf(path, sizeof(path), "%s LightEffects::%s", root,
+        snprintf(path, sizeof(path), "%s::LightEffects::%s", root,
                  keys[i + 2u]);
         if (!light_effect_config_range_pair_read(file, path,
                 &range_min[i], &range_max[i])) return 0;

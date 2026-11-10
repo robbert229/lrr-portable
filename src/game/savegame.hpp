@@ -284,7 +284,7 @@ void* list_get_node(const SavListWindow* win, const void* wide_key);
 /* LevelNodeGet (FUN_00417090): get or recursively build the LevelLinks node
  * for a name in the level registry. `cfg` is the Lego configuration backing
  * the registry; this explicit argument replaces the corpus global. */
-struct BlockFile;
+typedef struct BlockRec BlockFile;
 struct SavTreeNode;
 SavTreeNode* level_node_get(SavListWindow* win, BlockFile* cfg,
                             const char* level_name);  /* FUN_00417090 */

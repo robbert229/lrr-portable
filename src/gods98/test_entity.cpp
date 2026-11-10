@@ -215,7 +215,8 @@ static void test_assembly_defaults(void)
 /* --- real-corpus validation --------------------------------------------------
  * Every .ae entry is opened by the corpus path build (name = parent dir of
  * the entry) and assembled; totals + FNV digest are cross-checked against
- * the same view extracted from the shipped bytes by the ae_truth.py model.
+ * the same view extracted from the shipped bytes by the ae_truth.py model,
+ * with duplicate groups resolved last-match as the original does.
  * Layout mirrors test_model.cpp (mount, dedup by folded key, sort, digest). */
 
 #define REAL_AE        56
@@ -229,11 +230,16 @@ static void test_assembly_defaults(void)
 #define REAL_TRIGGER_SUM 283
 #define REAL_TRANSCOEF_NZ 36
 #define REAL_SCALE_NZ   51
-#define REAL_DIGEST     0xe4e3630cu
+/* LargeDigger.ae has two `Drill` groups under `Lego*` ("digDRILL" and
+ * "digdrill"). Through the '*' root the original Config_FindItem keeps the
+ * LAST match (finding 508), so both digests fold "digdrill"; the earlier
+ * tree parser kept the first (0xe4e3630c / 0xfc217039). File lookups ignore
+ * case, so the loaded scene is the same. */
+#define REAL_DIGEST     0x80631cacu
 
 /* reduce-animation feature (0x400000): '!' rows dropped */
 #define REAL_RED_ACTIVITIES 354
-#define REAL_RED_DIGEST 0xfc217039u
+#define REAL_RED_DIGEST 0x2a2df559u
 
 typedef struct { char key[256]; char raw[256]; } Entry;
 

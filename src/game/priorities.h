@@ -9,7 +9,7 @@
 #ifndef LEGORRR_GAME_PRIORITIES_H
 #define LEGORRR_GAME_PRIORITIES_H
 
-#include "gods98/block.h"
+#include "gods98/config.h"
 #include "gods98/images.h"
 
 #ifdef __cplusplus

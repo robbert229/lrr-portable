@@ -13,6 +13,7 @@
 #include "record.hpp"
 #include "view.hpp"
 #include "block.hpp"
+#include "game/util.hpp"
 
 /* Sample variant selection shares the game's VC5 rand stream. */
 extern uint32_t rng_thunk_draw15(void);
@@ -2806,10 +2807,11 @@ void sound_samples_config_load(BlockFile* config, int allow_marked)
     BlockRec* group;
     BlockRec* entry;
     if (config == NULL) return;
-    group = block_subgroup(config, "Samples");
+    group = block_subgroup(config,
+        string_path_join(util_root_name(config), "Samples", (const char*)NULL));
     if (group == NULL) return;
     sound_alias_registration_set(1);
-    for (entry = block_first_child(group); entry != NULL;
+    for (entry = group; entry != NULL;
          entry = block_next_sibling(entry)) {
         const char* value = block_value(entry);
         const char* alias_name = value;

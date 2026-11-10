@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* test_block — validation for src/gods98/block.cpp (finding 12).
+/* test_block — validation for the config tree (src/gods98/config.c, the
+ * original Config.c) and its port-only layer (block.cpp), finding 12.
  *
- * Synthetic grammar cases always run: nesting, ';' comments, pending-flush
- * records, multi-root files, first-token '*' wildcard, case folding, and the
- * typed getters with the corpus bool vocabulary {TRUE,YES,ON}/
- * {FALSE,NO,OFF}/else→2.
+ * Synthetic grammar cases always run: nesting, ';' comments, the flat
+ * record list and its trailing empty record, `::` paths, the root '*'
+ * wildcard (last match wins), case folding, the record pool, and the typed
+ * getters with the corpus bool vocabulary {TRUE,YES,ON}/{FALSE,NO,OFF}/
+ * else→2.
  *
  * With `--real <dir>` the shipped wads are mounted and EVERY block-text
  * entry (56 .ae, 44 .ol, 37 .ptl, 1 Lego.cfg = 138) is parsed, with a
- * record-count + FNV digest cross-checked against the ground-truth table
- * extracted from the shipped bytes via tools/rrwad.py, plus spot checks on
- * Barracks.ae / IceMonster.ae / Lego.cfg values.
- *
- * Wire-up: meson test 'block' (suite 'block'); real checks via the
- * `test_wads_dir` meson option.
+ * record-count + FNV digest cross-checked against a ground-truth table,
+ * plus spot checks on Barracks.ae / IceMonster.ae / Lego.cfg values.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,14 +31,9 @@ static void CHECK(int cond, const char* what)
     }
 }
 
-static char* s_parse(const char* text)
-{
-    return (char*)text; /* block_parse never mutates the caller buffer */
-}
-
 static BlockFile* parse(const char* text)
 {
-    return block_parse(s_parse(text), strlen(text));
+    return block_parse(text, strlen(text));
 }
 
 /* ASCII-only fold to compare extensions without locale surprises */
@@ -71,6 +64,68 @@ static int val_is(BlockFile* bf, const char* path, const char* want)
 }
 
 /* ------------------------------------------------------------------ *
+ *  Record pool (Config_Initialise / Config_AddList / Config_Shutdown).
+ *  Runs first: Config_Shutdown frees every pool block, so no file may be
+ *  open across it.
+ * ------------------------------------------------------------------ */
+
+static void test_pool(void)
+{
+    BlockRec* block1;
+    BlockRec* block2;
+    block_text_token_pool_init();
+    CHECK(block_text_token_pool_head_peek() == NULL
+              && block_text_token_pool_watermark_peek() == 0
+              && block_text_token_pool_resident_peek() == 1,
+          "pool: init clears the free list and the count, raises the flag");
+    block_text_token_pool_grow();
+    block1 = (BlockRec*)block_text_token_pool_head_peek();
+    CHECK(block1 != NULL && block_text_token_pool_slot_peek(0) == block1
+              && block_text_token_pool_watermark_peek() == 1,
+          "pool: the first block holds one record, in slot 0");
+    CHECK(block1 != NULL && block1->next_free == NULL,
+          "pool: its record links to the empty old free list");
+    block_text_token_pool_grow();
+    block2 = (BlockRec*)block_text_token_pool_head_peek();
+    CHECK(block2 != block1 && block_text_token_pool_slot_peek(1) == block2
+              && block_text_token_pool_watermark_peek() == 2,
+          "pool: the second block doubles to two records, in slot 1");
+    CHECK(block2 != NULL && block2[0].next_free == &block2[1]
+              && block2[1].next_free == block1,
+          "pool: the new records chain ahead of the old free list");
+
+    /* Config_Create takes from the head and marks the record in use;
+     * Config_Remove pushes it back. */
+    {
+        BlockRec* first = block_record_create(NULL);
+        BlockRec* second = block_record_create(first);
+        CHECK(first == &block2[0] && first->next_free == first,
+              "pool: create takes the head record and marks it in use");
+        CHECK(second == &block2[1] && first->next == second
+                  && second->prev == first && second->depth == first->depth
+                  && second->key == NULL && second->value == NULL,
+              "pool: create appends after prev and copies its depth");
+        block_record_remove(second);
+        block_record_remove(first);
+        CHECK(block_text_token_pool_head_peek() == first
+                  && first->next_free == second,
+              "pool: remove pushes records back on the free list");
+    }
+
+    block_text_token_pool_destroy();
+    CHECK(block_text_token_pool_head_peek() == NULL
+              && block_text_token_pool_resident_peek() == 0,
+          "pool: shutdown clears the free list and the flag");
+    CHECK(block_text_token_pool_watermark_peek() == 2,
+          "pool: shutdown leaves the block count (faithful)");
+    block_text_token_pool_init();
+    CHECK(block_text_token_pool_slot_peek(0) == NULL
+              && block_text_token_pool_slot_peek(1) == NULL
+              && block_text_token_pool_watermark_peek() == 0,
+          "pool: init after shutdown starts the pool again");
+}
+
+/* ------------------------------------------------------------------ *
  *  Synthetic grammar cases
  * ------------------------------------------------------------------ */
 
@@ -91,35 +146,84 @@ static void test_basic(void)
     CHECK(bf != NULL, "basic: parse");
     CHECK(bf && block_record_count(bf) == 7, "basic: 7 records (comment wins)");
     CHECK(bf && val_is(bf, "Lego*", "{"), "basic: container value is '{'");
-    CHECK(val_is(bf, "Lego* Scale", "1.0"), "basic: name value");
-    CHECK(val_is(bf, "lego* scale", "1.0"), "basic: case-insensitive");
-    CHECK(val_is(bf, "LegoRR Scale", "1.0"), "basic: exe-base '*' prefix match");
-    CHECK(block_find(bf, "Lego* Activities A2") == NULL, "basic: ';' comments out");
-    CHECK(val_is(bf, "Lego* Activities A3", "Create"), "basic: nested value");
-    CHECK(block_subgroup(bf, "Lego* Activities") != NULL, "basic: subgroup ok");
-    CHECK(block_subgroup(bf, "Lego* Scale") == NULL, "basic: subgroup needs children");
-    CHECK(val_is(bf, "Lego* PowerOff FILE", "Bar"), "basic: two levels");
-    CHECK(block_find(bf, "Lego* Missing") == NULL, "basic: miss -> NULL");
+    CHECK(val_is(bf, "Lego*::Scale", "1.0"), "basic: name value");
+    CHECK(val_is(bf, "lego*::scale", "1.0"), "basic: case-insensitive");
+    CHECK(val_is(bf, "LegoRR::Scale", "1.0"), "basic: exe-base '*' prefix match");
+    CHECK(block_find(bf, "Lego*::Activities::A2") == NULL, "basic: ';' comments out");
+    CHECK(val_is(bf, "Lego*::Activities::A3", "Create"), "basic: nested value");
+    CHECK(block_find(bf, "Lego*::Activities A3") == NULL,
+          "basic: a space is not a separator");
+    CHECK(block_find(bf, "Lego* Scale") == bf,
+          "basic: one segment matches the '*' root by its prefix");
+    CHECK(val_is(bf, "Lego*::PowerOff::FILE", "Bar"), "basic: two levels");
+    CHECK(block_find(bf, "Lego*::Missing") == NULL, "basic: miss -> NULL");
 
-    /* children of Activities: A1 then A3, names/values readable */
-    BlockRec* acts = block_subgroup(bf, "Lego* Activities");
-    BlockRec* first = block_first_child(acts);
-    CHECK(first && strcmp(block_name(first), "A1") == 0, "basic: first child A1");
-    CHECK(first && block_next_sibling(first)
-        && strcmp(block_name(block_next_sibling(first)), "A3") == 0,
-        "basic: sibling A3");
+    /* Config_FindArray answers the container's first item. */
+    BlockRec* first = block_subgroup(bf, "Lego*::Activities");
+    CHECK(first && strcmp(first->key, "A1") == 0, "basic: subgroup -> first item A1");
+    CHECK(block_subgroup(bf, "Lego*::Scale") == NULL, "basic: subgroup needs items");
+    CHECK(first && block_next_equal_key(first)
+        && strcmp(block_next_equal_key(first)->key, "A3") == 0,
+        "basic: next item A3");
+    CHECK(first && block_next_equal_key(block_next_equal_key(first)) == NULL,
+          "basic: the container ends the walk");
+    BlockRec* acts = block_find(bf, "Lego*::Activities");
+    CHECK(block_first_child(acts) == first && block_has_children(acts),
+          "basic: first_child of the container is its first item");
+    CHECK(block_first_child(first) == NULL, "basic: a value has no items");
     block_close(bf);
+}
+
+static void test_records(void)
+{
+    /* The flat list: one record per pair in document order, depths from the
+     * braces, and an empty record (no key) closing the file. */
+    BlockFile* bf = parse("A { x 1 }\nB 2\n");
+    BlockRec* r = bf;
+    CHECK(r && strcmp(r->key, "A") == 0 && strcmp(r->value, "{") == 0
+              && r->depth == 0 && r->file_text != NULL && r->prev == NULL,
+          "records: root holds the text");
+    r = r ? r->next : NULL;
+    CHECK(r && strcmp(r->key, "x") == 0 && r->depth == 1, "records: item at depth 1");
+    r = r ? r->next : NULL;
+    CHECK(r && strcmp(r->key, "B") == 0 && r->depth == 0 && r->file_text == NULL,
+          "records: '}' closes the depth");
+    r = r ? r->next : NULL;
+    CHECK(r && r->key == NULL && r->value == NULL && r->next == NULL,
+          "records: an empty record ends the list");
+    CHECK(block_record_count(bf) == 3 && block_record_at(bf, 2) == bf->next->next
+              && block_record_at(bf, 3) == NULL,
+          "records: count and index skip the empty record");
+    CHECK(block_next_sibling(bf) == bf->next->next
+              && block_next_sibling(bf->next->next) == NULL,
+          "records: next_sibling stops before the empty record");
+    CHECK(block_next_equal_key(bf->next->next) == r,
+          "records: GetNextItem answers the empty record (faithful)");
+
+    /* Config_Free returns every record, the empty one included. */
+    void* head_before = block_text_token_pool_head_peek();
+    block_close(bf);
+    CHECK(block_text_token_pool_head_peek() == r && r->next_free != NULL
+              && head_before != r,
+          "records: free pushes the records back, last one on top");
 }
 
 static void test_wildcard(void)
 {
     BlockFile* bf = parse("Root* {\n\tDeep { x 1\n\t\tk* { y 2 }\n\t}\n}\n");
     CHECK(bf != NULL, "wildcard: parse");
-    CHECK(val_is(bf, "RootRR Deep x", "1"), "wildcard: first-token '*' prefix");
-    CHECK(val_is(bf, "rootrr DEEP x", "1"), "wildcard: fold + prefix");
-    CHECK(val_is(bf, "RootRR Deep k* y", "2"), "wildcard: deeper exact '*' name");
-    CHECK(block_find(bf, "RootRR Deep kZ y") == NULL, "wildcard: not gated deeper");
-    CHECK(block_find(bf, "Zoop Deep x") == NULL, "wildcard: prefix must match root");
+    CHECK(val_is(bf, "RootRR::Deep::x", "1"), "wildcard: first-token '*' prefix");
+    CHECK(val_is(bf, "rootrr::DEEP::x", "1"), "wildcard: fold + prefix");
+    CHECK(val_is(bf, "RootRR::Deep::k*::y", "2"), "wildcard: deeper exact '*' name");
+    CHECK(block_find(bf, "RootRR::Deep::kZ::y") == NULL, "wildcard: not gated deeper");
+    CHECK(block_find(bf, "Zoop::Deep::x") == NULL, "wildcard: prefix must match root");
+    block_close(bf);
+
+    /* Through a '*' root the last match wins; through an exact root the
+     * first does (Config_FindItem keeps scanning after a wildcard match). */
+    bf = parse("Lego* { K 1 K 2 }\nExact { K 3 K 4 }\n");
+    CHECK(val_is(bf, "LegoRR::K", "2"), "wildcard: last match wins via '*'");
+    CHECK(val_is(bf, "Exact::K", "3"), "wildcard: first match wins otherwise");
     block_close(bf);
 }
 
@@ -131,25 +235,24 @@ static void test_comments_braces(void)
         "C { ; hidden inside\n"
         "}\n"
         "E 5\n"
-        "R { a 1 } } extra 9\n"
+        "R { a 1 }\n"
         "R2 { b");
     CHECK(bf != NULL, "braces: parse");
     CHECK(val_is(bf, "A", "1"), "braces: inline comment stripped");
     CHECK(val_is(bf, "B", "2"), "braces: sibling after comment");
     CHECK(val_is(bf, "E", "5"), "braces: pop then sibling at root");
-    CHECK(val_is(bf, "R a", "1"), "braces: nested pair");
-    CHECK(val_is(bf, "extra", "9"), "braces: extra '}' cannot eat siblings");
-    BlockRec* b = block_find(bf, "R2 b");
-    CHECK(b != NULL && block_value(b) == NULL, "braces: EOF flush = valueless record");
+    CHECK(val_is(bf, "R::a", "1"), "braces: nested pair");
+    CHECK(block_subgroup(bf, "C") == NULL, "braces: empty container has no items");
+    BlockRec* b = block_find(bf, "R2::b");
+    CHECK(b != NULL && block_value(b) == NULL, "braces: EOF leaves a valueless key");
     block_close(bf);
 }
 
 static void test_colon_sep(void)
 {
     /* The shipped Lego.cfg shape: root `Lego*` with sibling `Main`/`Menu`/
-     * `Levels` groups; the exe queries with the `::` group separator
-     * (DAT_004aab18 = "::", finding 23) — "Lego* Main Menu::MainMenuFull
-     * MenuCount". Both ' ' and "::" must tokenize. */
+     * `Levels` groups, queried with the `::` separator (DAT_004aab18,
+     * finding 23). */
     BlockFile* bf = parse(
         "Lego* {\n"
         "\tMain {\n"
@@ -171,36 +274,48 @@ static void test_colon_sep(void)
         "\t}\n"
         "}\n");
     CHECK(bf != NULL, "colon: parse");
-    CHECK(val_is(bf, "Lego* Menu::MainMenuFull MenuCount", "5"),
+    CHECK(val_is(bf, "Lego*::Menu::MainMenuFull::MenuCount", "5"),
         "colon: :: menu path");
-    CHECK(val_is(bf, "Lego* Menu MainMenuFull MenuCount", "5"),
-        "colon: space form parity");
-    CHECK(val_is(bf, "Lego* Menu::MainMenuFull Menu1 Item1",
+    CHECK(block_find(bf, "Lego*::Menu MainMenuFull::MenuCount") == NULL,
+        "colon: the space form does not resolve");
+    CHECK(val_is(bf, "Lego*::Menu::MainMenuFull::Menu1::Item1",
                  "Next:0:0:Start_Game:Menu2"), "colon: :: nested item");
     /* the shipped level *address* (StartLevel value) resolves the group: */
-    CHECK(val_is(bf, "Lego* Main StartLevel", "Levels::Tran01"),
+    CHECK(val_is(bf, "Lego*::Main::StartLevel", "Levels::Tran01"),
         "colon: StartLevel value kept intact (a value, not a path)");
-    CHECK(val_is(bf, "Lego* Levels::Tran01 SurfaceMap", "x.map"),
+    CHECK(val_is(bf, string_path_join("Lego*", "Levels::Tran01", "SurfaceMap",
+                                      (const char*)NULL), "x.map"),
         "colon: Levels::X level address resolves the record");
-    CHECK(block_subgroup(bf, "Lego* Menu::MainMenuFull Menu1") != NULL,
+    CHECK(block_subgroup(bf, "Lego*::Menu::MainMenuFull::Menu1") != NULL,
         "colon: :: subgroup");
-    CHECK(block_find(bf, "Lego* Menu::MainMenuFull MenuNope") == NULL,
+    CHECK(block_find(bf, "Lego*::Menu::MainMenuFull::MenuNope") == NULL,
         "colon: miss -> NULL");
     block_close(bf);
+}
+
+static void test_path_join(void)
+{
+    const char* p = string_path_join("Lego*", "Main", "MenuCount",
+                                     (const char*)NULL);
+    CHECK(strcmp(p, "Lego*::Main::MenuCount") == 0, "join: joins with ::");
+    p = string_path_join("Lego*", (const char*)NULL);
+    CHECK(strcmp(p, "Lego*") == 0, "join: root-only stays the root");
+    p = string_path_join("a", "b", (const char*)NULL);
+    CHECK(strcmp(p, "a::b") == 0, "join: builder restarts per call");
 }
 
 static void test_multiroot(void)
 {
     BlockFile* bf = parse("A { x { y 1 } }\nB { x { y 2 } }\n");
-    CHECK(val_is(bf, "A x y", "1"), "multiroot: tree A");
-    CHECK(val_is(bf, "B x y", "2"), "multiroot: tree B");
-    CHECK(val_is(bf, "A x", "{"), "multiroot: intermediate is container");
+    CHECK(val_is(bf, "A::x::y", "1"), "multiroot: tree A");
+    CHECK(val_is(bf, "B::x::y", "2"), "multiroot: tree B");
+    CHECK(val_is(bf, "A::x", "{"), "multiroot: intermediate is container");
     block_close(bf);
 }
 
-/* SortedEntryNextEqualKey (FUN_00479020): the config loaders' sibling
- * iteration idiom — first match then repeatedly "next at the same
- * depth" (findings 230/403). */
+/* Config_GetNextItem (FUN_00479020): the config loaders' sibling
+ * iteration idiom — first item then repeatedly "next at the same depth"
+ * (findings 230/403). */
 static void test_equal_key(void)
 {
     BlockFile* bf = parse(
@@ -209,20 +324,19 @@ static void test_equal_key(void)
         "  c2 2\n"
         "  c3 { g 3 }\n"
         "}\n");
-    BlockRec* c1 = block_find(bf, "S c1");
-    BlockRec* c2 = block_find(bf, "S c2");
-    BlockRec* c3 = block_find(bf, "S c3");
-    BlockRec* g1 = block_find(bf, "S c1 g");
+    BlockRec* c1 = block_find(bf, "S::c1");
+    BlockRec* c2 = block_find(bf, "S::c2");
+    BlockRec* c3 = block_find(bf, "S::c3");
+    BlockRec* g1 = block_find(bf, "S::c1::g");
     CHECK(c1 != NULL && c2 != NULL && c3 != NULL && g1 != NULL,
           "equal-key: fixture records");
     CHECK(block_next_equal_key(c1) == c2, "skips c1's subtree in document order");
     CHECK(block_next_equal_key(c2) == c3, "simple child continues the walk");
     CHECK(block_next_equal_key(c3) == NULL, "last sibling ends the walk");
     CHECK(block_next_equal_key(g1) == NULL, "subtree record has no sibling");
-    CHECK(block_next_equal_key(NULL) == NULL, "NULL start answers NULL");
     /* The loaders' loop idiom. */
     int seen = 0;
-    for (BlockRec* e = block_find(bf, "S c1"); e != NULL;
+    for (BlockRec* e = block_subgroup(bf, "S"); e != NULL;
          e = block_next_equal_key(e)) {
         ++seen;
     }
@@ -238,29 +352,37 @@ static void test_getters(void)
         " I1 -5\n I2 42\n F1 1.5\n S1 0,-1:0,-1\n"
         "}\n");
     CHECK(bf != NULL, "getters: parse");
-    CHECK(block_get_bool(bf, "G B1") == 1, "bool TRUE");
-    CHECK(block_get_bool(bf, "G B2") == 1, "bool yes");
-    CHECK(block_get_bool(bf, "G B3") == 1, "bool ON");
-    CHECK(block_get_bool(bf, "G B4") == 0, "bool FALSE");
-    CHECK(block_get_bool(bf, "G B5") == 0, "bool NO");
-    CHECK(block_get_bool(bf, "G B6") == 0, "bool off");
-    CHECK(block_get_bool(bf, "G B7") == 2, "bool junk -> 2");
-    CHECK(block_get_bool(bf, "G missing") == 2, "bool missing -> 2");
-    CHECK(block_get_int(bf, "G I1", 99) == -5, "int negative");
-    CHECK(block_get_int(bf, "G I2", 99) == 42, "int positive");
-    CHECK(block_get_int(bf, "G nope", 7) == 7, "int default");
-    CHECK(block_get_float(bf, "G F1", 9.f) == 1.5f, "float");
-    CHECK(block_get_float(bf, "G nope", 9.f) == 9.f, "float default");
+    CHECK(block_get_bool_path(bf, "G::B1") == 1, "bool TRUE");
+    CHECK(block_get_bool_path(bf, "G::B2") == 1, "bool yes");
+    CHECK(block_get_bool_path(bf, "G::B3") == 1, "bool ON");
+    CHECK(block_get_bool_path(bf, "G::B4") == 0, "bool FALSE");
+    CHECK(block_get_bool_path(bf, "G::B5") == 0, "bool NO");
+    CHECK(block_get_bool_path(bf, "G::B6") == 0, "bool off");
+    CHECK(block_get_bool_path(bf, "G::B7") == 2, "bool junk -> 2");
+    CHECK(block_get_bool_path(bf, "G::missing") == 2, "bool missing -> 2");
+    CHECK(block_get_int(bf, "G::I1", 99) == -5, "int negative");
+    CHECK(block_get_int(bf, "G::I2", 99) == 42, "int positive");
+    CHECK(block_get_int(bf, "G::nope", 7) == 7, "int default");
+    CHECK(block_get_float(bf, "G::F1", 9.f) == 1.5f, "float");
+    CHECK(block_get_float(bf, "G::nope", 9.f) == 9.f, "float default");
     char buf[4];
-    CHECK(block_get_str(bf, "G S1", buf, sizeof(buf))
+    CHECK(block_get_str(bf, "G::S1", buf, sizeof(buf))
         && strcmp(buf, "0,-") == 0, "str truncates safely");
-    CHECK(strcmp(block_get_strptr(bf, "G S1"), "0,-1:0,-1") == 0, "strptr full value");
-    CHECK(block_get_strptr(bf, "G nope") == NULL, "strptr missing -> NULL");
+    CHECK(strcmp(block_get_strptr(bf, "G::S1"), "0,-1:0,-1") == 0, "strptr full value");
+    CHECK(block_get_strptr(bf, "G::nope") == NULL, "strptr missing -> NULL");
+    {
+        char* copy = block_get_str_copy(bf, "G::S1");
+        CHECK(copy != NULL && copy != block_get_strptr(bf, "G::S1")
+                  && strcmp(copy, "0,-1:0,-1") == 0,
+              "str_copy is a heap copy of the value");
+        engine_heap_free(copy);
+        CHECK(block_get_str_copy(bf, "G::nope") == NULL, "str_copy missing -> NULL");
+    }
 
-    /* empty corpus: parse-only, zero records, no crash */
-    BlockFile* zero = block_parse((char*)"", 0);
+    /* empty buffer: a lone empty record, zero keyed records, no crash */
+    BlockFile* zero = block_parse("", 0);
     CHECK(zero != NULL && block_record_count(zero) == 0, "empty buffer parses clean");
-    CHECK(block_find(zero, "anything") == NULL, "empty: find -> NULL");
+    CHECK(block_find(zero, "anything::deeper") == NULL, "empty: find -> NULL");
     block_close(zero);
     block_close(bf);
 }
@@ -339,7 +461,7 @@ static void test_real(const char* dir)
                 }
                 continue;
             }
-            BlockFile* bf = block_parse((char*)res->data, (size_t)res->size);
+            BlockFile* bf = block_parse((const char*)res->data, (size_t)res->size);
             resource_free(res);
             if (bf == NULL) {
                 printf("FAIL: real: parse %s\n", nm);
@@ -374,13 +496,13 @@ static void test_real_spots(const char* dir)
     BlockFile* bf = block_open("Buildings\\Barracks\\Barracks.ae");
     CHECK(bf != NULL, "spot: Barracks.ae opens");
     if (bf != NULL) {
-        CHECK(val_is(bf, "Lego* Scale", "1.0"), "spot: Barracks Scale");
-        CHECK(val_is(bf, "LegoRR Scale", "1.0"), "spot: Barracks exe-root query");
-        CHECK(val_is(bf, "Lego* Activities Activity_Teleport", "Create"),
+        CHECK(val_is(bf, "Lego*::Scale", "1.0"), "spot: Barracks Scale");
+        CHECK(val_is(bf, "LegoRR::Scale", "1.0"), "spot: Barracks exe-root query");
+        CHECK(val_is(bf, "Lego*::Activities::Activity_Teleport", "Create"),
             "spot: Barracks Activity_Teleport");
-        CHECK(val_is(bf, "LegoRR Activities Activity_Teleport", "Create"),
+        CHECK(val_is(bf, "LegoRR::Activities::Activity_Teleport", "Create"),
             "spot: same record via '*' root");
-        CHECK(val_is(bf, "Lego* PowerOff FILE", "Barracks_Idle"),
+        CHECK(val_is(bf, "Lego*::PowerOff::FILE", "Barracks_Idle"),
             "spot: Barracks PowerOff FILE");
         block_close(bf);
     }
@@ -388,19 +510,20 @@ static void test_real_spots(const char* dir)
     bf = block_open("Creatures\\IceMonster\\IceMonster.ae");
     CHECK(bf != NULL, "spot: IceMonster.ae opens");
     if (bf != NULL) {
-        CHECK(val_is(bf, "Lego* Scale", "1.0"), "spot: Ice Scale");
-        CHECK(block_get_bool(bf, "Lego* CameraFlipDir") == 1, "spot: Ice CameraFlipDir");
+        CHECK(val_is(bf, "Lego*::Scale", "1.0"), "spot: Ice Scale");
+        CHECK(block_get_bool_path(bf, "Lego*::CameraFlipDir") == 1,
+              "spot: Ice CameraFlipDir");
         CHECK(block_find(bf, "LegoLow*") != NULL, "spot: Ice LegoLow* sibling root");
-        CHECK(val_is(bf, "Lego* HIGHPOLY Arml", "HArml"), "spot: Ice HIGHPOLY map");
+        CHECK(val_is(bf, "Lego*::HIGHPOLY::Arml", "HArml"), "spot: Ice HIGHPOLY map");
         block_close(bf);
     }
 
     bf = block_open("Lego.cfg");
     CHECK(bf != NULL, "spot: Lego.cfg opens");
     if (bf != NULL) {
-        CHECK(block_get_int(bf, "Lego* Main TextureUsage", 0) == 3145728,
+        CHECK(block_get_int(bf, "Lego*::Main::TextureUsage", 0) == 3145728,
             "spot: cfg TextureUsage");
-        CHECK(val_is(bf, "Lego* Main CreditsTextFile", "Credits.txt"),
+        CHECK(val_is(bf, "Lego*::Main::CreditsTextFile", "Credits.txt"),
             "spot: cfg CreditsTextFile");
         block_close(bf);
     }
@@ -408,9 +531,12 @@ static void test_real_spots(const char* dir)
 
 int main(int argc, char** argv)
 {
+    test_pool();
     test_basic();
+    test_records();
     test_wildcard();
     test_colon_sep();
+    test_path_join();
     test_comments_braces();
     test_multiroot();
     test_equal_key();
@@ -453,82 +579,6 @@ int main(int argc, char** argv)
               "NULL out copies nothing and returns the path");
     }
 
-    /* BlockTextTokenPoolDestroy (FUN_00478e20): corpus pool storage is
-     * module-local with hooks (grow ported by iters 117-120, init ported
-     * 2026-10-25); the destroy frees the nonzero slots through the engine
-     * heap and clears the head cursor and resident flag, NULLing slots
-     * along the way. */
-    {
-        void* tok0 = engine_heap_alloc(8);
-        void* tok1 = engine_heap_alloc(8);
-        block_text_token_pool_slot_set(3, tok0);
-        block_text_token_pool_slot_set(5, tok1);
-        block_text_token_pool_head_set(tok1);
-        CHECK(block_text_token_pool_slot_peek(3) == tok0, "slot 3 holds");
-        CHECK(block_text_token_pool_slot_peek(-1) == NULL
-                  && block_text_token_pool_slot_peek(32) == NULL,
-              "out-of-window peeks answer NULL (deviation)");
-        CHECK(block_text_token_pool_head_peek() == tok1,
-              "the head hook round-trips");
-        block_text_token_pool_destroy();
-        CHECK(block_text_token_pool_slot_peek(3) == NULL
-                  && block_text_token_pool_slot_peek(5) == NULL,
-              "freed slots are cleared (anti-dangling deviation)");
-        CHECK(block_text_token_pool_head_peek() == NULL,
-              "the head cursor word is cleared");
-        CHECK(block_text_token_pool_resident_peek() == 0,
-              "the resident flag drops");
-        block_text_token_pool_destroy();
-        CHECK(block_text_token_pool_slot_peek(0) == NULL,
-              "the empty pool survives a second destroy");
-        /* BlockTextTokenPoolGrow (FUN_00479490): doubling chunks chained
-         * into the free-list head. Port node = eight pointer slots, link =
-         * field 7. */
-        block_text_token_pool_grow();
-        void* chunk1 = block_text_token_pool_head_peek();
-        const ptrdiff_t pnode = (ptrdiff_t)(8u * sizeof(void*));
-        const ptrdiff_t plink = 7 * (ptrdiff_t)sizeof(void*);
-        CHECK(chunk1 != NULL && block_text_token_pool_slot_peek(0) == chunk1
-                  && block_text_token_pool_watermark_peek() == 1,
-              "grow publishes chunk 1 and parks it in slot 0");
-        CHECK(*(void**)((char*)chunk1 + plink) == NULL,
-              "the single node links to the empty old head");
-        block_text_token_pool_grow();
-        void* chunk2 = block_text_token_pool_head_peek();
-        CHECK(chunk2 != chunk1 && block_text_token_pool_slot_peek(1) == chunk2
-                  && block_text_token_pool_watermark_peek() == 2,
-              "grow doubles to a two-node chunk parked in slot 1");
-        CHECK(*(void**)((char*)chunk2 + plink)
-                  == (void*)((char*)chunk2 + pnode)
-                  && *(void**)((char*)chunk2 + pnode + plink) == chunk1,
-              "the chunk 2 nodes chain node 0 -> node 1 -> old head");
-        block_text_token_pool_destroy();
-        CHECK(block_text_token_pool_slot_peek(0) == NULL
-                  && block_text_token_pool_slot_peek(1) == NULL
-                  && block_text_token_pool_head_peek() == NULL,
-              "destroy frees and clears the grown chunks");
-        CHECK(block_text_token_pool_watermark_peek() == 2,
-              "destroy leaves the watermark counter alone (faithful)");
-
-        /* BlockTextTokenPoolInit (FUN_00478df0): window clear + flag raise. */
-        {
-            void* tok = engine_heap_alloc(8);
-            block_text_token_pool_slot_set(7, tok);
-            block_text_token_pool_head_set(tok);
-            block_text_token_pool_init();
-            CHECK(block_text_token_pool_slot_peek(7) == NULL
-                      && block_text_token_pool_slot_peek(0) == NULL
-                      && block_text_token_pool_head_peek() == NULL,
-                  "init clears the window and the head (no free, faithful)");
-            CHECK(block_text_token_pool_watermark_peek() == 0
-                      && block_text_token_pool_resident_peek() == 1,
-                  "init resets the counter and raises the resident flag");
-            /* leak-pinned: init stores NULL over the corpus's own slots the
-             * same way (startup contract, no allocator traffic). */
-            engine_heap_free(tok);
-        }
-    }
-
     /* ConfigRgbVectorRead (2026-10-25): the colon triplet, scaled 1/255. */
     {
         BlockFile* bf = parse("G {\n  rgb 12:128:255\n  bad 1:2\n  four 1:2:3:4\n  "
@@ -536,18 +586,18 @@ int main(int argc, char** argv)
         CHECK(bf != NULL, "fixture parses");
         const float sc = 1.0f / 255.0f;
         float r = -1.0f, g = -1.0f, b = -1.0f;
-        CHECK(config_rgb_vector_read(bf, "G rgb", &r, &g, &b) == 1
+        CHECK(config_rgb_vector_read(bf, "G::rgb", &r, &g, &b) == 1
                   && r == 12.0f * sc && g == 128.0f * sc
                   && b == 255.0f * sc,
               "the triplet lands scaled");
-        CHECK(config_rgb_vector_read(bf, "G nope", &r, &g, &b) == 0
+        CHECK(config_rgb_vector_read(bf, "G::nope", &r, &g, &b) == 0
                   && r == 12.0f * sc,
               "a missing string answers zero and leaves the outputs");
-        CHECK(config_rgb_vector_read(bf, "G bad", &r, &g, &b) == 0,
+        CHECK(config_rgb_vector_read(bf, "G::bad", &r, &g, &b) == 0,
               "two tokens fail the count");
-        CHECK(config_rgb_vector_read(bf, "G four", &r, &g, &b) == 0,
+        CHECK(config_rgb_vector_read(bf, "G::four", &r, &g, &b) == 0,
               "four tokens fail the count (tracked past three)");
-        CHECK(config_rgb_vector_read(bf, "G tail", &r, &g, &b) == 1
+        CHECK(config_rgb_vector_read(bf, "G::tail", &r, &g, &b) == 1
                   && b == 3.0f * sc,
               "the never-tested final colon rides the last token");
         block_close(bf);
@@ -558,12 +608,12 @@ int main(int argc, char** argv)
         BlockFile* bf = parse("A {\n  deg 90\n  zero 0\n  word banana\n}");
         CHECK(bf != NULL, "angle fixture parses");
         const float want = 90.0f * (1.0f / 360.0f) * 6.2831855f;
-        CHECK(config_angle_radians_get(bf, "A deg") == want,
+        CHECK(config_angle_radians_get(bf, "A::deg") == want,
               "the degrees land scaled");
-        CHECK(config_angle_radians_get(bf, "A zero") == 0.0f,
+        CHECK(config_angle_radians_get(bf, "A::zero") == 0.0f,
               "a zero value answers zero");
-        CHECK(config_angle_radians_get(bf, "A nope") == 0.0f
-                  && config_angle_radians_get(bf, "A word") == 0.0f,
+        CHECK(config_angle_radians_get(bf, "A::nope") == 0.0f
+                  && config_angle_radians_get(bf, "A::word") == 0.0f,
               "missing and unparseable strings answer zero");
         block_close(bf);
     }

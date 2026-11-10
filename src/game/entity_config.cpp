@@ -22,7 +22,8 @@ static TypeConfigTable s_rockmonster_type_config;
 static BlockFile* s_entity_type_config_file;
 
 /* These loaders receive the complete game config. Retail builds each key
- * beneath its actual root; BlockFile retains that root in its hierarchy. */
+ * beneath its actual root; BlockFile retains that root in its hierarchy.
+ * Returns the section's container record (NULL when missing or empty). */
 static BlockRec* entity_config_section_find(BlockFile* config,
                                              const char* section_name)
 {
@@ -30,15 +31,18 @@ static BlockRec* entity_config_section_find(BlockFile* config,
     const char* root;
     size_t root_length;
     size_t section_length;
+    BlockRec* section;
     if (config == NULL || section_name == NULL) return NULL;
     root = util_root_name(config);
     root_length = strlen(root);
     section_length = strlen(section_name);
-    if (root_length + section_length + 2u > sizeof(path)) return NULL;
+    if (root_length + section_length + 3u > sizeof(path)) return NULL;
     memcpy(path, root, root_length);
-    path[root_length] = ' ';
-    memcpy(path + root_length + 1u, section_name, section_length + 1u);
-    return block_subgroup(config, path);
+    path[root_length] = ':';
+    path[root_length + 1u] = ':';
+    memcpy(path + root_length + 2u, section_name, section_length + 1u);
+    section = block_find(config, path);
+    return block_has_children(section) ? section : NULL;
 }
 
 const TypeConfigTable* entity_type_config_table_get(uint32_t row_kind)
@@ -281,14 +285,14 @@ static int entity_type_config_building_upgrades_parse(
         BlockRec* entry;
         path[0] = 'U'; path[1] = 'p'; path[2] = 'g'; path[3] = 'r';
         path[4] = 'a'; path[5] = 'd'; path[6] = 'e'; path[7] = 's';
-        path[8] = ' ';
-        path[9] = 'L'; path[10] = 'e'; path[11] = 'v'; path[12] = 'e';
-        path[13] = 'l';
-        path[14] = (char)('0' + ((level >> 3) & 1u));
-        path[15] = (char)('0' + ((level >> 2) & 1u));
-        path[16] = (char)('0' + ((level >> 1) & 1u));
-        path[17] = (char)('0' + (level & 1u));
-        path[18] = 0;
+        path[8] = ':'; path[9] = ':';
+        path[10] = 'L'; path[11] = 'e'; path[12] = 'v'; path[13] = 'e';
+        path[14] = 'l';
+        path[15] = (char)('0' + ((level >> 3) & 1u));
+        path[16] = (char)('0' + ((level >> 2) & 1u));
+        path[17] = (char)('0' + ((level >> 1) & 1u));
+        path[18] = (char)('0' + (level & 1u));
+        path[19] = 0;
         section = s_entity_type_config_file != NULL
             ? entity_config_section_find(s_entity_type_config_file, path) : NULL;
         if (section == NULL) continue;
@@ -378,7 +382,7 @@ static void entity_type_config_string_append(char* destination,
 
 static void entity_type_config_key_path(char path[256], const char* key)
 {
-    strcpy(path, "Lego* ");
+    strcpy(path, "Lego*::");
     entity_type_config_string_append(path, 256u, key != NULL ? key : "");
 }
 
@@ -534,9 +538,9 @@ static int entity_type_config_row_parse_path(void* context,
         entity_type_config_word_set(destination, 120u,
             entity_type_config_frames(ae, "ToolNullFrames"));
         entity_type_config_float_set(destination, 208u,
-            block_get_float(ae, "Lego* PivotMaxZ", 1.0f));
+            block_get_float(ae, "Lego*::PivotMaxZ", 1.0f));
         entity_type_config_float_set(destination, 212u,
-            block_get_float(ae, "Lego* PivotMinZ", -1.0f));
+            block_get_float(ae, "Lego*::PivotMinZ", -1.0f));
         {
             const char* power_path = entity_type_config_ae_value(
                 ae, "PowerLevelScene");
@@ -981,7 +985,7 @@ static EntityObjectNameLoadState* s_entity_object_name_load_state;
 
 /* ObjectNamesLoad (FUN_0042d600) receives the parent config handle. The
  * decompile builds ObjectNames-qualified keys and queries them against that
- * root; block_subgroup provides the equivalent scope for the portable tree. */
+ * root; entity_config_section_find provides the equivalent scope. */
 // FUNCTION: LEGORR 0x0042D600
 void entity_object_names_load(BlockFile* config)
 {

@@ -487,6 +487,7 @@ have not yet been added to the catalog.
 | 505 | [findings/505-original-translation-units-and-link-order.md](505-original-translation-units-and-link-order.md) | Original translation units and link order (issue 383) |
 | 506 | [findings/506-original-shape-pilot-priorities.md](506-original-shape-pilot-priorities.md) | Original-shape pilot: Priorities.c rebuilt as C, measured step by step (issue 384) |
 | 507 | [findings/507-single-function-match-loop.md](507-single-function-match-loop.md) | Single-function match loop: parity with full Reccmp and timings (issue 381) |
+| 508 | [findings/508-config-unit-original-shape.md](508-config-unit-original-shape.md) | Config tree (G98-006) rebuilt in original shape; pilot pads removed (issue 394) |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](../../docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](../../docs/decompiles/full/README.md)). The

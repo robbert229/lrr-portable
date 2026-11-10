@@ -449,11 +449,11 @@ static void probe_real(const char* wad_dir)
         }
         const char* name = block_name(g);
         char path[512];
-        snprintf(path, sizeof(path), "%s Levels %s SurfaceMap",
+        snprintf(path, sizeof(path), "%s::Levels::%s::SurfaceMap",
                  util_root_name(cfg), name);
         int found = block_get_strptr(cfg, path) != NULL;
         if (!found) {
-            snprintf(path, sizeof(path), "%s %s SurfaceMap", util_root_name(cfg),
+            snprintf(path, sizeof(path), "%s::%s::SurfaceMap", util_root_name(cfg),
                      name);
             found = block_get_strptr(cfg, path) != NULL;
         }

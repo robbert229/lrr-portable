@@ -1258,20 +1258,21 @@ static int terrain_texture_set_config_load_grid(TerrainTileMeshGrid* grid,
     int width;
     int height;
     if (grid == NULL || config == NULL || group_name == NULL) return 0;
-    group = block_subgroup(config, group_name);
-    if (group == NULL) {
+    /* The group name is a config value such as "Textures::Lava", resolved
+     * under the root. A bare one-segment lookup would reach the file's
+     * trailing empty record on a miss (Config_FindItem reads its NULL key). */
+    {
         char path[512];
         const char* root = util_root_name(config);
         if (root == NULL) root = "Lego";
-        if (strlen(root) + strlen(group_name) + 2u < sizeof(path)) {
-            strcpy(path, root);
-            strcat(path, " ");
-            strcat(path, group_name);
-            group = block_subgroup(config, path);
-        }
+        if (strlen(root) + strlen(group_name) + 3u >= sizeof(path)) return 0;
+        strcpy(path, root);
+        strcat(path, "::");
+        strcat(path, group_name);
+        group = block_subgroup(config, path);
     }
     if (group == NULL) return 0;
-    for (entry = block_first_child(group); entry != NULL;
+    for (entry = group; entry != NULL;
          entry = block_next_sibling(entry)) {
         const char* name = block_name(entry);
         const char* value = block_value(entry);

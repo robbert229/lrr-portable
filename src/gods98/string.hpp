@@ -4,9 +4,8 @@
  *
  * Deviations (documented): the substring scanner's corpus
  * leading-byte/leading-pair gates and paired tail comparison are reproduced
- * in plain C — identical results. The config path builder writes
- * into a fixed static buffer and stops appending when full, where the
- * corpus copies through the static limit. */
+ * in plain C — identical results. The config path builder
+ * (FUN_00478f50) is in gods98/config.h. */
 #ifndef LEGORRR_GODS98_STRING_HPP
 #define LEGORRR_GODS98_STRING_HPP
 
@@ -98,16 +97,6 @@ char* string_case_substring_find(char* haystack, const char* needle,
 #if !defined(_MSC_VER)
 int string_length_bounded(const char* text, int limit);
 #endif
-
-#define STRING_PATH_MAX 256 /* static builder buffer (corpus DAT_00506098) */
-
-/* FUN_00478f50: joins the `::`-delimited config path root plus
- * NULL-terminated trailing components into the static builder buffer and
- * returns it (the same buffer every call — single-threaded use, as the
- * corpus's static scratch). This only BUILDS the path: the record lookup
- * itself is block_find (the corpus's other half). Appends stop at the
- * buffer bound where the corpus runs past the static. */
-const char* string_path_join(const char* root, ...);
 
 #ifdef __cplusplus
 }

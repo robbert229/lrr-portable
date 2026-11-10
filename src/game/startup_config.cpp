@@ -4,6 +4,7 @@
 
 #include "port_loop_ports.hpp"
 #include "../gods98/block.hpp"
+#include "util.hpp"
 #include "../gods98/engine.hpp"
 #include "../gods98/resource.hpp"
 
@@ -209,9 +210,11 @@ int dependency_grid_config_load(void* config, int level)
     BlockRec* entry;
     int processed = 0;
     if (file == NULL) return 0;
-    group = block_subgroup(file, "Dependencies");
+    group = block_subgroup(file, string_path_join(util_root_name(file),
+                                                  "Dependencies",
+                                                  (const char*)NULL));
     if (group == NULL) return 0;
-    for (entry = block_first_child(group); entry != NULL;
+    for (entry = group; entry != NULL;
          entry = block_next_sibling(entry)) {
         const char* name = block_name(entry);
         const char* value = block_value(entry);

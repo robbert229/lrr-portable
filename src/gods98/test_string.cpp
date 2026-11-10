@@ -69,30 +69,11 @@ static void test_length_bounded(void)
     CHECK(string_length_bounded("", 16) == 0, "empty string length zero");
 }
 
-static void test_path_join(void)
-{
-    const char* p = string_path_join("Lego*", "Main Menu", "MenuCount", NULL);
-    CHECK(strcmp(p, "Lego*::Main Menu::MenuCount") == 0, "joins with :: runs");
-    p = string_path_join("Lego*", NULL);
-    CHECK(strcmp(p, "Lego*") == 0, "root-only stays the root");
-    p = string_path_join("a", "b", NULL);
-    CHECK(strcmp(p, "a::b") == 0, "builder restarts per call");
-
-    /* Over-long root: truncated into the static buffer, never a crash. */
-    char filler[STRING_PATH_MAX + 16];
-    memset(filler, 'r', sizeof filler);
-    filler[sizeof filler - 1] = '\0';
-    p = string_path_join(filler, "tail", NULL);
-    CHECK(strlen(p) == STRING_PATH_MAX - 1 && strstr(p, "::") == NULL,
-          "the full buffer truncates the root and joins nothing further");
-}
-
 int main(void)
 {
     test_duplicate();
     test_find_substring();
     test_length_bounded();
-    test_path_join();
     /* CaseInsensitiveSubstringFind (2026-10-25). */
     {
         const char* hay = "Hello World!";

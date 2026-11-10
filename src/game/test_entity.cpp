@@ -595,11 +595,11 @@ static int ol_probe(const char* wad_dir)
             continue;
         }
         char path[512];
-        snprintf(path, sizeof(path), "%s Levels %s OListFile", root,
+        snprintf(path, sizeof(path), "%s::Levels::%s::OListFile", root,
                  block_name(g));
         const char* olist = block_get_strptr(cfg, path);
         if (olist == NULL) {
-            snprintf(path, sizeof(path), "%s %s OListFile", root,
+            snprintf(path, sizeof(path), "%s::%s::OListFile", root,
                      block_name(g));
             olist = block_get_strptr(cfg, path);
         }

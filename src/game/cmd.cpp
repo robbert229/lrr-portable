@@ -442,7 +442,9 @@ static int cmd_place_ray_object_position_get(void*, void* object,
 static int cmd_place_ray_see_through_walls_enabled(void*)
 {
     return s_ctx != NULL && s_ctx->cfg != NULL &&
-           block_get_bool(s_ctx->cfg, "SeeThroughWalls") == 1;
+           block_get_bool_path(s_ctx->cfg,
+               string_path_join(util_root_name(s_ctx->cfg), "SeeThroughWalls",
+                                (const char*)NULL)) == 1;
 }
 
 static int cmd_place_ray_grid_dimensions_get(void*, uint32_t* width,
@@ -865,7 +867,7 @@ static void cmd_place_eligibility_ops_bind(void)
     s_place_eligibility_ops.context = s_ctx;
     s_place_eligibility_ops.activity_scale =
         s_ctx != NULL && s_ctx->cfg != NULL
-        ? block_get_float(s_ctx->cfg, "Main MinEnergyForEat", 0.0f)
+        ? block_get_float(s_ctx->cfg, "Main::MinEnergyForEat", 0.0f)
         : 0.0f;
     s_place_eligibility_ops.entity_view_get = cmd_place_entity_view_get;
     s_place_eligibility_ops.global_feature_word =
@@ -6626,7 +6628,7 @@ int ledger_stub_00404fc0_PlaceCommandEligibilityCheck(
         GameContext* context = pending_scan_context_get();
         EntitySlot* target = command->target;
         const float min_energy = context != NULL && context->cfg != NULL
-            ? block_get_float(context->cfg, "Main MinEnergyForEat", 0.0f)
+            ? block_get_float(context->cfg, "Main::MinEnergyForEat", 0.0f)
             : 0.0f;
         if (target == NULL || command->task_scalar_18 > 0.0f ||
             ((entity_stats_word_get(entity) & 0x20000u) != 0u &&

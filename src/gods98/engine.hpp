@@ -24,7 +24,7 @@
 
 /* Forward: the view/camera objects (view.hpp behind a cycle-breaking decl). */
 typedef struct ViewContext ViewContext;
-typedef struct BlockFile BlockFile;
+typedef struct BlockRec BlockFile;
 
 /* --- App mode (corpus DAT_00505f88) ------------------------------------ */
 #define ENGINE_APP_NORMAL 0

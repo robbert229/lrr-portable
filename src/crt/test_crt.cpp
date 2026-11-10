@@ -582,9 +582,6 @@ int main(void)
               "the second push relinks");
         linked_list_push_at_global_head(NULL); /* guarded */
 
-        global_record_list_push_head(node2);
-        CHECK(global_record_list_head_peek() == (void*)node2, "the record push lands");
-
         const uint32_t expect_zero[3] = { 0u, 0u, 0u };
         CHECK(scene_effect_registry_reset() == 1, "the reset answers one");
         uint32_t words[3] = { 9u, 9u, 9u };
@@ -732,26 +729,6 @@ int main(void)
               "the clear empties the head");
         CHECK(linked_list_global_aux_peek() == NULL,
               "the aux word clears with it");
-    }
-
-    /* ReleaseLinkedObjectList (2026-10-24): owner free + chain recycle. */
-    {
-        void* prev = global_record_list_head_peek();
-        char header[0x20];
-        char node[0x20];
-        memset(header, 0, sizeof header);
-        memset(node, 0, sizeof node);
-        void* next = node;
-        __builtin_memcpy(header + 0x14, &next, sizeof next);
-        linked_object_list_release(header);
-        CHECK(global_record_list_head_peek() == (void*)node,
-              "the chain recycles the last node to the head");
-        void* link = NULL;
-        __builtin_memcpy(&link, node + 0x1c, sizeof link);
-        CHECK(link == (void*)header, "the recycled nodes chain through +0x1c");
-        __builtin_memcpy(&link, header + 0x1c, sizeof link);
-        CHECK(link == prev, "the chain tail reaches the prior head");
-        linked_object_list_release(NULL); /* guarded */
     }
 
     /* ModelRenderListClear + CrtOwnedStreamBufferRelease (2026-10-24). */

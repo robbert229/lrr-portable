@@ -2,7 +2,7 @@
 #include <stdio.h>
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_M_IX86)
 #include "../../tools/diagnostics/wine-message-ui-probe.inc" /* DEBUG-message-ui-probe */
-int pe32_nerp_owner_probe(struct BlockFile*, int, int, FILE*); /* DEBUG-next-owner */
+int pe32_nerp_owner_probe(struct BlockRec*, int, int, FILE*); /* DEBUG-next-owner */
 #endif
 #include <stdlib.h>
 #include <string.h>
@@ -2097,7 +2097,7 @@ static void frameloop_game_context_dispose(GameContext* game)
     (void)tutorial_display_resources_release();
     advisor_message_ui_release();
     level_destroy(game->level);
-    block_close(game->cfg);
+    if (game->cfg) block_close(game->cfg);
 }
 
 /* Streamed soundtrack aliases live beside the menu SFX aliases in Samples.
@@ -2105,7 +2105,7 @@ static void frameloop_game_context_dispose(GameContext* game)
 static const char* menu_music_resource(BlockFile* cfg)
 {
     const char* music = block_get_strptr(cfg,
-                                         "Lego* Samples SFX_AmbientMusicLoop");
+                                         "Lego*::Samples::SFX_AmbientMusicLoop");
     if (music != NULL && music[0] == '@') {
         ++music;
     }
@@ -2371,13 +2371,13 @@ static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
 {
     uint32_t scroll_clock = (uint32_t)now_ms();
     const char* text_name = block_get_strptr(cfg,
-                                             "Lego* Main CreditsTextFile");
+                                             "Lego*::Main::CreditsTextFile");
     char** lines = NULL;
     int line_count = 0;
     if (text_name == NULL
         || !frontend_credits_lines_load(text_name, &lines, &line_count)) {
         fprintf(log, "credits: cannot load %s\n",
-                text_name != NULL ? text_name : "Lego* Main CreditsTextFile");
+                text_name != NULL ? text_name : "Lego*::Main::CreditsTextFile");
         return;
     }
 
@@ -2874,7 +2874,7 @@ static int frameloop_briefing_prepare(FrameloopApplicationState* app)
             app->briefing_panel = image_surface_load(image_path, 0u, 0u);
             texture_source_color_key_set(app->briefing_panel, 0u, 0u);
         }
-        snprintf(key, sizeof(key), "%s Main MissionBriefingText", util_root_name(game->cfg));
+        snprintf(key, sizeof(key), "%s::Main::MissionBriefingText", util_root_name(game->cfg));
         title = block_get_strptr(game->cfg, key);
         if (title != NULL) {
             size_t i;
@@ -2883,19 +2883,19 @@ static int frameloop_briefing_prepare(FrameloopApplicationState* app)
             for (i = 0; app->briefing_title[i] != '\0'; ++i)
                 if (app->briefing_title[i] == '_') app->briefing_title[i] = ' ';
         }
-        snprintf(key, sizeof(key), "%s Main NextButton%ix%i", util_root_name(game->cfg), WINDOW_W, WINDOW_H);
+        snprintf(key, sizeof(key), "%s::Main::NextButton%ix%i", util_root_name(game->cfg), WINDOW_W, WINDOW_H);
         image = block_get_strptr(game->cfg, key);
         if (image != NULL) {
             app->briefing_next = image_surface_load(image, 0u, 0u);
             texture_source_color_key_set(app->briefing_next, 0u, 0u);
         }
-        snprintf(key, sizeof(key), "%s Main BackButton%ix%i", util_root_name(game->cfg), WINDOW_W, WINDOW_H);
+        snprintf(key, sizeof(key), "%s::Main::BackButton%ix%i", util_root_name(game->cfg), WINDOW_W, WINDOW_H);
         image = block_get_strptr(game->cfg, key);
         if (image != NULL) {
             app->briefing_back = image_surface_load(image, 0u, 0u);
             texture_source_color_key_set(app->briefing_back, 0u, 0u);
         }
-        snprintf(key, sizeof(key), "%s Main BackArrow", util_root_name(game->cfg));
+        snprintf(key, sizeof(key), "%s::Main::BackArrow", util_root_name(game->cfg));
         image = block_get_strptr(game->cfg, key);
         if (image != NULL) {
             app->briefing_back_arrow = image_surface_load(image, 0u, 0u);
@@ -3028,7 +3028,7 @@ static void menu_save_image_config_rect_blit(FrontEnd* fe,
     }
 
     char key[160];
-    snprintf(key, sizeof(key), "%s Menu::SaveImage pos%d",
+    snprintf(key, sizeof(key), "%s::Menu::SaveImage::pos%d",
              util_root_name(fe->cfg), item->load_slot);
     const char* position = block_get_strptr(fe->cfg, key);
     if (position == NULL) {
@@ -3040,11 +3040,11 @@ static void menu_save_image_config_rect_blit(FrontEnd* fe,
     }
     int x = atoi(position);
     int y = atoi(separator + 1);
-    snprintf(key, sizeof(key), "%s Menu::SaveImage Width",
+    snprintf(key, sizeof(key), "%s::Menu::SaveImage::Width",
              util_root_name(fe->cfg));
     const char* width_value = block_get_strptr(fe->cfg, key);
     int draw_w = atoi(width_value != NULL ? width_value : "");
-    snprintf(key, sizeof(key), "%s Menu::SaveImage Height",
+    snprintf(key, sizeof(key), "%s::Menu::SaveImage::Height",
              util_root_name(fe->cfg));
     const char* height_value = block_get_strptr(fe->cfg, key);
     int draw_h = atoi(height_value != NULL ? height_value : "");
@@ -3104,34 +3104,34 @@ static int frameloop_game_init_callback(const char* root, void* user)
         float speed, drop_off, acceleration, minimum, maximum;
         int indent;
         const char* config_root = util_root_name(cfg);
-        snprintf(key, sizeof(key), "%s Main CameraSpeed", config_root);
+        snprintf(key, sizeof(key), "%s::Main::CameraSpeed", config_root);
         speed = block_get_float(cfg, key, 0.0f);
-        snprintf(key, sizeof(key), "%s Main CameraDropOff", config_root);
+        snprintf(key, sizeof(key), "%s::Main::CameraDropOff", config_root);
         drop_off = block_get_float(cfg, key, 0.0f);
-        snprintf(key, sizeof(key), "%s Main CameraAcceleration", config_root);
+        snprintf(key, sizeof(key), "%s::Main::CameraAcceleration", config_root);
         acceleration = block_get_float(cfg, key, 0.0f);
-        snprintf(key, sizeof(key), "%s Main MouseScrollIndent", config_root);
+        snprintf(key, sizeof(key), "%s::Main::MouseScrollIndent", config_root);
         indent = (int)block_get_float(cfg, key, 0.0f);
         camera_view_context_set(speed, drop_off, acceleration, indent);
-        snprintf(key, sizeof(key), "%s Main MinDist", config_root);
+        snprintf(key, sizeof(key), "%s::Main::MinDist", config_root);
         minimum = block_get_float(cfg, key, 0.0f);
-        snprintf(key, sizeof(key), "%s Main MaxDist", config_root);
+        snprintf(key, sizeof(key), "%s::Main::MaxDist", config_root);
         maximum = block_get_float(cfg, key, 0.0f);
         camera_distance_bounds_set(engine->camera_controller, minimum, maximum);
-        snprintf(key, sizeof(key), "%s Main MinTilt", config_root);
+        snprintf(key, sizeof(key), "%s::Main::MinTilt", config_root);
         minimum = block_get_float(cfg, key, 0.0f) * 0.017453292f;
-        snprintf(key, sizeof(key), "%s Main MaxTilt", config_root);
+        snprintf(key, sizeof(key), "%s::Main::MaxTilt", config_root);
         maximum = block_get_float(cfg, key, 0.0f) * 0.017453292f;
         camera_tilt_bounds_set(engine->camera_controller, minimum, maximum);
         engine_render_poly_ranges_set(
-            block_get_float(cfg, "Lego* Main MedPolyRange", 0.0f),
-            block_get_float(cfg, "Lego* Main HighPolyRange", 0.0f));
+            block_get_float(cfg, "Lego*::Main::MedPolyRange", 0.0f),
+            block_get_float(cfg, "Lego*::Main::HighPolyRange", 0.0f));
         /* GameConfigInit loads HUD config before the later bubble and font
          * resource passes. This is now part of the registered init callback. */
         bubble_config_global_flags_set(engine_feature_word_peek());
         (void)lego::upgrade_types_load(cfg);
         entity_names_config_load(cfg);
-        if (block_get_bool(cfg, "HelpWindow::HelpWindowOn") == 1) {
+        if (block_get_bool_path(cfg, "HelpWindow::HelpWindowOn") == 1) {
             help_window_resources_init(cfg, NULL);
         }
         frontend_hud_runtime_install();
@@ -3525,15 +3525,15 @@ int frameloop_application_init(void)
 #endif
     }
     if (game.cfg != NULL) {
-        const char* cd_start = block_get_strptr(game.cfg, "Lego* Main CDStartTrack");
-        const char* cd_count = block_get_strptr(game.cfg, "Lego* Main CDTracks");
+        const char* cd_start = block_get_strptr(game.cfg, "Lego*::Main::CDStartTrack");
+        const char* cd_count = block_get_strptr(game.cfg, "Lego*::Main::CDTracks");
         int count = cd_count != NULL ? atoi(cd_count) : 0;
         engine_debug_word_bit_set(0x800u,
-            count != 0 && block_get_bool(game.cfg, "Lego* Main MusicOn") == 1);
+            count != 0 && block_get_bool_path(game.cfg, "Lego*::Main::MusicOn") == 1);
         media_cd_config_set(cd_start != NULL ? atoi(cd_start) : 0, count);
     }
     if (game.cfg != NULL) {
-        const char* tooltip_rgb = block_get_strptr(game.cfg, "Lego* Main ToolTipRGB");
+        const char* tooltip_rgb = block_get_strptr(game.cfg, "Lego*::Main::ToolTipRGB");
         int tooltip_r = 0, tooltip_g = 0, tooltip_b = 0;
         TextureSurface* tooltip_font = bitmap_font_resource_load(
             "Interface\\Fonts\\ToolTipFont.bmp");
@@ -3674,8 +3674,8 @@ int frameloop_application_init(void)
          * the panel table used by the loader's optional action token. */
         char advisor_config_path[128];
         snprintf(advisor_config_path, sizeof(advisor_config_path),
-                 "%s DisplayAdvisor", util_root_name(game.cfg));
-        if (block_get_bool(game.cfg, advisor_config_path) == 1) {
+                 "%s::DisplayAdvisor", util_root_name(game.cfg));
+        if (block_get_bool_path(game.cfg, advisor_config_path) == 1) {
             advisor_position_config_load(game.cfg, WINDOW_W, WINDOW_H);
         }
         /* SaveMenuBuild builds and retains the campaign/tutorial trees before

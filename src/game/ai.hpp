@@ -130,7 +130,7 @@ int entity_remove_object_if_class6(GameContext* ctx, EntitySlot* e);
  * case-insensitive comparison result, not a -1 sentinel. BubbleConfigTextureLoad
  * reads the Bubbles child list, honors the global !-entry gate, and routes
  * resource load/initialize operations through the host renderer. */
-typedef struct BlockFile BlockFile;
+typedef struct BlockRec BlockFile;
 int bubble_action_name_register(int index, const char* name);
 int bubble_action_name_to_index(const char* name);
 typedef uint32_t (*BubbleTextureResourceLoadFn)(
