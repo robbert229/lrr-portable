@@ -190,7 +190,12 @@ int main(void)
               "the zero reference rides past too");
     }
 
-    /* Chain purge returns records to the pool. */
+    /* Chain purge returns records to the pool. The faithful CmdChainPurge
+     * only retires records already marked DONE (live ones are re-sorted and
+     * kept), so complete the entity's chain first. */
+    for (void* rec = d->cmd_head; rec != NULL; rec = cmd_rec_next(rec)) {
+        cmd_rec_state_set(rec, cmd_rec_state(rec) | CMD_STATE_DONE);
+    }
     cmd_chain_purge(d);
     CHECK(d->cmd_head == NULL, "purge clears the chain head");
     void* reused = cmd_alloc(0);
