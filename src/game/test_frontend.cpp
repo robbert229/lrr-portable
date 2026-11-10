@@ -917,11 +917,16 @@ static void test_scroll(void)
         "\t\t\tItemCount 1 Item1 Trigger:0:0:Back:1 }\n"
         "\t} }\n"
         "\tLevels {\n"
+        /* The reference chain walk follows LevelLinks (the picker tree
+         * edges), not NextLevel alone. */
         "\t\tLv0 { FullName Lv0 NextLevel Levels::Lv1 "
-        "FrontEndX 300 FrontEndY 100 }\n"
+        "LevelLinks Levels::Lv1 FrontEndX 300 FrontEndY 100 }\n"
         "\t\tLv1 { FullName Lv1 NextLevel Levels::Lv2 "
-        "FrontEndX 300 FrontEndY 900 }\n"
-        "\t\tLv2 { FullName Lv2 FrontEndX 300 FrontEndY 1800 }\n"
+        "LevelLinks Levels::Lv2 FrontEndX 300 FrontEndY 900 }\n"
+        /* Rows are click-enabled only when completed or authored open (the
+         * reference FrontEndOpen gate), so open Lv2 for the click check. */
+        "\t\tLv2 { FullName Lv2 FrontEndOpen TRUE "
+        "FrontEndX 300 FrontEndY 1800 }\n"
         "\t}\n"
         "}\n");
     FrontEnd fe;
