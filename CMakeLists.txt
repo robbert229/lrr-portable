@@ -128,7 +128,7 @@ add_library(game STATIC
   ${GAME_DIR}/dependency_grid.cpp
   ${GAME_DIR}/weapon.cpp ${GAME_DIR}/upgrades.cpp
   ${GAME_DIR}/video_graph.cpp ${GAME_DIR}/spawn.cpp
-  ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp
+  ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp ${GAME_DIR}/priorities.cpp
   ${GAME_DIR}/tutorial_hud.cpp ${GAME_DIR}/tutorial_world_arrows.cpp
   ${GAME_DIR}/seh_runtime.cpp
   ${GAME_DIR}/startup_config.cpp)

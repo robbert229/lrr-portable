@@ -128,78 +128,9 @@ void ui_list_state_clear(UiListState* state)
     if (state != NULL) memset(state, 0, sizeof(*state));
 }
 
-// FUNCTION: LEGORR 0x0045d3c0
-void ui_list_priority_panel_row_move_dispatch(UiListState* state,
-                                              uint32_t index)
-{
-    if (state == NULL) return;
-    if ((state->priority_panel_mode & 2u) != 0) {
-        ui_list_priority_order_move_to_front(state, index);
-        return;
-    }
-    if ((state->priority_panel_mode & 4u) != 0)
-        ui_list_entries_swap(state, index);
-}
 
-// FUNCTION: LEGORR 0x0045d3f0
-void ui_list_priority_order_move_to_front(UiListState* state,
-                                          uint32_t index)
-{
-    void* entry;
-    uint32_t i;
-    if (state != NULL && index != 0 && index < state->count &&
-        state->count <= UI_LIST_CAPACITY) {
-        entry = state->entries[0][index];
-        for (i = index; i > 0; --i) {
-            state->entries[0][i] = state->entries[0][i - 1];
-            if (state->entry_position_set != NULL)
-                state->entry_position_set(state->entries[0][i], 80 + 5 * (int)i);
-        }
-        state->entries[0][0] = entry;
-        if (state->entry_position_set != NULL)
-            state->entry_position_set(entry, 80);
-    }
-    if (state != NULL && state->state_changed != NULL) state->state_changed(3);
-}
 
-// FUNCTION: LEGORR 0x0045d470
-void ui_list_entries_swap(UiListState* state, uint32_t index)
-{
-    void* entry;
-    if (state != NULL && index != 0 && index < state->count &&
-        state->count <= UI_LIST_CAPACITY) {
-        entry = state->entries[0][index];
-        state->entries[0][index] = state->entries[1][index];
-        state->entries[1][index] = entry;
-        if (state->entry_position_set != NULL) {
-            state->entry_position_set(state->entries[0][index],
-                                      80 - 5 * (int)index);
-            state->entry_position_set(state->entries[1][index],
-                                      85 - 5 * (int)index);
-        }
-        if (state->cursor_move != NULL) state->cursor_move(index - 1);
-    }
-    if (state != NULL && state->state_changed != NULL) state->state_changed(0);
-}
 
-// FUNCTION: LEGORR 0x0045d4f0
-void ui_list_config_entry_enabled_toggle(UiListState* state,
-                                         uint32_t index)
-{
-    void* entry;
-    int was_enabled;
-    if (state == NULL || index >= state->count ||
-        index >= UI_LIST_CAPACITY || state->entries[0][index] == NULL ||
-        state->enabled_get == NULL || state->enabled_set == NULL) return;
-    entry = state->entries[0][index];
-    was_enabled = state->enabled_get(entry);
-    state->enabled_set(entry, was_enabled == 0);
-    if (was_enabled == 0 && (entry == state->entries[0][0] ||
-                             entry == state->entries[0][1]) &&
-        state->play_feedback != NULL) {
-        state->play_feedback(0x10);
-    }
-}
 
 // FUNCTION: LEGORR 0x0045b620
 void ui_list_priority_button_action_dispatch(UiListState* state,
@@ -457,21 +388,6 @@ int ui_sim_track_cursor_hit_test(UiTrackCursorState* state, int x, int y,
     return handled;
 }
 
-// FUNCTION: LEGORR 0x0045cf00
-void ui_priority_label_layout_apply(UiPriorityLabelRow* rows, uint32_t count,
-                                    void (*position_set)(void*, void*),
-                                    void (*visibility_set)(void*, void*))
-{
-    uint32_t i;
-    if (rows == NULL) return;
-    for (i = 0; i < count; ++i) {
-        rows[i].replacement_label = rows[i].source_label;
-        if (position_set != NULL)
-            position_set(rows[i].source_label, rows[i].source_widget);
-        if (visibility_set != NULL)
-            visibility_set(rows[i].replacement_label, rows[i].replacement_widget);
-    }
-}
 
 void ui_pointer_cursor_override_set(float duration)
 {
@@ -488,32 +404,4 @@ void ui_pointer_cursor_override_tick(float elapsed)
     media_pointer_cursor_override_tick(elapsed);
 }
 
-// FUNCTION: LEGORR 0x0045d640
-void ui_cursor_move_to_element_center(const UiCursorNavigation* nav,
-                                      uint32_t element)
-{
-    int left, top, right, bottom;
-    if (nav == NULL || nav->element_bounds_get == NULL || nav->cursor_move == NULL)
-        return;
-    if (nav->element_bounds_get(nav->context, element, &left, &top,
-                                &right, &bottom))
-        nav->cursor_move(nav->context, left + (right - left) / 2,
-                         top + (bottom - top) / 2);
-}
 
-// FUNCTION: LEGORR 0x0045d550
-void ui_cursor_move_to_choice_entry(const UiCursorNavigation* nav,
-                                    uint32_t choice)
-{
-    int left, top, right, bottom;
-    if (choice == 0) {
-        ui_cursor_move_to_element_center(nav, 0);
-        return;
-    }
-    if (choice > 8 || nav == NULL || nav->choice_bounds_get == NULL ||
-        nav->cursor_move == NULL) return;
-    if (nav->choice_bounds_get(nav->context, 8, choice + 8,
-                               &left, &top, &right, &bottom))
-        nav->cursor_move(nav->context, left + (right - left) / 2,
-                         top + (bottom - top) / 2);
-}
