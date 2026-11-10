@@ -1389,6 +1389,7 @@ void main_loop_frame_pump_hooks_set(const MainLoopFramePumpHooks* hooks)
 // FUNCTION: LEGORR 0x00478040
 static void window_message_dispatch_pump(void)
 {
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     MSG message;
     while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
         /* WM_QUIT is a thread message: DispatchMessage cannot latch it. */
@@ -1401,6 +1402,7 @@ static void window_message_dispatch_pump(void)
             DispatchMessageA(&message);
         }
     }
+#endif /* native backends pump messages in src/platform */
     (void)frameloop_application_quit_ingest(&s_frameloop_application, NULL, 0);
 }
 
@@ -1578,7 +1580,15 @@ int window_runtime_message_dispatch_filter(const void* message)
 void window_runtime_adjust_rect(WindowPortRect* rect)
 {
     if ((s_engine_feature_word & 2u) == 0u) {
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
         (void)AdjustWindowRect((LPRECT)rect, (DWORD)s_window_runtime_style, 0);
+#else
+        if (s_window_runtime_ops.adjust_window_rect != NULL) {
+            (void)s_window_runtime_ops.adjust_window_rect(
+                s_window_runtime_ops.context, rect,
+                (int32_t)s_window_runtime_style, 0);
+        }
+#endif
     }
 }
 

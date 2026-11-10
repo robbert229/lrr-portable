@@ -1192,20 +1192,29 @@ int main(int argc, char** argv)
     /* The cell timestamp dedup pair (2026-10-24). */
     {
         int k;
-        CHECK(cell_coordinate_timestamp_exists(1234, 5678) == 0u,
+        /* The pair API takes the cell as an int[2]. */
+        auto remember = [](int x, int y) {
+            const int xy[2] = {x, y};
+            cell_coordinate_timestamp_remember(xy);
+        };
+        auto exists = [](int x, int y) {
+            const int xy[2] = {x, y};
+            return cell_coordinate_timestamp_exists(xy);
+        };
+        CHECK(exists(1234, 5678) == 0u,
               "the table starts empty");
-        cell_coordinate_timestamp_remember(1234, 5678);
-        CHECK(cell_coordinate_timestamp_exists(1234, 5678) == 1u,
+        remember(1234, 5678);
+        CHECK(exists(1234, 5678) == 1u,
               "remember registers the pair");
-        CHECK(cell_coordinate_timestamp_exists(1234, 5679) == 0u,
+        CHECK(exists(1234, 5679) == 0u,
               "the near miss answers no");
         for (k = 0; k < 999; ++k) {
-            cell_coordinate_timestamp_remember(k * 7 + 1, k * 11 + 1);
+            remember(k * 7 + 1, k * 11 + 1);
         }
-        cell_coordinate_timestamp_remember(987654, 321);
-        CHECK(cell_coordinate_timestamp_exists(987654, 321) == 0u,
+        remember(987654, 321);
+        CHECK(exists(987654, 321) == 0u,
               "the full table stores nothing (faithful)");
-        CHECK(cell_coordinate_timestamp_exists(998 * 7 + 1, 998 * 11 + 1)
+        CHECK(exists(998 * 7 + 1, 998 * 11 + 1)
                   == 1u,
               "the filled table answers for its entries");
     }
@@ -1873,18 +1882,19 @@ int main(int argc, char** argv)
         level_set_int(&ev, LEVEL_OFF_HEIGHT, 4);
         uint8_t* seed = evox + ((size_t)2 * 4 + 2) * 0x48; /* cell (2,2) */
         seed[2] = 6; /* lava type */
+        const int seed_xy[2] = { 2, 2 };
+        lava_erosion_level_context_set(&ev);
         erosion_timing_state_init(1.0f, 1.0f, 0.0f);
         seed[6] = 3;
-        CHECK(lava_erosion_delay_from_cell(&ev, 2, 2)
+        CHECK(lava_erosion_delay_from_cell(seed_xy)
                   == (float)(6 - 3) * (1.0f * 25.0f * 0.2f) * 25.0f,
               "the delay counts the erosion byte down from six");
         seed[6] = 9;
-        CHECK(lava_erosion_delay_from_cell(&ev, 2, 2)
+        CHECK(lava_erosion_delay_from_cell(seed_xy)
                   == (float)(6 - 9) * (1.0f * 25.0f * 0.2f) * 25.0f,
               "the count goes negative past six (faithful)");
-        CHECK(lava_erosion_delay_from_cell(NULL, 0, 0) == 0.0f
-                  && lava_erosion_delay_from_cell(&ev, 9, 9) == 0.0f,
-              "the guarded grid answers zero (deviation)");
+        CHECK(lava_erosion_delay_from_cell(NULL) == 0.0f,
+              "a missing cell answers zero (deviation)");
         seed[6] = 0;
 
         int out[2] = { -5, -5 };
@@ -1919,6 +1929,7 @@ int main(int argc, char** argv)
         CHECK(lava_erosion_neighbor_check_level(NULL, 1, 1, out) == 0
                   && lava_erosion_neighbor_check_level(&ev, 0, 0, NULL) == 0,
               "the guarded seed answers zero");
+        lava_erosion_level_context_release(&ev);
     }
 
     /* Cell route + neighbour pick (FUN_00431da0 / FUN_00431c70; 2026-10-25).

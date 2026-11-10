@@ -1856,7 +1856,7 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     {
-        static const struct NerpIconCallback { uint8_t command; uint8_t slot; uint8_t operation; } icons[] = {
+        static const struct NerpIconCallback { uint16_t command; uint8_t slot; uint8_t operation; } icons[] = {
             {51,0,0}, {53,1,0}, {54,1,1}, {55,2,1}, {56,3,1},
             {57,3,0}, {58,3,2}, {59,1,2}, {60,2,2}, {61,4,1},
             {62,4,0}, {63,4,2}, {64,5,1}, {65,5,0}, {66,5,2},

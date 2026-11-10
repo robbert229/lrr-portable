@@ -12515,7 +12515,6 @@ __declspec(naked) void lava_erosion_pending_cell_add(const int xy[2], int add)
 #else
 void lava_erosion_pending_cell_add(const int xy[2], int add)
 {
-    uint32_t i;
     LevelState* level = lava_erosion_current_level_get();
     uint8_t* const cell = xy != NULL
         ? level_voxel(level, xy[0], xy[1]) : NULL;
