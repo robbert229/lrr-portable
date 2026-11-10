@@ -1745,17 +1745,21 @@ int main(void)
         static uint8_t sgrid[8 * 8 * 0x48];
         static LevelState slvl;
         static EntitySlot eligible, plain;
+        static uint8_t eligible_stats[ENTITY_STATS_RECORD_SIZE];
+        GameContext* previous_pool_context = entity_pool_callback_context_get();
         GameContext sctx;
         memset(sgrid, 0, sizeof sgrid);
         memset(&slvl, 0, sizeof slvl);
         memset(&eligible, 0, sizeof eligible);
         memset(&plain, 0, sizeof plain);
+        memset(eligible_stats, 0, sizeof eligible_stats);
         game_context_init(&sctx);
         cmd_context_set(&sctx);
         slvl.word[0x14 / 4] = 8; /* width */
         slvl.word[0x18 / 4] = 8; /* height */
         slvl.ptr_voxels = sgrid;
         sctx.level = &slvl;
+        entity_pool_callback_context_set(&sctx);
 
 #define SCELL(x, y) (sgrid + ((size_t)(y) * 8u + (size_t)(x)) * 0x48)
 #define SPUT(x, y, off, v)                                                     \
@@ -1764,7 +1768,10 @@ int main(void)
         memcpy(SCELL(x, y) + (off), &v_, 4);                                   \
     } while (0)
         SPUT(5, 5, 0x08, 0x10u); /* (5,5): walkable + placeable */
-        eligible.flags_3e8 = 0x4u; /* the placement gate bit */
+        eligible.flags_3e8 = 0x6u; /* walkability and placement gates */
+        eligible.stats_record = eligible_stats;
+        const float terrain_speed = 1.0f;
+        memcpy(eligible_stats + 0x24, &terrain_speed, sizeof terrain_speed);
 
         selection_clear(&sctx);
         CHECK(selected_entities_any_predicate_match(5, 5) == 0
@@ -1772,11 +1779,27 @@ int main(void)
               "the empty selection answers zero");
 
         selection_add(&sctx, &plain);
-        CHECK(selected_entities_any_predicate_match(5, 5) == 1,
-              "the walkable cell lets the sweep through");
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0,
+              "grid walkability cannot admit a flagless selected entity");
         CHECK(any_object_can_occupy_terrain_cell(5, 5) == 0,
               "the flagless record stays out of the placement sweep");
         selection_add(&sctx, &eligible);
+        CHECK(selected_entities_any_predicate_match(5, 5) == 1,
+              "the any-hit sweep admits a capable entity after an incapable one");
+        selection_active_count_reset();
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0,
+              "active selection clearing excludes stale context entries");
+        selection_active_context_sync(&sctx);
+        eligible.flags_3e0 |= 0x400u;
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0,
+              "the selected entity state gate remains authoritative");
+        eligible.flags_3e0 &= ~0x400u;
+        memset(eligible_stats + 0x24, 0, sizeof terrain_speed);
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0,
+              "zero indexed terrain speed excludes the selected entity");
+        memcpy(eligible_stats + 0x24, &terrain_speed, sizeof terrain_speed);
+        CHECK(selected_entities_any_predicate_match(5, 5, 1) == 0,
+              "the optional stats-bit requirement reaches the real predicate");
         CHECK(any_object_can_occupy_terrain_cell(5, 5) == 1,
               "the eligible record lands");
         selection_clear(&sctx);
@@ -1791,6 +1814,7 @@ int main(void)
         sctx.level = &slvl;
         selection_clear(&sctx);
         cmd_context_set(NULL);
+        entity_pool_callback_context_set(previous_pool_context);
 #undef SCELL
 #undef SPUT
     }

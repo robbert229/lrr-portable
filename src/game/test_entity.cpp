@@ -1425,7 +1425,14 @@ int main(int argc, char** argv)
               "the default query answers the empty pair table");
         catalog_id_pair_install(2, 42u);
         CHECK(entity_query_flag_count(2) == 42, "the installed pair answers");
-        CHECK(entity_query_flag_count(-1) == 0 && entity_query_flag_count(8) == 0,
+        catalog_id_pair_install(8, 2u);
+        catalog_id_pair_install(18, 4u);
+        CHECK(entity_query_flag_count(8) == 2
+                  && entity_query_flag_count(18) == 4,
+              "registered action modes above seven expose their counts");
+        catalog_id_pair_install(8, 0u);
+        catalog_id_pair_install(18, 0u);
+        CHECK(entity_query_flag_count(-1) == 0 && entity_query_flag_count(24) == 0,
               "the pair-window guards answer zero");
 
         catalog_count_install(0, 0u);

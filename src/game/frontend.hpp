@@ -366,6 +366,8 @@ void frontend_panel_rotation_control_state_get(
     FrontendPanelRotationControlState* state);
 uint32_t interface_build_image_count(int group);
 const FeInterfaceBuildImage* interface_build_image_peek(int group, int index);
+TextureSurface* interface_action_image_value_get(
+    const struct EngineContext* engine, int action);
 TextureSurface* interface_build_image_binding_value_get(
     const struct EngineContext* engine, int kind, int index);
 void* input_binding_default_value_get(int kind, int index, int mode);
@@ -458,8 +460,12 @@ int  frontend_build(FrontEnd* fe, BlockFile* cfg);
 /* Pointer cursor config/draw target entry points. Config rows are the child
  * records of Lego.cfg's Pointers group. */
 void pointer_cursor_config_load_target(BlockRec* first_entry);
+void frontend_pointer_config_load(BlockFile* cfg);
 int pointer_cursor_config_parse_target(const char* name, int* index_out);
 void pointer_cursor_draw_target(uint32_t x, uint32_t y);
+/* Draw into a caller-locked software frame, using the same resource owner. */
+void pointer_cursor_draw_pixels(uint32_t x, uint32_t y, void* pixels,
+                                 int pitch, int width, int height);
 
 /* Sync the option widgets with `fe->opts` (issue #85): seed every option
  * Slider/Cycle value from the store, clamped to the item's cfg range. Called
@@ -573,6 +579,11 @@ void frontend_background_render(const FrontEnd* fe, void* pixels, int pitch,
                                  int width, int height);
 void frontend_picker_panel_text(FrontEnd* fe, const TextureSurface* measure,
                                 void* pixels, int pitch, int width, int height);
+/* The frame compositor can own the final cursor instead of drawing it in
+ * the text pass. Pass 0 draws all items, 1 picker rows, and 2 other rows. */
+void frontend_render_menu_pass(FrontEnd* fe, const TextureSurface* hi_font,
+                               const TextureSurface* lo_font, int w, int h,
+                               void* px, int pitch, int pass, int draw_cursor);
 void frontend_render_picker_pass(FrontEnd* fe, const TextureSurface* hi_font,
                                  const TextureSurface* lo_font,
                                  int w, int h, void* px, int pitch, int foreground);
@@ -1072,6 +1083,13 @@ typedef struct SimulationPointerDispatchOps {
     void (*action_complete)(void* context, int action, int cell_x,
                             int cell_y);
 } SimulationPointerDispatchOps;
+/* Authored catalog geometry shared with image composition. Setup preserves
+ * the caller's context and callbacks; the hit callback receives those live
+ * game/engine owners from the frame adapter. */
+void frontend_action_catalog_pointer_setup(SimulationPointerDispatchOps* ops);
+int frontend_action_catalog_hit(const EngineContext* engine,
+    const GameContext* game, float x, float y, float offset_x, float offset_y,
+    uint32_t* action_out, uint32_t* kind_out, uint32_t* entry_out);
 /* Each physical gesture owns its UI latch independently. This is a port
  * adapter around the original dispatcher, not a replacement action domain. */
 typedef struct SimulationPointerCapture {
@@ -1274,6 +1292,7 @@ void frontend_event_timer_state_set(const EventTimerState* state);
 void timed_status_and_event_tick(float delta); /* FUN_0041b930 */
 float    interaction_timer_peek(void);          /* port hook */
 uint32_t interaction_flags_peek(void);          /* port hook */
+void interaction_flags_set(uint32_t flags);     /* port hook, same owner */
 /* PointerActionStateDispatch (FUN_0041c6e0): drive the pointer action
  * latch and matching input-entry/player flags. */
 int pointer_action_state_dispatch(int action, int kind, int entry,
@@ -1444,6 +1463,10 @@ int frontend_panels_pointer_activate(int category, int item);
 int frontend_panels_pointer_hover(int x, int y);
 void frontend_panels_render(uint32_t engine_state, void* pixels, int pitch,
                             int width, int height);
+/* Image portion of the mode-indexed action palette; count text and the
+ * tracker/dialog are separate composition owners. */
+void frontend_action_catalog_images_render(const struct EngineContext* engine,
+    const struct GameContext* game, void* pixels, int pitch, int width, int height);
 void frontend_panels_release(void);
 
 /* TimedEffectTimestampReset (FUN_0046b7a0): stamps DAT_0054bf3c's float bits

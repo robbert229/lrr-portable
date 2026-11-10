@@ -6128,24 +6128,23 @@ void* cmd_pending_record_copy(const void* rec)
 
 /* SelectedEntitiesAnyPredicateMatch (FUN_00431a30) / AnyObjectCanOccupy-
  * TerrainCell (FUN_00431ab0) — see cmd.hpp. The selection array entries
- * ride as native record pointers; the walkability mode-1 gates are the
- * seam pass, the placement gate reads the record's own flags. */
+ * ride as native record pointers. The walkability sweep uses each record's
+ * state and stats against the current level; the placement gate reads the
+ * record's own flags. */
 // FUNCTION: LEGORR 0x00431a30
-int selected_entities_any_predicate_match(int cx, int cy)
+int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit)
 {
     int count = 0;
-    const void* recs = active_context_record_get(&count);
+    const void* recs = selection_active_context_record_get(&count);
     const unsigned remaining_count = (unsigned)count;
     /* Corpus 0x431a54 tests the count as unsigned; zero is the empty case. */
     if (recs == NULL || remaining_count == 0u) {
         return 0;
     }
-    const LevelState* lvl = (s_ctx != NULL)
-        ? (const LevelState*)s_ctx->level : NULL;
     const EntitySlot* const* arr = (const EntitySlot* const*)recs;
     for (unsigned i = 0; i < remaining_count; ++i) {
-        (void)arr[i]; /* the mode-1 entity gates are the seam pass */
-        if (level_walkable(lvl, cx, cy) != 0) {
+        if (terrain_cell_walkability_query_current(arr[i], (uint32_t)cx,
+                (uint32_t)cy, require_stat_bit, 1) != 0) {
             return 1;
         }
     }

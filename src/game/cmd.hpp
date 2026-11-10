@@ -708,11 +708,10 @@ void idle_queue_register(EntitySlot* e);
  * selection context's record array. Both pull the array through the
  * context-record getter and answer the first true predicate; an empty
  * array answers zero.
- * Deviations: the corpus strides the array blindly (the port guards the
- * count and the state block); the walkability predicate's entity-gated
- * mode-1 clauses are the documented seam pass — only the cell walkability
- * actually discriminates the sweep. */
-int selected_entities_any_predicate_match(int cx, int cy);
+ * The walkability sweep retains the per-entity gates and forwards the
+ * optional stats-bit requirement. The port guards the state block and
+ * empty array, which the corpus strides blindly. */
+int selected_entities_any_predicate_match(int cx, int cy, int require_stat_bit = 0);
                                                 /* FUN_00431a30 */
 int any_object_can_occupy_terrain_cell(int cx, int cy);
                                                 /* FUN_00431ab0 */

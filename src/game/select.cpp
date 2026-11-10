@@ -1031,7 +1031,9 @@ static int tutorial_path_menu_action_precheck_raw(
         const uint32_t target[2] = {
             map_store_pair_word(0), map_store_pair_word(1)
         };
-        return terrain_cell_predicate_check(descriptors, target) == 0
+        return (descriptors != NULL
+                   ? terrain_cell_predicate_check(descriptors, target)
+                   : terrain_cell_predicate_check_current(target)) == 0
             && level_cell_occupied_at(ctx->level, (int)target[0],
                                       (int)target[1]) == 0
             && ensure_cell_entries_loaded(0xfu, 0, 0) != 0;
@@ -1043,7 +1045,9 @@ static int tutorial_path_menu_action_precheck_raw(
         };
         const uint8_t* voxel = level_voxel(
             ctx->level, (int)target[0], (int)target[1]);
-        return terrain_cell_predicate_check(descriptors, target) == 0
+        return (descriptors != NULL
+                   ? terrain_cell_predicate_check(descriptors, target)
+                   : terrain_cell_predicate_check_current(target)) == 0
             && voxel != NULL && voxel[2] != 6u;
     }
 
@@ -1681,6 +1685,52 @@ static int selection_floor_release(GameContext* ctx, EngineContext* engine,
     return 1;
 }
 
+/* Ordinary selected wall action and wall context release. The special
+ * placement modes remain owned by the existing dispatcher. */
+static int selection_wall_release(GameContext* ctx, EngineContext* engine,
+                                  const int cell_xy[2])
+{
+    const uint8_t* cell;
+    uint32_t flags;
+    uint32_t coord[2];
+    if ((engine->state & (0x40000u | 0x10000000u)) != 0u ||
+        (global_state_low_word_get() & 0xffu) != 0u) return -1;
+    if (level_width(ctx->level) < 2 || level_height(ctx->level) < 2 ||
+        (unsigned int)cell_xy[0] >= (unsigned int)level_width(ctx->level) - 1u ||
+        (unsigned int)cell_xy[1] >= (unsigned int)level_height(ctx->level) - 1u)
+        return 0;
+    cell = level_voxel(ctx->level, cell_xy[0], cell_xy[1]);
+    if (cell == NULL) return 0;
+    memcpy(&flags, cell + 8, sizeof(flags));
+    if ((flags & 0x08u) == 0u && selection_active_has_any_get() != 0 &&
+        selected_entities_any_predicate_match(cell_xy[0], cell_xy[1], 0) &&
+        cell[2] != 1 && cell[2] != 9 && cell[2] != 11 &&
+        (flags & 0x40u) == 0u) {
+        if (terrain_cell_command_predicate(engine, cell_xy[0], cell_xy[1]) != 0)
+            return 0;
+        if (global_refresh_record_peek() == NULL) return 0;
+        terrain_cell_command_create(cell_xy[0], cell_xy[1], 0, 1);
+        cmd_mark_matching(8, 0, cell_xy);
+        media_action_feedback_sound_dispatch(0);
+        selection_clear_request_and_hud_reset();
+        return 1;
+    }
+    if ((flags & 0x08u) != 0u) return -1;
+    if ((flags & (0x40u | 0x400u)) != 0u ||
+        (cell[0x0c] & 0x24u) != 0u || cell[2] == 1 ||
+        cell[2] == 6 || cell[2] == 9) return 0;
+    if (terrain_cell_command_predicate(engine, cell_xy[0], cell_xy[1]) != 0)
+        return 0;
+    /* The real refresh scene owner is required by the HUD transition. */
+    if (global_refresh_record_peek() == NULL) return 0;
+    coord[0] = (uint32_t)cell_xy[0];
+    coord[1] = (uint32_t)cell_xy[1];
+    cmd_produce(3, NULL, 0, NULL);
+    media_action_feedback_sound_dispatch(4);
+    command_context_post_to_hud(7, coord);
+    return 1;
+}
+
 /* The frame UI arbiter owns the complete gesture and admits its release.
  * No catalog tuple, synthetic ray, cell picker fallback or forced route. */
 int selection_pointer_world_dispatch(GameContext* ctx,
@@ -1723,6 +1773,8 @@ int selection_pointer_world_dispatch(GameContext* ctx,
         int result;
         cell_xy[0] = signed_cell_x;
         cell_xy[1] = signed_cell_y;
+        result = selection_wall_release(ctx, engine, cell_xy);
+        if (result >= 0) return result;
         result = selection_floor_release(ctx, engine, cell_xy);
         if (result >= 0) return result;
     }

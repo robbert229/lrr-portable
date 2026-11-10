@@ -32,6 +32,7 @@
 #include "gods98/block.hpp"
 
 struct EntitySlot;
+struct TextureSurface;
 
 #ifdef __cplusplus
 extern "C" {
@@ -322,6 +323,12 @@ void advisor_animation_position_update_state_set(
     const AdvisorAnimationPositionUpdateState* state);
 void advisor_animation_position_update_value_resolver_set(
     AdvisorPositionUpdateValueResolveFn resolver, void* user);
+/* FlashGeneric advisor producer (FUN_0041e890). */
+int advisor_action_indicator_request(int action, int request_mode);
+/* Typed 0x41c4f0 path: image is the freshly resolved current image. */
+void advisor_animation_position_and_request_update_image(
+    int position_mode, int input_a, int input_b, const float* position,
+    const struct TextureSurface* image);
 void advisor_animation_position_and_request_update(
     int position_mode, int input_a, int input_b, const float* position);
 

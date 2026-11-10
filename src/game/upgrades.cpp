@@ -2,10 +2,12 @@
 #include "upgrades.hpp"
 #include "cmd.hpp"
 #include "frontend.hpp"
+#include "effects.hpp"
 #include "level.hpp"
 #include "port_loop_ports.hpp"
 #include "gods98/block.hpp"
 #include "gods98/heap.hpp"
+#include "gods98/input.hpp"
 #include "gods98/string.hpp"
 
 #include <limits.h>
@@ -109,7 +111,15 @@ void level_counter_state_set(LevelCounterState* state,
 // FUNCTION: LEGORR 0x0041A920
 void level_state_counters_clear(void)
 {
+    EventTimerState frontend_state;
+    uint32_t i;
     LevelCounterState* state = s_counter_state;
+    frontend_event_timer_state_get(&frontend_state);
+    frontend_state.flags = 0u;
+    frontend_event_timer_state_set(&frontend_state);
+    input_action_level_state_clear();
+    for (i = 0u; i < 300u; ++i)
+        cell_action_permission_table_set((int)i, 0u);
     if (state == 0) return;
     memset(state->fixed_a, 0, sizeof(state->fixed_a));
     memset(state->fixed_b, 0, sizeof(state->fixed_b));

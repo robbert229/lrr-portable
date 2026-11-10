@@ -2,11 +2,141 @@
 
 Scope: the eight **Training Missions** origins below, from picker entry through
 legitimate completion or quit and return. The latest runtime-tested frozen
-candidate is `367228c1…` (observational Moving arrival diagnostic, inheriting
-the `9455b45a…` continuation-line correction). Its 377 recorded source
+candidate is `56bd94ab…` (action-palette image discovery build,
+inheriting the `5f43503d…` overlay cursor correction and earlier Moving work). Its 377 recorded source
 inputs, EXE/PDB, configuration and reports are retained. All final acceptance
 rows remain **U**. This inventory records
 bounded comparisons and demonstrated corrections, not full tutorial parity.
+
+## 2026-11-10 action-palette image composition
+
+The current built discovery candidate is EXE `56bd94abfa00c06d119f37fac46bbcbffeaeef676049dbf4aa055ead4f10221a`,
+PDB `d9ca9e8b61d9a07e33009757d18298fe7d1cf10a65d804e6f7eef7aef4537eac`.
+Its [retained implementation and regression evidence](/home/johnrowl/.local/share/lrr-devbox/tutorial-action-palette-images-evidence-20261110/HANDOFF.md)
+covers the genuine Back/build loader continuation, group-count queries above
+mode seven, typed image selection and mode-indexed image composition through
+the real config parser, group walker, decoder and blitter. The same extracted
+owner fixture reports 35 failures on the original snapshot and 52 passes with
+zero failures on the integrated source. It substitutes bitmap IO and unrelated
+presentation leaves; this is not a real-asset or ordinary-input parity claim.
+
+The image pass uses the reference startup origin and tooltip-font owner,
+count-selected surround and Back offsets, current disabled/pressed state,
+flash gates, real image heights and forty-pixel missing-image spacing. It does
+not force availability. Count text, tracker/dialog behavior, the availability
+query, catalog hit testing and ordinary wall-selection input remain missing
+owners. Independent Terra review found no must-fix issue in the image-only scope.
+
+The isolated `make reccmp-report` completed with `/ML /Zi /O2 /Ob1`; all 377
+before/after/current/archive source inputs match. Exact source, EXE, PDB, cache,
+configuration, logs and both reports are retained in
+`tutorial-action-palette-images-build-20261110`. There are still 31 compiler
+warning lines and 54 Reccmp ERROR lines, limiting matching evidence.
+
+The first guarded licensed-reference launch for this check exited after normal
+default HAL mode selection (`reference-run` Error 5; make return code 2), before
+the main menu. Its complete 230-row afterstate was archived and reviewed; only
+registry bytes and timestamps changed. Both controller and independent live
+verification found zero protected differences after restoration. Completion
+and independent lock reacquisition succeeded. This failed startup supplies no
+tutorial or image acceptance.
+
+Fresh [reference](/home/johnrowl/.local/share/lrr-devbox/tutorial-action-palette-images-rgb-reference-run-20261110/HANDOFF.md)
+and [candidate](/home/johnrowl/.local/share/lrr-devbox/tutorial-action-palette-images-rgb-candidate-run-20261110/HANDOFF.md)
+runs then used the normal RGB-emulation selection with the same runner,
+authenticated prefix/reference baseline, saved settings and Training → Drilling
+context. The candidate now visibly draws the four authored default-palette
+images, but displays their grayscale states where the reference displays normal
+images. After an ordinary click on the marked Dirt wall, both show the
+instruction to use Drill Wall; the reference has the wall-action palette while
+the candidate retains the default palette. No absent Drill control was clicked.
+Both returned through ordinary Pause → Quit Yes → Training and application
+Quit Yes, exited with code zero, archived/reviewed their complete afterstates,
+and passed controller plus independent protected-state equality checks.
+Completion and independent lock reacquisition succeeded with no journal/socket.
+
+The scoped static trace identifies a concrete next availability seam:
+`InputActionStateUpdate` reads the engine's `DAT_00556ed4` through
+`global_state_low_word_get`, while the reference tests the frontend interaction
+flags at `DAT_004de1f8`. Its existing `TutorialPathMenuAction` predicate also
+lacks a production installer. These findings do not establish every runtime
+cause or repair the missing wall context/hit caller. Immediate captures sometimes
+retain prior frames; the retained handoffs distinguish those from settled states.
+The reference Back attempt did not establish its destination in this bounded run.
+All final acceptance rows remain **U**.
+
+## Latest overlay-cursor and action-catalog corrections
+
+The [new MSVC5 build](/home/johnrowl/.local/share/lrr-devbox/tutorial-overlay-cursor-action-catalog-build-20261109/validation.json)
+retains EXE `5f43503de68066c077fcc5f99e8f32d28ec2bec61692cb13a2af984207da0fd5`,
+PDB `24bae436c8975677184b409b5c0888afce07f21b2ec318fce85aea7332e0bd91`,
+all 377 matching before/after/current/archive source inputs, configuration,
+verbose `/ML /Zi /O2 /Ob1` log and both reports. `make reccmp-report` succeeds;
+31 warnings and 54 Reccmp ERROR lines remain. This is not final acceptance.
+
+The actual briefing and in-level menu presentation callers now draw through the
+shared cursor resource owner after overlays. The menu passes suppress their
+separate standard-cursor draw there; boot menus retain that owner. Native actual
+decoder/consumer/presentation-tail checks fail five assertions before and pass
+after; full menu suppression is structurally checked, not executed by the fixture.
+The [guarded Moving run](/home/johnrowl/.local/share/lrr-devbox/tutorial-overlay-cursor-candidate-run-20261109/HANDOFF.md)
+observes the cursor over both briefing pages, Pause, Advanced and confirmations,
+and after Continue returns to gameplay. Next/Back, Continue, Restart No and Quit
+Yes are ordinary inputs. Page-zero/Back, gameplay/Continue, settled Advanced
+return and Pause/No capture pairs are each byte-identical. An immediate capture
+after pointer motion still shows the prior position; the later settled capture
+is retained separately. Contextual cursor selection and pixel parity remain open.
+
+The source action-name initializer also had 68 of its 74 enum positions wrong.
+The [primary-backed oracle](/home/johnrowl/.local/share/lrr-devbox/tutorial-overlay-cursor-action-catalog-evidence-20261109/catalog/HANDOFF.md)
+authenticates every reference initializer assignment and ASCII name. The actual
+getter/finder regression fails 68 roundtrips before and passes all 74 after.
+Drill Wall is action 11, Reinforce 12, Dynamite 13 and DeselectDig 15, matching
+the existing group walker and dispatcher. Earlier candidate Dig=23 observations
+reflect the incorrect table, not a required translation between action IDs.
+This corrects the resource/catalog contract; it does not implement or validate
+the missing live Drilling palette, its enabled states or wall-selection caller.
+
+All final eight-tutorial rows remain U. Protected restoration and released
+ownership must be read from the run's verification and closure artifacts.
+
+## Cursor and pause selection owner corrections: bounded validation
+
+The [new build](/home/johnrowl/.local/share/lrr-devbox/tutorial-cursor-pause-owner-build-20261109/validation.json)
+retains EXE `29a25424054628b21609c1374c284b2a45e43d15fb56ad496c2143f4f390191d`,
+PDB, all 377 matching source inputs and reconstructed archive members, effective
+configuration, verbose MSVC5 `/ML /Zi /O2 /Ob1` log and both Reccmp reports.
+The build succeeds; 31 compiler warnings and 54 Reccmp ERROR lines remain.
+It is a discovery candidate, not a final acceptance freeze.
+
+The pointer startup owner now resolves the authored `Pointers` group under the
+configuration root. Gameplay calls the existing bitmap/FLH cursor consumer after
+its HUD overlays into the already-locked frame. The actual-parser, BMP/FLH decode,
+blit and extracted gameplay-presentation regression fails eight checks on the old
+source and passes on this source. Resource IO and platform presentation are
+controlled fixture leaves; no real DirectDraw or game execution follows from it.
+The [guarded run](/home/johnrowl/.local/share/lrr-devbox/tutorial-cursor-pause-candidate-run-20261109/HANDOFF.md)
+separately confirms a visible authored cursor after Training → Drilling briefing,
+ordinary movement and lower-right clipping. Briefing and pause overlays still
+lack the cursor, and the reference selects a contextual terrain cursor where this
+candidate displays the standard cursor. Those contracts remain incomplete.
+
+Pause pointer selection now resets before option input, so pointer misses do not
+retain the initial or previous row. The extracted tick/hit-test regression passes
+its eight formerly failing assertions and preserves ordinary hits, clicks and
+return navigation. Tracked parser/render tests were extended and passed a native
+syntax check; the full native test executable was not run. Runtime Advanced
+entry, hover then miss, and outside Right captures confirm that no stale option
+changes; the three outside captures are byte-identical. Advanced, Restart and
+Quit outside-body bright-green masks match the retained Drilling reference.
+Reference used completion followed by fresh entry, while this candidate used its
+first Drilling entry; this comparison is bounded and not final acceptance.
+
+The run retains 18 admitted captures and paired baseline/runner/root identities.
+It exits normally, archives and reviews all 249 afterstate rows, and restores both
+protected roots. Controller and independent verification report zero differences;
+377 source identities and all capture hashes match. `closure.json` proves released
+ownership and absent journal/socket. All eight tutorial acceptance rows remain U.
 
 ## Drilling reference route reaches completion
 
@@ -1491,3 +1621,139 @@ configuration, cache, logs and reports are retained.31 warnings and54 Reccmp
 ERROR lines remain. The active runtime binding still pins `b785…` and refuses
 current drift. No game/protected transaction or repin occurred; every final
 acceptance row remains U pending current matched ordinary-input evidence.
+
+## 2026-11-10 action availability and ordinary wall context
+
+The input and catalog availability owners now read the frontend interaction
+flags used by the reference. The application binds the actual action predicate
+to its stable game/engine context and current menu coordinates, and removes
+the binding before disposal. Actions 5 and 7 retain the actual current path
+descriptor checks when no explicit typed descriptor owner is supplied.
+
+The ordinary world release now admits the wall-context producer after genuine
+selected-entity preemption, retaining raw voxel exclusions, permission and
+tutorial-marker gates. The selected sweep uses the real active-selection and
+entity-aware current-level walkability owners. It preserves the existing
+queue/feedback/HUD timer transition; it does not force the current menu mode.
+Missing refresh ownership refuses effects before mutation. Special placement
+modes and the full preceding interaction routine remain outside this slice.
+
+[Exact tests, source, primary audits and review resolution](/home/johnrowl/.local/share/lrr-devbox/tutorial-wall-context-owner-evidence-20261110/HANDOFF.md)
+are retained. The final native availability fixture is original-red with eight
+failures and integrated-green with 64 checks. The final wall fixture is
+original-red with 19 failures and integrated-green with 39 checks, including
+three active-selection/copy divergence controls added after independent review.
+These execute actual owners under documented projection, IO and effect-recording
+boundaries; they do not prove real task allocation or whole-game behavior.
+The retained replay reconstructs both source snapshots and passed both loops.
+
+The frozen MSVC5 `/ML /Zi /O2 /Ob1` build is EXE `da824b67…`, PDB `a5a2d6ff…`.
+All 377 recorded source/current/archive identities matched. Both reports were
+produced; 31 compiler warnings and 54 Reccmp ERROR lines remain, limiting
+matching evidence. The exact build and binding are retained in
+`tutorial-wall-active-context-build-20261110` and
+`tutorial-wall-active-context-binding-20261110` under the private devbox root.
+
+The [guarded candidate Drilling discovery run](/home/johnrowl/.local/share/lrr-devbox/tutorial-wall-context-rgb-candidate-run-20261110/HANDOFF.md)
+uses the same baseline, runner, RGB/full-screen/640x480 16-bit settings and
+Training origin as the retained RGB reference run. The candidate default
+palette is now visibly colored rather than incorrectly grayscale. A real
+marked-wall click reaches the Drill instruction and displays the wall palette,
+where the previous candidate retained its default palette. The Drill image is
+gray in the inspected settled captures. A visible Back press/release does not
+leave that palette; the reference's earlier Back destination is also
+unestablished. Neither a permanent Drill deadlock nor a paired Back defect is
+proven. No absent control or fabricated progression was used.
+
+The run returned through Pause/Quit Yes to Training, picker Back to Main and
+application Quit Yes, then exited normally. The run's closure and independent
+verification records are authoritative for protected-state restoration and
+ownership release; source and fixture results alone do not establish them.
+Availability for all actions, hit testing, flashing, count text, tracker/dialog
+tail, tutorial completion and every final acceptance row remain U. No commit,
+push, PR update or merge; unrelated staged AG1 notes remain unchanged.
+
+## 2026-11-10 catalog input and selected-cell caller
+
+The frame now binds the genuine catalog hit traversal into the existing
+pointer arbiter after dependency-grid UI. Back uses the authored count-selected
+surround offsets and configured control dimensions. Rows use the same typed
+bitmap owners as composition, inclusive edges and the reference's 40x40 null
+image fallback. The existing capture latch owns press, hold and release;
+drag-out cancels activation. Binding action 73 retains its category/entry and
+cursor pair, and row hits publish origin bits and extents to the tracker owner.
+Cell-action completion now reads the current selected world coordinates,
+preserving the catalog tuple separately for the existing tutorial observer.
+
+[Exact actual-owner regression, primary instructions and independent review](/home/johnrowl/.local/share/lrr-devbox/tutorial-catalog-input-owner-evidence-20261110/HANDOFF.md)
+are retained. The final fixture has 21 failures on the original frozen source
+and 97 passes after integration. It executes production parser, decoder,
+blitter, group traversal, capture, pointer/action dispatch and actual frame
+setup/completion bodies under documented IO, grid and command-recording
+boundaries. The retained reconstruction replay reproduces both results.
+Tracked tests cover configured Back geometry, missing-image bounds and output
+preservation; the full native repository target remains unvalidated because
+of its previously recorded unrelated compilation failures.
+
+The isolated MSVC5 `/ML /Zi /O2 /Ob1` build is EXE `9ec53a1e…`, PDB `b8641a34…`.
+All 377 recorded current/before/after/archive inputs matched. Exact source,
+configuration, cache, logs and both reports are retained under
+`tutorial-catalog-input-build-20261110`. The 31 compiler warnings and 54
+Reccmp ERROR lines remain; reports are not clean matching evidence.
+
+The [guarded Drilling run](/home/johnrowl/.local/share/lrr-devbox/tutorial-catalog-input-rgb-candidate-run-20261110/HANDOFF.md)
+reaches the briefing, wall instruction and real wall palette under the matched
+RGB/runner/baseline context. Next advances after a retry. Drill remains gray;
+its visible press/release leaves the instruction unchanged and shows red-X
+feedback. Back now has an observed pressed image, but its release likewise
+leaves the palette in place. Those observations do not establish the complete
+enabled policy or a paired Back defect. One capture times out and is excluded
+from accepted capture evidence; a later admitted capture confirms Main.
+
+The application reaches shutdown entry after ordinary Quit Yes, but this run
+ends with Make rc 2 / reported child Error 247 before the shutdown-return log.
+Its cause is unknown. It must not be reported as a successful shutdown contract
+or attributed to the new input code without evidence. Owned processes are
+verified empty; the complete failure afterstate is archived for review and
+restoration. The run's closure and independent-verification records establish
+protected-state restoration separately from its application failure.
+
+The [NERP icon-state audit](/home/johnrowl/.local/share/lrr-devbox/tutorial-nerp-icon-owner-audit-20261110/HANDOFF.md)
+identifies disconnected script counters/flash state and the unset real input
+completion-count callback. Dig/Back mappings have authenticated primary proof;
+other icon wrappers, flash clearing and reset lifetime need further tracing.
+This is a next owner repair, not proof of the gray icon's runtime cause. Hover
+tooltips, complete action effects, shutdown, all tutorial routes and every final
+acceptance row remain U. No commit, push, PR update or merge.
+
+
+### 2026-11-10: shared NERP icon state, advisor consumption and teardown
+
+The new source connects admitted pointer completion to shared ordinary/binding
+counters, widens command IDs above255, resolves named bindings at runtime, and
+routes flashing to the real flag and advisor owners. The typed consumer uses a
+fresh image lookup after pressed-flag clear and the authored Back geometry.
+Active level teardown now clears the real counters, flags and cell permissions.
+
+[Source/regression/build evidence and explicit limits](/home/johnrowl/.local/share/lrr-devbox/tutorial-nerp-icon-owner-evidence-20261110/HANDOFF.md)
+retain127 passing actual-owner checks, versus12 behavioral failures on the9ec
+snapshot. The isolated MSVC5 report build completed0 using /ML /Zi /O2 /Ob1;
+377 before/after/archive inputs match. EXE `aeaa2963…`, PDB `40632f6f…` are
+retained in `tutorial-nerp-icon-build-20261110`. Its31 warnings and54 Reccmp
+ERROR lines remain; this is not clean matching proof. The native fixture does
+not exercise the complete game, all82 callback cases, dynamic-row loading or
+the full level-destruction path. Binding rows>=74 and zero-count Back placement
+remain bounded deviations; cached build advisor tuple production is unproven.
+
+The [minimal unchanged9ec startup/Main Quit run](/home/johnrowl/.local/share/lrr-devbox/tutorial-quick-quit-candidate-run-20261110/HANDOFF.md)
+exited0 through ordinary input, archived/reviewed all236 deltas, restored both
+protected roots, independently compared them with zero differences, and proved
+lock release. Four accepted captures were verified. This does not explain the
+longer Drilling run's make2/Error247. Correction to the earlier shutdown signal:
+normal EngineShutdown calls exit(0), so absence of a shutdown-return line does
+not alone indicate failure; the prior successful run also lacks that line.
+
+No post-edit runtime acceptance is claimed. The active production binding
+still pins9ec and must refuse new source drift until controlled repinning.
+Gray Drill, full action effects, shutdown of the longer route, all tutorial
+routes and every frozen-final-candidate acceptance row remain **U**.

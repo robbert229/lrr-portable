@@ -1659,13 +1659,35 @@ void advisor_animation_position_update_value_resolver_set(
     s_advisor_position_value_resolver_user = user;
 }
 
+/* AdvisorActionIndicatorRequest (FUN_0041e890).  The reference jump table
+ * has one category for action 0, a second for these action IDs, and the
+ * default category for every other value, including out-of-range values. */
+int advisor_action_indicator_request(int action, int request_mode)
+{
+    static const unsigned char category5[69] = {
+        0,1,1,0,0,1,1,0,0,1,0,1,1,0,1,0,0,0,0,0,1,0,1,
+        1,1,0,0,0,0,0,0,1,0,0,1,0,1,0,0,0,0,1,1,1,1,0,
+        1,1,0,1,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1
+    };
+    EventTimerState frontend_state;
+    frontend_event_timer_state_get(&frontend_state);
+    frontend_state.flags |= 0x20u;
+    if (request_mode != 0) frontend_state.flags |= 0x40u;
+    frontend_event_timer_state_set(&frontend_state);
+    s_advisor_position_update_state.action_row = action == 0 ? 4 :
+        (action > 0 && action < 69 && category5[action] ? 5 : 3);
+    s_advisor_position_update_state.trigger_selector = action;
+    return 1;
+}
+
 /* AdvisorAnimationPositionAndRequestUpdate (FUN_0041c4f0). The live mode,
  * interaction word, scroll/lower offsets, and back-button extents come from
  * their existing owners. The point table and row/trigger tuple are the four
  * unowned DAT inputs represented by the explicit bounded state above. */
 // FUNCTION: LEGORR 0x0041c4f0
-void advisor_animation_position_and_request_update(
-    int position_mode, int input_a, int input_b, const float* position)
+static void advisor_animation_position_and_request_update_internal(
+    int position_mode, int input_a, int input_b, const float* position,
+    const TextureSurface* image, int typed)
 {
     EventTimerState frontend_state;
     const AdvisorAnimationPositionUpdateState* state =
@@ -1687,10 +1709,10 @@ void advisor_animation_position_and_request_update(
     if (state->trigger_selector == 0x49) {
         if (state->cached_input_a == input_a &&
             state->cached_input_b == input_b &&
-            s_advisor_position_value_resolver != NULL &&
+            (typed || (s_advisor_position_value_resolver != NULL &&
             s_advisor_position_value_resolver(
                 0x49, input_a, input_b, &resolved_value,
-                s_advisor_position_value_resolver_user)) {
+                s_advisor_position_value_resolver_user)))) {
             matched = 1;
         }
     }
@@ -1699,10 +1721,10 @@ void advisor_animation_position_and_request_update(
         if (position_mode == 0) {
             use_catalog_point = 1;
         }
-        else if (s_advisor_position_value_resolver == NULL ||
+        else if (!typed && (s_advisor_position_value_resolver == NULL ||
             !s_advisor_position_value_resolver(
                 position_mode, input_a, input_b, &resolved_value,
-                s_advisor_position_value_resolver_user)) {
+                s_advisor_position_value_resolver_user))) {
             matched = 0;
         }
     }
@@ -1712,27 +1734,45 @@ void advisor_animation_position_and_request_update(
         const int mode = (int)s_obj_sel_word;
         uint32_t point_index;
         if (mode < 0 || mode > 0x12) return;
-        point_index = resource_handle_set_band_word_peek(mode);
-        if (point_index >= state->point_count ||
-            point_index >= ADVISOR_POSITION_UPDATE_MAX_POINTS) return;
-        (void)interface_back_button_dimensions(&width, &height);
-        offset_x = (frontend_state.flags & 0x80u) != 0u
-            ? frontend_state.timer : frontend_state.lower;
-        offset_y = state->vertical_origin;
-        new_x = state->points[point_index].x + offset_x +
-                (float)width * 0.5f;
-        new_y = state->points[point_index].y + offset_y +
-                (float)height * 0.5f;
+        point_index = typed ? (uint32_t)entity_query_flag_count(mode) :
+                              resource_handle_set_band_word_peek(mode);
+        if (typed) {
+            const FeSurroundImage* surround;
+            float origin[2];
+            /* Count zero aliases pointer storage in the executable. */
+            if (point_index == 0u || point_index > 11u) return;
+            surround = interface_surround_image_peek((int)point_index - 1);
+            if (surround == NULL) return;
+            interface_menu_action_layout_peek(origin);
+            (void)interface_back_button_dimensions(&width, &height);
+            offset_x = (frontend_state.flags & 0x80u) != 0u
+                ? frontend_state.timer : frontend_state.lower;
+            new_x = (float)surround->width + offset_x + (float)width * 0.5f;
+            new_y = (float)surround->height + origin[1] + (float)height * 0.5f;
+        }
+        else {
+            if (point_index >= state->point_count ||
+                point_index >= ADVISOR_POSITION_UPDATE_MAX_POINTS) return;
+            (void)interface_back_button_dimensions(&width, &height);
+            offset_x = (frontend_state.flags & 0x80u) != 0u
+                ? frontend_state.timer : frontend_state.lower;
+            offset_y = state->vertical_origin;
+            new_x = state->points[point_index].x + offset_x +
+                    (float)width * 0.5f;
+            new_y = state->points[point_index].y + offset_y +
+                    (float)height * 0.5f;
+        }
     }
     else {
         /* The decompile's zero mapped-value arm uses a fixed 40-pixel
          * height. A nonzero value is a pointer-like UI record whose +8
          * height has no live owner in the portable frontend. */
-        if (resolved_value != 0 || position == NULL) return;
+        if ((!typed && resolved_value != 0) || position == NULL) return;
         new_x = position[0];
         if ((frontend_state.flags & 0x80u) == 0u)
             new_x = frontend_state.lower;
-        new_y = 20.0f + position[1];
+        new_y = (typed && image != NULL ? (float)image->height * 0.5f
+                                         : 20.0f) + position[1];
     }
 
     if (state->action_row < 0 || state->action_row >= ADV_ACTION_ROWS) return;
@@ -1749,6 +1789,21 @@ void advisor_animation_position_and_request_update(
                                 (frontend_state.flags & 0x40u) != 0u);
     frontend_state.flags &= ~0x20u;
     frontend_event_timer_state_set(&frontend_state);
+}
+
+void advisor_animation_position_and_request_update_image(
+    int position_mode, int input_a, int input_b, const float* position,
+    const TextureSurface* image)
+{
+    advisor_animation_position_and_request_update_internal(
+        position_mode, input_a, input_b, position, image, 1);
+}
+
+void advisor_animation_position_and_request_update(
+    int position_mode, int input_a, int input_b, const float* position)
+{
+    advisor_animation_position_and_request_update_internal(
+        position_mode, input_a, input_b, position, NULL, 0);
 }
 
 uint32_t advisor_action_flags_peek(int row)

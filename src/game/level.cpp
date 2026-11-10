@@ -27,6 +27,7 @@
 #include "type_config_ports.hpp"
 #include "ai.hpp"
 #include "cmd.hpp"
+#include "upgrades.hpp"
 #include "spawn.hpp"
 #include "port_loop_ports.hpp"
 #include "frontend.hpp"
@@ -3640,6 +3641,9 @@ void level_destroy(LevelState* s)
      * level_load); never freed here. */
     __builtin_memset(s, 0, sizeof(*s));
     free(s);
+    /* PendingLevelName resets the shared interface state after releasing
+     * the active level. Discarding an uninstalled load must not reset it. */
+    if (was_current) lego::level_state_counters_clear();
 }
 
 int level_width(const LevelState* s) { return s ? level_int(s, LEVEL_OFF_WIDTH) : 0; }

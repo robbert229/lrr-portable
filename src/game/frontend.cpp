@@ -89,74 +89,74 @@ MENU_ACTION_TABLE_ALLOC static const char* const s_interface_menu_action_labels[
     "Interface_MenuItem_BuildSmallVehicle",
     "Interface_MenuItem_BuildLargeVehicle",
     "Interface_MenuItem_LayPath",
+    "Interface_MenuItem_RemovePath",
     "Interface_MenuItem_RepairLava",
     "Interface_MenuItem_GeologistTest",
     "Interface_MenuItem_ClearRubble",
     "Interface_MenuItem_Dam",
-    "Interface_MenuItem_SelectMan",
-    "Interface_MenuItem_DeleteMan",
-    "Interface_MenuItem_DeleteVehicle",
-    "Interface_MenuItem_DeleteBuilding",
-    "Interface_MenuItem_Attack",
-    "Interface_MenuItem_SelectVehicle",
-    "Interface_MenuItem_UnLoadVehicle",
-    "Interface_MenuItem_UnLoadMinifigure",
-    "Interface_MenuItem_VehiclePickUp",
-    "Interface_MenuItem_MinifigurePickUp",
-    "Interface_MenuItem_GetOut",
-    "Interface_MenuItem_GetIn",
-    "Interface_MenuItem_GotoDock",
     "Interface_MenuItem_Dig",
     "Interface_MenuItem_Reinforce",
     "Interface_MenuItem_Dynamite",
-    "Interface_MenuItem_UpgradeMan",
+    "Interface_MenuItem_PlaceFence",
+    "Interface_MenuItem_DeselectDig",
+    "Interface_MenuItem_CancelConstruction",
+    "Interface_MenuItem_SelectMan",
+    "Interface_MenuItem_SelectVehicle",
+    "Interface_MenuItem_SelectBuilding",
+    "Interface_MenuItem_VehiclePickUp",
+    "Interface_MenuItem_MinifigurePickUp",
+    "Interface_MenuItem_UnLoadVehicle",
+    "Interface_MenuItem_UnLoadMinifigure",
+    "Interface_MenuItem_GetIn",
+    "Interface_MenuItem_GetOut",
+    "Interface_MenuItem_GotoDock",
+    "Interface_MenuItem_LegoManGoto",
+    "Interface_MenuItem_VehicleGoto",
+    "Interface_MenuItem_VehicleDig",
+    "Interface_MenuItem_LegoManDig",
     "Interface_MenuItem_GoFeed",
-    "Interface_MenuItem_GotoFirstPerson",
-    "Interface_MenuItem_GotoSecondPerson",
-    "Interface_MenuItem_TrainSkill",
+    "Interface_MenuItem_DeleteMan",
+    "Interface_MenuItem_DropBirdScarer",
     "Interface_MenuItem_PowerOn",
     "Interface_MenuItem_PowerOff",
-    "Interface_MenuItem_UpgradeBuilding",
     "Interface_MenuItem_Repair",
-    "Interface_MenuItem_SelectBuilding",
+    "Interface_MenuItem_MakeTeleporterPrimary",
+    "Interface_MenuItem_EjectCrystal",
+    "Interface_MenuItem_EjectOre",
+    "Interface_MenuItem_DeleteBuilding",
+    "Interface_MenuItem_DeleteVehicle",
+    "Interface_MenuItem_DeleteElectricFence",
+    "Interface_MenuItem_Attack",
     "Interface_MenuItem_GotoTopView",
+    "Interface_MenuItem_GotoFirstPerson",
+    "Interface_MenuItem_GotoSecondPerson",
+    "Interface_MenuItem_TrackObject",
     "Interface_MenuItem_GetTool",
     "Interface_MenuItem_GetDrill",
     "Interface_MenuItem_GetSpade",
     "Interface_MenuItem_GetHammer",
     "Interface_MenuItem_GetSpanner",
+    "Interface_MenuItem_GetLaser",
+    "Interface_MenuItem_GetPusherGun",
+    "Interface_MenuItem_GetFreezerGun",
+    "Interface_MenuItem_GetBirdScarer",
+    "Interface_MenuItem_TrainSkill",
     "Interface_MenuItem_TrainDriver",
     "Interface_MenuItem_TrainEngineer",
     "Interface_MenuItem_TrainGeologist",
     "Interface_MenuItem_TrainPilot",
     "Interface_MenuItem_TrainSailor",
     "Interface_MenuItem_TrainDynamite",
-    "Interface_MenuItem_Build",
-    "Interface_MenuItem_PlaceFence",
-    "Interface_MenuItem_MakeTeleporterPrimary",
-    "Interface_MenuItem_DeselectDig",
-    "Interface_MenuItem_ClearSelection",
-    "Interface_MenuItem_Encyclopedia",
-    "Interface_MenuItem_EjectCrystal",
-    "Interface_MenuItem_EjectOre",
-    "Interface_MenuItem_TrackObject",
-    "Interface_MenuItem_LegoManGoto",
-    "Interface_MenuItem_LegoManDig",
-    "Interface_MenuItem_VehicleGoto",
-    "Interface_MenuItem_VehicleDig",
-    "Interface_MenuItem_RemovePath",
+    "Interface_MenuItem_UpgradeMan",
+    "Interface_MenuItem_UpgradeBuilding",
     "Interface_MenuItem_UpgradeVehicle",
     "Interface_MenuItem_UpgradeEngine",
     "Interface_MenuItem_UpgardeDrill",
     "Interface_MenuItem_UpgardeScan",
     "Interface_MenuItem_UpgardeCarry",
-    "Interface_MenuItem_DeleteElectricFence",
-    "Interface_MenuItem_GetLaser",
-    "Interface_MenuItem_GetPusherGun",
-    "Interface_MenuItem_GetFreezerGun",
-    "Interface_MenuItem_GetBirdScarer",
-    "Interface_MenuItem_DropBirdScarer",
-    "Interface_MenuItem_CancelConstruction",
+    "Interface_MenuItem_Encyclopedia",
+    "Interface_MenuItem_ClearSelection",
+    "Interface_MenuItem_Build",
 };
 #undef MENU_ACTION_TABLE_ALLOC
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -1576,7 +1576,8 @@ int interface_images_config_load(BlockFile* cfg)
     section = block_subgroup(cfg, section_path);
     entry = section != NULL ? block_first_child(section) : NULL;
     if (entry == NULL) {
-        /* Corpus fallback when the generic action-image section is absent. */
+        /* These two loaders run after the generic loop, including when
+         * the section is absent (FUN_0041ada0 + 0x209). */
         (void)interface_build_images_config_load(cfg);
         (void)interface_back_button_config_load(cfg);
         return 0;
@@ -1686,6 +1687,8 @@ int interface_images_config_load(BlockFile* cfg)
         }
         ++loaded;
     }
+    (void)interface_build_images_config_load(cfg);
+    (void)interface_back_button_config_load(cfg);
     return loaded;
 }
 
@@ -1834,6 +1837,20 @@ const FeInterfaceBuildImage* interface_build_image_peek(int group, int index)
         return NULL;
     }
     return &s_interface_build_images[group][index];
+}
+
+/* Typed counterpart of IndexedEntityValueGet (0x0041cab0). The legacy
+ * DWORD windows cannot carry TextureSurface pointers on a 64-bit host. */
+TextureSurface* interface_action_image_value_get(
+    const EngineContext* engine, int action)
+{
+    const FeInterfaceImage* image = interface_image_peek(action);
+    if (image == NULL) return NULL;
+    if (input_action_pressed_get(engine, action, 0) != 0)
+        return image->disabled;
+    if (input_entry_flag8_get(action) != 0u)
+        return image->pressed;
+    return image->normal;
 }
 
 /* InputBindingValueGet (FUN_0041caf0): resolve a catalog image from the
@@ -2115,12 +2132,7 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
         cfg, display_width_get(), display_height_get());
     frontend_config::panel_button_layout_config_load(
         cfg, display_width_get(), display_height_get());
-    {
-        BlockRec* pointer_section = block_subgroup(cfg, "Pointers");
-        pointer_cursor_config_load_target(
-            pointer_section != NULL ? block_first_child(pointer_section)
-                                    : NULL);
-    }
+    frontend_pointer_config_load(cfg);
 
     /* GameConfigInit loads the action and surround image tables alongside
      * the menu definitions; keep those menu-facing resources on the same
@@ -3192,11 +3204,17 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     if (fe->sel >= sub->item_count) {
         fe->sel = sub->item_count - 1;
     }
-    if (fe->sel < 0 && fe->menu != FE_MENU_MAIN) {
+    const int pointer_selection = fe->menu == FE_MENU_MAIN ||
+        (fe->menu == FE_MENU_PAUSED &&
+         in->mouse_x >= 0 && in->mouse_y >= 0);
+    if (fe->sel < 0 && !pointer_selection) {
         fe->sel = 0;
     }
 
-    if (fe->menu == FE_MENU_MAIN) {
+    /* MenuUpdate clears its current item before hit-testing. Pause menus
+     * use that same field for option input and selected drawing, so a miss
+     * must not retain the previous row or the submenu's initial item. */
+    if (pointer_selection) {
         int idx = -1;
         if (in->mouse_x >= 0 && in->mouse_y >= 0) {
             fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &idx);
@@ -3204,12 +3222,12 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         fe->sel = idx;
     }
 
-    if (fe->menu != FE_MENU_MAIN && in->up) {
+    if (!pointer_selection && in->up) {
         if (fe->sel > 0) {
             --fe->sel;
         }
     }
-    if (fe->menu != FE_MENU_MAIN && in->down) {
+    if (!pointer_selection && in->down) {
         if (fe->sel < sub->item_count - 1) {
             ++fe->sel;
         }
@@ -3271,8 +3289,8 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         int hit = fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &idx);
         if (hit) {
             fe->sel = idx;
-        } else if (fe->menu == FE_MENU_MAIN) {
-            /* Main menu selection follows the pointer each frame. */
+        } else if (fe->menu == FE_MENU_MAIN || fe->menu == FE_MENU_PAUSED) {
+            /* These menus select only the current pointer target. */
             fe->sel = -1;
         }
 
@@ -5513,7 +5531,8 @@ TextureSurface* interface_message_tab_info_text(void)
 
 static void fe_render_pass(FrontEnd* fe, const TextureSurface* hi_font,
                            const TextureSurface* lo_font,
-                           int w, int h, void* px, int pitch, int pass)
+                           int w, int h, void* px, int pitch, int pass,
+                           int draw_cursor)
 {
     if (fe == NULL || px == NULL || !fe->open) {
         return;
@@ -5745,7 +5764,7 @@ static void fe_render_pass(FrontEnd* fe, const TextureSurface* hi_font,
 
     /* Pointer_Standard is the shipped Aclosed.bmp cursor from Lego.cfg's
      * Pointers block. Its red tip is the top-left hotspot. */
-    if (fe->pointer_x >= 0 && fe->pointer_y >= 0
+    if (draw_cursor && fe->pointer_x >= 0 && fe->pointer_y >= 0
         && fe->pointer_x < w && fe->pointer_y < h) {
         char key[128];
         snprintf(key, sizeof(key), "%s Pointers Pointer_Standard",
@@ -5797,7 +5816,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch)
 {
-    fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch, 0);
+    fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch, 0, 1);
 }
 
 void frontend_render_picker_pass(FrontEnd* fe, const TextureSurface* hi_font,
@@ -5805,7 +5824,14 @@ void frontend_render_picker_pass(FrontEnd* fe, const TextureSurface* hi_font,
                                  int w, int h, void* px, int pitch, int foreground)
 {
     fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch,
-                   foreground ? 2 : 1);
+                   foreground ? 2 : 1, 1);
+}
+
+void frontend_render_menu_pass(FrontEnd* fe, const TextureSurface* hi_font,
+                               const TextureSurface* lo_font, int w, int h,
+                               void* px, int pitch, int pass, int draw_cursor)
+{
+    fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch, pass, draw_cursor);
 }
 
 void frontend_render_credits(const TextureSurface* font,
@@ -8884,6 +8910,11 @@ uint32_t interaction_flags_peek(void)
     return s_inter_flags;
 }
 
+void interaction_flags_set(uint32_t flags)
+{
+    s_inter_flags = flags;
+}
+
 /* AdvisorCallbackScheduleGate reads the held scan-code byte at DAT_0076abbc
  * (keyboard offset 0x3c) before walking the current catalog. The anonymous
  * row callback remains an explicit binding because its body is unresolved. */
@@ -9362,6 +9393,193 @@ void frontend_panels_release(void)
         panel_draw_count_set(panel, 0);
         legacy_overlay_image_record_load(NULL, panel, 0u);
     }
+}
+
+/* The 0x41c310 row callback uses the same image owners and catalog traversal
+ * as composition. A missing image retains the reference's 40x40 extent. */
+typedef struct FeActionCatalogHitPass {
+    const EngineContext* engine;
+    float x, y;
+    float position[2];
+    uint32_t action, kind, entry;
+} FeActionCatalogHitPass;
+
+static int fe_action_catalog_hit_row(int action, int kind, int entry,
+                                    void* payload)
+{
+    FeActionCatalogHitPass* pass = (FeActionCatalogHitPass*)payload;
+    TextureSurface* image = action == 0x49
+        ? interface_build_image_binding_value_get(pass->engine, kind, entry)
+        : interface_action_image_value_get(pass->engine, action);
+    const int width = image != NULL ? image->width : 40;
+    const int height = image != NULL ? image->height : 40;
+    if (pass->x >= pass->position[0] &&
+        pass->x <= pass->position[0] + (float)width &&
+        pass->y >= pass->position[1] &&
+        pass->y <= pass->position[1] + (float)height) {
+        uint32_t position[2];
+        pass->action = (uint32_t)action;
+        if (action == 0x49) {
+            pass->kind = (uint32_t)kind;
+            pass->entry = (uint32_t)entry;
+        }
+        cursor_tile_selection_update_by_type(action, (uint32_t)kind,
+                                               (uint32_t)entry);
+        memcpy(position, pass->position, sizeof(position));
+        selection_coordinates_set(position, (uint32_t)(width - 1),
+                                   (uint32_t)(height - 1));
+        return 1;
+    }
+    pass->position[1] += (float)height;
+    return 0;
+}
+
+void frontend_action_catalog_pointer_setup(SimulationPointerDispatchOps* ops)
+{
+    EventTimerState state;
+    float origin[2];
+    const FeSurroundImage* surround;
+    int width, height;
+    if (ops == NULL) return;
+    frontend_event_timer_state_get(&state);
+    interface_menu_action_layout_peek(origin);
+    ops->overlay_offset_x = state.timer;
+    ops->overlay_offset_y = origin[1];
+    memset(&ops->focused_rect, 0, sizeof(ops->focused_rect));
+    surround = interface_surround_image_peek(
+        entity_query_flag_count(state.current_event) - 1);
+    if (state.current_event != 0 && state.current_event != 15 &&
+        surround != NULL && interface_back_button_dimensions(&width, &height)) {
+        ops->focused_rect.x = (float)surround->width;
+        ops->focused_rect.y = (float)surround->height;
+        ops->focused_rect.width = (float)width;
+        ops->focused_rect.height = (float)height;
+        ops->focused_rect.enabled = 1;
+    }
+}
+
+int frontend_action_catalog_hit(const EngineContext* engine,
+    const GameContext* game, float x, float y, float offset_x, float offset_y,
+    uint32_t* action_out, uint32_t* kind_out, uint32_t* entry_out)
+{
+    FeActionCatalogHitPass pass;
+    memset(&pass, 0, sizeof(pass));
+    pass.engine = engine;
+    pass.x = x;
+    pass.y = y;
+    pass.position[0] = offset_x;
+    pass.position[1] = offset_y;
+    if (!catalog_callback_by_id_dispatch(game,
+            (int)objective_selection_word_peek(),
+            fe_action_catalog_hit_row, &pass)) return 0;
+    if (action_out != NULL) *action_out = pass.action;
+    if (kind_out != NULL) *kind_out = pass.kind;
+    if (entry_out != NULL) *entry_out = pass.entry;
+    return 1;
+}
+
+/* CPU image composition from AdvisorOverlayUpdate and its 0x41b800 row
+ * callback. Mode, sliding origin, images and action state remain owned by
+ * their existing producers. The count-text overlay and tracker/dialog tail
+ * have separate owners; this adapter does not stand in for those paths. */
+typedef struct FeActionCatalogImagePass {
+    const EngineContext* engine;
+    void* pixels;
+    int pitch, width, height;
+    float position[2];
+} FeActionCatalogImagePass;
+
+static int fe_action_catalog_image_row(int action, int kind, int entry,
+                                      void* payload)
+{
+    FeActionCatalogImagePass* pass = (FeActionCatalogImagePass*)payload;
+    TextureSurface* image;
+    uint32_t flags;
+    if (action == 73) {
+        catalog_slot_flag_update(kind, entry);
+        image = interface_build_image_binding_value_get(pass->engine,
+                                                         kind, entry);
+        flags = input_binding_state_word_get(kind, entry);
+        player_input_flag8_set_clear(kind, entry, 0);
+    }
+    else {
+        input_action_state_update(action);
+        image = interface_action_image_value_get(pass->engine, action);
+        flags = input_action_state_word_get(action);
+        input_entry_flag8_set_clear(action, 0);
+    }
+    /* The reference resolves the current image again after consuming flag
+     * 8. Pass its typed dimensions; never truncate a host image pointer. */
+    advisor_animation_position_and_request_update_image(action, kind, entry,
+        pass->position, action == 73
+            ? interface_build_image_binding_value_get(pass->engine, kind, entry)
+            : interface_action_image_value_get(pass->engine, action));
+    if (image != NULL &&
+        ((flags & 4u) == 0u || sim_status_banner_word_get() != 0u)) {
+        surface_blit_texture(pass->pixels, pass->pitch, pass->width,
+            pass->height, image, (int)pass->position[0],
+            (int)pass->position[1]);
+    }
+    pass->position[1] += image != NULL ? (float)image->height : 40.0f;
+    return 0;
+}
+
+void frontend_action_catalog_images_render(const EngineContext* engine,
+    const GameContext* game, void* pixels, int pitch, int width, int height)
+{
+    EventTimerState state;
+    float origin[2];
+    int count;
+    int has_back;
+    const FeSurroundImage* surround;
+    FeActionCatalogImagePass pass;
+    if (pixels == NULL || width <= 0 || height <= 0) return;
+    frontend_event_timer_state_get(&state);
+    if ((state.flags & 4u) == 0u) return;
+    interface_menu_action_layout_peek(origin);
+    origin[0] = state.timer;
+    count = entity_query_flag_count(state.current_event);
+    /* Config row 1 is stored at source index 0. In the executable the
+     * renderer bases its arrays one entry before that first stored row. */
+    surround = interface_surround_image_peek(count - 1);
+    has_back = state.current_event != 0 && state.current_event != 15;
+    if (surround != NULL) {
+        TextureSurface* image = has_back ? surround->image
+                                         : surround->image_without_back;
+        const int x = has_back ? surround->x : surround->without_back_x;
+        const int y = has_back ? surround->y : surround->without_back_y;
+        if (image != NULL)
+            surface_blit_texture(pixels, pitch, width, height, image,
+                (int)(origin[0] + (float)x), (int)(origin[1] + (float)y));
+    }
+    if (has_back) {
+        const int flash = (input_action_state_word_get(0) & 4u) != 0u;
+        const int blink = sim_status_banner_word_get() != 0u;
+        const int pressed = input_entry_flag8_get(0) != 0u;
+        TextureSurface* back = NULL;
+        if (pressed)
+            back = interface_back_button_image(!(flash && blink));
+        else if ((flash && blink) ||
+                 (!flash && (state.flags & 0x4000u) != 0u))
+            back = interface_back_button_image(0);
+        if (back != NULL && surround != NULL)
+            surface_blit_texture(pixels, pitch, width, height, back,
+                (int)(origin[0] + (float)surround->width),
+                (int)(origin[1] + (float)surround->height));
+        advisor_animation_position_and_request_update_image(0, 0, 0, NULL,
+                                                            NULL);
+        input_entry_flag8_set_clear(0, 0);
+        input_action_state_update(0);
+    }
+    pass.engine = engine;
+    pass.pixels = pixels;
+    pass.pitch = pitch;
+    pass.width = width;
+    pass.height = height;
+    pass.position[0] = origin[0];
+    pass.position[1] = origin[1];
+    (void)catalog_callback_by_id_dispatch(game, state.current_event,
+                                         fe_action_catalog_image_row, &pass);
 }
 
 /* Keep the address-mapped leaf blind like the corpus; the public wrapper
@@ -12325,6 +12543,18 @@ namespace unported_ledger_stubs {
 
 static PointerCursorState s_pointer_cursor_runtime;
 
+void frontend_pointer_config_load(BlockFile* cfg)
+{
+    char key[256];
+    BlockRec* section;
+    snprintf(key, sizeof(key), "%s Pointers", util_root_name(cfg));
+    section = cfg != NULL ? block_subgroup(cfg, key) : NULL;
+    if (section == NULL && cfg != NULL)
+        section = block_subgroup(cfg, "Pointers");
+    pointer_cursor_config_load_target(
+        section != NULL ? block_first_child(section) : NULL);
+}
+
 static void pointer_cursor_slot_release(PointerCursorSlot* slot)
 {
     if (slot == NULL || slot->resource == NULL) return;
@@ -12453,28 +12683,23 @@ static void pointer_cursor_flic_blit(void* pixels, int pitch, int width,
     }
 }
 
-// FUNCTION: LEGORR 0x0045cc70
-void pointer_cursor_draw_target(uint32_t x, uint32_t y)
+/* The software frame already owns its target lock. Keep resource selection
+ * and animated/bitmap drawing shared with the legacy target entry point. */
+void pointer_cursor_draw_pixels(uint32_t x, uint32_t y, void* pixels,
+                                 int pitch, int width, int height)
 {
-    DisplaySurface* target = surface_active_render_target_get();
     const int selected = media_pointer_cursor_slot();
     PointerCursorSlot* slot;
-    void* pixels = NULL;
-    int pitch = 0;
-    if (target == NULL || selected < 0 || selected >= POINTER_CURSOR_COUNT)
+    if (pixels == NULL || pitch <= 0 || width <= 0 || height <= 0 ||
+        selected < 0 || selected >= POINTER_CURSOR_COUNT)
         return;
-    if (surface_lock(target, &pixels, &pitch) < 0) return;
-    if (pixels == NULL) {
-        surface_unlock(target, pixels);
-        return;
-    }
     slot = &s_pointer_cursor_runtime.slots[selected];
     if (!slot->animated) {
         TextureSurface* bitmap = (TextureSurface*)slot->resource;
         if (bitmap == NULL)
             bitmap = (TextureSurface*)s_pointer_cursor_runtime.slots[0].resource;
         if (bitmap != NULL)
-            surface_blit_texture(pixels, pitch, target->w, target->h, bitmap,
+            surface_blit_texture(pixels, pitch, width, height, bitmap,
                                  (int)x, (int)y);
     }
     else if (slot->resource != NULL) {
@@ -12483,14 +12708,24 @@ void pointer_cursor_draw_target(uint32_t x, uint32_t y)
         const int source_key_enabled = flags != NULL
             ? (int)((~*flags >> 20) & 1u) : 0;
         if (s_pointer_cursor_runtime.slots[1].resource != NULL)
-            surface_blit_texture(pixels, pitch, target->w, target->h,
+            surface_blit_texture(pixels, pitch, width, height,
                 (TextureSurface*)s_pointer_cursor_runtime.slots[1].resource,
                 (int)x, (int)y);
         (void)flic_tick_loop(animation, 1);
-        pointer_cursor_flic_blit(pixels, pitch, target->w, target->h,
+        pointer_cursor_flic_blit(pixels, pitch, width, height,
             animation, (int)x + slot->hot_x, (int)y + slot->hot_y,
             source_key_enabled);
     }
+}
+
+// FUNCTION: LEGORR 0x0045cc70
+void pointer_cursor_draw_target(uint32_t x, uint32_t y)
+{
+    DisplaySurface* target = surface_active_render_target_get();
+    void* pixels = NULL;
+    int pitch = 0;
+    if (target == NULL || surface_lock(target, &pixels, &pitch) < 0) return;
+    pointer_cursor_draw_pixels(x, y, pixels, pitch, target->w, target->h);
     surface_unlock(target, pixels);
 }
 

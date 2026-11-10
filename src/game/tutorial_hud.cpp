@@ -38,7 +38,6 @@ typedef struct TutorialTokenEntry {
     int kind;
 } TutorialTokenEntry;
 
-#define NERP_ICON_STATE_COUNT 29
 #define NERP_TUTORIAL_CELL_CAPACITY 2048
 
 typedef struct NerpTutorialCellState {
@@ -64,8 +63,6 @@ typedef struct NerpRuntimeState {
     uint32_t message_suppress_arrow;
     uint32_t message_sound_active;
     float message_timer;
-    uint32_t icon_clicked[NERP_ICON_STATE_COUNT];
-    uint32_t icon_flashing[NERP_ICON_STATE_COUNT];
     float icon_position[2];
     uint32_t icon_space;
     uint32_t icon_width;
@@ -2228,7 +2225,7 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     {
-        static const struct NerpIconCallback { uint8_t command; uint8_t slot; uint8_t operation; } icons[] = {
+        static const struct NerpIconCallback { uint16_t command; uint8_t slot; uint8_t operation; } icons[] = {
             {51,0,0}, {53,1,0}, {54,1,1}, {55,2,1}, {56,3,1},
             {57,3,0}, {58,3,2}, {59,1,2}, {60,2,2}, {61,4,1},
             {62,4,0}, {63,4,2}, {64,5,1}, {65,5,0}, {66,5,2},
@@ -2247,18 +2244,71 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
             {256,26,1}, {257,26,2}, {258,27,0}, {259,27,1}, {260,27,2},
             {263,28,0}, {264,28,1}, {265,28,2}
         };
+        /* These are action IDs, not NERP-private counters. Object names
+         * must resolve through the loaded type table rather than guessed
+         * building rows. Slots 0 and 2 both name Teleport in the PE. */
+        static const int actions[] = {
+            1, 2, 1, 73, 0, 11, 24, 5, 73, 13, 73, 73, 73,
+            25, 48, 53, 54, 73, 73, 73, 57, 58, 61, 62, 65,
+            -1, 56, 33, 14
+        };
+        static const char* const bindings[] = {
+            NULL, NULL, NULL, "Toolstation", NULL, NULL, NULL, NULL,
+            "TeleportPad", NULL, "Gunstation", "TeleportBIG", "Upgrade",
+            NULL, NULL, NULL, NULL, "Powerstation", "Barracks", "Geo-dome",
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        };
         uint32_t i;
         for (i = 0u; i < sizeof(icons) / sizeof(icons[0]); ++i) {
+            int action;
+            int kind = 0, entry = 0;
             if (icons[i].command != command) continue;
+            action = actions[icons[i].slot];
+            if (action == 73 && !entity_type_row_for_name(
+                    bindings[icons[i].slot], &kind, &entry)) {
+                *result_out = 0u;
+                return 1;
+            }
             if (icons[i].operation == 0u) {
-                *result_out = s_nerp_runtime.icon_clicked[icons[i].slot];
+                *result_out = action == 73
+                    ? input_binding_click_count_get(kind, entry)
+                    : input_action_click_count_get(action);
             } else if (icons[i].operation == 1u && argc == 1u && args != NULL) {
-                uint32_t old = s_nerp_runtime.icon_clicked[icons[i].slot];
-                s_nerp_runtime.icon_clicked[icons[i].slot] = args[0];
-                *result_out = old;
+                *result_out = action == 73
+                    ? input_binding_click_count_swap(kind, entry, args[0])
+                    : input_action_click_count_swap(action, args[0]);
             } else if (icons[i].operation == 2u && argc == 1u && args != NULL) {
-                s_nerp_runtime.icon_flashing[icons[i].slot] = args[0] == 1u;
-                *result_out = args[0] == 1u;
+                uint32_t flags;
+                if (action == -1) {
+                    /* FlashCallToArms is a direct advisor request, not an
+                     * action-table flash. Its wrapper always returns zero. */
+                    uint32_t slot;
+                    if (args[0] != 0u) {
+                        if (advisor_animation_slot_id_resolve(6u, 2u, &slot))
+                            (void)advisor_request_admit((int)slot, 1);
+                    }
+                    else advisor_clear_active_state();
+                    *result_out = 0u;
+                }
+                else if (action == 73) {
+                    flags = input_binding_state_word_get(kind, entry);
+                    input_binding_state_word_set(kind, entry,
+                        args[0] != 0u ? flags | 4u : flags & ~4u);
+                    *result_out = args[0];
+                }
+                else {
+                    flags = input_action_state_word_get(action);
+                    if (args[0] == 1u) {
+                        (void)advisor_action_indicator_request(action, 1);
+                        input_action_state_word_set(action, flags | 4u);
+                        *result_out = 1u;
+                    }
+                    else {
+                        advisor_clear_active_state();
+                        input_action_state_word_set(action, flags & ~4u);
+                        *result_out = 0u;
+                    }
+                }
             } else {
                 *result_out = 0u;
             }

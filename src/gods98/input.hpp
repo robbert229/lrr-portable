@@ -240,6 +240,14 @@ uint32_t input_action_state_word_get(int action);
 void input_action_state_word_set(int action, uint32_t flags);
 uint32_t input_binding_state_word_get(int kind, int entry);
 void input_binding_state_word_set(int kind, int entry, uint32_t flags);
+/* Completed catalog input and NERP callbacks share these counters. Binding
+ * rows use the same kind 1 / kind 4 index space as their live flag words. */
+uint32_t input_action_click_count_get(int action);
+uint32_t input_action_click_count_swap(int action, uint32_t value);
+uint32_t input_binding_click_count_get(int kind, int entry);
+uint32_t input_binding_click_count_swap(int kind, int entry, uint32_t value);
+void input_action_completion_record(int action, int current_mode, int entry);
+void input_action_level_state_clear(void);
 typedef int (*InputActionStateQueryFn)(void* context, int action);
 void input_action_state_query_set(InputActionStateQueryFn query,
                                   void* context);

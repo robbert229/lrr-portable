@@ -633,6 +633,28 @@ static int frame_catalog_slot_rank(int category, int slot, void* context)
     return (int)entity_indexed_record_word_at_b4_get(1, slot, 0);
 }
 
+static int frame_action_catalog_query(void* context, int action)
+{
+    FrameloopApplicationState* app = (FrameloopApplicationState*)context;
+    if (app == NULL || app->game_storage == NULL) return 0;
+    /* The reference predicate reads the current selected tile, not the
+     * cursor or pending tile. Retrieve the live contexts on every call;
+     * a frame-local pointer-dispatch record does not outlive its scope. */
+    return tutorial_path_menu_action(app->game_storage, &app->engine_context,
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+        action, (int)map_store_pair_word(0), (int)map_store_pair_word(1));
+}
+
+static int frame_action_catalog_hit(void* context, float x, float y,
+    float offset_x, float offset_y, uint32_t* action, uint32_t* kind,
+    uint32_t* entry)
+{
+    FramePointerDispatchContext* frame = (FramePointerDispatchContext*)context;
+    if (frame == NULL) return 0;
+    return frontend_action_catalog_hit(frame->engine, frame->game,
+        x, y, offset_x, offset_y, action, kind, entry);
+}
+
 static uint32_t frame_ui_action_entity_flags(void* context, void* entity,
                                              int offset)
 {
@@ -993,8 +1015,15 @@ static void frame_ui_action_selected_entity_action_21(void* context)
         (void)entity_remove_object_if_class6(state->game, entities[i]);
 }
 
-static void frame_ui_action_complete(void* context, int action, int cell_x,
-                                    int cell_y)
+static void frame_ui_action_count(void* context, int action, int entry)
+{
+    (void)context;
+    input_action_completion_record(action,
+        (int)objective_selection_word_peek(), entry);
+}
+
+static void frame_ui_action_complete(void* context, int action, int kind,
+                                    int entry)
 {
     FramePointerDispatchContext* frame =
         (FramePointerDispatchContext*)context;
@@ -1003,13 +1032,13 @@ static void frame_ui_action_complete(void* context, int action, int cell_x,
     if (frame == NULL || frame->ui_action_state == NULL) return;
     state = frame->ui_action_state;
     state->current_mode = (int)objective_selection_word_peek();
-    state->selected_cell_x = cell_x;
-    state->selected_cell_y = cell_y;
+    state->selected_cell_x = (int)map_store_pair_word(0);
+    state->selected_cell_y = (int)map_store_pair_word(1);
     state->cursor_action_x = (int)cursor_tile_pair_peek(0);
     state->cursor_action_y = (int)cursor_tile_pair_peek(1);
     state->action_flags = global_state_low_word_get();
     state->cursor_flags = terrain_choice_flags_peek();
-    tutorial_nerp_pointer_release_record(action, cell_x, cell_y);
+    tutorial_nerp_pointer_release_record(action, kind, entry);
     ui_action_dispatch_state_install(state);
     result = ui_action_dispatch(action);
     global_state_low_word_set(state->action_flags);
@@ -2892,6 +2921,8 @@ static void frameloop_briefing_render(PlatformWindow* win,
     advisor_text_display_worker(delta);
     pixels = NULL;
     if (surface_lock(surf, &pixels, &pitch) != 0) return;
+    pointer_cursor_draw_pixels(s_renderer_word_a, s_renderer_word_b,
+                               pixels, pitch, WINDOW_W, WINDOW_H);
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
@@ -3021,7 +3052,7 @@ static void frameloop_level_return_begin(FrameloopApplicationState* app)
 // FUNCTION: LEGORR 0x004129d0
 static void menu_overlay_surface_and_text_setup(
     FrontEnd* fe, const TextureSurface* hi_font, const TextureSurface* lo_font,
-    void* pixels, int pitch, int width, int height)
+    void* pixels, int pitch, int width, int height, int draw_cursor)
 {
     if (fe == NULL || pixels == NULL) {
         return;
@@ -3030,8 +3061,8 @@ static void menu_overlay_surface_and_text_setup(
     const FeSubmenu* active = frontend_active_submenu(fe);
     const int picker = frontend_picker_active(fe);
     if (picker) {
-        frontend_render_picker_pass(fe, hi_font, lo_font, width, height,
-                                    pixels, pitch, 0);
+        frontend_render_menu_pass(fe, hi_font, lo_font, width, height,
+                                  pixels, pitch, 1, draw_cursor);
     }
     if (active != NULL
         && (frontend_picker_active(fe) || fe->menu == FE_MENU_SAVE
@@ -3054,10 +3085,11 @@ static void menu_overlay_surface_and_text_setup(
     }
     frontend_picker_panel_text(fe, hi_font, pixels, pitch, width, height);
     if (picker) {
-        frontend_render_picker_pass(fe, hi_font, lo_font, width, height,
-                                    pixels, pitch, 1);
+        frontend_render_menu_pass(fe, hi_font, lo_font, width, height,
+                                  pixels, pitch, 2, draw_cursor);
     } else {
-        frontend_render(fe, hi_font, lo_font, width, height, pixels, pitch);
+        frontend_render_menu_pass(fe, hi_font, lo_font, width, height,
+                                  pixels, pitch, 0, draw_cursor);
     }
 }
 
@@ -3131,7 +3163,7 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
     frontend_background_render(fe, pixels, pitch, WINDOW_W, WINDOW_H);
     menu_overlay_surface_and_text_setup(fe, hi_font,
                                         lo_font, pixels, pitch, WINDOW_W,
-                                        WINDOW_H);
+                                        WINDOW_H, game->level == NULL);
     const FeSubmenu* active = frontend_active_submenu(fe);
     if (active != NULL) {
         for (int i = 0; i < active->item_count; ++i) {
@@ -3139,6 +3171,9 @@ static void frameloop_menu_render(PlatformWindow* win, DisplaySurface* surf,
                                              WINDOW_W, WINDOW_H);
         }
     }
+    if (game->level != NULL)
+        pointer_cursor_draw_pixels(s_renderer_word_a, s_renderer_word_b,
+                                   pixels, pitch, WINDOW_W, WINDOW_H);
     platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H, frame);
     platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
     surface_unlock(surf, pixels);
@@ -3643,6 +3678,7 @@ int frameloop_application_init(void)
     catalog_slot_flag_hooks_set(frame_catalog_slot_eligible,
                                 frame_catalog_slot_available,
                                 frame_catalog_slot_rank, &game);
+    input_action_state_query_set(frame_action_catalog_query, &app);
 
     /* Real corpus textures through the merged texture loader. */
     TextureSurface*& rock = app.rock_texture;
@@ -3687,6 +3723,9 @@ int frameloop_application_init(void)
         tooltip_software_initialize(tooltip_font, WINDOW_W, WINDOW_H,
             (float)tooltip_r / 255.0f, (float)tooltip_g / 255.0f,
             (float)tooltip_b / 255.0f);
+        /* GameConfigInit supplies the tooltip font to the action catalog
+         * initializer at the shipped logical origin (0x41fd1b). */
+        interface_menu_action_labels_init(565u, 18u, tooltip_font);
         /* GameConfigInit loads the Samples aliases after enabling the sound
          * bank. This portable startup has the Lego.cfg tree ready earlier,
          * so load the same section once the audio backend opens. */
@@ -4582,9 +4621,12 @@ static int frameloop_application_gameplay_frame(float dt)
             memset(&ui_action_ops, 0, sizeof(ui_action_ops));
             pointer_ops.context = &pointer_context;
             pointer_ops.feature_word = ctx.debug;
-            /* No world-to-catalog fallback. The existing dependency-grid
-             * hit path remains live. The real control-catalog walker is a
-             * separate missing renderer/UI owner, not a guessed rectangle. */
+            /* The existing arbiter owns the whole gesture. Resolve the
+             * authored catalog after the dependency-grid UI, before world
+             * input, using the same sliding layout and images as rendering. */
+            frontend_action_catalog_pointer_setup(&pointer_ops);
+            pointer_ops.overlay_fallback = frame_action_catalog_hit;
+            pointer_ops.action_count = frame_ui_action_count;
             pointer_ops.action_complete = frame_ui_action_complete;
             ui_action_ops.context = &pointer_context;
             ui_action_ops.current_selection_get =
@@ -4908,9 +4950,13 @@ static int frameloop_application_gameplay_frame(float dt)
                                          ui, rock_x + 64 + 8, rock_y);
                 }
             }
-            if (game.level != NULL && !mission_reward_active(&game))
+            if (game.level != NULL && !mission_reward_active(&game)) {
                 frontend_panels_render(ctx.state, pixels, pitch,
                                        WINDOW_W, WINDOW_H);
+                if ((engine_debug_word_peek() & 0x1000u) == 0u)
+                    frontend_action_catalog_images_render(&ctx, &game,
+                        pixels, pitch, WINDOW_W, WINDOW_H);
+            }
             /* Help Window (issue #85): the option toggles the shipped help
              * panel over the level; the advisor stream text leads when the
              * announcer has one. frontend_help_overlay holds the On/Off
@@ -4979,6 +5025,8 @@ static int frameloop_application_gameplay_frame(float dt)
                                             (uint32_t)input.mouse_y, dt * 25.0f);
                 timed_effect_slot_render_hooks_set(NULL);
             }
+            pointer_cursor_draw_pixels((uint32_t)input.mouse_x,
+                (uint32_t)input.mouse_y, pixels, pitch, WINDOW_W, WINDOW_H);
             platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
                                 (int)frames);
             platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
@@ -5120,6 +5168,7 @@ void frameloop_application_shutdown(void)
     frontend_close(&fe);
     sav_tree_roots_clear();
     catalog_slot_flag_hooks_set(NULL, NULL, NULL, NULL);
+    input_action_state_query_set(NULL, NULL);
     frameloop_game_context_dispose(&game);
     free(fe_storage);
     engine_current_context_bind(NULL);

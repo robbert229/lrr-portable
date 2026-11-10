@@ -24,6 +24,8 @@ void ui_text_output_position_and_draw(void* record, uint32_t start_line,
 extern void scroll_offset_from_cursor_update(void);
 extern void* panel_ui_record_peek(void);
 extern uint32_t screen_right_edge_cache_peek(void);
+extern uint32_t interaction_flags_peek(void);
+extern void interaction_flags_set(uint32_t flags);
 
 #define MESSAGE_CD_RESET 25.0f /* 0x41c80000 */
 #define IDX_LIST_SLOTS MESSAGE_MAX_ID
@@ -281,7 +283,7 @@ uint32_t catalog_slot_flag_word_get(int category, int slot)
 
 void catalog_slot_flag_global_state_set(uint32_t flags)
 {
-    global_state_low_word_set(flags);
+    interaction_flags_set(flags);
 }
 
 // FUNCTION: LEGORR 0x0041c800
@@ -293,7 +295,7 @@ void catalog_slot_flag_update(int category, int slot)
         slot >= CATALOG_SLOT_CAPACITY) return;
     flags = input_binding_state_word_get(category, slot);
     if ((flags & 2u) == 0 &&
-        (global_state_low_word_get() & 0x80u) != 0u) {
+        (interaction_flags_peek() & 0x80u) != 0u) {
         if (s_catalog_slot_eligible != NULL
             && s_catalog_slot_available != NULL
             && s_catalog_slot_eligible(category, slot,

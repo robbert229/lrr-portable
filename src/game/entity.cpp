@@ -10558,7 +10558,7 @@ uint32_t stats_instance_word_at_f0(const void* config_block)
 // GLOBAL: LEGORR 0x0055627c
 static uint32_t s_catalog_counts[5]; /* DAT_0055627c/80/84/88/8c roles */
 static const void* s_catalog_name_tables[4]; /* DAT_005561e8/ec/f0/f4 roles */
-#define CATALOG_ID_PAIRS 8u
+#define CATALOG_ID_PAIRS 24u
 
 // FUNCTION: LEGORR 0x0042ef40
 int stats_level_record_count_for_stat_type(int stat_type)

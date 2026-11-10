@@ -30,6 +30,8 @@
 #include "crt/crt.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/message.hpp"
+#include "gods98/input.hpp"
+#include "gods98/engine.hpp"
 #include "gods98/resource.hpp"
 #include "gods98/texture.hpp"
 #include "game/entity.hpp"
@@ -54,6 +56,19 @@ static void* s_c179_loader(const char* key)
 }
 
 static int s_failures = 0;
+static int s_action_ready_calls;
+static int s_action_ready(void*, int action)
+{
+    ++s_action_ready_calls;
+    input_action_state_word_set(action,
+        input_action_state_word_get(action) | 4u);
+    return 1;
+}
+static int s_catalog_ready(int, int, void*)
+{
+    ++s_action_ready_calls;
+    return 1;
+}
 
 
 #define CHECK(cond, msg)                                                       \
@@ -588,6 +603,29 @@ static void test_pointer(void)
     block_close(cfg);
 }
 
+static void test_interface_action_labels(void)
+{
+    int action = -1;
+    /* The registered wall group and UiActionDispatch use these reference
+     * enum values, not the old order of the image-name initializer. */
+    CHECK(interface_menu_action_label_find("Interface_MenuItem_Dig", &action)
+          && action == 11,
+          "action images: Drill Wall uses dispatcher action 11");
+    CHECK(strcmp(interface_menu_action_label_get(12),
+                 "Interface_MenuItem_Reinforce") == 0
+          && strcmp(interface_menu_action_label_get(13),
+                    "Interface_MenuItem_Dynamite") == 0
+          && strcmp(interface_menu_action_label_get(15),
+                    "Interface_MenuItem_DeselectDig") == 0,
+          "action images: wall group resolves its authored artwork");
+    CHECK(interface_menu_action_label_find("Interface_MenuItem_RemovePath",
+                                           &action) && action == 6,
+          "action images: Remove Path keeps reference enum position");
+    CHECK(interface_menu_action_label_get(-1) == NULL
+          && interface_menu_action_label_get(74) == NULL,
+          "action images: invalid enum has no resource name");
+}
+
 static void test_pause(void)
 {
     /* Shipped PausedMenu shape: Menu1 (Continue/Options/Quit), Menu2
@@ -652,11 +690,16 @@ static void test_pause(void)
     FeInput yes = { 0, 0, 0, 0, 0, 0, 1, 61, 1 };
     CHECK(frontend_tick(&fe, &quit, NULL) == FE_EVT_NONE && fe.sub == 2,
         "pause: click Quit opens confirmation");
+    FeInput outside = { 0, 0, 0, 0, 0, 0, 600, 400, 0 };
+    CHECK(frontend_tick(&fe, &outside, NULL) == FE_EVT_NONE && fe.sel == -1,
+        "pause: confirmation entry outside has no highlighted row");
     enter.mouse_x = 1; enter.mouse_y = 101;
     CHECK(frontend_tick(&fe, &enter, NULL) == FE_EVT_NONE && fe.sub == 2,
         "pause: Enter does not activate No");
     CHECK(frontend_tick(&fe, &no, NULL) == FE_EVT_NONE && fe.sub == 0,
         "pause: click No returns to root");
+    CHECK(frontend_tick(&fe, &outside, NULL) == FE_EVT_NONE && fe.sel == -1,
+        "pause: returned root outside has no highlighted row");
     CHECK(frontend_tick(&fe, &quit, NULL) == FE_EVT_NONE && fe.sub == 2,
         "pause: click Quit reopens confirmation");
     CHECK(frontend_tick(&fe, &yes, NULL) == FE_EVT_LEAVE_LEVEL && !fe.open,
@@ -667,6 +710,8 @@ static void test_pause(void)
     FeInput restart = { 0, 0, 0, 0, 0, 0, 310, 274, 1 };
     CHECK(frontend_tick(&fe, &restart, NULL) == FE_EVT_NONE && fe.sub == 3,
         "pause: click Restart opens confirmation");
+    CHECK(frontend_tick(&fe, &outside, NULL) == FE_EVT_NONE && fe.sel == -1,
+        "pause: restart confirmation outside has no highlighted row");
     CHECK(frontend_tick(&fe, &yes, NULL) == FE_EVT_START_LEVEL
         && strcmp(fe.pending_level, "Tran01") == 0,
         "pause: click Yes restarts the level");
@@ -927,6 +972,19 @@ static void test_cycle_pointer_and_layout(void)
         frontend_render(&fe, NULL, NULL, 640, 480, pixels, 640 * 4);
         CHECK(pixels[(179 * 640 + 450) * 4] != 0,
               "cycle layout: value drawn at authored column");
+        FeInput outside = { 0, 0, 0, 1, 0, 0, 600, 400, 0, 0 };
+        frontend_tick(&fe, &outside, NULL);
+        CHECK(fe.sel == -1 && sub->items[0].value == 1,
+              "cycle input: outside Right cannot adjust stale selection");
+        outside.right = 0;
+        outside.down = 1;
+        frontend_tick(&fe, &outside, NULL);
+        CHECK(fe.sel == -1,
+              "cycle input: outside Down cannot create pointer highlight");
+        memset(pixels, 0, 640 * 480 * 4);
+        frontend_render(&fe, NULL, NULL, 640, 480, pixels, 640 * 4);
+        CHECK(pixels[(179 * 640 + 450) * 4] == 200,
+              "cycle layout: missed row uses unselected glyph color");
         free(pixels);
     }
     block_close(cfg);
@@ -1118,6 +1176,7 @@ int main(int argc, char** argv)
     test_font();
     test_font_blank_advance();
     test_pointer();
+    test_interface_action_labels();
     test_pause();
     test_slots();
     test_options();
@@ -2510,6 +2569,148 @@ int main(int argc, char** argv)
             remove(files[k]);
         }
         rmdir(dir);
+    }
+
+    /* InterfaceImagesConfigLoad always continues into the build-image and
+     * Back loaders, even after a populated generic action section. Missing
+     * bitmap files here leave metadata observable without a WAD mount. */
+    {
+        BlockFile* cfg = s_parse(
+            "Lego* { InterfaceImages { "
+            "Interface_MenuItem_Dig NULL:NULL:NULL:Dig:Unavailable:KEY_D "
+            "} VehicleTypes { FixtureVehicle 1 } "
+            "BuildingTypes { FixtureBuilding 1 } "
+            "InterfaceBackButton 28:28:missing_hl.bmp:missing_pr.bmp:Back }");
+        CHECK(interface_images_config_load(cfg) == 1,
+              "populated action image section is parsed");
+        int width = 0, height = 0;
+        CHECK(interface_back_button_dimensions(&width, &height) != 0
+                  && width == 28 && height == 28,
+              "generic image loop continues to the Back metadata loader");
+        const char* action = interface_back_button_action();
+        CHECK(action != NULL && strcmp(action, "Back") == 0,
+              "generic image loop retains the authored Back action");
+        CHECK(interface_build_image_count(0) == 1u
+                  && interface_build_image_count(1) == 1u,
+              "generic image loop continues to both build catalogs");
+        block_close(cfg);
+    }
+
+    /* Catalog input shares the authored surround offsets and action groups;
+     * absent bitmaps retain the reference's 40x40 hit geometry. */
+    {
+        BlockFile* cfg = s_parse(
+            "Lego* { InterfaceImages { "
+            "Interface_MenuItem_Dig NULL:NULL:NULL:Dig:Unavailable:KEY_D "
+            "} InterfaceBackButton 28:28:missing_hl.bmp:missing_pr.bmp:Back "
+            "InterfaceSurroundImages { 4 NULL:-36:-9:-32:5:NULL:-10:-9 } }");
+        EventTimerState previous, state;
+        frontend_event_timer_state_get(&previous);
+        interface_menu_action_labels_init(565, 18, NULL);
+        (void)interface_images_config_load(cfg);
+        CHECK(interface_surround_images_config_load(cfg) == 1,
+              "catalog input retains configured surround offsets without bitmap IO");
+        memset(&state, 0, sizeof(state));
+        state.current_event = 7;
+        state.flags = 0x84u;
+        state.timer = 500.0f;
+        frontend_event_timer_state_set(&state);
+        SimulationPointerDispatchOps ops;
+        memset(&ops, 0, sizeof(ops));
+        ops.context = &state;
+        frontend_action_catalog_pointer_setup(&ops);
+        CHECK(ops.context == &state && ops.overlay_offset_x == 500.0f
+                  && ops.overlay_offset_y == 18.0f,
+              "catalog layout keeps caller context and current sliding origin");
+        CHECK(ops.focused_rect.enabled && ops.focused_rect.x == -32.0f
+                  && ops.focused_rect.y == 5.0f
+                  && ops.focused_rect.width == 28.0f
+                  && ops.focused_rect.height == 28.0f,
+              "Back uses its authored offsets and configured control dimensions");
+        uint32_t action = 99, kind = 99, entry = 99;
+        CHECK(frontend_action_catalog_hit(NULL, NULL, 540.0f, 58.0f,
+                  500.0f, 18.0f, &action, &kind, &entry) != 0
+                  && action == 11u && kind == 0u && entry == 0u,
+              "missing image retains inclusive 40x40 extent and authored Drill code");
+        action = 99;
+        CHECK(frontend_action_catalog_hit(NULL, NULL, 541.0f, 58.0f,
+                  500.0f, 18.0f, &action, NULL, NULL) == 0
+                  && action == 99,
+              "catalog miss preserves output and cannot widen the missing image");
+        state.current_event = 0;
+        frontend_event_timer_state_set(&state);
+        frontend_action_catalog_pointer_setup(&ops);
+        CHECK(!ops.focused_rect.enabled, "default catalog has no Back target");
+        state.current_event = 15;
+        frontend_event_timer_state_set(&state);
+        frontend_action_catalog_pointer_setup(&ops);
+        CHECK(!ops.focused_rect.enabled, "mode fifteen retains no-Back policy");
+        frontend_event_timer_state_set(&previous);
+        block_close(cfg);
+    }
+
+    /* Availability reads the frontend's DAT_004de1f8; the separate engine
+     * placement-mode word DAT_00556ed4 must neither enable nor disable it. */
+    {
+        const uint32_t interaction = interaction_flags_peek();
+        const uint32_t placement = global_state_low_word_get();
+        const uint32_t action = input_action_state_word_get(2);
+        const uint32_t catalog = input_binding_state_word_get(4, 0);
+        input_action_state_query_set(s_action_ready, NULL);
+        interaction_flags_set(0x84u);
+        global_state_low_word_set(0u);
+        s_action_ready_calls = 0;
+        input_action_state_word_set(2, 1u);
+        input_action_state_update(2);
+        CHECK(s_action_ready_calls == 1
+                  && input_action_state_word_get(2) == 4u,
+              "availability uses interaction mode and preserves predicate writes");
+        interaction_flags_set(0u);
+        global_state_low_word_set(0x80u);
+        input_action_state_update(2);
+        CHECK(s_action_ready_calls == 1
+                  && (input_action_state_word_get(2) & 1u) != 0u,
+              "engine placement flags cannot enable the action catalog");
+        catalog_slot_flag_hooks_set(s_catalog_ready, s_catalog_ready,
+                                    NULL, NULL);
+        catalog_slot_flag_global_state_set(0x84u);
+        global_state_low_word_set(0u);
+        input_binding_state_word_set(4, 0, 0u);
+        catalog_slot_flag_update(4, 0);
+        CHECK((input_binding_state_word_get(4, 0) & 1u) == 0u,
+              "build catalog eligibility uses the same interaction owner");
+        catalog_slot_flag_hooks_set(NULL, NULL, NULL, NULL);
+        input_action_state_query_set(NULL, NULL);
+        input_binding_state_word_set(4, 0, catalog);
+        input_action_state_word_set(2, action);
+        interaction_flags_set(interaction);
+        global_state_low_word_set(placement);
+    }
+
+    /* The admitted pointer callback counts before executing an action.
+     * Build icons count in the current catalog's kind, not in action 73. */
+    {
+        const uint32_t ordinary = input_action_click_count_swap(11, 5u);
+        const uint32_t vehicle = input_binding_click_count_swap(1, 5, 10u);
+        const uint32_t building = input_binding_click_count_swap(4, 5, 20u);
+        input_action_completion_record(11, 0x13, 5);
+        CHECK(input_action_click_count_get(11) == 6u,
+              "ordinary completion and script counter share the action ID");
+        input_action_completion_record(73, 0x13, 5);
+        input_action_completion_record(73, 0x14, 5);
+        input_action_completion_record(73, 0x15, 5);
+        input_action_completion_record(73, 7, 5);
+        CHECK(input_binding_click_count_get(4, 5) == 21u
+                  && input_binding_click_count_get(1, 5) == 12u,
+              "binding counts use the three admitted catalog modes");
+        CHECK(input_action_click_count_swap(11, 0xffffffffu) == 6u,
+              "script counter setter returns the completed count");
+        input_action_completion_record(11, 0, 0);
+        CHECK(input_action_click_count_get(11) == 0u,
+              "completion wraps as an unsigned reference DWORD");
+        (void)input_action_click_count_swap(11, ordinary);
+        (void)input_binding_click_count_swap(1, 5, vehicle);
+        (void)input_binding_click_count_swap(4, 5, building);
     }
 
     if (s_failures == 0) {
