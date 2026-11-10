@@ -5,7 +5,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2116 mapped functions
+[game-only] 2117 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -1235,7 +1235,7 @@
 0x0045adb0 20.09 ledger_stub_0045adb0_SimCursorInteractionTick
 0x0045b310 19.64 ledger_stub_0045b310_SimCategoryCellHitTest
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
-0x0045b620 52.94 ui_list_priority_button_action_dispatch
+0x0045b620 100.00 ui_list_priority_button_action_dispatch
 0x0045b740 20.59 ui_scroll_info_panel_initialize
 0x0045b850 12.50 ui_overlay_create_configured_element
 0x0045b8a0 100.00 point_distance_within_radius
@@ -1266,19 +1266,20 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 5.50 pointer_cursor_draw_target
 0x0045cd90 88.89 media_pointer_cursor_override_tick
-0x0045cdc0 17.76 frontend_priority_images_config_load
-0x0045cf00 21.62 ui_priority_label_layout_apply
-0x0045cf50 18.10 frontend_priorities_config_load
-0x0045d060 32.50 frontend_priorities_image_positions_config_load
-0x0045d110 7.62 ledger_stub_0045d110_RegionContainmentScanUpdate
-0x0045d300 32.00 priority_image_selection_state_update
-0x0045d370 32.56 region_bounds_set
-0x0045d3c0 38.10 ui_list_priority_panel_row_move_dispatch
-0x0045d3f0 14.55 ui_list_priority_order_move_to_front
-0x0045d470 28.57 ui_list_entries_swap
-0x0045d4f0 16.28 ui_list_config_entry_enabled_toggle
-0x0045d550 11.21 ui_cursor_move_to_choice_entry
-0x0045d640 10.00 ui_cursor_move_to_element_center
+0x0045cdc0 65.69 priorities_load_images
+0x0045cf00 51.61 priorities_reset
+0x0045cf50 66.27 priorities_load
+0x0045d060 96.55 priorities_load_positions
+0x0045d110 53.99 priorities_handle_cursor
+0x0045d300 100.00 priorities_select
+0x0045d370 100.00 priorities_set_hover_area
+0x0045d3c0 100.00 priorities_change_priority
+0x0045d3f0 53.01 priorities_move_to_top
+0x0045d470 75.00 priorities_move_up
+0x0045d4f0 100.00 priorities_toggle
+0x0045d550 73.10 priorities_move_cursor_to_up_button
+0x0045d640 52.27 priorities_move_cursor_to_image
+0x0045d6d0 52.87 priorities_draw
 0x0045d7e0 18.18 ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad
 0x0045d870 70.83 command_entity_reference_remap
 0x0045d8a0 100.00 object_field14_set
@@ -1700,7 +1701,7 @@
 0x00477550 83.58 string_duplicate
 0x00477590 25.74 formatted_text_escape_decode_and_emit
 0x00477610 79.67 case_insensitive_substring_find
-0x00477710 60.95 block_get_bool(char const *)
+0x00477710 60.95 block_get_bool(1)
 0x004777a0 28.49 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
@@ -1736,7 +1737,7 @@
 0x00479170 25.00 config_rgb_vector_read
 0x00479240 59.46 linked_object_list_release
 0x004792c0 100.00 global_record_list_push_head
-0x004792e0 9.79 block_find(struct BlockFile *, char const *)
+0x004792e0 9.79 block_find(1)
 0x00479490 49.32 block_text_token_pool_grow
 0x00479500 66.67 d3drm_vector_random
 0x00479510 85.71 d3drm_vector_rotate
@@ -2123,7 +2124,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2335 mapped functions
+[full] 2336 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -3353,7 +3354,7 @@
 0x0045adb0 20.09 ledger_stub_0045adb0_SimCursorInteractionTick
 0x0045b310 19.64 ledger_stub_0045b310_SimCategoryCellHitTest
 0x0045b610 100.00 simtick_global_ui_flags_clear_bits12
-0x0045b620 52.94 ui_list_priority_button_action_dispatch
+0x0045b620 100.00 ui_list_priority_button_action_dispatch
 0x0045b740 20.59 ui_scroll_info_panel_initialize
 0x0045b850 12.50 ui_overlay_create_configured_element
 0x0045b8a0 100.00 point_distance_within_radius
@@ -3384,19 +3385,20 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 5.50 pointer_cursor_draw_target
 0x0045cd90 88.89 media_pointer_cursor_override_tick
-0x0045cdc0 17.76 frontend_priority_images_config_load
-0x0045cf00 21.62 ui_priority_label_layout_apply
-0x0045cf50 18.10 frontend_priorities_config_load
-0x0045d060 32.50 frontend_priorities_image_positions_config_load
-0x0045d110 7.62 ledger_stub_0045d110_RegionContainmentScanUpdate
-0x0045d300 32.00 priority_image_selection_state_update
-0x0045d370 32.56 region_bounds_set
-0x0045d3c0 38.10 ui_list_priority_panel_row_move_dispatch
-0x0045d3f0 14.55 ui_list_priority_order_move_to_front
-0x0045d470 28.57 ui_list_entries_swap
-0x0045d4f0 16.28 ui_list_config_entry_enabled_toggle
-0x0045d550 11.21 ui_cursor_move_to_choice_entry
-0x0045d640 10.00 ui_cursor_move_to_element_center
+0x0045cdc0 65.69 priorities_load_images
+0x0045cf00 51.61 priorities_reset
+0x0045cf50 66.27 priorities_load
+0x0045d060 96.55 priorities_load_positions
+0x0045d110 53.99 priorities_handle_cursor
+0x0045d300 100.00 priorities_select
+0x0045d370 100.00 priorities_set_hover_area
+0x0045d3c0 100.00 priorities_change_priority
+0x0045d3f0 53.01 priorities_move_to_top
+0x0045d470 75.00 priorities_move_up
+0x0045d4f0 100.00 priorities_toggle
+0x0045d550 73.10 priorities_move_cursor_to_up_button
+0x0045d640 52.27 priorities_move_cursor_to_image
+0x0045d6d0 52.87 priorities_draw
 0x0045d7e0 18.18 ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad
 0x0045d870 70.83 command_entity_reference_remap
 0x0045d8a0 100.00 object_field14_set
@@ -3818,7 +3820,7 @@
 0x00477550 83.58 string_duplicate
 0x00477590 25.74 formatted_text_escape_decode_and_emit
 0x00477610 79.67 case_insensitive_substring_find
-0x00477710 60.95 block_get_bool(char const *)
+0x00477710 60.95 block_get_bool(1)
 0x004777a0 28.49 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
@@ -3854,7 +3856,7 @@
 0x00479170 25.00 config_rgb_vector_read
 0x00479240 59.46 linked_object_list_release
 0x004792c0 100.00 global_record_list_push_head
-0x004792e0 9.79 block_find(struct BlockFile *, char const *)
+0x004792e0 9.79 block_find(1)
 0x00479490 49.32 block_text_token_pool_grow
 0x00479500 66.67 d3drm_vector_random
 0x00479510 85.71 d3drm_vector_rotate

@@ -2290,8 +2290,6 @@ void byte_range_swap(void* a, void* b, size_t n)
 static float    s_fpair_a[DAT_WINDOW_COUNT]; /* DAT_00552144 entries */
 static float    s_fpair_b[DAT_WINDOW_COUNT]; /* DAT_00552148 entries */
 static void*    s_metric_records[DAT_WINDOW_COUNT]; /* DAT_00552154 */
-static uint32_t s_region_xy[2];  /* DAT_005013a8/3ac */
-static float    s_region_wh[2];  /* DAT_005013b0/b4 */
 static void*    s_panel_records[DAT_WINDOW_COUNT]; /* DAT_00500134 */
 
 
@@ -2383,29 +2381,7 @@ void* indexed_record_pointer_peek(int index)
     return s_metric_records[index];
 }
 
-// FUNCTION: LEGORR 0x0045d370
-void region_bounds_set(const uint32_t* xy_pair, uint32_t w, uint32_t h)
-{
-    if (xy_pair == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    s_region_xy[0] = xy_pair[0];
-    s_region_xy[1] = xy_pair[1];
-    s_region_wh[0] = (float)w; /* the corpus's uint->float casts */
-    s_region_wh[1] = (float)h;
-}
 
-void region_bounds_peek(uint32_t* out_xy, float* out_wh)
-{
-    if (out_xy != NULL) {
-        out_xy[0] = s_region_xy[0];
-        out_xy[1] = s_region_xy[1];
-    }
-    if (out_wh != NULL) {
-        out_wh[0] = s_region_wh[0];
-        out_wh[1] = s_region_wh[1];
-    }
-}
 
 void panel_draw_records_set(int index, void* records)
 {

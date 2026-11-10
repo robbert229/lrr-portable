@@ -943,7 +943,7 @@ typedef struct PositionTrackerBoxDrawOps {
                          float scale, int parameter1, int parameter2);
 } PositionTrackerBoxDrawOps;
 void position_tracker_box_draw_ops_set(const PositionTrackerBoxDrawOps* ops);
-void position_tracker_box_draw(const float bounds[4]); /* FUN_0041cd30 */
+extern "C" void position_tracker_box_draw(const float bounds[4]); /* FUN_0041cd30 */
 typedef struct OverlayTextLine {
     void* entry;
     int kind;
@@ -1093,7 +1093,7 @@ typedef struct AdvisorTextAnimationOps {
 } AdvisorTextAnimationOps;
 void advisor_text_animation_ops_set(const AdvisorTextAnimationOps* ops,
                                     float reset_timer);
-void advisor_text_animation_update(int slot, int force, int selected); /* FUN_0046ac60 */
+extern "C" void advisor_text_animation_update(int slot, int force, int selected); /* FUN_0046ac60 */
 typedef struct AdvisorTextBoxLayoutState {
     uint32_t object_id;
     uint32_t request_id;
@@ -1351,24 +1351,20 @@ void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2);
                                         /* FUN_0045a650 */
 void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
                                 float* out_x2, float* out_y2); /* port hook */
-void ui_entry_bounds_get(int panel, int item, float* out_bounds);
+extern "C" void ui_entry_bounds_get(int panel, int item, float* out_bounds);
                                         /* FUN_0045bf70 */
 
-/* PriorityImageSelectionStateUpdate (FUN_0045d300): the priority-image
- * selection state pair (a sentinel-parked state word plus a flag word —
- * no ported owner, own storage behind the install/peek hooks). */
-int priority_image_selection_state_update(int candidate, int gate, int skip);
-                                        /* FUN_0045d300 */
-void priority_image_state_set(int32_t state, uint32_t flags); /* port hook */
-void priority_image_state_peek(int32_t* state, uint32_t* flags);
-void frontend_priority_images_config_load(BlockFile* values,
-                                          BlockFile* names);
-int frontend_priorities_config_load(BlockFile* values, BlockFile* names,
-                                    const char* section_name);
-void frontend_priorities_image_positions_config_load(BlockFile* values,
-                                                      BlockFile* names);
-void frontend_priority_config_state_get(PriorityConfigState* state);
-int frontend_priority_sound_alias_get(int kind);
+/* Symbol-count pad (finding 506). MSVC 5.0 numbers every symbol a
+ * translation unit declares, and its register and x87-stack choices in later
+ * functions depend on that numbering. Issue #384 removed the eight
+ * priority-panel adapters from this header (src/game/priorities.h replaces
+ * them); this declaration fills their 24 symbol slots so that every other
+ * unit including the header compiles to the same code. It is
+ * never defined or called. Drop it in a change that accepts entropy drift
+ * (ADR 0005). */
+void lrr_symbol_pad_frontend(int, int, int, int, int, int, int, int,
+                             int, int, int, int, int, int, int, int,
+                             int, int, int, int, int, int, int);
 
 /* UiRenderRecordCreate (FUN_0045da90): the 0x3c UI render record — the
  * source, its payload words copied from the caller's array, the extra

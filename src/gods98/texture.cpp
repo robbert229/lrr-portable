@@ -7,6 +7,7 @@
 #include "scene_resources.hpp"
 #include "string.hpp"
 #include "texture.hpp"
+#include "images.h"
 #include "view.hpp"
 #include "heap.hpp"
 #include "crt/crt.hpp"
@@ -402,6 +403,38 @@ TextureSurface* image_surface_load(const char* name, uint32_t flags,
                              (uint32_t)resource->size);
     resource_free(resource);
     return surface;
+}
+
+/* Image_LoadBMPScaled / Image_DisplayScaled adapters (images.h): wrap the
+ * software surface in the original Image record so converted C units can
+ * read its size at the original offsets. */
+Image* image_load_bmp_scaled(const char* name, unsigned int width,
+                             unsigned int height)
+{
+    TextureSurface* surface;
+    Image* image;
+    (void)width;
+    (void)height;
+    surface = image_surface_load(name, 0u, 0u);
+    if (surface == NULL) return NULL;
+    image = (Image*)calloc(1, sizeof(*image));
+    if (image == NULL) {
+        texture_free(surface);
+        return NULL;
+    }
+    image->surface = surface;
+    image->width = (unsigned int)surface->width;
+    image->height = (unsigned int)surface->height;
+    return image;
+}
+
+void image_display_scaled(Image* image, const Area2F* src,
+                          const Point2F* dest_pos, const Point2F* dest_size)
+{
+    (void)image;
+    (void)src;
+    (void)dest_pos;
+    (void)dest_size;
 }
 
 /* ------------------------------------------------------------------ *

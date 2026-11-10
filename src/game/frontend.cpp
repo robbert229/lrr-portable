@@ -22,6 +22,7 @@
 #include <time.h>
 
 #include "frontend.hpp"
+#include "frontend.h"
 #include "objective.hpp"
 #include "entity.hpp"
 #include "terrain_feedback.hpp"
@@ -6073,7 +6074,7 @@ static void (*s_help_window_sound_clear)(int);
 static void (*s_help_render_transition_clear)(int, int);
 
 // FUNCTION: LEGORR 0x0046b770
-static void timed_effect_update_request_set_corpus(int index)
+void timed_effect_update_request_set_corpus(int index)
 {
     s_timed_effect_records[index].flags |= 4u;
 }
@@ -6082,6 +6083,42 @@ void timed_effect_update_request_set(int index)
 {
     if (index >= 0 && index < TIMED_EFFECT_ENTRIES)
         timed_effect_update_request_set_corpus(index);
+}
+
+/* ToolTip_SetContent adapter (frontend.h). The original (FUN_0046b520)
+ * formats into a 512-byte buffer and either loads an image ('@' prefix) or
+ * copies the text into the record, turning "\n" into a newline and '_'
+ * into a space, then measures it and arms the record (flags |= 3). This
+ * port keeps the text path only: the image pointer slot is 32-bit in the
+ * record layout, and the text measurement (FUN_00401c80) has no owner. */
+void tooltip_set_content(int index, const char* format, ...)
+{
+    TimedEffectRecord* record;
+    char text[512];
+    const char* in;
+    char* out;
+    char* end;
+    va_list args;
+    if (index < 0 || index >= TIMED_EFFECT_RECORD_COUNT || format == NULL)
+        return;
+    record = &s_timed_effect_records[index];
+    va_start(args, format);
+    formatted_text_buffer_build(text, sizeof(text), format, args);
+    va_end(args);
+    if (text[0] == '@') return;
+    out = (char*)record->payload;
+    end = out + 0x1ff;
+    for (in = text; *in != '\0' && out < end; ++in, ++out) {
+        if (in[0] == '\\' && in[1] == 'n') {
+            *out = '\n';
+            ++in;
+        }
+        else if (*in == '_') *out = ' ';
+        else *out = *in;
+    }
+    *out = '\0';
+    memset(record->payload + 0x258, 0, 0x14);
+    record->flags = (record->flags & ~8u) | 3u;
 }
 
 // FUNCTION: LEGORR 0x0046b700
@@ -9907,60 +9944,7 @@ void ui_entry_bounds_get(int panel, int item, float* out_bounds)
     out_bounds[3] = rec[3] - rec[1];
 }
 
-/* PriorityImageSelectionStateUpdate (FUN_0045d300): the corpus's
- * priority-image selection state pair (DAT_005013b8/13bc — no ported
- * owner, own storage). A cleared gate parks the sentinel 0x1b; while the
- * sentinel rides, a cleared third argument installs the candidate and
- * raises flag bit 2; otherwise an equal state just raises the flag. The
- * answer is the pre-call state against the candidate (the corpus threads
- * the stale word through the fall-through). */
-// GLOBAL: LEGORR 0x005013b8
-static int32_t  s_priority_image_state;
-// GLOBAL: LEGORR 0x005013bc
-static uint32_t s_priority_image_flags;
 
-// FUNCTION: LEGORR 0x0045d300
-int priority_image_selection_state_update(int candidate, int gate, int skip)
-{
-    const int32_t prior = s_priority_image_state;
-    if (gate == 0) {
-        s_priority_image_state = 0x1b;
-    } else if (s_priority_image_state == 0x1b) {
-        if (skip == 0) {
-            s_priority_image_state = candidate;
-            s_priority_image_flags |= 2u;
-            return candidate == 0x1b ? 1 : 0;
-        }
-    } else if (s_priority_image_state == candidate) {
-        s_priority_image_flags |= 2u;
-        return 1;
-    }
-    return prior == candidate ? 1 : 0;
-}
-
-void priority_image_state_set(int32_t state, uint32_t flags)
-{
-    s_priority_image_state = state;
-    s_priority_image_flags = flags;
-}
-
-void priority_image_state_peek(int32_t* state, uint32_t* flags)
-{
-    if (state != NULL) {
-        *state = s_priority_image_state;
-    }
-    if (flags != NULL) {
-        *flags = s_priority_image_flags;
-    }
-}
-
-/* The three priority loaders consume the two BlockFile views passed by the
- * original engine: `names` identifies the config paths and entry names,
- * while `values` supplies their strings.  Keep their loaded tables here in
- * command-kind/order form so callers can use the same records without
- * manufacturing PriorityConfigRows. */
-static PriorityConfigState s_priority_config_loaded;
-static int s_priority_alias_index[27];
 
 static int frontend_config_fields(const char* value, char* storage,
                                   unsigned int storage_size,
@@ -10027,134 +10011,6 @@ static int frontend_config_boolean(const char* value)
     return 2;
 }
 
-// FUNCTION: LEGORR 0x0045cdc0
-void frontend_priority_images_config_load(BlockFile* values,
-                                          BlockFile* names)
-{
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    BlockRec* section;
-    BlockRec* entry;
-    if (name_cfg == NULL || value_cfg == NULL) return;
-    s_priority_config_loaded.image_count = 0;
-    section = block_subgroup(name_cfg, "PriorityImages");
-    for (entry = block_first_child(section); entry != NULL;
-         entry = block_next_sibling(entry)) {
-        char path[512];
-        char row_storage[512];
-        char name_storage[256];
-        char* fields[4];
-        char* name_fields[2];
-        const char* entry_name = block_name(entry);
-        const char* value;
-        int kind;
-        int alias = -1;
-        int name_count;
-        if (entry_name == NULL ||
-            !cmd_kind_by_name(entry_name, &kind) || kind < 0 || kind >= 27 ||
-            !frontend_config_path(path, sizeof(path), NULL,
-                                  "PriorityImages", entry_name)) continue;
-        value = block_get_strptr(value_cfg, path);
-        if (value == NULL) value = block_value(entry);
-        if (!frontend_config_fields(value, row_storage,
-                (unsigned int)sizeof(row_storage), fields, 4, ':')) continue;
-        name_count = frontend_config_fields(fields[0], name_storage,
-                (unsigned int)sizeof(name_storage), name_fields, 2, '|') ? 2 : 1;
-        s_priority_config_loaded.labels[kind] = string_duplicate(name_fields[0]);
-        s_priority_config_loaded.images[kind][0] =
-            texture_get_or_load(NULL, fields[1]);
-        s_priority_config_loaded.images[kind][1] =
-            texture_get_or_load(NULL, fields[2]);
-        s_priority_config_loaded.images[kind][2] =
-            texture_get_or_load(NULL, fields[3]);
-        if (name_count == 2 && sound_alias_lookup(name_fields[1], &alias)) {
-            s_priority_alias_index[kind] = alias;
-            s_priority_config_loaded.sound_aliases[kind] =
-                string_duplicate(name_fields[1]);
-        }
-        ++s_priority_config_loaded.image_count;
-    }
-}
-
-// FUNCTION: LEGORR 0x0045cf50
-int frontend_priorities_config_load(BlockFile* values, BlockFile* names,
-                                    const char* section_name)
-{
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    char section_path[512];
-    BlockRec* section;
-    BlockRec* entry;
-    unsigned int count = 0;
-    s_priority_config_loaded.priority_count = 0;
-    if (name_cfg == NULL || value_cfg == NULL || section_name == NULL ||
-        !frontend_config_path(section_path, sizeof(section_path),
-                              section_name, "Priorities", NULL)) return 1;
-    section = block_subgroup(name_cfg, section_path);
-    for (entry = block_first_child(section); entry != NULL;
-         entry = block_next_sibling(entry)) {
-        char path[512];
-        const char* entry_name = block_name(entry);
-        const char* value;
-        int kind;
-        int enabled;
-        if (entry_name == NULL || !cmd_kind_by_name(entry_name, &kind)) continue;
-        if (!frontend_config_path(path, sizeof(path), section_name,
-                                  "Priorities", entry_name)) continue;
-        value = block_get_strptr(value_cfg, path);
-        if (value == NULL) value = block_value(entry);
-        enabled = frontend_config_boolean(value) == 1 ? 0 : 1;
-        s_priority_config_loaded.kinds[count] = (uint32_t)kind;
-        s_priority_config_loaded.weights[count] = 0x50 - (int)count * 5;
-        s_priority_config_loaded.enabled[count] = enabled;
-        priority_entry_order_value_set(kind,
-                                       s_priority_config_loaded.weights[count]);
-        priority_entry_state_set(kind, enabled);
-        ++count;
-        if (count >= 64) break;
-    }
-    s_priority_config_loaded.priority_count = count;
-    return 1;
-}
-
-// FUNCTION: LEGORR 0x0045d060
-void frontend_priorities_image_positions_config_load(BlockFile* values,
-                                                      BlockFile* names)
-{
-    BlockFile* name_cfg = names != NULL ? names : values;
-    BlockFile* value_cfg = values != NULL ? values : names;
-    int i;
-    if (name_cfg == NULL || value_cfg == NULL) return;
-    for (i = 1; i <= 27; ++i) {
-        char index[16];
-        char path[512];
-        char pair_storage[128];
-        char* fields[2];
-        const char* value;
-        sprintf(index, "%d", i);
-        if (!frontend_config_path(path, sizeof(path), NULL,
-                                 "PrioritiesImagePositions", index)) continue;
-        if (block_find(name_cfg, path) == NULL) continue;
-        value = block_get_strptr(value_cfg, path);
-        if (value == NULL) continue;
-        if (!frontend_config_fields(value, pair_storage,
-                (unsigned int)sizeof(pair_storage), fields, 2, ':')) continue;
-        s_priority_config_loaded.positions[i - 1].x = atoi(fields[0]);
-        s_priority_config_loaded.positions[i - 1].y = atoi(fields[1]);
-        s_priority_config_loaded.positions[i - 1].visible = 1;
-    }
-    s_priority_config_loaded.position_count = 27;
-}
-
-void frontend_priority_config_state_get(PriorityConfigState* state)
-{
-    if (state != NULL) *state = s_priority_config_loaded;
-}
-
-int frontend_priority_sound_alias_get(int kind)
-{
-    return (kind >= 0 && kind < 27) ? s_priority_alias_index[kind] : -1;
-}
 
 /* UiRenderRecordCreate (FUN_0045da90): build the 0x3c corpus record —
  * the source, its four copied payload words, the extra argument, and the
@@ -12135,15 +11991,6 @@ uint32_t ledger_stub_0045d060_PrioritiesImagePositionsConfigLoad(
 
 namespace unported_ledger_stubs {
 
-// RegionContainmentScanUpdate
-// FUNCTION: LEGORR 0x0045d110
-int ledger_stub_0045d110_RegionContainmentScanUpdate(
-    RegionContainmentEntry* entries, uint32_t count, int x, int y,
-    void (*changed)(void*, int, int), void* context)
-{
-    return region_containment_scan_update(entries, count, x, y, changed,
-                                          context);
-}
 
 
 } // namespace unported_ledger_stubs

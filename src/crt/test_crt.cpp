@@ -512,15 +512,6 @@ int main(void)
         indexed_text_metrics_pair_set(4, 1u, 1u); /* empty slot: inert */
         indexed_text_metrics_pair_get(9, &x, &y); /* guarded */
 
-        const uint32_t xy[2] = { 5u, 6u };
-        region_bounds_set(xy, 640u, 480u);
-        uint32_t rx[2] = { 0, 0 };
-        float rw[2] = { 0, 0 };
-        region_bounds_peek(rx, rw);
-        CHECK(rx[0] == 5u && rx[1] == 6u && rw[0] == 640.0f && rw[1] == 480.0f,
-              "the region quad lands");
-        region_bounds_set(NULL, 1u, 1u); /* guarded */
-
         char block[0x2c * 3];
         memset(block, 0, sizeof(block));
         panel_draw_records_set(0, block);
