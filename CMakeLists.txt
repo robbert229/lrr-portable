@@ -14,6 +14,11 @@ if(LRR_CLASSIC_MSVC5)
 endif()
 
 project(lrr-portable VERSION 0.1.0 LANGUAGES CXX)
+# The matching build compiles units rebuilt in original shape as C, as the
+# original was (ADR 0005). Other builds compile those sources as C++.
+if(LRR_CLASSIC_MSVC5)
+  enable_language(C)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,14 +42,15 @@ if(LRR_CLASSIC_MSVC5)
   # toolchain's ReproBit command model does not admit.
   include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/src/compat/msvc5")
 
-  string(REGEX REPLACE "[ /-][Mm][DdTtLl][Dd]?" "" _classic_cxx_flags
-    " ${CMAKE_CXX_FLAGS}")
-  string(REGEX REPLACE "[ /]Zm[0-9]+" "" _classic_cxx_flags
-    "${_classic_cxx_flags}")
-  string(STRIP "${_classic_cxx_flags}" _classic_cxx_flags)
-  string(APPEND _classic_cxx_flags " /ML")
-  set(CMAKE_CXX_FLAGS "${_classic_cxx_flags}" CACHE STRING
-    "Classic MSVC 5.0 compatible compiler flags" FORCE)
+  foreach(_lang IN ITEMS C CXX)
+    string(REGEX REPLACE "[ /-][Mm][DdTtLl][Dd]?" "" _classic_flags
+      " ${CMAKE_${_lang}_FLAGS}")
+    string(REGEX REPLACE "[ /]Zm[0-9]+" "" _classic_flags "${_classic_flags}")
+    string(STRIP "${_classic_flags}" _classic_flags)
+    string(APPEND _classic_flags " /ML")
+    set(CMAKE_${_lang}_FLAGS "${_classic_flags}" CACHE STRING
+      "Classic MSVC 5.0 compatible compiler flags" FORCE)
+  endforeach()
 
   foreach(_link_kind IN ITEMS STATIC EXE SHARED MODULE)
     foreach(_config IN ITEMS "" DEBUG MINSIZEREL RELEASE RELWITHDEBINFO)
@@ -80,6 +86,8 @@ if(LRR_CLASSIC_MSVC5)
   # its own PDB so ReproBit can model the compile steps as isolated producers.
   set(CMAKE_CXX_COMPILE_OBJECT
     "<CMAKE_CXX_COMPILER> /nologo /TP <DEFINES> <INCLUDES> <FLAGS> /Fo<OBJECT> /Fd<OBJECT>.pdb -c <SOURCE>")
+  set(CMAKE_C_COMPILE_OBJECT
+    "<CMAKE_C_COMPILER> /nologo /TC <DEFINES> <INCLUDES> <FLAGS> /Fo<OBJECT> /Fd<OBJECT>.pdb -c <SOURCE>")
 endif()
 
 if(NOT PLATFORM STREQUAL "native" AND NOT PLATFORM STREQUAL "winapi")
@@ -133,9 +141,13 @@ add_library(game STATIC
   ${GAME_DIR}/seh_runtime.cpp
   ${GAME_DIR}/startup_config.cpp)
 target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
-# Units rebuilt in original shape are C (ADR 0005); pilot step (b) still
-# compiles them as C++ everywhere.
-set_source_files_properties(${GAME_DIR}/priorities.c PROPERTIES LANGUAGE CXX)
+# Units rebuilt in original shape (ADR 0005) are C in the matching build and
+# C++ elsewhere, because the native port's miniwin headers are C++-only.
+set(LRR_ORIGINAL_SHAPE_SOURCES ${GAME_DIR}/priorities.c)
+if(NOT LRR_CLASSIC_MSVC5)
+  set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
+    LANGUAGE CXX)
+endif()
 target_link_libraries(game PUBLIC gods98)
 
 if(PLATFORM STREQUAL "native")
