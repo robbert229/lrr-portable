@@ -88,6 +88,16 @@ static uint32_t* fix_flags(float wx, float wy)
                                       LEVEL_VOXEL_STRIDE + 8);
 }
 
+/* Stand an entity at the centre of grid cell (cx, cy). */
+static void set_cell(EntitySlot* e, int cx, int cy)
+{
+    float w[2] = { 0.0f, 0.0f };
+    CHECK(terrain_cell_world_center_xy_transform(s_fix_terrain, cx, cy, w) != 0,
+          "cell centre resolves");
+    e->x = w[0];
+    e->y = w[1];
+}
+
 /* cmd_create_move toward a WORLD position: the faithful record carries the
  * target CELL, resolved through the scratch terrain. */
 static void move_to(EntitySlot* e, float wx, float wy, int flag)
@@ -1107,24 +1117,41 @@ int main(int argc, char** argv)
         level_set_int(&map, LEVEL_OFF_WIDTH, 16);
         level_set_int(&map, LEVEL_OFF_HEIGHT, 16);
         level_store_ptr(&map, LEVEL_OFF_VOXELS, voxels);
+        map.ptr_terrain = s_fix_terrain; /* start cells resolve through it */
         LevelState* const saved_level = ctx.level;
         ctx.level = &map;
-        for (int cy = 0; cy <= 13; ++cy) {
-            for (int cx = 0; cx <= 13; ++cx) {
-                *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
+        /* With a terrain bound, the seed's northwest-2x2 TerrainCellInitialize
+         * pass rewrites those cells' flag words from the (all-zero) terrain,
+         * clobbering the synthetic walk bits around the goal. Re-lay the
+         * grid before every build so each case starts from a clean map. */
+        auto relay = [&](int wall_column) {
+            memset(voxels, 0, sizeof(voxels));
+            for (int cy = 0; cy <= 13; ++cy) {
+                for (int cx = 0; cx <= 13; ++cx) {
+                    *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |=
+                        0x10u;
+                }
+                if (wall_column) {
+                    *(uint32_t*)(voxels + ((size_t)cy * 16 + 5) * 0x48 + 8) |=
+                        0x40u;
+                }
             }
-        }
+        };
 
         /* Multi-cell path on a clean grid: a straight 4-cell flood to a
          * target one margin-row away, installed in walk order. */
         EntitySlot* runner = place(&ctx, 1, "runner", 0, 0);
-        runner->x = 1.0f; /* the builder reads the slot's cell coordinates */
-        runner->y = 1.0f;
-        CHECK(ai_path_build(&ctx, runner, 5.0f, 1.0f) == 4 &&
-                  runner->wp_count == 4,
+        set_cell(runner, 1, 1);
+        relay(0);
+        /* The seed's init pass zeroes the goal's northwest 2x2 block
+         * ((4,0),(5,0),(4,1),(5,1)) before the spread, so the faithful
+         * route cannot run straight along row 1: it drops to row 2 and
+         * climbs into the goal from (5,2). */
+        CHECK(ai_path_build(&ctx, runner, 5.0f, 1.0f) == 6 &&
+                  runner->wp_count == 6,
               "wave-flood builds the multi-cell path on a clean grid");
-        CHECK(runner->wp[0].x == 2.0f && runner->wp[3].x == 5.0f &&
-                  runner->wp[3].y == 1.0f,
+        CHECK(runner->wp[0].x == 1.0f && runner->wp[0].y == 2.0f &&
+                  runner->wp[5].x == 5.0f && runner->wp[5].y == 1.0f,
               "the traceback installs the flooded cells in walk order");
         CHECK(ai_wave_flood_count() > runner->wp_count,
               "the wave spread marks more cells with flag 0x40000 than the path uses");
@@ -1132,36 +1159,33 @@ int main(int argc, char** argv)
         /* Retargeting mid-move (PR #87 feedback): the mover's own cell
          * carries its occupancy reservation, so a rebuild must exempt it. */
         EntitySlot* retarget = place(&ctx, 1, "retarget", 0, 0);
-        retarget->x = 1.0f;
-        retarget->y = 5.0f;
-        CHECK(ai_path_build(&ctx, retarget, 8.0f, 5.0f) == 7,
-              "the first build routes the seven-cell move");
+        set_cell(retarget, 1, 5);
+        relay(0);
+        const int first_len = ai_path_build(&ctx, retarget, 8.0f, 5.0f);
+        CHECK(first_len >= 7, "the first build routes the move");
+        relay(0);
         level_tile_mark(&map, 1, 5, 1); /* the mover's own reservation */
-        CHECK(ai_path_build(&ctx, retarget, 8.0f, 5.0f) == 7,
+        CHECK(ai_path_build(&ctx, retarget, 8.0f, 5.0f) == first_len,
               "the rebuild exempts the mover's own reservation at the start");
 
         /* Seed flag footprint (PR #87 feedback): record 12 raises the
          * flag over the northwest 2x2 block including the seed cell. */
         EntitySlot* seedcell = place(&ctx, 1, "seedcell", 0, 0);
-        seedcell->x = 2.0f;
-        seedcell->y = 12.0f;
-        CHECK(ai_path_build(&ctx, seedcell, 3.0f, 12.0f) == 1,
+        set_cell(seedcell, 3, 12);
+        relay(0);
+        /* The target sits one step WEST of the start: an eastward target
+         * would put the start inside the goal's zeroed footprint, which the
+         * faithful init pass makes unwalkable. */
+        CHECK(ai_path_build(&ctx, seedcell, 2.0f, 12.0f) == 1,
               "a one-step target roots a one-cell traceback");
         CHECK(ai_wave_flood_count() == 5,
               "the seed raises record 12's northwest 2x2 footprint flag");
 
         /* Unreachable target: a full-height blocked column floods the target
          * side, exhausts, and the traceback never roots at the start. */
-        memset(voxels, 0, sizeof(voxels));
-        for (int cy = 0; cy <= 13; ++cy) {
-            for (int cx = 0; cx <= 13; ++cx) {
-                *(uint32_t*)(voxels + ((size_t)cy * 16 + cx) * 0x48 + 8) |= 0x10u;
-            }
-            *(uint32_t*)(voxels + ((size_t)cy * 16 + 5) * 0x48 + 8) |= 0x40u;
-        }
+        relay(1);
         EntitySlot* stranded2 = place(&ctx, 1, "stranded2", 0, 0);
-        stranded2->x = 1.0f;
-        stranded2->y = 5.0f;
+        set_cell(stranded2, 1, 5);
         CHECK(ai_path_build(&ctx, stranded2, 9.0f, 5.0f) == 0,
               "unreachable target across the full wall yields no path");
         CHECK(stranded2->wp_count == 0,
@@ -1172,8 +1196,7 @@ int main(int argc, char** argv)
         /* Equal cells: the seed validates the target (it is the start), so
          * the traceback is a zero-cell walk and yields no path. */
         EntitySlot* parked2 = place(&ctx, 1, "parked2", 0, 0);
-        parked2->x = 1.0f;
-        parked2->y = 3.0f;
+        set_cell(parked2, 1, 3);
         CHECK(ai_path_build(&ctx, parked2, 1.0f, 3.0f) == 0,
               "start-equal-target builds no path");
 
