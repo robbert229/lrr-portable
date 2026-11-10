@@ -6,6 +6,13 @@
 - Never merge, squash-merge, or auto-merge a PR — open the PR, report the link,
   and leave merging to the human. This applies to every branch and every repo
   state, including after all checks are green.
+- Before handing work back, run `make reccmp-check` (matching build; see the
+  *match baseline* in `GLOSSARY.md`) whenever the configured toolchain is
+  available, including for apparently unrelated C/C++ or `#include` changes.
+  Do not let a function's score drop below the baseline. If a change
+  intentionally improves matches, refresh the baseline in the same change with
+  `make reccmp-baseline-update`. Use `make reccmp-compare` to re-check an
+  existing report without rebuilding.
 
 # Project guide
 

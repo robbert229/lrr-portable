@@ -11,13 +11,14 @@ MOVIES ?= auto
 RECCMP_BUILD_DIR ?= $(CURDIR)/build-reccmp
 RECCMP_REFERENCE_DIR ?= $(CURDIR)/reference
 RECCMP_LEDGER ?= docs/coverage/ledger.csv
+RECCMP_BASELINE ?= docs/coverage/match-baseline.txt
 RECCMP_WINE_BIN ?=
 RECCMP_PROTON_BIN ?= $(RR_A2_PROTON)
 RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-raider-a2)/compatdata
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint
+.PHONY: all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update
 
 all: build
 
@@ -40,6 +41,20 @@ reccmp-report:
 	RECCMP_RECCMP="$(RECCMP_RECCMP)" \
 	REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
 	  ./tools/reccmp.sh 2>&1
+
+# Match baseline gate (see GLOSSARY.md). reccmp-check rebuilds, then fails if
+# any function's score fell below the committed baseline. reccmp-compare does
+# the same against an existing report without rebuilding. reccmp-baseline-update
+# accepts the current report as the new baseline (run it after a rebuild).
+reccmp-check: reccmp-report reccmp-compare
+
+reccmp-compare:
+	python3 ./tools/match_baseline.py check \
+	  --report-dir "$(RECCMP_BUILD_DIR)/reccmp-report" --baseline "$(RECCMP_BASELINE)"
+
+reccmp-baseline-update:
+	python3 ./tools/match_baseline.py update \
+	  --report-dir "$(RECCMP_BUILD_DIR)/reccmp-report" --baseline "$(RECCMP_BASELINE)"
 
 # Both executables use the same Proton runner, compatdata, and reference
 # working directory so the candidate sees the same game assets and settings.

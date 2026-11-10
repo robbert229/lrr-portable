@@ -78,6 +78,26 @@ make reccmp-report RECCMP_WINE_BIN=/path/to/wine \
 `REPROBIT_MSVC_5_0_RTM_ROOT=/path/to/toolchain`. Reports go to
 `build-reccmp/reccmp-report/index.html` and `results.json`.
 
+### Match baseline gate
+
+`docs/coverage/match-baseline.txt` is the committed *match baseline*: every
+function's Reccmp similarity score (percent, two decimals, sorted by address)
+for the game-only and full scopes. Parallel changes can silently erase each
+other's matches, so check before handing work back:
+
+```sh
+make reccmp-check      # rebuild, then compare against the baseline
+make reccmp-compare    # compare an existing build-reccmp/reccmp-report only
+```
+
+Both exit non-zero and list every function that fell below baseline as
+`old -> new`. Improvements, newly mapped and newly unmapped functions are
+reported but do not fail. To accept a deliberate change (an improvement, or an
+intended drop), rebuild with `make reccmp-report`, run
+`make reccmp-baseline-update`, and commit the baseline in the same change.
+`RECCMP_BASELINE=<file>` and `RECCMP_BUILD_DIR=<dir>` override the paths. The
+logic lives in `tools/match_baseline.py`.
+
 ```sh
 make reccmp-lint
 make reference-run
