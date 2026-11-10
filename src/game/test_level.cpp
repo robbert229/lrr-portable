@@ -1520,7 +1520,10 @@ int main(int argc, char** argv)
                   && terrain_choice_record_peek() == (uintptr_t)sel,
               "the kind 1 select stores the window word and the record");
 
-        /* Kind 2 / index 1 folds to window word 2. */
+        /* Kind 2 / index 1: the choice windows are now per-kind arrays (word
+         * % 4 = kind - 1, word / 4 = index) instead of one folded window, so
+         * the entry is installed at that (kind, index) pair. */
+        terrain_choice_window_array_install(1, 1, 33u);
         sel[0] = 2u; sel[1] = 1u;
         terrain_choice_resource_select(sel);
         CHECK(terrain_choice_active_peek() == 33u, "the folded window word reads");
@@ -1683,10 +1686,13 @@ int main(int argc, char** argv)
         terrain_neighbor_work_flag_scan(&wfs, 2, 2);
         uint32_t got = 0;
         memcpy(&got, WFW(2, 2), 4);
-        CHECK(got == 0u, "the seed cell loses its work flag");
+        /* The faithful mutation the scan runs on a flagged cell leaves its own
+         * state bits behind (0x200000 / init-pass bits), so assert only that
+         * the work flag (0x20000) itself is consumed. */
+        CHECK((got & 0x20000u) == 0u, "the seed cell loses its work flag");
         terrain_neighbor_work_flag_scan(&wfs, 2, 2);
         memcpy(&got, WFW(2, 2), 4);
-        CHECK(got == 0u, "the swept map stays clear when rerun");
+        CHECK((got & 0x20000u) == 0u, "the swept map stays clear when rerun");
 
         /* Two flagged cells inside the seed's neighbourhood: both clear;
          * the far one only by riding the queue (the col-bound drift
@@ -1707,7 +1713,7 @@ int main(int argc, char** argv)
         WFPUT(3, 2, 0x20000u);
         terrain_neighbor_work_flag_scan(&wfs, 2, 2);
         memcpy(&got, WFW(3, 2), 4);
-        CHECK(got == 0u, "the queue hop clears the next-column cell");
+        CHECK((got & 0x20000u) == 0u, "the queue hop clears the next-column cell");
 
         /* Out-of-map seeds and NULL state guard: nothing writes, nothing
          * crashes (the corpus strides both blindly). */
@@ -1771,6 +1777,14 @@ int main(int argc, char** argv)
                   s.objective == 0u,
               "suppressed depletion stores zero, no announce");
         system_state_flags_set(&zero_word);
+        /* level_load's own ObjectiveVoiceAliasPrepare(0) left the global
+         * objective result word at "briefing pending", and the faithful
+         * announce is a no-op until that is acknowledged; do so for the
+         * local level before expecting the failed-result announce. */
+        s.objective = LVL_OBJECTIVE_STILL_PENDING;
+        objective_active_level_bind(&s);
+        (void)objective_briefing_acknowledge(&s);
+        s.objective = 0u;
         air_supply_amount_update(&s, &e, 0.0f); /* acc is 0: <= 0 branch */
         CHECK(level_float(&s, LEVEL_OFF_AIR_SUPPLY) == 0.0f &&
                   (s.objective & 4u) != 0u,
