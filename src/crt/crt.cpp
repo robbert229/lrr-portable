@@ -600,7 +600,9 @@ void* crt_memory_move(void* dest, const void* src, size_t count)
 #if !defined(_MSC_VER) || !defined(_M_IX86)
 int crt_float_to_long(float value)
 {
-    return (int)nearbyintf(value);
+    /* __ftol truncates toward zero (it forces the x87 chop mode), exactly
+     * like the C cast the matching build lowers each call site to. */
+    return (int)value;
 }
 #endif
 

@@ -294,7 +294,8 @@ int main(void)
         CHECK(menu_overlay_list_count(&menu) == 3, "three-node chain");
         chain[1].next = NULL;
         CHECK(menu_overlay_list_count(&menu) == 2, "chain shortened by a tail");
-        CHECK(menu_overlay_list_count(NULL) == 0, "NULL menu counts zero");
+        /* The faithful port reads the menu's list head blindly (no NULL
+         * guard), so the former NULL-menu assertion is gone. */
     }
 
     /* TerrainGridBorderInsetGet (FUN_00435f28): DAT_005560ac getter. */
