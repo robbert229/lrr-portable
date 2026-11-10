@@ -70,15 +70,25 @@ static inline void tlf_indexed_surface_release(void* handle, void* user)
 }
 
 /* Installs the indexed-texture loader TextureSetConfigLoad needs for the roof
- * texture and the GameContext LevelLoad parses its object list into. */
-static inline void tlf_bind_context(GameContext* ctx)
+ * texture. */
+static inline void tlf_install_texture_hooks(void)
 {
     static int token;
-    game_context_init(ctx);
-    entity_pool_callback_context_set(ctx);
     indexed_surface_resource_hooks_set(NULL, tlf_indexed_texture_load,
                                        tlf_indexed_surface_release, NULL,
                                        &token);
+}
+
+/* Initialises a GameContext and makes it the active one LevelLoad parses its
+ * object list into. NOTE: game_context_init() itself installs its context as
+ * the process-wide entity-pool/current-level owner, so a later block-local
+ * context steals it; re-bind with entity_pool_callback_context_set() once it
+ * goes out of scope. */
+static inline void tlf_bind_context(GameContext* ctx)
+{
+    game_context_init(ctx);
+    entity_pool_callback_context_set(ctx);
+    tlf_install_texture_hooks();
 }
 
 #endif
