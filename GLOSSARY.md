@@ -92,7 +92,7 @@ The committed per-function Reccmp similarity scores from the last accepted *matc
 _Avoid_: "snapshot", "the report"
 
 **single-function match**:
-A Reccmp score for one function computed by `tools/match_function.py` from just its translation unit, compiled with the *matching build* flags and compared without a link. It agrees with the full report's score; the *match baseline* is still checked against a full build.
+A Reccmp score for one function computed by `tools/match_function.py` from just its translation unit, compiled with the *matching build* flags and compared without a link. It reproduces the full report's score for all but a handful of functions (finding 507 lists the known differences); the *match baseline* is still checked against a full build.
 _Avoid_: "quick reccmp", "partial build"
 
 **original translation unit**:

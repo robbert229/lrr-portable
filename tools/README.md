@@ -49,53 +49,48 @@ function was scored, 1 when any was not, 2 for setup errors.
 **Environment.** Wine runs directly when `wine` is on `PATH`, otherwise
 through `distrobox enter developer` (`MATCH_FN_DISTROBOX=<name>`; empty
 disables). `REPROBIT_MSVC_5_0_RTM_ROOT` selects the toolchain. The flags cache
-lives in `build-match/cmake` (`--build-dir` or `MATCH_FN_BUILD_DIR`) and is
-re-configured when `CMakeLists.txt` or the toolchain file changes. Each
+lives in `build-match/cmake` (`--build-dir` or `MATCH_FN_BUILD_DIR`). Its
+configure options are read from `tools/reccmp.sh`, and it is re-configured
+when those options, `CMakeLists.txt` or the toolchain file change. Each
 invocation compiles in its own `build-match/runs/run-*` directory, removed on
-exit; the configure step is serialized with a file lock, so concurrent runs in
-one worktree or across worktrees share no mutable state. The tool keeps one
-wineserver alive for 15 minutes after its last use
+exit, and configuring takes a file lock, so concurrent runs in one worktree
+or across worktrees share no build state. They do share Wine: the tool keeps
+one wineserver for the `WINEPREFIX` alive for 15 minutes after its last use
 (`MATCH_FN_WINESERVER_PERSIST=<seconds>`, `0` disables) and starts Wine's
-services with detached stdio: the MSVC wrapper pipes Wine through `sed`, and
+services with detached stdio. The MSVC wrapper pipes Wine through `sed`, and
 services started during a compile would otherwise hold that pipe open.
 
-**Timings** (measured 2026-11-10, `block_open`, warm page cache):
+**Speed.** About 1.2–1.4 s per call with a warm wineserver, 1.8 s for the
+largest file, 3 s fully cold; several addresses in different files compile
+in parallel. Measurements are in
+[finding 507](../docs/findings/507-single-function-match-loop.md).
 
-| State | Wall time |
-| --- | ---: |
-| Warm wineserver, flags cached | 1.2–1.4 s (compile 0.35 s) |
-| Largest file (`game/entity.cpp`, 15k lines), warm | 1.8 s |
-| Cold wineserver, flags cached | 1.7 s |
-| Fully cold (no wineserver, no flags cache) | 3.0 s |
-| 8 concurrent invocations, two of them cold-configuring | 2.9 s for all |
-| 20 functions across 16 files in one call | 4.5 s |
-
-**Parity.** `make match-function-parity` (`match_function_parity.py`) scores
-every annotated function file by file and compares with a full
-`results.json` built from the same tree; run it after changing this tool.
-Against `make reccmp-report` it agrees on all but one of 2335 functions, for
-three different source trees (see
-[finding 507](../docs/findings/507-single-function-match-loop.md)). How the
-unlinked object stands in for the link:
+**Parity.** On three source trees the score equals full Reccmp's for all but
+one function (`__isindst`); finding 507 has the per-area counts and a
+26-function spot-check table. `make match-function-parity`
+(`match_function_parity.py`) repeats the comparison against a full
+`results.json` from the same tree; run it after changing these tools.
+`synthetic_image.py` builds the stand-in for the linked program:
 
 * Relocations are applied in a synthetic layout at `0x0E401000`; undefined
   symbols get slots named the way the linker PDB would name them (CodeView
   names for project code, public symbols for LIBC), Win32 calls without
   `dllimport` go through `jmp [IAT]` thunks, and functions of the `program`
   target are reached through incremental-link (ILT) thunks, as in the
-  `/INCREMENTAL` Reccmp link.
+  `/INCREMENTAL` matching-build link.
 * Calls into other translation units are matched to their `FUNCTION`
   annotation by name; other files' line-referenced annotations are named on
   the original side, as the full run would have matched them.
-* A constant inside the Reccmp link's address span (`0x400000`–`0xA00000`,
-  `MATCH_FN_LINK_END` overrides) is treated as an address, because the full
-  run finds some entity there (e.g. the flag `0x800000` lands in a large
-  `.bss` array).
+* A constant inside the linked program's address span is treated as an
+  address, because the full run finds some entity there (e.g. the flag
+  `0x800000` lands in a large `.bss` array). The span ends where an existing
+  `build-reccmp/LegoRR.exe` (or `$RECCMP_BUILD_DIR`) ends, else at
+  `0xA00000`; `MATCH_FN_LINK_END` overrides.
 
 Known differences: variables have no CodeView type sizes, so offsets render
 as `var+4` rather than `var[1]` (text only), and a `GLOBAL` annotation that the
 full link matches but this translation unit never references has no size,
-which changed one CRT score (`__isindst`, 98.64% here, 96.36% in full).
+which changes one CRT score (`__isindst`, 98.64% here, 96.36% in full).
 Functions in objects the link never pulls in (`ptrstack.cpp`,
 `video_graph.cpp`) are scored here but absent from the full report. Before
 handing work back, `make reccmp-check` remains the gate.

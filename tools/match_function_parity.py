@@ -58,9 +58,11 @@ def main(argv: list[str] | None = None) -> int:
         sys.path.insert(0, str(ROOT / "tools"))
         import match_function  # pylint: disable=import-outside-toplevel
 
-        env = match_function.Environment.detect(argparse.Namespace(build_dir=args.build_dir))
-        commands = match_function.load_compile_commands(env, {})
-        sources = sorted({c.source for c in commands})
+        try:
+            sources = match_function.compiled_sources(args.build_dir)
+        except match_function.MatchError as ex:
+            print(f"match_function_parity: {ex}", file=sys.stderr)
+            return 2
 
     exact, differ, only_here, only_full, errors, failed_files = [], [], [], [], [], []
     seen: set[int] = set()

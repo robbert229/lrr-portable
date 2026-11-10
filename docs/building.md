@@ -100,15 +100,6 @@ intended drop), rebuild with `make reccmp-report`, run
 `RECCMP_BASELINE=<file>` and `RECCMP_BUILD_DIR=<dir>` override the paths. The
 logic lives in `tools/match_baseline.py`.
 
-### Single-function loop
-
-`make match-function ADDR=0x00478e60` compiles only the translation unit that
-holds the function, with the same flags, and scores it with Reccmp's own
-comparator against the original in about a second, without linking. It
-prints the similarity, the baseline delta and a diff (`JSON=1` for JSON).
-See [`tools/README.md`](../tools/README.md#match_functionpy--single-function-match-loop)
-for options, timings and how its scores relate to a full report.
-
 ```sh
 make reccmp-lint
 make reference-run
@@ -125,6 +116,15 @@ compares compiled functions with the original executable; its percentages
 measure something different. Record the build configuration and report scope
 when publishing a score, as in the
 [optimization-flag sweep](findings/486-msvc5-optimization-flag-reccmp-sweep.md).
+
+### Single-function loop
+
+`make match-function ADDR=0x00478e60` compiles only the translation unit that
+holds the function, with the same flags, and scores it with Reccmp's own
+comparator against the original in about a second, without linking. It
+prints the similarity, the baseline delta and a diff (`JSON=1` for JSON).
+See [`tools/README.md`](../tools/README.md#match_functionpy--single-function-match-loop)
+for options, timings and how its scores relate to a full report.
 
 ## Legacy build notes
 

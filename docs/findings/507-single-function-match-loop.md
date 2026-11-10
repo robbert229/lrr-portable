@@ -1,4 +1,4 @@
-# Single-function match loop: parity with full Reccmp and timings
+# Finding 507 — Single-function match loop: parity with full Reccmp and timings
 
 Issue #381. Tool: [`tools/match_function.py`](../../tools/README.md#match_functionpy--single-function-match-loop).
 
@@ -11,7 +11,7 @@ score a full `make reccmp-report` would give?
 ## Method
 
 `match_function.py` compiles the translation unit with the command line CMake
-generates for the Reccmp build (`/GX /ML /Zi /O2 /Ob1 /DNDEBUG` plus the
+generates for the matching build (`/GX /ML /Zi /O2 /Ob1 /DNDEBUG` plus the
 target's defines and include paths), reads the COFF object, and lays it out
 as a synthetic image: sections placed, relocations applied, undefined symbols
 given slots and names as the linker PDB would name them, Win32 import and
@@ -26,7 +26,7 @@ start-up object defines).
 
 Parity was measured with `tools/match_function_parity.py`, which scores every
 annotated function file by file and compares each with the `matching` value of
-the same address in a full report. Two trees were checked, each against its
+the same address in a full report. Three trees were checked, each against its
 own full `make reccmp-report` run:
 
 * `d3ccdcb8` (source identical to `653caf92`), used while developing the tool;
@@ -58,7 +58,7 @@ report: seven in `gods98/ptrstack.cpp`, eleven in `game/video_graph.cpp` and
 `engine_calloc`, whose objects the link never pulls in (or, for
 `engine_calloc`, replaces with LIBC's).
 
-Spot checks (tree `d3ccdcb8`):
+Spot checks (identical on `d3ccdcb8` and `6f3fe74d`):
 
 | Area | Address | Function | Built from | Full Reccmp | Single function |
 | --- | --- | --- | --- | ---: | ---: |
@@ -104,7 +104,9 @@ names for calls into other translation units, ILT thunks for the `program`
 target, `jmp [IAT]` thunks for Win32 calls without `dllimport`, LIBC absolute
 symbols (`__except_list`), aliases (`__strcmpi`/`__stricmp`), and constants
 inside the full link's address span (`0x800000` is inside a large `.bss`
-array in that link, so full Reccmp renders it as an address).
+array in that link, so full Reccmp renders it as an address). The span's end
+comes from an existing matching-build `LegoRR.exe` when one is present,
+otherwise from a default of `0xA00000`.
 
 ## Timings
 
@@ -118,6 +120,7 @@ Measured 2026-11-10 on the developer workstation (16 cores, Wine 11.0 in the
 | Cold wineserver, flags cached | 1.7 s |
 | Fully cold (no wineserver, no flags cache) | 3.0 s |
 | 8 concurrent invocations, two cold-configuring separate build dirs | 2.9 s for all |
+| 20 functions across 16 files in one call | 4.5 s |
 | Every annotated function in the tree (`--jobs 6`) | 18 s |
 
 A full `make reccmp-report` of the same tree takes several minutes. The cold
