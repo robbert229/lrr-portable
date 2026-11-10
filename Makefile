@@ -18,7 +18,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update
+.PHONY: all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity
 
 all: build
 
@@ -55,6 +55,26 @@ reccmp-compare:
 reccmp-baseline-update:
 	python3 ./tools/match_baseline.py update \
 	  --report-dir "$(RECCMP_BUILD_DIR)/reccmp-report" --baseline "$(RECCMP_BASELINE)"
+
+# Single-function loop (tools/match_function.py): compile only the translation
+# unit holding ADDR with the matching-build flags and score it with Reccmp's
+# comparator, without linking. ADDR takes one or more original addresses;
+# SOURCE=<file> alone scores every annotated function in that file; JSON=1
+# prints JSON; MATCH_ARGS passes extra options (e.g. --side-by-side).
+match-function:
+	@if [ -z "$(ADDR)$(SOURCE)" ]; then \
+	  echo "usage: make match-function ADDR=0x00478e60 [SOURCE=src/...] [JSON=1] [MATCH_ARGS=...]" >&2; \
+	  exit 2; \
+	fi
+	@REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
+	  python3 ./tools/match_function.py $(ADDR) $(if $(SOURCE),--source "$(SOURCE)") \
+	  $(if $(JSON),--json) $(MATCH_ARGS)
+
+# Check match_function.py against an existing full report from the same tree.
+match-function-parity:
+	REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
+	  python3 ./tools/match_function_parity.py \
+	  --report "$(RECCMP_BUILD_DIR)/reccmp-report/results.json"
 
 # Both executables use the same Proton runner, compatdata, and reference
 # working directory so the candidate sees the same game assets and settings.

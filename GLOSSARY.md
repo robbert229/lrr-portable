@@ -91,6 +91,10 @@ _Avoid_: "reccmp build", "the MSVC build"
 The committed per-function Reccmp similarity scores from the last accepted *matching build*. A function's score may not fall below its baseline without the change explicitly refreshing the baseline.
 _Avoid_: "snapshot", "the report"
 
+**single-function match**:
+A Reccmp score for one function computed by `tools/match_function.py` from just its translation unit, compiled with the *matching build* flags and compared without a link. It agrees with the full report's score; the *match baseline* is still checked against a full build.
+_Avoid_: "quick reccmp", "partial build"
+
 **original translation unit**:
 A contiguous range of the shipped `LegoRR.exe` (code, and where known its data) attributed to one source file of the original 1999 build, such as gods98's `Main.c`. Reproducing these units and their link order is a prerequisite for a byte-identical *matching build*.
 _Avoid_: "module", "object file" (ambiguous with our own build outputs)
