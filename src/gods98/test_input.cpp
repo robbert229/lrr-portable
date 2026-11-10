@@ -179,7 +179,9 @@ int main(void)
         /* Unknown kinds and far indices answer zero / skip (deviation). */
         player_input_flag8_set_clear(2, 5, 1);
         CHECK(player_input_flag8_get(2, 5) == 0u, "kind 2 never fires");
-        CHECK(input_entry_flag8_get(1 << 20) == 0u, "the far index reads zero");
+        /* input_entry_flag8_get/_set_clear stride the entry table blindly
+         * (faithful: no bounds guard), so the former far-index read is no
+         * longer asserted. The player-table leaves keep their guard. */
         player_input_flag8_set_clear(1, 1 << 20, 1);
         CHECK(player_input_flag8_get(1, 1 << 20) == 0u,
               "the far player index is guarded");
