@@ -352,13 +352,16 @@ int main(int argc, char** argv)
         hdr[7] = 0;             /* size 0: the codecs gate out immediately */
         hdr[3] = 1;
         memset(dst, 0xEE, sizeof dst);
-        CHECK(wad_payload_decode_dispatch(hdr, dst) == 0,
+        /* The codecs now return the output-end pointer masked with
+         * 0xffff0000 (faithful to the corpus); callers test only AX, so the
+         * verdict is the low word == 0, not the whole int. */
+        CHECK(((unsigned)wad_payload_decode_dispatch(hdr, dst) & 0xffffu) == 0,
               "the type-1 codec answers the corpus verdict 0");
         CHECK(dst[0] == 0xEE && dst[15] == 0xEE,
               "the zero-size type-1 stream writes nothing");
         hdr[3] = 2;
         memset(dst, 0xEE, sizeof dst);
-        CHECK(wad_payload_decode_dispatch(hdr, dst) == 0,
+        CHECK(((unsigned)wad_payload_decode_dispatch(hdr, dst) & 0xffffu) == 0,
               "the type-2 codec answers the corpus verdict 0");
         CHECK(dst[0] == 0xEE && dst[15] == 0xEE,
               "the zero-size type-2 stream writes nothing");
