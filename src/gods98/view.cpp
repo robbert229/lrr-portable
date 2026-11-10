@@ -6810,10 +6810,13 @@ float selected_global_point_transform_and_return_x(EngineContext* ctx)
 // FUNCTION: LEGORR 0x00436ac9
 void renderer_node_relative_position_set(const void* node, float x, float y)
 {
-    /* The handle is the module's widened pointer slot (see view.hpp); a
-     * uint32_t read truncates the pointer on 64-bit native builds. On the
-     * 32-bit target sizeof(void*) == sizeof(uint32_t), so it is unchanged. */
+#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
+    /* Native 64-bit: the handle is the module's widened pointer slot (see
+     * view.hpp); a uint32_t read would truncate the pointer. */
     void* handle = NULL;
+#else
+    uint32_t handle = 0u;
+#endif
     if (node != NULL) {
         __builtin_memcpy(&handle, (const char*)node + 0x28, sizeof handle);
     }
