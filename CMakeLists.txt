@@ -128,11 +128,14 @@ add_library(game STATIC
   ${GAME_DIR}/dependency_grid.cpp
   ${GAME_DIR}/weapon.cpp ${GAME_DIR}/upgrades.cpp
   ${GAME_DIR}/video_graph.cpp ${GAME_DIR}/spawn.cpp
-  ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp ${GAME_DIR}/priorities.cpp
+  ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp ${GAME_DIR}/priorities.c
   ${GAME_DIR}/tutorial_hud.cpp ${GAME_DIR}/tutorial_world_arrows.cpp
   ${GAME_DIR}/seh_runtime.cpp
   ${GAME_DIR}/startup_config.cpp)
 target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
+# Units rebuilt in original shape are C (ADR 0005); pilot step (b) still
+# compiles them as C++ everywhere.
+set_source_files_properties(${GAME_DIR}/priorities.c PROPERTIES LANGUAGE CXX)
 target_link_libraries(game PUBLIC gods98)
 
 if(PLATFORM STREQUAL "native")
@@ -245,6 +248,15 @@ if(BUILD_TESTING AND PLATFORM STREQUAL "native")
     endif()
     set_tests_properties(${name} PROPERTIES LABELS ${name})
   endforeach()
+  # Compile-only check that the C boundary headers match their C++ headers
+  # (ADR 0005). It needs their include paths, not the libraries.
+  add_executable(c_boundaries_test ${GAME_DIR}/test_c_boundaries.cpp)
+  target_include_directories(c_boundaries_test PRIVATE ${SRC_ROOT} ${GAME_DIR}
+    ${ENGINE_DIR})
+  target_compile_definitions(c_boundaries_test PRIVATE MINIWIN)
+  target_link_libraries(c_boundaries_test PRIVATE miniwin)
+  add_test(NAME c_boundaries COMMAND c_boundaries_test)
+  set_tests_properties(c_boundaries PROPERTIES LABELS c_boundaries)
   add_executable(crt_test ${CRT_DIR}/test_crt.cpp)
   target_link_libraries(crt_test PRIVATE gods98)
   add_test(NAME crt COMMAND crt_test)

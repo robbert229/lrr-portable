@@ -575,11 +575,11 @@ void display_dimensions_set(int w, int h); /* port hook */
 extern int s_display_w; /* DAT_00505924 */
 extern int s_display_h; /* DAT_00505928 */
 int  request_record_ready_flag4(int index);   /* FUN_0045ab30 */
-int  request_record_ready_flag4_target(int index); /* unchecked target body */
+extern "C" int  request_record_ready_flag4_target(int index); /* unchecked target body */
 int  request_record_ready_flag2(int index);   /* FUN_0045ab60 */
 int  request_record_ready_flag2_target(int index); /* retail body */
 int  request_record_flag8_is_set(int index);  /* FUN_0045ab90 */
-int  request_record_flag8_is_set_target(int index); /* unchecked target body */
+extern "C" int  request_record_flag8_is_set_target(int index); /* unchecked target body */
 void request_record_flags_set(int index, uint32_t flags); /* port hook */
 uint32_t request_record_flags_peek(int index); /* port hook */
 void request_record_panel_bounds_peek(int index, float* out_x1,
@@ -626,7 +626,7 @@ void byte_range_swap(void* a, void* b, size_t n);
  * view writers (unowned-global convention; deviations documented). */
 void indexed_pair_set(int index, uint32_t x, uint32_t y);
                                         /* FUN_0045a6e0 */
-void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y);
+extern "C" void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y);
                                         /* FUN_0045a700 */
 void indexed_float_pair_set(int index, uint32_t x, uint32_t y);
                                         /* FUN_00463730 */
@@ -637,9 +637,14 @@ void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
                                    uint32_t* out_y); /* FUN_00463ea0 */
 void indexed_record_pointer_set(int index, void* record); /* port hook */
 void* indexed_record_pointer_peek(int index);
-void region_bounds_set(const uint32_t* xy_pair, uint32_t w, uint32_t h);
-                                        /* FUN_0045d370 */
-void region_bounds_peek(uint32_t* out_xy, float* out_wh);
+/* Symbol-count pad (finding 506). MSVC 5.0 numbers every symbol a
+ * translation unit declares, and its register and x87-stack choices in later
+ * functions depend on that numbering. Issue #384 removed region_bounds_set/peek
+ * from this header; this declaration fills their 7 symbol slots so that
+ * every other unit including the header compiles to the same code. It is
+ * never defined or called. Drop it in a change that accepts entropy drift
+ * (ADR 0005). */
+void lrr_symbol_pad_crt(int, int, int, int, int, int);
 void panel_draw_records_set(int index, void* records); /* port hook */
 void* panel_draw_records_peek(int index);
 void panel_item_flag16_set(int panel, int item, int value);

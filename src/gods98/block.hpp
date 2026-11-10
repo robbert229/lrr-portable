@@ -55,18 +55,18 @@ void block_close(BlockFile* bf);
  * a record name containing '*' matches a token that starts with the text
  * before the '*' (first-token position, per FUN_004792e0). First match in
  * document order wins. Returns NULL when no record matches. */
-BlockRec* block_find(BlockFile* bf, const char* path);
+extern "C" BlockRec* block_find(BlockFile* bf, const char* path);
 
 /* Like block_find but requires the record to have children (corpus
  * BlockSubgroup gate `record.depth < parent.depth`). Returns NULL if found
  * without children. */
-BlockRec* block_subgroup(BlockFile* bf, const char* path);
+extern "C" BlockRec* block_subgroup(BlockFile* bf, const char* path);
 
 /* Record accessors. A container (`name {`) reads back value "{", matching
  * the corpus record+8. */
-const char* block_name(const BlockRec* r);
-const char* block_value(const BlockRec* r);     /* NULL when no value token */
-BlockRec*   block_first_child(const BlockRec* r);
+extern "C" const char* block_name(const BlockRec* r);
+extern "C" const char* block_value(const BlockRec* r);     /* NULL when no value token */
+extern "C" BlockRec*   block_first_child(const BlockRec* r);
 BlockRec*   block_next_sibling(const BlockRec* r);
 
 /* SortedEntryNextEqualKey (FUN_00479020, findings 230/403): follow the
@@ -76,7 +76,7 @@ BlockRec*   block_next_sibling(const BlockRec* r);
  * reads the followed entry's depth before checking it (NULL next
  * crashes — guarded here); in the port's tree model the walk is exactly
  * the next record under the same parent, so this is next-sibling. */
-BlockRec* block_next_equal_key(const BlockRec* r);
+extern "C" BlockRec* block_next_equal_key(const BlockRec* r);
 int         block_has_children(const BlockRec* r);
 size_t      block_record_count(const BlockFile* bf);
 /* Records in document (creation) order — iteration for validators/tools. */
@@ -85,14 +85,14 @@ BlockRec*   block_record_at(const BlockFile* bf, size_t index);
 /* --- typed getters (missing path ⇒ dflt) -------------------------------- */
 
 int   block_get_str(BlockFile* bf, const char* path, char* buf, size_t sz);
-const char* block_get_strptr(BlockFile* bf, const char* path); /* NULL ok */
+extern "C" const char* block_get_strptr(BlockFile* bf, const char* path); /* NULL ok */
 char* block_get_str_copy(BlockFile* bf, const char* path); /* FUN_00479050 */
 int   block_get_int(BlockFile* bf, const char* path, int dflt);
 float block_get_float(BlockFile* bf, const char* path, float dflt);
 
 /* ConfigBooleanParse (FUN_00477710): TRUE|YES|ON → 1, FALSE|NO|OFF → 0,
  * unparseable → 2. */
-int   block_get_bool(const char* value);
+extern "C" int   block_get_bool(const char* value);
 /* Path convenience corresponding to ConfigBooleanGetDefault2 (0x4790d0);
  * missing or unparseable values answer 2. */
 int   block_get_bool(BlockFile* bf, const char* path);

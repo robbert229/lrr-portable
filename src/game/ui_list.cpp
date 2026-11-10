@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "ui_list.hpp"
+#include "priorities.h"
 #include "frontend.hpp"
 #include "gods98/media.hpp"
 
@@ -123,38 +124,27 @@ static const char s_pointer_name_surface_crystal_seam[] = "Pointer_SurfaceType_C
 // GLOBAL: LEGORR 0x004a8a14
 static const char s_pointer_name_surface_recharge_seam[] = "Pointer_SurfaceType_RechargeSeam";
 
-void ui_list_state_clear(UiListState* state)
-{
-    if (state != NULL) memset(state, 0, sizeof(*state));
-}
-
-
-
-
-
 // FUNCTION: LEGORR 0x0045b620
-void ui_list_priority_button_action_dispatch(UiListState* state,
-                                             uint32_t action)
+void ui_list_priority_button_action_dispatch(uint32_t action)
 {
-    if (state == NULL) return;
     switch (action) {
-    case 0: ui_list_config_entry_enabled_toggle(state, 0); return;
-    case 1: ui_list_config_entry_enabled_toggle(state, 1); return;
-    case 2: ui_list_config_entry_enabled_toggle(state, 2); return;
-    case 3: ui_list_config_entry_enabled_toggle(state, 3); return;
-    case 4: ui_list_config_entry_enabled_toggle(state, 4); return;
-    case 5: ui_list_config_entry_enabled_toggle(state, 5); return;
-    case 6: ui_list_config_entry_enabled_toggle(state, 6); return;
-    case 7: ui_list_config_entry_enabled_toggle(state, 7); return;
-    case 8: ui_list_config_entry_enabled_toggle(state, 8); return;
-    case 9: ui_list_entries_swap(state, 1); return;
-    case 10: ui_list_entries_swap(state, 2); return;
-    case 11: ui_list_entries_swap(state, 3); return;
-    case 12: ui_list_entries_swap(state, 4); return;
-    case 13: ui_list_entries_swap(state, 5); return;
-    case 14: ui_list_entries_swap(state, 6); return;
-    case 15: ui_list_entries_swap(state, 7); return;
-    case 16: ui_list_entries_swap(state, 8); return;
+    case 0: priorities_toggle(0); return;
+    case 1: priorities_toggle(1); return;
+    case 2: priorities_toggle(2); return;
+    case 3: priorities_toggle(3); return;
+    case 4: priorities_toggle(4); return;
+    case 5: priorities_toggle(5); return;
+    case 6: priorities_toggle(6); return;
+    case 7: priorities_toggle(7); return;
+    case 8: priorities_toggle(8); return;
+    case 9: priorities_move_up(1); return;
+    case 10: priorities_move_up(2); return;
+    case 11: priorities_move_up(3); return;
+    case 12: priorities_move_up(4); return;
+    case 13: priorities_move_up(5); return;
+    case 14: priorities_move_up(6); return;
+    case 15: priorities_move_up(7); return;
+    case 16: priorities_move_up(8); return;
     default: return;
     }
 }

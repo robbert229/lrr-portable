@@ -265,7 +265,7 @@ void simtick_selection_group_clear(const uint32_t key_pair[2]);   /* FUN_0040915
 /* SimulationGlobalWordSet (FUN_0041ba90, finding 474): the corpus assigns
  * its argument to the global DAT_004de1f4 — the mute word the simtick
  * models. NULL-free by shape: this is a blind global store. */
-void simulation_global_word_set(uint32_t value);
+extern "C" void simulation_global_word_set(uint32_t value);
 
 /* DirectSoundListenerViewSet (FUN_0047ab80): the view provider stores the
  * current listener object in the DAT_00506688 slot (this module's sound

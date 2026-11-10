@@ -189,7 +189,7 @@ void input_cursor_position_hooks_install(InputClientToScreenHook convert,
                                         void* context);
 void input_cursor_position_update(void); /* FUN_0047f010 */
 void input_cursor_position_sync(InputState* state);
-void input_cursor_client_position_set(int x, int y); /* FUN_0047f0d0 */
+extern "C" void input_cursor_client_position_set(int x, int y); /* FUN_0047f0d0 */
 void input_cursor_client_position_get(int* x, int* y);
 void input_cursor_delta_get(int* x, int* y);
 int  input_key_edge(const InputState* s, int key);

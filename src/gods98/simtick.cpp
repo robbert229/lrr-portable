@@ -563,7 +563,7 @@ static int  s_metrics[2] = { 0, 0 };
 static int  s_repos_n = 0, s_attach_n = 0;
 
 // GLOBAL: LEGORR 0x00500860
-static uint32_t s_timer_word = 0;
+extern "C" uint32_t simtick_timer_word = 0;
 static int      s_timer_handles[4] = { 0, 0, 0, 0 }; /* DAT_00500850..5c */
 static const uint32_t s_timer_bits[4] = { 0x10u, 0x20u, 0x40u, 0x80u };
 
@@ -575,7 +575,7 @@ void simtick_manager_clear(void)
     s_attach = NULL;
     s_metrics[0] = s_metrics[1] = 0;
     s_repos_n = s_attach_n = 0;
-    s_timer_word = 0;
+    simtick_timer_word = 0;
 }
 
 void simtick_manager_set_slots(SimtickManagerSlot* slots, int count)
@@ -616,12 +616,12 @@ int simtick_manager_timer_bit(int which)
     if (which < 0 || which > 3) {
         return 0;
     }
-    return (s_timer_word & s_timer_bits[which]) != 0;
+    return (simtick_timer_word & s_timer_bits[which]) != 0;
 }
 
 void simtick_manager_set_timer_word(uint32_t w)
 {
-    s_timer_word = w;
+    simtick_timer_word = w;
 }
 
 // FUNCTION: LEGORR 0x0045a730
@@ -678,8 +678,8 @@ void simtick_manager_tick(int index, float dt, int ingame)
     /* index 9: stop the four shared timers (DAT_00500860 bits 0x10..0x80). */
     if (index == 9) {
         for (int k = 0; k < 4; ++k) {
-            if ((s_timer_word & s_timer_bits[k]) != 0) {
-                s_timer_word &= ~s_timer_bits[k];
+            if ((simtick_timer_word & s_timer_bits[k]) != 0) {
+                simtick_timer_word &= ~s_timer_bits[k];
                 /* FUN_0047dcb0(timer_handle, 0, &coord, 0) — see hook:
                  * a stop state is recorded through the reposition hook. */
                 if (s_repos != NULL) {
@@ -1619,15 +1619,15 @@ uint32_t simtick_route_position_state_peek(void)
 // FUNCTION: LEGORR 0x0045b610
 void simtick_global_ui_flags_clear_bits12(void)
 {
-    s_timer_word &= 0xfffffff9u;
+    simtick_timer_word &= 0xfffffff9u;
 }
 
 void simtick_global_ui_flags_set_bit2(void)
 {
-    s_timer_word |= 2u;
+    simtick_timer_word |= 2u;
 }
 
-uint32_t simtick_global_ui_flags_word(void) { return s_timer_word; }
+uint32_t simtick_global_ui_flags_word(void) { return simtick_timer_word; }
 
 /* ScenePositionResetAndEffectMotionCancel (FUN_0044cf70) — see simtick.hpp. */
 static float s_xform_current[3];   /* corpus pose seam stand-in */

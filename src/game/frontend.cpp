@@ -22,6 +22,7 @@
 #include <time.h>
 
 #include "frontend.hpp"
+#include "frontend.h"
 #include "objective.hpp"
 #include "entity.hpp"
 #include "terrain_feedback.hpp"
@@ -6073,7 +6074,7 @@ static void (*s_help_window_sound_clear)(int);
 static void (*s_help_render_transition_clear)(int, int);
 
 // FUNCTION: LEGORR 0x0046b770
-static void timed_effect_update_request_set_corpus(int index)
+void timed_effect_update_request_set_corpus(int index)
 {
     s_timed_effect_records[index].flags |= 4u;
 }
@@ -6082,6 +6083,42 @@ void timed_effect_update_request_set(int index)
 {
     if (index >= 0 && index < TIMED_EFFECT_ENTRIES)
         timed_effect_update_request_set_corpus(index);
+}
+
+/* ToolTip_SetContent adapter (frontend.h). The original (FUN_0046b520)
+ * formats into a 512-byte buffer and either loads an image ('@' prefix) or
+ * copies the text into the record, turning "\n" into a newline and '_'
+ * into a space, then measures it and arms the record (flags |= 3). This
+ * port keeps the text path only: the image pointer slot is 32-bit in the
+ * record layout, and the text measurement (FUN_00401c80) has no owner. */
+void tooltip_set_content(int index, const char* format, ...)
+{
+    TimedEffectRecord* record;
+    char text[512];
+    const char* in;
+    char* out;
+    char* end;
+    va_list args;
+    if (index < 0 || index >= TIMED_EFFECT_RECORD_COUNT || format == NULL)
+        return;
+    record = &s_timed_effect_records[index];
+    va_start(args, format);
+    formatted_text_buffer_build(text, sizeof(text), format, args);
+    va_end(args);
+    if (text[0] == '@') return;
+    out = (char*)record->payload;
+    end = out + 0x1ff;
+    for (in = text; *in != '\0' && out < end; ++in, ++out) {
+        if (in[0] == '\\' && in[1] == 'n') {
+            *out = '\n';
+            ++in;
+        }
+        else if (*in == '_') *out = ' ';
+        else *out = *in;
+    }
+    *out = '\0';
+    memset(record->payload + 0x258, 0, 0x14);
+    record->flags = (record->flags & ~8u) | 3u;
 }
 
 // FUNCTION: LEGORR 0x0046b700

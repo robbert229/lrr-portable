@@ -22,6 +22,7 @@
 #include <unistd.h> /* mkdtemp / rmdir */
 
 #include "game/frontend.hpp"
+#include "game/priorities.h"
 #include "game/savegame.hpp"
 #include "game/util.hpp"
 #include "game/game.hpp"
@@ -1941,35 +1942,44 @@ int main(int argc, char** argv)
         panel_draw_records_set(panel, NULL);
         request_record_flags_set(panel, 0u);
 
-        priority_image_state_set(0, 0u);
-        CHECK(priority_image_selection_state_update(7, 0, 0) == 0,
-              "the cleared gate parks the sentinel");
-        int32_t st = 0;
-        uint32_t flags = 0u;
-        priority_image_state_peek(&st, &flags);
-        CHECK(st == 0x1b && flags == 0u, "the sentinel rides alone");
-        CHECK(priority_image_selection_state_update(9, 1, 0) == 0
-                  && st != 9,
-              "the sentinel branch answers the sentinel test false");
-        priority_image_state_peek(&st, &flags);
-        CHECK(st == 9 && (flags & 2u) != 0u,
-              "the sentinel install lands the candidate plus the flag");
-        CHECK(priority_image_selection_state_update(9, 1, 1) == 1,
-              "the equal state raises the flag and answers true");
-        priority_image_state_peek(&st, &flags);
-        CHECK(st == 9, "the equal-state branch leaves the state alone");
-        CHECK(priority_image_selection_state_update(8, 1, 1) == 0,
-              "the foreign candidate answers the stale word");
-        priority_image_state_set(5, 0u);
-        CHECK(priority_image_selection_state_update(5, 1, 1) == 1,
-              "the equal branch ignores the skip argument");
-        priority_image_state_peek(&st, &flags);
-        CHECK((flags & 2u) != 0u, "the equal branch raises the flag");
-        priority_image_state_set(0x1b, 0u);
-        CHECK(priority_image_selection_state_update(9, 1, 1) == 0,
-              "the sentinel with the skip set rides stale");
-        priority_image_state_peek(&st, &flags);
-        CHECK(st == 0x1b && flags == 0u, "the skip keeps the sentinel clear");
+        priorities_selection_set(0u, 0u);
+        CHECK(priorities_select(7u, 0, 0) == 0,
+              "a release clears the selection");
+        unsigned int st = 0u;
+        unsigned int flags = 0u;
+        priorities_selection_get(&st, &flags);
+        CHECK(st == PRIORITY_TYPE_COUNT && flags == 0u,
+              "the cleared selection holds the sentinel");
+        CHECK(priorities_select(9u, 1, 0) == 0,
+              "a new press answers false");
+        priorities_selection_get(&st, &flags);
+        CHECK(st == 9u && (flags & 2u) != 0u,
+              "a new press selects the row and raises the pressed flag");
+        CHECK(priorities_select(9u, 1, 1) == 1,
+              "a held press on the selected row answers true");
+        priorities_selection_get(&st, &flags);
+        CHECK(st == 9u, "a held press keeps the selection");
+        CHECK(priorities_select(8u, 1, 1) == 0,
+              "another row answers false");
+        priorities_selection_set(5u, 0u);
+        CHECK(priorities_select(5u, 1, 1) == 1,
+              "the selected row ignores the released argument");
+        priorities_selection_get(&st, &flags);
+        CHECK((flags & 2u) != 0u, "the selected row raises the pressed flag");
+        priorities_selection_set(PRIORITY_TYPE_COUNT, 0u);
+        CHECK(priorities_select(9u, 1, 1) == 0,
+              "a released press selects nothing");
+        priorities_selection_get(&st, &flags);
+        CHECK(st == PRIORITY_TYPE_COUNT && flags == 0u,
+              "a released press keeps the sentinel and flags clear");
+
+        const Point2F hover_position = { 5.0f, 6.0f };
+        Area2F hover_area;
+        priorities_set_hover_area(&hover_position, 640u, 480u);
+        priorities_hover_area_get(&hover_area);
+        CHECK(hover_area.x == 5.0f && hover_area.y == 6.0f &&
+                  hover_area.width == 640.0f && hover_area.height == 480.0f,
+              "the hover area lands");
 
         uint32_t srcbuf[17];
         memset(srcbuf, 0, sizeof srcbuf);

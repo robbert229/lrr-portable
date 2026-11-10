@@ -27,7 +27,7 @@ typedef struct BlockFile BlockFile;
 #define SOUND_BANK_SLOTS 600 /* finding 14 §1: (0x5339a8 - 0x506798)/0x134 */
 
 /* In-place token split used by both menu image records and sound variants. */
-int sound_variant_split(char* text, char** out, const char* separators);
+extern "C" int sound_variant_split(char* text, char** out, const char* separators);
 
 /* fmt chunk (16 bytes, PCM). */
 typedef struct WavSample {
@@ -261,7 +261,7 @@ void sound_alias_registration_set(int enable);
  * corpus's param_1 guard). A miss appends at the first free slot only
  * while registration is enabled — and the port returns 0 instead of the
  * corpus's out-of-bounds write once SOUND_ALIAS_MAX slots are full. */
-int sound_alias_lookup(const char* name, int* out_index);
+extern "C" int sound_alias_lookup(const char* name, int* out_index);
 
 /* Current table size (built-ins + dynamic), i.e. DAT_00502a24 + 45. */
 int sound_alias_count(void);
