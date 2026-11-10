@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "game/ai.hpp"
 #include "game/cmd.hpp"
@@ -26,19 +28,74 @@ static int s_failures = 0;
         }                                                                      \
     } while (0)
 
+#define FIX_DIM 128
+
+/* A FIX_DIM x FIX_DIM all-zero surface map for the scratch terrain. */
+static void write_surface_map(const char* path)
+{
+    FILE* fp = fopen(path, "wb");
+    if (fp == NULL) {
+        return;
+    }
+    const char magic[4] = { 'M', 'A', 'P', ' ' };
+    const uint32_t len = FIX_DIM * FIX_DIM * 2, w = FIX_DIM, h = FIX_DIM;
+    static const uint16_t cells[FIX_DIM * FIX_DIM] = { 0 };
+    fwrite(magic, 1, 4, fp);
+    fwrite(&len, 1, 4, fp);
+    fwrite(&w, 1, 4, fp);
+    fwrite(&h, 1, 4, fp);
+    fwrite(cells, 1, sizeof(cells), fp);
+    fclose(fp);
+}
+
+/* Scratch terrain the faithful route code resolves cells through. Entity
+ * positions in this test are WORLD coordinates (blocksize 1: cell centres sit
+ * on integer world coordinates, y flipped); move targets are cells. */
+static void* s_fix_terrain;
+/* A minimal Stats record: only RouteSpeed (+0x20) set, so the faithful
+ * 0x446610 / entity_route_speed path yields 0.08 * 25 = 2 world units/s. */
+static uint8_t s_fix_stats[ENTITY_STATS_RECORD_SIZE];
+
 static EntitySlot* place(GameContext* ctx, int type, const char* name,
                          float x, float y)
 {
     int idx = entity_create(ctx, type, name, x, y, 0, 0);
     CHECK(idx >= 0, "entity_create");
-    return (EntitySlot*)entity_at(ctx, type, idx);
+    EntitySlot* e = (EntitySlot*)entity_at(ctx, type, idx);
+    if (e != NULL && e->stats_record == NULL) {
+        e->stats_record = s_fix_stats;
+    }
+    return e;
 }
 
-/* Run ai_tick `n` times at dt, returning completions summed. */
+/* cmd_create_move toward a WORLD position: the faithful record carries the
+ * target CELL, resolved through the scratch terrain. */
+static void move_to(EntitySlot* e, float wx, float wy, int flag)
+{
+    int cx = 0, cy = 0;
+    CHECK(terrain_world_xy_to_cell(s_fix_terrain, wx, wy, &cx, &cy) != 0,
+          "move target resolves to a cell");
+    cmd_create_move(e, (float)cx, (float)cy, flag);
+}
+
+/* One application frame, `n` times at dt: the game-layer move/target/task
+ * pass (ai_tick), then the per-entity callback receiver. The faithful
+ * ai_tick no longer runs the flag/callback branches itself (the engine's
+ * EntityFrameUpdateDispatch walker owns them and their liveness filter), so
+ * the harness plays that walker: every live slot gets ai_entity_frame_update
+ * after the pass. */
 static void run(GameContext* ctx, int n, float dt)
 {
     for (int i = 0; i < n; ++i) {
         ai_tick(ctx, dt);
+        for (int t = 0; t < ENTITY_TYPES; ++t) {
+            for (int k = 0; k < ctx->entity_count[t]; ++k) {
+                EntitySlot* e = &ctx->entity[t][k];
+                if (e->type != 0) {
+                    ai_entity_frame_update(e, dt);
+                }
+            }
+        }
     }
 }
 
@@ -411,9 +468,48 @@ int main(int argc, char** argv)
     game_context_init(&ctx);
     cmd_context_set(&ctx);
 
+    /* The faithful move route (cmd_move_route_prepare / step_path) resolves
+     * cells through the level's terrain, so the context needs a level backed
+     * by a real terrain (file opens resolve under the CD root: the fixture
+     * directory). */
+    system("rm -rf ai_fixture");
+    mkdir("ai_fixture", 0755);
+    write_surface_map("ai_fixture/L01_surface.map");
+    if (chdir("ai_fixture") != 0) {
+        fprintf(stderr, "ai_test: chdir failed\n");
+        return 1;
+    }
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
+    s_fix_terrain = terrain_create("L01_surface.map", 1.0f);
+    void* const fix_terrain = s_fix_terrain;
+    {
+        const float route_speed = 0.08f;
+        const uint32_t walk_relief = 0x2000000u;
+        const float surface_scale = 1.0f; /* terrain never slows the route */
+        memcpy(s_fix_stats + 0x20, &route_speed, sizeof(route_speed));
+        memcpy(s_fix_stats + 0xd4, &surface_scale, sizeof(surface_scale));
+        memcpy(s_fix_stats + 0x144, &walk_relief, sizeof(walk_relief));
+    }
+    CHECK(fix_terrain != NULL, "scratch terrain");
+    static LevelState fix_level;
+    static uint8_t fix_grid[FIX_DIM * FIX_DIM * LEVEL_VOXEL_STRIDE];
+    memset(&fix_level, 0, sizeof(fix_level));
+    level_set_int(&fix_level, LEVEL_OFF_WIDTH, FIX_DIM);
+    level_set_int(&fix_level, LEVEL_OFF_HEIGHT, FIX_DIM);
+    fix_level.ptr_voxels = fix_grid;
+    fix_level.ptr_terrain = fix_terrain;
+    /* Every cell reads walkable to the faithful route gate (flag 0x8). */
+    for (int c = 0; c < FIX_DIM * FIX_DIM; ++c) {
+        const uint32_t walkable = 0x8u;
+        memcpy(fix_grid + c * LEVEL_VOXEL_STRIDE + 8, &walkable,
+               sizeof(walkable));
+    }
+    ctx.level = &fix_level;
+
     /* Move execution: entity at (0,0) moves to (10,0) at 2 cells/s. */
     EntitySlot* mover = place(&ctx, 1, "mover", 0, 0);
-    cmd_create_move(mover, 10.0f, 0.0f, 0);
+    move_to(mover, 10.0f, 0.0f, 0);
     int before = ai_commands_active(&ctx);
     CHECK(before >= 1, "move enqueued");
     run(&ctx, 2, 0.5f);
@@ -425,40 +521,43 @@ int main(int argc, char** argv)
     CHECK(ai_commands_active(&ctx) == 0, "no live commands after the move");
     CHECK((mover->flags_3e0 & 0x8u) == 0, "arrival clears the +0x3e0 move flag");
 
-    /* --- path list (corpus +0x24 mirror; creator seeding, arrival pop) --- */
+    /* --- path list (corpus +0x24 mirror; lazy route build, arrival pop) --- */
 
-    /* A move command seeds a one-entry path and raises the mover flag. */
+    /* The faithful creator (0x4035c0) only links the record; the route is
+     * built lazily on the first tick by cmd_move_route_prepare, from the
+     * entity's start CELL through to the target cell (both endpoints), so
+     * four cells of travel is a five-entry list. */
     EntitySlot* walker = place(&ctx, 1, "walker", 0, 0);
-    cmd_create_move(walker, 4.0f, 0.0f, 0);
-    CHECK(walker->wp_count == 1 && walker->wp[0].pending == 1,
-          "move seeds a one-entry path list");
-    CHECK((walker->flags_3e0 & 0x8u) != 0, "move sets the +0x3e0 mover flag");
-    run(&ctx, 2, 0.5f); /* 2 of 4 cells */
-    CHECK(walker->wp_index == 0 && walker->wp[0].pending == 1,
+    move_to(walker, 4.0f, 0.0f, 0);
+    CHECK(walker->wp_count == 0 && (walker->flags_3e0 & 0x1u) == 0,
+          "the creator seeds no path and raises no mover flag");
+    run(&ctx, 1, 0.5f); /* 1 of 4 cells */
+    CHECK(walker->wp_count == 5 && (walker->flags_3e0 & 0x1u) != 0,
+          "the first tick routes start..target and raises the mover flag");
+    run(&ctx, 1, 0.5f); /* 2 of 4 cells */
+    CHECK(walker->wp_index == 3,
           "mid-path entry stays pending (pop is arrival-only)");
     run(&ctx, 3, 0.5f);
     CHECK(walker->x >= 3.9f, "walker arrives at the waypoint");
-    CHECK(walker->wp[0].pending == 0 && walker->wp_index == 1,
-          "arrival pops the pending flag in place (corpus pop semantics)");
-    CHECK((walker->flags_3e0 & 0x8u) == 0 && walker->cmd_head == NULL,
-          "path exhaustion completes the command and clears the flag");
+    CHECK((walker->flags_3e0 & 0x1u) == 0 && walker->cmd_head == NULL &&
+              walker->wp_count == 0,
+          "path exhaustion completes the command, clears the flag and path");
 
-    /* Multi-waypoint: the tick walks entries in order, popping each. */
+    /* Chained moves: the tick walks the first record to arrival, then the
+     * next queued record routes from where the first ended. */
     EntitySlot* courier = place(&ctx, 1, "courier", 0, 0);
-    cmd_create_move(courier, 4.0f, 0.0f, 0);
-    CHECK(ai_path_append(courier, 4.0f, 4.0f) == 1, "waypoint appended");
-    run(&ctx, 4, 0.5f); /* exactly the first hop */
+    move_to(courier, 4.0f, 0.0f, 0);
+    move_to(courier, 4.0f, 4.0f, 0);
+    run(&ctx, 4, 0.5f); /* exactly the first leg (1 cell per tick) */
     CHECK(courier->x >= 3.9f && courier->y < 1.0f, "first waypoint reached");
-    CHECK(courier->wp_index == 1 && courier->wp[0].pending == 0 &&
-              courier->wp[1].pending == 1 && courier->cmd_head != NULL,
-          "pop advances to the second entry, command stays live");
-    CHECK((courier->flags_3e0 & 0x8u) != 0, "mid-path mover flag stays set");
+    CHECK(courier->cmd_head != NULL && courier->wp_count == 0,
+          "the first leg retires, the second command stays live");
+    run(&ctx, 1, 0.5f);
+    CHECK((courier->flags_3e0 & 0x1u) != 0 && courier->wp_count == 5,
+          "mid-chain mover flag is up on the second leg's route");
     run(&ctx, 6, 0.5f);
     CHECK(courier->x >= 3.9f && courier->y >= 3.9f, "second waypoint reached");
-    CHECK(courier->wp[1].pending == 0 && courier->cmd_head == NULL,
-          "final pop completes the command");
-    CHECK(ai_path_append(courier, 0.0f, 0.0f) == 0,
-          "a fully popped path restarts the buffer");
+    CHECK(courier->cmd_head == NULL, "final leg completes the command");
 
     /* Target execution: A chases B. */
     EntitySlot* chaser = place(&ctx, 2, "chaser", 0, 0);
@@ -491,7 +590,13 @@ int main(int argc, char** argv)
     /* Queue -> executor -> ai: selection move via opcode 5 executes. */
     EntitySlot* digger = place(&ctx, 1, "digger", 0, 0);
     selection_add(&ctx, digger);
-    selection_cmd_move(&ctx, 5, 5);
+    {
+        /* The pointer command takes a grid CELL: resolve world (5,5). */
+        int cx5 = 0, cy5 = 0;
+        CHECK(terrain_world_xy_to_cell(s_fix_terrain, 5.0f, 5.0f, &cx5, &cy5),
+              "world (5,5) resolves to a cell");
+        selection_cmd_move(&ctx, cx5, cy5);
+    }
     cmd_queue_tick();
     run(&ctx, 20, 0.5f);
     CHECK(digger->x >= 4.9f && digger->y >= 4.9f, "queue move executes");
@@ -549,7 +654,7 @@ int main(int argc, char** argv)
 
     /* Wake timer (0x43c870): flags tick but movement freezes. */
     EntitySlot* sleeper = place(&ctx, 1, "sleeper", 0, 0);
-    cmd_create_move(sleeper, 100.0f, 0.0f, 0);
+    move_to(sleeper, 100.0f, 0.0f, 0);
     sleeper->flags_3e4 |= 0x08000000u;
     sleeper->wake_timer = 0.3f;
     run(&ctx, 1, 0.5f);
@@ -629,7 +734,7 @@ int main(int argc, char** argv)
      * from the chain-head record's +0x38 field, installs it through the
      * setter, and returns early — the chain head does not run that tick. */
     EntitySlot* grantee = place(&ctx, 1, "grantee", 0, 0);
-    cmd_create_move(grantee, 10.0f, 0.0f, 0);
+    move_to(grantee, 10.0f, 0.0f, 0);
     CHECK(grantee->cmd_head != NULL, "move record at the chain head");
     if (grantee->cmd_head != NULL) {
         cmd_rec_set_activity(grantee->cmd_head, AI_ACT_TELEPORT);
@@ -732,7 +837,7 @@ int main(int argc, char** argv)
      * grant, the corpus unlinks and frees every type-0x13 record
      * (FUN_00403d10(ent, 0x13, 0, 1)) — the port's cmd_chain_drop. */
     EntitySlot* grantee2 = place(&ctx, 8, "grantee2", 0, 0);
-    cmd_create_move(grantee2, 10.0f, 0.0f, 0);
+    move_to(grantee2, 10.0f, 0.0f, 0);
     if (grantee2->cmd_head != NULL) {
         cmd_rec_set_activity(grantee2->cmd_head, AI_ACT_DRILL);
         void* grec = cmd_alloc(0x13); /* type-0x13 grant record */
@@ -808,7 +913,7 @@ int main(int argc, char** argv)
         /* Unwalkable start (no 0x10 layer bit): the move command is live
          * but the walker must not budge; the mover state marks the cell. */
         EntitySlot* stuck = place(&ctx, 1, "stuck", 0, 0);
-        cmd_create_move(stuck, 4.0f, 0.0f, 0);
+        move_to(stuck, 4.0f, 0.0f, 0);
         run(&ctx, 2, 0.5f);
         CHECK(stuck->x == 0.0f && stuck->cmd_head != NULL,
               "unwalkable cell freezes the walker");
@@ -849,7 +954,7 @@ int main(int argc, char** argv)
             *(uint32_t*)(voxels + ((size_t)cy * 16 + 5) * 0x48 + 8) |= 0x40u;
         }
         EntitySlot* detour = place(&ctx, 1, "detour", 1, 3);
-        cmd_create_move(detour, 9.0f, 3.0f, 0);
+        move_to(detour, 9.0f, 3.0f, 0);
         CHECK(detour->wp_count > 1, "pathfinder fills a multi-entry list");
         int arrived = 0;
         for (int t = 0; t < 40 && !arrived; ++t) {
@@ -876,7 +981,7 @@ int main(int argc, char** argv)
             }
         }
         EntitySlot* runner = place(&ctx, 1, "runner", 1, 1);
-        cmd_create_move(runner, 5.0f, 1.0f, 0);
+        move_to(runner, 5.0f, 1.0f, 0);
         CHECK(runner->wp_count == 4,
               "wave-flood builds the multi-cell path on a clean grid");
         CHECK(runner->wp[0].x == 2.0f && runner->wp[3].x == 5.0f &&
@@ -903,7 +1008,7 @@ int main(int argc, char** argv)
             }
         }
         EntitySlot* retarget = place(&ctx, 1, "retarget", 1, 5);
-        cmd_create_move(retarget, 8.0f, 5.0f, 0);
+        move_to(retarget, 8.0f, 5.0f, 0);
         CHECK(retarget->wp_count == 7,
               "the first build routes the seven-cell move");
         run(&ctx, 1, 0.1f); /* mid-move: the walker marks cell (1,5) */
@@ -991,7 +1096,7 @@ int main(int argc, char** argv)
         EntitySlot* parked = place(&ctx, 1, "parked", 1, 3);
         CHECK(ai_path_build(&ctx, parked, 1.0f, 3.0f) == 0,
               "start-equal-target builds no path");
-        cmd_create_move(parked, 1.0f, 3.0f, 0);
+        move_to(parked, 1.0f, 3.0f, 0);
         CHECK(parked->wp_count == 1,
               "the equal-cell move keeps the one-hop fallback seed");
         run(&ctx, 1, 0.5f);
@@ -1018,7 +1123,7 @@ int main(int argc, char** argv)
               "no grid handle: no path and no flood state");
         CHECK(ai_wave_flood_count() == 0,
               "a no-grid build owns no wave work state");
-        cmd_create_move(gridless, 6.0f, 6.0f, 0);
+        move_to(gridless, 6.0f, 6.0f, 0);
         CHECK(gridless->wp_count == 1, "no-grid move seeds the one-hop fallback");
         run(&ctx, 12, 0.5f);
         CHECK(gridless->x >= 5.9f && gridless->cmd_head == NULL,
@@ -1066,9 +1171,9 @@ int main(int argc, char** argv)
         EntitySlot* slow = place(&ctx, 1, "slow", 3, 5);
         EntitySlot* plain = place(&ctx, 1, "plain", 3, 6);
         EntitySlot* fast = place(&ctx, 1, "fast", 3, 7);
-        cmd_create_move(slow, 11.0f, 5.0f, 0);
-        cmd_create_move(plain, 11.0f, 6.0f, 0);
-        cmd_create_move(fast, 11.0f, 7.0f, 0);
+        move_to(slow, 11.0f, 5.0f, 0);
+        move_to(plain, 11.0f, 6.0f, 0);
+        move_to(fast, 11.0f, 7.0f, 0);
         CHECK(slow->wp_count > 1, "the speed rows walk straight-through paths");
 
         int t_slow = 0, t_plain = 0, t_fast = 0;
@@ -1111,7 +1216,7 @@ int main(int argc, char** argv)
      * leaves the move intact and does not alter the task-only global list. */
     void* global_before_drop = cmd_global_head();
     EntitySlot* dropper = place(&ctx, 1, "dropper", 11, 5);
-    cmd_create_move(dropper, 10.0f, 5.0f, 0);
+    move_to(dropper, 10.0f, 5.0f, 0);
     cmd_create_target(dropper, (void*)dropper);
     CHECK(cmd_chain_drop(dropper, 2) == 1, "drop takes the target record");
     CHECK(cmd_global_head() == global_before_drop,
@@ -1122,7 +1227,7 @@ int main(int argc, char** argv)
     }
     CHECK(dropper->cmd_head == NULL, "dropper chain drains cleanly");
     EntitySlot* linked = place(&ctx, 1, "linked", 12, 5);
-    cmd_create_move(linked, 11.0f, 5.0f, 0);
+    move_to(linked, 11.0f, 5.0f, 0);
     CHECK(cmd_global_head() == global_before_drop &&
               linked->cmd_head != NULL && cmd_rec_next(linked->cmd_head) == NULL,
           "new move remains on its own chain outside the task list");
