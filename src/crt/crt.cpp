@@ -4268,12 +4268,23 @@ uint32_t crt_extended_float_convert_format_b(const uint16_t* source,
 #if !defined(_MSC_VER)
 uint32_t crt_number_string_to_binary64(uint32_t* destination, char* text)
 {
-    uint16_t extended[6];
+    /* Native-only: the old strtod -> __dtold -> __ld12tod chain fed a packed
+     * x87 extended value to the converter that expects the 12-byte LD12
+     * layout, so every number converted to 0 with an underflow status.
+     * Convert directly; status follows the CRT's 1 = overflow, 2 = underflow. */
     char* end;
-    double value = strtod(text, &end);
-    (void)end;
-    CRT_DTOLD(extended, &value);
-    return CRT_LD12TOD(extended, destination);
+    double value;
+    uint32_t status = 0u;
+    errno = 0;
+    value = strtod(text, &end);
+    if (isinf(value)) {
+        status = 1u;
+    }
+    else if (errno == ERANGE) {
+        status = 2u;
+    }
+    memcpy(destination, &value, sizeof(value));
+    return status;
 }
 #endif
 
@@ -4282,12 +4293,20 @@ uint32_t crt_number_string_to_binary64(uint32_t* destination, char* text)
 #if !defined(_MSC_VER)
 uint32_t crt_number_string_to_binary32(uint32_t* destination, char* text)
 {
-    uint16_t extended[6];
+    /* Native-only direct conversion (see crt_number_string_to_binary64). */
     char* end;
-    double value = strtod(text, &end);
-    (void)end;
-    CRT_DTOLD(extended, &value);
-    return CRT_LD12TOF(extended, destination);
+    float value;
+    uint32_t status = 0u;
+    errno = 0;
+    value = strtof(text, &end);
+    if (isinf(value)) {
+        status = 1u;
+    }
+    else if (errno == ERANGE) {
+        status = 2u;
+    }
+    memcpy(destination, &value, sizeof(value));
+    return status;
 }
 #endif
 
