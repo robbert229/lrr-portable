@@ -55,13 +55,19 @@ int main(void)
     /* dedupe suppresses a second fire of an active id. */
     message_dispatch(3, 0, 0, NULL);
     CHECK(message_active_count() == 1, "dedupe: no re-queue");
-    CHECK(s_fires == 2, "dedupe: duplicate ran live callback");
+    /* The faithful MessagePreCheck now answers "duplicate handled live" for
+     * a payload-less dispatch of an already-queued id and returns before the
+     * callback, so the duplicate does not fire again. */
+    CHECK(s_fires == 1, "dedupe: duplicate suppressed by the pre-check");
 
     /* exception ids {10,11,12,38} skip dedupe. */
+    /* The faithful dispatch drops an id with no bound config, so give id 11
+     * one first. */
+    message_config_set(11, "Sounds\\y.wav", 0.0f, 0);
     message_dispatch(11, 0, 0, NULL);
     message_dispatch(11, 0, 0, NULL);
     CHECK(message_active_has(11), "exception: id queued");
-    CHECK(s_fires == 4, "exception: both dispatches fired");
+    CHECK(s_fires == 3, "exception: both dispatches fired");
 
     /* auto-cooldown rule: flags(+0x8 flag, cfg 0x20000) with spent cooldown
      * resets the linked family and mutes; nothing is queued. */
@@ -89,10 +95,11 @@ int main(void)
     {
         char txt[] =
             "InfoMessages {\n"
-            "  UnderAttack Sounds\\UnderAttack.wav\n"
-            "  Info_CrystalFound Sounds\\Crystal.wav\n"
-            "  LegoManDeath AlwaysPlaySFX\n"
-            "  NotAnEntry Sounds\\Ignored.wav\n"
+            /* Faithful format: colon fields text:image[:sound[:mode...]] */
+            "  UnderAttack UnderAttack:attack.bmp:Sounds\\UnderAttack.wav\n"
+            "  Info_CrystalFound Crystal:crystal.bmp:Sounds\\Crystal.wav\n"
+            "  LegoManDeath Death:death.bmp\n"
+            "  NotAnEntry Ignored:i.bmp:Sounds\\Ignored.wav\n"
             "}\n";
         BlockFile* bf = block_parse(txt, strlen(txt));
         CHECK(bf != NULL, "infomessages: parse");
