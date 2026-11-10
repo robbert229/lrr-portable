@@ -4,13 +4,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "game/cmd.hpp"
 #include "game/entity.hpp"
+#include "game/level.hpp"
 #include "game/frontend.hpp"
 #include "game/game.hpp"
 #include "game/select.hpp"
 #include "gods98/engine.hpp"
+#include "gods98/resource.hpp"
 
 static int s_failures = 0;
 
@@ -21,6 +25,26 @@ static int s_failures = 0;
             ++s_failures;                                                      \
         }                                                                      \
     } while (0)
+
+#define LEVEL_DIM 64
+
+/* A LEVEL_DIM x LEVEL_DIM all-zero surface map. */
+static void write_surface_map(const char* path)
+{
+    FILE* fp = fopen(path, "wb");
+    if (fp == NULL) {
+        return;
+    }
+    const char magic[4] = { 'M', 'A', 'P', ' ' };
+    const uint32_t len = LEVEL_DIM * LEVEL_DIM * 2, w = LEVEL_DIM, h = LEVEL_DIM;
+    static const uint16_t cells[LEVEL_DIM * LEVEL_DIM] = { 0 };
+    fwrite(magic, 1, 4, fp);
+    fwrite(&len, 1, 4, fp);
+    fwrite(&w, 1, 4, fp);
+    fwrite(&h, 1, 4, fp);
+    fwrite(cells, 1, sizeof(cells), fp);
+    fclose(fp);
+}
 
 static EntitySlot* place(GameContext* ctx, int type, const char* name,
                          float x, float y)
@@ -37,6 +61,30 @@ int main(void)
     game_context_init(&ctx);
     cmd_context_set(&ctx);
 
+    /* The faithful pick / move / HUD paths resolve entity positions and
+     * cells through the context's level terrain, so give the context a
+     * scratch level (a real terrain over a written surface map; file opens
+     * resolve under the CD root, the fixture directory). */
+    system("rm -rf select_fixture");
+    mkdir("select_fixture", 0755);
+    write_surface_map("select_fixture/L01_surface.map");
+    if (chdir("select_fixture") != 0) {
+        fprintf(stderr, "select_test: chdir failed\n");
+        return 1;
+    }
+    resource_set_cd_root(".");
+    resource_set_cd_data_dir(".");
+    void* const level_terrain = terrain_create("L01_surface.map", 1.0f);
+    CHECK(level_terrain != NULL, "scratch terrain");
+    static LevelState level;
+    static uint8_t level_grid[LEVEL_DIM * LEVEL_DIM * LEVEL_VOXEL_STRIDE];
+    memset(&level, 0, sizeof(level));
+    level_set_int(&level, LEVEL_OFF_WIDTH, LEVEL_DIM);
+    level_set_int(&level, LEVEL_OFF_HEIGHT, LEVEL_DIM);
+    level.ptr_voxels = level_grid;
+    level.ptr_terrain = level_terrain;
+    ctx.level = &level;
+
     EntitySlot* a = place(&ctx, 1, "diggerA", 3, 4);
     EntitySlot* b = place(&ctx, 2, "minerB", 8, 8);
     EntitySlot* c = place(&ctx, 4, "wallC", 20, 20);
@@ -50,9 +98,15 @@ int main(void)
     CHECK((a->flags & ENTITY_SELECTED) != 0, "a selected flag");
 
     /* Pick nearest within tolerance. */
-    CHECK(selection_pick(&ctx, 3, 4, 2.0f) == a, "pick a at its cell");
-    CHECK(selection_pick(&ctx, 8, 8, 1.0f) == b, "pick b at its cell");
-    CHECK(selection_pick(&ctx, 50, 50, 5.0f) == NULL, "no entity near (50,50)");
+    /* Picks are in grid cells: the entities' world positions map through the
+     * level's terrain, so read each one's grid position back first. */
+    float ga[2] = { 0, 0 }, gb[2] = { 0, 0 };
+    CHECK(entity_position_grid_coordinates_get(a, ctx.level, ga) != 0
+              && entity_position_grid_coordinates_get(b, ctx.level, gb) != 0,
+          "grid coordinates resolve");
+    CHECK(selection_pick(&ctx, ga[0], ga[1], 2.0f) == a, "pick a at its cell");
+    CHECK(selection_pick(&ctx, gb[0], gb[1], 1.0f) == b, "pick b at its cell");
+    CHECK(selection_pick(&ctx, 62, 62, 1.0f) == NULL, "no entity near (62,62)");
 
     /* Pointer command: move selection to a cell -> queue -> dispatch. */
     int n = selection_cmd_move(&ctx, 5, 5);
