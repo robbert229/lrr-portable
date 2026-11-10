@@ -212,7 +212,8 @@ static void test_build(void)
     CHECK(pick->item_count == 1 + 2, "build: Menu2 = Back + 2 campaign rows");
     CHECK(pick->items[1].level_start == 1, "build: picker row flagged");
     CHECK(strcmp(pick->items[1].target, "Tran01") == 0, "build: row target Tran01");
-    CHECK(strcmp(pick->items[1].label, "1._Moving_Rock_Raiders") == 0,
+    /* Reference-backed picker rows show FullName with '_' rendered as ' '. */
+    CHECK(strcmp(pick->items[1].label, "1. Moving Rock Raiders") == 0,
         "build: row label from FullName");
     CHECK(pick->items[1].x == 96 && pick->items[1].y == 90,
         "build: row scatter from FrontEndX/Y");
@@ -301,6 +302,14 @@ static void test_render(void)
     FrontEnd fe;
     frontend_build(&fe, cfg);
     frontend_open(&fe, FE_MENU_MAIN);
+    /* Reference behaviour: opening the root menu leaves no row selected (Up/
+     * Down/Enter do not drive it, see test_nav); the highlight follows the
+     * pointer. Hover the first row (y 200..) before rendering. */
+    {
+        FeInput hover0 = { 0, 0, 0, 0, 0, 0, 300, 205, 0 };
+        frontend_tick(&fe, &hover0, NULL);
+        CHECK(fe.sel == 0, "render: pointer selects the first row");
+    }
 
     int w = 640, h = 400;
     uint8_t* px = (uint8_t*)calloc((size_t)w * h, 4);
@@ -315,8 +324,10 @@ static void test_render(void)
     b[0] = px[(199 * w + 283) * 4 + 0];
     b[1] = px[(199 * w + 283) * 4 + 1];
     b[2] = px[(199 * w + 283) * 4 + 2];
-    CHECK(b[0] == 60 && b[1] == 80 && b[2] == 200,
-        "render: selection highlight color");
+    /* The reference renderer draws no highlight bar: selection is the bright
+     * face only, so the pixel left of the label stays background. */
+    CHECK(b[0] == 0 && b[1] == 0 && b[2] == 0,
+        "render: no selection highlight bar (background)");
     /* 'S' of Start_Game at (285,200) is ink (white) */
     b[0] = px[(200 * w + 285) * 4 + 0];
     CHECK(b[0] == 255 && px[(200 * w + 285) * 4 + 1] == 255
@@ -369,6 +380,13 @@ static void test_font(void)
         FrontEnd fe;
         frontend_build(&fe, cfg);
         frontend_open(&fe, FE_MENU_MAIN);
+        /* No row is pre-selected (reference behaviour); hover the label so
+         * the selected-row highlight bar is under the glyph cells. */
+        {
+            FeInput hover = { 0, 0, 0, 0, 0, 0, 5, 5, 0 };
+            frontend_tick(&fe, &hover, NULL);
+            CHECK(fe.sel == 0, "font: pointer selects the label row");
+        }
 
         int w = 160, h = 120;
         uint8_t* px = (uint8_t*)calloc((size_t)w * h, 4);
@@ -381,17 +399,19 @@ static void test_font(void)
             uint8_t c0 = px[((4 + 1) * w + (4 + 1)) * 4 + 0];   /* 'L' ink */
             CHECK(c0 == 255 && px[((4 + 1) * w + (4 + 1)) * 4 + 1] == 255
                 && px[((4 + 1) * w + (4 + 1)) * 4 + 2] == 255, "font: L ink");
-            /* advance('L') = maxx+1 = 2 -> 'Q' at x = 4 + 2 = 6, ink at
-             * (6+1, 5) = (7,5) */
-            uint8_t q0 = px[(5 * w + 7) * 4 + 0];
+            /* The reference text path advances by the trimmed ink width
+             * (here 1 column), so 'Q' lands one pixel after 'L': ink at
+             * (6, 5) (it was (7, 5) with the old maxx+1 advance). */
+            uint8_t q0 = px[(5 * w + 6) * 4 + 0];
             CHECK(q0 == 255, "font: Q advance ink");
             /* the key pixel of the 'L' cell (its 0,0) is transparent: the
-             * selected-row highlight bar behind it shows through (not the
-             * red key, not white ink) */
+             * frame buffer behind it shows through (black here — not the
+             * red key, not white ink). The selected-row highlight bar the
+             * old port drew behind rows is gone in the reference path. */
             uint8_t k = px[(4 * w + 4) * 4 + 0];
-            CHECK(k == 60 && px[(4 * w + 4) * 4 + 1] == 80
-                && px[(4 * w + 4) * 4 + 2] == 200,
-                "font: key skipped (highlight shows through)");
+            CHECK(k == 0 && px[(4 * w + 4) * 4 + 1] == 0
+                && px[(4 * w + 4) * 4 + 2] == 0,
+                "font: key skipped (background shows through)");
             free(px);
         }
 
@@ -797,9 +817,11 @@ static void test_options(void)
     frontend_tick(&fe, &r, NULL);
     CHECK(cy->value == 0, "opt: cycle wraps to first option");
 
-    /* Render the slider widget (3x5 fallback): item0 at Position 250:134,
-     * label "SFX_Volume" tw 70 -> bar x=250+80=330, y=134+6-2=138, width 72;
-     * value 7 -> fill 7*72/10=50 => gold 330..379, dark 380..401. */
+    /* Render the slider widget (fallback chrome, no bitmap tuple): the bar is
+     * anchored at the item's origin (reference layout, no label-width
+     * offset): item0 at Position 250:134, bar x=250, y=134+7=141, 100 wide,
+     * 6 tall; value 7 -> fill 70 => gold 250..319, then the white marker
+     * 320..322, dark 323..349. */
     int w = 480, h = 320;
     uint8_t* px = (uint8_t*)calloc((size_t)w * h, 4);
     CHECK(px != NULL, "opt: buffer");
@@ -807,13 +829,13 @@ static void test_options(void)
         memset(px, 0, (size_t)w * h * 4);
         frontend_render(&fe, NULL, NULL, w, h, px, w * 4);
         uint8_t c[3];
-        c[0] = px[(140 * w + 334) * 4 + 0];
-        c[1] = px[(140 * w + 334) * 4 + 1];
-        c[2] = px[(140 * w + 334) * 4 + 2];
+        c[0] = px[(143 * w + 260) * 4 + 0];
+        c[1] = px[(143 * w + 260) * 4 + 1];
+        c[2] = px[(143 * w + 260) * 4 + 2];
         CHECK(c[0] == 210 && c[1] == 180 && c[2] == 70,
             "opt: bar fill is gold");
-        c[0] = px[(140 * w + 384) * 4 + 0];
-        c[1] = px[(140 * w + 384) * 4 + 1];
+        c[0] = px[(143 * w + 340) * 4 + 0];
+        c[1] = px[(143 * w + 340) * 4 + 1];
         CHECK(c[0] == 36 && c[1] == 36, "opt: bar tail is dark");
         free(px);
     }
@@ -848,7 +870,11 @@ static void test_options(void)
 
 static void test_cycle_pointer_and_layout(void)
 {
-    BlockFile* cfg = s_parse("Lego* { Menu { PausedMenu { MenuCount 1 "
+    /* frontend_build reports MainMenuFull's result, so the fixture needs a
+     * (minimal) main menu next to the PausedMenu under test. */
+    BlockFile* cfg = s_parse("Lego* { Menu { MainMenuFull { MenuCount 1 "
+        "Menu1 { Position 0:0 ItemCount 1 Item1 Next:0:0:Back:Menu1 } } "
+        "PausedMenu { MenuCount 1 "
         "Menu1 { Title Advanced_Options Position 290:134 ItemCount 2 "
         "Item1 Cycle:-150:45:310:0:Wall_Detail:2:High:Low "
         "Item2 Cycle:-150:120:310:0:Automatic_Game_Speed:2:On:Off "
