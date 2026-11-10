@@ -144,6 +144,13 @@ int main(void)
     selection_count_reset(&ctx);
     CHECK(selection_count(&ctx) == 0 && (a->flags & ENTITY_SELECTED) != 0,
           "count-only reset leaves the selected flags");
+    /* The count-only reset leaves the +0x3e8 selected bits (and the active
+     * records are gone), so no later clear can release them and the faithful
+     * add refuses to re-select: release them by hand. */
+    a->flags_3e8 &= ~ENTITY_SELECTED;
+    b->flags_3e8 &= ~ENTITY_SELECTED;
+    a->flags &= ~ENTITY_SELECTED;
+    b->flags &= ~ENTITY_SELECTED;
     selection_add(&ctx, a);
     selection_add(&ctx, b);
     selection_clear(&ctx);
@@ -166,6 +173,9 @@ int main(void)
 
         CHECK(selection_candidate_already_selected_or_marked(&ctx, b) == 1,
               "selected counts as taken");
+        /* selection_clear leaves the +0x3ec "recently selected" mark (bit 2)
+         * on every entity it released; drop a's to model an unmarked one. */
+        a->flags_3ec &= ~2u;
         CHECK(selection_candidate_already_selected_or_marked(&ctx, a) == 0,
               "the unselected/unmarked answers 0");
         CHECK(selection_candidate_already_selected_or_marked(&ctx, NULL) == 0,
@@ -241,20 +251,30 @@ int main(void)
         CHECK((eng.state & 0x10000000u) == 0u && a->flags_3ec == 0u,
               "the unmarked entity raises nothing");
 
-        /* Marked + stats bit + clear state flags: both raises fire. */
-        a->flags_3ec = 2u;
-        rec[0x146] = 0x02u; /* stats word @+144 bit 0x20000 */
-        selection_clear_marker_and_reset_hud(&eng, a);
-        CHECK((eng.state & 0x10000000u) != 0u && (a->flags_3ec & 3u) == 3u,
-              "the marked stats-carrying entity raises both words");
-
-        /* Stats bit clear on the second word + null owner: no raise. */
-        eng.state = 0u;
+        /* Faithful gate (FUN_0044c4a0): a marked entity needs the state-flags
+         * word (+0x148) bit 0x20000 AND (the stats word (+0x144) bit 0x20000
+         * clear OR an owner). Marked, state bit set, stats bit clear: both
+         * raises fire. */
         a->flags_3ec = 2u;
         rec[0x14a] = 0x02u; /* state-flags word @+148 bit 0x20000 */
         selection_clear_marker_and_reset_hud(&eng, a);
+        CHECK((eng.state & 0x10000000u) != 0u && (a->flags_3ec & 3u) == 3u,
+              "the marked state-flagged entity raises both words");
+
+        /* No state-flags bit: nothing raises even when marked. */
+        eng.state = 0u;
+        a->flags_3ec = 2u;
+        rec[0x14a] = 0u;
+        selection_clear_marker_and_reset_hud(&eng, a);
         CHECK((eng.state & 0x10000000u) == 0u && a->flags_3ec == 2u,
-              "the set state flags with no owner skips the raise");
+              "the marked entity without the state bit raises nothing");
+
+        /* State bit + stats bit set + null owner: no raise. */
+        rec[0x14a] = 0x02u;
+        rec[0x146] = 0x02u; /* stats word @+144 bit 0x20000 */
+        selection_clear_marker_and_reset_hud(&eng, a);
+        CHECK((eng.state & 0x10000000u) == 0u && a->flags_3ec == 2u,
+              "the set stats bit with no owner skips the raise");
 
         /* Same, owner set: the owner half of the fold raises. */
         static const int owner = 1;
