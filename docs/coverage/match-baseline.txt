@@ -5,7 +5,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2117 mapped functions
+[game-only] 2119 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -17,7 +17,7 @@
 0x00401470 100.00 vec_cross
 0x004014c0 89.66 advisor_animation_name_to_index
 0x00401500 100.00 vec_add
-0x00401530 28.38 advisor_position_config_load
+0x00401530 28.67 advisor_position_config_load
 0x004016c0 100.00 vec_sub
 0x004016f0 100.00 vec_dot
 0x00401720 100.00 vec_scale
@@ -157,7 +157,7 @@
 0x00407040 58.33 renderer_cached_handle_4c_is_not_one
 0x00407090 11.11 animation_object_value_get
 0x004070b0 100.00 bubble_action_strings_initialize
-0x00407240 17.18 bubble_config_texture_load
+0x00407240 26.19 bubble_config_texture_load
 0x00407300 56.34 bubble_action_name_to_index
 0x00407340 100.00 state_flag_toggle_when_zero
 0x00407360 100.00 global_task_refresh_flag_get
@@ -236,7 +236,7 @@
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
 0x0040ab10 100.00 global_mode_zero_input_set
 0x0040ab30 50.00 grid_record_flag_mask_clear
-0x0040ab70 11.76 dependency_grid_config_load(struct BlockRec *, struct BlockFile *)
+0x0040ab70 11.76 dependency_grid_config_load(struct BlockRec *, struct BlockRec *)
 0x0040aea0 26.58 ensure_cell_entries_loaded
 0x0040af40 25.97 terrain_cell_resource_entry_matches
 0x0040af90 100.00 terrain_cell_record_get_target
@@ -394,7 +394,7 @@
 0x00414070 38.55 dword_list_allocate_and_zero
 0x004140c0 18.40 fe_parse_menu
 0x00414c90 100.00 menu_list_find_name
-0x00414ce0 19.35 movie_avis_enabled
+0x00414ce0 25.81 movie_avis_enabled
 0x00414de0 100.00 audio_menu_sfx_volume_set
 0x00414df0 100.00 audio_menu_volume_set
 0x00414e10 43.75 option_music_default
@@ -519,8 +519,8 @@
 0x0041a990 100.00 objective_selection_state_reset
 0x0041a9c0 93.10 interface_menu_action_label_find
 0x0041aa00 8.00 entity_table_maps_allocate
-0x0041ab00 9.62 interface_build_images_config_load
-0x0041ada0 12.58 interface_images_config_load
+0x0041ab00 10.22 interface_build_images_config_load
+0x0041ada0 13.56 interface_images_config_load
 0x0041afd0 12.53 interface_surround_images_config_load
 0x0041b1b0 8.62 interface_back_button_config_load
 0x0041b270 14.55 interface_button_images_load
@@ -623,7 +623,7 @@
 0x004263c0 34.15 ledger_stub_004263c0_GlobalSubsystemStateReset
 0x00426520 11.65 simtick_vu_meter
 0x00427e00 15.38 tooltip_info_strings_load
-0x00427f80 16.16 lego::level_upgrade_name_strings_load
+0x00427f80 17.17 lego::level_upgrade_name_strings_load
 0x00428020 15.43 entity_command_status_feedback_dispatch
 0x00428330 9.60 ledger_stub_00428330_TerrainCommandFeedbackDispatch
 0x00428780 29.27 terrain_cell_command_predicate
@@ -663,7 +663,7 @@
 0x0042cf50 24.19 entity_minifigure_type_table_load
 0x0042d100 23.60 entity_rockmonster_type_table_load
 0x0042d2b0 23.81 entity_building_types_load
-0x0042d460 16.62 lego::upgrade_types_load
+0x0042d460 18.68 lego::upgrade_types_load
 0x0042d600 5.86 entity_object_names_load
 0x0042da20 5.86 entity_object_the_names_load
 0x0042dfc0 22.22 object_pointer_registry_clear_match
@@ -756,13 +756,13 @@
 0x00433e30 13.43 grid_cell_entity_eligibility_check
 0x00434480 33.33 terrain_cell_surface_update_dispatch_level
 0x00434530 11.11 terrain_grid_entry_resources_release_all_current
-0x004345f0 31.22 frontend_config::panels_config_entry_apply
-0x00434710 31.29 frontend_config::panel_button_layout_config_load
+0x004345f0 32.69 frontend_config::panels_config_entry_apply
+0x00434710 33.07 frontend_config::panel_button_layout_config_load
 0x00434a00 30.99 advisor_tutorial_icon_image_load
-0x00434a50 37.96 sound_samples_config_load
-0x00434af0 26.52 frontend_config::text_messages_config_load
+0x00434a50 47.48 sound_samples_config_load
+0x00434af0 32.50 frontend_config::text_messages_config_load
 0x00434c10 18.80 message_load_infomessages
-0x00434da0 28.33 advisor_tooltip_and_sound_config_load
+0x00434da0 67.84 advisor_tooltip_and_sound_config_load
 0x00434e80 26.33 interface_spawn_request_enqueue
 0x00435010 99.16 terrain_cell_work_flag_circle_set_current
 0x004350a0 18.45 surface_type_descriptions_config_load
@@ -807,7 +807,7 @@
 0x004370b0 17.65 render_config_six_field_copy_out
 0x004370d0 32.65 render_config_six_field_copy_in_or_clear
 0x00437100 100.00 grid_record_count_difference_sum
-0x00437150 18.32 tooltip_icons_config_load
+0x00437150 22.90 tooltip_icons_config_load
 0x004372a0 13.33 spawn_coordinate_pool_clear
 0x00437300 36.92 process_queued_grid_animations
 0x004373d0 67.61 entity_activity_toggle
@@ -1025,7 +1025,7 @@
 0x0044a5d0 32.95 ledger_stub_0044a5d0_NearestOpenCellCoordSearch
 0x0044a7d0 13.79 ledger_stub_0044a7d0_PolyVariantSectionModelBuild
 0x0044a910 10.43 ledger_stub_0044a910_BuildingPlacementPreviewUpdate
-0x0044acc0 77.52 terrain_object_sfx_grid_config_load
+0x0044acc0 80.00 terrain_object_sfx_grid_config_load
 0x0044ad80 96.97 terrain_object_type_sfx_at_cell_get
 0x0044adc0 100.00 lego::scatter_spawn_gate_set
 0x0044ade0 31.25 lego::entity_kind_one_random_spawn_trigger
@@ -1072,7 +1072,7 @@
 0x0044da20 100.00 simtick_route_position_blocked_state_set
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
-0x0044e0c0 11.73 terrain_create_retail
+0x0044e0c0 11.44 terrain_create_retail
 0x0044e4d0 10.71 terrain_grid_vertex_build
 0x0044e670 36.36 nested_pointer_record_destroy
 0x0044e6b0 11.76 indexed_flag_value_set_one
@@ -1266,9 +1266,9 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 5.50 pointer_cursor_draw_target
 0x0045cd90 88.89 media_pointer_cursor_override_tick
-0x0045cdc0 65.69 priorities_load_images
+0x0045cdc0 91.84 priorities_load_images
 0x0045cf00 51.61 priorities_reset
-0x0045cf50 66.27 priorities_load
+0x0045cf50 57.69 priorities_load
 0x0045d060 96.55 priorities_load_positions
 0x0045d110 53.99 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
@@ -1556,7 +1556,7 @@
 0x004712f0 100.00 entity_velocity_slot_value_get
 0x00471310 100.00 entity_velocity_slot_value_set
 0x00471330 47.27 interpolated_z_within_bounds
-0x00471370 15.22 cmd_place_ray_candidate_check
+0x00471370 15.30 cmd_place_ray_candidate_check
 0x00471630 17.80 ray_hit_cell_distance_minimize_sweep
 0x00471860 21.51 scene_segment_trace_nearest_hit
 0x004718d0 36.52 object_pair_ray_hit_check
@@ -1582,7 +1582,7 @@
 0x00472950 28.28 lego::ddiscene_object_allocate
 0x00472a40 100.00 ledger_stub_00472a40_DDiSceneObjectDestroy
 0x00472a50 24.54 ddiscene_object_destroy_with_mode
-0x00472cd0 8.30 entity_assembly_parse
+0x00472cd0 10.10 entity_assembly_parse
 0x00473340 14.29 ledger_stub_00473340_SceneActionNamePresent
 0x00473370 52.17 scene_action_name_set
 0x00473460 48.28 light_interface_call_slot_40
@@ -1701,7 +1701,7 @@
 0x00477550 83.58 string_duplicate
 0x00477590 25.74 formatted_text_escape_decode_and_emit
 0x00477610 79.67 case_insensitive_substring_find
-0x00477710 60.95 block_get_bool(1)
+0x00477710 60.95 block_get_bool
 0x004777a0 28.49 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
@@ -1725,24 +1725,26 @@
 0x00478980 100.00 music_mixer_volume_set
 0x004789a0 100.00 ledger_stub_004789a0_MusicMixerVolumeGet
 0x004789c0 29.21 audio_mixer_control_init
-0x00478df0 90.00 block_text_token_pool_init
-0x00478e20 86.67 block_text_token_pool_destroy
-0x00478e60 21.62 block_open
-0x00478f50 30.34 string_path_join
-0x00478ff0 58.33 block_subgroup
-0x00479020 30.77 block_next_equal_key
-0x00479050 85.71 block_get_str_copy
-0x004790b0 76.19 block_get_strptr
+0x00478df0 100.00 block_text_token_pool_init
+0x00478e20 100.00 block_text_token_pool_destroy
+0x00478e60 91.18 block_open
+0x00478f50 100.00 string_path_join
+0x00478ff0 100.00 block_subgroup
+0x00479020 100.00 block_next_equal_key
+0x00479050 100.00 block_get_str_copy
+0x004790b0 100.00 block_get_strptr
+0x004790d0 100.00 block_get_bool_path
 0x00479110 100.00 config_angle_radians_get
-0x00479170 25.00 config_rgb_vector_read
-0x00479240 59.46 linked_object_list_release
-0x004792c0 100.00 global_record_list_push_head
-0x004792e0 9.79 block_find(1)
-0x00479490 49.32 block_text_token_pool_grow
+0x00479170 100.00 config_rgb_vector_read
+0x00479240 100.00 block_close
+0x00479270 70.18 block_record_create
+0x004792c0 100.00 block_record_remove
+0x004792e0 98.12 block_find(1)
+0x00479490 100.00 block_text_token_pool_grow
 0x00479500 66.67 d3drm_vector_random
 0x00479510 85.71 d3drm_vector_rotate
 0x00479530 98.81 surface_triangle_normal_calculate
-0x00479630 17.31 surface_triangle_area_calculate
+0x00479630 17.37 surface_triangle_area_calculate
 0x004798a0 100.00 rng_thunk_draw15
 0x004798b0 76.19 random_float_range
 0x004798e0 100.00 view_ray_intersection_test
@@ -1825,7 +1827,7 @@
 0x0047d430 8.33 scene_object_registry_teardown
 0x0047d470 37.21 image_surface_release
 0x0047d490 19.26 surface_pixel_format_query_convert_surface
-0x0047d520 32.65 surface_palette8_to_16bit_surface_expand
+0x0047d520 33.82 surface_palette8_to_16bit_surface_expand
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
@@ -1986,7 +1988,7 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 25.00 text_buffer_append_vformat
 0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.96 text_buffer_draw_wrapped
+0x00485390 5.99 text_buffer_draw_wrapped
 0x00485710 19.05 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
@@ -2084,7 +2086,7 @@
 0x0048c360 23.88 ledger_stub_0048c360_LwoCurves
 0x0048c3e0 10.47 parse_pols
 0x0048c690 7.11 parse_srfs
-0x0048c820 6.34 parse_surf_chunk
+0x0048c820 6.94 parse_surf_chunk
 0x0048d2c0 10.03 model_parse
 0x0048d7c0 9.13 model_open
 0x0048d870 14.69 model_free
@@ -2124,7 +2126,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2336 mapped functions
+[full] 2338 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -2136,7 +2138,7 @@
 0x00401470 100.00 vec_cross
 0x004014c0 89.66 advisor_animation_name_to_index
 0x00401500 100.00 vec_add
-0x00401530 28.38 advisor_position_config_load
+0x00401530 28.67 advisor_position_config_load
 0x004016c0 100.00 vec_sub
 0x004016f0 100.00 vec_dot
 0x00401720 100.00 vec_scale
@@ -2276,7 +2278,7 @@
 0x00407040 58.33 renderer_cached_handle_4c_is_not_one
 0x00407090 11.11 animation_object_value_get
 0x004070b0 100.00 bubble_action_strings_initialize
-0x00407240 17.18 bubble_config_texture_load
+0x00407240 26.19 bubble_config_texture_load
 0x00407300 56.34 bubble_action_name_to_index
 0x00407340 100.00 state_flag_toggle_when_zero
 0x00407360 100.00 global_task_refresh_flag_get
@@ -2355,7 +2357,7 @@
 0x0040aae0 100.00 entity_quad_mesh_render_record_allowed
 0x0040ab10 100.00 global_mode_zero_input_set
 0x0040ab30 50.00 grid_record_flag_mask_clear
-0x0040ab70 11.76 dependency_grid_config_load(struct BlockRec *, struct BlockFile *)
+0x0040ab70 11.76 dependency_grid_config_load(struct BlockRec *, struct BlockRec *)
 0x0040aea0 26.58 ensure_cell_entries_loaded
 0x0040af40 25.97 terrain_cell_resource_entry_matches
 0x0040af90 100.00 terrain_cell_record_get_target
@@ -2513,7 +2515,7 @@
 0x00414070 38.55 dword_list_allocate_and_zero
 0x004140c0 18.40 fe_parse_menu
 0x00414c90 100.00 menu_list_find_name
-0x00414ce0 19.35 movie_avis_enabled
+0x00414ce0 25.81 movie_avis_enabled
 0x00414de0 100.00 audio_menu_sfx_volume_set
 0x00414df0 100.00 audio_menu_volume_set
 0x00414e10 43.75 option_music_default
@@ -2638,8 +2640,8 @@
 0x0041a990 100.00 objective_selection_state_reset
 0x0041a9c0 93.10 interface_menu_action_label_find
 0x0041aa00 8.00 entity_table_maps_allocate
-0x0041ab00 9.62 interface_build_images_config_load
-0x0041ada0 12.58 interface_images_config_load
+0x0041ab00 10.22 interface_build_images_config_load
+0x0041ada0 13.56 interface_images_config_load
 0x0041afd0 12.53 interface_surround_images_config_load
 0x0041b1b0 8.62 interface_back_button_config_load
 0x0041b270 14.55 interface_button_images_load
@@ -2742,7 +2744,7 @@
 0x004263c0 34.15 ledger_stub_004263c0_GlobalSubsystemStateReset
 0x00426520 11.65 simtick_vu_meter
 0x00427e00 15.38 tooltip_info_strings_load
-0x00427f80 16.16 lego::level_upgrade_name_strings_load
+0x00427f80 17.17 lego::level_upgrade_name_strings_load
 0x00428020 15.43 entity_command_status_feedback_dispatch
 0x00428330 9.60 ledger_stub_00428330_TerrainCommandFeedbackDispatch
 0x00428780 29.27 terrain_cell_command_predicate
@@ -2782,7 +2784,7 @@
 0x0042cf50 24.19 entity_minifigure_type_table_load
 0x0042d100 23.60 entity_rockmonster_type_table_load
 0x0042d2b0 23.81 entity_building_types_load
-0x0042d460 16.62 lego::upgrade_types_load
+0x0042d460 18.68 lego::upgrade_types_load
 0x0042d600 5.86 entity_object_names_load
 0x0042da20 5.86 entity_object_the_names_load
 0x0042dfc0 22.22 object_pointer_registry_clear_match
@@ -2875,13 +2877,13 @@
 0x00433e30 13.43 grid_cell_entity_eligibility_check
 0x00434480 33.33 terrain_cell_surface_update_dispatch_level
 0x00434530 11.11 terrain_grid_entry_resources_release_all_current
-0x004345f0 31.22 frontend_config::panels_config_entry_apply
-0x00434710 31.29 frontend_config::panel_button_layout_config_load
+0x004345f0 32.69 frontend_config::panels_config_entry_apply
+0x00434710 33.07 frontend_config::panel_button_layout_config_load
 0x00434a00 30.99 advisor_tutorial_icon_image_load
-0x00434a50 37.96 sound_samples_config_load
-0x00434af0 26.52 frontend_config::text_messages_config_load
+0x00434a50 47.48 sound_samples_config_load
+0x00434af0 32.50 frontend_config::text_messages_config_load
 0x00434c10 18.80 message_load_infomessages
-0x00434da0 28.33 advisor_tooltip_and_sound_config_load
+0x00434da0 67.84 advisor_tooltip_and_sound_config_load
 0x00434e80 26.33 interface_spawn_request_enqueue
 0x00435010 99.16 terrain_cell_work_flag_circle_set_current
 0x004350a0 18.45 surface_type_descriptions_config_load
@@ -2926,7 +2928,7 @@
 0x004370b0 17.65 render_config_six_field_copy_out
 0x004370d0 32.65 render_config_six_field_copy_in_or_clear
 0x00437100 100.00 grid_record_count_difference_sum
-0x00437150 18.32 tooltip_icons_config_load
+0x00437150 22.90 tooltip_icons_config_load
 0x004372a0 13.33 spawn_coordinate_pool_clear
 0x00437300 36.92 process_queued_grid_animations
 0x004373d0 67.61 entity_activity_toggle
@@ -3144,7 +3146,7 @@
 0x0044a5d0 32.95 ledger_stub_0044a5d0_NearestOpenCellCoordSearch
 0x0044a7d0 13.79 ledger_stub_0044a7d0_PolyVariantSectionModelBuild
 0x0044a910 10.43 ledger_stub_0044a910_BuildingPlacementPreviewUpdate
-0x0044acc0 77.52 terrain_object_sfx_grid_config_load
+0x0044acc0 80.00 terrain_object_sfx_grid_config_load
 0x0044ad80 96.97 terrain_object_type_sfx_at_cell_get
 0x0044adc0 100.00 lego::scatter_spawn_gate_set
 0x0044ade0 31.25 lego::entity_kind_one_random_spawn_trigger
@@ -3191,7 +3193,7 @@
 0x0044da20 100.00 simtick_route_position_blocked_state_set
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
-0x0044e0c0 11.73 terrain_create_retail
+0x0044e0c0 11.44 terrain_create_retail
 0x0044e4d0 10.71 terrain_grid_vertex_build
 0x0044e670 36.36 nested_pointer_record_destroy
 0x0044e6b0 11.76 indexed_flag_value_set_one
@@ -3385,9 +3387,9 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 5.50 pointer_cursor_draw_target
 0x0045cd90 88.89 media_pointer_cursor_override_tick
-0x0045cdc0 65.69 priorities_load_images
+0x0045cdc0 91.84 priorities_load_images
 0x0045cf00 51.61 priorities_reset
-0x0045cf50 66.27 priorities_load
+0x0045cf50 57.69 priorities_load
 0x0045d060 96.55 priorities_load_positions
 0x0045d110 53.99 priorities_handle_cursor
 0x0045d300 100.00 priorities_select
@@ -3675,7 +3677,7 @@
 0x004712f0 100.00 entity_velocity_slot_value_get
 0x00471310 100.00 entity_velocity_slot_value_set
 0x00471330 47.27 interpolated_z_within_bounds
-0x00471370 15.22 cmd_place_ray_candidate_check
+0x00471370 15.30 cmd_place_ray_candidate_check
 0x00471630 17.80 ray_hit_cell_distance_minimize_sweep
 0x00471860 21.51 scene_segment_trace_nearest_hit
 0x004718d0 36.52 object_pair_ray_hit_check
@@ -3701,7 +3703,7 @@
 0x00472950 28.28 lego::ddiscene_object_allocate
 0x00472a40 100.00 ledger_stub_00472a40_DDiSceneObjectDestroy
 0x00472a50 24.54 ddiscene_object_destroy_with_mode
-0x00472cd0 8.30 entity_assembly_parse
+0x00472cd0 10.10 entity_assembly_parse
 0x00473340 14.29 ledger_stub_00473340_SceneActionNamePresent
 0x00473370 52.17 scene_action_name_set
 0x00473460 48.28 light_interface_call_slot_40
@@ -3820,7 +3822,7 @@
 0x00477550 83.58 string_duplicate
 0x00477590 25.74 formatted_text_escape_decode_and_emit
 0x00477610 79.67 case_insensitive_substring_find
-0x00477710 60.95 block_get_bool(1)
+0x00477710 60.95 block_get_bool
 0x004777a0 28.49 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
@@ -3844,24 +3846,26 @@
 0x00478980 100.00 music_mixer_volume_set
 0x004789a0 100.00 ledger_stub_004789a0_MusicMixerVolumeGet
 0x004789c0 29.21 audio_mixer_control_init
-0x00478df0 90.00 block_text_token_pool_init
-0x00478e20 86.67 block_text_token_pool_destroy
-0x00478e60 21.62 block_open
-0x00478f50 30.34 string_path_join
-0x00478ff0 58.33 block_subgroup
-0x00479020 30.77 block_next_equal_key
-0x00479050 85.71 block_get_str_copy
-0x004790b0 76.19 block_get_strptr
+0x00478df0 100.00 block_text_token_pool_init
+0x00478e20 100.00 block_text_token_pool_destroy
+0x00478e60 91.18 block_open
+0x00478f50 100.00 string_path_join
+0x00478ff0 100.00 block_subgroup
+0x00479020 100.00 block_next_equal_key
+0x00479050 100.00 block_get_str_copy
+0x004790b0 100.00 block_get_strptr
+0x004790d0 100.00 block_get_bool_path
 0x00479110 100.00 config_angle_radians_get
-0x00479170 25.00 config_rgb_vector_read
-0x00479240 59.46 linked_object_list_release
-0x004792c0 100.00 global_record_list_push_head
-0x004792e0 9.79 block_find(1)
-0x00479490 49.32 block_text_token_pool_grow
+0x00479170 100.00 config_rgb_vector_read
+0x00479240 100.00 block_close
+0x00479270 70.18 block_record_create
+0x004792c0 100.00 block_record_remove
+0x004792e0 98.12 block_find(1)
+0x00479490 100.00 block_text_token_pool_grow
 0x00479500 66.67 d3drm_vector_random
 0x00479510 85.71 d3drm_vector_rotate
 0x00479530 98.81 surface_triangle_normal_calculate
-0x00479630 17.31 surface_triangle_area_calculate
+0x00479630 17.37 surface_triangle_area_calculate
 0x004798a0 100.00 rng_thunk_draw15
 0x004798b0 76.19 random_float_range
 0x004798e0 100.00 view_ray_intersection_test
@@ -3944,7 +3948,7 @@
 0x0047d430 8.33 scene_object_registry_teardown
 0x0047d470 37.21 image_surface_release
 0x0047d490 19.26 surface_pixel_format_query_convert_surface
-0x0047d520 32.65 surface_palette8_to_16bit_surface_expand
+0x0047d520 33.82 surface_palette8_to_16bit_surface_expand
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
@@ -4105,7 +4109,7 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 25.00 text_buffer_append_vformat
 0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.96 text_buffer_draw_wrapped
+0x00485390 5.99 text_buffer_draw_wrapped
 0x00485710 19.05 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
@@ -4203,7 +4207,7 @@
 0x0048c360 23.88 ledger_stub_0048c360_LwoCurves
 0x0048c3e0 10.47 parse_pols
 0x0048c690 7.11 parse_srfs
-0x0048c820 6.34 parse_surf_chunk
+0x0048c820 6.94 parse_surf_chunk
 0x0048d2c0 10.03 model_parse
 0x0048d7c0 9.13 model_open
 0x0048d870 14.69 model_free
