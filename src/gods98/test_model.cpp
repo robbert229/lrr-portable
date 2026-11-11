@@ -276,6 +276,7 @@ static void test_srfs_surf(void)
         unsigned char c3[3] = {255, 128, 0};
         wsub(&q, "COLR", c3, 3);
     }
+    wsub(&q, "TIMG", "steam.bmp (sequence)", 21);
     wchunk(&p, "SURF", sb, (int)(q - sb));
 
     /* second SURF chunk repeats "wall" — seen-gate: must NOT overwrite */
@@ -303,7 +304,9 @@ static void test_srfs_surf(void)
             CHECK(m->surfaces[1].has_colr && m->surfaces[1].colr[0] == 1.0f
                       && m->surfaces[1].colr[1] > 0.5f,
                   "surf: 3-byte COLR read");
-            CHECK(m->surfaces[1].timg == NULL, "surf: TIMG absent stays NULL");
+            CHECK(m->surfaces[1].timg && strcmp(m->surfaces[1].timg, "steam.bmp") == 0
+                      && m->surfaces[1].animated_image_sequence,
+                  "surf: sequence marker and preceding separator removed");
             CHECK(m->polys[0].surface == 1, "surf: poly points at surface 1");
         }
         model_free(m);
@@ -461,7 +464,12 @@ static void test_digest_stability(void)
 #define REAL_VERTS 36506
 #define REAL_POLYS 20119
 #define REAL_SURFACES 3396
-#define REAL_DIGEST 0x18a8f7e3u
+/* The old Python digest retained " (sequence)" in TIMG and anchored SURF
+ * names inside other names. Retail LwoSurfaceSettings 0x48c820 removes the
+ * separator and marker; LoadLWO 0x48d2c0 matches complete surface names.
+ * For example Barracks/steam.lwo loses that suffix, and Gunstation/
+ * GunTurret/LPgunmain_ug.lwo resolves its 2_HP Head sides surface. */
+#define REAL_DIGEST 0x3ef7c74cu
 
 typedef struct {
     char key[256];
@@ -596,7 +604,7 @@ static void test_real(const char* dir)
     CHECK(verts == REAL_VERTS, "real: vertex total matches ground truth");
     CHECK(polys == REAL_POLYS, "real: polygon total matches ground truth");
     CHECK(surfs == REAL_SURFACES, "real: surface total matches ground truth");
-    CHECK(h == REAL_DIGEST, "real: corpus digest matches python ground truth");
+    CHECK(h == REAL_DIGEST, "real: corpus digest matches retail-derived view");
 }
 
 static void test_real_spots(void)
@@ -627,6 +635,30 @@ static void test_real_spots(void)
             model_free(m);
         }
         resource_free(r);
+    }
+
+    /* Retail truncates TIMG one byte before the sequence marker. */
+    Model* steam = model_open("Buildings\\Barracks\\steam.lwo");
+    CHECK(steam != NULL, "spot: steam.lwo opens");
+    if (steam) {
+        CHECK(steam->n_surfaces == 1 && steam->surfaces[0].timg &&
+                  strcmp(steam->surfaces[0].timg,
+                         "\\\\Mother\\LEGO\\Meshes\\Lowpoly\\Buildings\\Barracks\\steam_C001.bmp") == 0 &&
+                  steam->surfaces[0].animated_image_sequence,
+              "spot: steam sequence texture path");
+        model_free(steam);
+    }
+
+    /* Full-name matching keeps the 2_ prefix rather than finding a suffix. */
+    Model* gun = model_open("Buildings\\Gunstation\\GunTurret\\LPgunmain_ug.lwo");
+    CHECK(gun != NULL, "spot: LPgunmain_ug.lwo opens");
+    if (gun) {
+        CHECK(gun->n_surfaces > 26 &&
+                  strcmp(gun->surfaces[26].name, "2_HP Head sides") == 0 &&
+                  gun->surfaces[26].timg &&
+                  strcmp(gun->surfaces[26].timg, "Z:\\Data\\World\\Shared\\Headside.bmp") == 0,
+              "spot: prefixed surface has its own texture");
+        model_free(gun);
     }
 
     /* the .uv story end-to-end: Creatures\LavaMonster\Arml.lwo (ground truth
