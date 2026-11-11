@@ -1,4 +1,4 @@
-# Finding 528 — Unit-relative data gaps and anchored offsets
+# Finding 529 — Unit-relative data gaps and anchored offsets
 
 Issue #450, stage S6c of [the link-order plan](../plans/388-original-link-order.md). Measured after R1 merged, using the matching build of this tree (`make reccmp-check`, then `make match-progress`). Run `make unit-data-offsets` to reproduce. The table covers all rows of the unit-range CSV, including CRT rows; a unit's classification is partial if any section mismatches, otherwise n/a if an active section is unresolved, otherwise gaps-only or full. The summary is **0 full, 1 gaps-only, 6 partial, 218 n/a**. This does not imply the 218 disagree: most lack attributable pairs or a dedicated object. Unowned/ambiguous addresses are reported by the command.
 
