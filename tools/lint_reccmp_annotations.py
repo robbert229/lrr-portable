@@ -109,8 +109,13 @@ def matching_open_paren(masked: str, close: int) -> int | None:
     return None
 
 
-def function_definitions(source: str) -> list[tuple[int, str, int]]:
-    """Return (definition offset, function name, body brace) for recognizable bodies."""
+def function_definitions(source: str) -> list[tuple[int, str, int, int]]:
+    """Return (key offset, function name, body brace, definition offset) for
+    recognizable bodies.
+
+    The definition offset skips preprocessor directives and their backslash
+    continuation lines; the annotation check uses it. The key offset skips
+    only directive lines, as the debt keys in the baseline were computed."""
     masked = mask_comments_and_literals(source)
     found: list[tuple[int, str, int]] = []
     seen: set[int] = set()
@@ -161,8 +166,17 @@ def function_definitions(source: str) -> list[tuple[int, str, int]]:
             if line_match.group(0).strip() and not line_match.group(0).lstrip().startswith("#"):
                 offset = boundary + line_match.start()
                 break
+        definition = boundary
+        in_directive = False
+        for line_match in re.finditer(r"[^\n]*\n|[^\n]+$", masked[boundary:brace]):
+            text = line_match.group(0)
+            directive = in_directive or text.lstrip().startswith("#")
+            in_directive = directive and text.rstrip().endswith("\\")
+            if text.strip() and not directive:
+                definition = boundary + line_match.start()
+                break
         if offset not in seen:
-            found.append((offset, name, brace))
+            found.append((offset, name, brace, definition))
             seen.add(offset)
     return found
 
@@ -266,8 +280,8 @@ def collect(root: Path, ledger_path: Path | None) -> dict[str, list[str]]:
         source = path.read_text(encoding="utf-8", errors="replace")
         masked = mask_comments_and_literals(source)
         scopes = scopes_at_braces(masked)
-        for offset, name, brace in function_definitions(source):
-            if has_nearby_annotation(source, offset):
+        for offset, name, brace, definition in function_definitions(source):
+            if has_nearby_annotation(source, definition):
                 continue
             # Ignore whitespace and directives, not parameter names or types.
             signature = re.sub(r"(?m)^\s*\#.*$", "", masked[offset:brace])

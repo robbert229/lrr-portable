@@ -397,7 +397,7 @@ static const char* K_LANDSLIDECOUNT = "NumberOfLandSlidesTillCaveIn";
 // LIBRARY: LEGORR 0x0048e160 SYMBOL
 // _srand
 #if !defined(_MSC_VER) || (_MSC_VER >= 1200) || !defined(_M_IX86)
-// GLOBAL: LEGORR 0x004afcc8
+/* LIBC.LIB static data at 0x004afcc8: not annotated (finding 540). */
 static uint32_t s_rand_state = 1;
 
 void level_random_seed_set(uint32_t seed)
