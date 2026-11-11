@@ -19,6 +19,11 @@
 #include "utils.h"
 #include "crt/vc5names.h"
 
+#if defined(_MSC_VER) && _MSC_VER == 1100
+#include <windows.h>
+#include <d3drm.h>
+#endif
+
 #define CONFIG_MAXLISTS 32
 #define CONFIG_MAXTOKENS 100
 #define CONFIG_JOINPATH_SIZE 1024
