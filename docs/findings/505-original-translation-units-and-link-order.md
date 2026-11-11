@@ -301,9 +301,9 @@ functions). The current tables are in the coverage CSVs.
   In each case the units themselves are evidenced (each owns literals,
   `.bss` or commons). What is uncertain is which side the few unanchored
   functions between them belong to.
-- **Lego.c (216 functions) may be two objects.** An interior split near
-  `0042f350` (terrain block helpers) cannot be excluded: the literals rise
-  continuously and the unit's `.bss` is sparse.
+- **Lego.c (216 functions) remains provisional.** The proposed interior split
+  at `0042f350` is undecidable from the available data; retain one unit until
+  independent object or linkage evidence resolves it (finding 535).
 - **Map mesh tail.** The model-record helpers `004519b0`–`00451cd0` have no
   data and are kept with the map mesh unit.
 - **gods98 boundaries resting on behaviour only.**
