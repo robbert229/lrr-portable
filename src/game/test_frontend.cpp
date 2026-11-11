@@ -733,6 +733,30 @@ static void test_interface_action_labels(void)
           "action images: invalid enum has no resource name");
 }
 
+/* Keys.c (G98-018): the shortcut-key names resolve to DirectInput scan
+ * codes, ignoring case; a miss leaves the out byte untouched. */
+static void test_key_names(void)
+{
+    uint8_t code = 0xeeu;
+    keyboard_key_names_init();
+    CHECK(named_option_index_find_case_insensitive("KEY_ESCAPE", &code)
+          && code == 0x01u,
+          "keys: the first named code resolves");
+    CHECK(named_option_index_find_case_insensitive("key_d", &code)
+          && code == 0x20u,
+          "keys: the lookup ignores case");
+    CHECK(named_option_index_find_case_insensitive("KEYPAD_ENTER", &code)
+          && code == 0x9cu,
+          "keys: extended codes above 0x80 resolve");
+    CHECK(named_option_index_find_case_insensitive("KEY_DELETE", &code)
+          && code == 0xd3u,
+          "keys: the last named code resolves");
+    code = 0xeeu;
+    CHECK(!named_option_index_find_case_insensitive("KEY_NOSUCH", &code)
+          && code == 0xeeu,
+          "keys: an unknown name fails and leaves the code alone");
+}
+
 static void test_pause(void)
 {
     /* Shipped PausedMenu shape: Menu1 (Continue/Options/Quit), Menu2
@@ -1296,6 +1320,7 @@ int main(int argc, char** argv)
     test_font_blank_advance();
     test_pointer();
     test_interface_action_labels();
+    test_key_names();
     test_pause();
     test_slots();
     test_options();

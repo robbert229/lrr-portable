@@ -72,7 +72,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 004030e0,FUN_004030e0,1,GAME-002,AITask.c,game,high,bracketed,src/game/cmd.cpp
 00403190,ObjectEventType2Queue,1,GAME-002,AITask.c,game,high,bracketed,src/game/cmd.cpp
 004031e0,ActiveEntityListContainsCode,1,GAME-002,AITask.c,game,high,bss,src/game/ai.cpp
-00403270,SelectionDragAreaCommandCreate,1,GAME-002,AITask.c,game,high,bracketed,
+00403270,SelectionDragAreaCommandCreate,1,GAME-002,AITask.c,game,high,bracketed,src/game/cmd.cpp
 00403320,ObjectCommandTaskCreate,1,GAME-002,AITask.c,game,high,bracketed,src/game/cmd.cpp
 004033c0,ObjectAttachedRecordAllocate,1,GAME-002,AITask.c,game,high,bracketed,src/game/cmd.cpp
 004033f0,CoordinatePairTaskRecordQueue,1,GAME-002,AITask.c,game,high,bracketed,src/game/cmd.cpp
@@ -724,7 +724,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00430470,TerrainNeighborFlagSet,20,GAME-021,Lego.c,game,high,bracketed,src/game/level.cpp
 00430530,TerrainCellMutation,20,GAME-021,Lego.c,game,high,rdata,src/game/level.cpp
 00430df0,TerrainNeighborRefresh,20,GAME-021,Lego.c,game,high,bracketed,src/game/level.cpp
-00430ee0,TerrainCellInitialize,20,GAME-021,Lego.c,game,high,bracketed,src/game/ai.cpp
+00430ee0,TerrainCellInitialize,20,GAME-021,Lego.c,game,high,bracketed,src/game/level.cpp
 004310f0,TerrainCellFlag20ClearAndRefresh,20,GAME-021,Lego.c,game,high,bracketed,src/game/level.cpp
 00431140,TerrainCellQueuedWorkTransition,20,GAME-021,Lego.c,game,high,bracketed,src/game/level.cpp
 004311d0,FUN_004311d0,20,GAME-021,Lego.c,game,high,string,
@@ -804,7 +804,7 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00433e80,TerrainProjectedCellStateRefresh,20,GAME-021,Lego.c,game,high,rdata,
 00434480,CellSurfaceUpdateDispatch,20,GAME-021,Lego.c,game,high,bracketed,src/game/level.cpp
 00434530,TerrainGridEntryResourcesReleaseAll,20,GAME-021,Lego.c,game,high,bracketed,src/game/terrain_grid.cpp
-00434570,TerrainCellProgressUpdate,20,GAME-021,Lego.c,game,high,bracketed,
+00434570,TerrainCellProgressUpdate,20,GAME-021,Lego.c,game,high,bracketed,src/game/level.cpp
 004345f0,PanelsConfigEntryApply,20,GAME-021,Lego.c,game,high,string,src/game/frontend.cpp
 00434710,PanelButtonLayoutConfigLoad,20,GAME-021,Lego.c,game,high,string,src/game/frontend.cpp
 00434a00,AdvisorTutorialIconImageLoad,20,GAME-021,Lego.c,game,high,string,src/game/frontend.cpp
@@ -2146,8 +2146,8 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00485710,TextWrapMeasureAndDrawLines,66,G98-017,,gods98,high,rdata,src/gods98/heap.cpp
 004859b0,TextBufferReset,66,G98-017,,gods98,low,boundary:G98-018,src/gods98/heap.cpp
 00485a00,ObjectStatePairGet,66,G98-017,,gods98,low,boundary:G98-018,src/gods98/record.cpp
-00485a20,KeyboardKeyNamesInit,67,G98-018,Keys.c,gods98,high,string,src/game/frontend.cpp
-00485e30,NamedOptionIndexFindCaseInsensitive,67,G98-018,Keys.c,gods98,low,boundary:G98-019,src/game/frontend.cpp
+00485a20,KeyboardKeyNamesInit,67,G98-018,Keys.c,gods98,high,string,src/gods98/keys.c
+00485e30,NamedOptionIndexFindCaseInsensitive,67,G98-018,Keys.c,gods98,low,boundary:G98-019,src/gods98/keys.c
 00485e80,RenderSetup,68,G98-019,,gods98,high,bss,src/gods98/surface.cpp
 00485ea0,InterfaceSlot58PairStoreClamp,68,G98-019,,gods98,high,bss;rdata,
 00485fb0,ViewportRectangleGet,68,G98-019,,gods98,high,bss,

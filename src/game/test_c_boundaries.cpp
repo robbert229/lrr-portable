@@ -35,6 +35,7 @@
 #include "gods98/audio.h"
 #include "platform/platform.h"
 #include "platform/window.h"
+#include "gods98/keys.h"
 
 int main(void)
 {
