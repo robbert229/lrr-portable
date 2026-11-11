@@ -232,7 +232,8 @@ at-address metrics barely move, because sizes still differ.
 **Risk.** Medium.
 - The most work is mechanical: file-static closures in `entity.cpp`,
   `level.cpp`, `frontend.cpp` and `view.cpp`.
-- Every PR conflicts on `match-baseline.txt` and `binary-progress.json`,
+- Every PR conflicts on `match-baseline.txt`, `match-listing-digests.txt` and
+  `binary-progress.json`,
   which conversions also refresh. Land one restructuring PR at a time;
   conversions keep their own queue.
 

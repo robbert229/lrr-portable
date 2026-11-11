@@ -1,2 +1,3 @@
 docs/coverage/match-baseline.txt -merge
 docs/coverage/binary-progress.json -merge
+docs/coverage/match-listing-digests.txt -merge

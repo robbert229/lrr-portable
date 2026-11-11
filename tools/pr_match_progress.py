@@ -8,9 +8,11 @@ import re
 from pathlib import Path
 from binary_progress_hash import input_hash
 from match_baseline import load_baseline, compare
+import match_listings
 
 PROGRESS = 'docs/coverage/binary-progress.json'
 BASELINE = 'docs/coverage/match-baseline.txt'
+LISTINGS = 'docs/coverage/match-listing-digests.txt'
 MARKER = '<!-- matching-progress-report -->'
 
 
@@ -25,10 +27,14 @@ def check(base, head):
     head_hash = input_hash(head)
     data = read_progress(head)
     baseline = (head / BASELINE).read_bytes()
+    listings = (head / LISTINGS).read_bytes()
+    listing_fingerprints = re.findall(rb'^# input_sha256: ([0-9a-f]{64})$', listings, re.MULTILINE)
     fingerprints = re.findall(rb'^# input_sha256: ([0-9a-f]{64})$', baseline, re.MULTILINE)
     if (len(fingerprints) != 1 or fingerprints[0].decode() != head_hash or
             data.get('input_sha256') != head_hash or
-            data.get('baseline_sha256') != hashlib.sha256(baseline).hexdigest()):
+            data.get('baseline_sha256') != hashlib.sha256(baseline).hexdigest() or
+            listing_fingerprints != [head_hash.encode()] or
+            data.get('listing_digests_sha256') != hashlib.sha256(listings).hexdigest()):
         raise ValueError('matching progress or baseline is stale or modified; run make match-progress and never hand-merge the generated files')
     print('Matching progress and baseline are fresh.')
 
@@ -60,6 +66,13 @@ def render(base, head):
         lines.append(f'| {label} | {a} | {b} | {arrow} ({delta:+.2f}) |')
     lines += ['', '### Match baseline', '']
     old_scopes, new_scopes = load_baseline(base / BASELINE), load_baseline(head / BASELINE)
+    evidence = None
+    if (base / LISTINGS).is_file() and (head / LISTINGS).is_file():
+        try:
+            evidence = (match_listings.load(base / LISTINGS), match_listings.load(head / LISTINGS),
+                        match_listings.source_index(root=base), match_listings.source_index(root=head))
+        except (OSError, ValueError):
+            pass
     for scope in ('game-only', 'full'):
         before, after = old_scopes[scope], new_scopes[scope]
         fell, rose, mapped, unmapped = compare(before, after)
@@ -69,6 +82,17 @@ def render(base, head):
         movers = sorted(rose + fell, key=lambda x: (-abs(float(x[3]) - float(x[2])), x[0]))[:5]
         if movers:
             lines.append('Top movers: ' + '; '.join(f'`0x{addr:08x}` {name.replace("|", "&#124;")} {old_score}% → {new_score}%' for addr, name, old_score, new_score in movers) + '.')
+        for address, name, old_score, new_score in fell:
+            detail = 'classification unavailable; instruction delta unknown'
+            if evidence:
+                old_lists, new_lists, old_source, new_source = evidence
+                a, b = old_lists[scope].get(address), new_lists[scope].get(address)
+                if a and b:
+                    x, y = old_source.get(address), new_source.get(address)
+                    changed = None if x is None or y is None else x != y
+                    kind, delta = match_listings.classify(a, b, changed)
+                    detail = f'{kind}; instructions {delta:+d}' + ('; owner review' if delta or kind in ('source-changed', 'source-unknown', 'drift-review') else '')
+            lines.append(f'- `0x{address:08x}` {name.replace("|", "&#124;")}: {old_score}% → {new_score}% — {detail}')
         lines.append('')
     lines.append('Measurements are committed locally; CI checks input freshness, not the correctness of the measurement. Review drops under the entropy policy.')
     return '\n'.join(lines) + '\n'

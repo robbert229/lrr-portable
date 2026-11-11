@@ -3,7 +3,7 @@
     "full": 54.24,
     "game_only": 49.93
   },
-  "baseline_sha256": "1c306c75f842666b1c565ff90c150e07c372594b27b7f6963aa285d7088805a4",
+  "baseline_sha256": "48182b268b2ab1cc30fd5faf623bc301b008af861abc2bd22442fdb1ab84fc08",
   "exact_function_code_bytes": {
     "bytes": 41053,
     "original_text_bytes": 642549,
@@ -23,7 +23,8 @@
       "pairs": 844760
     }
   },
-  "input_sha256": "76ba9755ee0f7da350a74faeddefd68254890c72bf7d2726ce214bc26c822cb8",
+  "input_sha256": "c0b631568c8091726abd20c25aa9bc1001c84b5c6d99b8026a09ba41ea626bfe",
+  "listing_digests_sha256": "f433742e112da86818c93b0e606a8c49e21b853a58afdefacaa951eaaaff629a",
   "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
