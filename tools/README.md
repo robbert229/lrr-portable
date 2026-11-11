@@ -370,7 +370,10 @@ from fresh builds. Run `make reccmp-check` first and review any drops under
 ADR 0005 before accepting the baseline. The non-incremental build always runs:
 a matching input hash alone does not prove that the baseline is current.
 The PR freshness check uses `pr_match_progress.py check`, and its `render`
-command compares the committed reports without the toolchain.
+command compares the committed reports without the toolchain. The baseline
+header records the input fingerprint and the progress file records a baseline
+digest. On conflict, take either side and regenerate both with `make
+match-progress`; never hand-merge them.
 
 `make binary-progress` builds a separate non-incremental matching executable
 in `build-binary-progress/`, runs Reccmp, prints the comparison as JSON and

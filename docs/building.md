@@ -169,7 +169,9 @@ and commit both `docs/coverage/binary-progress.json` and
 `docs/coverage/match-baseline.txt`. This rebuilds the ordinary matching report
 and baseline, then always runs the separate non-incremental whole-binary build.
 The hash alone cannot establish that the baseline is current. CI checks the
-progress input hash in `matching-progress-freshness` without the toolchain;
+progress and baseline fingerprints and baseline digest in
+`matching-progress-freshness` without the toolchain;
 it reports progress in a single comment for same-repository PRs. Fork PRs
 get the freshness check but no comment. This check verifies freshness, not
-measurement correctness. Rebase and regenerate when matching inputs change.
+measurement correctness. On a generated-file conflict, take either side and
+regenerate both with `make match-progress`; never hand-merge them.

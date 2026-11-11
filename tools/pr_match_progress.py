@@ -3,6 +3,8 @@
 """Check committed matching progress and render a PR comparison (stdlib only)."""
 import argparse
 import json
+import hashlib
+import re
 from pathlib import Path
 from binary_progress_hash import input_hash
 from match_baseline import load_baseline, compare
@@ -20,14 +22,15 @@ def read_progress(root):
 
 
 def check(base, head):
-    base_hash, head_hash = input_hash(base), input_hash(head)
-    # Existing stale main must not block a PR with no matching-build impact.
-    if base_hash == head_hash and (base / PROGRESS).read_bytes() == (head / PROGRESS).read_bytes():
-        print('No matching-build input or progress change.')
-        return
-    if read_progress(head)['input_sha256'] != head_hash:
-        raise ValueError('binary progress is stale; run make match-progress and commit both outputs')
-    print('Binary progress is fresh.')
+    head_hash = input_hash(head)
+    data = read_progress(head)
+    baseline = (head / BASELINE).read_bytes()
+    fingerprints = re.findall(rb'^# input_sha256: ([0-9a-f]{64})$', baseline, re.MULTILINE)
+    if (len(fingerprints) != 1 or fingerprints[0].decode() != head_hash or
+            data.get('input_sha256') != head_hash or
+            data.get('baseline_sha256') != hashlib.sha256(baseline).hexdigest()):
+        raise ValueError('matching progress or baseline is stale or modified; run make match-progress and never hand-merge the generated files')
+    print('Matching progress and baseline are fresh.')
 
 
 def render(base, head):

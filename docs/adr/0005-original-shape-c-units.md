@@ -134,7 +134,9 @@ For each original translation unit, in link order where possible:
    - Classify any drop outside the unit under the entropy policy.
    - Run `make match-progress` and commit the refreshed match baseline and
      whole-binary progress. The PR freshness check verifies the input hash;
-     it does not replace the local gate or this entropy review.
+     it also checks the baseline digest and does not replace the local gate or
+     this entropy review. On conflict, take either side and regenerate both;
+     never hand-merge the generated files.
    - Regenerate the unit map with `python3 tools/translation_units.py build`.
 9. **Native.** The unit and every touched file must compile natively with
    no new errors, and `c_boundaries` must pass. Run the native tests once

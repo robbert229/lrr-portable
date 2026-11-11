@@ -16,6 +16,8 @@
 - For changes to matching-build inputs, run `make match-progress` and commit
   both `docs/coverage/binary-progress.json` and the match baseline. Review
   drops under ADR 0005 before accepting a new baseline. CI checks freshness.
+  On a generated-file conflict, take either side and regenerate both with
+  `make match-progress`; never hand-merge them.
 - To convert an original translation unit (ADR 0005), start with step 0: run
   `python3 tools/convert_unit.py <unit>` (`tools/README.md`). It scaffolds the
   unit's `.c`/`.h`, globals, stubs and wiring, and prints the conversion
