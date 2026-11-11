@@ -2220,10 +2220,10 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00489d70,ObjectField38Release,73,G98-026,,gods98,low,boundary:G98-026,src/gods98/g98_026.c
 00489d90,DirectXErrorMessageFormat,74,G98-027,,gods98,high,bss;data;string,src/gods98/dxerror.c
 00489dd0,DirectXResultDiagnosticDispatch,74,G98-027,,gods98,high,bss;string,src/gods98/dxerror.c
-0048b260,StartupStreamStateReset,75,G98-028,,gods98,low,boundary:G98-028,src/game/startup_config.cpp
-0048b280,WindowModeFlagSet,75,G98-028,,gods98,low,boundary:G98-028,src/gods98/engine.cpp
-0048b290,StartupStreamsClose,75,G98-028,,gods98,low,boundary:G98-028,src/game/startup_config.cpp
-0048b2f0,StartupConfigStreamLoad,75,G98-028,,gods98,low,boundary:G98-028,src/game/startup_config.cpp
+0048b260,StartupStreamStateReset,75,G98-028,,gods98,low,boundary:G98-028,src/gods98/file_list_streams.cpp
+0048b280,WindowModeFlagSet,75,G98-028,,gods98,low,boundary:G98-028,src/gods98/file_list_streams.cpp
+0048b290,StartupStreamsClose,75,G98-028,,gods98,low,boundary:G98-028,src/gods98/file_list_streams.cpp
+0048b2f0,StartupConfigStreamLoad,75,G98-028,,gods98,low,boundary:G98-028,src/gods98/file_list_streams.cpp
 0048b330,RegistryPathSplit,76,G98-029,,gods98,low,boundary:G98-029,src/gods98/g98_029.c
 0048b360,RegistryPathAccessor,76,G98-029,,gods98,low,boundary:G98-029,src/gods98/g98_029.c
 0048b390,RegistryPathCreateKeys,76,G98-029,,gods98,low,boundary:G98-029,src/gods98/g98_029.c

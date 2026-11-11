@@ -8,4 +8,6 @@
 
 extern int32_t s_application_mode;
 
+extern uint32_t s_window_mode_flag;
+
 #endif /* LRR_GODS98_ENGINE_SHARED_HPP */
