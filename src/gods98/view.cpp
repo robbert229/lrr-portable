@@ -21,6 +21,7 @@
 #include "../game/ai.hpp"
 #include "../game/entity.hpp"
 #include "../game/level.hpp"
+#include "view_shared.hpp"
 
 #if defined(_MSC_VER)
 #define VIEW_COM_CALL __stdcall
@@ -64,9 +65,9 @@ static SceneOwnerLinkReleaseFn s_owner_link_child_release;
 static CameraViewContextReleaseHook s_view_context_release_hook;
 static CameraViewContextFreeHook s_view_context_free_hook;
 static void* s_view_context_close_context;
-static AnimationObjectTransformApplyHook s_animation_orientation_hook;
-static RenderNodePositionApplyHook s_render_node_position_hook;
-static void* s_animation_transform_context;
+AnimationObjectTransformApplyHook s_animation_orientation_hook;
+RenderNodePositionApplyHook s_render_node_position_hook;
+void* s_animation_transform_context;
 static SceneMatrixApplyHook s_scene_matrix_apply_hook;
 static void* s_scene_matrix_apply_context;
 static SceneObjectChainHooks s_scene_object_chain_hooks;
@@ -140,7 +141,7 @@ static SceneChildSearchHooks s_scene_child_search_hooks;
 static SceneFormattedStringHooks s_scene_formatted_string_hooks;
 static RenderInterfacePairHooks s_render_interface_pair_hooks;
 static DDiScenePayloadReleaseHooks s_ddiscene_payload_release_hooks;
-static RendererRecordCloneHooks s_renderer_record_clone_hooks;
+RendererRecordCloneHooks s_renderer_record_clone_hooks;
 static char* s_shared_object_directory_root;
 static SharedObjectEntryResolveFn s_shared_object_entry_resolve;
 static SharedObjectSoundEnabledFn s_shared_object_sound_enabled;
@@ -3181,36 +3182,6 @@ void animation_transform_hooks_set(AnimationObjectTransformApplyHook orient,
     s_animation_transform_context = context;
 }
 
-// AnimationObjectTransformSet (FUN_00406dc0).
-// FUNCTION: LEGORR 0x00406dc0
-void animation_object_transform_set(void* record, float first, float second)
-{
-    static const float orientation[4] = { 0.0f, 0.0f, 0.0f, -1.0f };
-    void* render_object;
-    if (record == NULL || s_animation_orientation_hook == NULL) return;
-    render_object = *(void**)((char*)record + 4);
-    if (render_object == NULL) return;
-    s_animation_orientation_hook(s_animation_transform_context,
-                                 render_object, first, second, orientation);
-}
-
-// RenderNodeSetPositionFromCallback (FUN_00406df0).
-// FUNCTION: LEGORR 0x00406df0
-void render_node_position_from_callback(void* record, float x, float y,
-                                        RenderNodePositionValueFn value_fn,
-                                        void* context)
-{
-    void* render_object;
-    float z;
-    if (record == NULL || value_fn == NULL ||
-        s_render_node_position_hook == NULL) return;
-    render_object = *(void**)((char*)record + 4);
-    if (render_object == NULL) return;
-    z = value_fn(x, y, context);
-    s_render_node_position_hook(s_animation_transform_context,
-                                render_object, x, y, z);
-}
-
 void scene_matrix_apply_hook_set(SceneMatrixApplyHook hook, void* context)
 {
     s_scene_matrix_apply_hook = hook;
@@ -3429,36 +3400,6 @@ void renderer_record_clone_hooks_set(const RendererRecordCloneHooks* hooks)
     }
     else {
         s_renderer_record_clone_hooks = *hooks;
-    }
-}
-
-// RendererRecordClone (FUN_00406cb0).
-// FUNCTION: LEGORR 0x00406cb0
-void renderer_record_clone(const RendererRecord* source,
-                           RendererRecord* destination)
-{
-    unsigned int i;
-    if (source == NULL || destination == NULL) return;
-    destination->first_word = source->first_word;
-    destination->visual_resource = source->visual_resource;
-    for (i = 0; i < 23; ++i) destination->prefix[i] = source->prefix[i];
-    for (i = 0; i < 3; ++i) {
-        destination->resource_lists[i] = source->resource_lists[i];
-    }
-    destination->flags = source->flags & ~1u;
-    if (s_renderer_record_clone_hooks.linked_records_clone != NULL) {
-        for (i = 0; i < 3; ++i) {
-            destination->resource_lists[i] =
-                s_renderer_record_clone_hooks.linked_records_clone(
-                    s_renderer_record_clone_hooks.context,
-                    source->resource_lists[i]);
-        }
-    }
-    if (s_renderer_record_clone_hooks.visual_resource_load != NULL) {
-        destination->visual_resource =
-            s_renderer_record_clone_hooks.visual_resource_load(
-                s_renderer_record_clone_hooks.context,
-                source->visual_resource);
     }
 }
 
@@ -4985,18 +4926,18 @@ void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount)
 
 static CameraPoseDispatchHook s_camera_pose_dispatch_hook;
 static void* s_camera_pose_dispatch_context;
-static SceneTimingValueGetHook s_scene_timing_value_get_hook;
-static SceneTimingCountGetHook s_scene_timing_count_get_hook;
-static void* s_scene_timing_hooks_context;
-static AnimationObjectTimeUpdateHook s_animation_object_time_update_hook;
-static AnimationObjectActionHook s_animation_object_time_get_hook;
-static AnimationObjectActionHook s_animation_object_value_get_hook;
-static void* s_animation_object_hooks_context;
+SceneTimingValueGetHook s_scene_timing_value_get_hook;
+SceneTimingCountGetHook s_scene_timing_count_get_hook;
+void* s_scene_timing_hooks_context;
+AnimationObjectTimeUpdateHook s_animation_object_time_update_hook;
+AnimationObjectActionHook s_animation_object_time_get_hook;
+AnimationObjectActionHook s_animation_object_value_get_hook;
+void* s_animation_object_hooks_context;
 static RendererSubobjectFindHook s_renderer_subobject_find_hook;
 static RendererSubobjectApplyHook s_renderer_subobject_apply_hook;
 static void* s_renderer_subobject_hooks_context;
-static RendererHandleScalarGetHook s_renderer_handle_scalar_get_hook;
-static void* s_renderer_handle_scalar_get_context;
+RendererHandleScalarGetHook s_renderer_handle_scalar_get_hook;
+void* s_renderer_handle_scalar_get_context;
 
 void camera_pose_dispatch_hook_install(CameraPoseDispatchHook hook,
                                        void* context)
@@ -5014,35 +4955,6 @@ void scene_timing_value_hooks_install(SceneTimingValueGetHook value_get,
     s_scene_timing_hooks_context = context;
 }
 
-/* RendererObjectTimingValueAdjustByCount (FUN_00406d30): read the base
- * timing value from the frame interface and subtract one frame duration for
- * each additional instance when the value is nonzero. */
-// FUNCTION: LEGORR 0x00406D30
-float renderer_object_timing_value_adjust_by_count(void* record,
-                                                   void* argument,
-                                                   uint32_t count)
-{
-    void* frame;
-    float value;
-    int frame_duration;
-    if (record == NULL || s_scene_timing_value_get_hook == NULL) {
-        return 0.0f;
-    }
-    frame = *(void**)((char*)record + 4);
-    if (frame == NULL) {
-        return 0.0f;
-    }
-    value = s_scene_timing_value_get_hook(frame, argument,
-                                         s_scene_timing_hooks_context);
-    if (count > 1u && value != 0.0f &&
-        s_scene_timing_count_get_hook != NULL) {
-        frame_duration = s_scene_timing_count_get_hook(
-            frame, s_scene_timing_hooks_context);
-        value -= (float)frame_duration * (float)(count - 1u);
-    }
-    return value;
-}
-
 void animation_object_hooks_install(AnimationObjectTimeUpdateHook update,
                                     AnimationObjectActionHook time_get,
                                     AnimationObjectActionHook value_get,
@@ -5052,48 +4964,6 @@ void animation_object_hooks_install(AnimationObjectTimeUpdateHook update,
     s_animation_object_time_get_hook = time_get;
     s_animation_object_value_get_hook = value_get;
     s_animation_object_hooks_context = context;
-}
-
-/* AnimationObjectTimeUpdate (FUN_00406d10): forward the supplied time to
- * the scene frame stored in the animation object's +4 slot. */
-// FUNCTION: LEGORR 0x00406D10
-void animation_object_time_update(void* record, float time)
-{
-    void* frame;
-    if (record == NULL || s_animation_object_time_update_hook == NULL) return;
-    frame = *(void**)((char*)record + 4);
-    if (frame != NULL) {
-        s_animation_object_time_update_hook(
-            frame, time, s_animation_object_hooks_context);
-    }
-}
-
-/* AnimationObjectTimeGet (FUN_00406da0): query the object's current scene
- * frame through the installed backend callback. */
-// FUNCTION: LEGORR 0x00406DA0
-void animation_object_time_get(void* record)
-{
-    void* frame;
-    if (record == NULL || s_animation_object_time_get_hook == NULL) return;
-    frame = *(void**)((char*)record + 4);
-    if (frame != NULL) {
-        s_animation_object_time_get_hook(frame,
-                                         s_animation_object_hooks_context);
-    }
-}
-
-/* AnimationObjectValueGet (FUN_00407090): run the value-query method on
- * the scene frame stored at +4. */
-// FUNCTION: LEGORR 0x00407090
-void animation_object_value_get(void* record)
-{
-    void* frame;
-    if (record == NULL || s_animation_object_value_get_hook == NULL) return;
-    frame = *(void**)((char*)record + 4);
-    if (frame != NULL) {
-        s_animation_object_value_get_hook(
-            frame, s_animation_object_hooks_context);
-    }
 }
 
 void renderer_subobject_hooks_install(RendererSubobjectFindHook find,
@@ -5135,67 +5005,11 @@ void renderer_object_subobject_dispatch(void* record, void* key)
     (void)renderer_object_subobject_find_apply(record, key);
 }
 
-/* RendererCachedHandle48GetOrCreate (FUN_00406fe0): lazily resolve the
- * resource at +0x34 and cache its scene subobject at +0x48. */
-// FUNCTION: LEGORR 0x00406FE0
-void* renderer_cached_handle_48_get_or_create(void* record)
-{
-    void** source;
-    void** cached;
-    if (record == NULL) return NULL;
-    source = (void**)((char*)record + 0x34);
-    cached = (void**)((char*)record + 0x48);
-    if (*source == NULL) return NULL;
-    if (*cached == NULL) {
-        *cached = renderer_object_subobject_find_apply(record, *source);
-    }
-    return *cached;
-}
-
-/* RendererCachedHandle50GetOrCreate (FUN_00407010): sibling cache with
- * source at +0x3c and cached handle at +0x50. */
-// FUNCTION: LEGORR 0x00407010
-void* renderer_cached_handle_50_get_or_create(void* record)
-{
-    void** source;
-    void** cached;
-    if (record == NULL) return NULL;
-    source = (void**)((char*)record + 0x3c);
-    cached = (void**)((char*)record + 0x50);
-    if (*source == NULL) return NULL;
-    if (*cached == NULL) {
-        *cached = renderer_object_subobject_find_apply(record, *source);
-    }
-    return *cached;
-}
-
 void renderer_handle_scalar_hook_install(RendererHandleScalarGetHook hook,
                                          void* context)
 {
     s_renderer_handle_scalar_get_hook = hook;
     s_renderer_handle_scalar_get_context = context;
-}
-
-/* RendererCachedHandle4cIsNotOne (FUN_00407040): lazily resolve +0x38 into
- * +0x4c, then answer whether the handle's scalar property differs from 1. */
-// FUNCTION: LEGORR 0x00407040
-int renderer_cached_handle_4c_is_not_one(void* record)
-{
-    void** source;
-    void** cached;
-    float value;
-    if (record == NULL) return 0;
-    source = (void**)((char*)record + 0x38);
-    cached = (void**)((char*)record + 0x4c);
-    if (*cached == NULL && *source != NULL) {
-        *cached = renderer_object_subobject_find_apply(record, *source);
-    }
-    if (*cached == NULL || s_renderer_handle_scalar_get_hook == NULL) {
-        return 0;
-    }
-    value = s_renderer_handle_scalar_get_hook(
-        *cached, s_renderer_handle_scalar_get_context);
-    return value != 1.0f;
 }
 
 static void* scene_object_subobject_resolve(void* owner, void* source,
@@ -7518,7 +7332,7 @@ int float_round_to_nearest_int(float value)
         crt_round_to_integral_with_math_error_handling_variant(value_double));
 }
 
-static RendererSubobjectResolveFn s_renderer_subobject_resolver;
+RendererSubobjectResolveFn s_renderer_subobject_resolver;
 
 void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver)
 {
@@ -7550,29 +7364,6 @@ static void* scene_object_cached_subobject_get(void* owner,
         cached = scene_object_subobject_resolve(owner, source, index);
         __builtin_memcpy((char*)owner + slot_offset, &cached, sizeof(cached));
     }
-    return cached;
-}
-
-/* ActivityRunnerStateRead (FUN_00406f80): lazily resolve and cache the
- * selected subobject from the runner's +0x20 source into its +0x54 table. */
-// FUNCTION: LEGORR 0x00406f80
-void* activity_runner_state_read(void* runner, int index)
-{
-    void* source = NULL;
-    void* cached = NULL;
-    size_t slot_offset;
-
-    if (runner == NULL) return NULL;
-    __builtin_memcpy(&source, (char*)runner + 0x20u, sizeof(source));
-    if (source == NULL) return NULL;
-    slot_offset = 0x54u + (size_t)index * sizeof(void*);
-    __builtin_memcpy(&cached, (char*)runner + slot_offset, sizeof(cached));
-    if (cached == NULL && s_renderer_subobject_resolver != NULL) {
-        cached = s_renderer_subobject_resolver(runner, source, index);
-        __builtin_memcpy((char*)runner + slot_offset, &cached,
-                         sizeof(cached));
-    }
-    __builtin_memcpy(&cached, (char*)runner + slot_offset, sizeof(cached));
     return cached;
 }
 

@@ -926,6 +926,7 @@ float periodic_timer25_peek(void)
 #include "frontend.hpp"
 extern "C" float random_float_range(float minimum, float maximum);
 #include "crt/crt.hpp"
+#include "entity_shared.hpp"
 
 static uint32_t s_entity_finalize_mode_flags;
 static EntityFinalizeHook s_entity_type5_timeout_hook;
@@ -8959,8 +8960,8 @@ void entity_reset_auxiliary_state(EntitySlot* e)
     pending_type_value_slot_select(e, &e->auxiliary_slot_38c);
 }
 
-static EntityPayloadReleaseFn s_payload_scene_release_hook;
-static EntityPayloadReleaseFn s_payload_chain_release_hook;
+EntityPayloadReleaseFn s_payload_scene_release_hook;
+EntityPayloadReleaseFn s_payload_chain_release_hook;
 
 void entity_payload_release_hooks_set(EntityPayloadReleaseFn scene_release,
                                       EntityPayloadReleaseFn chain_release)
@@ -9148,36 +9149,6 @@ void entity_payload_state_set(EntitySlot* e, int state)
     }
     e->payload_state_8c = state;
     entity_scene_slot_table_rebuild(e, 0);
-}
-
-/* EntityPayloadReleaseSubslots (FUN_00406ec0): release the three owned
- * reference chains, conditionally free the five auxiliary blocks under
- * flag bit 0, then release the primary scene object. */
-// FUNCTION: LEGORR 0x00406ec0
-void entity_payload_release_subslots(EntitySlot* e)
-{
-    if (e == NULL) {
-        return;
-    }
-    if (s_payload_chain_release_hook != NULL) {
-        for (int i = 0; i < 3; ++i) {
-            if (e->payload_resource_chains[i] != NULL) {
-                s_payload_chain_release_hook(e->payload_resource_chains[i]);
-            }
-        }
-    }
-    if ((e->payload_flags_70 & 1u) != 0u) {
-        for (int i = 0; i < 5; ++i) {
-            if (e->payload_owned_blocks[i] != NULL) {
-                engine_heap_free(e->payload_owned_blocks[i]);
-                e->payload_owned_blocks[i] = NULL;
-            }
-        }
-    }
-    if (e->payload_handle_04 != NULL && s_payload_scene_release_hook != NULL) {
-        s_payload_scene_release_hook(e->payload_handle_04);
-    }
-    e->payload_handle_04 = NULL;
 }
 
 /* EntityPayloadTeardown (FUN_00408940): set state to -1, then release the

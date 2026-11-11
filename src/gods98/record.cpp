@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <string.h>
 #include <stdlib.h>
+#include "record_shared.hpp"
 
 #if defined(_MSC_VER)
 #define RECORD_COM_CALL __stdcall
@@ -126,7 +127,7 @@ static float rec_float(const void* base, size_t off)
 
 /* Pointer slots are modeled native-size (documented deviation from the
  * corpus's 32-bit pointers); reads stay byte-safe like the fields. */
-static void* rec_ptr(const void* base, size_t off)
+void* rec_ptr(const void* base, size_t off)
 {
     void* v = NULL;
     if (base != NULL) {
@@ -779,126 +780,6 @@ uint32_t scene_object_flag_bit3_get(const void* scene_object)
     if (scene_object == NULL) return 0u;
     return scene_object_flag_bit3_get_target(scene_object);
 }
-
-// FUNCTION: LEGORR 0x00406e30
-uint32_t animation_object_handle_get(const void* animation_object)
-{
-    uint32_t handle;
-    __builtin_memcpy(&handle, (const char*)animation_object + 0x04,
-                     sizeof(handle));
-    return handle;
-}
-
-/* RendererObjectUpdateFromRecordField64/68/6c (FUN_00406c00,
- * FUN_00406c30, FUN_00406c60): feed the selected list, renderer library,
- * update switch, and key to the resource-list adapter. The original passes
- * `param_2 == 0` as a dword-valued opaque pointer; retain that call shape so
- * installed native hooks observe the same zero/one value. */
-static void renderer_object_update_from_record(void* record,
-                                               unsigned int list_offset,
-                                               int enabled,
-                                               void* update_value)
-{
-    void* list;
-    void* library;
-    if (record == NULL) {
-        return;
-    }
-    __builtin_memcpy(&list, (const char*)record + list_offset, sizeof(list));
-    __builtin_memcpy(&library, (const char*)record + 0x04, sizeof(library));
-    resource_list_update_matching_key(list, library, update_value, 0u);
-}
-
-// FUNCTION: LEGORR 0x00406c00
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void renderer_object_update_from_record_field64(
-    void* record, int enabled)
-{
-    __asm {
-        mov edx, dword ptr [esp + 8]
-        xor eax, eax
-        test edx, edx
-        sete al
-        push 0
-        push eax
-        mov eax, dword ptr [esp + 0ch]
-        mov ecx, dword ptr [eax + 4]
-        mov edx, dword ptr [eax + 64h]
-        push ecx
-        push edx
-        call resource_list_update_matching_key
-        add esp, 10h
-        ret
-    }
-}
-#else
-void renderer_object_update_from_record_field64(void* record, int enabled)
-{
-    renderer_object_update_from_record(record, 0x64u, enabled,
-                                       (void*)(uintptr_t)(enabled == 0));
-}
-#endif
-
-// FUNCTION: LEGORR 0x00406c30
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void renderer_object_update_from_record_field68(
-    void* record, int enabled)
-{
-    __asm {
-        mov edx, dword ptr [esp + 8]
-        xor eax, eax
-        test edx, edx
-        sete al
-        push 0
-        push eax
-        mov eax, dword ptr [esp + 0ch]
-        mov ecx, dword ptr [eax + 4]
-        mov edx, dword ptr [eax + 68h]
-        push ecx
-        push edx
-        call resource_list_update_matching_key
-        add esp, 10h
-        ret
-    }
-}
-#else
-void renderer_object_update_from_record_field68(void* record, int enabled)
-{
-    renderer_object_update_from_record(record, 0x68u, enabled,
-                                       (void*)(uintptr_t)(enabled == 0));
-}
-#endif
-
-// FUNCTION: LEGORR 0x00406c60
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void renderer_object_update_from_record_field6c(
-    void* record, int enabled, void* update_value)
-{
-    __asm {
-        mov eax, dword ptr [esp + 0ch]
-        xor ecx, ecx
-        push eax
-        mov eax, dword ptr [esp + 0ch]
-        test eax, eax
-        mov eax, dword ptr [esp + 8]
-        sete cl
-        mov edx, dword ptr [eax + 4]
-        mov eax, dword ptr [eax + 6ch]
-        push ecx
-        push edx
-        push eax
-        call resource_list_update_matching_key
-        add esp, 10h
-        ret
-    }
-}
-#else
-void renderer_object_update_from_record_field6c(void* record, int enabled,
-                                                void* update_value)
-{
-    renderer_object_update_from_record(record, 0x6cu, enabled, update_value);
-}
-#endif
 
 // FUNCTION: LEGORR 0x004877d0
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -1863,30 +1744,6 @@ void surface_visibility_set(const void* record, uint32_t flag)
     if (adapter != NULL && adapter(context, record, flag) != 0) return;
     surface_visibility_set_target(record, flag);
 }
-
-/* AnimationObjectVisibilitySet (FUN_00406c90) — animation record +4. */
-// FUNCTION: LEGORR 0x00406c90
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void animation_object_visibility_set(const void* anim,
-                                                        uint32_t flag)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        mov eax, dword ptr [esp + 8]
-        push eax
-        mov edx, dword ptr [ecx + 4]
-        push edx
-        call scene_render_lock_toggle
-        add esp, 8
-        ret
-    }
-}
-#else
-void animation_object_visibility_set(const void* anim, uint32_t flag)
-{
-    scene_render_lock_toggle(rec_ptr(anim, 0x04), (int)flag);
-}
-#endif
 
 /* SceneObjectPairApplyMode (FUN_00408670) — the corpus blindly loads the +4
  * object and +0x7c partner. Copy native-width port pointer slots inline to

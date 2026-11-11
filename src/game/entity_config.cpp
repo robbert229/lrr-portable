@@ -16,10 +16,10 @@
 #include "gods98/string.hpp"
 #include "util.hpp"
 
-static TypeConfigTable s_minifigure_type_config;
-static TypeConfigTable s_building_type_config;
-static TypeConfigTable s_vehicle_type_config;
-static TypeConfigTable s_rockmonster_type_config;
+TypeConfigTable s_minifigure_type_config;
+TypeConfigTable s_building_type_config;
+TypeConfigTable s_vehicle_type_config;
+TypeConfigTable s_rockmonster_type_config;
 static BlockFile* s_entity_type_config_file;
 
 /* These loaders receive the complete game config. Retail builds each key
@@ -90,7 +90,7 @@ static int entity_type_config_entry_get(void* context, void* section,
     return 1;
 }
 
-static EntityTypeConfigRuntimeOps s_entity_type_runtime_ops;
+EntityTypeConfigRuntimeOps s_entity_type_runtime_ops;
 
 void entity_type_config_runtime_ops_install(
     const EntityTypeConfigRuntimeOps* ops)
@@ -161,7 +161,7 @@ int entity_type_config_scene_slot_nodes_load(EntitySlot* entity)
     return 1;
 }
 
-static void entity_type_config_word_set(void* row, uint32_t offset,
+void entity_type_config_word_set(void* row, uint32_t offset,
                                         uint32_t value)
 {
     memcpy((char*)row + offset, &value, sizeof(value));
@@ -470,7 +470,7 @@ legacy_unowned:
 /* Concrete row parser for the two table families in Finding 409. The
  * renderer-facing handles are opaque 32-bit backend tokens supplied by the
  * installed runtime adapter; config text and numeric fields are parsed here. */
-static int entity_type_config_row_parse_path(void* context,
+int entity_type_config_row_parse_path(void* context,
                                              const char* asset_path,
                                              void* destination,
                                              uint32_t row_kind)
@@ -657,54 +657,6 @@ int entity_type_config_row_parse(void* context, void* entry,
     if (config_entry == NULL) return 0;
     return entity_type_config_row_parse_path(
         context, block_value(config_entry), destination, row_kind);
-}
-
-// FUNCTION: LEGORR 0x00406990
-int entity_type_config_resource_row_load(void* destination,
-                                        uint32_t row_index,
-                                        void* scene_context,
-                                        const char* asset_path,
-                                        void* engine_config,
-                                        uint32_t row_kind)
-{
-    TypeConfigTable* table = NULL;
-    uint32_t row_slot = 0xffffffffu;
-    uintptr_t row_address;
-    uintptr_t table_address;
-    (void)scene_context;
-    (void)engine_config;
-    if (destination == NULL) return 0;
-    if (row_kind == 1u) table = &s_minifigure_type_config;
-    else if (row_kind == 2u) table = &s_building_type_config;
-    else if (row_kind == 3u) table = &s_rockmonster_type_config;
-    else if (row_kind == 4u) table = &s_vehicle_type_config;
-    if (row_kind == 2u) memset(destination, 0, 0x14cu);
-    row_address = (uintptr_t)destination;
-    table_address = table != NULL ? (uintptr_t)table->rows : 0u;
-    if (table != NULL && table->rows != NULL && table->row_owned != NULL &&
-        table->row_stride != 0u && row_address >= table_address &&
-        row_address - table_address <
-            (uintptr_t)table->capacity * table->row_stride) {
-        size_t offset = (size_t)(row_address - table_address);
-        if (offset % table->row_stride == 0u &&
-            offset / table->row_stride < table->capacity)
-            row_slot = (uint32_t)(offset / table->row_stride);
-    }
-    if (row_kind == 2u && row_slot == 0xffffffffu) return 0;
-    if (!entity_type_config_row_parse_path(table, asset_path, destination,
-                                           row_kind)) return 0;
-    entity_type_config_word_set(destination, 0u, row_index);
-    if (row_kind == 2u) {
-        entity_type_config_word_set(destination, 0x148u, 0u);
-        if (s_entity_type_runtime_ops.scene_apply_mode != NULL) {
-            uint32_t scene = 0u;
-            memcpy(&scene, (char*)destination + 4u, sizeof(scene));
-            if (scene != 0u)
-                s_entity_type_runtime_ops.scene_apply_mode(
-                    s_entity_type_runtime_ops.context, scene, 1);
-        }
-    }
-    return 1;
 }
 
 // FUNCTION: LEGORR 0x00407d60
@@ -1791,6 +1743,7 @@ unsigned int entity_stats_config_load_from_block(BlockFile* config)
 }
 
 #include "port_loop_ports.hpp"
+#include "entity_config_shared.hpp"
 
 /* VehicleTypeDefinitionParse (FUN_0046c6f0): the source parser zeroes its
  * 0x7b-word vehicle record before reading config. Keep that initialization
