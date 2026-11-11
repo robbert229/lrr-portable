@@ -41,15 +41,15 @@ SHA-256:
 
 ## Whole-binary progress — 2026-11-10
 
-The non-incremental matching build at `cf3bfa0d` has **33 bytes** in
+The non-incremental matching build at `6db0b3c7` has **33 bytes** in
 identical runs of at least 16 bytes at their original `.text` addresses
 (**0.01 percentage points** above the shifted-original baseline). Raw
-agreement is **2.80%**, below the **2.83%** chance estimate; no fully
+agreement and the chance estimate both round to **2.83%**; no fully
 identical functions sit at their original addresses. Full-scope function order
-has **907 adjacent inversions** and **872,200 inverted pairs**; game-only has
-**849** and **858,236** respectively. Raw exact-function coverage is
-**32,883 / 642,549 bytes (5.12%)**, and mean raw accuracy is **49.28%**
-game-only and **53.67%** full.
+has **907 adjacent inversions** and **870,576 inverted pairs**; game-only has
+**848** and **856,666** respectively. Raw exact-function coverage is
+**37,855 / 642,549 bytes (5.89%)**, and mean raw accuracy is **49.37%**
+game-only and **53.74%** full.
 
 The [generated report](binary-progress.json) records chance-adjusted section
 metrics, sizes, header differences and the input hash. See the

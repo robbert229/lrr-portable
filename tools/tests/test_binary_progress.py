@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
+import hashlib
 import json
 import struct
 import subprocess
@@ -6,12 +7,12 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import binary_progress as progress
 import binary_progress_hash as hashing
+import translation_units
 from strip_pe_debug import strip
 
 
@@ -39,6 +40,8 @@ def fixture_pe(path, signed=False):
         struct.pack_into('<IIII', data, off + 8, 0x200, (i + 1) * 0x1000, 0x200, 0x400 + i * 0x200)
         struct.pack_into('<I', data, off + 36, 0x40000040 if i else 0x60000020)
     data[0x400:0x600] = bytes(range(256)) * 2
+    data[0x400:0x410] = b'\x90' * 15 + b'\xc3'
+    data[0x420:0x430] = b'\x90' * 15 + b'\xc3'
     data[0x620:0x63c] = b'D' * 28
     data[0xa00:] = b'Z' * 32
     path.write_bytes(data)
@@ -118,24 +121,23 @@ class ProgressTests(unittest.TestCase):
     def test_report_synthetic_pe(self):
         try:
             import pefile
+            import capstone
         except ImportError:
-            self.skipTest('pefile is needed for synthetic PE report test')
+            self.skipTest('pefile and capstone are needed for synthetic PE report test')
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); original = root / 'original.exe'; rebuilt = root / 'rebuilt.exe'
             fixture_pe(original); fixture_pe(rebuilt)
-            pe = pefile.PE(str(original))
-            class Original:
-                def __init__(self, path):
-                    self.pe = pe
-                    self.text = (0x401000, 0x401200)
-                def read(self, va, size):
-                    return pe.get_memory_mapped_image()[va - 0x400000:va - 0x400000 + size]
             entries = [{'address': '0x401000', 'recomp': '0x401000', 'matching': 1.0},
                        {'address': '0x401020', 'recomp': '0x401020', 'matching': 0.5, 'effective': True}]
             for name in ('results.json', 'game-only.json'):
                 (root / name).write_text(json.dumps({'data': entries}))
-            funcs = [SimpleNamespace(address=0x401000, end=0x401010), SimpleNamespace(address=0x401020, end=0x401030)]
-            with patch.object(progress, 'Binary', Original), patch.object(progress, 'load_functions', return_value=funcs), patch.object(progress, 'input_hash', return_value='hash'):
+            manifest = root / 'manifest.csv'; ledger = root / 'ledger.csv'; areas = root / 'areas.csv'
+            manifest.write_text('address\n00401000\n00401020\n')
+            ledger.write_text('address,corpus_name,symbol,status\n00401000,first,,mapped\n00401020,second,,mapped\n')
+            areas.write_text('address,area_id\n00401000,a\n00401020,a\n')
+            with patch.multiple(translation_units, EXPECTED_SHA256=hashlib.sha256(original.read_bytes()).hexdigest(),
+                                DATA_INIT=(0x403000, 0x403000), MANIFEST=manifest, LEDGER=ledger, AREAS=areas), \
+                    patch.object(progress, 'input_hash', return_value='hash'):
                 result = progress.report(original, rebuilt, root)
             self.assertEqual(result['text_at_original_addresses']['identical_percent'], 100)
             self.assertEqual(result['fully_identical_functions_at_original_address'], {'count': 1, 'bytes': 16})

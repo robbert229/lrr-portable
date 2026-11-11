@@ -96,6 +96,8 @@ src/gods98/camera.cpp
 src/gods98/camera.hpp
 src/gods98/config.c
 src/gods98/config.h
+src/gods98/dxerror.c
+src/gods98/dxerror.h
 src/gods98/engine.cpp
 src/gods98/engine.hpp
 src/gods98/entity.cpp
