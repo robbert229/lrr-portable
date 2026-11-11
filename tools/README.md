@@ -493,12 +493,18 @@ Errors in individual compilations are recorded in the result. A failed initial
 score exits nonzero. The search does not edit `src/`.
 
 The passes swap uninitialized primitive declarations, declarators, and
-independent adjacent scalar assignments; reverse simple C comparisons;
+independent adjacent scalar assignments and increments (including
+comma-separated `for` steps); reverse simple C comparisons; invert restricted
+braced C `if/else` branches; reorder adjacent, explicitly terminating switch
+cases;
 introduce and remove certain scalar temporaries; commute and reassociate
 unsigned scalar expressions; and convert restricted `while`, `for`, and
 `do` loops. These are intentionally narrow patterns, not a C/C++ parser:
 for example, arithmetic rewrites require known unsigned locals and avoid
-nested scopes. Many functions have no candidates. Review
+nested scopes. Switch reordering rejects fallthrough and nested blocks, and
+increment swaps require distinct known primitive scalars or pointers whose
+addresses do not escape. Compiler-generated increments have no source statement to swap.
+Many functions have no candidates. Review
 all changes for semantics (including macro expansion and volatile access) and
 MSVC 5.0 compatibility. Scores use the single-function loop and can differ
 from the full linked build. Candidate files must preserve line numbers so the
