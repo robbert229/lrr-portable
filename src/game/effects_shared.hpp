@@ -14,4 +14,11 @@ struct ScreenEffectTickRecord {
 extern struct ScreenEffectTickRecord s_screen_effect_tick_records[3][50];
 extern ScreenEffectTickHooks s_screen_effect_tick_hooks;
 
+extern SceneTransformState s_scene_transform_state;
+extern LightEffectParameterState s_light_effect_parameters;
+extern LightEffectConfigLoadHook s_light_effect_config_load_hook;
+extern void* s_light_effect_config_load_context;
+int light_effect_config_range_pair_read(BlockFile* config, const char* path, float* minimum, float* maximum);
+uint32_t light_effect_float_word(float value);
+
 #endif /* LRR_GAME_EFFECTS_SHARED_HPP */

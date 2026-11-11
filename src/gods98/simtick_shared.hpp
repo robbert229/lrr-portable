@@ -34,4 +34,7 @@ extern SimtickPostClusterRecordHook s_post_entity_first_hook;
 extern SimtickPostClusterRecordHook s_post_entity_second_hook;
 extern void* s_post_cluster_user;
 
+extern float s_xform_current[3];
+extern float s_xform_config[3];
+
 #endif /* LRR_GODS98_SIMTICK_SHARED_HPP */

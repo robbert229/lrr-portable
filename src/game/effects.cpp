@@ -77,8 +77,8 @@ static TimedEffectSlotRenderHooks s_timed_effect_slot_render_hooks;
 static TooltipOverlayState s_timed_effect_overlay_state;
 // GLOBAL: LEGORR 0x004aa64c
 static uint32_t s_timed_effect_cue_gate = 1u;
-static SceneTransformState s_scene_transform_state;
-static LightEffectParameterState s_light_effect_parameters;
+SceneTransformState s_scene_transform_state;
+LightEffectParameterState s_light_effect_parameters;
 static EntityNodeScaleApplyHook s_entity_node_scale_apply_hook;
 static void* s_entity_node_scale_apply_context;
 static EventTimerActionHook s_event_timer_action_hook;
@@ -432,10 +432,10 @@ void entity_node_scale_update(void* entity_ptr, int doubled)
     s_entity_node_scale_apply_hook(s_entity_node_scale_apply_context,
                                    entity, first, second);
 }
-static LightEffectConfigLoadHook s_light_effect_config_load_hook;
-static void* s_light_effect_config_load_context;
+LightEffectConfigLoadHook s_light_effect_config_load_hook;
+void* s_light_effect_config_load_context;
 
-static int light_effect_config_range_pair_read(BlockFile* config,
+int light_effect_config_range_pair_read(BlockFile* config,
                                                const char* path,
                                                float* minimum,
                                                float* maximum)
@@ -470,61 +470,7 @@ static int light_effect_config_range_pair_read(BlockFile* config,
     return 1;
 }
 
-static int light_effect_config_path_build(char* path, size_t path_capacity,
-                                          const char* config_root,
-                                          const char* key)
-{
-    static const char middle[] = "::LightEffects::";
-    size_t root_length;
-    size_t middle_length = sizeof(middle) - 1u;
-    size_t key_length;
-    if (path == NULL || config_root == NULL || key == NULL ||
-        path_capacity == 0u) return 0;
-    root_length = strlen(config_root);
-    key_length = strlen(key);
-    if (root_length + middle_length + key_length + 1u > path_capacity)
-        return 0;
-    memcpy(path, config_root, root_length);
-    memcpy(path + root_length, middle, middle_length);
-    memcpy(path + root_length + middle_length, key, key_length + 1u);
-    return 1;
-}
-
-static int light_effect_config_float_triplet_read(BlockFile* config,
-                                                  const char* path,
-                                                  float values[3])
-{
-    const char* value = block_get_strptr(config, path);
-    char copy[256];
-    char* cursor;
-    unsigned int i;
-    size_t length = 0u;
-    if (value == NULL || values == NULL) return 0;
-    while (length + 1u < sizeof(copy) && value[length] != '\0') {
-        copy[length] = value[length];
-        ++length;
-    }
-    if (value[length] != '\0') return 0;
-    copy[length] = '\0';
-    cursor = copy;
-    for (i = 0u; i < 3u; ++i) {
-        char* end;
-        double parsed = strtod(cursor, &end);
-        if (end == cursor) return 0;
-        values[i] = (float)parsed;
-        while (*end == ' ' || *end == '\t') ++end;
-        if (i != 2u) {
-            if (*end != ':') return 0;
-            cursor = end + 1;
-        }
-        else if (*end != '\0') {
-            return 0;
-        }
-    }
-    return 1;
-}
-
-static uint32_t light_effect_float_word(float value)
+uint32_t light_effect_float_word(float value)
 {
     uint32_t word;
     memcpy(&word, &value, sizeof(word));
@@ -596,110 +542,6 @@ void light_effect_config_load_hook_set(LightEffectConfigLoadHook hook,
     s_light_effect_config_load_context = context;
 }
 
-// FUNCTION: LEGORR 0x0044c7f0
-uint32_t light_effect_blink_config_load(void* config, void* section)
-{
-    return s_light_effect_config_load_hook != NULL
-        ? s_light_effect_config_load_hook(s_light_effect_config_load_context,
-                                          0, config, section) : 0u;
-}
-
-// FUNCTION: LEGORR 0x0044c9c0
-uint32_t light_effect_fade_config_load(void* config, void* section)
-{
-    return s_light_effect_config_load_hook != NULL
-        ? s_light_effect_config_load_hook(s_light_effect_config_load_context,
-                                          1, config, section) : 0u;
-}
-
-// FUNCTION: LEGORR 0x0044cca0
-uint32_t light_effect_move_config_load(void* config,
-                                      const char* config_root)
-{
-    BlockFile* file = (BlockFile*)config;
-    const char* root = config_root != NULL ? config_root : "Lego*";
-    static const char* const keys[4] = {
-        "RandomRangeForTimeBetweenMoves",
-        "RandomRangeForSpeedOfMove",
-        "RandomRangeForDistOfMove",
-        "MoveLimit"
-    };
-    char path[256];
-    float time_min, time_max;
-    float speed_min, speed_max;
-    float distance_min, distance_max;
-    float move_limit[3];
-    if (file == NULL ||
-        !light_effect_config_path_build(path, sizeof(path), root, keys[0]) ||
-        !light_effect_config_range_pair_read(file, path, &time_min,
-                                             &time_max) ||
-        !light_effect_config_path_build(path, sizeof(path), root, keys[1]) ||
-        !light_effect_config_range_pair_read(file, path, &speed_min,
-                                             &speed_max) ||
-        !light_effect_config_path_build(path, sizeof(path), root, keys[2]) ||
-        !light_effect_config_range_pair_read(file, path, &distance_min,
-                                             &distance_max) ||
-        !light_effect_config_path_build(path, sizeof(path), root, keys[3]) ||
-        !light_effect_config_float_triplet_read(file, path, move_limit)) {
-        return 0u;
-    }
-    light_effect_move_parameters_store(
-        light_effect_float_word(time_min * 25.0f),
-        light_effect_float_word(time_max * 25.0f),
-        light_effect_float_word(speed_min * 25.0f),
-        light_effect_float_word(speed_max * 25.0f),
-        light_effect_float_word(distance_min),
-        light_effect_float_word(distance_max),
-        light_effect_float_word(move_limit[0]),
-        light_effect_float_word(move_limit[1]),
-        light_effect_float_word(move_limit[2]));
-    return 1u;
-}
-
-// FUNCTION: LEGORR 0x0044c7c0
-void light_effect_configuration_load(void* config,
-                                    const char* config_root)
-{
-    (void)light_effect_blink_config_load(config, (void*)config_root);
-    (void)light_effect_fade_config_load(config, (void*)config_root);
-    (void)light_effect_move_config_load(config, config_root);
-}
-
-// FUNCTION: LEGORR 0x0044c970
-void light_effect_blink_parameters_store(uint32_t a, uint32_t b,
-                                         uint32_t c, uint32_t d,
-                                         uint32_t e, uint32_t f)
-{
-    s_light_effect_parameters.blink[0] = a;
-    s_light_effect_parameters.blink[1] = b;
-    s_light_effect_parameters.blink[2] = c;
-    s_light_effect_parameters.blink[3] = d;
-    s_light_effect_parameters.blink[4] = e;
-    s_light_effect_parameters.blink[5] = f;
-    s_light_effect_parameters.flags |= 1u;
-}
-
-// FUNCTION: LEGORR 0x0044cc10
-void light_effect_fade_parameters_store(uint32_t a, uint32_t b, uint32_t c,
-                                        uint32_t d, uint32_t e, uint32_t f,
-                                        uint32_t g, uint32_t h, uint32_t i,
-                                        uint32_t j, uint32_t k, uint32_t l)
-{
-    s_light_effect_parameters.fade[0] = a;
-    s_light_effect_parameters.fade[1] = b;
-    s_light_effect_parameters.fade[2] = c;
-    s_light_effect_parameters.fade[3] = d;
-    s_light_effect_parameters.fade[4] = e;
-    s_light_effect_parameters.fade[5] = f;
-    s_light_effect_parameters.fade[6] = g;
-    s_light_effect_parameters.fade[7] = h;
-    s_light_effect_parameters.fade[8] = i;
-    s_light_effect_parameters.fade[9] = j;
-    s_light_effect_parameters.fade[10] = k;
-    s_light_effect_parameters.fade[11] = l;
-    s_light_effect_parameters.flags |= 4u;
-}
-
 void light_effect_move_parameters_store(uint32_t a, uint32_t b, uint32_t c,
                                         uint32_t d, uint32_t e, uint32_t f,
                                         uint32_t g, uint32_t h, uint32_t i)
@@ -735,62 +577,11 @@ const LightEffectParameterState* light_effect_parameter_state_peek(void)
     return &s_light_effect_parameters;
 }
 
-// FUNCTION: LEGORR 0x0044c710
-void scene_transform_state_initialize(void* target, void* owner,
-                                      float x, float y, float z)
-{
-    s_scene_transform_state.target = target;
-    s_scene_transform_state.owner = owner;
-    s_scene_transform_state.base[0] = x;
-    s_scene_transform_state.base[1] = y;
-    s_scene_transform_state.base[2] = z;
-    s_scene_transform_state.current[0] = x;
-    s_scene_transform_state.current[1] = y;
-    s_scene_transform_state.current[2] = z;
-    motion_gameplay_scene_bind(target, s_scene_transform_state.flags);
-    motion_gameplay_scene_owner_bind(target, owner);
-    motion_waypoint_position_bind(x, y, z);
-    render_object_set_packed_rgba_from_float_channels(target, x, y, z,
-                                                       1.0f);
-}
-
-// FUNCTION: LEGORR 0x0044c790
-void scene_transform_enable_set(int enabled)
-{
-    if (enabled != 0) {
-        s_scene_transform_state.flags |= 0x100u;
-        render_object_set_packed_rgba_from_float_channels(
-            s_scene_transform_state.target,
-            s_scene_transform_state.base[0],
-            s_scene_transform_state.base[1],
-            s_scene_transform_state.base[2], 1.0f);
-    }
-    else {
-        s_scene_transform_state.flags &= ~0x100u;
-    }
-    motion_gameplay_scene_bind(s_scene_transform_state.target,
-                               s_scene_transform_state.flags);
-}
-
 void scene_transform_current_set(float x, float y, float z)
 {
     s_scene_transform_state.current[0] = x;
     s_scene_transform_state.current[1] = y;
     s_scene_transform_state.current[2] = z;
-}
-
-// FUNCTION: LEGORR 0x0044cff0
-void scene_transform_rgb_clamp_apply(void)
-{
-    float color[3];
-    unsigned int i;
-    for (i = 0; i < 3; ++i) {
-        color[i] = s_scene_transform_state.current[i];
-        if (color[i] < 0.0f) color[i] = 0.0f;
-        if (color[i] > 1.0f) color[i] = 1.0f;
-    }
-    render_object_set_packed_rgba_from_float_channels(
-        s_scene_transform_state.target, color[0], color[1], color[2], 1.0f);
 }
 
 const SceneTransformState* scene_transform_state_peek(void)

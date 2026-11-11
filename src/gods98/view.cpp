@@ -5161,42 +5161,6 @@ void grid_operation_argument_adapter(float x, float y, EngineContext* ctx)
     (void)terrain_height(ctx, x, y);
 }
 
-/* FloatNegateAbsoluteValue (FUN_0044d250) — see view.hpp. */
-// FUNCTION: LEGORR 0x0044d250
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void float_negate_absolute_value(float* value)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        test ecx, ecx
-        je float_negate_null
-        fld dword ptr [ecx]
-        fcomp dword ptr ds:[0049e4b0h]
-        fld dword ptr [ecx]
-        fnstsw ax
-        test ah, 1
-        je float_negate_nonnegative
-        fmul dword ptr ds:[0049e4c8h]
-        fstp dword ptr [ecx]
-        ret
-
-    float_negate_nonnegative:
-        fchs
-        fstp dword ptr [ecx]
-    float_negate_null:
-        ret
-    }
-}
-#else
-void float_negate_absolute_value(float* value)
-{
-    if (value == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    *value = -*value; /* both corpus branches negate */
-}
-#endif
-
 /* CameraZoomStepAdjust (FUN_0045bf20) — see view.hpp. */
 void camera_zoom_step_context_set(void* context)
 {

@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'lighteffects.cpp',
   'bubbles.cpp',
   'info.cpp',
   'terrain_cell_objects.cpp',

@@ -22,4 +22,33 @@ extern void (*s_entity_link_list_release_hook)(EntityLinkList*);
 
 extern const char* s_bubble_action_strings[BUBBLE_ACTION_STRING_COUNT];
 
+extern "C" float random_float_range(float minimum, float maximum);
+
+extern void* s_motion_jitter_retail_scene_object;
+extern void* s_motion_jitter_retail_scene_owner;
+extern float s_motion_jitter_center[3];
+extern uint32_t s_motion_jitter_flags;
+extern MotionDriftState* s_motion_drift_state;
+extern MotionRandomRangeFn s_motion_drift_random_range;
+extern void* s_motion_drift_user;
+extern MotionWaypointTimerState* s_motion_waypoint_state;
+extern PortLoopRandomRangeHook s_motion_waypoint_random_range;
+extern void* s_motion_waypoint_user;
+extern void* s_motion_gameplay_scene_object;
+extern void* s_motion_gameplay_scene_owner;
+extern MotionJitterState s_motion_jitter_state;
+extern float s_motion_waypoint_target[3];
+extern float s_motion_waypoint_bounds_min[3];
+extern float s_motion_waypoint_bounds_max[3];
+extern float s_motion_waypoint_delay;
+extern float s_motion_waypoint_delay_range[2];
+extern float s_motion_waypoint_velocity[3];
+extern float s_motion_waypoint_scale_range[2];
+extern float s_motion_waypoint_duration;
+extern float s_motion_waypoint_duration_range[2];
+extern float s_motion_waypoint_progress[3];
+extern float s_motion_waypoint_position[3];
+void motion_jitter_center_refresh(void);
+float motion_waypoint_default_random(void* context, float minimum, float maximum);
+
 #endif /* LRR_GAME_UTIL_SHARED_HPP */

@@ -1359,17 +1359,6 @@ void simtick_directsound_listener_view_set(int view)
     }
 }
 
-/* RoutePositionBlockedStateSet (FUN_0044da20) — see simtick.hpp. */
-// FUNCTION: LEGORR 0x0044da20
-void simtick_route_position_blocked_state_set(int blocked)
-{
-    if (blocked != 0) {
-        s_motion_jitter_flags = (s_motion_jitter_flags & ~0x400u) | 0x200u;
-        return;
-    }
-    s_motion_jitter_flags &= ~0x1200u; /* bits 9 and 12; bit 10 survives */
-}
-
 uint32_t simtick_route_position_state_peek(void)
 {
     return s_motion_jitter_flags;
@@ -1390,15 +1379,8 @@ void simtick_global_ui_flags_set_bit2(void)
 uint32_t simtick_global_ui_flags_word(void) { return simtick_timer_word; }
 
 /* ScenePositionResetAndEffectMotionCancel (FUN_0044cf70) — see simtick.hpp. */
-static float s_xform_current[3];   /* corpus pose seam stand-in */
-static float s_xform_config[3];    /* DAT_004eae74 role */
-
-// FUNCTION: LEGORR 0x0044cf70
-void simtick_scene_position_reset_and_effect_motion_cancel(void)
-{
-    __builtin_memcpy(s_xform_config, s_xform_current, sizeof s_xform_config);
-    s_motion_jitter_flags &= 0xffffff7fu;
-}
+float s_xform_current[3];   /* corpus pose seam stand-in */
+float s_xform_config[3];    /* DAT_004eae74 role */
 
 void simtick_scene_transform_current_set(const float xyz[3])
 {
