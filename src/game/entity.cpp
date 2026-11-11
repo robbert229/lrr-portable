@@ -5726,7 +5726,15 @@ static uint32_t stats_rec_word(const EntitySlot* e, int off)
 
 /* The retail x86 readers dereference the selected record at +0x334 directly.
  * Keep the null-template adapter for other hosts, but preserve the unchecked
- * field load in the MSVC 5.0 target build. */
+ * field load in the MSVC 5.0 target build. The 32-bit EntitySlot keeps the
+ * record pointer at that original offset (finding 520). */
+#if defined(_MSC_VER) && defined(_M_IX86)
+static_assert((size_t)&((EntitySlot*)0)->stats_record == 0x334,
+              "EntitySlot.stats_record must sit at retail +0x334");
+#elif defined(__i386__)
+static_assert(__builtin_offsetof(EntitySlot, stats_record) == 0x334,
+              "EntitySlot.stats_record must sit at retail +0x334");
+#endif
 #if defined(_MSC_VER) && defined(_M_IX86)
 #define ENTITY_STATS_FLOAT_READ(e, off) \
     (*(const float*)((const uint8_t*)(e)->stats_record + (off)))
@@ -5870,14 +5878,15 @@ int entity_state_override_pop(EntitySlot* entity)
 }
 
 /* EntityRecordFlag400ToggleAndRefresh (FUN_0046a330): toggle stats-record
- * flag 0x400 and run the kind-four post-create resolver. */
+ * flag 0x400 and run the kind-four post-create resolver. The naked body
+ * hard-codes EntitySlot.stats_record at +0x334 (asserted above). */
 // FUNCTION: LEGORR 0x0046A330
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void entity_record_flag400_toggle_and_refresh(EntitySlot* e)
 {
     __asm {
         mov edx, dword ptr [esp + 4]
-        mov ecx, dword ptr [edx + 114h]
+        mov ecx, dword ptr [edx + 334h]
         mov eax, dword ptr [ecx + 148h]
         test ah, 4
         je entity_record_flag400_toggle_raise
