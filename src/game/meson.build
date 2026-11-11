@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'rock_fall_styles.cpp',
   'dependencies.cpp',
   'entity_cell_effects.cpp',
   'placement.cpp',

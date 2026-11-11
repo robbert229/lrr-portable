@@ -20,4 +20,6 @@ extern int s_global_value_word;
 
 extern uint32_t s_level_stored_word;
 
+extern uint32_t s_rockfall_base;
+
 #endif /* LRR_CRT_CRT_SHARED_HPP */

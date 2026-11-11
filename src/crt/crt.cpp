@@ -1878,8 +1878,6 @@ void global_value_004ffe48_set(uint32_t value)
 
 // GLOBAL: LEGORR 0x00557860
 static uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
-// GLOBAL: LEGORR 0x004c79a4
-static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
 
 // FUNCTION: LEGORR 0x00407340
 void state_flag_toggle_when_zero(void)
@@ -1896,12 +1894,6 @@ uint32_t global_task_refresh_flag_get(void)
 uint32_t global_mode_zero_input_peek(void)
 {
     return s_mode_zero_flag;
-}
-
-// FUNCTION: LEGORR 0x0040bfc0
-void rockfall_style_table_base_set(uint32_t v)
-{
-    s_rockfall_base = v;
 }
 
 uint32_t advisor_state_word_peek(void)  { return s_advisor_state_word; }
