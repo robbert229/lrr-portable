@@ -39,4 +39,8 @@ extern float s_xform_config[3];
 
 extern int s_marker_fired;
 
+extern int s_post_n;
+extern SimtickPostStepHook s_post_step_hook;
+extern void* s_post_step_user;
+
 #endif /* LRR_GODS98_SIMTICK_SHARED_HPP */

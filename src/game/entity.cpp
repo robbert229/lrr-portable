@@ -14126,7 +14126,7 @@ void ledger_stub_0044fab0_TerrainCellSurfaceTriangleVerticesSelect(
 
 } // namespace unported_ledger_stubs
 
-static EntityQuadCollisionHooks s_entity_quad_collision_hooks;
+EntityQuadCollisionHooks s_entity_quad_collision_hooks;
 
 void entity_quad_collision_hooks_set(
     const EntityQuadCollisionHooks* hooks)
@@ -14135,63 +14135,6 @@ void entity_quad_collision_hooks_set(
     else memset(&s_entity_quad_collision_hooks, 0,
                 sizeof(s_entity_quad_collision_hooks));
 }
-
-namespace unported_ledger_stubs {
-
-// FUNCTION: LEGORR 0x00466490
-int ledger_stub_00466490_CellSightRayCheckAndFlag(
-    const EntitySlot* observer)
-{
-    EntitySlot* cell_entity = NULL;
-    LevelState* level;
-    float observer_position[2];
-    float start[2];
-    float end[2];
-    float direction_length;
-    int cell_x = -1;
-    int cell_y = -1;
-    uint32_t cell_flags = 0u;
-    int hit;
-    if (observer == NULL || observer->owner_ctx == NULL ||
-        observer->owner_ctx->level == NULL) return 0;
-    level = observer->owner_ctx->level;
-    if (level->ptr_terrain == NULL) return 0;
-    entity_transform_position_get(observer, observer_position);
-    if (!terrain_world_xy_to_cell(level->ptr_terrain, observer_position[0],
-            observer_position[1], &cell_x, &cell_y) ||
-        !entity_field_grid_cell_get(cell_x, cell_y, (void**)&cell_entity,
-                                    &cell_flags) ||
-        (cell_flags & 0x100u) == 0u || cell_entity == NULL ||
-        !terrain_cell_world_center_xy_get(level->ptr_terrain, cell_x, cell_y,
-                                          start)) return 0;
-
-    /* Retail normalizes the occupied cell entity's surface vector before
-     * using it as the ray endpoint. Prefer the installed renderer accessor;
-     * EntitySlot's attached direction is the typed runtime representation
-     * when that accessor has no provider. */
-    if (!entity_surface_vector_normalize_if_available(cell_entity, end)) {
-        end[0] = cell_entity->attached_direction[0];
-        end[1] = cell_entity->attached_direction[1];
-        direction_length = (float)sqrt((double)(end[0] * end[0] +
-                                                 end[1] * end[1]));
-        if (direction_length == 0.0f) return 0;
-        end[0] /= direction_length;
-        end[1] /= direction_length;
-    }
-    if ((entity_state_flags_get(observer) & 0x100u) != 0u) {
-        hit = entity_surface_quad_segment_intersect((EntitySlot*)observer,
-            start, end, NULL, 0, &s_entity_quad_collision_hooks);
-    }
-    else {
-        hit = entity_segment_center_proximity_check(observer, start, end, 0);
-    }
-    if (!hit) return 0;
-    ((EntitySlot*)observer)->flags_3e0 |= 0x02000000u;
-    cell_entity->flags_3e0 |= 0x02000000u;
-    return 1;
-}
-
-} // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
 

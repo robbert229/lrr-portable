@@ -188,4 +188,10 @@ extern uint32_t s_terrain_quad_height;
 extern TerrainQuadVertexReadHook s_terrain_quad_vertex_read;
 extern void* s_terrain_quad_vertex_context;
 
+namespace unported_ledger_stubs {
+int ledger_stub_00466250_ExpandCellEntitySpawn(int x, int y);
+} // namespace unported_ledger_stubs
+uint32_t cell_flag_word(const LevelState* s, int cx, int cy);
+uint8_t* cell_record_unchecked(LevelState* s, int cx, int cy);
+
 #endif /* LRR_GAME_LEVEL_SHARED_HPP */

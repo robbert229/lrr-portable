@@ -21,10 +21,6 @@
 #include "view.hpp"
 #include "simtick_shared.hpp"
 
-namespace unported_ledger_stubs {
-int ledger_stub_00466490_CellSightRayCheckAndFlag(const EntitySlot* observer);
-}
-
 #define SIMTICK_MUTE_RESET 25.0f
 
 /* ---- mute timer (FUN_0041ba10) ------------------------------------------ */
@@ -540,37 +536,15 @@ void simtick_bitfield_tree(int* base, int code)
 /* ---- tranche 9 ---------------------------------------------------------- */
 
 /* FUN_004665c0: a single ordered post-step. */
-static int s_post_n = 0;
-static SimtickPostStepHook s_post_step_hook = NULL;
-static void* s_post_step_user = NULL;
+int s_post_n = 0;
+SimtickPostStepHook s_post_step_hook = NULL;
+void* s_post_step_user = NULL;
 int simtick_post_steps_count(void) { return s_post_n; }
-
-static int post_step_cell_sight_callback(EntitySlot* entity, void* payload)
-{
-    (void)payload;
-    (void)unported_ledger_stubs::
-        ledger_stub_00466490_CellSightRayCheckAndFlag(entity);
-    /* LAB_004665e0's result does not terminate the entity-pool walk. */
-    return 0;
-}
 
 void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user)
 {
     s_post_step_hook = hook;
     s_post_step_user = user;
-}
-
-// FUNCTION: LEGORR 0x004665c0
-void simtick_post_step(EngineContext* c)
-{
-    (void)c;
-    /* FUN_004665c0 calls FUN_004377b0 with this relay. That walker excludes
-     * the same 0x80000-filtered records as the existing filtered pool API. */
-    entity_pool_find_by_callback_filtered_current(
-        post_step_cell_sight_callback, NULL);
-    if (s_post_step_hook != NULL)
-        s_post_step_hook(c, s_post_step_user);
-    ++s_post_n;
 }
 
 /* FUN_004313b0: minion activity state machine over the +0x88 list.

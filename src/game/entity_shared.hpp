@@ -24,4 +24,6 @@ extern EntityStateOverrideValue330ApplyHook s_entity_state_override_value_330_ap
 extern EntityStateOverrideRenameHook s_entity_state_override_rename;
 extern void* s_entity_state_override_context;
 
+extern EntityQuadCollisionHooks s_entity_quad_collision_hooks;
+
 #endif /* LRR_GAME_ENTITY_SHARED_HPP */

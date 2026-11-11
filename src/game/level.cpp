@@ -155,10 +155,6 @@ static void cell_transient_effect_ports_release(LevelState* level)
     }
 }
 
-namespace unported_ledger_stubs {
-int ledger_stub_00466250_ExpandCellEntitySpawn(int x, int y);
-}
-
 /* MapLoadPipeline calls GridCellRecordBufferReplace(level) after rebuilding
  * the separate 20-byte map-cell pool. EngineState is a portable view, so
  * keep its dimensions in persistent storage instead of casting LevelState
@@ -3399,7 +3395,7 @@ uint8_t terrain_cell_material_get_current(int x, int y)
  * their own dim-minus-one checks; unchecked target leaves use the raw
  * row-major helper where they do not have that gate. */
 
-static uint32_t cell_flag_word(const LevelState* s, int cx, int cy)
+uint32_t cell_flag_word(const LevelState* s, int cx, int cy)
 {
     const uint8_t* rec = level_voxel(s, cx, cy);
     uint32_t flags = 0;
@@ -3422,7 +3418,7 @@ static uint32_t cell_secondary_word(const LevelState* s, int cx, int cy)
 /* The target's coordinate-pair leaf readers do not apply grid bounds. Keep
  * their 32-bit row-major address calculation distinct from level_voxel(),
  * whose checked access is useful to higher-level portable code. */
-static uint8_t* cell_record_unchecked(LevelState* s, int cx, int cy)
+uint8_t* cell_record_unchecked(LevelState* s, int cx, int cy)
 {
     uint8_t* voxels;
     uint32_t index;
@@ -10692,7 +10688,6 @@ void ledger_stub_004350a0_SurfaceTypeDescriptionsConfigLoad(
     surface_type_descriptions_load(entries, hooks);
 }
 
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
@@ -10702,73 +10697,6 @@ int ledger_stub_0043b360_TaskCountAtGridCoordinateQuery(
     uint32_t x, uint32_t y, EntitySlot** out_entity)
 {
     return entity_task_at_grid_coordinate_find(x, y, out_entity);
-}
-
-
-} // namespace unported_ledger_stubs
-
-namespace unported_ledger_stubs {
-
-/* ExpandCellEntitySpawn (FUN_00466250) creates a type-12 entity only when
- * the cell's expansion bit is clear and the surrounding terrain flags allow
- * its orientation. The scene action setter itself remains renderer-owned;
- * entity creation, cell state, and the cell object's live sidecar are
- * handled here. */
-// FUNCTION: LEGORR 0x00466250
-int ledger_stub_00466250_ExpandCellEntitySpawn(int x, int y)
-{
-    static const float half_pi = 1.57079632679f;
-    GameContext* game = entity_pool_callback_context_get();
-    LevelState* level = game != NULL ? game->level : NULL;
-    uint8_t* cell;
-    uint32_t flags;
-    uint32_t entity_word;
-    float position[3];
-    float orientation;
-    EntitySlot* entity;
-
-    if (level == NULL) level = level_current_owner_get();
-    if (game == NULL || level == NULL || level->ptr_terrain == NULL)
-        return 0;
-    if ((unsigned)x >= (unsigned)level_width(level) ||
-        (unsigned)y >= (unsigned)level_height(level)) return 0;
-    map_cell_record_grid_activate(level);
-    cell = cell_record_unchecked(level, x, y);
-    if (cell == NULL) return 0;
-    memcpy(&flags, cell + 0x08, sizeof(flags));
-    if ((flags & 0x100u) != 0u || (flags & 8u) == 0u) return 0;
-
-    /* FUN_004663f0 first tests the two horizontal neighbors. If either
-     * lacks bit 0x10, both vertical neighbors must carry it and orientation
-     * is zero; otherwise the expansion faces at pi/2. */
-    if ((cell_flag_word(level, x + 1, y) & 0x10u) == 0u ||
-        (cell_flag_word(level, x - 1, y) & 0x10u) == 0u) {
-        if ((cell_flag_word(level, x, y + 1) & 0x10u) == 0u ||
-            (cell_flag_word(level, x, y - 1) & 0x10u) == 0u) return 0;
-        orientation = 0.0f;
-    }
-    else {
-        orientation = half_pi;
-    }
-    if (!terrain_cell_world_position_get(x, y, position)) return 0;
-
-    entity = entity_create_with_position(game, 0x0c, NULL, 0,
-        position[0], position[1], orientation);
-    if (entity == NULL) return 0;
-
-    entity_word = (uint32_t)(uintptr_t)entity;
-    memcpy(cell, &entity_word, sizeof(entity_word));
-    {
-        const float expansion_time = 100.0f;
-        memcpy(cell + 0x04, &expansion_time, sizeof(expansion_time));
-    }
-    flags |= 0x100u;
-    memcpy(cell + 0x08, &flags, sizeof(flags));
-    entity->flags_3e0 |= 0x100u;
-    /* The native owner keeps the full pointer in its cell-link sidecar; the
-     * retail record word above remains the 32-bit image used by x86 callers. */
-    (void)grid_cell_object_link_insert(entity, x, y);
-    return 1;
 }
 
 } // namespace unported_ledger_stubs
@@ -11098,7 +11026,6 @@ void ledger_stub_00409f20_EntityPlacementCommandsBuildOnce(EntitySlot* entity)
     entity_placement_commands_build_once(entity);
 }
 
-
 // LavaErosionNeighborMutate
 void ledger_stub_0040f330_LavaErosionNeighborMutate(
     const int xy[2], unsigned int direction, int propagate)
@@ -11119,7 +11046,5 @@ int ledger_stub_0040f190_LavaErosionCellEligibleAndMutate(
 {
     return lava_erosion_cell_eligible_and_mutate(xy, hint);
 }
-
-
 
 } // namespace unported_ledger_stubs
