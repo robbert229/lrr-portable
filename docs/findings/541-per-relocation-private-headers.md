@@ -229,6 +229,33 @@ So a relocation no longer changes any other unit file's code. Reccmp's label
 for an address can still change when the data layout moves, as it can for
 any change to the link.
 
+## R5's two hand fix-ups
+
+Finding 536 records two fix-ups that wave R5 needed after the tool ran. This
+design removes the need for neither.
+
+- **GAME-040, the `static` naked helper (`bc4265c2`).** Still needed. The
+  tool places the unannotated closure helper `surface_visibility_set_target`
+  after the unit's functions (ADR 0006 decision 4). It then forward-declares
+  the helper with `__declspec(naked)` stripped (`_head_decl`), and MSVC 5.0
+  rejects that pair with C2375. A naked prototype fails too (C2488). This
+  happens inside the unit file and involves no private header, so #496 does
+  not touch it. The fix belongs in the tool: when the closure contains a
+  `__declspec(naked)` static used before its definition, place it, unchanged,
+  before its first caller, as the fix-up did by hand, instead of
+  forward-declaring it. The migration keeps the fixed-up
+  `placement_footprint.cpp` as it is (only include lines change).
+- **GAME-024, the `random_float_range` prototype (`7aae39df`).** The
+  relocation still has to declare `util.cpp`'s `random_float_range` (a G98-007
+  function) for `lighteffects.cpp`. It now goes in a per-unit `util_for_<u>.hpp`
+  rather than `util_shared.hpp`; after the migration it appears in five
+  snapshots plus the old header. `convert_unit.py` must therefore still keep
+  private headers out of the boundary test's includes. The R5 fix-up matched
+  only `*_shared.hpp`, and the new names broke the same two hand-conversion
+  tests. This PR replaces that suffix test with `relocate_unit.is_private_header`,
+  so the exclusion covers every private-header name and needs no further hand
+  fix-up for later relocations.
+
 ## Limits
 
 - **Legacy files still drift** with every relocation out of them: they lose
