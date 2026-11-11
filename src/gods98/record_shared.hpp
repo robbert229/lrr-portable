@@ -10,4 +10,6 @@ void* rec_ptr(const void* base, size_t off);
 
 uint32_t rec_dword(const void* base, size_t off);
 
+float rec_float(const void* base, size_t off);
+
 #endif /* LRR_GODS98_RECORD_SHARED_HPP */

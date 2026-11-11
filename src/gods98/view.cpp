@@ -4154,7 +4154,7 @@ void cam_set_facing(CameraHandle* c, const float* r)
 /* Camera world queries cross through the bound terrain owner. In
  * particular, world X/Y are never voxel indices and +4 is not a height. */
 
-static int engine_context_grid_pick(EngineContext* ctx, const float* pos,
+int engine_context_grid_pick(EngineContext* ctx, const float* pos,
                                     int* gx, int* gy)
 {
     if (ctx == NULL || pos == NULL || gx == NULL || gy == NULL) return 0;
@@ -4167,33 +4167,11 @@ static int engine_context_grid_pick(EngineContext* ctx, const float* pos,
     *gy = (int)pos[1];
     return 1;
 }
-static float terrain_height(EngineContext* ctx, float x, float y)
+float terrain_height(EngineContext* ctx, float x, float y)
 {
     if (ctx != NULL && ctx->level_terrain != NULL)
         return terrain_surface_height_interpolate(ctx->level_terrain, x, y);
     return 0.0f;
-}
-
-/* RandomReachableGridPointSelect (FUN_00450560): the ray-descending
- * grid-point pick — see view.hpp for the plane geometry. Both float*
- * direction arguments ride the corpus's forwarded-dword convention:
- * the point and ray direction are vectors, and Ghidra typed them as
- * plain dwords because FUN_004798e0 only forwards them. The plane-point
- * z quirk is faithful: FUN_004798e0 answers into `out` while the height
- * store lands on the plane quad's z-slot, so the corpus effectively
- * intersects against successively lower planes. */
-// FUNCTION: LEGORR 0x00450560
-void random_reachable_grid_point_select(EngineContext* ctx, const float* p,
-                                        const float* dir, float* out,
-                                        int* gx, int* gy, int rounds)
-{
-    float plane[3] = { 0.0f, 0.0f, -50.0f };
-    const float normal[3] = { 0.0f, 0.0f, -1.0f };
-    for (int i = rounds; i != 0; --i) {
-        view_ray_intersection_test(out, p, dir, plane, normal);
-        plane[2] = terrain_height(ctx, out[0], out[1]);
-    }
-    (void)engine_context_grid_pick(ctx, out, gx, gy);
 }
 
 static int object_lookup(EngineContext* ctx, int id)

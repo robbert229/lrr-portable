@@ -37,4 +37,6 @@ extern void* s_post_cluster_user;
 extern float s_xform_current[3];
 extern float s_xform_config[3];
 
+extern int s_marker_fired;
+
 #endif /* LRR_GODS98_SIMTICK_SHARED_HPP */

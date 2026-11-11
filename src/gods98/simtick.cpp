@@ -236,54 +236,11 @@ void bobbin_clear_delay(SimtickBobbin* node)
 } /* FUN_004027a0 */
 
 /* ---- grid marker sweep (FUN_0044eff0) ----------------------------------- */
-static int s_marker_fired = 0;
+int s_marker_fired = 0;
 
 int simtick_marker_count(void)
 {
     return s_marker_fired;
-}
-
-static void marker_cell(EngineState* st, uint32_t x, uint32_t y)
-{
-    TerrainSurfaceGrid* grid = path_record_surface_grid_get();
-    if (st != NULL && grid != NULL && grid->width == st->sim_w &&
-        grid->height == st->sim_h) {
-        terrain_cell_surface_vectors_initialize(grid, x, y);
-    }
-    ++s_marker_fired;
-}
-
-// FUNCTION: LEGORR 0x0044eff0
-void simtick_marker_sweep(EngineContext* c, float dt, float scale)
-{
-    (void)scale;
-    EngineState* st = c != NULL ? c->state_block : NULL;
-    LevelState* level = level_current_owner_get();
-    if (level != NULL) {
-        /* The retail +0x73d0 dirty word and +0x28 cell records belong to the
-         * active LevelState's TerrainState. EngineState::sim_grid is only a
-         * test/legacy adapter and is not populated by the production level
-         * loader. */
-        s_marker_fired = 0;
-        terrain_dirty_cell_vectors_refresh(level);
-    }
-    else if (st != NULL && (st->sim_marker_flags & 2u) != 0u) {
-        s_marker_fired = 0;
-        for (uint32_t y = 0; y < st->sim_h; ++y) {
-            for (uint32_t x = 0; x < st->sim_w; ++x) {
-                uint8_t* cell = (uint8_t*)st->sim_grid +
-                    (y * st->sim_w + x) * 0x28;
-                if ((cell[0x19] & 4u) != 0u) {
-                    marker_cell(st, x, y);
-                    cell[0x19] = cell[0x19] & ~4u;
-                }
-            }
-        }
-        st->sim_marker_flags = (uint8_t)(st->sim_marker_flags & ~2u);
-    }
-    terrain_material_transition_tick(path_record_surface_grid_get(), dt);
-    /* FUN_00450b60's terrain-vertex interpolation pass still needs its
-     * cell-list and renderer-owned vertex records. */
 }
 
 /* ---- ManagerTick (corpus FUN_0045a730, finding 04) ---------------------- */

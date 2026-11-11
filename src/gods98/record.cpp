@@ -116,7 +116,7 @@ uint32_t rec_dword(const void* base, size_t off)
     return v;
 }
 
-static float rec_float(const void* base, size_t off)
+float rec_float(const void* base, size_t off)
 {
     float v = 0.0f;
     if (base != NULL) {
@@ -466,45 +466,6 @@ float camera_rotation_get(const void* camera)
     return *(const float*)((const char*)camera + 0x84);
 }
 #endif
-
-/* MapCellToWorldCenter (FUN_0044f640, finding 225): the descriptor's
- * int fields convert to float at the use site — reproduced exactly,
- * including the unsigned bounds compare. */
-// FUNCTION: LEGORR 0x0044f640
-int map_cell_to_world_center(const void* map, uint32_t cell_x,
-                             uint32_t cell_y, float* world_x, float* world_y)
-{
-#if defined(_MSC_VER) && defined(_M_IX86)
-    const uint32_t* fields = (const uint32_t*)map;
-    if (cell_x < fields[0] && cell_y < fields[1]) {
-        *world_x = *(const float*)((const char*)map + 0x10) * 0.5f +
-            (float)cell_x * *(const float*)((const char*)map + 0x10) +
-            *(const float*)((const char*)map + 0x18);
-        *world_y = *(const float*)((const char*)map + 0x1c) -
-            (*(const float*)((const char*)map + 0x10) * 0.5f +
-             (float)cell_y * *(const float*)((const char*)map + 0x10));
-        return 1;
-    }
-    return 0;
-#else
-    const uint32_t width = rec_dword(map, 0x00);
-    const uint32_t height = rec_dword(map, 0x04);
-    const float scale = rec_float(map, 0x10);
-    const float origin_x = rec_float(map, 0x18);
-    const float origin_y = rec_float(map, 0x1C);
-
-    if (cell_x < width && cell_y < height) {
-        if (world_x != NULL) {
-            *world_x = scale * 0.5f + (float)cell_x * scale + origin_x;
-        }
-        if (world_y != NULL) {
-            *world_y = origin_y - (scale * 0.5f + (float)cell_y * scale);
-        }
-        return 1;
-    }
-    return 0;
-#endif
-}
 
 /* PackedGridCellValueGet (FUN_0040b850, findings 373/451): low nibble
  * * width + high nibble indexes the cell dwords; the corpus's own NULL
@@ -939,194 +900,7 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
 
 /* --- grid-descriptor coordinate leaves (see record.hpp) ------------------ */
 
-// FUNCTION: LEGORR 0x0044f700
-int world_to_terrain_cell_bounds_check(const void* map, float world_x,
-                                       float world_y, int* cell_x,
-                                       int* cell_y, float* subcell)
-{
-    int cx;
-    int cy;
-#if defined(_MSC_VER) && defined(_M_IX86)
-    cx = (int)((world_x - *(const float*)((const char*)map + 0x18)) /
-               *(const float*)((const char*)map + 0x10));
-    cy = (int)((*(const float*)((const char*)map + 0x1c) - world_y) /
-               *(const float*)((const char*)map + 0x10));
-#else
-    if (map == NULL) {
-        if (cell_x != NULL) {
-            *cell_x = (int)world_x;
-        }
-        if (cell_y != NULL) {
-            *cell_y = (int)world_y;
-        }
-        return 0;
-    }
-    cx = (int)((world_x - rec_float(map, 0x18)) / rec_float(map, 0x10));
-    cy = (int)((rec_float(map, 0x1c) - world_y) / rec_float(map, 0x10));
-#endif
-    if (cell_x != NULL) {
-        *cell_x = cx;
-    }
-    if (cell_y != NULL) {
-        *cell_y = cy;
-    }
-#if defined(_MSC_VER) && defined(_M_IX86)
-    if (!(-1 < cx && cx < *(const int*)map && -1 < cy &&
-          cy < ((const int*)map)[1])) {
-#else
-    if (!(-1 < cx && cx < (int)rec_dword(map, 0x00) && -1 < cy &&
-          cy < (int)rec_dword(map, 0x04))) {
-#endif
-        return 0;
-    }
-    if (subcell != NULL) {
-        const float bs = *(const float*)((const char*)map + 0x10);
-        const float ox = *(const float*)((const char*)map + 0x18);
-        const float oy = *(const float*)((const char*)map + 0x1C);
-        float px = (world_x - ((float)cx * bs + ox)) / (bs * 0.5f);
-        float py = -((world_y - (oy - (float)cy * bs)) / (bs * 0.5f));
-        if (1.0f < px) {
-            px = 2.0f - px;
-        }
-        if (1.0f < py) {
-            py = 2.0f - py;
-        }
-        if (px < py) {
-            py = px;
-        }
-        *subcell = py;
-    }
-    return 1;
-}
-
-/* TerrainGridPick (FUN_0044f6d0): forward the same cell outputs and retain
- * the bounds result; the corpus's temporary subcell write is discarded. */
-// FUNCTION: LEGORR 0x0044f6d0
-int terrain_grid_pick(const void* map, float world_x, float world_y,
-                      int* cell_x, int* cell_y)
-{
-    return world_to_terrain_cell_bounds_check(
-        map, world_x, world_y, cell_x, cell_y, (float*)&cell_y);
-}
-
-// FUNCTION: LEGORR 0x0044f810
-void grid_coordinate_clamp_and_store(const void* map, float world_x,
-                                     float world_y, int* cell_x, int* cell_y)
-{
-    const int w = (int)rec_dword(map, 0x00);
-    const int h = (int)rec_dword(map, 0x04);
-    int cx = (int)world_x;
-    int cy = (int)world_y;
-    if (cx < 0) {
-        cx = 0;
-    }
-    if (w <= cx) {
-        cx = w - 1;
-    }
-    if (cy < 0) {
-        cy = 0;
-    }
-    if (h <= cy) {
-        cy = h - 1;
-    }
-    if (cell_x != NULL) {
-        *cell_x = cx;
-    }
-    if (cell_y != NULL) {
-        *cell_y = cy;
-    }
-}
-
-// FUNCTION: LEGORR 0x0044f870
-uint32_t terrain_world_point_to_cell(const void* map, const float* point,
-                                     float* cell_out, float* offset_out)
-{
-#if defined(_MSC_VER) && defined(_M_IX86)
-    const void* map_source = map;
-    const float* point_source = point;
-    int picked;
-    picked = terrain_grid_pick(map, point[0], point[1],
-                               (int*)&map, (int*)&point);
-    if (picked != 0) {
-        const int cell_x = (int)(uint32_t)map;
-        const int cell_y = (int)(uint32_t)point;
-        if (cell_out != NULL) {
-            cell_out[0] = (float)cell_x;
-            cell_out[1] = (float)cell_y;
-        }
-        if (offset_out != NULL) {
-            float center_x;
-            float center_y;
-            float inverse_scale;
-            map_cell_to_world_center(map_source, (uint32_t)cell_x,
-                                     (uint32_t)cell_y, &center_x, &center_y);
-            offset_out[0] = point_source[0] - center_x;
-            offset_out[1] = point_source[1] - center_y;
-            inverse_scale = 1.0f /
-                *(const float*)((const char*)map_source + 0x10);
-            offset_out[0] = inverse_scale * offset_out[0] - -0.5f;
-            offset_out[1] = inverse_scale * offset_out[1] - -0.5f;
-        }
-    }
-#else
-    int cx = 0, cy = 0;
-    if (point != NULL
-        && world_to_terrain_cell_bounds_check(map, point[0], point[1],
-                                              &cx, &cy, NULL) != 0) {
-        if (cell_out != NULL) {
-            cell_out[0] = (float)cx;
-            cell_out[1] = (float)cy;
-        }
-        if (offset_out != NULL) {
-            float wx = 0.0f, wy = 0.0f;
-            float inverse_scale;
-            map_cell_to_world_center(map, (uint32_t)cx, (uint32_t)cy,
-                                     &wx, &wy);
-            offset_out[0] = point[0] - wx;
-            offset_out[1] = point[1] - wy;
-            inverse_scale = 1.0f / rec_float(map, 0x10);
-            offset_out[0] = inverse_scale * offset_out[0] - -0.5f;
-            offset_out[1] = inverse_scale * offset_out[1] - -0.5f;
-        }
-    }
-#endif
-    return 0u;
-}
-
 /* --- indexed flag slot and resource-handle writers (see record.hpp) ------ */
-
-// FUNCTION: LEGORR 0x0044e6b0
-void indexed_flag_value_set_one(void* record, uint32_t index)
-{
-    if (record == NULL) {
-        return;
-    }
-    const uint32_t one = 1u;
-    const size_t off = 0x40b4u + (size_t)(index & 0xffu) * 4u;
-    __builtin_memcpy((char*)record + off, &one, sizeof(one));
-}
-
-// FUNCTION: LEGORR 0x0044f220
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void scene_object_resource_handle_set(void* object,
-                                                        uint32_t handle)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        mov eax, dword ptr [esp + 8]
-        mov dword ptr [ecx + 2ch], eax
-        ret
-    }
-}
-#else
-void scene_object_resource_handle_set(void* object, uint32_t handle)
-{
-    if (object == NULL) {
-        return;
-    }
-    __builtin_memcpy((char*)object + 0x2cu, &handle, sizeof(handle));
-}
-#endif
 
 /* --- entity record-field leaves (see record.hpp) --------------------------- */
 // FUNCTION: LEGORR 0x00435ef4
@@ -1297,22 +1071,6 @@ void object_field14_set(void* record, uint32_t value)
     __builtin_memcpy((char*)record + 0x14, &value, sizeof(value));
 }
 #endif
-
-// FUNCTION: LEGORR 0x00451c30
-void linked_record_field4_clear(void* record)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    char* node = (char*)record;
-    while (node != NULL) {
-        const uint32_t zero = 0u;
-        __builtin_memcpy(node + 4, &zero, sizeof(zero));
-        void* next = NULL;
-        __builtin_memcpy(&next, node + 0x14, sizeof(next));
-        node = (char*)next;
-    }
-}
 
 /* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
 // FUNCTION: LEGORR 0x00439930

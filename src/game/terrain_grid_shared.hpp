@@ -76,4 +76,7 @@ extern TerrainFenceSparkDurationHook s_fence_spark_duration_hook;
 extern void* s_fence_spark_interaction_context;
 void level_cell_kind_grid_storage_release(LevelCellKindGrid* grid);
 
+extern NestedPointerReleaseHook s_nested_handle_release_hook;
+extern NestedPointerReleaseHook s_nested_memory_release_hook;
+
 #endif /* LRR_GAME_TERRAIN_GRID_SHARED_HPP */
