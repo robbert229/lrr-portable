@@ -10072,10 +10072,10 @@ void* encyclopedia_ore_file_peek(void)
 
 namespace unported_ledger_stubs {
 
-static InputDeviceReleaseHooks s_input_device_release_hooks;
-static uint32_t s_input_device_release_flags;
-static uint32_t s_input_device_system_flags;
-static int s_input_device_active_track = -1;
+InputDeviceReleaseHooks s_input_device_release_hooks;
+uint32_t s_input_device_release_flags;
+uint32_t s_input_device_system_flags;
+int s_input_device_active_track = -1;
 
 void input_device_release_state_set(uint32_t input_flags,
                                     uint32_t system_flags,
@@ -10091,49 +10091,6 @@ void input_device_release_hooks_set(const InputDeviceReleaseHooks* hooks)
     if (hooks == NULL) memset(&s_input_device_release_hooks, 0,
                               sizeof(s_input_device_release_hooks));
     else s_input_device_release_hooks = *hooks;
-}
-
-// FUNCTION: LEGORR 0x004588e0
-void input_device_release(void)
-{
-    InputDeviceReleaseHooks* hooks = &s_input_device_release_hooks;
-    uint32_t flags = s_input_device_release_flags;
-    if ((flags & 1u) != 0u) {
-        if (hooks->primary_release != NULL) {
-            hooks->primary_release(hooks->context);
-        }
-        s_input_device_release_flags &= ~1u;
-        if ((s_input_device_system_flags & 0x800u) != 0u) {
-            if (hooks->secondary_reenable != NULL) {
-                hooks->secondary_reenable(hooks->context, 1);
-            }
-            s_input_device_system_flags &= ~0x800u;
-        }
-    }
-    else if ((flags & 2u) != 0u) {
-        s_input_device_release_flags &= ~2u;
-    }
-    else if ((flags & 4u) != 0u) {
-        s_input_device_release_flags &= ~0x104u;
-    }
-
-    if (hooks->advisor_clear != NULL) hooks->advisor_clear(hooks->context);
-    if (s_input_device_active_track != -1) {
-        if (hooks->stream_stop != NULL) {
-            hooks->stream_stop(hooks->context, 0);
-        }
-        s_input_device_active_track = -1;
-    }
-    if (hooks->transition_control != NULL) {
-        hooks->transition_control(hooks->context, 0, 0);
-    }
-    if (hooks->sound_cleanup != NULL) {
-        hooks->sound_cleanup(hooks->context, 0);
-    }
-    if (hooks->system_state_get != NULL &&
-        hooks->system_state_get(hooks->context, 0) == 0) {
-        s_input_device_system_flags &= ~0x1000u;
-    }
 }
 
 uint32_t input_device_release_flags_get(void)

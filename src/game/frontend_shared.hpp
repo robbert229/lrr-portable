@@ -40,4 +40,11 @@ extern uint32_t s_advisor_inline_last_sound;
 extern uint32_t s_advisor_inline_token_generation;
 extern float s_advisor_inline_duration;
 
+namespace unported_ledger_stubs {
+extern InputDeviceReleaseHooks s_input_device_release_hooks;
+extern uint32_t s_input_device_release_flags;
+extern uint32_t s_input_device_system_flags;
+extern int s_input_device_active_track;
+} // namespace unported_ledger_stubs
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */

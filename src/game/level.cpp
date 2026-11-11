@@ -9311,21 +9311,6 @@ uint32_t level_fielda8_get(const LevelState* s)
     return s != NULL ? (uint32_t)level_int(s, 0xA8) : 0u;
 }
 
-/* GlobalOptionLowBitsEnabled (FUN_004589a0): faithful gate over the
- * objective word's low three bits. */
-// FUNCTION: LEGORR 0x004589a0
-int global_option_low_bits_enabled(const LevelState* s)
-{
-    return s != NULL && (s->objective & 7u) != 0u;
-}
-
-/* GlobalFlagGet_004ffe30 (FUN_00458650): threaded objective-result read. */
-// FUNCTION: LEGORR 0x00458650
-int level_objective_result_get(const LevelState* s)
-{
-    return s != NULL ? s->objective_result : 0;
-}
-
 /* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80) — see level.hpp. */
 #define TERRAIN_SFX_GRID_CELLS 300
 // GLOBAL: LEGORR 0x004de814

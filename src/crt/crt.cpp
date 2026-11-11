@@ -1822,15 +1822,6 @@ int display_mode_matches_filter_tuple(int mode_index)
     return 0;
 }
 
-// GLOBAL: LEGORR 0x004ffe48
-static uint32_t s_value_004ffe48 = 0u;
-
-// FUNCTION: LEGORR 0x00458660
-void global_value_004ffe48_set(uint32_t value)
-{
-    s_value_004ffe48 = value;
-}
-
 // GLOBAL: LEGORR 0x00557860
 uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
 
