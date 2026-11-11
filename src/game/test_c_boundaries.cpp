@@ -4,12 +4,13 @@
  * C++ compiler rejects any difference in parameter or return types as a
  * conflicting declaration. Nothing runs: the test passes once it compiles. */
 #include "gods98/block.hpp"
-#include "gods98/block.h"
 #include "gods98/config.h"
 #include "gods98/resource.hpp"
 #include "gods98/resource.h"
 #include "gods98/sound.hpp"
 #include "gods98/sound.h"
+#include "gods98/string.hpp"
+#include "gods98/utils.h"
 #include "gods98/input.hpp"
 #include "gods98/input.h"
 #include "gods98/simtick.hpp"
@@ -23,6 +24,7 @@
 #include "game/frontend.h"
 #include "game/panel.h"
 #include "game/priorities.h"
+#include "game/util.hpp"
 
 int main(void)
 {

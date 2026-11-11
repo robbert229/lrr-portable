@@ -39,14 +39,14 @@ extern "C" {
 int util_query_fields(const char* path_or_value, char out[UTIL_QUERY_MAX_FIELDS][256],
                       size_t out_sz);
 
-/* WhitespaceTokenize (FUN_004774b0): split a mutable buffer in place and
- * write token pointers in document order. The corpus includes an empty
- * first token when the input begins with whitespace and counts a final
- * empty token after trailing whitespace. */
+/* WhitespaceTokenize (FUN_004774b0, gods98/utils.c): split a mutable
+ * buffer in place and write token pointers in document order. The corpus
+ * includes an empty first token when the input begins with whitespace and
+ * counts a final empty token after trailing whitespace. */
 int whitespace_tokenize(char* text, char** fields); /* FUN_004774b0 */
 
-/* GameStringHashCompute (FUN_00477670): polynomial hash over bytes, with
- * optional whitespace skipping and case folding. */
+/* GameStringHashCompute (FUN_00477670, gods98/utils.c): polynomial hash
+ * over bytes, with optional whitespace skipping and case folding. */
 int game_string_hash_compute(const unsigned char* text,
                              int skip_whitespace,
                              int uppercase); /* FUN_00477670 */

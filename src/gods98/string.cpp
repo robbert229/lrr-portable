@@ -16,20 +16,6 @@ extern "C" int __cdecl _output(FILE* stream, const char* format,
 extern "C" int __cdecl _flsbuf(int value, FILE* stream);
 #endif
 
-// FUNCTION: LEGORR 0x00477550
-char* string_duplicate(const char* text)
-{
-    size_t length;
-    char* copy;
-    /* The port tests exercise NULL as an empty result; the reference assumes
-     * non-NULL. Keep that guard while matching its engine-heap ownership. */
-    if (text == NULL) return NULL;
-    length = strlen(text) + 1u;
-    copy = (char*)engine_heap_alloc((long)length);
-    if (copy != NULL) strcpy(copy, text);
-    return copy;
-}
-
 // FUNCTION: LEGORR 0x00485300
 void objective_advisor_text_copy(void* record, int mode,
                                  const char* format, ...)
@@ -80,36 +66,6 @@ uint32_t formatted_text_buffer_build(char* out, size_t capacity,
     (void)vsnprintf(out, capacity, format, args);
     return (uint32_t)strlen(out);
 #endif
-}
-
-// FUNCTION: LEGORR 0x00477610
-const char* case_insensitive_substring_find(const char* haystack,
-                                            const char* needle)
-{
-    if (haystack == NULL || needle == NULL) {
-        return NULL; /* pinned deviation: the corpus dereferences both blindly */
-    }
-    /* Corpus walk: keep the haystack pointer in its walking register before
-     * the two intrinsic strlen scans, then use separate zero-length gates
-     * and an unsigned bound beside an incrementing counter (the needle is
-     * re-read from its stack slot every pass, the length hoisted into ebp).
-     * On a miss the corpus increments the index before the hay pointer
-     * (0x477655 inc edi; 0x477656 inc esi), then tests cmp/jb at 0x477657. */
-    const char* hay = haystack;
-    const unsigned hlen = (unsigned)strlen(hay);
-    const unsigned nlen = (unsigned)strlen(needle);
-    if (hlen == 0u) {
-        return NULL; /* pinned: the corpus's strlen-shaped gate */
-    }
-    if (nlen == 0u) {
-        return NULL; /* pinned: the corpus's strlen-shaped gate */
-    }
-    for (unsigned i = 0; i < hlen; ++i, ++hay) {
-        if (strnicmp_lite(hay, needle, (int)nlen) == 0) {
-            return hay;
-        }
-    }
-    return NULL;
 }
 
 /* Portable fallback for VC5 aw_str.obj's private _strncnt helper at

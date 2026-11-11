@@ -597,9 +597,11 @@ int main(int argc, char** argv)
               "two tokens fail the count");
         CHECK(config_rgb_vector_read(bf, "G::four", &r, &g, &b) == 0,
               "four tokens fail the count (tracked past three)");
-        CHECK(config_rgb_vector_read(bf, "G::tail", &r, &g, &b) == 1
-                  && b == 3.0f * sc,
-              "the never-tested final colon rides the last token");
+        /* The split (FUN_00477440) tests every byte, the last included, so
+         * a trailing colon adds an empty fourth part. */
+        CHECK(config_rgb_vector_read(bf, "G::tail", &r, &g, &b) == 0
+                  && b == 255.0f * sc,
+              "a trailing colon makes a fourth part and fails the count");
         block_close(bf);
     }
 

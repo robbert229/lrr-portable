@@ -392,6 +392,8 @@ void formatted_text_printf(const TextureSurface* font,
                            int x, int y, const char* format, ...);
 void reward_text_draw(const TextureSurface* font, void* px, int pitch,
                       int w, int h, int x, int y, const char* format, ...);
+/* FormattedTextEscapeDecodeAndEmit (FUN_00477590, gods98/utils.c): format
+ * into 256 bytes, decode `\\n` and `_`, and return a heap copy. */
 char* formatted_text_escape_decode_and_emit(const char* format, ...);
 typedef const TextureSurface* (*FeFormattedTextTextureResolve)(uint32_t handle);
 void formatted_text_texture_resolver_set(FeFormattedTextTextureResolve resolve);

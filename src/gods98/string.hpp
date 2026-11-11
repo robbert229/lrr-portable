@@ -20,10 +20,9 @@
 extern "C" {
 #endif
 
-/* FUN_00477550: duplicate a NUL-terminated string. The VC5 x86 path
- * delegates to _strdup; that runtime uses the same malloc/free heap as the
- * engine allocator. Other builds use the CRT shim's engine-heap fallback.
- * NULL input returns NULL; callers free through the engine heap. */
+/* FUN_00477550: duplicate a NUL-terminated string (gods98/utils.c, which
+ * also declares it in gods98/utils.h). `text` must not be NULL; callers
+ * free the copy through the engine heap. */
 char* string_duplicate(const char* text);
 
 /* FormattedTextBufferBuild (FUN_0048e1e0): format into caller-owned storage
@@ -63,14 +62,10 @@ int strcasecmp_lite(const char* a, const char* b);
 int strnicmp_lite(const char* a, const char* b, int count);
 #endif
 
-/* CaseInsensitiveSubstringFind (FUN_00477610): the folded sibling of the
- * plain find — every start position through the corpus's scan bound (the
- * haystack start to the last byte; the corpus do-while skips the empty
- * tail position) gets a bounded fold compare of the needle length.
- * Corpus gate pinned: an empty haystack or an empty needle answers null
- * (the corpus's strlen-shaped tests). Deviations: the port guards the
- * two pointers, and its fold compare stops where the corpus strides a
- * terminated haystack byte against an unterminated needle tail. */
+/* CaseInsensitiveSubstringFind (FUN_00477610, gods98/utils.c): the first
+ * position in `haystack` where a case-insensitive compare of the needle's
+ * length matches, or NULL. An empty haystack or needle matches nothing;
+ * neither may be NULL. */
 const char* case_insensitive_substring_find(const char* haystack,
                                             const char* needle);
                                                 /* FUN_00477610 */

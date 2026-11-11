@@ -15,9 +15,8 @@
 #include <string.h>
 
 #include "config.h"
-#include "block.h"
 #include "resource.h"
-#include "sound.h"
+#include "utils.h"
 #include "crt/vc5names.h"
 
 #define CONFIG_MAXLISTS 32

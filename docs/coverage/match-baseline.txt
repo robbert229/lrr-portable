@@ -5,7 +5,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2119 mapped functions
+[game-only] 2121 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -862,7 +862,7 @@
 0x00439790 75.41 localized_object_the_name_get
 0x00439860 75.41 localized_object_name_get
 0x00439930 100.00 copy_two_dword_pair_to_outputs
-0x00439950 37.97 entity_tool_name_strings_load
+0x00439950 42.11 entity_tool_name_strings_load
 0x00439990 100.00 entity_activity_scene_state_update_retail
 0x004399c0 20.95 entity_flag400_and_health_threshold_check
 0x00439a20 20.36 entity_gated_step_command_issue
@@ -1697,11 +1697,13 @@
 0x00477310 16.87 com_property_result_get
 0x00477370 12.77 ddiscene_render_surface_pool_grow
 0x004773e0 23.16 lego::scene_resource_tracked_references_release_all
-0x00477440 29.31 sound_variant_split
-0x00477550 83.58 string_duplicate
-0x00477590 25.74 formatted_text_escape_decode_and_emit
-0x00477610 79.67 case_insensitive_substring_find
-0x00477710 60.95 block_get_bool
+0x00477440 100.00 sound_variant_split
+0x004774b0 100.00 whitespace_tokenize
+0x00477550 100.00 string_duplicate
+0x00477590 97.62 formatted_text_escape_decode_and_emit
+0x00477610 100.00 case_insensitive_substring_find
+0x00477670 96.72 game_string_hash_compute
+0x00477710 100.00 block_get_bool
 0x004777a0 28.49 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
@@ -2126,7 +2128,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2338 mapped functions
+[full] 2340 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -2983,7 +2985,7 @@
 0x00439790 75.41 localized_object_the_name_get
 0x00439860 75.41 localized_object_name_get
 0x00439930 100.00 copy_two_dword_pair_to_outputs
-0x00439950 37.97 entity_tool_name_strings_load
+0x00439950 42.11 entity_tool_name_strings_load
 0x00439990 100.00 entity_activity_scene_state_update_retail
 0x004399c0 20.95 entity_flag400_and_health_threshold_check
 0x00439a20 20.36 entity_gated_step_command_issue
@@ -3818,11 +3820,13 @@
 0x00477310 16.87 com_property_result_get
 0x00477370 12.77 ddiscene_render_surface_pool_grow
 0x004773e0 23.16 lego::scene_resource_tracked_references_release_all
-0x00477440 29.31 sound_variant_split
-0x00477550 83.58 string_duplicate
-0x00477590 25.74 formatted_text_escape_decode_and_emit
-0x00477610 79.67 case_insensitive_substring_find
-0x00477710 60.95 block_get_bool
+0x00477440 100.00 sound_variant_split
+0x004774b0 100.00 whitespace_tokenize
+0x00477550 100.00 string_duplicate
+0x00477590 97.62 formatted_text_escape_decode_and_emit
+0x00477610 100.00 case_insensitive_substring_find
+0x00477670 96.72 game_string_hash_compute
+0x00477710 100.00 block_get_bool
 0x004777a0 28.49 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
@@ -4213,10 +4217,10 @@
 0x0048d870 14.69 model_free
 0x0048d920 93.33 __fpmath
 0x0048d940 56.25 __cfltcvt_init
-0x0048d980 93.48 _atof
+0x0048d980 97.83 _atof
 0x0048d9e0 97.67 _vsprintf
 0x0048da50 98.48 _strstr
-0x0048dad0 94.44 _atol
+0x0048dad0 100.00 _atol
 0x0048db70 100.00 _atoi
 0x0048db80 97.37 _free
 0x0048dbd0 94.74 _malloc
@@ -4233,7 +4237,7 @@
 0x0048e1e0 43.01 formatted_text_buffer_build
 0x0048e250 100.00 __chkstk
 0x0048e280 99.06 _floor
-0x0048e380 94.19 _toupper
+0x0048e380 97.67 _toupper
 0x0048e480 46.15 __cinit
 0x0048e4b0 100.00 _exit
 0x0048e4d0 100.00 __exit
@@ -4263,7 +4267,7 @@
 0x0048efe6 85.71 __NLG_Notify
 0x0048f000 91.49 _WinMainCRTStartup
 0x0048f1a0 94.12 __amsg_exit
-0x0048f1d0 96.88 __isctype
+0x0048f1d0 100.00 __isctype
 0x0048f270 100.00 _strncmp
 0x0048f2b0 97.75 _ftell
 0x0048f460 98.57 _fseek
@@ -4290,13 +4294,13 @@
 0x00490210 100.00 __setdefaultprecision
 0x00490230 50.00 processor_feature_fallback_false
 0x00490280 85.00 __ms_p5_mp_test_fdiv
-0x004902b0 92.50 __forcdecpt
+0x004902b0 97.50 __forcdecpt
 0x00490400 95.35 __cftoe
 0x00490540 92.52 __cftof
 0x00490640 92.21 __cftog
 0x004907c0 100.00 string_prefix_reserve
 0x004908a0 96.67 __flsbuf
-0x004909d0 95.62 __output
+0x004909d0 95.74 __output
 0x004914a0 100.00 _strchr
 0x00491560 92.59 __heap_init
 0x004915a0 92.74 ___sbh_new_region
@@ -4345,7 +4349,7 @@
 0x00493c10 100.00 __ctrlfp
 0x00493c40 100.00 __set_statfp
 0x00493ca0 96.74 ___crtLCMapStringA
-0x00493ef0 97.67 __input
+0x00493ef0 99.40 __input
 0x00494d10 94.44 __close
 0x00494df0 100.00 __freebuf
 0x00494e30 98.13 __openfile
@@ -4374,7 +4378,7 @@
 0x00497130 97.02 __read
 0x004974d0 85.42 __stbuf
 0x00497570 100.00 __ftbuf
-0x004975d0 94.19 _tolower
+0x004975d0 97.67 _tolower
 0x004976d0 97.53 __mbsnbcpy
 0x00497770 100.00 __control87
 0x004977b0 100.00 __controlfp
@@ -4395,15 +4399,15 @@
 0x00497f40 100.00 ___dtold
 0x00498000 100.00 _memmove
 0x00498340 100.00 crt_fatal_message_exit
-0x00498350 98.03 ___strgtold12
+0x00498350 99.44 ___strgtold12
 0x00498ae0 93.33 __getbuf
 0x00498b40 90.48 __isatty
-0x00498b70 92.00 _wctomb
+0x00498b70 94.00 _wctomb
 0x00498bf0 100.00 __aulldiv
 0x00498c60 100.00 __aullrem
 0x00498ce0 97.92 __87except
-0x00498e00 91.67 _mbtowc
-0x00498f00 89.47 _isspace
+0x00498e00 94.79 _mbtowc
+0x00498f00 100.00 _isspace
 0x00498f30 100.00 __allshl
 0x00498f50 100.00 _ungetc
 0x00498fe0 91.78 __alloc_osfhnd
@@ -4430,7 +4434,7 @@
 0x0049a800 96.49 ___multtenpow12
 0x0049a890 94.70 __chsize
 0x0049aa10 90.41 _raise
-0x0049abe0 95.63 _wcstombs
+0x0049abe0 96.60 _wcstombs
 0x0049ae10 95.77 _getenv
 0x0049aea0 90.00 __setmode
 0x0049af20 92.86 __mbsnbicoll

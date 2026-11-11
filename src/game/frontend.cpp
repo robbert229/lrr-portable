@@ -4025,39 +4025,6 @@ void reward_text_draw(const TextureSurface* font, void* px, int pitch,
     va_end(args);
 }
 
-/* FormattedTextEscapeDecodeAndEmit (FUN_00477590): format into the legacy
- * 256-byte scratch window, decode `\\n` to newline and `_` to space, then
- * duplicate the resulting text. The port returns the allocated copy to make
- * ownership usable by callers; the original engine heap retained it. */
-// FUNCTION: LEGORR 0x00477590
-char* formatted_text_escape_decode_and_emit(const char* format, ...)
-{
-    if (format == NULL) return NULL;
-    char formatted[256];
-    va_list args;
-    va_start(args, format);
-    const uint32_t result = formatted_text_buffer_build(
-        formatted, sizeof(formatted), format, args);
-    va_end(args);
-
-    char decoded[256];
-    size_t read = 0;
-    size_t write = 0;
-    while (read < result && formatted[read] != '\0'
-           && write + 1 < sizeof(decoded)) {
-        if (formatted[read] == '\\' && formatted[read + 1] == 'n') {
-            decoded[write++] = '\n';
-            read += 2;
-        } else {
-            decoded[write++] = formatted[read] == '_'
-                                   ? ' ' : formatted[read];
-            ++read;
-        }
-    }
-    decoded[write] = '\0';
-    return string_duplicate(decoded);
-}
-
 /* FormattedTextPrintfWidth (FUN_00401c50): format and measure without drawing.
  * The retail wrapper forwards its variadic arguments through
  * FormattedTextFormatDraw, including the engine's `%b` texture tokens. */
