@@ -252,6 +252,71 @@ def check_map(entries: list[Entry], text: str) -> list[str]:
         except ValueError:
             errors.append(f"map: unexpected or out-of-order .text contribution {obj}; compare with {LIST}")
     return errors
+def lower_median(text: str) -> int | None:
+    """The key ``check`` expects for a legacy file: the lower median of its
+    FUNCTION and LIBRARY marker addresses, or None when it has none."""
+    addresses = sorted(int(a, 16) for a in MARKER.findall(text))
+    return addresses[(len(addresses) - 1) // 2] if addresses else None
+
+
+def crt_start(root: Path = ROOT) -> int:
+    """First address of the CRT segment (translation-units.spec.csv)."""
+    with (Path(root) / "docs/coverage/translation-units.spec.csv").open(newline="", encoding="utf-8") as f:
+        return min(int(r["start"], 16) for r in csv.DictReader(f) if r["kind"] == "crt")
+
+
+def place_legacy(text: str, source: str, median: int, starts: dict[str, int], crt: int) -> str:
+    """Give a legacy entry the key ``median`` and move it into address order.
+
+    Entries below the CRT segment sit among the game and gods98 entries,
+    before the port tail; CRT-range entries sit after the tail. A file that
+    is not a legacy entry is left alone.
+    """
+    entries = parse(text)
+    entry = next((e for e in entries if e.source == source), None)
+    if entry is None or entry.kind != "legacy":
+        return text
+    lines = text.splitlines(keepends=True)
+    del lines[entry.line]
+    rest = parse("".join(lines))
+    new = format_entry("legacy", f"{median:08x}", entry.library, entry.source, entry.platform) + "\n"
+    tail = [e for e in rest if e.kind == "tail"]
+    if median >= crt:
+        region = [e for e in rest if e.kind != "tail" and tail and e.line > tail[-1].line]
+        floor = tail[-1].line + 1 if tail else len(lines)
+    else:
+        region = [e for e in rest if e.kind != "tail" and (not tail or e.line < tail[0].line)]
+        floor = region[0].line if region else 0
+    at = floor
+    for e in region:
+        address = entry_address(e, starts)
+        if address is not None and address <= median:
+            at = e.line + 1
+    lines.insert(at, new)
+    return "".join(lines)
+
+
+def retire_legacy(text: str, source: str) -> str:
+    """Turn a drained legacy file into a port-tail entry (ADR 0006 decision 4).
+
+    A legacy file whose original functions have all been relocated holds only
+    port-only code. Its entry becomes ``tail -`` and moves after the last tail
+    entry. A file that is not a legacy entry is left alone.
+    """
+    entries = parse(text)
+    entry = next((e for e in entries if e.source == source), None)
+    if entry is None or entry.kind != "legacy":
+        return text
+    tails = [e for e in entries if e.kind == "tail"]
+    if not tails:
+        raise ValueError("the list has no port tail to move a drained legacy file into")
+    lines = text.splitlines(keepends=True)
+    new = format_entry("tail", "-", entry.library, entry.source, entry.platform) + "\n"
+    at = tails[-1].line + 1
+    lines.insert(at, new)
+    del lines[entry.line if entry.line < at else entry.line + 1]
+    return "".join(lines)
+
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])

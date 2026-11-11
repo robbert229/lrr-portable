@@ -19,7 +19,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit tools-test
+.PHONY: match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -99,6 +99,15 @@ convert-unit:
 	@REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
 	  python3 ./tools/convert_unit.py $(UNIT) $(CONVERT_ARGS)
 
+# Relocate one unit verbatim into its own file (ADR 0006, plan S2a).
+# UNIT=GAME-001 [RELOCATE_ARGS="--stem name --dry-run"]; see tools/README.md.
+relocate-unit:
+	@if [ -z "$(UNIT)" ]; then \
+	  echo "usage: make relocate-unit UNIT=GAME-001 [RELOCATE_ARGS=\"--stem name --dry-run\"]" >&2; \
+	  exit 2; \
+	fi
+	@python3 ./tools/relocate_unit.py $(UNIT) $(RELOCATE_ARGS)
+
 # Unit tests of the Python tooling (needs reference/LegoRR.exe for the
 # validation tests, which are skipped without it).
 tools-test:
@@ -110,6 +119,7 @@ tools-test:
 	python3 -m unittest discover -s tools/tests -p 'test_pr_match_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_match_listings.py'
 	python3 -m unittest discover -s tools/tests -p 'test_link_order.py'
+	python3 -m unittest discover -s tools/tests -p 'test_relocate_unit.py'
 
 # Check match_function.py against an existing full report from the same tree.
 match-function-parity:
