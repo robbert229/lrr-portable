@@ -41,7 +41,9 @@ callers.
 **Annotations and the gate.** The stubs carry live annotations, so each
 address is annotated twice until you delete the old definition. Reccmp keeps
 one of them: the old function then drops out of the report (as "newly
-unmapped") and `make reccmp-check` fails, as does any caller scored against it.
+unmapped") and `make reccmp-check` **fails until the old definitions are
+deleted**, as does any caller scored against it. Only the final conversion PR
+has to pass the gate.
 In a trial scaffold of the nine leaf units, the full matching build compiled
 and linked, and the gate reported 32 old functions unmapped and 3 callers
 below baseline for that reason. The report lists the existing `// GLOBAL`

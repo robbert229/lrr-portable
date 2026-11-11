@@ -173,8 +173,15 @@ def layout(refs: dict[int, Ref], end: int, *, clusters: bool = True,
                     count = 1
                 if r.scale and r.scale > w and not clusters:
                     pass
-                fields.append(Field(start, count * w, t, count, width=w, is_float=r.is_float,
-                                    note=(f"indexed, stride {r.scale}" if r.scale > w else "")))
+                if count > 1 and not r.scale and not clusters:
+                    # .rdata/.data words that nothing indexes are separate constants,
+                    # even when no instruction reads the later ones (finding 510's 2.0f).
+                    for k in range(count):
+                        fields.append(Field(start + k * w, w, t, 1, width=w, is_float=r.is_float,
+                                            note="" if k == 0 else "not read by the unit's code"))
+                else:
+                    fields.append(Field(start, count * w, t, count, width=w, is_float=r.is_float,
+                                        note=(f"indexed, stride {r.scale}" if r.scale > w else "")))
                 used_size = count * w
         gap = span - used_size
         if gap > 0 and not common:
@@ -445,8 +452,9 @@ def render_source(u, fp, stem, ranges, struct_fields, bss_refs, g_start, g_end,
     w(" * so that they build beside the existing definitions. When you write one:")
     w(" * give it the final name, delete the old definition and its declaration,")
     w(" * and update the callers. Until the old definition is deleted, its")
-    w(" * annotation and this one name the same address and `make reccmp-check`")
-    w(" * reports the old function as unmapped.")
+    w(" * annotation and this one name the same address, and `make reccmp-check`")
+    w(" * FAILS (the old function drops out of the report). Only the final")
+    w(" * conversion PR has to pass the gate.")
     w(" * Delete this comment with the last stub. */")
     w(f'#include "{stem}.h"')
     w("")
@@ -766,6 +774,12 @@ def render_report(sc: Scaffold, scores: list[dict], score_note: str) -> str:
         w(f"> {item}")
     if sc.warnings:
         w("")
+    w("> **The matching-build gate will fail until the old definitions are deleted.** The stubs "
+      "repeat the old functions' `// FUNCTION` (and `// GLOBAL`) annotations; Reccmp keeps one "
+      "per address, so the old functions drop out of the report as unmapped and their callers "
+      "can fall below baseline. Delete the old definitions listed below in the same conversion "
+      "PR. Only the final PR has to pass `make reccmp-check`.")
+    w("")
     w("### Conversion footprint")
     w("")
     w(f"* New files: {', '.join('`%s`' % f for f in fp.new_files)}")

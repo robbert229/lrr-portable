@@ -33,7 +33,7 @@ class Access:
     address: int      # absolute data address
     size: int         # bytes read or written; 0 when the address is only taken
     kind: str         # "int", "float" (x87 operand) or "addr" (lea / immediate)
-    scale: int        # index scale when the access is indexed, else 0
+    scale: int        # index scale when the access is indexed (1 for base+offset), else 0
     function: int     # address of the function containing the instruction
     insn: int         # instruction address
     region: str       # rdata, data, bss or common (finding 505 section layout)
@@ -93,7 +93,9 @@ def scan_unit_accesses(
                             kind, size = "float", op.size
                         else:
                             kind, size = "int", op.size
-                        scale = op.mem.scale if op.mem.index else 0
+                        # `[reg*4 + base]` is indexed; so is `[reg + base]` (a computed
+                        # byte offset), reported as scale 1.
+                        scale = op.mem.scale if op.mem.index else (1 if op.mem.base else 0)
                         found.setdefault((addr, a), Access(addr, size, kind, scale, start, a, region))
                     elif op.type == X86_OP_IMM and m in ADDRESS_MNEMONICS:
                         addr = op.imm & 0xFFFFFFFF

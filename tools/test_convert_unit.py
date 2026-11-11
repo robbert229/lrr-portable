@@ -6,7 +6,7 @@
 
 The footprint tests run on a small synthetic repository. The validation tests
 compare the scaffold with the hand conversions committed in this checkout
-(Priorities.c, Config.c and utils.c) and need ``reference/LegoRR.exe``.
+(Priorities.c, Config.c, utils.c and maths.c) and need ``reference/LegoRR.exe``.
 """
 
 from __future__ import annotations
@@ -278,7 +278,8 @@ class HandConversionValidationTest(unittest.TestCase):
     def setUpClass(cls):
         cls.index = cf.SourceIndex(REPO)
         cls.results = {}
-        for unit, stem in (("GAME-034", "priorities"), ("G98-006", "config"), ("G98-004", "utils")):
+        for unit, stem in (("GAME-034", "priorities"), ("G98-006", "config"), ("G98-004", "utils"),
+                            ("G98-007", "maths")):
             sc = cu.build_scaffold(unit, REPO, stem=stem, index=cls.index)
             cls.results[unit] = (sc, cu.compare_with_hand(sc, REPO))
 
@@ -328,6 +329,22 @@ class HandConversionValidationTest(unittest.TestCase):
         self.assertEqual({f"{a:08x}" for a, _, _ in sc.shared_literals}, {"004a4120", "004a4124"})
 
 
+    def test_maths_rdata_constants_and_no_bss(self):
+        """maths.c: 20 functions, seven annotated .rdata floats (one read by no instruction), no .bss."""
+        sc, res = self.results["G98-007"]
+        self.assertEqual(res["differences"], [])
+        self.assertEqual(res["functions"]["tool"], 20)
+        self.assertEqual(res["struct"]["tool_fields"], 0)
+        self.assertEqual(res["globals"]["tool"], res["globals"]["hand"])
+        # 0049e934 is the 2.0f that MSVC folded into fadd: only the unit's range shows it.
+        self.assertIn("0049e934", res["globals"]["tool"])
+        text = sc.files["src/gods98/maths.c"]
+        self.assertIn("static const float s_rdata_0049e934 = 2.0f;", text)
+        # The D3DRM import-thunk callees are library calls: no header work.
+        self.assertFalse(any(c.needs_extern_c or c.needs_boundary_decl
+                             for c in sc.footprint.callees if c.unit_kind not in cf.CONVERTIBLE_KINDS))
+
+
 @unittest.skipUnless(HAVE_EXE, "reference/LegoRR.exe is needed (symlink reference/ into the worktree)")
 class ScaffoldOutputTest(unittest.TestCase):
     def test_keys_scaffold_text(self):
@@ -341,6 +358,12 @@ class ScaffoldOutputTest(unittest.TestCase):
         self.assertIn("#ifdef __cplusplus", sc.files["src/gods98/keys.h"])
         # The common-region key-name table is scaffolded as one array.
         self.assertRegex(text, r"// GLOBAL: LEGORR 0x005765e0\nunsigned int g_005765e0\[84\]")
+
+    def test_report_and_stubs_say_the_gate_fails_until_old_code_is_deleted(self):
+        sc = cu.build_scaffold("G98-029", REPO)
+        report = cu.render_report(sc, [], "")
+        self.assertIn("gate will fail until the old definitions are deleted", report)
+        self.assertIn("FAILS (the old function drops out of the report)", sc.files["src/gods98/g98_029.c"])
 
     def test_nothing_is_written_in_dry_run(self):
         import subprocess

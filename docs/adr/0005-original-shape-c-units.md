@@ -81,7 +81,10 @@ For each original translation unit, in link order where possible:
    of steps 2 to 4 and the wiring, and reports the *conversion footprint*
    (its files, callees, callers and headers), the unit's before scores and
    the checklist for the PR description. The stubs repeat the existing
-   functions' annotations, so delete the old definitions in the same change.
+   functions' annotations, so **`make reccmp-check` fails on a scaffolded tree
+   until the old definitions are deleted** (the old functions drop out of the
+   report). Delete them in the same conversion PR; only the final PR has to
+   pass the gate.
 1. **Pick the unit** from `docs/coverage/translation-unit-ranges.csv`. Its
    functions, with their current files, are in `translation-units.csv`.
    Prefer high-confidence boundaries.
