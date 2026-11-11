@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Compare the original PE with the non-incremental matching build."""
+"""Compare the original PE with the matching build."""
 import hashlib
 import argparse
 import json
@@ -120,8 +120,8 @@ def report(orig_path, rebuilt_path, report_dir):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--original', type=Path, default=ROOT / 'reference/LegoRR.exe')
-    parser.add_argument('--rebuilt', type=Path, default=ROOT / 'build-binary-progress/LegoRR.exe')
-    parser.add_argument('--report-dir', type=Path, default=ROOT / 'build-binary-progress/reccmp-report')
+    parser.add_argument('--rebuilt', type=Path, default=ROOT / 'build-reccmp/LegoRR.exe')
+    parser.add_argument('--report-dir', type=Path, default=ROOT / 'build-reccmp/reccmp-report')
     parser.add_argument('--output', type=Path, default=ROOT / 'docs/coverage/binary-progress.json')
     args = parser.parse_args()
     result = report(args.original, args.rebuilt, args.report_dir)

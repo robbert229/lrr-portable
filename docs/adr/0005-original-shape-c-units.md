@@ -136,8 +136,10 @@ For each original translation unit, in link order where possible:
    - Run `make reccmp-check` and compare the unit's functions before and
      after.
    - Classify any drop outside the unit under the entropy policy.
-   - Run `make match-progress` and commit the refreshed match baseline, listing digests and
-     whole-binary progress. The PR freshness check verifies the input hash;
+   - Run `make match-progress` and commit the refreshed match baseline,
+     listing digests and whole-binary progress. It reads the same
+     non-incremental build as `make reccmp-check` (ADR 0006 decision 2), so
+     it only reruns Reccmp. The PR freshness check verifies the input hash;
      it also checks the baseline digest and does not replace the local gate or
      this entropy review. On conflict, take either side and regenerate all three;
      never hand-merge the generated files.

@@ -99,6 +99,16 @@ make reccmp-report RECCMP_WINE_BIN=/path/to/wine \
 `REPROBIT_MSVC_5_0_RTM_ROOT=/path/to/toolchain`. Reports go to
 `build-reccmp/reccmp-report/index.html` and `results.json`.
 
+There is one matching build. It links with `/INCREMENTAL:NO` (ADR 0006
+decision 2), so the executable has no incremental-link thunks and, like the
+original, no `.reloc` section. `tools/reccmp.sh` then removes the PE debug
+directory, which the original also lacks; the linker PDB stays next to the
+executable for Reccmp. The link also writes a map to `build-reccmp/LegoRR.map`
+(gitignored with the rest of `build-reccmp/`): the section layout, then every
+public symbol with its address and contributing `library:object`, sorted by
+address, which shows the link order. The gate, `make binary-progress` and
+`make match-progress` all read this one build.
+
 ### Match baseline gate
 
 `docs/coverage/match-baseline.txt` is the committed *match baseline*: every
@@ -154,24 +164,28 @@ entry point.
 
 ### Whole-binary progress
 
-`make binary-progress` builds and compares a separate non-incremental matching
-executable and refreshes `docs/coverage/binary-progress.json`. Install Python
-`pefile` and `capstone` for the report; `BINARY_PROGRESS_PYTHON` selects their
-interpreter. See [tool documentation](../tools/README.md#whole-binary-progress)
-for definitions, input hashing and build-directory overrides. Run
-`make reccmp-check` separately for the match baseline gate.
+`make binary-progress` rebuilds the matching build (`make reccmp-report`) and
+compares its executable with the original, refreshing
+`docs/coverage/binary-progress.json`; `make binary-progress-compare` compares
+an existing build without rebuilding. Install Python `pefile` and `capstone`
+for the report; `BINARY_PROGRESS_PYTHON` selects their interpreter. See [tool
+documentation](../tools/README.md#whole-binary-progress) for definitions and
+input hashing. Run `make reccmp-check` for the match baseline gate.
 
 ### PR matching progress
 
 For any change to matching-build inputs, run `make reccmp-check`, investigate
 any drops under the ADR 0005 entropy policy, then run `make match-progress`
-and commit both `docs/coverage/binary-progress.json` and
-`docs/coverage/match-baseline.txt`. This rebuilds the ordinary matching report
-and baseline, then always runs the separate non-incremental whole-binary build.
-The hash alone cannot establish that the baseline is current. CI checks the
-progress and baseline fingerprints and baseline digest in
+and commit `docs/coverage/match-baseline.txt`,
+`docs/coverage/match-listing-digests.txt` and
+`docs/coverage/binary-progress.json`. This reruns `make reccmp-report`,
+refreshes the baseline and listing digests from it and compares the same
+executable for the whole-binary report. There is no second build: after `make reccmp-check`, CMake has nothing
+to recompile or relink, so only Reccmp runs again. The hash alone cannot
+establish that the baseline is current. CI checks the progress and baseline
+fingerprints and baseline digest in
 `matching-progress-freshness` without the toolchain;
 it reports progress in a single comment for same-repository PRs. Fork PRs
 get the freshness check but no comment. This check verifies freshness, not
 measurement correctness. On a generated-file conflict, take either side and
-regenerate both with `make match-progress`; never hand-merge them.
+regenerate all three with `make match-progress`; never hand-merge them.
