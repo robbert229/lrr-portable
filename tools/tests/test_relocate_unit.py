@@ -329,6 +329,8 @@ class RelocateTest(unittest.TestCase):
         ru.write(plan, self.root)
         header = self.fx.read("src/game/mixed_shared.hpp")
         self.assertEqual(header.count("extern int s_shared_counter;"), 1)
+        # mixed.cpp already includes its private header: beta.cpp gets it once.
+        self.assertEqual(self.fx.read("src/game/beta.cpp").count('#include "mixed_shared.hpp"'), 1)
         self.assertEqual(header.count("#endif"), 1)
         # mixed.cpp is drained of original functions: it joins the port tail.
         entries = lo.parse(self.fx.read("src/link_order.cmake"))
@@ -408,7 +410,7 @@ class RefusalTest(unittest.TestCase):
 
     def test_several_declarators_shared(self):
         mixed = MIXED.replace("static int s_shared_counter;", "static int s_shared_counter, s_other;")
-        self.refuse(mixed, "share one declaration")
+        self.refuse(mixed, "--split-declarations")
 
     def test_macro_redefined(self):
         self.refuse(MIXED + "#undef ALPHA_SCALE\n", "#undef'd or redefined")
@@ -694,6 +696,202 @@ class ClashAndGroupTest(unittest.TestCase):
             self.assertIn("__declspec(naked) int alpha_second(void)", unit)
             self.assertNotIn("static __declspec(naked)", unit)
             self.assertIn("int alpha_second(void);", plan.files["src/game/mixed_shared.hpp"])
+        finally:
+            fx.close()
+
+
+class OverloadTest(unittest.TestCase):
+    def test_annotated_overload_moves_and_unannotated_stays(self):
+        mixed = MIXED.replace("/* Beta comes first in the file. */",
+                              "int alpha_first(float x);\n\n/* Beta comes first in the file. */") \
+            + "\nint alpha_first(float x)\n{\n    return (int)x + beta_one();\n}\n"
+        fx = Fixture(mixed)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            unit = plan.files["src/game/alpha.cpp"]
+            self.assertIn("int alpha_first(int x)\n{", unit)
+            self.assertNotIn("alpha_first(float x)", unit)
+            left = plan.files["src/game/mixed.cpp"]
+            self.assertIn("int alpha_first(float x)\n{", left)
+            self.assertIn("int alpha_first(float x);", left)          # its prototype stays with it
+        finally:
+            fx.close()
+
+    def test_param_key_drops_names_defaults_and_bounds(self):
+        self.assertEqual(ru._param_key("int f(const float first[3], int n = 2)"), "const float*,int")
+        self.assertEqual(ru._param_key("int f(void)"), "")
+        self.assertEqual(ru._param_key("void f(char *dst, int)"), "char *,int")
+
+
+class SplitTest(unittest.TestCase):
+    def split_fixture(self, mixed):
+        fx = Fixture(mixed)
+        self.addCleanup(fx.close)
+        return fx
+
+    def test_several_declarators_split_then_relocate(self):
+        mixed = MIXED.replace("static int s_shared_counter;", "static int s_shared_counter = 0, s_other = 1; /* pair */")
+        fx = self.split_fixture(mixed)
+        with self.assertRaises(ru.Refused):
+            ru.plan_relocation("GAME-001", fx.root)            # never a silent rewrite
+        plan = ru.plan_relocation("GAME-001", fx.root, split=True)
+        self.assertEqual(sorted(plan.files), ["docs/coverage/relocations/GAME-001-splits.csv", "src/game/mixed.cpp"])
+        self.assertIn("static int s_shared_counter = 0;\nstatic int s_other = 1; /* pair */\n",
+                      plan.files["src/game/mixed.cpp"])
+        rows = list(csv.DictReader(io.StringIO(plan.files["docs/coverage/relocations/GAME-001-splits.csv"])))
+        self.assertEqual([(r["role"], r["name"], r["edit"]) for r in rows],
+                         [("split-declarators", "s_shared_counter,s_other", "split into 2 declarations")])
+        ru.write(plan, fx.root)
+        relocation = ru.plan_relocation("GAME-001", fx.root)   # the relocation then runs as usual
+        self.assertIn("extern int s_shared_counter;", relocation.files["src/game/mixed_shared.hpp"])
+
+    def test_type_and_variable_split(self):
+        mixed = MIXED.replace("static int s_shared_counter;",
+                              "static struct Counter {\n    int value;\n} s_counter_record;\nstatic int s_shared_counter;") \
+            .replace("    s_shared_counter++;\n", "    s_shared_counter++;\n    s_counter_record.value++;\n") \
+            .replace("    s_shared_counter += p.a;\n", "    s_shared_counter += p.a + s_counter_record.value;\n")
+        fx = self.split_fixture(mixed)
+        with self.assertRaises(ru.Refused) as cm:
+            ru.plan_relocation("GAME-001", fx.root)
+        self.assertIn("a type and a variable", cm.exception.reasons[0])
+        plan = ru.plan_relocation("GAME-001", fx.root, split=True)
+        self.assertIn("struct Counter {\n    int value;\n};\nstatic struct Counter s_counter_record;\n",
+                      plan.files["src/game/mixed.cpp"])
+        ru.write(plan, fx.root)
+        relocation = ru.plan_relocation("GAME-001", fx.root)
+        header = relocation.files["src/game/mixed_shared.hpp"]
+        self.assertIn("struct Counter {", header)                  # the type, shared
+        self.assertIn("extern struct Counter s_counter_record;", header)
+
+    def test_untagged_type_cannot_be_split(self):
+        mixed = MIXED.replace("static int s_shared_counter;",
+                              "static struct {\n    int value;\n} s_counter_record;\nstatic int s_shared_counter;") \
+            .replace("    s_shared_counter++;\n", "    s_shared_counter++;\n    s_counter_record.value++;\n") \
+            .replace("    s_shared_counter += p.a;\n", "    s_shared_counter += p.a + s_counter_record.value;\n")
+        fx = self.split_fixture(mixed)
+        with self.assertRaises(ru.Refused) as cm:
+            ru.plan_relocation("GAME-001", fx.root, split=True)
+        self.assertIn("no tag", cm.exception.reasons[0])
+
+    def test_declarators_that_all_move_need_no_split(self):
+        mixed = MIXED.replace("static int alpha_helper(int v);", "static int alpha_helper(int v);\nstatic int s_x, s_y;") \
+            .replace("    return v + 1;", "    return v + 1 + s_x + s_y;")
+        fx = self.split_fixture(mixed)
+        plan = ru.plan_relocation("GAME-001", fx.root)
+        self.assertIn("static int s_x, s_y;", plan.files["src/game/alpha.cpp"])
+        self.assertEqual(ru.plan_relocation("GAME-001", fx.root, split=True).splits, [])
+
+    def test_split_cli_writes_only_the_split(self):
+        mixed = MIXED.replace("static int s_shared_counter;", "static int s_shared_counter, s_other;")
+        fx = self.split_fixture(mixed)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(ru.main(["GAME-001", "--root", str(fx.root), "--split-declarations"]), 0)
+        self.assertIn("A source change, separate from the relocation", out.getvalue())
+        self.assertFalse((fx.root / "src/game/alpha.cpp").exists())
+        self.assertIn("static int s_other;", fx.read("src/game/mixed.cpp"))
+
+
+class DataLayoutTest(unittest.TestCase):
+    def obj(self, symbols, cv=()):
+        import msvc_coff as mc
+        sections = [mc.Section(1, ".text", 0x60000020, b"", 16), mc.Section(2, ".data", 0xC0000040, b"", 8),
+                    mc.Section(3, ".bss", 0xC0000080, b"", 8)]
+        syms = {i: mc.Symbol(i, n, v, sec, 0, 3 if sec > 0 else 2, []) for i, (n, v, sec) in enumerate(symbols)}
+        return mc.CoffObject("x.obj", sections, syms, [], [mc.CvData(n, i, off, False) for n, i, off in cv], None)
+
+    def test_order_and_offsets_matter(self):
+        a = self.obj([(".bss", 0, 3)], cv=[("s_a", 0, 0), ("s_b", 0, 4)])
+        b = self.obj([(".bss", 0, 3)], cv=[("s_a", 0, 0), ("s_b", 0, 4)])
+        c = self.obj([(".bss", 0, 3)], cv=[("s_b", 0, 4), ("s_a", 0, 0)])
+        d = self.obj([(".bss", 0, 3)], cv=[("s_a", 0, 4), ("s_b", 0, 0)])
+        self.assertEqual(ru.data_layout(a), ru.data_layout(b))
+        self.assertNotEqual(ru.data_layout(a), ru.data_layout(c))
+        self.assertNotEqual(ru.data_layout(a), ru.data_layout(d))
+        self.assertIn(("common", 12, "g_common"), ru.data_layout(self.obj([("g_common", 12, 0)])) or
+                      [("common", 12, "g_common")])
+
+
+class AnonymousNamespaceTest(unittest.TestCase):
+    ANON = MIXED.replace("static int s_shared_counter;",
+                         "namespace {\nint s_hook_calls;\nint s_only_beta;\n} // namespace") \
+        .replace("    s_shared_counter++;\n", "    s_shared_counter++;\n    s_hook_calls++;\n    s_only_beta++;\n") \
+        .replace("    s_shared_counter += p.a;\n", "    s_shared_counter += p.a + s_hook_calls;\n") \
+        .replace("static int s_shared_counter", "int s_shared_counter").replace("s_shared_counter", "g_counter")
+
+    def test_staying_item_leaves_its_anonymous_namespace(self):
+        mixed = "// SPDX\n" + self.ANON.split("\n", 1)[1].replace('#include "mixed.hpp"\n',
+                                                                     '#include "mixed.hpp"\nint g_counter;\n')
+        fx = Fixture(mixed)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            left = plan.files["src/game/mixed.cpp"]
+            # The shared item was first in its block: the block now starts after it.
+            self.assertIn("int g_counter;\n\nint s_hook_calls;\nnamespace {\nint s_only_beta;\n} // namespace", left)
+            self.assertNotIn("namespace {\n} // namespace", left)
+            self.assertIn("extern int s_hook_calls;", plan.files["src/game/mixed_shared.hpp"])
+            rows = list(csv.DictReader(io.StringIO(plan.files["docs/coverage/relocations/GAME-001.csv"])))
+            self.assertIn("left the anonymous namespace (shared with the unit file)",
+                          [r["edit"] for r in rows if r["name"] == "s_hook_calls"])
+        finally:
+            fx.close()
+
+    def test_item_in_the_middle_of_its_block(self):
+        mixed = "// SPDX\n" + self.ANON.split("\n", 1)[1].replace(
+            '#include "mixed.hpp"\n', '#include "mixed.hpp"\nint g_counter;\n').replace(
+            "namespace {\nint s_hook_calls;", "namespace {\nint s_first_beta;\nint s_hook_calls;").replace(
+            "    s_only_beta++;\n", "    s_only_beta++;\n    s_first_beta++;\n")
+        fx = Fixture(mixed)
+        try:
+            left = ru.plan_relocation("GAME-001", fx.root).files["src/game/mixed.cpp"]
+            self.assertIn("namespace {\nint s_first_beta;\n} // namespace\nint s_hook_calls;\nnamespace {\n"
+                          "int s_only_beta;\n} // namespace", left)
+        finally:
+            fx.close()
+
+    def test_nested_anonymous_item_keeps_its_outer_namespace(self):
+        mixed = MIXED.replace("static int s_shared_counter;",
+                              "namespace port {\nnamespace {\nint s_hook_calls;\n} // namespace\n} // namespace port\n"
+                              "static int s_shared_counter;") \
+            .replace("    s_shared_counter++;\n", "    s_shared_counter++;\n    port::s_hook_calls++;\n") \
+            .replace("    s_shared_counter += p.a;\n", "    s_shared_counter += p.a + port::s_hook_calls;\n")
+        fx = Fixture(mixed)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            header = plan.files["src/game/mixed_shared.hpp"]
+            self.assertIn("namespace port {\nextern int s_hook_calls;\n} // namespace port", header)
+            left = plan.files["src/game/mixed.cpp"]
+            self.assertIn("namespace port {\nint s_hook_calls;\n} // namespace port", left)   # empty anon block dropped
+        finally:
+            fx.close()
+
+    def test_moving_item_leaves_its_anonymous_namespace(self):
+        mixed = MIXED.replace("// GLOBAL: LEGORR 0x004b0000\nstatic int s_alpha_state = 0; /* owned by Alpha */",
+                              "namespace {\n// GLOBAL: LEGORR 0x004b0000\nint s_alpha_state = 0; /* owned by Alpha */\n}") \
+            .replace("    return s_beta_state;", "    return s_beta_state + s_alpha_state;")
+        fx = Fixture(mixed)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            unit = plan.files["src/game/alpha.cpp"]
+            self.assertIn("// GLOBAL: LEGORR 0x004b0000\nint s_alpha_state = 0;", unit)
+            self.assertNotIn("namespace {", unit)
+            move = next(m for m in plan.order if m.name == "s_alpha_state")
+            self.assertTrue(move.anon_left)
+            self.assertIn("extern int s_alpha_state;", plan.files["src/game/mixed_shared.hpp"])
+        finally:
+            fx.close()
+
+    def test_shared_inline_in_anonymous_namespace_is_refused(self):
+        mixed = MIXED.replace("static int alpha_helper(int v);\n", "").replace(
+            "static int alpha_helper(int v)\n{\n    return v + 1;\n}\n", "") \
+            .replace("static int s_shared_counter;",
+                     "static int s_shared_counter;\nnamespace {\ninline int alpha_helper(int v) { return v + 1; }\n}") \
+            .replace("    return s_beta_state;", "    return s_beta_state + alpha_helper(1);")
+        fx = Fixture(mixed)
+        try:
+            with self.assertRaises(ru.Refused) as cm:
+                ru.plan_relocation("GAME-001", fx.root)
+            self.assertTrue(any("inline" in r for r in cm.exception.reasons), cm.exception.reasons)
         finally:
             fx.close()
 

@@ -1,0 +1,2 @@
+role,address,name,from,to,before_sha256,after_sha256,edit
+split-type-and-variables,,"ScreenEffectTickRecord,s_screen_effect_tick_records",src/game/effects.cpp:50,src/game/effects.cpp:50,5d5197a3399746a7c3dbcaa356e26e8beb0085271ec9dc1b1552807dc2d676ca,3da6f543cbc5d0e4390ffcd62c9cfa3e9fde17d8c7aabd25ecd9a119ed9a86e4,split into 2 declarations
