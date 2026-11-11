@@ -112,6 +112,8 @@ src/gods98/flic.cpp
 src/gods98/flic.hpp
 src/gods98/frameloop.cpp
 src/gods98/frameloop.hpp
+src/gods98/g98_024.c
+src/gods98/g98_024.h
 src/gods98/gods98.cpp
 src/gods98/gods98.hpp
 src/gods98/heap.cpp
@@ -121,7 +123,6 @@ src/gods98/input.cpp
 src/gods98/input.h
 src/gods98/input.hpp
 src/gods98/keys.c
-src/gods98/g98_024.h
 src/gods98/keys.h
 src/gods98/lwsc_scene.cpp
 src/gods98/lwsc_scene.hpp
