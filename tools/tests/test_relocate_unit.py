@@ -268,13 +268,13 @@ class RelocateTest(unittest.TestCase):
         self.assertGreater(unit.index("static int alpha_helper(int v)\n{"), unit.index("0x00401040"))
         # Includes keep the source's order.
         self.assertLess(unit.index("#include <string.h>"), unit.index('#include "mixed.hpp"'))
-        self.assertIn('#include "mixed_shared.hpp"', unit)
+        self.assertIn('#include "mixed_for_alpha.hpp"', unit)
         # Leading comments travel with their item.
         self.assertIn("/* The first function of Alpha.c. */\n// FUNCTION: LEGORR 0x00401000", unit)
 
     def test_shared_statics_types_and_macros_go_to_the_private_header(self):
         plan = ru.plan_relocation("GAME-001", self.root)
-        header = plan.files["src/game/mixed_shared.hpp"]
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
         self.assertIn("extern int s_shared_counter;", header)
         self.assertNotIn("#define ALPHA_SCALE", header)        # only moved code uses it
         unit = plan.files["src/game/alpha.cpp"]
@@ -282,7 +282,7 @@ class RelocateTest(unittest.TestCase):
         self.assertIn("typedef struct AlphaPair", unit)
         mixed = plan.files["src/game/mixed.cpp"]
         self.assertIn("\nint s_shared_counter;", mixed)          # static removed, stays
-        self.assertIn('#include "mixed_shared.hpp"', mixed)
+        self.assertIn('#include "mixed_for_alpha.hpp"', mixed)
         self.assertNotIn("alpha_first", mixed)
         self.assertNotIn("ALPHA_SCALE", mixed)
         self.assertIn("// FUNCTION: LEGORR 0x00401100", mixed)
@@ -327,10 +327,10 @@ class RelocateTest(unittest.TestCase):
         ru.write(ru.plan_relocation("GAME-001", self.root), self.root)
         plan = ru.plan_relocation("GAME-002", self.root)
         ru.write(plan, self.root)
-        header = self.fx.read("src/game/mixed_shared.hpp")
+        header = self.fx.read("src/game/mixed_for_alpha.hpp")
         self.assertEqual(header.count("extern int s_shared_counter;"), 1)
         # mixed.cpp already includes its private header: beta.cpp gets it once.
-        self.assertEqual(self.fx.read("src/game/beta.cpp").count('#include "mixed_shared.hpp"'), 1)
+        self.assertEqual(self.fx.read("src/game/beta.cpp").count('#include "mixed_for_alpha.hpp"'), 1)
         self.assertEqual(header.count("#endif"), 1)
         # mixed.cpp is drained of original functions: it joins the port tail.
         entries = lo.parse(self.fx.read("src/link_order.cmake"))
@@ -484,7 +484,7 @@ class NamespaceTest(unittest.TestCase):
         self.assertLess(unit.index("0x00401000"), unit.index("0x00401040"))
         self.assertIn("} // namespace port", unit)
         # The static both sides use is shared inside the namespace.
-        header = plan.files["src/game/mixed_shared.hpp"]
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
         self.assertIn("namespace port {\nextern int s_shared;\n} // namespace port", header)
         mixed = plan.files["src/game/mixed.cpp"]
         self.assertIn("namespace port {\nint s_shared;\n} // namespace port", mixed)
@@ -522,7 +522,7 @@ class NamespaceTest(unittest.TestCase):
         mixed = NS_ONLY.replace("static int s_shared;", "static int s_shared;\nstatic int s_only_beta;").replace(
             "    return s_shared;\n", "    return s_shared + s_only_beta;\n")
         _, plan = self.plan(mixed)
-        header = plan.files["src/game/mixed_shared.hpp"]
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
         self.assertIn("extern int s_shared;", header)
         self.assertNotIn("s_only_beta", header)
         names = {d.name for s in plan.sources for d in s.declarations}
@@ -608,7 +608,7 @@ class R1DefectTest(unittest.TestCase):
         fx = Fixture(mixed)
         try:
             plan = ru.plan_relocation("GAME-001", fx.root)
-            header = plan.files["src/game/mixed_shared.hpp"]
+            header = plan.files["src/game/mixed_for_alpha.hpp"]
             self.assertNotIn("i < 9u", header)
         finally:
             fx.close()
@@ -619,8 +619,8 @@ class R1DefectTest(unittest.TestCase):
         try:
             plan = ru.plan_relocation("GAME-001", fx.root)
             mixed = plan.files["src/game/mixed.cpp"]
-            self.assertLess(mixed.index('#include "mixed_shared.hpp"'), mixed.index("int s_shared_counter;"))
-            self.assertLess(mixed.index('#include "mixed_shared.hpp"'), mixed.index("#include <stdlib.h>"))
+            self.assertLess(mixed.index('#include "mixed_for_alpha.hpp"'), mixed.index("int s_shared_counter;"))
+            self.assertLess(mixed.index('#include "mixed_for_alpha.hpp"'), mixed.index("#include <stdlib.h>"))
         finally:
             fx.close()
 
@@ -632,8 +632,8 @@ class R1DefectTest(unittest.TestCase):
         fx = Fixture(middle)
         try:
             mixed = ru.plan_relocation("GAME-001", fx.root).files["src/game/mixed.cpp"]
-            self.assertLess(mixed.index("#include <stddef.h>"), mixed.index('#include "mixed_shared.hpp"'))
-            self.assertLess(mixed.index('#include "mixed_shared.hpp"'), mixed.index("int s_shared_counter;"))
+            self.assertLess(mixed.index("#include <stddef.h>"), mixed.index('#include "mixed_for_alpha.hpp"'))
+            self.assertLess(mixed.index('#include "mixed_for_alpha.hpp"'), mixed.index("int s_shared_counter;"))
         finally:
             fx.close()
 
@@ -695,9 +695,194 @@ class ClashAndGroupTest(unittest.TestCase):
             unit = plan.files["src/game/alpha.cpp"]
             self.assertIn("__declspec(naked) int alpha_second(void)", unit)
             self.assertNotIn("static __declspec(naked)", unit)
-            self.assertIn("int alpha_second(void);", plan.files["src/game/mixed_shared.hpp"])
+            # alpha_second moved and beta_one (staying) calls it: declared for mixed.cpp only.
+            self.assertIn("int alpha_second(void);", plan.files["src/game/mixed_from_alpha.hpp"])
+            self.assertNotIn("mixed_from_alpha.hpp", unit)
         finally:
             fx.close()
+
+
+class PerRelocationHeaderTest(unittest.TestCase):
+    """#496: each relocation writes its own frozen pair of private headers."""
+
+    def tree(self, root):
+        return {p.relative_to(root).as_posix(): p.read_text() for p in root.rglob("*") if p.is_file()}
+
+    def test_second_relocation_leaves_the_first_unit_file_untouched(self):
+        mixed = MIXED.replace("    return s_beta_state;", "    return s_beta_state + s_shared_counter;")
+        fx = Fixture(mixed)
+        try:
+            ru.write(ru.plan_relocation("GAME-001", fx.root), fx.root)
+            first = self.tree(fx.root)
+            alpha_includes = [line for line in first["src/game/alpha.cpp"].splitlines() if line.startswith("#include")]
+            self.assertIn('#include "mixed_for_alpha.hpp"', alpha_includes)
+            ru.write(ru.plan_relocation("GAME-002", fx.root), fx.root)
+            second = self.tree(fx.root)
+            # The first unit file and every private header it includes are byte-identical.
+            for rel in ("src/game/alpha.cpp", "src/game/mixed_for_alpha.hpp"):
+                self.assertEqual(first[rel], second[rel], rel)
+            self.assertNotIn("src/game/mixed_shared.hpp", second)
+            # s_shared_counter already has external linkage and alpha's frozen
+            # header declares it: beta.cpp reuses that header (it uses the name)
+            # and nothing is appended to it.
+            self.assertIn('#include "mixed_for_alpha.hpp"', second["src/game/beta.cpp"])
+            self.assertNotIn("src/game/mixed_for_beta.hpp", second)
+            self.assertIn('#include "mixed_for_alpha.hpp"', second["src/game/mixed.cpp"])
+        finally:
+            fx.close()
+
+    def test_unit_never_sees_declarations_of_its_own_definitions(self):
+        # s_alpha_state moves to alpha.cpp and beta_one (staying) uses it:
+        # its extern goes to mixed_from_alpha.hpp, which alpha.cpp does not include.
+        mixed = MIXED.replace("    return s_beta_state;", "    return s_beta_state + s_alpha_state;")
+        fx = Fixture(mixed)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            self.assertIn("extern int s_alpha_state;", plan.files["src/game/mixed_from_alpha.hpp"])
+            self.assertNotIn("mixed_from_alpha.hpp", plan.files["src/game/alpha.cpp"])
+            self.assertIn('#include "mixed_from_alpha.hpp"', plan.files["src/game/mixed.cpp"])
+        finally:
+            fx.close()
+
+    def test_const_object_definition_sees_its_extern(self):
+        # A const object needs its extern first for external linkage.
+        mixed = MIXED.replace("// GLOBAL: LEGORR 0x004b0000\nstatic int s_alpha_state = 0; /* owned by Alpha */",
+                              "// GLOBAL: LEGORR 0x004b0000\nstatic const int s_alpha_state = 0;") \
+            .replace("    s_alpha_state = x;\n", "") \
+            .replace("    return s_beta_state;", "    return s_beta_state + s_alpha_state;")
+        fx = Fixture(mixed)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            self.assertIn('#include "mixed_from_alpha.hpp"', plan.files["src/game/alpha.cpp"])
+        finally:
+            fx.close()
+
+    def test_function_declared_only_in_the_from_header_gets_a_forward_declaration(self):
+        # alpha_second moves (annotated) and beta_one, which stays, calls it;
+        # no public header declares it, so its declaration goes to
+        # mixed_from_alpha.hpp, which alpha.cpp does not include. alpha_first
+        # calls it before its definition: alpha.cpp needs a forward declaration.
+        mixed = MIXED.replace("    return s_beta_state;", "    return s_beta_state + alpha_second();")
+        header = HEADER.replace("int alpha_second(void);\n", "")
+        fx = Fixture(mixed, {"src/game/mixed.hpp": header})
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            self.assertIn("int alpha_second(void);", plan.files["src/game/mixed_from_alpha.hpp"])
+            self.assertIn("int alpha_second(void);", plan.forward)
+            self.assertNotIn("mixed_from_alpha.hpp", plan.files["src/game/alpha.cpp"])
+        finally:
+            fx.close()
+
+    def test_frozen_header_is_never_rewritten(self):
+        fx = Fixture(MIXED)
+        try:
+            (fx.root / "src/game/mixed_for_alpha.hpp").write_text("// someone else's\n")
+            with self.assertRaises(ru.Refused) as cm:
+                ru.plan_relocation("GAME-001", fx.root)
+            self.assertIn("frozen", " ".join(cm.exception.reasons))
+        finally:
+            fx.close()
+
+    def test_is_private_header(self):
+        fx = Fixture(MIXED)
+        try:
+            for name, expected in (("mixed_shared.hpp", True), ("mixed_for_alpha.hpp", True),
+                                   ("mixed_from_alpha.hpp", True), ("mixed.hpp", False), ("other_for_x.hpp", True),
+                                   ("nolegacy_for_x.hpp", False)):
+                self.assertEqual(ru.is_private_header(fx.root, f"src/game/{name}"), expected, name)
+        finally:
+            fx.close()
+
+
+class PerRelocationHeaderSecondUnitTest(unittest.TestCase):
+    def test_second_relocation_writes_its_own_pair(self):
+        # A static used by beta's code and by code that stays: the second
+        # relocation writes mixed_for_beta.hpp; alpha's header is untouched.
+        mixed = MIXED.replace("static int s_shared_counter;", "static int s_shared_counter;\nstatic int s_beta_only;") \
+            .replace("    return s_beta_state;", "    return s_beta_state + s_beta_only;") \
+            + "\nint keep_beta_only(void)\n{\n    return s_beta_only;\n}\n"
+        fx = Fixture(mixed)
+        try:
+            ru.write(ru.plan_relocation("GAME-001", fx.root), fx.root)
+            alpha = (fx.root / "src/game/alpha.cpp").read_text()
+            alpha_header = (fx.root / "src/game/mixed_for_alpha.hpp").read_text()
+            ru.write(ru.plan_relocation("GAME-002", fx.root), fx.root)
+            self.assertEqual(alpha, (fx.root / "src/game/alpha.cpp").read_text())
+            self.assertEqual(alpha_header, (fx.root / "src/game/mixed_for_alpha.hpp").read_text())
+            beta_header = (fx.root / "src/game/mixed_for_beta.hpp").read_text()
+            self.assertIn("extern int s_beta_only;", beta_header)
+            self.assertNotIn("s_beta_only", alpha_header)
+            self.assertNotIn("mixed_for_beta.hpp", alpha)
+            left = (fx.root / "src/game/mixed.cpp").read_text()
+            self.assertIn('#include "mixed_for_alpha.hpp"', left)
+            self.assertIn('#include "mixed_for_beta.hpp"', left)
+        finally:
+            fx.close()
+
+
+class MigrationTest(unittest.TestCase):
+    """#496: the pre-#496 per-source headers become per-unit snapshots."""
+
+    OLD_HEADER = ("// SPDX-License-Identifier: LGPL-3.0-or-later\n/* old */\n#ifndef LRR_GAME_MIXED_SHARED_HPP\n"
+                  "#define LRR_GAME_MIXED_SHARED_HPP\n\n#define MIXED_ROWS 4\nextern int s_rows[MIXED_ROWS];\n"
+                  "namespace port {\nextern int s_port_word;\n} // namespace port\n\n#endif /* LRR_GAME_MIXED_SHARED_HPP */\n")
+
+    def fixture(self):
+        unit = '// SPDX\n#include "mixed.hpp"\n#include "mixed_shared.hpp"\n\n// FUNCTION: LEGORR 0x{0}\nint {1}(void)\n{{\n    return s_rows[0];\n}}\n'
+        extra = {
+            "src/game/mixed_shared.hpp": self.OLD_HEADER,
+            "src/game/mixed.cpp": '// SPDX\n#include "mixed.hpp"\n#include "mixed_shared.hpp"\n\nint s_rows[MIXED_ROWS];\n'
+                                  '// FUNCTION: LEGORR 0x00401100\nint beta_one(void)\n{\n    return s_rows[1];\n}\n',
+            "src/game/alpha.cpp": unit.format("00401000", "alpha_first"),
+            "src/game/gamma.cpp": unit.format("00402000", "gamma_one").replace(
+                '#include "mixed_shared.hpp"\n', '#include "mixed_shared.hpp"\n#include "game/mixed_shared.hpp"\n'),
+            "src/link_order.cmake": LIST.replace("lrr_link(legacy 00401040 game          game/mixed.cpp)",
+                                                 "lrr_link(unit   GAME-001 game          game/alpha.cpp)\n"
+                                                 "lrr_link(legacy 00401100 game          game/mixed.cpp)").replace(
+                "lrr_link(legacy 00402000 game          game/other.cpp)", "lrr_link(unit   GAME-003 game          game/gamma.cpp)"),
+        }
+        fx = Fixture(MIXED, extra)
+        (fx.root / "src/game/other.cpp").unlink()
+        self.addCleanup(fx.close)
+        return fx
+
+    def test_each_unit_gets_a_verbatim_snapshot(self):
+        fx = self.fixture()
+        mig = ru.plan_header_migration(fx.root)
+        self.assertEqual(mig.reasons, [])
+        self.assertEqual(sorted(k for k in mig.files if k.endswith(".hpp")),
+                         ["src/game/mixed_for_alpha.hpp", "src/game/mixed_for_gamma.hpp"])
+        body = self.OLD_HEADER.split("#define LRR_GAME_MIXED_SHARED_HPP\n", 1)[1].rsplit("#endif", 1)[0]
+        for rel in ("src/game/mixed_for_alpha.hpp", "src/game/mixed_for_gamma.hpp"):
+            self.assertIn(body, mig.files[rel])
+        self.assertIn('#include "mixed_for_alpha.hpp"\n', mig.files["src/game/alpha.cpp"])
+        self.assertNotIn("mixed_shared.hpp", mig.files["src/game/alpha.cpp"])
+        # A duplicate include of the old header is kept, pointing at the
+        # snapshot: it still costs MSVC a symbol-counter step (finding 538).
+        gamma = mig.files["src/game/gamma.cpp"]
+        self.assertEqual(gamma.count("#include"), 3)
+        # Each include keeps its spelling; only the file name changes.
+        self.assertEqual(gamma.count('#include "mixed_for_gamma.hpp"\n'), 1)
+        self.assertEqual(gamma.count('#include "game/mixed_for_gamma.hpp"\n'), 1)
+        # The legacy file and the old header do not change.
+        self.assertNotIn("src/game/mixed.cpp", mig.files)
+        self.assertNotIn("src/game/mixed_shared.hpp", mig.files)
+        rows = list(csv.DictReader(io.StringIO(mig.files["docs/coverage/relocations/private-header-migration.csv"])))
+        self.assertEqual([(r["unit"], r["includes_replaced"]) for r in rows],
+                         [("src/game/alpha.cpp", "1"), ("src/game/gamma.cpp", "2")])
+
+    def test_migration_cli_writes_and_is_then_a_no_op(self):
+        fx = self.fixture()
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(ru.main(["--root", str(fx.root), "--migrate-private-headers"]), 0)
+        self.assertTrue((fx.root / "src/game/mixed_for_alpha.hpp").exists())
+        again = ru.plan_header_migration(fx.root)
+        self.assertEqual([k for k in again.files if not k.endswith(".csv")], [])
+
+    def test_header_included_elsewhere_is_refused(self):
+        fx = self.fixture()
+        (fx.root / "src/game/stray.cpp").write_text('#include "mixed_shared.hpp"\nint stray;\n')
+        self.assertTrue(any("stray.cpp" in r for r in ru.plan_header_migration(fx.root).reasons))
 
 
 class OverloadTest(unittest.TestCase):
@@ -743,7 +928,7 @@ class SplitTest(unittest.TestCase):
                          [("split-declarators", "s_shared_counter,s_other", "split into 2 declarations")])
         ru.write(plan, fx.root)
         relocation = ru.plan_relocation("GAME-001", fx.root)   # the relocation then runs as usual
-        self.assertIn("extern int s_shared_counter;", relocation.files["src/game/mixed_shared.hpp"])
+        self.assertIn("extern int s_shared_counter;", relocation.files["src/game/mixed_for_alpha.hpp"])
 
     def test_type_and_variable_split(self):
         mixed = MIXED.replace("static int s_shared_counter;",
@@ -759,7 +944,7 @@ class SplitTest(unittest.TestCase):
                       plan.files["src/game/mixed.cpp"])
         ru.write(plan, fx.root)
         relocation = ru.plan_relocation("GAME-001", fx.root)
-        header = relocation.files["src/game/mixed_shared.hpp"]
+        header = relocation.files["src/game/mixed_for_alpha.hpp"]
         self.assertIn("struct Counter {", header)                  # the type, shared
         self.assertIn("extern struct Counter s_counter_record;", header)
 
@@ -829,7 +1014,7 @@ class AnonymousNamespaceTest(unittest.TestCase):
             # The shared item was first in its block: the block now starts after it.
             self.assertIn("int g_counter;\n\nint s_hook_calls;\nnamespace {\nint s_only_beta;\n} // namespace", left)
             self.assertNotIn("namespace {\n} // namespace", left)
-            self.assertIn("extern int s_hook_calls;", plan.files["src/game/mixed_shared.hpp"])
+            self.assertIn("extern int s_hook_calls;", plan.files["src/game/mixed_for_alpha.hpp"])
             rows = list(csv.DictReader(io.StringIO(plan.files["docs/coverage/relocations/GAME-001.csv"])))
             self.assertIn("left the anonymous namespace (shared with the unit file)",
                           [r["edit"] for r in rows if r["name"] == "s_hook_calls"])
@@ -858,7 +1043,7 @@ class AnonymousNamespaceTest(unittest.TestCase):
         fx = Fixture(mixed)
         try:
             plan = ru.plan_relocation("GAME-001", fx.root)
-            header = plan.files["src/game/mixed_shared.hpp"]
+            header = plan.files["src/game/mixed_for_alpha.hpp"]
             self.assertIn("namespace port {\nextern int s_hook_calls;\n} // namespace port", header)
             left = plan.files["src/game/mixed.cpp"]
             self.assertIn("namespace port {\nint s_hook_calls;\n} // namespace port", left)   # empty anon block dropped
@@ -877,7 +1062,7 @@ class AnonymousNamespaceTest(unittest.TestCase):
             self.assertNotIn("namespace {", unit)
             move = next(m for m in plan.order if m.name == "s_alpha_state")
             self.assertTrue(move.anon_left)
-            self.assertIn("extern int s_alpha_state;", plan.files["src/game/mixed_shared.hpp"])
+            self.assertIn("extern int s_alpha_state;", plan.files["src/game/mixed_from_alpha.hpp"])
         finally:
             fx.close()
 

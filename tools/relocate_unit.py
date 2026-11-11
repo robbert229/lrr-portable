@@ -209,6 +209,9 @@ class Decl:
     text: str        # the declaration, unqualified, ending in ;
     why: str
     ns: str = ""     # namespace to declare it in ("" for the global scope)
+    direction: str = "for"   # for: the legacy file's item, which the unit uses;
+                             # from: the unit's (moved) item, which the legacy file uses
+    const_object: bool = False   # a const object: needs a prior extern for external linkage
 
 
 # --------------------------------------------------------------------------
@@ -254,14 +257,48 @@ class Source:
     anon_exits: list[cx.Item] = field(default_factory=list)     # staying items that leave their anonymous namespace
     declarations: list[Decl] = field(default_factory=list)
 
+    unit_stem: str = ""
+
     @property
     def shared_header(self) -> str:
+        """The pre-#496 per-source header (now frozen; types and macros only)."""
         p = Path(self.rel)
         return (p.parent / f"{p.stem}_shared.hpp").as_posix()
 
     @property
+    def for_header(self) -> str:
+        """What the unit needs from this legacy file (#496): the unit and the
+        legacy file include it. Written once, by this relocation."""
+        p = Path(self.rel)
+        return (p.parent / f"{p.stem}_for_{self.unit_stem}.hpp").as_posix()
+
+    @property
+    def from_header(self) -> str:
+        """What this legacy file needs from the unit (#496): only the legacy
+        file includes it, so the unit never sees declarations of its own
+        definitions (finding 538 rule A)."""
+        p = Path(self.rel)
+        return (p.parent / f"{p.stem}_from_{self.unit_stem}.hpp").as_posix()
+
+    @property
+    def for_decls(self) -> list[Decl]:
+        return [d for d in self.declarations if d.direction == "for"]
+
+    @property
+    def from_decls(self) -> list[Decl]:
+        return [d for d in self.declarations if d.direction == "from"]
+
+    @property
+    def shares_for(self) -> bool:
+        return bool(self.header_items or self.for_decls)
+
+    @property
+    def shares_from(self) -> bool:
+        return bool(self.from_decls)
+
+    @property
     def shares(self) -> bool:
-        return bool(self.header_items or self.declarations)
+        return self.shares_for or self.shares_from
 
 
 @dataclass
@@ -427,6 +464,7 @@ def plan_relocation(key: str, root: Path = ROOT, stem: str | None = None,
     plan.split_mode = split
     for src in sources:
         src.plan = plan
+        src.unit_stem = stem
     for s in sources:
         _plan_source(plan, s, [a for a in func_ann if a.file == s.rel],
                      [a for a in glob_ann if a.file == s.rel], headers, reasons)
@@ -715,10 +753,10 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
         if kinds[c] == "internal":
             exported.add(c)
         elif kinds[c] == "external" and not (_bases(cl.names[c]) & visible_here):
-            s.declarations.extend(_declarations(s, items, cl, c, "moved; remaining code uses it", reasons))
+            s.declarations.extend(_declarations(s, items, cl, c, "moved; remaining code uses it", reasons, "from"))
     for c in sorted(reach - candidates, key=first):
         if kinds[c] == "external" and not (_bases(cl.names[c]) & visible_here):
-            s.declarations.extend(_declarations(s, items, cl, c, "stays; moved code uses it", reasons))
+            s.declarations.extend(_declarations(s, items, cl, c, "stays; moved code uses it", reasons, "for"))
     anon_exit = set()
     for c in sorted(exported, key=first):
         if any(_anonymous(items[k].container) for k in cl.members[c]):
@@ -731,7 +769,7 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
             continue
         why = ("anonymous-namespace item shared by moved and remaining code" if c in anon_exit
                else "static shared by moved and remaining code")
-        s.declarations.extend(_declarations(s, items, cl, c, why, reasons))
+        s.declarations.extend(_declarations(s, items, cl, c, why, reasons, "from" if c in moving else "for"))
 
     # Types, macros and declarations the private header needs.
     need = set()
@@ -1062,8 +1100,19 @@ def _head_decl(s: Source, it: cx.Item) -> str:
     return head
 
 
+def _const_object(head: str, name: str) -> bool:
+    """True when ``head`` declares ``name`` as a const object (not a pointer
+    to const): it then has internal linkage unless declared extern first."""
+    masked = cx.mask(head)
+    m = re.search(r"\b%s\b" % re.escape(name), masked)
+    before = masked[:m.start()] if m else masked
+    consts = [x.start() for x in re.finditer(r"\bconst\b", before)]
+    stars = [x.start() for x in re.finditer(r"\*", before)]
+    return bool(consts) and (not stars or consts[-1] > stars[-1])
+
+
 def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int, why: str,
-                  reasons: list[str]) -> list[Decl]:
+                  reasons: list[str], direction: str = "for") -> list[Decl]:
     """External declarations for the private header, from a cluster's definition."""
     defs = [items[k] for k in cl.members[c] if items[k].category in ("function", "var")
             and not _is_extern_decl(items[k])]
@@ -1085,13 +1134,13 @@ def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int, why: s
         if re.search(r"=", params):
             reasons.append(f"{where}: {it.names[0]} has default arguments; a declaration cannot repeat them")
             return []
-        return [Decl(name, f"{prefix}{head};", why, it.scope)]
+        return [Decl(name, f"{prefix}{head};", why, it.scope, direction)]
     decl = cx._split_top(head, "=")[0].strip()
     if not decl.startswith("extern"):
         decl = "extern " + decl
     if prefix:
         decl = prefix + decl[len("extern "):]
-    return [Decl(name, decl + ";", why, it.scope)]
+    return [Decl(name, decl + ";", why, it.scope, direction, _const_object(head, it.names[0]))]
 
 
 def _check_clashes(plan: Plan, root: Path, reasons: list[str]) -> None:
@@ -1236,7 +1285,23 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     primary = max(plan.sources, key=lambda s: (sum(1 for m in s.moves if m.role == "function"), -plan.sources.index(s)))
     ordered_sources = [primary] + [s for s in plan.sources if s is not primary]
 
+    # This relocation's private headers (#496): one pair per source, written
+    # once and never edited again.
+    header_texts: dict[str, str] = {}
+    for s in plan.sources:
+        if s.shares_for:
+            header_texts[s.for_header] = _render_private(root, s, "for", reasons)
+        if s.shares_from:
+            header_texts[s.from_header] = _render_private(root, s, "from", reasons)
+    needed = {u.rsplit("::", 1)[-1] for s in plan.sources for m in s.moves for u in m.item.uses}
+    for s in plan.sources:
+        if s.shares_for:
+            needed |= _tail_uses(header_texts[s.for_header])
+
     # Includes: the primary source's, in order, then the others' new ones.
+    # A legacy file's private headers come along only when the unit uses a
+    # name they declare: they are frozen, so including them is safe, but a
+    # unit that does not need them should not count their declarations.
     includes, seen, skipped = [], set(), []
     for s in ordered_sources:
         for it in s.scan.items:
@@ -1248,15 +1313,16 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
             resolved = headers.resolve(it.include, s.rel, s.entry.library) or it.include
             if resolved in seen:
                 continue
+            if is_private_header(root, resolved) and not (_names_in_file(root / resolved) & needed):
+                continue
             seen.add(resolved)
             includes.append(_spell(it.include, s.rel, plan.target, s.entry.library, headers))
     if skipped:
         plan.notes.append("Conditional includes not copied (the build checks the result): " + ", ".join(skipped))
-    private = [s.shared_header for s in ordered_sources if s.shares or (root / s.shared_header).exists()
-               and any(i.include and Path(i.include[1:-1]).name == Path(s.shared_header).name
-                       for i in s.scan.items)]
-    # A source that already includes its private header passes it on in its
-    # include list: do not include it twice.
+    private = [s.for_header for s in ordered_sources if s.shares_for]
+    # A const object defined in the unit needs its extern first, or it would
+    # have internal linkage: only then does the unit include the from-header.
+    private += [s.from_header for s in ordered_sources if any(d.const_object for d in s.from_decls)]
     private = [h for h in dict.fromkeys(private) if h not in seen]
 
     # The unit file: types and macros, globals, variables, forward
@@ -1282,7 +1348,7 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     for s in ordered_sources:
         visible |= headers.visible([it.include for it in s.scan.items if it.category == "include" and it.include],
                                    s.rel, s.entry.library)
-        visible |= {d.name for d in s.declarations}
+        visible |= {d.name for d in s.for_decls}       # the unit does not include its from-headers
     defined_at = {}
     for pos, m in enumerate(plan.order):
         for n in m.item.qnames:
@@ -1388,11 +1454,11 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
             [it.include for it in s.scan.items if it.category == "include" and it.include],
             s.rel, s.entry.library) if "::" in n}
         new_text = _drop_emptied_namespaces(s.text, new_text, seen_ns)
-        if s.shares:
-            line = _private_include(s.shared_header, s.rel)
-            plan.files[s.shared_header] = header = _render_header(root, s, plan)
-            names = {n for it in cx.scan(header).items for n in it.names}
-            new_text = _place_private_include(new_text, line, names)
+        for path in (s.for_header, s.from_header):
+            if path in header_texts:
+                plan.files[path] = header_texts[path]
+                names = {n for it in cx.scan(header_texts[path]).items for n in it.names}
+                new_text = _place_private_include(new_text, _private_include(path, s.rel), names)
         plan.files[s.rel] = new_text
 
     plan.files.update(_wiring(plan, root))
@@ -1544,41 +1610,101 @@ def _line_after_spdx(text: str) -> int:
     return m.end() if m else 0
 
 
-def _render_header(root: Path, s: Source, plan: Plan) -> str:
-    rel = s.shared_header
+PRIVATE_NAME = re.compile(r"^[A-Za-z0-9_]+?_(?:shared|for_[A-Za-z0-9_]+|from_[A-Za-z0-9_]+)\.hpp$")
+
+
+def is_private_header(root: Path, rel: str) -> bool:
+    """A relocation's private header: ``<l>_shared.hpp`` (before #496),
+    ``<l>_for_<unit>.hpp`` or ``<l>_from_<unit>.hpp`` next to legacy ``<l>``."""
+    p = Path(rel)
+    name = p.name
+    if not PRIVATE_NAME.match(name):
+        return False
+    for m in re.finditer(r"_(?:shared\.hpp$|for_|from_)", name):
+        stem = name[:m.start()]
+        if any((Path(root) / p.parent / f"{stem}{ext}").exists() for ext in (".cpp", ".c")):
+            return True
+    return False
+
+
+def legacy_private_headers(root: Path, legacy: str) -> list[str]:
+    """The private headers of a legacy file that exist on disk."""
+    p = Path(legacy)
+    found = []
+    for path in sorted((Path(root) / p.parent).glob(f"{p.stem}_*.hpp")):
+        name = path.name
+        if name == f"{p.stem}_shared.hpp" or re.fullmatch(rf"{re.escape(p.stem)}_(?:for|from)_[A-Za-z0-9_]+\.hpp", name):
+            found.append(path.relative_to(root).as_posix())
+    return found
+
+
+_NAMES_CACHE: dict[Path, set[str]] = {}
+
+
+def _names_in_file(path: Path) -> set[str]:
+    """Names a header declares or defines (bare), from a cxx_items scan."""
+    if path not in _NAMES_CACHE:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            return set()
+        _NAMES_CACHE[path] = {n for it in cx.scan(text).items for n in it.names}
+    return _NAMES_CACHE[path]
+
+
+def _tail_uses(text: str) -> set[str]:
+    return {u.rsplit("::", 1)[-1] for u in cx._uses(cx.mask(text))}
+
+
+def _render_private(root: Path, s: Source, kind: str, reasons: list[str]) -> str:
+    """One of this relocation's private headers (#496), self-contained.
+
+    ``for``: types and macros moved out of the legacy file, and declarations of
+    its items the unit uses. ``from``: declarations of the unit's items the
+    legacy file uses. Each includes the legacy file's earlier private headers
+    whose names it uses, so it never has to be edited later.
+    """
+    rel = s.for_header if kind == "for" else s.from_header
     guard = "LRR_" + re.sub(r"\W", "_", Path(rel).relative_to("src").as_posix()).upper()
-    existing = (root / rel).read_text(encoding="utf-8") if (root / rel).exists() else None
-    norm = cx.normalise(existing) if existing else ""
-    # Types and macros, then declarations; members of a namespace inside it.
     chunks: list[tuple[str | None, str]] = []
-    for it in s.header_items:
-        text = it.text(s.text).rstrip("\n") + "\n"
-        if cx.normalise(text) not in norm:
+    if kind == "for":
+        for it in s.header_items:
+            text = it.text(s.text).rstrip("\n") + "\n"
             # A type or macro that leaves an anonymous namespace lands in
             # its outer namespace (recorded as such in the relocation CSV).
             wrap = _outer_wrap(it.container) if _anonymous(it.container) else it.container
             chunks.append((wrap if _container_namespace(wrap) else None, text))
     parts = _blocks(chunks)
-    decls: list[tuple[str | None, str]] = []
-    for d in s.declarations:
-        if cx.normalise(d.text) in norm:
-            continue
-        decls.append((f"ns:{d.ns}" if d.ns else None, d.text))
-    decl_text = "".join(_blocks([(w, t + "\n") for w, t in decls], sep=""))
-    add = "\n".join(p.rstrip("\n") + "\n" for p in parts)
+    decls = [(f"ns:{d.ns}" if d.ns else None, d.text + "\n")
+             for d in (s.for_decls if kind == "for" else s.from_decls)]
+    decl_text = "".join(_blocks(decls, sep=""))
+    body = "\n".join(p.rstrip("\n") + "\n" for p in parts)
     if decl_text:
-        add += ("\n" if add else "") + decl_text
-    if existing is None:
-        head = ["// SPDX-License-Identifier: LGPL-3.0-or-later",
-                f"/* Private to {s.rel} and the units relocated out of it (ADR 0006",
-                " * decision 4; tools/relocate_unit.py). Statics both sides use have",
-                " * external linkage through the declarations below. Include it only from",
-                " * those files: it is not a shared header. */",
-                f"#ifndef {guard}",
-                f"#define {guard}", ""]
-        return "\n".join(head) + "\n" + add + f"\n#endif /* {guard} */\n"
-    end = existing.rstrip().rfind("#endif")
-    return existing[:end].rstrip("\n") + "\n" + ("\n" + add if add else "") + "\n" + existing[end:]
+        body += ("\n" if body else "") + decl_text
+    uses = _tail_uses(body)
+    deps = [h for h in legacy_private_headers(root, s.rel)
+            if h != rel and _names_in_file(Path(root) / h) & uses]
+    if kind == "from" and s.shares_for:
+        for_names = {n for it in s.header_items for n in it.names} | {d.name.rsplit("::", 1)[-1] for d in s.for_decls}
+        if for_names & uses:
+            deps.append(s.for_header)
+    unit = s.unit_stem
+    who = (f"what {unit} uses from {Path(s.rel).name}" if kind == "for"
+           else f"what {Path(s.rel).name} uses from {unit}")
+    lines = ["// SPDX-License-Identifier: LGPL-3.0-or-later",
+             f"/* Private (ADR 0006 decision 4; tools/relocate_unit.py, #496): {who}.",
+             " * Written once by that relocation and never edited again, so later",
+             " * relocations do not change what earlier unit files see. "
+             + ("Included by both files." if kind == "for" else f"Included by {Path(s.rel).name} only.")
+             + " */",
+             f"#ifndef {guard}",
+             f"#define {guard}", ""]
+    lines += [_private_include(h, rel) for h in deps]
+    text = "\n".join(lines) + ("\n\n" if deps else "\n") + body + f"\n#endif /* {guard} */\n"
+    existing = Path(root) / rel
+    if existing.exists() and existing.read_text(encoding="utf-8") != text:
+        reasons.append(f"{rel} exists and private headers are frozen; a relocation writes its own pair")
+    return text
 
 
 def _wiring(plan: Plan, root: Path) -> dict[str, str]:
@@ -1681,12 +1807,12 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
     for s in plan.sources:
         new_text = plan.files[s.rel]
         for it in s.header_items:
-            header = plan.files[s.shared_header]
+            header = plan.files[s.for_header]
             ok = cx.normalise(it.text(s.text)) in cx.normalise(header)
             if not ok:
                 reasons.append(f"{s.rel}:{it.line}: the header text differs from the original")
             records.append({"role": f"shared-{it.category}", "address": "", "name": ",".join(it.names),
-                            "from": f"{s.rel}:{it.line}", "to": s.shared_header,
+                            "from": f"{s.rel}:{it.line}", "to": s.for_header,
                             "before_sha256": sha(it.code(s.text)), "after_sha256": sha(it.code(s.text)) if ok else "",
                             "edit": ""})
         for it in s.anon_exits:
@@ -1701,7 +1827,7 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
         for it in s.header_items:
             if _anonymous(it.container):
                 records.append({"role": f"shared-{it.category}", "address": "", "name": ",".join(it.names),
-                                "from": f"{s.rel}:{it.line}", "to": s.shared_header,
+                                "from": f"{s.rel}:{it.line}", "to": s.for_header,
                                 "before_sha256": sha(it.code(s.text)), "after_sha256": sha(it.code(s.text)),
                                 "edit": "left the anonymous namespace (moved to the private header)"})
         for it in s.strip_static:
@@ -1709,15 +1835,18 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
                             "from": f"{s.rel}:{it.line}", "to": s.rel,
                             "before_sha256": sha(it.code(s.text)), "after_sha256": sha(_strip_static(it.code(s.text))),
                             "edit": "static removed (shared with the unit file)"})
-        # The private header must come before any code that uses its names.
-        if s.shares:
-            include = _private_include(s.shared_header, s.rel)
+        # Each private header must come before any code that uses its names.
+        for path, names in ((s.for_header, {d.name.rsplit("::", 1)[-1] for d in s.for_decls}
+                             | {n for it in s.header_items for n in it.names}),
+                            (s.from_header, {d.name.rsplit("::", 1)[-1] for d in s.from_decls})):
+            if path not in plan.files:
+                continue
+            include = _private_include(path, s.rel)
             at = new_text.find(include)
-            names = {d.name.rsplit("::", 1)[-1] for d in s.declarations} | {n for it in s.header_items for n in it.names}
             early = [it for it in cx.scan(new_text[:max(at, 0)]).items
                      if it.kind in ("function", "declaration") and set(it.uses) & names]
             if at < 0 or early:
-                reasons.append(f"{s.rel}: the private header is included after code that uses "
+                reasons.append(f"{s.rel}: {Path(path).name} is included after code that uses "
                                + ", ".join(sorted(set().union(*(set(it.uses) & names for it in early))) or "it"))
         # Annotation conservation: nothing lost or doubled.
         before = sorted(cx.ANNOTATION.findall(s.text))
@@ -1755,6 +1884,186 @@ def _records_csv(records: list[dict]) -> str:
     w.writeheader()
     w.writerows(records)
     return buf.getvalue()
+
+
+# --------------------------------------------------------------------------
+# Migration of the per-source private headers (#496)
+
+
+@dataclass
+class Migration:
+    files: dict[str, str | None] = field(default_factory=dict)   # None: delete the file
+    records: list[dict] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)
+
+
+def _defined_qnames(text: str, namespaces: set[str]) -> set[str]:
+    """Qualified names a source file defines (functions and variables)."""
+    out = set()
+    for it in cx.scan(text).items:
+        if it.category == "function" or (it.category == "var" and not (
+                re.match(r"\s*extern\b", text[it.start:it.end]) and "=" not in text[it.start:it.end])):
+            scope = _scope(it, namespaces)
+            out.update(_qualify(scope, n) for n in it.names)
+    return out
+
+
+def _include_lines(text: str, rel: str, target: str, root: Path, library: str, headers: Headers) -> list[re.Match]:
+    """``#include`` lines of ``text`` (file ``rel``) that resolve to ``target``."""
+    out = []
+    for m in re.finditer(r'^[ \t]*#[ \t]*include[ \t]*("[^"\n]+")[^\n]*\n', text, re.M):
+        if headers.resolve(m.group(1), rel, library) == target:
+            out.append(m)
+    return out
+
+
+def plan_header_migration(root: Path = ROOT) -> Migration:
+    """Give every unit file its own frozen snapshot of the pre-#496 headers.
+
+    Before #496 each legacy file had one ``<l>_shared.hpp`` that every
+    relocation appended to, and every unit relocated out of ``<l>`` included it.
+    For each such unit U, the migration writes ``<l>_for_<U>.hpp``: a verbatim
+    copy of the header's body (only the guard and the comment differ) and points
+    each of U's includes of it there. U's declaration sequence, and therefore every symbol
+    counter MSVC derives from it (finding 538), is unchanged, so the migration
+    itself changes no listing. ``<l>_shared.hpp`` stays as it is, included only
+    by ``<l>``, and the tool never writes it again: new relocations write their
+    own pair (``_render_private``). A duplicate include of the old header is
+    kept (pointing at the snapshot): it still costs a symbol-counter step.
+    """
+    root = Path(root)
+    mig = Migration()
+    entries = link_order.load(root)
+    by_path = {e.path: e for e in entries}
+    unit_files = {e.path: e for e in entries if e.kind == "unit"}
+    headers = Headers(root)
+    texts: dict[str, str] = {}
+
+    def text_of(rel):
+        if rel not in texts:
+            texts[rel] = (root / rel).read_text(encoding="utf-8")
+        return texts[rel]
+
+    def library_of(rel):
+        e = by_path.get(rel)
+        return e.library if e else ("gods98" if rel.startswith("src/gods98/") else "game")
+
+    sources = sorted(p.relative_to(root).as_posix() for p in (root / "src").rglob("*")
+                     if p.suffix.lower() in cf.SOURCE_SUFFIXES and p.is_file() and not p.name.startswith("test_"))
+    edits: dict[str, list[tuple[int, int, str]]] = {}
+    for p in sorted((root / "src").rglob("*_shared.hpp")):
+        hdr = p.relative_to(root).as_posix()
+        stem = p.name[:-len("_shared.hpp")]
+        legacy = next((f"{p.parent.relative_to(root).as_posix()}/{stem}{ext}" for ext in (".cpp", ".c")
+                       if (p.parent / f"{stem}{ext}").exists()), None)
+        if legacy is None:
+            continue
+        htext = text_of(hdr)
+        guard = re.search(r"^#ifndef[ \t]+(\w+)[ \t]*\n#define[ \t]+\1[ \t]*\n", htext, re.M)
+        end = htext.rstrip().rfind("#endif")
+        if not guard or end < guard.end():
+            mig.reasons.append(f"{hdr}: no include guard to replace")
+            continue
+        body = htext[guard.end():end]
+        includers = [rel for rel in sources if rel != hdr and p.name in text_of(rel)
+                     and _include_lines(text_of(rel), rel, hdr, root, library_of(rel), headers)]
+        others = [rel for rel in includers if rel != legacy and rel not in unit_files]
+        if others:
+            mig.reasons.append(f"{hdr} is included by {', '.join(others)}, neither its legacy file nor a unit file")
+            continue
+        for rel in includers:
+            if rel == legacy:
+                continue
+            snapshot = _pair_header(legacy, rel, "for")
+            if (root / snapshot).exists():
+                mig.reasons.append(f"{snapshot} exists already")
+                continue
+            mig.files[snapshot] = _snapshot_text(snapshot, hdr, legacy, rel, body)
+            matches = _include_lines(text_of(rel), rel, hdr, root, library_of(rel), headers)
+            # Every occurrence points at the snapshot, duplicates included: a
+            # repeated include of a guarded header still costs MSVC a step of
+            # its symbol counter (finding 538), so dropping one would drift
+            # the unit (it re-rolled 0x004089d0 in a trial).
+            # Each include keeps its spelling, with only the file name changed:
+            # MSVC's codegen depends on the spelled include path, not only on
+            # the declarations (a "gods98/" prefix re-rolled 0x004089d0).
+            for m in matches:
+                old_name, new_name = Path(hdr).name, Path(snapshot).name
+                line = m.group(0)
+                quoted = m.group(1)
+                spelled = quoted[:-1 - len(old_name)] + new_name + '"' if quoted.endswith(old_name + '"') else None
+                if spelled is None:
+                    mig.reasons.append(f"{rel}: cannot respell {quoted.strip()}")
+                    continue
+                edits.setdefault(rel, []).append((m.start(), m.end(), line.replace(quoted, spelled, 1)))
+            mig.records.append({"header": hdr, "unit": rel, "snapshot": snapshot,
+                                "body_sha256": sha(body), "includes_replaced": len(matches)})
+    for rel, es in edits.items():
+        text = text_of(rel)
+        out, last = [], 0
+        for a, b, new in sorted(es):
+            out.append(text[last:a])
+            out.append(new)
+            last = b
+        out.append(text[last:])
+        mig.files[rel] = "".join(out)
+    # Verbatim: no annotated item changed; each snapshot's declarations equal
+    # the old header's, in order.
+    for rel, new in mig.files.items():
+        if rel.endswith((".hpp", ".h")):
+            continue
+        before = {a: it.code(text_of(rel)) for it in cx.scan(text_of(rel)).items for _, a in it.annotations}
+        after = {a: it.code(new) for it in cx.scan(new).items for _, a in it.annotations}
+        if before != after:
+            mig.reasons.append(f"{rel}: an annotated item changed during the migration")
+    for r in mig.records:
+        old = [cx.normalise(it.code(text_of(r["header"]))) for it in cx.scan(text_of(r["header"])).items
+               if not (it.category == "macro" and it.names and it.names[0].startswith("LRR_"))]
+        new_text = mig.files[r["snapshot"]]
+        new = [cx.normalise(it.code(new_text)) for it in cx.scan(new_text).items
+               if not (it.category == "macro" and it.names and it.names[0].startswith("LRR_"))]
+        if old != new:
+            mig.reasons.append(f"{r['snapshot']}: declarations differ from {r['header']}")
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, ("header", "unit", "snapshot", "body_sha256", "includes_replaced"), lineterminator="\n")
+    w.writeheader()
+    w.writerows(mig.records)
+    mig.files[f"{RECORDS}/private-header-migration.csv"] = buf.getvalue()
+    return mig
+
+
+def _snapshot_text(rel: str, old: str, legacy: str, unit_file: str, body: str) -> str:
+    guard = "LRR_" + re.sub(r"\W", "_", Path(rel).relative_to("src").as_posix()).upper()
+    lines = ["// SPDX-License-Identifier: LGPL-3.0-or-later",
+             f"/* Private (ADR 0006 decision 4; #496): what {Path(unit_file).name} sees from",
+             f" * {Path(legacy).name}. A verbatim snapshot of {Path(old).name} as it was when the",
+             " * #496 migration froze it, so the unit's declarations no longer change",
+             " * with later relocations. Never edited by tools/relocate_unit.py. */",
+             f"#ifndef {guard}",
+             f"#define {guard}"]
+    return "\n".join(lines) + "\n" + body + f"#endif /* {guard} */\n"
+
+
+def _pair_header(legacy: str, unit_file: str, kind: str) -> str:
+    p = Path(legacy)
+    return (p.parent / f"{p.stem}_{kind}_{Path(unit_file).stem}.hpp").as_posix()
+
+
+def _pair_header_text(rel: str, legacy: str, unit_file: str, kind: str, deps: list[str], body: str) -> str:
+    guard = "LRR_" + re.sub(r"\W", "_", Path(rel).relative_to("src").as_posix()).upper()
+    unit = Path(unit_file).stem
+    who = (f"what {unit} uses from {Path(legacy).name}" if kind == "for"
+           else f"what {Path(legacy).name} uses from {unit}")
+    lines = ["// SPDX-License-Identifier: LGPL-3.0-or-later",
+             f"/* Private (ADR 0006 decision 4; tools/relocate_unit.py, #496): {who}.",
+             " * Written once (here by the #496 migration) and never edited again, so",
+             " * later relocations do not change what earlier unit files see. "
+             + ("Included by both files." if kind == "for" else f"Included by {Path(legacy).name} only.") + " */",
+             f"#ifndef {guard}",
+             f"#define {guard}", ""]
+    lines += [_private_include(h, rel) for h in deps]
+    return "\n".join(lines) + ("\n\n" if deps else "\n") + body + f"\n#endif /* {guard} */\n"
 
 
 # --------------------------------------------------------------------------
@@ -1808,7 +2117,8 @@ def render_report(plan: Plan, footprint: cf.Footprint | None) -> str:
         if not s.shares and not s.strip_static:
             continue
         w("")
-        w(f"Shared with the rest of `{s.rel}` through `{s.shared_header}`:")
+        w(f"Shared with the rest of `{s.rel}` through `{s.for_header}` (both files) and "
+          f"`{s.from_header}` (`{Path(s.rel).name}` only):")
         for it in s.header_items:
             w(f"* moved into the header: `{', '.join(it.names)}` ({it.category})")
         for d in s.declarations:
@@ -1832,7 +2142,8 @@ def render_report(plan: Plan, footprint: cf.Footprint | None) -> str:
     w("")
     w("### Relocation checklist (ADR 0006, plan S3)")
     w("")
-    private = ", ".join(f"`{s.shared_header}`" for s in plan.sources if s.shares) or "none"
+    private = ", ".join(f"`{h}`" for s in plan.sources for h, on in ((s.for_header, s.shares_for),
+                                                                      (s.from_header, s.shares_from)) if on) or "none"
     meson = ", ".join(f"`{p}`" for p in plan.files if p.endswith("meson.build")) or "already listed"
     for n, text in enumerate(CHECKLIST, 1):
         text = text.format(id=u.unit_id, records=f"{RECORDS}/{u.unit_id}.csv", private=private, meson=meson)
@@ -1990,10 +2301,38 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--check-layout", action="store_true",
                    help="with --split-declarations: compile each split source before and after with MSVC 5.0 "
                         "and refuse if its data layout changes")
+    p.add_argument("--migrate-private-headers", action="store_true",
+                   help="split every pre-#496 <file>_shared.hpp into per-relocation headers, then stop")
     p.add_argument("--allow-layout-change", action="store_true",
                    help="with --check-layout: write the split even if the data layout changes")
     args = p.parse_args(argv)
     root = args.root.resolve()
+    if args.migrate_private_headers:
+        mig = plan_header_migration(root)
+        for r in mig.reasons:
+            print(f"refused: {r}", file=sys.stderr)
+        if mig.reasons:
+            return 2
+        print(f"Private-header migration (#496): {len(mig.records)} per-unit snapshots of "
+              f"{len({r['header'] for r in mig.records})} headers.")
+        for n in mig.notes:
+            print(f"> {n}")
+        deleted = sorted(k for k, v in mig.files.items() if v is None)
+        written = sorted(k for k, v in mig.files.items() if v is not None)
+        if args.dry_run:
+            print("Would write: " + ", ".join(written))
+            print("Would delete: " + (", ".join(deleted) or "-"))
+            return 0
+        for rel in written:
+            path = root / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(mig.files[rel], encoding="utf-8")
+        for rel in deleted:
+            (root / rel).unlink()
+        print("Wrote: " + ", ".join(written))
+        if deleted:
+            print("Deleted: " + ", ".join(deleted))
+        return 0
     if args.survey:
         results = survey(root)
         text = json.dumps(results, indent=2) + "\n" if args.json else render_survey(results)
@@ -2036,7 +2375,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  - {r}", file=sys.stderr)
         return 2
     if footprint is not None:
-        footprint.new_files = [plan.target] + [s.shared_header for s in plan.sources if s.shares]
+        footprint.new_files = [plan.target] + [h for s in plan.sources for h, on in
+                                               ((s.for_header, s.shares_for), (s.from_header, s.shares_from)) if on]
     report = render_report(plan, footprint)
     written = [] if args.dry_run or plan.done else write(plan, root)
     if args.report:
