@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-int ci_deliberate_break = ;  // TEMP: CI proof for #402, reverted in the next commit
 
 #include "cmd.hpp"
 #include "ai.hpp"
