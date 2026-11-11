@@ -1878,8 +1878,6 @@ void global_value_004ffe48_set(uint32_t value)
 
 // GLOBAL: LEGORR 0x00557860
 static uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
-// GLOBAL: LEGORR 0x004c7178
-uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
 // GLOBAL: LEGORR 0x004c79a4
 static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
 

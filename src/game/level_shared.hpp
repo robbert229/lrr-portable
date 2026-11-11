@@ -113,4 +113,11 @@ namespace unported_ledger_stubs {
 void entity_cell_path_effects_apply_level(EntitySlot* entity, LevelState* level);
 } // namespace unported_ledger_stubs
 
+#define GRID_REC_COLS          15    /* 20 rows by 15 columns */
+
+void terrain_cell_record_get_target( int x, int y, int field, uint32_t* value_a, uint32_t* value_b);
+uint32_t cell_flag4_is_set_target(int x, int y, int field);
+void cell_flag100_set_target(int x, int y, int field);
+uint32_t cell_flag100_is_set_target(int x, int y, int field);
+
 #endif /* LRR_GAME_LEVEL_SHARED_HPP */
