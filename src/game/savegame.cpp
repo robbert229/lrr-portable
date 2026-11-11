@@ -18,6 +18,8 @@
 #include "options.hpp"
 #include "util.hpp"
 #include "savegame_shared.hpp"
+#include "savegame_for_reward.hpp"
+#include "savegame_from_reward.hpp"
 
 #if defined(LEGORRR_BACKEND_WINAPI)
 #  define SAVE_SEP '\\'  /* the corpus's "%s\%i.sav" DOS separators */
@@ -33,9 +35,6 @@
 #  define LRR_MKDIR(p) mkdir(p, 0755)
 #endif
 
-/* Reward/Timer default when the key is absent (finding 08): 76.9375. */
-#define LVL_REWARD_TIMER_DEFAULT 76.9375f
-
 /* The `.sav` open modes (corpus constants): DAT_004a2770 ("rb") and
  * DAT_004a2794 ("wb"). */
 const char* MODE_RB = "rb";
@@ -43,7 +42,7 @@ const char* MODE_WB = "wb";
 static void* s_sav_tree_root[2]; /* the two corpus tree-root globals' role */
 static void** s_sav_owned_tree_nodes[2];
 static uint32_t s_sav_owned_tree_node_count[2];
-static GameContext* s_save_current_context;
+GameContext* s_save_current_context;
 static FILE* s_return_diag_log;
 
 void save_return_diagnostic_log_set(void* log)
@@ -713,119 +712,6 @@ int save_write_record(GameContext* ctx, int index, const uint8_t* blob)
  *  Checkpoint blob (CheckpointBlobBuild @ 0x45fda0).
  * ------------------------------------------------------------------ */
 
-static void checkpoint_reward_group(GameContext* ctx, const char* level_name)
-{
-    /* FUN_0045fda0 reads every key on each build. Missing values therefore
-     * take the retail empty/default parse instead of retaining a previous
-     * level's reward configuration. */
-    ctx->reward.enable = 0;
-    ctx->reward.modifier = 0;
-    ctx->reward.timer = LVL_REWARD_TIMER_DEFAULT;
-    ctx->reward.display_text = 0;
-    ctx->reward.display_images = 0;
-    ctx->reward.display_flics = 0;
-    if (ctx->cfg == NULL || level_name == NULL) {
-        return;
-    }
-    char path[512];
-    /* Reward/Enable tri-state (2 -> 0). Shipped config nests the level
-     * under root -> Levels, so resolve each key through the container. */
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::Enable", path,
-                            sizeof(path)) != NULL) {
-        int en = block_get_bool_path(ctx->cfg, path);
-        if (en == 2) en = 0;
-        ctx->reward.enable = en;
-    }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::Modifier", path,
-                            sizeof(path)) != NULL) {
-        ctx->reward.modifier = block_get_int(ctx->cfg, path, 0);
-    }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::Timer", path,
-                            sizeof(path)) != NULL) {
-        ctx->reward.timer =
-            block_get_float(ctx->cfg, path, LVL_REWARD_TIMER_DEFAULT);
-    }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::DisplayText", path,
-                            sizeof(path)) != NULL) {
-        int dt = block_get_bool_path(ctx->cfg, path);
-        ctx->reward.display_text = dt == 2 ? 1 : dt;
-    }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::DisplayImages", path,
-                            sizeof(path)) != NULL) {
-        int di = block_get_bool_path(ctx->cfg, path);
-        ctx->reward.display_images = di == 2 ? 1 : di;
-    }
-    if (util_level_cfg_path(ctx->cfg, level_name, "Reward::DisplayFlics", path,
-                            sizeof(path)) != NULL) {
-        int df = block_get_bool_path(ctx->cfg, path);
-        ctx->reward.display_flics = df == 2 ? 1 : df;
-    }
-}
-
-// FUNCTION: LEGORR 0x0045fda0
-void checkpoint_blob_build(GameContext* ctx)
-{
-    if (ctx == NULL) {
-        return;
-    }
-    uint8_t* blob = (uint8_t*)engine_heap_alloc(SAVE_BLOB_SIZE);
-    if (blob == NULL) {
-        return;
-    }
-    memset(blob, 0, SAVE_BLOB_SIZE);
-    const char* level_name = ctx->level != NULL
-                             ? (const char*)ctx->level->ptr_name : NULL;
-    checkpoint_reward_group(ctx, level_name);
-
-    int32_t enable = (int32_t)ctx->reward.enable;
-    int32_t mod = (int32_t)ctx->reward.modifier;
-    int32_t ten = GAME_TASK_COUNT;
-    __builtin_memcpy(blob + 0x00, &enable, 4);          /* Reward/Enable   */
-    __builtin_memcpy(blob + 0x1C0, &mod, 4);            /* Reward/Modifier  */
-    __builtin_memcpy(blob + 0x1CE4, &ten, 4);           /* task count       */
-    uint32_t self = (uint32_t)(uintptr_t)(blob + 0x1CECu);
-    __builtin_memcpy(blob + 0x1CE8, &self, 4);          /* task-table ptr   */
-    /* Copy the ten task records (stride 0x210) verbatim. */
-    __builtin_memcpy(blob + 0x1CEC, ctx->tasks, GAME_TASK_COUNT * GAME_TASK_STRIDE);
-    mission_task_snapshot_refresh(ctx, (GameTask*)(blob + 0x1CEC));
-
-    /* Tutorial hard-code (CheckpointBlobBuild tail, corpus 0x460066-0x46008c):
-     * when the level name matches "Levels::Level03", record_base + 0x868 —
-     * i.e. task slot 4 ("Caverns") quota, record_base + 4*0x210 + 0x28 — is
-     * forced to 1 as a dword write. */
-    const char* base = level_name != NULL ? strrchr(level_name, ':') : NULL;
-    if (base == NULL && level_name != NULL) {
-        base = strrchr(level_name, '\\');
-    }
-    if (base != NULL) {
-        ++base;
-    } else {
-        base = level_name;
-    }
-    /* FUN_0048ff10 is a case-folded strcmp, so match "Level03" the same way. */
-    static const char LVL03[] = "Level03";
-    int l03 = base != NULL && strcasecmp_lite(base, LVL03) == 0;
-    if (l03) {
-        int32_t one = 1;
-        __builtin_memcpy(blob + 0x1CEC + 0x868, &one, 4);
-    }
-
-    engine_heap_free(ctx->checkpoint_blob);
-    ctx->checkpoint_blob = blob;
-}
-
-/* CheckpointBlobFree (FUN_004601e0, finding 08): frees the blob. The
- * corpus frees its global and LEAVES the dangling pointer; the port
- * nulls it (documented deviation — port-owned storage). */
-// FUNCTION: LEGORR 0x004601e0
-void checkpoint_blob_free(GameContext* ctx)
-{
-    if (ctx != NULL) {
-        engine_heap_free(ctx->checkpoint_blob);
-        ctx->checkpoint_blob = NULL;
-    }
-}
-
 void checkpoint_blob_apply(GameContext* ctx, const uint8_t* blob)
 {
     if (ctx == NULL || blob == NULL) {
@@ -940,64 +826,6 @@ void checkpoint_refresh(GameContext* ctx)
     checkpoint_blob_build(ctx);
 }
 
-// FUNCTION: LEGORR 0x00462270
-void checkpoint_step_target(void)
-{
-    GameContext* ctx = s_save_current_context;
-    if (ctx == NULL) {
-        return;
-    }
-    int orig = ctx->save_slot;
-    int slot = orig == -1 ? SAVE_DEFAULT_SLOT : orig;
-
-    if (ctx->records == NULL || ctx->active_slot != slot) {
-        /* Bootstrap the slot context (`SavSetSlot(5)` path in the corpus). */
-        (void)save_read_slot_target((uint32_t)slot, NULL, 0);
-    }
-    if (orig == -1) {
-        /* SavSetSlot selects the fallback even when its records are already
-         * active; the commit uses the selected slot, not active_slot. */
-        save_slot_set(ctx, slot);
-    }
-    int rec = ctx->current_record;
-    /* The corpus marks the record dirty when the level's objective-result
-     * word (+0x27c) reads 1 ("achieved"), then copies the blob in. */
-    int result = 0;
-    if (ctx->level != NULL) {
-        result = level_int(ctx->level, LEVEL_OFF_OBJ_RESULT);
-    }
-    if (ctx->checkpoint_blob == NULL) {
-        checkpoint_blob_build(ctx);
-    }
-    /* Write before marking: the write grows the record array if `rec` is
-     * past the bootstrap count, so the mark (a flags-word write) can't
-     * miss. The corpus marks first, but both touch the same record — the
-     * observable order is the same. */
-    save_write_record(ctx, rec, ctx->checkpoint_blob);
-    if (result == 1) {
-        save_mark_record(ctx, rec);
-    }
-    if (orig == -1) {
-        /* FUN_00462270 clears every default-slot level record after the
-         * first one, then reapplies the current checkpoint before commit.
-         * The initial write above ensures the table has grown far enough for
-         * this active level's record. */
-        if (ctx->records != NULL && ctx->record_count > 1) {
-            memset(ctx->records + SAVE_RECORD_SIZE, 0,
-                   (size_t)(ctx->record_count - 1) * SAVE_RECORD_SIZE);
-        }
-        (void)save_write_record(ctx, rec, ctx->checkpoint_blob);
-        if (result == 1) {
-            save_mark_record(ctx, rec);
-        }
-        /* The corpus commits the cleared/reapplied default slot, then
-         * reloads slot-5 metadata. */
-        save_commit(ctx);
-        (void)save_read_slot_target(SAVE_DEFAULT_SLOT, NULL, 0);
-
-    }
-}
-
 void checkpoint_step(GameContext* ctx)
 {
     if (ctx == NULL) return;
@@ -1054,12 +882,6 @@ void* sav_slot_ctx(GameContext* ctx, int slot)
     }
     save_context_bind(ctx);
     return sav_slot_ctx_target(slot);
-}
-
-// FUNCTION: LEGORR 0x004601f0
-void* checkpoint_blob_get(const GameContext* ctx)
-{
-    return ctx != NULL ? ctx->checkpoint_blob : NULL;
 }
 
 /* SaveStateEventContextSet (FUN_00418110) — zero-init module static per
@@ -1167,16 +989,6 @@ void* sav_record_ptr_target(int index)
     if (slot_ctx != NULL && index < slot_ctx->record_count)
         return slot_ctx->records + index * SAVE_RECORD_SIZE + 4;
     return NULL;
-}
-
-/* SelectedLevelStartObjectUpdate (FUN_00460200) — see savegame.hpp. */
-// FUNCTION: LEGORR 0x00460200
-void selected_level_start_object_update(GameContext* ctx)
-{
-    if (ctx == NULL || ctx->level == NULL) {
-        return; /* corpus: no level bound, nothing reads */
-    }
-    (void)checkpoint_blob_get(ctx); /* the corpus keeps no result */
 }
 
 /* --- the generic list window band (see savegame.hpp) ----------------------
@@ -2128,111 +1940,6 @@ void show_level_overlay_target(void)
 
 /* --- the checkpoint progress fold band (see savegame.hpp) ------------------ */
 
-static float blob_float_get(const char* blob, size_t off)
-{
-    float v = 0.0f;
-    __builtin_memcpy(&v, blob + off, sizeof v);
-    return v;
-}
-
-static void blob_float_put(char* blob, size_t off, float v)
-{
-    __builtin_memcpy(blob + off, &v, sizeof v);
-}
-
-/* Corpus fold shape: percent = 100 / den * num rides through only when
- * the denominator reads non-zero. It stores the raw result before the
- * upper clamp, then stores the clamped result; zero denominator stores 100. */
-static float blob_percent_fold_store(char* blob, size_t den, size_t num,
-                                     size_t out)
-{
-    float v = 100.0f;
-    const float d = blob_float_get(blob, den);
-    if (d != 0.0f) {
-        v = (100.0f / d) * blob_float_get(blob, num);
-    }
-    blob_float_put(blob, out, v);
-    if (100.0f < v) {
-        v = 100.0f;
-    }
-    blob_float_put(blob, out, v);
-    return v;
-}
-
-/* Corpus count-up: every round adds 100.0 to the +0x2fac sum (the
- * corpus's subtracted negative — an addition) and the window's last
- * folded percent to the +0x2fb0 carry; the guard float is re-read every
- * round and the counter rides as a converted uint. */
-static void blob_count_up(char* blob, size_t guard_off, size_t add_off)
-{
-    for (uint32_t n = 0u; (float)n < blob_float_get(blob, guard_off); ++n) {
-        blob_float_put(blob, 0x2fac, blob_float_get(blob, 0x2fac) + 100.0f);
-        blob_float_put(blob, 0x2fb0,
-                       blob_float_get(blob, add_off)
-                           + blob_float_get(blob, 0x2fb0));
-    }
-}
-
-// FUNCTION: LEGORR 0x00460950
-int checkpoint_blob_task_progress_recalculate_target(void)
-{
-    GameContext* ctx = s_save_current_context;
-    if (ctx == NULL || ctx->level == NULL) {
-        return 0; /* corpus: the CurrentLevelGet guard; deviation: threaded */
-    }
-    char* blob = (char*)checkpoint_blob_get(ctx);
-    if (blob == NULL) {
-        return 0; /* corpus: the blob getter guard */
-    }
-    blob_float_put(blob, 0x2fb0, 0.0f);
-    blob_float_put(blob, 0x2fac, 0.0f);
-    blob_float_put(blob, 0x2fb4, 0.0f);
-    (void)blob_percent_fold_store(blob, 0x1d1c, 0x1d20, 0x1d24);
-    (void)blob_percent_fold_store(blob, 0x1f2c, 0x1f30, 0x1f34);
-    (void)blob_percent_fold_store(blob, 0x213c, 0x2140, 0x2144);
-    (void)blob_percent_fold_store(blob, 0x1b04, 0x1b08, 0x1b0c);
-    (void)blob_percent_fold_store(blob, 0x2b8c, 0x2b90, 0x2b94);
-    (void)blob_percent_fold_store(blob, 0x234c, 0x2350, 0x2354);
-    (void)blob_percent_fold_store(blob, 0x276c, 0x2770, 0x2774);
-    (void)blob_percent_fold_store(blob, 0x297c, 0x2980, 0x2984);
-    blob_count_up(blob, 0x2760, 0x2774);
-    blob_count_up(blob, 0x1d10, 0x1d24);
-    blob_count_up(blob, 0x2b80, 0x2b94);
-    blob_count_up(blob, 0x2340, 0x2354);
-    blob_count_up(blob, 0x2550, 0x2564); /* the raw-window twin */
-    if (0.0f < blob_float_get(blob, 0x2d90)) {
-        /* Corpus shape: this loop keeps both accumulators in registers
-         * and writes them back only when it ends. */
-        float sum = blob_float_get(blob, 0x2fac);
-        float carry = blob_float_get(blob, 0x2fb0);
-        const float each = 100.0f - blob_float_get(blob, 0x2da4);
-        for (uint32_t n = 0u;
-             (float)n < blob_float_get(blob, 0x2d90); ++n) {
-            sum = sum + 100.0f;
-            carry = each + carry;
-        }
-        blob_float_put(blob, 0x2fb0, carry);
-        blob_float_put(blob, 0x2fac, sum);
-    }
-    blob_count_up(blob, 0x2970, 0x2984);
-    if (blob_float_get(blob, 0x2fac) < blob_float_get(blob, 0x2fb0)) {
-        blob_float_put(blob, 0x2fb0, blob_float_get(blob, 0x2fac));
-    }
-    if (blob_float_get(blob, 0x2fb0) < 0.0f) {
-        blob_float_put(blob, 0x2fb0, 0.0f);
-    }
-    float v = blob_percent_fold_store(blob, 0x2fac, 0x2fb0, 0x2fb4);
-    uint32_t bonus = 0u; /* the corpus's converted uint word */
-    __builtin_memcpy(&bonus, blob + 0x1c0, sizeof bonus);
-    v = (float)bonus + blob_float_get(blob, 0x2fb4);
-    blob_float_put(blob, 0x2fb4, v);
-    if (100.0f < v) {
-        v = 100.0f;
-    }
-    blob_float_put(blob, 0x2fb4, v);
-    return 1;
-}
-
 /* Explicit-context adapter for portable callers and isolated state tests.
  * The retail target itself is the no-argument current-owner entry above. */
 int checkpoint_blob_task_progress_recalculate(GameContext* ctx)
@@ -2300,9 +2007,6 @@ namespace unported_ledger_stubs {
 static EntityType4IndexNameList s_start_level_type4_list;
 static uint32_t s_start_level_pilot_count;
 
-void ledger_stub_00460290_EntityType4IndexListBuild(
-    EntityType4IndexNameList* output);
-
 } // namespace unported_ledger_stubs
 
 void start_level_selected(GameContext* ctx)
@@ -2337,44 +2041,6 @@ void ledger_stub_00460220_StartLevelSelected(GameContext* ctx)
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
-
-// FUNCTION: LEGORR 0x00460310
-int ledger_stub_00460310_EntityType4IndexListAppend(
-    EntitySlot* entity, void* payload)
-{
-    EntityType4IndexNameList* list = (EntityType4IndexNameList*)payload;
-    uint32_t kind;
-    uint32_t index;
-    if (list == NULL || entity == NULL) return 0;
-    copy_two_dword_pair_to_outputs(entity, &kind, &index);
-    if (kind == 4u && list->count < 100u) {
-        list->indices[list->count] = index;
-        list->names[list->count] = item_name_by_kind_lookup(4u, (int)index);
-        list->count = list->count + 1u;
-    }
-    return 0;
-}
-
-// FUNCTION: LEGORR 0x00460290
-void ledger_stub_00460290_EntityType4IndexListBuild(
-    EntityType4IndexNameList* output)
-{
-    EntityType4IndexNameList local;
-    uint32_t row;
-    uint32_t column;
-    memset(&local, 0, sizeof(local));
-    entity_pool_find_by_callback_filtered_current(
-        ledger_stub_00460310_EntityType4IndexListAppend, &local);
-    for (row = 0; row < 15u; ++row) {
-        for (column = 0; column < 16u; ++column) {
-            local.grid_count += grid_record_count_get(4, (int)row,
-                                                      (int)column);
-        }
-    }
-    if (output != NULL) {
-        memcpy(output, &local, sizeof(local));
-    }
-}
 
 // FUNCTION: LEGORR 0x00418040
 int ledger_stub_00418040_CampaignChainSnapshotCreate(

@@ -231,7 +231,7 @@ static int s_main_menu_text_item_pending;
  * Keep its active menu owner in the module so the mapped entry retains that
  * ABI while the portable frame loop can still use its instance-taking
  * adapter below. */
-static FrontEnd* s_reward_save_frontend;
+FrontEnd* s_reward_save_frontend;
 // GLOBAL: LEGORR 0x004dcec4
 static int s_back_button_width;
 static void fe_picker_order(FrontEnd* fe, int tree_index);
@@ -255,6 +255,8 @@ static uint32_t s_interface_build_image_counts[2];
 #include "frontend_shared.hpp"
 #include "frontend_for_helpwindow.hpp"
 #include "frontend_from_helpwindow.hpp"
+#include "frontend_for_reward.hpp"
+#include "frontend_from_reward.hpp"
 
 static int s_toupper(int c)
 {
@@ -2615,24 +2617,6 @@ int menu_enter(FrontEnd* fe, int mode)
  * The portable frame loop owns input/rendering, so menu_enter opens that same
  * picker and the frame loop advances it one frame at a time. */
 namespace reference_target {
-// FUNCTION: LEGORR 0x00462030
-void save_menu_open_from_reward(void)
-{
-    FrontEnd* fe = s_reward_save_frontend;
-    if (fe == NULL)
-        return;
-    options_write_to_slot_target();
-    if (!frontend_state_change(fe, FE_STATE_SAVE_REWARD))
-        return;
-    /* SaveMenuOpenFromReward selects submenu zero in the separate save-menu
-     * set. The legacy routine then runs a blocking input loop; the portable
-     * frame loop owns that loop, so this entry prepares the same live state
-     * and returns to its caller. */
-    if (fe->menus[FE_MENU_SAVE].submenu_count <= 0 ||
-        !frontend_open(fe, FE_MENU_SAVE))
-        return;
-    fe->save_action = 1;
-}
 }
 
 int save_menu_open_from_reward(FrontEnd* fe)

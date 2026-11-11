@@ -43,7 +43,6 @@
 namespace unported_ledger_stubs {
 int ledger_stub_004401b0_TerrainCellToWorldPosition(EntitySlot* entity,
                                                     int force);
-int ledger_stub_00435550_GlobalStateZeroTransitionDetect(void);
 void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode);
 int ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
     EntitySlot* entity);
@@ -1419,23 +1418,6 @@ static void window_message_dispatch_pump(void)
     }
 #endif /* native backends pump messages in src/platform */
     (void)frameloop_application_quit_ingest(&s_frameloop_application, NULL, 0);
-}
-
-/* PointerOverrideExpiryTick (FUN_00462700): expire overrides, draw the
- * current cursor, advance the sound/effect work, then pump one frame. */
-// FUNCTION: LEGORR 0x00462700
-void pointer_override_expiry_tick(float delta)
-{
-    media_pointer_cursor_override_tick(1.0f);
-    media_pointer_cursor_select(0);
-    pointer_cursor_draw_target(s_renderer_word_a, s_renderer_word_b);
-    (void)unported_ledger_stubs::
-        ledger_stub_00435550_GlobalStateZeroTransitionDetect();
-    s_window_mouse_word_4c = 0u;
-    sound_subsystem_frame_tick(delta);
-    timed_effect_runtime_update(s_renderer_word_a, s_renderer_word_b,
-                                (delta * 0.04f) * 1000.0f);
-    main_loop_frame_pump(1);
 }
 
 /* MainLoopFramePump (FUN_00477f30): drain Win32 messages, poll the active

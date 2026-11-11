@@ -728,49 +728,6 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
 
 /* --- indexed flag slot and resource-handle writers (see record.hpp) ------ */
 
-/* --- the record-field write band (see record.hpp) --------------------------- */
-// FUNCTION: LEGORR 0x00462ab0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void record_field18_set(void* record, uint32_t value)
-{
-    __asm {
-        fld dword ptr [esp + 8]
-        mov eax, dword ptr [esp + 4]
-        fstp dword ptr [eax + 18h]
-        ret
-    }
-}
-#else
-void record_field18_set(void* record, uint32_t value)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    __builtin_memcpy((char*)record + 0x18, &value, sizeof(value));
-}
-#endif
-
-// FUNCTION: LEGORR 0x00462ac0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void record_flags_24_or(void* record, uint32_t flags)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        or dword ptr [eax + 24h], ecx
-        ret
-    }
-}
-#else
-void record_flags_24_or(void* record, uint32_t flags)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus reads blindly */
-    }
-    *(uint32_t*)((char*)record + 0x24) |= flags;
-}
-#endif
-
 /* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
 // FUNCTION: LEGORR 0x00439930
 #if defined(_MSC_VER) && defined(_M_IX86)

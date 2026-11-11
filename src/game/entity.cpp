@@ -890,6 +890,7 @@ float periodic_timer25_peek(void)
 #include "frontend.hpp"
 extern "C" float random_float_range(float minimum, float maximum);
 #include "crt/crt.hpp"
+#include "entity_for_reward.hpp"
 
 static uint32_t s_entity_finalize_mode_flags;
 static EntityFinalizeHook s_entity_type5_timeout_hook;
@@ -5709,7 +5710,7 @@ static int entity_type_config_name_find(uint32_t table_kind,
  * so everything else answers a zero row (the dispatch aliases that slot
  * onto its first argument's word — a corpus quirk, pinned in the tests). */
 // FUNCTION: LEGORR 0x0042e8b0
-static int entity_type_pair_for_name(const char* name, int* type_out,
+int entity_type_pair_for_name(const char* name, int* type_out,
                                      int* row_out, int* zero_out)
 {
     /* The corpus's entry zeroing, blind (mov ebx,[esp+0x10] / mov [ebx],0
@@ -9160,27 +9161,6 @@ void pooled_record_pool_resources_release(void)
     s_entity_iteration_guard_flags = 0u;
     terrain_neighbor_path_cost_release();
     s_entity_iteration_guard_flags &= ~1u;
-}
-
-/* ResolvedEntityOperationDispatch (FUN_00460910) — see entity.hpp. */
-// FUNCTION: LEGORR 0x00460910
-int resolved_entity_operation_dispatch(const char* name, int slot,
-                                       int subtract)
-{
-    /* Corpus shape: one local (the type slot, `push ecx`) and the resolver's
-     * row output aliased onto this function's first-parameter stack slot
-     * (`lea eax,[esp+0x8]` at 0x460915), so the resolver's entry zeroing
-     * clears it for special names while table/ore matches write the row
-     * there, and the post-resolver count scan reads its column word back
-     * out of the name parameter (`mov edx,[esp+0x8]` at 0x460936). The
-     * corpus's fourth resolver word is the immediate 0 (its NULL-guarded
-     * tvcamera store never fires from here). */
-    int type;
-    if (entity_type_pair_for_name(name, &type, (int*)&name, NULL)) {
-        return grid_record_count_difference_get(type, *(int*)&name, slot,
-                                                subtract);
-    }
-    return 0;
 }
 
 /* --- DAT_00502bd8 indexed stats-type tables (2026-10-25) ------------------
