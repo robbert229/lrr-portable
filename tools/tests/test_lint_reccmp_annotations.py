@@ -58,6 +58,18 @@ class RatchetTest(unittest.TestCase):
         self.assertIn("definition A::helper", result.stdout)
         self.assertNotIn("definition B::helper", result.stdout)
 
+    def test_relocation_dropping_static_keeps_key(self):
+        # relocate_unit.py removes `static` from definitions it shares.
+        self.source.write_text("static inline int helper(int x) { return x; }\n")
+        self.baseline()
+        self.source.write_text("")
+        (self.root / "src" / "unit.cpp").write_text("int helper(int x) { return x; }\n")
+        result = self.run_lint()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("can be removed:", result.stdout)
+        (self.root / "src" / "unit.cpp").write_text("int helper(long x) { return x; }\n")
+        self.assertEqual(self.run_lint().returncode, 1)
+
     def test_duplicate_counts_and_ledger(self):
         self.source.write_text("void same() {}\n")
         ledger = self.root / "ledger.csv"

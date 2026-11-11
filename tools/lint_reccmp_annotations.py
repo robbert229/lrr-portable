@@ -257,6 +257,9 @@ def scopes_at_braces(masked: str) -> dict[int, str]:
     return scopes
 
 
+LINKAGE_TOKENS = frozenset({"static", "inline", "__inline", "__forceinline"})
+
+
 def collect(root: Path, ledger_path: Path | None) -> dict[str, list[str]]:
     violations: dict[str, list[str]] = defaultdict(list)
     for path in source_files(root / "src"):
@@ -268,7 +271,10 @@ def collect(root: Path, ledger_path: Path | None) -> dict[str, list[str]]:
                 continue
             # Ignore whitespace and directives, not parameter names or types.
             signature = re.sub(r"(?m)^\s*\#.*$", "", masked[offset:brace])
-            signature = " ".join(re.findall(r"[A-Za-z_]\w*|\d+|::|\S", signature))
+            # Relocation (tools/relocate_unit.py) drops `static` when it shares a
+            # definition, so linkage specifiers must not change the key.
+            signature = " ".join(token for token in re.findall(r"[A-Za-z_]\w*|\d+|::|\S", signature)
+                                 if token not in LINKAGE_TOKENS)
             digest = hashlib.sha256(signature.encode()).hexdigest()[:16]
             scope = scopes.get(brace, "")
             key = f"definition {scope + '::' if scope else ''}{name} {digest}"
