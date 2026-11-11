@@ -99,37 +99,3 @@ float block_get_float(BlockFile* bf, const char* path, float dflt)
     float v = strtof(value, &end);
     return (end == value) ? dflt : v;
 }
-
-/* RegistryPathSplit (FUN_0048b330, finding 402): the corpus copies the
- * leading backslash component, terminates both ends, and skips one
- * separator. The registry's 100-byte caller buffer bound is the
- * caller's business (finding 402 notes the helper itself is unbounded —
- * reproduced, caller checks live where the registry lands). */
-// FUNCTION: LEGORR 0x0048b330
-const char* registry_path_split(const char* path, char* out)
-{
-    if (path == NULL || out == NULL) {
-        return path; /* deviation: pinned by test_block.cpp — corpus strides blind */
-    }
-    /* Corpus shape: NUL the destination, seed the character, gate entry on
-     * it, then a do-while whose back edge is the character's own test —
-     * the source advances before the byte is stored. */
-    *out = '\0';
-    char c = *path;
-    if (c != '\0') {
-        do {
-            if (c == '\\') {
-                break;
-            }
-            ++path;
-            *out = c;
-            ++out;
-            c = *path;
-        } while (c != '\0');
-    }
-    if (*path == '\\') {
-        ++path;
-    }
-    *out = '\0';
-    return path;
-}

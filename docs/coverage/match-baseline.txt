@@ -1,4 +1,4 @@
-# input_sha256: 78e802465e23e62041ac65e48373fb0df0d17443f0eaf77d5ddf455f6b78360d
+# input_sha256: 5b2180bd8255666548d7a487d5de693ef6b1c94a2f480fc59ccbf5f9879a176f
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1711,7 +1711,7 @@
 0x00477610 100.00 case_insensitive_substring_find
 0x00477670 96.72 game_string_hash_compute
 0x00477710 100.00 block_get_bool
-0x004777a0 30.81 WinMain
+0x004777a0 31.83 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
 0x00477f30 60.47 main_loop_frame_pump
@@ -2075,9 +2075,9 @@
 0x0048b280 100.00 window_mode_flag_set
 0x0048b290 72.73 ledger_stub_0048b290_StartupStreamsClose
 0x0048b2f0 31.82 startup_config_stream_load
-0x0048b330 64.00 registry_path_split
-0x0048b360 31.82 registry_path_accessor
-0x0048b390 10.53 ledger_stub_0048b390_RegistryPathCreateKeys
+0x0048b330 100.00 registry_path_split
+0x0048b360 100.00 registry_path_accessor
+0x0048b390 65.56 registry_path_create_keys
 0x0048b4a0 31.88 buffered_char_stream_read_to_string
 0x0048b4e0 27.21 wwad_archive_index_load
 0x0048bcf0 13.33 wad_entry_length_get
@@ -3841,7 +3841,7 @@
 0x00477610 100.00 case_insensitive_substring_find
 0x00477670 96.72 game_string_hash_compute
 0x00477710 100.00 block_get_bool
-0x004777a0 30.81 WinMain
+0x004777a0 31.83 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
 0x00477f30 60.47 main_loop_frame_pump
@@ -4205,9 +4205,9 @@
 0x0048b280 100.00 window_mode_flag_set
 0x0048b290 72.73 ledger_stub_0048b290_StartupStreamsClose
 0x0048b2f0 31.82 startup_config_stream_load
-0x0048b330 64.00 registry_path_split
-0x0048b360 31.82 registry_path_accessor
-0x0048b390 10.53 ledger_stub_0048b390_RegistryPathCreateKeys
+0x0048b330 100.00 registry_path_split
+0x0048b360 100.00 registry_path_accessor
+0x0048b390 65.56 registry_path_create_keys
 0x0048b4a0 31.88 buffered_char_stream_read_to_string
 0x0048b4e0 27.21 wwad_archive_index_load
 0x0048bcf0 13.33 wad_entry_length_get
