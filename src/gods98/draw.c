@@ -142,13 +142,17 @@ void surface_draw_polyline(Point2F* fromList, Point2F* toList,
     DrawSurface* surf = DRAW_BACK_SURFACE();
     uint32_t colour;
     uint32_t loop;
+    Point2F* from;
+    Point2F* to;
 
     if (surface_active_pixel_writer_configure(surf, effect)) {
         colour = surface_color_pack_to_pixel(r, g, b);
         for (loop = 0; loop < count; loop++) {
-            surface_bresenham_line_walk_clipped(
-                (int32_t)fromList[loop].x, (int32_t)fromList[loop].y,
-                (int32_t)toList[loop].x, (int32_t)toList[loop].y, colour);
+            from = &fromList[loop];
+            to = &toList[loop];
+            surface_bresenham_line_walk_clipped((int32_t)from->x, (int32_t)from->y,
+                                                (int32_t)to->x, (int32_t)to->y,
+                                                colour);
         }
         surface_unlock_reset_pixel_writer(surf);
     }

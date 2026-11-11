@@ -52,8 +52,59 @@ and the rebuilt reverse order; it also records pointer-walking rewrites
 scoring only 61–63%. Five further single-function probes using equivalent
 indexing, pointer arithmetic, loop comparison and prefix increment also stayed
 at 98.36%. Swapping explicit source increments therefore cannot
-change this pair. The requested 100% target remains unmet; a safe rewrite
-that changes MSVC's strength-reduction scheduling is still needed.
+change this pair.
+
+**Resolved by hand (issue #382).** A per-iteration element pointer reaches
+100%:
+
+```c
+for (loop = 0; loop < count; loop++) {
+    from = &fromList[loop];
+    to = &toList[loop];
+    surface_bresenham_line_walk_clipped((int32_t)from->x, (int32_t)from->y,
+                                        (int32_t)to->x, (int32_t)to->y,
+                                        colour);
+}
+```
+
+MSVC still strength-reduces both lists into the original's register shape:
+`esi = &fromList[0].y`, `edi = toList`, `ebx = toList - fromList`, with
+`toList[i].y` read as `[ebx + esi]`. The loop foot always increments `esi`
+before `edi`. The source decides which list gets `esi`, together with the
+`ebx` difference. Every indexed spelling gave that shape but emitted the two
+`add`s in the other order. The two `&list[loop]` assignments, `from` first,
+give the original's order. With `to` first, the score is back at 98.36%.
+Explicit walks that increment the pointers make the list initialised second
+the `esi` one, and also lose the `ebx` difference (61–90%). In that family,
+the order of the increments or declarations has no effect.
+
+All scores are Reccmp's raw `matching` value from `match_function.py
+--candidate`. Different increment placements (loop body or `for` step) and
+declaration positions (before or after the other locals) that gave the same
+score are grouped together.
+
+| Spelling | Score |
+|---|---|
+| Original indexed loop (`fromList[loop].x`) | 98.36 |
+| Index through aliases `from = fromList; to = toList; from[loop]`, both init orders | 98.36 |
+| Loop counter declared first, or `uint32_t loop, colour;` above `surf` | 98.36 |
+| `(fromList + loop)->x`, `(*(fromList + loop)).x`, `(&fromList[loop])->x` | 98.36 |
+| `count > loop` | 98.36 |
+| `loop != count` | 96.72 |
+| `int32_t loop` against `(int32_t)count` | 96.72 |
+| `const Point2F*` parameters; `surf` assigned after declaration | 98.36 |
+| Renamed parameters, counter, colour or count (names have no effect) | 98.36 |
+| Pointer walk, `from` initialised first; increments in either order, in the body or the `for` step; either declaration order (16 variants) | 78.99 |
+| Pointer walk, `to` initialised first; same 16 variations | 90.16 |
+| Pointer walk with `while (count--)` | 73.02 |
+| Walk `from`, index `toList` (step or body increment) | 52.25 / 57.66 |
+| Walk `to`, index `fromList` (step or body increment) | 55.86 / 59.46 |
+| Walk the parameters themselves, `fromList++, toList++` / `toList++, fromList++` | 63.06 / 61.26 |
+| `to = &toList[loop]; from = &fromList[loop];` (block or function scope) | 98.36 |
+| **`from = &fromList[loop]; to = &toList[loop];`** (block or function scope) | **100.00** |
+
+The source uses the function-scope form, matching the unit's other
+declarations.
 
 ## Regression checks
 
