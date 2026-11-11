@@ -9,6 +9,7 @@ from pathlib import Path
 
 SCOPES = (('game-only', 'game-only.json'), ('full', 'results.json'))
 DEFAULT = 'docs/coverage/match-listing-digests.txt'
+FORMAT = '# listing_format: 3'
 REGISTER = re.compile(r'\b(?:e(?:ax|bx|cx|dx|si|di|bp|sp)|(?:ax|bx|cx|dx|si|di|bp|sp)|[abcd][hl]|st(?:\([0-7]\))?)\b', re.I)
 BRANCH = re.compile(r'^(?:j\w+|loop\w*)\s+.*$', re.I)
 STACK = re.compile(r'\b(?:esp|ebp|sp|bp)\s*([+-])\s*(?:0x[0-9a-f]+|\d+)', re.I)
@@ -20,6 +21,19 @@ def normalize(instruction):
     text = re.sub(r'\s+', ' ', text)
     if BRANCH.match(text):
         return text.split(' ', 1)[0] + ' <target>'
+    # Symbol names and relocation placeholders stand for addresses. Keep the
+    # surrounding brackets, registers and explicit size in the instruction.
+    # Mangled file-local names can contain a path and compilation number.
+    text = re.sub(r'\?[^\s,]+\s*\((?:data|function|offset)\)', '<address>', text)
+    # MSVC's anonymous namespace identifier changes between compilations.
+    text = re.sub(r'\?a0x[0-9a-f]+::[^\s,\]+]+(?:\s*\((?:data|function|offset)\))?', '<address>', text)
+    text = re.sub(r"thunk of '[^']*'", '<address>', text)
+    text = re.sub(r'[-+]?\d+(?:\.\d+)?\s*\(float\)', '<address>', text)
+    text = re.sub(r'<offset\d+>', '<address>', text)
+    text = re.sub(r"(?:[a-z_$?][\w$?:.@]*(?:\[\d+\])*(?:\s*\+\s*(?:0x[0-9a-f]+|\d+))?|\"[^\"]*\")\s*\((?:data|function|import_thunk|offset)\)", '<address>', text)
+    text = re.sub(r"(?<![\w])(?!(?:e(?:ax|bx|cx|dx|si|di|bp|sp)|(?:ax|bx|cx|dx|si|di|bp|sp))\b)[a-z_$?][\w$?:.@]*(?:\[\d+\])*\s*\+\s*0x[0-9a-f]+", '<address>', text)
+    text = re.sub(r'"(?:\\.|[^"\\])*"', '<address>', text)
+    text = re.sub(r'(?<![\w])(?:0x[0-9a-f]+|\d+)\s*\(offset\)', '<address>', text)
     text = STACK.sub(lambda m: 'stack ' + m.group(1) + ' offset', text)
     def mask_register(match):
         reg = match.group().lower()
@@ -63,7 +77,7 @@ def report_listings(directory):
 
 
 def render(scopes, input_digest):
-    lines = ['# input_sha256: ' + input_digest, '# Normalised rebuilt listings: address count sequence_sha256 multiset_sha256']
+    lines = ['# input_sha256: ' + input_digest, FORMAT, '# Normalised rebuilt listings: address count sequence_sha256 multiset_sha256']
     for scope, _ in SCOPES:
         lines.append('[' + scope + ']')
         for address, (count, seq, bag) in sorted(scopes[scope].items()):
@@ -74,7 +88,10 @@ def render(scopes, input_digest):
 def load(path):
     result = {scope: {} for scope, _ in SCOPES}
     current = None
-    for line in Path(path).read_text().splitlines():
+    content = Path(path).read_text().splitlines()
+    if FORMAT not in content:
+        raise ValueError('unsupported listing digest format')
+    for line in content:
         if not line or line.startswith('#'):
             continue
         if line.startswith('['):
@@ -107,7 +124,7 @@ def source_index(ref=None, root=Path.cwd()):
 
     Missing or ambiguous annotations are deliberately unknown, never unchanged.
     """
-    cmd = ['git', '-C', str(root), 'grep', '-l', '-i', '-E', r'//[[:space:]]*FUNCTION:[[:space:]]*LEGORR[[:space:]]+0x[0-9a-f]+']
+    cmd = ['git', '-C', str(root), 'grep', '-l', '-i', '-E', r'//[[:space:]]*(FUNCTION|LIBRARY):[[:space:]]*LEGORR[[:space:]]+0x[0-9a-f]+']
     if ref:
         cmd.append(ref)
     cmd += ['--', 'src']
@@ -115,7 +132,7 @@ def source_index(ref=None, root=Path.cwd()):
     if result.returncode not in (0, 1):
         raise ValueError('cannot read source at %s: %s' % (ref or 'worktree', result.stderr.strip()))
     index = {}
-    marker = re.compile(r'//\s*FUNCTION:\s*LEGORR\s+0x([0-9a-f]+)[^\n]*\n', re.I)
+    marker = re.compile(r'//\s*(FUNCTION|LIBRARY):\s*LEGORR\s+0x([0-9a-f]+)[^\n]*\n', re.I)
     # Ignore braces in strings and comments when locating a function body.
     token = re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|[{};]', re.S)
     for name in result.stdout.splitlines():
@@ -140,8 +157,8 @@ def source_index(ref=None, root=Path.cwd()):
                         break
                 elif c == ';' and depth == 0:
                     break
-            address = int(match.group(1), 16)
-            value = text[start:end] if end else None
+            address = int(match.group(2), 16)
+            value = '<library>' if match.group(1).upper() == 'LIBRARY' else (text[start:end] if end else None)
             if address in index:
                 index[address] = None
             else:
