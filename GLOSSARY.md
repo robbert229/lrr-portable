@@ -108,6 +108,10 @@ _Avoid_: "C style" (that names the syntax, not the unit and data layout)
 A C-compatible `.h` that declares, with C linkage, the functions and globals of a not-yet-converted C++ module that *original shape* units call. Shared C++ headers do not include it; `test_c_boundaries.cpp` checks it against the C++ declarations.
 _Avoid_: "wrapper header"
 
+**conversion footprint**:
+For one *original translation unit*, the set of source files and headers an ADR 0005 conversion will touch: its own new files, the files currently holding its functions, its callees' headers and its callers. Two conversions whose footprints share no header can proceed in parallel without entropy conflicts.
+_Avoid_: "blast radius", "impact set"
+
 **entropy drift**:
 Score changes in functions whose source did not change, caused by MSVC 5.0's register allocation depending on how many symbols the translation unit declares before them (finding 506). Any edit to a shared header can cause it.
 _Avoid_: "regression" (when the source is unchanged), "noise" (it is deterministic)

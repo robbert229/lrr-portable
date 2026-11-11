@@ -13,6 +13,13 @@
   intentionally improves matches, refresh the baseline in the same change with
   `make reccmp-baseline-update`. Use `make reccmp-compare` to re-check an
   existing report without rebuilding. CI does not run this gate; it stays local.
+- To convert an original translation unit (ADR 0005), start with step 0: run
+  `python3 tools/convert_unit.py <unit>` (`tools/README.md`). It scaffolds the
+  unit's `.c`/`.h`, globals, stubs and wiring, and prints the conversion
+  footprint and the PR checklist. The stubs repeat the old functions'
+  annotations, so `make reccmp-check` fails until the old definitions are
+  deleted. Delete them in the same conversion PR; only that final PR has to
+  pass the gate.
 - To iterate on one function's match, run `make match-function ADDR=0x...`
   (or `python3 tools/match_function.py ADDR --json`): it compiles only that
   function's translation unit and returns Reccmp's score, the baseline delta

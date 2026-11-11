@@ -18,7 +18,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity
+.PHONY: all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit tools-test
 
 all: build
 
@@ -69,6 +69,21 @@ match-function:
 	@REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
 	  python3 ./tools/match_function.py $(ADDR) $(if $(SOURCE),--source "$(SOURCE)") \
 	  $(if $(JSON),--json) $(MATCH_ARGS)
+
+# Scaffold an original-shape conversion of one unit (ADR 0005, step 0).
+# UNIT=G98-029 [CONVERT_ARGS="--stem registry --dry-run"]; see tools/README.md.
+convert-unit:
+	@if [ -z "$(UNIT)" ]; then \
+	  echo "usage: make convert-unit UNIT=G98-029 [CONVERT_ARGS=\"--stem name --dry-run\"]" >&2; \
+	  exit 2; \
+	fi
+	@REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" \
+	  python3 ./tools/convert_unit.py $(UNIT) $(CONVERT_ARGS)
+
+# Unit tests of the Python tooling (needs reference/LegoRR.exe for the
+# validation tests, which are skipped without it).
+tools-test:
+	python3 -m unittest discover -s tools -p 'test_convert_unit.py'
 
 # Check match_function.py against an existing full report from the same tree.
 match-function-parity:

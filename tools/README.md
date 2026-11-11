@@ -1,5 +1,151 @@
 # `tools/` — game-data tooling
 
+## `convert_unit.py` — scaffold an original-shape conversion (ADR 0005, step 0)
+
+Writes the mechanical starting state of a conversion for one *original
+translation unit*, so the converting agent spends its time on matching
+functions. It does not write bodies, choose signatures where the pseudocode is
+ambiguous, migrate callers or edit existing implementations.
+
+```sh
+python3 tools/convert_unit.py G98-029 --stem registry   # scaffold into src/, wire CMake and the boundary test
+python3 tools/convert_unit.py Keys.c --dry-run           # print the report, write nothing
+python3 tools/convert_unit.py GAME-003 --out /tmp/scratch  # write into a scratch copy of the tree
+python3 tools/convert_unit.py G98-027 --footprint-only [--json]
+python3 tools/convert_unit.py GAME-034 --compare --stem priorities   # diff against a hand conversion
+make convert-unit UNIT=G98-029 CONVERT_ARGS="--stem registry"
+```
+
+`UNIT` is a unit id from `docs/coverage/translation-unit-ranges.csv` or a unit
+name (`Keys.c`). The file stem is the name without `.c`; unnamed units default
+to the lower-case id (`g98_029`), so pass `--stem` to choose a descriptive one.
+The tool refuses to overwrite existing files without `--force`, and only
+handles `game` and `gods98` units.
+
+**What it writes**
+
+| Output | Contents |
+| --- | --- |
+| `src/<game or gods98>/<stem>.c` | SPDX header; the unit's `.bss` range as one typed `<Stem>Globs` struct with fields named by offset (`f_0000`, each commented with its address); the unit's `.rdata`/`.data` items with their initial values, in address order, each with `// GLOBAL: LEGORR 0x…`; data that no other unit touches outside the attributed ranges (the common region) as plain file-scope globals; the unit's string literals as a comment table of `STRING` markers; then one stub per function in original order, each with `// FUNCTION: LEGORR 0x…` and the Ghidra pseudocode above it |
+| `src/…/<stem>.h` | C boundary header (`extern "C"`, include guard) declaring the stubs |
+| `CMakeLists.txt` | the source added to its library (`gods98` or `game`) and to `LRR_ORIGINAL_SHAPE_SOURCES` |
+| `src/game/test_c_boundaries.cpp` | includes for the new header and for the C++ headers that declare the unit's functions today |
+| report (stdout, `--report FILE`) | the conversion footprint, a "before" score table and the recipe checklist for the PR description |
+
+Stubs are `void scaffold_<name>(void)` with the existing port name after the
+prefix, and every function the port already defines keeps that definition. The
+prefix lets the stubs link beside the old code. When you write one, give it its
+final name, delete the old definition and its declaration, and switch the
+callers.
+
+**Annotations and the gate.** The stubs carry live annotations, so each
+address is annotated twice until you delete the old definition. Reccmp keeps
+one of them: the old function then drops out of the report (as "newly
+unmapped") and `make reccmp-check` **fails until the old definitions are
+deleted**, as does any caller scored against it. Only the final conversion PR
+has to pass the gate.
+In a trial scaffold of the nine leaf units, the full matching build compiled
+and linked, and the gate reported 32 old functions unmapped and 3 callers
+below baseline for that reason. The report lists the existing `// GLOBAL`
+annotations that the scaffold now repeats. Delete the old definitions in the
+same change, and run the gate after that.
+
+**Data layout.** Addresses come from disassembling the unit's functions in
+`reference/LegoRR.exe`. Each referenced address starts a field that runs to the
+next one, typed by the widest access (an x87 operand is `float` or `double`).
+Indexed accesses make arrays, and a stride larger than the access (`[ecx*8 +
+base]`) makes an array of structs. Adjacent scalars of one type (four or more)
+are merged into an array, except in `.rdata`/`.data`. Constants that look like
+addresses but are not (an `imul` immediate, an odd value in the common region)
+are ignored. The tool cannot see nested types, so a hand-made `Area2F` shows as
+four floats and an array indexed with a constant element splits at it. Items
+over 512 bytes in `.data` are declared uninitialised with a TODO.
+
+**Before scores.** The table comes from `match_function.py` for every function
+of the unit (about 6 s; Wine through `distrobox`, see below). When it cannot
+run, the table falls back to the committed *match baseline*; `--scores
+baseline|none` choose it.
+
+### Validation against the hand conversions
+
+`--compare` regenerates the mechanical output for an already converted unit and
+compares it with the committed files: function annotations and order, `GLOBAL`
+and `STRING` addresses, the struct's field starts and extent, the CMake wiring
+(strip the unit's entry, rewire, compare membership) and the boundary-test
+includes. The checked-in test `tools/test_convert_unit.py` runs it for
+Priorities.c (GAME-034), Config.c (G98-006) and utils.c (G98-004), and pins the
+differences:
+
+| Unit | Result |
+| --- | --- |
+| GAME-034 | 14 of 14 functions and addresses in the same order. Struct starts at `00500f00`, ends at `005013c0`, with every hand-made field start present. The tool splits arrays and `Area2F` at five more addresses (`00501118`, `00501264`, `005013ac`, `005013b0`, `005013b4`) because it sees constant-index accesses and cannot see nested types. One extra `GLOBAL` (`0049e654`, an x87 constant that the hand version writes as a literal). The tool also lists three `STRING` addresses that the hand version does not annotate |
+| G98-006 | 16 of 16 functions in order. The struct is field-for-field identical (`00506098`–`00506524`). The hand version puts the `.bss` struct before the `.rdata` constants and the tool orders by address. The hand version's shared literals (`004a1cd4`, `004aab18`) and empty string (`004b8a14`, owned by GAME-004's `.bss`) are reported by the tool as pooled with other units rather than defined |
+| G98-004 | 7 of 7 functions in order, no state, no differences. The four own `STRING` addresses and the two pooled ones (`004a4120`, `004a4124`) are listed. The hash multiplier `0x600937` (`mov edi, imm`) is not mistaken for an address |
+
+CMake wiring and `c_boundaries` entries match for all three (the tool appends
+to a source list where a hand edit placed it in the middle; the order of a
+source list is irrelevant).
+
+## `conversion_footprint.py` — conversion footprint library
+
+The *conversion footprint* of a unit is the set of source files and headers an
+ADR 0005 conversion touches: its new files, the files that hold its functions
+today, its callees' headers and its callers. Two conversions whose footprints
+share no header can run in parallel. The module is stdlib-only and is what
+`convert_unit.py` reports with; it also works as a library and from the
+command line:
+
+```python
+import sys; sys.path.insert(0, "tools")
+from conversion_footprint import compute_footprint, header_overlap
+
+a, b = compute_footprint("G98-029"), compute_footprint("GAME-003")
+a.headers                 # existing headers the conversion is expected to edit
+header_overlap(a, b)      # frozenset(): no shared header, so a wave can hold both
+a.to_json()               # the same document as `--json`
+```
+
+```sh
+python3 tools/conversion_footprint.py G98-029 --json
+python3 tools/conversion_footprint.py G98-019 G98-022 GAME-003 --table   # summary and overlaps
+```
+
+`compute_footprint(unit, root, stem=None, with_data=None)` reads
+`translation-unit-ranges.csv`, `translation-units.csv`, `call-graph/edges.csv`
+and `src/`, and returns a `Footprint`:
+
+| Field | Meaning |
+| --- | --- |
+| `unit_id`, `unit_name`, `unit_kind`, `stem`, `confidence`, `text_start/end`, `ranges` | the unit, its address ranges (`rdata`, `data`, `string`, `bss`; the end is the start of the last item) |
+| `new_files` | the `.c` and `.h` to create |
+| `functions` | per function in address order: address, existing port name, corpus name, current source and line, size, headers declaring it, counts of callers and callees outside |
+| `current_sources` | files holding the code to replace |
+| `callees` | calls into other units: unit, current source, declarations (`file`, `line`, `in_c`), `status` (`converted`, `c-declared`, `needs-c-linkage`, `needs-boundary-decl`, `undeclared`, `library`, `unmapped`), `needs_extern_c`, `needs_boundary_decl`, `edit_headers`, `new_headers` |
+| `callers`, `caller_sources` | functions in other units that call the unit, and their files |
+| `external_globals` | globals of other units that the unit's code uses (owner, other users, declaring header, `needs_extern_c`, `needs_declaration` when no header declares a shared global); pooled literals are flagged `literal_candidate` |
+| `unattributed_own_data` | data outside the attributed ranges that no other unit touches (scaffolded as the unit's own) |
+| `test_files` | `test_*` files that mention the unit's functions |
+| `own_declaration_headers` | headers that declare the unit's functions today |
+| `headers` | **the set of existing headers the conversion is expected to edit**: own declaration headers, callees' headers that need `extern "C"` or a boundary header, and headers of shared globals needing C linkage. New files are not in it. `header_set` is the same as a `frozenset` |
+| `sources` | existing non-header files to edit: current sources, caller files and tests |
+| `shared_files` | `CMakeLists.txt` and `test_c_boundaries.cpp`: every conversion touches them, so they are not in `headers` |
+| `limitations` | the caveats below, so that every report carries them |
+
+`leaf` is true when no callee is in another game or gods98 unit. `with_data`
+adds the global and common-data analysis (needs `pefile`, `capstone` and
+`reference/LegoRR.exe`, about 3 s once); `None` enables it when they are
+present. Everything else needs only the repository.
+
+**Limits.** `edges.csv` holds only the direct calls that Ghidra resolved. It
+has no function-pointer callbacks (window procedures, enumeration callbacks,
+handler tables), so a unit's callers and callees reached only that way are
+missing from the footprint; check them in the pseudocode. Declarations are
+found by name with a small scanner and not a C++ parser, so a callee that
+shows as `undeclared` needs a look. Two units can also interact without
+sharing a header, through the symbol numbering (ADR 0005 entropy policy).
+
+Tests: `make tools-test`.
+
 ## `match_function.py` — single-function match loop
 
 Scores one function of the *matching build* against the shipped
