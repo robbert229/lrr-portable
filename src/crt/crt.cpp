@@ -592,9 +592,12 @@ int crt_float_to_long(float value)
 /* The raw x86 body indexes the float table at record+0x34 with a 0x3190
  * stride, loads the float at +0x2fb8, and tail-jumps to __ftol. Ghidra
  * treated the x87 input as the whole function and lost both parameters. */
-// FUNCTION: LEGORR 0x00417430
 #if defined(_MSC_VER) && defined(_M_IX86)
 extern "C" int __cdecl _ftol(void);
+#endif
+
+// FUNCTION: LEGORR 0x00417430
+#if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) int float_to_long_x87(unsigned int index, const void* record)
 {
     __asm {
@@ -910,7 +913,6 @@ uint32_t find_first_set_bit32(uint32_t value)
 }
 
 /* FUN_0047e7e0: the corpus's second identical position-loop body. */
-// FUNCTION: LEGORR 0x0047e7e0
 #if defined(_MSC_VER)
 #define LEGORRR_CRT_STDCALL __stdcall
 #elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
@@ -918,6 +920,7 @@ uint32_t find_first_set_bit32(uint32_t value)
 #else
 #define LEGORRR_CRT_STDCALL
 #endif
+// FUNCTION: LEGORR 0x0047e7e0
 int LEGORRR_CRT_STDCALL bit_count32_by_position(uint32_t value)
 {
     int count = 0;
