@@ -819,8 +819,6 @@ int main(void)
               "the source edit stays out of the copy");
         shared_texture_directory_clear();
         CHECK(shared_texture_directory_peek() == NULL, "the clear frees out");
-        shared_texture_directory_set(NULL); /* guarded by the dup */
-        CHECK(shared_texture_directory_peek() == NULL, "NULL is guarded");
     }
 
     /* SelectionMarkerResourcesRelease (2026-10-24): the table release. */

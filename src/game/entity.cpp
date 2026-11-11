@@ -6735,8 +6735,8 @@ void entity_tool_name_strings_load(void* string_loader, void* config)
             if (cfg != NULL && config_root != NULL) {
                 const char* path = string_path_join(config_root, "ToolNames",
                                                     tool_name, (char*)NULL);
-                const char* value = block_get_strptr(cfg, path);
-                s_entity_tool_name_handles[slot] = string_duplicate(value);
+                char* value = block_get_str_copy(cfg, path);
+                s_entity_tool_name_handles[slot] = value;
             }
             else {
                 s_entity_tool_name_handles[slot] = NULL;

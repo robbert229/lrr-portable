@@ -2001,27 +2001,6 @@ static int s_variant_pool_alloc(void)
     return s_variant_pool_next;
 }
 
-/* In-place split on any byte in the separator string. The reference leaves
- * a trailing separator attached to the final token by not testing the last
- * character as a separator start. */
-// FUNCTION: LEGORR 0x00477440
-int sound_variant_split(char* s, char** out, const char* separators)
-{
-    if (s[0] == '\0') {
-        return 0;
-    }
-    out[0] = s;
-    int n = 1;
-    const size_t separator_len = strlen(separators);
-    for (char* p = s; p[1] != '\0'; ++p) {
-        if (strncmp(separators, p, separator_len) == 0) {
-            *p = '\0';
-            out[n++] = p + separator_len;
-        }
-    }
-    return n;
-}
-
 // FUNCTION: LEGORR 0x00464d00
 int sound_sample_marker_parse(const char* spec, int alias_index)
 {

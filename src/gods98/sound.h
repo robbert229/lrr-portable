@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
-/* gods98 sound layer: token split and sound-alias lookup.
+/* gods98 sound layer: sound-alias lookup. The token split it used to
+ * declare is in gods98/utils.h.
  *
  * C boundary header (ADR 0005): C declarations, with C linkage, of the
  * sound functions that units rebuilt as C call. The C++ code keeps
@@ -15,8 +16,6 @@
 extern "C" {
 #endif
 
-int sound_variant_split(char* text, char** out, const char* separators);
-                                                       /* FUN_00477440 */
 int sound_alias_lookup(const char* name, int* out_index); /* FUN_00464c70 */
 
 #ifdef __cplusplus

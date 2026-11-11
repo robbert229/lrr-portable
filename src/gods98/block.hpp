@@ -5,8 +5,8 @@
  * G98-006): block_open loads a file into a flat list of records and
  * block_find looks items up by `::`-separated paths. This header adds the
  * port-only conveniences built on those records, and two config-adjacent
- * helpers from other original units: ConfigBooleanParse (FUN_00477710) and
- * RegistryPathSplit (FUN_0048b330). */
+ * helpers from other original units: ConfigBooleanParse (FUN_00477710,
+ * gods98/utils.c) and RegistryPathSplit (FUN_0048b330). */
 #ifndef LEGORRR_BLOCK_HPP
 #define LEGORRR_BLOCK_HPP
 
@@ -37,8 +37,8 @@ int   block_get_str(BlockFile* bf, const char* path, char* buf, size_t sz);
 int   block_get_int(BlockFile* bf, const char* path, int dflt);
 float block_get_float(BlockFile* bf, const char* path, float dflt);
 
-/* ConfigBooleanParse (FUN_00477710): TRUE|YES|ON → 1, FALSE|NO|OFF → 0,
- * unparseable → 2. */
+/* ConfigBooleanParse (FUN_00477710, gods98/utils.c): TRUE|YES|ON → 1,
+ * FALSE|NO|OFF → 0, anything else → 2. `value` must not be NULL. */
 extern "C" int   block_get_bool(const char* value);
 
 /* RegistryPathSplit (FUN_0048b330, finding 402): the backslash-path

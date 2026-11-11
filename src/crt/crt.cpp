@@ -4813,6 +4813,9 @@ uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
 // __allshl
 
 #if defined(_MSC_VER)
+/* LIBC.LIB's _pctype is the original's table pointer. */
+// GLOBAL: LEGORR 0x004afd68
+// _pctype
 #define s_ctype_pointer _pctype
 #else
 // GLOBAL: LEGORR 0x004afd72
@@ -4835,7 +4838,6 @@ static uint16_t s_ctype_character_flags[256] = {
     0x0002u, 0x0002u, 0x0002u, 0x0010u, 0x0010u, 0x0010u, 0x0010u, 0x0020u
 };
 
-// GLOBAL: LEGORR 0x004afd68
 static uint16_t* volatile s_ctype_pointer = s_ctype_character_flags;
 #endif
 #if defined(_MSC_VER)
@@ -5082,9 +5084,11 @@ static uint8_t s_decimal_conversion_buffer[32];
 static CrtDecimalFormatContext s_decimal_format_context;
 #endif
 #if defined(_MSC_VER)
+/* LIBC.LIB's __mb_cur_max is the original's. */
+// GLOBAL: LEGORR 0x004aff74
+// __mb_cur_max
 #define s_max_multibyte_width __mb_cur_max
 #else
-// GLOBAL: LEGORR 0x004aff74
 static volatile uint32_t s_max_multibyte_width = 1u;
 #endif
 // GLOBAL: LEGORR 0x004aff78

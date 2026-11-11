@@ -1,29 +1,13 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 /* Block-text (Lego*) config: port-only conveniences over the original
- * Config.c records (config.c, finding 12), plus ConfigBooleanParse and
- * RegistryPathSplit from other original units. See block.hpp. */
+ * Config.c records (config.c, finding 12), plus RegistryPathSplit from
+ * another original unit. ConfigBooleanParse is in utils.c. See block.hpp. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "block.hpp"
 #include "string.hpp"
-
-/* ConfigBooleanParse compares these file-backed tokens directly. Their
- * contents and addresses are confirmed by the mapped DAT inventory and
- * decompile references. */
-// GLOBAL: LEGORR 0x004aabec
-static const char s_config_bool_yes[] = "YES";
-// GLOBAL: LEGORR 0x004aabe4
-static const char s_config_bool_true[] = "TRUE";
-// GLOBAL: LEGORR 0x004a4124
-static const char s_config_bool_on[] = "ON";
-// GLOBAL: LEGORR 0x004aabe0
-static const char s_config_bool_no[] = "NO";
-// GLOBAL: LEGORR 0x004aabd8
-static const char s_config_bool_false[] = "FALSE";
-// GLOBAL: LEGORR 0x004a4120
-static const char s_config_bool_off[] = "OFF";
 
 /* --- accessors ------------------------------------------------------------ */
 
@@ -114,25 +98,6 @@ float block_get_float(BlockFile* bf, const char* path, float dflt)
     char* end = NULL;
     float v = strtof(value, &end);
     return (end == value) ? dflt : v;
-}
-
-/* ConfigBooleanParse (FUN_00477710): YES/TRUE/ON → 1; NO/FALSE/OFF → 0;
- * otherwise 2. */
-// FUNCTION: LEGORR 0x00477710
-int block_get_bool(const char* value)
-{
-    if (value == NULL) return 2;
-    if (strcasecmp_lite(value, s_config_bool_yes) == 0
-        || strcasecmp_lite(value, s_config_bool_true) == 0
-        || strcasecmp_lite(value, s_config_bool_on) == 0) {
-        return 1;
-    }
-    if (strcasecmp_lite(value, s_config_bool_no) == 0
-        || strcasecmp_lite(value, s_config_bool_false) == 0
-        || strcasecmp_lite(value, s_config_bool_off) == 0) {
-        return 0;
-    }
-    return 2;
 }
 
 /* RegistryPathSplit (FUN_0048b330, finding 402): the corpus copies the

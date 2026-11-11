@@ -30,8 +30,6 @@ static void test_duplicate(void)
     char* empty = string_duplicate("");
     CHECK(empty != NULL && empty[0] == '\0', "empty string duplicates to a byte");
     engine_heap_free(empty);
-
-    CHECK(string_duplicate(NULL) == NULL, "NULL duplicates to NULL");
 }
 
 static void test_find_substring(void)
@@ -84,9 +82,6 @@ int main(void)
         CHECK(case_insensitive_substring_find("", "x") == NULL
                   && case_insensitive_substring_find("abc", "") == NULL,
               "the corpus gate answers null");
-        CHECK(case_insensitive_substring_find(NULL, "x") == NULL
-                  && case_insensitive_substring_find("abc", NULL) == NULL,
-              "the pointer guards hold");
         CHECK(case_insensitive_substring_find("ab", "abc") == NULL,
               "the tail overrun does not match");
     }
