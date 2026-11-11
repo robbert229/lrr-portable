@@ -121,17 +121,6 @@ void text_output_field82c_bit2_set_clear(void* record, int set_bit)
     }
 }
 
-/* The mapped ObjectField38Release body follows the target's unchecked record
- * access; the portable entry below retains the null-record guard. */
-// FUNCTION: LEGORR 0x00489d70
-void object_field_38_release_target(void* record)
-{
-    void* field = *(void**)((char*)record + 0x38);
-    if (field != NULL) {
-        engine_heap_free(field);
-    }
-}
-
 void object_field_38_release(void* record)
 {
     if (record != NULL) object_field_38_release_target(record);

@@ -52,7 +52,7 @@ TextureSurface* texture_decode(const uint8_t* data, uint32_t size);
  * layout. On the 32-bit target it is exactly 0x3c bytes; pointer members are
  * widened on portable 64-bit builds. `palette` is a zero-filled 256-entry
  * table of four-byte palette values with red/blue swapped, owned by caller.
- * The size argument bounds the DIB header, palette, and pixel pointer reads. */
+ * The size argument is retained for the original ABI. */
 typedef struct IndexedBitmapPaletteData {
     int32_t width;             /* +0x00 */
     int32_t height;            /* +0x04 */
@@ -70,7 +70,7 @@ typedef struct IndexedBitmapPaletteData {
 typedef char IndexedBitmapPaletteDataTargetSizeCheck[
     sizeof(void*) == 4u && sizeof(IndexedBitmapPaletteData) != 0x3cu
         ? -1 : 1];
-void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap,
+extern "C" void indexed_bitmap_palette_data_prepare(const uint8_t* bitmap,
                                          uint32_t bitmap_size,
                                          IndexedBitmapPaletteData* output);
 void indexed_bitmap_palette_data_release(IndexedBitmapPaletteData* data);

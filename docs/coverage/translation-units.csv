@@ -2216,8 +2216,8 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 004899f0,ObjectHierarchyRecursiveClone,72,G98-025,,gods98,low,boundary:G98-025,src/gods98/view.cpp
 00489b30,ObjectInterfaceArrayResourceCreate,72,G98-025,,gods98,low,boundary:G98-025,src/gods98/view.cpp
 00489bc0,ComChildItemsVisit,72,G98-025,,gods98,low,boundary:G98-025,src/gods98/view.cpp
-00489c30,IndexedBitmapPaletteDataPrepare,73,G98-026,,gods98,low,boundary:G98-026,src/gods98/texture.cpp
-00489d70,ObjectField38Release,73,G98-026,,gods98,low,boundary:G98-026,src/gods98/heap.cpp
+00489c30,IndexedBitmapPaletteDataPrepare,73,G98-026,,gods98,low,boundary:G98-026,src/gods98/g98_026.c
+00489d70,ObjectField38Release,73,G98-026,,gods98,low,boundary:G98-026,src/gods98/g98_026.c
 00489d90,DirectXErrorMessageFormat,74,G98-027,,gods98,high,bss;data;string,src/gods98/dxerror.c
 00489dd0,DirectXResultDiagnosticDispatch,74,G98-027,,gods98,high,bss;string,src/gods98/dxerror.c
 0048b260,StartupStreamStateReset,75,G98-028,,gods98,low,boundary:G98-028,src/game/startup_config.cpp

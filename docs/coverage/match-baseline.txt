@@ -1,4 +1,4 @@
-# input_sha256: 5b2180bd8255666548d7a487d5de693ef6b1c94a2f480fc59ccbf5f9879a176f
+# input_sha256: 76ba9755ee0f7da350a74faeddefd68254890c72bf7d2726ce214bc26c822cb8
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1998,7 +1998,7 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 25.00 text_buffer_append_vformat
 0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.96 text_buffer_draw_wrapped
+0x00485390 5.99 text_buffer_draw_wrapped
 0x00485710 22.48 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
@@ -2067,7 +2067,7 @@
 0x004899f0 19.37 object_hierarchy_recursive_clone
 0x00489b30 16.46 object_interface_array_resource_create
 0x00489bc0 16.98 com_child_items_visit
-0x00489c30 32.40 indexed_bitmap_palette_data_prepare
+0x00489c30 70.54 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
@@ -4128,7 +4128,7 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 25.00 text_buffer_append_vformat
 0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.96 text_buffer_draw_wrapped
+0x00485390 5.99 text_buffer_draw_wrapped
 0x00485710 22.48 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
@@ -4197,7 +4197,7 @@
 0x004899f0 19.37 object_hierarchy_recursive_clone
 0x00489b30 16.46 object_interface_array_resource_create
 0x00489bc0 16.98 com_child_items_visit
-0x00489c30 32.40 indexed_bitmap_palette_data_prepare
+0x00489c30 70.54 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
