@@ -8,6 +8,7 @@ if get_option('platform') == 'winapi'
 endif
 
 gods98_sources = [
+  'input_unit.cpp',
   'bitmap_font.cpp',
   'ptrstack.cpp',
   'message.cpp',
