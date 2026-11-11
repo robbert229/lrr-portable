@@ -306,5 +306,3 @@ if(BUILD_TESTING AND PLATFORM STREQUAL "native")
   endforeach()
   set_tests_properties(audio PROPERTIES ENVIRONMENT "SDL_AUDIODRIVER=dummy")
 endif()
-
-# Temporary freshness demonstration.
