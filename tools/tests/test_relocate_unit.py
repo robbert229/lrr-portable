@@ -214,8 +214,11 @@ class ScannerTest(unittest.TestCase):
         self.assertTrue(f.group)
         self.assertEqual(f.cond, 0)
         self.assertEqual(f.annotations, [("FUNCTION", 0x401000)])
+        # A single conditional datum is a one-item group: it merges whole (#501).
         only = next(i for i in items if i.names == ["only_x"])
-        self.assertEqual(only.cond, 1)
+        self.assertTrue(only.cgroup)
+        self.assertEqual(only.cond, 0)
+        self.assertEqual(only.condition, "#if defined(X)\n")
 
     def test_directive_inside_declaration_is_a_problem(self):
         text = "int x =\n#if A\n1\n#else\n2\n#endif\n;\n"
@@ -413,7 +416,11 @@ class RefusalTest(unittest.TestCase):
         self.refuse(mixed, "--split-declarations")
 
     def test_macro_redefined(self):
-        self.refuse(MIXED + "#undef ALPHA_SCALE\n", "#undef'd or redefined")
+        # An #undef before a later use, or a second definition, refuses; an
+        # #undef after the last use does not (ConditionalGroupTest).
+        early = MIXED.replace("static int s_shared_counter;", "#undef ALPHA_SCALE\nstatic int s_shared_counter;")
+        self.refuse(early, "#undef'd or redefined")
+        self.refuse(MIXED + "#define ALPHA_SCALE 4\n", "defined more than once")
 
     def test_name_clash_between_files(self):
         other = OTHER + "int s_shared_counter;\n"
@@ -1178,3 +1185,199 @@ class LinkOrderRetireTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+ALTERNATIVES = """#if defined(_MSC_VER)
+#define ALPHA_SCALE 3
+#elif defined(__GNUC__)
+#define ALPHA_SCALE (2 + 1)
+#else
+#define ALPHA_SCALE 3
+#endif
+"""
+
+
+class ConditionalGroupTest(unittest.TestCase):
+    """#501 (T1, T2): whole conditional groups, guarded declarations, statics
+    a header item needs."""
+
+    def plan(self, mixed: str, unit: str = "GAME-001", extra: dict | None = None):
+        fx = Fixture(mixed, extra)
+        self.addCleanup(fx.close)
+        return fx, ru.plan_relocation(unit, fx.root)
+
+    def refused(self, mixed: str) -> list[str]:
+        fx = Fixture(mixed)
+        self.addCleanup(fx.close)
+        with self.assertRaises(ru.Refused) as cm:
+            ru.plan_relocation("GAME-001", fx.root)
+        return cm.exception.reasons
+
+    # -- the scanner
+
+    def test_macro_alternatives_merge_into_one_group(self):
+        items = cx.scan(ALTERNATIVES + "int use = ALPHA_SCALE;\n").items
+        group = items[0]
+        self.assertTrue(group.cgroup)
+        self.assertEqual((group.category, group.names, group.branches), ("macro", ["ALPHA_SCALE"], 3))
+        self.assertEqual([p.branch for p in group.parts], [0, 1, 2])
+        self.assertEqual(group.condition, "#if defined(_MSC_VER)\n")
+        self.assertEqual(group.code(ALTERNATIVES), ALTERNATIVES)
+        self.assertIn("_MSC_VER", group.uses)
+
+    def test_groups_that_do_not_merge_say_why(self):
+        unrelated = "#if A\nint a;\nint b;\n#endif\n"
+        with_function = "#if A\nint a;\nint f(void) { return a; }\n#endif\n"
+        guard = "#ifndef H\n#define H\nint a;\n#endif\n"
+        nested = "#if A\n#if B\nint a;\n#endif\n#endif\n"
+        for text, why in ((unrelated, "2 unrelated clusters"), (with_function, "function definition f"),
+                          (guard, "include guard"), (nested, "nested #if")):
+            items = cx.scan(text).items
+            self.assertFalse(any(i.cgroup for i in items), text)
+            self.assertTrue(any(why in i.group_why for i in items), (text, [i.group_why for i in items]))
+
+    def test_two_macros_per_branch_merge(self):
+        # P2 with two macros (GAME-043's ENTITY_STATS_*_READ): header-safe items
+        # of one group belong together even when they do not use each other.
+        text = ("#if defined(V)\n#define READ_F(r) f_v(r)\n#define READ_W(r) w_v(r)\n#else\n"
+                "#define READ_F(r) f_c(r)\n#define READ_W(r) w_c(r)\n#endif\n")
+        (group,) = cx.scan(text).items
+        self.assertTrue(group.cgroup)
+        self.assertEqual(group.names, ["READ_F", "READ_W"])
+        # Data unrelated to the macros does not merge.
+        items = cx.scan("#if defined(V)\n#define READ_F 1\nint unrelated;\n#endif\n").items
+        self.assertFalse(any(i.cgroup for i in items))
+
+    def test_includes_come_with_their_group(self):
+        text = ("#if defined(W)\n#include <direct.h>\n#define MKDIR(p) _mkdir(p)\n#else\n"
+                "#include <sys/stat.h>\n#define MKDIR(p) mkdir(p, 0777)\n#endif\n")
+        (group,) = cx.scan(text).items
+        self.assertTrue(group.cgroup)
+        self.assertEqual([p.category for p in group.parts], ["include", "macro", "include", "macro"])
+
+    # -- (1) whole groups move verbatim
+
+    def test_group_used_only_by_moved_code_moves_whole_to_the_unit(self):
+        fx, plan = self.plan(MIXED.replace("#define ALPHA_SCALE 3\n", ALTERNATIVES))
+        self.assertIn(ALTERNATIVES, plan.files["src/game/alpha.cpp"])
+        self.assertNotIn("ALPHA_SCALE", plan.files["src/game/mixed.cpp"])
+        # The hash check covers the group's whole text.
+        rows = list(csv.DictReader(io.StringIO(plan.files["docs/coverage/relocations/GAME-001.csv"])))
+        row = next(r for r in rows if r["name"] == "ALPHA_SCALE")
+        self.assertEqual(row["before_sha256"], ru.sha(ALTERNATIVES))
+        self.assertEqual(row["after_sha256"], row["before_sha256"])
+
+    def test_group_both_sides_use_goes_whole_to_the_for_header(self):
+        mixed = MIXED.replace("#define ALPHA_SCALE 3\n", ALTERNATIVES) \
+            .replace("    return s_beta_state;", "    return s_beta_state * ALPHA_SCALE;")
+        fx, plan = self.plan(mixed)
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
+        self.assertIn(ALTERNATIVES, header)
+        legacy = plan.files["src/game/mixed.cpp"]
+        self.assertLess(legacy.index('#include "mixed_for_alpha.hpp"'), legacy.index("ALPHA_SCALE"))
+
+    def test_group_with_includes_moves_whole(self):
+        group = ("#if defined(W)\n#include <direct.h>\n#define ALPHA_SCALE 3\n#else\n"
+                 "#include <sys/stat.h>\n#define ALPHA_SCALE 3\n#endif\n")
+        fx, plan = self.plan(MIXED.replace("#define ALPHA_SCALE 3\n", group))
+        self.assertIn(group, plan.files["src/game/alpha.cpp"])
+        self.assertNotIn("direct.h", plan.files["src/game/mixed.cpp"])
+
+    # -- (2) the redefined-macro check
+
+    def test_undef_after_the_last_use_is_accepted_and_reported(self):
+        mixed = MIXED.replace("#define ALPHA_SCALE 3\n", ALTERNATIVES) + "#undef ALPHA_SCALE\n"
+        fx, plan = self.plan(mixed)
+        self.assertTrue(plan.files["src/game/mixed.cpp"].rstrip().endswith("#undef ALPHA_SCALE"))
+        self.assertEqual(sum("#undef ALPHA_SCALE after its last use stays in place" in n for n in plan.notes), 1,
+                         plan.notes)
+
+    def test_two_definitions_in_one_branch_refuse(self):
+        twice = ALTERNATIVES.replace("#define ALPHA_SCALE (2 + 1)\n",
+                                     "#define ALPHA_SCALE (2 + 1)\n#define ALPHA_SCALE 4\n")
+        reasons = self.refused(MIXED.replace("#define ALPHA_SCALE 3\n", twice))
+        self.assertTrue(any("defined twice in one branch" in r for r in reasons), reasons)
+
+    # -- (3) guarded private-header declarations
+
+    def guarded(self, group: str) -> str:
+        return MIXED.replace("static int s_shared_counter;", group + "static int s_shared_counter;") \
+            .replace("    s_shared_counter += p.a;\n",
+                     "    s_shared_counter += p.a;\n#if defined(FEATURE)\n    s_cond++;\n#endif\n") \
+            .replace("    return s_beta_state;", "#if defined(FEATURE)\n    s_cond--;\n#endif\n    return s_beta_state;")
+
+    def test_shared_static_in_a_single_branch_group_gets_a_guarded_declaration(self):
+        group = "#if defined(FEATURE) /* port only */\nstatic int s_cond;\n#endif /* FEATURE */\n"
+        fx, plan = self.plan(self.guarded(group))
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
+        self.assertIn("#if defined(FEATURE) /* port only */\nextern int s_cond;\n#endif /* FEATURE */\n", header)
+        legacy = plan.files["src/game/mixed.cpp"]
+        self.assertIn("#if defined(FEATURE) /* port only */\nint s_cond;\n#endif /* FEATURE */\n", legacy)
+        rows = list(csv.DictReader(io.StringIO(plan.files["docs/coverage/relocations/GAME-001.csv"])))
+        guarded = [r for r in rows if r["role"] == "guarded-declaration"]
+        self.assertEqual([r["name"] for r in guarded], ["s_cond"])
+        self.assertEqual(guarded[0]["to"], "src/game/mixed_for_alpha.hpp")
+        self.assertIn("#if defined(FEATURE) /* port only */", guarded[0]["edit"])
+        self.assertTrue(any(r["role"] == "stays-var" and "static removed" in r["edit"] for r in rows), rows)
+
+    def test_first_branch_static_gets_a_guarded_declaration(self):
+        group = "#if defined(FEATURE)\nstatic int s_cond;\n#else\n#define S_COND_ABSENT 1\n#endif\n"
+        group = group.replace("#define S_COND_ABSENT 1", "#define s_cond_absent s_cond")
+        fx, plan = self.plan(self.guarded(group))
+        self.assertIn("#if defined(FEATURE)\nextern int s_cond;\n#endif\n",
+                      plan.files["src/game/mixed_for_alpha.hpp"])
+
+    def test_static_outside_the_first_branch_refuses(self):
+        group = "#if defined(OTHER)\n#define s_cond_alias 1\n#else\nstatic int s_cond;\n#endif\n"
+        group = group.replace("#define s_cond_alias 1", "#define s_cond_alias s_cond")
+        reasons = self.refused(self.guarded(group))
+        self.assertTrue(any("branch 2 of the #if group" in r and "synthesised" in r for r in reasons), reasons)
+
+    # -- (4) anything else refuses, naming the group
+
+    def test_unmergeable_group_is_named(self):
+        group = ("#if defined(FEATURE)\nstatic int s_cond;\nstatic int cond_helper(void) { return s_cond; }\n"
+                 "#endif\n")
+        reasons = self.refused(self.guarded(group))
+        line = self.guarded(group).splitlines().index("#if defined(FEATURE)") + 1
+        self.assertTrue(any(f"the group at line {line} cannot move whole" in r and "cond_helper" in r
+                            for r in reasons), reasons)
+
+    # -- T2: a static that a private-header item needs is exported
+
+    def test_static_a_header_macro_needs_is_exported(self):
+        mixed = MIXED.replace("#define ALPHA_SCALE 3\n", "static int s_scale_base = 3;\n#define ALPHA_SCALE (s_scale_base + 1)\n") \
+            .replace("    return s_beta_state;", "    return s_beta_state * ALPHA_SCALE;")
+        fx, plan = self.plan(mixed)
+        header = plan.files["src/game/mixed_for_alpha.hpp"]
+        self.assertIn("#define ALPHA_SCALE (s_scale_base + 1)", header)
+        self.assertIn("extern int s_scale_base;", header)
+        self.assertIn("\nint s_scale_base = 3;", plan.files["src/game/mixed.cpp"])
+        rows = list(csv.DictReader(io.StringIO(plan.files["docs/coverage/relocations/GAME-001.csv"])))
+        self.assertTrue(any(r["name"] == "s_scale_base" and "static removed" in r["edit"] for r in rows), rows)
+
+    def test_inline_static_a_header_needs_still_refuses(self):
+        mixed = MIXED.replace("#define ALPHA_SCALE 3\n",
+                              "static inline int scale_base(void) { return 3; }\n#define ALPHA_SCALE (scale_base() + 1)\n") \
+            .replace("    return s_beta_state;", "    return s_beta_state * ALPHA_SCALE;")
+        reasons = self.refused(mixed)
+        self.assertTrue(any("a static that is not shared" in r for r in reasons), reasons)
+
+    def test_pinned_external_used_by_moved_code_is_declared(self):
+        # beta_one carries GAME-002's annotation (pinned) and stays; alpha_second
+        # moves and calls it; no header declares it: the for header must.
+        mixed = MIXED.replace("    AlphaPair p = { 1, 2 };\n", "    AlphaPair p = { 1, 2 };\n    p.b += beta_one();\n")
+        header = HEADER.replace("int beta_one(void);\n", "")
+        fx, plan = self.plan(mixed, extra={"src/game/mixed.hpp": header})
+        self.assertIn("int beta_one(void);", plan.files["src/game/mixed_for_alpha.hpp"])
+
+    def test_shared_group_mixing_data_and_macros_refuses(self):
+        # The moved code uses the group's macro, but only the datum's
+        # declaration reaches the unit: refuse.
+        group = "#if defined(FEATURE)\nstatic int s_cond;\n#define COND_NEXT (s_cond + 1)\n#endif\n"
+        mixed = self.guarded(group).replace("    s_cond++;\n", "    s_cond = COND_NEXT;\n")
+        reasons = self.refused(mixed)
+        self.assertTrue(any("split across the files" in r and "COND_NEXT" in r for r in reasons), reasons)
+        # Using only the datum is fine.
+        fx, plan = self.plan(self.guarded(group))
+        self.assertIn("extern int s_cond;", plan.files["src/game/mixed_for_alpha.hpp"])

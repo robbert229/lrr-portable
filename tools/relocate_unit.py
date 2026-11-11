@@ -32,8 +32,13 @@ a SHA-256 of every moved item before and after, which must agree after
 whitespace normalisation (only a documented ``static`` removal may change a
 head, never a body). A second run finds the unit relocated and does nothing.
 
+A top-level ``#if`` group whose items form one cluster moves whole and
+verbatim (#501); a static it shares gets a declaration wrapped in the group's
+condition. A static that a private-header item needs is exported (T2).
+
 Constructs it refuses rather than guesses at: definitions inside ``#if`` blocks
-(except a group of alternative definitions of one function), directives that
+(except a group of alternative definitions of one function, or a whole
+group as above), directives that
 split a declaration, functions defined in headers, qualified or macro-built
 definitions, named namespaces, shared ``inline`` functions, shared statics that
 need a declaration it cannot write, and name clashes between moved files.
@@ -121,7 +126,7 @@ class Headers:
         if rel not in self.names:
             scan = cx.scan((self.root / rel).read_text(encoding="utf-8", errors="replace"))
             names = set()
-            for it in scan.items:
+            for it in (p for x in scan.items for p in (x.parts or [x])):
                 if it.category not in ("function", "proto", "var"):
                     continue
                 scope = _container_namespace(it.container) or it.qualifier or ""
@@ -212,6 +217,15 @@ class Decl:
     direction: str = "for"   # for: the legacy file's item, which the unit uses;
                              # from: the unit's (moved) item, which the legacy file uses
     const_object: bool = False   # a const object: needs a prior extern for external linkage
+    guard: str = ""          # a conditional item's #if directive, verbatim (#501)
+    endif: str = ""          # the line that closes the guard
+    origin: str = ""         # file:line of the definition (for the records)
+
+    def rendered(self) -> str:
+        """The declaration, wrapped in its group's condition if it has one."""
+        if not self.guard:
+            return self.text + "\n"
+        return f"{self.guard}\n{self.text}\n{self.endif}\n"
 
 
 # --------------------------------------------------------------------------
@@ -256,6 +270,7 @@ class Source:
     strip_static: list[cx.Item] = field(default_factory=list)   # staying items that get external linkage
     anon_exits: list[cx.Item] = field(default_factory=list)     # staying items that leave their anonymous namespace
     declarations: list[Decl] = field(default_factory=list)
+    guarded_groups: list = field(default_factory=list)   # (#if group, direction) split across the files
 
     unit_stem: str = ""
 
@@ -644,6 +659,9 @@ def _kind(items: list[cx.Item], members: list[int]) -> str:
 
 
 def _is_extern_decl(item: cx.Item) -> bool:
+    if item.cgroup:
+        vars_ = [p for p in item.parts if p.category == "var"]
+        return bool(vars_) and all(_is_extern_decl(p) for p in vars_)
     code = getattr(item, "text_code", "")
     return item.category == "var" and bool(re.match(r"\s*extern\b", code)) and "=" not in code
 
@@ -652,8 +670,9 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
                  headers: Headers, reasons: list[str]) -> None:
     items = s.scan.items
     for it in items:
-        it.text_code = s.text[it.start:it.end]
-        it.source_text = s.text
+        for x in [it] + it.parts:
+            x.text_code = s.text[x.start:x.end]
+            x.source_text = s.text
     where = {}
     for k, it in enumerate(items):
         for _, addr in it.annotations:
@@ -754,7 +773,10 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
             exported.add(c)
         elif kinds[c] == "external" and not (_bases(cl.names[c]) & visible_here):
             s.declarations.extend(_declarations(s, items, cl, c, "moved; remaining code uses it", reasons, "from"))
-    for c in sorted(reach - candidates, key=first):
+    # An external item pinned to another unit stays too, and needs the same
+    # declaration when no header declares it (#501: G98-025's ledger stub).
+    pinned_external = {c for c in candidates & pinned if kinds[c] == "external"}
+    for c in sorted((reach - candidates) | pinned_external, key=first):
         if kinds[c] == "external" and not (_bases(cl.names[c]) & visible_here):
             s.declarations.extend(_declarations(s, items, cl, c, "stays; moved code uses it", reasons, "for"))
     anon_exit = set()
@@ -780,7 +802,8 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
         need |= cl.uses[c]
     while True:
         add = set()
-        for n in need:
+        need_extra: set[str] = set()
+        for n in list(need):
             d = cl.definer.get(n)
             if d is None or d in to_header:
                 continue
@@ -788,13 +811,43 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
                 add.add(d)
             elif d in moving or d in exported or kinds[d] in ("internal", "external"):
                 if kinds[d] == "internal" and d not in exported:
-                    reasons.append(f"{s.rel}: the private header needs {n}, a static that is not shared")
-        if not add:
+                    # T2 (#501): export it, as the static rule does for a
+                    # static that moved and remaining code share.
+                    members = [items[k] for k in cl.members[d]]
+                    if any(_anonymous(x.container) for x in members) or any(x.inline for x in members):
+                        reasons.append(f"{s.rel}: the private header needs {n}, a static that is not shared "
+                                       "(inline or in an anonymous namespace: not exported)")
+                        continue
+                    exported.add(d)
+                    new = _declarations(s, items, cl, d, "static used by a private-header item", reasons,
+                                        "from" if d in moving else "for")
+                    s.declarations.extend(new)
+                    for x in new:
+                        for u in cx._uses(cx.mask(x.text)):
+                            add_need = cl.resolve_all(u, x.ns) - need
+                            need_extra.update(add_need)
+        need |= need_extra
+        if not add and not need_extra:
             break
         to_header |= add
         moving -= add
         for d in add:
             need |= cl.uses[d]
+
+    # A group split across the files gives the other file a declaration of
+    # its data only: that file must not use the group's macros or types.
+    for group, direction in s.guarded_groups:
+        local = {n for p in group.parts if p.category in ("macro", "type") for n in p.names}
+        k_group = items.index(group)
+        group_moves = cl.of[k_group] in moving
+        other = [it for k, it in enumerate(items) if k != k_group and (cl.of[k] in moving) != group_moves
+                 and cl.of[k] not in to_header]
+        used = sorted({u for it in other for u in it.uses} & local)
+        if used:
+            reasons.append(f"{s.rel}:{group.line}: the #if group at line {group.line} is split across the files "
+                           f"(its data is declared in the private header) but "
+                           f"{'the unit' if not group_moves else 'the remaining code'} also uses its "
+                           f"{', '.join(used)}; hoist the data into its own group first")
 
     # Problems of every item that changes place or linkage.
     involved = set(moving) | to_header | exported
@@ -803,15 +856,25 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
             it = items[k]
             where_ = f"{s.rel}:{it.line} ({', '.join(it.names) or it.category})"
             if it.cond:
-                reasons.append(f"{where_}: inside an #if block")
+                if it.in_group:
+                    reasons.append(f"{where_}: inside an #if block: the group at line {it.in_group} "
+                                   f"cannot move whole ({it.group_why})")
+                else:
+                    reasons.append(f"{where_}: inside an #if block")
             if it.qualifier and not it.scope:
                 reasons.append(f"{where_}: out-of-line member of {it.qualifier} (a class, not a namespace)")
             for p in it.problems:
                 reasons.append(f"{where_}: {p}")
             if c in to_header and any(kind == "GLOBAL" or kind in FUNCTION_KINDS for kind, _ in it.annotations):
                 reasons.append(f"{where_}: an annotated item would move into the private header")
-            if it.category == "macro" and _redefined(items, it.names):
-                reasons.append(f"{where_}: macro {it.names[0]} is #undef'd or redefined in the file")
+            if it.category == "macro" or it.cgroup:
+                for name in [n for p in (it.parts or [it]) if p.category == "macro" for n in p.names[:1]]:
+                    verdict = _redefined(s, items, name)
+                    if verdict and verdict.startswith("note:"):
+                        if verdict[len("note: "):] not in plan.notes:
+                            plan.notes.append(verdict[len("note: "):])
+                    elif verdict:
+                        reasons.append(f"{where_}: macro {name} is #undef'd or redefined in the file ({verdict})")
     if reasons:
         return
 
@@ -1080,14 +1143,44 @@ def plan_of_source(plan: Plan, rel: str) -> Source:
     return next(s for s in plan.sources if s.rel == rel)
 
 
-def _redefined(items: list[cx.Item], names: list[str]) -> bool:
-    n = 0
+def _redefined(s: Source, items: list[cx.Item], name: str) -> str:
+    """Why macro ``name`` cannot move: "" when it is defined once, or once per
+    branch of one #if group (alternatives, #501). An ``#undef`` after the
+    macro's last use stays where it is and is reported ("note: ..."); any
+    other ``#undef`` or a second definition refuses."""
+    definitions, undefs = 0, []
     for it in items:
-        if it.category == "macro" and it.names == names:
-            n += 1
-        if it.category == "undef" and set(names) & it.uses:
-            return True
-    return n > 1
+        if it.cgroup:
+            per_branch: dict[int, int] = {}
+            for p in it.parts:
+                if p.category == "macro" and p.names == [name]:
+                    per_branch[p.branch] = per_branch.get(p.branch, 0) + 1
+            if per_branch:
+                if max(per_branch.values()) > 1:
+                    return "defined twice in one branch of its #if group"
+                definitions += 1
+            undefs += [p for p in it.parts if p.category == "undef" and name in p.uses]
+        elif it.category == "macro" and it.names == [name]:
+            definitions += 1
+        elif it.category == "undef" and name in it.uses:
+            undefs.append(it)
+    if definitions > 1:
+        return "defined more than once"
+    if not undefs:
+        return ""
+    masked = s.scan.masked
+    spans = [(u.start, u.end) for u in undefs]
+    uses = [m.start() for m in re.finditer(r"\b%s\b" % re.escape(name), masked)
+            if not any(a <= m.start() < b for a, b in spans)
+            and not re.match(r"[ \t]*#[ \t]*define[ \t]+%s\b" % re.escape(name),
+                             masked[masked.rfind("\n", 0, m.start()) + 1:])]
+    last = max(uses, default=-1)
+    early = [u for u in undefs if u.start < last]
+    if early:
+        return f"#undef at line {cx._line_of(s.text, early[0].start)} comes before a later use"
+    lines = ", ".join(str(cx._line_of(s.text, u.start)) for u in undefs)
+    return (f"note: {s.rel}:{lines}: #undef {name} after its last use stays in place "
+            "(#501; harmless once the macro moves)")
 
 
 def _head_decl(s: Source, it: cx.Item) -> str:
@@ -1114,12 +1207,54 @@ def _const_object(head: str, name: str) -> bool:
 def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int, why: str,
                   reasons: list[str], direction: str = "for") -> list[Decl]:
     """External declarations for the private header, from a cluster's definition."""
+    group = next((items[k] for k in cl.members[c] if items[k].cgroup), None)
+    if group is not None:
+        return _group_declarations(s, group, why, reasons, direction)
     defs = [items[k] for k in cl.members[c] if items[k].category in ("function", "var")
             and not _is_extern_decl(items[k])]
     protos = [items[k] for k in cl.members[c] if items[k].category == "proto"]
     it = (defs or protos or [None])[0]
     if it is None:
         return []
+    return _declaration(s, it, it.qnames[0], it.scope, why, reasons, direction)
+
+
+def _group_declarations(s: Source, group: cx.Item, why: str, reasons: list[str],
+                        direction: str) -> list[Decl]:
+    """Guarded declarations for a conditional group's definitions (#501).
+
+    Each is wrapped in the group's own #if directive, copied verbatim. Only
+    definitions in a single-branch group or in the first branch qualify; an
+    #elif or #else branch's condition would have to be synthesised.
+    """
+    where = f"{s.rel}:{group.line}"
+    defs = [p for p in group.parts if (p.category in ("function", "var") and not _is_extern_decl(p))]
+    if not defs:
+        defs = [p for p in group.parts if p.category == "proto"]
+    late = [p for p in defs if p.branch > 0]
+    if late:
+        reasons.append(f"{where}: {', '.join(late[0].names)} is defined in branch {late[0].branch + 1} of the "
+                       f"#if group at line {group.line}; a guarded declaration needs the first branch "
+                       "(an #elif/#else condition would have to be synthesised)")
+        return []
+    guard = group.condition.rstrip("\n")
+    endif = group.endif.rstrip("\n") if group.branches == 1 else "#endif"
+    s.guarded_groups.append((group, direction))
+    out = []
+    for p in defs:
+        if p.multi or p.defines_type:
+            reasons.append(f"{s.rel}:{p.line}: {', '.join(p.names)}: several declarators inside the #if group "
+                           f"at line {group.line}; split them first")
+            continue
+        for d in _declaration(s, p, _qualify(group.scope, p.names[0]), group.scope, why, reasons, direction):
+            out.append(Decl(d.name, d.text, d.why, d.ns, d.direction, d.const_object, guard, endif,
+                            f"{s.rel}:{p.line}"))
+    return out
+
+
+def _declaration(s: Source, it: cx.Item, name: str, scope: str, why: str, reasons: list[str],
+                 direction: str) -> list[Decl]:
+    """The external declaration of one definition or prototype."""
     where = f"{s.rel}:{it.line}"
     if it.multi or it.defines_type:
         what = ("a type and a variable defined in one declaration" if it.defines_type
@@ -1128,19 +1263,18 @@ def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int, why: s
         return []
     head = re.sub(r"\bstatic\s+", "", _head_decl(s, it), count=1)
     prefix = 'extern "C" ' if it.container == "extern-c" else ""
-    name = it.qnames[0]
     if it.category in ("function", "proto"):
         params = head[head.find("("):]
         if re.search(r"=", params):
             reasons.append(f"{where}: {it.names[0]} has default arguments; a declaration cannot repeat them")
             return []
-        return [Decl(name, f"{prefix}{head};", why, it.scope, direction)]
+        return [Decl(name, f"{prefix}{head};", why, scope, direction)]
     decl = cx._split_top(head, "=")[0].strip()
     if not decl.startswith("extern"):
         decl = "extern " + decl
     if prefix:
         decl = prefix + decl[len("extern "):]
-    return [Decl(name, decl + ";", why, it.scope, direction, _const_object(head, it.names[0]))]
+    return [Decl(name, decl + ";", why, scope, direction, _const_object(head, it.names[0]))]
 
 
 def _check_clashes(plan: Plan, root: Path, reasons: list[str]) -> None:
@@ -1200,6 +1334,21 @@ def _strip_static(code: str) -> str:
     return "".join(out)
 
 
+def _strip_static_item(text: str, it: cx.Item) -> str:
+    """``it``'s code with ``static`` removed; in a conditional group (#501),
+    only from its declarations and definitions, never from a macro body."""
+    if not it.cgroup:
+        return _strip_static(it.code(text))
+    out, last = [], it.start
+    for p in it.parts:
+        if p.static and p.category in ("var", "function", "proto"):
+            out.append(text[last:p.start])
+            out.append(_strip_static(p.code(text)))
+            last = p.end
+    out.append(text[last:it.end])
+    return "".join(out)
+
+
 def _wrap(text: str, wrap: str | None) -> str:
     """``text`` inside the block a wrap names (extern-c, anon, ns:X)."""
     body = text.rstrip("\n")
@@ -1219,9 +1368,7 @@ def _wrap(text: str, wrap: str | None) -> str:
 def _move_text(s: Source, m: Move) -> str:
     """A moved item with its leading comments, unwrapped."""
     lead = s.text[m.item.lead:m.item.start]
-    code = m.item.code(s.text)
-    if m.static_removed:
-        code = _strip_static(code)
+    code = _strip_static_item(s.text, m.item) if m.static_removed else m.item.code(s.text)
     text = lead + code
     return text if text.endswith("\n") else text + "\n"
 
@@ -1428,7 +1575,7 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
         text = s.text
         edits = []
         for it in s.strip_static:
-            edits.append((it.start, it.end, _strip_static(it.code(text))))
+            edits.append((it.start, it.end, _strip_static_item(text, it)))
         for first, last in _runs(s.anon_exits, text):
             # Close the anonymous namespace before the shared items and
             # reopen it after them, so their order in the file is kept.
@@ -1675,7 +1822,7 @@ def _render_private(root: Path, s: Source, kind: str, reasons: list[str]) -> str
             wrap = _outer_wrap(it.container) if _anonymous(it.container) else it.container
             chunks.append((wrap if _container_namespace(wrap) else None, text))
     parts = _blocks(chunks)
-    decls = [(f"ns:{d.ns}" if d.ns else None, d.text + "\n")
+    decls = [(f"ns:{d.ns}" if d.ns else None, d.rendered())
              for d in (s.for_decls if kind == "for" else s.from_decls)]
     decl_text = "".join(_blocks(decls, sep=""))
     body = "\n".join(p.rstrip("\n") + "\n" for p in parts)
@@ -1773,7 +1920,7 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
     for m in plan.order:
         s = next(x for x in plan.sources if m in x.moves)
         before = m.item.code(s.text)
-        expected = _strip_static(before) if m.static_removed else before
+        expected = _strip_static_item(s.text, m.item) if m.static_removed else before
         if m.address is not None:
             after_item = by_addr.get(m.address)
         else:
@@ -1819,7 +1966,7 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
             records.append({"role": f"stays-{it.category}", "address": "", "name": ",".join(it.names),
                             "from": f"{s.rel}:{it.line}", "to": s.rel,
                             "before_sha256": sha(it.code(s.text)),
-                            "after_sha256": sha(_strip_static(it.code(s.text)) if it in s.strip_static else it.code(s.text)),
+                            "after_sha256": sha(_strip_static_item(s.text, it) if it in s.strip_static else it.code(s.text)),
                             "edit": "left the anonymous namespace (shared with the unit file)"})
             if it.code(s.text) and cx.normalise(it.code(s.text)) not in cx.normalise(new_text) \
                     and it not in s.strip_static:
@@ -1830,10 +1977,22 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
                                 "from": f"{s.rel}:{it.line}", "to": s.for_header,
                                 "before_sha256": sha(it.code(s.text)), "after_sha256": sha(it.code(s.text)),
                                 "edit": "left the anonymous namespace (moved to the private header)"})
+        for d in s.declarations:
+            if not d.guard:
+                continue
+            path = s.for_header if d.direction == "for" else s.from_header
+            ok = cx.normalise(d.rendered()) in cx.normalise(plan.files.get(path, ""))
+            if not ok:
+                reasons.append(f"{d.origin}: the guarded declaration of {d.name} is missing from {path}")
+            records.append({"role": "guarded-declaration", "address": "", "name": d.name,
+                            "from": d.origin, "to": path,
+                            "before_sha256": sha(d.guard), "after_sha256": sha(d.rendered()),
+                            "edit": "declaration wrapped in its #if group's condition, verbatim: "
+                                    + d.guard.splitlines()[0].strip()})
         for it in s.strip_static:
             records.append({"role": f"stays-{it.category}", "address": "", "name": ",".join(it.names),
                             "from": f"{s.rel}:{it.line}", "to": s.rel,
-                            "before_sha256": sha(it.code(s.text)), "after_sha256": sha(_strip_static(it.code(s.text))),
+                            "before_sha256": sha(it.code(s.text)), "after_sha256": sha(_strip_static_item(s.text, it)),
                             "edit": "static removed (shared with the unit file)"})
         # Each private header must come before any code that uses its names.
         for path, names in ((s.for_header, {d.name.rsplit("::", 1)[-1] for d in s.for_decls}
@@ -2198,6 +2357,8 @@ def classify_reason(reason: str) -> str:
     table = (
         ("--split-declarations", "needs --split-declarations (source change)"),
         ("cannot be split", "declaration that cannot be split"),
+        ("synthesised", "#if group: definition outside the first branch"),
+        ("holds an annotated item", "#if group with an annotated item"),
         ("inside an #if block", "#if block"),
         ("is inside an #if block", "#if block"),
         ("directive splits", "directive inside a declaration"),
