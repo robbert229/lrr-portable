@@ -247,7 +247,6 @@ definition be16 1f7b20e0dcdcd781
 definition be32 65bad09057ff56c4
 definition bef32 f692d1fef2cabbdc
 definition bind_model_texture_inputs d78e10b0b411b070
-definition bit_count32_by_position b149e09d00c0aed5
 definition bitmap_font_resource_load 1db1a6ed36a36db2
 definition blit_wallpaper eb1918a73df58fb6
 definition blob_count_up 9f5c246f6f290ce6
