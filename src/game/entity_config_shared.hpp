@@ -14,6 +14,5 @@ extern EntityTypeConfigRuntimeOps s_entity_type_runtime_ops;
 void entity_type_config_word_set(void* row, uint32_t offset, uint32_t value);
 int entity_type_config_row_parse_path(void* context, const char* asset_path, void* destination, uint32_t row_kind);
 
-extern i < 9u;
 
 #endif /* LRR_GAME_ENTITY_CONFIG_SHARED_HPP */
