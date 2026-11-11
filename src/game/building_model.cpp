@@ -15,12 +15,12 @@
 #include <limits.h>
 #include <string.h>
 #include <stdlib.h>
-#include "record_shared.hpp"
+#include "record_for_building_model.hpp"
 #include <float.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_building_model.hpp"
 #include <stdint.h>
 #include "ai.hpp"
 #include "entity.hpp"
@@ -49,19 +49,19 @@
 #include "upgrades.hpp"
 #include "frontend.hpp"
 #include "gods98/media.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_building_model.hpp"
 #include "gods98/entity.hpp"
-#include "entity_config_shared.hpp"
+#include "entity_config_for_building_model.hpp"
 #include <stdarg.h>
 #include "scene_resources.hpp"
 #include "scene_pool.hpp"
 #include "surface.hpp"
-#include "view_shared.hpp"
-#include "gods98/record_shared.hpp"
-#include "crt/crt_shared.hpp"
-#include "entity_shared.hpp"
-#include "entity_config_shared.hpp"
-#include "gods98/view_shared.hpp"
+#include "view_for_building_model.hpp"
+#include "gods98/record_for_building_model.hpp"
+#include "crt/crt_for_building_model.hpp"
+#include "entity_for_building_model.hpp"
+#include "entity_config_for_building_model.hpp"
+#include "gods98/view_for_building_model.hpp"
 
 /* The corpus's .rdata +0.0f (file bytes verified 00 00 00 00): the
  * leaf flds a DWORD data operand (the s_global_float_00556f00 fld

@@ -34,13 +34,13 @@
 #include "effects.hpp"
 #include "util.hpp"
 #include "crt/crt.hpp"
-#include "objective_shared.hpp"
+#include "objective_for_tutorial_script.hpp"
 #include <math.h>
 #include <float.h>
 #include <ctype.h>
 #include <errno.h>
 #include "heap.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_tutorial_script.hpp"
 #include <stdarg.h>
 #include <time.h>
 #include "frontend.h"
@@ -56,24 +56,24 @@
 #include "screen_pick.hpp"
 #include "pointer_cursor.hpp"
 #include "ui_list.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_tutorial_script.hpp"
 #include <stdint.h>
 #include <limits.h>
 #include "gods98/camera.hpp"
 #include "type_config_ports.hpp"
 #include "upgrades.hpp"
 #include "scene_render.hpp"
-#include "level_shared.hpp"
+#include "level_for_tutorial_script.hpp"
 #include "frameloop.hpp"
 #include "mainsim.hpp"
 #include "tickers.hpp"
 #include "game/building_scene.hpp"
 #include "game/actor_scene.hpp"
 #include "scene_pool.hpp"
-#include "engine_shared.hpp"
-#include "message_shared.hpp"
-#include "record_shared.hpp"
-#include "tutorial_hud_shared.hpp"
+#include "engine_for_tutorial_script.hpp"
+#include "message_for_tutorial_script.hpp"
+#include "record_for_tutorial_script.hpp"
+#include "tutorial_hud_for_tutorial_script.hpp"
 
 /* DeferredCallbackSet (FUN_00453900) — zero-init module static (the
  * corpus's DAT_004a673c presence word). */

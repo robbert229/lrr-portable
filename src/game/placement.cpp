@@ -40,8 +40,8 @@
 #include "select.hpp"
 #include "scene_render.hpp"
 #include "tutorial_hud_ports.hpp"
-#include "level_shared.hpp"
-#include "cmd_shared.hpp"
+#include "level_for_placement.hpp"
+#include "cmd_for_placement.hpp"
 #include <float.h>
 #include <ctype.h>
 #include "building_scene.hpp"
@@ -55,24 +55,24 @@
 #include "entity_quad_collision.hpp"
 #include "weapon.hpp"
 #include "gods98/model.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_placement.hpp"
 #include <errno.h>
 #include <locale.h>
 #include "texture.hpp"
-#include "record_shared.hpp"
+#include "record_for_placement.hpp"
 #include "game/render.hpp"
-#include "simtick_shared.hpp"
+#include "simtick_for_placement.hpp"
 #include <stdarg.h>
 #include "scene_resources.hpp"
 #include "scene_pool.hpp"
-#include "view_shared.hpp"
-#include "level_shared.hpp"
-#include "cmd_shared.hpp"
-#include "entity_shared.hpp"
-#include "util_shared.hpp"
-#include "gods98/record_shared.hpp"
-#include "gods98/simtick_shared.hpp"
-#include "gods98/view_shared.hpp"
+#include "view_for_placement.hpp"
+#include "level_for_placement.hpp"
+#include "cmd_for_placement.hpp"
+#include "entity_for_placement.hpp"
+#include "util_for_placement.hpp"
+#include "gods98/record_for_placement.hpp"
+#include "gods98/simtick_for_placement.hpp"
+#include "gods98/view_for_placement.hpp"
 
 /* DAT_004b8a20 role */
 // GLOBAL: LEGORR 0x004b8a20

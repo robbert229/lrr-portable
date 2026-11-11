@@ -46,12 +46,12 @@
 #include "gods98/view.hpp"
 #include "gods98/string.hpp"
 #include "gods98/resource.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_object_overlays.hpp"
 #include <stdint.h>
 #include "game.hpp"
 #include "spawn.hpp"
 #include "terrain_grid.hpp"
-#include "tutorial_hud_shared.hpp"
+#include "tutorial_hud_for_object_overlays.hpp"
 
 /* --- the panel resource + scroll leaf band (see frontend.hpp) --------------
  * The corpus's unowned panel words (DAT_004ffe68 enable gate, DAT_004ffed8/

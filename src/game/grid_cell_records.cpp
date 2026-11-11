@@ -32,7 +32,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "engine_shared.hpp"
+#include "engine_for_grid_cell_records.hpp"
 #include <math.h>
 #include <float.h>
 #include <string.h>
@@ -55,15 +55,15 @@
 #include "gods98/model.hpp"
 #include "gods98/block.hpp"
 #include "upgrades.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_grid_cell_records.hpp"
 #include <limits.h>
 #include "game.hpp"
 #include "gods98/surface.hpp"
 #include "gods98/flic.hpp"
 #include "tutorial_hud_ports.hpp"
-#include "level_shared.hpp"
+#include "level_for_grid_cell_records.hpp"
 #include "game/render.hpp"
-#include "simtick_shared.hpp"
+#include "simtick_for_grid_cell_records.hpp"
 
 namespace unported_ledger_stubs {
 int ledger_stub_00466250_ExpandCellEntitySpawn(int x, int y);

@@ -26,7 +26,7 @@
 #include "../gods98/view.hpp"
 #include "../gods98/engine.hpp"
 #include <stdlib.h>
-#include "terrain_grid_shared.hpp"
+#include "terrain_grid_for_terrain_map.hpp"
 #include "gods98/media.hpp"
 #include "effects.hpp"
 #include "gods98/sound.hpp"
@@ -44,20 +44,20 @@
 #include "gods98/flic.hpp"
 #include "select.hpp"
 #include "tutorial_hud_ports.hpp"
-#include "level_shared.hpp"
+#include "level_for_terrain_map.hpp"
 #include "screen_pick.hpp"
 #include "frameloop.hpp"
-#include "input_shared.hpp"
+#include "input_for_terrain_map.hpp"
 #include <ctype.h>
 #include "model.hpp"
-#include "record_shared.hpp"
+#include "record_for_terrain_map.hpp"
 #include "game/render.hpp"
-#include "simtick_shared.hpp"
+#include "simtick_for_terrain_map.hpp"
 #include <stdarg.h>
 #include "scene_resources.hpp"
 #include "scene_pool.hpp"
-#include "view_shared.hpp"
-#include "screen_pick_shared.hpp"
+#include "view_for_terrain_map.hpp"
+#include "screen_pick_for_terrain_map.hpp"
 
 typedef struct TerrainIndexedMeshLayerOwner {
     void* reserved[3];

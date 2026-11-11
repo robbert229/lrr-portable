@@ -27,14 +27,14 @@
 #include <errno.h>
 #include "gods98/texture.hpp"
 #include "heap.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_bubbles.hpp"
 #include "effects.hpp"
 #include "spawn.hpp"
 #include "frontend.hpp"
 #include "gods98/engine.hpp"
 #include "gods98/media.hpp"
 #include "port_loop_ports.hpp"
-#include "cmd_shared.hpp"
+#include "cmd_for_bubbles.hpp"
 #include "combat_ray_ports.hpp"
 #include "simtick.hpp"
 #include "gods98/record.hpp"
@@ -56,11 +56,11 @@
 #include "entity_quad_collision.hpp"
 #include "gods98/model.hpp"
 #include "upgrades.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_bubbles.hpp"
 #include <locale.h>
-#include "util_shared.hpp"
-#include "ai_shared.hpp"
-#include "effects_shared.hpp"
+#include "util_for_bubbles.hpp"
+#include "ai_for_bubbles.hpp"
+#include "effects_for_bubbles.hpp"
 
 #define AI_REG_FLAGGED_SEED  0x42160000u
 #define AI_REG_TYPE2_SEED    0x4a095440u

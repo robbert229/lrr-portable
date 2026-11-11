@@ -46,16 +46,16 @@
 #include "gods98/view.hpp"
 #include "gods98/string.hpp"
 #include "gods98/resource.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_bitmap_font.hpp"
 #include <limits.h>
-#include "record_shared.hpp"
+#include "record_for_bitmap_font.hpp"
 #include "platform/platform.h"
 #include "model.hpp"
 #include "frameloop.hpp"
 #include "scene_resources.hpp"
-#include "game/frontend_shared.hpp"
-#include "record_shared.hpp"
-#include "surface_shared.hpp"
+#include "game/frontend_for_bitmap_font.hpp"
+#include "record_for_bitmap_font.hpp"
+#include "surface_for_bitmap_font.hpp"
 
 static FontAtlasRecord* s_font_atlas_record_free_list;
 

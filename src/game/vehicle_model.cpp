@@ -14,12 +14,12 @@
 #include "texture.hpp"
 #include "view.hpp"
 #include "scene_pool.hpp"
-#include "resource_shared.hpp"
+#include "resource_for_vehicle_model.hpp"
 #include "crt/crt.hpp"
 #include "game/util.hpp"
 #include <math.h>
 #include <limits.h>
-#include "record_shared.hpp"
+#include "record_for_vehicle_model.hpp"
 
 /* EntityPayloadType1Release (FUN_0046ce10): clear indexed registrations,
  * free optional owned descriptor buffers, release six paired scene slots,

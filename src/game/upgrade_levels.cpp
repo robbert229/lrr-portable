@@ -14,12 +14,12 @@
 #include "texture.hpp"
 #include "view.hpp"
 #include "scene_pool.hpp"
-#include "resource_shared.hpp"
+#include "resource_for_upgrade_levels.hpp"
 #include "crt/crt.hpp"
 #include "game/util.hpp"
 #include <math.h>
 #include <limits.h>
-#include "record_shared.hpp"
+#include "record_for_upgrade_levels.hpp"
 
 /* IndexedRecordListRebuildForValue (FUN_0046c340): dispose the prior index
  * chain, then construct a linked node for each source record matching value. */

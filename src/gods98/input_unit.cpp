@@ -9,7 +9,7 @@
 #include "crt/crt.hpp"
 #include "frameloop.hpp"
 #include <ctype.h>
-#include "input_shared.hpp"
+#include "input_for_input_unit.hpp"
 
 // FUNCTION: LEGORR 0x0047ed90
 int input_direct_initialize(void)

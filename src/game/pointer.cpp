@@ -46,16 +46,16 @@
 #include "gods98/view.hpp"
 #include "gods98/string.hpp"
 #include "gods98/resource.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_pointer.hpp"
 #include <float.h>
 #include <errno.h>
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_pointer.hpp"
 #include "priorities.h"
 #include <stddef.h>
 #include "platform/platform.h"
 #include "frameloop.hpp"
-#include "ui_list_shared.hpp"
-#include "gods98/media_shared.hpp"
+#include "ui_list_for_pointer.hpp"
+#include "gods98/media_for_pointer.hpp"
 
 /* The corpus's override gate compares against this .rdata zero dword
  * (objdump-verified fcomp operand of PointerCursorSelect); a named const

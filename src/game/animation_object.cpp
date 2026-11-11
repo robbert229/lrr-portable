@@ -51,10 +51,10 @@
 #include "gods98/media.hpp"
 #include "gods98/entity.hpp"
 #include <limits.h>
-#include "gods98/view_shared.hpp"
-#include "entity_shared.hpp"
-#include "entity_config_shared.hpp"
-#include "gods98/record_shared.hpp"
+#include "gods98/view_for_animation_object.hpp"
+#include "entity_for_animation_object.hpp"
+#include "entity_config_for_animation_object.hpp"
+#include "gods98/record_for_animation_object.hpp"
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static void renderer_object_update_from_record(void* record, unsigned int list_offset, int enabled, void* update_value);

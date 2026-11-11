@@ -15,7 +15,7 @@
 #include "texture.hpp"
 #include "record.hpp"
 #include "crt/crt.hpp"
-#include "message_shared.hpp"
+#include "message_for_text.hpp"
 #include <stdarg.h>
 #include <ctype.h>
 #include <math.h>
@@ -47,7 +47,7 @@
 #include "ui_list.hpp"
 #include "gods98/view.hpp"
 #include "gods98/resource.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_text.hpp"
 #include "camera.hpp"
 #include "frameloop.hpp"
 #include "mainsim.hpp"
@@ -57,7 +57,7 @@
 #include "game/actor_scene.hpp"
 #include "game/scene_render.hpp"
 #include "scene_pool.hpp"
-#include "engine_shared.hpp"
+#include "engine_for_text.hpp"
 
 // GLOBAL: LEGORR 0x00503190
 const char* s_ui_message_labels[26] = {

@@ -15,7 +15,7 @@
 #include <limits.h>
 #include <string.h>
 #include <stdlib.h>
-#include "record_shared.hpp"
+#include "record_for_terrain_overlay_quads.hpp"
 #include <stdio.h>
 #include <stdint.h>
 #include "game.hpp"
@@ -42,7 +42,7 @@
 #include "select.hpp"
 #include "scene_render.hpp"
 #include "tutorial_hud_ports.hpp"
-#include "level_shared.hpp"
+#include "level_for_terrain_overlay_quads.hpp"
 
 /* The corpus's indexed-surface grid is owned by the overlay resource
  * loader, which is still unported. This sidecar exposes a small install

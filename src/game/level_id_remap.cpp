@@ -17,13 +17,13 @@
 #include "effects.hpp"
 #include "port_loop_ports.hpp"
 #include "util.hpp"
-#include "util_shared.hpp"
+#include "util_for_level_id_remap.hpp"
 #include "record.hpp"
 #include "sound.hpp"
 #include "string.hpp"
 #include "texture.hpp"
 #include <limits.h>
-#include "record_shared.hpp"
+#include "record_for_level_id_remap.hpp"
 
 namespace unported_ledger_stubs {
 // LevelIdentifierRemapTableLoad
