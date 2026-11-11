@@ -17,39 +17,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include "model_for_lws.hpp"
+#include "model_from_lws.hpp"
 #if defined(_MSC_VER)
 #define strcasecmp _stricmp
 #else
 #include <strings.h>
 #endif
 
-/* The reference keeps two adjacent 8-byte-stride path/record pair tables,
- * 0x1f40 bytes apart: 1000 entries each, scanned case-insensitively through
- * the shared pair-table helpers (FUN_00488730/FUN_00488790).  The primary
- * table (DAT_00540838, count DAT_005446bc) keys on the joined request path;
- * the secondary table (DAT_00542778, count DAT_005446c0) keys on the raw
- * path and is consulted under the fallback prefix (DAT_005446b8). */
-#define MODEL_RESOURCE_CACHE_CAPACITY 1000u
-typedef struct ModelResourcePair {
-    char* key;
-    void* value;
-} ModelResourcePair;
-static ModelResourcePair
+ModelResourcePair
     s_model_resource_primary[MODEL_RESOURCE_CACHE_CAPACITY];
-// GLOBAL: LEGORR 0x005446bc
-static int s_model_resource_primary_count;
-static ModelResourcePair
+ModelResourcePair
     s_model_resource_secondary[MODEL_RESOURCE_CACHE_CAPACITY];
-// GLOBAL: LEGORR 0x005446c0
-static int s_model_resource_secondary_count;
 /* DAT_005446b8: the fallback prefix the resolver retries with; installed by
  * the port through model_resource_fallback_prefix_set. */
-static const char* s_model_resource_fallback_prefix;
-/* Portable notification for a parsed-model cache hit. It is not the
- * FUN_00480900 source record: that routine expects a 13-dword resource
- * template with per-entry 0x70-byte renderer records, absent from Model. */
-typedef void (*ModelResourceInstanceHook)(void* record, void* flags);
-static ModelResourceInstanceHook s_model_resource_instance_hook;
+const char* s_model_resource_fallback_prefix;
+ModelResourceInstanceHook s_model_resource_instance_hook;
 void model_resource_instance_hook_set(ModelResourceInstanceHook hook)
 {
     s_model_resource_instance_hook = hook;
@@ -1266,81 +1249,6 @@ Model* lwo_model_entry_load(const char* path, void* flags, void* context)
         }
     }
     return model;
-}
-
-/* The reference's model resolver joins prefix and path with the raw
- * "%s%s" template (DAT_004a50d4) into a 260-byte stack path before its
- * case-insensitive pair-table lookup; no separator is inserted and a NULL
- * prefix copies the path verbatim.  Keep the same bounded contract without
- * snprintf, which is not part of the VC5 CRT. */
-static void model_resource_path_join(char* output, size_t output_size,
-                                     const char* prefix, const char* path)
-{
-    size_t position = 0u;
-    const char* source;
-    source = prefix;
-    while (source != NULL && *source != '\0' &&
-           position + 1u < output_size)
-        output[position++] = *source++;
-    source = path;
-    while (*source != '\0' && position + 1u < output_size)
-        output[position++] = *source++;
-    output[position] = '\0';
-}
-
-/* ModelResourceResolveOrLoad (FUN_004885c0): concatenate prefix/path, use
- * the primary case-insensitive cache, load and cache on a miss, then retry
- * through the shared model root. The renderer instance operation remains a
- * backend seam; the portable cache owns parsed Model records. */
-// FUNCTION: LEGORR 0x004885c0
-Model* model_resource_resolve_or_load(const char* prefix, const char* path,
-                                      void* flags, void* context)
-{
-    char resolved[260];
-    Model* record;
-    if (path == NULL) return NULL;
-    model_resource_path_join(resolved, sizeof(resolved), prefix, path);
-    record = (Model*)pair_table_find(s_model_resource_primary,
-                                     (uint32_t)s_model_resource_primary_count,
-                                     resolved);
-    if (record != NULL) {
-        if (s_model_resource_instance_hook != NULL)
-            s_model_resource_instance_hook(record, flags);
-        return record;
-    }
-    record = lwo_model_entry_load(resolved, flags, context);
-    if (record != NULL) {
-        /* Deviation: the corpus appends blindly past the 1000-entry
-         * window; the port guards it. */
-        if (s_model_resource_primary_count <
-            (int)MODEL_RESOURCE_CACHE_CAPACITY)
-            pair_table_append(s_model_resource_primary,
-                              &s_model_resource_primary_count, resolved,
-                              record);
-        return record;
-    }
-    if (s_model_resource_fallback_prefix != NULL) {
-        model_resource_path_join(resolved, sizeof(resolved),
-                                 s_model_resource_fallback_prefix, path);
-        record = (Model*)pair_table_find(
-            s_model_resource_secondary,
-            (uint32_t)s_model_resource_secondary_count, path);
-        if (record != NULL) {
-            if (s_model_resource_instance_hook != NULL)
-                s_model_resource_instance_hook(record, flags);
-            return record;
-        }
-        record = lwo_model_entry_load(resolved, flags, context);
-        if (record != NULL) {
-            if (s_model_resource_secondary_count <
-                (int)MODEL_RESOURCE_CACHE_CAPACITY)
-                pair_table_append(s_model_resource_secondary,
-                                  &s_model_resource_secondary_count, path,
-                                  record);
-            return record;
-        }
-    }
-    return NULL;
 }
 
 void model_resource_cache_clear(void)

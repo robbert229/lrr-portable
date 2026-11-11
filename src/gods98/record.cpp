@@ -497,29 +497,6 @@ uint32_t scene_object_flag_bit3_get(const void* scene_object)
     return scene_object_flag_bit3_get_target(scene_object);
 }
 
-// FUNCTION: LEGORR 0x004877d0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t resource_entry_id_get(const void* entry)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        xor eax, eax
-        mov ax, word ptr [ecx + 2]
-        ret
-    }
-}
-#else
-uint32_t resource_entry_id_get(const void* entry)
-{
-    if (entry != NULL) {
-        uint16_t v = 0;
-        __builtin_memcpy(&v, (const char*)entry + 2, sizeof(v));
-        return v;
-    }
-    return 0u;
-}
-#endif
-
 // FUNCTION: LEGORR 0x00482780
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t indexed_record_flag6c_bit0_get(

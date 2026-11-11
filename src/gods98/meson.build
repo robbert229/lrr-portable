@@ -8,6 +8,7 @@ if get_option('platform') == 'winapi'
 endif
 
 gods98_sources = [
+  'lws.cpp',
   'viewports.cpp',
   'com_object_tree.cpp',
   'file_list_streams.cpp',

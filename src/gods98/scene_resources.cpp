@@ -10,10 +10,10 @@
 #include "view.hpp"
 #include "crt/crt.hpp"
 #include "scene_resources_for_viewports.hpp"
+#include "scene_resources_for_lws.hpp"
 namespace lego {
 // GLOBAL: LEGORR 0x0076ad68
 int s_slots_live = 0;
-namespace {
 SceneResourceReleaseHook s_release_hook = 0;
 void* s_release_context = 0;
 void** s_string_table_a = 0;
@@ -22,6 +22,7 @@ unsigned int s_string_count_a = 0;
 unsigned int s_string_count_b = 0;
 SceneFloatTrackApplyHook s_float_track_apply_hook = 0;
 void* s_float_track_apply_context = 0;
+namespace {
 SceneAnimationTrackApplyHook s_animation_track_apply_hook = 0;
 void* s_animation_track_apply_context = 0;
 SceneNodeMatrixApplyHook s_node_matrix_apply_hook = 0;
@@ -332,30 +333,6 @@ void scene_float_track_apply_hook_set(SceneFloatTrackApplyHook hook,
     s_float_track_apply_hook = hook;
     s_float_track_apply_context = context;
 }
-// FUNCTION: LEGORR 0x00488070
-/* SharedObjectFloatTrackInterpolateApply masks the key index to 16 bits,
- * uses the final value directly, or interpolates to the following key before
- * forwarding the result to the renderer's value-apply seam. */
-void shared_object_float_track_interpolate_apply(
-    void* owner, const void* track, uint32_t segment, float fraction)
-{
-    const unsigned char* bytes =
-        static_cast<const unsigned char*>(track);
-    const float* values;
-    uint16_t count;
-    float value;
-    if (track == 0 || s_float_track_apply_hook == 0) return;
-    memcpy(&count, bytes + 0x26, sizeof(count));
-    if (count == 0) return;
-    memcpy(&values, bytes + 0x1c, sizeof(values));
-    if (values == 0) return;
-    segment &= 0xffffu;
-    value = values[segment];
-    if (segment + 1u < count)
-        value = (values[segment + 1u] - value) * fraction + value;
-    s_float_track_apply_hook(owner, track, value,
-                             s_float_track_apply_context);
-}
 void scene_animation_track_apply_hook_set(SceneAnimationTrackApplyHook hook,
                                           void* context)
 {
@@ -467,62 +444,6 @@ void scene_node_transform_matrix_apply(void* owner, const void* track,
 void scene_resource_string_tables_set(void** first, unsigned int first_count,
                                       void** second, unsigned int second_count)
 { s_string_table_a = first; s_string_count_a = first_count; s_string_table_b = second; s_string_count_b = second_count; }
-// FUNCTION: LEGORR 0x00487760
-void scene_resource_string_tables_free()
-{
-    unsigned int i;
-    /* The two retail tables freed at 0x87760 are the model-resource cache
-     * tables owned by model.cpp. Clear them here because engine teardown
-     * reaches this entrypoint; the portable cache also owns each parsed
-     * Model value and releases it alongside its copied key. */
-    model_resource_cache_clear();
-    if (s_release_hook != 0) {
-        for (i = 0; i < s_string_count_a; ++i)
-            if (s_string_table_a != 0 && s_string_table_a[i] != 0) s_release_hook(s_string_table_a[i], s_release_context);
-        for (i = 0; i < s_string_count_b; ++i)
-            if (s_string_table_b != 0 && s_string_table_b[i] != 0) s_release_hook(s_string_table_b[i], s_release_context);
-    }
-    s_string_table_a = 0; s_string_table_b = 0; s_string_count_a = 0; s_string_count_b = 0;
-}
-// FUNCTION: LEGORR 0x00487ed0
-int shared_object_sample_time_matches(const void* record, uint32_t time)
-{
-    const unsigned char* bytes = static_cast<const unsigned char*>(record);
-    float a, b, low, high, sample_time;
-    uint32_t duration;
-    if (record == 0) return 0;
-    memcpy(&a, bytes + 0x0c, sizeof(float));
-    memcpy(&b, bytes + 0x10, sizeof(float));
-    sample_time = (float)time;
-    duration = resource_entry_id_get(record);
-    high = b;
-    if (b < a) high = a;
-    low = b;
-    if (a < b) low = a;
-    if (0.5f <= (high - low) / (float)duration) {
-        if (high <= sample_time || sample_time <= low) return 1;
-    }
-    else if (sample_time <= high && low <= sample_time) {
-        return 1;
-    }
-    return 0;
-}
-// FUNCTION: LEGORR 0x00487fc0
-float keyframe_time_segment_fraction(const void* track, float time, uint16_t* segment_out)
-{
-    const unsigned char* bytes = static_cast<const unsigned char*>(track);
-    uint16_t count, i, *times;
-    if (track == 0 || segment_out == 0) return 0.0f;
-    memcpy(&count, bytes + 0x26, sizeof(count));
-    if (count < 2) { *segment_out = (uint16_t)(count - 1); return 0.0f; }
-    memcpy(&times, bytes + 0x20, sizeof(times));
-    if (times == 0) { *segment_out = (uint16_t)(count - 1); return 0.0f; }
-    for (i = 1; i < count; ++i) if (time <= (float)times[i]) {
-        *segment_out = (uint16_t)(i - 1);
-        return (time - (float)times[i - 1]) / ((float)times[i] - (float)times[i - 1]);
-    }
-    *segment_out = (uint16_t)(count - 1); return 0.0f;
-}
 
 void cached_render_resource_renderer_hook_set(
     CachedRenderResourceRendererHook hook, void* context)
