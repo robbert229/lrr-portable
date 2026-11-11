@@ -257,6 +257,8 @@ static uint32_t s_interface_build_image_counts[2];
 #include "frontend_from_helpwindow.hpp"
 #include "frontend_for_reward.hpp"
 #include "frontend_from_reward.hpp"
+#include "frontend_for_panel_unit.hpp"
+#include "frontend_from_panel_unit.hpp"
 
 static int s_toupper(int c)
 {
@@ -3968,119 +3970,6 @@ const char* const s_tooltip_names[38] = {
     "ToolTip_FrontEnd_Back"
 };
 
-/* UiPanelNameTablesInit publishes these exact pointer-table bands. The
- * button table is twelve 24-pointer rows and ends at DAT_005007d0. */
-// GLOBAL: LEGORR 0x004a8924
-static const char s_panel_name_radar[] = "Panel_Radar";
-// GLOBAL: LEGORR 0x004a8914
-static const char s_panel_name_radar_fill[] = "Panel_RadarFill";
-// GLOBAL: LEGORR 0x004a8900
-static const char s_panel_name_radar_overlay[] = "Panel_RadarOverlay";
-// GLOBAL: LEGORR 0x004a88f0
-static const char s_panel_name_messages[] = "Panel_Messages";
-// GLOBAL: LEGORR 0x004a88dc
-static const char s_panel_name_messages_side[] = "Panel_MessagesSide";
-// GLOBAL: LEGORR 0x004a88c4
-static const char s_panel_name_crystal_side_bar[] = "Panel_CrystalSideBar";
-// GLOBAL: LEGORR 0x004a88b4
-static const char s_panel_name_top_panel[] = "Panel_TopPanel";
-// GLOBAL: LEGORR 0x004a88a0
-static const char s_panel_name_information[] = "Panel_Information";
-// GLOBAL: LEGORR 0x004a888c
-static const char s_panel_name_priority_list[] = "Panel_PriorityList";
-// GLOBAL: LEGORR 0x004a8878
-static const char s_panel_name_camera_control[] = "Panel_CameraControl";
-// GLOBAL: LEGORR 0x004a8868
-static const char s_panel_name_info_dock[] = "Panel_InfoDock";
-// GLOBAL: LEGORR 0x004a8930
-static const char s_panel_name_encyclopedia[] = "Panel_Encyclopedia";
-// GLOBAL: LEGORR 0x004a884c
-static const char s_panel_button_radar_toggle[] = "PanelButton_Radar_Toggle";
-// GLOBAL: LEGORR 0x004a8828
-static const char s_panel_button_radar_tagged[] = "PanelButton_Radar_TaggedObjectView";
-// GLOBAL: LEGORR 0x004a880c
-static const char s_panel_button_radar_zoom_in[] = "PanelButton_Radar_ZoomIn";
-// GLOBAL: LEGORR 0x004a87f0
-static const char s_panel_button_radar_zoom_out[] = "PanelButton_Radar_ZoomOut";
-// GLOBAL: LEGORR 0x004a87d4
-static const char s_panel_button_radar_map_view[] = "PanelButton_Radar_MapView";
-// GLOBAL: LEGORR 0x004a87b8
-static const char s_panel_button_info_dock_goto[] = "PanelButton_InfoDock_Goto";
-// GLOBAL: LEGORR 0x004a879c
-static const char s_panel_button_info_dock_close[] = "PanelButton_InfoDock_Close";
-// GLOBAL: LEGORR 0x004a877c
-static const char s_panel_button_top_options[] = "PanelButton_TopPanel_Options";
-// GLOBAL: LEGORR 0x004a875c
-static const char s_panel_button_top_priorities[] = "PanelButton_TopPanel_Priorities";
-// GLOBAL: LEGORR 0x004a873c
-static const char s_panel_button_top_call_to_arms[] = "PanelButton_TopPanel_CallToArms";
-// GLOBAL: LEGORR 0x004a871c
-static const char s_panel_button_information_toggle[] = "PanelButton_Information_Toggle";
-// GLOBAL: LEGORR 0x004a86f8
-static const char s_panel_button_information_function[] = "PanelButton_Information_Function";
-// GLOBAL: LEGORR 0x004a86d4
-static const char s_panel_button_priority_disable1[] = "PanelButton_PriorityList_Disable1";
-// GLOBAL: LEGORR 0x004a86b0
-static const char s_panel_button_priority_disable2[] = "PanelButton_PriorityList_Disable2";
-// GLOBAL: LEGORR 0x004a868c
-static const char s_panel_button_priority_disable3[] = "PanelButton_PriorityList_Disable3";
-// GLOBAL: LEGORR 0x004a8668
-static const char s_panel_button_priority_disable4[] = "PanelButton_PriorityList_Disable4";
-// GLOBAL: LEGORR 0x004a8644
-static const char s_panel_button_priority_disable5[] = "PanelButton_PriorityList_Disable5";
-// GLOBAL: LEGORR 0x004a8620
-static const char s_panel_button_priority_disable6[] = "PanelButton_PriorityList_Disable6";
-// GLOBAL: LEGORR 0x004a85fc
-static const char s_panel_button_priority_disable7[] = "PanelButton_PriorityList_Disable7";
-// GLOBAL: LEGORR 0x004a85d8
-static const char s_panel_button_priority_disable8[] = "PanelButton_PriorityList_Disable8";
-// GLOBAL: LEGORR 0x004a85b4
-static const char s_panel_button_priority_disable9[] = "PanelButton_PriorityList_Disable9";
-// GLOBAL: LEGORR 0x004a8594
-static const char s_panel_button_priority_up1[] = "PanelButton_PriorityList_UpOne1";
-// GLOBAL: LEGORR 0x004a8574
-static const char s_panel_button_priority_up2[] = "PanelButton_PriorityList_UpOne2";
-// GLOBAL: LEGORR 0x004a8554
-static const char s_panel_button_priority_up3[] = "PanelButton_PriorityList_UpOne3";
-// GLOBAL: LEGORR 0x004a8534
-static const char s_panel_button_priority_up4[] = "PanelButton_PriorityList_UpOne4";
-// GLOBAL: LEGORR 0x004a8514
-static const char s_panel_button_priority_up5[] = "PanelButton_PriorityList_UpOne5";
-// GLOBAL: LEGORR 0x004a84f4
-static const char s_panel_button_priority_up6[] = "PanelButton_PriorityList_UpOne6";
-// GLOBAL: LEGORR 0x004a84d4
-static const char s_panel_button_priority_up7[] = "PanelButton_PriorityList_UpOne7";
-// GLOBAL: LEGORR 0x004a84b4
-static const char s_panel_button_priority_up8[] = "PanelButton_PriorityList_UpOne8";
-// GLOBAL: LEGORR 0x004a8494
-static const char s_panel_button_priority_close[] = "PanelButton_PriorityList_Close";
-// GLOBAL: LEGORR 0x004a8474
-static const char s_panel_button_priority_reset[] = "PanelButton_PriorityList_Reset";
-// GLOBAL: LEGORR 0x004a8454
-static const char s_panel_button_encyclopedia_close[] = "PanelButton_Encyclopedia_Close";
-// GLOBAL: LEGORR 0x004a8430
-static const char s_panel_button_camera_zoom_in[] = "PanelButton_CameraControl_ZoomIn";
-// GLOBAL: LEGORR 0x004a840c
-static const char s_panel_button_camera_zoom_out[] = "PanelButton_CameraControl_ZoomOut";
-// GLOBAL: LEGORR 0x004a83e0
-static const char s_panel_button_camera_cycle_buildings[] = "PanelButton_CameraControl_CycleBuildings";
-// GLOBAL: LEGORR 0x004a83bc
-static const char s_panel_button_camera_rotate[] = "PanelButton_CameraControl_Rotate";
-// GLOBAL: LEGORR 0x004a839c
-static const char s_panel_button_crystal_ore[] = "PanelButton_CrystalSideBar_Ore";
-// GLOBAL: LEGORR 0x004a8378
-static const char s_panel_button_crystal_crystals[] = "PanelButton_CrystalSideBar_Crystals";
-// GLOBAL: LEGORR 0x005000e0
-static const char* s_ui_panel_names[12];
-// GLOBAL: LEGORR 0x00500350
-static const char* s_ui_panel_indexed_names[12][24];
-/* These words are also the selected category-cell coordinates. The table
- * initializer sets the no-selection sentinel used by SimCategoryCellHitTest. */
-// GLOBAL: LEGORR 0x005007d0
-static int s_category_cell_selected_x;
-// GLOBAL: LEGORR 0x005007d4
-static int s_category_cell_selected_y;
-
 void ui_panel_name_tables_install(const char* const names[12],
                                   const char* const indexed_names[][24],
                                   unsigned int indexed_count)
@@ -4100,7 +3989,7 @@ void ui_panel_name_tables_install(const char* const names[12],
     }
 }
 
-static int ui_panel_string_equal_case_insensitive(const char* first,
+int ui_panel_string_equal_case_insensitive(const char* first,
                                                    const char* second)
 {
     if (first == NULL || second == NULL) return 0;
@@ -4111,122 +4000,6 @@ static int ui_panel_string_equal_case_insensitive(const char* first,
         ++second;
     }
     return *first == '\0' && *second == '\0';
-}
-
-/* UiPanelNameTableLookup (FUN_0045a370): the corpus do-while-walks the twelve
- * panel-name dwords at DAT_005000e0..DAT_00500110, __strcmpi-comparing each
- * against the caller's name; the first case-insensitive match writes the
- * zero-based slot and returns 1, the exhausted scan returns 0. Deviations:
- * the port guards null arguments (the corpus dereferences blindly) and the
- * null-name check inside the comparator stands in for the corpus's direct
- * __strcmpi against the installed pointer. */
-// FUNCTION: LEGORR 0x0045a370
-int ui_panel_name_table_lookup(const char* name, int* out_index)
-{
-    const char** slot;
-    int index;
-    if (name == NULL || out_index == NULL) return 0;
-    slot = s_ui_panel_names;
-    index = 0;
-    do {
-        if (ui_panel_string_equal_case_insensitive(name, *slot)) {
-            *out_index = index;
-            return 1;
-        }
-        ++slot;
-        ++index;
-    } while (slot < s_ui_panel_names + 12);
-    return 0;
-}
-
-/* UiPanelIndexedNameLookup (FUN_0045a410): the corpus strides the category's
- * 24 name dwords at DAT_00500350 + table * 0x60, skipping null slots, and
- * __strcmpi-compares the rest; the first match writes the zero-based slot and
- * returns 1. Deviations: the port bounds the table index to the 64 installed
- * tables (the corpus strides the DAT band blindly) and null-guards its
- * arguments. */
-// FUNCTION: LEGORR 0x0045a410
-int ui_panel_indexed_name_lookup(unsigned int table_index, const char* name,
-                                 unsigned int* out_index)
-{
-    const char** slot;
-    unsigned int index;
-    if (name == NULL || out_index == NULL || table_index >= 12u) return 0;
-    slot = s_ui_panel_indexed_names[table_index];
-    index = 0;
-    do {
-        if (*slot != NULL &&
-            ui_panel_string_equal_case_insensitive(name, *slot)) {
-            *out_index = index;
-            return 1;
-        }
-        ++slot;
-        ++index;
-    } while (index < 24u);
-    return 0;
-}
-
-/* UiPanelNameTablesInit (FUN_0045a030) stores twelve panel-name pointers,
- * thirty-eight button-name pointers at their original 24-slot row offsets,
- * then initializes the category-cell sentinel to (12, 24). */
-// FUNCTION: LEGORR 0x0045a030
-void ui_panel_name_tables_init(void)
-{
-    s_category_cell_selected_x = 0x0c;
-    s_category_cell_selected_y = 0x18;
-    /* Keep each string pointer at the exact panel/category/slot offset from
-     * the reference tables. The target leaves all unlisted slots untouched. */
-    s_ui_panel_names[11] = s_panel_name_encyclopedia;
-    s_ui_panel_names[0] = s_panel_name_radar;
-    s_ui_panel_names[1] = s_panel_name_radar_fill;
-    s_ui_panel_names[2] = s_panel_name_radar_overlay;
-    s_ui_panel_names[3] = s_panel_name_messages;
-    s_ui_panel_names[4] = s_panel_name_messages_side;
-    s_ui_panel_names[5] = s_panel_name_crystal_side_bar;
-    s_ui_panel_names[6] = s_panel_name_top_panel;
-    s_ui_panel_names[7] = s_panel_name_information;
-    s_ui_panel_names[8] = s_panel_name_priority_list;
-    s_ui_panel_names[9] = s_panel_name_camera_control;
-    s_ui_panel_names[10] = s_panel_name_info_dock;
-
-    s_ui_panel_indexed_names[0][0] = s_panel_button_radar_toggle;
-    s_ui_panel_indexed_names[0][1] = s_panel_button_radar_tagged;
-    s_ui_panel_indexed_names[0][2] = s_panel_button_radar_zoom_in;
-    s_ui_panel_indexed_names[0][3] = s_panel_button_radar_zoom_out;
-    s_ui_panel_indexed_names[0][4] = s_panel_button_radar_map_view;
-    s_ui_panel_indexed_names[10][0] = s_panel_button_info_dock_goto;
-    s_ui_panel_indexed_names[10][1] = s_panel_button_info_dock_close;
-    s_ui_panel_indexed_names[6][0] = s_panel_button_top_options;
-    s_ui_panel_indexed_names[6][1] = s_panel_button_top_priorities;
-    s_ui_panel_indexed_names[6][2] = s_panel_button_top_call_to_arms;
-    s_ui_panel_indexed_names[7][0] = s_panel_button_information_toggle;
-    s_ui_panel_indexed_names[7][1] = s_panel_button_information_function;
-    s_ui_panel_indexed_names[8][0] = s_panel_button_priority_disable1;
-    s_ui_panel_indexed_names[8][1] = s_panel_button_priority_disable2;
-    s_ui_panel_indexed_names[8][2] = s_panel_button_priority_disable3;
-    s_ui_panel_indexed_names[8][3] = s_panel_button_priority_disable4;
-    s_ui_panel_indexed_names[8][4] = s_panel_button_priority_disable5;
-    s_ui_panel_indexed_names[8][5] = s_panel_button_priority_disable6;
-    s_ui_panel_indexed_names[8][6] = s_panel_button_priority_disable7;
-    s_ui_panel_indexed_names[8][7] = s_panel_button_priority_disable8;
-    s_ui_panel_indexed_names[8][8] = s_panel_button_priority_disable9;
-    s_ui_panel_indexed_names[8][9] = s_panel_button_priority_up1;
-    s_ui_panel_indexed_names[8][10] = s_panel_button_priority_up2;
-    s_ui_panel_indexed_names[8][11] = s_panel_button_priority_up3;
-    s_ui_panel_indexed_names[8][12] = s_panel_button_priority_up4;
-    s_ui_panel_indexed_names[8][13] = s_panel_button_priority_up5;
-    s_ui_panel_indexed_names[8][14] = s_panel_button_priority_up6;
-    s_ui_panel_indexed_names[8][15] = s_panel_button_priority_up7;
-    s_ui_panel_indexed_names[8][16] = s_panel_button_priority_up8;
-    s_ui_panel_indexed_names[8][17] = s_panel_button_priority_close;
-    s_ui_panel_indexed_names[8][18] = s_panel_button_priority_reset;
-    s_ui_panel_indexed_names[11][0] = s_panel_button_encyclopedia_close;
-    s_ui_panel_indexed_names[9][0] = s_panel_button_camera_zoom_in;
-    s_ui_panel_indexed_names[9][1] = s_panel_button_camera_zoom_out;
-    s_ui_panel_indexed_names[9][2] = s_panel_button_camera_cycle_buildings;
-    s_ui_panel_indexed_names[9][3] = s_panel_button_camera_rotate;
-    s_ui_panel_indexed_names[5][0] = s_panel_button_crystal_ore;
-    s_ui_panel_indexed_names[5][1] = s_panel_button_crystal_crystals;
 }
 
 static ToolTipIconConfigHooks s_tooltip_icon_config_hooks;
@@ -7280,33 +7053,6 @@ void advisor_callback_schedule_gate(void)
         (int)s_obj_sel_word, s_advisor_callback_callback, NULL);
 }
 
-/* AdvisorAnimationSlotIdResolve (FUN_0045c6b0): only kinds 0, 6, 9, and 10
- * have cases; each accepts its own position-index range and maps to a fixed
- * advisor animation slot. */
-// FUNCTION: LEGORR 0x0045C6B0
-int advisor_animation_slot_id_resolve(uint32_t animation_kind,
-                                      uint32_t position_index,
-                                      uint32_t* slot_id)
-{
-    if (slot_id == NULL) return 0;
-    *slot_id = 0x15u;
-    switch (animation_kind) {
-    case 0:
-        if (position_index <= 4u) *slot_id = 6u + position_index;
-        break;
-    case 6:
-        if (position_index <= 2u) *slot_id = 0x0eu + position_index;
-        break;
-    case 9:
-        if (position_index <= 1u) *slot_id = 0x12u + position_index;
-        break;
-    case 10:
-        if (position_index <= 1u) *slot_id = 0x0bu + position_index;
-        break;
-    }
-    return *slot_id != 0x15u;
-}
-
 /* --- the cell-action permission window (see frontend.hpp) ------------------- */
 #define CELL_PERMISSION_ENTRIES 300 /* corpus's 300-dword clear loop */
 // GLOBAL: LEGORR 0x004ddd34
@@ -7428,83 +7174,6 @@ float menu_wipe_clock_peek(void) { return s_menu_wipe_clock; }
 void menu_clock_millis_set(uint32_t millis)
 {
     s_menu_clock_millis = millis;
-}
-
-/* --- the panel texture-slot blit (see frontend.hpp) --------------------------
- * The record's flag word is the float view's +0x28 dword; the texture
- * handles are the +0x10/+0x14/+0x18 float views carried bit-for-bit. A
- * missing draw-record block answers nothing (deviation: the corpus walks
- * the window unconditionally once its count word reads non-null). */
-// FUNCTION: LEGORR 0x0045a9c0
-static void panel_texture_slots_blit_to(int panel, void* pixels, int pitch,
-                                        int width, int height)
-{
-    const int count = panel_draw_count_peek(panel);
-    if (count <= 0) {
-        return; /* the corpus's count gate */
-    }
-    const char* block = (const char*)panel_draw_records_peek(panel);
-    if (block == NULL) {
-        return; /* deviation: the corpus strides a null block */
-    }
-    uint32_t oa = 0u, ob = 0u;
-    indexed_pair_get(panel, &oa, &ob);
-    const float ox = crt_float_bits(oa);
-    const float oy = crt_float_bits(ob);
-
-    for (int i = 0; i < count; ++i) {
-        const float* rec = (const float*)(block + (size_t)i * 0x2c);
-        uint32_t flags = 0u;
-        __builtin_memcpy(&flags, rec + 10, sizeof(flags));
-        if ((flags & 0x10u) != 0u) {
-            continue; /* the corpus hides bit-0x10 items */
-        }
-        const int has40 = (flags & 0x40u) != 0u;
-        int banner = 0;
-        int field = 0;
-        if ((flags & 8u) == 0u && (flags & 2u) != 0u) {
-            if (!has40) {
-                field = 4;
-            } else {
-                banner = (int)sim_status_banner_word_get();
-                if (banner == 0) {
-                    continue; /* the corpus skips the blit */
-                }
-                field = 4;
-            }
-        } else if ((flags & 4u) == 0u && (flags & 8u) == 0u) {
-            if (!has40) {
-                field = 6;
-            } else {
-                banner = (int)sim_status_banner_word_get();
-                field = banner == 0 ? 6 : 4;
-            }
-        } else {
-            if (has40) {
-                banner = (int)sim_status_banner_word_get();
-                if (banner != 0) {
-                    field = 4;
-                } else {
-                    field = 5;
-                }
-            } else {
-                field = 5;
-            }
-        }
-        uint32_t handle = 0u;
-        __builtin_memcpy(&handle, rec + field, sizeof(handle));
-        if (handle != 0u) {
-            float x = rec[0] + ox;
-            float y = rec[1] + oy;
-            TextureSurface* surface = panel_named_resource_get(
-                panel, block, i, field, handle);
-            crt_surface_blit_record(handle, x, y);
-            if (surface != NULL && pixels != NULL)
-                surface_blit_texture(pixels, pitch, width, height, surface,
-                                     (int)crt_float_to_long(x),
-                                     (int)crt_float_to_long(y));
-        }
-    }
 }
 
 void panel_texture_slots_blit(int panel)
@@ -7936,16 +7605,6 @@ uint32_t screen_right_edge_cache_peek(void) { return s_screen_right_edge; }
 
 float    s_bubble_offset_x;
 float    s_bubble_offset_y;
-// GLOBAL: LEGORR 0x00500810
-static void*    s_panel_surface_handle;
-// GLOBAL: LEGORR 0x00500814
-static float    s_panel_width;
-// GLOBAL: LEGORR 0x00500818
-static float    s_panel_height;
-// GLOBAL: LEGORR 0x0050081c
-static uint32_t s_panel_extra;
-// GLOBAL: LEGORR 0x005007d8
-void*    s_panel_ui_record;   /* DAT_005007d8 role */
 static void*    s_panel_text_slot;   /* DAT_005007dc role: holder-slot address */
 
 static int    s_panel_seam_calls;
@@ -7961,77 +7620,10 @@ void panel_blit_seam_call(void* res, float x, float y)
     s_panel_seam_last_y = y;
 }
 
-static void* panel_load_seam_call(void* res)
-{
-    panel_blit_seam_call(res, 0.0f, 0.0f);
-    return NULL; /* the port has no surface layer */
-}
-
-// FUNCTION: LEGORR 0x0045c520
-void panel_resource_handle_and_dimensions_store(void* resource, uint32_t w,
-                                                uint32_t h, uint32_t extra)
-{
-    /* corpus order: load, +0x14 width, +0x1c extra, +0x18 height */
-    s_panel_surface_handle = panel_load_seam_call(resource);
-    s_panel_width = (float)w;
-    s_panel_extra = extra;
-    s_panel_height = (float)h;
-}
-
 void     panel_enable_word_set(uint32_t word) { s_panel_enable_word = word; }
 uint32_t panel_enable_word_peek(void) { return s_panel_enable_word; }
 
-/* --- the panel layout band (2026-10-25; frontend.hpp) ----------------------
- * DAT_005007f0/7f4 handle slots, DAT_005007f8/7fc size floats,
- * DAT_00500800 extra word and DAT_00500804/808 offset floats have no
- * ported corpus owner — zero-init own storage (the unowned-global
- * deviation). The corpus surface loads (FUN_0047d9d0) stay hook boundaries
- * answering NULL (the panel-load precedent), and the blits ride the seam. */
-// GLOBAL: LEGORR 0x005007f0
-static void* s_panel_layout_surface;
-// GLOBAL: LEGORR 0x005007f4
-static void* s_panel_layout_glyph;
-static float s_panel_layout_size[2];     /* DAT_005007f8/7fc role */
-// GLOBAL: LEGORR 0x00500800
-static uint32_t s_panel_layout_extra;
-// GLOBAL: LEGORR 0x00500804
-static float s_panel_layout_offset[2];
-
-// FUNCTION: LEGORR 0x0045c340
-void panel_resource_layout_store(void* face_resource, uint32_t width,
-                                 uint32_t height, uint32_t extra,
-                                 void* glyph_resource, uint32_t position_x,
-                                 uint32_t position_y)
-{
-    s_panel_layout_surface = panel_load_seam_call(face_resource);
-    s_panel_layout_size[0] = (float)width;
-    s_panel_layout_size[1] = (float)height;
-    s_panel_layout_extra = extra;
-    s_panel_layout_glyph = panel_load_seam_call(glyph_resource);
-    if (s_panel_layout_glyph != NULL) {
-        panel_blit_seam_call(s_panel_layout_glyph, 0.0f, 0.0f);
-    }
-    s_panel_layout_offset[0] = (float)position_x;
-    s_panel_layout_offset[1] = (float)position_y;
-}
-
-// FUNCTION: LEGORR 0x0045c4b0
-void panel_resource_position_update(int index)
-{
-    if (s_panel_layout_glyph == NULL) {
-        return;
-    }
-    uint32_t x = 0, y = 0;
-    indexed_pair_get(index, &x, &y);
-    const float px = (float)(int32_t)x + s_panel_layout_offset[0];
-    const float py = (float)(int32_t)y + s_panel_layout_offset[1];
-    if (global_value_0050080c_peek() == 0u) {
-        return;
-    }
-    if (sim_status_banner_word_get() != 0u) {
-        panel_blit_seam_call(s_panel_layout_glyph, px, py);
-    }
-}
+float s_panel_layout_size[2];     /* DAT_005007f8/7fc role */
 
 void* panel_layout_surface_peek(void) { return s_panel_layout_surface; }
 void* panel_layout_glyph_peek(void) { return s_panel_layout_glyph; }
@@ -8084,8 +7676,6 @@ void panel_layout_surface_install(void* surface)
 // GLOBAL: LEGORR 0x004de1e4
 static uint32_t s_interface_button_surfaces[2];
 static TextureSurface* s_interface_button_surface_native[2];
-// GLOBAL: LEGORR 0x005007e0
-static uint32_t s_advisor_bar_surfaces[3];
 static uint32_t s_menu_blit_record[16];         /* corpus record window */
 
 uint32_t surface_load_handle(const char* path)
@@ -8115,58 +7705,9 @@ uint32_t interface_button_surface_peek(int which)
     return (which >= 0 && which < 2) ? s_interface_button_surfaces[which] : 0u;
 }
 
-// FUNCTION: LEGORR 0x0045bfb0
-void three_surface_resources_load(const char* first, const char* second,
-                                  const char* third)
-{
-    const char* paths[3] = { first, second, third };
-    /* corpus store order: slot 0 (DAT_005007e0), slot 1 lands at the
-     * THIRD peek index (DAT_005007e8), slot 2 at the second (DAT_005007e4)
-     */
-    uint32_t* const slots[3] = { &s_advisor_bar_surfaces[0],
-                                 &s_advisor_bar_surfaces[2],
-                                 &s_advisor_bar_surfaces[1] };
-    for (int i = 0; i != 3; ++i) {
-        const uint32_t handle = surface_load_handle(paths[i]);
-        *slots[i] = handle;
-        if (handle != 0u) {
-            crt_surface_blit_record(handle, 0.0f, 0.0f); /* transform */
-        }
-    }
-}
-
 uint32_t advisor_bar_surface_peek(int which)
 {
     return (which >= 0 && which < 3) ? s_advisor_bar_surfaces[which] : 0u;
-}
-
-// FUNCTION: LEGORR 0x0045c3f0
-void advisor_progress_bar_fill_draw(int row, float percent)
-{
-    if (s_panel_layout_surface == NULL || !(0.0f < percent)) {
-        return;
-    }
-    float pct = percent;
-    if (100.0f < pct) {
-        pct = 100.0f; /* the corpus constant */
-    }
-    int field8 = 0;
-    __builtin_memcpy(&field8, (const char*)s_panel_layout_surface + 8,
-                     sizeof field8);
-    uint32_t pair_x = 0u, pair_y = 0u;
-    indexed_pair_get(row, &pair_x, &pair_y);
-    const float dest_x
-        = crt_float_bits(pair_x) + panel_layout_size_peek(0);
-    const float dest_y
-        = crt_float_bits(pair_y) + panel_layout_size_peek(1);
-    const float size[2] = {
-        (float)((double)(float)panel_layout_extra_peek()
-                * (double)(float)(1.0 / 100.0) * (double)pct),
-        (float)field8
-    };
-    crt_surface_blit_record_rect(
-        (uint32_t)(uintptr_t)s_panel_layout_surface, dest_x, dest_y, NULL,
-        size);
 }
 
 void menu_blit_record_write(int index, uint32_t value)
@@ -8436,13 +7977,6 @@ int selection_entity_code_resolve(const GameContext* ctx, int* code_out)
     return code;
 }
 
-/* --- overlay animation float (2026-10-25) ---------------------------------
- * The DAT_00500820 animation float is reference state with no port owner,
- * so it lands as a guarded static (the unowned-global deviation) and the
- * corpus x87 float10 lands as plain float. */
-// GLOBAL: LEGORR 0x00500820
-static float s_overlay_anim_float;
-
 float overlay_anim_float_peek(void)
 {
     return s_overlay_anim_float;
@@ -8451,25 +7985,6 @@ float overlay_anim_float_peek(void)
 void overlay_anim_float_install(float value)
 {
     s_overlay_anim_float = value;
-}
-
-// FUNCTION: LEGORR 0x0045c580
-void ui_overlay_animation_advance(int mode, int steps)
-{
-    /* Deviation: the corpus loops `param_2 != 0` down by one, so a
-     * negative count runs away; the port treats it as no steps. */
-    for (int i = steps > 0 ? steps : 0; i != 0; --i) {
-        if (mode == 0) {
-            s_overlay_anim_float =
-                (s_overlay_anim_float - 0.05f) * 20.0f * 0.05263158f;
-        } else {
-            s_overlay_anim_float =
-                s_overlay_anim_float - (1.0f - s_overlay_anim_float) * -0.05f;
-        }
-    }
-    if (s_overlay_anim_float < 0.0f) {
-        s_overlay_anim_float = 0.0f; /* the after-loop negative guard */
-    }
 }
 
 void timed_effect_persistence_set(int index, int set)
@@ -8524,8 +8039,6 @@ uint32_t cursor_tile_pair_peek(int which)
  * +0x08..+0x14 and the zeroed word at +0x20 have no ported owner, so they
  * land as own storage (the unowned-global convention). */
 
-#define PANEL_CATEGORY_WINDOWS 18
-
 void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
                                 float* out_x2, float* out_y2)
 {
@@ -8534,31 +8047,6 @@ void panel_category_bounds_peek(int panel, float* out_x1, float* out_y1,
     }
     request_record_panel_bounds_peek(panel, out_x1, out_y1, out_x2, out_y2);
 }
-
-/* UiEntryBoundsGet (FUN_0045bf70): read the entry's record out of the
- * panel's installed draw-record block (stride 0x2c) and answer the
- * position plus the derived size — the position dwords ride as-is, the
- * size is the far-corner minus the near one. Deviations: the panel window
- * and the null block are guarded (the corpus strides both). */
-// FUNCTION: LEGORR 0x0045bf70
-void ui_entry_bounds_get(int panel, int item, float* out_bounds)
-{
-    if (panel < 0 || panel >= PANEL_CATEGORY_WINDOWS || out_bounds == NULL
-        || item < 0) {
-        return; /* deviation: the corpus strides blindly */
-    }
-    const char* block = (const char*)panel_draw_records_peek(panel);
-    if (block == NULL) {
-        return; /* deviation: the corpus strides a null block */
-    }
-    const float* rec = (const float*)(block + (size_t)item * 0x2c);
-    out_bounds[0] = rec[0];
-    out_bounds[1] = rec[1];
-    out_bounds[2] = rec[2] - rec[0];
-    out_bounds[3] = rec[3] - rec[1];
-}
-
-
 
 int frontend_config_fields(const char* value, char* storage,
                                   unsigned int storage_size,
@@ -9823,30 +9311,10 @@ void* frontend_panel_image_slot_entry_allocate(
     return legacy_panel_image_slot_entry_allocate(panel, path, rect, flags);
 }
 
-// ScrollingAdvisorTextAppend
-// FUNCTION: LEGORR 0x0045a590
-void ledger_stub_0045a590_ScrollingAdvisorTextAppend(void* record,
-                                                      const char* format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    text_buffer_append_vformat(*(void**)record, 0, format, args);
-    va_end(args);
-}
+UiTextOutputPointerBinding s_ui_text_output_bindings[64];
+float s_ui_text_output_panel_offsets[18][8];
 
-// UITextOutputPositionAndDraw
-typedef struct UiTextOutputPointerBinding {
-    void* record;
-    void* text_buffer;
-    const float* offsets;
-    int owns_text_buffer;
-    int panel_index;
-} UiTextOutputPointerBinding;
-
-static UiTextOutputPointerBinding s_ui_text_output_bindings[64];
-static float s_ui_text_output_panel_offsets[18][8];
-
-static int ui_text_output_binding_install(void* record, void* text_buffer,
+int ui_text_output_binding_install(void* record, void* text_buffer,
                                           const float* offsets, int owns,
                                           int panel_index)
 {
@@ -9891,55 +9359,6 @@ int ui_text_output_panel_coordinates_set(int panel, float y_offset,
     s_ui_text_output_panel_offsets[panel][6] = y_offset;
     s_ui_text_output_panel_offsets[panel][7] = x_offset;
     return 1;
-}
-
-/* PanelImageSlotEntryAllocate (FUN_0045a500): allocate the four-word wrapper
- * first, then create its text buffer with the supplied font handle, header
- * rectangle, and capacity. The target record order is text buffer, base Y,
- * base X, and category-coordinate pointer. */
-// FUNCTION: LEGORR 0x0045a500
-void* ui_text_output_record_allocate(int panel, uintptr_t font_handle,
-                                     const float rect[4],
-                                     uint32_t buffer_size)
-{
-    UiTextOutputRecord32* record;
-    uint32_t header[4] = { 0u, 0u, 0u, 0u };
-    void* text_buffer;
-    uint32_t text_token = 0u;
-    uint32_t offsets_token = 0u;
-    uintptr_t pointer_value;
-    if (rect == NULL || panel < 0 || panel >= 18) return NULL;
-    memcpy(&header[2], &rect[2], sizeof(rect[2]));
-    memcpy(&header[3], &rect[3], sizeof(rect[3]));
-
-    /* The retail order allocates the 16-byte wrapper before its text buffer. */
-    record = (UiTextOutputRecord32*)engine_heap_alloc(
-        (long)sizeof(UiTextOutputRecord32));
-    if (record == NULL) return NULL;
-    memset(record, 0, sizeof(*record));
-    text_buffer = text_buffer_create(font_handle, header, (long)buffer_size);
-    record->base_x = crt_float_to_long(rect[0]);
-    record->base_y = crt_float_to_long(rect[1]);
-
-#if defined(_M_IX86) || defined(__i386__)
-    text_token = (uint32_t)(uintptr_t)text_buffer;
-    pointer_value = (uintptr_t)&s_ui_text_output_panel_offsets[panel][0];
-    offsets_token = (uint32_t)pointer_value;
-#else
-    /* A 32-bit target record cannot carry native pointers on this host;
-     * the sidecar is authoritative, so leave the ABI token words empty. */
-    (void)pointer_value;
-#endif
-    record->text_buffer_pointer = text_token;
-    record->panel_coordinates_pointer = offsets_token;
-    if (text_buffer != NULL &&
-        !ui_text_output_binding_install(record, text_buffer,
-            s_ui_text_output_panel_offsets[panel], 1, panel)) {
-        text_buffer_destroy(text_buffer);
-        engine_heap_free(record);
-        return NULL;
-    }
-    return record;
 }
 
 /* Adapter for UiOverlayInitSink.element_create: its panel index, geometry,
@@ -10028,55 +9447,6 @@ void ui_text_output_pointer_binding_clear(void* record)
     }
 }
 
-// FUNCTION: LEGORR 0x0045a5b0
-void ui_text_output_position_and_draw(void* record, uint32_t start_line,
-                                     float line_scale)
-{
-    const UiTextOutputRecord32* target_record =
-        (const UiTextOutputRecord32*)record;
-    void* text_buffer = NULL;
-    const float* offsets = NULL;
-    int panel_index = -1;
-    unsigned int binding_index;
-    if (record == NULL) return;
-    for (binding_index = 0; binding_index < 64; ++binding_index) {
-        if (s_ui_text_output_bindings[binding_index].record == record) {
-            text_buffer = s_ui_text_output_bindings[binding_index].text_buffer;
-            offsets = s_ui_text_output_bindings[binding_index].offsets;
-            panel_index = s_ui_text_output_bindings[binding_index].panel_index;
-            break;
-        }
-    }
-    if (panel_index >= 0 && panel_index < 18) {
-        uint32_t y_bits, x_bits;
-        indexed_pair_get(panel_index, &x_bits, &y_bits);
-        memcpy(&s_ui_text_output_panel_offsets[panel_index][6], &y_bits,
-               sizeof(y_bits));
-        memcpy(&s_ui_text_output_panel_offsets[panel_index][7], &x_bits,
-               sizeof(x_bits));
-    }
-#if defined(_M_IX86) || defined(__i386__)
-    if (text_buffer == NULL)
-        text_buffer = (void*)(uintptr_t)target_record->text_buffer_pointer;
-    if (offsets == NULL)
-        offsets = (const float*)(uintptr_t)
-            target_record->panel_coordinates_pointer;
-#else
-    if (text_buffer == NULL || offsets == NULL) return;
-#endif
-    {
-        int x, y;
-    /* The retail path converts x (+0x1c) before y (+0x18), calling the CRT
-     * floor helper before __ftol so coordinates round downward. */
-        x = (int)crt_round_to_integral_with_math_error_handling(
-            (double)((float)target_record->base_x + offsets[7]));
-        y = (int)crt_round_to_integral_with_math_error_handling(
-            (double)((float)target_record->base_y + offsets[6]));
-        float_pair_at_offset4_set_from_ints(text_buffer, x, y);
-    }
-    (void)text_buffer_draw_wrapped(text_buffer, start_line, line_scale, NULL);
-}
-
 void ui_text_output_record_slot_draw(void* const* holder,
                                      uint32_t start_line, float line_scale)
 {
@@ -10084,86 +9454,9 @@ void ui_text_output_record_slot_draw(void* const* holder,
         ui_text_output_position_and_draw(*holder, start_line, line_scale);
 }
 
-// SimCursorInteractionTick
-// FUNCTION: LEGORR 0x0045adb0
-int ledger_stub_0045adb0_SimCursorInteractionTick(
-    const SimCursorInteractionHooks* hooks, int x, int y,
-    unsigned int action)
-{
-    return sim_cursor_interaction_tick(hooks, x, y, action);
-}
-
-// SimCategoryCellHitTest
-// FUNCTION: LEGORR 0x0045b310
-int ledger_stub_0045b310_SimCategoryCellHitTest(
-    const SimCategoryHitEntry* entries, uint32_t count, int x, int y,
-    int* category_out, int* item_out)
-{
-    return sim_category_cell_hit_test(entries, count, x, y,
-                                      category_out, item_out);
-}
-
 } // namespace unported_ledger_stubs
 
-static FrontendPanelRotationControlState s_panel_rotation_control;
-
-static void frontend_panel_rotation_image_load(BlockFile* values,
-                                                const char* config_root,
-                                                const char* key, int index)
-{
-    const char* const path = string_path_join(config_root,
-        "PanelRotationControl", key, (char*)NULL);
-    const char* value = values != NULL ? block_get_strptr(values, path) : NULL;
-    TextureSurface* old_surface = s_panel_rotation_control.images[index];
-    if (value == NULL) {
-        s_panel_rotation_control.images[index] = NULL;
-        if (old_surface != NULL) texture_release(old_surface);
-        return;
-    }
-
-    char storage[FE_PATH_MAX * 2];
-    char* fields[3];
-    TextureSurface* surface = NULL;
-    if (frontend_config_fields(value, storage, sizeof(storage), fields, 3,
-                               ',')) {
-        surface = image_surface_load(fields[0], 0u, 0u);
-        if (surface != NULL) {
-            s_panel_rotation_control.image_sizes[index][0] =
-                (float)atof(fields[1]);
-            s_panel_rotation_control.image_sizes[index][1] =
-                (float)atof(fields[2]);
-        }
-    }
-    s_panel_rotation_control.images[index] = surface;
-    if (old_surface != NULL) texture_release(old_surface);
-}
-
-// FUNCTION: LEGORR 0x0045b9d0
-void frontend_panel_rotation_control_config_load(BlockFile* values,
-                                                   const char* config_root)
-{
-    static const char* const image_keys[4] = {
-        "LeftImage", "RightImage", "UpImage", "DownImage"
-    };
-    static const char* const numeric_keys[3] = {
-        "CenterPositionX", "CenterPositionY", "Radius"
-    };
-    int* numeric_values[3];
-    int i;
-    numeric_values[0] = &s_panel_rotation_control.center_x;
-    numeric_values[1] = &s_panel_rotation_control.center_y;
-    numeric_values[2] = &s_panel_rotation_control.radius;
-    for (i = 0; i < 3; ++i) {
-        const char* const path = string_path_join(config_root,
-            "PanelRotationControl", numeric_keys[i], (char*)NULL);
-        const char* const value = values != NULL
-            ? block_get_strptr(values, path) : NULL;
-        *numeric_values[i] = value != NULL ? atoi(value) : 1;
-    }
-    for (i = 0; i < 4; ++i)
-        frontend_panel_rotation_image_load(values, config_root,
-                                            image_keys[i], i);
-}
+FrontendPanelRotationControlState s_panel_rotation_control;
 
 void frontend_panel_rotation_control_state_get(
     FrontendPanelRotationControlState* state)
@@ -10187,28 +9480,9 @@ void ledger_stub_0045b9d0_PanelRotationControlConfigLoad(
 
 namespace unported_ledger_stubs {
 
-// CameraDragFromCursorApply
-// FUNCTION: LEGORR 0x0045bcd0
-int ledger_stub_0045bcd0_CameraDragFromCursorApply(
-    CameraDragState* state, const CameraDragHooks* hooks, int x, int y,
-    float delta)
-{
-    return camera_drag_from_cursor_apply(state, hooks, x, y, delta);
-}
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
-
-// UiOverlayAnimationApply
-// FUNCTION: LEGORR 0x0045c5f0
-void ledger_stub_0045c5f0_UiOverlayAnimationApply(
-    const UiOverlayAnimationState* state,
-    void (*draw)(void*, void*, int, const float*, const float*),
-    void* context)
-{
-    ui_overlay_animation_apply(state, draw, context);
-}
 
 } // namespace unported_ledger_stubs
 
@@ -10684,31 +9958,4 @@ void ledger_stub_004588e0_InputDeviceRelease()
     input_device_release();
 }
 
-/* PairCountHistogramBuild rolls the last six pairs into a two-row history
- * before producing its local histogram. The original table is owned by the
- * simulation HUD; retain the same 2x6 window here rather than accepting an
- * invented caller-provided array. */
-// GLOBAL: LEGORR 0x00500868
-static uint32_t s_pair_count_history[2][6];
-static uint32_t s_pair_count_histogram[2][6];
-static uint32_t s_pair_count_dominant[2];
-
-// PairCountHistogramBuild
-// FUNCTION: LEGORR 0x0045c0d0
-void ledger_stub_0045c0d0_PairCountHistogramBuild(uint32_t first,
-                                                   uint32_t second)
-{
-    int group;
-    int column;
-    for (group = 0; group != 2; ++group) {
-        for (column = 0; column != 5; ++column)
-            s_pair_count_history[group][column] =
-                s_pair_count_history[group][column + 1];
-    }
-    s_pair_count_history[0][5] = first;
-    s_pair_count_history[1][5] = second;
-    pair_count_histogram_build(&s_pair_count_history[0][0],
-                               s_pair_count_histogram,
-                               s_pair_count_dominant);
-}
 } // namespace unported_ledger_stubs

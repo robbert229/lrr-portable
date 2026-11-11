@@ -27,16 +27,9 @@
 #include "mission_shared.hpp"
 #include "mission_for_reward.hpp"
 #include "mission_from_reward.hpp"
+#include "mission_from_panel_unit.hpp"
 
-/* TaskBlockInit's stack name list and format operand are fixed image data. */
-// GLOBAL: LEGORR 0x004a8a08
-const char s_task_name_crystals[] = "Crystals";
-
-#define MISS_CRYSTAL_QUOTA 26 /* crystal display budget (CrystalQuotaSetup) */
 #define REWARD_TASK_DURATION_DEFAULT 76.9375f
-
-// GLOBAL: LEGORR 0x005007ec
-static int s_crystal_quota;
 
 /* The reference entry points carry no context pointers. The game/runtime
  * owner must bind its active reward state and engine callbacks before calling
@@ -158,28 +151,6 @@ void mission_task_init(GameContext* ctx, BlockFile* cfg, const char* level_name)
      * snapshot consume the same configured values. */
     mission_task_config_values_refresh(ctx, cfg, level_name);
     s_task_init_binding = previous;
-}
-
-/* CrystalQuotaSetup @ 0x45c040: build Reward::Quota::Crystals, parse it,
- * and clamp zero or values above the display budget to 26. */
-// FUNCTION: LEGORR 0x0045c040
-static void mission_crystal_quota_setup(BlockFile* cfg, const char* root,
-                                        const char* level)
-{
-    const char* path = string_path_join(root, level, "Reward", "Quota",
-                                        "Crystals", (const char*)0);
-    const char* value = block_get_strptr(cfg, path);
-    int quota;
-    if (value == NULL) {
-        value = "";
-    } else {
-        value = block_get_strptr(cfg, path);
-    }
-    quota = atoi(value != NULL ? value : "");
-    s_crystal_quota = quota;
-    if (s_crystal_quota > MISS_CRYSTAL_QUOTA || s_crystal_quota == 0) {
-        s_crystal_quota = MISS_CRYSTAL_QUOTA;
-    }
 }
 
 void mission_task_refresh(GameContext* ctx)

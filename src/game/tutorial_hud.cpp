@@ -29,6 +29,7 @@
 #include "../gods98/message.hpp"
 #include "../gods98/media.hpp"
 #include "tutorial_hud_shared.hpp"
+#include "tutorial_hud_for_panel_unit.hpp"
 
 /* The old NERP/advisor owner lives in DAT windows in the corpus.  Keep the
  * parser and interpreter state explicit here so callers can install the
@@ -1929,21 +1930,6 @@ uint32_t tutorial_token_value_get(uint32_t index)
     return index < s_tutorial_token_count ? s_tutorial_tokens[index].value : 0;
 }
 
-typedef struct LegacyPanelPortRecord {
-    float initial[4];
-    float current[4];
-    uint32_t flags;
-    uint32_t image_flags;
-    void* image;
-    int image_mode;
-    int image_texture_owned;
-    uint32_t selection_flags[64];
-    /* Mirrors the original per-entry value word (record entry +0x24),
-       cleared by the interaction-state reset alongside selection_flags. */
-    uint32_t selection_values[64];
-    uint32_t selection_count;
-} LegacyPanelPortRecord;
-
 typedef struct LegacyPanelImagePortEntry {
     void* surface;
     int x;
@@ -1956,7 +1942,7 @@ typedef struct LegacyPanelImagePortEntry {
 
 LegacyHudOps s_legacy_hud_ops;
 LegacyHealthBarState s_legacy_health_bar;
-static LegacyPanelPortRecord s_legacy_panels[18];
+LegacyPanelPortRecord s_legacy_panels[18];
 static float s_legacy_bubble_position[2];
 static float s_legacy_entity_ring_radius;
 static float s_legacy_entity_ring_height;
@@ -2020,120 +2006,6 @@ void legacy_entity_screen_ring_render_with_ops(
     else memset(&s_legacy_hud_ops, 0, sizeof(s_legacy_hud_ops));
     legacy_entity_screen_ring_render(entity, x, y);
     s_legacy_hud_ops = saved_ops;
-}
-
-// FUNCTION: LEGORR 0x0045a240
-void legacy_scroll_panel_controls_initialize(void)
-{
-    /* The original initialises the scroll info panel, creates the
-       configured overlay element, then calls FUN_0045abb0(6, 1, 1) and
-       FUN_0045abb0(6, 2, 1) — the panel-item request-state setter. */
-    ui_scroll_info_panel_initialize(s_legacy_hud_ops.overlay_init_sink);
-    ui_overlay_create_configured_element(s_legacy_hud_ops.overlay_init_sink);
-    panel_item_flag32_set(6, 1, 1);
-    panel_item_flag32_set(6, 2, 1);
-}
-
-// FUNCTION: LEGORR 0x0045a270
-void legacy_panel_category_interaction_state_reset(void)
-{
-    int i;
-    /* The original walks the twelve records between DAT_00500110 and
-       0x500350 (stride 0x30), restores the two view-offset dwords from
-       their initial pair, forces the record flags to (f & ~0xa) | 4, and
-       clears each selection entry's value word and its 0x48 flag bits.
-       It does not touch the HUD state-flag word. */
-    for (i = 0; i < 12; ++i) {
-        uint32_t j;
-        LegacyPanelPortRecord* record = &s_legacy_panels[i];
-        record->current[0] = record->initial[0];
-        record->current[1] = record->initial[1];
-        record->flags = (record->flags & ~0xau) | 4u;
-        for (j = 0; j < record->selection_count && j < 64; ++j) {
-            record->selection_values[j] = 0;
-            record->selection_flags[j] &= ~0x48u;
-        }
-    }
-    overlay_anim_float_install(0.0f);
-}
-
-// FUNCTION: LEGORR 0x0045a2e0
-void legacy_overlay_image_record_load(const char* path, int panel,
-                                      uint32_t state)
-{
-    LegacyPanelPortRecord* record;
-    if (panel < 0 || panel >= 18) return;
-    record = &s_legacy_panels[panel];
-    if (record->image != NULL) {
-        if (record->image_texture_owned) {
-            texture_release((TextureSurface*)record->image);
-        }
-        else if (s_legacy_hud_ops.surface_release != NULL) {
-            s_legacy_hud_ops.surface_release(record->image,
-                                             s_legacy_hud_ops.context);
-        }
-    }
-    record->selection_count = 0;
-    record->flags = state;
-    request_record_flags_set(panel, state);
-    record->image_mode = 0;
-    record->image_flags = 0;
-    record->image = NULL;
-    record->image_texture_owned = 0;
-    if (path != NULL) {
-        if (s_legacy_hud_ops.panel_texture_load != NULL) {
-            record->image = s_legacy_hud_ops.panel_texture_load(
-                path, s_legacy_hud_ops.context);
-            record->image_texture_owned = record->image != NULL;
-        }
-        else if (s_legacy_hud_ops.surface_load != NULL) {
-            record->image = s_legacy_hud_ops.surface_load(
-                NULL, path, 0, 0, s_legacy_hud_ops.context);
-        }
-        else {
-            record->image = image_surface_load(path, 0u, 0u);
-            record->image_texture_owned = record->image != NULL;
-        }
-        if (record->image_texture_owned)
-            texture_source_color_key_set((TextureSurface*)record->image,
-                                         0u, 0u);
-    }
-    if (record->image != NULL) {
-        if (s_legacy_hud_ops.surface_initialize != NULL)
-            s_legacy_hud_ops.surface_initialize(record->image,
-                                                s_legacy_hud_ops.context);
-        record->image_mode = 0;
-        record->image_flags |= 1u;
-        request_record_flags_set(panel, state | 1u);
-        return;
-    }
-    if (path != NULL && s_legacy_hud_ops.surface_alternate_load != NULL) {
-        record->image = s_legacy_hud_ops.surface_alternate_load(
-            NULL, path, panel, 3, s_legacy_hud_ops.context);
-        if (record->image != NULL) {
-            record->image_texture_owned = 0;
-            record->image_mode = 1;
-            record->image_flags |= 1u;
-            request_record_flags_set(panel, state | 1u);
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x0045a3b0
-int legacy_panel_slot_coordinate_hit_test(int panel, int x, int y)
-{
-    LegacyPanelPortRecord* record;
-    int hit;
-    /* Preserve the port record-array bound; the corpus directly indexes its
-       panel record and has no corresponding range branch. */
-    if (panel < 0 || panel >= 18) return 1;
-    record = &s_legacy_panels[panel];
-    if (record->image_mode != 0 || record->image == NULL ||
-        s_legacy_hud_ops.surface_hit == NULL) return 1;
-    hit = s_legacy_hud_ops.surface_hit(record->image,
-        x - (int)record->current[0], y - (int)record->current[1],
-        s_legacy_hud_ops.context);
-    return hit ? panel == 0 : 1;
 }
 
 /* Portable panel-image entry. This is separate from PanelImageSlotEntryAllocate
