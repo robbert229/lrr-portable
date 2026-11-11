@@ -1,4 +1,4 @@
-# input_sha256: 416d6c9e167a11c3c5dd7e2a74d04c7589bb1c5e19a41eb9a58fa7f1041646c5
+# input_sha256: d62bb518724479ce01cc0d82a1a70c32aa772043cd79e1e77ab722c03b666b2b
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
