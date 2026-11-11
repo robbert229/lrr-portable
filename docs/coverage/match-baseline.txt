@@ -1,4 +1,4 @@
-# input_sha256: c9d0387dfb71f18e940b427da3339624a71129b768e571f4852a4b40ebf029ed
+# input_sha256: 9cc828dba87c86fc0a7c328633a252a76a8f7627283a01b0a0be8e7eb4e69ba1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -459,7 +459,7 @@
 0x004179b0 14.39 frontend_sav_menu_list
 0x00417a90 11.18 save_read_slot_target
 0x00417bd0 14.35 sav_write_slot_file
-0x00417df0 29.41 sav_refresh_slots_target
+0x00417df0 29.70 sav_refresh_slots_target
 0x00417e50 33.33 sav_slot_ctx_target
 0x00417e70 100.00 sav_build_ctx_target
 0x00417e90 100.00 save_slot_get_target
@@ -986,7 +986,7 @@
 0x004440a0 31.82 linked_entity_flag_and_command_update
 0x004440f0 11.31 ledger_stub_004440f0_ActivityTimeoutAccumulateAndRaise
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
-0x00444460 22.72 ledger_stub_00444460_FlaggedVectorStepCommandIssue
+0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
 0x00444680 4.88 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
@@ -1039,7 +1039,7 @@
 0x00449cd0 91.67 ledger_stub_00449cd0_SceneObjectStateHandleApplyValue
 0x00449f50 39.10 ledger_stub_00449f50_EntityTypeOperationDispatch
 0x00449ff0 29.01 entity_type_operation_release
-0x0044a070 28.69 entity_follow_target_pose_get
+0x0044a070 22.49 entity_follow_target_pose_get
 0x0044a200 91.49 entity_type_component_get
 0x0044a2a0 34.41 entity_work_object_position_get
 0x0044a310 0.00 ledger_stub_0044a310_ObjectMovementInputAccumulate
@@ -1323,7 +1323,7 @@
 0x0045f1f0 32.43 task_loader_sound
 0x0045f230 12.21 task_loader_font
 0x0045f290 15.58 task_loader_boximages
-0x0045f3e0 17.91 task_loader_images
+0x0045f3e0 15.85 task_loader_images
 0x0045f530 26.77 task_loader_text
 0x0045f5f0 20.63 task_loader_flics
 0x0045f750 15.38 reward_task_block_finish
@@ -1344,15 +1344,15 @@
 0x00460f00 13.20 reward_stats_panel_draw_bound
 0x00461070 27.62 reward_stats_text_format_bound
 0x00461410 8.01 reward_screen_tick
-0x00461790 4.89 reward_display_task_abi
+0x00461790 4.96 reward_display_task_abi
 0x00461c90 28.87 reward_score_task_text_draw
 0x00461dd0 12.21 mission_reward_zone
 0x00462030 18.18 reference_target::save_menu_open_from_reward
-0x00462270 29.70 checkpoint_step_target
-0x00462390 11.36 reward_screen_transition_tick_abi
+0x00462270 30.15 checkpoint_step_target
+0x00462390 14.12 reward_screen_transition_tick_abi
 0x00462460 34.29 reward_flic_context_reload_abi
-0x004624a0 21.18 reward_flic_context_tick_abi
-0x00462600 11.22 reward_task_text_draw_and_score_gate_abi
+0x004624a0 24.69 reward_flic_context_tick_abi
+0x00462600 11.28 reward_task_text_draw_and_score_gate_abi
 0x00462700 100.00 pointer_override_expiry_tick
 0x00462780 9.84 mission_reward_click
 0x00462800 88.89 reward_score_add
@@ -1713,7 +1713,7 @@
 0x00476850 11.76 ddiscene_resource_open
 0x00476bf0 73.03 surface_pixel_rows_flip_in_place
 0x00476d10 40.00 render_resource_pair_release_and_clear
-0x00476d50 90.00 lego::scene_resource_slots_initialize
+0x00476d50 100.00 lego::scene_resource_slots_initialize
 0x00476d80 52.17 lego::scene_resource_slots_release_all
 0x00476dc0 14.55 render_target_viewport_scale_set
 0x00476e50 14.29 ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate
@@ -1871,7 +1871,7 @@
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
-0x0047d800 29.17 surface_bitmap24_bit_surface_convert
+0x0047d800 29.34 surface_bitmap24_bit_surface_convert
 0x0047db90 100.00 rgb_channels_pack
 0x0047dbc0 22.22 resource_record_add_ref
 0x0047dbf0 18.87 image_surface_blit_transformed
@@ -1986,7 +1986,7 @@
 0x00483240 51.28 indexed_record_transform_copy_in
 0x00483270 16.34 render_object_color_vector_set
 0x00483400 100.00 indexed_record_data_address_get_target
-0x00483420 36.16 screen_effect_item_opacity_set_target
+0x00483420 30.51 screen_effect_item_opacity_set_target
 0x00483540 100.00 matrix4_identity_initialize
 0x00483580 18.18 render_interface_capability_check
 0x00483600 24.24 direct3d_viewport_setup
@@ -2069,7 +2069,7 @@
 0x00487fc0 42.34 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 15.33 scene_node_transform_matrix_apply
+0x004882e0 14.00 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
@@ -2622,7 +2622,7 @@
 0x004179b0 14.39 frontend_sav_menu_list
 0x00417a90 11.18 save_read_slot_target
 0x00417bd0 14.35 sav_write_slot_file
-0x00417df0 29.41 sav_refresh_slots_target
+0x00417df0 29.70 sav_refresh_slots_target
 0x00417e50 33.33 sav_slot_ctx_target
 0x00417e70 100.00 sav_build_ctx_target
 0x00417e90 100.00 save_slot_get_target
@@ -3149,7 +3149,7 @@
 0x004440a0 31.82 linked_entity_flag_and_command_update
 0x004440f0 11.31 ledger_stub_004440f0_ActivityTimeoutAccumulateAndRaise
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
-0x00444460 22.72 ledger_stub_00444460_FlaggedVectorStepCommandIssue
+0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
 0x00444680 4.88 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
@@ -3202,7 +3202,7 @@
 0x00449cd0 91.67 ledger_stub_00449cd0_SceneObjectStateHandleApplyValue
 0x00449f50 39.10 ledger_stub_00449f50_EntityTypeOperationDispatch
 0x00449ff0 29.01 entity_type_operation_release
-0x0044a070 28.69 entity_follow_target_pose_get
+0x0044a070 22.49 entity_follow_target_pose_get
 0x0044a200 91.49 entity_type_component_get
 0x0044a2a0 34.41 entity_work_object_position_get
 0x0044a310 0.00 ledger_stub_0044a310_ObjectMovementInputAccumulate
@@ -3486,7 +3486,7 @@
 0x0045f1f0 32.43 task_loader_sound
 0x0045f230 12.21 task_loader_font
 0x0045f290 15.58 task_loader_boximages
-0x0045f3e0 17.91 task_loader_images
+0x0045f3e0 15.85 task_loader_images
 0x0045f530 26.77 task_loader_text
 0x0045f5f0 20.63 task_loader_flics
 0x0045f750 15.38 reward_task_block_finish
@@ -3507,15 +3507,15 @@
 0x00460f00 13.20 reward_stats_panel_draw_bound
 0x00461070 27.62 reward_stats_text_format_bound
 0x00461410 8.01 reward_screen_tick
-0x00461790 4.89 reward_display_task_abi
+0x00461790 4.96 reward_display_task_abi
 0x00461c90 28.87 reward_score_task_text_draw
 0x00461dd0 12.21 mission_reward_zone
 0x00462030 18.18 reference_target::save_menu_open_from_reward
-0x00462270 29.70 checkpoint_step_target
-0x00462390 11.36 reward_screen_transition_tick_abi
+0x00462270 30.15 checkpoint_step_target
+0x00462390 14.12 reward_screen_transition_tick_abi
 0x00462460 34.29 reward_flic_context_reload_abi
-0x004624a0 21.18 reward_flic_context_tick_abi
-0x00462600 11.22 reward_task_text_draw_and_score_gate_abi
+0x004624a0 24.69 reward_flic_context_tick_abi
+0x00462600 11.28 reward_task_text_draw_and_score_gate_abi
 0x00462700 100.00 pointer_override_expiry_tick
 0x00462780 9.84 mission_reward_click
 0x00462800 88.89 reward_score_add
@@ -3876,7 +3876,7 @@
 0x00476850 11.76 ddiscene_resource_open
 0x00476bf0 73.03 surface_pixel_rows_flip_in_place
 0x00476d10 40.00 render_resource_pair_release_and_clear
-0x00476d50 90.00 lego::scene_resource_slots_initialize
+0x00476d50 100.00 lego::scene_resource_slots_initialize
 0x00476d80 52.17 lego::scene_resource_slots_release_all
 0x00476dc0 14.55 render_target_viewport_scale_set
 0x00476e50 14.29 ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate
@@ -4034,7 +4034,7 @@
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
-0x0047d800 29.17 surface_bitmap24_bit_surface_convert
+0x0047d800 29.34 surface_bitmap24_bit_surface_convert
 0x0047db90 100.00 rgb_channels_pack
 0x0047dbc0 22.22 resource_record_add_ref
 0x0047dbf0 18.87 image_surface_blit_transformed
@@ -4149,7 +4149,7 @@
 0x00483240 51.28 indexed_record_transform_copy_in
 0x00483270 16.34 render_object_color_vector_set
 0x00483400 100.00 indexed_record_data_address_get_target
-0x00483420 36.16 screen_effect_item_opacity_set_target
+0x00483420 30.51 screen_effect_item_opacity_set_target
 0x00483540 100.00 matrix4_identity_initialize
 0x00483580 18.18 render_interface_capability_check
 0x00483600 24.24 direct3d_viewport_setup
@@ -4232,7 +4232,7 @@
 0x00487fc0 42.34 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 15.33 scene_node_transform_matrix_apply
+0x004882e0 14.00 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
