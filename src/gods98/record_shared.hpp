@@ -23,4 +23,6 @@ extern uint32_t s_indexed_surface_hidden_count;
 extern SurfaceVisibilityAdapter s_surface_visibility_adapter;
 extern void* s_surface_visibility_context;
 
+void rec_dword_put(void* base, size_t off, uint32_t v);
+
 #endif /* LRR_GODS98_RECORD_SHARED_HPP */

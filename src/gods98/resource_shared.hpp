@@ -82,4 +82,16 @@ extern void* s_scene_indexed_record_context;
 extern SceneChannelEntryProcessHook s_scene_channel_entry_process_hook;
 extern void* s_scene_channel_entry_context;
 
+extern SceneAnimationDurationHook s_animation_duration_hook;
+extern SceneAnimationLastFrameHook s_animation_last_frame_hook;
+extern void* s_animation_duration_context;
+extern SceneResourceNamedResolveHook s_scene_resource_named_resolve_hook;
+extern void* s_scene_resource_record_context;
+extern SceneAnimationTrackApplyHook s_animation_track_apply_hook;
+extern void* s_animation_track_context;
+extern SceneResourceOwnerApplyHook s_scene_resource_owner_apply_hook;
+extern void* s_scene_resource_owner_context;
+extern SceneOwnedMemoryReleaseHook s_scene_owned_memory_release_hook;
+extern void* s_scene_owned_memory_context;
+
 #endif /* LRR_GODS98_RESOURCE_SHARED_HPP */

@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'vehicle_model.cpp',
   'upgrade_levels.cpp',
   'tooltip.cpp',
   'text.cpp',

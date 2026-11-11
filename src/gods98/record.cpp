@@ -137,7 +137,7 @@ void* rec_ptr(const void* base, size_t off)
 }
 
 /* Defined with the mesh-window band below; used by the visibility setter. */
-static void rec_dword_put(void* base, size_t off, uint32_t v);
+void rec_dword_put(void* base, size_t off, uint32_t v);
 
 /* Contents of a native cell array: memcpy read (the corpus's cell
  * dwords can sit unaligned after a stride change). */
@@ -490,28 +490,6 @@ int model_child_render_eligibility_check(const void* object)
     return 0;
 }
 
-/* The mapped EntityTypeFlagBit1Get body follows the corpus's unchecked
- * +0x1e8 load; the public helper retains its null guard. */
-// FUNCTION: LEGORR 0x0046d330
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t entity_type_flag_bit1_get_target(const void* record)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 01e8h]
-        and eax, 0ffh
-        shr eax, 1
-        and eax, 1
-        ret
-    }
-}
-#else
-uint32_t entity_type_flag_bit1_get_target(const void* record)
-{
-    return (*(const uint32_t*)((const char*)record + 0x1e8) & 0xffu) >> 1 & 1u;
-}
-#endif
-
 uint32_t entity_type_flag_bit1_get(const void* record)
 {
     if (record == NULL) return 0u;
@@ -520,34 +498,6 @@ uint32_t entity_type_flag_bit1_get(const void* record)
 
 /* ------------------------------------------------------------------ *
  *  Field-reader sweep (see record.hpp). */
-
-// FUNCTION: LEGORR 0x0046db60
-uint32_t object_record_field11c_get(const void* record)
-{
-    uint32_t value;
-    __builtin_memcpy(&value, (const char*)record + 0x11c, sizeof(value));
-    return value;
-}
-
-// FUNCTION: LEGORR 0x0046cf80
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t entity_type_mask_get(const void* record)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 12ch]
-        ret
-    }
-}
-#else
-uint32_t entity_type_mask_get(const void* record)
-{
-    if (record == NULL) {
-        return 0u; /* pinned deviation: the corpus loads blindly */
-    }
-    return *(const uint32_t*)((const char*)record + 300);
-}
-#endif
 
 // FUNCTION: LEGORR 0x00482210
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -576,15 +526,6 @@ uint32_t scene_object_owner_get(const void* scene_object)
     __builtin_memcpy(&owner, (const char*)scene_object + 0x20,
                      sizeof(owner));
     return owner;
-}
-
-// FUNCTION: LEGORR 0x0046d9e0
-uint32_t scene_object_resource_get(const void* scene_object)
-{
-    uint32_t resource;
-    __builtin_memcpy(&resource, (const char*)scene_object + 0x08,
-                     sizeof(resource));
-    return resource;
 }
 
 // FUNCTION: LEGORR 0x00473680
@@ -1269,44 +1210,6 @@ void scene_render_lock_toggle(void* scene_object, int enabled)
 }
 #endif
 
-/* SceneResourceVisibilitySet (FUN_0046d2c0): raise (+0x1e8 |= 2) or clear
- * (&= ~2) the record's visibility word, then route the raw flag through the
- * visibility operation — unconditionally on the +8 object, on +0xc when it
- * is set, and on every live child in the +0x10 window counted at +0x40.
- * Deviations: the corpus's +8/+0xc object fields are adjacent 32-bit
- * dwords, which the port's native-size pointer-slot model cannot carry
- * four bytes apart — the port routes the field values as raw handles,
- * exactly as the corpus does (adapter calls are recorded for tests).
- * The children keep the band's native-size stride (the
- * slot-window precedent) walked only to the window's six entries before
- * +0x40 (the corpus strides its dword slots blindly past the count field);
- * the count is read once (the visibility helper never touches the record) and NULL
- * records are guarded. The flag rides the leaf raw, unlike the overlay's
- * folded call. */
-// FUNCTION: LEGORR 0x0046d2c0
-void scene_resource_visibility_set(void* record, uint32_t flag)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus strides blindly */
-    }
-    const uint32_t word = rec_dword(record, 0x1e8);
-    rec_dword_put(record, 0x1e8, flag == 0u ? word & ~2u : word | 2u);
-    scene_visibility_hook_call(
-        (void*)(uintptr_t)rec_dword(record, 0x08), (int)flag);
-    const uint32_t secondary = rec_dword(record, 0x0c);
-    if (secondary != 0u) {
-        scene_visibility_hook_call((void*)(uintptr_t)secondary, (int)flag);
-    }
-    const uint32_t count = rec_dword(record, 0x40);
-    const uint32_t window = (0x40u - 0x10u) / (uint32_t)sizeof(void*);
-    for (uint32_t i = 0; i < count && i < window; ++i) {
-        void* child = rec_ptr(record, (size_t)0x10 + (size_t)i * sizeof(void*));
-        if (child != NULL) {
-            scene_visibility_hook_call(child, (int)flag);
-        }
-    }
-}
-
 /* SceneCurrentObjectSet (FUN_00477240) — see record.hpp. The store lands
  * on the record's +0x14 slot; Deviation: the corpus strides a dword, the
  * port writes the module's widened pointer slot. */
@@ -1315,22 +1218,6 @@ void scene_current_object_set(void* record, void* object)
 {
     if (record != NULL) {
         __builtin_memcpy((char*)record + 0x14, &object, sizeof object);
-    }
-}
-
-/* SixResourceSlotsSetState (FUN_0046cfc0) — see record.hpp. The corpus
- * walks record+0x10..0x24 with a 6-count dec/jne loop from a lea'd cursor
- * and loads each slot directly; mirror that shape here. */
-// FUNCTION: LEGORR 0x0046cfc0
-void six_resource_slots_set_state(const void* record, uint32_t flag)
-{
-    const void* const* slot =
-        (const void* const*)((const char*)record + 0x10);
-    for (int remaining = 6; remaining != 0; --remaining, ++slot) {
-        const void* handle = *slot;
-        if (handle != NULL) {
-            scene_visibility_hook_call((void*)handle, (int)flag);
-        }
     }
 }
 
@@ -1344,21 +1231,6 @@ void ui_record_callback_forward(const void* const* ui_record,
     }
     void* handle = rec_ptr(ui_record, 0x00);
     object_state_pair_get(handle, out_a, out_b);
-}
-
-/* RecordFlagBitTest (FUN_0046cf40) — see record.hpp. */
-// FUNCTION: LEGORR 0x0046cf40
-uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
-                              int reject_masked)
-{
-    /* The corpus shifts blind; the x86 shift masks the count to 5 bits. */
-    const uint32_t bit = 1u << bit_index;
-    if (reject_masked != 0 && (entity_type_mask_get(record) & bit) != 0u) {
-        return 0u;
-    }
-    uint32_t flags = 0u;
-    __builtin_memcpy(&flags, (const char*)record + 0x130, sizeof(flags));
-    return flags & bit;
 }
 
 /* --- the UI record factories (see record.hpp) ------------------------------
@@ -2275,7 +2147,7 @@ static void rec_float_put(void* base, size_t off, float v)
     __builtin_memcpy((char*)base + off, &v, sizeof v);
 }
 
-static void rec_dword_put(void* base, size_t off, uint32_t v)
+void rec_dword_put(void* base, size_t off, uint32_t v)
 {
     __builtin_memcpy((char*)base + off, &v, sizeof v);
 }
