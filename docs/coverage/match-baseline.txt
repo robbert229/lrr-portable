@@ -1,4 +1,4 @@
-# input_sha256: 4ae009c84477d6958b0299643910debbdea52e8d518a580d4246a0fbea4bf1b6
+# input_sha256: ca149edd930ba4c6431babbd665c01582f77c3c1bb81ec0e13adc86557b5557d
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2136 mapped functions
+[game-only] 2155 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -325,12 +325,18 @@
 0x0040f330 21.13 lava_erosion_neighbor_mutate
 0x0040f5e0 100.00 global_config_value_set
 0x0040f5f0 21.36 lava_erosion_eight_neighbor_propagate
+0x0040f6c0 7.27 scene_node_record_create
 0x0040f7b0 100.00 optional_resource_destroy
+0x0040f7d0 36.78 callback_state_record_create
+0x0040f850 46.38 callback_state_list_dispose
 0x0040fb00 100.00 matrix_rotation_compose_xyz
 0x0040fcc0 100.00 vector_scale_components_in_place
 0x0040fdb0 53.85 three_value_record_copy_and_mark_ready
 0x0040fde0 75.00 set_vector_and_notify_listeners
 0x0040fe00 32.14 scene_object_list_update_transforms
+0x0040fe40 6.45 ptrstack_push
+0x0040fe60 28.00 ptrstack_pop
+0x0040fe90 54.55 ptrstack_for_each
 0x0040fec0 90.91 set_global_scalar_to_one
 0x0040ff50 87.50 scene_object_list_apply_float_callback
 0x0040ff70 83.33 object_vector3_set
@@ -1344,6 +1350,7 @@
 0x00462890 100.00 global_counter_at_0055532c_increment
 0x004628a0 100.00 global_float_accumulator_00555330_add
 0x004628c0 100.00 global_float_accumulate_00555120
+0x004628e0 50.98 callback_record_allocate_initialize
 0x00462960 39.18 task_table_contents_release
 0x00462ab0 100.00 record_field18_set
 0x00462ac0 100.00 record_flags_24_or
@@ -1580,6 +1587,17 @@
 0x00471fc0 12.94 entity_velocity_slot_dispatch
 0x00472080 33.33 entity_centers_within_configured_radius
 0x00472130 15.79 entity_centers_within_object_radius
+0x004721e0 8.26 lego::directshow_sample_setup
+0x004722b0 8.33 lego::configured_video_graph_setup
+0x00472390 10.53 lego::configured_video_com_route_init
+0x00472430 13.51 lego::directshow_interface_release
+0x004724a0 6.45 lego::configured_video_sample_update
+0x00472530 10.26 lego::video_duration_frame_bound_update
+0x00472560 13.33 lego::directshow_render_surface_create
+0x00472670 12.50 lego::directdraw_surface_description_get
+0x004726c0 0.00 lego::video_frame_bound_refresh
+0x004726d0 58.82 lego::directshow_sample_update_and_blit
+0x004726f0 64.00 lego::directshow_wrapper_destroy
 0x00472800 30.06 lego::ddiscene_object_pool_shutdown
 0x004728c0 100.00 shared_texture_directory_set
 0x004728e0 100.00 renderer_flag_bit6_set
@@ -2110,6 +2128,7 @@
 0x0048d870 14.69 model_free
 0x0048e1aa 50.00 crt_math_intrinsic_dispatch
 0x0048e1e0 43.01 formatted_text_buffer_build
+0x0048ead0 100.00 engine_calloc
 0x0048ec00 22.86 seh_frame_unwind
 0x0048eca0 11.90 call_setting_frame_12
 0x0048ed00 27.45 crt_exception_frame_filter_invoke
@@ -2144,7 +2163,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2355 mapped functions
+[full] 2374 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -2463,12 +2482,18 @@
 0x0040f330 21.13 lava_erosion_neighbor_mutate
 0x0040f5e0 100.00 global_config_value_set
 0x0040f5f0 21.36 lava_erosion_eight_neighbor_propagate
+0x0040f6c0 7.27 scene_node_record_create
 0x0040f7b0 100.00 optional_resource_destroy
+0x0040f7d0 36.78 callback_state_record_create
+0x0040f850 46.38 callback_state_list_dispose
 0x0040fb00 100.00 matrix_rotation_compose_xyz
 0x0040fcc0 100.00 vector_scale_components_in_place
 0x0040fdb0 53.85 three_value_record_copy_and_mark_ready
 0x0040fde0 75.00 set_vector_and_notify_listeners
 0x0040fe00 32.14 scene_object_list_update_transforms
+0x0040fe40 6.45 ptrstack_push
+0x0040fe60 28.00 ptrstack_pop
+0x0040fe90 54.55 ptrstack_for_each
 0x0040fec0 90.91 set_global_scalar_to_one
 0x0040ff50 87.50 scene_object_list_apply_float_callback
 0x0040ff70 83.33 object_vector3_set
@@ -3482,6 +3507,7 @@
 0x00462890 100.00 global_counter_at_0055532c_increment
 0x004628a0 100.00 global_float_accumulator_00555330_add
 0x004628c0 100.00 global_float_accumulate_00555120
+0x004628e0 50.98 callback_record_allocate_initialize
 0x00462960 39.18 task_table_contents_release
 0x00462ab0 100.00 record_field18_set
 0x00462ac0 100.00 record_flags_24_or
@@ -3718,6 +3744,17 @@
 0x00471fc0 12.94 entity_velocity_slot_dispatch
 0x00472080 33.33 entity_centers_within_configured_radius
 0x00472130 15.79 entity_centers_within_object_radius
+0x004721e0 8.26 lego::directshow_sample_setup
+0x004722b0 8.33 lego::configured_video_graph_setup
+0x00472390 10.53 lego::configured_video_com_route_init
+0x00472430 13.51 lego::directshow_interface_release
+0x004724a0 6.45 lego::configured_video_sample_update
+0x00472530 10.26 lego::video_duration_frame_bound_update
+0x00472560 13.33 lego::directshow_render_surface_create
+0x00472670 12.50 lego::directdraw_surface_description_get
+0x004726c0 0.00 lego::video_frame_bound_refresh
+0x004726d0 58.82 lego::directshow_sample_update_and_blit
+0x004726f0 64.00 lego::directshow_wrapper_destroy
 0x00472800 30.06 lego::ddiscene_object_pool_shutdown
 0x004728c0 100.00 shared_texture_directory_set
 0x004728e0 100.00 renderer_flag_bit6_set
@@ -4279,6 +4316,7 @@
 0x0048e8e0 100.00 _ceil
 0x0048e9e0 100.00 __alldiv
 0x0048ea90 100.00 __allmul
+0x0048ead0 100.00 engine_calloc
 0x0048eae0 100.00 _fclose
 0x0048eb60 100.00 __fsopen
 0x0048eb90 100.00 _fopen

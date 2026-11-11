@@ -107,6 +107,7 @@ tools-test:
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_pr_match_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_match_listings.py'
+	python3 -m unittest discover -s tools/tests -p 'test_link_order.py'
 
 # Check match_function.py against an existing full report from the same tree.
 match-function-parity:

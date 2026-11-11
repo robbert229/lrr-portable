@@ -113,60 +113,79 @@ set(GAME_DIR "${SRC_ROOT}/game")
 set(CRT_DIR "${SRC_ROOT}/crt")
 set(PLATFORM_DIR "${SRC_ROOT}/platform")
 
-add_library(gods98 STATIC
-  ${ENGINE_DIR}/gods98.cpp ${ENGINE_DIR}/string.cpp
-  ${CRT_DIR}/crt.cpp ${CRT_DIR}/crt_heap.cpp
-  ${CRT_DIR}/crt_runtime_calls.cpp ${CRT_DIR}/crt_runtime_aliases.cpp
-  ${ENGINE_DIR}/heap.cpp ${ENGINE_DIR}/ptrstack.cpp ${ENGINE_DIR}/record.cpp
-  ${ENGINE_DIR}/engine.cpp ${ENGINE_DIR}/tickers.cpp
-  ${ENGINE_DIR}/resource.cpp ${ENGINE_DIR}/texture.cpp ${ENGINE_DIR}/sound.cpp
-  ${ENGINE_DIR}/input.cpp ${ENGINE_DIR}/surface.cpp ${ENGINE_DIR}/frameloop.cpp
-  ${ENGINE_DIR}/audio.cpp ${ENGINE_DIR}/camera.cpp ${ENGINE_DIR}/view.cpp
-  ${ENGINE_DIR}/message.cpp ${ENGINE_DIR}/mainsim.cpp ${ENGINE_DIR}/simtick.cpp
-  ${ENGINE_DIR}/utils.c ${ENGINE_DIR}/block.cpp ${ENGINE_DIR}/config.c
-  ${ENGINE_DIR}/maths.c
-  ${ENGINE_DIR}/model.cpp
-  ${ENGINE_DIR}/entity.cpp ${ENGINE_DIR}/lwsc_scene.cpp
-  ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp ${ENGINE_DIR}/media.cpp
-  ${ENGINE_DIR}/scene_pool.cpp ${ENGINE_DIR}/scene_resources.cpp
-  ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c
-  ${ENGINE_DIR}/sound_wave.cpp ${ENGINE_DIR}/winmm_port.cpp ${ENGINE_DIR}/registry_port.cpp
-  ${ENGINE_DIR}/keys.c ${ENGINE_DIR}/g98_024.c ${ENGINE_DIR}/g98_026.c ${ENGINE_DIR}/g98_029.c
-  ${ENGINE_DIR}/draw.c ${ENGINE_DIR}/draw_port.cpp)
-target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
+# The link-order list (ADR 0006): every game, gods98, platform and program
+# source, in the matching build's link order, with its library.
+get_filename_component(LRR_SRC_ROOT_ABS "${SRC_ROOT}" ABSOLUTE
+  BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(LRR_LINK_ORDER_FILE "${LRR_SRC_ROOT_ABS}/link_order.cmake")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  "${LRR_LINK_ORDER_FILE}")
+set(LRR_LINK_SOURCES "")
+set(LRR_LINK_TARGETS "")
+set(LRR_ORIGINAL_SHAPE_SOURCES "")
+foreach(_lib IN ITEMS game gods98 platform_glue program)
+  set(LRR_LINK_SOURCES_${_lib} "")
+endforeach()
+macro(lrr_link kind key library source)
+  if("${ARGN}" STREQUAL "" OR "${ARGN}" STREQUAL "${PLATFORM}")
+    list(APPEND LRR_LINK_SOURCES "${SRC_ROOT}/${source}")
+    list(APPEND LRR_LINK_TARGETS "${library}")
+    list(APPEND LRR_LINK_SOURCES_${library} "${SRC_ROOT}/${source}")
+    # Units rebuilt in original shape (ADR 0005) are the list's .c files.
+    if("${source}" MATCHES "\\.c$")
+      list(APPEND LRR_ORIGINAL_SHAPE_SOURCES "${SRC_ROOT}/${source}")
+    endif()
+  endif()
+endmacro()
+include("${LRR_LINK_ORDER_FILE}")
 
-add_library(game STATIC
-  ${GAME_DIR}/game.cpp ${GAME_DIR}/level.cpp ${GAME_DIR}/objective.cpp
-  ${GAME_DIR}/savegame.cpp ${GAME_DIR}/mission.cpp ${GAME_DIR}/entity.cpp
-  ${GAME_DIR}/entity_config.cpp ${GAME_DIR}/entity_motion_owner.cpp
-  ${GAME_DIR}/cmd.cpp ${GAME_DIR}/select.cpp ${GAME_DIR}/ai.cpp
-  ${GAME_DIR}/screen_pick.cpp
-  ${GAME_DIR}/render.cpp ${GAME_DIR}/scene_render.cpp
-  ${GAME_DIR}/frontend.cpp ${GAME_DIR}/options.cpp
-  ${GAME_DIR}/util.cpp ${GAME_DIR}/effects.cpp ${GAME_DIR}/terrain_grid.cpp
-  ${GAME_DIR}/dependency_grid.cpp
-  ${GAME_DIR}/weapon.cpp ${GAME_DIR}/upgrades.cpp
-  ${GAME_DIR}/video_graph.cpp ${GAME_DIR}/spawn.cpp
-  ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp ${GAME_DIR}/priorities.c
-  ${GAME_DIR}/tutorial_hud.cpp ${GAME_DIR}/tutorial_world_arrows.cpp
-  ${GAME_DIR}/seh_runtime.cpp
-  ${GAME_DIR}/startup_config.cpp ${GAME_DIR}/bezier.c)
-target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
-# Units rebuilt in original shape (ADR 0005) are C in the matching build and
-# C++ elsewhere, because the native port's miniwin headers are C++-only.
-set(LRR_ORIGINAL_SHAPE_SOURCES ${ENGINE_DIR}/utils.c ${ENGINE_DIR}/config.c
-  ${ENGINE_DIR}/maths.c
-  ${GAME_DIR}/priorities.c ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c
-  ${ENGINE_DIR}/keys.c ${ENGINE_DIR}/g98_024.c ${GAME_DIR}/bezier.c
-  ${ENGINE_DIR}/g98_026.c ${ENGINE_DIR}/g98_029.c ${ENGINE_DIR}/draw.c)
+# Units rebuilt in original shape are C in the matching build and C++
+# elsewhere, because the native port's miniwin headers are C++-only.
 if(NOT LRR_CLASSIC_MSVC5)
   set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
     LANGUAGE CXX)
 endif()
-target_link_libraries(game PUBLIC gods98)
-# gods98 (frame loop, sim tick) calls into game; static libraries may be
-# mutually dependent, so every consumer of either one resolves both.
-target_link_libraries(gods98 PUBLIC game)
+
+if(LRR_CLASSIC_MSVC5)
+  if(NOT PLATFORM STREQUAL "winapi")
+    message(FATAL_ERROR "LRR_CLASSIC_MSVC5 builds PLATFORM=winapi only")
+  endif()
+  # The matching build links one object per list entry, explicitly and in
+  # list order, then the list's libraries (ADR 0006 decision 1). LINK 5.0
+  # keeps command-line object order in every section. Each object keeps the
+  # include path of its library in the other builds.
+  set(LRR_LINK_INCLUDES_game ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
+  set(LRR_LINK_INCLUDES_program ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
+  set(LRR_LINK_INCLUDES_gods98 ${SRC_ROOT} ${ENGINE_DIR} ${GAME_DIR})
+  set(LRR_LINK_INCLUDES_platform_glue ${SRC_ROOT})
+  set(LRR_LINK_OBJECTS "")
+  set(_lrr_index 0)
+  foreach(_src _lib IN ZIP_LISTS LRR_LINK_SOURCES LRR_LINK_TARGETS)
+    math(EXPR _lrr_index "${_lrr_index} + 1")
+    get_filename_component(_stem "${_src}" NAME_WE)
+    string(LENGTH "00${_lrr_index}" _len)
+    math(EXPR _len "${_len} - 3")
+    string(SUBSTRING "00${_lrr_index}" ${_len} 3 _pos)
+    set(_target "link_${_pos}_${_stem}")
+    add_library(${_target} OBJECT ${_src})
+    target_include_directories(${_target} PRIVATE ${LRR_LINK_INCLUDES_${_lib}})
+    list(APPEND LRR_LINK_OBJECTS "$<TARGET_OBJECTS:${_target}>")
+  endforeach()
+else()
+  # The native and reference builds group the list's sources into libraries
+  # (ADR 0003); their order does not matter there.
+  add_library(gods98 STATIC ${LRR_LINK_SOURCES_gods98})
+  target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
+  add_library(game STATIC ${LRR_LINK_SOURCES_game})
+  target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
+  target_link_libraries(game PUBLIC gods98)
+  # gods98 (frame loop, sim tick) calls into game; static libraries may be
+  # mutually dependent, so every consumer of either one resolves both.
+  target_link_libraries(gods98 PUBLIC game)
+  add_library(platform_glue STATIC ${LRR_LINK_SOURCES_platform_glue})
+  target_include_directories(platform_glue PUBLIC ${SRC_ROOT})
+  target_link_libraries(gods98 PUBLIC platform_glue ${CMAKE_DL_LIBS})
+endif()
 
 if(PLATFORM STREQUAL "native")
   set(MINIWIN "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/isle-portable/miniwin")
@@ -190,21 +209,8 @@ if(PLATFORM STREQUAL "native")
   target_link_libraries(miniwin PUBLIC SDL3::SDL3)
   target_compile_definitions(gods98 PUBLIC MINIWIN)
   target_link_libraries(gods98 PUBLIC miniwin SDL3::SDL3)
-  add_library(platform_glue STATIC ${PLATFORM_DIR}/native/frameloop.cpp)
   target_link_libraries(platform_glue PUBLIC miniwin)
-  set(PLATFORM_ENTRY ${PLATFORM_DIR}/native/entry.cpp)
-else()
-  target_sources(gods98 PRIVATE ${ENGINE_DIR}/lwsc_winapi.cpp)
-  target_sources(game PRIVATE ${GAME_DIR}/building_scene.cpp)
-  target_sources(game PRIVATE ${GAME_DIR}/actor_scene.cpp)
-  add_library(platform_glue STATIC ${PLATFORM_DIR}/winapi/frameloop.cpp)
-  target_include_directories(platform_glue PUBLIC ${SRC_ROOT})
-  set(PLATFORM_ENTRY ${PLATFORM_DIR}/winapi/entry.cpp)
-endif()
-target_include_directories(platform_glue PUBLIC ${SRC_ROOT})
-target_link_libraries(gods98 PUBLIC platform_glue ${CMAKE_DL_LIBS})
 
-if(PLATFORM STREQUAL "native")
   if(NOT MOVIES STREQUAL "disabled")
     # The movie module resolves FFmpeg at runtime. Keep these ordered soname
     # candidates in step with Meson's configure-time capability probe.
@@ -230,9 +236,15 @@ if(PLATFORM STREQUAL "native")
   endif()
 endif()
 
-set(LRR_SOURCES ${SRC_ROOT}/main.cpp ${PLATFORM_ENTRY}
-  ${GAME_DIR}/seh_runtime.cpp
-  ${GAME_DIR}/dependency_grid.cpp ${GAME_DIR}/screen_pick.cpp)
+if(LRR_CLASSIC_MSVC5)
+  set(LRR_SOURCES ${LRR_LINK_OBJECTS})
+else()
+  # These game sources register hooks that nothing references, so the
+  # program compiles them itself to keep them in the static link.
+  set(LRR_SOURCES ${LRR_LINK_SOURCES_program}
+    ${GAME_DIR}/seh_runtime.cpp
+    ${GAME_DIR}/dependency_grid.cpp ${GAME_DIR}/screen_pick.cpp)
+endif()
 if(PLATFORM STREQUAL "winapi")
   list(APPEND LRR_SOURCES ${SRC_ROOT}/version.rc)
 endif()
@@ -246,11 +258,20 @@ if(LRR_RECCMP)
   # The link map records the object contributions in link order (ADR 0006).
   target_link_options(program PRIVATE "/MAP:${CMAKE_BINARY_DIR}/LegoRR.map")
 endif()
-# The frame-loop object in gods98 calls into game, while game itself uses
-# gods98 APIs. Repeat the archive so GNU ld resolves this static-library cycle.
-target_link_libraries(program PRIVATE game gods98 game platform_glue)
-if(PLATFORM STREQUAL "winapi")
-  target_link_libraries(program PRIVATE winmm d3drm advapi32)
+if(LRR_CLASSIC_MSVC5)
+  target_link_libraries(program PRIVATE ${LRR_LINK_LIBRARIES})
+  # Name the entry point up front. LIBC is searched before the linker would
+  # infer it, and LIBC.LIB's symbol index resolves the startup data shared by
+  # both entry objects to the console one (crt0.obj) first.
+  target_link_options(program PRIVATE "/ENTRY:WinMainCRTStartup")
+else()
+  # The frame-loop object in gods98 calls into game, while game itself uses
+  # gods98 APIs. Repeat the archive so GNU ld resolves this static-library
+  # cycle.
+  target_link_libraries(program PRIVATE game gods98 game platform_glue)
+  if(PLATFORM STREQUAL "winapi")
+    target_link_libraries(program PRIVATE winmm d3drm advapi32)
+  endif()
 endif()
 if(WIN32)
   set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)

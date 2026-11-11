@@ -93,10 +93,14 @@ For each original translation unit, in link order where possible:
    functions, with their current files, are in `translation-units.csv`.
    Prefer high-confidence boundaries.
 2. **Create the file.** Name it `src/game/<stem>.c` or `src/gods98/<stem>.c`,
-   lowercase, with a short C-compatible `<stem>.h`. Add it to its library and
-   to `LRR_ORIGINAL_SHAPE_SOURCES` in `CMakeLists.txt`. Never add it to the
-   executable's own sources: incrementally linked objects are called through
-   thunks.
+   lowercase, with a short C-compatible `<stem>.h`. Add its `unit` entry to
+   the link-order list, `src/link_order.cmake`, in its original position and
+   with its library (`game` or `gods98`). The matching build links every list
+   entry as an explicit object in list order; it links without incremental
+   mode, so explicit objects are not called through thunks (ADR 0006
+   decisions 1 and 2). The list's `.c` files are compiled as C in the
+   matching build and as C++ elsewhere. Remove the unit's functions from the
+   legacy files they leave; the legacy entries stay where they are.
 3. **State.** Turn the unit's `.bss` range into one typed globals struct
    laid out as the original. Use `static` for per-object `.bss` and plain
    file-scope (common) definitions for the common region. Put initialised

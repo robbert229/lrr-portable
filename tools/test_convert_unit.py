@@ -75,7 +75,7 @@ def make_repo(root: Path) -> None:
     write(root, "src/gods98/gamma.h", '#ifdef __cplusplus\nextern "C" {\n#endif\nvoid gamma_fn(void);\n'
           '#ifdef __cplusplus\n}\n#endif\n')
     write(root, "src/game/test_alpha.cpp", "int main() { return alpha_one(1); }\n")
-    write(root, "CMakeLists.txt", "")
+    write(root, "src/link_order.cmake", "")
 
 
 class HeaderScanTest(unittest.TestCase):
@@ -239,18 +239,34 @@ class LayoutTest(unittest.TestCase):
 
 
 class WiringTest(unittest.TestCase):
-    CMAKE = ("add_library(gods98 STATIC\n  ${ENGINE_DIR}/a.cpp ${ENGINE_DIR}/b.cpp)\n"
-             "set(LRR_ORIGINAL_SHAPE_SOURCES ${ENGINE_DIR}/config.c\n  ${GAME_DIR}/priorities.c)\n")
+    LIST = ("# game\n"
+            "lrr_link(legacy 00401800 game          game/old.cpp)\n"
+            "lrr_link(unit   GAME-B   game          game/beta.c)\n"
+            "\n# gods98\n"
+            "lrr_link(legacy 00403800 gods98        gods98/mixed.cpp)\n"
+            "\n# Port tail\n"
+            "lrr_link(tail   -        program       main.cpp)\n"
+            "lrr_link(legacy 00404800 gods98        crt/crt.cpp)\n")
+    STARTS = {"GAME-A": 0x401000, "GAME-B": 0x402000, "G98-C": 0x403000, "G98-D": 0x404000}
 
-    def test_wire_cmake_is_idempotent_and_wraps(self):
-        once = cu.wire_cmake(self.CMAKE, "gods98", "${ENGINE_DIR}/keys.c")
-        self.assertEqual(once.count("${ENGINE_DIR}/keys.c"), 2)
-        self.assertEqual(cu.wire_cmake(once, "gods98", "${ENGINE_DIR}/keys.c"), once)
-        self.assertIn("${ENGINE_DIR}/b.cpp ${ENGINE_DIR}/keys.c)", once)      # fits on the line
-        long = cu.wire_cmake(once, "gods98", "${ENGINE_DIR}/a_rather_long_unit_name.c")
-        self.assertIn("\n  ${ENGINE_DIR}/a_rather_long_unit_name.c)", long)
-        for line in long.splitlines():
-            self.assertLessEqual(len(line), 80)
+    def wire(self, text, unit, lib, source):
+        return cu.wire_link_order(text, cu.Wiring(unit, lib, source, []), self.STARTS)
+
+    def test_unit_goes_to_its_original_position(self):
+        first = self.wire(self.LIST, "GAME-A", "game", "game/alpha.c")
+        self.assertIn("# game\nlrr_link(unit   GAME-A   game          game/alpha.c)\n"
+                      "lrr_link(legacy 00401800", first)
+        late = self.wire(self.LIST, "G98-D", "gods98", "gods98/delta.c")
+        self.assertIn("gods98/mixed.cpp)\nlrr_link(unit   G98-D    gods98        gods98/delta.c)\n"
+                      "\n# Port tail", late)             # before the tail, not by crt.cpp's key
+
+    def test_wiring_is_idempotent_and_refuses_duplicates(self):
+        once = self.wire(self.LIST, "G98-C", "gods98", "gods98/gamma.c")
+        self.assertEqual(self.wire(once, "G98-C", "gods98", "gods98/gamma.c"), once)
+        with self.assertRaises(ValueError):
+            self.wire(once, "G98-C", "gods98", "gods98/other.c")
+        with self.assertRaises(ValueError):
+            self.wire(once, "GAME-A", "game", "game/old.cpp")
 
     def test_boundary_test_includes(self):
         text = '#include "a.h"\n#include "b.h"\n\nint main(void)\n{\n    return 0;\n}\n'
@@ -293,10 +309,10 @@ class HandConversionValidationTest(unittest.TestCase):
             self.assertEqual(res["functions"]["hand"], res["functions"]["tool"], unit)
             self.assertEqual(res["header_declares"]["declared"], res["header_declares"]["unit_functions"], unit)
 
-    def test_cmake_wiring_and_boundary_includes_match(self):
+    def test_link_order_wiring_and_boundary_includes_match(self):
         for unit in self.results:
             res = self.results[unit][1]
-            self.assertTrue(res["cmake_wiring_matches"], unit)
+            self.assertTrue(res["link_order_wiring_matches"], unit)
             self.assertEqual(res["boundary_includes"]["missing_from_committed_test"], [], unit)
 
     def test_priorities_globals_range_and_layout(self):
@@ -381,8 +397,8 @@ class ScaffoldOutputTest(unittest.TestCase):
                 rc = cu.main(["G98-029", "--out", tmp, "--scores", "none"])
             self.assertEqual(rc, 0)
             self.assertTrue((Path(tmp) / "src/gods98/g98_029.c").exists())
-            cmake = (Path(tmp) / "CMakeLists.txt").read_text()
-            self.assertIn("${ENGINE_DIR}/g98_029.c", cmake)
+            listing = (Path(tmp) / "src/link_order.cmake").read_text()
+            self.assertIn("lrr_link(unit   G98-029  gods98        gods98/g98_029.c)", listing)
             checkout = REPO / "src/gods98/g98_029.c"
             self.assertEqual(checkout.read_bytes() if checkout.exists() else None, original)
 
