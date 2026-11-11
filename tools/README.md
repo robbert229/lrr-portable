@@ -438,3 +438,52 @@ tracked inputs change (the tooling test checks it). The report's schema version
 is defined in the hashed metric script. The input hash excludes generated
 outputs, reference binary, build artifacts and commit metadata. Run tests with
 `make tools-test` (the PE fixture test needs `pefile`).
+
+## `msvc_permuter.py` — bounded source search
+
+Run inside the matching-build environment, with `reference/` available:
+
+```sh
+python3 tools/msvc_permuter.py 0x0045d470 --seconds 60 --workers 2 --output build-match/search-45d470
+```
+
+The time budget includes the initial score; two workers are the default. The
+search tries individual conservative rewrites, scores each through
+`match_function.py`, retains improvements, and repeats from the best candidate.
+It stops on an exact score, exhaustion, or the deadline. The output directory
+contains `result.json`, the complete `best.c` or `best.cpp`, and `best.patch`.
+Errors in individual compilations are recorded in the result. A failed initial
+score exits nonzero. The search does not edit `src/`.
+
+The passes swap uninitialized primitive declarations, declarators, and
+independent adjacent scalar assignments; reverse simple C comparisons;
+introduce and remove certain scalar temporaries; commute and reassociate
+unsigned scalar expressions; and convert restricted `while`, `for`, and
+`do` loops. These are intentionally narrow patterns, not a C/C++ parser:
+for example, arithmetic rewrites require known unsigned locals and avoid
+nested scopes. Many functions have no candidates. Review
+all changes for semantics (including macro expansion and volatile access) and
+MSVC 5.0 compatibility. Scores use the single-function loop and can differ
+from the full linked build. Candidate files must preserve line numbers so the
+COFF line records map to the original source. `--candidate FILE` on
+`match_function.py` is the underlying replacement-source interface.
+
+To list the register/constant/order cohort of an existing game-only report:
+
+```sh
+python3 tools/permuter_cohort.py build-reccmp/reccmp-report/game-only.json > build-match/cohort.json
+```
+
+The classifier compares multisets of unmatched instructions after replacing
+registers and numeric constants with placeholders. It preserves opcodes and
+other operand text; order can differ. It is a mechanical filter, not proof
+that the functions are semantically equivalent or that this search can reach
+them. The [demonstration](../docs/coverage/msvc-permuter-demonstration.md)
+records the exact cohort and results.
+
+To apply a reviewed result in a later change, check the patch against the
+current tree (`git apply --check build-match/search-45d470/best.patch`), apply
+it with `git apply`, then run `make reccmp-check`. A local improvement can
+cause other functions to drop through translation-unit symbol numbering
+(finding 506); review every drop under ADR 0005. For a source change that is
+accepted, run `make match-progress` and include both refreshed coverage files.
