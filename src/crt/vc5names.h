@@ -15,6 +15,9 @@
 #if !defined(_MSC_VER)
 char* crt_signed_to_string(int value, char* out, int radix);
 #define _itoa crt_signed_to_string
+/* _rand (FUN_0048e170): the port's VC5 LCG. */
+int level_random_draw15(void);
+#define rand level_random_draw15
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +28,8 @@ void engine_heap_free(void* ptr);
 /* __strcmpi (FUN_0048ff10) and __strnicmp (FUN_0049dab0). */
 int strcasecmp_lite(const char* a, const char* b);
 int strnicmp_lite(const char* a, const char* b, int count);
+/* __finite (FUN_0048e870). */
+int double_is_finite(double value);
 #ifdef __cplusplus
 }
 #endif
@@ -33,6 +38,7 @@ int strnicmp_lite(const char* a, const char* b, int count);
 #define free(ptr) engine_heap_free(ptr)
 #define _strcmpi strcasecmp_lite
 #define _strnicmp(a, b, count) strnicmp_lite((a), (b), (int)(count))
+#define _finite double_is_finite
 #endif
 
 #endif /* LEGORRR_CRT_VC5NAMES_H */

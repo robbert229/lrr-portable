@@ -16,7 +16,7 @@
 #include "game/util.hpp"
 
 /* Sample variant selection shares the game's VC5 rand stream. */
-extern uint32_t rng_thunk_draw15(void);
+extern "C" short rng_thunk_draw15(void);
 
 /* The reference scene interfaces are 32-bit COM-style objects. This getter
  * reads the record that DDiSceneAnimationHookCreate owns at vtable +0x1c. */

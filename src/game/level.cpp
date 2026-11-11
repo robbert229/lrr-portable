@@ -39,7 +39,7 @@
 #include "scene_render.hpp"
 #include "tutorial_hud_ports.hpp"
 
-extern float random_float_range(float minimum, float maximum);
+extern "C" float random_float_range(float minimum, float maximum);
 /* Cell mutation's cheat branch calls the existing entity-side implementation
  * of SmallSpiderCellSwarmSpawn. Its runtime prerequisites are checked by that
  * owner (active entity context, surface grid, and configured entity type). */
@@ -11991,21 +11991,6 @@ void random_variant_cell_scatter(int center_x, int center_y, int radius,
         }
     }
 }
-
-/* RandomThunkDraw15 (thunk_FUN_0048e170 at FUN_004798a0): the reference thunk
- * jumps to VC5's _rand entry. Keep the same direct tail-call shape on MSVC. */
-// FUNCTION: LEGORR 0x004798a0
-#if defined(_MSC_VER) && (_MSC_VER < 1200) && defined(_M_IX86)
-__declspec(naked) uint32_t rng_thunk_draw15(void)
-{
-    __asm { jmp rand }
-}
-#else
-uint32_t rng_thunk_draw15(void)
-{
-    return (uint32_t)level_random_draw15();
-}
-#endif
 
 /* --- erosion timing band (2026-10-25) -------------------------------------
  * These module statics mirror the reference timing, stage, and lock tables;

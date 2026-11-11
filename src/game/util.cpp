@@ -17,8 +17,8 @@
 #include "port_loop_ports.hpp"
 #include "util.hpp"
 
-extern float random_float_range(float minimum, float maximum);
-extern uint32_t rng_thunk_draw15(void);
+extern "C" float random_float_range(float minimum, float maximum);
+extern "C" short rng_thunk_draw15(void);
 
 static ParsedEntityHealthValue s_parsed_entity_health_value;
 

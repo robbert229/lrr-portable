@@ -7,8 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern uint32_t rng_thunk_draw15(void);
-extern float random_float_range(float minimum, float maximum);
+extern "C" short rng_thunk_draw15(void);
+extern "C" float random_float_range(float minimum, float maximum);
 
 /* Reconstruction symbols for corpus globals. */
 int   g_camera_scale_14   = 1;      /* DAT_00556f14, integer multiplier */

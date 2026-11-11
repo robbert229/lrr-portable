@@ -1536,7 +1536,7 @@ void level_random_seed_set(uint32_t seed);
 int level_rand_u16(void);       /* RandomNext @ 0x48e170 */
 #endif
 int level_random_draw15(void); /* one 15-bit draw from the active RNG */
-uint32_t rng_thunk_draw15(void); /* FUN_004798a0: corpus RNG-thunk forward */
+extern "C" short rng_thunk_draw15(void); /* FUN_004798a0: Maths_Rand */
 
 /* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80): turns a position record's
  * coordinate pair into the grid cell through the ported two-dword copy, and

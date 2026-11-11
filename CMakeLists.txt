@@ -119,6 +119,7 @@ add_library(gods98 STATIC
   ${ENGINE_DIR}/audio.cpp ${ENGINE_DIR}/camera.cpp ${ENGINE_DIR}/view.cpp
   ${ENGINE_DIR}/message.cpp ${ENGINE_DIR}/mainsim.cpp ${ENGINE_DIR}/simtick.cpp
   ${ENGINE_DIR}/utils.c ${ENGINE_DIR}/block.cpp ${ENGINE_DIR}/config.c
+  ${ENGINE_DIR}/maths.c
   ${ENGINE_DIR}/model.cpp
   ${ENGINE_DIR}/entity.cpp ${ENGINE_DIR}/lwsc_scene.cpp
   ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp ${ENGINE_DIR}/media.cpp
@@ -145,6 +146,7 @@ target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
 # Units rebuilt in original shape (ADR 0005) are C in the matching build and
 # C++ elsewhere, because the native port's miniwin headers are C++-only.
 set(LRR_ORIGINAL_SHAPE_SOURCES ${ENGINE_DIR}/utils.c ${ENGINE_DIR}/config.c
+  ${ENGINE_DIR}/maths.c
   ${GAME_DIR}/priorities.c)
 if(NOT LRR_CLASSIC_MSVC5)
   set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
