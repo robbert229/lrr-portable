@@ -99,6 +99,7 @@ convert-unit:
 # validation tests, which are skipped without it).
 tools-test:
 	python3 -m unittest discover -s tools -p 'test_convert_unit.py'
+	python3 -m unittest discover -s tools/tests -p 'test_msvc_permuter.py'
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_pr_match_progress.py'
 
