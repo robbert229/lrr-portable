@@ -32,15 +32,6 @@ void engine_heap_allocate(long size)
 }
 
 
-/* OptionalResourceDestroy (FUN_0040f7b0) — see heap.hpp. */
-// FUNCTION: LEGORR 0x0040f7b0
-void optional_resource_destroy(void* record)
-{
-    if (record != NULL) {
-        engine_heap_free(record);
-    }
-}
-
 typedef struct TextBufferFontBinding {
     struct TextBufferFontBinding* next;
     void* record;

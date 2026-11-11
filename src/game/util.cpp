@@ -1485,19 +1485,6 @@ void string_queue_record_or_flush(uint32_t first, uint32_t second,
     ++s_string_queue_count;
 }
 
-// FUNCTION: LEGORR 0x00410280
-int callback_operation_run_and_return_status(void* stack_owner,
-                                             CallbackOperationNode* first,
-                                             CallbackOperationVisit visit)
-{
-    int status = 1;
-    CallbackOperationNode* node;
-    if (visit == NULL) return status;
-    for (node = first; node != NULL; node = node->next)
-        visit(stack_owner, node, &status);
-    return status;
-}
-
 const char* util_root_name(BlockFile* bf)
 {
     static char root_buf[64];

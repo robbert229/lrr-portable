@@ -1819,12 +1819,6 @@ void scene_object_pose_position_sync(EntitySlot* entity)
         memcpy(target->orientation, source->orientation, sizeof(source->orientation));
 }
 
-// FUNCTION: LEGORR 0x0040fde0
-void set_vector_and_notify_listeners(float* state, const float* delta)
-{
-    steering_physics_step(NULL, state, delta);
-}
-
 // FUNCTION: LEGORR 0x00441ed0
 int entity_face_target_action_start(EntitySlot* entity, EntitySlot* target,
                                     int mode)

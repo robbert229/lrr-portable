@@ -27,4 +27,7 @@ void* scene_object_subobject_resolve(void* owner, void* source, int index);
 
 extern QuadMeshRenderHooks s_quad_mesh_render_hooks;
 
+extern SceneObjectListApplyHook s_scene_object_list_apply_hook;
+extern void* s_scene_object_list_apply_context;
+
 #endif /* LRR_GODS98_VIEW_SHARED_HPP */

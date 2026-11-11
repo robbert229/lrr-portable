@@ -31,9 +31,6 @@
 #define VIEW_COM_CALL
 #endif
 
-/* Maths_RandRange (FUN_004798b0, Maths.c). */
-extern "C" float random_float_range(float low, float high);
-
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
 // GLOBAL: LEGORR 0x005560ac
@@ -149,8 +146,8 @@ static SharedObjectSoundSubmitFn s_shared_object_sound_submit;
 static void* s_scene_material_manager;
 static SceneEntryExpandOps s_scene_entry_expand_ops;
 static SharedObjectCloneOps s_shared_object_clone_ops;
-static SceneObjectListApplyHook s_scene_object_list_apply_hook;
-static void* s_scene_object_list_apply_context;
+SceneObjectListApplyHook s_scene_object_list_apply_hook;
+void* s_scene_object_list_apply_context;
 QuadMeshRenderHooks s_quad_mesh_render_hooks;
 static SinePhaseBlendState s_sine_phase_blend_state;
 static SinePhaseBlendHooks s_sine_phase_blend_hooks;
@@ -3388,57 +3385,6 @@ void scene_object_list_apply_hook_set(SceneObjectListApplyHook hook,
     s_scene_object_list_apply_context = context;
 }
 
-static void scene_object_list_apply(void* list, uint32_t operation,
-                                    void* payload)
-{
-    void* object;
-    unsigned int count;
-    if (list == NULL || s_scene_object_list_apply_hook == NULL) return;
-    object = *(void**)((char*)list + 4);
-    count = 0;
-    while (object != NULL && count < 65536u) {
-        void* next = *(void**)((char*)object + 0x9c);
-        s_scene_object_list_apply_hook(s_scene_object_list_apply_context,
-                                       list, object, operation, payload);
-        object = next;
-        ++count;
-    }
-}
-
-// FUNCTION: LEGORR 0x0040fe00
-void scene_object_list_update_transforms(void* list, void* payload)
-{
-    void* first;
-    if (list == NULL) return;
-    first = *(void**)list;
-    if (s_scene_object_list_apply_hook != NULL) {
-        s_scene_object_list_apply_hook(s_scene_object_list_apply_context,
-                                       list, first, 0x0040fde0u, payload);
-    }
-    scene_object_list_apply(list, 0x0040fb90u, payload);
-    scene_object_list_apply(list, 0x0040fd00u, payload);
-}
-
-// FUNCTION: LEGORR 0x0040ff50
-void scene_object_list_apply_float_callback(void* list, float value)
-{
-    scene_object_list_apply(list, 0x0040fed0u, &value);
-}
-
-// FUNCTION: LEGORR 0x00410070
-void scene_object_list_apply_position_callback(void* list,
-                                              const float position[3])
-{
-    scene_object_list_apply(list, 0x00410050u, (void*)position);
-}
-
-// FUNCTION: LEGORR 0x004100b0
-void scene_object_list_apply_second_position_callback(
-    void* list, const float position[3])
-{
-    scene_object_list_apply(list, 0x00410090u, (void*)position);
-}
-
 void quad_mesh_render_hooks_set(const QuadMeshRenderHooks* hooks)
 {
     if (hooks == NULL) {
@@ -3886,25 +3832,6 @@ float projected_quad_screen_area_calculate(
     return (second_area + first_area) * visibility;
 }
 
-// FUNCTION: LEGORR 0x0040fb00
-void matrix_rotation_compose_xyz(float* record)
-{
-    float scratch[64];
-    float* rotation_x = scratch + 32;
-    float* rotation_y = scratch;
-    float* rotation_z = scratch + 16;
-    float* intermediate = scratch + 48;
-
-    matrix4_set_rotation_x(rotation_x, record[0x28 / 4]);
-    matrix4_set_rotation_y(rotation_y, record[0x24 / 4]);
-    matrix4_set_rotation_z(rotation_z, record[0x2c / 4]);
-    /* Matrix4Multiply takes (out, param2, param3) and computes param3 ×
-     * param2. The retail calls therefore produce X × Y, then Z × that
-     * intermediate; keep the seemingly reversed argument order explicit. */
-    matrix4_multiply(intermediate, rotation_y, rotation_x);
-    matrix4_multiply(record + 0x58 / 4, intermediate, rotation_z);
-}
-
 #if !defined(LEGORRR_BACKEND_WINAPI)
 /* D3DRM.DLL's D3DRMVectorRandom and D3DRMVectorRotate for the native port,
  * which has no D3DRM import. Maths.c's wrappers (FUN_00479500,
@@ -4026,21 +3953,6 @@ extern "C" float* D3DRMVectorRotate(float* out, float* vector, float* axis,
     return out;
 }
 #endif /* !LEGORRR_BACKEND_WINAPI */
-
-// FUNCTION: LEGORR 0x0040fcc0
-void vector_scale_components_in_place(float* vector, float sx, float sy,
-                                      float sz)
-{
-    if (vector == NULL) {
-        return;
-    }
-    d3drm_vector_random(vector);
-    /* Keep the scale operand first, matching FUN_0040fcc0's
-     * param_scale * vector_component order on the x87 path. */
-    vector[0] = sx * vector[0];
-    vector[1] = sy * vector[1];
-    vector[2] = sz * vector[2];
-}
 
 /* ---- geometry helpers (finding 363/323) --------------------------------
  * Pure math leaves, corpus-exact operations: the corpus computes on x87
@@ -5318,13 +5230,6 @@ void grid_operation_argument_adapter(float x, float y, EngineContext* ctx)
         return; /* deviation: the corpus reads its own world blindly */
     }
     (void)terrain_height(ctx, x, y);
-}
-
-/* SetGlobalScalarToOne (FUN_0040fec0) — see view.hpp. */
-// FUNCTION: LEGORR 0x0040fec0
-void set_global_scalar_to_one(void)
-{
-    (void)random_float_range(0.0f, 1.0f);
 }
 
 /* FloatNegateAbsoluteValue (FUN_0044d250) — see view.hpp. */
@@ -6607,26 +6512,6 @@ void render_surface_get_value_pair_80_and_84(void* surface,
         *out_84 = ((SceneRootInterface*)scene)
             ->render_surface_value_pair_84_get();
     }
-}
-
-/* SceneNodePositionSet (FUN_00410020) — see view.hpp. The inner object
- * rides the node's widened slot at +0; the corpus strides a dword. */
-// FUNCTION: LEGORR 0x00410020
-void scene_node_position_set(void* node, const float pos[3])
-{
-    if (node == NULL || pos == NULL) {
-        return;
-    }
-    void* inner = NULL;
-    const uint32_t valid = 1u;
-    __builtin_memcpy((char*)node + 0x0c, &valid, sizeof valid);
-    __builtin_memcpy(&inner, (const char*)node, sizeof inner);
-    if (inner == NULL) {
-        return; /* deviation: the corpus strides the handle blindly */
-    }
-    __builtin_memcpy((char*)inner + 0x0c, &pos[0], sizeof pos[0]);
-    __builtin_memcpy((char*)inner + 0x10, &pos[1], sizeof pos[1]);
-    __builtin_memcpy((char*)inner + 0x14, &pos[2], sizeof pos[2]);
 }
 
 /* DDiSceneObjectArgumentsNormalize (FUN_00475900) — resolve the dispatch

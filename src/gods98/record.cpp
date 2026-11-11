@@ -1467,23 +1467,6 @@ void indexed_record_field64_set(void* record, int index, uint32_t value)
     indexed_record_field64_set_target(record, index, value);
 }
 
-/* The corpus reloads the base slot for each store and dereferences it
- * blindly. The outer NULL guard is retained because test_record pins it. */
-// FUNCTION: LEGORR 0x0040ff70
-void object_vector3_set(void* object_block, float x, float y, float z)
-{
-    if (object_block == NULL) {
-        return; /* deviation: the corpus reads blindly */
-    }
-    void* base;
-    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
-    __builtin_memcpy((char*)base + 0x3c, &x, sizeof(x));
-    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
-    __builtin_memcpy((char*)base + 0x40, &y, sizeof(y));
-    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
-    __builtin_memcpy((char*)base + 0x44, &z, sizeof(z));
-}
-
 // FUNCTION: LEGORR 0x004851b0
 void float_pair_at_offset4_set_from_ints(void* record, int x, int y)
 {
@@ -2812,19 +2795,6 @@ static void rec_float_put(void* base, size_t off, float v)
 static void rec_dword_put(void* base, size_t off, uint32_t v)
 {
     __builtin_memcpy((char*)base + off, &v, sizeof v);
-}
-
-/* ThreeValueRecordCopyAndMarkReady (FUN_0040fdb0). */
-// FUNCTION: LEGORR 0x0040fdb0
-void three_value_record_copy_and_mark_ready(void* record,
-                                            const uint32_t values[3])
-{
-    void* destination_pointer = *(void**)record;
-    uint32_t* destination = (uint32_t*)destination_pointer;
-    destination[0] = values[0];
-    destination[1] = values[1];
-    destination[2] = values[2];
-    ((uint32_t*)record)[4] = 1;
 }
 
 static char* mesh_block(const void* record, int block)
