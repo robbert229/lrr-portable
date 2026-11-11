@@ -12597,11 +12597,11 @@ void ledger_stub_00447950_EntityDirectionalActivityStart(
     entity_directional_activity_start(entity, direction, mode);
 }
 
-// EntityActivityTick
-// FUNCTION: LEGORR 0x00447b30
 void ledger_stub_00447ea0_EntityTypeBehaviorUpdate(
     EntitySlot* entity, float delta, const EntityTypeBehaviorHooks* hooks);
 
+// EntityActivityTick
+// FUNCTION: LEGORR 0x00447b30
 float ledger_stub_00447b30_EntityActivityTick(
     EntitySlot* entity, float delta)
 {
