@@ -436,13 +436,6 @@ void entity_kind_name_tables_install(int kind, const char* const* names,
     s_entity_kind_name_counts[kind] = count;
 }
 
-/* ItemNameByKindLookup's fixed labels reside at the literal DAT addresses
- * used by its original switch. Keep separate named arrays so Reccmp can map
- * each string reference without relying on literal pooling. */
-// GLOBAL: LEGORR 0x004a1e98
-static const char s_item_name_ore[] = "Ore";
-// GLOBAL: LEGORR 0x004a1e9c
-static const char s_item_name_power_crystal[] = "PowerCrystal";
 // GLOBAL: LEGORR 0x004a3f40
 static const char s_item_name_spider_web[] = "SpiderWeb";
 // GLOBAL: LEGORR 0x004a3f90

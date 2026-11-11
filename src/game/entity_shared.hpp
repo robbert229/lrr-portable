@@ -11,4 +11,7 @@ extern EntityPayloadReleaseFn s_payload_chain_release_hook;
 
 extern EntitySceneSlotRuntimeOps s_entity_scene_slot_runtime_ops;
 
+extern const char s_item_name_ore[];
+extern const char s_item_name_power_crystal[];
+
 #endif /* LRR_GAME_ENTITY_SHARED_HPP */

@@ -307,12 +307,12 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 0040e1e0,CellCornerOccupancyScan,12,GAME-013,,game,high,bss,src/game/level.cpp
 0040e350,CellEntityKindCreateOrRemove,12,GAME-013,,game,high,bss,src/game/entity.cpp
 0040e460,GridCellRecordPresentCheck,12,GAME-013,,game,high,bss,src/game/level.cpp
-0040e490,EncyclopediaConfigFilesOpen,13,GAME-014,Encyclopedia.c,game,high,bss;string,src/game/frontend.cpp
-0040e700,TerrainChoiceResourceSelect,13,GAME-014,Encyclopedia.c,game,high,bss,src/game/level.cpp
-0040e7e0,GlobalFlagBit0Clear,13,GAME-014,Encyclopedia.c,game,high,bss,src/crt/crt.cpp
+0040e490,EncyclopediaConfigFilesOpen,13,GAME-014,Encyclopedia.c,game,high,bss;string,src/game/encyclopedia.cpp
+0040e700,TerrainChoiceResourceSelect,13,GAME-014,Encyclopedia.c,game,high,bss,src/game/encyclopedia.cpp
+0040e7e0,GlobalFlagBit0Clear,13,GAME-014,Encyclopedia.c,game,high,bss,src/game/encyclopedia.cpp
 0040e7f0,FUN_0040e7f0,13,GAME-014,Encyclopedia.c,game,high,bss;string,
 0040e8d0,ScreenSpaceEffectDispatchIfEnabled,13,GAME-014,Encyclopedia.c,game,high,bss,
-0040e910,GlobalValueClearIfEqual,13,GAME-014,Encyclopedia.c,game,high,bss,src/crt/crt.cpp
+0040e910,GlobalValueClearIfEqual,13,GAME-014,Encyclopedia.c,game,high,bss,src/game/encyclopedia.cpp
 0040e930,ErosionTimingStateInit,14,GAME-015,,game,high,bss;rdata,src/game/lava_erosion.cpp
 0040e990,FUN_0040e990,14,GAME-015,,game,high,bss,src/game/lava_erosion.cpp
 0040e9c0,LavaErosionDelayFromCell,14,GAME-015,,game,high,bss,src/game/lava_erosion.cpp

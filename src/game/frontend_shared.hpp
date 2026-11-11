@@ -18,4 +18,8 @@ extern int s_screen_effect_seam_calls;
 extern void* s_screen_effect_seam_last_handle;
 extern int s_screen_effect_seam_last_flag;
 
+extern void* s_ency_files[4];
+extern void* s_ency_crystal;
+extern void* s_ency_ore;
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */

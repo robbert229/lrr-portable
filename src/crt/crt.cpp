@@ -1881,8 +1881,6 @@ static uint32_t s_level_stored_word = 0u;  /* DAT_004b8a54 */
 uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
 // GLOBAL: LEGORR 0x004c79a4
 static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
-// GLOBAL: LEGORR 0x004c7ea8
-static uint32_t s_ui_flag_word = 0u;       /* DAT_004c7ea8 */
 
 // FUNCTION: LEGORR 0x00407340
 void state_flag_toggle_when_zero(void)
@@ -1911,16 +1909,6 @@ uint32_t global_mode_zero_input_peek(void)
 void rockfall_style_table_base_set(uint32_t v)
 {
     s_rockfall_base = v;
-}
-
-// FUNCTION: LEGORR 0x0040e7e0
-void global_flag_bit0_clear(void)
-{
-    /* corpus: mov eax,ds:004c7ea8 / and al,0FEh / mov ds:004c7ea8,eax.
-     * The plain load-op-store spelling (not the &= compound) keeps the
-     * /Od register round-trip instead of folding to and mem,imm; the
-     * corpus's byte-sized and is MSVC's own narrowing of the mask. */
-    s_ui_flag_word = s_ui_flag_word & ~1u;
 }
 
 uint32_t advisor_state_word_peek(void)  { return s_advisor_state_word; }
@@ -2818,19 +2806,6 @@ void uint96_zero(uint32_t limbs[3])
 #endif
 
 /* --- the small global primitives band (see crt.hpp) -------------------------- */
-
-/* GlobalValueClearIfEqual (FUN_0040e910) — the screen-effect handle word
- * (the corpus's DAT_004c7ea4, unowned) clears only on a matching release. */
-// GLOBAL: LEGORR 0x004c7ea4
-static int s_global_value_word;
-
-// FUNCTION: LEGORR 0x0040e910
-void global_value_clear_if_equal(int value)
-{
-    if (s_global_value_word == value) {
-        s_global_value_word = 0;
-    }
-}
 
 void global_value_word_set(int value) { s_global_value_word = value; }
 int  global_value_word_peek(void) { return s_global_value_word; }

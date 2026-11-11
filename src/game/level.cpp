@@ -10702,44 +10702,11 @@ void terrain_object_sfx_grid_config_load(BlockFile* config,
     }
 }
 
-/* --- terrain choice resource select (2026-10-25) ---------------------------
- * The first record word selects one of four independently allocated arrays;
- * the second word indexes that array. Kinds 6/7 select scalar resources.
- * An installer exposes array contents because the encyclopedia config
- * loader has no production owner in the portable startup path. */
-typedef struct TerrainChoiceWindow {
-    uint32_t* values;
-    uint32_t count;
-} TerrainChoiceWindow;
-static TerrainChoiceWindow s_choice_windows[4];
-static uint32_t s_choice_scalar[2];  /* DAT_004c7e98/e9c role */
-static uint32_t s_choice_active;     /* DAT_004c7ea0 role */
-static uint32_t s_choice_flags;      /* DAT_004c7ea8 role */
-static uintptr_t s_choice_record;    /* DAT_004c7ea4 role */
-
-// FUNCTION: LEGORR 0x0040e700
-void terrain_choice_resource_select(const void* record)
-{
-    uint32_t kind = 0u, index = 0u;
-    copy_two_dword_pair_to_outputs(record, &kind, &index);
-    switch (kind) {
-    case 1u: case 2u: case 3u: case 4u: {
-        const TerrainChoiceWindow* window = &s_choice_windows[kind - 1u];
-        s_choice_active = index < window->count
-            ? window->values[index] : 0u;
-        break;
-    }
-    case 6u: s_choice_active = s_choice_scalar[0]; break;
-    case 7u: s_choice_active = s_choice_scalar[1]; break;
-    default:
-        s_choice_active = 0u;
-        s_choice_flags &= ~1u;
-        return;
-    }
-    s_choice_flags |= 3u;
-    s_choice_record = (uintptr_t)record;
-    ui_text_output_object_release((void* const*)panel_text_slot_peek());
-}
+TerrainChoiceWindow s_choice_windows[4];
+uint32_t s_choice_scalar[2];  /* DAT_004c7e98/e9c role */
+uint32_t s_choice_active;     /* DAT_004c7ea0 role */
+uint32_t s_choice_flags;      /* DAT_004c7ea8 role */
+uintptr_t s_choice_record;    /* DAT_004c7ea4 role */
 
 void terrain_choice_window_install(int word, uint32_t value)
 {

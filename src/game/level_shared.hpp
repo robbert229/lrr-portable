@@ -66,4 +66,19 @@ extern LavaErosionSoundHook s_lava_erosion_sound;
 extern LavaErosionEventHook s_lava_erosion_event;
 extern void* s_lava_erosion_hook_context;
 
+/* --- terrain choice resource select (2026-10-25) ---------------------------
+ * The first record word selects one of four independently allocated arrays;
+ * the second word indexes that array. Kinds 6/7 select scalar resources.
+ * An installer exposes array contents because the encyclopedia config
+ * loader has no production owner in the portable startup path. */
+typedef struct TerrainChoiceWindow {
+    uint32_t* values;
+    uint32_t count;
+} TerrainChoiceWindow;
+extern TerrainChoiceWindow s_choice_windows[4];
+extern uint32_t s_choice_scalar[2];
+extern uint32_t s_choice_active;
+extern uint32_t s_choice_flags;
+extern uintptr_t s_choice_record;
+
 #endif /* LRR_GAME_LEVEL_SHARED_HPP */

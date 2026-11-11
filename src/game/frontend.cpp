@@ -10518,52 +10518,9 @@ int menu_list_find_name(const void* list, const char* name)
  * EncyclopediaConfigFilesOpen (FUN_0040e490) — see frontend.hpp. The group
  * pairs (count window, name table) ride the corpus's address pairing:
  * 0x27c/0x1e8, 0x280/0x1ec, 0x284/0x1f0, 0x288/0x1f4. */
-static void* s_ency_files[4];   /* DAT_004c7e88/ec/90/94 roles */
-static void* s_ency_crystal;    /* DAT_004c7e98 role */
-static void* s_ency_ore;        /* DAT_004c7e9c role */
-
-/* The corpus joins `<root>::Encyclopedia::<name>` through the path builder
- * (FUN_00478f50), reads the record's +8 value token (FUN_004790b0's
- * record+8), and dispatches the file open (FUN_0047f6e0 in "r" mode — the
- * port's AUTO open). NULL answers ride where the corpus strides. */
-static void encyclopedia_value_open(BlockFile* cfg, const char* root_path,
-                                    const char* name, void** slot)
-{
-    const char* path = string_path_join(root_path, "Encyclopedia", name,
-                                        (char*)NULL);
-    const char* value = block_get_strptr(cfg, path);
-    if (value != NULL) {
-        *slot = resource_open(value, RESOURCE_AUTO);
-    }
-}
-
-// FUNCTION: LEGORR 0x0040e490
-void encyclopedia_config_files_open(BlockFile* cfg, const char* root_path)
-{
-    static const int count_slot[4] = { 0, 2, 3, 1 }; /* 0x27c/80/84/88 */
-    for (int kind = 0; kind != 4; ++kind) {
-        const uint32_t count = catalog_count_peek(count_slot[kind]);
-        /* The corpus strides count 4-byte handle slots (its windows are
-         * undefined4 arrays sized count * 4); on the pointer-sized port the
-         * window is count void* slots, so the allocation and zeroing stride
-         * sizeof(void*) to cover every handle (deviation: slot width). */
-        void* array = engine_heap_alloc((long)count * (long)sizeof(void*));
-        s_ency_files[kind] = array;
-        if (array == NULL) {
-            continue; /* deviation: the corpus strides the store blindly */
-        }
-        memset(array, 0, (size_t)count * sizeof(void*));
-        const char* const* table =
-            (const char* const*)catalog_name_table_peek(kind);
-        for (uint32_t i = 0; i != count; ++i) {
-            const char* name = (table != NULL) ? table[i] : NULL;
-            encyclopedia_value_open(cfg, root_path, name,
-                                    &((void**)array)[i]);
-        }
-    }
-    encyclopedia_value_open(cfg, root_path, "PowerCrystal", &s_ency_crystal);
-    encyclopedia_value_open(cfg, root_path, "Ore", &s_ency_ore);
-}
+void* s_ency_files[4];   /* DAT_004c7e88/ec/90/94 roles */
+void* s_ency_crystal;    /* DAT_004c7e98 role */
+void* s_ency_ore;        /* DAT_004c7e9c role */
 
 void* encyclopedia_file_window_peek(int group)
 {

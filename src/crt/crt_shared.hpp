@@ -12,4 +12,7 @@ extern uint32_t s_mode_zero_flag;
 
 extern uint32_t s_config_word;
 
+extern uint32_t s_ui_flag_word;
+extern int s_global_value_word;
+
 #endif /* LRR_CRT_CRT_SHARED_HPP */
