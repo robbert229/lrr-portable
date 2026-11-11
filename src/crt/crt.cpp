@@ -993,11 +993,14 @@ void integer_pair_divide_to_float_pair(int x, int y, int divisor,
     *out_y = (float)y / (float)divisor;
 }
 
+#if defined(_MSC_VER) && defined(_M_IX86)
+extern "C" int __cdecl _ftol(void);
+#endif
+
 /* FUN_0045b930's caller has the two source values in ST(0)/ST(1); its
  * arguments are only the output pointers. Keep that x87 ABI on the x86
  * reference backend, where each _ftol consumes the next stack value. */
 #if defined(_MSC_VER) && defined(_M_IX86)
-extern "C" int __cdecl _ftol(void);
 // FUNCTION: LEGORR 0x0045b930
 __declspec(naked) void float_pair_to_integer_pair_x87(int* out_x, int* out_y)
 {
