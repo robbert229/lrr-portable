@@ -1,59 +1,66 @@
 # MSVC 5.0 permuter: bounded cohort demonstration
 
-The report was generated on 2026-11-10 from matching-build source commit
-`0cfa8749` (Keys.c conversion); the subsequent #430 changes the progress
-measurement metadata, not source. It has 2,128 mapped game functions, 1,633
-non-exact and 134 in the 75–89% band. The issue's 1,670 and 141 counts are
-therefore stale or based on a different selection. The 134 is the entire band,
-not the issue's band after excluding its register/order-only cohort.
+The search used the matching report at `44734133` (the explicit link order
+in #463). After rebasing onto `b842219a` (#464), the newly derived cohort,
+including report scores, was identical. The unchanged tree passed
+`make reccmp-check` in the developer distrobox. #460 made the 44 `entity_stats_*` accessors exact, removing the
+principal field-layout obstruction identified in the earlier demonstration.
 
-## Classification
+## Cohort and search
 
-`tools/permuter_cohort.py` reads the game-only Reccmp JSON. For each non-exact
-function it collects unmatched instructions, removes source-line annotations,
-replaces register names and numeric constants with placeholders, and compares
-the two multisets. Opcode and other operand text remain significant; order
-may differ. The resulting cohort has **64 functions** (54 in the 75–89% band).
-This is a reproducible approximation: it treats every numeric constant,
-including offsets and jump-table entries, alike and loses register identity.
-It does not prove that a difference is reachable by semantics-preserving
-rewrites, and is not necessarily the issue author's original 61-function set.
+`tools/permuter_cohort.py` selects non-exact, non-effective game functions
+whose unmatched instruction multisets are equal after replacing registers and
+numeric constants with placeholders. It preserves opcodes but discards order
+and register identity, and it treats field offsets as constants. It is a
+mechanical approximation, not a proof of semantic equivalence. On this report
+it selects 22 functions, rather than the earlier 64. Each search had a
+120-second wall-clock budget and at most two workers, and could stop on
+exhaustion. The [per-function results](msvc-permuter-cohort.csv) distinguish
+linked-report scores from single-function scores.
 
-## Search
+The cohort run scored 95 candidates: **two functions improved and none
+reached 100%**. One function (`0x4330e0`) could not be parsed because
+preprocessor directives precede its body. The improved functions were
+`localized_object_name_get` (`0x439860`) and
+`localized_object_the_name_get` (`0x439790`), each 75.41% → 80.33% in the
+single-function loop. Both variants move case 3 before case 2 and case 7
+before case 6; each case returns directly.
 
-Each address had an 18-second wall-clock budget and at most two workers; each
-search could stop early on exhaustion. The [per-function results](msvc-permuter-cohort.csv)
-include report and single-function before/after scores and candidate counts.
-The search produced **0 improvements and 0 exact matches**. Nineteen functions
-had candidates: 40 candidates were compiled and scored with no compilation
-failures. Of the remaining 45, 43 had no supported rewrite; two could not be
-parsed because preprocessor directives intervene between annotation and body.
-No winning patches or winner-specific full regression results exist. The full
-`make reccmp-check` passed on the unchanged source tree; it does not validate
-any candidate or establish an absence of collateral drops for future winners.
+A separate exploratory run covered 22 functions in the remaining 75–89%
+band with supported candidates: 47 candidates, no improvements. Five
+additional switch-bearing functions were also tried. One improved:
+`terrain_neighbor_coordinate_check_current_target` (`0x42f350`), 16.30% →
+17.21%, by swapping cases 0/1, 5/6 and 13/14. Those cases assign `*kind`
+and immediately return. It is outside the cohort. These are search results,
+not source changes, and bounded exhaustion does not prove no better variant
+exists.
 
-The outcome is explained by the search space, not by a failed scoring loop:
-an unchanged copy of `priorities.c` scored 75.00% both with and without the
-candidate input. For example, 37 cohort entries are `entity_stats_*` accessors;
-`0x469de0` differs in the instruction's field offset (`0x334` versus `0x114`).
-The function is a macro-based float accessor, with no safe candidate from the
-current passes. Replacing that offset would change the reconstructed layout,
-not merely permute source syntax. `0x42ef40` has a switch whose compiled case
-blocks and jump-table entries are ordered differently; eight return-temporary
-variants all scored 86.79%, and the search does not reorder switch cases. The
-two unsupported functions, `0x4330e0` and `0x46a330`, place conditional
-compilation and naked assembly before their bodies. These examples show why
-this bounded run finds no wins; they do not prove no safe rewrite exists.
+The new passes handle conservative adjacent statement and increment swaps,
+simple switch-case ordering and C if/else inversion, alongside the existing
+unsigned commutation pass. They are pattern-based, not a C parser. Switches
+with fallthrough, declarations, nested blocks or conditional exits are left
+alone. All candidate source needs human semantic review.
 
-The requested three winner-specific full checks remain impossible without
-actual winners. Candidate search needs broader, reviewed transformations and a
-new demonstration yielding at least three winners before that criterion can
-be satisfied. Do not apply a candidate solely because its single-function
-score rises: full linked-build checks and the ADR 0005 entropy policy still
-apply.
+## Polyline acceptance target
 
-As a further attempt to find regression-checkable winners, the same bounded
-search was run on all 21 additional 75–89% functions with at least one
-supported candidate. The [results](msvc-permuter-band.csv) record 46 scored
-candidates, 0 improvements and 0 exact matches. This does not establish that
-other rewrite strategies cannot improve those functions.
+`surface_draw_polyline` (`0x00485ff0`) scores 98.36% in the fast loop. The
+permuter found no applicable candidate. The two differently ordered increments
+in the machine code are **strength-reduced pointer increments generated by
+MSVC**, not adjacent expressions in the source: the source indexes both
+arrays with `loop`. Finding 519 records the original `add esi, 8; add edi, 8`
+and the rebuilt reverse order; it also records pointer-walking rewrites
+scoring only 61–63%. Five further single-function probes using equivalent
+indexing, pointer arithmetic, loop comparison and prefix increment also stayed
+at 98.36%. Swapping explicit source increments therefore cannot
+change this pair. The requested 100% target remains unmet; a safe rewrite
+that changes MSVC's strength-reduction scheduling is still needed.
+
+## Regression checks
+
+Each patch was applied individually, checked with the full `make reccmp-check`
+in the developer distrobox, and reverted before the next. The three checks
+were repeated after rebasing onto `b842219a`.
+All three passed with the same improvements in both report scopes. **There
+were no collateral drops**, so no drop classifier labels apply. An additional
+full check after reverting all three passed on the unchanged source. No source
+variants or matching-progress measurements are included in this change.

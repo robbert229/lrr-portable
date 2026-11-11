@@ -42,6 +42,38 @@ class RewriteTests(unittest.TestCase):
         self.assertTrue(any(k == 'statements' and 'b = 2;\na = 1;' in s for k, s in result))
         self.assertFalse(any(k == 'statements' for k, _ in self.variants('int a;\nint b;\na = 1;\nb = a;\n')))
         self.assertFalse(any(k == 'statements' for k, _ in self.variants('int a;\nint b;\na = foo();\nb = 2;\n')))
+        self.assertFalse(any(k == 'statements' for k, _ in self.variants('int a;\nint b;\nif (a)\na = 1;\nb = 2;\n')))
+
+    def test_increment_order(self):
+        pointers = 'int *a;\nint *b;\na++;\nb++;\n'
+        self.assertTrue(any(k == 'increment-statements' for k, _ in self.variants(pointers)))
+        body = 'int a;\nint b;\na++;\nb++;\n'
+        self.assertTrue(any(k == 'increment-statements' and 'b++;\na++;' in s for k, s in self.variants(body)))
+        self.assertTrue(any(k == 'comma-increments' and 'b++, a++' in s for k, s in self.variants('int a;\nint b;\nfor (; a; a++, b++) {}')))
+        self.assertFalse(any(k == 'comma-increments' for k, _ in self.variants('int a;\nfor (; a; a++, call()) {}')))
+        multiline = self.variants('int a;\nint b;\nfor (; a; a++, /* keep */\n b++) {}')
+        self.assertTrue(any(k == 'comma-increments' and 'b++, /* keep */\n a++' in s for k, s in multiline))
+        for body in ('int a;\na++;\na++;\n', 'volatile int a;\nint b;\na++;\nb++;\n', 'volatile int\na;\nint b;\na++;\nb++;\n', 'int a;\nint b;\nuse(&a);\na++;\nb++;\n', 'int a;\nint b;\nuse(&(a));\na++;\nb++;\n', 'int a;\nint b;\na++;\ncall();\nb++;\n', 'int a;\nint b;\nif (a)\na++;\nb++;\n'):
+            self.assertFalse(any(k == 'increment-statements' for k, _ in self.variants(body)))
+
+    def test_if_inversion(self):
+        result = self.variants('if (a) { x++; } else { y++; }')
+        self.assertTrue(any(k == 'if-invert' and 'if (!(a)) { y++; } else { x++; }' in s for k, s in result))
+        self.assertFalse(any(k == 'if-invert' for k, _ in self.variants('if (a) { goto label; } else { y++; }')))
+        self.assertFalse(any(k == 'if-invert' for k, _ in self.variants('if (a) { x++; } else { y++; }', False)))
+        multiline = 'if (a)\n{\n x++;\n}\nelse\n{\n y++;\n}'
+        candidate = next(s for k, s in self.variants(multiline) if k == 'if-invert')
+        self.assertEqual(candidate.count('\n'), multiline.count('\n') + 4)
+
+    def test_switch_order_and_fallthrough(self):
+        result = self.variants('switch (x) { case 1: x++; break; case 2: x--; break; }')
+        self.assertTrue(any(k == 'switch-cases' and s.index('case 2') < s.index('case 1') for k, s in result))
+        three = self.variants('switch (x) { case 1: break; case 2: break; case 3: break; }')
+        self.assertEqual(sum(k == 'switch-cases' for k, _ in three), 2)
+        for body in ('switch (x) { case 0: x++; case 1: x--; break; case 2: x++; break; }',
+                     'switch (x) { case 1: if (x) break; x++; case 2: x--; break; }',
+                     'switch (x) { case 1: Thing item; break; case 2: break; }'):
+            self.assertFalse(any(k == 'switch-cases' for k, _ in self.variants(body)))
 
     def test_temporary_introduction_and_removal(self):
         result = self.variants('int a;\nreturn a;')

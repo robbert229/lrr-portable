@@ -112,7 +112,66 @@ def rewrites(text, address, c_language=True):
         if dst1 == rhs2 or dst2 == rhs1:
             continue
         a, b = start + m.start(), start + m.end()
+        prefix = code[start:a].rstrip()
+        if prefix and prefix[-1] not in ';{}':
+            continue
         edits.append((a, b, text[start+m.start(4):start+m.end(4)] + text[start+m.start(1):start+m.end(1)], 'statements'))
+    # Bare local/parameter increments do not touch pointees. Exclude names
+    # whose addresses escape, volatile declarations, and possible shadowing.
+    signature_code = code[text.rfind('// FUNCTION', 0, start):start]
+    safe_names = set(re.findall(r'\b(?:unsigned\s+int|int|long|short|char)\s+([A-Za-z_]\w*)\s*(?=[,;)])', signature_code + body))
+    safe_names.update(re.findall(r'\b(?:unsigned\s+int|int|long|short|char)\s*\*+\s*([A-Za-z_]\w*)\s*(?=[,;)])', signature_code + body))
+    safe_names = {n for n in safe_names if not re.search(r'&\s*\(*\s*' + re.escape(n) + r'\b|\bvolatile\b[^;,)]*\b' + re.escape(n) + r'\b', code)}
+    inc = r'(?:\+\+\s*([A-Za-z_]\w*)|([A-Za-z_]\w*)\s*\+\+|--\s*([A-Za-z_]\w*)|([A-Za-z_]\w*)\s*--)'
+    # A line pair or the step clause of a for loop; values are discarded.
+    for m in re.finditer(r'(?m)^([ \t]*' + inc + r'[ \t]*;[ \t]*\n)([ \t]*' + inc + r'[ \t]*;[ \t]*(?:\n|$))', body):
+        names = [x for x in m.groups()[1:5] if x], [x for x in m.groups()[6:10] if x]
+        if text[start+m.start():start+m.end()] == m[0] and len(names[0]) == len(names[1]) == 1 and names[0][0] != names[1][0] and all(n[0] in safe_names for n in names):
+            a, b = start + m.start(), start + m.end()
+            prefix = code[start:a].rstrip()
+            if prefix and prefix[-1] not in ';{}':
+                continue
+            edits.append((a, b, m[6] + m[1], 'increment-statements'))
+    for m in re.finditer(r'\bfor\s*\([^;{}]*;[^;{}]*;\s*(' + inc + r')\s*,\s*(' + inc + r')\s*\)', body):
+        left = next((x for x in m.groups()[1:5] if x), None)
+        right = next((x for x in m.groups()[6:10] if x), None)
+        if left and right and left != right and left in safe_names and right in safe_names:
+            a, b = start + m.start(1), start + m.end(6)
+            middle = text[start+m.end(1):start+m.start(6)]
+            edits.append((a, b, text[start+m.start(6):b] + middle + text[a:start+m.end(1)], 'comma-increments'))
+    # Braced, label-free branches avoid dangling else and jump-into-scope.
+    for m in re.finditer(r'\bif\s*\(([^(){}#\n]+)\)\s*\{([^{}#]*)\}\s*else\s*\{([^{}#]*)\}' if c_language else r'(?!)', body):
+        if text[start+m.start():start+m.end()] != m[0] or re.search(r'\b(?:case|default|goto)\b|:', m[2] + m[3]):
+            continue
+        a, b = start + m.start(), start + m.end()
+        cond_a, cond_b = start + m.start(1), start + m.end(1)
+        then_a, then_b = start + m.start(2), start + m.end(2)
+        else_a, else_b = start + m.start(3), start + m.end(3)
+        replacement = (text[a:cond_a] + '!(' + text[cond_a:cond_b] + ')' +
+                       text[cond_b:then_a] + text[else_a:else_b] +
+                       text[then_b:else_a] + text[then_a:then_b] + text[else_b:b])
+        edits.append((a, b, replacement, 'if-invert'))
+    # Swap complete neighboring cases only when each terminates explicitly;
+    # never split a fallthrough group or move declarations across case labels.
+    case = r'(case\s+(?:0[xX][0-9a-fA-F]+|[0-9]+|[A-Za-z_]\w*)\s*:[^{}#]*?\b(?:break|return(?:\s+[^;{}]+)?)\s*;\s*)'
+    for sw in re.finditer(r'\bswitch\s*\([^(){}#]+\)\s*\{([^{}#]*)\}', body):
+        block = sw[1]
+        parts = re.split(r'\b(?:case\s+[^:]+|default)\s*:', block)
+        if re.search(r'\b(?:int|long|short|char|float|double|struct|class|typedef)\b', block):
+            continue
+        simple_case = r'(?:\s*(?:\*?\s*[A-Za-z_]\w*\s*=\s*[^;]+|[A-Za-z_]\w*\s*(?:\+\+|--));)*\s*(?:break|return(?:\s+[^;]+)?)\s*;\s*'
+        if parts[0].strip() or any(not re.fullmatch(simple_case, part) for part in parts[1:]):
+            continue
+        cases = list(re.finditer(case, block))
+        for left, right in zip(cases, cases[1:]):
+            if left.end() != right.start():
+                continue
+            first, second = left[1], right[1]
+            a = start + sw.start(1) + left.start()
+            b = start + sw.start(1) + right.end()
+            if text[a:b] != block[left.start():right.end()] or re.search(r'\b(?:case|default|goto)\b|:', first[first.find(':')+1:] + second[second.find(':')+1:]):
+                continue
+            edits.append((a, b, second + first, 'switch-cases'))
     # Introduce a same-type temporary in an inner block around a return.
     for m in re.finditer(r"\breturn[ \t]+([A-Za-z_]\w*)[ \t]*;", body):
         name = m[1]
