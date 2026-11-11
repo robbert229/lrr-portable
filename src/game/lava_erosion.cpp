@@ -2,6 +2,8 @@
 /* GAME-015 GAME-015: the unit's functions in original address order and the
  * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
  * Body hashes: docs/coverage/relocations/GAME-015.csv. */
+/* Hides level_shared.hpp's extern for s_erosion_delay_scale (see there). */
+#define LRR_LAVA_EROSION_UNIT
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -50,7 +50,13 @@ extern int32_t s_ts_stamps[LEVEL_TS_COUNT];
 extern uint32_t s_ts_active[LEVEL_TS_COUNT];
 extern int32_t s_ts_now;
 extern float s_erosion_decay_scale;
+/* The lava-erosion unit's own definition must be the first declaration it
+ * sees, after its 25.0f constant: MSVC 5.0 orders the memory operands of a
+ * float product by declaration (finding 538), and the original multiplies
+ * by this word before the constant (0x0040e9c0). */
+#if !defined(LRR_LAVA_EROSION_UNIT)
 extern float s_erosion_delay_scale;
+#endif
 extern LavaErosionPendingCell s_lava_erosion_pending_cells[EROSION_MARK_COUNT];
 extern uint32_t s_lava_erosion_pending_count;
 extern LavaErosionPendingCell s_lava_erosion_stage_coordinates[ EROSION_MARK_COUNT];
