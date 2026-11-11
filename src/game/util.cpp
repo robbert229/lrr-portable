@@ -17,6 +17,7 @@
 #include "port_loop_ports.hpp"
 #include "util.hpp"
 #include "util_shared.hpp"
+#include "util_for_tile_variants.hpp"
 
 static ParsedEntityHealthValue s_parsed_entity_health_value;
 
@@ -806,8 +807,8 @@ int util_query_fields(const char* path_or_value,
 
 namespace unported_ledger_stubs {
 
-static CellVisualChannelReleaseHook s_cell_visual_release_hook;
-static void* s_cell_visual_release_context;
+CellVisualChannelReleaseHook s_cell_visual_release_hook;
+void* s_cell_visual_release_context;
 
 void cell_visual_channel_release_hook_set(CellVisualChannelReleaseHook hook,
                                            void* context)
@@ -833,46 +834,6 @@ int cell_visual_channel_table_resource_set(CellVisualChannelTable* table,
     if (resource != NULL && table->resource_count <= index)
         table->resource_count = index + 1u;
     return 1;
-}
-
-// FUNCTION: LEGORR 0x0040b810
-void cell_visual_channel_table_resources_clear(CellVisualChannelTable* table)
-{
-    uint32_t channel;
-    uint32_t index;
-    if (table == NULL) return;
-    table->resource_count = 0;
-    for (channel = 0; channel < 2u; channel++) {
-        for (index = 0; index < 100u; index++) {
-            void* resource = table->resources[channel][index];
-            if (resource != NULL) {
-                if (s_cell_visual_release_hook != NULL)
-                    s_cell_visual_release_hook(s_cell_visual_release_context,
-                                               resource);
-                else
-                    ddiscene_object_destroy(resource);
-            }
-            table->resources[channel][index] = NULL;
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x0040b7d0
-void cell_visual_channel_table_dispose(CellVisualChannelTable* table)
-{
-    int index;
-    if (table == NULL) return;
-    cell_visual_channel_table_resources_clear(table);
-    for (index = 0; index < 2; index++) {
-        if (table->roots[index] != NULL) {
-            if (s_cell_visual_release_hook != NULL)
-                s_cell_visual_release_hook(s_cell_visual_release_context,
-                                           table->roots[index]);
-            else
-                ddiscene_object_destroy(table->roots[index]);
-        }
-    }
-    engine_heap_free(table);
 }
 
 } // namespace unported_ledger_stubs

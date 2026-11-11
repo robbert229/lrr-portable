@@ -6604,69 +6604,6 @@ void surface_type_descriptions_load(SurfaceTypeDescriptionEntry entries[18],
     }
 }
 
-/* TileModelEntityRegister (FUN_0040b5f0): allocate two model slots plus two
- * 100-word interface arrays, load the no-texture models, scale and configure
- * them, then copy/reverse the second model's UVs. */
-// FUNCTION: LEGORR 0x0040B5F0
-TileModelEntityRegistration* tile_model_entity_register(
-    void* manager, const char* first_entry, const char* second_entry,
-    float scale_percent, int parameter,
-    const TileModelEntityRegistrationHooks* hooks)
-{
-    TileModelEntityRegistration* registration;
-    const char* names[2];
-    unsigned int model_index;
-    if (hooks == NULL || hooks->model_load == NULL ||
-        hooks->model_release == NULL || first_entry == NULL)
-        return NULL;
-    names[0] = first_entry;
-    names[1] = second_entry != NULL ? second_entry : first_entry;
-    registration = (TileModelEntityRegistration*)calloc(
-        1, sizeof(TileModelEntityRegistration));
-    if (registration == NULL) return NULL;
-    registration->scale_integer = (int32_t)scale_percent;
-    registration->registration_flags = 0u;
-    registration->parameter = parameter;
-    for (model_index = 0; model_index < 2u; ++model_index) {
-        registration->models[model_index] = hooks->model_load(
-            hooks->context, manager, (int)model_index, names[model_index], 1);
-        if (registration->models[model_index] == NULL && model_index == 1u)
-            registration->models[model_index] = hooks->model_load(
-                hooks->context, manager, 1, first_entry, 1);
-        if (registration->models[model_index] == NULL) {
-            tile_model_entity_registration_release(registration, hooks);
-            return NULL;
-        }
-    }
-    for (model_index = 0; model_index < 2u; ++model_index) {
-        void* model = registration->models[model_index];
-        float* uv_records = NULL;
-        int count = 0;
-        unsigned int i;
-        float scale = scale_percent * 0.01f;
-        if (hooks->model_scale != NULL)
-            hooks->model_scale(hooks->context, model, scale, scale, scale);
-        if (hooks->model_mode_set != NULL)
-            hooks->model_mode_set(hooks->context, model, 0, 1);
-        if (hooks->model_mode_set != NULL)
-            hooks->model_mode_set(hooks->context, model, 1, 1);
-        if (hooks->mesh_uv_get != NULL)
-            count = hooks->mesh_uv_get(hooks->context, model, &uv_records);
-        if (count < 0) count = 0;
-        if (model_index != 0u && uv_records != NULL) {
-            for (i = 0; i < (unsigned int)count; ++i) {
-                uv_records[i * 9u + 7u] = 1.0f - uv_records[i * 9u + 7u];
-                uv_records[i * 9u + 8u] = 1.0f - uv_records[i * 9u + 8u];
-            }
-        }
-        if (hooks->mesh_uv_set != NULL)
-            hooks->mesh_uv_set(hooks->context, model, 0, count, uv_records);
-        if (hooks->uv_records_release != NULL && uv_records != NULL)
-            hooks->uv_records_release(hooks->context, uv_records);
-    }
-    return registration;
-}
-
 void tile_model_entity_registration_release(
     TileModelEntityRegistration* registration,
     const TileModelEntityRegistrationHooks* hooks)

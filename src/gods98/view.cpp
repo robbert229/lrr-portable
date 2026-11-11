@@ -22,6 +22,8 @@
 #include "../game/entity.hpp"
 #include "../game/level.hpp"
 #include "view_shared.hpp"
+#include "view_for_tile_variants.hpp"
+#include "view_for_camera_control.hpp"
 
 #if defined(_MSC_VER)
 #define VIEW_COM_CALL __stdcall
@@ -36,9 +38,9 @@ float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
 // GLOBAL: LEGORR 0x005560ac
 int   g_view_grid_edge   = 0;       /* DAT_005560ac (tile-count edge clamp) */
 int   g_view_test_blend  = 0;       /* test hook for the mode-3 EMA target */
-static ViewObjectLookupHook s_view_object_lookup_hook = NULL;
-static ViewTargetBlendHook s_view_target_blend_hook = NULL;
-static void* s_view_follow_target_context = NULL;
+ViewObjectLookupHook s_view_object_lookup_hook = NULL;
+ViewTargetBlendHook s_view_target_blend_hook = NULL;
+void* s_view_follow_target_context = NULL;
 
 void view_follow_target_hooks_set(ViewObjectLookupHook lookup,
     ViewTargetBlendHook blend, void* context)
@@ -59,15 +61,15 @@ TexturedSceneDrawHooks s_textured_scene_draw_hooks;
 
 static SceneOwnerLinkReleaseFn s_owner_link_interface_release;
 static SceneOwnerLinkReleaseFn s_owner_link_child_release;
-static CameraViewContextReleaseHook s_view_context_release_hook;
-static CameraViewContextFreeHook s_view_context_free_hook;
-static void* s_view_context_close_context;
+CameraViewContextReleaseHook s_view_context_release_hook;
+CameraViewContextFreeHook s_view_context_free_hook;
+void* s_view_context_close_context;
 AnimationObjectTransformApplyHook s_animation_orientation_hook;
 RenderNodePositionApplyHook s_render_node_position_hook;
 void* s_animation_transform_context;
 static SceneMatrixApplyHook s_scene_matrix_apply_hook;
 static void* s_scene_matrix_apply_context;
-static SceneObjectChainHooks s_scene_object_chain_hooks;
+SceneObjectChainHooks s_scene_object_chain_hooks;
 static SceneObjectDisposeHooks s_scene_object_dispose_hooks;
 static SceneObjectBoundsHooks s_scene_object_bounds_hooks;
 static RenderPackedRgbaHooks s_render_packed_rgba_hooks;
@@ -149,8 +151,8 @@ static SharedObjectCloneOps s_shared_object_clone_ops;
 QuadMeshRenderHooks s_quad_mesh_render_hooks;
 static SinePhaseBlendState s_sine_phase_blend_state;
 static SinePhaseBlendHooks s_sine_phase_blend_hooks;
-static SceneFrameApplyHooks s_scene_frame_apply_hooks;
-static SceneRotationApplyHooks s_scene_rotation_apply_hooks;
+SceneFrameApplyHooks s_scene_frame_apply_hooks;
+SceneRotationApplyHooks s_scene_rotation_apply_hooks;
 SceneObjectRecordRetainHook s_scene_object_record_retain_hook;
 void* s_scene_object_record_retain_context;
 static RenderQualityApplyHook s_render_quality_apply_hook;
@@ -2874,117 +2876,6 @@ void scene_frame_apply_hooks_set(const SceneFrameApplyHooks* hooks)
     else s_scene_frame_apply_hooks = *hooks;
 }
 
-static float scene_frame_vector_length(const float vector[3])
-{
-    return (float)sqrt((double)(vector[0] * vector[0] +
-                                 vector[1] * vector[1] +
-                                 vector[2] * vector[2]));
-}
-
-// FUNCTION: LEGORR 0x0040bb90
-void scene_frame_from_triplet_apply(void* object, float projection_scale,
-                                   const float first[3],
-                                   const float second[3],
-                                   const float third[3])
-{
-    float forward[3];
-    float normal[3];
-    float transformed_second[3];
-    float transformed_third[3];
-    float projection[16];
-    float forward_length, normal_length;
-    float projection_height;
-    int i;
-    if (object == NULL || first == NULL || second == NULL || third == NULL)
-        return;
-    for (i = 0; i < 3; ++i) forward[i] = second[i] - first[i];
-    normal[0] = (third[2] - second[2]) * forward[1] -
-                (third[1] - second[1]) * forward[2];
-    normal[1] = (third[0] - second[0]) * forward[2] -
-                (third[2] - second[2]) * forward[0];
-    normal[2] = (third[1] - second[1]) * forward[0] -
-                (third[0] - second[0]) * forward[1];
-    forward_length = scene_frame_vector_length(forward);
-    normal_length = scene_frame_vector_length(normal);
-    projection_height = forward[1];
-    for (i = 0; i < 3; ++i) {
-        forward[i] /= forward_length;
-        normal[i] = -normal[i] / normal_length;
-    }
-    if (s_scene_frame_apply_hooks.orientation_set != NULL)
-        s_scene_frame_apply_hooks.orientation_set(
-            s_scene_frame_apply_hooks.context, object, 0, normal, forward);
-    if (s_scene_frame_apply_hooks.position_set != NULL)
-        s_scene_frame_apply_hooks.position_set(
-            s_scene_frame_apply_hooks.context, object, 0, first);
-    memcpy(transformed_second, second, sizeof(transformed_second));
-    memcpy(transformed_third, third, sizeof(transformed_third));
-    if (s_scene_frame_apply_hooks.point_transform != NULL) {
-        s_scene_frame_apply_hooks.point_transform(
-            s_scene_frame_apply_hooks.context, object, transformed_second,
-            second);
-        s_scene_frame_apply_hooks.point_transform(
-            s_scene_frame_apply_hooks.context, object, transformed_third,
-            third);
-    }
-    perspective_projection_matrix_set(
-        projection, projection_scale, projection_scale, projection_height,
-        transformed_third[0], transformed_third[2]);
-    if (s_scene_frame_apply_hooks.projection_set != NULL)
-        s_scene_frame_apply_hooks.projection_set(
-            s_scene_frame_apply_hooks.context, object, 1, projection);
-}
-
-/* CellVisualChannelRelay (FUN_0040b880): resolve the two root resources into
- * the current channel slot, then apply the selected and opposite corner
- * frames. The record follows the recovered dword layout on x86 while its
- * pointer-bearing banks widen naturally in the portable build. */
-// FUNCTION: LEGORR 0x0040b880
-void scene_cell_visual_channels_apply(SceneCellVisualRelayRecord* record,
-                                      const float corner_points[12],
-                                      uint32_t lookup_selector,
-                                      uint32_t corner_index, float scale,
-                                      float uniform_scale)
-{
-    static const uint8_t corner_triplets[4][3] = {
-        { 3, 0, 2 }, { 0, 1, 3 }, { 1, 2, 0 }, { 2, 3, 1 }
-    };
-    void* scene_objects[2];
-    float child_value = 0.0f;
-    uint32_t child_value_bits;
-    uint32_t index;
-    uint32_t first_corner;
-    uint32_t opposite_corner;
-    if (record == NULL || corner_points == NULL) return;
-    index = record->channel_cursor;
-    if (index >= 100u) return;
-    scene_objects[0] = entity_visual_resource_load(record->resource_roots[0]);
-    scene_objects[1] = entity_visual_resource_load(record->resource_roots[1]);
-    record->channel_resources[0][index] = scene_objects[0];
-    record->channel_resources[1][index] = scene_objects[1];
-    if (record->lookup_table != NULL &&
-        record->lookup_table->entries != NULL) {
-        uint32_t lookup_index =
-            (lookup_selector & 0x0fu) * record->lookup_table->stride +
-            ((lookup_selector & 0xffu) >> 4);
-        child_value_bits = record->lookup_table->entries[lookup_index];
-        memcpy(&child_value, &child_value_bits, sizeof(child_value));
-    }
-    first_corner = corner_index & 3u;
-    opposite_corner = (first_corner + 2u) & 3u;
-    scene_rotation_flags_apply(scene_objects[0], record->projection_scale,
-        corner_points + corner_triplets[first_corner][0] * 3u,
-        corner_points + corner_triplets[first_corner][1] * 3u,
-        corner_points + corner_triplets[first_corner][2] * 3u,
-        scale, uniform_scale, child_value, 0u);
-    scene_rotation_flags_apply(scene_objects[1], record->projection_scale,
-        corner_points + corner_triplets[opposite_corner][0] * 3u,
-        corner_points + corner_triplets[opposite_corner][1] * 3u,
-        corner_points + corner_triplets[opposite_corner][2] * 3u,
-        scale, uniform_scale, child_value, 0u);
-    record->channel_cursor = index + 1u;
-}
-
 int viewport_target_position_clamp(ViewportTargetClampState* state,
                                    const int position[2])
 {
@@ -3015,64 +2906,6 @@ void scene_rotation_apply_hooks_set(const SceneRotationApplyHooks* hooks)
     else s_scene_rotation_apply_hooks = *hooks;
 }
 
-/* SceneRotationFlagsApply (FUN_0040ba00): argument 2 is passed through to
- * SceneFrameFromTripletApply as its projection scale; the remaining scalar
- * and bit arguments retain their original stack order. */
-// FUNCTION: LEGORR 0x0040BA00
-void scene_rotation_flags_apply(void* object, float projection_scale,
-                                const float first[3],
-                                const float second[3], const float third[3],
-                                float scale, float uniform_scale,
-                                float child_value, uint8_t flags)
-{
-    unsigned int i;
-    SceneRotationApplyHooks* hooks = &s_scene_rotation_apply_hooks;
-    if (object == NULL || first == NULL || second == NULL || third == NULL)
-        return;
-    if (hooks->frame_transform_apply != NULL) {
-        hooks->frame_transform_apply(hooks->context, object, projection_scale,
-                                     first, second, third);
-    } else {
-        /* The renderer's projection-matrix operation is not exposed by the
-         * portable scene interface; preserve the available frame update. */
-        scene_frame_from_triplet_apply(object, projection_scale,
-                                       first, second, third);
-    }
-    if (hooks->apply != NULL)
-        hooks->apply(hooks->context, object, 0x473b40u, 0, 0, 0, 0, 0);
-    i = 0u;
-    while (hooks->child_count != NULL &&
-           i < hooks->child_count(hooks->context, object)) {
-        if (hooks->apply != NULL)
-            hooks->apply(hooks->context, object, 0x474da0u, i,
-                         child_value, 0, 0, 0);
-        ++i;
-    }
-    if (hooks->apply == NULL) return;
-    hooks->apply(hooks->context, object, 0x4755e0u, 1,
-                 -0.02f, -0.02f, 0, 0);
-    hooks->apply(hooks->context, object, 0x4755b0u, 1,
-                 1.015f, 1.015f, scale, 0);
-    hooks->apply(hooks->context, object, 0x4750b0u, 0,
-                 uniform_scale, uniform_scale, uniform_scale, 1.0f);
-    if (flags & 1u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                 1, 0, 0, 1.57079637f);
-    if (flags & 2u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                 1, 0, 0, -1.57079637f);
-    if (flags & 4u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                 0, 1, 0, 1.57079637f);
-    if (flags & 8u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                 0, 1, 0, -1.57079637f);
-    if (flags & 0x10u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                   0, 0, 1, 1.57079637f);
-    if (flags & 0x20u) hooks->apply(hooks->context, object, 0x475580u, 1,
-                                   0, 0, 1, -1.57079637f);
-    if (flags & 0x80u) hooks->apply(hooks->context, object, 0x4755e0u, 2,
-                                   0, -10, 0, 0);
-    if (flags & 0x40u) hooks->apply(hooks->context, object, 0x4755e0u, 2,
-                                   0, 10, 0, 0);
-}
-
 void scene_rotation_flags_apply(void* object, const float first[3],
                                 const float second[3], const float third[3],
                                 float scale, float uniform_scale,
@@ -3083,38 +2916,6 @@ void scene_rotation_flags_apply(void* object, const float first[3],
 }
 RenderResourceBindingHooks s_render_resource_binding_hooks;
 
-// ModelTransformCopyToSceneNode (FUN_00435e35) copies a scene node's pose
-// onto the model scene object when the model record kind is 3.
-// FUNCTION: LEGORR 0x00435e35
-void model_transform_copy_to_scene_node(void* model_record,
-                                        void* source_scene_node)
-{
-    unsigned char* record = (unsigned char*)model_record;
-    unsigned char* source = (unsigned char*)source_scene_node;
-    uint32_t kind;
-    void* model_scene_object;
-    void* source_scene_object;
-    float position[3];
-    float first[3];
-    float second[3];
-    if (record == NULL || source == NULL) return;
-    memcpy(&kind, record, sizeof(kind));
-    if (kind != 3u) return;
-    memcpy(&model_scene_object, record + 0x24, sizeof(model_scene_object));
-    memcpy(&source_scene_object, source + 0x24,
-           sizeof(source_scene_object));
-    if (model_scene_object == NULL || source_scene_object == NULL) return;
-    if (!ddiscene_object_position_get(source_scene_object, NULL, position))
-        return;
-    if (!ddiscene_object_facing_pair_get(source_scene_object, NULL, first,
-                                         second)) return;
-    (void)ddiscene_object_position_set(model_scene_object, NULL,
-                                       position[0], position[1], position[2]);
-    (void)ddiscene_object_pose_method_dispatch(
-        model_scene_object, NULL, first[0], first[1], first[2],
-        second[0], second[1], second[2]);
-}
-
 void camera_view_context_close_hooks_set(CameraViewContextReleaseHook release,
                                          CameraViewContextFreeHook free_view,
                                          void* context)
@@ -3122,28 +2923,6 @@ void camera_view_context_close_hooks_set(CameraViewContextReleaseHook release,
     s_view_context_release_hook = release;
     s_view_context_free_hook = free_view;
     s_view_context_close_context = context;
-}
-
-// CameraViewContextClose (FUN_00435dc8) releases the world camera first,
-// conditionally releases follow and third handles, then frees the context.
-// FUNCTION: LEGORR 0x00435dc8
-void camera_view_context_close(void* view)
-{
-    int mode;
-    if (view == NULL) return;
-    mode = *(int*)view;
-    if (s_view_context_release_hook != NULL) {
-        s_view_context_release_hook(s_view_context_close_context, view, 9);
-        if (mode != 3) {
-            s_view_context_release_hook(s_view_context_close_context,
-                                        view, 10);
-            s_view_context_release_hook(s_view_context_close_context,
-                                        view, 12);
-        }
-    }
-    if (s_view_context_free_hook != NULL) {
-        s_view_context_free_hook(s_view_context_close_context, view);
-    }
 }
 
 void animation_transform_hooks_set(AnimationObjectTransformApplyHook orient,
@@ -3448,74 +3227,6 @@ void scene_object_chain_hooks_set(const SceneObjectChainHooks* hooks)
     }
 }
 
-static void scene_object_chain_nodes_release(SceneObjectChainRecord* record)
-{
-    int i;
-    if (record == NULL || s_scene_object_chain_hooks.node_release == NULL)
-        return;
-    for (i = 2; i >= 0; --i) {
-        if (record->node[i] != NULL) {
-            s_scene_object_chain_hooks.node_release(
-                s_scene_object_chain_hooks.context, record->node[i]);
-            record->node[i] = NULL;
-        }
-    }
-}
-
-// SceneObjectChainRecordCreate (FUN_00435b20).
-// FUNCTION: LEGORR 0x00435b20
-SceneObjectChainRecord* scene_object_chain_record_create(void* parent,
-                                                         int type)
-{
-    static const float direction[3] = { 0.0f, 0.0f, 1.0f };
-    static const float up[3] = { 0.0f, 1.0f, 0.0f };
-    SceneObjectChainRecord* record;
-    SceneObjectChainHooks* hooks = &s_scene_object_chain_hooks;
-    if (hooks->node_create == NULL) return NULL;
-    record = (SceneObjectChainRecord*)engine_heap_alloc(
-        (long)sizeof(SceneObjectChainRecord));
-    if (record == NULL) return NULL;
-    memset(record, 0, sizeof(*record));
-    record->type = type;
-    record->layer_depth = 200.0f;
-    record->node[0] = hooks->node_create(hooks->context, NULL);
-    if (record->node[0] == NULL) goto fail;
-    if (hooks->node_position_set != NULL) {
-        hooks->node_position_set(hooks->context, record->node[0],
-                                 0.0f, 0.0f, -record->layer_depth);
-    }
-    if (hooks->node_orientation_set != NULL) {
-        hooks->node_orientation_set(hooks->context, record->node[0],
-                                    direction, up);
-    }
-    if (type == 3) {
-        if (hooks->node_attach != NULL)
-            hooks->node_attach(hooks->context, record->node[0], parent);
-        return record;
-    }
-    record->node[1] = hooks->node_create(hooks->context, parent);
-    if (record->node[1] == NULL) goto fail;
-    record->node[2] = hooks->node_create(hooks->context, parent);
-    if (record->node[2] == NULL) goto fail;
-    record->node[3] = hooks->node_create(hooks->context, record->node[1]);
-    if (record->node[3] == NULL) goto fail;
-    if (type == 1) {
-        record->node[4] = hooks->node_create(hooks->context, record->node[3]);
-        if (record->node[4] != NULL && hooks->node_position_set != NULL) {
-            hooks->node_position_set(hooks->context, record->node[4],
-                                     0.0f, 0.0f, -80.0f);
-        }
-    }
-    if (hooks->node_attach != NULL) {
-        hooks->node_attach(hooks->context, record->node[0], record->node[3]);
-    }
-    return record;
-fail:
-    scene_object_chain_nodes_release(record);
-    engine_heap_free(record);
-    return NULL;
-}
-
 void scene_object_chain_record_release(SceneObjectChainRecord* record)
 {
     int i;
@@ -3646,41 +3357,6 @@ void camera_project_point_to_screen(const ViewProjectionAdapter* adapter,
     adapter->transform_point(adapter->context, projected, input_xyz);
     output_xy[0] = projected[0] / projected[3];
     output_xy[1] = projected[1] / projected[3];
-}
-
-// FUNCTION: LEGORR 0x0040b470
-float projected_quad_screen_area_calculate(
-    const ViewProjectionAdapter* adapter, const float* quad_xyz,
-    const float bounds_xy[2], int disable_visibility_clip)
-{
-    float clip[4][4];
-    float screen[4][3];
-    float first_area;
-    float second_area;
-    float visibility = 1.0f;
-    int i;
-    if (adapter == NULL || adapter->transform_point == NULL ||
-        quad_xyz == NULL || bounds_xy == NULL) return 0.0f;
-    for (i = 0; i < 4; ++i) {
-        adapter->transform_point(adapter->context, clip[i], quad_xyz + i * 3);
-        screen[i][0] = clip[i][0] / clip[i][3];
-        screen[i][1] = clip[i][1] / clip[i][3];
-        /* The target writes only projected x/y into these 3-word points;
-         * SurfaceTriangleAreaCalculate consumes them as z=0 screen points. */
-        screen[i][2] = 0.0f;
-        if (!disable_visibility_clip &&
-            (screen[i][0] < 0.0f || screen[i][1] < 0.0f ||
-             screen[i][0] > bounds_xy[0] || screen[i][1] > bounds_xy[1] ||
-             clip[i][2] < 0.0f || clip[i][2] > clip[i][3])) {
-            visibility -= 0.25f;
-        }
-    }
-    if (visibility <= 0.0f) return 0.0f;
-    first_area = surface_triangle_area_calculate(
-        screen[2], screen[1], screen[0], 0);
-    second_area = surface_triangle_area_calculate(
-        screen[0], screen[3], screen[2], 0);
-    return (second_area + first_area) * visibility;
 }
 
 #if !defined(LEGORRR_BACKEND_WINAPI)
@@ -3928,31 +3604,6 @@ int rect_contains_point_from_object_bounds(const float* const* bounds_at_14,
     return rect_contains_converted(*bounds_at_14, off_x, off_y, x, y);
 }
 
-/* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zero the matrix, raise
- * m[10]/m[15], then the three quotients — the corpus's m[1] multiplies
- * p5/p4 by p4/p1, not p5/p1. */
-// FUNCTION: LEGORR 0x0040bd60
-void perspective_projection_matrix_set(float* out, float p1, float p2,
-                                       float p3, float p4, float p5)
-{
-    out[3] = 0.0f;
-    out[2] = 0.0f;
-    out[7] = 0.0f;
-    out[6] = 0.0f;
-    out[4] = 0.0f;
-    out[11] = 0.0f;
-    out[9] = 0.0f;
-    out[8] = 0.0f;
-    out[14] = 0.0f;
-    out[13] = 0.0f;
-    out[12] = 0.0f;
-    out[15] = 1.0f;
-    out[10] = 1.0f;
-    out[0] = p4 / p1;
-    out[5] = p3 / p2;
-    out[1] = (p5 / p4) * (p4 / p1);
-}
-
 /* ---- camera-handle primitives (record-backed) --------------------------- */
 
 void cam_offset(CameraHandle* c, float x, float y, float z)
@@ -4027,39 +3678,6 @@ float terrain_height(EngineContext* ctx, float x, float y)
     if (ctx != NULL && ctx->level_terrain != NULL)
         return terrain_surface_height_interpolate(ctx->level_terrain, x, y);
     return 0.0f;
-}
-
-static int object_lookup(EngineContext* ctx, int id)
-{
-    if (ctx != NULL && id > 0 && id <= (int)ctx->camera_target_count &&
-        ctx->camera_targets[id - 1].type != 0u) return 1;
-    return s_view_object_lookup_hook != NULL
-        ? s_view_object_lookup_hook(id, s_view_follow_target_context) : 0;
-}
-static int target_blend(EngineCameraTargetRecord* record, int target_id,
-                        float* blend,
-                        float* facing)
-{
-    if (record != NULL && record->type >= 1u && record->type <= 3u &&
-        record->source[record->type - 1u] != NULL &&
-        blend != NULL && facing != NULL) {
-        entity_follow_target_pose_get(
-            (EntitySlot*)record->source[record->type - 1u], target_id,
-            blend, facing);
-        return 1;
-    }
-    if (s_view_target_blend_hook != NULL)
-        return s_view_target_blend_hook(target_id,
-                                        record != NULL ? (int)record->type : 0,
-                                        blend, facing,
-                                        s_view_follow_target_context);
-    if (blend != NULL) {
-        blend[0] = blend[1] = blend[2] = 0.0f;
-    }
-    if (facing != NULL) {
-        facing[0] = facing[1] = facing[2] = 0.0f;
-    }
-    return g_view_test_blend;
 }
 
 /* ---- the ported tick ---------------------------------------------------- */
@@ -4187,159 +3805,6 @@ int view_primary_projection_get(const ViewContext* view, const void* level,
     return 1;
 }
 
-static void view_tail(ViewContext* v, float scale)
-{
-    /* Corpus tail: when the motion timer has expired, velocity snaps to 0;
-     * otherwise it decays toward the step size and the camera is shifted by
-     * the negative velocity (glide-to-stop). */
-    if (v->timer_num <= v->timer_acc) {
-        v->velocity[0] = v->velocity[1] = v->velocity[2] = 0.0f;
-    } else {
-        float decay = ((float)(v->timer_num - v->timer_acc) / (float)v->timer_num)
-                    * v->step;
-        vec_scale(v->velocity, v->velocity, decay);
-        v->timer_acc += (int)scale;
-        cam_offset(&v->cam_world, -v->velocity[0], -v->velocity[1],
-                   -v->velocity[2]);
-    }
-}
-
-// FUNCTION: LEGORR 0x00435f5c
-void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale)
-{
-    if (v == NULL || dt <= 0.0f) {
-        return;
-    }
-    EngineState* st = ctx != NULL ? ctx->state_block : NULL;
-    (void)st;
-    cam_offset(&v->cam_world, -v->velocity[0], -v->velocity[1],
-               -v->velocity[2]);
-
-    if (v->mode == 1) {
-        /* Follow: keep the follow camera at the offset, then clamp it at the
-         * world grid edges (corpus: local_8/local_c vs DAT_005560ac). */
-        vec_scale(v->offset, v->offset, g_view_follow_scale);
-        cam_offset(&v->cam_follow, v->offset[0], v->offset[1], v->offset[2]);
-        float pos[3], fac[3];
-        cam_get_pos(&v->cam_follow, pos);
-        cam_get_facing(&v->cam_follow, fac);
-        (void)fac;
-        int gx = 0, gy = 0;
-        if (!engine_context_grid_pick(ctx, pos, &gx, &gy)) {
-            cam_offset(&v->cam_follow, -v->offset[0], -v->offset[1],
-                       -v->offset[2]);
-        } else {
-            const int edge = g_view_grid_edge;
-            if (gx < edge || engine_level_width(ctx) - 1 - edge <= gx) {
-                cam_offset(&v->cam_follow, -v->offset[0], 0, 0);
-            }
-            if (gy < edge || engine_level_height(ctx) - 1 - edge <= gy) {
-                cam_offset(&v->cam_follow, 0, -v->offset[1], 0);
-            }
-            float h = terrain_height(ctx, pos[0], pos[1]);
-            cam_set_pos(&v->cam_facing, pos[0], pos[1], h);
-            cam_set_facing(&v->cam_facing, fac);
-            float distance = v->follow_span;
-            if (v->controller != NULL)
-                memcpy(&distance, (char*)v->controller + 0x90,
-                       sizeof(distance));
-            float base_height = terrain_authored_surface_height_interpolate(
-                ctx->level_terrain, pos[0], pos[1]);
-            float z = distance - base_height;
-            cam_set_pos(&v->cam_world, 0.0f, 0.0f, -z);
-        }
-        view_tail(v, scale);
-        return;
-    }
-
-    if (v->mode == 2) {
-        /* Scripted / lagged follow: interpolate toward the target with
-         * k = |d|/(|d|+A) once an object target exists (object_lookup). */
-        if (v->follow_id == 0) {
-            if (ctx != NULL) {
-                ctx->state &= ~0x20000u;
-            }
-            view_tail(v, scale);
-            return;
-        }
-        int target = object_lookup(ctx, v->follow_id);
-        if (target == 0) {
-            view_tail(v, scale);
-            return;
-        }
-        if (ctx != NULL) {
-            ctx->state |= 0x20000u;
-        }
-        float goal3[3], facing[3];
-        cam_get_pos(&v->cam_world, goal3);
-        cam_get_facing(&v->cam_world, facing);
-        float dist = vec_len(goal3);
-        float a = (float)v->a3;
-        float k = a <= 0.0f ? 0.0f : dist / (dist + a); (void)k;
-        /* ...full corpus interpolations follow when the object layer lands */
-        view_tail(v, scale);
-        return;
-    }
-
-    if (v->mode == 3) {
-        /* Free/cruise: ease the camera position and facing toward the
-         * velocity target.  The factor is 4 / dt, so smaller frame deltas
-         * keep the camera closer to the target while larger deltas retain
-         * more of the current camera state. */
-        float pos[3], facing[3];
-        float target_pos[3], target_facing[3];
-        float mixed_pos[3], mixed_facing[3];
-        float distance, facing_dot, factor, inverse_factor;
-        int target_dirty;
-        cam_get_pos(&v->cam_world, pos);
-        cam_get_facing(&v->cam_world, facing);
-        memcpy(target_pos, pos, sizeof(target_pos));
-        memcpy(target_facing, facing, sizeof(target_facing));
-        if ((v->target_record == NULL &&
-             s_view_target_blend_hook == NULL) || dt == 0.0f ||
-            target_blend((EngineCameraTargetRecord*)v->target_record,
-                         v->target_record != NULL ? v->a5 : v->follow_id,
-                         target_pos,
-                         target_facing) == 0) {
-            view_tail(v, scale);
-            return;
-        }
-
-        target_dirty = (v->flags & 0x10u) != 0;
-        distance = vec_dist(target_pos, pos);
-        facing_dot = vec_dot(target_facing, facing);
-        if (!target_dirty || distance > 100.0f || facing_dot < 0.0f) {
-            memcpy(pos, target_pos, sizeof(pos));
-            memcpy(facing, target_facing, sizeof(facing));
-        }
-
-        /* The reference normalizes both facing vectors after applying its
-         * dirty-target fallback, then blends the current vector toward the
-         * target vector. */
-        vec_normalize(facing);
-        vec_normalize(target_facing);
-        factor = 4.0f / dt;
-        inverse_factor = 1.0f / (factor + 1.0f);
-        vec_scale(mixed_facing, facing, factor);
-        vec_add(mixed_facing, mixed_facing, target_facing);
-        vec_scale(mixed_facing, mixed_facing, inverse_factor);
-        vec_scale(mixed_pos, pos, factor);
-        vec_add(mixed_pos, mixed_pos, target_pos);
-        vec_scale(mixed_pos, mixed_pos, inverse_factor);
-
-        if (distance > 0.01f)
-            cam_set_pos(&v->cam_world, mixed_pos[0], mixed_pos[1],
-                        mixed_pos[2]);
-        if (facing_dot < 0.99999f)
-            cam_set_facing(&v->cam_world, mixed_facing);
-        v->flags |= 0x10;
-        view_tail(v, scale);
-        return;
-    }
-
-    view_tail(v, scale);
-}
-
 /* The corpus ticks the three view contexts each frame (finding 03 §4). */
 void view_views_tick(EngineContext* ctx, float dt, float scale)
 {
@@ -4410,26 +3875,6 @@ int menu_overlay_list_count(const void* menu)
     return count;
 }
 
-/* TerrainGridBorderInsetGet (FUN_00435f28): DAT_005560ac's getter. */
-// FUNCTION: LEGORR 0x00435f28
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int view_grid_edge_get(void)
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-        mov eax, dword ptr [g_view_grid_edge]
-        pop ebp
-        ret
-    }
-}
-#else
-int view_grid_edge_get(void)
-{
-    return g_view_grid_edge;
-}
-#endif
-
 /* Startup CameraViewContextSet binds CameraSpeed, CameraDropOff,
  * CameraAcceleration and MouseScrollIndent in the reference caller order. */
 // GLOBAL: LEGORR 0x005560a0
@@ -4437,63 +3882,8 @@ float g_view_pan_cap   = 0.0f;  /* DAT_005560a0 (CameraSpeed) */
 // GLOBAL: LEGORR 0x005560a8
 float g_view_pan_scale = 0.0f;  /* DAT_005560a8 (CameraAcceleration) */
 
-// FUNCTION: LEGORR 0x00435e0e
-void camera_view_context_set(float cap, float follow_scale,
-                             float pan_scale, int edge)
-{
-    g_view_pan_cap = cap;
-    g_view_follow_scale = follow_scale;
-    g_view_pan_scale = pan_scale;
-    g_view_grid_edge = edge;
-}
-
-// FUNCTION: LEGORR 0x00436b0b
-void selection_record_point_set(ViewContext* v, float x, float y)
-{
-    if (v != NULL && v->mode == 1) {
-        /* corpus: the view record's dword [10] camera (cam_follow), z=0 */
-        cam_set_pos(&v->cam_follow, x, y, 0.0f);
-    }
-}
-
-// FUNCTION: LEGORR 0x00436b33
-int camera_get_position_with_terrain_height(ViewContext* v,
-                                            EngineContext* ctx,
-                                            float out[3])
-{
-    if (v != NULL && ctx != NULL && out != NULL && v->mode == 1) {
-        cam_get_pos(&v->cam_follow, out);
-        /* corpus: the terrain leaf takes the world handle; the port routes
-         * it through the engine context's bound level block (deviation). */
-        out[2] = terrain_height(ctx, out[0], out[1]);
-    }
-    return 1; /* corpus: constant success, untouched output for mode != 1 */
-}
-
-// FUNCTION: LEGORR 0x00436b87
-void camera_pointer_pan_update(ViewContext* v, float vec[3], float amount)
-{
-    if (v == NULL || vec == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    vec_normalize(vec);
-    v->pan_accum = amount * g_view_pan_scale + v->pan_accum;
-    if (g_view_pan_cap < v->pan_accum) {
-        v->pan_accum = g_view_pan_cap;
-    }
-    vec_scale(vec, vec, v->pan_accum * amount);
-    vec_add(v->offset, v->offset, vec);
-}
-
-/* --- the camera-controller bounds band (see view.hpp) -----------------------
- * Fixed-offset record operations; the corpus's controller record is not
- * modeled as a struct (its owners are the per-view camera objects, and
- * the pose-dispatch half of the keys' logic stays at the unported scene
- * seam). Only the record-field shape these five leaves need is written. */
-#define CAM_FLAGS_OFF 0xb8  /* gate-bit byte */
-
-static CameraPoseDispatchHook s_camera_pose_dispatch_hook;
-static void* s_camera_pose_dispatch_context;
+CameraPoseDispatchHook s_camera_pose_dispatch_hook;
+void* s_camera_pose_dispatch_context;
 SceneTimingValueGetHook s_scene_timing_value_get_hook;
 SceneTimingCountGetHook s_scene_timing_count_get_hook;
 void* s_scene_timing_hooks_context;
@@ -4599,253 +3989,6 @@ static void cam_or_flags(void* rec, uint8_t mask)
     *(uint8_t*)((char*)rec + CAM_FLAGS_OFF) = f;
 }
 
-// FUNCTION: LEGORR 0x00436831
-void camera_tilt_bounds_set(void* camera, float lo, float hi)
-{
-    if (camera == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    uint8_t* flags = (uint8_t*)((char*)camera + CAM_FLAGS_OFF);
-    *flags = (uint8_t)(*flags | 1u);
-    __builtin_memcpy((char*)camera + 0x7c, &lo, sizeof(lo));
-    __builtin_memcpy((char*)camera + 0x80, &hi, sizeof(hi));
-}
-
-/* CameraSetTilt (FUN_00436860): honor the optional bound unless override bit
- * 8 is set, store +0x78, reset the scene object's pose, then apply the
- * negative X-axis rotation. The DDiSceneObjectPoseMethodDispatch leaf is an
- * injectable renderer seam because its owning scene interface varies by
- * backend. */
-// FUNCTION: LEGORR 0x00436860
-void camera_tilt_set(void* camera, float value)
-{
-    uint8_t flags;
-    float lo, hi;
-    void* scene_object;
-    void* pose_context;
-    if (camera == NULL) {
-        return;
-    }
-    flags = *(uint8_t*)((char*)camera + CAM_FLAGS_OFF);
-    __builtin_memcpy(&lo, (char*)camera + 0x7c, sizeof(lo));
-    __builtin_memcpy(&hi, (char*)camera + 0x80, sizeof(hi));
-    if ((flags & 1u) != 0u && (flags & 8u) == 0u &&
-        (value < lo || value > hi)) {
-        return;
-    }
-    __builtin_memcpy((char*)camera + 0x78, &value, sizeof(value));
-    scene_object = *(void**)((char*)camera + 0x30);
-    pose_context = *(void**)((char*)camera + 0x28);
-    if (scene_object == NULL) {
-        return;
-    }
-    if (s_camera_pose_dispatch_hook != NULL) {
-        s_camera_pose_dispatch_hook(scene_object, pose_context,
-                                    0.0f, 0.0f, 1.0f,
-                                    0.0f, 1.0f, 0.0f,
-                                    s_camera_pose_dispatch_context);
-    }
-    render_object_rotate_axis(scene_object, 1u, 1.0f, 0.0f, 0.0f, -value);
-}
-
-/* CameraPanAxisUpdate (FUN_00436900): add the delta to the controller's
- * current +0x78 angle and route through CameraSetTilt for the same bounds and
- * scene-transform update. */
-// FUNCTION: LEGORR 0x00436900
-void camera_pan_axis_update(void* camera, float delta)
-{
-    camera_tilt_set(camera,
-                    delta + *(float*)((char*)camera + 0x78));
-}
-
-/* ScreenEffectRecordSet (FUN_00435ebb): copy the four effect parameters
- * around the camera tilt operation in the original record. */
-// FUNCTION: LEGORR 0x00435ebb
-void screen_effect_record_set(void* camera_record,
-                              uint32_t field4, uint32_t field8,
-                              uint32_t fieldc, float tilt,
-                              uint32_t field10)
-{
-    if (camera_record == NULL) return;
-    memcpy((char*)camera_record + 4, &field4, sizeof(field4));
-    memcpy((char*)camera_record + 8, &field8, sizeof(field8));
-    memcpy((char*)camera_record + 0x0c, &fieldc, sizeof(fieldc));
-    camera_tilt_set(camera_record, tilt);
-    memcpy((char*)camera_record + 0x10, &field10, sizeof(field10));
-}
-
-// FUNCTION: LEGORR 0x00436921
-void camera_scalar_bounds_set(void* camera, float lo, float hi)
-{
-    if (camera == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    uint8_t* flags = (uint8_t*)((char*)camera + CAM_FLAGS_OFF);
-    *flags = (uint8_t)(*flags | 2u);
-    __builtin_memcpy((char*)camera + 0x88, &lo, sizeof(lo));
-    __builtin_memcpy((char*)camera + 0x8c, &hi, sizeof(hi));
-}
-
-/* CameraSetBoundedRotationValue (FUN_00436953): same optional-range and
- * override gates as the tilt setter, with a reset pose followed by a
- * negative Z-axis rotation. */
-// FUNCTION: LEGORR 0x00436953
-void camera_rotation_set(void* camera, float value)
-{
-    uint8_t flags;
-    float lo, hi;
-    void* scene_object;
-    if (camera == NULL) {
-        return;
-    }
-    flags = *(uint8_t*)((char*)camera + CAM_FLAGS_OFF);
-    __builtin_memcpy(&lo, (char*)camera + 0x88, sizeof(lo));
-    __builtin_memcpy(&hi, (char*)camera + 0x8c, sizeof(hi));
-    if ((flags & 2u) != 0u && (flags & 8u) == 0u &&
-        (value < lo || value > hi)) {
-        return;
-    }
-    __builtin_memcpy((char*)camera + 0x84, &value, sizeof(value));
-    scene_object = *(void**)((char*)camera + 0x28);
-    if (scene_object == NULL) {
-        return;
-    }
-    if (s_camera_pose_dispatch_hook != NULL) {
-        s_camera_pose_dispatch_hook(scene_object, NULL,
-                                    0.0f, 0.0f, 1.0f,
-                                    0.0f, 1.0f, 0.0f,
-                                    s_camera_pose_dispatch_context);
-    }
-    render_object_rotate_axis(scene_object, 1u, 0.0f, 0.0f, 1.0f, -value);
-}
-
-// FUNCTION: LEGORR 0x00436a18
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void camera_distance_bounds_set(void* camera,
-                                                 float lo, float hi)
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-        mov eax, dword ptr [ebp + 8]
-        mov cl, byte ptr [eax + 0b8h]
-        or cl, 4
-        mov edx, dword ptr [ebp + 8]
-        mov byte ptr [edx + 0b8h], cl
-        mov eax, dword ptr [ebp + 8]
-        mov ecx, dword ptr [ebp + 0ch]
-        mov dword ptr [eax + 94h], ecx
-        mov edx, dword ptr [ebp + 8]
-        mov eax, dword ptr [ebp + 10h]
-        mov dword ptr [edx + 98h], eax
-        pop ebp
-        ret
-    }
-}
-#else
-void camera_distance_bounds_set(void* camera, float lo, float hi)
-{
-    if (camera == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    uint8_t* flags = (uint8_t*)((char*)camera + CAM_FLAGS_OFF);
-    *flags = (uint8_t)(*flags | 4u);
-    __builtin_memcpy((char*)camera + 0x94, &lo, sizeof(lo));
-    __builtin_memcpy((char*)camera + 0x98, &hi, sizeof(hi));
-}
-#endif
-
-// FUNCTION: LEGORR 0x00436a4a
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void camera_distance_set(void* camera, float value)
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-        mov eax, dword ptr [ebp + 8]
-        xor ecx, ecx
-        mov cl, byte ptr [eax + 0b8h]
-        and ecx, 4
-        test ecx, ecx
-        je short camera_distance_set_write
-        mov edx, dword ptr [ebp + 8]
-        xor eax, eax
-        mov al, byte ptr [edx + 0b8h]
-        and eax, 8
-        test eax, eax
-        jne short camera_distance_set_write
-        mov ecx, dword ptr [ebp + 8]
-        fld dword ptr [ebp + 0ch]
-        fcomp dword ptr [ecx + 94h]
-        fnstsw ax
-        test ah, 1
-        jne short camera_distance_set_done
-        mov edx, dword ptr [ebp + 8]
-        fld dword ptr [ebp + 0ch]
-        fcomp dword ptr [edx + 98h]
-        fnstsw ax
-        test ah, 41h
-        je short camera_distance_set_done
-    camera_distance_set_write:
-        mov eax, dword ptr [ebp + 8]
-        mov ecx, dword ptr [ebp + 0ch]
-        mov dword ptr [eax + 90h], ecx
-    camera_distance_set_done:
-        pop ebp
-        ret
-    }
-}
-#else
-void camera_distance_set(void* camera, float value)
-{
-    if (camera == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    const uint8_t f = *(const uint8_t*)((const char*)camera + CAM_FLAGS_OFF);
-    float lo = 0.0f, hi = 0.0f;
-    __builtin_memcpy(&lo, (const char*)camera + 0x94, sizeof(lo));
-    __builtin_memcpy(&hi, (const char*)camera + 0x98, sizeof(hi));
-    if ((f & 4u) == 0u || (f & 8u) != 0u || (lo <= value && value <= hi)) {
-        __builtin_memcpy((char*)camera + 0x90, &value, sizeof(value));
-    }
-}
-#endif
-
-// FUNCTION: LEGORR 0x00436aa5
-void camera_zoom_update(void* camera, float delta)
-{
-    if (camera == NULL) {
-        return; /* deviation: the corpus reads blindly */
-    }
-    float cur = 0.0f;
-    __builtin_memcpy(&cur, (const char*)camera + 0x90, sizeof(cur));
-    camera_distance_set(camera, delta + cur);
-}
-
-/* CursorScreenRayContextReset (FUN_00435f16) — see view.hpp. */
-// FUNCTION: LEGORR 0x00435f16
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void cursor_screen_ray_context_reset(ViewContext* v)
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-        mov eax, dword ptr [ebp + 8]
-        mov dword ptr [eax + 0x9c], 0
-        pop ebp
-        ret
-    }
-}
-#else
-void cursor_screen_ray_context_reset(ViewContext* v)
-{
-    if (v == NULL) {
-        return; /* deviation: the corpus stores blindly */
-    }
-    v->pan_accum = 0.0f; /* the corpus's view-record +0x9c slot */
-}
-#endif
-
 /* CurrentLevelTerrainGridPick (FUN_00433be0) — see view.hpp. */
 // FUNCTION: LEGORR 0x00433be0
 void current_level_terrain_grid_pick(EngineContext* ctx, float x, float y,
@@ -4910,33 +4053,6 @@ void camera_zoom_step_adjust(int direction, float step)
         camera_zoom_update(s_zoom_step_context, step * 3.0f);
     }
     /* other directions: the corpus's early exit — inert */
-}
-
-/* SelectionRecordPointGet (FUN_00436ae9) — see view.hpp. */
-// FUNCTION: LEGORR 0x00436ae9
-void selection_record_point_get(ViewContext* v, float out[3])
-{
-    if (v != NULL && out != NULL && v->mode == 1) {
-        /* corpus: the view record's dword [10] camera (cam_follow) */
-        cam_get_pos(&v->cam_follow, out);
-    }
-}
-
-/* RendererNodeRelativePositionSet (FUN_00436ac9) — see view.hpp. */
-// FUNCTION: LEGORR 0x00436ac9
-void renderer_node_relative_position_set(const void* node, float x, float y)
-{
-#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
-    /* Native 64-bit: the handle is the module's widened pointer slot (see
-     * view.hpp); a uint32_t read would truncate the pointer. */
-    void* handle = NULL;
-#else
-    uint32_t handle = 0u;
-#endif
-    if (node != NULL) {
-        __builtin_memcpy(&handle, (const char*)node + 0x28, sizeof handle);
-    }
-    cam_offset((CameraHandle*)handle, x, y, 0.0f);
 }
 
 /* ---- scene-root hook band (2026-10-24) ----------------------------------- *
