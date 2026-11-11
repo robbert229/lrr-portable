@@ -3112,10 +3112,8 @@ void entity_indexed_value_table_clear(void)
 // FUNCTION: LEGORR 0x00469A90
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 void entity_indexed_value_append(int group, uint32_t value)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov ecx, dword ptr [esp + 4]
         mov eax, ecx
@@ -3130,7 +3128,10 @@ void entity_indexed_value_append(int group, uint32_t value)
         mov dword ptr [eax], ecx
         ret
     }
+}
 #else
+void entity_indexed_value_append(int group, uint32_t value)
+{
     uint32_t count;
     if (group < 0 || group >= ENTITY_INDEXED_VALUE_GROUPS) {
         return;
@@ -3140,19 +3141,17 @@ void entity_indexed_value_append(int group, uint32_t value)
         s_entity_indexed_value_groups[group].values[count] = value;
         s_entity_indexed_value_groups[group].count = count + 1u;
     }
-#endif
 }
+#endif
 
 /* GroupedCodeTableFindValueIndex (FUN_0046a120): scan the count-prefixed
  * fixed groups in order and return the first group containing the value. */
 // FUNCTION: LEGORR 0x0046A120
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 int entity_grouped_code_table_find_value_index(uint32_t value,
                                                int* out_group)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         push ebx
         push esi
@@ -3193,8 +3192,11 @@ int entity_grouped_code_table_find_value_index(uint32_t value,
         pop ebx
         ret
     }
-#endif
-#if !defined(_MSC_VER) || !defined(_M_IX86)
+}
+#else
+int entity_grouped_code_table_find_value_index(uint32_t value,
+                                               int* out_group)
+{
     int group;
     for (group = 0; group < ENTITY_INDEXED_VALUE_GROUPS; ++group) {
         uint32_t i;
@@ -3206,8 +3208,8 @@ int entity_grouped_code_table_find_value_index(uint32_t value,
         }
     }
     return 0;
-#endif
 }
+#endif
 
 void entity_indexed_record_table_set(int group, const void* const* records,
                                      uint32_t count)
@@ -3258,10 +3260,8 @@ static uint32_t entity_indexed_record_word_get(int group, int index,
 // FUNCTION: LEGORR 0x00469AC0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t entity_indexed_record_word_at_b0_get(int group, int index, int slot)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         mov ecx, dword ptr [esp + 0ch]
@@ -3276,20 +3276,21 @@ uint32_t entity_indexed_record_word_at_b0_get(int group, int index, int slot)
         mov eax, dword ptr [edx + eax + 0b0h]
         ret
     }
-#else
-    return entity_indexed_record_word_get(group, index, slot, 0xb0u);
-#endif
 }
+#else
+uint32_t entity_indexed_record_word_at_b0_get(int group, int index, int slot)
+{
+    return entity_indexed_record_word_get(group, index, slot, 0xb0u);
+}
+#endif
 
 /* IndexedRecordWordAtOffsetB4Get (FUN_00469af0) is the adjacent dword
  * reader used by EntityKindOneRandomSpawnTrigger. */
 // FUNCTION: LEGORR 0x00469AF0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t entity_indexed_record_word_at_b4_get(int group, int index, int slot)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         mov ecx, dword ptr [esp + 0ch]
@@ -3304,10 +3305,13 @@ uint32_t entity_indexed_record_word_at_b4_get(int group, int index, int slot)
         mov eax, dword ptr [edx + eax + 0b4h]
         ret
     }
-#else
-    return entity_indexed_record_word_get(group, index, slot, 0xb4u);
-#endif
 }
+#else
+uint32_t entity_indexed_record_word_at_b4_get(int group, int index, int slot)
+{
+    return entity_indexed_record_word_get(group, index, slot, 0xb4u);
+}
+#endif
 
 /* IndexedRecordWordAtOffsetB8Get (FUN_00469b20) is the third adjacent
  * configuration-word reader used by the terrain descriptor transition. */
@@ -3328,11 +3332,9 @@ uint32_t entity_indexed_record_word_at_f0_get(int group, int index, int slot)
 // FUNCTION: LEGORR 0x0046A0C0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
                                                      int slot)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         mov ecx, dword ptr [esp + 0ch]
@@ -3347,10 +3349,14 @@ uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
         mov eax, dword ptr [edx + eax + 0fch]
         ret
     }
-#else
-    return entity_indexed_record_word_get(group, index, slot, 0xfcu);
-#endif
 }
+#else
+uint32_t entity_mapped_indexed_record_word_at_fc_get(int group, int index,
+                                                     int slot)
+{
+    return entity_indexed_record_word_get(group, index, slot, 0xfcu);
+}
+#endif
 
 /* FUNCTION: LEGORR 0x00406540
  * Pool storage is represented by the most recently active portable game
@@ -7644,9 +7650,12 @@ static float entity_cell_speed_indexed_scale_get(int type,
         type, entity_record);
 }
 
-// FUNCTION: LEGORR 0x00433180
 #if defined(_MSC_VER) && defined(_M_IX86)
 static const char s_entity_rock_fall_in_name[] = "RockFallIn";
+#endif
+
+// FUNCTION: LEGORR 0x00433180
+#if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) int entity_cell_type_speed_multiplier_resolve_current(
     const EntitySlot* entity, int x, int y, float scale, float* out_scale)
 {
@@ -9219,10 +9228,8 @@ const void* stats_type_table_cell(int type, int row)
 // FUNCTION: LEGORR 0x00469f40
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t building_upgrade_admission_check(int type, int row)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         mov ecx, dword ptr [esp + 8]
@@ -9232,7 +9239,10 @@ uint32_t building_upgrade_admission_check(int type, int row)
         mov eax, dword ptr [edx + eax*4 + s_stats_cell_level_limit]
         ret
     }
+}
 #else
+uint32_t building_upgrade_admission_check(int type, int row)
+{
     if (type < 0 || type >= STATS_TYPE_TABLE_TYPES
         || row < 0 || row >= STATS_TYPE_TABLE_ROWS) {
         return 0u; /* deviation: the corpus indexes the table blindly */
@@ -9241,8 +9251,8 @@ uint32_t building_upgrade_admission_check(int type, int row)
     __builtin_memcpy(&raw_word, &s_stats_cell_level_limit[type][row],
                      sizeof(raw_word));
     return raw_word;
-#endif
 }
+#endif
 
 static uint32_t stats_table_read(int type, int row, int off, int stride_index)
 {
@@ -9296,10 +9306,8 @@ int entity_task_state_capacity_bind(EntitySlot* entity)
 // FUNCTION: LEGORR 0x00469b20
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t stats_table_word_at_b8(int type, int row, int stride_index)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         mov ecx, dword ptr [esp + 0ch]
@@ -9314,10 +9322,13 @@ uint32_t stats_table_word_at_b8(int type, int row, int stride_index)
         mov eax, dword ptr [edx + eax + 0b8h]
         ret
     }
-#else
-    return stats_table_read(type, row, 0xb8, stride_index);
-#endif
 }
+#else
+uint32_t stats_table_word_at_b8(int type, int row, int stride_index)
+{
+    return stats_table_read(type, row, 0xb8, stride_index);
+}
+#endif
 /* FUN_00469b20 */
 
 /* Port stats-table convenience reader at record offset +0xb4. The retail
@@ -9335,10 +9346,8 @@ uint32_t stats_table_word_at_b0(int type, int row, int stride_index)
 // FUNCTION: LEGORR 0x00469f60
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t stats_table_word_at_d0(int type, int row, int stride_index)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         mov ecx, dword ptr [esp + 0ch]
@@ -9353,17 +9362,18 @@ uint32_t stats_table_word_at_d0(int type, int row, int stride_index)
         mov eax, dword ptr [edx + eax + 0d0h]
         ret
     }
-#else
-    return stats_table_read(type, row, 0xd0, stride_index); /* FUN_00469f60 */
-#endif
 }
+#else
+uint32_t stats_table_word_at_d0(int type, int row, int stride_index)
+{
+    return stats_table_read(type, row, 0xd0, stride_index); /* FUN_00469f60 */
+}
+#endif
 // FUNCTION: LEGORR 0x0046a0f0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t stats_table_word_at_100(int type, int row, int stride_index)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         mov ecx, dword ptr [esp + 0ch]
@@ -9378,10 +9388,13 @@ uint32_t stats_table_word_at_100(int type, int row, int stride_index)
         mov eax, dword ptr [edx + eax + 100h]
         ret
     }
-#else
-    return stats_table_read(type, row, 0x100, stride_index); /* FUN_0046a0f0 */
-#endif
 }
+#else
+uint32_t stats_table_word_at_100(int type, int row, int stride_index)
+{
+    return stats_table_read(type, row, 0x100, stride_index); /* FUN_0046a0f0 */
+}
+#endif
 
 // FUNCTION: LEGORR 0x00469e00
 float stats_table_float_at_dc(int type, int row)
@@ -9446,10 +9459,8 @@ static uint32_t stats_instance_read(const void* config_block, int off)
 // FUNCTION: LEGORR 0x00469b50
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t stats_instance_word_at_bc(const void* config_block)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         push esi
@@ -9467,18 +9478,19 @@ uint32_t stats_instance_word_at_bc(const void* config_block)
         mov eax, dword ptr [ecx + eax + 0bch]
         ret
     }
-#else
-    return stats_instance_read(config_block, 0xbc);
-#endif
 }
+#else
+uint32_t stats_instance_word_at_bc(const void* config_block)
+{
+    return stats_instance_read(config_block, 0xbc);
+}
+#endif
 /* FUN_00469b50 */
 // FUNCTION: LEGORR 0x00469b80
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t stats_instance_word_at_e0(const void* config_block)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         push esi
@@ -9496,18 +9508,19 @@ uint32_t stats_instance_word_at_e0(const void* config_block)
         mov eax, dword ptr [ecx + eax + 0e0h]
         ret
     }
-#else
-    return stats_instance_read(config_block, 0xe0);
-#endif
 }
+#else
+uint32_t stats_instance_word_at_e0(const void* config_block)
+{
+    return stats_instance_read(config_block, 0xe0);
+}
+#endif
 /* FUN_00469b80 */
 // FUNCTION: LEGORR 0x00469bb0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t stats_instance_word_at_ec(const void* config_block)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         push esi
@@ -9525,18 +9538,19 @@ uint32_t stats_instance_word_at_ec(const void* config_block)
         mov eax, dword ptr [ecx + eax + 0ech]
         ret
     }
-#else
-    return stats_instance_read(config_block, 0xec);
-#endif
 }
+#else
+uint32_t stats_instance_word_at_ec(const void* config_block)
+{
+    return stats_instance_read(config_block, 0xec);
+}
+#endif
 /* FUN_00469bb0 */
 // FUNCTION: LEGORR 0x00469be0
  #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 uint32_t stats_instance_word_at_f0(const void* config_block)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [esp + 4]
         push esi
@@ -9554,10 +9568,13 @@ uint32_t stats_instance_word_at_f0(const void* config_block)
         mov eax, dword ptr [ecx + eax + 0f0h]
         ret
     }
-#else
-    return stats_instance_read(config_block, 0xf0);
-#endif
 }
+#else
+uint32_t stats_instance_word_at_f0(const void* config_block)
+{
+    return stats_instance_read(config_block, 0xf0);
+}
+#endif
 /* FUN_00469be0 */
 
 /* --- entity query flag count (2026-10-25) ----------------------------------
