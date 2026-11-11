@@ -1132,8 +1132,8 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 0044d9a0,VectorWithinAxisTolerance,23,GAME-024,LightEffects.c,game,high,bss,src/game/lighteffects.cpp
 0044da20,RoutePositionBlockedStateSet,23,GAME-024,LightEffects.c,game,high,bss,src/game/lighteffects.cpp
 0044da50,ThreeChannelValueTweenStep,23,GAME-024,LightEffects.c,game,high,bss;rdata,
-0044db50,KeyValueEqualsFileLoad,24,GAME-025,,game,high,string,src/game/entity.cpp
-0044dd40,EngineLoaderProfileEntriesRelease,24,GAME-025,,game,high,string,src/game/entity.cpp
+0044db50,KeyValueEqualsFileLoad,24,GAME-025,,game,high,string,src/game/loading_progress.cpp
+0044dd40,EngineLoaderProfileEntriesRelease,24,GAME-025,,game,high,string,src/game/loading_progress.cpp
 0044dde0,StringTableEntrySetCurrent,24,GAME-025,,game,high,bracketed,
 0044dec0,FileLoadingProgressUpdate,24,GAME-025,,game,high,rdata,
 0044e0a0,GlobalResourceHandleRelease,24,GAME-025,,game,medium,boundary:GAME-026,

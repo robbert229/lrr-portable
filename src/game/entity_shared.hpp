@@ -14,4 +14,8 @@ extern EntitySceneSlotRuntimeOps s_entity_scene_slot_runtime_ops;
 extern const char s_item_name_ore[];
 extern const char s_item_name_power_crystal[];
 
+namespace unported_ledger_stubs {
+uint32_t motion_config_profile_entries_release( void* config, MotionConfigProfileEntry* entries, uint32_t count, const MotionConfigProfileReleaseHooks* hooks);
+} // namespace unported_ledger_stubs
+
 #endif /* LRR_GAME_ENTITY_SHARED_HPP */

@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'loading_progress.cpp',
   'lighteffects.cpp',
   'bubbles.cpp',
   'info.cpp',
