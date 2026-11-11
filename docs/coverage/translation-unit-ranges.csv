@@ -69,160 +69,158 @@ unit_order,unit_id,unit_name,unit_kind,name_basis,text_start,text_end,functions,
 67,G98-018,Keys.c,gods98,string-prefix,00485a20,00485e80,2,1,low,none,2,,,004ab180-004ab5ec,,KEY_*/KEYPAD_* key-name table strings 0x4ab180-0x4ab5f7 + case-insensitive key lookup 485e30
 68,G98-019,,gods98,none,00485e80,004869f0,12,11,low,none,1,0049ea20-0049ea30,,,005407e8-00540830,2D surface drawing (lines/polyline/circle/pixel writer); header rdata 0x49ea10; bss 0x5407e8-0x540830 (485e80 writes 0x540830)
 69,G98-020,Lws.c,gods98,inferred,004869f0,00488b50,25,7,high,data-step;rdata@0049ea48;bss@00540838,0,0049ea48-0049ea58,,004ab5f8-004ab6c8,00540838-00544860,LightWave scene parser ('LWSC' 'lws' 'LoadObject' strings); header rdata 0x49ea38; bss 0x540838-0x544860; tail 488730-488a70 joined by calls (minor uncertainty); stem taken from the LWS scene-file strings
-70,G98-021,,gods98,none,00488b50,00488c70,5,5,low,data-step;bss@0054486c,7,,,,0054486c-00544a10,sound init facade + CD-track state (calls 47a640 and MCI unit); bss 0x54486c-0x544a10; one of 6 header tables 0x49ea5c-0x49eac4 lies in units 021-030
-71,G98-022,,gods98,none,00488c70,00489210,6,0,low,none,,,,,,RIFF/mmio wave readers called only by unit 009; no data; boundary uncertain: may belong with 021 or 023
-72,G98-023,,gods98,none,00489210,004893f0,5,5,low,none,,,,004ab6e0-004ab774,00544a1c-00544a1c,MCI 'cdaudio' command strings 0x4ab6e0-0x4ab783 (preceded by init data 0x4ab6d0); bss 0x544a1c; boundary uncertain vs 021/022
-73,G98-024,,gods98,none,004893f0,004894c0,4,4,high,data-step;bss@00544a20,0,,,,00544a20-005488a4,2000-slot handle table (bss 0x544a20-0x5488a4) used by Files.c and game
-74,G98-025,,gods98,none,004894c0,00489c30,11,0,low,none,,,,,,D3DRM frame clone/walk helpers serving unit 002 (no own data); boundary uncertain at 489c30
-75,G98-026,,gods98,none,00489c30,00489d90,2,0,low,none,,,,,,BMP palette/pixel-data prep used by 474050 and 47d9d0; no data; boundary uncertain
-76,G98-027,,gods98,none,00489d90,0048b260,2,2,low,none,,,004ab788-004ab788,004ab834-004af9b4,005488a8-005488c0,"DirectX HRESULT decoder (format + dispatch); rebuilt as src/gods98/dxerror.c (#411; finding 511); file name not evidenced in the binary; own .data 0x4ab788-0x4af9e1 = 8-entry module-name table then its 8 literals in reverse, the format string and the dispatcher's 329 literals (the rebuilt object's COMDAT order reproduces every address); it starts at the 8-byte boundary after G98-023's last literal (0x4ab774) and ends before an unreferenced dword (0x4af9e4) and Wad.c's first literal (0x4af9e8); own .bss 0x5488a8-0x5490c0 (5 dwords, an unreferenced dword 0x5488bc, a 2048-byte report buffer 0x5488c0) follows G98-024's .bss (ends 0x5488a4) and precedes the CRT's (0x5490c8); text edges kept on behaviour: G98-026 (BMP helpers called from 474050/47d9d0) and G98-028 (stream commons called from WinMain) have no own data and neither calls the decoder or touches its state; the dispatcher's jump tables end at 0x48b25d with 0x90 fill to 0x48b260"
-77,G98-028,,gods98,none,0048b260,0048b330,4,0,low,none,,,,,,file-list stream state (commons 0x575ce0-0x5760f0) called from WinMain; boundary uncertain: may share an object with 029
-78,G98-029,,gods98,none,0048b330,0048b4a0,3,0,low,none,,,,,,registry key path create/query (RegCreateKeyA/RegQueryValueExA); no data; boundary uncertain
-79,G98-030,Wad.c,gods98,inferred,0048b4a0,0048c040,15,1,low,none,,,,004af9e8-004af9ec,,'WWAD' archive index loader + wad entry streams (commons 0x575500-0x575cdf); data 0x4af9e4 precedes its strings; 48b4a0 is its private fgetc string reader; stem taken from the WWAD magic
-80,G98-031,,gods98,none,0048c040,0048d920,13,6,low,data-step;string@004af9f4,15,0049eaf0-0049eaf0,,004af9f4-004afc98,,LightWave LWOB object parser ('LWOB' 'POLS' 'SURF' chunk strings 0x4af9f4-); header rdata 0x49eadc; 48c040 is a private stristr duplicating 477610; file name not evidenced in the binary
-81,CRT-001,fpinit.c,crt,library-symbol,0048d920,0048d980,2,1,high,library;segment,2,,,,005490cc-005490cc,symbols __fpmath _cfltcvt_init; bss 0x5490cc
-82,CRT-002,atof.c,crt,library-symbol,0048d980,0048d9e0,1,0,medium,library-symbol,,,,,,symbol _atof
-83,CRT-003,sprintf.c,crt,library-symbol,0048d9e0,0048da50,1,0,medium,library-symbol,,,,,,symbol _sprintf: reccmp marker says _vsprintf but the body passes the address of its varargs to _output so it is sprintf
-84,CRT-004,strstr.asm,crt,library-symbol,0048da50,0048dad0,1,0,medium,library-symbol,,,,,,symbol _strstr; hand-written asm (dl/dh scan) ending exactly on a 16-byte boundary so no int3 fill is visible
-85,CRT-005,atox.c,crt,library-symbol,0048dad0,0048db80,2,0,medium,library-symbol,,,,,,symbols _atol _atoi
-86,CRT-006,free.c,crt,library-symbol,0048db80,0048dbd0,1,0,medium,library-symbol,,,,,,symbol _free (ledger EngineHeapFree)
-87,CRT-007,malloc.c,crt,library-symbol,0048dbd0,0048dc80,3,0,medium,library-symbol,,,,,,symbols _malloc _nh_malloc _heap_alloc (ledger EngineHeapAlloc/EngineHeapAllocateWithRetry/EngineHeapAllocateAligned)
-88,CRT-008,realloc.c,crt,library-symbol,0048dc80,0048de20,1,0,medium,library-symbol,,,,,,symbol _realloc (ledger GrowHeapArray)
-89,CRT-009,qsort.c,crt,library-symbol,0048de20,0048e060,3,0,medium,library-symbol,,,,,,symbols _qsort and static shortsort swap
-90,CRT-010,ftol.asm,crt,library-symbol,0048e060,0048e090,1,0,medium,library-symbol,,,,,,symbol __ftol; int3 fill after
-91,CRT-011,,crt,library-symbol,0048e090,0048e160,2,1,high,padding;library-symbol,,,,004afcc0-004afcc0,,MASM object (int3 fill; packed entries) with __CIasin + C entry _asin at 0x48e0a4 and the shared acos/asin core; source file name of this VC5 transcendental member unknown
-92,CRT-012,rand.c,crt,library-symbol,0048e160,0048e1aa,2,2,high,padding;library-symbol,0,,004afcc8-004afcc8,,,symbols _srand _rand; holdrand .data 0x4afcc8
-93,CRT-013,,crt,library-symbol,0048e1aa,0048e1e0,1,1,high,library;library-symbol;data-step;data@004afcd0,0,,004afcd0-004afcd0,,,MASM fmod object: real start 0x48e1a0 (C entry _fmod via _ctrandisp2 is not a manifest function) then _CIfmod and the fprem worker; int3 fill; file name unknown
-94,CRT-014,vsprintf.c,crt,library-symbol,0048e1e0,0048e250,1,0,medium,library-symbol,,,,,,symbol _vsprintf (string-flag 0x42 count INT_MAX and va_list passed through); ledger FormattedTextBufferBuild / src string.cpp formatted_text_buffer_build is really CRT vsprintf
-95,CRT-015,chkstk.asm,crt,library-symbol,0048e250,0048e280,1,0,high,library;library-symbol,,,,,,symbol __chkstk (__alloca_probe); int3 fill
-96,CRT-016,floor.c,crt,library-symbol,0048e280,0048e380,1,1,high,padding;library-symbol,,0049eaf8-0049eaf8,004afd20-004afd20,,,symbol _floor
-97,CRT-017,toupper.c,crt,library-symbol,0048e380,0048e480,1,0,medium,library-symbol,,,,,,symbol _toupper
-98,CRT-018,crt0dat.c,crt,library-symbol,0048e480,0048e680,5,0,medium,library-symbol,,,,,,symbols _cinit exit _exit doexit _initterm; bss 0x5490d0.. (errno _osver __argc _environ _exitflag); boundary note: an unlisted __CIsqrt/_sqrt MASM object at 0x48e5c0-0x48e67a (int3 fill) is absorbed here because it has no manifest function
-99,CRT-019,fabs.c,crt,library-symbol,0048e680,0048e770,1,1,medium,library-symbol,,0049eb00-0049eb00,,,,symbol _fabs
-100,CRT-020,strncpy.asm,crt,library-symbol,0048e770,0048e870,1,0,medium,library-symbol,,,,,,symbol _strncpy; int3 fill
-101,CRT-021,ieeemisc.c,crt,library-symbol,0048e870,0048e890,1,0,high,padding;library-symbol,,,,,,symbol _finite (only member pulled from the IEEE helper object)
-102,CRT-022,sscanf.c,crt,library-symbol,0048e890,0048e8e0,1,0,medium,library-symbol,,,,,,symbol _sscanf (ledger MarkupIntegerTokenParse)
-103,CRT-023,ceil.c,crt,library-symbol,0048e8e0,0048e9e0,1,1,medium,library-symbol,,0049eb18-0049eb18,004afd40-004afd40,,,symbol _ceil
-104,CRT-024,lldiv.asm,crt,library-symbol,0048e9e0,0048ea90,1,0,medium,library-symbol,,,,,,symbol __alldiv; int3 fill
-105,CRT-025,llmul.asm,crt,library-symbol,0048ea90,0048ead0,1,0,high,padding;library-symbol,,,,,,symbol __allmul; int3 fill
-106,CRT-026,new.cpp,crt,library-symbol,0048ead0,0048eae0,1,0,high,padding;library;library-symbol,,,,,,operator new (??2@YAPAXI@Z = _nh_malloc(size 1)); ledger EngineCalloc / src engine_calloc is really CRT operator new
-107,CRT-027,fclose.c,crt,library-symbol,0048eae0,0048eb60,1,0,high,library;library-symbol,,,,,,symbol _fclose (ledger FileResourceHandleClose)
-108,CRT-028,fopen.c,crt,library-symbol,0048eb60,0048ebb0,2,0,medium,library-symbol,,,,,,symbols _fsopen _fopen
-109,CRT-029,trnsctrl.cpp,crt,library-symbol,0048ebb0,0048ef10,9,0,medium,library-symbol,,,,,,symbols _JumpToContinuation _CallMemberFunction0 _UnwindNestedFrames(SehFrameUnwind) __CxxFrameHandler _CallCatchBlock2(CallSettingFrame12) CatchGuardHandler _CallSETranslator TranslatorGuardHandler _GetRangeOfTrysToCheck; int3 fill after its inline-asm functions inside one C++ object
-110,CRT-030,exsup.asm,crt,library-symbol,0048ef10,0048f000,5,2,high,padding;library;library-symbol,,,004afd50-004afd50,,,symbols __global_unwind2 __local_unwind2 __abnormal_termination __NLG_Notify1 __NLG_Notify; packed MASM; int3 fill
-111,CRT-031,crt0.c,crt,library-symbol,0048f000,0048f1d0,2,2,high,padding;library-symbol;data-step;data@004afd60,0,0049eb20-0049eb20,004afd60-004afd60,,005490dc-00549124,symbols WinMainCRTStartup _amsg_exit
-112,CRT-032,isctype.c,crt,library-symbol,0048f1d0,0048f270,1,1,high,library-symbol;data-step;data@004afd68,0,,004afd68-004afd68,,,symbol _isctype
-113,CRT-033,strncmp.asm,crt,library-symbol,0048f270,0048f2b0,1,0,medium,library-symbol,,,,,,symbol _strncmp; int3 fill; name uncertain between strncmp.asm and an inline-asm strncmp.c
-114,CRT-034,ftell.c,crt,library-symbol,0048f2b0,0048f460,1,0,high,padding;library-symbol,,,,,,symbol _ftell (ledger StreamedAudioFileLengthGet)
-115,CRT-035,fseek.c,crt,library-symbol,0048f460,0048f500,1,0,medium,library-symbol,,,,,,symbol _fseek (ledger FileResourceHandleSeek)
-116,CRT-036,fwrite.c,crt,library-symbol,0048f500,0048f650,1,0,medium,library-symbol,,,,,,symbol _fwrite (ledger GameFileWrite)
-117,CRT-037,remove.c,crt,library-symbol,0048f650,0048f680,1,0,medium,library-symbol,,,,,,symbol remove (ledger GameFileDelete)
-118,CRT-038,chmod.c,crt,library-symbol,0048f680,0048f6d0,1,0,medium,library-symbol,,,,,,symbol _chmod
-119,CRT-039,mkdir.c,crt,library-symbol,0048f6d0,0048f700,1,0,medium,library-symbol,,,,,,symbol _mkdir (ledger GameDirectoryCreate)
-120,CRT-040,findfile.c,crt,library-symbol,0048f700,0048fa00,4,0,medium,library-symbol,,,,,,symbols _findfirst _findnext _findclose __timet_from_ft
-121,CRT-041,getcwd.c,crt,library-symbol,0048fa00,0048fb90,3,0,medium,library-symbol,,,,,,symbols _getcwd _getdcwd _validdrive
-122,CRT-042,fread.c,crt,library-symbol,0048fb90,0048fd20,1,0,medium,library-symbol,,,,,,symbol _fread (ledger GameFileReadBuffered)
-123,CRT-043,fflush.c,crt,library-symbol,0048fd20,0048fe20,1,0,medium,library-symbol,,,,,,symbol _flush; unlisted _flushall/flsall follow at 0x48fd90-0x48fe1f
-124,CRT-044,fgetc.c,crt,library-symbol,0048fe20,0048fe50,1,0,medium,library-symbol,,,,,,symbol _fgetc
-125,CRT-045,fgets.c,crt,library-symbol,0048fe50,0048fed0,1,0,medium,library-symbol,,,,,,symbol _fgets
-126,CRT-046,vfprintf.c,crt,library-symbol,0048fed0,0048ff10,1,0,medium,library-symbol,,,,,,symbol _vfprintf (_stbuf/_output/_ftbuf)
-127,CRT-047,stricmp.c,crt,library-symbol,0048ff10,0048ffa0,1,0,medium,library-symbol,,,,,,symbol _stricmp/_strcmpi; int3 fill taken as inline-asm C-locale path (as in trnsctrl.cpp) - name uncertain vs an .asm member; shares __lc_handle bss 0x549178 with late _strnicmp
-128,CRT-048,fullpath.c,crt,library-symbol,0048ffa0,00490070,1,0,high,padding;library-symbol,,,,,,symbol _fullpath
-129,CRT-049,fscanf.c,crt,library-symbol,00490070,00490090,1,0,medium,library-symbol,,,,,,symbol _fscanf
-130,CRT-050,splitpat.c,crt,library-symbol,00490090,00490210,1,0,medium,library-symbol,,,,,,symbol _splitpath (ledger AssetPathComponentsParse)
-131,CRT-051,fp8.c,crt,library-symbol,00490210,00490230,1,0,medium,library-symbol,,,,,,symbol _setdefaultprecision
-132,CRT-052,testfdiv.c,crt,library-symbol,00490230,004902b0,2,2,high,library;library-symbol,,0049eb30-0049eb54,,,,symbols _ms_p5_test_fdiv (ProcessorFeatureFallbackFalse: constant-folded Pentium FDIV test) _ms_p5_mp_test_fdiv
-133,CRT-053,cvt.c,crt,library-symbol,004902b0,004907f0,7,6,high,library-symbol;data-step;rdata@0049eb68,0,0049eb68-0049eb6c,004aff74-004aff74,004aff78-004aff78,00549128-00549134,symbols _forcdecpt (+unlisted _cropzeros _positive _fassign) _cftoe _cftof _cftog _cftoe_g _cftof_g and static _shift (StringPrefixReserve); bss 0x549128-0x549134
-134,CRT-054,cfin.c,crt,library-symbol,004907f0,004908a0,1,0,medium,library-symbol,,,,,,symbol _fltin (strgtold12 + ld12tod into static FLT .data 0x4aff98); ledger ParseEntityHealthValue is really CRT _fltin
-135,CRT-055,_flsbuf.c,crt,library-symbol,004908a0,004909d0,1,0,high,library;library-symbol,,,,,,symbol _flsbuf
-136,CRT-056,output.c,crt,library-symbol,004909d0,004914a0,7,1,medium,library-symbol,,0049eb70-0049eb70,004aff80-004affa0,,,symbols _output write_char write_multi_char write_string get_int_arg get_int64_arg get_short_arg
-137,CRT-057,strchr.asm,crt,library-symbol,004914a0,00491560,1,0,medium,library-symbol,,,,,,symbol _strchr; int3 fill
-138,CRT-058,heapinit.c,crt,library-symbol,00491560,004915a0,1,0,high,padding;library-symbol,,,,,,symbol _heap_init
-139,CRT-059,sbheap.c,crt,library-symbol,004915a0,00491d90,8,6,medium,library-symbol,,,004affb8-004b1fd8,,00549150-00549150,symbols __sbh_new_region __sbh_release_region __sbh_decommit_pages __sbh_find_block __sbh_free_block __sbh_alloc_block __sbh_alloc_block_from_page __sbh_resize_block; bss 0x549150
-140,CRT-060,handler.cpp,crt,library-symbol,00491d90,00491db0,1,1,medium,library-symbol;data-step;bss@00549158,2,,,,00549158-00549158,symbol _callnewh; bss 0x549158 (_pnhHeap)
-141,CRT-061,87disp.asm,crt,library-symbol,00491db0,00491f80,2,2,high,padding;library-symbol,0,,004b1ffd-004b1ffd,,,symbols _trandisp1 _trandisp2 (+ unlisted helpers to 0x491f6c); int3 fill
-142,CRT-062,,crt,library-symbol,00491f80,00492170,6,1,medium,library-symbol,3,0049ebf0-0049ebf0,,,,MASM FP error-handling helpers _startTwoArgErrorHandling _startOneArgErrorHandling _twoToTOS _load_CW _convertTOStoQNaN _fload_withFB _checkTOS_withFB _fast_exit _math_exit _check_overflow_exit _check_range_exit; int3 fill; file name unknown
-143,CRT-063,87cdisp.asm,crt,library-symbol,00492170,00492bc6,7,4,medium,library-symbol;data-step;rdata@0049ec40,2,0049ec40-0049ec68,,,00549160-00549168,symbols _cintrindisp2 _cintrindisp1 _ctrandisp2 _ctrandisp1 _fload; int3 at 0x4923bd ends it; boundary note: unlisted Pentium-FDIV adjust code 0x4923c0-0x492bc5 (next object) is absorbed here
-144,CRT-064,,crt,library-symbol,00492bc6,00493150,2,2,medium,library-symbol,2,,004b202c-004b2064,,,MASM Pentium FDIV/FPREM workaround object (_adj_fdiv_* _fprem_common _adj_fprem ...); real start 0x4923c0 after int3 fill (no manifest function there); int3 fill at end; file name unknown
-145,CRT-065,frnd.c,crt,library-symbol,00493150,00493170,1,0,high,padding;library-symbol,,,,,,symbol _frnd
-146,CRT-066,fpexcept.c,crt,library-symbol,00493170,00493a40,8,2,medium,library-symbol,,0049ed28-0049ed28,004b2170-004b225c,,,symbols _handle_qnan1 _except1 _raise_exc _handle_exc _umatherr _set_errno _get_fname _errcode
-147,CRT-067,util.c,crt,library-symbol,00493a40,00493be0,3,1,medium,library-symbol;data-step;rdata@0049ed30,3,0049ed30-0049ed30,,,,symbols _set_exp _sptype _decomp
-148,CRT-068,fpctrl.c,crt,library-symbol,00493be0,00493ca0,4,1,medium,library-symbol,3,,004b2270-004b2280,,,symbols _statfp _clrfp _ctrlfp _set_statfp
-149,CRT-069,aw_map.c,crt,library-symbol,00493ca0,00493ef0,2,1,medium,library-symbol,0,0049ed38-0049ed3c,,,00549170-00549190,symbols __crtLCMapStringA strncnt
-150,CRT-070,input.c,crt,library-symbol,00493ef0,00494d10,5,1,medium,library-symbol,1,,,004b228c-004b2294,,symbols _input _hextodec _inc _un_inc _whiteout; strings ' \t-\r]' ']'
-151,CRT-071,close.c,crt,library-symbol,00494d10,00494df0,1,0,medium,library-symbol,,,,,,symbol _close
-152,CRT-072,_freebuf.c,crt,library-symbol,00494df0,00494e30,1,0,medium,library-symbol,,,,,,symbol _freebuf
-153,CRT-073,_open.c,crt,library-symbol,00494e30,00495000,1,0,medium,library-symbol,,,,,,symbol _openfile; boundary uncertain: _getstream (0x495000) is stream.c in VC6 but has no data evidence of its own
-154,CRT-074,stream.c,crt,library-symbol,00495000,00495090,1,0,medium,library-symbol,,,,,,symbol _getstream; boundary uncertain (see CRT-073)
-155,CRT-075,frame.cpp,crt,library-symbol,00495090,00495a90,10,7,high,padding;library-symbol,,0049ed50-0049ed88,,,00549194-0054919c,symbols __InternalCxxFrameHandler FindHandler FindHandlerForForeignException __FrameUnwindToState CatchIt CallCatchBlock BuildCatchObject _DestructExceptionObject AdjustPointer; bss 0x549194-0x54919c
-156,CRT-076,lowhelpr.asm,crt,library-symbol,00495a90,00495ae0,1,0,high,padding;library-symbol,,,,,,symbol _CallSettingFrame@12; int3 fill
-157,CRT-077,hooks.cpp,crt,library-symbol,00495ae0,00495d90,4,2,high,padding;library-symbol,,0049ed98-0049edb0,004b22a4-004b22a4,,005491a0-005491a0,symbols terminate _inconsistency (+ their abort funclets); bss 0x5491a0; boundary note: unlisted winxfltr.c (_XcptFilter at 0x495c00 and xcptlookup at 0x495d40 using bss 0x5491a4 shared with raise) is absorbed here; confirmed by .data: raise() uses _XcptActTab at 0x4b22a8-0x4b232c which lies between hooks.cpp (0x4b22a4) and mbctype.c (0x4b2330)
-158,CRT-078,ismbbyte.c,crt,library-symbol,00495d90,00495df0,2,0,high,padding;library-symbol,,,,,,symbols _ismbblead x_ismbbtype
-159,CRT-079,stdenvp.c,crt,library-symbol,00495df0,00495ee0,1,0,medium,library-symbol,,,,,,symbol _setenvp
-160,CRT-080,stdargv.c,crt,library-symbol,00495ee0,00496190,2,1,medium,library-symbol,,,,,005491a8-005491a8,symbols _setargv parse_cmdline; bss 0x5491a8 _pgmname
-161,CRT-081,a_env.c,crt,library-symbol,00496190,004962f0,1,1,medium,library-symbol;data-step;bss@005492b0,1,,,,005492b0-005492b0,symbol __crtGetEnvironmentStringsA; bss 0x5492b0
-162,CRT-082,mbctype.c,crt,library-symbol,004962f0,004965d0,5,3,high,library-symbol;data-step;bss@005492b8,0,,004b2330-004b2428,004b2340-004b2340,005492b8-005493d4,symbols _setmbcp getSystemCP CPtoLCID setSBCS __initmbctable; bss 0x5492b8-0x5493d4 (_mbctype etc)
-163,CRT-083,ioinit.c,crt,library-symbol,004965d0,00496895,1,0,medium,library-symbol,,,,,,symbol _ioinit
-164,CRT-084,exsup3.asm,crt,library-symbol,00496895,004968b0,1,0,high,library;library-symbol,,,,,,symbols _except_handler3 _seh_longjmp_unwind; real start 0x4967d0 ('VC20XC00' signature then _except_handler3 at 0x4967d8 - not manifest functions); packed MASM
-165,CRT-085,crt0msg.c,crt,library-symbol,004968b0,00496ad0,2,2,high,library;library-symbol,,0049f050-0049f09c,004b2430-004b24c0,,005493d8-005493d8,symbols _FF_MSGBANNER _NMSG_WRITE; bss 0x5493d8
-166,CRT-086,aw_str.c,crt,library-symbol,00496ad0,00496c00,1,1,high,library-symbol;data-step;bss@005493e0,0,,,,005493e0-005493e0,symbol __crtGetStringTypeA; bss 0x5493e0
-167,CRT-087,lseek.c,crt,library-symbol,00496c00,00496cc0,1,0,medium,library-symbol,,,,,,symbol _lseek
-168,CRT-088,write.c,crt,library-symbol,00496cc0,00496ee0,1,0,medium,library-symbol,,,,,,symbol _write
-169,CRT-089,dosmap.c,crt,library-symbol,00496ee0,00496f50,1,1,medium,library-symbol,,,004b24c4-004b2628,,,symbol _dosmaperr; errtable .data 0x4b24c0
-170,CRT-090,dtoxtime.c,crt,library-symbol,00496f50,00497040,1,0,medium,library-symbol,,,,,,symbol __loctotime_t
-171,CRT-091,_filbuf.c,crt,library-symbol,00497040,00497130,1,0,medium,library-symbol,,,,,,symbol _filbuf
-172,CRT-092,read.c,crt,library-symbol,00497130,004974d0,1,0,medium,library-symbol,,,,,,symbol _read
-173,CRT-093,_sftbuf.c,crt,library-symbol,004974d0,004975d0,2,1,medium,library-symbol,,,004b2648-004b2668,,005493e4-005493e8,symbols _stbuf _ftbuf; bss 0x5493e4-0x5493e8
-174,CRT-094,tolower.c,crt,library-symbol,004975d0,004976d0,1,0,medium,library-symbol,,,,,,symbol _tolower
-175,CRT-095,mbsnbcpy.c,crt,library-symbol,004976d0,00497770,1,0,medium,library-symbol,,,,,,symbol _mbsnbcpy
-176,CRT-096,ieee87.c,crt,library-symbol,00497770,00497900,4,0,medium,library-symbol,,,,,,symbols _control87 _controlfp _abstract_cw _hw_cw
-177,CRT-097,intrncvt.c,crt,library-symbol,00497900,00497e20,12,2,medium,library-symbol,,,004b28a8-004b28c0,,,symbols _ZeroTail _IncMan _RoundMan _CopyMan _FillZeroMan _IsZeroMan _ShrMan _ld12cvt _ld12tod _ld12tof _atodbl _atoflt
-178,CRT-098,_fptostr.c,crt,library-symbol,00497e20,00497ec0,1,0,medium,library-symbol,,,,,,symbol _fptostr
-179,CRT-099,cfout.c,crt,library-symbol,00497ec0,00498000,2,1,medium,library-symbol,,,,,005493f0-0054941c,symbols _fltout __dtold; bss 0x5493f0-0x54941c
-180,CRT-100,memmove.asm,crt,library-symbol,00498000,00498340,1,0,medium,library-symbol,,,,,,symbol _memmove; int3 fill
-181,CRT-101,crt0fp.c,crt,library-symbol,00498340,00498350,1,0,high,padding;library;library-symbol,,,,,,symbol _fptrap (calls _amsg_exit(_RT_FLOAT))
-182,CRT-102,strgtold.c,crt,library-symbol,00498350,00498ae0,1,0,high,library;library-symbol,,,,,,symbol __strgtold12
-183,CRT-103,_getbuf.c,crt,library-symbol,00498ae0,00498b40,1,0,medium,library-symbol,,,,,,symbol _getbuf
-184,CRT-104,isatty.c,crt,library-symbol,00498b40,00498b70,1,0,medium,library-symbol,,,,,,symbol _isatty
-185,CRT-105,wctomb.c,crt,library-symbol,00498b70,00498bf0,1,0,medium,library-symbol,,,,,,symbol _wctomb
-186,CRT-106,ulldiv.asm,crt,library-symbol,00498bf0,00498c60,1,0,medium,library-symbol,,,,,,symbol __aulldiv; int3 fill
-187,CRT-107,ullrem.asm,crt,library-symbol,00498c60,00498ce0,1,0,high,padding;library-symbol,,,,,,symbol __aullrem; int3 fill
-188,CRT-108,87except.c,crt,library-symbol,00498ce0,00498e00,1,1,high,padding;library-symbol,,,004b28e0-004b28e0,,,symbol _87except
-189,CRT-109,mbtowc.c,crt,library-symbol,00498e00,00498f00,1,0,medium,library-symbol,,,,,,symbol _mbtowc
-190,CRT-110,_ctype.c,crt,library-symbol,00498f00,00498f30,1,0,medium,library-symbol,,,,,,symbol _isspace (function form of the ctype macro); file name uncertain (VC function-form ctype object)
-191,CRT-111,llshl.asm,crt,library-symbol,00498f30,00498f50,1,0,medium,library-symbol,,,,,,symbol __allshl; int3 fill
-192,CRT-112,ungetc.c,crt,library-symbol,00498f50,00498fe0,1,0,high,padding;library-symbol,,,,,,symbol _ungetc
-193,CRT-113,osfinfo.c,crt,library-symbol,00498fe0,00499240,4,0,medium,library-symbol,,,,,,symbols _alloc_osfhnd _set_osfhnd _free_osfhnd _get_osfhandle
-194,CRT-114,open.c,crt,library-symbol,00499240,00499690,1,0,medium,library-symbol,,,,,,symbol _sopen; bss 0x5494f4
-195,CRT-115,validate.cpp,crt,library-symbol,00499690,004996f0,3,0,medium,library-symbol,,,,,,symbols _ValidateRead _ValidateWrite _ValidateExecute
-196,CRT-116,abort.c,crt,library-symbol,004996f0,00499710,1,0,medium,library-symbol,,,,,,symbol abort
-197,CRT-117,wcslen.c,crt,library-symbol,00499710,00499730,1,0,medium,library-symbol,,,,,,symbol wcslen
-198,CRT-118,crtmbox.c,crt,library-symbol,00499730,004997c0,1,1,medium,library-symbol,,0049f0b4-0049f0e4,,,00549428-00549430,symbol __crtMessageBoxA; bss 0x549428-0x549430
-199,CRT-119,calloc.c,crt,library-symbol,004997c0,00499860,1,0,medium,library-symbol,,,,,,symbol _calloc
-200,CRT-120,tzset.c,crt,library-symbol,00499860,00499fb0,4,4,medium,library-symbol,,0049f130-0049f130,004b28f0-004b29e0,004b2984-004b2984,00549438-005494f0,symbols __tzset _tzset _isindst cvtdate; bss 0x549438-0x5494f0
-201,CRT-121,mantold.c,crt,library-symbol,00499fb0,0049a1b0,5,0,medium,library-symbol,,,,,,symbols __addl __add_12 __shl_12 __shr_12 __mtold12
-202,CRT-122,x10fout.c,crt,library-symbol,0049a1b0,0049a540,1,1,medium,library-symbol,,0049f134-0049f152,,,,symbol $I10_OUTPUT
-203,CRT-123,tenpow.c,crt,library-symbol,0049a540,0049a890,2,1,medium,library-symbol,1,,004b2a18-004b2b78,,,symbols __ld12mul __multtenpow12
-204,CRT-124,chsize.c,crt,library-symbol,0049a890,0049aa10,1,0,medium,library-symbol,,,,,,symbol _chsize
-205,CRT-125,winsig.c,crt,library-symbol,0049aa10,0049abe0,2,1,medium,library-symbol,,,,,005494f8-00549504,symbols raise siglookup; bss 0x5494f8-0x549504
-206,CRT-126,wcstombs.c,crt,library-symbol,0049abe0,0049ae10,2,0,medium,library-symbol,,,,,,symbols wcstombs wcsncnt
-207,CRT-127,getenv.c,crt,library-symbol,0049ae10,0049aea0,1,0,medium,library-symbol,,,,,,symbol getenv
-208,CRT-128,setmode.c,crt,library-symbol,0049aea0,0049af20,1,0,medium,library-symbol,,,,,,symbol _setmode
-209,CRT-129,mbsnbicl.c,crt,library-symbol,0049af20,0049af60,1,0,medium,library-symbol,,,,,,symbol _mbsnbicoll
-210,CRT-130,wtombenv.c,crt,library-symbol,0049af60,0049afe0,1,0,medium,library-symbol,,,,,,symbol __wtomb_environ
-211,CRT-131,aw_cmp.c,crt,library-symbol,0049afe0,0049b2b0,1,1,medium,library-symbol,,,,,00549510-00549510,symbol __crtCompareStringA; bss 0x549510
-212,CRT-132,setenv.c,crt,library-symbol,0049b2b0,0049b5b0,3,0,medium,library-symbol,,,,,,symbols __crtsetenv findenv copy_environ
-213,CRT-133,mbschr.c,crt,library-symbol,0049b5b0,0049b660,1,0,medium,library-symbol,,,,,,symbol _mbschr
-214,CRT-134,strdup.c,crt,library-symbol,0049b660,0049b6b0,1,0,medium,library-symbol,,,,,,symbol _strdup; last CRT object before the import thunks
-215,IMP-001,d3drm.lib,import,library-symbol,0049b6b0,0049b6c2,3,0,high,padding;segment;library-symbol,,,,,,thunks Direct3DRMCreate D3DRMVectorRandom D3DRMVectorRotate; each jmp [__imp_X] thunk is really its own import-library member
-216,IMP-002,ddraw.lib,import,library-symbol,0049b6c2,0049b6ce,2,0,medium,library-symbol,,,,,,thunks DirectDrawEnumerateA DirectDrawCreate; each thunk is its own library member
-217,IMP-003,avifil32.lib,import,library-symbol,0049b6ce,0049c7a8,6,0,medium,library-symbol,,,,,,thunks AVIStreamInfoA .. AVIFileInit (int3 fill to 0x49b700); each thunk is its own member; boundary note: the dinput.lib c_dfDIMouse/c_dfDIKeyboard DIDATAFORMAT data blob 0x49b700-0x49c7a7 has no manifest function and is absorbed here
-218,IMP-004,dinput.lib,import,library-symbol,0049c7a8,0049c7ae,1,0,high,padding;library-symbol,,,,,,thunk DirectInputCreateA; its library also contributes the c_dfDI* data objects at 0x49b700-0x49c7a7 immediately before it; each member is its own object
-219,IMP-005,dsound.lib,import,library-symbol,0049c7ae,0049c7b4,1,0,medium,library-symbol,,,,,,thunk DirectSoundCreate (DSOUND ordinal 1); its own library member
-220,IMP-006,kernel32.lib,import,library-symbol,0049c7b4,0049c7c0,1,0,medium,library-symbol,,,,,,thunk RtlUnwind (used by CRT SEH code); int3 fill to 0x49c7c0; its own library member
-221,LATE-001,,late,none,0049c7c0,0049d030,14,1,high,padding;library;segment,,,,004b2d08-004b2d08,,RNC (Rob Northen) ProPack-style WAD payload decompressor (string 'RNC' at 0x4b2d08; commons 0x557d68-0x55808c); C object linked after the import libraries; file name unknown
-222,LATE-002,,late,none,0049d030,0049dab0,8,4,low,data-step;string@004b2d0c,12,,,004b2d0c-004b2d90,,DirectDraw device / display-mode selection dialog (strings 'Please install DirectX versi..' 'Window Size' 'Screen Mode' at 0x4b2d0c-0x4b2d90 follow the RNC string; commons 0x5580a0+); boundary at 0x49d030 from string order and disjoint commons; file name unknown
-223,LATE-003,strnicmp.c,crt,library-symbol,0049dab0,0049db60,1,0,high,library;segment,,,,,,symbol _strnicmp (pulled late via oldnames.lib strnicmp alias); int3 fill (inline-asm path or .asm member - name uncertain like CRT-047)
-224,LATE-004,xtoa.c,crt,library-symbol,0049db60,0049dc10,2,0,high,padding;library-symbol,,,,,,symbols _itoa and static xtoa (pulled late via oldnames.lib itoa alias)
-225,LATE-005,strlwr.c,crt,library-symbol,0049dc10,0049dcd0,1,0,medium,library-symbol,,,,,,symbol _strlwr (pulled late via oldnames.lib strlwr alias)
-226,LATE-006,strupr.c,crt,library-symbol,0049dcd0,0049ddf5,1,0,medium,library-symbol,,,,,,symbol _strupr (via oldnames.lib); boundary note: the .text$x C++ EH unwind funclets 0x49dd90-0x49ddf4 (game objects' __CxxFrameHandler thunks) are absorbed here
+70,G98-021,,gods98,none,00488b50,004893f0,16,10,low,data-step;string@004ab6e0;bss@0054486c,7,,,004ab6e0-004ab774,0054486c-00544a1c,gods98 sound layer (probably Sound.c; not attested): init facade + CD-track state 488b50-488c70; RIFF/mmio wave readers 488c70-489210 (called only by unit 009); MCI 'cdaudio' commands 489210-4893f0 (called only by this unit's CD code). Merged from the former G98-022/023 by #409/#410: no data or padding separates the three. bss is one run 544868-544a20 (=0x1b8) whose referenced slots 54486c/544a00-544a08/544a10 (CD state) and 544a1c (MCI error; last slot before 024) are interleaved with unreferenced 544868/544a0c/544a14/544a18; MSVC 5.0 gives an object holding an >=8-byte variable (the 400-byte block 544870-544a00) an 8-aligned .bss so the object starts at 544868; unreferenced .data 1/1/'cdaudio' 4ab6d0-4ab6df then the MCI literals 4ab6e0-4ab783; common 576500 is the 200-byte MCI return buffer; no x87 or .rdata use so the header tables 0x49ea5c-0x49eac4 cannot count objects; one of those 6 tables lies in units 021-030
+71,G98-024,,gods98,none,004893f0,004894c0,4,4,high,data-step;bss@00544a20,0,,,,00544a20-005488a4,2000-slot handle table (bss 0x544a20-0x5488a4) used by Files.c and game
+72,G98-025,,gods98,none,004894c0,00489c30,11,0,low,none,,,,,,D3DRM frame clone/walk helpers serving unit 002 (no own data); boundary uncertain at 489c30
+73,G98-026,,gods98,none,00489c30,00489d90,2,0,low,none,,,,,,BMP palette/pixel-data prep used by 474050 and 47d9d0; no data; boundary uncertain
+74,G98-027,,gods98,none,00489d90,0048b260,2,2,low,none,,,004ab788-004ab788,004ab834-004af9b4,005488a8-005488c0,"DirectX HRESULT decoder (format + dispatch); rebuilt as src/gods98/dxerror.c (#411; finding 511); file name not evidenced in the binary; own .data 0x4ab788-0x4af9e1 = 8-entry module-name table then its 8 literals in reverse, the format string and the dispatcher's 329 literals (the rebuilt object's COMDAT order reproduces every address); it starts at the 8-byte boundary after the sound unit's last literal (G98-021; formerly G98-023; 0x4ab774) and ends before an unreferenced dword (0x4af9e4) and Wad.c's first literal (0x4af9e8); own .bss 0x5488a8-0x5490c0 (5 dwords, an unreferenced dword 0x5488bc, a 2048-byte report buffer 0x5488c0) follows G98-024's .bss (ends 0x5488a4) and precedes the CRT's (0x5490c8); text edges kept on behaviour: G98-026 (BMP helpers called from 474050/47d9d0) and G98-028 (stream commons called from WinMain) have no own data and neither calls the decoder or touches its state; the dispatcher's jump tables end at 0x48b25d with 0x90 fill to 0x48b260"
+75,G98-028,,gods98,none,0048b260,0048b330,4,0,low,none,,,,,,file-list stream state (commons 0x575ce0-0x5760f0) called from WinMain; boundary uncertain: may share an object with 029
+76,G98-029,,gods98,none,0048b330,0048b4a0,3,0,low,none,,,,,,registry key path create/query (RegCreateKeyA/RegQueryValueExA); no data; boundary uncertain
+77,G98-030,Wad.c,gods98,inferred,0048b4a0,0048c040,15,1,low,none,,,,004af9e8-004af9ec,,'WWAD' archive index loader + wad entry streams (commons 0x575500-0x575cdf); data 0x4af9e4 precedes its strings; 48b4a0 is its private fgetc string reader; stem taken from the WWAD magic
+78,G98-031,,gods98,none,0048c040,0048d920,13,6,low,data-step;string@004af9f4,15,0049eaf0-0049eaf0,,004af9f4-004afc98,,LightWave LWOB object parser ('LWOB' 'POLS' 'SURF' chunk strings 0x4af9f4-); header rdata 0x49eadc; 48c040 is a private stristr duplicating 477610; file name not evidenced in the binary
+79,CRT-001,fpinit.c,crt,library-symbol,0048d920,0048d980,2,1,high,library;segment,2,,,,005490cc-005490cc,symbols __fpmath _cfltcvt_init; bss 0x5490cc
+80,CRT-002,atof.c,crt,library-symbol,0048d980,0048d9e0,1,0,medium,library-symbol,,,,,,symbol _atof
+81,CRT-003,sprintf.c,crt,library-symbol,0048d9e0,0048da50,1,0,medium,library-symbol,,,,,,symbol _sprintf: reccmp marker says _vsprintf but the body passes the address of its varargs to _output so it is sprintf
+82,CRT-004,strstr.asm,crt,library-symbol,0048da50,0048dad0,1,0,medium,library-symbol,,,,,,symbol _strstr; hand-written asm (dl/dh scan) ending exactly on a 16-byte boundary so no int3 fill is visible
+83,CRT-005,atox.c,crt,library-symbol,0048dad0,0048db80,2,0,medium,library-symbol,,,,,,symbols _atol _atoi
+84,CRT-006,free.c,crt,library-symbol,0048db80,0048dbd0,1,0,medium,library-symbol,,,,,,symbol _free (ledger EngineHeapFree)
+85,CRT-007,malloc.c,crt,library-symbol,0048dbd0,0048dc80,3,0,medium,library-symbol,,,,,,symbols _malloc _nh_malloc _heap_alloc (ledger EngineHeapAlloc/EngineHeapAllocateWithRetry/EngineHeapAllocateAligned)
+86,CRT-008,realloc.c,crt,library-symbol,0048dc80,0048de20,1,0,medium,library-symbol,,,,,,symbol _realloc (ledger GrowHeapArray)
+87,CRT-009,qsort.c,crt,library-symbol,0048de20,0048e060,3,0,medium,library-symbol,,,,,,symbols _qsort and static shortsort swap
+88,CRT-010,ftol.asm,crt,library-symbol,0048e060,0048e090,1,0,medium,library-symbol,,,,,,symbol __ftol; int3 fill after
+89,CRT-011,,crt,library-symbol,0048e090,0048e160,2,1,high,padding;library-symbol,,,,004afcc0-004afcc0,,MASM object (int3 fill; packed entries) with __CIasin + C entry _asin at 0x48e0a4 and the shared acos/asin core; source file name of this VC5 transcendental member unknown
+90,CRT-012,rand.c,crt,library-symbol,0048e160,0048e1aa,2,2,high,padding;library-symbol,0,,004afcc8-004afcc8,,,symbols _srand _rand; holdrand .data 0x4afcc8
+91,CRT-013,,crt,library-symbol,0048e1aa,0048e1e0,1,1,high,library;library-symbol;data-step;data@004afcd0,0,,004afcd0-004afcd0,,,MASM fmod object: real start 0x48e1a0 (C entry _fmod via _ctrandisp2 is not a manifest function) then _CIfmod and the fprem worker; int3 fill; file name unknown
+92,CRT-014,vsprintf.c,crt,library-symbol,0048e1e0,0048e250,1,0,medium,library-symbol,,,,,,symbol _vsprintf (string-flag 0x42 count INT_MAX and va_list passed through); ledger FormattedTextBufferBuild / src string.cpp formatted_text_buffer_build is really CRT vsprintf
+93,CRT-015,chkstk.asm,crt,library-symbol,0048e250,0048e280,1,0,high,library;library-symbol,,,,,,symbol __chkstk (__alloca_probe); int3 fill
+94,CRT-016,floor.c,crt,library-symbol,0048e280,0048e380,1,1,high,padding;library-symbol,,0049eaf8-0049eaf8,004afd20-004afd20,,,symbol _floor
+95,CRT-017,toupper.c,crt,library-symbol,0048e380,0048e480,1,0,medium,library-symbol,,,,,,symbol _toupper
+96,CRT-018,crt0dat.c,crt,library-symbol,0048e480,0048e680,5,0,medium,library-symbol,,,,,,symbols _cinit exit _exit doexit _initterm; bss 0x5490d0.. (errno _osver __argc _environ _exitflag); boundary note: an unlisted __CIsqrt/_sqrt MASM object at 0x48e5c0-0x48e67a (int3 fill) is absorbed here because it has no manifest function
+97,CRT-019,fabs.c,crt,library-symbol,0048e680,0048e770,1,1,medium,library-symbol,,0049eb00-0049eb00,,,,symbol _fabs
+98,CRT-020,strncpy.asm,crt,library-symbol,0048e770,0048e870,1,0,medium,library-symbol,,,,,,symbol _strncpy; int3 fill
+99,CRT-021,ieeemisc.c,crt,library-symbol,0048e870,0048e890,1,0,high,padding;library-symbol,,,,,,symbol _finite (only member pulled from the IEEE helper object)
+100,CRT-022,sscanf.c,crt,library-symbol,0048e890,0048e8e0,1,0,medium,library-symbol,,,,,,symbol _sscanf (ledger MarkupIntegerTokenParse)
+101,CRT-023,ceil.c,crt,library-symbol,0048e8e0,0048e9e0,1,1,medium,library-symbol,,0049eb18-0049eb18,004afd40-004afd40,,,symbol _ceil
+102,CRT-024,lldiv.asm,crt,library-symbol,0048e9e0,0048ea90,1,0,medium,library-symbol,,,,,,symbol __alldiv; int3 fill
+103,CRT-025,llmul.asm,crt,library-symbol,0048ea90,0048ead0,1,0,high,padding;library-symbol,,,,,,symbol __allmul; int3 fill
+104,CRT-026,new.cpp,crt,library-symbol,0048ead0,0048eae0,1,0,high,padding;library;library-symbol,,,,,,operator new (??2@YAPAXI@Z = _nh_malloc(size 1)); ledger EngineCalloc / src engine_calloc is really CRT operator new
+105,CRT-027,fclose.c,crt,library-symbol,0048eae0,0048eb60,1,0,high,library;library-symbol,,,,,,symbol _fclose (ledger FileResourceHandleClose)
+106,CRT-028,fopen.c,crt,library-symbol,0048eb60,0048ebb0,2,0,medium,library-symbol,,,,,,symbols _fsopen _fopen
+107,CRT-029,trnsctrl.cpp,crt,library-symbol,0048ebb0,0048ef10,9,0,medium,library-symbol,,,,,,symbols _JumpToContinuation _CallMemberFunction0 _UnwindNestedFrames(SehFrameUnwind) __CxxFrameHandler _CallCatchBlock2(CallSettingFrame12) CatchGuardHandler _CallSETranslator TranslatorGuardHandler _GetRangeOfTrysToCheck; int3 fill after its inline-asm functions inside one C++ object
+108,CRT-030,exsup.asm,crt,library-symbol,0048ef10,0048f000,5,2,high,padding;library;library-symbol,,,004afd50-004afd50,,,symbols __global_unwind2 __local_unwind2 __abnormal_termination __NLG_Notify1 __NLG_Notify; packed MASM; int3 fill
+109,CRT-031,crt0.c,crt,library-symbol,0048f000,0048f1d0,2,2,high,padding;library-symbol;data-step;data@004afd60,0,0049eb20-0049eb20,004afd60-004afd60,,005490dc-00549124,symbols WinMainCRTStartup _amsg_exit
+110,CRT-032,isctype.c,crt,library-symbol,0048f1d0,0048f270,1,1,high,library-symbol;data-step;data@004afd68,0,,004afd68-004afd68,,,symbol _isctype
+111,CRT-033,strncmp.asm,crt,library-symbol,0048f270,0048f2b0,1,0,medium,library-symbol,,,,,,symbol _strncmp; int3 fill; name uncertain between strncmp.asm and an inline-asm strncmp.c
+112,CRT-034,ftell.c,crt,library-symbol,0048f2b0,0048f460,1,0,high,padding;library-symbol,,,,,,symbol _ftell (ledger StreamedAudioFileLengthGet)
+113,CRT-035,fseek.c,crt,library-symbol,0048f460,0048f500,1,0,medium,library-symbol,,,,,,symbol _fseek (ledger FileResourceHandleSeek)
+114,CRT-036,fwrite.c,crt,library-symbol,0048f500,0048f650,1,0,medium,library-symbol,,,,,,symbol _fwrite (ledger GameFileWrite)
+115,CRT-037,remove.c,crt,library-symbol,0048f650,0048f680,1,0,medium,library-symbol,,,,,,symbol remove (ledger GameFileDelete)
+116,CRT-038,chmod.c,crt,library-symbol,0048f680,0048f6d0,1,0,medium,library-symbol,,,,,,symbol _chmod
+117,CRT-039,mkdir.c,crt,library-symbol,0048f6d0,0048f700,1,0,medium,library-symbol,,,,,,symbol _mkdir (ledger GameDirectoryCreate)
+118,CRT-040,findfile.c,crt,library-symbol,0048f700,0048fa00,4,0,medium,library-symbol,,,,,,symbols _findfirst _findnext _findclose __timet_from_ft
+119,CRT-041,getcwd.c,crt,library-symbol,0048fa00,0048fb90,3,0,medium,library-symbol,,,,,,symbols _getcwd _getdcwd _validdrive
+120,CRT-042,fread.c,crt,library-symbol,0048fb90,0048fd20,1,0,medium,library-symbol,,,,,,symbol _fread (ledger GameFileReadBuffered)
+121,CRT-043,fflush.c,crt,library-symbol,0048fd20,0048fe20,1,0,medium,library-symbol,,,,,,symbol _flush; unlisted _flushall/flsall follow at 0x48fd90-0x48fe1f
+122,CRT-044,fgetc.c,crt,library-symbol,0048fe20,0048fe50,1,0,medium,library-symbol,,,,,,symbol _fgetc
+123,CRT-045,fgets.c,crt,library-symbol,0048fe50,0048fed0,1,0,medium,library-symbol,,,,,,symbol _fgets
+124,CRT-046,vfprintf.c,crt,library-symbol,0048fed0,0048ff10,1,0,medium,library-symbol,,,,,,symbol _vfprintf (_stbuf/_output/_ftbuf)
+125,CRT-047,stricmp.c,crt,library-symbol,0048ff10,0048ffa0,1,0,medium,library-symbol,,,,,,symbol _stricmp/_strcmpi; int3 fill taken as inline-asm C-locale path (as in trnsctrl.cpp) - name uncertain vs an .asm member; shares __lc_handle bss 0x549178 with late _strnicmp
+126,CRT-048,fullpath.c,crt,library-symbol,0048ffa0,00490070,1,0,high,padding;library-symbol,,,,,,symbol _fullpath
+127,CRT-049,fscanf.c,crt,library-symbol,00490070,00490090,1,0,medium,library-symbol,,,,,,symbol _fscanf
+128,CRT-050,splitpat.c,crt,library-symbol,00490090,00490210,1,0,medium,library-symbol,,,,,,symbol _splitpath (ledger AssetPathComponentsParse)
+129,CRT-051,fp8.c,crt,library-symbol,00490210,00490230,1,0,medium,library-symbol,,,,,,symbol _setdefaultprecision
+130,CRT-052,testfdiv.c,crt,library-symbol,00490230,004902b0,2,2,high,library;library-symbol,,0049eb30-0049eb54,,,,symbols _ms_p5_test_fdiv (ProcessorFeatureFallbackFalse: constant-folded Pentium FDIV test) _ms_p5_mp_test_fdiv
+131,CRT-053,cvt.c,crt,library-symbol,004902b0,004907f0,7,6,high,library-symbol;data-step;rdata@0049eb68,0,0049eb68-0049eb6c,004aff74-004aff74,004aff78-004aff78,00549128-00549134,symbols _forcdecpt (+unlisted _cropzeros _positive _fassign) _cftoe _cftof _cftog _cftoe_g _cftof_g and static _shift (StringPrefixReserve); bss 0x549128-0x549134
+132,CRT-054,cfin.c,crt,library-symbol,004907f0,004908a0,1,0,medium,library-symbol,,,,,,symbol _fltin (strgtold12 + ld12tod into static FLT .data 0x4aff98); ledger ParseEntityHealthValue is really CRT _fltin
+133,CRT-055,_flsbuf.c,crt,library-symbol,004908a0,004909d0,1,0,high,library;library-symbol,,,,,,symbol _flsbuf
+134,CRT-056,output.c,crt,library-symbol,004909d0,004914a0,7,1,medium,library-symbol,,0049eb70-0049eb70,004aff80-004affa0,,,symbols _output write_char write_multi_char write_string get_int_arg get_int64_arg get_short_arg
+135,CRT-057,strchr.asm,crt,library-symbol,004914a0,00491560,1,0,medium,library-symbol,,,,,,symbol _strchr; int3 fill
+136,CRT-058,heapinit.c,crt,library-symbol,00491560,004915a0,1,0,high,padding;library-symbol,,,,,,symbol _heap_init
+137,CRT-059,sbheap.c,crt,library-symbol,004915a0,00491d90,8,6,medium,library-symbol,,,004affb8-004b1fd8,,00549150-00549150,symbols __sbh_new_region __sbh_release_region __sbh_decommit_pages __sbh_find_block __sbh_free_block __sbh_alloc_block __sbh_alloc_block_from_page __sbh_resize_block; bss 0x549150
+138,CRT-060,handler.cpp,crt,library-symbol,00491d90,00491db0,1,1,medium,library-symbol;data-step;bss@00549158,2,,,,00549158-00549158,symbol _callnewh; bss 0x549158 (_pnhHeap)
+139,CRT-061,87disp.asm,crt,library-symbol,00491db0,00491f80,2,2,high,padding;library-symbol,0,,004b1ffd-004b1ffd,,,symbols _trandisp1 _trandisp2 (+ unlisted helpers to 0x491f6c); int3 fill
+140,CRT-062,,crt,library-symbol,00491f80,00492170,6,1,medium,library-symbol,3,0049ebf0-0049ebf0,,,,MASM FP error-handling helpers _startTwoArgErrorHandling _startOneArgErrorHandling _twoToTOS _load_CW _convertTOStoQNaN _fload_withFB _checkTOS_withFB _fast_exit _math_exit _check_overflow_exit _check_range_exit; int3 fill; file name unknown
+141,CRT-063,87cdisp.asm,crt,library-symbol,00492170,00492bc6,7,4,medium,library-symbol;data-step;rdata@0049ec40,2,0049ec40-0049ec68,,,00549160-00549168,symbols _cintrindisp2 _cintrindisp1 _ctrandisp2 _ctrandisp1 _fload; int3 at 0x4923bd ends it; boundary note: unlisted Pentium-FDIV adjust code 0x4923c0-0x492bc5 (next object) is absorbed here
+142,CRT-064,,crt,library-symbol,00492bc6,00493150,2,2,medium,library-symbol,2,,004b202c-004b2064,,,MASM Pentium FDIV/FPREM workaround object (_adj_fdiv_* _fprem_common _adj_fprem ...); real start 0x4923c0 after int3 fill (no manifest function there); int3 fill at end; file name unknown
+143,CRT-065,frnd.c,crt,library-symbol,00493150,00493170,1,0,high,padding;library-symbol,,,,,,symbol _frnd
+144,CRT-066,fpexcept.c,crt,library-symbol,00493170,00493a40,8,2,medium,library-symbol,,0049ed28-0049ed28,004b2170-004b225c,,,symbols _handle_qnan1 _except1 _raise_exc _handle_exc _umatherr _set_errno _get_fname _errcode
+145,CRT-067,util.c,crt,library-symbol,00493a40,00493be0,3,1,medium,library-symbol;data-step;rdata@0049ed30,3,0049ed30-0049ed30,,,,symbols _set_exp _sptype _decomp
+146,CRT-068,fpctrl.c,crt,library-symbol,00493be0,00493ca0,4,1,medium,library-symbol,3,,004b2270-004b2280,,,symbols _statfp _clrfp _ctrlfp _set_statfp
+147,CRT-069,aw_map.c,crt,library-symbol,00493ca0,00493ef0,2,1,medium,library-symbol,0,0049ed38-0049ed3c,,,00549170-00549190,symbols __crtLCMapStringA strncnt
+148,CRT-070,input.c,crt,library-symbol,00493ef0,00494d10,5,1,medium,library-symbol,1,,,004b228c-004b2294,,symbols _input _hextodec _inc _un_inc _whiteout; strings ' \t-\r]' ']'
+149,CRT-071,close.c,crt,library-symbol,00494d10,00494df0,1,0,medium,library-symbol,,,,,,symbol _close
+150,CRT-072,_freebuf.c,crt,library-symbol,00494df0,00494e30,1,0,medium,library-symbol,,,,,,symbol _freebuf
+151,CRT-073,_open.c,crt,library-symbol,00494e30,00495000,1,0,medium,library-symbol,,,,,,symbol _openfile; boundary uncertain: _getstream (0x495000) is stream.c in VC6 but has no data evidence of its own
+152,CRT-074,stream.c,crt,library-symbol,00495000,00495090,1,0,medium,library-symbol,,,,,,symbol _getstream; boundary uncertain (see CRT-073)
+153,CRT-075,frame.cpp,crt,library-symbol,00495090,00495a90,10,7,high,padding;library-symbol,,0049ed50-0049ed88,,,00549194-0054919c,symbols __InternalCxxFrameHandler FindHandler FindHandlerForForeignException __FrameUnwindToState CatchIt CallCatchBlock BuildCatchObject _DestructExceptionObject AdjustPointer; bss 0x549194-0x54919c
+154,CRT-076,lowhelpr.asm,crt,library-symbol,00495a90,00495ae0,1,0,high,padding;library-symbol,,,,,,symbol _CallSettingFrame@12; int3 fill
+155,CRT-077,hooks.cpp,crt,library-symbol,00495ae0,00495d90,4,2,high,padding;library-symbol,,0049ed98-0049edb0,004b22a4-004b22a4,,005491a0-005491a0,symbols terminate _inconsistency (+ their abort funclets); bss 0x5491a0; boundary note: unlisted winxfltr.c (_XcptFilter at 0x495c00 and xcptlookup at 0x495d40 using bss 0x5491a4 shared with raise) is absorbed here; confirmed by .data: raise() uses _XcptActTab at 0x4b22a8-0x4b232c which lies between hooks.cpp (0x4b22a4) and mbctype.c (0x4b2330)
+156,CRT-078,ismbbyte.c,crt,library-symbol,00495d90,00495df0,2,0,high,padding;library-symbol,,,,,,symbols _ismbblead x_ismbbtype
+157,CRT-079,stdenvp.c,crt,library-symbol,00495df0,00495ee0,1,0,medium,library-symbol,,,,,,symbol _setenvp
+158,CRT-080,stdargv.c,crt,library-symbol,00495ee0,00496190,2,1,medium,library-symbol,,,,,005491a8-005491a8,symbols _setargv parse_cmdline; bss 0x5491a8 _pgmname
+159,CRT-081,a_env.c,crt,library-symbol,00496190,004962f0,1,1,medium,library-symbol;data-step;bss@005492b0,1,,,,005492b0-005492b0,symbol __crtGetEnvironmentStringsA; bss 0x5492b0
+160,CRT-082,mbctype.c,crt,library-symbol,004962f0,004965d0,5,3,high,library-symbol;data-step;bss@005492b8,0,,004b2330-004b2428,004b2340-004b2340,005492b8-005493d4,symbols _setmbcp getSystemCP CPtoLCID setSBCS __initmbctable; bss 0x5492b8-0x5493d4 (_mbctype etc)
+161,CRT-083,ioinit.c,crt,library-symbol,004965d0,00496895,1,0,medium,library-symbol,,,,,,symbol _ioinit
+162,CRT-084,exsup3.asm,crt,library-symbol,00496895,004968b0,1,0,high,library;library-symbol,,,,,,symbols _except_handler3 _seh_longjmp_unwind; real start 0x4967d0 ('VC20XC00' signature then _except_handler3 at 0x4967d8 - not manifest functions); packed MASM
+163,CRT-085,crt0msg.c,crt,library-symbol,004968b0,00496ad0,2,2,high,library;library-symbol,,0049f050-0049f09c,004b2430-004b24c0,,005493d8-005493d8,symbols _FF_MSGBANNER _NMSG_WRITE; bss 0x5493d8
+164,CRT-086,aw_str.c,crt,library-symbol,00496ad0,00496c00,1,1,high,library-symbol;data-step;bss@005493e0,0,,,,005493e0-005493e0,symbol __crtGetStringTypeA; bss 0x5493e0
+165,CRT-087,lseek.c,crt,library-symbol,00496c00,00496cc0,1,0,medium,library-symbol,,,,,,symbol _lseek
+166,CRT-088,write.c,crt,library-symbol,00496cc0,00496ee0,1,0,medium,library-symbol,,,,,,symbol _write
+167,CRT-089,dosmap.c,crt,library-symbol,00496ee0,00496f50,1,1,medium,library-symbol,,,004b24c4-004b2628,,,symbol _dosmaperr; errtable .data 0x4b24c0
+168,CRT-090,dtoxtime.c,crt,library-symbol,00496f50,00497040,1,0,medium,library-symbol,,,,,,symbol __loctotime_t
+169,CRT-091,_filbuf.c,crt,library-symbol,00497040,00497130,1,0,medium,library-symbol,,,,,,symbol _filbuf
+170,CRT-092,read.c,crt,library-symbol,00497130,004974d0,1,0,medium,library-symbol,,,,,,symbol _read
+171,CRT-093,_sftbuf.c,crt,library-symbol,004974d0,004975d0,2,1,medium,library-symbol,,,004b2648-004b2668,,005493e4-005493e8,symbols _stbuf _ftbuf; bss 0x5493e4-0x5493e8
+172,CRT-094,tolower.c,crt,library-symbol,004975d0,004976d0,1,0,medium,library-symbol,,,,,,symbol _tolower
+173,CRT-095,mbsnbcpy.c,crt,library-symbol,004976d0,00497770,1,0,medium,library-symbol,,,,,,symbol _mbsnbcpy
+174,CRT-096,ieee87.c,crt,library-symbol,00497770,00497900,4,0,medium,library-symbol,,,,,,symbols _control87 _controlfp _abstract_cw _hw_cw
+175,CRT-097,intrncvt.c,crt,library-symbol,00497900,00497e20,12,2,medium,library-symbol,,,004b28a8-004b28c0,,,symbols _ZeroTail _IncMan _RoundMan _CopyMan _FillZeroMan _IsZeroMan _ShrMan _ld12cvt _ld12tod _ld12tof _atodbl _atoflt
+176,CRT-098,_fptostr.c,crt,library-symbol,00497e20,00497ec0,1,0,medium,library-symbol,,,,,,symbol _fptostr
+177,CRT-099,cfout.c,crt,library-symbol,00497ec0,00498000,2,1,medium,library-symbol,,,,,005493f0-0054941c,symbols _fltout __dtold; bss 0x5493f0-0x54941c
+178,CRT-100,memmove.asm,crt,library-symbol,00498000,00498340,1,0,medium,library-symbol,,,,,,symbol _memmove; int3 fill
+179,CRT-101,crt0fp.c,crt,library-symbol,00498340,00498350,1,0,high,padding;library;library-symbol,,,,,,symbol _fptrap (calls _amsg_exit(_RT_FLOAT))
+180,CRT-102,strgtold.c,crt,library-symbol,00498350,00498ae0,1,0,high,library;library-symbol,,,,,,symbol __strgtold12
+181,CRT-103,_getbuf.c,crt,library-symbol,00498ae0,00498b40,1,0,medium,library-symbol,,,,,,symbol _getbuf
+182,CRT-104,isatty.c,crt,library-symbol,00498b40,00498b70,1,0,medium,library-symbol,,,,,,symbol _isatty
+183,CRT-105,wctomb.c,crt,library-symbol,00498b70,00498bf0,1,0,medium,library-symbol,,,,,,symbol _wctomb
+184,CRT-106,ulldiv.asm,crt,library-symbol,00498bf0,00498c60,1,0,medium,library-symbol,,,,,,symbol __aulldiv; int3 fill
+185,CRT-107,ullrem.asm,crt,library-symbol,00498c60,00498ce0,1,0,high,padding;library-symbol,,,,,,symbol __aullrem; int3 fill
+186,CRT-108,87except.c,crt,library-symbol,00498ce0,00498e00,1,1,high,padding;library-symbol,,,004b28e0-004b28e0,,,symbol _87except
+187,CRT-109,mbtowc.c,crt,library-symbol,00498e00,00498f00,1,0,medium,library-symbol,,,,,,symbol _mbtowc
+188,CRT-110,_ctype.c,crt,library-symbol,00498f00,00498f30,1,0,medium,library-symbol,,,,,,symbol _isspace (function form of the ctype macro); file name uncertain (VC function-form ctype object)
+189,CRT-111,llshl.asm,crt,library-symbol,00498f30,00498f50,1,0,medium,library-symbol,,,,,,symbol __allshl; int3 fill
+190,CRT-112,ungetc.c,crt,library-symbol,00498f50,00498fe0,1,0,high,padding;library-symbol,,,,,,symbol _ungetc
+191,CRT-113,osfinfo.c,crt,library-symbol,00498fe0,00499240,4,0,medium,library-symbol,,,,,,symbols _alloc_osfhnd _set_osfhnd _free_osfhnd _get_osfhandle
+192,CRT-114,open.c,crt,library-symbol,00499240,00499690,1,0,medium,library-symbol,,,,,,symbol _sopen; bss 0x5494f4
+193,CRT-115,validate.cpp,crt,library-symbol,00499690,004996f0,3,0,medium,library-symbol,,,,,,symbols _ValidateRead _ValidateWrite _ValidateExecute
+194,CRT-116,abort.c,crt,library-symbol,004996f0,00499710,1,0,medium,library-symbol,,,,,,symbol abort
+195,CRT-117,wcslen.c,crt,library-symbol,00499710,00499730,1,0,medium,library-symbol,,,,,,symbol wcslen
+196,CRT-118,crtmbox.c,crt,library-symbol,00499730,004997c0,1,1,medium,library-symbol,,0049f0b4-0049f0e4,,,00549428-00549430,symbol __crtMessageBoxA; bss 0x549428-0x549430
+197,CRT-119,calloc.c,crt,library-symbol,004997c0,00499860,1,0,medium,library-symbol,,,,,,symbol _calloc
+198,CRT-120,tzset.c,crt,library-symbol,00499860,00499fb0,4,4,medium,library-symbol,,0049f130-0049f130,004b28f0-004b29e0,004b2984-004b2984,00549438-005494f0,symbols __tzset _tzset _isindst cvtdate; bss 0x549438-0x5494f0
+199,CRT-121,mantold.c,crt,library-symbol,00499fb0,0049a1b0,5,0,medium,library-symbol,,,,,,symbols __addl __add_12 __shl_12 __shr_12 __mtold12
+200,CRT-122,x10fout.c,crt,library-symbol,0049a1b0,0049a540,1,1,medium,library-symbol,,0049f134-0049f152,,,,symbol $I10_OUTPUT
+201,CRT-123,tenpow.c,crt,library-symbol,0049a540,0049a890,2,1,medium,library-symbol,1,,004b2a18-004b2b78,,,symbols __ld12mul __multtenpow12
+202,CRT-124,chsize.c,crt,library-symbol,0049a890,0049aa10,1,0,medium,library-symbol,,,,,,symbol _chsize
+203,CRT-125,winsig.c,crt,library-symbol,0049aa10,0049abe0,2,1,medium,library-symbol,,,,,005494f8-00549504,symbols raise siglookup; bss 0x5494f8-0x549504
+204,CRT-126,wcstombs.c,crt,library-symbol,0049abe0,0049ae10,2,0,medium,library-symbol,,,,,,symbols wcstombs wcsncnt
+205,CRT-127,getenv.c,crt,library-symbol,0049ae10,0049aea0,1,0,medium,library-symbol,,,,,,symbol getenv
+206,CRT-128,setmode.c,crt,library-symbol,0049aea0,0049af20,1,0,medium,library-symbol,,,,,,symbol _setmode
+207,CRT-129,mbsnbicl.c,crt,library-symbol,0049af20,0049af60,1,0,medium,library-symbol,,,,,,symbol _mbsnbicoll
+208,CRT-130,wtombenv.c,crt,library-symbol,0049af60,0049afe0,1,0,medium,library-symbol,,,,,,symbol __wtomb_environ
+209,CRT-131,aw_cmp.c,crt,library-symbol,0049afe0,0049b2b0,1,1,medium,library-symbol,,,,,00549510-00549510,symbol __crtCompareStringA; bss 0x549510
+210,CRT-132,setenv.c,crt,library-symbol,0049b2b0,0049b5b0,3,0,medium,library-symbol,,,,,,symbols __crtsetenv findenv copy_environ
+211,CRT-133,mbschr.c,crt,library-symbol,0049b5b0,0049b660,1,0,medium,library-symbol,,,,,,symbol _mbschr
+212,CRT-134,strdup.c,crt,library-symbol,0049b660,0049b6b0,1,0,medium,library-symbol,,,,,,symbol _strdup; last CRT object before the import thunks
+213,IMP-001,d3drm.lib,import,library-symbol,0049b6b0,0049b6c2,3,0,high,padding;segment;library-symbol,,,,,,thunks Direct3DRMCreate D3DRMVectorRandom D3DRMVectorRotate; each jmp [__imp_X] thunk is really its own import-library member
+214,IMP-002,ddraw.lib,import,library-symbol,0049b6c2,0049b6ce,2,0,medium,library-symbol,,,,,,thunks DirectDrawEnumerateA DirectDrawCreate; each thunk is its own library member
+215,IMP-003,avifil32.lib,import,library-symbol,0049b6ce,0049c7a8,6,0,medium,library-symbol,,,,,,thunks AVIStreamInfoA .. AVIFileInit (int3 fill to 0x49b700); each thunk is its own member; boundary note: the dinput.lib c_dfDIMouse/c_dfDIKeyboard DIDATAFORMAT data blob 0x49b700-0x49c7a7 has no manifest function and is absorbed here
+216,IMP-004,dinput.lib,import,library-symbol,0049c7a8,0049c7ae,1,0,high,padding;library-symbol,,,,,,thunk DirectInputCreateA; its library also contributes the c_dfDI* data objects at 0x49b700-0x49c7a7 immediately before it; each member is its own object
+217,IMP-005,dsound.lib,import,library-symbol,0049c7ae,0049c7b4,1,0,medium,library-symbol,,,,,,thunk DirectSoundCreate (DSOUND ordinal 1); its own library member
+218,IMP-006,kernel32.lib,import,library-symbol,0049c7b4,0049c7c0,1,0,medium,library-symbol,,,,,,thunk RtlUnwind (used by CRT SEH code); int3 fill to 0x49c7c0; its own library member
+219,LATE-001,,late,none,0049c7c0,0049d030,14,1,high,padding;library;segment,,,,004b2d08-004b2d08,,RNC (Rob Northen) ProPack-style WAD payload decompressor (string 'RNC' at 0x4b2d08; commons 0x557d68-0x55808c); C object linked after the import libraries; file name unknown
+220,LATE-002,,late,none,0049d030,0049dab0,8,4,low,data-step;string@004b2d0c,12,,,004b2d0c-004b2d90,,DirectDraw device / display-mode selection dialog (strings 'Please install DirectX versi..' 'Window Size' 'Screen Mode' at 0x4b2d0c-0x4b2d90 follow the RNC string; commons 0x5580a0+); boundary at 0x49d030 from string order and disjoint commons; file name unknown
+221,LATE-003,strnicmp.c,crt,library-symbol,0049dab0,0049db60,1,0,high,library;segment,,,,,,symbol _strnicmp (pulled late via oldnames.lib strnicmp alias); int3 fill (inline-asm path or .asm member - name uncertain like CRT-047)
+222,LATE-004,xtoa.c,crt,library-symbol,0049db60,0049dc10,2,0,high,padding;library-symbol,,,,,,symbols _itoa and static xtoa (pulled late via oldnames.lib itoa alias)
+223,LATE-005,strlwr.c,crt,library-symbol,0049dc10,0049dcd0,1,0,medium,library-symbol,,,,,,symbol _strlwr (pulled late via oldnames.lib strlwr alias)
+224,LATE-006,strupr.c,crt,library-symbol,0049dcd0,0049ddf5,1,0,medium,library-symbol,,,,,,symbol _strupr (via oldnames.lib); boundary note: the .text$x C++ EH unwind funclets 0x49dd90-0x49ddf4 (game objects' __CxxFrameHandler thunks) are absorbed here

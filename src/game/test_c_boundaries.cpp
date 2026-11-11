@@ -29,6 +29,12 @@
 #include "game/priorities.h"
 #include "game/util.hpp"
 #include "gods98/dxerror.h"
+#include "gods98/media.hpp"
+#include "gods98/soundsys.h"
+#include "gods98/audio.hpp"
+#include "gods98/audio.h"
+#include "platform/platform.h"
+#include "platform/window.h"
 
 int main(void)
 {

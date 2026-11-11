@@ -46,15 +46,6 @@ typedef struct SoundWaveDataReader {
     uint32_t cursor;
     uint32_t remaining;
 } SoundWaveDataReader;
-typedef struct SoundWaveMemoryStream SoundWaveMemoryStream;
-typedef struct SoundWaveFileHandle SoundWaveFileHandle;
-typedef struct SoundWaveChunk {
-    uint32_t chunk_id;
-    uint32_t chunk_size;
-    uint32_t form_type;
-    uint32_t data_offset;
-    uint32_t flags;
-} SoundWaveChunk;
 void sound_wave_data_reader_init(SoundWaveDataReader* reader,
                                  const uint8_t* data, uint32_t size);
 uint32_t sound_wave_data_reader_read(SoundWaveDataReader* reader,
@@ -72,39 +63,10 @@ typedef struct Sound {
                             * corpus's stored stream size role) */
 } Sound;
 
-/* Portable counterparts for the reference WinMM/mmio WAVE helpers. The
- * in-memory parser returns an opaque stream context; the file opener below
- * keeps a loose-file GameFileHandle open while the caller visits the data
- * chunk. Both return an owned WAVEFORMATEX byte block (including any non-PCM
- * extension) and the RIFF parent chunk. The in-memory caller must keep its
- * input data alive until the stream is released. */
-uint32_t sound_wave_memory_format_read(const uint8_t* data, int32_t size,
-                                      SoundWaveMemoryStream** stream_out,
-                                      uint8_t** format_out,
-                                      SoundWaveChunk* parent_chunk_out);
-uint32_t sound_wave_memory_stream_read(SoundWaveMemoryStream* stream,
-                                      void* destination, uint32_t requested,
-                                      uint32_t* bytes_read);
-void sound_wave_memory_format_close(SoundWaveMemoryStream** stream,
-                                    uint8_t** format);
-uint32_t sound_wave_file_average_bytes_per_second_read(const char* path);
-uint32_t sound_wave_file_open_read_chunks(const char* path,
-                                          SoundWaveFileHandle** handle_out,
-                                          uint8_t** format_out,
-                                          SoundWaveChunk* parent_chunk_out);
-void sound_wave_data_chunk_open(SoundWaveFileHandle** handle,
-                                SoundWaveChunk* data_chunk_out,
-                                SoundWaveChunk* parent_chunk);
-/* WaveDataRead @ 0x489100: `data_chunk` is the MMCKINFO-compatible record
- * returned by sound_wave_data_chunk_open; its chunk_size is remaining bytes. */
-uint32_t sound_wave_data_read(SoundWaveFileHandle* handle,
-                              uint32_t requested, void* destination,
-                              SoundWaveChunk* data_chunk,
-                              uint32_t* bytes_read);
-void sound_wave_file_handle_close(SoundWaveFileHandle** handle,
-                                 uint8_t** format);
-uint32_t sound_wave_handle_and_buffer_release(SoundWaveFileHandle** handle,
-                                              uint8_t** format);
+/* Load a loose wave file through the original's mmio readers (soundsys.c,
+ * WaveOpenFile/WaveStartDataRead/WaveReadFile). PCM only; NULL if the file
+ * is missing or not a PCM wave (sound_wave.cpp). */
+Sound* sound_wave_file_load(const char* name);
 
 /* Parse a RIFF/WAVE buffer. Chunk order-independent; PCM (tag 1) only; NULL
  * for anything else (missing fmt/data, non-WAVE, truncated, RLE'd etc.). */
@@ -154,7 +116,7 @@ void sound_bank_clear(void);
  * engine's config read drives it when that milestone lands. */
 void sound_bank_sound_on_set(int on);
 int  sound_bank_sound_on(void);
-extern int s_bank_sound_on; /* DAT_00533878, read directly by media.cpp */
+extern "C" int s_bank_sound_on; /* DAT_00533878, read by soundsys.c */
 
 /* SoundBankFreeSlotFind @ 0x47aad0: first slot whose busy bit is clear.
  * 1 with *out_slot set, or 0 when all 600 slots are claimed. */

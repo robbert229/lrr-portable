@@ -135,40 +135,24 @@ void media_min_distance_config_set(float cell_scale, float clip_base,
 }
 #endif
 
-/* --- the CD-audio availability seam (2026-10-24; finding 14) ---------------
- * CDAudioPlaybackAvailable (FUN_00488b90): the corpus answers yes only
- * while the CD-audio device word (DAT_0054486c, raised by the MCI device
- * opener) and the sound-system word (DAT_00533878, the port's sound-on
- * seam) are both set. Native has no CD-DA device, while winapi owns it in
- * the platform MCI backend. */
-int  media_cd_audio_playback_available(void); /* FUN_00488b90 */
-void media_cd_audio_open_set(int open);       /* port hook */
-int media_cd_audio_device_state_update(int request);
-typedef int (*MediaCdAudioErrorTextHook)(void* context, int error_code,
-                                         char* output, int capacity);
-typedef int (*MediaCdAudioStatusHook)(void* context, char* mode, int capacity,
-                                      int* current_track, int* error_code);
-void media_cd_audio_error_hook_set(MediaCdAudioErrorTextHook hook,
-                                   void* context);
-void media_cd_audio_error_code_set(int error_code);
-void media_cd_audio_error_text_get(void); /* 0x00489260 */
-void media_cd_audio_status_hook_set(MediaCdAudioStatusHook hook,
-                                    void* context);
-int media_cd_audio_track_completion_poll(int track); /* 0x00489280 */
-typedef int (*MediaCdAudioCommandHook)(void* context, const char* command,
-                                       int argument, int* error_code);
-void media_cd_audio_command_hook_set(MediaCdAudioCommandHook hook,
-                                     void* context);
-int media_cd_audio_track_play_from(int track); /* 0x00489210 */
-int media_cd_audio_device_open(int initial_track); /* 0x00489330 */
-int media_cd_audio_stop_and_close(void); /* 0x004893a0 */
-void media_cd_audio_stop_and_close_if_active(void); /* 0x00488bf0 */
-typedef uint32_t (*MediaCdAudioTimeHook)(void* context);
-void media_cd_audio_time_hook_set(MediaCdAudioTimeHook hook, void* context);
-void media_cd_audio_watchdog_tick(int enabled); /* 0x00488c00 */
+/* --- the CD track player (gods98 sound layer, soundsys.c) ------------------
+ * Defined in the original-shape unit soundsys.c and declared there in
+ * gods98/soundsys.h; test_c_boundaries checks these against it. The track
+ * argument is 0-based (MCI plays track + 1). */
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef void (*MediaCdAudioCompletionHook)(void);
-void media_cd_audio_track_start(int track, int restart_when_done,
+int media_cd_audio_device_state_update(int nosound); /* 0x00488b50 */
+int media_cd_audio_playback_available(void); /* 0x00488b90 */
+void media_cd_audio_track_start(int track, int mode,
                                 MediaCdAudioCompletionHook callback);
+                                             /* 0x00488bb0 */
+void media_cd_audio_stop_and_close_if_active(void); /* 0x00488bf0 */
+void media_cd_audio_watchdog_tick(int cdtrack); /* 0x00488c00 */
+#ifdef __cplusplus
+}
+#endif
 
 /* LoaderProgressCallbackSet (FUN_004802b0): stores the optional loader
  * progress callback pair (DAT_005343ac/DAT_005343b0, finding 118). The

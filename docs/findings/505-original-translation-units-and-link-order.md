@@ -281,6 +281,10 @@ ranges CSV with symbols in their notes.
 | 79 | G98-030 | `Wad.c` (inferred) | `0048b4a0`–`0048c040` | 15 | low |
 | 80 | G98-031 | — | `0048c040`–`0048d920` | 13 | low |
 
+Update (#409/#410, [finding 512](512-sound-unit-original-shape.md)): G98-021, G98-022 and G98-023
+are one object and are now one unit, G98-021 (`00488b50`–`004893f0`, 16
+functions). The current tables are in the coverage CSVs.
+
 ## Low-confidence areas (flagged, not guessed)
 
 - **Game boundaries with no data step or large slack (21).** These are the
@@ -306,7 +310,8 @@ ranges CSV with symbols in their notes.
   - The string/token helpers either side of `Viewports.c` and `Main.c`.
   - The text-window unit `004850f0`–`00485a20`.
   - The wave reader, MCI and sound front-end units `00488c70`–`004894c0`,
-    which may be one file.
+    which may be one file. (Settled for `00488b50`–`004893f0`: one object,
+    finding 512.)
   - The file-list and registry units `0048b260`/`0048b330`, which may be one
     file.
 - **Objects with no manifest function at their start** are absorbed into the

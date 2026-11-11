@@ -14,11 +14,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "resource.hpp"
 #include "gods98/heap.hpp"
 #include "sound.hpp"
 #include "audio.hpp"
+#include "soundsys.h"
 
 static int s_failures = 0;
 
@@ -1312,8 +1314,158 @@ static void test_streamed_voices(void)
         remove(files[i]);
     }
 }
+/* ------------------------------------------------------------------ *
+ *  The original's RIFF wave readers (soundsys.c: WaveOpenFile over memory
+ *  and over a file, WaveStartDataRead, WaveReadFile, WaveCloseReadFile)
+ *  on the native mmio emulation (winmm_port.cpp).
+ * ------------------------------------------------------------------ */
+
+static size_t wave_put32(unsigned char* p, size_t at, uint32_t v)
+{
+    p[at] = (unsigned char)v;
+    p[at + 1] = (unsigned char)(v >> 8);
+    p[at + 2] = (unsigned char)(v >> 16);
+    p[at + 3] = (unsigned char)(v >> 24);
+    return at + 4;
+}
+
+static size_t wave_put16(unsigned char* p, size_t at, unsigned v)
+{
+    p[at] = (unsigned char)v;
+    p[at + 1] = (unsigned char)(v >> 8);
+    return at + 2;
+}
+
+/* RIFF/WAVE with an odd-sized 'junk' chunk, then 'fmt ' (tag, plus cbSize
+ * and two extra bytes when not PCM), then 'data' holding `data_len` bytes
+ * 0, 1, 2... `data_claim` is the size the data header states. */
+static size_t wave_build(unsigned char* p, unsigned tag, uint32_t data_len,
+                         uint32_t data_claim)
+{
+    size_t at = 0;
+    uint32_t i;
+    unsigned fmt_size = tag == 1 ? 16u : 20u;
+    memcpy(p, "RIFF", 4); at = 8;
+    memcpy(p + at, "WAVE", 4); at += 4;
+    memcpy(p + at, "junk", 4); at = wave_put32(p, at + 4, 3);
+    p[at++] = 'x'; p[at++] = 'y'; p[at++] = 'z'; p[at++] = 0;
+    memcpy(p + at, "fmt ", 4); at = wave_put32(p, at + 4, fmt_size);
+    at = wave_put16(p, at, tag);
+    at = wave_put16(p, at, 2);
+    at = wave_put32(p, at, 22050);
+    at = wave_put32(p, at, 88200);
+    at = wave_put16(p, at, 4);
+    at = wave_put16(p, at, 16);
+    if (tag != 1) {
+        at = wave_put16(p, at, 2);
+        p[at++] = 0xab; p[at++] = 0xcd;
+    }
+    memcpy(p + at, "data", 4); at = wave_put32(p, at + 4, data_claim);
+    for (i = 0; i < data_len; ++i) p[at++] = (unsigned char)i;
+    wave_put32(p, 4, (uint32_t)(at - 8));
+    return at;
+}
+
+static void test_wave_readers(void)
+{
+    static unsigned char wav[256];
+    HMMIO hmmio = NULL;
+    WAVEFORMATEX* format = NULL;
+    MMCKINFO riff;
+    MMCKINFO data;
+    BYTE out[16];
+    UINT got = 99;
+    size_t size;
+    char path[64];
+    FILE* fp;
+
+    size = wave_build(wav, 1, 10, 10);
+    CHECK(sound_wave_memory_format_read(wav, (LONG)size, &hmmio, &format,
+                                        &riff) == 0,
+          "wave: memory WaveOpenFile succeeds");
+    CHECK(hmmio != NULL && format != NULL, "wave: handle and format returned");
+    CHECK(riff.ckid == FOURCC_RIFF && riff.dwDataOffset == 8,
+          "wave: RIFF chunk info");
+    if (format != NULL)
+        CHECK(format->wFormatTag == 1 && format->nChannels == 2 &&
+                  format->nSamplesPerSec == 22050 &&
+                  format->nAvgBytesPerSec == 88200 &&
+                  format->nBlockAlign == 4 && format->wBitsPerSample == 16 &&
+                  format->cbSize == 0,
+              "wave: PCM format copied with cbSize 0");
+    CHECK(sound_wave_data_chunk_open(&hmmio, &data, &riff) == 0 &&
+              data.ckid == mmioFOURCC('d', 'a', 't', 'a') && data.cksize == 10,
+          "wave: WaveStartDataRead finds data past the odd junk chunk");
+    CHECK(sound_wave_data_read(hmmio, 3, out, &data, &got) == 0 && got == 3 &&
+              out[0] == 0 && out[2] == 2 && data.cksize == 7,
+          "wave: WaveReadFile reads and counts down cksize");
+    CHECK(sound_wave_data_read(hmmio, 16, out, &data, &got) == 0 && got == 7 &&
+              out[0] == 3 && out[6] == 9 && data.cksize == 0,
+          "wave: a read past the chunk stops at its end");
+    CHECK(sound_wave_handle_and_buffer_release(&hmmio, &format) == 0 &&
+              hmmio == NULL && format == NULL,
+          "wave: WaveCloseReadFile clears both");
+
+    /* A data chunk that claims more than the file holds. */
+    size = wave_build(wav, 1, 4, 8);
+    CHECK(sound_wave_memory_format_read(wav, (LONG)size, &hmmio, &format,
+                                        &riff) == 0 &&
+              sound_wave_data_chunk_open(&hmmio, &data, &riff) == 0,
+          "wave: truncated data still opens");
+    CHECK(sound_wave_data_read(hmmio, 8, out, &data, &got) == 0xe103 && got == 0,
+          "wave: reading past the end of the file is ER_CORRUPTWAVEFILE");
+    sound_wave_handle_and_buffer_release(&hmmio, &format);
+
+    /* Non-PCM: cbSize and the extra bytes follow the 16-byte prefix. */
+    size = wave_build(wav, 2, 4, 4);
+    CHECK(sound_wave_memory_format_read(wav, (LONG)size, &hmmio, &format,
+                                        &riff) == 0 && format != NULL &&
+              format->cbSize == 2 &&
+              ((unsigned char*)format)[18] == 0xab &&
+              ((unsigned char*)format)[19] == 0xcd,
+          "wave: non-PCM extra format bytes kept");
+    sound_wave_handle_and_buffer_release(&hmmio, &format);
+
+    /* Not a wave file, and a short 'fmt ' chunk. */
+    size = wave_build(wav, 1, 4, 4);
+    memcpy(wav + 8, "AVI ", 4);
+    CHECK(sound_wave_memory_format_read(wav, (LONG)size, &hmmio, &format,
+                                        &riff) == 0xe101 &&
+              hmmio == NULL && format == NULL,
+          "wave: a non-WAVE form is ER_NOTWAVEFILE and closes");
+    size = wave_build(wav, 1, 4, 4);
+    wave_put32(wav, 28, 14);
+    CHECK(sound_wave_memory_format_read(wav, (LONG)size, &hmmio, &format,
+                                        &riff) == 0xe101 && hmmio == NULL,
+          "wave: a 'fmt ' shorter than PCMWAVEFORMAT is ER_NOTWAVEFILE");
+
+    /* The file variants. */
+    snprintf(path, sizeof path, "/tmp/lrr_wave_%ld.wav", (long)getpid());
+    size = wave_build(wav, 1, 6, 6);
+    fp = fopen(path, "wb");
+    CHECK(fp != NULL, "wave: temp file");
+    if (fp == NULL) return;
+    fwrite(wav, 1, size, fp);
+    fclose(fp);
+    CHECK(sound_wave_file_average_bytes_per_second_read(path) == 88200,
+          "wave: average byte rate from the file");
+    CHECK(sound_wave_file_open_read_chunks(path, &hmmio, &format, &riff) == 0 &&
+              sound_wave_data_chunk_open(&hmmio, &data, &riff) == 0 &&
+              sound_wave_data_read(hmmio, 6, out, &data, &got) == 0 &&
+              got == 6 && out[5] == 5,
+          "wave: file WaveOpenFile, start and read");
+    sound_wave_handle_and_buffer_release(&hmmio, &format);
+    remove(path);
+    CHECK(sound_wave_file_average_bytes_per_second_read(path) == 0,
+          "wave: a missing file has no byte rate");
+    CHECK(sound_wave_file_open_read_chunks(path, &hmmio, &format, &riff) ==
+              0xe100 && hmmio == NULL && format == NULL,
+          "wave: a missing file is ER_CANNOTOPEN");
+}
+
 int main(int argc, char** argv)
 {
+    test_wave_readers();
     test_synthetic();
     test_alias_registry();
     test_sound_enable();
