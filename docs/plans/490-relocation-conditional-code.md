@@ -419,9 +419,9 @@ object.
 Each ticket re-runs `--survey` first: line numbers move as other units
 relocate.
 
-## Proposed ADR 0006 addendum (for the owner; not accepted)
+## ADR 0006 addendum (accepted 2026-11-11; now in ADR 0006)
 
-> **Status: proposed by #490, for the owner to accept or reject.** It amends
+> **Status: accepted by the owner on 2026-11-11 and added to ADR 0006.** Originally proposed by #490. It amends
 > ADR 0006 decision 3 and entropy rule 3.
 >
 > **Reshape commits.** A relocation may be preceded by a *reshape*: a hand
