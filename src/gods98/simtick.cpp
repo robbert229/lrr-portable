@@ -450,7 +450,9 @@ void simtick_bobbins(EngineContext* c)
 }
 
 /* ---- grid marker sweep (FUN_0044eff0) ----------------------------------- */
-static int s_marker_fired = 0;int simtick_marker_count(void)
+static int s_marker_fired = 0;
+
+int simtick_marker_count(void)
 {
     return s_marker_fired;
 }
