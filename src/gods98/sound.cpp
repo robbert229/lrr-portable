@@ -14,9 +14,7 @@
 #include "view.hpp"
 #include "block.hpp"
 #include "game/util.hpp"
-
-/* Sample variant selection shares the game's VC5 rand stream. */
-extern "C" short rng_thunk_draw15(void);
+#include "sound_shared.hpp"
 
 /* The reference scene interfaces are 32-bit COM-style objects. This getter
  * reads the record that DDiSceneAnimationHookCreate owns at vtable +0x1c. */
@@ -594,7 +592,7 @@ uint32_t sound_pcm_hash(Sound* s)
  * slot order (literal strings s_SFX_NULL..s_SFX_AmbientMusicLoop at
  * 0x4a9794..0x4a94d0; indices 7, 0x26, 0x29 and 0x2c are pinned by
  * findings 137/144). */
-static const char* const s_alias_builtins[SOUND_ALIAS_BUILTINS] = {
+const char* const s_alias_builtins[SOUND_ALIAS_BUILTINS] = {
     "SFX_NULL",                  /* 0  */
     "SFX_Stamp",                 /* 1  */
     "SFX_Drill",                 /* 2  */
@@ -642,23 +640,9 @@ static const char* const s_alias_builtins[SOUND_ALIAS_BUILTINS] = {
     "SFX_AmbientMusicLoop",      /* 44 (0x2c) */
 };
 
-/* SoundAliasLookup compares the GameStringHashCompute result, not the
- * original text. Retain the hashes in slot order so collisions resolve to
- * the first registered alias as they do in the reference. */
-static uint32_t* s_alias_hashes;
-static int s_alias_hashes_initialized;
-
 /* Dynamic (config-registered) aliases appended by the lookup, mirroring
  * the corpus DAT_00502a24 slots behind the 45 built-ins. */
-static char* s_alias_dynamic[SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS];
-// GLOBAL: LEGORR 0x00502a24
-static int   s_alias_dynamic_count;
-
-/* The corpus's DAT_00502a2c sound flag word: bit 0 subsystem-enabled
- * (enable-set @ 0x465260), bit 1 dynamic-alias registration, bit 3 batch
- * mode (batch-mode-get @ 0x4652b0). */
-// GLOBAL: LEGORR 0x00502a2c
-static uint32_t s_sound_flags;
+char* s_alias_dynamic[SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS];
 
 static SoundBufferObjectStopHook s_buffer_object_stop_hook;
 static void* s_buffer_object_stop_context;
@@ -784,12 +768,6 @@ void sound_buffer_stop_handle(int buffer_handle)
      * the -1 sentinel, and the returned interface before calling Stop. */
     if (s_bank_sound_on != 0 && buffer_handle != -1 && buffer != NULL)
         audio_buffer_stop(buffer);
-}
-
-// FUNCTION: LEGORR 0x00465190
-void sound_handle_stop_forward(int buffer_handle)
-{
-    sound_buffer_stop_handle(buffer_handle);
 }
 
 void sound_buffer_object_stop_hook_set(SoundBufferObjectStopHook hook,
@@ -1138,148 +1116,6 @@ void sound_source_spatial_refresh(void* sound_object)
 #endif
 }
 
-/* _DAT_00502b2c — the global-cooldown word (the corpus types it as a
- * double; it holds the alias submitted under the cooldown, whose writer
- * lands with #296). */
-// GLOBAL: LEGORR 0x00502b2c
-static double s_cooldown_alias;
-
-static char* s_dupstr(const char* s)
-{
-#if defined(_MSC_VER)
-    /* Keep this allocation in the VC5 CRT heap; the alias table releases it
-     * with free(). The runtime's _strdup performs the same NUL-inclusive
-     * copy as the portable path below. */
-    return _strdup(s);
-#else
-    size_t n = strlen(s) + 1;
-    char* copy = (char*)calloc(n, 1);
-    if (copy != NULL) {
-        memcpy(copy, s, n);
-    }
-    return copy;
-#endif
-}
-
-static uint32_t sound_alias_hash_compute(const char* name)
-{
-    const unsigned char* cursor = (const unsigned char*)name;
-    uint32_t hash = 0u;
-    uint32_t factor = 0x00600937u;
-    uint32_t position = 1u;
-    while (*cursor != 0u) {
-        uint32_t value = (uint32_t)(unsigned char)toupper((int)*cursor);
-        hash += position * factor * value;
-        factor *= 0x00600937u;
-        ++position;
-        ++cursor;
-    }
-    return hash;
-}
-
-static int sound_alias_builtin_hashes_init(void)
-{
-    int index;
-    if (s_alias_hashes_initialized != 0) return 1;
-    if (s_alias_hashes == NULL) {
-        s_alias_hashes = (uint32_t*)engine_heap_alloc(0x7bcL);
-        if (s_alias_hashes == NULL) return 0;
-    }
-    for (index = 0; index < SOUND_ALIAS_BUILTINS; ++index)
-        s_alias_hashes[index] = sound_alias_hash_compute(s_alias_builtins[index]);
-    s_alias_hashes_initialized = 1;
-    return 1;
-}
-
-static void sound_alias_scene_sample_callback(const char* sample_name,
-                                              void* scene_object,
-                                              void* context)
-{
-    int alias;
-    (void)context;
-    if (sound_alias_lookup(sample_name, &alias))
-        sound_submission_route_wrapper(scene_object, alias, 0, 1, NULL);
-}
-
-// FUNCTION: LEGORR 0x00464740
-void sound_alias_registry_init(void)
-{
-    /* Keep the dynamic count and names, as the reference does, but rebuild
-     * their hash slots along with the 45 built-ins. Reinitialization must
-     * not leave the retained aliases represented by zeroed/uninitialized
-     * words in the replacement 0x7bc-byte table. */
-    uint32_t* replacement = (uint32_t*)engine_heap_alloc(0x7bcL);
-    int index;
-    if (replacement != NULL) {
-        uint32_t* previous = s_alias_hashes;
-        s_alias_hashes = replacement;
-        s_alias_hashes_initialized = 0;
-        if (sound_alias_builtin_hashes_init()) {
-            for (index = 0; index < s_alias_dynamic_count; ++index) {
-                s_alias_hashes[SOUND_ALIAS_BUILTINS + index] =
-                    sound_alias_hash_compute(s_alias_dynamic[index]);
-            }
-            if (previous != NULL) engine_heap_free(previous);
-        } else {
-            s_alias_hashes = previous;
-            engine_heap_free(replacement);
-        }
-    }
-
-    /* SoundAliasRegistryInit registers LAB_00464c20 through the scene sample
-     * callback globals. Keep the existing owner callback and add the sound
-     * resolver as an independent, idempotent subscriber. */
-    (void)ddiscene_sample_hook_add(sound_alias_scene_sample_callback, NULL);
-}
-
-// FUNCTION: LEGORR 0x00464c50
-void sound_alias_registration_set(int enable)
-{
-    /* SoundDynamicAliasRegistrationSet @ 0x00464c50: raises/clears the
-     * value-2 bit of DAT_00502a2c (`|= 2` / `&= 0xfffffffd`). */
-    if (enable != 0) {
-        s_sound_flags |= SOUND_FLAG_REG_UNKNOWN;
-    } else {
-        s_sound_flags &= ~SOUND_FLAG_REG_UNKNOWN;
-    }
-}
-
-// FUNCTION: LEGORR 0x00464c70
-int sound_alias_lookup(const char* name, int* out_index)
-{
-    /* SoundAliasLookup @ 0x00464c70 compares GameStringHashCompute values
-     * and returns the first matching slot. */
-    if (name == NULL || out_index == NULL) {
-        return 0; /* corpus's param_1 != 0 guard */
-    }
-    if (!sound_alias_builtin_hashes_init()) return 0;
-    int i;
-    uint32_t hash = sound_alias_hash_compute(name);
-    for (i = 0; i < SOUND_ALIAS_BUILTINS + s_alias_dynamic_count; ++i) {
-        if (s_alias_hashes[i] == hash) {
-            *out_index = i;
-            return 1;
-        }
-    }
-    if ((s_sound_flags & SOUND_FLAG_REG_UNKNOWN) != 0) {
-        if (s_alias_dynamic_count >= SOUND_ALIAS_MAX - SOUND_ALIAS_BUILTINS) {
-            return 0; /* port bound: the corpus writes past its 0x7bc
-                       * table instead of failing */
-        }
-        int index = SOUND_ALIAS_BUILTINS + s_alias_dynamic_count;
-        char* copy = s_dupstr(name);
-        if (copy == NULL) {
-            return 0;
-        }
-        s_alias_hashes[index] = hash;
-        s_alias_dynamic[s_alias_dynamic_count] = copy;
-        ++s_alias_dynamic_count;
-        *out_index = index;
-        return 1;
-    }
-    return 0;
-}
-
 int sound_alias_count(void)
 {
     return SOUND_ALIAS_BUILTINS + s_alias_dynamic_count;
@@ -1304,52 +1140,6 @@ const char* sound_alias_name(int index)
  *  finding 137 flag word DAT_00502a2c).
  * ------------------------------------------------------------------ */
 
-/* SoundSubsystemStopAll @ 0x47b160 — the corpus's disable seam. */
-static void s_subsystem_stop_all(void)
-{
-    sound_subsystem_stop_all();
-}
-
-// FUNCTION: LEGORR 0x00465260
-void sound_subsystem_enable_set(int enable, int stop_active)
-{
-    /* SoundSubsystemEnableSet @ 0x00465260. */
-    if (enable != 0) {
-        s_sound_flags |= SOUND_FLAG_ENABLED;
-        return;
-    }
-    /* Corpus disable order: the flag word is read once, bit 0 cleared and
-     * stored back before stop_active is tested — the store precedes the
-     * stop call, and both sub-paths then zero the cooldown word. */
-    uint32_t cleared = s_sound_flags & ~SOUND_FLAG_ENABLED;
-    s_sound_flags = cleared;
-    if (stop_active != 0) {
-        s_subsystem_stop_all();
-    }
-    s_cooldown_alias = 0.0;
-}
-
-// FUNCTION: LEGORR 0x004652a0
-void sound_subsystem_enable_set_and_stop(int enable)
-{
-    /* SoundSubsystemEnableSetAndStop @ 0x004652a0. */
-    sound_subsystem_enable_set(enable, 1);
-}
-
-// FUNCTION: LEGORR 0x00465370
-int sound_subsystem_enabled(void)
-{
-    return (s_sound_flags & SOUND_FLAG_ENABLED) != 0;
-}
-
-// FUNCTION: LEGORR 0x004652b0
-int sound_batch_mode_get(void)
-{
-    /* SoundBatchModeGet @ 0x004652b0: `return DAT_00502a2c & 8` — the
-     * corpus returns the masked word, so 8 (not 1) when set. */
-    return (int)(s_sound_flags & SOUND_FLAG_BATCH);
-}
-
 double sound_deferred_last_alias(void)
 {
     return s_cooldown_alias;
@@ -1358,28 +1148,6 @@ double sound_deferred_last_alias(void)
 /* ------------------------------------------------------------------ *
  *  Deferred sound request queue (issue #317). See sound.hpp.
  * ------------------------------------------------------------------ */
-
-// GLOBAL: LEGORR 0x00502b30
-static int s_queue_alias[SOUND_REQUEST_QUEUE_CAPACITY];  /* DAT_00502b30 */
-// GLOBAL: LEGORR 0x00502b58
-static int s_queue_loop[SOUND_REQUEST_QUEUE_CAPACITY];   /* DAT_00502b58 */
-// GLOBAL: LEGORR 0x00502bd0
-static int s_sound_queue_count;                                /* DAT_00502bd0 */
-
-// FUNCTION: LEGORR 0x00464f60
-void sound_request_queue_submit(int alias, int loop)
-{
-    /* SoundRequestQueueSubmit @ 0x464f60. */
-    /* 0x464f68 uses the unsigned `jae` full gate. The private count starts at
-     * zero and only this bounded submit path increments it. */
-    if ((unsigned int)s_sound_queue_count >=
-        (unsigned int)SOUND_REQUEST_QUEUE_CAPACITY) {
-        return; /* corpus drop-on-full: no counter bump, no error */
-    }
-    s_queue_alias[s_sound_queue_count] = alias;
-    s_queue_loop[s_sound_queue_count] = loop;
-    ++s_sound_queue_count;
-}
 
 int sound_request_queue_count(void)
 {
@@ -1411,44 +1179,6 @@ void sound_request_queue_clear(void)
  *  Deferred-play global cooldown (issues #326 / #327). See sound.hpp.
  * ------------------------------------------------------------------ */
 
-// GLOBAL: LEGORR 0x00502b24
-static float s_cooldown_timer;   /* _DAT_00502b24 (zero-initialised) */
-// GLOBAL: LEGORR 0x00502b28
-static int   s_cooldown_handle;  /* DAT_00502b28  (zero-initialised) */
-
-/* The corpus compares against a file-backed .rdata dword (0x49e73c, bytes
- * 00 00 00 00). A const zero-initialized static lands with real file bytes
- * in .rdata — plain zero-initialized storage would sit in the image's zero
- * tail, which reccmp-datacmp reads as uninitialized. */
-// GLOBAL: LEGORR 0x0049e73c
-static const float s_deferred_zero = 0.0f; /* DAT_0049e73c role: 0.0 constant */
-
-// FUNCTION: LEGORR 0x00464ec0
-int sound_deferred_timer_set_if_idle(float seconds)
-{
-    /* DeferredSoundTimerSetIfIdle @ 0x464ec0. */
-    if (s_cooldown_timer <= s_deferred_zero) {
-        s_cooldown_handle = -1;
-        s_cooldown_timer = seconds;
-        return 1;
-    }
-    return 0;
-}
-
-// FUNCTION: LEGORR 0x00464e80
-void sound_deferred_play_expire(void)
-{
-    /* DeferredSoundPlayExpire @ 0x464e80. */
-    if (s_cooldown_handle != -1 && s_cooldown_timer > 0.0f) {
-        /* SoundHandleStopForward -> SoundBufferStopHandle. The portable
-         * bank validates the handle and stops that duplicate buffer's
-         * active voice. */
-        sound_handle_stop_forward(s_cooldown_handle);
-        s_cooldown_handle = -1;
-        s_cooldown_timer = 0.0f;
-    }
-}
-
 float sound_deferred_cooldown(void)
 {
     return s_cooldown_timer;
@@ -1467,177 +1197,10 @@ int sound_deferred_handle(void)
  *  Configured sound-variant chains (issues #318 / #324). See sound.hpp.
  * ------------------------------------------------------------------ */
 
-static int s_variant_slot[SOUND_ALIAS_MAX]; /* DAT_00501468 head slot words */
-static int s_variant_next[SOUND_ALIAS_MAX]; /* DAT_0050146c head next words */
+int s_variant_slot[SOUND_ALIAS_MAX]; /* DAT_00501468 head slot words */
+int s_variant_next[SOUND_ALIAS_MAX]; /* DAT_0050146c head next words */
 
-/* Corpus chain pool DAT_005023e0 (stride 8: slot word + next word),
- * allocation counter DAT_00502a28. The corpus identifies nodes by their
- * address and treats 0 as null, so the port reserves node id 0 for "no
- * link" and allocates every node exactly once (monotone counter). */
-typedef struct VariantNode {
-    int slot;   /* bank slot: -1 failed link, stale until first written */
-    int next;   /* node id, 0 = end of chain */
-} VariantNode;
-
-static VariantNode s_variant_pool[SOUND_VARIANT_POOL_NODES];
-static int         s_variant_pool_next;   /* DAT_00502a28 */
-
-static int s_variant_rand(void)
-{
-    /* FUN_00464e20 calls the same 0x48e170 generator used throughout level
-     * and simulation code; keep sample selection on that shared stream. */
-    return (int)rng_thunk_draw15();
-}
-
-static int s_variant_pool_alloc(void)
-{
-    if (s_variant_pool_next >= SOUND_VARIANT_POOL_NODES) {
-        return 0; /* port bound; the corpus scribbles past the pool */
-    }
-    ++s_variant_pool_next;
-    s_variant_pool[s_variant_pool_next].next = 0; /* DAT_005023e4 write */
-    /* The slot field keeps its previous content: unwritten links read as
-     * stale chain data, exactly like the corpus's global region. */
-    return s_variant_pool_next;
-}
-
-// FUNCTION: LEGORR 0x00464d00
-int sound_sample_marker_parse(const char* spec, int alias_index)
-{
-    if (spec == NULL || alias_index < 0 || alias_index >= SOUND_ALIAS_MAX) {
-        return 0; /* corpus: NULL deref / out-of-bounds scribble */
-    }
-
-    /* Chain reset: the head's next word (DAT_0050146c) zeroes — the head
-     * slot itself keeps its value until the first write. */
-    s_variant_next[alias_index] = 0;
-
-    char* buf;
-    size_t spec_length = strlen(spec);
-    size_t token_capacity = 1u;
-    const char* scan;
-    /* Keep the config value immutable, but size the copy from the complete
-     * sample list so long lists are not truncated at the adapter's old
-     * 1023-byte limit. */
-    buf = (char*)malloc(spec_length + 1u);
-    if (buf == NULL) return 0;
-    memcpy(buf, spec, spec_length + 1u);
-    for (scan = spec; *scan != '\0' && scan[1] != '\0'; ++scan) {
-        if (*scan == ',') ++token_capacity;
-    }
-    if (token_capacity > SOUND_VARIANT_TOKENS) {
-        free(buf);
-        return 0;
-    }
-    char* tokens[SOUND_VARIANT_TOKENS];
-    int ntok = sound_variant_split(buf, tokens, ",");
-
-    int stream_mode = 0;            /* '@' marker, sticky (finding 135) */
-    int ok = 1;
-
-    /* Corpus cursors: W (piVar9) is the link written next, C (local_1d4)
-     * the previous link. W starts at the chain head, C starts null. */
-    int w_head = 1, w_id = alias_index;
-    int c_head = 0, c_id = 0;
-    int c_valid = 0;
-
-    for (int t = 0; t < ntok; ++t) {
-        char* p = tokens[t];
-        int looping = (p[0] == '*'); /* '*' = duplicate-buffer request */
-        if (looping) {
-            ++p;
-        }
-        int volume = 0;
-        if (p[0] == '#') {           /* '#N#' millibel marker, finding 142 */
-            ++p;
-            char digits[64];         /* corpus local_1d0[64] */
-            size_t d = 0;
-            if (*p != '#') {         /* empty '#...#' parses as 0 (the
-                                     * corpus reads its stack garbage) */
-                for (; *p != '\0' && *p != '#'; ++p) {
-                    if (d < sizeof(digits) - 1) {
-                        digits[d++] = *p;
-                    }
-                }
-                if (*p == '\0') {
-                    /* Unterminated '#': the corpus walks past the NUL and
-                     * parses its stack; the port parses what it captured
-                     * and loads the (empty) tail as the path. */
-                }
-            }
-            digits[d] = '\0';
-            if (*p == '#') {
-                ++p;                 /* step over the closing '#' */
-            }
-            volume = atoi(digits); /* VC5 _atoi at FUN_0048db70 */
-        }
-        if (p[0] == '@') {
-            stream_mode = 1;
-            ++p;
-        }
-
-        int slot = sound_bank_entry_load(p, stream_mode, looping, volume);
-        if (w_head) {
-            s_variant_slot[w_id] = slot;   /* *piVar9 = iVar5 */
-        } else {
-            s_variant_pool[w_id].slot = slot;
-        }
-
-        if (slot == -1) {
-            ok = 0;  /* failed link stays linked with its -1 (as shipped);
-                      * both cursors stay where they were */
-            continue;
-        }
-        if (c_valid) {
-            int node = s_variant_pool_alloc();
-            if (node != 0) {
-                if (c_head) {
-                    s_variant_next[c_id] = node;
-                } else {
-                    s_variant_pool[c_id].next = node;
-                }
-                w_head = 0;
-                w_id   = node;
-            }
-            /* Pool full: the link is dropped (the corpus scribbles past
-             * the pool region instead). */
-        }
-        c_valid = 1;
-        c_head  = w_head;
-        c_id    = w_id;
-    }
-    free(buf);
-    return ok;
-}
-
-// FUNCTION: LEGORR 0x00464e20
-int sound_variant_select(int alias_index)
-{
-    if (alias_index <= 0 || alias_index >= SOUND_ALIAS_MAX) {
-        return -1; /* corpus: alias 0 (the silent alias) returns -1 and
-                    * negatives scribble out of bounds */
-    }
-    if (s_variant_next[alias_index] != 0) {
-        int count = 1;
-        for (int node = s_variant_next[alias_index]; node != 0;
-             node = s_variant_pool[node].next) {
-            ++count;
-        }
-        int pick = s_variant_rand() % count;
-        int head_slot = s_variant_slot[alias_index];
-        if (pick != 0) {
-            int node = s_variant_next[alias_index];
-            for (int i = 1; i < pick; ++i) {
-                node = s_variant_pool[node].next;
-            }
-            int tmp = s_variant_pool[node].slot;
-            s_variant_pool[node].slot = head_slot;
-            head_slot = tmp; /* corpus swaps picked slot with head */
-        }
-        s_variant_slot[alias_index] = head_slot;
-    }
-    return s_variant_slot[alias_index];
-}
+VariantNode s_variant_pool[SOUND_VARIANT_POOL_NODES];
 
 int sound_variant_chain(int alias_index, int* out_slots, int max)
 {
@@ -1679,62 +1242,17 @@ void sound_bank_entry_volume_set(int slot, int millibels)
         audio_buffer_volume_set(s_bank[slot].buffers[i], s_bank[slot].volume);
 }
 
-// FUNCTION: LEGORR 0x00465010
-void sound_variant_property_set(int alias_index, int millibels)
-{
-    /* ConfiguredVariantPropertySet @ 0x465010. Keep the selector nested in
-     * the volume setter's first argument: MSVC 5 /Od evaluates the setter's
-     * right argument first, staging millibels before calling the selector.
-     * The corpus loads [esp+8] then [esp+4], pushes value then alias, calls
-     * the selector, and reuses the staged value for the volume write. */
-    sound_bank_entry_volume_set(sound_variant_select(alias_index), millibels);
-}
-
-// FUNCTION: LEGORR 0x00465030
-void sound_variant_property_read(int alias_index)
-{
-    /* ConfiguredVariantPropertyRead @ 0x465030: only the variant draw
-     * is observable — the corpus reads IndexedRecordStride134WordGet's
-     * word (@ 0x47b0d0, via sound_bank_entry_volume) but discards it. */
-    int slot = sound_variant_select(alias_index);
-    (void)sound_bank_entry_volume(slot);
-}
-
 /* ------------------------------------------------------------------ *
  *  Sound submission route (issues #325 / #328 / #329 / #330 / #332).
  *  See sound.hpp.
  * ------------------------------------------------------------------ */
-
-/* Corpus batch-deferred record: DAT_00502a30 +0 alias, +4 position
- * word, +8/+12/+16 coordinate words, +20 mode word (stride 6 words,
- * count DAT_00502b20). */
-typedef struct BatchEntry {
-    int      alias;      /* +0  DAT_00502a30 */
-    int      position;   /* +4  DAT_00502a34 */
-    float    xyz[3];     /* +8  DAT_00502a38/3c/40 */
-    uint32_t mode;       /* +20 DAT_00502a44 */
-} BatchEntry;
-
-// GLOBAL: LEGORR 0x00502a44
-static BatchEntry s_batch_entry[SOUND_BATCH_QUEUE_CAPACITY];
-// GLOBAL: LEGORR 0x00502b20
-static int        s_batch_count;   /* DAT_00502b20 */
-
-/* The frame tick's active replay copies (DAT_00502b80 alias words,
- * DAT_00502ba8 loop words, count DAT_00502bd4). */
-// GLOBAL: LEGORR 0x00502b80
-static int s_active_alias[SOUND_REQUEST_QUEUE_CAPACITY];
-// GLOBAL: LEGORR 0x00502ba8
-static int s_active_loop[SOUND_REQUEST_QUEUE_CAPACITY];
-// GLOBAL: LEGORR 0x00502bd4
-static int s_active_count;
 
 /* Instance-layer play seam. The portable audio API can represent an
  * explicit source position as stereo pan for one-shot samples, while
  * object-attached sources are tracked through the existing spatial hooks.
  * Stream selection and loop-buffer ownership remain with the bank path. */
 // FUNCTION: LEGORR 0x0047ad70
-static int s_play_seam(int mode, int position, int slot, int loop,
+int s_play_seam(int mode, int position, int slot, int loop,
                        const float* xyz)
 {
     Sound* sample;
@@ -1784,118 +1302,6 @@ static int s_play_seam(int mode, int position, int slot, int loop,
     }
 }
 
-// FUNCTION: LEGORR 0x00464fa0
-int sound_alias_play(int alias, int loop)
-{
-    /* SoundAliasPlay @ 0x464fa0. */
-    if ((s_sound_flags & SOUND_FLAG_BATCH) == 0) {
-        if (alias != 0 && (s_sound_flags & SOUND_FLAG_ENABLED) != 0) {
-            int slot = sound_variant_select(alias);
-            /* Corpus quirk kept: a chain head reading 0 — a real bank
-             * slot, or the unwritten head — counts as "no sound". */
-            if (slot != 0) {
-                return s_play_seam(2, 0, slot, loop, NULL);
-            }
-        }
-    } else if (s_batch_count < SOUND_BATCH_QUEUE_CAPACITY) {
-        /* Deferred alias form writes only the alias and clears the mode
-         * word's positional bit — the loop bit (and position words)
-         * keep whatever an earlier batch record left in the slot
-         * (corpus quirk: the deferred alias form never carries a loop
-         * flag). */
-        s_batch_entry[s_batch_count].alias = alias;
-        s_batch_entry[s_batch_count].mode &= ~1u;
-        ++s_batch_count;
-        return -1;
-    }
-    return -1;
-}
-
-// FUNCTION: LEGORR 0x00465090
-int sound_positional_sound_submit(int position, int alias, int loop,
-                                  int positional, const float* xyz)
-{
-    /* PositionalSoundSubmit @ 0x465090. */
-    if ((s_sound_flags & SOUND_FLAG_BATCH) == 0) {
-        if (alias != 0 && (s_sound_flags & SOUND_FLAG_ENABLED) != 0) {
-            int slot = sound_variant_select(alias);
-            if (slot != 0) {
-                if (positional != 0) {
-                    return s_play_seam(0, position, slot, loop, NULL);
-                } else {
-                    return s_play_seam(1, 0, slot, loop, xyz);
-                }
-            }
-        }
-    /* ORIG 0x4650a4 also uses `jae`; the queue count is bounded by both
-     * append gates and reset by replay drain @ 0x4652d0. */
-    } else if ((unsigned int)s_batch_count <
-               (unsigned int)SOUND_BATCH_QUEUE_CAPACITY) {
-        BatchEntry* e = &s_batch_entry[s_batch_count];
-        ++s_batch_count;
-        e->alias = alias;
-        e->position = position;
-        e->mode = (uint32_t)((((positional & 1) << 1) | (loop & 1)) << 1)
-                | (e->mode & 0xfffffff9u) | 1u;
-        if (xyz != NULL) {
-            e->xyz[0] = xyz[0];
-            e->xyz[1] = xyz[1];
-            e->xyz[2] = xyz[2];
-        }
-    }
-    return 0;
-}
-
-// FUNCTION: LEGORR 0x00465050
-int sound_submission_route_wrapper(const void* wrapped_position, int alias,
-                                    int loop, int positional,
-                                    const float* xyz)
-{
-    int position = 0;
-    if (wrapped_position != NULL) {
-        position = (int)scene_object_wrapped_pointer_get(wrapped_position);
-    }
-    return sound_positional_sound_submit(position, alias, loop, positional, xyz);
-}
-
-// FUNCTION: LEGORR 0x004652d0
-void sound_batch_queue_drain(int batch_set, int replay)
-{
-    /* SoundBatchQueueDrain @ 0x4652d0. */
-    if (batch_set != 0) {
-        s_sound_flags |= SOUND_FLAG_BATCH; /* raise the bit and leave */
-        return;
-    }
-    s_sound_flags &= ~SOUND_FLAG_BATCH;
-    if (replay == 0) {
-        return;
-    }
-    /* The corpus uses an unsigned zero gate and an unsigned back edge
-     * (0x465309 jbe / 0x46535a jb). Both append sites cap this private
-     * count at SOUND_BATCH_QUEUE_CAPACITY, so it remains nonnegative. */
-    for (unsigned int i = 0; i < (unsigned int)s_batch_count; ++i) {
-        const BatchEntry* e = &s_batch_entry[i];
-        const uint32_t m = e->mode;
-        if ((m & 1u) == 0) {
-            /* Deferred alias form replays with the stale loop bit. */
-            sound_alias_play(e->alias, (int)((m << 30) >> 31));
-        } else {
-            sound_positional_sound_submit(e->position, e->alias,
-                                          (int)((m << 30) >> 31),
-                                          (int)((m << 29) >> 31),
-                                          (const float*)e->xyz);
-        }
-    }
-    s_batch_count = 0;
-}
-
-// FUNCTION: LEGORR 0x004652c0
-void sound_deferred_queue_drain(int batch_set)
-{
-    /* SoundDeferredQueueDrain @ 0x4652c0. */
-    sound_batch_queue_drain(batch_set, 1);
-}
-
 int sound_batch_queue_count(void)
 {
     return s_batch_count;
@@ -1922,38 +1328,6 @@ int sound_batch_queue_get(int index, int* alias, int* position,
         xyz[2] = s_batch_entry[index].xyz[2];
     }
     return 1;
-}
-
-// FUNCTION: LEGORR 0x004651a0
-void sound_subsystem_frame_tick(float dt)
-{
-    /* SoundSubsystemFrameTick @ 0x4651a0. */
-    const int batch_saved = sound_batch_mode_get();
-    int i;
-    s_cooldown_timer -= dt;            /* _DAT_00502b24 step */
-    sound_batch_queue_drain(0, 0);     /* batch off for the replay pass */
-    /* Replay pass: the corpus re-reads the active count every iteration
-     * (0x4651e2) and gates it unsigned, so neither is hoisted. */
-    for (i = 0; i < (unsigned) s_active_count; ++i) {
-        sound_alias_play(s_active_alias[i], s_active_loop[i]);
-    }
-    if (batch_saved != 0) {
-        sound_deferred_queue_drain(1); /* restore batch mode */
-    }
-    /* Rotate the pending queue (#317) into the active replay copies:
-     * two rep-movs passes over the pending count, then the count moves
-     * and the pending count clears. */
-    for (i = 0; i < (unsigned) s_sound_queue_count; ++i) {
-        s_active_alias[i] = s_queue_alias[i];
-    }
-    for (i = 0; i < (unsigned) s_sound_queue_count; ++i) {
-        s_active_loop[i] = s_queue_loop[i];
-    }
-    s_active_count = s_sound_queue_count;
-    s_sound_queue_count = 0;
-    /* SoundSourceSpatialRefreshAll @ 0x47b390: refresh attached sources,
-     * remove stale associations, and advance both streamed-wave slots. */
-    sound_source_spatial_refresh_all();
 }
 
 int sound_active_request_count(void)
@@ -2005,45 +1379,6 @@ double sound_streamed_wave_buffer_step_rate(int slot)
     uint32_t bytes = (snd != NULL) ? snd->file_len : 0u;
     double rate = (snd != NULL) ? (double)snd->format.byte_rate : 0.0;
     return (double)bytes / rate;
-}
-
-// FUNCTION: LEGORR 0x00465160
-double sound_object_duration_get(int alias)
-{
-    /* SoundObjectDurationGet @ 0x465160: duration of whatever the alias's
-     * chain selects — one PRNG draw per call (a global-cooldown submit
-     * therefore draws twice: play's select and this one, as corpus). The
-     * corpus tests the select (test eax,eax / je 0x46517b): a zero slot
-     * never reaches the step-rate, it loads the 0x49e73c zero instead. */
-    int slot = sound_variant_select(alias);
-    if (slot != 0) {
-        return sound_streamed_wave_buffer_step_rate(slot);
-    }
-    return s_deferred_zero; /* the corpus's test/je tail: a zero chain head
-                             * (no sound) loads the 0x49e73c zero instead */
-}
-
-// FUNCTION: LEGORR 0x00464ef0
-int sound_submit_with_global_cooldown(int alias, int* out_handle)
-{
-    /* SoundSubmitWithGlobalCooldown @ 0x464ef0. */
-    if (s_cooldown_timer <= 0.0f) {
-        /* The target stores the encoded handle returned by
-         * SoundBufferPlayWithPosition through the SoundAliasPlay call. */
-        int handle = sound_alias_play(alias, 0);
-
-        if (handle != -1) {
-            s_cooldown_alias = (double)alias;   /* _DAT_00502b2c */
-            s_cooldown_timer =
-                (float)(sound_object_duration_get(alias) * 25.0);
-            s_cooldown_handle = handle;         /* DAT_00502b28 */
-            if (out_handle != NULL) {
-                *out_handle = handle;
-            }
-            return 1;
-        }
-    }
-    return 0;
 }
 
 // FUNCTION: LEGORR 0x00416150

@@ -21,4 +21,26 @@ extern void* s_light_effect_config_load_context;
 int light_effect_config_range_pair_read(BlockFile* config, const char* path, float* minimum, float* maximum);
 uint32_t light_effect_float_word(float value);
 
+typedef struct TransientEffectInstanceLinks {
+    void* instance;
+    void* scene_object;
+    void* render_record;
+    struct TransientEffectInstanceLinks* next;
+    struct TransientEffectInstanceLinks* previous;
+    struct TransientEffectInstanceLinks* all_next;
+} TransientEffectInstanceLinks;
+
+extern TransientEffectHooks s_transient_effect_hooks;
+extern TransientEffectQuadBasisGetHook s_transient_effect_quad_basis_hook;
+extern void* s_transient_effect_quad_basis_context;
+extern TextureSurface* s_transient_effect_textures[12];
+extern uint32_t s_transient_effect_texture_count;
+extern void* s_transient_effect_head;
+extern void* s_transient_effect_tail;
+extern TransientEffectInstanceLinks* s_transient_effect_links;
+extern int s_transient_effect_enabled;
+TransientEffectInstanceLinks* transient_effect_links_find( const void* instance);
+TransientEffectInstanceLinks* transient_effect_links_add(void* instance);
+void transient_effect_link_pointer_set(void* instance, size_t offset, void* value);
+
 #endif /* LRR_GAME_EFFECTS_SHARED_HPP */

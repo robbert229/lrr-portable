@@ -65,4 +65,8 @@ extern void* s_view_rect_a[DAT_WINDOW_COUNT];
 extern void* s_view_rect_b[DAT_WINDOW_COUNT];
 extern int s_view_region[DAT_WINDOW_COUNT];
 
+extern uint32_t s_scene_effect_head;
+extern uint32_t s_scene_effect_tail;
+extern uint32_t s_scene_effect_shared;
+
 #endif /* LRR_CRT_CRT_SHARED_HPP */

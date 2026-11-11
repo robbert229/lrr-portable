@@ -2677,18 +2677,9 @@ uint32_t first_set_flag_ordinal(uint32_t mask)
  * 0x00552128/0x0055212c/0x00552130, so each word is its own annotated
  * static (the s_indexed_window precedent); all three are zero-filled
  * virtual tail, matching the zero-initialized statics here. */
-static uint32_t s_scene_effect_head;     /* DAT_00552128 role: transient-effect head */
-static uint32_t s_scene_effect_tail;     /* DAT_0055212c role: transient-effect tail */
-static uint32_t s_scene_effect_shared;   /* DAT_00552130 role: shared texture */
-
-// FUNCTION: LEGORR 0x00465380
-int scene_effect_registry_reset(void)
-{
-    s_scene_effect_head = 0u;    /* corpus clears in address order */
-    s_scene_effect_tail = 0u;
-    s_scene_effect_shared = 0u;
-    return 1;
-}
+uint32_t s_scene_effect_head;     /* DAT_00552128 role: transient-effect head */
+uint32_t s_scene_effect_tail;     /* DAT_0055212c role: transient-effect tail */
+uint32_t s_scene_effect_shared;   /* DAT_00552130 role: shared texture */
 
 void scene_effect_registry_words_peek(uint32_t out_words[3])
 {
