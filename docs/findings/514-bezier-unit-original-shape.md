@@ -169,54 +169,52 @@ This change refreshes the *match baseline* under ADR 0005 entropy rule 2.
 `make reccmp-check` on a clean checkout of `0cfa8749` passes, so every
 change below is this change's.
 
-Outside the unit, 6 functions rose and 4 fell. Inside it, 3 rose and 1
-fell (the evaluator, asm to C, above).
+**Declarations kept for the count (rule 1).** Deleting the unit's six
+superseded declarations from `view.hpp` (recipe step 7) renumbered every
+file that includes it. Four functions in unchanged files fell, among them
+`lava_erosion_delay_from_cell` (`0040e9c0`), from 100.00% to 84.21% with the
+same 16 instructions in another order. Deleting SceneObjectModeIsOne's
+declaration from `record.hpp` moved `terrain_cell_normal_sample`
+(`004512d0`) from 11.22% to 10.31% in the same way. Restoring each header
+alone brought its functions back exactly. So, following rule 1's preference
+for zero-drift techniques:
 
-**What moved them.** Restoring only `view.hpp` to `main` brings all four
-outside drops back to their baselines exactly, with every other change in
-place. `view.hpp` lost the unit's six superseded declarations (recipe
-step 7), and every file that includes it was renumbered. Keeping stale
-declarations to hold the count would be a symbol pad, which entropy rule 3
-forbids.
+- `view.hpp` keeps the six old C++ declarations (`vec2_dist_alt`,
+  `vector2_set_length`, `cubic_bezier_point_evaluate`,
+  `bezier_curve_samples_build`, `polyline_segment_lengths_total`,
+  `path_arc_length_interpolate`) with their old `float*`/`uint32_t*`
+  signatures. Nothing defines or calls them. A comment says they are kept
+  only for the declaration count (finding 506) until the #388 relocation.
+  They overload the `extern "C"` versions in `bezier.h` without
+  conflicting, because the parameter types differ.
+- `record.hpp` keeps `scene_object_mode_is_one`. Its signature is the same
+  as `bezier.h`'s, so a C++-linkage copy would conflict in `effects.cpp`,
+  which includes both. It is declared `extern "C"` in place instead, so it
+  declares the real function, and `test_c_boundaries.cpp` checks it against
+  `bezier.h`.
 
-The four drops are in files whose source did not change. The listings below
-compare whole functions from single-function objects on `0cfa8749` and on
-this change:
+With both, every one of those functions is back at its `main` score, and
+the drift rises that the deletions caused are gone too.
+
+**What remains.** Outside the unit, one function rose and one fell. Inside
+it, 3 rose and 1 fell (the evaluator, asm to C, above).
 
 | Address | Function | File | before | after | Listing difference | Class |
 | --- | --- | --- | ---: | ---: | --- | --- |
-| `0040e9c0` | `lava_erosion_delay_from_cell` | `level.cpp` | 100.00 | 84.21 | the same 16 instructions; two loads swap places and `imul` takes the other operand from memory | drift, rule 2 |
-| `00471370` | `cmd_place_ray_candidate_check` | `cmd.cpp` | 15.30 | 15.22 | one extra `fxch st(1)`, branch offsets +2 | drift, rule 2 (see below) |
-| `0047d800` | `surface_bitmap24_bit_surface_convert` | `surface.cpp` | 29.34 | 29.17 | registers, stack slots and instruction order; one extra stack reload (`mov ecx, [esp+0x40]`) | drift, rule 2 (see below) |
-| `00489c30` | `indexed_bitmap_palette_data_prepare` | `texture.cpp` | 32.40 | 32.30 | registers and instruction order; `imul eax, [ebx]` becomes a load plus `imul ecx, eax` (one extra `mov`) | drift, rule 2 (see below) |
+| `0046fc70` | `object_flight_curve_record_init` | `effects.cpp` | 17.14 | 17.25 | now calls the unit, as the original does | callee contract |
+| `004882e0` | `scene_node_transform_matrix_apply` | `view.cpp` | 14.00 | 13.97 | x87 stack order, `fxch` placement and spill order; one extra instruction net | drift, rule 2 (see below) |
 
-**For the owner.**
+`scene_node_transform_matrix_apply`'s source did not change, but its file
+did: `view.cpp` lost the unit's definitions and its `0049e050` static,
+which the conversion must delete. Single-function listings from `0cfa8749`
+and from this change differ only in x87 scheduling.
 
-- `lava_erosion_delay_from_cell` loses an exact match (−15.79 points)
-  without any change in its instructions, only in their order. Rule 2
-  covers it, but it is the largest single drop.
-- The last three each gain one instruction. In all three the extra
-  instruction comes from register allocation: an x87 exchange, a stack
-  reload, or a load split from a memory operand. Findings 510 and 512
-  classified the same kind of change as rule 2 drift, and these are
-  classified the same way. Each drop is under 0.2 points.
-  `cmd_place_ray_candidate_check` is the function finding 512 reported with
-  the same extra `fxch st(1)`; #427's baseline had it back at 15.30.
+**For the owner.** That listing is one instruction longer (an `fxch`).
+Findings 510 and 512 classified x87 stack exchanges as rule 2 drift, and it
+is classified the same way. The drop is 0.03 points.
 
-The six outside rises:
-
-| Address | Function | before | after | Cause |
-| --- | --- | ---: | ---: | --- |
-| `0046fc70` | `object_flight_curve_record_init` | 17.14 | 17.25 | now calls the unit, as the original does |
-| `00484ba0` | `flic_packed_triplet_table_to_word_build_target` | 82.76 | 100.00 | drift |
-| `004882e0` | `scene_node_transform_matrix_apply` | 14.00 | 16.21 | drift |
-| `0044e0c0` | `terrain_create_retail` | 11.44 | 11.73 | drift |
-| `004512d0` | `terrain_cell_normal_sample` | 11.22 | 11.34 | drift |
-| `00444680` | `entity_step_movement_vector_resolve` | 5.23 | 5.24 | drift |
-
-**Net effect, both scopes:** 9 functions rose and 5 fell, a net of
-+107.65 percentage points across common functions. No function was newly
-mapped or lost.
+**Net effect, both scopes:** 4 functions rose and 2 fell, a net of +103.89
+percentage points. No function was newly mapped or lost.
 
 **Whole binary** (`make match-progress`, `docs/coverage/binary-progress.json`):
 
@@ -224,8 +222,8 @@ mapped or lost.
 | --- | ---: | ---: |
 | Accuracy, game-only | 49.74% | 49.79% |
 | Accuracy, full | 54.07% | 54.12% |
-| Exact-function code bytes | 40,883 | 40,898 |
-| `.text` identical at original addresses | 18,260 (2.84%) | 18,426 (2.87%) |
+| Exact-function code bytes | 40,883 | 40,883 |
+| `.text` identical at original addresses | 18,260 (2.84%) | 18,239 (2.84%) |
 | Adjacent order inversions, full | 908 | 907 |
 
 ## Native port
