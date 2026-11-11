@@ -5,8 +5,10 @@ import re
 import sys
 
 # The original returns a pointer to a stack result; preserve its shape until
-# the view unit is reconstructed (finding 379). MSVC 5 warns about that ABI.
-ALLOW = [re.compile(r'[/\\]src[/\\]gods98[/\\]view\.cpp\(\d+\) : warning C4172: returning address of local variable or temporary$', re.I),
+# its unit is reconstructed (finding 379). MSVC 5 warns about that ABI. The
+# function, com_property_result_get (0x00477310), was relocated with G98-003
+# (Viewports.c) from view.cpp into viewports.cpp.
+ALLOW = [re.compile(r'[/\\]src[/\\]gods98[/\\]viewports\.cpp\(\d+\) : warning C4172: returning address of local variable or temporary$', re.I),
          # This toolchain omits the optional resource-compiler message catalog.
          re.compile(r'^WARNING:  missing cvtres\.err; displaying error numbers without messages\.$')]
 DIAGNOSTIC = re.compile(r'\[(?:ERROR|WARNING|CRITICAL)\]|\bwarning\s+(?:[A-Z]+\d+\s*:|:)|^\s*(?:warning|error|fatal error)\s*:', re.I)
