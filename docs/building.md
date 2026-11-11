@@ -45,6 +45,25 @@ original game files and are skipped when those files are not configured.
 Passing tests establishes the behavior covered by those tests; gameplay
 comparison against the original is a separate check.
 
+## Continuous integration
+
+The `native-build` workflow (`.github/workflows/native-build.yml`) runs on pull
+requests and pushes to `main`. Its check is required for merging. It checks out
+the repository without submodules, runs `tools/setup-miniwin.sh` to fetch only
+`miniwin/`, and then runs the native commands from [Tests](#tests) with
+`TEST_WADS_DIR` unset, so only the synthetic-fixture tests run.
+
+SDL3 comes from a pinned source build of release-3.4.18 (commit `829a65d7`),
+configured headless with `SDL_UNIX_CONSOLE_BUILD` and without X11 or Wayland.
+The tests use SDL's dummy and offscreen drivers. The build is cached by SDL
+version. `ubuntu-24.04` has no SDL3 development package, so a distro package is
+not used. When you change the SDL version or its build recipe, update
+`SDL_VERSION`, `SDL_COMMIT`, or `SDL_CACHE_VERSION` in the workflow.
+
+The matching build, the Reccmp gate (`make reccmp-check`), and real-data tests
+need licensed inputs and the MSVC 5.0 toolchain. They stay local and are not run
+in CI.
+
 ## Windows reference backend
 
 The reference backend builds a 32-bit Windows executable for comparison with
