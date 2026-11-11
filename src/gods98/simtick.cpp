@@ -21,8 +21,6 @@
 #include "view.hpp"
 #include "simtick_shared.hpp"
 
-extern uint32_t s_motion_jitter_flags;
-
 namespace unported_ledger_stubs {
 int ledger_stub_00466490_CellSightRayCheckAndFlag(const EntitySlot* observer);
 }
