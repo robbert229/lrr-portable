@@ -24,14 +24,7 @@
 #include "view_shared.hpp"
 #include "view_for_tile_variants.hpp"
 #include "view_for_camera_control.hpp"
-
-#if defined(_MSC_VER)
-#define VIEW_COM_CALL __stdcall
-#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
-#define VIEW_COM_CALL __attribute__((stdcall))
-#else
-#define VIEW_COM_CALL
-#endif
+#include "view_for_com_object_tree.hpp"
 
 /* Reconstruction-owned globals for corpus constants. */
 float g_view_follow_scale = 1.0f;   /* DAT_005560a4 (grid pick follow scale) */
@@ -59,8 +52,8 @@ void* s_terrain_point_pick_user;
 ViewportPointDispatchHooks s_viewport_point_dispatch_hooks;
 TexturedSceneDrawHooks s_textured_scene_draw_hooks;
 
-static SceneOwnerLinkReleaseFn s_owner_link_interface_release;
-static SceneOwnerLinkReleaseFn s_owner_link_child_release;
+SceneOwnerLinkReleaseFn s_owner_link_interface_release;
+SceneOwnerLinkReleaseFn s_owner_link_child_release;
 CameraViewContextReleaseHook s_view_context_release_hook;
 CameraViewContextFreeHook s_view_context_free_hook;
 void* s_view_context_close_context;
@@ -82,7 +75,7 @@ static VideoAspectRatioQueryHook s_video_aspect_ratio_query_hook;
 static void* s_video_aspect_ratio_query_context;
 static SceneContextHooks s_scene_context_hooks;
 static SceneActFrameScanHooks s_scene_act_frame_scan_hooks;
-static SceneActFrameRecordCloneHooks s_scene_act_frame_record_clone_hooks;
+SceneActFrameRecordCloneHooks s_scene_act_frame_record_clone_hooks;
 static EntityVisualResourceLoadHooks s_entity_visual_resource_load_hooks;
 static DDiSceneAnimationHookRecordHooks s_ddiscene_animation_hook_record_hooks;
 static DDiSceneFrameRecordFindHooks s_ddiscene_frame_record_find_hooks;
@@ -145,7 +138,7 @@ static char* s_shared_object_directory_root;
 static SharedObjectEntryResolveFn s_shared_object_entry_resolve;
 static SharedObjectSoundEnabledFn s_shared_object_sound_enabled;
 static SharedObjectSoundSubmitFn s_shared_object_sound_submit;
-static void* s_scene_material_manager;
+void* s_scene_material_manager;
 static SceneEntryExpandOps s_scene_entry_expand_ops;
 static SharedObjectCloneOps s_shared_object_clone_ops;
 QuadMeshRenderHooks s_quad_mesh_render_hooks;
@@ -195,7 +188,7 @@ static void ddiscene_payload_owner_detach_call(void* owner, void* payload,
 }
 #endif
 
-static void ddiscene_payload_interface_release(void* interface_object)
+void ddiscene_payload_interface_release(void* interface_object)
 {
     void** vtable;
     if (interface_object == NULL) return;
@@ -649,52 +642,6 @@ void scene_act_frame_record_clone_hooks_set(
     else s_scene_act_frame_record_clone_hooks = *hooks;
 }
 
-/* The `words[3] != 0` record form is a shallow record clone with a retained
- * interface in word 1. The zero form builds a fresh scene-animation record;
- * its QueryInterface and animation-list clone calls are COM-specific and
- * stay behind the typed full_record_clone seam. */
-// FUNCTION: LEGORR 0x00489660
-SceneActFrameRecord* scene_act_frame_record_clone_or_create(
-    const SceneActFrameRecord* source, uint32_t clone_argument,
-    uintptr_t* output_value)
-{
-    SceneActFrameRecord* copy;
-    if (source == NULL) return NULL;
-    copy = (SceneActFrameRecord*)engine_heap_alloc(
-        (long)sizeof(SceneActFrameRecord));
-    if (copy == NULL) return NULL;
-    if (source->words[3] != 0u) {
-        memcpy(copy, source, sizeof(*copy));
-        copy->words[0] = 0u;
-        if (source->words[1] != 0u) {
-            if (s_scene_act_frame_record_clone_hooks.interface_retain == NULL) {
-                engine_heap_free(copy);
-                return NULL;
-            }
-            copy->words[1] = (uintptr_t)
-                s_scene_act_frame_record_clone_hooks.interface_retain(
-                    (void*)source->words[1],
-                    s_scene_act_frame_record_clone_hooks.context);
-            if (copy->words[1] == 0u) {
-                engine_heap_free(copy);
-                return NULL;
-            }
-        }
-    }
-    else {
-        memset(copy, 0, sizeof(*copy));
-        if (s_scene_act_frame_record_clone_hooks.full_record_clone == NULL ||
-            !s_scene_act_frame_record_clone_hooks.full_record_clone(
-                source, clone_argument, copy,
-                s_scene_act_frame_record_clone_hooks.context)) {
-            engine_heap_free(copy);
-            return NULL;
-        }
-    }
-    if (output_value != NULL) *output_value = source->words[7];
-    return copy;
-}
-
 void entity_visual_resource_load_hooks_set(
     const EntityVisualResourceLoadHooks* hooks)
 {
@@ -937,15 +884,6 @@ void ddiscene_animation_hook_create(void* scene_object, int callback,
     }
 }
 
-typedef void (VIEW_COM_CALL *DdiTimedInterfaceTimeCall)(void*, float);
-typedef uintptr_t (VIEW_COM_CALL *DdiTimedInterfaceRefresh)(void*, void**);
-typedef void (VIEW_COM_CALL *DdiTimedInterfaceApply)(void*, uintptr_t,
-                                                     void**);
-typedef void (VIEW_COM_CALL *DdiTimedInterfaceRecordCall)(void*, uint32_t,
-                                                          void**);
-typedef void (VIEW_COM_CALL *DdiTimedInterfaceValueCall)(void*, uintptr_t);
-typedef void (VIEW_COM_CALL *DdiTimedInterfaceRelease)(void*);
-
 namespace unported_ledger_stubs {
 void ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
     void* shared_object, float time);
@@ -953,124 +891,6 @@ void* ledger_stub_00475e40_DDiSceneFrameRecordFind(
     void* action_interface, const char* action_name, int selector);
 void ledger_stub_00487d50_ComInterfaceQueryAndContextDispatch(
     void* owner, void* track);
-}
-
-// FUNCTION: LEGORR 0x004897e0
-/* DDiSceneTimedHookDispatch (FUN_004897e0): root interfaces receive only the
- * requested time. Nested child interfaces use the x86 ABI's +0x5c out-slot,
- * pass its return value and a local out-slot to +0x74, release the interface
- * produced by +0x5c, then run the record-child +0x38 callback. */
-void ddiscene_timed_hook_dispatch(void* hook_record, float time,
-                                  void* interface_value)
-{
-    SceneActFrameRecord* record = (SceneActFrameRecord*)hook_record;
-    SceneActFrameRecord* shared;
-    void** shared_children;
-    void** record_children;
-    void* updated_interface = interface_value;
-    uintptr_t i;
-    if (record == NULL) return;
-    shared = (SceneActFrameRecord*)record->words[0];
-    if (shared == NULL) {
-        if (record->words[3] != 0u) {
-            unported_ledger_stubs::
-                ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
-                (void*)record->words[1], time);
-        }
-        else if (record->words[2] != 0u) {
-            void* object = (void*)record->words[2];
-            void** vtable = *static_cast<void***>(object);
-            if (vtable != NULL && vtable[0x38 / 4] != NULL) {
-                DdiTimedInterfaceTimeCall call =
-                    reinterpret_cast<DdiTimedInterfaceTimeCall>(
-                        vtable[0x38 / 4]);
-                call(object, time);
-            }
-        }
-        return;
-    }
-    if (shared->words[3] != 0u) {
-        unported_ledger_stubs::
-            ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
-            (void*)shared->words[1], time);
-    }
-    else if (shared->words[2] != 0u) {
-        void* object = (void*)shared->words[2];
-        void** vtable = *static_cast<void***>(object);
-        if (vtable != NULL && vtable[0x38 / 4] != NULL) {
-            DdiTimedInterfaceTimeCall call =
-                reinterpret_cast<DdiTimedInterfaceTimeCall>(
-                    vtable[0x38 / 4]);
-            call(object, time);
-        }
-    }
-    shared_children = (void**)shared->words[5];
-    record_children = (void**)record->words[5];
-    for (i = 0u; i < record->words[6]; ++i) {
-        void* child = shared_children != NULL ? shared_children[i] : NULL;
-        if (child != NULL) {
-            void* child_result = NULL;
-            void* released_interface;
-            uintptr_t update_value = 0u;
-            void** vtable = *static_cast<void***>(child);
-            if (vtable != NULL) {
-                if (vtable[0x5c / 4] != NULL) {
-                    DdiTimedInterfaceRefresh refresh =
-                        reinterpret_cast<DdiTimedInterfaceRefresh>(
-                            vtable[0x5c / 4]);
-                    update_value = refresh(child, &updated_interface);
-                }
-                if (vtable[0x74 / 4] != NULL) {
-                    DdiTimedInterfaceApply apply =
-                        reinterpret_cast<DdiTimedInterfaceApply>(
-                            vtable[0x74 / 4]);
-                    apply(child, update_value, &child_result);
-                }
-            }
-            released_interface = updated_interface;
-            if (released_interface != NULL) {
-                void** updated_vtable =
-                    *static_cast<void***>(released_interface);
-                if (updated_vtable != NULL && updated_vtable[2] != NULL) {
-                    DdiTimedInterfaceRelease release =
-                        reinterpret_cast<DdiTimedInterfaceRelease>(
-                            updated_vtable[2]);
-                    release(released_interface);
-                }
-            }
-        }
-        if (record_children != NULL && record_children[i] != NULL) {
-            void* record_child = record_children[i];
-            void* child_output = NULL;
-            void** vtable = *static_cast<void***>(record_child);
-            if (vtable != NULL && vtable[0x38 / 4] != NULL) {
-                DdiTimedInterfaceRecordCall call =
-                    reinterpret_cast<DdiTimedInterfaceRecordCall>(
-                        vtable[0x38 / 4]);
-                call(record_child, 0u, &child_output);
-            }
-        }
-    }
-    if (updated_interface != NULL) {
-        if (shared->words[3] != 0u) {
-            uint32_t output_bits = (uint32_t)(uintptr_t)updated_interface;
-            float output_value;
-            memcpy(&output_value, &output_bits, sizeof(output_value));
-            unported_ledger_stubs::
-                ledger_stub_00487ba0_SharedObjectAnimationAndTimedEventUpdate(
-                (void*)shared->words[1], output_value);
-        }
-        else if (shared->words[2] != 0u) {
-            void* object = (void*)shared->words[2];
-            void** vtable = *static_cast<void***>(object);
-            if (vtable != NULL && vtable[0x38 / 4] != NULL) {
-                DdiTimedInterfaceValueCall call =
-                    reinterpret_cast<DdiTimedInterfaceValueCall>(
-                        vtable[0x38 / 4]);
-                call(object, (uintptr_t)updated_interface);
-            }
-        }
-    }
 }
 
 // FUNCTION: LEGORR 0x00475300
@@ -1572,50 +1392,6 @@ void shared_object_timed_sound_event_update(void* owner, void* track)
 void scene_material_manager_set(void* manager)
 {
     s_scene_material_manager = manager;
-}
-
-/* The manager's +0x34 creates an IDirect3DRMMaterial. The reference then
- * applies two RGB triples through material slots +0x34 and +0x30. */
-// FUNCTION: LEGORR 0x004894c0
-void* scene_material_create(float color0, float color1, float color2,
-                            float color3, float color4, float color5,
-                            float power)
-{
-#if defined(_MSC_VER)
-#define SCENE_MATERIAL_STDCALL __stdcall
-#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
-#define SCENE_MATERIAL_STDCALL __attribute__((stdcall))
-#else
-#define SCENE_MATERIAL_STDCALL
-#endif
-    typedef int32_t (SCENE_MATERIAL_STDCALL *MaterialCreateMethod)(
-        void*, float, void**);
-    typedef int32_t (SCENE_MATERIAL_STDCALL *MaterialColorMethod)(
-        void*, float, float, float);
-    void** manager_vtable;
-    void** material_vtable;
-    MaterialCreateMethod create_material;
-    MaterialColorMethod apply_color;
-    void* material = NULL;
-    if (s_scene_material_manager == NULL) return NULL;
-    manager_vtable = *(void***)s_scene_material_manager;
-    if (manager_vtable == NULL || manager_vtable[0x34 / 4] == NULL)
-        return NULL;
-    create_material = (MaterialCreateMethod)manager_vtable[0x34 / 4];
-    if (create_material(s_scene_material_manager, power, &material) != 0 ||
-        material == NULL) return NULL;
-    material_vtable = *(void***)material;
-    if (material_vtable == NULL) return material;
-    if (material_vtable[0x34 / 4] != NULL) {
-        apply_color = (MaterialColorMethod)material_vtable[0x34 / 4];
-        (void)apply_color(material, color0, color1, color2);
-    }
-    if (material_vtable[0x30 / 4] != NULL) {
-        apply_color = (MaterialColorMethod)material_vtable[0x30 / 4];
-        (void)apply_color(material, color3, color4, color5);
-    }
-#undef SCENE_MATERIAL_STDCALL
-    return material;
 }
 
 void scene_entry_expand_ops_set(const SceneEntryExpandOps* ops)
@@ -3288,38 +3064,6 @@ void scene_object_owner_link_release_hooks_set(
 {
     s_owner_link_interface_release = interface_release;
     s_owner_link_child_release = child_chain_release;
-}
-
-static void scene_owner_link_interface_release(void* object)
-{
-    if (s_owner_link_interface_release != NULL)
-        s_owner_link_interface_release(object);
-    else
-        ddiscene_payload_interface_release(object);
-}
-
-// FUNCTION: LEGORR 0x00489750
-void scene_object_owner_link_release(SceneObjectOwnerLinkRecord* record)
-{
-    uint32_t i;
-    if (record == NULL) return;
-    if (record->kind == 0) {
-        if (record->shared_mode == 0) {
-            scene_owner_link_interface_release(record->first_handle);
-            scene_owner_link_interface_release(record->second_handle);
-        }
-        else if (s_owner_link_child_release != NULL) {
-            s_owner_link_child_release(record->child_chain);
-        }
-    }
-    if (record->shared_mode == 0) {
-        for (i = 0; i < record->handle_count; ++i) {
-            if (record->handles != NULL)
-                scene_owner_link_interface_release(record->handles[i]);
-        }
-        engine_heap_free(record->handles);
-    }
-    engine_heap_free(record);
 }
 
 /* ---- pure vector helpers ------------------------------------------------
@@ -6491,7 +6235,7 @@ void ledger_stub_004897e0_DDiSceneTimedHookDispatch(
 
 } // namespace unported_ledger_stubs
 
-static ObjectHierarchyResourceHooks s_object_hierarchy_resource_hooks;
+ObjectHierarchyResourceHooks s_object_hierarchy_resource_hooks;
 
 void object_hierarchy_resource_hooks_set(
     const ObjectHierarchyResourceHooks* hooks)
@@ -6501,223 +6245,6 @@ void object_hierarchy_resource_hooks_set(
                sizeof(s_object_hierarchy_resource_hooks));
     else
         s_object_hierarchy_resource_hooks = *hooks;
-}
-
-typedef void (VIEW_COM_CALL *ObjectHierarchyChildrenGet)(void*, uint32_t*,
-                                                          void***);
-typedef void (VIEW_COM_CALL *ObjectHierarchyChildApply)(void*, void*);
-typedef uint32_t (VIEW_COM_CALL *ObjectHierarchyCountGet)(void*);
-typedef void (VIEW_COM_CALL *ObjectHierarchyChildGet)(void*, uint32_t,
-                                                       void**);
-typedef int32_t (VIEW_COM_CALL *ObjectHierarchyQueryInterface)(
-    void*, const void*, void**);
-typedef void* (VIEW_COM_CALL *ObjectHierarchyInterfaceGet)(void*);
-typedef void (VIEW_COM_CALL *ObjectHierarchyRelatedGet)(void*, void**);
-typedef uint32_t (VIEW_COM_CALL *ObjectHierarchyRelease)(void*);
-
-typedef struct ObjectHierarchyGuid {
-    uint32_t data1;
-    uint16_t data2;
-    uint16_t data3;
-    uint8_t data4[8];
-} ObjectHierarchyGuid;
-
-/* DAT_0049fb48 is the observed IID {59163DE0-6D43-11CF-AC4A-0000C03825A1}.
- * Its interface name remains unknown, but its bytes and QueryInterface use
- * are established by docs/dat/annotations.csv and the retail call sites. */
-static const ObjectHierarchyGuid s_object_hierarchy_resource_iid = {
-    0x59163de0u, 0x6d43u, 0x11cfu,
-    { 0xacu, 0x4au, 0x00u, 0x00u, 0xc0u, 0x38u, 0x25u, 0xa1u }
-};
-
-static void** object_hierarchy_vtable_get(void* object)
-{
-    void** vtable = NULL;
-    if (object != NULL) memcpy(&vtable, object, sizeof(vtable));
-    return vtable;
-}
-
-static void object_hierarchy_children_get(void* object, uint32_t* count,
-                                          void*** items_out)
-{
-    void** vtable = object_hierarchy_vtable_get(object);
-    if (count == NULL) return;
-    if (vtable == NULL || vtable[0x80 / 4] == NULL) {
-        *count = 0u;
-        if (items_out != NULL) *items_out = NULL;
-        return;
-    }
-    /* Slot +0x80 returns the count and a borrowed child pointer array. The
-     * retail callers query with a null array output, then fetch the pointer;
-     * they neither allocate a copy nor release the returned entries. */
-    ((ObjectHierarchyChildrenGet)vtable[0x80 / 4])(object, count, items_out);
-}
-
-// FUNCTION: LEGORR 0x00489bc0
-void com_child_items_visit(void* parent)
-{
-    void** vtable;
-    void** items = NULL;
-    uint32_t count = 0u;
-    uint32_t index;
-    object_hierarchy_children_get(parent, &count, NULL);
-    if (count == 0u) return;
-    object_hierarchy_children_get(parent, &count, &items);
-    if (items == NULL) return;
-    vtable = object_hierarchy_vtable_get(parent);
-    if (vtable != NULL && vtable[0x48 / 4] != NULL) {
-        ObjectHierarchyChildApply apply =
-            (ObjectHierarchyChildApply)vtable[0x48 / 4];
-        for (index = 0u; index < count; ++index)
-            apply(parent, items[index]);
-    }
-}
-
-// FUNCTION: LEGORR 0x00489b30
-void object_interface_array_resource_create(void* object, uint32_t mode)
-{
-    void** items = NULL;
-    uint32_t count = 0u;
-    uint32_t index;
-    object_hierarchy_children_get(object, &count, NULL);
-    if (count == 0u) return;
-    object_hierarchy_children_get(object, &count, &items);
-    if (items == NULL) return;
-    for (index = 0u; index < count; ++index) {
-        void* queried = NULL;
-        void** item_vtable = object_hierarchy_vtable_get(items[index]);
-        if (item_vtable != NULL && item_vtable[0] != NULL) {
-            int32_t result = ((ObjectHierarchyQueryInterface)item_vtable[0])(
-                items[index], &s_object_hierarchy_resource_iid, &queried);
-            if (result == 0 && queried != NULL) {
-                void** queried_vtable = object_hierarchy_vtable_get(queried);
-                if (queried_vtable != NULL &&
-                    queried_vtable[0x1c / 4] != NULL) {
-                    void* resource = ((ObjectHierarchyInterfaceGet)
-                        queried_vtable[0x1c / 4])(queried);
-                    if (resource != NULL &&
-                        s_object_hierarchy_resource_hooks.template_resolve !=
-                            NULL) {
-                        lego::CachedRenderResourceTemplateRecord* source =
-                            s_object_hierarchy_resource_hooks.template_resolve(
-                                resource, mode,
-                                s_object_hierarchy_resource_hooks.context);
-                        if (source != NULL)
-                            (void)lego::cached_render_resource_instance_create(
-                                source);
-                    }
-                }
-            }
-        }
-        /* The reference retains the queried interface in the resource path;
-         * there is no Release call at 0x489b30. */
-    }
-}
-
-static void object_hierarchy_release(void* object)
-{
-    void** vtable = object_hierarchy_vtable_get(object);
-    if (vtable != NULL && vtable[2] != NULL)
-        ((ObjectHierarchyRelease)vtable[2])(object);
-}
-
-// FUNCTION: LEGORR 0x004899f0
-void object_hierarchy_recursive_clone(void* source, void* clone,
-                                      uint32_t mode)
-{
-    void** source_vtable;
-    void** clone_vtable;
-    uint32_t state_bytes = 0u;
-    uint32_t state_value = 0u;
-    void* state_buffer = NULL;
-    void* related_interface = NULL;
-    void* related_result = NULL;
-    void* child_list = NULL;
-    uint32_t child_count;
-    uint32_t index;
-    if (source == NULL || clone == NULL) return;
-    if (mode != 0u)
-        object_interface_array_resource_create(source, mode);
-    else
-        com_child_items_visit(source);
-
-    source_vtable = object_hierarchy_vtable_get(source);
-    clone_vtable = object_hierarchy_vtable_get(clone);
-    if (source_vtable == NULL || clone_vtable == NULL) return;
-
-    /* Retail first asks slot +0x24 for a byte count, allocates that exact
-     * block, asks the same slot to fill it, and gives it to clone slot +0x20. */
-    if (source_vtable[0x24 / 4] != NULL &&
-        clone_vtable[0x20 / 4] != NULL) {
-        typedef void (VIEW_COM_CALL *StateRead)(void*, void*, void*);
-        typedef void (VIEW_COM_CALL *StateApply)(void*, void*);
-        ((StateRead)source_vtable[0x24 / 4])(source, &state_bytes, NULL);
-        if (state_bytes != 0u && state_bytes <= 0x7fffffffu) {
-            state_buffer = engine_heap_alloc((long)state_bytes);
-            if (state_buffer != NULL) {
-                ((StateRead)source_vtable[0x24 / 4])(source, &state_value,
-                                                     state_buffer);
-                ((StateApply)clone_vtable[0x20 / 4])(clone, state_buffer);
-                engine_heap_free(state_buffer);
-            }
-        }
-    }
-
-    /* Preserve the renderer's interface refresh/apply order and release the
-     * temporary interface returned by +0x5c. */
-    if (source_vtable[0x5c / 4] != NULL &&
-        source_vtable[0x74 / 4] != NULL) {
-        typedef void (VIEW_COM_CALL *RelatedApply)(void*, void*, void**);
-        ((ObjectHierarchyRelatedGet)source_vtable[0x5c / 4])(
-            source, &related_interface);
-        ((RelatedApply)source_vtable[0x74 / 4])(source, related_interface,
-                                                &related_result);
-        object_hierarchy_release(related_interface);
-    }
-    if (clone_vtable[0x38 / 4] != NULL) {
-        typedef void (VIEW_COM_CALL *CloneUpdate)(void*, uint32_t, void**);
-        ((CloneUpdate)clone_vtable[0x38 / 4])(clone, 0u, &related_result);
-    }
-
-    if (source_vtable[0x4c / 4] == NULL) return;
-    {
-        typedef int (VIEW_COM_CALL *ChildListGet)(void*, void**);
-        if (((ChildListGet)source_vtable[0x4c / 4])(source, &child_list) != 0 ||
-            child_list == NULL) return;
-    }
-    {
-        void** list_vtable = object_hierarchy_vtable_get(child_list);
-        if (list_vtable == NULL || list_vtable[0x0c / 4] == NULL ||
-            list_vtable[0x10 / 4] == NULL) {
-            object_hierarchy_release(child_list);
-            return;
-        }
-        child_count = ((ObjectHierarchyCountGet)list_vtable[0x0c / 4])(
-            child_list);
-        for (index = 0u; index < child_count; ++index) {
-            void* child = NULL;
-            ((ObjectHierarchyChildGet)list_vtable[0x10 / 4])(
-                child_list, index, &child);
-            if (child != NULL) {
-                if (s_object_hierarchy_resource_hooks.child_clone_register !=
-                    NULL) {
-                    void* source_child = NULL;
-                    void* clone_child = NULL;
-                    if (s_object_hierarchy_resource_hooks.child_clone_register(
-                            source, clone, child, &source_child, &clone_child,
-                            s_object_hierarchy_resource_hooks.context) &&
-                        source_child != NULL && clone_child != NULL) {
-                        object_hierarchy_recursive_clone(source_child,
-                                                         clone_child, mode);
-                        object_hierarchy_release(clone_child);
-                        object_hierarchy_release(source_child);
-                    }
-                }
-                object_hierarchy_release(child);
-            }
-        }
-        object_hierarchy_release(child_list);
-    }
 }
 
 namespace unported_ledger_stubs {

@@ -26,11 +26,19 @@ Supported shapes:
 * ``extern "C" { }`` and ``namespace [name] { }`` blocks, whose members are
   items with a ``container``;
 * a conditional group that wraps alternative definitions of one function
-  (``#if A`` def ``#else`` def ``#endif``), merged into one ``function`` item.
+  (``#if A`` def ``#else`` def ``#endif``), merged into one ``function`` item;
+* a top-level, non-nested conditional group whose items form one cluster
+  (macro alternatives, a single conditional declaration or datum, a group
+  with ``#include`` lines), merged into one item with ``cgroup`` set (#501).
+  Macros, types and prototypes count as one cluster; data must connect to
+  them, or to each other, by name. It moves whole and verbatim; ``parts``
+  keeps its members, each with the index of its branch, for guarded
+  declarations.
 
-Anything else inside ``#if`` blocks keeps a ``cond`` depth above zero, and an
-item whose head or body is split by directives in a way that changes brace
-depth is marked with a problem.
+Anything else inside ``#if`` blocks keeps a ``cond`` depth above zero and
+names its group (``in_group``, ``group_why``), and an item whose head or
+body is split by directives in a way that changes brace depth is marked with
+a problem.
 """
 
 from __future__ import annotations
@@ -136,6 +144,14 @@ class Item:
     qualifier: str | None = None   # X in an out-of-line definition ``T X::name(...)``
     using: tuple[str, str] | None = None   # ("namespace", X) or ("name", "X::n")
     defines_type: bool = False     # a declaration that also defines a struct/union/enum
+    cgroup: bool = False      # a merged top-level #if group of one cluster (#501)
+    parts: list["Item"] = field(default_factory=list)   # a cgroup's members, in order
+    branch: int = 0           # a cgroup member's branch (0: the #if branch)
+    condition: str = ""       # a cgroup's #if/#ifdef/#ifndef directive, verbatim
+    endif: str = ""           # a cgroup's #endif line, verbatim
+    branches: int = 0         # a cgroup's number of branches
+    in_group: int = 0         # line of the unmerged top-level #if group holding the item
+    group_why: str = ""       # why that group was not merged
 
     def head(self, source: str) -> str:
         """A function's text before its body, or a declaration without ``;``."""
@@ -159,6 +175,8 @@ class Group:
 
     start: int                # start of the #if line
     end: int = -1             # one past the #endif line
+    if_end: int = -1          # one past the #if directive
+    endif_start: int = -1     # start of the #endif line
     branches: list[list[int]] = field(default_factory=list)   # item indices
     nested: bool = False
     in_item: bool = False
@@ -310,7 +328,7 @@ def scan(text: str) -> Scan:
                     cur_problems.append(f"a #{word} directive splits the declaration")
                 if word in ("if", "ifdef", "ifndef"):
                     top = depth == 0 and cur is None
-                    g = Group(start=i, in_item=not top)
+                    g = Group(start=i, in_item=not top, if_end=stop)
                     g.branches.append([])
                     if top:
                         for f in top_frames():
@@ -341,6 +359,7 @@ def scan(text: str) -> Scan:
                         depth = f["ends"][0]
                         if f["top"]:
                             f["group"].end = stop
+                            f["group"].endif_start = i
                             groups.append(f["group"])
                 elif depth == 0 and cur is None:
                     item = Item(kind="directive", start=i, end=stop, cond=len(top_frames()),
@@ -432,8 +451,11 @@ def scan(text: str) -> Scan:
     for item in items:
         item.lead = _lead(item, text, masked)
         item.line = _line_of(text, item.start)
-        for m in ANNOTATION.finditer(text, item.lead, item.end if item.group else item.start):
+        for m in ANNOTATION.finditer(text, item.lead, item.end if item.group or item.cgroup else item.start):
             item.annotations.append((m.group(1), int(m.group(2), 16)))
+        if item.cgroup and ANNOTATION.search(text, item.start, item.end):
+            item.problems.append(f"the #if group at line {item.line} holds an annotated item; "
+                                 "only unannotated groups move whole")
     return Scan(text, masked, items, groups, problems)
 
 
@@ -585,7 +607,9 @@ def _describe(item: Item, text: str, masked: str) -> None:
         if tm:
             names.append(tm.group(1))
         for part in _split_top(rest):
-            fp = re.search(r"\(\s*(?:__\w+\s+)?\*\s*([A-Za-z_]\w*)\s*\)", part)
+            # (*Name), (__stdcall *Name) or (CONV_MACRO *Name) (#501)
+            fp = re.search(r"\(\s*(?:[A-Za-z_]\w*\s+)*\*\s*([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*\)",
+                           DECL_STRIP.sub(" ", part))
             if fp:
                 names.append(fp.group(1))
                 continue
@@ -597,6 +621,8 @@ def _describe(item: Item, text: str, masked: str) -> None:
             for body in bodies:
                 names.extend(_enumerators(body))
         item.names = list(dict.fromkeys(names))
+        if not item.names:
+            item.problems.append("a typedef whose name the scanner cannot find")
     elif words and words[0] in TYPE_KEYWORDS and "{" in stripped:
         rest, bodies = _strip_braced(stripped)
         tm = re.match(r"\s*(?:struct|union|enum|class)\s+([A-Za-z_]\w*)", rest)
@@ -691,12 +717,12 @@ def _merge_groups(items: list[Item], groups: list[Group], text: str) -> list[Ite
     drop: set[int] = set()
     merged: dict[int, Item] = {}
     for g in groups:
-        if g.nested or g.in_item or g.end < 0:
+        if g.in_item or g.end < 0:
             continue
         names = set()
-        ok = True
+        ok = not g.nested
         members = []
-        for branch in g.branches:
+        for branch in g.branches if ok else []:
             if len(branch) != 1:
                 ok = False
                 break
@@ -707,6 +733,17 @@ def _merge_groups(items: list[Item], groups: list[Group], text: str) -> list[Ite
             names.add(it.names[0])
             members.append(branch[0])
         if not ok or len(names) != 1 or not members or len({items[k].cond for k in members}) != 1:
+            cluster, why = _cluster_group(g, items, text)
+            if cluster is not None:
+                merged[cluster[0]] = cluster[1]
+                drop.update(k for b in g.branches for k in b)
+            else:
+                line = _line_of(text, g.start)
+                # Groups are listed innermost first: the outermost one names
+                # the item's group.
+                for b in g.branches:
+                    for k in b:
+                        items[k].in_group, items[k].group_why = line, why
             continue
         parts = [items[k] for k in members]
         first = parts[0]
@@ -730,3 +767,99 @@ def _merge_groups(items: list[Item], groups: list[Group], text: str) -> list[Ite
             out.append(it)
     return out
 
+
+
+CLUSTER_CATEGORIES = ("macro", "include", "type", "proto", "var")
+
+
+def _cluster_group(g: Group, items: list[Item], text: str) -> tuple[tuple[int, Item] | None, str]:
+    """Merge a top-level group whose items form one cluster (#501), or say why not.
+
+    The group moves whole, so its members must belong together: every item
+    other than an ``#include`` shares a name with, or uses a name of, another
+    one, and the ``#include`` lines come along with them. Function
+    definitions (other than whole alternatives, merged above), ``#undef``
+    and other directives, nested groups and include guards are not merged.
+    """
+    if g.in_item or g.end < 0:
+        return None, "inside an item"
+    if g.nested:
+        return None, "it holds a nested #if group"
+    keys = [k for b in g.branches for k in b]
+    if not keys:
+        return None, "it holds no items"
+    members = [items[k] for k in keys]
+    if any(it.cond != 1 for it in members):
+        return None, "it is nested in another #if group"
+    for it in members:
+        if it.category == "function":
+            return None, f"it holds the function definition {', '.join(it.names) or '?'} besides other items"
+        if it.category not in CLUSTER_CATEGORIES:
+            word = DIRECTIVE.match(text, it.start)
+            return None, f"it holds a #{word.group(1) if word else it.category} directive"
+    if all(it.category == "include" for it in members):
+        return None, "it holds only #include lines"
+    guard = re.match(r"\s*#\s*ifndef\s+(\w+)\s*$", text[g.start:g.if_end])
+    if guard and members[0].category == "macro" and members[0].names == [guard.group(1)]:
+        return None, "it is an include guard"
+    if len({it.container for it in members}) != 1 or len({it.cond for it in members}) != 1:
+        return None, "its items are in different scopes"
+    # One cluster: union by shared names and by uses of each other's names.
+    # Header-safe members (macros, types, prototypes) always belong together:
+    # they can all go to the private header (the plan's P2 allows two macros
+    # per branch). Data must connect by names.
+    named = [k for k, it in enumerate(members) if it.category != "include"]
+    parent = {k: k for k in named}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    safe = [k for k in named if members[k].category in ("macro", "type", "proto")]
+    for k in safe[1:]:
+        parent[find(k)] = find(safe[0])
+    owner: dict[str, int] = {}
+    for k in named:
+        for n in members[k].names:
+            if n in owner:
+                parent[find(k)] = find(owner[n])
+            else:
+                owner[n] = k
+    for k in named:
+        for u in members[k].uses:
+            o = owner.get(u)
+            if o is not None:
+                parent[find(k)] = find(o)
+    roots = {find(k) for k in named}
+    if len(roots) > 1:
+        return None, f"its items form {len(roots)} unrelated clusters"
+    branch_of = {k: b for b, branch in enumerate(g.branches) for k in branch}
+    parts = []
+    for k in keys:
+        it = items[k]
+        it.branch = branch_of[k]
+        parts.append(it)
+    cats = {it.category for it in parts}
+    category = next(c for c in ("var", "proto", "type", "macro") if c in cats)
+    names = list(dict.fromkeys(n for it in parts for n in it.names))
+    cond_uses = set()
+    masked = mask(text)
+    for m in DIRECTIVE_LINE.finditer(masked, g.start, g.end):
+        if m.group(1) in ("if", "ifdef", "ifndef", "elif"):
+            cond_uses |= set(IDENT.findall(m.group(2)))
+    cond_uses -= {"defined"}
+    item = Item(kind="macro" if category == "macro" else "declaration", start=g.start, end=g.end,
+                category=category, names=names, cond=parts[0].cond - 1, container=parts[0].container,
+                cgroup=True, parts=parts, condition=text[g.start:g.if_end],
+                endif=text[g.endif_start:g.end], branches=len(g.branches))
+    item.uses = (set().union(*(it.uses for it in parts)) | cond_uses) - set(names)
+    item.static = any(it.static for it in parts)
+    item.inline = any(it.inline for it in parts)
+    item.defines_type = False
+    for it in parts:
+        item.problems.extend(x for x in it.problems if x not in item.problems)
+    return (keys[0], item), ""
+
+
+DIRECTIVE_LINE = re.compile(r"^[ \t]*#[ \t]*(\w+)([^\n]*(?:\\\n[^\n]*)*)", re.M)

@@ -256,6 +256,7 @@ src/gods98/camera.cpp
 src/gods98/camera.hpp
 src/gods98/camera_for_record_chains.hpp
 src/gods98/camera_shared.hpp
+src/gods98/com_object_tree.cpp
 src/gods98/config.c
 src/gods98/config.h
 src/gods98/draw.c
@@ -352,6 +353,7 @@ src/gods98/registry_port.cpp
 src/gods98/resource.cpp
 src/gods98/resource.h
 src/gods98/resource.hpp
+src/gods98/resource_for_com_object_tree.hpp
 src/gods98/resource_for_rock_fall_styles.hpp
 src/gods98/resource_for_screen_effect_quads.hpp
 src/gods98/resource_for_upgrade_levels.hpp
@@ -399,6 +401,7 @@ src/gods98/view_for_animation_object.hpp
 src/gods98/view_for_building_model.hpp
 src/gods98/view_for_camera_control.hpp
 src/gods98/view_for_cell_flood_passes.hpp
+src/gods98/view_for_com_object_tree.hpp
 src/gods98/view_for_info_track_overlay.hpp
 src/gods98/view_for_lighteffects.hpp
 src/gods98/view_for_map_view.hpp

@@ -207,10 +207,43 @@ A second run finds the unit relocated and does nothing. A half-done state
   Each change is recorded ("left the anonymous namespace") and covered by
   the hash and container checks.
 
+- **Whole conditional groups (#501, ADR 0006 addendum item 4).** A
+  top-level, non-nested `#if` group whose items form one cluster moves
+  whole and verbatim, from its `#if` line to its `#endif` line. A group's
+  macros, types and prototypes always count as one cluster; data must
+  connect to them by name. Examples
+  are macro alternatives such as a calling-convention macro, a single
+  conditional declaration or datum, or a group with `#include` lines. The
+  group goes to the unit file when only moved code uses it, or to the
+  `for` header when both files use it and it holds only macros, types,
+  prototypes and `#include`s. The hash check covers the group's whole
+  text.
+  - **Macros in such a group** are alternatives, not redefinitions: one
+    definition per branch is accepted. An `#undef` after the macro's last
+    use stays where it is and is reported in the plan's notes. An `#undef`
+    before a later use, or a second definition, still refuses.
+  - **Guarded declarations.** A `static` in a single-branch group, or in a
+    group's first branch, that both files use is exported as usual. Its
+    private-header declaration is wrapped in the group's `#if` directive,
+    copied verbatim, and recorded in the relocation CSV as a
+    `guarded-declaration` row. The `static` removal gets its own row. If
+    the file that gets only the declaration also uses one of the group's
+    macros or types, the relocation refuses; hoist the data into its own
+    group first.
+- **Statics a private-header item needs (T2, #501).** When a macro, type or
+  declaration that goes to the private header uses a file `static`, that
+  static is exported by the static rule instead of refused. `inline` and
+  anonymous-namespace items still refuse.
+
 **Refusals.** The tool refuses, with the file and line, rather than guess. It
 refuses:
 - definitions inside `#if` blocks, except a group whose branches each hold
-  one whole definition of the same function (the naked-`__asm`/C pairs);
+  one whole definition of the same function (the naked-`__asm`/C pairs)
+  and the whole groups above. The refusal names the group and why it
+  cannot move whole: it holds a function definition among other items,
+  a nested group, an `#undef` or other directive, or unrelated items;
+- a guarded declaration for a definition outside a group's first branch
+  (its condition would have to be synthesised);
 - directives that split a declaration;
 - functions defined in headers;
 - out-of-line class members (`T C::f() {}` where `C` is not a namespace),
@@ -221,7 +254,7 @@ refuses:
 - shared `inline` functions;
 - a declaration that needs splitting, unless you run `--split-declarations`
   first (below);
-- macros that are `#undef`'d or redefined;
+- macros that are redefined, or `#undef`'d before a later use;
 - two items on one line;
 - name clashes between the moved files or with another file;
 - backend-only sources;

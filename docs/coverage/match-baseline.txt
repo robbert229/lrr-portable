@@ -1,4 +1,4 @@
-# input_sha256: 52a0fcade0402588819d631de240f803c1b42f5b0e6f1249877a6b9a232a5556
+# input_sha256: c9d0387dfb71f18e940b427da3339624a71129b768e571f4852a4b40ebf029ed
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -2069,7 +2069,7 @@
 0x00487fc0 42.34 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 12.11 scene_node_transform_matrix_apply
+0x004882e0 15.33 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
@@ -2104,7 +2104,7 @@
 0x004897e0 10.07 ddiscene_timed_hook_dispatch
 0x004898e0 100.00 resource_tree_callback_count_increment
 0x004898f0 100.00 resource_tree_callback_array_append
-0x00489910 45.03 resource_tree_callback_count
+0x00489910 56.50 resource_tree_callback_count
 0x004899f0 19.37 object_hierarchy_recursive_clone
 0x00489b30 16.46 object_interface_array_resource_create
 0x00489bc0 16.98 com_child_items_visit
@@ -4232,7 +4232,7 @@
 0x00487fc0 42.34 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 12.11 scene_node_transform_matrix_apply
+0x004882e0 15.33 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
@@ -4267,7 +4267,7 @@
 0x004897e0 10.07 ddiscene_timed_hook_dispatch
 0x004898e0 100.00 resource_tree_callback_count_increment
 0x004898f0 100.00 resource_tree_callback_array_append
-0x00489910 45.03 resource_tree_callback_count
+0x00489910 56.50 resource_tree_callback_count
 0x004899f0 19.37 object_hierarchy_recursive_clone
 0x00489b30 16.46 object_interface_array_resource_create
 0x00489bc0 16.98 com_child_items_visit
