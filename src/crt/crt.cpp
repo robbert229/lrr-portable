@@ -3284,46 +3284,6 @@ void* resource_name_cache_get_or_load(const char* key)
     return NULL;
 }
 
-/* --- the selection marker table (see crt.hpp) ------------------------------
- * DAT_004c7e00..e7c is 32 pointer slots plus the count word at e80; the
- * descriptor sits at DAT_004c7df8. All unowned: zero-init statics here. */
-// GLOBAL: LEGORR 0x004c7e00
-static void*    s_marker_table[32];
-// GLOBAL: LEGORR 0x004c7e80
-static uint32_t s_marker_count;
-// GLOBAL: LEGORR 0x004c7df8
-static void*    s_marker_descriptor;
-
-// FUNCTION: LEGORR 0x0040ce30
-void selection_marker_resources_release(void)
-{
-    /* Corpus walk: an unsigned add-4 pointer stride bounded by the table
-     * end, entered unconditionally and bottom-tested (body, add, cmp, jb —
-     * no pre-loop check). Deviation: each freed slot is cleared in place
-     * (the corpus dangles, which a second release could double-free), so
-     * the window stays idempotent; pinned by test_crt.cpp's "the freed
-     * slots clear out" / double-release checks. */
-    void** p;
-    void*  desc;
-
-    p = s_marker_table;
-    do {
-        void* slot = *p;
-        if (slot != NULL) {
-            engine_heap_free(slot);
-            *p = NULL;
-        }
-        ++p;
-    } while (p < s_marker_table + 32);
-
-    desc = s_marker_descriptor; /* the corpus loads it once... */
-    s_marker_count = 0u;        /* ...before the count resets */
-    if (desc != NULL) {
-        engine_heap_free(desc); /* the loaded word rides the push */
-        s_marker_descriptor = NULL;
-    }
-}
-
 void selection_marker_slot_set(int index, void* ptr)
 {
     if (index >= 0 && index < 32) {

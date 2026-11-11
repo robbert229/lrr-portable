@@ -26,4 +26,12 @@ extern SimtickBobbinSpawnHook s_bobbin_spawn_hook;
 extern void* s_bobbin_action_context;
 void bobbin_clear_delay(SimtickBobbin* node);
 
+extern int s_post_steps;
+extern void** s_post_record_tables;
+extern uint32_t s_post_record_table_count;
+extern SimtickPostClusterRecordHook s_post_active_hook;
+extern SimtickPostClusterRecordHook s_post_entity_first_hook;
+extern SimtickPostClusterRecordHook s_post_entity_second_hook;
+extern void* s_post_cluster_user;
+
 #endif /* LRR_GODS98_SIMTICK_SHARED_HPP */

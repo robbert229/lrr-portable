@@ -1635,34 +1635,6 @@ float entity_surface_scale_get(void)
     return scale > 0.0f ? scale : 1.0f;
 }
 
-// FUNCTION: LEGORR 0x0040e350
-void cell_entity_kind_create_or_remove(CellEntityKindRegistry* registry,
-                                       uint32_t x, uint32_t y,
-                                       int create)
-{
-    uint32_t index;
-    void* current;
-    if (registry == NULL || registry->records == NULL ||
-        x >= registry->width || y >= registry->height) return;
-    index = y * registry->width + x;
-    current = registry->records[index];
-    if (!create) {
-        if (current != NULL && registry->release_entity != NULL)
-            registry->release_entity(registry->context, current);
-        registry->records[index] = NULL;
-        return;
-    }
-    if (current != NULL || registry->grid_to_world == NULL ||
-        registry->create_kind14 == NULL) return;
-    {
-        float world_x, world_y;
-        if (registry->grid_to_world(registry->context, x, y,
-                                    &world_x, &world_y))
-            registry->records[index] = registry->create_kind14(
-                registry->context, world_x, world_y);
-    }
-}
-
 void entity_scene_pose_hooks_set(const EntityScenePoseHooks* hooks)
 {
     if (hooks == NULL) {

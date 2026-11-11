@@ -9606,28 +9606,6 @@ uint32_t cell_flag100_is_set(int x, int y, int field)
     return cell_flag100_is_set_target(x, y, field);
 }
 
-/* The active table and its dimension owner are mirrored from the cell-kind
- * registry. The Reccmp GLOBAL alias for this address is already attached to
- * the shared descriptor view in crt.cpp; do not annotate a second mirror. */
-static uint32_t* s_grid_present_table;
-// GLOBAL: LEGORR 0x004c7dfc
-static const uint32_t* s_grid_record_manager;
-
-// FUNCTION: LEGORR 0x0040e460
-int grid_cell_record_present_check(int x, int y)
-{
-    size_t index;
-    s_grid_present_table = (uint32_t*)map_cell_record_grid_get();
-    s_grid_record_manager =
-        (const uint32_t*)map_cell_record_grid_level_get();
-    if (s_grid_present_table == NULL || s_grid_record_manager == NULL ||
-        x < 0 || y < 0) return 0;
-    index = (size_t)s_grid_record_manager[5] * (size_t)y + (size_t)x;
-    /* MapCellRecordGridInitialize allocates 0x14 bytes per cell, but the
-     * retail accessors address the first 0x0c-byte record by this stride. */
-    return s_grid_present_table[index * 3u] != 0u;
-}
-
 /* --- corner normal sampling (see level.hpp) ------------------------------- */
 // FUNCTION: LEGORR 0x004512d0
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -10576,61 +10554,6 @@ const void* terrain_cell_variant_window_get(const void* terrain)
 {
     const TerrainState* state = (const TerrainState*)terrain;
     return state != NULL ? state->variant_window : NULL;
-}
-
-// FUNCTION: LEGORR 0x0040d3f0
-int terrain_cell_special_state_predicate(const LevelState* s, int cx,
-                                         int cy, int secondary_gate)
-{
-    if (level_cell_occupied_or_flag(s, cx, cy, 1) == 0u) {
-        return 0;
-    }
-    if (secondary_gate == 0) {
-        return 1;
-    }
-    return level_cell_secondary_flag_100(s, cx, cy) != 0u ? 1 : 0;
-}
-
-/* TerrainCellHasOccupiedOrFlaggedNeighbor (FUN_0040d240): preserve the
- * corpus's center rejection and adjacent/distance-two checks per axis. The
- * per-cell DAT_004c7df8 side table is threaded as a query callback. */
-// FUNCTION: LEGORR 0x0040D240
-int terrain_cell_has_occupied_or_flagged_neighbor(
-    const LevelState* s, int cx, int cy,
-    TerrainCellSidecarPresenceQuery sidecar_present)
-{
-    const uint8_t* center = level_voxel(s, cx, cy);
-    if (center == NULL || (center[8] & 8u) == 0u
-        || center[2] == 6u || center[2] == 7u) {
-        return 0;
-    }
-    if ((sidecar_present != NULL && sidecar_present(s, cx, cy) != 0)
-        || terrain_cell_special_state_predicate(s, cx, cy, 0) != 0) {
-        return 0;
-    }
-
-    static const int8_t offsets[2][4][2] = {
-        { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } },
-        { { 0, 2 }, { 2, 0 }, { 0, -2 }, { -2, 0 } },
-    };
-    for (int direction = 0; direction < 4; ++direction) {
-        int distance;
-        /* FUN_0040d240 tests the adjacent cell, then the distance-two cell
-         * on that same cardinal axis before advancing to the next axis. */
-        for (distance = 0; distance < 2; ++distance) {
-            const int x = cx + offsets[distance][direction][0];
-            const int y = cy + offsets[distance][direction][1];
-            if (level_coord_pair_within_bounds(s, x, y) == 0) {
-                continue;
-            }
-            if ((sidecar_present != NULL &&
-                 sidecar_present(s, x, y) != 0) ||
-                terrain_cell_special_state_predicate(s, x, y, 0) != 0) {
-                return 1;
-            }
-        }
-    }
-    return 0;
 }
 
 /* --- the path record window band (2026-10-25) ----------------------------- */
@@ -12488,43 +12411,6 @@ void entity_cell_path_effects_apply(
 void ledger_stub_00409f20_EntityPlacementCommandsBuildOnce(EntitySlot* entity)
 {
     entity_placement_commands_build_once(entity);
-}
-
-
-// CellCornerOccupancyScan examines the center and ordered cardinal neighbors
-// in the map-record sidecar and the level's special-state predicate.
-// FUNCTION: LEGORR 0x0040e1e0
-uint32_t ledger_stub_0040e1e0_CellCornerOccupancyScan(
-    LevelState* level, int cell_x, int cell_y)
-{
-    static const int dx[4] = { 0, 1, 0, -1 };
-    static const int dy[4] = { 1, 0, -1, 0 };
-    uint32_t i;
-    if (level == NULL ||
-        terrain_cell_object_record_present_for_level(level, cell_x, cell_y) ||
-        terrain_cell_special_state_predicate(level, cell_x, cell_y, 0))
-        return 0u;
-    for (i = 0u; i < 4u; ++i) {
-        int nx = cell_x + dx[i];
-        int ny = cell_y + dy[i];
-        int opposite = (int)((i - 2u) & 3u);
-        int ox = cell_x + dx[opposite];
-        int oy = cell_y + dy[opposite];
-        int neighbor_record = terrain_cell_object_record_present_for_level(
-            level, nx, ny);
-        int neighbor_special = 0;
-        if (!neighbor_record) {
-            neighbor_special = terrain_cell_special_state_predicate(
-                level, nx, ny, 0);
-            if (!neighbor_special) continue;
-        }
-        if (terrain_cell_object_record_present_for_level(level, ox, oy))
-            return 1u;
-        if (terrain_cell_special_state_predicate(level, ox, oy, 0) &&
-            !terrain_cell_special_state_predicate(level, nx, ny, 0))
-            return 1u;
-    }
-    return 0u;
 }
 
 

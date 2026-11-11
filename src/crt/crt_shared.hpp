@@ -22,4 +22,8 @@ extern uint32_t s_level_stored_word;
 
 extern uint32_t s_rockfall_base;
 
+extern void* s_marker_table[32];
+extern uint32_t s_marker_count;
+extern void* s_marker_descriptor;
+
 #endif /* LRR_CRT_CRT_SHARED_HPP */
