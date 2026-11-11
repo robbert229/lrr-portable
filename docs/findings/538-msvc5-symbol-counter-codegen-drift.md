@@ -205,9 +205,9 @@ unaffected.
 | `0x0040e9c0` lava_erosion_delay_from_cell | `lava_erosion.cpp` | 94.74 | **100.00** | improved | 19 → 19 |
 
 `make reccmp-check`: one function improved, none fell, no other listing
-changed (game-only mean 51.00%, full 55.16%). `make match-progress`
+changed (game-only mean 51.04%, full 55.20%, on `main` at `970a1822`). `make match-progress`
 regenerated the three progress files. Exact-function code bytes went from
-44,551 to 44,617. The other `level_shared.hpp` users (`level.cpp`,
+44,636 to 44,702. The other `level_shared.hpp` users (`level.cpp`,
 `placement.cpp`, `encyclopedia.cpp`, `screen_effect_quads.cpp`) do not
 define the macro, so their preprocessed text and counters are unchanged.
 
