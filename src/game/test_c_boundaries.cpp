@@ -43,6 +43,9 @@
 #include "gods98/g98_029.h"
 #include "gods98/heap.hpp"
 #include "gods98/g98_026.h"
+#include "gods98/surface.hpp"
+#include "gods98/draw.h"
+#include "crt/crt.h"
 
 int main(void)
 {

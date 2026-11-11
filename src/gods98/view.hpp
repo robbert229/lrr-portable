@@ -97,13 +97,18 @@ int view_primary_projection_get(const ViewContext* view, const void* level,
 
 /* Per-frame camera update: delta/scale are reference 25-Hz frame units. */
 void view_tick(ViewContext* v, EngineContext* ctx, float dt, float scale);
+/* viewport_rectangle_set, ViewportDimensionsQueryFn and
+ * viewport_dimensions_query_hook_set have no definition since the 2D unit
+ * (G98-019) was rebuilt in draw.c. They stay declared only to hold the
+ * declaration count (finding 506): removing them moves
+ * lava_erosion_delay_from_cell (0040e9c0) from 100% to 84.21%. */
 void viewport_rectangle_set(float left, float top, float right, float bottom);
-void viewport_rectangle_get(float rectangle[4]); /* FUN_00485fb0 */
+extern "C" void viewport_rectangle_get(struct Area2F* window); /* FUN_00485fb0, draw.h */
 typedef int (*ViewportDimensionsQueryFn)(void* context, float* width,
                                          float* height);
 void viewport_dimensions_query_hook_set(ViewportDimensionsQueryFn query,
                                         void* context);
-void viewport_subrectangle_set(const float rectangle[4]); /* FUN_00485ea0 */
+extern "C" void viewport_subrectangle_set(const struct Area2F* window); /* FUN_00485ea0, draw.h */
 void model_transform_copy_to_scene_node(void* model_record,
                                         void* source_scene_node);
 typedef void (*CameraViewContextReleaseHook)(void* context, void* view,

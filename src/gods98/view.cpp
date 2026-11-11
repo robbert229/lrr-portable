@@ -67,8 +67,6 @@ static const float s_normalize_unit = 1.0f;   /* DAT_0049e008, verified */
 
 static SceneOwnerLinkReleaseFn s_owner_link_interface_release;
 static SceneOwnerLinkReleaseFn s_owner_link_child_release;
-static ViewportDimensionsQueryFn s_viewport_dimensions_query;
-static void* s_viewport_dimensions_context;
 static CameraViewContextReleaseHook s_view_context_release_hook;
 static CameraViewContextFreeHook s_view_context_free_hook;
 static void* s_view_context_close_context;
@@ -3116,25 +3114,6 @@ void scene_rotation_flags_apply(void* object, const float first[3],
                                uniform_scale, child_value, flags);
 }
 static RenderResourceBindingHooks s_render_resource_binding_hooks;
-static float s_viewport_left;
-static float s_viewport_top;
-static float s_viewport_right;
-static float s_viewport_bottom;
-
-void viewport_rectangle_set(float left, float top, float right, float bottom)
-{
-    s_viewport_left = left;
-    s_viewport_top = top;
-    s_viewport_right = right;
-    s_viewport_bottom = bottom;
-}
-
-void viewport_dimensions_query_hook_set(ViewportDimensionsQueryFn query,
-                                        void* context)
-{
-    s_viewport_dimensions_query = query;
-    s_viewport_dimensions_context = context;
-}
 
 // ModelTransformCopyToSceneNode (FUN_00435e35) copies a scene node's pose
 // onto the model scene object when the model record kind is 3.
@@ -3893,43 +3872,6 @@ void scene_object_resource_and_callback_state_dispose(void** owner)
     if (hooks->owner_record_release != NULL) {
         hooks->owner_record_release(hooks->context, owner);
     }
-}
-
-/* FUNCTION: LEGORR 0x00485ea0 */
-void viewport_subrectangle_set(const float rectangle[4])
-{
-    float width = 0.0f;
-    float height = 0.0f;
-    float left = 0.0f;
-    float top = 0.0f;
-    float right;
-    float bottom;
-    if (rectangle != NULL) {
-        if (rectangle[0] > 0.0f) left = rectangle[0];
-        if (rectangle[1] > 0.0f) top = rectangle[1];
-    }
-    if (s_viewport_dimensions_query == NULL ||
-        s_viewport_dimensions_query(s_viewport_dimensions_context,
-                                    &width, &height) != 0) {
-        return;
-    }
-    right = width;
-    bottom = height;
-    if (rectangle != NULL) {
-        if (rectangle[2] + left < right) right = rectangle[2] + left;
-        if (rectangle[3] + top < bottom) bottom = rectangle[3] + top;
-    }
-    viewport_rectangle_set(left, top, right, bottom);
-}
-
-/* FUNCTION: LEGORR 0x00485fb0 */
-void viewport_rectangle_get(float rectangle[4])
-{
-    if (rectangle == NULL) return;
-    rectangle[0] = s_viewport_left;
-    rectangle[1] = s_viewport_top;
-    rectangle[2] = s_viewport_right - s_viewport_left;
-    rectangle[3] = s_viewport_bottom - s_viewport_top;
 }
 
 void scene_object_owner_link_release_hooks_set(

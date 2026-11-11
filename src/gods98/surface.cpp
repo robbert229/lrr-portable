@@ -1288,16 +1288,6 @@ int material_pass_execute(const char* path_prefix, void* render_object,
     return result;
 }
 
-// GLOBAL: LEGORR 0x00540814
-static uint32_t s_surface_pixel_bits = 0;
-// GLOBAL: LEGORR 0x00540824
-static uint32_t s_surface_red_mask_bits = 0;
-// GLOBAL: LEGORR 0x00540828
-static uint32_t s_surface_green_mask_bits = 0;
-// GLOBAL: LEGORR 0x0054082c
-static uint32_t s_surface_blue_mask_bits = 0;
-// GLOBAL: LEGORR 0x00540830
-static uint32_t s_surface_render_flags = 0;
 typedef struct RendererRecordTableState {
     uint32_t words[32];
     uint32_t reserved[2];
@@ -1323,8 +1313,6 @@ typedef struct FontAtlasRecord {
 } FontAtlasRecord;
 static FontAtlasRecord* s_font_atlas_record_free_list;
 static SurfacePixelBitsQueryFn s_surface_pixel_bits_query;
-// GLOBAL: LEGORR 0x005407e8
-static SurfacePixelWriteFn s_surface_pixel_writer;
 static SurfaceWriterUnlockHook s_surface_writer_unlock_hook;
 static RendererBeginFrameHook s_renderer_begin_frame_hook;
 static void* s_renderer_begin_frame_device;
@@ -2857,20 +2845,6 @@ void surface_pixel_bits_query_hook_set(SurfacePixelBitsQueryFn query)
     s_surface_pixel_bits_query = query;
 }
 
-/* RenderSetup (FUN_00485e80): set the render-ready bit, then apply the
- * optional subrectangle through the viewport's dimension-query seam. */
-// FUNCTION: LEGORR 0x00485e80
-void surface_render_setup(const float rectangle[4])
-{
-    s_surface_render_flags |= 1u;
-    viewport_subrectangle_set(rectangle);
-}
-
-uint32_t surface_render_flags_peek(void)
-{
-    return s_surface_render_flags;
-}
-
 /* RendererRecordTableInitialize (FUN_0047d410) clears its 32-word table
  * and raises the adjacent initialized word. The two intervening dwords are
  * retained as reserved state because the corpus leaves them untouched. */
@@ -3295,154 +3269,6 @@ void directdraw_objects_release(DirectDrawObjectSet* objects,
     objects->restore_display_mode = 0;
 }
 
-
-/* SurfacePixelWriterSelectByFormat (FUN_00486690): select the packed-pixel
- * writer by depth; 16-bit modes 1 and 2 use their dedicated byte-order
- * paths, with other 16-bit formats taking the default writer. */
-// FUNCTION: LEGORR 0x00486690
-int surface_pixel_writer_select_by_format(
-    uint32_t bits_per_pixel, int format,
-    const SurfacePixelWriterTable* writers,
-    SurfacePixelWriteFn* out_writer)
-{
-    SurfacePixelWriteFn writer = NULL;
-    if (writers == NULL || out_writer == NULL) return 0;
-    /* FUN_00486690 clears DAT_005407e8 before returning failure for an
-     * unsupported depth. Keep the portable global and output in sync so a
-     * failed reconfiguration cannot leave the previous surface writer live. */
-    s_surface_pixel_writer = NULL;
-    *out_writer = NULL;
-    switch (bits_per_pixel) {
-    case 8u: writer = writers->writer8; break;
-    case 16u:
-        if (format == 1) writer = writers->writer16_mode1;
-        else if (format == 2) writer = writers->writer16_mode2;
-        else writer = writers->writer16_default;
-        break;
-    case 24u: writer = writers->writer24; break;
-    case 32u: writer = writers->writer32; break;
-    default: break;
-    }
-    if (writer == NULL) return 0;
-    s_surface_pixel_writer = writer;
-    *out_writer = writer;
-    return 1;
-}
-
-/* Portable callback adapter for SurfaceLockConfigurePixelWriter. */
-int surface_lock_configure_pixel_writer(
-    void* surface, int format, SurfaceLockFormatQueryFn query,
-    const SurfacePixelWriterTable* writers)
-{
-    uint32_t bits_per_pixel = 0u;
-    uint32_t red_mask = 0u;
-    uint32_t green_mask = 0u;
-    uint32_t blue_mask = 0u;
-    SurfacePixelWriteFn writer = NULL;
-    if (query == NULL || writers == NULL ||
-        query(surface, &bits_per_pixel, &red_mask, &green_mask,
-              &blue_mask) != 0) {
-        s_surface_pixel_bits = 0u;
-        s_surface_pixel_writer = NULL;
-        return 0;
-    }
-    s_surface_pixel_bits = bits_per_pixel;
-    s_surface_red_mask_bits = (uint32_t)pop_count32(red_mask);
-    s_surface_green_mask_bits = (uint32_t)pop_count32(green_mask);
-    s_surface_blue_mask_bits = (uint32_t)pop_count32(blue_mask);
-    if (!surface_pixel_writer_select_by_format(bits_per_pixel, format,
-                                                writers, &writer)) {
-        s_surface_pixel_bits = 0u;
-        s_surface_pixel_writer = NULL;
-        return 0;
-    }
-    return 1;
-}
-
-/* SurfaceLockConfigurePixelWriter (FUN_00486550) locks the DirectDraw
- * surface and takes bpp plus channel masks from DDSURFACEDESC2 before it
- * installs the selected writer. The portable adapter receives the surface
- * owner from the frame binding and retains the lock through the draw call. */
-// FUNCTION: LEGORR 0x00486550
-int surface_active_pixel_writer_configure(
-    int format, const SurfacePixelWriterTable* writers)
-{
-#if defined(LEGORRR_BACKEND_MINIWIN) || \
-    (defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64))
-    DisplaySurface* target = s_active_render_target;
-    void* surface = target != NULL ? target->surf : NULL;
-    void** vtable = surface_interface_vtable(surface);
-    typedef int32_t (SURFACE_COM_CALL *SurfaceRawLockFn)(
-        void*, void*, void*, uint32_t, void*);
-    typedef int32_t (SURFACE_COM_CALL *SurfaceRawUnlockFn)(void*, void*);
-    SurfaceRawLockFn lock;
-    SurfaceRawUnlockFn unlock;
-#if defined(LEGORRR_BACKEND_MINIWIN)
-    DDSURFACEDESC descriptor;
-    uint32_t bits_per_pixel;
-    uint32_t red_mask;
-    uint32_t green_mask;
-    uint32_t blue_mask;
-#else
-    uint32_t descriptor[31];
-    uint32_t bits_per_pixel;
-    uint32_t red_mask;
-    uint32_t green_mask;
-    uint32_t blue_mask;
-    const unsigned char* bytes = (const unsigned char*)descriptor;
-#endif
-    SurfacePixelWriteFn writer = NULL;
-
-    if (surface == NULL || vtable == NULL || vtable[25] == NULL ||
-        vtable[32] == NULL || writers == NULL) return 0;
-    lock = (SurfaceRawLockFn)vtable[25];
-    unlock = (SurfaceRawUnlockFn)vtable[32];
-#if defined(LEGORRR_BACKEND_MINIWIN)
-    memset(&descriptor, 0, sizeof(descriptor));
-    descriptor.dwSize = sizeof(descriptor);
-#else
-    memset(descriptor, 0, sizeof(descriptor));
-    descriptor[0] = 0x7cu;
-#endif
-#if defined(LEGORRR_BACKEND_MINIWIN)
-    if (lock(surface, NULL, &descriptor, 1u, NULL) != 0) return 0;
-#else
-    if (lock(surface, NULL, descriptor, 1u, NULL) != 0) return 0;
-#endif
-#if defined(LEGORRR_BACKEND_MINIWIN)
-    bits_per_pixel = descriptor.ddpfPixelFormat.dwRGBBitCount;
-    red_mask = descriptor.ddpfPixelFormat.dwRBitMask;
-    green_mask = descriptor.ddpfPixelFormat.dwGBitMask;
-    blue_mask = descriptor.ddpfPixelFormat.dwBBitMask;
-#else
-    memcpy(&bits_per_pixel, bytes + 88u, sizeof(bits_per_pixel));
-    memcpy(&red_mask, bytes + 92u, sizeof(red_mask));
-    memcpy(&green_mask, bytes + 96u, sizeof(green_mask));
-    memcpy(&blue_mask, bytes + 100u, sizeof(blue_mask));
-#endif
-
-    s_surface_pixel_bits = bits_per_pixel;
-    s_surface_red_mask_bits = (uint32_t)pop_count32(red_mask);
-    s_surface_green_mask_bits = (uint32_t)pop_count32(green_mask);
-    s_surface_blue_mask_bits = (uint32_t)pop_count32(blue_mask);
-    if (!surface_pixel_writer_select_by_format(bits_per_pixel, format,
-                                                writers, &writer)) {
-        (void)unlock(surface, NULL);
-        s_surface_pixel_bits = 0u;
-        s_surface_red_mask_bits = 0u;
-        s_surface_green_mask_bits = 0u;
-        s_surface_blue_mask_bits = 0u;
-        s_surface_pixel_writer = NULL;
-        return 0;
-    }
-    return 1;
-#else
-    (void)format;
-    (void)writers;
-    return 0;
-#endif
-}
-
 void surface_writer_unlock_hook_set(SurfaceWriterUnlockHook hook)
 {
     s_surface_writer_unlock_hook = hook;
@@ -3476,24 +3302,6 @@ void surface_directdraw_unlock(void* surface)
     }
 }
 
-/* SurfaceUnlockResetPixelWriter (FUN_00486650): unlock the DirectDraw target,
- * then clear the format and active pixel-writer globals. */
-// FUNCTION: LEGORR 0x00486650
-void surface_unlock_reset_pixel_writer(void* surface)
-{
-    surface_directdraw_unlock(surface);
-    s_surface_pixel_bits = 0u;
-    s_surface_red_mask_bits = 0u;
-    s_surface_green_mask_bits = 0u;
-    s_surface_blue_mask_bits = 0u;
-    s_surface_pixel_writer = NULL;
-}
-
-SurfacePixelWriteFn surface_pixel_writer_peek(void)
-{
-    return s_surface_pixel_writer;
-}
-
 /* FUNCTION: LEGORR 0x0047df50 */
 int32_t surface_pixel_channel_mask_get(void* surface)
 {
@@ -3504,160 +3312,6 @@ int32_t surface_pixel_channel_mask_get(void* surface)
         return 0;
     shift = (32u - bits_per_pixel) & 31u;
     return (int32_t)(0xffffffffu << shift);
-}
-
-/* BresenhamLineWalkClipped (FUN_00486720): walk the inclusive major axis,
- * take a minor-axis step when the doubled error is nonnegative, and emit
- * only coordinates inside the active rectangle. */
-// FUNCTION: LEGORR 0x00486720
-void surface_bresenham_line_walk_clipped(
-    SurfaceRasterContext* raster, int x0, int y0, int x1, int y1,
-    uint32_t pixel)
-{
-    int delta_x;
-    int delta_y;
-    int x_step;
-    int y_step;
-    int error;
-    int count;
-    int steep;
-    int x = x0;
-    int y = y0;
-    if (raster == NULL || raster->write_pixel == NULL) {
-        return;
-    }
-    delta_x = x1 - x0;
-    delta_y = y1 - y0;
-    x_step = delta_x < 0 ? -1 : 1;
-    y_step = delta_y < 0 ? -1 : 1;
-    if (delta_x < 0) delta_x = -delta_x;
-    if (delta_y < 0) delta_y = -delta_y;
-    steep = delta_x < delta_y;
-    if (steep) {
-        error = 2 * delta_x - delta_y;
-        count = delta_y + 1;
-    }
-    else {
-        error = 2 * delta_y - delta_x;
-        count = delta_x + 1;
-    }
-    while (count > 0) {
-        if ((float)x >= raster->left && (float)y >= raster->top
-            && (float)x < raster->right && (float)y < raster->bottom) {
-            raster->write_pixel(raster->context, x, y, pixel);
-        }
-        if (steep) {
-            if (error >= 0) {
-                x += x_step;
-                error -= 2 * delta_y;
-            }
-            y += y_step;
-            error += 2 * delta_x;
-        }
-        else {
-            if (error >= 0) {
-                y += y_step;
-                error -= 2 * delta_x;
-            }
-            x += x_step;
-            error += 2 * delta_y;
-        }
-        --count;
-    }
-}
-
-/* SurfaceFillPixelSpans (FUN_00486090): each span fills x0..x1 on every
- * scanline y0..y1, with both upper bounds exclusive, through the pixel
- * writer selected for the locked destination surface. */
-// FUNCTION: LEGORR 0x00486090
-void surface_fill_pixel_spans(SurfaceRasterContext* raster,
-                              const SurfacePixelSpan* spans, int count,
-                              uint32_t pixel)
-{
-    int span_index;
-    if (raster == NULL || raster->write_pixel == NULL || spans == NULL
-        || count <= 0) {
-        return;
-    }
-    for (span_index = 0; span_index < count; ++span_index) {
-        const SurfacePixelSpan* span = &spans[span_index];
-        int y;
-        if (span->x1 <= span->x0 || span->y1 <= span->y0) continue;
-        for (y = span->y0; y < span->y1; ++y) {
-            int x;
-            if ((float)y < raster->top || (float)y >= raster->bottom) {
-                continue;
-            }
-            for (x = span->x0; x < span->x1; ++x) {
-                if ((float)x >= raster->left && (float)x < raster->right) {
-                    raster->write_pixel(raster->context, x, y, pixel);
-                }
-            }
-        }
-    }
-}
-
-/* SurfaceDrawPolyline (FUN_00485ff0): connect each adjacent pair with the
- * same clipped integer walk used by the low-level line helper. */
-// FUNCTION: LEGORR 0x00485ff0
-void surface_draw_polyline(SurfaceRasterContext* raster,
-                           const SurfacePoint* points, int count,
-                           uint32_t pixel)
-{
-    int i;
-    if (raster == NULL || points == NULL || count < 2) return;
-    for (i = 1; i < count; ++i) {
-        surface_bresenham_line_walk_clipped(raster,
-            points[i - 1].x, points[i - 1].y,
-            points[i].x, points[i].y, pixel);
-    }
-}
-
-/* SurfaceFillPixelSpanRecords (FUN_00486210): consume the span records in
- * order and route each rectangle through the shared span filler. */
-// FUNCTION: LEGORR 0x00486210
-void surface_fill_pixel_span_records(SurfaceRasterContext* raster,
-                                     const SurfacePixelSpan* spans, int count,
-                                     uint32_t pixel)
-{
-    surface_fill_pixel_spans(raster, spans, count, pixel);
-}
-
-static void surface_circle_pixel(SurfaceRasterContext* raster,
-                                 int x, int y, uint32_t pixel)
-{
-    if ((float)x >= raster->left && (float)x < raster->right &&
-        (float)y >= raster->top && (float)y < raster->bottom) {
-        raster->write_pixel(raster->context, x, y, pixel);
-    }
-}
-
-/* SurfaceDrawCirclePixels (FUN_00486390): midpoint circle walk, emitting
- * the eight symmetric pixels at each step and clipping through the raster. */
-// FUNCTION: LEGORR 0x00486390
-void surface_draw_circle_pixels(SurfaceRasterContext* raster,
-                                int center_x, int center_y, int radius,
-                                uint32_t pixel)
-{
-    int x;
-    int y = 0;
-    int decision;
-    if (raster == NULL || raster->write_pixel == NULL || radius < 0) return;
-    x = radius;
-    decision = 1 - radius;
-    while (x >= y) {
-        surface_circle_pixel(raster, center_x + x, center_y + y, pixel);
-        surface_circle_pixel(raster, center_x + y, center_y + x, pixel);
-        surface_circle_pixel(raster, center_x - y, center_y + x, pixel);
-        surface_circle_pixel(raster, center_x - x, center_y + y, pixel);
-        surface_circle_pixel(raster, center_x - x, center_y - y, pixel);
-        surface_circle_pixel(raster, center_x - y, center_y - x, pixel);
-        surface_circle_pixel(raster, center_x + y, center_y - x, pixel);
-        surface_circle_pixel(raster, center_x + x, center_y - y, pixel);
-        ++y;
-        if (decision < 0) decision += 2 * y + 1;
-        else { --x; decision += 2 * (y - x) + 1; }
-    }
 }
 
 /* FUNCTION: LEGORR 0x0042b850
@@ -3938,25 +3592,6 @@ int parse_indexed_surface_name(const char* path, uint32_t* index_out)
     if (digits[3] != '_') return 0;
     *index_out = value;
     return 1;
-}
-
-// FUNCTION: LEGORR 0x004864d0
-uint32_t surface_color_pack_to_pixel(float red, float green, float blue)
-{
-    if (s_surface_pixel_bits == 8) {
-        return 0;
-    }
-    const uint32_t red_value = (uint32_t)float_to_long(red);
-    const uint32_t green_value = (uint32_t)float_to_long(green);
-    const uint32_t blue_value = (uint32_t)float_to_long(blue);
-    const uint32_t red_bits = (uint8_t)s_surface_red_mask_bits;
-    const uint32_t green_bits = (uint8_t)s_surface_green_mask_bits;
-    const uint32_t blue_bits = (uint8_t)s_surface_blue_mask_bits;
-    return ((red_value >> ((8u - red_bits) & 31u))
-            << ((green_bits + blue_bits) & 31u))
-         | ((green_value >> ((8u - green_bits) & 31u))
-            << (blue_bits & 31u))
-         | (blue_value >> ((8u - blue_bits) & 31u));
 }
 
 /* SurfacePixelValueEncode (FUN_0047d2d0): resolve an RGB color through an

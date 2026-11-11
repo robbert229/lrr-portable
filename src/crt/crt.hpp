@@ -1000,7 +1000,7 @@ uint32_t renderer_global_dword_get(void);
 void     renderer_global_dword_set(uint32_t value); /* install */
 
 /* RenderSurfaceSecondaryGet (FUN_004065e0): the DAT_0076ac8c surface word. */
-extern uint32_t s_render_surface_secondary; /* DAT_0076ac8c */
+extern "C" uint32_t s_render_surface_secondary; /* DAT_0076ac8c, crt.h */
 uint32_t render_surface_secondary_get(void);
 void     render_surface_secondary_set(uint32_t value); /* install */
 

@@ -7695,8 +7695,9 @@ void position_tracker_box_draw_ops_set(const PositionTrackerBoxDrawOps* ops)
 }
 
 /* PositionTrackerBoxDraw (FUN_0041cd30): draw the two nested outline quads
- * unless the interface's transition flag is active. The corpus submits each
- * four point contour through the same transformed polygon primitive. */
+ * in green unless the interface's transition flag is active. Each closed
+ * four-point contour is one Draw_LineListEx call (draw.c) whose to-list is
+ * the from-list shifted by one point. */
 // FUNCTION: LEGORR 0x0041cd30
 void position_tracker_box_draw(const float bounds[4])
 {
@@ -7704,7 +7705,7 @@ void position_tracker_box_draw(const float bounds[4])
     uint32_t flags;
     float points[10];
     int inset;
-    if (bounds == NULL || ops->outline_draw == NULL) return;
+    if (bounds == NULL) return;
     flags = ops->interface_flags_get != NULL ?
         ops->interface_flags_get(ops->context) : 0u;
     if ((flags & 0x100000u) != 0u) return;
@@ -7723,8 +7724,9 @@ void position_tracker_box_draw(const float bounds[4])
         points[7] = bottom;
         points[8] = left;
         points[9] = top;
-        ops->outline_draw(ops->context, points, points + 2,
-                          4, 0, 1.0f, 0, 0);
+        surface_draw_polyline((struct Point2F*)points,
+                              (struct Point2F*)(points + 2), 4, 0.0f, 1.0f,
+                              0.0f, 0);
     }
 }
 
@@ -12693,26 +12695,6 @@ int ledger_stub_0041c7b0_InputActionStateUpdate(const EngineContext* context,
 void ledger_stub_0041c800_CatalogSlotFlagUpdate(int category, int slot)
 {
     catalog_slot_flag_update(category, slot);
-}
-
-void ledger_stub_0041cd30_PositionTrackerBoxDraw(
-    SurfaceRasterContext* raster, int x, int y, int width, int height,
-    uint32_t flags, uint32_t pixel)
-{
-    SurfacePoint points[5];
-    if (raster == NULL || (flags & 0x100000u) != 0u) return;
-    points[0].x = x - 1; points[0].y = y - 1;
-    points[1].x = x + width + 1; points[1].y = y - 1;
-    points[2].x = x + width + 1; points[2].y = y + height + 1;
-    points[3].x = x - 1; points[3].y = y + height + 1;
-    points[4] = points[0];
-    surface_draw_polyline(raster, points, 5, pixel);
-    points[0].x = x + 2; points[0].y = y + 2;
-    points[1].x = x + width - 2; points[1].y = y + 2;
-    points[2].x = x + width - 2; points[2].y = y + height - 2;
-    points[3].x = x + 2; points[3].y = y + height - 2;
-    points[4] = points[0];
-    surface_draw_polyline(raster, points, 5, pixel);
 }
 
 void ledger_stub_0041eac0_EventTimerCountdownAdvance(float delta)
