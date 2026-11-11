@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'helpwindow.cpp',
   'tile_variants.cpp',
   'cell_flood_passes.cpp',
   'vehicle_model.cpp',

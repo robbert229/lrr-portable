@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include "upgrades_for_helpwindow.hpp"
 
 namespace lego {
 
@@ -31,10 +32,12 @@ UpgradeTypeRecord* s_upgrade_types;
 char** s_upgrade_type_names;
 uint32_t s_upgrade_type_count = 0;
 UpgradeTypeLoadHook s_upgrade_type_load_hook = 0;
+} // namespace
 void (*s_building_upgrade_begin_hook)(void) = 0;
 int (*s_building_upgrade_changed_hook)(int, int, int) = 0;
 void (*s_building_upgrade_apply_hook)(int, int, int) = 0;
 BuildingUpgradeEventHook s_building_upgrade_event_hook = 0;
+namespace {
 
 int ascii_lower(int c)
 {
@@ -342,35 +345,6 @@ void building_upgrade_event_hooks_set(
     s_building_upgrade_changed_hook = already_changed_hook;
     s_building_upgrade_apply_hook = apply_hook;
     s_building_upgrade_event_hook = event_hook;
-}
-
-// FUNCTION: LEGORR 0x00418830
-void building_upgrade_state_changed_dispatch(int type, int row, int column,
-                                             int state)
-{
-    if (s_building_upgrade_begin_hook != 0) s_building_upgrade_begin_hook();
-    else unported_ledger_stubs::dependency_grid_occupancy_pass();
-    if (s_building_upgrade_changed_hook != 0) {
-        if (s_building_upgrade_changed_hook(type, row, column) != 0) return;
-    }
-    else if (cell_flag100_is_set(type, row, column) != 0u) {
-        return;
-    }
-    if (s_building_upgrade_apply_hook != 0) {
-        s_building_upgrade_apply_hook(type, row, column);
-    }
-    else {
-        cell_flag100_set(type, row, column);
-    }
-    if (state == 0) {
-        if (s_building_upgrade_event_hook != 0) {
-            s_building_upgrade_event_hook(type, row, column, state);
-        }
-        else {
-            unported_ledger_stubs::dependency_grid_category_candidates_build(
-                (uint32_t)type, (uint32_t)row, (uint32_t)column);
-        }
-    }
 }
 
 } // namespace lego

@@ -486,39 +486,6 @@ uint32_t dependency_grid_flag100_get(int x, int y, int field)
     return state->cells[x][y].flags[field] & 0x100u;
 }
 
-// FUNCTION: LEGORR 0x00418920
-void dependency_grid_category_candidates_build(uint32_t category,
-                                               uint32_t row,
-                                               uint32_t selector)
-{
-    DependencyGridMatches matches;
-    DependencyGridLevelStorage* storage = dependency_grid_current_storage();
-    DependencyGridCategoryCandidates* candidates;
-    uint32_t index;
-    if (storage == NULL) return;
-    candidates = &storage->candidates;
-    candidates->count = 0u;
-    candidates->category = category;
-    candidates->row = row;
-    candidates->selector = selector;
-    dependency_grid_matches_collect(category, row, selector, &matches);
-    for (index = 0u; index < matches.count &&
-         index < DEPENDENCY_GRID_MATCH_CAPACITY; ++index) {
-        const uint32_t x = matches.x[index];
-        const uint32_t y = matches.y[index];
-        const uint32_t variant = matches.variant[index];
-        uint32_t output_index;
-        if (cell_flag4_is_set((int)x, (int)y, (int)variant) == 0u) continue;
-        output_index = candidates->count;
-        if (output_index < DEPENDENCY_GRID_CATEGORY_CANDIDATE_CAPACITY) {
-            candidates->x[output_index] = x;
-            candidates->y[output_index] = y;
-            candidates->variant[output_index] = variant;
-        }
-        ++candidates->count;
-    }
-}
-
 const DependencyGridCategoryCandidates*
 dependency_grid_category_candidates_get(void)
 {
