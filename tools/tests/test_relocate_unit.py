@@ -17,6 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import conversion_footprint as cf  # noqa: E402
 import cxx_items as cx  # noqa: E402
 import link_order as lo  # noqa: E402
 import relocate_unit as ru  # noqa: E402
@@ -188,7 +189,8 @@ class ScannerTest(unittest.TestCase):
         naked = by[("naked_fn",)]
         self.assertEqual(naked.category, "function")
         self.assertTrue(naked.static)
-        self.assertIn("qualified (member or namespace) definition", by[("member",)].problems)
+        self.assertEqual(by[("member",)].qualifier, "obj")
+        self.assertEqual(by[("member",)].problems, [])
 
     def test_if_group_of_alternatives_merges(self):
         text = textwrap.dedent("""\
@@ -378,18 +380,17 @@ class RefusalTest(unittest.TestCase):
                                   "// FUNCTION: LEGORR 0x00401000\nDECLARE_IT(x) int alpha_first(int x)"),
                     "macro or complex declarator")
 
-    def test_named_namespace(self):
-        helper_in_ns = MIXED.replace("static int alpha_helper(int v);\n", "").replace(
-            "static int alpha_helper(int v)\n{\n    return v + 1;\n}\n", "")
-        helper_in_ns = helper_in_ns.replace("// FUNCTION: LEGORR 0x00401040",
-                                            "namespace port {\nint alpha_helper(int v) { return v; }\n}\n\n"
-                                            "// FUNCTION: LEGORR 0x00401040")
-        self.refuse(helper_in_ns, "defined in namespace port")
-        definition_in_ns = MIXED.replace("// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)\n{\n"
-                                         "    s_alpha_state = x;\n    return alpha_second();\n}\n",
-                                         "namespace port {\n// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)\n{\n"
-                                         "    s_alpha_state = x;\n    return alpha_second();\n}\n}\n")
-        self.refuse(definition_in_ns, "inside namespace port")
+    def test_nested_namespace(self):
+        nested = MIXED.replace("// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)\n{\n"
+                               "    s_alpha_state = x;\n    return alpha_second();\n}\n",
+                               "namespace outer {\nnamespace inner {\n// FUNCTION: LEGORR 0x00401000\n"
+                               "int alpha_first(int x)\n{\n    return x;\n}\n}\n}\n")
+        self.refuse(nested, "nested namespace")
+
+    def test_out_of_line_class_member(self):
+        member = MIXED.replace("// FUNCTION: LEGORR 0x00401000\nint alpha_first(int x)",
+                               "// FUNCTION: LEGORR 0x00401000\nint Obj::alpha_first(int x)")
+        self.refuse(member, "out-of-line member of Obj")
 
     def test_function_defined_in_a_header(self):
         self.refuse(MIXED, "edit a shared header",
@@ -415,6 +416,299 @@ class RefusalTest(unittest.TestCase):
     def test_name_clash_between_files(self):
         other = OTHER + "int s_shared_counter;\n"
         self.refuse(MIXED, "would get external linkage", {"src/game/other.cpp": other})
+
+
+NS_HEADER = """#ifndef MIXED_HPP
+#define MIXED_HPP
+namespace port {
+int alpha_first(int x);
+int alpha_second(void);
+int beta_one(void);
+int port_value(void);
+}
+#endif
+"""
+# A file whose original functions are all members of one namespace, split
+# over three blocks.
+NS_ONLY = """// SPDX-License-Identifier: LGPL-3.0-or-later
+#include "mixed.hpp"
+
+namespace port {
+static int s_shared;
+} // namespace port
+
+namespace port {
+
+/* Alpha's first function. */
+// FUNCTION: LEGORR 0x00401000
+int alpha_first(int x)
+{
+    s_shared = x;
+    return alpha_second();
+}
+
+// FUNCTION: LEGORR 0x00401040
+int alpha_second(void)
+{
+    return s_shared + 1;
+}
+
+} // namespace port
+
+namespace port {
+
+// FUNCTION: LEGORR 0x00401100
+int beta_one(void)
+{
+    return s_shared;
+}
+
+} // namespace port
+"""
+
+
+class NamespaceTest(unittest.TestCase):
+    def plan(self, mixed: str, header: str = NS_HEADER, unit: str = "GAME-001"):
+        fx = Fixture(mixed, {"src/game/mixed.hpp": header})
+        self.addCleanup(fx.close)
+        return fx, ru.plan_relocation(unit, fx.root)
+
+    def test_namespace_only_file(self):
+        fx, plan = self.plan(NS_ONLY)
+        unit = plan.files["src/game/alpha.cpp"]
+        # Both functions in one reopened block, in address order, comments kept.
+        self.assertEqual(unit.count("namespace port {"), 1)
+        self.assertIn("namespace port {\n/* Alpha's first function. */\n// FUNCTION: LEGORR 0x00401000", unit)
+        self.assertLess(unit.index("0x00401000"), unit.index("0x00401040"))
+        self.assertIn("} // namespace port", unit)
+        # The static both sides use is shared inside the namespace.
+        header = plan.files["src/game/mixed_shared.hpp"]
+        self.assertIn("namespace port {\nextern int s_shared;\n} // namespace port", header)
+        mixed = plan.files["src/game/mixed.cpp"]
+        self.assertIn("namespace port {\nint s_shared;\n} // namespace port", mixed)
+        # The emptied middle block is gone; Beta's block stays.
+        self.assertEqual(mixed.count("namespace port {"), 2)
+        self.assertIn("// FUNCTION: LEGORR 0x00401100", mixed)
+        ru.write(plan, fx.root)
+        rows = list(csv.DictReader(io.StringIO(fx.read("docs/coverage/relocations/GAME-001.csv"))))
+        for r in rows:
+            if r["role"] == "function":
+                self.assertEqual(r["before_sha256"], r["after_sha256"])
+        self.assertEqual(lo.check(fx.root), [])
+        self.assertTrue(ru.plan_relocation("GAME-001", fx.root).done)
+
+    def test_mixed_file_with_namespace_helper(self):
+        mixed = MIXED.replace("static int alpha_helper(int v);\n", "").replace(
+            "static int alpha_helper(int v)\n{\n    return v + 1;\n}\n",
+            "namespace port {\nstatic int alpha_helper(int v)\n{\n    return v + 1;\n}\n} // namespace port\n")
+        mixed = mixed.replace("return alpha_helper(s_alpha_state)", "return port::alpha_helper(s_alpha_state)")
+        fx, plan = self.plan(mixed, HEADER)
+        unit = plan.files["src/game/alpha.cpp"]
+        # The global functions stay global; the helper moves inside its namespace,
+        # after them, with a namespaced forward declaration.
+        self.assertIn("namespace port { static int alpha_helper(int v); }", unit)
+        self.assertIn("namespace port {\nstatic int alpha_helper(int v)\n{", unit)
+        self.assertGreater(unit.index("namespace port {\nstatic int alpha_helper(int v)\n{"),
+                           unit.index("0x00401040"))
+        self.assertNotIn("namespace port {\n// FUNCTION", unit)
+        mixed_after = plan.files["src/game/mixed.cpp"]
+        self.assertNotIn("alpha_helper", mixed_after)
+        # The emptied block stays: nothing else declares namespace port.
+        self.assertIn("namespace port {", mixed_after)
+
+    def test_namespace_static_used_from_both_sides(self):
+        mixed = NS_ONLY.replace("static int s_shared;", "static int s_shared;\nstatic int s_only_beta;").replace(
+            "    return s_shared;\n", "    return s_shared + s_only_beta;\n")
+        _, plan = self.plan(mixed)
+        header = plan.files["src/game/mixed_shared.hpp"]
+        self.assertIn("extern int s_shared;", header)
+        self.assertNotIn("s_only_beta", header)
+        names = {d.name for s in plan.sources for d in s.declarations}
+        self.assertEqual(names, {"port::s_shared"})
+
+    def test_using_directive_is_carried_over(self):
+        mixed = MIXED.replace('#include "mixed.hpp"\n', '#include "mixed.hpp"\n\nusing namespace port;\n') \
+            .replace("    return alpha_helper(s_alpha_state) * ALPHA_SCALE;",
+                     "    return alpha_helper(s_alpha_state) * ALPHA_SCALE + port_value();")
+        header = HEADER.replace("#endif", "namespace port {\nint port_value(void);\n}\n#endif")
+        _, plan = self.plan(mixed, header)
+        unit = plan.files["src/game/alpha.cpp"]
+        self.assertEqual(plan.usings, ["using namespace port;"])
+        self.assertLess(unit.index("using namespace port;"), unit.index("// FUNCTION"))
+        self.assertIn("using namespace port;", plan.files["src/game/mixed.cpp"])
+        # Not needed, not copied.
+        _, plan2 = self.plan(MIXED.replace('#include "mixed.hpp"\n', '#include "mixed.hpp"\nusing namespace port;\n'),
+                             header)
+        self.assertEqual(plan2.usings, [])
+
+    def test_using_declaration_is_carried_over(self):
+        mixed = MIXED.replace('#include "mixed.hpp"\n', '#include "mixed.hpp"\nusing port::port_value;\n') \
+            .replace("    return alpha_second();", "    return alpha_second() + port_value();")
+        header = HEADER.replace("#endif", "namespace port {\nint port_value(void);\n}\n#endif")
+        _, plan = self.plan(mixed, header)
+        self.assertEqual(plan.usings, ["using port::port_value;"])
+
+    def test_anonymous_namespace_inside_a_named_one(self):
+        mixed = MIXED.replace("static int alpha_helper(int v);\n", "").replace(
+            "static int alpha_helper(int v)\n{\n    return v + 1;\n}\n",
+            "namespace port {\nnamespace {\nint alpha_helper(int v)\n{\n    return v + 1;\n}\n} // namespace\n"
+            "} // namespace port\n")
+        mixed = mixed.replace("// FUNCTION: LEGORR 0x00401040", "namespace port {\nnamespace {\nint alpha_helper(int v);\n}\n}\n\n"
+                              "// FUNCTION: LEGORR 0x00401040", 1)
+        mixed = mixed.replace("return alpha_helper(s_alpha_state)", "return port::alpha_helper(s_alpha_state)")
+        fx, plan = self.plan(mixed, HEADER)
+        unit = plan.files["src/game/alpha.cpp"]
+        self.assertIn("namespace port {\nnamespace {\nint alpha_helper(int v)\n{", unit)
+        moved = [m for m in plan.order if m.name == "alpha_helper"]
+        self.assertTrue(moved and all(m.wrap == "ns:port/anon" and m.item.scope == "port" for m in moved))
+        ru.write(plan, fx.root)
+        self.assertEqual(lo.check(fx.root), [])
+
+    def test_qualified_out_of_line_namespace_definition(self):
+        mixed = NS_ONLY.replace("// FUNCTION: LEGORR 0x00401040\nint alpha_second(void)",
+                                "// FUNCTION: LEGORR 0x00401040\nint port::alpha_second(void)")
+        # Move alpha_second out of the block, as an out-of-line definition.
+        body = "// FUNCTION: LEGORR 0x00401040\nint port::alpha_second(void)\n{\n    return s_shared + 1;\n}\n\n"
+        mixed = mixed.replace(body, "").replace("} // namespace port\n\nnamespace port {\n\n// FUNCTION: LEGORR 0x00401100",
+                                                "} // namespace port\n\n" + body + "namespace port {\n\n// FUNCTION: LEGORR 0x00401100")
+        _, plan = self.plan(mixed)
+        moved = {m.name: m for m in plan.order}
+        self.assertEqual(moved["alpha_second"].item.scope, "port")
+        self.assertIsNone(moved["alpha_second"].wrap)            # moved as written, at global scope
+        unit = plan.files["src/game/alpha.cpp"]
+        self.assertIn("\nint port::alpha_second(void)\n{", unit)
+
+
+class R1DefectTest(unittest.TestCase):
+    """The three defects PR #477 (finding 527) worked around by hand."""
+
+    def test_block_comment_inside_a_define_belongs_to_it(self):
+        text = textwrap.dedent("""\
+            #define LOAD_BODY(x) \\
+                do { \\
+                    /* a comment that
+                     * spans lines */ \\
+                    if (i < 9u) { x; } \\
+                } while (0)
+            #define AFTER /* one
+               line */ 3
+            int after_macro;
+            """)
+        items = cx.scan(text).items
+        self.assertEqual([(i.category, i.names) for i in items],
+                         [("macro", ["LOAD_BODY"]), ("macro", ["AFTER"]), ("var", ["after_macro"])])
+        self.assertIn("} while (0)", items[0].code(text))
+
+    def test_macro_with_comment_does_not_leak_into_the_private_header(self):
+        mixed = MIXED.replace("#define ALPHA_SCALE 3\n",
+                              "#define ALPHA_SCALE 3\n#define LOOP(x) \\\n    do { \\\n        /* note\n"
+                              "         * more */ \\\n        if (i < 9u) { x; } \\\n    } while (0)\n")
+        fx = Fixture(mixed)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            header = plan.files["src/game/mixed_shared.hpp"]
+            self.assertNotIn("i < 9u", header)
+        finally:
+            fx.close()
+
+    def test_private_header_goes_after_the_top_include_block(self):
+        late = MIXED + '\n#include <stdlib.h>\n\nint late_user(void) { return s_shared_counter; }\n'
+        fx = Fixture(late)
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            mixed = plan.files["src/game/mixed.cpp"]
+            self.assertLess(mixed.index('#include "mixed_shared.hpp"'), mixed.index("int s_shared_counter;"))
+            self.assertLess(mixed.index('#include "mixed_shared.hpp"'), mixed.index("#include <stdlib.h>"))
+        finally:
+            fx.close()
+
+    def test_includes_before_the_first_use_stay_in_front(self):
+        # A declaration block, then more includes, then the first use: the
+        # private header goes after those includes, before the use.
+        middle = MIXED.replace("#define ALPHA_SCALE 3\n",
+                               "int unrelated_decl(void);\n#include <stddef.h>\n\n#define ALPHA_SCALE 3\n")
+        fx = Fixture(middle)
+        try:
+            mixed = ru.plan_relocation("GAME-001", fx.root).files["src/game/mixed.cpp"]
+            self.assertLess(mixed.index("#include <stddef.h>"), mixed.index('#include "mixed_shared.hpp"'))
+            self.assertLess(mixed.index('#include "mixed_shared.hpp"'), mixed.index("int s_shared_counter;"))
+        finally:
+            fx.close()
+
+    def test_late_private_include_is_caught(self):
+        fx = Fixture(MIXED)
+        original = ru._insert_include
+        try:
+            ru._insert_include = lambda text, line, names=(): text + line + "\n"   # the old, too-late placement
+            with self.assertRaises(ru.Refused) as cm:
+                ru.plan_relocation("GAME-001", fx.root)
+            self.assertTrue(any("included after code that uses s_shared_counter" in r for r in cm.exception.reasons),
+                            cm.exception.reasons)
+        finally:
+            ru._insert_include = original
+            fx.close()
+
+    def test_bss_slack_never_reaches_the_next_unit(self):
+        # GAME-002's .bss starts at 004b0008, inside GAME-001's slack
+        # (its last item starts at 004b0004; the slack reaches 004b000c).
+        ranges = RANGES.replace("004b0010-004b0010", "004b0008-004b0008")
+        mixed = MIXED.replace("// GLOBAL: LEGORR 0x004b0010", "// GLOBAL: LEGORR 0x004b0008")
+        fx = Fixture(mixed, {"docs/coverage/translation-unit-ranges.csv": ranges})
+        try:
+            units = cf.load_units(fx.root)
+            alpha, beta = cf.find_unit(units, "GAME-001"), cf.find_unit(units, "GAME-002")
+            self.assertTrue(cf._in_ranges(0x4b0008, alpha))            # the raw slack does reach it
+            self.assertFalse(ru.owns_data(0x4b0008, alpha, units))
+            self.assertTrue(ru.owns_data(0x4b0008, beta, units))
+            self.assertTrue(ru.owns_data(0x4b0006, alpha, units))       # slack nobody else claims
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            self.assertNotIn("s_beta_state", plan.files["src/game/alpha.cpp"])
+        finally:
+            fx.close()
+
+
+class ClashAndGroupTest(unittest.TestCase):
+    def test_extern_declaration_and_definition_from_two_sources_do_not_clash(self):
+        mixed = MIXED.replace("static int alpha_helper(int v);", "static int alpha_helper(int v);\nextern int g_alpha_word;") \
+            .replace("    s_alpha_state = x;", "    s_alpha_state = x + g_alpha_word;")
+        other = OTHER + "\n// GLOBAL: LEGORR 0x004b0004\nint g_alpha_word = 0;\n"
+        fx = Fixture(mixed, {"src/game/other.cpp": other})
+        try:
+            unit = ru.plan_relocation("GAME-001", fx.root).files["src/game/alpha.cpp"]
+            self.assertIn("extern int g_alpha_word;", unit)
+            self.assertIn("int g_alpha_word = 0;", unit)
+        finally:
+            fx.close()
+
+    def test_if_group_that_loses_static(self):
+        group = ("// FUNCTION: LEGORR 0x00401040\n#if defined(NAKED)\nstatic __declspec(naked) int alpha_second(void)\n"
+                 "{\n    __asm { ret }\n}\n#else\nstatic int alpha_second(void)\n{\n    return 2;\n}\n#endif\n")
+        start = MIXED.index("// FUNCTION: LEGORR 0x00401040")
+        end = MIXED.index("/* The first function of Alpha.c. */")
+        mixed = MIXED[:start] + group + "\n" + MIXED[end:]
+        mixed = mixed.replace("    return s_beta_state;", "    return s_beta_state + alpha_second();")
+        fx = Fixture(mixed, {"src/game/mixed.hpp": HEADER.replace("int alpha_second(void);\n", "")})
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            unit = plan.files["src/game/alpha.cpp"]
+            self.assertIn("__declspec(naked) int alpha_second(void)", unit)
+            self.assertNotIn("static __declspec(naked)", unit)
+            self.assertIn("int alpha_second(void);", plan.files["src/game/mixed_shared.hpp"])
+        finally:
+            fx.close()
+
+
+class StemTest(unittest.TestCase):
+    def test_default_stem_that_names_a_file_gets_a_variant(self):
+        fx = Fixture(MIXED, {"src/game/alpha.hpp": "#pragma once\n"})
+        try:
+            plan = ru.plan_relocation("GAME-001", fx.root)
+            self.assertEqual(plan.target, "src/game/alpha_unit.cpp")
+            self.assertTrue(any("alpha_unit" in n for n in plan.notes))
+            with self.assertRaises(ru.Refused):
+                ru.plan_relocation("GAME-001", fx.root, stem="alpha")
+        finally:
+            fx.close()
 
 
 class OrderAndSurveyTest(unittest.TestCase):

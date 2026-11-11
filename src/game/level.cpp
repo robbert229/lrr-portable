@@ -73,7 +73,7 @@ static void* s_terrain_cell_overlay_height_fill_context;
 static LevelTerrainMaterialTransitionMeshHook
     s_material_transition_mesh_hook;
 static void* s_material_transition_mesh_context;
-static TerrainSurfaceGrid* level_surface_grid_get(const LevelState* level);
+TerrainSurfaceGrid* level_surface_grid_get(const LevelState* level);
 LevelState* level_current_owner_get(void);
 LevelState* s_lava_erosion_level_context;
 static EngineState s_level_field_grid_state;
@@ -3686,36 +3686,6 @@ int terrain_cell_predicate_check(TerrainDescriptorNode* list,
                                  const uint32_t* pair_key)
 {
     return terrain_descriptor_find_exact(list, pair_key, NULL) != NULL;
-}
-
-/* Retail's descriptor chain consists of the raw path-record windows. */
-// FUNCTION: LEGORR 0x004090c0
-void* terrain_descriptor_find_exact_current(const uint32_t* pair_key,
-                                            const uint32_t* single_key)
-{
-    uint8_t* record = (uint8_t*)path_record_last_peek();
-    while (record != NULL) {
-        uint32_t first, second;
-        void* previous;
-        if (pair_key != NULL) {
-            memcpy(&first, record + 0x0c, sizeof first);
-            memcpy(&second, record + 0x10, sizeof second);
-            if (first == pair_key[0] && second == pair_key[1]) return record;
-        }
-        else if (single_key != NULL) {
-            memcpy(&first, record + 0x08, sizeof first);
-            if (first == *single_key) return record;
-        }
-        memcpy(&previous, record + 0x24, sizeof previous);
-        record = (uint8_t*)previous;
-    }
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x004090a0
-int terrain_cell_predicate_check_current(const uint32_t pair_key[2])
-{
-    return terrain_descriptor_find_exact_current(pair_key, NULL) != NULL;
 }
 
 /* CellResourceEntryMatches (FUN_0040af40): entries backed by a matching
@@ -10789,19 +10759,6 @@ void cell_cardinal_neighbor_apply(const struct GameContext* ctx, int x,
     }
 }
 
-// FUNCTION: LEGORR 0x00409cd0
-void cell_cardinal_neighbor_apply_current(const int coord_pair[2])
-{
-    static const int offsets[8] = { 0,-1, 1,0, 0,1, -1,0 };
-    int i;
-    if (coord_pair == NULL) return;
-    for (i = 0; i < 4; ++i) {
-        const int pair[2] = { coord_pair[0] + offsets[i * 2],
-                              coord_pair[1] + offsets[i * 2 + 1] };
-        terrain_cell_refresh_dispatch_current(pair, 0);
-    }
-}
-
 /* TerrainCellSpecialStatePredicate (FUN_0040d3f0) — see level.hpp. */
 /* CellVariantEntryMatchCheck (FUN_00451180) — see level.hpp. The
  * coordinate pair names two cells through the same window: the block
@@ -10919,21 +10876,7 @@ int terrain_cell_has_occupied_or_flagged_neighbor(
  * belt-and-braces zero stores are spelled explicitly after the fill, and
  * the allocator's failure word is guarded. */
 
-#define PATH_RECORD_WINDOW 0xd4 /* the corpus's 53-dword window           */
 #define PATH_RECORD_WORDS (PATH_RECORD_WINDOW / 4u)
-
-/* DAT_004b8a20 role */
-// GLOBAL: LEGORR 0x004b8a20
-static uint32_t s_path_record_count;
-// GLOBAL: LEGORR 0x004b8a24
-static void* s_path_record_last;     /* DAT_004b8a24 role */
-
-typedef struct PathRecordPayloadPort {
-    const void* record;
-    void* payload;
-    uint32_t count;
-    struct PathRecordPayloadPort* next;
-} PathRecordPayloadPort;
 
 typedef struct CellPathRecordPort {
     LevelState* level;
@@ -10943,16 +10886,9 @@ typedef struct CellPathRecordPort {
     struct CellPathRecordPort* next;
 } CellPathRecordPort;
 
-typedef struct PathRecordEntityPort {
-    const void* record;
-    uint32_t count;
-    struct EntitySlot* entities[40];
-    struct PathRecordEntityPort* next;
-} PathRecordEntityPort;
-
-static PathRecordPayloadPort* s_path_record_payload_ports;
+PathRecordPayloadPort* s_path_record_payload_ports;
 static CellPathRecordPort* s_cell_path_record_ports;
-static PathRecordEntityPort* s_path_record_entity_ports;
+PathRecordEntityPort* s_path_record_entity_ports;
 static TerrainSurfaceGrid* s_path_record_surface_grid;
 
 static PathRecordPayloadPort* path_record_payload_port_find(
@@ -10984,33 +10920,6 @@ static PathRecordEntityPort* path_record_entity_port_find(
         if (port->record == record) return port;
     }
     return NULL;
-}
-
-// FUNCTION: LEGORR 0x00409350
-void* path_record_allocate_and_link(const uint32_t* coord_pair)
-{
-    const size_t bytes =
-        PATH_RECORD_WINDOW + sizeof(void*) - sizeof(uint32_t);
-    char* rec = (char*)engine_heap_alloc((long)bytes);
-    if (rec == NULL) {
-        return NULL; /* deviation: the corpus strides the allocator's word */
-    }
-    __builtin_memset(rec, 0, bytes); /* the corpus's rep stos zero-fill  */
-    /* The corpus writes these two belt words after the sweep and MSVC5
-     * keeps the stores (the disassembly shows them landing blind). */
-    *(uint32_t*)(rec + 0x20) = 0u;
-    *(uint32_t*)(rec + 0x1c) = 0u;
-    /* Keep the corpus's two counter reads separate: the record receives the
-     * old word at 0x40936e, then 0x409379 reloads and increments the global. */
-    *(uint32_t*)(rec + 0x08) = s_path_record_count;
-    s_path_record_count = s_path_record_count + 1u;
-    if (coord_pair != NULL) {
-        *(uint32_t*)(rec + 0x0c) = coord_pair[0];
-        *(uint32_t*)(rec + 0x10) = coord_pair[1];
-    }
-    *(void**)(rec + 0x24) = s_path_record_last;         /* prev link */
-    s_path_record_last = rec;
-    return rec;
 }
 
 int path_record_payload_set(void* record, void* payload, uint32_t count)
@@ -11124,7 +11033,7 @@ TerrainSurfaceGrid* path_record_surface_grid_get(void)
     return s_path_record_surface_grid;
 }
 
-static TerrainSurfaceGrid* level_surface_grid_get(const LevelState* level)
+TerrainSurfaceGrid* level_surface_grid_get(const LevelState* level)
 {
     TerrainSurfaceGrid* surface;
     TerrainState* terrain = level != NULL
@@ -11533,41 +11442,6 @@ void path_record_cell_links_release(LevelState* level, const void* record)
     }
 }
 
-static void path_record_storage_release(void* record)
-{
-    PathRecordPayloadPort* previous = NULL;
-    PathRecordPayloadPort* port;
-    PathRecordEntityPort* entity_previous = NULL;
-    PathRecordEntityPort* entity_port;
-    if (record == NULL) return;
-    path_record_cell_links_release(NULL, record);
-    for (port = s_path_record_payload_ports; port != NULL; port = port->next) {
-        if (port->record == record) {
-            if (previous != NULL) previous->next = port->next;
-            else s_path_record_payload_ports = port->next;
-            engine_heap_free(port->payload);
-            engine_heap_free(port);
-            break;
-        }
-        previous = port;
-    }
-    for (entity_port = s_path_record_entity_ports; entity_port != NULL;
-         entity_port = entity_port->next) {
-        if (entity_port->record == record) {
-            if (entity_previous != NULL)
-                entity_previous->next = entity_port->next;
-            else
-                s_path_record_entity_ports = entity_port->next;
-            engine_heap_free(entity_port);
-            break;
-        }
-        entity_previous = entity_port;
-    }
-    if (port == NULL) engine_heap_free(path_record_payload_get(record));
-}
-
-void path_record_remove_and_free(void* record);
-
 void path_record_release(void* record)
 {
     path_record_remove_and_free(record);
@@ -11591,51 +11465,6 @@ void* tutorial_path_descriptor_create(const uint32_t* coord_pair)
 
 uint32_t path_record_count_peek(void) { return s_path_record_count; }
 void* path_record_last_peek(void) { return s_path_record_last; }
-
-/* PathRecordRelease (FUN_004099f0): unlink the selected record from the
- * path-record chain, then release its optional owned payload and record. */
-// FUNCTION: LEGORR 0x004099f0
-void path_record_remove_and_free(void* record)
-{
-    void* previous = NULL;
-    void* current = s_path_record_last;
-
-    /* The corpus enters a do/while and tests the link before comparing the
-     * requested record.  Keep that shape: an empty list goes straight to the
-     * common payload/record release path. */
-    do {
-        if (current == NULL) goto release_record;
-        if (current == record) {
-            if (previous != NULL) {
-                *(void**)((char*)previous + 0x24) =
-                    *(void**)((char*)current + 0x24);
-            }
-            else {
-                s_path_record_last = *(void**)((char*)current + 0x24);
-            }
-            goto release_record;
-        }
-        previous = current;
-        current = *(void**)((char*)current + 0x24);
-    } while (1);
-
-release_record:
-    path_record_storage_release(record);
-    engine_heap_free(record);
-}
-
-/* ReleaseAllGroupRecords (FUN_004099d0) saves each successor before the
- * unlinking/freeing leaf, so the full list can be released head-first. */
-// FUNCTION: LEGORR 0x004099d0
-void path_record_release_all(void)
-{
-    void* current = s_path_record_last;
-    while (current != NULL) {
-        void* next = *(void**)((char*)current + 0x24);
-        path_record_remove_and_free(current);
-        current = next;
-    }
-}
 
 /* TutorialPathCoordinateIndex (FUN_00456b80) — see level.hpp. The corpus
  * sweeps x-outer/y-inner over the grid dims and head-pushes each cell's
@@ -12586,58 +12415,6 @@ uint32_t path_record_count_matching_coordinates(const void* record,
     return matches;
 }
 
-// FUNCTION: LEGORR 0x00408d70
-int terrain_descriptor_coordinate_count_limit_check(
-    uint32_t descriptor_key, int type, int row)
-{
-    uint8_t* record = (uint8_t*)path_record_last_peek();
-    uint32_t descriptor_flags;
-    uint32_t descriptor_value;
-    uint32_t matching_count;
-    uint32_t limit;
-    int selector;
-
-    /* TerrainDescriptorFindExact(0, &key) walks the path-record chain and
-     * compares the key against record +8.  The port stores that same chain
-     * through the widened +0x24 link. */
-    while (record != NULL) {
-        uint32_t key;
-        memcpy(&key, record + 0x08, sizeof(key));
-        if (key == descriptor_key) break;
-        record = (uint8_t*)*(void**)(record + 0x24);
-    }
-    if (record == NULL) return 0;
-
-    /* Retail's 0x408e10 walks the +0x2c pointer list for +0x20 entries;
-     * each pointed-to entity begins with the type/row pair. The port keeps
-     * the live pointer list in its entity sidecar on non-32-bit builds, but
-     * maintains the retail +0x20 count alongside +0xcc in append(). */
-    matching_count = path_record_count_matching_coordinates(record, type,
-                                                             row);
-    memcpy(&descriptor_value, record, sizeof(descriptor_value));
-    memcpy(&descriptor_flags, record + 0xd0, sizeof(descriptor_flags));
-    /* Retail's masked-negation expression yields 15 when bit 1 is set. */
-    selector = (descriptor_flags & 2u) != 0u ? 15 : 4;
-    if (type == 6) {
-        limit = entity_indexed_record_word_at_b4_get(
-            selector, (int)descriptor_value, 0);
-    }
-    else if (type == 7) {
-        if (row == 0) {
-            limit = entity_indexed_record_word_at_b0_get(
-                selector, (int)descriptor_value, 0);
-        }
-        else {
-            limit = stats_table_word_at_b8(selector,
-                                           (int)descriptor_value, 0);
-        }
-    }
-    else {
-        return 1;
-    }
-    return matching_count < limit;
-}
-
 namespace unported_ledger_stubs {
 
 int ledger_stub_00408d70_TerrainDescriptorCoordinateCountLimitCheck(
@@ -12742,14 +12519,6 @@ uint32_t terrain_kind_nine_neighbor_emit_for_footprint_cells(
     return emitted;
 }
 
-// FUNCTION: LEGORR 0x00408ec0
-void terrain_kind_nine_neighbor_emit_for_footprint_cells_current(
-    const int cell_xy[2], const int* footprint_xy, uint32_t footprint_count)
-{
-    (void)terrain_kind_nine_neighbor_emit_for_footprint_cells(
-        cell_xy, footprint_xy, footprint_count);
-}
-
 namespace unported_ledger_stubs {
 
 uint32_t ledger_stub_00408ec0_KindNineNeighborEmitForFootprintCells(
@@ -12759,76 +12528,10 @@ uint32_t ledger_stub_00408ec0_KindNineNeighborEmitForFootprintCells(
         cell_xy, footprint_xy, footprint_count);
 }
 
-// FUNCTION: LEGORR 0x004093b0
-static void placement_cell_search_expand(const int cell_xy[2])
-{
-    static const int offset[4][2] = {{0,-1},{1,0},{0,1},{-1,0}};
-    GameContext* context = entity_pool_callback_context_get();
-    LevelState* level = context != NULL ? context->level : NULL;
-    int direction;
-    if (level == NULL) level = level_current_owner_get();
-    if (level == NULL || cell_xy == NULL) return;
-    for (direction = 0; direction < 4; ++direction) {
-        int next_xy[2];
-        int nx = cell_xy[0] + offset[direction][0];
-        int ny = cell_xy[1] + offset[direction][1];
-        if (!level_cell_occupied_at(level, nx, ny) &&
-            !level_cell_occupied_or_flag(level, nx, ny, 1)) continue;
-        if (level_cell_secondary_flag_100(level, nx, ny) != 0u) continue;
-        terrain_cell_flag100_set_and_track(level, nx, ny);
-        next_xy[0] = nx;
-        next_xy[1] = ny;
-        placement_cell_search_expand(next_xy);
-    }
-}
 void ledger_stub_004093b0_PassableAdjacentCellSearchExpand(
     const int cell_xy[2])
 {
     placement_cell_search_expand(cell_xy);
-}
-
-int ledger_stub_00409470_NeighborCellEntitySearchRecurse(
-    const int cell_xy[2], int resource_amount);
-// FUNCTION: LEGORR 0x00409450
-int ledger_stub_00409450_FindNearbyPlacementCandidate(
-    const int start_xy[2], int resource_amount)
-{
-    int found = ledger_stub_00409470_NeighborCellEntitySearchRecurse(
-        start_xy, resource_amount);
-    terrain_cell_visited_flags_clear_all_current();
-    return found;
-}
-
-// NeighborCellEntitySearchRecurse
-// FUNCTION: LEGORR 0x00409470
-int ledger_stub_00409470_NeighborCellEntitySearchRecurse(
-    const int cell_xy[2], int resource_amount)
-{
-    static const int offset[4][2] = {{0,-1},{1,0},{0,1},{-1,0}};
-    GameContext* context = entity_pool_callback_context_get();
-    LevelState* level = context != NULL ? context->level : NULL;
-    int direction;
-    if (level == NULL)
-        level = (LevelState*)map_cell_record_grid_level_get();
-    if (level == NULL || cell_xy == NULL) return 0;
-    for (direction = 0; direction < 4; ++direction) {
-        int cell[2];
-        EntitySlot* found;
-        cell[0] = cell_xy[0] + offset[direction][0];
-        cell[1] = cell_xy[1] + offset[direction][1];
-        if (level_cell_secondary_bit0(level, cell[0], cell[1]) != 0u) {
-            found = entity_at_grid_position_find(cell);
-            if (found != NULL && entity_available_resource_spend(
-                    level, resource_amount, found)) return 1;
-        }
-        if (!level_cell_occupied_at(level, cell[0], cell[1]) &&
-            !level_cell_occupied_or_flag(level, cell[0], cell[1], 1)) continue;
-        if (level_cell_visited_flag(level, cell[0], cell[1]) != 0u) continue;
-        terrain_cell_visited_flag_set_and_track(level, cell[0], cell[1]);
-        if (ledger_stub_00409470_NeighborCellEntitySearchRecurse(
-                cell, resource_amount)) return 1;
-    }
-    return 0;
 }
 
 int nearby_placement_entity_search_current(const int cell_xy[2],
@@ -12836,158 +12539,6 @@ int nearby_placement_entity_search_current(const int cell_xy[2],
 {
     return ledger_stub_00409470_NeighborCellEntitySearchRecurse(
         cell_xy, resource_amount);
-}
-
-// FUNCTION: LEGORR 0x00409600
-void ledger_stub_00409600_TerrainDescriptorTilesResetAndFree(
-    const int cell_xy[2])
-{
-    LevelState* level = level_current_owner_get();
-    uint8_t* descriptor;
-    int* coordinates;
-    uint32_t count;
-    uint32_t entity_count;
-    uint32_t entity_index;
-    uint32_t progress;
-    uint32_t descriptor_key;
-    if (cell_xy == NULL || level == NULL) return;
-
-    /* This is the target's exact pair-key descriptor lookup. */
-    descriptor = (uint8_t*)terrain_descriptor_find_exact_current(
-        (const uint32_t*)cell_xy, NULL);
-    if (descriptor == NULL) return;
-    memcpy(&progress, descriptor + 0x1c, sizeof(progress));
-    if (progress == *(uint32_t*)(descriptor + 0x20)) return;
-    coordinates = (int*)path_record_payload_get(descriptor);
-    count = path_record_payload_count_get(descriptor);
-    memcpy(&descriptor_key, descriptor + 0x08, sizeof(descriptor_key));
-    if (count != 0u && coordinates == NULL) return;
-
-    progress = 0u;
-    while (progress < count) {
-        int x = coordinates[progress * 2u];
-        int y = coordinates[progress * 2u + 1u];
-        int duplicate = progress + 1u < count &&
-            x == coordinates[(progress + 1u) * 2u] &&
-            y == coordinates[(progress + 1u) * 2u + 1u];
-        if (!level_cell_path_record_state_apply(
-                level, x, y, NULL, 0, duplicate))
-            level_cell_init_pass(level, x, y);
-        /* FUN_0041cfb0 follows CellInitPass for every listed pair, even if
-         * the portable cell-link adapter could not represent that cell. */
-        cancel_action_for_matching_coordinates(
-            (const uint32_t*)coordinates + progress * 2u);
-        ++progress;
-    }
-
-    entity_count = path_record_entity_count_get(descriptor);
-    for (entity_index = 0u; entity_index < entity_count; ++entity_index) {
-        EntitySlot* entity = path_record_entity_get(descriptor, entity_index);
-        if (entity == NULL) continue;
-        if (entity->type == 9) {
-            entity->flags_3e8 |= 0x800000u;
-            entity->field_340 = -1.0f;
-        }
-        else {
-            entity->flags_3ec &= ~0x100u;
-            cmd_create_task(entity);
-        }
-    }
-
-    cmd_cancel_by_coords((int)descriptor_key, 0, 0, 0);
-    path_record_release(descriptor);
-}
-
-// CellPathRecordRegisterApply
-// FUNCTION: LEGORR 0x00409790
-uint32_t ledger_stub_00409790_CellPathRecordRegisterApply(
-    uint32_t record_key, const int cell_xy[2], uint32_t direction,
-    const int* footprint_xy, uint32_t footprint_count)
-{
-    LevelState* level = level_current_owner_get();
-    void* record;
-    int* coordinate_copy = NULL;
-    uint32_t index = 0u;
-    if (cell_xy == NULL ||
-        (footprint_count != 0u && footprint_xy == NULL) ||
-        (size_t)footprint_count > ((size_t)-1) / (2u * sizeof(int)))
-        return 0u;
-    if (level == NULL) return 0u;
-
-    record = path_record_allocate_and_link((const uint32_t*)cell_xy);
-    if (record == NULL) return 0u;
-    memcpy((char*)record + 0x00, &record_key, sizeof(record_key));
-    memcpy((char*)record + 0x04, &direction, sizeof(direction));
-    if (footprint_count != 0u) {
-        coordinate_copy = (int*)engine_heap_alloc((long)(
-            (size_t)footprint_count * 2u * sizeof(int)));
-        if (coordinate_copy == NULL) {
-            path_record_release(record);
-            return 0u;
-        }
-        memcpy(coordinate_copy, footprint_xy,
-               (size_t)footprint_count * 2u * sizeof(int));
-    }
-    if (!path_record_payload_set(record, coordinate_copy, footprint_count)) {
-        engine_heap_free(coordinate_copy);
-        path_record_release(record);
-        return 0u;
-    }
-    if (footprint_count != 0u) {
-        /* FUN_00409790 passes a four-unit clamp width. */
-        terrain_cell_surface_height_clamp(
-            level_surface_grid_get(level),
-            coordinate_copy, footprint_count, 4.0f);
-    }
-
-    while (index < footprint_count) {
-        int x = coordinate_copy[index * 2u];
-        int y = coordinate_copy[index * 2u + 1u];
-        int duplicate = index + 1u < footprint_count &&
-            x == coordinate_copy[(index + 1u) * 2u] &&
-            y == coordinate_copy[(index + 1u) * 2u + 1u];
-        if (level != NULL) {
-            if (!level_cell_path_record_state_apply(
-                    level, x, y, record, 1, duplicate))
-                level_cell_init_pass(level, x, y);
-            terrain_cell_refresh_eight_neighbors_current(
-                coordinate_copy + index * 2u);
-            cancel_action_for_matching_coordinates(
-                (const uint32_t*)coordinate_copy + index * 2u);
-        }
-        /* CellPathRecordRegisterApply advances over a repeated adjacent
-         * coordinate as one logical pair even when the cell could not be
-         * updated. The decompile increments its list cursor in the duplicate
-         * branch before the common increment below. */
-        if (duplicate) ++index;
-        ++index;
-    }
-    return *(uint32_t*)((char*)record + 0x08);
-}
-
-// FUNCTION: LEGORR 0x00409940
-void terrain_cell_refresh_eight_neighbors_current(const int cell_xy[2])
-{
-    /* The retail local_40 table is ordered NW, N, NE, W, E, SW, S, SE.
-     * Keep the walk in the mapped body: the reference calls the mutation
-     * worker once for every offset and lets that worker apply edge checks. */
-    static const int offset[8][2] = {
-        { -1, -1 }, { 0, -1 }, { 1, -1 }, { -1, 0 },
-        { 1, 0 }, { -1, 1 }, { 0, 1 }, { 1, 1 }
-    };
-    GameContext* game = entity_pool_callback_context_get();
-    LevelState* level = game != NULL ? game->level : NULL;
-    int index;
-    if (level == NULL)
-        level = (LevelState*)map_cell_record_grid_level_get();
-    if (level == NULL || cell_xy == NULL) return;
-    for (index = 0; index < 8; ++index) {
-        const int64_t x = (int64_t)cell_xy[0] + offset[index][0];
-        const int64_t y = (int64_t)cell_xy[1] + offset[index][1];
-        if (x < 0 || y < 0 || x > 0x7fffffff || y > 0x7fffffff)
-            continue;
-        terrain_cell_mutation_progress(level, (uint32_t)x, (uint32_t)y);
-    }
 }
 
 static int entity_path_footprint_record_get(const EntitySlot* entity,

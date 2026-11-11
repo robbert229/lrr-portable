@@ -9,4 +9,6 @@
 extern GameContext* s_ctx;
 extern float s_sweep_timer;
 
+void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
+
 #endif /* LRR_GAME_CMD_SHARED_HPP */

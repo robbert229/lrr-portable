@@ -18,4 +18,12 @@ extern void (*s_effect_release_hook)(uint32_t, int);
  * the unit's state; simtick.cpp holds two of the unit's functions. */
 extern uint32_t s_motion_jitter_flags;
 
+extern SimtickBobbin* s_bobbin_head;
+extern int s_bobbin_advance;
+extern SimtickBobbinMarkHook s_bobbin_mark_hook;
+extern void* s_bobbin_mark_context;
+extern SimtickBobbinSpawnHook s_bobbin_spawn_hook;
+extern void* s_bobbin_action_context;
+void bobbin_clear_delay(SimtickBobbin* node);
+
 #endif /* LRR_GODS98_SIMTICK_SHARED_HPP */

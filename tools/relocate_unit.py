@@ -117,9 +117,16 @@ class Headers:
         return self.includes[rel]
 
     def declared(self, rel: str) -> set[str]:
+        """Functions and variables a header declares, as ``n`` or ``X::n``."""
         if rel not in self.names:
-            scan = cf.HeaderScan((self.root / rel).read_text(encoding="utf-8", errors="replace"))
-            self.names[rel] = set(scan.functions) | set(scan.variables)
+            scan = cx.scan((self.root / rel).read_text(encoding="utf-8", errors="replace"))
+            names = set()
+            for it in scan.items:
+                if it.category not in ("function", "proto", "var"):
+                    continue
+                scope = _container_namespace(it.container) or it.qualifier or ""
+                names.update(_qualify(scope, n) for n in it.names)
+            self.names[rel] = names
         return self.names[rel]
 
     def visible(self, spelled: list[str], including: str, library: str) -> set[str]:
@@ -138,6 +145,61 @@ class Headers:
         for rel in seen:
             names |= self.declared(rel)
         return names
+
+
+def _qualify(scope: str, name: str) -> str:
+    return f"{scope}::{name}" if scope else name
+
+
+def _container_namespace(container: str | None) -> str | None:
+    """X for a member of ``namespace X {}`` or of an anonymous namespace
+    inside it (``namespace X { namespace { } }``), else None."""
+    if container and container.startswith("ns:"):
+        if "/" not in container:
+            return container[3:]
+        if re.fullmatch(r"ns:[A-Za-z_]\w*/anon", container):
+            return container[3:].split("/")[0]
+    return None
+
+
+def _anonymous(container: str | None) -> bool:
+    """Internal linkage through an anonymous namespace (alone or inside X)."""
+    return container == "anon" or bool(container and container.endswith("/anon"))
+
+
+def _scope(item: cx.Item, namespaces: set[str]) -> str:
+    """The namespace an item's names belong to ("" for the global scope).
+
+    Members of ``namespace X { }`` and out-of-line ``T X::f()`` definitions
+    belong to X when X is a namespace. ``extern "C"`` blocks and anonymous
+    namespaces put names in the global scope of the file.
+    """
+    ns = _container_namespace(item.container)
+    if ns:
+        return ns
+    if item.qualifier and item.qualifier in namespaces:
+        return item.qualifier
+    return ""
+
+
+def known_namespaces(root: Path) -> set[str]:
+    """Names of every ``namespace X {`` in src/ (not classes or structs)."""
+    found = set()
+    for path in (Path(root) / "src").rglob("*"):
+        if path.suffix.lower() in cf.SOURCE_SUFFIXES and path.is_file():
+            found.update(re.findall(r"\bnamespace\s+([A-Za-z_]\w*)\s*\{",
+                                    cx.mask(path.read_text(encoding="utf-8", errors="replace"))))
+    return found
+
+
+@dataclass(frozen=True)
+class Decl:
+    """A declaration for a private header."""
+
+    name: str        # qualified: n or X::n
+    text: str        # the declaration, unqualified, ending in ;
+    why: str
+    ns: str = ""     # namespace to declare it in ("" for the global scope)
 
 
 # --------------------------------------------------------------------------
@@ -169,7 +231,7 @@ class Source:
     moves: list[Move] = field(default_factory=list)
     header_items: list[cx.Item] = field(default_factory=list)   # types/macros/decls to the private header
     strip_static: list[cx.Item] = field(default_factory=list)   # staying items that get external linkage
-    declarations: list[tuple[str, str, str]] = field(default_factory=list)  # (name, decl, why)
+    declarations: list[Decl] = field(default_factory=list)
 
     @property
     def shared_header(self) -> str:
@@ -195,13 +257,17 @@ class Plan:
     order: list[Move] = field(default_factory=list)
     forward: list[str] = field(default_factory=list)
     done: bool = False                        # already relocated: nothing to do
+    namespaces: set[str] = field(default_factory=set)
+    usings: list[str] = field(default_factory=list)
+    units: list[cf.UnitRanges] = field(default_factory=list)
 
     @property
     def moves(self) -> list[Move]:
         return [m for s in self.sources for m in s.moves]
 
 
-def _annotations(root: Path, u: cf.UnitRanges) -> tuple[list[cf.Annotation], list[cf.Annotation]]:
+def _annotations(root: Path, u: cf.UnitRanges,
+                 units: list[cf.UnitRanges]) -> tuple[list[cf.Annotation], list[cf.Annotation]]:
     """The unit's function and owned-global annotations anywhere in src/."""
     marker = re.compile(r"LEGORR\s+0x([0-9a-fA-F]+)")
     funcs, globs = [], []
@@ -209,7 +275,7 @@ def _annotations(root: Path, u: cf.UnitRanges) -> tuple[list[cf.Annotation], lis
         if path.suffix.lower() not in cf.SOURCE_SUFFIXES or not path.is_file() or path.name.startswith("test_"):
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        if not any(_wanted(int(a, 16), u) for a in marker.findall(text)):
+        if not any(_wanted(int(a, 16), u, units) for a in marker.findall(text)):
             continue
         rel = path.relative_to(root).as_posix()
         for number, line in enumerate(text.split("\n")):
@@ -219,13 +285,30 @@ def _annotations(root: Path, u: cf.UnitRanges) -> tuple[list[cf.Annotation], lis
             kind, addr = m.group(1), int(m.group(2), 16)
             if kind in FUNCTION_KINDS + ("LIBRARY",) and u.text_start <= addr < u.text_end:
                 funcs.append(cf.Annotation(kind, addr, rel, number + 1, None))
-            elif kind == "GLOBAL" and cf._in_ranges(addr, u):
+            elif kind == "GLOBAL" and owns_data(addr, u, units):
                 globs.append(cf.Annotation(kind, addr, rel, number + 1, None))
     return funcs, globs
 
 
-def _wanted(addr: int, u: cf.UnitRanges) -> bool:
-    return u.text_start <= addr < u.text_end or bool(cf._in_ranges(addr, u))
+def owns_data(addr: int, u: cf.UnitRanges, units: list[cf.UnitRanges]) -> bool:
+    """True when ``addr`` is in one of ``u``'s data ranges.
+
+    A range ends at the start of its last item, and
+    ``conversion_footprint._in_ranges`` adds a few bytes of slack past it for
+    that item's size. An address in the slack belongs to ``u`` only if no
+    other unit's range holds it: the slack never reaches into the next unit
+    (finding 527: GAME-014's .bss slack claimed 004c7eb0, the first item of
+    GAME-015's).
+    """
+    if any(lo <= addr <= hi for lo, hi in u.ranges.values()):
+        return True
+    if not cf._in_ranges(addr, u):
+        return False
+    return not any(lo <= addr <= hi for v in units if v.unit_id != u.unit_id for lo, hi in v.ranges.values())
+
+
+def _wanted(addr: int, u: cf.UnitRanges, units: list[cf.UnitRanges]) -> bool:
+    return u.text_start <= addr < u.text_end or owns_data(addr, u, units)
 
 
 def plan_relocation(key: str, root: Path = ROOT, stem: str | None = None,
@@ -238,7 +321,17 @@ def plan_relocation(key: str, root: Path = ROOT, stem: str | None = None,
         raise Refused(u.unit_id, [f"{u.unit_kind} units are not relocated (only game and gods98)"])
     if not stem and not u.unit_name:
         raise Refused(u.unit_id, ["unnamed unit: pass --stem with a descriptive lower-case stem (ADR 0006 decision 4)"])
+    given = bool(stem)
     stem = stem or u.stem
+    if not given:
+        # A default stem that names an existing file gets the variant
+        # <stem>_unit (ADR 0006 decision 4); --stem overrides it.
+        directory = root / cf.SOURCE_DIRS.get(u.unit_kind, "src/game")
+        taken = [p for p in directory.glob(f"{stem}.*") if p.name != f"{stem}_shared.hpp"]
+        listed_unit = any(e.kind == "unit" and e.key == u.unit_id and e.path == f"{cf.SOURCE_DIRS.get(u.unit_kind)}/{stem}.cpp"
+                          for e in link_order.load(root))
+        if taken and not listed_unit:
+            stem += "_unit"
     if not re.fullmatch(r"[a-z][a-z0-9_]*", stem):
         raise Refused(u.unit_id, [f"stem {stem!r} must be lower-case letters, digits and underscores"])
     library = u.unit_kind
@@ -248,7 +341,7 @@ def plan_relocation(key: str, root: Path = ROOT, stem: str | None = None,
     listed = [e for e in entries if e.kind == "unit" and e.key == u.unit_id]
     headers = headers or Headers(root)
 
-    func_ann, glob_ann = _annotations(root, u)
+    func_ann, glob_ann = _annotations(root, u, units)
     # Globals in another unit's file (pooled literals a conversion annotated
     # in place) stay there: a relocation never edits another unit.
     kept = [a for a in glob_ann if a.file in by_source and by_source[a.file].kind == "unit"
@@ -303,6 +396,11 @@ def plan_relocation(key: str, root: Path = ROOT, stem: str | None = None,
     plan = Plan(u, stem, library, target, sources, missing,
                 [f"GLOBAL 0x{a.address:08x} stays in {a.file}, the unit file of {by_source[a.file].key}"
                  for a in kept])
+    if not given and stem != u.stem:
+        plan.notes.append(f"The default stem {u.stem!r} names an existing file in {cf.SOURCE_DIRS[library]}; "
+                          f"using {stem!r} (pass --stem to choose another)")
+    plan.namespaces = known_namespaces(root)
+    plan.units = units
     for s in sources:
         _plan_source(plan, s, [a for a in func_ann if a.file == s.rel],
                      [a for a in glob_ann if a.file == s.rel], headers, reasons)
@@ -322,9 +420,17 @@ def plan_relocation(key: str, root: Path = ROOT, stem: str | None = None,
 
 
 class _Clusters:
-    """Items that define a common name form one symbol (prototype + definition)."""
+    """Items that define a common (qualified) name form one symbol.
 
-    def __init__(self, items: list[cx.Item]):
+    Names are scoped: ``n`` in the global scope, ``X::n`` in namespace X. A use
+    resolves as C++ looks it up: ``X::n`` exactly; a bare ``n`` inside X to
+    ``X::n`` when this file defines it, else to the global ``n``; a bare
+    ``n`` in the global scope through the file's ``using`` items.
+    """
+
+    SKIP = ("include", "undef", "other", "using")
+
+    def __init__(self, items: list[cx.Item], namespaces: set[str]):
         parent = list(range(len(items)))
 
         def find(x):
@@ -332,15 +438,20 @@ class _Clusters:
                 parent[x] = parent[parent[x]]
                 x = parent[x]
             return x
+        self.usings = [it.using for it in items if it.category == "using" and it.using
+                       and not it.cond and not it.container]
         owner: dict[str, int] = {}
         for k, it in enumerate(items):
-            if it.category in ("include", "undef", "other") or it.container and it.container.startswith("ns:"):
-                continue
-            for name in it.names:
+            it.scope = _scope(it, namespaces)
+            it.qnames = [] if it.category in self.SKIP else [_qualify(it.scope, n) for n in it.names]
+            for name in it.qnames:
                 if name in owner:
                     parent[find(k)] = find(owner[name])
                 else:
                     owner[name] = k
+        self.owner = owner
+        for it in items:
+            it.ruses = {self.resolve(u, it.scope) for u in it.uses}
         self.of = [find(k) for k in range(len(items))]
         self.members: dict[int, list[int]] = {}
         for k, c in enumerate(self.of):
@@ -348,12 +459,9 @@ class _Clusters:
         self.names: dict[int, set[str]] = {c: set() for c in self.members}
         self.uses: dict[int, set[str]] = {c: set() for c in self.members}
         for k, it in enumerate(items):
-            if it.container and it.container.startswith("ns:"):
-                continue
             c = self.of[k]
-            if it.category not in ("include", "undef", "other"):
-                self.names[c].update(it.names)
-            self.uses[c].update(it.uses)
+            self.names[c].update(it.qnames)
+            self.uses[c].update(it.ruses)
         self.definer: dict[str, int] = {}
         for c, names in self.names.items():
             for n in names:
@@ -367,6 +475,20 @@ class _Clusters:
                 if d is not None and d != c:
                     self.users[d].add(c)
 
+    def resolve(self, use: str, scope: str) -> str:
+        if "::" in use:
+            return use
+        if scope and f"{scope}::{use}" in self.owner:
+            return f"{scope}::{use}"
+        if use in self.owner:
+            return use
+        for kind, target in self.usings:
+            if kind == "namespace" and f"{target}::{use}" in self.owner:
+                return f"{target}::{use}"
+            if kind == "name" and target.rsplit("::", 1)[-1] == use and target in self.owner:
+                return target
+        return use
+
 
 def _kind(items: list[cx.Item], members: list[int]) -> str:
     """local (type/macro), internal (static), declaration (no definition here), external."""
@@ -374,7 +496,7 @@ def _kind(items: list[cx.Item], members: list[int]) -> str:
     cats = {i.category for i in its}
     if cats <= {"type", "macro"}:
         return "local"
-    if any(i.static or i.container == "anon" for i in its):
+    if any(i.static or _anonymous(i.container) for i in its):
         return "internal"
     if not any(i.category == "function" or (i.category == "var" and not _is_extern_decl(i)) for i in its):
         return "declaration"
@@ -418,14 +540,14 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
             reasons.append(f"{s.rel}:{it.line}: GLOBAL 0x{a.address:08x} is a declaration of several variables")
         if role == "global" and _is_extern_decl(it):
             reasons.append(f"{s.rel}:{it.line}: GLOBAL 0x{a.address:08x} annotates an extern declaration, not a definition")
-        others = [x for _, x in it.annotations if not _wanted(x, plan.unit)]
+        others = [x for _, x in it.annotations if not _wanted(x, plan.unit, plan.units)]
         if others:
             reasons.append(f"{s.rel}:{it.line}: the item also carries annotations of other units "
                            + ", ".join(f"0x{x:08x}" for x in others))
         seeds[k] = (role, a.address) if k not in seeds or role == "function" else seeds[k]
     if reasons:
         return
-    cl = _Clusters(items)
+    cl = _Clusters(items, plan.namespaces)
     core = {cl.of[k] for k in seeds}
     for c in core:
         defs = [k for k in cl.members[c] if items[k].category in ("function", "var") and not _is_extern_decl(items[k])]
@@ -440,7 +562,11 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
     # Reachability expands only through items that move: what a staying
     # function uses stays with it.
     kinds = {c: _kind(items, cl.members[c]) for c in cl.members}
-    local = {c for c in cl.members if kinds[c] in ("local", "internal", "declaration")} - set(core)
+    # An item annotated for another unit is that unit's: it never moves with
+    # this one. It stays, and gets external linkage if moved code uses it.
+    pinned = {c for c in cl.members if c not in core and any(
+        kind in FUNCTION_KINDS + ("LIBRARY", "GLOBAL") for k in cl.members[c] for kind, _ in items[k].annotations)}
+    local = {c for c in cl.members if kinds[c] in ("local", "internal", "declaration")} - set(core) - pinned
 
     def touched(roots):
         seen = set()
@@ -470,9 +596,9 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
             break
         moving = keep
     reach = touched(moving) - moving
-    candidates = reach & local
+    candidates = reach & (local | pinned)
     shared = candidates
-    to_header = {c for c in shared if kinds[c] in ("local", "declaration")}
+    to_header = {c for c in shared if kinds[c] in ("local", "declaration") and c not in pinned}
     exported = {c for c in shared if kinds[c] == "internal"}
 
     stay_includes = [it.include for it in items if it.category == "include" and it.include]
@@ -485,14 +611,12 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
         if kinds[c] == "internal":
             exported.add(c)
         elif kinds[c] == "external" and not (cl.names[c] & visible_here):
-            s.declarations.extend((n, d, "moved; remaining code uses it")
-                                  for n, d in _declarations(s, items, cl, c, reasons))
+            s.declarations.extend(_declarations(s, items, cl, c, "moved; remaining code uses it", reasons))
     for c in sorted(reach - candidates, key=first):
         if kinds[c] == "external" and not (cl.names[c] & visible_here):
-            s.declarations.extend((n, d, "stays; moved code uses it")
-                                  for n, d in _declarations(s, items, cl, c, reasons))
+            s.declarations.extend(_declarations(s, items, cl, c, "stays; moved code uses it", reasons))
     for c in sorted(exported, key=first):
-        if any(items[k].container == "anon" for k in cl.members[c]):
+        if any(_anonymous(items[k].container) for k in cl.members[c]):
             reasons.append(f"{s.rel}:{items[cl.members[c][0]].line}: {', '.join(sorted(cl.names[c]))} is in an "
                            "anonymous namespace and used by moved and remaining code")
             continue
@@ -500,13 +624,12 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
             reasons.append(f"{s.rel}:{items[cl.members[c][0]].line}: inline {', '.join(sorted(cl.names[c]))} is used by "
                            "moved and remaining code")
             continue
-        s.declarations.extend((n, d, "static shared by moved and remaining code")
-                              for n, d in _declarations(s, items, cl, c, reasons))
+        s.declarations.extend(_declarations(s, items, cl, c, "static shared by moved and remaining code", reasons))
 
     # Types, macros and declarations the private header needs.
     need = set()
-    for _, decl, _ in s.declarations:
-        need |= set(cx.IDENT.findall(cx.mask(decl)))
+    for d in s.declarations:
+        need |= {cl.resolve(u, d.ns) for u in cx._uses(cx.mask(d.text))}
     for c in to_header:
         need |= cl.uses[c]
     while True:
@@ -527,14 +650,6 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
         for d in add:
             need |= cl.uses[d]
 
-    # Names moved code uses that only a named namespace of this file defines.
-    ns_names = {n: it for it in items if it.container and it.container.startswith("ns:") for n in it.names}
-    moved_uses = set().union(*(cl.uses[c] for c in moving)) if moving else set()
-    for n in sorted(moved_uses & set(ns_names)):
-        if n not in cl.definer and n not in visible_here:
-            reasons.append(f"{s.rel}:{ns_names[n].line}: moved code uses {n}, defined in namespace "
-                           f"{ns_names[n].container[3:]} of the source")
-
     # Problems of every item that changes place or linkage.
     involved = set(moving) | to_header | exported
     for c in involved:
@@ -543,8 +658,8 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
             where_ = f"{s.rel}:{it.line} ({', '.join(it.names) or it.category})"
             if it.cond:
                 reasons.append(f"{where_}: inside an #if block")
-            if it.container and it.container.startswith("ns:"):
-                reasons.append(f"{where_}: inside namespace {it.container[3:]}")
+            if it.qualifier and not it.scope:
+                reasons.append(f"{where_}: out-of-line member of {it.qualifier} (a class, not a namespace)")
             for p in it.problems:
                 reasons.append(f"{where_}: {p}")
             if c in to_header and any(kind == "GLOBAL" or kind in FUNCTION_KINDS for kind, _ in it.annotations):
@@ -563,7 +678,8 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
                 role, addr = f"closure-{it.category}", None
             s.moves.append(Move(s.rel, it, role, addr, ",".join(it.names) or it.category,
                                 static_removed=c in exported and it.static,
-                                wrap=it.container if it.container in ("extern-c", "anon") else None))
+                                wrap=it.container if it.container in ("extern-c", "anon")
+                                or _container_namespace(it.container) else None))
     for c in sorted(to_header, key=lambda c: cl.members[c][0]):
         s.header_items.extend(items[k] for k in cl.members[c])
     for c in exported - moving:
@@ -580,8 +696,18 @@ def _redefined(items: list[cx.Item], names: list[str]) -> bool:
     return n > 1
 
 
-def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int,
-                  reasons: list[str]) -> list[tuple[str, str]]:
+def _head_decl(s: Source, it: cx.Item) -> str:
+    """An item's head as a declaration: comments, ``__declspec(naked)``, the
+    namespace qualifier of an out-of-line definition removed."""
+    head = cx.strip_comments(it.head(s.text))
+    head = NAKED.sub("", head)
+    if it.qualifier and it.scope and it.names:
+        head = re.sub(r"\b%s\s*::\s*(?=%s\b)" % (re.escape(it.qualifier), re.escape(it.names[0])), "", head)
+    return head
+
+
+def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int, why: str,
+                  reasons: list[str]) -> list[Decl]:
     """External declarations for the private header, from a cluster's definition."""
     defs = [items[k] for k in cl.members[c] if items[k].category in ("function", "var")
             and not _is_extern_decl(items[k])]
@@ -593,37 +719,44 @@ def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int,
     if it.multi:
         reasons.append(f"{where}: {', '.join(it.names)} share one declaration and would need external linkage")
         return []
-    head = cx.strip_comments(it.head(s.text))
-    head = NAKED.sub("", head)
-    head = re.sub(r"\bstatic\s+", "", head, count=1)
+    if it.defines_type:
+        reasons.append(f"{where}: {', '.join(it.names)}: a type and a variable defined in one declaration "
+                       "would need sharing; declaring it would define the type twice")
+        return []
+    head = re.sub(r"\bstatic\s+", "", _head_decl(s, it), count=1)
     prefix = 'extern "C" ' if it.container == "extern-c" else ""
+    name = it.qnames[0]
     if it.category in ("function", "proto"):
         params = head[head.find("("):]
         if re.search(r"=", params):
             reasons.append(f"{where}: {it.names[0]} has default arguments; a declaration cannot repeat them")
             return []
-        return [(it.names[0], f"{prefix}{head};")]
+        return [Decl(name, f"{prefix}{head};", why, it.scope)]
     decl = cx._split_top(head, "=")[0].strip()
     if not decl.startswith("extern"):
         decl = "extern " + decl
     if prefix:
         decl = prefix + decl[len("extern "):]
-    return [(it.names[0], decl + ";")]
+    return [Decl(name, decl + ";", why, it.scope)]
 
 
 def _check_clashes(plan: Plan, root: Path, reasons: list[str]) -> None:
+    # Definitions that would meet in the unit file. Prototypes and extern
+    # declarations may repeat a definition from another source: they do not
+    # clash.
     seen: dict[str, str] = {}
     for s in plan.sources:
-        names = {n for m in s.moves for n in m.item.names} | {n for n, _, _ in s.declarations} \
-            | {n for it in s.header_items for n in it.names}
+        names = {n for m in s.moves if m.item.category != "proto" and not _is_extern_decl(m.item)
+                 for n in m.item.qnames} | {n for it in s.header_items for n in it.qnames}
         for n in sorted(names):
             if n in seen and seen[n] != s.rel:
-                reasons.append(f"{n} is defined or declared by both {seen[n]} and {s.rel}; they would meet in {plan.target}")
+                reasons.append(f"{n} is defined by both {seen[n]} and {s.rel}; they would meet in {plan.target}")
             seen.setdefault(n, s.rel)
-    exported = {n: s.rel for s in plan.sources for n, _, why in s.declarations if why.startswith("static")}
+    exported = {d.name: s.rel for s in plan.sources for d in s.declarations if d.why.startswith("static")}
     if not exported:
         return
-    pattern = re.compile(r"\b(" + "|".join(map(re.escape, sorted(exported))) + r")\b")
+    bare = sorted({n.rsplit("::", 1)[-1] for n in exported})
+    pattern = re.compile(r"\b(" + "|".join(map(re.escape, bare)) + r")\b")
     for path in sorted((root / "src").rglob("*.c*")):
         rel = path.relative_to(root).as_posix()
         if path.suffix not in (".c", ".cpp") or rel in exported.values() or path.name.startswith("test_"):
@@ -632,8 +765,9 @@ def _check_clashes(plan: Plan, root: Path, reasons: list[str]) -> None:
         if not pattern.search(text):
             continue
         for it in cx.scan(text).items:
-            if it.category in ("function", "var") and not it.static and it.container != "anon":
-                for n in set(it.names) & set(exported):
+            if it.category in ("function", "var") and not it.static and not _anonymous(it.container):
+                scope = _scope(it, plan.namespaces)
+                for n in {_qualify(scope, x) for x in it.names} & set(exported):
                     reasons.append(f"{n} would get external linkage but {rel}:{it.line} defines it too")
 
 
@@ -663,20 +797,48 @@ def _strip_static(code: str) -> str:
 
 
 def _wrap(text: str, wrap: str | None) -> str:
+    """``text`` inside the block a wrap names (extern-c, anon, ns:X)."""
+    body = text.rstrip("\n")
     if wrap == "extern-c":
-        return 'extern "C" {\n' + text.rstrip("\n") + '\n}\n'
+        return 'extern "C" {\n' + body + '\n}\n'
     if wrap == "anon":
-        return "namespace {\n" + text.rstrip("\n") + "\n}\n"
+        return "namespace {\n" + body + "\n} // namespace\n"
+    if wrap and wrap.endswith("/anon"):
+        ns = wrap[3:].split("/")[0]
+        return f"namespace {ns} {{\nnamespace {{\n" + body + f"\n}} // namespace\n}} // namespace {ns}\n"
+    ns = _container_namespace(wrap)
+    if ns:
+        return f"namespace {ns} {{\n" + body + f"\n}} // namespace {ns}\n"
     return text
 
 
 def _move_text(s: Source, m: Move) -> str:
+    """A moved item with its leading comments, unwrapped."""
     lead = s.text[m.item.lead:m.item.start]
     code = m.item.code(s.text)
     if m.static_removed:
         code = _strip_static(code)
     text = lead + code
-    return _wrap(text if text.endswith("\n") else text + "\n", m.wrap)
+    return text if text.endswith("\n") else text + "\n"
+
+
+def _blocks(chunks: list[tuple[str | None, str]]) -> list[str]:
+    """Join chunks; consecutive chunks with the same wrap share one block."""
+    out: list[str] = []
+    i = 0
+    while i < len(chunks):
+        wrap, text = chunks[i]
+        if wrap is None:
+            out.append(text)
+            i += 1
+            continue
+        group = [text]
+        i += 1
+        while i < len(chunks) and chunks[i][0] == wrap:
+            group.append(chunks[i][1])
+            i += 1
+        out.append(_wrap("\n".join(t.rstrip("\n") + "\n" for t in group), wrap))
+    return out
 
 
 def _spell(spelled: str, including: str, target: str, library: str, headers: Headers) -> str:
@@ -762,17 +924,17 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     for s in ordered_sources:
         visible |= headers.visible([it.include for it in s.scan.items if it.category == "include" and it.include],
                                    s.rel, s.entry.library)
-        visible |= {n for n, _, _ in s.declarations}
+        visible |= {d.name for d in s.declarations}
     defined_at = {}
     for pos, m in enumerate(plan.order):
-        for n in m.item.names:
+        for n in m.item.qnames:
             defined_at.setdefault(n, pos)
-    forward = []
+    forward: list[tuple[str, str]] = []           # (namespace, declaration)
     declared = set()
     for pos, m in enumerate(plan.order):
         if m.item.category == "proto":
-            declared.update(m.item.names)
-        for n in sorted(m.item.uses):
+            declared.update(m.item.qnames)
+        for n in sorted(m.item.ruses):
             at = defined_at.get(n)
             if at is None or at <= pos or n in visible or n in declared:
                 continue
@@ -780,20 +942,23 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
             if target_move.item.category != "function":
                 reasons.append(f"{n} ({target_move.item.category}) is used before its definition in {plan.target}")
                 continue
-            if target_move.wrap == "anon":
+            if _anonymous(target_move.wrap):
                 reasons.append(f"{n} is in an anonymous namespace and used before its definition in {plan.target}")
                 continue
             s = src_of[id(target_move)]
-            head = cx.strip_comments(target_move.item.head(s.text))
-            head = NAKED.sub("", head)
+            head = _head_decl(s, target_move.item)
             if target_move.static_removed:
                 head = re.sub(r"\bstatic\s+", "", head, count=1)
             decl = head + ";"
             if target_move.wrap == "extern-c":
                 decl = 'extern "C" ' + decl
-            forward.append(decl)
+            forward.append((target_move.item.scope, decl))
             declared.add(n)
-    plan.forward = forward
+    plan.forward = [f"namespace {ns} {{ {d} }}" if ns else d for ns, d in forward]
+
+    # using directives and declarations the moved global-scope code needs.
+    usings = _needed_usings(plan, ordered_sources, visible, reasons)
+    plan.usings = usings
 
     title = u.unit_name or u.unit_id
     out = ["// SPDX-License-Identifier: LGPL-3.0-or-later",
@@ -803,27 +968,33 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     out += [f"#include {i}" for i in includes]
     out += [_private_include(h, plan.target) for h in private]
     body = ["\n".join(out) + "\n"]
+    if usings:
+        body.append("\n".join(usings) + "\n")
+    chunks: list[tuple[str | None, str]] = []
     prev: Move | None = None
 
     def add(m: Move):
         nonlocal prev
         s = src_of[id(m)]
         text = _move_text(s, m)
-        adjacent = (prev is not None and src_of[id(prev)] is s and prev.wrap is None and m.wrap is None
+        adjacent = (prev is not None and src_of[id(prev)] is s and prev.wrap == m.wrap
                     and s.text[prev.item.end:m.item.lead] == "")
         if adjacent:
-            body[-1] = body[-1].rstrip("\n") + "\n" + text.rstrip("\n") + "\n"
+            chunks[-1] = (m.wrap, chunks[-1][1].rstrip("\n") + "\n" + text.rstrip("\n") + "\n")
         else:
-            body.append(text)
+            chunks.append((m.wrap, text))
         prev = m
     for m in types + globals_ + variables + protos:
         add(m)
-    if forward:
+    body.extend(_blocks(chunks))
+    chunks = []
+    prev = None
+    if plan.forward:
         body.append("/* Defined below (forward declarations added by tools/relocate_unit.py). */\n"
-                    + "\n".join(forward) + "\n")
-        prev = None
+                    + "\n".join(plan.forward) + "\n")
     for m in functions + helpers:
         add(m)
+    body.extend(_blocks(chunks))
     plan.files[plan.target] = "\n".join(b.rstrip("\n") + "\n" for b in body)
 
     # The sources: remove what moved, strip static from shared statics,
@@ -850,15 +1021,82 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
             return p + sum(d for a, d in delta if a < p)
         spans = [(moved(a), moved(b)) for a, b in spans]
         new_text = _remove(new_text, spans)
+        seen_ns = {n.split("::")[0] for n in headers.visible(
+            [it.include for it in s.scan.items if it.category == "include" and it.include],
+            s.rel, s.entry.library) if "::" in n}
+        new_text = _drop_emptied_namespaces(s.text, new_text, seen_ns)
         if s.shares:
             line = _private_include(s.shared_header, s.rel)
-            if line not in new_text:
-                new_text = _insert_include(new_text, line)
-            plan.files[s.shared_header] = _render_header(root, s, plan)
+            plan.files[s.shared_header] = header = _render_header(root, s, plan)
+            names = {n for it in cx.scan(header).items for n in it.names}
+            new_text = _place_private_include(new_text, line, names)
         plan.files[s.rel] = new_text
 
     plan.files.update(_wiring(plan, root))
     _verify(plan, reasons)
+
+
+EMPTY_NS = re.compile(r"^namespace[ \t]+([A-Za-z_]\w*)[ \t]*\{\s*\}[ \t]*(?://[^\n]*)?\n", re.M)
+
+
+def _drop_emptied_namespaces(before: str, after: str, declared: set[str] = frozenset()) -> str:
+    """Remove ``namespace X { }`` blocks the relocation emptied.
+
+    An emptied block is dropped only when X stays declared for later uses:
+    by another ``namespace X {`` in the file or by an included header
+    (``declared``).
+    """
+    had = {m.group(0) for m in EMPTY_NS.finditer(before)}
+
+    def drop(m):
+        if m.group(0) in had:
+            return m.group(0)
+        rest = after[:m.start()] + after[m.end():]
+        if m.group(1) in declared:
+            return ""
+        if re.search(r"\bnamespace\s+%s\s*\{" % re.escape(m.group(1)), cx.mask(rest)):
+            return ""
+        return m.group(0)
+    result = EMPTY_NS.sub(drop, after)
+    if result.count("\n\n\n") > before.count("\n\n\n"):
+        result = re.sub(r"\n{3,}", "\n\n", result)
+    return result
+
+
+def _needed_usings(plan: Plan, sources: list[Source], visible: set[str], reasons: list[str]) -> list[str]:
+    """The sources' file-scope ``using`` items that moved global-scope code needs.
+
+    ``using namespace X;`` is needed when moved code in the global scope uses a
+    bare name that resolves only to ``X::name`` (in the source or a visible
+    header); ``using X::n;`` when it uses a bare ``n``. They are copied
+    verbatim, after the includes, and stay in the source as well.
+    """
+    out: list[str] = []
+    for s in sources:
+        usings = [it for it in s.scan.items if it.category == "using" and it.using
+                  and not it.cond and not it.container]
+        if not usings:
+            continue
+        file_names = {n for it in s.scan.items for n in getattr(it, "qnames", [])}
+        known = file_names | visible
+        moved_bare = {u for m in s.moves if not m.item.scope for u in m.item.uses if "::" not in u}
+        for it in usings:
+            kind, target = it.using
+            if kind == "namespace":
+                needed = any(f"{target}::{u}" in known and u not in known for u in moved_bare)
+            else:
+                needed = target.rsplit("::", 1)[-1] in moved_bare
+            if not needed:
+                continue
+            ns = target if kind == "namespace" else target.split("::")[0]
+            if not any(n.startswith(ns + "::") for n in visible):
+                reasons.append(f"{s.rel}:{it.line}: moved code needs '{it.code(s.text).strip()}', but no header "
+                               f"the unit file includes declares namespace {ns}")
+                continue
+            line = it.code(s.text).strip()
+            if line not in out:
+                out.append(line)
+    return out
 
 
 def _data_order(moves: list[Move]) -> list[Move]:
@@ -869,7 +1107,7 @@ def _data_order(moves: list[Move]) -> list[Move]:
         changed = False
         for i, m in enumerate(order):
             for j in range(i + 1, len(order)):
-                if set(order[j].item.names) & m.item.uses:
+                if set(order[j].item.qnames) & m.item.ruses:
                     order.insert(i, order.pop(j))
                     changed = True
                     break
@@ -880,9 +1118,36 @@ def _data_order(moves: list[Move]) -> list[Move]:
     return order
 
 
-def _insert_include(text: str, line: str) -> str:
+def _place_private_include(text: str, line: str, names: set[str]) -> str:
+    """Insert the private include, or move an existing one up when the
+    header's names (now including this relocation's) are used before it."""
+    at = text.find(line + "\n")
+    if at < 0:
+        return _insert_include(text, line, names)
+    without = text[:at] + text[at + len(line) + 1:]
+    wanted = _insert_include(without, line, names)
+    return wanted if wanted.find(line) < at else text
+
+
+def _insert_include(text: str, line: str, names: set[str] = frozenset()) -> str:
+    """Add the private header's include ``line`` before its first use.
+
+    It goes after the last unconditional ``#include`` that precedes the first
+    code item using one of ``names`` (the header's names), so includes the
+    header's declarations depend on stay in front of it. With no such use it
+    goes after the top include block (the includes before the first code
+    item). A late include after code that already uses the names would come
+    too late (finding 527).
+    """
     scan = cx.scan(text)
-    incs = [it for it in scan.items if it.category == "include" and not it.cond and not it.container]
+
+    def uses_names(it):
+        return any(u.rsplit("::", 1)[-1] in names for u in it.uses)
+    code = [it for it in scan.items if it.kind in ("function", "declaration")]
+    first_use = next((it.start for it in code if uses_names(it)), None)
+    limit = first_use if first_use is not None else (code[0].start if code else len(text))
+    incs = [it for it in scan.items if it.category == "include" and not it.cond and not it.container
+            and it.start < limit]
     at = incs[-1].end if incs else _line_after_spdx(text)
     return text[:at] + line + "\n" + text[at:]
 
@@ -896,10 +1161,23 @@ def _render_header(root: Path, s: Source, plan: Plan) -> str:
     rel = s.shared_header
     guard = "LRR_" + re.sub(r"\W", "_", Path(rel).relative_to("src").as_posix()).upper()
     existing = (root / rel).read_text(encoding="utf-8") if (root / rel).exists() else None
-    parts = []
+    norm = cx.normalise(existing) if existing else ""
+    # Types and macros, then declarations; members of a namespace inside it.
+    chunks: list[tuple[str | None, str]] = []
     for it in s.header_items:
-        parts.append(it.text(s.text).rstrip("\n") + "\n")
-    decls = [d for _, d, _ in s.declarations]
+        text = it.text(s.text).rstrip("\n") + "\n"
+        if cx.normalise(text) not in norm:
+            chunks.append((it.container if _container_namespace(it.container) else None, text))
+    parts = _blocks(chunks)
+    decls: list[tuple[str | None, str]] = []
+    for d in s.declarations:
+        if cx.normalise(d.text) in norm:
+            continue
+        decls.append((f"ns:{d.ns}" if d.ns else None, d.text))
+    decl_text = "".join(_blocks([(w, t + "\n") for w, t in decls]))
+    add = "\n".join(p.rstrip("\n") + "\n" for p in parts)
+    if decl_text:
+        add += ("\n" if add else "") + decl_text
     if existing is None:
         head = ["// SPDX-License-Identifier: LGPL-3.0-or-later",
                 f"/* Private to {s.rel} and the units relocated out of it (ADR 0006",
@@ -908,18 +1186,8 @@ def _render_header(root: Path, s: Source, plan: Plan) -> str:
                 " * those files: it is not a shared header. */",
                 f"#ifndef {guard}",
                 f"#define {guard}", ""]
-        text = "\n".join(head) + "\n"
-        text += "\n".join(p.rstrip("\n") + "\n" for p in parts)
-        if decls:
-            text += ("\n" if parts else "") + "\n".join(decls) + "\n"
-        return text + f"\n#endif /* {guard} */\n"
-    norm = cx.normalise(existing)
-    new_parts = [p for p in parts if cx.normalise(p) not in norm]
-    new_decls = [d for d in decls if cx.normalise(d) not in norm]
+        return "\n".join(head) + "\n" + add + f"\n#endif /* {guard} */\n"
     end = existing.rstrip().rfind("#endif")
-    add = "\n".join(p.rstrip("\n") + "\n" for p in new_parts)
-    if new_decls:
-        add += "\n".join(new_decls) + "\n"
     return existing[:end].rstrip("\n") + "\n" + ("\n" + add if add else "") + "\n" + existing[end:]
 
 
@@ -999,8 +1267,15 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
             after_item = cands[0] if cands else None
         after = after_item.code(plan.files[plan.target]) if after_item else ""
         ok = cx.normalise(after) == cx.normalise(expected)
+        if after_item is not None and after_item.container != m.item.container:
+            ok = False
+            reasons.append(f"{m.source}:{m.item.line} {m.name}: moved from scope {m.item.container or 'global'} "
+                           f"into {after_item.container or 'global'}")
         if m.item.category == "function" and after_item is not None:
-            ok = ok and cx.normalise(_body(before, m.item, s.text)) == cx.normalise(_body(after, after_item, plan.files[plan.target]))
+            # A group's "body" includes its later alternatives' heads, so it
+            # is compared after the recorded static removal.
+            reference = expected if m.item.group else before
+            ok = ok and cx.normalise(_body(reference, m.item, s.text)) == cx.normalise(_body(after, after_item, plan.files[plan.target]))
         if not ok:
             reasons.append(f"{m.source}:{m.item.line} {m.name}: the moved text differs from the original")
         records.append({
@@ -1026,12 +1301,26 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
                             "from": f"{s.rel}:{it.line}", "to": s.rel,
                             "before_sha256": sha(it.code(s.text)), "after_sha256": sha(_strip_static(it.code(s.text))),
                             "edit": "static removed (shared with the unit file)"})
+        # The private header must come before any code that uses its names.
+        if s.shares:
+            include = _private_include(s.shared_header, s.rel)
+            at = new_text.find(include)
+            names = {d.name.rsplit("::", 1)[-1] for d in s.declarations} | {n for it in s.header_items for n in it.names}
+            early = [it for it in cx.scan(new_text[:max(at, 0)]).items
+                     if it.kind in ("function", "declaration") and set(it.uses) & names]
+            if at < 0 or early:
+                reasons.append(f"{s.rel}: the private header is included after code that uses "
+                               + ", ".join(sorted(set().union(*(set(it.uses) & names for it in early))) or "it"))
         # Annotation conservation: nothing lost or doubled.
         before = sorted(cx.ANNOTATION.findall(s.text))
         after = sorted(cx.ANNOTATION.findall(new_text))
         moved = sorted(a for m in s.moves for a in cx.ANNOTATION.findall(m.item.text(s.text)))
         if sorted(after + moved) != before:
             reasons.append(f"{s.rel}: annotations were lost or duplicated")
+    for kind, addr in cx.ANNOTATION.findall(plan.files[plan.target]):
+        a = int(addr, 16)
+        if kind in FUNCTION_KINDS + ("LIBRARY",) and not plan.unit.text_start <= a < plan.unit.text_end:
+            reasons.append(f"{plan.target}: holds {kind} 0x{a:08x}, outside {plan.unit.unit_id}")
     target_ann = sorted(cx.ANNOTATION.findall(plan.files[plan.target]))
     moved_all = sorted(a for s in plan.sources for m in s.moves
                        for a in cx.ANNOTATION.findall(m.item.text(s.text)))
@@ -1114,11 +1403,14 @@ def render_report(plan: Plan, footprint: cf.Footprint | None) -> str:
         w(f"Shared with the rest of `{s.rel}` through `{s.shared_header}`:")
         for it in s.header_items:
             w(f"* moved into the header: `{', '.join(it.names)}` ({it.category})")
-        for n, d, why in s.declarations:
-            w(f"* `{d}` ({why})")
+        for d in s.declarations:
+            w(f"* `{d.text}`" + (f" in namespace `{d.ns}`" if d.ns else "") + f" ({d.why})")
     if plan.forward:
         w("")
         w("Forward declarations added: " + ", ".join(f"`{d}`" for d in plan.forward))
+    if plan.usings:
+        w("")
+        w("`using` items carried over: " + ", ".join(f"`{d}`" for d in plan.usings))
     for note in plan.notes:
         w("")
         w(f"> {note}")
@@ -1184,6 +1476,11 @@ def classify_reason(reason: str) -> str:
         ("annotated definitions in a header", "function defined in a header"),
         ("qualified", "qualified (namespace/member) definition"),
         ("inside namespace", "named namespace"),
+        ("nested namespace", "nested namespace or linkage block"),
+        ("out-of-line member of", "out-of-line class member"),
+        ("several levels", "qualified definition with several levels"),
+        ("declares namespace", "using without a declared namespace"),
+        ("moved from scope", "verbatim check failed"),
         ("macro or complex declarator", "macro or complex declarator"),
         ("complex declarator", "macro or complex declarator"),
         ("not attached", "annotation not attached to a definition"),
@@ -1202,6 +1499,7 @@ def classify_reason(reason: str) -> str:
         ("shares its last line", "two items on one line"),
         ("starts on a line", "two items on one line"),
         ("type and a variable", "type and variable in one declaration"),
+        ("defined in one declaration", "type and variable in one declaration"),
         ("default arguments", "default arguments"),
         ("used before its definition", "use before definition"),
         ("annotates a", "annotation on a non-definition"),

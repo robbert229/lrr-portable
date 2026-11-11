@@ -2002,56 +2002,6 @@ int cmd_chain_contains_kind(const EntitySlot* e, int kind)
 
 static void idle_register(EntitySlot* e);
 
-/* The 0x408d70/0x408ce0 helpers share the live path-descriptor list owned by
- * level.cpp. The descriptor key is its serial dword at +0x08; its +0x2c list
- * contains EntitySlot pointers, mirrored by the native sidecar accessors. */
-static void* cmd_path_descriptor_find(uint32_t key)
-{
-    void* record;
-    for (record = path_record_last_peek(); record != NULL;
-         record = *(void**)((char*)record + 0x24)) {
-        uint32_t record_key;
-        memcpy(&record_key, (char*)record + 0x08, sizeof(record_key));
-        if (record_key == key) return record;
-    }
-    return NULL;
-}
-
-// FUNCTION: LEGORR 0x00408CE0
-static void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity)
-{
-    void* descriptor = cmd_path_descriptor_find(key);
-    uint32_t expected_count = 0u;
-    uint32_t current_count = 0u;
-    uint32_t flags = 0u;
-    if (descriptor == NULL) {
-        if (entity != NULL)
-            cmd_produce(entity->type == 6 ? 0x16 : 0x1c,
-                        entity, 0, NULL);
-        return;
-    }
-
-    if (entity != NULL) {
-        /* Retail sets +0x3ec bit 0x100 before appending the entity pointer.
-         * The sidecar append mirrors the descriptor's +0xcc and +0x20 counts. */
-        entity->flags_3ec |= 0x100u;
-        if (!path_record_entity_append(descriptor, entity)) return;
-    }
-
-    memcpy(&expected_count, (char*)descriptor + 0x1c,
-           sizeof(expected_count));
-    memcpy(&current_count, (char*)descriptor + 0x20,
-           sizeof(current_count));
-    if (expected_count == current_count) {
-        const float completed_progress = 1.3125f;
-        memcpy((char*)descriptor + 0x28, &completed_progress,
-               sizeof(completed_progress));
-        memcpy(&flags, (char*)descriptor + 0xd0, sizeof(flags));
-        flags |= 1u;
-        memcpy((char*)descriptor + 0xd0, &flags, sizeof(flags));
-    }
-}
-
 // FUNCTION: LEGORR 0x00403d10
 void entity_command_unlink_by_kind(EntitySlot* e, int type,
                                    const void* extra, int unlink)

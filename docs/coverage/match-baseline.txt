@@ -1,4 +1,4 @@
-# input_sha256: c61075e87803c2a0da64f4300b772f80b7e04ef27f72d2a123e235516df8897a
+# input_sha256: 6c4974e9ad409b111e3c61cb5e8f8fe99dbbc750d72d34167969ebc8e981655f
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -338,7 +338,7 @@
 0x0040fe60 28.00 ptrstack_pop
 0x0040fe90 54.55 ptrstack_for_each
 0x0040fec0 90.91 set_global_scalar_to_one
-0x0040ff50 75.00 scene_object_list_apply_float_callback
+0x0040ff50 87.50 scene_object_list_apply_float_callback
 0x0040ff70 83.33 object_vector3_set
 0x00410020 17.14 scene_node_position_set
 0x00410070 75.00 scene_object_list_apply_position_callback
@@ -849,7 +849,7 @@
 0x00438720 24.00 entity_available_resource_spend
 0x00438770 13.95 building_upgrade_resource_admission_check
 0x004387f0 23.73 building_upgrade_commit
-0x004388b0 14.49 entity_action_kind_prerequisite_check
+0x004388b0 18.12 entity_action_kind_prerequisite_check
 0x004389e0 18.82 entity_route_marker_candidate_find
 0x00438a60 14.04 ledger_stub_00438a60_SpatialObjectQueryCenterMask01
 0x00438ae0 18.18 ledger_stub_00438ae0_SpatialObjectQueryCenterMask02
@@ -977,13 +977,13 @@
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
-0x00444680 4.88 entity_step_movement_vector_resolve
+0x00444680 4.89 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
 0x00445d70 12.05 entity_flag_gated_callback_dispatch
-0x00446610 12.07 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
+0x00446610 12.27 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
 0x004468c0 22.58 entity_route_adjacent_step_append
 0x004469c0 13.22 ledger_stub_004469c0_EntityNearestConnectedTerrainCellRouteSelect
 0x00446e40 21.21 ledger_stub_00446e40_EntityNearestCellRouteCommit
@@ -1086,7 +1086,7 @@
 0x0044da20 100.00 simtick_route_position_blocked_state_set
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
-0x0044e0c0 11.44 terrain_create_retail
+0x0044e0c0 11.73 terrain_create_retail
 0x0044e4d0 10.71 terrain_grid_vertex_build
 0x0044e670 36.36 nested_pointer_record_destroy
 0x0044e6b0 11.76 indexed_flag_value_set_one
@@ -1133,7 +1133,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 13.27 terrain_cell_normal_sample
+0x004512d0 11.34 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -1572,7 +1572,7 @@
 0x004712f0 100.00 entity_velocity_slot_value_get
 0x00471310 100.00 entity_velocity_slot_value_set
 0x00471330 47.27 interpolated_z_within_bounds
-0x00471370 15.76 cmd_place_ray_candidate_check
+0x00471370 15.85 cmd_place_ray_candidate_check
 0x00471630 17.80 ray_hit_cell_distance_minimize_sweep
 0x00471860 21.51 scene_segment_trace_nearest_hit
 0x004718d0 36.52 object_pair_ray_hit_check
@@ -2499,7 +2499,7 @@
 0x0040fe60 28.00 ptrstack_pop
 0x0040fe90 54.55 ptrstack_for_each
 0x0040fec0 90.91 set_global_scalar_to_one
-0x0040ff50 75.00 scene_object_list_apply_float_callback
+0x0040ff50 87.50 scene_object_list_apply_float_callback
 0x0040ff70 83.33 object_vector3_set
 0x00410020 17.14 scene_node_position_set
 0x00410070 75.00 scene_object_list_apply_position_callback
@@ -3010,7 +3010,7 @@
 0x00438720 24.00 entity_available_resource_spend
 0x00438770 13.95 building_upgrade_resource_admission_check
 0x004387f0 23.73 building_upgrade_commit
-0x004388b0 14.49 entity_action_kind_prerequisite_check
+0x004388b0 18.12 entity_action_kind_prerequisite_check
 0x004389e0 18.82 entity_route_marker_candidate_find
 0x00438a60 14.04 ledger_stub_00438a60_SpatialObjectQueryCenterMask01
 0x00438ae0 18.18 ledger_stub_00438ae0_SpatialObjectQueryCenterMask02
@@ -3138,13 +3138,13 @@
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
-0x00444680 4.88 entity_step_movement_vector_resolve
+0x00444680 4.89 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
 0x00445d70 12.05 entity_flag_gated_callback_dispatch
-0x00446610 12.07 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
+0x00446610 12.27 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
 0x004468c0 22.58 entity_route_adjacent_step_append
 0x004469c0 13.22 ledger_stub_004469c0_EntityNearestConnectedTerrainCellRouteSelect
 0x00446e40 21.21 ledger_stub_00446e40_EntityNearestCellRouteCommit
@@ -3247,7 +3247,7 @@
 0x0044da20 100.00 simtick_route_position_blocked_state_set
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
-0x0044e0c0 11.44 terrain_create_retail
+0x0044e0c0 11.73 terrain_create_retail
 0x0044e4d0 10.71 terrain_grid_vertex_build
 0x0044e670 36.36 nested_pointer_record_destroy
 0x0044e6b0 11.76 indexed_flag_value_set_one
@@ -3294,7 +3294,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 13.27 terrain_cell_normal_sample
+0x004512d0 11.34 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -3733,7 +3733,7 @@
 0x004712f0 100.00 entity_velocity_slot_value_get
 0x00471310 100.00 entity_velocity_slot_value_set
 0x00471330 47.27 interpolated_z_within_bounds
-0x00471370 15.76 cmd_place_ray_candidate_check
+0x00471370 15.85 cmd_place_ray_candidate_check
 0x00471630 17.80 ray_hit_cell_distance_minimize_sweep
 0x00471860 21.51 scene_segment_trace_nearest_hit
 0x004718d0 36.52 object_pair_ray_hit_check

@@ -133,6 +133,9 @@ class Item:
     multi: bool = False       # declaration with several declarators
     include: str | None = None     # spelled include target, with <> or ""
     decl_start: int = -1      # start of the declaration (a group's first alternative)
+    qualifier: str | None = None   # X in an out-of-line definition ``T X::name(...)``
+    using: tuple[str, str] | None = None   # ("namespace", X) or ("name", "X::n")
+    defines_type: bool = False     # a declaration that also defines a struct/union/enum
 
     def head(self, source: str) -> str:
         """A function's text before its body, or a declaration without ``;``."""
@@ -176,6 +179,57 @@ class Scan:
             for _, addr in item.annotations:
                 out[addr] = item
         return out
+
+
+def _directive_end(text: str, start: int) -> int:
+    """One past the last line of the preprocessor directive at ``start``.
+
+    A directive continues past a line that ends in a backslash, and past a
+    line that ends inside a block comment: a ``/* */`` comment that begins in
+    a directive belongs to it until it closes, and the directive continues
+    if a backslash follows the comment's end on its last line.
+    """
+    n = len(text)
+    i = start
+    in_comment = False
+    while i < n:
+        e = text.find("\n", i)
+        e = n if e < 0 else e
+        k = i
+        line_end_code = i          # where the code part of the line ends
+        while k < e:
+            if in_comment:
+                close = text.find("*/", k, e)
+                if close < 0:
+                    k = e
+                    break
+                in_comment = False
+                k = close + 2
+                line_end_code = k
+                continue
+            c = text[k]
+            if text.startswith("/*", k):
+                in_comment = True
+                k += 2
+            elif text.startswith("//", k):
+                break
+            elif c in "\"'":
+                q = k + 1
+                while q < e and text[q] != c:
+                    q += 2 if text[q] == "\\" else 1
+                k = min(q + 1, e)
+                line_end_code = k
+            else:
+                k += 1
+                if not c.isspace():
+                    line_end_code = k
+        if e >= n:
+            return n
+        if in_comment or text[i:line_end_code].rstrip().endswith("\\"):
+            i = e + 1
+            continue
+        return e + 1
+    return n
 
 
 def _line_of(text: str, offset: int) -> int:
@@ -237,7 +291,7 @@ def scan(text: str) -> Scan:
         else:
             stop = _line_end(text, end)
         item = Item(kind=kind, start=cur, end=stop, problems=list(cur_problems),
-                    cond=len(top_frames()), container=containers[-1] if containers else None,
+                    cond=len(top_frames()), container="/".join(containers) or None,
                     body=body_at if kind == "function" else -1)
         if masked[_line_start(text, cur):cur].strip():
             item.problems.append("starts on a line with other code")
@@ -250,17 +304,7 @@ def scan(text: str) -> Scan:
         if at_line_start:
             m = DIRECTIVE.match(masked, i)
             if m:
-                j = i
-                while True:
-                    e = text.find("\n", j)
-                    if e < 0:
-                        e = n
-                        break
-                    if text[j:e].rstrip("\r").endswith("\\"):
-                        j = e + 1
-                        continue
-                    break
-                stop = min(n, e + 1)
+                stop = _directive_end(text, i)
                 word = m.group(1)
                 if word in ("if", "ifdef", "ifndef", "elif", "else", "endif") and depth == 0 and cur is not None:
                     cur_problems.append(f"a #{word} directive splits the declaration")
@@ -300,7 +344,7 @@ def scan(text: str) -> Scan:
                             groups.append(f["group"])
                 elif depth == 0 and cur is None:
                     item = Item(kind="directive", start=i, end=stop, cond=len(top_frames()),
-                                container=containers[-1] if containers else None, category="other")
+                                container="/".join(containers) or None, category="other")
                     if word == "define":
                         dm = re.match(r"\s*#\s*define\s+([A-Za-z_]\w*)", masked[i:stop])
                         item.kind = item.category = "macro"
@@ -380,6 +424,10 @@ def scan(text: str) -> Scan:
         problems.append("unbalanced braces at end of file")
     for item in items:
         _describe(item, text, masked)
+        if item.container and "/" in item.container and not re.fullmatch(r"ns:[A-Za-z_]\w*/anon", item.container):
+            # namespace X { namespace { } } is supported (scope X, internal
+            # linkage); other nesting is not.
+            item.problems.append(f"nested namespace or linkage block ({item.container})")
     items = _merge_groups(items, groups, text)
     for item in items:
         item.lead = _lead(item, text, masked)
@@ -405,16 +453,25 @@ def _lead(item: Item, text: str, masked: str) -> int:
 # Names and uses
 
 
+QUALIFIED = re.compile(r"(?:\b[A-Za-z_]\w*\s*::\s*)+[A-Za-z_]\w*|(?<![\w:])::\s*[A-Za-z_]\w*|[A-Za-z_]\w*")
+
+
 def _uses(masked: str) -> set[str]:
-    """Identifiers in ``masked``, except member names after ``.`` and ``->``."""
+    """Names used in ``masked``.
+
+    A bare identifier is reported as itself and a qualified one as
+    ``X::n`` (``::n`` reads as ``n``). Member names after ``.`` and ``->``
+    are skipped.
+    """
     out = set()
-    for m in IDENT.finditer(masked):
+    for m in QUALIFIED.finditer(masked):
         k = m.start() - 1
         while k >= 0 and masked[k] in " \t\r\n":
             k -= 1
         if k >= 0 and (masked[k] == "." or (masked[k] == ">" and k > 0 and masked[k - 1] == "-")):
             continue
-        out.add(m.group(0))
+        name = re.sub(r"\s+", "", m.group(0)).lstrip(":")
+        out.add(name)
     return out
 
 
@@ -453,7 +510,7 @@ def _strip_braced(text: str) -> tuple[str, list[str]]:
     return "".join(out), bodies
 
 
-def _function_name(head: str) -> tuple[str | None, list[str]]:
+def _function_name(head: str) -> tuple[str | None, list[str], str | None]:
     """Name declared by a function head (text before the body or ``;``).
 
     The parameter list is the last top-level parenthesised group; the name is
@@ -475,17 +532,23 @@ def _function_name(head: str) -> tuple[str | None, list[str]]:
             if depth == 0:
                 groups.append(start)
     if not groups:
-        return None, ["no parameter list"]
+        return None, ["no parameter list"], None
     p = groups[-1]
     m = re.search(r"([A-Za-z_]\w*)\s*$", h[:p])
     if not m or m.group(1) in CONTROL:
-        return None, ["complex declarator (function pointer or macro before the name)"]
+        return None, ["complex declarator (function pointer or macro before the name)"], None
     before = h[:m.start()]
-    if re.search(r"::\s*$", before):
-        problems.append("qualified (member or namespace) definition")
+    qualifier = None
+    q = re.search(r"((?:[A-Za-z_]\w*\s*::\s*)+)$", before)
+    if q:
+        parts = [x for x in re.split(r"\s*::\s*", q.group(1)) if x]
+        if len(parts) > 1:
+            problems.append("qualified definition with several levels (" + "::".join(parts) + ")")
+        qualifier = parts[-1]
+        before = before[:q.start()]
     if "(" in before or ")" in before:
         problems.append("macro or complex declarator before the function name")
-    return m.group(1), problems
+    return m.group(1), problems, qualifier
 
 
 def _describe(item: Item, text: str, masked: str) -> None:
@@ -504,10 +567,12 @@ def _describe(item: Item, text: str, masked: str) -> None:
     item.inline = any(w in ("inline", "__inline", "__forceinline") for w in lead_words[:4])
     if item.kind == "function":
         item.category = "function"
-        name, probs = _function_name(head)
+        name, probs, item.qualifier = _function_name(head)
         item.names = [name] if name else []
         item.problems.extend(probs)
         item.uses -= set(item.names)
+        if item.qualifier:
+            item.uses.discard(f"{item.qualifier}::{name}")
         return
     decl = code.rstrip().rstrip(";")
     stripped = decl.strip()
@@ -543,7 +608,7 @@ def _describe(item: Item, text: str, masked: str) -> None:
         declarators = [p for p in _split_top(tail) if p.strip()]
         if declarators:
             item.category = "var"
-            item.problems.append("defines a type and a variable in one declaration")
+            item.defines_type = True
             for p in declarators:
                 m = re.search(r"([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*(?:=.*)?$", p.strip(), re.S)
                 if m:
@@ -554,7 +619,24 @@ def _describe(item: Item, text: str, masked: str) -> None:
     elif words and words[0] in TYPE_KEYWORDS and len(words) == 2:
         item.category = "type"          # forward declaration: struct X;
         item.names = [words[1]]
-    elif words and words[0] in ("using", "template", "static_assert"):
+    elif words and words[0] == "using":
+        um = re.fullmatch(r"using\s+namespace\s+([A-Za-z_]\w*)", stripped)
+        un = re.fullmatch(r"using\s+((?:[A-Za-z_]\w*\s*::\s*)+[A-Za-z_]\w*)", stripped)
+        ua = re.fullmatch(r"using\s+([A-Za-z_]\w*)\s*=.*", stripped, re.S)
+        item.category = "using"
+        if um:
+            item.using = ("namespace", um.group(1))
+            item.uses = {um.group(1)}
+        elif un:
+            item.using = ("name", re.sub(r"\s+", "", un.group(1)))
+            item.uses = {item.using[1]}
+        elif ua:
+            item.category = "type"         # alias declaration: using T = ...;
+            item.names = [ua.group(1)]
+        else:
+            item.category = "other"
+            item.problems.append("unrecognised 'using' declaration")
+    elif words and words[0] in ("template", "static_assert"):
         item.category = "other"
         item.problems.append(f"'{words[0]}' declaration")
     else:
@@ -564,7 +646,7 @@ def _describe(item: Item, text: str, masked: str) -> None:
         fp = re.search(r"\(\s*(?:__\w+\s+)?\*\s*([A-Za-z_]\w*)\s*\)", no_init)
         if "(" in no_init and not fp:
             item.category = "proto"
-            name, probs = _function_name(no_init)
+            name, probs, item.qualifier = _function_name(no_init)
             item.problems.extend(probs)
             names = [name] if name else []
             if len(parts) > 1:
@@ -573,6 +655,13 @@ def _describe(item: Item, text: str, masked: str) -> None:
         else:
             item.category = "var"
             names = []
+            tagged = re.search(r"\b(?:struct|union|enum|class)\s*([A-Za-z_]\w*)?\s*\{", no_init)
+            if tagged:
+                # static struct T { ... } v[N]; defines T as well as v.
+                item.defines_type = True
+                if tagged.group(1):
+                    names.append(tagged.group(1))
+                parts = [_strip_braced(part)[0] for part in parts]
             for part in parts:
                 part = _split_top(part, "=")[0]
                 f2 = re.search(r"\(\s*(?:__\w+\s+)?\*\s*([A-Za-z_]\w*)\s*\)", part)
