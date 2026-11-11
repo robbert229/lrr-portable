@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "mainsim.hpp"
+#include "message.hpp"
+#include "view.hpp"
 #include "game/entity.hpp"
 
 /* --- boundaries ----------------------------------------------------------
@@ -42,7 +44,6 @@ static void m_toggle_hud(EngineContext* ctx, uint32_t* flag, uint32_t bit,
 int main_sim_step(EngineContext* ctx, float scale,
                   uint32_t* o1, uint32_t* o2, uint32_t* o3)
 {
-    (void)scale;
     if (ctx == NULL) {
         return 0;
     }
@@ -103,12 +104,23 @@ int main_sim_step(EngineContext* ctx, float scale,
         ctx->state_block->air_beat--;
     }
 
-    /* The source camera keys and deltas are identified (see mainsim.hpp and
-     * Finding 101), but the called helpers expect the original camera-control
-     * record. ViewContext's reconstructed fields do not match that record's
-     * +0x78/+0x84/+0x90 values or scene-node offsets, so applying the deltas
-     * here would mutate unrelated state. Keep this path deferred until that
-     * record has a faithful adapter. */
+    /* 4252e5..425360 (Finding 101): held camera keys, gated on the outer
+     * activity mask, in-game context mode, and system-state bit 0x1000.
+     * Zoom drives the bounded controller distance at +0x90, which the
+     * primary follow view reads. The corpus delta is scale * 3.0 in 25-Hz
+     * frame units; the port's scale is seconds, hence the * 25.
+     * Pan (+0x78) and tilt (+0x84) remain deferred until the follow view
+     * consumes those controller fields. */
+    if ((ctx->state & 0x08100000u) == 0u && ctx->context_mode == 1 &&
+        (system_state_flags_get() & 0x1000u) == 0u) {
+        const float frames = scale * 25.0f;
+        if (m_held(ctx, MNSIM_K_ZOOM_OUT)) {
+            camera_zoom_update(ctx->camera_controller, frames * 3.0f);
+        }
+        if (m_held(ctx, MNSIM_K_ZOOM_IN)) {
+            camera_zoom_update(ctx->camera_controller, frames * -3.0f);
+        }
+    }
 
     /* The three edge outputs EngineTick's later tickers consume. */
     if (m_edge(ctx, '1')) {

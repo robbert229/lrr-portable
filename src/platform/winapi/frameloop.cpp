@@ -572,6 +572,10 @@ int platform_pump_events(PlatformWindow* win, PlatformEvent* out, int cap)
             else if (message.wParam == VK_RIGHT) code = PLATFORM_KEY_RIGHT;
             else if (message.wParam == VK_ESCAPE) code = PLATFORM_KEY_ESC;
             else if (message.wParam == VK_RETURN) code = PLATFORM_KEY_ENTER;
+            /* OEM VKs sit above printable ASCII; the camera zoom keys
+             * (DIK_MINUS/DIK_EQUALS in the original) use '-' and '='. */
+            else if (message.wParam == 0xbd) code = '-'; /* VK_OEM_MINUS */
+            else if (message.wParam == 0xbb) code = '='; /* VK_OEM_PLUS */
             else if (message.wParam >= 'A' && message.wParam <= 'Z')
                 code = (int)message.wParam - 'A' + 'a';
             else if (message.wParam >= 0x20 && message.wParam <= 0x7e)

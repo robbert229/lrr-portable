@@ -11,6 +11,7 @@
 
 #include "input.hpp"
 #include "mainsim.hpp"
+#include "view.hpp"
 
 static int s_failures = 0;
 
@@ -80,6 +81,42 @@ int main(void)
     in.cur[MNSIM_K_AIRCHEAT] = 1; /* held */
     main_sim_step(&ctx, 1.0f, 1.0f / 30.0f, &o1, &o2, &o3);
     CHECK(st.air_beat < 10, "aircheat: drains air");
+
+    /* held zoom keys (Finding 101): '-' adds and '=' subtracts
+     * 3 * scale * 25 to the controller distance, in-game mode only. */
+    {
+        float d = 0.0f;
+        camera_distance_bounds_set(ctx.camera_controller, 100.0f, 300.0f);
+        camera_distance_set(ctx.camera_controller, 200.0f);
+        input_reset(&in);
+        in.cur[MNSIM_K_ZOOM_OUT] = 1;
+        main_sim_step(&ctx, 0.04f, &o1, &o2, &o3);
+        memcpy(&d, ctx.camera_controller + 0x90, sizeof(d));
+        CHECK(d == 200.0f, "zoom: inert outside in-game context mode");
+
+        ctx.context_mode = 1;
+        main_sim_step(&ctx, 0.04f, &o1, &o2, &o3);
+        memcpy(&d, ctx.camera_controller + 0x90, sizeof(d));
+        CHECK(d > 202.9f && d < 203.1f, "zoom: '-' zooms out by 3/frame");
+
+        input_reset(&in);
+        in.cur[MNSIM_K_ZOOM_IN] = 1;
+        main_sim_step(&ctx, 0.08f, &o1, &o2, &o3);
+        memcpy(&d, ctx.camera_controller + 0x90, sizeof(d));
+        CHECK(d > 196.9f && d < 197.1f, "zoom: '=' zooms in by 3/frame");
+
+        ctx.state |= 0x100000u; /* frozen time gates the camera keys */
+        main_sim_step(&ctx, 0.04f, &o1, &o2, &o3);
+        memcpy(&d, ctx.camera_controller + 0x90, sizeof(d));
+        CHECK(d > 196.9f && d < 197.1f, "zoom: gated while time frozen");
+        ctx.state &= ~0x100000u;
+
+        camera_distance_set(ctx.camera_controller, 101.0f);
+        main_sim_step(&ctx, 0.08f, &o1, &o2, &o3);
+        memcpy(&d, ctx.camera_controller + 0x90, sizeof(d));
+        CHECK(d == 101.0f, "zoom: step past MinDist is refused");
+        ctx.context_mode = 0;
+    }
 
     /* quit gate. */
     press(&in, MNSIM_K_QUIT);

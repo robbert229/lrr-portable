@@ -8,8 +8,8 @@
  *   2. debug/cheat toggles (gated debug word 0x10): Frame Rate Monitor
  *      (state 0x40), render pass (0x2/0x1000/0x2000), Memory Monitor
  *      (state 0x80), Sound Effects (state 0x10), Music, air cheat key
- *   3. camera key slots and bounded camera-controller updates (slots are
- *      identified; the controller record is not represented by ViewContext)
+ *   3. camera key slots and bounded camera-controller updates (zoom is
+ *      applied to EngineContext::camera_controller; pan/tilt are deferred)
  *   4. the three edge outputs o1/o2/o3 that EngineTick's later tickers read
  *
  * The camera-slot constants below are offsets into the current-key table,
@@ -38,6 +38,10 @@
 #define MNSIM_K_CAMERA_TILT_NEG 0xcd /* DAT_0076ac4d: KEY_CURSORRIGHT */
 #define MNSIM_K_CAMERA_ZOOM_POS 0x0c /* DAT_0076ab8c: KEY_MINUS */
 #define MNSIM_K_CAMERA_ZOOM_NEG 0x0d /* DAT_0076ab8d: KEY_EQUALS */
+/* The port's key table is indexed by canonical (ASCII) codes, not DIK
+ * scan codes; these are the canonical keys for the two zoom slots. */
+#define MNSIM_K_ZOOM_OUT '-' /* MNSIM_K_CAMERA_ZOOM_POS: distance += 3*scale */
+#define MNSIM_K_ZOOM_IN  '=' /* MNSIM_K_CAMERA_ZOOM_NEG: distance -= 3*scale */
 
 /* Retail-shaped MainSimStep @ 0x4250c0. The reference receives a context-like
  * first word (unused by the original), the frame scale, and three output
