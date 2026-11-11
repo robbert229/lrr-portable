@@ -16,6 +16,7 @@
 #include "frameloop.hpp"
 #include "scene_resources.hpp"
 #include "surface_shared.hpp"
+#include "surface_for_viewports.hpp"
 
 #if defined(_MSC_VER)
 #define SURFACE_COM_CALL __stdcall
@@ -42,7 +43,7 @@ static TextureSurfaceCreateHook s_texture_surface_create_hook;
 static void* s_texture_surface_create_context;
 static DisplaySurface* s_active_render_target;
 static void* s_screen_bounded_surface_renderer;
-static void* s_screen_bounded_surface_device;
+void* s_screen_bounded_surface_device;
 
 typedef uint32_t (SURFACE_COM_CALL *SurfaceDeviceDimensionFn)(void* device);
 typedef int32_t (SURFACE_COM_CALL *Direct3DRMCreateViewportFn)(
@@ -57,7 +58,7 @@ static void** surface_interface_vtable(void* object)
     return *(void***)object;
 }
 
-static int surface_screen_dimensions_get(uint32_t* width_out,
+int surface_screen_dimensions_get(uint32_t* width_out,
                                          uint32_t* height_out)
 {
     void** vtable;
@@ -139,42 +140,6 @@ ScreenBoundedSurfaceRecord* screen_bounded_surface_allocate(
         record->appdata = 0u;
     }
     return record;
-}
-
-/* RenderTargetViewportScaleSet (FUN_00476dc0): its actual stack ABI has four
- * normalized origin/size floats followed by a camera pointer. GameConfigInit
- * passes (0, 0, 1, 1, camera); convert x/width against device width and
- * y/height against device height before allocating the viewport. */
-// FUNCTION: LEGORR 0x00476dc0
-ScreenBoundedSurfaceRecord* render_target_viewport_scale_set(
-    float x, float y, float width_scale, float height_scale, void* camera)
-{
-    uint32_t screen_width;
-    uint32_t screen_height;
-    float pixel_x;
-    float pixel_y;
-    float pixel_width;
-    float pixel_height;
-    if (s_screen_bounded_surface_device == NULL || camera == NULL)
-        return NULL;
-    if (!surface_screen_dimensions_get(&screen_width, &screen_height))
-        return NULL;
-    if (screen_width == 0u || screen_height == 0u) return NULL;
-    pixel_x = x * (float)screen_width;
-    pixel_y = y * (float)screen_height;
-    pixel_width = width_scale * (float)screen_width;
-    pixel_height = height_scale * (float)screen_height;
-    if (pixel_x != pixel_x || pixel_y != pixel_y ||
-        pixel_width != pixel_width || pixel_height != pixel_height ||
-        pixel_x < -2147483648.0f || pixel_x > 2147483520.0f ||
-        pixel_y < -2147483648.0f || pixel_y > 2147483520.0f ||
-        pixel_width <= 0.0f || pixel_width > 2147483520.0f ||
-        pixel_height <= 0.0f || pixel_height > 2147483520.0f)
-        return NULL;
-    return screen_bounded_surface_allocate(
-        (uint32_t)crt_float_to_long(pixel_width),
-        (uint32_t)crt_float_to_long(pixel_height), camera,
-        crt_float_to_long(pixel_x), crt_float_to_long(pixel_y));
 }
 
 int mesh_record_allocate_or_append_ops_set(const MeshRecordAppendOps* ops)
@@ -6072,16 +6037,6 @@ int ledger_stub_004748f0_MeshRecordAllocateOrAppend(
     return mesh_record_allocate_or_append(object, vertex_count, index_rows,
                                           index_columns, source_indices);
 }
-
-
-// FUNCTION: LEGORR 0x00476e50
-ScreenBoundedSurfaceRecord*
-ledger_stub_00476e50_ScreenBoundedSurfaceResourceAllocate(
-    uint32_t width, uint32_t height, void* camera, int x, int y)
-{
-    return screen_bounded_surface_allocate(width, height, camera, x, y);
-}
-
 
 
 // InterfaceMethod18StructApply

@@ -25,6 +25,8 @@
 #include "scene_pool.hpp"
 #include "resource_shared.hpp"
 #include "resource_for_com_object_tree.hpp"
+#include "resource_for_wad.hpp"
+#include "resource_from_wad.hpp"
 
 // GLOBAL: LEGORR 0x0049f988
 const unsigned char s_resource_tree_child_iid[16] = {
@@ -74,75 +76,6 @@ public:
     virtual void slot_14(void) = 0;
     virtual void slot_18(void) = 0;
     virtual void* property_get(void) = 0;
-};
-
-class ResourceSlot40Interface
-{
-public:
-    virtual void slot_00(void) = 0;
-    virtual void slot_04(void) = 0;
-    virtual void slot_08(void) = 0;
-    virtual void slot_0c(void) = 0;
-    virtual void slot_10(void) = 0;
-    virtual void slot_14(void) = 0;
-    virtual void slot_18(void) = 0;
-    virtual void slot_1c(void) = 0;
-    virtual void slot_20(void) = 0;
-    virtual void slot_24(void) = 0;
-    virtual void slot_28(void) = 0;
-    virtual void slot_2c(void) = 0;
-    virtual void slot_30(void) = 0;
-    virtual void slot_34(void) = 0;
-    virtual void slot_38(void) = 0;
-    virtual void slot_3c(void) = 0;
-    virtual void slot_40(uint32_t value) = 0;
-};
-
-class ResourceSlot88Interface
-{
-public:
-    virtual void slot_00(void) = 0;
-    virtual void slot_04(void) = 0;
-    virtual void slot_08(void) = 0;
-    virtual void slot_0c(void) = 0;
-    virtual void slot_10(void) = 0;
-    virtual void slot_14(void) = 0;
-    virtual void slot_18(void) = 0;
-    virtual void slot_1c(void) = 0;
-    virtual void slot_20(void) = 0;
-    virtual void slot_24(void) = 0;
-    virtual void slot_28(void) = 0;
-    virtual void slot_2c(void) = 0;
-    virtual void slot_30(void) = 0;
-    virtual void slot_34(void) = 0;
-    virtual void slot_38(void) = 0;
-    virtual void slot_3c(void) = 0;
-    virtual void slot_40(void) = 0;
-    virtual void slot_44(void) = 0;
-    virtual void slot_48(void) = 0;
-    virtual void slot_4c(void) = 0;
-    virtual void slot_50(void) = 0;
-    virtual void slot_54(void) = 0;
-    virtual void slot_58(void) = 0;
-    virtual void slot_5c(void) = 0;
-    virtual void slot_60(void) = 0;
-    virtual void slot_64(void) = 0;
-    virtual void slot_68(void) = 0;
-    virtual void slot_6c(void) = 0;
-    virtual void slot_70(void) = 0;
-    virtual void slot_74(void) = 0;
-    virtual void slot_78(void) = 0;
-    virtual void slot_7c(void) = 0;
-    virtual void slot_80(void) = 0;
-    virtual void slot_84(void) = 0;
-    virtual void slot_88(void) = 0;
-};
-
-class ResourceRetainInterface
-{
-public:
-    virtual void slot_00(void) = 0;
-    virtual void retain(void) = 0;
 };
 
 char s_rock_fall_style_names[ROCK_FALL_STYLE_NAME_CAPACITY]
@@ -1216,43 +1149,6 @@ int scene_resource_availability_sweep(float delta, uint32_t** groups_out,
     return count;
 }
 
-// FUNCTION: LEGORR 0x00477220
-void render_resource_track_and_retain(void* resource)
-{
-    void** next;
-    ResourceRetainInterface* interface_object;
-    if (resource == NULL) {
-        return;
-    }
-    next = (void**)((unsigned char*)resource + 0x1c);
-    *next = s_render_surface_pool_free_head;
-    s_render_surface_pool_free_head = resource;
-    interface_object = *(ResourceRetainInterface**)((unsigned char*)resource + 0x10);
-    interface_object->retain();
-}
-
-// FUNCTION: LEGORR 0x00477270
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void resource_interface_call_slot88(void* wrapper)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 10h]
-        push eax
-        mov ecx, dword ptr [eax]
-        call dword ptr [ecx + 88h]
-        ret
-    }
-}
-#else
-void resource_interface_call_slot88(void* wrapper)
-{
-    ResourceSlot88Interface* interface_object =
-        *(ResourceSlot88Interface**)((unsigned char*)wrapper + 0x10);
-    interface_object->slot_88();
-}
-#endif
-
 // FUNCTION: LEGORR 0x00476d10
 void render_resource_pair_release_and_clear(void** pair)
 {
@@ -1293,21 +1189,6 @@ void scene_property_owned_buffer_release(void* property)
 #endif
 }
 
-// FUNCTION: LEGORR 0x00477250
-void resource_interface_call_slot40_and_clear_field14(
-    ResourceInterfaceWrapper* wrapper, uint32_t value)
-{
-    if (wrapper == NULL) {
-        return;
-    }
-    if (wrapper->interface_object != NULL) {
-        ((ResourceSlot40Interface*)wrapper->interface_object)->slot_40(value);
-    }
-    wrapper->field14 = 0;
-}
-
-#define RESOURCE_MAX_WADS 10
-#define RESOURCE_PATH_MAX 4096
 #define WAD_MAGIC         "WWAD"
 #define ENTRY_FLAG_EXPANDED 0x2u
 #define EXPAND_HEADER_SZ  0x12u
@@ -1488,23 +1369,6 @@ static unsigned int wad_huffman_symbol_decode(void* table)
     return i<2 ? i : (wad_read_bits_lsb_first(i-1)|(1u<<(i-1)));
 }
 
-typedef struct WadEntry {
-    uint32_t flags;
-    uint32_t orig;    /* uncompressed length */
-    uint32_t stored;  /* length on disk */
-    uint32_t off;     /* absolute file offset of the payload */
-    uint32_t name_off;/* byte offset of the name inside RESOURCE_wads[].names */
-} WadEntry;
-
-typedef struct ResourceWad {
-    FILE*     fp;         /* binary handle, kept open for reads */
-    char      path[RESOURCE_PATH_MAX];
-    uint32_t  file_size;
-    uint32_t  entry_count;
-    char*     names;      /* copied name blob (archive-relative paths) */
-    WadEntry* entries;
-} ResourceWad;
-
 struct ResourceStream {
     FILE* file;
     uint32_t data_offset;
@@ -1512,8 +1376,8 @@ struct ResourceStream {
     uint8_t* expanded_data;
 };
 
-static ResourceWad s_wads[RESOURCE_MAX_WADS];
-static int       s_wad_count = 0;
+ResourceWad s_wads[RESOURCE_MAX_WADS];
+int       s_wad_count = 0;
 static char      s_wad_prefix[RESOURCE_PATH_MAX] = "LegoRR";
 static ResourceFileTokenList s_resource_file_tokens;
 static char s_resource_directory_root[RESOURCE_PATH_MAX];
@@ -1766,7 +1630,7 @@ static uint32_t ares_le32(const uint8_t* p)
          | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
-static char* ares_strdup(const char* s)
+char* ares_strdup(const char* s)
 {
 #if defined(_MSC_VER)
     /* The archive-owned names are released with free(), so use the matching
@@ -1818,7 +1682,7 @@ static uint32_t ares_count_names(FILE* fp, uint32_t n)
     return total;
 }
 
-static int ares_parse(FILE* fp, ResourceWad* out)
+int ares_parse(FILE* fp, ResourceWad* out)
 {
     uint8_t hdr[8];
     if (fseek(fp, 0, SEEK_END) != 0) {
@@ -1896,35 +1760,6 @@ static int ares_parse(FILE* fp, ResourceWad* out)
         out->entries[i].off    = ares_le32(row + 12);
     }
     return 1;
-}
-
-/* WwadArchiveIndexLoad (FUN_0048b4e0): open and index one archive into the
- * next archive record. The port guards the corpus's fixed record array. */
-// FUNCTION: LEGORR 0x0048b4e0
-int wwad_archive_index_load(const char* path)
-{
-    ResourceWad* wad;
-    FILE* fp;
-    if (path == NULL || s_wad_count >= RESOURCE_MAX_WADS) {
-        return -1;
-    }
-    fp = fopen(path, "rb");
-    if (fp == NULL) {
-        return -1;
-    }
-    wad = &s_wads[s_wad_count];
-    memset(wad, 0, sizeof(*wad));
-    wad->fp = fp;
-    if (!ares_parse(fp, wad)) {
-        free(wad->names);
-        free(wad->entries);
-        memset(wad, 0, sizeof(*wad));
-        fclose(fp);
-        return -1;
-    }
-    snprintf(wad->path, sizeof(wad->path), "%s", path);
-    ++s_wad_count;
-    return s_wad_count - 1;
 }
 
 /* WadMountPathCacheStore (FUN_0047f590): keep a nonempty path shorter than
@@ -2264,24 +2099,6 @@ void resource_unmount_all(void)
     s_wad_count = 0;
 }
 
-/* WadEntryNameLookup: case-insensitive scan of one mounted archive's names;
- * return its entry index or -1. Bounds checks are port safeguards. */
-// FUNCTION: LEGORR 0x0048bda0
-int resource_wad_lookup(int wad_idx, const char* name)
-{
-    if (wad_idx < 0 || wad_idx >= s_wad_count || name == NULL) {
-        return -1;
-    }
-    ResourceWad* w = &s_wads[wad_idx];
-    for (uint32_t i = 0; i < w->entry_count; ++i) {
-        const char* cand = w->names + w->entries[i].name_off;
-        if (strcasecmp_lite(cand, name) == 0) {
-            return (int)i;
-        }
-    }
-    return -1;
-}
-
 uint32_t resource_wad_entry_count(int wad_idx)
 {
     if (wad_idx < 0 || wad_idx >= s_wad_count) {
@@ -2318,16 +2135,6 @@ void* wad_archive_record_at_index(int index)
         return NULL;
     }
     return &s_wads[index];
-}
-
-// FUNCTION: LEGORR 0x0048bcf0
-uint32_t wad_entry_length_get(int wad_idx, int entry_idx)
-{
-    if (wad_idx < 0 || wad_idx >= s_wad_count || entry_idx < 0
-        || (uint32_t)entry_idx >= s_wads[wad_idx].entry_count) {
-        return 0;
-    }
-    return s_wads[wad_idx].entries[entry_idx].stored;
 }
 
 /* FUNCTION: LEGORR 0x0048bd10 */
@@ -2400,48 +2207,6 @@ int game_file_open_route_select(const char* path, const char* mode)
     if (mode[0] == 'w' || mode[0] == 'W') return 1;
     rewritten = game_file_mounted_path_prefix_rewrite(path);
     return wad_entry_find_across_mounted_archives(rewritten, -1) == -1;
-}
-
-/* Open an entry inside mounted wad `wad_idx` (no payload yet). */
-static Resource* ares_open_wad(int wad_idx, int entry_idx, const char* name)
-{
-    Resource* r = (Resource*)calloc(1, sizeof(Resource));
-    if (r == NULL) {
-        return NULL;
-    }
-    r->name = ares_strdup(name);
-    if (r->name == NULL) {
-        free(r);
-        return NULL;
-    }
-    r->branch    = RESOURCE_WAD_BRANCH;
-    r->wad_idx   = wad_idx;
-    r->entry_idx = entry_idx;
-    r->size      = -1;
-    return r;
-}
-
-/* Partial WadPathOpen (FUN_0048bf70): scan mounted archives from newest to
- * oldest, resolve the entry, and return its resource handle. The original
- * opens the entry into a fixed stream slot immediately; this port reads its
- * payload lazily through resource_read. */
-// FUNCTION: LEGORR 0x0048bf70
-static Resource* ares_open_wad_path(const char* name, int mode)
-{
-    for (int w = s_wad_count - 1; w >= 0; --w) {
-        int e = resource_wad_lookup(w, name);
-        if (e >= 0) {
-            Resource* r = ares_open_wad(w, e, name);
-            if (r != NULL) {
-                r->mode = mode;
-                return r;
-            }
-            /* WadPathOpen continues to the next older mounted archive when
-             * opening a matching entry fails (for example, slot allocation
-             * failure). Keep that fallback if this handle allocation fails. */
-        }
-    }
-    return NULL;
 }
 
 /* Open a loose file (STD branch) — payload read lazily by resource_read. */
@@ -3187,34 +2952,14 @@ int file_resource_record_slot_allocate(void)
     return -1;
 }
 
-/* --- the fixed-record slot resources (see resource.hpp) -------------------- */
-#define FIXED_RECORD_SLOTS 16
-
-/* The fixed-record slot band: sixteen 16-byte records {resource@+0x00,
- * in-use flag@+0x04} at DAT_005756a0 (all-zero image bytes; the corpus
- * scales the index shl 4 and strides blindly). The +0x08/+0x0c words
- * belong to the unported reader (FUN_0048c010) — pad only. */
-typedef struct FixedRecordSlot {
-    uint32_t resource;  /* +0x00: reference pointer word */
-    uint32_t in_use;    /* +0x04 */
-    uint8_t  pad[8];    /* +0x08..0x0f */
-} FixedRecordSlot;
-
 typedef char fixed_record_slot_stride_check[sizeof(FixedRecordSlot) == 16u ? 1 : -1];
 
 // GLOBAL: LEGORR 0x005756a0
-static FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
+FixedRecordSlot s_fixed_slots[FIXED_RECORD_SLOTS];
 #if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
 /* The retail record stores a 32-bit pointer. Keep its 16-byte layout and
  * retain native pointers separately on wider hosts. */
-static void* s_fixed_slot_resources[FIXED_RECORD_SLOTS];
-#endif
-
-#if defined(_WIN64) || defined(__x86_64__) || defined(__aarch64__)
-#define fixed_record_slot_pointer_get(slot) s_fixed_slot_resources[(slot)]
-#else
-#define fixed_record_slot_pointer_get(slot) \
-    ((void*)(uintptr_t)s_fixed_slots[(slot)].resource)
+void* s_fixed_slot_resources[FIXED_RECORD_SLOTS];
 #endif
 
 typedef struct WadFileStreamState {
@@ -3234,27 +2979,6 @@ int wad_entry_slot_allocate(void)
     return -1;
 }
 
-// FUNCTION: LEGORR 0x0048bfc0
-void fixed_record_slot_resource_release(int slot)
-{
-    /* The corpus scales the index shl 4 and strides blindly (the tests only
-     * release in-range slots) and clears ONLY the flag — the stale pointer
-     * is unobservable because the get path checks the flag first. */
-    if (s_fixed_slots[slot].in_use != 0) {
-        engine_heap_free(fixed_record_slot_pointer_get(slot));
-        s_fixed_slots[slot].in_use = 0;
-    }
-}
-
-/* The mapped slot getter follows the retail unchecked 16-byte table walk;
- * the public helper keeps the portable bounds check. */
-// FUNCTION: LEGORR 0x0048bff0
-static void* fixed_record_slot_resource_get_target(int slot)
-{
-    return s_fixed_slots[slot].in_use != 0
-        ? fixed_record_slot_pointer_get(slot) : NULL;
-}
-
 void* fixed_record_slot_resource_get(int slot)
 {
     if ((unsigned int)slot >= FIXED_RECORD_SLOTS) return NULL;
@@ -3272,16 +2996,6 @@ static int resource_slot_length_get(int slot)
     }
     length = resource_read(resource);
     return length > 0 ? (int)length : 0;
-}
-
-/* WadStreamLengthGet (FUN_0048c010) resolves the two WAD indices held by the
- * stream slot and performs the reference's indexed length lookup. */
-// FUNCTION: LEGORR 0x0048c010
-void wad_stream_length_get(int slot)
-{
-    Resource* resource =
-        (Resource*)fixed_record_slot_resource_get(slot);
-    (void)wad_entry_length_get(resource->wad_idx, resource->entry_idx);
 }
 
 /* WadFileSeek (FUN_0047f850): update the WAD stream cursor for SET/CUR/END.
@@ -3610,15 +3324,6 @@ void resource_debug_output_format(const char* format, ...)
     vsprintf(buffer, format, args);
     va_end(args);
     fputs(buffer, stderr);
-}
-
-/* WadMemoryStreamBufferGet (FUN_0048c030): the corpus wrapper routes the
- * slot through the fixed-record slot reader (FUN_0048bff0) and drops the
- * result — the observable half is the slot reader's resolution. */
-// FUNCTION: LEGORR 0x0048c030
-void wad_memory_stream_buffer_get(int slot)
-{
-    (void)fixed_record_slot_resource_get_target(slot);
 }
 
 /* --- wad payload band (2026-10-25; finding 01 codec story) ---------------

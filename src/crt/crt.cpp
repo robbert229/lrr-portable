@@ -89,6 +89,7 @@ extern char** environ;
 #include "heap.hpp"
 #include "string.hpp"
 #include "crt_shared.hpp"
+#include "crt_for_reward.hpp"
 
 #if defined(_MSC_VER)
 #define crt_math_error_code_set _set_errno
@@ -1446,69 +1447,20 @@ uint32_t global_value_004ff9bc_store_and_return(const void* value)
 }
 
 // GLOBAL: LEGORR 0x00554adc
-static float    s_float_00554adc   = 0.0f;
+float    s_float_00554adc   = 0.0f;
 // GLOBAL: LEGORR 0x00554efc
-static float    s_float_00554efc   = 0.0f;
+float    s_float_00554efc   = 0.0f;
 
-/* The two add-one helpers share the corpus's .rdata subtrahend: both
- * 0x462836 and 0x462856 fsub dword ptr [0x0049e6bc], whose bytes are
- * verified 00 00 80 bf (-1.0f). A const static keeps the operand a
- * memory reference Reccmp resolves through the annotation (the
- * audio.cpp s_menu_volume_scale pattern). */
-// GLOBAL: LEGORR 0x0049e6bc
-static const float s_minus_one_0049e6bc = -1.0f;
 // GLOBAL: LEGORR 0x00555324
-static uint32_t s_counter_00555324 = 0u;
+uint32_t s_counter_00555324 = 0u;
 // GLOBAL: LEGORR 0x00555328
-static uint32_t s_counter_00555328 = 0u;
+uint32_t s_counter_00555328 = 0u;
 // GLOBAL: LEGORR 0x0055532c
-static uint32_t s_counter_0055532c = 0u;
+uint32_t s_counter_0055532c = 0u;
 // GLOBAL: LEGORR 0x00555330
-static float    s_float_00555330   = 0.0f;
+float    s_float_00555330   = 0.0f;
 // GLOBAL: LEGORR 0x00555120
-static float    s_float_00555120   = 0.0f;
-
-// FUNCTION: LEGORR 0x00462830
-void global_float_at_00554adc_add_one(void)
-{
-    s_float_00554adc = s_float_00554adc - s_minus_one_0049e6bc; /* corpus: x - -1.0 */
-}
-
-// FUNCTION: LEGORR 0x00462850
-void global_float_at_00554efc_add_one(void)
-{
-    s_float_00554efc = s_float_00554efc - s_minus_one_0049e6bc; /* corpus: x - -1.0 */
-}
-
-// FUNCTION: LEGORR 0x00462870
-void global_counter_at_00555324_increment(void)
-{
-    s_counter_00555324 = s_counter_00555324 + 1u;
-}
-
-// FUNCTION: LEGORR 0x00462880
-void global_counter_at_00555328_increment(void)
-{
-    s_counter_00555328 = s_counter_00555328 + 1u;
-}
-
-// FUNCTION: LEGORR 0x00462890
-void global_counter_at_0055532c_increment(void)
-{
-    s_counter_0055532c = s_counter_0055532c + 1u;
-}
-
-// FUNCTION: LEGORR 0x004628a0
-void global_float_accumulator_00555330_add(float value)
-{
-    s_float_00555330 = s_float_00555330 + value;
-}
-
-// FUNCTION: LEGORR 0x004628c0
-void global_float_accumulate_00555120(float value)
-{
-    s_float_00555120 = s_float_00555120 + value;
-}
+float    s_float_00555120   = 0.0f;
 
 uint32_t crt_counter_004ff990_peek(void) { return s_counter_004ff990; }
 float    crt_float_00554adc_peek(void)   { return s_float_00554adc; }
@@ -2230,16 +2182,9 @@ void panel_state_flags_toggle(int index)
 }
 
 // GLOBAL: LEGORR 0x00555738
-static float    s_reward_score;  /* DAT_00555738 */
+float    s_reward_score;  /* DAT_00555738 */
 // GLOBAL: LEGORR 0x0055573c
-static float    s_reward_count;  /* DAT_0055573c */
-
-// FUNCTION: LEGORR 0x00462800
-void reward_score_add(float value)
-{
-    s_reward_count = s_reward_count - -1.0f; /* corpus shape */
-    s_reward_score = s_reward_score + value;
-}
+float    s_reward_count;  /* DAT_0055573c */
 
 float reward_score_total_peek(void) { return s_reward_score; }
 uint32_t reward_score_count_peek(void)
@@ -2952,27 +2897,6 @@ void* selection_marker_descriptor_peek(void) { return s_marker_descriptor; }
 void     selection_marker_count_set(uint32_t count) { s_marker_count = count; }
 uint32_t selection_marker_count_peek(void) { return s_marker_count; }
 
-/* OwnedResourceTreeRelease (FUN_0048c180) — see crt.hpp. */
-// FUNCTION: LEGORR 0x0048c180
-void owned_resource_tree_release(void** node, int own_node)
-{
-    if (node == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    if (node[0] != NULL) {
-        engine_heap_free(node[0]);
-    }
-    if (node[2] != NULL) {
-        engine_heap_free(node[2]);
-    }
-    if (node[1] != NULL) {
-        owned_resource_tree_release((void**)node[1], 1);
-    }
-    if (own_node != 0) {
-        engine_heap_free((void*)node);
-    }
-}
-
 /* --- the string + stream allocation leaves (see crt.hpp) ------------------- */
 
 /* StringPrefixReserve (FUN_004907c0): the scan is a strlen; the shift is an
@@ -3481,54 +3405,6 @@ uint32_t crt_uint96_clear_from_bit(uint32_t limbs[3], int bit)
     return result;
 }
 #endif
-
-/* --- the pair-table window pair (see crt.hpp) ------------------------------
- * The find scan keeps the corpus's masked walk: the compare index is the
- * low 16 bits of the hop counter and the bound test reads that mask. It also
- * calls the shared strcasecmp_lite helper, as the corpus does.
- * Deviations: the port guards the table and the key; the corpus strides
- * them (and its append blindly stores past the caller's window). */
-// FUNCTION: LEGORR 0x00488730
-void* pair_table_find(const void* table, uint32_t count, const char* key)
-{
-    if (table == NULL || count == 0u || key == NULL) {
-        return NULL; /* deviation: the corpus strides the table blindly */
-    }
-    const long field = (long)sizeof(void*);
-    uint32_t hops = 0;
-    for (;;) {
-        const uint32_t idx = hops & 0xffffu; /* pinned: corpus walk mask */
-        char* name = NULL;
-        __builtin_memcpy(&name, (const char*)table + (long)idx * 2 * field,
-                         sizeof name);
-        void* value = NULL;
-        __builtin_memcpy(&value,
-                         (const char*)table + ((long)idx * 2 + 1) * field,
-                         sizeof value);
-        if (name != NULL && strcasecmp_lite(key, name) == 0) {
-            return value;
-        }
-        ++hops;
-        if ((hops & 0xffffu) >= count) {
-            return NULL;
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x00488790
-void pair_table_append(void* table, int* count, const char* key,
-                       void* value)
-{
-    if (table == NULL || count == NULL) {
-        return; /* deviation: the corpus strides both blindly */
-    }
-    const long field = (long)sizeof(void*);
-    char* copy = string_duplicate(key); /* FUN_00477550 */
-    char* entry = (char*)table + (long)*count * 2 * field;
-    __builtin_memcpy(entry, &copy, sizeof copy);
-    __builtin_memcpy(entry + field, &value, sizeof value);
-    *count += 1;
-}
 
 /* --- the renderer-word band (2026-10-25) ------------------------------------
  * The corpus's DAT_0076ab24/b28/b3c + DAT_0076ac84/ac8c + DAT_0050608c band

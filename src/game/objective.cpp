@@ -33,6 +33,7 @@
 #include "util.hpp"
 #include "crt/crt.hpp"
 #include "objective_shared.hpp"
+#include "objective_for_reward.hpp"
 
 ObjectiveDeferredCallback s_objective_deferred_callback;
 static AdvisorTimerActionFn s_advisor_timer_action;
@@ -49,7 +50,7 @@ static AdvisorPositionUpdateValueResolveFn s_advisor_position_value_resolver;
 static void* s_advisor_position_value_resolver_user;
 static CoordinateListHeadGetHook s_coordinate_list_head_get;
 static void* s_coordinate_list_head_context;
-static RewardTaskResourceRecord s_reward_task_resources[10];
+RewardTaskResourceRecord s_reward_task_resources[10];
 void objective_advisor_clear_active_state(void);
 
 void advisor_sound_alias_set(int slot)
@@ -136,43 +137,6 @@ void reward_task_box_image_surface_set(unsigned int slot, void* surface)
 void* reward_task_box_image_surface_get(unsigned int slot)
 {
     return slot < 10u ? s_reward_task_resources[slot].box_image_surface : NULL;
-}
-
-/* TaskFlushImages @ 0x0045f7b0: release the task's owned image surface. */
-// FUNCTION: LEGORR 0x0045F7B0
-void reward_task_flush_images(RewardTaskResourceRecord* task)
-{
-    if (task != NULL) {
-        texture_release((TextureSurface*)task->image_surface);
-    }
-}
-
-/* TaskFlushFont @ 0x0045f7d0: release the task's font-atlas record. */
-// FUNCTION: LEGORR 0x0045F7D0
-void reward_task_flush_font(RewardTaskResourceRecord* task)
-{
-    if (task != NULL) {
-        font_atlas_record_release(task->font_record);
-    }
-}
-
-/* TaskBlockFinish @ 0x0045f750: the ten 0x210-byte task records select
- * image release with flag bit 1 and font release with bit 0. */
-// FUNCTION: LEGORR 0x0045F750
-void reward_task_block_finish(void)
-{
-    unsigned int i;
-    for (i = 0; i < 10u; ++i) {
-        RewardTaskResourceRecord* task = &s_reward_task_resources[i];
-        if ((task->flags & 2u) != 0u) reward_task_flush_images(task);
-        if ((task->flags & 1u) != 0u) reward_task_flush_font(task);
-        if (task->box_image_surface != NULL)
-            texture_release((TextureSurface*)task->box_image_surface);
-        task->flags = 0;
-        task->image_surface = NULL;
-        task->font_record = NULL;
-        task->box_image_surface = NULL;
-    }
 }
 
 void objective_deferred_callback_set(ObjectiveDeferredCallback callback)

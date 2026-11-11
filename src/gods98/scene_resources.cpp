@@ -9,15 +9,9 @@
 #include "heap.hpp"
 #include "view.hpp"
 #include "crt/crt.hpp"
-#if defined(_MSC_VER)
-#define SCENE_RESOURCE_COM_CALL __stdcall
-#elif defined(__i386__) && (defined(__GNUC__) || defined(__clang__))
-#define SCENE_RESOURCE_COM_CALL __attribute__((stdcall))
-#else
-#define SCENE_RESOURCE_COM_CALL
-#endif
+#include "scene_resources_for_viewports.hpp"
+#include "scene_resources_for_lws.hpp"
 namespace lego {
-namespace {
 // GLOBAL: LEGORR 0x0076ad68
 int s_slots_live = 0;
 SceneResourceReleaseHook s_release_hook = 0;
@@ -28,6 +22,7 @@ unsigned int s_string_count_a = 0;
 unsigned int s_string_count_b = 0;
 SceneFloatTrackApplyHook s_float_track_apply_hook = 0;
 void* s_float_track_apply_context = 0;
+namespace {
 SceneAnimationTrackApplyHook s_animation_track_apply_hook = 0;
 void* s_animation_track_apply_context = 0;
 SceneNodeMatrixApplyHook s_node_matrix_apply_hook = 0;
@@ -43,35 +38,11 @@ CachedRenderResourceRendererReleaseHook s_cached_resource_renderer_release_hook 
 void* s_cached_resource_renderer_release_context = 0;
 }
 static InterfaceArrayForwardSyncHooks s_interface_array_forward_sync_hooks;
-static void** s_interface_forward_sync_items;
-static uint32_t s_interface_forward_sync_items_capacity;
+void** s_interface_forward_sync_items;
+uint32_t s_interface_forward_sync_items_capacity;
 void scene_resource_release_hook_set(SceneResourceReleaseHook hook,
                                      void* context)
 { s_release_hook = hook; s_release_context = context; }
-// FUNCTION: LEGORR 0x00476d50
-void scene_resource_slots_initialize()
-{
-    memset(s_render_surface_pool_blocks, 0,
-           sizeof(s_render_surface_pool_blocks));
-    s_render_surface_pool_free_head = 0;
-    s_render_surface_pool_level_count = 0;
-    s_slots_live = 1;
-}
-// FUNCTION: LEGORR 0x00476d80
-void scene_resource_slots_release_all()
-{
-    unsigned int i;
-    scene_resource_tracked_references_release_all();
-    for (i = 0; i < SCENE_RESOURCE_SLOT_COUNT; ++i) {
-        if (s_render_surface_pool_blocks[i] != 0)
-            engine_heap_free(s_render_surface_pool_blocks[i]);
-    }
-    s_render_surface_pool_free_head = 0;
-    s_slots_live = 0;
-    free(s_interface_forward_sync_items);
-    s_interface_forward_sync_items = NULL;
-    s_interface_forward_sync_items_capacity = 0u;
-}
 void* scene_resource_slot_get(unsigned int index)
 { return s_slots_live && index < SCENE_RESOURCE_SLOT_COUNT ? s_render_surface_pool_blocks[index] : 0; }
 int scene_resource_slot_set(unsigned int index, void* resource)
@@ -356,66 +327,11 @@ const char* shared_texture_root_get()
     return s_shared_texture_root;
 }
 
-// FUNCTION: LEGORR 0x004773e0
-void scene_resource_tracked_references_release_all()
-{
-    unsigned int pool;
-    typedef uint32_t (SCENE_RESOURCE_COM_CALL *ReleaseMethod)(void*);
-    for (pool = 0; pool < ddiscene_render_surface_pool_block_count(); ++pool) {
-        unsigned char* records = static_cast<unsigned char*>(
-            ddiscene_render_surface_pool_block_get(pool));
-        unsigned int index;
-        unsigned int record_count = 1u << pool;
-        if (records == 0) continue;
-        for (index = 0; index < record_count; ++index) {
-            size_t stride = (size_t)0x20u + sizeof(void*) - sizeof(uint32_t);
-            unsigned char* record = records + (size_t)index * stride;
-            void* self_link;
-            void* interface_object;
-            void** vtable;
-            memcpy(&self_link, record + 0x1c, sizeof(self_link));
-            if (self_link != record) continue;
-            memcpy(&interface_object, record + 0x10,
-                   sizeof(interface_object));
-            if (interface_object == 0) continue;
-            vtable = *static_cast<void***>(interface_object);
-            if (vtable != 0 && vtable[2] != 0) {
-                ReleaseMethod release =
-                    reinterpret_cast<ReleaseMethod>(vtable[2]);
-                release(interface_object);
-            }
-        }
-    }
-}
 void scene_float_track_apply_hook_set(SceneFloatTrackApplyHook hook,
                                       void* context)
 {
     s_float_track_apply_hook = hook;
     s_float_track_apply_context = context;
-}
-// FUNCTION: LEGORR 0x00488070
-/* SharedObjectFloatTrackInterpolateApply masks the key index to 16 bits,
- * uses the final value directly, or interpolates to the following key before
- * forwarding the result to the renderer's value-apply seam. */
-void shared_object_float_track_interpolate_apply(
-    void* owner, const void* track, uint32_t segment, float fraction)
-{
-    const unsigned char* bytes =
-        static_cast<const unsigned char*>(track);
-    const float* values;
-    uint16_t count;
-    float value;
-    if (track == 0 || s_float_track_apply_hook == 0) return;
-    memcpy(&count, bytes + 0x26, sizeof(count));
-    if (count == 0) return;
-    memcpy(&values, bytes + 0x1c, sizeof(values));
-    if (values == 0) return;
-    segment &= 0xffffu;
-    value = values[segment];
-    if (segment + 1u < count)
-        value = (values[segment + 1u] - value) * fraction + value;
-    s_float_track_apply_hook(owner, track, value,
-                             s_float_track_apply_context);
 }
 void scene_animation_track_apply_hook_set(SceneAnimationTrackApplyHook hook,
                                           void* context)
@@ -528,131 +444,6 @@ void scene_node_transform_matrix_apply(void* owner, const void* track,
 void scene_resource_string_tables_set(void** first, unsigned int first_count,
                                       void** second, unsigned int second_count)
 { s_string_table_a = first; s_string_count_a = first_count; s_string_table_b = second; s_string_count_b = second_count; }
-// FUNCTION: LEGORR 0x00487760
-void scene_resource_string_tables_free()
-{
-    unsigned int i;
-    /* The two retail tables freed at 0x87760 are the model-resource cache
-     * tables owned by model.cpp. Clear them here because engine teardown
-     * reaches this entrypoint; the portable cache also owns each parsed
-     * Model value and releases it alongside its copied key. */
-    model_resource_cache_clear();
-    if (s_release_hook != 0) {
-        for (i = 0; i < s_string_count_a; ++i)
-            if (s_string_table_a != 0 && s_string_table_a[i] != 0) s_release_hook(s_string_table_a[i], s_release_context);
-        for (i = 0; i < s_string_count_b; ++i)
-            if (s_string_table_b != 0 && s_string_table_b[i] != 0) s_release_hook(s_string_table_b[i], s_release_context);
-    }
-    s_string_table_a = 0; s_string_table_b = 0; s_string_count_a = 0; s_string_count_b = 0;
-}
-// FUNCTION: LEGORR 0x00487ed0
-int shared_object_sample_time_matches(const void* record, uint32_t time)
-{
-    const unsigned char* bytes = static_cast<const unsigned char*>(record);
-    float a, b, low, high, sample_time;
-    uint32_t duration;
-    if (record == 0) return 0;
-    memcpy(&a, bytes + 0x0c, sizeof(float));
-    memcpy(&b, bytes + 0x10, sizeof(float));
-    sample_time = (float)time;
-    duration = resource_entry_id_get(record);
-    high = b;
-    if (b < a) high = a;
-    low = b;
-    if (a < b) low = a;
-    if (0.5f <= (high - low) / (float)duration) {
-        if (high <= sample_time || sample_time <= low) return 1;
-    }
-    else if (sample_time <= high && low <= sample_time) {
-        return 1;
-    }
-    return 0;
-}
-// FUNCTION: LEGORR 0x00487fc0
-float keyframe_time_segment_fraction(const void* track, float time, uint16_t* segment_out)
-{
-    const unsigned char* bytes = static_cast<const unsigned char*>(track);
-    uint16_t count, i, *times;
-    if (track == 0 || segment_out == 0) return 0.0f;
-    memcpy(&count, bytes + 0x26, sizeof(count));
-    if (count < 2) { *segment_out = (uint16_t)(count - 1); return 0.0f; }
-    memcpy(&times, bytes + 0x20, sizeof(times));
-    if (times == 0) { *segment_out = (uint16_t)(count - 1); return 0.0f; }
-    for (i = 1; i < count; ++i) if (time <= (float)times[i]) {
-        *segment_out = (uint16_t)(i - 1);
-        return (time - (float)times[i - 1]) / ((float)times[i] - (float)times[i - 1]);
-    }
-    *segment_out = (uint16_t)(count - 1); return 0.0f;
-}
-// FUNCTION: LEGORR 0x00476f50
-void resource_interface_call_slot48(void* wrapper, void* value)
-{
-    void* interface_object;
-    void** vtable;
-    typedef void (SCENE_RESOURCE_COM_CALL *Method)(void*, void*);
-    if (wrapper == 0) return;
-    memcpy(&interface_object, static_cast<unsigned char*>(wrapper) + 0x10, sizeof(void*));
-    if (interface_object == 0) return;
-    vtable = *static_cast<void***>(interface_object);
-    if (vtable != 0 && vtable[0x48 / 4] != 0) {
-        Method method = reinterpret_cast<Method>(vtable[0x48 / 4]);
-        method(interface_object, value);
-    }
-}
-#if !defined(_MSC_VER) || !defined(_M_IX86)
-static void resource_interface_call_noargs(void* wrapper, unsigned int byte_offset)
-{
-    void* interface_object;
-    void** vtable;
-    typedef void (SCENE_RESOURCE_COM_CALL *Method)(void*);
-    if (wrapper == 0) return;
-    memcpy(&interface_object, static_cast<unsigned char*>(wrapper) + 0x10, sizeof(void*));
-    if (interface_object == 0) return;
-    vtable = *static_cast<void***>(interface_object);
-    if (vtable != 0 && vtable[byte_offset / 4] != 0) {
-        Method method = reinterpret_cast<Method>(vtable[byte_offset / 4]);
-        method(interface_object);
-    }
-}
-#endif
-// FUNCTION: LEGORR 0x00476fd0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void resource_interface_call_slot8c(void* wrapper)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 10h]
-        push eax
-        mov ecx, dword ptr [eax]
-        call dword ptr [ecx + 8ch]
-        ret
-    }
-}
-#else
-void resource_interface_call_slot8c(void* wrapper)
-{
-    resource_interface_call_noargs(wrapper, 0x8c);
-}
-#endif
-// FUNCTION: LEGORR 0x00476ff0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void resource_interface_call_slot90(void* wrapper)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 10h]
-        push eax
-        mov ecx, dword ptr [eax]
-        call dword ptr [ecx + 90h]
-        ret
-    }
-}
-#else
-void resource_interface_call_slot90(void* wrapper)
-{
-    resource_interface_call_noargs(wrapper, 0x90);
-}
-#endif
 
 void cached_render_resource_renderer_hook_set(
     CachedRenderResourceRendererHook hook, void* context)

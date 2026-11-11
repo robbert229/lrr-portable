@@ -497,29 +497,6 @@ uint32_t scene_object_flag_bit3_get(const void* scene_object)
     return scene_object_flag_bit3_get_target(scene_object);
 }
 
-// FUNCTION: LEGORR 0x004877d0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t resource_entry_id_get(const void* entry)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        xor eax, eax
-        mov ax, word ptr [ecx + 2]
-        ret
-    }
-}
-#else
-uint32_t resource_entry_id_get(const void* entry)
-{
-    if (entry != NULL) {
-        uint16_t v = 0;
-        __builtin_memcpy(&v, (const char*)entry + 2, sizeof(v));
-        return v;
-    }
-    return 0u;
-}
-#endif
-
 // FUNCTION: LEGORR 0x00482780
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t indexed_record_flag6c_bit0_get(
@@ -727,49 +704,6 @@ uint32_t indexed_record_transform_copy_in(void* record, int index,
 /* --- grid-descriptor coordinate leaves (see record.hpp) ------------------ */
 
 /* --- indexed flag slot and resource-handle writers (see record.hpp) ------ */
-
-/* --- the record-field write band (see record.hpp) --------------------------- */
-// FUNCTION: LEGORR 0x00462ab0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void record_field18_set(void* record, uint32_t value)
-{
-    __asm {
-        fld dword ptr [esp + 8]
-        mov eax, dword ptr [esp + 4]
-        fstp dword ptr [eax + 18h]
-        ret
-    }
-}
-#else
-void record_field18_set(void* record, uint32_t value)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    __builtin_memcpy((char*)record + 0x18, &value, sizeof(value));
-}
-#endif
-
-// FUNCTION: LEGORR 0x00462ac0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void record_flags_24_or(void* record, uint32_t flags)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        or dword ptr [eax + 24h], ecx
-        ret
-    }
-}
-#else
-void record_flags_24_or(void* record, uint32_t flags)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus reads blindly */
-    }
-    *(uint32_t*)((char*)record + 0x24) |= flags;
-}
-#endif
 
 /* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
 // FUNCTION: LEGORR 0x00439930
@@ -1034,17 +968,6 @@ void scene_render_lock_toggle(void* scene_object, int enabled)
     }
 }
 #endif
-
-/* SceneCurrentObjectSet (FUN_00477240) — see record.hpp. The store lands
- * on the record's +0x14 slot; Deviation: the corpus strides a dword, the
- * port writes the module's widened pointer slot. */
-// FUNCTION: LEGORR 0x00477240
-void scene_current_object_set(void* record, void* object)
-{
-    if (record != NULL) {
-        __builtin_memcpy((char*)record + 0x14, &object, sizeof object);
-    }
-}
 
 /* UIRecordCallbackForward (FUN_0045a630) — see record.hpp. */
 // FUNCTION: LEGORR 0x0045a630

@@ -8,6 +8,7 @@
 #include "../gods98/engine.hpp"
 #include "../gods98/resource.hpp"
 #include "startup_config_shared.hpp"
+#include "startup_config_for_wad.hpp"
 
 namespace unported_ledger_stubs {
 
@@ -16,8 +17,8 @@ GameFileHandle* s_startup_streams[4];
 uint32_t s_startup_window_mode;
 char s_startup_output_path[260];
 char s_startup_token_list_path[260];
-static BufferedCharReadHook s_buffered_char_read_hook;
-static void* s_buffered_char_read_context;
+BufferedCharReadHook s_buffered_char_read_hook;
+void* s_buffered_char_read_context;
 static DependencyConfigEntryHook s_dependency_config_hook;
 static void* s_dependency_config_context;
 
@@ -90,22 +91,6 @@ void buffered_char_stream_read_hook_set(BufferedCharReadHook read_char,
 {
     s_buffered_char_read_hook = read_char;
     s_buffered_char_read_context = context;
-}
-
-// FUNCTION: LEGORR 0x0048b4a0
-int buffered_char_stream_read_to_string(void* stream, char* output)
-{
-    char* cursor = output;
-    int value;
-    if (output == NULL || s_buffered_char_read_hook == NULL) return 0;
-    value = s_buffered_char_read_hook(s_buffered_char_read_context, stream);
-    while (value != 0) {
-        *cursor++ = (char)value;
-        value = s_buffered_char_read_hook(s_buffered_char_read_context,
-                                         stream);
-    }
-    *cursor = '\0';
-    return 1;
 }
 
 void dependency_config_entry_hook_set(DependencyConfigEntryHook hook,

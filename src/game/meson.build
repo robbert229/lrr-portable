@@ -13,6 +13,8 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'entity_stats.cpp',
+  'reward.cpp',
   'camera_control.cpp',
   'helpwindow.cpp',
   'tile_variants.cpp',
