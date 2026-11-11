@@ -26,7 +26,7 @@
 #include <errno.h>
 #include "gods98/texture.hpp"
 #include "string.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_screen_effect_quads.hpp"
 #include <stdint.h>
 #include "building_scene.hpp"
 #include "actor_scene.hpp"
@@ -49,7 +49,7 @@
 #include "frontend.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_screen_effect_quads.hpp"
 #include <stdarg.h>
 #include <time.h>
 #include "frontend.h"
@@ -81,16 +81,16 @@
 #include "tickers.hpp"
 #include "scene_pool.hpp"
 #include "scene_resources.hpp"
-#include "view_shared.hpp"
-#include "gods98/simtick_shared.hpp"
-#include "crt/crt_shared.hpp"
-#include "entity_shared.hpp"
-#include "frontend_shared.hpp"
-#include "level_shared.hpp"
-#include "mission_shared.hpp"
-#include "gods98/frameloop_shared.hpp"
-#include "gods98/resource_shared.hpp"
-#include "gods98/view_shared.hpp"
+#include "view_for_screen_effect_quads.hpp"
+#include "gods98/simtick_for_screen_effect_quads.hpp"
+#include "crt/crt_for_screen_effect_quads.hpp"
+#include "entity_for_screen_effect_quads.hpp"
+#include "frontend_for_screen_effect_quads.hpp"
+#include "level_for_screen_effect_quads.hpp"
+#include "mission_for_screen_effect_quads.hpp"
+#include "gods98/frameloop_for_screen_effect_quads.hpp"
+#include "gods98/resource_for_screen_effect_quads.hpp"
+#include "gods98/view_for_screen_effect_quads.hpp"
 
 #define GRID_REC_FIELD_WORDS   16    /* cleared by the mask sweep */
 

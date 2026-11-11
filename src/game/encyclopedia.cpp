@@ -13,7 +13,7 @@
 #include "crt/crt.hpp"
 #include "heap.hpp"
 #include "string.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_encyclopedia.hpp"
 #include <stdint.h>
 #include "ai.hpp"
 #include "entity.hpp"
@@ -47,7 +47,7 @@
 #include "frontend.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_encyclopedia.hpp"
 #include <stdarg.h>
 #include <time.h>
 #include "frontend.h"
@@ -66,16 +66,16 @@
 #include "screen_pick.hpp"
 #include "pointer_cursor.hpp"
 #include "ui_list.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_encyclopedia.hpp"
 #include <limits.h>
 #include "game.hpp"
 #include "gods98/camera.hpp"
 #include "scene_render.hpp"
-#include "level_shared.hpp"
-#include "crt/crt_shared.hpp"
-#include "entity_shared.hpp"
-#include "frontend_shared.hpp"
-#include "level_shared.hpp"
+#include "level_for_encyclopedia.hpp"
+#include "crt/crt_for_encyclopedia.hpp"
+#include "entity_for_encyclopedia.hpp"
+#include "frontend_for_encyclopedia.hpp"
+#include "level_for_encyclopedia.hpp"
 
 /* ItemNameByKindLookup's fixed labels reside at the literal DAT addresses
  * used by its original switch. Keep separate named arrays so Reccmp can map

@@ -13,7 +13,7 @@
 #include "crt/crt.hpp"
 #include "heap.hpp"
 #include "string.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_entity_cell_effects.hpp"
 #include <stdint.h>
 #include "ai.hpp"
 #include "entity.hpp"
@@ -45,7 +45,7 @@
 #include "gods98/block.hpp"
 #include "upgrades.hpp"
 #include "frontend.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_entity_cell_effects.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
 #include <limits.h>
@@ -57,10 +57,10 @@
 #include "gods98/flic.hpp"
 #include "scene_render.hpp"
 #include "tutorial_hud_ports.hpp"
-#include "level_shared.hpp"
-#include "crt/crt_shared.hpp"
-#include "entity_shared.hpp"
-#include "level_shared.hpp"
+#include "level_for_entity_cell_effects.hpp"
+#include "crt/crt_for_entity_cell_effects.hpp"
+#include "entity_for_entity_cell_effects.hpp"
+#include "level_for_entity_cell_effects.hpp"
 
 // GLOBAL: LEGORR 0x004b8a54
 uint32_t s_level_stored_word = 0u;  /* DAT_004b8a54 */

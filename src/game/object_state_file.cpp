@@ -47,9 +47,9 @@
 #include "gods98/message.hpp"
 #include "gods98/string.hpp"
 #include "upgrades.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_object_state_file.hpp"
 #include "gods98/media.hpp"
-#include "savegame_shared.hpp"
+#include "savegame_for_object_state_file.hpp"
 
 /* Dedicated live-table globals preserve the original no-argument reset ABI.
  * OsfRead borrows its GameContext owner into these words before invoking the

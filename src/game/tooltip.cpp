@@ -46,20 +46,20 @@
 #include "gods98/view.hpp"
 #include "gods98/string.hpp"
 #include "gods98/resource.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_tooltip.hpp"
 #include "ai.hpp"
 #include "spawn.hpp"
 #include "terrain_grid.hpp"
-#include "cmd_shared.hpp"
+#include "cmd_for_tooltip.hpp"
 #include "combat_ray_ports.hpp"
 #include "gods98/scene_pool.hpp"
 #include "gods98/scene_resources.hpp"
 #include "weapon.hpp"
 #include "bezier.h"
 #include <stddef.h>
-#include "effects_shared.hpp"
+#include "effects_for_tooltip.hpp"
 #include "model.hpp"
-#include "view_shared.hpp"
+#include "view_for_tooltip.hpp"
 
 // GLOBAL: LEGORR 0x004aa64c
 static uint32_t s_timed_effect_cue_gate = 1u;

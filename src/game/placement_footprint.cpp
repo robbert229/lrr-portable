@@ -15,7 +15,7 @@
 #include <limits.h>
 #include <string.h>
 #include <stdlib.h>
-#include "record_shared.hpp"
+#include "record_for_placement_footprint.hpp"
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -26,7 +26,7 @@
 #include "../game/ai.hpp"
 #include "../game/entity.hpp"
 #include "../game/level.hpp"
-#include "view_shared.hpp"
+#include "view_for_placement_footprint.hpp"
 
 // GLOBAL: LEGORR 0x005013c8
 int s_rot_pairs[ROT_PAIR_SLOTS * 2];

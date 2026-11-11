@@ -23,7 +23,7 @@
 #include "../game/ai.hpp"
 #include "../game/entity.hpp"
 #include "../game/level.hpp"
-#include "view_shared.hpp"
+#include "view_for_map_view.hpp"
 #include <float.h>
 #include <stdint.h>
 #include "building_scene.hpp"
@@ -48,7 +48,7 @@
 #include "gods98/block.hpp"
 #include "upgrades.hpp"
 #include "frontend.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_map_view.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
 #include <time.h>
@@ -67,12 +67,12 @@
 #include "screen_pick.hpp"
 #include "pointer_cursor.hpp"
 #include "ui_list.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_map_view.hpp"
 #include <limits.h>
 #include "game.hpp"
 #include "scene_render.hpp"
-#include "terrain_grid_shared.hpp"
-#include "heap_shared.hpp"
+#include "terrain_grid_for_map_view.hpp"
+#include "heap_for_map_view.hpp"
 
 /* The palette globals read by FUN_0045e9e0 are adjacent float triplets in
  * the retail data section.  The game's ScreenCoordNormalizeInit divides this

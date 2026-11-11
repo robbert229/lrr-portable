@@ -13,7 +13,7 @@
 #include "crt/crt.hpp"
 #include "heap.hpp"
 #include "string.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_info_track_overlay.hpp"
 #include <stdarg.h>
 #include <time.h>
 #include "frontend.hpp"
@@ -49,18 +49,18 @@
 #include "ui_list.hpp"
 #include "gods98/view.hpp"
 #include "gods98/resource.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_info_track_overlay.hpp"
 #include <stdint.h>
 #include "ai.hpp"
 #include "render.hpp"
 #include "scene_render.hpp"
 #include "terrain_grid.hpp"
 #include "priorities.h"
-#include "ui_list_shared.hpp"
+#include "ui_list_for_info_track_overlay.hpp"
 #include "scene_resources.hpp"
 #include "scene_pool.hpp"
 #include "model.hpp"
-#include "view_shared.hpp"
+#include "view_for_info_track_overlay.hpp"
 
 // GLOBAL: LEGORR 0x005013c0
 int s_ui_track_pointer_outer_gate;

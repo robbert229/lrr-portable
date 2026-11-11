@@ -97,22 +97,49 @@ legacy `frontend.cpp`), the tool uses `<stem>_unit` and says so;
 6. Static helpers last, because they are port-only code (ADR 0006 decision
    4).
 
-**Sharing without editing shared headers.** Sometimes moved code and the
-code left behind both need something:
-- A static gets external linkage: `static` is removed, and the static is
-  declared in a private `<file>_shared.hpp` next to the source file.
-- A file-local type or macro moves into that header.
-- The unit file includes the private header after its own includes. The
-  source includes it after the last `#include` that comes before the
-  source's first use of one of the header's names, so it is never later
-  than that use. A late include further down the file does not count
-  (finding 527). The tool re-scans the source and refuses if code before
-  the include uses the header's names. An existing private include moves
-  up when a later relocation's names are used earlier.
-- Headers that other files include are never edited (finding 506's
-  declaration-count drift).
-- A second relocation from the same file appends to the existing private
-  header.
+**Sharing without editing shared headers: per-relocation private headers
+(#496).** Sometimes moved code and the code left behind both need something.
+- A static gets external linkage: `static` is removed and the static is
+  declared in a private header.
+- A file-local type or macro moves into a private header.
+
+Each relocation of unit U from legacy file L writes its own pair, next to L:
+
+| Header | Holds | Included by |
+| --- | --- | --- |
+| `<l>_for_<u>.hpp` | types and macros moved out of L, and declarations of L's items that U uses | U and L |
+| `<l>_from_<u>.hpp` | declarations of U's items (moved out of L) that L still uses | L only, and U only when it defines a const object, which needs the extern first |
+
+Both are written once and never edited again: a later relocation from L
+writes its own pair. A header that already exists is refused. So:
+- a later relocation never changes what an earlier unit file sees. Its
+  declaration sequence, and the symbol counters MSVC derives from it (finding
+  538, rule B), stay fixed;
+- a unit file never sees declarations of its own definitions (finding 538,
+  rule A, the cause of `0x0040e9c0`'s drop). A function the unit uses before
+  defining it gets a forward declaration in the unit file instead.
+
+Each header includes the earlier private headers of L whose names it uses,
+so it is self-contained. A new unit file copies L's include list but keeps
+an earlier private header only when it uses a name the header declares.
+
+Headers that other files include are never edited (finding 506).
+
+**Placement.** The unit file includes its `for` headers after its own
+includes. L includes each new header after the last `#include` that comes
+before L's first use of one of the header's names, so it is never later
+than that use; a late include further down the file does not count (finding
+527). The tool re-scans L and refuses if code before an include uses that
+header's names.
+
+**Migration** (`--migrate-private-headers`, #496). Before #496, each legacy
+file had one `<l>_shared.hpp` that every relocation appended to, and every
+unit from L included it. The migration gives each such unit U a verbatim
+snapshot of that header, `<l>_for_<u>.hpp` (only the guard and the comment
+differ), and points U's include at it. The unit's declarations do not change,
+so the migration itself changes no listing. `<l>_shared.hpp` stays as it
+is, is included only by L, and is never written again. Recorded in
+`docs/coverage/relocations/private-header-migration.csv`.
 
 **Wiring.** The tool also updates:
 - the link-order list (a `unit` entry at the unit's original position,
@@ -205,7 +232,7 @@ The relocator adds each new C++ source to the literal `game_sources` or
 `gods98_sources` Meson array, which the native parity check reads.
 
 `--survey` tries every unrelocated unit and tabulates the blocking constructs
-(findings 523, 530 and 537).
+(findings 523, 530, 537 and 541).
 
 The scanner is `cxx_items.py`: a comment- and literal-aware top-level item
 splitter (stdlib only), not a C++ parser. Tests: `tools/tests/test_relocate_unit.py`

@@ -29,23 +29,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "effects_shared.hpp"
+#include "effects_for_lighteffects.hpp"
 #include <ctype.h>
 #include <errno.h>
 #include <stdint.h>
 #include <locale.h>
 #include "port_loop_ports.hpp"
-#include "util_shared.hpp"
+#include "util_for_lighteffects.hpp"
 #include "message.hpp"
 #include "game/cmd.hpp"
 #include "game/select.hpp"
 #include "game/render.hpp"
 #include "game/terrain_grid.hpp"
-#include "simtick_shared.hpp"
+#include "simtick_for_lighteffects.hpp"
 #include <stdarg.h>
 #include "string.hpp"
 #include "model.hpp"
-#include "view_shared.hpp"
+#include "view_for_lighteffects.hpp"
 
 // GLOBAL: LEGORR 0x004EADD8
 void* s_motion_jitter_retail_scene_object;

@@ -42,15 +42,15 @@
 #include "select.hpp"
 #include "scene_render.hpp"
 #include "tutorial_hud_ports.hpp"
-#include "level_shared.hpp"
+#include "level_for_lava_erosion.hpp"
 #include <float.h>
 #include <ctype.h>
 #include <errno.h>
 #include "gods98/texture.hpp"
-#include "crt/crt_shared.hpp"
-#include "level_shared.hpp"
-#include "crt/crt_shared.hpp"
-#include "cmd_shared.hpp"
+#include "crt/crt_for_lava_erosion.hpp"
+#include "level_for_lava_erosion.hpp"
+#include "crt/crt_for_lava_erosion.hpp"
+#include "cmd_for_lava_erosion.hpp"
 
 // GLOBAL: LEGORR 0x0049e124
 static const float s_erosion_ticks_per_second = 25.0f;

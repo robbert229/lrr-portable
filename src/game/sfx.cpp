@@ -20,7 +20,7 @@
 #include <errno.h>
 #include "gods98/texture.hpp"
 #include "crt/crt.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_sfx.hpp"
 #include "effects.hpp"
 #include "combat_ray_ports.hpp"
 #include "entity.hpp"
@@ -35,8 +35,8 @@
 #include "weapon.hpp"
 #include "bezier.h"
 #include <stddef.h>
-#include "effects_shared.hpp"
-#include "gods98/sound_shared.hpp"
+#include "effects_for_sfx.hpp"
+#include "gods98/sound_for_sfx.hpp"
 
 /* The corpus compares against a file-backed .rdata dword (0x49e73c, bytes
  * 00 00 00 00). A const zero-initialized static lands with real file bytes

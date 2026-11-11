@@ -26,7 +26,7 @@
 #include "../gods98/view.hpp"
 #include "../gods98/engine.hpp"
 #include <stdlib.h>
-#include "terrain_grid_shared.hpp"
+#include "terrain_grid_for_cell_flood_passes.hpp"
 #include "simtick.hpp"
 #include "sound.hpp"
 #include "game/ai.hpp"
@@ -34,14 +34,14 @@
 #include "game/select.hpp"
 #include "game/effects.hpp"
 #include "game/render.hpp"
-#include "simtick_shared.hpp"
+#include "simtick_for_cell_flood_passes.hpp"
 #include <ctype.h>
 #include <stdarg.h>
 #include "scene_resources.hpp"
 #include "scene_pool.hpp"
 #include "string.hpp"
 #include "model.hpp"
-#include "view_shared.hpp"
+#include "view_for_cell_flood_passes.hpp"
 
 typedef struct TerrainWorldSpatialStageContext {
     TerrainWorldSpatialRecords* owner;

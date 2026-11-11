@@ -30,7 +30,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include "string.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_terrain_cell_objects.hpp"
 #include "ai.hpp"
 #include "building_scene.hpp"
 #include "actor_scene.hpp"
@@ -51,21 +51,21 @@
 #include "gods98/sound.hpp"
 #include "upgrades.hpp"
 #include "frontend.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_terrain_cell_objects.hpp"
 #include "gods98/media.hpp"
 #include "gods98/simtick.hpp"
 #include "gods98/camera.hpp"
 #include "objective.hpp"
 #include "gods98/flic.hpp"
 #include "tutorial_hud_ports.hpp"
-#include "level_shared.hpp"
+#include "level_for_terrain_cell_objects.hpp"
 #include "game/render.hpp"
-#include "simtick_shared.hpp"
-#include "terrain_grid_shared.hpp"
-#include "crt/crt_shared.hpp"
-#include "entity_shared.hpp"
-#include "level_shared.hpp"
-#include "gods98/simtick_shared.hpp"
+#include "simtick_for_terrain_cell_objects.hpp"
+#include "terrain_grid_for_terrain_cell_objects.hpp"
+#include "crt/crt_for_terrain_cell_objects.hpp"
+#include "entity_for_terrain_cell_objects.hpp"
+#include "level_for_terrain_cell_objects.hpp"
+#include "gods98/simtick_for_terrain_cell_objects.hpp"
 
 #define s_grid_cell_object_chunks (s_active_cell_kind_grid->chunks)
 #define s_grid_cell_object_free (s_active_cell_kind_grid->free_nodes)

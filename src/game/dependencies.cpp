@@ -40,15 +40,15 @@
 #include "select.hpp"
 #include "scene_render.hpp"
 #include "tutorial_hud_ports.hpp"
-#include "level_shared.hpp"
+#include "level_for_dependencies.hpp"
 #include <float.h>
 #include <ctype.h>
 #include <errno.h>
 #include "gods98/texture.hpp"
-#include "crt/crt_shared.hpp"
-#include "level_shared.hpp"
-#include "crt/crt_shared.hpp"
-#include "dependency_grid_shared.hpp"
+#include "crt/crt_for_dependencies.hpp"
+#include "level_for_dependencies.hpp"
+#include "crt/crt_for_dependencies.hpp"
+#include "dependency_grid_for_dependencies.hpp"
 
 /* Cell-entry readiness bits occupy bytes at DAT_004b8c4c. DependencyGridConfigLoad
  * produces the parallel record/count lists in the active LevelState sidecar;

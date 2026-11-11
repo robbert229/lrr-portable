@@ -13,7 +13,7 @@
 #include "crt/crt.hpp"
 #include "heap.hpp"
 #include "string.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_record_chains.hpp"
 #include <stdint.h>
 #include "ai.hpp"
 #include "entity.hpp"
@@ -45,7 +45,7 @@
 #include "gods98/block.hpp"
 #include "upgrades.hpp"
 #include "frontend.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_record_chains.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
 #include "camera.hpp"
@@ -53,8 +53,8 @@
 #include "scene_resources.hpp"
 #include "scene_pool.hpp"
 #include "surface.hpp"
-#include "view_shared.hpp"
-#include "gods98/camera_shared.hpp"
+#include "view_for_record_chains.hpp"
+#include "gods98/camera_for_record_chains.hpp"
 
 struct SceneStateDispatchContext {
     uint32_t ordinal;

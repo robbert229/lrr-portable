@@ -46,14 +46,14 @@
 #include "ui_list.hpp"
 #include "gods98/view.hpp"
 #include "gods98/resource.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_info.hpp"
 #include <errno.h>
 #include <stdint.h>
 #include <locale.h>
-#include "util_shared.hpp"
-#include "gods98/message_shared.hpp"
-#include "frontend_shared.hpp"
-#include "util_shared.hpp"
+#include "util_for_info.hpp"
+#include "gods98/message_for_info.hpp"
+#include "frontend_for_info.hpp"
+#include "util_for_info.hpp"
 
 #define MESSAGE_CD_RESET 25.0f /* 0x41c80000 */
 

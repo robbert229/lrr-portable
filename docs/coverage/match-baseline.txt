@@ -1,4 +1,4 @@
-# input_sha256: 416d6c9e167a11c3c5dd7e2a74d04c7589bb1c5e19a41eb9a58fa7f1041646c5
+# input_sha256: 399f454b7d6ed1d5081591e503544c1c0afbc561074bedef648ba6f78557bcbc
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -313,7 +313,7 @@
 0x0040e910 100.00 global_value_clear_if_equal
 0x0040e930 100.00 erosion_timing_state_init
 0x0040e990 100.00 lava_erosion_stage_slot_find_free
-0x0040e9c0 84.21 lava_erosion_delay_from_cell
+0x0040e9c0 100.00 lava_erosion_delay_from_cell
 0x0040eab0 41.42 lava_erosion_pending_cell_tick
 0x0040ee00 94.44 cell_coordinate_timestamp_remember
 0x0040ee50 100.00 lava_erosion_pending_cell_add
@@ -2007,7 +2007,7 @@
 0x00484c00 22.76 flic_decode16_bit_row_records
 0x00484c90 100.00 flic_opcode27_fallback_noop
 0x00484ca0 15.95 flic_decode8_bit_alternate_delta
-0x00484e50 19.44 flic_decode16_bit_delta
+0x00484e50 19.50 flic_decode16_bit_delta
 0x00485030 64.79 flic_opcode27_decode_dispatch
 0x004850c0 29.63 indexed_word_table_lookup
 0x004850e0 100.00 object_field10_get
@@ -2465,7 +2465,7 @@
 0x0040e910 100.00 global_value_clear_if_equal
 0x0040e930 100.00 erosion_timing_state_init
 0x0040e990 100.00 lava_erosion_stage_slot_find_free
-0x0040e9c0 84.21 lava_erosion_delay_from_cell
+0x0040e9c0 100.00 lava_erosion_delay_from_cell
 0x0040eab0 41.42 lava_erosion_pending_cell_tick
 0x0040ee00 94.44 cell_coordinate_timestamp_remember
 0x0040ee50 100.00 lava_erosion_pending_cell_add
@@ -4159,7 +4159,7 @@
 0x00484c00 22.76 flic_decode16_bit_row_records
 0x00484c90 100.00 flic_opcode27_fallback_noop
 0x00484ca0 15.95 flic_decode8_bit_alternate_delta
-0x00484e50 19.44 flic_decode16_bit_delta
+0x00484e50 19.50 flic_decode16_bit_delta
 0x00485030 64.79 flic_opcode27_decode_dispatch
 0x004850c0 29.63 indexed_word_table_lookup
 0x004850e0 100.00 object_field10_get

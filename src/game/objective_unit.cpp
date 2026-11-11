@@ -34,13 +34,13 @@
 #include "effects.hpp"
 #include "util.hpp"
 #include "crt/crt.hpp"
-#include "objective_shared.hpp"
+#include "objective_for_objective_unit.hpp"
 #include <math.h>
 #include <float.h>
 #include <ctype.h>
 #include <errno.h>
 #include "heap.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_objective_unit.hpp"
 #include <stdarg.h>
 #include <time.h>
 #include "frontend.h"
@@ -56,14 +56,14 @@
 #include "screen_pick.hpp"
 #include "pointer_cursor.hpp"
 #include "ui_list.hpp"
-#include "frontend_shared.hpp"
+#include "frontend_for_objective_unit.hpp"
 #include <stdint.h>
 #include <limits.h>
 #include "gods98/camera.hpp"
 #include "type_config_ports.hpp"
 #include "upgrades.hpp"
 #include "scene_render.hpp"
-#include "level_shared.hpp"
+#include "level_for_objective_unit.hpp"
 
 typedef struct ObjectiveEntityMatchContext {
     LevelState* level;

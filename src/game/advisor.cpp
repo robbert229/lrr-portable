@@ -63,9 +63,9 @@
 #include "game/scene_render.hpp"
 #include "scene_pool.hpp"
 #include "model.hpp"
-#include "objective_shared.hpp"
-#include "crt/crt_shared.hpp"
-#include "gods98/engine_shared.hpp"
+#include "objective_for_advisor.hpp"
+#include "crt/crt_for_advisor.hpp"
+#include "gods98/engine_for_advisor.hpp"
 
 /* The corpus's normalize numerator is the .rdata dword 1.0 at 0x49e008
  * (objdump-verified fdivr operand in FUN_00401750); a named const static

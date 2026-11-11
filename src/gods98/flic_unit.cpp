@@ -18,9 +18,9 @@
 #include "game/util.hpp"
 #include <math.h>
 #include <limits.h>
-#include "record_shared.hpp"
-#include "flic_shared.hpp"
-#include "record_shared.hpp"
+#include "record_for_flic_unit.hpp"
+#include "flic_for_flic_unit.hpp"
+#include "record_for_flic_unit.hpp"
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static int flic_stream_chunk_header_read(Flic* f);

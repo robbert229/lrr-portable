@@ -19,9 +19,9 @@
 #include "game/util.hpp"
 #include <math.h>
 #include <limits.h>
-#include "record_shared.hpp"
-#include "heap_shared.hpp"
-#include "record_shared.hpp"
+#include "record_for_text_window.hpp"
+#include "heap_for_text_window.hpp"
+#include "record_for_text_window.hpp"
 
 /* Defined below (forward declarations added by tools/relocate_unit.py). */
 static int text_buffer_font_binding_add(void* record, uintptr_t font_handle);

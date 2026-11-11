@@ -42,7 +42,7 @@
 #include "upgrades.hpp"
 #include "crt/crt.hpp"
 #include "frontend.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_loading_progress.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
 

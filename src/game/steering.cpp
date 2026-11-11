@@ -23,7 +23,7 @@
 #include "../game/ai.hpp"
 #include "../game/entity.hpp"
 #include "../game/level.hpp"
-#include "view_shared.hpp"
+#include "view_for_steering.hpp"
 #include <float.h>
 #include <stdint.h>
 #include "building_scene.hpp"
@@ -48,17 +48,17 @@
 #include "gods98/block.hpp"
 #include "upgrades.hpp"
 #include "frontend.hpp"
-#include "entity_shared.hpp"
+#include "entity_for_steering.hpp"
 #include "util.hpp"
 #include "gods98/media.hpp"
 #include <errno.h>
 #include <locale.h>
 #include "ptrstack.hpp"
 #include <limits.h>
-#include "record_shared.hpp"
-#include "gods98/view_shared.hpp"
-#include "entity_shared.hpp"
-#include "gods98/record_shared.hpp"
+#include "record_for_steering.hpp"
+#include "gods98/view_for_steering.hpp"
+#include "entity_for_steering.hpp"
+#include "gods98/record_for_steering.hpp"
 
 /* Maths_RandRange (FUN_004798b0, Maths.c). */
 extern "C" float random_float_range(float low, float high);

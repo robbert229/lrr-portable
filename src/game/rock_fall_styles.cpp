@@ -14,15 +14,15 @@
 #include "texture.hpp"
 #include "view.hpp"
 #include "scene_pool.hpp"
-#include "resource_shared.hpp"
+#include "resource_for_rock_fall_styles.hpp"
 #include <math.h>
 #include <float.h>
 #include <ctype.h>
 #include <errno.h>
 #include "crt/crt.hpp"
-#include "crt/crt_shared.hpp"
-#include "gods98/resource_shared.hpp"
-#include "crt/crt_shared.hpp"
+#include "crt/crt_for_rock_fall_styles.hpp"
+#include "gods98/resource_for_rock_fall_styles.hpp"
+#include "crt/crt_for_rock_fall_styles.hpp"
 
 // GLOBAL: LEGORR 0x004c79a4
 uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
