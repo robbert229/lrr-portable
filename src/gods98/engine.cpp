@@ -861,28 +861,13 @@ void engine_context_mode_global_set(int32_t mode)
 /* EngineModeSet (FUN_004565f0) clears the two advisor-text request globals;
  * their normal writers/readers are in the advisor text band. */
 // GLOBAL: LEGORR 0x00503610
-static uint32_t s_overlay_word_03610; /* DAT_00503610 role */
+uint32_t s_overlay_word_03610; /* DAT_00503610 role */
 // GLOBAL: LEGORR 0x00503614
-static uint32_t s_overlay_word_03614; /* DAT_00503614 role */
+uint32_t s_overlay_word_03614; /* DAT_00503614 role */
 
 void engine_global_state_flags_bit7_set_target(int value);
 void engine_global_state_flags_bits6_and_9_set_target(
     int value, int set_bit9);
-
-/* The mapped body takes only the mode pointer; keep the portable context
- * adapter separate to preserve that x86 argument layout. */
-// FUNCTION: LEGORR 0x004565f0
-int engine_mode_set_target(const int* mode)
-{
-    global_flag_004ff978_install((uint32_t)*mode);
-    if (*mode == 1) {
-        engine_global_state_flags_bits6_and_9_set_target(0, 1);
-        engine_global_state_flags_bit7_set_target(0);
-    }
-    s_overlay_word_03610 = 0u;
-    s_overlay_word_03614 = 0u;
-    return *mode;
-}
 
 int engine_mode_set(EngineContext* ctx, const int* mode)
 {
@@ -1213,30 +1198,6 @@ void scroll_scale_set_and_clamp(float scale)
             s_scroll_scale = 3.0f;
         }
     }
-}
-
-/* CameraFocusScrollScaleCommit (FUN_004538a0) — see engine.hpp. The corpus
- * reads the level-state root global and strides both windows blindly. */
-// FUNCTION: LEGORR 0x004538a0
-int camera_focus_scroll_scale_commit(const EngineContext* ctx,
-                                     const void* record)
-{
-    if (record == NULL) {
-        return 0; /* deviation: the corpus strides the record blindly */
-    }
-    uint32_t focus = 0, guard = 0;
-    __builtin_memcpy(&focus, (const char*)record + 0x00, sizeof focus);
-    __builtin_memcpy(&guard, (const char*)record + 0x04, sizeof guard);
-    if (focus == 0) {
-        const EngineState* st = ctx != NULL ? ctx->state_block : NULL;
-        if (st != NULL && st->focus_gate_27c != 0) {
-            return 0;
-        }
-    }
-    global_scroll_guard_set((int)guard);
-    scroll_scale_set_and_clamp((float)focus * 0.01f);
-    global_scroll_guard_set((int)guard);
-    return 0;
 }
 
 /* PanelSelectionHighlightToggle (FUN_00435aa0) — see engine.hpp. The corpus

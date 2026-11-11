@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'tutorial_script.cpp',
   'terrain_map.cpp',
   'loading_progress.cpp',
   'lighteffects.cpp',

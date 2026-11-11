@@ -5695,10 +5695,10 @@ static AdvisorTextAnimationOps s_advisor_text_animation_ops;
 static AdvisorTextBoxExtentFn s_advisor_text_box_extent_hook;
 static void* s_advisor_text_box_extent_context;
 static AdvisorTextDisplayOps s_advisor_text_display_ops;
-static AdvisorInlineTokenOps s_advisor_inline_token_ops;
-static uint32_t s_advisor_inline_last_sound = 0xffffffffu;
-static uint32_t s_advisor_inline_token_generation = 0xffffffffu;
-static float s_advisor_inline_duration;
+AdvisorInlineTokenOps s_advisor_inline_token_ops;
+uint32_t s_advisor_inline_last_sound = 0xffffffffu;
+uint32_t s_advisor_inline_token_generation = 0xffffffffu;
+float s_advisor_inline_duration;
 static SelectedGroundMarkerOps s_selected_ground_marker_ops;
 static PositionTrackerBoxDrawOps s_position_tracker_box_draw_ops;
 static OverlayTextBufferOps s_overlay_text_buffer_ops;
@@ -6975,19 +6975,6 @@ static void advisor_text_display_production_install(void)
     advisor_text_display_ops_set(&ops);
 }
 
-static int advisor_inline_name_equal(const char* a, const char* b)
-{
-    if (a == NULL || b == NULL) return a == b;
-    while (*a != '\0' && *b != '\0') {
-        unsigned char ca = (unsigned char)*a++;
-        unsigned char cb = (unsigned char)*b++;
-        if (ca >= 'A' && ca <= 'Z') ca = (unsigned char)(ca + ('a' - 'A'));
-        if (cb >= 'A' && cb <= 'Z') cb = (unsigned char)(cb + ('a' - 'A'));
-        if (ca != cb) return 0;
-    }
-    return *a == *b;
-}
-
 void advisor_inline_token_ops_set(const AdvisorInlineTokenOps* ops)
 {
     if (ops != NULL) s_advisor_inline_token_ops = *ops;
@@ -7006,164 +6993,6 @@ uint32_t advisor_inline_last_sound_get(void)
         s_advisor_inline_last_sound = objective_advisor_sound_token_count();
     }
     return s_advisor_inline_last_sound;
-}
-
-static void advisor_inline_output_char(char* output, uint32_t output_size,
-                                       uint32_t* used, char value)
-{
-    if (output == NULL || output_size == 0u || used == NULL ||
-        *used + 1u >= output_size) return;
-    output[(*used)++] = value;
-    output[*used] = '\0';
-}
-
-// FUNCTION: LEGORR 0x00456830
-void advisor_inline_token_render(char* source, char* output, int draw)
-{
-    const uint32_t output_size = 512u;
-    uint32_t used = 0u;
-    void* image_handles[20];
-    uint32_t image_token_count = 0u;
-    uint32_t i = 0u;
-    uint32_t image_table_count = objective_advisor_image_token_count();
-    uint32_t sound_table_count = objective_advisor_sound_token_count();
-    uint32_t token_generation = objective_advisor_token_generation_get();
-    float timer_values[3];
-    float final_duration;
-    tutorial_message_timer_values_get(timer_values);
-    final_duration = timer_values[2];
-    memset(image_handles, 0, sizeof(image_handles));
-    if (output != NULL && output_size != 0u) output[0] = '\0';
-    if (source == NULL) return;
-    if (token_generation != s_advisor_inline_token_generation) {
-        s_advisor_inline_token_generation = token_generation;
-        s_advisor_inline_last_sound = sound_table_count;
-    }
-
-    /* With neither resource table initialized the retail helper takes its
-     * memcpy path and leaves marker characters untouched. */
-    if (image_table_count == 0u && sound_table_count == 0u) {
-        while (source[i] != '\0')
-            advisor_inline_output_char(output, output_size, &used,
-                                       source[i++]);
-        if (draw != 0) {
-            s_advisor_inline_duration = final_duration;
-            tutorial_message_duration_set(final_duration);
-        }
-        return;
-    }
-
-    while (source[i] != '\0') {
-        char marker = source[i];
-        char close = marker == '<' ? '>' : (marker == '#' ? '#' : '\0');
-        if (close != '\0' && source[i + 1u] != '\0') {
-            char name[256];
-            uint32_t start = i + 1u;
-            uint32_t end = start;
-            uint32_t name_length;
-            uint32_t entry;
-            int matched = 0;
-            while (source[end] != '\0' && source[end] != close &&
-                   end - start < sizeof(name) - 1u) ++end;
-            if (source[end] == close) {
-                name_length = end - start;
-                memcpy(name, source + start, name_length);
-                name[name_length] = '\0';
-                if (marker == '<') {
-                    for (entry = 0u; entry < image_table_count; ++entry) {
-                        const char* token_name =
-                            objective_advisor_image_token_name_get(entry);
-                        if (advisor_inline_name_equal(name, token_name)) {
-                            void* handle =
-                                objective_advisor_image_token_resource_get(entry);
-                            if (image_token_count <
-                                sizeof(image_handles) / sizeof(image_handles[0]))
-                                image_handles[image_token_count] = handle;
-                            if (image_token_count < 255u) ++image_token_count;
-                            matched = 1;
-                            break;
-                        }
-                    }
-                } else {
-                    for (entry = 0u; entry < sound_table_count; ++entry) {
-                        const char* token_name =
-                            objective_advisor_sound_token_name_get(entry);
-                        if (advisor_inline_name_equal(name, token_name)) {
-                            uintptr_t encoded_handle =
-                                objective_advisor_sound_token_handle_get(entry);
-                            if (entry != s_advisor_inline_last_sound) {
-                                float duration = 0.0f;
-                                int sound_slot = encoded_handle != 0u
-                                    ? (int)(uint32_t)encoded_handle - 1 : -1;
-                                s_advisor_inline_last_sound = entry;
-                                if (s_advisor_inline_token_ops.sound_duration != NULL)
-                                    duration =
-                                        s_advisor_inline_token_ops.sound_duration(
-                                            s_advisor_inline_token_ops.context,
-                                            (uint32_t)sound_slot);
-                                else if (sound_slot >= 0)
-                                    duration = (float)
-                                        sound_streamed_wave_buffer_step_rate(
-                                            sound_slot);
-                                final_duration = duration * timer_values[0] + timer_values[1];
-                                if (sound_slot >= 0 && sound_bank_sound_on()) {
-                                    sound_deferred_play_expire();
-                                    (void)sound_deferred_timer_set_if_idle(
-                                        duration * 25.0f);
-                                    advisor_sound_alias_set(sound_slot);
-                                    advisor_sound_alias_play_global();
-                                    if (system_state_flags_get() == 0u)
-                                        (void)advisor_request_admit(0x14, 1);
-                                    tutorial_message_sound_active_set();
-                                    if (s_advisor_inline_token_ops.sound_transition != NULL)
-                                        s_advisor_inline_token_ops.sound_transition(
-                                            s_advisor_inline_token_ops.context,
-                                            (uint32_t)sound_slot,
-                                            final_duration);
-                                }
-                            }
-                            matched = 1;
-                            break;
-                        }
-                    }
-                }
-                /* Both recognized and unrecognized markup spans are consumed
-                 * by the retail scanner; only ordinary text is copied. */
-                (void)matched;
-                i = end + 1u;
-                continue;
-            }
-            /* An unterminated span consumes the rest of the input. */
-            break;
-        }
-        advisor_inline_output_char(output, output_size, &used, marker);
-        ++i;
-    }
-    if (s_advisor_inline_token_ops.image_draw != NULL) {
-        uint32_t draw_count = image_token_count;
-        uint32_t draw_index;
-        float center = s_advisor_inline_token_ops.image_x != 0.0f
-            ? s_advisor_inline_token_ops.image_x : 260.0f;
-        float y = s_advisor_inline_token_ops.image_y != 0.0f
-            ? s_advisor_inline_token_ops.image_y : 386.0f;
-        float image_step = s_advisor_inline_token_ops.image_step_x != 0.0f
-            ? s_advisor_inline_token_ops.image_step_x : 40.0f;
-        if (draw_count > sizeof(image_handles) / sizeof(image_handles[0]))
-            draw_count = sizeof(image_handles) / sizeof(image_handles[0]);
-        for (draw_index = 0u; draw_index < draw_count; ++draw_index) {
-            if (image_handles[draw_index] != NULL)
-                s_advisor_inline_token_ops.image_draw(
-                    s_advisor_inline_token_ops.context,
-                    image_handles[draw_index], draw_index,
-                    center - (float)image_token_count * 20.0f +
-                        (float)draw_index * image_step,
-                    y);
-        }
-    }
-    if (draw != 0) {
-        s_advisor_inline_duration = final_duration;
-        tutorial_message_duration_set(final_duration);
-    }
 }
 
 float advisor_inline_token_duration_get(void)

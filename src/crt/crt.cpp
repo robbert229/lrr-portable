@@ -1456,32 +1456,16 @@ uint32_t crt_floating_point_feature_probe(void)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00456210
-uint32_t flh_magic_uu_noop(void)
-{
-    return 0u;
-}
-
 /* The two DAT globals, static-backed until the corpus's writers (all
  * still unported) land — message.cpp's s_system_state precedent. The
  * float width is the corpus's own: 0x4230b0 flds a DWORD. */
 // GLOBAL: LEGORR 0x00556f00
 static float    s_global_float_00556f00;
-extern uint32_t s_objective_switch;
 
 // FUNCTION: LEGORR 0x004230b0
 float global_float_field_00556f00_get(void)
 {
     return s_global_float_00556f00;
-}
-
-/* Mapped target: stores the input dword globally and returns the same value;
- * the retail body dereferences the pointer without a null check. */
-// FUNCTION: LEGORR 0x004567c0
-uint32_t global_value_004ff9bc_store_and_return_target(const void* value)
-{
-    s_objective_switch = *(const uint32_t*)value;
-    return *(const uint32_t*)value;
 }
 
 /* Keep the portable API's null behavior pinned by test_static_globals. */
@@ -1491,11 +1475,6 @@ uint32_t global_value_004ff9bc_store_and_return(const void* value)
         ? global_value_004ff9bc_store_and_return_target(value) : 0u;
 }
 
-/* --- unowned DAT-global counter/accumulator band (see crt.hpp) -----------
- * None of these globals has a ported owner or feeder, so each lands as a
- * zero-initialized module static (the s_system_state precedent). */
-// GLOBAL: LEGORR 0x004ff990
-static uint32_t s_counter_004ff990 = 0u;
 // GLOBAL: LEGORR 0x00554adc
 static float    s_float_00554adc   = 0.0f;
 // GLOBAL: LEGORR 0x00554efc
@@ -1518,18 +1497,6 @@ static uint32_t s_counter_0055532c = 0u;
 static float    s_float_00555330   = 0.0f;
 // GLOBAL: LEGORR 0x00555120
 static float    s_float_00555120   = 0.0f;
-
-// FUNCTION: LEGORR 0x00454880
-void global_counter_004ff990_increment(void)
-{
-    s_counter_004ff990 = s_counter_004ff990 + 1u;
-}
-
-// FUNCTION: LEGORR 0x00454890
-void global_counter_004ff990_reset(void)
-{
-    s_counter_004ff990 = 0u;
-}
 
 // FUNCTION: LEGORR 0x00462830
 void global_float_at_00554adc_add_one(void)
@@ -1855,20 +1822,8 @@ int display_mode_matches_filter_tuple(int mode_index)
     return 0;
 }
 
-/* --- the remaining unowned DAT one-liners (see crt.hpp) ---------------------
- * Zero-initialized module statics per the s_system_state precedent — the
- * globals' meanings are unresolved (finding 383) and none has a ported
- * feeder. */
-// GLOBAL: LEGORR 0x004ff978
-static uint32_t s_flag_004ff978 = 0u;
 // GLOBAL: LEGORR 0x004ffe48
 static uint32_t s_value_004ffe48 = 0u;
-
-// FUNCTION: LEGORR 0x00456640
-uint32_t global_flag_004ff978_get(void)
-{
-    return s_flag_004ff978;
-}
 
 // FUNCTION: LEGORR 0x00458660
 void global_value_004ffe48_set(uint32_t value)

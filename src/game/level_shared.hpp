@@ -180,4 +180,6 @@ extern void* s_cell_list_object;
 extern int s_cell_list_scale;
 extern uint32_t s_cell_list_flags;
 
+uint8_t* voxel_at(LevelState* s, int x, int y);
+
 #endif /* LRR_GAME_LEVEL_SHARED_HPP */

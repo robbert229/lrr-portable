@@ -35,4 +35,9 @@ int fe_font_advance(const TextureSurface* f, int cw, int ch, int g, const uint32
 int fe_font_glyph_draw_and_measure(void* px, int pitch, int w, int h, int x, int y, const TextureSurface* f, int cw, int ch, int g, const uint32_t keys[2], int draw);
 extern FeFormattedTextTextureResolve s_formatted_text_texture_resolve;
 
+extern AdvisorInlineTokenOps s_advisor_inline_token_ops;
+extern uint32_t s_advisor_inline_last_sound;
+extern uint32_t s_advisor_inline_token_generation;
+extern float s_advisor_inline_duration;
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */

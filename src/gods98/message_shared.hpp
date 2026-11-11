@@ -61,4 +61,7 @@ extern const char* s_catalog[MESSAGE_MAX_ID];
 extern IncidentMessageCatalogRecord s_msg_catalog[MSG_DAT_WINDOW];
 extern uint32_t s_incident_state;
 
+extern uint32_t s_objective_switch;
+extern uint32_t s_deferred_callback_presence;
+
 #endif /* LRR_GODS98_MESSAGE_SHARED_HPP */

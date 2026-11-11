@@ -163,10 +163,6 @@ int ui_message_label_index_find(const char* label, int* out_index)
 }
 
 static char* s_info_message_sound_names[MESSAGE_MAX_ID];
-// GLOBAL: LEGORR 0x004ff980
-uint32_t      s_system_state = 0u;   /* DAT_004ff980 */
-// GLOBAL: LEGORR 0x004ff9bc
-uint32_t             s_objective_switch = 0u; /* DAT_004ff9bc */
 float         s_now = 0.0f;          /* _DAT_0049e264 analog */
 MessageCallback  s_callback = NULL;
 MessageSoundHook s_sound = NULL;
@@ -439,19 +435,6 @@ uint32_t message_config_flags(int id)
 }
 void message_set_system_state(uint32_t v)     { s_system_state = v; }
 
-// FUNCTION: LEGORR 0x00456240
-uint32_t system_state_flags_get(void)
-{
-    return s_system_state;
-}
-
-// FUNCTION: LEGORR 0x00456550
-uint32_t system_state_flags_set_target(const uint32_t* value)
-{
-    s_system_state = *value;
-    return *value;
-}
-
 uint32_t system_state_flags_set(const uint32_t* value)
 {
     return value != NULL ? system_state_flags_set_target(value) : 0u;
@@ -462,32 +445,6 @@ uint32_t objective_switch_state_set(uint32_t value)
     s_objective_switch = value;
     return value;
 }
-
-// FUNCTION: LEGORR 0x004567d0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t objective_switch_state_get(void)
-{
-    __asm {
-        mov eax, dword ptr [s_objective_switch]
-        test eax, eax
-        je objective_switch_state_get_false
-        mov dword ptr [s_objective_switch], 0
-        mov eax, 1
-        ret
-    objective_switch_state_get_false:
-        xor eax, eax
-        ret
-    }
-}
-#else
-uint32_t objective_switch_state_get(void)
-{
-    /* FUN_004567d0 consumes the pending state and returns a boolean. */
-    if (s_objective_switch == 0u) return 0u;
-    s_objective_switch = 0u;
-    return 1u;
-}
-#endif
 
 void message_set_callback(MessageCallback cb) { s_callback = cb; }
 void message_set_sound_hook(MessageSoundHook h) { s_sound = h; }
@@ -630,17 +587,6 @@ float message_cooldown(int id)
         return 0.0f;
     }
     return s_cfg[id].cooldown;
-}
-
-/* DeferredCallbackSet (FUN_00453900) — zero-init module static (the
- * corpus's DAT_004a673c presence word). */
-// GLOBAL: LEGORR 0x004a673c
-static uint32_t s_deferred_callback_presence;
-
-// FUNCTION: LEGORR 0x00453900
-void deferred_callback_set(uint32_t value)
-{
-    s_deferred_callback_presence = value;
 }
 
 uint32_t deferred_callback_peek(void)

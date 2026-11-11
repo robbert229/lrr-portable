@@ -483,43 +483,6 @@ uint32_t packed_grid_cell_value_get(const void* grid, uint32_t packed_cell)
     return cells_dword(cells, (size_t)index * 4u);
 }
 
-/* ObjectPoolListHeadGet (FUN_00456c30, finding 374): the corpus's exact
- * in-range bounds (-1 < index < 0x37) over the +0x114 slot table. */
-// FUNCTION: LEGORR 0x00456c30
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int object_pool_list_head_get(const void* pools, int index)
-{
-    __asm {
-        mov eax, dword ptr [esp + 8]
-        test eax, eax
-        jl short object_pool_list_head_get_zero
-        cmp eax, 37h
-        jge short object_pool_list_head_get_zero
-        mov ecx, dword ptr [esp + 4]
-        mov edx, dword ptr [ecx + eax*4 + 114h]
-        test edx, edx
-        je short object_pool_list_head_get_zero
-        mov eax, edx
-        ret
-    object_pool_list_head_get_zero:
-        xor eax, eax
-        ret
-    }
-}
-#else
-int object_pool_list_head_get(const void* pools, int index)
-{
-    if (-1 < index && index < 0x37) {
-        const int32_t v = (int32_t)rec_dword(
-            pools, (size_t)(0x114 + index * 4));
-        if (v != 0) {
-            return v;
-        }
-    }
-    return 0;
-}
-#endif
-
 /* ModelChildRenderEligibilityCheck (FUN_00483a70): the two-bit render
  * gate (finding 431). NULL answers "not eligible" — the corpus would
  * crash on it (documented deviation). */
@@ -1510,32 +1473,6 @@ uint32_t record_flag_bit_test(const void* record, uint32_t bit_index,
     uint32_t flags = 0u;
     __builtin_memcpy(&flags, (const char*)record + 0x130, sizeof(flags));
     return flags & bit;
-}
-
-/* ObjectPoolListsFreeAll (FUN_00456c60) — see record.hpp. The corpus reads
- * each head through the bounds-checked getter and strides the dword slot
- * blind for the clear; the port reads/clears the native link slot. */
-// FUNCTION: LEGORR 0x00456c60
-void object_pool_lists_free_all(void* pools)
-{
-    if (pools == NULL) {
-        return; /* deviation: the corpus strides the global blindly */
-    }
-    for (int i = 0; i < 0x37; ++i) {
-        const size_t slot = 0x114 + (size_t)i * sizeof(void*);
-        /* The corpus calls the bounds-checked head getter for this read;
-         * that carrier keeps the corpus-layout dword view (stride 4, a
-         * 32-bit answer) and this table is the widened-link native image,
-         * so the native slot is read in place. */
-        void* node = NULL;
-        __builtin_memcpy(&node, (char*)pools + slot, sizeof node);
-        while (node != NULL) {
-            void* next = *(void* const*)((const char*)node + 8);
-            engine_heap_free(node);
-            node = next;
-        }
-        *(void**)((char*)pools + slot) = NULL; /* blind clear */
-    }
 }
 
 /* --- the UI record factories (see record.hpp) ------------------------------

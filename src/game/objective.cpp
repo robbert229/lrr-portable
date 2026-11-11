@@ -34,11 +34,11 @@
 #include "crt/crt.hpp"
 #include "objective_shared.hpp"
 
-static ObjectiveDeferredCallback s_objective_deferred_callback;
+ObjectiveDeferredCallback s_objective_deferred_callback;
 static AdvisorTimerActionFn s_advisor_timer_action;
 static AdvisorTimerFinalizeFn s_advisor_timer_finalize;
 static void* s_advisor_timer_user;
-static LevelState* s_objective_active_level;
+LevelState* s_objective_active_level;
 static char s_objective_voice_alias[256];
 static int s_objective_voice_alias_pending;
 /* DAT_004ffbc0 is the runtime result word. It is separate from the level's
@@ -52,8 +52,6 @@ static int s_objective_tick_resolved;
 static AdvisorAnimationPositionUpdateState s_advisor_position_update_state;
 static AdvisorPositionUpdateValueResolveFn s_advisor_position_value_resolver;
 static void* s_advisor_position_value_resolver_user;
-// GLOBAL: LEGORR 0x004a6768
-static int s_advisor_sound_slot = -1;
 static CoordinateListHeadGetHook s_coordinate_list_head_get;
 static void* s_coordinate_list_head_context;
 static RewardTaskResourceRecord s_reward_task_resources[10];
@@ -65,16 +63,6 @@ void advisor_sound_alias_set(int slot)
      * table, whose entries are sound-bank slots (the 0x47b8e0 and 0x47ad70
      * callers consume it as a slot), not SoundAliasPlay IDs. */
     s_advisor_sound_slot = slot;
-}
-
-/* SoundAliasPlayGlobal (FUN_00456810) forwards the configured bank slot
- * directly to SoundBufferPlayWithPosition in global mode 2, with loop 0.
- * It does not run alias lookup or variant selection. */
-// FUNCTION: LEGORR 0x00456810
-void advisor_sound_alias_play_global(void)
-{
-    if (s_advisor_sound_slot != -1 && sound_bank_sound_on())
-        (void)sound_bank_entry_play_mode(s_advisor_sound_slot, 0, 2);
 }
 
 void coordinate_list_visit_hooks_set(CoordinateListHeadGetHook head_get,
@@ -195,13 +183,6 @@ void reward_task_block_finish(void)
 void objective_deferred_callback_set(ObjectiveDeferredCallback callback)
 {
     s_objective_deferred_callback = callback;
-}
-
-// FUNCTION: LEGORR 0x00453910
-void objective_deferred_callback_invoke_if_set(void)
-{
-    if (s_objective_deferred_callback != NULL)
-        s_objective_deferred_callback();
 }
 
 void advisor_timer_hooks_set(AdvisorTimerActionFn action,
@@ -909,25 +890,6 @@ int objective_tick(LevelState* s, float dt)
     return s_objective_tick_resolved;
 }
 
-// FUNCTION: LEGORR 0x00454b70
-int objective_voice_alias_raise_commit(LevelState* s)
-{
-    if (s != NULL) s_objective_active_level = s;
-    objective_announce_current(1);
-    return 1;
-}
-
-/* ObjectiveVoiceAliasRaiseGateBit27 (FUN_00454b80) — see objective.hpp. */
-// FUNCTION: LEGORR 0x00454b80
-int objective_voice_alias_raise_gate_bit27(LevelState* s)
-{
-    if ((media_cd_flags_get() & 0x8000000u) == 0u) {
-        if (s != NULL) s_objective_active_level = s;
-        objective_announce_current(2);
-    }
-    return 1;
-}
-
 /* --- the advisor action window band (see objective.hpp) ------------------- */
 
 /* Controller representation of DAT_004b31bc. The CRT adapter also keeps
@@ -1242,8 +1204,8 @@ typedef struct ObjectiveAdvisorResourceToken {
 /* The reference's DAT_00555da0 buffer owns every text/name pointer below.
  * Keep one copied buffer and grow the three tables as their entries appear. */
 static char* s_adv_token_source;
-static const char** s_adv_text_tokens;
-static uint32_t s_adv_text_token_count;
+const char** s_adv_text_tokens;
+uint32_t s_adv_text_token_count;
 static ObjectiveAdvisorResourceToken* s_adv_image_tokens;
 static uint32_t s_adv_image_token_count;
 static ObjectiveAdvisorResourceToken* s_adv_sound_tokens;
@@ -1256,9 +1218,9 @@ static uint32_t s_adv_token_generation;
  * test installer. Parsed callers should use objective_advisor_token_text_get
  * on 64-bit hosts, where a native pointer cannot fit in the target dword. */
 // GLOBAL: LEGORR 0x00555da8
-static const uint32_t* s_adv_tokens;
+const uint32_t* s_adv_tokens;
 // GLOBAL: LEGORR 0x00555da4
-static uint32_t s_adv_token_count;
+uint32_t s_adv_token_count;
 
 void objective_advisor_tokens_release(void)
 {
@@ -1402,77 +1364,11 @@ int objective_advisor_tokens_parse(const char* source, uint32_t source_length,
     return 1;
 }
 
-static uintptr_t objective_advisor_live_token_resolve(int kind,
-                                                       const char* value,
-                                                       void* user)
-{
-    (void)user;
-    if (value == NULL || value[0] == '\0') return (uintptr_t)0;
-    if (kind == 1) {
-        TextureSurface* image = image_surface_load(value, 0u, 0u);
-        return (uintptr_t)image;
-    }
-    if (kind == 2) {
-        int slot = sound_bank_entry_load(value, 0, 0, 0);
-        /* Zero is a valid bank slot; reserve encoded zero for a load miss. */
-        return slot >= 0 ? (uintptr_t)(uint32_t)(slot + 1) : (uintptr_t)0;
-    }
-    return (uintptr_t)0;
-}
-
-static void objective_advisor_live_token_release(int kind, uintptr_t handle,
-                                                  void* user)
-{
-    (void)user;
-    if (handle == (uintptr_t)0) return;
-    if (kind == 1) {
-        texture_release((TextureSurface*)handle);
-    }
-    else if (kind == 2) {
-        int slot = (int)(uint32_t)handle - 1;
-        if (slot >= 0) (void)sound_bank_entry_release(slot);
-    }
-}
-
-// FUNCTION: LEGORR 0x00452e70
-int objective_advisor_token_file_load(const char* path)
-{
-    Resource* resource;
-    int32_t size;
-    int result;
-    objective_advisor_tokens_release();
-    if (path == NULL || path[0] == '\0') return 0;
-    resource = resource_open(path, RESOURCE_AUTO);
-    if (resource == NULL) return 0;
-    size = resource_read(resource);
-    if (size < 0) {
-        resource_free(resource);
-        return 0;
-    }
-    result = objective_advisor_tokens_parse(
-        (const char*)resource->data, (uint32_t)size,
-        objective_advisor_live_token_resolve,
-        objective_advisor_live_token_release, NULL);
-    resource_free(resource);
-    return result;
-}
-
 void objective_advisor_tokens_install(const uint32_t* table, uint32_t count)
 {
     objective_advisor_tokens_release();
     s_adv_tokens = table;
     s_adv_token_count = count;
-}
-
-// FUNCTION: LEGORR 0x00453200
-int objective_advisor_token_lookup(uint32_t index)
-{
-    if (index < s_adv_token_count && s_adv_tokens != NULL) {
-        return (int)s_adv_tokens[index];
-    }
-    if (index < s_adv_text_token_count && s_adv_text_tokens != NULL)
-        return (int)(uint32_t)(uintptr_t)s_adv_text_tokens[index];
-    return 0;
 }
 
 const char* objective_advisor_token_text_get(uint32_t index)
@@ -1715,18 +1611,6 @@ int objective_sidecar_append_gate(EntitySlot* entity)
     return 1;
 }
 
-namespace unported_ledger_stubs {
-
-// CoordinateListCallbackVisit
-// FUNCTION: LEGORR 0x00456cb0
-void ledger_stub_00456cb0_CoordinateListCallbackVisit(
-    void* list_key, CoordinateListVisitCallback callback, void* user)
-{
-    coordinate_list_callback_visit(list_key, callback, user);
-}
-
-
-} // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
 
