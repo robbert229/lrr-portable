@@ -13733,10 +13733,6 @@ uint32_t ledger_stub_00449ff0_EntityTypeOperationRelease(EntitySlot* entity)
     return ::entity_type_operation_release(entity);
 }
 
-/* EntityWorkObjectPositionGet (FUN_0044a2a0) resolves the type-specific
- * work-object record before asking the scene layer for its position. The
- * sidecar record pointers correspond to the retail entity fields +0x0c,
- * +0x10, and +0x14 used by types 1, 2, and 3. */
 } // namespace unported_ledger_stubs
 
 /* EntityDirectionalActivityStart (FUN_00447950) chooses an activity from the
@@ -13898,6 +13894,10 @@ void entity_follow_target_pose_get(EntitySlot* entity, int index,
     }
 }
 
+/* EntityWorkObjectPositionGet (FUN_0044a2a0) resolves the type-specific
+ * work-object record before asking the scene layer for its position. The
+ * sidecar record pointers correspond to the retail entity fields +0x0c,
+ * +0x10, and +0x14 used by types 1, 2, and 3. */
 // FUNCTION: LEGORR 0x0044a2a0
 int entity_work_object_position_get(const EntitySlot* entity,
                                     float out_xy[2])
