@@ -2000,8 +2000,6 @@ int cmd_chain_contains_kind(const EntitySlot* e, int kind)
     return 0;
 }
 
-static void idle_register(EntitySlot* e);
-
 // FUNCTION: LEGORR 0x00403d10
 void entity_command_unlink_by_kind(EntitySlot* e, int type,
                                    const void* extra, int unlink)
@@ -3938,36 +3936,8 @@ void cmd_tick_global(void)
  *  Idle queue table (IdleQueueRegister): type-2 entries.
  * ------------------------------------------------------------------ */
 
-#define IDLE_TABLE_MAX 20
-typedef struct IdleQueueRecord {
-    EntitySlot* entity;
-    float timer;
-} IdleQueueRecord;
 // GLOBAL: LEGORR 0x00557a84
-static IdleQueueRecord s_idle[IDLE_TABLE_MAX];
-
-// FUNCTION: LEGORR 0x00407450
-static void idle_register(EntitySlot* e)
-{
-    if (e == NULL || e->type != 2) {
-        return;
-    }
-    int i = 0;
-    while (i < IDLE_TABLE_MAX && s_idle[i].entity != e) {
-        ++i;
-    }
-    if (i == IDLE_TABLE_MAX) {
-        for (i = 0; i < IDLE_TABLE_MAX; ++i) {
-            if (s_idle[i].entity == NULL) {
-                s_idle[i].entity = e;
-                break;
-            }
-        }
-    }
-    if (i < IDLE_TABLE_MAX) {
-        s_idle[i].timer = 12.5f; /* corpus stores 0x41480000 at +4 */
-    }
-}
+IdleQueueRecord s_idle[IDLE_TABLE_MAX];
 
 void idle_queue_register(EntitySlot* e)
 {

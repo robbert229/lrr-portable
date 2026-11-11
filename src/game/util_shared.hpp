@@ -20,4 +20,6 @@ extern EntityLinkList** s_entity_link_lists;
 extern void (*s_entity_link_node_release_hook)(EntityLinkNode*);
 extern void (*s_entity_link_list_release_hook)(EntityLinkList*);
 
+extern const char* s_bubble_action_strings[BUBBLE_ACTION_STRING_COUNT];
+
 #endif /* LRR_GAME_UTIL_SHARED_HPP */

@@ -24,6 +24,7 @@
 #include "gods98/string.hpp"
 #include "gods98/message.hpp"
 #include "util.hpp"
+#include "ai_shared.hpp"
 
 /* The command record's mutable `now` doubles as the task countdown for
  * task commands (the link primitives seed it with the 1500.0 "now"
@@ -639,28 +640,14 @@ int entity_remove_object_if_class6(GameContext* ctx, EntitySlot* e)
     return 0;
 }
 
-#define BUBBLE_ACTION_NAME_COUNT 39
-#define BUBBLE_ACTION_NAME_CAPACITY 64
-static char s_bubble_action_names[BUBBLE_ACTION_NAME_COUNT]
+char s_bubble_action_names[BUBBLE_ACTION_NAME_COUNT]
                                   [BUBBLE_ACTION_NAME_CAPACITY];
 // GLOBAL: LEGORR 0x00557864
 uint32_t s_bubble_texture_handles[BUBBLE_ACTION_NAME_COUNT];
-static BubbleTextureResourceLoadFn s_bubble_texture_load;
-static BubbleTextureInitializeFn s_bubble_texture_initialize;
-static void* s_bubble_texture_context;
-static uint32_t s_bubble_config_global_flags;
-static int s_bubble_action_names_initialized;
-
-static void bubble_action_names_ensure_initialized(void)
-{
-    int i;
-    if (s_bubble_action_names_initialized) return;
-    for (i = 0; i < BUBBLE_ACTION_NAME_COUNT; ++i) {
-        const char* name = bubble_action_string_get((unsigned int)i);
-        if (name != NULL) bubble_action_name_register(i, name);
-    }
-    s_bubble_action_names_initialized = 1;
-}
+BubbleTextureResourceLoadFn s_bubble_texture_load;
+BubbleTextureInitializeFn s_bubble_texture_initialize;
+void* s_bubble_texture_context;
+uint32_t s_bubble_config_global_flags;
 
 int bubble_action_name_register(int index, const char* name)
 {
@@ -676,25 +663,6 @@ int bubble_action_name_register(int index, const char* name)
     return 1;
 }
 
-/* BubbleActionNameToIndex (FUN_00407300): the source compares the input with
- * all 39 initialized names and returns the matching slot. On a miss it leaves
- * the final _strcmpi result in EAX rather than returning a -1 sentinel. */
-// FUNCTION: LEGORR 0x00407300
-int bubble_action_name_to_index(const char* name)
-{
-    int last_comparison = 0;
-    if (name == NULL) {
-        return -1;
-    }
-    bubble_action_names_ensure_initialized();
-    for (int i = 0; i < BUBBLE_ACTION_NAME_COUNT; ++i) {
-        const char* candidate = s_bubble_action_names[i];
-        last_comparison = strcasecmp_lite(candidate, name);
-        if (last_comparison == 0) return i;
-    }
-    return last_comparison;
-}
-
 void bubble_texture_load_hooks_set(BubbleTextureResourceLoadFn load,
                                    BubbleTextureInitializeFn initialize,
                                    void* context)
@@ -707,44 +675,6 @@ void bubble_texture_load_hooks_set(BubbleTextureResourceLoadFn load,
 void bubble_config_global_flags_set(uint32_t flags)
 {
     s_bubble_config_global_flags = flags;
-}
-
-/* BubbleConfigTextureLoad (FUN_00407240): walk Bubbles entries, filter
- * names with the global 0x02000000 gate, map the action to its fixed slot,
- * and retain the loaded resource handle before initializing it. */
-// FUNCTION: LEGORR 0x00407240
-void bubble_config_texture_load(BlockFile* cfg)
-{
-    BlockRec* group = block_subgroup(cfg,
-        string_path_join(util_root_name(cfg), "Bubbles", (const char*)NULL));
-    BlockRec* entry = group;
-    while (entry != NULL) {
-        const char* name = block_name(entry);
-        const char* resource_name = block_value(entry);
-        int enabled = 1;
-        if (name != NULL && name[0] == '!') {
-            if ((s_bubble_config_global_flags & 0x02000000u) != 0u) {
-                enabled = 0;
-            }
-            else {
-                ++name;
-            }
-        }
-        if (enabled && name != NULL && resource_name != NULL
-            && s_bubble_texture_load != NULL) {
-            const int index = bubble_action_name_to_index(name);
-            if (index >= 0 && index < BUBBLE_ACTION_NAME_COUNT) {
-                const uint32_t handle = s_bubble_texture_load(
-                    s_bubble_texture_context, resource_name, 0, 0);
-                s_bubble_texture_handles[index] = handle;
-                if (handle != 0u && s_bubble_texture_initialize != NULL) {
-                    s_bubble_texture_initialize(s_bubble_texture_context,
-                                                handle);
-                }
-            }
-        }
-        entry = block_next_sibling(entry);
-    }
 }
 
 uint32_t bubble_texture_handle_peek(int index)
@@ -1003,127 +933,9 @@ static void ai_lava_crust_activity_register(GameContext* ctx, EntitySlot* e)
         idle100_register(e);
 }
 
-/* --- the object registry windows (see ai.hpp) ------------------------------ */
-typedef struct {
-    void*    record;
-    uint32_t timer;
-} AiRegSlot;
-
-#define AI_REG_FLAGGED_SLOTS 20 /* DAT_005579e4 window */
-#define AI_REG_TYPE4_SLOTS   20 /* DAT_00557b24 window */
-#define AI_REG_TYPE2_SLOTS   50 /* DAT_00557bc4 window */
-#define AI_REG_FLAGGED_SEED  0x42160000u
-#define AI_REG_TYPE2_SEED    0x4a095440u
-
-static AiRegSlot s_reg_flagged[AI_REG_FLAGGED_SLOTS];
-static AiRegSlot s_reg_type4[AI_REG_TYPE4_SLOTS];
-static AiRegSlot s_reg_type2[AI_REG_TYPE2_SLOTS];
-
-// FUNCTION: LEGORR 0x004073a0
-void entity_pointer_registries_remove(EntitySlot* record)
-{
-    int i;
-    for (i = 0; i < AI_REG_FLAGGED_SLOTS; ++i) {
-        if (s_reg_flagged[i].record == (void*)record) {
-            s_reg_flagged[i].record = NULL;
-        }
-    }
-    idle_queue_clear(record); /* window B rides the cmd idle table */
-    for (i = 0; i < AI_REG_TYPE4_SLOTS; ++i) {
-        if (s_reg_type4[i].record == (void*)record) {
-            s_reg_type4[i].record = NULL;
-        }
-    }
-    for (i = 0; i < AI_REG_TYPE2_SLOTS; ++i) {
-        if (s_reg_type2[i].record == (void*)record) {
-            s_reg_type2[i].record = NULL;
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x00407410
-void type4_object_registry_insert(EntitySlot* record)
-{
-    if (record == NULL || record->type != 4) {
-        return; /* deviation: the corpus strides the type word blindly */
-    }
-    int i;
-    for (i = 0; i < AI_REG_TYPE4_SLOTS; ++i) {
-        if (s_reg_type4[i].record == (void*)record) {
-            return; /* the corpus's no-duplicate rule */
-        }
-    }
-    for (i = 0; i < AI_REG_TYPE4_SLOTS; ++i) {
-        if (s_reg_type4[i].record == NULL) {
-            s_reg_type4[i].record = (void*)record; /* timer word rides on */
-            return;
-        }
-    }
-    /* deviation: the corpus's bounded empty scan simply drops the record on
-     * a full table; the port's scan drops it too. */
-}
-
-// FUNCTION: LEGORR 0x004074b0
-void type2_timed_registry_insert(EntitySlot* record)
-{
-    if (record == NULL || record->type != 2) {
-        return; /* deviation: the corpus strides the type word blindly */
-    }
-    int i;
-    for (i = 0; i < AI_REG_TYPE2_SLOTS; ++i) {
-        if (s_reg_type2[i].record == (void*)record) {
-            s_reg_type2[i].timer = AI_REG_TYPE2_SEED; /* re-seed the hit */
-            return;
-        }
-    }
-    for (i = 0; i < AI_REG_TYPE2_SLOTS; ++i) {
-        if (s_reg_type2[i].record == NULL) {
-            s_reg_type2[i].record = (void*)record;
-            s_reg_type2[i].timer = AI_REG_TYPE2_SEED;
-            return;
-        }
-    }
-    /* the corpus drops the record on the full table */
-}
-
-// FUNCTION: LEGORR 0x00407510
-void set_type2_object_record_value(EntitySlot* record, uint32_t value)
-{
-    if (record == NULL || record->type != 2) {
-        return; /* deviation: the corpus strides the type word blindly */
-    }
-    for (int i = 0; i < AI_REG_TYPE2_SLOTS; ++i) {
-        if (s_reg_type2[i].record != NULL) {
-            s_reg_type2[i].timer = value;
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x00407540
-void flagged_object_timer_registry_insert(EntitySlot* record)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
-    }
-    if ((entity_capability_flags_get(record) & 0x80u) == 0u) {
-        return;
-    }
-    int i;
-    for (i = 0; i < AI_REG_FLAGGED_SLOTS; ++i) {
-        if (s_reg_flagged[i].record == (void*)record) {
-            s_reg_flagged[i].timer = AI_REG_FLAGGED_SEED; /* re-seed the hit */
-            return;
-        }
-    }
-    for (i = 0; i < AI_REG_FLAGGED_SLOTS; ++i) {
-        if (s_reg_flagged[i].record == NULL) {
-            s_reg_flagged[i].record = (void*)record;
-            s_reg_flagged[i].timer = AI_REG_FLAGGED_SEED;
-            return;
-        }
-    }
-    /* the corpus drops the record on the full table */
-}
+AiRegSlot s_reg_flagged[AI_REG_FLAGGED_SLOTS];
+AiRegSlot s_reg_type4[AI_REG_TYPE4_SLOTS];
+AiRegSlot s_reg_type2[AI_REG_TYPE2_SLOTS];
 
 static AiRegSlot* s_reg_window(int window, int* count)
 {

@@ -162,6 +162,15 @@ def _container_namespace(container: str | None) -> str | None:
     return None
 
 
+def _outer_wrap(container: str | None) -> str | None:
+    """The block an item lands in when it leaves its anonymous namespace."""
+    if container == "anon":
+        return None
+    if container and container.endswith("/anon"):
+        return container[:-len("/anon")]
+    return container
+
+
 def _anonymous(container: str | None) -> bool:
     """Internal linkage through an anonymous namespace (alone or inside X)."""
     return container == "anon" or bool(container and container.endswith("/anon"))
@@ -216,10 +225,21 @@ class Move:
     address: int | None
     name: str
     static_removed: bool = False
-    wrap: str | None = None   # extern-c or anon
+    wrap: str | None = None   # extern-c, anon, ns:X or ns:X/anon
+    anon_left: bool = False   # leaves its anonymous namespace (shared, so external)
 
     def before(self, text: str) -> str:
         return self.item.code(text)
+
+
+@dataclass
+class Split:
+    """A declaration the relocation needs split (``--split-declarations``)."""
+
+    source: str
+    item: cx.Item
+    text: str                 # the replacement, one declaration per line
+    kind: str                 # declarators or type-and-variables
 
 
 @dataclass
@@ -231,6 +251,7 @@ class Source:
     moves: list[Move] = field(default_factory=list)
     header_items: list[cx.Item] = field(default_factory=list)   # types/macros/decls to the private header
     strip_static: list[cx.Item] = field(default_factory=list)   # staying items that get external linkage
+    anon_exits: list[cx.Item] = field(default_factory=list)     # staying items that leave their anonymous namespace
     declarations: list[Decl] = field(default_factory=list)
 
     @property
@@ -260,6 +281,8 @@ class Plan:
     namespaces: set[str] = field(default_factory=set)
     usings: list[str] = field(default_factory=list)
     units: list[cf.UnitRanges] = field(default_factory=list)
+    split_mode: bool = False                  # --split-declarations: rewrite declarations only
+    splits: list["Split"] = field(default_factory=list)
 
     @property
     def moves(self) -> list[Move]:
@@ -312,7 +335,7 @@ def _wanted(addr: int, u: cf.UnitRanges, units: list[cf.UnitRanges]) -> bool:
 
 
 def plan_relocation(key: str, root: Path = ROOT, stem: str | None = None,
-                    headers: Headers | None = None) -> Plan:
+                    headers: Headers | None = None, split: bool = False) -> Plan:
     root = Path(root)
     units = cf.load_units(root)
     u = cf.find_unit(units, key)
@@ -401,11 +424,19 @@ def plan_relocation(key: str, root: Path = ROOT, stem: str | None = None,
                           f"using {stem!r} (pass --stem to choose another)")
     plan.namespaces = known_namespaces(root)
     plan.units = units
+    plan.split_mode = split
+    for src in sources:
+        src.plan = plan
     for s in sources:
         _plan_source(plan, s, [a for a in func_ann if a.file == s.rel],
                      [a for a in glob_ann if a.file == s.rel], headers, reasons)
     if reasons:
         raise Refused(u.unit_id, reasons)
+    if split:
+        _render_splits(plan, reasons)
+        if reasons:
+            raise Refused(u.unit_id, reasons)
+        return plan
     _check_clashes(plan, root, reasons)
     if reasons:
         raise Refused(u.unit_id, reasons)
@@ -441,17 +472,36 @@ class _Clusters:
         self.usings = [it.using for it in items if it.category == "using" and it.using
                        and not it.cond and not it.container]
         owner: dict[str, int] = {}
-        for k, it in enumerate(items):
+        for it in items:
             it.scope = _scope(it, namespaces)
-            it.qnames = [] if it.category in self.SKIP else [_qualify(it.scope, n) for n in it.names]
+        # Overloads: a name with several function definitions in the file is
+        # keyed by its parameter types, n(int,float*), and a use of the name
+        # resolves to the whole overload set.
+        definitions: dict[str, int] = {}
+        for it in items:
+            if it.category == "function" and it.names:
+                q = _qualify(it.scope, it.names[0])
+                definitions[q] = definitions.get(q, 0) + 1
+        self.overloads: dict[str, set[str]] = {}
+        for it in items:
+            if it.category in self.SKIP:
+                it.qnames = []
+                continue
+            it.qnames = [_qualify(it.scope, n) for n in it.names]
+            if it.category in ("function", "proto") and it.qnames and definitions.get(it.qnames[0], 0) > 1:
+                key = f"{it.qnames[0]}({_param_key(it.head(_text_of(it)))})"
+                self.overloads.setdefault(it.qnames[0], set()).add(key)
+                it.qnames = [key]
+        for k, it in enumerate(items):
             for name in it.qnames:
                 if name in owner:
                     parent[find(k)] = find(owner[name])
                 else:
                     owner[name] = k
         self.owner = owner
+        self.known = set(owner) | set(self.overloads)
         for it in items:
-            it.ruses = {self.resolve(u, it.scope) for u in it.uses}
+            it.ruses = set().union(*(self.resolve_all(u, it.scope) for u in it.uses)) if it.uses else set()
         self.of = [find(k) for k in range(len(items))]
         self.members: dict[int, list[int]] = {}
         for k, c in enumerate(self.of):
@@ -478,16 +528,68 @@ class _Clusters:
     def resolve(self, use: str, scope: str) -> str:
         if "::" in use:
             return use
-        if scope and f"{scope}::{use}" in self.owner:
+        if scope and f"{scope}::{use}" in self.known:
             return f"{scope}::{use}"
-        if use in self.owner:
+        if use in self.known:
             return use
         for kind, target in self.usings:
-            if kind == "namespace" and f"{target}::{use}" in self.owner:
+            if kind == "namespace" and f"{target}::{use}" in self.known:
                 return f"{target}::{use}"
-            if kind == "name" and target.rsplit("::", 1)[-1] == use and target in self.owner:
+            if kind == "name" and target.rsplit("::", 1)[-1] == use and target in self.known:
                 return target
         return use
+
+    def resolve_all(self, use: str, scope: str) -> set[str]:
+        """``resolve``, with an overloaded name expanded to its overload set."""
+        r = self.resolve(use, scope)
+        return set(self.overloads.get(r, ())) or {r}
+
+
+def _text_of(item: cx.Item) -> str:
+    """The source text an item was scanned from (set by _plan_source)."""
+    return getattr(item, "source_text", "")
+
+
+def _base(name: str) -> str:
+    """A qualified name without an overload's parameter key."""
+    return name.split("(", 1)[0]
+
+
+def _bases(names) -> set[str]:
+    return {_base(n) for n in names}
+
+
+def _param_key(head: str) -> str:
+    """Parameter types of a function head, for telling overloads apart.
+
+    Parameter names are dropped (the last identifier of a parameter with two
+    or more), defaults and array bounds too: ``(const float first[3], int n
+    = 2)`` reads ``const float*,int``.
+    """
+    masked = cx.mask(head)
+    depth, start, end = 0, -1, -1
+    for k, ch in enumerate(masked):
+        if ch == "(":
+            if depth == 0:
+                start = k
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                end = k
+    inner = masked[start + 1:end] if start >= 0 and end > start else ""
+    out = []
+    for part in cx._split_top(inner):
+        part = cx._split_top(part, "=")[0]
+        arrays = part.count("[")
+        part = re.sub(r"\[[^\]]*\]", " ", part)
+        tokens = re.findall(r"[A-Za-z_]\w*|[*&]", part)
+        idents = [t for t in tokens if t not in ("*", "&")]
+        if len(idents) >= 2 and tokens and tokens[-1] == idents[-1]:
+            tokens = tokens[:-1]
+        out.append(" ".join(tokens) + "*" * arrays)
+    key = ",".join(out)
+    return "" if key == "void" else key
 
 
 def _kind(items: list[cx.Item], members: list[int]) -> str:
@@ -513,6 +615,7 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
     items = s.scan.items
     for it in items:
         it.text_code = s.text[it.start:it.end]
+        it.source_text = s.text
     where = {}
     for k, it in enumerate(items):
         for _, addr in it.annotations:
@@ -536,8 +639,9 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
             reasons.append(f"{s.rel}:{it.line}: 0x{a.address:08x} annotates a {it.category or it.kind}, not a function definition")
         if role == "global" and it.category != "var":
             reasons.append(f"{s.rel}:{it.line}: GLOBAL 0x{a.address:08x} annotates a {it.category}, not a variable")
-        if role == "global" and it.multi:
-            reasons.append(f"{s.rel}:{it.line}: GLOBAL 0x{a.address:08x} is a declaration of several variables")
+        if role == "global" and (it.multi or it.defines_type):
+            _need_split(plan, s, it, reasons,
+                        f"GLOBAL 0x{a.address:08x} annotates a declaration of several names ({', '.join(it.names)})")
         if role == "global" and _is_extern_decl(it):
             reasons.append(f"{s.rel}:{it.line}: GLOBAL 0x{a.address:08x} annotates an extern declaration, not a definition")
         others = [x for _, x in it.annotations if not _wanted(x, plan.unit, plan.units)]
@@ -610,26 +714,30 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
             continue
         if kinds[c] == "internal":
             exported.add(c)
-        elif kinds[c] == "external" and not (cl.names[c] & visible_here):
+        elif kinds[c] == "external" and not (_bases(cl.names[c]) & visible_here):
             s.declarations.extend(_declarations(s, items, cl, c, "moved; remaining code uses it", reasons))
     for c in sorted(reach - candidates, key=first):
-        if kinds[c] == "external" and not (cl.names[c] & visible_here):
+        if kinds[c] == "external" and not (_bases(cl.names[c]) & visible_here):
             s.declarations.extend(_declarations(s, items, cl, c, "stays; moved code uses it", reasons))
+    anon_exit = set()
     for c in sorted(exported, key=first):
         if any(_anonymous(items[k].container) for k in cl.members[c]):
-            reasons.append(f"{s.rel}:{items[cl.members[c][0]].line}: {', '.join(sorted(cl.names[c]))} is in an "
-                           "anonymous namespace and used by moved and remaining code")
-            continue
+            # Mirrors the static rule: the item leaves its anonymous namespace
+            # (gaining external linkage) and is declared in the private header.
+            anon_exit.add(c)
         if any(items[k].inline for k in cl.members[c]):
             reasons.append(f"{s.rel}:{items[cl.members[c][0]].line}: inline {', '.join(sorted(cl.names[c]))} is used by "
                            "moved and remaining code")
             continue
-        s.declarations.extend(_declarations(s, items, cl, c, "static shared by moved and remaining code", reasons))
+        why = ("anonymous-namespace item shared by moved and remaining code" if c in anon_exit
+               else "static shared by moved and remaining code")
+        s.declarations.extend(_declarations(s, items, cl, c, why, reasons))
 
     # Types, macros and declarations the private header needs.
     need = set()
     for d in s.declarations:
-        need |= {cl.resolve(u, d.ns) for u in cx._uses(cx.mask(d.text))}
+        for u in cx._uses(cx.mask(d.text)):
+            need |= cl.resolve_all(u, d.ns)
     for c in to_header:
         need |= cl.uses[c]
     while True:
@@ -676,14 +784,262 @@ def _plan_source(plan: Plan, s: Source, funcs: list[cf.Annotation], globs: list[
                 role, addr = seeds[k]
             else:
                 role, addr = f"closure-{it.category}", None
+            leaves = c in anon_exit and _anonymous(it.container)
+            wrap = it.container if it.container in ("extern-c", "anon") or _container_namespace(it.container) else None
             s.moves.append(Move(s.rel, it, role, addr, ",".join(it.names) or it.category,
                                 static_removed=c in exported and it.static,
-                                wrap=it.container if it.container in ("extern-c", "anon")
-                                or _container_namespace(it.container) else None))
+                                wrap=_outer_wrap(wrap) if leaves else wrap, anon_left=leaves))
     for c in sorted(to_header, key=lambda c: cl.members[c][0]):
         s.header_items.extend(items[k] for k in cl.members[c])
     for c in exported - moving:
         s.strip_static.extend(items[k] for k in cl.members[c] if items[k].static)
+        if c in anon_exit:
+            s.anon_exits.extend(items[k] for k in cl.members[c] if _anonymous(items[k].container))
+
+
+def plan_of(s: Source) -> Plan:
+    return s.plan
+
+
+SPLIT_HINT = ("split it first with `relocate_unit.py <unit> --split-declarations`: a source change, "
+              "recorded and committed on its own before the relocation")
+
+
+def _need_split(plan: Plan, s: Source, it: cx.Item, reasons: list[str], why: str) -> None:
+    """Record a declaration that must be split, or refuse outside split mode."""
+    where = f"{s.rel}:{it.line}"
+    if not plan.split_mode:
+        reasons.append(f"{where}: {why}; {SPLIT_HINT}")
+        return
+    if any(x.item is it for x in plan.splits):
+        return
+    try:
+        text, kind = _split_declaration(s.text, it)
+    except ValueError as e:
+        reasons.append(f"{where}: {why}, and it cannot be split: {e}")
+        return
+    plan.splits.append(Split(s.rel, it, text, kind))
+
+
+def _split_declaration(text: str, it: cx.Item) -> tuple[str, str]:
+    """One declaration per declarator, in the original order.
+
+    ``static int a = 0, b = 0;`` becomes ``static int a = 0;`` and ``static int
+    b = 0;``. ``static struct T { ... } v[3], w;`` becomes ``struct T { ... };``
+    then ``static struct T v[3];`` and ``static struct T w;``. Leading
+    comments stay above the first line and a trailing comment after the last.
+    """
+    code = it.code(text)
+    masked = cx.mask(code)
+    depth, semi = 0, -1
+    for k, ch in enumerate(masked):
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == ";" and depth == 0:
+            semi = k
+    if semi < 0:
+        raise ValueError("no terminating semicolon")
+    decl, trailer = code[:semi], code[semi + 1:]
+    mdecl = masked[:semi]
+    if "(" in cx.DECL_STRIP.sub(" ", mdecl.split("=")[0]) and not it.defines_type:
+        raise ValueError("a function or function-pointer declarator")
+    lines: list[str] = []
+    if it.defines_type:
+        open_ = mdecl.find("{")
+        kw = None
+        for m in re.finditer(r"\b(struct|union|enum|class)\b", mdecl[:open_]):
+            kw = m
+        if kw is None:
+            raise ValueError("no struct, union, enum or class keyword before the body")
+        depth, close = 0, -1
+        for k in range(open_, len(mdecl)):
+            if mdecl[k] == "{":
+                depth += 1
+            elif mdecl[k] == "}":
+                depth -= 1
+                if depth == 0:
+                    close = k
+                    break
+        tag = re.match(r"\s*([A-Za-z_]\w*)?\s*$", mdecl[kw.end():open_])
+        if not tag or not tag.group(1):
+            raise ValueError("the type has no tag, so a separate declaration could not name it")
+        specifiers = decl[:kw.start()]
+        type_text = decl[kw.start():close + 1]
+        elaborated = f"{kw.group(1)} {tag.group(1)}"
+        lines.append(type_text + ";")
+        rest_masked = mdecl[close + 1:]
+        offsets = _top_commas(rest_masked)
+        rest = decl[close + 1:]
+        for a, b in zip([0] + [o + 1 for o in offsets], offsets + [len(rest)]):
+            declarator = rest[a:b].strip()
+            if declarator:
+                lines.append(f"{specifiers}{elaborated} {declarator};")
+        kind = "type-and-variables"
+    else:
+        offsets = _top_commas(mdecl)
+        bounds = list(zip([0] + [o + 1 for o in offsets], offsets + [len(decl)]))
+        first_masked = mdecl[bounds[0][0]:bounds[0][1]]
+        name_end = len(cx._split_top(first_masked, "=")[0])
+        head = re.sub(r"\[[^\]]*\]", lambda m: " " * len(m.group(0)), first_masked[:name_end]).rstrip()
+        name = re.search(r"([A-Za-z_]\w*)$", head)
+        if not name:
+            raise ValueError("cannot find the first declarator")
+        start = name.start()
+        while start > 0 and first_masked[start - 1] in " \t*&":
+            start -= 1
+        specifiers = decl[:start].rstrip()
+        if not specifiers or "{" in specifiers:
+            raise ValueError("cannot find the shared specifiers")
+        for n, (a, b) in enumerate(bounds):
+            declarator = decl[start if n == 0 else a:b].strip()
+            lines.append(f"{specifiers} {declarator};")
+        kind = "declarators"
+    new = "\n".join(lines)
+    return new + trailer if trailer.strip() else new + "\n", kind
+
+
+def _top_commas(masked: str) -> list[int]:
+    out, depth = [], 0
+    for k, ch in enumerate(masked):
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            out.append(k)
+    return out
+
+
+def _render_splits(plan: Plan, reasons: list[str]) -> None:
+    """``--split-declarations``: rewrite the sources' declarations only."""
+    if not plan.splits:
+        plan.notes.append("No declaration needs splitting for this relocation.")
+        return
+    records = []
+    for s in plan.sources:
+        mine = sorted((x for x in plan.splits if x.source == s.rel), key=lambda x: x.item.start)
+        if not mine:
+            continue
+        out, last = [], 0
+        for x in mine:
+            out.append(s.text[last:x.item.start])
+            out.append(x.text)
+            last = x.item.end
+        out.append(s.text[last:])
+        new_text = "".join(out)
+        # Verify: the same names and annotations, one declarator per item.
+        after = cx.scan(new_text)
+        if sorted(cx.ANNOTATION.findall(new_text)) != sorted(cx.ANNOTATION.findall(s.text)):
+            reasons.append(f"{s.rel}: annotations changed while splitting")
+        for x in mine:
+            start = len("".join(out[:2 * mine.index(x) + 1]))
+            new_items = [it for it in after.items if start <= it.start < start + len(x.text)]
+            names = [n for it in new_items for n in it.names]
+            if sorted(names) != sorted(x.item.names) or any(it.multi for it in new_items):
+                reasons.append(f"{s.rel}:{x.item.line}: splitting {', '.join(x.item.names)} did not give one "
+                               "declaration per name")
+            records.append({"role": f"split-{x.kind}", "address": "", "name": ",".join(x.item.names),
+                            "from": f"{s.rel}:{x.item.line}", "to": f"{s.rel}:{x.item.line}",
+                            "before_sha256": sha(x.item.code(s.text)), "after_sha256": sha(x.text),
+                            "edit": f"split into {len(new_items)} declarations"})
+        plan.files[s.rel] = new_text
+    plan.records = records
+    plan.files[f"{RECORDS}/{plan.unit.unit_id}-splits.csv"] = _records_csv(records)
+
+
+def data_layout(obj) -> list[tuple]:
+    """Data placement of an MSVC object (``msvc_coff.CoffObject``).
+
+    Every named data symbol as (section, offset, name): external COFF
+    symbols in data sections, commons (section ``common``, size as offset)
+    and CodeView data records (statics are only named there), then each data
+    section's size. Two compiles of a unit with equal layouts place their data
+    identically (finding 525: common order follows the COFF symbol table, so
+    that order is kept as well).
+    """
+    out = []
+    sections = {sec.index: sec for sec in obj.sections}
+
+    def data_section(index):
+        sec = sections.get(index)
+        return sec if sec is not None and not sec.is_code and not sec.is_debug else None
+    for sym in sorted(obj.symbols.values(), key=lambda x: x.index):
+        if sym.is_function or sym.name.startswith("."):
+            continue
+        if sym.section == 0 and sym.value > 0 and sym.is_external:
+            out.append(("common", sym.value, sym.name))
+        elif sym.section > 0 and data_section(sym.section) is not None:
+            out.append((sections[sym.section].name, sym.value, sym.name))
+    for cv in obj.data:
+        sym = obj.symbols.get(cv.symbol)
+        if sym is not None and sym.section > 0 and data_section(sym.section) is not None:
+            out.append((sections[sym.section].name, sym.value + cv.offset, cv.name))
+    sizes = [("size", sec.size, sec.name) for sec in obj.sections if data_section(sec.index) is not None]
+    return out + sizes
+
+
+def check_split_layout(plan: Plan, root: Path) -> list[tuple[str, bool, str]]:
+    """Compile each split source before and after with the matching flags
+    (MSVC 5.0, as ``match_function.py`` does) and compare ``data_layout``.
+
+    Returns (source, unchanged, detail) per source.
+    """
+    import tempfile
+    import match_function as mf
+    import msvc_coff
+    env = mf.Environment.detect(argparse.Namespace(build_dir=None))
+    commands = {c.source: c for c in mf.load_compile_commands(env, {})}
+    results = []
+    env.build_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="split-layout-", dir=env.build_dir) as tmp:
+        work = Path(tmp)
+        for n, rel in enumerate(sorted({x.source for x in plan.splits})):
+            command = commands.get((root / rel).resolve())
+            if command is None:
+                results.append((rel, False, "not compiled by the matching build"))
+                continue
+            candidate = work / f"candidate-{n}-{Path(rel).name}"
+            candidate.write_text(plan.files[rel], encoding="utf-8")
+            before, _ = mf.compile_source(env, command, work, 2 * n)
+            after, _ = mf.compile_source(env, command, work, 2 * n + 1, candidate=candidate)
+            a, b = data_layout(msvc_coff.read_coff(before)), data_layout(msvc_coff.read_coff(after))
+            if a == b:
+                results.append((rel, True, f"{len(a)} data symbols and section sizes identical"))
+            else:
+                diff = [f"- {x}" for x in a if x not in b][:6] + [f"+ {x}" for x in b if x not in a][:6]
+                if not diff:
+                    diff = ["same symbols, different order"]
+                results.append((rel, False, "; ".join(map(str, diff))))
+    return results
+
+
+def render_split_report(plan: Plan, layout: list[tuple[str, bool, str]] | None) -> str:
+    out = [f"## Declaration splits for {plan.unit.unit_id} {plan.unit.unit_name or '(unnamed)'}", ""]
+    if not plan.splits:
+        out.append("No declaration needs splitting; run the relocation directly.")
+        return "\n".join(out) + "\n"
+    out.append("A source change, separate from the relocation (ADR 0006 rule 3): commit it on its "
+               f"own, then run `relocate_unit.py {plan.unit.unit_id}` without `--split-declarations`. "
+               f"Record: `{RECORDS}/{plan.unit.unit_id}-splits.csv`.")
+    out.append("")
+    for x in plan.splits:
+        out.append(f"* `{x.source}:{x.item.line}` ({x.kind}): `{cx.normalise(x.item.code(plan_of_source(plan, x.source).text))}`")
+        out.append("  becomes:")
+        out.extend("      " + line for line in x.text.rstrip("\n").split("\n"))
+    out.append("")
+    if layout is None:
+        out.append("Data layout not checked; `--check-layout` compiles each split source before and after "
+                   "with MSVC 5.0 and compares its data symbols (finding 525).")
+    else:
+        for rel, same, detail in layout:
+            out.append(f"* layout of `{rel}`: {'unchanged' if same else 'CHANGED'} ({detail})")
+    return "\n".join(out) + "\n"
+
+
+def plan_of_source(plan: Plan, rel: str) -> Source:
+    return next(s for s in plan.sources if s.rel == rel)
 
 
 def _redefined(items: list[cx.Item], names: list[str]) -> bool:
@@ -716,12 +1072,10 @@ def _declarations(s: Source, items: list[cx.Item], cl: _Clusters, c: int, why: s
     if it is None:
         return []
     where = f"{s.rel}:{it.line}"
-    if it.multi:
-        reasons.append(f"{where}: {', '.join(it.names)} share one declaration and would need external linkage")
-        return []
-    if it.defines_type:
-        reasons.append(f"{where}: {', '.join(it.names)}: a type and a variable defined in one declaration "
-                       "would need sharing; declaring it would define the type twice")
+    if it.multi or it.defines_type:
+        what = ("a type and a variable defined in one declaration" if it.defines_type
+                else "several variables in one declaration")
+        _need_split(plan_of(s), s, it, reasons, f"{', '.join(it.names)}: {what}, and one of them is shared")
         return []
     head = re.sub(r"\bstatic\s+", "", _head_decl(s, it), count=1)
     prefix = 'extern "C" ' if it.container == "extern-c" else ""
@@ -752,7 +1106,8 @@ def _check_clashes(plan: Plan, root: Path, reasons: list[str]) -> None:
             if n in seen and seen[n] != s.rel:
                 reasons.append(f"{n} is defined by both {seen[n]} and {s.rel}; they would meet in {plan.target}")
             seen.setdefault(n, s.rel)
-    exported = {d.name: s.rel for s in plan.sources for d in s.declarations if d.why.startswith("static")}
+    exported = {d.name: s.rel for s in plan.sources for d in s.declarations
+                if d.why.startswith(("static", "anonymous"))}
     if not exported:
         return
     bare = sorted({n.rsplit("::", 1)[-1] for n in exported})
@@ -822,7 +1177,7 @@ def _move_text(s: Source, m: Move) -> str:
     return text if text.endswith("\n") else text + "\n"
 
 
-def _blocks(chunks: list[tuple[str | None, str]]) -> list[str]:
+def _blocks(chunks: list[tuple[str | None, str]], sep: str = "\n") -> list[str]:
     """Join chunks; consecutive chunks with the same wrap share one block."""
     out: list[str] = []
     i = 0
@@ -837,7 +1192,7 @@ def _blocks(chunks: list[tuple[str | None, str]]) -> list[str]:
         while i < len(chunks) and chunks[i][0] == wrap:
             group.append(chunks[i][1])
             i += 1
-        out.append(_wrap("\n".join(t.rstrip("\n") + "\n" for t in group), wrap))
+        out.append(_wrap(sep.join(t.rstrip("\n") + "\n" for t in group), wrap))
     return out
 
 
@@ -900,6 +1255,9 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
     private = [s.shared_header for s in ordered_sources if s.shares or (root / s.shared_header).exists()
                and any(i.include and Path(i.include[1:-1]).name == Path(s.shared_header).name
                        for i in s.scan.items)]
+    # A source that already includes its private header passes it on in its
+    # include list: do not include it twice.
+    private = [h for h in dict.fromkeys(private) if h not in seen]
 
     # The unit file: types and macros, globals, variables, forward
     # declarations, the unit's functions in address order, static helpers.
@@ -1005,22 +1363,27 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
         edits = []
         for it in s.strip_static:
             edits.append((it.start, it.end, _strip_static(it.code(text))))
+        for first, last in _runs(s.anon_exits, text):
+            # Close the anonymous namespace before the shared items and
+            # reopen it after them, so their order in the file is kept.
+            edits.append((first.lead, first.lead, "} // namespace\n"))
+            edits.append((last.end, last.end, "namespace {\n"))
         pieces, last = [], 0
-        for a, b, new in sorted(edits):
+        for a, b, new in sorted(edits, key=lambda e: (e[0], e[1])):
             pieces.append(text[last:a])
             pieces.append(new)
             last = b
         pieces.append(text[last:])
         new_text = "".join(pieces)
-        # Recompute spans after the static edits (edits never overlap spans).
-        delta = []
-        for a, b, new in sorted(edits):
-            delta.append((a, len(new) - (b - a)))
+        # Recompute spans after the edits (edits never overlap spans). An
+        # insertion at a span's start goes before it; at its end, after.
+        delta = [(a, b, len(new) - (b - a)) for a, b, new in edits]
 
-        def moved(p):
-            return p + sum(d for a, d in delta if a < p)
-        spans = [(moved(a), moved(b)) for a, b in spans]
+        def moved(p, end=False):
+            return p + sum(d for a, b, d in delta if a < p or (a == b == p and not end))
+        spans = [(moved(a), moved(b, end=True)) for a, b in spans]
         new_text = _remove(new_text, spans)
+        new_text = _drop_empty_anonymous(text, new_text)
         seen_ns = {n.split("::")[0] for n in headers.visible(
             [it.include for it in s.scan.items if it.category == "include" and it.include],
             s.rel, s.entry.library) if "::" in n}
@@ -1034,6 +1397,30 @@ def _render(plan: Plan, root: Path, headers: Headers, reasons: list[str]) -> Non
 
     plan.files.update(_wiring(plan, root))
     _verify(plan, reasons)
+
+
+EMPTY_ANON = re.compile(r"^namespace[ \t]*\{[ \t]*\n(?:[ \t]*\n)*\}[^\n]*\n", re.M)
+
+
+def _runs(items: list[cx.Item], text: str) -> list[tuple[cx.Item, cx.Item]]:
+    """Consecutive items (only blank lines between them) as (first, last)."""
+    runs: list[list[cx.Item]] = []
+    for it in sorted(items, key=lambda i: i.start):
+        if runs and runs[-1][-1].container == it.container and not text[runs[-1][-1].end:it.lead].strip():
+            runs[-1].append(it)
+        else:
+            runs.append([it])
+    return [(r[0], r[-1]) for r in runs]
+
+
+def _drop_empty_anonymous(before: str, after: str) -> str:
+    """Remove anonymous ``namespace { }`` blocks the edits left empty."""
+    if len(EMPTY_ANON.findall(after)) <= len(EMPTY_ANON.findall(before)):
+        return after
+    result = EMPTY_ANON.sub("", after)
+    if result.count("\n\n\n") > before.count("\n\n\n"):
+        result = re.sub(r"\n{3,}", "\n\n", result)
+    return result
 
 
 EMPTY_NS = re.compile(r"^namespace[ \t]+([A-Za-z_]\w*)[ \t]*\{\s*\}[ \t]*(?://[^\n]*)?\n", re.M)
@@ -1167,14 +1554,17 @@ def _render_header(root: Path, s: Source, plan: Plan) -> str:
     for it in s.header_items:
         text = it.text(s.text).rstrip("\n") + "\n"
         if cx.normalise(text) not in norm:
-            chunks.append((it.container if _container_namespace(it.container) else None, text))
+            # A type or macro that leaves an anonymous namespace lands in
+            # its outer namespace (recorded as such in the relocation CSV).
+            wrap = _outer_wrap(it.container) if _anonymous(it.container) else it.container
+            chunks.append((wrap if _container_namespace(wrap) else None, text))
     parts = _blocks(chunks)
     decls: list[tuple[str | None, str]] = []
     for d in s.declarations:
         if cx.normalise(d.text) in norm:
             continue
         decls.append((f"ns:{d.ns}" if d.ns else None, d.text))
-    decl_text = "".join(_blocks([(w, t + "\n") for w, t in decls]))
+    decl_text = "".join(_blocks([(w, t + "\n") for w, t in decls], sep=""))
     add = "\n".join(p.rstrip("\n") + "\n" for p in parts)
     if decl_text:
         add += ("\n" if add else "") + decl_text
@@ -1267,7 +1657,8 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
             after_item = cands[0] if cands else None
         after = after_item.code(plan.files[plan.target]) if after_item else ""
         ok = cx.normalise(after) == cx.normalise(expected)
-        if after_item is not None and after_item.container != m.item.container:
+        expected_container = _outer_wrap(m.item.container) if m.anon_left else m.item.container
+        if after_item is not None and after_item.container != expected_container:
             ok = False
             reasons.append(f"{m.source}:{m.item.line} {m.name}: moved from scope {m.item.container or 'global'} "
                            f"into {after_item.container or 'global'}")
@@ -1283,7 +1674,9 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
             "name": m.name, "from": f"{m.source}:{m.item.line}",
             "to": f"{plan.target}:{after_item.line if after_item else '?'}",
             "before_sha256": sha(before), "after_sha256": sha(after),
-            "edit": "static removed (shared with remaining code)" if m.static_removed else "",
+            "edit": "; ".join(x for x in (
+                "static removed (shared with remaining code)" if m.static_removed else "",
+                "left the anonymous namespace (shared with remaining code)" if m.anon_left else "") if x),
         })
     for s in plan.sources:
         new_text = plan.files[s.rel]
@@ -1296,6 +1689,21 @@ def _verify(plan: Plan, reasons: list[str]) -> None:
                             "from": f"{s.rel}:{it.line}", "to": s.shared_header,
                             "before_sha256": sha(it.code(s.text)), "after_sha256": sha(it.code(s.text)) if ok else "",
                             "edit": ""})
+        for it in s.anon_exits:
+            records.append({"role": f"stays-{it.category}", "address": "", "name": ",".join(it.names),
+                            "from": f"{s.rel}:{it.line}", "to": s.rel,
+                            "before_sha256": sha(it.code(s.text)),
+                            "after_sha256": sha(_strip_static(it.code(s.text)) if it in s.strip_static else it.code(s.text)),
+                            "edit": "left the anonymous namespace (shared with the unit file)"})
+            if it.code(s.text) and cx.normalise(it.code(s.text)) not in cx.normalise(new_text) \
+                    and it not in s.strip_static:
+                reasons.append(f"{s.rel}:{it.line}: {', '.join(it.names)} changed while leaving its anonymous namespace")
+        for it in s.header_items:
+            if _anonymous(it.container):
+                records.append({"role": f"shared-{it.category}", "address": "", "name": ",".join(it.names),
+                                "from": f"{s.rel}:{it.line}", "to": s.shared_header,
+                                "before_sha256": sha(it.code(s.text)), "after_sha256": sha(it.code(s.text)),
+                                "edit": "left the anonymous namespace (moved to the private header)"})
         for it in s.strip_static:
             records.append({"role": f"stays-{it.category}", "address": "", "name": ",".join(it.names),
                             "from": f"{s.rel}:{it.line}", "to": s.rel,
@@ -1462,13 +1870,23 @@ def survey(root: Path) -> list[dict]:
                             "shared": sum(len(s.declarations) + len(s.header_items) for s in plan.sources),
                             "reasons": []})
         except Refused as e:
-            results.append({"unit": u.unit_id, "name": u.unit_name, "status": "refused",
+            status = "refused"
+            if all(classify_reason(r).startswith("needs --split") for r in e.reasons):
+                # Would it relocate once its declarations are split?
+                try:
+                    if plan_relocation(u.unit_id, root, stem=stem, headers=headers, split=True).splits:
+                        status = "ok after --split-declarations"
+                except Refused:
+                    pass
+            results.append({"unit": u.unit_id, "name": u.unit_name, "status": status,
                             "functions": 0, "sources": [], "shared": 0, "reasons": e.reasons})
     return results
 
 
 def classify_reason(reason: str) -> str:
     table = (
+        ("--split-declarations", "needs --split-declarations (source change)"),
+        ("cannot be split", "declaration that cannot be split"),
         ("inside an #if block", "#if block"),
         ("is inside an #if block", "#if block"),
         ("directive splits", "directive inside a declaration"),
@@ -1566,6 +1984,14 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--report", type=Path, help="also write the report to this file")
     p.add_argument("--no-footprint", action="store_true", help="skip the conversion footprint")
     p.add_argument("--survey", action="store_true", help="try every unrelocated unit and tabulate what blocks it")
+    p.add_argument("--split-declarations", action="store_true",
+                   help="only split the declarations the relocation needs split (a source change, "
+                        "committed on its own), then stop")
+    p.add_argument("--check-layout", action="store_true",
+                   help="with --split-declarations: compile each split source before and after with MSVC 5.0 "
+                        "and refuse if its data layout changes")
+    p.add_argument("--allow-layout-change", action="store_true",
+                   help="with --check-layout: write the split even if the data layout changes")
     args = p.parse_args(argv)
     root = args.root.resolve()
     if args.survey:
@@ -1577,6 +2003,28 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if not args.unit:
         p.error("give a unit or --survey")
+    if args.split_declarations:
+        try:
+            plan = plan_relocation(args.unit, root, stem=args.stem, split=True)
+        except Refused as e:
+            print(f"refused: {e.unit}:", file=sys.stderr)
+            for r in e.reasons:
+                print(f"  - {r}", file=sys.stderr)
+            return 2
+        layout = check_split_layout(plan, root) if args.check_layout and plan.splits else None
+        report = render_split_report(plan, layout)
+        sys.stdout.write(report)
+        if args.report:
+            args.report.write_text(report, encoding="utf-8")
+        if layout and not all(same for _, same, _ in layout) and not args.allow_layout_change:
+            print("\nrefused: a split changes the data layout (pass --allow-layout-change to write it anyway)",
+                  file=sys.stderr)
+            return 3
+        if plan.splits and not args.dry_run:
+            print("\nWrote: " + ", ".join(write(plan, root)))
+        elif plan.splits:
+            print("\nWould write: " + ", ".join(sorted(plan.files)))
+        return 0
     footprint = None
     if not args.no_footprint:
         footprint = cf.compute_footprint(args.unit, root, stem=args.stem, with_data=False)

@@ -135,6 +135,49 @@ generated and refuses if:
 A second run finds the unit relocated and does nothing. A half-done state
 (the unit listed, but annotations still elsewhere) is refused.
 
+**Overloads, splits and anonymous namespaces** (#485).
+- **Overloads.** A name with several function definitions in one file is
+  keyed by its parameter types. An annotated overload moves, an
+  unannotated one stays, and a use of the name counts as a use of every
+  overload.
+- **Several declarators, or a type and a variable, in one declaration.**
+  When all the names move together, the declaration moves verbatim. When
+  they would go different ways, or one has to be shared, the declaration
+  must be split. That is a source change, so the relocation refuses and
+  names the step:
+
+  ```sh
+  python3 tools/relocate_unit.py GAME-005 --split-declarations --check-layout   # rewrite, check, write
+  git commit -m "Split ... for the GAME-005 relocation"                       # its own commit
+  python3 tools/relocate_unit.py GAME-005                                       # then the relocation
+  ```
+
+  The split step only rewrites the declarations the relocation needs split:
+  - `static int a = 0, b = 0;` becomes one declaration per name;
+  - `static struct T {…} v[3];` becomes `struct T {…};` and
+    `static struct T v[3];`; an untagged type is refused.
+
+  Each split is recorded in `docs/coverage/relocations/<unit>-splits.csv`,
+  with hashes before and after, and the result is re-scanned for one name
+  per declaration and unchanged annotations. `--check-layout` compiles each
+  split source before and after with MSVC 5.0, using `match_function.py`'s
+  compile commands, and compares every data symbol's section, offset and
+  order and every data section's size. Symbol order is compared because
+  common allocation follows it (finding 525). A changed layout is refused
+  unless you pass `--allow-layout-change`.
+- **Anonymous-namespace items shared across files.** This mirrors the static
+  rule. Such an item leaves its anonymous namespace, gaining external
+  linkage, and is declared in the private header, in its outer namespace if
+  it has one.
+  - A staying item gets the anonymous block closed before it and reopened
+    after it, so source order is kept, and blocks left empty are dropped.
+  - A moving item lands in the unit file outside any anonymous block.
+  - A file-local type or macro the header needs moves to the header in the
+    outer namespace.
+
+  Each change is recorded ("left the anonymous namespace") and covered by
+  the hash and container checks.
+
 **Refusals.** The tool refuses, with the file and line, rather than guess. It
 refuses:
 - definitions inside `#if` blocks, except a group whose branches each hold
@@ -143,11 +186,12 @@ refuses:
 - functions defined in headers;
 - out-of-line class members (`T C::f() {}` where `C` is not a namespace),
   qualifications with several levels, and macro-built definitions;
-- nested namespaces or a namespace inside an `extern "C"` block;
-- a type and a variable defined in one declaration, when both sides need it;
-- statics shared from an anonymous namespace;
+- nested named namespaces or a namespace inside an `extern "C"` block;
+- an untagged type defined together with a variable, when it has to be
+  split;
 - shared `inline` functions;
-- shared multi-declarator declarations;
+- a declaration that needs splitting, unless you run `--split-declarations`
+  first (below);
 - macros that are `#undef`'d or redefined;
 - two items on one line;
 - name clashes between the moved files or with another file;
@@ -159,7 +203,7 @@ The relocator adds each new C++ source to the literal `game_sources` or
 `gods98_sources` Meson array, which the native parity check reads.
 
 `--survey` tries every unrelocated unit and tabulates the blocking constructs
-(findings 523 and 530).
+(findings 523, 530 and 537).
 
 The scanner is `cxx_items.py`: a comment- and literal-aware top-level item
 splitter (stdlib only), not a C++ parser. Tests: `tools/tests/test_relocate_unit.py`
