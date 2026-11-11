@@ -41,6 +41,8 @@
 #include "game/bezier.h"
 #include "game/port_loop_ports.hpp"
 #include "gods98/g98_029.h"
+#include "gods98/heap.hpp"
+#include "gods98/g98_026.h"
 
 int main(void)
 {
