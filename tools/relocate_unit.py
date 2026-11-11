@@ -948,9 +948,11 @@ def _wiring(plan: Plan, root: Path) -> dict[str, str]:
         mt = meson.read_text(encoding="utf-8")
         name = Path(plan.target).name
         if f"'{name}'" not in mt:
-            m = re.search(r"static_library\(\s*'%s'\s*,[ \t]*\n" % plan.library, mt)
+            # The native parity check reads these literal arrays, which are
+            # passed to the target; adding a positional target source bypasses it.
+            m = re.search(r"^%s_sources\s*=\s*\[\s*\n" % plan.library, mt, re.M)
             if not m:
-                plan.notes.append(f"{meson.relative_to(root)}: no static_library('{plan.library}', ...) list; "
+                plan.notes.append(f"{meson.relative_to(root)}: no {plan.library}_sources list; "
                                   "add the source by hand")
             else:
                 mt = mt[:m.end()] + f"  '{name}',\n" + mt[m.end():]

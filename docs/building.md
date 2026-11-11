@@ -182,12 +182,21 @@ prints the similarity, the baseline delta and a diff (`JSON=1` for JSON).
 See [`tools/README.md`](../tools/README.md#match_functionpy--single-function-match-loop)
 for options, timings and how its scores relate to a full report.
 
-## Legacy build notes
+## Meson build
 
-The root Meson build remains in the repository. The
-[implementation notes](implementation.md) preserve its subsystem-specific
-commands and historical test results. CMake through `make` is the current
-entry point.
+The native Meson build also needs SDL3 development files, pkg-config, and
+bootstrapped miniwin. Run its tests from the build directory via Meson:
+
+```sh
+tools/setup-miniwin.sh
+meson setup builddir-meson
+meson compile -C builddir-meson
+meson test -C builddir-meson --print-errorlogs
+```
+
+Use `-Dtest_wads_dir=/path/to/game` at setup for real-data probes, and
+`-Dmovies=auto|enabled|disabled` to control movie detection. CMake through
+`make` remains the current primary entry point.
 
 ### Whole-binary progress
 

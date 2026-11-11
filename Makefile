@@ -112,6 +112,8 @@ relocate-unit:
 # validation tests, which are skipped without it).
 tools-test:
 	python3 tools/link_order.py check
+	python3 tools/meson_source_parity.py
+	python3 -m unittest discover -s tools/tests -p 'test_meson_source_parity.py'
 	python3 -m unittest discover -s tools -p 'test_convert_unit.py'
 	python3 -m unittest discover -s tools/tests -p 'test_msvc_permuter.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_cohort.py'

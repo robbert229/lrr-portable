@@ -11,3 +11,5 @@ build/
 /.reprobit-state/
 /.reprobit-transactions/
 reccmp-build.yml
+
+/builddir-meson/

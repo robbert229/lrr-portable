@@ -35,7 +35,10 @@ jobs:
           submodules: false
 
       - name: Check link order
-        run: python3 tools/link_order.py check
+        run: |
+          python3 tools/link_order.py check
+          python3 tools/meson_source_parity.py
+          python3 -m unittest discover -s tools/tests -p 'test_meson_source_parity.py'
 
       - name: Install build tools
         run: |

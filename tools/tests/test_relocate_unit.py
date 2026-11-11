@@ -51,10 +51,11 @@ lrr_link(tail   -        program       main.cpp)
 # Legacy files whose functions lie in the CRT range
 lrr_link(legacy 00491450 gods98        crt/crt.cpp)
 """
-MESON = """game_lib = static_library('game',
+MESON = """game_sources = [
   'mixed.cpp',
   'other.cpp',
-  install : false)
+]
+game_lib = static_library('game', game_sources, install : false)
 """
 HEADER = """#ifndef MIXED_HPP
 #define MIXED_HPP
@@ -302,7 +303,11 @@ class RelocateTest(unittest.TestCase):
         # mixed.cpp's lower median moves from Alpha's 00401040 to Beta's 00401100.
         self.assertEqual((entries[1].key, entries[1].source), ("00401100", "game/mixed.cpp"))
         self.assertEqual(lo.check(self.root), [])
-        self.assertIn("'alpha.cpp',", self.fx.read("src/game/meson.build"))
+        import meson_source_parity
+        sources = meson_source_parity.meson_array(self.fx.read("src/game/meson.build"), "game_sources")
+        self.assertEqual(sources, ["alpha.cpp", "mixed.cpp", "other.cpp"])
+        self.assertEqual({"src/" + e.source for e in entries if e.library == "game"},
+                         {"src/game/" + source for source in sources})
         tu = self.fx.read("docs/coverage/translation-units.csv")
         self.assertIn("00401000,AlphaFirst,0,GAME-001,Alpha.c,game,high,bss,src/game/alpha.cpp", tu)
         self.assertIn("00401100,BetaOne,1,GAME-002,Beta.c,game,high,bss,src/game/mixed.cpp", tu)
