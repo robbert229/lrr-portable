@@ -21,7 +21,7 @@ later with `convert_unit.py`.
 ```sh
 python3 tools/relocate_unit.py GAME-001 --dry-run     # plan, report, write nothing
 python3 tools/relocate_unit.py GAME-001               # relocate Advisor.c into src/game/advisor.cpp
-python3 tools/relocate_unit.py G98-013 --stem input_unit
+python3 tools/relocate_unit.py GAME-007 --stem placement   # unnamed units need a stem
 python3 tools/relocate_unit.py --survey               # what blocks each unrelocated unit
 make relocate-unit UNIT=GAME-001 RELOCATE_ARGS=--dry-run
 ```
@@ -30,12 +30,38 @@ make relocate-unit UNIT=GAME-001 RELOCATE_ARGS=--dry-run
 - The unit's functions are the annotations in the unit's `.text` range. They
   may sit in several legacy files.
 - The owned globals are the `GLOBAL` annotations in the unit's data ranges
-  (`translation-unit-ranges.csv`).
+  (`translation-unit-ranges.csv`). A range ends at its last item's start.
+  The few bytes of slack after it count only when no other unit's range
+  holds the address, so a unit never claims its neighbour's first item
+  (finding 527).
 - The file-static closure moves too: static helpers, static variables,
   forward declarations, file-local types and macros that only the moved code
   uses.
-- Unmarked code with external linkage stays where it is.
+- Unmarked code with external linkage stays where it is. So does an item
+  annotated for another unit, even if only moved code uses it.
 - Each item keeps its leading comments.
+
+**Named namespaces** (#471). A member of `namespace X { }` moves verbatim
+into a reopened `namespace X { }` in the unit file. Consecutive members share
+one block, and order is unchanged. An out-of-line `T X::f() {}` definition
+moves as written. Names are scoped (`n`, `X::n`) and resolve as C++ looks
+them up:
+- a qualified `X::n` resolves exactly;
+- a bare `n` inside `X` resolves to `X::n` before the global `n`;
+- a bare `n` at global scope resolves through the file's `using` items.
+
+Declarations the private header needs for namespace members go inside
+`namespace X { }` there too. Forward declarations in the unit file are
+written the same way. A file-scope `using namespace X;` or `using X::n;`
+that moved global-scope code depends on is copied after the includes, and
+stays in the source as well. A namespace block that the relocation empties
+is dropped from the source when `X` stays declared: by another block in the
+file, or by an included header.
+
+**Stems.** The stem defaults to the unit name in lower case. Unnamed units
+need `--stem`. When the default names an existing file (`input.h`, or the
+legacy `frontend.cpp`), the tool uses `<stem>_unit` and says so;
+`--stem` overrides it.
 
 **The new file's layout.**
 1. The includes of the source with the most moved functions, in order; then
@@ -55,7 +81,13 @@ code left behind both need something:
 - A static gets external linkage: `static` is removed, and the static is
   declared in a private `<file>_shared.hpp` next to the source file.
 - A file-local type or macro moves into that header.
-- Both files include the header after their own includes.
+- The unit file includes the private header after its own includes. The
+  source includes it after the last `#include` that comes before the
+  source's first use of one of the header's names, so it is never later
+  than that use. A late include further down the file does not count
+  (finding 527). The tool re-scans the source and refuses if code before
+  the include uses the header's names. An existing private include moves
+  up when a later relocation's names are used earlier.
 - Headers that other files include are never edited (finding 506's
   declaration-count drift).
 - A second relocation from the same file appends to the existing private
@@ -64,7 +96,7 @@ code left behind both need something:
 **Wiring.** The tool also updates:
 - the link-order list (a `unit` entry at the unit's original position,
   `link_order.insert_unit`);
-- the Meson `static_library` source list;
+- the Meson `game_sources` or `gods98_sources` array;
 - the `current_source` column of `translation-units.csv`.
 
 Each source it edits keeps the key `link_order.py check` requires, the lower
@@ -90,8 +122,10 @@ refuses:
   one whole definition of the same function (the naked-`__asm`/C pairs);
 - directives that split a declaration;
 - functions defined in headers;
-- qualified (`ns::f`) or macro-built definitions;
-- named namespaces;
+- out-of-line class members (`T C::f() {}` where `C` is not a namespace),
+  qualifications with several levels, and macro-built definitions;
+- nested namespaces or a namespace inside an `extern "C"` block;
+- a type and a variable defined in one declaration, when both sides need it;
 - statics shared from an anonymous namespace;
 - shared `inline` functions;
 - shared multi-declarator declarations;
@@ -99,13 +133,14 @@ refuses:
 - two items on one line;
 - name clashes between the moved files or with another file;
 - backend-only sources;
-- stems that clash with an existing file (pass `--stem`).
+- a `--stem` that clashes with an existing file;
+- a needed `using` whose namespace no included header declares.
 
 The relocator adds each new C++ source to the literal `game_sources` or
 `gods98_sources` Meson array, which the native parity check reads.
 
 `--survey` tries every unrelocated unit and tabulates the blocking constructs
-(finding 523).
+(findings 523 and 530).
 
 The scanner is `cxx_items.py`: a comment- and literal-aware top-level item
 splitter (stdlib only), not a C++ parser. Tests: `tools/tests/test_relocate_unit.py`
