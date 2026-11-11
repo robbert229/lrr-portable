@@ -38,3 +38,21 @@ SHA-256:
 
 - Original: `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`
 - Rebuilt: `64683af52eee251151f1083f2b511624f0caeabe3d4f40908d7c3aeceff7dfd5`
+
+## Whole-binary progress — 2026-11-10
+
+The non-incremental matching build at `6db0b3c7` has **33 bytes** in
+identical runs of at least 16 bytes at their original `.text` addresses
+(**0.01 percentage points** above the shifted-original baseline). Raw
+agreement and the chance estimate both round to **2.83%**; no fully
+identical functions sit at their original addresses. Full-scope function order
+has **907 adjacent inversions** and **870,576 inverted pairs**; game-only has
+**848** and **856,666** respectively. Raw exact-function coverage is
+**37,855 / 642,549 bytes (5.89%)**, and mean raw accuracy is **49.37%**
+game-only and **53.74%** full.
+
+The [generated report](binary-progress.json) records chance-adjusted section
+metrics, sizes, header differences and the input hash. See the
+[tool documentation](../../tools/README.md#whole-binary-progress) for
+thresholds and definitions. These figures use a separate non-incremental link
+and differ from the incremental-link snapshot above.

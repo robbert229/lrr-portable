@@ -362,3 +362,57 @@ Notes:
 * `unwad.py` is the earlier extract-only script from the finding-01 work;
   `rrwad.py` supersedes it (it also converts `foo\bar.bmp` names into real
   directories instead of literal backslash files).
+
+## Whole-binary progress
+
+`make binary-progress` builds a separate non-incremental matching executable
+in `build-binary-progress/`, runs Reccmp, prints the comparison as JSON and
+writes `docs/coverage/binary-progress.json`. It needs the matching-build
+requirements plus Python packages `pefile` and `capstone` (used by
+`translation_units.py`). Set `BINARY_PROGRESS_PYTHON` to a Python with those
+packages and `BINARY_PROGRESS_BUILD_DIR` to change the build directory.
+The linker emits a separate PDB for Reccmp; the target removes the PE debug
+directory and file-only debug overlay before comparing the executable.
+The ordinary `make reccmp-check` remains a separate gate.
+
+Section comparisons align each named section at its start and use the
+original's virtual size as denominator (missing candidate bytes count as
+unequal); raw-file alignment padding is excluded. Imports and resources use
+the PE data-directory spans: imports are the descriptor table, not all names
+and thunks. The original-address `.text` comparison aligns by virtual address.
+
+For every region the report also counts identical bytes in contiguous runs of
+at least 16 bytes. Sixteen suppresses isolated common x86 bytes while still
+capturing short sequences; it is a threshold, not proof of semantic identity.
+Chance is the median of five comparisons with the original circularly shifted
+by 1/11 through 5/11 of its length (integer byte offsets). Raw and run excess
+are percentage-point differences from their respective chance rates; negative
+values are possible. Long zero runs can still inflate data-section scores, so
+the chance estimate is also reported for those regions. The report counts
+functions with a raw Reccmp score of exactly 100% that also start at the same
+address and whose recovered original instruction span is byte-identical there.
+
+For both full and game-only scopes, adjacent inversions count consecutive
+mapped functions in original order whose rebuilt addresses go backwards;
+pair inversions count all reversed pairs, with ties excluded. The issue's 874
+is an adjacent-inversion baseline from an earlier incremental build, so use
+`function_order_inversions.full.adjacent` for that measure (the separate
+non-incremental link can change it). Exact-function coverage sums reachable
+instruction spans recovered by `translation_units.py` for raw Reccmp 100%
+matches, divided by original `.text` virtual size. It is not a byte-for-byte
+comparison of those functions. Accuracy uses raw `matching` scores, rounded
+per function to two decimal percent before averaging, matching
+`match_baseline.py`; effective matches are not promoted to 100%. Header
+changes are numeric values (entry point is an RVA).
+
+`python3 tools/binary_progress_hash.py` prints a commit-independent SHA-256
+using only the standard library. It selects Git-tracked matching-build sources
+from CMake's source declarations, excludes native-only and test-only sources,
+and conservatively includes non-native project headers. It also hashes the
+build configuration, metric code and its coverage inputs. Untracked and ignored
+files are excluded. When Git is unavailable, the explicit
+`tools/binary_progress_inputs.txt` list is used; update it when the selected
+tracked inputs change (the tooling test checks it). The report's schema version
+is defined in the hashed metric script. The input hash excludes generated
+outputs, reference binary, build artifacts and commit metadata. Run tests with
+`make tools-test` (the PE fixture test needs `pefile`).

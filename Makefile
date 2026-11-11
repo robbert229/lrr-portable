@@ -11,6 +11,8 @@ MOVIES ?= auto
 RECCMP_BUILD_DIR ?= $(CURDIR)/build-reccmp
 RECCMP_REFERENCE_DIR ?= $(CURDIR)/reference
 RECCMP_LEDGER ?= docs/coverage/ledger.csv
+BINARY_PROGRESS_BUILD_DIR ?= $(CURDIR)/build-binary-progress
+BINARY_PROGRESS_PYTHON ?= python3
 RECCMP_BASELINE ?= docs/coverage/match-baseline.txt
 RECCMP_WINE_BIN ?=
 RECCMP_PROTON_BIN ?= $(RR_A2_PROTON)
@@ -18,7 +20,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit tools-test
+.PHONY: binary-progress all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit tools-test
 
 all: build
 
@@ -30,6 +32,14 @@ setup:
 
 build: setup
 	cmake --build "$(BUILD_DIR)" --target program
+
+# Build and compare the separate non-incremental matching executable.
+binary-progress:
+	LRR_BINARY_PROGRESS=ON RECCMP_BUILD_DIR="$(BINARY_PROGRESS_BUILD_DIR)" \
+	  RECCMP_WINE_BIN="$(RECCMP_WINE_BIN)" RECCMP_RECCMP="$(RECCMP_RECCMP)" \
+	  REPROBIT_MSVC_5_0_RTM_ROOT="$(REPROBIT_MSVC_5_0_RTM_ROOT)" ./tools/reccmp.sh
+	$(BINARY_PROGRESS_PYTHON) tools/binary_progress.py --rebuilt "$(BINARY_PROGRESS_BUILD_DIR)/LegoRR.exe" \
+	  --report-dir "$(BINARY_PROGRESS_BUILD_DIR)/reccmp-report"
 
 # Build the MSVC 5.0 candidate with a linker PDB, then generate the Reccmp
 # HTML and JSON reports. Override the Wine/tool paths when they are not on PATH.
@@ -84,6 +94,7 @@ convert-unit:
 # validation tests, which are skipped without it).
 tools-test:
 	python3 -m unittest discover -s tools -p 'test_convert_unit.py'
+	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
 
 # Check match_function.py against an existing full report from the same tree.
 match-function-parity:

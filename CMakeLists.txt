@@ -74,6 +74,9 @@ if(LRR_CLASSIC_MSVC5)
     # Reccmp reads the linker PDB, so retain CMake's /PDB:<TARGET_PDB> rule
     # and add /DEBUG explicitly after filtering newer CMake/MSVC flags above.
     string(APPEND CMAKE_CXX_LINK_EXECUTABLE " /DEBUG")
+    if(LRR_BINARY_PROGRESS)
+      string(APPEND CMAKE_CXX_LINK_EXECUTABLE " /INCREMENTAL:NO")
+    endif()
   else()
     # ReproBit's current evidence model treats PDBs as compile-stage
     # artifacts, so omit the link PDB and its /DEBUG switch for that profile.
