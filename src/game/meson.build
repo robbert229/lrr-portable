@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'upgrade_levels.cpp',
   'tooltip.cpp',
   'text.cpp',
   'record_chains.cpp',

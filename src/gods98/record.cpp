@@ -248,15 +248,6 @@ uint32_t record_field14_get(const void* record)
 }
 #endif
 
-/* RecordFieldD8EqualsOne (FUN_0046c3d0): int == 1, not "nonzero". */
-// FUNCTION: LEGORR 0x0046c3d0
-int record_field_d8_equals_one(const void* record)
-{
-    int32_t v;
-    __builtin_memcpy(&v, (const char*)record + 0xd8, sizeof(v));
-    return v == 1;
-}
-
 /* ReadIndexedPairSlotDword (FUN_00471a20): base + i*8 + j*4, exactly as
  * the corpus computes it. */
 // FUNCTION: LEGORR 0x00471a20

@@ -1593,10 +1593,10 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 0046c110,AnimationResourceAdvanceTime,45,GAME-046,ToolTip.c,game,high,rdata,src/game/tooltip.cpp
 0046c130,SceneObjectSetAnimationWithFallback,45,GAME-046,ToolTip.c,game,medium,boundary:GAME-047,src/game/tooltip.cpp
 0046c160,UpgradeLevelTableParse,46,GAME-047,,game,high,string,
-0046c340,IndexedRecordListRebuildForValue,46,GAME-047,,game,low,boundary:GAME-048,src/gods98/resource.cpp
-0046c3d0,RecordFieldD8EqualsOne,46,GAME-047,,game,low,boundary:GAME-048,src/gods98/record.cpp
-0046c3f0,SceneActivityPairedChannelUpdate,46,GAME-047,,game,low,boundary:GAME-048,src/gods98/resource.cpp
-0046c510,SceneChannelSlotsRebuild,46,GAME-047,,game,low,boundary:GAME-048,src/gods98/resource.cpp
+0046c340,IndexedRecordListRebuildForValue,46,GAME-047,,game,low,boundary:GAME-048,src/game/upgrade_levels.cpp
+0046c3d0,RecordFieldD8EqualsOne,46,GAME-047,,game,low,boundary:GAME-048,src/game/upgrade_levels.cpp
+0046c3f0,SceneActivityPairedChannelUpdate,46,GAME-047,,game,low,boundary:GAME-048,src/game/upgrade_levels.cpp
+0046c510,SceneChannelSlotsRebuild,46,GAME-047,,game,low,boundary:GAME-048,src/game/upgrade_levels.cpp
 0046c6f0,VehicleTypeDefinitionParse,47,GAME-048,,game,high,rdata;string,
 0046ce10,EntityPayloadType1Release,47,GAME-048,,game,high,bracketed,src/gods98/resource.cpp
 0046ced0,PairedResourceStateSet,47,GAME-048,,game,high,bracketed,src/gods98/resource.cpp
