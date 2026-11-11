@@ -85,10 +85,10 @@ fi
 
 report_dir="${build_dir}/reccmp-report"
 mkdir -p "${report_dir}"
-"${reccmp_bin}" --target LEGORR \
+python3 "${project_root}/tools/reccmp_full_diff.py" "${reccmp_bin}" --target LEGORR \
   --html "${report_dir}/index.html" \
   --json "${report_dir}/results.json"
-"${reccmp_bin}" --target LEGORR --nolib \
+python3 "${project_root}/tools/reccmp_full_diff.py" "${reccmp_bin}" --target LEGORR --nolib \
   --html "${report_dir}/game-only.html" \
   --json "${report_dir}/game-only.json"
 python3 "${project_root}/tools/clean_reccmp_report_names.py" "${report_dir}"

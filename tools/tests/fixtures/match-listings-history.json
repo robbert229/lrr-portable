@@ -1,0 +1,143 @@
+[
+  {
+    "pr": "427",
+    "address": "004388b0",
+    "base": "c3888e55",
+    "head": "623ce359",
+    "base_count": 152,
+    "head_count": 152,
+    "source_changed": false,
+    "classification": "drift-review",
+    "before": [
+      "mov ebx, dword ptr [esi + 0x2d4]"
+    ],
+    "after": [
+      "mov ebx, dword ptr [esi + 0x2d8]"
+    ]
+  },
+  {
+    "pr": "427",
+    "address": "00446610",
+    "base": "c3888e55",
+    "head": "623ce359",
+    "base_count": 189,
+    "head_count": 11,
+    "source_changed": true,
+    "classification": "source-changed",
+    "before": [
+      "sub esp, 0x40"
+    ],
+    "after": [
+      "mov eax, dword ptr [esp + 0x10]",
+      "mov ecx, dword ptr [esp + 0xc]",
+      "mov edx, dword ptr [esp + 8]",
+      "push eax",
+      "mov eax, dword ptr [esp + 8]"
+    ]
+  },
+  {
+    "pr": "427",
+    "address": "0044e0c0",
+    "base": "c3888e55",
+    "head": "623ce359",
+    "base_count": 393,
+    "head_count": 395,
+    "source_changed": false,
+    "classification": "drift-review",
+    "before": [
+      "xor ecx, ecx",
+      "mov cl, byte ptr [ebp + 0x42]"
+    ],
+    "after": [
+      "mov ecx, dword ptr [esp + 0x54]"
+    ]
+  },
+  {
+    "pr": "427",
+    "address": "0044f870",
+    "base": "c3888e55",
+    "head": "623ce359",
+    "base_count": 75,
+    "head_count": 69,
+    "source_changed": false,
+    "classification": "drift-review",
+    "before": [
+      "fxch st(1)",
+      "fld st(1)",
+      "fxch st(1)",
+      "fmul st(2)"
+    ],
+    "after": [
+      "fld st(0)",
+      "fmul dword ptr [esi]"
+    ]
+  },
+  {
+    "pr": "427",
+    "address": "004512d0",
+    "base": "c3888e55",
+    "head": "623ce359",
+    "base_count": 99,
+    "head_count": 100,
+    "source_changed": false,
+    "classification": "drift-review",
+    "before": [
+      "fadd dword ptr [ecx + 0x10]"
+    ],
+    "after": [
+      "fadd dword ptr [ecx + 4]"
+    ]
+  },
+  {
+    "pr": "427",
+    "address": "004882e0",
+    "base": "c3888e55",
+    "head": "623ce359",
+    "base_count": 296,
+    "head_count": 293,
+    "source_changed": false,
+    "classification": "drift-review",
+    "before": [
+      "fld dword ptr [ebp]"
+    ],
+    "after": [
+      "fld dword ptr [esp + 0x38]"
+    ]
+  },
+  {
+    "pr": "432",
+    "address": "004512d0",
+    "base": "623ce359",
+    "head": "99e4f624",
+    "base_count": 100,
+    "head_count": 99,
+    "source_changed": false,
+    "classification": "drift-review",
+    "before": [
+      "fld dword ptr [ecx + 0xc]",
+      "fadd dword ptr [ecx]"
+    ],
+    "after": [
+      "fld dword ptr [ecx]",
+      "fadd dword ptr [ecx + 0xc]"
+    ]
+  },
+  {
+    "pr": "431",
+    "address": "004882e0",
+    "base": "99e4f624",
+    "head": "adb06e20",
+    "base_count": 293,
+    "head_count": 294,
+    "source_changed": false,
+    "classification": "drift-review",
+    "before": [
+      "fxch st(5)",
+      "faddp st(1)"
+    ],
+    "after": [
+      "fxch st(1)",
+      "faddp st(5)"
+    ]
+  }
+]

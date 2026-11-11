@@ -126,6 +126,7 @@ def main():
     args = parser.parse_args()
     result = report(args.original, args.rebuilt, args.report_dir)
     result['baseline_sha256'] = hashlib.sha256((ROOT / 'docs/coverage/match-baseline.txt').read_bytes()).hexdigest()
+    result['listing_digests_sha256'] = hashlib.sha256((ROOT / 'docs/coverage/match-listing-digests.txt').read_bytes()).hexdigest()
     output = json.dumps(result, indent=2, sort_keys=True) + '\n'
     args.output.write_text(output, encoding='utf-8')
     print(output, end='')

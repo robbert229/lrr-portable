@@ -10,7 +10,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = 'tools/binary_progress_inputs.txt'
 FIXED = ('CMakeLists.txt', 'cross/msvc5-toolchain.cmake', 'tools/reccmp.sh',
-         'tools/clean_reccmp_report_names.py', 'tools/binary_progress.py',
+         'tools/clean_reccmp_report_names.py', 'tools/reccmp_full_diff.py', 'tools/match_listings.py',
+         'tools/match_baseline.py', 'tools/binary_progress.py',
          'tools/binary_progress_hash.py', 'tools/translation_units.py',
          'tools/strip_pe_debug.py', 'docs/decompiles/full/manifest.csv',
          'docs/coverage/ledger.csv', 'docs/coverage/function-areas.csv', MANIFEST)

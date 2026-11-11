@@ -40,10 +40,10 @@ class ProgressTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             for _, filename in match_baseline.SCOPES:
-                (root / filename).write_text(json.dumps([{'address': '0x401000', 'matching': 0.5, 'name': 'test'}]))
+                (root / filename).write_text(json.dumps([{'address': '0x401000', 'matching': 0.5, 'name': 'test', 'diff': [['@@', [{'recomp': [['0x401000', 'ret']], 'orig': []}]]]}]))
             path = root / 'baseline.txt'
             with patch.object(match_baseline, 'input_hash', return_value='a' * 64):
-                self.assertEqual(match_baseline.command_update(SimpleNamespace(report_dir=str(root), baseline=str(path))), 0)
+                self.assertEqual(match_baseline.command_update(SimpleNamespace(report_dir=str(root), baseline=str(path), listings=str(root / 'listings'))), 0)
             self.assertTrue(path.read_text().startswith('# input_sha256: ' + 'a' * 64 + '\n'))
             self.assertEqual(match_baseline.load_baseline(path)['full'][0x401000], ('50.00', 'test'))
 
@@ -53,11 +53,14 @@ class ProgressTest(unittest.TestCase):
             (head / progress.PROGRESS).parent.mkdir(parents=True)
             fingerprint = 'a' * 64
             baseline = ('# input_sha256: ' + fingerprint + '\nscore 50.00\n').encode()
+            listings = ('# input_sha256: ' + fingerprint + '\n').encode()
+            (head / progress.LISTINGS).write_bytes(listings)
             def write(b, fingerprint_value=fingerprint, digest=None):
                 (head / progress.BASELINE).write_bytes(b)
                 (head / progress.PROGRESS).write_text(json.dumps({
                     'schema_version': 2, 'input_sha256': fingerprint_value,
-                    'baseline_sha256': digest or hashlib.sha256(baseline).hexdigest()}))
+                    'baseline_sha256': digest or hashlib.sha256(baseline).hexdigest(),
+                    'listing_digests_sha256': hashlib.sha256(listings).hexdigest()}))
             with patch.object(progress, 'input_hash', return_value=fingerprint):
                 write(baseline)
                 progress.check(head, head)
@@ -67,6 +70,11 @@ class ProgressTest(unittest.TestCase):
                     write(bad)
                     with self.assertRaisesRegex(ValueError, 'never hand-merge'):
                         progress.check(head, head)
+                (head / progress.LISTINGS).write_bytes(listings + b'tampered\n')
+                write(baseline)
+                with self.assertRaisesRegex(ValueError, 'never hand-merge'):
+                    progress.check(head, head)
+                (head / progress.LISTINGS).write_bytes(listings)
                 write(baseline, fingerprint_value='b' * 64)
                 with self.assertRaisesRegex(ValueError, 'never hand-merge'):
                     progress.check(head, head)

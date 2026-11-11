@@ -27,6 +27,7 @@ import json
 import sys
 from pathlib import Path
 from binary_progress_hash import input_hash
+import match_listings
 
 SCOPES = (
     ("game-only", "game-only.json"),
@@ -167,9 +168,20 @@ def command_check(args) -> int:
         print("error: %s" % error, file=sys.stderr)
         return 2
 
+    drops = any(compare(baseline[scope], current[scope])[0] for scope, _ in SCOPES)
+    old_listings = new_listings = old_source = new_source = None
+    if drops:
+        try:
+            old_listings = (match_listings.report_listings(args.base_report) if args.base_report
+                            else match_listings.load(args.listings))
+            new_listings = match_listings.report_listings(args.report_dir)
+            old_source = match_listings.source_index(args.base_ref)
+            new_source = match_listings.source_index()
+        except (OSError, ValueError, KeyError) as error:
+            print('error loading classification evidence: %s' % error, file=sys.stderr)
     failed = False
     sections = (
-        ("REGRESSED (below baseline)", 0),
+        ("DROPPED (below baseline)", 0),
         ("improved", 1),
         ("newly mapped (not in baseline)", 2),
         ("newly unmapped (absent from report)", 3),
@@ -184,13 +196,26 @@ def command_check(args) -> int:
             if items:
                 print(" %s: %d" % (title, len(items)))
                 for item in items:
-                    print(show(item))
+                    line = show(item)
+                    if index == 0:
+                        address = item[0]
+                        before = old_listings.get(scope, {}).get(address) if old_listings else None
+                        after = new_listings.get(scope, {}).get(address) if new_listings else None
+                        if before and after:
+                            a = old_source.get(address) if old_source else None
+                            b = new_source.get(address) if new_source else None
+                            changed = None if a is None or b is None else a != b
+                            kind, delta = match_listings.classify(before, after, changed)
+                            line += '  [%s; instructions %+d%s]' % (kind, delta, ' OWNER REVIEW' if delta or kind in ('source-changed', 'source-unknown', 'drift-review') else '')
+                        else:
+                            line += '  [classification unavailable; instruction delta unknown]'
+                    print(line)
         if results[0]:
             failed = True
 
     if failed:
-        print("\nFAIL: functions fell below the match baseline. Fix the "
-              "regression; if the drop is intended, refresh the baseline with "
+        print("\nFAIL: functions fell below the match baseline. Review the "
+              "drops; if a drop is intended, refresh the baseline with "
               "`make reccmp-baseline-update` in the same change.",
               file=sys.stderr)
         return 1
@@ -202,12 +227,18 @@ def command_check(args) -> int:
 def command_update(args) -> int:
     try:
         current = load_reports(Path(args.report_dir))
+        listings = match_listings.report_listings(args.report_dir)
     except (OSError, ValueError, KeyError) as error:
         print("error: %s" % error, file=sys.stderr)
         return 2
     baseline_path = Path(args.baseline)
     baseline_path.parent.mkdir(parents=True, exist_ok=True)
-    baseline_path.write_text("# input_sha256: %s\n" % input_hash() + render(current), encoding="utf-8", newline="\n")
+    digest = input_hash()
+    listing_path = Path(args.listings)
+    listing_path.parent.mkdir(parents=True, exist_ok=True)
+    listing_path.write_text(match_listings.render(listings, digest), encoding='utf-8', newline='\n')
+    baseline_path.write_text("# input_sha256: %s\n" % digest + render(current), encoding="utf-8", newline="\n")
+    print("Wrote %s" % listing_path)
     print("Wrote %s" % baseline_path)
     print(summarize(current))
     return 0
@@ -221,6 +252,10 @@ def main(argv=None) -> int:
         p.add_argument("--report-dir", default=DEFAULT_REPORT_DIR,
                        help="directory holding results.json and game-only.json")
         p.add_argument("--baseline", default=DEFAULT_BASELINE)
+        p.add_argument("--listings", default=match_listings.DEFAULT)
+        if name == 'check':
+            p.add_argument('--base-ref', default='origin/main')
+            p.add_argument('--base-report', help='compare against rebuilt listings in this report directory')
         p.set_defaults(func=handler)
     args = parser.parse_args(argv)
     return args.func(args)
