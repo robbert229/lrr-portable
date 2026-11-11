@@ -274,6 +274,17 @@ class WiringTest(unittest.TestCase):
         self.assertIn('#include "b.h"\n#include "gods98/view.hpp"\n#include "gods98/keys.h"\n\nint main', once)
         self.assertEqual(cu.wire_boundary_test(once, ["gods98/keys.h"]), once)
 
+    def test_relocation_private_headers_are_not_boundary_includes(self):
+        # A relocation can move another unit's prototype into a private
+        # <file>_shared.hpp (#446: util.cpp's random_float_range, a G98-007
+        # function). Only util.cpp includes that header.
+        from types import SimpleNamespace
+        fp = SimpleNamespace(new_files=["src/gods98/maths.c", "src/gods98/maths.h"],
+                             own_declaration_headers=["src/game/util_shared.hpp",
+                                                      "src/gods98/maths.c",
+                                                      "src/gods98/view.hpp"])
+        self.assertEqual(cu.boundary_test_headers(fp), ["src/gods98/view.hpp"])
+
 
 class RenderTest(unittest.TestCase):
     def test_comment_safety(self):

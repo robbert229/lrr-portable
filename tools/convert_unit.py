@@ -407,13 +407,20 @@ def build_scaffold(unit: str, root: Path = ROOT, stem: str | None = None,
                               data_items, literals, shared, mine, ends, stub_names, pseudo, binary),
         h_path: render_header(u, fp, stem, mine, stub_names, directory),
     }
-    own_hpp = [h for h in fp.own_declaration_headers
-               if h.endswith(".hpp") and h not in fp.new_files]
+    own_hpp = boundary_test_headers(fp)
     wiring = Wiring(u.unit_id, LIBRARIES[u.unit_kind], rel_include(c_path),
                     [rel_include(h) for h in own_hpp] + [rel_include(h_path)])
     patches = apply_wiring(wiring, root)
     return Scaffold(fp, files, patches, wiring, stub_names, g_start, g_end, struct_fields,
                     data_items, existing, literals, shared, warnings)
+
+
+def boundary_test_headers(fp) -> list[str]:
+    """The existing C++ headers that declare the unit's functions and that the
+    boundary test includes. A relocation's private ``<file>_shared.hpp``
+    (tools/relocate_unit.py) is left out: only its own source includes it."""
+    return [h for h in fp.own_declaration_headers
+            if h.endswith(".hpp") and h not in fp.new_files and not h.endswith("_shared.hpp")]
 
 
 def stem_given(stem: str, u: cf.UnitRanges) -> bool:
@@ -925,7 +932,7 @@ def compare_with_hand(sc: Scaffold, root: Path = ROOT, hand_c: str | None = None
     # Boundary-test entries: the tool's includes must be in the committed test.
     test = (root / BOUNDARY_TEST).read_text(encoding="utf-8")
     have = set(re.findall(r'#include "([^"]+)"', test))
-    own_hpp = [h for h in fp.own_declaration_headers if h.endswith(".hpp") and h not in fp.new_files]
+    own_hpp = boundary_test_headers(fp)
     want = [rel_include(h) for h in own_hpp] + [rel_include(fp.new_files[1])]
     missing = [i for i in want if i not in have]
     result["boundary_includes"] = {"tool": want, "missing_from_committed_test": missing}
