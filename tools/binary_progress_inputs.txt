@@ -119,6 +119,7 @@ src/gods98/input.cpp
 src/gods98/input.h
 src/gods98/input.hpp
 src/gods98/keys.c
+src/gods98/g98_024.h
 src/gods98/keys.h
 src/gods98/lwsc_scene.cpp
 src/gods98/lwsc_scene.hpp

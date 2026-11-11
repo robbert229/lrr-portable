@@ -1,4 +1,4 @@
-# input_sha256: d292fc6a5f05636f940478d1a38b1cff2e099473a5cca58b9c5a0148910f93ab
+# input_sha256: 2453fe23dc6e3bba4f41de9e54e89bbb56b64b66a3d46dc4cbabacf9de8fc8a0
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -1126,7 +1126,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 11.22 terrain_cell_normal_sample
+0x004512d0 10.31 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -2051,10 +2051,10 @@
 0x00489280 100.00 media_cd_audio_track_completion_poll
 0x00489330 100.00 media_cd_audio_device_open
 0x004893a0 100.00 media_cd_audio_stop_and_close
-0x004893f0 45.16 level_map_slots_reset
-0x00489410 81.48 level_map_slot_allocate
-0x00489460 63.16 level_map_slot_release
-0x004894a0 88.89 level_map_slot_get
+0x004893f0 87.50 level_map_slots_reset
+0x00489410 95.65 level_map_slot_allocate
+0x00489460 100.00 level_map_slot_release
+0x004894a0 100.00 level_map_slot_get
 0x004894c0 15.38 scene_material_create
 0x00489520 73.68 resource_tree_callback_context_create_for_enumerator
 0x004895c0 73.68 resource_tree_callback_context_create_for_resource
@@ -3256,7 +3256,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 11.22 terrain_cell_normal_sample
+0x004512d0 10.31 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -4181,10 +4181,10 @@
 0x00489280 100.00 media_cd_audio_track_completion_poll
 0x00489330 100.00 media_cd_audio_device_open
 0x004893a0 100.00 media_cd_audio_stop_and_close
-0x004893f0 45.16 level_map_slots_reset
-0x00489410 81.48 level_map_slot_allocate
-0x00489460 63.16 level_map_slot_release
-0x004894a0 88.89 level_map_slot_get
+0x004893f0 87.50 level_map_slots_reset
+0x00489410 95.65 level_map_slot_allocate
+0x00489460 100.00 level_map_slot_release
+0x004894a0 100.00 level_map_slot_get
 0x004894c0 15.38 scene_material_create
 0x00489520 73.68 resource_tree_callback_context_create_for_enumerator
 0x004895c0 73.68 resource_tree_callback_context_create_for_resource

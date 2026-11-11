@@ -36,6 +36,7 @@
 #include "platform/platform.h"
 #include "platform/window.h"
 #include "gods98/keys.h"
+#include "gods98/g98_024.h"
 
 int main(void)
 {
