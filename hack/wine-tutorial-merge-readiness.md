@@ -2,7 +2,7 @@
 
 The eight-tutorial parity goal is paused. This change contains implemented frontend and required owner/caller repairs; it does not claim complete tutorial parity. Moving has completed in discovery runs. Drilling still has a bounded Loose-rock progression blocker, and the other six tutorials lack end-to-end candidate acceptance. The detailed discovery ledger remains in [wine-tutorial-frontend-matrix.md](wine-tutorial-frontend-matrix.md).
 
-The integration is based on `origin/main` at `3cf227171effd923541b0b4da3be94d0507a4fab`. The previous branch and its seven commits were preserved. The three staged AG1 notes are unrelated and excluded from the integration change.
+The original integration was based on `origin/main` at `3cf227171effd923541b0b4da3be94d0507a4fab`. The report-conflict refresh rebases it onto `82a533a9c10826b4db081246adca46619e4a002b`; the current results are recorded below. The previous branch and its seven commits were preserved. The three staged AG1 notes are unrelated and excluded from the integration change.
 
 ## Source and regression preparation
 
@@ -45,7 +45,7 @@ The isolated final MSVC 5 build completes with `/ML /Zi /O2 /Ob1`. Its source-be
 
 The last active discovery process exited normally before source cleanup. All 258 afterstate rows were reviewed and restored. Controller verification and an independent comparison both reported zero differences for the reference and game-prefix roots. The canonical lock was independently reacquired and the journal/socket were absent. No merge-candidate game launch occurred. Existing production launch pins remain historical and must be reconciled before any future launch.
 
-## Matching tradeoff
+## Initial matching tradeoff
 
 An exact latest-main control was built with the same MSVC toolchain and report workflow. It passes the previous baseline, so the declines below belong to this integration rather than preexisting baseline drift. Full accuracy changes from **53.50% to 53.34%**; game-only accuracy changes from **49.11% to 48.95%**. There are 34 declines, 31 improvements and seven newly mapped addresses in each scope.
 
@@ -89,3 +89,9 @@ Following [the documented baseline workflow](../docs/building.md#match-baseline-
 | 0x484ba0 | `flic_packed_triplet_table_to_word_build_target` | 100.00% | 82.76% |
 | 0x485390 | `text_buffer_draw_wrapped` | 5.99% | 5.96% |
 | 0x48c820 | `parse_surf_chunk` | 6.94% | 6.34% |
+
+## Report-conflict refresh
+
+The branch was rebased onto main at `82a533a9c10826b4db081246adca46619e4a002b`. The only Git conflict was the generated matching baseline. Main's baseline was used provisionally, then regenerated from a fresh MSVC 5 `/ML /Zi /O2 /Ob1` build of the combined source. This preserves main's newer conversions instead of selecting stale score rows from either side. Main's new binary-progress input manifest was also regenerated to include `actor_scene.cpp`, `actor_scene.hpp` and `entity_motion_owner.cpp`.
+
+Current validation: all 31 native CTest tests pass. The expanded tooling suite runs 12 tests: 11 pass and the synthetic PE test skips because its optional pefile/capstone dependency pair is unavailable; the six integration-owned tests still pass. `make reccmp-report` and the regenerated `make reccmp-compare` pass. All 215 recorded source/build inputs match before and after the build. Full report accuracy is 53.52%; game-only is 49.15%. Relative to the latest main baseline, each scope has 33 declines, 32 improvements and seven newly mapped addresses; the earlier table remains historical. There are 32 compiler warnings and 70 Reccmp ERROR lines, so this is not clean analysis or tutorial runtime acceptance. No game or protected-state transaction was started for this conflict fix.
