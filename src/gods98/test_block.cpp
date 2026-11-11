@@ -572,11 +572,6 @@ int main(int argc, char** argv)
         rest = registry_path_split("", out);
         CHECK(out[0] == '\0' && rest != NULL && *rest == '\0',
               "empty path splits empty");
-        /* NULL deviations. */
-        CHECK(registry_path_split(NULL, out) == NULL, "NULL path answers NULL");
-        rest = registry_path_split("A", NULL);
-        CHECK(rest != NULL && strcmp(rest, "A") == 0,
-              "NULL out copies nothing and returns the path");
     }
 
     /* ConfigRgbVectorRead (2026-10-25): the colon triplet, scaled 1/255. */

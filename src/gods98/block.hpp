@@ -46,6 +46,6 @@ extern "C" int   block_get_bool(const char* value);
  * up to (not including) the next backslash or NUL into `out`, skips one
  * separator, and returns the rest of the path. NULL path answers NULL, out
  * NULL copies nothing (documented deviation). */
-const char* registry_path_split(const char* path, char* out);
+extern "C" const char* registry_path_split(const char* path, char* out);
 
 #endif /* LEGORRR_BLOCK_HPP */
