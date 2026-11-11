@@ -1,4 +1,4 @@
-# Finding 529 — One-off source shapes that blocked unit relocation
+# Finding 531 — One-off source shapes that blocked unit relocation
 
 Issue #478, preparing the relocation waves (#443–#446) of the
 [#388 plan](../plans/388-original-link-order.md). It follows
@@ -92,7 +92,7 @@ remaining code, so `static` is removed from both heads. `_verify` compares a
 group's body from its first `#` line, so the `#else` head is part of the
 "body", and that comparison does not strip `static`. With `_body` stripping
 `static` from group bodies, the unit plans cleanly: 79 items. This is a
-tooling fix, so it is left out of this change (#450).
+tooling fix, so it is left out of this change. PR #483 (#471) reports fixing an `#if` group that loses `static` in the body check, which may be this defect.
 
 ## Matching build
 
