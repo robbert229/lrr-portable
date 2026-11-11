@@ -55,6 +55,7 @@ int ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
 #include "view.hpp"
 #include "camera.hpp"
 #include "crt/crt.hpp"
+#include "frameloop_shared.hpp"
 
 static void menu_sound_tick_clock_init(MenuSoundTickClock* clock)
 {
@@ -2026,7 +2027,6 @@ static void frame_camera_target_registry_update(EngineContext* engine,
     engine->camera_target_count = count;
 }
 #include "game/util.hpp"
-#include "frameloop_shared.hpp"
 
 static const char* env_get(const char* name, const char* fallback)
 {
