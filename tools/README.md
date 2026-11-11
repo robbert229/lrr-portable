@@ -375,22 +375,44 @@ The linker emits a separate PDB for Reccmp; the target removes the PE debug
 directory and file-only debug overlay before comparing the executable.
 The ordinary `make reccmp-check` remains a separate gate.
 
-Section comparisons align each named section at its start, count equal bytes
-against the original's virtual size (missing candidate bytes count as unequal),
-and exclude raw-file alignment padding. Imports and resources compare the PE
-data-directory spans: the import directory is the descriptor table, not all
-import names and thunks. The original-address `.text` comparison aligns by
-virtual address. Inversions count pairs of mapped functions whose candidate
-addresses reverse their original order; ties do not count. Exact-function
-coverage sums reachable instruction spans recovered by `translation_units.py`
-for raw Reccmp 100% matches, divided by original `.text` virtual size; it is
-not a byte-for-byte comparison of those functions. Accuracy is the Reccmp
-mean over mapped functions, including its effective matches. Header changes
-are listed as numeric values (entry point is an RVA).
+Section comparisons align each named section at its start and use the
+original's virtual size as denominator (missing candidate bytes count as
+unequal); raw-file alignment padding is excluded. Imports and resources use
+the PE data-directory spans: imports are the descriptor table, not all names
+and thunks. The original-address `.text` comparison aligns by virtual address.
 
-`python3 tools/binary_progress_hash.py` prints the commit-independent SHA-256
-of paths and contents under `src/`, `CMakeLists.txt`, the matching toolchain
-file and `tools/reccmp.sh`. It uses only the Python standard library. The
-hash is recorded as `input_sha256`; it deliberately excludes the generated
-file, reference binary, build artifacts and commit metadata. Run script tests
-with `python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'`.
+For every region the report also counts identical bytes in contiguous runs of
+at least 16 bytes. Sixteen suppresses isolated common x86 bytes while still
+capturing short sequences; it is a threshold, not proof of semantic identity.
+Chance is the median of five comparisons with the original circularly shifted
+by 1/11 through 5/11 of its length (integer byte offsets). Raw and run excess
+are percentage-point differences from their respective chance rates; negative
+values are possible. Long zero runs can still inflate data-section scores, so
+the chance estimate is also reported for those regions. The report counts
+functions with a raw Reccmp score of exactly 100% that also start at the same
+address and whose recovered original instruction span is byte-identical there.
+
+For both full and game-only scopes, adjacent inversions count consecutive
+mapped functions in original order whose rebuilt addresses go backwards;
+pair inversions count all reversed pairs, with ties excluded. The issue's 874
+is an adjacent-inversion baseline from an earlier incremental build, so use
+`function_order_inversions.full.adjacent` for that measure (the separate
+non-incremental link can change it). Exact-function coverage sums reachable
+instruction spans recovered by `translation_units.py` for raw Reccmp 100%
+matches, divided by original `.text` virtual size. It is not a byte-for-byte
+comparison of those functions. Accuracy uses raw `matching` scores, rounded
+per function to two decimal percent before averaging, matching
+`match_baseline.py`; effective matches are not promoted to 100%. Header
+changes are numeric values (entry point is an RVA).
+
+`python3 tools/binary_progress_hash.py` prints a commit-independent SHA-256
+using only the standard library. It selects Git-tracked matching-build sources
+from CMake's source declarations, excludes native-only and test-only sources,
+and conservatively includes non-native project headers. It also hashes the
+build configuration, metric code and its coverage inputs. Untracked and ignored
+files are excluded. When Git is unavailable, the explicit
+`tools/binary_progress_inputs.txt` list is used; update it when the selected
+tracked inputs change (the tooling test checks it). The report's schema version
+is defined in the hashed metric script. The input hash excludes generated
+outputs, reference binary, build artifacts and commit metadata. Run tests with
+`make tools-test` (the PE fixture test needs `pefile`).

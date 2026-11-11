@@ -3,6 +3,7 @@
 """Compare the original PE with the non-incremental matching build."""
 import argparse
 import json
+import statistics
 from pathlib import Path
 
 from binary_progress_hash import input_hash
@@ -13,10 +14,39 @@ def percent(n, d):
     return round(100 * n / d, 2) if d else 0.0
 
 
+RUN_LENGTH = 16
+SCHEMA_VERSION = 2
+
+
+def run_bytes(original, rebuilt):
+    total = run = 0
+    for a, b in zip(original, rebuilt):
+        if a == b:
+            run += 1
+        else:
+            if run >= RUN_LENGTH:
+                total += run
+            run = 0
+    return total + (run if run >= RUN_LENGTH else 0)
+
+
 def compare_bytes(original, rebuilt):
     same = sum(a == b for a, b in zip(original, rebuilt))
+    # Compare against deterministic circular shifts of the original. This
+    # preserves the full denominator even for short resource directories.
+    shifts = sorted({max(1, len(original) * n // 11) for n in (1, 2, 3, 4, 5)}) if len(original) > 1 else []
+    chance = [sum(a == b for a, b in zip(original, original[k:] + original[:k])) for k in shifts]
+    run_chance = [run_bytes(original, original[k:] + original[:k]) for k in shifts]
+    baseline = statistics.median(chance) if chance else 0
+    run_baseline = statistics.median(run_chance) if run_chance else 0
+    runs = run_bytes(original, rebuilt)
     return {'original_bytes': len(original), 'rebuilt_bytes': len(rebuilt),
-            'identical_bytes': same, 'identical_percent': percent(same, len(original))}
+            'identical_bytes': same, 'identical_percent': percent(same, len(original)),
+            'chance_percent': percent(baseline, len(original)),
+            'excess_percent_points': round(100 * (same - baseline) / len(original), 2) if original else 0.0,
+            'run_identical_bytes': runs, 'run_identical_percent': percent(runs, len(original)),
+            'run_chance_percent': percent(run_baseline, len(original)),
+            'run_excess_percent_points': round(100 * (runs - run_baseline) / len(original), 2) if original else 0.0}
 
 
 def inversions(entries):
@@ -34,7 +64,7 @@ def inversions(entries):
             else:
                 merged.append(right[j]); j += 1; a += len(left) - i
         return merged + left[i:] + right[j:], a + b
-    return count(values)[1]
+    return {"adjacent": sum(a > b for a, b in zip(values, values[1:])), "pairs": count(values)[1]}
 
 
 def section_bytes(pe, name):
@@ -67,15 +97,21 @@ def report(orig_path, rebuilt_path, report_dir):
     exact = {int(e['address'], 16) for e in full if e.get('matching') == 1.0}
     funcs = load_functions(original)
     covered = sum(f.end - f.address for f in funcs if f.address in exact)
+    positioned = [f for f in funcs if f.address in exact and any(
+        int(e['address'], 16) == f.address and e.get('recomp') and
+        int(e['recomp'], 16) == f.address for e in full) and
+        original.read(f.address, f.end - f.address) ==
+        mapped[f.address - rebuilt.OPTIONAL_HEADER.ImageBase:f.end - rebuilt.OPTIONAL_HEADER.ImageBase]]
     def mean(entries):
-        return round(sum(1.0 if e.get('effective') else e.get('matching', 0) for e in entries) * 100 / len(entries), 2) if entries else 0.0
+        return round(sum(round(float(e.get('matching', 0)) * 10000) / 100 for e in entries) / len(entries), 2) if entries else 0.0
     fields = [('linker_major', 'MajorLinkerVersion'), ('linker_minor', 'MinorLinkerVersion'),
               ('section_alignment', 'SectionAlignment'), ('entry_point_rva', 'AddressOfEntryPoint'),
               ('image_size', 'SizeOfImage'), ('subsystem', 'Subsystem')]
     headers = {name: {'original': getattr(orig.OPTIONAL_HEADER, field), 'rebuilt': getattr(rebuilt.OPTIONAL_HEADER, field)}
                for name, field in fields if getattr(orig.OPTIONAL_HEADER, field) != getattr(rebuilt.OPTIONAL_HEADER, field)}
-    return {'schema_version': 1, 'input_sha256': input_hash(), 'sections': sections,
-            'text_at_original_addresses': at_address, 'function_order_inversions': inversions(full),
+    return {'schema_version': SCHEMA_VERSION, 'minimum_identical_run_bytes': RUN_LENGTH, 'input_sha256': input_hash(), 'sections': sections,
+            'text_at_original_addresses': at_address, 'function_order_inversions': {'full': inversions(full), 'game_only': inversions(game)},
+            'fully_identical_functions_at_original_address': {'count': len(positioned), 'bytes': sum(f.end - f.address for f in positioned)},
             'exact_function_code_bytes': {'bytes': covered, 'original_text_bytes': len(text), 'percent': percent(covered, len(text))},
             'accuracy_percent': {'game_only': mean(game), 'full': mean(full)}, 'pe_header_differences': headers}
 

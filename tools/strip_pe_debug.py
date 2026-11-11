@@ -7,6 +7,13 @@ from pathlib import Path
 
 
 def strip(path):
+    try:
+        _strip(path)
+    except (struct.error, IndexError) as error:
+        raise ValueError("truncated PE image") from error
+
+
+def _strip(path):
     data = bytearray(path.read_bytes())
     pe = struct.unpack_from('<I', data, 0x3c)[0]
     if data[pe:pe + 4] != b'PE\0\0':

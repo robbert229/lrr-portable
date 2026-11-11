@@ -1,15 +1,29 @@
 {
   "accuracy_percent": {
-    "full": 53.68,
-    "game_only": 49.3
+    "full": 53.67,
+    "game_only": 49.28
   },
   "exact_function_code_bytes": {
     "bytes": 32883,
     "original_text_bytes": 642549,
     "percent": 5.12
   },
-  "function_order_inversions": 872200,
-  "input_sha256": "340b296bce614c93ec2665b0bd001674310d5ae37a360e1902a488d8f853a844",
+  "fully_identical_functions_at_original_address": {
+    "bytes": 0,
+    "count": 0
+  },
+  "function_order_inversions": {
+    "full": {
+      "adjacent": 907,
+      "pairs": 872200
+    },
+    "game_only": {
+      "adjacent": 849,
+      "pairs": 858236
+    }
+  },
+  "input_sha256": "3ef11007ef03e30df6b12940c72bb5c844ad63dc82f08464e174bda408e202fb",
+  "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
       "original": 585728,
@@ -20,43 +34,79 @@
       "rebuilt": 5496832
     }
   },
-  "schema_version": 1,
+  "schema_version": 2,
   "sections": {
     ".data": {
+      "chance_percent": 10.47,
+      "excess_percent_points": 4.56,
       "identical_bytes": 11009,
       "identical_percent": 15.04,
       "original_bytes": 73216,
-      "rebuilt_bytes": 989696
+      "rebuilt_bytes": 989696,
+      "run_chance_percent": 1.76,
+      "run_excess_percent_points": 5.75,
+      "run_identical_bytes": 5500,
+      "run_identical_percent": 7.51
     },
     ".rdata": {
+      "chance_percent": 4.12,
+      "excess_percent_points": 8.16,
       "identical_bytes": 1379,
       "identical_percent": 12.28,
       "original_bytes": 11232,
-      "rebuilt_bytes": 459776
+      "rebuilt_bytes": 459776,
+      "run_chance_percent": 0.0,
+      "run_excess_percent_points": 0.56,
+      "run_identical_bytes": 63,
+      "run_identical_percent": 0.56
     },
     ".text": {
+      "chance_percent": 2.83,
+      "excess_percent_points": -0.03,
       "identical_bytes": 17978,
       "identical_percent": 2.8,
       "original_bytes": 642549,
-      "rebuilt_bytes": 901548
+      "rebuilt_bytes": 901548,
+      "run_chance_percent": 0.0,
+      "run_excess_percent_points": 0.01,
+      "run_identical_bytes": 33,
+      "run_identical_percent": 0.01
     },
     "imports": {
+      "chance_percent": 34.58,
+      "excess_percent_points": -2.5,
       "identical_bytes": 77,
       "identical_percent": 32.08,
       "original_bytes": 240,
-      "rebuilt_bytes": 140
+      "rebuilt_bytes": 140,
+      "run_chance_percent": 0.0,
+      "run_excess_percent_points": 0.0,
+      "run_identical_bytes": 0,
+      "run_identical_percent": 0.0
     },
     "resources": {
+      "chance_percent": 16.31,
+      "excess_percent_points": 0.0,
       "identical_bytes": 479,
       "identical_percent": 16.31,
       "original_bytes": 2936,
-      "rebuilt_bytes": 1348
+      "rebuilt_bytes": 1348,
+      "run_chance_percent": 0.0,
+      "run_excess_percent_points": 0.0,
+      "run_identical_bytes": 0,
+      "run_identical_percent": 0.0
     }
   },
   "text_at_original_addresses": {
+    "chance_percent": 2.83,
+    "excess_percent_points": -0.03,
     "identical_bytes": 17978,
     "identical_percent": 2.8,
     "original_bytes": 642549,
-    "rebuilt_bytes": 642549
+    "rebuilt_bytes": 642549,
+    "run_chance_percent": 0.0,
+    "run_excess_percent_points": 0.01,
+    "run_identical_bytes": 33,
+    "run_identical_percent": 0.01
   }
 }

@@ -33,8 +33,7 @@ setup:
 build: setup
 	cmake --build "$(BUILD_DIR)" --target program
 
-# Build the MSVC 5.0 candidate with a linker PDB, then generate the Reccmp
-# HTML and JSON reports. Override the Wine/tool paths when they are not on PATH.
+# Build and compare the separate non-incremental matching executable.
 binary-progress:
 	LRR_BINARY_PROGRESS=ON RECCMP_BUILD_DIR="$(BINARY_PROGRESS_BUILD_DIR)" \
 	  RECCMP_WINE_BIN="$(RECCMP_WINE_BIN)" RECCMP_RECCMP="$(RECCMP_RECCMP)" \
@@ -42,6 +41,8 @@ binary-progress:
 	$(BINARY_PROGRESS_PYTHON) tools/binary_progress.py --rebuilt "$(BINARY_PROGRESS_BUILD_DIR)/LegoRR.exe" \
 	  --report-dir "$(BINARY_PROGRESS_BUILD_DIR)/reccmp-report"
 
+# Build the MSVC 5.0 candidate with a linker PDB, then generate the Reccmp
+# HTML and JSON reports. Override the Wine/tool paths when they are not on PATH.
 reccmp: reccmp-report
 
 reccmp-report:

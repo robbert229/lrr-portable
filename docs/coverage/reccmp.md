@@ -41,14 +41,18 @@ SHA-256:
 
 ## Whole-binary progress — 2026-11-10
 
-The separate non-incremental matching build measured on the source tree at
-`cf3bfa0d` reports **2.80%** of original `.text` bytes identical at their
-original addresses, **872,200** inverted pairs of mapped functions, and
-**32,883 / 642,549 bytes (5.12%)** covered by raw 100%-matching functions.
-The mapped-function accuracy means are **49.30%** game-only and **53.68%**
-full. Section-relative identical shares are `.text` **2.80%**, `.rdata`
-**12.28%**, `.data` **15.04%**, import descriptors **32.08%**, and resources
-**16.31%**. The [generated report](binary-progress.json) records the sizes,
-header differences and input hash. These figures use the definitions and
-reproduction command in the [tool documentation](../../tools/README.md#whole-binary-progress);
-they are distinct from the incremental-link snapshot above.
+The non-incremental matching build at `cf3bfa0d` has **33 bytes** in
+identical runs of at least 16 bytes at their original `.text` addresses
+(**0.01 percentage points** above the shifted-original baseline). Raw
+agreement is **2.80%**, below the **2.83%** chance estimate; no fully
+identical functions sit at their original addresses. Full-scope function order
+has **907 adjacent inversions** and **872,200 inverted pairs**; game-only has
+**849** and **858,236** respectively. Raw exact-function coverage is
+**32,883 / 642,549 bytes (5.12%)**, and mean raw accuracy is **49.28%**
+game-only and **53.67%** full.
+
+The [generated report](binary-progress.json) records chance-adjusted section
+metrics, sizes, header differences and the input hash. See the
+[tool documentation](../../tools/README.md#whole-binary-progress) for
+thresholds and definitions. These figures use a separate non-incremental link
+and differ from the incremental-link snapshot above.
