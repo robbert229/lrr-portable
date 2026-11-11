@@ -34,7 +34,7 @@ int ledger_stub_004473b0_RouteToCellCommandIssue(
     EntitySlot* entity, int target_x, int target_y, EntitySlot* target);
 void entity_attached_object_list_detach(EntitySlot* entity, int reset_mode);
 }
-float random_float_range(float minimum, float maximum);
+extern "C" float random_float_range(float minimum, float maximum);
 
 namespace lego {
 namespace {

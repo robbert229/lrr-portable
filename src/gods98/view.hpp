@@ -486,12 +486,12 @@ float point_to_polyline_minimum_segment_distance(const float* point,
                                                  unsigned int segment_count);
 void matrix_rotation_compose_xyz(float* record); /* FUN_0040fb00 */
 /* D3DRMVectorRandom takes one D3DVECTOR* (three adjacent floats). */
-void d3drm_vector_random(float out[3]); /* FUN_00479500 */
+extern "C" float* d3drm_vector_random(float* r); /* FUN_00479500 */
 /* FUN_00479510: rotates vector by angle around axis; the import normalizes
  * axis in place. The DLL ABI is (return-vector, source-vector, axis, angle);
  * out may alias either vector input or axis. */
-void d3drm_vector_rotate(float out[3], float vector[3], float axis[3],
-                         float angle);
+extern "C" float* d3drm_vector_rotate(float* r, float* v, float* axis,
+                                      float theta);
 void vector_scale_components_in_place(float* vector, float sx, float sy,
                                       float sz); /* FUN_0040fcc0 */
 int   vec_exact_equal(const float* a, const float* b);
@@ -622,18 +622,18 @@ int menu_overlay_list_count(const void* menu);
 /* t = dot(q-p, n) / dot(d, n) into t_out for ray (p,d) × plane (q,n);
  * answers 0 for zero/unordered denominator and leaves t_out unchanged.
  * Negative t is accepted (FUN_00479a30). */
-int ray_plane_intersection_parameter(float* t_out, const float* p,
+extern "C" int ray_plane_intersection_parameter(float* t_out, const float* p,
                                      const float* d, const float* q,
                                      const float* n);
 /* Line1 (p1,d1) × line2 (p2,d2): writes the hit into out, returns it;
  * NULL for zero/unordered determinant, leaving out untouched
  * (FUN_00479af0). */
-float* line_intersection_2d_compute(float* out, const float* p1,
+extern "C" float* line_intersection_2d_compute(float* out, const float* p1,
                                     const float* d1, const float* p2,
                                     const float* d2);
 /* Positive-discriminant ray-sphere test, corpus expression verbatim;
  * `radius2` is the corpus's squared-radius parameter (FUN_00479c10). */
-int sphere_ray_intersection_discriminant_positive(const float* center,
+extern "C" int sphere_ray_intersection_discriminant_positive(const float* center,
                                                   float radius2,
                                                   const float* origin,
                                                   const float* dir);
@@ -1243,12 +1243,13 @@ uint32_t scene_object_query_value_if_ready(void* object);
  * Row-major float storage; corpus x87 math is byte-equivalent float here. */
 
 /* Zero the matrix (FUN_00479ea0: 16 stores). */
-void matrix4_set_zero(float* out);
+extern "C" void matrix4_set_zero(float* out);
 
 /* Multiply: corpus takes (out, right, left) and accumulates each output
  * cell as a four-term dot product, i.e. out = left × right, row-major
  * (FUN_00479ce0). */
-void matrix4_multiply(float* out, const float* right, const float* left);
+extern "C" void matrix4_multiply(float* out, const float* right,
+                                 const float* left);
 
 /* Even-odd horizontal-ray crossing parity (FUN_00479b80). Edge k runs
  * verts[k] → next[k]; the corpus reads the edge end through a pointer pair
@@ -1256,8 +1257,8 @@ void matrix4_multiply(float* out, const float* right, const float* left);
  * vertex array shifted one vertex (the typical ring form) behaves 1:1.
  * No zero-span/boundary handling beyond the corpus's, including the
  * potentially zero-span divide. */
-int point_in_polygon_2d(const float point[2], const float* verts,
-                        const float* next, int count);
+extern "C" int point_in_polygon_2d(const float* point, const float* verts,
+                                   const float* next, unsigned int count);
 
 /* --- matrix/ray math leaves (2026-10-24) ----------------------------------
  * Pure single-precision arithmetic over row-major float[16] storage; no
@@ -1268,27 +1269,28 @@ int point_in_polygon_2d(const float point[2], const float* verts,
  * nearly every angle. */
 
 /* out = origin + t · dir, corpus component order (FUN_00479ab0). */
-void point_along_ray(float* out, const float* origin, const float* dir,
-                     float t);
+extern "C" void point_along_ray(float* out, const float* origin,
+                                const float* dir, float t);
 
 /* ViewRayIntersectionTest (FUN_004798e0): normalizes both directions,
  * intersects ray (p, normalized dir_a) with the plane through q with the
  * normalized dir_b as normal (through ray_plane_intersection_parameter),
  * and writes out = p + t · normalized dir_a, answering 1; parallel rays
  * answer 0 with `out` untouched. */
-int view_ray_intersection_test(float* out, const float* p,
+extern "C" int view_ray_intersection_test(float* out, const float* p,
                                const float* dir_a, const float* q,
                                const float* dir_b);
 
 /* Matrix4SetIdentity (FUN_00479e70): 1 on the diagonal, 0 elsewhere. */
-void matrix4_set_identity(float* out);
+extern "C" void matrix4_set_identity(float* out);
 
 /* MatrixIdentityAndTranslationSet (FUN_00479e40): the identity with the
  * translation triad written into row-major row 3. */
-void matrix4_identity_translation_set(float* out, const float* translation);
+extern "C" void matrix4_identity_translation_set(float* out,
+                                                 const float* translation);
 
 /* Matrix4Copy (FUN_00479eb0): 16 dword copies. */
-void matrix4_copy(float* out, const float* src);
+extern "C" void matrix4_copy(float* out, const float* src);
 
 /* Rotation setters: each writes the identity, then overwrites the
  * two-row/two-column rotation block with (cos, −sin/sin, cos) at the
@@ -1299,9 +1301,9 @@ void matrix4_copy(float* out, const float* src);
  * The corpus reference names call FUN_00479d50 "Matrix4SetRotationZ" as
  * well as FUN_00479df0; the row/column blocks distinguish the three and
  * are what the port names. */
-void matrix4_set_rotation_x(float* out, float angle); /* FUN_00479d50 */
-void matrix4_set_rotation_y(float* out, float angle); /* FUN_00479da0 */
-void matrix4_set_rotation_z(float* out, float angle); /* FUN_00479df0 */
+extern "C" void matrix4_set_rotation_x(float* out, float angle); /* FUN_00479d50 */
+extern "C" void matrix4_set_rotation_y(float* out, float angle); /* FUN_00479da0 */
+extern "C" void matrix4_set_rotation_z(float* out, float angle); /* FUN_00479df0 */
 
 /* BuildPerspectiveProjectionMatrix (FUN_0040bd60): zeroes the matrix,
  * sets m[10] = m[15] = 1, then the three quotients m[0] = p4/p1,
@@ -1522,10 +1524,10 @@ void matrix4_identity_initialize(float* out);   /* FUN_00483540 */
  * the unit cross product of the edges (p3 − p2) and (p4 − p3). Deviation
  * kept faithful: there is no zero-length guard before the reciprocal, so
  * degenerate input yields the corpus's inf/NaN. */
-void surface_triangle_normal_calculate(float* out, const float* p2,
+extern "C" float* surface_triangle_normal_calculate(float* out, const float* p2,
                                        const float* p3, const float* p4);
                                                 /* FUN_00479530 */
-float surface_triangle_area_calculate(const float* p1, const float* p2,
+extern "C" float surface_triangle_area_calculate(const float* p1, const float* p2,
                                       const float* p3,
                                       int only_downward); /* FUN_00479630 */
 

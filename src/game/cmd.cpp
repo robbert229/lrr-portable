@@ -73,7 +73,7 @@ void* ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
 }
 
 static CommandKindRecordHooks s_command_kind_record_hooks;
-extern float random_float_range(float minimum, float maximum);
+extern "C" float random_float_range(float minimum, float maximum);
 #include "gods98/string.hpp"
 
 /* ------------------------------------------------------------------ *
