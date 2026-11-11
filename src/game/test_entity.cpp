@@ -531,6 +531,163 @@ static void stats_probe(const char* wad_dir)
     resource_unmount_all();
 }
 
+/* Real-data layout check (--real-layout <wad-dir>, finding 522): create
+ * entities from the shipped Lego.cfg types and drive the members that the
+ * 32-bit layout places at their original offsets (+0x33c, +0x340, +0x36c,
+ * +0x3e0..+0x3f0) through the retail readers that read them. A layout move
+ * changes no native behaviour, so every reader must keep its answer, and
+ * writing the moved members must leave the Stats binding (+0x334) intact. */
+static EntitySlot* layout_probe_create(GameContext* ctx, const char* name)
+{
+    int type = 0, row = 0;
+    if (!entity_type_row_for_name(name, &type, &row)) return NULL;
+    int index = entity_create(ctx, type, name, 0.0f, 0.0f, 0.0f, 0.0f);
+    if (index < 0) return NULL;
+    return (EntitySlot*)entity_at(ctx, type, index);
+}
+
+static void layout_probe_defaults(const EntitySlot* e, const char* name)
+{
+    char msg[96];
+    snprintf(msg, sizeof msg, "--real-layout: %s binds its Stats record",
+             name);
+    CHECK(e != NULL && e->stats_record != NULL, msg);
+    if (e == NULL) return;
+    /* EntityCreateByType's +0x3e8 arms: 0x40100 for type 4 and the Pilot
+     * scheduler mask 0x4481f5 for type 2. Later creation steps add bits (a
+     * building's 0x20000000), so check that each arm's bits are present. */
+    const uint32_t want = e->type == ENTITY_TYPE_BUILDING ? 0x00040100u
+                        : e->type == ENTITY_TYPE_MINIFIG  ? 0x004481f5u
+                                                          : 0u;
+    if (want == 0u) return;
+    snprintf(msg, sizeof msg, "--real-layout: %s +0x3e8 creation word", name);
+    CHECK((e->flags_3e8 & want) == want, msg);
+}
+
+static void layout_probe(const char* wad_dir)
+{
+    int mounted = resource_mount(wad_dir, "LegoRR");
+    BlockFile* cfg = mounted > 0 ? block_open("Lego.cfg") : NULL;
+    CHECK(cfg != NULL, "--real-layout: shipped Lego.cfg opens");
+    if (cfg == NULL) {
+        resource_unmount_all();
+        return;
+    }
+    entity_names_config_load(cfg);
+    static GameContext ctx;
+    game_context_init(&ctx);
+
+    EntitySlot* building = layout_probe_create(&ctx, "Toolstation");
+    EntitySlot* monster = layout_probe_create(&ctx, "RockMonster");
+    EntitySlot* pilot = layout_probe_create(&ctx, "Pilot");
+    layout_probe_defaults(building, "Toolstation");
+    layout_probe_defaults(monster, "RockMonster");
+    layout_probe_defaults(pilot, "Pilot");
+
+    /* SelectionCandidateEligibilityCheck (0x452870): +0x3e8 bit 0x100 from
+     * the type-4 creation word, then the shared gate (+0x3e0, +0x3e4,
+     * +0x340) and the +0x3e4/+0x3e0 clear-bit band. */
+    if (building != NULL) {
+        /* EntityCreateByType seeds +0x340 with 100.0 (0x42c80000). */
+        building->field_340 = 100.0f;
+        CHECK(selection_candidate_eligibility_check(building) == 1,
+              "--real-layout: Toolstation is a selection candidate");
+        building->field_340 = -1.0f;
+        CHECK(selection_candidate_eligibility_check(building) == 0,
+              "--real-layout: negative +0x340 rejects the candidate");
+        building->field_340 = 100.0f;
+        building->flags_3e0 = 0x04000000u;
+        CHECK(selection_candidate_eligibility_check(building) == 0,
+              "--real-layout: +0x3e0 bit 0x04000000 rejects the candidate");
+        building->flags_3e0 = 0u;
+        building->flags_3e4 = 0x2u;
+        CHECK(selection_candidate_eligibility_check(building) == 0,
+              "--real-layout: +0x3e4 bit 2 rejects the candidate");
+        building->flags_3e4 = 0u;
+        building->flags_3e8 &= ~0x100u;
+        CHECK(selection_candidate_eligibility_check(building) == 0,
+              "--real-layout: +0x3e8 bit 0x100 is required");
+        building->flags_3e8 |= 0x100u;
+        CHECK(selection_candidate_eligibility_check(building) == 1,
+              "--real-layout: Toolstation eligible again once restored");
+    }
+
+    /* 0x4436f0 (+0x3e8), 0x43baf0 (+0x3e0/+0x3e4) and 0x452690 (+0x3ec). */
+    if (monster != NULL) {
+        monster->flags_3e0 = 0u;
+        monster->flags_3e4 = 0u;
+        monster->flags_3e8 &= ~0x04000000u;
+        monster->flags_3ec = 0u;
+        CHECK(entity_type3_flag04000000_test(monster) == 0,
+              "--real-layout: RockMonster +0x3e8 bit 0x04000000 clear");
+        monster->flags_3e8 |= 0x04000000u;
+        CHECK(entity_type3_flag04000000_test(monster) == 1,
+              "--real-layout: RockMonster +0x3e8 bit 0x04000000 set");
+        CHECK(entity_flags_mask107c33de_or_1c00203_any_test(monster) == 0,
+              "--real-layout: RockMonster flag masks clear");
+        monster->flags_3e4 = 0x00000200u;
+        CHECK(entity_flags_mask107c33de_or_1c00203_any_test(monster) == 1,
+              "--real-layout: +0x3e4 mask bit seen");
+        monster->flags_3e4 = 0u;
+        monster->flags_3e0 = 0x10000000u;
+        CHECK(entity_flags_mask107c33de_or_1c00203_any_test(monster) == 1,
+              "--real-layout: +0x3e0 mask bit seen");
+        monster->flags_3e0 = 0u;
+        CHECK(selection_active_candidate_already_selected_or_marked(monster)
+                  == 0,
+              "--real-layout: unselected RockMonster is not marked");
+        monster->flags_3ec = 2u;
+        CHECK(selection_active_candidate_already_selected_or_marked(monster)
+                  == 1,
+              "--real-layout: +0x3ec bit 2 marks the candidate");
+        monster->flags_3ec = 0u;
+    }
+
+    /* EntityFlag40000ThresholdCompare (0x437cc0): Stats flag 0x40000 and
+     * PainThreshold (+0xe8) against the entity's +0x340. */
+    EntitySlot* probes[3] = { building, monster, pilot };
+    for (int i = 0; i < 3; ++i) {
+        EntitySlot* e = probes[i];
+        if (e == NULL) continue;
+        const int shot = (entity_state_flags_get(e) & 0x40000u) != 0u;
+        e->field_340 = entity_stats_float_ate8(e) + 1.0f;
+        CHECK(entity_flag40000_threshold_compare(e) == shot,
+              "--real-layout: +0x340 above PainThreshold follows flag 0x40000");
+        e->field_340 = entity_stats_float_ate8(e) - 1.0f;
+        CHECK(entity_flag40000_threshold_compare(e) == 0,
+              "--real-layout: +0x340 below PainThreshold never compares");
+        e->field_340 = 0.0f;
+    }
+
+    /* Writing every moved member leaves the Stats binding and each other
+     * member intact (no overlap on any host). */
+    if (pilot != NULL) {
+        const void* record = pilot->stats_record;
+        const float route_speed = entity_stats_float_at20(pilot);
+        pilot->field_33c = 33.0f;
+        pilot->field_340 = 34.0f;
+        pilot->owner_36c = monster;
+        pilot->flags_3e0 = 0x3e0u;
+        pilot->flags_3e4 = 0x3e4u;
+        pilot->flags_3e8 = 0x3e8u;
+        pilot->flags_3ec = 0x3ecu;
+        pilot->flags_3f0 = 0x3f0u;
+        CHECK(pilot->stats_record == record
+                  && entity_stats_float_at20(pilot) == route_speed
+                  && route_speed == 1.1f,
+              "--real-layout: moved members leave the Pilot Stats binding");
+        CHECK(pilot->field_33c == 33.0f && pilot->field_340 == 34.0f
+                  && pilot->owner_36c == monster
+                  && pilot->flags_3e0 == 0x3e0u && pilot->flags_3e4 == 0x3e4u
+                  && pilot->flags_3e8 == 0x3e8u && pilot->flags_3ec == 0x3ecu
+                  && pilot->flags_3f0 == 0x3f0u,
+              "--real-layout: moved members hold distinct storage");
+    }
+    fprintf(stderr, "entity_test: --real layout probe done\n");
+    block_close(cfg);
+    resource_unmount_all();
+}
+
 static int ol_probe(const char* wad_dir)
 {
     int mounted = resource_mount(wad_dir, "LegoRR");
@@ -1006,6 +1163,16 @@ int main(int argc, char** argv)
             return 1;
         }
         printf("entity_test: real Stats pass\n");
+        return 0;
+    }
+    /* Real-data layout probe (ctest: entity_layout_real, finding 522). */
+    if (argc >= 3 && strcmp(argv[1], "--real-layout") == 0) {
+        layout_probe(argv[2]);
+        if (s_failures != 0) {
+            fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
+            return 1;
+        }
+        printf("entity_test: real layout pass\n");
         return 0;
     }
     char rmcmd[64];
