@@ -12603,7 +12603,7 @@ static int entity_path_footprint_cell_get(const TypeConfigTable* table,
     return 1;
 }
 
-static void entity_cell_path_effects_apply_level(EntitySlot* entity,
+void entity_cell_path_effects_apply_level(EntitySlot* entity,
                                                   LevelState* level)
 {
     const TypeConfigTable* table;
@@ -12699,17 +12699,6 @@ static void entity_cell_path_effects_apply_level(EntitySlot* entity,
         if (repeated) ++i;
     }
     entity_placement_commands_build_once(entity);
-}
-
-/* EntityCellPathEffectsApply (FUN_00409d50) uses one entity argument and the
- * active level/type tables; there is no caller-supplied hook bundle. */
-// FUNCTION: LEGORR 0x00409d50
-void entity_cell_path_effects_apply_current(EntitySlot* entity)
-{
-    GameContext* context = entity != NULL ? entity->owner_ctx : NULL;
-    if (context == NULL) context = entity_pool_callback_context_get();
-    entity_cell_path_effects_apply_level(
-        entity, context != NULL ? context->level : NULL);
 }
 
 /* Explicit-level compatibility entry point retained for port callers. The

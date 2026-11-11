@@ -1878,8 +1878,6 @@ void global_value_004ffe48_set(uint32_t value)
 
 // GLOBAL: LEGORR 0x00557860
 static uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
-// GLOBAL: LEGORR 0x004b8a54
-static uint32_t s_level_stored_word = 0u;  /* DAT_004b8a54 */
 // GLOBAL: LEGORR 0x004c7178
 uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
 // GLOBAL: LEGORR 0x004c79a4
@@ -1895,12 +1893,6 @@ void state_flag_toggle_when_zero(void)
 uint32_t global_task_refresh_flag_get(void)
 {
     return s_task_refresh_flag;
-}
-
-// FUNCTION: LEGORR 0x00409d40
-void level_state_stored_value_set(uint32_t v)
-{
-    s_level_stored_word = v;
 }
 
 uint32_t global_mode_zero_input_peek(void)

@@ -109,4 +109,8 @@ namespace unported_ledger_stubs {
 void placement_cell_search_expand(const int cell_xy[2]);
 } // namespace unported_ledger_stubs
 
+namespace unported_ledger_stubs {
+void entity_cell_path_effects_apply_level(EntitySlot* entity, LevelState* level);
+} // namespace unported_ledger_stubs
+
 #endif /* LRR_GAME_LEVEL_SHARED_HPP */

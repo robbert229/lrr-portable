@@ -221,9 +221,9 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00409a90,WorldObjectCreateWithTransform,6,GAME-007,,game,high,bracketed,src/game/placement.cpp
 00409b30,FUN_00409b30,6,GAME-007,,game,high,rdata,src/game/placement.cpp
 00409cd0,CellCardinalNeighborApply,6,GAME-007,,game,medium,boundary:GAME-008,src/game/placement.cpp
-00409d40,LevelStateStoredValueSet,7,GAME-008,,game,high,bss,src/crt/crt.cpp
-00409d50,EntityCellPathEffectsApply,7,GAME-008,,game,high,rdata,src/game/level.cpp
-00409f20,EntityPlacementCommandsBuildOnce,7,GAME-008,,game,high,bss,src/game/entity.cpp
+00409d40,LevelStateStoredValueSet,7,GAME-008,,game,high,bss,src/game/entity_cell_effects.cpp
+00409d50,EntityCellPathEffectsApply,7,GAME-008,,game,high,rdata,src/game/entity_cell_effects.cpp
+00409f20,EntityPlacementCommandsBuildOnce,7,GAME-008,,game,high,bss,src/game/entity_cell_effects.cpp
 00409ff0,EntityDestroyTrackedPointerCleanup,7,GAME-008,,game,medium,boundary:GAME-009,
 0040a0c0,ScrollingTextDisplay,8,GAME-009,,game,high,string,src/game/screen_effect_quads.cpp
 0040a3d0,ScreenEffectFlagsClearAndRelease,8,GAME-009,,game,high,bss,src/game/screen_effect_quads.cpp
