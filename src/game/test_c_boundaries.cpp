@@ -36,6 +36,13 @@
 #include "platform/platform.h"
 #include "platform/window.h"
 #include "gods98/keys.h"
+#include "gods98/g98_024.h"
+#include "gods98/record.hpp"
+#include "game/bezier.h"
+#include "game/port_loop_ports.hpp"
+#include "gods98/g98_029.h"
+#include "gods98/heap.hpp"
+#include "gods98/g98_026.h"
 
 int main(void)
 {

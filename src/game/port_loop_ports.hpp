@@ -607,7 +607,7 @@ void registry_path_hooks_set(
     unported_ledger_stubs::RegistryCreateKeyHook create_key,
     unported_ledger_stubs::RegistryQueryValueHook query_value,
     unported_ledger_stubs::RegistryCloseKeyHook close_key, void* context);
-int registry_path_accessor(const char* subkey_path, const char* value_name,
+extern "C" int registry_path_accessor(const char* subkey_path, const char* value_name,
                            int query_mode, void* output,
                            uint32_t output_size);
 #endif

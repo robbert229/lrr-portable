@@ -16,6 +16,8 @@ src/game/actor_scene.cpp
 src/game/actor_scene.hpp
 src/game/ai.cpp
 src/game/ai.hpp
+src/game/bezier.c
+src/game/bezier.h
 src/game/building_scene.cpp
 src/game/building_scene.hpp
 src/game/camera_drag.hpp
@@ -110,6 +112,12 @@ src/gods98/flic.cpp
 src/gods98/flic.hpp
 src/gods98/frameloop.cpp
 src/gods98/frameloop.hpp
+src/gods98/g98_024.c
+src/gods98/g98_024.h
+src/gods98/g98_026.c
+src/gods98/g98_026.h
+src/gods98/g98_029.c
+src/gods98/g98_029.h
 src/gods98/gods98.cpp
 src/gods98/gods98.hpp
 src/gods98/heap.cpp
@@ -140,6 +148,8 @@ src/gods98/ptrstack.cpp
 src/gods98/ptrstack.hpp
 src/gods98/record.cpp
 src/gods98/record.hpp
+src/gods98/registry_api.h
+src/gods98/registry_port.cpp
 src/gods98/resource.cpp
 src/gods98/resource.h
 src/gods98/resource.hpp

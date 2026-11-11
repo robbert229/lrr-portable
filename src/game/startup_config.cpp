@@ -17,10 +17,6 @@ static char s_startup_output_path[260];
 static char s_startup_token_list_path[260];
 static BufferedCharReadHook s_buffered_char_read_hook;
 static void* s_buffered_char_read_context;
-static RegistryCreateKeyHook s_registry_create_key_hook;
-static RegistryQueryValueHook s_registry_query_value_hook;
-static RegistryCloseKeyHook s_registry_close_key_hook;
-static void* s_registry_hook_context;
 static DependencyConfigEntryHook s_dependency_config_hook;
 static void* s_dependency_config_context;
 
@@ -127,75 +123,6 @@ int buffered_char_stream_read_to_string(void* stream, char* output)
     return 1;
 }
 
-void registry_path_hooks_set(
-    unported_ledger_stubs::RegistryCreateKeyHook create_key,
-    unported_ledger_stubs::RegistryQueryValueHook query_value,
-    unported_ledger_stubs::RegistryCloseKeyHook close_key, void* context)
-{
-    s_registry_create_key_hook = create_key;
-    s_registry_query_value_hook = query_value;
-    s_registry_close_key_hook = close_key;
-    s_registry_hook_context = context;
-}
-
-static int registry_path_create_keys_recurse(
-    void* root, const char* subkey_path, const char* value_name,
-    int query_mode, void* output, uint32_t* size, uint32_t* value_type)
-{
-    char component[100];
-    const char* cursor = subkey_path;
-    size_t length = 0u;
-    void* child;
-    int result;
-    if (cursor == NULL || root == NULL) return 0;
-    while (*cursor != '\0' && *cursor != '\\') {
-        if (length + 1u >= sizeof(component)) return 0;
-        component[length++] = *cursor++;
-    }
-    component[length] = '\0';
-    if (*cursor == '\\') ++cursor;
-    if (component[0] == '\0') {
-        if (query_mode != 0 && query_mode != 1) return 0;
-        if (s_registry_query_value_hook == NULL) return 0;
-        return s_registry_query_value_hook(root, value_name, output, size,
-                                           value_type,
-                                           s_registry_hook_context);
-    }
-    if (s_registry_create_key_hook == NULL) return 0;
-    child = s_registry_create_key_hook(root, component,
-                                       s_registry_hook_context);
-    if (child == NULL) return 0;
-    result = registry_path_create_keys_recurse(
-        child, cursor, value_name, query_mode, output, size, value_type);
-    if (s_registry_close_key_hook != NULL)
-        s_registry_close_key_hook(child, s_registry_hook_context);
-    return result;
-}
-
-int registry_path_create_keys(void* root, const char* subkey_path,
-                              const char* value_name, int query_mode,
-                              void* output, uint32_t* size,
-                              uint32_t* value_type)
-{
-    if (root == NULL || subkey_path == NULL) return 0;
-    return registry_path_create_keys_recurse(root, subkey_path, value_name,
-        query_mode, output, size, value_type);
-}
-
-/* RegistryPathAccessor (FUN_0048b360): fix the root to HKEY_LOCAL_MACHINE
- * (0x80000002) and forward the five query arguments through the path walker. */
-// FUNCTION: LEGORR 0x0048b360
-int registry_path_accessor(const char* subkey_path, const char* value_name,
-                           int query_mode, void* output,
-                           uint32_t output_size)
-{
-    void* root = (void*)0x80000002u;
-    uint32_t size = output_size;
-    uint32_t value_type = 0u;
-    return registry_path_create_keys(root, subkey_path, value_name,
-                                     query_mode, output, &size, &value_type);
-}
-
 void dependency_config_entry_hook_set(DependencyConfigEntryHook hook,
                                       void* context)
 {
@@ -259,45 +186,5 @@ void ledger_stub_0048b290_StartupStreamsClose()
     s_startup_streams[0] = NULL;
 }
 
-// FUNCTION: LEGORR 0x0048b390
-int ledger_stub_0048b390_RegistryPathCreateKeys(
-    void* root, const char* subkey_path, const char* value_name,
-    int query_mode, void* output, uint32_t output_size)
-{
-    uint32_t size = output_size;
-    uint32_t value_type = 0u;
-    /* The retail routine validates the selector at the leaf, after creating
-     * the requested subkey path, and accepts modes 0 and 1 identically. */
-    return unported_ledger_stubs::registry_path_create_keys(
-        root, subkey_path, value_name, query_mode, output, &size,
-        &value_type);
-}
-
 
 } // namespace unported_ledger_stubs
-
-void registry_path_hooks_set(
-    unported_ledger_stubs::RegistryCreateKeyHook create_key,
-    unported_ledger_stubs::RegistryQueryValueHook query_value,
-    unported_ledger_stubs::RegistryCloseKeyHook close_key, void* context)
-{
-    unported_ledger_stubs::registry_path_hooks_set(
-        create_key, query_value, close_key, context);
-}
-
-int registry_path_create_keys(void* root, const char* subkey_path,
-                              const char* value_name, int query_mode,
-                              void* output, uint32_t* size,
-                              uint32_t* value_type)
-{
-    return unported_ledger_stubs::registry_path_create_keys(
-        root, subkey_path, value_name, query_mode, output, size, value_type);
-}
-
-int registry_path_accessor(const char* subkey_path, const char* value_name,
-                           int query_mode, void* output,
-                           uint32_t output_size)
-{
-    return unported_ledger_stubs::registry_path_accessor(
-        subkey_path, value_name, query_mode, output, output_size);
-}

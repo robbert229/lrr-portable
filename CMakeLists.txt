@@ -128,8 +128,8 @@ add_library(gods98 STATIC
   ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp ${ENGINE_DIR}/media.cpp
   ${ENGINE_DIR}/scene_pool.cpp ${ENGINE_DIR}/scene_resources.cpp
   ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c
-  ${ENGINE_DIR}/sound_wave.cpp ${ENGINE_DIR}/winmm_port.cpp
-  ${ENGINE_DIR}/keys.c)
+  ${ENGINE_DIR}/sound_wave.cpp ${ENGINE_DIR}/winmm_port.cpp ${ENGINE_DIR}/registry_port.cpp
+  ${ENGINE_DIR}/keys.c ${ENGINE_DIR}/g98_024.c ${ENGINE_DIR}/g98_026.c ${ENGINE_DIR}/g98_029.c)
 target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 
 add_library(game STATIC
@@ -147,14 +147,15 @@ add_library(game STATIC
   ${GAME_DIR}/opgroup.cpp ${GAME_DIR}/ui_list.cpp ${GAME_DIR}/priorities.c
   ${GAME_DIR}/tutorial_hud.cpp ${GAME_DIR}/tutorial_world_arrows.cpp
   ${GAME_DIR}/seh_runtime.cpp
-  ${GAME_DIR}/startup_config.cpp)
+  ${GAME_DIR}/startup_config.cpp ${GAME_DIR}/bezier.c)
 target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
 # Units rebuilt in original shape (ADR 0005) are C in the matching build and
 # C++ elsewhere, because the native port's miniwin headers are C++-only.
 set(LRR_ORIGINAL_SHAPE_SOURCES ${ENGINE_DIR}/utils.c ${ENGINE_DIR}/config.c
   ${ENGINE_DIR}/maths.c
   ${GAME_DIR}/priorities.c ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c
-  ${ENGINE_DIR}/keys.c)
+  ${ENGINE_DIR}/keys.c ${ENGINE_DIR}/g98_024.c ${GAME_DIR}/bezier.c
+  ${ENGINE_DIR}/g98_026.c ${ENGINE_DIR}/g98_029.c)
 if(NOT LRR_CLASSIC_MSVC5)
   set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
     LANGUAGE CXX)
@@ -244,7 +245,7 @@ endif()
 # gods98 APIs. Repeat the archive so GNU ld resolves this static-library cycle.
 target_link_libraries(program PRIVATE game gods98 game platform_glue)
 if(PLATFORM STREQUAL "winapi")
-  target_link_libraries(program PRIVATE winmm d3drm)
+  target_link_libraries(program PRIVATE winmm d3drm advapi32)
 endif()
 if(WIN32)
   set_target_properties(program PROPERTIES WIN32_EXECUTABLE TRUE)
@@ -277,6 +278,13 @@ if(BUILD_TESTING AND PLATFORM STREQUAL "native")
   endforeach()
   # Compile-only check that the C boundary headers match their C++ headers
   # (ADR 0005). It needs their include paths, not the libraries.
+  if(NOT WIN32)
+    add_executable(registry_test ${ENGINE_DIR}/test_registry.cpp ${ENGINE_DIR}/g98_029.c)
+    target_include_directories(registry_test PRIVATE ${SRC_ROOT})
+    target_link_libraries(registry_test PRIVATE miniwin)
+    add_test(NAME registry COMMAND registry_test)
+  endif()
+
   add_executable(c_boundaries_test ${GAME_DIR}/test_c_boundaries.cpp)
   target_include_directories(c_boundaries_test PRIVATE ${SRC_ROOT} ${GAME_DIR}
     ${ENGINE_DIR})
@@ -288,10 +296,11 @@ if(BUILD_TESTING AND PLATFORM STREQUAL "native")
   target_link_libraries(crt_test PRIVATE gods98)
   add_test(NAME crt COMMAND crt_test)
   set_tests_properties(crt PROPERTIES LABELS crt)
-  set(GAME_TESTS level objective savegame mission entity cmd select ai render bind frontend options)
+  set(GAME_TESTS level objective savegame mission entity cmd select ai render bind frontend options
+    bezier)
   set(GAME_TEST_SOURCES test_level.cpp test_objective.cpp test_savegame.cpp test_mission.cpp
     test_entity.cpp test_cmd.cpp test_select.cpp test_ai.cpp test_render.cpp test_bind.cpp
-    test_frontend.cpp test_options.cpp)
+    test_frontend.cpp test_options.cpp test_bezier.cpp)
   list(LENGTH GAME_TESTS count)
   math(EXPR last "${count} - 1")
   foreach(i RANGE ${last})

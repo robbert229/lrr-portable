@@ -28,7 +28,7 @@ static char s_start_level_name[256];
 // GLOBAL: LEGORR 0x0050593c
 static float s_frame_interval_override;
 
-/* WinAPI registry operations used by RegistryPathAccessor (finding 402). */
+/* Retained to preserve declaration count for matching (finding 506). */
 static void* winmain_registry_create_key(void* parent, const char* component,
                                          void*)
 {
@@ -179,6 +179,8 @@ static int winmain_application_run(void)
     return 0;
 }
 
+namespace unported_ledger_stubs { void ledger_stub_0048b260_StartupStreamStateReset(); }
+
 // FUNCTION: LEGORR 0x4777a0
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                    LPSTR lpCmdLine, int nCmdShow)
@@ -195,9 +197,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     char standard_parameters[1024];
     volatile DWORD startup_state[4] = { 0, 0, 0, 0 };
     volatile float frame_delta = 0.0f;
-    registry_path_hooks_set(winmain_registry_create_key,
-                            winmain_registry_query_value,
-                            winmain_registry_close_key, NULL);
     sprintf(mutex_name, "%s_Mutex", "Lego_Rock_Raiders");
     CreateMutexA(NULL, TRUE, mutex_name);
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
@@ -273,6 +272,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     resource_set_wad_prefix(s_application_prefix);
     (void)startup_state[2];
     (void)startup_state[3];
+    unported_ledger_stubs::ledger_stub_0048b260_StartupStreamStateReset();
     (void)no_hal_message;
     (void)hInstance;
     return winmain_application_run();
