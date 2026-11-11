@@ -201,8 +201,8 @@ static EntityClippedRectangleHooks s_entity_clipped_rectangle_hooks;
 static EntityPairRayHitCheckHook s_entity_pair_ray_hit_check_hook;
 static void* s_entity_pair_ray_hit_check_context;
 static void* s_entity_health_threshold_context;
-static EntityStateOverrideEntry s_entity_state_override_entries[64];
-static uint32_t s_entity_state_override_count;
+EntityStateOverrideEntry s_entity_state_override_entries[64];
+uint32_t s_entity_state_override_count;
 
 static uint32_t* entity_action_consume_counter_sidecar_get(EntitySlot* owner,
                                                            int create)
@@ -269,10 +269,10 @@ static void entity_path_motion_runtime_clear(EntitySlot* entity);
 namespace unported_ledger_stubs {
 void entity_path_motion_runtime_clear_impl(EntitySlot* entity);
 }
-static EntityStateOverrideValue330ApplyHook
+EntityStateOverrideValue330ApplyHook
     s_entity_state_override_value_330_apply;
-static EntityStateOverrideRenameHook s_entity_state_override_rename;
-static void* s_entity_state_override_context;
+EntityStateOverrideRenameHook s_entity_state_override_rename;
+void* s_entity_state_override_context;
 
 typedef struct EntitySimulationQueueItem {
     EntitySlot* target;
@@ -4443,19 +4443,6 @@ void steering_physics_step(void* unused, float* state, const float* delta)
     matrix4_multiply(state + 0x16, translation, previous);
 }
 
-static uint32_t s_entity_flag_mask_all_pass;
-
-static int entity_flag_mask_match_callback(EntitySlot* entity, void* payload)
-{
-    const uint32_t mask = (uint32_t)(uintptr_t)payload;
-    const uint32_t type = first_set_flag_ordinal(mask);
-    if (entity != NULL && (uint32_t)entity->type == type &&
-        entity->flags_390 != 0u) {
-        s_entity_flag_mask_all_pass = 0u;
-    }
-    return 0; /* retail visits every filtered entity for this mask bit */
-}
-
 struct FlagMaskPredicateContext {
     uint32_t bit;
     EntityFlagMaskPredicate predicate;
@@ -4474,10 +4461,10 @@ static int flag_mask_predicate_callback(EntitySlot* entity, void* payload)
 }
 
 static uint32_t s_entity_iteration_guard_flags;
-static uint32_t s_scene_dispatch_point_low;
-static uint32_t s_scene_dispatch_point_high;
-static uint32_t s_scene_dispatch_word_c;
-static uint32_t s_scene_dispatch_word14;
+uint32_t s_scene_dispatch_point_low;
+uint32_t s_scene_dispatch_point_high;
+uint32_t s_scene_dispatch_word_c;
+uint32_t s_scene_dispatch_word14;
 
 uint32_t entity_iteration_guard_flags_peek(void)
 {
@@ -4500,65 +4487,6 @@ void scene_object_state_dispatch_words_install(uint32_t point_low,
     s_scene_dispatch_word14 = word14;
 }
 
-struct SceneStateDispatchContext {
-    uint32_t ordinal;
-    uint32_t mode;
-    uint32_t flags;
-    SceneObjectStateCallback callback;
-    void* user;
-};
-
-static int scene_state_dispatch_callback(EntitySlot* entity, void* payload)
-{
-    SceneStateDispatchContext* context = (SceneStateDispatchContext*)payload;
-    if (context->callback == NULL) {
-        return 0;
-    }
-    return context->callback(entity, context->ordinal, context->mode,
-                             context->flags, context->user);
-}
-
-/* SceneObjectStateDispatch (FUN_0046a510): compute the selector ordinal,
- * optionally allocate/link its 0x20-byte record, then visit filtered entities
- * with the state tuple. The per-caller LAB_0046a3c0 effect and four global
- * words are represented by explicit install/callback hooks. Native records
- * reserve four extra bytes so the widened pointer at +0x1c fits. */
-// FUNCTION: LEGORR 0x0046A510
-void scene_object_state_dispatch(GameContext* ctx, uint32_t selector,
-                                 uint32_t mode, uint32_t flags,
-                                 SceneObjectStateCallback callback,
-                                 void* user)
-{
-    SceneStateDispatchContext context;
-    context.ordinal = first_set_flag_ordinal(selector);
-    context.mode = mode;
-    context.flags = flags;
-    context.callback = callback;
-    context.user = user;
-    if ((mode & 2u) != 0u) {
-        unsigned char* record = (unsigned char*)engine_heap_alloc(0x24);
-        if (record != NULL) {
-            uint32_t zero = 0u;
-            memset(record, 0, 0x24);
-            linked_list_push_at_global_head(record);
-            memcpy(record + 0x10, &zero, sizeof(zero));
-            if ((flags & 2u) != 0u) {
-                memcpy(record, &s_scene_dispatch_point_low, sizeof(uint32_t));
-                memcpy(record + 4, &s_scene_dispatch_point_high, sizeof(uint32_t));
-                memcpy(record + 0x0c, &s_scene_dispatch_word_c, sizeof(uint32_t));
-            }
-            if ((flags & 1u) != 0u) {
-                memcpy(record + 0x14, &s_scene_dispatch_word14, sizeof(uint32_t));
-            }
-            memcpy(record + 0x18, &flags, sizeof(flags));
-        }
-    }
-    if (ctx != NULL && callback != NULL) {
-        entity_pool_find_by_callback_filtered_current(
-            scene_state_dispatch_callback, &context);
-    }
-}
-
 static int entity_pool_teardown_callback(EntitySlot* entity, void* unused)
 {
     (void)unused;
@@ -4574,24 +4502,6 @@ void entity_iteration_callback_guard(void)
     entity_pool_find_by_callback_filtered_current(
         entity_pool_teardown_callback, NULL);
     s_entity_iteration_guard_flags &= ~2u;
-}
-
-/* FlagMaskCallbacksAllPass (FUN_0046a4c0): for each set bit 0..30, visit
- * filtered entities and fail if LAB_0046a490 finds a matching type with a
- * nonzero +0x390 word. */
-// FUNCTION: LEGORR 0x0046A4C0
-int entity_flag_mask_callbacks_all_pass(uint32_t mask)
-{
-    for (uint32_t index = 0; index < 31u; ++index) {
-        uint32_t bit = 1u << index;
-        s_entity_flag_mask_all_pass = 1u;
-        if ((mask & bit) != 0u) {
-            entity_pool_find_by_callback_filtered_current(
-                entity_flag_mask_match_callback, (void*)(uintptr_t)bit);
-            if (s_entity_flag_mask_all_pass == 0u) return 0;
-        }
-    }
-    return 1;
 }
 
 /* Camera/control registry callers need their supplied per-entity predicate;
@@ -5709,40 +5619,6 @@ int entity_state_override_stack_push(const EntityStateOverrideEntry* entry)
         return 0;
     }
     s_entity_state_override_entries[s_entity_state_override_count++] = *entry;
-    return 1;
-}
-
-/* PopEntityStateOverride (FUN_00459240): only type-2 entities consume the
- * global LIFO; restore +0x3f0 and the saved name, then apply +0x330. */
-// FUNCTION: LEGORR 0x00459240
-int entity_state_override_pop(EntitySlot* entity)
-{
-    EntityStateOverrideEntry entry;
-    if (entity == NULL || entity->type != 2 ||
-        s_entity_state_override_count == 0u) {
-        return 0;
-    }
-    entry = s_entity_state_override_entries[--s_entity_state_override_count];
-    entity->flags_3f0 = entry.flags_3f0;
-    if (s_entity_state_override_rename != NULL) {
-        s_entity_state_override_rename(entity, entry.name,
-                                       s_entity_state_override_context);
-    }
-    else {
-        size_t length = 0;
-        while (length < sizeof(entry.name) && entry.name[length] != '\0') {
-            entity->name[length] = entry.name[length];
-            ++length;
-        }
-        entity->name[length] = '\0';
-    }
-    if (s_entity_state_override_value_330_apply != NULL) {
-        s_entity_state_override_value_330_apply(
-            entity, entry.value_330, s_entity_state_override_context);
-    }
-    else {
-        entity->indexed_record_slot_330 = (int32_t)entry.value_330;
-    }
     return 1;
 }
 
@@ -9157,22 +9033,6 @@ int task_type_and_condition_check(const void* unused,
         return 0;
     }
     return 1;
-}
-
-/* EntityTypeAndStateFlagPredicate (FUN_0045e400) — see entity.hpp. */
-// FUNCTION: LEGORR 0x0045e400
-int entity_type_and_state_flag_predicate(const EntitySlot* e)
-{
-    if (e == NULL) {
-        return 0; /* deviation: the corpus strides blindly */
-    }
-    const int type = e->type;
-    if (type != 0xe && type != 5 && type != 8 && type != 0xd
-        && type != 0x10 && type != 0x11 && type != 0x13
-        && type != 9 && type != 0x12 && type != 4 && type != 0xc) {
-        return ((~entity_state_flags_get(e)) >> 29) & 1u;
-    }
-    return 0;
 }
 
 /* ObjectFilterMatchesActionTarget (FUN_00404f50) — see entity.hpp. The
@@ -14114,66 +13974,6 @@ void ledger_stub_0044d0d0_DriftOffsetStepApply(float delta)
     motion_drift_offset_step(delta);
 }
 
-// KeyValueEqualsFileLoad
-// FUNCTION: LEGORR 0x0044db50
-int ledger_stub_0044db50_KeyValueEqualsFileLoad(
-    const MotionKeyValueLoadRequest* request, MotionKeyValueTable* table,
-    const MotionKeyValueLoadHooks* hooks)
-{
-    char line[256];
-    void* profile = NULL;
-    uint32_t i;
-    if (request == NULL || table == NULL || hooks == NULL) return 0;
-    memset(table, 0, sizeof(*table));
-    if (hooks->string_resolve != NULL) {
-        table->name_a = hooks->string_resolve(hooks->context,
-                                              request->name_a_id);
-        table->name_b = hooks->string_resolve(hooks->context,
-                                              request->name_b_id);
-        if (request->optional_name_id != 0)
-            table->optional_name = hooks->string_resolve(
-                hooks->context, request->optional_name_id);
-        if (request->text_resource_id != 0)
-            table->text_resource = hooks->string_resolve(
-                hooks->context, request->text_resource_id);
-    }
-    for (i = 0; i < 4u; ++i) table->values[i] = request->values[i];
-    if (hooks->profile_open != NULL)
-        profile = hooks->profile_open(hooks->context, request->config,
-                                      request->profile_id);
-    for (i = 0; i < MOTION_KEY_VALUE_ENTRY_CAPACITY; ++i) {
-        char* key = NULL;
-        char* value = NULL;
-        if (profile == NULL || hooks->profile_line_get == NULL ||
-            !hooks->profile_line_get(hooks->context, profile, i, line))
-            continue;
-        if (hooks->line_split != NULL) {
-            if (hooks->line_split(hooks->context, line, &key, &value) != 2)
-                continue;
-        }
-        else {
-            char* separator = strchr(line, '=');
-            if (separator == NULL) continue;
-            *separator = '\0';
-            key = line;
-            value = separator + 1;
-        }
-        if (key == NULL || value == NULL) continue;
-        table->entries[i].key = hooks->string_duplicate != NULL
-            ? hooks->string_duplicate(hooks->context, key)
-            : string_duplicate(key);
-        if (table->entries[i].key == NULL) continue;
-        table->entries[i].direct_value = 0;
-        table->entries[i].fallback_value = hooks->integer_parse == NULL
-            ? atoi(value) : hooks->integer_parse(hooks->context, value);
-    }
-    if (profile != NULL && hooks->profile_close != NULL)
-        hooks->profile_close(hooks->context, profile);
-    if (hooks->deferred_callback_register != NULL)
-        hooks->deferred_callback_register(hooks->context, 0x0044dec0u);
-    return 1;
-}
-
 uint32_t motion_config_profile_entries_release(
     void* config, MotionConfigProfileEntry* entries, uint32_t count,
     const MotionConfigProfileReleaseHooks* hooks)
@@ -14206,16 +14006,6 @@ uint32_t motion_config_profile_entries_release(
     return released;
 }
 
-// EngineLoaderProfileEntriesRelease
-// FUNCTION: LEGORR 0x0044dd40
-uint32_t ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease(
-    void* config, MotionConfigProfileEntry* entries, uint32_t count,
-    const MotionConfigProfileReleaseHooks* hooks)
-{
-    return unported_ledger_stubs::motion_config_profile_entries_release(
-        config, entries, count, hooks);
-}
-
 // SurfaceVertexSpanValidate
 int ledger_stub_0044e8c0_SurfaceVertexSpanValidate(
     TerrainSurfaceGrid* grid, const int* cell_xy, unsigned int cell_count,
@@ -14246,7 +14036,7 @@ void ledger_stub_0044fab0_TerrainCellSurfaceTriangleVerticesSelect(
 
 } // namespace unported_ledger_stubs
 
-static EntityQuadCollisionHooks s_entity_quad_collision_hooks;
+EntityQuadCollisionHooks s_entity_quad_collision_hooks;
 
 void entity_quad_collision_hooks_set(
     const EntityQuadCollisionHooks* hooks)
@@ -14255,63 +14045,6 @@ void entity_quad_collision_hooks_set(
     else memset(&s_entity_quad_collision_hooks, 0,
                 sizeof(s_entity_quad_collision_hooks));
 }
-
-namespace unported_ledger_stubs {
-
-// FUNCTION: LEGORR 0x00466490
-int ledger_stub_00466490_CellSightRayCheckAndFlag(
-    const EntitySlot* observer)
-{
-    EntitySlot* cell_entity = NULL;
-    LevelState* level;
-    float observer_position[2];
-    float start[2];
-    float end[2];
-    float direction_length;
-    int cell_x = -1;
-    int cell_y = -1;
-    uint32_t cell_flags = 0u;
-    int hit;
-    if (observer == NULL || observer->owner_ctx == NULL ||
-        observer->owner_ctx->level == NULL) return 0;
-    level = observer->owner_ctx->level;
-    if (level->ptr_terrain == NULL) return 0;
-    entity_transform_position_get(observer, observer_position);
-    if (!terrain_world_xy_to_cell(level->ptr_terrain, observer_position[0],
-            observer_position[1], &cell_x, &cell_y) ||
-        !entity_field_grid_cell_get(cell_x, cell_y, (void**)&cell_entity,
-                                    &cell_flags) ||
-        (cell_flags & 0x100u) == 0u || cell_entity == NULL ||
-        !terrain_cell_world_center_xy_get(level->ptr_terrain, cell_x, cell_y,
-                                          start)) return 0;
-
-    /* Retail normalizes the occupied cell entity's surface vector before
-     * using it as the ray endpoint. Prefer the installed renderer accessor;
-     * EntitySlot's attached direction is the typed runtime representation
-     * when that accessor has no provider. */
-    if (!entity_surface_vector_normalize_if_available(cell_entity, end)) {
-        end[0] = cell_entity->attached_direction[0];
-        end[1] = cell_entity->attached_direction[1];
-        direction_length = (float)sqrt((double)(end[0] * end[0] +
-                                                 end[1] * end[1]));
-        if (direction_length == 0.0f) return 0;
-        end[0] /= direction_length;
-        end[1] /= direction_length;
-    }
-    if ((entity_state_flags_get(observer) & 0x100u) != 0u) {
-        hit = entity_surface_quad_segment_intersect((EntitySlot*)observer,
-            start, end, NULL, 0, &s_entity_quad_collision_hooks);
-    }
-    else {
-        hit = entity_segment_center_proximity_check(observer, start, end, 0);
-    }
-    if (!hit) return 0;
-    ((EntitySlot*)observer)->flags_3e0 |= 0x02000000u;
-    cell_entity->flags_3e0 |= 0x02000000u;
-    return 1;
-}
-
-} // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
 

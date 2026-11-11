@@ -17,6 +17,7 @@
 #include "savegame.hpp"
 #include "options.hpp"
 #include "util.hpp"
+#include "savegame_shared.hpp"
 
 #if defined(LEGORRR_BACKEND_WINAPI)
 #  define SAVE_SEP '\\'  /* the corpus's "%s\%i.sav" DOS separators */
@@ -37,8 +38,8 @@
 
 /* The `.sav` open modes (corpus constants): DAT_004a2770 ("rb") and
  * DAT_004a2794 ("wb"). */
-static const char* MODE_RB = "rb";
-static const char* MODE_WB = "wb";
+const char* MODE_RB = "rb";
+const char* MODE_WB = "wb";
 static void* s_sav_tree_root[2]; /* the two corpus tree-root globals' role */
 static void** s_sav_owned_tree_nodes[2];
 static uint32_t s_sav_owned_tree_node_count[2];
@@ -1008,78 +1009,6 @@ void checkpoint_step(GameContext* ctx)
  *  Completed-objective table (`.osf`).
  * ------------------------------------------------------------------ */
 
-// FUNCTION: LEGORR 0x00459190
-void osf_add(GameContext* ctx, int32_t id, int32_t ref, const char* name)
-{
-    if (ctx == NULL) {
-        return;
-    }
-    if (ctx->osf_count >= ctx->osf_capacity) {
-        int new_capacity = ctx->osf_capacity + 10;
-        GameOsfEntry* grown = (GameOsfEntry*)realloc(
-            ctx->osf, (size_t)new_capacity * sizeof(GameOsfEntry));
-        if (grown == NULL) return;
-        ctx->osf = grown;
-        ctx->osf_capacity = new_capacity;
-    }
-    GameOsfEntry* e = &ctx->osf[ctx->osf_count++];
-    e->id = id;
-    e->ref = ref;
-    /* The corpus clears the whole 12-byte slot before its strncpy(0xb),
-     * leaving the final byte zero even when the name fills the copy window. */
-    const uint32_t zero = 0u;
-    __builtin_memcpy(e->name + 0, &zero, sizeof zero);
-    __builtin_memcpy(e->name + 4, &zero, sizeof zero);
-    __builtin_memcpy(e->name + 8, &zero, sizeof zero);
-    if (name != NULL) {
-        crt_string_copy_n(e->name, name, 11u); /* corpus calls 0x48e770 */
-    }
-    ctx->osf_dirty = 1;
-}
-
-// FUNCTION: LEGORR 0x004592e0
-void osf_snapshot(GameContext* ctx)
-{
-    if (ctx == NULL || ctx->osf_count == 0) {
-        return;
-    }
-    GameOsfEntry* snapshot = (GameOsfEntry*)malloc(
-        (size_t)ctx->osf_count * sizeof(GameOsfEntry));
-    if (snapshot == NULL) return;
-    __builtin_memcpy(snapshot, ctx->osf,
-                     (size_t)ctx->osf_count * sizeof(GameOsfEntry));
-    free(ctx->osf_shadow);
-    ctx->osf_shadow = snapshot;
-    ctx->osf_shadow_count = ctx->osf_count;
-    ctx->osf_shadow_dirty = 1;
-}
-
-// FUNCTION: LEGORR 0x004593e0
-int osf_write(GameContext* ctx, const char* path)
-{
-    if (ctx == NULL || path == NULL) {
-        return 0;
-    }
-    FILE* fp = fopen(path, MODE_WB);
-    if (fp == NULL) {
-        return 0;
-    }
-    uint8_t hdr[8];
-    const uint32_t magic = 0x534F5252u; /* 'R','O' bytes -> "ROS" u32 */
-    const uint32_t count = (uint32_t)ctx->osf_count;
-    __builtin_memcpy(hdr + 0, &magic, 4);
-    __builtin_memcpy(hdr + 4, &count, 4);
-    fwrite(hdr, 1, 8, fp);
-    if (count > 0) {
-        fwrite(ctx->osf, 1, (size_t)count * 20, fp);
-    }
-    fclose(fp);
-    ctx->osf_dirty = 0;
-    osf_snapshot(ctx);
-    ctx->osf_shadow_dirty = 0;
-    return 1;
-}
-
 int osf_write_path(GameContext* ctx, int slot)
 {
     char path[280];
@@ -1087,101 +1016,17 @@ int osf_write_path(GameContext* ctx, int slot)
     return osf_write(ctx, path);
 }
 
-/* Dedicated live-table globals preserve the original no-argument reset ABI.
- * OsfRead borrows its GameContext owner into these words before invoking the
- * mapped reset body, then synchronizes the resulting ownership back. */
-// GLOBAL: LEGORR 0x004ffe50
-static GameOsfEntry* s_osf_live_table;
-// GLOBAL: LEGORR 0x004ffe54
-static int s_osf_live_count;
-// GLOBAL: LEGORR 0x004ffe58
-static int s_osf_live_capacity;
-
-// FUNCTION: LEGORR 0x004592a0
-static void osf_read_state_reset(void)
-{
-    s_osf_live_count = 0;
-    s_osf_live_capacity = 0;
-    if (s_osf_live_table != NULL) engine_heap_free(s_osf_live_table);
-    s_osf_live_table = NULL;
-}
-
 /* GameFileLengthGet (FUN_0047fca0): query the stream length and restore its
  * original position, matching the original's save/seek-end/read-position /
  * seek-back sequence. */
 // FUNCTION: LEGORR 0x0047fca0
-static long save_stream_length(FILE* fp)
+long save_stream_length(FILE* fp)
 {
     long position = ftell(fp);
     fseek(fp, 0, SEEK_END);
     long length = ftell(fp);
     fseek(fp, position, SEEK_SET);
     return length;
-}
-
-/* Load-side `.osf` restore — OsfRead @ 0x459470, entered from LevelLoad @
- * 0x429890 (finding 08 §".osf load-side restore"). Mirrors FUN_00459470:
- * clear the live table first (OsfClear @ 0x4592a0), open `path` "rb",
- * validate the `'RO'` magic (`0x534f5252`) and the exact
- * `file_size == 8 + count*0x14` shape (the count is u32, read with the
- * header), then repopulate the live table and snapshot it into the shadow
- * (OsfSnapshot @ 0x4592e0) with the dirty flag cleared. A missing or
- * corrupt sidecar degrades to an empty table — the corpus's failure mode,
- * no crash. The return mirrors FUN_00459470's `uVar3`: 1 whenever the
- * file opened (valid or not), 0 when it was absent; the *installed state*
- * (osf_count == 0 on a bad sidecar) is what distinguishes them. `count`
- * count is bounded by the exact file length and allocation-size limits. */
-// FUNCTION: LEGORR 0x00459470
-int osf_read(GameContext* ctx, const char* path)
-{
-    if (ctx == NULL || path == NULL) {
-        return 0;
-    }
-    /* OsfReadStateReset clears only the live table. The corpus leaves the
-     * restart snapshot intact when the file is absent or invalid; a valid
-     * read replaces it through OsfSnapshot below. */
-    s_osf_live_table = ctx->osf;
-    s_osf_live_count = ctx->osf_count;
-    s_osf_live_capacity = ctx->osf_capacity;
-    osf_read_state_reset();
-    ctx->osf = s_osf_live_table;
-    ctx->osf_count = s_osf_live_count;
-    ctx->osf_capacity = s_osf_live_capacity;
-    FILE* fp = fopen(path, MODE_RB);
-    if (fp == NULL) {
-        return 0;
-    }
-    long int fsz = save_stream_length(fp);
-    uint8_t hdr[8];
-    size_t got = fread(hdr, 1, 8, fp);
-    int ok = (got == 8);
-    uint32_t magic = 0, count_le = 0;
-    if (ok) {
-        __builtin_memcpy(&magic, hdr + 0, 4);    /* 'RO' magic (LE u32)  */
-        __builtin_memcpy(&count_le, hdr + 4, 4); /* entry count (u32)    */
-        ok = (magic == 0x534F5252u)
-          && ((int64_t)fsz - 8 == (int64_t)count_le * 0x14)
-          && count_le <= 0x7fffffffu
-          && (size_t)count_le <= ((size_t)-1) / sizeof(GameOsfEntry);
-    }
-    if (ok) {
-        size_t n = (size_t)count_le * 0x14;      /* count * 20 bytes */
-        GameOsfEntry* loaded = count_le != 0
-            ? (GameOsfEntry*)malloc(n) : NULL;
-        if ((count_le == 0 || loaded != NULL) &&
-            (count_le == 0 || fread(loaded, 1, n, fp) == n)) {
-            ctx->osf = loaded;
-            ctx->osf_count = (int)count_le;
-            ctx->osf_capacity = (int)count_le;
-            osf_snapshot(ctx);                   /* live -> shadow     */
-            ctx->osf_dirty = 0;                  /* DAT_004ffe64 = 0   */
-            ctx->osf_shadow_dirty = 0;
-        }
-        else free(loaded);
-        /* else: corrupt (short read) -> table stays empty */
-    }
-    fclose(fp);
-    return 1;   /* uVar3 — the file opened */
 }
 
 int osf_read_path(GameContext* ctx, int slot)
@@ -1209,13 +1054,6 @@ void* sav_slot_ctx(GameContext* ctx, int slot)
     }
     save_context_bind(ctx);
     return sav_slot_ctx_target(slot);
-}
-
-/* --- the save-side DAT accessor band (see savegame.hpp) --------------------- */
-// FUNCTION: LEGORR 0x004593d0
-int osf_read_dirty_flag_get(const GameContext* ctx)
-{
-    return ctx != NULL ? ctx->osf_dirty : 0;
 }
 
 // FUNCTION: LEGORR 0x004601f0

@@ -76,4 +76,35 @@ extern TerrainFenceSparkDurationHook s_fence_spark_duration_hook;
 extern void* s_fence_spark_interaction_context;
 void level_cell_kind_grid_storage_release(LevelCellKindGrid* grid);
 
+extern NestedPointerReleaseHook s_nested_handle_release_hook;
+extern NestedPointerReleaseHook s_nested_memory_release_hook;
+
+typedef struct TerrainWorldSpatialRecord {
+    TerrainCellQuadRunRecord run;
+    float* candidate_xy; /* four candidate coordinates per run item */
+} TerrainWorldSpatialRecord;
+
+typedef struct TerrainWorldSpatialMerge {
+    uint32_t destination;
+    uint32_t source;
+} TerrainWorldSpatialMerge;
+
+typedef struct TerrainWorldSpatialRecords {
+    LevelState* owner;
+    TerrainWorldSpatialRecord* records;
+    uint32_t count;
+    uint32_t capacity;
+    TerrainWorldSpatialMerge* merges;
+    uint32_t merge_count;
+    uint32_t merge_capacity;
+} TerrainWorldSpatialRecords;
+
+extern const StagedCellCandidateRecord* s_staged_candidate_records;
+extern uint32_t s_staged_candidate_record_count;
+extern StagedCellCandidateLinks* s_staged_candidate_links;
+extern StagedCellCandidateSelectionRecord* s_staged_selection_records;
+extern uint32_t s_staged_selection_record_count;
+void terrain_world_spatial_record_release( TerrainWorldSpatialRecord* record);
+TerrainWorldSpatialRecord* terrain_world_spatial_record_find_at( LevelState* level, int x, int y, uint32_t* item_index);
+
 #endif /* LRR_GAME_TERRAIN_GRID_SHARED_HPP */

@@ -28,6 +28,7 @@
 #include "terrain_grid.hpp"
 #include "../gods98/message.hpp"
 #include "../gods98/media.hpp"
+#include "tutorial_hud_shared.hpp"
 
 /* The old NERP/advisor owner lives in DAT windows in the corpus.  Keep the
  * parser and interpreter state explicit here so callers can install the
@@ -38,69 +39,21 @@ typedef struct TutorialTokenEntry {
     int kind;
 } TutorialTokenEntry;
 
-#define NERP_TUTORIAL_CELL_CAPACITY 2048
-
-typedef struct NerpTutorialCellState {
-    int32_t x;
-    int32_t y;
-    uint32_t block_clicks;
-    uint32_t crystal_count;
-    uint32_t ore_count;
-    uint32_t flags;
-} NerpTutorialCellState;
-
-typedef struct NerpRuntimeState {
-    /* Reference history[0] aliases the frontend's last inline sound index.
-     * Only entries 1..8 live here; always use tutorial_message_history_get. */
-    uint32_t message_history[8];
-    uint32_t message_maximum;
-    uint32_t message_offset;
-    uint32_t message_ack_count;
-    uint32_t message_pending_ack;
-    uint32_t message_previous_ack;
-    uint32_t message_flags;
-    uint32_t message_wait;
-    uint32_t message_suppress_arrow;
-    uint32_t message_sound_active;
-    float message_timer;
-    float icon_position[2];
-    uint32_t icon_space;
-    uint32_t icon_width;
-    uint32_t tutorial_flags;
-    uint32_t tutorial_block_clicks;
-    uint32_t tutorial_crystals;
-    uint32_t tutorial_block_type_flags;
-    uint32_t tutorial_record_pointer;
-    uint32_t camera_control_flags;
-    int32_t camera_target_cells[2][2];
-    uint32_t camera_target_valid[2];
-    uint32_t hidden_objects_found;
-    uint32_t objective_switch;
-    uint32_t pointer_release_count;
-    int32_t pointer_action;
-    int32_t pointer_x;
-    int32_t pointer_y;
-    NerpTutorialCellState cells[NERP_TUTORIAL_CELL_CAPACITY];
-    uint32_t cell_count;
-} NerpRuntimeState;
-
-static TutorialScriptOps s_tutorial_script_ops;
-static GameContext* s_tutorial_game_context;
-static EngineContext* s_tutorial_engine_context;
-static void* s_tutorial_script_data;
-static uint32_t s_tutorial_script_size;
+TutorialScriptOps s_tutorial_script_ops;
+GameContext* s_tutorial_game_context;
+EngineContext* s_tutorial_engine_context;
+void* s_tutorial_script_data;
+uint32_t s_tutorial_script_size;
 static TutorialScriptFreeFn s_tutorial_script_release;
 static void* s_tutorial_script_release_context;
-static uint32_t* s_tutorial_program_words;
-static uint32_t s_tutorial_program_count;
+uint32_t* s_tutorial_program_words;
+uint32_t s_tutorial_program_count;
 static uint32_t s_tutorial_program_capacity;
-static uint32_t s_tutorial_nerp_registers[8];
-static float s_tutorial_nerp_timers[4];
-static NerpRuntimeState s_nerp_runtime;
+uint32_t s_tutorial_nerp_registers[8];
+float s_tutorial_nerp_timers[4];
+NerpRuntimeState s_nerp_runtime;
 // GLOBAL: LEGORR 0x00555d40
-static uint32_t s_tutorial_555d40_state[45];
-// GLOBAL: LEGORR 0x004ff958
-static uint32_t s_tutorial_4ff958_state[11];
+uint32_t s_tutorial_555d40_state[45];
 static TutorialTokenEntry s_tutorial_tokens[512];
 static uint32_t s_tutorial_token_count;
 static uint32_t s_tutorial_literal_token_count;
@@ -108,24 +61,24 @@ static TutorialScriptOps s_advisor_token_ops;
 static uint32_t s_tutorial_message_generation = 0xffffffffu;
 /* Initialized .data words at 0x4a6748/4c/50, outside the script reset bands. */
 static float s_tutorial_message_timer_values[3] = {1000.0f, 500.0f, 4000.0f};
-static uint32_t s_tutorial_focus_id;
-static uint32_t s_tutorial_focus_valid;
-static float s_tutorial_focus_offset_target;
-static float s_tutorial_focus_angle_target;
-static uint32_t s_tutorial_focus_offset_active;
-static uint32_t s_tutorial_focus_angle_active;
-static float s_tutorial_focus_offset;
-static float s_tutorial_focus_angle;
-static float s_tutorial_focus_angle_velocity;
+uint32_t s_tutorial_focus_id;
+uint32_t s_tutorial_focus_valid;
+float s_tutorial_focus_offset_target;
+float s_tutorial_focus_angle_target;
+uint32_t s_tutorial_focus_offset_active;
+uint32_t s_tutorial_focus_angle_active;
+float s_tutorial_focus_offset;
+float s_tutorial_focus_angle;
+float s_tutorial_focus_angle_velocity;
 
-static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
+int tutorial_builtin_command(uint32_t command, const uint32_t* args,
                                     uint32_t argc, uint32_t* result_out);
-static uint32_t tutorial_builtin_command_adapter(uint32_t command,
+uint32_t tutorial_builtin_command_adapter(uint32_t command,
                                                 const uint32_t* args,
                                                 uint32_t arg_count,
                                                 void* context);
 
-static void tutorial_scroll_runtime_state_reset(void)
+void tutorial_scroll_runtime_state_reset(void)
 {
     memset(s_nerp_runtime.message_history, 0,
            sizeof(s_nerp_runtime.message_history));
@@ -174,7 +127,7 @@ void tutorial_message_sound_active_set(void)
     s_nerp_runtime.message_sound_active = 1u;
 }
 
-static void tutorial_camera_focus_state_reset(void)
+void tutorial_camera_focus_state_reset(void)
 {
     s_tutorial_focus_id = 0xffffffffu;
     s_tutorial_focus_valid = 0u;
@@ -200,33 +153,7 @@ static void tutorial_camera_runtime_state_reset(void)
     }
 }
 
-/* NERP callback metadata is the third dword of each 12-byte callback-table
- * row at 0x004a5948. The retail table has 293 rows. Metadata determines
- * argument count and whether the result feeds a condition; keep the bytecode
- * cursor aligned even for callbacks whose effects have not been ported yet. */
-static const uint8_t s_tutorial_command_kinds[293] = {
-    3,0,0,0,0,0,0,0,3,3,3,3,0,0,0,0,
-    5,0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,
-    4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,
-    4,4,0,0,0,0,4,4,4,0,4,4,4,4,0,4,
-    4,0,4,0,0,0,0,4,4,4,4,0,0,0,0,0,
-    0,0,0,0,4,5,4,4,4,0,4,4,5,0,4,5,
-    0,0,0,0,0,4,4,0,0,4,4,0,6,1,5,1,
-    5,0,1,4,4,0,4,4,0,0,1,0,4,4,0,5,
-    0,0,4,4,0,4,4,0,5,5,4,3,4,4,4,1,
-    0,0,0,0,0,4,4,0,4,4,0,4,0,4,4,4,
-    0,0,4,0,4,0,4,4,4,0,0,4,4,4,5,4,
-    4,0,1,0,4,0,4,0,4,0,4,3,0,0,5,4,
-    0,0,0,0,0,1,0,1,3,4,3,3,3,3,4,0,
-    0,0,4,4,4,0,4,4,0,4,4,0,4,4,0,4,
-    0,0,0,4,4,4,4,4,4,4,4,4,0,0,0,0,
-    0,0,0,0,0,4,0,4,0,4,4,4,3,4,4,0,
-    4,4,0,4,4,1,4,0,4,4,0,0,0,0,0,0,
-    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-    0,0,0,0,0
-};
-
-static void tutorial_script_data_release(void* data)
+void tutorial_script_data_release(void* data)
 {
     if (data == NULL) return;
     if (s_tutorial_script_release != NULL)
@@ -250,7 +177,7 @@ static int tutorial_text_equal(const char* a, const char* b)
     return *a == *b;
 }
 
-static void tutorial_tokens_clear(void)
+void tutorial_tokens_clear(void)
 {
     uint32_t i;
     for (i = 0; i < s_tutorial_token_count; ++i) {
@@ -317,7 +244,7 @@ void tutorial_nerp_pointer_release_record(int action, int cell_x, int cell_y)
     s_nerp_runtime.pointer_y = cell_y;
 }
 
-static void tutorial_script_program_clear(void)
+void tutorial_script_program_clear(void)
 {
     if (s_tutorial_program_words != NULL) {
         free(s_tutorial_program_words);
@@ -374,41 +301,6 @@ static void tutorial_script_host_state_reset(void)
     if (s_tutorial_script_ops.resource_state_initialize != NULL)
         s_tutorial_script_ops.resource_state_initialize(
             s_tutorial_script_ops.context);
-}
-
-/* TutorialNerpScriptFileLoad @ 0x00452df0. The two global clear bands have
- * exact extents of 45 and 11 dwords; retain their unmapped fields as raw
- * sidecars while keeping the observed engine calls in their original order. */
-// FUNCTION: LEGORR 0x00452df0
-static int tutorial_script_file_load_target(const char* path)
-{
-    uint32_t size = 0u;
-    void* data = NULL;
-    int mode = 1;
-    uint32_t* state_word = s_tutorial_555d40_state;
-    int state_count = 45;
-    for (; state_count != 0; --state_count) *state_word++ = 0u;
-    ui_message_overlay_state_initialize();
-    state_word = s_tutorial_4ff958_state;
-    state_count = 11;
-    for (; state_count != 0; --state_count) *state_word++ = 0u;
-    if (s_tutorial_script_ops.mode_set != NULL)
-        s_tutorial_script_ops.mode_set(mode, s_tutorial_script_ops.context);
-    else
-        (void)engine_mode_set_target(&mode);
-    if (path != NULL) {
-        if (s_tutorial_script_ops.load != NULL)
-            data = s_tutorial_script_ops.load(
-                path, &size, s_tutorial_script_ops.context);
-        else {
-            int32_t byte_size = 0;
-            data = read_whole_file(path, &byte_size);
-            if (byte_size > 0) size = (uint32_t)byte_size;
-        }
-    }
-    s_tutorial_script_data = data;
-    s_tutorial_script_size = size;
-    return data != NULL;
 }
 
 int tutorial_script_file_load(const char* path)
@@ -510,129 +402,6 @@ const char* tutorial_objective_token_lookup(uint32_t index)
      * so look through its live table even when this module's optional output
      * snapshot has not been requested. */
     return objective_advisor_token_text_get(index);
-}
-
-// FUNCTION: LEGORR 0x00453220
-int tutorial_display_resources_release(void)
-{
-    tutorial_script_data_release(s_tutorial_script_data);
-    s_tutorial_script_data = NULL;
-    s_tutorial_script_size = 0;
-    tutorial_script_program_clear();
-    memset(s_tutorial_nerp_registers, 0, sizeof(s_tutorial_nerp_registers));
-    memset(&s_nerp_runtime, 0, sizeof(s_nerp_runtime));
-    tutorial_camera_focus_state_reset();
-    tutorial_scroll_runtime_state_reset();
-    if (s_tutorial_engine_context != NULL &&
-        s_tutorial_engine_context->views[0] != NULL) {
-        s_tutorial_engine_context->views[0]->target_record = NULL;
-        s_tutorial_engine_context->views[0]->follow_id = 0;
-    }
-    objective_advisor_tokens_release();
-    tutorial_tokens_clear();
-    if (s_tutorial_script_ops.resource_state_release != NULL)
-        s_tutorial_script_ops.resource_state_release(
-            s_tutorial_script_ops.context);
-    /* AdvisorDisplayStateResourcesRelease reinitializes the shared message
-     * overlay after clearing the tutorial-owned resource tables. */
-    ui_message_overlay_state_initialize();
-    return 1;
-}
-
-static uint32_t tutorial_command_kind_default(uint32_t command);
-
-// FUNCTION: LEGORR 0x004532e0
-void tutorial_indirect_handle_resolve(uint32_t* value)
-{
-    uint32_t index;
-    uint32_t kind;
-    uint32_t resolved;
-    if (value == NULL || (*value & 0xffff0000u) != 0x00020000u) return;
-    index = *value & 0xffffu;
-    kind = s_tutorial_script_ops.command_kind != NULL
-        ? s_tutorial_script_ops.command_kind(
-            index, s_tutorial_script_ops.context)
-        : tutorial_command_kind_default(index);
-    if (kind != 0u) return;
-    if (s_tutorial_script_ops.indirect_resolve != NULL)
-        *value = s_tutorial_script_ops.indirect_resolve(
-            index, s_tutorial_script_ops.context);
-    else if (s_tutorial_script_ops.command != NULL &&
-             s_tutorial_script_ops.command !=
-                 tutorial_builtin_command_adapter)
-        *value = s_tutorial_script_ops.command(
-            index, NULL, 0u, s_tutorial_script_ops.context);
-    else if (tutorial_builtin_command(index, NULL, 0u, &resolved))
-        *value = resolved;
-}
-
-static uint32_t tutorial_compare_values(uint32_t op, uint32_t previous,
-                                        uint32_t current)
-{
-    switch (op) {
-    case 1: return previous != 0u && current != 0u;
-    case 2: return previous != 0u || current != 0u;
-    case 3: return current < previous;
-    case 4: return previous < current;
-    case 5: return previous == current;
-    case 6: return current <= previous;
-    case 7: return previous <= current;
-    case 8: return previous != current;
-    default: return current;
-    }
-}
-
-static uint32_t tutorial_command_kind_default(uint32_t command)
-{
-    return command < 293u ? s_tutorial_command_kinds[command] : 0u;
-}
-
-static int tutorial_command_invoke(uint32_t command, const uint32_t* args,
-                                   uint32_t argc, uint32_t* result)
-{
-    if (result == NULL) return 0;
-    if (s_tutorial_script_ops.command != NULL) {
-        *result = s_tutorial_script_ops.command(
-            command, argc == 0u ? NULL : args, argc,
-            s_tutorial_script_ops.context);
-        return 1;
-    }
-    return tutorial_builtin_command(command,
-        argc == 0u ? NULL : args, argc, result);
-}
-
-// FUNCTION: LEGORR 0x00453bb0
-void tutorial_frame_timer_array_advance(float delta)
-{
-    const float timer_delta = delta * 1000.0f * 0.04f;
-    uint32_t i;
-    tutorial_message_generation_sync();
-    for (i = 0u; i < 4u; ++i)
-        s_tutorial_nerp_timers[i] += timer_delta;
-    if (s_nerp_runtime.message_timer == 0.0f) return;
-    if (s_nerp_runtime.message_timer >= 0.0f) {
-        if (deferred_callback_peek() == 0u ||
-            s_nerp_runtime.message_flags != 0u) {
-            s_nerp_runtime.message_timer -= timer_delta;
-            if (s_nerp_runtime.message_timer > 0.0f) goto message_tail;
-        } else {
-            if (s_nerp_runtime.message_previous_ack != 0u &&
-                (((int32_t)s_nerp_runtime.message_offset > 0 &&
-                  s_nerp_runtime.message_suppress_arrow != 0u) ||
-                 s_nerp_runtime.message_suppress_arrow == 0u)) {
-                engine_global_state_flags_bits6_and_9_set_target(
-                    s_nerp_runtime.message_pending_ack != 0u, 1);
-            }
-            s_nerp_runtime.message_previous_ack =
-                s_nerp_runtime.message_pending_ack;
-            if (s_nerp_runtime.message_pending_ack != 0u) goto message_tail;
-        }
-    }
-    s_nerp_runtime.message_timer = 0.0f;
-message_tail:
-    if (s_nerp_runtime.message_sound_active != 0u &&
-        s_nerp_runtime.message_timer < 1000.0f)
-        advisor_clear_active_state();
 }
 
 static int tutorial_grid_count_command_type(uint32_t command,
@@ -1409,39 +1178,6 @@ static void tutorial_camera_goto_coordinate_list(GameContext* game,
     }
 }
 
-static int tutorial_camera_focus_target_apply(GameContext* game,
-                                              EngineContext* engine,
-                                              uint32_t target_index)
-{
-    EntitySlot* entity;
-    int cell_x;
-    int cell_y;
-    int cell_xy[2];
-    ViewportTargetClampState clamp_state;
-    float world[3];
-    if (game == NULL || engine == NULL || game->level == NULL ||
-        target_index >= object_pointer_registry_count_get()) return 0;
-    entity = object_pointer_registry_entity_get(target_index);
-    if (entity == NULL) return 0;
-    entity_position_to_terrain_cell(entity, game->level, &cell_x, &cell_y);
-    cell_xy[0] = cell_x;
-    cell_xy[1] = cell_y;
-    memset(&clamp_state, 0, sizeof(clamp_state));
-    clamp_state.map_width = level_width(game->level) - 1;
-    clamp_state.map_height = level_height(game->level) - 1;
-    clamp_state.edge_extent = view_grid_edge_get();
-    clamp_state.global_flags = engine->state;
-    /* 0x42de40 preserves an object's exact world point unless the map
-     * inset actually changes its cell. Do not quantize scripted follow. */
-    entity_transform_position_get(entity, world);
-    if (viewport_target_position_clamp(&clamp_state, cell_xy) &&
-        !terrain_cell_world_center_xy_get(game->level->ptr_terrain,
-            clamp_state.target[0], clamp_state.target[1], world)) return 0;
-    engine->state = clamp_state.global_flags;
-    view_primary_target_request(engine, world[0], world[1], 1);
-    return 1;
-}
-
 static void tutorial_unit_at_coordinate_list_set(GameContext* game,
                                                  uint32_t list_index)
 {
@@ -1466,7 +1202,7 @@ static void tutorial_unit_at_coordinate_list_set(GameContext* game,
  * table: GetR0..7 return a register, SetR0..7 replace it, AddR0..7 add one
  * argument, and SubR0..7 subtract one argument. Other callback IDs still
  * need their game-specific effects bound. */
-static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
+int tutorial_builtin_command(uint32_t command, const uint32_t* args,
                                     uint32_t argc, uint32_t* result_out)
 {
     uint32_t reg;
@@ -2061,7 +1797,7 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
 /* Install the ported callback subset through the same call slot as host
  * command providers. The subset recognizes commands by the exact retail ID
  * table; unrepresented IDs return zero without claiming a guessed effect. */
-static uint32_t tutorial_builtin_command_adapter(uint32_t command,
+uint32_t tutorial_builtin_command_adapter(uint32_t command,
                                                 const uint32_t* args,
                                                 uint32_t arg_count,
                                                 void* context)
@@ -2070,148 +1806,6 @@ static uint32_t tutorial_builtin_command_adapter(uint32_t command,
     (void)context;
     (void)tutorial_builtin_command(command, args, arg_count, &result);
     return result;
-}
-
-// FUNCTION: LEGORR 0x00453320
-void tutorial_script_command_dispatch(float delta)
-{
-    uint32_t pc = 0u;
-    uint32_t previous = 0;
-    uint32_t last_result = 0u;
-    uint32_t compare_op = 0;
-    int negate_next = 0;
-    if (s_tutorial_script_data == NULL && s_tutorial_program_count == 0u)
-        return;
-    while (pc < s_tutorial_program_count) {
-        uint32_t word = s_tutorial_program_words[pc];
-        uint32_t command = word & 0xffffu;
-        uint32_t kind = 0u;
-        uint32_t argc = 0u;
-        uint32_t args[3];
-        uint32_t result = 0u;
-        uint32_t i;
-        uint32_t step = 1u;
-        if ((word & 0x20000u) == 0u) {
-            if ((word & 0x10000u) != 0u) {
-                negate_next = 0;
-                if (command == 0u) {
-                    /* Preserve the accumulated predicate and select AND. */
-                    compare_op = 1u;
-                } else if (command == 1u) {
-                    negate_next = 1;
-                } else if (command == 2u) {
-                    compare_op = 2u;
-                } else if (command >= 5u && command <= 10u) {
-                    compare_op = command - 2u;
-                }
-            } else if ((word & 0x40000u) != 0u) {
-                previous = 0u;
-                compare_op = 0u;
-                negate_next = 0;
-            } else if ((word & 0x80000u) != 0u) {
-                if (previous != 0u) {
-                    pc = command < s_tutorial_program_count
-                        ? command : s_tutorial_program_count;
-                }
-                previous = 0u;
-                compare_op = 0u;
-                negate_next = 0;
-            } else {
-                uint32_t current = (uint32_t)(int32_t)(int16_t)command;
-                if (negate_next) current = current == 0u;
-                last_result = current;
-                previous = compare_op != 0u
-                    ? tutorial_compare_values(compare_op, previous, current)
-                    : current;
-                negate_next = 0;
-                compare_op = 1u;
-            }
-            ++pc;
-            continue;
-        }
-        if (command == 0u && (previous != 0u || compare_op == 0u)) break;
-        kind = s_tutorial_script_ops.command_kind != NULL
-            ? s_tutorial_script_ops.command_kind(command,
-                                                  s_tutorial_script_ops.context)
-            : tutorial_command_kind_default(command);
-        if (kind <= 2u) {
-            if (kind == 1u) argc = 1u;
-            else if (kind == 2u) argc = 2u;
-            for (i = 0u; i < argc; ++i) {
-                args[i] = pc + 1u + i < s_tutorial_program_count
-                    ? s_tutorial_program_words[pc + 1u + i] : 0u;
-                tutorial_indirect_handle_resolve(&args[i]);
-            }
-            step += argc;
-            (void)tutorial_command_invoke(command,
-                argc == 0u ? NULL : args, argc, &result);
-            if (negate_next) result = result == 0u;
-            last_result = result;
-            previous = compare_op != 0u
-                ? tutorial_compare_values(compare_op, previous, result)
-                : result;
-            negate_next = 0;
-            compare_op = 1u;
-        } else if (kind >= 3u && kind <= 6u) {
-            argc = kind - 3u;
-            for (i = 0u; i < argc; ++i) {
-                args[i] = pc + 1u + i < s_tutorial_program_count
-                    ? s_tutorial_program_words[pc + 1u + i] : 0u;
-                if (previous != 0u)
-                    tutorial_indirect_handle_resolve(&args[i]);
-            }
-            step += argc;
-
-            if (previous != 0u) {
-                (void)tutorial_command_invoke(command,
-                    argc == 0u ? NULL : args, argc, &result);
-            }
-            previous = 0u;
-            compare_op = 0u;
-            negate_next = 0;
-        } else {
-            ++pc;
-            continue;
-        }
-        pc += step;
-    }
-    /* This dispatcher receives simulation seconds. Only the camera's
-     * reference-shaped tween consumes the original 25-Hz frame units. */
-    tutorial_camera_focus_tween_update(view_camera_delta_from_seconds(delta));
-}
-
-// FUNCTION: LEGORR 0x00453920
-void tutorial_advisor_scroll_step_advance(void)
-{
-    static const uint32_t scroll_scale_record[2] = { 100u, 0u };
-    tutorial_message_generation_sync();
-    media_action_feedback_sound_dispatch(0);
-    if (s_nerp_runtime.message_offset != 0u) {
-        --s_nerp_runtime.message_offset;
-        if ((int32_t)s_nerp_runtime.message_offset > 3)
-            s_nerp_runtime.message_offset = 3u;
-        if ((int32_t)s_nerp_runtime.message_offset >
-            (int32_t)s_nerp_runtime.message_maximum)
-            s_nerp_runtime.message_offset = s_nerp_runtime.message_maximum;
-        {
-            uint32_t index = s_nerp_runtime.message_maximum -
-                             s_nerp_runtime.message_offset;
-            const char* token = tutorial_objective_token_lookup(
-                tutorial_message_history_get(index));
-            advisor_text_request_setup_text(token, 0u);
-        }
-        if (s_nerp_runtime.message_offset == 0u) {
-            engine_global_state_flags_bits6_and_9_set_target(0, 1);
-            if (system_state_flags_get() != 0u)
-                (void)camera_focus_scroll_scale_commit(
-                    s_tutorial_engine_context, scroll_scale_record);
-        }
-        engine_global_state_flags_bit7_set_target(1);
-    } else {
-        if (s_nerp_runtime.message_pending_ack != 0u)
-            ++s_nerp_runtime.message_ack_count;
-        s_nerp_runtime.message_pending_ack = 0u;
-    }
 }
 
 void tutorial_camera_focus_state_set(uint32_t focus_id, uint32_t valid,
@@ -2228,78 +1822,6 @@ void tutorial_camera_focus_state_set(uint32_t focus_id, uint32_t valid,
     s_tutorial_focus_offset = 0.0f;
     s_tutorial_focus_angle = 0.0f;
     s_tutorial_focus_angle_velocity = 0.0f;
-}
-
-// FUNCTION: LEGORR 0x00453da0
-void tutorial_camera_focus_tween_update(float delta)
-{
-    float scale = 1.0f;
-    float step;
-    if (delta <= 0.0f) return;
-    if (s_tutorial_script_ops.delta_scale != NULL)
-        scale = s_tutorial_script_ops.delta_scale(
-            s_tutorial_script_ops.context);
-    if (s_tutorial_focus_valid != 0) {
-        if (!tutorial_camera_focus_target_apply(s_tutorial_game_context,
-                                                s_tutorial_engine_context,
-                                                s_tutorial_focus_id)) {
-            s_tutorial_focus_valid = 0u;
-        }
-        if (s_tutorial_script_ops.camera_focus != NULL)
-            s_tutorial_script_ops.camera_focus(
-                s_tutorial_focus_id, 0.0f, 0.0f,
-                s_tutorial_script_ops.context);
-    }
-    if (s_tutorial_focus_offset_active != 0) {
-        step = s_tutorial_focus_offset_target / (delta * 25.0f);
-        s_tutorial_focus_offset += step;
-        if (s_tutorial_focus_offset_target - 5.0f < s_tutorial_focus_offset &&
-            s_tutorial_focus_offset < s_tutorial_focus_offset_target + 5.0f) {
-            s_tutorial_focus_offset_active = 0;
-            s_tutorial_focus_offset = 0.0f;
-        }
-        if (s_tutorial_script_ops.camera_offset != NULL)
-            s_tutorial_script_ops.camera_offset(
-                step, s_tutorial_script_ops.context);
-        else if (s_tutorial_engine_context != NULL)
-            camera_zoom_update(
-                s_tutorial_engine_context->camera_controller, step);
-    }
-    if (s_tutorial_focus_angle_active != 0) {
-        float remaining = s_tutorial_focus_angle <= 0.0f
-                        ? s_tutorial_focus_angle + s_tutorial_focus_angle_target
-                        : s_tutorial_focus_angle - s_tutorial_focus_angle_target;
-        float scaled = remaining * 0.05555556f * 0.33333334f * scale;
-        s_tutorial_focus_angle_velocity += scaled;
-        if ((s_tutorial_focus_angle_target > 0.0f &&
-             s_tutorial_focus_angle_target - 1.0f <
-                 s_tutorial_focus_angle_velocity) ||
-            (s_tutorial_focus_angle_target < 0.0f &&
-             s_tutorial_focus_angle_velocity <
-                 s_tutorial_focus_angle_target + 1.0f)) {
-            s_tutorial_focus_angle_active = 0;
-            s_tutorial_focus_angle_velocity = 0.0f;
-        }
-        s_tutorial_focus_angle += scaled;
-        if (s_tutorial_script_ops.camera_rotation != NULL)
-            s_tutorial_script_ops.camera_rotation(
-                scaled * 0.017453292f, s_tutorial_script_ops.context);
-        else if (s_tutorial_engine_context != NULL) {
-            float current = 0.0f;
-            float next;
-            memcpy(&current,
-                   s_tutorial_engine_context->camera_controller + 0x84,
-                   sizeof(current));
-            next = current + scaled * 0.017453292f;
-            camera_rotation_set(
-                s_tutorial_engine_context->camera_controller, next);
-        }
-    }
-    if (s_tutorial_script_ops.camera_state != NULL &&
-        s_tutorial_script_ops.camera_state(s_tutorial_script_ops.context) != 0 &&
-        s_tutorial_script_ops.camera_scroll != NULL)
-        s_tutorial_script_ops.camera_scroll(100, 0.0f,
-                                            s_tutorial_script_ops.context);
 }
 
 static void tutorial_inline_append(char* out, uint32_t* used, const char* text)
@@ -2432,11 +1954,9 @@ typedef struct LegacyPanelImagePortEntry {
     uint32_t flags;
 } LegacyPanelImagePortEntry;
 
-static LegacyHudOps s_legacy_hud_ops;
-static LegacyHealthBarState s_legacy_health_bar;
+LegacyHudOps s_legacy_hud_ops;
+LegacyHealthBarState s_legacy_health_bar;
 static LegacyPanelPortRecord s_legacy_panels[18];
-static void* s_legacy_hunger_images[5];
-static float s_legacy_hunger_position[2];
 static float s_legacy_bubble_position[2];
 static float s_legacy_entity_ring_radius;
 static float s_legacy_entity_ring_height;
@@ -2447,7 +1967,7 @@ void legacy_hud_ops_set(const LegacyHudOps* ops)
     else memset(&s_legacy_hud_ops, 0, sizeof(s_legacy_hud_ops));
 }
 
-static int legacy_config_pair(BlockFile* cfg, const char* path, int* x, int* y)
+int legacy_config_pair(BlockFile* cfg, const char* path, int* x, int* y)
 {
     char text[128];
     char* separator;
@@ -2463,197 +1983,6 @@ static int legacy_config_pair(BlockFile* cfg, const char* path, int* x, int* y)
     *separator = '\0';
     *x = atoi(text);
     *y = atoi(separator + 1);
-    return 1;
-}
-
-static int legacy_config_rgb(BlockFile* cfg, const char* path, float rgb[3])
-{
-    if (cfg == NULL || path == NULL || rgb == NULL) return 0;
-    if (s_legacy_hud_ops.config_rgb != NULL)
-        return s_legacy_hud_ops.config_rgb(cfg, path, rgb,
-                                           s_legacy_hud_ops.context);
-    return config_rgb_vector_read(cfg, path, &rgb[0], &rgb[1], &rgb[2]);
-}
-
-/* The retail loaders resolve each setting through a key-name file first,
- * then fetch and parse the corresponding value from the value file. Most
- * production callers pass the same Lego.cfg for both, but keep the two
- * inputs distinct for callers which supply a separate key table. */
-static const char* legacy_hud_config_path(const char* config_root,
-                                          const char* key)
-{
-    return string_path_join(config_root, "ObjInfo", key, (char*)NULL);
-}
-
-static int legacy_config_pair_from_root(BlockFile* values,
-                                        const char* config_root,
-                                        const char* key, int* x, int* y)
-{
-    const char* path;
-    if (values == NULL || config_root == NULL || key == NULL) return 0;
-    path = legacy_hud_config_path(config_root, key);
-    return legacy_config_pair(values, path, x, y);
-}
-
-static int legacy_config_rgb_from_root(BlockFile* values,
-                                       const char* config_root,
-                                       const char* key, float rgb[3])
-{
-    const char* path;
-    if (values == NULL || config_root == NULL || key == NULL) return 0;
-    path = legacy_hud_config_path(config_root, key);
-    return legacy_config_rgb(values, path, rgb);
-}
-
-static int legacy_config_int_from_root(BlockFile* values,
-                                       const char* config_root,
-                                       const char* key, int fallback)
-{
-    const char* path;
-    if (values == NULL || config_root == NULL || key == NULL) return fallback;
-    path = legacy_hud_config_path(config_root, key);
-    return block_get_int(values, path, fallback);
-}
-
-static int legacy_config_bool_from_root(BlockFile* values,
-                                        const char* config_root,
-                                        const char* key)
-{
-    const char* path;
-    if (values == NULL || config_root == NULL || key == NULL) return 0;
-    path = legacy_hud_config_path(config_root, key);
-    return block_get_bool_path(values, path);
-}
-
-static float legacy_clamp_01(float value)
-{
-    if (value < 0.0f) return 0.0f;
-    if (value > 1.0f) return 1.0f;
-    return value;
-}
-
-static void legacy_color_pair(float source[3], float high[3], float low[3])
-{
-    int i;
-    for (i = 0; i < 3; ++i) {
-        /* The retail loop walks the interleaved globals in three strides,
-         * clamping the source, lighter, and darker RGB channels in place. */
-        high[i] = legacy_clamp_01(source[i] + source[i] * 0.4f);
-        low[i] = legacy_clamp_01(source[i] - source[i] * 0.4f);
-        source[i] = legacy_clamp_01(source[i]);
-    }
-}
-
-// FUNCTION: LEGORR 0x00459560
-int legacy_health_bar_config_load(BlockFile* values, const char* config_root)
-{
-    int x, y;
-    int width, height;
-    BlockFile* cfg = values;
-    int border;
-    int vertical;
-    float rgb[3];
-    if (cfg == NULL) return 0;
-    if (!legacy_config_pair_from_root(values, config_root,
-            "HealthBarPosition", &x, &y)) return 0;
-    s_legacy_health_bar.x = (float)x;
-    s_legacy_health_bar.y = (float)y;
-    if (!legacy_config_pair_from_root(values, config_root,
-            "HealthBarWidthHeight", &width, &height)) return 0;
-    s_legacy_health_bar.width = (float)width;
-    s_legacy_health_bar.height = (float)height;
-    // The original derives this through an integer conversion of the raw
-    // value string, so a missing or empty key yields 0 rather than 1.
-    border = legacy_config_int_from_root(values, config_root,
-            "HealthBarBorderSize", 0);
-    s_legacy_health_bar.border = (float)border;
-    if (!legacy_config_rgb_from_root(values, config_root,
-            "HealthBarBorderRGB", rgb)) return 0;
-    memcpy(s_legacy_health_bar.border_rgb, rgb, sizeof(rgb));
-    legacy_color_pair(s_legacy_health_bar.border_rgb,
-                      s_legacy_health_bar.border_high,
-                      s_legacy_health_bar.border_low);
-    if (!legacy_config_rgb_from_root(values, config_root,
-            "HealthBarBackgroundRGB", rgb)) return 0;
-    memcpy(s_legacy_health_bar.background_rgb, rgb, sizeof(rgb));
-    if (!legacy_config_rgb_from_root(values, config_root,
-            "HealthBarRGB", rgb)) return 0;
-    memcpy(s_legacy_health_bar.health_rgb, rgb, sizeof(rgb));
-    vertical = legacy_config_bool_from_root(values, config_root,
-            "HealthBarVertical");
-    /* DAT_004ffe68 is shared by the other HUD loaders. The original only
-       ORs these bits: a later horizontal reload does not clear vertical. */
-    if (vertical == 1) s_panel_enable_word |= 8u;
-    s_panel_enable_word |= 2u;
-    s_legacy_health_bar.vertical =
-        (s_panel_enable_word & 8u) != 0 ? 1u : 0u;
-    s_legacy_health_bar.flags |= 2u;
-    if ((s_panel_enable_word & 8u) != 0)
-        s_legacy_health_bar.flags |= 8u;
-    return 1;
-}
-
-static void legacy_hud_resource_name(BlockFile* cfg, const char* config_root,
-                                     const char* key,
-                                     char* out, uint32_t out_size)
-{
-    const char* path;
-    out[0] = '\0';
-    if (cfg == NULL || config_root == NULL || key == NULL || out_size == 0)
-        return;
-    path = legacy_hud_config_path(config_root, key);
-    if (s_legacy_hud_ops.config_resource != NULL) {
-        s_legacy_hud_ops.config_resource(cfg, path, out, out_size,
-                                        s_legacy_hud_ops.context);
-    } else {
-        block_get_str(cfg, path, out, (size_t)out_size);
-    }
-}
-
-// FUNCTION: LEGORR 0x004599c0
-void legacy_hunger_images_load(BlockFile* values, const char* config_root)
-{
-    int i;
-    char path[96];
-    char resource_name[256];
-    BlockFile* cfg = values;
-    // The original re-reads the five ObjInfo::HungerImages::HungerImage%i
-    // keys and overwrites each slot without releasing the previous surface
-    // (the resource layer owns surface lifetime).
-    for (i = 0; i < 5; ++i) {
-        void* image = NULL;
-        sprintf(path, "HungerImages::HungerImage%i", i);
-        legacy_hud_resource_name(cfg, config_root, path, resource_name,
-                                 (uint32_t)sizeof(resource_name));
-        if (resource_name[0] != '\0' &&
-            s_legacy_hud_ops.surface_load != NULL) {
-            image = s_legacy_hud_ops.surface_load(
-                cfg, resource_name, 0, 0, s_legacy_hud_ops.context);
-            if (image != NULL && s_legacy_hud_ops.surface_initialize != NULL)
-                s_legacy_hud_ops.surface_initialize(
-                    image, s_legacy_hud_ops.context);
-        }
-        s_legacy_hunger_images[i] = image;
-        /* These are the five DAT_004ffec4 slots consumed by
-         * IndexedPanelResourcePositionApply. Keep the config-loaded images
-         * in the same table used by the live panel drawing path. */
-        panel_position_slot_set(i, image);
-    }
-}
-
-// FUNCTION: LEGORR 0x00459900
-int legacy_hunger_images_position_config_load(BlockFile* values,
-                                               const char* config_root)
-{
-    int x, y;
-    BlockFile* cfg = values;
-    legacy_hunger_images_load(values, config_root);
-    if (cfg == NULL || !legacy_config_pair_from_root(values, config_root,
-            "HungerImagesPosition", &x, &y)) return 0;
-    s_legacy_hunger_position[0] = (float)x;
-    s_legacy_hunger_position[1] = (float)y;
-    panel_position_offsets_set((float)x, (float)y);
-    s_panel_enable_word |= 1u;
     return 1;
 }
 
@@ -2681,118 +2010,6 @@ int legacy_bubble_images_position_config_load(BlockFile* values,
 void legacy_health_bar_config_peek(LegacyHealthBarState* state)
 {
     if (state != NULL) *state = s_legacy_health_bar;
-}
-
-static uint32_t legacy_rgb_pack(const float rgb[3])
-{
-    uint32_t r = (uint32_t)(legacy_clamp_01(rgb[0]) * 255.0f);
-    uint32_t g = (uint32_t)(legacy_clamp_01(rgb[1]) * 255.0f);
-    uint32_t b = (uint32_t)(legacy_clamp_01(rgb[2]) * 255.0f);
-    return (r << 16) | (g << 8) | b;
-}
-
-// FUNCTION: LEGORR 0x00459b00
-void legacy_entity_screen_ring_render(void* entity, int x, int y)
-{
-    EntitySlot* slot = (EntitySlot*)entity;
-    float first_xy[20];
-    float second_xy[20];
-    float rect[4];
-    float health;
-    float width, height, border;
-    float health_size;
-    float x0, y0;
-    int i;
-    int point_count;
-    if (slot == NULL || (s_panel_enable_word & 2u) == 0u) return;
-    if (entity_quad_mesh_render_record_allowed(slot) == 0) return;
-    health = slot->field_340;
-    if (health < 0.0f) health = 0.0f;
-    if (health > 100.0f) health = 100.0f;
-    border = s_legacy_health_bar.border;
-    width = s_legacy_health_bar.width + border * 2.0f;
-    height = s_legacy_health_bar.height + border * 2.0f;
-    x0 = (float)x + s_legacy_health_bar.x;
-    y0 = (float)y + s_legacy_health_bar.y;
-
-    /* Match the two interleaved 2*border vertex streams built by retail.
-     * Each pair walks one screen edge while stepping one pixel inward. */
-    point_count = (int)border * 2;
-    if (point_count > 10) point_count = 10;
-    if (point_count < 0) point_count = 0;
-    memset(first_xy, 0, sizeof(first_xy));
-    memset(second_xy, 0, sizeof(second_xy));
-    for (i = 0; i < point_count / 2; ++i) {
-        float fi = (float)i;
-        int at = i * 4;
-        first_xy[at] = x0 + fi;
-        first_xy[at + 1] = y0 + fi;
-        first_xy[at + 2] = x0 + width - 1.0f - fi;
-        first_xy[at + 3] = y0 + fi;
-        second_xy[at] = x0 + fi;
-        second_xy[at + 1] = y0 + height - 2.0f - fi;
-        second_xy[at + 2] = x0 + fi + 1.0f;
-        second_xy[at + 3] = y0 + fi;
-    }
-    {
-        float opposite_a[20];
-        float opposite_b[20];
-        memset(opposite_a, 0, sizeof(opposite_a));
-        memset(opposite_b, 0, sizeof(opposite_b));
-        for (i = 0; i < point_count / 2; ++i) {
-            float fi = (float)i;
-            int at = i * 4;
-            opposite_a[at] = x0 + fi;
-            opposite_a[at + 1] = y0 + height - 1.0f - fi;
-            opposite_a[at + 2] = x0 + width - 1.0f - fi;
-            opposite_a[at + 3] = y0 + height - 1.0f - fi;
-            opposite_b[at] = x0 + width - 2.0f - fi;
-            opposite_b[at + 1] = y0 + height - 1.0f - fi;
-            opposite_b[at + 2] = x0 + width - 1.0f - fi;
-            opposite_b[at + 3] = y0 + fi + 1.0f;
-        }
-        if (s_legacy_hud_ops.ring_strip_draw != NULL && point_count > 0) {
-            s_legacy_hud_ops.ring_strip_draw(first_xy, second_xy,
-                (uint32_t)point_count, s_legacy_health_bar.border_high, 0,
-                s_legacy_hud_ops.context);
-            s_legacy_hud_ops.ring_strip_draw(opposite_a, opposite_b,
-                (uint32_t)point_count, s_legacy_health_bar.border_low, 0,
-                s_legacy_hud_ops.context);
-        }
-    }
-
-    if (s_legacy_hud_ops.rect_draw != NULL) {
-        if (s_legacy_health_bar.vertical == 0u) {
-            health_size = health * width * 0.01f;
-            rect[0] = x0;
-            rect[1] = y0;
-            rect[2] = health_size;
-            rect[3] = height;
-            s_legacy_hud_ops.rect_draw(rect,
-                legacy_rgb_pack(s_legacy_health_bar.health_rgb),
-                s_legacy_hud_ops.context);
-            rect[0] = x0 + health_size;
-            rect[2] = width - health_size;
-            s_legacy_hud_ops.rect_draw(rect,
-                legacy_rgb_pack(s_legacy_health_bar.background_rgb),
-                s_legacy_hud_ops.context);
-        }
-        else {
-            health_size = (100.0f - health) * height * 0.01f;
-            rect[0] = x0;
-            rect[1] = y0;
-            rect[2] = width;
-            rect[3] = health_size;
-            s_legacy_hud_ops.rect_draw(rect,
-                legacy_rgb_pack(s_legacy_health_bar.background_rgb),
-                s_legacy_hud_ops.context);
-            rect[1] = y0 + health_size;
-            rect[3] = height - health_size;
-            s_legacy_hud_ops.rect_draw(rect,
-                legacy_rgb_pack(s_legacy_health_bar.health_rgb),
-                s_legacy_hud_ops.context);
-        }
-    }
 }
 
 void legacy_entity_screen_ring_render_with_ops(

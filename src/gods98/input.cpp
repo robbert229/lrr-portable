@@ -100,23 +100,6 @@ void input_key_mapping_reset(InputKeyMappingTable* table)
     if (table != NULL) memset(table, 0, sizeof(*table));
 }
 
-// FUNCTION: LEGORR 0x0044f1a0
-void input_key_mapping_add_bidirectional(InputKeyMappingTable* table,
-                                         uint8_t key_a, uint8_t key_b)
-{
-    uint32_t i;
-    if (table == NULL) return;
-    for (i = 0; i < table->count[key_a]; ++i) {
-        if (table->values[key_a][i] == key_b) {
-            return;
-        }
-    }
-    table->values[key_a][table->count[key_a]] = key_b;
-    ++table->count[key_a];
-    table->values[key_b][table->count[key_b]] = key_a;
-    ++table->count[key_b];
-}
-
 void input_reset(InputState* s)
 {
     if (s == NULL) {

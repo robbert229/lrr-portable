@@ -20,12 +20,6 @@ void engine_heap_free_wrapper(void* ptr)
     engine_heap_free(ptr);
 }
 
-// FUNCTION: LEGORR 0x0045daf0
-void ui_render_record_free(void* record)
-{
-    engine_heap_free(record);
-}
-
 // FUNCTION: LEGORR 0x0047ff30
 void engine_heap_allocate(long size)
 {

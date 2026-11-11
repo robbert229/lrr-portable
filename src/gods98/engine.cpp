@@ -858,31 +858,9 @@ void engine_context_mode_global_set(int32_t mode)
     s_context_mode = mode;
 }
 
-/* EngineModeSet (FUN_004565f0) clears the two advisor-text request globals;
- * their normal writers/readers are in the advisor text band. */
-// GLOBAL: LEGORR 0x00503610
-static uint32_t s_overlay_word_03610; /* DAT_00503610 role */
-// GLOBAL: LEGORR 0x00503614
-static uint32_t s_overlay_word_03614; /* DAT_00503614 role */
-
 void engine_global_state_flags_bit7_set_target(int value);
 void engine_global_state_flags_bits6_and_9_set_target(
     int value, int set_bit9);
-
-/* The mapped body takes only the mode pointer; keep the portable context
- * adapter separate to preserve that x86 argument layout. */
-// FUNCTION: LEGORR 0x004565f0
-int engine_mode_set_target(const int* mode)
-{
-    global_flag_004ff978_install((uint32_t)*mode);
-    if (*mode == 1) {
-        engine_global_state_flags_bits6_and_9_set_target(0, 1);
-        engine_global_state_flags_bit7_set_target(0);
-    }
-    s_overlay_word_03610 = 0u;
-    s_overlay_word_03614 = 0u;
-    return *mode;
-}
 
 int engine_mode_set(EngineContext* ctx, const int* mode)
 {
@@ -1060,49 +1038,9 @@ void engine_app_mode_global_set(int32_t mode)
 
 /* --- the grid-cell record buffer (see engine.hpp) ---------------------------- */
 // GLOBAL: LEGORR 0x005520e8
-static void*        s_field_grid_buf;   /* DAT_005520e8 role */
+void*        s_field_grid_buf;   /* DAT_005520e8 role */
 // GLOBAL: LEGORR 0x005520ec
-static EngineState* s_field_grid_desc;  /* DAT_005520ec role */
-
-// FUNCTION: LEGORR 0x004661c0
-void grid_cell_record_buffer_allocate(EngineState* block)
-{
-    if (block == NULL) {
-        return; /* deviation: the corpus strides the block blindly */
-    }
-    const int w = (int)block->grid_w;
-    const int h = (int)block->grid_h;
-    /* The corpus uses 12-byte records on x86 (entity, timer, flags). The
-     * portable build widens the entity slot with sizeof(void*), retaining a
-     * 16-byte record on LP64 while naturally returning to 12 bytes on x86. */
-    const int cell_size = (int)sizeof(void*) + 8;
-    void* buf = engine_heap_alloc((long)(w * h * cell_size));
-    if (buf != NULL) {
-        uint32_t* p = (uint32_t*)buf;
-        for (uint32_t n = (uint32_t)(w * h * (cell_size / 4)) & 0x3fffffffu;
-             n != 0u; --n) {
-            *p++ = 0u;
-        }
-    }
-    s_field_grid_buf = buf;
-    s_field_grid_desc = block;
-}
-
-// FUNCTION: LEGORR 0x00466210
-void entity_field_grid_buffer_release(void)
-{
-    if (s_field_grid_buf != NULL) {
-        engine_heap_free(s_field_grid_buf);
-        s_field_grid_buf = NULL;
-    }
-}
-
-// FUNCTION: LEGORR 0x00466230
-void grid_cell_record_buffer_replace(EngineState* block)
-{
-    entity_field_grid_buffer_release();
-    grid_cell_record_buffer_allocate(block);
-}
+EngineState* s_field_grid_desc;  /* DAT_005520ec role */
 
 void* entity_field_grid_buffer_peek(void) { return s_field_grid_buf; }
 
@@ -1215,30 +1153,6 @@ void scroll_scale_set_and_clamp(float scale)
     }
 }
 
-/* CameraFocusScrollScaleCommit (FUN_004538a0) — see engine.hpp. The corpus
- * reads the level-state root global and strides both windows blindly. */
-// FUNCTION: LEGORR 0x004538a0
-int camera_focus_scroll_scale_commit(const EngineContext* ctx,
-                                     const void* record)
-{
-    if (record == NULL) {
-        return 0; /* deviation: the corpus strides the record blindly */
-    }
-    uint32_t focus = 0, guard = 0;
-    __builtin_memcpy(&focus, (const char*)record + 0x00, sizeof focus);
-    __builtin_memcpy(&guard, (const char*)record + 0x04, sizeof guard);
-    if (focus == 0) {
-        const EngineState* st = ctx != NULL ? ctx->state_block : NULL;
-        if (st != NULL && st->focus_gate_27c != 0) {
-            return 0;
-        }
-    }
-    global_scroll_guard_set((int)guard);
-    scroll_scale_set_and_clamp((float)focus * 0.01f);
-    global_scroll_guard_set((int)guard);
-    return 0;
-}
-
 /* PanelSelectionHighlightToggle (FUN_00435aa0) — see engine.hpp. The corpus
  * rides two DAT globals, not the context: bit 0 of the shared debug/cheat
  * flag word DAT_00556ed0 (25 further corpus claimants — docs/dat/globals.csv)
@@ -1324,91 +1238,6 @@ int entity_field_grid_cell_get(int x, int y, void** entity_out,
     __builtin_memcpy(&flags, cell + sizeof(void*) + 4, sizeof(flags));
     if (entity_out != NULL) *entity_out = entity;
     if (flags_out != NULL) *flags_out = flags;
-    return 1;
-}
-
-// FUNCTION: LEGORR 0x00466380
-void set_expansion_entity_at_grid_cell(int x, int y, void* entity)
-{
-    if (s_field_grid_buf != NULL && s_field_grid_desc != NULL) {
-        /* Preserve the corpus's repeated index calculation and write order.
-         * On x86 these expressions use stride 0x0c, flags at +8, and timer
-         * at +4: imul width*y; add x; lea index*3; then scale by four. */
-        *(void**)((char*)s_field_grid_buf +
-                  ((int)s_field_grid_desc->grid_w * y + x) *
-                      ((int)sizeof(void*) + 8)) = entity;
-        uint32_t* flags = (uint32_t*)((char*)s_field_grid_buf +
-                  ((int)s_field_grid_desc->grid_w * y + x) *
-                      ((int)sizeof(void*) + 8) + (int)sizeof(void*) + 4);
-        *flags = *flags | 0x100u;
-        *(uint32_t*)((char*)s_field_grid_buf +
-                  ((int)s_field_grid_desc->grid_w * y + x) *
-                      ((int)sizeof(void*) + 8) + (int)sizeof(void*)) =
-            0x42c80000u;
-    }
-}
-
-// FUNCTION: LEGORR 0x00466750
-void grid_cell_invalidate_and_clear_flags(int x, int y)
-{
-    const EngineState* desc = s_field_grid_desc;
-    char* cell;
-    if (s_field_grid_buf == NULL || desc == NULL) {
-        return; /* deviation: the corpus strides the missing grid blindly */
-    }
-    cell = (char*)s_field_grid_buf +
-           (size_t)((int)desc->grid_w * y + x) *
-               ((size_t)sizeof(void*) + 8u);
-    /* Corpus shape: the entity is re-read from the slot before each flag
-     * window it touches (the aliasing reloads). */
-    void* entity = NULL;
-    __builtin_memcpy(&entity, cell + 0x00, sizeof entity);
-    if (entity != NULL) {
-        uint32_t w = 0u;
-        __builtin_memcpy(&w, (char*)entity + 0x3e8, sizeof w);
-        w |= 0x800000u;
-        __builtin_memcpy((char*)entity + 0x3e8, &w, sizeof w);
-        entity = NULL;
-        __builtin_memcpy(&entity, cell + 0x00, sizeof entity);
-        if (entity != NULL) {
-            __builtin_memcpy(&w, (char*)entity + 0x3e0, sizeof w);
-            w &= 0xfdffffffu;
-            __builtin_memcpy((char*)entity + 0x3e0, &w, sizeof w);
-        }
-    }
-    uint32_t flags = 0u;
-    __builtin_memcpy(&flags, cell + sizeof(void*) + 4, sizeof flags);
-    flags &= 0xfffffeffu;
-    __builtin_memcpy(cell + sizeof(void*) + 4, &flags, sizeof flags);
-}
-
-// FUNCTION: LEGORR 0x004663f0
-int can_spawn_expansion_entity_at_grid_cell(int x, int y, float* out)
-{
-    const EngineState* desc = s_field_grid_desc;
-    const int w = (int)desc->grid_w;
-    const char* vox = (const char*)desc->grid_cells;
-    const long i = (long)y * w + x;
-    const long s = i * 9; /* the corpus's lea [eax+eax*8], *8 rides the scale */
-    const char* base = vox + s * 8;
-    if ((base[8] & 8) == 0) {
-        return 0;
-    }
-    if ((base[0x50] & 0x10) == 0 || (base[-0x40] & 0x10) == 0) {
-        const long iu = (long)(y + 1) * w + x;
-        const long su = iu * 9;
-        const long id = (long)(y - 1) * w + x;
-        const long sd = id * 9;
-        if ((vox[su * 8 + 8] & 0x10) == 0 || (vox[sd * 8 + 8] & 0x10) == 0) {
-            return 0;
-        }
-        if (out != NULL) {
-            *(uint32_t*)out = 0u; /* the corpus's zero immediate dword */
-        }
-    } else if (out != NULL) {
-        *(uint32_t*)out = 0x3fc90fdbu; /* the corpus's immediate dword */
-        return 1;
-    }
     return 1;
 }
 

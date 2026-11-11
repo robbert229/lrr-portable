@@ -11,6 +11,7 @@
 #include "frameloop.hpp"
 #include "sound.hpp"
 #include "engine.hpp"
+#include "media_shared.hpp"
 
 /* ------------------------------------------------------------------ *
  *  One-shot timer. The corpus schedules exactly one pending callback
@@ -174,39 +175,6 @@ void media_audio_playback_toggle(int enable)
  *  0.0f, so it skips only strictly-positive overrides: zero, negative
  *  AND NaN all store the slot.
  * ------------------------------------------------------------------ */
-
-// GLOBAL: LEGORR 0x00500a98
-int          s_cursor_slot;       /* DAT_00500a98 role */
-// GLOBAL: LEGORR 0x00500efc
-static float s_cursor_override;   /* _DAT_00500efc role (statics: 0.0) */
-
-/* The corpus's override gate compares against this .rdata zero dword
- * (objdump-verified fcomp operand of PointerCursorSelect); a named const
- * static keeps the fcomp operand resolvable by Reccmp. */
-// GLOBAL: LEGORR 0x0049e64c
-static const float s_cursor_gate = 0.0f;   /* DAT_0049e64c, verified */
-
-// FUNCTION: LEGORR 0x0045cc20
-void media_pointer_cursor_select(int slot)
-{
-    if (!(s_cursor_override > s_cursor_gate)) {
-        s_cursor_slot = slot;
-    }
-}
-
-// FUNCTION: LEGORR 0x0045cc40
-void media_pointer_cursor_override_set(int slot, float value)
-{
-    s_cursor_slot = slot;
-    s_cursor_override = value;
-}
-
-// FUNCTION: LEGORR 0x0045cd90
-void media_pointer_cursor_override_tick(float delta)
-{
-    if (s_cursor_override > 0.0f)
-        s_cursor_override -= delta;
-}
 
 int media_pointer_cursor_slot(void)
 {

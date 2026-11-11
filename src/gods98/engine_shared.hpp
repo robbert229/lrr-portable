@@ -10,4 +10,10 @@ extern int32_t s_application_mode;
 
 extern uint32_t s_window_mode_flag;
 
+extern uint32_t s_overlay_word_03610;
+extern uint32_t s_overlay_word_03614;
+
+extern void* s_field_grid_buf;
+extern EngineState* s_field_grid_desc;
+
 #endif /* LRR_GODS98_ENGINE_SHARED_HPP */

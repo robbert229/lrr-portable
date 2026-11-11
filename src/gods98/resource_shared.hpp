@@ -73,4 +73,25 @@ extern TransientEffectConfigureHook s_transient_effect_configure_hook;
 extern void* s_transient_effect_configure_context;
 extern int s_scene_availability_selected_style;
 
+extern SceneAnimationChannelUpdateHook s_animation_channel_update_hook;
+extern SceneAnimationChannelQueryHook s_animation_channel_query_hook;
+extern SceneAnimationVisibilityHook s_animation_visibility_hook;
+extern void* s_animation_channel_context;
+extern SceneIndexedRecordNodeReleaseHook s_scene_indexed_record_release_hook;
+extern void* s_scene_indexed_record_context;
+extern SceneChannelEntryProcessHook s_scene_channel_entry_process_hook;
+extern void* s_scene_channel_entry_context;
+
+extern SceneAnimationDurationHook s_animation_duration_hook;
+extern SceneAnimationLastFrameHook s_animation_last_frame_hook;
+extern void* s_animation_duration_context;
+extern SceneResourceNamedResolveHook s_scene_resource_named_resolve_hook;
+extern void* s_scene_resource_record_context;
+extern SceneAnimationTrackApplyHook s_animation_track_apply_hook;
+extern void* s_animation_track_context;
+extern SceneResourceOwnerApplyHook s_scene_resource_owner_apply_hook;
+extern void* s_scene_resource_owner_context;
+extern SceneOwnedMemoryReleaseHook s_scene_owned_memory_release_hook;
+extern void* s_scene_owned_memory_context;
+
 #endif /* LRR_GODS98_RESOURCE_SHARED_HPP */

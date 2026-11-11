@@ -27,4 +27,21 @@ extern void* s_advisor_config_target_lookup_user;
 extern AdvisorTransformApplyHook s_adv_transform_apply_hook;
 extern void* s_adv_transform_apply_user;
 
+extern ObjectiveDeferredCallback s_objective_deferred_callback;
+extern LevelState* s_objective_active_level;
+extern int s_advisor_sound_slot;
+extern const char** s_adv_text_tokens;
+extern uint32_t s_adv_text_token_count;
+extern const uint32_t* s_adv_tokens;
+extern uint32_t s_adv_token_count;
+
+extern char s_objective_voice_alias[256];
+extern int s_objective_voice_alias_pending;
+extern uint32_t s_objective_result_word;
+extern int s_objective_voice_stream_handle;
+extern int s_objective_voice_result_active;
+extern int s_objective_tick_resolved;
+void objective_advisor_clear_active_state(void);
+extern int s_objective_announce_target_gate;
+
 #endif /* LRR_GAME_OBJECTIVE_SHARED_HPP */

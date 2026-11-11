@@ -21,80 +21,11 @@
 extern uint32_t interaction_flags_peek(void);
 extern void interaction_flags_set(uint32_t flags);
 
-// GLOBAL: LEGORR 0x00503190
-static const char* s_ui_message_labels[26] = {
-    "Text_Walk", "Text_Drill", "Text_NoDrill", "Text_CantDrill",
-    "Text_Reinforce", "Text_NoReinforce", "Text_CantReinforce",
-    "Text_PickupCrystal", "Text_Encyclopedia", "Text_RadarHelp",
-    "Text_BuildHelp", "Text_SelectionHelp", "Text_Drive",
-    "Text_CantDrive", "Text_MakeTeleporter", "Text_CannotPlaceBuilding",
-    "Text_CrystalOreDisabled", "Text_CrystalFound", "Text_CavernDiscovered",
-    "Text_OreFound", "Text_AirSupplyLow", "Text_AirSupplyRunningOut",
-    "Text_SpaceToContinue", "Text_GameCompleted", "Text_ManTrained",
-    "Text_UnitUpgraded"
-};
-static void* s_ui_message_primary_font;
-static void* s_ui_message_secondary_font;
-static void* s_ui_message_resource;
-static void* s_ui_message_subtitle_font;
-static float s_ui_message_line_delay = 100.0f;
-static unsigned int s_ui_message_count = 26u;
-static unsigned int s_ui_message_slot_count = 26u;
-static unsigned int s_ui_message_current;
-static uint32_t s_ui_message_flags;
-// GLOBAL: LEGORR 0x005031f8
-static char* s_ui_message_text_slots[26];
-static TextureSurface* s_ui_message_image_slots[26];
-static char s_ui_message_image_names[26][32];
-
-// FUNCTION: LEGORR 0x0046ab10
-void ui_message_text_slot_assign(int index, const char* text)
-{
-    size_t length;
-    const char* source;
-    char* target;
-    if (index < 0 || index >= 26 || text == NULL) return;
-    engine_heap_free_wrapper(s_ui_message_text_slots[index]);
-    s_ui_message_text_slots[index] = NULL;
-    length = strlen(text);
-    s_ui_message_text_slots[index] = (char*)engine_heap_alloc((long)length + 1);
-    if (s_ui_message_text_slots[index] != NULL) {
-        source = text;
-        target = s_ui_message_text_slots[index];
-        while (*source != '\0') {
-            if (*source == '_') {
-                *target = ' ';
-            } else if (*source == '\\' && source[1] == 'n') {
-                *target = '\n';
-                ++source;
-            } else {
-                *target = *source;
-            }
-            ++source;
-            ++target;
-        }
-        *target = '\0';
-    }
-    texture_release(s_ui_message_image_slots[index]);
-    s_ui_message_image_slots[index] = NULL;
-}
-
-// FUNCTION: LEGORR 0x0046abb0
-void ui_message_text_slot_assign_with_image(int index, const char* text,
-                                            const char* image_path,
-                                            const char* display_path)
-{
-    if (index < 0 || index >= 26) return;
-    ui_message_text_slot_assign(index, text);
-    snprintf(s_ui_message_image_names[index],
-             sizeof(s_ui_message_image_names[index]), "%s",
-             display_path != NULL ? display_path : "");
-    s_ui_message_image_slots[index] = image_path != NULL
-        ? image_surface_load(image_path, 0u, 0u) : NULL;
-    if (s_ui_message_image_slots[index] != NULL) {
-        texture_source_color_key_set(s_ui_message_image_slots[index], 0u, 0u);
-    }
-}
+void* s_ui_message_primary_font;
+void* s_ui_message_secondary_font;
+void* s_ui_message_resource;
+void* s_ui_message_subtitle_font;
+TextureSurface* s_ui_message_image_slots[26];
 
 const char* ui_message_text_slot_get(unsigned int index)
 {
@@ -112,34 +43,10 @@ void ui_message_image_position_get(float* x, float* y)
     if (y != NULL) *y = (float)(uintptr_t)s_ui_message_subtitle_font;
 }
 
-// FUNCTION: LEGORR 0x0046a7f0
-void ui_message_strings_initialize(void* primary_font, void* secondary_font,
-                                   void* message_resource, void* subtitle_font,
-                                   float line_delay)
-{
-    s_ui_message_primary_font = primary_font;
-    s_ui_message_secondary_font = secondary_font;
-    s_ui_message_resource = message_resource;
-    s_ui_message_subtitle_font = subtitle_font;
-    s_ui_message_count = 26u;
-    s_ui_message_slot_count = 26u;
-    s_ui_message_line_delay = (line_delay == 0.0f) ? 100.0f : line_delay;
-}
-
 void* ui_message_text_output_get(int alternate)
 {
     return alternate != 0 ? s_ui_message_secondary_font :
                             s_ui_message_primary_font;
-}
-
-// FUNCTION: LEGORR 0x0046aa90
-void ui_message_overlay_state_initialize(void)
-{
-    s_ui_message_count = 26u;
-    s_ui_message_current = 0u;
-    s_ui_message_flags = 0u;
-    text_buffer_reset(s_ui_message_primary_font);
-    text_buffer_reset(s_ui_message_secondary_font);
 }
 
 const char* ui_message_label_get(unsigned int index)
@@ -147,26 +54,7 @@ const char* ui_message_label_get(unsigned int index)
     return index < 26u ? s_ui_message_labels[index] : NULL;
 }
 
-// FUNCTION: LEGORR 0x0046aad0
-int ui_message_label_index_find(const char* label, int* out_index)
-{
-    int i;
-    if (label == NULL) return 0;
-    for (i = 0; i < 26; ++i) {
-        if (strcasecmp_lite(s_ui_message_labels[i], label) == 0) {
-            if (out_index == NULL) return 0;
-            *out_index = i;
-            return 1;
-        }
-    }
-    return 0;
-}
-
 static char* s_info_message_sound_names[MESSAGE_MAX_ID];
-// GLOBAL: LEGORR 0x004ff980
-uint32_t      s_system_state = 0u;   /* DAT_004ff980 */
-// GLOBAL: LEGORR 0x004ff9bc
-uint32_t             s_objective_switch = 0u; /* DAT_004ff9bc */
 float         s_now = 0.0f;          /* _DAT_0049e264 analog */
 MessageCallback  s_callback = NULL;
 MessageSoundHook s_sound = NULL;
@@ -439,19 +327,6 @@ uint32_t message_config_flags(int id)
 }
 void message_set_system_state(uint32_t v)     { s_system_state = v; }
 
-// FUNCTION: LEGORR 0x00456240
-uint32_t system_state_flags_get(void)
-{
-    return s_system_state;
-}
-
-// FUNCTION: LEGORR 0x00456550
-uint32_t system_state_flags_set_target(const uint32_t* value)
-{
-    s_system_state = *value;
-    return *value;
-}
-
 uint32_t system_state_flags_set(const uint32_t* value)
 {
     return value != NULL ? system_state_flags_set_target(value) : 0u;
@@ -462,32 +337,6 @@ uint32_t objective_switch_state_set(uint32_t value)
     s_objective_switch = value;
     return value;
 }
-
-// FUNCTION: LEGORR 0x004567d0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t objective_switch_state_get(void)
-{
-    __asm {
-        mov eax, dword ptr [s_objective_switch]
-        test eax, eax
-        je objective_switch_state_get_false
-        mov dword ptr [s_objective_switch], 0
-        mov eax, 1
-        ret
-    objective_switch_state_get_false:
-        xor eax, eax
-        ret
-    }
-}
-#else
-uint32_t objective_switch_state_get(void)
-{
-    /* FUN_004567d0 consumes the pending state and returns a boolean. */
-    if (s_objective_switch == 0u) return 0u;
-    s_objective_switch = 0u;
-    return 1u;
-}
-#endif
 
 void message_set_callback(MessageCallback cb) { s_callback = cb; }
 void message_set_sound_hook(MessageSoundHook h) { s_sound = h; }
@@ -630,17 +479,6 @@ float message_cooldown(int id)
         return 0.0f;
     }
     return s_cfg[id].cooldown;
-}
-
-/* DeferredCallbackSet (FUN_00453900) — zero-init module static (the
- * corpus's DAT_004a673c presence word). */
-// GLOBAL: LEGORR 0x004a673c
-static uint32_t s_deferred_callback_presence;
-
-// FUNCTION: LEGORR 0x00453900
-void deferred_callback_set(uint32_t value)
-{
-    s_deferred_callback_presence = value;
 }
 
 uint32_t deferred_callback_peek(void)

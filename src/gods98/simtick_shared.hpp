@@ -34,4 +34,18 @@ extern SimtickPostClusterRecordHook s_post_entity_first_hook;
 extern SimtickPostClusterRecordHook s_post_entity_second_hook;
 extern void* s_post_cluster_user;
 
+extern float s_xform_current[3];
+extern float s_xform_config[3];
+
+extern int s_marker_fired;
+
+extern int s_post_n;
+extern SimtickPostStepHook s_post_step_hook;
+extern void* s_post_step_user;
+
+extern SimtickFxEntry* s_fx_entries;
+extern uint32_t s_fx_count;
+extern SimtickFxResourceUpdateFn s_fx_update;
+extern void* s_fx_user;
+
 #endif /* LRR_GODS98_SIMTICK_SHARED_HPP */

@@ -1456,32 +1456,16 @@ uint32_t crt_floating_point_feature_probe(void)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00456210
-uint32_t flh_magic_uu_noop(void)
-{
-    return 0u;
-}
-
 /* The two DAT globals, static-backed until the corpus's writers (all
  * still unported) land — message.cpp's s_system_state precedent. The
  * float width is the corpus's own: 0x4230b0 flds a DWORD. */
 // GLOBAL: LEGORR 0x00556f00
 static float    s_global_float_00556f00;
-extern uint32_t s_objective_switch;
 
 // FUNCTION: LEGORR 0x004230b0
 float global_float_field_00556f00_get(void)
 {
     return s_global_float_00556f00;
-}
-
-/* Mapped target: stores the input dword globally and returns the same value;
- * the retail body dereferences the pointer without a null check. */
-// FUNCTION: LEGORR 0x004567c0
-uint32_t global_value_004ff9bc_store_and_return_target(const void* value)
-{
-    s_objective_switch = *(const uint32_t*)value;
-    return *(const uint32_t*)value;
 }
 
 /* Keep the portable API's null behavior pinned by test_static_globals. */
@@ -1491,11 +1475,6 @@ uint32_t global_value_004ff9bc_store_and_return(const void* value)
         ? global_value_004ff9bc_store_and_return_target(value) : 0u;
 }
 
-/* --- unowned DAT-global counter/accumulator band (see crt.hpp) -----------
- * None of these globals has a ported owner or feeder, so each lands as a
- * zero-initialized module static (the s_system_state precedent). */
-// GLOBAL: LEGORR 0x004ff990
-static uint32_t s_counter_004ff990 = 0u;
 // GLOBAL: LEGORR 0x00554adc
 static float    s_float_00554adc   = 0.0f;
 // GLOBAL: LEGORR 0x00554efc
@@ -1518,18 +1497,6 @@ static uint32_t s_counter_0055532c = 0u;
 static float    s_float_00555330   = 0.0f;
 // GLOBAL: LEGORR 0x00555120
 static float    s_float_00555120   = 0.0f;
-
-// FUNCTION: LEGORR 0x00454880
-void global_counter_004ff990_increment(void)
-{
-    s_counter_004ff990 = s_counter_004ff990 + 1u;
-}
-
-// FUNCTION: LEGORR 0x00454890
-void global_counter_004ff990_reset(void)
-{
-    s_counter_004ff990 = 0u;
-}
 
 // FUNCTION: LEGORR 0x00462830
 void global_float_at_00554adc_add_one(void)
@@ -1855,27 +1822,6 @@ int display_mode_matches_filter_tuple(int mode_index)
     return 0;
 }
 
-/* --- the remaining unowned DAT one-liners (see crt.hpp) ---------------------
- * Zero-initialized module statics per the s_system_state precedent — the
- * globals' meanings are unresolved (finding 383) and none has a ported
- * feeder. */
-// GLOBAL: LEGORR 0x004ff978
-static uint32_t s_flag_004ff978 = 0u;
-// GLOBAL: LEGORR 0x004ffe48
-static uint32_t s_value_004ffe48 = 0u;
-
-// FUNCTION: LEGORR 0x00456640
-uint32_t global_flag_004ff978_get(void)
-{
-    return s_flag_004ff978;
-}
-
-// FUNCTION: LEGORR 0x00458660
-void global_value_004ffe48_set(uint32_t value)
-{
-    s_value_004ffe48 = value;
-}
-
 // GLOBAL: LEGORR 0x00557860
 uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
 
@@ -1904,25 +1850,8 @@ void display_dimensions_set(int w, int h)
     s_display_h = h;
 }
 
-/* DAT_00500110 record block: 0x30-byte panel-category records. Bounds, pair,
- * category word, and flags all share this storage. */
-#define REQUEST_RECORD_COUNT 18
-
-typedef struct RequestRecord {
-    uint8_t  prefix[0x08];
-    float    bounds_x1; /* +0x08 */
-    float    bounds_y1; /* +0x0c */
-    float    bounds_x2; /* +0x10 */
-    float    bounds_y2; /* +0x14 */
-    uint32_t pair_x;  /* +0x18: DAT_00500128, 0x30-byte category stride */
-    uint32_t pair_y;  /* +0x1c: DAT_0050012c, 0x30-byte category stride */
-    uint32_t category_word; /* +0x20 */
-    uint8_t  reserved[0x08];
-    uint32_t flags;   /* +0x2c */
-} RequestRecord;
-
 // GLOBAL: LEGORR 0x00500110
-static RequestRecord s_request_records[REQUEST_RECORD_COUNT];
+RequestRecord s_request_records[REQUEST_RECORD_COUNT];
 
 // FUNCTION: LEGORR 0x0045a650
 void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2)
@@ -2099,8 +2028,6 @@ uint32_t request_record_flags_peek(int index)
 /* --- the remaining DAT one-liner stores/reads (see crt.hpp) ----------------- */
 // GLOBAL: LEGORR 0x0050080c
 static uint32_t s_value_0050080c = 0u;
-// GLOBAL: LEGORR 0x00500a9c
-static uint32_t s_font_words[16];   /* DAT_00500a9c window */
 
 // FUNCTION: LEGORR 0x0045c4a0
 void global_value_0050080c_set(uint32_t value)
@@ -2111,21 +2038,6 @@ void global_value_0050080c_set(uint32_t value)
 uint32_t global_value_0050080c_peek(void)
 {
     return s_value_0050080c;
-}
-
-// FUNCTION: LEGORR 0x0045cc10
-uint32_t indexed_global_value_at_get(int index)
-{
-    if (index < 0 || index >= 16) {
-        return 0u; /* deviation: the corpus strides blindly */
-    }
-    return s_font_words[index];
-}
-
-// FUNCTION: LEGORR 0x0045cc60
-uint32_t global_cursor_word_get(void)
-{
-    return s_cursor_slot;
 }
 
 void font_cursor_word_set(int index, uint32_t v)
@@ -2194,15 +2106,9 @@ void byte_range_swap(void* a, void* b, size_t n)
 }
 #endif
 
-/* --- the DAT window band (see crt.hpp) ---------------------------------------
- * Auxiliary tables are zero-initialized statics. The panel position pair
- * lives in the corresponding 0x30-byte RequestRecord, preserving the
- * corpus's indexed record stride; public port hooks remain guarded. */
-#define DAT_WINDOW_COUNT 18
-
-static float    s_fpair_a[DAT_WINDOW_COUNT]; /* DAT_00552144 entries */
-static float    s_fpair_b[DAT_WINDOW_COUNT]; /* DAT_00552148 entries */
-static void*    s_metric_records[DAT_WINDOW_COUNT]; /* DAT_00552154 */
+float    s_fpair_a[DAT_WINDOW_COUNT]; /* DAT_00552144 entries */
+float    s_fpair_b[DAT_WINDOW_COUNT]; /* DAT_00552148 entries */
+void*    s_metric_records[DAT_WINDOW_COUNT]; /* DAT_00552154 */
 static void*    s_panel_records[DAT_WINDOW_COUNT]; /* DAT_00500134 */
 
 
@@ -2227,16 +2133,6 @@ void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y)
     *out_y = s_request_records[index].pair_y;
 }
 
-// FUNCTION: LEGORR 0x00463730
-void indexed_float_pair_set(int index, uint32_t x, uint32_t y)
-{
-    if (index < 0 || index >= DAT_WINDOW_COUNT) {
-        return; /* deviation: the corpus strides blindly */
-    }
-    s_fpair_a[index] = (float)x; /* the corpus's uint->float cast */
-    s_fpair_b[index] = (float)y;
-}
-
 void indexed_float_pair_peek(int index, float* out_x, float* out_y)
 {
     if (index < 0 || index >= DAT_WINDOW_COUNT || out_x == NULL
@@ -2245,38 +2141,6 @@ void indexed_float_pair_peek(int index, float* out_x, float* out_y)
     }
     *out_x = s_fpair_a[index];
     *out_y = s_fpair_b[index];
-}
-
-// FUNCTION: LEGORR 0x00463ed0
-void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y)
-{
-    if (index < 0 || index >= DAT_WINDOW_COUNT) {
-        return;
-    }
-    char* rec = (char*)s_metric_records[index];
-    if (rec == NULL) {
-        return; /* deviation: the corpus dereferences its slot blindly */
-    }
-    __builtin_memcpy(rec + 0x1c, &x, sizeof(x));
-    __builtin_memcpy(rec + 0x20, &y, sizeof(y));
-    const uint32_t one = 1u; /* the corpus's dirty flag */
-    __builtin_memcpy(rec + 0x24, &one, sizeof(one));
-}
-
-// FUNCTION: LEGORR 0x00463ea0
-void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
-                                   uint32_t* out_y)
-{
-    if (index < 0 || index >= DAT_WINDOW_COUNT
-        || out_x == NULL || out_y == NULL) {
-        return;
-    }
-    const char* rec = (const char*)s_metric_records[index];
-    if (rec == NULL) {
-        return;
-    }
-    __builtin_memcpy(out_x, rec + 0x1c, sizeof(*out_x));
-    __builtin_memcpy(out_y, rec + 0x20, sizeof(*out_y));
 }
 
 void indexed_record_pointer_set(int index, void* record)
@@ -2414,10 +2278,10 @@ uint32_t reward_score_count_peek(void)
 }
 
 /* --- the panel/view blit band (see crt.hpp) --------------------------------- */
-static uint32_t s_view_handle[DAT_WINDOW_COUNT]; /* DAT_00552140 */
-static void*    s_view_rect_a[DAT_WINDOW_COUNT]; /* DAT_0055214c */
-static void*    s_view_rect_b[DAT_WINDOW_COUNT]; /* DAT_00552150 */
-static int      s_view_region[DAT_WINDOW_COUNT]; /* DAT_00552158 */
+uint32_t s_view_handle[DAT_WINDOW_COUNT]; /* DAT_00552140 */
+void*    s_view_rect_a[DAT_WINDOW_COUNT]; /* DAT_0055214c */
+void*    s_view_rect_b[DAT_WINDOW_COUNT]; /* DAT_00552150 */
+int      s_view_region[DAT_WINDOW_COUNT]; /* DAT_00552158 */
 static int      s_panel_count[DAT_WINDOW_COUNT]; /* DAT_00500138 */
 
 #define CRT_SURFACE_CALLS 256
@@ -2525,13 +2389,6 @@ float crt_float_bits(uint32_t bits)
     return f;
 }
 
-static uint32_t float_bits(float f)
-{
-    uint32_t b = 0u;
-    __builtin_memcpy(&b, &f, sizeof(b));
-    return b;
-}
-
 void view_blit_window_set(int view, uint32_t handle, void* rect_a,
                           void* rect_b, int region_index)
 {
@@ -2593,56 +2450,6 @@ void panel_item_flag8_set_if_enabled(int panel, int item, int value)
         return;
     }
     *w = value != 0 ? *w | 8u : *w & ~8u;
-}
-
-/* ViewBlitRectPositionsApply (FUN_00463d20) — see crt.hpp. Rect records:
- * +0x00/+0x04 position, +0x10/+0x14 the size pair (bit-for-bit blit
- * handles), +0x18 the flag word. The corpus strides its own block and
- * dereferences every window blindly — the guards here are the documented
- * deviation. */
-// FUNCTION: LEGORR 0x00463d20
-void view_blit_rect_positions_apply(int view)
-{
-    if (view < 0 || view >= DAT_WINDOW_COUNT) {
-        return;
-    }
-    const int k = s_view_region[view];
-    if (k < 0 || k >= DAT_WINDOW_COUNT) {
-        return; /* deviation: the corpus strides its own block blindly */
-    }
-    const float ox = s_fpair_a[view] +
-                     (float)(int)s_request_records[k].pair_x;
-    const float oy = s_fpair_b[view] +
-                     (float)(int)s_request_records[k].pair_y;
-    crt_surface_blit_record(s_view_handle[view], ox, oy);
-
-    for (int which = 0; which <= 1; ++which) {
-        const float* pf = (const float*)(which == 0 ? s_view_rect_a[view]
-                                                   : s_view_rect_b[view]);
-        if (pf == NULL) {
-            continue; /* deviation: the corpus reads blindly */
-        }
-        uint32_t flags = 0u;
-        __builtin_memcpy(&flags, pf + 6, sizeof(flags));
-        uint32_t handle = 0u;
-        if (((flags & 2u) == 0u) || (pf[4] == 0.0f)) {
-            if ((flags & 4u) != 0u && pf[5] != 0.0f) {
-                handle = float_bits(pf[5]);
-            } else {
-                continue;
-            }
-        } else {
-            handle = float_bits(pf[4]);
-        }
-        crt_surface_blit_record(handle, pf[0] + ox, pf[1] + oy);
-    }
-
-    const float* pf = (const float*)s_metric_records[view];
-    if (pf == NULL) {
-        return; /* deviation: the corpus dereferences its slot blindly */
-    }
-    crt_surface_blit_record(float_bits(pf[6]),
-                            pf[0] + pf[4] + ox, pf[1] + pf[5] + oy);
 }
 
 /* PanelTextureSlotsAllocate (FUN_0045ac30) — see crt.hpp. Draw-record
@@ -2779,89 +2586,11 @@ void uint96_zero(uint32_t limbs[3])
 void global_value_word_set(int value) { s_global_value_word = value; }
 int  global_value_word_peek(void) { return s_global_value_word; }
 
-/* The global-list push (FUN_0046a470) — the corpus's head word has no
- * ported owner, so the head lands here; the link field
- * at record +0x28 is a port-side pointer-sized slot (the corpus's 32-bit
- * dword, widened with the host — deviation documented). */
-/* Datacmp note: the corpus words at 0x4aa450/0x4aa458 are file-backed
- * zeros while the port's zero-init statics land in the exe's zero-fill
- * tail; reccmp-datacmp reads only file bytes per side and flags the pair
- * (uninitialized) — both sides are genuinely zero (image-verified). */
-// GLOBAL: LEGORR 0x004aa458
-static void* s_linked_list_head = NULL;  /* DAT_004aa458 role */
-static void record_list_push(void** head, void* record)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
-    }
-    *(void**)((char*)record + 0x1c) = *head;
-    *head = record;
-}
-
-// FUNCTION: LEGORR 0x0046a470
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void linked_list_push_at_global_head(void* record)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [s_linked_list_head]
-        mov dword ptr [eax + 1ch], ecx
-        mov dword ptr [s_linked_list_head], eax
-        ret
-    }
-}
-#else
-void linked_list_push_at_global_head(void* record)
-{
-    record_list_push(&s_linked_list_head, record);
-}
-#endif
-
 void* linked_list_global_head_peek(void) { return s_linked_list_head; }
 
 void linked_list_global_head_set(void* record)
 {
     s_linked_list_head = record;
-}
-
-/* LinkedRecordConditionalFloatAdvance (FUN_0046a700): walk the global
- * +0x1c chain and advance +8 by (+0xc * delta) only when +0x10 is nonzero
- * and +0x18 equals 2. The native chain pointer is widened in the port; the
- * observed record offsets and branch conditions are unchanged. */
-// FUNCTION: LEGORR 0x0046A700
-void linked_list_conditional_float_advance(float delta)
-{
-    void* record = s_linked_list_head;
-    while (record != NULL) {
-        uint32_t active = 0u;
-        uint32_t mode = 0u;
-        float value = 0.0f;
-        float rate = 0.0f;
-        void* next = NULL;
-        memcpy(&active, (const char*)record + 0x10, sizeof(active));
-        memcpy(&mode, (const char*)record + 0x18, sizeof(mode));
-        if (active != 0u && mode == 2u) {
-            memcpy(&value, (const char*)record + 8, sizeof(value));
-            memcpy(&rate, (const char*)record + 0x0c, sizeof(rate));
-            value = rate * delta + value;
-            memcpy((char*)record + 8, &value, sizeof(value));
-        }
-        memcpy(&next, (const char*)record + 0x1c, sizeof(next));
-        record = next;
-    }
-}
-
-/* FirstSetFlagOrdinal (FUN_0046a760): return the one-based index of the
- * lowest selected bit in the 13-bit state selector, or zero when empty. */
-// FUNCTION: LEGORR 0x0046A760
-uint32_t first_set_flag_ordinal(uint32_t mask)
-{
-    for (uint32_t bit = 0u; bit < 13u; ++bit) {
-        if ((mask & (1u << bit)) != 0u) {
-            return bit + 1u;
-        }
-    }
-    return 0u;
 }
 
 /* SceneEffectRegistryReset (FUN_00465380) — the transient-effect registry
@@ -2870,18 +2599,9 @@ uint32_t first_set_flag_ordinal(uint32_t mask)
  * 0x00552128/0x0055212c/0x00552130, so each word is its own annotated
  * static (the s_indexed_window precedent); all three are zero-filled
  * virtual tail, matching the zero-initialized statics here. */
-static uint32_t s_scene_effect_head;     /* DAT_00552128 role: transient-effect head */
-static uint32_t s_scene_effect_tail;     /* DAT_0055212c role: transient-effect tail */
-static uint32_t s_scene_effect_shared;   /* DAT_00552130 role: shared texture */
-
-// FUNCTION: LEGORR 0x00465380
-int scene_effect_registry_reset(void)
-{
-    s_scene_effect_head = 0u;    /* corpus clears in address order */
-    s_scene_effect_tail = 0u;
-    s_scene_effect_shared = 0u;
-    return 1;
-}
+uint32_t s_scene_effect_head;     /* DAT_00552128 role: transient-effect head */
+uint32_t s_scene_effect_tail;     /* DAT_0055212c role: transient-effect tail */
+uint32_t s_scene_effect_shared;   /* DAT_00552130 role: shared texture */
 
 void scene_effect_registry_words_peek(uint32_t out_words[3])
 {
@@ -2934,31 +2654,6 @@ void crt_no_op_stub_variant2(void)
     return;
 }
 #endif
-
-/* LinkedRecordChainFree / GlobalLinkedRecordChainClear — see crt.hpp. */
-// GLOBAL: LEGORR 0x004aa450
-static void* s_linked_list_aux = NULL; /* DAT_004aa450 role: unowned, zero-init */
-
-// FUNCTION: LEGORR 0x0046a370
-void linked_record_chain_free(void* record)
-{
-    if (record == NULL) {
-        return; /* the corpus's gate */
-    }
-    void* next = NULL;
-    __builtin_memcpy(&next, (char*)record + 0x1c, sizeof(next));
-    linked_record_chain_free(next);
-    engine_heap_free(record);
-}
-
-// FUNCTION: LEGORR 0x0046a390
-void global_linked_record_chain_clear(void)
-{
-    void* head = s_linked_list_head; /* the corpus reads the head first */
-    s_linked_list_aux = NULL;
-    linked_record_chain_free(head);
-    s_linked_list_head = NULL;
-}
 
 void* linked_list_global_aux_peek(void) { return s_linked_list_aux; }
 void  linked_list_global_aux_set(void* word) { s_linked_list_aux = word; }

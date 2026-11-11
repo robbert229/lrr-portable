@@ -41,7 +41,6 @@
 #include "tutorial_hud_ports.hpp"
 #include "level_shared.hpp"
 
-extern "C" float random_float_range(float minimum, float maximum);
 /* Cell mutation's cheat branch calls the existing entity-side implementation
  * of SmallSpiderCellSwarmSpawn. Its runtime prerequisites are checked by that
  * owner (active entity context, surface grid, and configured entity type). */
@@ -62,17 +61,17 @@ extern "C" float random_float_range(float minimum, float maximum);
  * explicit instead of pretending that TerrainState owns the render quads.
  * Once the backend binds the indexed surface, the normal helpers below read
  * and update the actual quad records supplied by that owner. */
-static void* s_terrain_quad_surface;
-static uint32_t s_terrain_quad_width;
-static uint32_t s_terrain_quad_height;
-static TerrainQuadVertexReadHook s_terrain_quad_vertex_read;
-static void* s_terrain_quad_vertex_context;
+void* s_terrain_quad_surface;
+uint32_t s_terrain_quad_width;
+uint32_t s_terrain_quad_height;
+TerrainQuadVertexReadHook s_terrain_quad_vertex_read;
+void* s_terrain_quad_vertex_context;
 static TerrainCellOverlayHeightFillHook
     s_terrain_cell_overlay_height_fill;
 static void* s_terrain_cell_overlay_height_fill_context;
-static LevelTerrainMaterialTransitionMeshHook
+LevelTerrainMaterialTransitionMeshHook
     s_material_transition_mesh_hook;
-static void* s_material_transition_mesh_context;
+void* s_material_transition_mesh_context;
 TerrainSurfaceGrid* level_surface_grid_get(const LevelState* level);
 LevelState* level_current_owner_get(void);
 LevelState* s_lava_erosion_level_context;
@@ -156,10 +155,6 @@ static void cell_transient_effect_ports_release(LevelState* level)
     }
 }
 
-namespace unported_ledger_stubs {
-int ledger_stub_00466250_ExpandCellEntitySpawn(int x, int y);
-}
-
 /* MapLoadPipeline calls GridCellRecordBufferReplace(level) after rebuilding
  * the separate 20-byte map-cell pool. EngineState is a portable view, so
  * keep its dimensions in persistent storage instead of casting LevelState
@@ -202,51 +197,6 @@ void terrain_cell_overlay_height_fill_hook_set(
 {
     s_terrain_cell_overlay_height_fill = hook;
     s_terrain_cell_overlay_height_fill_context = context;
-}
-
-// FUNCTION: LEGORR 0x00463590
-int terrain_cell_surface_normal_get(uint32_t x, uint32_t y, float out[3])
-{
-    float vertices[4][3];
-    float first[3];
-    float second[3];
-    float nx, ny, nz, inverse_length;
-    size_t index;
-    if (out == NULL) return 0;
-    /* The retail helper also gates on bit 0 of its renderer-owned 8-byte quad
-     * record. This standalone API has no record pointer; the dirty-normal
-     * pass enforces that gate at its call site. Do not substitute the
-     * surface orientation bit here. */
-    if (s_terrain_quad_surface != NULL &&
-        s_terrain_quad_vertex_read != NULL &&
-        x < s_terrain_quad_width && y < s_terrain_quad_height) {
-        index = (size_t)y * (size_t)s_terrain_quad_width + (size_t)x;
-        if (!s_terrain_quad_vertex_read(s_terrain_quad_vertex_context,
-                s_terrain_quad_surface, index, vertices)) return 0;
-    }
-    else {
-        GameContext* game = entity_pool_callback_context_get();
-        LevelState* level = game != NULL ? game->level : NULL;
-        if (level == NULL) level = level_current_owner_get();
-        if (level == NULL || level->ptr_terrain == NULL ||
-            !scene_render_terrain_cell_vertices_get(level, x, y,
-                                                     vertices)) return 0;
-    }
-    /* The polygon reader returns the four points in the order consumed by
-     * FUN_00463590: triangles (0,1,2) and (2,3,0). */
-    surface_triangle_normal_calculate(first, vertices[0], vertices[1],
-                                      vertices[2]);
-    surface_triangle_normal_calculate(second, vertices[2], vertices[3],
-                                      vertices[0]);
-    nx = first[0] + second[0];
-    ny = first[1] + second[1];
-    nz = first[2] + second[2];
-    inverse_length = 1.0f / (float)sqrt((double)(nx * nx + ny * ny + nz * nz));
-    /* The game's output frame swaps the second and third normal components. */
-    out[0] = nx * inverse_length;
-    out[1] = nz * inverse_length;
-    out[2] = ny * inverse_length;
-    return 1;
 }
 
 /* TerrainDirtyCellQuadNormalEmitPass has the same renderer quad table that
@@ -579,50 +529,6 @@ static int map_header_value(const char* name)
  *  renderer boundary.
  * ------------------------------------------------------------------ */
 
-#define TERRAIN_BLOCK_STRIDE 0x28
-#define LEVEL_DIRTY_QUEUE_CAP 2500
-
-typedef struct TerrainIndexedMeshObject {
-    void* mesh_record;
-} TerrainIndexedMeshObject;
-
-typedef struct TerrainState {
-    uint32_t dim[4];      /* [0]=w-1 [1]=h-1 [2]=w [3]=h */
-    float    blocksize;
-    float    terrain_value; /* TerrainCreate's fourth source parameter */
-    float    world_off_x; /* -(w-1)*blocksize*0.5 */
-    float    world_off_y; /*  (h-1)*blocksize*0.5 */
-    uint32_t dirty_flags; /* TerrainCreate +0x73d0 sidecar word */
-    uint32_t detail_mesh_token; /* retail +0x24 mode-2 indexed mesh object */
-    uint8_t* blocks;      /* w*h*0x28 physical block table */
-    uint8_t* variant_window; /* cell variant relation tables + header */
-    float*   cell_vertices; /* four XYZ vertices per terrain quad */
-    uint32_t* cell_detail_flags; /* indexed mesh +0x6c bit-0 sidecar */
-    struct TerrainIndexedMeshRecord {
-        uint32_t block_count;
-        uint32_t reserved;
-        void* blocks;
-    } indexed_mesh;
-    TerrainIndexedMeshObject detail_mesh_object;
-    uint8_t* indexed_mesh_blocks; /* 0x70-byte indexed mesh entries */
-    float* indexed_mesh_vertices; /* four 0x20-byte vertices per quad */
-    /* GraphicsOverlayResources' separate quad list (0x552180/0x552198).
-     * It owns derived output; cell_vertices remains the mutable base mesh. */
-    TerrainCellQuadEmitGrid derived_mesh;
-    uint32_t derived_mesh_dirty;
-    float* derived_vertices; /* separate ordered retail X,Z,height quads */
-    void* roof_scene;        /* genuine pooled native frame owner */
-    void* roof_root;
-    TerrainSurfaceGrid* detail_surface; /* physical-quad clear/restore owner */
-    float    minimum_y;
-    int      width, height;
-    LevelState* owner_level; /* live current-level SceneRender quad owner */
-    uint16_t dirty_queue_x[LEVEL_DIRTY_QUEUE_CAP];
-    uint16_t dirty_queue_y[LEVEL_DIRTY_QUEUE_CAP];
-    uint32_t dirty_queue_count;
-    void* scene_context; /* portable sidecar for the input scene root */
-} TerrainState;
-
 int terrain_roof_owner_initialize(LevelState* level)
 {
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
@@ -702,27 +608,7 @@ typedef struct TerrainVertexReadRequest {
     void* output;
 } TerrainVertexReadRequest;
 
-typedef struct TerrainIndexedMeshLayerOwner {
-    void* reserved[3];
-    void* mesh;
-} TerrainIndexedMeshLayerOwner;
-
-typedef struct TerrainIndexedMeshLayerObject {
-    void* reserved[3];
-    TerrainIndexedMeshLayerOwner* owner;
-} TerrainIndexedMeshLayerObject;
-
-static void terrain_indexed_mesh_layer_object_init(
-    TerrainState* terrain, TerrainIndexedMeshLayerObject* object,
-    TerrainIndexedMeshLayerOwner* owner)
-{
-    memset(object, 0, sizeof(*object));
-    memset(owner, 0, sizeof(*owner));
-    owner->mesh = &terrain->indexed_mesh;
-    object->owner = owner;
-}
-
-static void terrain_indexed_mesh_cell_sync(TerrainState* terrain,
+void terrain_indexed_mesh_cell_sync(TerrainState* terrain,
                                            size_t quad_index)
 {
     static const uint8_t flipped_order[4] = { 3u, 0u, 1u, 2u };
@@ -754,77 +640,6 @@ static void terrain_indexed_mesh_cell_sync(TerrainState* terrain,
         vertex[1] = source[2];
         vertex[2] = source[1];
     }
-}
-
-static int terrain_derived_quad_create(void* context, uint32_t index,
-                                       const uint32_t triangles[6])
-{
-    TerrainState* terrain = (TerrainState*)context;
-    (void)triangles;
-    if (terrain == NULL || terrain->owner_level == NULL) return -1;
-    if (terrain->derived_vertices == NULL || index >=
-        terrain->derived_mesh.width * terrain->derived_mesh.height ||
-        index > 0x7fffffffu) return -1;
-    return (int)index; /* software mesh slot, not a native DDi handle */
-}
-
-static int terrain_derived_quad_vertices_emit(void* context, int quad,
-                                               const float vertices[4][3])
-{
-    TerrainState* terrain = (TerrainState*)context;
-    if (terrain == NULL || terrain->derived_vertices == NULL || quad < 0 ||
-        (uint32_t)quad >= terrain->derived_mesh.width *
-                           terrain->derived_mesh.height) return 0;
-    memcpy(terrain->derived_vertices + (size_t)quad * 12u,
-           vertices, 12u * sizeof(float));
-    return 1;
-}
-
-static int terrain_indexed_mesh_create(TerrainState* terrain,
-                                       size_t quad_count)
-{
-    size_t index;
-    if (terrain == NULL || quad_count == 0u ||
-        quad_count > ((size_t)-1) / 0x70u ||
-        quad_count > ((size_t)-1) / (32u * sizeof(float)) ||
-        quad_count > 0xffffffffu) return 0;
-    terrain->indexed_mesh_blocks = (uint8_t*)calloc(quad_count, 0x70u);
-    terrain->indexed_mesh_vertices = (float*)calloc(
-        quad_count * 32u, sizeof(float));
-    terrain->derived_mesh.records = (uint8_t*)calloc(
-        (size_t)terrain->dim[2] * terrain->dim[3], 8u);
-    terrain->derived_vertices = (float*)calloc(
-        (size_t)terrain->dim[2] * terrain->dim[3] * 12u, sizeof(float));
-    if (terrain->indexed_mesh_blocks == NULL ||
-        terrain->indexed_mesh_vertices == NULL ||
-        terrain->derived_mesh.records == NULL ||
-        terrain->derived_vertices == NULL) return 0;
-    terrain->derived_mesh.width = terrain->dim[2];
-    terrain->derived_mesh.height = terrain->dim[3];
-    for (index = 0u; index < (size_t)terrain->dim[2] * terrain->dim[3];
-         ++index) terrain->derived_mesh.records[index * 8u + 4u] = 1u;
-    terrain->derived_mesh.dirty = &terrain->derived_mesh_dirty;
-    terrain->derived_mesh.hooks.context = terrain;
-    terrain->derived_mesh.hooks.create_quad = terrain_derived_quad_create;
-    terrain->derived_mesh.hooks.vertices_emit =
-        terrain_derived_quad_vertices_emit;
-    terrain->indexed_mesh.block_count = (uint32_t)quad_count;
-    terrain->indexed_mesh.reserved = 0u;
-    terrain->indexed_mesh.blocks = terrain->indexed_mesh_blocks;
-    terrain->detail_mesh_object.mesh_record = &terrain->indexed_mesh;
-    terrain->detail_mesh_token =
-        (uint32_t)(uintptr_t)&terrain->detail_mesh_object;
-    for (index = 0u; index < quad_count; ++index) {
-        uint8_t* block = terrain->indexed_mesh_blocks + index * 0x70u;
-        uint32_t vertex_count = 4u;
-        uint32_t detail_enabled = 1u;
-        void* vertices = terrain->indexed_mesh_vertices + index * 32u;
-        memcpy(block + 0x04u, &vertex_count, sizeof(vertex_count));
-        memcpy(block + 0x0cu, &vertices, sizeof(vertices));
-        memcpy(block + 0x6cu, &detail_enabled, sizeof(detail_enabled));
-        terrain_indexed_mesh_cell_sync(terrain, index);
-    }
-    return 1;
 }
 
 static void* terrain_indexed_mesh_get(void* context, void* object)
@@ -921,26 +736,7 @@ static void terrain_cell_orientation_set_level(LevelState* level, int x, int y,
                                                (uint32_t)y, flipped);
 }
 
-static void terrain_create_vertices_write(void* context, uint32_t cell,
-                                          const float vertices[12])
-{
-    TerrainState* terrain = (TerrainState*)context;
-    float* output;
-    uint32_t corner;
-    if (terrain == NULL || terrain->cell_vertices == NULL) return;
-    output = terrain->cell_vertices + (size_t)cell * 12u;
-    for (corner = 0u; corner < 4u; ++corner) {
-        /* FUN_0044e4d0 emits retail records as X,Z,height. TerrainState's
-         * SceneRender-facing cache stores X,height,Z. */
-        output[corner * 3u] = vertices[corner * 3u];
-        output[corner * 3u + 1u] = vertices[corner * 3u + 2u];
-        output[corner * 3u + 2u] = vertices[corner * 3u + 1u];
-        if (vertices[corner * 3u + 2u] < terrain->minimum_y)
-            terrain->minimum_y = vertices[corner * 3u + 2u];
-    }
-}
-
-static void terrain_create_cell_surface_vectors_rebuild(TerrainState* terrain,
+void terrain_create_cell_surface_vectors_rebuild(TerrainState* terrain,
                                                          uint32_t quad_index,
                                                          uint32_t record_index,
                                                          int flipped)
@@ -974,170 +770,6 @@ static void terrain_create_cell_surface_vectors_rebuild(TerrainState* terrain,
                                       ordered_vertices + 9);
     memcpy(record, first, sizeof(first));
     memcpy(record + 0x0cu, second, sizeof(second));
-}
-
-// FUNCTION: LEGORR 0x0044e0c0
-void* terrain_create_retail(void* engine_context, const char* surface_map,
-                            float blocksize, float terrain_value)
-{
-    /* The retail entry receives DAT_005560d8 as its scene/resource owner.
-     * Retain that owner with the CPU terrain even when its DDi mesh callbacks
-     * are unavailable. */
-    MapFile* m = level_map_open(surface_map);
-    if (m == NULL) {
-        return NULL;
-    }
-    TerrainState* t = (TerrainState*)calloc(1, sizeof(TerrainState));
-    if (t == NULL) {
-        level_map_close(m);
-        return NULL;
-    }
-    t->width = m->width;
-    t->height = m->height;
-    t->dim[0] = (uint32_t)(m->width - 1);
-    t->dim[1] = (uint32_t)(m->height - 1);
-    t->dim[2] = (uint32_t)m->width;
-    t->dim[3] = (uint32_t)m->height;
-    t->blocksize = blocksize;
-    t->terrain_value = terrain_value;
-    t->scene_context = engine_context;
-    t->world_off_x = -(float)(m->width - 1) * blocksize * 0.5f;
-    t->world_off_y = (float)(m->height - 1) * blocksize * 0.5f;
-
-    size_t n = (size_t)m->width * m->height;
-    t->blocks = (uint8_t*)calloc(n, TERRAIN_BLOCK_STRIDE);
-    if (t->blocks == NULL) {
-        level_map_close(m);
-        free(t);
-        return NULL;
-    }
-    t->variant_window = (uint8_t*)calloc(1u, CELL_VARIANT_WINDOW_SIZE);
-    if (t->variant_window == NULL) {
-        free(t->blocks);
-        level_map_close(m);
-        free(t);
-        return NULL;
-    }
-    /* The retail TerrainState begins with the dimensions/stride and stores
-     * its block table at +0x28; the compatibility lists occupy +0x34 and
-     * +0x4034. Keep that view in a native sidecar because host pointers make
-     * the compact 32-bit object layout unsuitable for inline tables. */
-    memcpy(t->variant_window + 0x00, &t->dim[0], sizeof(uint32_t));
-    memcpy(t->variant_window + 0x04, &t->dim[1], sizeof(uint32_t));
-    memcpy(t->variant_window + 0x08, &t->dim[2], sizeof(uint32_t));
-    memcpy(t->variant_window + 0x28, &t->blocks, sizeof(t->blocks));
-    int x, y;
-    for (y = 0; y < m->height; ++y) {
-        for (x = 0; x < m->width; ++x) {
-            uint8_t* rec = t->blocks
-                           + ((size_t)y * m->width + x) * TERRAIN_BLOCK_STRIDE;
-            rec[0x18] = 0;
-            rec[0x19] = 0x60;
-            rec[0x1A] = (uint8_t)level_map_cell(m, x, y);
-            /* FUN_0044e0c0 draws two shared-stream values, normalizes their
-             * vector, and stores it at +0x1c/+0x20 with magnitude 0.3. */
-            float nx = random_float_range(0.0f, 1.0f);
-            float ny = random_float_range(0.0f, 1.0f);
-            float inv = 1.0f / (float)sqrt((double)(nx * nx + ny * ny));
-            nx *= inv * 0.3f;
-            ny *= inv * 0.3f;
-            memcpy(rec + 0x1C, &nx, sizeof(nx));
-            memcpy(rec + 0x20, &ny, sizeof(ny));
-        }
-    }
-    /* TerrainGridVertexBuild creates the CPU copy of each retail quad. The
-     * render backend can later mirror these records into its native mesh. */
-    t->minimum_y = 0.0f;
-    if (m->width > 1 && m->height > 1) {
-        size_t quad_count = (size_t)(m->width - 1) * (size_t)(m->height - 1);
-        if (quad_count > ((size_t)-1) / (12u * sizeof(float))) {
-            terrain_destroy(t);
-            level_map_close(m);
-            return NULL;
-        }
-        t->cell_vertices = (float*)calloc(quad_count * 12u,
-                                          sizeof(float));
-        t->cell_detail_flags = (uint32_t*)calloc(quad_count,
-                                                 sizeof(uint32_t));
-        if (t->cell_vertices == NULL || t->cell_detail_flags == NULL) {
-            terrain_destroy(t);
-            level_map_close(m);
-            return NULL;
-        }
-        /* TerrainCreate allocates one 4-vertex mesh record per quad, then
-         * LwoLayerEnabledSet(scene, index, 1) sets its indexed +0x6c bit.
-         * MeshRecordAllocateAndFill has zeroed that word first, so this is
-         * the complete initial per-cell detail state. */
-        {
-            size_t detail_index;
-            for (detail_index = 0u; detail_index < quad_count;
-                 ++detail_index)
-                t->cell_detail_flags[detail_index] = 1u;
-        }
-        {
-            TerrainVertexBuildGrid build;
-            memset(&build, 0, sizeof(build));
-            build.width = (uint32_t)(m->width - 1);
-            build.height = (uint32_t)(m->height - 1);
-            build.map_width = (uint32_t)m->width;
-            build.map_height = (uint32_t)m->height;
-            /* FUN_0044e4d0 uses context +0x14 (TerrainCreate's fourth
-             * argument) for height, while +0x10 controls X/Z spacing. */
-            build.vertical_scale = terrain_value;
-            build.spacing = blocksize;
-            build.x_origin = t->world_off_x;
-            build.z_origin = t->world_off_y;
-            build.minimum_y = 0.0f;
-            build.cell_records = t->blocks;
-            build.context = t;
-            build.vertices_write = terrain_create_vertices_write;
-            terrain_grid_vertex_build(&build);
-            t->minimum_y = build.minimum_y;
-        }
-    }
-    /* Choose each quad's diagonal by comparing the two opposite-corner
-     * height deltas. The lower delta is orientation bit 0 (finding 114).
-     * Retail rebuilds both stored triangle vectors for every quad; choosing
-     * a new orientation also marks the cell and its three neighboring
-     * records dirty through TerrainCellOrientationToggleAndRebuild. */
-    for (y = 0; y + 1 < m->height; ++y) {
-        for (x = 0; x + 1 < m->width; ++x) {
-            uint8_t* top_left = t->blocks +
-                ((size_t)y * (size_t)m->width + (size_t)x) *
-                    TERRAIN_BLOCK_STRIDE;
-            uint8_t* top_right = top_left + TERRAIN_BLOCK_STRIDE;
-            uint8_t* bottom_left = top_left +
-                (size_t)m->width * TERRAIN_BLOCK_STRIDE;
-            uint8_t* bottom_right = bottom_left + TERRAIN_BLOCK_STRIDE;
-            int diagonal_ad = (int)top_left[0x1A] -
-                              (int)bottom_right[0x1A];
-            int diagonal_bc = (int)top_right[0x1A] -
-                              (int)bottom_left[0x1A];
-            if (diagonal_ad < 0) diagonal_ad = -diagonal_ad;
-            if (diagonal_bc < 0) diagonal_bc = -diagonal_bc;
-            if (diagonal_ad < diagonal_bc) {
-                top_left[0x19] |= 1u;
-                terrain_cell_changed_flag_set(t, x, y);
-                terrain_cell_changed_flag_set(t, x + 1, y);
-                terrain_cell_changed_flag_set(t, x + 1, y + 1);
-                terrain_cell_changed_flag_set(t, x, y + 1);
-            }
-            terrain_create_cell_surface_vectors_rebuild(
-                t, (uint32_t)y * t->dim[0] + (uint32_t)x,
-                (uint32_t)y * t->dim[2] + (uint32_t)x,
-                (top_left[0x19] & 1u) != 0u);
-        }
-    }
-    if (m->width > 1 && m->height > 1) {
-        size_t quad_count = (size_t)t->dim[0] * (size_t)t->dim[1];
-        if (!terrain_indexed_mesh_create(t, quad_count)) {
-            terrain_destroy(t);
-            level_map_close(m);
-            return NULL;
-        }
-    }
-    level_map_close(m);
-    return t;
 }
 
 void* terrain_create(const char* surface_map, float blocksize)
@@ -1224,51 +856,6 @@ int terrain_cell_surface_values_available(const void* handle, int x, int y)
             terrain->owner_level, (uint32_t)x, (uint32_t)y, vertices);
     }
     return 0;
-}
-
-// FUNCTION: LEGORR 0x00450220
-void grid_cell_read_surface_values(void* terrain, int x, int y,
-                                   float out_values[12])
-{
-    TerrainState* state = (TerrainState*)terrain;
-    float indexed_output[4][9];
-    TerrainIndexedMeshLayerObject object;
-    TerrainIndexedMeshLayerOwner owner;
-    size_t quad_index;
-    uint32_t corner;
-    uint32_t component;
-    if (state == NULL || out_values == NULL || x < 0 || y < 0 ||
-        (uint32_t)x >= state->dim[0] ||
-        (uint32_t)y >= state->dim[1]) return;
-    quad_index = (size_t)(uint32_t)y * state->dim[0] + (uint32_t)x;
-    if (state->indexed_mesh_blocks == NULL ||
-        state->indexed_mesh_vertices == NULL) return;
-    terrain_indexed_mesh_cell_sync(state, quad_index);
-    memset(indexed_output, 0, sizeof(indexed_output));
-    terrain_indexed_mesh_layer_object_init(state, &object, &owner);
-    (void)lwo_layer_polygon_vertex_data_read(&object, (int)quad_index, 0,
-                                            4, indexed_output);
-    for (corner = 0u; corner < 4u; ++corner)
-        for (component = 0u; component < 3u; ++component)
-            out_values[corner * 3u + component] =
-                indexed_output[corner][component];
-}
-
-/* Retail GridCellSetPayloadIndex asks the TerrainCreate scene object at
- * +0x24 for the detail entry at width * y + x, then discards the result.
- * Keep this target wrapper separate from the host eligibility predicate
- * below, which reads the same mirrored enable bit. */
-// FUNCTION: LEGORR 0x0044e860
-void grid_cell_set_payload_index(void* terrain_handle, int x, int y)
-{
-    TerrainState* terrain = (TerrainState*)terrain_handle;
-    TerrainIndexedMeshLayerObject object;
-    TerrainIndexedMeshLayerOwner owner;
-    unsigned int entry_index;
-    if (terrain == NULL) return;
-    entry_index = (unsigned int)((int64_t)terrain->dim[2] * y + x);
-    terrain_indexed_mesh_layer_object_init(terrain, &object, &owner);
-    (void)terrain_detail_entry_get_at_index(&object, entry_index);
 }
 
 /* TerrainCreate initializes each indexed record's +0x6c bit, and
@@ -1503,238 +1090,6 @@ int terrain_world_xy_to_cell(const void* handle, float x, float y,
         (uint32_t)mapped_y < t->dim[1];
 }
 
-/* TerrainSurfacePointProjectOffset (FUN_0044fb90): choose the cell edge
- * intersected by the supplied horizontal normal, intersect that edge with
- * the point's normal line, then apply the requested block-scaled offset.
- * The reference receives its TerrainState and four-corner data from the
- * active renderer; this path uses TerrainState's retained CPU quad and the
- * two triangle normals stored in its 0x28-byte cell record. */
-// FUNCTION: LEGORR 0x0044fb90
-int terrain_state_surface_point_project_offset(
-    void* terrain_handle, float world_x, float world_z, int orientation,
-    float offset, float* out_x, float* out_z)
-{
-    static const uint8_t flipped_order[4] = { 1u, 2u, 3u, 0u };
-    TerrainState* terrain = (TerrainState*)terrain_handle;
-    int cell_x, cell_y;
-    size_t quad_index, record_index;
-    uint8_t* record;
-    float vertices[4][3];
-    float normal_x, normal_z;
-    float edge_point[2], edge_direction[2];
-    float point[2], normal_direction[2], intersection[2];
-    float length, scaled_offset;
-    uint32_t corner;
-    int flipped, first_corner, second_corner;
-    if (terrain == NULL || terrain->blocks == NULL ||
-        terrain->cell_vertices == NULL || out_x == NULL || out_z == NULL ||
-        !terrain_world_xy_to_cell(terrain, world_x, world_z,
-                                  &cell_x, &cell_y) ||
-        cell_x < 0 || cell_y < 0 || cell_x >= terrain->width - 1 ||
-        cell_y >= terrain->height - 1) return 0;
-
-    quad_index = (size_t)(uint32_t)cell_y * terrain->dim[0] +
-                 (uint32_t)cell_x;
-    record_index = (size_t)(uint32_t)cell_y * terrain->dim[2] +
-                   (uint32_t)cell_x;
-    record = terrain->blocks + record_index * TERRAIN_BLOCK_STRIDE;
-    flipped = (record[0x19] & 1u) != 0u;
-    for (corner = 0u; corner < 4u; ++corner) {
-        const uint32_t source = flipped ? flipped_order[corner] : corner;
-        memcpy(vertices[corner], terrain->cell_vertices +
-               quad_index * 12u + source * 3u, 3u * sizeof(float));
-    }
-
-    /* FUN_0044fb90 selects the stored triangle normal using the same
-     * Manhattan-distance tests against the first two sampled corners. */
-    if (!flipped) {
-        if ((world_x - vertices[0][0]) +
-            (vertices[1][2] - world_z) < terrain->blocksize)
-            record += 0u;
-        else
-            record += 0x0cu;
-    }
-    else {
-        if ((vertices[1][0] - world_x) +
-            (vertices[1][2] - world_z) < terrain->blocksize)
-            record += 0x0cu;
-        else
-            record += 0u;
-    }
-    normal_x = *(float*)record;
-    normal_z = *(float*)(record + 4u);
-
-    if (orientation == 0) {
-        if ((float)fabs((double)normal_x) <=
-            (float)fabs((double)normal_z)) {
-            if (normal_z >= 0.0f) {
-                first_corner = 0;
-                second_corner = 1;
-            }
-            else {
-                first_corner = 2;
-                second_corner = 3;
-            }
-        }
-        else if (normal_x >= 0.0f) {
-            first_corner = 1;
-            second_corner = 2;
-        }
-        else {
-            first_corner = 0;
-            second_corner = 3;
-        }
-    }
-    else if (flipped) {
-        first_corner = 1;
-        second_corner = 3;
-    }
-    else {
-        first_corner = 0;
-        second_corner = 2;
-    }
-
-    edge_point[0] = vertices[first_corner][0];
-    edge_point[1] = vertices[first_corner][2];
-    edge_direction[0] = vertices[second_corner][0] - edge_point[0];
-    edge_direction[1] = vertices[second_corner][2] - edge_point[1];
-    point[0] = world_x;
-    point[1] = world_z;
-    normal_direction[0] = normal_x;
-    normal_direction[1] = normal_z;
-    if (line_intersection_2d_compute(intersection, edge_point,
-            edge_direction, point, normal_direction) == NULL) return 0;
-
-    length = (float)sqrt((double)(normal_x * normal_x +
-                                  normal_z * normal_z));
-    if (length == 0.0f) return 0;
-    scaled_offset = offset * terrain->blocksize;
-    *out_x = intersection[0] - (normal_x / length) * scaled_offset;
-    *out_z = intersection[1] - (normal_z / length) * scaled_offset;
-    return 1;
-}
-
-static int terrain_surface_triangle_height(const float a[3], const float b[3],
-                                           const float c[3], float x, float z,
-                                           float* height_out)
-{
-    const float denominator = (b[2] - c[2]) * (a[0] - c[0]) +
-                              (c[0] - b[0]) * (a[2] - c[2]);
-    float wa, wb, wc;
-    if (height_out == NULL || denominator == 0.0f) return 0;
-    wa = ((b[2] - c[2]) * (x - c[0]) +
-          (c[0] - b[0]) * (z - c[2])) / denominator;
-    wb = ((c[2] - a[2]) * (x - c[0]) +
-          (a[0] - c[0]) * (z - c[2])) / denominator;
-    wc = 1.0f - wa - wb;
-    if (wa < -0.0001f || wb < -0.0001f || wc < -0.0001f) return 0;
-    *height_out = wa * a[1] + wb * b[1] + wc * c[1];
-    return 1;
-}
-
-/* TerrainSurfaceHeightInterpolate (FUN_0044f940): choose the cell under the
- * world point, use its live four-vertex CPU quad, and interpolate in the
- * target's two triangles (0,1,3) and (1,2,3). TerrainCreate's two stored
- * triangle records use this 1-to-3 diagonal; the cell orientation bit rotates
- * the four vertices before interpolation. Heights are already in world units
- * after TerrainGridVertexBuild, so the target returns the interpolated value
- * without another scale. */
-// FUNCTION: LEGORR 0x0044f940
-float terrain_surface_height_interpolate(const void* handle, float world_x,
-                                         float world_z)
-{
-    static const uint8_t flipped_order[4] = { 1u, 2u, 3u, 0u };
-    const TerrainState* terrain = (const TerrainState*)handle;
-    int cell_x, cell_y;
-    size_t cell_index;
-    uint8_t* record;
-    float vertices[4][3];
-    float height;
-    uint32_t corner;
-    int flipped;
-    if (terrain == NULL || terrain->blocks == NULL ||
-        terrain->cell_vertices == NULL ||
-        !terrain_world_xy_to_cell(handle, world_x, world_z,
-                                  &cell_x, &cell_y) ||
-        cell_x < 0 || cell_y < 0 || cell_x >= terrain->width - 1 ||
-        cell_y >= terrain->height - 1) return 0.0f;
-    cell_index = (size_t)cell_y * (size_t)(terrain->width - 1) +
-                 (size_t)cell_x;
-    record = terrain->blocks +
-        ((size_t)cell_y * (size_t)terrain->width + (size_t)cell_x) *
-            TERRAIN_BLOCK_STRIDE;
-    flipped = (record[0x19] & 1u) != 0u;
-    for (corner = 0u; corner < 4u; ++corner) {
-        const uint32_t source = flipped
-            ? flipped_order[corner] : corner;
-        memcpy(vertices[corner],
-               terrain->cell_vertices + cell_index * 12u + source * 3u,
-               3u * sizeof(float));
-    }
-    if (terrain_surface_triangle_height(vertices[0], vertices[1],
-                                        vertices[3], world_x, world_z,
-                                        &height) ||
-        terrain_surface_triangle_height(vertices[1], vertices[2],
-                                        vertices[3], world_x, world_z,
-                                        &height)) return height;
-    return 0.0f;
-}
-
-/* 0x44fe70 samples the authored SurfaceMap plane, independently of the
- * live/mutated quad used by 0x44f940. Byte decoding and RoughLevel scaling
- * stay inside the terrain owner; the camera receives a world-space height. */
-// FUNCTION: LEGORR 0x0044fe70
-float terrain_authored_surface_height_interpolate(const void* handle,
-                                                  float world_x,
-                                                  float world_y)
-{
-    const TerrainState* terrain = (const TerrainState*)handle;
-    static const int corner_x[4] = { 0, 1, 1, 0 };
-    static const int corner_y[4] = { 0, 0, 1, 1 };
-    float height[4];
-    float fx, fy;
-    int x, y, corner;
-    if (terrain == NULL || terrain->blocks == NULL ||
-        terrain->blocksize == 0.0f ||
-        !terrain_world_xy_to_cell(handle, world_x, world_y, &x, &y))
-        return 0.0f;
-    fx = (world_x - terrain->world_off_x) / terrain->blocksize - (float)x;
-    fy = (terrain->world_off_y - world_y) / terrain->blocksize - (float)y;
-    for (corner = 0; corner < 4; ++corner) {
-        size_t index = ((size_t)(y + corner_y[corner]) *
-            (size_t)terrain->width + (size_t)(x + corner_x[corner])) *
-            TERRAIN_BLOCK_STRIDE;
-        height[corner] = -(float)terrain->blocks[index + 0x1a] *
-            terrain->terrain_value;
-    }
-    /* The reference uses the fixed 00-to-11 diagonal and does not consult
-     * the live mesh's orientation flag, vertex offsets or mutation state. */
-    if (fy >= fx)
-        return height[0] + (height[2] - height[3]) * fx +
-            (height[3] - height[0]) * fy;
-    return height[0] + (height[1] - height[0]) * fx +
-        (height[2] - height[1]) * fy;
-}
-
-
-/* TerrainCellSurfaceTypeGet (FUN_0044f540, finding 226): the per-cell
- * surface-type byte in the physical block table — the port's terrain
- * handle is the TerrainState model, so the corpus's record fields
- * +0x8/+0x28 (stride, table) map to the modeled width/table pair. Bounds
- * guard added — the corpus indexes blind (documented deviation). */
-// FUNCTION: LEGORR 0x0044f540
-int terrain_cell_surface_type_get(const void* terrain, int x, int y)
-{
-    const TerrainState* t = (const TerrainState*)terrain;
-    if (t == NULL || t->blocks == NULL) {
-        return 0;
-    }
-    if (x < 0 || y < 0 || x >= t->width || y >= t->height) {
-        return 0;
-    }
-    return t->blocks[0x24 + ((size_t)y * (size_t)t->width + (size_t)x) * TERRAIN_BLOCK_STRIDE];
-}
-
 /* TerrainCellChangedFlagSet (FUN_0044efb0): the physical cell dirty bit is
  * available even though TerrainState does not yet own the renderer's global
  * dirty word or mesh handles. */
@@ -1783,7 +1138,7 @@ void terrain_dirty_cell_vectors_refresh(LevelState* level)
  *  Layer loaders — the ten grid importers (finding 07).
  * ------------------------------------------------------------------ */
 
-static uint8_t* voxel_at(LevelState* s, int x, int y)
+uint8_t* voxel_at(LevelState* s, int x, int y)
 {
     int w = level_int(s, LEVEL_OFF_WIDTH);
     return (uint8_t*)level_load_ptr(s, LEVEL_OFF_VOXELS)
@@ -4040,7 +3395,7 @@ uint8_t terrain_cell_material_get_current(int x, int y)
  * their own dim-minus-one checks; unchecked target leaves use the raw
  * row-major helper where they do not have that gate. */
 
-static uint32_t cell_flag_word(const LevelState* s, int cx, int cy)
+uint32_t cell_flag_word(const LevelState* s, int cx, int cy)
 {
     const uint8_t* rec = level_voxel(s, cx, cy);
     uint32_t flags = 0;
@@ -4063,7 +3418,7 @@ static uint32_t cell_secondary_word(const LevelState* s, int cx, int cy)
 /* The target's coordinate-pair leaf readers do not apply grid bounds. Keep
  * their 32-bit row-major address calculation distinct from level_voxel(),
  * whose checked access is useful to higher-level portable code. */
-static uint8_t* cell_record_unchecked(LevelState* s, int cx, int cy)
+uint8_t* cell_record_unchecked(LevelState* s, int cx, int cy)
 {
     uint8_t* voxels;
     uint32_t index;
@@ -6041,39 +5396,6 @@ void terrain_cell_work_flag_clear_current(const int coord[2],
 }
 #endif
 
-/* FUN_004502c0: unsigned pair membership (negative coords wrap). */
-// FUNCTION: LEGORR 0x004502c0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) static int level_coord_pair_within_bounds_target(
-    const uint32_t* dimensions, uint32_t cx, uint32_t cy)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        cmp ecx, dword ptr [eax]
-        jb coordinate_x_in_bounds
-        xor eax, eax
-        ret
-    coordinate_x_in_bounds:
-        mov edx, dword ptr [esp + 0ch]
-        mov ecx, dword ptr [eax + 4]
-        cmp edx, ecx
-        sbb eax, eax
-        neg eax
-        ret
-    }
-}
-#else
-static int level_coord_pair_within_bounds_target(const uint32_t* dimensions,
-                                                uint32_t cx, uint32_t cy)
-{
-    if (cx < dimensions[0]) {
-        return cy < dimensions[1];
-    }
-    return 0;
-}
-#endif
-
 int level_coord_pair_within_bounds(const LevelState* s, int cx, int cy)
 {
     if (s == NULL) return 0;
@@ -6155,45 +5477,6 @@ int level_cell_flag8_check(const LevelState* s, int cx, int cy)
     if (level_coord_pair_within_bounds(s, cx, cy))
         return (cell_flag_word(s, cx, cy) & 8u) != 0;
     return 0;
-}
-
-/* FUN_004515a0: header dims at +0x08/+0x0C (port guards a NULL image). */
-// FUNCTION: LEGORR 0x004515a0
-void level_map_image_header(const uint8_t* image, uint32_t* width,
-                            uint32_t* height)
-{
-#if defined(_MSC_VER) && defined(_M_IX86)
-    *width = *(const uint32_t*)(image + 0x08);
-    *height = *(const uint32_t*)(image + 0x0c);
-#else
-    *width = 0;
-    *height = 0;
-    if (image != NULL) {
-        __builtin_memcpy(width, image + 0x08, sizeof(*width));
-        __builtin_memcpy(height, image + 0x0C, sizeof(*height));
-    }
-#endif
-}
-
-/* FUN_004515c0: zero-extended u16 cell at +0x10 + (y*width+x)*2. */
-// FUNCTION: LEGORR 0x004515c0
-uint16_t level_map_image_cell(const uint8_t* image, int x, int width, int y)
-{
-#if defined(_MSC_VER) && defined(_M_IX86)
-    return *(const uint16_t*)(image + 0x10 + (y * width + x) * 2);
-#else
-    if (image == NULL) {
-        return 0;
-    }
-    /* MapFileGetCell performs this multiply/add in 32-bit unsigned
-     * arithmetic before doubling the cell index. Keep that behavior on
-     * 64-bit hosts as well; the target accessor has no coordinate check. */
-    const uint32_t index = (uint32_t)y * (uint32_t)width + (uint32_t)x;
-    const uint32_t byte_offset = index * 2u;
-    uint16_t cell;
-    __builtin_memcpy(&cell, image + 0x10 + byte_offset, sizeof(cell));
-    return cell;
-#endif
 }
 
 /* FUN_004334c0: resolve the resource slot, then read its two header dwords. */
@@ -8956,51 +8239,6 @@ void level_debug_input_cell_mutator_dispatch(
     }
 }
 
-/* CellNeighborDirectionCode (FUN_004508a0): eight neighbors, -1 else. */
-// FUNCTION: LEGORR 0x004508a0
-int cell_neighbor_direction_code(int x1, int y1, int x2, int y2)
-{
-    int result = -1;
-    if (x1 == x2) {
-        if (y2 == y1 - 1) {
-            return 0;
-        }
-        if (y2 == y1 + 1) {
-            return 2;
-        }
-    }
-    else {
-        const int x1_next = x1 + 1;
-        if (y1 == y2) {
-            if (x1_next == x2) {
-                return 1;
-            }
-            if (x1 - 1 == x2) {
-                return 3;
-            }
-        }
-        else {
-            if (x1_next == x2) {
-                if (y1 - 1 == y2) {
-                    return 4;
-                }
-                if (x1_next == x2 && y1 + 1 == y2) {
-                    return 5;
-                }
-            }
-            if (x1 - 1 == x2) {
-                if (y1 + 1 == y2) {
-                    return 6;
-                }
-                if (x1 - 1 == x2 && y1 - 1 == y2) {
-                    result = 7;
-                }
-            }
-        }
-    }
-    return result;
-}
-
 /* --- neighbor-refresh / circle / edge-flag cluster (see level.hpp) ------- */
 
 // FUNCTION: LEGORR 0x00431450
@@ -9375,60 +8613,6 @@ void terrain_neighbor_work_flag_scan_current(unsigned int seed_x,
 typedef char cell_coordinate_timestamp_stride_check[
     sizeof(CellCoordinateTimestamp) == 8u ? 1 : -1];
 
-/* --- terrain dirty queue (see level.hpp) ---------------------------------
- * The corpus's queue lives inside its terrain context (u16 pair entries,
- * stride 4, capacity (0x7198-0x4a88)/4 = 2500, count at +0x7198). */
-// FUNCTION: LEGORR 0x00450960
-void terrain_cell_dirty_queue_push_and_clear(void* terrain, int x, int y,
-                                             int push)
-{
-    TerrainState* t = (TerrainState*)terrain;
-    if (t == NULL || t->blocks == NULL) {
-        return; /* deviation: corpus dereferences its context blindly */
-    }
-    if (x < 0 || y < 0 || x >= t->width || y >= t->height) {
-        return; /* bounds deviation (as across this module) */
-    }
-    uint8_t* flag = t->blocks
-                    + ((size_t)y * (size_t)t->width + (size_t)x)
-                      * TERRAIN_BLOCK_STRIDE + 0x19;
-    if (push == 0) {
-        if ((*flag & 0x10) == 0) {
-            return;
-        }
-        if (t->dirty_queue_count == 0u) {
-            return; /* corpus's empty-queue path: flag stays set */
-        }
-        int i;
-        for (i = 0; i < (int)t->dirty_queue_count; ++i) {
-            if ((uint32_t)t->dirty_queue_x[i] == (uint32_t)x &&
-                (uint32_t)t->dirty_queue_y[i] == (uint32_t)y) {
-                break;
-            }
-        }
-        if ((uint32_t)i >= t->dirty_queue_count) {
-            return; /* corpus's not-found path: flag stays set */
-        }
-        /* overwrite the found entry with the last one, then drop it */
-        t->dirty_queue_x[i] = t->dirty_queue_x[t->dirty_queue_count - 1u];
-        t->dirty_queue_y[i] = t->dirty_queue_y[t->dirty_queue_count - 1u];
-        --t->dirty_queue_count;
-        *flag &= 0xef;
-        return;
-    }
-    if ((*flag & 0x10) != 0) {
-        return; /* already queued (faithful) */
-    }
-    /* The corpus has no capacity branch, but its queue owns exactly 2500
-     * entries. Keep the flag clear if a corrupt/overfull state cannot retain
-     * the coordinate; otherwise the cell would become permanently stuck. */
-    if (t->dirty_queue_count >= LEVEL_DIRTY_QUEUE_CAP) return;
-    t->dirty_queue_x[t->dirty_queue_count] = (uint16_t)x;
-    t->dirty_queue_y[t->dirty_queue_count] = (uint16_t)y;
-    ++t->dirty_queue_count;
-    *flag |= 0x10;
-}
-
 /* terrain_cell_dirty_flag: faithful physical-byte read (see level.hpp). */
 int terrain_cell_dirty_flag(const void* terrain, int x, int y)
 {
@@ -9448,9 +8632,9 @@ int terrain_cell_dirty_flag(const void* terrain, int x, int y)
  * land as zero-init own storage behind install/peek hooks. Dirty coordinates
  * and their count are retained by the terrain instance, matching +0x4a88
  * and +0x7198 instead of sharing one queue across levels. */
-static void*    s_cell_list_object;
-static int      s_cell_list_scale;
-static uint32_t s_cell_list_flags; /* corpus word +0x73d0: bit 2 = applied */
+void*    s_cell_list_object;
+int      s_cell_list_scale;
+uint32_t s_cell_list_flags; /* corpus word +0x73d0: bit 2 = applied */
 
 void cell_list_apply_state_install(void* scene_object, int scale)
 {
@@ -9466,41 +8650,6 @@ void* cell_list_object_peek(void)
 uint32_t cell_list_apply_flags_peek(void)
 {
     return s_cell_list_flags;
-}
-
-// FUNCTION: LEGORR 0x00450a80
-void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
-{
-    GameContext* game = entity_pool_callback_context_get();
-    LevelState* level = game != NULL ? game->level : NULL;
-    TerrainState* terrain;
-    if (level == NULL) level = level_current_owner_get();
-    terrain = level != NULL ? (TerrainState*)level->ptr_terrain : NULL;
-    uint32_t dirty_count = terrain != NULL
-        ? terrain->dirty_queue_count : 0u;
-    if (enable != 0 && (s_cell_list_flags & 4u) == 0) {
-        for (uint32_t i = 0u; i < dirty_count; ++i) {
-            /* The corpus strides the u16 pair entries unsigned: the
-             * index folds the y-entry through the scale word. */
-            const uint32_t x = (uint32_t)terrain->dirty_queue_x[i];
-            const uint32_t y = (uint32_t)terrain->dirty_queue_y[i];
-            scene_mesh_color_set(s_cell_list_object,
-                                 (int)(y * (uint32_t)s_cell_list_scale + x),
-                                 0.3f, 0.3f, 0.3f);
-        }
-        s_cell_list_flags |= 4u;
-        return;
-    }
-    if (enable == 0 && (s_cell_list_flags & 4u) != 0) {
-        for (uint32_t i = 0u; i < dirty_count; ++i) {
-            const uint32_t x = (uint32_t)terrain->dirty_queue_x[i];
-            const uint32_t y = (uint32_t)terrain->dirty_queue_y[i];
-            scene_mesh_color_set(s_cell_list_object,
-                                 (int)(y * (uint32_t)s_cell_list_scale + x),
-                                 0.0f, 0.0f, 0.0f);
-        }
-        s_cell_list_flags &= ~4u;
-    }
 }
 
 /* Flat dword index of a cell's selector word, or -1 when the coordinate
@@ -9605,103 +8754,6 @@ uint32_t cell_flag100_is_set(int x, int y, int field)
     }
     return cell_flag100_is_set_target(x, y, field);
 }
-
-/* --- corner normal sampling (see level.hpp) ------------------------------- */
-// FUNCTION: LEGORR 0x004512d0
-#if defined(_MSC_VER) && defined(_M_IX86)
-int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
-                               uint32_t corner, float out[3])
-{
-    const TerrainState* t = (const TerrainState*)terrain;
-    const uint8_t* p;
-    float* second;
-    float length;
-    float inverse;
-    if (x < t->dim[0] && y < t->dim[1]) {
-        p = t->blocks + (y * t->dim[2] + x) * TERRAIN_BLOCK_STRIDE;
-        if ((p[0x19] & 1u) != 0u) corner = (corner + 1u) & 3u;
-        if (corner == 0u) {
-            out[0] = *(const float*)(p + 0x00);
-            out[1] = *(const float*)(p + 0x04);
-            out[2] = *(const float*)(p + 0x08);
-        }
-        if (corner == 2u) {
-            second = (float*)(p + 0x0c);
-            out[0] = second[0];
-            out[1] = second[1];
-            out[2] = second[2];
-        }
-        if (corner == 1u || corner == 3u) {
-            second = (float*)(p + 0x0c);
-            out[0] = second[0] + *(const float*)(p + 0x00);
-            out[1] = second[1] + *(const float*)(p + 0x04);
-            out[2] = second[2] + *(const float*)(p + 0x08);
-            length = (float)sqrt(out[0] * out[0] + out[2] * out[2] +
-                                 out[1] * out[1]);
-            inverse = 1.0f / length;
-            out[0] = inverse * out[0];
-            out[1] = inverse * out[1];
-            out[2] = inverse * out[2];
-        }
-        return 1;
-    }
-    out[2] = 0.0f;
-    out[1] = 0.0f;
-    out[0] = 0.0f;
-    return 0;
-}
-#else
-int terrain_cell_normal_sample(const void* terrain, uint32_t x, uint32_t y,
-                               uint32_t corner, float out[3])
-{
-    const TerrainState* t = (const TerrainState*)terrain;
-    uint32_t sel;
-    const uint8_t* p;
-    const float* fa;
-    const float* fb;
-    float v[3];
-    if (out == NULL) return 0;
-    if (t == NULL || t->blocks == NULL ||
-        x >= t->dim[0] || y >= t->dim[1]) {
-        for (int i = 0; i < 3; ++i) {
-            out[i] = 0.0f;
-        }
-        return 0;
-    }
-    p = t->blocks + ((size_t)y * (size_t)t->dim[2] + (size_t)x) *
-        TERRAIN_BLOCK_STRIDE;
-    sel = corner;
-    if ((p[0x19] & 1u) != 0u) {
-        sel = (sel + 1u) & 3u;
-    }
-    fa = (const float*)(p + 0x00);
-    fb = (const float*)(p + 0x0c);
-    if (sel == 0u) {
-        v[0] = fa[0]; v[1] = fa[1]; v[2] = fa[2];
-    } else if (sel == 2u) {
-        v[0] = fb[0]; v[1] = fb[1]; v[2] = fb[2];
-    } else if (sel == 1u || sel == 3u) {
-        v[0] = fb[0] + fa[0];
-        v[1] = fb[1] + fa[1];
-        v[2] = fb[2] + fa[2];
-        /* FUN_004512d0's x87 expression evaluates x*x + z*z + y*y. */
-        const float inv = 1.0f / (float)
-            sqrt(v[0] * v[0] + v[2] * v[2] + v[1] * v[1]);
-        v[0] *= inv;
-        v[1] *= inv;
-        v[2] *= inv;
-    }
-    else {
-        /* The retail switch leaves the output untouched for other corner
-         * selectors, while still returning success for the in-bounds cell. */
-        return 1;
-    }
-    out[0] = v[0];
-    out[1] = v[1];
-    out[2] = v[2];
-    return 1;
-}
-#endif
 
 // FUNCTION: LEGORR 0x00435170
 const char* terrain_surface_type_name_get(int index)
@@ -9934,89 +8986,6 @@ int32_t grid_count_table_slot_peek(int row, int column, int slot, int table)
     }
     return (int)(table != 0 ? s_grid_count_second[(size_t)idx]
                             : s_grid_count_first[(size_t)idx]);
-}
-
-/* --- surface-type writer pair (2026-10-24, see level.hpp) -------------------
- * The corpus's appearance table (DAT_004a52c0, 12-byte entries) ships the
- * reference data's six color triplets: white, half-gray, brown, light
- * green, blue, yellow. Larger type indexes read past the table into
- * undefined data in the corpus; the port substitutes white. The triplets
- * feed the level-owned SceneRender cell-color cache; alpha is fixed at 1.0
- * in every target call. */
-static const float s_surface_appearance[6][3] = {
-    { 1.0f, 1.0f, 1.0f },   /* 0 white */
-    { 0.5f, 0.5f, 0.5f },   /* 1 half-gray */
-    { 1.0f, 0.5f, 0.4f },   /* 2 brown */
-    { 0.5f, 1.0f, 0.5f },   /* 3 light green */
-    { 0.4f, 0.5f, 1.0f },   /* 4 blue */
-    { 0.6f, 0.6f, 0.0f },   /* 5 yellow */
-};
-
-// FUNCTION: LEGORR 0x0044f5c0
-void terrain_cell_surface_appearance_apply(void* terrain, int x, int y,
-                                           int mode, float r, float g,
-                                           float b)
-{
-    TerrainState* t = (TerrainState*)terrain;
-    if (t == NULL || t->blocks == NULL) {
-        return;
-    }
-    if (x < 0 || y < 0 || x >= t->width || y >= t->height) {
-        return; /* deviation: the corpus indexes blind */
-    }
-    uint8_t* blk = t->blocks
-        + ((size_t)y * (size_t)t->dim[2] + (size_t)x) *
-            TERRAIN_BLOCK_STRIDE;
-    if (t->owner_level != NULL) {
-        scene_render_terrain_cell_surface_color_set(
-            t->owner_level, (uint32_t)x, (uint32_t)y,
-            mode != 0 ? r : 1.0f,
-            mode != 0 ? g : 1.0f,
-            mode != 0 ? b : 1.0f);
-    }
-    if (mode == 0) {
-        /* corpus: the mesh half gets (1,1,1) and (1,1,1) alpha, and the
-         * byte is cleared. */
-        blk[0x24] = 0u;
-        (void)r; (void)g; (void)b;
-    }
-    /* FUN_00475020 writes the cell mesh's RGB and fixed opaque alpha. The
-     * SceneRender cache stores the RGB under the same width-minus-one quad
-     * stride; TerrainState's +0x24 appearance byte remains separate from the
-     * material byte at +0x18. */
-    (void)r; (void)g; (void)b;
-}
-
-// FUNCTION: LEGORR 0x0044f4e0
-uint8_t terrain_cell_surface_type_set(void* terrain, int x, int y, int type)
-{
-    TerrainState* t = (TerrainState*)terrain;
-    if (t == NULL || t->blocks == NULL) {
-        return 0;
-    }
-    if (x < 0 || y < 0 || x >= t->width || y >= t->height) {
-        return 0; /* deviation: the corpus indexes blind */
-    }
-    uint8_t* blk = t->blocks
-        + ((size_t)y * (size_t)t->dim[2] + (size_t)x) *
-            TERRAIN_BLOCK_STRIDE;
-    const uint8_t prior = blk[0x24];
-    blk[0x24] = (uint8_t)type;
-    const float* c = ((unsigned)type < 6u)
-        ? s_surface_appearance[type] : s_surface_appearance[0];
-    /* The corpus looks up the triplet at table + type*0xc and hands it to
-     * the appearance leaf (mode 1) — the seam half above. */
-    terrain_cell_surface_appearance_apply(t, x, y, 1, c[0], c[1], c[2]);
-    return prior;
-}
-
-// FUNCTION: LEGORR 0x0044f570
-void terrain_cell_surface_type_reset(void* terrain, int x, int y)
-{
-    /* corpus: the white appearance (1,1,1) through the leaf in mode 0,
-     * then the byte cleared — the leaf's mode-0 half already clears. */
-    terrain_cell_surface_appearance_apply(terrain, x, y, 0, 1.0f, 1.0f,
-                                          1.0f);
 }
 
 /* --- coordinate-callback dispatchers (see level.hpp) -------------------------
@@ -10293,21 +9262,6 @@ uint32_t level_fielda8_get(const LevelState* s)
     return s != NULL ? (uint32_t)level_int(s, 0xA8) : 0u;
 }
 
-/* GlobalOptionLowBitsEnabled (FUN_004589a0): faithful gate over the
- * objective word's low three bits. */
-// FUNCTION: LEGORR 0x004589a0
-int global_option_low_bits_enabled(const LevelState* s)
-{
-    return s != NULL && (s->objective & 7u) != 0u;
-}
-
-/* GlobalFlagGet_004ffe30 (FUN_00458650): threaded objective-result read. */
-// FUNCTION: LEGORR 0x00458650
-int level_objective_result_get(const LevelState* s)
-{
-    return s != NULL ? s->objective_result : 0;
-}
-
 /* TerrainObjectTypeSfxAtCellGet (FUN_0044ad80) — see level.hpp. */
 #define TERRAIN_SFX_GRID_CELLS 300
 // GLOBAL: LEGORR 0x004de814
@@ -10503,48 +9457,6 @@ void cell_cardinal_neighbor_apply(const struct GameContext* ctx, int x,
         terrain_cell_refresh_dispatch(ctx, x + k_offsets[2 * i],
                                       y + k_offsets[2 * i + 1]);
     }
-}
-
-/* TerrainCellSpecialStatePredicate (FUN_0040d3f0) — see level.hpp. */
-/* CellVariantEntryMatchCheck (FUN_00451180) — see level.hpp. The
- * coordinate pair names two cells through the same window: the block
- * table stride is the window's own dword at + 0x08. */
-// FUNCTION: LEGORR 0x00451180
-int cell_variant_entry_match_check(const void* grid, uint32_t x1, uint32_t y1,
-                                   uint32_t x2, uint32_t y2)
-{
-    if (grid == NULL) {
-        return 0; /* deviation: the corpus strides the window blindly */
-    }
-    const unsigned char* w = (const unsigned char*)grid;
-    if ((y1 != y2 || x1 != x2) != 0) {
-        uint32_t width, height, stride;
-        __builtin_memcpy(&width, w + 0x00, sizeof width);
-        __builtin_memcpy(&height, w + 0x04, sizeof height);
-        __builtin_memcpy(&stride, w + 0x08, sizeof stride);
-        if (x1 < width && y1 < height && x2 < width && y2 < height) {
-            void* blocks = NULL;
-            __builtin_memcpy(&blocks, w + 0x28, sizeof blocks);
-            if (blocks == NULL) {
-                return 0; /* deviation: the corpus strides the base */
-            }
-            const unsigned char* base = (const unsigned char*)blocks + 0x18;
-            const size_t i1 = ((size_t)y1 * stride + x1) * 0x28;
-            const size_t i2 = ((size_t)y2 * stride + x2) * 0x28;
-            const uint32_t v1 = base[i1];
-            const uint32_t v2 = base[i2];
-            if (v1 != 0xffu && v2 != 0xffu) {
-                const size_t cnt = w[0x4034u + v1];
-                for (size_t i = 0; i < cnt; ++i) {
-                    if (w[0x34u + (size_t)v1 * 0x80u + i] == (unsigned char)v2) {
-                        return 1;
-                    }
-                }
-                return 0; /* corpus: the list ran out (and count 0) */
-            }
-        }
-    }
-    return 0;
 }
 
 /* TerrainCreate's 0x34/0x4034 reciprocal variant lists are hosted in a
@@ -10766,194 +9678,6 @@ void level_terrain_material_transition_mesh_hook_set(
     s_material_transition_mesh_context = context;
 }
 
-static LevelState* terrain_material_transition_owner_get(
-    TerrainSurfaceGrid* grid)
-{
-    if (grid != NULL && grid->owner_level != NULL)
-        return grid->owner_level;
-    return level_current_owner_get();
-}
-
-/* The retail transition path reads the four current mesh vertices. Use the
- * indexed mesh first and SceneRender's live quad cache when no TerrainState
- * geometry is available. TerrainSurfaceGrid::surface_vectors stores the
- * separate corner vectors and is not vertex-position data. */
-static int terrain_material_transition_vertices_get(
-    LevelState* level, TerrainState* terrain, TerrainSurfaceGrid* grid,
-    uint32_t x, uint32_t y, float out[12])
-{
-    uint32_t corner;
-    if (terrain_cell_surface_values_available(terrain, (int)x, (int)y)) {
-        grid_cell_read_surface_values(terrain, (int)x, (int)y, out);
-        return 1;
-    }
-    if (grid == NULL || x >= grid->width || y >= grid->height) return 0;
-    if (level != NULL) {
-        float scene_vertices[4][3];
-        if (!scene_render_terrain_cell_vertices_get(
-                level, x, y, scene_vertices)) return 0;
-        for (corner = 0u; corner < 4u; ++corner) {
-            out[corner * 3u] = scene_vertices[corner][0];
-            out[corner * 3u + 1u] = scene_vertices[corner][2];
-            out[corner * 3u + 2u] = scene_vertices[corner][1];
-        }
-        return 1;
-    }
-    return 0;
-}
-
-/* FUN_0044e6d0 copies words 6 and 7 from each nine-word vertex output slot
- * into its 0x38-byte transition record. Keep the full indexed-mesh payload
- * here so the saved words remain the source UV pair; the twelve-word
- * GridCellReadSurfaceValues result contains positions only. */
-static int terrain_material_transition_vertex_payload_get(
-    TerrainState* terrain, uint32_t x, uint32_t y, float out[4][9])
-{
-    TerrainIndexedMeshLayerObject object;
-    TerrainIndexedMeshLayerOwner owner;
-    size_t quad_index;
-    if (terrain == NULL || out == NULL ||
-        x >= terrain->dim[0] || y >= terrain->dim[1] ||
-        terrain->indexed_mesh_blocks == NULL ||
-        terrain->indexed_mesh_vertices == NULL) return 0;
-    quad_index = (size_t)y * terrain->dim[0] + x;
-    terrain_indexed_mesh_cell_sync(terrain, quad_index);
-    memset(out, 0, sizeof(float) * 4u * 9u);
-    terrain_indexed_mesh_layer_object_init(terrain, &object, &owner);
-    (void)lwo_layer_polygon_vertex_data_read(&object, (int)quad_index, 0,
-                                            4, out);
-    return 1;
-}
-
-// FUNCTION: LEGORR 0x0044e6d0
-void terrain_cell_material_transition_begin(TerrainSurfaceGrid* grid,
-                                            uint32_t x, uint32_t y,
-                                            int material,
-                                            int rotation)
-{
-    LevelState* level = terrain_material_transition_owner_get(grid);
-    TerrainState* terrain = level != NULL
-        ? (TerrainState*)level->ptr_terrain : NULL;
-    uint32_t index = 0u;
-    uint32_t record_width;
-    size_t record_index;
-    uint8_t prior_material;
-    float vertices[12];
-    float vertex_payload[4][9];
-    int have_vertices = 0;
-    if (level == NULL || (grid == NULL && terrain == NULL)) return;
-    /* The retail routine receives the terrain renderer object directly. The
-     * port may enter through a helper that has only the level, so recover its
-     * live surface owner before applying the final material operation. */
-    if (grid == NULL) grid = level_surface_grid_get(level);
-    if (grid != NULL) {
-        if (x >= grid->width || y >= grid->height) return;
-        index = y * grid->width + x;
-    }
-    else if (terrain == NULL || x >= terrain->dim[0] ||
-             y >= terrain->dim[1]) return;
-    record_width = grid != NULL && grid->record_width != 0u
-        ? grid->record_width
-        : (uint32_t)level_width(level);
-    if (record_width == 0u && grid != NULL) record_width = grid->width;
-    record_index = (size_t)y * record_width + x;
-    if (terrain != NULL && terrain->blocks != NULL &&
-        record_index < (size_t)terrain->dim[2] * terrain->dim[3]) {
-        prior_material = terrain->blocks[record_index * 0x28u + 0x18u];
-    }
-    else if (grid != NULL && grid->cell_records != NULL) {
-        prior_material = grid->cell_records[record_index * 0x28u + 0x18u];
-    }
-    else {
-        prior_material = (uint8_t)material;
-    }
-
-    if (prior_material != (uint8_t)material &&
-        level->material_transition_suppress_flags[prior_material] == 0u) {
-        have_vertices = terrain_material_transition_vertices_get(
-            level, terrain, grid, x, y, vertices) &&
-            terrain_material_transition_vertex_payload_get(
-                terrain, x, y, vertex_payload);
-    }
-    if (have_vertices) {
-        uint32_t slot_index;
-        for (slot_index = 0u; slot_index < 10u; ++slot_index) {
-            LevelTerrainMaterialTransitionSlot* slot =
-                &level->material_transition_slots[slot_index];
-            uint32_t corner;
-            if ((slot->flags & 1u) != 0u) continue;
-            slot->timer = 0.05f;
-            slot->cell_x = (int32_t)x;
-            slot->cell_y = (int32_t)y;
-            for (corner = 0u; corner < 4u; ++corner) {
-                slot->saved_uv[corner][0] = vertex_payload[corner][6];
-                slot->saved_uv[corner][1] = vertex_payload[corner][7];
-            }
-            slot->reserved = 0u;
-            slot->flags |= 1u;
-            if (s_material_transition_mesh_hook != NULL) {
-                (void)s_material_transition_mesh_hook(
-                    s_material_transition_mesh_context, level, slot_index, 0,
-                    (int)x, (int)y, vertices, 1.0f);
-            }
-            break;
-        }
-    }
-
-    /* The reference invokes the material setter whether or not a transition
-     * slot was available. */
-    if (grid != NULL)
-        terrain_cell_material_set(grid, x, y, (uint8_t)material,
-                                  (uint8_t)rotation);
-    if (terrain != NULL && terrain->blocks != NULL &&
-        record_index < (size_t)terrain->dim[2] * terrain->dim[3])
-        terrain->blocks[record_index * 0x28u + 0x18u] = (uint8_t)material;
-}
-
-// FUNCTION: LEGORR 0x0044f090
-void terrain_material_transition_tick(TerrainSurfaceGrid* grid, float delta)
-{
-    LevelState* level = terrain_material_transition_owner_get(grid);
-    TerrainState* terrain = level != NULL
-        ? (TerrainState*)level->ptr_terrain : NULL;
-    uint32_t slot_index;
-    if (level == NULL) return;
-    if (grid == NULL) grid = level_surface_grid_get(level);
-    for (slot_index = 0u; slot_index < 10u; ++slot_index) {
-        LevelTerrainMaterialTransitionSlot* slot =
-            &level->material_transition_slots[slot_index];
-        float vertices[12];
-        int have_vertices = 0;
-        if ((slot->flags & 1u) == 0u) continue;
-        if (slot->cell_x < 0 || slot->cell_y < 0) {
-            slot->flags &= ~1u;
-            continue;
-        }
-        have_vertices = terrain_material_transition_vertices_get(
-            level, terrain, grid, (uint32_t)slot->cell_x,
-            (uint32_t)slot->cell_y, vertices);
-        if (!have_vertices) {
-            slot->flags &= ~1u;
-            continue;
-        }
-        if (s_material_transition_mesh_hook != NULL) {
-            (void)s_material_transition_mesh_hook(
-                s_material_transition_mesh_context, level, slot_index, 1,
-                slot->cell_x, slot->cell_y, vertices, 1.0f - slot->timer);
-        }
-        slot->timer += delta * 0.04f;
-        if (slot->timer > 1.0f) {
-            if (s_material_transition_mesh_hook != NULL) {
-                (void)s_material_transition_mesh_hook(
-                    s_material_transition_mesh_context, level, slot_index, 2,
-                    slot->cell_x, slot->cell_y, vertices,
-                    1.0f - slot->timer);
-            }
-            slot->flags &= ~1u;
-        }
-    }
-}
-
 int level_cell_path_record_set(LevelState* level, int x, int y,
                                void* record)
 {
@@ -11156,49 +9880,6 @@ void* tutorial_path_descriptor_create(const uint32_t* coord_pair)
 
 uint32_t path_record_count_peek(void) { return s_path_record_count; }
 void* path_record_last_peek(void) { return s_path_record_last; }
-
-/* TutorialPathCoordinateIndex (FUN_00456b80) — see level.hpp. The corpus
- * sweeps x-outer/y-inner over the grid dims and head-pushes each cell's
- * coordinate byte onto the chain table, clearing the byte as consumed. */
-// FUNCTION: LEGORR 0x00456b80
-void tutorial_path_coordinate_index(LevelState* s)
-{
-    if (s == NULL) {
-        return; /* deviation: the corpus strides the block blindly */
-    }
-    for (int i = 0; i != 0x37; ++i) {
-        s->pool_heads[i] = NULL;
-    }
-    const int w = level_int(s, LEVEL_OFF_WIDTH);
-    const int h = level_int(s, LEVEL_OFF_HEIGHT);
-    if (level_load_ptr(s, LEVEL_OFF_VOXELS) == NULL) {
-        return; /* deviation: the corpus strides the voxel global */
-    }
-    for (int x = 0; x < w; ++x) {
-        for (int y = 0; y < h; ++y) {
-            uint8_t* cell = voxel_at(s, x, y) + 0x04;
-            const int coord = *cell;
-            if (coord != 0) {
-                const uint32_t ux = (uint32_t)x;
-                const uint32_t uy = (uint32_t)y;
-                /* the corpus reads the superseded head and threads the
-                 * node's next link after the allocation */
-                void* old = (coord < 0x37) ? s->pool_heads[coord] : NULL;
-                void* node = engine_heap_alloc(8u + sizeof(void*));
-                if (node == NULL) {
-                    continue; /* deviation: the corpus strides the alloc */
-                }
-                __builtin_memcpy((char*)node + 0x0, &ux, 4);
-                __builtin_memcpy((char*)node + 0x4, &uy, 4);
-                __builtin_memcpy((char*)node + 0x8, &old, sizeof(old));
-                if (coord < 0x37) {
-                    s->pool_heads[coord] = node;
-                }
-                *cell = 0;
-            }
-        }
-    }
-}
 
 /* Test hook: stages a count-table slot (the corpus's table writers are
  * unported, so the faithful read shape is exercised through this hook —
@@ -12007,7 +10688,6 @@ void ledger_stub_004350a0_SurfaceTypeDescriptionsConfigLoad(
     surface_type_descriptions_load(entries, hooks);
 }
 
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
@@ -12017,73 +10697,6 @@ int ledger_stub_0043b360_TaskCountAtGridCoordinateQuery(
     uint32_t x, uint32_t y, EntitySlot** out_entity)
 {
     return entity_task_at_grid_coordinate_find(x, y, out_entity);
-}
-
-
-} // namespace unported_ledger_stubs
-
-namespace unported_ledger_stubs {
-
-/* ExpandCellEntitySpawn (FUN_00466250) creates a type-12 entity only when
- * the cell's expansion bit is clear and the surrounding terrain flags allow
- * its orientation. The scene action setter itself remains renderer-owned;
- * entity creation, cell state, and the cell object's live sidecar are
- * handled here. */
-// FUNCTION: LEGORR 0x00466250
-int ledger_stub_00466250_ExpandCellEntitySpawn(int x, int y)
-{
-    static const float half_pi = 1.57079632679f;
-    GameContext* game = entity_pool_callback_context_get();
-    LevelState* level = game != NULL ? game->level : NULL;
-    uint8_t* cell;
-    uint32_t flags;
-    uint32_t entity_word;
-    float position[3];
-    float orientation;
-    EntitySlot* entity;
-
-    if (level == NULL) level = level_current_owner_get();
-    if (game == NULL || level == NULL || level->ptr_terrain == NULL)
-        return 0;
-    if ((unsigned)x >= (unsigned)level_width(level) ||
-        (unsigned)y >= (unsigned)level_height(level)) return 0;
-    map_cell_record_grid_activate(level);
-    cell = cell_record_unchecked(level, x, y);
-    if (cell == NULL) return 0;
-    memcpy(&flags, cell + 0x08, sizeof(flags));
-    if ((flags & 0x100u) != 0u || (flags & 8u) == 0u) return 0;
-
-    /* FUN_004663f0 first tests the two horizontal neighbors. If either
-     * lacks bit 0x10, both vertical neighbors must carry it and orientation
-     * is zero; otherwise the expansion faces at pi/2. */
-    if ((cell_flag_word(level, x + 1, y) & 0x10u) == 0u ||
-        (cell_flag_word(level, x - 1, y) & 0x10u) == 0u) {
-        if ((cell_flag_word(level, x, y + 1) & 0x10u) == 0u ||
-            (cell_flag_word(level, x, y - 1) & 0x10u) == 0u) return 0;
-        orientation = 0.0f;
-    }
-    else {
-        orientation = half_pi;
-    }
-    if (!terrain_cell_world_position_get(x, y, position)) return 0;
-
-    entity = entity_create_with_position(game, 0x0c, NULL, 0,
-        position[0], position[1], orientation);
-    if (entity == NULL) return 0;
-
-    entity_word = (uint32_t)(uintptr_t)entity;
-    memcpy(cell, &entity_word, sizeof(entity_word));
-    {
-        const float expansion_time = 100.0f;
-        memcpy(cell + 0x04, &expansion_time, sizeof(expansion_time));
-    }
-    flags |= 0x100u;
-    memcpy(cell + 0x08, &flags, sizeof(flags));
-    entity->flags_3e0 |= 0x100u;
-    /* The native owner keeps the full pointer in its cell-link sidecar; the
-     * retail record word above remains the 32-bit image used by x86 callers. */
-    (void)grid_cell_object_link_insert(entity, x, y);
-    return 1;
 }
 
 } // namespace unported_ledger_stubs
@@ -12413,7 +11026,6 @@ void ledger_stub_00409f20_EntityPlacementCommandsBuildOnce(EntitySlot* entity)
     entity_placement_commands_build_once(entity);
 }
 
-
 // LavaErosionNeighborMutate
 void ledger_stub_0040f330_LavaErosionNeighborMutate(
     const int xy[2], unsigned int direction, int propagate)
@@ -12434,7 +11046,5 @@ int ledger_stub_0040f190_LavaErosionCellEligibleAndMutate(
 {
     return lava_erosion_cell_eligible_and_mutate(xy, hint);
 }
-
-
 
 } // namespace unported_ledger_stubs

@@ -21,10 +21,6 @@
 #include "view.hpp"
 #include "simtick_shared.hpp"
 
-namespace unported_ledger_stubs {
-int ledger_stub_00466490_CellSightRayCheckAndFlag(const EntitySlot* observer);
-}
-
 #define SIMTICK_MUTE_RESET 25.0f
 
 /* ---- mute timer (FUN_0041ba10) ------------------------------------------ */
@@ -236,54 +232,11 @@ void bobbin_clear_delay(SimtickBobbin* node)
 } /* FUN_004027a0 */
 
 /* ---- grid marker sweep (FUN_0044eff0) ----------------------------------- */
-static int s_marker_fired = 0;
+int s_marker_fired = 0;
 
 int simtick_marker_count(void)
 {
     return s_marker_fired;
-}
-
-static void marker_cell(EngineState* st, uint32_t x, uint32_t y)
-{
-    TerrainSurfaceGrid* grid = path_record_surface_grid_get();
-    if (st != NULL && grid != NULL && grid->width == st->sim_w &&
-        grid->height == st->sim_h) {
-        terrain_cell_surface_vectors_initialize(grid, x, y);
-    }
-    ++s_marker_fired;
-}
-
-// FUNCTION: LEGORR 0x0044eff0
-void simtick_marker_sweep(EngineContext* c, float dt, float scale)
-{
-    (void)scale;
-    EngineState* st = c != NULL ? c->state_block : NULL;
-    LevelState* level = level_current_owner_get();
-    if (level != NULL) {
-        /* The retail +0x73d0 dirty word and +0x28 cell records belong to the
-         * active LevelState's TerrainState. EngineState::sim_grid is only a
-         * test/legacy adapter and is not populated by the production level
-         * loader. */
-        s_marker_fired = 0;
-        terrain_dirty_cell_vectors_refresh(level);
-    }
-    else if (st != NULL && (st->sim_marker_flags & 2u) != 0u) {
-        s_marker_fired = 0;
-        for (uint32_t y = 0; y < st->sim_h; ++y) {
-            for (uint32_t x = 0; x < st->sim_w; ++x) {
-                uint8_t* cell = (uint8_t*)st->sim_grid +
-                    (y * st->sim_w + x) * 0x28;
-                if ((cell[0x19] & 4u) != 0u) {
-                    marker_cell(st, x, y);
-                    cell[0x19] = cell[0x19] & ~4u;
-                }
-            }
-        }
-        st->sim_marker_flags = (uint8_t)(st->sim_marker_flags & ~2u);
-    }
-    terrain_material_transition_tick(path_record_surface_grid_get(), dt);
-    /* FUN_00450b60's terrain-vertex interpolation pass still needs its
-     * cell-list and renderer-owned vertex records. */
 }
 
 /* ---- ManagerTick (corpus FUN_0045a730, finding 04) ---------------------- */
@@ -583,37 +536,15 @@ void simtick_bitfield_tree(int* base, int code)
 /* ---- tranche 9 ---------------------------------------------------------- */
 
 /* FUN_004665c0: a single ordered post-step. */
-static int s_post_n = 0;
-static SimtickPostStepHook s_post_step_hook = NULL;
-static void* s_post_step_user = NULL;
+int s_post_n = 0;
+SimtickPostStepHook s_post_step_hook = NULL;
+void* s_post_step_user = NULL;
 int simtick_post_steps_count(void) { return s_post_n; }
-
-static int post_step_cell_sight_callback(EntitySlot* entity, void* payload)
-{
-    (void)payload;
-    (void)unported_ledger_stubs::
-        ledger_stub_00466490_CellSightRayCheckAndFlag(entity);
-    /* LAB_004665e0's result does not terminate the entity-pool walk. */
-    return 0;
-}
 
 void simtick_post_step_hook_set(SimtickPostStepHook hook, void* user)
 {
     s_post_step_hook = hook;
     s_post_step_user = user;
-}
-
-// FUNCTION: LEGORR 0x004665c0
-void simtick_post_step(EngineContext* c)
-{
-    (void)c;
-    /* FUN_004665c0 calls FUN_004377b0 with this relay. That walker excludes
-     * the same 0x80000-filtered records as the existing filtered pool API. */
-    entity_pool_find_by_callback_filtered_current(
-        post_step_cell_sight_callback, NULL);
-    if (s_post_step_hook != NULL)
-        s_post_step_hook(c, s_post_step_user);
-    ++s_post_n;
 }
 
 /* FUN_004313b0: minion activity state machine over the +0x88 list.
@@ -1269,10 +1200,10 @@ void simtick_vu_meter(EngineContext* c, float dt)
 }
 
 /* FUN_0046e390: fx-bank ticker — per-entry sub-fx scan with fade/clamp. */
-static SimtickFxEntry* s_fx_entries;
-static uint32_t s_fx_count;
-static SimtickFxResourceUpdateFn s_fx_update;
-static void* s_fx_user;
+SimtickFxEntry* s_fx_entries;
+uint32_t s_fx_count;
+SimtickFxResourceUpdateFn s_fx_update;
+void* s_fx_user;
 
 void simtick_fx_bank_entries_install(SimtickFxEntry* entries, uint32_t count,
                                      SimtickFxResourceUpdateFn update,
@@ -1284,63 +1215,6 @@ void simtick_fx_bank_entries_install(SimtickFxEntry* entries, uint32_t count,
     s_fx_user = user;
 }
 
-// FUNCTION: LEGORR 0x0046e390
-void simtick_fx_bank_tick(EngineContext* c, float dt)
-{
-    uint32_t active_count = 0u;
-    float scale = c != NULL && c->time_scale != 0.0f ? c->time_scale : 1.0f;
-    for (uint32_t i = 0; i < s_fx_count; ++i) {
-        SimtickFxEntry* entry = &s_fx_entries[i];
-        float maximum = entry->initial;
-        int any_active = 0;
-        int fade_out = (entry->flags & 2u) == 0u;
-        uint32_t count = entry->count;
-        if (count > 256u) count = 256u;
-        for (uint32_t j = 0; entry->subentries != NULL && j < count; ++j) {
-            SimtickFxSubEntry* sub = &entry->subentries[j];
-            int advance_secondary = sub->enabled == 0.0f
-                || sub->value < entry->current;
-            if (!advance_secondary) {
-                if (maximum < sub->value) maximum = sub->value;
-                fade_out = 0;
-                ++active_count;
-                any_active = 1;
-                if (sub->value == entry->current) advance_secondary = 1;
-            }
-            sub->fade_primary += dt * 1.5f;
-            if (advance_secondary) sub->fade_secondary += dt * 0.5f;
-            if (sub->fade_primary > 240.0f) sub->fade_primary = 240.0f;
-            if (sub->fade_secondary > 240.0f) sub->fade_secondary = 240.0f;
-        }
-        if ((entry->flags & 4u) != 0u) any_active = 0;
-        if (any_active || fade_out) {
-            const float rate = (entry->current - entry->initial) / scale;
-            if (any_active) {
-                entry->flags &= ~2u;
-                entry->current += active_count * dt * 0.3f / (rate + 1.0f);
-                if (entry->current >= maximum) {
-                    entry->current = maximum;
-                    entry->flags |= 4u;
-                }
-            } else {
-                entry->flags &= ~4u;
-                entry->current -= dt * 0.05f;
-                if (entry->current <= maximum) {
-                    entry->current = maximum;
-                    entry->flags |= 2u;
-                }
-            }
-            for (uint32_t j = 0; j < entry->resource_count; ++j) {
-                if (s_fx_update != NULL) {
-                    s_fx_update(entry->resource, j, entry->current, s_fx_user);
-                }
-            }
-        }
-    }
-    if (c != NULL) {
-        terrain_edge_flag_midpoint_update((LevelState*)c->level_block);
-    }
-}
 /* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the
  * same word the mute timer reads (simtick_set_mute_word is the port-side
  * hook with the same effect; this is the corpus's own entry point). */
@@ -1357,17 +1231,6 @@ void simtick_directsound_listener_view_set(int view)
     if (s_bank_sound_on != 0) {
         s_listener_view = view;
     }
-}
-
-/* RoutePositionBlockedStateSet (FUN_0044da20) — see simtick.hpp. */
-// FUNCTION: LEGORR 0x0044da20
-void simtick_route_position_blocked_state_set(int blocked)
-{
-    if (blocked != 0) {
-        s_motion_jitter_flags = (s_motion_jitter_flags & ~0x400u) | 0x200u;
-        return;
-    }
-    s_motion_jitter_flags &= ~0x1200u; /* bits 9 and 12; bit 10 survives */
 }
 
 uint32_t simtick_route_position_state_peek(void)
@@ -1390,15 +1253,8 @@ void simtick_global_ui_flags_set_bit2(void)
 uint32_t simtick_global_ui_flags_word(void) { return simtick_timer_word; }
 
 /* ScenePositionResetAndEffectMotionCancel (FUN_0044cf70) — see simtick.hpp. */
-static float s_xform_current[3];   /* corpus pose seam stand-in */
-static float s_xform_config[3];    /* DAT_004eae74 role */
-
-// FUNCTION: LEGORR 0x0044cf70
-void simtick_scene_position_reset_and_effect_motion_cancel(void)
-{
-    __builtin_memcpy(s_xform_config, s_xform_current, sizeof s_xform_config);
-    s_motion_jitter_flags &= 0xffffff7fu;
-}
+float s_xform_current[3];   /* corpus pose seam stand-in */
+float s_xform_config[3];    /* DAT_004eae74 role */
 
 void simtick_scene_transform_current_set(const float xyz[3])
 {
