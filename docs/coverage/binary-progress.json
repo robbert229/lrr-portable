@@ -3,7 +3,7 @@
     "full": 55.15,
     "game_only": 50.99
   },
-  "baseline_sha256": "0ee97930d82b20de50d641fcc15a2f46f98154dc1b169b7eae21ec0165decbbf",
+  "baseline_sha256": "dd3fe04eef3e2c12b21ed0417eeeddb58f6469d0af7a0917d4936219ac21cfb2",
   "exact_function_code_bytes": {
     "bytes": 44551,
     "original_text_bytes": 642549,
@@ -16,14 +16,14 @@
   "function_order_inversions": {
     "full": {
       "adjacent": 843,
-      "pairs": 513565
+      "pairs": 513793
     },
     "game_only": {
       "adjacent": 782,
-      "pairs": 499742
+      "pairs": 499970
     }
   },
-  "input_sha256": "f97e2e9c5e7ae64edceffd2b17c0cc6d477226b69d6491e52e9ff4553baa5bef",
+  "input_sha256": "c61075e87803c2a0da64f4300b772f80b7e04ef27f72d2a123e235516df8897a",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 6,
@@ -1804,7 +1804,7 @@
         "functions": 25,
         "identical_function_bytes": 77,
         "identity_percent": 3.53,
-        "mapped": 24,
+        "mapped": 25,
         "original_function_bytes": 2183,
         "size_exact": false,
         "unit_id": "G98-012"
@@ -3766,9 +3766,9 @@
         "unit_id": "LATE-006"
       }
     ],
-    "unmapped_original_functions": 216
+    "unmapped_original_functions": 215
   },
-  "listing_digests_sha256": "33de945214d34efdfa073b232a66a554ee5d577450d09314dcd576d6d32d0728",
+  "listing_digests_sha256": "7be8fc29e2e5b018696a6c08995fd7e5da3f3a2174f70d66cfb5bed18a29003c",
   "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
