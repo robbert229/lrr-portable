@@ -1,0 +1,5 @@
+unit,snapshot,header,removed_commit,lines_removed,sha256
+src/game/lava_erosion.cpp,src/crt/crt_for_lava_erosion.hpp,src/crt/crt_shared.hpp,a0096524,44,0359ea2262ee6a153055f8940e1e200b834ae41b4149f76470e26daff0c0b066
+src/game/lava_erosion.cpp,src/game/cmd_for_lava_erosion.hpp,src/game/cmd_shared.hpp,a0096524,27,2e02c8cf60ccae1954fb723a70edd2c2ecde61cf6ce0e29abbd4b0044fea5d74
+src/game/lava_erosion.cpp,src/game/level_for_lava_erosion.hpp,src/game/level_shared.hpp,a0096524,68,5c681a76859c9e5972d2a281ae0f2b384c18e7df390dff958f3518a137c009cb
+src/gods98/flic_unit.cpp,src/gods98/record_for_flic_unit.hpp,src/gods98/record_shared.hpp,a0096524,15,85403dfec2f4eaf9485979c5b6e904d1bbbc8edfbdf918e3c3c5b97bf07ec7fe

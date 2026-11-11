@@ -28,6 +28,10 @@ The migration is measured on `main` at `8bdb5e28` (after #494's wave R5,
    snapshot, `<l>_for_<u>.hpp`, and the unit's includes name it with their
    spelling otherwise unchanged. **The migration changes no listing:** 0 of
    2,386 digests change, and the gate passes with no score change.
+   Two units then get back the view they had before wave R5 (#494)
+   appended to their legacy files' headers. That restores `0x0040e9c0` to
+   100% (#498's fix, which R5 undid) and `0x00484e50` to its pre-R5 score
+   (below).
 4. **A new measurement.** MSVC 5.0's codegen depends on the **spelled path**
    of an `#include`, not only on the declarations it brings in. Respelling
    three includes of the same file (`"record_shared.hpp"` →
@@ -148,19 +152,57 @@ meant to change: change the file name only, and keep the spelling.
   were byte-identical between `a0096524` and `8bdb5e28`.
 - Native build and ctest: 35/35. `link_order.py check` and `check-map`,
   and Meson parity: OK.
-- `make reccmp-check`: OK, no function falls or rises. The listing digests
+- `make reccmp-check` on the verbatim migration: OK, no function falls or
+  rises. The listing digests
   equal `main`'s for all 2,386 functions (game-only mean 51.09%, full
   55.85%, as on `main`). `make match-progress` leaves the three generated
   files' measurements unchanged; only their input hashes change. The
   input manifest `tools/binary_progress_inputs.txt` gains the 142 snapshots.
-- **Earlier drift recovered: none, by design.** A migration that changed
-  units' declarations would re-roll their ties with even odds (rule B), so
-  it could not promise recovery. The known rule A case, `0x0040e9c0`, is
-  already fixed by #498, and its guard is copied verbatim into
-  `level_for_lava_erosion.hpp`.
+- **The verbatim migration recovers no earlier drift, by design.** It
+  keeps every unit's declaration sequence, so it keeps every unit's codegen.
 
-  Per-unit headers make such fixes safe from now on: editing one unit's
-  snapshot changes no other unit. Finding 538's counter rule suggests the
+### Restoring pre-R5 views (earlier drift recovered)
+
+#498 restored `0x0040e9c0` to 100% on `5031c134`. It added a rule A guard to
+`level_shared.hpp` that hides `extern float s_erosion_delay_scale;` from
+`lava_erosion.cpp`. Wave R5 (#494, `a0096524`) then appended to 22 shared
+headers, including three that `lava_erosion.cpp` included. That shifted the
+unit's declaration count, and `0x0040e9c0` fell to 84.21% (finding 536: the
+integer `imul` operands swap, a rule B re-roll; the guarded `fmul` order
+stays right). This is the drift that per-unit headers are designed to stop.
+
+Per-unit snapshots make it cheap to undo, because editing one unit's
+snapshot changes no other translation unit. A survey used single-unit
+compiles (`match_function.py --source`). For each of the 18 units relocated
+before R5, it removed R5's appended blocks from all of that unit's
+snapshots, returning the unit to its exact pre-R5 view. Every R5 change was
+a pure append. Only three functions changed, each back to its exact pre-R5
+score:
+
+| Function | Unit | `main` (after R5) | pre-R5 view | Applied |
+| --- | --- | ---: | ---: | --- |
+| `0x0040e9c0` lava_erosion_delay_from_cell | `lava_erosion.cpp` | 84.21 | **100.00** | yes |
+| `0x00484e50` flic_decode16_bit_delta | `flic_unit.cpp` | 19.44 | 19.50 | yes |
+| `0x004089d0` segment_2d_point_distance | `placement.cpp` | 43.56 | 40.89 | no: R5's re-roll happened to gain; restoring would fall below the baseline |
+
+The pre-R5 view is applied to `lava_erosion.cpp` (`crt_`, `cmd_` and
+`level_for_lava_erosion.hpp`) and `flic_unit.cpp` (`record_for_flic_unit.hpp`).
+The removed text is R5's appended blocks, so each snapshot equals its old
+header's body as it stood before R5. The #498 guard is kept, verbatim.
+Records: `docs/coverage/relocations/private-header-view-restores.csv`. The
+full gate shows exactly these two digests changed (`0x0040e9c0` 84.21 →
+100.00, `0x00484e50` 19.44 → 19.50), with nothing falling. The means become
+51.10% game-only and 55.86% full.
+
+Counter effects were measured directly, not modelled. The verbatim
+migration leaves every unit's preprocessed token stream, and so finding
+538's counter at every function, unchanged, and the full gate confirms it.
+For the restore, single-unit compiles score every function of the unit
+in about a second, so the kit in `tools/experiments/486/` (sweeps and
+delta debugging, for finding causes) was not needed.
+
+Per-unit headers make such fixes safe from now on: editing one unit's
+snapshot changes no other unit. Finding 538's counter rule suggests the
   next step. Dropping a unit's `extern`s of its own variables from its
   snapshot does not move the counter at any function after those variables'
   definitions, which is every function in a relocated unit file. That would
