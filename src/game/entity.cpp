@@ -42,6 +42,7 @@
 #include "gods98/message.hpp"
 #include "crt/crt.hpp"
 #include "frontend.hpp"
+#include "entity_shared.hpp"
 extern "C" float random_float_range(float minimum, float maximum);
 
 static uint32_t s_next_ddiscene_owner_token = 1u;
@@ -919,7 +920,6 @@ float periodic_timer25_peek(void)
 #include "frontend.hpp"
 extern "C" float random_float_range(float minimum, float maximum);
 #include "crt/crt.hpp"
-#include "entity_shared.hpp"
 
 static uint32_t s_entity_finalize_mode_flags;
 static EntityFinalizeHook s_entity_type5_timeout_hook;
