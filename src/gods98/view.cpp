@@ -6461,58 +6461,9 @@ const char* scene_property_secondary_name_get(void* property)
     return name;
 }
 
-/* Row-span staging records from FUN_0046eb30. The corpus has a 0x320-byte
- * count slot and an adjacent x/y float-pair window; dimensions inferred
- * from that window bound the port's rough model to 96 points per row and
- * 64 staged rows. */
-#define MAP_ROW_SPAN_RECORDS_MAX 64
-#define MAP_ROW_SPAN_POINTS_MAX 96
-#define MAP_ROW_SPAN_COUNT_OFFSET 0x320
-#define MAP_ROW_SPAN_RECORD_SIZE 0x324
-static unsigned char s_map_row_span_records[MAP_ROW_SPAN_RECORDS_MAX]
+unsigned char s_map_row_span_records[MAP_ROW_SPAN_RECORDS_MAX]
                                            [MAP_ROW_SPAN_RECORD_SIZE];
-static uint32_t s_map_row_span_records_count;
-
-/* AppendMapRowSpanToBuffer (FUN_0046ead0): append each x in the half-open
- * interval [x_begin, x_end), pairing it with y. */
-// FUNCTION: LEGORR 0x0046ead0
-void map_row_span_append(void* buffer, uint32_t y, uint32_t x_begin,
-                         uint32_t x_end)
-{
-    if (buffer == NULL) {
-        return;
-    }
-    uint32_t count = 0u;
-    __builtin_memcpy(&count, (char*)buffer + MAP_ROW_SPAN_COUNT_OFFSET,
-                     sizeof(count));
-    while (x_begin < x_end && count < MAP_ROW_SPAN_POINTS_MAX) {
-        const float x = (float)x_begin;
-        const float fy = (float)y;
-        __builtin_memcpy((char*)buffer + (size_t)count * 8u, &x, sizeof(x));
-        __builtin_memcpy((char*)buffer + (size_t)count * 8u + 4u,
-                         &fy, sizeof(fy));
-        ++x_begin;
-        ++count;
-    }
-    __builtin_memcpy((char*)buffer + MAP_ROW_SPAN_COUNT_OFFSET, &count,
-                     sizeof(count));
-}
-
-/* StartMapRowSpanBufferRecord (FUN_0046eb30): clear a new row record,
- * append the supplied span, then advance the port-owned staging count. */
-// FUNCTION: LEGORR 0x0046eb30
-void map_row_span_record_start(uint32_t y, uint32_t x_begin,
-                               uint32_t x_end)
-{
-    if (s_map_row_span_records_count >= MAP_ROW_SPAN_RECORDS_MAX) {
-        return;
-    }
-    unsigned char* record =
-        s_map_row_span_records[s_map_row_span_records_count];
-    memset(record, 0, MAP_ROW_SPAN_RECORD_SIZE);
-    map_row_span_append(record, y, x_begin, x_end);
-    ++s_map_row_span_records_count;
-}
+uint32_t s_map_row_span_records_count;
 
 uint32_t map_row_span_record_count(void)
 {
@@ -6770,9 +6721,9 @@ void global_entity_render_parameter_mode_set(int mode)
     }
 }
 
-static GridSurfaceLookupFn s_grid_surface_lookup;
-static GridSurfaceHandleReleaseFn s_grid_surface_release;
-static void* s_grid_surface_user;
+GridSurfaceLookupFn s_grid_surface_lookup;
+GridSurfaceHandleReleaseFn s_grid_surface_release;
+void* s_grid_surface_user;
 
 void grid_surface_hooks_set(GridSurfaceLookupFn lookup,
                             GridSurfaceHandleReleaseFn release, void* user)
@@ -6780,28 +6731,6 @@ void grid_surface_hooks_set(GridSurfaceLookupFn lookup,
     s_grid_surface_lookup = lookup;
     s_grid_surface_release = release;
     s_grid_surface_user = user;
-}
-
-// FUNCTION: LEGORR 0x0046e330
-void grid_surface_entry_reset(void* surface, int key)
-{
-    if (surface == NULL || s_grid_surface_lookup == NULL) return;
-    int index = key;
-    void* entry = s_grid_surface_lookup(surface, key, &index,
-                                        s_grid_surface_user);
-    if (entry == NULL || index < 0 || index > 4096) return;
-    uint32_t flags = 0;
-    uint32_t handle = 0u;
-    __builtin_memcpy(&flags, (char*)entry + 0x424u, sizeof(flags));
-    flags = (flags & ~2u) | 1u;
-    __builtin_memcpy((char*)entry + 0x424u, &flags, sizeof(flags));
-    __builtin_memcpy(&handle, (char*)entry + 0x420u, sizeof(handle));
-    if (s_grid_surface_release != NULL) {
-        s_grid_surface_release(handle, s_grid_surface_user);
-    }
-    uint32_t zero = 0;
-    __builtin_memcpy((char*)entry + 0x338u + (size_t)index * 0x18u,
-                     &zero, sizeof(zero));
 }
 
 static WorldSpatialRecordModel* s_world_spatial_records;

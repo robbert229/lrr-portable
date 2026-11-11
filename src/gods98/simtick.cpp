@@ -1200,10 +1200,10 @@ void simtick_vu_meter(EngineContext* c, float dt)
 }
 
 /* FUN_0046e390: fx-bank ticker — per-entry sub-fx scan with fade/clamp. */
-static SimtickFxEntry* s_fx_entries;
-static uint32_t s_fx_count;
-static SimtickFxResourceUpdateFn s_fx_update;
-static void* s_fx_user;
+SimtickFxEntry* s_fx_entries;
+uint32_t s_fx_count;
+SimtickFxResourceUpdateFn s_fx_update;
+void* s_fx_user;
 
 void simtick_fx_bank_entries_install(SimtickFxEntry* entries, uint32_t count,
                                      SimtickFxResourceUpdateFn update,
@@ -1215,63 +1215,6 @@ void simtick_fx_bank_entries_install(SimtickFxEntry* entries, uint32_t count,
     s_fx_user = user;
 }
 
-// FUNCTION: LEGORR 0x0046e390
-void simtick_fx_bank_tick(EngineContext* c, float dt)
-{
-    uint32_t active_count = 0u;
-    float scale = c != NULL && c->time_scale != 0.0f ? c->time_scale : 1.0f;
-    for (uint32_t i = 0; i < s_fx_count; ++i) {
-        SimtickFxEntry* entry = &s_fx_entries[i];
-        float maximum = entry->initial;
-        int any_active = 0;
-        int fade_out = (entry->flags & 2u) == 0u;
-        uint32_t count = entry->count;
-        if (count > 256u) count = 256u;
-        for (uint32_t j = 0; entry->subentries != NULL && j < count; ++j) {
-            SimtickFxSubEntry* sub = &entry->subentries[j];
-            int advance_secondary = sub->enabled == 0.0f
-                || sub->value < entry->current;
-            if (!advance_secondary) {
-                if (maximum < sub->value) maximum = sub->value;
-                fade_out = 0;
-                ++active_count;
-                any_active = 1;
-                if (sub->value == entry->current) advance_secondary = 1;
-            }
-            sub->fade_primary += dt * 1.5f;
-            if (advance_secondary) sub->fade_secondary += dt * 0.5f;
-            if (sub->fade_primary > 240.0f) sub->fade_primary = 240.0f;
-            if (sub->fade_secondary > 240.0f) sub->fade_secondary = 240.0f;
-        }
-        if ((entry->flags & 4u) != 0u) any_active = 0;
-        if (any_active || fade_out) {
-            const float rate = (entry->current - entry->initial) / scale;
-            if (any_active) {
-                entry->flags &= ~2u;
-                entry->current += active_count * dt * 0.3f / (rate + 1.0f);
-                if (entry->current >= maximum) {
-                    entry->current = maximum;
-                    entry->flags |= 4u;
-                }
-            } else {
-                entry->flags &= ~4u;
-                entry->current -= dt * 0.05f;
-                if (entry->current <= maximum) {
-                    entry->current = maximum;
-                    entry->flags |= 2u;
-                }
-            }
-            for (uint32_t j = 0; j < entry->resource_count; ++j) {
-                if (s_fx_update != NULL) {
-                    s_fx_update(entry->resource, j, entry->current, s_fx_user);
-                }
-            }
-        }
-    }
-    if (c != NULL) {
-        terrain_edge_flag_midpoint_update((LevelState*)c->level_block);
-    }
-}
 /* SimulationGlobalWordSet (FUN_0041ba90): the faithful blind store — the
  * same word the mute timer reads (simtick_set_mute_word is the port-side
  * hook with the same effect; this is the corpus's own entry point). */
