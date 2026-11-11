@@ -12,7 +12,7 @@
   Do not let a function's score drop below the baseline. If a change
   intentionally improves matches, refresh the baseline in the same change with
   `make reccmp-baseline-update`. Use `make reccmp-compare` to re-check an
-  existing report without rebuilding.
+  existing report without rebuilding. CI does not run this gate; it stays local.
 - To iterate on one function's match, run `make match-function ADDR=0x...`
   (or `python3 tools/match_function.py ADDR --json`): it compiles only that
   function's translation unit and returns Reccmp's score, the baseline delta
@@ -35,7 +35,12 @@
 - `PLATFORM=winapi` selects the 32-bit Windows reference backend; see
   `cross/i686.ini` and the build documentation before attempting a cross-build.
   `MOVIES=auto|enabled|disabled` controls native FFmpeg runtime detection.
-- No separate repository-wide formatter, linter, pre-commit configuration, or
-  CI workflow is present. The Makefile exposes `make reccmp-lint` for the
+- CI runs one required check, `native-build` (`.github/workflows/native-build.yml`),
+  on pull requests and pushes to `main`. It builds the native port and runs the
+  CMake and ctest commands above with synthetic fixtures only. It does not run
+  the matching build, `make reccmp-check`, or real-data tests. Those need
+  licensed inputs and the MSVC 5.0 toolchain, so run them locally.
+- No separate repository-wide formatter, linter, or pre-commit configuration is
+  present. The Makefile exposes `make reccmp-lint` for the
   Reccmp annotation ledger. Follow the surrounding C++ style and retain the
   SPDX headers used by source files.
