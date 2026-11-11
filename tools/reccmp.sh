@@ -61,9 +61,14 @@ cmake -S "${project_root}" -B "${build_dir}" \
   -DPLATFORM=winapi \
   -DLRR_CLASSIC_MSVC5=ON \
   -DLRR_RECCMP=ON \
+  -DLRR_BINARY_PROGRESS="${LRR_BINARY_PROGRESS:-OFF}" \
   -DBUILD_TESTING=OFF \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build "${build_dir}" --target program
+
+if [[ "${LRR_BINARY_PROGRESS:-OFF}" == ON ]]; then
+  python3 "${project_root}/tools/strip_pe_debug.py" "${build_dir}/LegoRR.exe"
+fi
 
 cat > "${project_root}/reccmp-build.yml" <<EOF
 project: .

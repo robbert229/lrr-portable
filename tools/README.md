@@ -362,3 +362,35 @@ Notes:
 * `unwad.py` is the earlier extract-only script from the finding-01 work;
   `rrwad.py` supersedes it (it also converts `foo\bar.bmp` names into real
   directories instead of literal backslash files).
+
+## Whole-binary progress
+
+`make binary-progress` builds a separate non-incremental matching executable
+in `build-binary-progress/`, runs Reccmp, prints the comparison as JSON and
+writes `docs/coverage/binary-progress.json`. It needs the matching-build
+requirements plus Python packages `pefile` and `capstone` (used by
+`translation_units.py`). Set `BINARY_PROGRESS_PYTHON` to a Python with those
+packages and `BINARY_PROGRESS_BUILD_DIR` to change the build directory.
+The linker emits a separate PDB for Reccmp; the target removes the PE debug
+directory and file-only debug overlay before comparing the executable.
+The ordinary `make reccmp-check` remains a separate gate.
+
+Section comparisons align each named section at its start, count equal bytes
+against the original's virtual size (missing candidate bytes count as unequal),
+and exclude raw-file alignment padding. Imports and resources compare the PE
+data-directory spans: the import directory is the descriptor table, not all
+import names and thunks. The original-address `.text` comparison aligns by
+virtual address. Inversions count pairs of mapped functions whose candidate
+addresses reverse their original order; ties do not count. Exact-function
+coverage sums reachable instruction spans recovered by `translation_units.py`
+for raw Reccmp 100% matches, divided by original `.text` virtual size; it is
+not a byte-for-byte comparison of those functions. Accuracy is the Reccmp
+mean over mapped functions, including its effective matches. Header changes
+are listed as numeric values (entry point is an RVA).
+
+`python3 tools/binary_progress_hash.py` prints the commit-independent SHA-256
+of paths and contents under `src/`, `CMakeLists.txt`, the matching toolchain
+file and `tools/reccmp.sh`. It uses only the Python standard library. The
+hash is recorded as `input_sha256`; it deliberately excludes the generated
+file, reference binary, build artifacts and commit metadata. Run script tests
+with `python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'`.

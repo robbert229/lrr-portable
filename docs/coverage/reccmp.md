@@ -38,3 +38,17 @@ SHA-256:
 
 - Original: `c3d8ce23f1aa21814950c77e713ec176599506d4e71758cf1cf709525e581e0f`
 - Rebuilt: `64683af52eee251151f1083f2b511624f0caeabe3d4f40908d7c3aeceff7dfd5`
+
+## Whole-binary progress — 2026-11-10
+
+The separate non-incremental matching build measured on the source tree at
+`cf3bfa0d` reports **2.80%** of original `.text` bytes identical at their
+original addresses, **872,200** inverted pairs of mapped functions, and
+**32,883 / 642,549 bytes (5.12%)** covered by raw 100%-matching functions.
+The mapped-function accuracy means are **49.30%** game-only and **53.68%**
+full. Section-relative identical shares are `.text` **2.80%**, `.rdata`
+**12.28%**, `.data` **15.04%**, import descriptors **32.08%**, and resources
+**16.31%**. The [generated report](binary-progress.json) records the sizes,
+header differences and input hash. These figures use the definitions and
+reproduction command in the [tool documentation](../../tools/README.md#whole-binary-progress);
+they are distinct from the incremental-link snapshot above.

@@ -151,3 +151,12 @@ The root Meson build remains in the repository. The
 [implementation notes](implementation.md) preserve its subsystem-specific
 commands and historical test results. CMake through `make` is the current
 entry point.
+
+### Whole-binary progress
+
+`make binary-progress` builds and compares a separate non-incremental matching
+executable and refreshes `docs/coverage/binary-progress.json`. Install Python
+`pefile` and `capstone` for the report; `BINARY_PROGRESS_PYTHON` selects their
+interpreter. See [tool documentation](../tools/README.md#whole-binary-progress)
+for definitions, input hashing and build-directory overrides. Run
+`make reccmp-check` separately for the match baseline gate.
