@@ -1,4 +1,4 @@
-# input_sha256: 76897bec6e053ff695a331d1b67c2612728740efaea77366c59330cb509ddcb3
+# input_sha256: 087f8f07c1b542ebc6f7c6d2402ee603b40f00487cce757b7e9cfc9c3d3480d1
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -11,7 +11,7 @@
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
 0x00401240 100.00 vec2_dist
-0x00401270 6.51 advisor_config_slots_load_target
+0x00401270 11.16 advisor_config_slots_load_target
 0x004013a0 100.00 vec_len
 0x004013e0 89.66 advisor_position_name_to_index
 0x00401420 100.00 vec_dist
@@ -26,7 +26,7 @@
 0x004017b0 17.39 advisor_position_record_initialize
 0x00401840 26.32 advisor_action_position_and_mode_set
 0x00401890 32.56 advisor_action_position_get
-0x004018c0 20.69 advisor_request_admit
+0x004018c0 13.79 advisor_request_admit
 0x00401930 81.58 advisor_request_reset_and_submit_sound
 0x00401990 37.18 advisor_transition_worker
 0x00401a70 28.82 advisor_scene_advance_completion_check
@@ -330,7 +330,7 @@
 0x0040f7d0 36.78 callback_state_record_create
 0x0040f850 46.38 callback_state_list_dispose
 0x0040fb00 100.00 matrix_rotation_compose_xyz
-0x0040fcc0 100.00 vector_scale_components_in_place
+0x0040fcc0 91.30 vector_scale_components_in_place
 0x0040fdb0 53.85 three_value_record_copy_and_mark_ready
 0x0040fde0 75.00 set_vector_and_notify_listeners
 0x0040fe00 32.14 scene_object_list_update_transforms
@@ -338,7 +338,7 @@
 0x0040fe60 28.00 ptrstack_pop
 0x0040fe90 54.55 ptrstack_for_each
 0x0040fec0 90.91 set_global_scalar_to_one
-0x0040ff50 87.50 scene_object_list_apply_float_callback
+0x0040ff50 75.00 scene_object_list_apply_float_callback
 0x0040ff70 83.33 object_vector3_set
 0x00410020 17.14 scene_node_position_set
 0x00410070 75.00 scene_object_list_apply_position_callback
@@ -2168,7 +2168,7 @@
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
 0x00401240 100.00 vec2_dist
-0x00401270 6.51 advisor_config_slots_load_target
+0x00401270 11.16 advisor_config_slots_load_target
 0x004013a0 100.00 vec_len
 0x004013e0 89.66 advisor_position_name_to_index
 0x00401420 100.00 vec_dist
@@ -2183,7 +2183,7 @@
 0x004017b0 17.39 advisor_position_record_initialize
 0x00401840 26.32 advisor_action_position_and_mode_set
 0x00401890 32.56 advisor_action_position_get
-0x004018c0 20.69 advisor_request_admit
+0x004018c0 13.79 advisor_request_admit
 0x00401930 81.58 advisor_request_reset_and_submit_sound
 0x00401990 37.18 advisor_transition_worker
 0x00401a70 28.82 advisor_scene_advance_completion_check
@@ -2487,7 +2487,7 @@
 0x0040f7d0 36.78 callback_state_record_create
 0x0040f850 46.38 callback_state_list_dispose
 0x0040fb00 100.00 matrix_rotation_compose_xyz
-0x0040fcc0 100.00 vector_scale_components_in_place
+0x0040fcc0 91.30 vector_scale_components_in_place
 0x0040fdb0 53.85 three_value_record_copy_and_mark_ready
 0x0040fde0 75.00 set_vector_and_notify_listeners
 0x0040fe00 32.14 scene_object_list_update_transforms
@@ -2495,7 +2495,7 @@
 0x0040fe60 28.00 ptrstack_pop
 0x0040fe90 54.55 ptrstack_for_each
 0x0040fec0 90.91 set_global_scalar_to_one
-0x0040ff50 87.50 scene_object_list_apply_float_callback
+0x0040ff50 75.00 scene_object_list_apply_float_callback
 0x0040ff70 83.33 object_vector3_set
 0x00410020 17.14 scene_node_position_set
 0x00410070 75.00 scene_object_list_apply_position_callback

@@ -14,10 +14,12 @@ src/crt/crt.hpp
 src/crt/crt_heap.cpp
 src/crt/crt_runtime_aliases.cpp
 src/crt/crt_runtime_calls.cpp
+src/crt/crt_shared.hpp
 src/crt/vc5names.h
 src/game/activity_timeout.hpp
 src/game/actor_scene.cpp
 src/game/actor_scene.hpp
+src/game/advisor.cpp
 src/game/ai.cpp
 src/game/ai.hpp
 src/game/bezier.c
@@ -51,6 +53,7 @@ src/game/mission.cpp
 src/game/mission.hpp
 src/game/objective.cpp
 src/game/objective.hpp
+src/game/objective_shared.hpp
 src/game/opgroup.cpp
 src/game/opgroup.hpp
 src/game/options.cpp
@@ -113,6 +116,7 @@ src/gods98/dxerror.c
 src/gods98/dxerror.h
 src/gods98/engine.cpp
 src/gods98/engine.hpp
+src/gods98/engine_shared.hpp
 src/gods98/entity.cpp
 src/gods98/entity.hpp
 src/gods98/flic.cpp
