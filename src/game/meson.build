@@ -41,7 +41,6 @@ game_sources = [
   'dependencies.cpp',
   'entity_cell_effects.cpp',
   'placement.cpp',
-  'steering.cpp',
   'encyclopedia.cpp',
   'lava_erosion.cpp',
   'screen_effect_quads.cpp',
@@ -82,6 +81,7 @@ game_sources = [
 game_c_sources = [
   'bezier.c',
   'priorities.c',
+  'steering.c',
 ]
 # Native/reference builds compile original-shape C units as C++ (ADR 0005).
 game_c_as_cpp = []
@@ -117,7 +117,8 @@ if get_option('platform') == 'native'
 ['bind', 'test_bind.cpp'],
                  ['frontend', 'test_frontend.cpp'],
                  ['options', 'test_options.cpp'],
-                 ['bezier', 'test_bezier.cpp']]
+                 ['bezier', 'test_bezier.cpp'],
+                 ['steering', 'test_steering.cpp']]
     test_name = exe[0]
     t = executable(test_name + '_test', exe[1],
       include_directories : gods98_incs + [miniwin_inc],

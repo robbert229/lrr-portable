@@ -46,6 +46,8 @@
 #include "gods98/surface.hpp"
 #include "gods98/draw.h"
 #include "crt/crt.h"
+#include "gods98/record.h"
+#include "game/steering.h"
 
 int main(void)
 {

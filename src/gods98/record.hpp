@@ -228,6 +228,8 @@ void indexed_record_flag6c_bit0_set(void* record, int index, int set);
 /* RecordFlag2CBit0Set (FUN_004827d0): set or clear bit zero at +0x2c. */
 void record_flag2c_bit0_set(void* record, int set);
 
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 /* ThreeValueRecordCopyAndMarkReady (FUN_0040fdb0): copy three dwords to
  * the record's pointed-to vector and raise the ready word at +0x10. */
 void three_value_record_copy_and_mark_ready(void* record,
@@ -372,6 +374,8 @@ void scene_object_owner_set(void* scene_object, uint32_t owner);
  * Entry NULL guards stand in for the corpus's blind dereferences
  * (documented deviations). */
 void indexed_record_field64_set(void* record, int index, uint32_t value);
+/* Superseded by game/steering.h (GAME-016, finding 544); kept uncalled so
+ * the symbol count of every includer is unchanged (ADR 0005 entropy rule 1). */
 void object_vector3_set(void* object_block, float x, float y, float z);
 void float_pair_at_offset4_set_from_ints(void* record, int x, int y);
 void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
@@ -427,7 +431,7 @@ void scene_object_pair_apply_mode(const void* record, uint32_t flag);
                                                 /* FUN_00408670 */
 /* SceneRenderLockToggle (FUN_00473b40): update the selected render-interface
  * pair and toggle scene flag bit 3. */
-void scene_render_lock_toggle(void* scene_object, int enabled);
+extern "C" void scene_render_lock_toggle(void* scene_object, int enabled);
 
 /* SceneResourceVisibilitySet (FUN_0046d2c0): raise or clear bit 1 of the
  * record's +0x1e8 word, then route the raw flag through the visibility

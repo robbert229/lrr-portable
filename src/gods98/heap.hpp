@@ -103,7 +103,7 @@ void* engine_calloc(long size);                  /* FUN_0048ead0 */
 
 /* OptionalResourceDestroy (FUN_0040f7b0): frees the optional resource
  * record only when one is there — the corpus's gate over the engine free. */
-void optional_resource_destroy(void* record);
+extern "C" void optional_resource_destroy(void* record);
 
 /* TextBufferDestroy (FUN_00485190): frees the buffer held in the text
  * buffer record's +0x14 slot, then the record itself. The mapped body is

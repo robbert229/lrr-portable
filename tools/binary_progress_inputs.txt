@@ -91,7 +91,6 @@ src/game/entity_for_object_state_file.hpp
 src/game/entity_for_placement.hpp
 src/game/entity_for_record_chains.hpp
 src/game/entity_for_screen_effect_quads.hpp
-src/game/entity_for_steering.hpp
 src/game/entity_for_terrain_cell_objects.hpp
 src/game/entity_motion_owner.cpp
 src/game/entity_motion_ports.hpp
@@ -192,7 +191,9 @@ src/game/spawn.hpp
 src/game/startup_config.cpp
 src/game/startup_config_for_file_list_streams.hpp
 src/game/startup_config_shared.hpp
-src/game/steering.cpp
+src/game/steering.c
+src/game/steering.h
+src/game/steering_maths.h
 src/game/terrain_cell_objects.cpp
 src/game/terrain_feedback.hpp
 src/game/terrain_grid.cpp
@@ -323,6 +324,7 @@ src/gods98/movie.hpp
 src/gods98/ptrstack.cpp
 src/gods98/ptrstack.hpp
 src/gods98/record.cpp
+src/gods98/record.h
 src/gods98/record.hpp
 src/gods98/record_for_animation_object.hpp
 src/gods98/record_for_bitmap_font.hpp
@@ -331,7 +333,6 @@ src/gods98/record_for_flic_unit.hpp
 src/gods98/record_for_level_id_remap.hpp
 src/gods98/record_for_placement.hpp
 src/gods98/record_for_placement_footprint.hpp
-src/gods98/record_for_steering.hpp
 src/gods98/record_for_terrain_map.hpp
 src/gods98/record_for_terrain_overlay_quads.hpp
 src/gods98/record_for_text_window.hpp
@@ -397,7 +398,6 @@ src/gods98/view_for_placement.hpp
 src/gods98/view_for_placement_footprint.hpp
 src/gods98/view_for_record_chains.hpp
 src/gods98/view_for_screen_effect_quads.hpp
-src/gods98/view_for_steering.hpp
 src/gods98/view_for_terrain_map.hpp
 src/gods98/view_for_tooltip.hpp
 src/gods98/view_shared.hpp

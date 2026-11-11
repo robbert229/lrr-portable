@@ -323,10 +323,10 @@ if(BUILD_TESTING AND PLATFORM STREQUAL "native")
   add_test(NAME crt COMMAND crt_test)
   set_tests_properties(crt PROPERTIES LABELS crt)
   set(GAME_TESTS level objective savegame mission entity cmd select ai render bind frontend options
-    bezier)
+    bezier steering)
   set(GAME_TEST_SOURCES test_level.cpp test_objective.cpp test_savegame.cpp test_mission.cpp
     test_entity.cpp test_cmd.cpp test_select.cpp test_ai.cpp test_render.cpp test_bind.cpp
-    test_frontend.cpp test_options.cpp test_bezier.cpp)
+    test_frontend.cpp test_options.cpp test_bezier.cpp test_steering.cpp)
   list(LENGTH GAME_TESTS count)
   math(EXPR last "${count} - 1")
   foreach(i RANGE ${last})
