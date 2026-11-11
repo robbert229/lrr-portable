@@ -23,6 +23,7 @@
 #include "texture.hpp"
 #include "view.hpp"
 #include "scene_pool.hpp"
+#include "resource_shared.hpp"
 
 /* Direct3DRM object and object-array ABI used by the recursive resource-tree
  * helper. The reference calls the object's GetChildren slot at +0x4c, then
@@ -424,9 +425,9 @@ static uint32_t s_terrain_point_object_count;
 static void* s_scene_resource_slot_instances[10][10];
 static SceneEffectPoseHook s_scene_effect_pose_hook;
 static void* s_scene_effect_pose_context;
-static void* s_numbered_bitmap_slots[11];
-static NumberedBitmapLoadHook s_numbered_bitmap_load_hook;
-static void* s_numbered_bitmap_context;
+void* s_numbered_bitmap_slots[11];
+NumberedBitmapLoadHook s_numbered_bitmap_load_hook;
+void* s_numbered_bitmap_context;
 static SceneAnimationDurationHook s_animation_duration_hook;
 static SceneAnimationLastFrameHook s_animation_last_frame_hook;
 static void* s_animation_duration_context;
@@ -1402,43 +1403,6 @@ void numbered_bitmap_load_hook_install(NumberedBitmapLoadHook hook,
 {
     s_numbered_bitmap_load_hook = hook;
     s_numbered_bitmap_context = context;
-}
-
-/* PreloadNumberedBitmaps (FUN_0040a400): format <directory>\\ followed by
- * either <index>.bmp or <prefix><index>.bmp, then get-or-create each of the
- * eleven textures. The retail function overwrites its slots without a
- * release; the texture cache owns the loaded surfaces. */
-// FUNCTION: LEGORR 0x0040A400
-void preload_numbered_bitmaps(const char* directory, const char* prefix)
-{
-    unsigned int index;
-    char path[512];
-    if (directory == NULL) return;
-    for (index = 0u; index < 11u; ++index) {
-        char suffix[24];
-        size_t length;
-        strncpy(path, directory, 400u);
-        path[400] = '\0';
-        length = strlen(path);
-        if (length < sizeof(path) - 1u) {
-            path[length++] = '\\';
-            path[length] = '\0';
-        }
-        if (prefix != NULL && prefix[0] != '\0' && length < 480u) {
-            size_t available = 480u - length;
-            strncat(path, prefix, available);
-            length = strlen(path);
-        }
-        sprintf(suffix, "%u.bmp", index);
-        strncat(path, suffix, sizeof(path) - strlen(path) - 1u);
-        if (s_numbered_bitmap_load_hook != NULL) {
-            s_numbered_bitmap_slots[index] = s_numbered_bitmap_load_hook(
-                path, s_numbered_bitmap_context);
-        }
-        else {
-            s_numbered_bitmap_slots[index] = texture_get_or_load(NULL, path);
-        }
-    }
 }
 
 void* numbered_bitmap_slot_peek(int index)

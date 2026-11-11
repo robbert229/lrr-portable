@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <string.h>
 #include <stdlib.h>
+#include "record_shared.hpp"
 
 #if defined(_MSC_VER)
 #define RECORD_COM_CALL __stdcall
@@ -126,7 +127,7 @@ static float rec_float(const void* base, size_t off)
 
 /* Pointer slots are modeled native-size (documented deviation from the
  * corpus's 32-bit pointers); reads stay byte-safe like the fields. */
-static void* rec_ptr(const void* base, size_t off)
+void* rec_ptr(const void* base, size_t off)
 {
     void* v = NULL;
     if (base != NULL) {
@@ -514,37 +515,6 @@ int map_cell_to_world_center(const void* map, uint32_t cell_x,
 #endif
 }
 
-/* TaskFlagBitQuery (FUN_00408970, findings 366/465). */
-// FUNCTION: LEGORR 0x00408970
-uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
-{
-    const uint32_t mask = 1u << (bit & 0x1fu);
-    uint32_t flags;
-    if (task == NULL) {
-        return 0u;
-    }
-    __builtin_memcpy(&flags, (const char*)task + 0x98, sizeof(flags));
-    if (suppress != 0 && (flags & mask) != 0) {
-        return 0;
-    }
-    return flags & mask;
-}
-
-/* TaskField84GetAndField88Out (FUN_00408360): after the pinned NULL-task
- * guard, mirror `test eax,eax; je`, the optional +0x88 load/store, then the
- * +0x84 answer load. The corpus itself does not guard the task pointer. */
-// FUNCTION: LEGORR 0x00408360
-uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
-{
-    if (task == NULL) {
-        return 0u;
-    }
-    if (out88 != NULL) {
-        *out88 = *(const uint32_t*)((const char*)task + 0x88);
-    }
-    return *(const uint32_t*)((const char*)task + 0x84);
-}
-
 /* PackedGridCellValueGet (FUN_0040b850, findings 373/451): low nibble
  * * width + high nibble indexes the cell dwords; the corpus's own NULL
  * grid guard answers 0, reproduced. */
@@ -715,15 +685,6 @@ uint32_t pointer_value_get(const void* pointed)
 }
 #endif
 
-// FUNCTION: LEGORR 0x00408850
-uint32_t scene_object_flags_get(const void* scene_object)
-{
-    uint32_t flags;
-    __builtin_memcpy(&flags, (const char*)scene_object + 0x70,
-                     sizeof(flags));
-    return flags;
-}
-
 // FUNCTION: LEGORR 0x00473db0
 uint32_t scene_object_owner_get(const void* scene_object)
 {
@@ -779,126 +740,6 @@ uint32_t scene_object_flag_bit3_get(const void* scene_object)
     if (scene_object == NULL) return 0u;
     return scene_object_flag_bit3_get_target(scene_object);
 }
-
-// FUNCTION: LEGORR 0x00406e30
-uint32_t animation_object_handle_get(const void* animation_object)
-{
-    uint32_t handle;
-    __builtin_memcpy(&handle, (const char*)animation_object + 0x04,
-                     sizeof(handle));
-    return handle;
-}
-
-/* RendererObjectUpdateFromRecordField64/68/6c (FUN_00406c00,
- * FUN_00406c30, FUN_00406c60): feed the selected list, renderer library,
- * update switch, and key to the resource-list adapter. The original passes
- * `param_2 == 0` as a dword-valued opaque pointer; retain that call shape so
- * installed native hooks observe the same zero/one value. */
-static void renderer_object_update_from_record(void* record,
-                                               unsigned int list_offset,
-                                               int enabled,
-                                               void* update_value)
-{
-    void* list;
-    void* library;
-    if (record == NULL) {
-        return;
-    }
-    __builtin_memcpy(&list, (const char*)record + list_offset, sizeof(list));
-    __builtin_memcpy(&library, (const char*)record + 0x04, sizeof(library));
-    resource_list_update_matching_key(list, library, update_value, 0u);
-}
-
-// FUNCTION: LEGORR 0x00406c00
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void renderer_object_update_from_record_field64(
-    void* record, int enabled)
-{
-    __asm {
-        mov edx, dword ptr [esp + 8]
-        xor eax, eax
-        test edx, edx
-        sete al
-        push 0
-        push eax
-        mov eax, dword ptr [esp + 0ch]
-        mov ecx, dword ptr [eax + 4]
-        mov edx, dword ptr [eax + 64h]
-        push ecx
-        push edx
-        call resource_list_update_matching_key
-        add esp, 10h
-        ret
-    }
-}
-#else
-void renderer_object_update_from_record_field64(void* record, int enabled)
-{
-    renderer_object_update_from_record(record, 0x64u, enabled,
-                                       (void*)(uintptr_t)(enabled == 0));
-}
-#endif
-
-// FUNCTION: LEGORR 0x00406c30
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void renderer_object_update_from_record_field68(
-    void* record, int enabled)
-{
-    __asm {
-        mov edx, dword ptr [esp + 8]
-        xor eax, eax
-        test edx, edx
-        sete al
-        push 0
-        push eax
-        mov eax, dword ptr [esp + 0ch]
-        mov ecx, dword ptr [eax + 4]
-        mov edx, dword ptr [eax + 68h]
-        push ecx
-        push edx
-        call resource_list_update_matching_key
-        add esp, 10h
-        ret
-    }
-}
-#else
-void renderer_object_update_from_record_field68(void* record, int enabled)
-{
-    renderer_object_update_from_record(record, 0x68u, enabled,
-                                       (void*)(uintptr_t)(enabled == 0));
-}
-#endif
-
-// FUNCTION: LEGORR 0x00406c60
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void renderer_object_update_from_record_field6c(
-    void* record, int enabled, void* update_value)
-{
-    __asm {
-        mov eax, dword ptr [esp + 0ch]
-        xor ecx, ecx
-        push eax
-        mov eax, dword ptr [esp + 0ch]
-        test eax, eax
-        mov eax, dword ptr [esp + 8]
-        sete cl
-        mov edx, dword ptr [eax + 4]
-        mov eax, dword ptr [eax + 6ch]
-        push ecx
-        push edx
-        push eax
-        call resource_list_update_matching_key
-        add esp, 10h
-        ret
-    }
-}
-#else
-void renderer_object_update_from_record_field6c(void* record, int enabled,
-                                                void* update_value)
-{
-    renderer_object_update_from_record(record, 0x6cu, enabled, update_value);
-}
-#endif
 
 // FUNCTION: LEGORR 0x004877d0
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -1626,23 +1467,6 @@ void indexed_record_field64_set(void* record, int index, uint32_t value)
     indexed_record_field64_set_target(record, index, value);
 }
 
-/* The corpus reloads the base slot for each store and dereferences it
- * blindly. The outer NULL guard is retained because test_record pins it. */
-// FUNCTION: LEGORR 0x0040ff70
-void object_vector3_set(void* object_block, float x, float y, float z)
-{
-    if (object_block == NULL) {
-        return; /* deviation: the corpus reads blindly */
-    }
-    void* base;
-    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
-    __builtin_memcpy((char*)base + 0x3c, &x, sizeof(x));
-    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
-    __builtin_memcpy((char*)base + 0x40, &y, sizeof(y));
-    __builtin_memcpy(&base, (char*)object_block, sizeof(base));
-    __builtin_memcpy((char*)base + 0x44, &z, sizeof(z));
-}
-
 // FUNCTION: LEGORR 0x004851b0
 void float_pair_at_offset4_set_from_ints(void* record, int x, int y)
 {
@@ -1864,48 +1688,6 @@ void surface_visibility_set(const void* record, uint32_t flag)
     surface_visibility_set_target(record, flag);
 }
 
-/* AnimationObjectVisibilitySet (FUN_00406c90) — animation record +4. */
-// FUNCTION: LEGORR 0x00406c90
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void animation_object_visibility_set(const void* anim,
-                                                        uint32_t flag)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        mov eax, dword ptr [esp + 8]
-        push eax
-        mov edx, dword ptr [ecx + 4]
-        push edx
-        call scene_render_lock_toggle
-        add esp, 8
-        ret
-    }
-}
-#else
-void animation_object_visibility_set(const void* anim, uint32_t flag)
-{
-    scene_render_lock_toggle(rec_ptr(anim, 0x04), (int)flag);
-}
-#endif
-
-/* SceneObjectPairApplyMode (FUN_00408670) — the corpus blindly loads the +4
- * object and +0x7c partner. Copy native-width port pointer slots inline to
- * avoid rec_ptr calls; the port retains its widened-slot layout (the corpus
- * tests a dword at +0x7c). NULL record behavior therefore follows the corpus
- * and is no longer guarded. */
-// FUNCTION: LEGORR 0x00408670
-void scene_object_pair_apply_mode(const void* record, uint32_t flag)
-{
-    void* object;
-    __builtin_memcpy(&object, (const char*)record + 0x04, sizeof(object));
-    scene_render_lock_toggle(object, (int)flag);
-    void* partner;
-    __builtin_memcpy(&partner, (const char*)record + 0x7c, sizeof(partner));
-    if (partner != NULL) {
-        scene_render_lock_toggle(partner, (int)flag);
-    }
-}
-
 /* SceneRenderLockToggle (FUN_00473b40): update the paired render interfaces
  * on the transition into or out of lock mode, then toggle flag bit 3. The
  * channel slots use the corpus offsets; rec_ptr preserves this port's
@@ -2014,82 +1796,6 @@ void scene_resource_visibility_set(void* record, uint32_t flag)
             scene_visibility_hook_call(child, (int)flag);
         }
     }
-}
-
-/* The pair band's shared pose apply: position (x, y, 0) plus the corpus's
- * constant (0, 0, -1) orientation, through the ported primitives. */
-static void pair_handle_set_pose(void* h, float x, float y)
-{
-    cam_set_pos((CameraHandle*)h, x, y, 0.0f);
-    const float up[3] = { 0.0f, 0.0f, -1.0f };
-    cam_set_facing((CameraHandle*)h, up);
-}
-
-/* SceneObjectPairSetRenderParameters (FUN_004086c0): the corpus blindly
- * loads the +4 object and +0x7c partner; inline native-width copies match
- * those loads without rec_ptr calls. The pose dispatch's argument block
- * (x, y, 0 / 0, 0, -1) reads as position + constant facing; the partner is
- * used only when the +0x7c slot is non-NULL. */
-// FUNCTION: LEGORR 0x004086c0
-void scene_object_pair_set_render_parameters(void* pair, float x, float y)
-{
-    void* object;
-    __builtin_memcpy(&object, (char*)pair + 0x04, sizeof(object));
-    pair_handle_set_pose(object, x, y);
-    void* partner;
-    __builtin_memcpy(&partner, (char*)pair + 0x7c, sizeof(partner));
-    if (partner != NULL) {
-        pair_handle_set_pose(partner, x, y);
-    }
-}
-
-/* SceneObjectPairSetCallbackScalar (FUN_00408710): run the scalar probe on
- * the (x, y) pair with its third argument — the corpus consumes the probe's
- * undefined float return as the camera z; the port pins it to zero (the
- * sole call-site probe, the ported height adapter, answers void). */
-// FUNCTION: LEGORR 0x00408710
-void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
-                                           SceneScalarProbe probe, void* arg)
-{
-    if (probe != NULL) {
-        probe(x, y, arg);
-    }
-    cam_set_pos((CameraHandle*)rec_ptr(pair, 0x04), x, y, 0.0f);
-    void* partner = rec_ptr(pair, 0x7c);
-    if (partner != NULL) {
-        cam_set_pos((CameraHandle*)partner, x, y, 0.0f);
-    }
-}
-
-
-/* AnimationObjectVisibilityGet (FUN_004086a0) — the +4 object's flag bit 3
- * through the ported getter. */
-// FUNCTION: LEGORR 0x004086a0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t animation_object_visibility_get(const void* anim)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [eax + 4]
-        push ecx
-        call scene_object_flag_bit3_get_target
-        add esp, 4
-        ret
-    }
-}
-#else
-uint32_t animation_object_visibility_get(const void* anim)
-{
-    return scene_object_flag_bit3_get(rec_ptr(anim, 0x04));
-}
-#endif
-
-/* SceneAssignEntityOwner (FUN_00408380) — owner store on the +4 object
- * through the ported owner set. */
-// FUNCTION: LEGORR 0x00408380
-void scene_assign_entity_owner(const void* scene, uint32_t owner)
-{
-    scene_object_owner_set(*(void* const*)((const char*)scene + 0x04), owner);
 }
 
 /* SceneCurrentObjectSet (FUN_00477240) — see record.hpp. The store lands
@@ -3091,19 +2797,6 @@ static void rec_dword_put(void* base, size_t off, uint32_t v)
     __builtin_memcpy((char*)base + off, &v, sizeof v);
 }
 
-/* ThreeValueRecordCopyAndMarkReady (FUN_0040fdb0). */
-// FUNCTION: LEGORR 0x0040fdb0
-void three_value_record_copy_and_mark_ready(void* record,
-                                            const uint32_t values[3])
-{
-    void* destination_pointer = *(void**)record;
-    uint32_t* destination = (uint32_t*)destination_pointer;
-    destination[0] = values[0];
-    destination[1] = values[1];
-    destination[2] = values[2];
-    ((uint32_t*)record)[4] = 1;
-}
-
 static char* mesh_block(const void* record, int block)
 {
     char* table = (char*)rec_ptr(record, 0x08);
@@ -3513,34 +3206,6 @@ uint32_t screen_effect_item_opacity_set(void* record, int block,
     base = *(void**)((char*)record + 0x08);
     if (base == NULL) return 1u;
     return screen_effect_item_opacity_set_target(record, block, opacity, mode);
-}
-
-/* SceneObjectScalarAdjustByDirection (FUN_004082e0) — see record.hpp. The
- * corpus callers are the config-record parse loop and the simulation flush;
- * the fold itself is a pure record-slot scale (the corpus's x87 double fold
- * lands as the same double arithmetic here). */
-// FUNCTION: LEGORR 0x004082e0
-void scene_object_scalar_adjust_by_direction(void* record, int direction)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
-    }
-    float scalar = 0.0f;
-    __builtin_memcpy(&scalar, (const char*)record + 0x80, sizeof scalar);
-    float result;
-    if (direction == 0) {
-        result = (float)((scalar - 0.1) * 10.0 * 0.11111111);
-    } else {
-        result = (float)(scalar - (1.0 - scalar) * -0.1);
-    }
-    if (result < 0.0f) {
-        result = 0.0f;
-    }
-    __builtin_memcpy((char*)record + 0x80, &result, sizeof result);
-    uint32_t flags = 0u;
-    __builtin_memcpy(&flags, (const char*)record + 0x148, sizeof flags);
-    flags |= 2u;
-    __builtin_memcpy((char*)record + 0x148, &flags, sizeof flags);
 }
 
 namespace unported_ledger_stubs {

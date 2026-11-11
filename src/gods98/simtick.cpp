@@ -19,6 +19,7 @@
 #include "game/render.hpp"
 #include "game/terrain_grid.hpp"
 #include "view.hpp"
+#include "simtick_shared.hpp"
 
 extern uint32_t s_motion_jitter_flags;
 
@@ -75,11 +76,11 @@ void simtick_mute_timer(EngineContext* c, float dt)
 }
 
 /* ---- table dispatch (FUN_0040aa10) -------------------------------------- */
-static SimtickEffect s_effects[16];
-static int           s_effect_count = 0;
-static int           s_effect_fired = 0;
-static void (*s_effect_opacity_hook)(uint32_t, int, float, int) = NULL;
-static void (*s_effect_release_hook)(uint32_t, int) = NULL;
+SimtickEffect s_effects[16];
+int           s_effect_count = 0;
+int           s_effect_fired = 0;
+void (*s_effect_opacity_hook)(uint32_t, int, float, int) = NULL;
+void (*s_effect_release_hook)(uint32_t, int) = NULL;
 
 void simtick_effect_table(SimtickEffect* table, int count)
 {
@@ -105,55 +106,6 @@ void simtick_effect_set_hooks(void (*set_opacity)(uint32_t, int, float, int),
 {
     s_effect_opacity_hook = set_opacity;
     s_effect_release_hook = release;
-}
-
-// FUNCTION: LEGORR 0x0040aa40
-static int effect_helper(SimtickEffect* e, float dt)
-{
-    float elapsed;
-    float opacity;
-    float decrement;
-    uint32_t count;
-    uint32_t index;
-
-    if (e == NULL) {
-        return 0;
-    }
-    memcpy(&elapsed, &e->words[6], sizeof(elapsed));
-    if (elapsed < 15.0f) {
-        memcpy(&decrement, &e->words[5], sizeof(decrement));
-        decrement -= dt;
-        memcpy(&e->words[5], &decrement, sizeof(decrement));
-        opacity = 1.0f - elapsed * 0.06666667f;
-        count = e->words[2];
-        if (s_effect_opacity_hook != NULL) {
-            for (index = 0; index < count; ++index) {
-                s_effect_opacity_hook(e->words[1], (int)index, opacity, 4);
-            }
-        }
-        elapsed += dt;
-        memcpy(&e->words[6], &elapsed, sizeof(elapsed));
-        return 1;
-    }
-
-    e->words[7] &= ~1u;
-    if (s_effect_release_hook != NULL) {
-        s_effect_release_hook(e->words[0], 1);
-    }
-    return 0;
-}
-
-// FUNCTION: LEGORR 0x0040aa10
-void simtick_table_dispatch(EngineContext* c, float dt, float scale)
-{
-    (void)c; (void)scale;
-    s_effect_fired = 0;
-    for (int i = 0; i < s_effect_count; ++i) {
-        if ((s_effects[i].words[7] & 1u) != 0) {
-            effect_helper(&s_effects[i], dt);
-            ++s_effect_fired;
-        }
-    }
 }
 
 /* ---- post-step cluster (FUN_0040d450) ----------------------------------- */

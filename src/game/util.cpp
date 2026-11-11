@@ -1485,60 +1485,6 @@ void string_queue_record_or_flush(uint32_t first, uint32_t second,
     ++s_string_queue_count;
 }
 
-// FUNCTION: LEGORR 0x00410280
-int callback_operation_run_and_return_status(void* stack_owner,
-                                             CallbackOperationNode* first,
-                                             CallbackOperationVisit visit)
-{
-    int status = 1;
-    CallbackOperationNode* node;
-    if (visit == NULL) return status;
-    for (node = first; node != NULL; node = node->next)
-        visit(stack_owner, node, &status);
-    return status;
-}
-
-// FUNCTION: LEGORR 0x0040a5e0
-void record_count_digits_fill(const RecordCountRenderHooks* hooks, uint32_t value)
-{
-    unsigned int slot;
-    unsigned int digits = 0;
-    uint32_t probe = value;
-    float red;
-    float green;
-    if (hooks == NULL) return;
-    if (value < 5u) { red = 0.0f; green = 1.0f; }
-    else if (value < 10u) { red = 1.0f; green = 1.0f; }
-    else { red = 1.0f; green = 0.25f; }
-    if (hooks->style_set != NULL) {
-        for (slot = 0; slot < 4; ++slot) {
-            hooks->style_set(hooks->context, slot, red, green, 0);
-            hooks->style_set(hooks->context, slot, red, green, 3);
-        }
-    }
-    if (probe != 0) {
-        uint32_t limit = 1;
-        while (limit <= probe && limit <= 100000000u) {
-            ++digits;
-            limit *= 10u;
-        }
-    }
-    if (digits > 4) digits = 4;
-    for (slot = 0; slot < digits; ++slot) {
-        if (hooks->digit_set != NULL)
-            hooks->digit_set(hooks->context, slot, value % 10u);
-        if (hooks->slot_hide != NULL)
-            hooks->slot_hide(hooks->context, slot, 0);
-        value /= 10u;
-    }
-    if (hooks->blank_set != NULL) hooks->blank_set(hooks->context, digits);
-    for (slot = digits + 1; slot < 4; ++slot) {
-        if (hooks->slot_hide != NULL)
-            hooks->slot_hide(hooks->context, slot, 1);
-    }
-}
-
-
 const char* util_root_name(BlockFile* bf)
 {
     static char root_buf[64];

@@ -1398,19 +1398,6 @@ double double_build_with_exponent(uint32_t significand_low,
 /* ------------------------------------------------------------------ *
  *  Constant and DAT-global band (see crt.hpp). */
 
-/* The corpus's .rdata +0.0f (file bytes verified 00 00 00 00): the
- * leaf flds a DWORD data operand (the s_global_float_00556f00 fld
- * width), so the zero rides a file-scope float carrier — the
- * float-to-double widening is free on the x87 return stack. */
-// GLOBAL: LEGORR 0x0049e084
-static const float  s_zero_float     = 0.0f; /* DAT_0049e084 */
-
-// FUNCTION: LEGORR 0x00408930
-double constant_zero_float_get(void)
-{
-    return (double)s_zero_float; /* corpus: fld DWORD ds:0049e084 / ret */
-}
-
 // FUNCTION: LEGORR 0x0047c160
 int32_t constant_negative_10000_get(void)
 {
@@ -1891,13 +1878,9 @@ static uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
 // GLOBAL: LEGORR 0x004b8a54
 static uint32_t s_level_stored_word = 0u;  /* DAT_004b8a54 */
 // GLOBAL: LEGORR 0x004c7178
-static uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
+uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
 // GLOBAL: LEGORR 0x004c79a4
 static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
-// GLOBAL: LEGORR 0x004c7ea8
-static uint32_t s_ui_flag_word = 0u;       /* DAT_004c7ea8 */
-// GLOBAL: LEGORR 0x004a1ee4
-static uint32_t s_config_word = 0u;        /* DAT_004a1ee4 */
 
 // FUNCTION: LEGORR 0x00407340
 void state_flag_toggle_when_zero(void)
@@ -1917,12 +1900,6 @@ void level_state_stored_value_set(uint32_t v)
     s_level_stored_word = v;
 }
 
-// FUNCTION: LEGORR 0x0040ab10
-void global_mode_zero_input_set(int value)
-{
-    s_mode_zero_flag = (value == 0) ? 1u : 0u;
-}
-
 uint32_t global_mode_zero_input_peek(void)
 {
     return s_mode_zero_flag;
@@ -1932,22 +1909,6 @@ uint32_t global_mode_zero_input_peek(void)
 void rockfall_style_table_base_set(uint32_t v)
 {
     s_rockfall_base = v;
-}
-
-// FUNCTION: LEGORR 0x0040e7e0
-void global_flag_bit0_clear(void)
-{
-    /* corpus: mov eax,ds:004c7ea8 / and al,0FEh / mov ds:004c7ea8,eax.
-     * The plain load-op-store spelling (not the &= compound) keeps the
-     * /Od register round-trip instead of folding to and mem,imm; the
-     * corpus's byte-sized and is MSVC's own narrowing of the mask. */
-    s_ui_flag_word = s_ui_flag_word & ~1u;
-}
-
-// FUNCTION: LEGORR 0x0040f5e0
-void global_config_value_set(uint32_t v)
-{
-    s_config_word = v;
 }
 
 uint32_t advisor_state_word_peek(void)  { return s_advisor_state_word; }
@@ -2845,19 +2806,6 @@ void uint96_zero(uint32_t limbs[3])
 #endif
 
 /* --- the small global primitives band (see crt.hpp) -------------------------- */
-
-/* GlobalValueClearIfEqual (FUN_0040e910) — the screen-effect handle word
- * (the corpus's DAT_004c7ea4, unowned) clears only on a matching release. */
-// GLOBAL: LEGORR 0x004c7ea4
-static int s_global_value_word;
-
-// FUNCTION: LEGORR 0x0040e910
-void global_value_clear_if_equal(int value)
-{
-    if (s_global_value_word == value) {
-        s_global_value_word = 0;
-    }
-}
 
 void global_value_word_set(int value) { s_global_value_word = value; }
 int  global_value_word_peek(void) { return s_global_value_word; }

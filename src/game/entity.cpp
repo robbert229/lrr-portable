@@ -42,6 +42,7 @@
 #include "gods98/message.hpp"
 #include "crt/crt.hpp"
 #include "frontend.hpp"
+#include "entity_shared.hpp"
 extern "C" float random_float_range(float minimum, float maximum);
 
 static uint32_t s_next_ddiscene_owner_token = 1u;
@@ -169,7 +170,7 @@ static EntityCommandStatusFeedbackHooks s_entity_command_feedback_hooks;
 static EntitySlot* s_entity_command_feedback_last_entity;
 static char s_entity_command_feedback_last_text[256];
 static void* s_entity_visual_resource_context;
-static EntitySceneSlotRuntimeOps s_entity_scene_slot_runtime_ops;
+EntitySceneSlotRuntimeOps s_entity_scene_slot_runtime_ops;
 static EntitySurfaceScaleReadHook s_entity_surface_scale_read_hook;
 static void* s_entity_surface_scale_context;
 static EntityIndexedFlagPublishHook s_entity_indexed_flag_publish_hook;
@@ -436,13 +437,6 @@ void entity_kind_name_tables_install(int kind, const char* const* names,
     s_entity_kind_name_counts[kind] = count;
 }
 
-/* ItemNameByKindLookup's fixed labels reside at the literal DAT addresses
- * used by its original switch. Keep separate named arrays so Reccmp can map
- * each string reference without relying on literal pooling. */
-// GLOBAL: LEGORR 0x004a1e98
-static const char s_item_name_ore[] = "Ore";
-// GLOBAL: LEGORR 0x004a1e9c
-static const char s_item_name_power_crystal[] = "PowerCrystal";
 // GLOBAL: LEGORR 0x004a3f40
 static const char s_item_name_spider_web[] = "SpiderWeb";
 // GLOBAL: LEGORR 0x004a3f90
@@ -1823,12 +1817,6 @@ void scene_object_pose_position_sync(EntitySlot* entity)
     }
     if (changed)
         memcpy(target->orientation, source->orientation, sizeof(source->orientation));
-}
-
-// FUNCTION: LEGORR 0x0040fde0
-void set_vector_and_notify_listeners(float* state, const float* delta)
-{
-    steering_physics_step(NULL, state, delta);
 }
 
 // FUNCTION: LEGORR 0x00441ed0
@@ -8959,8 +8947,8 @@ void entity_reset_auxiliary_state(EntitySlot* e)
     pending_type_value_slot_select(e, &e->auxiliary_slot_38c);
 }
 
-static EntityPayloadReleaseFn s_payload_scene_release_hook;
-static EntityPayloadReleaseFn s_payload_chain_release_hook;
+EntityPayloadReleaseFn s_payload_scene_release_hook;
+EntityPayloadReleaseFn s_payload_chain_release_hook;
 
 void entity_payload_release_hooks_set(EntityPayloadReleaseFn scene_release,
                                       EntityPayloadReleaseFn chain_release)
@@ -9034,167 +9022,6 @@ void entity_scene_slot_nodes_clear(EntitySlot* entity)
            sizeof(entity->scene_slot_payloads));
     memset(entity->scene_slot_owner_keys, 0,
            sizeof(entity->scene_slot_owner_keys));
-}
-
-/* SceneEntitySlotTableRebuild (FUN_004083a0): clear the owner windows, walk
- * its +0x9c scene-node chain, prepare each node's renderer, select its
- * animation, then register up to two +0x1c handles followed by +0x24 and
- * +0x20 handles for payload nodes. Host pointers live in native-width
- * sidecars; renderer preparation, state, animation and resource lookup cross
- * the DDiScene seam. */
-// FUNCTION: LEGORR 0x004083a0
-void entity_scene_slot_table_rebuild(EntitySlot* e, int mode)
-{
-    EntitySceneSlotNode* node;
-    uint32_t visited = 0u;
-    uint32_t cached = 0u;
-    if (e == NULL) return;
-
-    memset(e->scene_slot_cache, 0, sizeof(e->scene_slot_cache));
-    memset(e->scene_slot_owner_1c_handles, 0,
-           sizeof(e->scene_slot_owner_1c_handles));
-    memset(e->scene_slot_owner_24_handles, 0,
-           sizeof(e->scene_slot_owner_24_handles));
-    memset(e->scene_slot_owner_20_handles, 0,
-           sizeof(e->scene_slot_owner_20_handles));
-    memset(e->scene_slot_owner_1c_counts, 0,
-           sizeof(e->scene_slot_owner_1c_counts));
-    memset(e->scene_slot_payloads, 0, sizeof(e->scene_slot_payloads));
-    e->scene_slot_registration_count = 0u;
-    e->scene_slot_cache_count = 0u;
-    ++e->scene_slot_generation;
-
-    node = e->scene_slot_nodes;
-    while (node != NULL && visited < e->scene_slot_node_count) {
-        void* registered[4] = { NULL, NULL, NULL, NULL };
-        uint32_t registered_count = 0u;
-        uint32_t slot;
-        ++visited;
-        memset(node->slot_handles, 0, sizeof(node->slot_handles));
-        node->slot_handle_count = 0u;
-        node->animation_mode = mode;
-        if (s_entity_scene_slot_runtime_ops.renderer_position_prepare != NULL)
-            s_entity_scene_slot_runtime_ops.renderer_position_prepare(
-                s_entity_scene_slot_runtime_ops.context, e, node);
-        if (s_entity_scene_slot_runtime_ops.renderer_state_apply != NULL)
-            s_entity_scene_slot_runtime_ops.renderer_state_apply(
-                s_entity_scene_slot_runtime_ops.context, node);
-        if (s_entity_scene_slot_runtime_ops.node_animation_select != NULL)
-            s_entity_scene_slot_runtime_ops.node_animation_select(
-                s_entity_scene_slot_runtime_ops.context, node, mode);
-
-        if (node->payload != NULL) {
-            uint32_t payload_index = e->scene_slot_registration_count;
-            void* owner_1c[2] = { NULL, NULL };
-            void* owner_24 = NULL;
-            void* owner_20 = NULL;
-            uint32_t owner_1c_count = 0u;
-            if (s_entity_scene_slot_runtime_ops.resource_slot_register != NULL) {
-                /* FUN_004083a0 stops the repeated +0x1c lookup at its first
-                 * null handle, then always attempts +0x24 and +0x20 once.
-                 * The native +0xd8 count includes that terminating lookup. */
-                for (slot = 0u; slot < 2u; ++slot) {
-                    void* handle =
-                        s_entity_scene_slot_runtime_ops.resource_slot_register(
-                            s_entity_scene_slot_runtime_ops.context, node,
-                            e->scene_slot_owner_keys[0], slot);
-                    ++owner_1c_count;
-                    if (handle == NULL) break;
-                    owner_1c[slot] = handle;
-                    registered[registered_count++] = handle;
-                }
-                owner_24 =
-                    s_entity_scene_slot_runtime_ops.resource_slot_register(
-                        s_entity_scene_slot_runtime_ops.context, node,
-                        e->scene_slot_owner_keys[2], 0u);
-                registered[registered_count++] = owner_24;
-                owner_20 =
-                    s_entity_scene_slot_runtime_ops.resource_slot_register(
-                        s_entity_scene_slot_runtime_ops.context, node,
-                        e->scene_slot_owner_keys[1], 0u);
-                registered[registered_count++] = owner_20;
-            }
-            if (payload_index < 12u)
-                e->scene_slot_payloads[payload_index] = node->payload;
-            if (payload_index < 3u) {
-                e->scene_slot_owner_1c_counts[payload_index] =
-                    owner_1c_count;
-                e->scene_slot_owner_1c_handles[payload_index][0] =
-                    owner_1c[0];
-                e->scene_slot_owner_1c_handles[payload_index][1] =
-                    owner_1c[1];
-                e->scene_slot_owner_24_handles[payload_index] = owner_24;
-                e->scene_slot_owner_20_handles[payload_index] = owner_20;
-            }
-            node->slot_handle_count = registered_count;
-            memcpy(node->slot_handles, registered, sizeof(registered));
-            for (slot = 0u; slot < registered_count && cached < 12u; ++slot)
-                e->scene_slot_cache[cached++] = registered[slot];
-            /* Retail publishes +0x144 only after all slot lookups finish. */
-            e->scene_slot_registration_count = payload_index + 1u;
-        }
-        node = node->next;
-    }
-    e->scene_slot_cache_count = cached;
-}
-
-/* EntityPayloadStateSet (FUN_004089a0): store the payload state and rebuild
- * its scene slot cache. */
-// FUNCTION: LEGORR 0x004089a0
-void entity_payload_state_set(EntitySlot* e, int state)
-{
-    if (e == NULL) {
-        return;
-    }
-    e->payload_state_8c = state;
-    entity_scene_slot_table_rebuild(e, 0);
-}
-
-/* EntityPayloadReleaseSubslots (FUN_00406ec0): release the three owned
- * reference chains, conditionally free the five auxiliary blocks under
- * flag bit 0, then release the primary scene object. */
-// FUNCTION: LEGORR 0x00406ec0
-void entity_payload_release_subslots(EntitySlot* e)
-{
-    if (e == NULL) {
-        return;
-    }
-    if (s_payload_chain_release_hook != NULL) {
-        for (int i = 0; i < 3; ++i) {
-            if (e->payload_resource_chains[i] != NULL) {
-                s_payload_chain_release_hook(e->payload_resource_chains[i]);
-            }
-        }
-    }
-    if ((e->payload_flags_70 & 1u) != 0u) {
-        for (int i = 0; i < 5; ++i) {
-            if (e->payload_owned_blocks[i] != NULL) {
-                engine_heap_free(e->payload_owned_blocks[i]);
-                e->payload_owned_blocks[i] = NULL;
-            }
-        }
-    }
-    if (e->payload_handle_04 != NULL && s_payload_scene_release_hook != NULL) {
-        s_payload_scene_release_hook(e->payload_handle_04);
-    }
-    e->payload_handle_04 = NULL;
-}
-
-/* EntityPayloadTeardown (FUN_00408940): set state to -1, then release the
- * optional secondary and primary scene handles through the owner hook. */
-// FUNCTION: LEGORR 0x00408940
-void entity_payload_teardown(EntitySlot* e)
-{
-    if (e == NULL) {
-        return;
-    }
-    entity_payload_state_set(e, -1);
-    if (e->payload_aux_handle_7c != NULL
-        && s_payload_scene_release_hook != NULL) {
-        s_payload_scene_release_hook(e->payload_aux_handle_7c);
-    }
-    e->payload_aux_handle_7c = NULL;
-    entity_payload_release_subslots(e);
 }
 
 void entity_heading_step_move(EntityHeadingStepState* state, void* entity,
@@ -9690,17 +9517,6 @@ int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
         if (entity_shared_eligibility_check(e, e->type != 4) != 0) {
             return 1;
         }
-    }
-    return 0;
-}
-
-/* EntityQuadMeshRenderRecordAllowed (FUN_0040aae0) — see entity.hpp. */
-// FUNCTION: LEGORR 0x0040aae0
-int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
-{
-    if ((entity_state_flags_get(e) & 0x08000000u) == 0u && e->type != 8
-        && e->type != 13) {
-        return 1;
     }
     return 0;
 }
