@@ -36,6 +36,23 @@ class ProgressTest(unittest.TestCase):
             self.assertIn('0 rose, 1 fell', result)
             self.assertIn('net -10.00', result)
 
+    def test_schema_two_base_and_layout(self):
+        data = json.loads((Path(__file__).resolve().parents[2] / progress.PROGRESS).read_text())
+        data['schema_version'] = 2
+        data.pop('layout', None)
+        new = copy.deepcopy(data); new['schema_version'] = 3
+        new['layout'] = {'unit_relative_identity': {'percent': 20}, 'unit_contiguity': {'percent': 30},
+                         'unit_order_inversions': {'pairs': 5}, 'size_exact_prefix': {'size_exact_units': 2}}
+        with tempfile.TemporaryDirectory() as tmp:
+            base, head = Path(tmp) / 'base', Path(tmp) / 'head'
+            for root, value in ((base, data), (head, new)):
+                (root / progress.PROGRESS).parent.mkdir(parents=True)
+                (root / progress.PROGRESS).write_text(json.dumps(value))
+                (root / progress.BASELINE).write_text('[game-only] 0 mapped functions\n[full] 0 mapped functions\n')
+            with patch.object(progress, 'input_hash', return_value='same'):
+                result = progress.render(base, head)
+            self.assertIn('| Unit-relative identity (%) | n/a | 20 | n/a |', result)
+
     def test_baseline_writer_header_and_reader(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

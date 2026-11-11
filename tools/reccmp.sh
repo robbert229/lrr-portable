@@ -84,7 +84,7 @@ fi
 
 report_dir="${build_dir}/reccmp-report"
 mkdir -p "${report_dir}"
-python3 "${project_root}/tools/reccmp_full_diff.py" "${reccmp_bin}" --target LEGORR \
+RECCMP_ENTITIES="${report_dir}/entities.json" python3 "${project_root}/tools/reccmp_full_diff.py" "${reccmp_bin}" --target LEGORR \
   --html "${report_dir}/index.html" \
   --json "${report_dir}/results.json"
 python3 "${project_root}/tools/reccmp_full_diff.py" "${reccmp_bin}" --target LEGORR --nolib \

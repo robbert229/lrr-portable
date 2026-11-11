@@ -13,6 +13,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import binary_progress as progress
 import binary_progress_hash as hashing
 import translation_units
+import layout_progress
+from types import SimpleNamespace
 from strip_pe_debug import strip
 
 
@@ -114,6 +116,64 @@ class ProgressTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'truncated'):
                 strip(path)
 
+    def test_layout_function_attribution(self):
+        try:
+            import pefile
+            import capstone
+        except ImportError:
+            self.skipTest('pefile and capstone required')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); path = root / 'x.exe'; fixture_pe(path)
+            pe = pefile.PE(str(path))
+            original = SimpleNamespace(pe=pe, read=lambda a, n: pe.get_data(a - 0x400000, n))
+            funcs = [SimpleNamespace(address=a, end=a + 16) for a in (0x401000, 0x401020)]
+            rows = [dict(unit_id='A', text_start='00401000', text_end='00401020', rdata_range='', data_range='', string_range='', bss_range=''),
+                    dict(unit_id='B', text_start='00401020', text_end='00401040', rdata_range='', data_range='', string_range='', bss_range='')]
+            entries = [dict(address=hex(a), recomp=hex(b)) for a, b in ((0x401000, 0x401020), (0x401020, 0x401000))]
+            entities = [dict(orig=int(e['address'], 16), recomp=int(e['recomp'], 16), type=1, size=16) for e in entries]
+            mapfile = root / 'x.map'; mapfile.write_text(' 0001:00000000 _one 00401000 f one.obj\n')
+            result = layout_progress.measure(original, pe, funcs, entries, entities, rows, set(), mapfile, [])
+            self.assertEqual(result['unit_order_inversions']['pairs'], 1)
+            self.assertEqual(result['unit_contiguity']['percent'], 100)
+            self.assertEqual(result['unit_relative_identity']['percent'], 100)
+            self.assertEqual(result['size_exact_prefix']['units'], 2)
+            entities[0]['size'] = 15
+            result = layout_progress.measure(original, pe, funcs, entries, entities, rows, set(), mapfile, [])
+            self.assertEqual(result['size_exact_prefix']['units'], 0)
+            self.assertEqual(result['size_exact_prefix']['size_exact_units'], 1)
+            self.assertEqual(result['unit_relative_identity']['percent'], 50)
+
+    def test_anchored_data_offsets(self):
+        try:
+            import pefile
+            import capstone
+        except ImportError:
+            self.skipTest('pefile and capstone required')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); path = root / 'x.exe'; fixture_pe(path)
+            pe = pefile.PE(str(path))
+            original = SimpleNamespace(pe=pe, read=lambda a, n: pe.get_data(a - 0x400000, n))
+            rows = [dict(unit_id='A', text_start='00401000', text_end='00401200', rdata_range='', data_range='00403010-00403030', string_range='', bss_range='')]
+            entities = [dict(orig=a, recomp=b, type=2, size=4) for a,b in ((0x403010, 0x403040), (0x403020, 0x403050))]
+            mapfile = root / 'x.map'; mapfile.write_text('')
+            result = layout_progress.measure(original, pe, [], [], entities, rows, {0x403010, 0x403020}, mapfile, [])
+            self.assertTrue(result['units'][0]['data_offset_agreement'])
+            entities[1]['recomp'] += 4
+            result = layout_progress.measure(original, pe, [], [], entities, rows, {0x403010, 0x403020}, mapfile, [])
+            self.assertFalse(result['units'][0]['data_offset_agreement'])
+            result = layout_progress.measure(original, pe, [], [], entities, rows, {0x403010}, mapfile, [])
+            self.assertIsNone(result['units'][0]['data_offset_agreement'])
+
+    def test_mask_absolute_and_relative_operands(self):
+        try:
+            import capstone
+        except ImportError:
+            self.skipTest('capstone required')
+        a = bytes.fromhex('a100304000 e800100000 c3')
+        b = bytes.fromhex('a100404000 e800200000 c3')
+        self.assertTrue(layout_progress.identical(a, b, 0x401000, 0x402000, (0x400000, 0x500000), (0x400000, 0x500000)))
+        self.assertFalse(layout_progress.identical(a, b[:-1] + b'\x90', 0x401000, 0x402000, (0x400000, 0x500000), (0x400000, 0x500000)))
+
     def test_manifest_is_current(self):
         root = Path(__file__).resolve().parents[2]
         self.assertEqual((root / hashing.MANIFEST).read_text().splitlines(), hashing.input_paths(root))
@@ -131,13 +191,17 @@ class ProgressTests(unittest.TestCase):
                        {'address': '0x401020', 'recomp': '0x401020', 'matching': 0.5, 'effective': True}]
             for name in ('results.json', 'game-only.json'):
                 (root / name).write_text(json.dumps({'data': entries}))
+            (root / 'entities.json').write_text('[]')
             manifest = root / 'manifest.csv'; ledger = root / 'ledger.csv'; areas = root / 'areas.csv'
             manifest.write_text('address\n00401000\n00401020\n')
             ledger.write_text('address,corpus_name,symbol,status\n00401000,first,,mapped\n00401020,second,,mapped\n')
             areas.write_text('address,area_id\n00401000,a\n00401020,a\n')
             with patch.multiple(translation_units, EXPECTED_SHA256=hashlib.sha256(original.read_bytes()).hexdigest(),
                                 DATA_INIT=(0x403000, 0x403000), MANIFEST=manifest, LEDGER=ledger, AREAS=areas), \
-                    patch.object(progress, 'input_hash', return_value='hash'):
+                    patch.object(progress, 'input_hash', return_value='hash'), \
+                    patch.object(layout_progress, 'measure', return_value={}), \
+                    patch.object(layout_progress, 'read_rows', return_value=[]), \
+                    patch.object(layout_progress, 'annotation_addresses', return_value=set()):
                 result = progress.report(original, rebuilt, root)
             self.assertEqual(result['text_at_original_addresses']['identical_percent'], 100)
             self.assertEqual(result['fully_identical_functions_at_original_address'], {'count': 1, 'bytes': 16})

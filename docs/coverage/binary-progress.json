@@ -3,7 +3,7 @@
     "full": 54.94,
     "game_only": 50.76
   },
-  "baseline_sha256": "b73801b542b03484a2c612718c5b49cfe2a702a42d418f2a960105a85dc2fc98",
+  "baseline_sha256": "35aafffcba6818a1ee4fda4f24bacd2479bf66497aea8bdb0014d72b5b6db251",
   "exact_function_code_bytes": {
     "bytes": 44226,
     "original_text_bytes": 642549,
@@ -23,8 +23,3724 @@
       "pairs": 619397
     }
   },
-  "input_sha256": "ca149edd930ba4c6431babbd665c01582f77c3c1bb81ec0e13adc86557b5557d",
-  "listing_digests_sha256": "e4a7f133d37dfb5506cb434980cd4b40bd6570c724d375df0dc862135052f16e",
+  "input_sha256": "ab820531720ee95d8868d3f26ca6ca7e12275ed91cae6cccbfd175ac1c599a2c",
+  "layout": {
+    "data_offset_agreement": {
+      "agreeing_units": 6,
+      "eligible_units": 46,
+      "method": "anchored: compare mapped annotated offsets within each original evidence range and PE section; uncertain ownership omitted",
+      "unattributed_or_unmapped_annotations": 231
+    },
+    "link_order_list": {
+      "adjacent": 0,
+      "entries": 65,
+      "method": "list order versus original unit starts and legacy median-address keys; tail omitted",
+      "pairs": 0
+    },
+    "object_map": {
+      "method": "first public .text symbol per map object; objects without public symbols omitted",
+      "objects": [
+        {
+          "first_public_address": "0x401000",
+          "object": "cmd.cpp.obj"
+        },
+        {
+          "first_public_address": "0x40bbb0",
+          "object": "bezier.c.obj"
+        },
+        {
+          "first_public_address": "0x40bf60",
+          "object": "dependency_grid.cpp.obj"
+        },
+        {
+          "first_public_address": "0x40cfb0",
+          "object": "ptrstack.cpp.obj"
+        },
+        {
+          "first_public_address": "0x40d270",
+          "object": "options.cpp.obj"
+        },
+        {
+          "first_public_address": "0x40db60",
+          "object": "savegame.cpp.obj"
+        },
+        {
+          "first_public_address": "0x411440",
+          "object": "message.cpp.obj"
+        },
+        {
+          "first_public_address": "0x413090",
+          "object": "util.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4152f0",
+          "object": "upgrades.cpp.obj"
+        },
+        {
+          "first_public_address": "0x415cf0",
+          "object": "frontend.cpp.obj"
+        },
+        {
+          "first_public_address": "0x42b100",
+          "object": "select.cpp.obj"
+        },
+        {
+          "first_public_address": "0x42dfe0",
+          "object": "mainsim.cpp.obj"
+        },
+        {
+          "first_public_address": "0x42e340",
+          "object": "engine.cpp.obj"
+        },
+        {
+          "first_public_address": "0x42fbf0",
+          "object": "simtick.cpp.obj"
+        },
+        {
+          "first_public_address": "0x431db0",
+          "object": "camera.cpp.obj"
+        },
+        {
+          "first_public_address": "0x432500",
+          "object": "entity_config.cpp.obj"
+        },
+        {
+          "first_public_address": "0x437080",
+          "object": "level.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4475a0",
+          "object": "scene_render.cpp.obj"
+        },
+        {
+          "first_public_address": "0x44df10",
+          "object": "media.cpp.obj"
+        },
+        {
+          "first_public_address": "0x44e4c0",
+          "object": "ai.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4519a0",
+          "object": "terrain_grid.cpp.obj"
+        },
+        {
+          "first_public_address": "0x45a530",
+          "object": "entity.cpp.obj"
+        },
+        {
+          "first_public_address": "0x473910",
+          "object": "spawn.cpp.obj"
+        },
+        {
+          "first_public_address": "0x474c70",
+          "object": "input.cpp.obj"
+        },
+        {
+          "first_public_address": "0x476020",
+          "object": "screen_pick.cpp.obj"
+        },
+        {
+          "first_public_address": "0x476480",
+          "object": "objective.cpp.obj"
+        },
+        {
+          "first_public_address": "0x479880",
+          "object": "tutorial_hud.cpp.obj"
+        },
+        {
+          "first_public_address": "0x47e6c0",
+          "object": "ui_list.cpp.obj"
+        },
+        {
+          "first_public_address": "0x47ef60",
+          "object": "priorities.c.obj"
+        },
+        {
+          "first_public_address": "0x47fa40",
+          "object": "mission.cpp.obj"
+        },
+        {
+          "first_public_address": "0x483ae0",
+          "object": "record.cpp.obj"
+        },
+        {
+          "first_public_address": "0x486730",
+          "object": "sound.cpp.obj"
+        },
+        {
+          "first_public_address": "0x488f00",
+          "object": "effects.cpp.obj"
+        },
+        {
+          "first_public_address": "0x48e090",
+          "object": "weapon.cpp.obj"
+        },
+        {
+          "first_public_address": "0x48e830",
+          "object": "video_graph.cpp.obj"
+        },
+        {
+          "first_public_address": "0x48ec40",
+          "object": "scene_pool.cpp.obj"
+        },
+        {
+          "first_public_address": "0x48f510",
+          "object": "view.cpp.obj"
+        },
+        {
+          "first_public_address": "0x499c60",
+          "object": "texture.cpp.obj"
+        },
+        {
+          "first_public_address": "0x49af00",
+          "object": "resource.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4a2a40",
+          "object": "scene_resources.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4a3ea0",
+          "object": "utils.c.obj"
+        },
+        {
+          "first_public_address": "0x4a4200",
+          "object": "entry.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4a48c0",
+          "object": "frameloop.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4b02a0",
+          "object": "config.c.obj"
+        },
+        {
+          "first_public_address": "0x4b0b00",
+          "object": "maths.c.obj"
+        },
+        {
+          "first_public_address": "0x4b1510",
+          "object": "audio.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4b2c50",
+          "object": "surface.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4bbe80",
+          "object": "movie.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4bea20",
+          "object": "flic.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4c0dc0",
+          "object": "heap.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4c1df0",
+          "object": "keys.c.obj"
+        },
+        {
+          "first_public_address": "0x4c2250",
+          "object": "draw.c.obj"
+        },
+        {
+          "first_public_address": "0x4c2db0",
+          "object": "soundsys.c.obj"
+        },
+        {
+          "first_public_address": "0x4c3650",
+          "object": "g98_024.c.obj"
+        },
+        {
+          "first_public_address": "0x4c3720",
+          "object": "g98_026.c.obj"
+        },
+        {
+          "first_public_address": "0x4c3880",
+          "object": "dxerror.c.obj"
+        },
+        {
+          "first_public_address": "0x4c4d50",
+          "object": "startup_config.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4c50a0",
+          "object": "g98_029.c.obj"
+        },
+        {
+          "first_public_address": "0x4c5210",
+          "object": "string.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4c53c0",
+          "object": "model.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4c80e0",
+          "object": "actor_scene.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4c8d90",
+          "object": "building_scene.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4c9af0",
+          "object": "entity_motion_owner.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4ca030",
+          "object": "game.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4ca170",
+          "object": "opgroup.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4ca2f0",
+          "object": "render.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4cba70",
+          "object": "tutorial_world_arrows.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4cc030",
+          "object": "block.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4cc1f0",
+          "object": "gods98.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4cc200",
+          "object": "lwsc_scene.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d01f0",
+          "object": "lwsc_winapi.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d1090",
+          "object": "sound_wave.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d1250",
+          "object": "tickers.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d18c0",
+          "object": "crt_runtime_aliases.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d1920",
+          "object": "crt_runtime_calls.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d1980",
+          "object": "main.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d19f0",
+          "object": "seh_runtime.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d1db0",
+          "object": "crt.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d4140",
+          "object": "crt_heap.cpp.obj"
+        },
+        {
+          "first_public_address": "0x4d4150",
+          "object": "libc:wincrt0.obj"
+        },
+        {
+          "first_public_address": "0x4d4320",
+          "object": "libc:fpinit.obj"
+        },
+        {
+          "first_public_address": "0x4d43a0",
+          "object": "libc:ftol.obj"
+        },
+        {
+          "first_public_address": "0x4d43d0",
+          "object": "libc:free.obj"
+        },
+        {
+          "first_public_address": "0x4d4420",
+          "object": "libc:calloc.obj"
+        },
+        {
+          "first_public_address": "0x4d44c0",
+          "object": "libc:malloc.obj"
+        },
+        {
+          "first_public_address": "0x4d4570",
+          "object": "libc:stricmp.obj"
+        },
+        {
+          "first_public_address": "0x4d4600",
+          "object": "libc:qsort.obj"
+        },
+        {
+          "first_public_address": "0x4d4840",
+          "object": "libc:rand.obj"
+        },
+        {
+          "first_public_address": "0x4d4880",
+          "object": "libc:realloc.obj"
+        },
+        {
+          "first_public_address": "0x4d4a30",
+          "object": "libc:strchr.obj"
+        },
+        {
+          "first_public_address": "0x4d4af0",
+          "object": "libc:atox.obj"
+        },
+        {
+          "first_public_address": "0x4d4c70",
+          "object": "libc:mkdir.obj"
+        },
+        {
+          "first_public_address": "0x4d4ca0",
+          "object": "libc:snprintf.obj"
+        },
+        {
+          "first_public_address": "0x4d4d10",
+          "object": "libc:fclose.obj"
+        },
+        {
+          "first_public_address": "0x4d4d90",
+          "object": "libc:fread.obj"
+        },
+        {
+          "first_public_address": "0x4d4ed0",
+          "object": "libc:fopen.obj"
+        },
+        {
+          "first_public_address": "0x4d4f20",
+          "object": "libc:fwrite.obj"
+        },
+        {
+          "first_public_address": "0x4d5070",
+          "object": "libc:strrchr.obj"
+        },
+        {
+          "first_public_address": "0x4d50a0",
+          "object": "libc:memmove.obj"
+        },
+        {
+          "first_public_address": "0x4d53e0",
+          "object": "libc:strncpy.obj"
+        },
+        {
+          "first_public_address": "0x4d54e0",
+          "object": "libc:llmul.obj"
+        },
+        {
+          "first_public_address": "0x4d5520",
+          "object": "libc:fseek.obj"
+        },
+        {
+          "first_public_address": "0x4d55c0",
+          "object": "libc:ftell.obj"
+        },
+        {
+          "first_public_address": "0x4d5770",
+          "object": "libc:strcspn.obj"
+        },
+        {
+          "first_public_address": "0x4d57b0",
+          "object": "libc:strspn.obj"
+        },
+        {
+          "first_public_address": "0x4d57f0",
+          "object": "libc:strstr.obj"
+        },
+        {
+          "first_public_address": "0x4d5870",
+          "object": "libc:strncmp.obj"
+        },
+        {
+          "first_public_address": "0x4d58e0",
+          "object": "libc:sprintf.obj"
+        },
+        {
+          "first_public_address": "0x4d5950",
+          "object": "libc:intrncvt.obj"
+        },
+        {
+          "first_public_address": "0x4d5f30",
+          "object": "libc:strgtold.obj"
+        },
+        {
+          "first_public_address": "0x4d6710",
+          "object": "libc:tolower.obj"
+        },
+        {
+          "first_public_address": "0x4d6820",
+          "object": "libc:strnicmp.obj"
+        },
+        {
+          "first_public_address": "0x4d68d0",
+          "object": "libc:memchr.obj"
+        },
+        {
+          "first_public_address": "0x4d6980",
+          "object": "libc:atof.obj"
+        },
+        {
+          "first_public_address": "0x4d69e0",
+          "object": "libc:lldiv.obj"
+        },
+        {
+          "first_public_address": "0x4d6a90",
+          "object": "libc:toupper.obj"
+        },
+        {
+          "first_public_address": "0x4d6ba0",
+          "object": "libc:strtol.obj"
+        },
+        {
+          "first_public_address": "0x4d6e70",
+          "object": "libc:sscanf.obj"
+        },
+        {
+          "first_public_address": "0x4d6ec0",
+          "object": "libc:floor.obj"
+        },
+        {
+          "first_public_address": "0x4d6fc0",
+          "object": "libc:fprintf.obj"
+        },
+        {
+          "first_public_address": "0x4d7000",
+          "object": "libc:_file.obj"
+        },
+        {
+          "first_public_address": "0x4d70e0",
+          "object": "libc:crt0dat.obj"
+        },
+        {
+          "first_public_address": "0x4d7240",
+          "object": "libc:fflush.obj"
+        },
+        {
+          "first_public_address": "0x4d7390",
+          "object": "libc:strdup.obj"
+        },
+        {
+          "first_public_address": "0x4d73e0",
+          "object": "libc:ceil.obj"
+        },
+        {
+          "first_public_address": "0x4d74e0",
+          "object": "libc:acos.obj"
+        },
+        {
+          "first_public_address": "0x4d75b0",
+          "object": "libc:xtoa.obj"
+        },
+        {
+          "first_public_address": "0x4d77d0",
+          "object": "libc:strtod.obj"
+        },
+        {
+          "first_public_address": "0x4d7890",
+          "object": "libc:_ctype.obj"
+        },
+        {
+          "first_public_address": "0x4d7b60",
+          "object": "libc:isctype.obj"
+        },
+        {
+          "first_public_address": "0x4d7c00",
+          "object": "libc:asin.obj"
+        },
+        {
+          "first_public_address": "0x4d7cd0",
+          "object": "libc:ullshr.obj"
+        },
+        {
+          "first_public_address": "0x4d7cf0",
+          "object": "libc:ulldiv.obj"
+        },
+        {
+          "first_public_address": "0x4d7d60",
+          "object": "libc:strlwr.obj"
+        },
+        {
+          "first_public_address": "0x4d7e20",
+          "object": "libc:strncat.obj"
+        },
+        {
+          "first_public_address": "0x4d7f50",
+          "object": "libc:fgetc.obj"
+        },
+        {
+          "first_public_address": "0x4d7f90",
+          "object": "libc:fgets.obj"
+        },
+        {
+          "first_public_address": "0x4d8010",
+          "object": "libc:vfprintf.obj"
+        },
+        {
+          "first_public_address": "0x4d8050",
+          "object": "libc:fputs.obj"
+        },
+        {
+          "first_public_address": "0x4d80a0",
+          "object": "libc:vsprintf.obj"
+        },
+        {
+          "first_public_address": "0x4d8110",
+          "object": "libc:getenv.obj"
+        },
+        {
+          "first_public_address": "0x4d81a0",
+          "object": "libc:ieeemisc.obj"
+        },
+        {
+          "first_public_address": "0x4d8730",
+          "object": "libc:pow.obj"
+        },
+        {
+          "first_public_address": "0x4d8950",
+          "object": "libc:splitpat.obj"
+        },
+        {
+          "first_public_address": "0x4d8ad0",
+          "object": "libc:_flsbuf.obj"
+        },
+        {
+          "first_public_address": "0x4d8c00",
+          "object": "libc:output.obj"
+        },
+        {
+          "first_public_address": "0x4d96c0",
+          "object": "libc:87fmod.obj"
+        },
+        {
+          "first_public_address": "0x4d9700",
+          "object": "libc:fscanf.obj"
+        },
+        {
+          "first_public_address": "0x4d9720",
+          "object": "libc:unlink.obj"
+        },
+        {
+          "first_public_address": "0x4d9760",
+          "object": "libc:chmod.obj"
+        },
+        {
+          "first_public_address": "0x4d97b0",
+          "object": "libc:getcwd.obj"
+        },
+        {
+          "first_public_address": "0x4d9940",
+          "object": "libc:fullpath.obj"
+        },
+        {
+          "first_public_address": "0x4d9a10",
+          "object": "libc:_filbuf.obj"
+        },
+        {
+          "first_public_address": "0x4d9b00",
+          "object": "libc:_getbuf.obj"
+        },
+        {
+          "first_public_address": "0x4d9b60",
+          "object": "libc:_freebuf.obj"
+        },
+        {
+          "first_public_address": "0x4d9ba0",
+          "object": "libc:dosmap.obj"
+        },
+        {
+          "first_public_address": "0x4d9c10",
+          "object": "libc:close.obj"
+        },
+        {
+          "first_public_address": "0x4d9cf0",
+          "object": "libc:findfile.obj"
+        },
+        {
+          "first_public_address": "0x4d9ff0",
+          "object": "libc:open.obj"
+        },
+        {
+          "first_public_address": "0x4da3d0",
+          "object": "libc:osfinfo.obj"
+        },
+        {
+          "first_public_address": "0x4da6d0",
+          "object": "libc:isatty.obj"
+        },
+        {
+          "first_public_address": "0x4da700",
+          "object": "libc:_sftbuf.obj"
+        },
+        {
+          "first_public_address": "0x4da800",
+          "object": "libc:lseek.obj"
+        },
+        {
+          "first_public_address": "0x4da8c0",
+          "object": "libc:read.obj"
+        },
+        {
+          "first_public_address": "0x4dab20",
+          "object": "libc:write.obj"
+        },
+        {
+          "first_public_address": "0x4dad40",
+          "object": "libc:chsize.obj"
+        },
+        {
+          "first_public_address": "0x4daec0",
+          "object": "libc:winsig.obj"
+        },
+        {
+          "first_public_address": "0x4db250",
+          "object": "libc:crt0msg.obj"
+        },
+        {
+          "first_public_address": "0x4db4a0",
+          "object": "libc:fpexcept.obj"
+        },
+        {
+          "first_public_address": "0x4dbee0",
+          "object": "libc:util.obj"
+        },
+        {
+          "first_public_address": "0x4dc110",
+          "object": "libc:crtmbox.obj"
+        },
+        {
+          "first_public_address": "0x4dc1a0",
+          "object": "libc:fpctrl.obj"
+        },
+        {
+          "first_public_address": "0x4dc260",
+          "object": "libc:common.obj"
+        },
+        {
+          "first_public_address": "0x4dc3f0",
+          "object": "libc:adj_fdiv.obj"
+        },
+        {
+          "first_public_address": "0x4dd180",
+          "object": "libc:ieee87.obj"
+        },
+        {
+          "first_public_address": "0x4dd3c0",
+          "object": "libc:87except.obj"
+        },
+        {
+          "first_public_address": "0x4dd4e0",
+          "object": "libc:trnsctrl.obj"
+        },
+        {
+          "first_public_address": "0x4dd880",
+          "object": "libc:stdargv.obj"
+        },
+        {
+          "first_public_address": "0x4ddb30",
+          "object": "libc:fabs.obj"
+        },
+        {
+          "first_public_address": "0x4ddc20",
+          "object": "libc:wcslen.obj"
+        },
+        {
+          "first_public_address": "0x4ddc40",
+          "object": "libc:frnd.obj"
+        },
+        {
+          "first_public_address": "0x4ddc60",
+          "object": "libc:strupr.obj"
+        },
+        {
+          "first_public_address": "0x4ddd20",
+          "object": "libc:tzset.obj"
+        },
+        {
+          "first_public_address": "0x4de400",
+          "object": "libc:mbsnbcpy.obj"
+        },
+        {
+          "first_public_address": "0x4de4a0",
+          "object": "libc:mbschr.obj"
+        },
+        {
+          "first_public_address": "0x4de550",
+          "object": "libc:wctomb.obj"
+        },
+        {
+          "first_public_address": "0x4de5d0",
+          "object": "libc:mbtowc.obj"
+        },
+        {
+          "first_public_address": "0x4de6d0",
+          "object": "libc:mbctype.obj"
+        },
+        {
+          "first_public_address": "0x4de9c0",
+          "object": "libc:aw_str.obj"
+        },
+        {
+          "first_public_address": "0x4dec80",
+          "object": "libc:aw_map.obj"
+        },
+        {
+          "first_public_address": "0x4df120",
+          "object": "libc:stdenvp.obj"
+        },
+        {
+          "first_public_address": "0x4df210",
+          "object": "libc:aw_env.obj"
+        },
+        {
+          "first_public_address": "0x4df570",
+          "object": "libc:aw_cmp.obj"
+        },
+        {
+          "first_public_address": "0x4dfac0",
+          "object": "libc:mbsnbico.obj"
+        },
+        {
+          "first_public_address": "0x4dfb00",
+          "object": "libc:setenv.obj"
+        },
+        {
+          "first_public_address": "0x4dfe00",
+          "object": "libc:wtombenv.obj"
+        },
+        {
+          "first_public_address": "0x4dfe80",
+          "object": "libc:dtoxtime.obj"
+        },
+        {
+          "first_public_address": "0x4dff70",
+          "object": "libc:ismbbyte.obj"
+        },
+        {
+          "first_public_address": "0x4e0120",
+          "object": "libc:cvt.obj"
+        },
+        {
+          "first_public_address": "0x4e0660",
+          "object": "libc:exsup.obj"
+        },
+        {
+          "first_public_address": "0x4e0750",
+          "object": "libc:87cdisp.obj"
+        },
+        {
+          "first_public_address": "0x4e09a0",
+          "object": "libc:ioinit.obj"
+        },
+        {
+          "first_public_address": "0x4e0bd0",
+          "object": "libc:winxfltr.obj"
+        },
+        {
+          "first_public_address": "0x4e0d60",
+          "object": "libc:heapinit.obj"
+        },
+        {
+          "first_public_address": "0x4e0de8",
+          "object": "libc:exsup3.obj"
+        },
+        {
+          "first_public_address": "0x4e0ec0",
+          "object": "libc:fp8.obj"
+        },
+        {
+          "first_public_address": "0x4e0ee0",
+          "object": "libc:testfdiv.obj"
+        },
+        {
+          "first_public_address": "0x4e0f60",
+          "object": "libc:sbheap.obj"
+        },
+        {
+          "first_public_address": "0x4e1950",
+          "object": "libc:handler.obj"
+        },
+        {
+          "first_public_address": "0x4e1990",
+          "object": "libc:_open.obj"
+        },
+        {
+          "first_public_address": "0x4e1b60",
+          "object": "libc:stream.obj"
+        },
+        {
+          "first_public_address": "0x4e1bf0",
+          "object": "libc:mantold.obj"
+        },
+        {
+          "first_public_address": "0x4e1df0",
+          "object": "libc:tenpow.obj"
+        },
+        {
+          "first_public_address": "0x4e2140",
+          "object": "libc:cfin.obj"
+        },
+        {
+          "first_public_address": "0x4e21f0",
+          "object": "libc:input.obj"
+        },
+        {
+          "first_public_address": "0x4e3010",
+          "object": "libc:closeall.obj"
+        },
+        {
+          "first_public_address": "0x4e3080",
+          "object": "libc:commit.obj"
+        },
+        {
+          "first_public_address": "0x4e30e0",
+          "object": "libc:87disp.obj"
+        },
+        {
+          "first_public_address": "0x4e32b0",
+          "object": "libc:genexcep.obj"
+        },
+        {
+          "first_public_address": "0x4e3310",
+          "object": "libc:ullrem.obj"
+        },
+        {
+          "first_public_address": "0x4e3390",
+          "object": "libc:ldexp.obj"
+        },
+        {
+          "first_public_address": "0x4e3800",
+          "object": "libc:powhlp.obj"
+        },
+        {
+          "first_public_address": "0x4e3ac0",
+          "object": "libc:setmode.obj"
+        },
+        {
+          "first_public_address": "0x4e3b40",
+          "object": "libc:frame.obj"
+        },
+        {
+          "first_public_address": "0x4e4540",
+          "object": "libc:lowhelpr.obj"
+        },
+        {
+          "first_public_address": "0x4e4590",
+          "object": "libc:hooks.obj"
+        },
+        {
+          "first_public_address": "0x4e46c0",
+          "object": "libc:wcstombs.obj"
+        },
+        {
+          "first_public_address": "0x4e48f0",
+          "object": "libc:_fptostr.obj"
+        },
+        {
+          "first_public_address": "0x4e4990",
+          "object": "libc:cfout.obj"
+        },
+        {
+          "first_public_address": "0x4e4ad0",
+          "object": "libc:crt0fp.obj"
+        },
+        {
+          "first_public_address": "0x4e4ae0",
+          "object": "libc:llshl.obj"
+        },
+        {
+          "first_public_address": "0x4e4b00",
+          "object": "libc:ungetc.obj"
+        },
+        {
+          "first_public_address": "0x4e4b90",
+          "object": "libc:unhandld.obj"
+        },
+        {
+          "first_public_address": "0x4e4c20",
+          "object": "libc:validate.obj"
+        },
+        {
+          "first_public_address": "0x4e4c80",
+          "object": "libc:abort.obj"
+        },
+        {
+          "first_public_address": "0x4e4ca0",
+          "object": "libc:x10fout.obj"
+        },
+        {
+          "first_public_address": "0x4e5030",
+          "object": "d3drm:d3drm.dll"
+        },
+        {
+          "first_public_address": "0x4e503c",
+          "object": "kernel32:KERNEL32.dll"
+        },
+        {
+          "first_public_address": "0x4e51f2",
+          "object": "winmm:WINMM.dll"
+        },
+        {
+          "first_public_address": "0x4e52a0",
+          "object": "user32:USER32.dll"
+        },
+        {
+          "first_public_address": "0x4e5396",
+          "object": "gdi32:GDI32.dll"
+        },
+        {
+          "first_public_address": "0x4e53a2",
+          "object": "advapi32:ADVAPI32.dll"
+        }
+      ]
+    },
+    "size_exact_prefix": {
+      "bytes": 0,
+      "method": "all original functions mapped with equal code sizes; bytes use original unit spans",
+      "size_exact_units": 26,
+      "units": 0
+    },
+    "unattributed_mapped_functions": 29,
+    "unattributed_original_functions": 0,
+    "unit_contiguity": {
+      "eligible_units": 217,
+      "method": "one run of mapped functions in original function order; unmapped functions omitted",
+      "percent": 66.82,
+      "units": 145
+    },
+    "unit_order_inversions": {
+      "adjacent": 93,
+      "method": "median mapped function address per unit; ties are not inversions",
+      "pairs": 3799,
+      "units": 217
+    },
+    "unit_relative_identity": {
+      "identical_bytes": 36283,
+      "method": "whole function byte identity; image-address operands and external relative branches masked; missing functions count against original bytes",
+      "original_bytes": 553892,
+      "percent": 6.55
+    },
+    "units": [
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 41,
+        "functions": 32,
+        "identical_function_bytes": 494,
+        "identity_percent": 16.51,
+        "mapped": 31,
+        "original_function_bytes": 2992,
+        "size_exact": false,
+        "unit_id": "GAME-001"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 12,
+        "functions": 94,
+        "identical_function_bytes": 1995,
+        "identity_percent": 14.15,
+        "mapped": 93,
+        "original_function_bytes": 14100,
+        "size_exact": false,
+        "unit_id": "GAME-002"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 2,
+        "functions": 7,
+        "identical_function_bytes": 282,
+        "identity_percent": 31.69,
+        "mapped": 7,
+        "original_function_bytes": 890,
+        "size_exact": false,
+        "unit_id": "GAME-003"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 21,
+        "identical_function_bytes": 138,
+        "identity_percent": 8.26,
+        "mapped": 18,
+        "original_function_bytes": 1670,
+        "size_exact": false,
+        "unit_id": "GAME-004"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 38,
+        "functions": 15,
+        "identical_function_bytes": 416,
+        "identity_percent": 14.58,
+        "mapped": 15,
+        "original_function_bytes": 2854,
+        "size_exact": false,
+        "unit_id": "GAME-005"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 22,
+        "identical_function_bytes": 97,
+        "identity_percent": 3.23,
+        "mapped": 21,
+        "original_function_bytes": 3005,
+        "size_exact": false,
+        "unit_id": "GAME-006"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 2,
+        "functions": 31,
+        "identical_function_bytes": 135,
+        "identity_percent": 2.9,
+        "mapped": 30,
+        "original_function_bytes": 4648,
+        "size_exact": false,
+        "unit_id": "GAME-007"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 4,
+        "identical_function_bytes": 10,
+        "identity_percent": 1.16,
+        "mapped": 3,
+        "original_function_bytes": 862,
+        "size_exact": false,
+        "unit_id": "GAME-008"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 1,
+        "functions": 11,
+        "identical_function_bytes": 61,
+        "identity_percent": 3.12,
+        "mapped": 11,
+        "original_function_bytes": 1958,
+        "size_exact": false,
+        "unit_id": "GAME-009"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 9,
+        "identical_function_bytes": 270,
+        "identity_percent": 14.25,
+        "mapped": 9,
+        "original_function_bytes": 1895,
+        "size_exact": false,
+        "unit_id": "GAME-010"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 11,
+        "identical_function_bytes": 87,
+        "identity_percent": 3.27,
+        "mapped": 11,
+        "original_function_bytes": 2661,
+        "size_exact": false,
+        "unit_id": "GAME-011"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 27,
+        "identical_function_bytes": 36,
+        "identity_percent": 0.93,
+        "mapped": 26,
+        "original_function_bytes": 3863,
+        "size_exact": false,
+        "unit_id": "GAME-012"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 3,
+        "functions": 24,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 23,
+        "original_function_bytes": 5006,
+        "size_exact": false,
+        "unit_id": "GAME-013"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 3,
+        "functions": 6,
+        "identical_function_bytes": 37,
+        "identity_percent": 3.33,
+        "mapped": 4,
+        "original_function_bytes": 1111,
+        "size_exact": false,
+        "unit_id": "GAME-014"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 15,
+        "functions": 15,
+        "identical_function_bytes": 687,
+        "identity_percent": 21.02,
+        "mapped": 14,
+        "original_function_bytes": 3268,
+        "size_exact": false,
+        "unit_id": "GAME-015"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 23,
+        "identical_function_bytes": 278,
+        "identity_percent": 13.83,
+        "mapped": 19,
+        "original_function_bytes": 2010,
+        "size_exact": false,
+        "unit_id": "GAME-016"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 14,
+        "functions": 132,
+        "identical_function_bytes": 2227,
+        "identity_percent": 7.57,
+        "mapped": 120,
+        "original_function_bytes": 29437,
+        "size_exact": false,
+        "unit_id": "GAME-017"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 12,
+        "functions": 19,
+        "identical_function_bytes": 241,
+        "identity_percent": 5.89,
+        "mapped": 19,
+        "original_function_bytes": 4090,
+        "size_exact": false,
+        "unit_id": "GAME-018"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 7,
+        "functions": 36,
+        "identical_function_bytes": 190,
+        "identity_percent": 4.89,
+        "mapped": 35,
+        "original_function_bytes": 3888,
+        "size_exact": false,
+        "unit_id": "GAME-019"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 40,
+        "functions": 73,
+        "identical_function_bytes": 940,
+        "identity_percent": 5.1,
+        "mapped": 69,
+        "original_function_bytes": 18446,
+        "size_exact": false,
+        "unit_id": "GAME-020"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 11,
+        "functions": 216,
+        "identical_function_bytes": 4379,
+        "identity_percent": 5.3,
+        "mapped": 196,
+        "original_function_bytes": 82635,
+        "size_exact": false,
+        "unit_id": "GAME-021"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 27,
+        "identical_function_bytes": 314,
+        "identity_percent": 7.24,
+        "mapped": 26,
+        "original_function_bytes": 4338,
+        "size_exact": false,
+        "unit_id": "GAME-022"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 112,
+        "functions": 258,
+        "identical_function_bytes": 815,
+        "identity_percent": 1.22,
+        "mapped": 245,
+        "original_function_bytes": 66934,
+        "size_exact": false,
+        "unit_id": "GAME-023"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 25,
+        "functions": 20,
+        "identical_function_bytes": 343,
+        "identity_percent": 6.84,
+        "mapped": 18,
+        "original_function_bytes": 5018,
+        "size_exact": false,
+        "unit_id": "GAME-024"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 5,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 1344,
+        "size_exact": false,
+        "unit_id": "GAME-025"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 62,
+        "identical_function_bytes": 157,
+        "identity_percent": 1.06,
+        "mapped": 56,
+        "original_function_bytes": 14838,
+        "size_exact": false,
+        "unit_id": "GAME-026"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 4,
+        "functions": 26,
+        "identical_function_bytes": 115,
+        "identity_percent": 2.86,
+        "mapped": 24,
+        "original_function_bytes": 4014,
+        "size_exact": false,
+        "unit_id": "GAME-027"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 6,
+        "functions": 30,
+        "identical_function_bytes": 107,
+        "identity_percent": 1.94,
+        "mapped": 28,
+        "original_function_bytes": 5527,
+        "size_exact": false,
+        "unit_id": "GAME-028"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 1,
+        "functions": 14,
+        "identical_function_bytes": 198,
+        "identity_percent": 2.79,
+        "mapped": 11,
+        "original_function_bytes": 7100,
+        "size_exact": false,
+        "unit_id": "GAME-029"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 2,
+        "functions": 8,
+        "identical_function_bytes": 49,
+        "identity_percent": 5.79,
+        "mapped": 7,
+        "original_function_bytes": 846,
+        "size_exact": false,
+        "unit_id": "GAME-030"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 3,
+        "functions": 8,
+        "identical_function_bytes": 43,
+        "identity_percent": 1.55,
+        "mapped": 8,
+        "original_function_bytes": 2769,
+        "size_exact": false,
+        "unit_id": "GAME-031"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 69,
+        "functions": 52,
+        "identical_function_bytes": 788,
+        "identity_percent": 8.15,
+        "mapped": 50,
+        "original_function_bytes": 9670,
+        "size_exact": false,
+        "unit_id": "GAME-032"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 59,
+        "functions": 9,
+        "identical_function_bytes": 652,
+        "identity_percent": 47.98,
+        "mapped": 9,
+        "original_function_bytes": 1359,
+        "size_exact": false,
+        "unit_id": "GAME-033"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 2,
+        "functions": 14,
+        "identical_function_bytes": 800,
+        "identity_percent": 32.26,
+        "mapped": 14,
+        "original_function_bytes": 2480,
+        "size_exact": false,
+        "unit_id": "GAME-034"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 12,
+        "identity_percent": 6.12,
+        "mapped": 3,
+        "original_function_bytes": 196,
+        "size_exact": false,
+        "unit_id": "GAME-035"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 11,
+        "identical_function_bytes": 14,
+        "identity_percent": 0.27,
+        "mapped": 10,
+        "original_function_bytes": 5217,
+        "size_exact": false,
+        "unit_id": "GAME-036"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 7,
+        "functions": 52,
+        "identical_function_bytes": 344,
+        "identity_percent": 2.24,
+        "mapped": 49,
+        "original_function_bytes": 15329,
+        "size_exact": false,
+        "unit_id": "GAME-037"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 9,
+        "identical_function_bytes": 58,
+        "identity_percent": 2.58,
+        "mapped": 4,
+        "original_function_bytes": 2252,
+        "size_exact": false,
+        "unit_id": "GAME-038"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 12,
+        "identical_function_bytes": 88,
+        "identity_percent": 3.43,
+        "mapped": 8,
+        "original_function_bytes": 2565,
+        "size_exact": false,
+        "unit_id": "GAME-039"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 1544,
+        "size_exact": false,
+        "unit_id": "GAME-040"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 12,
+        "functions": 35,
+        "identical_function_bytes": 308,
+        "identity_percent": 4.84,
+        "mapped": 34,
+        "original_function_bytes": 6360,
+        "size_exact": false,
+        "unit_id": "GAME-041"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 9,
+        "identical_function_bytes": 48,
+        "identity_percent": 4.31,
+        "mapped": 9,
+        "original_function_bytes": 1114,
+        "size_exact": false,
+        "unit_id": "GAME-042"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 1,
+        "functions": 63,
+        "identical_function_bytes": 1490,
+        "identity_percent": 10.2,
+        "mapped": 62,
+        "original_function_bytes": 14604,
+        "size_exact": false,
+        "unit_id": "GAME-043"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 1,
+        "functions": 9,
+        "identical_function_bytes": 157,
+        "identity_percent": 25.0,
+        "mapped": 9,
+        "original_function_bytes": 628,
+        "size_exact": false,
+        "unit_id": "GAME-044"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 3,
+        "functions": 10,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 8,
+        "original_function_bytes": 2467,
+        "size_exact": false,
+        "unit_id": "GAME-045"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 16,
+        "identical_function_bytes": 26,
+        "identity_percent": 0.68,
+        "mapped": 15,
+        "original_function_bytes": 3847,
+        "size_exact": false,
+        "unit_id": "GAME-046"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 5,
+        "identical_function_bytes": 17,
+        "identity_percent": 1.24,
+        "mapped": 4,
+        "original_function_bytes": 1369,
+        "size_exact": false,
+        "unit_id": "GAME-047"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 26,
+        "identical_function_bytes": 169,
+        "identity_percent": 3.32,
+        "mapped": 24,
+        "original_function_bytes": 5092,
+        "size_exact": false,
+        "unit_id": "GAME-048"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 12,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 8,
+        "original_function_bytes": 3917,
+        "size_exact": false,
+        "unit_id": "GAME-049"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 45,
+        "identical_function_bytes": 367,
+        "identity_percent": 2.94,
+        "mapped": 44,
+        "original_function_bytes": 12497,
+        "size_exact": false,
+        "unit_id": "GAME-050"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 11,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 11,
+        "original_function_bytes": 1269,
+        "size_exact": false,
+        "unit_id": "G98-001"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 107,
+        "identical_function_bytes": 1090,
+        "identity_percent": 6.76,
+        "mapped": 102,
+        "original_function_bytes": 16114,
+        "size_exact": false,
+        "unit_id": "G98-002"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 22,
+        "identical_function_bytes": 88,
+        "identity_percent": 5.57,
+        "mapped": 22,
+        "original_function_bytes": 1579,
+        "size_exact": false,
+        "unit_id": "G98-003"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 3,
+        "functions": 7,
+        "identical_function_bytes": 839,
+        "identity_percent": 100.0,
+        "mapped": 7,
+        "original_function_bytes": 839,
+        "size_exact": true,
+        "unit_id": "G98-004"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 11,
+        "functions": 24,
+        "identical_function_bytes": 240,
+        "identity_percent": 4.57,
+        "mapped": 23,
+        "original_function_bytes": 5252,
+        "size_exact": false,
+        "unit_id": "G98-005"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 3,
+        "functions": 16,
+        "identical_function_bytes": 956,
+        "identity_percent": 56.5,
+        "mapped": 16,
+        "original_function_bytes": 1692,
+        "size_exact": false,
+        "unit_id": "G98-006"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 6,
+        "functions": 20,
+        "identical_function_bytes": 732,
+        "identity_percent": 30.86,
+        "mapped": 20,
+        "original_function_bytes": 2372,
+        "size_exact": false,
+        "unit_id": "G98-007"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 11,
+        "identical_function_bytes": 11,
+        "identity_percent": 0.61,
+        "mapped": 9,
+        "original_function_bytes": 1799,
+        "size_exact": false,
+        "unit_id": "G98-008"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 6,
+        "functions": 42,
+        "identical_function_bytes": 124,
+        "identity_percent": 1.87,
+        "mapped": 38,
+        "original_function_bytes": 6641,
+        "size_exact": false,
+        "unit_id": "G98-009"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 17,
+        "identical_function_bytes": 119,
+        "identity_percent": 3.05,
+        "mapped": 15,
+        "original_function_bytes": 3902,
+        "size_exact": false,
+        "unit_id": "G98-010"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 1,
+        "functions": 27,
+        "identical_function_bytes": 121,
+        "identity_percent": 3.05,
+        "mapped": 19,
+        "original_function_bytes": 3969,
+        "size_exact": false,
+        "unit_id": "G98-011"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 1,
+        "functions": 25,
+        "identical_function_bytes": 77,
+        "identity_percent": 3.53,
+        "mapped": 24,
+        "original_function_bytes": 2183,
+        "size_exact": false,
+        "unit_id": "G98-012"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 6,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 6,
+        "original_function_bytes": 883,
+        "size_exact": false,
+        "unit_id": "G98-013"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 13,
+        "functions": 36,
+        "identical_function_bytes": 290,
+        "identity_percent": 5.84,
+        "mapped": 34,
+        "original_function_bytes": 4970,
+        "size_exact": false,
+        "unit_id": "G98-014"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 4,
+        "functions": 58,
+        "identical_function_bytes": 470,
+        "identity_percent": 3.64,
+        "mapped": 50,
+        "original_function_bytes": 12916,
+        "size_exact": false,
+        "unit_id": "G98-015"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 24,
+        "identical_function_bytes": 15,
+        "identity_percent": 0.3,
+        "mapped": 23,
+        "original_function_bytes": 4979,
+        "size_exact": false,
+        "unit_id": "G98-016"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 13,
+        "identical_function_bytes": 184,
+        "identity_percent": 8.18,
+        "mapped": 13,
+        "original_function_bytes": 2250,
+        "size_exact": false,
+        "unit_id": "G98-017"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 100,
+        "functions": 2,
+        "identical_function_bytes": 1094,
+        "identity_percent": 100.0,
+        "mapped": 2,
+        "original_function_bytes": 1094,
+        "size_exact": true,
+        "unit_id": "G98-018"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 3,
+        "functions": 12,
+        "identical_function_bytes": 2359,
+        "identity_percent": 93.72,
+        "mapped": 12,
+        "original_function_bytes": 2517,
+        "size_exact": true,
+        "unit_id": "G98-019"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 1,
+        "functions": 25,
+        "identical_function_bytes": 11,
+        "identity_percent": 0.13,
+        "mapped": 21,
+        "original_function_bytes": 8340,
+        "size_exact": false,
+        "unit_id": "G98-020"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 7,
+        "functions": 16,
+        "identical_function_bytes": 2087,
+        "identity_percent": 100.0,
+        "mapped": 16,
+        "original_function_bytes": 2087,
+        "size_exact": true,
+        "unit_id": "G98-021"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 4,
+        "identical_function_bytes": 181,
+        "identity_percent": 100.0,
+        "mapped": 4,
+        "original_function_bytes": 181,
+        "size_exact": true,
+        "unit_id": "G98-024"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 11,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 10,
+        "original_function_bytes": 1758,
+        "size_exact": false,
+        "unit_id": "G98-025"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 21,
+        "identity_percent": 7.39,
+        "mapped": 2,
+        "original_function_bytes": 284,
+        "size_exact": false,
+        "unit_id": "G98-026"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 331,
+        "functions": 2,
+        "identical_function_bytes": 62,
+        "identity_percent": 1.27,
+        "mapped": 2,
+        "original_function_bytes": 4868,
+        "size_exact": false,
+        "unit_id": "G98-027"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 4,
+        "identical_function_bytes": 95,
+        "identity_percent": 51.91,
+        "mapped": 4,
+        "original_function_bytes": 183,
+        "size_exact": false,
+        "unit_id": "G98-028"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 81,
+        "identity_percent": 23.01,
+        "mapped": 3,
+        "original_function_bytes": 352,
+        "size_exact": false,
+        "unit_id": "G98-029"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 15,
+        "identical_function_bytes": 86,
+        "identity_percent": 2.97,
+        "mapped": 9,
+        "original_function_bytes": 2900,
+        "size_exact": false,
+        "unit_id": "G98-030"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 2,
+        "functions": 13,
+        "identical_function_bytes": 157,
+        "identity_percent": 2.51,
+        "mapped": 13,
+        "original_function_bytes": 6245,
+        "size_exact": false,
+        "unit_id": "G98-031"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 79,
+        "size_exact": false,
+        "unit_id": "CRT-001"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 87,
+        "size_exact": false,
+        "unit_id": "CRT-002"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 104,
+        "size_exact": false,
+        "unit_id": "CRT-003"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 128,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 128,
+        "size_exact": true,
+        "unit_id": "CRT-004"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 167,
+        "size_exact": false,
+        "unit_id": "CRT-005"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 74,
+        "size_exact": false,
+        "unit_id": "CRT-006"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 3,
+        "original_function_bytes": 144,
+        "size_exact": false,
+        "unit_id": "CRT-007"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 410,
+        "size_exact": false,
+        "unit_id": "CRT-008"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 554,
+        "size_exact": false,
+        "unit_id": "CRT-009"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 39,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 39,
+        "size_exact": true,
+        "unit_id": "CRT-010"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 20,
+        "identity_percent": 10.31,
+        "mapped": 2,
+        "original_function_bytes": 194,
+        "size_exact": false,
+        "unit_id": "CRT-011"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 52,
+        "size_exact": false,
+        "unit_id": "CRT-012"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 10,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 10,
+        "size_exact": true,
+        "unit_id": "CRT-013"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 104,
+        "size_exact": false,
+        "unit_id": "CRT-014"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 47,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 47,
+        "size_exact": true,
+        "unit_id": "CRT-015"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 249,
+        "size_exact": false,
+        "unit_id": "CRT-016"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 252,
+        "size_exact": false,
+        "unit_id": "CRT-017"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 5,
+        "identical_function_bytes": 48,
+        "identity_percent": 17.14,
+        "mapped": 3,
+        "original_function_bytes": 280,
+        "size_exact": false,
+        "unit_id": "CRT-018"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 229,
+        "size_exact": false,
+        "unit_id": "CRT-019"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 254,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 254,
+        "size_exact": true,
+        "unit_id": "CRT-020"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 22,
+        "size_exact": false,
+        "unit_id": "CRT-021"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 66,
+        "size_exact": false,
+        "unit_id": "CRT-022"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 249,
+        "size_exact": false,
+        "unit_id": "CRT-023"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 170,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 170,
+        "size_exact": true,
+        "unit_id": "CRT-024"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 52,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 52,
+        "size_exact": true,
+        "unit_id": "CRT-025"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 16,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 16,
+        "size_exact": true,
+        "unit_id": "CRT-026"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 119,
+        "size_exact": false,
+        "unit_id": "CRT-027"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 56,
+        "size_exact": false,
+        "unit_id": "CRT-028"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 9,
+        "identical_function_bytes": 7,
+        "identity_percent": 0.89,
+        "mapped": 9,
+        "original_function_bytes": 789,
+        "size_exact": false,
+        "unit_id": "CRT-029"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 5,
+        "identical_function_bytes": 44,
+        "identity_percent": 21.57,
+        "mapped": 5,
+        "original_function_bytes": 204,
+        "size_exact": false,
+        "unit_id": "CRT-030"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 447,
+        "size_exact": false,
+        "unit_id": "CRT-031"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 147,
+        "size_exact": false,
+        "unit_id": "CRT-032"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 56,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 56,
+        "size_exact": true,
+        "unit_id": "CRT-033"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 417,
+        "size_exact": false,
+        "unit_id": "CRT-034"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 150,
+        "size_exact": false,
+        "unit_id": "CRT-035"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 326,
+        "size_exact": false,
+        "unit_id": "CRT-036"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 45,
+        "size_exact": false,
+        "unit_id": "CRT-037"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 66,
+        "size_exact": false,
+        "unit_id": "CRT-038"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 47,
+        "size_exact": false,
+        "unit_id": "CRT-039"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 4,
+        "identical_function_bytes": 32,
+        "identity_percent": 4.76,
+        "mapped": 4,
+        "original_function_bytes": 672,
+        "size_exact": false,
+        "unit_id": "CRT-040"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 64,
+        "identity_percent": 17.02,
+        "mapped": 3,
+        "original_function_bytes": 376,
+        "size_exact": false,
+        "unit_id": "CRT-041"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 316,
+        "size_exact": false,
+        "unit_id": "CRT-042"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 110,
+        "size_exact": false,
+        "unit_id": "CRT-043"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 33,
+        "size_exact": false,
+        "unit_id": "CRT-044"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 114,
+        "size_exact": false,
+        "unit_id": "CRT-045"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 55,
+        "size_exact": false,
+        "unit_id": "CRT-046"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 140,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 140,
+        "size_exact": true,
+        "unit_id": "CRT-047"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 198,
+        "size_exact": false,
+        "unit_id": "CRT-048"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 24,
+        "size_exact": false,
+        "unit_id": "CRT-049"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 369,
+        "size_exact": false,
+        "unit_id": "CRT-050"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 19,
+        "size_exact": false,
+        "unit_id": "CRT-051"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 121,
+        "size_exact": false,
+        "unit_id": "CRT-052"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": false,
+        "data_offset_comparisons": 1,
+        "functions": 7,
+        "identical_function_bytes": 41,
+        "identity_percent": 4.3,
+        "mapped": 5,
+        "original_function_bytes": 954,
+        "size_exact": false,
+        "unit_id": "CRT-053"
+      },
+      {
+        "contiguous": null,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 0,
+        "original_function_bytes": 161,
+        "size_exact": false,
+        "unit_id": "CRT-054"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 301,
+        "size_exact": false,
+        "unit_id": "CRT-055"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 7,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 2409,
+        "size_exact": false,
+        "unit_id": "CRT-056"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 188,
+        "size_exact": false,
+        "unit_id": "CRT-057"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 55,
+        "size_exact": false,
+        "unit_id": "CRT-058"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 8,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 8,
+        "original_function_bytes": 1951,
+        "size_exact": false,
+        "unit_id": "CRT-059"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 32,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 32,
+        "size_exact": true,
+        "unit_id": "CRT-060"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 243,
+        "identity_percent": 100.0,
+        "mapped": 2,
+        "original_function_bytes": 243,
+        "size_exact": true,
+        "unit_id": "CRT-061"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 6,
+        "identical_function_bytes": 135,
+        "identity_percent": 69.23,
+        "mapped": 6,
+        "original_function_bytes": 195,
+        "size_exact": false,
+        "unit_id": "CRT-062"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 7,
+        "identical_function_bytes": 160,
+        "identity_percent": 27.16,
+        "mapped": 5,
+        "original_function_bytes": 589,
+        "size_exact": false,
+        "unit_id": "CRT-063"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 696,
+        "identity_percent": 100.0,
+        "mapped": 2,
+        "original_function_bytes": 696,
+        "size_exact": true,
+        "unit_id": "CRT-064"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 21,
+        "size_exact": false,
+        "unit_id": "CRT-065"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 8,
+        "identical_function_bytes": 853,
+        "identity_percent": 38.95,
+        "mapped": 8,
+        "original_function_bytes": 2190,
+        "size_exact": false,
+        "unit_id": "CRT-066"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 256,
+        "identity_percent": 63.21,
+        "mapped": 3,
+        "original_function_bytes": 405,
+        "size_exact": false,
+        "unit_id": "CRT-067"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 4,
+        "identical_function_bytes": 16,
+        "identity_percent": 9.88,
+        "mapped": 4,
+        "original_function_bytes": 162,
+        "size_exact": false,
+        "unit_id": "CRT-068"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 587,
+        "size_exact": false,
+        "unit_id": "CRT-069"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 5,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 3379,
+        "size_exact": false,
+        "unit_id": "CRT-070"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 210,
+        "size_exact": false,
+        "unit_id": "CRT-071"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 51,
+        "size_exact": false,
+        "unit_id": "CRT-072"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 347,
+        "size_exact": false,
+        "unit_id": "CRT-073"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 132,
+        "size_exact": false,
+        "unit_id": "CRT-074"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 10,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 3,
+        "original_function_bytes": 2321,
+        "size_exact": false,
+        "unit_id": "CRT-075"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 76,
+        "size_exact": false,
+        "unit_id": "CRT-076"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 4,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 232,
+        "size_exact": false,
+        "unit_id": "CRT-077"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 76,
+        "size_exact": false,
+        "unit_id": "CRT-078"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 238,
+        "size_exact": false,
+        "unit_id": "CRT-079"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 685,
+        "size_exact": false,
+        "unit_id": "CRT-080"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 342,
+        "size_exact": false,
+        "unit_id": "CRT-081"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 5,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 679,
+        "size_exact": false,
+        "unit_id": "CRT-082"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 504,
+        "size_exact": false,
+        "unit_id": "CRT-083"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 27,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 27,
+        "size_exact": true,
+        "unit_id": "CRT-084"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 531,
+        "size_exact": false,
+        "unit_id": "CRT-085"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 301,
+        "size_exact": false,
+        "unit_id": "CRT-086"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 189,
+        "size_exact": false,
+        "unit_id": "CRT-087"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 542,
+        "size_exact": false,
+        "unit_id": "CRT-088"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 103,
+        "size_exact": false,
+        "unit_id": "CRT-089"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 226,
+        "size_exact": false,
+        "unit_id": "CRT-090"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 236,
+        "size_exact": false,
+        "unit_id": "CRT-091"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 596,
+        "size_exact": false,
+        "unit_id": "CRT-092"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 243,
+        "size_exact": false,
+        "unit_id": "CRT-093"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 252,
+        "size_exact": false,
+        "unit_id": "CRT-094"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 147,
+        "size_exact": false,
+        "unit_id": "CRT-095"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 4,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 372,
+        "size_exact": false,
+        "unit_id": "CRT-096"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 12,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 12,
+        "original_function_bytes": 1237,
+        "size_exact": false,
+        "unit_id": "CRT-097"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 145,
+        "size_exact": false,
+        "unit_id": "CRT-098"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 305,
+        "size_exact": false,
+        "unit_id": "CRT-099"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 821,
+        "size_exact": true,
+        "unit_id": "CRT-100"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 11,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 11,
+        "size_exact": true,
+        "unit_id": "CRT-101"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 1632,
+        "size_exact": false,
+        "unit_id": "CRT-102"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 93,
+        "size_exact": false,
+        "unit_id": "CRT-103"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 40,
+        "size_exact": false,
+        "unit_id": "CRT-104"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 113,
+        "size_exact": false,
+        "unit_id": "CRT-105"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 104,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 104,
+        "size_exact": true,
+        "unit_id": "CRT-106"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 117,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 117,
+        "size_exact": true,
+        "unit_id": "CRT-107"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 256,
+        "size_exact": false,
+        "unit_id": "CRT-108"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 252,
+        "size_exact": false,
+        "unit_id": "CRT-109"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 42,
+        "size_exact": false,
+        "unit_id": "CRT-110"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 31,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 31,
+        "size_exact": true,
+        "unit_id": "CRT-111"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 131,
+        "size_exact": false,
+        "unit_id": "CRT-112"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 4,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 4,
+        "original_function_bytes": 567,
+        "size_exact": false,
+        "unit_id": "CRT-113"
+      },
+      {
+        "contiguous": null,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 0,
+        "original_function_bytes": 876,
+        "size_exact": false,
+        "unit_id": "CRT-114"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 64,
+        "identity_percent": 70.33,
+        "mapped": 3,
+        "original_function_bytes": 91,
+        "size_exact": false,
+        "unit_id": "CRT-115"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 31,
+        "size_exact": false,
+        "unit_id": "CRT-116"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 30,
+        "size_exact": false,
+        "unit_id": "CRT-117"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 143,
+        "size_exact": false,
+        "unit_id": "CRT-118"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 152,
+        "size_exact": false,
+        "unit_id": "CRT-119"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": true,
+        "data_offset_comparisons": 7,
+        "functions": 4,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 3,
+        "original_function_bytes": 1733,
+        "size_exact": false,
+        "unit_id": "CRT-120"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 5,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 5,
+        "original_function_bytes": 471,
+        "size_exact": false,
+        "unit_id": "CRT-121"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 898,
+        "size_exact": false,
+        "unit_id": "CRT-122"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 2,
+        "original_function_bytes": 834,
+        "size_exact": false,
+        "unit_id": "CRT-123"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 378,
+        "size_exact": false,
+        "unit_id": "CRT-124"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 394,
+        "size_exact": false,
+        "unit_id": "CRT-125"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 539,
+        "size_exact": false,
+        "unit_id": "CRT-126"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 142,
+        "size_exact": false,
+        "unit_id": "CRT-127"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 126,
+        "size_exact": false,
+        "unit_id": "CRT-128"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 59,
+        "size_exact": false,
+        "unit_id": "CRT-129"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 122,
+        "size_exact": false,
+        "unit_id": "CRT-130"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 709,
+        "size_exact": false,
+        "unit_id": "CRT-131"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 742,
+        "size_exact": false,
+        "unit_id": "CRT-132"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 171,
+        "size_exact": false,
+        "unit_id": "CRT-133"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 80,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 80,
+        "size_exact": true,
+        "unit_id": "CRT-134"
+      },
+      {
+        "contiguous": null,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 3,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 0,
+        "original_function_bytes": 18,
+        "size_exact": false,
+        "unit_id": "IMP-001"
+      },
+      {
+        "contiguous": null,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 0,
+        "original_function_bytes": 12,
+        "size_exact": false,
+        "unit_id": "IMP-002"
+      },
+      {
+        "contiguous": null,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 6,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 0,
+        "original_function_bytes": 36,
+        "size_exact": false,
+        "unit_id": "IMP-003"
+      },
+      {
+        "contiguous": null,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 0,
+        "original_function_bytes": 6,
+        "size_exact": false,
+        "unit_id": "IMP-004"
+      },
+      {
+        "contiguous": null,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 0,
+        "original_function_bytes": 6,
+        "size_exact": false,
+        "unit_id": "IMP-005"
+      },
+      {
+        "contiguous": null,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 0,
+        "original_function_bytes": 6,
+        "size_exact": false,
+        "unit_id": "IMP-006"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 14,
+        "identical_function_bytes": 48,
+        "identity_percent": 2.33,
+        "mapped": 14,
+        "original_function_bytes": 2063,
+        "size_exact": false,
+        "unit_id": "LATE-001"
+      },
+      {
+        "contiguous": false,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 8,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 8,
+        "original_function_bytes": 1866,
+        "size_exact": false,
+        "unit_id": "LATE-002"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 173,
+        "identity_percent": 100.0,
+        "mapped": 1,
+        "original_function_bytes": 173,
+        "size_exact": true,
+        "unit_id": "LATE-003"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 2,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 158,
+        "size_exact": false,
+        "unit_id": "LATE-004"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 182,
+        "size_exact": false,
+        "unit_id": "LATE-005"
+      },
+      {
+        "contiguous": true,
+        "data_offset_agreement": null,
+        "data_offset_comparisons": 0,
+        "functions": 1,
+        "identical_function_bytes": 0,
+        "identity_percent": 0.0,
+        "mapped": 1,
+        "original_function_bytes": 182,
+        "size_exact": false,
+        "unit_id": "LATE-006"
+      }
+    ],
+    "unmapped_original_functions": 219
+  },
+  "listing_digests_sha256": "a77b14fac00382395c894bf9953b113cb867f6827ae820454a42db3607117cfc",
   "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
@@ -36,7 +3752,7 @@
       "rebuilt": 5521408
     }
   },
-  "schema_version": 2,
+  "schema_version": 3,
   "sections": {
     ".data": {
       "chance_percent": 10.47,
