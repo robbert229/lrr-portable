@@ -1364,7 +1364,7 @@ static int s_queue_alias[SOUND_REQUEST_QUEUE_CAPACITY];  /* DAT_00502b30 */
 // GLOBAL: LEGORR 0x00502b58
 static int s_queue_loop[SOUND_REQUEST_QUEUE_CAPACITY];   /* DAT_00502b58 */
 // GLOBAL: LEGORR 0x00502bd0
-static int s_queue_count;                                /* DAT_00502bd0 */
+static int s_sound_queue_count;                                /* DAT_00502bd0 */
 
 // FUNCTION: LEGORR 0x00464f60
 void sound_request_queue_submit(int alias, int loop)
@@ -1372,23 +1372,23 @@ void sound_request_queue_submit(int alias, int loop)
     /* SoundRequestQueueSubmit @ 0x464f60. */
     /* 0x464f68 uses the unsigned `jae` full gate. The private count starts at
      * zero and only this bounded submit path increments it. */
-    if ((unsigned int)s_queue_count >=
+    if ((unsigned int)s_sound_queue_count >=
         (unsigned int)SOUND_REQUEST_QUEUE_CAPACITY) {
         return; /* corpus drop-on-full: no counter bump, no error */
     }
-    s_queue_alias[s_queue_count] = alias;
-    s_queue_loop[s_queue_count] = loop;
-    ++s_queue_count;
+    s_queue_alias[s_sound_queue_count] = alias;
+    s_queue_loop[s_sound_queue_count] = loop;
+    ++s_sound_queue_count;
 }
 
 int sound_request_queue_count(void)
 {
-    return s_queue_count;
+    return s_sound_queue_count;
 }
 
 int sound_request_queue_get(int index, int* alias, int* loop)
 {
-    if (index < 0 || index >= s_queue_count) {
+    if (index < 0 || index >= s_sound_queue_count) {
         return 0;
     }
     if (alias != NULL) {
@@ -1404,7 +1404,7 @@ void sound_request_queue_clear(void)
 {
     /* Port-side helper: the corpus zeroes DAT_00502bd0 only in its
      * frame tick (that consumer is unported here). */
-    s_queue_count = 0;
+    s_sound_queue_count = 0;
 }
 
 /* ------------------------------------------------------------------ *
@@ -1943,14 +1943,14 @@ void sound_subsystem_frame_tick(float dt)
     /* Rotate the pending queue (#317) into the active replay copies:
      * two rep-movs passes over the pending count, then the count moves
      * and the pending count clears. */
-    for (i = 0; i < (unsigned) s_queue_count; ++i) {
+    for (i = 0; i < (unsigned) s_sound_queue_count; ++i) {
         s_active_alias[i] = s_queue_alias[i];
     }
-    for (i = 0; i < (unsigned) s_queue_count; ++i) {
+    for (i = 0; i < (unsigned) s_sound_queue_count; ++i) {
         s_active_loop[i] = s_queue_loop[i];
     }
-    s_active_count = s_queue_count;
-    s_queue_count = 0;
+    s_active_count = s_sound_queue_count;
+    s_sound_queue_count = 0;
     /* SoundSourceSpatialRefreshAll @ 0x47b390: refresh attached sources,
      * remove stale associations, and advance both streamed-wave slots. */
     sound_source_spatial_refresh_all();
