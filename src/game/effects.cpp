@@ -21,6 +21,7 @@
 #include "weapon.hpp"
 #include "util.hpp"
 #include "util.hpp"
+#include "bezier.h"
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -30,6 +31,10 @@
 static uint32_t s_active_effect_occupied[10];
 static uint32_t s_active_segment_visual_occupied[10];
 static ActiveEffectRecord s_active_effect_records[10];
+/* Each record's flight path. The original embeds the BezierCurve at +4 of
+ * its 0x2b0-byte record (00503920); the port's record keeps its own layout,
+ * so the paths sit beside it, one per slot. */
+static BezierCurve s_active_effect_paths[10];
 static ActiveEffectBuildHooks s_active_effect_build_hooks;
 static EntityImpulseApplyHook s_entity_impulse_hook;
 static EntityDirectionApplyHook s_entity_direction_hook;
@@ -1184,34 +1189,22 @@ static void* active_effect_component_get(ActiveEffectRecord* record)
     return entity->type_component_handle;
 }
 
+static BezierCurve* active_effect_path(const ActiveEffectRecord* record)
+{
+    return &s_active_effect_paths[record - s_active_effect_records];
+}
+
+/* FUN_0046f920's walk: the point `distance` along the flight path, as
+ * (horizontal distance, height offset). */
 static int active_effect_curve_sample(const ActiveEffectRecord* record,
                                       float distance, float point[2])
 {
-    unsigned int i;
-    float traversed = 0.0f;
-    if (record == NULL || point == NULL || record->sample_count == 0u)
-        return 0;
-    if (record->sample_count == 1u) {
-        point[0] = record->curve_samples[0][0];
-        point[1] = record->curve_samples[0][1];
-        return 1;
-    }
-    for (i = 0u; i + 1u < record->sample_count; ++i) {
-        float segment = record->curve_segment_lengths[i];
-        if (distance < traversed + segment && segment > 0.0f) {
-            float fraction = (distance - traversed) / segment;
-            point[0] = record->curve_samples[i][0] +
-                (record->curve_samples[i + 1u][0] -
-                 record->curve_samples[i][0]) * fraction;
-            point[1] = record->curve_samples[i][1] +
-                (record->curve_samples[i + 1u][1] -
-                 record->curve_samples[i][1]) * fraction;
-            return 1;
-        }
-        traversed += segment;
-    }
-    point[0] = record->curve_samples[record->sample_count - 1u][0];
-    point[1] = record->curve_samples[record->sample_count - 1u][1];
+    Point2F r;
+    if (record == NULL || point == NULL) return 0;
+    (void)path_arc_length_interpolate(active_effect_path(record), distance,
+                                      &r);
+    point[0] = r.x;
+    point[1] = r.y;
     return 1;
 }
 
@@ -1379,41 +1372,29 @@ static void active_effect_direction_normalize(float direction[3])
     direction[2] *= inverse;
 }
 
+/* FUN_0046fc70's path: a cubic in the vertical plane from the start to the
+ * end, (horizontal distance, height). It leaves at (1, -1.3) scaled to a
+ * fifth of the distance and arrives along (0.3, 1) scaled to a third. The
+ * total length becomes the flight duration. record->duration holds the
+ * straight-line distance on entry. */
 static void active_effect_curve_samples_build(ActiveEffectRecord* record,
                                               const float endpoint[3])
 {
-    float control[4][2];
-    unsigned int i;
-    control[0][0] = 0.0f;
-    control[0][1] = 0.0f;
-    control[1][0] = 1.0f;
-    control[1][1] = -1.3f;
-    control[2][0] = record->duration;
-    control[2][1] = endpoint[2] - record->curve_origin[2];
-    control[3][0] = 0.3f;
-    control[3][1] = 1.0f;
-    record->curve_total_length = 0.0f;
-    for (i = 0u; i < record->sample_count; ++i) {
-        float t = (float)i / (float)(record->sample_count - 1u);
-        float one_minus_t = 1.0f - t;
-        float a = one_minus_t * one_minus_t * one_minus_t;
-        float b = 3.0f * one_minus_t * one_minus_t * t;
-        float c = 3.0f * one_minus_t * t * t;
-        float d = t * t * t;
-        record->curve_samples[i][0] = a * control[0][0] +
-            b * control[1][0] + c * control[2][0] + d * control[3][0];
-        record->curve_samples[i][1] = a * control[0][1] +
-            b * control[1][1] + c * control[2][1] + d * control[3][1];
-        if (i > 0u) {
-            float dx = record->curve_samples[i][0] -
-                       record->curve_samples[i - 1u][0];
-            float dy = record->curve_samples[i][1] -
-                       record->curve_samples[i - 1u][1];
-            float segment = (float)sqrt(dx * dx + dy * dy);
-            record->curve_segment_lengths[i - 1u] = segment;
-            record->curve_total_length += segment;
-        }
-    }
+    BezierCurve* path = active_effect_path(record);
+    float distance = record->duration;
+    Point2F p0, p1, p2, p3;
+    p0.x = 0.0f;
+    p0.y = 0.0f;
+    p1.x = 1.0f;
+    p1.y = -1.3f;
+    p2.x = distance;
+    p2.y = endpoint[2] - record->curve_origin[2];
+    p3.x = 0.3f;
+    p3.y = 1.0f;
+    vector2_set_length(&p1, distance * 0.2f);
+    vector2_set_length(&p3, distance * 0.33333334f);
+    bezier_curve_samples_build(path, &p0, &p1, &p2, &p3, BEZIER_MAXPOINTS);
+    record->curve_total_length = polyline_segment_lengths_total(path);
 }
 
 // FUNCTION: LEGORR 0x0046faf0
@@ -1507,7 +1488,6 @@ int object_flight_curve_record_init(void* owner, const float start[3],
     distance = (float)sqrt((end[0] - start[0]) * (end[0] - start[0]) +
                            (end[1] - start[1]) * (end[1] - start[1]) +
                            (end[2] - start[2]) * (end[2] - start[2]));
-    record->sample_count = 50;
     record->duration = distance;
     active_effect_curve_samples_build(record, end);
     if (s_active_effect_build_hooks.flight_curve_build != NULL) {

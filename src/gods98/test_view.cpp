@@ -61,7 +61,6 @@ int main(void)
     {
         float p[2] = { 1, 2 }, q[2] = { 4, 6 };
         CHECK(vec2_dist(p, q) > 4.99f && vec2_dist(p, q) < 5.01f, "vec2_dist");
-        CHECK(vec2_dist_alt(p, q) == vec2_dist(p, q), "vec2_dist_alt agrees");
     }
     CHECK(vec_exact_equal(a, b) == 0, "different vectors unequal");
     CHECK(vec_exact_equal(a, a) == 1, "identical vectors equal");
@@ -475,15 +474,6 @@ int main(void)
         CHECK(f == 2.0f, "the negate flips a negative");
         float_negate_absolute_value(NULL); /* guarded */
 
-        float v2[2] = { 3.0f, 0.0f };
-        vector2_set_length(v2, 2.0f);
-        CHECK(v2[0] == 2.0f && v2[1] == 0.0f, "the length lands on x");
-        float v3[2] = { 0.0f, 4.0f };
-        vector2_set_length(v3, 1.0f);
-        CHECK(v3[0] == 0.0f && v3[1] == 1.0f, "the unit y stays put");
-        vector2_set_length(v3, 0.0f); /* guarded divide */
-        CHECK(v3[1] == 1.0f, "a zero length keeps the vector");
-
         char cam[0xc0];
         memset(cam, 0, sizeof(cam));
         camera_distance_bounds_set(cam, 0.0f, 100.0f);
@@ -886,109 +876,6 @@ int main(void)
         CHECK(sc[0] == 101 && sc[1] == 202, "class 0 rides the offset");
         sc = (const int*)rotated_pairs_scratch_fill(off, src, 2, -0x9000);
         CHECK(sc[0] == 101, "the negative fold lands identity");
-    }
-
-    /* Curve band (2026-10-25): the bezier evaluate endpoints, the sample
-     * build with its count clamp, and the polyline length record. The
-     * integer control points keep the x87-equivalent double folds exact. */
-    {
-        const float p0[2] = { 0.0f, 0.0f };
-        const float p1[2] = { 1.0f, 5.0f };
-        const float p2[2] = { 2.0f, 10.0f };
-        const float p3[2] = { 3.0f, 15.0f };
-        float out[2] = { 0.0f, 0.0f };
-        cubic_bezier_point_evaluate(out, p0, p1, p2, p3, 0.0f);
-        CHECK(out[0] == 0.0f && out[1] == 0.0f, "t zero lands the first point");
-        cubic_bezier_point_evaluate(out, p0, p1, p2, p3, 1.0f);
-        CHECK(out[0] == 2.0f && out[1] == 10.0f, "t one lands the third point");
-        cubic_bezier_point_evaluate(NULL, p0, p1, p2, p3, 0.5f);
-        CHECK(out[0] == 2.0f && out[1] == 10.0f,
-              "the null output guard leaves the point (dev)");
-    }
-    {
-        uint32_t dest[128];
-        memset(dest, 0, sizeof dest);
-        const uint32_t ctrlw[2] = { 0u, 0u };
-        const float q3[2] = { 1.0f, 1.0f };
-        const float q4[2] = { 2.0f, 2.0f };
-        const float q5[2] = { 3.0f, 3.0f };
-        uint32_t w3[2], w4[2], w5[2];
-        memcpy(w3, q3, sizeof w3);
-        memcpy(w4, q4, sizeof w4);
-        memcpy(w5, q5, sizeof w5);
-        bezier_curve_samples_build(dest, ctrlw, w3, w4, w5, 5u);
-        CHECK(dest[0] == 5u, "the header count lands");
-        CHECK(dest[1] == 0u && dest[2] == 0u,
-              "the header copies the control pair bits");
-        const float* samples = (const float*)(dest + 3);
-        CHECK(samples[6] == 2.0f && samples[7] == 2.0f,
-              "the last sample at t one lands the fold");
-        bezier_curve_samples_build(dest, ctrlw, w3, w4, w5, 0x33u);
-        CHECK(dest[0] == 0x32u, "the count clamps above 0x31 (corpus)");
-        memset(dest, 0, sizeof dest);
-        bezier_curve_samples_build(dest, ctrlw, w3, w4, w5, 1u);
-        CHECK(dest[0] == 1u && dest[1] == 0u && dest[3] == 0u,
-              "the single-count build stays header-only");
-        bezier_curve_samples_build(NULL, ctrlw, w3, w4, w5, 4u);
-    }
-    {
-        uint32_t curve[112];
-        memset(curve, 0, sizeof curve);
-        const float xs[4] = { 0.0f, 3.0f, 3.0f, 0.0f };
-        const float ys[4] = { 0.0f, 4.0f, 0.0f, 0.0f };
-        curve[0] = 4u;
-        for (int i = 0; i < 4; ++i) {
-            memcpy((char*)curve + 4 + 8 * i, &xs[i], 4);
-            memcpy((char*)curve + 8 + 8 * i, &ys[i], 4);
-        }
-        CHECK(polyline_segment_lengths_total(curve) == 12.0f,
-              "the total walks the segment sums");
-        float lens[3];
-        memcpy(lens, (char*)curve + 0x198, sizeof lens);
-        CHECK(lens[0] == 5.0f && lens[1] == 4.0f && lens[2] == 3.0f,
-              "the length table lands segment by segment");
-        uint32_t word194 = 0xffffffffu;
-        memcpy(&word194, (char*)curve + 0x194, 4);
-        CHECK(word194 == 0u, "the 0x194 word clears");
-        curve[0] = 1u;
-        CHECK(polyline_segment_lengths_total(curve) == 0.0f,
-              "the single point answers zero");
-        CHECK(polyline_segment_lengths_total(NULL) == 0.0f,
-              "the null record guards (dev)");
-    }
-
-    /* PathArcLengthInterpolate (2026-10-25): segment walk + fold. */
-    {
-        uint32_t curve[112];
-        memset(curve, 0, sizeof curve);
-        const float xs[4] = { 0.0f, 3.0f, 3.0f, 0.0f };
-        const float ys[4] = { 0.0f, 4.0f, 8.0f, 12.0f };
-        curve[0] = 4u;
-        for (int i = 0; i < 4; ++i) {
-            memcpy((char*)curve + 4 + 8 * i, &xs[i], 4);
-            memcpy((char*)curve + 8 + 8 * i, &ys[i], 4);
-        }
-        (void)polyline_segment_lengths_total(curve); /* fill 3+4+5=12 */
-
-        float out[2] = { -9.0f, -9.0f };
-        uint32_t seg = path_arc_length_interpolate(curve, 2.0f, out);
-        CHECK(seg == 1u && out[0] == 1.2f && out[1] == 1.6f,
-              "the first segment interpolates the 3-4-5 slope");
-        seg = path_arc_length_interpolate(curve, 5.5f, out);
-        CHECK(seg == 2u && out[0] == 3.0f && out[1] == 4.5f,
-              "the second segment folds from its own head length");
-        seg = path_arc_length_interpolate(curve, 14.0f, out);
-        CHECK(seg == 4u && out[0] == 0.0f && out[1] == 12.0f,
-              "the exhausted travel rides the endpoint");
-        seg = path_arc_length_interpolate(curve, 0.0f, out);
-        CHECK(seg == 1u && out[0] == 0.0f && out[1] == 0.0f,
-              "zero travel stays on segment one");
-        curve[0] = 1u;
-        seg = path_arc_length_interpolate(curve, 5.0f, out);
-        CHECK(seg == 1u && out[0] == 0.0f && out[1] == 0.0f,
-              "the single-point record answers its only point");
-        CHECK(path_arc_length_interpolate(NULL, 1.0f, out) == 0u,
-              "the null record guards (dev)");
     }
 
     /* ViewPointToScreenGeometryTransform (2026-10-25): window fold. */

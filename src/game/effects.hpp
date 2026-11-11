@@ -80,11 +80,11 @@ typedef struct ActiveEffectRecord {
     float speed;
     float duration;
     float curve[4];
-    uint32_t sample_count;
+    uint32_t sample_count;    /* unused: the flight path is a BezierCurve */
     float target[3];
     float curve_origin[3];
-    float curve_samples[50][2];
-    float curve_segment_lengths[49];
+    float curve_samples[50][2];        /* unused since #417 (see */
+    float curve_segment_lengths[49];   /* s_active_effect_paths) */
     float curve_total_length;
     float curve_elapsed;
 } ActiveEffectRecord;
