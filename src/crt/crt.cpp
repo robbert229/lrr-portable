@@ -2897,27 +2897,6 @@ void* selection_marker_descriptor_peek(void) { return s_marker_descriptor; }
 void     selection_marker_count_set(uint32_t count) { s_marker_count = count; }
 uint32_t selection_marker_count_peek(void) { return s_marker_count; }
 
-/* OwnedResourceTreeRelease (FUN_0048c180) — see crt.hpp. */
-// FUNCTION: LEGORR 0x0048c180
-void owned_resource_tree_release(void** node, int own_node)
-{
-    if (node == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    if (node[0] != NULL) {
-        engine_heap_free(node[0]);
-    }
-    if (node[2] != NULL) {
-        engine_heap_free(node[2]);
-    }
-    if (node[1] != NULL) {
-        owned_resource_tree_release((void**)node[1], 1);
-    }
-    if (own_node != 0) {
-        engine_heap_free((void*)node);
-    }
-}
-
 /* --- the string + stream allocation leaves (see crt.hpp) ------------------- */
 
 /* StringPrefixReserve (FUN_004907c0): the scan is a strlen; the shift is an
