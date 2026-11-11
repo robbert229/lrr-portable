@@ -2001,7 +2001,7 @@
 0x00485710 22.48 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
-0x00485a20 43.48 keyboard_key_names_init
+0x00485a20 100.00 keyboard_key_names_init
 0x00485e30 100.00 named_option_index_find_case_insensitive
 0x00485e80 87.50 surface_render_setup
 0x00485ff0 14.93 surface_draw_polyline
@@ -4131,7 +4131,7 @@
 0x00485710 22.48 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
-0x00485a20 43.48 keyboard_key_names_init
+0x00485a20 100.00 keyboard_key_names_init
 0x00485e30 100.00 named_option_index_find_case_insensitive
 0x00485e80 87.50 surface_render_setup
 0x00485ff0 14.93 surface_draw_polyline
