@@ -8,7 +8,7 @@ its arc-length helpers: original translation unit GAME-003, text
 ([finding 505](505-original-translation-units-and-link-order.md)). It is the
 second game-side conversion, after Priorities.c (finding 506).
 
-"Before" is the *match baseline* on `main` at `0cfa8749` (#426). "After" is
+"Before" is the *match baseline* on `main` at `7c66934b` (#430; its scores are those of `0cfa8749`, #426). "After" is
 this change. `make reccmp-check` and `make match-function` give the same
 per-function scores.
 
@@ -223,7 +223,7 @@ percentage points. No function was newly mapped or lost.
 | Accuracy, game-only | 49.74% | 49.79% |
 | Accuracy, full | 54.07% | 54.12% |
 | Exact-function code bytes | 40,883 | 40,883 |
-| `.text` identical at original addresses | 18,260 (2.84%) | 18,239 (2.84%) |
+| `.text` identical at original addresses | 18,269 (2.84%) | 18,239 (2.84%) |
 | Adjacent order inversions, full | 908 | 907 |
 
 ## Native port
