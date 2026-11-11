@@ -248,15 +248,6 @@ uint32_t record_field14_get(const void* record)
 }
 #endif
 
-/* ObjectField10Get (FUN_004850e0). */
-// FUNCTION: LEGORR 0x004850e0
-uint32_t object_field10_get(const void* object)
-{
-    uint32_t value;
-    __builtin_memcpy(&value, (const char*)object + 0x10, sizeof(value));
-    return value;
-}
-
 /* RecordFieldD8EqualsOne (FUN_0046c3d0): int == 1, not "nonzero". */
 // FUNCTION: LEGORR 0x0046c3d0
 int record_field_d8_equals_one(const void* record)
@@ -741,18 +732,6 @@ uint32_t resource_entry_id_get(const void* entry)
     return 0u;
 }
 #endif
-
-// FUNCTION: LEGORR 0x004850c0
-uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
-{
-    const size_t off = 0x41c + (size_t)(index & 0xffu) * 2u;
-    if (table != NULL) {
-        uint16_t v = 0;
-        __builtin_memcpy(&v, (const char*)table + off, sizeof(v));
-        return v;
-    }
-    return 0u;
-}
 
 // FUNCTION: LEGORR 0x00482780
 #if defined(_MSC_VER) && defined(_M_IX86)
