@@ -259,6 +259,157 @@ each must go before data can land at original addresses:
   table is a common symbol, so the spare slot moves every common allocated
   after it.
 
+## S1a: the gate links without incremental mode (#436)
+
+#436 switched the gate build to `/INCREMENTAL:NO` with `/MAP` and made
+`make binary-progress` reuse it. Measured on `main` at `579737e7`, against an
+incremental build of the same tree that reproduces the committed baseline:
+
+| | incremental | `/INCREMENTAL:NO` |
+| --- | ---: | ---: |
+| Exact functions, full | 594 | 605 |
+| Mean score, full | 54.165% | 54.245% |
+| Exact functions, game-only | 495 | 501 |
+| Mean score, game-only | 49.859% | 49.932% |
+| Functions that differ, full | | 59: 55 up, 4 down |
+| Functions that differ, game-only | | 47: 44 up, 3 down |
+
+Finding 516 above counted 5 drops on #425's tree. `path_arc_length_interpolate`
+no longer drops: the Bezier unit was converted since (#431), and its score
+(75.76%) is the same under both links.
+
+What the measurements show:
+
+- **`/MAP` alone disables incremental linking.** LINK 5.0 prints `LNK4075:
+  ignoring /INCREMENTAL due to /MAP specification`. The build passes
+  `/INCREMENTAL:NO` explicitly anyway.
+- **The causes are in the rendering, not the code.** Reccmp's listing of
+  the original side is identical in both runs. On the rebuilt side every
+  instruction is the same; only operand names differ.
+- **The main cause is base relocations.** The incremental link writes a
+  `.reloc` section. The non-incremental one leaves relocations stripped, as
+  the original does (`IMAGE_FILE_RELOCS_STRIPPED`). Reccmp recognises float
+  constants (`find_float_consts`), strings and import thunks only at
+  relocated operands. Without relocations a rebuilt `fld [x]` is no longer
+  named `1.0 (FLOAT)` but renders as `<OFFSETn>`, as the original's does.
+  That accounts for 52 of the 59 changes. It also lowers 3 scores: in
+  structurally different functions the `<OFFSETn>` numbers on the two sides
+  are assigned in different orders. Likewise, an immediate holding the
+  address of an unnamed rebuilt variable or string now renders as raw hex
+  instead of a placeholder, and the later placeholders are renumbered. That
+  is the only cause in `__fltout` (a drop), `__fprem_common`, `__setargv` and
+  `__input`, and contributes in three more.
+- **Incremental-link thunks are gone.** Calls into the executable's own
+  objects (`dependency_grid.cpp`, `entry.cpp`) rendered as `Thunk of 'X'`;
+  they now name `X`, as the original does. Three functions.
+- **`.data` moves.** `.data` starts at `0x555000` instead of `0x5a5000`, so
+  a flag that falls inside a large rebuilt array names a different element.
+  It changes no score by itself.
+- **Stripping the debug directory changes no score.** The same
+  non-incremental executable scores identically before and after
+  `strip_pe_debug.py`.
+
+**`/OPT:REF` is not adopted.** It removes unreferenced functions: 990 of the
+2,347 report entries disappear, because the port does not call them. Of
+those left, 5 change score (2 down, 3 up). The link keeps LINK's `/DEBUG`
+default, `/OPT:NOREF`.
+
+**`match_function.py`.** Its synthetic image emulated incremental-link
+thunks for the `program` target's objects and recorded every `DIR32` fixup
+as a base relocation. Both are removed, the import thunks are named by their
+public symbol as the linker PDB names them, and the assert fix-up override
+is gone because the full run's image now has no debug directory. Against the
+non-incremental report, 2,333 of 2,347 functions score identically. The 14
+that differ are `__isindst` and 13 LIBC functions whose LIBC data operands
+the tool names by public symbol; the same 14 differed with the incremental
+build and the old emulation.
+
+**Drift classifier (#454).** Checked against `main`'s listing digests,
+`make reccmp-check` labels the three game drops `drift-review` and `__fltout`
+`source-unknown`, each with an instruction delta of +0. The labels come from
+what the classifier can see, not from a code change:
+
+- `match_listings.normalize` masks registers, stack offsets, branch targets
+  and raw addresses, but not Reccmp's symbolic operand names. A rebuilt
+  `fsub [1.0 (FLOAT)]` that becomes `fsub [<OFFSET1>]` therefore changes
+  the instruction multiset. With those names masked as well, the rebuilt
+  listings of `rectangular_grid_overlay_geometry_draw` and `__fltout` are
+  identical in sequence. The other two differ only in the element of
+  `s_help_info_string_storage` that a flag constant lands in (the moved
+  `.data` base).
+- `__fltout` carries a `LIBRARY` marker, which the source index does not
+  read, so its source is unknown rather than unchanged.
+
+Across the whole report, 359 full-scope listing digests change and none
+changes its instruction count. Every one of them differs only in operand
+names: float, string and address operands without relocations, removed ILT
+thunks, and import thunks named by their PDB public instead of
+`DLL::name (IMPORT_THUNK)`.
+
+Every changed function and its link cause:
+
+| Address | Function | Before | After | Scope | Link cause |
+| --- | --- | ---: | ---: | --- | --- |
+| `0x00404280` | `cmd_entity_command_chain_tick` | 11.99 | 10.71 | game, full | float constant, .data base shift |
+| `0x0043f7d0` | `ledger_stub_0043f7d0_EntityEnergyLowTargetRouteCommandTick` | 27.40 | 26.69 | game, full | float constant, unrelocated address immediate, .data base shift |
+| `0x0046b8b0` | `rectangular_grid_overlay_geometry_draw` | 11.55 | 7.94 | game, full | float constant |
+| `0x00497ec0` | `__fltout` | 88.10 | 85.71 | full | unrelocated address immediate, placeholder renumbering |
+| `0x004089d0` | `segment_2d_point_distance` | 36.44 | 40.89 | game, full | float constant |
+| `0x0040aa40` | `effect_helper` | 13.24 | 14.71 | game, full | float constant |
+| `0x0040f0e0` | `kind_six_random_sweep_dispatch` | 33.33 | 34.52 | game, full | float constant |
+| `0x00414e10` | `option_music_default` | 43.75 | 50.00 | game, full | float constant |
+| `0x00418830` | `lego::building_upgrade_state_changed_dispatch` | 28.04 | 29.91 | game, full | ILT thunk |
+| `0x00418920` | `dependency_grid_category_candidates_build` | 15.38 | 17.09 | game, full | ILT thunk |
+| `0x00418da0` | `help_window_button_hit_test` | 34.81 | 35.49 | game, full | float constant |
+| `0x00419030` | `help_window_button_feedback_update` | 67.31 | 71.15 | game, full | float constant |
+| `0x00419b50` | `remaining_timer_duration_get` | 25.00 | 30.00 | game, full | float constant |
+| `0x0041ba10` | `simtick_mute_timer` | 60.87 | 63.77 | game, full | float constant |
+| `0x0041ee80` | `ledger_stub_0041ee80_CellGridPointHitTest` | 22.61 | 23.04 | game, full | float constant |
+| `0x004230c0` | `debug_panel_text_draw_update` | 15.67 | 16.59 | game, full | float constant |
+| `0x0043c2b0` | `periodic_timer25_advance` | 12.61 | 14.41 | game, full | float constant |
+| `0x0043c6b0` | `entity_activity_counters_advance` | 43.88 | 45.57 | game, full | float constant |
+| `0x00440800` | `spatial_entity_damage_radius_callback` | 61.19 | 62.69 | game, full | float constant |
+| `0x00440a10` | `ledger_stub_00440a10_AttachedEntityDirectionVectorUpdate` | 22.16 | 22.71 | game, full | float constant |
+| `0x00447730` | `entity_progress_advance_by_25` | 36.36 | 42.42 | game, full | float constant |
+| `0x0044c030` | `entity_one_shot_attached_effect_start` | 28.27 | 29.32 | game, full | float constant |
+| `0x0044c1b0` | `ledger_stub_0044c1b0_EntityHeadingStepMove` | 27.60 | 28.03 | game, full | float constant |
+| `0x0044d0d0` | `motion_drift_offset_step` | 12.81 | 13.79 | game, full | float constant |
+| `0x0044f700` | `world_to_terrain_cell_bounds_check` | 57.29 | 60.42 | game, full | float constant |
+| `0x0044f870` | `terrain_world_point_to_cell` | 39.69 | 42.75 | game, full | float constant |
+| `0x004512d0` | `terrain_cell_normal_sample` | 10.31 | 11.34 | game, full | float constant |
+| `0x00453bb0` | `tutorial_frame_timer_array_advance` | 48.53 | 50.00 | game, full | float constant |
+| `0x00453da0` | `tutorial_camera_focus_tween_update` | 11.33 | 11.90 | game, full | float constant |
+| `0x0045bf20` | `camera_zoom_step_adjust` | 91.30 | 100.00 | game, full | float constant |
+| `0x0045d550` | `priorities_move_cursor_to_up_button` | 73.10 | 75.86 | game, full | float constant |
+| `0x0045e940` | `view_point_to_screen_geometry_transform` | 18.90 | 22.05 | game, full | float constant |
+| `0x00460360` | `mission_checkpoint_task_progress_refresh_bound` | 3.68 | 10.31 | game, full | float constant |
+| `0x00462700` | `pointer_override_expiry_tick` | 93.94 | 100.00 | game, full | float constant |
+| `0x00463e40` | `float_round_to_nearest_int` | 96.88 | 100.00 | game, full | float constant |
+| `0x00465f40` | `transient_effect_instance_quad_vertices_build` | 20.69 | 21.46 | game, full | float constant, unrelocated address immediate |
+| `0x00470630` | `entity_directed_line_side_check` | 35.00 | 37.50 | game, full | float constant |
+| `0x00471370` | `cmd_place_ray_candidate_check` | 15.30 | 15.85 | game, full | float constant |
+| `0x00473e10` | `renderer_fog_color_set` | 23.88 | 29.85 | game, full | float constant |
+| `0x004750b0` | `render_object_set_packed_rgba_from_float_channels` | 74.19 | 87.10 | game, full | float constant |
+| `0x004757f0` | `typed_child_resource_scalar_get` | 95.45 | 100.00 | game, full | float constant |
+| `0x004761a0` | `ddiscene_animation_duration_get` | 90.00 | 100.00 | game, full | float constant |
+| `0x004761c0` | `scene_property_float_at14_get` | 90.00 | 100.00 | game, full | float constant |
+| `0x00477150` | `ddiscene_draw_end` | 23.75 | 30.00 | game, full | float constant, string literal |
+| `0x004789c0` | `audio_mixer_control_init` | 29.21 | 38.20 | game, full | float constant |
+| `0x0047c100` | `ledger_stub_0047c100_DirectSoundListenerRolloffSet` | 59.09 | 68.18 | game, full | float constant |
+| `0x00483420` | `screen_effect_item_opacity_set_target` | 28.25 | 30.51 | game, full | float constant |
+| `0x00487fc0` | `lego::keyframe_time_segment_fraction` | 39.42 | 42.34 | game, full | float constant |
+| `0x0048e280` | `_floor` | 99.06 | 100.00 | full | float constant |
+| `0x0048e680` | `_fabs` | 98.98 | 100.00 | full | float constant |
+| `0x0048e8e0` | `_ceil` | 99.06 | 100.00 | full | float constant |
+| `0x0048f000` | `_WinMainCRTStartup` | 91.49 | 92.20 | full | unrelocated address immediate, ILT thunk |
+| `0x0049200c` | `__convertTOStoQNaN` | 85.71 | 100.00 | full | float constant |
+| `0x004921e4` | `__ctrandisp2` | 93.86 | 99.12 | full | float constant |
+| `0x00492bc6` | `__fprem_common` | 97.18 | 99.30 | full | unrelocated address immediate, placeholder renumbering |
+| `0x004935c0` | `__handle_exc` | 94.44 | 96.83 | full | float constant |
+| `0x00493ae0` | `__decomp` | 97.65 | 100.00 | full | float constant |
+| `0x00493ef0` | `__input` | 99.40 | 99.57 | full | placeholder renumbering, string literal |
+| `0x00495ee0` | `__setargv` | 85.19 | 88.89 | full | unrelocated address immediate, placeholder renumbering |
+
 ## Reproducing
 
 The experiment needs only the matching toolchain:
