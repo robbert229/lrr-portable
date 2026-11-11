@@ -47,10 +47,11 @@ static int s_sfx_tick_hooks_installed;
 static KindEffectDispatchHooks s_kind_effect_dispatch_hooks;
 static EffectApplyHooks s_effect_apply_hooks;
 static ScreenSpaceEffectDispatchHook s_screen_space_effect_dispatch_hook;
-static struct ScreenEffectTickRecord {
+struct ScreenEffectTickRecord {
     void* entity;
     float remaining;
-} s_screen_effect_tick_records[3][50];
+};
+static struct ScreenEffectTickRecord s_screen_effect_tick_records[3][50];
 static ScreenEffectTickHooks s_screen_effect_tick_hooks;
 static float s_screen_effect_pulse_timer;
 static void* s_screen_space_effect_dispatch_context;
