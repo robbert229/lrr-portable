@@ -123,7 +123,8 @@ add_library(gods98 STATIC
   ${ENGINE_DIR}/model.cpp
   ${ENGINE_DIR}/entity.cpp ${ENGINE_DIR}/lwsc_scene.cpp
   ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp ${ENGINE_DIR}/media.cpp
-  ${ENGINE_DIR}/scene_pool.cpp ${ENGINE_DIR}/scene_resources.cpp)
+  ${ENGINE_DIR}/scene_pool.cpp ${ENGINE_DIR}/scene_resources.cpp
+  ${ENGINE_DIR}/dxerror.c)
 target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 
 add_library(game STATIC
@@ -147,7 +148,7 @@ target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
 # C++ elsewhere, because the native port's miniwin headers are C++-only.
 set(LRR_ORIGINAL_SHAPE_SOURCES ${ENGINE_DIR}/utils.c ${ENGINE_DIR}/config.c
   ${ENGINE_DIR}/maths.c
-  ${GAME_DIR}/priorities.c)
+  ${GAME_DIR}/priorities.c ${ENGINE_DIR}/dxerror.c)
 if(NOT LRR_CLASSIC_MSVC5)
   set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
     LANGUAGE CXX)

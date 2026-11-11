@@ -824,10 +824,12 @@ typedef struct MiscObjectResourceHooks {
 void misc_object_resource_hooks_set(const MiscObjectResourceHooks* hooks);
 void misc_object_resources_load(void* config); /* FUN_00422850 */
 void* misc_object_resource_peek(unsigned int slot);
-void directx_error_message_format(const char* name, const char* description);
-int directx_result_diagnostic_dispatch(int result, int diagnostic_kind,
-                                      const char* source_file,
-                                      int source_line);
+extern "C" void directx_error_message_format(const char* name,
+                                             const char* description);
+extern "C" int directx_result_diagnostic_dispatch(int result,
+                                                 int diagnostic_kind,
+                                                 const char* source_file,
+                                                 int source_line);
 }
 
 /* Host operations for the retail SceneLightsBuildFromConfig sequence.
