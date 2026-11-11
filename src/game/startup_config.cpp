@@ -7,14 +7,15 @@
 #include "util.hpp"
 #include "../gods98/engine.hpp"
 #include "../gods98/resource.hpp"
+#include "startup_config_shared.hpp"
 
 namespace unported_ledger_stubs {
 
 // GLOBAL: LEGORR 0x00575ce0
-static GameFileHandle* s_startup_streams[4];
-static uint32_t s_startup_window_mode;
-static char s_startup_output_path[260];
-static char s_startup_token_list_path[260];
+GameFileHandle* s_startup_streams[4];
+uint32_t s_startup_window_mode;
+char s_startup_output_path[260];
+char s_startup_token_list_path[260];
 static BufferedCharReadHook s_buffered_char_read_hook;
 static void* s_buffered_char_read_context;
 static DependencyConfigEntryHook s_dependency_config_hook;
@@ -84,22 +85,6 @@ void startup_config_stream_paths_set(const char* output_path,
     startup_path_copy(s_startup_token_list_path, token_list_path);
 }
 
-// FUNCTION: LEGORR 0x0048b2f0
-void startup_config_stream_load(void)
-{
-    GameFileHandle* stream;
-    startup_streams_close();
-    if (s_startup_output_path[0] == '\0') return;
-    stream = game_file_open_dispatch(s_startup_output_path, "w");
-    s_startup_streams[3] = stream;
-    if (stream == NULL) return;
-    if (s_startup_token_list_path[0] != '\0')
-        resource_file_token_list_load_and_tree_scan_target(
-            s_startup_token_list_path);
-    game_file_close(stream);
-    /* The retail routine leaves the just-closed value in DAT_00575cec. */
-}
-
 void buffered_char_stream_read_hook_set(BufferedCharReadHook read_char,
                                         void* context)
 {
@@ -159,32 +144,5 @@ int dependency_config_entry_should_load(int level, const char* name,
         s_dependency_config_hook(s_dependency_config_context, level,
                                  name, value);
 }
-
-// FUNCTION: LEGORR 0x0048b260
-void ledger_stub_0048b260_StartupStreamStateReset()
-{
-    s_startup_streams[0] = NULL;
-    s_startup_streams[1] = NULL;
-    s_startup_streams[2] = NULL;
-    s_startup_streams[3] = NULL;
-    s_startup_window_mode = 0u;
-    window_mode_flag_set(0u);
-}
-
-
-// FUNCTION: LEGORR 0x0048b290
-void ledger_stub_0048b290_StartupStreamsClose()
-{
-    if (s_startup_streams[0] != NULL)
-        game_file_close(s_startup_streams[0]);
-    if (s_startup_streams[1] != NULL)
-        game_file_close(s_startup_streams[1]);
-    if (s_startup_streams[2] != NULL)
-        game_file_close(s_startup_streams[2]);
-    s_startup_streams[2] = NULL;
-    s_startup_streams[1] = NULL;
-    s_startup_streams[0] = NULL;
-}
-
 
 } // namespace unported_ledger_stubs

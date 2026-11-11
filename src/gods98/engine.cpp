@@ -457,12 +457,7 @@ void engine_callback_triplet_shutdown_dispatch(void)
 
 // WindowModeFlagSet records the mode selected by renderer startup.
 // GLOBAL: LEGORR 0x005764f4
-static uint32_t s_window_mode_flag;
-// FUNCTION: LEGORR 0x0048b280
-void window_mode_flag_set(uint32_t mode)
-{
-    s_window_mode_flag = mode;
-}
+uint32_t s_window_mode_flag;
 
 /* Frame tick — corpus EngineTick @ 0x4232e0. The numbered structure below
  * mirrors finding 03 §"Tick structure" and the first 130 lines of the corpus.

@@ -248,15 +248,6 @@ uint32_t record_field14_get(const void* record)
 }
 #endif
 
-/* ObjectField10Get (FUN_004850e0). */
-// FUNCTION: LEGORR 0x004850e0
-uint32_t object_field10_get(const void* object)
-{
-    uint32_t value;
-    __builtin_memcpy(&value, (const char*)object + 0x10, sizeof(value));
-    return value;
-}
-
 /* RecordFieldD8EqualsOne (FUN_0046c3d0): int == 1, not "nonzero". */
 // FUNCTION: LEGORR 0x0046c3d0
 int record_field_d8_equals_one(const void* record)
@@ -623,28 +614,6 @@ uint32_t object_record_field11c_get(const void* record)
     return value;
 }
 
-// FUNCTION: LEGORR 0x0047a540
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t object_field_be4_dword_get(const void* record)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 0be4h]
-        ret
-    }
-}
-#else
-uint32_t object_field_be4_dword_get(const void* record)
-{
-    uint32_t value;
-    if (record == NULL) {
-        return 0u;
-    }
-    __builtin_memcpy(&value, (const char*)record + 0xbe4, sizeof(value));
-    return value;
-}
-#endif
-
 // FUNCTION: LEGORR 0x0046cf80
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t entity_type_mask_get(const void* record)
@@ -763,18 +732,6 @@ uint32_t resource_entry_id_get(const void* entry)
     return 0u;
 }
 #endif
-
-// FUNCTION: LEGORR 0x004850c0
-uint32_t indexed_word_table_lookup(uint32_t index, const void* table)
-{
-    const size_t off = 0x41c + (size_t)(index & 0xffu) * 2u;
-    if (table != NULL) {
-        uint16_t v = 0;
-        __builtin_memcpy(&v, (const char*)table + off, sizeof(v));
-        return v;
-    }
-    return 0u;
-}
 
 // FUNCTION: LEGORR 0x00482780
 #if defined(_MSC_VER) && defined(_M_IX86)
@@ -1445,41 +1402,6 @@ void indexed_record_field64_set(void* record, int index, uint32_t value)
         return;
     }
     indexed_record_field64_set_target(record, index, value);
-}
-
-// FUNCTION: LEGORR 0x004851b0
-void float_pair_at_offset4_set_from_ints(void* record, int x, int y)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    const float fx = (float)x; /* the corpus's int->float casts */
-    const float fy = (float)y;
-    __builtin_memcpy((char*)record + 0x04, &fx, sizeof(fx));
-    __builtin_memcpy((char*)record + 0x08, &fy, sizeof(fy));
-}
-
-// FUNCTION: LEGORR 0x004851d0
-void float_pair_at_offsetc_set_from_uints(void* record, uint32_t x,
-                                          uint32_t y)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    const float fx = (float)x; /* the corpus's uint->float casts */
-    const float fy = (float)y;
-    __builtin_memcpy((char*)record + 0x0c, &fx, sizeof(fx));
-    __builtin_memcpy((char*)record + 0x10, &fy, sizeof(fy));
-}
-
-/* The mapped body follows the corpus's blind record and output-pointer
- * accesses. */
-// FUNCTION: LEGORR 0x00485a00
-void object_state_pair_get_target(const void* record, uint32_t* out_a,
-                                  uint32_t* out_b)
-{
-    *out_a = *(const uint32_t*)((const char*)record + 0x820);
-    *out_b = *(const uint32_t*)((const char*)record + 0x824);
 }
 
 /* Preserve the test-pinned null-record behavior of the portable API. */

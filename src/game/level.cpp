@@ -3688,31 +3688,6 @@ int terrain_cell_predicate_check(TerrainDescriptorNode* list,
     return terrain_descriptor_find_exact(list, pair_key, NULL) != NULL;
 }
 
-/* CellResourceEntryMatches (FUN_0040af40): entries backed by a matching
- * live task are accepted directly. Otherwise the first two words must
- * match, and a nonzero bounded-mode flag applies the unsigned cell limit
- * from entry word two to the cell record's word index 0xcc (+0x330 bytes). */
-// FUNCTION: LEGORR 0x0040AF40
-int terrain_cell_resource_entry_matches(const uint32_t* cell_record,
-                                        const uint32_t* resource_entry)
-{
-    if (cell_record == NULL || resource_entry == NULL) {
-        return 0;
-    }
-    if (task_kind_filtered_search((int)resource_entry[0]) != 0) {
-        return 1;
-    }
-    if (resource_entry[0] != cell_record[0]
-        || resource_entry[1] != cell_record[1]) {
-        return 0;
-    }
-    if (resource_entry[3] != 0u
-        && cell_record[0xcc] < resource_entry[2]) {
-        return 0;
-    }
-    return 1;
-}
-
 const char* level_next_name(const LevelState* s)
 {
     return s != NULL ? (const char*)s->ptr_next : NULL;
@@ -9528,8 +9503,6 @@ void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
     }
 }
 
-#define GRID_REC_COLS          15    /* 20 rows by 15 columns */
-
 /* Flat dword index of a cell's selector word, or -1 when the coordinate
  * cannot address the region (bounds deviation). */
 static int64_t grid_rec_block_index(int x, int y)
@@ -9555,62 +9528,6 @@ static int64_t grid_rec_field_index(int x, int y, int field)
     }
     return word;
 }
-
-/* The mapped target walks the retail count/pointer tables directly. */
-// FUNCTION: LEGORR 0x0040af90
-#if defined(_MSC_VER) && defined(_M_IX86)
-static __declspec(naked) void terrain_cell_record_get_target(
-    int x, int y, int field, uint32_t* value_a, uint32_t* value_b)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        lea eax, dword ptr [eax + eax*2]
-        lea edx, dword ptr [ecx + eax*4]
-        add eax, edx
-        lea ecx, dword ptr [eax + eax*2]
-        shl ecx, 4
-        add ecx, eax
-        shl ecx, 2
-        mov edx, dword ptr [s_grid_rec + ecx + 80h]
-        test edx, edx
-        je terrain_cell_record_get_default
-        mov edx, dword ptr [esp + 0ch]
-        lea ecx, dword ptr [eax + eax*2]
-        shl ecx, 4
-        add edx, ecx
-        add eax, edx
-        mov edx, dword ptr [esp + 10h]
-        shl eax, 2
-        mov ecx, dword ptr [s_grid_rec + eax + 40h]
-        mov dword ptr [edx], ecx
-        mov ecx, dword ptr [esp + 14h]
-        mov eax, dword ptr [s_grid_rec + eax]
-        mov dword ptr [ecx], eax
-        ret
-    terrain_cell_record_get_default:
-        mov eax, dword ptr [esp + 10h]
-        mov edx, dword ptr [s_grid_rec + ecx + 40h]
-        mov dword ptr [eax], edx
-        mov edx, dword ptr [esp + 14h]
-        mov ecx, dword ptr [s_grid_rec + ecx]
-        mov dword ptr [edx], ecx
-        ret
-    }
-}
-#else
-static void terrain_cell_record_get_target(int x, int y, int field,
-                                           uint32_t* value_a,
-                                           uint32_t* value_b)
-{
-    const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
-    const uint32_t offset = cell * GRID_REC_STRIDE;
-    const uint32_t base = offset +
-        (s_grid_rec[offset + 32u] != 0u ? (uint32_t)field : 0u);
-    *value_a = s_grid_rec[base + 16u];
-    *value_b = s_grid_rec[base];
-}
-#endif
 
 void terrain_cell_record_get(int x, int y, int field,
                              uint32_t* value_a, uint32_t* value_b)
@@ -9651,92 +9568,6 @@ void terrain_cell_record_get(int x, int y, int field,
     if (value_b != NULL) *value_b = s_grid_rec[(size_t)table_index];
 }
 
-/* Cell-entry readiness bits occupy bytes at DAT_004b8c4c. DependencyGridConfigLoad
- * produces the parallel record/count lists in the active LevelState sidecar;
- * its flags seed the retail ready-bit word here. */
-#define CELL_ENTRY_SLOT_TYPES 20
-#define CELL_ENTRY_SLOT_ROWS 15
-#define CELL_ENTRY_SLOT_VARIANTS 16
-#define CELL_ENTRY_SLOT_STRIDE 49
-
-// FUNCTION: LEGORR 0x0040AEA0
-int ensure_cell_entries_loaded(uint32_t kind, int row, int slot)
-{
-    GameContext* game = entity_pool_callback_context_get();
-    LevelState* level = game != NULL ? game->level : NULL;
-    if (unported_ledger_stubs::dependency_grid_mode_zero_input_get(level)
-        != 0u) {
-        return 1;
-    }
-    if (kind >= CELL_ENTRY_SLOT_TYPES || row < 0
-        || row >= CELL_ENTRY_SLOT_ROWS || slot < 0
-        || slot >= CELL_ENTRY_SLOT_VARIANTS) {
-        return 0;
-    }
-    const size_t index = ((size_t)kind * CELL_ENTRY_SLOT_ROWS
-                          + (size_t)row) * CELL_ENTRY_SLOT_STRIDE
-                         + (size_t)slot;
-    uint8_t* const ready = (uint8_t*)s_grid_rec + 0x84u + index;
-    *ready |= (uint8_t)(unported_ledger_stubs::
-        dependency_grid_cell_flags_get(level, kind, (uint32_t)row,
-                                       (uint32_t)slot) & 1u);
-    if ((*ready & 2u) != 0u) {
-        return 1;
-    }
-    if (!unported_ledger_stubs::dependency_grid_cell_entries_validate(
-            level, kind, (uint32_t)row, (uint32_t)slot)) {
-        return 0;
-    }
-    if ((*ready & 1u) != 0u) {
-        *ready |= 2u;
-    }
-    return 1;
-}
-
-// CellFlag4IsSet uses the global selector and flag tables directly.
-// FUNCTION: LEGORR 0x0040b250
-#if defined(_MSC_VER) && defined(_M_IX86)
-static __declspec(naked) uint32_t cell_flag4_is_set_target(int x, int y,
-                                                            int field)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        lea eax, dword ptr [eax + eax*2]
-        lea edx, dword ptr [ecx + eax*4]
-        lea ecx, dword ptr [eax + edx]
-        lea eax, dword ptr [ecx + ecx*2]
-        shl eax, 4
-        add eax, ecx
-        shl eax, 2
-        mov edx, dword ptr [s_grid_rec + eax + 80h]
-        test edx, edx
-        je cell_flag4_is_set_default
-        mov edx, dword ptr [esp + 0ch]
-        lea eax, dword ptr [ecx + ecx*2]
-        shl eax, 4
-        add edx, eax
-        add ecx, edx
-        mov eax, dword ptr [s_grid_rec + ecx*4 + 84h]
-        and eax, 4
-        ret
-    cell_flag4_is_set_default:
-        mov eax, dword ptr [s_grid_rec + eax + 84h]
-        and eax, 4
-        ret
-    }
-}
-#else
-static uint32_t cell_flag4_is_set_target(int x, int y, int field)
-{
-    const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
-    const uint32_t offset = cell * GRID_REC_STRIDE;
-    if (s_grid_rec[offset + 32u] != 0u)
-        return s_grid_rec[offset + 33u + (uint32_t)field] & 4u;
-    return s_grid_rec[offset + 33u] & 4u;
-}
-#endif
-
 uint32_t cell_flag4_is_set(int x, int y, int field)
 {
     const int64_t block = grid_rec_block_index(x, y);
@@ -9755,39 +9586,6 @@ uint32_t cell_flag4_is_set(int x, int y, int field)
     return cell_flag4_is_set_target(x, y, field);
 }
 
-// The mapped bodies address the retail flag table directly; public helpers
-// retain the dependency override and portable bounds checks.
-// FUNCTION: LEGORR 0x0040b2a0
-#if defined(_MSC_VER) && defined(_M_IX86)
-static __declspec(naked) void cell_flag100_set_target(int x, int y, int field)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        lea eax, dword ptr [eax + eax*2]
-        lea edx, dword ptr [ecx + eax*4]
-        add eax, edx
-        mov edx, dword ptr [esp + 0ch]
-        lea ecx, dword ptr [eax + eax*2]
-        shl ecx, 4
-        add edx, ecx
-        add eax, edx
-        mov ecx, dword ptr [s_grid_rec + eax*4 + 84h]
-        lea eax, dword ptr [s_grid_rec + eax*4 + 84h]
-        or ch, 1
-        mov dword ptr [eax], ecx
-        ret
-    }
-}
-#else
-static void cell_flag100_set_target(int x, int y, int field)
-{
-    const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
-    const uint32_t word = cell * GRID_REC_STRIDE + (uint32_t)field + 33u;
-    s_grid_rec[word] |= 0x100u;
-}
-#endif
-
 void cell_flag100_set(int x, int y, int field)
 {
     if (unported_ledger_stubs::dependency_grid_flag100_set(x, y, field))
@@ -9795,36 +9593,6 @@ void cell_flag100_set(int x, int y, int field)
     const int64_t word = grid_rec_field_index(x, y, field);
     if (word >= 0) cell_flag100_set_target(x, y, field);
 }
-
-// FUNCTION: LEGORR 0x0040b2e0
-#if defined(_MSC_VER) && defined(_M_IX86)
-static __declspec(naked) uint32_t cell_flag100_is_set_target(int x, int y,
-                                                             int field)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [esp + 8]
-        lea eax, dword ptr [eax + eax*2]
-        lea edx, dword ptr [ecx + eax*4]
-        add eax, edx
-        mov edx, dword ptr [esp + 0ch]
-        lea ecx, dword ptr [eax + eax*2]
-        shl ecx, 4
-        add edx, ecx
-        add eax, edx
-        mov eax, dword ptr [s_grid_rec + eax*4 + 84h]
-        and eax, 100h
-        ret
-    }
-}
-#else
-static uint32_t cell_flag100_is_set_target(int x, int y, int field)
-{
-    const uint32_t cell = (uint32_t)(y + x * GRID_REC_COLS);
-    const uint32_t word = cell * GRID_REC_STRIDE + (uint32_t)field + 33u;
-    return s_grid_rec[word] & 0x100u;
-}
-#endif
 
 uint32_t cell_flag100_is_set(int x, int y, int field)
 {
@@ -9836,28 +9604,6 @@ uint32_t cell_flag100_is_set(int x, int y, int field)
         return 0;
     }
     return cell_flag100_is_set_target(x, y, field);
-}
-
-/* The active table and its dimension owner are mirrored from the cell-kind
- * registry. The Reccmp GLOBAL alias for this address is already attached to
- * the shared descriptor view in crt.cpp; do not annotate a second mirror. */
-static uint32_t* s_grid_present_table;
-// GLOBAL: LEGORR 0x004c7dfc
-static const uint32_t* s_grid_record_manager;
-
-// FUNCTION: LEGORR 0x0040e460
-int grid_cell_record_present_check(int x, int y)
-{
-    size_t index;
-    s_grid_present_table = (uint32_t*)map_cell_record_grid_get();
-    s_grid_record_manager =
-        (const uint32_t*)map_cell_record_grid_level_get();
-    if (s_grid_present_table == NULL || s_grid_record_manager == NULL ||
-        x < 0 || y < 0) return 0;
-    index = (size_t)s_grid_record_manager[5] * (size_t)y + (size_t)x;
-    /* MapCellRecordGridInitialize allocates 0x14 bytes per cell, but the
-     * retail accessors address the first 0x0c-byte record by this stride. */
-    return s_grid_present_table[index * 3u] != 0u;
 }
 
 /* --- corner normal sampling (see level.hpp) ------------------------------- */
@@ -10808,61 +10554,6 @@ const void* terrain_cell_variant_window_get(const void* terrain)
 {
     const TerrainState* state = (const TerrainState*)terrain;
     return state != NULL ? state->variant_window : NULL;
-}
-
-// FUNCTION: LEGORR 0x0040d3f0
-int terrain_cell_special_state_predicate(const LevelState* s, int cx,
-                                         int cy, int secondary_gate)
-{
-    if (level_cell_occupied_or_flag(s, cx, cy, 1) == 0u) {
-        return 0;
-    }
-    if (secondary_gate == 0) {
-        return 1;
-    }
-    return level_cell_secondary_flag_100(s, cx, cy) != 0u ? 1 : 0;
-}
-
-/* TerrainCellHasOccupiedOrFlaggedNeighbor (FUN_0040d240): preserve the
- * corpus's center rejection and adjacent/distance-two checks per axis. The
- * per-cell DAT_004c7df8 side table is threaded as a query callback. */
-// FUNCTION: LEGORR 0x0040D240
-int terrain_cell_has_occupied_or_flagged_neighbor(
-    const LevelState* s, int cx, int cy,
-    TerrainCellSidecarPresenceQuery sidecar_present)
-{
-    const uint8_t* center = level_voxel(s, cx, cy);
-    if (center == NULL || (center[8] & 8u) == 0u
-        || center[2] == 6u || center[2] == 7u) {
-        return 0;
-    }
-    if ((sidecar_present != NULL && sidecar_present(s, cx, cy) != 0)
-        || terrain_cell_special_state_predicate(s, cx, cy, 0) != 0) {
-        return 0;
-    }
-
-    static const int8_t offsets[2][4][2] = {
-        { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } },
-        { { 0, 2 }, { 2, 0 }, { 0, -2 }, { -2, 0 } },
-    };
-    for (int direction = 0; direction < 4; ++direction) {
-        int distance;
-        /* FUN_0040d240 tests the adjacent cell, then the distance-two cell
-         * on that same cardinal axis before advancing to the next axis. */
-        for (distance = 0; distance < 2; ++distance) {
-            const int x = cx + offsets[distance][direction][0];
-            const int y = cy + offsets[distance][direction][1];
-            if (level_coord_pair_within_bounds(s, x, y) == 0) {
-                continue;
-            }
-            if ((sidecar_present != NULL &&
-                 sidecar_present(s, x, y) != 0) ||
-                terrain_cell_special_state_predicate(s, x, y, 0) != 0) {
-                return 1;
-            }
-        }
-    }
-    return 0;
 }
 
 /* --- the path record window band (2026-10-25) ----------------------------- */
@@ -12603,7 +12294,7 @@ static int entity_path_footprint_cell_get(const TypeConfigTable* table,
     return 1;
 }
 
-static void entity_cell_path_effects_apply_level(EntitySlot* entity,
+void entity_cell_path_effects_apply_level(EntitySlot* entity,
                                                   LevelState* level)
 {
     const TypeConfigTable* table;
@@ -12701,17 +12392,6 @@ static void entity_cell_path_effects_apply_level(EntitySlot* entity,
     entity_placement_commands_build_once(entity);
 }
 
-/* EntityCellPathEffectsApply (FUN_00409d50) uses one entity argument and the
- * active level/type tables; there is no caller-supplied hook bundle. */
-// FUNCTION: LEGORR 0x00409d50
-void entity_cell_path_effects_apply_current(EntitySlot* entity)
-{
-    GameContext* context = entity != NULL ? entity->owner_ctx : NULL;
-    if (context == NULL) context = entity_pool_callback_context_get();
-    entity_cell_path_effects_apply_level(
-        entity, context != NULL ? context->level : NULL);
-}
-
 /* Explicit-level compatibility entry point retained for port callers. The
  * type record, rotation, terrain operations, and effect slots are resolved
  * internally; the former hook bundle is ignored. */
@@ -12731,43 +12411,6 @@ void entity_cell_path_effects_apply(
 void ledger_stub_00409f20_EntityPlacementCommandsBuildOnce(EntitySlot* entity)
 {
     entity_placement_commands_build_once(entity);
-}
-
-
-// CellCornerOccupancyScan examines the center and ordered cardinal neighbors
-// in the map-record sidecar and the level's special-state predicate.
-// FUNCTION: LEGORR 0x0040e1e0
-uint32_t ledger_stub_0040e1e0_CellCornerOccupancyScan(
-    LevelState* level, int cell_x, int cell_y)
-{
-    static const int dx[4] = { 0, 1, 0, -1 };
-    static const int dy[4] = { 1, 0, -1, 0 };
-    uint32_t i;
-    if (level == NULL ||
-        terrain_cell_object_record_present_for_level(level, cell_x, cell_y) ||
-        terrain_cell_special_state_predicate(level, cell_x, cell_y, 0))
-        return 0u;
-    for (i = 0u; i < 4u; ++i) {
-        int nx = cell_x + dx[i];
-        int ny = cell_y + dy[i];
-        int opposite = (int)((i - 2u) & 3u);
-        int ox = cell_x + dx[opposite];
-        int oy = cell_y + dy[opposite];
-        int neighbor_record = terrain_cell_object_record_present_for_level(
-            level, nx, ny);
-        int neighbor_special = 0;
-        if (!neighbor_record) {
-            neighbor_special = terrain_cell_special_state_predicate(
-                level, nx, ny, 0);
-            if (!neighbor_special) continue;
-        }
-        if (terrain_cell_object_record_present_for_level(level, ox, oy))
-            return 1u;
-        if (terrain_cell_special_state_predicate(level, ox, oy, 0) &&
-            !terrain_cell_special_state_predicate(level, nx, ny, 0))
-            return 1u;
-    }
-    return 0u;
 }
 
 

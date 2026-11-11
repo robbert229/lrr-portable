@@ -1,4 +1,4 @@
-# input_sha256: 426009e32927494c53b52ebe822dccc1afc4375807132e4c741f17d038767583
+# input_sha256: 4268b8a8f018c08e7bda6f815b560cf132b7afdbfd3f00f2eef8e92cd5ce53c6
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -194,7 +194,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 40.89 segment_2d_point_distance
+0x004089d0 43.56 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -499,7 +499,7 @@
 0x004196f0 29.63 incident_message_queue_append
 0x00419780 24.39 indexed_linked_list_entry_get
 0x004197b0 35.96 incident_message_queue_remove_at
-0x00419830 8.96 entity_linked_list_entries_remove_by_key
+0x00419830 8.82 entity_linked_list_entries_remove_by_key
 0x004198f0 9.26 terrain_cell_linked_entries_remove
 0x004199f0 94.55 message_pre_check
 0x00419a80 26.23 incident_message_node_create
@@ -507,14 +507,14 @@
 0x00419b20 100.00 message_queue_find_id
 0x00419b50 30.00 remaining_timer_duration_get
 0x00419b80 15.53 message_dispatch
-0x00419da0 23.33 incident_message_panel_refresh_if_active
+0x00419da0 20.00 incident_message_panel_refresh_if_active
 0x00419de0 43.84 pending_record_list_entry_move_to_front
 0x00419e60 71.43 pending_record_release_if_present
 0x00419e80 26.79 pending_record_list_entry_remove_and_release
 0x00419f10 35.29 pending_record_release_all
 0x00419f30 43.77 info_message_queue_tick
 0x0041a080 27.49 incident_message_text_consumer
-0x0041a1a0 32.38 ui_entry_hit_test_and_dispatch
+0x0041a1a0 35.47 ui_entry_hit_test_and_dispatch
 0x0041a250 91.30 scroll_offset_from_cursor_update
 0x0041a290 33.33 screen_right_edge_cache_refresh
 0x0041a2c0 92.31 message_cooldown_tick
@@ -1114,7 +1114,7 @@
 0x0044f870 42.75 terrain_world_point_to_cell
 0x0044f940 9.65 terrain_surface_height_interpolate
 0x0044fab0 18.57 terrain_cell_surface_triangle_vertices_select
-0x0044fb90 23.19 terrain_state_surface_point_project_offset
+0x0044fb90 23.65 terrain_state_surface_point_project_offset
 0x0044fe70 9.89 terrain_authored_surface_height_interpolate
 0x00450060 14.29 grid_cell_read_surface_vector
 0x004500d0 10.20 terrain_cell_surface_vertices_get
@@ -1133,7 +1133,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 11.34 terrain_cell_normal_sample
+0x004512d0 13.27 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -1856,11 +1856,11 @@
 0x0047d430 8.33 scene_object_registry_teardown
 0x0047d470 37.21 image_surface_release
 0x0047d490 19.26 surface_pixel_format_query_convert_surface
-0x0047d520 32.65 surface_palette8_to_16bit_surface_expand
+0x0047d520 33.82 surface_palette8_to_16bit_surface_expand
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
-0x0047d800 29.34 surface_bitmap24_bit_surface_convert
+0x0047d800 29.17 surface_bitmap24_bit_surface_convert
 0x0047db90 100.00 rgb_channels_pack
 0x0047dbc0 22.22 resource_record_add_ref
 0x0047dbf0 18.87 image_surface_blit_transformed
@@ -1955,7 +1955,7 @@
 0x004823e0 13.56 terrain_cell_quad_vertices_write
 0x00482470 11.86 indexed_geometry_data_copy_to_output
 0x00482500 9.22 instance_quad_vertex_data_fill
-0x00482620 26.09 mesh_segment_vertex_fill
+0x00482620 31.30 mesh_segment_vertex_fill
 0x004826c0 9.64 mesh_vertex_record_fill
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set
@@ -1975,7 +1975,7 @@
 0x00483240 51.28 indexed_record_transform_copy_in
 0x00483270 16.34 render_object_color_vector_set
 0x00483400 100.00 indexed_record_data_address_get_target
-0x00483420 30.51 screen_effect_item_opacity_set_target
+0x00483420 36.16 screen_effect_item_opacity_set_target
 0x00483540 100.00 matrix4_identity_initialize
 0x00483580 18.18 render_interface_capability_check
 0x00483600 24.24 direct3d_viewport_setup
@@ -1994,7 +1994,7 @@
 0x004841d0 18.18 flic_tick_loop
 0x00484260 14.81 flic_stream_frame_advance
 0x00484320 17.12 flic_chunk_walk
-0x004844b0 17.65 flic_frame_record_walk
+0x004844b0 16.67 flic_frame_record_walk
 0x00484610 34.00 ledger_stub_00484610_FlicSubrecordOpcodeDispatch
 0x00484720 32.35 flic_chunk_buffer_and_continue_lk
 0x004847d0 33.08 flic_chunk_buffer_and_continue_type0b
@@ -2020,8 +2020,8 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 25.00 text_buffer_append_vformat
 0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.99 text_buffer_draw_wrapped
-0x00485710 22.48 text_wrap_measure_and_draw_lines
+0x00485390 5.96 text_buffer_draw_wrapped
+0x00485710 24.94 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
@@ -2101,9 +2101,9 @@
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
-0x0048b260 19.05 ledger_stub_0048b260_StartupStreamStateReset
+0x0048b260 57.14 ledger_stub_0048b260_StartupStreamStateReset
 0x0048b280 100.00 window_mode_flag_set
-0x0048b290 72.73 ledger_stub_0048b290_StartupStreamsClose
+0x0048b290 100.00 ledger_stub_0048b290_StartupStreamsClose
 0x0048b2f0 31.82 startup_config_stream_load
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor
@@ -2355,7 +2355,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 40.89 segment_2d_point_distance
+0x004089d0 43.56 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -2660,7 +2660,7 @@
 0x004196f0 29.63 incident_message_queue_append
 0x00419780 24.39 indexed_linked_list_entry_get
 0x004197b0 35.96 incident_message_queue_remove_at
-0x00419830 8.96 entity_linked_list_entries_remove_by_key
+0x00419830 8.82 entity_linked_list_entries_remove_by_key
 0x004198f0 9.26 terrain_cell_linked_entries_remove
 0x004199f0 94.55 message_pre_check
 0x00419a80 26.23 incident_message_node_create
@@ -2668,14 +2668,14 @@
 0x00419b20 100.00 message_queue_find_id
 0x00419b50 30.00 remaining_timer_duration_get
 0x00419b80 15.53 message_dispatch
-0x00419da0 23.33 incident_message_panel_refresh_if_active
+0x00419da0 20.00 incident_message_panel_refresh_if_active
 0x00419de0 43.84 pending_record_list_entry_move_to_front
 0x00419e60 71.43 pending_record_release_if_present
 0x00419e80 26.79 pending_record_list_entry_remove_and_release
 0x00419f10 35.29 pending_record_release_all
 0x00419f30 43.77 info_message_queue_tick
 0x0041a080 27.49 incident_message_text_consumer
-0x0041a1a0 32.38 ui_entry_hit_test_and_dispatch
+0x0041a1a0 35.47 ui_entry_hit_test_and_dispatch
 0x0041a250 91.30 scroll_offset_from_cursor_update
 0x0041a290 33.33 screen_right_edge_cache_refresh
 0x0041a2c0 92.31 message_cooldown_tick
@@ -3275,7 +3275,7 @@
 0x0044f870 42.75 terrain_world_point_to_cell
 0x0044f940 9.65 terrain_surface_height_interpolate
 0x0044fab0 18.57 terrain_cell_surface_triangle_vertices_select
-0x0044fb90 23.19 terrain_state_surface_point_project_offset
+0x0044fb90 23.65 terrain_state_surface_point_project_offset
 0x0044fe70 9.89 terrain_authored_surface_height_interpolate
 0x00450060 14.29 grid_cell_read_surface_vector
 0x004500d0 10.20 terrain_cell_surface_vertices_get
@@ -3294,7 +3294,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 11.34 terrain_cell_normal_sample
+0x004512d0 13.27 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -4017,11 +4017,11 @@
 0x0047d430 8.33 scene_object_registry_teardown
 0x0047d470 37.21 image_surface_release
 0x0047d490 19.26 surface_pixel_format_query_convert_surface
-0x0047d520 32.65 surface_palette8_to_16bit_surface_expand
+0x0047d520 33.82 surface_palette8_to_16bit_surface_expand
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
-0x0047d800 29.34 surface_bitmap24_bit_surface_convert
+0x0047d800 29.17 surface_bitmap24_bit_surface_convert
 0x0047db90 100.00 rgb_channels_pack
 0x0047dbc0 22.22 resource_record_add_ref
 0x0047dbf0 18.87 image_surface_blit_transformed
@@ -4116,7 +4116,7 @@
 0x004823e0 13.56 terrain_cell_quad_vertices_write
 0x00482470 11.86 indexed_geometry_data_copy_to_output
 0x00482500 9.22 instance_quad_vertex_data_fill
-0x00482620 26.09 mesh_segment_vertex_fill
+0x00482620 31.30 mesh_segment_vertex_fill
 0x004826c0 9.64 mesh_vertex_record_fill
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set
@@ -4136,7 +4136,7 @@
 0x00483240 51.28 indexed_record_transform_copy_in
 0x00483270 16.34 render_object_color_vector_set
 0x00483400 100.00 indexed_record_data_address_get_target
-0x00483420 30.51 screen_effect_item_opacity_set_target
+0x00483420 36.16 screen_effect_item_opacity_set_target
 0x00483540 100.00 matrix4_identity_initialize
 0x00483580 18.18 render_interface_capability_check
 0x00483600 24.24 direct3d_viewport_setup
@@ -4155,7 +4155,7 @@
 0x004841d0 18.18 flic_tick_loop
 0x00484260 14.81 flic_stream_frame_advance
 0x00484320 17.12 flic_chunk_walk
-0x004844b0 17.65 flic_frame_record_walk
+0x004844b0 16.67 flic_frame_record_walk
 0x00484610 34.00 ledger_stub_00484610_FlicSubrecordOpcodeDispatch
 0x00484720 32.35 flic_chunk_buffer_and_continue_lk
 0x004847d0 33.08 flic_chunk_buffer_and_continue_type0b
@@ -4181,8 +4181,8 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 25.00 text_buffer_append_vformat
 0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.99 text_buffer_draw_wrapped
-0x00485710 22.48 text_wrap_measure_and_draw_lines
+0x00485390 5.96 text_buffer_draw_wrapped
+0x00485710 24.94 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
@@ -4262,9 +4262,9 @@
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
-0x0048b260 19.05 ledger_stub_0048b260_StartupStreamStateReset
+0x0048b260 57.14 ledger_stub_0048b260_StartupStreamStateReset
 0x0048b280 100.00 window_mode_flag_set
-0x0048b290 72.73 ledger_stub_0048b290_StartupStreamsClose
+0x0048b290 100.00 ledger_stub_0048b290_StartupStreamsClose
 0x0048b2f0 31.82 startup_config_stream_load
 0x0048b330 100.00 registry_path_split
 0x0048b360 100.00 registry_path_accessor

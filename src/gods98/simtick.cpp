@@ -107,13 +107,13 @@ void simtick_effect_set_hooks(void (*set_opacity)(uint32_t, int, float, int),
 }
 
 /* ---- post-step cluster (FUN_0040d450) ----------------------------------- */
-static int s_post_steps = 0;
-static void** s_post_record_tables = NULL;
-static uint32_t s_post_record_table_count = 0;
-static SimtickPostClusterRecordHook s_post_active_hook = NULL;
-static SimtickPostClusterRecordHook s_post_entity_first_hook = NULL;
-static SimtickPostClusterRecordHook s_post_entity_second_hook = NULL;
-static void* s_post_cluster_user = NULL;
+int s_post_steps = 0;
+void** s_post_record_tables = NULL;
+uint32_t s_post_record_table_count = 0;
+SimtickPostClusterRecordHook s_post_active_hook = NULL;
+SimtickPostClusterRecordHook s_post_entity_first_hook = NULL;
+SimtickPostClusterRecordHook s_post_entity_second_hook = NULL;
+void* s_post_cluster_user = NULL;
 static SimtickSceneEntityHook s_scene_entity_hook = NULL;
 static void* s_scene_entity_user = NULL;
 
@@ -137,44 +137,6 @@ void simtick_post_cluster_records_set(void** tables, uint32_t table_count,
     s_post_cluster_user = user;
 }
 
-static void post_cluster_active_records(void)
-{
-    uint32_t table_index;
-    const size_t record_stride = 0x10u + sizeof(void*);
-    for (table_index = 0; table_index < s_post_record_table_count;
-         ++table_index) {
-        void* table = s_post_record_tables != NULL
-            ? s_post_record_tables[table_index] : NULL;
-        uint32_t count;
-        uint32_t i;
-        if (table == NULL) continue;
-        count = (uint32_t)1u << (table_index & 31u);
-        for (i = 0; i < count; ++i) {
-            uint8_t* record = (uint8_t*)table + i * record_stride;
-            void* self;
-            memcpy(&self, record + 0x10, sizeof(self));
-            if (self == (void*)record && s_post_active_hook != NULL)
-                s_post_active_hook(record, 1, s_post_cluster_user);
-        }
-    }
-}
-
-static int post_cluster_entity_first(EntitySlot* entity, void* payload)
-{
-    (void)payload;
-    if (s_post_entity_first_hook != NULL)
-        s_post_entity_first_hook(entity, 0, s_post_cluster_user);
-    return 0;
-}
-
-static int post_cluster_entity_second(EntitySlot* entity, void* payload)
-{
-    (void)payload;
-    if (s_post_entity_second_hook != NULL)
-        s_post_entity_second_hook(entity, 1, s_post_cluster_user);
-    return 0;
-}
-
 static int scene_entity_callback(EntitySlot* entity, void* payload)
 {
     float dt = *(float*)payload;
@@ -191,18 +153,6 @@ void simtick_scene_entity_hook_set(SimtickSceneEntityHook hook, void* user)
 {
     s_scene_entity_hook = hook;
     s_scene_entity_user = user;
-}
-
-// FUNCTION: LEGORR 0x0040d450
-void simtick_post_cluster(EngineContext* c)
-{
-    (void)c;
-    post_cluster_active_records();
-    entity_pool_find_by_callback_filtered_current(
-        post_cluster_entity_first, NULL);
-    entity_pool_find_by_callback_filtered_current(
-        post_cluster_entity_second, NULL);
-    s_post_steps += 3;
 }
 
 /* ---- bobbins list machine (FUN_004091e0) -------------------------------- */

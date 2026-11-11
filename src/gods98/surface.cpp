@@ -15,6 +15,7 @@
 #include "view.hpp"
 #include "frameloop.hpp"
 #include "scene_resources.hpp"
+#include "surface_shared.hpp"
 
 #if defined(_MSC_VER)
 #define SURFACE_COM_CALL __stdcall
@@ -1298,20 +1299,6 @@ static RendererRecordTableState s_renderer_record_table;
 
 static FontPixelFormatQueryFn s_font_pixel_format_query;
 static FontPixelFormatReleaseFn s_font_pixel_format_release;
-typedef struct FontAtlasGlyphRecord {
-    float x;
-    float y;
-    float width;
-    float height;
-} FontAtlasGlyphRecord;
-typedef struct FontAtlasRecord {
-    TextureSurface* surface;
-    struct FontAtlasRecord* free_next;
-    FontAtlasGlyphRecord glyphs[10 * 19];
-    uint32_t line_height;
-    uint32_t tab_width;
-} FontAtlasRecord;
-static FontAtlasRecord* s_font_atlas_record_free_list;
 static SurfacePixelBitsQueryFn s_surface_pixel_bits_query;
 static SurfaceWriterUnlockHook s_surface_writer_unlock_hook;
 static RendererBeginFrameHook s_renderer_begin_frame_hook;
@@ -3351,73 +3338,6 @@ void surface_text_character_map_initialize(
     }
 }
 
-// FUNCTION: LEGORR 0x00479ee0
-void* font_atlas_record_create(const char* name)
-{
-    TextureSurface* surface;
-    FontAtlasRecord* record;
-    int cell_width;
-    int cell_height;
-    int row;
-    int column;
-    uint32_t key1;
-
-    if (name == NULL || name[0] == '\0') return NULL;
-    surface = image_surface_load(name, 0u, 0u);
-    if (surface == NULL || surface->pixels == NULL ||
-        surface->width < 10 || surface->height < 19) {
-        texture_release(surface);
-        return NULL;
-    }
-    cell_width = surface->width / 10;
-    cell_height = surface->height / 19;
-    if (cell_width <= 0 || cell_height <= 0) {
-        texture_release(surface);
-        return NULL;
-    }
-    key1 = surface->key_count >= 2 ? surface->keys[1] : surface->pixels[0];
-
-    record = s_font_atlas_record_free_list;
-    if (record != NULL) {
-        s_font_atlas_record_free_list = record->free_next;
-        memset(record, 0, sizeof(*record));
-    }
-    else {
-        record = (FontAtlasRecord*)calloc(1, sizeof(*record));
-    }
-    if (record == NULL) {
-        texture_release(surface);
-        return NULL;
-    }
-    record->surface = surface;
-    record->line_height = (uint32_t)cell_height;
-    record->tab_width = (uint32_t)(cell_width * 8);
-    for (column = 0; column < 10; ++column) {
-        for (row = 0; row < 19; ++row) {
-            FontAtlasGlyphRecord* glyph =
-                &record->glyphs[column * 19 + row];
-            int x0 = column * cell_width;
-            int y0 = row * cell_height;
-            int width = cell_width;
-            int x;
-            glyph->x = (float)x0;
-            glyph->y = (float)y0;
-            glyph->height = (float)cell_height;
-            /* FontResourceLoad scans the first row against the second
-             * palette key, retaining at least one pixel of advance. The
-             * first key may encode spacing without visible glyph ink. */
-            for (x = cell_width - 1; x > 0; --x) {
-                uint32_t pixel = surface->pixels[(size_t)y0 *
-                    (size_t)surface->width + (size_t)(x0 + x)];
-                if (pixel != key1) break;
-                --width;
-            }
-            glyph->width = (float)width;
-        }
-    }
-    return record;
-}
-
 TextureSurface* font_atlas_record_surface_get(const void* opaque_record)
 {
     const FontAtlasRecord* record = (const FontAtlasRecord*)opaque_record;
@@ -3445,17 +3365,6 @@ int font_atlas_record_glyph_get(const void* opaque_record,
     rect_out[2] = entry->width;
     rect_out[3] = entry->height;
     return 1;
-}
-
-// FUNCTION: LEGORR 0x0047A550
-void font_atlas_record_release(void* opaque_record)
-{
-    FontAtlasRecord* record = (FontAtlasRecord*)opaque_record;
-    if (record == NULL) return;
-    texture_release(record->surface);
-    record->surface = NULL;
-    record->free_next = s_font_atlas_record_free_list;
-    s_font_atlas_record_free_list = record;
 }
 
 void font_pixel_format_hooks_set(FontPixelFormatQueryFn query,

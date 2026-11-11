@@ -16,25 +16,6 @@ extern "C" int __cdecl _output(FILE* stream, const char* format,
 extern "C" int __cdecl _flsbuf(int value, FILE* stream);
 #endif
 
-// FUNCTION: LEGORR 0x00485300
-void objective_advisor_text_copy(void* record, int mode,
-                                 const char* format, ...)
-{
-    char local[1024];
-    va_list args;
-    va_start(args, format);
-    formatted_text_buffer_build(local, sizeof(local), format, args);
-    va_end(args);
-    strcpy((char*)record + 0x18, local);
-    if (mode == 0) {
-        *(uint32_t*)((char*)record + 0x828) = 0x41c80000u;
-    }
-    else {
-        *(uint32_t*)((char*)record + 0x828) = 0u;
-    }
-    *(uint32_t*)((char*)record + 0x82c) |= 2u;
-}
-
 /* FormattedTextBufferBuild (FUN_0048e1e0): VC5 builds use output.obj's
  * __output with a string-backed FILE; other builds use bounded vsnprintf. */
 // FUNCTION: LEGORR 0x0048E1E0

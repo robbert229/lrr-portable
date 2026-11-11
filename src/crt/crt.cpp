@@ -1878,12 +1878,6 @@ void global_value_004ffe48_set(uint32_t value)
 
 // GLOBAL: LEGORR 0x00557860
 static uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
-// GLOBAL: LEGORR 0x004b8a54
-static uint32_t s_level_stored_word = 0u;  /* DAT_004b8a54 */
-// GLOBAL: LEGORR 0x004c7178
-uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
-// GLOBAL: LEGORR 0x004c79a4
-static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
 
 // FUNCTION: LEGORR 0x00407340
 void state_flag_toggle_when_zero(void)
@@ -1897,21 +1891,9 @@ uint32_t global_task_refresh_flag_get(void)
     return s_task_refresh_flag;
 }
 
-// FUNCTION: LEGORR 0x00409d40
-void level_state_stored_value_set(uint32_t v)
-{
-    s_level_stored_word = v;
-}
-
 uint32_t global_mode_zero_input_peek(void)
 {
     return s_mode_zero_flag;
-}
-
-// FUNCTION: LEGORR 0x0040bfc0
-void rockfall_style_table_base_set(uint32_t v)
-{
-    s_rockfall_base = v;
 }
 
 uint32_t advisor_state_word_peek(void)  { return s_advisor_state_word; }
@@ -3300,46 +3282,6 @@ void* resource_name_cache_get_or_load(const char* key)
         return *value_slot;
     }
     return NULL;
-}
-
-/* --- the selection marker table (see crt.hpp) ------------------------------
- * DAT_004c7e00..e7c is 32 pointer slots plus the count word at e80; the
- * descriptor sits at DAT_004c7df8. All unowned: zero-init statics here. */
-// GLOBAL: LEGORR 0x004c7e00
-static void*    s_marker_table[32];
-// GLOBAL: LEGORR 0x004c7e80
-static uint32_t s_marker_count;
-// GLOBAL: LEGORR 0x004c7df8
-static void*    s_marker_descriptor;
-
-// FUNCTION: LEGORR 0x0040ce30
-void selection_marker_resources_release(void)
-{
-    /* Corpus walk: an unsigned add-4 pointer stride bounded by the table
-     * end, entered unconditionally and bottom-tested (body, add, cmp, jb —
-     * no pre-loop check). Deviation: each freed slot is cleared in place
-     * (the corpus dangles, which a second release could double-free), so
-     * the window stays idempotent; pinned by test_crt.cpp's "the freed
-     * slots clear out" / double-release checks. */
-    void** p;
-    void*  desc;
-
-    p = s_marker_table;
-    do {
-        void* slot = *p;
-        if (slot != NULL) {
-            engine_heap_free(slot);
-            *p = NULL;
-        }
-        ++p;
-    } while (p < s_marker_table + 32);
-
-    desc = s_marker_descriptor; /* the corpus loads it once... */
-    s_marker_count = 0u;        /* ...before the count resets */
-    if (desc != NULL) {
-        engine_heap_free(desc); /* the loaded word rides the push */
-        s_marker_descriptor = NULL;
-    }
 }
 
 void selection_marker_slot_set(int index, void* ptr)

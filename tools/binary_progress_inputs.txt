@@ -34,12 +34,15 @@ src/game/cmd.h
 src/game/cmd.hpp
 src/game/cmd_shared.hpp
 src/game/combat_ray_ports.hpp
+src/game/dependencies.cpp
 src/game/dependency_grid.cpp
+src/game/dependency_grid_shared.hpp
 src/game/effects.cpp
 src/game/effects.hpp
 src/game/encyclopedia.cpp
 src/game/entity.cpp
 src/game/entity.hpp
+src/game/entity_cell_effects.cpp
 src/game/entity_config.cpp
 src/game/entity_config_shared.hpp
 src/game/entity_motion_owner.cpp
@@ -54,6 +57,7 @@ src/game/frontend.hpp
 src/game/frontend_shared.hpp
 src/game/game.cpp
 src/game/game.hpp
+src/game/info.cpp
 src/game/lava_erosion.cpp
 src/game/level.cpp
 src/game/level.hpp
@@ -77,6 +81,7 @@ src/game/priorities.h
 src/game/priority_config_ports.hpp
 src/game/render.cpp
 src/game/render.hpp
+src/game/rock_fall_styles.cpp
 src/game/savegame.cpp
 src/game/savegame.hpp
 src/game/scene_render.cpp
@@ -92,10 +97,13 @@ src/game/simulation_ui_ports.hpp
 src/game/spawn.cpp
 src/game/spawn.hpp
 src/game/startup_config.cpp
+src/game/startup_config_shared.hpp
 src/game/steering.cpp
+src/game/terrain_cell_objects.cpp
 src/game/terrain_feedback.hpp
 src/game/terrain_grid.cpp
 src/game/terrain_grid.hpp
+src/game/terrain_grid_shared.hpp
 src/game/tutorial_hud.cpp
 src/game/tutorial_hud_ports.hpp
 src/game/tutorial_world_arrows.cpp
@@ -117,6 +125,7 @@ src/game/weapon.hpp
 src/gods98/audio.cpp
 src/gods98/audio.h
 src/gods98/audio.hpp
+src/gods98/bitmap_font.cpp
 src/gods98/block.cpp
 src/gods98/block.hpp
 src/gods98/camera.cpp
@@ -133,8 +142,11 @@ src/gods98/engine.hpp
 src/gods98/engine_shared.hpp
 src/gods98/entity.cpp
 src/gods98/entity.hpp
+src/gods98/file_list_streams.cpp
 src/gods98/flic.cpp
 src/gods98/flic.hpp
+src/gods98/flic_shared.hpp
+src/gods98/flic_unit.cpp
 src/gods98/frameloop.cpp
 src/gods98/frameloop.hpp
 src/gods98/frameloop_shared.hpp
@@ -148,10 +160,13 @@ src/gods98/gods98.cpp
 src/gods98/gods98.hpp
 src/gods98/heap.cpp
 src/gods98/heap.hpp
+src/gods98/heap_shared.hpp
 src/gods98/images.h
 src/gods98/input.cpp
 src/gods98/input.h
 src/gods98/input.hpp
+src/gods98/input_shared.hpp
+src/gods98/input_unit.cpp
 src/gods98/keys.c
 src/gods98/keys.h
 src/gods98/lwsc_scene.cpp
@@ -166,6 +181,7 @@ src/gods98/media.cpp
 src/gods98/media.hpp
 src/gods98/message.cpp
 src/gods98/message.hpp
+src/gods98/message_shared.hpp
 src/gods98/model.cpp
 src/gods98/model.hpp
 src/gods98/movie.cpp
@@ -199,6 +215,8 @@ src/gods98/string.cpp
 src/gods98/string.hpp
 src/gods98/surface.cpp
 src/gods98/surface.hpp
+src/gods98/surface_shared.hpp
+src/gods98/text_window.cpp
 src/gods98/texture.cpp
 src/gods98/texture.hpp
 src/gods98/tickers.cpp

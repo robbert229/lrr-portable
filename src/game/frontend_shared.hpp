@@ -22,4 +22,17 @@ extern void* s_ency_files[4];
 extern void* s_ency_crystal;
 extern void* s_ency_ore;
 
+extern TextureSurface* s_interface_message_tab_info_text;
+extern uint32_t s_screen_right_edge;
+extern void* s_panel_ui_record;
+namespace unported_ledger_stubs {
+extern UiEntryHitTestState* s_ui_entry_hit_test_state;
+} // namespace unported_ledger_stubs
+
+int fe_font_cell(const TextureSurface* f, int* cw, int* ch);
+void fe_font_keys(const TextureSurface* f, int cw, int ch, uint32_t keys[2]);
+int fe_font_advance(const TextureSurface* f, int cw, int ch, int g, const uint32_t keys[2]);
+int fe_font_glyph_draw_and_measure(void* px, int pitch, int w, int h, int x, int y, const TextureSurface* f, int cw, int ch, int g, const uint32_t keys[2], int draw);
+extern FeFormattedTextTextureResolve s_formatted_text_texture_resolve;
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */

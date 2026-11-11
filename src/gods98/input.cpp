@@ -6,73 +6,23 @@
 #include "message.hpp"
 #include "crt/crt.hpp"
 #include "frameloop.hpp"
+#include "input_shared.hpp"
 
 /* The action catalog gate is DAT_004de1f8, owned by the frontend. It is
  * distinct from the engine placement-mode word at DAT_00556ed4. */
 extern uint32_t interaction_flags_peek(void);
 
-static DirectInputHooks s_direct_input_hooks;
-static InputState s_direct_input_state;
-static InputState* s_active_input_state;
-static int s_direct_input_initialized;
-static int s_direct_input_keyboard_acquired;
+DirectInputHooks s_direct_input_hooks;
+InputState s_direct_input_state;
+InputState* s_active_input_state;
+int s_direct_input_initialized;
+int s_direct_input_keyboard_acquired;
 
 void input_direct_hooks_set(const DirectInputHooks* hooks)
 {
     if (hooks == NULL) memset(&s_direct_input_hooks, 0,
                               sizeof(s_direct_input_hooks));
     else s_direct_input_hooks = *hooks;
-}
-
-// FUNCTION: LEGORR 0x0047ed90
-int input_direct_initialize(void)
-{
-    input_reset(&s_direct_input_state);
-    s_direct_input_initialized = 0;
-    s_direct_input_keyboard_acquired = 0;
-    /* Retail only reports success after DirectInputCreate, keyboard-device
-     * creation, data-format/cooperative configuration, and Acquire succeed.
-     * Missing adapters cannot stand in for those operations. */
-    if (s_direct_input_hooks.interface_create == NULL ||
-        s_direct_input_hooks.keyboard_create == NULL ||
-        s_direct_input_hooks.devices_configure == NULL ||
-        s_direct_input_hooks.devices_acquire == NULL ||
-        s_direct_input_hooks.devices_release == NULL) {
-        input_reset(&s_direct_input_state);
-        return 0;
-    }
-    if (!s_direct_input_hooks.interface_create(s_direct_input_hooks.context)) {
-        input_reset(&s_direct_input_state);
-        return 0;
-    }
-    if (!s_direct_input_hooks.keyboard_create(s_direct_input_hooks.context))
-        goto failed;
-    if (s_direct_input_hooks.mouse_create != NULL &&
-        !s_direct_input_hooks.mouse_create(s_direct_input_hooks.context))
-        goto failed;
-    if (!s_direct_input_hooks.devices_configure(s_direct_input_hooks.context))
-        goto failed;
-    if (!s_direct_input_hooks.devices_acquire(s_direct_input_hooks.context))
-        goto failed;
-    s_direct_input_initialized = 1;
-    s_direct_input_keyboard_acquired = 1;
-    return 1;
-failed:
-    if (s_direct_input_hooks.devices_release != NULL)
-        s_direct_input_hooks.devices_release(s_direct_input_hooks.context);
-    input_reset(&s_direct_input_state);
-    s_direct_input_keyboard_acquired = 0;
-    return 0;
-}
-
-// FUNCTION: LEGORR 0x0047efd0
-void input_direct_shutdown(void)
-{
-    if (s_direct_input_initialized &&
-        s_direct_input_hooks.devices_release != NULL)
-        s_direct_input_hooks.devices_release(s_direct_input_hooks.context);
-    s_direct_input_initialized = 0;
-    s_direct_input_keyboard_acquired = 0;
 }
 
 InputState* input_direct_state_get(void)
@@ -87,14 +37,14 @@ void input_direct_state_bind(InputState* state)
 }
 #include <ctype.h>
 
-static uint8_t s_global_current_keys[INPUT_KEY_COUNT];
+uint8_t s_global_current_keys[INPUT_KEY_COUNT];
 // GLOBAL: LEGORR 0x0076AB34
-static int s_cursor_delta_x;
+int s_cursor_delta_x;
 // GLOBAL: LEGORR 0x0076AB38
-static int s_cursor_delta_y;
-static InputClientToScreenHook s_input_client_to_screen_hook;
-static InputSetCursorPositionHook s_input_set_cursor_position_hook;
-static void* s_input_cursor_hook_context;
+int s_cursor_delta_y;
+InputClientToScreenHook s_input_client_to_screen_hook;
+InputSetCursorPositionHook s_input_set_cursor_position_hook;
+void* s_input_cursor_hook_context;
 
 /* DAT_004a1f60 is a file-backed 256-entry scan-code-to-character table.
  * These bytes were read from reference/LegoRR.exe at file offset 0xa0d60;
@@ -135,7 +85,7 @@ static const uint32_t s_key_context_table[INPUT_KEY_COUNT] = {
     0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u
 };
 
-static void input_global_current_keys_copy(const InputState* state)
+void input_global_current_keys_copy(const InputState* state)
 {
     /* DirectInput polling supplies a full snapshot. Platform event capture
      * updates this table per key instead, so frame-edge clearing does not
@@ -259,58 +209,6 @@ void input_state_poll(InputState* s, int poll_active)
             s_direct_input_hooks.keyboard_acquire(
                 s_direct_input_hooks.context) == 0)
             s_direct_input_keyboard_acquired = 1;
-    }
-    input_global_current_keys_copy(s);
-}
-
-/* InputStatePoll (FUN_0047eef0): update the live keyboard snapshot using the
- * engine's fullscreen and application-active gates. DirectInput ownership is
- * represented by the existing callbacks because this backend has no native
- * DirectInput device object. */
-// FUNCTION: LEGORR 0x0047eef0
-void input_state_poll_retail(void)
-{
-    int poll_active = 1;
-
-    if ((s_engine_feature_word & 2u) == 0u)
-        poll_active = s_window_application_active != 0u;
-
-    if (!poll_active) {
-        InputState* s = s_active_input_state != NULL
-            ? s_active_input_state : &s_direct_input_state;
-        memset(s->cur, 0, sizeof(s->cur));
-        memset(s->prev, 0, sizeof(s->prev));
-        if (s_direct_input_initialized &&
-            s_direct_input_hooks.keyboard_unacquire != NULL) {
-            s_direct_input_hooks.keyboard_unacquire(
-                s_direct_input_hooks.context);
-        }
-        s_direct_input_keyboard_acquired = 0;
-        input_global_current_keys_copy(s);
-        return;
-    }
-    if (!s_direct_input_initialized) return;
-
-    InputState* s = s_active_input_state != NULL
-        ? s_active_input_state : &s_direct_input_state;
-    int result;
-    if (s_direct_input_keyboard_acquired) {
-        result = -0x7ff8ffe2;
-        if (s_direct_input_hooks.keyboard_state_read != NULL) {
-            memcpy(s->prev, s->cur, sizeof(s->cur));
-            memset(s->cur, 0, sizeof(s->cur));
-            result = s_direct_input_hooks.keyboard_state_read(
-                s_direct_input_hooks.context, INPUT_KEY_COUNT, s->cur);
-        }
-    }
-    else result = -0x7ff8ffe2;
-    if (result != 0) {
-        s_direct_input_keyboard_acquired = 0;
-        if (s_direct_input_hooks.keyboard_acquire != NULL &&
-            s_direct_input_hooks.keyboard_acquire(
-                s_direct_input_hooks.context) == 0) {
-            s_direct_input_keyboard_acquired = 1;
-        }
     }
     input_global_current_keys_copy(s);
 }
@@ -452,22 +350,6 @@ int input_keyboard_key_held(int key)
         ? s_global_current_keys[key] != 0u : 0;
 }
 
-/* KeyboardDownKeyCount (FUN_0047efb0): count nonzero entries in the
- * module's current 256-byte key snapshot. DirectInput writes a full sample;
- * the event backend maintains held state until it receives key-up. */
-// FUNCTION: LEGORR 0x0047EFB0
-int input_keyboard_down_key_count(void)
-{
-    int count = 0;
-    int i;
-    for (i = 0; i < INPUT_KEY_COUNT; ++i) {
-        if (s_global_current_keys[i] != 0u) {
-            ++count;
-        }
-    }
-    return count;
-}
-
 void input_cursor_position_hooks_install(InputClientToScreenHook convert,
                                         InputSetCursorPositionHook set_cursor,
                                         void* context)
@@ -477,85 +359,11 @@ void input_cursor_position_hooks_install(InputClientToScreenHook convert,
     s_input_cursor_hook_context = context;
 }
 
-/* CursorPositionUpdate (FUN_0047f010): sample the active cursor, clamp it to
- * the configured dimensions, then publish the pair and per-sample delta.
- * WinAPI's platform getter converts the stretched client to framebuffer
- * coordinates; reading GetCursorPos here would overwrite normalized events. */
-// FUNCTION: LEGORR 0x0047F010
-void input_cursor_position_update(void)
-{
-    int x;
-    int y;
-#if defined(LEGORRR_BACKEND_WINAPI)
-    if (!platform_cursor_position_get(&x, &y)) return;
-    if (x >= s_display_w) x = s_display_w - 1;
-    if (y >= s_display_h) y = s_display_h - 1;
-#else
-    int width;
-    int height;
-    if (!platform_cursor_position_get(&x, &y)) return;
-    width = g_platform_cursor_width;
-    height = g_platform_cursor_height;
-    if (x >= width) x = width - 1;
-    if (y >= height) y = height - 1;
-#endif
-    if (x < 0) x = 0;
-    if (y < 0) y = 0;
-    s_cursor_delta_x = x - (int32_t)s_renderer_word_a;
-    s_cursor_delta_y = y - (int32_t)s_renderer_word_b;
-    s_renderer_word_a = (uint32_t)x;
-    s_renderer_word_b = (uint32_t)y;
-}
-
 void input_cursor_position_sync(InputState* state)
 {
     if (state == NULL) return;
     state->mouse_x = (int32_t)s_renderer_word_a;
     state->mouse_y = (int32_t)s_renderer_word_b;
-}
-
-/* CursorSetClientPosition (FUN_0047f0d0): update the client-relative mouse
- * globals, clear the accumulated movement pair, convert against the active
- * window when the platform hook exists, and move the host cursor. */
-// FUNCTION: LEGORR 0x0047F0D0
-void input_cursor_client_position_set(int x, int y)
-{
-#if defined(LEGORRR_BACKEND_WINAPI)
-    /* These limits belong to the retained framebuffer, not WM_SIZE. */
-    if (g_platform_cursor_width <= 0 || g_platform_cursor_height <= 0) return;
-    if (x < 0) x = 0;
-    if (y < 0) y = 0;
-    if (x >= g_platform_cursor_width) x = g_platform_cursor_width - 1;
-    if (y >= g_platform_cursor_height) y = g_platform_cursor_height - 1;
-#endif
-    int screen_x = x;
-    int screen_y = y;
-    s_renderer_word_a = (uint32_t)x;
-    s_renderer_word_b = (uint32_t)y;
-    s_cursor_delta_x = 0;
-    s_cursor_delta_y = 0;
-    if (s_input_client_to_screen_hook != NULL) {
-        if (s_input_client_to_screen_hook(&screen_x, &screen_y,
-                                          s_input_cursor_hook_context) == 0) {
-            screen_x = x;
-            screen_y = y;
-        }
-    }
-    if (s_input_set_cursor_position_hook != NULL) {
-        s_input_set_cursor_position_hook(screen_x, screen_y,
-                                         s_input_cursor_hook_context);
-    }
-    else {
-        platform_cursor_position_set(x, y);
-#if defined(LEGORRR_BACKEND_WINAPI)
-        /* Publish the actual logical sample after the inverse warp, including
-         * quantization in a smaller client or an OS cursor restriction. */
-        if (platform_cursor_position_get(&screen_x, &screen_y)) {
-            s_renderer_word_a = (uint32_t)screen_x;
-            s_renderer_word_b = (uint32_t)screen_y;
-        }
-#endif
-    }
 }
 
 void input_cursor_client_position_get(int* x, int* y)

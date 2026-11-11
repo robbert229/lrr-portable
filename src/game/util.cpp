@@ -1053,19 +1053,17 @@ static const char s_bubble_request[] = "Bubble_Request";
 // GLOBAL: LEGORR 0x00557900
 static const char* s_bubble_action_strings[BUBBLE_ACTION_STRING_COUNT];
 
-#define PENDING_RECORD_CAPACITY 256
-static uint32_t s_pending_record_rows[PENDING_RECORD_CAPACITY][5];
-static unsigned int s_pending_record_count;
-static uint32_t s_pending_record_flags;
-static void (*s_pending_record_release_hook)(uint32_t* row);
+uint32_t s_pending_record_rows[PENDING_RECORD_CAPACITY][5];
+unsigned int s_pending_record_count;
+void (*s_pending_record_release_hook)(uint32_t* row);
 
 #define LEVEL_REMAP_CAPACITY 128
 static uint32_t s_level_remap_pairs[LEVEL_REMAP_CAPACITY][2];
 static unsigned int s_level_remap_count;
 
-static EntityLinkList** s_entity_link_lists;
-static void (*s_entity_link_node_release_hook)(EntityLinkNode*);
-static void (*s_entity_link_list_release_hook)(EntityLinkList*);
+EntityLinkList** s_entity_link_lists;
+void (*s_entity_link_node_release_hook)(EntityLinkNode*);
+void (*s_entity_link_list_release_hook)(EntityLinkList*);
 static void (*s_resource_entry_release_hook)(void*);
 static void (*s_resource_array_release_hook)(void*);
 
@@ -1205,73 +1203,6 @@ unsigned int pending_record_count_get(void)
     return s_pending_record_count;
 }
 
-// FUNCTION: LEGORR 0x00419de0
-void pending_record_list_entry_move_to_front(unsigned int index)
-{
-    uint32_t row[5];
-    unsigned int i;
-    unsigned int j;
-    if (index < s_pending_record_count) {
-        if (index != 0) {
-            for (j = 0; j < 5; ++j) row[j] = s_pending_record_rows[index][j];
-            for (i = index; i > 0; --i) {
-                for (j = 0; j < 5; ++j)
-                    s_pending_record_rows[i][j] = s_pending_record_rows[i - 1][j];
-            }
-            for (j = 0; j < 5; ++j) s_pending_record_rows[0][j] = row[j];
-        }
-        s_pending_record_flags |= 3u;
-    }
-}
-
-// FUNCTION: LEGORR 0x00419e80
-void pending_record_list_entry_remove_and_release(unsigned int index)
-{
-    unsigned int i;
-    unsigned int j;
-    if (index >= s_pending_record_count) return;
-    if (s_pending_record_release_hook != NULL)
-        s_pending_record_release_hook(s_pending_record_rows[index]);
-    if (s_pending_record_rows[index][1] == 0) {
-        for (i = index; i + 1 < s_pending_record_count; ++i) {
-            for (j = 0; j < 5; ++j)
-                s_pending_record_rows[i][j] = s_pending_record_rows[i + 1][j];
-        }
-        --s_pending_record_count;
-        for (j = 0; j < 5; ++j)
-            s_pending_record_rows[s_pending_record_count][j] = 0;
-    }
-    if (index == 0) s_pending_record_flags &= ~1u;
-}
-
-/* PendingRecordReleaseIfPresent (FUN_00419e60): release the head row only
- * when the table is nonempty. */
-// FUNCTION: LEGORR 0x00419E60
-void pending_record_release_if_present(void)
-{
-    if (s_pending_record_count != 0u) {
-        pending_record_list_entry_remove_and_release(0u);
-    }
-}
-
-/* PendingRecordReleaseAll (FUN_00419f10): repeatedly release the head until
- * the table empties. The guard prevents a malformed retained row from
- * trapping the portable loop when its release hook does not clear +4. */
-// FUNCTION: LEGORR 0x00419F10
-void pending_record_release_all(void)
-{
-    unsigned int attempts = 0u;
-    while (s_pending_record_count != 0u &&
-           attempts < PENDING_RECORD_CAPACITY) {
-        const unsigned int before = s_pending_record_count;
-        pending_record_list_entry_remove_and_release(0u);
-        ++attempts;
-        if (s_pending_record_count == before) {
-            break;
-        }
-    }
-}
-
 void level_identifier_remap_table_install(const uint32_t* pairs,
                                           unsigned int count)
 {
@@ -1307,74 +1238,6 @@ void entity_link_release_hooks_set(void (*node_hook)(EntityLinkNode*),
 {
     s_entity_link_node_release_hook = node_hook;
     s_entity_link_list_release_hook = list_hook;
-}
-
-// FUNCTION: LEGORR 0x00419830
-void entity_linked_list_entries_remove_by_key(uintptr_t key)
-{
-    EntityLinkList** list_link;
-    if (s_entity_link_lists == NULL) return;
-    list_link = s_entity_link_lists;
-    while (*list_link != NULL) {
-        EntityLinkList* list = *list_link;
-        EntityLinkNode** node_link = &list->head;
-        while (*node_link != NULL) {
-            EntityLinkNode* node = *node_link;
-            if (node->key == key) {
-                /* FUN_004197b0 returns the removed entry, but 0x419830
-                 * discards that pointer; this path does not release it. */
-                *node_link = node->next;
-                --list->count;
-            }
-            else {
-                node_link = &node->next;
-            }
-        }
-        if (list->count == 0) {
-            /* FUN_00419e80 compacts the empty indexed registry record; it
-             * does not free the host mirror record itself. */
-            *list_link = list->next;
-        }
-        else {
-            list_link = &list->next;
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x004198f0
-void terrain_cell_linked_entries_remove(uint32_t key)
-{
-    EntityLinkList** list_link;
-    if (s_entity_link_lists == NULL) return;
-    list_link = s_entity_link_lists;
-    while (*list_link != NULL) {
-        EntityLinkList* list = *list_link;
-        if (list->kind != 6 && list->kind != 7) {
-            list_link = &list->next;
-            continue;
-        }
-        EntityLinkNode** node_link = &list->head;
-        while (*node_link != NULL) {
-            EntityLinkNode* node = *node_link;
-            if (node->key == key) {
-                *node_link = node->next;
-                --list->count;
-                if (s_entity_link_node_release_hook != NULL)
-                    s_entity_link_node_release_hook(node);
-            }
-            else {
-                node_link = &node->next;
-            }
-        }
-        if (list->count == 0) {
-            *list_link = list->next;
-            if (s_entity_link_list_release_hook != NULL)
-                s_entity_link_list_release_hook(list);
-        }
-        else {
-            list_link = &list->next;
-        }
-    }
 }
 
 void rectangular_resource_table_release_hooks_set(void (*resource_hook)(void*),

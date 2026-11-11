@@ -11,17 +11,9 @@
 #include "../crt/crt.hpp"
 #include "../gods98/block.hpp"
 #include "util.hpp"
+#include "dependency_grid_shared.hpp"
 
 namespace unported_ledger_stubs {
-
-typedef struct DependencyGridLevelStorage {
-    DependencyGridState state;
-    DependencyGridCategoryCandidates candidates;
-    DependencyGridTuple* tuples[DEPENDENCY_GRID_ROWS]
-        [DEPENDENCY_GRID_COLUMNS][DEPENDENCY_GRID_VARIANTS + 1u];
-    uint32_t tuple_capacity[DEPENDENCY_GRID_ROWS]
-        [DEPENDENCY_GRID_COLUMNS][DEPENDENCY_GRID_VARIANTS + 1u];
-} DependencyGridLevelStorage;
 
 static void dependency_grid_owned_records_clear(
     DependencyGridLevelStorage* storage)
@@ -60,7 +52,7 @@ static DependencyGridLevelStorage* dependency_grid_storage_ensure(
     return storage;
 }
 
-static LevelState* dependency_grid_current_level(void)
+LevelState* dependency_grid_current_level(void)
 {
     GameContext* game = entity_pool_callback_context_get();
     LevelState* level = game != NULL ? game->level : NULL;
@@ -69,7 +61,7 @@ static LevelState* dependency_grid_current_level(void)
     return level;
 }
 
-static DependencyGridLevelStorage* dependency_grid_current_storage(void)
+DependencyGridLevelStorage* dependency_grid_current_storage(void)
 {
     return dependency_grid_storage_get(dependency_grid_current_level());
 }
@@ -286,18 +278,6 @@ static int dependency_grid_parse(LevelState* level, BlockRec* level_block,
     return processed;
 }
 
-/* The retail entry receives its level config block and the global config
- * block.  Its records are owned by the active LevelState in this port, so
- * the same direct entry is called at level initialization after the active
- * level has been installed in GameContext. */
-// FUNCTION: LEGORR 0x0040ab70
-void dependency_grid_config_load(BlockRec* level_block,
-                                 BlockFile* global_config)
-{
-    LevelState* level = dependency_grid_current_level();
-    dependency_grid_level_load(level, level_block, global_config);
-}
-
 void dependency_grid_level_load(LevelState* level, BlockRec* level_block,
                                 BlockFile* global_config)
 {
@@ -370,7 +350,7 @@ static int dependency_grid_entity_matches(EntitySlot* entity, void* payload)
     return 1;
 }
 
-static int dependency_grid_cell_entries_ensure_loaded(
+int dependency_grid_cell_entries_ensure_loaded(
     DependencyGridState* state, uint32_t row, uint32_t column,
     uint32_t variant)
 {
@@ -467,54 +447,6 @@ int dependency_grid_cell_record_get_native(const LevelState* level,
     if (records_out != NULL) *records_out = list->records;
     if (count_out != NULL) *count_out = list->count;
     return 1;
-}
-
-// FUNCTION: LEGORR 0x0040b000
-void dependency_grid_matches_collect(uint32_t first, uint32_t second,
-                                     uint32_t selector,
-                                     DependencyGridMatches* output)
-{
-    DependencyGridLevelStorage* storage = dependency_grid_current_storage();
-    DependencyGridState* state = storage != NULL ? &storage->state : NULL;
-    uint32_t row, column, variant;
-    if (output == NULL) return;
-    output->count = 0u;
-    if (state == NULL) return;
-    for (row = 0u; row < DEPENDENCY_GRID_ROWS; ++row) {
-        for (column = 0u; column < DEPENDENCY_GRID_COLUMNS; ++column) {
-            DependencyGridCell* cell = &state->cells[row][column];
-            const uint32_t variant_limit =
-                cell->variant_records_present != 0u
-                    ? DEPENDENCY_GRID_VARIANTS : 1u;
-            for (variant = 0u; variant < variant_limit; ++variant) {
-                const DependencyGridRecordList* list =
-                    cell->variant_records_present != 0u
-                        ? &cell->variant_records[variant]
-                        : &cell->base_records;
-                uint32_t entry;
-                if (list->records == NULL) continue;
-                for (entry = 0u; entry < list->count; ++entry) {
-                    const DependencyGridTuple* tuple = &list->records[entry];
-                    uint32_t out_index;
-                    if (tuple->first != first || tuple->second != second ||
-                        (tuple->wildcard != 0u &&
-                         tuple->selector != selector)) continue;
-                    out_index = output->count;
-                    /* The retail caller provides four 32-dword arrays, but
-                     * the loop has no overflow branch. Keep this port's
-                     * count and all four outputs within that concrete ABI
-                     * capacity if malformed/expanded config exceeds it. */
-                    if (out_index >= DEPENDENCY_GRID_MATCH_CAPACITY) return;
-                    output->x[out_index] = row;
-                    output->y[out_index] = column;
-                    output->variant[out_index] = variant;
-                    output->variant_present[out_index] =
-                        cell->variant_records_present != 0u ? 1u : 0u;
-                    ++output->count;
-                }
-            }
-        }
-    }
 }
 
 /* CellFlag4IsSet (FUN_0040b250) reads the selected dependency-grid bit.
@@ -614,50 +546,6 @@ static void dependency_grid_occupancy_pass_state(DependencyGridState* state)
                  * (bit 1) for a HitOnceStay record. Retail reads the rule
                  * word after that call, so preserve its mutation while
                  * applying the occupancy transition below. */
-                flags = cell->flags[variant];
-                if (occupied == 0) {
-                    if ((flags & 4u) == 0u) continue;
-                    flags = (flags & ~4u) | 8u;
-                }
-                else if ((flags & 4u) == 0u) {
-                    flags |= 4u;
-                }
-                else {
-                    flags = (flags & ~4u) | 8u;
-                }
-                cell->flags[variant] = flags;
-            }
-        }
-    }
-}
-
-// FUNCTION: LEGORR 0x0040b1b0
-void dependency_grid_occupancy_pass(void)
-{
-    DependencyGridLevelStorage* storage = dependency_grid_current_storage();
-    DependencyGridState* state;
-    uint32_t row, column, variant;
-    if (storage == NULL) return;
-    state = &storage->state;
-    for (row = 0u; row < DEPENDENCY_GRID_ROWS; ++row) {
-        for (column = 0u; column < DEPENDENCY_GRID_COLUMNS; ++column) {
-            DependencyGridCell* cell = &state->cells[row][column];
-            for (variant = 0u; variant < DEPENDENCY_GRID_VARIANTS;
-                 ++variant) {
-                uint32_t flags;
-                int occupied;
-                /* The retail slot-one gate skips the remaining variants for
-                 * a cell whose per-variant record table is populated. */
-                if (variant == 1u && cell->variant_records_present != 0u)
-                    break;
-                flags = cell->flags[variant];
-                if ((flags & 8u) != 0u) continue;
-                occupied = dependency_grid_cell_entries_ensure_loaded(
-                    state, row, column, variant);
-                /* Validation can set bit 1 for HitOnceStay. The reference
-                 * reloads this dword after EnsureCellEntriesLoaded before
-                 * changing the occupancy bits; using the earlier snapshot
-                 * would discard the validation cache. */
                 flags = cell->flags[variant];
                 if (occupied == 0) {
                     if ((flags & 4u) == 0u) continue;
