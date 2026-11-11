@@ -1700,6 +1700,13 @@ static void cmd_port_state_reset(void)
     s_pending_timer_count = 0;
 }
 
+#if !defined(_MSC_VER) || !defined(_M_IX86)
+#define CMD_TASK_NAME_SET(index, value) \
+    (((const char* volatile*)s_task_names)[index] = value)
+#define CMD_PRIORITY_NAME_SET(index, value) \
+    (((const char* volatile*)s_priority_names)[index] = value)
+#endif
+
 // FUNCTION: LEGORR 0x00401cf0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) void cmd_registry_init_target(void)
@@ -1800,10 +1807,6 @@ __declspec(naked) void cmd_registry_init_target(void)
     }
 }
 #else
-#define CMD_TASK_NAME_SET(index, value) \
-    (((const char* volatile*)s_task_names)[index] = value)
-#define CMD_PRIORITY_NAME_SET(index, value) \
-    (((const char* volatile*)s_priority_names)[index] = value)
 void cmd_registry_init_target(void)
 {
     int i;
@@ -1895,6 +1898,8 @@ void cmd_registry_init_target(void)
     s_pool_level = 0;
     s_global_enabled = 1;
 }
+#endif
+#if !defined(_MSC_VER) || !defined(_M_IX86)
 #undef CMD_TASK_NAME_SET
 #undef CMD_PRIORITY_NAME_SET
 #endif

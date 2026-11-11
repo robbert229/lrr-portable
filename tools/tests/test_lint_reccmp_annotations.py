@@ -84,6 +84,39 @@ class RatchetTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertNotIn("annotated", result.stdout)
 
+    def test_annotation_above_if_group_covers_every_branch(self):
+        # ADR 0006 reshape commits: one annotation above a group of whole
+        # alternative definitions, nested groups and unconditional
+        # directives between them included.
+        self.source.write_text("")
+        self.baseline()
+        self.source.write_text(
+            "// FUNCTION: LEGORR 0x1234\n"
+            "#define HELPER(x) \\\n    ((x) + 1)\n\n"
+            "#if defined(A)\n"
+            "int alt(int x) { return HELPER(x); }\n"
+            "#elif defined(B)\n"
+            "#ifdef C\nint alt(int x) { return 2; }\n#else\nint alt(int x) { return 3; }\n#endif\n"
+            "#else\n"
+            "int alt(int x) { return 4; }\n"
+            "#endif\n")
+        result = self.run_lint()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("alt", result.stdout)
+
+    def test_annotation_separated_from_if_group_does_not_cover(self):
+        self.source.write_text("")
+        self.baseline()
+        for between in ("/* note */\n", "int x;\n", "#if X\n#endif\n"):
+            self.source.write_text(
+                "// FUNCTION: LEGORR 0x1234\n" + between +
+                "#if defined(A)\nint alt(int x) { return 1; }\n"
+                "#else\nint alt(int x) { return 2; }\n#endif\n"
+                "int after(int x) { return x; }\n")
+            result = self.run_lint()
+            self.assertEqual(result.returncode, 1, between)
+            self.assertEqual(result.stdout.count("new: src/one.cpp"), 3, between + result.stdout)
+
     def test_duplicate_counts_and_ledger(self):
         self.source.write_text("void same() {}\n")
         ledger = self.root / "ledger.csv"

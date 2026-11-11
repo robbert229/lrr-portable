@@ -313,10 +313,8 @@ void velocity_slot_vector_read(const void* record, float out[3],
 // FUNCTION: LEGORR 0x004712c0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 void* entity_velocity_state_record_get(const void* record)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov ecx, dword ptr [esp + 4]
         mov eax, dword ptr [ecx]
@@ -335,7 +333,10 @@ void* entity_velocity_state_record_get(const void* record)
         add eax, 138h
         ret
     }
+}
 #else
+void* entity_velocity_state_record_get(const void* record)
+{
     if (record == NULL) {
         return NULL; /* deviation: the corpus strides the record blindly */
     }
@@ -353,8 +354,8 @@ void* entity_velocity_state_record_get(const void* record)
                              : NULL; /* deviation: corpus strides blindly */
     }
     return NULL; /* deviation: the corpus walks a null base */
-#endif
 }
+#endif
 
 /* EntityVelocitySlotValueGet (FUN_004712f0): the x86 body reads the float
  * at +0x98 + slot*4 without a null or slot guard. The portable path keeps

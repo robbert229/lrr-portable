@@ -200,6 +200,60 @@ def has_nearby_annotation(source: str, definition_offset: int) -> bool:
     return False
 
 
+CONDITIONAL_OPEN = re.compile(r"\s*#\s*if(?:n?def)?\b")
+CONDITIONAL_CLOSE = re.compile(r"\s*#\s*endif\b")
+CONDITIONAL_ANY = re.compile(r"\s*#\s*(?:if|ifdef|ifndef|elif|else|endif)\b")
+
+
+def annotated_group_lines(source: str, masked: str) -> set[int]:
+    """Lines inside an #if group whose opening #if sits directly below an
+    annotation.
+
+    Only blank lines and unconditional preprocessor lines (with their
+    backslash continuations) may separate the annotation from the #if. A
+    definition in any branch of such a group, or of a group nested in one,
+    counts as annotated: the relocation tool needs one annotation above a
+    group of whole alternative definitions (ADR 0006 reshape commits)."""
+    lines = source.splitlines()
+    masked_lines = masked.splitlines()
+    # Classify each line: blank, unconditional directive, conditional, other
+    # (code or a comment).
+    kinds: list[str] = []
+    in_directive = False
+    for index, text in enumerate(masked_lines):
+        if in_directive:
+            kinds.append("directive")
+        elif not lines[index].strip():
+            kinds.append("blank")
+        elif CONDITIONAL_ANY.match(text):
+            kinds.append("conditional")
+        elif text.lstrip().startswith("#"):
+            kinds.append("directive")
+        else:
+            kinds.append("other")
+        in_directive = (in_directive or text.lstrip().startswith("#")) and text.rstrip().endswith("\\")
+
+    def opener_annotated(index: int) -> bool:
+        for prior in range(index - 1, -1, -1):
+            if ANNOTATION.fullmatch(lines[prior]):
+                return True
+            if kinds[prior] not in ("blank", "directive"):
+                return False
+        return False
+
+    covered: set[int] = set()
+    stack: list[bool] = []
+    for index, text in enumerate(masked_lines):
+        if kinds[index] == "conditional" and CONDITIONAL_OPEN.match(text):
+            stack.append(opener_annotated(index))
+        elif kinds[index] == "conditional" and CONDITIONAL_CLOSE.match(text):
+            if stack:
+                stack.pop()
+        elif any(stack):
+            covered.add(index)
+    return covered
+
+
 def source_files(root: Path) -> list[Path]:
     return sorted(
         path
@@ -280,8 +334,11 @@ def collect(root: Path, ledger_path: Path | None) -> dict[str, list[str]]:
         source = path.read_text(encoding="utf-8", errors="replace")
         masked = mask_comments_and_literals(source)
         scopes = scopes_at_braces(masked)
+        grouped = annotated_group_lines(source, masked)
         for offset, name, brace, definition in function_definitions(source):
             if has_nearby_annotation(source, definition):
+                continue
+            if source.count("\n", 0, definition) in grouped:
                 continue
             # Ignore whitespace and directives, not parameter names or types.
             signature = re.sub(r"(?m)^\s*\#.*$", "", masked[offset:brace])
