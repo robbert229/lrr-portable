@@ -768,3 +768,39 @@ build or requiring a compiler. CMake groups the platform-filtered entries in
 executable's explicitly compiled hook sources with Meson. It also compares the
 miniwin lists. Keep Meson's literal source arrays and their target wiring in
 sync with this check. `make tools-test` runs the check and its fixtures.
+
+## `reshape_check.py` — check a reshape for zero drift
+
+```sh
+python3 tools/reshape_check.py src/game/select.cpp
+python3 tools/reshape_check.py src/game/select.cpp src/game/entity.cpp --base main --head HEAD --json
+```
+
+The defaults compare `HEAD~1` with the working tree; `--base` and `--head`
+accept Git revisions, and `worktree` selects the working tree. Each file must
+be a translation unit in the configured builds. The tool checks that include
+directives are unchanged, strips them from both versions, then preprocesses
+with the native, matching and MinGW reference configurations. This follows
+plan #490: it compares the source's own tokens without expanding header macros,
+and avoids needing the headers for the token checks. It does not prove token
+equivalence with headers included; the matching object check still compiles
+with the real includes. Changes to headers are outside this check's scope.
+
+Native and matching flags come from CMake's compile commands. When available,
+MinGW uses its cross-compiler and winapi CMake configuration. Otherwise the
+reference token check uses host `g++ -E` with the reference platform defines;
+its result is labelled **emulated**. It does not reproduce every predefined
+MinGW macro, so an emulated pass is evidence for those specified defines, not
+for arbitrary compiler-specific predefines. The object check uses the
+single-TU matching command from `match_function.py` and compares non-debug
+COFF sections (including `.drectve`), relocations by symbol name, and the
+non-debug symbol table. The tool reports each check and its first difference;
+`--json` emits the same results as JSON. Differences and tool failures exit
+nonzero; an emulated pass counts as a pass.
+
+Run in the developer distrobox or let the tool enter it when Wine is absent.
+The matching toolchain and native build's configure dependencies must be
+installed. It configures `build/` and `build-match/` if needed, and uses
+`build-match/reshape-winapi/` for the MinGW CMake configuration when the cross
+compiler is installed. Temporary source and object files stay in the worktree
+and are removed on exit.
