@@ -25,4 +25,6 @@ extern SceneObjectRecordRetainHook s_scene_object_record_retain_hook;
 extern void* s_scene_object_record_retain_context;
 void* scene_object_subobject_resolve(void* owner, void* source, int index);
 
+extern QuadMeshRenderHooks s_quad_mesh_render_hooks;
+
 #endif /* LRR_GODS98_VIEW_SHARED_HPP */

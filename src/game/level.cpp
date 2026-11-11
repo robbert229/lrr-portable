@@ -39,6 +39,7 @@
 #include "select.hpp"
 #include "scene_render.hpp"
 #include "tutorial_hud_ports.hpp"
+#include "level_shared.hpp"
 
 extern "C" float random_float_range(float minimum, float maximum);
 /* Cell mutation's cheat branch calls the existing entity-side implementation
@@ -9689,20 +9690,7 @@ void cell_list_min_distance_scale_apply(int enable) /* FUN_00450a80 */
     }
 }
 
-/* --- dependency and terrain grid table fallback (see level.hpp) -----------
- * DAT 0x4b8bc8..0x4c71fc is a 300-cell, 0x31-dword-stride region addressed
- * by y + x * 15. For each cell, the block at dword 32 + cell * 0x31 holds
- * the selector, then sixteen field-flag words. Parallel counts start at
- * cell * 0x31 and pointer words at cell * 0x31 + 16. The active-level
- * DependencyGridConfigLoad path stores native pointer/count pairs in its
- * LevelState sidecar; this zeroed region is the no-level fallback. */
-#define GRID_REC_REGION_DWORDS 14712 /* (0x4c71fc - 0x4b8bc8) / 4 */
 #define GRID_REC_COLS          15    /* 20 rows by 15 columns */
-#define GRID_REC_STRIDE        0x31  /* dwords per record block */
-#define GRID_REC_FIELD_WORDS   16    /* cleared by the mask sweep */
-
-// GLOBAL: LEGORR 0x004b8bc8
-static uint32_t s_grid_rec[GRID_REC_REGION_DWORDS];
 
 /* Flat dword index of a cell's selector word, or -1 when the coordinate
  * cannot address the region (bounds deviation). */
@@ -9728,20 +9716,6 @@ static int64_t grid_rec_field_index(int x, int y, int field)
         return -1;
     }
     return word;
-}
-
-// FUNCTION: LEGORR 0x0040ab30
-void grid_record_flag_mask_clear(void)
-{
-    size_t k = 33; /* the corpus's field-word origin */
-    do {
-        for (int row = 0; row < 15; ++row) {
-            for (int d = 0; d < GRID_REC_FIELD_WORDS; ++d) {
-                s_grid_rec[k + (size_t)d] &= 0xfffffef3u; /* ~ 0x10c */
-            }
-            k += GRID_REC_STRIDE;
-        }
-    } while (k + 33 < GRID_REC_REGION_DWORDS);
 }
 
 /* The mapped target walks the retail count/pointer tables directly. */

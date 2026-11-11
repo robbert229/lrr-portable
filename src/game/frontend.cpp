@@ -254,6 +254,7 @@ static uint32_t s_interface_build_image_counts[2];
 #include "gods98/resource.hpp"
 #include "entity.hpp"
 #include "level.hpp"
+#include "frontend_shared.hpp"
 
 static int s_toupper(int c)
 {
@@ -10079,29 +10080,11 @@ void active_object_list_count_set(int which, int count)
     else if (which == 1) s_active_object_ingame = count;
 }
 
-/* --- the screen-effect release (see frontend.hpp) --------------------------
- * The corpus table runs ten entries from DAT_004b8aa0 at stride 0x20: the
- * handle sits at entry +0, the flag dword twenty-eight bytes above the
- * corpus's walk pointer. Unowned: zero-init statics here. */
-#define SCREEN_EFFECT_COUNT 10
-static void*    s_screen_effect_handle[SCREEN_EFFECT_COUNT];
-static uint32_t s_screen_effect_flags[SCREEN_EFFECT_COUNT];
-static int     s_screen_effect_seam_calls;
-static void*   s_screen_effect_seam_last_handle;
-static int     s_screen_effect_seam_last_flag;
-
-// FUNCTION: LEGORR 0x0040a3d0
-void screen_effect_flags_clear_and_release(void)
-{
-    for (int i = 0; i < SCREEN_EFFECT_COUNT; ++i) {
-        if ((s_screen_effect_flags[i] & 1u) != 0u) {
-            s_screen_effect_flags[i] &= ~1u;
-            ++s_screen_effect_seam_calls;
-            s_screen_effect_seam_last_handle = s_screen_effect_handle[i];
-            s_screen_effect_seam_last_flag = 1;
-        }
-    }
-}
+void*    s_screen_effect_handle[SCREEN_EFFECT_COUNT];
+uint32_t s_screen_effect_flags[SCREEN_EFFECT_COUNT];
+int     s_screen_effect_seam_calls;
+void*   s_screen_effect_seam_last_handle;
+int     s_screen_effect_seam_last_flag;
 
 void screen_effect_entry_set(int index, void* handle, uint32_t flags)
 {

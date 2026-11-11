@@ -1878,7 +1878,7 @@ static uint32_t s_task_refresh_flag = 0u;  /* DAT_00557860 */
 // GLOBAL: LEGORR 0x004b8a54
 static uint32_t s_level_stored_word = 0u;  /* DAT_004b8a54 */
 // GLOBAL: LEGORR 0x004c7178
-static uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
+uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
 // GLOBAL: LEGORR 0x004c79a4
 static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
 // GLOBAL: LEGORR 0x004c7ea8
@@ -1902,12 +1902,6 @@ uint32_t global_task_refresh_flag_get(void)
 void level_state_stored_value_set(uint32_t v)
 {
     s_level_stored_word = v;
-}
-
-// FUNCTION: LEGORR 0x0040ab10
-void global_mode_zero_input_set(int value)
-{
-    s_mode_zero_flag = (value == 0) ? 1u : 0u;
 }
 
 uint32_t global_mode_zero_input_peek(void)

@@ -9534,17 +9534,6 @@ int entity_flag100_and_shared_eligibility_check(const EntitySlot* e)
     return 0;
 }
 
-/* EntityQuadMeshRenderRecordAllowed (FUN_0040aae0) — see entity.hpp. */
-// FUNCTION: LEGORR 0x0040aae0
-int entity_quad_mesh_render_record_allowed(const EntitySlot* e)
-{
-    if ((entity_state_flags_get(e) & 0x08000000u) == 0u && e->type != 8
-        && e->type != 13) {
-        return 1;
-    }
-    return 0;
-}
-
 /* TaskTypeAndConditionCheck (FUN_0043c490) — see entity.hpp. */
 // FUNCTION: LEGORR 0x0043c490
 int task_type_and_condition_check(const void* unused,

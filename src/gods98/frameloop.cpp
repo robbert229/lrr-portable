@@ -56,15 +56,6 @@ int ledger_stub_0043fc20_RecordPairPoseCopyAndActivityRaise(
 #include "camera.hpp"
 #include "crt/crt.hpp"
 
-#define WINDOW_W 640
-#define WINDOW_H 480
-#define FRAME_MS 33 /* ~30 fps */
-
-typedef struct MenuSoundTickClock {
-    uint32_t last_ms;
-    float dt;
-} MenuSoundTickClock;
-
 static void menu_sound_tick_clock_init(MenuSoundTickClock* clock)
 {
     if (clock == NULL) return;
@@ -95,105 +86,12 @@ static void* s_window_default_proc_context;
 static char s_command_line_level_override[FE_LEVEL_NAME_MAX];
 static int s_command_line_sound_disabled;
 
-typedef struct RewardFramePumpContext {
-    PlatformWindow* window;
-    DisplaySurface* surface;
-    GameContext* game;
-    InputState* input;
-    AudioPlayer* audio;
-    FrontEnd* frontend;
-    FILE* log;
-    long* frames;
-    long frame_cap;
-    int* quit;
-    const char** stop;
-    uint32_t task_draw_masks[GAME_TASK_COUNT];
-    Flic* task_flics[GAME_TASK_COUNT];
-    int score_text_requested;
-    int stats_result_requested;
-    int zone_action_consumed;
-} RewardFramePumpContext;
-
-/* Storage for state that belongs to the application lifetime, rather than to
- * the C stack frame of LegorrrRun. The reference WinMain keeps this state in
- * globals while repeatedly dispatching its callback triplet. Keeping the
- * reconstruction's corresponding records here is the first step toward the
- * same init/tick/shutdown boundary. */
-typedef struct FrameloopApplicationState {
-    int initialized;
-    int phase;
-    int gameplay_prepared;
-    float frame_dt;
-    PlatformEvent frame_events[32];
-    int frame_event_count;
-    const char* wad_dir;
-    long frame_cap;
-    long autopause;
-    FILE* log;
-    int log_owned;
-    GameContext* game_storage;
-    FrontEnd* frontend_storage;
-    EngineState engine_state;
-    InputState input;
-    int pause_escape_down;
-    int pause_mouse_down;
-    int gameplay_mouse_suppressed;
-    int gameplay_clock_rebase;
-    uint32_t gameplay_resume_ms;
-    ViewContext views[3];
-    EngineContext engine_context;
-    PlatformWindow* window;
-    DisplaySurface surface;
-    TextureSurface* rock_texture;
-    TextureSurface* ui_texture;
-    AudioPlayer audio;
-    int audio_status;
-    long frames;
-    int thumbnail_slot;
-    int quit;
-    const char* stop_reason;
-    RewardFramePumpContext reward_frame;
-    RewardScreenOps reward_ops;
-    MenuSoundTickClock menu_sound_clock;
-    int play_movies;
-    char level_name[FE_LEVEL_NAME_MAX];
-    int boot_menu;
-    int frontend_built;
-    int pending_load_slot;
-    int pending_load_record;
-    char mission_brief[1024];
-    int mission_brief_active;
-    int mission_brief_kind;
-    int mission_brief_page;
-    unsigned int mission_brief_keys_held;
-    TextureSurface* briefing_panel;
-    TextureSurface* briefing_title_font;
-    TextureSurface* briefing_body_font;
-    TextureSurface* briefing_next;
-    TextureSurface* briefing_back;
-    TextureSurface* briefing_back_arrow;
-    int briefing_x;
-    int briefing_y;
-    char briefing_title[128];
-    LevelState* pointer_dispatch_level;
-    int pointer_dispatch_previous_down; /* retained for pause patch composition */
-    SimulationPointerCapture pointer_captures[2];
-    uint32_t pointer_capture_serial;
-    LevelState* reward_tick_level;
-    int reward_tick_started;
-    LevelState* picker_return_level;
-    int picker_return_pending;
-    int picker_return_origin;
-    int rock_x;
-    int rock_y;
-} FrameloopApplicationState;
-
 #define FRAMELOOP_PHASE_MENU 1
 #define FRAMELOOP_PHASE_GAMEPLAY_START 2
 #define FRAMELOOP_PHASE_GAMEPLAY 3
 #define FRAMELOOP_PHASE_DONE 4
 
-static FrameloopApplicationState s_frameloop_application;
+FrameloopApplicationState s_frameloop_application;
 
 /* A close can be delivered directly to WndProc, without a converted event.
  * Keep both routes sticky; only the outer callback owner performs shutdown. */
@@ -215,7 +113,7 @@ static int frameloop_application_quit_ingest(FrameloopApplicationState* app,
 /* The event backend clears cur each frame, so a repeated key-down can look
  * like a fresh edge. Every modal capture tracks the full removed batch before
  * any skip/leave decision, retaining both quit and Escape release state. */
-static int frameloop_application_events_track(FrameloopApplicationState* app,
+int frameloop_application_events_track(FrameloopApplicationState* app,
     const PlatformEvent* events, int count)
 {
     int pressed = 0;
@@ -2128,6 +2026,7 @@ static void frame_camera_target_registry_update(EngineContext* engine,
     engine->camera_target_count = count;
 }
 #include "game/util.hpp"
+#include "frameloop_shared.hpp"
 
 static const char* env_get(const char* name, const char* fallback)
 {
@@ -2297,7 +2196,7 @@ static int demo_msg_cb(int id)
 
 /* Monotonic wall clock (ms) — the shell's frame pacing clock (the corpus
  * uses timeGetTime; the port is libc-portable). */
-static int64_t now_ms(void)
+int64_t now_ms(void)
 {
 #if defined(LEGORRR_BACKEND_WINAPI)
     return (int64_t)GetTickCount();
@@ -2476,152 +2375,6 @@ static int movie_play_avi_rect(const char* os_path, const char* label,
     fprintf(log, "movie: %s done — %d frames%s\n", label, st.frames,
             st.skipped ? " (skipped)" : "");
     return 1;
-}
-
-/* CreditsTextFile + CreditsBackAVI: scroll centered text over the configured
- * AVI until the player presses a key or clicks. */
-// FUNCTION: LEGORR 0x0040a0c0
-static void frameloop_credits(PlatformWindow* win, DisplaySurface* surf,
-                              BlockFile* cfg, const char* wad_dir,
-                              AudioPlayer* ap, int audio_status, int* quit,
-                              FILE* log, long* frame_number)
-{
-    uint32_t scroll_clock = (uint32_t)now_ms();
-    const char* text_name = block_get_strptr(cfg,
-                                             "Lego*::Main::CreditsTextFile");
-    char** lines = NULL;
-    int line_count = 0;
-    if (text_name == NULL
-        || !frontend_credits_lines_load(text_name, &lines, &line_count)) {
-        fprintf(log, "credits: cannot load %s\n",
-                text_name != NULL ? text_name : "Lego*::Main::CreditsTextFile");
-        return;
-    }
-
-    TextureSurface* font = texture_get_or_load(
-        NULL, "Interface\\Fonts\\RSFont.bmp");
-    Movie* movie = NULL;
-    MovieInfo mi;
-    MovieOut out;
-    memset(&mi, 0, sizeof(mi));
-    memset(&out, 0, sizeof(out));
-    int video_frame_ms = FRAME_MS;
-    char movie_rel[256], movie_os[512];
-    if (movie_key_path(cfg, "CreditsBackAVI", movie_rel,
-                       sizeof(movie_rel))
-        && movie_path_resolve(wad_dir, movie_rel, movie_os,
-                              sizeof(movie_os))) {
-        movie = movie_open_path(movie_os);
-        if (movie == NULL || movie_info(movie, &mi) != 0
-            || mi.width <= 0 || mi.height <= 0) {
-            fprintf(log, "credits: cannot open backdrop %s\n", movie_os);
-            movie_close(movie);
-            movie = NULL;
-        } else if (mi.fps_num > 0 && mi.fps_den > 0) {
-            video_frame_ms = 1000 * mi.fps_den / mi.fps_num;
-            if (video_frame_ms < 1) {
-                video_frame_ms = 1;
-            }
-        }
-    }
-    InputState input;
-    input_reset(&input);
-    int scroll_px = 0;
-    int64_t next_video_ms = now_ms();
-    int have_video_frame = 0;
-    int leave = 0;
-    int mouse_was_down = 0;
-    while (!*quit && !leave) {
-        PlatformEvent evbuf[32];
-        int nev = platform_pump_events(win, evbuf, 32);
-        (void)frameloop_application_events_track(&s_frameloop_application,
-                                                evbuf, nev);
-        input_capture_events(&input, evbuf, nev);
-        renderer_word_c_set(input.mouse_down != 0 ? 1u : 0u);
-        input_cursor_position_update();
-        input_cursor_position_sync(&input);
-        for (int i = 0; i < nev; ++i) {
-            if (evbuf[i].kind == PLATFORM_EVENT_QUIT) {
-                *quit = 1;
-                break;
-            }
-            if (evbuf[i].kind == PLATFORM_EVENT_KEYDOWN) {
-                leave = 1;
-            }
-            if (evbuf[i].kind == PLATFORM_EVENT_MOUSE) {
-                if (!evbuf[i].held && mouse_was_down) {
-                    leave = 1;
-                }
-                mouse_was_down = evbuf[i].held;
-            }
-        }
-        if (*quit || leave) {
-            break;
-        }
-
-        if (movie != NULL && now_ms() >= next_video_ms) {
-            int mr = movie_next(movie, &out);
-            if (mr == 1) {
-                movie_close(movie);
-                movie = movie_open_path(movie_os);
-                if (movie != NULL && movie_info(movie, &mi) == 0) {
-                    mr = movie_next(movie, &out);
-                } else {
-                    movie_close(movie);
-                    movie = NULL;
-                    mr = -1;
-                }
-            }
-            if (mr == 0) {
-                have_video_frame = 1;
-            } else if (mr < 0) {
-                movie_close(movie);
-                movie = NULL;
-                have_video_frame = 0;
-            }
-            next_video_ms += video_frame_ms;
-            if (next_video_ms < now_ms() - video_frame_ms) {
-                next_video_ms = now_ms();
-            }
-        }
-
-        frontend_credits_scroll_step((uint32_t)now_ms(), &scroll_clock,
-                                     &scroll_px);
-
-        void* pixels = NULL;
-        int pitch = 0;
-        if (surface_lock(surf, &pixels, &pitch) == 0) {
-            if (have_video_frame) {
-                movie_scale_rgba(out.rgba, mi.width, mi.height, out.rgba_pitch,
-                                 (uint8_t*)pixels, WINDOW_W, WINDOW_H, pitch);
-            } else {
-                surface_fill(pixels, pitch, WINDOW_W, WINDOW_H, 0, 0, 0);
-            }
-            frontend_render_credits(font,
-                                    (const char* const*)lines, line_count,
-                                    (int)scroll_px, WINDOW_W, WINDOW_H,
-                                    pixels, pitch);
-            platform_screenshot(win, pixels, pitch, WINDOW_W, WINDOW_H,
-                                (int)*frame_number);
-            platform_present_pixels(win, pixels, pitch, WINDOW_W, WINDOW_H);
-            surface_unlock(surf, pixels);
-        }
-        /* ScrollingTextDisplay calls SoundSubsystemFrameTick after its
-         * text/video draw and before the next frame boundary. */
-        sound_subsystem_frame_tick(1.0f);
-        if (audio_status == 0) {
-            audio_update(ap);
-        }
-        if (movie == NULL) {
-            Sleep(10);
-        }
-        ++*frame_number;
-        input_begin_frame(&input);
-    }
-
-    movie_close(movie);
-    texture_release(font);
-    frontend_credits_lines_free(lines, line_count);
 }
 
 /* Level load + mission seeding + level intro movie + engine binding. Both

@@ -151,10 +151,7 @@ static SceneEntryExpandOps s_scene_entry_expand_ops;
 static SharedObjectCloneOps s_shared_object_clone_ops;
 static SceneObjectListApplyHook s_scene_object_list_apply_hook;
 static void* s_scene_object_list_apply_context;
-static uint32_t s_quad_mesh_render_records[10][8];
-static void* s_quad_mesh_render_objects[10];
-static void* s_quad_mesh_render_callbacks[10];
-static QuadMeshRenderHooks s_quad_mesh_render_hooks;
+QuadMeshRenderHooks s_quad_mesh_render_hooks;
 static SinePhaseBlendState s_sine_phase_blend_state;
 static SinePhaseBlendHooks s_sine_phase_blend_hooks;
 static SceneFrameApplyHooks s_scene_frame_apply_hooks;
@@ -3442,19 +3439,6 @@ void scene_object_list_apply_second_position_callback(
     scene_object_list_apply(list, 0x00410090u, (void*)position);
 }
 
-// FUNCTION: LEGORR 0x0040a5c0
-void* quad_mesh_render_record_pool_slot_allocate(void)
-{
-    unsigned int i;
-    for (i = 0; i < 10; ++i) {
-        if ((s_quad_mesh_render_records[i][7] & 1u) == 0u) {
-            s_quad_mesh_render_records[i][7] |= 1u;
-            return s_quad_mesh_render_records[i];
-        }
-    }
-    return NULL;
-}
-
 void quad_mesh_render_hooks_set(const QuadMeshRenderHooks* hooks)
 {
     if (hooks == NULL) {
@@ -3462,77 +3446,6 @@ void quad_mesh_render_hooks_set(const QuadMeshRenderHooks* hooks)
     }
     else {
         s_quad_mesh_render_hooks = *hooks;
-    }
-}
-
-// FUNCTION: LEGORR 0x0040a4b0
-void quad_mesh_render_record_create(void* entity, uint32_t count)
-{
-    static const int offsets[6] = { 0, 2, 1, 0, 3, 2 };
-    void* slot;
-    void* parent;
-    void* render_object;
-    void* callback_record;
-    unsigned int index;
-    int i;
-    if (entity == NULL || count == 0u || count >= 999u ||
-        s_quad_mesh_render_hooks.entity_eligible == NULL ||
-        !s_quad_mesh_render_hooks.entity_eligible(
-            s_quad_mesh_render_hooks.context, entity)) return;
-    slot = quad_mesh_render_record_pool_slot_allocate();
-    if (slot == NULL) return;
-    for (index = 0; index < 10; ++index) {
-        if (slot == s_quad_mesh_render_records[index]) break;
-    }
-    if (index >= 10) return;
-    s_quad_mesh_render_records[index][3] = 0;
-    s_quad_mesh_render_records[index][4] = 0;
-    s_quad_mesh_render_records[index][5] = 0;
-    s_quad_mesh_render_records[index][6] = 0;
-    if (s_quad_mesh_render_hooks.entity_lift_get != NULL) {
-        float lift = s_quad_mesh_render_hooks.entity_lift_get(
-            s_quad_mesh_render_hooks.context, entity);
-        float negative_lift = -lift;
-        memcpy(&s_quad_mesh_render_records[index][5], &negative_lift,
-               sizeof(negative_lift));
-    }
-    parent = s_quad_mesh_render_hooks.entity_scene_get != NULL
-        ? s_quad_mesh_render_hooks.entity_scene_get(
-              s_quad_mesh_render_hooks.context, entity) : NULL;
-    render_object = s_quad_mesh_render_objects[index];
-    if (render_object == NULL) {
-        if (s_quad_mesh_render_hooks.render_object_create == NULL) return;
-        render_object = s_quad_mesh_render_hooks.render_object_create(
-            s_quad_mesh_render_hooks.context, parent);
-        if (render_object == NULL) return;
-        s_quad_mesh_render_objects[index] = render_object;
-        callback_record = s_quad_mesh_render_hooks.callback_record_create != NULL
-            ? s_quad_mesh_render_hooks.callback_record_create(
-                  s_quad_mesh_render_hooks.context, render_object, slot,
-                  0x3000u) : NULL;
-        s_quad_mesh_render_callbacks[index] = callback_record;
-        if (callback_record != NULL &&
-            s_quad_mesh_render_hooks.digit_quad_prepare != NULL) {
-            for (i = 0; i < 4; ++i) {
-                s_quad_mesh_render_hooks.digit_quad_prepare(
-                    s_quad_mesh_render_hooks.context, callback_record,
-                    4, 2, 3, offsets);
-            }
-        }
-    }
-    else {
-        if (s_quad_mesh_render_hooks.render_object_attach != NULL) {
-            s_quad_mesh_render_hooks.render_object_attach(
-                s_quad_mesh_render_hooks.context, render_object, parent);
-        }
-        if (s_quad_mesh_render_hooks.render_object_disable != NULL) {
-            s_quad_mesh_render_hooks.render_object_disable(
-                s_quad_mesh_render_hooks.context, render_object, 0);
-        }
-    }
-    if (s_quad_mesh_render_hooks.digit_count_apply != NULL) {
-        s_quad_mesh_render_hooks.digit_count_apply(
-            s_quad_mesh_render_hooks.context, slot, count);
     }
 }
 

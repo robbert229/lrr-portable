@@ -24,6 +24,7 @@
 #include "../gods98/input.hpp"
 #include "../gods98/frameloop.hpp"
 #include "../platform/platform.h"
+#include "mission_shared.hpp"
 
 /* TaskBlockInit's stack name list and format operand are fixed image data. */
 // GLOBAL: LEGORR 0x004a8a08
@@ -45,8 +46,6 @@ static const char s_task_name_oxygen[] = "Oxygen";
 static const char s_task_name_timer[] = "Timer";
 // GLOBAL: LEGORR 0x004a931c
 static const char s_task_name_score[] = "Score";
-// GLOBAL: LEGORR 0x004a1d60
-static const char s_task_copy_format[] = "%s";
 
 #define MISS_CRYSTAL_QUOTA 26 /* crystal display budget (CrystalQuotaSetup) */
 #define REWARD_TASK_DURATION_DEFAULT 76.9375f
