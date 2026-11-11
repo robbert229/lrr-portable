@@ -758,7 +758,8 @@ static Model* build_model(Parse* P)
                     }
                 }
                 if (marker < n) {
-                    n = marker;
+                    /* 0x48ca7f terminates the byte before the marker. */
+                    n = marker ? marker - 1 : 0;
                     s->animated_image_sequence = 1;
                 }
                 if (!dup_lwo_assign(&s->timg, (const char*)bp, n)) {
