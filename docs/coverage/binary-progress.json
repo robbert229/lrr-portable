@@ -3,7 +3,7 @@
     "full": 54.71,
     "game_only": 50.46
   },
-  "baseline_sha256": "0243248fa7c4bdf9c73bc5ec02eb7fcc650310549b9e816c8ecc6d2b5ca867e1",
+  "baseline_sha256": "22c9ad249618dcef2d07ad1b659bbb1c9ab339be461538c26c841daf4f872e30",
   "exact_function_code_bytes": {
     "bytes": 43412,
     "original_text_bytes": 642549,
@@ -23,8 +23,8 @@
       "pairs": 841215
     }
   },
-  "input_sha256": "fc8d86fb2cb7c08eed31950e5d1dacd82524a7f2e4ca2421fd22a3a3fbb91b0f",
-  "listing_digests_sha256": "8245c0d79d121638d3b0de4caed896a144b8021c2a6457579945931c0ac95b21",
+  "input_sha256": "d5d10bd28c8a152aa3d8a1c6a9967721c16ecb0adc9f7ff489c24b2650382d68",
+  "listing_digests_sha256": "40f2feb27f4a7bc5fdfe84b645140a1466a923ae96b8a5ad64ed457a23a9816c",
   "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
@@ -64,8 +64,8 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": 0.05,
-      "identical_bytes": 18460,
+      "excess_percent_points": 0.04,
+      "identical_bytes": 18455,
       "identical_percent": 2.87,
       "original_bytes": 642549,
       "rebuilt_bytes": 932700,
@@ -101,8 +101,8 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": 0.05,
-    "identical_bytes": 18460,
+    "excess_percent_points": 0.04,
+    "identical_bytes": 18455,
     "identical_percent": 2.87,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,

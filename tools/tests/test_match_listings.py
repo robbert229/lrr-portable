@@ -23,6 +23,46 @@ class ListingTest(unittest.TestCase):
         self.assertNotEqual(listings.fingerprint(['add eax, 3']), listings.fingerprint(['add eax, 4']))
         self.assertNotEqual(listings.fingerprint(['call function_a']), listings.fingerprint(['call function_b']))
 
+    def test_symbolic_operands_preserve_shape_and_opcode(self):
+        a = listings.fingerprint(['fsub dword ptr [1.0 (FLOAT)]'])
+        self.assertEqual(a, listings.fingerprint(['fsub dword ptr [<OFFSET1>]']))
+        self.assertNotEqual(a, listings.fingerprint(['fadd dword ptr [<OFFSET1>]']))
+        self.assertNotEqual(a, listings.fingerprint(['fsub qword ptr [<OFFSET1>]']))
+        self.assertNotEqual(a, listings.fingerprint(['fsub <OFFSET1>']))
+
+    def test_anonymous_namespace_and_numeric_offset(self):
+        a = ['mov eax, dword ptr [?A0x1b2c3d4e::value (DATA)]',
+             'push 440 (OFFSET)']
+        b = ['mov eax, dword ptr [?A0x98765432::value (DATA)]',
+             'push <OFFSET1>']
+        self.assertEqual(listings.fingerprint(a), listings.fingerprint(b))
+        self.assertNotEqual(listings.fingerprint(a), listings.fingerprint([
+            'mov eax, ?A0x98765432::value (DATA)', 'push <OFFSET1>']))
+
+    def test_msvc_mangled_static_offset(self):
+        prefix = 'fld dword ptr [eax*8 + ?s_weapon@?%z:/src/weapon.cpp'
+        suffix = '@lego@@3PAUWeapon@2@A[0].damage (OFFSET)]'
+        self.assertEqual(listings.normalize(prefix + '316842078' + suffix),
+                         listings.normalize(prefix + '104802270' + suffix))
+        self.assertEqual(listings.normalize(prefix + '316842078' + suffix),
+                         listings.normalize('fld dword ptr [eax*8 + <OFFSET3>]'))
+
+    def test_old_digest_format_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'old'
+            path.write_text('# input_sha256: ' + 'a' * 64 + '\n')
+            with self.assertRaisesRegex(ValueError, 'format'):
+                listings.load(path)
+
+    def test_library_marker(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(['git', 'init', '-q', tmp], check=True)
+            (root / 'src').mkdir()
+            (root / 'src/a.c').write_text('// LIBRARY: LEGORR 0x00497ec0 SYMBOL\n')
+            subprocess.run(['git', '-C', tmp, 'add', 'src/a.c'], check=True)
+            self.assertEqual(listings.source_index(root=root)[0x497ec0], '<library>')
+
     def test_historical_listings(self):
         fixtures = json.loads((Path(__file__).parent / 'fixtures/match-listings-history.json').read_text())
         for case in fixtures:
