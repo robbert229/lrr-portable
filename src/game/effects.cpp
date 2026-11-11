@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "effects_shared.hpp"
 
 static uint32_t s_active_effect_occupied[10];
 static uint32_t s_active_segment_visual_occupied[10];
@@ -47,13 +48,8 @@ static int s_sfx_tick_hooks_installed;
 static KindEffectDispatchHooks s_kind_effect_dispatch_hooks;
 static EffectApplyHooks s_effect_apply_hooks;
 static ScreenSpaceEffectDispatchHook s_screen_space_effect_dispatch_hook;
-struct ScreenEffectTickRecord {
-    void* entity;
-    float remaining;
-};
-static struct ScreenEffectTickRecord s_screen_effect_tick_records[3][50];
-static ScreenEffectTickHooks s_screen_effect_tick_hooks;
-static float s_screen_effect_pulse_timer;
+struct ScreenEffectTickRecord s_screen_effect_tick_records[3][50];
+ScreenEffectTickHooks s_screen_effect_tick_hooks;
 static void* s_screen_space_effect_dispatch_context;
 static TransientEffectHooks s_transient_effect_hooks;
 static TransientEffectQuadBasisGetHook s_transient_effect_quad_basis_hook;
@@ -1604,75 +1600,6 @@ void* screen_effect_slot_peek(int pool, int slot, float* remaining)
     if (remaining != NULL)
         *remaining = s_screen_effect_tick_records[pool][slot].remaining;
     return s_screen_effect_tick_records[pool][slot].entity;
-}
-
-// FUNCTION: LEGORR 0x004075a0
-void screen_effects_tick(float delta)
-{
-    static const int capacities[3] = { 20, 20, 50 };
-    const int mode_zero = current_engine_mode_is_zero() ? 1 : 0;
-    int paused = s_screen_effect_tick_hooks.simulation_paused != NULL
-        ? s_screen_effect_tick_hooks.simulation_paused(
-              s_screen_effect_tick_hooks.context) : mode_zero;
-    int pool;
-    int slot;
-    /* The flagged-object ring window is owned by the AI registry module
-     * (FUN_00407540); TickEntityScreenEffects advances its float timer by
-     * reinterpreting the retained seed dword, clearing the pointer on expiry. */
-    for (slot = 0; slot < 20; ++slot) {
-        void* entity = NULL;
-        uint32_t timer_bits = 0u;
-        float timer;
-        ai_object_registry_slot_peek(0, slot, &entity, &timer_bits);
-        if (entity == NULL) continue;
-        memcpy(&timer, &timer_bits, sizeof(timer));
-        timer -= delta;
-        memcpy(&timer_bits, &timer, sizeof(timer_bits));
-        if (timer < 0.0f) entity = NULL;
-        ai_object_registry_slot_set(0, slot, entity, timer_bits);
-    }
-    if (paused == 0) {
-        if (s_screen_effect_pulse_timer >= 12.5f) {
-            if (s_screen_effect_pulse_timer >= 25.0f) {
-                s_screen_effect_pulse_timer -= 25.0f;
-            } else if (s_screen_effect_tick_hooks.pulse_tick != NULL) {
-                /* TickEntityScreenEffects' 20-entry pulse window is the
-                 * type-4 registry (DAT_00557b24), not the independent
-                 * 50-entry effect sidecar. Use the registry populated by
-                 * Type4ObjectRegistryInsert (0x407410). */
-                const int pulse_count = ai_object_registry_window_count(1);
-                for (slot = 0; slot < pulse_count; ++slot) {
-                    void* entity = NULL;
-                    ai_object_registry_slot_peek(1, slot, &entity, NULL);
-                    if (entity != NULL)
-                        s_screen_effect_tick_hooks.pulse_tick(entity, delta,
-                            s_screen_effect_tick_hooks.context);
-                }
-            }
-        }
-        s_screen_effect_pulse_timer += delta;
-    }
-    for (pool = 0; pool < 3; ++pool) {
-        for (slot = 0; slot < capacities[pool]; ++slot) {
-            struct ScreenEffectTickRecord* record =
-                &s_screen_effect_tick_records[pool][slot];
-            if (record->entity == NULL) continue;
-            if (paused == 0 &&
-                (s_screen_effect_tick_hooks.entity_eligible == NULL ||
-                 s_screen_effect_tick_hooks.entity_eligible(record->entity,
-                    pool, s_screen_effect_tick_hooks.context)) &&
-                s_screen_effect_tick_hooks.entity_tick != NULL) {
-                s_screen_effect_tick_hooks.entity_tick(record->entity, pool,
-                    delta, s_screen_effect_tick_hooks.context);
-            }
-            if (pool < 2) {
-                record->remaining -= delta;
-                if (record->remaining < 0.0f) record->entity = NULL;
-            } else if (record->remaining <= 0.0f) {
-                record->entity = NULL;
-            }
-        }
-    }
 }
 
 void transient_effect_hooks_set(const TransientEffectHooks* hooks)

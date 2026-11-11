@@ -26,4 +26,6 @@ extern void* s_marker_table[32];
 extern uint32_t s_marker_count;
 extern void* s_marker_descriptor;
 
+extern uint32_t s_task_refresh_flag;
+
 #endif /* LRR_CRT_CRT_SHARED_HPP */

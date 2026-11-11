@@ -11,4 +11,14 @@ extern float s_sweep_timer;
 
 void cmd_operation_group_append_object(uint32_t key, EntitySlot* entity);
 
+#define IDLE_TABLE_MAX 20
+
+typedef struct IdleQueueRecord {
+    EntitySlot* entity;
+    float timer;
+} IdleQueueRecord;
+
+void idle_register(EntitySlot* e);
+extern IdleQueueRecord s_idle[IDLE_TABLE_MAX];
+
 #endif /* LRR_GAME_CMD_SHARED_HPP */
