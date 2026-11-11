@@ -375,6 +375,7 @@ class ScaffoldOutputTest(unittest.TestCase):
         self.assertEqual(before, after)
 
     def test_scratch_output_leaves_the_checkout_alone(self):
+        original = (REPO / "src/gods98/g98_029.c").read_bytes() if (REPO / "src/gods98/g98_029.c").exists() else None
         with tempfile.TemporaryDirectory() as tmp:
             with contextlib.redirect_stdout(io.StringIO()):
                 rc = cu.main(["G98-029", "--out", tmp, "--scores", "none"])
@@ -382,7 +383,8 @@ class ScaffoldOutputTest(unittest.TestCase):
             self.assertTrue((Path(tmp) / "src/gods98/g98_029.c").exists())
             cmake = (Path(tmp) / "CMakeLists.txt").read_text()
             self.assertIn("${ENGINE_DIR}/g98_029.c", cmake)
-            self.assertFalse((REPO / "src/gods98/g98_029.c").exists())
+            checkout = REPO / "src/gods98/g98_029.c"
+            self.assertEqual(checkout.read_bytes() if checkout.exists() else None, original)
 
     def test_leaf_units_are_leaves(self):
         # The wave-reader and MCI units of the first leaf wave (G98-022 and
