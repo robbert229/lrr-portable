@@ -244,7 +244,11 @@ typedef struct EntitySlot {
     int32_t type;       /* corpus entity-type code (1..9)         */
     int32_t etype;      /* same, stored for the cmd task mapping  */
     char    name[32];
-    float   x, y, z;         /* world pose; horizontal Y is inverted vs grid */
+    /* +0x28: path-list valid entries at its original 32-bit offset
+     * (finding 526); the inline route buffer it counts is `wp` below. */
+    int      wp_count;
+    float   y, z;            /* world pose; horizontal Y is inverted vs grid;
+                              * x sits in wp_count's old 32-bit slot below */
     float   rot;
     float   movement_tick_scale; /* corpus entity +0xae, reset to 0.01 */
     float   velocity_x;
@@ -265,7 +269,8 @@ typedef struct EntitySlot {
     char    model_path[64]; /* .ol `Model` key (best-effort)       */
     const void* model;      /* parsed LWO Model* (entity_model cache) */
     /* --- command layer (finding 10) --- */
-    void*   cmd_head;   /* chain-head command record (entity +0x2f0) */
+    float auxiliary_state_388; /* +0x388: cursor-target timeout; in
+                                * cmd_head's old 32-bit slot */
     void*   route_partner_300; /* reciprocal partner link for step commands */
     /* Retail +0xa0/+0xb8/+0xc4 windows are separate per-payload arrays:
      * two repeated +0x1c registrations, then one +0x24 and one +0x20.
@@ -298,39 +303,29 @@ typedef struct EntitySlot {
                                * writer 0x44c0e2, which is not ported)      */
     uintptr_t field_300;      /* retail +0x300 pointer tested by the spatial
                                * filter; no portable producer is recovered */
-    const void* attach_304;  /* +0x304: attached object the selection
-                              * filter follows in place of the candidate   */
+    uint32_t attached_child_count; /* in attach_304's old 32-bit slot */
     void* payload_aux_handle_7c; /* in owner_36c's old 32-bit slot */
     /* --- carried-object pair (corpus +0x308/+0x324/+0x348) ---------------
      * A type-3 carrier links the object it carries through +0x308; +0x324
      * holds the carry state the detach clears, and +0x348 points at the
      * reference whose dword the detach folds into the level's field 0x9c. */
-    void*    carry_link_308;  /* +0x308: carried object link            */
+    void*    attached_scene_object; /* in carry_link_308's old slot   */
     int32_t  carry_state_324; /* +0x324: carry state word               */
     uint32_t field_328;       /* +0x328 counter read by tutorial 0x14/0x15 */
     void*    carry_ref_348;   /* +0x348: carried reference (dword read) */
     float    command_chain_idle_elapsed_338; /* +0x338 callback timer */
     uint32_t action_consume_counters_initialized; /* in field_340's old slot */
     int32_t  positioned_render_state_34c; /* proximity-driven render state */
-    /* --- route-progress advance (corpus +0x344/+0x2fc, finding 448) -----
-     * The corpus advances a routing progress float by a fixed step and
-     * clamps it to the entity's own +0x340 bound, clearing the +0x2fc
-     * link field in passing. */
-    float    progress_344;   /* +0x344: routing progress float            */
-    uintptr_t link_2fc;    /* +0x2fc: link field the advance clears (corpus
-                                 * dword link, widened for the port) */
-    /* --- eligibility coordinate pair (corpus +0x2f4/+0x2f8) ---------------
-     * The activity/terrain eligibility transition parks its last probed
-     * cell pair here and blanks it to -1.0/-1.0 when it hands the cell off
-     * to queued work. */
+    void* payload_handle_04;          /* in progress_344's old slot */
+    uint32_t indexed_record_flag_index; /* in link_2fc's old slot */
     int      drill_sound_handle_350; /* corpus +0x350 loop sound handle */
-    float    pos_pair_2f4; /* +0x2f4: pair x (port-side mirror)             */
-    float    pos_pair_2f8; /* +0x2f8: pair y                                */
+    uint32_t auxiliary_slot_38c;    /* in pos_pair_2f4's old slot */
+    uint32_t indexed_record_flags;  /* in pos_pair_2f8's old slot */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
     AiWaypoint wp[AI_WAYPOINTS_MAX];
     AiWaypoint* wp_dynamic; /* realloc-grown continuation of the inline list */
     unsigned int wp_capacity;
-    int      wp_count;       /* +0x28: valid entries                      */
+    float    x;              /* world pose x; in wp_count's old slot      */
     int      wp_index;       /* +0x2c: entry being walked                 */
     /* --- permitted-activity list (corpus +0x370 ids / +0x384 count) ----- *
      * Activities the entity is permitted to run, as table indices. The
@@ -348,26 +343,37 @@ typedef struct EntitySlot {
     float activity_counter_3d4;
     float activity_counter_3d8;
     float activity_counter_3dc;
-    float auxiliary_state_388; /* +0x388: cursor-target timeout */
-    uint32_t auxiliary_slot_38c;
-    uint32_t indexed_record_flags;
-    uint32_t indexed_record_flag_index;
+    /* --- retail +0x2f0..+0x308 at their original 32-bit offsets
+     * (finding 526); asserted in entity.cpp. ------------------------------ */
+    void*   cmd_head;   /* +0x2f0: chain-head command record */
+    /* Eligibility coordinate pair (corpus +0x2f4/+0x2f8). The
+     * activity/terrain eligibility transition parks its last probed cell
+     * pair here and blanks it to -1.0/-1.0 when it hands the cell off to
+     * queued work. */
+    float    pos_pair_2f4; /* +0x2f4: pair x                                */
+    float    pos_pair_2f8; /* +0x2f8: pair y                                */
+    uintptr_t link_2fc;    /* +0x2fc: link field the route-progress advance
+                            * clears (corpus dword link, widened for the
+                            * port) */
     /* Scene-owner sidecar for the corpus's variable attachment array at
      * +0x308/+0x324. The pointer is borrowed from the scene owner; entity
-     * creation zero-initializes it and the scene owner clears it on release. */
+     * creation zero-initializes it and the scene owner clears it on release.
+     * Retail +0x300 is split between route_partner_300 and field_300, so
+     * neither is placed (finding 526). */
     struct EntitySlot** attached_children;
-    uint32_t attached_child_count;
-    void* attached_scene_object;
-    uint32_t ddiscene_owner_token; /* stable 32-bit owner link for scene callbacks */
-    int32_t attached_scene_slot_index; /* corpus child +0x320 */
-    int32_t indexed_record_slot_330;   /* corpus selector at +0x330 */
+    const void* attach_304;  /* +0x304: attached object the selection
+                              * filter follows in place of the candidate   */
+    void*    carry_link_308;  /* +0x308: carried object link            */
+    /* Direction state written by AttachedEntityDirectionVectorUpdate
+     * (+0x2ac..+0x2b8 in the corpus image). */
+    float attached_direction[3];
     void* attached_direction_record_type1;
     void* attached_direction_record_type2;
     void* attached_direction_record_type3;
     void* attached_direction_record_type4;
-    /* Direction state written by AttachedEntityDirectionVectorUpdate
-     * (+0x2ac..+0x2b8 in the corpus image). */
-    float attached_direction[3];
+    uint32_t ddiscene_owner_token; /* stable 32-bit owner link for scene callbacks */
+    int32_t attached_scene_slot_index; /* corpus child +0x320 */
+    int32_t indexed_record_slot_330;   /* +0x330: corpus selector */
     /* Retail +0x334: pointer to the entity's selected 0x150-byte Stats
      * record, set by EntityBuildingIndexSet (0x469c10) from the level index
      * at retail +0x330, or to a static template by EntityCreateByType. The
@@ -381,8 +387,11 @@ typedef struct EntitySlot {
     float field_33c;         /* +0x33c spawn timer mirror */
     float    field_340;      /* +0x340 float; the wake mirror sets 100.0
                               * (its general corpus readers are TODO)       */
+    /* Route-progress advance (corpus +0x344/+0x2fc, finding 448): the
+     * corpus advances this float by a fixed step and clamps it to the
+     * entity's own +0x340 bound, clearing link_2fc in passing. */
+    float    progress_344;   /* +0x344: routing progress float            */
     uint32_t action_consume_counters[6];
-    void* payload_handle_04;
     void* payload_resource_chains[3];
     const void* owner_36c;   /* +0x36c: owner pointer read by the
                               * context-selected predicate and the
@@ -391,11 +400,11 @@ typedef struct EntitySlot {
     void* visual_resource_handles[4]; /* per-type cached scene visual */
     void* type_component_handle; /* retail 0x4a200 result consumed by
                                   * SurfaceVectorNormalize */
-    void* payload_owned_blocks[5];
-    uint32_t payload_flags_70;
     void* scene_slot_cache[12];
-    uint32_t scene_slot_generation;
     void* scene_slot_owner_24_handles[3];
+    uintptr_t pair_link_3c0; /* +0x3c0: reciprocal entity link */
+    void* payload_owned_blocks[5];
+    uint32_t scene_slot_generation;
     uint32_t flags_390; /* +0x390: BuildingTypes path-effect veto bits */
     /* --- entity flag words at their original 32-bit offsets +0x3e0..+0x3f0
      * (finding 522); asserted in entity.cpp. ------------------------------ */
@@ -413,7 +422,7 @@ typedef struct EntitySlot {
     uint32_t scene_slot_owner_1c_counts[3];
     int32_t task_pair_3b4[2];
     int32_t task_scalar_3bc;
-    uintptr_t pair_link_3c0; /* reciprocal entity link at corpus +0x3c0 */
+    uint32_t payload_flags_70; /* in pair_link_3c0's old 32-bit slot */
     int32_t payload_state_8c; /* in field_33c's old 32-bit slot */
     uint32_t tutorial_unit_at_block_3f8; /* +0x3f8 tutorial cell membership
                                           * marker written by callback 0x4570d0. */
