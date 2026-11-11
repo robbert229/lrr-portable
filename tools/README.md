@@ -1,5 +1,24 @@
 # `tools/` — game-data tooling
 
+## `lint_reccmp_annotations.py` — annotation ratchet
+
+`make reccmp-lint` checks recognizable definitions in production C/C++ source
+translation units under `src/` (excluding test files and `platform/native`),
+and named entries in `docs/coverage/ledger.csv` without an address annotation.
+It is a source heuristic, not a C++ parser; it scans conditional alternatives
+without preprocessing and accepts nearby FUNCTION, STUB or LIBRARY markers.
+It needs only Python's standard library, and runs in `make tools-test`.
+
+The sorted `docs/coverage/reccmp-lint-baseline.txt` records existing debt.
+Definition keys use scope, name and a normalized signature hash, never location;
+identical keys are counted separately. Named ledger keys use address and name.
+New entries fail; fixed entries are printed as `can be removed`. Run
+`make reccmp-lint-update` to remove fixed entries. It refuses additions unless
+explicitly approved with `make reccmp-lint-update
+RECCMP_LINT_UPDATE_ARGS=--allow-growth`. A changed signature can appear as a
+new and a fixed entry; review it before accepting growth. The heuristic cannot
+distinguish identical file-local signatures in the same scope, but counts them.
+
 ## `link_order.py` — read and edit the link-order list (ADR 0006)
 
 `src/link_order.cmake` is CMake code with one `lrr_link(...)` entry per line,

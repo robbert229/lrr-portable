@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+from collections import Counter, defaultdict
 import re
 import sys
 from pathlib import Path
@@ -107,10 +109,10 @@ def matching_open_paren(masked: str, close: int) -> int | None:
     return None
 
 
-def function_definitions(source: str) -> list[tuple[int, str]]:
-    """Return (definition offset, function name) pairs for recognizable bodies."""
+def function_definitions(source: str) -> list[tuple[int, str, int]]:
+    """Return (definition offset, function name, body brace) for recognizable bodies."""
     masked = mask_comments_and_literals(source)
-    found: list[tuple[int, str]] = []
+    found: list[tuple[int, str, int]] = []
     seen: set[int] = set()
 
     for brace, char in enumerate(masked):
@@ -160,7 +162,7 @@ def function_definitions(source: str) -> list[tuple[int, str]]:
                 offset = boundary + line_match.start()
                 break
         if offset not in seen:
-            found.append((offset, name))
+            found.append((offset, name, brace))
             seen.add(offset)
     return found
 
@@ -228,48 +230,101 @@ def annotated_ledger_addresses(root: Path) -> set[str]:
     return addresses
 
 
+BASELINE = "docs/coverage/reccmp-lint-baseline.txt"
+HEADER = ("# Reccmp lint debt; sorted keys, repeated for duplicate definitions.\n"
+          "# Run make reccmp-lint-update to remove fixed entries; use\n"
+          "# make reccmp-lint-update RECCMP_LINT_UPDATE_ARGS=--allow-growth to add debt.\n")
+
+
+def scopes_at_braces(masked: str) -> dict[int, str]:
+    """Track named namespace and type scopes; other braces only balance the stack."""
+    stack: list[str] = []
+    scopes = {}
+    boundary = 0
+    for i, char in enumerate(masked):
+        if char == "{":
+            header = masked[boundary:i]
+            match = re.search(r"\b(namespace|class|struct|union)\s+([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*(?:final\s*)?(?::[^{}]*)?$", header)
+            stack.append(match.group(2) if match else "")
+            scopes[i] = "::".join(part for part in stack[:-1] if part)
+            boundary = i + 1
+        elif char == "}":
+            if stack:
+                stack.pop()
+            boundary = i + 1
+        elif char == ";":
+            boundary = i + 1
+    return scopes
+
+
+def collect(root: Path, ledger_path: Path | None) -> dict[str, list[str]]:
+    violations: dict[str, list[str]] = defaultdict(list)
+    for path in source_files(root / "src"):
+        source = path.read_text(encoding="utf-8", errors="replace")
+        masked = mask_comments_and_literals(source)
+        scopes = scopes_at_braces(masked)
+        for offset, name, brace in function_definitions(source):
+            if has_nearby_annotation(source, offset):
+                continue
+            # Ignore whitespace and directives, not parameter names or types.
+            signature = re.sub(r"(?m)^\s*\#.*$", "", masked[offset:brace])
+            signature = " ".join(re.findall(r"[A-Za-z_]\w*|\d+|::|\S", signature))
+            digest = hashlib.sha256(signature.encode()).hexdigest()[:16]
+            scope = scopes.get(brace, "")
+            key = f"definition {scope + '::' if scope else ''}{name} {digest}"
+            line = source.count("\n", 0, offset) + 1
+            violations[key].append(f"{path.relative_to(root)}:{line}: {name}")
+    if ledger_path:
+        annotated = annotated_ledger_addresses(root)
+        for address, name in ledger_functions(ledger_path, {"named"}):
+            if address not in annotated:
+                violations[f"ledger 0x{address} {name}"].append(f"0x{address} {name}")
+    return violations
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("root", nargs="?", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument(
-        "--ledger",
-        type=Path,
-        help="coverage ledger CSV; report named functions missing a FUNCTION/STUB/LIBRARY marker",
-    )
+    parser.add_argument("--ledger", type=Path, help="coverage ledger CSV")
+    parser.add_argument("--baseline", type=Path, default=Path(BASELINE))
+    parser.add_argument("--update", action="store_true", help="rewrite the baseline")
+    parser.add_argument("--allow-growth", action="store_true", help="allow update to add debt")
     args = parser.parse_args()
     root = args.root.resolve()
-    missing: list[tuple[Path, int, str]] = []
-
-    for path in source_files(root / "src"):
-        source = path.read_text(encoding="utf-8", errors="replace")
-        for offset, name in function_definitions(source):
-            if not has_nearby_annotation(source, offset):
-                line = source.count("\n", 0, offset) + 1
-                missing.append((path, line, name))
-
-    if args.ledger:
-        ledger_path = args.ledger if args.ledger.is_absolute() else root / args.ledger
-        try:
-            annotated = annotated_ledger_addresses(root)
-            unported = [
-                row for row in ledger_functions(ledger_path, {"named"})
-                if row[0] not in annotated
-            ]
-        except (OSError, ValueError, csv.Error) as exc:
-            print(f"Could not read Reccmp coverage ledger: {exc}", file=sys.stderr)
-            return 2
-        print(f"\nNamed functions missing FUNCTION/STUB/LIBRARY annotations: {len(unported)} from {ledger_path}")
-        for address, name in unported:
-            print(f"0x{address} {name}")
-
-    if missing:
-        print(f"Reccmp annotation lint failed: {len(missing)} function(s) lack FUNCTION/STUB/LIBRARY annotations", file=sys.stderr)
-        for path, line, name in missing:
-            print(f"{path.relative_to(root)}:{line}: {name}", file=sys.stderr)
-        return 1
-
-    print("Reccmp annotation lint passed")
-    return 0
+    baseline = args.baseline if args.baseline.is_absolute() else root / args.baseline
+    ledger = args.ledger if not args.ledger or args.ledger.is_absolute() else root / args.ledger
+    try:
+        violations = collect(root, ledger)
+        current = Counter({key: len(locations) for key, locations in violations.items()})
+        if baseline.exists():
+            previous = Counter(line for line in baseline.read_text(encoding="utf-8").splitlines()
+                               if line and not line.startswith("#"))
+        elif args.update and args.allow_growth:
+            previous = Counter()
+        else:
+            raise ValueError(f"baseline missing: {baseline}")
+        new, fixed = current - previous, previous - current
+        for key, count in sorted(new.items()):
+            for location in violations[key][-count:]:
+                print(f"new: {location} [{key}]")
+        for key, count in sorted(fixed.items()):
+            print(f"can be removed: {key}" + (f" (x{count})" if count > 1 else ""))
+        if args.update:
+            if new and not args.allow_growth:
+                print("Refusing to add baseline entries; pass --allow-growth to accept them.", file=sys.stderr)
+                return 1
+            baseline.parent.mkdir(parents=True, exist_ok=True)
+            baseline.write_text(HEADER + "".join(key + "\n" for key in sorted(current.elements())), encoding="utf-8")
+            print(f"Updated {baseline}: {sum(current.values())} entries")
+        elif new:
+            print(f"Reccmp annotation lint failed: {sum(new.values())} new violation(s)", file=sys.stderr)
+            return 1
+        else:
+            print(f"Reccmp annotation lint passed: {sum(current.values())} existing violation(s), {sum(fixed.values())} can be removed")
+        return 0
+    except (OSError, ValueError, csv.Error) as exc:
+        print(f"Reccmp annotation lint: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

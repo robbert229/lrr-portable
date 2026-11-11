@@ -19,7 +19,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: unit-data-offsets match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
+.PHONY: unit-data-offsets match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-lint-update reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -113,7 +113,8 @@ unit-data-offsets:
 
 # Unit tests of the Python tooling (needs reference/LegoRR.exe for the
 # validation tests, which are skipped without it).
-tools-test:
+tools-test: reccmp-lint
+	python3 -m unittest discover -s tools/tests -p 'test_lint_reccmp_annotations.py'
 	python3 -m unittest discover -s tools/tests -p 'test_reccmp_diagnostics.py'
 	python3 tools/link_order.py check
 	python3 tools/meson_source_parity.py
@@ -163,6 +164,9 @@ reference-run reccmp-run:
 
 reccmp-lint:
 	python3 ./tools/lint_reccmp_annotations.py --ledger "$(RECCMP_LEDGER)"
+
+reccmp-lint-update:
+	python3 ./tools/lint_reccmp_annotations.py --ledger "$(RECCMP_LEDGER)" --update $(RECCMP_LINT_UPDATE_ARGS)
 
 run: build
 	LEGORRR_WAD_DIR="$(WAD_DIR)" "$(BUILD_DIR)/LegoRR"
