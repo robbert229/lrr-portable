@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "camera_shared.hpp"
 
 extern "C" short rng_thunk_draw15(void);
 extern "C" float random_float_range(float minimum, float maximum);
@@ -31,32 +32,12 @@ static CameraGridSpawnHook s_grid_spawn_hook;
 static void* s_grid_spawn_context;
 static CameraSpawnRegistryProbeHook s_spawn_registry_probe_hook;
 static void* s_spawn_registry_probe_context;
-static CameraMovePostCallback s_move_post_callback;
-static void* s_move_post_user;
+CameraMovePostCallback s_move_post_callback;
+void* s_move_post_user;
 static CameraControlRegistryPredicate s_control_registry_predicate;
 static void* s_control_registry_user;
 
 /* --- helper stubs (fill from the corpus one at a time) ------------------- */
-
-/* The linked-record float advance has its original global list owner in
- * crt.cpp; the entity callback after it remains a separate seam. */
-static void move_pipeline_hook(float delta)
-{
-    linked_list_conditional_float_advance(delta);
-}
-
-/* LAB_0046a5c0 is dispatched through EntityPoolFindByCallbackFiltered.
- * Keep the observed filtered traversal even when its unknown callback has
- * not been supplied. */
-static int move_post_callback_dispatch(EntitySlot* entity, void* user)
-{
-    if (s_move_post_callback != NULL) {
-        return s_move_post_callback(entity, s_move_post_user);
-    }
-    (void)entity;
-    (void)user;
-    return 0;
-}
 
 /* FUN_0046a4c0's bit ordering and all-pass aggregation are implemented by
  * the game entity layer. Only LAB_0046a490's entity predicate is unknown. */
@@ -117,15 +98,6 @@ void camera_spawn_registry_probe_hook_set(CameraSpawnRegistryProbeHook hook,
 static void spawn_issue(int source_object, uint32_t type)
 {
     predug_spawn_coordinate_select_and_create(source_object, (int)type);
-}
-
-static void move_post_hook(void)
-{
-    GameContext* game = entity_pool_callback_context_get();
-    if (game != NULL) {
-        entity_pool_find_by_callback_filtered(
-            game, move_post_callback_dispatch, NULL);
-    }
 }
 
 static int control_probe(uint32_t mask)
@@ -255,22 +227,6 @@ void* predug_spawn_coordinate_select_and_create(int source_object, int type)
 }
 
 /* --- the six corpus functions -------------------------------------------- */
-
-/* CameraMoveCommandRoute preserves the corpus's move-list call followed by
- * the conditional filtered entity walk. The callback body remains an
- * injectable, unresolved runtime input. */
-// FUNCTION: LEGORR 0x0046a730
-void camera_move_pipeline(EngineContext* ctx, float delta)
-{
-    /* The reference routine operates on global state and does not consume an
-     * EngineContext. Keep the context parameter only for the port's caller
-     * interface; a missing context must not suppress the global list step. */
-    (void)ctx;
-    move_pipeline_hook(delta);
-    if (g_move_hook_enabled()) {
-        move_post_hook();
-    }
-}
 
 /* MainSimFeatureFlagLatch (FUN_00435a50): probe control 0x40b when state
  * bit 0x08000000 is set, then latch debug bit 0x2. Context-owned state is

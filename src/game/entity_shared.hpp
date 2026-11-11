@@ -26,4 +26,9 @@ extern void* s_entity_state_override_context;
 
 extern EntityQuadCollisionHooks s_entity_quad_collision_hooks;
 
+extern uint32_t s_scene_dispatch_point_low;
+extern uint32_t s_scene_dispatch_point_high;
+extern uint32_t s_scene_dispatch_word_c;
+extern uint32_t s_scene_dispatch_word14;
+
 #endif /* LRR_GAME_ENTITY_SHARED_HPP */

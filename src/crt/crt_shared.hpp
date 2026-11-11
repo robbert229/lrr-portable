@@ -69,4 +69,7 @@ extern uint32_t s_scene_effect_head;
 extern uint32_t s_scene_effect_tail;
 extern uint32_t s_scene_effect_shared;
 
+extern void* s_linked_list_head;
+extern void* s_linked_list_aux;
+
 #endif /* LRR_CRT_CRT_SHARED_HPP */

@@ -4443,19 +4443,6 @@ void steering_physics_step(void* unused, float* state, const float* delta)
     matrix4_multiply(state + 0x16, translation, previous);
 }
 
-static uint32_t s_entity_flag_mask_all_pass;
-
-static int entity_flag_mask_match_callback(EntitySlot* entity, void* payload)
-{
-    const uint32_t mask = (uint32_t)(uintptr_t)payload;
-    const uint32_t type = first_set_flag_ordinal(mask);
-    if (entity != NULL && (uint32_t)entity->type == type &&
-        entity->flags_390 != 0u) {
-        s_entity_flag_mask_all_pass = 0u;
-    }
-    return 0; /* retail visits every filtered entity for this mask bit */
-}
-
 struct FlagMaskPredicateContext {
     uint32_t bit;
     EntityFlagMaskPredicate predicate;
@@ -4474,10 +4461,10 @@ static int flag_mask_predicate_callback(EntitySlot* entity, void* payload)
 }
 
 static uint32_t s_entity_iteration_guard_flags;
-static uint32_t s_scene_dispatch_point_low;
-static uint32_t s_scene_dispatch_point_high;
-static uint32_t s_scene_dispatch_word_c;
-static uint32_t s_scene_dispatch_word14;
+uint32_t s_scene_dispatch_point_low;
+uint32_t s_scene_dispatch_point_high;
+uint32_t s_scene_dispatch_word_c;
+uint32_t s_scene_dispatch_word14;
 
 uint32_t entity_iteration_guard_flags_peek(void)
 {
@@ -4500,65 +4487,6 @@ void scene_object_state_dispatch_words_install(uint32_t point_low,
     s_scene_dispatch_word14 = word14;
 }
 
-struct SceneStateDispatchContext {
-    uint32_t ordinal;
-    uint32_t mode;
-    uint32_t flags;
-    SceneObjectStateCallback callback;
-    void* user;
-};
-
-static int scene_state_dispatch_callback(EntitySlot* entity, void* payload)
-{
-    SceneStateDispatchContext* context = (SceneStateDispatchContext*)payload;
-    if (context->callback == NULL) {
-        return 0;
-    }
-    return context->callback(entity, context->ordinal, context->mode,
-                             context->flags, context->user);
-}
-
-/* SceneObjectStateDispatch (FUN_0046a510): compute the selector ordinal,
- * optionally allocate/link its 0x20-byte record, then visit filtered entities
- * with the state tuple. The per-caller LAB_0046a3c0 effect and four global
- * words are represented by explicit install/callback hooks. Native records
- * reserve four extra bytes so the widened pointer at +0x1c fits. */
-// FUNCTION: LEGORR 0x0046A510
-void scene_object_state_dispatch(GameContext* ctx, uint32_t selector,
-                                 uint32_t mode, uint32_t flags,
-                                 SceneObjectStateCallback callback,
-                                 void* user)
-{
-    SceneStateDispatchContext context;
-    context.ordinal = first_set_flag_ordinal(selector);
-    context.mode = mode;
-    context.flags = flags;
-    context.callback = callback;
-    context.user = user;
-    if ((mode & 2u) != 0u) {
-        unsigned char* record = (unsigned char*)engine_heap_alloc(0x24);
-        if (record != NULL) {
-            uint32_t zero = 0u;
-            memset(record, 0, 0x24);
-            linked_list_push_at_global_head(record);
-            memcpy(record + 0x10, &zero, sizeof(zero));
-            if ((flags & 2u) != 0u) {
-                memcpy(record, &s_scene_dispatch_point_low, sizeof(uint32_t));
-                memcpy(record + 4, &s_scene_dispatch_point_high, sizeof(uint32_t));
-                memcpy(record + 0x0c, &s_scene_dispatch_word_c, sizeof(uint32_t));
-            }
-            if ((flags & 1u) != 0u) {
-                memcpy(record + 0x14, &s_scene_dispatch_word14, sizeof(uint32_t));
-            }
-            memcpy(record + 0x18, &flags, sizeof(flags));
-        }
-    }
-    if (ctx != NULL && callback != NULL) {
-        entity_pool_find_by_callback_filtered_current(
-            scene_state_dispatch_callback, &context);
-    }
-}
-
 static int entity_pool_teardown_callback(EntitySlot* entity, void* unused)
 {
     (void)unused;
@@ -4574,24 +4502,6 @@ void entity_iteration_callback_guard(void)
     entity_pool_find_by_callback_filtered_current(
         entity_pool_teardown_callback, NULL);
     s_entity_iteration_guard_flags &= ~2u;
-}
-
-/* FlagMaskCallbacksAllPass (FUN_0046a4c0): for each set bit 0..30, visit
- * filtered entities and fail if LAB_0046a490 finds a matching type with a
- * nonzero +0x390 word. */
-// FUNCTION: LEGORR 0x0046A4C0
-int entity_flag_mask_callbacks_all_pass(uint32_t mask)
-{
-    for (uint32_t index = 0; index < 31u; ++index) {
-        uint32_t bit = 1u << index;
-        s_entity_flag_mask_all_pass = 1u;
-        if ((mask & bit) != 0u) {
-            entity_pool_find_by_callback_filtered_current(
-                entity_flag_mask_match_callback, (void*)(uintptr_t)bit);
-            if (s_entity_flag_mask_all_pass == 0u) return 0;
-        }
-    }
-    return 1;
 }
 
 /* Camera/control registry callers need their supplied per-entity predicate;

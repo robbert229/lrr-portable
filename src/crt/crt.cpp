@@ -2586,89 +2586,11 @@ void uint96_zero(uint32_t limbs[3])
 void global_value_word_set(int value) { s_global_value_word = value; }
 int  global_value_word_peek(void) { return s_global_value_word; }
 
-/* The global-list push (FUN_0046a470) — the corpus's head word has no
- * ported owner, so the head lands here; the link field
- * at record +0x28 is a port-side pointer-sized slot (the corpus's 32-bit
- * dword, widened with the host — deviation documented). */
-/* Datacmp note: the corpus words at 0x4aa450/0x4aa458 are file-backed
- * zeros while the port's zero-init statics land in the exe's zero-fill
- * tail; reccmp-datacmp reads only file bytes per side and flags the pair
- * (uninitialized) — both sides are genuinely zero (image-verified). */
-// GLOBAL: LEGORR 0x004aa458
-static void* s_linked_list_head = NULL;  /* DAT_004aa458 role */
-static void record_list_push(void** head, void* record)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
-    }
-    *(void**)((char*)record + 0x1c) = *head;
-    *head = record;
-}
-
-// FUNCTION: LEGORR 0x0046a470
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void linked_list_push_at_global_head(void* record)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [s_linked_list_head]
-        mov dword ptr [eax + 1ch], ecx
-        mov dword ptr [s_linked_list_head], eax
-        ret
-    }
-}
-#else
-void linked_list_push_at_global_head(void* record)
-{
-    record_list_push(&s_linked_list_head, record);
-}
-#endif
-
 void* linked_list_global_head_peek(void) { return s_linked_list_head; }
 
 void linked_list_global_head_set(void* record)
 {
     s_linked_list_head = record;
-}
-
-/* LinkedRecordConditionalFloatAdvance (FUN_0046a700): walk the global
- * +0x1c chain and advance +8 by (+0xc * delta) only when +0x10 is nonzero
- * and +0x18 equals 2. The native chain pointer is widened in the port; the
- * observed record offsets and branch conditions are unchanged. */
-// FUNCTION: LEGORR 0x0046A700
-void linked_list_conditional_float_advance(float delta)
-{
-    void* record = s_linked_list_head;
-    while (record != NULL) {
-        uint32_t active = 0u;
-        uint32_t mode = 0u;
-        float value = 0.0f;
-        float rate = 0.0f;
-        void* next = NULL;
-        memcpy(&active, (const char*)record + 0x10, sizeof(active));
-        memcpy(&mode, (const char*)record + 0x18, sizeof(mode));
-        if (active != 0u && mode == 2u) {
-            memcpy(&value, (const char*)record + 8, sizeof(value));
-            memcpy(&rate, (const char*)record + 0x0c, sizeof(rate));
-            value = rate * delta + value;
-            memcpy((char*)record + 8, &value, sizeof(value));
-        }
-        memcpy(&next, (const char*)record + 0x1c, sizeof(next));
-        record = next;
-    }
-}
-
-/* FirstSetFlagOrdinal (FUN_0046a760): return the one-based index of the
- * lowest selected bit in the 13-bit state selector, or zero when empty. */
-// FUNCTION: LEGORR 0x0046A760
-uint32_t first_set_flag_ordinal(uint32_t mask)
-{
-    for (uint32_t bit = 0u; bit < 13u; ++bit) {
-        if ((mask & (1u << bit)) != 0u) {
-            return bit + 1u;
-        }
-    }
-    return 0u;
 }
 
 /* SceneEffectRegistryReset (FUN_00465380) — the transient-effect registry
@@ -2732,31 +2654,6 @@ void crt_no_op_stub_variant2(void)
     return;
 }
 #endif
-
-/* LinkedRecordChainFree / GlobalLinkedRecordChainClear — see crt.hpp. */
-// GLOBAL: LEGORR 0x004aa450
-static void* s_linked_list_aux = NULL; /* DAT_004aa450 role: unowned, zero-init */
-
-// FUNCTION: LEGORR 0x0046a370
-void linked_record_chain_free(void* record)
-{
-    if (record == NULL) {
-        return; /* the corpus's gate */
-    }
-    void* next = NULL;
-    __builtin_memcpy(&next, (char*)record + 0x1c, sizeof(next));
-    linked_record_chain_free(next);
-    engine_heap_free(record);
-}
-
-// FUNCTION: LEGORR 0x0046a390
-void global_linked_record_chain_clear(void)
-{
-    void* head = s_linked_list_head; /* the corpus reads the head first */
-    s_linked_list_aux = NULL;
-    linked_record_chain_free(head);
-    s_linked_list_head = NULL;
-}
 
 void* linked_list_global_aux_peek(void) { return s_linked_list_aux; }
 void  linked_list_global_aux_set(void* word) { s_linked_list_aux = word; }
