@@ -179,6 +179,7 @@ static const char s_panel_name_radar[] = "Panel_Radar";
 // GLOBAL: LEGORR 0x004a8930
 static const char s_panel_name_encyclopedia[] = "Panel_Encyclopedia";
 
+extern const char s_task_name_crystals[];   /* fix-up: reward.cpp uses it (mission_for_reward.hpp) */
 /* TaskBlockInit's stack name list and format operand are fixed image data. */
 // GLOBAL: LEGORR 0x004a8a08
 const char s_task_name_crystals[] = "Crystals";
