@@ -290,11 +290,9 @@ typedef struct EntitySlot {
                              * AI_TASK_STATE_NONE (= -1) for instance stats */
     int      activity_cap;  /* state +0xcc: permitted-activity capacity;
                              * task-state value or context fallback          */
-    const void* stats_record; /* +0x334 record side (finding 457): the
-                               * selected stats record image read by the
-                               * entity record accessors in entity.hpp. NULL
-                               * for static task-state templates; instance
-                               * rows are populated by the Stats config loader. */
+    /* Retail +0x1c component. It occupies the slot stats_record left at
+     * +0x114 in the 32-bit layout, so no other member moves (finding 520). */
+    void* type_operation_fallback_1c;
     int      activity;       /* +0x2e8: activity-table index, -1 = none */
     int      activity_last;  /* +0xbb: last completed activity, -1 none */
     int      activity_param; /* +0x2d8 (activity argument)              */
@@ -377,10 +375,16 @@ typedef struct EntitySlot {
     void* attached_direction_record_type2;
     void* attached_direction_record_type3;
     void* attached_direction_record_type4;
-    void* type_operation_fallback_1c; /* retail entity +0x1c component */
     /* Direction state written by AttachedEntityDirectionVectorUpdate
      * (+0x2ac..+0x2b8 in the corpus image). */
     float attached_direction[3];
+    /* Retail +0x334: pointer to the entity's selected 0x150-byte Stats
+     * record, set by EntityBuildingIndexSet (0x469c10) from the level index
+     * at retail +0x330, or to a static template by EntityCreateByType. The
+     * 32-bit layout puts it at its original +0x334 (finding 520); the native
+     * EntitySlot is otherwise not a retail image. NULL selects the zero
+     * template on portable hosts. */
+    const void* stats_record;
     float attached_direction_length;
     uint32_t action_consume_counters[6];
     uint32_t action_consume_counters_initialized;

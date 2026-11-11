@@ -320,5 +320,12 @@ if(BUILD_TESTING AND PLATFORM STREQUAL "native")
     endif()
     set_tests_properties(${name} PROPERTIES LABELS ${name})
   endforeach()
+  # Shipped Lego.cfg Stats read back through the retail accessors (finding
+  # 520). A separate process: the probe loads process-wide config tables.
+  if(TEST_WADS_DIR)
+    add_test(NAME entity_stats_real
+      COMMAND entity_test --real-stats "${TEST_WADS_DIR}")
+    set_tests_properties(entity_stats_real PROPERTIES LABELS entity)
+  endif()
   set_tests_properties(audio PROPERTIES ENVIRONMENT "SDL_AUDIODRIVER=dummy")
 endif()

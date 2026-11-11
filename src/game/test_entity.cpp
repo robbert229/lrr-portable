@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "resource.hpp"
+#include "game/ai.hpp"
 #include "game/entity.hpp"
 #include "game/level.hpp"
 #include "gods98/media.hpp"
@@ -452,6 +453,82 @@ static int ol_type_is_unknown(const char* name)
         }
     }
     return 1;
+}
+
+/* Real-data Stats check (--real-stats <wad-dir>, finding 520): load the shipped
+ * Lego.cfg Stats section through the startup loader, bind entities to their
+ * per-level 0x150-byte records and read known values back through the
+ * retail accessors. Values are the shipped Lego.cfg Stats entries; drill
+ * and upgrade times are stored multiplied by 25 (reference ticks). */
+static EntitySlot* stats_probe_bind(const char* name, uint32_t level)
+{
+    static EntitySlot slot;
+    int type = 0, row = 0;
+    memset(&slot, 0, sizeof(slot));
+    if (!entity_type_row_for_name(name, &type, &row)) return NULL;
+    slot.type = type;
+    slot.etype = row;
+    snprintf(slot.type_name, sizeof(slot.type_name), "%s", name);
+    slot.task_state = AI_TASK_STATE_NONE;
+    if (!entity_stats_record_bind(&slot) || slot.stats_record == NULL)
+        return NULL;
+    if (level != 0u && !entity_animation_state_set(&slot, level)) return NULL;
+    return &slot;
+}
+
+static void stats_probe(const char* wad_dir)
+{
+    int mounted = resource_mount(wad_dir, "LegoRR");
+    BlockFile* cfg = mounted > 0 ? block_open("Lego.cfg") : NULL;
+    EntitySlot* e;
+    CHECK(cfg != NULL, "--real: shipped Lego.cfg opens for the Stats probe");
+    if (cfg == NULL) {
+        resource_unmount_all();
+        return;
+    }
+    entity_names_config_load(cfg);
+
+    /* Pilot: RouteSpeed 1.1, SoilDrillTime 4.0 (+0x38 = 0x24 + 5*4),
+     * EnergyDecayRate 0.25, AwarenessRange 1000, RepairValue 10:15:20:25. */
+    e = stats_probe_bind("Pilot", 0u);
+    CHECK(e != NULL, "--real: Pilot binds its level-0 Stats record");
+    if (e != NULL) {
+        CHECK(entity_stats_float_at20(e) == 1.1f, "--real: Pilot RouteSpeed");
+        CHECK(entity_stats_float_at24_indexed(e, 5) == 4.0f * 25.0f,
+              "--real: Pilot SoilDrillTime (x25)");
+        CHECK(entity_energy_decay_rate_get(e) == 0.25f,
+              "--real: Pilot EnergyDecayRate");
+        CHECK(entity_collision_radius_get(e) == 1000.0f,
+              "--real: Pilot AwarenessRange (+0xe4)");
+        CHECK(entity_stats_float_at88(e) == 10.0f,
+              "--real: Pilot level-0 RepairValue");
+    }
+    e = stats_probe_bind("Pilot", 2u);
+    CHECK(e != NULL && entity_stats_float_at88(e) == 20.0f,
+          "--real: Pilot level-2 RepairValue selects the third record");
+
+    /* SmallDigger: RouteSpeed 2:2:4:4:..., HardDrillTime 180:150:... */
+    e = stats_probe_bind("SmallDigger", 2u);
+    CHECK(e != NULL && entity_stats_float_at20(e) == 4.0f,
+          "--real: SmallDigger level-2 RouteSpeed");
+    CHECK(e != NULL && entity_stats_float_at24_indexed(e, 2) == 180.0f * 25.0f,
+          "--real: SmallDigger level-2 HardDrillTime (+0x2c, x25)");
+
+    /* RockMonster weapons block: FreezerTime 25, PusherDist 20, LaserDamage
+     * 110, AttackRadius 160, and CanFreeze|CanLaser|CanPush in +0x148. */
+    e = stats_probe_bind("RockMonster", 0u);
+    CHECK(e != NULL, "--real: RockMonster binds its Stats record");
+    if (e != NULL) {
+        CHECK(entity_stats_float_at10c(e) == 25.0f, "--real: FreezerTime");
+        CHECK(entity_stats_float_at114(e) == 20.0f, "--real: PusherDist");
+        CHECK(entity_stats_float_at11c(e) == 110.0f, "--real: LaserDamage");
+        CHECK(entity_stats_float_at98(e) == 160.0f, "--real: AttackRadius");
+        CHECK((entity_state_flags_get(e) & 0x07000000u) == 0x07000000u,
+              "--real: CanFreeze/CanLaser/CanPush flags");
+    }
+    fprintf(stderr, "entity_test: --real Stats probe done\n");
+    block_close(cfg);
+    resource_unmount_all();
 }
 
 static int ol_probe(const char* wad_dir)
@@ -920,6 +997,17 @@ static int disp_recorder(int kind, int lane, int row, void* payload)
 
 int main(int argc, char** argv)
 {
+    /* The Stats probe loads the full shipped config into process-wide
+     * tables, so it runs alone (ctest: entity_stats_real). */
+    if (argc >= 3 && strcmp(argv[1], "--real-stats") == 0) {
+        stats_probe(argv[2]);
+        if (s_failures != 0) {
+            fprintf(stderr, "entity_test: %d failure(s)\n", s_failures);
+            return 1;
+        }
+        printf("entity_test: real Stats pass\n");
+        return 0;
+    }
     char rmcmd[64];
     snprintf(rmcmd, sizeof(rmcmd), "rm -rf %s", FIX);
     system(rmcmd);
