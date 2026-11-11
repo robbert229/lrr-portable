@@ -137,6 +137,8 @@ For each original translation unit, in link order where possible:
    the superseded wrappers and their declarations (see the entropy policy).
    Move their tests to the new API.
 8. **Measure and gate.**
+   - Run `make unit-data-offsets` on the matching build; review the unit’s
+     section gaps, anchored offsets where available, unknowns and commons.
    - Run `make reccmp-check` and compare the unit's functions before and
      after.
    - Classify any drop outside the unit under the entropy policy.

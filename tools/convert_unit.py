@@ -727,7 +727,7 @@ CHECKLIST = (
     "VC5 LIBC names",
     "Callers and tests: switch {callers} caller(s) to the original signatures; delete the "
     "superseded definitions in {sources} and their declarations",
-    "Measure and gate: `make reccmp-check`; compare the unit's functions before and after; "
+    "Measure and gate: `make unit-data-offsets`; review gaps, anchors, unknowns and commons; `make reccmp-check`; compare the unit's functions before and after; "
     "classify drops outside the unit under the entropy policy; "
     "`make reccmp-baseline-update`; `python3 tools/translation_units.py build`",
     "Native: the unit and every touched file compile; `c_boundaries` and the native "

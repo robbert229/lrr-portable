@@ -19,7 +19,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
+.PHONY: unit-data-offsets match-progress binary-progress binary-progress-compare all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit relocate-unit tools-test
 
 all: build
 
@@ -108,6 +108,9 @@ relocate-unit:
 	fi
 	@python3 ./tools/relocate_unit.py $(UNIT) $(RELOCATE_ARGS)
 
+unit-data-offsets:
+	python3 tools/unit_data_offsets.py --build "$(RECCMP_BUILD_DIR)"
+
 # Unit tests of the Python tooling (needs reference/LegoRR.exe for the
 # validation tests, which are skipped without it).
 tools-test:
@@ -119,6 +122,7 @@ tools-test:
 	python3 -m unittest discover -s tools/tests -p 'test_msvc_permuter.py'
 	python3 -m unittest discover -s tools/tests -p 'test_permuter_cohort.py'
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
+	python3 -m unittest discover -s tools/tests -p 'test_unit_data_offsets.py'
 	python3 -m unittest discover -s tools/tests -p 'test_pr_match_progress.py'
 	python3 -m unittest discover -s tools/tests -p 'test_match_listings.py'
 	python3 -m unittest discover -s tools/tests -p 'test_link_order.py'
