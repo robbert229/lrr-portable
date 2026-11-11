@@ -12,7 +12,7 @@ fields, so this module reads it with the standard library only:
                                                 # the matching build's sources
 
 ``insert_unit`` is how ``convert_unit.py`` wires a new unit into the list.
-The static and map checks of the list are issue #438.
+The check command validates the list and check-map compares .text object runs.
 """
 
 from __future__ import annotations
@@ -148,6 +148,111 @@ def insert_unit(text: str, unit_id: str, library: str, source: str,
     return "".join(lines)
 
 
+
+MARKER = re.compile(r"^\s*//\s*(?:FUNCTION|LIBRARY):\s*LEGORR\s+0x([0-9a-f]+)", re.I | re.M)
+
+
+def check(root: Path = ROOT) -> list[str]:
+    """Validate the list against source annotations and the unit specification."""
+    root = Path(root)
+    entries = load(root)
+    with (root / "docs/coverage/translation-units.spec.csv").open(newline="", encoding="utf-8") as f:
+        spec = {r["unit_id"]: r for r in csv.DictReader(f)}
+    with (root / RANGES).open(newline="", encoding="utf-8") as f:
+        ranges = {r["unit_id"]: (int(r["text_start"], 16), int(r["text_end"], 16)) for r in csv.DictReader(f)}
+    g98 = min(int(r["start"], 16) for r in spec.values() if r["kind"] == "gods98")
+    crt = min(int(r["start"], 16) for r in spec.values() if r["kind"] == "crt")
+    errors, seen_paths, seen_units = [], set(), set()
+    phase, previous = 0, -1
+    for e in entries:
+        where = f"{LIST}:{e.line + 1} ({e.source})"
+        if e.source in seen_paths:
+            errors.append(f"{where}: source is listed twice; remove the duplicate")
+        seen_paths.add(e.source)
+        path = root / e.path
+        if not path.is_file():
+            errors.append(f"{where}: source file does not exist")
+            continue
+        addresses = sorted(int(a, 16) for a in MARKER.findall(path.read_text(encoding="utf-8")))
+        address = None
+        if e.kind == "unit":
+            if e.key in seen_units:
+                errors.append(f"{where}: unit {e.key} is listed twice; remove the duplicate")
+            seen_units.add(e.key)
+            if e.key not in spec or spec[e.key]["kind"] not in ("game", "gods98") or e.key not in ranges:
+                errors.append(f"{where}: {e.key} is not a game or gods98 unit in the spec and ranges")
+            else:
+                lo, hi = ranges[e.key]
+                address = lo
+                for a in addresses:
+                    if not lo <= a < hi:
+                        errors.append(f"{where}: marker 0x{a:08x} is outside {e.key} range 0x{lo:08x}..0x{hi:08x}; move it to its unit")
+        elif e.kind == "legacy":
+            if not addresses:
+                errors.append(f"{where}: legacy file has no annotated functions; move it to the tail")
+            else:
+                median = addresses[(len(addresses) - 1) // 2]
+                try:
+                    address = int(e.key, 16)
+                except ValueError:
+                    errors.append(f"{where}: invalid median {e.key!r}; set it to {median:08x}")
+                if address is not None and address != median:
+                    errors.append(f"{where}: stale median {e.key}; set it to {median:08x} and move the entry into order")
+        elif e.key != "-":
+            errors.append(f"{where}: tail key must be -")
+        part = 2 if e.kind == "tail" else (3 if address is not None and address >= crt else 1 if address is not None and address >= g98 else 0)
+        if part < phase:
+            errors.append(f"{where}: entry is in the wrong segment; order game, gods98, tail, CRT")
+        if part != phase:
+            previous = -1
+        phase = max(phase, part)
+        if address is not None:
+            if address < previous:
+                errors.append(f"{where}: address {address:08x} is out of order; move entry after the correct predecessor")
+            previous = address
+    for directory in ("game", "gods98"):
+        for path in (root / "src" / directory).rglob("*"):
+            if path.suffix.lower() in (".c", ".cpp") and not path.name.startswith("test_"):
+                relative = path.relative_to(root / "src").as_posix()
+                if relative not in seen_paths:
+                    errors.append(f"{relative}: source is missing from {LIST}; add an entry")
+    return errors
+
+
+def check_map(entries: list[Entry], text: str) -> list[str]:
+    """Compare .text symbol contribution runs to explicit objects in list order.
+
+    Maps omit empty objects and identify objects by basename only. The
+    subsequence comparison handles both omissions and adjacent name collisions.
+    """
+    sections = set(re.findall(r"^\s*([0-9a-fA-F]{4}):[0-9a-fA-F]+\s+[0-9a-fA-F]+H\s+\.text\s", text, re.M))
+    if not sections:
+        return ["map has no .text section table entry"]
+    symbols = []
+    pattern = re.compile(r"^\s*([0-9a-fA-F]{4}):([0-9a-fA-F]{8})\s+\S+\s+[0-9a-fA-F]{8}\s+(?:[fi]\s+)*(\S+\.obj)\s*$", re.I | re.M)
+    for m in pattern.finditer(text):
+        if m.group(1) in sections:
+            symbols.append((int(m.group(2), 16), m.group(3).lower()))
+    if not symbols:
+        return ["map has no .text object symbols; check the map format"]
+    runs = []
+    for _, obj in sorted(symbols):
+        if not runs or runs[-1] != obj:
+            runs.append(obj)
+    expected = [Path(e.source).name.lower() + ".obj" for e in entries if e.applies_to(MATCHING_PLATFORM)]
+    index, library_seen, errors = 0, False, []
+    for obj in runs:
+        if ":" in obj:
+            library_seen = True
+            continue
+        if library_seen:
+            errors.append(f"map: explicit object {obj} contributes after a library; check link order")
+        try:
+            index = expected.index(obj, index) + 1
+        except ValueError:
+            errors.append(f"map: unexpected or out-of-order .text contribution {obj}; compare with {LIST}")
+    return errors
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--root", type=Path, default=ROOT)
@@ -155,7 +260,25 @@ def main(argv: list[str] | None = None) -> int:
                     help="only the entries this backend builds")
     ap.add_argument("--sources", action="store_true",
                     help="print repository-relative sources only")
+    ap.add_argument("command", nargs="?", choices=("check", "check-map"))
+    ap.add_argument("mapfile", nargs="?", type=Path)
     args = ap.parse_args(argv)
+    if args.command:
+        try:
+            if args.command == "check":
+                errors = check(args.root)
+            elif args.mapfile:
+                errors = check_map(load(args.root), args.mapfile.read_text(encoding="utf-8", errors="replace"))
+            else:
+                ap.error("check-map requires a map file")
+        except (OSError, ValueError) as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        for error in errors:
+            print(error, file=sys.stderr)
+        if not errors:
+            print(f"link order {args.command}: OK")
+        return bool(errors)
     entries = [e for e in load(args.root) if e.applies_to(args.platform)]
     for e in entries:
         if args.sources:

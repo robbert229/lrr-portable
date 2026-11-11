@@ -3,7 +3,7 @@
     "full": 55.14,
     "game_only": 50.97
   },
-  "baseline_sha256": "a9779599dca030acf7fc318d05ad8bece2b1d4d16ffe109f32d130e2a73dab1b",
+  "baseline_sha256": "7826a3557d6b4f9852a50d9e7ec87fb1abb62da6eb900706ce8f6e9849f5e775",
   "exact_function_code_bytes": {
     "bytes": 44517,
     "original_text_bytes": 642549,
@@ -15,15 +15,15 @@
   },
   "function_order_inversions": {
     "full": {
-      "adjacent": 895,
-      "pairs": 633298
+      "adjacent": 896,
+      "pairs": 633221
     },
     "game_only": {
-      "adjacent": 832,
-      "pairs": 619397
+      "adjacent": 833,
+      "pairs": 619320
     }
   },
-  "input_sha256": "f193fefb5c77846360ec12b88909e339f8709cad4199cc923c1533fc7b8c4fc4",
+  "input_sha256": "988a254df043c4b9124bf70ded179bba44c182eea01836df720da5f3a5613b16",
   "layout": {
     "data_offset_agreement": {
       "agreeing_units": 6,
@@ -82,59 +82,59 @@
         },
         {
           "first_public_address": "0x42b100",
+          "object": "input.cpp.obj"
+        },
+        {
+          "first_public_address": "0x42c4b0",
           "object": "select.cpp.obj"
         },
         {
-          "first_public_address": "0x42dfe0",
+          "first_public_address": "0x42f390",
           "object": "mainsim.cpp.obj"
         },
         {
-          "first_public_address": "0x42e340",
+          "first_public_address": "0x42f6f0",
           "object": "engine.cpp.obj"
         },
         {
-          "first_public_address": "0x42fbf0",
+          "first_public_address": "0x430fa0",
           "object": "simtick.cpp.obj"
         },
         {
-          "first_public_address": "0x431db0",
+          "first_public_address": "0x433160",
           "object": "camera.cpp.obj"
         },
         {
-          "first_public_address": "0x432500",
+          "first_public_address": "0x4338b0",
           "object": "entity_config.cpp.obj"
         },
         {
-          "first_public_address": "0x437080",
+          "first_public_address": "0x438430",
           "object": "level.cpp.obj"
         },
         {
-          "first_public_address": "0x4475a0",
+          "first_public_address": "0x448950",
           "object": "scene_render.cpp.obj"
         },
         {
-          "first_public_address": "0x44df10",
+          "first_public_address": "0x44f2c0",
           "object": "media.cpp.obj"
         },
         {
-          "first_public_address": "0x44e4c0",
+          "first_public_address": "0x44f870",
           "object": "ai.cpp.obj"
         },
         {
-          "first_public_address": "0x4519a0",
+          "first_public_address": "0x452d50",
           "object": "terrain_grid.cpp.obj"
         },
         {
-          "first_public_address": "0x45a530",
+          "first_public_address": "0x45b8e0",
           "object": "entity.cpp.obj"
         },
         {
-          "first_public_address": "0x473910",
+          "first_public_address": "0x474cc0",
           "object": "spawn.cpp.obj"
-        },
-        {
-          "first_public_address": "0x474c70",
-          "object": "input.cpp.obj"
         },
         {
           "first_public_address": "0x476020",
@@ -1027,7 +1027,7 @@
     "unit_order_inversions": {
       "adjacent": 93,
       "method": "median mapped function address per unit; ties are not inversions",
-      "pairs": 3799,
+      "pairs": 3816,
       "units": 217
     },
     "unit_relative_identity": {
@@ -3740,7 +3740,7 @@
     ],
     "unmapped_original_functions": 219
   },
-  "listing_digests_sha256": "4d5591af6dee77568f177f0b3a0664ada1c1c6cbbc9ae7018fd2491d1e5756a2",
+  "listing_digests_sha256": "dee55635bab3c41f0b1e1089a76af8eb64d83a6faad60cd5c27d77bd71b50aa9",
   "minimum_identical_run_bytes": 16,
   "pe_header_differences": {
     "entry_point_rva": {
@@ -3772,7 +3772,7 @@
       "identical_bytes": 1696,
       "identical_percent": 15.1,
       "original_bytes": 11232,
-      "rebuilt_bytes": 457247,
+      "rebuilt_bytes": 457231,
       "run_chance_percent": 0.0,
       "run_excess_percent_points": 1.23,
       "run_identical_bytes": 138,
@@ -3780,15 +3780,15 @@
     },
     ".text": {
       "chance_percent": 2.83,
-      "excess_percent_points": -0.05,
-      "identical_bytes": 17874,
-      "identical_percent": 2.78,
+      "excess_percent_points": 0.01,
+      "identical_bytes": 18260,
+      "identical_percent": 2.84,
       "original_bytes": 642549,
       "rebuilt_bytes": 934836,
       "run_chance_percent": 0.0,
-      "run_excess_percent_points": 0.01,
-      "run_identical_bytes": 85,
-      "run_identical_percent": 0.01
+      "run_excess_percent_points": 0.02,
+      "run_identical_bytes": 144,
+      "run_identical_percent": 0.02
     },
     "imports": {
       "chance_percent": 34.58,
@@ -3817,14 +3817,14 @@
   },
   "text_at_original_addresses": {
     "chance_percent": 2.83,
-    "excess_percent_points": -0.05,
-    "identical_bytes": 17874,
-    "identical_percent": 2.78,
+    "excess_percent_points": 0.01,
+    "identical_bytes": 18260,
+    "identical_percent": 2.84,
     "original_bytes": 642549,
     "rebuilt_bytes": 642549,
     "run_chance_percent": 0.0,
-    "run_excess_percent_points": 0.01,
-    "run_identical_bytes": 85,
-    "run_identical_percent": 0.01
+    "run_excess_percent_points": 0.02,
+    "run_identical_bytes": 144,
+    "run_identical_percent": 0.02
   }
 }
