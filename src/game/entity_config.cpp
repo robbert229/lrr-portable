@@ -4,6 +4,7 @@
 
 #include "entity.hpp"
 #include "building_scene.hpp"
+#include "actor_scene.hpp"
 #include "crt/crt.hpp"
 #include "frontend.hpp"
 #include "cmd.hpp"
@@ -414,6 +415,58 @@ static const char* entity_type_config_ae_value(BlockFile* ae,
     return block_get_strptr(ae, path);
 }
 
+/* 0x406b06..20 stores ConfigStringCopy's result at CreatureModel +0x2c.
+ * It is owned by the original row (0x406eec..fd), not by the scene adapter.
+ * The constructor tests pointer presence, including a present empty string. */
+static int entity_type_config_drill_name_load(TypeConfigTable* table,
+                                               void* row, BlockFile* ae,
+                                               uint32_t scene)
+{
+    char path[256];
+    uintptr_t offset;
+    uint32_t index;
+    TypeConfigShapeOwner* owner;
+    char* copy;
+    uint32_t word;
+    entity_type_config_key_path(path, "DrillNullName");
+    /* A successful row must have an owner for the config copy, including
+     * failure cleanup. Never truncate a 64-bit host pointer into the row. */
+    if (table == NULL || table->rows == NULL || table->row_owned == NULL ||
+        table->row_stride < 48u || (uintptr_t)row < (uintptr_t)table->rows)
+        goto legacy_unowned;
+    offset = (uintptr_t)row - (uintptr_t)table->rows;
+    if (offset % table->row_stride != 0u ||
+        offset / table->row_stride >= table->count ||
+        offset / table->row_stride >= table->capacity) goto legacy_unowned;
+    if (block_get_strptr(ae, path) == NULL) {
+        entity_type_config_word_set(row, 44u, 0u);
+        return 1;
+    }
+    index = (uint32_t)(offset / table->row_stride);
+    owner = (TypeConfigShapeOwner*)table->row_owned[index];
+    if (owner == NULL) {
+        owner = (TypeConfigShapeOwner*)calloc(1u, sizeof(*owner));
+        if (owner == NULL) return 0;
+        table->row_owned[index] = owner;
+    }
+    copy = block_get_str_copy(ae, path);
+    if (copy == NULL) return 0;
+    engine_heap_free(owner->drill_null_name);
+    owner->drill_null_name = copy;
+    /* x86 retains the reference pointer representation. Other hosts use a
+     * nonzero sidecar token, resolved only through the typed accessor. */
+    word = sizeof(void*) == 4u ? (uint32_t)(uintptr_t)copy : 1u;
+    entity_type_config_word_set(row, 44u, word);
+    return 1;
+legacy_unowned:
+    /* The direct resource-row API also accepts storage outside a table.
+     * Preserve its existing caller-supplied token/lifetime contract; this
+     * path has no table owner in which to retain a config-string copy. */
+    entity_type_config_word_set(row, 44u, entity_type_config_named_get(
+        scene, block_get_strptr(ae, path), 0));
+    return 1;
+}
+
 /* Concrete row parser for the two table families in Finding 409. The
  * renderer-facing handles are opaque 32-bit backend tokens supplied by the
  * installed runtime adapter; config text and numeric fields are parsed here. */
@@ -477,9 +530,11 @@ static int entity_type_config_row_parse_path(void* context,
                 entity_type_config_named_get(scene,
                     entity_type_config_ae_value(ae, "CameraFlipDir"), 0));
         }
-        entity_type_config_word_set(destination, 44u,
-            entity_type_config_named_get(scene,
-                entity_type_config_ae_value(ae, "DrillNullName"), 0));
+        if (!entity_type_config_drill_name_load((TypeConfigTable*)context,
+                                                 destination, ae, scene)) {
+            block_close(ae);
+            return 0;
+        }
         entity_type_config_word_set(destination, 48u,
             entity_type_config_named_get(scene,
                 entity_type_config_ae_value(ae, "FootStepNullName"), 0));
@@ -572,7 +627,7 @@ static int entity_type_config_row_parse_path(void* context,
         }
     }
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
-    if (row_kind == 2u) {
+    if (row_kind == 1u || row_kind == 2u || row_kind == 3u) {
         TypeConfigTable* table = (TypeConfigTable*)context;
         size_t offset;
         if (table == NULL || table->rows == NULL || table->row_stride == 0u) {
@@ -581,8 +636,12 @@ static int entity_type_config_row_parse_path(void* context,
         offset = (size_t)((char*)destination - (char*)table->rows);
         if (offset % table->row_stride != 0u ||
             offset / table->row_stride >= table->capacity ||
-            !building_scene_config_path_set((uint32_t)(offset / table->row_stride),
-                                             asset_path, engine_feature_word_peek())) {
+            !(row_kind == 2u
+                ? building_scene_config_path_set((uint32_t)(offset / table->row_stride),
+                    asset_path, engine_feature_word_peek())
+                : actor_scene_config_path_set(row_kind == 1u ? 2 : 3,
+                    (uint32_t)(offset / table->row_stride), asset_path,
+                    engine_feature_word_peek()))) {
             block_close(ae); return 0;
         }
     }
@@ -686,6 +745,9 @@ static void entity_type_config_family_release(TypeConfigTable* table, uint32_t k
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (kind == 2u && !building_scene_types_clear())
         building_scene_require_stopped();
+    if ((kind == 1u || kind == 3u) &&
+        !actor_scene_types_clear(kind == 1u ? 2 : 3))
+        actor_scene_require_stopped();
 #else
     (void)kind;
 #endif
@@ -1294,12 +1356,12 @@ static int entity_stats_block_float_value_get(void* context,
     }
     token = value;
     while (level != 0u && *token != '\0') {
-        if (*token == ',') --level;
+        if (*token == ',' || *token == ':') --level;
         ++token;
     }
     if (*token == '\0' && level != 0u) return 0;
     end = token;
-    while (*end != '\0' && *end != ',') ++end;
+    while (*end != '\0' && *end != ',' && *end != ':') ++end;
     length = (size_t)(end - token);
     if (length >= sizeof(number)) length = sizeof(number) - 1u;
     memcpy(number, token, length);
@@ -1334,11 +1396,12 @@ typedef struct EntityStatsFieldBinding {
 
 static const EntityStatsFieldBinding s_entity_stats_field_bindings[] = {
     { "RouteSpeed", 0x20u, 1.0f, 0 },
-    { "SoilDrillTime", 0x24u, 25.0f, 0 },
-    { "LooseDrillTime", 0x28u, 25.0f, 0 },
-    { "MedDrillTime", 0x2cu, 25.0f, 0 },
-    { "HardDrillTime", 0x30u, 25.0f, 0 },
-    { "SeamDrillTime", 0x34u, 25.0f, 0 },
+    { "SoilDrillTime", 0x38u, 25.0f, 0 },
+    { "LooseDrillTime", 0x34u, 25.0f, 0 },
+    { "MedDrillTime", 0x30u, 25.0f, 0 },
+    { "HardDrillTime", 0x2cu, 25.0f, 0 },
+    { "SeamDrillTime", 0x44u, 25.0f, 0 },
+    { "SeamDrillTime", 0x4cu, 25.0f, 0 },
     { "CollHeight", 0x74u, 1.0f, 0 },
     { "CollRadius", 0x6cu, 1.0f, 0 },
     { "BuildingBase", 0xa8u, 1.0f, 0 },

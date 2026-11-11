@@ -204,6 +204,8 @@ int main(int argc, char** argv)
     CHECK(level_height(s) == GRID, "grid height");
 
     /* Corpus scalar stores. */
+    CHECK(level_float(s, LEVEL_OFF_AIR_SUPPLY) == 100.0f, "initial air supply");
+    CHECK(level_float(s, 0x204) == 100.0f, "initial paired air value");
     CHECK(level_float(s, LEVEL_OFF_BLOCKSIZE) == 2.0f, "blocksize stored");
     CHECK(level_int(s, LEVEL_OFF_USEROOF) == 1, "useroof stored");
     CHECK(level_int(s, LEVEL_OFF_STARTP) == 1, "StartFP stored");

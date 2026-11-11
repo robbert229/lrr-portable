@@ -75,7 +75,7 @@ int main(void)
     /* Saves/ directory must exist (the corpus driver creates it; tests mkdir). */
     mkdir("Saves", 0755);
 
-    GameContext ctx;
+    static GameContext ctx;
     game_context_init(&ctx);
 
     /* Fake current level + a couple of populated task records. */
@@ -149,7 +149,7 @@ int main(void)
      * over the blob's task windows. A private context keeps the blob
      * pristine for the checks below. */
     {
-        GameContext fc;
+        static GameContext fc;
         memset(&fc, 0, sizeof fc);
         static LevelState flvl;
         memset(&flvl, 0, sizeof flvl);
@@ -295,7 +295,7 @@ int main(void)
      * objectives written to the sidecar come back byte-identical into the
      * live table and its shadow, with nothing left dirty or stale. */
     {
-        GameContext rctx;
+        static GameContext rctx;
         game_context_init(&rctx);
         /* Fresh context — a player booting into the loaded slot. */
         osf_add(&rctx, 7, 8, "LegoManRescued");
@@ -332,7 +332,7 @@ int main(void)
      * failure mode): bad magic, a size that contradicts the count, a short
      * file, and an absent file all leave the live table empty. */
     {
-        GameContext cctx;
+        static GameContext cctx;
         game_context_init(&cctx);
         /* bad magic: 'XX' + count 1 */
         uint8_t bad[8 + 20];
@@ -384,7 +384,7 @@ int main(void)
      * first may survive. This locks that pre-clear: drop it and these
      * checks fail. */
     {
-        GameContext wctx;
+        static GameContext wctx;
         game_context_init(&wctx);
         osf_add(&wctx, 21, 22, "SlotOneObj");
         CHECK(save_write_slot(&wctx, 1) != 0, "stale-shadow: write slot 1 sidecar");
@@ -399,7 +399,7 @@ int main(void)
             fclose(fp);
         }
 
-        GameContext lctx;
+        static GameContext lctx;
         game_context_init(&lctx);
         CHECK(osf_read_path(&lctx, 1) == 1 && lctx.osf_shadow_count == 1,
             "stale-shadow: slot 1 installs live + shadow");
@@ -449,9 +449,16 @@ int main(void)
     level_set_int(ctx.level, LEVEL_OFF_OBJ_RESULT, 0);
     ctx.checkpoint_blob[64] = 0x5a;
     remove("Saves/5.osf");
+    options_set(&ctx.options, OPT_WALL_DETAIL, 1);
+    options_set(&ctx.options, OPT_MUSIC_ONOFF, 1);
+    options_set(&ctx.options, OPT_SFX_ONOFF, 1);
+    options_set(&ctx.options, OPT_AUTO_SPEED, 1);
     checkpoint_step(&ctx);
     CHECK(ctx.save_slot == 5 && save_slot_get_target() == 5,
           "fallback selects the active slot for commit");
+    CHECK(ctx.options.wall_detail == 1 && ctx.options.music_onoff == 1 &&
+          ctx.options.sfx_onoff == 1 && ctx.options.auto_game_speed == 1,
+          "fallback reload retains live Advanced cycles absent from header");
     {
         size_t n = 0;
         uint8_t* raw = read_all("Saves/5.sav", &n);
@@ -563,7 +570,7 @@ int main(void)
     /* Manual labels 1 and 5 select raw files 0 and 4, leaving the
      * checkpoint fallback file 5 independent. */
     {
-        GameContext manual;
+        static GameContext manual;
         uint8_t pattern[SAVE_BLOB_SIZE];
         size_t n0 = 0, n4 = 0, n5 = 0, n5_after = 0;
         uint8_t *r0, *r4, *r5_before, *r5_after;
@@ -600,7 +607,7 @@ int main(void)
      * it back with the BMP loader. Prove the writer's exact header layout,
      * bottom-up rows, and that the port's own decoder round-trips it. */
     {
-        GameContext tctx;
+        static GameContext tctx;
         game_context_init(&tctx);
         uint32_t fb[4 * 3];
         for (int y = 0; y < 3; ++y) {
@@ -672,7 +679,7 @@ int main(void)
 
     /* SavRecordPtr (2026-10-24). */
     {
-        GameContext g;
+        static GameContext g;
         memset(&g, 0, sizeof(g));
         g.save_slot = 2;
         g.active_slot = 2;
@@ -687,7 +694,7 @@ int main(void)
 
     /* SelectedLevelStartObjectUpdate (2026-10-24): bound-level read, guarded. */
     {
-        GameContext ctx;
+        static GameContext ctx;
         game_context_init(&ctx);
         selected_level_start_object_update(NULL); /* guarded */
         const LevelState* keep = ctx.level;
@@ -705,7 +712,7 @@ int main(void)
         for (int s = 0; s < 6; ++s) {
             memset(blob[s], 0x10 + s, SAVE_BLOB_SIZE);
         }
-        GameContext ctx;
+        static GameContext ctx;
         game_context_init(&ctx);
         for (int s = 0; s < SAVE_SLOTS; ++s) {
             CHECK(save_read_slot(&ctx, s, 0) != 0 || s == 0,
@@ -731,7 +738,7 @@ int main(void)
         }
 
         /* Feature clear: reads only — the files ride. */
-        GameContext reader;
+        static GameContext reader;
         game_context_init(&reader);
         engine_feature_word_install(0u);
         sav_refresh_slots(&reader);
@@ -1061,7 +1068,7 @@ int main(void)
         static void* mchain;
         static uint32_t recA[8];
         static uint32_t recB[8];
-        GameContext mctx;
+        static GameContext mctx;
 
         engine_feature_word_install(0u);
         memset(mblk, 0, sizeof mblk);

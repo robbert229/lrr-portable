@@ -259,18 +259,69 @@ typedef struct EngineTaskCallbackRecord {
     /* Retail record is 0x34 bytes. Pointer-bearing words retain their
      * x86 offsets here; portable code must keep full-width interface values
      * in its adapter hooks rather than widening this target record.
-     * Initialization writes the resource at +0x0c, fixed callback at +0x10,
-     * a pointer to +0x0c at +0x14, self at +0x18, one at +0x20, owner at
+     * Initialization writes the resource at +0x0c, caller callback at +0x10,
+     * caller context at +0x14, mode at +0x18, one at +0x20, owner at
      * +0x28, and mode flags at +0x2c. */
     uint32_t words[13];
 } EngineTaskCallbackRecord;
 typedef char EngineTaskCallbackRecordSizeCheck[
     sizeof(EngineTaskCallbackRecord) == 0x34u ? 1 : -1];
+enum SceneUserVisualReason {
+    SCENE_USER_VISUAL_CAN_SEE = 0,
+    SCENE_USER_VISUAL_RENDER = 1
+};
+/* Boundaries of the UserVisual manager's real COM/render operations.
+ * No default renderer is installed. The owner must keep this context and
+ * its borrowed device live until all visual callbacks have finished.
+ * Except for the documented tri-state queries, operations return nonzero
+ * on success. A failed operation must return any still-owned interface in
+ * the output or release it and clear the output; state_end must undo partial
+ * begin.
+ * group_get resolves a readable, DWORD-aligned 0x70-byte target-layout
+ * group, not a parsed Model. Misaligned groups are refused before access.
+ * A complete table is admission only, not proof of a real renderer binding. */
+typedef struct SceneUserVisualManagerHooks {
+    void* context;
+    void* renderer_device; /* the actual immediate-mode device (50591c) */
+    /* 475830(owner), then owner property +14 bit80: -1 error,0 shown,1 hidden. */
+    int (*owner_hidden)(void* context, EngineTaskCallbackRecord* record);
+    /* Viewport/frame CANSEE update: -1 error,0 not needed,1 performed. */
+    int (*facing_update)(void* context, EngineTaskCallbackRecord* record,
+                          void* viewport);
+    /* GetTransform(1),483580(viewport),QI(viewport),GetAppData, in order.
+     * parameter may be NULL; interface_out must own one reference. */
+    int (*render_context_open)(void* context, void* renderer_device,
+                                void* viewport, float transform[16],
+                                void** parameter_out, void** interface_out);
+    void (*interface_release)(void* context, void* interface_object);
+    void* (*group_get)(void* context, EngineTaskCallbackRecord* record,
+                        uint32_t index);
+    /* 4838b0 followed by482ac0(record,parameter,transform,0). */
+    int (*state_begin)(void* context, EngineTaskCallbackRecord* record,
+                        void* parameter, const float transform[16]);
+    /* 483a90(record,group,transform,0) and4839c0(record,transform,0). */
+    int (*group_draw)(void* context, EngineTaskCallbackRecord* record,
+                       void* group, const float transform[16]);
+    int (*model_draw)(void* context, EngineTaskCallbackRecord* record,
+                       const float transform[16]);
+    /* 478940 then483940, including when state_begin partially failed. */
+    int (*state_end)(void* context);
+} SceneUserVisualManagerHooks;
+void scene_user_visual_manager_hooks_set(
+    const SceneUserVisualManagerHooks* hooks);
+int scene_user_visual_manager_operations_present(void);
+/* Complete callback control owner. RENDER with no device returns one as in
+ * retail; that no-draw result must never be used as renderer readiness.
+ * Deferred queueing refuses record addresses not representable in32 bits. */
+int scene_user_visual_manager_dispatch(EngineTaskCallbackRecord* record,
+                                        uint32_t reason, void* viewport);
 typedef struct EngineTaskCallbackHooks {
     void* context;
     /* D3DRM3::CreateUserVisual is IDirect3DRM3 slot +0x58. The callback
      * manager object is renderer-owned; `resource_out` represents record
-     * +0x0c on x86. */
+     * +0x0c on x86. The callback_address argument is caller metadata;
+     * a production adapter must supply the real manager entry and record
+     * cookie to CreateUserVisual, not use that word as the COM callback. */
     void (*user_visual_create)(void* context, uint32_t callback_address,
                                EngineTaskCallbackRecord* record,
                                void** resource_out);
@@ -1089,6 +1140,10 @@ void ddiscene_frame_callbacks_set(DDiSceneSampleHook sample_hook,
  * Re-adding the same callback/context pair is harmless. */
 int ddiscene_sample_hook_add(DDiSceneSampleHook sample_hook,
                              void* sample_context);
+/* Typed ACT owners share the installed sample/trigger dispatch without
+ * pretending that their native records have the original ACT layout. */
+void ddiscene_activity_sample_dispatch(const char* sample, void* scene_object);
+void ddiscene_activity_trigger_dispatch(void* scene_object);
 float ddiscene_frame_update_and_callbacks(void* scene_object, float time); /* 0x475140 */
 float ddiscene_advance_by_time(void* scene_object, float delta); /* 0x00475120 */
 float ddiscene_advance_by_time_target(void* scene_object, float delta);
@@ -1473,6 +1528,30 @@ int scene_runtime_light_parameter_set(void* light, unsigned int offset,
 /* WinAPI backend owns the DLL and its IDirect3DRM3 factory reference. */
 int scene_winapi_initialize(void);
 void scene_winapi_shutdown(void);
+struct IDirect3DRMUserVisual;
+struct IDirect3DRMDevice;
+struct IDirect3DRMViewport;
+/* The COM method is stdcall, but D3DRMUSERVISUALCALLBACK is cdecl.
+ * The reference manager at 0x4827f0 also returns without popping args. */
+typedef int (__cdecl *SceneUserVisualCallback)(
+    IDirect3DRMUserVisual*, void*, SceneUserVisualReason,
+    IDirect3DRMDevice*, IDirect3DRMViewport*);
+int __cdecl scene_runtime_user_visual_manager(
+    IDirect3DRMUserVisual* visual, void* cookie, SceneUserVisualReason reason,
+    IDirect3DRMDevice* device, IDirect3DRMViewport* viewport);
+/* On success the caller owns one interface reference. On failure the
+ * output is NULL, including when the factory returns a failed object. */
+int scene_winapi_user_visual_create(SceneUserVisualCallback callback,
+                                    void* cookie, void** visual);
+/* RMDevice3::GetDirect3DDevice2 then QI(IDirect3DDevice3). Success transfers
+ * one owned immediate-device reference; failure clears the output. */
+int scene_winapi_device3_acquire(void* retained_device, void** immediate);
+/* Borrows both inputs; success transfers one RMViewport2 reference. Failure
+ * clears both outputs and releases temporaries; a successful viewport bind
+ * is not rolled back if the later RM interface query fails. */
+int scene_winapi_user_visual_context_open(void* immediate_device,
+    void* retained_viewport, float transform[16], void** parameter_out,
+    void** interface_out);
 int scene_winapi_frame_create(void* parent, void** frame);
 void scene_winapi_frame_release(void* frame);
 void scene_winapi_interface_release(void* object);

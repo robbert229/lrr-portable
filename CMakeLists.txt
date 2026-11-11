@@ -134,7 +134,7 @@ target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 add_library(game STATIC
   ${GAME_DIR}/game.cpp ${GAME_DIR}/level.cpp ${GAME_DIR}/objective.cpp
   ${GAME_DIR}/savegame.cpp ${GAME_DIR}/mission.cpp ${GAME_DIR}/entity.cpp
-  ${GAME_DIR}/entity_config.cpp
+  ${GAME_DIR}/entity_config.cpp ${GAME_DIR}/entity_motion_owner.cpp
   ${GAME_DIR}/cmd.cpp ${GAME_DIR}/select.cpp ${GAME_DIR}/ai.cpp
   ${GAME_DIR}/screen_pick.cpp
   ${GAME_DIR}/render.cpp ${GAME_DIR}/scene_render.cpp
@@ -190,6 +190,7 @@ if(PLATFORM STREQUAL "native")
 else()
   target_sources(gods98 PRIVATE ${ENGINE_DIR}/lwsc_winapi.cpp)
   target_sources(game PRIVATE ${GAME_DIR}/building_scene.cpp)
+  target_sources(game PRIVATE ${GAME_DIR}/actor_scene.cpp)
   add_library(platform_glue STATIC ${PLATFORM_DIR}/winapi/frameloop.cpp)
   target_include_directories(platform_glue PUBLIC ${SRC_ROOT})
   set(PLATFORM_ENTRY ${PLATFORM_DIR}/winapi/entry.cpp)

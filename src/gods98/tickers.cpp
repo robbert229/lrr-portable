@@ -228,7 +228,16 @@ static int engine_subsystem_tickers_dispatch(EngineContext* ctx, float dt,
         if ((TICKERS[i].skip_when != 0) && (ctx->state & TICKERS[i].skip_when)) {
             continue;
         }
-        TICKERS[i].fn(ctx, dt, scale);
+        if (update_views && TICKERS[i].fn == ticker_0043b270) {
+            /* 0x42358d supplies the scaled reference-frame carrier to
+             * EntityFrameUpdateDispatch. The runtime already computes that
+             * carrier for the views; seconds would slow authored ACT clocks
+             * and the callback's route displacement by a factor of 25. */
+            TICKERS[i].fn(ctx, camera_dt, camera_scale);
+        }
+        else {
+            TICKERS[i].fn(ctx, dt, scale);
+        }
         ++ctx->tickers_ran;
     }
     return simtick_camera_detail_collection_ready();

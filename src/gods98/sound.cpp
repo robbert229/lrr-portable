@@ -1847,7 +1847,7 @@ int sound_positional_sound_submit(int position, int alias, int loop,
 }
 
 // FUNCTION: LEGORR 0x00465050
-void sound_submission_route_wrapper(const void* wrapped_position, int alias,
+int sound_submission_route_wrapper(const void* wrapped_position, int alias,
                                     int loop, int positional,
                                     const float* xyz)
 {
@@ -1855,7 +1855,7 @@ void sound_submission_route_wrapper(const void* wrapped_position, int alias,
     if (wrapped_position != NULL) {
         position = (int)scene_object_wrapped_pointer_get(wrapped_position);
     }
-    sound_positional_sound_submit(position, alias, loop, positional, xyz);
+    return sound_positional_sound_submit(position, alias, loop, positional, xyz);
 }
 
 // FUNCTION: LEGORR 0x004652d0

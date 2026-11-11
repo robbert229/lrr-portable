@@ -292,7 +292,8 @@ void options_save_header(const GameOptions* o, uint8_t* blk)
 
 int options_load_header(GameOptions* o, const uint8_t* blk)
 {
-    if (o == NULL || blk == NULL || s_get_u32(blk) != OPT_HDR_MAGIC) {
+    if (o == NULL || blk == NULL || s_get_u32(blk) != OPT_HDR_MAGIC ||
+        s_get_u32(blk + 4) != OPT_HDR_VERSION) {
         return 0;
     }
     uint32_t n = s_get_u32(blk + 8);
@@ -333,8 +334,7 @@ void options_write_to_slot_target(void)
 {
     GameContext* ctx = (GameContext*)sav_build_ctx_target();
     if (ctx == NULL) return;
-    /* The host-width slot-record sidecar corresponds to the retail +0x08,
-     * +0x0c, and +0x10 option words. */
+    /* The host-width sidecar carries retail's SFX/speed/brightness words. */
     s_options_slot_window[2] = (uint32_t)ctx->options.sfx_volume;
     s_options_slot_window[3] = (uint32_t)ctx->options.game_speed;
     s_options_slot_window[4] = (uint32_t)ctx->options.brightness;

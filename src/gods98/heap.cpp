@@ -628,7 +628,7 @@ int text_wrap_measure_and_draw_lines(void* record, float elapsed,
             else {
                 if (text_buffer_is_break((unsigned char)ch)) {
                     widths[line_count - 1] = line_width;
-                    starts[line_count] = index;
+                    starts[line_count] = index + 1;
                     word_width = 0;
                 }
                 {

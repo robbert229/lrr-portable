@@ -118,10 +118,12 @@ int main(void)
           "move dispatched on b");
     CHECK(c->cmd_head == NULL, "unselected entity untouched");
 
-    /* Op-8 selection-add through the queue. */
+    /* Selection-add uses operation 1 and the actual eligibility owner. */
+    c->flags_3e8 |= 0x100u;
+    c->field_340 = 100.0f;
     selection_cmd_add(&ctx, c);
     cmd_queue_tick();
-    CHECK((c->flags & ENTITY_SELECTED) != 0, "op-8 added c to selection");
+    CHECK((c->flags & ENTITY_SELECTED) != 0, "op-1 added c to selection");
     CHECK(selection_count(&ctx) == 3, "selection now 3");
 
     /* Clear releases the selected flags. */

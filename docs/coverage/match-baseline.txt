@@ -5,7 +5,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2121 mapped functions
+[game-only] 2128 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -51,7 +51,7 @@
 0x00402210 100.00 engine_memory_free
 0x00402220 49.64 cmd_tick_global_delta
 0x00402310 17.86 cmd_global_list_purge
-0x00402510 42.62 terrain_cell_command_create
+0x00402510 45.35 terrain_cell_command_create
 0x00402600 21.05 entity_record_array_apply_zero_state
 0x00402670 96.30 entity_command15_validated_record_queue
 0x004026c0 60.00 entity_deferred_work_schedule
@@ -77,7 +77,8 @@
 0x004030b0 35.90 coordinate_pair_event_queue
 0x004030e0 18.87 cmd_validated_record_queue
 0x00403190 100.00 object_event_type2_queue
-0x004031e0 55.17 active_entity_list_contains_code
+0x004031e0 56.34 active_entity_list_contains_code
+0x00403270 48.82 selection_drag_area_command_create
 0x00403320 48.89 object_command_task_create
 0x004033c0 81.82 object_attached_record_allocate
 0x004033f0 100.00 coordinate_pair_task_record_queue
@@ -115,14 +116,14 @@
 0x004041b0 31.37 entity_task_chain_contains_kind
 0x004041e0 21.51 entity_command_chain_head_remove
 0x00404250 31.11 cmd_pool_timer_delta_apply
-0x00404280 12.67 cmd_entity_command_chain_tick
+0x00404280 11.99 cmd_entity_command_chain_tick
 0x00404e00 17.65 object_path_submit_to_grid_target
 0x00404ed0 77.27 ledger_stub_00404ed0_CheckObjectCandidate
 0x00404f10 18.37 object_task_target_filter_find
 0x00404f50 25.00 object_filter_matches_action_target
 0x00404fc0 7.39 ledger_stub_00404fc0_PlaceCommandEligibilityCheck
 0x00405950 11.15 pending_command_timer_fire_scan
-0x00405c10 14.11 pending_command_entity_assignment_tick
+0x00405c10 13.48 pending_command_entity_assignment_tick
 0x00406360 20.75 entity_record_attach_and_relink
 0x004063e0 18.75 pending_record_entity_reference_clear
 0x00406400 24.00 cmd_pending_record_copy
@@ -192,7 +193,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 39.11 segment_2d_point_distance
+0x004089d0 36.28 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -325,7 +326,7 @@
 0x0040f5f0 21.36 lava_erosion_eight_neighbor_propagate
 0x0040f7b0 100.00 optional_resource_destroy
 0x0040fb00 100.00 matrix_rotation_compose_xyz
-0x0040fcc0 91.30 vector_scale_components_in_place
+0x0040fcc0 100.00 vector_scale_components_in_place
 0x0040fdb0 53.85 three_value_record_copy_and_mark_ready
 0x0040fde0 75.00 set_vector_and_notify_listeners
 0x0040fe00 32.14 scene_object_list_update_transforms
@@ -381,18 +382,18 @@
 0x00412450 10.98 menu_render_ui_frame_cell
 0x004124f0 14.36 menu_save_image_config_rect_blit
 0x00412750 11.74 menu_hover_status_text_draw
-0x004129d0 11.49 menu_overlay_surface_and_text_setup
+0x004129d0 8.96 menu_overlay_surface_and_text_setup
 0x00412af0 20.69 menu_surface_blit_scaled
 0x00412c00 8.28 fe_item_pos
 0x00413b50 10.96 interface_resource_handles_release
-0x00413e20 11.90 frontend_open_submenu
+0x00413e20 11.36 frontend_open_submenu
 0x00413e60 100.00 fe_item_kind
 0x00413f00 100.00 mission_replace_char
 0x00413f30 26.39 filename_extension_classify
 0x00413f90 100.00 menu_item_record_alloc
 0x00414010 24.44 load_item_strings
 0x00414070 38.55 dword_list_allocate_and_zero
-0x004140c0 18.40 fe_parse_menu
+0x004140c0 18.71 fe_parse_menu
 0x00414c90 100.00 menu_list_find_name
 0x00414ce0 25.81 movie_avis_enabled
 0x00414de0 100.00 audio_menu_sfx_volume_set
@@ -415,7 +416,7 @@
 0x00416910 16.22 options_write_to_slot_target
 0x00416940 9.41 options_load_or_default_target
 0x004169c0 12.00 frontend_state_change
-0x00416c80 24.00 menu_enter
+0x00416c80 24.24 menu_enter
 0x00416d50 100.00 save_slot_open
 0x00416d60 100.00 is_in_game
 0x00416d70 10.00 fe_selected_level_action
@@ -438,8 +439,8 @@
 0x004173e0 30.14 sav_tree_load
 0x00417430 90.91 float_to_long_x87
 0x004179b0 14.39 frontend_sav_menu_list
-0x00417a90 11.44 save_read_slot_target
-0x00417bd0 16.16 sav_write_slot_file
+0x00417a90 11.18 save_read_slot_target
+0x00417bd0 14.35 sav_write_slot_file
 0x00417df0 29.41 sav_refresh_slots_target
 0x00417e50 33.33 sav_slot_ctx_target
 0x00417e70 100.00 sav_build_ctx_target
@@ -449,7 +450,7 @@
 0x00417f20 76.92 options_context_six_field_set_target
 0x00417f40 34.78 save_write_record_target
 0x00417f90 70.27 sav_record_ptr_target
-0x00417fc0 11.32 save_commit
+0x00417fc0 10.81 save_commit
 0x00417fe0 100.00 current_selection_context_get
 0x00417ff0 100.00 current_selection_context_set
 0x00418000 10.00 show_level_overlay_target
@@ -505,7 +506,7 @@
 0x00419e80 26.79 pending_record_list_entry_remove_and_release
 0x00419f10 35.29 pending_record_release_all
 0x00419f30 43.77 info_message_queue_tick
-0x0041a080 27.78 incident_message_text_consumer
+0x0041a080 27.49 incident_message_text_consumer
 0x0041a1a0 32.38 ui_entry_hit_test_and_dispatch
 0x0041a250 91.30 scroll_offset_from_cursor_update
 0x0041a290 33.33 screen_right_edge_cache_refresh
@@ -515,12 +516,12 @@
 0x0041a660 100.00 interaction_action_code_map_initialize
 0x0041a7d0 27.45 resource_input_key_group_register
 0x0041a850 35.09 resource_handle_set_release
-0x0041a920 29.41 lego::level_state_counters_clear
+0x0041a920 24.59 lego::level_state_counters_clear
 0x0041a990 100.00 objective_selection_state_reset
 0x0041a9c0 93.10 interface_menu_action_label_find
 0x0041aa00 8.00 entity_table_maps_allocate
 0x0041ab00 10.22 interface_build_images_config_load
-0x0041ada0 13.56 interface_images_config_load
+0x0041ada0 14.20 interface_images_config_load
 0x0041afd0 12.53 interface_surround_images_config_load
 0x0041b1b0 8.62 interface_back_button_config_load
 0x0041b270 14.55 interface_button_images_load
@@ -537,7 +538,7 @@
 0x0041baa0 15.26 simulation_pointer_action_dispatch_impl
 0x0041c1c0 11.49 advisor_overlay_hit_resolve
 0x0041c440 31.11 advisor_callback_schedule_gate
-0x0041c4f0 17.02 advisor_animation_position_and_request_update
+0x0041c4f0 13.10 advisor_animation_position_and_request_update_internal
 0x0041c6e0 84.77 pointer_action_state_dispatch
 0x0041c7b0 19.75 input_action_state_update
 0x0041c800 22.08 catalog_slot_flag_update
@@ -560,6 +561,10 @@
 0x0041d040 13.14 tutorial_path_menu_action
 0x0041dca0 4.73 ui_action_dispatch
 0x0041e750 100.00 selection_clear_request_and_hud_reset
+0x0041e7f0 7.41 input_action_click_count_swap
+0x0041e810 37.50 input_action_click_count_get
+0x0041e820 21.62 input_binding_click_count_swap
+0x0041e860 15.38 input_binding_click_count_get
 0x0041e990 42.42 cell_action_permission_get
 0x0041e9d0 100.00 selection_region_parameters_set
 0x0041ea50 100.00 store_selected_map_coordinate
@@ -600,14 +605,14 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 15.67 debug_panel_text_draw_update
 0x004231f0 17.14 EnginePreTick
-0x004232e0 9.76 EngineTick
+0x004232e0 10.16 EngineTick
 0x00424560 30.40 air_supply_amount_update
 0x00424730 33.33 sine_phase_midpoint_blend_dispatch
 0x004247d0 100.00 entity_default_transform_apply_if_flagged
 0x00424810 100.00 entity_default_transform_apply_all
 0x00424830 12.50 selected_object_outlines_draw
 0x004248b0 7.61 selected_entity_ground_marker_render
-0x004250c0 8.67 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
+0x004250c0 8.44 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
 0x00425b40 66.67 periodic_entity_callback_dispatch
 0x00425c30 38.71 ledger_stub_00425c30_TransitionControl
 0x00425cd0 100.00 global_scroll_guard_set
@@ -621,7 +626,7 @@
 0x00426360 100.00 engine_global_state_flags_bits6_and_9_set_target
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 34.15 ledger_stub_004263c0_GlobalSubsystemStateReset
-0x00426520 11.65 simtick_vu_meter
+0x00426520 9.62 simtick_vu_meter
 0x00427e00 15.38 tooltip_info_strings_load
 0x00427f80 17.17 lego::level_upgrade_name_strings_load
 0x00428020 15.43 entity_command_status_feedback_dispatch
@@ -638,7 +643,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 7.77 level_load
+0x00429890 7.92 level_load
 0x0042b2f0 30.30 entity_effect_counters_apply_from_record
 0x0042b330 18.07 terrain_tile_mesh_grid_load_level
 0x0042b480 17.20 rectangular_resource_table_destroy
@@ -681,7 +686,7 @@
 0x00430470 17.54 terrain_neighbor_flag_set
 0x00430530 12.41 terrain_cell_mutate
 0x00430df0 18.48 terrain_neighbor_refresh
-0x00430ee0 9.26 wave_seed
+0x00430ee0 11.27 terrain_cell_initialize
 0x004310f0 32.84 terrain_cell_flag20_clear_and_refresh
 0x00431140 42.55 terrain_cell_queued_work_transition_current
 0x004313b0 31.37 simtick_minion_states
@@ -692,7 +697,7 @@
 0x00431780 12.50 terrain_stamp_impact_handle_current
 0x004319b0 100.00 terrain_cell_material_get_current
 0x004319e0 93.88 level_map_cell_get
-0x00431a30 56.90 selected_entities_any_predicate_match
+0x00431a30 63.72 selected_entities_any_predicate_match
 0x00431ab0 50.77 any_object_can_occupy_terrain_cell
 0x00431b20 12.12 terrain_placement_blocked_adjacent_cell_scan
 0x00431c70 18.29 first_free_neighbor_cell_pick_current
@@ -755,8 +760,9 @@
 0x00433c10 18.59 entity_neighbor_blocked_cell_step_probe
 0x00433e30 13.43 grid_cell_entity_eligibility_check
 0x00434480 33.33 terrain_cell_surface_update_dispatch_level
-0x00434530 11.11 terrain_grid_entry_resources_release_all_current
-0x004345f0 32.69 frontend_config::panels_config_entry_apply
+0x00434530 16.00 terrain_grid_entry_resources_release_all_current
+0x00434570 11.11 terrain_cell_drill_work_add_current
+0x004345f0 38.46 frontend_config::panels_config_entry_apply
 0x00434710 33.46 frontend_config::panel_button_layout_config_load
 0x00434a00 30.99 advisor_tutorial_icon_image_load
 0x00434a50 47.48 sound_samples_config_load
@@ -817,7 +823,7 @@
 0x004374d0 100.00 entity_task_counter_increment_by_branch
 0x004374f0 22.22 entity_callback_dispatch_unless_type_five
 0x00437510 57.14 entity_linked_route_clear_callback
-0x00437540 18.25 entity_teardown
+0x00437540 21.01 entity_teardown
 0x004377b0 100.00 entity_pool_find_by_callback_filtered_current
 0x004377d0 35.22 entity_pool_find_by_callback_current
 0x004378e0 47.50 grid_object_records_release
@@ -828,10 +834,10 @@
 0x00438310 34.38 pooled_record_chunk_allocate_and_link
 0x004383a0 100.00 entity_global_animation_state_set
 0x004383b0 19.86 rover_work_queue_update
-0x00438460 18.75 entity_kind_record_update_dispatch
+0x00438460 34.57 entity_kind_record_update_dispatch
 0x00438580 22.22 entity_flag80000000_set_or_clear
 0x004385b0 57.69 entity_shared_eligibility_check
-0x00438610 16.67 entity_create_with_position
+0x00438610 27.78 entity_create_with_position
 0x00438670 22.95 entity_at_grid_position_find
 0x00438720 24.00 entity_available_resource_spend
 0x00438770 13.95 building_upgrade_resource_admission_check
@@ -876,9 +882,9 @@
 0x00439d50 11.11 entity_vehicle_unload_adjacent_cell_find
 0x00439e10 85.00 entity_vehicle_unload_cell_find_if_eligible
 0x00439e40 85.00 entity_record_flag20_query(1)
-0x00439e70 12.78 entity_attached_object_list_detach
+0x00439e70 13.18 entity_attached_object_list_detach
 0x0043a120 8.29 entity_cell_step_command_issue_with_jitter
-0x0043a300 33.62 entity_deposit_activity_gate
+0x0043a300 23.29 entity_deposit_activity_gate
 0x0043a5f0 16.16 entity_visual_resource_get_or_create
 0x0043a650 26.62 entity_action_kind_entity_create_and_command_issue
 0x0043a7c0 20.45 entity_action_kind_supported
@@ -929,7 +935,7 @@
 0x00440800 61.19 spatial_entity_damage_radius_callback
 0x004408c0 21.92 ledger_stub_004408c0_SpatialEntityCallbackQueryAtOptionalCoordinate
 0x00440920 40.82 spatial_entity_vector_step_callback
-0x004409e0 14.81 ai_set_activity
+0x004409e0 12.50 ai_set_activity
 0x00440a10 22.16 ledger_stub_00440a10_AttachedEntityDirectionVectorUpdate
 0x00440bf0 53.52 lego::object_list_field_assign_all
 0x00440c30 95.24 ledger_stub_00440c30_GridRouteSearchAdapter
@@ -949,7 +955,7 @@
 0x004424f0 26.09 entity_position_to_terrain_cell
 0x00442540 29.63 grid_operation_argument_adapter
 0x004425f0 17.42 ledger_stub_004425f0_SubobjectPoseDeltaNormalizeAndDispatch
-0x004428a0 11.46 entity_world_position_set
+0x004428a0 14.04 entity_world_position_set
 0x00442b10 14.73 ledger_stub_00442b10_EntityMovementAccumulatorApply
 0x00442f80 14.56 ledger_stub_00442f80_EntityPoseOrientationDispatch
 0x00443510 10.13 scene_object_pose_position_sync
@@ -958,14 +964,14 @@
 0x00443710 23.53 ledger_stub_00443710_AdjacentPositionCandidateFind
 0x004437f0 75.00 entity_dispatch_event31_for_pending_flag
 0x00443840 20.31 entity_route_cell_candidate_accept
-0x004438b0 10.07 entity_path_step_advance_and_arrival_check
+0x004438b0 17.59 entity_path_step_advance_and_arrival_check
 0x004440a0 31.82 linked_entity_flag_and_command_update
 0x004440f0 11.31 ledger_stub_004440f0_ActivityTimeoutAccumulateAndRaise
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 77.42 entity_enter_event21_state_once
 0x00444680 5.23 entity_step_movement_vector_resolve
-0x00444fb0 26.04 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
+0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
@@ -987,8 +993,8 @@
 0x00447900 63.64 entity_type_four_callback_dispatch
 0x00447950 31.45 entity_directional_activity_start
 0x00447b00 76.47 entity_dispatch_event5_and_set_flag
-0x00447b30 19.35 ledger_stub_00447b30_EntityActivityTick
-0x00447c40 20.75 activity_register_bookkeeping
+0x00447b30 25.24 ledger_stub_00447b30_EntityActivityTick
+0x00447c40 19.80 activity_register_bookkeeping
 0x00447ea0 11.38 ledger_stub_00447ea0_EntityTypeBehaviorUpdate
 0x004487c0 27.03 entity_clear_nested_state_8_fields
 0x00448800 27.91 ledger_stub_00448800_EntityMoveToCellCoordinates
@@ -1017,7 +1023,7 @@
 0x00449ff0 29.01 entity_type_operation_release
 0x0044a070 22.49 entity_follow_target_pose_get
 0x0044a200 91.49 entity_type_component_get
-0x0044a310 91.18 ledger_stub_0044a310_ObjectMovementInputAccumulate
+0x0044a310 0.00 ledger_stub_0044a310_ObjectMovementInputAccumulate
 0x0044a390 53.85 type11_cell_coordinate_append
 0x0044a3d0 44.97 type11_cell_coordinate_nearest_resolve
 0x0044a4b0 100.00 predug_coordinate_pool_append
@@ -1100,7 +1106,7 @@
 0x0044f870 41.67 terrain_world_point_to_cell
 0x0044f940 9.65 terrain_surface_height_interpolate
 0x0044fab0 18.57 terrain_cell_surface_triangle_vertices_select
-0x0044fb90 23.65 terrain_state_surface_point_project_offset
+0x0044fb90 23.19 terrain_state_surface_point_project_offset
 0x0044fe70 9.89 terrain_authored_surface_height_interpolate
 0x00450060 14.29 grid_cell_read_surface_vector
 0x004500d0 10.20 terrain_cell_surface_vertices_get
@@ -1131,7 +1137,7 @@
 0x00451f60 18.18 cmd_queue_cancel_match
 0x00452010 28.57 cmd_bind_key
 0x00452060 58.06 cmd_produce
-0x004520d0 24.50 cmd_queue_tick
+0x004520d0 21.81 cmd_queue_tick
 0x00452430 28.12 entity_random_valid_cell_command_create
 0x004524b0 72.22 selection_object_detach
 0x00452520 15.73 selection_snapshot_create
@@ -1210,7 +1216,7 @@
 0x0045a030 100.00 ui_panel_name_tables_init
 0x0045a240 63.41 legacy_scroll_panel_controls_initialize
 0x0045a270 17.72 legacy_panel_category_interaction_state_reset
-0x0045a2e0 18.39 legacy_overlay_image_record_load
+0x0045a2e0 13.27 legacy_overlay_image_record_load
 0x0045a370 52.05 ui_panel_name_table_lookup
 0x0045a3b0 28.89 legacy_panel_slot_coordinate_hit_test
 0x0045a410 47.73 ui_panel_indexed_name_lookup
@@ -1222,8 +1228,8 @@
 0x0045a650 15.62 panel_category_bounds_set
 0x0045a6e0 76.19 indexed_pair_set
 0x0045a700 26.67 indexed_pair_get
-0x0045a730 16.16 simtick_manager_tick
-0x0045a9c0 10.96 panel_texture_slots_blit
+0x0045a730 16.74 simtick_manager_tick
+0x0045a9c0 13.33 panel_texture_slots_blit_to
 0x0045aac0 19.35 panel_item_flag16_set
 0x0045ab00 42.11 panel_state_flags_toggle
 0x0045ab30 100.00 request_record_ready_flag4_target
@@ -1264,7 +1270,7 @@
 0x0045cc20 100.00 media_pointer_cursor_select
 0x0045cc40 100.00 media_pointer_cursor_override_set
 0x0045cc60 100.00 global_cursor_word_get
-0x0045cc70 5.50 pointer_cursor_draw_target
+0x0045cc70 16.90 pointer_cursor_draw_target
 0x0045cd90 88.89 media_pointer_cursor_override_tick
 0x0045cdc0 92.86 priorities_load_images
 0x0045cf00 51.61 priorities_reset
@@ -1291,7 +1297,7 @@
 0x0045e660 92.31 rect_contains_point_half_open
 0x0045e6d0 33.49 terrain_point_pick_resolve
 0x0045e820 26.58 viewport_point_callback_dispatch
-0x0045e940 17.05 view_point_to_screen_geometry_transform
+0x0045e940 18.90 view_point_to_screen_geometry_transform
 0x0045e9e0 22.48 terrain_tile_style_resolve
 0x0045f030 13.49 mission_task_init_target
 0x0045f1f0 32.43 task_loader_sound
@@ -1322,7 +1328,7 @@
 0x00461c90 28.87 reward_score_task_text_draw
 0x00461dd0 12.21 mission_reward_zone
 0x00462030 18.18 reference_target::save_menu_open_from_reward
-0x00462270 30.89 checkpoint_step_target
+0x00462270 29.70 checkpoint_step_target
 0x00462390 11.36 reward_screen_transition_tick_abi
 0x00462460 34.29 reward_flic_context_reload_abi
 0x004624a0 21.18 reward_flic_context_tick_abi
@@ -1352,9 +1358,9 @@
 0x00463e40 96.88 float_round_to_nearest_int
 0x00463ea0 19.51 indexed_text_metrics_pair_get
 0x00463ed0 29.63 indexed_text_metrics_pair_set
-0x00463f00 18.27 scene_quad_grid_emit
-0x00464110 10.85 rotated_pairs_scratch_fill
-0x00464720 100.00 surface_visibility_set
+0x00463f00 15.83 scene_quad_grid_emit
+0x00464110 13.95 rotated_pairs_scratch_fill
+0x00464720 9.76 surface_visibility_set
 0x00464740 8.70 sound_alias_registry_init
 0x00464c50 100.00 sound_alias_registration_set
 0x00464c70 28.35 sound_alias_lookup
@@ -1476,7 +1482,7 @@
 0x0046abb0 36.96 ui_message_text_slot_assign_with_image
 0x0046ac20 45.45 advisor_text_request_setup
 0x0046ac60 35.09 advisor_text_animation_update
-0x0046ad00 12.88 advisor_text_display_worker
+0x0046ad00 13.25 advisor_text_display_worker
 0x0046b1d0 9.52 tooltip_overlay_state_initialize
 0x0046b4d0 55.42 case_insensitive_name_table_lookup
 0x0046b660 10.00 command_sample_stats_accumulate
@@ -1485,7 +1491,7 @@
 0x0046b770 75.00 timed_effect_update_request_set_corpus
 0x0046b7a0 100.00 timed_effect_timestamp_reset_corpus
 0x0046b7c0 21.05 timed_effect_runtime_update
-0x0046b8b0 7.97 rectangular_grid_overlay_geometry_draw
+0x0046b8b0 11.55 rectangular_grid_overlay_geometry_draw
 0x0046bc30 11.59 timed_effect_slot_render_record
 0x0046c030 14.49 render_resource_binding_initialize
 0x0046c0b0 57.14 render_resource_binding_copy_and_convert
@@ -1564,7 +1570,7 @@
 0x00471a20 100.00 read_indexed_pair_slot_dword
 0x00471a40 100.00 velocity_slot_primary_object_get
 0x00471a50 100.00 velocity_slot_secondary_object_get
-0x00471a60 13.84 entity_velocity_steer_blend_update
+0x00471a60 13.29 entity_velocity_steer_blend_update
 0x00471c70 100.00 velocity_slot_vector_read
 0x00471ca0 37.84 entity_world_center_position_read
 0x00471ce0 100.00 entity_flag100_and_shared_eligibility_check
@@ -1833,7 +1839,7 @@
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
-0x0047d800 29.17 surface_bitmap24_bit_surface_convert
+0x0047d800 29.34 surface_bitmap24_bit_surface_convert
 0x0047db90 100.00 rgb_channels_pack
 0x0047dbc0 22.22 resource_record_add_ref
 0x0047dbf0 18.87 image_surface_blit_transformed
@@ -1912,7 +1918,7 @@
 0x004807a0 38.10 render_resource_instance_record_acquire
 0x004807d0 100.00 render_resource_instance_record_release
 0x004807f0 30.00 render_resource_instance_pool_grow
-0x00480870 35.56 engine_task_callback_record_allocate_and_initialize
+0x00480870 31.65 engine_task_callback_record_allocate_and_initialize
 0x00480900 17.78 lego::cached_render_resource_instance_create
 0x004809e0 17.48 lwo_model_entry_load
 0x00480ac0 6.78 material_pass_execute
@@ -1931,6 +1937,7 @@
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set
 0x004827d0 100.00 record_flag2c_bit0_set
+0x004827f0 0.00 scene_runtime_user_visual_manager
 0x00482ac0 55.81 model_render_record_state_setup
 0x00482b50 59.44 render_state_flags_apply
 0x00482cb0 78.95 renderer_command_mode_and_pair_send
@@ -1951,7 +1958,7 @@
 0x00483600 24.24 direct3d_viewport_setup
 0x00483690 9.30 matrix_method_pair_apply
 0x00483810 11.11 ledger_stub_00483810_InputActionStateToggle
-0x004838b0 10.85 d3d_render_state_sync
+0x004838b0 10.69 d3d_render_state_sync
 0x00483940 18.05 direct3d_render_state_restore
 0x004839c0 26.59 model_render_child_pass_dispatch
 0x00483a70 76.92 model_child_render_eligibility_check
@@ -1973,7 +1980,7 @@
 0x004849d0 11.16 flic_decode16_bit_keyframe
 0x00484b20 71.88 flic_opcode25_decode_dispatch
 0x00484b90 100.00 flic_opcode25_success_stub
-0x00484ba0 100.00 flic_packed_triplet_table_to_word_build_target
+0x00484ba0 82.76 flic_packed_triplet_table_to_word_build_target
 0x00484c00 22.76 flic_decode16_bit_row_records
 0x00484c90 100.00 flic_opcode27_fallback_noop
 0x00484ca0 15.95 flic_decode8_bit_alternate_delta
@@ -1990,8 +1997,8 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 25.00 text_buffer_append_vformat
 0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.99 text_buffer_draw_wrapped
-0x00485710 19.05 text_wrap_measure_and_draw_lines
+0x00485390 5.96 text_buffer_draw_wrapped
+0x00485710 22.48 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 43.48 keyboard_key_names_init
@@ -2059,7 +2066,7 @@
 0x004899f0 19.37 object_hierarchy_recursive_clone
 0x00489b30 16.46 object_interface_array_resource_create
 0x00489bc0 16.98 com_child_items_visit
-0x00489c30 32.30 indexed_bitmap_palette_data_prepare
+0x00489c30 32.40 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
@@ -2087,8 +2094,8 @@
 0x0048c210 13.61 parse_points
 0x0048c360 23.88 ledger_stub_0048c360_LwoCurves
 0x0048c3e0 10.47 parse_pols
-0x0048c690 7.11 parse_srfs
-0x0048c820 6.94 parse_surf_chunk
+0x0048c690 10.57 parse_srfs
+0x0048c820 6.34 parse_surf_chunk
 0x0048d2c0 10.03 model_parse
 0x0048d7c0 9.13 model_open
 0x0048d870 14.69 model_free
@@ -2128,7 +2135,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2340 mapped functions
+[full] 2347 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -2174,7 +2181,7 @@
 0x00402210 100.00 engine_memory_free
 0x00402220 49.64 cmd_tick_global_delta
 0x00402310 17.86 cmd_global_list_purge
-0x00402510 42.62 terrain_cell_command_create
+0x00402510 45.35 terrain_cell_command_create
 0x00402600 21.05 entity_record_array_apply_zero_state
 0x00402670 96.30 entity_command15_validated_record_queue
 0x004026c0 60.00 entity_deferred_work_schedule
@@ -2200,7 +2207,8 @@
 0x004030b0 35.90 coordinate_pair_event_queue
 0x004030e0 18.87 cmd_validated_record_queue
 0x00403190 100.00 object_event_type2_queue
-0x004031e0 55.17 active_entity_list_contains_code
+0x004031e0 56.34 active_entity_list_contains_code
+0x00403270 48.82 selection_drag_area_command_create
 0x00403320 48.89 object_command_task_create
 0x004033c0 81.82 object_attached_record_allocate
 0x004033f0 100.00 coordinate_pair_task_record_queue
@@ -2238,14 +2246,14 @@
 0x004041b0 31.37 entity_task_chain_contains_kind
 0x004041e0 21.51 entity_command_chain_head_remove
 0x00404250 31.11 cmd_pool_timer_delta_apply
-0x00404280 12.67 cmd_entity_command_chain_tick
+0x00404280 11.99 cmd_entity_command_chain_tick
 0x00404e00 17.65 object_path_submit_to_grid_target
 0x00404ed0 77.27 ledger_stub_00404ed0_CheckObjectCandidate
 0x00404f10 18.37 object_task_target_filter_find
 0x00404f50 25.00 object_filter_matches_action_target
 0x00404fc0 7.39 ledger_stub_00404fc0_PlaceCommandEligibilityCheck
 0x00405950 11.15 pending_command_timer_fire_scan
-0x00405c10 14.11 pending_command_entity_assignment_tick
+0x00405c10 13.48 pending_command_entity_assignment_tick
 0x00406360 20.75 entity_record_attach_and_relink
 0x004063e0 18.75 pending_record_entity_reference_clear
 0x00406400 24.00 cmd_pending_record_copy
@@ -2315,7 +2323,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 39.11 segment_2d_point_distance
+0x004089d0 36.28 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -2448,7 +2456,7 @@
 0x0040f5f0 21.36 lava_erosion_eight_neighbor_propagate
 0x0040f7b0 100.00 optional_resource_destroy
 0x0040fb00 100.00 matrix_rotation_compose_xyz
-0x0040fcc0 91.30 vector_scale_components_in_place
+0x0040fcc0 100.00 vector_scale_components_in_place
 0x0040fdb0 53.85 three_value_record_copy_and_mark_ready
 0x0040fde0 75.00 set_vector_and_notify_listeners
 0x0040fe00 32.14 scene_object_list_update_transforms
@@ -2504,18 +2512,18 @@
 0x00412450 10.98 menu_render_ui_frame_cell
 0x004124f0 14.36 menu_save_image_config_rect_blit
 0x00412750 11.74 menu_hover_status_text_draw
-0x004129d0 11.49 menu_overlay_surface_and_text_setup
+0x004129d0 8.96 menu_overlay_surface_and_text_setup
 0x00412af0 20.69 menu_surface_blit_scaled
 0x00412c00 8.28 fe_item_pos
 0x00413b50 10.96 interface_resource_handles_release
-0x00413e20 11.90 frontend_open_submenu
+0x00413e20 11.36 frontend_open_submenu
 0x00413e60 100.00 fe_item_kind
 0x00413f00 100.00 mission_replace_char
 0x00413f30 26.39 filename_extension_classify
 0x00413f90 100.00 menu_item_record_alloc
 0x00414010 24.44 load_item_strings
 0x00414070 38.55 dword_list_allocate_and_zero
-0x004140c0 18.40 fe_parse_menu
+0x004140c0 18.71 fe_parse_menu
 0x00414c90 100.00 menu_list_find_name
 0x00414ce0 25.81 movie_avis_enabled
 0x00414de0 100.00 audio_menu_sfx_volume_set
@@ -2538,7 +2546,7 @@
 0x00416910 16.22 options_write_to_slot_target
 0x00416940 9.41 options_load_or_default_target
 0x004169c0 12.00 frontend_state_change
-0x00416c80 24.00 menu_enter
+0x00416c80 24.24 menu_enter
 0x00416d50 100.00 save_slot_open
 0x00416d60 100.00 is_in_game
 0x00416d70 10.00 fe_selected_level_action
@@ -2561,8 +2569,8 @@
 0x004173e0 30.14 sav_tree_load
 0x00417430 90.91 float_to_long_x87
 0x004179b0 14.39 frontend_sav_menu_list
-0x00417a90 11.44 save_read_slot_target
-0x00417bd0 16.16 sav_write_slot_file
+0x00417a90 11.18 save_read_slot_target
+0x00417bd0 14.35 sav_write_slot_file
 0x00417df0 29.41 sav_refresh_slots_target
 0x00417e50 33.33 sav_slot_ctx_target
 0x00417e70 100.00 sav_build_ctx_target
@@ -2572,7 +2580,7 @@
 0x00417f20 76.92 options_context_six_field_set_target
 0x00417f40 34.78 save_write_record_target
 0x00417f90 70.27 sav_record_ptr_target
-0x00417fc0 11.32 save_commit
+0x00417fc0 10.81 save_commit
 0x00417fe0 100.00 current_selection_context_get
 0x00417ff0 100.00 current_selection_context_set
 0x00418000 10.00 show_level_overlay_target
@@ -2628,7 +2636,7 @@
 0x00419e80 26.79 pending_record_list_entry_remove_and_release
 0x00419f10 35.29 pending_record_release_all
 0x00419f30 43.77 info_message_queue_tick
-0x0041a080 27.78 incident_message_text_consumer
+0x0041a080 27.49 incident_message_text_consumer
 0x0041a1a0 32.38 ui_entry_hit_test_and_dispatch
 0x0041a250 91.30 scroll_offset_from_cursor_update
 0x0041a290 33.33 screen_right_edge_cache_refresh
@@ -2638,12 +2646,12 @@
 0x0041a660 100.00 interaction_action_code_map_initialize
 0x0041a7d0 27.45 resource_input_key_group_register
 0x0041a850 35.09 resource_handle_set_release
-0x0041a920 29.41 lego::level_state_counters_clear
+0x0041a920 24.59 lego::level_state_counters_clear
 0x0041a990 100.00 objective_selection_state_reset
 0x0041a9c0 93.10 interface_menu_action_label_find
 0x0041aa00 8.00 entity_table_maps_allocate
 0x0041ab00 10.22 interface_build_images_config_load
-0x0041ada0 13.56 interface_images_config_load
+0x0041ada0 14.20 interface_images_config_load
 0x0041afd0 12.53 interface_surround_images_config_load
 0x0041b1b0 8.62 interface_back_button_config_load
 0x0041b270 14.55 interface_button_images_load
@@ -2660,7 +2668,7 @@
 0x0041baa0 15.26 simulation_pointer_action_dispatch_impl
 0x0041c1c0 11.49 advisor_overlay_hit_resolve
 0x0041c440 31.11 advisor_callback_schedule_gate
-0x0041c4f0 17.02 advisor_animation_position_and_request_update
+0x0041c4f0 13.10 advisor_animation_position_and_request_update_internal
 0x0041c6e0 84.77 pointer_action_state_dispatch
 0x0041c7b0 19.75 input_action_state_update
 0x0041c800 22.08 catalog_slot_flag_update
@@ -2683,6 +2691,10 @@
 0x0041d040 13.14 tutorial_path_menu_action
 0x0041dca0 4.73 ui_action_dispatch
 0x0041e750 100.00 selection_clear_request_and_hud_reset
+0x0041e7f0 7.41 input_action_click_count_swap
+0x0041e810 37.50 input_action_click_count_get
+0x0041e820 21.62 input_binding_click_count_swap
+0x0041e860 15.38 input_binding_click_count_get
 0x0041e990 42.42 cell_action_permission_get
 0x0041e9d0 100.00 selection_region_parameters_set
 0x0041ea50 100.00 store_selected_map_coordinate
@@ -2723,14 +2735,14 @@
 0x004230b0 100.00 global_float_field_00556f00_get
 0x004230c0 15.67 debug_panel_text_draw_update
 0x004231f0 17.14 EnginePreTick
-0x004232e0 9.76 EngineTick
+0x004232e0 10.16 EngineTick
 0x00424560 30.40 air_supply_amount_update
 0x00424730 33.33 sine_phase_midpoint_blend_dispatch
 0x004247d0 100.00 entity_default_transform_apply_if_flagged
 0x00424810 100.00 entity_default_transform_apply_all
 0x00424830 12.50 selected_object_outlines_draw
 0x004248b0 7.61 selected_entity_ground_marker_render
-0x004250c0 8.67 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
+0x004250c0 8.44 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
 0x00425b40 66.67 periodic_entity_callback_dispatch
 0x00425c30 38.71 ledger_stub_00425c30_TransitionControl
 0x00425cd0 100.00 global_scroll_guard_set
@@ -2744,7 +2756,7 @@
 0x00426360 100.00 engine_global_state_flags_bits6_and_9_set_target
 0x004263a0 100.00 engine_global_state_flags_bit7_set_target
 0x004263c0 34.15 ledger_stub_004263c0_GlobalSubsystemStateReset
-0x00426520 11.65 simtick_vu_meter
+0x00426520 9.62 simtick_vu_meter
 0x00427e00 15.38 tooltip_info_strings_load
 0x00427f80 17.17 lego::level_upgrade_name_strings_load
 0x00428020 15.43 entity_command_status_feedback_dispatch
@@ -2761,7 +2773,7 @@
 0x00429850 100.00 active_engine_field_b0_get_current
 0x00429860 100.00 engine_float_field210_get_by_index_current
 0x00429880 100.00 engine_float_field260_get_current_target
-0x00429890 7.77 level_load
+0x00429890 7.92 level_load
 0x0042b2f0 30.30 entity_effect_counters_apply_from_record
 0x0042b330 18.07 terrain_tile_mesh_grid_load_level
 0x0042b480 17.20 rectangular_resource_table_destroy
@@ -2804,7 +2816,7 @@
 0x00430470 17.54 terrain_neighbor_flag_set
 0x00430530 12.41 terrain_cell_mutate
 0x00430df0 18.48 terrain_neighbor_refresh
-0x00430ee0 9.26 wave_seed
+0x00430ee0 11.27 terrain_cell_initialize
 0x004310f0 32.84 terrain_cell_flag20_clear_and_refresh
 0x00431140 42.55 terrain_cell_queued_work_transition_current
 0x004313b0 31.37 simtick_minion_states
@@ -2815,7 +2827,7 @@
 0x00431780 12.50 terrain_stamp_impact_handle_current
 0x004319b0 100.00 terrain_cell_material_get_current
 0x004319e0 93.88 level_map_cell_get
-0x00431a30 56.90 selected_entities_any_predicate_match
+0x00431a30 63.72 selected_entities_any_predicate_match
 0x00431ab0 50.77 any_object_can_occupy_terrain_cell
 0x00431b20 12.12 terrain_placement_blocked_adjacent_cell_scan
 0x00431c70 18.29 first_free_neighbor_cell_pick_current
@@ -2878,8 +2890,9 @@
 0x00433c10 18.59 entity_neighbor_blocked_cell_step_probe
 0x00433e30 13.43 grid_cell_entity_eligibility_check
 0x00434480 33.33 terrain_cell_surface_update_dispatch_level
-0x00434530 11.11 terrain_grid_entry_resources_release_all_current
-0x004345f0 32.69 frontend_config::panels_config_entry_apply
+0x00434530 16.00 terrain_grid_entry_resources_release_all_current
+0x00434570 11.11 terrain_cell_drill_work_add_current
+0x004345f0 38.46 frontend_config::panels_config_entry_apply
 0x00434710 33.46 frontend_config::panel_button_layout_config_load
 0x00434a00 30.99 advisor_tutorial_icon_image_load
 0x00434a50 47.48 sound_samples_config_load
@@ -2940,7 +2953,7 @@
 0x004374d0 100.00 entity_task_counter_increment_by_branch
 0x004374f0 22.22 entity_callback_dispatch_unless_type_five
 0x00437510 57.14 entity_linked_route_clear_callback
-0x00437540 18.25 entity_teardown
+0x00437540 21.01 entity_teardown
 0x004377b0 100.00 entity_pool_find_by_callback_filtered_current
 0x004377d0 35.22 entity_pool_find_by_callback_current
 0x004378e0 47.50 grid_object_records_release
@@ -2951,10 +2964,10 @@
 0x00438310 34.38 pooled_record_chunk_allocate_and_link
 0x004383a0 100.00 entity_global_animation_state_set
 0x004383b0 19.86 rover_work_queue_update
-0x00438460 18.75 entity_kind_record_update_dispatch
+0x00438460 34.57 entity_kind_record_update_dispatch
 0x00438580 22.22 entity_flag80000000_set_or_clear
 0x004385b0 57.69 entity_shared_eligibility_check
-0x00438610 16.67 entity_create_with_position
+0x00438610 27.78 entity_create_with_position
 0x00438670 22.95 entity_at_grid_position_find
 0x00438720 24.00 entity_available_resource_spend
 0x00438770 13.95 building_upgrade_resource_admission_check
@@ -2999,9 +3012,9 @@
 0x00439d50 11.11 entity_vehicle_unload_adjacent_cell_find
 0x00439e10 85.00 entity_vehicle_unload_cell_find_if_eligible
 0x00439e40 85.00 entity_record_flag20_query(1)
-0x00439e70 12.78 entity_attached_object_list_detach
+0x00439e70 13.18 entity_attached_object_list_detach
 0x0043a120 8.29 entity_cell_step_command_issue_with_jitter
-0x0043a300 33.62 entity_deposit_activity_gate
+0x0043a300 23.29 entity_deposit_activity_gate
 0x0043a5f0 16.16 entity_visual_resource_get_or_create
 0x0043a650 26.62 entity_action_kind_entity_create_and_command_issue
 0x0043a7c0 20.45 entity_action_kind_supported
@@ -3052,7 +3065,7 @@
 0x00440800 61.19 spatial_entity_damage_radius_callback
 0x004408c0 21.92 ledger_stub_004408c0_SpatialEntityCallbackQueryAtOptionalCoordinate
 0x00440920 40.82 spatial_entity_vector_step_callback
-0x004409e0 14.81 ai_set_activity
+0x004409e0 12.50 ai_set_activity
 0x00440a10 22.16 ledger_stub_00440a10_AttachedEntityDirectionVectorUpdate
 0x00440bf0 53.52 lego::object_list_field_assign_all
 0x00440c30 95.24 ledger_stub_00440c30_GridRouteSearchAdapter
@@ -3072,7 +3085,7 @@
 0x004424f0 26.09 entity_position_to_terrain_cell
 0x00442540 29.63 grid_operation_argument_adapter
 0x004425f0 17.42 ledger_stub_004425f0_SubobjectPoseDeltaNormalizeAndDispatch
-0x004428a0 11.46 entity_world_position_set
+0x004428a0 14.04 entity_world_position_set
 0x00442b10 14.73 ledger_stub_00442b10_EntityMovementAccumulatorApply
 0x00442f80 14.56 ledger_stub_00442f80_EntityPoseOrientationDispatch
 0x00443510 10.13 scene_object_pose_position_sync
@@ -3081,14 +3094,14 @@
 0x00443710 23.53 ledger_stub_00443710_AdjacentPositionCandidateFind
 0x004437f0 75.00 entity_dispatch_event31_for_pending_flag
 0x00443840 20.31 entity_route_cell_candidate_accept
-0x004438b0 10.07 entity_path_step_advance_and_arrival_check
+0x004438b0 17.59 entity_path_step_advance_and_arrival_check
 0x004440a0 31.82 linked_entity_flag_and_command_update
 0x004440f0 11.31 ledger_stub_004440f0_ActivityTimeoutAccumulateAndRaise
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 77.42 entity_enter_event21_state_once
 0x00444680 5.23 entity_step_movement_vector_resolve
-0x00444fb0 26.04 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
+0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
@@ -3110,8 +3123,8 @@
 0x00447900 63.64 entity_type_four_callback_dispatch
 0x00447950 31.45 entity_directional_activity_start
 0x00447b00 76.47 entity_dispatch_event5_and_set_flag
-0x00447b30 19.35 ledger_stub_00447b30_EntityActivityTick
-0x00447c40 20.75 activity_register_bookkeeping
+0x00447b30 25.24 ledger_stub_00447b30_EntityActivityTick
+0x00447c40 19.80 activity_register_bookkeeping
 0x00447ea0 11.38 ledger_stub_00447ea0_EntityTypeBehaviorUpdate
 0x004487c0 27.03 entity_clear_nested_state_8_fields
 0x00448800 27.91 ledger_stub_00448800_EntityMoveToCellCoordinates
@@ -3140,7 +3153,7 @@
 0x00449ff0 29.01 entity_type_operation_release
 0x0044a070 22.49 entity_follow_target_pose_get
 0x0044a200 91.49 entity_type_component_get
-0x0044a310 91.18 ledger_stub_0044a310_ObjectMovementInputAccumulate
+0x0044a310 0.00 ledger_stub_0044a310_ObjectMovementInputAccumulate
 0x0044a390 53.85 type11_cell_coordinate_append
 0x0044a3d0 44.97 type11_cell_coordinate_nearest_resolve
 0x0044a4b0 100.00 predug_coordinate_pool_append
@@ -3223,7 +3236,7 @@
 0x0044f870 41.67 terrain_world_point_to_cell
 0x0044f940 9.65 terrain_surface_height_interpolate
 0x0044fab0 18.57 terrain_cell_surface_triangle_vertices_select
-0x0044fb90 23.65 terrain_state_surface_point_project_offset
+0x0044fb90 23.19 terrain_state_surface_point_project_offset
 0x0044fe70 9.89 terrain_authored_surface_height_interpolate
 0x00450060 14.29 grid_cell_read_surface_vector
 0x004500d0 10.20 terrain_cell_surface_vertices_get
@@ -3254,7 +3267,7 @@
 0x00451f60 18.18 cmd_queue_cancel_match
 0x00452010 28.57 cmd_bind_key
 0x00452060 58.06 cmd_produce
-0x004520d0 24.50 cmd_queue_tick
+0x004520d0 21.81 cmd_queue_tick
 0x00452430 28.12 entity_random_valid_cell_command_create
 0x004524b0 72.22 selection_object_detach
 0x00452520 15.73 selection_snapshot_create
@@ -3333,7 +3346,7 @@
 0x0045a030 100.00 ui_panel_name_tables_init
 0x0045a240 63.41 legacy_scroll_panel_controls_initialize
 0x0045a270 17.72 legacy_panel_category_interaction_state_reset
-0x0045a2e0 18.39 legacy_overlay_image_record_load
+0x0045a2e0 13.27 legacy_overlay_image_record_load
 0x0045a370 52.05 ui_panel_name_table_lookup
 0x0045a3b0 28.89 legacy_panel_slot_coordinate_hit_test
 0x0045a410 47.73 ui_panel_indexed_name_lookup
@@ -3345,8 +3358,8 @@
 0x0045a650 15.62 panel_category_bounds_set
 0x0045a6e0 76.19 indexed_pair_set
 0x0045a700 26.67 indexed_pair_get
-0x0045a730 16.16 simtick_manager_tick
-0x0045a9c0 10.96 panel_texture_slots_blit
+0x0045a730 16.74 simtick_manager_tick
+0x0045a9c0 13.33 panel_texture_slots_blit_to
 0x0045aac0 19.35 panel_item_flag16_set
 0x0045ab00 42.11 panel_state_flags_toggle
 0x0045ab30 100.00 request_record_ready_flag4_target
@@ -3387,7 +3400,7 @@
 0x0045cc20 100.00 media_pointer_cursor_select
 0x0045cc40 100.00 media_pointer_cursor_override_set
 0x0045cc60 100.00 global_cursor_word_get
-0x0045cc70 5.50 pointer_cursor_draw_target
+0x0045cc70 16.90 pointer_cursor_draw_target
 0x0045cd90 88.89 media_pointer_cursor_override_tick
 0x0045cdc0 92.86 priorities_load_images
 0x0045cf00 51.61 priorities_reset
@@ -3414,7 +3427,7 @@
 0x0045e660 92.31 rect_contains_point_half_open
 0x0045e6d0 33.49 terrain_point_pick_resolve
 0x0045e820 26.58 viewport_point_callback_dispatch
-0x0045e940 17.05 view_point_to_screen_geometry_transform
+0x0045e940 18.90 view_point_to_screen_geometry_transform
 0x0045e9e0 22.48 terrain_tile_style_resolve
 0x0045f030 13.49 mission_task_init_target
 0x0045f1f0 32.43 task_loader_sound
@@ -3445,7 +3458,7 @@
 0x00461c90 28.87 reward_score_task_text_draw
 0x00461dd0 12.21 mission_reward_zone
 0x00462030 18.18 reference_target::save_menu_open_from_reward
-0x00462270 30.89 checkpoint_step_target
+0x00462270 29.70 checkpoint_step_target
 0x00462390 11.36 reward_screen_transition_tick_abi
 0x00462460 34.29 reward_flic_context_reload_abi
 0x004624a0 21.18 reward_flic_context_tick_abi
@@ -3475,9 +3488,9 @@
 0x00463e40 96.88 float_round_to_nearest_int
 0x00463ea0 19.51 indexed_text_metrics_pair_get
 0x00463ed0 29.63 indexed_text_metrics_pair_set
-0x00463f00 18.27 scene_quad_grid_emit
-0x00464110 10.85 rotated_pairs_scratch_fill
-0x00464720 100.00 surface_visibility_set
+0x00463f00 15.83 scene_quad_grid_emit
+0x00464110 13.95 rotated_pairs_scratch_fill
+0x00464720 9.76 surface_visibility_set
 0x00464740 8.70 sound_alias_registry_init
 0x00464c50 100.00 sound_alias_registration_set
 0x00464c70 28.35 sound_alias_lookup
@@ -3599,7 +3612,7 @@
 0x0046abb0 36.96 ui_message_text_slot_assign_with_image
 0x0046ac20 45.45 advisor_text_request_setup
 0x0046ac60 35.09 advisor_text_animation_update
-0x0046ad00 12.88 advisor_text_display_worker
+0x0046ad00 13.25 advisor_text_display_worker
 0x0046b1d0 9.52 tooltip_overlay_state_initialize
 0x0046b4d0 55.42 case_insensitive_name_table_lookup
 0x0046b660 10.00 command_sample_stats_accumulate
@@ -3608,7 +3621,7 @@
 0x0046b770 75.00 timed_effect_update_request_set_corpus
 0x0046b7a0 100.00 timed_effect_timestamp_reset_corpus
 0x0046b7c0 21.05 timed_effect_runtime_update
-0x0046b8b0 7.97 rectangular_grid_overlay_geometry_draw
+0x0046b8b0 11.55 rectangular_grid_overlay_geometry_draw
 0x0046bc30 11.59 timed_effect_slot_render_record
 0x0046c030 14.49 render_resource_binding_initialize
 0x0046c0b0 57.14 render_resource_binding_copy_and_convert
@@ -3687,7 +3700,7 @@
 0x00471a20 100.00 read_indexed_pair_slot_dword
 0x00471a40 100.00 velocity_slot_primary_object_get
 0x00471a50 100.00 velocity_slot_secondary_object_get
-0x00471a60 13.84 entity_velocity_steer_blend_update
+0x00471a60 13.29 entity_velocity_steer_blend_update
 0x00471c70 100.00 velocity_slot_vector_read
 0x00471ca0 37.84 entity_world_center_position_read
 0x00471ce0 100.00 entity_flag100_and_shared_eligibility_check
@@ -3956,7 +3969,7 @@
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
-0x0047d800 29.17 surface_bitmap24_bit_surface_convert
+0x0047d800 29.34 surface_bitmap24_bit_surface_convert
 0x0047db90 100.00 rgb_channels_pack
 0x0047dbc0 22.22 resource_record_add_ref
 0x0047dbf0 18.87 image_surface_blit_transformed
@@ -4035,7 +4048,7 @@
 0x004807a0 38.10 render_resource_instance_record_acquire
 0x004807d0 100.00 render_resource_instance_record_release
 0x004807f0 30.00 render_resource_instance_pool_grow
-0x00480870 35.56 engine_task_callback_record_allocate_and_initialize
+0x00480870 31.65 engine_task_callback_record_allocate_and_initialize
 0x00480900 17.78 lego::cached_render_resource_instance_create
 0x004809e0 17.48 lwo_model_entry_load
 0x00480ac0 6.78 material_pass_execute
@@ -4054,6 +4067,7 @@
 0x00482780 100.00 indexed_record_flag6c_bit0_get
 0x004827a0 100.00 indexed_record_flag6c_bit0_set
 0x004827d0 100.00 record_flag2c_bit0_set
+0x004827f0 0.00 scene_runtime_user_visual_manager
 0x00482ac0 55.81 model_render_record_state_setup
 0x00482b50 59.44 render_state_flags_apply
 0x00482cb0 78.95 renderer_command_mode_and_pair_send
@@ -4074,7 +4088,7 @@
 0x00483600 24.24 direct3d_viewport_setup
 0x00483690 9.30 matrix_method_pair_apply
 0x00483810 11.11 ledger_stub_00483810_InputActionStateToggle
-0x004838b0 10.85 d3d_render_state_sync
+0x004838b0 10.69 d3d_render_state_sync
 0x00483940 18.05 direct3d_render_state_restore
 0x004839c0 26.59 model_render_child_pass_dispatch
 0x00483a70 76.92 model_child_render_eligibility_check
@@ -4096,7 +4110,7 @@
 0x004849d0 11.16 flic_decode16_bit_keyframe
 0x00484b20 71.88 flic_opcode25_decode_dispatch
 0x00484b90 100.00 flic_opcode25_success_stub
-0x00484ba0 100.00 flic_packed_triplet_table_to_word_build_target
+0x00484ba0 82.76 flic_packed_triplet_table_to_word_build_target
 0x00484c00 22.76 flic_decode16_bit_row_records
 0x00484c90 100.00 flic_opcode27_fallback_noop
 0x00484ca0 15.95 flic_decode8_bit_alternate_delta
@@ -4113,8 +4127,8 @@
 0x00485230 100.00 text_buffer_append_format
 0x00485250 25.00 text_buffer_append_vformat
 0x00485300 82.22 objective_advisor_text_copy
-0x00485390 5.99 text_buffer_draw_wrapped
-0x00485710 19.05 text_wrap_measure_and_draw_lines
+0x00485390 5.96 text_buffer_draw_wrapped
+0x00485710 22.48 text_wrap_measure_and_draw_lines
 0x004859b0 100.00 text_buffer_reset_target
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 43.48 keyboard_key_names_init
@@ -4182,7 +4196,7 @@
 0x004899f0 19.37 object_hierarchy_recursive_clone
 0x00489b30 16.46 object_interface_array_resource_create
 0x00489bc0 16.98 com_child_items_visit
-0x00489c30 32.30 indexed_bitmap_palette_data_prepare
+0x00489c30 32.40 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
 0x00489d90 100.00 directx_error_message_format
 0x00489dd0 100.00 directx_result_diagnostic_dispatch
@@ -4210,8 +4224,8 @@
 0x0048c210 13.61 parse_points
 0x0048c360 23.88 ledger_stub_0048c360_LwoCurves
 0x0048c3e0 10.47 parse_pols
-0x0048c690 7.11 parse_srfs
-0x0048c820 6.94 parse_surf_chunk
+0x0048c690 10.57 parse_srfs
+0x0048c820 6.34 parse_surf_chunk
 0x0048d2c0 10.03 model_parse
 0x0048d7c0 9.13 model_open
 0x0048d870 14.69 model_free

@@ -408,6 +408,15 @@ void indexed_surface_grid_install(uint32_t width, const void* const* entries,
                                   uint32_t entry_count);
 void indexed_surface_entry_hide_and_record(int x, int y); /* FUN_004634f0 */
 void indexed_surface_entries_restore(void); /* FUN_00463540 */
+/* A software scene owner may recognize its own complete resource before the
+ * raw DDi path. Nonzero means visibility was applied; zero leaves the record
+ * to the existing legacy implementation. The owner and calls are serialized. */
+typedef int (*SurfaceVisibilityAdapter)(void* context, const void* record,
+                                       uint32_t hidden);
+int surface_visibility_adapter_install(SurfaceVisibilityAdapter adapter,
+                                        void* context);
+int surface_visibility_adapter_remove(SurfaceVisibilityAdapter adapter,
+                                       void* context);
 void surface_visibility_set(const void* record, uint32_t flag);
                                                 /* FUN_00464720 */
 void animation_object_visibility_set(const void* anim, uint32_t flag);

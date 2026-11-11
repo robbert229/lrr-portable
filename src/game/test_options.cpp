@@ -426,7 +426,7 @@ static void test_save_roundtrip(void)
     sav_tree_roots_clear();
 
     /* Fresh game: documented defaults, and the bootstrap slot stamps them. */
-    GameContext g1;
+    static GameContext g1;
     game_context_init(&g1);
     CHECK(g1.options.brightness == 8 && g1.options.game_speed == 1,
         "save: fresh context starts at the defaults");
@@ -434,27 +434,43 @@ static void test_save_roundtrip(void)
         && g1.options.brightness == 8,
         "save: absent slot bootstraps with defaults");
 
+    CHECK(save_write_slot(&g1, 3), "save: existing slot initialized before edits");
     /* Change through the store, commit, reload: the values survive. */
     options_set(&g1.options, OPT_GAME_SPEED, 4);
     options_set(&g1.options, OPT_BRIGHTNESS, 2);
     options_set(&g1.options, OPT_HELP_WINDOW, 1);
     options_set(&g1.options, OPT_SFX_VOLUME, 3);
-    options_set(&g1.options, OPT_MUSIC_VOLUME, 9);
+    {
+        BlockFile* cfg = s_parse(FIXCFG);
+        FrontEnd fe;
+        CHECK(cfg != NULL && frontend_build(&fe, cfg), "save: music menu builds");
+        fe.opts = &g1.options;
+        CHECK(frontend_open(&fe, FE_MENU_OPTIONS), "save: music menu opens");
+        fe.sel = 2;
+        FeInput right = { 0, 0, 0, 1, 0, 0, -1, -1, 0 };
+        int initial = g1.options.music_volume;
+        frontend_tick(&fe, &right, NULL);
+        CHECK(g1.options.music_volume == initial + 1,
+              "save: music slider updates the effective store");
+        block_close(cfg);
+    }
+    sav_tree_roots_clear(); /* the music menu installs its own picker tree */
+    const int changed_music = g1.options.music_volume;
     CHECK(save_write_slot(&g1, 3) == 1, "save: slot written");
     save_mark_record(&g1, 0);
     save_commit(&g1);
 
-    GameContext g2;
+    static GameContext g2;
     game_context_init(&g2);
     CHECK(save_read_slot(&g2, 3, 0) == 1, "save: slot reads back");
     /* Faithful: help_window is not one of the retail header's tracked words,
      * so it no longer rides the slot (previously asserted == 1). */
     CHECK(g2.options.game_speed == 4 && g2.options.brightness == 2
-        && g2.options.sfx_volume == 3 && g2.options.music_volume == 9,
+        && g2.options.sfx_volume == 3 && g2.options.music_volume == changed_music,
         "save: option values survive the save/reload round trip");
 
     /* An un-stamped legacy save falls back to the defaults (magic absent). */
-    GameContext g3;
+    static GameContext g3;
     game_context_init(&g3);
     CHECK(save_read_slot(&g3, 1, 1) == 0, "save: absent slot 1 -> bootstrap");
     options_set(&g3.options, OPT_BRIGHTNESS, 6);
@@ -469,7 +485,7 @@ static void test_save_roundtrip(void)
             fclose(fp);
         }
     }
-    GameContext g4;
+    static GameContext g4;
     game_context_init(&g4);
     CHECK(save_read_slot(&g4, 1, 0) == 1, "save: legacy header reads back");
     /* Faithful: the retail 0xb0 header carries only the four tracked option
@@ -478,6 +494,51 @@ static void test_save_roundtrip(void)
      * (brightness 6 as written) win over the port defaults. */
     CHECK(g4.options.brightness == 6 && g4.options.game_speed == 1,
         "save: header without the legacy stamp reads the stored words");
+    {
+        GameOptions legacy;
+        options_defaults(&legacy);
+        legacy.music_volume = 7;
+        legacy.brightness = 3;
+        legacy.sfx_volume = 6;
+        legacy.game_speed = 2;
+        CHECK(save_write_slot(&g1, 2), "legacy: fixture record payload written");
+        FILE* fp = fopen("Saves/2.sav", "r+b");
+        CHECK(fp != NULL, "legacy: fixture opened");
+        if (fp != NULL) {
+            uint8_t header[SAVE_HEADER_SIZE];
+            memset(header, 0, sizeof(header));
+            int32_t count = g1.record_count;
+            memcpy(header + 0x08, &legacy.sfx_volume, 4);
+            memcpy(header + 0x0c, &legacy.game_speed, 4);
+            memcpy(header + 0x10, &legacy.music_volume, 4);
+            memcpy(header + 0x18, &count, 4);
+            options_save_header(&legacy, header + 0x20);
+            CHECK(fwrite(header, 1, sizeof(header), fp) == sizeof(header),
+                  "legacy: former portable header written");
+            fclose(fp);
+        }
+        uint8_t slot[0xb8];
+        memset(slot, 0, sizeof(slot));
+        save_context_bind(&g1);
+        CHECK(save_read_slot_target(2, slot, 1), "legacy: per-slot read");
+        int music = -1, brightness = -1;
+        memcpy(&music, slot + 4, 4);
+        memcpy(&brightness, slot + 0x10, 4);
+        CHECK(music == 7 && brightness == 3,
+              "legacy: per-slot context normalizes music and brightness");
+        static GameContext migrated;
+        game_context_init(&migrated);
+        CHECK(save_read_slot(&migrated, 2, 0), "legacy: typed read");
+        CHECK(migrated.saved_music_volume == 7 && migrated.saved_brightness == 3 &&
+              migrated.options.sfx_volume == 6 && migrated.options.game_speed == 2,
+              "legacy: typed settings agree with the extension");
+        CHECK(save_write_slot(&migrated, 2), "legacy: migrated rewrite");
+        static GameContext reopened;
+        game_context_init(&reopened);
+        CHECK(save_read_slot(&reopened, 2, 0) &&
+              reopened.saved_music_volume == 7 && reopened.saved_brightness == 3,
+              "legacy: rewritten retail words survive a fresh read");
+    }
     if (chdir("..") != 0) {
         ++s_failures;
     }
@@ -545,7 +606,7 @@ int main(int argc, char** argv)
     }
     /* OptionsWriteToSlot (2026-10-24): the slot window stores. */
     {
-        GameContext ctx;
+        static GameContext ctx;
         game_context_init(&ctx);
         ctx.options.game_speed = 3;
         ctx.options.sfx_volume = 7;
@@ -573,7 +634,7 @@ int main(int argc, char** argv)
 
     /* OptionsContextSixFieldSet (2026-10-24): the +0x1c window stores. */
     {
-        GameContext ctx;
+        static GameContext ctx;
         game_context_init(&ctx);
         const uint32_t src[6] = { 11u, 22u, 33u, 44u, 55u, 66u };
         save_slot_set(&ctx, 1);
@@ -601,7 +662,7 @@ int main(int argc, char** argv)
     /* OptionsContextCopyAndReplaceResource (2026-10-25): the full window
      * copy and the owned-resource fold. */
     {
-        GameContext ctx;
+        static GameContext ctx;
         game_context_init(&ctx);
         static uint32_t init_block[46];
         memset(init_block, 0, sizeof init_block);
@@ -650,7 +711,7 @@ int main(int argc, char** argv)
 
     /* The scroll speed index band (2026-10-25). */
     {
-        GameContext ctx;
+        static GameContext ctx;
         memset(&ctx, 0, sizeof ctx);
         scroll_scale_set(0.5f);
         CHECK(scroll_to_slider_index() == 0, "the slow scale bands to 0");

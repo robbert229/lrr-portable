@@ -983,6 +983,12 @@ int terrain_cell_surface_update_dispatch_level(LevelState* level,
                                                 int x, int y,
                                                 float scale,
                                                 float uniform_scale);
+int terrain_cell_initialize(LevelState* level, uint32_t x, uint32_t y); /* 0x430ee0 */
+/* 0x434570: accumulate work in the level cell; no terrain mutation. */
+int terrain_cell_drill_work_add(LevelState* level, int x, int y,
+                                float divisor, float elapsed);
+int terrain_cell_drill_work_add_current(int x, int y, float divisor,
+                                        float elapsed);
 void terrain_cell_mutation_progress(LevelState* level, uint32_t x,
                                     uint32_t y); /* 0x00433380 */
 void terrain_cell_mutation_progress_current(int x, int y);

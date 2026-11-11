@@ -627,16 +627,29 @@ void simtick_manager_set_timer_word(uint32_t w)
 // FUNCTION: LEGORR 0x0045a730
 void simtick_manager_tick(int index, float dt, int ingame)
 {
-    if (index < 0 || index >= s_mgr_count) {
-        return;
+    SimtickManagerSlot local;
+    SimtickManagerSlot* slot;
+    int authoritative = (s_mgr == NULL);
+    uint32_t xbits, ybits;
+    if (authoritative) {
+        if (index < 0 || index >= 18) return;
+        memset(&local, 0, sizeof(local));
+        request_record_panel_bounds_peek(index, &local.target_a[0], &local.target_a[1], &local.target_b[0], &local.target_b[1]);
+        indexed_pair_get(index, &xbits, &ybits);
+        memcpy(&local.smoothed[0], &xbits, sizeof(xbits));
+        memcpy(&local.smoothed[1], &ybits, sizeof(ybits));
+        local.flags = request_record_flags_peek(index);
+        slot = &local;
+    } else {
+        if (index < 0 || index >= s_mgr_count) return;
+        slot = &s_mgr[index];
     }
-    SimtickManagerSlot* slot = &s_mgr[index];
 
-    /* target select: source B (ints) when flag bit 4, else source A. */
+    /* Both configured targets are float pairs; bit 4 selects the second. */
     float tx, ty;
     if ((slot->flags & 4u) != 0) {
-        tx = (float)slot->target_b[0];
-        ty = (float)slot->target_b[1];
+        tx = slot->target_b[0];
+        ty = slot->target_b[1];
     } else {
         tx = slot->target_a[0];
         ty = slot->target_a[1];
@@ -663,7 +676,9 @@ void simtick_manager_tick(int index, float dt, int ingame)
     int ix = (int)floor((double)slot->smoothed[0]);
     int iy = (int)floor((double)slot->smoothed[1]);
 
-    if (slot->mode == 0) {
+    if (authoritative) {
+        /* The fixture routing fields are not the panel owner. */
+    } else if (slot->mode == 0) {
         ++s_repos_n;
         if (s_repos != NULL) {
             s_repos(slot->handle, ix, iy);
@@ -689,10 +704,17 @@ void simtick_manager_tick(int index, float dt, int ingame)
         }
     }
 
-    /* stop-detect: when the integer coords are sub-2 for both axes, clear
-     * the slot flag bit 3 (the corpus's near-zero settle). */
-    if (ix < 2 && ix > -2 && iy < 2 && iy > -2) {
+    /* Retail truncates each difference from the selected target before
+     * testing absolute distance <= 1, including nonzero screen positions. */
+    if ((int)(slot->smoothed[0] - tx) < 2 && (int)(slot->smoothed[0] - tx) > -2
+        && (int)(slot->smoothed[1] - ty) < 2 && (int)(slot->smoothed[1] - ty) > -2) {
         slot->flags &= ~8u;
+    }
+    if (authoritative) {
+        memcpy(&xbits, &slot->smoothed[0], sizeof(xbits));
+        memcpy(&ybits, &slot->smoothed[1], sizeof(ybits));
+        indexed_pair_set(index, xbits, ybits);
+        request_record_flags_set(index, slot->flags);
     }
 }
 
@@ -1464,7 +1486,7 @@ void simtick_vu_meter(EngineContext* c, float dt)
     width = display_width_get();
     height = display_height_get();
     for (i = 0; i < c->input->pointer_count; ++i)
-        (void)selection_pointer_world_dispatch(game,
+        (void)selection_pointer_world_dispatch(game, c,
             &c->input->pointer_samples[i], width, height);
 #else
     GameContext* game;

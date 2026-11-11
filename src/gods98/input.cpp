@@ -7,6 +7,10 @@
 #include "crt/crt.hpp"
 #include "frameloop.hpp"
 
+/* The action catalog gate is DAT_004de1f8, owned by the frontend. It is
+ * distinct from the engine placement-mode word at DAT_00556ed4. */
+extern uint32_t interaction_flags_peek(void);
+
 static DirectInputHooks s_direct_input_hooks;
 static InputState s_direct_input_state;
 static InputState* s_active_input_state;
@@ -693,6 +697,10 @@ int input_quit_dwell(InputState* s, int slot, int mx, int my,
 static uint32_t s_input_entry_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind1_flags[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t s_player_kind4_flags[INPUT_FLAG_TABLE_SLOTS];
+// GLOBAL: LEGORR 0x004dd9ac
+static uint32_t s_input_action_click_counts[INPUT_FLAG_TABLE_SLOTS];
+static uint32_t s_player_kind1_click_counts[INPUT_FLAG_TABLE_SLOTS];
+static uint32_t s_player_kind4_click_counts[INPUT_FLAG_TABLE_SLOTS];
 static uint32_t* player_flags_table(int kind);
 static InputActionStateQueryFn s_input_action_state_query;
 static void* s_input_action_state_query_context;
@@ -725,6 +733,78 @@ void input_binding_state_word_set(int kind, int entry, uint32_t flags)
     table[entry] = flags;
 }
 
+// FUNCTION: LEGORR 0x0041e810
+uint32_t input_action_click_count_get(int action)
+{
+    if (action < 0 || action >= INPUT_FLAG_TABLE_SLOTS) return 0u;
+    return s_input_action_click_counts[action];
+}
+
+// FUNCTION: LEGORR 0x0041e7f0
+uint32_t input_action_click_count_swap(int action, uint32_t value)
+{
+    uint32_t old = input_action_click_count_get(action);
+    if (action >= 0 && action < INPUT_FLAG_TABLE_SLOTS)
+        s_input_action_click_counts[action] = value;
+    return old;
+}
+
+static uint32_t* player_click_count_table(int kind)
+{
+    if (kind == 1) return s_player_kind1_click_counts;
+    if (kind == 4) return s_player_kind4_click_counts;
+    return NULL;
+}
+
+// FUNCTION: LEGORR 0x0041e860
+uint32_t input_binding_click_count_get(int kind, int entry)
+{
+    const uint32_t* table = player_click_count_table(kind);
+    if (table == NULL || entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS)
+        return 0u;
+    return table[entry];
+}
+
+// FUNCTION: LEGORR 0x0041e820
+uint32_t input_binding_click_count_swap(int kind, int entry, uint32_t value)
+{
+    uint32_t* table = player_click_count_table(kind);
+    uint32_t old;
+    if (table == NULL || entry < 0 || entry >= INPUT_FLAG_TABLE_SLOTS)
+        return 0u;
+    old = table[entry];
+    table[entry] = value;
+    return old;
+}
+
+/* Called only after the real pointer latch admits a counted completion,
+ * before the action effect is dispatched. A rejected effect still counts. */
+void input_action_completion_record(int action, int current_mode, int entry)
+{
+    if (action != 73) {
+        (void)input_action_click_count_swap(action,
+            input_action_click_count_get(action) + 1u);
+    }
+    else if (current_mode == 0x13) {
+        (void)input_binding_click_count_swap(4, entry,
+            input_binding_click_count_get(4, entry) + 1u);
+    }
+    else if (current_mode == 0x14 || current_mode == 0x15) {
+        (void)input_binding_click_count_swap(1, entry,
+            input_binding_click_count_get(1, entry) + 1u);
+    }
+}
+
+void input_action_level_state_clear(void)
+{
+    memset(s_input_action_click_counts, 0, sizeof(s_input_action_click_counts));
+    memset(s_player_kind1_click_counts, 0, sizeof(s_player_kind1_click_counts));
+    memset(s_player_kind4_click_counts, 0, sizeof(s_player_kind4_click_counts));
+    memset(s_input_entry_flags, 0, sizeof(s_input_entry_flags));
+    memset(s_player_kind1_flags, 0, sizeof(s_player_kind1_flags));
+    memset(s_player_kind4_flags, 0, sizeof(s_player_kind4_flags));
+}
+
 void input_action_state_query_set(InputActionStateQueryFn query,
                                   void* context)
 {
@@ -740,7 +820,7 @@ void input_action_state_update(int action)
 {
     uint32_t flags = input_action_state_word_get(action);
     if ((flags & 2u) == 0u &&
-        (global_state_low_word_get() & 0x80u) != 0u) {
+        (interaction_flags_peek() & 0x80u) != 0u) {
         int handled = 0;
         if (s_input_action_state_query != NULL) {
             handled = s_input_action_state_query(

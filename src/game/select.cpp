@@ -12,6 +12,8 @@
 #include "gods98/engine.hpp"
 #include "gods98/record.hpp"
 #include "gods98/input.hpp"
+#include "gods98/media.hpp"
+#include "crt/crt.hpp"
 #include "render.hpp"
 #include "gods98/sound.hpp"
 #include "gods98/view.hpp"
@@ -1057,7 +1059,9 @@ static int tutorial_path_menu_action_precheck_raw(
         const uint32_t target[2] = {
             map_store_pair_word(0), map_store_pair_word(1)
         };
-        return terrain_cell_predicate_check(descriptors, target) == 0
+        return (descriptors != NULL
+                   ? terrain_cell_predicate_check(descriptors, target)
+                   : terrain_cell_predicate_check_current(target)) == 0
             && level_cell_occupied_at(ctx->level, (int)target[0],
                                       (int)target[1]) == 0
             && ensure_cell_entries_loaded(0xfu, 0, 0) != 0;
@@ -1069,7 +1073,9 @@ static int tutorial_path_menu_action_precheck_raw(
         };
         const uint8_t* voxel = level_voxel(
             ctx->level, (int)target[0], (int)target[1]);
-        return terrain_cell_predicate_check(descriptors, target) == 0
+        return (descriptors != NULL
+                   ? terrain_cell_predicate_check(descriptors, target)
+                   : terrain_cell_predicate_check_current(target)) == 0
             && voxel != NULL && voxel[2] != 6u;
     }
 
@@ -1394,7 +1400,7 @@ int selection_cmd_move(GameContext* ctx, float tx, float ty)
 void selection_cmd_add(GameContext* ctx, EntitySlot* e)
 {
     if (ctx != NULL && e != NULL) {
-        cmd_produce(8, e, 0, NULL);
+        cmd_produce(1, e, 1, NULL);
     }
 }
 
@@ -1652,24 +1658,125 @@ void selection_clear_marker_and_reset_hud(struct EngineContext* engine,
     selection_clear_request_and_hud_reset();
 }
 
-/* Neutral physical-button ingress adapter. Gesture policy remains the
- * reconstruction's press-to-select/press-ground-to-move for either button;
- * the reference's configured gesture and drag rules are still unresolved.
- * No catalog tuple, synthetic ray, cell picker fallback, or route is used. */
+/* The ordinary floor alternatives at 0x4272b6..0x42744f. A recognized
+ * floor owns a failed route/permission result too: it must not become an
+ * unconditional move in the compatibility adapter below. Other action
+ * modes are outside this slice. */
+static int selection_floor_release(GameContext* ctx, EngineContext* engine,
+                                    const int cell_xy[2])
+{
+    const uint8_t* cell;
+    uint32_t flags;
+    EntitySlot* first;
+    int handled = 0;
+    int mark_matching = 0;
+    if (level_width(ctx->level) < 2 || level_height(ctx->level) < 2 ||
+        (unsigned int)cell_xy[0] >= (unsigned int)level_width(ctx->level) - 1u ||
+        (unsigned int)cell_xy[1] >= (unsigned int)level_height(ctx->level) - 1u)
+        return 0;
+    if ((engine->state & (0x40000u | 0x10000000u)) != 0u ||
+        (global_state_low_word_get() & 0xffu) != 0u) return -1;
+    cell = level_voxel(ctx->level, cell_xy[0], cell_xy[1]);
+    if (cell == NULL) return 0;
+    memcpy(&flags, cell + 8, sizeof(flags));
+    if ((flags & 0x0cu) != 0x0cu || selection_count(ctx) == 0)
+        return -1;
+    if ((flags & 0x400u) != 0u || (cell[0x0c] & 0x24u) != 0u)
+        return 0;
+    first = selection_first(ctx);
+    if ((flags & 0x200000u) == 0u &&
+        (entity_stats_word_get(first) & 0x10000u) != 0u &&
+        terrain_cell_route_and_occupancy_check_current(first,
+            cell_xy[0], cell_xy[1], cell_xy[0], cell_xy[1], 0) != 0) {
+        handled = 1;
+        mark_matching = 1;
+    }
+    if (handled == 0 &&
+        terrain_cell_route_and_occupancy_check_current(first,
+            cell_xy[0], cell_xy[1], cell_xy[0], cell_xy[1], 0) != 0)
+        handled = 1;
+    /* Route success owns the branch before permission is tested. */
+    if (handled == 0 || terrain_cell_command_predicate(engine,
+        cell_xy[0], cell_xy[1]) != 0) return 0;
+    /* HUD reset reaches the x86 visibility owner through this record.
+     * Refuse the whole operation while that scene owner is unavailable;
+     * do not queue a move and pretend the dependent reset succeeded. */
+    if (global_refresh_record_peek() == NULL) {
+        return 0;
+    }
+    cmd_produce(8, NULL, 0, cell_xy);
+    if (mark_matching != 0) cmd_mark_matching(12, 0, cell_xy);
+    media_action_feedback_sound_dispatch(0);
+    selection_clear_request_and_hud_reset();
+    return 1;
+}
+
+/* Ordinary selected wall action and wall context release. The special
+ * placement modes remain owned by the existing dispatcher. */
+static int selection_wall_release(GameContext* ctx, EngineContext* engine,
+                                  const int cell_xy[2])
+{
+    const uint8_t* cell;
+    uint32_t flags;
+    uint32_t coord[2];
+    if ((engine->state & (0x40000u | 0x10000000u)) != 0u ||
+        (global_state_low_word_get() & 0xffu) != 0u) return -1;
+    if (level_width(ctx->level) < 2 || level_height(ctx->level) < 2 ||
+        (unsigned int)cell_xy[0] >= (unsigned int)level_width(ctx->level) - 1u ||
+        (unsigned int)cell_xy[1] >= (unsigned int)level_height(ctx->level) - 1u)
+        return 0;
+    cell = level_voxel(ctx->level, cell_xy[0], cell_xy[1]);
+    if (cell == NULL) return 0;
+    memcpy(&flags, cell + 8, sizeof(flags));
+    if ((flags & 0x08u) == 0u && selection_active_has_any_get() != 0 &&
+        selected_entities_any_predicate_match(cell_xy[0], cell_xy[1], 0) &&
+        cell[2] != 1 && cell[2] != 9 && cell[2] != 11 &&
+        (flags & 0x40u) == 0u) {
+        if (terrain_cell_command_predicate(engine, cell_xy[0], cell_xy[1]) != 0)
+            return 0;
+        if (global_refresh_record_peek() == NULL) return 0;
+        terrain_cell_command_create(cell_xy[0], cell_xy[1], 0, 1);
+        cmd_mark_matching(8, 0, cell_xy);
+        media_action_feedback_sound_dispatch(0);
+        selection_clear_request_and_hud_reset();
+        return 1;
+    }
+    if ((flags & 0x08u) != 0u) return -1;
+    if ((flags & (0x40u | 0x400u)) != 0u ||
+        (cell[0x0c] & 0x24u) != 0u || cell[2] == 1 ||
+        cell[2] == 6 || cell[2] == 9) return 0;
+    if (terrain_cell_command_predicate(engine, cell_xy[0], cell_xy[1]) != 0)
+        return 0;
+    /* The real refresh scene owner is required by the HUD transition. */
+    if (global_refresh_record_peek() == NULL) return 0;
+    coord[0] = (uint32_t)cell_xy[0];
+    coord[1] = (uint32_t)cell_xy[1];
+    cmd_produce(3, NULL, 0, NULL);
+    media_action_feedback_sound_dispatch(4);
+    command_context_post_to_hud(7, coord);
+    return 1;
+}
+
+/* The frame UI arbiter owns the complete gesture and admits its release.
+ * No catalog tuple, synthetic ray, cell picker fallback or forced route. */
 int selection_pointer_world_dispatch(GameContext* ctx,
-    InputPointerSample* sample, int width, int height)
+    EngineContext* engine, InputPointerSample* sample, int width, int height)
 {
     EntitySlot* hit;
     float cell_x, cell_y;
     int signed_cell_x, signed_cell_y;
     if (sample == NULL || sample->domain != INPUT_POINTER_WORLD ||
-        sample->transition != PLATFORM_MOUSE_DOWN || sample->admitted ||
+        sample->transition != PLATFORM_MOUSE_UP || sample->admitted ||
         (sample->button != PLATFORM_MOUSE_LEFT &&
          sample->button != PLATFORM_MOUSE_RIGHT)) return 0;
     /* Consume even a miss before any picker/queue side effect. A second
      * producer cannot reinterpret this physical edge later in the tick. */
     sample->admitted = 1;
-    if (ctx == NULL || ctx->level == NULL || width <= 0 || height <= 0)
+    if (ctx == NULL || ctx->level == NULL || engine == NULL ||
+        engine->level_block != ctx->level || engine->context_mode != 1 ||
+        (engine->state & (0x100u | 0x100000u | 0x08000000u)) != 0u ||
+        ((engine_feature_word_peek() & 0x4000u) != 0u &&
+         sample->button != PLATFORM_MOUSE_LEFT) || width <= 0 || height <= 0)
         return 0;
     hit = level_scene_pick_entity(ctx, ctx->level, width, height,
                                   sample->x, sample->y, 30.0f);
@@ -1687,5 +1794,18 @@ int selection_pointer_world_dispatch(GameContext* ctx,
      * catalog type/id. Existing queue/route owners keep all later authority. */
     signed_cell_x = (int)cell_x;
     signed_cell_y = (int)cell_y;
+    {
+        int cell_xy[2];
+        int result;
+        cell_xy[0] = signed_cell_x;
+        cell_xy[1] = signed_cell_y;
+        result = selection_wall_release(ctx, engine, cell_xy);
+        if (result >= 0) return result;
+        result = selection_floor_release(ctx, engine, cell_xy);
+        if (result >= 0) return result;
+    }
+    /* Other existing world modes are not covered by the floor slice. */
+    if (terrain_cell_command_predicate(engine, signed_cell_x,
+                                       signed_cell_y) != 0) return 0;
     return selection_cmd_move(ctx, (float)signed_cell_x, (float)signed_cell_y);
 }

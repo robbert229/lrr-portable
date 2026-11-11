@@ -37,7 +37,25 @@ typedef struct TypeConfigShapeOwner {
     const void** upgrade_names;
     uint32_t upgrade_count;
     uint32_t upgrade_level_mask;
+    /* CreatureModel +0x2c owns config text, not a frame. Keep the native
+     * pointer here when its packed row word cannot hold a host pointer. */
+    char* drill_null_name;
 } TypeConfigShapeOwner;
+
+static inline const char* type_config_drill_name_resolve(
+    const TypeConfigTable* table, uint32_t row_index)
+{
+    const TypeConfigShapeOwner* owner;
+    uint32_t word;
+    if (table == NULL || table->rows == NULL || table->row_stride < 48u ||
+        table->row_owned == NULL ||
+        row_index >= table->count) return NULL;
+    memcpy(&word, (const char*)table->rows +
+        (size_t)row_index * table->row_stride + 44u, sizeof(word));
+    if (word == 0u) return NULL;
+    owner = (const TypeConfigShapeOwner*)table->row_owned[row_index];
+    return owner != NULL ? owner->drill_null_name : NULL;
+}
 
 static inline const uint32_t* type_config_shape_table_resolve(
     const TypeConfigTable* table, uint32_t table_token)
@@ -191,6 +209,7 @@ static inline void type_config_table_release(TypeConfigTable* table)
             if (shape->string_count > 18u) shape->string_count = 18u;
             for (j = 0u; j < shape->string_count; ++j)
                 engine_heap_free(shape->strings[j]);
+            engine_heap_free(shape->drill_null_name);
             if (shape->upgrade_values != NULL) {
                 for (j = 0u; j < shape->upgrade_count; ++j)
                     engine_heap_free(shape->upgrade_values[j]);

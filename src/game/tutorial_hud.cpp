@@ -38,7 +38,6 @@ typedef struct TutorialTokenEntry {
     int kind;
 } TutorialTokenEntry;
 
-#define NERP_ICON_STATE_COUNT 29
 #define NERP_TUTORIAL_CELL_CAPACITY 2048
 
 typedef struct NerpTutorialCellState {
@@ -64,8 +63,6 @@ typedef struct NerpRuntimeState {
     uint32_t message_suppress_arrow;
     uint32_t message_sound_active;
     float message_timer;
-    uint32_t icon_clicked[NERP_ICON_STATE_COUNT];
-    uint32_t icon_flashing[NERP_ICON_STATE_COUNT];
     float icon_position[2];
     uint32_t icon_space;
     uint32_t icon_width;
@@ -955,6 +952,36 @@ static int tutorial_coordinate_field_set(LevelState* level,
     return changed;
 }
 
+/* 0x454d10 -> 0x454ca0 writes the authored count before creating each
+ * crystal through 0x439370. That owner also increments the cell counter. */
+static void tutorial_crystals_at_coordinate_list_set(GameContext* game,
+                                                     uint32_t list_index,
+                                                     uint32_t count)
+{
+    void* node;
+    uint32_t visited = 0u;
+    if (game == NULL || game->level == NULL || list_index >= 0x37u) return;
+    node = game->level->pool_heads[list_index];
+    while (node != NULL && visited < NERP_TUTORIAL_CELL_CAPACITY) {
+        int cell_xy[2];
+        uint8_t* voxel;
+        int32_t remaining = (int32_t)count;
+        memcpy(&cell_xy[0], node, sizeof(cell_xy[0]));
+        memcpy(&cell_xy[1], (char*)node + 4, sizeof(cell_xy[1]));
+        voxel = level_voxel(game->level, cell_xy[0], cell_xy[1]);
+        if (voxel != NULL) {
+            memcpy(voxel + 0x2c, &count, sizeof(count));
+            while (remaining > 0) {
+                (void)entity_build_placement_command_setup(
+                    cell_xy, 0, NULL, 1, 0);
+                --remaining;
+            }
+        }
+        node = *(void**)((char*)node + 8);
+        ++visited;
+    }
+}
+
 typedef struct TutorialPointerEntityMark {
     LevelState* level;
     int32_t x;
@@ -1003,6 +1030,67 @@ static void tutorial_pointer_context11(GameContext* game, uint32_t list_index)
         memcpy(&mark.y, (char*)node + 4, sizeof(mark.y));
         (void)entity_pool_find_by_callback_filtered(game,
             tutorial_pointer_entity_mark, &mark);
+        node = *(void**)((char*)node + 8);
+        ++visited;
+    }
+}
+
+typedef struct TutorialPickupCellQuery {
+    LevelState* level;
+    int32_t x;
+    int32_t y;
+    uint32_t count;
+    int type;
+    EntitySlot* entity;
+} TutorialPickupCellQuery;
+
+/* 0x457060: a typed match stops the filtered pool walk. Other objects at
+ * the same cell still increment the shared count. */
+static int tutorial_pickup_cell_candidate(EntitySlot* entity, void* payload)
+{
+    TutorialPickupCellQuery* query = (TutorialPickupCellQuery*)payload;
+    int x = -1;
+    int y = -1;
+    if (entity == NULL || query == NULL ||
+        !tutorial_pointer_entity_cell_get(entity, query->level, &x, &y) ||
+        x != query->x || y != query->y) return 0;
+    if (entity->type == query->type) {
+        query->entity = entity;
+        query->count = 1u;
+        return 1;
+    }
+    ++query->count;
+    return 0;
+}
+
+/* 0x457130 -> 0x456d00/context12 -> 0x439a20. The second typed scan
+ * deliberately retains the first scan's count and selected pointer. The
+ * outer callback's result remains zero even when a route is issued. */
+static void tutorial_pickup_at_coordinate_list(GameContext* game,
+                                               uint32_t list_index)
+{
+    void* node;
+    uint32_t visited = 0u;
+    if (game == NULL || game->level == NULL || list_index >= 0x37u) return;
+    node = game->level->pool_heads[list_index];
+    while (node != NULL && visited < NERP_TUTORIAL_CELL_CAPACITY) {
+        TutorialPickupCellQuery query;
+        memset(&query, 0, sizeof(query));
+        query.level = game->level;
+        memcpy(&query.x, node, sizeof(query.x));
+        memcpy(&query.y, (char*)node + 4, sizeof(query.y));
+        query.type = 2;
+        (void)entity_pool_find_by_callback_filtered(
+            game, tutorial_pickup_cell_candidate, &query);
+        if (query.count != 0u) {
+            EntitySlot* actor = query.entity;
+            query.type = 6;
+            (void)entity_pool_find_by_callback_filtered(
+                game, tutorial_pickup_cell_candidate, &query);
+            if (query.count != 0u) {
+                (void)entity_gated_step_command_issue(actor, query.entity);
+            }
+        }
         node = *(void**)((char*)node + 8);
         ++visited;
     }
@@ -1214,8 +1302,6 @@ static uint32_t tutorial_record_object_at_list(LevelState* level,
     return 0u;
 }
 
-/* GetSelectedRecordObject @ 0x454220 queries OList slots, not positions in
- * the selection array. FUN_00452610(entity, NULL) tests the selected bit. */
 static uint32_t tutorial_selected_record_object_get(void)
 {
     uint32_t index;
@@ -1475,10 +1561,8 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         return 1;
     }
     if (command == 112u && argc == 2u && args != NULL) {
-        (void)tutorial_coordinate_field_set(
-            s_tutorial_game_context != NULL
-                ? s_tutorial_game_context->level : NULL,
-            args[0], 0x2cu, args[1]);
+        tutorial_crystals_at_coordinate_list_set(
+            s_tutorial_game_context, args[0], args[1]);
         s_nerp_runtime.tutorial_crystals = args[1];
         *result_out = 1u;
         return 1;
@@ -1599,6 +1683,7 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
             s_tutorial_game_context != NULL
                 ? s_tutorial_game_context->level : NULL,
             args[0]);
+
         return 1;
     }
     if (command == 199u && argc == 1u && args != NULL) {
@@ -1731,6 +1816,16 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
         uint32_t count = 0u;
         while (tutorial_objective_token_lookup(count) != NULL) ++count;
         *result_out = s_nerp_runtime.message_ack_count >= count;
+        return 1;
+    }
+    if (command == 210u && argc == 1u && args != NULL) {
+        priority_entry_state_set(0, args[0] == 0u);
+        *result_out = 0u;
+        return 1;
+    }
+    if (command == 211u && argc == 1u && args != NULL) {
+        tutorial_pickup_at_coordinate_list(s_tutorial_game_context, args[0]);
+        *result_out = 0u;
         return 1;
     }
     if (command == 166u && argc == 1u && args != NULL) {
@@ -1875,18 +1970,71 @@ static int tutorial_builtin_command(uint32_t command, const uint32_t* args,
             {256,26,1}, {257,26,2}, {258,27,0}, {259,27,1}, {260,27,2},
             {263,28,0}, {264,28,1}, {265,28,2}
         };
+        /* These are action IDs, not NERP-private counters. Object names
+         * must resolve through the loaded type table rather than guessed
+         * building rows. Slots 0 and 2 both name Teleport in the PE. */
+        static const int actions[] = {
+            1, 2, 1, 73, 0, 11, 24, 5, 73, 13, 73, 73, 73,
+            25, 48, 53, 54, 73, 73, 73, 57, 58, 61, 62, 65,
+            -1, 56, 33, 14
+        };
+        static const char* const bindings[] = {
+            NULL, NULL, NULL, "Toolstation", NULL, NULL, NULL, NULL,
+            "TeleportPad", NULL, "Gunstation", "TeleportBIG", "Upgrade",
+            NULL, NULL, NULL, NULL, "Powerstation", "Barracks", "Geo-dome",
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+        };
         uint32_t i;
         for (i = 0u; i < sizeof(icons) / sizeof(icons[0]); ++i) {
+            int action;
+            int kind = 0, entry = 0;
             if (icons[i].command != command) continue;
+            action = actions[icons[i].slot];
+            if (action == 73 && !entity_type_row_for_name(
+                    bindings[icons[i].slot], &kind, &entry)) {
+                *result_out = 0u;
+                return 1;
+            }
             if (icons[i].operation == 0u) {
-                *result_out = s_nerp_runtime.icon_clicked[icons[i].slot];
+                *result_out = action == 73
+                    ? input_binding_click_count_get(kind, entry)
+                    : input_action_click_count_get(action);
             } else if (icons[i].operation == 1u && argc == 1u && args != NULL) {
-                uint32_t old = s_nerp_runtime.icon_clicked[icons[i].slot];
-                s_nerp_runtime.icon_clicked[icons[i].slot] = args[0];
-                *result_out = old;
+                *result_out = action == 73
+                    ? input_binding_click_count_swap(kind, entry, args[0])
+                    : input_action_click_count_swap(action, args[0]);
             } else if (icons[i].operation == 2u && argc == 1u && args != NULL) {
-                s_nerp_runtime.icon_flashing[icons[i].slot] = args[0] == 1u;
-                *result_out = args[0] == 1u;
+                uint32_t flags;
+                if (action == -1) {
+                    /* FlashCallToArms is a direct advisor request, not an
+                     * action-table flash. Its wrapper always returns zero. */
+                    uint32_t slot;
+                    if (args[0] != 0u) {
+                        if (advisor_animation_slot_id_resolve(6u, 2u, &slot))
+                            (void)advisor_request_admit((int)slot, 1);
+                    }
+                    else advisor_clear_active_state();
+                    *result_out = 0u;
+                }
+                else if (action == 73) {
+                    flags = input_binding_state_word_get(kind, entry);
+                    input_binding_state_word_set(kind, entry,
+                        args[0] != 0u ? flags | 4u : flags & ~4u);
+                    *result_out = args[0];
+                }
+                else {
+                    flags = input_action_state_word_get(action);
+                    if (args[0] == 1u) {
+                        (void)advisor_action_indicator_request(action, 1);
+                        input_action_state_word_set(action, flags | 4u);
+                        *result_out = 1u;
+                    }
+                    else {
+                        advisor_clear_active_state();
+                        input_action_state_word_set(action, flags & ~4u);
+                        *result_out = 0u;
+                    }
+                }
             } else {
                 *result_out = 0u;
             }
@@ -2013,6 +2161,7 @@ void tutorial_script_command_dispatch(float delta)
                     tutorial_indirect_handle_resolve(&args[i]);
             }
             step += argc;
+
             if (previous != 0u) {
                 (void)tutorial_command_invoke(command,
                     argc == 0u ? NULL : args, argc, &result);
@@ -2709,19 +2858,28 @@ void legacy_overlay_image_record_load(const char* path, int panel,
     }
     record->selection_count = 0;
     record->flags = state;
+    request_record_flags_set(panel, state);
     record->image_mode = 0;
     record->image_flags = 0;
     record->image = NULL;
     record->image_texture_owned = 0;
     if (path != NULL) {
-        if (s_legacy_hud_ops.surface_load != NULL) {
+        if (s_legacy_hud_ops.panel_texture_load != NULL) {
+            record->image = s_legacy_hud_ops.panel_texture_load(
+                path, s_legacy_hud_ops.context);
+            record->image_texture_owned = record->image != NULL;
+        }
+        else if (s_legacy_hud_ops.surface_load != NULL) {
             record->image = s_legacy_hud_ops.surface_load(
                 NULL, path, 0, 0, s_legacy_hud_ops.context);
         }
         else {
-            record->image = texture_get_or_load(NULL, path);
+            record->image = image_surface_load(path, 0u, 0u);
             record->image_texture_owned = record->image != NULL;
         }
+        if (record->image_texture_owned)
+            texture_source_color_key_set((TextureSurface*)record->image,
+                                         0u, 0u);
     }
     if (record->image != NULL) {
         if (s_legacy_hud_ops.surface_initialize != NULL)
@@ -2729,6 +2887,7 @@ void legacy_overlay_image_record_load(const char* path, int panel,
                                                 s_legacy_hud_ops.context);
         record->image_mode = 0;
         record->image_flags |= 1u;
+        request_record_flags_set(panel, state | 1u);
         return;
     }
     if (path != NULL && s_legacy_hud_ops.surface_alternate_load != NULL) {
@@ -2738,6 +2897,7 @@ void legacy_overlay_image_record_load(const char* path, int panel,
             record->image_texture_owned = 0;
             record->image_mode = 1;
             record->image_flags |= 1u;
+            request_record_flags_set(panel, state | 1u);
         }
     }
 }
@@ -2850,6 +3010,14 @@ void legacy_panel_category_record_install(int panel, const float rect[4],
     }
 }
 
+TextureSurface* legacy_panel_texture_get(int panel)
+{
+    if (panel < 0 || panel >= 18) return NULL;
+    const LegacyPanelPortRecord* record = &s_legacy_panels[panel];
+    if (!record->image_texture_owned || record->image_mode != 0) return NULL;
+    return (TextureSurface*)record->image;
+}
+
 void* legacy_panel_image_get(int panel)
 {
     return panel >= 0 && panel < 18 ? s_legacy_panels[panel].image : NULL;
@@ -2866,5 +3034,4 @@ void legacy_panel_image_slot_entry_release(void* opaque)
 }
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_M_IX86)
-#include "../../tools/diagnostics/wine-nerp-owner-probe.inc" /* DEBUG-next-owner */
 #endif

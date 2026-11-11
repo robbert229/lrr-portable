@@ -12,6 +12,8 @@ src/crt/crt_runtime_aliases.cpp
 src/crt/crt_runtime_calls.cpp
 src/crt/vc5names.h
 src/game/activity_timeout.hpp
+src/game/actor_scene.cpp
+src/game/actor_scene.hpp
 src/game/ai.cpp
 src/game/ai.hpp
 src/game/building_scene.cpp
@@ -27,6 +29,7 @@ src/game/effects.hpp
 src/game/entity.cpp
 src/game/entity.hpp
 src/game/entity_config.cpp
+src/game/entity_motion_owner.cpp
 src/game/entity_motion_ports.hpp
 src/game/entity_motion_probe.hpp
 src/game/entity_pose_delta.hpp

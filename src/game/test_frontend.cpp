@@ -22,6 +22,7 @@
 #include <unistd.h> /* mkdtemp / rmdir */
 
 #include "game/frontend.hpp"
+#include "game/effects.hpp"
 #include "game/priorities.h"
 #include "game/savegame.hpp"
 #include "game/util.hpp"
@@ -34,6 +35,8 @@
 #include "crt/crt.hpp"
 #include "gods98/heap.hpp"
 #include "gods98/message.hpp"
+#include "gods98/input.hpp"
+#include "gods98/engine.hpp"
 #include "gods98/resource.hpp"
 #include "gods98/texture.hpp"
 #include "game/entity.hpp"
@@ -58,6 +61,19 @@ static void* s_c179_loader(const char* key)
 }
 
 static int s_failures = 0;
+static int s_action_ready_calls;
+static int s_action_ready(void*, int action)
+{
+    ++s_action_ready_calls;
+    input_action_state_word_set(action,
+        input_action_state_word_get(action) | 4u);
+    return 1;
+}
+static int s_catalog_ready(int, int, void*)
+{
+    ++s_action_ready_calls;
+    return 1;
+}
 
 
 #define CHECK(cond, msg)                                                       \
@@ -653,6 +669,11 @@ static void test_active_image(void)
     CHECK(im != NULL, "img: Menu2 has a MenuImage");
     CHECK(im != NULL && strcmp(im, "Interface\\LevelPicker\\LevelPick.bmp") == 0,
         "img: Menu2 path trimmed of ':0:0:1'");
+    const FeSubmenu* image_sub = frontend_active_submenu(&fe);
+    CHECK(image_sub != NULL && image_sub->image_has_origin &&
+          image_sub->image_x == 0.0f && image_sub->image_y == 0.0f &&
+          image_sub->image_keyed,
+          "img: explicit origin and transparency survive tuple parsing");
     block_close(cfg);
 }
 
@@ -687,6 +708,29 @@ static void test_pointer(void)
     CHECK(frontend_tick(&fe, &start, NULL) == FE_EVT_NONE && fe.sub == 1,
         "ptr: click Start_Game -> Missions picker");
     block_close(cfg);
+}
+
+static void test_interface_action_labels(void)
+{
+    int action = -1;
+    /* The registered wall group and UiActionDispatch use these reference
+     * enum values, not the old order of the image-name initializer. */
+    CHECK(interface_menu_action_label_find("Interface_MenuItem_Dig", &action)
+          && action == 11,
+          "action images: Drill Wall uses dispatcher action 11");
+    CHECK(strcmp(interface_menu_action_label_get(12),
+                 "Interface_MenuItem_Reinforce") == 0
+          && strcmp(interface_menu_action_label_get(13),
+                    "Interface_MenuItem_Dynamite") == 0
+          && strcmp(interface_menu_action_label_get(15),
+                    "Interface_MenuItem_DeselectDig") == 0,
+          "action images: wall group resolves its authored artwork");
+    CHECK(interface_menu_action_label_find("Interface_MenuItem_RemovePath",
+                                           &action) && action == 6,
+          "action images: Remove Path keeps reference enum position");
+    CHECK(interface_menu_action_label_get(-1) == NULL
+          && interface_menu_action_label_get(74) == NULL,
+          "action images: invalid enum has no resource name");
 }
 
 static void test_pause(void)
@@ -753,11 +797,16 @@ static void test_pause(void)
     FeInput yes = { 0, 0, 0, 0, 0, 0, 1, 61, 1 };
     CHECK(frontend_tick(&fe, &quit, NULL) == FE_EVT_NONE && fe.sub == 2,
         "pause: click Quit opens confirmation");
+    FeInput outside = { 0, 0, 0, 0, 0, 0, 600, 400, 0 };
+    CHECK(frontend_tick(&fe, &outside, NULL) == FE_EVT_NONE && fe.sel == -1,
+        "pause: confirmation entry outside has no highlighted row");
     enter.mouse_x = 1; enter.mouse_y = 101;
     CHECK(frontend_tick(&fe, &enter, NULL) == FE_EVT_NONE && fe.sub == 2,
         "pause: Enter does not activate No");
     CHECK(frontend_tick(&fe, &no, NULL) == FE_EVT_NONE && fe.sub == 0,
         "pause: click No returns to root");
+    CHECK(frontend_tick(&fe, &outside, NULL) == FE_EVT_NONE && fe.sel == -1,
+        "pause: returned root outside has no highlighted row");
     CHECK(frontend_tick(&fe, &quit, NULL) == FE_EVT_NONE && fe.sub == 2,
         "pause: click Quit reopens confirmation");
     CHECK(frontend_tick(&fe, &yes, NULL) == FE_EVT_LEAVE_LEVEL && !fe.open,
@@ -768,6 +817,8 @@ static void test_pause(void)
     FeInput restart = { 0, 0, 0, 0, 0, 0, 310, 274, 1 };
     CHECK(frontend_tick(&fe, &restart, NULL) == FE_EVT_NONE && fe.sub == 3,
         "pause: click Restart opens confirmation");
+    CHECK(frontend_tick(&fe, &outside, NULL) == FE_EVT_NONE && fe.sel == -1,
+        "pause: restart confirmation outside has no highlighted row");
     CHECK(frontend_tick(&fe, &yes, NULL) == FE_EVT_START_LEVEL
         && strcmp(fe.pending_level, "Tran01") == 0,
         "pause: click Yes restarts the level");
@@ -953,6 +1004,57 @@ static void test_options(void)
     block_close(cfg);
 }
 
+static void test_cycle_label_bounds(void)
+{
+    FrontEnd* fe = (FrontEnd*)calloc(1, sizeof(FrontEnd));
+    GameOptions options;
+    options_defaults(&options);
+    CHECK(fe != NULL, "cycle bounds: frontend");
+    if (fe == NULL) return;
+    fe->open = fe->built = 1;
+    fe->menu = FE_MENU_PAUSED;
+    fe->opts = &options;
+    fe->menus[FE_MENU_PAUSED].submenu_count = 1;
+    FeSubmenu* sub = &fe->menus[FE_MENU_PAUSED].submenus[0];
+    sub->item_count = 1;
+    sub->base_x = 140;
+    sub->base_y = 200;
+    FeItem* item = &sub->items[0];
+    item->kind = FE_ITEM_CYCLE;
+    item->cycle_count = 2;
+    strcpy(item->label, "Music");
+
+    /* Five ten-pixel advances: label ends at x=190, value is separate. */
+    TextureSurface font;
+    memset(&font, 0, sizeof(font));
+    font.width = 100;
+    font.height = 190;
+    font.key_count = 2;
+    font.pixels = (uint32_t*)malloc(font.width * font.height * 4);
+    CHECK(font.pixels != NULL, "cycle bounds: font pixels");
+    if (font.pixels != NULL) {
+        for (int i = 0; i < font.width * font.height; ++i)
+            font.pixels[i] = 0xffffffffu;
+        FeInput input = { 0, 0, 0, 0, 0, 0, 192, 201, 1, 0 };
+        frontend_tick(fe, &input, &font);
+        CHECK(item->value == 0 && options.music_onoff == 0,
+              "cycle bounds: beyond label does not activate");
+        input.mouse_x = 141;
+        input.mouse_y = 198;
+        frontend_tick(fe, &input, &font);
+        CHECK(item->value == 0, "cycle bounds: above label does not activate");
+        input.mouse_y = 201;
+        frontend_tick(fe, &input, &font);
+        CHECK(item->value == 1 && options.music_onoff == 1,
+              "cycle bounds: label activates real option owner");
+        input.mouse_x = 450;
+        frontend_tick(fe, &input, &font);
+        CHECK(item->value == 1, "cycle bounds: value column does not activate");
+        free(font.pixels);
+    }
+    free(fe);
+}
+
 static void test_cycle_pointer_and_layout(void)
 {
     /* frontend_build reports MainMenuFull's result, so the fixture needs a
@@ -983,6 +1085,19 @@ static void test_cycle_pointer_and_layout(void)
         frontend_render(&fe, NULL, NULL, 640, 480, pixels, 640 * 4);
         CHECK(pixels[(179 * 640 + 450) * 4] != 0,
               "cycle layout: value drawn at authored column");
+        FeInput outside = { 0, 0, 0, 1, 0, 0, 600, 400, 0, 0 };
+        frontend_tick(&fe, &outside, NULL);
+        CHECK(fe.sel == -1 && sub->items[0].value == 1,
+              "cycle input: outside Right cannot adjust stale selection");
+        outside.right = 0;
+        outside.down = 1;
+        frontend_tick(&fe, &outside, NULL);
+        CHECK(fe.sel == -1,
+              "cycle input: outside Down cannot create pointer highlight");
+        memset(pixels, 0, 640 * 480 * 4);
+        frontend_render(&fe, NULL, NULL, 640, 480, pixels, 640 * 4);
+        CHECK(pixels[(179 * 640 + 450) * 4] == 200,
+              "cycle layout: missed row uses unselected glyph color");
         free(pixels);
     }
     block_close(cfg);
@@ -1180,10 +1295,12 @@ int main(int argc, char** argv)
     test_font();
     test_font_blank_advance();
     test_pointer();
+    test_interface_action_labels();
     test_pause();
     test_slots();
     test_options();
     test_cycle_pointer_and_layout();
+    test_cycle_label_bounds();
     test_scroll();
     test_records();
 
@@ -1531,7 +1648,7 @@ int main(int argc, char** argv)
         __builtin_memcpy(rec2 + 10, &fl2, 4);
         panel_draw_records_set(11, pblock);
         panel_draw_count_set(11, 2);
-        indexed_pair_set(11, 10u, 5u);
+        indexed_pair_set(11, 0x41200000u, 0x40a00000u); /* 10.0f, 5.0f */
         sim_status_banner_word_set(0u);
         crt_surface_calls_clear();
         panel_texture_slots_blit(11);
@@ -1573,6 +1690,70 @@ int main(int argc, char** argv)
         crt_surface_calls_clear();
         panel_texture_slots_blit(11);
         CHECK(crt_surface_calls_count() == 0, "a closed panel answers nothing");
+    }
+
+    /* Idle hover uses the same live records as the image selector. */
+    {
+        uint32_t saved_flags[12];
+        static float items[22];
+        memset(items, 0, sizeof(items));
+        for (int k = 0; k < 12; ++k) {
+            saved_flags[k] = request_record_flags_peek(k);
+            request_record_flags_set(k, k == 11 ? 1u : 0u);
+        }
+        items[2] = items[13] = 36.0f;
+        items[3] = items[14] = 25.0f;
+        panel_draw_records_set(11, items);
+        panel_draw_count_set(11, 2);
+        float ox = 330.75f, oy = -0.75f;
+        uint32_t xb, yb, flags = 0x10u;
+        memcpy(&xb, &ox, sizeof(xb));
+        memcpy(&yb, &oy, sizeof(yb));
+        indexed_pair_set(11, xb, yb);
+        memcpy(items + 10, &flags, sizeof(flags));
+        CHECK(frontend_panels_pointer_hover(330, 0) != 0,
+              "idle hit uses truncated live origin and includes left/top");
+        memcpy(&flags, items + 10, sizeof(flags));
+        CHECK(flags == 0x12u, "hidden item still receives reference hover");
+        memcpy(&flags, items + 21, sizeof(flags));
+        CHECK((flags & 2u) == 0u, "first overlapping item owns hover");
+        CHECK(frontend_panels_pointer_hover(366, 0) == 0,
+              "right edge is excluded");
+        flags = 0xabu;
+        memcpy(items + 10, &flags, sizeof(flags));
+        frontend_panels_pointer_hover(0, 479);
+        memcpy(&flags, items + 10, sizeof(flags));
+        CHECK(flags == 0xadu,
+              "miss clears hover and restores persistent pressed state");
+        request_record_flags_set(11, 0u);
+        frontend_panels_pointer_hover(330, 0);
+        memcpy(&flags, items + 10, sizeof(flags));
+        CHECK(flags == 0xadu, "disabled category skips flag mutation");
+        request_record_flags_set(11, 1u);
+        FrontendPanelPointerCapture capture;
+        FrontendPanelPointerHit hit;
+        memset(&capture, 0, sizeof(capture));
+        flags = 0x20u;
+        memcpy(items + 10, &flags, sizeof(flags));
+        frontend_panels_pointer_update(&capture, 330, 0, 1, 0, &hit);
+        CHECK(capture.active && hit.item == 0 && !hit.released,
+              "fresh press captures the first item");
+        frontend_panels_pointer_update(&capture, 0, 479, 1, 1, &hit);
+        CHECK(capture.active && !hit.released,
+              "drag-out preserves capture without activation");
+        frontend_panels_pointer_update(&capture, 330, 0, 1, 1, &hit);
+        frontend_panels_pointer_update(&capture, 330, 0, 0, 1, &hit);
+        memcpy(&flags, items + 10, sizeof(flags));
+        CHECK(!capture.active && hit.released && flags == 0x2au,
+              "matching release toggles only the configured persistent item");
+        frontend_panels_pointer_update(&capture, 330, 0, 1, 0, &hit);
+        frontend_panels_pointer_capture_cancel(&capture);
+        frontend_panels_pointer_update(&capture, 330, 0, 0, 1, &hit);
+        CHECK(!hit.released, "cancel cannot synthesize an activation");
+        panel_draw_records_set(11, NULL);
+        panel_draw_count_set(11, 0);
+        for (int k = 0; k < 12; ++k)
+            request_record_flags_set(k, saved_flags[k]);
     }
 
     /* The timed-effect timestamp reset (2026-10-24): stamp + guard. */
@@ -2522,6 +2703,151 @@ int main(int argc, char** argv)
             remove(files[k]);
         }
         rmdir(dir);
+    }
+
+    /* InterfaceImagesConfigLoad always continues into the build-image and
+     * Back loaders, even after a populated generic action section. Missing
+     * bitmap files here leave metadata observable without a WAD mount. */
+    {
+        BlockFile* cfg = s_parse(
+            "Lego* { InterfaceImages { "
+            "Interface_MenuItem_Dig NULL:NULL:NULL:Dig:Unavailable:KEY_D "
+            "} VehicleTypes { FixtureVehicle 1 } "
+            "BuildingTypes { FixtureBuilding 1 } "
+            "InterfaceBackButton 28:28:missing_hl.bmp:missing_pr.bmp:Back }");
+        CHECK(interface_images_config_load(cfg) == 1,
+              "populated action image section is parsed");
+        int width = 0, height = 0;
+        CHECK(interface_back_button_dimensions(&width, &height) != 0
+                  && width == 28 && height == 28,
+              "generic image loop continues to the Back metadata loader");
+        const char* action = interface_back_button_action();
+        CHECK(action != NULL && strcmp(action, "Back") == 0,
+              "generic image loop retains the authored Back action");
+        CHECK(interface_build_image_count(0) == 1u
+                  && interface_build_image_count(1) == 1u,
+              "generic image loop continues to both build catalogs");
+        block_close(cfg);
+    }
+
+    /* Catalog input shares the authored surround offsets and action groups;
+     * absent bitmaps retain the reference's 40x40 hit geometry. */
+    {
+        BlockFile* cfg = s_parse(
+            "Lego* { InterfaceImages { "
+            "Interface_MenuItem_Dig NULL:NULL:NULL:Dig:Unavailable:KEY_D "
+            "} InterfaceBackButton 28:28:missing_hl.bmp:missing_pr.bmp:Back "
+            "InterfaceSurroundImages { 4 missing_surround.bmp:-36:-9:-32:5:NULL:-10:-9 } }");
+        EventTimerState previous, state;
+        frontend_event_timer_state_get(&previous);
+        interface_menu_action_labels_init(565, 18, NULL);
+        (void)interface_images_config_load(cfg);
+        CHECK(interface_surround_images_config_load(cfg) == 1,
+              "catalog input retains configured surround offsets without bitmap IO");
+        memset(&state, 0, sizeof(state));
+        state.current_event = 7;
+        state.flags = 0x84u;
+        state.timer = 500.0f;
+        frontend_event_timer_state_set(&state);
+        const uint32_t previous_count = resource_handle_set_band_word_peek(7);
+        resource_handle_set_band_word_install(7, 4u);
+        SimulationPointerDispatchOps ops;
+        memset(&ops, 0, sizeof(ops));
+        ops.context = &state;
+        frontend_action_catalog_pointer_setup(&ops);
+        CHECK(ops.context == &state && ops.overlay_offset_x == 500.0f
+                  && ops.overlay_offset_y == 18.0f,
+              "catalog layout keeps caller context and current sliding origin");
+        CHECK(ops.focused_rect.enabled && ops.focused_rect.x == -32.0f
+                  && ops.focused_rect.y == 5.0f
+                  && ops.focused_rect.width == 28.0f
+                  && ops.focused_rect.height == 28.0f,
+              "Back uses its authored offsets and configured control dimensions");
+        uint32_t action = 99, kind = 99, entry = 99;
+        CHECK(frontend_action_catalog_hit(NULL, NULL, 540.0f, 58.0f,
+                  500.0f, 18.0f, &action, &kind, &entry) != 0
+                  && action == 11u && kind == 0u && entry == 0u,
+              "missing image retains inclusive 40x40 extent and authored Drill code");
+        action = 99;
+        CHECK(frontend_action_catalog_hit(NULL, NULL, 541.0f, 58.0f,
+                  500.0f, 18.0f, &action, NULL, NULL) == 0
+                  && action == 99,
+              "catalog miss preserves output and cannot widen the missing image");
+        state.current_event = 0;
+        frontend_event_timer_state_set(&state);
+        frontend_action_catalog_pointer_setup(&ops);
+        CHECK(!ops.focused_rect.enabled, "default catalog has no Back target");
+        state.current_event = 15;
+        frontend_event_timer_state_set(&state);
+        frontend_action_catalog_pointer_setup(&ops);
+        CHECK(!ops.focused_rect.enabled, "mode fifteen retains no-Back policy");
+        frontend_event_timer_state_set(&previous);
+        resource_handle_set_band_word_install(7, previous_count);
+        block_close(cfg);
+    }
+
+    /* Availability reads the frontend's DAT_004de1f8; the separate engine
+     * placement-mode word DAT_00556ed4 must neither enable nor disable it. */
+    {
+        const uint32_t interaction = interaction_flags_peek();
+        const uint32_t placement = global_state_low_word_get();
+        const uint32_t action = input_action_state_word_get(2);
+        const uint32_t catalog = input_binding_state_word_get(4, 0);
+        input_action_state_query_set(s_action_ready, NULL);
+        interaction_flags_set(0x84u);
+        global_state_low_word_set(0u);
+        s_action_ready_calls = 0;
+        input_action_state_word_set(2, 1u);
+        input_action_state_update(2);
+        CHECK(s_action_ready_calls == 1
+                  && input_action_state_word_get(2) == 4u,
+              "availability uses interaction mode and preserves predicate writes");
+        interaction_flags_set(0u);
+        global_state_low_word_set(0x80u);
+        input_action_state_update(2);
+        CHECK(s_action_ready_calls == 1
+                  && (input_action_state_word_get(2) & 1u) != 0u,
+              "engine placement flags cannot enable the action catalog");
+        catalog_slot_flag_hooks_set(s_catalog_ready, s_catalog_ready,
+                                    NULL, NULL);
+        catalog_slot_flag_global_state_set(0x84u);
+        global_state_low_word_set(0u);
+        input_binding_state_word_set(4, 0, 0u);
+        catalog_slot_flag_update(4, 0);
+        CHECK((input_binding_state_word_get(4, 0) & 1u) == 0u,
+              "build catalog eligibility uses the same interaction owner");
+        catalog_slot_flag_hooks_set(NULL, NULL, NULL, NULL);
+        input_action_state_query_set(NULL, NULL);
+        input_binding_state_word_set(4, 0, catalog);
+        input_action_state_word_set(2, action);
+        interaction_flags_set(interaction);
+        global_state_low_word_set(placement);
+    }
+
+    /* The admitted pointer callback counts before executing an action.
+     * Build icons count in the current catalog's kind, not in action 73. */
+    {
+        const uint32_t ordinary = input_action_click_count_swap(11, 5u);
+        const uint32_t vehicle = input_binding_click_count_swap(1, 5, 10u);
+        const uint32_t building = input_binding_click_count_swap(4, 5, 20u);
+        input_action_completion_record(11, 0x13, 5);
+        CHECK(input_action_click_count_get(11) == 6u,
+              "ordinary completion and script counter share the action ID");
+        input_action_completion_record(73, 0x13, 5);
+        input_action_completion_record(73, 0x14, 5);
+        input_action_completion_record(73, 0x15, 5);
+        input_action_completion_record(73, 7, 5);
+        CHECK(input_binding_click_count_get(4, 5) == 21u
+                  && input_binding_click_count_get(1, 5) == 12u,
+              "binding counts use the three admitted catalog modes");
+        CHECK(input_action_click_count_swap(11, 0xffffffffu) == 6u,
+              "script counter setter returns the completed count");
+        input_action_completion_record(11, 0, 0);
+        CHECK(input_action_click_count_get(11) == 0u,
+              "completion wraps as an unsigned reference DWORD");
+        (void)input_action_click_count_swap(11, ordinary);
+        (void)input_binding_click_count_swap(1, 5, vehicle);
+        (void)input_binding_click_count_swap(4, 5, building);
     }
 
     if (s_failures == 0) {

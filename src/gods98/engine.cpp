@@ -19,6 +19,7 @@
 #include "game/frontend.hpp"
 #include "game/entity.hpp"
 #include "game/building_scene.hpp"
+#include "game/actor_scene.hpp"
 #include "game/objective.hpp"
 #include "game/effects.hpp"
 #include "game/scene_render.hpp"
@@ -58,6 +59,44 @@ static uint32_t s_engine_bootstrap_state;
 
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
 static int s_engine_scene_live;
+static SceneQuadGridRecord* s_engine_placement_preview;
+
+static int engine_placement_preview_visibility(void*, const void* record,
+                                               uint32_t hidden)
+{
+    return scene_placement_preview_visibility_apply(record, hidden);
+}
+
+static void engine_placement_preview_shutdown(void)
+{
+    if (s_engine_placement_preview == NULL) return;
+    if (global_refresh_record_peek() == s_engine_placement_preview)
+        global_refresh_record_set(NULL);
+    (void)surface_visibility_adapter_remove(
+        engine_placement_preview_visibility, NULL);
+    (void)scene_placement_preview_destroy(s_engine_placement_preview);
+    s_engine_placement_preview = NULL;
+}
+
+static int engine_placement_preview_initialize(void)
+{
+    if (s_engine_placement_preview != NULL ||
+        global_refresh_record_peek() != NULL) return 0;
+    /* GameConfigInit4210fd..421123 constructs this root-owned footprint
+     * with binary32 extrusion5.0 before publishing and hiding it. */
+    s_engine_placement_preview = scene_placement_preview_create(
+        scene_root_object_get(), 5.0f);
+    if (s_engine_placement_preview == NULL) return 0;
+    if (!surface_visibility_adapter_install(
+            engine_placement_preview_visibility, NULL)) {
+        (void)scene_placement_preview_destroy(s_engine_placement_preview);
+        s_engine_placement_preview = NULL;
+        return 0;
+    }
+    global_refresh_record_set(s_engine_placement_preview);
+    surface_visibility_set(s_engine_placement_preview, 1u);
+    return 1;
+}
 
 struct EngineSceneBuild {
     BlockFile* config;
@@ -155,10 +194,12 @@ static int engine_scene_transform_init(void* light, void* root,
 
 void engine_scene_shutdown(void)
 {
+    actor_scene_require_stopped();
     building_scene_require_stopped();
     /* Concrete roof child/resource teardown must precede root-pool teardown
      * on normal, loader and rollback paths; the busy guard alone is not it. */
     graphics_overlay_resources_release();
+    engine_placement_preview_shutdown();
     if (!s_engine_scene_live) return;
     motion_gameplay_scene_bind(NULL, 0u);
     motion_gameplay_scene_owner_bind(NULL, NULL);
@@ -222,6 +263,10 @@ int engine_scene_initialize(EngineContext* context, BlockFile* config)
     ops.scene_object_allocate = engine_scene_object_allocate;
     ops.scene_object_transform_init = engine_scene_transform_init;
     if (!scene_lights_build_from_config(&ops) || build.failed) {
+        engine_scene_shutdown();
+        return 0;
+    }
+    if (!engine_placement_preview_initialize()) {
         engine_scene_shutdown();
         return 0;
     }
@@ -492,7 +537,8 @@ int EngineTick(EngineContext* ctx, float dt)
      *    under ENGINE_STATE_INDEXED_SUBSYS; index list observed: 1,2,4,9,6,8,
      *    0xb,5,7,10 interleaved with the named manager tickers. Stub table. */
     if ((ctx->state & ENGINE_STATE_INDEXED_SUBSYS) != 0) {
-        EngineManagerDispatch(ctx, dt);
+        /* Indexed UI timers use the reference 25-Hz frame unit. */
+        EngineManagerDispatch(ctx, dt * 25.0f);
     }
 
     /* 8. Render begin/end pairs, world-draw vs editor pass, and the
@@ -688,6 +734,7 @@ static void engine_reset_level_and_exit(void)
 void EngineShutdown(EngineContext* ctx)
 {
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    actor_scene_require_stopped();
     building_scene_require_stopped();
 #endif
     if (ctx == NULL) {

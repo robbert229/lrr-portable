@@ -335,6 +335,7 @@ typedef struct EntitySlot {
      * The activity/terrain eligibility transition parks its last probed
      * cell pair here and blanks it to -1.0/-1.0 when it hands the cell off
      * to queued work. */
+    int      drill_sound_handle_350; /* corpus +0x350 loop sound handle */
     float    pos_pair_2f4; /* +0x2f4: pair x (port-side mirror)             */
     float    pos_pair_2f8; /* +0x2f8: pair y                                */
     /* --- path list (corpus +0x24 buffer / +0x28 count / +0x2c index) --- */
@@ -423,6 +424,20 @@ typedef struct EntitySlot {
     void* scene_slot_payloads[12];
     uint32_t scene_slot_owner_keys[3]; /* retail owner +0x1c/+0x20/+0x24 */
     uintptr_t pool_link_408; /* +0x408 self-pointer while live, free-list link after teardown */
+    /* Remaining reference +0x30c..+0x320 carrier slots. Append sidecars
+     * to preserve existing member offsets; slot zero is carry_link_308.
+     * Never index the native EntitySlot by reference byte offsets. */
+    struct EntitySlot* carry_extra_links[6];
+    /* Owned 0x44a310 inputs; native EntitySlot is not a retail byte image. */
+    int32_t motion_input_2bc;
+    int32_t motion_input_2c0;
+    float motion_input_2c4;
+    uint32_t motion_inputs_initialized;
+    uint32_t activity_generation;
+    uint32_t activity_advance_valid;
+    uint32_t activity_advance_generation;
+    int activity_advance_activity;
+    float activity_advance_overflow;
 } EntitySlot;
 
 /* Waypoint consumers use this accessor so routes grown past the inline

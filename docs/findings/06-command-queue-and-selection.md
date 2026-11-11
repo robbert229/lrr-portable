@@ -48,7 +48,7 @@ arrives through this queue.
 | 3 | `FUN_00452be0()` | global op |
 | 4 | `FUN_00452c50(ent)` | entity op |
 | 5,6 | `FUN_004035c0(ent, arg+1, n)` | position set/step |
-| 8 | `FUN_00403270(&selection, n, args…)` | **add N entities to selection** |
+| 8 | `FUN_00403270(&selection, n, args…)` | Creates state-bit-4 movement records for the active selection; does not add selection entries (corrected from the original interpretation; see findings 254 and 444). |
 | 9 | `FUN_00452d60(n)` | |
 | 10 | `FUN_00425d50(selection[0])` | command to first selected |
 | 0xb | `FUN_004295f0(1,0,0)` | audio |

@@ -571,7 +571,7 @@ typedef struct Direct3DDeviceStateOps {
     void* context;
     int (*texture_stage_set)(void* context, uint32_t stage, void* texture);
     int (*texture_interface_bind)(void* context, void* texture);
-    int (*light_state_set)(void* context, uint32_t state, void* light);
+    int (*light_state_set)(void* context, uint32_t state, uint32_t value);
     void (*render_state_set)(void* context, uint32_t state, uint32_t value);
     int (*primitive_submit)(void* context, uint32_t primitive_type,
                             uint32_t a, uint32_t b, uint32_t c,
@@ -579,10 +579,15 @@ typedef struct Direct3DDeviceStateOps {
 } Direct3DDeviceStateOps;
 void direct3d_device_state_ops_set(const Direct3DDeviceStateOps* ops);
 void direct3d_device_texture_dirty_set(int dirty);
-int direct3d_device_state_apply(void* light, void* texture,
+int direct3d_device_state_apply(uint32_t material_handle, void* texture,
                                 uint32_t a, uint32_t b, uint32_t c,
                                 uint32_t d, uint32_t e); /* FUN_00483b70 */
 typedef int (*ModelMaterialUpdateHook)(void* context, const void* material);
+/* Renderer material initialization publishes the actual GetHandle result
+ * for its live device, then clears it before releasing that material.
+ * This scalar alone does not establish material/renderer readiness. */
+void model_material_handle_set(uint32_t handle);
+uint32_t model_material_handle_peek(void);
 void model_material_update_hook_set(ModelMaterialUpdateHook hook,
                                     void* context);
 typedef struct ModelChildMaterialOps {
@@ -597,7 +602,7 @@ typedef struct ModelChildMaterialOps {
 void model_child_material_ops_set(const ModelChildMaterialOps* ops);
 int world_object_render_state_apply(void* child, const float* transform,
                                     int alternate_mode); /* FUN_00483b00 */
-int model_render_child_material_pass(void* light, void* child,
+int model_render_child_material_pass(void* model, void* child,
                                      const float* transform,
                                      int alternate_mode); /* FUN_00483a90 */
 typedef struct Direct3DInterfaceOps {
@@ -718,6 +723,10 @@ void directdraw_device_selection_get(DirectDrawDeviceSelection* out);
  * dialog resource before DirectDrawDeviceInitialize is called. */
 void surface_winapi_startup_ops_install(void* owner_window);
 int surface_winapi_present_rgba(const void* pixels, int pitch, int width, int height);
+/* Borrowed IDirect3DDevice3; valid only until renderer replacement/shutdown.
+ * NULL before first successful initialization and during teardown. A failed
+ * replacement preserves the previously owned device. */
+void* surface_winapi_immediate_device_peek(void);
 typedef int (*Direct3DTextureMemoryCapsQueryFn)(void* context,
                                                 uint32_t capability,
                                                 uint32_t* memory_out);

@@ -836,26 +836,27 @@ void objective_active_level_clear(LevelState* s)
     if (s_objective_active_level == s) s_objective_active_level = NULL;
 }
 
-int objective_briefing_active(const LevelState* s)
+int objective_presentation_kind(const LevelState* s)
 {
-    return s != NULL && s == s_objective_active_level &&
-        (s_objective_result_word & 7u) == 1u;
+    if (s == NULL || s != s_objective_active_level)
+        return OBJECTIVE_PRESENTATION_NONE;
+    if ((s_objective_result_word & 1u) != 0u)
+        return OBJECTIVE_PRESENTATION_BRIEFING;
+    if ((s_objective_result_word & 6u) == 0u)
+        return OBJECTIVE_PRESENTATION_NONE;
+    if ((s_objective_result_word & 2u) != 0u)
+        return OBJECTIVE_PRESENTATION_ACHIEVED;
+    return (s_objective_result_word & 0x100u) != 0u
+        ? OBJECTIVE_PRESENTATION_CRYSTAL_FAILED : OBJECTIVE_PRESENTATION_FAILED;
 }
 
-int objective_briefing_acknowledge(LevelState* s)
+int objective_briefing_active(const LevelState* s)
 {
-    if (!objective_briefing_active(s)) return 0;
-    /* FUN_004589c0 calls FUN_004588e0 only after the last page. The
-     * frontend's mapped release adapter has independent, unbound storage;
-     * perform this branch against the actual objective owner instead. */
-    (void)global_value_004ff9bc_store_and_return(&s->objective_pending);
-    s_objective_result_word &= ~1u;
-    s->objective &= ~LVL_OBJECTIVE_STILL_PENDING;
-    s->objective_pending = 0;
-    if ((engine_debug_word_peek() & 0x800u) != 0u) {
-        media_cd_watchdog_update(1);
-        engine_debug_word_bit_set(0x800u, 0);
-    }
+    return objective_presentation_kind(s) == OBJECTIVE_PRESENTATION_BRIEFING;
+}
+
+static void objective_presentation_cleanup(LevelState* s)
+{
     objective_advisor_clear_active_state();
     if (s_objective_voice_stream_handle != -1) {
         (void)sound_stream_stop_and_release(0);
@@ -865,13 +866,45 @@ int objective_briefing_acknowledge(LevelState* s)
     sound_deferred_queue_drain(0);
     if (system_state_flags_get() == 0u)
         engine_debug_word_bit_set(0x1000u, 0);
-    /* The frame-driven UI may accept before another ObjectiveTick. Retire
-     * its unsubmitted intro alias too, so it cannot play during gameplay. */
     s_objective_voice_alias_pending = 0;
     s_objective_voice_alias[0] = '\0';
     s_objective_voice_result_active = 0;
     s_objective_tick_resolved = 1;
     s->obj_stream[0] = '\0';
+}
+
+int objective_briefing_acknowledge(LevelState* s)
+{
+    if (!objective_briefing_active(s)) return 0;
+    (void)global_value_004ff9bc_store_and_return(&s->objective_pending);
+    s_objective_result_word &= ~1u;
+    s->objective &= ~LVL_OBJECTIVE_STILL_PENDING;
+    s->objective_pending = 0;
+    if ((engine_debug_word_peek() & 0x800u) != 0u) {
+        media_cd_watchdog_update(1);
+        engine_debug_word_bit_set(0x800u, 0);
+    }
+    objective_presentation_cleanup(s);
+    return 1;
+}
+
+int objective_presentation_acknowledge(LevelState* s)
+{
+    int kind = objective_presentation_kind(s);
+    if (kind == OBJECTIVE_PRESENTATION_NONE) return 0;
+    if (kind == OBJECTIVE_PRESENTATION_BRIEFING)
+        return objective_briefing_acknowledge(s);
+    /* ObjectivePoll selects the terminal page independently, but rechecks
+     * the entity gate immediately before releasing the final page. */
+    if (!entity_flag_mask_callbacks_all_pass(0x40bu)) return 0;
+    if (kind == OBJECTIVE_PRESENTATION_ACHIEVED) {
+        s_objective_result_word &= ~2u;
+        s->objective &= ~LVL_OBJECTIVE_ACHIEVED;
+    } else {
+        s_objective_result_word &= ~0x104u;
+        s->objective &= ~(LVL_OBJECTIVE_FAILED | LVL_OBJECTIVE_CRYSTALS);
+    }
+    objective_presentation_cleanup(s);
     return 1;
 }
 
@@ -1626,13 +1659,35 @@ void advisor_animation_position_update_value_resolver_set(
     s_advisor_position_value_resolver_user = user;
 }
 
+/* AdvisorActionIndicatorRequest (FUN_0041e890).  The reference jump table
+ * has one category for action 0, a second for these action IDs, and the
+ * default category for every other value, including out-of-range values. */
+int advisor_action_indicator_request(int action, int request_mode)
+{
+    static const unsigned char category5[69] = {
+        0,1,1,0,0,1,1,0,0,1,0,1,1,0,1,0,0,0,0,0,1,0,1,
+        1,1,0,0,0,0,0,0,1,0,0,1,0,1,0,0,0,0,1,1,1,1,0,
+        1,1,0,1,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,1,1
+    };
+    EventTimerState frontend_state;
+    frontend_event_timer_state_get(&frontend_state);
+    frontend_state.flags |= 0x20u;
+    if (request_mode != 0) frontend_state.flags |= 0x40u;
+    frontend_event_timer_state_set(&frontend_state);
+    s_advisor_position_update_state.action_row = action == 0 ? 4 :
+        (action > 0 && action < 69 && category5[action] ? 5 : 3);
+    s_advisor_position_update_state.trigger_selector = action;
+    return 1;
+}
+
 /* AdvisorAnimationPositionAndRequestUpdate (FUN_0041c4f0). The live mode,
  * interaction word, scroll/lower offsets, and back-button extents come from
  * their existing owners. The point table and row/trigger tuple are the four
  * unowned DAT inputs represented by the explicit bounded state above. */
 // FUNCTION: LEGORR 0x0041c4f0
-void advisor_animation_position_and_request_update(
-    int position_mode, int input_a, int input_b, const float* position)
+static void advisor_animation_position_and_request_update_internal(
+    int position_mode, int input_a, int input_b, const float* position,
+    const TextureSurface* image, int typed)
 {
     EventTimerState frontend_state;
     const AdvisorAnimationPositionUpdateState* state =
@@ -1654,10 +1709,10 @@ void advisor_animation_position_and_request_update(
     if (state->trigger_selector == 0x49) {
         if (state->cached_input_a == input_a &&
             state->cached_input_b == input_b &&
-            s_advisor_position_value_resolver != NULL &&
+            (typed || (s_advisor_position_value_resolver != NULL &&
             s_advisor_position_value_resolver(
                 0x49, input_a, input_b, &resolved_value,
-                s_advisor_position_value_resolver_user)) {
+                s_advisor_position_value_resolver_user)))) {
             matched = 1;
         }
     }
@@ -1666,10 +1721,10 @@ void advisor_animation_position_and_request_update(
         if (position_mode == 0) {
             use_catalog_point = 1;
         }
-        else if (s_advisor_position_value_resolver == NULL ||
+        else if (!typed && (s_advisor_position_value_resolver == NULL ||
             !s_advisor_position_value_resolver(
                 position_mode, input_a, input_b, &resolved_value,
-                s_advisor_position_value_resolver_user)) {
+                s_advisor_position_value_resolver_user))) {
             matched = 0;
         }
     }
@@ -1679,27 +1734,45 @@ void advisor_animation_position_and_request_update(
         const int mode = (int)s_obj_sel_word;
         uint32_t point_index;
         if (mode < 0 || mode > 0x12) return;
-        point_index = resource_handle_set_band_word_peek(mode);
-        if (point_index >= state->point_count ||
-            point_index >= ADVISOR_POSITION_UPDATE_MAX_POINTS) return;
-        (void)interface_back_button_dimensions(&width, &height);
-        offset_x = (frontend_state.flags & 0x80u) != 0u
-            ? frontend_state.timer : frontend_state.lower;
-        offset_y = state->vertical_origin;
-        new_x = state->points[point_index].x + offset_x +
-                (float)width * 0.5f;
-        new_y = state->points[point_index].y + offset_y +
-                (float)height * 0.5f;
+        point_index = typed ? (uint32_t)entity_query_flag_count(mode) :
+                              resource_handle_set_band_word_peek(mode);
+        if (typed) {
+            const FeSurroundImage* surround;
+            float origin[2];
+            /* Count zero aliases pointer storage in the executable. */
+            if (point_index == 0u || point_index > 11u) return;
+            surround = interface_surround_image_peek((int)point_index - 1);
+            if (surround == NULL) return;
+            interface_menu_action_layout_peek(origin);
+            (void)interface_back_button_dimensions(&width, &height);
+            offset_x = (frontend_state.flags & 0x80u) != 0u
+                ? frontend_state.timer : frontend_state.lower;
+            new_x = (float)surround->width + offset_x + (float)width * 0.5f;
+            new_y = (float)surround->height + origin[1] + (float)height * 0.5f;
+        }
+        else {
+            if (point_index >= state->point_count ||
+                point_index >= ADVISOR_POSITION_UPDATE_MAX_POINTS) return;
+            (void)interface_back_button_dimensions(&width, &height);
+            offset_x = (frontend_state.flags & 0x80u) != 0u
+                ? frontend_state.timer : frontend_state.lower;
+            offset_y = state->vertical_origin;
+            new_x = state->points[point_index].x + offset_x +
+                    (float)width * 0.5f;
+            new_y = state->points[point_index].y + offset_y +
+                    (float)height * 0.5f;
+        }
     }
     else {
         /* The decompile's zero mapped-value arm uses a fixed 40-pixel
          * height. A nonzero value is a pointer-like UI record whose +8
          * height has no live owner in the portable frontend. */
-        if (resolved_value != 0 || position == NULL) return;
+        if ((!typed && resolved_value != 0) || position == NULL) return;
         new_x = position[0];
         if ((frontend_state.flags & 0x80u) == 0u)
             new_x = frontend_state.lower;
-        new_y = 20.0f + position[1];
+        new_y = (typed && image != NULL ? (float)image->height * 0.5f
+                                         : 20.0f) + position[1];
     }
 
     if (state->action_row < 0 || state->action_row >= ADV_ACTION_ROWS) return;
@@ -1716,6 +1789,21 @@ void advisor_animation_position_and_request_update(
                                 (frontend_state.flags & 0x40u) != 0u);
     frontend_state.flags &= ~0x20u;
     frontend_event_timer_state_set(&frontend_state);
+}
+
+void advisor_animation_position_and_request_update_image(
+    int position_mode, int input_a, int input_b, const float* position,
+    const TextureSurface* image)
+{
+    advisor_animation_position_and_request_update_internal(
+        position_mode, input_a, input_b, position, image, 1);
+}
+
+void advisor_animation_position_and_request_update(
+    int position_mode, int input_a, int input_b, const float* position)
+{
+    advisor_animation_position_and_request_update_internal(
+        position_mode, input_a, input_b, position, NULL, 0);
 }
 
 uint32_t advisor_action_flags_peek(int row)
