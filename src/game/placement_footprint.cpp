@@ -31,9 +31,6 @@
 // GLOBAL: LEGORR 0x005013c8
 int s_rot_pairs[ROT_PAIR_SLOTS * 2];
 
-/* Defined below (forward declarations added by tools/relocate_unit.py). */
-static void surface_visibility_set_target( const void* record, uint32_t flag);
-
 // FUNCTION: LEGORR 0x00464110
 void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
                                  int count, int rotation)
@@ -59,16 +56,6 @@ void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
     return s_rot_pairs;
 }
 
-/* SurfaceVisibilitySet: owned software meshes use their real visibility;
- * other records retain the target's record +0 handle/scene operation. */
-// FUNCTION: LEGORR 0x00464720
-void surface_visibility_set(const void* record, uint32_t flag)
-{
-    SurfaceVisibilityAdapter adapter = s_surface_visibility_adapter;
-    void* context = s_surface_visibility_context;
-    if (adapter != NULL && adapter(context, record, flag) != 0) return;
-    surface_visibility_set_target(record, flag);
-}
 #if defined(_MSC_VER) && defined(_M_IX86)
 static __declspec(naked) void surface_visibility_set_target(
     const void* record, uint32_t flag)
@@ -90,3 +77,14 @@ static void surface_visibility_set_target(const void* record, uint32_t flag)
     scene_render_lock_toggle(rec_ptr(record, 0x00), (int)flag);
 }
 #endif
+
+/* SurfaceVisibilitySet: owned software meshes use their real visibility;
+ * other records retain the target's record +0 handle/scene operation. */
+// FUNCTION: LEGORR 0x00464720
+void surface_visibility_set(const void* record, uint32_t flag)
+{
+    SurfaceVisibilityAdapter adapter = s_surface_visibility_adapter;
+    void* context = s_surface_visibility_context;
+    if (adapter != NULL && adapter(context, record, flag) != 0) return;
+    surface_visibility_set_target(record, flag);
+}
