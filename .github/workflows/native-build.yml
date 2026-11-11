@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+#
+# Required check: builds the native port and runs its synthetic-fixture tests.
+# The matching build (make reccmp-check) needs licensed inputs and the MSVC 5.0
+# toolchain, so it stays local (see docs/building.md).
+name: native-build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  native-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      # Pinned SDL3 release: tag release-3.4.18 (lightweight tag, commit below).
+      # Ubuntu 24.04 has no libsdl3-dev package, so SDL3 is built from source
+      # and cached. Bump SDL_CACHE_VERSION when the SDL build recipe changes.
+      SDL_VERSION: "3.4.18"
+      SDL_COMMIT: "829a65d769d935c4852f8159e964312c0957260a"
+      SDL_CACHE_VERSION: "1"
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build pkg-config
+
+      - name: Restore SDL3 build
+        id: sdl3-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/sdl3-prefix
+          key: sdl3-${{ env.SDL_VERSION }}-v${{ env.SDL_CACHE_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Build SDL3 from the pinned commit
+        if: steps.sdl3-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          src="$RUNNER_TEMP/sdl3-src"
+          git init --quiet "$src"
+          git -C "$src" fetch --depth 1 https://github.com/libsdl-org/SDL.git "$SDL_COMMIT"
+          git -C "$src" -c advice.detachedHead=false checkout --quiet FETCH_HEAD
+          test "$(git -C "$src" rev-parse HEAD)" = "$SDL_COMMIT"
+          # Headless: no X11 or Wayland. The tests use the dummy/offscreen drivers.
+          cmake -S "$src" -B "$RUNNER_TEMP/sdl3-build" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/sdl3-prefix" \
+            -DBUILD_SHARED_LIBS=ON \
+            -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_INSTALL_TESTS=OFF \
+            -DSDL_X11=OFF -DSDL_WAYLAND=OFF -DSDL_UNIX_CONSOLE_BUILD=ON
+          cmake --build "$RUNNER_TEMP/sdl3-build"
+          cmake --install "$RUNNER_TEMP/sdl3-build"
+
+      - name: Point CMake at SDL3
+        run: echo "CMAKE_PREFIX_PATH=$RUNNER_TEMP/sdl3-prefix" >> "$GITHUB_ENV"
+
+      - name: Bootstrap sparse miniwin
+        # Fetches only 3rdparty/isle-portable/miniwin/, never the full submodule.
+        run: tools/setup-miniwin.sh
+
+      - name: Configure, build, and test
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "4"
+        run: cmake -S . -B build && cmake --build build && ctest --test-dir build --output-on-failure
