@@ -2128,7 +2128,6 @@ uint32_t request_record_flags_peek(int index)
 static uint32_t s_value_0050080c = 0u;
 // GLOBAL: LEGORR 0x00500a9c
 static uint32_t s_font_words[16];   /* DAT_00500a9c window */
-static uint32_t s_cursor_slot = 0u; /* DAT_00500a98 */
 
 // FUNCTION: LEGORR 0x0045c4a0
 void global_value_0050080c_set(uint32_t value)

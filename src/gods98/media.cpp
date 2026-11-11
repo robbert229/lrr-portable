@@ -176,7 +176,7 @@ void media_audio_playback_toggle(int enable)
  * ------------------------------------------------------------------ */
 
 // GLOBAL: LEGORR 0x00500a98
-static int   s_cursor_slot;       /* DAT_00500a98 role */
+int          s_cursor_slot;       /* DAT_00500a98 role */
 // GLOBAL: LEGORR 0x00500efc
 static float s_cursor_override;   /* _DAT_00500efc role (statics: 0.0) */
 
