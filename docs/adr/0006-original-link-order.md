@@ -299,6 +299,28 @@ sources, and how tests link them.
 separate ticket retires it or keeps it, relocation PRs update its source
 lists along with CMake's.
 
+## Addendum (2026-11-11): reshape commits
+
+**Status: accepted by the owner.** It was proposed by #490 ([plan](../plans/490-relocation-conditional-code.md), [finding 539](../findings/539-conditional-relocation-blockers.md)), and it amends decision 3 and the entropy policy in decision 7.
+
+**Reshape commits.** A relocation may be preceded by a *reshape*: a hand edit to source that changes no build's input.
+
+1. A reshape counts as zero drift (ADR 0005 entropy rule 1) only when `tools/reshape_check.py` (#500) shows both of the following for every file it touches:
+   - an identical token stream under the native, matching and MinGW reference configurations;
+   - an identical matching-build object outside debug sections: bytes, relocations and symbol table.
+
+   It refreshes no baseline. Its PR includes the check's output.
+2. A reshape may only:
+   - split a conditional head into whole alternative definitions, duplicating the head;
+   - hoist branch-local helpers out of an alternatives group;
+   - move annotations or comments;
+   - rename a file-local macro;
+   - close and reopen `#if` groups with equivalent conditions.
+
+   It doesn't change a contract, collapse a dual path (#389), or edit a shared header.
+3. Reshapes follow rule 3: one commit per file, never in the same commit as a relocation, conversion or fix. They may share a PR with the relocation they prepare.
+4. The relocation tool moves a top-level conditional group whole and verbatim (#501). When it writes a private-header declaration for a conditional item, it wraps the declaration in that item's group condition, copied verbatim, and records it in the relocation CSV like a `static` removal.
+
 ## Consequences
 
 - The issue's acceptance criteria become reachable in stages:
