@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'building_model.cpp',
   'animation_object.cpp',
   'advisor.cpp',
   'cmd.cpp',

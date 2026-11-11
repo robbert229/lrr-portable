@@ -515,37 +515,6 @@ int map_cell_to_world_center(const void* map, uint32_t cell_x,
 #endif
 }
 
-/* TaskFlagBitQuery (FUN_00408970, findings 366/465). */
-// FUNCTION: LEGORR 0x00408970
-uint32_t task_flag_bit_query(const void* task, uint32_t bit, int suppress)
-{
-    const uint32_t mask = 1u << (bit & 0x1fu);
-    uint32_t flags;
-    if (task == NULL) {
-        return 0u;
-    }
-    __builtin_memcpy(&flags, (const char*)task + 0x98, sizeof(flags));
-    if (suppress != 0 && (flags & mask) != 0) {
-        return 0;
-    }
-    return flags & mask;
-}
-
-/* TaskField84GetAndField88Out (FUN_00408360): after the pinned NULL-task
- * guard, mirror `test eax,eax; je`, the optional +0x88 load/store, then the
- * +0x84 answer load. The corpus itself does not guard the task pointer. */
-// FUNCTION: LEGORR 0x00408360
-uint32_t task_field84_get_and_field88_out(const void* task, uint32_t* out88)
-{
-    if (task == NULL) {
-        return 0u;
-    }
-    if (out88 != NULL) {
-        *out88 = *(const uint32_t*)((const char*)task + 0x88);
-    }
-    return *(const uint32_t*)((const char*)task + 0x84);
-}
-
 /* PackedGridCellValueGet (FUN_0040b850, findings 373/451): low nibble
  * * width + high nibble indexes the cell dwords; the corpus's own NULL
  * grid guard answers 0, reproduced. */
@@ -715,15 +684,6 @@ uint32_t pointer_value_get(const void* pointed)
     return *(const uint32_t*)pointed;
 }
 #endif
-
-// FUNCTION: LEGORR 0x00408850
-uint32_t scene_object_flags_get(const void* scene_object)
-{
-    uint32_t flags;
-    __builtin_memcpy(&flags, (const char*)scene_object + 0x70,
-                     sizeof(flags));
-    return flags;
-}
 
 // FUNCTION: LEGORR 0x00473db0
 uint32_t scene_object_owner_get(const void* scene_object)
@@ -1745,24 +1705,6 @@ void surface_visibility_set(const void* record, uint32_t flag)
     surface_visibility_set_target(record, flag);
 }
 
-/* SceneObjectPairApplyMode (FUN_00408670) — the corpus blindly loads the +4
- * object and +0x7c partner. Copy native-width port pointer slots inline to
- * avoid rec_ptr calls; the port retains its widened-slot layout (the corpus
- * tests a dword at +0x7c). NULL record behavior therefore follows the corpus
- * and is no longer guarded. */
-// FUNCTION: LEGORR 0x00408670
-void scene_object_pair_apply_mode(const void* record, uint32_t flag)
-{
-    void* object;
-    __builtin_memcpy(&object, (const char*)record + 0x04, sizeof(object));
-    scene_render_lock_toggle(object, (int)flag);
-    void* partner;
-    __builtin_memcpy(&partner, (const char*)record + 0x7c, sizeof(partner));
-    if (partner != NULL) {
-        scene_render_lock_toggle(partner, (int)flag);
-    }
-}
-
 /* SceneRenderLockToggle (FUN_00473b40): update the paired render interfaces
  * on the transition into or out of lock mode, then toggle flag bit 3. The
  * channel slots use the corpus offsets; rec_ptr preserves this port's
@@ -1871,82 +1813,6 @@ void scene_resource_visibility_set(void* record, uint32_t flag)
             scene_visibility_hook_call(child, (int)flag);
         }
     }
-}
-
-/* The pair band's shared pose apply: position (x, y, 0) plus the corpus's
- * constant (0, 0, -1) orientation, through the ported primitives. */
-static void pair_handle_set_pose(void* h, float x, float y)
-{
-    cam_set_pos((CameraHandle*)h, x, y, 0.0f);
-    const float up[3] = { 0.0f, 0.0f, -1.0f };
-    cam_set_facing((CameraHandle*)h, up);
-}
-
-/* SceneObjectPairSetRenderParameters (FUN_004086c0): the corpus blindly
- * loads the +4 object and +0x7c partner; inline native-width copies match
- * those loads without rec_ptr calls. The pose dispatch's argument block
- * (x, y, 0 / 0, 0, -1) reads as position + constant facing; the partner is
- * used only when the +0x7c slot is non-NULL. */
-// FUNCTION: LEGORR 0x004086c0
-void scene_object_pair_set_render_parameters(void* pair, float x, float y)
-{
-    void* object;
-    __builtin_memcpy(&object, (char*)pair + 0x04, sizeof(object));
-    pair_handle_set_pose(object, x, y);
-    void* partner;
-    __builtin_memcpy(&partner, (char*)pair + 0x7c, sizeof(partner));
-    if (partner != NULL) {
-        pair_handle_set_pose(partner, x, y);
-    }
-}
-
-/* SceneObjectPairSetCallbackScalar (FUN_00408710): run the scalar probe on
- * the (x, y) pair with its third argument — the corpus consumes the probe's
- * undefined float return as the camera z; the port pins it to zero (the
- * sole call-site probe, the ported height adapter, answers void). */
-// FUNCTION: LEGORR 0x00408710
-void scene_object_pair_set_callback_scalar(void* pair, float x, float y,
-                                           SceneScalarProbe probe, void* arg)
-{
-    if (probe != NULL) {
-        probe(x, y, arg);
-    }
-    cam_set_pos((CameraHandle*)rec_ptr(pair, 0x04), x, y, 0.0f);
-    void* partner = rec_ptr(pair, 0x7c);
-    if (partner != NULL) {
-        cam_set_pos((CameraHandle*)partner, x, y, 0.0f);
-    }
-}
-
-
-/* AnimationObjectVisibilityGet (FUN_004086a0) — the +4 object's flag bit 3
- * through the ported getter. */
-// FUNCTION: LEGORR 0x004086a0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t animation_object_visibility_get(const void* anim)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [eax + 4]
-        push ecx
-        call scene_object_flag_bit3_get_target
-        add esp, 4
-        ret
-    }
-}
-#else
-uint32_t animation_object_visibility_get(const void* anim)
-{
-    return scene_object_flag_bit3_get(rec_ptr(anim, 0x04));
-}
-#endif
-
-/* SceneAssignEntityOwner (FUN_00408380) — owner store on the +4 object
- * through the ported owner set. */
-// FUNCTION: LEGORR 0x00408380
-void scene_assign_entity_owner(const void* scene, uint32_t owner)
-{
-    scene_object_owner_set(*(void* const*)((const char*)scene + 0x04), owner);
 }
 
 /* SceneCurrentObjectSet (FUN_00477240) — see record.hpp. The store lands
@@ -3370,34 +3236,6 @@ uint32_t screen_effect_item_opacity_set(void* record, int block,
     base = *(void**)((char*)record + 0x08);
     if (base == NULL) return 1u;
     return screen_effect_item_opacity_set_target(record, block, opacity, mode);
-}
-
-/* SceneObjectScalarAdjustByDirection (FUN_004082e0) — see record.hpp. The
- * corpus callers are the config-record parse loop and the simulation flush;
- * the fold itself is a pure record-slot scale (the corpus's x87 double fold
- * lands as the same double arithmetic here). */
-// FUNCTION: LEGORR 0x004082e0
-void scene_object_scalar_adjust_by_direction(void* record, int direction)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
-    }
-    float scalar = 0.0f;
-    __builtin_memcpy(&scalar, (const char*)record + 0x80, sizeof scalar);
-    float result;
-    if (direction == 0) {
-        result = (float)((scalar - 0.1) * 10.0 * 0.11111111);
-    } else {
-        result = (float)(scalar - (1.0 - scalar) * -0.1);
-    }
-    if (result < 0.0f) {
-        result = 0.0f;
-    }
-    __builtin_memcpy((char*)record + 0x80, &result, sizeof result);
-    uint32_t flags = 0u;
-    __builtin_memcpy(&flags, (const char*)record + 0x148, sizeof flags);
-    flags |= 2u;
-    __builtin_memcpy((char*)record + 0x148, &flags, sizeof flags);
 }
 
 namespace unported_ledger_stubs {

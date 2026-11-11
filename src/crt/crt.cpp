@@ -1398,19 +1398,6 @@ double double_build_with_exponent(uint32_t significand_low,
 /* ------------------------------------------------------------------ *
  *  Constant and DAT-global band (see crt.hpp). */
 
-/* The corpus's .rdata +0.0f (file bytes verified 00 00 00 00): the
- * leaf flds a DWORD data operand (the s_global_float_00556f00 fld
- * width), so the zero rides a file-scope float carrier — the
- * float-to-double widening is free on the x87 return stack. */
-// GLOBAL: LEGORR 0x0049e084
-static const float  s_zero_float     = 0.0f; /* DAT_0049e084 */
-
-// FUNCTION: LEGORR 0x00408930
-double constant_zero_float_get(void)
-{
-    return (double)s_zero_float; /* corpus: fld DWORD ds:0049e084 / ret */
-}
-
 // FUNCTION: LEGORR 0x0047c160
 int32_t constant_negative_10000_get(void)
 {

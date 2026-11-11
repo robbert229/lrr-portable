@@ -21,4 +21,8 @@ extern RendererHandleScalarGetHook s_renderer_handle_scalar_get_hook;
 extern void* s_renderer_handle_scalar_get_context;
 extern RendererSubobjectResolveFn s_renderer_subobject_resolver;
 
+extern SceneObjectRecordRetainHook s_scene_object_record_retain_hook;
+extern void* s_scene_object_record_retain_context;
+void* scene_object_subobject_resolve(void* owner, void* source, int index);
+
 #endif /* LRR_GODS98_VIEW_SHARED_HPP */

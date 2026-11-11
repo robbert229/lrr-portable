@@ -659,19 +659,6 @@ int entity_type_config_row_parse(void* context, void* entry,
         context, block_value(config_entry), destination, row_kind);
 }
 
-// FUNCTION: LEGORR 0x00407d60
-int entity_building_type_config_record_parse(void* destination,
-                                             uint32_t row_index,
-                                             void* scene_context,
-                                             const char* asset_path,
-                                             void* engine_config)
-{
-    if (destination == NULL) return 0;
-    memset(destination, 0, 0x14cu);
-    return entity_type_config_resource_row_load(
-        destination, row_index, scene_context, asset_path, engine_config, 2u);
-}
-
 void entity_type_config_row_finalize(void* context, void* row,
                                      uint32_t row_kind)
 {

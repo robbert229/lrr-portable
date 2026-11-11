@@ -159,8 +159,8 @@ static SinePhaseBlendState s_sine_phase_blend_state;
 static SinePhaseBlendHooks s_sine_phase_blend_hooks;
 static SceneFrameApplyHooks s_scene_frame_apply_hooks;
 static SceneRotationApplyHooks s_scene_rotation_apply_hooks;
-static SceneObjectRecordRetainHook s_scene_object_record_retain_hook;
-static void* s_scene_object_record_retain_context;
+SceneObjectRecordRetainHook s_scene_object_record_retain_hook;
+void* s_scene_object_record_retain_context;
 static RenderQualityApplyHook s_render_quality_apply_hook;
 static void* s_render_quality_apply_context;
 
@@ -2875,25 +2875,6 @@ void scene_object_record_retain_hook_set(SceneObjectRecordRetainHook hook,
     s_scene_object_record_retain_context = context;
 }
 
-// FUNCTION: LEGORR 0x00408620
-void scene_object_record_clone_retain_handles(
-    const SceneObjectRecord* source, SceneObjectRecord* destination)
-{
-    unsigned int i;
-    if (source == NULL || destination == NULL) return;
-    for (i = 0; i < 0x53u; ++i) destination->words[i] = source->words[i];
-    destination->words[0x52] = (void*)((uintptr_t)destination->words[0x52]
-                                      & ~(uintptr_t)1u);
-    if (s_scene_object_record_retain_hook != NULL) {
-        if (source->words[1] != NULL)
-            destination->words[1] = s_scene_object_record_retain_hook(
-                s_scene_object_record_retain_context, source->words[1]);
-        if (source->words[0x1f] != NULL)
-            destination->words[0x1f] = s_scene_object_record_retain_hook(
-                s_scene_object_record_retain_context, source->words[0x1f]);
-    }
-}
-
 void scene_frame_apply_hooks_set(const SceneFrameApplyHooks* hooks)
 {
     if (hooks == NULL) memset(&s_scene_frame_apply_hooks, 0,
@@ -5012,108 +4993,12 @@ void renderer_handle_scalar_hook_install(RendererHandleScalarGetHook hook,
     s_renderer_handle_scalar_get_context = context;
 }
 
-static void* scene_object_subobject_resolve(void* owner, void* source,
+void* scene_object_subobject_resolve(void* owner, void* source,
                                             int index);
 static void* scene_object_cached_subobject_get(void* owner,
                                                size_t source_offset,
                                                size_t cache_offset,
                                                int index);
-
-/* SceneObjectIndexedHandleGetOrCreate (FUN_00408770): resolve the indexed
- * child from +8 and cache it in the corresponding +0x28 slot. The installed
- * resolver models the retail resource-tree lookup/apply sequence. */
-// FUNCTION: LEGORR 0x00408770
-void* scene_object_indexed_handle_get_or_create(void* record, int index)
-{
-    void** source;
-    void** cached;
-    if (record == NULL) return NULL;
-    source = (void**)((char*)record + 8);
-    if (*source == NULL) return NULL;
-    cached = (void**)((char*)record + 0x28) + index;
-    if (*cached == NULL)
-        *cached = scene_object_subobject_resolve(record, *source, index);
-    return *cached;
-}
-
-/* SceneObjectPrimaryHandleGetOrCreate (FUN_004087b0). */
-// FUNCTION: LEGORR 0x004087b0
-void* scene_object_primary_handle_get_or_create(void* record)
-{
-    void** source;
-    void** cached;
-    if (record == NULL) return NULL;
-    source = (void**)((char*)record + 0x10);
-    if (*source == NULL) return NULL;
-    cached = (void**)((char*)record + 0x68);
-    if (*cached == NULL) {
-        *cached = scene_object_subobject_resolve(record, *source, 0);
-        return *cached;
-    }
-    return *cached;
-}
-
-/* SceneObjectSecondaryHandleGetOrCreate (FUN_004087e0). */
-// FUNCTION: LEGORR 0x004087e0
-void* scene_object_secondary_handle_get_or_create(void* record)
-{
-    void** source;
-    void** cached;
-    if (record == NULL) return NULL;
-    source = (void**)((char*)record + 0x14);
-    if (*source == NULL) return NULL;
-    cached = (void**)((char*)record + 0x6c);
-    if (*cached == NULL) {
-        *cached = scene_object_subobject_resolve(record, *source, 0);
-        return *cached;
-    }
-    return *cached;
-}
-
-/* SceneObjectIndexedSecondaryHandleGetOrCreate (FUN_00408810). */
-// FUNCTION: LEGORR 0x00408810
-void* scene_object_indexed_secondary_handle_get_or_create(void* record,
-                                                           int index)
-{
-    void** source;
-    void** cached;
-    if (record == NULL) return NULL;
-    source = (void**)((char*)record + 0x18);
-    if (*source == NULL) return NULL;
-    cached = (void**)((char*)record + 0x50) + index;
-    if (*cached == NULL)
-        *cached = scene_object_subobject_resolve(record, *source, index);
-    return *cached;
-}
-
-// AnimationLoopTimeAdjust (FUN_00408860) shares the counted scene-time
-// adjustment, then refreshes and clears the optional loop-time latch.
-// FUNCTION: LEGORR 0x00408860
-float animation_loop_time_adjust(void* record, void* argument,
-                                 uint32_t count)
-{
-    uint32_t* flags;
-    void* loop_frame;
-    float value;
-    if (record == NULL) return 0.0f;
-    value = renderer_object_timing_value_adjust_by_count(record, argument,
-                                                          count);
-    flags = (uint32_t*)((char*)record + 0x148);
-    if ((*flags & 2u) != 0u) {
-        loop_frame = *(void**)((char*)record + 0x7c);
-        if (loop_frame != NULL && s_scene_timing_count_get_hook != NULL &&
-            s_animation_object_time_update_hook != NULL) {
-            float scale = *(float*)((char*)record + 0x80);
-            int duration = s_scene_timing_count_get_hook(
-                loop_frame, s_scene_timing_hooks_context);
-            s_animation_object_time_update_hook(
-                loop_frame, (float)duration * scale,
-                s_animation_object_hooks_context);
-        }
-        *flags &= ~2u;
-    }
-    return value;
-}
 
 static uint8_t cam_flags(const void* rec, size_t off)
 {
@@ -7339,7 +7224,7 @@ void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver)
     s_renderer_subobject_resolver = resolver;
 }
 
-static void* scene_object_subobject_resolve(void* owner, void* source,
+void* scene_object_subobject_resolve(void* owner, void* source,
                                             int index)
 {
     if (owner == NULL || source == NULL ||
@@ -7365,25 +7250,6 @@ static void* scene_object_cached_subobject_get(void* owner,
         __builtin_memcpy((char*)owner + slot_offset, &cached, sizeof(cached));
     }
     return cached;
-}
-
-/* SceneActivityChangeSecondary (FUN_004085f0): resolve the requested indexed
- * child from +0x0c and cache it in the +0x40 handle table. */
-// FUNCTION: LEGORR 0x004085f0
-void* scene_activity_change_secondary(void* activity, int index)
-{
-    void** cached;
-    void* result = NULL;
-    if (activity == NULL) return NULL;
-    if (*(void**)((char*)activity + 0x0c) != NULL) {
-        cached = (void**)((char*)activity + 0x40) + index;
-        if (*cached == NULL) {
-            *cached = scene_object_subobject_resolve(
-                activity, *(void**)((char*)activity + 0x0c), index);
-        }
-        result = *cached;
-    }
-    return result;
 }
 
 /* FUNCTION: LEGORR 0x00406fb0 */

@@ -9,4 +9,6 @@
 extern EntityPayloadReleaseFn s_payload_scene_release_hook;
 extern EntityPayloadReleaseFn s_payload_chain_release_hook;
 
+extern EntitySceneSlotRuntimeOps s_entity_scene_slot_runtime_ops;
+
 #endif /* LRR_GAME_ENTITY_SHARED_HPP */
