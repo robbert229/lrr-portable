@@ -73,10 +73,12 @@ if(LRR_CLASSIC_MSVC5)
   if(LRR_RECCMP)
     # Reccmp reads the linker PDB, so retain CMake's /PDB:<TARGET_PDB> rule
     # and add /DEBUG explicitly after filtering newer CMake/MSVC flags above.
-    string(APPEND CMAKE_CXX_LINK_EXECUTABLE " /DEBUG")
-    if(LRR_BINARY_PROGRESS)
-      string(APPEND CMAKE_CXX_LINK_EXECUTABLE " /INCREMENTAL:NO")
-    endif()
+    # The matching build links without incremental mode (ADR 0006 decision
+    # 2): its thunks change call sites and it adds a .reloc section the
+    # original lacks. The trailing /INCREMENTAL:NO overrides the default that
+    # /DEBUG and CMake's RelWithDebInfo flags select. The program target also
+    # writes a /MAP, which by itself would disable incremental mode (LNK4075).
+    string(APPEND CMAKE_CXX_LINK_EXECUTABLE " /DEBUG /INCREMENTAL:NO")
   else()
     # ReproBit's current evidence model treats PDBs as compile-stage
     # artifacts, so omit the link PDB and its /DEBUG switch for that profile.
@@ -240,6 +242,8 @@ if(LRR_RECCMP)
   set_target_properties(program PROPERTIES
     PDB_NAME "LegoRR"
     PDB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+  # The link map records the object contributions in link order (ADR 0006).
+  target_link_options(program PRIVATE "/MAP:${CMAKE_BINARY_DIR}/LegoRR.map")
 endif()
 # The frame-loop object in gods98 calls into game, while game itself uses
 # gods98 APIs. Repeat the archive so GNU ld resolves this static-library cycle.

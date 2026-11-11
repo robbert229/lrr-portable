@@ -54,5 +54,6 @@ game-only and **53.74%** full.
 The [generated report](binary-progress.json) records chance-adjusted section
 metrics, sizes, header differences and the input hash. See the
 [tool documentation](../../tools/README.md#whole-binary-progress) for
-thresholds and definitions. These figures use a separate non-incremental link
-and differ from the incremental-link snapshot above.
+thresholds and definitions. These figures use the non-incremental link, then
+a separate build and since #436 the gate's only build, and differ from the
+incremental-link snapshot above.

@@ -213,17 +213,24 @@ in parallel. Measurements are in
 
 **Parity.** On three source trees the score equals full Reccmp's for all but
 one function (`__isindst`); finding 507 has the per-area counts and a
-26-function spot-check table. `make match-function-parity`
+26-function spot-check table. On the tree of #436, 2,333 of 2,347 functions
+score identically. The other 14 are `__isindst` and 13 LIBC functions whose
+LIBC data operands (`__mb_cur_max`, `_pctype` and others) this tool names by
+public symbol while the full run names them by their `GLOBAL` annotation; the
+same 14 differed before #436. `make match-function-parity`
 (`match_function_parity.py`) repeats the comparison against a full
 `results.json` from the same tree; run it after changing these tools.
 `synthetic_image.py` builds the stand-in for the linked program:
 
 * Relocations are applied in a synthetic layout at `0x0E401000`; undefined
   symbols get slots named the way the linker PDB would name them (CodeView
-  names for project code, public symbols for LIBC), Win32 calls without
-  `dllimport` go through `jmp [IAT]` thunks, and functions of the `program`
-  target are reached through incremental-link (ILT) thunks, as in the
-  `/INCREMENTAL` matching-build link.
+  names for project code, public symbols for LIBC), and Win32 calls without
+  `dllimport` go through `jmp [IAT]` thunks named by their public symbol.
+* Like the matching build, which links with `/INCREMENTAL:NO`, the image has
+  no incremental-link thunks and no base relocations. Reccmp finds float
+  constants, strings and import thunks only through relocations, so neither
+  the full run nor this tool names them from the code: both render a float
+  operand as `<OFFSETn>`, as on the original side.
 * Calls into other translation units are matched to their `FUNCTION`
   annotation by name; other files' line-referenced annotations are named on
   the original side, as the full run would have matched them.
@@ -367,9 +374,9 @@ Notes:
 
 `make match-progress` regenerates `docs/coverage/match-baseline.txt`,
 `docs/coverage/match-listing-digests.txt`, and `docs/coverage/binary-progress.json`
-from fresh builds. Run `make reccmp-check` first and review any drops under
-ADR 0005 before accepting the baseline. The non-incremental build always runs:
-a matching input hash alone does not prove that the baseline is current.
+from one fresh matching build. Run `make reccmp-check` first and review any
+drops under ADR 0005 before accepting the baseline. The build and Reccmp always
+run: a matching input hash alone does not prove that the baseline is current.
 The PR freshness check uses `pr_match_progress.py check`, and its `render`
 command compares the committed reports without the toolchain. The baseline
 and listing headers record the input fingerprint, and the progress file records
@@ -387,15 +394,17 @@ for the owner. Normalisation masks registers, stack offsets, branch targets and
 absolute addresses; these fingerprints do not prove behavioral equivalence.
 The gate still fails on every score drop.
 
-`make binary-progress` builds a separate non-incremental matching executable
-in `build-binary-progress/`, runs Reccmp, prints the comparison as JSON and
-writes `docs/coverage/binary-progress.json`. It needs the matching-build
-requirements plus Python packages `pefile` and `capstone` (used by
-`translation_units.py`). Set `BINARY_PROGRESS_PYTHON` to a Python with those
-packages and `BINARY_PROGRESS_BUILD_DIR` to change the build directory.
-The linker emits a separate PDB for Reccmp; the target removes the PE debug
-directory and file-only debug overlay before comparing the executable.
-The ordinary `make reccmp-check` remains a separate gate.
+`make binary-progress` runs the matching build (`make reccmp-report`, in
+`build-reccmp/` or `$RECCMP_BUILD_DIR`), then `binary_progress.py`, which
+prints the comparison as JSON and writes `docs/coverage/binary-progress.json`.
+`make binary-progress-compare` runs only the comparison, on an existing build.
+It needs the matching-build requirements plus Python packages `pefile` and
+`capstone` (used by `translation_units.py`). Set `BINARY_PROGRESS_PYTHON` to a
+Python with those packages. The matching build links with `/INCREMENTAL:NO`
+and writes `LegoRR.map`; the linker emits a separate PDB for Reccmp, and
+`tools/reccmp.sh` (`strip_pe_debug.py`) removes the PE debug directory and
+file-only debug overlay before Reccmp and this comparison read the executable.
+`make reccmp-check` is the match baseline gate on the same build.
 
 Section comparisons align each named section at its start and use the
 original's virtual size as denominator (missing candidate bytes count as
@@ -418,8 +427,8 @@ For both full and game-only scopes, adjacent inversions count consecutive
 mapped functions in original order whose rebuilt addresses go backwards;
 pair inversions count all reversed pairs, with ties excluded. The issue's 874
 is an adjacent-inversion baseline from an earlier incremental build, so use
-`function_order_inversions.full.adjacent` for that measure (the separate
-non-incremental link can change it). Exact-function coverage sums reachable
+`function_order_inversions.full.adjacent` for that measure (the matching
+build has linked without incremental mode since #436, which can change it). Exact-function coverage sums reachable
 instruction spans recovered by `translation_units.py` for raw Reccmp 100%
 matches, divided by original `.text` virtual size. It is not a byte-for-byte
 comparison of those functions. Accuracy uses raw `matching` scores, rounded

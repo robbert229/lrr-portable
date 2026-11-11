@@ -2,11 +2,12 @@
 """Synthetic recomp image for one unlinked MSVC 5.0 object.
 
 Lays a COFF object out the way a linker would, applies its relocations, and
-gives undefined symbols, Win32 imports and incremental-link thunks the
-addresses and names that the linker PDB of the matching build would give
-them. The result is a duck-typed Reccmp `Image`, plus the recomp entities
-(`collect_nodes`) that stand in for Reccmp's `load_cvdump`. Used by
-tools/match_function.py.
+gives undefined symbols and Win32 imports the addresses and names that the
+linker PDB of the matching build would give them. Like the matching build
+(linked with /INCREMENTAL:NO) and the original, the image has no base
+relocations and no incremental-link thunks. The result is a duck-typed Reccmp
+`Image`, plus the recomp entities (`collect_nodes`) that stand in for Reccmp's
+`load_cvdump`. Used by tools/match_function.py.
 """
 
 from __future__ import annotations
@@ -23,10 +24,10 @@ import msvc_coff
 from msvc_coff import CoffObject, Section
 
 # Synthetic recomp address space, laid out like a small linked program:
-# code, const data, data, then areas for undefined symbols, the IAT, import
-# thunks and ILT thunks. The base sits outside the original image (so a
-# hard-coded original address in the source never lands on a synthetic
-# symbol) and is not a plausible flag, colour, FourCC or float constant.
+# code, const data, data, then areas for undefined symbols, the IAT and import
+# thunks. The base sits outside the original image (so a hard-coded original
+# address in the source never lands on a synthetic symbol) and is not a
+# plausible flag, colour, FourCC or float constant.
 IMAGEBASE = 0x0E400000
 CODE_BASE = 0x0E401000
 EXTERN_CODE_SLOT = 0x10
@@ -167,28 +168,28 @@ class SyntheticImage:
     """Duck-typed reccmp Image built from one unlinked COFF object.
 
     Sections are laid out like a linker would (code / const / data areas),
-    relocations are applied, undefined symbols get their own slots, Win32
-    imports get an IAT and jmp thunks, and functions from objects that the
-    incremental link routes through the ILT get `jmp` thunks too."""
+    relocations are applied, undefined symbols get their own slots, and Win32
+    imports get an IAT and jmp thunks. The matching build links with
+    /INCREMENTAL:NO, so no call goes through an incremental-link thunk."""
 
-    def __init__(self, obj: CoffObject, ctx: Any, source: Path, in_program: bool):
+    def __init__(self, obj: CoffObject, ctx: Any, source: Path):
         # ctx: match_function.ProjectContext (orig_bin, orig_imports,
-        # libc_* lookups, markers, program_sources, resolve_lineref).
+        # libc_* lookups, markers, resolve_lineref).
         from reccmp.formats.image import ImageImport
 
         self.filepath = Path(str(obj.path))
         self.obj = obj
         self.ctx = ctx
         self.source = source
-        self.in_program = in_program
         self.regions: list[_Region] = []
         self.section_addr: dict[int, int] = {}
+        # The matching build has no .reloc section, so Reccmp finds no float
+        # constants, strings or import thunks through relocations there.
         self.relocations: set[int] = set()
-        self._relocated_addrs: set[int] = set()
         self.import_list: list[ImageImport] = []
         self.thunks: list[tuple[int, int]] = []
         self.exports: list[tuple[int, bytes]] = []
-        self.is_debug = True  # the matching build links with /DEBUG
+        self.is_debug = False  # tools/reccmp.sh strips the debug directory
         self.nodes: dict[int, Node] = {}
         self.extern_addr: dict[str, int] = {}
         self._layout()
@@ -272,8 +273,6 @@ class SyntheticImage:
             return False
 
     def is_relocated_addr(self, addr: int) -> bool:
-        if addr in self._relocated_addrs:
-            return True
         # A constant inside the span of the linked matching build (an original
         # address cast to a pointer, or a flag such as 0x800000 that happens
         # to land in its large .bss) falls inside some entity of that link,
@@ -297,14 +296,10 @@ class SyntheticImage:
         return self._regions_of("rdata", "data")
 
     def iter_string(self, encoding: str = "ascii") -> Iterator[tuple[int, str]]:
-        for region in self.get_data_regions():
-            for addr in sorted(self._relocated_addrs):
-                if addr in region.range:
-                    raw = self.read_string(addr)
-                    try:
-                        yield addr, raw.decode(encoding)
-                    except UnicodeDecodeError:
-                        continue
+        # Reccmp finds strings at relocated addresses; without base relocations
+        # only the PDB's string symbols (collect_nodes) name them.
+        del encoding
+        return iter(())
 
     # -- layout -------------------------------------------------------------
     def _add_region(self, start: int, data: bytes | bytearray, size: int, kind: str, name: str) -> _Region:
@@ -342,8 +337,6 @@ class SyntheticImage:
         cursor = _align(cursor + 4 * undefined, 0x1000)
         self.import_thunk_base = cursor
         cursor = _align(cursor + 8 * undefined, 0x1000)
-        self.ilt_base = cursor
-        cursor = _align(cursor + 8 * (undefined + len(obj.procs)), 0x1000)
         self.extern_data_base = cursor
 
         self._classify_externals()
@@ -383,7 +376,6 @@ class SyntheticImage:
         data_slots = 0
         iat: dict[str, int] = {}
         import_thunks: list[tuple[int, int]] = []
-        ilt: list[tuple[int, int]] = []
 
         def iat_slot(api: str) -> int:
             if api not in iat:
@@ -421,20 +413,18 @@ class SyntheticImage:
                     and fname == api
                 ):
                     # A Win32 API called without dllimport: the linker emits a
-                    # `jmp [__imp_X]` thunk and the call goes there.
+                    # `jmp [__imp_X]` thunk and the call goes there. Without
+                    # base relocations Reccmp cannot recognise the thunk; the
+                    # linker PDB names it with its public symbol instead.
                     thunk = self.import_thunk_base + 8 * len(import_thunks)
                     import_thunks.append((thunk, iat_slot(api)))
+                    self.nodes[thunk] = Node(thunk, self._c_type(name), name, name, None)
                     self.extern_addr[name] = thunk
                     continue
                 addr = self.extern_code_base + EXTERN_CODE_SLOT * code_slots
                 code_slots += 1
                 self.nodes[addr] = Node(addr, ftype, fname, name, None, resolved)
                 self.extern_addr[name] = addr
-                marker = self.ctx.markers.get(resolved) if resolved is not None else None
-                if marker is not None and marker.path.resolve() in self.ctx.program_sources:
-                    thunk = self.ilt_base + 8 * len(ilt)
-                    ilt.append((thunk, addr))
-                    self.extern_addr[name] = thunk
             else:
                 from reccmp.types import EntityType
 
@@ -459,16 +449,8 @@ class SyntheticImage:
         if import_thunks:
             buf = bytearray()
             for thunk, slot in import_thunks:
-                self.relocations.add(thunk + 2)
-                self._relocated_addrs.add(slot)
                 buf += b"\xff\x25" + struct.pack("<I", slot) + b"\xcc\xcc"
             self._add_region(self.import_thunk_base, buf, len(buf), "code", "import-thunks")
-        if ilt:
-            buf = bytearray()
-            for thunk, target in ilt:
-                buf += b"\xe9" + struct.pack("<i", target - (thunk + 5)) + b"\xcc\xcc\xcc"
-                self.thunks.append((thunk, target))
-            self._add_region(self.ilt_base, buf, len(buf), "code", "ilt")
 
     @staticmethod
     def _demangled(sym: str) -> str:
@@ -519,32 +501,6 @@ class SyntheticImage:
         return self.extern_addr.get(sym.name)
 
     def _apply_relocations(self) -> None:
-        # Function symbols defined here that the incremental link reaches via
-        # the ILT (objects linked directly into the program target).
-        ilt_targets: dict[int, int] = {}
-        if self.in_program:
-            extra = []
-            next_thunk = self.ilt_base + 8 * len(self.thunks)
-            for proc in self.obj.procs:
-                addr = self.symbol_address(proc.symbol)
-                sym = self.obj.symbols.get(proc.symbol)
-                if addr is None or sym is None or not sym.is_external:
-                    continue
-                ilt_targets[addr + proc.offset] = next_thunk
-                extra.append((next_thunk, addr + proc.offset))
-                next_thunk += 8
-            if extra:
-                existing = [r for r in self.regions if r.name == "ilt"]
-                region = existing[0] if existing else self._add_region(
-                    self.ilt_base, bytearray(), 0, "code", "ilt"
-                )
-                for thunk, target in extra:
-                    region.data += b"\xe9" + struct.pack("<i", target - (thunk + 5)) + b"\xcc\xcc\xcc"
-                    self.thunks.append((thunk, target))
-                region.size = len(region.data)
-                self.regions.sort(key=lambda r: r.start)
-                self._starts = [r.start for r in self.regions]
-
         for sect in self.obj.sections:
             base = self.section_addr.get(sect.index)
             if base is None:
@@ -556,17 +512,10 @@ class SyntheticImage:
                 off = site - region.start
                 if target is None:
                     continue
-                sym = self.obj.symbols[rel.symbol]
-                if sym.section > 0 and target in ilt_targets:
-                    # In an incremental link every reference to the function,
-                    # address-taken ones included, goes through its ILT thunk.
-                    target = ilt_targets[target]
                 (addend,) = struct.unpack_from("<i", region.data, off)
                 if rel.type == msvc_coff.IMAGE_REL_I386_DIR32:
                     value = (target + addend) & 0xFFFFFFFF
                     struct.pack_into("<I", region.data, off, value)
-                    self.relocations.add(site)
-                    self._relocated_addrs.add(value)
                 elif rel.type == msvc_coff.IMAGE_REL_I386_DIR32NB:
                     struct.pack_into("<I", region.data, off, (target + addend - IMAGEBASE) & 0xFFFFFFFF)
                 elif rel.type == msvc_coff.IMAGE_REL_I386_REL32:
