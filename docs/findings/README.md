@@ -495,6 +495,7 @@ have not yet been added to the catalog.
 | 513 | [findings/513-keys-unit-original-shape.md](513-keys-unit-original-shape.md) | Key-name table (G98-018, Keys.c) rebuilt in original shape; both functions exact, literal block byte-identical, boundary confirmed; one spare table slot for Reccmp operand naming (issue 416) |
 | 514 | [findings/514-bezier-unit-original-shape.md](514-bezier-unit-original-shape.md) | Bezier curve unit (GAME-003) rebuilt in original shape; asm leaves replaced by C, unit 68.64% to 78.74%; flight-curve effects now call it, so the object links; boundary confirmed (issue 417) |
 | 515 | [findings/515-handle-table-original-shape.md](515-handle-table-original-shape.md) | gods98 handle table (G98-024) rebuilt in original shape with exactly 2,000 records; boundary and matching results (issue 413) |
+| 516 | [findings/516-msvc5-link-order-and-layout-experiments.md](516-msvc5-link-order-and-layout-experiments.md) | How MSVC 5.0's linker orders objects, literals, statics and commons; incremental against non-incremental scores; what reordering and relocation do to inversions (issue 388) |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](../../docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](../../docs/decompiles/full/README.md)). The

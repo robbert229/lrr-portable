@@ -1,5 +1,10 @@
 # Reconstruction is a tree of per-subsystem static libraries mirroring gods98
 
+**Amended by** [ADR 0006](0006-original-link-order.md): the libraries still
+group and link the sources of the native port and the reference build, with
+membership following the original segment. The matching build links unit
+objects explicitly in original order instead.
+
 The reconstruction source tree (`src/`, relocated via the `src_root` meson
 option) is split into one static library per subsystem — `gods98/` for the
 engine core, `game/` for the game layer — with a thin final `LegoRR.exe`
