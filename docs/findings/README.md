@@ -492,6 +492,7 @@ have not yet been added to the catalog.
 | 510 | [findings/510-maths-unit-original-shape.md](510-maths-unit-original-shape.md) | Maths unit (G98-007) rebuilt in original shape; asm leaves replaced by C (issue 395) |
 | 511 | [findings/511-dxerror-unit-original-shape.md](511-dxerror-unit-original-shape.md) | DirectX error decoder (G98-027) rebuilt in original shape; 338 literals at their original addresses; boundary confirmed on data and behaviour (issue 411) |
 | 512 | [findings/512-sound-unit-original-shape.md](512-sound-unit-original-shape.md) | gods98 sound layer: G98-021/022/023 merged into one unit on .bss alignment and behaviour, rebuilt in original shape with all 16 functions exact; native WinMM stand-ins (issues 409, 410) |
+| 513 | [findings/513-keys-unit-original-shape.md](513-keys-unit-original-shape.md) | Key-name table (G98-018, Keys.c) rebuilt in original shape; both functions exact, literal block byte-identical, boundary confirmed; one spare table slot for Reccmp operand naming (issue 416) |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](../../docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](../../docs/decompiles/full/README.md)). The
