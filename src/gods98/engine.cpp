@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "engine_shared.hpp"
 
 /* PanelSelectionHighlightToggle/EngineTick DAT globals (see the function
  * comments at their use sites): bit-0 flag word and the 250-ms cooldown in
@@ -53,7 +54,7 @@ static const volatile float s_panel_highlight_zero = 0.0f;
 
 /* GlobalField505f88Get and CommandLineOptionParse share this app-mode word. */
 // GLOBAL: LEGORR 0x00505f88
-static int32_t s_application_mode;
+int32_t s_application_mode;
 static EngineContext* s_engine_current_context;
 static uint32_t s_engine_bootstrap_state;
 
@@ -1055,13 +1056,6 @@ void global_triple_copy_out(uint32_t* out)
     out[0] = s_triple_first;
     out[1] = s_triple_second;
     out[2] = s_triple_third;
-}
-
-/* GlobalField505f88Get (FUN_00401bf0): app-mode global read. */
-// FUNCTION: LEGORR 0x00401bf0
-int engine_app_mode_get(void)
-{
-    return s_application_mode;
 }
 
 void engine_app_mode_global_set(int32_t mode)

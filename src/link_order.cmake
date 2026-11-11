@@ -33,6 +33,7 @@
 # unit's .c file is compiled as C in the matching build and as C++ elsewhere.
 
 # Ordered game and gods98 segments, port tail, then CRT-range legacy files.
+lrr_link(unit   GAME-001 game          game/advisor.cpp)
 lrr_link(legacy 00403af0 game          game/cmd.cpp)
 lrr_link(unit   GAME-003 game          game/bezier.c)
 lrr_link(legacy 0040b000 game          game/dependency_grid.cpp)
@@ -42,7 +43,7 @@ lrr_link(legacy 00417eb0 game          game/savegame.cpp)
 lrr_link(legacy 00419b20 gods98        gods98/message.cpp)
 lrr_link(legacy 00419e60 game          game/util.cpp)
 lrr_link(legacy 0041a920 game          game/upgrades.cpp)
-lrr_link(legacy 0041b9b0 game          game/frontend.cpp)
+lrr_link(legacy 0041b9c0 game          game/frontend.cpp)
 lrr_link(legacy 0041e820 gods98        gods98/input.cpp)
 lrr_link(legacy 0041f420 game          game/select.cpp)
 lrr_link(legacy 004250c0 gods98        gods98/mainsim.cpp)
@@ -58,7 +59,7 @@ lrr_link(legacy 004410f0 game          game/terrain_grid.cpp)
 lrr_link(legacy 004440f0 game          game/entity.cpp)
 lrr_link(legacy 00447210 game          game/spawn.cpp)
 lrr_link(legacy 004502e0 game          game/screen_pick.cpp)
-lrr_link(legacy 00452e70 game          game/objective.cpp)
+lrr_link(legacy 00458580 game          game/objective.cpp)
 lrr_link(legacy 00459560 game          game/tutorial_hud.cpp)
 lrr_link(legacy 0045b740 game          game/ui_list.cpp)
 lrr_link(unit   GAME-034 game          game/priorities.c)
@@ -73,7 +74,7 @@ lrr_link(legacy 0046f140 game          game/weapon.cpp)
 lrr_link(unit   G98-001  game          game/video_graph.cpp)
 lrr_link(legacy 00472950 gods98        gods98/scene_pool.cpp)
 lrr_link(legacy 00472cd0 gods98        gods98/entity.cpp)
-lrr_link(legacy 00473340 gods98        gods98/view.cpp)
+lrr_link(legacy 004734c0 gods98        gods98/view.cpp)
 lrr_link(legacy 00474710 gods98        gods98/texture.cpp)
 lrr_link(legacy 00476d10 gods98        gods98/resource.cpp)
 lrr_link(legacy 00476fd0 gods98        gods98/scene_resources.cpp)
@@ -124,8 +125,8 @@ lrr_link(tail   -        platform_glue platform/native/frameloop.cpp native)
 
 # Legacy files whose functions lie in the CRT range, just before LIBC
 lrr_link(legacy 0048ed00 game          game/seh_runtime.cpp)
-lrr_link(legacy 00491470 gods98        crt/crt.cpp)
 lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
+lrr_link(legacy 00491cc0 gods98        crt/crt.cpp)
 
 # Libraries of the matching build, after the objects: LIBC (the /ML runtime),
 # oldnames.lib, then the import libraries in the original's import-thunk

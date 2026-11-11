@@ -10,6 +10,104 @@ position; `convert_unit.py` uses it. `python3 tools/link_order.py
 tools-test`. The field layout is described at the top of the list and in
 `docs/building.md` ("Link order").
 
+## `relocate_unit.py` — move one unit verbatim into its own file (ADR 0006, plan S2a)
+
+*Relocation* (GLOSSARY.md) moves a unit's `// FUNCTION`-annotated functions
+and the `// GLOBAL` state it owns, verbatim, into `src/<game or
+gods98>/<stem>.cpp`. The functions go in original address order. The file
+stays C++. It is not a conversion, and the relocated unit is still converted
+later with `convert_unit.py`.
+
+```sh
+python3 tools/relocate_unit.py GAME-001 --dry-run     # plan, report, write nothing
+python3 tools/relocate_unit.py GAME-001               # relocate Advisor.c into src/game/advisor.cpp
+python3 tools/relocate_unit.py G98-013 --stem input_unit
+python3 tools/relocate_unit.py --survey               # what blocks each unrelocated unit
+make relocate-unit UNIT=GAME-001 RELOCATE_ARGS=--dry-run
+```
+
+**What it moves.**
+- The unit's functions are the annotations in the unit's `.text` range. They
+  may sit in several legacy files.
+- The owned globals are the `GLOBAL` annotations in the unit's data ranges
+  (`translation-unit-ranges.csv`).
+- The file-static closure moves too: static helpers, static variables,
+  forward declarations, file-local types and macros that only the moved code
+  uses.
+- Unmarked code with external linkage stays where it is.
+- Each item keeps its leading comments.
+
+**The new file's layout.**
+1. The includes of the source with the most moved functions, in order; then
+   the other sources' unconditional includes that are not already there.
+   Spellings are re-spelled only when they would resolve to a different
+   file.
+2. Types and macros.
+3. The owned globals in address order, then the closure variables. A
+   variable moves up to just before its first user.
+4. The forward declarations the new order needs.
+5. The unit's functions in address order.
+6. Static helpers last, because they are port-only code (ADR 0006 decision
+   4).
+
+**Sharing without editing shared headers.** Sometimes moved code and the
+code left behind both need something:
+- A static gets external linkage: `static` is removed, and the static is
+  declared in a private `<file>_shared.hpp` next to the source file.
+- A file-local type or macro moves into that header.
+- Both files include the header after their own includes.
+- Headers that other files include are never edited (finding 506's
+  declaration-count drift).
+- A second relocation from the same file appends to the existing private
+  header.
+
+**Wiring.** The tool also updates:
+- the link-order list (a `unit` entry at the unit's original position,
+  `link_order.insert_unit`);
+- the Meson `static_library` source list;
+- the `current_source` column of `translation-units.csv`.
+
+Each source it edits keeps the key `link_order.py check` requires, the lower
+median of its remaining `FUNCTION`/`LIBRARY` markers: `link_order.place_legacy`
+rewrites the key and moves the entry into address order. A legacy file left
+with no original function becomes a `tail` entry (`link_order.retire_legacy`). Globals that a conversion annotated in its own
+`.c` file (pooled literals) stay there, with a note in the report.
+
+**Verbatim check.** Every moved item is hashed before and after: SHA-256 of
+the item's text, with whitespace and line endings normalised. The hashes go
+to `docs/coverage/relocations/<unit>.csv`. The tool re-scans the text it
+generated and refuses if:
+- any body differs;
+- a head differs other than by a recorded `static` removal;
+- an annotation is lost or duplicated.
+
+A second run finds the unit relocated and does nothing. A half-done state
+(the unit listed, but annotations still elsewhere) is refused.
+
+**Refusals.** The tool refuses, with the file and line, rather than guess. It
+refuses:
+- definitions inside `#if` blocks, except a group whose branches each hold
+  one whole definition of the same function (the naked-`__asm`/C pairs);
+- directives that split a declaration;
+- functions defined in headers;
+- qualified (`ns::f`) or macro-built definitions;
+- named namespaces;
+- statics shared from an anonymous namespace;
+- shared `inline` functions;
+- shared multi-declarator declarations;
+- macros that are `#undef`'d or redefined;
+- two items on one line;
+- name clashes between the moved files or with another file;
+- backend-only sources;
+- stems that clash with an existing file (pass `--stem`).
+
+`--survey` tries every unrelocated unit and tabulates the blocking constructs
+(finding 523).
+
+The scanner is `cxx_items.py`: a comment- and literal-aware top-level item
+splitter (stdlib only), not a C++ parser. Tests: `tools/tests/test_relocate_unit.py`
+on synthetic sources (`make tools-test`).
+
 ## `convert_unit.py` — scaffold an original-shape conversion (ADR 0005, step 0)
 
 Writes the mechanical starting state of a conversion for one *original

@@ -24,7 +24,8 @@ src/link_order.cmake
 meson.build         Existing Meson build (kept during the CMake migration)
 src/                Reconstruction source tree: game/ and gods98/ (original
                     units: one <stem>.c or <stem>.cpp per unit, plus legacy
-                    mixed files), platform/ (backend entry points), crt/
+                    mixed files and their private <file>_shared.hpp headers
+                    from relocation), platform/ (backend entry points), crt/
                     (runtime stand-ins), main.cpp
 subprojects/        miniwin CMake bridge (sparse isle-portable submodule)
 3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)

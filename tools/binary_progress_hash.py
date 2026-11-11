@@ -74,4 +74,9 @@ def input_hash(root=ROOT):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=ROOT)
-    print(input_hash(parser.parse_args().root))
+    parser.add_argument('--write-manifest', action='store_true',
+                        help='rewrite %s from the tracked files (after git add of new sources)' % MANIFEST)
+    args = parser.parse_args()
+    if args.write_manifest:
+        (args.root / MANIFEST).write_text('\n'.join(input_paths(args.root)) + '\n', encoding='utf-8')
+    print(input_hash(args.root))

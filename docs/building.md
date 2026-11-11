@@ -131,7 +131,9 @@ place that adds a game, gods98, platform or program source to the build:
 Order is the game segment (converted units at their unit's position, each
 mixed legacy file at the median original address of its functions), the
 gods98 segment, the port tail (port-only files), then the legacy files whose
-functions lie in the CRT range. `tools/convert_unit.py` adds a new unit's line;
+functions lie in the CRT range. `tools/convert_unit.py` and
+`tools/relocate_unit.py` add a new unit's line. When relocation drains a
+legacy file of its last original function, the file becomes a tail entry.
 `python3 tools/link_order.py` prints the list.
 
 ### Match baseline gate
