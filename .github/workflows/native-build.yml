@@ -72,6 +72,12 @@ jobs:
         # Fetches only 3rdparty/isle-portable/miniwin/, never the full submodule.
         run: tools/setup-miniwin.sh
 
+      - name: Create test scratch directory
+        # The render, frontend, and options tests hardcode /tmp/opencode as
+        # their scratch base and do not create it (sound and movie tests use the
+        # same path). The developer environment has it; the runner does not.
+        run: mkdir -p /tmp/opencode
+
       - name: Configure, build, and test
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: "4"
