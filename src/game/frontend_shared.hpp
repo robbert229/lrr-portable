@@ -63,4 +63,19 @@ extern float s_snorm_pairs[2][7][2];
 extern uint32_t s_snorm_rows;
 extern uint32_t s_snorm_sentinels[2];
 
+extern uint32_t s_advisor_text_state_flags;
+extern int s_advisor_text_current_slot;
+extern float s_advisor_text_animation_timer;
+extern float s_advisor_text_animation_reset_timer;
+extern const char* s_advisor_text_request_source;
+extern AdvisorTextAnimationOps s_advisor_text_animation_ops;
+extern AdvisorTextDisplayOps s_advisor_text_display_ops;
+extern void* s_message_font;
+extern void* s_message_text_buffers[2];
+extern float s_message_panel_y;
+extern float s_message_text_y;
+extern float s_message_text_height;
+void advisor_message_layout_commit(void);
+void advisor_message_layout_reset(void);
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */

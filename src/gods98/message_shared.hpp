@@ -64,4 +64,12 @@ extern uint32_t s_incident_state;
 extern uint32_t s_objective_switch;
 extern uint32_t s_deferred_callback_presence;
 
+extern const char* s_ui_message_labels[26];
+extern void* s_ui_message_primary_font;
+extern void* s_ui_message_secondary_font;
+extern void* s_ui_message_resource;
+extern void* s_ui_message_subtitle_font;
+extern char* s_ui_message_text_slots[26];
+extern TextureSurface* s_ui_message_image_slots[26];
+
 #endif /* LRR_GODS98_MESSAGE_SHARED_HPP */

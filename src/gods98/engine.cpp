@@ -858,13 +858,6 @@ void engine_context_mode_global_set(int32_t mode)
     s_context_mode = mode;
 }
 
-/* EngineModeSet (FUN_004565f0) clears the two advisor-text request globals;
- * their normal writers/readers are in the advisor text band. */
-// GLOBAL: LEGORR 0x00503610
-uint32_t s_overlay_word_03610; /* DAT_00503610 role */
-// GLOBAL: LEGORR 0x00503614
-uint32_t s_overlay_word_03614; /* DAT_00503614 role */
-
 void engine_global_state_flags_bit7_set_target(int value);
 void engine_global_state_flags_bits6_and_9_set_target(
     int value, int set_bit9);

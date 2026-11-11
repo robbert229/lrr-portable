@@ -5686,15 +5686,15 @@ static void* s_tutorial_icon_context;
 static void* s_tutorial_icon;
 static AdvisorTextRequestActionFn s_advisor_text_request_action;
 static void* s_advisor_text_request_context;
-static uint32_t s_advisor_text_state_flags;
-static int s_advisor_text_current_slot = 0x1a;
-static float s_advisor_text_animation_timer;
-static float s_advisor_text_animation_reset_timer;
-static const char* s_advisor_text_request_source;
-static AdvisorTextAnimationOps s_advisor_text_animation_ops;
+uint32_t s_advisor_text_state_flags;
+int s_advisor_text_current_slot = 0x1a;
+float s_advisor_text_animation_timer;
+float s_advisor_text_animation_reset_timer;
+const char* s_advisor_text_request_source;
+AdvisorTextAnimationOps s_advisor_text_animation_ops;
 static AdvisorTextBoxExtentFn s_advisor_text_box_extent_hook;
 static void* s_advisor_text_box_extent_context;
-static AdvisorTextDisplayOps s_advisor_text_display_ops;
+AdvisorTextDisplayOps s_advisor_text_display_ops;
 AdvisorInlineTokenOps s_advisor_inline_token_ops;
 uint32_t s_advisor_inline_last_sound = 0xffffffffu;
 uint32_t s_advisor_inline_token_generation = 0xffffffffu;
@@ -6193,16 +6193,16 @@ static TextureSurface* s_message_air_image;
 static TextureSurface* s_message_noair_image;
 static float s_message_next_position[2];
 static float s_message_back_position[2];
-static void* s_message_font;
-static void* s_message_text_buffers[2];
+void* s_message_font;
+void* s_message_text_buffers[2];
 static AdvisorMessagePointerCapture s_message_pointer_capture;
 static int s_message_gameplay_active;
-static float s_message_panel_y = 409.0f;
-static float s_message_text_y = 435.0f;
-static float s_message_text_height = 42.0f;
+float s_message_panel_y = 409.0f;
+float s_message_text_y = 435.0f;
+float s_message_text_height = 42.0f;
 
 /* 0x46ad00 grows/shrinks by the actual font line after wrapped output. */
-static void advisor_message_layout_commit(void)
+void advisor_message_layout_commit(void)
 {
     if (s_message_text_buffers[0] == NULL) return;
     float_pair_at_offset4_set_from_ints(s_message_text_buffers[0],
@@ -6211,44 +6211,13 @@ static void advisor_message_layout_commit(void)
                                         325u, (uint32_t)s_message_text_height);
 }
 
-static void advisor_message_layout_reset(void)
+void advisor_message_layout_reset(void)
 {
     s_message_panel_y = 409.0f;
     s_message_text_y = 435.0f;
     s_message_text_height = 42.0f;
     s_advisor_text_state_flags &= ~1u;
     advisor_message_layout_commit();
-}
-
-static void advisor_message_layout_result(void* output, int overflow,
-                                          int bottom)
-{
-    int line;
-    if (output == NULL || output != s_message_text_buffers[0] ||
-        s_message_font == NULL) return;
-    line = font_atlas_record_line_height_get(s_message_font);
-    if (line <= 0) return;
-    if (overflow) {
-        s_message_panel_y -= (float)line;
-        s_message_text_y -= (float)line;
-        s_message_text_height += (float)line;
-        s_advisor_text_state_flags &= ~1u;
-        advisor_message_layout_commit();
-    } else if ((s_advisor_text_state_flags & 1u) != 0u) {
-        /* The reference compares the last drawn baseline with the original
-         * text bottom minus one font line before contracting a new message. */
-        if (435.0f + 42.0f - (float)line <= (float)bottom) {
-            s_advisor_text_state_flags &= ~1u;
-        } else {
-            s_message_panel_y += (float)line;
-            s_message_text_y += (float)line;
-            s_message_text_height -= (float)line;
-            if (s_message_panel_y >= 409.0f) {
-                advisor_message_layout_reset();
-                s_advisor_text_state_flags &= ~1u;
-            } else advisor_message_layout_commit();
-        }
-    }
 }
 
 /* Return a transition so the real input owner can discard inherited holds
@@ -6571,19 +6540,6 @@ void advisor_text_request_action_hook_set(AdvisorTextRequestActionFn hook,
     s_advisor_text_request_context = context;
 }
 
-/* AdvisorTextRequestSetup (FUN_0046ac20): normalize the request mask,
- * publish the two overlay globals, notify the actor, and set pending bit 0. */
-// FUNCTION: LEGORR 0x0046ac20
-void advisor_text_request_setup(uint32_t request, uint32_t flags)
-{
-    if (flags == 0u) flags = 0x8000u;
-    flags |= 0x10000u;
-    engine_overlay_words_set(flags, request);
-    s_advisor_text_request_source = NULL;
-    advisor_inline_token_render((char*)(uintptr_t)request, NULL, 1);
-    s_advisor_text_state_flags |= 1u;
-}
-
 /* Typed source path for callers that already own the token text. On 64-bit
  * hosts the retail request dword cannot preserve that pointer, but inline
  * image/sound processing still runs against the live source before the
@@ -6858,41 +6814,6 @@ void advisor_text_animation_ops_set(const AdvisorTextAnimationOps* ops,
     s_advisor_text_animation_reset_timer = reset_timer;
 }
 
-/* AdvisorTextAnimationUpdate (FUN_0046ac60): update the active text slot,
- * optionally restart its timeout, advance an available animation, and
- * maintain the slot-selected flag. */
-// FUNCTION: LEGORR 0x0046ac60
-void advisor_text_animation_update(int slot, int force, int selected)
-{
-    if (force == 0) {
-        if (s_advisor_text_animation_timer <= 0.0f) {
-            s_advisor_text_current_slot = slot;
-        }
-    }
-    else {
-        s_advisor_text_current_slot = slot;
-        s_advisor_text_animation_timer = s_advisor_text_animation_reset_timer;
-    }
-    if (s_advisor_text_animation_ops.is_paused == NULL ||
-        s_advisor_text_animation_ops.is_paused(
-            s_advisor_text_animation_ops.context) == 0) {
-        int request = 0;
-        if (s_advisor_text_animation_ops.animation_find != NULL &&
-            s_advisor_text_animation_ops.animation_find(
-                s_advisor_text_animation_ops.context, slot, &request) != 0 &&
-            s_advisor_text_animation_ops.animation_play != NULL) {
-            s_advisor_text_animation_ops.animation_play(
-                s_advisor_text_animation_ops.context, request, 0);
-        }
-    }
-    if (s_advisor_text_current_slot == slot && selected != 0) {
-        s_advisor_text_state_flags |= 4u;
-    }
-    else {
-        s_advisor_text_state_flags &= ~4u;
-    }
-}
-
 void advisor_text_display_ops_set(const AdvisorTextDisplayOps* ops)
 {
     if (ops != NULL) s_advisor_text_display_ops = *ops;
@@ -6998,157 +6919,6 @@ uint32_t advisor_inline_last_sound_get(void)
 float advisor_inline_token_duration_get(void)
 {
     return s_advisor_inline_duration;
-}
-
-/* The engine text-output record already owns its font, position, wrapping,
- * and scroll state. Use the shared record writer and wrapped renderer when a
- * display-state provider supplies that record but no backend-specific draw
- * callback. */
-static void advisor_text_output_copy(void* output, const char* text, int mode)
-{
-    if (output == NULL || text == NULL) return;
-    objective_advisor_text_copy(output, mode, "%s", text);
-}
-
-static int advisor_text_output_draw(void* output, float delta)
-{
-    int bottom = 0;
-    int overflow;
-    if (output == NULL) return 0;
-    overflow = text_buffer_draw_wrapped(output, 0u, delta, &bottom);
-    advisor_message_layout_result(output, overflow, bottom);
-    return overflow;
-}
-
-/* AdvisorTextDisplayWorker (FUN_0046ad00): update the active advisor slot
- * or message timer, render the selected text path, then close or finish the
- * interface overlay according to the global display state. */
-// FUNCTION: LEGORR 0x0046ad00
-void advisor_text_display_worker(float delta)
-{
-    AdvisorTextDisplayOps* ops = &s_advisor_text_display_ops;
-    AdvisorTextDisplayState state;
-    int old_slot;
-    int alternate;
-    int slot_available = 0;
-    int message_pending;
-    int update_enabled;
-    int image_path;
-    const char* request_text = NULL;
-    char rendered_text[512];
-    if (ops->state_get == NULL) return;
-    memset(&state, 0, sizeof(state));
-    if (!ops->state_get(ops->context, &state)) return;
-    old_slot = state.current_slot;
-    message_pending = state.message_flags != 0u;
-    update_enabled = !state.advisor_mode_valid || state.advisor_mode != 0;
-    image_path = !message_pending && update_enabled && old_slot != 0x1a &&
-                 state.slot_image != NULL;
-    if (state.message_flags == 0u) {
-        if (update_enabled) {
-            slot_available = ops->slot_is_available != NULL ?
-                ops->slot_is_available(ops->context, state.current_slot) : 0;
-            if (slot_available && state.current_slot != 0x1a) {
-                alternate = state.hidden_slot != 0;
-                if (ops->slot_text_draw == NULL) {
-                    const char* text = ui_message_text_slot_get(
-                        (unsigned int)state.current_slot);
-                    void* output = alternate != 0 ? state.alternate_text_output :
-                                                    state.primary_text_output;
-                    advisor_text_output_copy(output, text, 1);
-                }
-                if (state.message_timer <= 0.0f) {
-                    state.current_slot = 0x1a;
-                    if (ops->current_slot_set != NULL)
-                        ops->current_slot_set(ops->context, state.current_slot);
-                }
-                state.message_timer -= delta;
-                if (ops->message_timer_set != NULL)
-                    ops->message_timer_set(ops->context, state.message_timer);
-            }
-        }
-    }
-    else if (state.message_id == 0) {
-        state.message_flags = 0u;
-        message_pending = 0;
-        if (ops->message_flags_set != NULL)
-            ops->message_flags_set(ops->context, 0u);
-    }
-    else {
-        request_text = state.message_text;
-        if (request_text == NULL && state.message_token_index_valid != 0u)
-            request_text = objective_advisor_token_text_get(
-                state.message_token_index);
-        if (request_text != NULL) {
-            advisor_inline_token_render((char*)request_text, rendered_text,
-                                        0);
-            advisor_text_output_copy(state.primary_text_output,
-                                     rendered_text, 0);
-        }
-        if ((state.message_flags & 0x8000u) == 0u) {
-            state.message_flags--;
-            if (ops->message_flags_set != NULL)
-                ops->message_flags_set(ops->context, state.message_flags);
-        }
-    }
-    if (((state.interface_flags & 0x100000u) != 0u ||
-         (ops->overlay_active != NULL &&
-          ops->overlay_active(ops->context))) && old_slot != 0x16) {
-        if (ops->interface_finish != NULL) {
-            AdvisorTextDisplayState presentation = state;
-            presentation.current_slot = old_slot;
-            presentation.hidden_slot = image_path;
-            ops->interface_finish(ops->context, &presentation, delta);
-        }
-        if (ops->overlay_close != NULL) ops->overlay_close(ops->context);
-        return;
-    }
-    if (ops->interface_finish != NULL) {
-        AdvisorTextDisplayState presentation = state;
-        presentation.current_slot = old_slot;
-        presentation.hidden_slot = image_path;
-        ops->interface_finish(ops->context, &presentation, delta);
-    }
-    if (message_pending) {
-        if (request_text != NULL) {
-            (void)advisor_text_output_draw(state.primary_text_output, delta);
-        }
-        else if (ops->message_text_draw != NULL) {
-            ops->message_text_draw(ops->context, state.message_id,
-                                   state.x, state.y);
-        }
-        else {
-            (void)advisor_text_output_draw(state.primary_text_output, delta);
-        }
-    }
-    else {
-        if (slot_available && old_slot != 0x1a) {
-            alternate = state.hidden_slot != 0;
-            if (ops->slot_text_draw != NULL) {
-                ops->slot_text_draw(ops->context, old_slot, alternate,
-                                    state.x, state.y);
-            }
-            else {
-                void* output = alternate != 0 ? state.alternate_text_output :
-                                                state.primary_text_output;
-                (void)advisor_text_output_draw(output, delta);
-            }
-            if (state.slot_image != NULL) {
-                DisplaySurface* target = surface_active_render_target_get();
-                void* pixels = NULL;
-                int pitch = 0;
-                if (target != NULL && surface_lock(target, &pixels, &pitch) == 0) {
-                    surface_blit_texture(pixels, pitch, target->w, target->h,
-                        (TextureSurface*)state.slot_image,
-                        (int)state.x, (int)state.y);
-                    surface_unlock(target, pixels);
-                }
-            }
-        }
-        else {
-            (void)advisor_text_output_draw(state.primary_text_output, delta);
-        }
-    }
 }
 
 void selected_ground_marker_ops_set(const SelectedGroundMarkerOps* ops)
