@@ -3545,7 +3545,7 @@ void frontend_help_overlay(void* px, int pitch, int w, int h,
  * per-glyph float advances in the font object at load; we re-derive the
  * same numbers from the image). */
 
-static int fe_font_cell(const TextureSurface* f, int* cw, int* ch)
+int fe_font_cell(const TextureSurface* f, int* cw, int* ch)
 {
     if (f == NULL || f->pixels == NULL || f->width < FE_FONT_GRID_COLS
         || f->height < FE_FONT_GRID_ROWS) {
@@ -3605,7 +3605,7 @@ static uint32_t fe_font_key(const TextureSurface* f, int cw, int ch)
  * font surface carries palette[0] and palette[255] as colour keys, both
  * blitted transparent. Surfaces without a decoded palette (key_count 0)
  * keep the sampled stand-in for both slots. */
-static void fe_font_keys(const TextureSurface* f, int cw, int ch,
+void fe_font_keys(const TextureSurface* f, int cw, int ch,
                          uint32_t keys[2])
 {
     if (f->key_count == 2) {
@@ -3614,38 +3614,6 @@ static void fe_font_keys(const TextureSurface* f, int cw, int ch,
         return;
     }
     keys[0] = keys[1] = fe_font_key(f, cw, ch);
-}
-
-static int fe_font_key_hit(uint32_t p, const uint32_t keys[2])
-{
-    return p == keys[0] || p == keys[1];
-}
-
-/* Ink bounding box of glyph g — the non-key pixels only. The engine blits
- * exactly this box (FUN_00479ee0's right-edge scan / per-glyph rect), which
- * keeps each face's background AND frame strips out while retaining the
- * glyph's dark outline when it is inside the box. */
-static int fe_font_ink_box(const TextureSurface* f, int cw, int ch, int g,
-                           const uint32_t keys[2], int* minx, int* miny,
-                           int* maxx, int* maxy)
-{
-    int col = g % FE_FONT_GRID_COLS, row = g / FE_FONT_GRID_COLS;
-    int x0 = col * cw, y0 = row * ch;
-    *minx = cw; *miny = ch; *maxx = -1; *maxy = -1;
-    for (int yy = 0; yy < ch; yy++) {
-        for (int xx = 0; xx < cw; xx++) {
-            if (fe_font_key_hit(
-                    f->pixels[(size_t)(y0 + yy) * (size_t)f->width + (x0 + xx)],
-                    keys)) {
-                continue;
-            }
-            if (xx < *minx) { *minx = xx; }
-            if (xx > *maxx) { *maxx = xx; }
-            if (yy < *miny) { *miny = yy; }
-            if (yy > *maxy) { *maxy = yy; }
-        }
-    }
-    return *maxx >= 0;
 }
 
 /* Load a font bitmap for the frontend's CPU text path. Task/reward records
@@ -3666,7 +3634,7 @@ TextureSurface* bitmap_font_resource_load(const char* name)
 }
 
 /* FontResourceLoad measures the top row against the second palette key. */
-static int fe_font_advance(const TextureSurface* f, int cw, int ch, int g,
+int fe_font_advance(const TextureSurface* f, int cw, int ch, int g,
                            const uint32_t keys[2])
 {
     int col = g % FE_FONT_GRID_COLS;
@@ -3678,59 +3646,6 @@ static int fe_font_advance(const TextureSurface* f, int cw, int ch, int g,
         if (pixel != keys[1]) return x + 1;
     }
     return 1;
-}
-
-static void fe_blit_glyph(void* px, int pitch, int w, int h,
-                          int dx, int dy, const TextureSurface* f,
-                          int cw, int ch, int g, const uint32_t keys[2])
-{
-    int col = g % FE_FONT_GRID_COLS, row = g / FE_FONT_GRID_COLS;
-    int x0 = col * cw, y0 = row * ch;
-    int minx, miny, maxx, maxy;
-    if (!fe_font_ink_box(f, cw, ch, g, keys, &minx, &miny, &maxx, &maxy)) {
-        return;
-    }
-    for (int yy = miny; yy <= maxy; yy++) {
-        int dy2 = dy + yy;
-        if (dy2 < 0 || dy2 >= h) {
-            continue;
-        }
-        for (int xx = minx; xx <= maxx; xx++) {
-            uint32_t p = f->pixels[(size_t)(y0 + yy) * (size_t)f->width
-                                   + (x0 + xx)];
-            if (fe_font_key_hit(p, keys)) {
-                continue;               /* key *inside* the box */
-            }
-            int dx2 = dx + xx;
-            if (dx2 < 0 || dx2 >= w) {
-                continue;
-            }
-            uint8_t* o = (uint8_t*)px + (size_t)dy2 * (size_t)pitch
-                         + (size_t)dx2 * 4;
-            o[0] = (uint8_t)(p >> 16);
-            o[1] = (uint8_t)(p >> 8);
-            o[2] = (uint8_t)(p);
-            o[3] = (uint8_t)(p >> 24);
-        }
-    }
-}
-
-/* Partial BitmapFontGlyphDrawAndMeasure (FUN_0047a470): combine the port's
- * software glyph blit with the glyph advance calculation. The corpus uses
- * its DirectDraw surface and stored float advances; this path clips RGBA
- * pixels and derives the advance from the glyph's ink bounds. */
-// FUNCTION: LEGORR 0x0047a470
-static int fe_font_glyph_draw_and_measure(void* px, int pitch, int w, int h,
-                                          int x, int y,
-                                          const TextureSurface* f,
-                                          int cw, int ch, int g,
-                                          const uint32_t keys[2], int draw)
-{
-    int advance = fe_font_advance(f, cw, ch, g, keys);
-    if (draw != 0) {
-        fe_blit_glyph(px, pitch, w, h, x, y, f, cw, ch, g, keys);
-    }
-    return advance;
 }
 
 /* Draw `s` with a bitmap font at (x,y). `_` renders as a space, matching
@@ -3763,19 +3678,6 @@ static int fe_draw_font_text(void* px, int pitch, int w, int h,
     return cx - x;
 }
 
-/* FormattedTextDraw (FUN_0047a1b0): software-framebuffer draw of an already
- * resolved text value using the selected bitmap face. Format expansion is
- * performed at the caller boundary in this port. */
-// FUNCTION: LEGORR 0x0047A1B0
-void formatted_text_draw(const TextureSurface* font, void* px, int pitch,
-                         int w, int h, int x, int y, const char* text)
-{
-    if (font == NULL || px == NULL || text == NULL || w <= 0 || h <= 0) {
-        return;
-    }
-    formatted_text_draw_and_measure(font, px, pitch, w, h, x, y, text, NULL);
-}
-
 static int fe_font_text_width(const char* s, const TextureSurface* f)
 {
     int cw = 0, chh = 0;
@@ -3798,150 +3700,11 @@ static int fe_font_text_width(const char* s, const TextureSurface* f)
     return cx;
 }
 
-static FeFormattedTextTextureResolve s_formatted_text_texture_resolve;
+FeFormattedTextTextureResolve s_formatted_text_texture_resolve;
 
 void formatted_text_texture_resolver_set(FeFormattedTextTextureResolve resolve)
 {
     s_formatted_text_texture_resolve = resolve;
-}
-
-/* FormattedTextDrawAndMeasure (FUN_0047a1e0): draw decoded bitmap-font text,
- * returning its widest line and optionally the number of lines. Newlines
- * reset the pen and advance one glyph cell; tabs advance to the next eight-
- * cell stop. Inline @[0x........] handles are resolved through the port-side
- * hook, then blitted through the software surface path. */
-// FUNCTION: LEGORR 0x0047A1E0
-uint32_t formatted_text_draw_and_measure(const TextureSurface* font,
-                                         void* px, int pitch, int w, int h,
-                                         int x, int y, const char* text,
-                                         int* line_count)
-{
-    if (line_count != NULL) {
-        *line_count = 0;
-    }
-    if (font == NULL || text == NULL) {
-        return 0;
-    }
-
-    int cell_w = 0;
-    int cell_h = 0;
-    if (!fe_font_cell(font, &cell_w, &cell_h)) {
-        return 0;
-    }
-    uint32_t keys[2];
-    fe_font_keys(font, cell_w, cell_h, keys);
-
-    int pen_x = 0;
-    int max_width = 0;
-    int line_h = cell_h;
-    int lines = 1;
-    for (size_t i = 0; text[i] != '\0'; ++i) {
-        if (text[i] == '\n') {
-            if (pen_x > max_width) max_width = pen_x;
-            pen_x = 0;
-            y += line_h;
-            line_h = cell_h;
-            ++lines;
-            continue;
-        }
-        if (text[i] == '\t') {
-            const int tab_width = cell_w * 8;
-            if (tab_width > 0) {
-                pen_x += tab_width - (pen_x % tab_width);
-            }
-            continue;
-        }
-        if (text[i] == '@' && text[i + 1] == '[' && text[i + 2] == '0'
-            && text[i + 3] == 'x' && strlen(text + i) >= 13
-            && text[i + 12] == ']') {
-            char* end;
-            unsigned long parsed = strtoul(text + i + 4, &end, 16);
-            int valid = end == text + i + 12 && *end == ']';
-            uint32_t handle = (uint32_t)parsed;
-            const TextureSurface* image = valid && handle != 0
-                && s_formatted_text_texture_resolve != NULL
-                ? s_formatted_text_texture_resolve(handle) : NULL;
-            if (image != NULL) {
-                if (px != NULL && w > 0 && h > 0) {
-                    surface_blit_texture(px, pitch, w, h, image,
-                                         x + pen_x, y);
-                }
-                pen_x += image->width;
-                if (image->height > line_h) line_h = image->height;
-            }
-            i += 12;
-            continue;
-        }
-
-        const int c = (unsigned char)text[i];
-        const int glyph = c - 0x20;
-        int advance;
-        if (glyph < 0 || glyph >= FE_FONT_GRID_COLS * FE_FONT_GRID_ROWS) {
-            advance = 0;
-        } else {
-            advance = fe_font_glyph_draw_and_measure(
-                px, pitch, w, h, x + pen_x, y, font, cell_w, cell_h, glyph,
-                keys, px != NULL && w > 0 && h > 0);
-        }
-        pen_x += advance;
-    }
-    if (pen_x > max_width) max_width = pen_x;
-    if (line_count != NULL) {
-        *line_count = lines;
-    }
-    return (uint32_t)max_width;
-}
-
-/* FormattedTextFormatDraw (FUN_0047a150): expand the engine's `%b` inline
- * texture token, format into bounded storage, then delegate drawing and
- * measurement to the decoded-text path. `%b` values are 32-bit handles
- * resolved by the software renderer hook. */
-// FUNCTION: LEGORR 0x0047A150
-void formatted_text_format_draw(const TextureSurface* font,
-                                uint32_t* width_out, int* line_count,
-                                void* px, int pitch, int w, int h,
-                                int x, int y, const char* format,
-                                va_list args)
-{
-    if (width_out != NULL) *width_out = 0;
-    if (line_count != NULL) *line_count = 0;
-    if (font == NULL || format == NULL) return;
-
-    char expanded[1024];
-    size_t used = 0;
-    for (size_t i = 0; format[i] != '\0' && used + 1 < sizeof(expanded); ++i) {
-        if (format[i] == '%' && format[i + 1] == 'b') {
-            static const char texture_format[] = "@[0x%0.8x]";
-            const size_t n = sizeof(texture_format) - 1;
-            if (used + n >= sizeof(expanded)) break;
-            memcpy(expanded + used, texture_format, n);
-            used += n;
-            ++i;
-        } else {
-            expanded[used++] = format[i];
-        }
-    }
-    expanded[used] = '\0';
-
-    char text[1024];
-    formatted_text_buffer_build(text, sizeof(text), expanded, args);
-    const uint32_t width = formatted_text_draw_and_measure(
-        font, px, pitch, w, h, x, y, text, line_count);
-    if (width_out != NULL) *width_out = width;
-}
-
-/* RewardTextDraw (FUN_0047a180): positioned variadic convenience wrapper for
- * formatted UI text. The legacy routine forwards its format and argument
- * list to FormattedTextFormatDraw; the port supplies its software target. */
-// FUNCTION: LEGORR 0x0047A180
-void reward_text_draw(const TextureSurface* font, void* px, int pitch,
-                      int w, int h, int x, int y, const char* format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    formatted_text_format_draw(font, NULL, NULL, px, pitch, w, h,
-                               x, y, format, args);
-    va_end(args);
 }
 
 static void fe_menu_panel_text_draw(void* px, int pitch, int w, int h,
@@ -9459,25 +9222,6 @@ uint32_t timed_effect_time_peek(int index)
 }
 
 uint32_t screen_right_edge_cache_peek(void) { return s_screen_right_edge; }
-
-/* BitmapFontGlyphMeasureWidth (FUN_0047a520) — see frontend.hpp. */
-// FUNCTION: LEGORR 0x47a520
-int bitmap_font_glyph_measure_width(void* font, unsigned char glyph)
-{
-    const TextureSurface* surface = (const TextureSurface*)font;
-    const int glyph_index = (int)glyph - 0x20;
-    int cell_width = 0;
-    int cell_height = 0;
-    uint32_t keys[2];
-    if (glyph_index < 0 ||
-        glyph_index >= FE_FONT_GRID_COLS * FE_FONT_GRID_ROWS ||
-        !fe_font_cell(surface, &cell_width, &cell_height)) {
-        return 0;
-    }
-    fe_font_keys(surface, cell_width, cell_height, keys);
-    return fe_font_advance(surface, cell_width, cell_height,
-                           glyph_index, keys);
-}
 
 /* --- the panel resource + scroll leaf band (see frontend.hpp) --------------
  * The corpus's unowned panel words (DAT_004ffe68 enable gate, DAT_004ffed8/

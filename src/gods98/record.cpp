@@ -623,28 +623,6 @@ uint32_t object_record_field11c_get(const void* record)
     return value;
 }
 
-// FUNCTION: LEGORR 0x0047a540
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t object_field_be4_dword_get(const void* record)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov eax, dword ptr [eax + 0be4h]
-        ret
-    }
-}
-#else
-uint32_t object_field_be4_dword_get(const void* record)
-{
-    uint32_t value;
-    if (record == NULL) {
-        return 0u;
-    }
-    __builtin_memcpy(&value, (const char*)record + 0xbe4, sizeof(value));
-    return value;
-}
-#endif
-
 // FUNCTION: LEGORR 0x0046cf80
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked) uint32_t entity_type_mask_get(const void* record)
