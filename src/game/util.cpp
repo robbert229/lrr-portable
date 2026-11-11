@@ -508,9 +508,8 @@ uint32_t s_pending_record_rows[PENDING_RECORD_CAPACITY][5];
 unsigned int s_pending_record_count;
 void (*s_pending_record_release_hook)(uint32_t* row);
 
-#define LEVEL_REMAP_CAPACITY 128
-static uint32_t s_level_remap_pairs[LEVEL_REMAP_CAPACITY][2];
-static unsigned int s_level_remap_count;
+uint32_t s_level_remap_pairs[LEVEL_REMAP_CAPACITY][2];
+unsigned int s_level_remap_count;
 
 EntityLinkList** s_entity_link_lists;
 void (*s_entity_link_node_release_hook)(EntityLinkNode*);
@@ -619,19 +618,6 @@ void level_identifier_remap_table_install(const uint32_t* pairs,
     for (i = 0; i < count; ++i) {
         s_level_remap_pairs[i][0] = pairs != NULL ? pairs[i * 2] : 0;
         s_level_remap_pairs[i][1] = pairs != NULL ? pairs[i * 2 + 1] : 0;
-    }
-}
-
-// FUNCTION: LEGORR 0x0045d870
-void command_entity_reference_remap(uint32_t* entity_reference)
-{
-    unsigned int i;
-    if (entity_reference == NULL) return;
-    for (i = 0; i < s_level_remap_count; ++i) {
-        if (*entity_reference == s_level_remap_pairs[i][0]) {
-            *entity_reference = s_level_remap_pairs[i][1];
-            return;
-        }
     }
 }
 
@@ -892,18 +878,6 @@ void cell_visual_channel_table_dispose(CellVisualChannelTable* table)
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
-
-// LevelIdentifierRemapTableLoad
-// FUNCTION: LEGORR 0x0045d7e0
-void ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad(
-    const uint32_t* identifier_pairs, uint32_t pair_count)
-{
-    level_identifier_remap_table_install(identifier_pairs, pair_count);
-}
-
-
-
-
 
 void ledger_stub_0040b880_CellVisualChannelRelay(
     SceneCellVisualRelayRecord* record, const float corner_points[12],

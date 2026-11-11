@@ -51,4 +51,9 @@ extern float s_motion_waypoint_position[3];
 void motion_jitter_center_refresh(void);
 float motion_waypoint_default_random(void* context, float minimum, float maximum);
 
+#define LEVEL_REMAP_CAPACITY 128
+
+extern uint32_t s_level_remap_pairs[LEVEL_REMAP_CAPACITY][2];
+extern unsigned int s_level_remap_count;
+
 #endif /* LRR_GAME_UTIL_SHARED_HPP */

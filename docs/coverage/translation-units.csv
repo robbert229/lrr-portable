@@ -1360,9 +1360,9 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 0045d550,UiCursorMoveToChoiceEntry,33,GAME-034,Priorities.c,game,high,rdata,src/game/priorities.c
 0045d640,UiCursorMoveToElementCenter,33,GAME-034,Priorities.c,game,high,bss,src/game/priorities.c
 0045d6d0,PositionTrackerUpdateAll,33,GAME-034,Priorities.c,game,high,bss,src/game/priorities.c
-0045d7e0,LevelIdentifierRemapTableLoad,34,GAME-035,,game,low,boundary:GAME-035,src/game/util.cpp
-0045d870,CommandEntityReferenceRemap,34,GAME-035,,game,low,boundary:GAME-035,src/game/util.cpp
-0045d8a0,ObjectField14Set,34,GAME-035,,game,low,boundary:GAME-035,src/gods98/record.cpp
+0045d7e0,LevelIdentifierRemapTableLoad,34,GAME-035,,game,low,boundary:GAME-035,src/game/level_id_remap.cpp
+0045d870,CommandEntityReferenceRemap,34,GAME-035,,game,low,boundary:GAME-035,src/game/level_id_remap.cpp
+0045d8a0,ObjectField14Set,34,GAME-035,,game,low,boundary:GAME-035,src/game/level_id_remap.cpp
 0045d8b0,ScreenCoordNormalizeInit,35,GAME-036,,game,high,data;rdata,src/game/frontend.cpp
 0045da90,UiRenderRecordCreate,35,GAME-036,,game,high,bracketed,src/game/frontend.cpp
 0045daf0,UiRenderRecordFree,35,GAME-036,,game,high,bracketed,src/gods98/heap.cpp

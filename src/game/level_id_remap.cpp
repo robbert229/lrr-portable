@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+/* GAME-035 GAME-035: the unit's functions in original address order and the
+ * state they own, relocated verbatim by tools/relocate_unit.py (ADR 0006).
+ * Body hashes: docs/coverage/relocations/GAME-035.csv. */
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <math.h>
+#include <locale.h>
+#include "crt/crt.hpp"
+#include "gods98/resource.hpp"
+#include "gods98/heap.hpp"
+#include "gods98/view.hpp"
+#include "effects.hpp"
+#include "port_loop_ports.hpp"
+#include "util.hpp"
+#include "util_shared.hpp"
+#include "record.hpp"
+#include "sound.hpp"
+#include "string.hpp"
+#include "texture.hpp"
+#include <limits.h>
+#include "record_shared.hpp"
+
+namespace unported_ledger_stubs {
+// LevelIdentifierRemapTableLoad
+// FUNCTION: LEGORR 0x0045d7e0
+void ledger_stub_0045d7e0_LevelIdentifierRemapTableLoad(
+    const uint32_t* identifier_pairs, uint32_t pair_count)
+{
+    level_identifier_remap_table_install(identifier_pairs, pair_count);
+}
+} // namespace unported_ledger_stubs
+
+// FUNCTION: LEGORR 0x0045d870
+void command_entity_reference_remap(uint32_t* entity_reference)
+{
+    unsigned int i;
+    if (entity_reference == NULL) return;
+    for (i = 0; i < s_level_remap_count; ++i) {
+        if (*entity_reference == s_level_remap_pairs[i][0]) {
+            *entity_reference = s_level_remap_pairs[i][1];
+            return;
+        }
+    }
+}
+
+// FUNCTION: LEGORR 0x0045d8a0
+#if defined(_MSC_VER) && defined(_M_IX86)
+__declspec(naked) void object_field14_set(void* record, uint32_t value)
+{
+    __asm {
+        fld dword ptr [esp + 8]
+        mov eax, dword ptr [esp + 4]
+        fstp dword ptr [eax + 14h]
+        ret
+    }
+}
+#else
+void object_field14_set(void* record, uint32_t value)
+{
+    if (record == NULL) {
+        return; /* deviation: the corpus writes blindly */
+    }
+    __builtin_memcpy((char*)record + 0x14, &value, sizeof(value));
+}
+#endif

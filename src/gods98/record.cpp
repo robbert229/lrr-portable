@@ -1014,27 +1014,6 @@ void record_flags_24_or(void* record, uint32_t flags)
 }
 #endif
 
-// FUNCTION: LEGORR 0x0045d8a0
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void object_field14_set(void* record, uint32_t value)
-{
-    __asm {
-        fld dword ptr [esp + 8]
-        mov eax, dword ptr [esp + 4]
-        fstp dword ptr [eax + 14h]
-        ret
-    }
-}
-#else
-void object_field14_set(void* record, uint32_t value)
-{
-    if (record == NULL) {
-        return; /* deviation: the corpus writes blindly */
-    }
-    __builtin_memcpy((char*)record + 0x14, &value, sizeof(value));
-}
-#endif
-
 /* CopyTwoDwordPairToOutputs (FUN_00439930) — see record.hpp. */
 // FUNCTION: LEGORR 0x00439930
 #if defined(_MSC_VER) && defined(_M_IX86)
