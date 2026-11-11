@@ -6,7 +6,6 @@
 #ifndef LRR_GAME_ENTITY_CONFIG_SHARED_HPP
 #define LRR_GAME_ENTITY_CONFIG_SHARED_HPP
 
-extern i < 9u;
 extern TypeConfigTable s_minifigure_type_config;
 extern TypeConfigTable s_building_type_config;
 extern TypeConfigTable s_vehicle_type_config;
