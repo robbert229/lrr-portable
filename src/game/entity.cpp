@@ -201,8 +201,8 @@ static EntityClippedRectangleHooks s_entity_clipped_rectangle_hooks;
 static EntityPairRayHitCheckHook s_entity_pair_ray_hit_check_hook;
 static void* s_entity_pair_ray_hit_check_context;
 static void* s_entity_health_threshold_context;
-static EntityStateOverrideEntry s_entity_state_override_entries[64];
-static uint32_t s_entity_state_override_count;
+EntityStateOverrideEntry s_entity_state_override_entries[64];
+uint32_t s_entity_state_override_count;
 
 static uint32_t* entity_action_consume_counter_sidecar_get(EntitySlot* owner,
                                                            int create)
@@ -269,10 +269,10 @@ static void entity_path_motion_runtime_clear(EntitySlot* entity);
 namespace unported_ledger_stubs {
 void entity_path_motion_runtime_clear_impl(EntitySlot* entity);
 }
-static EntityStateOverrideValue330ApplyHook
+EntityStateOverrideValue330ApplyHook
     s_entity_state_override_value_330_apply;
-static EntityStateOverrideRenameHook s_entity_state_override_rename;
-static void* s_entity_state_override_context;
+EntityStateOverrideRenameHook s_entity_state_override_rename;
+void* s_entity_state_override_context;
 
 typedef struct EntitySimulationQueueItem {
     EntitySlot* target;
@@ -5709,40 +5709,6 @@ int entity_state_override_stack_push(const EntityStateOverrideEntry* entry)
         return 0;
     }
     s_entity_state_override_entries[s_entity_state_override_count++] = *entry;
-    return 1;
-}
-
-/* PopEntityStateOverride (FUN_00459240): only type-2 entities consume the
- * global LIFO; restore +0x3f0 and the saved name, then apply +0x330. */
-// FUNCTION: LEGORR 0x00459240
-int entity_state_override_pop(EntitySlot* entity)
-{
-    EntityStateOverrideEntry entry;
-    if (entity == NULL || entity->type != 2 ||
-        s_entity_state_override_count == 0u) {
-        return 0;
-    }
-    entry = s_entity_state_override_entries[--s_entity_state_override_count];
-    entity->flags_3f0 = entry.flags_3f0;
-    if (s_entity_state_override_rename != NULL) {
-        s_entity_state_override_rename(entity, entry.name,
-                                       s_entity_state_override_context);
-    }
-    else {
-        size_t length = 0;
-        while (length < sizeof(entry.name) && entry.name[length] != '\0') {
-            entity->name[length] = entry.name[length];
-            ++length;
-        }
-        entity->name[length] = '\0';
-    }
-    if (s_entity_state_override_value_330_apply != NULL) {
-        s_entity_state_override_value_330_apply(
-            entity, entry.value_330, s_entity_state_override_context);
-    }
-    else {
-        entity->indexed_record_slot_330 = (int32_t)entry.value_330;
-    }
     return 1;
 }
 

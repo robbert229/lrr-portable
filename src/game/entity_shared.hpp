@@ -18,4 +18,10 @@ namespace unported_ledger_stubs {
 uint32_t motion_config_profile_entries_release( void* config, MotionConfigProfileEntry* entries, uint32_t count, const MotionConfigProfileReleaseHooks* hooks);
 } // namespace unported_ledger_stubs
 
+extern EntityStateOverrideEntry s_entity_state_override_entries[64];
+extern uint32_t s_entity_state_override_count;
+extern EntityStateOverrideValue330ApplyHook s_entity_state_override_value_330_apply;
+extern EntityStateOverrideRenameHook s_entity_state_override_rename;
+extern void* s_entity_state_override_context;
+
 #endif /* LRR_GAME_ENTITY_SHARED_HPP */
