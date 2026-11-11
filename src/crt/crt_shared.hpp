@@ -10,4 +10,6 @@ extern uint32_t s_advisor_state_word;
 
 extern uint32_t s_mode_zero_flag;
 
+extern uint32_t s_config_word;
+
 #endif /* LRR_CRT_CRT_SHARED_HPP */

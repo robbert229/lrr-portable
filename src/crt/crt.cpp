@@ -1883,8 +1883,6 @@ uint32_t s_mode_zero_flag = 0u;     /* DAT_004c7178 */
 static uint32_t s_rockfall_base = 0u;      /* DAT_004c79a4 */
 // GLOBAL: LEGORR 0x004c7ea8
 static uint32_t s_ui_flag_word = 0u;       /* DAT_004c7ea8 */
-// GLOBAL: LEGORR 0x004a1ee4
-static uint32_t s_config_word = 0u;        /* DAT_004a1ee4 */
 
 // FUNCTION: LEGORR 0x00407340
 void state_flag_toggle_when_zero(void)
@@ -1923,12 +1921,6 @@ void global_flag_bit0_clear(void)
      * /Od register round-trip instead of folding to and mem,imm; the
      * corpus's byte-sized and is MSVC's own narrowing of the mask. */
     s_ui_flag_word = s_ui_flag_word & ~1u;
-}
-
-// FUNCTION: LEGORR 0x0040f5e0
-void global_config_value_set(uint32_t v)
-{
-    s_config_word = v;
 }
 
 uint32_t advisor_state_word_peek(void)  { return s_advisor_state_word; }

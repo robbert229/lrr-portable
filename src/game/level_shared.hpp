@@ -19,4 +19,51 @@
 
 extern uint32_t s_grid_rec[GRID_REC_REGION_DWORDS];
 
+/* --- cell timestamp lock table (see level.hpp) --------------------------
+ * Corpus regions: the (x,y) pair slots (stride 8) end at the per-entry
+ * active flags (stride 4), the stamps live in their own stride-4 region,
+ * and the scan bound is the first address past the flag region — all
+ * 1000 entries. */
+#define LEVEL_TS_COUNT 1000
+
+typedef struct CellCoordinateTimestamp {
+    int32_t x;
+    int32_t y;
+} CellCoordinateTimestamp;
+
+/* --- erosion timing band (2026-10-25) -------------------------------------
+ * These module statics mirror the reference timing, stage, and lock tables;
+ * EmergeMap and the live ticker now own their initialization and updates. */
+#define EROSION_MARK_COUNT 2000   /* DAT_004cfbb4 */
+
+#define EROSION_TICKET_COUNT LEVEL_TS_COUNT /* DAT_004d6914 */
+
+struct LavaErosionPendingCell {
+    int x;
+    int y;
+};
+extern LevelState* s_lava_erosion_level_context;
+void cell_init_pass(LevelState* s, float cell_x, uint32_t cell_y, ...);
+LevelState* terrain_current_level_resolve(void);
+extern CellCoordinateTimestamp s_ts_coordinates[LEVEL_TS_COUNT];
+extern int32_t s_ts_stamps[LEVEL_TS_COUNT];
+extern uint32_t s_ts_active[LEVEL_TS_COUNT];
+extern int32_t s_ts_now;
+extern float s_erosion_decay_scale;
+extern float s_erosion_delay_scale;
+extern LavaErosionPendingCell s_lava_erosion_pending_cells[EROSION_MARK_COUNT];
+extern uint32_t s_lava_erosion_pending_count;
+extern LavaErosionPendingCell s_lava_erosion_stage_coordinates[ EROSION_MARK_COUNT];
+extern uint32_t s_erosion_marks[EROSION_MARK_COUNT];
+extern float s_lava_erosion_stage_timers[EROSION_MARK_COUNT];
+extern float s_erosion_trigger_accumulator;
+extern int s_erosion_triggered_this_tick;
+extern unsigned int s_lava_erosion_mutation_threshold;
+extern LavaErosionEdgeApplyHook s_lava_erosion_edge_apply;
+extern LavaErosionCellActionHook s_lava_erosion_work_clear;
+extern LavaErosionCellActionHook s_lava_erosion_cell_change;
+extern LavaErosionSoundHook s_lava_erosion_sound;
+extern LavaErosionEventHook s_lava_erosion_event;
+extern void* s_lava_erosion_hook_context;
+
 #endif /* LRR_GAME_LEVEL_SHARED_HPP */
