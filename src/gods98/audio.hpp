@@ -45,7 +45,7 @@ void audio_active_shutdown(void); /* 0x0047a800 */
 void audio_system_shutdown(void);
 typedef int (*AudioSystemInitHook)(void* context, void* window);
 void audio_system_init_hook_set(AudioSystemInitHook hook, void* context);
-int audio_system_init(void* window); /* 0x0047a640 */
+extern "C" int audio_system_init(void* window); /* 0x0047a640 */
 
 /* Master volume 0..1 (FUN_00464ef0 analog); applied to the audio stream. */
 void audio_set_volume(AudioPlayer* p, float volume);

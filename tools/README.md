@@ -107,7 +107,7 @@ a.to_json()               # the same document as `--json`
 
 ```sh
 python3 tools/conversion_footprint.py G98-029 --json
-python3 tools/conversion_footprint.py G98-019 G98-022 GAME-003 --table   # summary and overlaps
+python3 tools/conversion_footprint.py G98-019 G98-024 GAME-003 --table   # summary and overlaps
 ```
 
 `compute_footprint(unit, root, stem=None, with_data=None)` reads

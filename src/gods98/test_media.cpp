@@ -15,6 +15,8 @@
 
 #include "media.hpp"
 #include "sound.hpp"
+#include "audio.hpp"
+#include "winmm.h"
 
 static int s_failures = 0;
 
@@ -85,49 +87,89 @@ static void test_timer(void)
  *  CD watchdog state machine (issue #301)
  * ------------------------------------------------------------------ */
 
+/* The CD player is the original-shape soundsys.c (Sound_PlayCDTrack,
+ * Sound_Update, Play/Stop/Status_CDTrack). Its MCI commands go to
+ * winmm_port.cpp's mciSendStringA, whose test hook stands in for the
+ * "cdaudio" device; the hook also answers the status queries. */
 static int cd_open_calls, cd_play_calls, cd_stop_calls, cd_close_calls;
-static int cd_last_track, cd_fail_stop, cd_fail_open;
+static int cd_status_calls, cd_last_track, cd_fail_stop, cd_fail_open;
+static int cd_playing_track; /* 1-based track the disc reports; 0 = stopped */
 static uint32_t cd_time;
-static int cd_command(void* context, const char* command, int argument, int* error)
+static MCIERROR cd_mci(LPCSTR command, LPSTR result, UINT capacity)
 {
-    (void)context;
-    if (!strcmp(command, "open")) { ++cd_open_calls; if (cd_fail_open) { *error = 2; return 0; } }
-    if (!strcmp(command, "play")) { ++cd_play_calls; cd_last_track = argument; }
-    if (!strcmp(command, "stop")) { ++cd_stop_calls; if (cd_fail_stop) { *error = 1; return 0; } }
-    if (!strcmp(command, "close")) ++cd_close_calls;
+    (void)capacity;
+    if (!strcmp(command, "open cdaudio")) {
+        ++cd_open_calls;
+        return cd_fail_open ? MCIERR_INVALID_DEVICE_NAME : 0;
+    }
+    if (!strncmp(command, "play cdaudio from ", 18)) {
+        ++cd_play_calls;
+        cd_last_track = atoi(command + 18);
+        return 0;
+    }
+    if (!strcmp(command, "stop cdaudio")) {
+        ++cd_stop_calls;
+        return cd_fail_stop ? 1 : 0;
+    }
+    if (!strcmp(command, "close cdaudio")) { ++cd_close_calls; return 0; }
+    if (!strcmp(command, "status cdaudio mode")) {
+        ++cd_status_calls;
+        strcpy(result, cd_playing_track != 0 ? "playing" : "stopped");
+        return 0;
+    }
+    if (!strcmp(command, "status cdaudio current track")) {
+        sprintf(result, "%d", cd_playing_track);
+        return 0;
+    }
+    return 0; /* "set cdaudio time format tmsf" */
+}
+static DWORD cd_clock(void) { return cd_time; }
+static int cd_audio_init(void* context, void* window)
+{
+    (void)context; (void)window;
     return 1;
 }
-static int cd_status(void* context, char* mode, int capacity, int* track, int* error)
-{
-    (void)context; (void)capacity; (void)error;
-    strcpy(mode, "stopped"); *track = 0; return 1;
-}
-static uint32_t cd_clock(void* context) { (void)context; return cd_time; }
 
 static void test_cd_watchdog(void)
 {
-    media_cd_audio_command_hook_set(cd_command, NULL);
-    media_cd_audio_status_hook_set(cd_status, NULL);
-    media_cd_audio_time_hook_set(cd_clock, NULL);
+    winmm_port_mci_hook_set(cd_mci);
+    winmm_port_time_hook_set(cd_clock);
+    audio_system_init_hook_set(cd_audio_init, NULL);
     media_cd_config_set(2, 3);
-    media_cd_audio_open_set(0);
+
+    CHECK(media_cd_audio_device_state_update(1) == 1, "nosound initialises");
     media_cd_watchdog_update(1);
-    CHECK(cd_open_calls == 0 && cd_play_calls == 0, "unavailable device does not play");
+    CHECK(cd_open_calls == 0 && cd_play_calls == 0, "sound off does not play");
     CHECK((media_cd_flags_get() & MEDIA_CD_WATCHDOG_BIT) != 0, "enable sets shared bit");
     CHECK(media_timer_pending() == 0, "track index is not a timer");
-    media_cd_audio_open_set(1);
+
+    CHECK(media_cd_audio_device_state_update(0) == 1,
+          "sound on starts 3D sound on the main window");
     media_cd_watchdog_update(1);
     CHECK(cd_open_calls == 1 && cd_play_calls == 1, "enable opens and plays");
     CHECK(cd_last_track >= 2 && cd_last_track <= 4, "configured track range reaches device");
+
     cd_time = 5000;
     media_cd_audio_watchdog_tick(0);
     media_cd_audio_watchdog_tick(1);
-    CHECK(cd_stop_calls == 0 && cd_play_calls == 1,
-          "disabled tick advances the poll timestamp without completion");
+    CHECK(cd_status_calls == 0 && cd_play_calls == 1,
+          "disabled tick advances the poll timestamp without polling");
+
+    cd_playing_track = cd_last_track;
     cd_time = 9001;
     media_cd_audio_watchdog_tick(1);
-    CHECK(cd_stop_calls == 1 && cd_close_calls == 1 && cd_play_calls == 2,
-          "completion stops and starts a newly selected track");
+    CHECK(cd_status_calls == 1 && cd_play_calls == 1 && cd_stop_calls == 0,
+          "a track still playing is left alone");
+
+    cd_playing_track = 0;
+    cd_time = 13002;
+    media_cd_audio_watchdog_tick(1);
+    /* Sound_Initialise leaves the loop flag at -1, so the ended track is
+     * replayed before the callback stops the disc and starts a new one. */
+    CHECK(cd_status_calls == 2 && cd_stop_calls == 1 && cd_close_calls == 1 &&
+              cd_play_calls == 3 && cd_open_calls == 2,
+          "completion replays, then stops and starts a newly selected track");
+
     media_cd_watchdog_update(0);
     CHECK((media_cd_flags_get() & MEDIA_CD_WATCHDOG_BIT) == 0 && cd_stop_calls == 2 && cd_close_calls == 2,
           "disable clears bit and stops and closes");
@@ -137,12 +179,13 @@ static void test_cd_watchdog(void)
     cd_fail_stop = 0;
     cd_fail_open = 1;
     media_cd_watchdog_update(1);
-    CHECK(cd_open_calls == 3 && cd_play_calls == 2, "failed open does not play");
+    CHECK(cd_open_calls == 3 && cd_play_calls == 3, "failed open does not play");
     cd_fail_open = 0;
-    media_cd_audio_open_set(0);
-    media_cd_audio_command_hook_set(NULL, NULL);
-    media_cd_audio_status_hook_set(NULL, NULL);
-    media_cd_audio_time_hook_set(NULL, NULL);
+
+    (void)media_cd_audio_device_state_update(1);
+    winmm_port_mci_hook_set(NULL);
+    winmm_port_time_hook_set(NULL);
+    audio_system_init_hook_set(NULL, NULL);
 }
 
 /* ------------------------------------------------------------------ *

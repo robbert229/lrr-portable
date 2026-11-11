@@ -127,7 +127,8 @@ add_library(gods98 STATIC
   ${ENGINE_DIR}/entity.cpp ${ENGINE_DIR}/lwsc_scene.cpp
   ${ENGINE_DIR}/movie.cpp ${ENGINE_DIR}/flic.cpp ${ENGINE_DIR}/media.cpp
   ${ENGINE_DIR}/scene_pool.cpp ${ENGINE_DIR}/scene_resources.cpp
-  ${ENGINE_DIR}/dxerror.c)
+  ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c
+  ${ENGINE_DIR}/sound_wave.cpp ${ENGINE_DIR}/winmm_port.cpp)
 target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 
 add_library(game STATIC
@@ -151,7 +152,7 @@ target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
 # C++ elsewhere, because the native port's miniwin headers are C++-only.
 set(LRR_ORIGINAL_SHAPE_SOURCES ${ENGINE_DIR}/utils.c ${ENGINE_DIR}/config.c
   ${ENGINE_DIR}/maths.c
-  ${GAME_DIR}/priorities.c ${ENGINE_DIR}/dxerror.c)
+  ${GAME_DIR}/priorities.c ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c)
 if(NOT LRR_CLASSIC_MSVC5)
   set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
     LANGUAGE CXX)
@@ -249,11 +250,11 @@ endif()
 include(CTest)
 if(BUILD_TESTING AND PLATFORM STREQUAL "native")
   set(GODS98_TESTS resource texture sound input audio camera view message airbeat
-    mainsim simtick enginebind block model entity_ae movie flic)
+    mainsim simtick enginebind block model entity_ae movie flic media)
   set(GODS98_TEST_SOURCES test_resource.cpp test_texture.cpp test_sound.cpp test_input.cpp
     test_audio.cpp test_camera.cpp test_view.cpp test_message.cpp test_airbeat.cpp
     test_mainsim.cpp test_simtick.cpp test_engine_bind.cpp test_block.cpp test_model.cpp
-    test_entity.cpp test_movie.cpp test_flic.cpp)
+    test_entity.cpp test_movie.cpp test_flic.cpp test_media.cpp)
   list(LENGTH GODS98_TESTS count)
   math(EXPR last "${count} - 1")
   foreach(i RANGE ${last})
