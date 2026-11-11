@@ -1,4 +1,4 @@
-# input_sha256: 716c0a55288b70106c0360316e910c85ce8ab94510c04c35c707103e9b3d97b8
+# input_sha256: 650a994d3c76e79b7ec31346ab3bb30d53293607f1b3dd1ba985df264ad8a27c
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -613,7 +613,7 @@
 0x00424810 100.00 entity_default_transform_apply_all
 0x00424830 12.50 selected_object_outlines_draw
 0x004248b0 7.61 selected_entity_ground_marker_render
-0x004250c0 8.44 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
+0x004250c0 9.72 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
 0x00425b40 66.67 periodic_entity_callback_dispatch
 0x00425c30 38.71 ledger_stub_00425c30_TransitionControl
 0x00425cd0 100.00 global_scroll_guard_set
@@ -2743,7 +2743,7 @@
 0x00424810 100.00 entity_default_transform_apply_all
 0x00424830 12.50 selected_object_outlines_draw
 0x004248b0 7.61 selected_entity_ground_marker_render
-0x004250c0 8.44 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
+0x004250c0 9.72 main_sim_step(struct EngineContext *, float, unsigned int *, unsigned int *, unsigned int *)
 0x00425b40 66.67 periodic_entity_callback_dispatch
 0x00425c30 38.71 ledger_stub_00425c30_TransitionControl
 0x00425cd0 100.00 global_scroll_guard_set

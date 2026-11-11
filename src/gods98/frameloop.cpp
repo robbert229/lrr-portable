@@ -1272,6 +1272,33 @@ static int frame_tutorial_world_pointer_admit(GameContext* game,
     return 1;
 }
 
+/* SimCursorInteractionTick (0x45adb0) zooms while the button stays held on
+ * a captured CameraControl ZoomIn/ZoomOut item (panel 9, items 0/1), unless
+ * system-state bit 0x1000 locks the camera. The pointer pass records the
+ * held item; the frame applies it with the frame's scale (see below). */
+static int s_frame_panel_zoom_item = -1;
+
+static void frame_panel_zoom_hold_capture(int held,
+                                          const FrontendPanelPointerHit* hit)
+{
+    s_frame_panel_zoom_item = -1;
+    if (held && hit != NULL && hit->category == 9 &&
+        (hit->item == 0 || hit->item == 1) &&
+        (system_state_flags_get() & 0x1000u) == 0u)
+        s_frame_panel_zoom_item = hit->item;
+}
+
+/* CameraZoomStepAdjust's step is the 25-Hz frame scale; the port's frame
+ * delta is in seconds. Frozen time adds no zoom, as in MainSimStep. */
+static void frame_panel_zoom_hold_apply(const EngineContext* engine, float dt)
+{
+    if (s_frame_panel_zoom_item < 0) return;
+    if ((engine->state & ENGINE_STATE_TIME_FROZEN) == 0u)
+        camera_zoom_step_adjust(s_frame_panel_zoom_item,
+                                EngineTimeScale() * dt * 25.0f);
+    s_frame_panel_zoom_item = -1;
+}
+
 /* UI arbitration owns a physical gesture through its release, even on a
  * miss or when the other button overlaps. World actions are admitted only
  * by selection_pointer_world_dispatch, once per admitted release sample. */
@@ -1449,6 +1476,7 @@ static void frame_pointer_ingress(GameContext* game, EngineContext* engine,
         int panel_hit = frontend_panels_pointer_update(&panel, input->mouse_x,
             input->mouse_y, logical, logical, &hit);
         if (panel_hit) engine->state |= 0x200u;
+        frame_panel_zoom_hold_capture(logical, &hit);
         if (!panel_hit && !logical && input->pointer_buttons == 0) {
             SimulationPointerCapture hover;
             AdvisorMessagePointerCapture message_hover;
@@ -3589,6 +3617,8 @@ int frameloop_application_init(void)
     ctx.views[2] = &views[2];
     views[0].controller = ctx.camera_controller;
     camera_distance_set(ctx.camera_controller, 200.0f);
+    /* CameraZoomStepAdjust targets the primary camera record (0x5560e4). */
+    camera_zoom_step_context_set(ctx.camera_controller);
     ctx.time_scale = 1.0f;
     const float dt = 1.0f / 30.0f;
     app.frame_dt = dt;
@@ -4717,7 +4747,33 @@ static int frameloop_application_gameplay_frame(float dt)
             /* Native still supplies untagged aggregate events. Preserve its
              * existing adapter without inventing physical button identity. */
             int native_ui_consumed = 0;
-            if ((ctx.state & 0x100u) == 0u && (ctx.debug & 0x1000u) == 0u)
+            {
+                /* Native has no physical button identity, so the panel
+                 * pass uses the aggregate level as its logical button. It
+                 * provides hover/press feedback, owns the gesture against
+                 * world clicks, and feeds the held camera-zoom buttons. */
+                static FrontendPanelPointerCapture native_panel;
+                FrontendPanelPointerHit native_hit;
+                const int native_enabled =
+                    (ctx.state & (0x100u | 0x100000u | 0x08000000u)) == 0u &&
+                    (ctx.debug & 0x1000u) == 0u &&
+                    (ctx.state & ENGINE_STATE_INDEXED_SUBSYS) != 0u;
+                if (native_enabled) {
+                    if (frontend_panels_pointer_update(&native_panel,
+                            input.mouse_x, input.mouse_y, input.mouse_down,
+                            pointer_dispatch_previous_down, &native_hit)) {
+                        ctx.state |= 0x200u;
+                        native_ui_consumed = 1;
+                    }
+                    if (native_panel.active) native_ui_consumed = 1;
+                    frame_panel_zoom_hold_capture(input.mouse_down,
+                                                  &native_hit);
+                } else {
+                    frontend_panels_pointer_capture_cancel(&native_panel);
+                }
+            }
+            if (!native_ui_consumed &&
+                (ctx.state & 0x100u) == 0u && (ctx.debug & 0x1000u) == 0u)
                 native_ui_consumed = simulation_pointer_action_dispatch(
                     input.mouse_x, input.mouse_y, input.mouse_down,
                     pointer_dispatch_previous_down,
@@ -4907,6 +4963,7 @@ static int frameloop_application_gameplay_frame(float dt)
         frame_world_arrows_begin_frame();
 #endif
         frame_camera_target_registry_update(&ctx, &game);
+        frame_panel_zoom_hold_apply(&ctx, dt);
         if (engine_callback_triplet_tick_dispatch(dt) == 0) {
             quit = 1;
             stop = "tick callback";
