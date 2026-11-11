@@ -38,4 +38,8 @@ extern void* s_terrain_point_pick_user;
 extern ViewportPointDispatchHooks s_viewport_point_dispatch_hooks;
 extern TexturedSceneDrawHooks s_textured_scene_draw_hooks;
 
+#define ROT_PAIR_SLOTS 256 /* deviation: bounded scratch (blind DAT stride) */
+
+extern int s_rot_pairs[ROT_PAIR_SLOTS * 2];
+
 #endif /* LRR_GODS98_VIEW_SHARED_HPP */

@@ -1181,8 +1181,8 @@ void indexed_surface_grid_install(uint32_t width, const void* const* entries,
     s_indexed_surface_hidden_count = 0u;
 }
 
-static SurfaceVisibilityAdapter s_surface_visibility_adapter;
-static void* s_surface_visibility_context;
+SurfaceVisibilityAdapter s_surface_visibility_adapter;
+void* s_surface_visibility_context;
 
 int surface_visibility_adapter_install(SurfaceVisibilityAdapter adapter,
                                         void* context)
@@ -1204,39 +1204,6 @@ int surface_visibility_adapter_remove(SurfaceVisibilityAdapter adapter,
     s_surface_visibility_adapter = NULL;
     s_surface_visibility_context = NULL;
     return 1;
-}
-
-#if defined(_MSC_VER) && defined(_M_IX86)
-static __declspec(naked) void surface_visibility_set_target(
-    const void* record, uint32_t flag)
-{
-    __asm {
-        mov ecx, dword ptr [esp + 4]
-        mov eax, dword ptr [esp + 8]
-        push eax
-        mov edx, dword ptr [ecx]
-        push edx
-        call scene_render_lock_toggle
-        add esp, 8
-        ret
-    }
-}
-#else
-static void surface_visibility_set_target(const void* record, uint32_t flag)
-{
-    scene_render_lock_toggle(rec_ptr(record, 0x00), (int)flag);
-}
-#endif
-
-/* SurfaceVisibilitySet: owned software meshes use their real visibility;
- * other records retain the target's record +0 handle/scene operation. */
-// FUNCTION: LEGORR 0x00464720
-void surface_visibility_set(const void* record, uint32_t flag)
-{
-    SurfaceVisibilityAdapter adapter = s_surface_visibility_adapter;
-    void* context = s_surface_visibility_context;
-    if (adapter != NULL && adapter(context, record, flag) != 0) return;
-    surface_visibility_set_target(record, flag);
 }
 
 /* SceneRenderLockToggle (FUN_00473b40): update the paired render interfaces

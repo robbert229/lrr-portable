@@ -6406,36 +6406,7 @@ void scene_mesh_color_set(void* object, int block, float red, float green,
 
 /* --- the rotated-pairs scratch (see view.hpp) ----------------------------- */
 
-#define ROT_PAIR_SLOTS 256 /* deviation: bounded scratch (blind DAT stride) */
-// GLOBAL: LEGORR 0x005013c8
-static int s_rot_pairs[ROT_PAIR_SLOTS * 2];
-
 void* rotated_pairs_scratch_peek(void) { return s_rot_pairs; }
-
-// FUNCTION: LEGORR 0x00464110
-void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
-                                 int count, int rotation)
-{
-    if (count > ROT_PAIR_SLOTS) {
-        count = ROT_PAIR_SLOTS; /* deviation: the corpus fills blindly */
-    }
-    for (int n = 0; n < count; ++n) {
-        const int t = rotation + 0x8000; /* the corpus's sign fold */
-        const int u = t >> 31;
-        const int sel = (((t ^ u) - u & 3) ^ u) - u;
-        int x = source[2 * n];
-        int y = source[2 * n + 1];
-        switch (sel) {
-        case 1: { const int h = x; x = -y; y = -h; } break;
-        case 2:  x = -x; y = -y; break;
-        case 3: { const int h = x; x = y; y = -h; } break;
-        default: break; /* identity (negative folds land here) */
-        }
-        s_rot_pairs[2 * n]     = x + offset_pair[0];
-        s_rot_pairs[2 * n + 1] = y + offset_pair[1];
-    }
-    return s_rot_pairs;
-}
 
 /* --- the curve band (2026-10-25; see view.hpp) ----------------------------- */
 

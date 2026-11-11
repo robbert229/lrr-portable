@@ -1447,9 +1447,9 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00463ea0,IndexedTextMetricsPairGet,38,GAME-039,,game,low,boundary:GAME-040,src/game/info_track_overlay.cpp
 00463ed0,IndexedTextMetricsPairSet,38,GAME-039,,game,low,boundary:GAME-040,src/game/info_track_overlay.cpp
 00463f00,SceneQuadGridEmit,38,GAME-039,,game,low,boundary:GAME-040,src/game/info_track_overlay.cpp
-00464110,RotatedPairsScratchFill,39,GAME-040,,game,high,bss,src/gods98/view.cpp
+00464110,RotatedPairsScratchFill,39,GAME-040,,game,high,bss,src/game/placement_footprint.cpp
 004641c0,BuildingPlacementFootprintRenderAndValidate,39,GAME-040,,game,high,rdata,
-00464720,SurfaceVisibilitySet,39,GAME-040,,game,medium,boundary:GAME-041,src/gods98/record.cpp
+00464720,SurfaceVisibilitySet,39,GAME-040,,game,medium,boundary:GAME-041,src/game/placement_footprint.cpp
 00464740,SoundAliasRegistryInit,40,GAME-041,SFX.c,game,high,bss;string,src/gods98/sound.cpp
 00464c50,SoundDynamicAliasRegistrationSet,40,GAME-041,SFX.c,game,high,bss,src/gods98/sound.cpp
 00464c70,SoundAliasLookup,40,GAME-041,SFX.c,game,high,bss,src/gods98/sound.cpp

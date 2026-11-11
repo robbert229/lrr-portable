@@ -20,4 +20,7 @@ extern uint32_t s_indexed_surface_entry_count;
 extern const void* const* s_indexed_surface_entries;
 extern uint32_t s_indexed_surface_hidden_count;
 
+extern SurfaceVisibilityAdapter s_surface_visibility_adapter;
+extern void* s_surface_visibility_context;
+
 #endif /* LRR_GODS98_RECORD_SHARED_HPP */
