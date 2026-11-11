@@ -251,7 +251,8 @@ static int  s_mgr_count = 0;
 static int  (*s_repos)(int, int, int) = NULL;
 static int  (*s_attach)(int, int, int, int) = NULL;
 static int  s_metrics[2] = { 0, 0 };
-static int  s_repos_n = 0, s_attach_n = 0;
+static int s_repos_n = 0;
+static int s_attach_n = 0;
 
 // GLOBAL: LEGORR 0x00500860
 extern "C" uint32_t simtick_timer_word = 0;
