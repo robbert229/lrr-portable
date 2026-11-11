@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'map_view.cpp',
   'level_id_remap.cpp',
   'pointer.cpp',
   'object_overlays.cpp',

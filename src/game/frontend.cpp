@@ -9405,18 +9405,11 @@ static const float s_snorm_colors_init[90] = {
     255.0f, 0.0f, 255.0f, 255.0f, 0.0f, 0.0f, 47.0f, 181.0f, 191.0f,
     191.0f, 191.0f, 108.0f, 0.0f, 0.0f
 };
-static float s_snorm_colors[90];                /* DAT band role */
-static float s_snorm_cells[2][20];              /* stride-16 unit lanes */
-static float s_snorm_pairs[2][7][2];            /* seven rows of mirrors */
-static uint32_t s_snorm_rows;
-static uint32_t s_snorm_sentinels[2];           /* DAT band sentinels */
-
-static const float s_snorm_pair_consts[2][7][2] = {
-    {{320.0f, 40.0f},  {360.0f, 180.0f}, {360.0f, 180.0f}, {400.0f, 180.0f},
-     {280.0f, 180.0f}, {220.0f, 180.0f}, {0.0f, 0.0f}},
-    {{420.0f, 180.0f}, {360.0f, 180.0f}, {360.0f, 180.0f}, {400.0f, 180.0f},
-     {280.0f, 180.0f}, {220.0f, 180.0f}, {320.0f, 40.0f}}
-};
+float s_snorm_colors[90];                /* DAT band role */
+float s_snorm_cells[2][20];              /* stride-16 unit lanes */
+float s_snorm_pairs[2][7][2];            /* seven rows of mirrors */
+uint32_t s_snorm_rows;
+uint32_t s_snorm_sentinels[2];           /* DAT band sentinels */
 
 void screen_coord_normalize_reset(void)
 {
@@ -9427,43 +9420,6 @@ void screen_coord_normalize_reset(void)
     s_snorm_rows = 0u;
     s_snorm_sentinels[0] = 0u;
     s_snorm_sentinels[1] = 0u;
-}
-
-// FUNCTION: LEGORR 0x0045d8b0
-void screen_coord_normalize_init(void)
-{
-    const double color_k = (double)((float)(1.0 / 255.0));
-    int i;
-    int mirror;
-    int row;
-    for (i = 0; i < 90; ++i) {
-        s_snorm_colors[i] = (float)((double)s_snorm_colors[i] * color_k);
-    }
-    for (i = 0; i < 20; ++i) {
-        s_snorm_cells[0][i] = 1.0f;
-        s_snorm_cells[1][i] = 1.0f;
-    }
-    for (mirror = 0; mirror < 2; ++mirror) {
-        for (row = 0; row < 7; ++row) {
-            s_snorm_pairs[mirror][row][0] = s_snorm_pair_consts[mirror][row][0];
-            s_snorm_pairs[mirror][row][1] = s_snorm_pair_consts[mirror][row][1];
-        }
-    }
-    s_snorm_rows = 7u;
-    const double w = (double)((float)display_width_get());
-    const double h = (double)((float)display_height_get());
-    const double kx = (double)((float)(1.0 / 640.0));
-    const double ky = (double)((float)(1.0 / 480.0));
-    for (mirror = 0; mirror < 2; ++mirror) {
-        for (row = 0; row < 7; ++row) {
-            s_snorm_pairs[mirror][row][0]
-                = (float)((w * kx) * (double)s_snorm_pairs[mirror][row][0]);
-            s_snorm_pairs[mirror][row][1]
-                = (float)((h * ky) * (double)s_snorm_pairs[mirror][row][1]);
-        }
-    }
-    s_snorm_sentinels[0] = 0xffffffffu;
-    s_snorm_sentinels[1] = 0xffffffffu;
 }
 
 float screen_coord_normalize_color_peek(int index)
@@ -9836,37 +9792,6 @@ static int frontend_config_boolean(const char* value)
     return 2;
 }
 
-
-/* UiRenderRecordCreate (FUN_0045da90): build the 0x3c corpus record —
- * the source, its four copied payload words, the extra argument, and the
- * source's float read at byte offset +0x10 (the corpus threads that read
- * through its float10 widening — a float -> float10 -> float round trip
- * is exact, so the port copies). Deviations: the record fields widen
- * LP64-safe, the payload array and source are guarded, and the corpus's
- * uninitialized record tail stays absent from the modeled record. */
-// FUNCTION: LEGORR 0x0045da90
-UiRenderRecord* ui_render_record_create(void* source,
-                                        const uint32_t* payload,
-                                        uint32_t extra)
-{
-    if (source == NULL || payload == NULL) {
-        return NULL; /* deviation: the corpus strides blindly */
-    }
-    UiRenderRecord* rec = (UiRenderRecord*)engine_heap_alloc(
-        (long)sizeof(UiRenderRecord));
-    if (rec == NULL) {
-        return NULL;
-    }
-    rec->source = source;
-    rec->payload[0] = payload[0];
-    rec->payload[1] = payload[1];
-    rec->payload[2] = payload[2];
-    rec->payload[3] = payload[3];
-    rec->extra = extra;
-    __builtin_memcpy(&rec->float_at_10,
-                     (const unsigned char*)source + 0x10, sizeof rec->float_at_10);
-    return rec;
-}
 
 void sav_visited_entry_set(int which, int index, void* record,
                            uint32_t word)

@@ -57,4 +57,10 @@ int frontend_config_fields(const char* value, char* storage, unsigned int storag
 
 extern PointerCursorState s_pointer_cursor_runtime;
 
+extern float s_snorm_colors[90];
+extern float s_snorm_cells[2][20];
+extern float s_snorm_pairs[2][7][2];
+extern uint32_t s_snorm_rows;
+extern uint32_t s_snorm_sentinels[2];
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */

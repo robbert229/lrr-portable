@@ -9125,22 +9125,6 @@ int task_type_and_condition_check(const void* unused,
     return 1;
 }
 
-/* EntityTypeAndStateFlagPredicate (FUN_0045e400) — see entity.hpp. */
-// FUNCTION: LEGORR 0x0045e400
-int entity_type_and_state_flag_predicate(const EntitySlot* e)
-{
-    if (e == NULL) {
-        return 0; /* deviation: the corpus strides blindly */
-    }
-    const int type = e->type;
-    if (type != 0xe && type != 5 && type != 8 && type != 0xd
-        && type != 0x10 && type != 0x11 && type != 0x13
-        && type != 9 && type != 0x12 && type != 4 && type != 0xc) {
-        return ((~entity_state_flags_get(e)) >> 29) & 1u;
-    }
-    return 0;
-}
-
 /* ObjectFilterMatchesActionTarget (FUN_00404f50) — see entity.hpp. The
  * identity pair (+0x20/+0x24/+0x28) stays dword; only the +0x10 entity
  * handle widens for the host pointer it dereferences. */

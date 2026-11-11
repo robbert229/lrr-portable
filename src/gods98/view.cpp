@@ -52,10 +52,10 @@ void view_follow_target_hooks_set(ViewObjectLookupHook lookup,
  * the corpus's active-view global. Its owner is the unported config setup. */
 // GLOBAL: LEGORR 0x005560e4
 static void* s_zoom_step_context;
-static TerrainPointPickCellCheckHook s_terrain_point_pick_hook;
-static void* s_terrain_point_pick_user;
-static ViewportPointDispatchHooks s_viewport_point_dispatch_hooks;
-static TexturedSceneDrawHooks s_textured_scene_draw_hooks;
+TerrainPointPickCellCheckHook s_terrain_point_pick_hook;
+void* s_terrain_point_pick_user;
+ViewportPointDispatchHooks s_viewport_point_dispatch_hooks;
+TexturedSceneDrawHooks s_textured_scene_draw_hooks;
 
 static SceneOwnerLinkReleaseFn s_owner_link_interface_release;
 static SceneOwnerLinkReleaseFn s_owner_link_child_release;
@@ -3940,73 +3940,6 @@ int point_distance_within_radius(int x1, int y1, int x2, int y2, int radius)
 }
 #endif
 
-/* RectContainsPointHalfOpen (FUN_0045e660): rect is the corpus record's
- * float quad {x, y, w, h} at +0x4…+0x10 — half-open in both axes. */
-// FUNCTION: LEGORR 0x0045e660
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) int rect_contains_point_half_open(const float* rect_record,
-                                                    int x, int y)
-{
-    __asm {
-        sub esp, 8
-        mov eax, dword ptr [esp + 0x10]
-        mov ecx, dword ptr [esp + 0x0c]
-        xor edx, edx
-        mov dword ptr [esp], eax
-        mov dword ptr [esp + 4], edx
-        fild qword ptr [esp]
-        fcom dword ptr [ecx + 4]
-        fnstsw ax
-        test ah, 1
-        jne rect_contains_false_with_stack
-        fld dword ptr [ecx + 0x0c]
-        fadd dword ptr [ecx + 4]
-        fxch st(1)
-        fcompp
-        fnstsw ax
-        test ah, 1
-        je rect_contains_false
-
-        mov eax, dword ptr [esp + 0x14]
-        mov dword ptr [esp + 4], edx
-        mov dword ptr [esp], eax
-        fild qword ptr [esp]
-        fcom dword ptr [ecx + 8]
-        fnstsw ax
-        test ah, 1
-        jne rect_contains_false_with_stack
-        fld dword ptr [ecx + 0x10]
-        fadd dword ptr [ecx + 8]
-        fxch st(1)
-        fcompp
-        fnstsw ax
-        test ah, 1
-        je rect_contains_false
-        mov eax, 1
-        add esp, 8
-        ret
-
-    rect_contains_false_with_stack:
-        fstp st(0)
-    rect_contains_false:
-        xor eax, eax
-        add esp, 8
-        ret
-    }
-}
-#else
-int rect_contains_point_half_open(const float* rect_record, int x, int y)
-{
-    if (((rect_record[1] <= (float)x)
-         && ((float)x < rect_record[3] + rect_record[1]))
-        && ((rect_record[2] <= (float)y)
-            && ((float)y < rect_record[4] + rect_record[2]))) {
-        return 1;
-    }
-    return 0;
-}
-#endif
-
 /* ---- offset-point rect family (findings 241/363/446) --------------------- */
 
 /* Shared body of the portable rectangle helpers. The retail leaves obtain
@@ -5010,43 +4943,6 @@ void terrain_point_pick_cell_check_hook_set(
     s_terrain_point_pick_user = user;
 }
 
-// FUNCTION: LEGORR 0x0045e6d0
-int terrain_point_pick_resolve(const TerrainPointPickRegion* region,
-                               uint32_t screen_x, uint32_t screen_y,
-                               float out_world_xy[2],
-                               uint32_t argument_a,
-                               uint32_t argument_b)
-{
-    float world_x;
-    float world_y;
-    float x = (float)screen_x;
-    float y = (float)screen_y;
-    if (region == NULL || s_terrain_point_pick_hook == NULL ||
-        region->tile_size == 0.0f ||
-        x < region->screen_left ||
-        x >= region->screen_left + region->screen_width ||
-        y < region->screen_top ||
-        y >= region->screen_top + region->screen_height) {
-        return 0;
-    }
-    world_y = region->scale *
-        ((region->screen_top + region->screen_width * 0.5f) - y) /
-        region->tile_size + region->world_origin_y;
-    world_x = region->world_origin_x - region->scale *
-        ((region->screen_left + region->screen_width * 0.5f) - x) /
-        region->tile_size;
-    if (!s_terrain_point_pick_hook(region->grid_token, world_x, world_y,
-                                   argument_a, argument_b,
-                                   s_terrain_point_pick_user)) {
-        return 0;
-    }
-    if (out_world_xy != NULL) {
-        out_world_xy[0] = world_x;
-        out_world_xy[1] = world_y;
-    }
-    return 1;
-}
-
 void viewport_point_dispatch_hooks_set(const ViewportPointDispatchHooks* hooks)
 {
     if (hooks == NULL)
@@ -5056,38 +4952,6 @@ void viewport_point_dispatch_hooks_set(const ViewportPointDispatchHooks* hooks)
         s_viewport_point_dispatch_hooks = *hooks;
 }
 
-// FUNCTION: LEGORR 0x0045e820
-int viewport_point_callback_dispatch(const TerrainPointPickRegion* region,
-                                     uint32_t screen_x, uint32_t screen_y,
-                                     uint32_t* object_handle,
-                                     float out_position_xy[2])
-{
-    float world_xy[2];
-    float position[3];
-    uint32_t handle = 0u;
-    if (object_handle != NULL) *object_handle = 0u;
-    if (region == NULL || object_handle == NULL ||
-        s_viewport_point_dispatch_hooks.resolve == NULL ||
-        !terrain_point_pick_resolve(region, screen_x, screen_y, world_xy,
-                                    0u, 0u)) {
-        return 0;
-    }
-    if (!s_viewport_point_dispatch_hooks.resolve(region->grid_token,
-            world_xy[0], world_xy[1], region->scale, &handle,
-            s_viewport_point_dispatch_hooks.user) || handle == 0u) {
-        return 0;
-    }
-    *object_handle = handle;
-    if (out_position_xy != NULL &&
-        s_viewport_point_dispatch_hooks.position_get != NULL &&
-        s_viewport_point_dispatch_hooks.position_get(handle, position,
-            s_viewport_point_dispatch_hooks.user)) {
-        out_position_xy[0] = position[0];
-        out_position_xy[1] = position[1];
-    }
-    return 1;
-}
-
 void textured_scene_draw_hooks_set(const TexturedSceneDrawHooks* hooks)
 {
     if (hooks == NULL)
@@ -5095,38 +4959,6 @@ void textured_scene_draw_hooks_set(const TexturedSceneDrawHooks* hooks)
                sizeof(s_textured_scene_draw_hooks));
     else
         s_textured_scene_draw_hooks = *hooks;
-}
-
-// FUNCTION: LEGORR 0x0045db00
-void textured_scene_object_draw_at_position(const void* view,
-                                            const float position_xy[2],
-                                            float z, float size)
-{
-    float saved_matrix[16];
-    float position[4];
-    float scale;
-    int width;
-    int saved = 0;
-    if (view == NULL || position_xy == NULL ||
-        s_textured_scene_draw_hooks.draw == NULL) return;
-    if (s_textured_scene_draw_hooks.state_save != NULL)
-        saved = s_textured_scene_draw_hooks.state_save(
-            s_textured_scene_draw_hooks.user, saved_matrix);
-    if (s_textured_scene_draw_hooks.view_transform_set != NULL)
-        s_textured_scene_draw_hooks.view_transform_set(
-            s_textured_scene_draw_hooks.user, (const char*)view + 4);
-    position[0] = position_xy[0];
-    position[1] = position_xy[1];
-    position[2] = z;
-    position[3] = 0.0f;
-    view_point_to_screen_geometry_transform(view, position);
-    scale = size * 0.7f + 0.3f;
-    width = (int)scale;
-    s_textured_scene_draw_hooks.draw(s_textured_scene_draw_hooks.user,
-        position, width, width * 2, scale * 0.7f, scale * 0.9f, scale);
-    if (saved && s_textured_scene_draw_hooks.state_restore != NULL)
-        s_textured_scene_draw_hooks.state_restore(
-            s_textured_scene_draw_hooks.user, saved_matrix);
 }
 
 /* GridOperationArgumentAdapter (FUN_00442540) — see view.hpp. */
@@ -6606,39 +6438,6 @@ void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
 }
 
 /* --- the curve band (2026-10-25; see view.hpp) ----------------------------- */
-
-/* ViewPointToScreenGeometryTransform (FUN_0045e940) — see view.hpp. The
- * record window is the projection block: center +4/+8, half-size +c/+10,
- * scale pair +14/+18, screen offsets +1c/+20. Deviations: NULL guards on
- * both inputs (the corpus dereferences blindly). The scale ratio is
- * recomputed at each output as in the corpus. */
-// FUNCTION: LEGORR 0x0045e940
-void view_point_to_screen_geometry_transform(const void* view, float p[4])
-{
-    if (view == NULL || p == NULL) {
-        return; /* deviation: the corpus strides both blindly */
-    }
-    const char* w = (const char*)view;
-    float cx = 0.0f, cy = 0.0f, half_x = 0.0f, half_y = 0.0f;
-    float scale_a = 0.0f, scale_b = 0.0f, off_x = 0.0f, off_y = 0.0f;
-    __builtin_memcpy(&cx, w + 0x04, sizeof cx);
-    __builtin_memcpy(&cy, w + 0x08, sizeof cy);
-    __builtin_memcpy(&half_x, w + 0x0c, sizeof half_x);
-    __builtin_memcpy(&half_y, w + 0x10, sizeof half_y);
-    __builtin_memcpy(&scale_a, w + 0x14, sizeof scale_a);
-    __builtin_memcpy(&scale_b, w + 0x18, sizeof scale_b);
-    __builtin_memcpy(&off_x, w + 0x1c, sizeof off_x);
-    __builtin_memcpy(&off_y, w + 0x20, sizeof off_y);
-
-    p[0] = p[0] - off_x;
-    p[1] = p[1] - off_y;
-    p[0] = (scale_a / scale_b) * p[0];
-    p[1] = (scale_a / scale_b) * p[1];
-    p[2] = (scale_a / scale_b) * p[2];
-    p[0] = p[0] + half_x * 0.5f + cx;
-    p[1] = (half_y * 0.5f + cy) - p[1];
-    p[3] = (scale_a / scale_b) * p[3];
-}
 
 /* The callback is vtable slot 7 (byte offset 0x1c on x86). Express it as a
  * virtual method so older MSVC compilers use their implicit thiscall ABI. */
