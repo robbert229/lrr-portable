@@ -1,4 +1,4 @@
-# input_sha256: 4268b8a8f018c08e7bda6f815b560cf132b7afdbfd3f00f2eef8e92cd5ce53c6
+# input_sha256: 846fc5cf2cd1d9d8d92cc4c81b0ded9bc1264374eb81799c127bd7c85a022786
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -194,7 +194,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 43.56 segment_2d_point_distance
+0x004089d0 40.89 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -977,7 +977,7 @@
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
-0x00444680 4.89 entity_step_movement_vector_resolve
+0x00444680 4.88 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
@@ -1028,7 +1028,7 @@
 0x00449cd0 91.67 ledger_stub_00449cd0_SceneObjectStateHandleApplyValue
 0x00449f50 39.10 ledger_stub_00449f50_EntityTypeOperationDispatch
 0x00449ff0 29.01 entity_type_operation_release
-0x0044a070 22.49 entity_follow_target_pose_get
+0x0044a070 28.69 entity_follow_target_pose_get
 0x0044a200 91.49 entity_type_component_get
 0x0044a2a0 34.41 entity_work_object_position_get
 0x0044a310 0.00 ledger_stub_0044a310_ObjectMovementInputAccumulate
@@ -2355,7 +2355,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 43.56 segment_2d_point_distance
+0x004089d0 40.89 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -3138,7 +3138,7 @@
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
-0x00444680 4.89 entity_step_movement_vector_resolve
+0x00444680 4.88 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
@@ -3189,7 +3189,7 @@
 0x00449cd0 91.67 ledger_stub_00449cd0_SceneObjectStateHandleApplyValue
 0x00449f50 39.10 ledger_stub_00449f50_EntityTypeOperationDispatch
 0x00449ff0 29.01 entity_type_operation_release
-0x0044a070 22.49 entity_follow_target_pose_get
+0x0044a070 28.69 entity_follow_target_pose_get
 0x0044a200 91.49 entity_type_component_get
 0x0044a2a0 34.41 entity_work_object_position_get
 0x0044a310 0.00 ledger_stub_0044a310_ObjectMovementInputAccumulate

@@ -22,9 +22,11 @@ src/game/actor_scene.hpp
 src/game/advisor.cpp
 src/game/ai.cpp
 src/game/ai.hpp
+src/game/ai_shared.hpp
 src/game/animation_object.cpp
 src/game/bezier.c
 src/game/bezier.h
+src/game/bubbles.cpp
 src/game/building_model.cpp
 src/game/building_scene.cpp
 src/game/building_scene.hpp
@@ -39,6 +41,7 @@ src/game/dependency_grid.cpp
 src/game/dependency_grid_shared.hpp
 src/game/effects.cpp
 src/game/effects.hpp
+src/game/effects_shared.hpp
 src/game/encyclopedia.cpp
 src/game/entity.cpp
 src/game/entity.hpp
