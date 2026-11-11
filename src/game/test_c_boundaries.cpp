@@ -37,6 +37,7 @@
 #include "platform/window.h"
 #include "gods98/keys.h"
 #include "gods98/g98_024.h"
+#include "game/bezier.h"
 
 int main(void)
 {

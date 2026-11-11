@@ -65,13 +65,6 @@ static TexturedSceneDrawHooks s_textured_scene_draw_hooks;
 // GLOBAL: LEGORR 0x0049e008
 static const float s_normalize_unit = 1.0f;   /* DAT_0049e008, verified */
 
-/* The curve builder's divisor is the .rdata dword 1.0 at 0x49e050
- * (objdump-verified fdivr operand in FUN_00406820; a different .rdata dword
- * from 0x49e008, since Reccmp resolves constants per-address); a named
- * const static keeps the fld operand resolvable by Reccmp. */
-// GLOBAL: LEGORR 0x0049e050
-static const float s_curve_unit = 1.0f;   /* DAT_0049e050, verified */
-
 static SceneOwnerLinkReleaseFn s_owner_link_interface_release;
 static SceneOwnerLinkReleaseFn s_owner_link_child_release;
 static ViewportDimensionsQueryFn s_viewport_dimensions_query;
@@ -3986,7 +3979,7 @@ void scene_object_owner_link_release(SceneObjectOwnerLinkRecord* record)
  *   FUN_00401720 vec_scale, FUN_00401500 vec_add,  FUN_004016c0 vec_sub,
  *   FUN_00401470 vec_cross, FUN_00401750 vec_normalize,
  *   FUN_00401420 vec_dist,  FUN_004016f0 vec_dot,  FUN_004013a0 vec_len,
- *   FUN_00401240 vec2_dist, FUN_00406730 vec2_dist_alt,
+ *   FUN_00401240 vec2_dist,
  *   FUN_0047c0c0 vec_exact_equal. */
 
 // FUNCTION: LEGORR 0x00401720
@@ -4255,16 +4248,6 @@ float vec2_dist(const float* a, const float* b) /* FUN_00401240 */
     float dy = a[1] - b[1];
     float dx = a[0] - b[0];
     return sqrtf(dy * dy + dx * dx);
-}
-
-// FUNCTION: LEGORR 0x00406730
-float vec2_dist_alt(const float* a, const float* b) /* FUN_00406730 */
-{
-    /* Corpus variant: x term first through an extra round-trip, then y —
-     * opposite the primary helper's x87 arithmetic order. */
-    float dx = a[0] - b[0];
-    float dy = a[1] - b[1];
-    return sqrtf(dx * dx + dy * dy);
 }
 
 // FUNCTION: LEGORR 0x004089d0
@@ -6100,71 +6083,6 @@ void float_negate_absolute_value(float* value)
 }
 #endif
 
-/* Vector2SetLength (FUN_00406760) — see view.hpp. */
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* The mapped target is unchecked and retains the corpus's x87 operand and
- * stack-slot sequence. The portable API below keeps its safety guards. */
-// FUNCTION: LEGORR 0x00406760
-static __declspec(naked) void vector2_set_length_target(float v[2],
-                                                        float length)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        mov ecx, dword ptr [eax]
-        fld dword ptr [eax + 4]
-        mov dword ptr [esp + 4], ecx
-        fld dword ptr [esp + 4]
-        fld st(1)
-        fmul st, st(2)
-        fld dword ptr [eax]
-        fxch st(2)
-        fmul dword ptr [esp + 4]
-        fld dword ptr [eax + 4]
-        fxch st(1)
-        faddp st(2), st
-        fxch st(1)
-        fsqrt
-        fst dword ptr [esp + 4]
-        fdiv dword ptr [esp + 8]
-        fstp dword ptr [esp + 4]
-        fxch st(1)
-        fdiv dword ptr [esp + 4]
-        fxch st(1)
-        fdiv dword ptr [esp + 4]
-        fxch st(1)
-        fstp dword ptr [eax]
-        fstp dword ptr [eax + 4]
-        fstp st(0)
-        ret
-        nop
-        nop
-        nop
-        nop
-        nop
-        nop
-    }
-}
-
-void vector2_set_length(float v[2], float length)
-{
-    if (v == NULL || length == 0.0f) return;
-    vector2_set_length_target(v, length);
-}
-#else
-void vector2_set_length(float v[2], float length)
-{
-    if (v == NULL) {
-        return; /* deviation: the corpus dereferences blindly */
-    }
-    if (length == 0.0f) {
-        return; /* deviation: the corpus divides blindly */
-    }
-    const float s = sqrtf(v[0] * v[0] + v[1] * v[1]) / length;
-    v[0] = v[0] / s;
-    v[1] = v[1] / s;
-}
-#endif
-
 /* CameraZoomStepAdjust (FUN_0045bf20) — see view.hpp. */
 void camera_zoom_step_context_set(void* context)
 {
@@ -7653,266 +7571,6 @@ void* rotated_pairs_scratch_fill(const int* offset_pair, const int* source,
 
 /* --- the curve band (2026-10-25; see view.hpp) ----------------------------- */
 
-/* CubicBezierPointEvaluate (FUN_004065f0) — see view.hpp. Its portable
- * fallback keeps the corpus's polynomial term shapes. */
-// FUNCTION: LEGORR 0x004065f0
-#if defined(_MSC_VER) && defined(_M_IX86)
-/* The five NULL checks preserve the port's tested guard behavior; after them
- * the x87 body follows FUN_004065f0 instruction-for-instruction. The repeated
- * dword operand is the corpus's .rdata 3.0f at 0x49e048 (bytes 00 00 40 40). */
-__declspec(naked) void cubic_bezier_point_evaluate(float out[2],
-                                                   const float* p0,
-                                                   const float* p1,
-                                                   const float* p2,
-                                                   const float* p3, float t)
-{
-    __asm {
-        mov eax, dword ptr [esp + 4]
-        test eax, eax
-        je bezier_point_null_return
-        mov eax, dword ptr [esp + 8]
-        test eax, eax
-        je bezier_point_null_return
-        mov eax, dword ptr [esp + 0x0c]
-        test eax, eax
-        je bezier_point_null_return
-        mov eax, dword ptr [esp + 0x10]
-        test eax, eax
-        je bezier_point_null_return
-        mov eax, dword ptr [esp + 0x14]
-        test eax, eax
-        je bezier_point_null_return
-
-        sub esp, 0x10
-        mov edx, dword ptr [esp + 0x1c]
-        mov eax, dword ptr [esp + 0x18]
-        push esi
-        mov esi, dword ptr [esp + 0x28]
-        fld dword ptr [edx]
-        fmul dword ptr ds:[0049e048h]
-        fld dword ptr [esi]
-        fmul dword ptr ds:[0049e048h]
-        fxch st(1)
-        fadd dword ptr [eax]
-        fxch st(1)
-        mov ecx, dword ptr [esp + 0x24]
-        fsubr dword ptr [ecx]
-        fld dword ptr [esp + 0x2c]
-        fld st(2)
-        fsub dword ptr [eax]
-        fxch st(2)
-        fsub st, st(3)
-        fxch st(1)
-        fmul dword ptr [esp + 0x2c]
-        fxch st(2)
-        fmul dword ptr ds:[0049e048h]
-        fld dword ptr [ecx]
-        fxch st(2)
-        fmul dword ptr ds:[0049e048h]
-        fxch st(2)
-        fsub dword ptr [eax]
-        fxch st(1)
-        fstp dword ptr [esp + 0x20]
-        fxch st(1)
-        fsub dword ptr [esp + 0x20]
-        fxch st(1)
-        fsub dword ptr [esp + 0x20]
-        fxch st(2)
-        fst dword ptr [esp + 0x28]
-        fmul dword ptr [esp + 0x2c]
-        fxch st(1)
-        fstp dword ptr [esp + 0x1c]
-        fxch st(1)
-        fsub dword ptr [esp + 0x1c]
-        fld dword ptr [esp + 0x1c]
-        fmul dword ptr [esp + 0x28]
-        fxch st(2)
-        fstp dword ptr [esp + 0x1c]
-        fld dword ptr [esp + 0x20]
-        fld dword ptr [edx + 4]
-        fxch st(2)
-        fmul dword ptr [esp + 0x1c]
-        fld dword ptr [esi + 4]
-        fxch st(2)
-        fmul dword ptr [esp + 0x2c]
-        fxch st(3)
-        fmul dword ptr ds:[0049e048h]
-        fxch st(2)
-        fmul dword ptr ds:[0049e048h]
-        fxch st(4)
-        faddp st(1), st
-        fxch st(1)
-        fadd dword ptr [eax + 4]
-        fxch st(2)
-        faddp st(1), st
-        fxch st(2)
-        fsubr dword ptr [ecx + 4]
-        fxch st(2)
-        fadd dword ptr [eax]
-        fxch st(1)
-        fst dword ptr [esp + 8]
-        fxch st(2)
-        fst dword ptr [esp + 0x10]
-        fsub dword ptr [esp + 8]
-        fxch st(1)
-        mov edx, dword ptr [esp + 0x18]
-        pop esi
-        fstp dword ptr [edx]
-        fxch st(1)
-        fsub dword ptr [eax + 4]
-        fld dword ptr [ecx + 4]
-        fxch st(2)
-        fmul dword ptr ds:[0049e048h]
-        fxch st(1)
-        fmul dword ptr ds:[0049e048h]
-        fxch st(2)
-        fsub dword ptr [eax + 4]
-        fxch st(2)
-        fstp dword ptr [esp + 0x1c]
-        fsub dword ptr [esp + 0x1c]
-        fxch st(1)
-        fsub dword ptr [esp + 0x1c]
-        fld dword ptr [esp + 0x1c]
-        fmul dword ptr [esp + 0x28]
-        fxch st(2)
-        fstp dword ptr [esp + 0x28]
-        fsub dword ptr [esp + 0x28]
-        fld dword ptr [esp + 0x28]
-        fmul dword ptr [esp + 0x24]
-        fxch st(1)
-        fmul dword ptr [esp + 0x18]
-        fxch st(2)
-        faddp st(2), st
-        faddp st(1), st
-        fadd dword ptr [eax + 4]
-        fstp dword ptr [edx + 4]
-        fstp st(0)
-        add esp, 0x10
-        ret
-
-    bezier_point_null_return:
-        ret
-    }
-}
-#else
-void cubic_bezier_point_evaluate(float out[2], const float* p0, const float* p1,
-                                 const float* p2, const float* p3, float t)
-{
-    if (out == NULL || p0 == NULL || p1 == NULL || p2 == NULL || p3 == NULL) {
-        return; /* deviation: the corpus strides the points blindly */
-    }
-    const double tt = (double)t * (double)t; /* the x87 t-squared word */
-    const double q = (double)p1[0] * 3.0 + (double)p0[0]; /* x: P1.x*3 + P0.x */
-    const double s4 = (q - (double)p0[0]) * 3.0;
-    const double s3 = (((double)p2[0] - (double)p3[0] * 3.0) - q) * 3.0 - s4;
-    const double s1 = ((double)p2[0] - (double)p0[0]) - s4 - s3;
-    const double r6 = (double)p1[1] * 3.0 + (double)p0[1];
-    const double t4 = (r6 - (double)p0[1]) * 3.0;
-    const double t3 = (((double)p2[1] - (double)p3[1] * 3.0) - r6) * 3.0 - t4;
-    const double t1 = ((double)p2[1] - (double)p0[1]) - t4 - t3;
-
-    double x = (double)s4 * (double)t;
-    x += (double)s3 * tt;
-    x += (double)s1 * tt * (double)t;
-    x += (double)p0[0];
-    const float fx = (float)x;
-    double y = (double)t3 * tt;
-    y += (double)t4 * (double)t;
-    y += (double)t1 * tt * (double)t;
-    y += (double)p0[1];
-    const float fy = (float)y;
-
-    __builtin_memcpy(&out[0], &fx, sizeof fx);
-    __builtin_memcpy(&out[1], &fy, sizeof fy);
-}
-#endif
-
-/* BezierCurveSamplesBuild (FUN_00406820) — see view.hpp. */
-// FUNCTION: LEGORR 0x00406820
-void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
-                                const uint32_t* p3, const uint32_t* p4,
-                                const uint32_t* p5, uint32_t count)
-{
-    if (dest == NULL || control == NULL) {
-        return; /* deviation: the corpus strides the record blindly */
-    }
-    /* `cmp ebx,0x32` / `jb` leaves counts below 50 untouched. */
-    if (count >= 0x32u) {
-        count = 0x32u; /* the corpus's overflow clamp, faithful */
-    }
-    uint32_t i = 1u;
-    dest[0] = count;
-    dest[1] = control[0];
-    dest[2] = control[1];
-    if (count <= i) {
-        return;
-    }
-    const uint32_t denominator = count - 1u;
-    uint32_t* slot = dest + 3;
-    /* The corpus forms `lea edx,[ebx-1]`, advances the output, then converts
-     * the denominator with `fild QWORD PTR` before dividing the 1.0 constant. */
-    const float inv = s_curve_unit / (float)denominator;
-    do {
-        const float t = (float)i * inv;
-        cubic_bezier_point_evaluate((float*)slot, (const float*)control,
-                                    (const float*)p3, (const float*)p4,
-                                    (const float*)p5, t);
-        i = i + 1u;
-        slot += 2;
-    } while (i < count);
-}
-
-/* PathArcLengthInterpolate (FUN_004068c0) — see view.hpp. The record layout
- * is the curve band's: count at dword 0, point i (1-based) floats at dwords
- * 2i-1/2i, segment lengths at dword 0x65+k — the same window the length
- * builder stores through +0x198. */
-// FUNCTION: LEGORR 0x004068c0
-uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
-                                     float* out)
-{
-#if !defined(_MSC_VER) || !defined(_M_IX86)
-    if (curve == NULL || out == NULL) {
-        return 0u; /* deviation: the corpus strides both blindly */
-    }
-#endif
-    const uint32_t count = curve[0];
-    float accumulated = 0.0f;
-    uint32_t segment = 1u;
-    if (count > 1u) {
-        const float* length = (const float*)(curve + 0x66);
-        for (;;) {
-            accumulated = accumulated + *length;
-            if (travel < accumulated) {
-                break;
-            }
-            segment = segment + 1u;
-            length = length + 1;
-            if (segment >= count) {
-                break;
-            }
-        }
-    }
-
-    const float* points = (const float*)curve;
-
-    if (segment < count) {
-        const float* point = points + (2u * segment - 1u);
-        const float next_x = point[2];
-        const float next_y = point[3];
-        const float len = points[0x65u + segment];
-        const float fraction = (travel - (accumulated - len)) / len;
-        out[0] = point[0];
-        out[1] = point[1];
-        out[0] = (next_x - out[0]) * fraction + out[0];
-        out[1] = (next_y - out[1]) * fraction + out[1];
-    } else {
-        const float* point = points + (2u * segment - 1u);
-        out[0] = point[0];
-        out[1] = point[1];
-    }
-    return segment;
-}
-
 /* ViewPointToScreenGeometryTransform (FUN_0045e940) — see view.hpp. The
  * record window is the projection block: center +4/+8, half-size +c/+10,
  * scale pair +14/+18, screen offsets +1c/+20. Deviations: NULL guards on
@@ -7944,35 +7602,6 @@ void view_point_to_screen_geometry_transform(const void* view, float p[4])
     p[0] = p[0] + half_x * 0.5f + cx;
     p[1] = (half_y * 0.5f + cy) - p[1];
     p[3] = (scale_a / scale_b) * p[3];
-}
-
-/* PolylineSegmentLengthsAndTotalCalculate (FUN_004067b0) — see view.hpp. */
-// FUNCTION: LEGORR 0x004067b0
-float polyline_segment_lengths_total(uint32_t* curve)
-{
-#if !defined(_MSC_VER) || !defined(_M_IX86)
-    if (curve == NULL) {
-        return 0.0f; /* deviation: the corpus strides the record blindly */
-    }
-#endif
-    const uint32_t count = curve[0];
-    float total = 0.0f;
-    curve[0x65] = 0;
-    if (count > 1u) {
-        uint32_t segment = 1u;
-        uint32_t* point = curve;
-        float* length = (float*)(curve + 0x66);
-        do {
-            float segment_length = vec2_dist_alt((float*)(point + 1),
-                                                 (float*)(point + 3));
-            *length = segment_length;
-            segment = segment + 1u;
-            length = length + 1;
-            total = (float)(segment_length + total);
-            point = point + 2;
-        } while (segment < count);
-    }
-    return total;
 }
 
 // FUNCTION: LEGORR 0x00408b60

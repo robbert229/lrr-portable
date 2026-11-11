@@ -16,6 +16,8 @@ src/game/actor_scene.cpp
 src/game/actor_scene.hpp
 src/game/ai.cpp
 src/game/ai.hpp
+src/game/bezier.c
+src/game/bezier.h
 src/game/building_scene.cpp
 src/game/building_scene.hpp
 src/game/camera_drag.hpp

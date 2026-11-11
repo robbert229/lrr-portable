@@ -189,10 +189,6 @@ uint32_t scene_object_wrapped_pointer_get(const void* wrapped);
 uint32_t scene_object_flag_bit3_get(const void* scene_object);
 uint32_t scene_object_flag_bit3_get_target(const void* scene_object);
 
-/* SceneObjectModeIsOne (FUN_00406980, findings 373/435): the +0x28 mode
- * word equals 1. */
-int scene_object_mode_is_one(const void* scene_object);
-
 /* AnimationObjectHandleGet (FUN_00406e30, findings 356/435): +0x04. */
 uint32_t animation_object_handle_get(const void* animation_object);
 /* Renderer-record adapters for the resource-list updater (FUN_00406c00,

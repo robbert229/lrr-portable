@@ -780,14 +780,6 @@ uint32_t scene_object_flag_bit3_get(const void* scene_object)
     return scene_object_flag_bit3_get_target(scene_object);
 }
 
-// FUNCTION: LEGORR 0x00406980
-int scene_object_mode_is_one(const void* scene_object)
-{
-    int32_t mode;
-    __builtin_memcpy(&mode, (const char*)scene_object + 0x28, sizeof(mode));
-    return mode == 1;
-}
-
 // FUNCTION: LEGORR 0x00406e30
 uint32_t animation_object_handle_get(const void* animation_object)
 {

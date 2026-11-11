@@ -365,10 +365,6 @@ static void test_reader_sweep(void)
     CHECK(scene_object_flag_bit3_get(&r) == 1u, "bit 3 set");
     poke_dword(&r, 0x14, 0x80u);
     CHECK(scene_object_flag_bit3_get(&r) == 0u, "bit 7 is not bit 3");
-    poke_dword(&r, 0x28, 1u);
-    CHECK(scene_object_mode_is_one(&r) == 1, "mode 1 is one");
-    poke_dword(&r, 0x28, 2u);
-    CHECK(scene_object_mode_is_one(&r) == 0, "mode 2 is not one");
 
     /* Pointer-deref twins: read through the given address. */
     poke_dword(&r, 0x04, 0x40000000u);

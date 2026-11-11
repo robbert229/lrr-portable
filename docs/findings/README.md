@@ -493,6 +493,7 @@ have not yet been added to the catalog.
 | 511 | [findings/511-dxerror-unit-original-shape.md](511-dxerror-unit-original-shape.md) | DirectX error decoder (G98-027) rebuilt in original shape; 338 literals at their original addresses; boundary confirmed on data and behaviour (issue 411) |
 | 512 | [findings/512-sound-unit-original-shape.md](512-sound-unit-original-shape.md) | gods98 sound layer: G98-021/022/023 merged into one unit on .bss alignment and behaviour, rebuilt in original shape with all 16 functions exact; native WinMM stand-ins (issues 409, 410) |
 | 513 | [findings/513-keys-unit-original-shape.md](513-keys-unit-original-shape.md) | Key-name table (G98-018, Keys.c) rebuilt in original shape; both functions exact, literal block byte-identical, boundary confirmed; one spare table slot for Reccmp operand naming (issue 416) |
+| 514 | [findings/514-bezier-unit-original-shape.md](514-bezier-unit-original-shape.md) | Bezier curve unit (GAME-003) rebuilt in original shape; asm leaves replaced by C, unit 68.64% to 78.74%; flight-curve effects now call it, so the object links; boundary confirmed (issue 417) |
 | 515 | [findings/515-handle-table-original-shape.md](515-handle-table-original-shape.md) | gods98 handle table (G98-024) rebuilt in original shape with exactly 2,000 records; boundary and matching results (issue 413) |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](../../docs/decompiles/full/LEGORR.full.c)
