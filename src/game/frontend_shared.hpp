@@ -47,4 +47,12 @@ extern uint32_t s_input_device_system_flags;
 extern int s_input_device_active_track;
 } // namespace unported_ledger_stubs
 
+extern float s_bubble_offset_x;
+extern float s_bubble_offset_y;
+extern void* s_panel_position_slots[5];
+extern float s_panel_position_offset_x;
+extern float s_panel_position_offset_y;
+void panel_blit_seam_call(void* res, float x, float y);
+int frontend_config_fields(const char* value, char* storage, unsigned int storage_size, char** fields, unsigned int field_count, char separator);
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */

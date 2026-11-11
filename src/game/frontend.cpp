@@ -9052,17 +9052,8 @@ uint32_t timed_effect_time_peek(int index)
 
 uint32_t screen_right_edge_cache_peek(void) { return s_screen_right_edge; }
 
-/* --- the panel resource + scroll leaf band (see frontend.hpp) --------------
- * The corpus's unowned panel words (DAT_004ffe68 enable gate, DAT_004ffed8/
- * edc bubble offsets, DAT_00500810..81c handle/dimensions, DAT_005007d8 UI
- * record slot) land here as zero-init statics; both corpus seams (surface
- * blit FUN_0047dcb0, surface load FUN_0047d9d0) are hook boundaries with
- * no ported body — the seam calls record and the load answers NULL (the
- * view object-layer precedent). */
-// GLOBAL: LEGORR 0x004ffe68
-uint32_t s_panel_enable_word;
-static float    s_bubble_offset_x;
-static float    s_bubble_offset_y;
+float    s_bubble_offset_x;
+float    s_bubble_offset_y;
 // GLOBAL: LEGORR 0x00500810
 static void*    s_panel_surface_handle;
 // GLOBAL: LEGORR 0x00500814
@@ -9075,19 +9066,12 @@ static uint32_t s_panel_extra;
 void*    s_panel_ui_record;   /* DAT_005007d8 role */
 static void*    s_panel_text_slot;   /* DAT_005007dc role: holder-slot address */
 
-// GLOBAL: LEGORR 0x004ffec4
-static void*    s_panel_position_slots[5];
-// GLOBAL: LEGORR 0x004ffebc
-static float    s_panel_position_offset_x;
-// GLOBAL: LEGORR 0x004ffec0
-static float    s_panel_position_offset_y;
-
 static int    s_panel_seam_calls;
 static void*  s_panel_seam_last_res;
 static float  s_panel_seam_last_x;
 static float  s_panel_seam_last_y;
 
-static void panel_blit_seam_call(void* res, float x, float y)
+void panel_blit_seam_call(void* res, float x, float y)
 {
     ++s_panel_seam_calls;
     s_panel_seam_last_res = res;
@@ -9095,78 +9079,10 @@ static void panel_blit_seam_call(void* res, float x, float y)
     s_panel_seam_last_y = y;
 }
 
-/* FUN_0047dcb0's native device path is renderer-owned. The portable HUD
- * loader supplies TextureSurface records, so use the active software render
- * target when one is bound and retain the seam state for callers without a
- * framebuffer. */
-static void panel_texture_draw_at_active_target(void* resource, float x,
-                                               float y)
-{
-    DisplaySurface* target = surface_active_render_target_get();
-    void* pixels = NULL;
-    int pitch = 0;
-    if (resource == NULL || target == NULL || target->w <= 0 ||
-        target->h <= 0) return;
-    if (surface_lock(target, &pixels, &pitch) != 0) return;
-    surface_blit_texture(pixels, pitch, target->w, target->h,
-        (const TextureSurface*)resource, (int)crt_float_to_long(x),
-        (int)crt_float_to_long(y));
-    surface_unlock(target, pixels);
-}
-
 static void* panel_load_seam_call(void* res)
 {
     panel_blit_seam_call(res, 0.0f, 0.0f);
     return NULL; /* the port has no surface layer */
-}
-
-// FUNCTION: LEGORR 0x00459fd0
-void panel_resource_position_apply_if_enabled(void* resource, int x, int y)
-{
-    /* The corpus tests the enable byte, then FILD/FADD-stores x before y
-     * into its local coordinate pair. Its native SurfaceBlitRect path uses
-     * the renderer-owned DirectDraw device; portable HUD images are
-     * TextureSurface records and draw through the active software target. */
-    if (((unsigned char)s_panel_enable_word & 0x10u) != 0u) {
-        float position[2];
-        position[0] = (float)x + s_bubble_offset_x;
-        position[1] = (float)y + s_bubble_offset_y;
-        panel_blit_seam_call(resource, position[0], position[1]);
-        panel_texture_draw_at_active_target(resource, position[0],
-                                             position[1]);
-    }
-}
-
-/* IndexedPanelResourcePositionApply (FUN_00459f50) — see frontend.hpp.
- * The corpus reads the slot selector off the record's screen-position
- * float (+0x344), multiplied by its two float constants in the x87
- * register's extended precision (modeled as exact double products) and
- * truncated toward zero, then clamped at the last slot by the unsigned
- * compare (a negative conversion clamps to 4 too); the slot table and
- * offsets are own storage (the position-config loads are recorded config
- * seams), and the position rides the surface blit seam. Deviations: the
- * port takes the record float's address instead of the corpus's blind
- * record+0x344 read, and a NULL float reads zero. */
-// FUNCTION: LEGORR 0x00459f50
-void indexed_panel_resource_position_apply(const float* record_position,
-                                           int x, int y)
-{
-    if ((s_panel_enable_word & 1u) == 0u) {
-        return;
-    }
-    const float v = (record_position != NULL ? *record_position : 0.0f);
-    const int sel = (int)(((double)v * (double)0.01f) * (double)5.0f);
-    uint32_t slot = (uint32_t)sel;
-    if (slot > 4u) {
-        slot = 4u; /* the corpus jbe: every out-of-range index, negative
-                    * conversions included, rides the last slot */
-    }
-    void* res = s_panel_position_slots[slot];
-    if (res == NULL) {
-        return;
-    }
-    panel_blit_seam_call(res, (float)x + s_panel_position_offset_x,
-                         (float)y + s_panel_position_offset_y);
 }
 
 // FUNCTION: LEGORR 0x0045c520
@@ -9855,7 +9771,7 @@ void ui_entry_bounds_get(int panel, int item, float* out_bounds)
 
 
 
-static int frontend_config_fields(const char* value, char* storage,
+int frontend_config_fields(const char* value, char* storage,
                                   unsigned int storage_size,
                                   char** fields, unsigned int field_count,
                                   char separator)
@@ -11047,36 +10963,6 @@ void frontend_hud_runtime_install(void)
     ops.surface_initialize = frontend_hud_surface_initialize;
     ops.config_resource = frontend_hud_config_resource;
     legacy_hud_ops_set(&ops);
-}
-
-// FUNCTION: LEGORR 0x00459530
-void frontend_render_three_pass_update(BlockFile* values,
-                                        const char* config_root)
-{
-    legacy_health_bar_config_load(values, config_root);
-    legacy_hunger_images_position_config_load(values, config_root);
-    (void)frontend_bubble_images_position_config_load(values, config_root);
-}
-
-// FUNCTION: LEGORR 0x00459a50
-int frontend_bubble_images_position_config_load(BlockFile* values,
-                                                const char* config_root)
-{
-    const char* const path = string_path_join(config_root, "ObjInfo",
-        "BubbleImagesPosition", (char*)NULL);
-    const char* value;
-    char storage[128];
-    char* fields[2];
-    if (values == NULL) return 0;
-    value = block_get_strptr(values, path);
-    if (value == NULL ||
-        !frontend_config_fields(value, storage, sizeof(storage), fields, 2,
-                                ':')) {
-        return 0;
-    }
-    bubble_offsets_set((float)atoi(fields[0]), (float)atoi(fields[1]));
-    panel_enable_word_set(panel_enable_word_peek() | 0x10u);
-    return 1;
 }
 
 namespace unported_ledger_stubs {

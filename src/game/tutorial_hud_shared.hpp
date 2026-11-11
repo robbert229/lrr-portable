@@ -81,4 +81,8 @@ void tutorial_tokens_clear(void);
 void tutorial_script_program_clear(void);
 int tutorial_script_file_load_target(const char* path);
 
+extern LegacyHudOps s_legacy_hud_ops;
+extern LegacyHealthBarState s_legacy_health_bar;
+int legacy_config_pair(BlockFile* cfg, const char* path, int* x, int* y);
+
 #endif /* LRR_GAME_TUTORIAL_HUD_SHARED_HPP */
