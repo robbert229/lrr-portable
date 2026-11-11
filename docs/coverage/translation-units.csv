@@ -1431,10 +1431,10 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00462ed0,GraphicsOverlayResourcesRelease,37,GAME-038,,game,low,boundary:GAME-038,
 00462f20,TerrainCellQuadGeometryEmit,37,GAME-038,,game,low,boundary:GAME-038,
 00463230,TerrainDirtyCellQuadNormalEmitPass,37,GAME-038,,game,high,rdata,
-004634b0,GraphicsOverlayVisibilitySet,37,GAME-038,,game,low,boundary:GAME-039,src/gods98/record.cpp
-004634f0,IndexedSurfaceEntryHideAndRecord,37,GAME-038,,game,low,boundary:GAME-039,src/gods98/record.cpp
-00463540,IndexedSurfaceEntriesRestore,37,GAME-038,,game,low,boundary:GAME-039,src/gods98/record.cpp
-00463590,TerrainCellSurfaceNormalGet,37,GAME-038,,game,low,boundary:GAME-039,src/game/level.cpp
+004634b0,GraphicsOverlayVisibilitySet,37,GAME-038,,game,low,boundary:GAME-039,src/game/terrain_overlay_quads.cpp
+004634f0,IndexedSurfaceEntryHideAndRecord,37,GAME-038,,game,low,boundary:GAME-039,src/game/terrain_overlay_quads.cpp
+00463540,IndexedSurfaceEntriesRestore,37,GAME-038,,game,low,boundary:GAME-039,src/game/terrain_overlay_quads.cpp
+00463590,TerrainCellSurfaceNormalGet,37,GAME-038,,game,low,boundary:GAME-039,src/game/terrain_overlay_quads.cpp
 004636b0,InfoPanelStringEntriesInitialize,38,GAME-039,,game,low,boundary:GAME-039,
 00463730,IndexedFloatPairSet,38,GAME-039,,game,low,boundary:GAME-039,src/crt/crt.cpp
 00463770,ScrollRectResourceRecordCreate,38,GAME-039,,game,low,boundary:GAME-039,src/game/frontend.cpp

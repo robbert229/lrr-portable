@@ -1126,7 +1126,7 @@ static void scene_visibility_observation_record(void* object, int flag)
     s_scene_vis_last_flag = flag;
 }
 
-static void scene_visibility_hook_call(void* object, int flag)
+void scene_visibility_hook_call(void* object, int flag)
 {
     scene_visibility_observation_record(object, flag);
     scene_render_lock_toggle(object, flag);
@@ -1155,24 +1155,9 @@ void scene_visibility_last_call(void** out_object, int* out_flag)
  * DAT_00552180/DAT_0055218c (handle, cache) have no ported owner; they land
  * here as zero-init statics (deviation: corpus strides them blindly). */
 // GLOBAL: LEGORR 0x00552180
-static uint32_t s_overlay_word;  /* DAT_00552180 role */
+uint32_t s_overlay_word;  /* DAT_00552180 role */
 // GLOBAL: LEGORR 0x0055218c
-static uint32_t s_overlay_cache; /* DAT_0055218c role */
-
-// FUNCTION: LEGORR 0x004634b0
-void graphics_overlay_visibility_set(uint32_t flag)
-{
-    if (s_overlay_cache != flag) {
-        /* The corpus commits the cache before testing the requested flag
-         * (0x4634c0, then 0x4634c5) and dispatches separate 1/0 paths. */
-        s_overlay_cache = flag;
-        if (flag != 0u) {
-            scene_visibility_hook_call((void*)(uintptr_t)s_overlay_word, 1);
-        } else {
-            scene_visibility_hook_call((void*)(uintptr_t)s_overlay_word, 0);
-        }
-    }
-}
+uint32_t s_overlay_cache; /* DAT_0055218c role */
 
 void graphics_overlay_word_set(uint32_t handle_word)
 {
@@ -1182,15 +1167,10 @@ void graphics_overlay_word_set(uint32_t handle_word)
 
 uint32_t graphics_overlay_word_peek(void) { return s_overlay_word; }
 
-/* The corpus's indexed-surface grid is owned by the overlay resource
- * loader, which is still unported. This sidecar exposes a small install
- * seam and preserves the hide-stack order without fabricating that loader. */
-#define INDEXED_SURFACE_ENTRY_LIMIT 256
-static uint32_t s_indexed_surface_width;
-static uint32_t s_indexed_surface_entry_count;
-static const void* const* s_indexed_surface_entries;
-static const void* s_indexed_surface_hidden[INDEXED_SURFACE_ENTRY_LIMIT];
-static uint32_t s_indexed_surface_hidden_count;
+uint32_t s_indexed_surface_width;
+uint32_t s_indexed_surface_entry_count;
+const void* const* s_indexed_surface_entries;
+uint32_t s_indexed_surface_hidden_count;
 
 void indexed_surface_grid_install(uint32_t width, const void* const* entries,
                                   uint32_t entry_count)
@@ -1198,37 +1178,6 @@ void indexed_surface_grid_install(uint32_t width, const void* const* entries,
     s_indexed_surface_width = width;
     s_indexed_surface_entries = entries;
     s_indexed_surface_entry_count = entry_count;
-    s_indexed_surface_hidden_count = 0u;
-}
-
-/* IndexedSurfaceEntryHideAndRecord (FUN_004634f0): compute y*width+x,
- * hide the selected surface and save its handle for a later restore. */
-// FUNCTION: LEGORR 0x004634f0
-void indexed_surface_entry_hide_and_record(int x, int y)
-{
-    if (s_indexed_surface_width == 0u || s_indexed_surface_entries == NULL
-        || x < 0 || y < 0) {
-        return;
-    }
-    const uint32_t index = (uint32_t)y * s_indexed_surface_width
-        + (uint32_t)x;
-    if (index >= s_indexed_surface_entry_count
-        || s_indexed_surface_hidden_count >= INDEXED_SURFACE_ENTRY_LIMIT) {
-        return;
-    }
-    const void* handle = s_indexed_surface_entries[index];
-    scene_visibility_hook_call((void*)handle, 0);
-    s_indexed_surface_hidden[s_indexed_surface_hidden_count++] = handle;
-}
-
-/* IndexedSurfaceEntriesRestore (FUN_00463540): show each handle saved by
- * the hide pass and reset the temporary list. */
-// FUNCTION: LEGORR 0x00463540
-void indexed_surface_entries_restore(void)
-{
-    for (uint32_t i = 0; i < s_indexed_surface_hidden_count; ++i) {
-        scene_visibility_hook_call((void*)s_indexed_surface_hidden[i], 1);
-    }
     s_indexed_surface_hidden_count = 0u;
 }
 

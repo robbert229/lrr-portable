@@ -61,11 +61,11 @@
  * explicit instead of pretending that TerrainState owns the render quads.
  * Once the backend binds the indexed surface, the normal helpers below read
  * and update the actual quad records supplied by that owner. */
-static void* s_terrain_quad_surface;
-static uint32_t s_terrain_quad_width;
-static uint32_t s_terrain_quad_height;
-static TerrainQuadVertexReadHook s_terrain_quad_vertex_read;
-static void* s_terrain_quad_vertex_context;
+void* s_terrain_quad_surface;
+uint32_t s_terrain_quad_width;
+uint32_t s_terrain_quad_height;
+TerrainQuadVertexReadHook s_terrain_quad_vertex_read;
+void* s_terrain_quad_vertex_context;
 static TerrainCellOverlayHeightFillHook
     s_terrain_cell_overlay_height_fill;
 static void* s_terrain_cell_overlay_height_fill_context;
@@ -201,51 +201,6 @@ void terrain_cell_overlay_height_fill_hook_set(
 {
     s_terrain_cell_overlay_height_fill = hook;
     s_terrain_cell_overlay_height_fill_context = context;
-}
-
-// FUNCTION: LEGORR 0x00463590
-int terrain_cell_surface_normal_get(uint32_t x, uint32_t y, float out[3])
-{
-    float vertices[4][3];
-    float first[3];
-    float second[3];
-    float nx, ny, nz, inverse_length;
-    size_t index;
-    if (out == NULL) return 0;
-    /* The retail helper also gates on bit 0 of its renderer-owned 8-byte quad
-     * record. This standalone API has no record pointer; the dirty-normal
-     * pass enforces that gate at its call site. Do not substitute the
-     * surface orientation bit here. */
-    if (s_terrain_quad_surface != NULL &&
-        s_terrain_quad_vertex_read != NULL &&
-        x < s_terrain_quad_width && y < s_terrain_quad_height) {
-        index = (size_t)y * (size_t)s_terrain_quad_width + (size_t)x;
-        if (!s_terrain_quad_vertex_read(s_terrain_quad_vertex_context,
-                s_terrain_quad_surface, index, vertices)) return 0;
-    }
-    else {
-        GameContext* game = entity_pool_callback_context_get();
-        LevelState* level = game != NULL ? game->level : NULL;
-        if (level == NULL) level = level_current_owner_get();
-        if (level == NULL || level->ptr_terrain == NULL ||
-            !scene_render_terrain_cell_vertices_get(level, x, y,
-                                                     vertices)) return 0;
-    }
-    /* The polygon reader returns the four points in the order consumed by
-     * FUN_00463590: triangles (0,1,2) and (2,3,0). */
-    surface_triangle_normal_calculate(first, vertices[0], vertices[1],
-                                      vertices[2]);
-    surface_triangle_normal_calculate(second, vertices[2], vertices[3],
-                                      vertices[0]);
-    nx = first[0] + second[0];
-    ny = first[1] + second[1];
-    nz = first[2] + second[2];
-    inverse_length = 1.0f / (float)sqrt((double)(nx * nx + ny * ny + nz * nz));
-    /* The game's output frame swaps the second and third normal components. */
-    out[0] = nx * inverse_length;
-    out[1] = nz * inverse_length;
-    out[2] = ny * inverse_length;
-    return 1;
 }
 
 /* TerrainDirtyCellQuadNormalEmitPass has the same renderer quad table that

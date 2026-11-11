@@ -86,11 +86,12 @@ lrr_link(unit   GAME-035 game          game/level_id_remap.cpp)
 lrr_link(unit   GAME-036 game          game/map_view.cpp)
 lrr_link(legacy 00460360 game          game/mission.cpp)
 lrr_link(legacy 004628e0 gods98        gods98/ptrstack.cpp)
+lrr_link(unit   GAME-038 game          game/terrain_overlay_quads.cpp)
 lrr_link(legacy 004652d0 gods98        gods98/sound.cpp)
 lrr_link(legacy 0046a7f0 gods98        gods98/message.cpp)
 lrr_link(legacy 0046b7c0 game          game/effects.cpp)
 lrr_link(legacy 0046f140 game          game/weapon.cpp)
-lrr_link(legacy 00471310 gods98        gods98/record.cpp)
+lrr_link(legacy 00471a20 gods98        gods98/record.cpp)
 
 # gods98 segment. G98-001 is still in src/game and the game library;
 # it moves with its relocation.

@@ -182,4 +182,10 @@ extern uint32_t s_cell_list_flags;
 
 uint8_t* voxel_at(LevelState* s, int x, int y);
 
+extern void* s_terrain_quad_surface;
+extern uint32_t s_terrain_quad_width;
+extern uint32_t s_terrain_quad_height;
+extern TerrainQuadVertexReadHook s_terrain_quad_vertex_read;
+extern void* s_terrain_quad_vertex_context;
+
 #endif /* LRR_GAME_LEVEL_SHARED_HPP */
