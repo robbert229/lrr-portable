@@ -193,7 +193,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 36.28 segment_2d_point_distance
+0x004089d0 36.44 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -367,7 +367,7 @@
 0x00411260 13.92 menu_list_append
 0x004112e0 100.00 menu_pointer_rectangle_hit_test
 0x00411320 100.00 text_layout_offset_for_centering
-0x00411360 21.03 menu_mouse_coordinate_update
+0x00411360 21.12 menu_mouse_coordinate_update
 0x004114f0 24.69 has_type6_item_at_index
 0x00411530 7.71 menu_widget_item_screen_rect
 0x00411790 75.52 menu_pick_widget_under_pointer
@@ -842,7 +842,7 @@
 0x00438720 24.00 entity_available_resource_spend
 0x00438770 13.95 building_upgrade_resource_admission_check
 0x004387f0 23.73 building_upgrade_commit
-0x004388b0 18.12 entity_action_kind_prerequisite_check
+0x004388b0 14.49 entity_action_kind_prerequisite_check
 0x004389e0 18.82 entity_route_marker_candidate_find
 0x00438a60 14.04 ledger_stub_00438a60_SpatialObjectQueryCenterMask01
 0x00438ae0 18.18 ledger_stub_00438ae0_SpatialObjectQueryCenterMask02
@@ -976,7 +976,7 @@
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
 0x00445d70 12.05 entity_flag_gated_callback_dispatch
-0x00446610 12.27 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
+0x00446610 12.07 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
 0x004468c0 21.51 entity_route_adjacent_step_append
 0x004469c0 13.22 ledger_stub_004469c0_EntityNearestConnectedTerrainCellRouteSelect
 0x00446e40 13.53 ledger_stub_00446e40_EntityNearestCellRouteCommit
@@ -1078,7 +1078,7 @@
 0x0044da20 100.00 simtick_route_position_blocked_state_set
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
-0x0044e0c0 11.73 terrain_create_retail
+0x0044e0c0 11.44 terrain_create_retail
 0x0044e4d0 10.71 terrain_grid_vertex_build
 0x0044e670 36.36 nested_pointer_record_destroy
 0x0044e6b0 11.76 indexed_flag_value_set_one
@@ -1103,7 +1103,7 @@
 0x0044f6d0 100.00 terrain_grid_pick
 0x0044f700 57.29 world_to_terrain_cell_bounds_check
 0x0044f810 38.10 grid_coordinate_clamp_and_store
-0x0044f870 41.67 terrain_world_point_to_cell
+0x0044f870 39.69 terrain_world_point_to_cell
 0x0044f940 9.65 terrain_surface_height_interpolate
 0x0044fab0 18.57 terrain_cell_surface_triangle_vertices_select
 0x0044fb90 23.19 terrain_state_surface_point_project_offset
@@ -1125,7 +1125,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 11.34 terrain_cell_normal_sample
+0x004512d0 11.22 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -1562,7 +1562,7 @@
 0x004712f0 100.00 entity_velocity_slot_value_get
 0x00471310 100.00 entity_velocity_slot_value_set
 0x00471330 47.27 interpolated_z_within_bounds
-0x00471370 15.22 cmd_place_ray_candidate_check
+0x00471370 15.30 cmd_place_ray_candidate_check
 0x00471630 17.80 ray_hit_cell_distance_minimize_sweep
 0x00471860 21.51 scene_segment_trace_nearest_hit
 0x004718d0 36.52 object_pair_ray_hit_check
@@ -2027,7 +2027,7 @@
 0x00487fc0 39.42 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 15.02 scene_node_transform_matrix_apply
+0x004882e0 14.00 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
@@ -2323,7 +2323,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 36.28 segment_2d_point_distance
+0x004089d0 36.44 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -2497,7 +2497,7 @@
 0x00411260 13.92 menu_list_append
 0x004112e0 100.00 menu_pointer_rectangle_hit_test
 0x00411320 100.00 text_layout_offset_for_centering
-0x00411360 21.03 menu_mouse_coordinate_update
+0x00411360 21.12 menu_mouse_coordinate_update
 0x004114f0 24.69 has_type6_item_at_index
 0x00411530 7.71 menu_widget_item_screen_rect
 0x00411790 75.52 menu_pick_widget_under_pointer
@@ -2972,7 +2972,7 @@
 0x00438720 24.00 entity_available_resource_spend
 0x00438770 13.95 building_upgrade_resource_admission_check
 0x004387f0 23.73 building_upgrade_commit
-0x004388b0 18.12 entity_action_kind_prerequisite_check
+0x004388b0 14.49 entity_action_kind_prerequisite_check
 0x004389e0 18.82 entity_route_marker_candidate_find
 0x00438a60 14.04 ledger_stub_00438a60_SpatialObjectQueryCenterMask01
 0x00438ae0 18.18 ledger_stub_00438ae0_SpatialObjectQueryCenterMask02
@@ -3106,7 +3106,7 @@
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
 0x00445d70 12.05 entity_flag_gated_callback_dispatch
-0x00446610 12.27 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
+0x00446610 12.07 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
 0x004468c0 21.51 entity_route_adjacent_step_append
 0x004469c0 13.22 ledger_stub_004469c0_EntityNearestConnectedTerrainCellRouteSelect
 0x00446e40 13.53 ledger_stub_00446e40_EntityNearestCellRouteCommit
@@ -3208,7 +3208,7 @@
 0x0044da20 100.00 simtick_route_position_blocked_state_set
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
-0x0044e0c0 11.73 terrain_create_retail
+0x0044e0c0 11.44 terrain_create_retail
 0x0044e4d0 10.71 terrain_grid_vertex_build
 0x0044e670 36.36 nested_pointer_record_destroy
 0x0044e6b0 11.76 indexed_flag_value_set_one
@@ -3233,7 +3233,7 @@
 0x0044f6d0 100.00 terrain_grid_pick
 0x0044f700 57.29 world_to_terrain_cell_bounds_check
 0x0044f810 38.10 grid_coordinate_clamp_and_store
-0x0044f870 41.67 terrain_world_point_to_cell
+0x0044f870 39.69 terrain_world_point_to_cell
 0x0044f940 9.65 terrain_surface_height_interpolate
 0x0044fab0 18.57 terrain_cell_surface_triangle_vertices_select
 0x0044fb90 23.19 terrain_state_surface_point_project_offset
@@ -3255,7 +3255,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 11.34 terrain_cell_normal_sample
+0x004512d0 11.22 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -3692,7 +3692,7 @@
 0x004712f0 100.00 entity_velocity_slot_value_get
 0x00471310 100.00 entity_velocity_slot_value_set
 0x00471330 47.27 interpolated_z_within_bounds
-0x00471370 15.22 cmd_place_ray_candidate_check
+0x00471370 15.30 cmd_place_ray_candidate_check
 0x00471630 17.80 ray_hit_cell_distance_minimize_sweep
 0x00471860 21.51 scene_segment_trace_nearest_hit
 0x004718d0 36.52 object_pair_ray_hit_check
@@ -4157,7 +4157,7 @@
 0x00487fc0 39.42 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 15.02 scene_node_transform_matrix_apply
+0x004882e0 14.00 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append

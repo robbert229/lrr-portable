@@ -12259,7 +12259,7 @@ static float entity_movement_default_animation_scale_get(void* context,
         entity_speed_component_get((const EntitySlot*)entity));
 }
 
-static int entity_movement_scale_impl(
+static inline int entity_movement_scale_impl(
     void* entity, float delta, float* movement_delta,
     float* movement_scale)
 {
