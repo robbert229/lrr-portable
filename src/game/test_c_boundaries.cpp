@@ -28,6 +28,7 @@
 #include "game/panel.h"
 #include "game/priorities.h"
 #include "game/util.hpp"
+#include "gods98/dxerror.h"
 
 int main(void)
 {

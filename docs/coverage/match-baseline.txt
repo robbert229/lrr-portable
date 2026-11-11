@@ -17,7 +17,7 @@
 0x00401470 100.00 vec_cross
 0x004014c0 89.66 advisor_animation_name_to_index
 0x00401500 100.00 vec_add
-0x00401530 28.67 advisor_position_config_load
+0x00401530 29.33 advisor_position_config_load
 0x004016c0 100.00 vec_sub
 0x004016f0 100.00 vec_dot
 0x00401720 100.00 vec_scale
@@ -227,7 +227,7 @@
 0x00409f20 22.34 entity_placement_commands_build_once
 0x0040a0c0 11.76 frameloop_credits
 0x0040a3d0 9.76 screen_effect_flags_clear_and_release
-0x0040a400 12.33 preload_numbered_bitmaps
+0x0040a400 19.18 preload_numbered_bitmaps
 0x0040a4b0 15.32 quad_mesh_render_record_create
 0x0040a5c0 29.63 quad_mesh_render_record_pool_slot_allocate
 0x0040a5e0 21.89 record_count_digits_fill
@@ -757,7 +757,7 @@
 0x00434480 33.33 terrain_cell_surface_update_dispatch_level
 0x00434530 11.11 terrain_grid_entry_resources_release_all_current
 0x004345f0 32.69 frontend_config::panels_config_entry_apply
-0x00434710 33.07 frontend_config::panel_button_layout_config_load
+0x00434710 33.46 frontend_config::panel_button_layout_config_load
 0x00434a00 30.99 advisor_tutorial_icon_image_load
 0x00434a50 47.48 sound_samples_config_load
 0x00434af0 32.50 frontend_config::text_messages_config_load
@@ -1202,7 +1202,7 @@
 0x00459530 100.00 frontend_render_three_pass_update
 0x00459560 4.24 legacy_health_bar_config_load
 0x00459900 17.58 legacy_hunger_images_position_config_load
-0x004599c0 29.92 legacy_hunger_images_load
+0x004599c0 31.50 legacy_hunger_images_load
 0x00459a50 36.21 frontend_bubble_images_position_config_load
 0x00459b00 13.15 legacy_entity_screen_ring_render
 0x00459f50 27.12 indexed_panel_resource_position_apply
@@ -1266,7 +1266,7 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 5.50 pointer_cursor_draw_target
 0x0045cd90 88.89 media_pointer_cursor_override_tick
-0x0045cdc0 91.84 priorities_load_images
+0x0045cdc0 92.86 priorities_load_images
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 96.55 priorities_load_positions
@@ -1293,7 +1293,7 @@
 0x0045e820 26.58 viewport_point_callback_dispatch
 0x0045e940 17.05 view_point_to_screen_geometry_transform
 0x0045e9e0 22.48 terrain_tile_style_resolve
-0x0045f030 12.70 mission_task_init_target
+0x0045f030 13.49 mission_task_init_target
 0x0045f1f0 32.43 task_loader_sound
 0x0045f230 12.21 task_loader_font
 0x0045f290 15.58 task_loader_boximages
@@ -1316,7 +1316,7 @@
 0x00460910 100.00 resolved_entity_operation_dispatch
 0x00460950 6.52 checkpoint_blob_task_progress_recalculate_target
 0x00460f00 13.20 reward_stats_panel_draw_bound
-0x00461070 24.29 reward_stats_text_format_bound
+0x00461070 27.62 reward_stats_text_format_bound
 0x00461410 8.01 reward_screen_tick
 0x00461790 4.89 reward_display_task_abi
 0x00461c90 28.87 reward_score_task_text_draw
@@ -1379,7 +1379,7 @@
 0x004652d0 53.21 sound_batch_queue_drain
 0x00465370 100.00 sound_subsystem_enabled
 0x00465380 50.00 scene_effect_registry_reset
-0x004653a0 22.06 transient_effect_textures_preload
+0x004653a0 23.53 transient_effect_textures_preload
 0x00465430 23.50 transient_effect_emitter_create
 0x00465970 29.79 transient_effect_registry_release_all
 0x004659b0 13.08 transient_effect_instance_release
@@ -1704,7 +1704,7 @@
 0x00477610 100.00 case_insensitive_substring_find
 0x00477670 96.72 game_string_hash_compute
 0x00477710 100.00 block_get_bool
-0x004777a0 28.49 WinMain
+0x004777a0 30.81 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
 0x00477f30 60.47 main_loop_frame_pump
@@ -2061,8 +2061,8 @@
 0x00489bc0 16.98 com_child_items_visit
 0x00489c30 32.30 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
-0x00489d90 18.87 directx_error_message_format
-0x00489dd0 18.33 directx_result_diagnostic_dispatch
+0x00489d90 100.00 directx_error_message_format
+0x00489dd0 100.00 directx_result_diagnostic_dispatch
 0x0048b260 19.05 ledger_stub_0048b260_StartupStreamStateReset
 0x0048b280 100.00 window_mode_flag_set
 0x0048b290 72.73 ledger_stub_0048b290_StartupStreamsClose
@@ -2140,7 +2140,7 @@
 0x00401470 100.00 vec_cross
 0x004014c0 89.66 advisor_animation_name_to_index
 0x00401500 100.00 vec_add
-0x00401530 28.67 advisor_position_config_load
+0x00401530 29.33 advisor_position_config_load
 0x004016c0 100.00 vec_sub
 0x004016f0 100.00 vec_dot
 0x00401720 100.00 vec_scale
@@ -2350,7 +2350,7 @@
 0x00409f20 22.34 entity_placement_commands_build_once
 0x0040a0c0 11.76 frameloop_credits
 0x0040a3d0 9.76 screen_effect_flags_clear_and_release
-0x0040a400 12.33 preload_numbered_bitmaps
+0x0040a400 19.18 preload_numbered_bitmaps
 0x0040a4b0 15.32 quad_mesh_render_record_create
 0x0040a5c0 29.63 quad_mesh_render_record_pool_slot_allocate
 0x0040a5e0 21.89 record_count_digits_fill
@@ -2880,7 +2880,7 @@
 0x00434480 33.33 terrain_cell_surface_update_dispatch_level
 0x00434530 11.11 terrain_grid_entry_resources_release_all_current
 0x004345f0 32.69 frontend_config::panels_config_entry_apply
-0x00434710 33.07 frontend_config::panel_button_layout_config_load
+0x00434710 33.46 frontend_config::panel_button_layout_config_load
 0x00434a00 30.99 advisor_tutorial_icon_image_load
 0x00434a50 47.48 sound_samples_config_load
 0x00434af0 32.50 frontend_config::text_messages_config_load
@@ -3325,7 +3325,7 @@
 0x00459530 100.00 frontend_render_three_pass_update
 0x00459560 4.24 legacy_health_bar_config_load
 0x00459900 17.58 legacy_hunger_images_position_config_load
-0x004599c0 29.92 legacy_hunger_images_load
+0x004599c0 31.50 legacy_hunger_images_load
 0x00459a50 36.21 frontend_bubble_images_position_config_load
 0x00459b00 13.15 legacy_entity_screen_ring_render
 0x00459f50 27.12 indexed_panel_resource_position_apply
@@ -3389,7 +3389,7 @@
 0x0045cc60 100.00 global_cursor_word_get
 0x0045cc70 5.50 pointer_cursor_draw_target
 0x0045cd90 88.89 media_pointer_cursor_override_tick
-0x0045cdc0 91.84 priorities_load_images
+0x0045cdc0 92.86 priorities_load_images
 0x0045cf00 51.61 priorities_reset
 0x0045cf50 57.69 priorities_load
 0x0045d060 96.55 priorities_load_positions
@@ -3416,7 +3416,7 @@
 0x0045e820 26.58 viewport_point_callback_dispatch
 0x0045e940 17.05 view_point_to_screen_geometry_transform
 0x0045e9e0 22.48 terrain_tile_style_resolve
-0x0045f030 12.70 mission_task_init_target
+0x0045f030 13.49 mission_task_init_target
 0x0045f1f0 32.43 task_loader_sound
 0x0045f230 12.21 task_loader_font
 0x0045f290 15.58 task_loader_boximages
@@ -3439,7 +3439,7 @@
 0x00460910 100.00 resolved_entity_operation_dispatch
 0x00460950 6.52 checkpoint_blob_task_progress_recalculate_target
 0x00460f00 13.20 reward_stats_panel_draw_bound
-0x00461070 24.29 reward_stats_text_format_bound
+0x00461070 27.62 reward_stats_text_format_bound
 0x00461410 8.01 reward_screen_tick
 0x00461790 4.89 reward_display_task_abi
 0x00461c90 28.87 reward_score_task_text_draw
@@ -3502,7 +3502,7 @@
 0x004652d0 53.21 sound_batch_queue_drain
 0x00465370 100.00 sound_subsystem_enabled
 0x00465380 50.00 scene_effect_registry_reset
-0x004653a0 22.06 transient_effect_textures_preload
+0x004653a0 23.53 transient_effect_textures_preload
 0x00465430 23.50 transient_effect_emitter_create
 0x00465970 29.79 transient_effect_registry_release_all
 0x004659b0 13.08 transient_effect_instance_release
@@ -3827,7 +3827,7 @@
 0x00477610 100.00 case_insensitive_substring_find
 0x00477670 96.72 game_string_hash_compute
 0x00477710 100.00 block_get_bool
-0x004777a0 28.49 WinMain
+0x004777a0 30.81 WinMain
 0x00477bd0 100.00 low_texture_flag_set
 0x00477bf0 79.91 winmain_parse_options
 0x00477f30 60.47 main_loop_frame_pump
@@ -4184,8 +4184,8 @@
 0x00489bc0 16.98 com_child_items_visit
 0x00489c30 32.30 indexed_bitmap_palette_data_prepare
 0x00489d70 100.00 object_field_38_release_target
-0x00489d90 18.87 directx_error_message_format
-0x00489dd0 18.33 directx_result_diagnostic_dispatch
+0x00489d90 100.00 directx_error_message_format
+0x00489dd0 100.00 directx_result_diagnostic_dispatch
 0x0048b260 19.05 ledger_stub_0048b260_StartupStreamStateReset
 0x0048b280 100.00 window_mode_flag_set
 0x0048b290 72.73 ledger_stub_0048b290_StartupStreamsClose
@@ -4218,7 +4218,7 @@
 0x0048d920 93.33 __fpmath
 0x0048d940 56.25 __cfltcvt_init
 0x0048d980 97.83 _atof
-0x0048d9e0 97.67 _vsprintf
+0x0048d9e0 100.00 _sprintf
 0x0048da50 98.48 _strstr
 0x0048dad0 100.00 _atol
 0x0048db70 100.00 _atoi

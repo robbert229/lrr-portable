@@ -7772,7 +7772,7 @@ int crt_file_descriptor_close_slot(unsigned fd)
 // LIBRARY: LEGORR 0x0048e890 SYMBOL
 // _sscanf
 // LIBRARY: LEGORR 0x0048d9e0 SYMBOL
-// _vsprintf
+// _sprintf
 // LIBRARY: LEGORR 0x0048f2b0 SYMBOL
 // _ftell
 // LIBRARY: LEGORR 0x0048f460 SYMBOL
