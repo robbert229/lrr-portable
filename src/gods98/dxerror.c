@@ -102,14 +102,10 @@ int directx_result_diagnostic_dispatch(int err, int module, const char* file,
             // STRING: LEGORR 0x004af9b4
             "Error handling is unsupported in this module");
     case DXERROR_MODULE_DPLAY:
-        // STRING: LEGORR 0x004af9ac
         directx_error_message_format("Unknown",
-            // STRING: LEGORR 0x004af9b4
             "Error handling is unsupported in this module");
     case DXERROR_MODULE_D3DIM:
-        // STRING: LEGORR 0x004af9ac
         directx_error_message_format("Unknown",
-            // STRING: LEGORR 0x004af9b4
             "Error handling is unsupported in this module");
     case DXERROR_MODULE_D3DRM:
         switch (err) {
@@ -448,9 +444,7 @@ int directx_result_diagnostic_dispatch(int err, int module, const char* file,
                 "Data is not yet availabe.");
             break;
         default:
-            // STRING: LEGORR 0x004ab9fc
             directx_error_message_format("UNKNOWN ERROR",
-                // STRING: LEGORR 0x004aba0c
                 "Invalid error code specified");
             break;
         }
@@ -1100,9 +1094,7 @@ int directx_result_diagnostic_dispatch(int err, int module, const char* file,
                 "The request completed successfully.");
             break;
         default:
-            // STRING: LEGORR 0x004ab9fc
             directx_error_message_format("UNKNOWN ERROR",
-                // STRING: LEGORR 0x004aba0c
                 "Invalid error code specified");
             break;
         }
@@ -1114,7 +1106,6 @@ int directx_result_diagnostic_dispatch(int err, int module, const char* file,
             "The requested interface could not be obtained");
         break;
     default:
-        // STRING: LEGORR 0x004af9ac
         directx_error_message_format("Unknown",
             // STRING: LEGORR 0x004ab8a4
             "An error in an unknown DirectX module/object was raised");

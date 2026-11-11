@@ -33,7 +33,7 @@ const char* key_names[KEY_NAMES_COUNT + 1];
 // FUNCTION: LEGORR 0x00485a20
 void keyboard_key_names_init(void)
 {
-    memset(key_names, 0, KEY_NAMES_COUNT * sizeof(key_names[0]));
+    memset((void*)key_names, 0, KEY_NAMES_COUNT * sizeof(key_names[0]));
 
     // STRING: LEGORR 0x004ab5ec
     key_names[0x01] = "KEY_ESCAPE";

@@ -111,6 +111,7 @@ relocate-unit:
 # Unit tests of the Python tooling (needs reference/LegoRR.exe for the
 # validation tests, which are skipped without it).
 tools-test:
+	python3 -m unittest discover -s tools/tests -p 'test_reccmp_diagnostics.py'
 	python3 tools/link_order.py check
 	python3 tools/meson_source_parity.py
 	python3 -m unittest discover -s tools/tests -p 'test_meson_source_parity.py'

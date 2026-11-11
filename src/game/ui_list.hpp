@@ -16,7 +16,7 @@ const char* ui_pointer_cursor_name_get(uint32_t index);
 void ui_pointer_cursor_override_set(float duration);
 float ui_pointer_cursor_override_remaining(void);
 void ui_pointer_cursor_override_tick(float elapsed); /* FUN_0045cd90 */
-typedef struct UiOverlayInitSink {
+struct UiOverlayInitSink {
     void* context;
     void (*panel_create)(void* context, const char* name, int group,
                          int x, int y, int width, int height, int flags);

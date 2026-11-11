@@ -225,6 +225,7 @@ tools/match_baseline.py
 tools/match_listings.py
 tools/pr_match_progress.py
 tools/reccmp.sh
+tools/reccmp_diagnostics.py
 tools/reccmp_full_diff.py
 tools/strip_pe_debug.py
 tools/translation_units.py

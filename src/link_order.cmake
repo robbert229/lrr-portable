@@ -132,7 +132,7 @@ lrr_link(tail   -        platform_glue platform/native/frameloop.cpp native)
 # Legacy files whose functions lie in the CRT range, just before LIBC
 lrr_link(legacy 0048ed00 game          game/seh_runtime.cpp)
 lrr_link(legacy 00491710 gods98        crt/crt_heap.cpp)
-lrr_link(legacy 00491f80 gods98        crt/crt.cpp)
+lrr_link(legacy 00491f97 gods98        crt/crt.cpp)
 
 # Libraries of the matching build, after the objects: LIBC (the /ML runtime),
 # oldnames.lib, then the import libraries in the original's import-thunk

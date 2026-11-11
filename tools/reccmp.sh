@@ -63,7 +63,17 @@ cmake -S "${project_root}" -B "${build_dir}" \
   -DLRR_RECCMP=ON \
   -DBUILD_TESTING=OFF \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build "${build_dir}" --target program
+# A clean build is required: an incremental build cannot report warnings from
+# translation units which were not recompiled.
+run_checked() {
+  local log_file status=0
+  log_file="$(mktemp)"
+  "$@" 2>&1 | tee "${log_file}" || status=$?
+  python3 "${project_root}/tools/reccmp_diagnostics.py" "${log_file}" || status=1
+  rm -f "${log_file}"
+  return "${status}"
+}
+run_checked cmake --build "${build_dir}" --target program --clean-first
 
 # The original has no debug directory. Remove the linker's, keeping the PDB,
 # so that Reccmp and binary_progress.py both see the executable as shipped.
@@ -84,10 +94,10 @@ fi
 
 report_dir="${build_dir}/reccmp-report"
 mkdir -p "${report_dir}"
-RECCMP_ENTITIES="${report_dir}/entities.json" python3 "${project_root}/tools/reccmp_full_diff.py" "${reccmp_bin}" --target LEGORR \
+RECCMP_ENTITIES="${report_dir}/entities.json" run_checked python3 "${project_root}/tools/reccmp_full_diff.py" "${reccmp_bin}" --target LEGORR \
   --html "${report_dir}/index.html" \
   --json "${report_dir}/results.json"
-python3 "${project_root}/tools/reccmp_full_diff.py" "${reccmp_bin}" --target LEGORR --nolib \
+run_checked python3 "${project_root}/tools/reccmp_full_diff.py" "${reccmp_bin}" --target LEGORR --nolib \
   --html "${report_dir}/game-only.html" \
   --json "${report_dir}/game-only.json"
 python3 "${project_root}/tools/clean_reccmp_report_names.py" "${report_dir}"

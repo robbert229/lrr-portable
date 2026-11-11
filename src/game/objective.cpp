@@ -499,7 +499,6 @@ void objective_load(BlockFile* cfg, const char* level_name, LevelState* s)
     }
 }
 
-// FUNCTION: LEGORR 0x00459050
 typedef struct ObjectiveEntityMatchContext {
     LevelState* level;
     uint32_t flags;
@@ -528,6 +527,7 @@ static int objective_entity_pair_match(EntitySlot* entity, void* payload)
     return 0;
 }
 
+// FUNCTION: LEGORR 0x00459050
 int objective_check(LevelState* s, int* mark, float dt)
 {
     if (s == NULL) {
