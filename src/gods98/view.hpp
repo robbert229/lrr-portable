@@ -527,6 +527,10 @@ float vec_dist(const float* a, const float* b);
 float vec_dot(const float* a, const float* b);
 float vec_len(const float* a);
 float vec2_dist(const float* a, const float* b);   /* 2D */
+/* Unused: kept only to preserve the declaration count of every unit that
+ * includes this header (finding 506) until the #388 relocation. The
+ * function is game/bezier.c's (GAME-003, finding 514). */
+float vec2_dist_alt(const float* a, const float* b);
 /* Minimum 2D distance from point to the closed segment start→end. */
 float segment_2d_point_distance(const float* point, const float* start,
                                 const float* end); /* FUN_004089d0 */
@@ -1477,6 +1481,8 @@ void set_global_scalar_to_one(void);
  * step, 1 by +3x, anything else is inert; the target is the primary
  * view/camera context at DAT_005560e4. */
 void float_negate_absolute_value(float* value);
+/* Unused: kept for the declaration count (see vec2_dist_alt above). */
+void vector2_set_length(float v[2], float length);
 void camera_zoom_step_context_set(void* context);
 void camera_zoom_step_adjust(int direction, float step);
 
@@ -1638,7 +1644,18 @@ void* rotated_pairs_scratch_peek(void);
 
 /* --- curve band (2026-10-25) -------------------------------------------------
  * The Bezier helpers (FUN_004065f0-FUN_004068c0) are game/bezier.c (GAME-003,
- * issue #417). */
+ * issue #417, finding 514), with the original's types. The four declarations
+ * below are unused and have no definition: they are kept only to preserve
+ * the declaration count of every unit that includes this header (finding
+ * 506) until the #388 relocation. Use game/bezier.h. */
+void cubic_bezier_point_evaluate(float out[2], const float* p0, const float* p1,
+                                 const float* p2, const float* p3, float t);
+void bezier_curve_samples_build(uint32_t* dest, const uint32_t* control,
+                                const uint32_t* p3, const uint32_t* p4,
+                                const uint32_t* p5, uint32_t count);
+float polyline_segment_lengths_total(uint32_t* curve);
+uint32_t path_arc_length_interpolate(const uint32_t* curve, float travel,
+                                     float* out);
 
 /* ViewPointToScreenGeometryTransform (FUN_0045e940): projects four floats
  * in place through the projection window — screen offsets at +1c/+20 come
