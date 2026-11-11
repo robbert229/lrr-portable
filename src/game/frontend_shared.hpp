@@ -55,4 +55,6 @@ extern float s_panel_position_offset_y;
 void panel_blit_seam_call(void* res, float x, float y);
 int frontend_config_fields(const char* value, char* storage, unsigned int storage_size, char** fields, unsigned int field_count, char separator);
 
+extern PointerCursorState s_pointer_cursor_runtime;
+
 #endif /* LRR_GAME_FRONTEND_SHARED_HPP */

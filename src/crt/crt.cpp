@@ -2045,8 +2045,6 @@ uint32_t request_record_flags_peek(int index)
 /* --- the remaining DAT one-liner stores/reads (see crt.hpp) ----------------- */
 // GLOBAL: LEGORR 0x0050080c
 static uint32_t s_value_0050080c = 0u;
-// GLOBAL: LEGORR 0x00500a9c
-static uint32_t s_font_words[16];   /* DAT_00500a9c window */
 
 // FUNCTION: LEGORR 0x0045c4a0
 void global_value_0050080c_set(uint32_t value)
@@ -2057,21 +2055,6 @@ void global_value_0050080c_set(uint32_t value)
 uint32_t global_value_0050080c_peek(void)
 {
     return s_value_0050080c;
-}
-
-// FUNCTION: LEGORR 0x0045cc10
-uint32_t indexed_global_value_at_get(int index)
-{
-    if (index < 0 || index >= 16) {
-        return 0u; /* deviation: the corpus strides blindly */
-    }
-    return s_font_words[index];
-}
-
-// FUNCTION: LEGORR 0x0045cc60
-uint32_t global_cursor_word_get(void)
-{
-    return s_cursor_slot;
 }
 
 void font_cursor_word_set(int index, uint32_t v)

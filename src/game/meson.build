@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'pointer.cpp',
   'object_overlays.cpp',
   'object_state_file.cpp',
   'objective_unit.cpp',

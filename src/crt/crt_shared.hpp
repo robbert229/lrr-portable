@@ -31,4 +31,6 @@ extern uint32_t s_task_refresh_flag;
 extern uint32_t s_counter_004ff990;
 extern uint32_t s_flag_004ff978;
 
+extern uint32_t s_font_words[16];
+
 #endif /* LRR_CRT_CRT_SHARED_HPP */

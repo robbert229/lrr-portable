@@ -11458,7 +11458,7 @@ namespace unported_ledger_stubs {
 
 } // namespace unported_ledger_stubs
 
-static PointerCursorState s_pointer_cursor_runtime;
+PointerCursorState s_pointer_cursor_runtime;
 
 void frontend_pointer_config_load(BlockFile* cfg)
 {
@@ -11471,100 +11471,6 @@ void frontend_pointer_config_load(BlockFile* cfg)
         section = block_first_child(cfg);
     pointer_cursor_config_load_target(
         section);
-}
-
-static void pointer_cursor_slot_release(PointerCursorSlot* slot)
-{
-    if (slot == NULL || slot->resource == NULL) return;
-    if (slot->animated)
-        (void)flic_close((Flic*)slot->resource);
-    else
-        texture_release((TextureSurface*)slot->resource);
-    slot->resource = NULL;
-    slot->animated = 0;
-    slot->hot_x = 0;
-    slot->hot_y = 0;
-}
-
-static int pointer_cursor_value_split(char* value, char** fields,
-                                      unsigned int capacity)
-{
-    unsigned int count = 0u;
-    char* p;
-    if (value == NULL || fields == NULL || capacity == 0u || value[0] == '\0')
-        return 0;
-    fields[count++] = value;
-    for (p = value; *p != '\0' && count < capacity; ++p) {
-        if (*p == ',') {
-            *p = '\0';
-            fields[count++] = p + 1;
-        }
-    }
-    return (int)count;
-}
-
-// FUNCTION: LEGORR 0x0045cbd0
-int pointer_cursor_config_parse_target(const char* name, int* index_out)
-{
-    if (s_pointer_cursor_runtime.names[0] == NULL)
-        pointer_cursor_registry_init(&s_pointer_cursor_runtime);
-    return pointer_cursor_name_resolve(&s_pointer_cursor_runtime, name,
-                                       index_out);
-}
-
-// FUNCTION: LEGORR 0x0045ca70
-void pointer_cursor_config_load_target(BlockRec* first_entry)
-{
-    BlockRec* entry;
-    uint32_t* feature_flags;
-    if (s_pointer_cursor_runtime.names[0] == NULL)
-        pointer_cursor_registry_init(&s_pointer_cursor_runtime);
-    feature_flags = engine_current_feature_word();
-    for (entry = first_entry; entry != NULL; entry = block_next_sibling(entry)) {
-        const char* entry_name = block_name(entry);
-        const char* entry_value = block_value(entry);
-        char value_copy[512];
-        char* fields[3];
-        int field_count;
-        int slot_index;
-        int animated;
-        PointerCursorSlot* slot;
-        if (entry_name == NULL || entry_value == NULL) continue;
-        if (entry_name[0] == '!') {
-            if (feature_flags != NULL &&
-                (*feature_flags & 0x02000000u) != 0u) continue;
-            ++entry_name;
-        }
-        if (!pointer_cursor_config_parse_target(entry_name, &slot_index) ||
-            slot_index < 0 || slot_index >= POINTER_CURSOR_COUNT)
-            continue;
-        strncpy(value_copy, entry_value, sizeof(value_copy) - 1u);
-        value_copy[sizeof(value_copy) - 1u] = '\0';
-        field_count = pointer_cursor_value_split(value_copy, fields, 3u);
-        if (field_count < 1) continue;
-        slot = &s_pointer_cursor_runtime.slots[slot_index];
-        animated = field_count != 1;
-        if (animated) {
-            Flic* animation = flic_open(fields[0]);
-            if (animation == NULL) continue;
-            pointer_cursor_slot_release(slot);
-            slot->resource = animation;
-            slot->animated = 1;
-            slot->hot_x = field_count > 1 ? atoi(fields[1]) : 0;
-            slot->hot_y = field_count > 2 ? atoi(fields[2]) : 0;
-        }
-        else {
-            TextureSurface* bitmap = image_surface_load(fields[0], 0u, 0u);
-            if (bitmap == NULL) continue;
-            image_surface_blit_transformed(bitmap, 0.0f, 0.0f, 0.0f,
-                                           0.0f, 0.0f, 0.0f);
-            pointer_cursor_slot_release(slot);
-            slot->resource = bitmap;
-            slot->animated = 0;
-            slot->hot_x = 0;
-            slot->hot_y = 0;
-        }
-    }
 }
 
 static void pointer_cursor_flic_blit(void* pixels, int pitch, int width,
@@ -11634,17 +11540,6 @@ void pointer_cursor_draw_pixels(uint32_t x, uint32_t y, void* pixels,
             animation, (int)x + slot->hot_x, (int)y + slot->hot_y,
             source_key_enabled);
     }
-}
-
-// FUNCTION: LEGORR 0x0045cc70
-void pointer_cursor_draw_target(uint32_t x, uint32_t y)
-{
-    DisplaySurface* target = surface_active_render_target_get();
-    void* pixels = NULL;
-    int pitch = 0;
-    if (target == NULL || surface_lock(target, &pixels, &pitch) < 0) return;
-    pointer_cursor_draw_pixels(x, y, pixels, pitch, target->w, target->h);
-    surface_unlock(target, pixels);
 }
 
 namespace unported_ledger_stubs {
