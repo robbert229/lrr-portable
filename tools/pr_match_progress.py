@@ -18,7 +18,7 @@ MARKER = '<!-- matching-progress-report -->'
 
 def read_progress(root):
     data = json.loads((root / PROGRESS).read_text(encoding='utf-8'))
-    if data['schema_version'] != 2:
+    if data['schema_version'] not in (2, 3):
         raise ValueError('unsupported binary progress schema')
     return data
 
@@ -46,6 +46,10 @@ def render(base, head):
         return MARKER + '\nNo matching-build impact.\n'
     old, new = read_progress(base), read_progress(head)
     metrics = [
+        ('Unit-relative identity (%)', ('layout', 'unit_relative_identity', 'percent'), 1),
+        ('Unit contiguity (%)', ('layout', 'unit_contiguity', 'percent'), 1),
+        ('Unit order inversions, pairs', ('layout', 'unit_order_inversions', 'pairs'), -1),
+        ('Size-exact units', ('layout', 'size_exact_prefix', 'size_exact_units'), 1),
         ('Text excess over chance (pp)', ('text_at_original_addresses', 'excess_percent_points'), 1),
         ('Text 16+ byte run excess (pp)', ('text_at_original_addresses', 'run_excess_percent_points'), 1),
         ('Identical functions at original address', ('fully_identical_functions_at_original_address', 'count'), 1),
@@ -60,7 +64,11 @@ def render(base, head):
     for label, path, direction in metrics:
         a, b = old, new
         for key in path:
-            a, b = a[key], b[key]
+            a = a.get(key) if isinstance(a, dict) else None
+            b = b.get(key) if isinstance(b, dict) else None
+        if a is None or b is None:
+            lines.append(f'| {label} | {a if a is not None else "n/a"} | {b if b is not None else "n/a"} | n/a |')
+            continue
         delta = b - a
         arrow = '⬆️ improvement' if delta * direction > 0 else '⬇️ regression' if delta * direction < 0 else '—'
         lines.append(f'| {label} | {a} | {b} | {arrow} ({delta:+.2f}) |')

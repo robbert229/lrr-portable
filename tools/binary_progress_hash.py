@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = 'tools/binary_progress_inputs.txt'
 FIXED = ('CMakeLists.txt', 'cross/msvc5-toolchain.cmake', 'tools/reccmp.sh',
          'tools/clean_reccmp_report_names.py', 'tools/reccmp_full_diff.py', 'tools/match_listings.py',
-         'tools/match_baseline.py', 'tools/binary_progress.py',
+         'tools/match_baseline.py', 'tools/binary_progress.py', 'tools/layout_progress.py',
+         'tools/pr_match_progress.py', 'docs/coverage/translation-unit-ranges.csv',
+         'docs/coverage/translation-units.csv', 'docs/coverage/translation-units.spec.csv',
          'tools/binary_progress_hash.py', 'tools/translation_units.py',
          'tools/link_order.py', link_order.LIST,
          'tools/strip_pe_debug.py', 'docs/decompiles/full/manifest.csv',

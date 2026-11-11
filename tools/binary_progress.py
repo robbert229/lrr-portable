@@ -8,6 +8,7 @@ import statistics
 from pathlib import Path
 
 from binary_progress_hash import input_hash
+import layout_progress
 from translation_units import Binary, load_functions, ROOT
 
 
@@ -16,7 +17,7 @@ def percent(n, d):
 
 
 RUN_LENGTH = 16
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def run_bytes(original, rebuilt):
@@ -110,7 +111,11 @@ def report(orig_path, rebuilt_path, report_dir):
               ('image_size', 'SizeOfImage'), ('subsystem', 'Subsystem')]
     headers = {name: {'original': getattr(orig.OPTIONAL_HEADER, field), 'rebuilt': getattr(rebuilt.OPTIONAL_HEADER, field)}
                for name, field in fields if getattr(orig.OPTIONAL_HEADER, field) != getattr(rebuilt.OPTIONAL_HEADER, field)}
-    return {'schema_version': SCHEMA_VERSION, 'minimum_identical_run_bytes': RUN_LENGTH, 'input_sha256': input_hash(), 'sections': sections,
+    layout = layout_progress.measure(original, rebuilt, funcs, full,
+                                     json.loads((report_dir / 'entities.json').read_text()),
+                                     layout_progress.read_rows(layout_progress.RANGES),
+                                     layout_progress.annotation_addresses(), rebuilt_path.parent / 'LegoRR.map')
+    return {'layout': layout, 'schema_version': SCHEMA_VERSION, 'minimum_identical_run_bytes': RUN_LENGTH, 'input_sha256': input_hash(), 'sections': sections,
             'text_at_original_addresses': at_address, 'function_order_inversions': {'full': inversions(full), 'game_only': inversions(game)},
             'fully_identical_functions_at_original_address': {'count': len(positioned), 'bytes': sum(f.end - f.address for f in positioned)},
             'exact_function_code_bytes': {'bytes': covered, 'original_text_bytes': len(text), 'percent': percent(covered, len(text))},

@@ -2,6 +2,9 @@ CMakeLists.txt
 cross/msvc5-toolchain.cmake
 docs/coverage/function-areas.csv
 docs/coverage/ledger.csv
+docs/coverage/translation-unit-ranges.csv
+docs/coverage/translation-units.csv
+docs/coverage/translation-units.spec.csv
 docs/decompiles/full/manifest.csv
 src/compat/msvc5/cstdint
 src/compat/msvc5/stdint.h
@@ -195,9 +198,11 @@ tools/binary_progress.py
 tools/binary_progress_hash.py
 tools/binary_progress_inputs.txt
 tools/clean_reccmp_report_names.py
+tools/layout_progress.py
 tools/link_order.py
 tools/match_baseline.py
 tools/match_listings.py
+tools/pr_match_progress.py
 tools/reccmp.sh
 tools/reccmp_full_diff.py
 tools/strip_pe_debug.py

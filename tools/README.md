@@ -416,6 +416,23 @@ and writes `LegoRR.map`; the linker emits a separate PDB for Reccmp, and
 file-only debug overlay before Reccmp and this comparison read the executable.
 `make reccmp-check` is the match baseline gate on the same build.
 
+Schema 3 layout measures attribute mapped functions to original unit ranges.
+Unit order uses each unit's median rebuilt function address; contiguity counts
+one rebuilt run in original function order, omitting unmapped functions.
+Unit-relative identity counts original function bytes only when the entire
+function matches after masking image-address operands and external relative
+branches. Missing functions count against the denominator. Size-exact units
+require every original function to map with equal code size; the prefix uses
+original unit spans including padding. Reccmp's PDB sizes and the disassembled
+original code extents are approximations. Data agreement is anchored on the
+lowest mapped annotation in each original section and uses the evidence ranges
+in the unit map, which are not exact contribution boundaries; unmapped and
+ambiguous annotations are counted. A unit with no comparable pair is n/a.
+The map's first public symbol per object is supplementary and can miss objects
+without publics; the link-order list comparison uses unit starts and legacy
+median keys and excludes the port tail. None of these is a claim of exact
+object or data boundaries.
+
 Section comparisons align each named section at its start and use the
 original's virtual size as denominator (missing candidate bytes count as
 unequal); raw-file alignment padding is excluded. Imports and resources use
