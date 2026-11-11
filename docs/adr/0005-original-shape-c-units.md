@@ -132,7 +132,9 @@ For each original translation unit, in link order where possible:
    - Run `make reccmp-check` and compare the unit's functions before and
      after.
    - Classify any drop outside the unit under the entropy policy.
-   - Refresh with `make reccmp-baseline-update`.
+   - Run `make match-progress` and commit the refreshed match baseline and
+     whole-binary progress. The PR freshness check verifies the input hash;
+     it does not replace the local gate or this entropy review.
    - Regenerate the unit map with `python3 tools/translation_units.py build`.
 9. **Native.** The unit and every touched file must compile natively with
    no new errors, and `c_boundaries` must pass. Run the native tests once
