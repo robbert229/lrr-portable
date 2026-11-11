@@ -302,10 +302,8 @@ void selection_count_reset(GameContext* ctx)
 // FUNCTION: LEGORR 0x004525c0
 #if defined(_MSC_VER) && defined(_M_IX86)
 __declspec(naked)
-#endif
 EntitySlot* selection_active_entity_get(void)
 {
-#if defined(_MSC_VER) && defined(_M_IX86)
     __asm {
         mov eax, dword ptr [s_selection_active_count]
         mov ecx, dword ptr [s_selection_active_records]
@@ -314,11 +312,14 @@ EntitySlot* selection_active_entity_get(void)
         and eax, ecx
         ret
     }
+}
 #else
+EntitySlot* selection_active_entity_get(void)
+{
     return s_selection_active_count != 0u
         ? s_selection_active_records[0] : NULL;
-#endif
 }
+#endif
 
 // FUNCTION: LEGORR 0x00452580
 EntitySlot* const* selection_active_context_record_get(int* count_out)
