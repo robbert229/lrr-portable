@@ -336,9 +336,8 @@ uint8_t* level_voxel(const LevelState* s, int x, int y);
 /* --- map-file resource slots (finding 07: 0x489410's slot registry) ----- *
  * The corpus keeps an interleaved (ptr, in-use-flag) pair table of 2000
  * map-image buffers; MapOpen2 opens through it using the resource module's
- * GameFileHandle route. The port models the retail table as fixed-width
- * stride-8 records (pointer word at +0, used byte at +4), with a native
- * pointer sidecar on wider hosts; the claim rides the
+ * GameFileHandle route. The 32-bit table has stride-8 records; on wider
+ * hosts the pointer-sized records grow naturally. The claim uses the
  * corpus's engine-heap allocator pair (0x48dbd0 / 0x48db80) — no
  * zero-fill, no failure check, fault-on-use like the corpus. Reset
  * clears without freeing, exactly as the corpus leak loop does. */
@@ -349,17 +348,17 @@ uint8_t* level_voxel(const LevelState* s, int x, int y);
 int map_open2(const char* path, int32_t* size_out);
 
 /* FUN_004893f0: zero every slot pair. */
-void level_map_slots_reset(void);
+extern "C" void level_map_slots_reset(void);
 
 /* FUN_00489410: claim the first free slot with an uninitialized `size`-byte
  * image; -1 when the table is full. */
-int level_map_slot_allocate(size_t size);
+extern "C" int level_map_slot_allocate(size_t size);
 
 /* FUN_00489460: free and clear an in-use slot; no-op for bad/free ids. */
-void level_map_slot_release(uint32_t slot);
+extern "C" void level_map_slot_release(uint32_t slot);
 
 /* FUN_004894a0: the slot's image pointer, or NULL when free/out of range. */
-uint8_t* level_map_slot_get(uint32_t slot);
+extern "C" uint8_t* level_map_slot_get(uint32_t slot);
 
 /* FUN_004515a0: read the image header dims (+0x08/+0x0C). NULL reads as
  * zero (the corpus dereferences blindly). */

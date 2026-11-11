@@ -2201,10 +2201,10 @@ address,function_name,unit_order,unit_id,unit_name,unit_kind,confidence,evidence
 00489280,CDAudioTrackCompletionPoll,70,G98-021,,gods98,high,bss;string,src/gods98/soundsys.c
 00489330,CDAudioDeviceOpen,70,G98-021,,gods98,high,bss;string,src/gods98/soundsys.c
 004893a0,CdAudioStopAndClose,70,G98-021,,gods98,high,bss;string,src/gods98/soundsys.c
-004893f0,MapFileResourceSlotsReset,71,G98-024,,gods98,high,bss,src/game/level.cpp
-00489410,MapFileResourceSlotAllocate,71,G98-024,,gods98,high,bss,src/game/level.cpp
-00489460,MapFileResourceSlotRelease,71,G98-024,,gods98,high,bss,src/game/level.cpp
-004894a0,MapFileResourceSlotGet,71,G98-024,,gods98,high,bss,src/game/level.cpp
+004893f0,MapFileResourceSlotsReset,71,G98-024,,gods98,high,bss,src/gods98/g98_024.c
+00489410,MapFileResourceSlotAllocate,71,G98-024,,gods98,high,bss,src/gods98/g98_024.c
+00489460,MapFileResourceSlotRelease,71,G98-024,,gods98,high,bss,src/gods98/g98_024.c
+004894a0,MapFileResourceSlotGet,71,G98-024,,gods98,high,bss,src/gods98/g98_024.c
 004894c0,ComInterfaceQueryOrFallback,72,G98-025,,gods98,low,boundary:G98-025,src/gods98/view.cpp
 00489520,ResourceTreeCallbackContextCreateForEnumerator,72,G98-025,,gods98,low,boundary:G98-025,src/gods98/resource.cpp
 004895c0,ResourceTreeCallbackContextCreateForResource,72,G98-025,,gods98,low,boundary:G98-025,src/gods98/resource.cpp

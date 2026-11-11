@@ -129,7 +129,7 @@ add_library(gods98 STATIC
   ${ENGINE_DIR}/scene_pool.cpp ${ENGINE_DIR}/scene_resources.cpp
   ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c
   ${ENGINE_DIR}/sound_wave.cpp ${ENGINE_DIR}/winmm_port.cpp
-  ${ENGINE_DIR}/keys.c)
+  ${ENGINE_DIR}/keys.c ${ENGINE_DIR}/g98_024.c)
 target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 
 add_library(game STATIC
@@ -154,7 +154,7 @@ target_include_directories(game PUBLIC ${SRC_ROOT} ${GAME_DIR} ${ENGINE_DIR})
 set(LRR_ORIGINAL_SHAPE_SOURCES ${ENGINE_DIR}/utils.c ${ENGINE_DIR}/config.c
   ${ENGINE_DIR}/maths.c
   ${GAME_DIR}/priorities.c ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c
-  ${ENGINE_DIR}/keys.c)
+  ${ENGINE_DIR}/keys.c ${ENGINE_DIR}/g98_024.c)
 if(NOT LRR_CLASSIC_MSVC5)
   set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
     LANGUAGE CXX)
