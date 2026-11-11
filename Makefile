@@ -20,7 +20,7 @@ RECCMP_COMPATDATA ?= $(if $(RR_A2_HOME),$(RR_A2_HOME),$(HOME)/.local/share/rock-
 RECCMP_RECCMP ?=
 REPROBIT_MSVC_5_0_RTM_ROOT ?=
 
-.PHONY: binary-progress all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit tools-test
+.PHONY: match-progress binary-progress all setup build run clean reccmp reccmp-report reccmp-run reference-run reccmp-lint reccmp-check reccmp-compare reccmp-baseline-update match-function match-function-parity convert-unit tools-test
 
 all: build
 
@@ -32,6 +32,11 @@ setup:
 
 build: setup
 	cmake --build "$(BUILD_DIR)" --target program
+
+# Rebuild both measurements; review the gate and entropy policy before accepting drops.
+match-progress: reccmp-report
+	$(MAKE) reccmp-baseline-update
+	$(MAKE) binary-progress
 
 # Build and compare the separate non-incremental matching executable.
 binary-progress:
@@ -95,6 +100,7 @@ convert-unit:
 tools-test:
 	python3 -m unittest discover -s tools -p 'test_convert_unit.py'
 	python3 -m unittest discover -s tools/tests -p 'test_binary_progress.py'
+	python3 -m unittest discover -s tools/tests -p 'test_pr_match_progress.py'
 
 # Check match_function.py against an existing full report from the same tree.
 match-function-parity:

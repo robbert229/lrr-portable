@@ -13,6 +13,9 @@
   intentionally improves matches, refresh the baseline in the same change with
   `make reccmp-baseline-update`. Use `make reccmp-compare` to re-check an
   existing report without rebuilding. CI does not run this gate; it stays local.
+- For changes to matching-build inputs, run `make match-progress` and commit
+  both `docs/coverage/binary-progress.json` and the match baseline. Review
+  drops under ADR 0005 before accepting a new baseline. CI checks freshness.
 - To convert an original translation unit (ADR 0005), start with step 0: run
   `python3 tools/convert_unit.py <unit>` (`tools/README.md`). It scaffolds the
   unit's `.c`/`.h`, globals, stubs and wiring, and prints the conversion
