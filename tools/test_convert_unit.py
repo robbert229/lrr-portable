@@ -384,9 +384,11 @@ class ScaffoldOutputTest(unittest.TestCase):
             self.assertIn("${ENGINE_DIR}/g98_029.c", cmake)
             self.assertFalse((REPO / "src/gods98/g98_029.c").exists())
 
-    def test_nine_leaf_units_are_leaves(self):
+    def test_leaf_units_are_leaves(self):
+        # The wave-reader and MCI units of the first leaf wave (G98-022 and
+        # G98-023) were merged into G98-021, which is not a leaf (#409/#410).
         index = cf.SourceIndex(REPO)
-        for unit in ("G98-019", "G98-022", "G98-023", "G98-024", "G98-026", "G98-027", "G98-029",
+        for unit in ("G98-019", "G98-024", "G98-026", "G98-027", "G98-029",
                      "Keys.c", "GAME-003"):
             fp = cf.compute_footprint(unit, REPO, index=index, with_data=False)
             self.assertTrue(fp.leaf, unit)

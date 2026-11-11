@@ -42,7 +42,7 @@
 typedef struct PlatformWindow PlatformWindow;
 
 /* Active window and configured client limits mirrored for the input sampler. */
-extern void* g_platform_cursor_window_handle;
+extern "C" void* g_platform_cursor_window_handle; /* platform/window.h */
 extern int g_platform_cursor_width;
 extern int g_platform_cursor_height;
 
