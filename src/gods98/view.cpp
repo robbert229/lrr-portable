@@ -6638,22 +6638,6 @@ const void* map_row_span_record_get(uint32_t index)
     return s_map_row_span_records[index];
 }
 
-/* FloatRoundToNearestInt (FUN_00463e40): the caller uses the returned
- * integer as a row index. The corpus compares the fractional part against
- * 0.5, choosing floor below it and ceil at/above it (ties toward +infinity). */
-// FUNCTION: LEGORR 0x00463e40
-int float_round_to_nearest_int(float value)
-{
-    const double value_double = (double)value;
-    if (value_double - crt_round_to_integral_with_math_error_handling(
-            value_double) < 0.5) {
-        return crt_float_to_long(
-            crt_round_to_integral_with_math_error_handling(value_double));
-    }
-    return crt_float_to_long(
-        crt_round_to_integral_with_math_error_handling_variant(value_double));
-}
-
 RendererSubobjectResolveFn s_renderer_subobject_resolver;
 
 void renderer_subobject_resolver_set(RendererSubobjectResolveFn resolver)

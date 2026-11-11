@@ -1850,25 +1850,8 @@ void display_dimensions_set(int w, int h)
     s_display_h = h;
 }
 
-/* DAT_00500110 record block: 0x30-byte panel-category records. Bounds, pair,
- * category word, and flags all share this storage. */
-#define REQUEST_RECORD_COUNT 18
-
-typedef struct RequestRecord {
-    uint8_t  prefix[0x08];
-    float    bounds_x1; /* +0x08 */
-    float    bounds_y1; /* +0x0c */
-    float    bounds_x2; /* +0x10 */
-    float    bounds_y2; /* +0x14 */
-    uint32_t pair_x;  /* +0x18: DAT_00500128, 0x30-byte category stride */
-    uint32_t pair_y;  /* +0x1c: DAT_0050012c, 0x30-byte category stride */
-    uint32_t category_word; /* +0x20 */
-    uint8_t  reserved[0x08];
-    uint32_t flags;   /* +0x2c */
-} RequestRecord;
-
 // GLOBAL: LEGORR 0x00500110
-static RequestRecord s_request_records[REQUEST_RECORD_COUNT];
+RequestRecord s_request_records[REQUEST_RECORD_COUNT];
 
 // FUNCTION: LEGORR 0x0045a650
 void panel_category_bounds_set(int panel, int x1, int y1, int x2, int y2)
@@ -2123,15 +2106,9 @@ void byte_range_swap(void* a, void* b, size_t n)
 }
 #endif
 
-/* --- the DAT window band (see crt.hpp) ---------------------------------------
- * Auxiliary tables are zero-initialized statics. The panel position pair
- * lives in the corresponding 0x30-byte RequestRecord, preserving the
- * corpus's indexed record stride; public port hooks remain guarded. */
-#define DAT_WINDOW_COUNT 18
-
-static float    s_fpair_a[DAT_WINDOW_COUNT]; /* DAT_00552144 entries */
-static float    s_fpair_b[DAT_WINDOW_COUNT]; /* DAT_00552148 entries */
-static void*    s_metric_records[DAT_WINDOW_COUNT]; /* DAT_00552154 */
+float    s_fpair_a[DAT_WINDOW_COUNT]; /* DAT_00552144 entries */
+float    s_fpair_b[DAT_WINDOW_COUNT]; /* DAT_00552148 entries */
+void*    s_metric_records[DAT_WINDOW_COUNT]; /* DAT_00552154 */
 static void*    s_panel_records[DAT_WINDOW_COUNT]; /* DAT_00500134 */
 
 
@@ -2156,16 +2133,6 @@ void indexed_pair_get(int index, uint32_t* out_x, uint32_t* out_y)
     *out_y = s_request_records[index].pair_y;
 }
 
-// FUNCTION: LEGORR 0x00463730
-void indexed_float_pair_set(int index, uint32_t x, uint32_t y)
-{
-    if (index < 0 || index >= DAT_WINDOW_COUNT) {
-        return; /* deviation: the corpus strides blindly */
-    }
-    s_fpair_a[index] = (float)x; /* the corpus's uint->float cast */
-    s_fpair_b[index] = (float)y;
-}
-
 void indexed_float_pair_peek(int index, float* out_x, float* out_y)
 {
     if (index < 0 || index >= DAT_WINDOW_COUNT || out_x == NULL
@@ -2174,38 +2141,6 @@ void indexed_float_pair_peek(int index, float* out_x, float* out_y)
     }
     *out_x = s_fpair_a[index];
     *out_y = s_fpair_b[index];
-}
-
-// FUNCTION: LEGORR 0x00463ed0
-void indexed_text_metrics_pair_set(int index, uint32_t x, uint32_t y)
-{
-    if (index < 0 || index >= DAT_WINDOW_COUNT) {
-        return;
-    }
-    char* rec = (char*)s_metric_records[index];
-    if (rec == NULL) {
-        return; /* deviation: the corpus dereferences its slot blindly */
-    }
-    __builtin_memcpy(rec + 0x1c, &x, sizeof(x));
-    __builtin_memcpy(rec + 0x20, &y, sizeof(y));
-    const uint32_t one = 1u; /* the corpus's dirty flag */
-    __builtin_memcpy(rec + 0x24, &one, sizeof(one));
-}
-
-// FUNCTION: LEGORR 0x00463ea0
-void indexed_text_metrics_pair_get(int index, uint32_t* out_x,
-                                   uint32_t* out_y)
-{
-    if (index < 0 || index >= DAT_WINDOW_COUNT
-        || out_x == NULL || out_y == NULL) {
-        return;
-    }
-    const char* rec = (const char*)s_metric_records[index];
-    if (rec == NULL) {
-        return;
-    }
-    __builtin_memcpy(out_x, rec + 0x1c, sizeof(*out_x));
-    __builtin_memcpy(out_y, rec + 0x20, sizeof(*out_y));
 }
 
 void indexed_record_pointer_set(int index, void* record)
@@ -2343,10 +2278,10 @@ uint32_t reward_score_count_peek(void)
 }
 
 /* --- the panel/view blit band (see crt.hpp) --------------------------------- */
-static uint32_t s_view_handle[DAT_WINDOW_COUNT]; /* DAT_00552140 */
-static void*    s_view_rect_a[DAT_WINDOW_COUNT]; /* DAT_0055214c */
-static void*    s_view_rect_b[DAT_WINDOW_COUNT]; /* DAT_00552150 */
-static int      s_view_region[DAT_WINDOW_COUNT]; /* DAT_00552158 */
+uint32_t s_view_handle[DAT_WINDOW_COUNT]; /* DAT_00552140 */
+void*    s_view_rect_a[DAT_WINDOW_COUNT]; /* DAT_0055214c */
+void*    s_view_rect_b[DAT_WINDOW_COUNT]; /* DAT_00552150 */
+int      s_view_region[DAT_WINDOW_COUNT]; /* DAT_00552158 */
 static int      s_panel_count[DAT_WINDOW_COUNT]; /* DAT_00500138 */
 
 #define CRT_SURFACE_CALLS 256
@@ -2454,13 +2389,6 @@ float crt_float_bits(uint32_t bits)
     return f;
 }
 
-static uint32_t float_bits(float f)
-{
-    uint32_t b = 0u;
-    __builtin_memcpy(&b, &f, sizeof(b));
-    return b;
-}
-
 void view_blit_window_set(int view, uint32_t handle, void* rect_a,
                           void* rect_b, int region_index)
 {
@@ -2522,56 +2450,6 @@ void panel_item_flag8_set_if_enabled(int panel, int item, int value)
         return;
     }
     *w = value != 0 ? *w | 8u : *w & ~8u;
-}
-
-/* ViewBlitRectPositionsApply (FUN_00463d20) — see crt.hpp. Rect records:
- * +0x00/+0x04 position, +0x10/+0x14 the size pair (bit-for-bit blit
- * handles), +0x18 the flag word. The corpus strides its own block and
- * dereferences every window blindly — the guards here are the documented
- * deviation. */
-// FUNCTION: LEGORR 0x00463d20
-void view_blit_rect_positions_apply(int view)
-{
-    if (view < 0 || view >= DAT_WINDOW_COUNT) {
-        return;
-    }
-    const int k = s_view_region[view];
-    if (k < 0 || k >= DAT_WINDOW_COUNT) {
-        return; /* deviation: the corpus strides its own block blindly */
-    }
-    const float ox = s_fpair_a[view] +
-                     (float)(int)s_request_records[k].pair_x;
-    const float oy = s_fpair_b[view] +
-                     (float)(int)s_request_records[k].pair_y;
-    crt_surface_blit_record(s_view_handle[view], ox, oy);
-
-    for (int which = 0; which <= 1; ++which) {
-        const float* pf = (const float*)(which == 0 ? s_view_rect_a[view]
-                                                   : s_view_rect_b[view]);
-        if (pf == NULL) {
-            continue; /* deviation: the corpus reads blindly */
-        }
-        uint32_t flags = 0u;
-        __builtin_memcpy(&flags, pf + 6, sizeof(flags));
-        uint32_t handle = 0u;
-        if (((flags & 2u) == 0u) || (pf[4] == 0.0f)) {
-            if ((flags & 4u) != 0u && pf[5] != 0.0f) {
-                handle = float_bits(pf[5]);
-            } else {
-                continue;
-            }
-        } else {
-            handle = float_bits(pf[4]);
-        }
-        crt_surface_blit_record(handle, pf[0] + ox, pf[1] + oy);
-    }
-
-    const float* pf = (const float*)s_metric_records[view];
-    if (pf == NULL) {
-        return; /* deviation: the corpus dereferences its slot blindly */
-    }
-    crt_surface_blit_record(float_bits(pf[6]),
-                            pf[0] + pf[4] + ox, pf[1] + pf[5] + oy);
 }
 
 /* PanelTextureSlotsAllocate (FUN_0045ac30) — see crt.hpp. Draw-record

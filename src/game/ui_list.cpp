@@ -7,9 +7,6 @@
 #include "gods98/media.hpp"
 #include "ui_list_shared.hpp"
 
-// GLOBAL: LEGORR 0x005013c0
-static int s_ui_track_pointer_outer_gate;
-
 // FUNCTION: LEGORR 0x0045b620
 void ui_list_priority_button_action_dispatch(uint32_t action)
 {

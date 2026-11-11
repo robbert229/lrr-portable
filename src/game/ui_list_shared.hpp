@@ -8,4 +8,6 @@
 
 extern const char* s_pointer_cursor_names[56];
 
+extern int s_ui_track_pointer_outer_gate;
+
 #endif /* LRR_GAME_UI_LIST_SHARED_HPP */
