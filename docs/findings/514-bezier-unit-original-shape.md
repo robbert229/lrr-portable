@@ -8,7 +8,7 @@ its arc-length helpers: original translation unit GAME-003, text
 ([finding 505](505-original-translation-units-and-link-order.md)). It is the
 second game-side conversion, after Priorities.c (finding 506).
 
-"Before" is the *match baseline* on `main` at `7c66934b` (#430; its scores are those of `0cfa8749`, #426). "After" is
+"Before" is the *match baseline* on `main` at `99e4f624` (#432). "After" is
 this change. `make reccmp-check` and `make match-function` give the same
 per-function scores.
 
@@ -19,8 +19,8 @@ per-function scores.
 | Unit similarity (byte-weighted, 890 bytes) | 68.64% | **78.74%** |
 | Exact functions | 3 | 3 of 7 |
 | Mapped functions | 7 | 7 |
-| Game-only mean (2,128 functions mapped in both builds) | 49.67% | 49.72% |
-| Full mean (2,347 functions mapped in both builds) | 53.99% | 54.04% |
+| Game-only mean (2,128 functions mapped in both builds) | 49.72% | 49.77% |
+| Full mean (2,347 functions mapped in both builds) | 54.04% | 54.08% |
 
 Byte weights are the original's code bytes, without padding.
 
@@ -166,8 +166,9 @@ zero-length guard.
 ## Entropy
 
 This change refreshes the *match baseline* under ADR 0005 entropy rule 2.
-`make reccmp-check` on a clean checkout of `0cfa8749` passes, so every
-change below is this change's.
+`make reccmp-check` on a clean checkout of `main` passes (checked at
+`0cfa8749`; #430 and #432 refreshed it since), so every change below is
+this change's. The table is against `99e4f624`.
 
 **Declarations kept for the count (rule 1).** Deleting the unit's six
 superseded declarations from `view.hpp` (recipe step 7) renumbered every
@@ -206,7 +207,7 @@ it, 3 rose and 1 fell (the evaluator, asm to C, above).
 
 `scene_node_transform_matrix_apply`'s source did not change, but its file
 did: `view.cpp` lost the unit's definitions and its `0049e050` static,
-which the conversion must delete. Single-function listings from `0cfa8749`
+which the conversion must delete. Single-function listings from `99e4f624`
 and from this change differ only in x87 scheduling.
 
 **For the owner.** That listing is one instruction longer (an `fxch`).
@@ -220,11 +221,11 @@ percentage points. No function was newly mapped or lost.
 
 | Metric | before | after |
 | --- | ---: | ---: |
-| Accuracy, game-only | 49.74% | 49.79% |
-| Accuracy, full | 54.07% | 54.12% |
-| Exact-function code bytes | 40,883 | 40,883 |
-| `.text` identical at original addresses | 18,269 (2.84%) | 18,239 (2.84%) |
-| Adjacent order inversions, full | 908 | 907 |
+| Accuracy, game-only | 49.79% | 49.84% |
+| Accuracy, full | 54.12% | 54.16% |
+| Exact-function code bytes | 40,972 | 40,972 |
+| `.text` identical at original addresses | 17,960 | 18,005 |
+| Adjacent order inversions, full | 909 | 908 |
 
 ## Native port
 

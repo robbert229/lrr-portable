@@ -1,4 +1,4 @@
-# input_sha256: 2453fe23dc6e3bba4f41de9e54e89bbb56b64b66a3d46dc4cbabacf9de8fc8a0
+# input_sha256: 78e802465e23e62041ac65e48373fb0df0d17443f0eaf77d5ddf455f6b78360d
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -133,12 +133,12 @@
 0x004064c0 25.21 cmd_pool_grow
 0x004065d0 100.00 renderer_global_dword_get
 0x004065e0 100.00 render_surface_secondary_get
-0x004065f0 85.22 cubic_bezier_point_evaluate
+0x004065f0 56.88 cubic_bezier_point_evaluate
 0x00406730 100.00 vec2_dist_alt
-0x00406760 100.00 vector2_set_length_target
-0x004067b0 29.03 polyline_segment_lengths_total
-0x00406820 75.63 bezier_curve_samples_build
-0x004068c0 34.25 path_arc_length_interpolate
+0x00406760 100.00 vector2_set_length
+0x004067b0 97.22 polyline_segment_lengths_total
+0x00406820 98.08 bezier_curve_samples_build
+0x004068c0 75.76 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
 0x00406990 13.27 entity_type_config_resource_row_load
 0x00406c00 92.86 renderer_object_update_from_record_field64
@@ -1548,7 +1548,7 @@
 0x0046f550 18.18 simtick_sfx_bank
 0x0046f770 31.65 effect_apply_by_kind_branch
 0x0046faf0 16.79 entity_spawn_record_slot_init
-0x0046fc70 17.14 object_flight_curve_record_init
+0x0046fc70 17.25 object_flight_curve_record_init
 0x0046fef0 100.00 effect_mode_surface_query_type_resolve
 0x0046ff70 40.00 active_effect_record_slot_find
 0x0046ff90 35.71 active_segment_visual_record_slot_find
@@ -2028,7 +2028,7 @@
 0x00487fc0 39.42 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 14.00 scene_node_transform_matrix_apply
+0x004882e0 13.97 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
@@ -2263,12 +2263,12 @@
 0x004064c0 25.21 cmd_pool_grow
 0x004065d0 100.00 renderer_global_dword_get
 0x004065e0 100.00 render_surface_secondary_get
-0x004065f0 85.22 cubic_bezier_point_evaluate
+0x004065f0 56.88 cubic_bezier_point_evaluate
 0x00406730 100.00 vec2_dist_alt
-0x00406760 100.00 vector2_set_length_target
-0x004067b0 29.03 polyline_segment_lengths_total
-0x00406820 75.63 bezier_curve_samples_build
-0x004068c0 34.25 path_arc_length_interpolate
+0x00406760 100.00 vector2_set_length
+0x004067b0 97.22 polyline_segment_lengths_total
+0x00406820 98.08 bezier_curve_samples_build
+0x004068c0 75.76 path_arc_length_interpolate
 0x00406980 100.00 scene_object_mode_is_one
 0x00406990 13.27 entity_type_config_resource_row_load
 0x00406c00 92.86 renderer_object_update_from_record_field64
@@ -3678,7 +3678,7 @@
 0x0046f550 18.18 simtick_sfx_bank
 0x0046f770 31.65 effect_apply_by_kind_branch
 0x0046faf0 16.79 entity_spawn_record_slot_init
-0x0046fc70 17.14 object_flight_curve_record_init
+0x0046fc70 17.25 object_flight_curve_record_init
 0x0046fef0 100.00 effect_mode_surface_query_type_resolve
 0x0046ff70 40.00 active_effect_record_slot_find
 0x0046ff90 35.71 active_segment_visual_record_slot_find
@@ -4158,7 +4158,7 @@
 0x00487fc0 39.42 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 14.00 scene_node_transform_matrix_apply
+0x004882e0 13.97 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
