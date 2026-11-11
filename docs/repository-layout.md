@@ -17,8 +17,15 @@ reference/          (gitignored) the original, unmodified game files
 unpacked/           (gitignored) 5,845 assets extracted from the .wad archives
 cross/              MinGW-w64 Win32 toolchain inputs
 CMakeLists.txt      Active CMake build (PLATFORM=native|winapi)
+src/link_order.cmake
+                    The link-order list (ADR 0006): every game, gods98,
+                    platform and program source in original link order, with
+                    its library; the matching build links them in this order
 meson.build         Existing Meson build (kept during the CMake migration)
-src/                Reconstruction source tree (gods98 / game / platform)
+src/                Reconstruction source tree: game/ and gods98/ (original
+                    units: one <stem>.c or <stem>.cpp per unit, plus legacy
+                    mixed files), platform/ (backend entry points), crt/
+                    (runtime stand-ins), main.cpp
 subprojects/        miniwin CMake bridge (sparse isle-portable submodule)
 3rdparty/           Dependency submodules (isle-portable, sparse → miniwin/)
 ```

@@ -1,5 +1,15 @@
 # `tools/` — game-data tooling
 
+## `link_order.py` — read and edit the link-order list (ADR 0006)
+
+`src/link_order.cmake` is CMake code with one `lrr_link(...)` entry per line,
+so `link_order.py` reads it with the standard library only (`parse`, `load`,
+`sources`, `libraries`). `insert_unit` places a unit's entry in its original
+position; `convert_unit.py` uses it. `python3 tools/link_order.py
+[--platform winapi] [--sources]` prints the entries. Its tests run in `make
+tools-test`. The field layout is described at the top of the list and in
+`docs/building.md` ("Link order").
+
 ## `convert_unit.py` — scaffold an original-shape conversion (ADR 0005, step 0)
 
 Writes the mechanical starting state of a conversion for one *original
@@ -8,7 +18,7 @@ functions. It does not write bodies, choose signatures where the pseudocode is
 ambiguous, migrate callers or edit existing implementations.
 
 ```sh
-python3 tools/convert_unit.py G98-029 --stem registry   # scaffold into src/, wire CMake and the boundary test
+python3 tools/convert_unit.py G98-029 --stem registry   # scaffold into src/, wire the link-order list and the boundary test
 python3 tools/convert_unit.py Keys.c --dry-run           # print the report, write nothing
 python3 tools/convert_unit.py GAME-003 --out /tmp/scratch  # write into a scratch copy of the tree
 python3 tools/convert_unit.py G98-027 --footprint-only [--json]
@@ -28,7 +38,7 @@ handles `game` and `gods98` units.
 | --- | --- |
 | `src/<game or gods98>/<stem>.c` | SPDX header; the unit's `.bss` range as one typed `<Stem>Globs` struct with fields named by offset (`f_0000`, each commented with its address); the unit's `.rdata`/`.data` items with their initial values, in address order, each with `// GLOBAL: LEGORR 0x…`; data that no other unit touches outside the attributed ranges (the common region) as plain file-scope globals; the unit's string literals as a comment table of `STRING` markers; then one stub per function in original order, each with `// FUNCTION: LEGORR 0x…` and the Ghidra pseudocode above it |
 | `src/…/<stem>.h` | C boundary header (`extern "C"`, include guard) declaring the stubs |
-| `CMakeLists.txt` | the source added to its library (`gods98` or `game`) and to `LRR_ORIGINAL_SHAPE_SOURCES` |
+| `src/link_order.cmake` | a `unit` entry for the new `.c` file, in its library (`gods98` or `game`), placed after the last unit or legacy entry whose original address is not above the unit's start, so the matching build links it in its original position (ADR 0006). The `.c` suffix makes it C in the matching build |
 | `src/game/test_c_boundaries.cpp` | includes for the new header and for the C++ headers that declare the unit's functions today |
 | report (stdout, `--report FILE`) | the conversion footprint, a "before" score table and the recipe checklist for the PR description |
 
@@ -438,8 +448,9 @@ changes are numeric values (entry point is an RVA).
 
 `python3 tools/binary_progress_hash.py` prints a commit-independent SHA-256
 using only the standard library. It selects Git-tracked matching-build sources
-from CMake's source declarations, excludes native-only and test-only sources,
-and conservatively includes non-native project headers. It also hashes the
+from CMake's source declarations and the link-order list
+(`src/link_order.cmake`, read by `link_order.py`), excludes native-only and
+test-only sources, and conservatively includes non-native project headers. It also hashes the
 build configuration, metric code and its coverage inputs. Untracked and ignored
 files are excluded. When Git is unavailable, the explicit
 `tools/binary_progress_inputs.txt` list is used; update it when the selected

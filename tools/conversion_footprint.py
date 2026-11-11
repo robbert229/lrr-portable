@@ -55,9 +55,9 @@ SOURCE_SUFFIXES = (".c", ".cpp", ".h", ".hpp")
 CONVERTIBLE_KINDS = ("game", "gods98")
 SOURCE_DIRS = {"game": "src/game", "gods98": "src/gods98"}
 
-# Files that every conversion touches (CMake wiring, boundary test). They
-# conflict only mechanically, so they are left out of the header overlap.
-SHARED_FILES = ("CMakeLists.txt", "src/game/test_c_boundaries.cpp")
+# Files that every conversion touches (the link-order list, boundary test).
+# They conflict only mechanically, so they are left out of the header overlap.
+SHARED_FILES = ("src/link_order.cmake", "src/game/test_c_boundaries.cpp")
 
 LIMITATIONS = (
     "Call edges are the direct calls Ghidra resolved (docs/coverage/call-graph/"

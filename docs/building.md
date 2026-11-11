@@ -80,8 +80,9 @@ See [ADR 0001](adr/0001-minwg-cross-toolchain.md),
 [ADR 0002](adr/0002-run-port-integrity-bypass.md),
 [ADR 0004](adr/0004-miniwin-native-port.md), and
 [ADR 0005](adr/0005-original-shape-c-units.md) for the toolchain and comparison
-rationale. Units rebuilt in original shape (`LRR_ORIGINAL_SHAPE_SOURCES`) are
-compiled as C by the matching build and as C++ by every other build. The [compatibility harness](../tools/compat/README.md) documents
+rationale. Units rebuilt in original shape (the `.c` files of the link-order
+list, `src/link_order.cmake`) are compiled as C by the matching build and as
+C++ by every other build. The [compatibility harness](../tools/compat/README.md) documents
 running the original executable under Proton.
 
 ## MSVC 5.0 and Reccmp
@@ -108,6 +109,30 @@ executable for Reccmp. The link also writes a map to `build-reccmp/LegoRR.map`
 public symbol with its address and contributing `library:object`, sorted by
 address, which shows the link order. The gate, `make binary-progress` and
 `make match-progress` all read this one build.
+
+### Link order
+
+`src/link_order.cmake` is the *link-order list* (ADR 0006 decision 1): one
+`lrr_link(<kind> <key> <library> <source> [<platform>])` line per source, in
+the original's link order. Its header explains the fields. It is the only
+place that adds a game, gods98, platform or program source to the build:
+
+- **The matching build** compiles each entry as its own object (a CMake object
+  library `link_<position>_<stem>`, with the include path of the entry's
+  library) and links the objects explicitly, in list order. Then come the
+  libraries in `LRR_LINK_LIBRARIES`: LIBC, `oldnames.lib` and the import
+  libraries in the original's order. LINK 5.0 keeps command-line object order
+  in every section, so the map shows the objects' `.text`, `.data` and `.bss`
+  in list order, followed by the LIBC members.
+- **The native and reference builds** build `game`, `gods98` and
+  `platform_glue` from the entries' `library` column; order does not matter
+  there (ADR 0003).
+
+Order is the game segment (converted units at their unit's position, each
+mixed legacy file at the median original address of its functions), the
+gods98 segment, the port tail (port-only files), then the legacy files whose
+functions lie in the CRT range. `tools/convert_unit.py` adds a new unit's line;
+`python3 tools/link_order.py` prints the list.
 
 ### Match baseline gate
 

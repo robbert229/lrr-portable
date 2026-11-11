@@ -182,7 +182,8 @@ def load_compile_commands(env: Environment, timings: dict[str, float]) -> list[C
     db_path = cmake_dir / "compile_commands.json"
     stamp = cmake_dir / "match-function-configure.json"
     args = cmake_args(env, cmake_dir)
-    inputs = [env.root / "CMakeLists.txt", env.root / "cross/msvc5-toolchain.cmake", env.root / "tools/reccmp.sh"]
+    inputs = [env.root / "CMakeLists.txt", env.root / "src/link_order.cmake",
+              env.root / "cross/msvc5-toolchain.cmake", env.root / "tools/reccmp.sh"]
 
     def stale() -> bool:
         if not db_path.exists() or not stamp.exists():

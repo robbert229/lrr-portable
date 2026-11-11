@@ -7,18 +7,22 @@ from pathlib import Path
 import re
 import subprocess
 
+import link_order
+
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = 'tools/binary_progress_inputs.txt'
 FIXED = ('CMakeLists.txt', 'cross/msvc5-toolchain.cmake', 'tools/reccmp.sh',
          'tools/clean_reccmp_report_names.py', 'tools/reccmp_full_diff.py', 'tools/match_listings.py',
          'tools/match_baseline.py', 'tools/binary_progress.py',
          'tools/binary_progress_hash.py', 'tools/translation_units.py',
+         'tools/link_order.py', link_order.LIST,
          'tools/strip_pe_debug.py', 'docs/decompiles/full/manifest.csv',
          'docs/coverage/ledger.csv', 'docs/coverage/function-areas.csv', MANIFEST)
 
 
 def selected_paths(root, tracked):
-    """CMake declares translation units; conservatively include project headers.
+    """CMake and the link-order list declare translation units; conservatively
+    include project headers.
 
     Inactive native and test branches are excluded. Headers are retained even
     when not currently included, since conditional includes are compiler-specific.
@@ -29,6 +33,8 @@ def selected_paths(root, tracked):
                 'PLATFORM_DIR': 'src/platform'}
     sources = {prefixes[var] + '/' + name for var, name in re.findall(
         r'\$\{(SRC_ROOT|ENGINE_DIR|GAME_DIR|CRT_DIR|PLATFORM_DIR)\}/([\w./-]+\.(?:cpp|c|rc))', cmake)}
+    if (root / link_order.LIST).is_file():
+        sources.update(link_order.sources(link_order.load(root), platform=None))
     def selected(name):
         if name in FIXED:
             return True

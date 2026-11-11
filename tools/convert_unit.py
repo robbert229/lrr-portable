@@ -13,8 +13,8 @@ its time on matching functions:
     unattributed (common) data, each with ``// GLOBAL: LEGORR 0x...``
   * one stub per function in original order with ``// FUNCTION: LEGORR 0x...``
     and the Ghidra pseudocode as a comment
-  * the ``LRR_ORIGINAL_SHAPE_SOURCES`` and library wiring in CMakeLists.txt and
-    the ``c_boundaries`` test includes
+  * the unit's entry in the link-order list ``src/link_order.cmake``, in its
+    original position (ADR 0006), and the ``c_boundaries`` test includes
   * a report: the conversion footprint, a "before" score table and a recipe
     checklist for the PR description
 
@@ -44,10 +44,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import conversion_footprint as cf  # noqa: E402
+import link_order  # noqa: E402
 
 ROOT = cf.ROOT
-LIB_VARS = {"game": ("game", "${GAME_DIR}"), "gods98": ("gods98", "${ENGINE_DIR}")}
-CMAKE = "CMakeLists.txt"
+LIBRARIES = {"game": "game", "gods98": "gods98"}     # unit kind -> library
+LINK_ORDER = link_order.LIST
 BOUNDARY_TEST = "src/game/test_c_boundaries.cpp"
 STUB_PREFIX = "scaffold_"
 INIT_LIMIT = 512            # largest initialised item written out, in bytes
@@ -406,10 +407,9 @@ def build_scaffold(unit: str, root: Path = ROOT, stem: str | None = None,
                               data_items, literals, shared, mine, ends, stub_names, pseudo, binary),
         h_path: render_header(u, fp, stem, mine, stub_names, directory),
     }
-    lib, entry_dir = LIB_VARS[u.unit_kind]
     own_hpp = [h for h in fp.own_declaration_headers
                if h.endswith(".hpp") and h not in fp.new_files]
-    wiring = Wiring(lib, f"{entry_dir}/{stem}.c",
+    wiring = Wiring(u.unit_id, LIBRARIES[u.unit_kind], rel_include(c_path),
                     [rel_include(h) for h in own_hpp] + [rel_include(h_path)])
     patches = apply_wiring(wiring, root)
     return Scaffold(fp, files, patches, wiring, stub_names, g_start, g_end, struct_fields,
@@ -624,55 +624,30 @@ def render_header(u, fp, stem, funcs, stub_names, directory) -> str:
 # Wiring
 
 
-def _paren_block(text: str, start: int) -> tuple[int, int]:
-    """(open, close) offsets of the parenthesis group that opens at ``start``."""
-    depth = 0
-    for i in range(start, len(text)):
-        if text[i] == "(":
-            depth += 1
-        elif text[i] == ")":
-            depth -= 1
-            if depth == 0:
-                return start, i
-    raise ValueError("unbalanced parentheses in CMakeLists.txt")
-
-
-def _add_to_block(text: str, header_pattern: str, entry: str) -> str:
-    m = re.search(header_pattern, text)
-    if not m:
-        raise SystemExit(f"CMakeLists.txt has no {header_pattern!r}")
-    open_, close = _paren_block(text, text.index("(", m.start()))
-    if entry in text[open_:close]:
-        return text
-    line_start = text.rfind("\n", 0, close) + 1
-    last = text[line_start:close]
-    if last.strip() and len(last) + 1 + len(entry) + 1 <= 80:
-        return text[:close] + " " + entry + text[close:]
-    if not last.strip():
-        return text[:close] + "  " + entry + text[close:]
-    return text[:close] + "\n  " + entry + text[close:]
-
-
 @dataclass
 class Wiring:
     """The edits to files that already exist."""
 
-    library: str              # CMake target: game or gods98
-    entry: str                # `${ENGINE_DIR}/keys.c`
+    unit_id: str              # G98-018
+    library: str              # game or gods98
+    source: str               # under src/: `gods98/keys.c`
     includes: list[str]       # for test_c_boundaries.cpp, relative to src/
 
 
-def apply_wiring(wiring: Wiring, root: Path) -> dict[str, str]:
-    """The patched text of CMakeLists.txt and the boundary test under ``root``."""
-    cmake = wire_cmake((root / CMAKE).read_text(encoding="utf-8"), wiring.library, wiring.entry)
+def apply_wiring(wiring: Wiring, root: Path, starts: dict[str, int] | None = None) -> dict[str, str]:
+    """The patched text of the link-order list and the boundary test under ``root``.
+
+    ``starts`` are the unit start addresses (default: ``root``'s unit map)."""
+    if starts is None:
+        starts = link_order.unit_starts(root)
+    listing = wire_link_order((root / LINK_ORDER).read_text(encoding="utf-8"), wiring, starts)
     test = wire_boundary_test((root / BOUNDARY_TEST).read_text(encoding="utf-8"), wiring.includes)
-    return {CMAKE: cmake, BOUNDARY_TEST: test}
+    return {LINK_ORDER: listing, BOUNDARY_TEST: test}
 
 
-def wire_cmake(text: str, lib: str, entry: str) -> str:
-    """Add ``entry`` to the library's sources and to LRR_ORIGINAL_SHAPE_SOURCES."""
-    text = _add_to_block(text, r"add_library\(" + lib + r"\s+STATIC", entry)
-    return _add_to_block(text, r"set\(LRR_ORIGINAL_SHAPE_SOURCES", entry)
+def wire_link_order(text: str, wiring: Wiring, starts: dict[str, int]) -> str:
+    """Add the unit's entry to the link-order list at its original position."""
+    return link_order.insert_unit(text, wiring.unit_id, wiring.library, wiring.source, starts)
 
 
 def wire_boundary_test(text: str, includes: list[str]) -> str:
@@ -740,8 +715,8 @@ def before_scores(fp: cf.Footprint, root: Path, mode: str) -> tuple[list[dict], 
 
 CHECKLIST = (
     "Pick the unit (`{id}`, boundary confidence **{conf}**)",
-    "Create `{c}` and `{h}`; add to the `{lib}` library and `LRR_ORIGINAL_SHAPE_SOURCES` "
-    "(scaffolded; not the executable's own sources)",
+    "Create `{c}` and `{h}`; add the unit to the link-order list `src/link_order.cmake` "
+    "in its original position, in the `{lib}` library (scaffolded)",
     "State: globals struct laid out as the original `.bss`; `.data`/`.rdata` items; "
     "each with `// GLOBAL: LEGORR 0x…` (scaffolded; rename the fields)",
     "Functions in original address order with original signatures and direct global "
@@ -840,7 +815,7 @@ def render_report(sc: Scaffold, scores: list[dict], score_note: str) -> str:
     w("### Conversion recipe (ADR 0005)")
     w("")
     w("- [x] 0. Scaffold generated with `tools/convert_unit.py`")
-    lib = LIB_VARS[fp.unit_kind][0]
+    lib = LIBRARIES[fp.unit_kind]
     for n, text in enumerate(CHECKLIST, 1):
         text = text.format(id=fp.unit_id, conf=fp.confidence, c=fp.new_files[0], h=fp.new_files[1],
                            lib=lib, callees=sum(1 for c in fp.callees if c.needs_extern_c or c.needs_boundary_decl),
@@ -931,19 +906,21 @@ def compare_with_hand(sc: Scaffold, root: Path = ROOT, hand_c: str | None = None
         result["struct"]["split_inside_hand_fields"] = [f"{a:08x}" for a in extra if hs and a > hs[0]]
         result["struct"]["tool_end"] = f"{sc.globals_end:08x}" if sc.globals_end else None
 
-    # CMake wiring: strip the unit's entry from the current file, rewire, compare.
-    cmake = (root / CMAKE).read_text(encoding="utf-8")
-    lib, entry_dir = LIB_VARS[fp.unit_kind]
-    entry = f"{entry_dir}/{Path(hand_c).name}"
-    stripped = re.sub(r"[ \t]*" + re.escape(entry) + r"[ \t]*", " ", cmake)
-    rewired = wire_cmake(stripped, lib, entry)
-    ok = (_block_entries(rewired, r"add_library\(" + lib + r"\s+STATIC") ==
-          _block_entries(cmake, r"add_library\(" + lib + r"\s+STATIC")
-          and _block_entries(rewired, r"set\(LRR_ORIGINAL_SHAPE_SOURCES") ==
-          _block_entries(cmake, r"set\(LRR_ORIGINAL_SHAPE_SOURCES"))
-    result["cmake_wiring_matches"] = ok
+    # Link-order wiring: drop the unit's entry from the committed list, rewire,
+    # compare (same position, kind, library and file).
+    listing = (root / LINK_ORDER).read_text(encoding="utf-8")
+    wiring = Wiring(fp.unit_id, LIBRARIES[fp.unit_kind], rel_include(hand_c), [])
+    kept = [line for line in listing.splitlines(keepends=True)
+            if not any(e.source == wiring.source for e in link_order.parse(line))]
+    try:
+        rewired = wire_link_order("".join(kept), wiring, link_order.unit_starts(root))
+        ok = link_order.parse(rewired) == link_order.parse(listing)
+    except ValueError:
+        ok = False
+    result["link_order_wiring_matches"] = ok
     if not ok:
-        note("cmake", "wiring differs in the library or LRR_ORIGINAL_SHAPE_SOURCES membership")
+        note("link-order", "the unit's entry in src/link_order.cmake differs in position, "
+                           "kind, library or file")
 
     # Boundary-test entries: the tool's includes must be in the committed test.
     test = (root / BOUNDARY_TEST).read_text(encoding="utf-8")
@@ -963,12 +940,6 @@ def compare_with_hand(sc: Scaffold, root: Path = ROOT, hand_c: str | None = None
         note("header", "functions not declared in the hand header: " +
              ", ".join(f.name for f in fp.functions if f.name not in declared))
     return result
-
-
-def _block_entries(text: str, pattern: str) -> list[str]:
-    m = re.search(pattern, text)
-    open_, close = _paren_block(text, text.index("(", m.start()))
-    return sorted(text[open_ + 1:close].split()[1:] if pattern.startswith("set") else text[open_ + 1:close].split()[2:])
 
 
 # --------------------------------------------------------------------------
@@ -1003,7 +974,7 @@ def main(argv: list[str] | None = None) -> int:
     mode = p.add_mutually_exclusive_group()
     mode.add_argument("--dry-run", action="store_true", help="write nothing; print the report")
     mode.add_argument("--out", type=Path, metavar="DIR",
-                      help="write the new files and patched CMakeLists.txt/test_c_boundaries.cpp "
+                      help="write the new files and patched link_order.cmake/test_c_boundaries.cpp "
                            "under DIR (a scratch copy), not into the checkout")
     mode.add_argument("--footprint-only", action="store_true", help="print the conversion footprint only")
     mode.add_argument("--compare", action="store_true",
@@ -1035,12 +1006,12 @@ def main(argv: list[str] | None = None) -> int:
         target = args.out.resolve() if args.out else root
         if args.out:
             # A scratch directory accumulates units: patch its own copies.
-            for rel in (CMAKE, BOUNDARY_TEST):
+            for rel in (LINK_ORDER, BOUNDARY_TEST):
                 dst = target / rel
                 if not dst.exists():
                     dst.parent.mkdir(parents=True, exist_ok=True)
                     dst.write_text((root / rel).read_text(encoding="utf-8"), encoding="utf-8")
-            sc.patches = apply_wiring(sc.wiring, target)
+            sc.patches = apply_wiring(sc.wiring, target, link_order.unit_starts(root))
         written = write_files(sc, target, args.force)
     if args.report:
         args.report.write_text(report, encoding="utf-8")
