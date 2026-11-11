@@ -469,7 +469,7 @@ typedef int (*SurfaceLockFormatQueryFn)(void* surface,
                                         uint32_t* green_mask,
                                         uint32_t* blue_mask);
 int32_t surface_pixel_channel_mask_get(void* surface); /* FUN_0047df50 */
-void surface_render_setup(const float rectangle[4]); /* FUN_00485e80 */
+extern "C" void surface_render_setup(const struct Area2F* window); /* FUN_00485e80, draw.h */
 typedef void (*RenderStateSetHook)(void* context, uint32_t state,
                                    uint32_t value);
 typedef int (*RenderStateGetHook)(void* context, uint32_t state,
@@ -764,6 +764,13 @@ void renderer_begin_frame_once_reset(void);
 void render_surface_present(void); /* FUN_0047c8d0 */
 #endif
 void surface_descriptor_initialize(void* record); /* FUN_0047e710 */
+/* The 2D drawing functions below are G98-019's, defined in draw.c
+ * with the original signatures; draw.h is their C header. The port's old
+ * drawing types (SurfacePixelWriteFn, SurfacePixelWriterTable,
+ * SurfaceRasterContext, SurfacePixelSpan, SurfacePoint) and the undefined
+ * surface_render_flags_peek and surface_pixel_writer_peek are no longer
+ * used. They stay declared only to hold the declaration count (finding 506)
+ * until the #388 relocation splits this header. */
 typedef void (*SurfacePixelWriteFn)(void* context, int x, int y,
                                     uint32_t pixel);
 typedef struct SurfacePixelWriterTable {
@@ -774,21 +781,16 @@ typedef struct SurfacePixelWriterTable {
     SurfacePixelWriteFn writer24;
     SurfacePixelWriteFn writer32;
 } SurfacePixelWriterTable;
-int surface_pixel_writer_select_by_format(
-    uint32_t bits_per_pixel, int format,
-    const SurfacePixelWriterTable* writers,
-    SurfacePixelWriteFn* out_writer); /* FUN_00486690 */
-int surface_lock_configure_pixel_writer(
-    void* surface, int format, SurfaceLockFormatQueryFn query,
-    const SurfacePixelWriterTable* writers); /* FUN_00486550 */
-/* DirectDraw-backed active-frame adapter for FUN_00486550. On success it
- * leaves the target locked until surface_unlock_reset_pixel_writer(). */
-int surface_active_pixel_writer_configure(
-    int format, const SurfacePixelWriterTable* writers);
+extern "C" int surface_pixel_writer_select_by_format(
+    int effect); /* FUN_00486690, draw.h */
+/* Draw_LockSurface (FUN_00486550): on success the surface stays locked
+ * until surface_unlock_reset_pixel_writer(). */
+extern "C" int surface_active_pixel_writer_configure(
+    void* surf, int effect); /* draw.h */
 typedef void (*SurfaceWriterUnlockHook)(void* surface, int flags);
 void surface_writer_unlock_hook_set(SurfaceWriterUnlockHook hook);
 void surface_directdraw_unlock(void* surface); /* FUN_0047ded0 */
-void surface_unlock_reset_pixel_writer(void* surface); /* FUN_00486650 */
+extern "C" void surface_unlock_reset_pixel_writer(void* surf); /* FUN_00486650, draw.h */
 SurfacePixelWriteFn surface_pixel_writer_peek(void);
 typedef struct SurfaceRasterContext {
     float left;
@@ -798,31 +800,33 @@ typedef struct SurfaceRasterContext {
     SurfacePixelWriteFn write_pixel;
     void* context;
 } SurfaceRasterContext;
-void surface_bresenham_line_walk_clipped(
-    SurfaceRasterContext* raster, int x0, int y0, int x1, int y1,
-    uint32_t pixel); /* FUN_00486720 */
+extern "C" void surface_bresenham_line_walk_clipped(
+    int32_t x1, int32_t y1, int32_t x2, int32_t y2,
+    uint32_t colour); /* FUN_00486720, draw.h */
 typedef struct SurfacePixelSpan {
     int x0;
     int y0;
     int x1;
     int y1;
 } SurfacePixelSpan;
-void surface_fill_pixel_spans(SurfaceRasterContext* raster,
-                              const SurfacePixelSpan* spans, int count,
-                              uint32_t pixel); /* FUN_00486090 */
-void surface_fill_pixel_span_records(SurfaceRasterContext* raster,
-                                     const SurfacePixelSpan* spans, int count,
-                                     uint32_t pixel); /* FUN_00486210 */
+extern "C" void surface_fill_pixel_spans(struct Area2F* rectList,
+                              uint32_t count, float r, float g, float b,
+                              int effect); /* FUN_00486090, draw.h */
+extern "C" void surface_fill_pixel_span_records(struct DrawRect* rectList,
+                                     uint32_t count,
+                                     int effect); /* FUN_00486210, draw.h */
 typedef struct SurfacePoint {
     int x;
     int y;
 } SurfacePoint;
-void surface_draw_polyline(SurfaceRasterContext* raster,
-                           const SurfacePoint* points, int count,
-                           uint32_t pixel); /* FUN_00485ff0 */
-void surface_draw_circle_pixels(SurfaceRasterContext* raster,
-                                int center_x, int center_y, int radius,
-                                uint32_t pixel); /* FUN_00486390 */
+extern "C" void surface_draw_polyline(struct Point2F* fromList,
+                           struct Point2F* toList, uint32_t count, float r,
+                           float g, float b,
+                           int effect); /* FUN_00485ff0, draw.h */
+extern "C" void surface_draw_circle_pixels(struct Point2F* pos,
+                                uint32_t radius, uint32_t dotCount, float r,
+                                float g, float b,
+                                int effect); /* FUN_00486390, draw.h */
 
 /* RGBChannelsPack (FUN_0047db90, findings 23/431): pack three channel
  * bytes into the corpus's 0x00BBGGRR word — first argument lands in the
@@ -933,9 +937,9 @@ int surface_pixel_format_query_convert_surface(
 int surface_active_pixel_format_query_convert(
     const SurfaceConvertJob* job); /* active-target adapter */
 
-/* SurfaceColorPackToPixel (FUN_004864d0): convert three 0..255 color
- * channels to the currently locked surface's pixel format. */
-uint32_t surface_color_pack_to_pixel(float red, float green, float blue);
+/* Draw_GetColour (FUN_004864d0): convert three 0..1 colour channels to
+ * the locked surface's pixel format. */
+extern "C" uint32_t surface_color_pack_to_pixel(float r, float g, float b); /* draw.h */
 
 /* FontDeviceColorConvert (FUN_0047e190): lock the supplied raw DirectDraw
  * surface interface, pack the low three source color bytes into its RGB

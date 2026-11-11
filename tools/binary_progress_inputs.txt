@@ -6,6 +6,7 @@ docs/decompiles/full/manifest.csv
 src/compat/msvc5/cstdint
 src/compat/msvc5/stdint.h
 src/crt/crt.cpp
+src/crt/crt.h
 src/crt/crt.hpp
 src/crt/crt_heap.cpp
 src/crt/crt_runtime_aliases.cpp
@@ -102,6 +103,9 @@ src/gods98/camera.cpp
 src/gods98/camera.hpp
 src/gods98/config.c
 src/gods98/config.h
+src/gods98/draw.c
+src/gods98/draw.h
+src/gods98/draw_port.cpp
 src/gods98/dxerror.c
 src/gods98/dxerror.h
 src/gods98/engine.cpp

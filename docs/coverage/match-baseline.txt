@@ -1,4 +1,4 @@
-# input_sha256: 650a994d3c76e79b7ec31346ab3bb30d53293607f1b3dd1ba985df264ad8a27c
+# input_sha256: fc8d86fb2cb7c08eed31950e5d1dacd82524a7f2e4ca2421fd22a3a3fbb91b0f
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -6,7 +6,7 @@
 # Reccmp reports only mapped functions, so a function absent from a
 # section is unmapped.
 
-[game-only] 2128 mapped functions
+[game-only] 2136 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -194,7 +194,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 40.89 segment_2d_point_distance
+0x004089d0 43.56 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -552,7 +552,7 @@
 0x0041cb90 16.67 input_binding_default_value_get
 0x0041cc80 100.00 cursor_tile_selection_update_by_type
 0x0041cce0 37.21 selection_coordinates_set
-0x0041cd30 14.46 position_tracker_box_draw
+0x0041cd30 19.35 position_tracker_box_draw
 0x0041cea0 16.51 selection_object_command_update
 0x0041cf20 66.67 selection_target_command_update
 0x0041cf80 15.38 selection_mode7_cancel_at_point
@@ -971,7 +971,7 @@
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 77.42 entity_enter_event21_state_once
-0x00444680 5.23 entity_step_movement_vector_resolve
+0x00444680 5.24 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
@@ -1836,7 +1836,7 @@
 0x0047d430 8.33 scene_object_registry_teardown
 0x0047d470 37.21 image_surface_release
 0x0047d490 19.26 surface_pixel_format_query_convert_surface
-0x0047d520 33.82 surface_palette8_to_16bit_surface_expand
+0x0047d520 32.65 surface_palette8_to_16bit_surface_expand
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
@@ -2004,16 +2004,24 @@
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
 0x00485e30 100.00 named_option_index_find_case_insensitive
-0x00485e80 87.50 surface_render_setup
-0x00485ff0 14.93 surface_draw_polyline
-0x00486090 10.81 surface_fill_pixel_spans
-0x00486210 10.00 surface_fill_pixel_span_records
-0x00486390 9.96 surface_draw_circle_pixels
-0x004864d0 18.75 surface_color_pack_to_pixel
-0x00486550 25.26 surface_active_pixel_writer_configure
-0x00486650 18.18 surface_unlock_reset_pixel_writer
-0x00486690 8.77 surface_pixel_writer_select_by_format
-0x00486720 14.29 surface_bresenham_line_walk_clipped
+0x00485e80 100.00 surface_render_setup
+0x00485ea0 100.00 viewport_subrectangle_set
+0x00485fb0 100.00 viewport_rectangle_get
+0x00485ff0 98.36 surface_draw_polyline
+0x00486090 100.00 surface_fill_pixel_spans
+0x00486210 100.00 surface_fill_pixel_span_records
+0x00486390 100.00 surface_draw_circle_pixels
+0x004864d0 100.00 surface_color_pack_to_pixel
+0x00486550 100.00 surface_active_pixel_writer_configure
+0x00486650 100.00 surface_unlock_reset_pixel_writer
+0x00486690 100.00 surface_pixel_writer_select_by_format
+0x00486720 100.00 surface_bresenham_line_walk_clipped
+0x00486880 100.00 Draw_Pixel8
+0x004868a0 100.00 Draw_Pixel16
+0x004868d0 100.00 Draw_Pixel16XOR
+0x00486900 33.33 Draw_Pixel16HalfTrans
+0x004869a0 100.00 Draw_Pixel24
+0x004869d0 100.00 Draw_Pixel32
 0x004869f0 7.69 ledger_stub_004869f0_LoadLWSCScene
 0x004876c0 0.00 shared_object_directory_scan_configure
 0x00487760 15.69 lego::scene_resource_string_tables_free
@@ -2028,7 +2036,7 @@
 0x00487fc0 42.34 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 13.97 scene_node_transform_matrix_apply
+0x004882e0 14.00 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
@@ -2136,7 +2144,7 @@
 0x0049d950 76.34 display_mode_name_index_find
 0x0049d9d0 17.65 display_refresh_rate_controls_sync
 
-[full] 2347 mapped functions
+[full] 2355 mapped functions
 0x00401000 75.97 advisor_scene_controller_initialize
 0x004011c0 90.00 advisor_animation_end_cleanup
 0x00401210 76.19 advisor_scene_visual_state_initialize
@@ -2324,7 +2332,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 40.89 segment_2d_point_distance
+0x004089d0 43.56 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -2682,7 +2690,7 @@
 0x0041cb90 16.67 input_binding_default_value_get
 0x0041cc80 100.00 cursor_tile_selection_update_by_type
 0x0041cce0 37.21 selection_coordinates_set
-0x0041cd30 14.46 position_tracker_box_draw
+0x0041cd30 19.35 position_tracker_box_draw
 0x0041cea0 16.51 selection_object_command_update
 0x0041cf20 66.67 selection_target_command_update
 0x0041cf80 15.38 selection_mode7_cancel_at_point
@@ -3101,7 +3109,7 @@
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
 0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 77.42 entity_enter_event21_state_once
-0x00444680 5.23 entity_step_movement_vector_resolve
+0x00444680 5.24 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
 0x004451e0 17.54 ledger_stub_004451e0_EntityPathStepVectorNormalize
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
@@ -3966,7 +3974,7 @@
 0x0047d430 8.33 scene_object_registry_teardown
 0x0047d470 37.21 image_surface_release
 0x0047d490 19.26 surface_pixel_format_query_convert_surface
-0x0047d520 33.82 surface_palette8_to_16bit_surface_expand
+0x0047d520 32.65 surface_palette8_to_16bit_surface_expand
 0x0047d700 100.00 pop_count32
 0x0047d720 100.00 find_first_set_bit32
 0x0047d740 22.92 surface_pixel_rows_flip_with_scratch
@@ -4134,16 +4142,24 @@
 0x00485a00 100.00 object_state_pair_get_target
 0x00485a20 100.00 keyboard_key_names_init
 0x00485e30 100.00 named_option_index_find_case_insensitive
-0x00485e80 87.50 surface_render_setup
-0x00485ff0 14.93 surface_draw_polyline
-0x00486090 10.81 surface_fill_pixel_spans
-0x00486210 10.00 surface_fill_pixel_span_records
-0x00486390 9.96 surface_draw_circle_pixels
-0x004864d0 18.75 surface_color_pack_to_pixel
-0x00486550 25.26 surface_active_pixel_writer_configure
-0x00486650 18.18 surface_unlock_reset_pixel_writer
-0x00486690 8.77 surface_pixel_writer_select_by_format
-0x00486720 14.29 surface_bresenham_line_walk_clipped
+0x00485e80 100.00 surface_render_setup
+0x00485ea0 100.00 viewport_subrectangle_set
+0x00485fb0 100.00 viewport_rectangle_get
+0x00485ff0 98.36 surface_draw_polyline
+0x00486090 100.00 surface_fill_pixel_spans
+0x00486210 100.00 surface_fill_pixel_span_records
+0x00486390 100.00 surface_draw_circle_pixels
+0x004864d0 100.00 surface_color_pack_to_pixel
+0x00486550 100.00 surface_active_pixel_writer_configure
+0x00486650 100.00 surface_unlock_reset_pixel_writer
+0x00486690 100.00 surface_pixel_writer_select_by_format
+0x00486720 100.00 surface_bresenham_line_walk_clipped
+0x00486880 100.00 Draw_Pixel8
+0x004868a0 100.00 Draw_Pixel16
+0x004868d0 100.00 Draw_Pixel16XOR
+0x00486900 33.33 Draw_Pixel16HalfTrans
+0x004869a0 100.00 Draw_Pixel24
+0x004869d0 100.00 Draw_Pixel32
 0x004869f0 7.69 ledger_stub_004869f0_LoadLWSCScene
 0x004876c0 0.00 shared_object_directory_scan_configure
 0x00487760 15.69 lego::scene_resource_string_tables_free
@@ -4158,7 +4174,7 @@
 0x00487fc0 42.34 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 13.97 scene_node_transform_matrix_apply
+0x004882e0 14.00 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append

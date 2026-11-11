@@ -131,7 +131,8 @@ add_library(gods98 STATIC
   ${ENGINE_DIR}/scene_pool.cpp ${ENGINE_DIR}/scene_resources.cpp
   ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c
   ${ENGINE_DIR}/sound_wave.cpp ${ENGINE_DIR}/winmm_port.cpp ${ENGINE_DIR}/registry_port.cpp
-  ${ENGINE_DIR}/keys.c ${ENGINE_DIR}/g98_024.c ${ENGINE_DIR}/g98_026.c ${ENGINE_DIR}/g98_029.c)
+  ${ENGINE_DIR}/keys.c ${ENGINE_DIR}/g98_024.c ${ENGINE_DIR}/g98_026.c ${ENGINE_DIR}/g98_029.c
+  ${ENGINE_DIR}/draw.c ${ENGINE_DIR}/draw_port.cpp)
 target_include_directories(gods98 PUBLIC ${SRC_ROOT} ${ENGINE_DIR})
 
 add_library(game STATIC
@@ -157,7 +158,7 @@ set(LRR_ORIGINAL_SHAPE_SOURCES ${ENGINE_DIR}/utils.c ${ENGINE_DIR}/config.c
   ${ENGINE_DIR}/maths.c
   ${GAME_DIR}/priorities.c ${ENGINE_DIR}/dxerror.c ${ENGINE_DIR}/soundsys.c
   ${ENGINE_DIR}/keys.c ${ENGINE_DIR}/g98_024.c ${GAME_DIR}/bezier.c
-  ${ENGINE_DIR}/g98_026.c ${ENGINE_DIR}/g98_029.c)
+  ${ENGINE_DIR}/g98_026.c ${ENGINE_DIR}/g98_029.c ${ENGINE_DIR}/draw.c)
 if(NOT LRR_CLASSIC_MSVC5)
   set_source_files_properties(${LRR_ORIGINAL_SHAPE_SOURCES} PROPERTIES
     LANGUAGE CXX)
@@ -258,11 +259,11 @@ endif()
 include(CTest)
 if(BUILD_TESTING AND PLATFORM STREQUAL "native")
   set(GODS98_TESTS resource texture sound input audio camera view message airbeat
-    mainsim simtick enginebind block model entity_ae movie flic media)
+    mainsim simtick enginebind block model entity_ae movie flic media draw)
   set(GODS98_TEST_SOURCES test_resource.cpp test_texture.cpp test_sound.cpp test_input.cpp
     test_audio.cpp test_camera.cpp test_view.cpp test_message.cpp test_airbeat.cpp
     test_mainsim.cpp test_simtick.cpp test_engine_bind.cpp test_block.cpp test_model.cpp
-    test_entity.cpp test_movie.cpp test_flic.cpp test_media.cpp)
+    test_entity.cpp test_movie.cpp test_flic.cpp test_media.cpp test_draw.cpp)
   list(LENGTH GODS98_TESTS count)
   math(EXPR last "${count} - 1")
   foreach(i RANGE ${last})
