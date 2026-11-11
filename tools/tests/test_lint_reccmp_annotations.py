@@ -70,6 +70,20 @@ class RatchetTest(unittest.TestCase):
         (self.root / "src" / "unit.cpp").write_text("int helper(long x) { return x; }\n")
         self.assertEqual(self.run_lint().returncode, 1)
 
+    def test_define_continuation_is_not_the_definition(self):
+        # A multi-line #define between the previous body and an annotated
+        # definition must not hide the annotation.
+        self.source.write_text("void old() {}\n")
+        self.baseline()
+        self.source.write_text(
+            "void old() {}\n"
+            "#define TWICE(x) \\\n    ((x) + (x))\n"
+            "// LIBRARY: LEGORR 0x1234 SYMBOL\n// _annotated\n"
+            "int annotated(int x) { return TWICE(x); }\n")
+        result = self.run_lint()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("annotated", result.stdout)
+
     def test_duplicate_counts_and_ledger(self):
         self.source.write_text("void same() {}\n")
         ledger = self.root / "ledger.csv"

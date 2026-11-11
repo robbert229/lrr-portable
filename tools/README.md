@@ -7,6 +7,8 @@ translation units under `src/` (excluding test files and `platform/native`),
 and named entries in `docs/coverage/ledger.csv` without an address annotation.
 It is a source heuristic, not a C++ parser; it scans conditional alternatives
 without preprocessing and accepts nearby FUNCTION, STUB or LIBRARY markers.
+It looks for the marker above the definition itself, skipping preprocessor
+directives and their backslash continuation lines (finding 540).
 It needs only Python's standard library, and runs in `make tools-test`.
 
 The sorted `docs/coverage/reccmp-lint-baseline.txt` records existing debt.
