@@ -744,13 +744,13 @@ int mission_checkpoint_task_progress_refresh(GameContext* ctx)
  * checkpoint allocation. Use direct typed accesses inside this hot target
  * body; the memcpy helpers below remain for callers that need unaligned or
  * format-independent access. */
-#define mission_blob_float_get(blob, offset) \
+#define mission_blob_float_get_at(blob, offset) \
     (*(float*)((blob) + (offset)))
-#define mission_blob_float_set(blob, offset, value) \
+#define mission_blob_float_set_at(blob, offset, value) \
     (*(float*)((blob) + (offset)) = (value))
-#define mission_blob_word_get(blob, offset) \
+#define mission_blob_word_get_at(blob, offset) \
     (*(uint32_t*)((blob) + (offset)))
-#define mission_blob_word_set(blob, offset, value) \
+#define mission_blob_word_set_at(blob, offset, value) \
     (*(uint32_t*)((blob) + (offset)) = (value))
 
 /* CheckpointBlobTaskProgressRefresh prepares the per-level task snapshot.
@@ -785,28 +785,28 @@ int mission_checkpoint_task_progress_refresh_bound(void)
     height = level_int(level, LEVEL_OFF_HEIGHT);
     if (width <= 0 || height <= 0 || level_voxel(level, 0, 0) == NULL) return 0;
 
-    mission_blob_float_set(blob, 0x1d1c, 0.0f);
-    mission_blob_float_set(blob, 0x1f2c, 0.0f);
-    mission_blob_word_set(blob, 0x1c8, 0u);
-    mission_blob_word_set(blob, 0x1cc, 0u);
-    mission_blob_word_set(blob, 0x1d0, 0u);
-    mission_blob_float_set(blob, 0x1d14, 0.0f);
-    mission_blob_float_set(blob, 0x2140, crt_float_00554adc_peek());
-    mission_blob_float_set(blob, 0x2560, crt_float_00554efc_peek());
-    mission_blob_float_set(blob, 0x213c, 0.0f);
-    mission_blob_float_set(blob, 0x1b04, 0.0f);
-    mission_blob_float_set(blob, 0x1b08, 0.0f);
+    mission_blob_float_set_at(blob, 0x1d1c, 0.0f);
+    mission_blob_float_set_at(blob, 0x1f2c, 0.0f);
+    mission_blob_word_set_at(blob, 0x1c8, 0u);
+    mission_blob_word_set_at(blob, 0x1cc, 0u);
+    mission_blob_word_set_at(blob, 0x1d0, 0u);
+    mission_blob_float_set_at(blob, 0x1d14, 0.0f);
+    mission_blob_float_set_at(blob, 0x2140, crt_float_00554adc_peek());
+    mission_blob_float_set_at(blob, 0x2560, crt_float_00554efc_peek());
+    mission_blob_float_set_at(blob, 0x213c, 0.0f);
+    mission_blob_float_set_at(blob, 0x1b04, 0.0f);
+    mission_blob_float_set_at(blob, 0x1b08, 0.0f);
     {
         const uint32_t pilot_count = (uint32_t)
             resolved_entity_operation_dispatch("Pilot", 0, 0);
         const uint32_t pilot_grid_count = start_level_pilot_grid_count_get();
-        mission_blob_word_set(blob, 0x2778, pilot_count);
-        mission_blob_word_set(blob, 0x277c, pilot_grid_count);
-        mission_blob_float_set(blob, 0x276c, (float)pilot_count);
-        mission_blob_float_set(blob, 0x2770,
+        mission_blob_word_set_at(blob, 0x2778, pilot_count);
+        mission_blob_word_set_at(blob, 0x277c, pilot_grid_count);
+        mission_blob_float_set_at(blob, 0x276c, (float)pilot_count);
+        mission_blob_float_set_at(blob, 0x2770,
             (float)(pilot_count - pilot_grid_count));
     }
-    mission_blob_float_set(blob, 0x2784, crt_float_00555120_peek());
+    mission_blob_float_set_at(blob, 0x2784, crt_float_00555120_peek());
 
     {
         const uint32_t count_a = crt_counter_00555324_peek();
@@ -816,25 +816,25 @@ int mission_checkpoint_task_progress_refresh_bound(void)
         float score_percent = (float)score_percent_raw;
         const float score_limit = crt_float_00555330_peek();
         if (score_percent > score_limit) score_percent = score_limit;
-        mission_blob_word_set(blob, 0x2988, count_a);
-        mission_blob_word_set(blob, 0x298c, count_b);
-        mission_blob_word_set(blob, 0x2990, count_c);
-        mission_blob_float_set(blob, 0x2994, score_percent);
-        mission_blob_float_set(blob, 0x297c, (float)score_percent_raw);
-        mission_blob_float_set(blob, 0x2980, score_percent);
+        mission_blob_word_set_at(blob, 0x2988, count_a);
+        mission_blob_word_set_at(blob, 0x298c, count_b);
+        mission_blob_word_set_at(blob, 0x2990, count_c);
+        mission_blob_float_set_at(blob, 0x2994, score_percent);
+        mission_blob_float_set_at(blob, 0x297c, (float)score_percent_raw);
+        mission_blob_float_set_at(blob, 0x2980, score_percent);
     }
     {
         const uint32_t score_count = reward_score_count_peek();
         const float score_total = reward_score_total_peek();
         const float denominator = (float)score_count;
-        mission_blob_float_set(blob, 0x2da0, denominator);
-        mission_blob_float_set(blob, 0x2d9c, score_total / denominator);
+        mission_blob_float_set_at(blob, 0x2da0, denominator);
+        mission_blob_float_set_at(blob, 0x2d9c, score_total / denominator);
     }
     /* The objective-success path stages these words in the temporary
      * DAT_0055299c block. The reference copies them only while its enable
      * dword is set; otherwise the checkpoint's prior result words survive. */
     if (s_reward_success_words_valid) {
-        mission_blob_word_set(blob, 4u, 1u);
+        mission_blob_word_set_at(blob, 4u, 1u);
         memcpy(blob + 8u, s_reward_success_words,
                sizeof(s_reward_success_words));
     }
@@ -859,12 +859,12 @@ int mission_checkpoint_task_progress_refresh_bound(void)
          * names at +0x1d4. */
         memcpy(blob + 0x28u, type4_snapshot->indices, 100u * sizeof(uint32_t));
     }
-    mission_blob_word_set(blob, 0x1b8, type4_name_count);
-    mission_blob_word_set(blob, 0x1bc, type4_grid_count);
-    mission_blob_word_set(blob, 0x1cc,
-        mission_blob_word_get(blob, 0x1b8));
-    mission_blob_word_set(blob, 0x1d0,
-        mission_blob_word_get(blob, 0x1bc));
+    mission_blob_word_set_at(blob, 0x1b8, type4_name_count);
+    mission_blob_word_set_at(blob, 0x1bc, type4_grid_count);
+    mission_blob_word_set_at(blob, 0x1cc,
+        mission_blob_word_get_at(blob, 0x1b8));
+    mission_blob_word_set_at(blob, 0x1d0,
+        mission_blob_word_get_at(blob, 0x1bc));
     {
         uint32_t i;
         for (i = 0u; i < type4_name_count; ++i) {
@@ -906,32 +906,32 @@ int mission_checkpoint_task_progress_refresh_bound(void)
         }
     }
 
-    mission_blob_word_set(blob, 0x1c8, cell_count);
-    mission_blob_float_set(blob, 0x1d1c, classified_a);
-    mission_blob_float_set(blob, 0x1f2c,
+    mission_blob_word_set_at(blob, 0x1c8, cell_count);
+    mission_blob_float_set_at(blob, 0x1d1c, classified_a);
+    mission_blob_float_set_at(blob, 0x1f2c,
                            classified_b + eligible_cells * 4.0f);
-    mission_blob_float_set(blob, 0x213c, eligible_cells);
-    mission_blob_float_set(blob, 0x1b04, eligible_non_solid);
-    mission_blob_float_set(blob, 0x1b08, marked_cells);
-    mission_blob_float_set(blob, 0x1d20,
+    mission_blob_float_set_at(blob, 0x213c, eligible_cells);
+    mission_blob_float_set_at(blob, 0x1b04, eligible_non_solid);
+    mission_blob_float_set_at(blob, 0x1b08, marked_cells);
+    mission_blob_float_set_at(blob, 0x1d20,
         (float)level_int(level, OBJ_OFF_CRYSTAL_LIVE));
-    mission_blob_float_set(blob, 0x1f30,
+    mission_blob_float_set_at(blob, 0x1f30,
         (float)level_int(level, OBJ_OFF_ORE_LIVE));
-    mission_blob_float_set(blob, 0x2b8c, 100.0f);
-    mission_blob_float_set(blob, 0x2b90,
+    mission_blob_float_set_at(blob, 0x2b8c, 100.0f);
+    mission_blob_float_set_at(blob, 0x2b90,
         (float)level_int(level, LEVEL_OFF_AIR_SUPPLY));
-    if (mission_blob_word_get(blob, 0x1d14) != 0u) {
-        mission_blob_float_set(blob, 0x1d1c,
-            (float)mission_blob_word_get(blob, 0x1d14));
+    if (mission_blob_word_get_at(blob, 0x1d14) != 0u) {
+        mission_blob_float_set_at(blob, 0x1d1c,
+            (float)mission_blob_word_get_at(blob, 0x1d14));
     }
-    mission_blob_float_set(blob, 0x234c, (float)type4_name_count);
+    mission_blob_float_set_at(blob, 0x234c, (float)type4_name_count);
     /* The retail calculation is uint arithmetic: (count - grid_count) + 1
      * wraps before it is converted to float for the task total. */
-    mission_blob_float_set(blob, 0x2350,
+    mission_blob_float_set_at(blob, 0x2350,
         (float)(type4_name_count - type4_grid_count + 1u));
     {
-        const uint32_t timer_quota = mission_blob_word_get(blob, 0x2d94);
-        const float timer_count = mission_blob_float_get(blob, 0x2da0);
+        const uint32_t timer_quota = mission_blob_word_get_at(blob, 0x2d94);
+        const float timer_count = mission_blob_float_get_at(blob, 0x2da0);
         float timer_progress = 0.0f;
         if (timer_quota != 0u) {
             const float quota_progress = timer_count * 0.04f;
@@ -950,17 +950,17 @@ int mission_checkpoint_task_progress_refresh_bound(void)
                 if (timer_progress < 0.0f) timer_progress = 0.0f;
             }
         }
-        mission_blob_float_set(blob, 0x2da4, timer_progress);
+        mission_blob_float_set_at(blob, 0x2da4, timer_progress);
     }
-    if (mission_blob_word_get(blob, 0x2344) != 0u) {
-        mission_blob_float_set(blob, 0x2354,
-            (float)(100u / mission_blob_word_get(blob, 0x2344)) *
-             mission_blob_float_get(blob, 0x2350));
+    if (mission_blob_word_get_at(blob, 0x2344) != 0u) {
+        mission_blob_float_set_at(blob, 0x2354,
+            (float)(100u / mission_blob_word_get_at(blob, 0x2344)) *
+             mission_blob_float_get_at(blob, 0x2350));
     }
-    if (mission_blob_word_get(blob, 0x2554) != 0u) {
-        mission_blob_float_set(blob, 0x2564,
-            (float)(100u / mission_blob_word_get(blob, 0x2554)) *
-             mission_blob_float_get(blob, 0x2560));
+    if (mission_blob_word_get_at(blob, 0x2554) != 0u) {
+        mission_blob_float_set_at(blob, 0x2564,
+            (float)(100u / mission_blob_word_get_at(blob, 0x2554)) *
+             mission_blob_float_get_at(blob, 0x2560));
     }
 
     /* Clamp every task's render percentage, except the Timer record whose
@@ -970,10 +970,10 @@ int mission_checkpoint_task_progress_refresh_bound(void)
         for (offset = 0u; offset < 0x14a0u; offset += GAME_TASK_STRIDE) {
             float progress;
             if (offset == 0x1080u) continue;
-            progress = mission_blob_float_get(blob, 0x1cec + offset + 0x38u);
+            progress = mission_blob_float_get_at(blob, 0x1cec + offset + 0x38u);
             if (progress < 0.0f) progress = 0.0f;
             if (progress > 100.0f) progress = 100.0f;
-            mission_blob_float_set(blob, 0x1cec + offset + 0x38u, progress);
+            mission_blob_float_set_at(blob, 0x1cec + offset + 0x38u, progress);
         }
     }
     if (save_current_context_get() == ctx) {
@@ -990,11 +990,6 @@ int mission_checkpoint_task_progress_refresh_bound(void)
     return 1;
 
 }
-
-#undef mission_blob_float_get
-#undef mission_blob_float_set
-#undef mission_blob_word_get
-#undef mission_blob_word_set
 
 static void mission_reward_font_records_release(void)
 {
