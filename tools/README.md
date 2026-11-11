@@ -484,9 +484,10 @@ Notes:
 ## Unit-relative data offsets
 
 Run `make unit-data-offsets` after a matching build, or `python3
- tools/unit_data_offsets.py --build build-reccmp --json` for machine-readable
+tools/unit_data_offsets.py --build build-reccmp --json` for machine-readable
 results. The standalone stdlib tool reads the link-order list, range CSV, map,
-source annotations and matching COFF objects. It parses section alignment,
+source annotations, the Reccmp entity report, the current CMake link response and matching COFF objects.
+The response file excludes stale object directories left by a rebase. It parses section alignment,
 section pieces and symbols, and compares each attributable annotation's gap
 from the first annotation in its original section. Finding 524's supported
 anchors additionally check absolute offsets. `full` requires matching gaps and
@@ -499,8 +500,9 @@ full. Empty sections do not establish a match.
 Ownership ranges are evidence ranges, not exact boundaries; ambiguous and
 outside annotations are listed separately. Only unambiguous direct source
 declarators in a dedicated link-order object are associated with COFF names;
-string literals, subobjects, declarations in other files, folded symbols and
-section changes can remain unknown. A common is identified by section zero
+Reccmp mappings and map symbols also resolve literals when they identify a
+unique symbol in the unit object. Subobjects, declarations in other files,
+folded symbols and section changes can remain unknown. A common is identified by section zero
 and nonzero COFF value and is excluded from offset scoring (finding 525).
 Multiple COFF sections with the same base name are laid out in object order,
 aligned by their characteristics; COMDATs are individual pieces. This is an

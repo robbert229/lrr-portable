@@ -10,6 +10,7 @@ import collections
 import csv
 import json
 import re
+import shlex
 import struct
 from pathlib import Path
 
@@ -25,6 +26,7 @@ ANCHORS = dict(zip(('GAME-003', 'G98-002', 'G98-003', 'G98-005', 'G98-006',
                     0x49ea38, 0x49eadc)))
 MARK = re.compile(r'^\s*//\s*(GLOBAL|STRING):\s*LEGORR\s+0x([0-9a-f]+)', re.I)
 IDENT = re.compile(r'\b([a-zA-Z_]\w*)\s*(?:\[[^\]]*\]\s*)*(?:=|;)')
+MAP_SYMBOL = re.compile(r'^\s*[0-9a-f]{4}:[0-9a-f]{8}\s+(\S+)\s+([0-9a-f]{8})\s+(?:[fi]\s+)*(\S+\.obj)\s*$', re.I | re.M)
 MAP = re.compile(r'^\s*[0-9a-f]{4}:[0-9a-f]{8}\s+\S+\s+[0-9a-f]{8}\s+(?:[fi]\s+)*(\S+\.obj)\s*$', re.I | re.M)
 
 
@@ -161,12 +163,24 @@ def measure(root, build):
         groups[unit][section].append((addr, declarations))
     maptext = (build / 'LegoRR.map').read_text(errors='replace')
     linked = {m.lower() for m in MAP.findall(maptext)}
+    map_symbols = collections.defaultdict(list)
+    for name, address, obj in MAP_SYMBOL.findall(maptext):
+        map_symbols[(int(address, 16), obj.lower())].append(name)
+    entity_file = build / 'reccmp-report/entities.json'
+    entities = json.loads(entity_file.read_text()) if entity_file.exists() else []
+    mapped = collections.defaultdict(set)
+    for entity in entities:
+        if entity.get('orig') is not None and entity.get('recomp') is not None and entity.get('type') in (2, 3, 4, 11):
+            mapped[entity['orig']].add(entity['recomp'])
+    # The build directory can retain stale CMake target directories after a
+    # rebase. Only objects in the current link response file are candidates.
+    response = build / 'CMakeFiles/program.dir/objects1.rsp'
+    linked_paths = {p.replace('\\', '/') for p in shlex.split(response.read_text())}
     result = []
     for unit in units:
         entry = listed.get(unit)
         object_name = Path(entry.source).name + '.obj' if entry else None
-        candidates = list(build.glob('CMakeFiles/link_*.dir/src/**/' + object_name)) if object_name else []
-        candidates = [p for p in candidates if p.as_posix().endswith('/src/' + entry.source + '.obj')] if entry else []
+        candidates = [build / p for p in linked_paths if p.endswith('/src/' + entry.source + '.obj')] if entry else []
         reason = None
         if not entry:
             reason = 'unit has no dedicated link-order object'
@@ -185,6 +199,12 @@ def measure(root, build):
             for addr, declarations in groups[unit][section]:
                 names = {name for path, name in declarations if entry and path == entry.path and name}
                 matches = [s for n in names for s in byname[n]]
+                # Reccmp resolves literal annotations; the map links the
+                # rebuilt address to its decorated COFF name and object.
+                if not matches and object_name and len(mapped[addr]) == 1:
+                    address = next(iter(mapped[addr]))
+                    decorated = map_symbols[(address, object_name.lower())]
+                    matches = [s for s in symbols if s['name'] in decorated]
                 matches = [s for s in matches if s['section'] == 0 and s['value'] or
                            0 < s['section'] < len(sections) and sections[s['section']]['group'] in ('.data', '.rdata', '.bss')]
                 if len(matches) != 1:
@@ -198,6 +218,8 @@ def measure(root, build):
                     items.append((addr, None)); continue
                 items.append((addr, sec['base'] + sym['value']))
             report['sections'][section] = classify(items, ANCHORS.get(unit) if section == '.rdata' else None)
+            report['sections'][section]['items'] = [
+                {'address': a, 'offset': b} for a, b in items]
             if reason:
                 report['sections'][section]['reason'] = reason
         active = [v for v in report['sections'].values() if v['count'] or v['missing']]
