@@ -1,4 +1,4 @@
-# input_sha256: 147492eebe12844789f76e140542d748dd6d263c839d4c18f886bd4649f9541e
+# input_sha256: d4c75414eee9d4438411fda7e739c79d86d216c78e6a1b3838c7702e456b2eb8
 # Match baseline: per-function Reccmp similarity (percent) from the last
 # accepted matching build. Do not edit by hand; refresh with
 # `make reccmp-baseline-update` (see GLOSSARY.md, docs/building.md).
@@ -194,7 +194,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 40.89 segment_2d_point_distance
+0x004089d0 43.56 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -313,7 +313,7 @@
 0x0040e910 100.00 global_value_clear_if_equal
 0x0040e930 100.00 erosion_timing_state_init
 0x0040e990 100.00 lava_erosion_stage_slot_find_free
-0x0040e9c0 100.00 lava_erosion_delay_from_cell
+0x0040e9c0 84.21 lava_erosion_delay_from_cell
 0x0040eab0 41.42 lava_erosion_pending_cell_tick
 0x0040ee00 94.44 cell_coordinate_timestamp_remember
 0x0040ee50 100.00 lava_erosion_pending_cell_add
@@ -975,7 +975,7 @@
 0x004440a0 31.82 linked_entity_flag_and_command_update
 0x004440f0 11.31 ledger_stub_004440f0_ActivityTimeoutAccumulateAndRaise
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
-0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
+0x00444460 22.72 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
 0x00444680 4.88 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
@@ -983,7 +983,7 @@
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
 0x00445d70 12.05 entity_flag_gated_callback_dispatch
-0x00446610 12.27 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
+0x00446610 12.07 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
 0x004468c0 22.58 entity_route_adjacent_step_append
 0x004469c0 13.22 ledger_stub_004469c0_EntityNearestConnectedTerrainCellRouteSelect
 0x00446e40 21.21 ledger_stub_00446e40_EntityNearestCellRouteCommit
@@ -1077,7 +1077,7 @@
 0x0044cef0 65.52 motion_jitter_parameters_store
 0x0044cf70 27.59 simtick_scene_position_reset_and_effect_motion_cancel
 0x0044cff0 25.00 scene_transform_rgb_clamp_apply
-0x0044d0d0 13.79 motion_drift_offset_step
+0x0044d0d0 13.27 motion_drift_offset_step
 0x0044d250 58.82 float_negate_absolute_value
 0x0044d280 15.28 motion_waypoint_timer_tick
 0x0044d710 100.00 motion_waypoint_vector_random_scale_apply
@@ -1086,7 +1086,7 @@
 0x0044da20 100.00 simtick_route_position_blocked_state_set
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
-0x0044e0c0 11.73 terrain_create_retail
+0x0044e0c0 11.44 terrain_create_retail
 0x0044e4d0 10.71 terrain_grid_vertex_build
 0x0044e670 36.36 nested_pointer_record_destroy
 0x0044e6b0 11.76 indexed_flag_value_set_one
@@ -1133,7 +1133,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 13.27 terrain_cell_normal_sample
+0x004512d0 9.73 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -1202,7 +1202,7 @@
 0x00458620 100.00 obj_set_construction_target
 0x00458650 10.53 level_objective_result_get
 0x00458660 100.00 global_value_004ffe48_set
-0x00458670 27.40 objective_announce_current
+0x00458670 27.95 objective_announce_current
 0x004588e0 31.43 input_device_release
 0x004589a0 17.39 global_option_low_bits_enabled
 0x00458be0 15.03 objective_tick_target
@@ -1213,13 +1213,13 @@
 0x004592e0 40.96 osf_snapshot
 0x004593d0 10.53 osf_read_dirty_flag_get
 0x004593e0 26.09 osf_write
-0x00459470 21.20 osf_read
+0x00459470 12.62 osf_read
 0x00459530 100.00 frontend_render_three_pass_update
 0x00459560 4.24 legacy_health_bar_config_load
 0x00459900 17.58 legacy_hunger_images_position_config_load
 0x004599c0 31.50 legacy_hunger_images_load
 0x00459a50 36.21 frontend_bubble_images_position_config_load
-0x00459b00 13.15 legacy_entity_screen_ring_render
+0x00459b00 9.66 legacy_entity_screen_ring_render
 0x00459f50 27.12 indexed_panel_resource_position_apply
 0x00459fd0 24.14 panel_resource_position_apply_if_enabled
 0x0045a030 100.00 ui_panel_name_tables_init
@@ -1369,7 +1369,7 @@
 0x00463ea0 19.51 indexed_text_metrics_pair_get
 0x00463ed0 29.63 indexed_text_metrics_pair_set
 0x00463f00 15.83 scene_quad_grid_emit
-0x00464110 13.95 rotated_pairs_scratch_fill
+0x00464110 10.85 rotated_pairs_scratch_fill
 0x00464720 9.76 surface_visibility_set
 0x00464740 8.70 sound_alias_registry_init
 0x00464c50 100.00 sound_alias_registration_set
@@ -1397,7 +1397,7 @@
 0x00465380 50.00 scene_effect_registry_reset
 0x004653a0 23.53 transient_effect_textures_preload
 0x00465430 23.50 transient_effect_emitter_create
-0x00465970 29.79 transient_effect_registry_release_all
+0x00465970 30.43 transient_effect_registry_release_all
 0x004659b0 13.08 transient_effect_instance_release
 0x00465a90 34.04 transient_effect_registry_enable_set
 0x00465ac0 74.07 transient_effect_enable_set
@@ -1501,7 +1501,7 @@
 0x0046b770 75.00 timed_effect_update_request_set_corpus
 0x0046b7a0 100.00 timed_effect_timestamp_reset_corpus
 0x0046b7c0 21.05 timed_effect_runtime_update
-0x0046b8b0 7.94 rectangular_grid_overlay_geometry_draw
+0x0046b8b0 7.97 rectangular_grid_overlay_geometry_draw
 0x0046bc30 11.59 timed_effect_slot_render_record
 0x0046c030 14.49 render_resource_binding_initialize
 0x0046c0b0 57.14 render_resource_binding_copy_and_convert
@@ -1541,7 +1541,7 @@
 0x0046e220 12.26 terrain_cell_surface_quad_height_fill_current
 0x0046e330 31.71 grid_surface_entry_reset
 0x0046e390 29.27 simtick_fx_bank_tick
-0x0046e9d0 15.09 staged_cell_candidate_collect
+0x0046e9d0 13.33 staged_cell_candidate_collect
 0x0046ead0 16.22 map_row_span_append
 0x0046eb30 26.42 map_row_span_record_start
 0x0046eb80 15.83 lego::weapon_type_config_load
@@ -2007,7 +2007,7 @@
 0x00484c00 22.76 flic_decode16_bit_row_records
 0x00484c90 100.00 flic_opcode27_fallback_noop
 0x00484ca0 15.95 flic_decode8_bit_alternate_delta
-0x00484e50 19.50 flic_decode16_bit_delta
+0x00484e50 19.44 flic_decode16_bit_delta
 0x00485030 64.79 flic_opcode27_decode_dispatch
 0x004850c0 29.63 indexed_word_table_lookup
 0x004850e0 100.00 object_field10_get
@@ -2058,7 +2058,7 @@
 0x00487fc0 42.34 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 14.00 scene_node_transform_matrix_apply
+0x004882e0 12.13 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
@@ -2125,7 +2125,7 @@
 0x0048c210 13.61 parse_points
 0x0048c360 23.88 ledger_stub_0048c360_LwoCurves
 0x0048c3e0 10.47 parse_pols
-0x0048c690 10.57 parse_srfs
+0x0048c690 7.11 parse_srfs
 0x0048c820 6.34 parse_surf_chunk
 0x0048d2c0 10.03 model_parse
 0x0048d7c0 9.13 model_open
@@ -2355,7 +2355,7 @@
 0x00408940 55.81 entity_payload_teardown
 0x00408970 50.00 task_flag_bit_query
 0x004089a0 20.00 entity_payload_state_set
-0x004089d0 40.89 segment_2d_point_distance
+0x004089d0 43.56 segment_2d_point_distance
 0x00408b00 59.26 point_to_polyline_minimum_segment_distance
 0x00408b60 40.43 point_project_onto_line2d
 0x00408bf0 50.53 point2d_project_onto_direction
@@ -2474,7 +2474,7 @@
 0x0040e910 100.00 global_value_clear_if_equal
 0x0040e930 100.00 erosion_timing_state_init
 0x0040e990 100.00 lava_erosion_stage_slot_find_free
-0x0040e9c0 100.00 lava_erosion_delay_from_cell
+0x0040e9c0 84.21 lava_erosion_delay_from_cell
 0x0040eab0 41.42 lava_erosion_pending_cell_tick
 0x0040ee00 94.44 cell_coordinate_timestamp_remember
 0x0040ee50 100.00 lava_erosion_pending_cell_add
@@ -3136,7 +3136,7 @@
 0x004440a0 31.82 linked_entity_flag_and_command_update
 0x004440f0 11.31 ledger_stub_004440f0_ActivityTimeoutAccumulateAndRaise
 0x00444260 34.84 ledger_stub_00444260_EntityRandomCellStepRouteIssue
-0x00444460 23.61 ledger_stub_00444460_FlaggedVectorStepCommandIssue
+0x00444460 22.72 ledger_stub_00444460_FlaggedVectorStepCommandIssue
 0x00444620 90.32 entity_enter_event21_state_once
 0x00444680 4.88 entity_step_movement_vector_resolve
 0x00444fb0 25.56 ledger_stub_00444fb0_EntityTurnToVectorActivityIssue
@@ -3144,7 +3144,7 @@
 0x004455a0 16.54 ledger_stub_004455a0_EntityMoveVectorSurfaceProbe
 0x004456e0 17.65 ledger_stub_004456e0_EntityBehaviorCallbackTick
 0x00445d70 12.05 entity_flag_gated_callback_dispatch
-0x00446610 12.27 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
+0x00446610 12.07 ledger_stub_00446610_EntityMovementTickScaleAndDeltaGet
 0x004468c0 22.58 entity_route_adjacent_step_append
 0x004469c0 13.22 ledger_stub_004469c0_EntityNearestConnectedTerrainCellRouteSelect
 0x00446e40 21.21 ledger_stub_00446e40_EntityNearestCellRouteCommit
@@ -3238,7 +3238,7 @@
 0x0044cef0 65.52 motion_jitter_parameters_store
 0x0044cf70 27.59 simtick_scene_position_reset_and_effect_motion_cancel
 0x0044cff0 25.00 scene_transform_rgb_clamp_apply
-0x0044d0d0 13.79 motion_drift_offset_step
+0x0044d0d0 13.27 motion_drift_offset_step
 0x0044d250 58.82 float_negate_absolute_value
 0x0044d280 15.28 motion_waypoint_timer_tick
 0x0044d710 100.00 motion_waypoint_vector_random_scale_apply
@@ -3247,7 +3247,7 @@
 0x0044da20 100.00 simtick_route_position_blocked_state_set
 0x0044db50 11.05 ledger_stub_0044db50_KeyValueEqualsFileLoad
 0x0044dd40 9.09 ledger_stub_0044dd40_EngineLoaderProfileEntriesRelease
-0x0044e0c0 11.73 terrain_create_retail
+0x0044e0c0 11.44 terrain_create_retail
 0x0044e4d0 10.71 terrain_grid_vertex_build
 0x0044e670 36.36 nested_pointer_record_destroy
 0x0044e6b0 11.76 indexed_flag_value_set_one
@@ -3294,7 +3294,7 @@
 0x00450a80 36.26 cell_list_min_distance_scale_apply
 0x00451180 42.86 cell_variant_entry_match_check
 0x00451230 14.95 terrain_cell_surface_vector_write
-0x004512d0 13.27 terrain_cell_normal_sample
+0x004512d0 9.73 terrain_cell_normal_sample
 0x00451450 14.16 terrain_cell_surface_vector_offset_add
 0x004514f0 13.51 terrain_cell_surface_vectors_rebuild
 0x004515a0 100.00 level_map_image_header
@@ -3363,7 +3363,7 @@
 0x00458620 100.00 obj_set_construction_target
 0x00458650 10.53 level_objective_result_get
 0x00458660 100.00 global_value_004ffe48_set
-0x00458670 27.40 objective_announce_current
+0x00458670 27.95 objective_announce_current
 0x004588e0 31.43 input_device_release
 0x004589a0 17.39 global_option_low_bits_enabled
 0x00458be0 15.03 objective_tick_target
@@ -3374,13 +3374,13 @@
 0x004592e0 40.96 osf_snapshot
 0x004593d0 10.53 osf_read_dirty_flag_get
 0x004593e0 26.09 osf_write
-0x00459470 21.20 osf_read
+0x00459470 12.62 osf_read
 0x00459530 100.00 frontend_render_three_pass_update
 0x00459560 4.24 legacy_health_bar_config_load
 0x00459900 17.58 legacy_hunger_images_position_config_load
 0x004599c0 31.50 legacy_hunger_images_load
 0x00459a50 36.21 frontend_bubble_images_position_config_load
-0x00459b00 13.15 legacy_entity_screen_ring_render
+0x00459b00 9.66 legacy_entity_screen_ring_render
 0x00459f50 27.12 indexed_panel_resource_position_apply
 0x00459fd0 24.14 panel_resource_position_apply_if_enabled
 0x0045a030 100.00 ui_panel_name_tables_init
@@ -3530,7 +3530,7 @@
 0x00463ea0 19.51 indexed_text_metrics_pair_get
 0x00463ed0 29.63 indexed_text_metrics_pair_set
 0x00463f00 15.83 scene_quad_grid_emit
-0x00464110 13.95 rotated_pairs_scratch_fill
+0x00464110 10.85 rotated_pairs_scratch_fill
 0x00464720 9.76 surface_visibility_set
 0x00464740 8.70 sound_alias_registry_init
 0x00464c50 100.00 sound_alias_registration_set
@@ -3558,7 +3558,7 @@
 0x00465380 50.00 scene_effect_registry_reset
 0x004653a0 23.53 transient_effect_textures_preload
 0x00465430 23.50 transient_effect_emitter_create
-0x00465970 29.79 transient_effect_registry_release_all
+0x00465970 30.43 transient_effect_registry_release_all
 0x004659b0 13.08 transient_effect_instance_release
 0x00465a90 34.04 transient_effect_registry_enable_set
 0x00465ac0 74.07 transient_effect_enable_set
@@ -3662,7 +3662,7 @@
 0x0046b770 75.00 timed_effect_update_request_set_corpus
 0x0046b7a0 100.00 timed_effect_timestamp_reset_corpus
 0x0046b7c0 21.05 timed_effect_runtime_update
-0x0046b8b0 7.94 rectangular_grid_overlay_geometry_draw
+0x0046b8b0 7.97 rectangular_grid_overlay_geometry_draw
 0x0046bc30 11.59 timed_effect_slot_render_record
 0x0046c030 14.49 render_resource_binding_initialize
 0x0046c0b0 57.14 render_resource_binding_copy_and_convert
@@ -3702,7 +3702,7 @@
 0x0046e220 12.26 terrain_cell_surface_quad_height_fill_current
 0x0046e330 31.71 grid_surface_entry_reset
 0x0046e390 29.27 simtick_fx_bank_tick
-0x0046e9d0 15.09 staged_cell_candidate_collect
+0x0046e9d0 13.33 staged_cell_candidate_collect
 0x0046ead0 16.22 map_row_span_append
 0x0046eb30 26.42 map_row_span_record_start
 0x0046eb80 15.83 lego::weapon_type_config_load
@@ -4168,7 +4168,7 @@
 0x00484c00 22.76 flic_decode16_bit_row_records
 0x00484c90 100.00 flic_opcode27_fallback_noop
 0x00484ca0 15.95 flic_decode8_bit_alternate_delta
-0x00484e50 19.50 flic_decode16_bit_delta
+0x00484e50 19.44 flic_decode16_bit_delta
 0x00485030 64.79 flic_opcode27_decode_dispatch
 0x004850c0 29.63 indexed_word_table_lookup
 0x004850e0 100.00 object_field10_get
@@ -4219,7 +4219,7 @@
 0x00487fc0 42.34 lego::keyframe_time_segment_fraction
 0x00488070 10.00 lego::shared_object_float_track_interpolate_apply
 0x00488170 19.35 animation_track_keys_interpolate
-0x004882e0 14.00 scene_node_transform_matrix_apply
+0x004882e0 12.13 scene_node_transform_matrix_apply
 0x004885c0 41.33 model_resource_resolve_or_load
 0x00488730 45.16 pair_table_find
 0x00488790 31.82 pair_table_append
@@ -4286,7 +4286,7 @@
 0x0048c210 13.61 parse_points
 0x0048c360 23.88 ledger_stub_0048c360_LwoCurves
 0x0048c3e0 10.47 parse_pols
-0x0048c690 10.57 parse_srfs
+0x0048c690 7.11 parse_srfs
 0x0048c820 6.34 parse_surf_chunk
 0x0048d2c0 10.03 model_parse
 0x0048d7c0 9.13 model_open
