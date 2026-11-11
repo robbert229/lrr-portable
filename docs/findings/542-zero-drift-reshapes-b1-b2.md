@@ -65,7 +65,7 @@ Issue #502, tickets **B1** and **B2** of the
    | GAME-043 | 13 split heads (row 1) | row 20: `ENTITY_STATS_FLOAT_READ`/`WORD_READ` (P2), and the header needs statics `stats_rec_float`/`stats_rec_word` (T2) | row 20 ✓ |
    | GAME-021 | P3a group (row 5) | `s_entity_rock_fall_in_name`, a one-item `#if` group (P3b) | P3b ✓ |
    | GAME-027 | split head (row 2) and `s_cmd_rand_state` | `s_cmd_rand_state` only (row 8, P3b) | row 8 ✓ |
-   | GAME-017 | P3a group (row 6) | `_ftol` declarations, `crt.cpp:614` and `:1000` (P3b) | P3b ✓ |
+   | GAME-017 | P3a group (row 6) | `_ftol` declarations, `crt.cpp:596` and `:982` (P3b) | P3b ✓ |
    | GAME-032 | `_ftol` declarations | unchanged: `_ftol` (P3b) | P3b ✓ (not a B1 target) |
    | G98-012 | annotation above the macro group (row 16) | `LEGORRR_CRT_STDCALL` alternatives (P2) | P2 ✓ |
    | GAME-050 | split head (row 3) | anonymous-namespace items used before their definition (`ascii_case_equal`, `weapon_definition_reset`) | #485 ✓ |
