@@ -267,18 +267,12 @@ typedef struct EntitySlot {
     /* --- command layer (finding 10) --- */
     void*   cmd_head;   /* chain-head command record (entity +0x2f0) */
     void*   route_partner_300; /* reciprocal partner link for step commands */
-    uint32_t flags_3e0; /* mirror of entity +0x3e0 (bit 0x400 gates gated cmds) */
-    uint32_t flags_3e8; /* mirror of entity +0x3e8 (type-6 high bit → kind) */
-    /* --- entity-tick state (callback 0x43c810, finding 10) --------- */
-    uint32_t flags_3e4; /* +0x3e4 (bit 0x8000000 = wake-timer running)  */
-    uint32_t flags_3ec; /* +0x3ec (activity/behaviour flags)            */
-    uint32_t flags_390; /* +0x390: BuildingTypes path-effect veto bits */
+    /* Retail +0xa0/+0xb8/+0xc4 windows are separate per-payload arrays:
+     * two repeated +0x1c registrations, then one +0x24 and one +0x20.
+     * The +0x1c pairs fill the 32-bit slots the entity flag words left
+     * (finding 522); the +0x24 handles sit before the flag words. */
+    void* scene_slot_owner_1c_handles[3][2];
     int32_t command_mode_404; /* per-entity mode written by route commands */
-    /* +0x3f0: level-state mask word. The corpus's two readers are this
-     * module's selection gate (CurrentLevelStateFlagsContainMask) and the
-     * unported sim-interaction update; no ported writer feeds it — a
-     * zero-init mirror per the flags_3e0 precedent. */
-    uint32_t flags_3f0;           /* +0x3f0 (level-state mask word)         */
     uint32_t activity_grant_state_3f4; /* +0x3f4: cleared by FUN_0044b370 */
     /* --- static task-state (spawn-dispatch switch 0x438150) -------- *
      * EntityCreateByType assigns one of three static +0x334 templates to
@@ -306,10 +300,7 @@ typedef struct EntitySlot {
                                * filter; no portable producer is recovered */
     const void* attach_304;  /* +0x304: attached object the selection
                               * filter follows in place of the candidate   */
-    const void* owner_36c;   /* +0x36c: owner pointer read by the
-                              * context-selected predicate and the
-                              * selection-command dispatch (pointer-sized
-                              * mirror of the corpus's 32-bit word)         */
+    void* payload_aux_handle_7c; /* in owner_36c's old 32-bit slot */
     /* --- carried-object pair (corpus +0x308/+0x324/+0x348) ---------------
      * A type-3 carrier links the object it carries through +0x308; +0x324
      * holds the carry state the detach clears, and +0x348 points at the
@@ -319,8 +310,7 @@ typedef struct EntitySlot {
     uint32_t field_328;       /* +0x328 counter read by tutorial 0x14/0x15 */
     void*    carry_ref_348;   /* +0x348: carried reference (dword read) */
     float    command_chain_idle_elapsed_338; /* +0x338 callback timer */
-    float    field_340;      /* +0x340 float; the wake mirror sets 100.0
-                              * (its general corpus readers are TODO)       */
+    uint32_t action_consume_counters_initialized; /* in field_340's old slot */
     int32_t  positioned_render_state_34c; /* proximity-driven render state */
     /* --- route-progress advance (corpus +0x344/+0x2fc, finding 448) -----
      * The corpus advances a routing progress float by a fixed step and
@@ -386,12 +376,18 @@ typedef struct EntitySlot {
      * template on portable hosts. */
     const void* stats_record;
     float attached_direction_length;
+    /* Retail +0x33c..+0x36c members at their original 32-bit offsets
+     * (finding 522); the port-only arrays fill the gaps between them. */
+    float field_33c;         /* +0x33c spawn timer mirror */
+    float    field_340;      /* +0x340 float; the wake mirror sets 100.0
+                              * (its general corpus readers are TODO)       */
     uint32_t action_consume_counters[6];
-    uint32_t action_consume_counters_initialized;
-    int32_t payload_state_8c;
     void* payload_handle_04;
-    void* payload_aux_handle_7c;
     void* payload_resource_chains[3];
+    const void* owner_36c;   /* +0x36c: owner pointer read by the
+                              * context-selected predicate and the
+                              * selection-command dispatch (pointer-sized
+                              * mirror of the corpus's 32-bit word)         */
     void* visual_resource_handles[4]; /* per-type cached scene visual */
     void* type_component_handle; /* retail 0x4a200 result consumed by
                                   * SurfaceVectorNormalize */
@@ -399,17 +395,26 @@ typedef struct EntitySlot {
     uint32_t payload_flags_70;
     void* scene_slot_cache[12];
     uint32_t scene_slot_generation;
-    /* Retail +0xa0/+0xb8/+0xc4 windows are separate per-payload arrays:
-     * two repeated +0x1c registrations, then one +0x24 and one +0x20. */
-    void* scene_slot_owner_1c_handles[3][2];
     void* scene_slot_owner_24_handles[3];
+    uint32_t flags_390; /* +0x390: BuildingTypes path-effect veto bits */
+    /* --- entity flag words at their original 32-bit offsets +0x3e0..+0x3f0
+     * (finding 522); asserted in entity.cpp. ------------------------------ */
+    uint32_t flags_3e0; /* +0x3e0 (bit 0x400 gates gated cmds) */
+    /* entity-tick state (callback 0x43c810, finding 10) */
+    uint32_t flags_3e4; /* +0x3e4 (bit 0x8000000 = wake-timer running)  */
+    uint32_t flags_3e8; /* +0x3e8 (type-6 high bit → kind) */
+    uint32_t flags_3ec; /* +0x3ec (activity/behaviour flags)            */
+    /* +0x3f0: level-state mask word. The corpus's two readers are this
+     * module's selection gate (CurrentLevelStateFlagsContainMask) and the
+     * unported sim-interaction update; no ported writer feeds it — a
+     * zero-init mirror per the flags_3e0 precedent. */
+    uint32_t flags_3f0;           /* +0x3f0 (level-state mask word)         */
     void* scene_slot_owner_20_handles[3];
     uint32_t scene_slot_owner_1c_counts[3];
     int32_t task_pair_3b4[2];
     int32_t task_scalar_3bc;
     uintptr_t pair_link_3c0; /* reciprocal entity link at corpus +0x3c0 */
-    float field_33c;         /* +0x33c spawn timer mirror, stored at the
-                              * end to avoid shifting other port fields. */
+    int32_t payload_state_8c; /* in field_33c's old 32-bit slot */
     uint32_t tutorial_unit_at_block_3f8; /* +0x3f8 tutorial cell membership
                                           * marker written by callback 0x4570d0. */
     /* Type-10 records retain their animation-resource record at retail

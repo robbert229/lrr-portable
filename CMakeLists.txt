@@ -347,6 +347,11 @@ if(BUILD_TESTING AND PLATFORM STREQUAL "native")
     add_test(NAME entity_stats_real
       COMMAND entity_test --real-stats "${TEST_WADS_DIR}")
     set_tests_properties(entity_stats_real PROPERTIES LABELS entity)
+    # Shipped-type entities driven through the readers of the members the
+    # 32-bit layout places at their original offsets (finding 522).
+    add_test(NAME entity_layout_real
+      COMMAND entity_test --real-layout "${TEST_WADS_DIR}")
+    set_tests_properties(entity_layout_real PROPERTIES LABELS entity)
   endif()
   set_tests_properties(audio PROPERTIES ENVIRONMENT "SDL_AUDIODRIVER=dummy")
 endif()

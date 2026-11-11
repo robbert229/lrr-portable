@@ -501,6 +501,7 @@ have not yet been added to the catalog.
 | 519 | [findings/519-draw-unit-original-shape.md](519-draw-unit-original-shape.md) | 2D drawing unit (G98-019) rebuilt in original shape; 16 of 18 functions exact, unit 11.19% to 96.22%; six pixel writers missing from the manifest now mapped; boundary confirmed (issue 412) |
 | 520 | [findings/520-entity-stats-record-pointer-layout.md](520-entity-stats-record-pointer-layout.md) | Entities reach their 0x150-byte Stats record through a pointer at +0x334; the 32-bit EntitySlot now puts it there (44 accessors exact); survey of other offset-only records (issue 457) |
 | 521 | [findings/521-link-order-list-explicit-objects.md](521-link-order-list-explicit-objects.md) | The link-order list (`src/link_order.cmake`): the matching build links every game and gods98 source as an explicit object in original order, then LIBC, oldnames and the import libraries; pair inversions 855,122 to 633,298, no score changes, never-pulled objects link (issue 437) |
+| 522 | [findings/522-entity-flag-words-and-owner-layout.md](522-entity-flag-words-and-owner-layout.md) | The 32-bit EntitySlot puts the +0x3e0..+0x3ec flag words, +0x3f0, +0x33c/+0x340 and the +0x36c owner at their original offsets (6 functions exact, 83 improved, 2 drift drops); survey rerun leaves one offset-only function (issue 462) |
 
 Canonical full pseudocode corpus: [`docs/decompiles/full/LEGORR.full.c`](../../docs/decompiles/full/LEGORR.full.c)
 (2564 manifest functions; see its [README](../../docs/decompiles/full/README.md)). The
