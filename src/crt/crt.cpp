@@ -444,27 +444,9 @@ extern "C" void __cdecl __multtenpow12(uint16_t*, uint32_t, int);
 // LIBRARY: LEGORR 0x0048efe6 SYMBOL
 // __NLG_Notify
 
-/* This target-specific frame adapter delegates cleanup to VC5's
- * __local_unwind2 rather than duplicating the runtime's scope walk. */
-// FUNCTION: LEGORR 0x00496895
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void __stdcall crt_local_unwind_from_frame(void*)
-{
-    __asm {
-        push ebp
-        mov ecx, dword ptr [esp + 8]
-        mov ebp, dword ptr [ecx]
-        mov eax, dword ptr [ecx + 1ch]
-        push eax
-        mov eax, dword ptr [ecx + 18h]
-        push eax
-        call _local_unwind2
-        add esp, 8
-        pop ebp
-        ret 4
-    }
-}
-#endif
+/* LIBC.LIB exsup3.obj's __seh_longjmp_unwind@4 (finding 540). */
+// LIBRARY: LEGORR 0x00496895 SYMBOL
+// __seh_longjmp_unwind@4
 
 /* VC5 LIBC.LIB's math runtime supplies these helper entries. 87cdisp.obj's
  * __ctrandisp2 matches the target outside relocated calls and runtime-data
@@ -666,11 +648,11 @@ extern "C" void (__cdecl *_adbgmsg)(void);
 #define s_runtime_error_console_mode __app_type
 #define s_runtime_error_callback _adbgmsg
 #else
-// GLOBAL: LEGORR 0x00549124
+/* LIBC.LIB data ___error_mode at 0x00549124 (src/crt/libc_symbols.csv). */
 static int s_runtime_error_mode;
-// GLOBAL: LEGORR 0x004afd64
+/* LIBC.LIB data ___app_type at 0x004afd64 (src/crt/libc_symbols.csv). */
 static int s_runtime_error_console_mode = 2;
-// GLOBAL: LEGORR 0x005493d8
+/* LIBC.LIB data __adbgmsg at 0x005493d8 (src/crt/libc_symbols.csv). */
 static void (*s_runtime_error_callback)(void);
 #endif
 #if !defined(_MSC_VER)
@@ -831,11 +813,11 @@ void crt_runtime_error_message(int error_code)
 #endif
 
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x00549428
+/* LIBC.LIB static data at 0x00549428: not annotated (finding 540). */
 static void* s_runtime_message_box_proc;
-// GLOBAL: LEGORR 0x0054942c
+/* LIBC.LIB static data at 0x0054942c: not annotated (finding 540). */
 static void* s_runtime_active_window_proc;
-// GLOBAL: LEGORR 0x00549430
+/* LIBC.LIB static data at 0x00549430: not annotated (finding 540). */
 static void* s_runtime_last_popup_proc;
 #endif
 
@@ -1236,7 +1218,7 @@ static int crt_double_classify_words(uint32_t low, uint32_t high)
  * addresses as DWORDs; function-valued slots use their declared symbols,
  * but are not called through host pointers here. */
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x004aff80
+/* LIBC.LIB data __cfltcvt_tab at 0x004aff80 (src/crt/libc_symbols.csv). */
 static volatile uint32_t s_math_dispatch_table[6] = {
     0x00498340u, 0x00498340u, 0x00498340u,
     0x00498340u, 0x00498340u, 0x00498340u
@@ -1266,16 +1248,10 @@ void crt_math_dispatch_table_initialize(void)
 static volatile unsigned char s_math_intrinsic_dispatch_seen;
 #endif
 
-// FUNCTION: LEGORR 0x0048e1aa
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void crt_math_intrinsic_dispatch(void)
-{
-    __asm {
-        mov edx, 004afcd0h
-        jmp _cintrindisp2
-    }
-}
-#else
+/* LIBC.LIB 87fmod.obj's __CIfmod (CRT-013; finding 540). */
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x0048e1aa SYMBOL
+// __CIfmod
 void crt_math_intrinsic_dispatch(void)
 {
     s_math_intrinsic_dispatch_seen = 1;
@@ -1407,19 +1383,10 @@ int32_t constant_negative_10000_get(void)
     return -10000;
 }
 
-// FUNCTION: LEGORR 0x00490230
-#if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) uint32_t processor_feature_fallback_false(void)
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-        xor eax, eax
-        pop ebp
-        ret
-    }
-}
-#else
+/* LIBC.LIB testfdiv.obj's __ms_p5_test_fdiv (finding 540). */
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x00490230 SYMBOL
+// __ms_p5_test_fdiv
 uint32_t processor_feature_fallback_false(void)
 {
     return 0u;
@@ -2613,26 +2580,26 @@ void scene_effect_registry_words_peek(uint32_t out_words[3])
     out_words[2] = s_scene_effect_shared;
 }
 
-/* CrtFatalMessageExit (FUN_00498340) — the corpus's exhausted-memory
- * abort. VC5 builds use LIBC.LIB's __amsg_exit with the observed message
- * code; portable builds use abort, with an observer hook for tests. */
+/* CrtFatalMessageExit (FUN_00498340, LIBC.LIB's __fptrap): VC5 builds take
+ * it from LIBC.LIB; portable builds use abort, with an observer hook for
+ * tests. */
 #if !defined(_MSC_VER)
 static void (*s_fatal_exit_observer)(void);
 #endif
 
-// FUNCTION: LEGORR 0x00498340
+/* LIBC.LIB crt0fp.obj's __fptrap (finding 540). */
+#if !defined(_MSC_VER)
+// LIBRARY: LEGORR 0x00498340 SYMBOL
+// __fptrap
 void crt_fatal_message_exit(void)
 {
-#if defined(_MSC_VER)
-    _amsg_exit(2);
-#else
     if (s_fatal_exit_observer != NULL) {
         s_fatal_exit_observer();
         return;
     }
     abort();
-#endif
 }
+#endif
 
 void crt_fatal_exit_observer_set(void (*observer)(void))
 {
@@ -3023,9 +2990,9 @@ void string_prefix_reserve(char* s, int count)
 /* CrtStreamBufferAllocate (FUN_00498ae0) — see crt.hpp. DAT_005493e4 is
  * unowned: zero-init hooked static. */
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x005493e4
+/* LIBC.LIB data __cflush at 0x005493e4 (src/crt/libc_symbols.csv). */
 static long s_stream_alloc_count;
-// GLOBAL: LEGORR 0x005493e8
+/* LIBC.LIB data __stdbuf at 0x005493e8 (src/crt/libc_symbols.csv). */
 static void* s_standard_stream_buffers[2];
 #endif
 
@@ -3033,9 +3000,9 @@ static void* s_standard_stream_buffers[2];
 #define s_standard_stream_record_0 ((int*)&_iob[1])
 #define s_standard_stream_record_1 ((int*)&_iob[2])
 #else
-// GLOBAL: LEGORR 0x004b2648
+/* LIBC.LIB static data at 0x004b2648: not annotated (finding 540). */
 static int s_standard_stream_record_0[8] = { 0, 0, 0, 2, 1, 0, 0, 0 };
-// GLOBAL: LEGORR 0x004b2668
+/* LIBC.LIB static data at 0x004b2668: not annotated (finding 540). */
 static int s_standard_stream_record_1[8] = { 0, 0, 0, 2, 2, 0, 0, 0 };
 #endif
 
@@ -3721,11 +3688,11 @@ void uint96_shift_right(uint32_t limbs[3], int count)
 #endif
 
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x004b28a8
+/* LIBC.LIB static data at 0x004b28a8: not annotated (finding 540). */
 static const int32_t s_extended_float_format_a[6] = {
     1024, -1023, 53, 11, 64, 1023
 };
-// GLOBAL: LEGORR 0x004b28c0
+/* LIBC.LIB static data at 0x004b28c0: not annotated (finding 540). */
 static const int32_t s_extended_float_format_b[6] = {
     128, -127, 24, 8, 32, 127
 };
@@ -3950,7 +3917,7 @@ char* crt_signed_to_string(int value, char* out, int radix)
 /* StringToUpper / StringToLowercase (FUN_0049dcd0 / FUN_0049dc10) — see
  * crt.hpp. The C-locale fast half folds ASCII letters in place; the
  * DAT_00549180 locale half rides the recorded locale-map chain. */
-// GLOBAL: LEGORR 0x00549180
+/* LIBC.LIB static data at 0x00549180: not annotated (finding 540). */
 #if !defined(_MSC_VER)
 static uint32_t s_crt_locale_handle; /* DAT_00549180: zero-init locale handle */
 #endif
@@ -4043,12 +4010,12 @@ char* crt_string_to_lower(char* text)
 #define s_math_error_code errno
 #define s_win32_error_code _doserrno
 #else
-// GLOBAL: LEGORR 0x005490d0
+/* LIBC.LIB data _errno at 0x005490d0 (src/crt/libc_symbols.csv). */
 static uint32_t s_math_error_code; /* _DAT_005490d0 role */
-// GLOBAL: LEGORR 0x005490d4
+/* LIBC.LIB data __doserrno at 0x005490d4 (src/crt/libc_symbols.csv). */
 static uint32_t s_win32_error_code; /* DAT_005490d4 role */
 #endif
-// GLOBAL: LEGORR 0x004b28e0
+/* LIBC.LIB data __matherr_flag at 0x004b28e0 (src/crt/libc_symbols.csv). */
 #if !defined(_MSC_VER)
 /* Non-MSVC fallback state. VC5 fpexcept.obj owns this adjacent runtime word
  * with its __matherr_flag data and accesses it from __except1. */
@@ -4425,7 +4392,7 @@ uint64_t crt_unsigned64_divide(uint32_t lo_a, uint32_t hi_a,
 
 #if defined(_MSC_VER)
 /* LIBC.LIB's _pctype is the original's table pointer. */
-// GLOBAL: LEGORR 0x004afd68
+/* LIBC.LIB data __pctype at 0x004afd68 (src/crt/libc_symbols.csv). */
 // _pctype
 #define s_ctype_pointer _pctype
 #else
@@ -4463,56 +4430,56 @@ extern "C" int __lc_codepage;
 #define s_ansi_codepage __lc_codepage
 #define s_active_locale_table __mblcid
 #else
-// GLOBAL: LEGORR 0x005492b8
+/* LIBC.LIB data __mbctype at 0x005492b8 (src/crt/libc_symbols.csv). */
 static uint8_t s_multibyte_character_flags[257];
-// GLOBAL: LEGORR 0x005493bc
+/* LIBC.LIB data ___mbcodepage at 0x005493bc (src/crt/libc_symbols.csv). */
 static uint32_t s_active_codepage;
-// GLOBAL: LEGORR 0x00549190
+/* LIBC.LIB data ___lc_codepage at 0x00549190 (src/crt/libc_symbols.csv). */
 static uint32_t s_ansi_codepage;
-// GLOBAL: LEGORR 0x005493c0
+/* LIBC.LIB data ___mblcid at 0x005493c0 (src/crt/libc_symbols.csv). */
 static uint32_t s_active_locale_table;
 #endif
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x005490f8
+/* LIBC.LIB data __environ at 0x005490f8 (src/crt/libc_symbols.csv). */
 static char** s_environment;
-// GLOBAL: LEGORR 0x005490fc
+/* LIBC.LIB data ___initenv at 0x005490fc (src/crt/libc_symbols.csv). */
 static char** s_environment_sentinel;
-// GLOBAL: LEGORR 0x00549100
+/* LIBC.LIB data __wenviron at 0x00549100 (src/crt/libc_symbols.csv). */
 static uint16_t** s_wide_environment;
-// GLOBAL: LEGORR 0x0054911c
+/* LIBC.LIB data __aenvptr at 0x0054911c (src/crt/libc_symbols.csv). */
 static char* s_environment_block;
-// GLOBAL: LEGORR 0x005492b0
+/* LIBC.LIB static data at 0x005492b0: not annotated (finding 540). */
 static int32_t s_environment_api_mode;
 #endif
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x00549510
+/* LIBC.LIB static data at 0x00549510: not annotated (finding 540). */
 static int32_t s_compare_string_api_mode;
 #endif
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x005493c8
+/* LIBC.LIB data ___mbulinfo at 0x005493c8 (src/crt/libc_symbols.csv). */
 static uint32_t s_codepage_metadata_word0;
-// GLOBAL: LEGORR 0x005493cc
+/* LIBC.LIB static data at 0x005493cc: not annotated (finding 540). */
 static uint32_t s_codepage_metadata_word1;
-// GLOBAL: LEGORR 0x005493d0
+/* LIBC.LIB static data at 0x005493d0: not annotated (finding 540). */
 static uint32_t s_codepage_metadata_word2;
-// GLOBAL: LEGORR 0x005493d4
+/* LIBC.LIB static data at 0x005493d4: not annotated (finding 540). */
 static uint32_t s_codepage_fallback_mode;
 #endif
-// GLOBAL: LEGORR 0x005490d8
+/* LIBC.LIB data __umaskval at 0x005490d8 (src/crt/libc_symbols.csv). */
 static uint32_t s_file_open_attribute_policy;
-// GLOBAL: LEGORR 0x005494f4
+/* LIBC.LIB data __fmode at 0x005494f4 (src/crt/libc_symbols.csv). */
 static uint32_t s_file_open_share_state;
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x00549170
+/* LIBC.LIB static data at 0x00549170: not annotated (finding 540). */
 static int32_t s_locale_map_api_mode;
 #endif
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x005493e0
+/* LIBC.LIB static data at 0x005493e0: not annotated (finding 540). */
 static int32_t s_string_type_api_mode;
 #endif
-// GLOBAL: LEGORR 0x004b2330
+/* LIBC.LIB static data at 0x004b2330: not annotated (finding 540). */
 static const uint8_t s_predefined_codepage_masks[4] = { 1u, 2u, 4u, 8u };
-// GLOBAL: LEGORR 0x004b2338
+/* LIBC.LIB static data at 0x004b2338: not annotated (finding 540). */
 static const uint8_t s_predefined_codepage_records[5][48] = {
     { 0xa4u,0x03u,0x00u,0x00u,0x60u,0x82u,0x79u,0x82u,
       0x21u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,0x00u,
@@ -4545,19 +4512,19 @@ static const uint8_t s_predefined_codepage_records[5][48] = {
       0x81u,0xd3u,0xd8u,0xdeu,0xe0u,0xf9u,0x00u,0x00u,
       0x31u,0x7eu,0x81u,0xfeu,0x00u,0x00u,0x00u,0x00u }
 };
-// GLOBAL: LEGORR 0x004b28f0
+/* LIBC.LIB data __timezone at 0x004b28f0 (src/crt/libc_symbols.csv). */
 static int32_t s_timezone_bias_seconds = 28800;
-// GLOBAL: LEGORR 0x004b28f4
+/* LIBC.LIB data __daylight at 0x004b28f4 (src/crt/libc_symbols.csv). */
 static int32_t s_daylight_saving_available = 1;
-// GLOBAL: LEGORR 0x004b28f8
+/* LIBC.LIB data __dstbias at 0x004b28f8 (src/crt/libc_symbols.csv). */
 static int32_t s_daylight_saving_bias_seconds = -3600;
 // GLOBAL: LEGORR 0x004b2900
 static char s_standard_timezone_name_buffer[64] = "PST";
 // GLOBAL: LEGORR 0x004b2940
 static char s_daylight_timezone_name_buffer[64] = "PDT";
-// GLOBAL: LEGORR 0x004b2980
+/* LIBC.LIB data __tzname at 0x004b2980 (src/crt/libc_symbols.csv). */
 static char* s_standard_timezone_name = s_standard_timezone_name_buffer;
-// GLOBAL: LEGORR 0x004b2984
+/* LIBC.LIB static data at 0x004b2984: not annotated (finding 540). */
 static char* s_daylight_timezone_name = s_daylight_timezone_name_buffer;
 struct CrtDaylightTransitionCache {
     uint32_t start_year;
@@ -4568,7 +4535,7 @@ struct CrtDaylightTransitionCache {
     int32_t end_day;
     int32_t end_milliseconds;
 };
-// GLOBAL: LEGORR 0x004b2988
+/* LIBC.LIB static data at 0x004b2988: not annotated (finding 540). */
 static CrtDaylightTransitionCache s_daylight_transition_cache = {
     0xffffffffu, 0, 0, 0, 0xffffffffu, 0, 0
 };
@@ -4578,7 +4545,7 @@ static CrtDaylightTransitionCache s_daylight_transition_cache = {
 #define s_daylight_end_year (s_daylight_transition_cache.end_year)
 #define s_daylight_end_day (s_daylight_transition_cache.end_day)
 #define s_daylight_end_milliseconds (s_daylight_transition_cache.end_milliseconds)
-// GLOBAL: LEGORR 0x00549438
+/* LIBC.LIB static data at 0x00549438: not annotated (finding 540). */
 static int32_t s_timezone_from_windows;
 
 /* TIME_ZONE_INFORMATION has a fixed 0xac-byte layout. Using 16-bit name
@@ -4604,17 +4571,17 @@ struct CrtTimeZoneInformation {
     int32_t daylight_bias;
 };
 
-// GLOBAL: LEGORR 0x00549440
+/* LIBC.LIB static data at 0x00549440: not annotated (finding 540). */
 static CrtTimeZoneInformation s_timezone_information;
-// GLOBAL: LEGORR 0x005494ec
+/* LIBC.LIB static data at 0x005494ec: not annotated (finding 540). */
 static char* s_timezone_environment_copy;
-// GLOBAL: LEGORR 0x005494f0
+/* LIBC.LIB static data at 0x005494f0: not annotated (finding 540). */
 static int32_t s_timezone_initialized;
 // GLOBAL: LEGORR 0x004b29a4
 static const int32_t s_leap_month_day_offsets[14] = {
     0, -1, 30, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365
 };
-// GLOBAL: LEGORR 0x004b29dc
+/* LIBC.LIB static data at 0x004b29dc: not annotated (finding 540). */
 static const int32_t s_common_month_day_offsets[14] = {
     0, -1, 30, 58, 89, 119, 150, 180, 211, 242, 272, 303, 333, 364
 };
@@ -4681,28 +4648,28 @@ static const uint16_t s_negative_power_of_ten_table[28][6] = {
 };
 #endif
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x00549128
+/* LIBC.LIB static data at 0x00549128: not annotated (finding 540). */
 static CrtDecimalFormatContext* s_current_decimal_format;
-// GLOBAL: LEGORR 0x0054912c
+/* LIBC.LIB static data at 0x0054912c: not annotated (finding 540). */
 static uint8_t s_decimal_format_prepared;
-// GLOBAL: LEGORR 0x00549130
+/* LIBC.LIB static data at 0x00549130: not annotated (finding 540). */
 static int32_t s_decimal_format_position;
-// GLOBAL: LEGORR 0x00549134
+/* LIBC.LIB static data at 0x00549134: not annotated (finding 540). */
 static uint8_t s_decimal_format_truncated;
-// GLOBAL: LEGORR 0x005493f0
+/* LIBC.LIB static data at 0x005493f0: not annotated (finding 540). */
 static uint8_t s_decimal_conversion_buffer[32];
-// GLOBAL: LEGORR 0x00549410
+/* LIBC.LIB static data at 0x00549410: not annotated (finding 540). */
 static CrtDecimalFormatContext s_decimal_format_context;
 #endif
 #if defined(_MSC_VER)
 /* LIBC.LIB's __mb_cur_max is the original's. */
-// GLOBAL: LEGORR 0x004aff74
+/* LIBC.LIB data ___mb_cur_max at 0x004aff74 (src/crt/libc_symbols.csv). */
 // __mb_cur_max
 #define s_max_multibyte_width __mb_cur_max
 #else
 static volatile uint32_t s_max_multibyte_width = 1u;
 #endif
-// GLOBAL: LEGORR 0x004aff78
+/* LIBC.LIB data ___decimal_point at 0x004aff78 (src/crt/libc_symbols.csv). */
 static char s_decimal_separator = '.';
 
 /* CrtCodePageLocaleIdLookup (FUN_00496530): the four DBCS pages with
@@ -5168,7 +5135,7 @@ void crt_ctype_tables_reset(void)
 /* CrtLocaleCodePageTableUpdate (FUN_004962f0): load one of the image's
  * five byte-range tables, or ask Windows for the current page's lead bytes. */
 // LIBRARY: LEGORR 0x004962f0 SYMBOL
-// _setmbcp
+// __setmbcp
 #if !defined(_MSC_VER)
 int crt_locale_codepage_table_update(int requested_codepage)
 {
@@ -7216,12 +7183,12 @@ extern "C" int _nhandle;
 #define s_fd_flag_blocks __pioinfo
 #define s_fd_flag_count _nhandle
 #else
-// GLOBAL: LEGORR 0x0076ddc0
+/* LIBC.LIB data ___pioinfo at 0x0076ddc0 (src/crt/libc_symbols.csv). */
 static void* s_fd_flag_blocks[CRT_FD_BLOCKS]; /* DAT_0076ddc0 role */
-// GLOBAL: LEGORR 0x0076dec0
+/* LIBC.LIB data __nhandle at 0x0076dec0 (src/crt/libc_symbols.csv). */
 static int   s_fd_flag_count;                 /* DAT_0076dec0 role */
 #endif
-// GLOBAL: LEGORR 0x004b2428
+/* LIBC.LIB data ___badioinfo at 0x004b2428 (src/crt/libc_symbols.csv). */
 static unsigned char s_fd_fallback_record[8] = {
     0xffu, 0xffu, 0xffu, 0xffu, 0u, 10u, 0u, 0u
 };
@@ -7539,7 +7506,7 @@ int crt_file_descriptor_close(unsigned fd)
  * corresponding Win32 access, sharing, disposition, and handle flags, then
  * register the resulting operating-system handle in the CRT descriptor table. */
 // LIBRARY: LEGORR 0x00499240 SYMBOL
-// _sopen
+// __sopen
 #if !defined(_MSC_VER)
 int crt_win32_file_descriptor_open(const char* path, uint32_t flags,
                                    uint32_t share, uint32_t attributes)
@@ -8246,7 +8213,7 @@ int crt_file_descriptor_count_peek(void)
  * 0x4b24c0, then applies the CRT's two range fallbacks. The initial bytes
  * were checked directly against LegoRR.exe. */
 #if !defined(_MSC_VER)
-// GLOBAL: LEGORR 0x004b24c0
+/* LIBC.LIB static data at 0x004b24c0: not annotated (finding 540). */
 static const uint32_t s_win32_error_errno_pairs[45][2] = {
     { 0x00000001u, 0x00000016u }, { 0x00000002u, 0x00000002u },
     { 0x00000003u, 0x00000002u }, { 0x00000004u, 0x00000018u },

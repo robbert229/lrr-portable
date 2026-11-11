@@ -19,7 +19,8 @@ FIXED = ('CMakeLists.txt', 'cross/msvc5-toolchain.cmake', 'tools/reccmp.sh',
          'tools/binary_progress_hash.py', 'tools/translation_units.py',
          'tools/link_order.py', link_order.LIST,
          'tools/strip_pe_debug.py', 'docs/decompiles/full/manifest.csv',
-         'docs/coverage/ledger.csv', 'docs/coverage/function-areas.csv', MANIFEST)
+         'docs/coverage/ledger.csv', 'docs/coverage/function-areas.csv',
+         'reccmp-project.yml', 'src/crt/libc_symbols.csv', MANIFEST)
 
 
 def selected_paths(root, tracked):

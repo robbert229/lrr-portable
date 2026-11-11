@@ -75,7 +75,7 @@ typedef struct CrtHeapArena {
     (CRT_POOL_RESERVE_BASE(arena) != (unsigned char*)-1)
 #endif
 
-// GLOBAL: LEGORR 0x004affb8
+/* LIBC.LIB data ___small_block_heap at 0x004affb8 (src/crt/libc_symbols.csv). */
 static CrtHeapArena s_pool_root = {
     &s_pool_root,
     &s_pool_root,
@@ -91,14 +91,14 @@ static CrtHeapArena s_pool_root = {
     { { 0xf0, 0xf1u } },
     { 0u, 0u }
 };
-// GLOBAL: LEGORR 0x004b1fd8
+/* LIBC.LIB static data at 0x004b1fd8: not annotated (finding 540). */
 static CrtHeapArena* s_preferred_arena = &s_pool_root;
-// GLOBAL: LEGORR 0x004b1fdc
+/* LIBC.LIB data ___sbh_threshold at 0x004b1fdc (src/crt/libc_symbols.csv). */
 static uint32_t s_pool_small_threshold = 480u;
-// GLOBAL: LEGORR 0x00549150
+/* LIBC.LIB static data at 0x00549150: not annotated (finding 540). */
 static int32_t s_free_small_page_count;
 #if defined(LEGORRR_BACKEND_WINAPI)
-// GLOBAL: LEGORR 0x0076dec4
+/* LIBC.LIB data __crtheap at 0x0076dec4 (src/crt/libc_symbols.csv). */
 static HANDLE s_process_heap;
 #else
 static void* s_process_heap;
@@ -661,7 +661,7 @@ void* engine_heap_alloc_retry(long size, int retry_via_new_handler)
 }
 #endif
 
-// GLOBAL: LEGORR 0x00549154
+/* LIBC.LIB data __newmode at 0x00549154 (src/crt/libc_symbols.csv). */
 static int s_heap_alloc_retry_enabled;
 
 #if !defined(_MSC_VER) || !defined(_M_IX86)
@@ -709,7 +709,7 @@ void engine_heap_free(void* ptr)
 
 /* --- the retry-handler pair (see heap.hpp) ----------------------------------
  * VC5 LIBC.LIB owns the reference build's allocation-failure handler. */
-// GLOBAL: LEGORR 0x00549158
+/* LIBC.LIB data ?_pnhHeap@@3P6AHI@ZA at 0x00549158 (src/crt/libc_symbols.csv). */
 #if !defined(_MSC_VER)
 static int (*s_new_handler)(long);
 #endif

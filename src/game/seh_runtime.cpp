@@ -3,6 +3,9 @@
 
 #include <string.h>
 
+/* The original links these from LIBC.LIB trnsctrl.obj (CRT-029); the
+ * matching build takes them from there (finding 540). */
+#if !defined(_MSC_VER)
 namespace unported_ledger_stubs {
 
 static SehRuntimeHooks s_seh_runtime_hooks;
@@ -14,7 +17,9 @@ void seh_runtime_hooks_set(const SehRuntimeHooks* hooks)
     else s_seh_runtime_hooks = *hooks;
 }
 
-// FUNCTION: LEGORR 0x0048ec00
+/* LIBC.LIB trnsctrl.obj (finding 540). */
+// LIBRARY: LEGORR 0x0048ec00 SYMBOL
+// ?_UnwindNestedFrames@@YGXPAUEHRegistrationNode@@PAUEHExceptionRecord@@@Z
 void seh_frame_unwind(void* target_frame,
                       SehExceptionRecord* exception_record)
 {
@@ -32,7 +37,8 @@ void seh_frame_unwind(void* target_frame,
     }
 }
 
-// FUNCTION: LEGORR 0x0048eca0
+// LIBRARY: LEGORR 0x0048eca0 SYMBOL
+// ?_CallCatchBlock2@@YAPAXPAUEHRegistrationNode@@PBU_s_FuncInfo@@PAXHK@Z
 uint32_t call_setting_frame_12(uintptr_t argument_1, uintptr_t argument_2,
     uintptr_t callback, int frame_index, uintptr_t argument_5)
 {
@@ -55,7 +61,8 @@ uint32_t call_setting_frame_12(uintptr_t argument_1, uintptr_t argument_2,
     return result;
 }
 
-// FUNCTION: LEGORR 0x0048ed00
+// LIBRARY: LEGORR 0x0048ed00 SYMBOL
+// ?CatchGuardHandler (static in LIBC.LIB trnsctrl.obj; no public symbol, finding 540)
 void crt_exception_frame_filter_invoke(uintptr_t exception,
     SehCrtExceptionFrame* frame, uintptr_t argument_3)
 {
@@ -68,7 +75,8 @@ void crt_exception_frame_filter_invoke(uintptr_t exception,
     }
 }
 
-// FUNCTION: LEGORR 0x0048ee00
+// LIBRARY: LEGORR 0x0048ee00 SYMBOL
+// ?TranslatorGuardHandler (static in LIBC.LIB trnsctrl.obj; no public symbol, finding 540)
 uint32_t crt_exception_scope_filter_and_unwind(
     SehExceptionRecord* exception, SehCrtExceptionFrame* frame,
     uintptr_t argument_3)
@@ -93,7 +101,8 @@ uint32_t crt_exception_scope_filter_and_unwind(
     return result;
 }
 
-// FUNCTION: LEGORR 0x0048ed30
+// LIBRARY: LEGORR 0x0048ed30 SYMBOL
+// ?_CallSETranslator@@YAHPAUEHExceptionRecord@@PAUEHRegistrationNode@@PAX2PBU_s_FuncInfo@@H1@Z
 uint32_t crt_exception_frame_install_and_dispatch(
     const void* type_info, uintptr_t argument_2, uintptr_t argument_3,
     uintptr_t argument_4, uintptr_t argument_5, uintptr_t argument_6,
@@ -130,7 +139,8 @@ uint32_t crt_exception_frame_install_and_dispatch(
 /* SehScopeTableLookup (FUN_0048ee90): walk the nested active scope ranges
  * from the innermost table entry outwards. Invalid frame/table data returns
  * NULL in this portable model instead of invoking the CRT's fatal helper. */
-// FUNCTION: LEGORR 0x0048ee90
+// LIBRARY: LEGORR 0x0048ee90 SYMBOL
+// ?_GetRangeOfTrysToCheck@@YAPBU_s_TryBlockMapEntry@@PBU_s_FuncInfo@@HHPAI1@Z
 void* seh_scope_table_lookup(const void* registration_frame,
                              int nesting_depth, uint32_t control_pc,
                              uint32_t* scope_index_out,
@@ -178,3 +188,4 @@ void* seh_scope_table_lookup(const void* registration_frame,
 }
 
 } // namespace unported_ledger_stubs
+#endif

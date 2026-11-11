@@ -6,6 +6,7 @@ docs/coverage/translation-unit-ranges.csv
 docs/coverage/translation-units.csv
 docs/coverage/translation-units.spec.csv
 docs/decompiles/full/manifest.csv
+reccmp-project.yml
 src/compat/msvc5/cstdint
 src/compat/msvc5/stdint.h
 src/crt/crt.cpp
@@ -15,6 +16,7 @@ src/crt/crt_heap.cpp
 src/crt/crt_runtime_aliases.cpp
 src/crt/crt_runtime_calls.cpp
 src/crt/crt_shared.hpp
+src/crt/libc_symbols.csv
 src/crt/vc5names.h
 src/game/activity_timeout.hpp
 src/game/actor_scene.cpp
