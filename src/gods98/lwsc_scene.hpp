@@ -189,6 +189,25 @@ int lwsc_instance_activity_set(LwscAssemblyInstance* instance,
  * Backend mutation failure poisons queries; destroy/recreate that instance. */
 int lwsc_instance_time_set(LwscAssemblyInstance* instance, float frame_time,
                            LwscError* error);
+/* ACT timing is distinct from the wrapped/clamped LWS pose clock. Advance
+ * the requested ACT time, dispatch entry SAMPLE before pose and TRIGGER
+ * after pose, then apply the 0x406d30 repeat-count overflow adjustment.
+ * Success and numeric overflow are separate; a failed pose never completes
+ * an activity. Callbacks borrow their names and may not destroy/switch the
+ * instance during dispatch. No callback or mesh-rendering capability is
+ * invented when an explicit pose-query instance is used. */
+typedef struct LwscClockCallbacks {
+    void* context;
+    void (*sample)(void* context, const char* name);
+    void (*trigger)(void* context);
+} LwscClockCallbacks;
+int lwsc_instance_advance(LwscAssemblyInstance* instance, float delta,
+    uint32_t repeat_count, const LwscClockCallbacks* callbacks,
+    float* overflow, LwscError* error);
+/* ActivityRunnerUpdate also calls the ACT frame owner with an absolute
+ * initial time, including when the requested state is already selected. */
+int lwsc_instance_clock_set(LwscAssemblyInstance* instance, float time,
+    const LwscClockCallbacks* callbacks, float* overflow, LwscError* error);
 int lwsc_instance_root_set(LwscAssemblyInstance* instance,
                            const float root_matrix[16], LwscError* error);
 unsigned int lwsc_instance_activity(const LwscAssemblyInstance* instance);

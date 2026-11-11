@@ -67,6 +67,8 @@ static float* s_scene_overlay_heights;
 static uint8_t* s_scene_overlay_valid;
 static float* s_scene_overlay_slot_heights;
 static uint8_t* s_scene_overlay_slot_active;
+static void scene_placement_preview_draw_owned(SceneCamera* camera,
+                                                const LevelState* level);
 
 static int scene_render_vertex_cache_ensure(const LevelState* level)
 {
@@ -279,6 +281,7 @@ void scene_render_terrain_vertex_offset(const LevelState* level,
 
 void scene_render_terrain_level_release(const LevelState* level)
 {
+    scene_placement_preview_level_release(level);
     if (level == NULL || level == s_scene_focus_level) {
         s_scene_focus_level = NULL;
         memset(&s_scene_focus, 0, sizeof(s_scene_focus));
@@ -699,6 +702,70 @@ static int scene_triangle_project(const SceneCamera* c, SceneVec3 a,
 {
     return scene_project(c, a, &p[0]) && scene_project(c, b, &p[1])
         && scene_project(c, d, &p[2]);
+}
+
+/* Half-open edges ensure adjacent triangles cover a shared sample once. */
+static float scene_blend_edge(ScenePoint a, ScenePoint b, float x, float y)
+{
+    return (b.x-a.x)*(y-a.y)-(b.y-a.y)*(x-a.x);
+}
+static int scene_blend_edge_inclusive(ScenePoint a, ScenePoint b)
+{
+    return b.y < a.y || (b.y == a.y && b.x > a.x);
+}
+static int scene_blend_finite(float x)
+{
+    return x >= -3.0e30f && x <= 3.0e30f;
+}
+static void scene_triangle_blended(SceneCamera* c, SceneVec3 a, SceneVec3 b,
+                                   SceneVec3 d, SceneColor color, float alpha,
+                                   int depth_write)
+{
+    ScenePoint p[3], tmp;
+    float area, minx, maxx, miny, maxy;
+    int x0, x1, y0, y1, x, y;
+    if (c == NULL || c->pixels == NULL || c->depth == NULL ||
+        c->width <= 0 || c->height <= 0 || c->width > 0x1fffffff ||
+        c->pitch < c->width * 4 ||
+        (size_t)c->height > ((size_t)-1) / (size_t)c->pitch ||
+        (size_t)c->height > ((size_t)-1) / (size_t)c->width / sizeof(float) ||
+        !(alpha >= 0.0f && alpha <= 1.0f) || alpha == 0.0f) return;
+    if (!scene_triangle_project(c, a, b, d, p)) return;
+    for (x = 0; x < 3; ++x)
+        if (!scene_blend_finite(p[x].x) || !scene_blend_finite(p[x].y) ||
+            !scene_blend_finite(p[x].z)) return;
+    area = scene_blend_edge(p[0], p[1], p[2].x, p[2].y);
+    if (!scene_blend_finite(area) || scene_abs(area) < 0.001f) return;
+    if (area < 0.0f) { tmp = p[1]; p[1] = p[2]; p[2] = tmp; area = -area; }
+    minx = scene_min(p[0].x, scene_min(p[1].x, p[2].x));
+    maxx = scene_max(p[0].x, scene_max(p[1].x, p[2].x));
+    miny = scene_min(p[0].y, scene_min(p[1].y, p[2].y));
+    maxy = scene_max(p[0].y, scene_max(p[1].y, p[2].y));
+    if (maxx < 0.0f || maxy < 0.0f || minx >= c->width || miny >= c->height) return;
+    x0 = minx <= 0.0f ? 0 : (int)scene_floor(minx);
+    y0 = miny <= 0.0f ? 0 : (int)scene_floor(miny);
+    x1 = maxx >= c->width - 1 ? c->width - 1 : (int)scene_ceil(maxx);
+    y1 = maxy >= c->height - 1 ? c->height - 1 : (int)scene_ceil(maxy);
+    for (y = y0; y <= y1; ++y) for (x = x0; x <= x1; ++x) {
+        float px = (float)x + 0.5f, py = (float)y + 0.5f;
+        float e0 = scene_blend_edge(p[1], p[2], px, py);
+        float e1 = scene_blend_edge(p[2], p[0], px, py);
+        float e2 = scene_blend_edge(p[0], p[1], px, py);
+        float z;
+        size_t index;
+        uint8_t* q;
+        if (e0 < 0.0f || (e0 == 0.0f && !scene_blend_edge_inclusive(p[1], p[2])) ||
+            e1 < 0.0f || (e1 == 0.0f && !scene_blend_edge_inclusive(p[2], p[0])) ||
+            e2 < 0.0f || (e2 == 0.0f && !scene_blend_edge_inclusive(p[0], p[1]))) continue;
+        z = (e0 / area) * p[0].z + (e1 / area) * p[1].z + (e2 / area) * p[2].z;
+        index = (size_t)y * (size_t)c->width + (size_t)x;
+        if (!(z < c->depth[index])) continue;
+        if (depth_write) c->depth[index] = z;
+        q = (uint8_t*)c->pixels + (size_t)y * (size_t)c->pitch + (size_t)x * 4u;
+        q[0] = (uint8_t)(q[0] * (1.0f-alpha) + color.r * alpha);
+        q[1] = (uint8_t)(q[1] * (1.0f-alpha) + color.g * alpha);
+        q[2] = (uint8_t)(q[2] * (1.0f-alpha) + color.b * alpha);
+    }
 }
 
 static void scene_triangle_sampled(SceneCamera* c, SceneVec3 a, SceneVec3 b,
@@ -1250,7 +1317,10 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
             const EntitySlot* e = entity_at((GameContext*)ctx, type, i);
             if (e == NULL) continue;
             SceneVec3 origin;
-            if (!scene_entity_origin_get(e, lvl, block, &origin)) continue;
+            if (!scene_entity_origin_get(e, lvl, block, &origin)) {
+                continue;
+            }
+
             if (type == ENTITY_TYPE_MINIFIG) {
                 render_raider(&camera, e, block, origin,
                               selection_contains_entity_target(ctx, e, NULL));
@@ -1270,6 +1340,8 @@ void level_render_scene(const LevelState* lvl, const GameContext* ctx,
             }
         }
     }
+
+    scene_placement_preview_draw_owned(&camera, lvl);
 
     /* TickEntityScreenEffects walks the 20-slot flagged-entity registry and
      * sends each eligible entity through RenderEntityScreenRing. The native
@@ -1525,8 +1597,6 @@ int scene_lights_build_from_config(const SceneLightBuildOps* ops)
     return 1;
 }
 
-namespace unported_ledger_stubs {
-
 static void scene_quad_grid_vertices_build(uint32_t quad,
                                            float vertices[4][9])
 {
@@ -1569,8 +1639,10 @@ SceneQuadGridRecord* scene_quad_grid_emit(
     SceneQuadGridRecord* record;
     uint32_t face;
     if (hooks == NULL || hooks->mesh_create == NULL ||
+        hooks->mesh_release == NULL ||
         hooks->face_vertices_emit == NULL ||
-        hooks->face_texture_bind_by_mode == NULL)
+        hooks->face_texture_bind_by_mode == NULL ||
+        hooks->scene_render_lock_toggle == NULL)
         return NULL;
     record = (SceneQuadGridRecord*)engine_heap_alloc(
         (long)sizeof(*record));
@@ -1590,6 +1662,7 @@ SceneQuadGridRecord* scene_quad_grid_emit(
     for (face = 0; face < 10u; ++face) {
         uint32_t quad;
         uint32_t index;
+        int group;
         /* FUN_00463f00 appends a 20-vertex record for each face group before
          * filling that group's five quads. The retail index pointer is a
          * dword table; the in-memory pool adapter consumes the low word of
@@ -1598,27 +1671,306 @@ SceneQuadGridRecord* scene_quad_grid_emit(
             index_words[index * 2u] = (uint16_t)indices[index];
             index_words[index * 2u + 1u] = 0u;
         }
-        (void)mesh_record_allocate_or_append(record->mesh, 20u, 10u, 3u,
-                                             index_words);
+        if (hooks->mesh_record_allocate_or_append != NULL) {
+            group = hooks->mesh_record_allocate_or_append(
+                hooks->context, record->mesh, 20u, 10u, 3u, indices);
+        }
+        else {
+            group = mesh_record_allocate_or_append(
+                record->mesh, 20u, 10u, 3u, index_words);
+        }
+        /* A fresh mesh must append in face order; every later write uses
+         * that group index. Reject stale or incomplete adapter storage. */
+        if (group != (int)face) {
+            scene_quad_grid_release(record, hooks);
+            return NULL;
+        }
         for (quad = 0; quad < 5u; ++quad) {
             float vertices[4][9];
             scene_quad_grid_vertices_build(quad, vertices);
-            (void)hooks->face_vertices_emit(hooks->context, record->mesh,
-                                            face, quad, vertices);
+            if (!hooks->face_vertices_emit(hooks->context, record->mesh,
+                                           face, quad, vertices)) {
+                scene_quad_grid_release(record, hooks);
+                return NULL;
+            }
         }
-        hooks->face_texture_bind_by_mode(hooks->context, record->mesh,
-                                         face, 3u);
+        if (!hooks->face_texture_bind_by_mode(hooks->context, record->mesh,
+                                              face, 3u)) {
+            scene_quad_grid_release(record, hooks);
+            return NULL;
+        }
     }
-    scene_render_lock_toggle(record->mesh, 1);
+    if (!hooks->scene_render_lock_toggle(hooks->context, record->mesh, 1)) {
+        scene_quad_grid_release(record, hooks);
+        return NULL;
+    }
     return record;
+}
+
+int scene_quad_grid_release(SceneQuadGridRecord* record,
+                             const SceneQuadGridEmitHooks* hooks)
+{
+    if (record == NULL) return 1;
+    if (record->mesh != NULL) {
+        if (hooks == NULL || hooks->mesh_release == NULL) return 0;
+        hooks->mesh_release(hooks->context, record->mesh);
+        record->mesh = NULL;
+    }
+    engine_heap_free(record);
+    return 1;
 }
 
 SceneQuadGridRecord* ledger_stub_00463f00_SceneQuadGridEmit(
     void* scene, unsigned int parameter, const SceneQuadGridEmitHooks* hooks)
 {
-    return unported_ledger_stubs::scene_quad_grid_emit(scene, parameter,
-                                                        hooks);
+    return scene_quad_grid_emit(scene, parameter, hooks);
 }
 
+/* The presented backend owns an ordinary software mesh. Its wrapper is the
+ * real SceneQuadGridRecord, but it must not enter raw COM scene functions. */
+typedef struct ScenePlacementPreviewGroup {
+    float vertices[20][9];
+    uint32_t indices[30];
+    uint32_t vertex_count;
+    uint32_t index_count;
+    ScenePlacementPreviewStyle style;
+    int hidden;
+} ScenePlacementPreviewGroup;
+typedef struct ScenePlacementPreviewMesh {
+    struct ScenePlacementPreviewMesh* next;
+    SceneQuadGridRecord* record;
+    void* scene;
+    const LevelState* level;
+    float extrusion;
+    uint32_t group_count;
+    int hidden;
+    ScenePlacementPreviewGroup groups[10];
+} ScenePlacementPreviewMesh;
+static ScenePlacementPreviewMesh* s_placement_preview_meshes;
 
-} // namespace unported_ledger_stubs
+static ScenePlacementPreviewMesh* scene_placement_preview_find(
+    const void* record)
+{
+    ScenePlacementPreviewMesh* mesh = s_placement_preview_meshes;
+    while (mesh != NULL) {
+        if (mesh->record == record) return mesh;
+        mesh = mesh->next;
+    }
+    return NULL;
+}
+
+static void* scene_placement_mesh_create(void*, void* scene, int kind)
+{
+    ScenePlacementPreviewMesh* mesh;
+    if (scene == NULL || kind != 3) return NULL;
+    mesh = (ScenePlacementPreviewMesh*)engine_heap_alloc((long)sizeof(*mesh));
+    if (mesh == NULL) return NULL;
+    memset(mesh, 0, sizeof(*mesh));
+    mesh->scene = scene;
+    mesh->hidden = 1;
+    for (uint32_t i = 0u; i < 10u; ++i) {
+        mesh->groups[i].hidden = 1;
+        for (uint32_t j = 0u; j < 4u; ++j)
+            mesh->groups[i].style.diffuse[j] = 1.0f;
+    }
+    return mesh;
+}
+
+static int scene_placement_mesh_append(void*, void* object,
+    uint32_t vertex_count, uint32_t rows, uint32_t columns,
+    const uint32_t* indices)
+{
+    ScenePlacementPreviewMesh* mesh = (ScenePlacementPreviewMesh*)object;
+    ScenePlacementPreviewGroup* group;
+    if (mesh == NULL || vertex_count != 20u || rows != 10u ||
+        columns != 3u || indices == NULL || mesh->group_count >= 10u)
+        return -1;
+    for (uint32_t i = 0u; i < 30u; ++i)
+        if (indices[i] >= 20u) return -1;
+    group = &mesh->groups[mesh->group_count];
+    group->vertex_count = vertex_count;
+    group->index_count = 30u;
+    memcpy(group->indices, indices, sizeof(group->indices));
+    return (int)mesh->group_count++;
+}
+
+static int scene_placement_mesh_vertices(void*, void* object, uint32_t face,
+    uint32_t quad, const float vertices[4][9])
+{
+    ScenePlacementPreviewMesh* mesh = (ScenePlacementPreviewMesh*)object;
+    if (mesh == NULL || vertices == NULL || face >= mesh->group_count ||
+        quad >= 5u) return 0;
+    memcpy(mesh->groups[face].vertices + quad * 4u, vertices,
+           4u * 9u * sizeof(float));
+    return 1;
+}
+
+static int scene_placement_mesh_mode(void*, void* object, uint32_t face,
+                                      uint32_t mode)
+{
+    ScenePlacementPreviewMesh* mesh = (ScenePlacementPreviewMesh*)object;
+    /* 474a65..474a6d returns immediately for direct mesh data. There is no
+     * texture acquisition hidden behind this mode call on the authored path. */
+    return mesh != NULL && face < mesh->group_count && mode == 3u;
+}
+
+static int scene_placement_mesh_hidden(void*, void* object, int hidden)
+{
+    ScenePlacementPreviewMesh* mesh = (ScenePlacementPreviewMesh*)object;
+    if (mesh == NULL) return 0;
+    mesh->hidden = hidden != 0;
+    return 1;
+}
+
+static void scene_placement_mesh_release(void*, void* object)
+{
+    if (object != NULL) engine_heap_free(object);
+}
+
+static void scene_placement_mesh_hooks(SceneQuadGridEmitHooks* hooks)
+{
+    memset(hooks, 0, sizeof(*hooks));
+    hooks->mesh_create = scene_placement_mesh_create;
+    hooks->mesh_record_allocate_or_append = scene_placement_mesh_append;
+    hooks->face_vertices_emit = scene_placement_mesh_vertices;
+    hooks->face_texture_bind_by_mode = scene_placement_mesh_mode;
+    hooks->scene_render_lock_toggle = scene_placement_mesh_hidden;
+    hooks->mesh_release = scene_placement_mesh_release;
+}
+
+SceneQuadGridRecord* scene_placement_preview_create(void* scene,
+                                                    float extrusion)
+{
+    SceneQuadGridEmitHooks hooks;
+    SceneQuadGridRecord* record;
+    ScenePlacementPreviewMesh* mesh;
+    uint32_t parameter;
+    if (scene == NULL || scene != scene_root_object_get() ||
+        !scene_blend_finite(extrusion)) return NULL;
+    memcpy(&parameter, &extrusion, sizeof(parameter));
+    scene_placement_mesh_hooks(&hooks);
+    record = scene_quad_grid_emit(scene, parameter, &hooks);
+    if (record == NULL) return NULL;
+    mesh = (ScenePlacementPreviewMesh*)record->mesh;
+    mesh->record = record;
+    mesh->extrusion = extrusion;
+    /* No registry identity is visible before the full constructor succeeds. */
+    mesh->next = s_placement_preview_meshes;
+    s_placement_preview_meshes = mesh;
+    return record;
+}
+
+int scene_placement_preview_destroy(SceneQuadGridRecord* record)
+{
+    ScenePlacementPreviewMesh** link = &s_placement_preview_meshes;
+    SceneQuadGridEmitHooks hooks;
+    while (*link != NULL && (*link)->record != record) link = &(*link)->next;
+    if (*link == NULL) return 0;
+    *link = (*link)->next;
+    scene_placement_mesh_hooks(&hooks);
+    return scene_quad_grid_release(record, &hooks);
+}
+
+int scene_placement_preview_visibility_apply(const void* record,
+                                             uint32_t hidden)
+{
+    ScenePlacementPreviewMesh* mesh = scene_placement_preview_find(record);
+    if (mesh == NULL) return 0;
+    mesh->hidden = hidden != 0u;
+    return 1;
+}
+
+int scene_placement_preview_hide_groups(SceneQuadGridRecord* record,
+                                         uint32_t first_group)
+{
+    ScenePlacementPreviewMesh* mesh = scene_placement_preview_find(record);
+    if (mesh == NULL || first_group > mesh->group_count) return 0;
+    for (uint32_t i = first_group; i < mesh->group_count; ++i)
+        mesh->groups[i].hidden = 1;
+    return 1;
+}
+
+int scene_placement_preview_group_update(SceneQuadGridRecord* record,
+    const LevelState* level, uint32_t index, const float raw_corners[4][3],
+    const ScenePlacementPreviewStyle* style)
+{
+    ScenePlacementPreviewMesh* mesh = scene_placement_preview_find(record);
+    float vertices[20][9];
+    ScenePlacementPreviewGroup* group;
+    uint32_t i, j;
+    if (mesh == NULL || level == NULL || raw_corners == NULL ||
+        style == NULL || index >= mesh->group_count) return 0;
+    for (i = 0u; i < 4u; ++i)
+        if (!(style->diffuse[i] >= 0.0f && style->diffuse[i] <= 1.0f))
+            return 0;
+    for (i = 0u; i < 3u; ++i)
+        if (!(style->emissive[i] >= 0.0f && style->emissive[i] <= 1.0f))
+            return 0;
+    group = &mesh->groups[index];
+    memcpy(vertices, group->vertices, sizeof(vertices));
+    if (!building_footprint_vertices_update(vertices, raw_corners,
+                                             mesh->extrusion)) return 0;
+    for (i = 0u; i < 20u; ++i)
+        for (j = 0u; j < 3u; ++j)
+            if (!scene_blend_finite(vertices[i][j])) return 0;
+    if (mesh->level != level) {
+        mesh->hidden = 1;
+        mesh->level = level;
+        (void)scene_placement_preview_hide_groups(record, 0u);
+    }
+    memcpy(group->vertices, vertices, sizeof(vertices));
+    group->style = *style;
+    group->hidden = 0;
+    return 1;
+}
+
+void scene_placement_preview_level_release(const LevelState* level)
+{
+    ScenePlacementPreviewMesh* mesh = s_placement_preview_meshes;
+    if (level == NULL) return;
+    while (mesh != NULL) {
+        if (mesh->level == level) {
+            mesh->hidden = 1;
+            mesh->level = NULL;
+            (void)scene_placement_preview_hide_groups(mesh->record, 0u);
+        }
+        mesh = mesh->next;
+    }
+}
+
+static void scene_placement_preview_draw_owned(SceneCamera* camera,
+                                                const LevelState* level)
+{
+    ScenePlacementPreviewMesh* mesh = s_placement_preview_meshes;
+    void* scene = scene_root_object_get();
+    while (mesh != NULL) {
+        if (mesh->scene == scene && mesh->level == level && !mesh->hidden) {
+            for (uint32_t g = 0u; g < mesh->group_count; ++g) {
+                const ScenePlacementPreviewGroup* group = &mesh->groups[g];
+                SceneColor color;
+                if (group->hidden) continue;
+                /* The existing software scene is flat shaded. Retain the
+                 * full material for subsequent lighting comparisons; this
+                 * submission consumes its diffuse RGB and alpha. */
+                color = scene_color((uint8_t)(group->style.diffuse[0] * 255.0f),
+                    (uint8_t)(group->style.diffuse[1] * 255.0f),
+                    (uint8_t)(group->style.diffuse[2] * 255.0f));
+                for (uint32_t i = 0u; i < group->index_count; i += 3u) {
+                    SceneVec3 p[3];
+                    for (uint32_t v = 0u; v < 3u; ++v) {
+                        const float* raw = group->vertices[group->indices[i+v]];
+                        p[v] = scene_vec3(raw[0], raw[2], raw[1]);
+                    }
+                    /* Axis permutation converts the authored winding to an
+                     * outward cross product in this software world. */
+                    if (scene_dot(scene_cross(scene_sub(p[1], p[0]),
+                            scene_sub(p[2], p[0])),
+                            scene_sub(camera->eye, p[0])) <= 0.0f) continue;
+                    scene_triangle_blended(camera, p[0], p[1], p[2], color,
+                                             group->style.diffuse[3], 0);
+                }
+            }
+        }
+        mesh = mesh->next;
+    }
+}

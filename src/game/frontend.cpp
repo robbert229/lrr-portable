@@ -24,6 +24,7 @@
 #include "frontend.hpp"
 #include "frontend.h"
 #include "objective.hpp"
+#include "level.hpp"
 #include "entity.hpp"
 #include "terrain_feedback.hpp"
 #include "port_loop_ports.hpp"
@@ -89,74 +90,74 @@ MENU_ACTION_TABLE_ALLOC static const char* const s_interface_menu_action_labels[
     "Interface_MenuItem_BuildSmallVehicle",
     "Interface_MenuItem_BuildLargeVehicle",
     "Interface_MenuItem_LayPath",
+    "Interface_MenuItem_RemovePath",
     "Interface_MenuItem_RepairLava",
     "Interface_MenuItem_GeologistTest",
     "Interface_MenuItem_ClearRubble",
     "Interface_MenuItem_Dam",
-    "Interface_MenuItem_SelectMan",
-    "Interface_MenuItem_DeleteMan",
-    "Interface_MenuItem_DeleteVehicle",
-    "Interface_MenuItem_DeleteBuilding",
-    "Interface_MenuItem_Attack",
-    "Interface_MenuItem_SelectVehicle",
-    "Interface_MenuItem_UnLoadVehicle",
-    "Interface_MenuItem_UnLoadMinifigure",
-    "Interface_MenuItem_VehiclePickUp",
-    "Interface_MenuItem_MinifigurePickUp",
-    "Interface_MenuItem_GetOut",
-    "Interface_MenuItem_GetIn",
-    "Interface_MenuItem_GotoDock",
     "Interface_MenuItem_Dig",
     "Interface_MenuItem_Reinforce",
     "Interface_MenuItem_Dynamite",
-    "Interface_MenuItem_UpgradeMan",
+    "Interface_MenuItem_PlaceFence",
+    "Interface_MenuItem_DeselectDig",
+    "Interface_MenuItem_CancelConstruction",
+    "Interface_MenuItem_SelectMan",
+    "Interface_MenuItem_SelectVehicle",
+    "Interface_MenuItem_SelectBuilding",
+    "Interface_MenuItem_VehiclePickUp",
+    "Interface_MenuItem_MinifigurePickUp",
+    "Interface_MenuItem_UnLoadVehicle",
+    "Interface_MenuItem_UnLoadMinifigure",
+    "Interface_MenuItem_GetIn",
+    "Interface_MenuItem_GetOut",
+    "Interface_MenuItem_GotoDock",
+    "Interface_MenuItem_LegoManGoto",
+    "Interface_MenuItem_VehicleGoto",
+    "Interface_MenuItem_VehicleDig",
+    "Interface_MenuItem_LegoManDig",
     "Interface_MenuItem_GoFeed",
-    "Interface_MenuItem_GotoFirstPerson",
-    "Interface_MenuItem_GotoSecondPerson",
-    "Interface_MenuItem_TrainSkill",
+    "Interface_MenuItem_DeleteMan",
+    "Interface_MenuItem_DropBirdScarer",
     "Interface_MenuItem_PowerOn",
     "Interface_MenuItem_PowerOff",
-    "Interface_MenuItem_UpgradeBuilding",
     "Interface_MenuItem_Repair",
-    "Interface_MenuItem_SelectBuilding",
+    "Interface_MenuItem_MakeTeleporterPrimary",
+    "Interface_MenuItem_EjectCrystal",
+    "Interface_MenuItem_EjectOre",
+    "Interface_MenuItem_DeleteBuilding",
+    "Interface_MenuItem_DeleteVehicle",
+    "Interface_MenuItem_DeleteElectricFence",
+    "Interface_MenuItem_Attack",
     "Interface_MenuItem_GotoTopView",
+    "Interface_MenuItem_GotoFirstPerson",
+    "Interface_MenuItem_GotoSecondPerson",
+    "Interface_MenuItem_TrackObject",
     "Interface_MenuItem_GetTool",
     "Interface_MenuItem_GetDrill",
     "Interface_MenuItem_GetSpade",
     "Interface_MenuItem_GetHammer",
     "Interface_MenuItem_GetSpanner",
+    "Interface_MenuItem_GetLaser",
+    "Interface_MenuItem_GetPusherGun",
+    "Interface_MenuItem_GetFreezerGun",
+    "Interface_MenuItem_GetBirdScarer",
+    "Interface_MenuItem_TrainSkill",
     "Interface_MenuItem_TrainDriver",
     "Interface_MenuItem_TrainEngineer",
     "Interface_MenuItem_TrainGeologist",
     "Interface_MenuItem_TrainPilot",
     "Interface_MenuItem_TrainSailor",
     "Interface_MenuItem_TrainDynamite",
-    "Interface_MenuItem_Build",
-    "Interface_MenuItem_PlaceFence",
-    "Interface_MenuItem_MakeTeleporterPrimary",
-    "Interface_MenuItem_DeselectDig",
-    "Interface_MenuItem_ClearSelection",
-    "Interface_MenuItem_Encyclopedia",
-    "Interface_MenuItem_EjectCrystal",
-    "Interface_MenuItem_EjectOre",
-    "Interface_MenuItem_TrackObject",
-    "Interface_MenuItem_LegoManGoto",
-    "Interface_MenuItem_LegoManDig",
-    "Interface_MenuItem_VehicleGoto",
-    "Interface_MenuItem_VehicleDig",
-    "Interface_MenuItem_RemovePath",
+    "Interface_MenuItem_UpgradeMan",
+    "Interface_MenuItem_UpgradeBuilding",
     "Interface_MenuItem_UpgradeVehicle",
     "Interface_MenuItem_UpgradeEngine",
     "Interface_MenuItem_UpgardeDrill",
     "Interface_MenuItem_UpgardeScan",
     "Interface_MenuItem_UpgardeCarry",
-    "Interface_MenuItem_DeleteElectricFence",
-    "Interface_MenuItem_GetLaser",
-    "Interface_MenuItem_GetPusherGun",
-    "Interface_MenuItem_GetFreezerGun",
-    "Interface_MenuItem_GetBirdScarer",
-    "Interface_MenuItem_DropBirdScarer",
-    "Interface_MenuItem_CancelConstruction",
+    "Interface_MenuItem_Encyclopedia",
+    "Interface_MenuItem_ClearSelection",
+    "Interface_MenuItem_Build",
 };
 #undef MENU_ACTION_TABLE_ALLOC
 #if defined(LEGORRR_BACKEND_WINAPI)
@@ -965,6 +966,36 @@ static void fe_options_write(FrontEnd* fe, FeItem* it)
 
 /* --- menu group building -------------------------------------------------- */
 
+/* MenuImageLoad (0x410fb0): normal and dark images share the optional
+ * floating-point origin. Only a four-field tuple ending in 1 enables a key. */
+static void fe_parse_menu_image(FeSubmenu* sub, const char* value, int dark)
+{
+    char fields[5][FE_PATH_MAX];
+    const char* p = value;
+    int count = 0;
+    if (value == NULL) return;
+    while (count < 5) {
+        p += strspn(p, ":");
+        if (*p == '\0') break;
+        size_t length = strcspn(p, ":");
+        size_t copied = length < FE_PATH_MAX ? length : FE_PATH_MAX - 1;
+        memcpy(fields[count], p, copied);
+        fields[count][copied] = '\0';
+        ++count;
+        p += length;
+    }
+    if (count == 0) return;
+    snprintf(dark ? sub->image_dark : sub->image, FE_PATH_MAX, "%s", fields[0]);
+    if (count >= 3) {
+        sub->image_has_origin = 1;
+        sub->image_x = (float)atof(fields[1]);
+        sub->image_y = (float)atof(fields[2]);
+    }
+    int keyed = count == 4 && atoi(fields[3]) == 1;
+    if (dark) sub->image_dark_keyed = keyed;
+    else sub->image_keyed = keyed;
+}
+
 static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
                              int idx)
 {
@@ -983,6 +1014,8 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     sub->scroll = sub->scroll_extent = 0;
     sub->full_name[0] = sub->title[0] = '\0';
     sub->image[0] = sub->image_dark[0] = '\0';
+    sub->image_x = sub->image_y = 0.0f;
+    sub->image_has_origin = sub->image_keyed = sub->image_dark_keyed = 0;
     sub->lofont[0] = sub->hifont[0] = '\0';
     memset(sub->items, 0, sizeof(sub->items));
     memset(sub->overlays, 0, sizeof(sub->overlays));
@@ -1040,24 +1073,10 @@ static void fe_parse_submenu(FrontEnd* fe, FeMenu* m, const char* name,
     sub->can_scroll = block_get_bool_path(fe->cfg, buf) == 1;
     snprintf(buf, sizeof(buf), "%s::MenuImage", pre);
     v = block_get_strptr(fe->cfg, buf);
-    if (v != NULL) {
-        /* "img.bmp:0:0:1" -> keep only the path part (temp first:
-         * snprintf with overlapping src/dst would be UB) */
-        char raw[FE_PATH_MAX];
-        snprintf(raw, sizeof(raw), "%s", v);
-        const char* c = strchr(raw, ':');
-        snprintf(sub->image, FE_PATH_MAX, "%.*s",
-                 c != NULL ? (int)(c - raw) : (int)strlen(raw), raw);
-    }
+    fe_parse_menu_image(sub, v, 0);
     snprintf(buf, sizeof(buf), "%s::MenuImageDark", pre);
     v = block_get_strptr(fe->cfg, buf);
-    if (v != NULL) {
-        char raw[FE_PATH_MAX];
-        snprintf(raw, sizeof(raw), "%s", v);
-        const char* c = strchr(raw, ':');
-        snprintf(sub->image_dark, sizeof(sub->image_dark), "%.*s",
-                 c != NULL ? (int)(c - raw) : (int)strlen(raw), raw);
-    }
+    fe_parse_menu_image(sub, v, 1);
 
     /* Bitmap fonts: LoFont = unselected, HiFont = selected (MenuFont is
      * the measurement face — fall back to it for both when the pair is
@@ -1558,7 +1577,8 @@ int interface_images_config_load(BlockFile* cfg)
     section = block_subgroup(cfg, section_path);
     entry = section;
     if (entry == NULL) {
-        /* Corpus fallback when the generic action-image section is absent. */
+        /* These two loaders run after the generic loop, including when
+         * the section is absent (FUN_0041ada0 + 0x209). */
         (void)interface_build_images_config_load(cfg);
         (void)interface_back_button_config_load(cfg);
         return 0;
@@ -1668,6 +1688,8 @@ int interface_images_config_load(BlockFile* cfg)
         }
         ++loaded;
     }
+    (void)interface_build_images_config_load(cfg);
+    (void)interface_back_button_config_load(cfg);
     return loaded;
 }
 
@@ -1816,6 +1838,20 @@ const FeInterfaceBuildImage* interface_build_image_peek(int group, int index)
         return NULL;
     }
     return &s_interface_build_images[group][index];
+}
+
+/* Typed counterpart of IndexedEntityValueGet (0x0041cab0). The legacy
+ * DWORD windows cannot carry TextureSurface pointers on a 64-bit host. */
+TextureSurface* interface_action_image_value_get(
+    const EngineContext* engine, int action)
+{
+    const FeInterfaceImage* image = interface_image_peek(action);
+    if (image == NULL) return NULL;
+    if (input_action_pressed_get(engine, action, 0) != 0)
+        return image->disabled;
+    if (input_entry_flag8_get(action) != 0u)
+        return image->pressed;
+    return image->normal;
 }
 
 /* InputBindingValueGet (FUN_0041caf0): resolve a catalog image from the
@@ -2078,6 +2114,15 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
         return 0;
     }
 
+    {
+        char key[256];
+        uint32_t* state = engine_shared_state_word();
+        snprintf(key, sizeof(key), "%s::Main::Panels", util_root_name(cfg));
+        *state |= ENGINE_STATE_INDEXED_SUBSYS;
+        if (block_get_bool_path(cfg, key) == 0)
+            *state &= ~ENGINE_STATE_INDEXED_SUBSYS;
+    }
+    frontend_panels_release();
     advisor_message_ui_initialize(cfg, display_width_get(), display_height_get());
 
     /* GameConfigInit applies message and display-sized panel data after the
@@ -2088,11 +2133,7 @@ int frontend_build(FrontEnd* fe, BlockFile* cfg)
         cfg, display_width_get(), display_height_get());
     frontend_config::panel_button_layout_config_load(
         cfg, display_width_get(), display_height_get());
-    {
-        BlockRec* pointer_section = block_subgroup(cfg,
-            string_path_join(util_root_name(cfg), "Pointers", (const char*)NULL));
-        pointer_cursor_config_load_target(pointer_section);
-    }
+    frontend_pointer_config_load(cfg);
 
     /* GameConfigInit loads the action and surround image tables alongside
      * the menu definitions; keep those menu-facing resources on the same
@@ -2897,6 +2938,26 @@ static int fe_scroll_measure(const FeSubmenu* sub);
 static void fe_item_pos(const FrontEnd* fe, const FeItem* it, int i,
                         int w, const TextureSurface* measure, int* x, int* y);
 
+/* Hit admission must include the same track and resource-sized arrows as
+ * the slider consumer, even after MenuUpdate clears the hovered row. */
+static int fe_slider_pointer_contains(const FeSubmenu* sub, const FeItem* item,
+                                       int mx, int my)
+{
+    int bx = sub->base_x + item->x + item->slider_x;
+    int by = sub->base_y + item->y + item->slider_y;
+    TextureSurface* anchor = item->slider_images[3];
+    TextureSurface* right = item->slider_images[4];
+    TextureSurface* left = item->slider_images[5];
+    if (sub->can_scroll) by += sub->scroll;
+    if (mx >= bx && mx <= bx + 100 && my >= by && my <= by + 20)
+        return 1;
+    if (left == NULL || right == NULL) return 0;
+    if (menu_pointer_rectangle_hit_test(mx, my, bx - left->width - 4, by,
+                                         left->width, left->height)) return 1;
+    return anchor != NULL && menu_pointer_rectangle_hit_test(mx, my,
+        bx + anchor->width + 0x68, by, right->width, right->height);
+}
+
 /* MenuSliderPointerHandler (FUN_00411870): the track drag plus the two
  * resource-sized arrow hit zones from the retail numeric-range record. */
 // FUNCTION: LEGORR 0x00411870
@@ -3045,6 +3106,14 @@ static FeEvent fe_activate(FrontEnd* fe)
             frontend_close(fe);
             return FE_EVT_NONE;
         }
+        if (fe->menu == FE_MENU_OPTIONS) {
+            if (s_stristr(it->label, "replay"))
+                objective_announce_current(0);
+            else if (!s_stristr(it->label, "continue"))
+                return FE_EVT_NONE;
+            frontend_close(fe);
+            return FE_EVT_RESUME;
+        }
         if (fe->menu == FE_MENU_PAUSED) {
             switch (fe->sub) {
             case 0:   /* pause Menu1: Continue_Game / Replay_Objective */
@@ -3156,11 +3225,17 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
     if (fe->sel >= sub->item_count) {
         fe->sel = sub->item_count - 1;
     }
-    if (fe->sel < 0 && fe->menu != FE_MENU_MAIN) {
+    const int pointer_selection = fe->menu == FE_MENU_MAIN ||
+        (fe->menu == FE_MENU_PAUSED &&
+         in->mouse_x >= 0 && in->mouse_y >= 0);
+    if (fe->sel < 0 && !pointer_selection) {
         fe->sel = 0;
     }
 
-    if (fe->menu == FE_MENU_MAIN) {
+    /* MenuUpdate clears its current item before hit-testing. Pause menus
+     * use that same field for option input and selected drawing, so a miss
+     * must not retain the previous row or the submenu's initial item. */
+    if (pointer_selection) {
         int idx = -1;
         if (in->mouse_x >= 0 && in->mouse_y >= 0) {
             fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &idx);
@@ -3168,12 +3243,12 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         fe->sel = idx;
     }
 
-    if (fe->menu != FE_MENU_MAIN && in->up) {
+    if (!pointer_selection && in->up) {
         if (fe->sel > 0) {
             --fe->sel;
         }
     }
-    if (fe->menu != FE_MENU_MAIN && in->down) {
+    if (!pointer_selection && in->down) {
         if (fe->sel < sub->item_count - 1) {
             ++fe->sel;
         }
@@ -3235,8 +3310,8 @@ FeEvent frontend_tick(FrontEnd* fe, const FeInput* in,
         int hit = fe_item_pick(fe, in->mouse_x, in->mouse_y, measure, &idx);
         if (hit) {
             fe->sel = idx;
-        } else if (fe->menu == FE_MENU_MAIN) {
-            /* Main menu selection follows the pointer each frame. */
+        } else if (fe->menu == FE_MENU_MAIN || fe->menu == FE_MENU_PAUSED) {
+            /* These menus select only the current pointer target. */
             fe->sel = -1;
         }
 
@@ -3319,6 +3394,26 @@ const char* frontend_active_image(const FrontEnd* fe)
 {
     const FeSubmenu* s = frontend_active_submenu(fe);
     return (s != NULL && s->image[0] != '\0') ? s->image : NULL;
+}
+
+void frontend_background_render(const FrontEnd* fe, void* pixels, int pitch,
+                                 int width, int height)
+{
+    const FeSubmenu* sub = frontend_active_submenu(fe);
+    const char* path = frontend_active_image(fe);
+    if (sub == NULL || path == NULL) return;
+    TextureSurface* image = texture_get_or_load(NULL, path);
+    if (image == NULL) return;
+    TextureSurface view = *image;
+    if (sub->image_keyed) {
+        uint32_t key = image->key_count == 2 ? image->keys[0] : 0u;
+        texture_source_color_key_set(&view, key, key);
+    }
+    /* MenuImageDraw's explicit-origin lane ignores the scrolling plane. */
+    int x = sub->image_has_origin ? (int)sub->image_x : 0;
+    int y = sub->image_has_origin ? (int)sub->image_y : sub->scroll;
+    surface_blit_texture(pixels, pitch, width, height, &view, x, y);
+    texture_release(image);
 }
 
 /* --- render -----------------------------------------------------------------
@@ -5220,7 +5315,7 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
     if (measure != NULL) {
         fe_font_cell(measure, &cw, &chh);
     }
-    int rh = measure != NULL ? chh + 8 : 12;
+    int rh = measure != NULL ? chh : 12;
     for (int i = 0; i < sub->item_count; i++) {
         const FeItem* it = &sub->items[i];
         int x, y;
@@ -5241,10 +5336,18 @@ static int fe_item_pick(const FrontEnd* fe, int mx, int my,
                 texture_release(image);
             }
         }
+        if ((it->kind == FE_ITEM_SLIDER || it->kind == FE_ITEM_REALSLIDER) &&
+            fe_slider_pointer_contains(sub, it, mx, my)) {
+            if (out_idx != NULL) *out_idx = i;
+            return 1;
+        }
+        /* MenuItemArea uses the label's measured width and font height.
+         * Extra padding makes a short cycle label active outside its ink
+         * column; its separately drawn value does not extend the area. */
         if ((it->level_start && mx >= x && mx <= x + tw &&
              my >= y && my <= y + hit_h) ||
-            (!it->level_start && mx >= x - 4 && mx <= x + tw + 4 &&
-             my >= y - 2 && my <= y + hit_h)) {
+            (!it->level_start && mx >= x && mx <= x + tw &&
+             my >= y && my <= y + hit_h)) {
             if (out_idx != NULL) {
                 *out_idx = i;
             }
@@ -5427,7 +5530,8 @@ TextureSurface* interface_message_tab_info_text(void)
 
 static void fe_render_pass(FrontEnd* fe, const TextureSurface* hi_font,
                            const TextureSurface* lo_font,
-                           int w, int h, void* px, int pitch, int pass)
+                           int w, int h, void* px, int pitch, int pass,
+                           int draw_cursor)
 {
     if (fe == NULL || px == NULL || !fe->open) {
         return;
@@ -5659,7 +5763,7 @@ static void fe_render_pass(FrontEnd* fe, const TextureSurface* hi_font,
 
     /* Pointer_Standard is the shipped Aclosed.bmp cursor from Lego.cfg's
      * Pointers block. Its red tip is the top-left hotspot. */
-    if (fe->pointer_x >= 0 && fe->pointer_y >= 0
+    if (draw_cursor && fe->pointer_x >= 0 && fe->pointer_y >= 0
         && fe->pointer_x < w && fe->pointer_y < h) {
         char key[128];
         snprintf(key, sizeof(key), "%s::Pointers::Pointer_Standard",
@@ -5711,7 +5815,7 @@ void frontend_render(FrontEnd* fe, const TextureSurface* hi_font,
                      const TextureSurface* lo_font,
                      int w, int h, void* px, int pitch)
 {
-    fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch, 0);
+    fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch, 0, 1);
 }
 
 void frontend_render_picker_pass(FrontEnd* fe, const TextureSurface* hi_font,
@@ -5719,7 +5823,14 @@ void frontend_render_picker_pass(FrontEnd* fe, const TextureSurface* hi_font,
                                  int w, int h, void* px, int pitch, int foreground)
 {
     fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch,
-                   foreground ? 2 : 1);
+                   foreground ? 2 : 1, 1);
+}
+
+void frontend_render_menu_pass(FrontEnd* fe, const TextureSurface* hi_font,
+                               const TextureSurface* lo_font, int w, int h,
+                               void* px, int pitch, int pass, int draw_cursor)
+{
+    fe_render_pass(fe, hi_font, lo_font, w, h, px, pitch, pass, draw_cursor);
 }
 
 void frontend_render_credits(const TextureSurface* font,
@@ -6517,6 +6628,8 @@ void* advisor_tutorial_icon_get(void)
 static TextureSurface* s_message_next_image;
 static TextureSurface* s_message_back_image;
 static TextureSurface* s_message_panel_image;
+static TextureSurface* s_message_air_image;
+static TextureSurface* s_message_noair_image;
 static float s_message_next_position[2];
 static float s_message_back_position[2];
 static void* s_message_font;
@@ -6542,6 +6655,7 @@ static void advisor_message_layout_reset(void)
     s_message_panel_y = 409.0f;
     s_message_text_y = 435.0f;
     s_message_text_height = 42.0f;
+    s_advisor_text_state_flags &= ~1u;
     advisor_message_layout_commit();
 }
 
@@ -6588,7 +6702,6 @@ int advisor_message_ui_gameplay_set(int active)
     return changed;
 }
 
-
 void advisor_message_source_clear(void)
 {
     s_advisor_text_request_source = NULL;
@@ -6623,9 +6736,13 @@ void advisor_message_ui_release(void)
     texture_release(s_message_next_image);
     texture_release(s_message_back_image);
     texture_release(s_message_panel_image);
+    texture_release(s_message_air_image);
+    texture_release(s_message_noair_image);
     s_message_next_image = NULL;
     s_message_back_image = NULL;
     s_message_panel_image = NULL;
+    s_message_air_image = NULL;
+    s_message_noair_image = NULL;
     deferred_callback_set(0u);
 }
 
@@ -6656,6 +6773,13 @@ void advisor_message_ui_initialize(BlockFile* cfg, int width, int height)
     s_message_panel_image = image_surface_load(
         "Interface\\MessagePanel\\MsgPanel.bmp", 0u, 0u);
     image_surface_blit_transformed(s_message_panel_image,
+                                  0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    /* GameConfigInit 0x4225a3 owns the real air-meter resources. */
+    s_message_air_image = image_surface_load(
+        "Interface\\AirMeter\\msgpanel_air_juice.bmp", 0u, 0u);
+    s_message_noair_image = image_surface_load(
+        "Interface\\AirMeter\\msgpanel_noair.bmp", 0u, 0u);
+    image_surface_blit_transformed(s_message_noair_image,
                                   0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     snprintf(key, sizeof(key), "%s::Main::NextButton%ix%i",
              util_root_name(cfg), width, height);
@@ -6768,6 +6892,83 @@ int advisor_message_pointer_sample(int x, int y, int down)
                                                      x, y, down);
 }
 
+/* The air texture is an 8-pixel-wide authored strip. SurfaceBlitRect
+ * stretches it to the requested meter width, preserving its own height. */
+static void advisor_message_air_blit(void* pixels, int pitch, int width,
+    int height, const TextureSurface* image, int x, int y, int draw_width)
+{
+    int yy;
+    if (pixels == NULL || image == NULL || image->pixels == NULL ||
+        image->width <= 0 || image->height <= 0 || draw_width <= 0) return;
+    for (yy = 0; yy < image->height; ++yy) {
+        int dy = y + yy;
+        int xx;
+        unsigned char* row;
+        if (dy < 0 || dy >= height) continue;
+        row = (unsigned char*)pixels + (size_t)dy * pitch;
+        for (xx = 0; xx < draw_width; ++xx) {
+            int dx = x + xx;
+            uint32_t color;
+            if (dx < 0 || dx >= width) continue;
+            color = image->pixels[yy * image->width +
+                                  xx * image->width / draw_width];
+            row[dx * 4] = (unsigned char)(color >> 16);
+            row[dx * 4 + 1] = (unsigned char)(color >> 8);
+            row[dx * 4 + 2] = (unsigned char)color;
+            row[dx * 4 + 3] = (unsigned char)(color >> 24);
+        }
+    }
+}
+
+/* AdvisorTextDisplayWorker owns category 3 presentation after any layout
+ * reset and before text. The shipped category has no button records. These
+ * are the actual GameConfigInit surfaces, not the diagnostic blit ledger. */
+static void advisor_message_interface_finish(void* context,
+    const AdvisorTextDisplayState* state, float delta)
+{
+    DisplaySurface* target = surface_active_render_target_get();
+    LevelState* level = level_current_owner_get();
+    void* pixels = NULL;
+    int pitch = 0;
+    float position[2];
+    uint32_t position_bits[2];
+    (void)context;
+    (void)delta;
+    if (state == NULL) return;
+    if (((state->interface_flags & 0x100000u) != 0u &&
+         state->current_slot != 0x16) ||
+        state->hidden_slot)
+        advisor_message_layout_reset();
+    position[0] = 42.0f;
+    position[1] = s_message_panel_y;
+    memcpy(position_bits, position, sizeof(position_bits));
+    indexed_pair_set(3, position_bits[0], position_bits[1]);
+    if (target == NULL || target->w <= 0 || target->h <= 0 ||
+        surface_lock(target, &pixels, &pitch) != 0) return;
+    surface_blit_texture(pixels, pitch, target->w, target->h,
+                         s_message_panel_image, (int)position[0],
+                         (int)position[1]);
+    if (level != NULL && s_message_air_image != NULL) {
+        float percent = level_float(level, LEVEL_OFF_AIR_SUPPLY);
+        if (percent > 0.0f) {
+            int x = (int)position[0] + 85;
+            int y = (int)position[1] + 6;
+            int draw_width;
+            if (percent > 100.0f) percent = 100.0f;
+            draw_width = (int)crt_float_to_long((float)
+                ((double)236.0f * (double)(float)0.01f * (double)percent));
+            advisor_message_air_blit(pixels, pitch, target->w, target->h,
+                                    s_message_air_image, x, y, draw_width);
+        }
+    }
+    if (s_message_noair_image != NULL &&
+        global_value_0050080c_peek() != 0u &&
+        sim_status_banner_word_get() != 0u)
+        surface_blit_texture(pixels, pitch, target->w, target->h,
+            s_message_noair_image, (int)position[0] + 21, (int)position[1]);
+    surface_unlock(target, pixels);
+}
+
 void advisor_message_ui_draw(float delta)
 {
     DisplaySurface* target = surface_active_render_target_get();
@@ -6775,9 +6976,7 @@ void advisor_message_ui_draw(float delta)
     void* pixels = NULL;
     int pitch = 0;
     tutorial_message_generation_sync();
-    if (!s_message_gameplay_active || target == NULL ||
-        s_advisor_text_request_source == NULL ||
-        engine_overlay_word_peek(0) == 0u) return;
+    if (!s_message_gameplay_active || target == NULL) return;
     /* The portable frame draws messages without the indexed manager block
      * that normally calls 0x41b930. Advance only its shared flash clock here
      * when that owner is absent; otherwise NEXT stays in the off phase.
@@ -6787,14 +6986,6 @@ void advisor_message_ui_draw(float delta)
         if (engine_state == NULL ||
             (*engine_state & ENGINE_STATE_TIME_FROZEN) == 0u)
             frontend_status_flash_tick(delta);
-    }
-    if (surface_lock(target, &pixels, &pitch) == 0) {
-        /* Reference panel 3 and its pixel hit share the expanded placement. */
-        if (s_message_panel_image != NULL)
-            surface_blit_texture(pixels, pitch, target->w, target->h,
-                                 s_message_panel_image, 42,
-                                 (int)s_message_panel_y);
-        surface_unlock(target, pixels);
     }
     advisor_text_display_worker(delta);
     if (surface_lock(target, &pixels, &pitch) == 0) {
@@ -7167,6 +7358,10 @@ static int advisor_text_display_state_get(void* context,
     ui_message_image_position_get(&state->x, &state->y);
     state->message_id = (int)request;
     state->message_flags = engine_overlay_word_peek(0);
+    {
+        const uint32_t* engine_state = engine_current_state_word();
+        state->interface_flags = engine_state != NULL ? *engine_state : 0u;
+    }
     state->message_timer = s_advisor_text_animation_timer;
     state->primary_text_output = ui_message_text_output_get(0);
     state->alternate_text_output = ui_message_text_output_get(1);
@@ -7215,6 +7410,7 @@ static void advisor_text_display_production_install(void)
     ops.current_slot_set = advisor_text_display_current_slot_set;
     ops.message_flags_set = advisor_text_display_message_flags_set;
     ops.message_timer_set = advisor_text_display_message_timer_set;
+    ops.interface_finish = advisor_message_interface_finish;
     advisor_text_display_ops_set(&ops);
 }
 
@@ -7447,6 +7643,7 @@ void advisor_text_display_worker(float delta)
     int slot_available = 0;
     int message_pending;
     int update_enabled;
+    int image_path;
     const char* request_text = NULL;
     char rendered_text[512];
     if (ops->state_get == NULL) return;
@@ -7455,6 +7652,8 @@ void advisor_text_display_worker(float delta)
     old_slot = state.current_slot;
     message_pending = state.message_flags != 0u;
     update_enabled = !state.advisor_mode_valid || state.advisor_mode != 0;
+    image_path = !message_pending && update_enabled && old_slot != 0x1a &&
+                 state.slot_image != NULL;
     if (state.message_flags == 0u) {
         if (update_enabled) {
             slot_available = ops->slot_is_available != NULL ?
@@ -7505,13 +7704,21 @@ void advisor_text_display_worker(float delta)
     if (((state.interface_flags & 0x100000u) != 0u ||
          (ops->overlay_active != NULL &&
           ops->overlay_active(ops->context))) && old_slot != 0x16) {
-        if (ops->interface_finish != NULL)
-            ops->interface_finish(ops->context, &state, delta);
+        if (ops->interface_finish != NULL) {
+            AdvisorTextDisplayState presentation = state;
+            presentation.current_slot = old_slot;
+            presentation.hidden_slot = image_path;
+            ops->interface_finish(ops->context, &presentation, delta);
+        }
         if (ops->overlay_close != NULL) ops->overlay_close(ops->context);
         return;
     }
-    if (ops->interface_finish != NULL)
-        ops->interface_finish(ops->context, &state, delta);
+    if (ops->interface_finish != NULL) {
+        AdvisorTextDisplayState presentation = state;
+        presentation.current_slot = old_slot;
+        presentation.hidden_slot = image_path;
+        ops->interface_finish(ops->context, &presentation, delta);
+    }
     if (message_pending) {
         if (request_text != NULL) {
             (void)advisor_text_output_draw(state.primary_text_output, delta);
@@ -8737,6 +8944,11 @@ uint32_t interaction_flags_peek(void)
     return s_inter_flags;
 }
 
+void interaction_flags_set(uint32_t flags)
+{
+    s_inter_flags = flags;
+}
+
 /* AdvisorCallbackScheduleGate reads the held scan-code byte at DAT_0076abbc
  * (keyboard offset 0x3c) before walking the current catalog. The anonymous
  * row callback remains an explicit binding because its body is unresolved. */
@@ -8942,7 +9154,8 @@ void menu_clock_millis_set(uint32_t millis)
  * missing draw-record block answers nothing (deviation: the corpus walks
  * the window unconditionally once its count word reads non-null). */
 // FUNCTION: LEGORR 0x0045a9c0
-void panel_texture_slots_blit(int panel)
+static void panel_texture_slots_blit_to(int panel, void* pixels, int pitch,
+                                        int width, int height)
 {
     const int count = panel_draw_count_peek(panel);
     if (count <= 0) {
@@ -8954,8 +9167,8 @@ void panel_texture_slots_blit(int panel)
     }
     uint32_t oa = 0u, ob = 0u;
     indexed_pair_get(panel, &oa, &ob);
-    const float ox = (float)(int)oa;
-    const float oy = (float)(int)ob;
+    const float ox = crt_float_bits(oa);
+    const float oy = crt_float_bits(ob);
 
     for (int i = 0; i < count; ++i) {
         const float* rec = (const float*)(block + (size_t)i * 0x2c);
@@ -8966,42 +9179,440 @@ void panel_texture_slots_blit(int panel)
         }
         const int has40 = (flags & 0x40u) != 0u;
         int banner = 0;
-        float pick = 0.0f;
+        int field = 0;
         if ((flags & 8u) == 0u && (flags & 2u) != 0u) {
             if (!has40) {
-                pick = rec[4];
+                field = 4;
             } else {
                 banner = (int)sim_status_banner_word_get();
                 if (banner == 0) {
                     continue; /* the corpus skips the blit */
                 }
-                pick = rec[4];
+                field = 4;
             }
         } else if ((flags & 4u) == 0u && (flags & 8u) == 0u) {
             if (!has40) {
-                pick = rec[6];
+                field = 6;
             } else {
                 banner = (int)sim_status_banner_word_get();
-                pick = banner == 0 ? rec[6] : rec[4];
+                field = banner == 0 ? 6 : 4;
             }
         } else {
             if (has40) {
                 banner = (int)sim_status_banner_word_get();
                 if (banner != 0) {
-                    pick = rec[4];
+                    field = 4;
                 } else {
-                    pick = rec[5];
+                    field = 5;
                 }
             } else {
-                pick = rec[5];
+                field = 5;
             }
         }
         uint32_t handle = 0u;
-        __builtin_memcpy(&handle, &pick, sizeof(handle));
+        __builtin_memcpy(&handle, rec + field, sizeof(handle));
         if (handle != 0u) {
-            crt_surface_blit_record(handle, rec[0] + ox, rec[1] + oy);
+            float x = rec[0] + ox;
+            float y = rec[1] + oy;
+            TextureSurface* surface = panel_named_resource_get(
+                panel, block, i, field, handle);
+            crt_surface_blit_record(handle, x, y);
+            if (surface != NULL && pixels != NULL)
+                surface_blit_texture(pixels, pitch, width, height, surface,
+                                     (int)crt_float_to_long(x),
+                                     (int)crt_float_to_long(y));
         }
     }
+}
+
+void panel_texture_slots_blit(int panel)
+{
+    panel_texture_slots_blit_to(panel, NULL, 0, 0, 0);
+}
+
+void panel_texture_slots_render(int panel, void* pixels, int pitch,
+                                int width, int height)
+{
+    if (pixels == NULL || pitch <= 0 || width <= 0 || height <= 0) return;
+    panel_texture_slots_blit_to(panel, pixels, pitch, width, height);
+}
+
+/* The physical gesture caller supplies mapped button levels; the scan owns
+ * only category/item capture and feedback, separately from action dispatch. */
+/* Ordinary 45b310 scan. 500860 bit 1 forced-camera mode is unowned here.
+ * Return means geometric ownership; item 24 means no action-capable item. */
+int frontend_panels_pointer_update(FrontendPanelPointerCapture* capture,
+                                  int x, int y, int current, int previous,
+                                  FrontendPanelPointerHit* hit)
+{
+    FrontendPanelRotationControlState rotation;
+    int found = 0, panel;
+    if (capture == NULL || hit == NULL) return 0;
+    hit->category = 12; hit->item = 24; hit->released = 0;
+    frontend_panel_rotation_control_state_get(&rotation);
+    for (panel = 0; panel < 12; ++panel) {
+        uint32_t ox_bits = 0u, oy_bits = 0u;
+        int i, px, py, count;
+        char* block;
+        if ((request_record_flags_peek(panel) & 1u) == 0u) continue;
+        count = panel_draw_count_peek(panel);
+        block = (char*)panel_draw_records_peek(panel);
+        if (block == NULL) continue;
+        indexed_pair_get(panel, &ox_bits, &oy_bits);
+        px = x - (int)crt_float_bits(ox_bits);
+        py = y - (int)crt_float_bits(oy_bits);
+        for (i = 0; i < count; ++i) {
+            float* rec = (float*)(block + (size_t)i * 0x2c);
+            uint32_t flags;
+            int inside = 0;
+            memcpy(&flags, rec + 10, sizeof(flags));
+            if (!found) {
+                if (panel == 9 && i == 3) {
+                    const double dx = (double)rotation.center_x - x;
+                    const double dy = (double)rotation.center_y - y;
+                    inside = sqrt(dx * dx + dy * dy) < rotation.radius;
+                } else {
+                    inside = rec[0] <= (float)px && (float)px < rec[2] &&
+                             rec[1] <= (float)py && (float)py < rec[3];
+                }
+            }
+            if (inside) {
+                int same;
+                found = 1;
+                hit->category = panel;
+                same = capture->active && capture->category == panel &&
+                       capture->item == i && capture->records == block;
+                if (current) {
+                    if (!capture->active && !previous) {
+                        capture->active = 1; capture->category = panel;
+                        capture->item = i; capture->records = block;
+                        same = 1;
+                    }
+                    if (same) {
+                        hit->item = i;
+                        flags = (flags & ~2u) | 4u;
+                    }
+                } else if (!capture->active || same) {
+                    hit->item = i;
+                    if (same) {
+                        if ((flags & 0x20u) != 0u) flags ^= 8u;
+                        hit->released = 1;
+                    }
+                    flags = (flags & ~4u) | 2u;
+                }
+            } else {
+                flags = (flags & ~6u) | ((flags & 8u) ? 4u : 0u);
+            }
+            memcpy(rec + 10, &flags, sizeof(flags));
+        }
+    }
+    if (!current) {
+        capture->active = 0; capture->records = NULL;
+        capture->category = 12; capture->item = 24;
+    }
+    return found;
+}
+
+/* Explicit cancellation does not release. Only clean the captured record if
+ * its original block is still installed, category enabled, and index valid. */
+void frontend_panels_pointer_capture_cancel(FrontendPanelPointerCapture* capture)
+{
+    if (capture == NULL) return;
+    if (capture->active && capture->category >= 0 && capture->category < 12 &&
+        (request_record_flags_peek(capture->category) & 1u) != 0u &&
+        capture->records != NULL &&
+        capture->records == panel_draw_records_peek(capture->category) &&
+        capture->item >= 0 && capture->item < panel_draw_count_peek(capture->category)) {
+        char* block = (char*)panel_draw_records_peek(capture->category);
+        char* word = block + (size_t)capture->item * 0x2c + 0x28;
+        uint32_t flags;
+        memcpy(&flags, word, sizeof(flags));
+        flags = (flags & ~6u) | ((flags & 8u) ? 4u : 0u);
+        memcpy(word, &flags, sizeof(flags));
+    }
+    capture->active = 0; capture->records = NULL;
+    capture->category = 12; capture->item = 24;
+}
+
+int frontend_panels_pointer_hover(int x, int y)
+{
+    FrontendPanelPointerCapture capture;
+    FrontendPanelPointerHit hit;
+    memset(&capture, 0, sizeof(capture));
+    return frontend_panels_pointer_update(&capture, x, y, 0, 0, &hit);
+}
+
+/* Release counts precede the tutorial/result gates in 0x45adb0. A hit and a
+ * performed action are separate results; unported action owners return zero. */
+int frontend_panels_pointer_activate(int category, int item)
+{
+    char* block;
+    uint32_t count, flags, blocked = 0u;
+    LevelState* level;
+    if (category < 0 || category >= 12 || item < 0 ||
+        item >= panel_draw_count_peek(category)) return 0;
+    block = (char*)panel_draw_records_peek(category);
+    if (block == NULL) return 0;
+    memcpy(&count, block + (size_t)item * 0x2c + 0x24, sizeof(count));
+    ++count;
+    memcpy(block + (size_t)item * 0x2c + 0x24, &count, sizeof(count));
+    flags = system_state_flags_get();
+    if (category == 0) blocked = flags & 0x10u;
+    else if (category == 6 && item < 3) blocked = flags & (0x20u << item);
+    else if (category == 9) {
+        if (item == 2) blocked = flags & 0x400u;
+        else if (item == 0 || item == 1 || item == 3)
+            blocked = flags & 0x1000u;
+    }
+    if (blocked != 0u) {
+        if (category == 6 && item < 3)
+            panel_item_flag8_set_if_enabled(category, item, 0);
+        media_action_feedback_sound_dispatch(1);
+        return 0;
+    }
+    level = level_current_owner_get();
+    if (level == NULL || level_int(level, LEVEL_OFF_OBJ_RESULT) != 0) {
+        media_action_feedback_sound_dispatch(1);
+        return 0;
+    }
+    if (category == 6 && item == 0) {
+        media_action_feedback_sound_dispatch(0);
+        unported_ledger_stubs::ledger_stub_00425c30_TransitionControl(1, 0u);
+        engine_debug_word_bit_set(0x100u,
+            (engine_debug_word_peek() & 0x100u) == 0u);
+        return 1;
+    }
+    /* Other category actions retain their own renderer/game owners. */
+    return 0;
+}
+
+/* The software presentation pass consumes live resources and category state.
+ * Simulation advances these positions once in EngineManagerDispatch; drawing
+ * a frozen pause frame must not advance the manager or replay its ledger. */
+static void frontend_panel_render(int panel, void* pixels, int pitch,
+                                   int width, int height)
+{
+    uint32_t x = 0u, y = 0u;
+    TextureSurface* image = legacy_panel_texture_get(panel);
+    indexed_pair_get(panel, &x, &y);
+    if (image != NULL)
+        surface_blit_texture(pixels, pitch, width, height, image,
+            (int)floor((double)crt_float_bits(x)),
+            (int)floor((double)crt_float_bits(y)));
+    panel_texture_slots_render(panel, pixels, pitch, width, height);
+}
+
+void frontend_panels_render(uint32_t state, void* pixels, int pitch,
+                            int width, int height)
+{
+    static const int order[] = {4, 9, 6, 8, 11, 5, 7, 10};
+    unsigned int i;
+    if ((state & ENGINE_STATE_INDEXED_SUBSYS) == 0u || pixels == NULL) return;
+    if ((state & 2u) == 0u)
+        frontend_panel_render(1, pixels, pitch, width, height);
+    frontend_panel_render(0, pixels, pitch, width, height);
+    if ((state & 2u) != 0u && (state & 0x2000u) != 0u &&
+        (state & 0x20000u) == 0u)
+        frontend_panel_render(2, pixels, pitch, width, height);
+    for (i = 0; i < sizeof(order) / sizeof(order[0]); ++i)
+        frontend_panel_render(order[i], pixels, pitch, width, height);
+}
+
+void frontend_panels_release(void)
+{
+    int panel;
+    for (panel = 0; panel < 12; ++panel) {
+        panel_draw_records_set(panel, NULL);
+        panel_draw_count_set(panel, 0);
+        legacy_overlay_image_record_load(NULL, panel, 0u);
+    }
+}
+
+/* The 0x41c310 row callback uses the same image owners and catalog traversal
+ * as composition. A missing image retains the reference's 40x40 extent. */
+typedef struct FeActionCatalogHitPass {
+    const EngineContext* engine;
+    float x, y;
+    float position[2];
+    uint32_t action, kind, entry;
+} FeActionCatalogHitPass;
+
+static int fe_action_catalog_hit_row(int action, int kind, int entry,
+                                    void* payload)
+{
+    FeActionCatalogHitPass* pass = (FeActionCatalogHitPass*)payload;
+    TextureSurface* image = action == 0x49
+        ? interface_build_image_binding_value_get(pass->engine, kind, entry)
+        : interface_action_image_value_get(pass->engine, action);
+    const int width = image != NULL ? image->width : 40;
+    const int height = image != NULL ? image->height : 40;
+    if (pass->x >= pass->position[0] &&
+        pass->x <= pass->position[0] + (float)width &&
+        pass->y >= pass->position[1] &&
+        pass->y <= pass->position[1] + (float)height) {
+        uint32_t position[2];
+        pass->action = (uint32_t)action;
+        if (action == 0x49) {
+            pass->kind = (uint32_t)kind;
+            pass->entry = (uint32_t)entry;
+        }
+        cursor_tile_selection_update_by_type(action, (uint32_t)kind,
+                                               (uint32_t)entry);
+        memcpy(position, pass->position, sizeof(position));
+        selection_coordinates_set(position, (uint32_t)(width - 1),
+                                   (uint32_t)(height - 1));
+        return 1;
+    }
+    pass->position[1] += (float)height;
+    return 0;
+}
+
+void frontend_action_catalog_pointer_setup(SimulationPointerDispatchOps* ops)
+{
+    EventTimerState state;
+    float origin[2];
+    const FeSurroundImage* surround;
+    int width, height;
+    if (ops == NULL) return;
+    frontend_event_timer_state_get(&state);
+    interface_menu_action_layout_peek(origin);
+    ops->overlay_offset_x = state.timer;
+    ops->overlay_offset_y = origin[1];
+    memset(&ops->focused_rect, 0, sizeof(ops->focused_rect));
+    surround = interface_surround_image_peek(
+        entity_query_flag_count(state.current_event) - 1);
+    if (state.current_event != 0 && state.current_event != 15 &&
+        surround != NULL && interface_back_button_dimensions(&width, &height)) {
+        ops->focused_rect.x = (float)surround->width;
+        ops->focused_rect.y = (float)surround->height;
+        ops->focused_rect.width = (float)width;
+        ops->focused_rect.height = (float)height;
+        ops->focused_rect.enabled = 1;
+    }
+}
+
+int frontend_action_catalog_hit(const EngineContext* engine,
+    const GameContext* game, float x, float y, float offset_x, float offset_y,
+    uint32_t* action_out, uint32_t* kind_out, uint32_t* entry_out)
+{
+    FeActionCatalogHitPass pass;
+    memset(&pass, 0, sizeof(pass));
+    pass.engine = engine;
+    pass.x = x;
+    pass.y = y;
+    pass.position[0] = offset_x;
+    pass.position[1] = offset_y;
+    if (!catalog_callback_by_id_dispatch(game,
+            (int)objective_selection_word_peek(),
+            fe_action_catalog_hit_row, &pass)) return 0;
+    if (action_out != NULL) *action_out = pass.action;
+    if (kind_out != NULL) *kind_out = pass.kind;
+    if (entry_out != NULL) *entry_out = pass.entry;
+    return 1;
+}
+
+/* CPU image composition from AdvisorOverlayUpdate and its 0x41b800 row
+ * callback. Mode, sliding origin, images and action state remain owned by
+ * their existing producers. The count-text overlay and tracker/dialog tail
+ * have separate owners; this adapter does not stand in for those paths. */
+typedef struct FeActionCatalogImagePass {
+    const EngineContext* engine;
+    void* pixels;
+    int pitch, width, height;
+    float position[2];
+} FeActionCatalogImagePass;
+
+static int fe_action_catalog_image_row(int action, int kind, int entry,
+                                      void* payload)
+{
+    FeActionCatalogImagePass* pass = (FeActionCatalogImagePass*)payload;
+    TextureSurface* image;
+    uint32_t flags;
+    if (action == 73) {
+        catalog_slot_flag_update(kind, entry);
+        image = interface_build_image_binding_value_get(pass->engine,
+                                                         kind, entry);
+        flags = input_binding_state_word_get(kind, entry);
+        player_input_flag8_set_clear(kind, entry, 0);
+    }
+    else {
+        input_action_state_update(action);
+        image = interface_action_image_value_get(pass->engine, action);
+        flags = input_action_state_word_get(action);
+        input_entry_flag8_set_clear(action, 0);
+    }
+    /* The reference resolves the current image again after consuming flag
+     * 8. Pass its typed dimensions; never truncate a host image pointer. */
+    advisor_animation_position_and_request_update_image(action, kind, entry,
+        pass->position, action == 73
+            ? interface_build_image_binding_value_get(pass->engine, kind, entry)
+            : interface_action_image_value_get(pass->engine, action));
+    if (image != NULL &&
+        ((flags & 4u) == 0u || sim_status_banner_word_get() != 0u)) {
+        surface_blit_texture(pass->pixels, pass->pitch, pass->width,
+            pass->height, image, (int)pass->position[0],
+            (int)pass->position[1]);
+    }
+    pass->position[1] += image != NULL ? (float)image->height : 40.0f;
+    return 0;
+}
+
+void frontend_action_catalog_images_render(const EngineContext* engine,
+    const GameContext* game, void* pixels, int pitch, int width, int height)
+{
+    EventTimerState state;
+    float origin[2];
+    int count;
+    int has_back;
+    const FeSurroundImage* surround;
+    FeActionCatalogImagePass pass;
+    if (pixels == NULL || width <= 0 || height <= 0) return;
+    frontend_event_timer_state_get(&state);
+    if ((state.flags & 4u) == 0u) return;
+    interface_menu_action_layout_peek(origin);
+    origin[0] = state.timer;
+    count = entity_query_flag_count(state.current_event);
+    /* Config row 1 is stored at source index 0. In the executable the
+     * renderer bases its arrays one entry before that first stored row. */
+    surround = interface_surround_image_peek(count - 1);
+    has_back = state.current_event != 0 && state.current_event != 15;
+    if (surround != NULL) {
+        TextureSurface* image = has_back ? surround->image
+                                         : surround->image_without_back;
+        const int x = has_back ? surround->x : surround->without_back_x;
+        const int y = has_back ? surround->y : surround->without_back_y;
+        if (image != NULL)
+            surface_blit_texture(pixels, pitch, width, height, image,
+                (int)(origin[0] + (float)x), (int)(origin[1] + (float)y));
+    }
+    if (has_back) {
+        const int flash = (input_action_state_word_get(0) & 4u) != 0u;
+        const int blink = sim_status_banner_word_get() != 0u;
+        const int pressed = input_entry_flag8_get(0) != 0u;
+        TextureSurface* back = NULL;
+        if (pressed)
+            back = interface_back_button_image(!(flash && blink));
+        else if ((flash && blink) ||
+                 (!flash && (state.flags & 0x4000u) != 0u))
+            back = interface_back_button_image(0);
+        if (back != NULL && surround != NULL)
+            surface_blit_texture(pixels, pitch, width, height, back,
+                (int)(origin[0] + (float)surround->width),
+                (int)(origin[1] + (float)surround->height));
+        advisor_animation_position_and_request_update_image(0, 0, 0, NULL,
+                                                            NULL);
+        input_entry_flag8_set_clear(0, 0);
+        input_action_state_update(0);
+    }
+    pass.engine = engine;
+    pass.pixels = pixels;
+    pass.pitch = pitch;
+    pass.width = width;
+    pass.height = height;
+    pass.position[0] = origin[0];
+    pass.position[1] = origin[1];
+    (void)catalog_callback_by_id_dispatch(game, state.current_event,
+                                         fe_action_catalog_image_row, &pass);
 }
 
 /* Keep the address-mapped leaf blind like the corpus; the public wrapper
@@ -11025,8 +11636,8 @@ void panels_config_entry_apply(BlockFile* config, int display_width,
         count = ledger_config_split_limited(copy, fields, 6u, ",");
         if (count != 5) continue;
         legacy_overlay_image_record_load(fields[0], panel, 4u);
-        panel_category_bounds_set(panel, atoi(fields[4]), atoi(fields[3]),
-                                  atoi(fields[2]), atoi(fields[1]));
+        panel_category_bounds_set(panel, atoi(fields[1]), atoi(fields[2]),
+                                  atoi(fields[3]), atoi(fields[4]));
     }
 }
 
@@ -11040,7 +11651,7 @@ void panel_button_layout_config_load(BlockFile* config, int display_width,
     char* textures[3][PANEL_COUNT][BUTTONS_PER_PANEL];
     int ids[PANEL_COUNT][BUTTONS_PER_PANEL];
     float geometry[PANEL_COUNT][BUTTONS_PER_PANEL][4];
-    char path[64];
+    char path[256];
     BlockRec* group;
     BlockRec* entry;
     int panel;
@@ -11114,7 +11725,6 @@ void panel_button_layout_config_load(BlockFile* config, int display_width,
     }
 }
 
-
 } // namespace frontend_config
 
 namespace frontend_config {
@@ -11173,7 +11783,6 @@ void ledger_stub_00434da0_AdvisorTooltipAndTooltipSoundConfigLoad(
     advisor_tooltip_and_sound_config_load(config);
 }
 
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
@@ -11183,7 +11792,6 @@ void ledger_stub_00437150_ToolTipIconsConfigLoad(void* config)
 {
     tooltip_icons_config_load(config);
 }
-
 
 } // namespace unported_ledger_stubs
 
@@ -11195,6 +11803,19 @@ static void* frontend_hud_surface_load(BlockFile* cfg, const char* path,
     (void)y;
     (void)context;
     return image_surface_load(path, 0u, 0u);
+}
+
+static TextureSurface* frontend_hud_panel_texture_load(const char* path,
+                                                        void* context)
+{
+    (void)context;
+    return image_surface_load(path, 0u, 0u);
+}
+
+static void frontend_hud_surface_release(void* surface, void* context)
+{
+    (void)context;
+    texture_release((TextureSurface*)surface);
 }
 
 static void frontend_hud_surface_initialize(void* surface, void* context)
@@ -11223,6 +11844,8 @@ void frontend_hud_runtime_install(void)
     LegacyHudOps ops;
     memset(&ops, 0, sizeof(ops));
     ops.surface_load = frontend_hud_surface_load;
+    ops.surface_release = frontend_hud_surface_release;
+    ops.panel_texture_load = frontend_hud_panel_texture_load;
     ops.surface_initialize = frontend_hud_surface_initialize;
     ops.config_resource = frontend_hud_config_resource;
     legacy_hud_ops_set(&ops);
@@ -11640,7 +12263,6 @@ int ledger_stub_0045b310_SimCategoryCellHitTest(
 
 } // namespace unported_ledger_stubs
 
-
 static FrontendPanelRotationControlState s_panel_rotation_control;
 
 static void frontend_panel_rotation_image_load(BlockFile* values,
@@ -11719,7 +12341,6 @@ void ledger_stub_0045b9d0_PanelRotationControlConfigLoad(
     (void)panel_rotation_control_config_load(state, hooks);
 }
 
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
@@ -11732,7 +12353,6 @@ int ledger_stub_0045bcd0_CameraDragFromCursorApply(
 {
     return camera_drag_from_cursor_apply(state, hooks, x, y, delta);
 }
-
 
 } // namespace unported_ledger_stubs
 
@@ -11748,7 +12368,6 @@ void ledger_stub_0045c5f0_UiOverlayAnimationApply(
     ui_overlay_animation_apply(state, draw, context);
 }
 
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
@@ -11756,6 +12375,19 @@ namespace unported_ledger_stubs {
 } // namespace unported_ledger_stubs
 
 static PointerCursorState s_pointer_cursor_runtime;
+
+void frontend_pointer_config_load(BlockFile* cfg)
+{
+    char key[256];
+    BlockRec* section;
+    snprintf(key, sizeof(key), "%s::Pointers", util_root_name(cfg));
+    section = cfg != NULL ? block_subgroup(cfg, key) : NULL;
+    if (section == NULL && cfg != NULL && block_name(cfg) != NULL &&
+        strcasecmp_lite(block_name(cfg), "Pointers") == 0)
+        section = block_first_child(cfg);
+    pointer_cursor_config_load_target(
+        section);
+}
 
 static void pointer_cursor_slot_release(PointerCursorSlot* slot)
 {
@@ -11885,28 +12517,23 @@ static void pointer_cursor_flic_blit(void* pixels, int pitch, int width,
     }
 }
 
-// FUNCTION: LEGORR 0x0045cc70
-void pointer_cursor_draw_target(uint32_t x, uint32_t y)
+/* The software frame already owns its target lock. Keep resource selection
+ * and animated/bitmap drawing shared with the legacy target entry point. */
+void pointer_cursor_draw_pixels(uint32_t x, uint32_t y, void* pixels,
+                                 int pitch, int width, int height)
 {
-    DisplaySurface* target = surface_active_render_target_get();
     const int selected = media_pointer_cursor_slot();
     PointerCursorSlot* slot;
-    void* pixels = NULL;
-    int pitch = 0;
-    if (target == NULL || selected < 0 || selected >= POINTER_CURSOR_COUNT)
+    if (pixels == NULL || pitch <= 0 || width <= 0 || height <= 0 ||
+        selected < 0 || selected >= POINTER_CURSOR_COUNT)
         return;
-    if (surface_lock(target, &pixels, &pitch) < 0) return;
-    if (pixels == NULL) {
-        surface_unlock(target, pixels);
-        return;
-    }
     slot = &s_pointer_cursor_runtime.slots[selected];
     if (!slot->animated) {
         TextureSurface* bitmap = (TextureSurface*)slot->resource;
         if (bitmap == NULL)
             bitmap = (TextureSurface*)s_pointer_cursor_runtime.slots[0].resource;
         if (bitmap != NULL)
-            surface_blit_texture(pixels, pitch, target->w, target->h, bitmap,
+            surface_blit_texture(pixels, pitch, width, height, bitmap,
                                  (int)x, (int)y);
     }
     else if (slot->resource != NULL) {
@@ -11915,19 +12542,28 @@ void pointer_cursor_draw_target(uint32_t x, uint32_t y)
         const int source_key_enabled = flags != NULL
             ? (int)((~*flags >> 20) & 1u) : 0;
         if (s_pointer_cursor_runtime.slots[1].resource != NULL)
-            surface_blit_texture(pixels, pitch, target->w, target->h,
+            surface_blit_texture(pixels, pitch, width, height,
                 (TextureSurface*)s_pointer_cursor_runtime.slots[1].resource,
                 (int)x, (int)y);
         (void)flic_tick_loop(animation, 1);
-        pointer_cursor_flic_blit(pixels, pitch, target->w, target->h,
+        pointer_cursor_flic_blit(pixels, pitch, width, height,
             animation, (int)x + slot->hot_x, (int)y + slot->hot_y,
             source_key_enabled);
     }
+}
+
+// FUNCTION: LEGORR 0x0045cc70
+void pointer_cursor_draw_target(uint32_t x, uint32_t y)
+{
+    DisplaySurface* target = surface_active_render_target_get();
+    void* pixels = NULL;
+    int pitch = 0;
+    if (target == NULL || surface_lock(target, &pixels, &pitch) < 0) return;
+    pointer_cursor_draw_pixels(x, y, pixels, pitch, target->w, target->h);
     surface_unlock(target, pixels);
 }
 
 namespace unported_ledger_stubs {
-
 
 } // namespace unported_ledger_stubs
 
@@ -11940,7 +12576,6 @@ uint32_t ledger_stub_0045cdc0_PriorityImagesConfigLoad(
 {
     return priority_images_config_load(state, rows, count);
 }
-
 
 // PrioritiesConfigLoad
 uint32_t ledger_stub_0045cf50_PrioritiesConfigLoad(
@@ -11958,11 +12593,9 @@ uint32_t ledger_stub_0045d060_PrioritiesImagePositionsConfigLoad(
     return priorities_image_positions_config_load(state, rows, count);
 }
 
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
-
 
 
 } // namespace unported_ledger_stubs
@@ -11981,7 +12614,6 @@ uint32_t ledger_stub_004636b0_InfoPanelStringEntriesInitialize(
                                                    context, resolve);
 }
 
-
 } // namespace unported_ledger_stubs
 
 namespace unported_ledger_stubs {
@@ -11997,13 +12629,11 @@ int ledger_stub_004638a0_SimTrackCursorHitTest(
                                         slot_index_out);
 }
 
-
 // OverlayTextBufferRefresh
 int ledger_stub_00418a00_OverlayTextBufferRefresh(void)
 {
     return overlay_text_buffer_refresh();
 }
-
 
 static SimulationPointerDispatchOps s_simulation_pointer_dispatch_ops;
 
@@ -12089,6 +12719,7 @@ int simulation_pointer_action_dispatch_impl(int x, int y, int active,
                     ops->terrain_grid, ops->ray_hooks, (float)x, (float)y,
                     0u, &terrain_x, &terrain_y, hit_xyz)) {
                 if (count_action != 0 && ops->world_hit_apply != NULL) {
+
                     ops->world_hit_apply(ops->context, terrain_x,
                                          terrain_y, hit_xyz, count_action);
                 }
@@ -12244,12 +12875,10 @@ void ledger_stub_0041cd30_PositionTrackerBoxDraw(
     surface_draw_polyline(raster, points, 5, pixel);
 }
 
-
 void ledger_stub_0041eac0_EventTimerCountdownAdvance(float delta)
 {
     event_timer_countdown_advance(delta);
 }
-
 
 // TerrainCommandFeedbackDispatch
 static uint32_t terrain_feedback_message_cue_get(void* context,
@@ -12292,7 +12921,6 @@ void ledger_stub_00428330_TerrainCommandFeedbackDispatch(
                                       &runtime_hooks);
 }
 
-
 // TutorialNerpScriptFileLoad
 int ledger_stub_00452df0_TutorialNerpScriptFileLoad(const char* path)
 {
@@ -12323,13 +12951,11 @@ void ledger_stub_00453920_AdvisorScrollStepAdvance()
     tutorial_advisor_scroll_step_advance();
 }
 
-
 // CameraFocusTweenUpdate
 void ledger_stub_00453da0_CameraFocusTweenUpdate(float delta)
 {
     tutorial_camera_focus_tween_update(delta);
 }
-
 
 // SelectedEntityGroundMarkerRender
 int ledger_stub_004248b0_SelectedEntityGroundMarkerRender(
@@ -12339,14 +12965,12 @@ int ledger_stub_004248b0_SelectedEntityGroundMarkerRender(
                                                 blue);
 }
 
-
 // AdvisorInlineTokenRender
 void ledger_stub_00456830_AdvisorInlineTokenRender(
     char* source, char* output, int draw)
 {
     advisor_inline_token_render(source, output, draw);
 }
-
 
 // InputDeviceRelease
 void ledger_stub_004588e0_InputDeviceRelease()

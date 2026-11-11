@@ -96,7 +96,7 @@ static int fixture_roundtrip(void)
     if (cfg == NULL) {
         return 1;
     }
-    GameContext ctx;
+    static GameContext ctx;
     game_context_init(&ctx);
     ctx.cfg = cfg;
 
@@ -199,7 +199,7 @@ static int fixture_roundtrip(void)
      * (the old port skipped just that record): the load answers 0, keeps the
      * records placed before it and creates nothing for Test1 or after. */
     {
-        GameContext bad;
+        static GameContext bad;
         game_context_init(&bad);
         bad.level = &level;
         CHECK(object_list_load_file(&bad, "M02.ol") == 0 &&
@@ -217,7 +217,7 @@ static int fixture_roundtrip(void)
     CHECK(entity_stride(20) == 0, "code 20 out of range stride 0");
 
     /* Table-exhaustion is guarded. */
-    GameContext cap;
+    static GameContext cap;
     game_context_init(&cap);
     int filled = 0;
     while (entity_create(&cap, ENTITY_TYPE_VEHICLE, "x", 0, 0, 0, 0) >= 0) {
@@ -517,7 +517,7 @@ static int ol_probe(const char* wad_dir)
                                         &want_cam);
             ol_sort(want, wn2);
 
-            GameContext ctx;
+            static GameContext ctx;
             game_context_init(&ctx);
             ctx.cfg = cfg;
             int placed = object_list_load_file(&ctx, ename);
@@ -606,7 +606,7 @@ static int ol_probe(const char* wad_dir)
         if (olist == NULL) {
             continue;
         }
-        GameContext ctx;
+        static GameContext ctx;
         game_context_init(&ctx);
         ctx.cfg = cfg;
         int placed = object_list_load(&ctx, cfg, block_name(g));
@@ -654,7 +654,7 @@ static int stats_record_test(void)
         rec[i] = (uint8_t)(1 + i % 100);
     }
 
-    GameContext ctx;
+    static GameContext ctx;
     game_context_init(&ctx);
     int idx = entity_create(&ctx, 1, "StatsProbe", 0.0f, 0.0f, 0.0f, 0.0f);
     CHECK(idx >= 0, "probe slot created");
@@ -860,7 +860,7 @@ static int stats_flag_test(void)
      * stats reader's word exactly. */
     uint8_t rec[ENTITY_STATS_RECORD_SIZE];
     memset(rec, 0, sizeof rec);
-    GameContext ctx;
+    static GameContext ctx;
     game_context_init(&ctx);
     int a = entity_create(&ctx, 1, "FlagA", 0.0f, 0.0f, 0.0f, 0.0f);
     int b = entity_create(&ctx, 1, "FlagB", 0.0f, 0.0f, 0.0f, 0.0f);
@@ -1083,7 +1083,7 @@ int main(int argc, char** argv)
 
     /* The eligibility + admission leaves (2026-10-24). */
     {
-        GameContext ctx;
+        static GameContext ctx;
         game_context_init(&ctx);
         int idx = entity_create(&ctx, 1, "EligLeaf", 0.0f, 0.0f, 0.0f, 0.0f);
         CHECK(idx >= 0, "eligibility leaf slot created");
@@ -1139,7 +1139,7 @@ int main(int argc, char** argv)
 
     /* The shared eligibility gate's own negative field (2026-10-24). */
     {
-        GameContext ctx;
+        static GameContext ctx;
         game_context_init(&ctx);
         int idx = entity_create(&ctx, 1, "EligNeg", 0.0f, 0.0f, 0.0f, 0.0f);
         if (idx >= 0) {
@@ -1529,7 +1529,14 @@ int main(int argc, char** argv)
               "the default query answers the empty pair table");
         catalog_id_pair_install(2, 42u);
         CHECK(entity_query_flag_count(2) == 42, "the installed pair answers");
-        CHECK(entity_query_flag_count(-1) == 0 && entity_query_flag_count(8) == 0,
+        catalog_id_pair_install(8, 2u);
+        catalog_id_pair_install(18, 4u);
+        CHECK(entity_query_flag_count(8) == 2
+                  && entity_query_flag_count(18) == 4,
+              "registered action modes above seven expose their counts");
+        catalog_id_pair_install(8, 0u);
+        catalog_id_pair_install(18, 0u);
+        CHECK(entity_query_flag_count(-1) == 0 && entity_query_flag_count(24) == 0,
               "the pair-window guards answer zero");
 
         catalog_count_install(0, 0u);
@@ -1543,7 +1550,7 @@ int main(int argc, char** argv)
      * catalog lanes hand the callback their gated rows, and the generic
      * lane sweeps a key group's code array through the shared band. */
     {
-        GameContext dctx;
+        static GameContext dctx;
         game_context_init(&dctx);
         static uint8_t drows[3][2 * 0x150];
         memset(drows, 0, sizeof drows);

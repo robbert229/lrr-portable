@@ -374,7 +374,7 @@ typedef struct EntityMovementTickScaleHooks {
     void* context;
 } EntityMovementTickScaleHooks;
 
-static inline void entity_movement_tick_scale_and_delta_get(
+static inline int entity_movement_tick_scale_and_delta_get(
     EntityMovementTickScaleState* state, void* entity, float delta,
     float* movement_delta, float* movement_scale,
     const EntityMovementTickScaleHooks* hooks)
@@ -386,14 +386,15 @@ static inline void entity_movement_tick_scale_and_delta_get(
     int terrain_type = state != 0 ? state->terrain_type : 0;
     int occupiable = 0;
     int entity_scale_gate = 0;
+    int terrain_available = 0;
     if (state == 0 || entity == 0 || movement_delta == 0 ||
-        movement_scale == 0 || hooks == 0) return;
+        movement_scale == 0 || hooks == 0) return 0;
     if (hooks->base_speed_get != 0)
         base_speed = hooks->base_speed_get(hooks->context, entity,
                                            state->kind);
     if ((state->flags_fa & 0x20000u) != 0u || state->kind == 10) {
         *movement_scale = delta;
-        return;
+        return 1;
     }
     speed = base_speed;
     if ((state->flags_f8 & 8u) != 0u) speed *= 0.05f;
@@ -405,6 +406,7 @@ static inline void entity_movement_tick_scale_and_delta_get(
         hooks->terrain_data_get(hooks->context, entity, &cell_cost,
                                 &terrain_type, &occupiable,
                                 &entity_scale_gate)) {
+        terrain_available = 1;
         float surface = hooks->surface_scale_get != 0
             ? hooks->surface_scale_get(hooks->context, entity) : 1.0f;
         scale_factor *= 1.0f - (1.0f - surface) *
@@ -427,6 +429,9 @@ static inline void entity_movement_tick_scale_and_delta_get(
         hooks->animation_scale_get != 0)
         *movement_scale *= hooks->animation_scale_get(hooks->context, entity);
     *movement_scale *= delta;
+    /* Legacy callers retain their numeric fallback. A checked owner must
+     * distinguish a missing terrain query from a valid result. */
+    return terrain_available;
 }
 
 typedef struct EntityPathStepState {

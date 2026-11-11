@@ -256,8 +256,8 @@ int mesh_record_allocate_and_fill(MeshRecordPool* pool,
     record = &pool->records[index];
     memset(record, 0, sizeof(*record));
     {
-        /* FUN_00483170 initializes the twenty dwords beginning at record
-         * +0x10: flags/format word 0x50, four unit scales, then zeros. On
+        /* FUN_00483170 initializes the eighty-byte D3DMATERIAL beginning
+         * at record +0x10: size0x50, diffuse RGBA1, then zeros. On
          * the 32-bit reference build `reserved` starts at +0x10. On wider
          * hosts it remains an adapter payload after the host pointers. */
         static const uint32_t initial_state[20] = {
@@ -1364,7 +1364,9 @@ static uint32_t s_d3d_snapshot_render;
 static uint32_t s_d3d_snapshot_texture_stage;
 static Direct3DDeviceStateOps s_direct3d_device_state_ops;
 static void* s_direct3d_cached_texture;
-static void* s_direct3d_cached_light;
+static uint32_t s_direct3d_cached_material_handle;
+// GLOBAL: LEGORR 0x0054057c
+static uint32_t s_model_material_handle;
 static int s_direct3d_device_texture_dirty;
 static ModelMaterialUpdateHook s_model_material_update_hook;
 static void* s_model_material_update_context;
@@ -1745,8 +1747,9 @@ void direct3d_render_state_snapshot_ops_set(
 }
 
 /* D3DRenderStateSync (FUN_004838b0): snapshot light/render state 1 and,
- * outside the alternate renderer mode, texture-stage state 0. Temporarily
- * clear render state 1 when it was set. */
+ * outside the alternate renderer mode, texture-stage state 0. Seed the draw
+ * caches from these live values before deciding which setters may be skipped.
+ * Temporarily clear render state 1 when it was set. */
 // FUNCTION: LEGORR 0x004838b0
 void d3d_render_state_sync(void)
 {
@@ -1755,6 +1758,7 @@ void d3d_render_state_sync(void)
         s_d3d_render_state_snapshot_ops.light_get(
             s_d3d_render_state_snapshot_ops.context, 1u, &value) == 0) {
         s_d3d_snapshot_light = value;
+        s_direct3d_cached_material_handle = value;
     }
     if ((s_renderer_window_mode_flags & 0x20u) == 0u) {
         value = 0u;
@@ -1762,6 +1766,7 @@ void d3d_render_state_sync(void)
             s_d3d_render_state_snapshot_ops.texture_stage_get(
                 s_d3d_render_state_snapshot_ops.context, 0u, &value) == 0) {
             s_d3d_snapshot_texture_stage = value;
+            s_direct3d_cached_texture = (void*)(uintptr_t)value;
         }
         value = 0u;
         if (s_d3d_render_state_snapshot_ops.render_state_get != NULL &&
@@ -1837,9 +1842,9 @@ void direct3d_device_texture_dirty_set(int dirty)
 }
 
 /* Direct3DDeviceStateApply (FUN_00483b70): bind the selected texture path,
- * update light state 1 when its object changes, and submit the primitive. */
+ * update D3DLIGHTSTATE_MATERIAL(1) when its handle changes, then submit. */
 // FUNCTION: LEGORR 0x00483b70
-int direct3d_device_state_apply(void* light, void* texture,
+int direct3d_device_state_apply(uint32_t material_handle, void* texture,
                                 uint32_t a, uint32_t b, uint32_t c,
                                 uint32_t d, uint32_t e)
 {
@@ -1872,14 +1877,14 @@ int direct3d_device_state_apply(void* light, void* texture,
             s_direct3d_device_texture_dirty = 0;
         }
     }
-    if (light != s_direct3d_cached_light) {
+    if (material_handle != s_direct3d_cached_material_handle) {
         if (s_direct3d_device_state_ops.light_state_set == NULL ||
             s_direct3d_device_state_ops.light_state_set(
-                s_direct3d_device_state_ops.context, 1u, light) != 0) {
+                s_direct3d_device_state_ops.context, 1u, material_handle) != 0) {
             result = 0;
         }
         else {
-            s_direct3d_cached_light = light;
+            s_direct3d_cached_material_handle = material_handle;
         }
     }
     if (s_direct3d_device_state_ops.primitive_submit == NULL ||
@@ -1895,6 +1900,16 @@ void model_material_update_hook_set(ModelMaterialUpdateHook hook,
 {
     s_model_material_update_hook = hook;
     s_model_material_update_context = context;
+}
+
+void model_material_handle_set(uint32_t handle)
+{
+    s_model_material_handle = handle;
+}
+
+uint32_t model_material_handle_peek(void)
+{
+    return s_model_material_handle;
 }
 
 void model_child_material_ops_set(const ModelChildMaterialOps* ops)
@@ -1942,7 +1957,7 @@ int world_object_render_state_apply(void* child, const float* transform,
 /* ModelRenderChildMaterialPass (FUN_00483a90): apply world/material state,
  * update the material record, then submit the child's primitive. */
 // FUNCTION: LEGORR 0x00483a90
-int model_render_child_material_pass(void* light, void* child,
+int model_render_child_material_pass(void* model, void* child,
                                      const float* transform,
                                      int alternate_mode)
 {
@@ -1951,6 +1966,7 @@ int model_render_child_material_pass(void* light, void* child,
     const void* material = NULL;
     int material_ok = 0;
     int render_ok;
+    (void)model;
     if (child == NULL) return 0;
     world_object_render_state_apply(child, transform, alternate_mode);
     if (s_model_child_material_ops.texture_get != NULL) {
@@ -1970,8 +1986,8 @@ int model_render_child_material_pass(void* light, void* child,
             s_model_child_material_ops.context, child, arguments);
     }
     render_ok = direct3d_device_state_apply(
-        light, texture, 0x112u, arguments[3], arguments[1], arguments[2],
-        arguments[0]);
+        s_model_material_handle, texture, 0x112u, arguments[3],
+        arguments[1], arguments[2], arguments[0]);
     return (render_ok != 0 && material_ok != 0) ? 1 : 0;
 }
 
@@ -4556,6 +4572,7 @@ typedef struct WinapiRendererState {
     void* clipper;
     void* rm;
     void* rm_device;
+    void* immediate_device;
     void* staging_surface;
     HMODULE rm_module;
     HWND window;
@@ -4565,6 +4582,11 @@ typedef struct WinapiRendererState {
 } WinapiRendererState;
 
 static WinapiRendererState s_winapi_renderer_state;
+void* surface_winapi_immediate_device_peek(void)
+{
+    return s_winapi_renderer_state.immediate_device;
+}
+
 static int winapi_renderer_active(void)
 {
     return s_winapi_renderer_state.device != NULL;
@@ -4581,7 +4603,11 @@ static void windowed_surface_blit_impl(DisplaySurface* primary,
 
 static void winapi_renderer_state_release(WinapiRendererState* state)
 {
+    void* immediate;
     if (state == NULL) return;
+    immediate = state->immediate_device;
+    state->immediate_device = NULL;
+    surface_com_release(immediate);
     if (s_screen_bounded_surface_device == state->rm_device &&
         state->rm_device != NULL)
         screen_bounded_surface_device_set(NULL, NULL);
@@ -4740,6 +4766,7 @@ static int directdraw_renderer_init_winapi(
     void* clipper = NULL;
     void* rm = NULL;
     void* rm_device = NULL;
+    void* immediate_device = NULL;
     HMODULE rm_module = NULL;
     int mode_set = 0;
     void** vtable;
@@ -4844,6 +4871,12 @@ static int directdraw_renderer_init_winapi(
         if (!ok) goto cleanup;
     }
 
+    /* The UserVisual manager needs the real immediate device belonging to
+     * this selected retained-mode device, as4781d0 does. Never substitute
+     * the DirectDraw device or the RM factory for that interface. */
+    if (!scene_winapi_device3_acquire(rm_device, &immediate_device))
+        goto cleanup;
+
     if (s_directdraw_renderer_init_ops.renderer_state_commit != NULL) {
         s_directdraw_renderer_init_ops.renderer_state_commit(
             s_directdraw_renderer_init_ops.context, device, primary,
@@ -4856,6 +4889,7 @@ static int directdraw_renderer_init_winapi(
     s_winapi_renderer_state.clipper = clipper;
     s_winapi_renderer_state.rm = rm;
     s_winapi_renderer_state.rm_device = rm_device;
+    s_winapi_renderer_state.immediate_device = immediate_device;
     s_winapi_renderer_state.rm_module = rm_module;
     s_winapi_renderer_state.window = window;
     s_winapi_renderer_state.fullscreen = params->fullscreen != 0;
@@ -4877,11 +4911,13 @@ static int directdraw_renderer_init_winapi(
     primary = NULL;
     back_surface = NULL;
     clipper = NULL;
-    rm = NULL; rm_device = NULL; rm_module = NULL; mode_set = 0;
+    rm = NULL; rm_device = NULL; immediate_device = NULL;
+    rm_module = NULL; mode_set = 0;
     if (params->fullscreen != 0) (void)ShowCursor(FALSE);
     success = 1;
 
 cleanup:
+    if (immediate_device != NULL) surface_com_release(immediate_device);
     if (rm_device != NULL) surface_com_release(rm_device);
     if (rm != NULL) surface_com_release(rm);
     if (rm_module != NULL) FreeLibrary(rm_module);

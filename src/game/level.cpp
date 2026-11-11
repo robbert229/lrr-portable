@@ -27,6 +27,7 @@
 #include "type_config_ports.hpp"
 #include "ai.hpp"
 #include "cmd.hpp"
+#include "upgrades.hpp"
 #include "spawn.hpp"
 #include "port_loop_ports.hpp"
 #include "frontend.hpp"
@@ -3291,6 +3292,9 @@ LevelState* level_load(BlockFile* cfg, const char* level_name)
 
     /* --- scalar config keys (finding 07 §"What a level is") ------------- */
     level_store_ptr(s, LEVEL_OFF_LEVEL_NAME, level_name);
+    /* LevelLoad 0x42ad16 initializes the real air and comparison values. */
+    level_set_float(s, LEVEL_OFF_AIR_SUPPLY, 100.0f);
+    level_set_float(s, 0x204, 100.0f);
     /* DependencyGridConfigLoad builds its 20x15 rule table from the global
      * Dependencies records.  Bind those records to this LevelState before
      * the map's later dependency/upgrade queries can run. */
@@ -3644,6 +3648,9 @@ void level_destroy(LevelState* s)
      * level_load); never freed here. */
     __builtin_memset(s, 0, sizeof(*s));
     free(s);
+    /* PendingLevelName resets the shared interface state after releasing
+     * the active level. Discarding an uninstalled load must not reset it. */
+    if (was_current) lego::level_state_counters_clear();
 }
 
 int level_width(const LevelState* s) { return s ? level_int(s, LEVEL_OFF_WIDTH) : 0; }
@@ -4122,6 +4129,30 @@ static uint8_t* cell_record_unchecked(LevelState* s, int cx, int cy)
             (uint32_t)cx;
     byte_offset = index * (uint32_t)LEVEL_VOXEL_STRIDE;
     return voxels + byte_offset;
+}
+
+/* 0x434570: the +0x14 float belongs to the level voxel record. */
+int terrain_cell_drill_work_add(LevelState* level, int x, int y,
+                                float divisor, float elapsed)
+{
+    uint8_t* record;
+    float work;
+    if (divisor == 0.0f || divisor != divisor || level == NULL) return 0;
+    record = cell_record_unchecked(level, x, y);
+    if (record == NULL) return 0;
+    memcpy(&work, record + 0x14, sizeof(work));
+    work += elapsed / divisor;
+    memcpy(record + 0x14, &work, sizeof(work));
+    return work > 1.0f ? 1 : 0;
+}
+
+// FUNCTION: LEGORR 0x00434570
+int terrain_cell_drill_work_add_current(int x, int y, float divisor,
+                                        float elapsed)
+{
+    if (divisor == 0.0f || divisor != divisor) return 0;
+    return terrain_cell_drill_work_add(level_current_owner_get(), x, y,
+                                       divisor, elapsed);
 }
 
 static const uint8_t* cell_record_unchecked_const(const LevelState* s,
@@ -6975,6 +7006,54 @@ static void terrain_level_vertex_offset(LevelState* level, int vertex_x,
                 (size_t)x) * TERRAIN_BLOCK_STRIDE + 0x19u] & 1u) != 0u);
     }
     scene_render_terrain_vertex_offset(level, vertex_x, vertex_y, delta);
+}
+
+/* 0x430ee0: initialize one actual level cell, including terrain refresh. */
+// FUNCTION: LEGORR 0x00430ee0
+int terrain_cell_initialize(LevelState* level, uint32_t x, uint32_t y)
+{
+    static const int cardinal[4][2] = {{0,-1},{1,0},{0,1},{-1,0}};
+    uint8_t* cell;
+    int ix, iy, i, count, last;
+    int xy[2];
+    int width, height;
+    if (level == NULL) return 0;
+    width = level_width(level); height = level_height(level);
+    if (width < 3 || height < 3 || x == 0u || y == 0u ||
+        x >= (uint32_t)(width - 2) || y >= (uint32_t)(height - 2))
+        return 0;
+    cell = level_voxel(level, (int)x, (int)y);
+    if (cell == NULL) return 0;
+    if (cell[0] != 0u) return 1;
+    terrain_level_vertex_offset(level, (int)x, (int)y,
+                                level_float(level, LEVEL_OFF_DIGDEPTH));
+    cell[0] = 1u;
+    for (iy = (int)y - 1; iy <= (int)y; ++iy) {
+        for (ix = (int)x - 1; ix <= (int)x; ++ix) {
+            uint8_t* neighbor = level_voxel(level, ix, iy);
+            uint32_t flags;
+            __builtin_memcpy(&flags, neighbor + 8, sizeof(flags));
+            flags |= 0x40000u;
+            __builtin_memcpy(neighbor + 8, &flags, sizeof(flags));
+        }
+    }
+    for (iy = (int)y - 1; iy <= (int)y; ++iy)
+        for (ix = (int)x - 1; ix <= (int)x; ++ix)
+            cell_init_pass(level, (float)ix, (uint32_t)iy);
+    for (iy = (int)y - 1; iy <= (int)y + 1; ++iy)
+        for (ix = (int)x - 1; ix <= (int)x + 1; ++ix)
+            terrain_cell_changed_flag_set(level->ptr_terrain, ix, iy);
+    count = 0; last = 0;
+    for (i = 0; i < 4; ++i) {
+        const uint8_t* neighbor = level_voxel(level,
+            (int)x + cardinal[i][0], (int)y + cardinal[i][1]);
+        if (neighbor[0] == 1u) { ++count; last = i; }
+    }
+    xy[0] = (int)x; xy[1] = (int)y;
+    if (count == 1)
+        cmd_produce(0x0e, NULL, ((last - 2) & 3) | 0x10000, xy);
+    terrain_cell_refresh_dispatch_level(level, xy, 1);
+    return 1;
 }
 
 /* TerrainCellMutation's mode-1 path is used by the tutorial ground visitor as

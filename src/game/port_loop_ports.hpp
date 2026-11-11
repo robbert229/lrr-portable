@@ -271,13 +271,20 @@ typedef struct SceneQuadGridEmitHooks {
                              float vertices[4][9]);
     int (*face_vertices_emit)(void* context, void* mesh, uint32_t face,
                               uint32_t quad, const float vertices[4][9]);
-    void (*face_texture_bind_by_mode)(void* context, void* mesh,
-                                      uint32_t face, uint32_t mode);
-    void (*scene_render_lock_toggle)(void* context, void* mesh, int enabled);
+    int (*face_texture_bind_by_mode)(void* context, void* mesh,
+                                     uint32_t face, uint32_t mode);
+    int (*scene_render_lock_toggle)(void* context, void* mesh, int enabled);
     void (*mesh_release)(void* context, void* mesh);
 } SceneQuadGridEmitHooks;
+/* A created mesh is owned by this record. Vertex, texture and lock hooks
+ * return nonzero on success. Append returns the new zero-based group index;
+ * when omitted, the renderer-owned mesh_record_allocate_or_append is used.
+ * A failure destroys the entire partial mesh and never publishes a record.
+ * Keep the same mesh_release owner available until record destruction. */
 SceneQuadGridRecord* scene_quad_grid_emit(
     void* scene, uint32_t parameter, const SceneQuadGridEmitHooks* hooks);
+int scene_quad_grid_release(SceneQuadGridRecord* record,
+                             const SceneQuadGridEmitHooks* hooks);
 typedef int (*MotionJitterVectorHook)(void* context, float out[3]);
 typedef int (*MotionJitterCandidateHook)(void* context,
                                          const float position[3]);

@@ -513,7 +513,7 @@ int sound_positional_sound_submit(int position, int alias, int loop,
                                   int positional, const float* xyz);
 /* SoundSubmissionRouteWrapper @ 0x465050: unwraps the optional position
  * handle before forwarding the request to PositionalSoundSubmit. */
-void sound_submission_route_wrapper(const void* wrapped_position, int alias,
+int sound_submission_route_wrapper(const void* wrapped_position, int alias,
                                    int loop, int positional,
                                    const float* xyz);
 

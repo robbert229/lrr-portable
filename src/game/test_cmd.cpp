@@ -111,7 +111,7 @@ int main(void)
     cmd_free(c, 0);
     cmd_free(again, 0);
 
-    GameContext ctx;
+    static GameContext ctx;
     game_context_init(&ctx);
     EntitySlot* movee = make_ent(&ctx, 2, "mover");
     EntitySlot* tgt   = make_ent(&ctx, 2, "miner");
@@ -223,7 +223,7 @@ int main(void)
      * Dropping a type from one entity must not follow the global link into
      * another entity's chain and free its record. */
     cmd_init();
-    GameContext separate;
+    static GameContext separate;
     game_context_init(&separate);
     EntitySlot* first = make_ent(&separate, 1, "first");
     EntitySlot* second = make_ent(&separate, 1, "second");
@@ -294,7 +294,7 @@ int main(void)
 
     /* The selection snapshot / dispatch leaves (2026-10-24). */
     {
-        GameContext sctx;
+        static GameContext sctx;
         game_context_init(&sctx);
         cmd_context_set(&sctx);
         drain_global_list();
@@ -374,7 +374,7 @@ int main(void)
     /* The random-cell producer + entity remove (2026-10-24). */
     {
         static uint8_t grid[8 * 8 * 0x48]; /* LEVEL_VOXEL_STRIDE cells */
-        GameContext lctx;
+        static GameContext lctx;
         game_context_init(&lctx);
         cmd_context_set(&lctx);
         drain_global_list();
@@ -412,7 +412,7 @@ int main(void)
 
     {
         /* selection_entity_remove: found removes, missing answers zero. */
-        GameContext rctx;
+        static GameContext rctx;
         game_context_init(&rctx);
         cmd_context_set(&rctx);
         drain_global_list();
@@ -434,7 +434,7 @@ int main(void)
 
     /* The selection filter / state monitor (2026-10-24). */
     {
-        GameContext fctx;
+        static GameContext fctx;
         game_context_init(&fctx);
         cmd_context_set(&fctx);
         drain_global_list();
@@ -515,7 +515,7 @@ int main(void)
         owner.owner_36c = &grand;
         head.owner_36c = &owner;
 
-        GameContext mctx;
+        static GameContext mctx;
         game_context_init(&mctx);
         cmd_context_set(&mctx);
         drain_global_list();
@@ -549,7 +549,7 @@ int main(void)
 
     /* The entity record schedulers (2026-10-24). */
     {
-        GameContext qctx;
+        static GameContext qctx;
         game_context_init(&qctx);
         cmd_context_set(&qctx);
         drain_global_list();
@@ -616,7 +616,7 @@ int main(void)
 
     /* The registry accessors / match marker (2026-10-24). */
     {
-        GameContext xctx;
+        static GameContext xctx;
         game_context_init(&xctx);
         cmd_context_set(&xctx);
         drain_global_list();
@@ -680,7 +680,7 @@ int main(void)
 
     /* The registry flush / wrappers / batch issue (2026-10-24). */
     {
-        GameContext rctx;
+        static GameContext rctx;
         game_context_init(&rctx);
         cmd_context_set(&rctx);
         drain_global_list();
@@ -767,7 +767,7 @@ int main(void)
 
     /* The cancellation ref and conditional issuers (2026-10-24). */
     {
-        GameContext cctx;
+        static GameContext cctx;
         game_context_init(&cctx);
         cmd_context_set(&cctx);
         drain_global_list();
@@ -900,7 +900,7 @@ int main(void)
 
     /* The record-array half and the entity-kind issuer (2026-10-24). */
     {
-        GameContext sctx;
+        static GameContext sctx;
         game_context_init(&sctx);
         cmd_context_set(&sctx);
         drain_global_list();
@@ -1039,7 +1039,7 @@ int main(void)
     /* The terrain cell-command issuers (2026-10-24). */
     {
         static uint8_t grid[8 * 8 * 0x48];
-        GameContext lctx;
+        static GameContext lctx;
         game_context_init(&lctx);
         cmd_context_set(&lctx);
         drain_global_list();
@@ -1094,8 +1094,10 @@ int main(void)
             cmd_rec_cell_xy_get(cmd_global_head(), &cx, &cy);
             CHECK(cx == 1 && cy == 1, "the coordinates land as words");
             CHECK(cmd_rec_action_get(cmd_global_head()) == 0
-                      && cmd_rec_target_get(cmd_global_head()) == -1,
-                  "the create record leaves the action unset, target -1");
+                      && cmd_rec_target_get(cmd_global_head()) == 0,
+                  "the type-8 action and target retain allocation zeros");
+            CHECK((cmd_rec_state(cmd_global_head()) & 0x400u) == 0u,
+                  "Drill does not enter the carried-cell assignment lane");
             CHECK(cmd_rec_kind(cmd_global_head()) == 3, "kind 3 links it");
             CHECK((cmd_rec_state(cmd_global_head()) & 0x20008u) == 0x20008u
                       && (cmd_rec_state(cmd_global_head()) & 0x80u) != 0u,
@@ -1180,7 +1182,7 @@ int main(void)
 
     /* The task-type-23 category-mask issuer (2026-10-24). */
     {
-        GameContext kctx;
+        static GameContext kctx;
         game_context_init(&kctx);
         cmd_context_set(&kctx);
         drain_global_list();
@@ -1265,7 +1267,7 @@ int main(void)
 
     /* The task-kind filtered search (2026-10-24). */
     {
-        GameContext pctx;
+        static GameContext pctx;
         game_context_init(&pctx);
         cmd_context_set(&pctx);
         drain_global_list();
@@ -1373,7 +1375,7 @@ int main(void)
 
     /* The task-record queue producers (2026-10-24). */
     {
-        GameContext qctx;
+        static GameContext qctx;
         game_context_init(&qctx);
         cmd_context_set(&qctx);
         drain_global_list();
@@ -1544,7 +1546,7 @@ int main(void)
 
     /* The entity command-chain housekeeping band (2026-10-24). */
     {
-        GameContext lctx;
+        static GameContext lctx;
         game_context_init(&lctx);
         cmd_context_set(&lctx);
         drain_global_list();
@@ -1802,11 +1804,14 @@ int main(void)
         static uint8_t sgrid[8 * 8 * 0x48];
         static LevelState slvl;
         static EntitySlot eligible, plain;
-        GameContext sctx;
+        static uint8_t eligible_stats[ENTITY_STATS_RECORD_SIZE];
+        GameContext* previous_pool_context = entity_pool_callback_context_get();
+        static GameContext sctx;
         memset(sgrid, 0, sizeof sgrid);
         memset(&slvl, 0, sizeof slvl);
         memset(&eligible, 0, sizeof eligible);
         memset(&plain, 0, sizeof plain);
+        memset(eligible_stats, 0, sizeof eligible_stats);
         game_context_init(&sctx);
         cmd_context_set(&sctx);
         drain_global_list();
@@ -1814,6 +1819,7 @@ int main(void)
         slvl.word[0x18 / 4] = 8; /* height */
         slvl.ptr_voxels = sgrid;
         sctx.level = &slvl;
+        entity_pool_callback_context_set(&sctx);
 
 #define SCELL(x, y) (sgrid + ((size_t)(y) * 8u + (size_t)(x)) * 0x48)
 #define SPUT(x, y, off, v)                                                     \
@@ -1822,7 +1828,10 @@ int main(void)
         memcpy(SCELL(x, y) + (off), &v_, 4);                                   \
     } while (0)
         SPUT(5, 5, 0x08, 0x10u); /* (5,5): walkable + placeable */
-        eligible.flags_3e8 = 0x4u; /* the placement gate bit */
+        eligible.flags_3e8 = 0x6u; /* walkability and placement gates */
+        eligible.stats_record = eligible_stats;
+        const float terrain_speed = 1.0f;
+        memcpy(eligible_stats + 0x24, &terrain_speed, sizeof terrain_speed);
 
         selection_clear(&sctx);
         CHECK(selected_entities_any_predicate_match(5, 5) == 0
@@ -1830,11 +1839,27 @@ int main(void)
               "the empty selection answers zero");
 
         selection_add(&sctx, &plain);
-        CHECK(selected_entities_any_predicate_match(5, 5) == 1,
-              "the walkable cell lets the sweep through");
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0,
+              "grid walkability cannot admit a flagless selected entity");
         CHECK(any_object_can_occupy_terrain_cell(5, 5) == 0,
               "the flagless record stays out of the placement sweep");
         selection_add(&sctx, &eligible);
+        CHECK(selected_entities_any_predicate_match(5, 5) == 1,
+              "the any-hit sweep admits a capable entity after an incapable one");
+        selection_active_count_reset();
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0,
+              "active selection clearing excludes stale context entries");
+        selection_active_context_sync(&sctx);
+        eligible.flags_3e0 |= 0x400u;
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0,
+              "the selected entity state gate remains authoritative");
+        eligible.flags_3e0 &= ~0x400u;
+        memset(eligible_stats + 0x24, 0, sizeof terrain_speed);
+        CHECK(selected_entities_any_predicate_match(5, 5) == 0,
+              "zero indexed terrain speed excludes the selected entity");
+        memcpy(eligible_stats + 0x24, &terrain_speed, sizeof terrain_speed);
+        CHECK(selected_entities_any_predicate_match(5, 5, 1) == 0,
+              "the optional stats-bit requirement reaches the real predicate");
         CHECK(any_object_can_occupy_terrain_cell(5, 5) == 1,
               "the eligible record lands");
         selection_clear(&sctx);
@@ -1849,6 +1874,7 @@ int main(void)
         sctx.level = &slvl;
         selection_clear(&sctx);
         cmd_context_set(NULL);
+        entity_pool_callback_context_set(previous_pool_context);
 #undef SCELL
 #undef SPUT
     }
@@ -1880,7 +1906,7 @@ int main(void)
     {
         static unsigned char grid135[8 * 8 * 0x48];
         memset(grid135, 0, sizeof grid135);
-        GameContext lctx;
+        static GameContext lctx;
         game_context_init(&lctx);
         cmd_context_set(&lctx);
         drain_global_list();
@@ -1926,7 +1952,7 @@ int main(void)
         CHECK(cmd_rec_type(cmd_global_head()) == 0xb, "the second issues too");
         cmd_init();
 
-        GameContext ectx;
+        static GameContext ectx;
         game_context_init(&ectx);
         cmd_context_set(&ectx);
         drain_global_list();
@@ -1958,7 +1984,7 @@ int main(void)
 
     /* Resource/ore counters + overlay advance pair (2026-10-25). */
     {
-        GameContext lctx;
+        static GameContext lctx;
         game_context_init(&lctx);
         static LevelState lvl;
         memset(&lvl, 0, sizeof(lvl));
@@ -2001,7 +2027,7 @@ int main(void)
 
     /* UpgradeResourceDebit + the upgrade-name table band (2026-10-25). */
     {
-        GameContext dctx;
+        static GameContext dctx;
         game_context_init(&dctx);
         static LevelState lvl;
         memset(&lvl, 0, sizeof lvl);
@@ -2095,7 +2121,7 @@ int main(void)
 
     /* KindSix random sweep (2026-10-25): timer fold, re-arm, guards. */
     {
-        GameContext sctx;
+        static GameContext sctx;
         game_context_init(&sctx);
         static LevelState lvl;
         memset(&lvl, 0, sizeof lvl);
@@ -2263,7 +2289,7 @@ int main(void)
         lvl.word[0x18 / 4] = 8;
         lvl.ptr_voxels = grid;
         lvl.ptr_terrain = terrain;
-        GameContext lctx;
+        static GameContext lctx;
         game_context_init(&lctx);
         cmd_init();
         cmd_context_set(&lctx);
@@ -2407,7 +2433,7 @@ int main(void)
      * the flagged lane attaches a pending-record copy instead. */
     {
         cmd_init();
-        GameContext fresh;
+        static GameContext fresh;
         game_context_init(&fresh);
         cmd_context_set(&fresh);
         drain_global_list();

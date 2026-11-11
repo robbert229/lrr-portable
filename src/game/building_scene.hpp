@@ -5,6 +5,10 @@
 struct EntitySlot;
 struct GameContext;
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+/* Copy the actual configured locator's world pose immediately. Status is
+ * 1 found, 0 authored locator absent, -1 owner/pose unavailable. */
+int building_scene_deposit_approach_get(EntitySlot* entity, int tool_null,
+                                        float position[3], float facing[3]);
 /* Dedicated type4 owner; never installs the shared visual_load callback.
  * Config paths are copied, templates open lazily for actual created buildings.
  * Consumers retire before instances/templates/context and the global root. */

@@ -34,6 +34,61 @@ void scene_winapi_interface_release(void* object)
     }
 }
 
+/* The device and retained viewport are borrowed. The returned RM viewport
+ * owns a QI reference; a later failure can leave the current viewport changed. */
+int scene_winapi_user_visual_context_open(void* immediate_device,
+    void* retained_viewport, float transform[16], void** parameter_out,
+    void** interface_out)
+{
+    typedef HRESULT (WINAPI *TransformFn)(void*, DWORD, float*);
+    typedef HRESULT (WINAPI *GetViewportFn)(void*, void**);
+    typedef HRESULT (WINAPI *QueryFn)(void*, const GUID*, void**);
+    typedef HRESULT (WINAPI *SetViewportFn)(void*, void*);
+    typedef DWORD (WINAPI *GetAppDataFn)(void*);
+    static const GUID iid_viewport3 = { 0xb0ab3b61, 0x33d7, 0x11d1,
+        { 0xa9, 0x81, 0x00, 0xc0, 0x4f, 0xd7, 0xb1, 0x74 } };
+    static const GUID iid_rm_viewport2 = { 0x4a1b1be6, 0xbfed, 0x11d1,
+        { 0x8e, 0xd8, 0x00, 0xa0, 0xc9, 0x67, 0xa4, 0x82 } };
+    void* legacy = NULL;
+    void* viewport3 = NULL;
+    void* rm_viewport2 = NULL;
+    HRESULT result;
+    if (parameter_out != NULL) *parameter_out = NULL;
+    if (interface_out != NULL) *interface_out = NULL;
+    if (immediate_device == NULL || retained_viewport == NULL ||
+        transform == NULL || parameter_out == NULL || interface_out == NULL ||
+        parameter_out == interface_out) return 0;
+    result = ((TransformFn)(*(void***)immediate_device)[0x68 / 4])(
+        immediate_device, 1, transform);
+    if (result < 0) return 0;
+    result = ((GetViewportFn)(*(void***)retained_viewport)[0x98 / 4])(
+        retained_viewport, &legacy);
+    if (result < 0 || legacy == NULL) {
+        scene_winapi_interface_release(legacy);
+        return 0;
+    }
+    result = ((QueryFn)(*(void***)legacy)[0])(legacy, &iid_viewport3, &viewport3);
+    scene_winapi_interface_release(legacy);
+    if (result < 0 || viewport3 == NULL) {
+        scene_winapi_interface_release(viewport3);
+        return 0;
+    }
+    result = ((SetViewportFn)(*(void***)immediate_device)[0x30 / 4])(
+        immediate_device, viewport3);
+    scene_winapi_interface_release(viewport3);
+    if (result < 0) return 0;
+    result = ((QueryFn)(*(void***)retained_viewport)[0])(
+        retained_viewport, &iid_rm_viewport2, &rm_viewport2);
+    if (result < 0 || rm_viewport2 == NULL) {
+        scene_winapi_interface_release(rm_viewport2);
+        return 0;
+    }
+    *parameter_out = (void*)((GetAppDataFn)(*(void***)rm_viewport2)[0x1c / 4])(
+        rm_viewport2);
+    *interface_out = rm_viewport2;
+    return 1;
+}
+
 void scene_winapi_shutdown(void)
 {
     scene_winapi_interface_release(s_scene_rm_factory);
@@ -82,6 +137,58 @@ int scene_winapi_initialize(void)
         scene_winapi_shutdown();
         return 0;
     }
+    return 1;
+}
+
+int scene_winapi_user_visual_create(SceneUserVisualCallback callback,
+                                    void* cookie, void** visual)
+{
+    typedef HRESULT (WINAPI *CreateUserVisualFn)(void*, SceneUserVisualCallback,
+                                                void*, void**);
+    HRESULT result;
+    void* created = NULL;
+    if (visual == NULL) return 0;
+    *visual = NULL;
+    if (s_scene_rm_factory == NULL || callback == NULL) return 0;
+    result = ((CreateUserVisualFn)(*(void***)s_scene_rm_factory)[0x58 / 4])(
+        s_scene_rm_factory, callback, cookie, &created);
+    if (result < 0 || created == NULL) {
+        scene_winapi_interface_release(created);
+        return 0;
+    }
+    *visual = created;
+    return 1;
+}
+
+int scene_winapi_device3_acquire(void* retained_device, void** immediate)
+{
+    typedef HRESULT (WINAPI *DeviceGetFn)(void*, void**);
+    typedef HRESULT (WINAPI *QueryFn)(void*, const GUID*, void**);
+    static const GUID iid_device3 = {
+        0xb0ab3b60, 0x33d7, 0x11d1,
+        { 0xa9, 0x81, 0x00, 0xc0, 0x4f, 0xd7, 0xb1, 0x74 }
+    };
+    void* device2 = NULL;
+    void* device3 = NULL;
+    HRESULT result;
+    if (immediate == NULL) return 0;
+    *immediate = NULL;
+    if (retained_device == NULL) return 0;
+    /* Direct3DRMDeviceInit47828d..4782ad uses the same RM3 slot/IID. */
+    result = ((DeviceGetFn)(*(void***)retained_device)[0x98 / 4])(
+        retained_device, &device2);
+    if (result < 0 || device2 == NULL) {
+        scene_winapi_interface_release(device2);
+        return 0;
+    }
+    result = ((QueryFn)(*(void***)device2)[0])(
+        device2, &iid_device3, &device3);
+    scene_winapi_interface_release(device2);
+    if (result < 0 || device3 == NULL) {
+        scene_winapi_interface_release(device3);
+        return 0;
+    }
+    *immediate = device3;
     return 1;
 }
 

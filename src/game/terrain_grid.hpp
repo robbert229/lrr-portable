@@ -336,6 +336,14 @@ typedef struct BuildingFootprintPreviewHooks {
                               int x, int y, int in_bounds,
                               int surface_valid, int neighbor_valid);
 } BuildingFootprintPreviewHooks;
+/* Update the twenty raw (X,Z,height) positions; preserve six metadata words
+ * per vertex. Input corners may overlap the output, and NULL inputs refuse. */
+int building_footprint_vertices_update(float vertices[20][9],
+                                       const float terrain_corners[4][3],
+                                       float extrusion);
+/* Returns the rotated scratch cells when placement is valid, NULL otherwise.
+ * Rendering callbacks use compact group indices, one per distinct source
+ * cell; adjacent duplicate pairs retain their separate validation semantics. */
 const int* building_footprint_render_and_validate(
     TerrainSurfaceGrid* surface, const int offset[2], const int* source_xy,
     uint32_t count, int rotation, float maximum_height_span,

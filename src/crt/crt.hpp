@@ -678,6 +678,9 @@ void panel_texture_slots_allocate_named(
     int panel, int count, const int* slot_index, const float* stream,
     const char* const* tex1, const char* const* tex2,
     const char* const* tex3, const int* ids);
+struct TextureSurface;
+TextureSurface* panel_named_resource_get(int panel, const void* block,
+                                         int item, int field, uint32_t word);
 void view_blit_window_set(int view, uint32_t handle, void* rect_a,
                           void* rect_b, int region_index); /* port hook */
 void view_blit_window_peek(int view, uint32_t* handle, void** rect_a,

@@ -29,6 +29,23 @@ extern "C" {
 #endif
 
 typedef struct TypeConfigTable TypeConfigTable;
+struct InputState;
+void entity_motion_inputs_initialize(EntitySlot* entity);
+void entity_motion_input_accumulate(EntitySlot* entity, int forward,
+                                    int strafe, float yaw);
+void entity_motion_inputs_capture(const struct InputState* input);
+/* Negative means unavailable/pending, zero is a checked no-motion result.
+ * Unsupported nonzero input remains owned and is never cleared as zero. */
+int entity_motion_idle_gate_checked(EntitySlot* entity, float delta);
+int entity_motion_scale_checked(EntitySlot* entity, float delta,
+                                 float* movement_delta, float* scale);
+int entity_neighbor_step_idle_checked(EntitySlot* entity, int mode);
+/* ACT worker boundary; production defaults to the actual retained actor
+ * instance. A success/result pair is published only for the same activity. */
+typedef int (*EntityActorActivityAdvanceHook)(void* context, EntitySlot* entity,
+    float delta, uint32_t repeat_count, float* overflow);
+void entity_actor_activity_advance_hook_set(EntityActorActivityAdvanceHook hook,
+                                            void* context);
 struct EntityQuadCollisionHooks;
 void entity_quad_collision_hooks_set(
     const struct EntityQuadCollisionHooks* hooks);
@@ -433,6 +450,7 @@ EntitySlot* entity_route_marker_candidate_find(EntitySlot* source,
 typedef struct EntityKindRecordUpdateHooks {
     void* context;
     void (*type_four_update)(EntitySlot* entity, void* context);
+    /* Notification after the required type-5 delivery record is created. */
     void (*action_dispatch)(EntitySlot* entity, int action, void* context);
     void (*type_four_global_action)(void* context);
     void (*type_one_record_update)(EntitySlot* entity, void* context);
@@ -444,6 +462,9 @@ typedef struct EntityKindRecordUpdateHooks {
 void entity_kind_record_update_hooks_set(
     const EntityKindRecordUpdateHooks* hooks);
 void entity_kind_record_update_dispatch(EntitySlot* entity); /* 0x438460 */
+/* 0x447b30: returns scaled frame delta; completion lives in activity_timer
+ * and is supplied by the actual type-specific animation owner. */
+float entity_activity_tick(EntitySlot* entity, float delta);
 typedef struct GridObjectRecord {
     void* first;
     void* second;
@@ -492,6 +513,12 @@ EntitySlot* entity_create_with_position(GameContext* context, int type,
                                         const char* name, int value,
                                         float x, float y,
                                         float heading); /* 0x438610 */
+/* Unnamed resource creation carries the raw subtype independently of the
+ * post-create animation selector. Named objects retain config resolution. */
+EntitySlot* entity_create_with_position_subtype(GameContext* context, int type,
+                                                int subtype, const char* name,
+                                                int value, float x, float y,
+                                                float heading);
 typedef struct BuildingUpgradeAdmissionHooks {
     void* context;
     uint32_t (*maximum_level_get)(EntitySlot* building, void* context);
@@ -905,6 +932,12 @@ typedef struct EntityDepositActivityHooks {
     void (*deposit_cancel)(void* context, EntitySlot* entity);
     void (*deposit_start)(void* context, EntitySlot* entity,
                           EntitySlot* target, int direction);
+    /* Locator boundary only: 1 found, 0 authored locator absent, -1 owner
+     * unavailable. The gate always owns path search and installation.
+     * target_busy/route_to_target/deposit_start above are legacy adapters;
+     * they cannot substitute for the target's Stats or a real route. */
+    int (*approach_pose_get)(void* context, EntitySlot* target, int tool_null,
+                              float position[3], float facing[3]);
 } EntityDepositActivityHooks;
 void entity_deposit_activity_hooks_set(const EntityDepositActivityHooks* hooks);
 int entity_deposit_activity_gate(EntitySlot* entity,
@@ -1282,7 +1315,6 @@ uint32_t context_selected_global_pointer_get(void);
 int entity_matches_current_selection_or_owner(const void* entity);
 uint32_t context_selected_pointer_pair_peek(int second);
 void context_selected_pointer_pair_set(uint32_t first, uint32_t second);
-
 
 /* SelectionCandidateEligibilityCheck (FUN_00452870, findings 77/85/468):
  * the selection filter's eligibility predicate — requires the +0x3e8

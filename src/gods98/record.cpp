@@ -1814,11 +1814,34 @@ void indexed_surface_entries_restore(void)
     s_indexed_surface_hidden_count = 0u;
 }
 
-/* SurfaceVisibilitySet (FUN_00464720) — record +0 handle through the leaf. */
-// FUNCTION: LEGORR 0x00464720
+static SurfaceVisibilityAdapter s_surface_visibility_adapter;
+static void* s_surface_visibility_context;
+
+int surface_visibility_adapter_install(SurfaceVisibilityAdapter adapter,
+                                        void* context)
+{
+    if (adapter == NULL) return 0;
+    if (s_surface_visibility_adapter != NULL &&
+        (s_surface_visibility_adapter != adapter ||
+         s_surface_visibility_context != context)) return 0;
+    s_surface_visibility_adapter = adapter;
+    s_surface_visibility_context = context;
+    return 1;
+}
+
+int surface_visibility_adapter_remove(SurfaceVisibilityAdapter adapter,
+                                       void* context)
+{
+    if (adapter == NULL || s_surface_visibility_adapter != adapter ||
+        s_surface_visibility_context != context) return 0;
+    s_surface_visibility_adapter = NULL;
+    s_surface_visibility_context = NULL;
+    return 1;
+}
+
 #if defined(_MSC_VER) && defined(_M_IX86)
-__declspec(naked) void surface_visibility_set(const void* record,
-                                             uint32_t flag)
+static __declspec(naked) void surface_visibility_set_target(
+    const void* record, uint32_t flag)
 {
     __asm {
         mov ecx, dword ptr [esp + 4]
@@ -1832,11 +1855,22 @@ __declspec(naked) void surface_visibility_set(const void* record,
     }
 }
 #else
-void surface_visibility_set(const void* record, uint32_t flag)
+static void surface_visibility_set_target(const void* record, uint32_t flag)
 {
     scene_render_lock_toggle(rec_ptr(record, 0x00), (int)flag);
 }
 #endif
+
+/* SurfaceVisibilitySet: owned software meshes use their real visibility;
+ * other records retain the target's record +0 handle/scene operation. */
+// FUNCTION: LEGORR 0x00464720
+void surface_visibility_set(const void* record, uint32_t flag)
+{
+    SurfaceVisibilityAdapter adapter = s_surface_visibility_adapter;
+    void* context = s_surface_visibility_context;
+    if (adapter != NULL && adapter(context, record, flag) != 0) return;
+    surface_visibility_set_target(record, flag);
+}
 
 /* AnimationObjectVisibilitySet (FUN_00406c90) — animation record +4. */
 // FUNCTION: LEGORR 0x00406c90

@@ -12,14 +12,17 @@
 #include "cmd.hpp"
 #include "entity.hpp"
 #include "building_scene.hpp"
+#include "actor_scene.hpp"
 #include "level.hpp"
 #include "terrain_grid.hpp"
 #include "mission.hpp"
 #include "select.hpp"
 #include "gods98/view.hpp"
+#include "gods98/sound.hpp"
 #include "crt/crt.hpp"
 #include "gods98/block.hpp"
 #include "gods98/string.hpp"
+#include "gods98/message.hpp"
 #include "util.hpp"
 
 /* The command record's mutable `now` doubles as the task countdown for
@@ -544,6 +547,8 @@ void ai_set_activity(EntitySlot* e, int id, int param)
         return; /* corpus indexes the table blindly; clamp the mirror */
     }
     e->activity = id;
+    ++e->activity_generation;
+    e->activity_advance_valid = 0u;
     /* FUN_004409e0 leaves the +0x2ec bookkeeping mirror alone. The paired
      * SceneActivityUpdateDispatch (FUN_00447c40) observes this change, runs
      * its transition work, then updates activity_last. */
@@ -1317,13 +1322,13 @@ static int wave_gate_blocked(WaveFlood* wf, int x, int y, int cell)
     return 0;
 }
 
-/* FUN_00430ee0 seed: this routine gates only on its interior-coordinate
+/* Temporary path-search seed inspired by the terrain initializer: this
+ * routine gates only on its interior-coordinate
  * bounds and the destination record's state byte being zero. It does not
  * query walkability or occupancy: those are path-search policy, not part
  * of the seed operation. Then it stamps the seed cell walked (1) and raises
  * the wave flag 0x40000 over the northwest 2x2 footprint. The bytes and
  * flag words here are per-build replacements for record+0 and record+8. */
-// FUNCTION: LEGORR 0x00430ee0
 static int wave_seed(WaveFlood* wf, int tx, int ty)
 {
     if (tx == 0 || ty == 0 ||
@@ -1712,6 +1717,139 @@ static void ai_attached_entity_wake(EntitySlot* parent)
     }
 }
 
+/* 43d0a6: turn completion owns this callback before route/grant. */
+static int ai_turn_completion_frame_update(EntitySlot* e)
+{
+    void* component;
+    float angle;
+    if ((e->flags_3e4 & 0x4000u) != 0u) return 1;
+    if ((e->flags_3e0 & 4u) == 0u) return 0;
+    if (!e->activity_advance_valid ||
+        e->activity_advance_activity != e->activity ||
+        e->activity_advance_generation != e->activity_generation ||
+        e->activity_advance_overflow != e->activity_timer ||
+        !(e->activity_advance_overflow > 0.0f)) return 1;
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    component = actor_scene_motion_component(e);
+    if (component == NULL) return 1;
+    if ((e->flags_3e0 & 0x80u) != 0u) {
+        render_object_rotate_axis(component, 1u, 0.0f, 1.0f, 0.0f, 1.57079637f);
+        if (!actor_scene_clock_reset(e)) return 1;
+        e->flags_3e0 &= ~0x80u;
+        return 1;
+    }
+    angle = (e->activity == 9 || e->activity == 20) ? -1.57079637f : 1.57079637f;
+    render_object_rotate_axis(component, 1u, 0.0f, 1.0f, 0.0f, angle);
+    e->flags_3e0 = (e->flags_3e0 & ~4u) | 1u;
+    if (e->wp_count == 0) ai_set_activity(e, 0, 0);
+    else if ((e->flags_3e0 & 0x800000u) != 0u && e->type == 2)
+        ai_set_activity(e, 3, 0);
+    else ai_set_activity(e, 1, 0);
+#else
+    (void)component; (void)angle;
+#endif
+    return 1;
+}
+
+/* Work callback 43cb40..43ce69. */
+static void* ai_drill_component(EntitySlot* e)
+{
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+    if (e->type == 2 || e->type == 3)
+        return actor_scene_motion_component(e);
+#endif
+    return e->type_component_handle;
+}
+static void ai_drill_sound_cleanup(EntitySlot* e)
+{
+    sound_handle_stop_forward(e->drill_sound_handle_350);
+    e->flags_3ec &= ~0x100000u;
+    (void)sound_submission_route_wrapper(ai_drill_component(e),
+        (int)entity_stats_word_at_c0_or_c4(e, 1), 0, 1, NULL);
+    /* 484c90 is the mapped no-op. */
+    e->flags_3e8 &= ~0x4000u;
+}
+
+static void ai_drill_work_frame_update(EntitySlot* e, float dt)
+{
+    AiWaypoint* route;
+    LevelState* level;
+    int gx, gy, wx, wy, mode;
+    float position[2], divisor;
+    if ((e->flags_3e0 & 8u) == 0u) return;
+    if ((e->flags_3e0 & 0x10u) != 0u) {
+        e->drill_sound_handle_350 = sound_submission_route_wrapper(
+            ai_drill_component(e),
+            (int)entity_stats_word_at_c0_or_c4(e, 0), 1, 1, NULL);
+        e->flags_3ec |= 0x100000u;
+        e->flags_3e0 &= ~0x10u;
+    }
+    route = ENTITY_WAYPOINTS(e);
+    if (e->wp_count <= 0 || e->wp_index < 0 ||
+        e->wp_index >= e->wp_count ||
+        (e->wp_dynamic == NULL && e->wp_count > AI_WAYPOINTS_MAX) ||
+        (e->wp_dynamic != NULL &&
+         (unsigned int)e->wp_count > e->wp_capacity)) {
+        e->flags_3e0 &= ~8u;
+        e->flags_3e8 &= ~0x02000000u;
+        ai_drill_sound_cleanup(e);
+        return;
+    }
+    gx = (int)e->pos_pair_2f4;
+    gy = (int)e->pos_pair_2f8;
+    wx = crt_float_to_long(route[e->wp_index].x);
+    wy = crt_float_to_long(route[e->wp_index].y);
+    mode = (int)(e->flags_3e8 & 0x02000000u);
+    if (!terrain_cell_walkability_query_current(e, (uint32_t)gx,
+                                                 (uint32_t)gy, mode, 1)) {
+        e->flags_3e0 &= ~8u;
+        e->flags_3e8 &= ~0x02000000u;
+        ai_drill_sound_cleanup(e);
+        return;
+    }
+    if (!entity_work_object_position_get(e, position)) return;
+    /* 484c90 on type 2 is a no-op in this port. */
+    divisor = entity_stats_float_at24_indexed(e,
+        (int)terrain_cell_material_get_current(gx, gy));
+    if ((entity_stats_word_get(e) & 1u) != 0u && mode != 0)
+        divisor *= 0.5f;
+    if (!terrain_cell_drill_work_add_current(gx, gy, divisor, dt)) {
+        int cx, cy;
+        level = level_current_owner_get();
+        if (level != NULL && level->ptr_terrain != NULL &&
+            terrain_world_xy_to_cell(level->ptr_terrain, position[0],
+                                     position[1], &cx, &cy) &&
+            cx == wx && cy == wy)
+            e->flags_3e8 |= 0x4000u;
+        return;
+    }
+    if (!terrain_cell_walkability_query_current(e, (uint32_t)gx,
+                                                 (uint32_t)gy, mode, 1))
+        return;
+    level = level_current_owner_get();
+    if (level == NULL) return;
+    if (mode != 0) {
+        if (!terrain_cell_initialize(level, (uint32_t)gx, (uint32_t)gy))
+            return;
+    }
+    else if (!terrain_cell_mutate(level, (uint32_t)wx, (uint32_t)wy, 0))
+        return;
+    entity_command_unlink_by_kind(e, 8, NULL, 1);
+    e->flags_3e0 &= ~8u;
+    {
+        int goal[2];
+        goal[0] = gx; goal[1] = gy;
+        level_tile_mark_current(goal, 0);
+    }
+    route = ENTITY_WAYPOINTS(e);
+    if (e->wp_count > 0 &&
+        (e->wp_dynamic == NULL ? e->wp_count <= AI_WAYPOINTS_MAX :
+            (unsigned int)e->wp_count <= e->wp_capacity) &&
+        route[e->wp_count - 1].step_kind == 1u)
+        route[e->wp_count - 1].step_kind = 0u;
+    ai_drill_sound_cleanup(e);
+}
+
 /* The verified callback branches, in corpus order. Returns 1 when the
  * corpus's callback would have returned early (walker moves on). */
 static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
@@ -1736,7 +1874,7 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
             ai_attached_entity_wake(e);
         }
         e->wake_timer -= dt;
-        return 1;
+        return 2; /* direct early return; no shared activity tail */
     }
 
     /* 0x43c8b2 — target acquisition: +0x3ec bit 0x40000 asks FUN_0044a200
@@ -1776,6 +1914,18 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
         ai_lava_crust_activity_register(ctx, e);
     }
 
+    /* 0x43c9d7..43ca1b precedes action routes and the pickup transition.
+     * A mounted type-2 actor has a separate vehicle clock-sync branch; do
+     * not advance its animation independently of that owner. */
+    entity_building_deposit_state_monitor(e);
+    if (!(e->type == 2 && (e->flags_3e4 & 8u) != 0u &&
+          e->owner_36c != NULL && ((const EntitySlot*)e->owner_36c)->type == 1))
+        (void)entity_activity_tick(e, dt);
+
+    ai_drill_work_frame_update(e, dt);
+
+    if (ai_turn_completion_frame_update(e)) return 1;
+
     /* 0x43da62 — deferred command grant: +0x3e4 bit 0x40 marks "the command
      * at the chain head grants an activity". The branch consumes the flag,
      * installs the record's +0x38 activity onto the entity's permitted-
@@ -1808,15 +1958,114 @@ static int callback_branches(GameContext* ctx, EntitySlot* e, float dt)
 /* EntityFrameUpdateDispatch's LAB_0043c810 receiver. The pool walker owns
  * liveness and +0x3e8 filtering; this adapter carries the current GameContext
  * into the recovered behavior branches and refreshes the activity timer. */
+static int ai_action_route_frame_update(EntitySlot* entity, float dt)
+{
+    EntitySlot* target;
+    int index;
+    if ((entity->flags_3e0 & 1u) == 0u) {
+        return 0;
+    }
+    /* The application runs ai_tick before this callback. Its Move/GetTool
+     * owners already advance and retire these command routes in seconds. */
+    if (entity->cmd_head != NULL &&
+        (cmd_rec_type(entity->cmd_head) == 0 ||
+         cmd_rec_type(entity->cmd_head) == 19)) {
+        return 0;
+    }
+
+    /* 0x43de28..47: this receiver already gets reference frame units from
+     * the EngineTick scaled carrier; do not multiply by 25 again. */
+    (void)entity_path_step_advance_and_arrival_check(entity, dt);
+    if ((entity->flags_3e0 & 0x200u) == 0u) return 0;
+    target = (EntitySlot*)entity->link_2fc;
+    if (target == NULL || target->attach_304 != NULL) {
+        entity->flags_3e0 &= ~0x200u;
+        return 1;
+    }
+    index = entity->carry_state_324;
+    /* The reference slots end immediately before +0x324. Refuse corrupt
+     * counts before mutating a relationship; upstream capacity is separate. */
+    if (index < 0 || index >= 7) return 1;
+    ai_set_activity(entity, 0x0f, 0);
+    if (entity->type == 3) {
+        if (target->type == 5) ai_set_activity(entity, 0x10, 0);
+        else if (target->type == 6) ai_set_activity(entity, 0x23, 0);
+    }
+    if (index == 0) entity->carry_link_308 = target;
+    else entity->carry_extra_links[index - 1] = target;
+    entity->link_2fc = 0u;
+    target->attach_304 = entity;
+    target->attached_scene_slot_index = index;
+    /* 0x43e23c retains arrival 0x200 while starting the pickup activity.
+     * Later activity completion owns its clearing, not this attachment. */
+    entity->flags_3e0 |= 0x400u;
+    entity_command_unlink_by_kind(entity, 3, target, 1);
+    ai_idle_chain_record_attach(entity);
+    ++entity->carry_state_324;
+    return 1;
+}
+
+static int ai_pickup_completion_frame_update(EntitySlot* entity, float dt)
+{
+    EntitySlot* carried;
+    LevelState* level;
+    int neighbor, motion, count;
+    if (entity->type != 2 || (entity->flags_3e0 & 0x600u) != 0x600u)
+        return 0;
+    /* The mounted clock-sync branch has a separate owner. Do not use an
+     * old independent actor result while that branch is unavailable. */
+    if ((entity->flags_3e4 & 8u) != 0u && entity->owner_36c != NULL &&
+        ((EntitySlot*)entity->owner_36c)->type == 1) return 0;
+    /* 43ea00..43ebf1: neither missing nor unimplemented motion ownership
+     * is a zero result. Both actual gates must establish the idle path. */
+    neighbor = entity_neighbor_step_idle_checked(entity, 0);
+    if (neighbor != 0) return 0;
+    motion = entity_motion_idle_gate_checked(entity, dt);
+    if (motion != 0 || !entity->activity_advance_valid ||
+        entity->activity_advance_activity != entity->activity ||
+        entity->activity_advance_generation != entity->activity_generation ||
+        entity->activity_advance_overflow != entity->activity_timer ||
+        !(entity->activity_advance_overflow > 0.0f)) return 0;
+    count = entity->carry_state_324;
+    if (count < 1 || count > 7) return 0;
+    carried = count == 1 ? (EntitySlot*)entity->carry_link_308
+                         : entity->carry_extra_links[count - 2];
+    level = entity->owner_ctx != NULL ? entity->owner_ctx->level : NULL;
+    if (carried == NULL || level == NULL) return 0;
+    entity->activity_advance_valid = 0u;
+    /* 43ec17/43eca0: the last carried kind owns the one-shot pickup count.
+     * Retain carry/backlink and bit400; the scheduler owns later delivery. */
+    entity->flags_3e0 &= ~0x200u;
+    if (carried->type == 6) global_object_field94_increment_for_level(level);
+    else if (carried->type == 7) {
+        global_object_fielda8_increment_for_level(level);
+        message_dispatch(0x1a, NULL, (uint32_t)(uintptr_t)entity, NULL);
+    }
+
+    return 1;
+}
+
 int ai_entity_frame_update(EntitySlot* entity, float dt)
 {
     GameContext* ctx;
+    int handled;
     if (entity == NULL) return 0;
+    entity->activity_advance_valid = 0u;
     ctx = entity->owner_ctx != NULL ? entity->owner_ctx
                                     : entity_pool_callback_context_get();
-    if (ctx == NULL) return 0;
-    if (callback_branches(ctx, entity, dt)) return 1;
-    entity->activity_timer += dt;
+    if (ctx == NULL) {
+        return 0;
+    }
+    handled = callback_branches(ctx, entity, dt);
+    if (handled == 2) {
+        return 1;
+    }
+    if (handled || ai_action_route_frame_update(entity, dt)) {
+        (void)activity_register_bookkeeping(entity);
+        return 1;
+    }
+    (void)ai_pickup_completion_frame_update(entity, dt);
+    (void)activity_register_bookkeeping(entity);
     return 0;
 }
 
@@ -1849,6 +2098,11 @@ int ai_tick(GameContext* ctx, float dt)
                         done += cmd_move_route_finish(e);
                     }
                     break;
+                } else if (type == 5 || type == 8) {
+                    /* The command/entity callbacks own delivery and Drill
+                     * tasks. This earlier mover cannot retire an attached
+                     * task before those owners receive it. */
+                    break;
                 } else if (type == 19) {
                     /* Retain the scheduler's actual GetTool head. Only its
                      * admitted terminal-d route uses this ordinary mover. */
@@ -1873,6 +2127,7 @@ int ai_tick(GameContext* ctx, float dt)
                 } else {
                     /* Unknown record types: drop them (the task type-3 runs
                      * in the global pass below, matching CmdLinkHead). */
+
                     done += finish_head(ctx, e);
                 }
             }
@@ -1969,9 +2224,16 @@ int activity_register_bookkeeping(EntitySlot* e)
      * before it commits activity_last. The activity is the table string and
      * +0x2d4's current argument is carried as the callback's raw value word. */
     if (e->type == 2 || e->type == 3) {
+#if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
+        result = actor_scene_activity_set(e, ai_activity_name(e->activity),
+                                           e->activity_timer);
+#else
+        uint32_t initial_time;
+        memcpy(&initial_time, &e->activity_timer, sizeof(initial_time));
         result = entity_activity_runner_activity_update(
             e, e->type, (void*)ai_activity_name(e->activity),
-            (void*)(uintptr_t)(uint32_t)e->activity_param);
+            (void*)(uintptr_t)initial_time);
+#endif
     }
 #if defined(LEGORRR_BACKEND_WINAPI) && defined(_WIN32) && !defined(_WIN64)
     if (e->type == 4)

@@ -705,8 +705,8 @@ int main(int argc, char** argv)
           "wake timer still decrements");
     sleeper->flags_3e4 = 0;
     CHECK(ai_entity_frame_update(sleeper, 0.5f) == 0 &&
-              sleeper->activity_timer == 0.5f,
-          "callback resumes (and refreshes the activity timer) once the wake flag clears");
+              sleeper->activity_timer == 0.0f,
+          "unbound activity owner does not fabricate clock progress after wake");
 
     /* Target acquisition (0x43c8b2). */
     EntitySlot* linker = place(&ctx, 1, "linker", 0, 0);

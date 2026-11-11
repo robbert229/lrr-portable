@@ -2385,9 +2385,47 @@ void* indexed_record_pointer_peek(int index)
 
 
 
+/* Typed ownership for the portable named-panel loader. The record stays in
+ * the original 32-bit pointer-word format; this sidecar carries host pointers. */
+typedef struct PanelNamedResources {
+    void* block;
+    int count;
+    TextureSurface** slots;
+} PanelNamedResources;
+static PanelNamedResources s_panel_named[DAT_WINDOW_COUNT];
+
+static void panel_named_release(int panel)
+{
+    PanelNamedResources* owner = &s_panel_named[panel];
+    int i;
+    for (i = 0; i < owner->count * 3; ++i)
+        texture_release(owner->slots[i]);
+    free(owner->slots);
+    engine_heap_free(owner->block);
+    owner->slots = NULL;
+    owner->count = 0;
+    owner->block = NULL;
+}
+
+TextureSurface* panel_named_resource_get(int panel, const void* block,
+                                         int item, int field, uint32_t word)
+{
+    PanelNamedResources* owner;
+    TextureSurface* surface;
+    if (panel < 0 || panel >= DAT_WINDOW_COUNT || field < 4 || field > 6)
+        return NULL;
+    owner = &s_panel_named[panel];
+    if (owner->block != block || item < 0 || item >= owner->count)
+        return NULL;
+    surface = owner->slots[item * 3 + field - 4];
+    if (surface == NULL || (uint32_t)(uintptr_t)surface != word) return NULL;
+    return surface;
+}
+
 void panel_draw_records_set(int index, void* records)
 {
     if (index >= 0 && index < DAT_WINDOW_COUNT) {
+        if (s_panel_records[index] != records) panel_named_release(index);
         s_panel_records[index] = records;
     }
 }
@@ -2757,16 +2795,33 @@ void panel_texture_slots_allocate_named(
         slot_index == NULL || stream == NULL) {
         return;
     }
+    /* Preserve the old records if either allocation fails. */
+    if ((size_t)count > ((size_t)-1) / (3u * sizeof(TextureSurface*)) ||
+        count > 0x7fffffffL / 0x2cL) return;
+    TextureSurface** slots = (TextureSurface**)calloc(
+        (size_t)count * 3u, sizeof(TextureSurface*));
+    if (slots == NULL) return;
     float* block = (float*)engine_heap_alloc((long)count * 0x2c);
+    if (block == NULL) {
+        free(slots);
+        return;
+    }
+    memset(block, 0, (size_t)count * 0x2c);
     panel_draw_records_set(panel, block);
     panel_draw_count_set(panel, count);
-    if (block == NULL) return;
+    s_panel_named[panel].slots = slots;
+    s_panel_named[panel].block = block;
+    s_panel_named[panel].count = count;
 
     for (int i = 0; i < count; ++i) {
         const int slot = slot_index[i];
         if (slot < 0 || slot >= count) continue;
         float* rec = block + (size_t)slot * 11;
         const float* s = stream + (size_t)i * 4;
+        for (int clear = 0; clear < 3; ++clear) {
+            texture_release(slots[slot * 3 + clear]);
+            slots[slot * 3 + clear] = NULL;
+        }
         rec[0] = s[0];
         rec[1] = s[1];
         rec[2] = s[2] + s[0];
@@ -2781,11 +2836,14 @@ void panel_texture_slots_allocate_named(
         const int fields[3] = { 6, 4, 5 };
         for (int t = 0; t < 3; ++t) {
             const char* name = names[t] != NULL ? names[t][i] : NULL;
-            void* surface;
+            TextureSurface* surface;
             uint32_t handle;
             if (name == NULL || name[0] == '\0') continue;
-            surface = string_cache_lookup_or_load(name);
+            surface = image_surface_load(name, 0u, 0u);
             if (surface == NULL) continue;
+            texture_source_color_key_set(surface, 0u, 0u);
+            surface->resource_flags |= 2u;
+            slots[slot * 3 + fields[t] - 4] = surface;
             handle = (uint32_t)(uintptr_t)surface;
             rec[fields[t]] = crt_float_bits(handle);
             crt_surface_blit_record(handle, 0.0f, 0.0f);

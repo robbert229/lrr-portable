@@ -32,6 +32,7 @@
 #include "gods98/block.hpp"
 
 struct EntitySlot;
+struct TextureSurface;
 
 #ifdef __cplusplus
 extern "C" {
@@ -118,6 +119,19 @@ void objective_active_level_clear(LevelState* s);
  * acknowledges only after the user's final authored briefing page. This
  * performs the pending branch of 0x4588e0 and publishes FFE34 to the NERP
  * consume-on-read switch, as in 0x4589c0. Returns 1 on acknowledgment. */
+/* Public kinds represent the page sets selected by 0x4589c0. ObjectiveTick
+ * gates terminal entry; final-page acknowledgment checks that gate again. */
+typedef enum ObjectivePresentationKind {
+    OBJECTIVE_PRESENTATION_NONE = 0,
+    OBJECTIVE_PRESENTATION_BRIEFING = 1,
+    OBJECTIVE_PRESENTATION_ACHIEVED = 2,
+    OBJECTIVE_PRESENTATION_FAILED = 3,
+    OBJECTIVE_PRESENTATION_CRYSTAL_FAILED = 4
+} ObjectivePresentationKind;
+int objective_presentation_kind(const LevelState* s);
+/* Returns 1 when a presentation was accepted. The caller retains its kind
+ * to distinguish briefing resume from the subsequent mission transition. */
+int objective_presentation_acknowledge(LevelState* s);
 int objective_briefing_active(const LevelState* s);
 int objective_briefing_acknowledge(LevelState* s);
 const char* objective_voice_alias_get(void);
@@ -309,6 +323,12 @@ void advisor_animation_position_update_state_set(
     const AdvisorAnimationPositionUpdateState* state);
 void advisor_animation_position_update_value_resolver_set(
     AdvisorPositionUpdateValueResolveFn resolver, void* user);
+/* FlashGeneric advisor producer (FUN_0041e890). */
+int advisor_action_indicator_request(int action, int request_mode);
+/* Typed 0x41c4f0 path: image is the freshly resolved current image. */
+void advisor_animation_position_and_request_update_image(
+    int position_mode, int input_a, int input_b, const float* position,
+    const struct TextureSurface* image);
 void advisor_animation_position_and_request_update(
     int position_mode, int input_a, int input_b, const float* position);
 

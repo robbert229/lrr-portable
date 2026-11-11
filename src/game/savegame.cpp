@@ -351,6 +351,10 @@ static int save_bootstrap_records(GameContext* ctx, int count)
 // FUNCTION: LEGORR 0x00417bd0
 static int sav_write_slot_file(GameContext* ctx)
 {
+    /* The typed save entry points also serve callers outside the menu's
+     * close callback. Snapshot their effective settings before serializing. */
+    ctx->saved_music_volume = ctx->options.music_volume;
+    options_write_to_slot(ctx);
     save_directory_ensure_exists(ctx->saves_dir[0] != '\0'
                                      ? ctx->saves_dir : "Saves");
     char path[280];
@@ -433,6 +437,19 @@ int save_read_slot_target(uint32_t slot, void* slot_context, int mode)
         fclose(fp);
         return 0;
     }
+    /* GOPS identifies the earlier portable format unambiguously. Its
+     * +0x10 word was music, not retail brightness; normalize the numeric
+     * words before either the typed or per-slot reader consumes them. */
+    {
+        GameOptions legacy_options;
+        options_defaults(&legacy_options);
+        if (options_load_header(&legacy_options, header + 0x20)) {
+            __builtin_memcpy(header + 0x04, &legacy_options.music_volume, 4);
+            __builtin_memcpy(header + 0x08, &legacy_options.sfx_volume, 4);
+            __builtin_memcpy(header + 0x0c, &legacy_options.game_speed, 4);
+            __builtin_memcpy(header + 0x10, &legacy_options.brightness, 4);
+        }
+    }
     int32_t count;
     __builtin_memcpy(&count, header + 0x18, 4);
     have_tree_counts = save_current_level_counts(&tree_counts[0],
@@ -490,12 +507,18 @@ int save_read_slot_target(uint32_t slot, void* slot_context, int mode)
     /* Retail stores the three option words directly in the slot-context
      * header. Accept the former GOPS extension only for saves written by
      * earlier portable builds. */
-    options_defaults(&ctx->options);
     __builtin_memcpy(&ctx->saved_music_volume, header + 0x04, 4);
     __builtin_memcpy(&ctx->saved_sfx_volume, header + 0x08, 4);
     __builtin_memcpy(&ctx->saved_scroll_index, header + 0x0c, 4);
     __builtin_memcpy(&ctx->saved_brightness, header + 0x10, 4);
-    if (!options_load_header(&ctx->options, header + 0x20)) {
+    GameOptions legacy_options;
+    options_defaults(&legacy_options);
+    if (options_load_header(&legacy_options, header + 0x20)) {
+        ctx->options = legacy_options;
+    } else {
+        /* The retail header contains numeric settings, not the live
+         * Advanced cycles. A checkpoint's default-slot reload must retain
+         * those cycles, just as an ordinary slot read does. */
         ctx->options.music_volume = ctx->saved_music_volume;
         ctx->options.sfx_volume = ctx->saved_sfx_volume;
         ctx->options.game_speed = ctx->saved_scroll_index;
@@ -547,12 +570,8 @@ void save_commit(GameContext* ctx)
     if (ctx->records == NULL) {
         save_bootstrap_records(ctx, SAVE_DEFAULT_RECORDS);
     }
-    int written = sav_write_slot_file(ctx);
-    if (s_return_diag_log != NULL) {
-        fprintf(s_return_diag_log, "return-diag: commit write=%d slot=%d records=%d\n",
-                written, ctx->save_slot, ctx->record_count);
-        fflush(s_return_diag_log);
-    }
+    (void)sav_write_slot_file(ctx);
+
 }
 
 /* Saves\<slot>.dat — the `.dat` slot thumbnail (FUN_00413b80's save-confirm
@@ -929,12 +948,7 @@ void checkpoint_step_target(void)
     }
     int orig = ctx->save_slot;
     int slot = orig == -1 ? SAVE_DEFAULT_SLOT : orig;
-    if (s_return_diag_log != NULL) {
-        fprintf(s_return_diag_log, "return-diag: checkpoint slot=%d active=%d record=%d count=%d fallback=%d blob=%d\n",
-                orig, ctx->active_slot, ctx->current_record, ctx->record_count,
-                orig == -1, ctx->checkpoint_blob != NULL);
-        fflush(s_return_diag_log);
-    }
+
     if (ctx->records == NULL || ctx->active_slot != slot) {
         /* Bootstrap the slot context (`SavSetSlot(5)` path in the corpus). */
         (void)save_read_slot_target((uint32_t)slot, NULL, 0);
@@ -978,12 +992,8 @@ void checkpoint_step_target(void)
         /* The corpus commits the cleared/reapplied default slot, then
          * reloads slot-5 metadata. */
         save_commit(ctx);
-        int reloaded = save_read_slot_target(SAVE_DEFAULT_SLOT, NULL, 0);
-        if (s_return_diag_log != NULL) {
-            fprintf(s_return_diag_log, "return-diag: reload=%d slot=%d active=%d count=%d\n",
-                    reloaded, ctx->save_slot, ctx->active_slot, ctx->record_count);
-            fflush(s_return_diag_log);
-        }
+        (void)save_read_slot_target(SAVE_DEFAULT_SLOT, NULL, 0);
+
     }
 }
 
@@ -2527,7 +2537,6 @@ void ledger_stub_00460290_EntityType4IndexListBuild(
         memcpy(output, &local, sizeof(local));
     }
 }
-
 
 // FUNCTION: LEGORR 0x00418040
 int ledger_stub_00418040_CampaignChainSnapshotCreate(
