@@ -378,36 +378,6 @@ static EntityPeriodicTickHook s_entity_periodic_tick_hook;
 static void* s_entity_periodic_tick_context;
 static float s_periodic_timer25;
 
-/* CreateRepeatedResourceInstances (FUN_00408e50): the parameter is a cell
- * coordinate pair. The descriptor owns the sequence counter and supplies the
- * zone written into each newly linked kind-7 command. */
-// FUNCTION: LEGORR 0x00408E50
-void entity_repeated_resource_instances_create(
-    const int cell_xy[2], int kind, int variant, uint32_t value, int count)
-{
-    uint8_t* record;
-    uint32_t zone;
-    if (cell_xy == NULL || count <= 0) return;
-    record = (uint8_t*)terrain_descriptor_find_exact_current(
-        (const uint32_t*)cell_xy, NULL);
-    if (record == NULL) return;
-    if (kind == 7 && variant == 1) {
-        uint32_t flags;
-        memcpy(&flags, record + 0xd0u, sizeof(flags));
-        flags |= 8u;
-        memcpy(record + 0xd0u, &flags, sizeof(flags));
-    }
-    memcpy(&zone, record + 8u, sizeof(zone));
-    while (count-- > 0) {
-        uint32_t sequence;
-        memcpy(&sequence, record + 0x1cu, sizeof(sequence));
-        ++sequence;
-        memcpy(record + 0x1cu, &sequence, sizeof(sequence));
-        cmd_command_kind_record_issue((uint32_t)kind, (uint32_t)variant,
-                                      value, cell_xy, zone, NULL, 0);
-    }
-}
-
 void entity_kind_name_tables_install(int kind, const char* const* names,
                                      uint32_t count)
 {
@@ -1691,100 +1661,6 @@ void cell_entity_kind_create_or_remove(CellEntityKindRegistry* registry,
             registry->records[index] = registry->create_kind14(
                 registry->context, world_x, world_y);
     }
-}
-
-// FUNCTION: LEGORR 0x00409b30
-EntitySlot* world_object_spawn_request_create(
-    const WorldObjectCreateHooks* hooks,
-    const WorldObjectSpawnRequest* request,
-    int notify)
-{
-    EntitySlot* entity;
-    uint32_t i;
-    float orientation;
-    if (hooks == NULL || request == NULL ||
-        hooks->entity_create_type4 == NULL) return NULL;
-    orientation = (float)request->orientation_quadrant * 1.5707964f;
-    entity = hooks->entity_create_type4(hooks->context, request, orientation);
-    if (entity == NULL) return NULL;
-    if (notify != 0 && hooks->event8_dispatch != NULL)
-        hooks->event8_dispatch(hooks->context, entity);
-    for (i = 0; request->coordinate_pairs != NULL &&
-         i < request->coordinate_pair_count; ++i) {
-        const int32_t* pair = request->coordinate_pairs + i * 2u;
-        const int is_matching_pair =
-            (i + 1u < request->coordinate_pair_count &&
-             pair[0] == pair[2] && pair[1] == pair[3]);
-        if (is_matching_pair) {
-            if (hooks->matching_pair_prepare != NULL)
-                hooks->matching_pair_prepare(hooks->context, pair[0], pair[1]);
-            if (hooks->matching_pair_attach != NULL)
-                hooks->matching_pair_attach(hooks->context, entity, pair);
-            ++i;
-        }
-        else if ((entity_stats_word_get(entity) & 0x100000u) != 0u) {
-            if (hooks->boundary_pair_special != NULL)
-                hooks->boundary_pair_special(hooks->context, pair);
-            else
-                /* FUN_00409b30 calls FUN_004323f0 for this stats-gated
-                 * branch. Use the mapped current-level entry when no host
-                 * override supplies that operation. */
-                terrain_cell_flags_set_and_refresh_current(
-                    (const int*)pair);
-        }
-        else {
-            if (hooks->boundary_pair_unlink != NULL)
-                hooks->boundary_pair_unlink(hooks->context, pair);
-            if (hooks->boundary_pair_apply != NULL)
-                hooks->boundary_pair_apply(hooks->context, pair[0], pair[1]);
-            if ((entity_state_flags_get(entity) & 0x200u) != 0u &&
-                hooks->boundary_pair_secondary != NULL) {
-                hooks->boundary_pair_secondary(hooks->context, pair);
-            }
-            if (hooks->cardinal_neighbors_apply != NULL)
-                hooks->cardinal_neighbors_apply(hooks->context,
-                                                pair[0], pair[1]);
-            else
-                /* FUN_00409cd0 runs the four cardinal cell refreshes here,
-                 * immediately before FUN_0040cea0 refreshes this pair. The
-                 * current-level entrypoint resolves the live LevelState
-                 * through the same engine binding used by other retail ABI
-                 * callers. */
-                cell_cardinal_neighbor_apply_current((const int*)pair);
-        }
-        if (hooks->pair_refresh != NULL)
-            hooks->pair_refresh(hooks->context, pair[0], pair[1]);
-    }
-    return entity;
-}
-
-// FUNCTION: LEGORR 0x00409a90
-void world_object_create_with_transform(const WorldObjectCreateHooks* hooks,
-                                        uint32_t object_kind,
-                                        const int32_t position[2],
-                                        uint32_t subtype,
-                                        const int32_t* coordinate_pairs,
-                                        uint32_t coordinate_pair_count,
-                                        int notify)
-{
-    WorldObjectSpawnRequest request;
-    if (hooks == NULL || position == NULL) return;
-    memset(&request, 0, sizeof(request));
-    request.object_kind = object_kind;
-    request.orientation_quadrant = subtype;
-    request.origin_x = position[0];
-    request.origin_y = position[1];
-    request.coordinate_pairs = coordinate_pairs;
-    request.coordinate_pair_count = coordinate_pair_count;
-    if (hooks->terrain_pairs_prepare != NULL)
-        hooks->terrain_pairs_prepare(hooks->context, coordinate_pairs,
-                                     coordinate_pair_count, 4.0f);
-    if (hooks->neighbor_cells_refresh != NULL)
-        hooks->neighbor_cells_refresh(hooks->context, position);
-    else
-        unported_ledger_stubs::terrain_cell_refresh_eight_neighbors_current(
-            (const int*)position);
-    world_object_spawn_request_create(hooks, &request, notify);
 }
 
 void entity_scene_pose_hooks_set(const EntityScenePoseHooks* hooks)

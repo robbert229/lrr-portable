@@ -206,14 +206,14 @@ void simtick_post_cluster(EngineContext* c)
 }
 
 /* ---- bobbins list machine (FUN_004091e0) -------------------------------- */
-static SimtickBobbin* s_bobbin_head = NULL;
-static int            s_bobbin_advance = 0;
-static SimtickBobbinMarkHook s_bobbin_mark_hook = NULL;
-static void* s_bobbin_mark_context = NULL;
-static SimtickBobbinSpawnHook s_bobbin_spawn_hook = NULL;
+SimtickBobbin* s_bobbin_head = NULL;
+int            s_bobbin_advance = 0;
+SimtickBobbinMarkHook s_bobbin_mark_hook = NULL;
+void* s_bobbin_mark_context = NULL;
+SimtickBobbinSpawnHook s_bobbin_spawn_hook = NULL;
 static SimtickBobbinActionHook s_bobbin_clear_delay_hook = NULL;
 static SimtickBobbinActionHook s_bobbin_die_hook = NULL;
-static void* s_bobbin_action_context = NULL;
+void* s_bobbin_action_context = NULL;
 
 void simtick_set_bobbin_head(SimtickBobbin* head)
 {
@@ -241,50 +241,6 @@ int simtick_bobbin_advanced(void)
     return s_bobbin_advance;
 }
 
-// FUNCTION: LEGORR 0x00409270
-static int bobbin_spawn(SimtickBobbin* node)
-{
-    return node != NULL && s_bobbin_spawn_hook != NULL
-        ? s_bobbin_spawn_hook(node, s_bobbin_action_context) : 0;
-} /* FUN_00409270 */
-// FUNCTION: LEGORR 0x00409a40
-static void bobbin_delayed(SimtickBobbin* node)
-{
-    if (node == NULL) return;
-    uint32_t count = node->member_count;
-    if (count > 20u) count = 20u;
-    for (uint32_t i = 0; i < count; ++i) {
-        void* record = node->members[i];
-        if (record == NULL) continue;
-        const float no_timeout = -1.0f;
-        uint32_t flags = 0;
-        __builtin_memcpy((char*)record + 0x340u, &no_timeout,
-                         sizeof(no_timeout));
-        __builtin_memcpy(&flags, (char*)record + 0x3e8u, sizeof(flags));
-        flags |= 0x800000u;
-        __builtin_memcpy((char*)record + 0x3e8u, &flags, sizeof(flags));
-    }
-}
-static void bobbin_mark(SimtickBobbin* node)
-{
-    if (node != NULL && s_bobbin_mark_hook != NULL)
-        s_bobbin_mark_hook(node, s_bobbin_mark_context);
-}
-static void bobbin_record_remove_and_free(SimtickBobbin* node)
-{
-    SimtickBobbin* previous = NULL;
-    SimtickBobbin* current = s_bobbin_head;
-    while (current != NULL && current != node) {
-        previous = current;
-        current = current->next;
-    }
-    if (current == NULL) return;
-    if (previous == NULL) s_bobbin_head = current->next;
-    else previous->next = current->next;
-    engine_heap_free_wrapper(current->owned_buffer);
-    engine_heap_free_wrapper(current);
-}
-
 static SimtickBobbin* bobbin_find_key(const uint32_t key_pair[2])
 {
     SimtickBobbin* node = s_bobbin_head;
@@ -297,74 +253,8 @@ static SimtickBobbin* bobbin_find_key(const uint32_t key_pair[2])
     return NULL;
 }
 
-/* The two UI group operations resolve the shared DAT_004b8a24 path-record
- * list. Their entity arrays live at +0x2c/+0xcc in the 32-bit record; native
- * builds use level.cpp's widened-pointer sidecar accessors for that window. */
-// FUNCTION: LEGORR 0x00409110
-void simtick_selection_group_release(const uint32_t key_pair[2])
-{
-    void* record;
-    record = terrain_descriptor_find_exact_current(key_pair, NULL);
-    if (record != NULL) {
-        cancel_action_for_matching_coordinates(key_pair);
-#if defined(_WIN32)
-        bobbin_delayed((SimtickBobbin*)record);
-#else
-        {
-            uint32_t count = path_record_entity_count_get(record);
-            uint32_t i;
-            for (i = 0u; i < count; ++i) {
-                EntitySlot* entity = path_record_entity_get(record, i);
-                if (entity != NULL) {
-                    const float no_timeout = -1.0f;
-                    entity->field_340 = no_timeout;
-                    entity->flags_3e8 |= 0x800000u;
-                }
-            }
-        }
-#endif
-        path_record_remove_and_free(record);
-    }
-}
-
-// FUNCTION: LEGORR 0x00409150
-void simtick_selection_group_clear(const uint32_t key_pair[2])
-{
-    void* record;
-    uint32_t count;
-    uint32_t i;
-    uint32_t group_key;
-    int cell_xy[2];
-    record = terrain_descriptor_find_exact_current(key_pair, NULL);
-    if (record == NULL) return;
-    cell_xy[0] = (int)key_pair[0];
-    cell_xy[1] = (int)key_pair[1];
-    terrain_cell_flag40000000_clear_or_set_current(cell_xy, 0);
-#if defined(_WIN32)
-    count = *(uint32_t*)((char*)record + 0xcc);
-    for (i = 0u; i < count; ++i) {
-        EntitySlot* entity = (EntitySlot*)
-            *(uint32_t*)((char*)record + 0x2c + i * 4u);
-        if (entity == NULL) continue;
-        entity->flags_3ec &= ~0x100u;
-        cmd_create_task(entity, 0); /* FUN_00402720(entity, 0) */
-    }
-#else
-    count = path_record_entity_count_get(record);
-    for (i = 0u; i < count; ++i) {
-        EntitySlot* entity = path_record_entity_get(record, i);
-        if (entity == NULL) continue;
-        entity->flags_3ec &= ~0x100u;
-        cmd_create_task(entity, 0); /* FUN_00402720(entity, 0) */
-    }
-#endif
-    cancel_action_for_matching_coordinates(key_pair);
-    memcpy(&group_key, (const char*)record + 0x08, sizeof(group_key));
-    cmd_cancel_by_coords((int)group_key, 0, 0, 0);
-    path_record_remove_and_free(record);
-}
 // FUNCTION: LEGORR 0x004027a0
-static void bobbin_clear_delay(SimtickBobbin* node)
+void bobbin_clear_delay(SimtickBobbin* node)
 {
     if (node == NULL) return;
     if (s_bobbin_clear_delay_hook != NULL) {
@@ -394,60 +284,6 @@ static void bobbin_clear_delay(SimtickBobbin* node)
                         (float)node->key_pair[1]);
     cmd_link_global_head(command, 0xe);
 } /* FUN_004027a0 */
-// FUNCTION: LEGORR 0x00409550
-static void descriptor_transition_apply(SimtickBobbin* node)
-{
-    int* cell_xy;
-    void* matching_entity;
-    uint32_t kind6_count;
-    uint32_t kind7_default_count;
-    uint32_t kind7_variant_count;
-    int kind7_variant;
-    if (node == NULL || !always_accept_place_command_cell()) return;
-    cell_xy = (int*)node->key_pair;
-    matching_entity = unported_ledger_stubs::
-        ledger_stub_00438ae0_SpatialObjectQueryCenterMask02(
-        NULL, cell_xy, 7u, 0u);
-    kind6_count = entity_indexed_record_word_at_b4_get(15, 0, 0);
-    kind7_default_count = entity_indexed_record_word_at_b0_get(15, 0, 0);
-    kind7_variant_count = entity_indexed_record_word_at_b8_get(15, 0, 0);
-
-    entity_repeated_resource_instances_create(cell_xy, 6, 0, 0u,
-                                               (int)kind6_count);
-    kind7_variant = matching_entity != NULL && kind7_variant_count != 0u;
-    entity_repeated_resource_instances_create(cell_xy, 7, kind7_variant,
-        0u, (int)(kind7_variant ? kind7_variant_count : kind7_default_count));
-    node->flags |= 4u;
-} /* FUN_00409550 */
-
-// FUNCTION: LEGORR 0x004091e0
-void simtick_bobbins(EngineContext* c)
-{
-    (void)c;
-    SimtickBobbin* node = s_bobbin_head;
-    while (node != NULL) {
-        uint32_t f = node->flags;
-        SimtickBobbin* next = node->next;
-        ++s_bobbin_advance;
-        if (((f & 2u) == 0) || ((f & 4u) != 0)) {
-            if ((f & 1u) != 0) {
-                if ((f & 2u) == 0) {
-                    if (bobbin_spawn(node)) {
-                        bobbin_delayed(node);
-                        bobbin_mark(node);
-                        bobbin_record_remove_and_free(node);
-                    }
-                } else {
-                    bobbin_clear_delay(node);
-                    node->flags = node->flags & ~1u;
-                }
-            }
-        } else {
-            descriptor_transition_apply(node);
-        }
-        node = next;
-    }
-}
 
 /* ---- grid marker sweep (FUN_0044eff0) ----------------------------------- */
 static int s_marker_fired = 0;

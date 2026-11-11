@@ -13,6 +13,7 @@ if get_option('platform') == 'winapi'
 endif
 
 game_sources = [
+  'placement.cpp',
   'steering.cpp',
   'encyclopedia.cpp',
   'lava_erosion.cpp',

@@ -81,4 +81,32 @@ extern uint32_t s_choice_active;
 extern uint32_t s_choice_flags;
 extern uintptr_t s_choice_record;
 
+#define PATH_RECORD_WINDOW 0xd4 /* the corpus's 53-dword window           */
+
+typedef struct PathRecordPayloadPort {
+    const void* record;
+    void* payload;
+    uint32_t count;
+    struct PathRecordPayloadPort* next;
+} PathRecordPayloadPort;
+
+typedef struct PathRecordEntityPort {
+    const void* record;
+    uint32_t count;
+    struct EntitySlot* entities[40];
+    struct PathRecordEntityPort* next;
+} PathRecordEntityPort;
+
+namespace unported_ledger_stubs {
+int ledger_stub_00409470_NeighborCellEntitySearchRecurse( const int cell_xy[2], int resource_amount);
+} // namespace unported_ledger_stubs
+TerrainSurfaceGrid* level_surface_grid_get(const LevelState* level);
+extern uint32_t s_path_record_count;
+extern void* s_path_record_last;
+extern PathRecordPayloadPort* s_path_record_payload_ports;
+extern PathRecordEntityPort* s_path_record_entity_ports;
+namespace unported_ledger_stubs {
+void placement_cell_search_expand(const int cell_xy[2]);
+} // namespace unported_ledger_stubs
+
 #endif /* LRR_GAME_LEVEL_SHARED_HPP */

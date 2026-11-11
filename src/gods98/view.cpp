@@ -3699,77 +3699,6 @@ void scene_object_owner_link_release(SceneObjectOwnerLinkRecord* record)
  *   FUN_00401240 vec2_dist,
  *   FUN_0047c0c0 vec_exact_equal. */
 
-// FUNCTION: LEGORR 0x004089d0
-float segment_2d_point_distance(const float* point, const float* start,
-                                const float* end)
-{
-    float segment_x = end[0] - start[0];
-    float segment_y = end[1] - start[1];
-    float point_to_end_x = point[0] - end[0];
-    float point_to_end_y = point[1] - end[1];
-    float point_to_end_distance = sqrtf(
-        point_to_end_y * point_to_end_y +
-        point_to_end_x * point_to_end_x);
-    float inverse_segment_length = 1.0f / sqrtf(
-        segment_y * segment_y + segment_x * segment_x);
-    float unit_x = inverse_segment_length * segment_x;
-    float unit_y = inverse_segment_length * segment_y;
-
-    if ((1.0f / point_to_end_distance) * point_to_end_y * unit_y +
-        (1.0f / point_to_end_distance) * point_to_end_x * unit_x < 0.0f) {
-        float point_to_start_x = point[0] - start[0];
-        float point_to_start_y = point[1] - start[1];
-        float point_to_start_distance = sqrtf(
-            point_to_start_y * point_to_start_y +
-            point_to_start_x * point_to_start_x);
-        if ((1.0f / point_to_start_distance) * point_to_start_y * unit_y +
-            (1.0f / point_to_start_distance) * point_to_start_x * unit_x <=
-                0.0f) {
-            return point_to_start_distance;
-        }
-        {
-            float perpendicular = point_to_start_x * unit_y -
-                                 point_to_start_y * unit_x;
-            if (perpendicular < 0.0f) perpendicular = -perpendicular;
-            {
-                const double angle = asin((double)perpendicular /
-                                           (double)point_to_start_distance);
-                return (float)(sin(angle) *
-                               (double)point_to_start_distance);
-            }
-        }
-    }
-    return point_to_end_distance;
-}
-
-// FUNCTION: LEGORR 0x00408b00
-float point_to_polyline_minimum_segment_distance(const float* point,
-                                                 const float* first_point,
-                                                 const float* last_point,
-                                                 unsigned int segment_count)
-{
-    float minimum = segment_2d_point_distance(point, first_point, last_point);
-    if (segment_count > 1u) {
-        const ptrdiff_t segment_bytes =
-            (const char*)last_point - (const char*)first_point;
-        uint32_t remaining = segment_count - 1u;
-        do {
-            float distance;
-            first_point = (const float*)((const char*)first_point + 8);
-            last_point = (const float*)((const char*)first_point +
-                                        segment_bytes);
-            distance = segment_2d_point_distance(point, first_point,
-                                                  last_point);
-            if (distance < minimum) {
-                minimum = distance;
-            }
-            remaining = remaining - 1u;
-        }
-        while (remaining != 0u);
-    }
-    return minimum;
-}
-
 // FUNCTION: LEGORR 0x0047c0c0
 int vec_exact_equal(const float* a, const float* b) /* FUN_0047c0c0 */
 {
@@ -6767,37 +6696,6 @@ void view_point_to_screen_geometry_transform(const void* view, float p[4])
     p[0] = p[0] + half_x * 0.5f + cx;
     p[1] = (half_y * 0.5f + cy) - p[1];
     p[3] = (scale_a / scale_b) * p[3];
-}
-
-// FUNCTION: LEGORR 0x00408b60
-void point_project_onto_line2d(const float* line_start, const float* line_end,
-                               const float* point, float* out)
-{
-    float dx = line_end[0] - line_start[0];
-    float dy = line_end[1] - line_start[1];
-    float inverse_length = 1.0f / sqrt(dy * dy + dx * dx);
-    float unit_x = inverse_length * dx;
-    float unit_y = inverse_length * dy;
-    float projection = (point[1] - line_start[1]) * unit_y +
-                       (point[0] - line_start[0]) * unit_x;
-    out[0] = projection * unit_x + line_start[0];
-    out[1] = projection * unit_y + line_start[1];
-}
-
-// FUNCTION: LEGORR 0x00408bf0
-void point2d_project_onto_direction(const float* origin, const float* direction,
-                                    const float* point, float* out)
-{
-    float direction_x = direction[0];
-    float direction_y = direction[1];
-    float inverse_length = 1.0f / sqrt(direction_y * direction_y +
-                                       direction_x * direction_x);
-    float unit_x = inverse_length * direction_x;
-    float unit_y = inverse_length * direction_y;
-    float projection = (point[1] - origin[1]) * unit_y +
-                       (point[0] - origin[0]) * unit_x;
-    out[0] = projection * unit_x + origin[0];
-    out[1] = projection * unit_y + origin[1];
 }
 
 /* The callback is vtable slot 7 (byte offset 0x1c on x86). Express it as a

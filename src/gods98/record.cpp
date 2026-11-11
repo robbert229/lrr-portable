@@ -107,7 +107,7 @@ void fixed_size_small_record_pool_teardown(void)
 
 /* Byte-safe field reads: corpus dword/float slots at offsets that may
  * not be pointer-aligned on 64-bit hosts. */
-static uint32_t rec_dword(const void* base, size_t off)
+uint32_t rec_dword(const void* base, size_t off)
 {
     uint32_t v = 0;
     if (base != NULL) {
@@ -916,26 +916,6 @@ void* indexed_record_data_address_get(const void* record, int index)
     base = *(void* const*)((const char*)record + 0x08);
     if (base == NULL) return NULL;
     return indexed_record_data_address_get_target(record, index);
-}
-
-// FUNCTION: LEGORR 0x00408e10
-int count_matching_coordinates_in_list(const void* manager,
-                                       int32_t coord_x, int32_t coord_y)
-{
-    const int32_t count = (int32_t)rec_dword(manager, 0x20);
-    if (count == 0) {
-        return 0;
-    }
-    int found = 0;
-    for (int32_t i = 0; i < count; ++i) {
-        void* entry = rec_ptr(manager, 0x2cu + (size_t)i * sizeof(void*));
-        if (entry != NULL
-            && (int32_t)rec_dword(entry, 0) == coord_x
-            && (int32_t)rec_dword(entry, 4) == coord_y) {
-            ++found;
-        }
-    }
-    return found;
 }
 
 /* AviPlayerReadyGet (FUN_0047ed80, findings 185/414): the readiness

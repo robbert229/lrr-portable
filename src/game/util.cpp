@@ -16,6 +16,7 @@
 #include "effects.hpp"
 #include "port_loop_ports.hpp"
 #include "util.hpp"
+#include "util_shared.hpp"
 
 extern "C" float random_float_range(float minimum, float maximum);
 extern "C" short rng_thunk_draw15(void);
@@ -967,10 +968,7 @@ void motion_gameplay_tick(float delta)
     scene_transform_rgb_clamp_apply();
 }
 
-#define STRING_TABLE_MAX_ENTRIES 256
-static const char* s_string_table_entries[STRING_TABLE_MAX_ENTRIES];
-// GLOBAL: LEGORR 0x004b8a50
-static unsigned int s_string_table_count;
+const char* s_string_table_entries[STRING_TABLE_MAX_ENTRIES];
 
 /* The initialized bubble-name pointers reference distinct original .rdata
  * strings; keep same-spelling labels distinct where retail did. */
@@ -1094,45 +1092,6 @@ void string_table_install(const char* const* entries, unsigned int count)
     for (; i < STRING_TABLE_MAX_ENTRIES; ++i) {
         s_string_table_entries[i] = NULL;
     }
-}
-
-/* StringTableIndexLookup (FUN_00408c80): scan the configured name-pointer
- * table in order and return the first exact byte-string match.  The retail
- * comparator loads two bytes per iteration, but still checks both bytes and
- * stops at the same NUL terminator as an ordinary byte walk.  A miss returns
- * the table count. */
-// FUNCTION: LEGORR 0x00408c80
-unsigned int string_table_index_lookup(const char* value)
-{
-    unsigned int i;
-    if (s_string_table_count == 0 || value == NULL) return 0;
-    for (i = 0; i < s_string_table_count; ++i) {
-        const unsigned char* left = (const unsigned char*)
-            s_string_table_entries[i];
-        const unsigned char* right = (const unsigned char*)value;
-        int equal = 1;
-        if (left == NULL) continue;
-        for (;;) {
-            unsigned char first = *left;
-            unsigned char second = *right;
-            if (first != second) {
-                equal = 0;
-                break;
-            }
-            if (first == 0) break;
-            first = left[1];
-            second = right[1];
-            if (first != second) {
-                equal = 0;
-                break;
-            }
-            left += 2;
-            right += 2;
-            if (second == 0) break;
-        }
-        if (equal) return i;
-    }
-    return s_string_table_count;
 }
 
 // FUNCTION: LEGORR 0x004070b0
