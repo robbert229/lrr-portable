@@ -110,9 +110,14 @@ def database(build, extra):
     return json.loads(db.read_text())
 
 
+def entry_path(entry, name):
+    """Resolve a compile-database path, which may be relative to the entry's directory."""
+    return (Path(entry['directory']) / name).resolve()
+
+
 def entry_for(entries, source):
     for e in entries:
-        if Path(e['file']).resolve() == source:
+        if entry_path(e, e['file']) == source:
             return e
     raise RuntimeError(f'no compile command for {source}')
 
@@ -129,7 +134,7 @@ def preprocess_gcc(entry, source, candidate):
             skip = True
         elif arg in ('-c', '-MD', '-MMD', '-MP'):
             continue
-        elif Path(arg).resolve() == source:
+        elif not arg.startswith('-') and entry_path(entry, arg) == source:
             result.append(str(candidate))
         else:
             result.append(arg)

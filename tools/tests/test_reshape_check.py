@@ -57,6 +57,19 @@ class TokenTests(unittest.TestCase):
             self.assertEqual(rc.tokens_from_file(rc.preprocess_reference(source), source), ['int', 'reference', ';'])
 
 
+class CompileDatabaseTests(unittest.TestCase):
+    def test_relative_file_resolves_against_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            (root / 'src').mkdir()
+            (root / 'build').mkdir()
+            source = root / 'src' / 'unit.cpp'
+            source.write_text('int x;\n')
+            entry = {'directory': str(root / 'build'), 'file': '../src/unit.cpp',
+                     'arguments': ['c++', '-c', '../src/unit.cpp', '-o', 'unit.o']}
+            self.assertIs(rc.entry_for([entry], source), entry)
+
+
 class IntegrationTests(unittest.TestCase):
     def test_same_revision(self):
         toolchain = Path(os.environ.get('REPROBIT_MSVC_5_0_RTM_ROOT') or Path.home() / '.local/share/reprobit/toolchains/msvc_5_0_rtm')
